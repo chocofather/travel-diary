@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.info.AccommodationInfoMapper">
+
+    <insert id="insert" parameterType="com.example.travlediary.model.AccommodationInfo">
+        INSERT INTO accommodation_info
+        (destination_id, checkin_time, checkout_time, room_count, room_type, star_rating, breakfast_included, parking_available, pet_allowed, contact_number, homepage_url, etc)
+        VALUES
+            (#{destinationId}, #{checkinTime}, #{checkoutTime}, #{roomCount}, #{roomType}, #{starRating}, #{breakfastIncluded}, #{parkingAvailable}, #{petAllowed}, #{contactNumber}, #{homepageUrl}, #{etc})
+    </insert>
+
+    <select id="findByDestinationId" resultType="com.example.travlediary.model.AccommodationInfo">
+        SELECT * FROM accommodation_info WHERE destination_id = #{destinationId}
+    </select>
+
+    <update id="update" parameterType="com.example.travlediary.model.AccommodationInfo">
+        UPDATE accommodation_info
+        SET
+            checkin_time = #{checkinTime},
+            checkout_time = #{checkoutTime},
+            room_count = #{roomCount},
+            room_type = #{roomType},
+            star_rating = #{starRating},
+            breakfast_included = #{breakfastIncluded},
+            parking_available = #{parkingAvailable},
+            pet_allowed = #{petAllowed},
+            contact_number = #{contactNumber},
+            homepage_url = #{homepageUrl},
+            etc = #{etc}
+        WHERE destination_id = #{destinationId}
+    </update>
+
+
+</mapper>

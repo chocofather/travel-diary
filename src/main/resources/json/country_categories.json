@@ -1,0 +1,4473 @@
+[
+  {
+    "id": 1,
+    "region_name": "아시아",
+    "name_en": "Asia",
+    "code": "AS",
+    "parent_id": null,
+    "depth": 1,
+    "subregion": null
+  },
+  {
+    "id": 2,
+    "region_name": "유럽",
+    "name_en": "Europe",
+    "code": "EU",
+    "parent_id": null,
+    "depth": 1,
+    "subregion": null
+  },
+  {
+    "id": 3,
+    "region_name": "북아메리카",
+    "name_en": "North America",
+    "code": "NA",
+    "parent_id": null,
+    "depth": 1,
+    "subregion": null
+  },
+  {
+    "id": 4,
+    "region_name": "남아메리카",
+    "name_en": "South America",
+    "code": "SA",
+    "parent_id": null,
+    "depth": 1,
+    "subregion": null
+  },
+  {
+    "id": 5,
+    "region_name": "오세아니아",
+    "name_en": "Oceania",
+    "code": "OC",
+    "parent_id": null,
+    "depth": 1,
+    "subregion": null
+  },
+  {
+    "id": 6,
+    "region_name": "아프리카",
+    "name_en": "Africa",
+    "code": "AF",
+    "parent_id": null,
+    "depth": 1,
+    "subregion": null
+  },
+  {
+    "id": 7,
+    "region_name": "대한민국",
+    "name_en": "South Korea",
+    "code": "KR",
+    "parent_id": null,
+    "depth": 1,
+    "subregion": null
+  },
+  {
+    "id": 8,
+    "region_name": "일본",
+    "name_en": "Japan",
+    "code": "JP",
+    "parent_id": 1,
+    "depth": 2,
+    "subregion": "Eastern Asia"
+  },
+  {
+    "id": 9,
+    "region_name": "태국",
+    "name_en": "Thailand",
+    "code": "TH",
+    "parent_id": 1,
+    "depth": 2,
+    "subregion": "South-Eastern Asia"
+  },
+  {
+    "id": 10,
+    "region_name": "베트남",
+    "name_en": "Vietnam",
+    "code": "VN",
+    "parent_id": 1,
+    "depth": 2,
+    "subregion": "South-Eastern Asia"
+  },
+  {
+    "id": 11,
+    "region_name": "대만",
+    "name_en": "Taiwan",
+    "code": "TW",
+    "parent_id": 1,
+    "depth": 2,
+    "subregion": "Eastern Asia"
+  },
+  {
+    "id": 12,
+    "region_name": "라오스",
+    "name_en": "Laos",
+    "code": "LA",
+    "parent_id": 1,
+    "depth": 2,
+    "subregion": "South-Eastern Asia"
+  },
+  {
+    "id": 13,
+    "region_name": "말레이시아",
+    "name_en": "Malaysia",
+    "code": "MY",
+    "parent_id": 1,
+    "depth": 2,
+    "subregion": "South-Eastern Asia"
+  },
+  {
+    "id": 14,
+    "region_name": "싱가포르",
+    "name_en": "Singapore",
+    "code": "SG",
+    "parent_id": 1,
+    "depth": 2,
+    "subregion": "South-Eastern Asia"
+  },
+  {
+    "id": 15,
+    "region_name": "인도네시아",
+    "name_en": "Indonesia",
+    "code": "ID",
+    "parent_id": 1,
+    "depth": 2,
+    "subregion": "South-Eastern Asia"
+  },
+  {
+    "id": 16,
+    "region_name": "튀르키예",
+    "name_en": "Türkiye",
+    "code": "TR",
+    "parent_id": 2,
+    "depth": 2,
+    "subregion": "Western Asia"
+  },
+  {
+    "id": 17,
+    "region_name": "프랑스",
+    "name_en": "France",
+    "code": "FR",
+    "parent_id": 2,
+    "depth": 2,
+    "subregion": "Western Europe"
+  },
+  {
+    "id": 18,
+    "region_name": "독일",
+    "name_en": "Germany",
+    "code": "DE",
+    "parent_id": 2,
+    "depth": 2,
+    "subregion": "Western Europe"
+  },
+  {
+    "id": 19,
+    "region_name": "영국",
+    "name_en": "UK",
+    "code": "GB",
+    "parent_id": 2,
+    "depth": 2,
+    "subregion": "Northern Europe"
+  },
+  {
+    "id": 20,
+    "region_name": "이탈리아",
+    "name_en": "Italy",
+    "code": "IT",
+    "parent_id": 2,
+    "depth": 2,
+    "subregion": "Southern Europe"
+  },
+  {
+    "id": 21,
+    "region_name": "네덜란드",
+    "name_en": "Netherlands",
+    "code": "NL",
+    "parent_id": 2,
+    "depth": 2,
+    "subregion": "Western Europe"
+  },
+  {
+    "id": 22,
+    "region_name": "벨기에",
+    "name_en": "Belgium",
+    "code": "BE",
+    "parent_id": 2,
+    "depth": 2,
+    "subregion": "Western Europe"
+  },
+  {
+    "id": 23,
+    "region_name": "아일랜드",
+    "name_en": "Ireland",
+    "code": "IE",
+    "parent_id": 2,
+    "depth": 2,
+    "subregion": "Northern Europe"
+  },
+  {
+    "id": 24,
+    "region_name": "스위스",
+    "name_en": "Switzerland",
+    "code": "CH",
+    "parent_id": 2,
+    "depth": 2,
+    "subregion": "Western Europe"
+  },
+  {
+    "id": 25,
+    "region_name": "오스트리아",
+    "name_en": "Austria",
+    "code": "AT",
+    "parent_id": 2,
+    "depth": 2,
+    "subregion": "Western Europe"
+  },
+  {
+    "id": 26,
+    "region_name": "체코",
+    "name_en": "Czech Republic",
+    "code": "CZ",
+    "parent_id": 2,
+    "depth": 2,
+    "subregion": "Eastern Europe"
+  },
+  {
+    "id": 27,
+    "region_name": "아이슬란드",
+    "name_en": "Iceland",
+    "code": "IS",
+    "parent_id": 2,
+    "depth": 2,
+    "subregion": "Northern Europe"
+  },
+  {
+    "id": 28,
+    "region_name": "캐나다",
+    "name_en": "Canada",
+    "code": "CA",
+    "parent_id": 3,
+    "depth": 2,
+    "subregion": "Northern America"
+  },
+  {
+    "id": 29,
+    "region_name": "미국",
+    "name_en": "United States",
+    "code": "US",
+    "parent_id": 3,
+    "depth": 2,
+    "subregion": "Northern America"
+  },
+  {
+    "id": 30,
+    "region_name": "멕시코",
+    "name_en": "Mexico",
+    "code": "MX",
+    "parent_id": 3,
+    "depth": 2,
+    "subregion": "Central America"
+  },
+  {
+    "id": 31,
+    "region_name": "페루",
+    "name_en": "Peru",
+    "code": "PE",
+    "parent_id": 4,
+    "depth": 2,
+    "subregion": "South America"
+  },
+  {
+    "id": 32,
+    "region_name": "브라질",
+    "name_en": "Brazil",
+    "code": "BR",
+    "parent_id": 4,
+    "depth": 2,
+    "subregion": "South America"
+  },
+  {
+    "id": 33,
+    "region_name": "아르헨티나",
+    "name_en": "Argentine",
+    "code": "AR",
+    "parent_id": 4,
+    "depth": 2,
+    "subregion": "South America"
+  },
+  {
+    "id": 34,
+    "region_name": "호주",
+    "name_en": "Australia",
+    "code": "AU",
+    "parent_id": 5,
+    "depth": 2,
+    "subregion": "Australia and New Zealand"
+  },
+  {
+    "id": 35,
+    "region_name": "뉴질랜드",
+    "name_en": "New Zealand",
+    "code": "NZ",
+    "parent_id": 5,
+    "depth": 2,
+    "subregion": "Australia and New Zealand"
+  },
+  {
+    "id": 36,
+    "region_name": "모로코",
+    "name_en": "Morocco",
+    "code": "MA",
+    "parent_id": 6,
+    "depth": 2,
+    "subregion": "Northern Africa"
+  },
+  {
+    "id": 37,
+    "region_name": "이집트",
+    "name_en": "Egypt",
+    "code": "EG",
+    "parent_id": 6,
+    "depth": 2,
+    "subregion": "Northern Africa"
+  },
+  {
+    "id": 38,
+    "region_name": "서울",
+    "name_en": "Seoul",
+    "code": "KR-11",
+    "parent_id": 7,
+    "depth": 2,
+    "subregion": null
+  },
+  {
+    "id": 39,
+    "region_name": "경기",
+    "name_en": "Gyeonggi-do",
+    "code": "KR-41",
+    "parent_id": 7,
+    "depth": 2,
+    "subregion": null
+  },
+  {
+    "id": 40,
+    "region_name": "인천",
+    "name_en": "Incheon",
+    "code": "KR-28",
+    "parent_id": 7,
+    "depth": 2,
+    "subregion": null
+  },
+  {
+    "id": 41,
+    "region_name": "대전",
+    "name_en": "Daejeon",
+    "code": "KR-30",
+    "parent_id": 7,
+    "depth": 2,
+    "subregion": null
+  },
+  {
+    "id": 42,
+    "region_name": "대구",
+    "name_en": "Daegu",
+    "code": "KR-27",
+    "parent_id": 7,
+    "depth": 2,
+    "subregion": null
+  },
+  {
+    "id": 43,
+    "region_name": "광주",
+    "name_en": "Gwangju",
+    "code": "KR-29",
+    "parent_id": 7,
+    "depth": 2,
+    "subregion": null
+  },
+  {
+    "id": 44,
+    "region_name": "부산",
+    "name_en": "Busan",
+    "code": "KR-26",
+    "parent_id": 7,
+    "depth": 2,
+    "subregion": null
+  },
+  {
+    "id": 45,
+    "region_name": "울산",
+    "name_en": "Ulsan",
+    "code": "KR-31",
+    "parent_id": 7,
+    "depth": 2,
+    "subregion": null
+  },
+  {
+    "id": 46,
+    "region_name": "세종",
+    "name_en": "Sejong",
+    "code": "KR-50",
+    "parent_id": 7,
+    "depth": 2,
+    "subregion": null
+  },
+  {
+    "id": 47,
+    "region_name": "강원",
+    "name_en": "Gangwon",
+    "code": "KR-42",
+    "parent_id": 7,
+    "depth": 2,
+    "subregion": null
+  },
+  {
+    "id": 48,
+    "region_name": "충북",
+    "name_en": "Chungcheongbuk-do",
+    "code": "KR-43",
+    "parent_id": 7,
+    "depth": 2,
+    "subregion": null
+  },
+  {
+    "id": 49,
+    "region_name": "충남",
+    "name_en": "Chungcheongnam-do",
+    "code": "KR-44",
+    "parent_id": 7,
+    "depth": 2,
+    "subregion": null
+  },
+  {
+    "id": 50,
+    "region_name": "전북",
+    "name_en": "Jeollabuk-do",
+    "code": "KR-45",
+    "parent_id": 7,
+    "depth": 2,
+    "subregion": null
+  },
+  {
+    "id": 51,
+    "region_name": "전남",
+    "name_en": "Jeollanam-do",
+    "code": "KR-46",
+    "parent_id": 7,
+    "depth": 2,
+    "subregion": null
+  },
+  {
+    "id": 52,
+    "region_name": "경북",
+    "name_en": "Gyeongsangbuk-do",
+    "code": "KR-47",
+    "parent_id": 7,
+    "depth": 2,
+    "subregion": null
+  },
+  {
+    "id": 53,
+    "region_name": "경남",
+    "name_en": "Gyeongsangnam-do",
+    "code": "KR-48",
+    "parent_id": 7,
+    "depth": 2,
+    "subregion": null
+  },
+  {
+    "id": 54,
+    "region_name": "제주",
+    "name_en": "Jeju",
+    "code": "KR-49",
+    "parent_id": 7,
+    "depth": 2,
+    "subregion": null
+  },
+  {
+    "id": 55,
+    "region_name": "후쿠오카",
+    "name_en": "Fukuoka",
+    "code": "JP-40",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 56,
+    "region_name": "사가",
+    "name_en": "Saga",
+    "code": "JP-41",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 57,
+    "region_name": "나가사키",
+    "name_en": "Nagasaki",
+    "code": "JP-42",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 58,
+    "region_name": "구마모토",
+    "name_en": "Kumamoto",
+    "code": "JP-43",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 59,
+    "region_name": "오이타",
+    "name_en": "Oita",
+    "code": "JP-44",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 60,
+    "region_name": "미야자키",
+    "name_en": "Miyazaki",
+    "code": "JP-45",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 61,
+    "region_name": "가고시마",
+    "name_en": "Kagoshima",
+    "code": "JP-46",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 62,
+    "region_name": "카가와",
+    "name_en": "Kagawa",
+    "code": "JP-37",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 63,
+    "region_name": "에히메",
+    "name_en": "Ehime",
+    "code": "JP-38",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 64,
+    "region_name": "도쿠시마",
+    "name_en": "Tokushima",
+    "code": "JP-36",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 65,
+    "region_name": "고치",
+    "name_en": "Kochi",
+    "code": "JP-39",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 66,
+    "region_name": "돗토리",
+    "name_en": "Tottori",
+    "code": "JP-31",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 67,
+    "region_name": "시마네",
+    "name_en": "Shimane",
+    "code": "JP-32",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 68,
+    "region_name": "오카야마",
+    "name_en": "Okayama",
+    "code": "JP-33",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 69,
+    "region_name": "히로시마",
+    "name_en": "Hiroshima",
+    "code": "JP-34",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 70,
+    "region_name": "야마구치",
+    "name_en": "Yamaguchi",
+    "code": "JP-35",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 71,
+    "region_name": "교토",
+    "name_en": "Kyoto",
+    "code": "JP-26",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 72,
+    "region_name": "오사카",
+    "name_en": "Osaka",
+    "code": "JP-27",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 73,
+    "region_name": "나라",
+    "name_en": "Nara",
+    "code": "JP-29",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 74,
+    "region_name": "미에",
+    "name_en": "Mie",
+    "code": "JP-24",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 75,
+    "region_name": "시가",
+    "name_en": "Shiga",
+    "code": "JP-25",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 76,
+    "region_name": "와카야마",
+    "name_en": "Wakayama",
+    "code": "JP-30",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 77,
+    "region_name": "효고",
+    "name_en": "Hyogo",
+    "code": "JP-28",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 78,
+    "region_name": "도야마",
+    "name_en": "Toyama",
+    "code": "JP-16",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 79,
+    "region_name": "이시카와",
+    "name_en": "Ishikawa",
+    "code": "JP-17",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 80,
+    "region_name": "후쿠이",
+    "name_en": "Fukui",
+    "code": "JP-18",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 81,
+    "region_name": "니가타",
+    "name_en": "Niigata",
+    "code": "JP-15",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 82,
+    "region_name": "야마나시",
+    "name_en": "Yamanashi",
+    "code": "JP-19",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 83,
+    "region_name": "나가노",
+    "name_en": "Nagano",
+    "code": "JP-20",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 84,
+    "region_name": "기후",
+    "name_en": "Gifu",
+    "code": "JP-21",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 85,
+    "region_name": "시즈오카",
+    "name_en": "Shizuoka",
+    "code": "JP-22",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 86,
+    "region_name": "아이치",
+    "name_en": "Aichi",
+    "code": "JP-23",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 87,
+    "region_name": "이바라키",
+    "name_en": "Ibaraki",
+    "code": "JP-08",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 88,
+    "region_name": "도치기",
+    "name_en": "Tochigi",
+    "code": "JP-09",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 89,
+    "region_name": "군마",
+    "name_en": "Gunma",
+    "code": "JP-10",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 90,
+    "region_name": "사이타마",
+    "name_en": "Saitama",
+    "code": "JP-11",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 91,
+    "region_name": "치바",
+    "name_en": "Chiba",
+    "code": "JP-12",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 92,
+    "region_name": "도쿄",
+    "name_en": "Tokyo",
+    "code": "JP-13",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 93,
+    "region_name": "가나가와",
+    "name_en": "Kanagawa",
+    "code": "JP-14",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 94,
+    "region_name": "훗카이도",
+    "name_en": "Hokkaido",
+    "code": "JP-01",
+    "parent_id": 8,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 95,
+    "region_name": "방콕",
+    "name_en": "Bangkok",
+    "code": "TH-BKK",
+    "parent_id": 9,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 96,
+    "region_name": "하노이",
+    "name_en": "Hanoi",
+    "code": "VN-HAN",
+    "parent_id": 10,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 97,
+    "region_name": "다낭",
+    "name_en": "Da Nang",
+    "code": "VN-DAD",
+    "parent_id": 10,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 98,
+    "region_name": "호찌민",
+    "name_en": "Ho Chi Minh City",
+    "code": "VN-SGN",
+    "parent_id": 10,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 99,
+    "region_name": "타이베이",
+    "name_en": "Taipei",
+    "code": "TW-TPE",
+    "parent_id": 11,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 100,
+    "region_name": "비엔티안",
+    "name_en": "Vientiane",
+    "code": "LA-VTE",
+    "parent_id": 12,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 101,
+    "region_name": "쿠알라룸푸르",
+    "name_en": "Kuala Lumpur",
+    "code": "MY-KUL",
+    "parent_id": 13,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 102,
+    "region_name": "자카르타",
+    "name_en": "Jakarta",
+    "code": "ID-JKT",
+    "parent_id": 15,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 103,
+    "region_name": "발리",
+    "name_en": "Bali",
+    "code": "ID-DPS",
+    "parent_id": 15,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 104,
+    "region_name": "앙카라",
+    "name_en": "Ankara",
+    "code": "TR-ANK",
+    "parent_id": 16,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 105,
+    "region_name": "이스탄불",
+    "name_en": "Istanbul",
+    "code": "TR-IST",
+    "parent_id": 16,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 106,
+    "region_name": "파리",
+    "name_en": "Paris",
+    "code": "FR-PAR",
+    "parent_id": 17,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 107,
+    "region_name": "리옹",
+    "name_en": "Lyon",
+    "code": "FR-LYS",
+    "parent_id": 17,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 108,
+    "region_name": "디종",
+    "name_en": "Dijon",
+    "code": "FR-DIJ",
+    "parent_id": 17,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 109,
+    "region_name": "렌",
+    "name_en": "Rennes",
+    "code": "FR-RNS",
+    "parent_id": 17,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 110,
+    "region_name": "마르세유",
+    "name_en": "Marseille",
+    "code": "FR-MRS",
+    "parent_id": 17,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 111,
+    "region_name": "릴",
+    "name_en": "Lille",
+    "code": "FR-LIL",
+    "parent_id": 17,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 112,
+    "region_name": "보르도",
+    "name_en": "Bordeaux",
+    "code": "FR-BOD",
+    "parent_id": 17,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 113,
+    "region_name": "낭트",
+    "name_en": "Nantes",
+    "code": "FR-NTE",
+    "parent_id": 17,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 114,
+    "region_name": "베를린",
+    "name_en": "Berlin",
+    "code": "DE-BER",
+    "parent_id": 18,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 115,
+    "region_name": "하노버",
+    "name_en": "Hanover",
+    "code": "DE-HAJ",
+    "parent_id": 18,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 116,
+    "region_name": "마인츠",
+    "name_en": "Mainz",
+    "code": "DE-MNZ",
+    "parent_id": 18,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 117,
+    "region_name": "슈투트가르트",
+    "name_en": "Stuttgart",
+    "code": "DE-STR",
+    "parent_id": 18,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 118,
+    "region_name": "뮌헨",
+    "name_en": "Munich",
+    "code": "DE-MUC",
+    "parent_id": 18,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 119,
+    "region_name": "함부르크",
+    "name_en": "Hamburg",
+    "code": "DE-HAM",
+    "parent_id": 18,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 120,
+    "region_name": "런던",
+    "name_en": "London",
+    "code": "GB-LON",
+    "parent_id": 19,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 121,
+    "region_name": "맨체스터",
+    "name_en": "Manchester",
+    "code": "GB-MAN",
+    "parent_id": 19,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 122,
+    "region_name": "버밍엄",
+    "name_en": "Birmingham",
+    "code": "GB-BHX",
+    "parent_id": 19,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 123,
+    "region_name": "리즈/프래드포드",
+    "name_en": "Leeds/Bradford",
+    "code": "GB-LBA",
+    "parent_id": 19,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 124,
+    "region_name": "리버풀",
+    "name_en": "Liverpool",
+    "code": "GB-LPL",
+    "parent_id": 19,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 125,
+    "region_name": "사우스샘프턴",
+    "name_en": "Southampton",
+    "code": "GB-SOU",
+    "parent_id": 19,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 126,
+    "region_name": "셰필드",
+    "name_en": "Sheffield",
+    "code": "GB-SHF",
+    "parent_id": 19,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 127,
+    "region_name": "로마",
+    "name_en": "Rome",
+    "code": "IT-ROM",
+    "parent_id": 20,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 128,
+    "region_name": "밀라노",
+    "name_en": "Milan",
+    "code": "IT-MIL",
+    "parent_id": 20,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 129,
+    "region_name": "베네치아",
+    "name_en": "Venice",
+    "code": "IT-VCE",
+    "parent_id": 20,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 130,
+    "region_name": "피렌체",
+    "name_en": "Florence",
+    "code": "IT-FLR",
+    "parent_id": 20,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 131,
+    "region_name": "나폴리",
+    "name_en": "Naples",
+    "code": "IT-NAP",
+    "parent_id": 20,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 132,
+    "region_name": "제노바",
+    "name_en": "Genoa",
+    "code": "IT-GEN",
+    "parent_id": 20,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 133,
+    "region_name": "볼로냐",
+    "name_en": "Bologna",
+    "code": "IT-BLQ",
+    "parent_id": 20,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 134,
+    "region_name": "팔레르모",
+    "name_en": "Palermo",
+    "code": "IT-PMO",
+    "parent_id": 20,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 135,
+    "region_name": "암스테르담",
+    "name_en": "Amsterdam",
+    "code": "NL-AMS",
+    "parent_id": 21,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 136,
+    "region_name": "로테르담",
+    "name_en": "Rotterdam",
+    "code": "NL-RTM",
+    "parent_id": 21,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 137,
+    "region_name": "브뤼셀",
+    "name_en": "Brussels",
+    "code": "BE-BRU",
+    "parent_id": 22,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 138,
+    "region_name": "앤트워프",
+    "name_en": "Antwerp",
+    "code": "BE-ANR",
+    "parent_id": 22,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 139,
+    "region_name": "더블린",
+    "name_en": "Dublin",
+    "code": "IE-DUB",
+    "parent_id": 23,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 140,
+    "region_name": "취리히",
+    "name_en": "Zurich",
+    "code": "CH-ZRH",
+    "parent_id": 24,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 141,
+    "region_name": "빈",
+    "name_en": "Vienna",
+    "code": "AT-VIE",
+    "parent_id": 25,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 142,
+    "region_name": "프라하",
+    "name_en": "Prague",
+    "code": "CZ-PRG",
+    "parent_id": 26,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 143,
+    "region_name": "레이캬비크",
+    "name_en": "Reykjavik",
+    "code": "IS-REK",
+    "parent_id": 27,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 144,
+    "region_name": "아테네",
+    "name_en": "Athens",
+    "code": "GR-ATH",
+    "parent_id": 464,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 145,
+    "region_name": "테살로니키",
+    "name_en": "Thessaloniki",
+    "code": "GR-SKG",
+    "parent_id": 464,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 146,
+    "region_name": "미코노스",
+    "name_en": "Mykonos",
+    "code": "GR-JMK",
+    "parent_id": 464,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 147,
+    "region_name": "산토리니",
+    "name_en": "Santorini",
+    "code": "GR-JTR",
+    "parent_id": 464,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 148,
+    "region_name": "크레타",
+    "name_en": "Crete",
+    "code": "GR-HER",
+    "parent_id": 464,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 149,
+    "region_name": "로도스",
+    "name_en": "Rhodes",
+    "code": "GR-RHO",
+    "parent_id": 464,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 150,
+    "region_name": "코르푸",
+    "name_en": "Corfu",
+    "code": "GR-CFU",
+    "parent_id": 464,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 151,
+    "region_name": "마드리드",
+    "name_en": "Madrid",
+    "code": "ES-MAD",
+    "parent_id": 465,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 152,
+    "region_name": "바르셀로나",
+    "name_en": "Barcelona",
+    "code": "ES-BCN",
+    "parent_id": 465,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 153,
+    "region_name": "세비야",
+    "name_en": "Seville",
+    "code": "ES-SVQ",
+    "parent_id": 465,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 154,
+    "region_name": "그라나다",
+    "name_en": "Granada",
+    "code": "ES-GRQ",
+    "parent_id": 465,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 155,
+    "region_name": "말라가",
+    "name_en": "Málaga",
+    "code": "ES-AGP",
+    "parent_id": 465,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 156,
+    "region_name": "발렌시아",
+    "name_en": "Valencia",
+    "code": "ES-VLC",
+    "parent_id": 465,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 157,
+    "region_name": "빌바오",
+    "name_en": "Bilbao",
+    "code": "ES-BIO",
+    "parent_id": 465,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 158,
+    "region_name": "팔마데마요르카",
+    "name_en": "Palma de Mallorca",
+    "code": "ES-PMI",
+    "parent_id": 465,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 159,
+    "region_name": "톨레도",
+    "name_en": "Toledo",
+    "code": "ES-TLD",
+    "parent_id": 465,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 160,
+    "region_name": "산티아고데콤포스텔라",
+    "name_en": "Santiago de Compostela",
+    "code": "ES-SCQ",
+    "parent_id": 465,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 161,
+    "region_name": "리스본",
+    "name_en": "Lisbon",
+    "code": "PT-LIS",
+    "parent_id": 466,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 162,
+    "region_name": "포르투",
+    "name_en": "Porto",
+    "code": "PT-OPO",
+    "parent_id": 466,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 163,
+    "region_name": "파루",
+    "name_en": "Faro",
+    "code": "PT-FAO",
+    "parent_id": 466,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 164,
+    "region_name": "코임브라",
+    "name_en": "Coimbra",
+    "code": "PT-CBR",
+    "parent_id": 466,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 165,
+    "region_name": "브라가",
+    "name_en": "Braga",
+    "code": "PT-BRG",
+    "parent_id": 466,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 166,
+    "region_name": "마데이라",
+    "name_en": "Funchal (Madeira)",
+    "code": "PT-FNC",
+    "parent_id": 466,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 167,
+    "region_name": "아베이루",
+    "name_en": "Aveiro",
+    "code": "PT-AVR",
+    "parent_id": 466,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 168,
+    "region_name": "에보라",
+    "name_en": "Évora",
+    "code": "PT-EVR",
+    "parent_id": 466,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 169,
+    "region_name": "자그레브",
+    "name_en": "Zagreb",
+    "code": "HR-ZAG",
+    "parent_id": 467,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 170,
+    "region_name": "두브로브니크",
+    "name_en": "Dubrovnik",
+    "code": "HR-DBV",
+    "parent_id": 467,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 171,
+    "region_name": "스플리트",
+    "name_en": "Split",
+    "code": "HR-SPU",
+    "parent_id": 467,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 172,
+    "region_name": "자다르",
+    "name_en": "Zadar",
+    "code": "HR-ZAD",
+    "parent_id": 467,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 173,
+    "region_name": "리예카",
+    "name_en": "Rijeka",
+    "code": "HR-RJK",
+    "parent_id": 467,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 174,
+    "region_name": "풀라",
+    "name_en": "Pula",
+    "code": "HR-PUY",
+    "parent_id": 467,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 175,
+    "region_name": "시벤니크",
+    "name_en": "Šibenik",
+    "code": "HR-SBK",
+    "parent_id": 467,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 176,
+    "region_name": "오시예크",
+    "name_en": "Osijek",
+    "code": "HR-OSI",
+    "parent_id": 467,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 177,
+    "region_name": "오타와",
+    "name_en": "Ottawa",
+    "code": "CA-YOW",
+    "parent_id": 28,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 178,
+    "region_name": "토론토",
+    "name_en": "Toronto",
+    "code": "CA-YYZ",
+    "parent_id": 28,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 179,
+    "region_name": "밴쿠버",
+    "name_en": "Vancouver",
+    "code": "CA-YVR",
+    "parent_id": 28,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 180,
+    "region_name": "퀘벡시티",
+    "name_en": "Québec City",
+    "code": "CA-YQB",
+    "parent_id": 28,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 181,
+    "region_name": "몬트리올",
+    "name_en": "Montréal",
+    "code": "CA-YUL",
+    "parent_id": 28,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 182,
+    "region_name": "나이아가라폴스",
+    "name_en": "Niagara Falls",
+    "code": "CA-NIA",
+    "parent_id": 28,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 183,
+    "region_name": "빅토리아",
+    "name_en": "Victoria",
+    "code": "CA-YYJ",
+    "parent_id": 28,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 184,
+    "region_name": "캘거리",
+    "name_en": "Calgary",
+    "code": "CA-YYC",
+    "parent_id": 28,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 185,
+    "region_name": "에드먼턴",
+    "name_en": "Edmonton",
+    "code": "CA-YEG",
+    "parent_id": 28,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 186,
+    "region_name": "휘슬러",
+    "name_en": "Whistler",
+    "code": "CA-WHS",
+    "parent_id": 28,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 187,
+    "region_name": "워싱턴 D.C.",
+    "name_en": "Washington D.C.",
+    "code": "US-WAS",
+    "parent_id": 29,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 188,
+    "region_name": "뉴욕",
+    "name_en": "New York",
+    "code": "US-NYC",
+    "parent_id": 29,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 189,
+    "region_name": "로스앤젤레스",
+    "name_en": "Los Angeles",
+    "code": "US-LAX",
+    "parent_id": 29,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 190,
+    "region_name": "샌프란시스코",
+    "name_en": "San Francisco",
+    "code": "US-SFO",
+    "parent_id": 29,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 191,
+    "region_name": "라스베이거스",
+    "name_en": "Las Vegas",
+    "code": "US-LAS",
+    "parent_id": 29,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 192,
+    "region_name": "시카고",
+    "name_en": "Chicago",
+    "code": "US-CHI",
+    "parent_id": 29,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 193,
+    "region_name": "마이애미",
+    "name_en": "Miami",
+    "code": "US-MIA",
+    "parent_id": 29,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 194,
+    "region_name": "보스턴",
+    "name_en": "Boston",
+    "code": "US-BOS",
+    "parent_id": 29,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 195,
+    "region_name": "필라델피아",
+    "name_en": "Philadelphia",
+    "code": "US-PHL",
+    "parent_id": 29,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 196,
+    "region_name": "올랜도",
+    "name_en": "Orlando",
+    "code": "US-MCO",
+    "parent_id": 29,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 197,
+    "region_name": "샌디에이고",
+    "name_en": "San Diego",
+    "code": "US-SAN",
+    "parent_id": 29,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 198,
+    "region_name": "멕시코 시티",
+    "name_en": "Mexico City",
+    "code": "MX-MEX",
+    "parent_id": 30,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 199,
+    "region_name": "칸쿤",
+    "name_en": "Cancun",
+    "code": "MX-CUN",
+    "parent_id": 30,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 200,
+    "region_name": "쿠스코",
+    "name_en": "Cusco",
+    "code": "PE-CUZ",
+    "parent_id": 31,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 201,
+    "region_name": "리마",
+    "name_en": "Lima",
+    "code": "PE-LIM",
+    "parent_id": 31,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 202,
+    "region_name": "브라질리아",
+    "name_en": "Brasília",
+    "code": "BR-BSB",
+    "parent_id": 32,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 203,
+    "region_name": "리우데자네이루",
+    "name_en": "Rio de Janeiro",
+    "code": "BR-GIG",
+    "parent_id": 32,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 204,
+    "region_name": "이과수",
+    "name_en": "Foz do Iguaçu",
+    "code": "BR-IGU",
+    "parent_id": 32,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 205,
+    "region_name": "부에노스아이레스",
+    "name_en": "Buenos Aires",
+    "code": "AR-EZE",
+    "parent_id": 33,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 206,
+    "region_name": "바릴로체",
+    "name_en": "Bariloche",
+    "code": "AR-BRC",
+    "parent_id": 33,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 207,
+    "region_name": "엘 칼라파테",
+    "name_en": "El Calafate",
+    "code": "AR-FTE",
+    "parent_id": 33,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 208,
+    "region_name": "우수아이아",
+    "name_en": "Ushuaia",
+    "code": "AR-USH",
+    "parent_id": 33,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 209,
+    "region_name": "시드니",
+    "name_en": "Sydney",
+    "code": "AU-SYD",
+    "parent_id": 34,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 210,
+    "region_name": "멜버른",
+    "name_en": "Melbourne",
+    "code": "AU-MEL",
+    "parent_id": 34,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 211,
+    "region_name": "골드코스트",
+    "name_en": "Gold Coast",
+    "code": "AU-OOL",
+    "parent_id": 34,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 212,
+    "region_name": "케언즈",
+    "name_en": "Cairns",
+    "code": "AU-CNS",
+    "parent_id": 34,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 213,
+    "region_name": "태즈메이니아",
+    "name_en": "Tasmania",
+    "code": "AU-TAS",
+    "parent_id": 34,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 214,
+    "region_name": "오클랜드",
+    "name_en": "Auckland",
+    "code": "NZ-AKL",
+    "parent_id": 35,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 215,
+    "region_name": "로토루아",
+    "name_en": "Rotorua",
+    "code": "NZ-ROT",
+    "parent_id": 35,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 216,
+    "region_name": "타우포",
+    "name_en": "Taupō",
+    "code": "NZ-TPO",
+    "parent_id": 35,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 217,
+    "region_name": "웰링턴",
+    "name_en": "Wellington",
+    "code": "NZ-WLG",
+    "parent_id": 35,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 218,
+    "region_name": "베이 오브 아일랜드",
+    "name_en": "Bay of Islands",
+    "code": "NZ-BOI",
+    "parent_id": 35,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 219,
+    "region_name": "퀸스타운",
+    "name_en": "Queenstown",
+    "code": "NZ-ZQN",
+    "parent_id": 35,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 220,
+    "region_name": "밀포드 사운드",
+    "name_en": "Milford Sound",
+    "code": "NZ-MFD",
+    "parent_id": 35,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 221,
+    "region_name": "테카포",
+    "name_en": "Lake Tekapo",
+    "code": "NZ-TKP",
+    "parent_id": 35,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 222,
+    "region_name": "마운트쿡",
+    "name_en": "Mount Cook / Aoraki",
+    "code": "NZ-MTC",
+    "parent_id": 35,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 223,
+    "region_name": "크라이스트처치",
+    "name_en": "Christchurch",
+    "code": "NZ-CHC",
+    "parent_id": 35,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 224,
+    "region_name": "마라케시",
+    "name_en": "Marrakech",
+    "code": "MA-RAK",
+    "parent_id": 36,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 225,
+    "region_name": "페스",
+    "name_en": "Fès",
+    "code": "MA-FES",
+    "parent_id": 36,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 226,
+    "region_name": "카사블랑카",
+    "name_en": "Casablanca",
+    "code": "MA-CAS",
+    "parent_id": 36,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 227,
+    "region_name": "쉐프샤우엔",
+    "name_en": "Chefchaouen",
+    "code": "MA-CHE",
+    "parent_id": 36,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 228,
+    "region_name": "메르주가",
+    "name_en": "Merzouga",
+    "code": "MA-MER",
+    "parent_id": 36,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 229,
+    "region_name": "탕헤르",
+    "name_en": "Tangier",
+    "code": "MA-TNG",
+    "parent_id": 36,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 230,
+    "region_name": "카이로",
+    "name_en": "Cairo",
+    "code": "EG-CAI",
+    "parent_id": 37,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 231,
+    "region_name": "룩소르",
+    "name_en": "Luxor",
+    "code": "EG-LXR",
+    "parent_id": 37,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 232,
+    "region_name": "아스완",
+    "name_en": "Aswan",
+    "code": "EG-ASW",
+    "parent_id": 37,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 233,
+    "region_name": "후르가다",
+    "name_en": "Hurghada",
+    "code": "EG-HRG",
+    "parent_id": 37,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 234,
+    "region_name": "샤름엘셰이크",
+    "name_en": "Sharm El-Sheikh",
+    "code": "EG-SSH",
+    "parent_id": 37,
+    "depth": 3,
+    "subregion": null
+  },
+  {
+    "id": 235,
+    "region_name": "종로구",
+    "name_en": "Jongno-gu",
+    "code": "KR-11-01",
+    "parent_id": 38,
+    "depth": 4,
+    "subregion": "서울"
+  },
+  {
+    "id": 236,
+    "region_name": "중구",
+    "name_en": "Jung-gu",
+    "code": "KR-11-02",
+    "parent_id": 38,
+    "depth": 4,
+    "subregion": "서울"
+  },
+  {
+    "id": 237,
+    "region_name": "용산구",
+    "name_en": "Yongsan-gu",
+    "code": "KR-11-03",
+    "parent_id": 38,
+    "depth": 4,
+    "subregion": "서울"
+  },
+  {
+    "id": 238,
+    "region_name": "성동구",
+    "name_en": "Seongdong-gu",
+    "code": "KR-11-04",
+    "parent_id": 38,
+    "depth": 4,
+    "subregion": "서울"
+  },
+  {
+    "id": 239,
+    "region_name": "광진구",
+    "name_en": "Gwangjin-gu",
+    "code": "KR-11-05",
+    "parent_id": 38,
+    "depth": 4,
+    "subregion": "서울"
+  },
+  {
+    "id": 240,
+    "region_name": "동대문구",
+    "name_en": "Dongdaemun-gu",
+    "code": "KR-11-06",
+    "parent_id": 38,
+    "depth": 4,
+    "subregion": "서울"
+  },
+  {
+    "id": 241,
+    "region_name": "중랑구",
+    "name_en": "Jungnang-gu",
+    "code": "KR-11-07",
+    "parent_id": 38,
+    "depth": 4,
+    "subregion": "서울"
+  },
+  {
+    "id": 242,
+    "region_name": "성북구",
+    "name_en": "Seongbuk-gu",
+    "code": "KR-11-08",
+    "parent_id": 38,
+    "depth": 4,
+    "subregion": "서울"
+  },
+  {
+    "id": 243,
+    "region_name": "강북구",
+    "name_en": "Gangbuk-gu",
+    "code": "KR-11-09",
+    "parent_id": 38,
+    "depth": 4,
+    "subregion": "서울"
+  },
+  {
+    "id": 244,
+    "region_name": "도봉구",
+    "name_en": "Dobong-gu",
+    "code": "KR-11-10",
+    "parent_id": 38,
+    "depth": 4,
+    "subregion": "서울"
+  },
+  {
+    "id": 245,
+    "region_name": "노원구",
+    "name_en": "Nowon-gu",
+    "code": "KR-11-11",
+    "parent_id": 38,
+    "depth": 4,
+    "subregion": "서울"
+  },
+  {
+    "id": 246,
+    "region_name": "은평구",
+    "name_en": "Eunpyeong-gu",
+    "code": "KR-11-12",
+    "parent_id": 38,
+    "depth": 4,
+    "subregion": "서울"
+  },
+  {
+    "id": 247,
+    "region_name": "서대문구",
+    "name_en": "Seodaemun-gu",
+    "code": "KR-11-13",
+    "parent_id": 38,
+    "depth": 4,
+    "subregion": "서울"
+  },
+  {
+    "id": 248,
+    "region_name": "마포구",
+    "name_en": "Mapo-gu",
+    "code": "KR-11-14",
+    "parent_id": 38,
+    "depth": 4,
+    "subregion": "서울"
+  },
+  {
+    "id": 249,
+    "region_name": "양천구",
+    "name_en": "Yangcheon-gu",
+    "code": "KR-11-15",
+    "parent_id": 38,
+    "depth": 4,
+    "subregion": "서울"
+  },
+  {
+    "id": 250,
+    "region_name": "강서구",
+    "name_en": "Gangseo-gu",
+    "code": "KR-11-16",
+    "parent_id": 38,
+    "depth": 4,
+    "subregion": "서울"
+  },
+  {
+    "id": 251,
+    "region_name": "구로구",
+    "name_en": "Guro-gu",
+    "code": "KR-11-17",
+    "parent_id": 38,
+    "depth": 4,
+    "subregion": "서울"
+  },
+  {
+    "id": 252,
+    "region_name": "금천구",
+    "name_en": "Geumcheon-gu",
+    "code": "KR-11-18",
+    "parent_id": 38,
+    "depth": 4,
+    "subregion": "서울"
+  },
+  {
+    "id": 253,
+    "region_name": "영등포구",
+    "name_en": "Yeongdeungpo-gu",
+    "code": "KR-11-19",
+    "parent_id": 38,
+    "depth": 4,
+    "subregion": "서울"
+  },
+  {
+    "id": 254,
+    "region_name": "동작구",
+    "name_en": "Dongjak-gu",
+    "code": "KR-11-20",
+    "parent_id": 38,
+    "depth": 4,
+    "subregion": "서울"
+  },
+  {
+    "id": 255,
+    "region_name": "관악구",
+    "name_en": "Gwanak-gu",
+    "code": "KR-11-21",
+    "parent_id": 38,
+    "depth": 4,
+    "subregion": "서울"
+  },
+  {
+    "id": 256,
+    "region_name": "서초구",
+    "name_en": "Seocho-gu",
+    "code": "KR-11-22",
+    "parent_id": 38,
+    "depth": 4,
+    "subregion": "서울"
+  },
+  {
+    "id": 257,
+    "region_name": "강남구",
+    "name_en": "Gangnam-gu",
+    "code": "KR-11-23",
+    "parent_id": 38,
+    "depth": 4,
+    "subregion": "서울"
+  },
+  {
+    "id": 258,
+    "region_name": "송파구",
+    "name_en": "Songpa-gu",
+    "code": "KR-11-24",
+    "parent_id": 38,
+    "depth": 4,
+    "subregion": "서울"
+  },
+  {
+    "id": 259,
+    "region_name": "강동구",
+    "name_en": "Gangdong-gu",
+    "code": "KR-11-25",
+    "parent_id": 38,
+    "depth": 4,
+    "subregion": "서울"
+  },
+  {
+    "id": 260,
+    "region_name": "수원시",
+    "name_en": "Suwon-si",
+    "code": "KR-41-01",
+    "parent_id": 39,
+    "depth": 4,
+    "subregion": "경기도"
+  },
+  {
+    "id": 261,
+    "region_name": "성남시",
+    "name_en": "Seongnam-si",
+    "code": "KR-41-02",
+    "parent_id": 39,
+    "depth": 4,
+    "subregion": "경기도"
+  },
+  {
+    "id": 262,
+    "region_name": "고양시",
+    "name_en": "Goyang-si",
+    "code": "KR-41-03",
+    "parent_id": 39,
+    "depth": 4,
+    "subregion": "경기도"
+  },
+  {
+    "id": 263,
+    "region_name": "용인시",
+    "name_en": "Yongin-si",
+    "code": "KR-41-04",
+    "parent_id": 39,
+    "depth": 4,
+    "subregion": "경기도"
+  },
+  {
+    "id": 264,
+    "region_name": "부천시",
+    "name_en": "Bucheon-si",
+    "code": "KR-41-05",
+    "parent_id": 39,
+    "depth": 4,
+    "subregion": "경기도"
+  },
+  {
+    "id": 265,
+    "region_name": "안산시",
+    "name_en": "Ansan-si",
+    "code": "KR-41-06",
+    "parent_id": 39,
+    "depth": 4,
+    "subregion": "경기도"
+  },
+  {
+    "id": 266,
+    "region_name": "안양시",
+    "name_en": "Anyang-si",
+    "code": "KR-41-07",
+    "parent_id": 39,
+    "depth": 4,
+    "subregion": "경기도"
+  },
+  {
+    "id": 267,
+    "region_name": "남양주시",
+    "name_en": "Namyangju-si",
+    "code": "KR-41-08",
+    "parent_id": 39,
+    "depth": 4,
+    "subregion": "경기도"
+  },
+  {
+    "id": 268,
+    "region_name": "화성시",
+    "name_en": "Hwaseong-si",
+    "code": "KR-41-09",
+    "parent_id": 39,
+    "depth": 4,
+    "subregion": "경기도"
+  },
+  {
+    "id": 269,
+    "region_name": "평택시",
+    "name_en": "Pyeongtaek-si",
+    "code": "KR-41-10",
+    "parent_id": 39,
+    "depth": 4,
+    "subregion": "경기도"
+  },
+  {
+    "id": 270,
+    "region_name": "의정부시",
+    "name_en": "Uijeongbu-si",
+    "code": "KR-41-11",
+    "parent_id": 39,
+    "depth": 4,
+    "subregion": "경기도"
+  },
+  {
+    "id": 271,
+    "region_name": "시흥시",
+    "name_en": "Siheung-si",
+    "code": "KR-41-12",
+    "parent_id": 39,
+    "depth": 4,
+    "subregion": "경기도"
+  },
+  {
+    "id": 272,
+    "region_name": "파주시",
+    "name_en": "Paju-si",
+    "code": "KR-41-13",
+    "parent_id": 39,
+    "depth": 4,
+    "subregion": "경기도"
+  },
+  {
+    "id": 273,
+    "region_name": "김포시",
+    "name_en": "Gimpo-si",
+    "code": "KR-41-14",
+    "parent_id": 39,
+    "depth": 4,
+    "subregion": "경기도"
+  },
+  {
+    "id": 274,
+    "region_name": "광명시",
+    "name_en": "Gwangmyeong-si",
+    "code": "KR-41-15",
+    "parent_id": 39,
+    "depth": 4,
+    "subregion": "경기도"
+  },
+  {
+    "id": 275,
+    "region_name": "군포시",
+    "name_en": "Gunpo-si",
+    "code": "KR-41-16",
+    "parent_id": 39,
+    "depth": 4,
+    "subregion": "경기도"
+  },
+  {
+    "id": 276,
+    "region_name": "이천시",
+    "name_en": "Icheon-si",
+    "code": "KR-41-17",
+    "parent_id": 39,
+    "depth": 4,
+    "subregion": "경기도"
+  },
+  {
+    "id": 277,
+    "region_name": "오산시",
+    "name_en": "Osan-si",
+    "code": "KR-41-18",
+    "parent_id": 39,
+    "depth": 4,
+    "subregion": "경기도"
+  },
+  {
+    "id": 278,
+    "region_name": "하남시",
+    "name_en": "Hanam-si",
+    "code": "KR-41-19",
+    "parent_id": 39,
+    "depth": 4,
+    "subregion": "경기도"
+  },
+  {
+    "id": 279,
+    "region_name": "양주시",
+    "name_en": "Yangju-si",
+    "code": "KR-41-20",
+    "parent_id": 39,
+    "depth": 4,
+    "subregion": "경기도"
+  },
+  {
+    "id": 280,
+    "region_name": "구리시",
+    "name_en": "Guri-si",
+    "code": "KR-41-21",
+    "parent_id": 39,
+    "depth": 4,
+    "subregion": "경기도"
+  },
+  {
+    "id": 281,
+    "region_name": "안성시",
+    "name_en": "Anseong-si",
+    "code": "KR-41-22",
+    "parent_id": 39,
+    "depth": 4,
+    "subregion": "경기도"
+  },
+  {
+    "id": 282,
+    "region_name": "포천시",
+    "name_en": "Pocheon-si",
+    "code": "KR-41-23",
+    "parent_id": 39,
+    "depth": 4,
+    "subregion": "경기도"
+  },
+  {
+    "id": 283,
+    "region_name": "의왕시",
+    "name_en": "Uiwang-si",
+    "code": "KR-41-24",
+    "parent_id": 39,
+    "depth": 4,
+    "subregion": "경기도"
+  },
+  {
+    "id": 284,
+    "region_name": "여주시",
+    "name_en": "Yeoju-si",
+    "code": "KR-41-25",
+    "parent_id": 39,
+    "depth": 4,
+    "subregion": "경기도"
+  },
+  {
+    "id": 285,
+    "region_name": "양평군",
+    "name_en": "Yangpyeong-gun",
+    "code": "KR-41-26",
+    "parent_id": 39,
+    "depth": 4,
+    "subregion": "경기도"
+  },
+  {
+    "id": 286,
+    "region_name": "동두천시",
+    "name_en": "Dongducheon-si",
+    "code": "KR-41-27",
+    "parent_id": 39,
+    "depth": 4,
+    "subregion": "경기도"
+  },
+  {
+    "id": 287,
+    "region_name": "가평군",
+    "name_en": "Gapyeong-gun",
+    "code": "KR-41-28",
+    "parent_id": 39,
+    "depth": 4,
+    "subregion": "경기도"
+  },
+  {
+    "id": 288,
+    "region_name": "연천군",
+    "name_en": "Yeoncheon-gun",
+    "code": "KR-41-29",
+    "parent_id": 39,
+    "depth": 4,
+    "subregion": "경기도"
+  },
+  {
+    "id": 289,
+    "region_name": "광주시",
+    "name_en": "Gwangju-si",
+    "code": "KR-41-30",
+    "parent_id": 39,
+    "depth": 4,
+    "subregion": "경기도"
+  },
+  {
+    "id": 290,
+    "region_name": "과천시",
+    "name_en": "Gwacheon-si",
+    "code": "KR-41-31",
+    "parent_id": 39,
+    "depth": 4,
+    "subregion": "경기도"
+  },
+  {
+    "id": 291,
+    "region_name": "중구",
+    "name_en": "Jung-gu",
+    "code": "KR-28-01",
+    "parent_id": 40,
+    "depth": 4,
+    "subregion": "인천"
+  },
+  {
+    "id": 292,
+    "region_name": "동구",
+    "name_en": "Dong-gu",
+    "code": "KR-28-02",
+    "parent_id": 40,
+    "depth": 4,
+    "subregion": "인천"
+  },
+  {
+    "id": 293,
+    "region_name": "미추홀구",
+    "name_en": "Michuhol-gu",
+    "code": "KR-28-03",
+    "parent_id": 40,
+    "depth": 4,
+    "subregion": "인천"
+  },
+  {
+    "id": 294,
+    "region_name": "연수구",
+    "name_en": "Yeonsu-gu",
+    "code": "KR-28-04",
+    "parent_id": 40,
+    "depth": 4,
+    "subregion": "인천"
+  },
+  {
+    "id": 295,
+    "region_name": "남동구",
+    "name_en": "Namdong-gu",
+    "code": "KR-28-05",
+    "parent_id": 40,
+    "depth": 4,
+    "subregion": "인천"
+  },
+  {
+    "id": 296,
+    "region_name": "부평구",
+    "name_en": "Bupyeong-gu",
+    "code": "KR-28-06",
+    "parent_id": 40,
+    "depth": 4,
+    "subregion": "인천"
+  },
+  {
+    "id": 297,
+    "region_name": "계양구",
+    "name_en": "Gyeyang-gu",
+    "code": "KR-28-07",
+    "parent_id": 40,
+    "depth": 4,
+    "subregion": "인천"
+  },
+  {
+    "id": 298,
+    "region_name": "서구",
+    "name_en": "Seo-gu",
+    "code": "KR-28-08",
+    "parent_id": 40,
+    "depth": 4,
+    "subregion": "인천"
+  },
+  {
+    "id": 299,
+    "region_name": "강화군",
+    "name_en": "Ganghwa-gun",
+    "code": "KR-28-09",
+    "parent_id": 40,
+    "depth": 4,
+    "subregion": "인천"
+  },
+  {
+    "id": 300,
+    "region_name": "옹진군",
+    "name_en": "Ongjin-gun",
+    "code": "KR-28-10",
+    "parent_id": 40,
+    "depth": 4,
+    "subregion": "인천"
+  },
+  {
+    "id": 301,
+    "region_name": "동구",
+    "name_en": "Dong-gu",
+    "code": "KR-30-01",
+    "parent_id": 41,
+    "depth": 4,
+    "subregion": "대전"
+  },
+  {
+    "id": 302,
+    "region_name": "중구",
+    "name_en": "Jung-gu",
+    "code": "KR-30-02",
+    "parent_id": 41,
+    "depth": 4,
+    "subregion": "대전"
+  },
+  {
+    "id": 303,
+    "region_name": "서구",
+    "name_en": "Seo-gu",
+    "code": "KR-30-03",
+    "parent_id": 41,
+    "depth": 4,
+    "subregion": "대전"
+  },
+  {
+    "id": 304,
+    "region_name": "유성구",
+    "name_en": "Yuseong-gu",
+    "code": "KR-30-04",
+    "parent_id": 41,
+    "depth": 4,
+    "subregion": "대전"
+  },
+  {
+    "id": 305,
+    "region_name": "대덕구",
+    "name_en": "Daedeok-gu",
+    "code": "KR-30-05",
+    "parent_id": 41,
+    "depth": 4,
+    "subregion": "대전"
+  },
+  {
+    "id": 306,
+    "region_name": "중구",
+    "name_en": "Jung-gu",
+    "code": "KR-27-01",
+    "parent_id": 42,
+    "depth": 4,
+    "subregion": "대구"
+  },
+  {
+    "id": 307,
+    "region_name": "동구",
+    "name_en": "Dong-gu",
+    "code": "KR-27-02",
+    "parent_id": 42,
+    "depth": 4,
+    "subregion": "대구"
+  },
+  {
+    "id": 308,
+    "region_name": "서구",
+    "name_en": "Seo-gu",
+    "code": "KR-27-03",
+    "parent_id": 42,
+    "depth": 4,
+    "subregion": "대구"
+  },
+  {
+    "id": 309,
+    "region_name": "남구",
+    "name_en": "Nam-gu",
+    "code": "KR-27-04",
+    "parent_id": 42,
+    "depth": 4,
+    "subregion": "대구"
+  },
+  {
+    "id": 310,
+    "region_name": "북구",
+    "name_en": "Buk-gu",
+    "code": "KR-27-05",
+    "parent_id": 42,
+    "depth": 4,
+    "subregion": "대구"
+  },
+  {
+    "id": 311,
+    "region_name": "수성구",
+    "name_en": "Suseong-gu",
+    "code": "KR-27-06",
+    "parent_id": 42,
+    "depth": 4,
+    "subregion": "대구"
+  },
+  {
+    "id": 312,
+    "region_name": "달서구",
+    "name_en": "Dalseo-gu",
+    "code": "KR-27-07",
+    "parent_id": 42,
+    "depth": 4,
+    "subregion": "대구"
+  },
+  {
+    "id": 313,
+    "region_name": "달성군",
+    "name_en": "Dalseong-gun",
+    "code": "KR-27-08",
+    "parent_id": 42,
+    "depth": 4,
+    "subregion": "대구"
+  },
+  {
+    "id": 314,
+    "region_name": "동구",
+    "name_en": "Dong-gu",
+    "code": "KR-29-01",
+    "parent_id": 43,
+    "depth": 4,
+    "subregion": "광주"
+  },
+  {
+    "id": 315,
+    "region_name": "서구",
+    "name_en": "Seo-gu",
+    "code": "KR-29-02",
+    "parent_id": 43,
+    "depth": 4,
+    "subregion": "광주"
+  },
+  {
+    "id": 316,
+    "region_name": "남구",
+    "name_en": "Nam-gu",
+    "code": "KR-29-03",
+    "parent_id": 43,
+    "depth": 4,
+    "subregion": "광주"
+  },
+  {
+    "id": 317,
+    "region_name": "북구",
+    "name_en": "Buk-gu",
+    "code": "KR-29-04",
+    "parent_id": 43,
+    "depth": 4,
+    "subregion": "광주"
+  },
+  {
+    "id": 318,
+    "region_name": "광산구",
+    "name_en": "Gwangsan-gu",
+    "code": "KR-29-05",
+    "parent_id": 43,
+    "depth": 4,
+    "subregion": "광주"
+  },
+  {
+    "id": 319,
+    "region_name": "중구",
+    "name_en": "Jung-gu",
+    "code": "KR-26-01",
+    "parent_id": 44,
+    "depth": 4,
+    "subregion": "부산"
+  },
+  {
+    "id": 320,
+    "region_name": "서구",
+    "name_en": "Seo-gu",
+    "code": "KR-26-02",
+    "parent_id": 44,
+    "depth": 4,
+    "subregion": "부산"
+  },
+  {
+    "id": 321,
+    "region_name": "동구",
+    "name_en": "Dong-gu",
+    "code": "KR-26-03",
+    "parent_id": 44,
+    "depth": 4,
+    "subregion": "부산"
+  },
+  {
+    "id": 322,
+    "region_name": "영도구",
+    "name_en": "Yeongdo-gu",
+    "code": "KR-26-04",
+    "parent_id": 44,
+    "depth": 4,
+    "subregion": "부산"
+  },
+  {
+    "id": 323,
+    "region_name": "부산진구",
+    "name_en": "Busan Jin-gu",
+    "code": "KR-26-05",
+    "parent_id": 44,
+    "depth": 4,
+    "subregion": "부산"
+  },
+  {
+    "id": 324,
+    "region_name": "동래구",
+    "name_en": "Dongnae-gu",
+    "code": "KR-26-06",
+    "parent_id": 44,
+    "depth": 4,
+    "subregion": "부산"
+  },
+  {
+    "id": 325,
+    "region_name": "남구",
+    "name_en": "Nam-gu",
+    "code": "KR-26-07",
+    "parent_id": 44,
+    "depth": 4,
+    "subregion": "부산"
+  },
+  {
+    "id": 326,
+    "region_name": "북구",
+    "name_en": "Buk-gu",
+    "code": "KR-26-08",
+    "parent_id": 44,
+    "depth": 4,
+    "subregion": "부산"
+  },
+  {
+    "id": 327,
+    "region_name": "해운대구",
+    "name_en": "Haeundae-gu",
+    "code": "KR-26-09",
+    "parent_id": 44,
+    "depth": 4,
+    "subregion": "부산"
+  },
+  {
+    "id": 328,
+    "region_name": "사하구",
+    "name_en": "Saha-gu",
+    "code": "KR-26-10",
+    "parent_id": 44,
+    "depth": 4,
+    "subregion": "부산"
+  },
+  {
+    "id": 329,
+    "region_name": "금정구",
+    "name_en": "Geumjeong-gu",
+    "code": "KR-26-11",
+    "parent_id": 44,
+    "depth": 4,
+    "subregion": "부산"
+  },
+  {
+    "id": 330,
+    "region_name": "강서구",
+    "name_en": "Gangseo-gu",
+    "code": "KR-26-12",
+    "parent_id": 44,
+    "depth": 4,
+    "subregion": "부산"
+  },
+  {
+    "id": 331,
+    "region_name": "연제구",
+    "name_en": "Yeonje-gu",
+    "code": "KR-26-13",
+    "parent_id": 44,
+    "depth": 4,
+    "subregion": "부산"
+  },
+  {
+    "id": 332,
+    "region_name": "수영구",
+    "name_en": "Suyeong-gu",
+    "code": "KR-26-14",
+    "parent_id": 44,
+    "depth": 4,
+    "subregion": "부산"
+  },
+  {
+    "id": 333,
+    "region_name": "사상구",
+    "name_en": "Sasang-gu",
+    "code": "KR-26-15",
+    "parent_id": 44,
+    "depth": 4,
+    "subregion": "부산"
+  },
+  {
+    "id": 334,
+    "region_name": "기장군",
+    "name_en": "Gijang-gun",
+    "code": "KR-26-16",
+    "parent_id": 44,
+    "depth": 4,
+    "subregion": "부산"
+  },
+  {
+    "id": 335,
+    "region_name": "중구",
+    "name_en": "Jung-gu",
+    "code": "KR-31-01",
+    "parent_id": 45,
+    "depth": 4,
+    "subregion": "울산"
+  },
+  {
+    "id": 336,
+    "region_name": "남구",
+    "name_en": "Nam-gu",
+    "code": "KR-31-02",
+    "parent_id": 45,
+    "depth": 4,
+    "subregion": "울산"
+  },
+  {
+    "id": 337,
+    "region_name": "동구",
+    "name_en": "Dong-gu",
+    "code": "KR-31-03",
+    "parent_id": 45,
+    "depth": 4,
+    "subregion": "울산"
+  },
+  {
+    "id": 338,
+    "region_name": "북구",
+    "name_en": "Buk-gu",
+    "code": "KR-31-04",
+    "parent_id": 45,
+    "depth": 4,
+    "subregion": "울산"
+  },
+  {
+    "id": 339,
+    "region_name": "울주군",
+    "name_en": "Ulju-gun",
+    "code": "KR-31-05",
+    "parent_id": 45,
+    "depth": 4,
+    "subregion": "울산"
+  },
+  {
+    "id": 341,
+    "region_name": "춘천시",
+    "name_en": "Chuncheon-si",
+    "code": "KR-42-01",
+    "parent_id": 47,
+    "depth": 4,
+    "subregion": "강원도"
+  },
+  {
+    "id": 342,
+    "region_name": "원주시",
+    "name_en": "Wonju-si",
+    "code": "KR-42-02",
+    "parent_id": 47,
+    "depth": 4,
+    "subregion": "강원도"
+  },
+  {
+    "id": 343,
+    "region_name": "강릉시",
+    "name_en": "Gangneung-si",
+    "code": "KR-42-03",
+    "parent_id": 47,
+    "depth": 4,
+    "subregion": "강원도"
+  },
+  {
+    "id": 344,
+    "region_name": "동해시",
+    "name_en": "Donghae-si",
+    "code": "KR-42-04",
+    "parent_id": 47,
+    "depth": 4,
+    "subregion": "강원도"
+  },
+  {
+    "id": 345,
+    "region_name": "태백시",
+    "name_en": "Taebaek-si",
+    "code": "KR-42-05",
+    "parent_id": 47,
+    "depth": 4,
+    "subregion": "강원도"
+  },
+  {
+    "id": 346,
+    "region_name": "속초시",
+    "name_en": "Sokcho-si",
+    "code": "KR-42-06",
+    "parent_id": 47,
+    "depth": 4,
+    "subregion": "강원도"
+  },
+  {
+    "id": 347,
+    "region_name": "삼척시",
+    "name_en": "Samcheok-si",
+    "code": "KR-42-07",
+    "parent_id": 47,
+    "depth": 4,
+    "subregion": "강원도"
+  },
+  {
+    "id": 348,
+    "region_name": "홍천군",
+    "name_en": "Hongcheon-gun",
+    "code": "KR-42-08",
+    "parent_id": 47,
+    "depth": 4,
+    "subregion": "강원도"
+  },
+  {
+    "id": 349,
+    "region_name": "횡성군",
+    "name_en": "Hoengseong-gun",
+    "code": "KR-42-09",
+    "parent_id": 47,
+    "depth": 4,
+    "subregion": "강원도"
+  },
+  {
+    "id": 350,
+    "region_name": "영월군",
+    "name_en": "Yeongwol-gun",
+    "code": "KR-42-10",
+    "parent_id": 47,
+    "depth": 4,
+    "subregion": "강원도"
+  },
+  {
+    "id": 351,
+    "region_name": "평창군",
+    "name_en": "Pyeongchang-gun",
+    "code": "KR-42-11",
+    "parent_id": 47,
+    "depth": 4,
+    "subregion": "강원도"
+  },
+  {
+    "id": 352,
+    "region_name": "정선군",
+    "name_en": "Jeongseon-gun",
+    "code": "KR-42-12",
+    "parent_id": 47,
+    "depth": 4,
+    "subregion": "강원도"
+  },
+  {
+    "id": 353,
+    "region_name": "철원군",
+    "name_en": "Cheorwon-gun",
+    "code": "KR-42-13",
+    "parent_id": 47,
+    "depth": 4,
+    "subregion": "강원도"
+  },
+  {
+    "id": 354,
+    "region_name": "화천군",
+    "name_en": "Hwacheon-gun",
+    "code": "KR-42-14",
+    "parent_id": 47,
+    "depth": 4,
+    "subregion": "강원도"
+  },
+  {
+    "id": 355,
+    "region_name": "양구군",
+    "name_en": "Yanggu-gun",
+    "code": "KR-42-15",
+    "parent_id": 47,
+    "depth": 4,
+    "subregion": "강원도"
+  },
+  {
+    "id": 356,
+    "region_name": "인제군",
+    "name_en": "Inje-gun",
+    "code": "KR-42-16",
+    "parent_id": 47,
+    "depth": 4,
+    "subregion": "강원도"
+  },
+  {
+    "id": 357,
+    "region_name": "고성군",
+    "name_en": "Goseong-gun",
+    "code": "KR-42-17",
+    "parent_id": 47,
+    "depth": 4,
+    "subregion": "강원도"
+  },
+  {
+    "id": 358,
+    "region_name": "양양군",
+    "name_en": "Yangyang-gun",
+    "code": "KR-42-18",
+    "parent_id": 47,
+    "depth": 4,
+    "subregion": "강원도"
+  },
+  {
+    "id": 359,
+    "region_name": "청주시",
+    "name_en": "Cheongju-si",
+    "code": "KR-43-01",
+    "parent_id": 48,
+    "depth": 4,
+    "subregion": "충북"
+  },
+  {
+    "id": 360,
+    "region_name": "충주시",
+    "name_en": "Chungju-si",
+    "code": "KR-43-02",
+    "parent_id": 48,
+    "depth": 4,
+    "subregion": "충북"
+  },
+  {
+    "id": 361,
+    "region_name": "제천시",
+    "name_en": "Jecheon-si",
+    "code": "KR-43-03",
+    "parent_id": 48,
+    "depth": 4,
+    "subregion": "충북"
+  },
+  {
+    "id": 362,
+    "region_name": "보은군",
+    "name_en": "Boeun-gun",
+    "code": "KR-43-04",
+    "parent_id": 48,
+    "depth": 4,
+    "subregion": "충북"
+  },
+  {
+    "id": 363,
+    "region_name": "옥천군",
+    "name_en": "Okcheon-gun",
+    "code": "KR-43-05",
+    "parent_id": 48,
+    "depth": 4,
+    "subregion": "충북"
+  },
+  {
+    "id": 364,
+    "region_name": "영동군",
+    "name_en": "Yeongdong-gun",
+    "code": "KR-43-06",
+    "parent_id": 48,
+    "depth": 4,
+    "subregion": "충북"
+  },
+  {
+    "id": 365,
+    "region_name": "진천군",
+    "name_en": "Jincheon-gun",
+    "code": "KR-43-07",
+    "parent_id": 48,
+    "depth": 4,
+    "subregion": "충북"
+  },
+  {
+    "id": 366,
+    "region_name": "괴산군",
+    "name_en": "Goesan-gun",
+    "code": "KR-43-08",
+    "parent_id": 48,
+    "depth": 4,
+    "subregion": "충북"
+  },
+  {
+    "id": 367,
+    "region_name": "음성군",
+    "name_en": "Eumseong-gun",
+    "code": "KR-43-09",
+    "parent_id": 48,
+    "depth": 4,
+    "subregion": "충북"
+  },
+  {
+    "id": 368,
+    "region_name": "단양군",
+    "name_en": "Danyang-gun",
+    "code": "KR-43-10",
+    "parent_id": 48,
+    "depth": 4,
+    "subregion": "충북"
+  },
+  {
+    "id": 369,
+    "region_name": "증평군",
+    "name_en": "Jeungpyeong-gun",
+    "code": "KR-43-11",
+    "parent_id": 48,
+    "depth": 4,
+    "subregion": "충북"
+  },
+  {
+    "id": 370,
+    "region_name": "천안시",
+    "name_en": "Cheonan-si",
+    "code": "KR-44-01",
+    "parent_id": 49,
+    "depth": 4,
+    "subregion": "충남"
+  },
+  {
+    "id": 371,
+    "region_name": "공주시",
+    "name_en": "Gongju-si",
+    "code": "KR-44-02",
+    "parent_id": 49,
+    "depth": 4,
+    "subregion": "충남"
+  },
+  {
+    "id": 372,
+    "region_name": "보령시",
+    "name_en": "Boryeong-si",
+    "code": "KR-44-03",
+    "parent_id": 49,
+    "depth": 4,
+    "subregion": "충남"
+  },
+  {
+    "id": 373,
+    "region_name": "아산시",
+    "name_en": "Asan-si",
+    "code": "KR-44-04",
+    "parent_id": 49,
+    "depth": 4,
+    "subregion": "충남"
+  },
+  {
+    "id": 374,
+    "region_name": "서산시",
+    "name_en": "Seosan-si",
+    "code": "KR-44-05",
+    "parent_id": 49,
+    "depth": 4,
+    "subregion": "충남"
+  },
+  {
+    "id": 375,
+    "region_name": "논산시",
+    "name_en": "Nonsan-si",
+    "code": "KR-44-06",
+    "parent_id": 49,
+    "depth": 4,
+    "subregion": "충남"
+  },
+  {
+    "id": 376,
+    "region_name": "계룡시",
+    "name_en": "Gyeryong-si",
+    "code": "KR-44-07",
+    "parent_id": 49,
+    "depth": 4,
+    "subregion": "충남"
+  },
+  {
+    "id": 377,
+    "region_name": "당진시",
+    "name_en": "Dangjin-si",
+    "code": "KR-44-08",
+    "parent_id": 49,
+    "depth": 4,
+    "subregion": "충남"
+  },
+  {
+    "id": 378,
+    "region_name": "금산군",
+    "name_en": "Geumsan-gun",
+    "code": "KR-44-09",
+    "parent_id": 49,
+    "depth": 4,
+    "subregion": "충남"
+  },
+  {
+    "id": 379,
+    "region_name": "부여군",
+    "name_en": "Buyeo-gun",
+    "code": "KR-44-10",
+    "parent_id": 49,
+    "depth": 4,
+    "subregion": "충남"
+  },
+  {
+    "id": 380,
+    "region_name": "서천군",
+    "name_en": "Seocheon-gun",
+    "code": "KR-44-11",
+    "parent_id": 49,
+    "depth": 4,
+    "subregion": "충남"
+  },
+  {
+    "id": 381,
+    "region_name": "청양군",
+    "name_en": "Cheongyang-gun",
+    "code": "KR-44-12",
+    "parent_id": 49,
+    "depth": 4,
+    "subregion": "충남"
+  },
+  {
+    "id": 382,
+    "region_name": "홍성군",
+    "name_en": "Hongseong-gun",
+    "code": "KR-44-13",
+    "parent_id": 49,
+    "depth": 4,
+    "subregion": "충남"
+  },
+  {
+    "id": 383,
+    "region_name": "예산군",
+    "name_en": "Yesan-gun",
+    "code": "KR-44-14",
+    "parent_id": 49,
+    "depth": 4,
+    "subregion": "충남"
+  },
+  {
+    "id": 384,
+    "region_name": "태안군",
+    "name_en": "Taean-gun",
+    "code": "KR-44-15",
+    "parent_id": 49,
+    "depth": 4,
+    "subregion": "충남"
+  },
+  {
+    "id": 385,
+    "region_name": "전주시",
+    "name_en": "Jeonju-si",
+    "code": "KR-45-01",
+    "parent_id": 50,
+    "depth": 4,
+    "subregion": "전북"
+  },
+  {
+    "id": 386,
+    "region_name": "군산시",
+    "name_en": "Gunsan-si",
+    "code": "KR-45-02",
+    "parent_id": 50,
+    "depth": 4,
+    "subregion": "전북"
+  },
+  {
+    "id": 387,
+    "region_name": "익산시",
+    "name_en": "Iksan-si",
+    "code": "KR-45-03",
+    "parent_id": 50,
+    "depth": 4,
+    "subregion": "전북"
+  },
+  {
+    "id": 388,
+    "region_name": "정읍시",
+    "name_en": "Jeongeup-si",
+    "code": "KR-45-04",
+    "parent_id": 50,
+    "depth": 4,
+    "subregion": "전북"
+  },
+  {
+    "id": 389,
+    "region_name": "남원시",
+    "name_en": "Namwon-si",
+    "code": "KR-45-05",
+    "parent_id": 50,
+    "depth": 4,
+    "subregion": "전북"
+  },
+  {
+    "id": 390,
+    "region_name": "김제시",
+    "name_en": "Gimje-si",
+    "code": "KR-45-06",
+    "parent_id": 50,
+    "depth": 4,
+    "subregion": "전북"
+  },
+  {
+    "id": 391,
+    "region_name": "완주군",
+    "name_en": "Wanju-gun",
+    "code": "KR-45-07",
+    "parent_id": 50,
+    "depth": 4,
+    "subregion": "전북"
+  },
+  {
+    "id": 392,
+    "region_name": "진안군",
+    "name_en": "Jinan-gun",
+    "code": "KR-45-08",
+    "parent_id": 50,
+    "depth": 4,
+    "subregion": "전북"
+  },
+  {
+    "id": 393,
+    "region_name": "무주군",
+    "name_en": "Muju-gun",
+    "code": "KR-45-09",
+    "parent_id": 50,
+    "depth": 4,
+    "subregion": "전북"
+  },
+  {
+    "id": 394,
+    "region_name": "장수군",
+    "name_en": "Jangsu-gun",
+    "code": "KR-45-10",
+    "parent_id": 50,
+    "depth": 4,
+    "subregion": "전북"
+  },
+  {
+    "id": 395,
+    "region_name": "임실군",
+    "name_en": "Imsil-gun",
+    "code": "KR-45-11",
+    "parent_id": 50,
+    "depth": 4,
+    "subregion": "전북"
+  },
+  {
+    "id": 396,
+    "region_name": "순창군",
+    "name_en": "Sunchang-gun",
+    "code": "KR-45-12",
+    "parent_id": 50,
+    "depth": 4,
+    "subregion": "전북"
+  },
+  {
+    "id": 397,
+    "region_name": "고창군",
+    "name_en": "Gochang-gun",
+    "code": "KR-45-13",
+    "parent_id": 50,
+    "depth": 4,
+    "subregion": "전북"
+  },
+  {
+    "id": 398,
+    "region_name": "부안군",
+    "name_en": "Buan-gun",
+    "code": "KR-45-14",
+    "parent_id": 50,
+    "depth": 4,
+    "subregion": "전북"
+  },
+  {
+    "id": 399,
+    "region_name": "목포시",
+    "name_en": "Mokpo-si",
+    "code": "KR-46-01",
+    "parent_id": 51,
+    "depth": 4,
+    "subregion": "전남"
+  },
+  {
+    "id": 400,
+    "region_name": "여수시",
+    "name_en": "Yeosu-si",
+    "code": "KR-46-02",
+    "parent_id": 51,
+    "depth": 4,
+    "subregion": "전남"
+  },
+  {
+    "id": 401,
+    "region_name": "순천시",
+    "name_en": "Suncheon-si",
+    "code": "KR-46-03",
+    "parent_id": 51,
+    "depth": 4,
+    "subregion": "전남"
+  },
+  {
+    "id": 402,
+    "region_name": "나주시",
+    "name_en": "Naju-si",
+    "code": "KR-46-04",
+    "parent_id": 51,
+    "depth": 4,
+    "subregion": "전남"
+  },
+  {
+    "id": 403,
+    "region_name": "광양시",
+    "name_en": "Gwangyang-si",
+    "code": "KR-46-05",
+    "parent_id": 51,
+    "depth": 4,
+    "subregion": "전남"
+  },
+  {
+    "id": 404,
+    "region_name": "담양군",
+    "name_en": "Damyang-gun",
+    "code": "KR-46-06",
+    "parent_id": 51,
+    "depth": 4,
+    "subregion": "전남"
+  },
+  {
+    "id": 405,
+    "region_name": "곡성군",
+    "name_en": "Gokseong-gun",
+    "code": "KR-46-07",
+    "parent_id": 51,
+    "depth": 4,
+    "subregion": "전남"
+  },
+  {
+    "id": 406,
+    "region_name": "구례군",
+    "name_en": "Gurye-gun",
+    "code": "KR-46-08",
+    "parent_id": 51,
+    "depth": 4,
+    "subregion": "전남"
+  },
+  {
+    "id": 407,
+    "region_name": "고흥군",
+    "name_en": "Goheung-gun",
+    "code": "KR-46-09",
+    "parent_id": 51,
+    "depth": 4,
+    "subregion": "전남"
+  },
+  {
+    "id": 408,
+    "region_name": "보성군",
+    "name_en": "Boseong-gun",
+    "code": "KR-46-10",
+    "parent_id": 51,
+    "depth": 4,
+    "subregion": "전남"
+  },
+  {
+    "id": 409,
+    "region_name": "화순군",
+    "name_en": "Hwasun-gun",
+    "code": "KR-46-11",
+    "parent_id": 51,
+    "depth": 4,
+    "subregion": "전남"
+  },
+  {
+    "id": 410,
+    "region_name": "장흥군",
+    "name_en": "Jangheung-gun",
+    "code": "KR-46-12",
+    "parent_id": 51,
+    "depth": 4,
+    "subregion": "전남"
+  },
+  {
+    "id": 411,
+    "region_name": "강진군",
+    "name_en": "Gangjin-gun",
+    "code": "KR-46-13",
+    "parent_id": 51,
+    "depth": 4,
+    "subregion": "전남"
+  },
+  {
+    "id": 412,
+    "region_name": "해남군",
+    "name_en": "Haenam-gun",
+    "code": "KR-46-14",
+    "parent_id": 51,
+    "depth": 4,
+    "subregion": "전남"
+  },
+  {
+    "id": 413,
+    "region_name": "영암군",
+    "name_en": "Yeongam-gun",
+    "code": "KR-46-15",
+    "parent_id": 51,
+    "depth": 4,
+    "subregion": "전남"
+  },
+  {
+    "id": 414,
+    "region_name": "무안군",
+    "name_en": "Muan-gun",
+    "code": "KR-46-16",
+    "parent_id": 51,
+    "depth": 4,
+    "subregion": "전남"
+  },
+  {
+    "id": 415,
+    "region_name": "함평군",
+    "name_en": "Hampyeong-gun",
+    "code": "KR-46-17",
+    "parent_id": 51,
+    "depth": 4,
+    "subregion": "전남"
+  },
+  {
+    "id": 416,
+    "region_name": "영광군",
+    "name_en": "Yeonggwang-gun",
+    "code": "KR-46-18",
+    "parent_id": 51,
+    "depth": 4,
+    "subregion": "전남"
+  },
+  {
+    "id": 417,
+    "region_name": "장성군",
+    "name_en": "Jangseong-gun",
+    "code": "KR-46-19",
+    "parent_id": 51,
+    "depth": 4,
+    "subregion": "전남"
+  },
+  {
+    "id": 418,
+    "region_name": "완도군",
+    "name_en": "Wando-gun",
+    "code": "KR-46-20",
+    "parent_id": 51,
+    "depth": 4,
+    "subregion": "전남"
+  },
+  {
+    "id": 419,
+    "region_name": "진도군",
+    "name_en": "Jindo-gun",
+    "code": "KR-46-21",
+    "parent_id": 51,
+    "depth": 4,
+    "subregion": "전남"
+  },
+  {
+    "id": 420,
+    "region_name": "신안군",
+    "name_en": "Shinan-gun",
+    "code": "KR-46-22",
+    "parent_id": 51,
+    "depth": 4,
+    "subregion": "전남"
+  },
+
+  {
+    "id": 421,
+    "region_name": "포항시",
+    "name_en": "Pohang-si",
+    "code": "KR-47-01",
+    "parent_id": 52,
+    "depth": 4,
+    "subregion": "경북"
+  },
+  {
+    "id": 422,
+    "region_name": "경주시",
+    "name_en": "Gyeongju-si",
+    "code": "KR-47-02",
+    "parent_id": 52,
+    "depth": 4,
+    "subregion": "경북"
+  },
+  {
+    "id": 423,
+    "region_name": "김천시",
+    "name_en": "Gimcheon-si",
+    "code": "KR-47-03",
+    "parent_id": 52,
+    "depth": 4,
+    "subregion": "경북"
+  },
+  {
+    "id": 424,
+    "region_name": "안동시",
+    "name_en": "Andong-si",
+    "code": "KR-47-04",
+    "parent_id": 52,
+    "depth": 4,
+    "subregion": "경북"
+  },
+  {
+    "id": 425,
+    "region_name": "구미시",
+    "name_en": "Gumi-si",
+    "code": "KR-47-05",
+    "parent_id": 52,
+    "depth": 4,
+    "subregion": "경북"
+  },
+  {
+    "id": 426,
+    "region_name": "영주시",
+    "name_en": "Yeongju-si",
+    "code": "KR-47-06",
+    "parent_id": 52,
+    "depth": 4,
+    "subregion": "경북"
+  },
+  {
+    "id": 427,
+    "region_name": "영천시",
+    "name_en": "Yeongcheon-si",
+    "code": "KR-47-07",
+    "parent_id": 52,
+    "depth": 4,
+    "subregion": "경북"
+  },
+  {
+    "id": 428,
+    "region_name": "상주시",
+    "name_en": "Sangju-si",
+    "code": "KR-47-08",
+    "parent_id": 52,
+    "depth": 4,
+    "subregion": "경북"
+  },
+  {
+    "id": 429,
+    "region_name": "문경시",
+    "name_en": "Mungyeong-si",
+    "code": "KR-47-09",
+    "parent_id": 52,
+    "depth": 4,
+    "subregion": "경북"
+  },
+  {
+    "id": 430,
+    "region_name": "경산시",
+    "name_en": "Gyeongsan-si",
+    "code": "KR-47-10",
+    "parent_id": 52,
+    "depth": 4,
+    "subregion": "경북"
+  },
+  {
+    "id": 431,
+    "region_name": "군위군",
+    "name_en": "Gunwi-gun",
+    "code": "KR-47-11",
+    "parent_id": 52,
+    "depth": 4,
+    "subregion": "경북"
+  },
+  {
+    "id": 432,
+    "region_name": "의성군",
+    "name_en": "Uiseong-gun",
+    "code": "KR-47-12",
+    "parent_id": 52,
+    "depth": 4,
+    "subregion": "경북"
+  },
+  {
+    "id": 433,
+    "region_name": "청송군",
+    "name_en": "Cheongsong-gun",
+    "code": "KR-47-13",
+    "parent_id": 52,
+    "depth": 4,
+    "subregion": "경북"
+  },
+  {
+    "id": 434,
+    "region_name": "영양군",
+    "name_en": "Yeongyang-gun",
+    "code": "KR-47-14",
+    "parent_id": 52,
+    "depth": 4,
+    "subregion": "경북"
+  },
+  {
+    "id": 435,
+    "region_name": "영덕군",
+    "name_en": "Yeongdeok-gun",
+    "code": "KR-47-15",
+    "parent_id": 52,
+    "depth": 4,
+    "subregion": "경북"
+  },
+  {
+    "id": 436,
+    "region_name": "청도군",
+    "name_en": "Cheongdo-gun",
+    "code": "KR-47-16",
+    "parent_id": 52,
+    "depth": 4,
+    "subregion": "경북"
+  },
+  {
+    "id": 437,
+    "region_name": "고령군",
+    "name_en": "Goryeong-gun",
+    "code": "KR-47-17",
+    "parent_id": 52,
+    "depth": 4,
+    "subregion": "경북"
+  },
+  {
+    "id": 438,
+    "region_name": "성주군",
+    "name_en": "Seongju-gun",
+    "code": "KR-47-18",
+    "parent_id": 52,
+    "depth": 4,
+    "subregion": "경북"
+  },
+  {
+    "id": 439,
+    "region_name": "칠곡군",
+    "name_en": "Chilgok-gun",
+    "code": "KR-47-19",
+    "parent_id": 52,
+    "depth": 4,
+    "subregion": "경북"
+  },
+  {
+    "id": 440,
+    "region_name": "예천군",
+    "name_en": "Yecheon-gun",
+    "code": "KR-47-20",
+    "parent_id": 52,
+    "depth": 4,
+    "subregion": "경북"
+  },
+
+  {
+    "id": 441,
+    "region_name": "봉화군",
+    "name_en": "Bonghwa-gun",
+    "code": "KR-47-21",
+    "parent_id": 52,
+    "depth": 4,
+    "subregion": "경북"
+  },
+  {
+    "id": 442,
+    "region_name": "울진군",
+    "name_en": "Uljin-gun",
+    "code": "KR-47-22",
+    "parent_id": 52,
+    "depth": 4,
+    "subregion": "경북"
+  },
+  {
+    "id": 443,
+    "region_name": "울릉군",
+    "name_en": "Ulleung-gun",
+    "code": "KR-47-23",
+    "parent_id": 52,
+    "depth": 4,
+    "subregion": "경북"
+  },
+  {
+    "id": 444,
+    "region_name": "창원시",
+    "name_en": "Changwon-si",
+    "code": "KR-48-01",
+    "parent_id": 53,
+    "depth": 4,
+    "subregion": "경남"
+  },
+  {
+    "id": 445,
+    "region_name": "진주시",
+    "name_en": "Jinju-si",
+    "code": "KR-48-02",
+    "parent_id": 53,
+    "depth": 4,
+    "subregion": "경남"
+  },
+  {
+    "id": 446,
+    "region_name": "통영시",
+    "name_en": "Tongyeong-si",
+    "code": "KR-48-03",
+    "parent_id": 53,
+    "depth": 4,
+    "subregion": "경남"
+  },
+  {
+    "id": 447,
+    "region_name": "사천시",
+    "name_en": "Sacheon-si",
+    "code": "KR-48-04",
+    "parent_id": 53,
+    "depth": 4,
+    "subregion": "경남"
+  },
+  {
+    "id": 448,
+    "region_name": "김해시",
+    "name_en": "Gimhae-si",
+    "code": "KR-48-05",
+    "parent_id": 53,
+    "depth": 4,
+    "subregion": "경남"
+  },
+  {
+    "id": 449,
+    "region_name": "밀양시",
+    "name_en": "Miryang-si",
+    "code": "KR-48-06",
+    "parent_id": 53,
+    "depth": 4,
+    "subregion": "경남"
+  },
+  {
+    "id": 450,
+    "region_name": "거제시",
+    "name_en": "Geoje-si",
+    "code": "KR-48-07",
+    "parent_id": 53,
+    "depth": 4,
+    "subregion": "경남"
+  },
+  {
+    "id": 451,
+    "region_name": "양산시",
+    "name_en": "Yangsan-si",
+    "code": "KR-48-08",
+    "parent_id": 53,
+    "depth": 4,
+    "subregion": "경남"
+  },
+  {
+    "id": 452,
+    "region_name": "의령군",
+    "name_en": "Uiryeong-gun",
+    "code": "KR-48-09",
+    "parent_id": 53,
+    "depth": 4,
+    "subregion": "경남"
+  },
+  {
+    "id": 453,
+    "region_name": "함안군",
+    "name_en": "Haman-gun",
+    "code": "KR-48-10",
+    "parent_id": 53,
+    "depth": 4,
+    "subregion": "경남"
+  },
+  {
+    "id": 454,
+    "region_name": "창녕군",
+    "name_en": "Changnyeong-gun",
+    "code": "KR-48-11",
+    "parent_id": 53,
+    "depth": 4,
+    "subregion": "경남"
+  },
+  {
+    "id": 455,
+    "region_name": "고성군",
+    "name_en": "Goseong-gun",
+    "code": "KR-48-12",
+    "parent_id": 53,
+    "depth": 4,
+    "subregion": "경남"
+  },
+  {
+    "id": 456,
+    "region_name": "남해군",
+    "name_en": "Namhae-gun",
+    "code": "KR-48-13",
+    "parent_id": 53,
+    "depth": 4,
+    "subregion": "경남"
+  },
+  {
+    "id": 457,
+    "region_name": "하동군",
+    "name_en": "Hadong-gun",
+    "code": "KR-48-14",
+    "parent_id": 53,
+    "depth": 4,
+    "subregion": "경남"
+  },
+  {
+    "id": 458,
+    "region_name": "산청군",
+    "name_en": "Sancheong-gun",
+    "code": "KR-48-15",
+    "parent_id": 53,
+    "depth": 4,
+    "subregion": "경남"
+  },
+  {
+    "id": 459,
+    "region_name": "함양군",
+    "name_en": "Hamyang-gun",
+    "code": "KR-48-16",
+    "parent_id": 53,
+    "depth": 4,
+    "subregion": "경남"
+  },
+  {
+    "id": 460,
+    "region_name": "거창군",
+    "name_en": "Geochang-gun",
+    "code": "KR-48-17",
+    "parent_id": 53,
+    "depth": 4,
+    "subregion": "경남"
+  },
+
+  {
+    "id": 461,
+    "region_name": "합천군",
+    "name_en": "Hapcheon-gun",
+    "code": "KR-48-18",
+    "parent_id": 53,
+    "depth": 4,
+    "subregion": "경남"
+  },
+  {
+    "id": 462,
+    "region_name": "제주시",
+    "name_en": "Jeju-si",
+    "code": "KR-49-01",
+    "parent_id": 54,
+    "depth": 4,
+    "subregion": "제주"
+  },
+  {
+    "id": 463,
+    "region_name": "서귀포시",
+    "name_en": "Seogwipo-si",
+    "code": "KR-49-02",
+    "parent_id": 54,
+    "depth": 4,
+    "subregion": "제주"
+  },
+  {
+    "id": 464,
+    "region_name": "그리스",
+    "name_en": "Greece",
+    "code": "GR",
+    "depth": 2,
+    "parent_id": 2,
+    "subregion": "Southern Europe"
+  },
+  {
+    "id": 465,
+    "region_name": "스페인",
+    "name_en": "Spain",
+    "icon_path": null,
+    "code": "ES",
+    "parent_id": 2,
+    "depth": 2,
+    "subregion": "Southern Europe"
+  },
+  {
+    "id": 466,
+    "region_name": "포르투갈",
+    "name_en": "Portugal",
+    "icon_path": null,
+    "code": "PT",
+    "parent_id": 2,
+    "depth": 2,
+    "subregion": "Southern Europe"
+  },
+  {
+    "id": 467,
+    "region_name": "크로아티아",
+    "name_en": "Croatia",
+    "icon_path": null,
+    "code": "HR",
+    "parent_id": 2,
+    "depth": 2,
+    "subregion": "Eastern Europe"
+  },
+  {
+    "id": 468,
+    "region_name": "중국",
+    "name_en": "China",
+    "icon_path": null,
+    "code": "CN",
+    "parent_id": 1,
+    "depth": 2,
+    "subregion": "East Asia"
+  },
+  {
+    "id": 469,
+    "region_name": "필리핀",
+    "name_en": "Philippines",
+    "icon_path": null,
+    "code": "PH",
+    "parent_id": 1,
+    "depth": 2,
+    "subregion": "Southeast Asia"
+  },
+  {
+    "id": 470,
+    "region_name": "인도",
+    "name_en": "India",
+    "icon_path": null,
+    "code": "IN",
+    "parent_id": 1,
+    "depth": 2,
+    "subregion": "South Asia"
+  },
+  {
+    "id": 471,
+    "region_name": "몽골",
+    "name_en": "Mongolia",
+    "icon_path": null,
+    "code": "MN",
+    "parent_id": 1,
+    "depth": 2,
+    "subregion": "East Asia"
+  },
+  {
+    "id": 472,
+    "region_name": "우즈베키스탄",
+    "name_en": "Uzbekistan",
+    "icon_path": null,
+    "code": "UZ",
+    "parent_id": 1,
+    "depth": 2,
+    "subregion": "Central Asia"
+  },
+  {
+    "id": 473,
+    "region_name": "네팔",
+    "name_en": "Nepal",
+    "icon_path": null,
+    "code": "NP",
+    "parent_id": 1,
+    "depth": 2,
+    "subregion": "South Asia"
+  },
+  {
+    "id": 474,
+    "region_name": "카자흐스탄",
+    "name_en": "Kazakhstan",
+    "icon_path": null,
+    "code": "KZ",
+    "parent_id": 1,
+    "depth": 2,
+    "subregion": "Central Asia"
+  },
+  {
+    "id": 475,
+    "region_name": "스리랑카",
+    "name_en": "Sri Lanka",
+    "icon_path": null,
+    "code": "LK",
+    "parent_id": 1,
+    "depth": 2,
+    "subregion": "South Asia"
+  },
+  {
+    "id": 476,
+    "region_name": "홍콩",
+    "name_en": "Hong Kong",
+    "icon_path": null,
+    "code": "HK",
+    "parent_id": 1,
+    "depth": 2,
+    "subregion": "East Asia"
+  },
+  {
+    "id": 477,
+    "region_name": "마카오",
+    "name_en": "Macau",
+    "icon_path": null,
+    "code": "MO",
+    "parent_id": 1,
+    "depth": 2,
+    "subregion": "East Asia"
+  },
+  {
+    "id": 478,
+    "region_name": "몰디브",
+    "name_en": "Maldives",
+    "icon_path": null,
+    "code": "MV",
+    "parent_id": 1,
+    "depth": 2,
+    "subregion": "South Asia"
+  },
+  {
+    "id": 479,
+    "region_name": "캄보디아",
+    "name_en": "Cambodia",
+    "icon_path": null,
+    "code": "KH",
+    "parent_id": 1,
+    "depth": 2,
+    "subregion": "Southeast Asia"
+  },
+  {
+    "id": 480,
+    "region_name": "부탄",
+    "name_en": "Bhutan",
+    "icon_path": null,
+    "code": "BT",
+    "parent_id": 1,
+    "depth": 2,
+    "subregion": "South Asia"
+  },
+  {
+    "id": 481,
+    "region_name": "중동",
+    "name_en": "Middle East",
+    "icon_path": null,
+    "code": "ME",
+    "parent_id": null,
+    "depth": 1,
+    "subregion": null
+  },
+  {
+    "id": 482,
+    "region_name": "아랍에미리트",
+    "name_en": "United Arab Emirates",
+    "icon_path": null,
+    "code": "AE",
+    "parent_id": 481,
+    "depth": 2,
+    "subregion": "West Asia"
+  },
+  {
+    "id": 483,
+    "region_name": "요르단",
+    "name_en": "Jordan",
+    "icon_path": null,
+    "code": "JO",
+    "parent_id": 481,
+    "depth": 2,
+    "subregion": "West Asia"
+  },
+  {
+    "id": 484,
+    "region_name": "이스라엘",
+    "name_en": "Israel",
+    "icon_path": null,
+    "code": "IL",
+    "parent_id": 481,
+    "depth": 2,
+    "subregion": "West Asia"
+  },
+  {
+    "id": 485,
+    "region_name": "사우디아라비아",
+    "name_en": "Saudi Arabia",
+    "icon_path": null,
+    "code": "SA",
+    "parent_id": 481,
+    "depth": 2,
+    "subregion": "West Asia"
+  },
+  {
+    "id": 486,
+    "region_name": "카타르",
+    "name_en": "Qatar",
+    "icon_path": null,
+    "code": "QA",
+    "parent_id": 481,
+    "depth": 2,
+    "subregion": "West Asia"
+  },
+  {
+    "id": 487,
+    "region_name": "오만",
+    "name_en": "Oman",
+    "icon_path": null,
+    "code": "OM",
+    "parent_id": 481,
+    "depth": 2,
+    "subregion": "West Asia"
+  },
+  {
+    "id": 488,
+    "region_name": "바레인",
+    "name_en": "Bahrain",
+    "icon_path": null,
+    "code": "BH",
+    "parent_id": 481,
+    "depth": 2,
+    "subregion": "West Asia"
+  },
+  {
+    "id": 489,
+    "region_name": "쿠웨이트",
+    "name_en": "Kuwait",
+    "icon_path": null,
+    "code": "KW",
+    "parent_id": 481,
+    "depth": 2,
+    "subregion": "West Asia"
+  },
+  {
+    "id": 490,
+    "region_name": "튀니지",
+    "name_en": "Tunisia",
+    "icon_path": null,
+    "code": "TN",
+    "parent_id": 6,
+    "depth": 2,
+    "subregion": "North Africa"
+  },
+  {
+    "id": 491,
+    "region_name": "남아프리카공화국",
+    "name_en": "South Africa",
+    "icon_path": null,
+    "code": "ZA",
+    "parent_id": 6,
+    "depth": 2,
+    "subregion": "Southern Africa"
+  },
+  {
+    "id": 492,
+    "region_name": "케냐",
+    "name_en": "Kenya",
+    "icon_path": null,
+    "code": "KE",
+    "parent_id": 6,
+    "depth": 2,
+    "subregion": "East Africa"
+  },
+  {
+    "id": 493,
+    "region_name": "탄자니아",
+    "name_en": "Tanzania",
+    "icon_path": null,
+    "code": "TZ",
+    "parent_id": 6,
+    "depth": 2,
+    "subregion": "East Africa"
+  },
+  {
+    "id": 494,
+    "region_name": "모리셔스",
+    "name_en": "Mauritius",
+    "icon_path": null,
+    "code": "MU",
+    "parent_id": 6,
+    "depth": 2,
+    "subregion": "East Africa"
+  }
+
+]

@@ -1,0 +1,184 @@
+/* /css/post-write.css */
+
+/* 1. 컨테이너 전체 스타일 */
+.write-container {
+    max-width: 1000px;
+    margin: 50px auto;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    padding: 48px;
+}
+
+/* 2. 페이지 타이틀 */
+.write-title {
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 32px;
+    color: #1a1a1a;
+    line-height: 1.2;
+}
+
+/* 3. 각 폼 그룹 공통 */
+.write-form .form-group {
+    margin-bottom: 24px;
+    position: relative;
+}
+
+/* 4. 드롭다운 레이블 */
+.select-label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+    color: #555;
+}
+
+/* 5. 드롭다운 (select) 스타일 */
+.write-form .input-select {
+    width: 100%;
+    max-width: 240px;
+    height: 48px;
+    padding: 0 40px 0 12px !important;      /* 우측 화살표 공간 확보, 글로벌 스타일 덮어쓰기 */
+    font-size: 16px;
+    line-height: 48px;           /* 텍스트 수직 중앙 정렬 */
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background: #fff url("/images/chevron-down.svg") no-repeat right 12px center;
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.write-form .input-select:focus {
+    outline: none;
+    border-color: #2077c9;
+    box-shadow: 0 0 0 3px rgba(32,119,201,0.2);
+}
+
+/* 6. 제목 입력 필드 */
+.write-form .input-text {
+    width: 100%;
+    height: 48px;
+    padding: 0 12px !important;              /* 글로벌 스타일 덮어쓰기 */
+    font-size: 16px;
+    line-height: 1.4;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background: transparent;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.write-form .input-text:focus {
+    outline: none;
+    border-color: #2077c9;
+    box-shadow: 0 0 0 3px rgba(32,119,201,0.2);
+}
+
+/* 7. 플로팅 라벨 */
+.input-label {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #999;
+    transition: all 0.2s;
+    pointer-events: none;
+}
+.write-form .input-text:focus + .input-label,
+.write-form .input-text:not(:placeholder-shown) + .input-label {
+    top: -8px;
+    left: 10px;
+    font-size: 12px;
+    background: #fff;
+    padding: 0 4px;
+    color: #2077c9;
+}
+
+/* 8. 에디터 영역 */
+.editor-group #editor {
+    width: 100%;
+    height: 500px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+/* 9. 버튼 그룹 */
+.button-group {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+/* 10. 버튼 기본 */
+.btn {
+    padding: 10px 20px;
+    font-size: 15px;
+    border-radius: 6px;
+    cursor: pointer;
+    text-decoration: none;
+    text-align: center;
+}
+
+/* 11. 주 버튼 */
+.btn-primary {
+    background: #2077c9;
+    color: #fff;
+    border: none;
+}
+.btn-primary:hover {
+    background: #185a9d;
+}
+
+/* 12. 보조 버튼 */
+.btn-secondary {
+    background: #f1f4fa;
+    color: #2077c9;
+    border: 1px solid #2077c9;
+}
+.btn-secondary:hover {
+    background: #e1e6f2;
+}
+
+/* 제목 입력칸이 보이도록 반드시 적용할 스타일 */
+.write-form .form-group .input-text {
+    display: block;               /* inline → block */
+    width: 100%;                  /* 최대 너비 */
+    max-width: 600px;             /* 필요 시 조절 */
+    height: 48px;                 /* 충분한 높이 */
+    padding: 0 12px !important;   /* !important 위치 수정 */
+    font-size: 16px;
+    line-height: 1.4;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background: #fff;             /* 투명 대신 흰 배경 */
+    box-sizing: border-box;       /* padding 포함 크기 계산 */
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.write-form .form-group .input-text:focus {
+    outline: none;
+    border-color: #2077c9;
+    box-shadow: 0 0 0 3px rgba(32,119,201,0.2);
+}
+
+
+/* 13. 반응형 */
+@media (max-width: 768px) {
+    .write-container {
+        max-width: 90%;
+        padding: 24px 16px;
+    }
+    .write-title {
+        font-size: 28px;
+    }
+    .editor-group #editor {
+        height: 350px;
+    }
+    .write-form .input-text,
+    .write-form .input-select {
+        height: 42px;
+        line-height: 42px;
+    }
+    .write-form .input-select {
+        max-width: none;
+    }
+}

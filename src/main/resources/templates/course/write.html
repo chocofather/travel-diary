@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="layout/main :: layout(~{::body}, ~{::headFragment})">
+
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/course-write.css" />
+  <link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css" />
+  <script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js" defer></script>
+  <script src="/js/editor-init.js" defer></script>
+</th:block>
+
+<th:block th:fragment="body">
+  <div class="course-write-wrapper">
+    <h1>나만의 여행코스 글쓰기</h1>
+
+    <form id="course-form"
+          th:action="@{/course/write}"
+          method="post"
+          enctype="multipart/form-data"
+          class="write-form">
+
+      <!-- 제목 -->
+      <div class="form-group">
+        <input type="text"
+               name="title"
+               placeholder="코스 제목을 입력하세요"
+               required
+               class="input-text" />
+      </div>
+
+      <!-- 에디터 -->
+      <div class="form-group editor-group">
+        <div id="editor"></div>
+        <input type="hidden" name="content" id="content-input" />
+      </div>
+
+      <!-- 여행지 선택 -->
+      <div class="form-group">
+        <label class="select-label">여행지(순서대로 추가)</label>
+        <div id="selected-destinations" class="dest-list"></div>
+        <input type="hidden" name="destinationIds" id="destinationIds" />
+        <button type="button"
+                id="add-destination-btn"
+                class="btn btn-secondary">
+          여행지 추가
+        </button>
+      </div>
+
+      <!-- 버튼 그룹 -->
+      <div class="button-group">
+        <button type="submit" class="btn btn-primary">등록</button>
+        <a th:href="@{/board/list?boardType=course}"
+           class="btn btn-secondary">취소</a>
+      </div>
+    </form>
+  </div>
+
+  <script defer>
+    document.addEventListener('DOMContentLoaded', function() {
+      // editorSelector, contentInputId, formId 순서대로 넘김
+      window.initToastEditor('#editor', 'content-input', 'course-form');
+    });
+  </script>
+</th:block>
+</html>

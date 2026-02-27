@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="layout/main :: layout(~{::body}, ~{::headFragment})">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/admin.css">
+</th:block>
+<th:block th:fragment="body">
+
+  <h1>여행지 이미지 등록</h1>
+
+  <form th:action="@{/admin/destinations/{id}/images(id=${destinationId})}"
+        method="post" enctype="multipart/form-data">
+
+    <div>
+      <label>이미지 파일 선택 (여러 장 가능)</label>
+      <input type="file" name="files" multiple required>
+    </div>
+
+    <div>
+      <label>메인 이미지 인덱스 (예: 0)</label>
+      <input type="number" name="mainIdx" placeholder="메인이미지 인덱스 (0부터)">
+    </div>
+
+    <div>
+      <label>슬라이드 이미지 인덱스들 (쉼표로 구분, 예: 0,1,2)</label>
+      <input type="text" name="slideIdx" placeholder="슬라이드 인덱스">
+    </div>
+
+    <button type="submit">이미지 업로드</button>
+  </form>
+
+  <!-- ✅ 기존 이미지 목록 -->
+  <h2 style="margin-top: 40px;">등록된 이미지</h2>
+
+  <table>
+    <thead>
+    <tr>
+      <th>썸네일</th>
+      <th>메인</th>
+      <th>슬라이드</th>
+      <th>삭제</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="img : ${imageList}">
+      <td>
+        <img th:src="@{${img.imageUrl}}" alt="thumbnail" class="thumb">
+      </td>
+      <td th:text="${img.isMain} ? '✔' : ''"></td>
+      <td th:text="${img.isSlide} ? '✔' : ''"></td>
+      <td>
+        <form th:action="@{/admin/destinations/images/{id}/delete(id=${img.id})}" method="post">
+          <input type="hidden" name="destinationId" th:value="${destinationId}">
+          <button type="submit" class="delete-btn" onclick="return confirm('삭제하시겠습니까?')">삭제</button>
+        </form>
+      </td>
+    </tr>
+    </tbody>
+  </table>
+</th:block>
+</html>

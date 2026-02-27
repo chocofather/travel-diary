@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.recommend.RandomRecommendMapper">
+
+    <resultMap id="RandomDestinationDtoMap" type="com.example.travlediary.dto.RandomDestinationDto">
+        <id property="destinationId" column="destination_id"/>
+        <result property="destinationName" column="name"/>
+        <result property="shortDescription" column="short_description"/>
+        <result property="imageUrl" column="image_url"/>
+    </resultMap>
+
+    <!-- regionId 하나로 랜덤 -->
+    <select id="findRandomByRegion" resultMap="RandomDestinationDtoMap">
+        SELECT
+            d.id AS destination_id,
+            dt.name,
+            dt.short_description,
+            di.image_url
+        FROM destinations d
+                 JOIN destination_translations dt ON dt.destination_id = d.id AND dt.language_code = 'ko'
+                 LEFT JOIN destination_images di ON di.destination_id = d.id AND di.is_main = 1
+        WHERE d.region_id = #{regionId}
+        ORDER BY RAND()
+            LIMIT #{limit}
+    </select>
+
+    <!-- 여러 regionId로 랜덤 -->
+    <select id="findRandomByRegionIds" resultMap="RandomDestinationDtoMap">
+        SELECT
+        d.id AS destination_id,
+        dt.name,
+        dt.short_description,
+        di.image_url
+        FROM destinations d
+        JOIN destination_translations dt ON dt.destination_id = d.id AND dt.language_code = 'ko'
+        LEFT JOIN destination_images di ON di.destination_id = d.id AND di.is_main = 1
+        WHERE d.region_id IN
+        <foreach collection="regionIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        ORDER BY RAND()
+        LIMIT #{limit}
+    </select>
+</mapper>

@@ -1,0 +1,433 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.destination.DestinationMapper">
+
+    <!-- 썸네일용 -->
+    <resultMap id="destinationWithThumbnail" type="com.example.travlediary.model.Destination">
+        <id     property="id"            column="id"/>
+        <result property="latitude"      column="latitude"/>
+        <result property="longitude"     column="longitude"/>
+        <result property="season" column="season" javaType="com.example.travlediary.model.DestinationSeason"/>
+        <result property="userID"        column="user_id"/>
+        <result property="regionId"      column="region_id"/>
+        <result property="regionName"    column="region_name"/>
+        <result property="name"          column="name"/>
+        <result property="thumbnailPath" column="thumbnail"/>
+        <result property="shortDescription" column="short_description"/>
+        <result property="type" column="type" javaType="com.example.travlediary.model.DestinationType"/>
+    </resultMap>
+
+    <!-- 이미지 컬렉션용 -->
+    <resultMap id="imageMap" type="com.example.travlediary.model.DestinationImage">
+        <id     property="id"         column="img_id"/>
+        <result property="imageUrl"   column="image_url"/>
+        <result property="isMain"     column="is_main"/>
+        <result property="isSlide"    column="is_slide"/>
+        <result property="orderIndex" column="order_index"/>
+        <result property="destinationId" column="destination_id"/>
+        <result property="createdAt"  column="created_at"/>
+    </resultMap>
+
+    <!-- 상세페이지용 (필요하면 컬럼 더 추가) -->
+    <resultMap id="DestinationDetailMap" type="com.example.travlediary.model.Destination">
+        <id     property="id"            column="id"/>
+        <result property="latitude"      column="latitude"/>
+        <result property="longitude"     column="longitude"/>
+        <result property="season"        column="season"/>
+        <result property="userID"        column="user_id"/>
+        <result property="regionId"      column="region_id"/>
+        <result property="regionName"    column="region_name"/>
+        <result property="name"          column="name"/>
+        <result property="description"   column="description"/>
+        <result property="thumbnailPath" column="thumbnail"/>
+        <result column="views" property="views"/>
+        <result property="shortDescription" column="short_description"/>
+        <result property="type" column="type" javaType="com.example.travlediary.model.DestinationType"/>
+
+        <!-- 이미지 리스트 -->
+        <collection property="images"
+                    ofType="com.example.travlediary.model.DestinationImage"
+                    resultMap="imageMap"
+                    javaType="java.util.ArrayList"/>
+    </resultMap>
+
+    <!-- 상세페이지 쿼리 (결과는 DestinationDetailMap으로) -->
+    <select id="findDestinationDetail" resultMap="DestinationDetailMap">
+        SELECT
+            d.*,                            -- type 컬럼 포함!
+            c.region_name,
+            t.name,
+            t.description,
+            t.short_description,
+            di.id           AS img_id,
+            di.image_url,
+            di.is_main,
+            di.is_slide,
+            di.order_index,
+            di.destination_id,
+            di.created_at
+        FROM destinations d
+                 JOIN country_categories      c ON d.region_id = c.id
+                 JOIN destination_translations t ON t.destination_id = d.id AND t.language_code = 'ko'
+                 LEFT JOIN destination_images di ON di.destination_id = d.id
+        WHERE d.id = #{id}
+        ORDER BY di.order_index
+    </select>
+
+    <!-- ========== INSERT / UPDATE ========== -->
+    <insert id="insertDestination" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO destinations (latitude, longitude, created_at, views, season, user_id, region_id, type)
+        VALUES (#{latitude}, #{longitude}, #{createdAt}, #{views}, #{season}, #{userID}, #{regionId}, #{type})
+    </insert>
+
+    <insert id="insertTranslation" parameterType="com.example.travlediary.model.DestinationTranslation">
+        INSERT INTO destination_translations (destination_id, language_code, name, description, short_description)
+        VALUES (#{destinationId}, #{languageCode}, #{name}, #{description}, #{shortDescription})
+    </insert>
+
+    <insert id="insertCategory">
+        INSERT INTO destination_categories (category_id, destination_id)
+        VALUES (#{categoryId}, #{destinationId})
+    </insert>
+
+    <insert id="insertImage">
+        INSERT INTO destination_images (image_url, is_main, is_slide, order_index, destination_id, created_at)
+        VALUES (#{imageUrl}, #{isMain}, #{isSlide}, #{orderIndex}, #{destinationId}, #{createdAt})
+    </insert>
+
+    <!-- ========== SELECT ========== -->
+
+    <select id="findById" resultMap="destinationWithThumbnail">
+        SELECT d.*, c.region_name
+        FROM destinations d
+                 JOIN country_categories c ON d.region_id = c.id
+        WHERE d.id = #{id}
+    </select>
+
+    <!-- 국내(대한민국=7) 리스트 + 썸네일 -->
+    <select id="findDomestic" resultMap="destinationWithThumbnail">
+        WITH RECURSIVE region_tree AS (
+            SELECT id FROM country_categories WHERE id = 7
+            UNION ALL
+            SELECT cc.id FROM country_categories cc JOIN region_tree rt ON cc.parent_id = rt.id
+        )
+        SELECT d.*, c.region_name, t.name, t.short_description AS short_description,
+            i.image_url AS thumbnail
+        FROM destinations d
+                 JOIN country_categories      c ON d.region_id = c.id
+                 JOIN destination_translations t ON d.id = t.destination_id
+            AND t.language_code = 'ko'
+                 LEFT JOIN destination_images i ON d.id = i.destination_id
+            AND i.is_main       = true
+        WHERE d.region_id IN (SELECT id FROM region_tree)
+    </select>
+
+    <!-- 카테고리 연결 -->
+    <insert id="insertDestinationCategory">
+        INSERT INTO destination_categories (destination_id, category_id)
+        VALUES (#{destinationId}, #{categoryId})
+    </insert>
+
+    <select id="findImagesByDestinationId" resultMap="imageMap">
+        SELECT
+            id           AS img_id,
+            image_url,
+            is_main,
+            is_slide,
+            order_index,
+            destination_id,
+            created_at
+        FROM destination_images
+        WHERE destination_id = #{destinationId}
+        ORDER BY order_index
+    </select>
+
+    <select id="findAllWithRegion" resultType="com.example.travlediary.model.Destination">
+        SELECT d.*, c.region_name, t.name, t.description, t.short_description
+        FROM destinations d
+                 JOIN country_categories c ON d.region_id = c.id
+                 JOIN destination_translations t ON d.id = t.destination_id
+            AND t.language_code = 'ko'
+    </select>
+
+    <select id="findAll" resultMap="destinationWithThumbnail">
+        SELECT d.*, c.region_name, t.name, t.description, t.short_description
+               i.image_url AS thumbnail
+        FROM destinations d
+                 JOIN country_categories c ON d.region_id = c.id
+                 JOIN destination_translations t ON d.id = t.destination_id
+            AND t.language_code = 'ko'
+                 LEFT JOIN destination_images i ON d.id = i.destination_id
+            AND i.is_main = true
+    </select>
+
+    <select id="findImageById" resultType="com.example.travlediary.model.DestinationImage">
+        SELECT * FROM destination_images WHERE id = #{imageId}
+    </select>
+
+    <delete id="deleteImageById" parameterType="long">
+        DELETE FROM destination_images WHERE id = #{imageId}
+    </delete>
+
+    <!--<select id="findByCountryCategoryId" resultType="com.example.travlediary.model.Destination">
+        SELECT
+            d.id,
+            dt.name AS name,
+            dt.description AS description,
+            d.latitude,
+            d.longitude,
+            d.season,
+            d.user_id AS userID,
+            d.region_id AS regionId,
+            (
+                SELECT image_url
+                FROM destination_images
+                WHERE destination_id = d.id AND is_main = 1
+                LIMIT 1
+            ) AS thumbnailPath,
+        cc.region_name AS regionName
+        FROM destinations d
+            JOIN destination_translations dt ON d.id = dt.destination_id AND dt.language_code = 'kr'
+            JOIN country_categories cc ON d.region_id = cc.id
+        WHERE d.region_id IN (
+            SELECT id FROM country_categories WHERE parent_id = #{cityId}
+            UNION
+            SELECT #{cityId}
+            )
+    </select>-->
+
+    <select id="findByRegionIds" resultType="com.example.travlediary.model.Destination">
+        SELECT
+        d.id,
+        dt.name AS name,
+        dt.description AS description,
+        dt.short_description AS shortDescription,
+        d.latitude,
+        d.longitude,
+        d.season,
+        d.user_id AS userID,
+        d.region_id AS regionId,
+        (
+        SELECT image_url
+        FROM destination_images
+        WHERE destination_id = d.id AND is_main = 1
+        LIMIT 1
+        ) AS thumbnailPath,
+        cc.region_name AS regionName
+        FROM destinations d
+        JOIN destination_translations dt ON d.id = dt.destination_id AND dt.language_code = 'ko'
+        JOIN country_categories cc ON d.region_id = cc.id
+        WHERE d.region_id IN
+        <foreach item="id" collection="regionIds" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+    <!-- 조회수 증가 -->
+    <update id="incrementViewCount" parameterType="long">
+        UPDATE destinations
+        SET views = views + 1
+        WHERE id = #{id}
+    </update>
+
+    <select id="findTranslationsByDestinationId" resultType="com.example.travlediary.model.DestinationTranslation">
+        SELECT *
+        FROM destination_translations
+        WHERE destination_id = #{destinationId}
+    </select>
+
+    <!-- 삭제 쿼리 -->
+    <delete id="deleteById" parameterType="long">
+        DELETE FROM destinations WHERE id = #{id}
+    </delete>
+
+    <delete id="deleteTranslationsByDestinationId" parameterType="long">
+        DELETE FROM destination_translations WHERE destination_id = #{destinationId}
+    </delete>
+
+    <delete id="deleteImagesByDestinationId" parameterType="long">
+        DELETE FROM destination_images WHERE destination_id = #{destinationId}
+    </delete>
+
+    <delete id="deleteCommentsByDestinationId" parameterType="long">
+        DELETE FROM destination_comments WHERE destination_id = #{destinationId}
+    </delete>
+
+    <delete id="deleteDestinationCategoriesByDestinationId" parameterType="long">
+        DELETE FROM destination_categories WHERE destination_id = #{destinationId}
+    </delete>
+
+    <!-- 좋아요 수 +1 -->
+    <update id="incrementCommentLikeCount">
+        UPDATE destination_comments
+        SET likes = likes + 1
+        WHERE id = #{commentId}
+    </update>
+
+    <!-- 좋아요 수 -1 -->
+    <update id="decrementCommentLikeCount">
+        UPDATE destination_comments
+        SET likes = likes - 1
+        WHERE id = #{commentId}
+    </update>
+
+    <update id="updateDestination" parameterType="com.example.travlediary.model.Destination">
+        UPDATE destinations
+        SET
+            latitude = #{latitude},
+            longitude = #{longitude},
+            season = #{season},
+            region_id = #{regionId},
+            type = #{type}
+        WHERE id = #{id}
+    </update>
+
+    <select id="findCategoryIdsByDestinationId" resultType="long" parameterType="long">
+        SELECT category_id FROM destination_categories WHERE destination_id = #{destinationId}
+    </select>
+
+    <delete id="deleteDestinationCategory">
+        DELETE FROM destination_categories WHERE destination_id = #{destinationId} AND category_id = #{categoryId}
+    </delete>
+
+    <update id="updateTranslation" parameterType="com.example.travlediary.model.DestinationTranslation">
+        UPDATE destination_translations
+        SET name = #{name},
+            description = #{description},
+            short_description = #{shortDescription}
+        WHERE destination_id = #{destinationId} AND language_code = #{languageCode}
+    </update>
+
+    <!-- 상세페이지 여행지 추천 -->
+    <select id="findSimilarDestinations" resultMap="destinationWithThumbnail">
+        SELECT DISTINCT d.*, c.region_name, t.name, t.short_description AS short_description,
+        i.image_url AS thumbnail
+        FROM destinations d
+        JOIN country_categories c ON d.region_id = c.id
+        JOIN destination_translations t ON d.id = t.destination_id AND t.language_code = 'ko'
+        LEFT JOIN destination_images i ON d.id = i.destination_id AND i.is_main = true
+        JOIN destination_categories dc ON d.id = dc.destination_id
+        WHERE d.region_id = #{regionId}
+        AND dc.category_id IN
+        <foreach item="cid" collection="categoryIds" open="(" separator="," close=")">
+            #{cid}
+        </foreach>
+        AND d.id != #{exceptId}
+        ORDER BY RAND()
+        LIMIT #{limit}
+    </select>
+
+    <select id="findByRegionIdsPaged" resultType="com.example.travlediary.model.Destination">
+        SELECT
+        d.id,
+        dt.name AS name,
+        dt.description AS description,
+        dt.short_description AS shortDescription,
+        d.latitude,
+        d.longitude,
+        d.season,
+        d.user_id AS userID,
+        d.region_id AS regionId,
+        (
+        SELECT image_url
+        FROM destination_images
+        WHERE destination_id = d.id AND is_main = 1
+        LIMIT 1
+        ) AS thumbnailPath,
+        cc.region_name AS regionName,
+        (SELECT COUNT(*) FROM bookmarks WHERE target_type = 'DESTINATION' AND target_id = d.id) AS bookmarkCount,
+        d.views
+        FROM destinations d
+        JOIN destination_translations dt ON d.id = dt.destination_id AND dt.language_code = 'ko'
+        JOIN country_categories cc ON d.region_id = cc.id
+        WHERE d.region_id IN
+        <foreach item="id" collection="regionIds" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        <choose>
+            <when test="sort == 'views'">
+                ORDER BY d.views DESC
+            </when>
+            <when test="sort == 'bookmarks'">
+                ORDER BY bookmarkCount DESC
+            </when>
+            <otherwise>
+                ORDER BY d.id ASC
+            </otherwise>
+        </choose>
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+
+    <select id="countByRegionIds" resultType="int">
+        SELECT COUNT(*) FROM destinations
+        WHERE region_id IN
+        <foreach item="id" collection="regionIds" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+    <select id="findDomesticPaged" resultType="com.example.travlediary.model.Destination">
+        WITH RECURSIVE region_tree AS (
+        SELECT id FROM country_categories WHERE id = 7
+        UNION ALL
+        SELECT cc.id FROM country_categories cc JOIN region_tree rt ON cc.parent_id = rt.id
+        )
+        SELECT
+        d.*,
+        c.region_name,
+        t.name,
+        t.short_description AS shortDescription,
+        (
+        SELECT image_url
+        FROM destination_images
+        WHERE destination_id = d.id AND is_main = 1
+        LIMIT 1
+        ) AS thumbnailPath,
+        (SELECT COUNT(*) FROM bookmarks WHERE target_type = 'DESTINATION' AND target_id = d.id) AS bookmarkCount,
+        d.views
+        FROM destinations d
+        JOIN country_categories c ON d.region_id = c.id
+        JOIN destination_translations t ON d.id = t.destination_id
+        AND t.language_code = 'ko'
+        WHERE d.region_id IN (SELECT id FROM region_tree)
+        <choose>
+            <when test="sort == 'views'">
+                ORDER BY d.views DESC
+            </when>
+            <when test="sort == 'bookmarks'">
+                ORDER BY bookmarkCount DESC
+            </when>
+            <otherwise>
+                ORDER BY d.id ASC
+            </otherwise>
+        </choose>
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+
+    <select id="countDomestic" resultType="int">
+        WITH RECURSIVE region_tree AS (
+            SELECT id FROM country_categories WHERE id = 7
+            UNION ALL
+            SELECT cc.id FROM country_categories cc JOIN region_tree rt ON cc.parent_id = rt.id
+        )
+        SELECT COUNT(*) FROM destinations d
+        WHERE d.region_id IN (SELECT id FROM region_tree)
+    </select>
+
+    <select id="findAllRegionIdsUnder" resultType="long" parameterType="long">
+        WITH RECURSIVE region_tree AS (
+            SELECT id FROM country_categories WHERE id = #{rootRegionId}
+            UNION ALL
+            SELECT cc.id FROM country_categories cc
+                                  JOIN region_tree rt ON cc.parent_id = rt.id
+        )
+        SELECT id FROM region_tree
+    </select>
+
+
+</mapper>

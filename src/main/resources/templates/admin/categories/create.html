@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="layout/main :: layout(~{::body}, ~{::headFragment})">
+
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/admin.css">
+</th:block>
+<th:block th:fragment="body">
+
+<div class="category-create-wrapper">
+<form th:action="@{/admin/categories}" method="post" th:object="${categoryForm}">
+  <input type="text" th:field="*{name}" placeholder="카테고리 이름" />
+  <button type="submit">등록</button>
+</form>
+</div>
+</th:block>
+</html>

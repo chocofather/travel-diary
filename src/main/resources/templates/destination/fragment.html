@@ -1,0 +1,168 @@
+<!-- templates/destination/fragment.html -->
+
+<!-- ─── region-bar + 리스트를 한 번에 감싸는 프래그먼트 ─── -->
+<th:block th:fragment="regionFragment(
+    cities,
+    destinations,
+    subregions,
+    selectedSubregionId,
+    selectedCityId,
+    selectedCityName,
+    totalPages,
+    currentPage,
+    pageSize,
+    sort,
+    type
+)">
+    <div id="region-fragment-container">
+        <!-- ─── 상단 region-bar ─── -->
+        <div class="region-bar-wrapper" th:attr="data-type=${type}">
+            <section class="region-selector">
+                <button class="arrow prev" th:if="${cities.size()} >= 12">‹</button>
+                <div th:class="'region-buttons ' +
+                       (${cities.size()} <= 3 ? 'few' :
+                        (${cities.size()} >= 7 ? 'scrollable' : 'normal'))">
+                    <div th:each="c : ${cities}"
+                         th:class="'circle-btn region-btn' + (${selectedCityId} == ${c.id} ? ' selected' : '')"
+                         th:attr="data-region-id=${c.id},data-depth=${c.depth}">
+                        <img th:src="@{${c.iconPath}}" th:alt="${c.regionName}" class="circle-icon"/>
+                        <span th:text="${c.regionName}">도시명</span>
+                    </div>
+                </div>
+                <button class="arrow next" th:if="${cities.size()} >= 12">›</button>
+            </section>
+        </div>
+
+        <!-- ─── 리스트 영역 (여기만 바뀜) ─── -->
+        <div th:insert="~{destination/fragment :: destinationList(
+         ${destinations},
+         ${subregions},
+         ${selectedSubregionId},
+         ${selectedCityId},
+         ${selectedCityName},
+         ${totalPages},
+         ${currentPage},
+         ${pageSize},
+         ${sort},
+         ${type}
+       )}">
+        </div>
+    </div>
+</th:block>
+
+<!-- ─── AJAX 로 교체될 리스트 부분만 정의된 프래그먼트 ─── -->
+<th:block th:fragment="destinationList(
+    destinations,
+    subregions,
+    selectedSubregionId,
+    selectedCityId,
+    selectedCityName,
+    totalPages,
+    currentPage,
+    pageSize,
+    sort,
+    type
+)">
+    <div id="destination-list">
+
+        <div class="destination-list-wrapper">
+            <h2 id="page-title"
+                th:text="${selectedCityName != null
+               ? selectedCityName + ' 여행지'
+               : (type == 'overseas' ? '해외 여행지' : '국내 여행지')}">
+            </h2>
+            <!-- 하위 지역(구/군) -->
+            <section class="subregion-selector"
+                     th:if="${subregions != null and #lists.size(subregions) > 0}">
+                <button class="arrow prev subregion-arrow" th:if="${subregions.size()} >= 12">‹</button>
+                <div class="subregion-scroll-container">
+                    <div class="subregion-list">
+                        <button class="subregion-btn"
+                                th:each="r : ${subregions}"
+                                th:classappend="${selectedSubregionId} == ${r.id} ? ' selected' : ''"
+                                th:attr="data-city-id=${r.id}"
+                                th:text="${r.regionName}">
+                            하위 지역
+                        </button>
+                    </div>
+                </div>
+                <button class="arrow next subregion-arrow" th:if="${subregions.size()} >= 12">›</button>
+            </section>
+
+            <!-- 정렬 버튼 -->
+            <div class="list-sort-buttons"
+                 style="display:flex;gap:10px;justify-content:flex-end;margin-bottom:20px;">
+                <button class="sort-btn"
+                        th:classappend="${sort} == 'default' ? ' active' : ''"
+                        data-sort="default">기본순</button>|
+                <button class="sort-btn"
+                        th:classappend="${sort} == 'views' ? ' active' : ''"
+                        data-sort="views">조회수순</button>|
+                <button class="sort-btn"
+                        th:classappend="${sort} == 'bookmarks' ? ' active' : ''"
+                        data-sort="bookmarks">북마크순</button>
+            </div>
+
+            <!-- 카드 리스트 -->
+            <div class="destination-card-list">
+                <div th:each="d : ${destinations}" class="destination-card-wrapper" style="position: relative;">
+                    <button type="button" class="bookmark-icon"
+                            th:attr="
+                            data-bookmarked=${d.bookmarked},
+                            data-target-type='DESTINATION',
+                            data-target-id=${d.id}
+                        ">
+                        <img th:src="@{'/uploads/icons/' + (${d.bookmarked} ? 'bookmark2' : 'bookmark') + '.png'}"
+                             th:alt="${d.bookmarked} ? '북마크 해제' : '북마크 추가'"
+                             style="width:30px;height:30px;" />
+                    </button>
+                    <a th:href="@{|/destinations/${d.id}|}" class="destination-card"
+                       th:attr="data-destination-id=${d.id}">
+                        <img th:if="${d.thumbnailPath != null}" th:src="@{${d.thumbnailPath}}" alt="썸네일"/>
+                        <div class="card-text-wrapper">
+                            <h3 th:text="${d.name}">여행지명</h3>
+                            <p class="short-description"
+                               th:if="${d.shortDescription != null}"
+                               th:text="${d.shortDescription}">간단 설명</p>
+                            <p class="region">지역: <span th:text="${d.regionName}">지역명</span></p>
+                        </div>
+                        <div class="card-comment-count"
+                             style="position:absolute;right:15px;bottom:15px;display:flex;align-items:center;gap:4px;color:#555;font-size:.94em;">
+                            <img src="/uploads/icons/comment.png" alt="댓글"
+                                 style="width:16px;height:16px;opacity:.7;" />
+                            <span th:text="${d.commentCount}">0</span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <!-- 페이징 -->
+            <div class="pagination-wrapper" th:if="${totalPages > 1}">
+                <div class="pagination">
+                    <a th:if="${currentPage > 1}"
+                       th:href="@{/destinations/fragment(type=${type},
+                                              region=${selectedSubregionId != null ? selectedSubregionId : selectedCityId},
+                                              page=${currentPage - 1},
+                                              size=${pageSize},
+                                              sort=${sort})}">&lt;</a>
+                    <span th:each="i : ${#numbers.sequence(1, totalPages)}">
+            <a th:if="${i != currentPage}"
+               th:href="@{/destinations/fragment(type=${type},
+                                                region=${selectedSubregionId != null ? selectedSubregionId : selectedCityId},
+                                                page=${i},
+                                                size=${pageSize},
+                                                sort=${sort})}"
+               th:text="${i}">i</a>
+            <span th:if="${i == currentPage}" th:text="${i}" style="font-weight:bold"></span>
+          </span>
+                    <a th:if="${currentPage < totalPages}"
+                       th:href="@{/destinations/fragment(type=${type},
+                                              region=${selectedSubregionId != null ? selectedSubregionId : selectedCityId},
+                                              page=${currentPage + 1},
+                                              size=${pageSize},
+                                              sort=${sort})}">&gt;</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</th:block>

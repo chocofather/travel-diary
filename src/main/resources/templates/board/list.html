@@ -1,0 +1,58 @@
+<!-- board/list.html -->
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="layout/main :: layout(~{::body}, ~{::headFragment})">
+
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/board-list.css">
+</th:block>
+
+<th:block th:fragment="body">
+  <div class="board-layout">
+    <!-- 사이드바 -->
+    <aside class="board-sidebar">
+      <ul>
+        <li><a href="/board/list"
+               th:classappend="${#strings.isEmpty(boardType)} ? 'active'">전체 글보기</a></li>
+        <li><a href="/board/list?boardType=post&postType=question"
+               th:classappend="${boardType=='post' and postType=='question'} ? 'active'">여행 질문</a></li>
+        <li><a href="/board/list?boardType=post&postType=tip"
+               th:classappend="${boardType=='post' and postType=='tip'} ? 'active'">여행 팁</a></li>
+        <li><a href="/board/list?boardType=course"
+               th:classappend="${boardType=='course'} ? 'active'">나의 여행코스</a></li>
+      </ul>
+    </aside>
+
+    <!-- 본문 -->
+    <main class="board-main">
+      <!-- 1. 여기! board-main 상단에 추가 -->
+      <div class="board-list-header"
+           style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <h1 style="margin:0;">게시판 리스트</h1>
+        <a th:href="${boardType == 'course'} ? @{/course/write} : @{/post/write}"
+           class="board-write-btn">글쓰기</a>
+      </div>
+
+      <!-- 2. 정렬 바 -->
+      <div class="board-sort-bar">
+        <button onclick="loadBoardList(1, 'latest')">최신순</button>
+        <button onclick="loadBoardList(1, 'oldest')">오래된순</button>
+        <button onclick="loadBoardList(1, 'views')">조회수순</button>
+        <button onclick="loadBoardList(1, 'comments')">댓글순</button>
+      </div>
+
+      <!-- 3. 리스트 fragment 컨테이너 -->
+      <div id="board-fragment-container"
+           th:replace="board/fragment :: boardListFragment(
+               ${boardList},
+               ${totalPages},
+               ${currentPage},
+               ${sort}
+           )">
+        <!-- SSR 최초 진입 시 서버에서 boardListFragment로 채워짐 -->
+      </div>
+    </main>
+  </div>
+  <script src="/js/board-ajax.js" defer></script>
+</th:block>
+</html>

@@ -1,0 +1,102 @@
+body {
+    margin: 0;
+    font-family: 'Noto Sans KR', sans-serif;
+}
+
+/* 전체 상단 헤더 구조 */
+.header {
+    background: transparent;
+    border-bottom: none;
+    position: relative;
+    z-index: 1000;
+}
+
+/* 헤더 내부 레이아웃: 로고 / 메뉴 / 우측 기능 */
+.nav-wrapper {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 80px;
+    padding: 0 20px;
+    box-sizing: border-box;
+}
+
+/* 로고 */
+.logo img {
+    height: 48px;
+}
+
+/* 메뉴바 중앙 정렬 */
+.main-menu {
+    display: flex;
+    gap: 48px;
+    list-style: none;
+    padding: 0;
+    margin: 0 auto;
+}
+
+.main-menu > li > a {
+    display: block;
+    padding: 16px 0;
+    font-size: 16px;
+    font-weight: 600;
+    text-decoration: none;
+    color: #222;
+    transition: color 0.2s;
+}
+
+.main-menu > li > a:hover {
+    color: #0077cc;
+}
+
+/* 우측 영역: 로그인/검색/프로필 등 */
+.right-actions {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+/* 전체 펼침 메뉴 */
+.global-submenu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    background: #fff;
+    padding: 30px 0;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    box-sizing: border-box;
+
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 40px;
+    justify-content: center;
+    padding-left: 80px;
+    padding-right: 80px;
+}
+
+.main-menu:hover ~ .global-submenu,
+.global-submenu:hover {
+    display: grid;
+}
+
+/* 서브메뉴 항목 */
+.submenu-column {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.submenu-column a {
+    text-decoration: none;
+    font-size: 14px;
+    color: #444;
+    transition: color 0.2s;
+}
+
+.submenu-column a:hover {
+    color: #0077cc;
+}

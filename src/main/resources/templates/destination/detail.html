@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="layout/main :: layout(~{::body}, ~{::headFragment})">
+
+<th:block th:fragment="headFragment">
+    <link rel="stylesheet" href="/css/detail.css">
+    <link rel="stylesheet" href="/css/comment.css">
+</th:block>
+
+<th:block th:fragment="body">
+
+
+    <!-- ────── 여행지 상단 정보 (타이틀 + 메타) ────── -->
+    <section class="destination-hero">
+        <p class="breadcrumb">
+            <a th:if="${regionPath != null}"
+               th:href="@{'/destinations?type=' + ${type} + '&region=' + ${regionPathId}}"
+               th:text="${regionPath}"
+               class="region-path-link"></a>
+            <span th:if="${regionPath != null}"> . </span>
+            <span th:text="${categoryName}">카테고리</span>
+        </p>
+        <h1 class="destination-title" th:text="${destination.name}">여행지 이름</h1> <!-- destination.name으로 수정 -->
+        <div class="meta-icons">
+  <span>
+    <img src="/uploads/icons/marker.png" alt="위치">
+       <a th:href="@{'/destinations?type=' + ${type} + '&region=' + ${regionId}}"
+          class="region-path-link"
+          th:text="${regionName}"></a>
+  </span>
+            <span>
+    <img src="/uploads/icons/view.png" alt="조회수" class="meta-icon">
+    <span th:text="${destination.views}">0</span> <!-- destination.views로 수정 -->
+  </span>
+            <!--  북마크 수 및 버튼 -->
+            <span id="bookmark-container"
+                  class="bookmark-icon"
+                  style="cursor: pointer;"
+                  data-type="DESTINATION"
+                  th:data-id="${destination.id}">
+            <img src="/uploads/icons/bookmark.png"
+                 alt="북마크 아이콘"
+                 class="meta-icon"
+                 id="bookmark-icon"
+                 data-bookmarked="false">
+            여행일기 저장 <span id="bookmark-count">0</span>
+        </span>
+
+        </div>
+    </section>
+
+    <!-- ────── 이미지 슬라이드 영역 ────── -->
+    <div class="carousel-wrapper" th:if="${destination.images != null and !destination.images.isEmpty()}">
+        <div class="carousel">
+            <button class="nav prev">&#10094;</button>
+            <div class="track">
+                <div class="slide" th:each="img, idx : ${destination.images}"
+                     th:classappend="${idx.index == 0} ? 'active'">
+                    <img th:src="@{${img.imageUrl}}" th:alt="'이미지 ' + ${idx.index + 1}"/>
+                </div>
+            </div>
+            <button class="nav next">&#10095;</button>
+        </div>
+    </div>
+
+    <div class="carousel no-image" th:if="${destination.images == null or destination.images.isEmpty()}">
+        <img th:src="@{${destination.thumbnailPath}}"
+             th:alt="${destination.name + ' 대표 이미지'}"/>
+    </div>
+
+    <!-- ────── 본문 소개 영역 ────── -->
+    <main class="detail-container">
+        <section class="info">
+            <h2>소개</h2>
+            <p th:utext="${descriptionWithBr}">설명</p>
+
+            <!-- 추가 정보 -->
+            <!-- 숙소 정보 AccommodationInfo -->
+            <div th:if="${accommodationInfo != null}" class="accommodation-info detail-info-block">
+                <h2>숙소 정보</h2>
+                <ul>
+                    <li>체크인 시간: <span th:text="${accommodationInfo.checkinTime ?: '-'}">-</span></li>
+                    <li>체크아웃 시간: <span th:text="${accommodationInfo.checkoutTime ?: '-'}">-</span></li>
+                    <li>객실 수: <span
+                            th:text="${accommodationInfo.roomCount != null ? accommodationInfo.roomCount : '-'}">-</span>
+                    </li>
+                    <li>객실 유형: <span th:text="${accommodationInfo.roomType ?: '-'}">-</span></li>
+                    <li>등급:
+                        <span th:if="${accommodationInfo.starRating != null}"
+                              th:text="${accommodationInfo.starRating} + '★'">4.5★</span>
+                        <span th:if="${accommodationInfo.starRating == null}">-</span>
+                    </li>
+                    <li>조식 포함:
+                        <span th:if="${accommodationInfo.breakfastIncluded != null}"
+                              th:text="${accommodationInfo.breakfastIncluded ? '포함' : '불포함'}">포함</span>
+                        <span th:if="${accommodationInfo.breakfastIncluded == null}">-</span>
+                    </li>
+                    <li>주차 가능:
+                        <span th:if="${accommodationInfo.parkingAvailable != null}"
+                              th:text="${accommodationInfo.parkingAvailable ? '가능' : '불가'}">가능</span>
+                        <span th:if="${accommodationInfo.parkingAvailable == null}">-</span>
+                    </li>
+                    <li>반려동물:
+                        <span th:if="${accommodationInfo.petAllowed != null}"
+                              th:text="${accommodationInfo.petAllowed ? '가능' : '불가'}">가능</span>
+                        <span th:if="${accommodationInfo.petAllowed == null}">-</span>
+                    </li>
+                    <li>연락처: <span th:text="${accommodationInfo.contactNumber ?: '-'}">-</span></li>
+                    <li>홈페이지:
+                        <span th:if="${accommodationInfo.homepageUrl != null}">
+                <a th:href="${accommodationInfo.homepageUrl}" target="_blank"
+                   th:text="${accommodationInfo.homepageUrl}">홈페이지</a>
+            </span>
+                        <span th:if="${accommodationInfo.homepageUrl == null}">-</span>
+                    </li>
+                    <li>기타 안내사항: <span th:text="${accommodationInfo.etc ?: '-'}">-</span></li>
+                </ul>
+            </div>
+            <!-- 편의시설 -->
+            <div th:if="${accommodationAmenities != null and !accommodationAmenities.isEmpty()}" class="amenity-row">
+                <div class="amenities-title">편의시설</div>
+                <ul class="amenities-list">
+                    <li th:each="a : ${accommodationAmenities}"
+                        th:attr="data-tooltip=${a.name}">
+                        <img th:src="@{'/uploads/icons/amenities/' + ${#strings.toLowerCase(a.code)} + '.png'}"
+                             th:alt="${a.name}" class="amenity-icon"/>
+                        <!-- <span th:text="${a.name}" style="display:none;"></span>  // 숨김 처리 필요 없으면 생략 -->
+                    </li>
+                </ul>
+            </div>
+
+            <!-- 관광명소 정보 AttractionInfo -->
+            <div th:if="${attractionInfo != null}" class="attraction-info detail-info-block">
+                <h2>관광명소 정보</h2>
+                <ul>
+                    <li>
+                        <span class="info-label">휴관일</span>
+                        <span th:text="${attractionInfo.closedDays ?: '-'}">-</span>
+                    </li>
+                    <li>
+                        <span class="info-label">운영시간</span>
+                        <span th:text="${attractionInfo.openingHours ?: '-'}">-</span>
+                    </li>
+                    <li>
+                        <span class="info-label">입장료</span>
+                        <span th:text="${attractionInfo.admissionFee ?: '-'}">-</span>
+                    </li>
+                    <li>
+                        <span class="info-label">주차 가능</span>
+                        <span th:if="${attractionInfo.parkingAvailable != null}"
+                              th:text="${attractionInfo.parkingAvailable ? '가능' : '불가'}">가능</span>
+                        <span th:if="${attractionInfo.parkingAvailable == null}">-</span>
+                    </li>
+                    <li>
+                        <span class="info-label">전화번호</span>
+                        <span th:text="${attractionInfo.contactNumber ?: '-'}">-</span>
+                    </li>
+                    <li>
+                        <span class="info-label">홈페이지</span>
+                        <span th:if="${attractionInfo.homepageUrl != null}">
+                <a th:href="${attractionInfo.homepageUrl}" target="_blank"
+                   th:text="${attractionInfo.homepageUrl}">홈페이지</a>
+            </span>
+                        <span th:if="${attractionInfo.homepageUrl == null}">-</span>
+                    </li>
+                    <li>
+                        <span class="info-label">관람 안내</span>
+                        <span th:utext="${attractionGuideWithBr}">-</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- 편의시설 -->
+            <div th:if="${attractionAmenities != null and !attractionAmenities.isEmpty()}" class="amenity-row">
+                <div class="amenities-title">편의시설</div>
+                <ul class="amenities-list">
+                    <li th:each="a : ${attractionAmenities}"
+                        th:attr="data-tooltip=${a.name}">
+                        <img th:src="@{'/uploads/icons/amenities/' + ${a.code.toLowerCase()} + '.png'}"
+                             th:alt="${a.name}" class="amenity-icon"/>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- 체험/액티비티 정보 ActivityInfo -->
+            <div th:if="${activityInfo != null}" class="activity-info detail-info-block">
+                <h2>체험/액티비티 정보</h2>
+                <ul>
+                    <li>운영 시간: <span th:text="${activityInfo.openingHours ?: '-'}">-</span></li>
+                    <li>소요 시간: <span th:text="${activityInfo.requiredTime ?: '-'}">-</span></li>
+                    <li>참가비/이용요금: <span th:text="${activityInfo.admissionFee ?: '-'}">-</span></li>
+                    <li>연령 제한: <span th:text="${activityInfo.ageLimit ?: '-'}">-</span></li>
+                    <li>사전 예약:
+                        <span th:if="${activityInfo.reservation != null}"
+                              th:text="${activityInfo.reservation ? '필요' : '불필요'}">필요</span>
+                        <span th:if="${activityInfo.reservation == null}">-</span>
+                    </li>
+                    <li>장비 대여/포함:
+                        <span th:if="${activityInfo.equipmentIncluded != null}"
+                              th:text="${activityInfo.equipmentIncluded ? '포함' : '미포함'}">포함</span>
+                        <span th:if="${activityInfo.equipmentIncluded == null}">-</span>
+                    </li>
+                    <li>주차 가능:
+                        <span th:if="${activityInfo.parkingAvailable != null}"
+                              th:text="${activityInfo.parkingAvailable ? '가능' : '불가'}">가능</span>
+                        <span th:if="${activityInfo.parkingAvailable == null}">-</span>
+                    </li>
+                    <li>연락처: <span th:text="${activityInfo.contactNumber ?: '-'}">-</span></li>
+                    <li>홈페이지:
+                        <span th:if="${activityInfo.homepageUrl != null}">
+                <a th:href="${activityInfo.homepageUrl}" target="_blank" th:text="${activityInfo.homepageUrl}">홈페이지</a>
+            </span>
+                        <span th:if="${activityInfo.homepageUrl == null}">-</span>
+                    </li>
+                    <li>이용 안내: <span th:text="${activityInfo.guide ?: '-'}">-</span></li>
+                </ul>
+            </div>
+            <!-- 편의시설 -->
+            <div th:if="${activityAmenities != null and !activityAmenities.isEmpty()}" class="amenity-row">
+                <div class="amenities-title">편의시설</div>
+                <ul class="amenities-list">
+                    <li th:each="a : ${activityAmenities}"
+                        th:attr="data-tooltip=${a.name}">
+                        <img th:src="@{'/uploads/icons/amenities/' + ${a.code.toLowerCase()} + '.png'}"
+                             th:alt="${a.name}" class="amenity-icon"/>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- 맛집/음식점 정보 RestaurantInfo -->
+            <div th:if="${restaurantInfo != null}" class="restaurant-info detail-info-block">
+                <h2>맛집 정보</h2>
+                <ul>
+                    <li>대표 메뉴: <span th:text="${restaurantInfo.mainMenu ?: '-'}">-</span></li>
+                    <li>가격대: <span th:text="${restaurantInfo.priceRange ?: '-'}">-</span></li>
+                    <li>영업시간: <span th:text="${restaurantInfo.openingHours ?: '-'}">-</span></li>
+                    <li>브레이크 타임: <span th:text="${restaurantInfo.breakTime ?: '-'}">-</span></li>
+                    <li>휴무일: <span th:text="${restaurantInfo.closedDays ?: '-'}">-</span></li>
+                    <li>주차 가능:
+                        <span th:if="${restaurantInfo.parkingAvailable != null}"
+                              th:text="${restaurantInfo.parkingAvailable ? '가능' : '불가'}">가능</span>
+                        <span th:if="${restaurantInfo.parkingAvailable == null}">-</span>
+                    </li>
+                    <li>반려동물 동반:
+                        <span th:if="${restaurantInfo.petAllowed != null}"
+                              th:text="${restaurantInfo.petAllowed ? '가능' : '불가'}">가능</span>
+                        <span th:if="${restaurantInfo.petAllowed == null}">-</span>
+                    </li>
+                    <li>좌석 수: <span
+                            th:text="${restaurantInfo.seatCount != null ? restaurantInfo.seatCount : '-'}">-</span></li>
+                    <li>테이크아웃:
+                        <span th:if="${restaurantInfo.takeoutAvailable != null}"
+                              th:text="${restaurantInfo.takeoutAvailable ? '가능' : '불가'}">가능</span>
+                        <span th:if="${restaurantInfo.takeoutAvailable == null}">-</span>
+                    </li>
+                    <li>배달:
+                        <span th:if="${restaurantInfo.deliveryAvailable != null}"
+                              th:text="${restaurantInfo.deliveryAvailable ? '가능' : '불가'}">가능</span>
+                        <span th:if="${restaurantInfo.deliveryAvailable == null}">-</span>
+                    </li>
+                    <li>예약:
+                        <span th:if="${restaurantInfo.reservation != null}"
+                              th:text="${restaurantInfo.reservation ? '가능' : '불가'}">가능</span>
+                        <span th:if="${restaurantInfo.reservation == null}">-</span>
+                    </li>
+                    <li>연락처: <span th:text="${restaurantInfo.contactNumber ?: '-'}">-</span></li>
+                    <li>홈페이지:
+                        <span th:if="${restaurantInfo.homepageUrl != null}">
+                <a th:href="${restaurantInfo.homepageUrl}" target="_blank"
+                   th:text="${restaurantInfo.homepageUrl}">홈페이지</a>
+            </span>
+                        <span th:if="${restaurantInfo.homepageUrl == null}">-</span>
+                    </li>
+                    <li>기타 안내: <span th:text="${restaurantInfo.etc ?: '-'}">-</span></li>
+                </ul>
+            </div>
+            <!-- 편의시설 -->
+            <div th:if="${restaurantAmenities != null and !restaurantAmenities.isEmpty()}" class="amenity-row">
+                <div class="amenities-title">편의시설</div>
+                <ul class="amenities-list">
+                    <li th:each="a : ${restaurantAmenities}"
+                        th:attr="data-tooltip=${a.name}">
+                        <img th:src="@{'/uploads/icons/amenities/' + ${a.code.toLowerCase()} + '.png'}"
+                             th:alt="${a.name}" class="amenity-icon"/>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- 상점/쇼핑 정보 ShopInfo -->
+            <div th:if="${shopInfo != null}" class="shop-info detail-info-block">
+                <h2>상점 정보</h2>
+                <ul>
+                    <li>주요 상품: <span th:text="${shopInfo.mainProducts ?: '-'}">-</span></li>
+                    <li>영업시간: <span th:text="${shopInfo.openingHours ?: '-'}">-</span></li>
+                    <li>휴점일: <span th:text="${shopInfo.closedDays ?: '-'}">-</span></li>
+                    <li>주차 가능:
+                        <span th:if="${shopInfo.parkingAvailable != null}"
+                              th:text="${shopInfo.parkingAvailable ? '가능' : '불가'}">가능</span>
+                        <span th:if="${shopInfo.parkingAvailable == null}">-</span>
+                    </li>
+                    <li>연락처: <span th:text="${shopInfo.contactNumber ?: '-'}">-</span></li>
+                    <li>홈페이지:
+                        <span th:if="${shopInfo.homepageUrl != null}">
+                <a th:href="${shopInfo.homepageUrl}" target="_blank" th:text="${shopInfo.homepageUrl}">홈페이지</a>
+            </span>
+                        <span th:if="${shopInfo.homepageUrl == null}">-</span>
+                    </li>
+                    <li>기타 안내: <span th:text="${shopInfo.guide ?: '-'}">-</span></li>
+                </ul>
+            </div>
+            <!-- 편의시설 -->
+            <div th:if="${shopAmenities != null and !shopAmenities.isEmpty()}" class="amenity-row">
+                <div class="amenities-title">편의시설</div>
+                <ul class="amenities-list">
+                    <li th:each="a : ${shopAmenities}"
+                        th:attr="data-tooltip=${a.name}">
+                        <img th:src="@{'/uploads/icons/amenities/' + ${a.code.toLowerCase()} + '.png'}"
+                             th:alt="${a.name}" class="amenity-icon"/>
+                    </li>
+                </ul>
+            </div>
+
+
+            <!-- 지도 영역 -->
+            <section class="map">
+                <h2>지도</h2>
+                <div id="map"
+                     th:attr="data-lat=${destination.latitude},data-lng=${destination.longitude},data-country-code=${countryCode}"
+                     style="width:100%; height:350px; margin-top:20px;">
+                </div>
+            </section>
+        </section>
+    </main>
+
+    <!-- 사진 후기 모아보기 -->
+    <section class="photo-review-section">
+        <div class="photo-review-header">
+            <h2>사진 후기</h2>
+            <a href="#" class="view-all">전체보기 &gt;</a>
+        </div>
+        <div class="photo-review-list">
+            <!-- JS로 썸네일 이미지들이 동적으로 들어옵니다 -->
+        </div>
+    </section>
+
+    <section class="comment-section">
+        <div class="comment-toolbar">
+            <div class="comment-count"><h2>댓글 (<span id="comment-count">7</span>)</h2></div>
+            <div class="comment-sort">
+                <button id="sort-toggle-btn">오래된순 ▼</button>
+                <ul id="sort-options" class="sort-options hidden">
+                    <li data-value="oldest">오래된순</li>
+                    <li data-value="recent">최신순</li>
+                    <li data-value="likes">좋아요순</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ✅ 비로그인 시 안내 문구 및 클릭 가능 댓글창 -->
+        <div th:if="${#authentication.name == 'anonymousUser'}">
+            <div class="textarea-wrapper">
+            <textarea id="guest-comment-box" readonly
+                      placeholder="댓글을 작성하려면 로그인하세요."></textarea>
+            </div>
+        </div>
+
+        <!-- ✅ 로그인 시 댓글 작성 폼 -->
+        <form id="comment-form" enctype="multipart/form-data"
+              th:if="${#authentication.name != 'anonymousUser'}" class="comment-write-form">
+
+            <div class="textarea-wrapper">
+                <textarea name="content" placeholder="댓글을 입력하세요" required></textarea>
+            </div>
+
+            <div class="comment-controls">
+                <input type="file" id="comment-image-input" name="image" accept="image/*" hidden>
+
+                <label for="comment-image-input" class="image-upload-label">
+                    <img src="/uploads/icons/camera.png" alt="사진">
+                    사진
+                </label>
+
+                <button type="submit" class="submit-btn">등록</button>
+            </div>
+        </form>
+
+        <!-- ✅ 댓글 목록 -->
+        <ul id="comment-list" class="comment-list">
+            <!-- 댓글 + 대댓글이 JavaScript로 렌더링됩니다 -->
+        </ul>
+
+        <button id="load-more-comments" class="comment-more-btn">
+            <span class="icon">＋</span> 댓글 더보기
+        </button>
+    </section>
+
+    <!-- ====== 추천 여행지 ====== -->
+    <section class="similar-destinations" th:if="${similarDestinations != null and !similarDestinations.isEmpty()}">
+        <div class="container">
+                <h2>
+                    <span th:if="${regionName != null}" th:text="${regionName} + '에 이런 여행지는 어떠세요?'">추천</span>
+                    <span th:if="${regionName == null}">이런 여행지는 어떠세요?</span>
+                </h2>
+                <div class="similar-destination-list">
+                    <div th:each="d : ${similarDestinations}" class="similar-destination-card">
+                        <!-- 북마크 버튼: 카드 우상단 -->
+                        <button
+                                class="bookmark-icon"
+                                type="button"
+                                th:data-type="'DESTINATION'"
+                                th:data-id="${d.id}"
+                                th:data-bookmarked="${d.bookmarked != null ? d.bookmarked : false}">
+                            <img th:src="@{${d.bookmarked != null and d.bookmarked} ? '/uploads/icons/bookmark2.png' : '/uploads/icons/bookmark.png'}"
+                                 alt="북마크"/>
+                        </button>
+                        <!-- 카드 내용 -->
+                        <a th:href="@{'/destinations/' + ${d.id}}">
+                            <img th:src="${d.thumbnailPath}" th:alt="${d.name}" class="similar-destination-thumbnail"/>
+                            <div class="similar-destination-name" th:text="${d.name}"></div>
+                            <div class="similar-destination-region" th:text="${d.regionName}"></div>
+                        </a>
+                    </div>
+                </div>
+        </div>
+    </section>
+
+
+    <!-- ✅ 이미지 확대용 모달 -->
+    <div id="image-modal" class="image-modal" style="display:none;">
+        <span class="close-btn">&times;</span>
+        <img class="modal-content" id="modal-img" alt="확대 이미지">
+    </div>
+
+    <!-- 전체보기 모달 -->
+    <div id="photo-modal" class="photo-modal" style="display: none;">
+        <div class="photo-modal-overlay"></div>
+        <div class="photo-modal-container">
+            <span class="photo-close">&times;</span>
+            <button class="photo-prev">&#10094;</button>
+            <div class="photo-main">
+                <img id="main-photo" src="" alt="메인 이미지">
+            </div>
+            <button class="photo-next">&#10095;</button>
+            <div class="photo-sidebar-thumbnails" id="sidebar-thumbnails">
+                <!-- 썸네일 동적 삽입 -->
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ────── JS 스크립트 ────── -->
+
+    <!-- ✅ Kakao 지도 SDK (JS 앱 키 사용) -->
+<!--
+    <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=e5aca11993412c733289f668bac6c606&autoload=false"></script>
+-->
+
+    <!-- 자체 JS -->
+    <script src="/js/detail-carousel.js" defer></script>
+    <script src="/js/map-init.js" defer></script>
+    <script src="/js/bookmark.js" defer></script>
+    <script src="/js/detail.js" defer></script>
+    <!--
+    <script src="/js/comment/comment.js" defer></script>
+    -->
+    <script type="module" src="/js/comment/init.js"></script>
+
+
+    <!-- ✅ 지도 초기화 호출 (DOM 로드 후 실행) -->
+<!--    <script th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function () {
+            function waitForKakao(callback) {
+                if (window.kakao && kakao.maps && kakao.maps.load) {
+                    callback();
+                } else {
+                    setTimeout(() => waitForKakao(callback), 100);
+                }
+            }
+
+            waitForKakao(function () {
+                kakao.maps.load(function () {
+                    initMap([[${destination.latitude} + 0]], [[${destination.longitude} + 0]]);
+                });
+            });
+        });
+
+    </script>-->
+    <script th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function () {
+            const mapDiv = document.getElementById('map');
+            if (mapDiv) {
+                const lat = parseFloat(mapDiv.dataset.lat);
+                const lng = parseFloat(mapDiv.dataset.lng);
+                const countryCode = mapDiv.dataset.countryCode;
+                if (!isNaN(lat) && !isNaN(lng) && countryCode) {
+                    initMap(lat, lng, countryCode);
+                } else {
+                    console.warn("Map data missing or invalid");
+                }
+            } else {
+                console.warn("map div not found!");
+            }
+        });
+    </script>
+    <div id="amenity-tooltip" class="amenity-tooltip"></div>
+
+</th:block>
+</html>

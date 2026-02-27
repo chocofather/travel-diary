@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.category.CategoryMapper">
+
+    <select id="findAll" resultType="com.example.travlediary.model.Category">
+        SELECT id, name FROM categories
+        ORDER BY id
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO categories (name) VALUES (#{name})
+    </insert>
+
+    <select id="getCategoryNamesByDestinationId" resultType="String">
+        SELECT c.name
+        FROM destination_categories dc
+                 JOIN categories c ON dc.category_id = c.id
+        WHERE dc.destination_id = #{destinationId}
+        ORDER BY dc.category_id ASC
+    </select>
+
+    <delete id="deleteById" parameterType="long">
+        DELETE FROM categories WHERE id = #{id}
+    </delete>
+</mapper>

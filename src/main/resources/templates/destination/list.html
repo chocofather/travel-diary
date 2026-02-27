@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="layout/main :: layout(~{::body}, ~{::headFragment})">
+
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/destination.css">
+</th:block>
+
+<th:block th:fragment="body">
+  <!-- region-bar + 리스트만 교체될 컨테이너 (이 div만 AJAX로 교체!) -->
+  <div id="region-fragment-container"
+       th:replace="destination/fragment :: regionFragment(
+            ${cities},
+            ${destinations},
+            ${subregions},
+            ${selectedSubregionId},
+            ${selectedCityId},
+            ${selectedCityName},
+            ${totalPages},
+            ${currentPage},
+            ${pageSize},
+            ${sort},
+            ${type}
+        )">
+    <!--
+      서버사이드 첫 렌더링 시에만 여기가 랜더되고
+      AJAX 호출 이후엔 fragment에서 regionFragment가 전체를 채움.
+    -->
+  </div>
+
+  <script src="/js/city-carousel.js" defer></script>
+  <script src="/js/ajax-destination-switcher.js" defer></script>
+  <script src="/js/bookmark.js" defer></script>
+</th:block>
+</html>

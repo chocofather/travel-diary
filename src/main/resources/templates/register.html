@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>회원가입</title>
+    <link rel="stylesheet" type="text/css" href="/css/style.css">
+    <link>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body class="register-page">
+<div class="register-wrapper">
+<div class="register-logo">
+    <a th:href="@{/}">
+        <img src="/images/logo7.png" alt="로고">
+    </a>
+</div>
+
+<div class="register-container">
+    <form action="/users/register" method="post" enctype="multipart/form-data">
+
+        <!-- Step 1: 약관 동의 -->
+        <div id="step-1" class="form-step">
+            <h2>이용약관 동의</h2>
+
+            <!-- 전체 동의 -->
+            <div class="agree-box">
+                <div class="agree-check">
+                    <input type="checkbox" id="agreeAll">
+                </div>
+                <div class="agree-text">
+                    <div class="agree-title"><strong>전체 동의하기</strong></div>
+                    <p class="agree-desc">아래 모든 약관(필수/선택 포함)에 동의합니다.</p>
+                </div>
+            </div>
+
+            <!-- 약관 1 -->
+            <div class="agree-box">
+                <div class="agree-check">
+                    <input type="checkbox" id="termsAgree1">
+                </div>
+                <div class="agree-text">
+                    <div class="agree-title">[필수] 서비스 이용약관</div>
+                    <textarea readonly rows="4">여기에 서비스 이용약관 내용이 들어갑니다.</textarea>
+                </div>
+            </div>
+
+            <!-- 약관 2 -->
+            <div class="agree-box">
+                <div class="agree-check">
+                    <input type="checkbox" id="termsAgree2">
+                </div>
+                <div class="agree-text">
+                    <div class="agree-title">[필수] 개인정보 수집 및 이용</div>
+                    <textarea readonly rows="4">여기에 개인정보 수집 및 이용 동의 내용이 들어갑니다.</textarea>
+                </div>
+            </div>
+
+            <!-- 약관 3 -->
+            <div class="agree-box">
+                <div class="agree-check">
+                    <input type="checkbox" id="termsAgree3">
+                </div>
+                <div class="agree-text">
+                    <div class="agree-title">[선택] 마케팅 정보 수신 동의</div>
+                    <textarea readonly rows="4">여기에 마케팅 정보 수신 동의 내용이 들어갑니다.</textarea>
+                </div>
+            </div>
+            <div class="step-buttons">
+                <button type="button" class="next-step" id="step1-next" disabled>다음 단계</button>
+            </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div id="step-2" class="form-step" style="display:none">
+            <h2>계정 정보 입력</h2>
+
+            <!-- 아이디 -->
+            <div class="input-group">
+            <div class="input-with-icon">
+                <input type="text" id="username" name="username" placeholder="아이디" required>
+                <span class="icon user-icon"></span>
+            </div>
+            <span id="usernameMessage" class="alert"></span>
+            </div>
+
+            <!-- 이메일 -->
+            <div class="input-group">
+            <div class="input-with-icon">
+                <input type="email" name="userEmail" placeholder="이메일 주소" required>
+                <span class="icon email-icon"></span>
+            </div>
+            <span id="emailMessage" class="alert"></span>
+            </div>
+
+            <!-- 비밀번호 -->
+            <div class="input-group">
+            <div class="input-with-icon">
+                <input type="password" id="userPassword" name="userPassword" placeholder="비밀번호" required>
+                <span class="icon lock-icon"></span>
+                <span class="toggle-password hide" data-toggle="#userPassword"></span>
+            </div>
+            <span id="passwordValidationMessage" class="alert error">
+                비밀번호는 8자 이상, 특수문자 1개 이상 포함해야 합니다.
+            </span>
+            </div>
+
+
+            <!-- 비밀번호 확인 -->
+            <div class="input-group">
+            <div class="input-with-icon">
+                <input type="password" id="passwordConfirm" name="passwordConfirm" placeholder="비밀번호 확인" required>
+                <span class="icon lock-icon"></span>
+                <span class="toggle-password hide" data-toggle="#passwordConfirm"></span>
+            </div>
+            <span id="passwordMessage" class="alert"></span>
+            </div>
+
+            <div class="step-buttons">
+                <button type="button" class="prev-step">이전</button>
+                <button type="button" class="next-step" id="step2-next" disabled>다음 단계</button>
+            </div>
+        </div>
+
+
+
+        <!-- Step 3 -->
+        <div id="step-3" class="form-step" style="display:none">
+            <h2>개인 정보 입력</h2>
+
+            <!-- 닉네임 -->
+            <div class="input-group">
+            <div class="input-with-icon nickname-row">
+                <input type="text" id="nickname" name="nickname" placeholder="닉네임" required>
+                <span class="icon user-icon"></span>
+                <button type="button" id="generateNickname">자동 추천</button>
+            </div>
+            <span id="nicknameMessage" class="alert"></span>
+            </div>
+
+            <!-- 이름 -->
+            <div class="input-with-icon">
+                <input type="text" id="fullName" name="fullName" placeholder="이름" required>
+                <span class="icon user-icon"></span>
+            </div>
+
+            <!-- 전화번호 -->
+            <div class="input-with-icon">
+                <input type="text" id="userPhone" name="userPhone" maxlength="13" placeholder="전화번호">
+                <span class="icon phone-icon"></span>
+            </div>
+
+            <!-- 생년월일 -->
+            <div class="input-with-icon">
+                <input type="date" name="userBirth" required>
+                <span class="icon calendar-icon"></span>
+            </div>
+
+            <!-- 프로필 이미지 -->
+            <div class="input-with-icon">
+                <input type="file" name="profileImageFile">
+                <span class="icon image-icon"></span>
+            </div>
+
+            <div class="step-buttons">
+                <button type="button" class="prev-step">이전</button>
+                <button type="submit" id="step3-submit" disabled>가입하기</button>
+            </div>
+        </div>
+
+    </form>
+</div>
+</div>
+<script src="/js/register.js" defer></script>
+</body>
+</html>

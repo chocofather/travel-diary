@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.event.EventMapper">
+
+    <!-- DTO: com.example.travlediary.model.Event -->
+    <resultMap id="EventMap" type="com.example.travlediary.model.Event">
+        <id     property="id"        column="id"/>
+        <result property="title"     column="title"/>
+        <result property="description" column="description"/>
+        <result property="eventImg"  column="event_img"/>
+        <result property="posterImg" column="poster_img"/>
+        <result property="slide" column="is_slide" javaType="boolean"/>
+        <result property="userId"    column="user_id"/>
+        <result property="startDate" column="start_date"/>
+        <result property="endDate"   column="end_date"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <!-- is_slide = 1 인 슬라이드용 이벤트만 가져오기 -->
+    <select id="selectSlideEvents" resultMap="EventMap">
+        SELECT
+            id, title, description, event_img, is_slide,
+            user_id, start_date, end_date, created_at
+        FROM events
+        WHERE is_slide = 1
+          AND start_date &lt;= NOW()
+          AND end_date &gt;= NOW()
+        ORDER BY id
+    </select>
+
+
+    <insert id="insert"
+            parameterType="com.example.travlediary.model.Event">
+        INSERT INTO events(title,description,event_img,poster_img,is_slide,user_id,
+                           start_date,end_date,created_at)
+        VALUES (#{title},#{description},#{eventImg},#{posterImg},#{slide},#{userId},
+                #{startDate},#{endDate},NOW())
+    </insert>
+
+
+    <delete id="deleteEventById" parameterType="long">
+        DELETE FROM events WHERE id = #{id}
+    </delete>
+
+    <!-- 전체 이벤트 (최신순) -->
+    <select id="selectAllEvents" resultMap="EventMap">
+        SELECT * FROM events ORDER BY start_date DESC
+    </select>
+
+    <!-- 진행중 이벤트 -->
+    <select id="selectOngoingEvents" resultMap="EventMap">
+        SELECT * FROM events
+        WHERE start_date &lt;= NOW() AND end_date &gt;= NOW()
+        ORDER BY start_date DESC
+    </select>
+
+    <!-- 진행예정 이벤트 -->
+    <select id="selectUpcomingEvents" resultMap="EventMap">
+        SELECT * FROM events
+        WHERE start_date &gt; NOW()
+        ORDER BY start_date ASC
+    </select>
+
+    <!-- 종료된 이벤트 -->
+    <select id="selectEndedEvents" resultMap="EventMap">
+        SELECT * FROM events
+        WHERE end_date &lt; NOW()
+        ORDER BY end_date DESC
+    </select>
+
+    <!-- 이벤트 단일조회 (selectEventById) -->
+    <select id="selectEventById" resultMap="EventMap" parameterType="long">
+        SELECT * FROM events WHERE id = #{id}
+    </select>
+</mapper>

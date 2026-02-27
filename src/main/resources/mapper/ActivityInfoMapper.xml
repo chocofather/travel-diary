@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.info.ActivityInfoMapper">
+
+    <insert id="insert" parameterType="com.example.travlediary.model.ActivityInfo">
+        INSERT INTO activity_info
+        (destination_id, opening_hours, required_time, admission_fee, age_limit, reservation, equipment_included, parking_available, contact_number, homepage_url, guide)
+        VALUES
+            (#{destinationId}, #{openingHours}, #{requiredTime}, #{admissionFee}, #{ageLimit}, #{reservation}, #{equipmentIncluded}, #{parkingAvailable}, #{contactNumber}, #{homepageUrl}, #{guide})
+    </insert>
+
+    <select id="findByDestinationId" resultType="com.example.travlediary.model.ActivityInfo">
+        SELECT * FROM activity_info WHERE destination_id = #{destinationId}
+    </select>
+
+    <update id="update" parameterType="com.example.travlediary.model.ActivityInfo">
+        UPDATE activity_info
+        SET
+            opening_hours = #{openingHours},
+            required_time = #{requiredTime},
+            admission_fee = #{admissionFee},
+            age_limit = #{ageLimit},
+            reservation = #{reservation},
+            equipment_included = #{equipmentIncluded},
+            parking_available = #{parkingAvailable},
+            contact_number = #{contactNumber},
+            homepage_url = #{homepageUrl},
+            guide = #{guide}
+        WHERE destination_id = #{destinationId}
+    </update>
+
+
+
+</mapper>

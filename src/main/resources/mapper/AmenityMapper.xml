@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.amenity.AmenityMapper">
+
+    <!-- 전체 편의시설 조회 -->
+    <select id="findAll" resultType="com.example.travlediary.model.Amenity">
+        SELECT * FROM amenities ORDER BY id ASC
+    </select>
+
+    <!-- 타입별 편의시설 (코드 기준) 예시: type이 attraction이면 attraction_amenities 참조 -->
+    <select id="findByType" parameterType="string" resultType="com.example.travlediary.model.Amenity">
+        SELECT a.* FROM amenities a
+                            JOIN ${type}_amenities ta ON ta.amenity_id = a.id
+        -- 필요시 group by 또는 distinct
+    </select>
+
+    <!-- 번역: 특정 amenity의 번역 전체 -->
+    <select id="findTranslationsByAmenityId" resultType="com.example.travlediary.model.AmenityTranslation">
+        SELECT * FROM amenity_translations WHERE amenity_id = #{amenityId} ORDER BY id ASC
+    </select>
+
+    <!-- 번역: 특정 언어로 모든 amenity -->
+    <select id="findTranslationsByLang" resultType="com.example.travlediary.model.AmenityTranslation">
+        SELECT * FROM amenity_translations WHERE language_code = #{languageCode}
+    </select>
+
+    <!-- 관광지 편의시설 연결 -->
+    <insert id="insertAttractionAmenity">
+        INSERT INTO attraction_amenities (attraction_id, amenity_id)
+        VALUES (#{attractionId}, #{amenityId})
+    </insert>
+
+    <!-- 숙소 편의시설 연결 -->
+    <insert id="insertAccommodationAmenity">
+        INSERT INTO accommodation_amenities (accommodation_id, amenity_id)
+        VALUES (#{accommodationId}, #{amenityId})
+    </insert>
+
+    <!-- 음식점/카페 편의시설 연결 (restaurants/cafe 공용) -->
+    <insert id="insertRestaurantAmenity">
+        INSERT INTO restaurants_amenities (restaurants_id, amenity_id)
+        VALUES (#{restaurantId}, #{amenityId})
+    </insert>
+
+    <!-- 액티비티 편의시설 연결 -->
+    <insert id="insertActivityAmenity">
+        INSERT INTO activity_amenities (activity_id, amenity_id)
+        VALUES (#{activityId}, #{amenityId})
+    </insert>
+
+    <!-- 쇼핑 편의시설 연결 -->
+    <insert id="insertShopAmenity">
+        INSERT INTO shop_amenities (shop_id, amenity_id)
+        VALUES (#{shopId}, #{amenityId})
+    </insert>
+
+    <select id="findTranslationsByTypeAndLang" resultType="com.example.travlediary.model.AmenityTranslation">
+        SELECT t.*
+        FROM amenities a
+                 JOIN ${type}_amenities ta ON ta.amenity_id = a.id
+                 JOIN amenity_translations t ON t.amenity_id = a.id
+        WHERE t.language_code = #{languageCode}
+    </select>
+
+    <!-- 관광지 -->
+    <select id="findAttractionAmenityTranslationsByDestinationId"
+            resultType="com.example.travlediary.model.AmenityTranslation">
+        SELECT t.*, a.code
+        FROM attraction_amenities aa
+                 JOIN amenities a ON a.id = aa.amenity_id
+                 JOIN amenity_translations t ON t.amenity_id = a.id
+        WHERE aa.attraction_id = #{destinationId}
+          AND t.language_code = #{lang}
+    </select>
+
+    <!-- 숙소  -->
+    <select id="findAccommodationAmenityTranslationsByDestinationId"
+            resultType="com.example.travlediary.model.AmenityTranslation">
+        SELECT t.*, a.code
+        FROM accommodation_amenities aa
+                 JOIN amenities a ON a.id = aa.amenity_id
+                 JOIN amenity_translations t ON t.amenity_id = a.id
+        WHERE aa.accommodation_id = #{destinationId}
+          AND t.language_code = #{lang}
+    </select>
+
+    <!-- 음식점 / 카페 -->
+    <select id="findRestaurantAmenityTranslationsByDestinationId"
+            resultType="com.example.travlediary.model.AmenityTranslation">
+        SELECT t.*, a.code
+        FROM restaurants_amenities ra
+                 JOIN amenities a ON a.id = ra.amenity_id
+                 JOIN amenity_translations t ON t.amenity_id = a.id
+        WHERE ra.restaurants_id = #{destinationId}
+          AND t.language_code = #{lang}
+    </select>
+
+    <!-- 엑티비티 -->
+    <select id="findActivityAmenityTranslationsByDestinationId"
+            resultType="com.example.travlediary.model.AmenityTranslation">
+        SELECT t.*, a.code
+        FROM activity_amenities aa
+                 JOIN amenities a ON a.id = aa.amenity_id
+                 JOIN amenity_translations t ON t.amenity_id = a.id
+        WHERE aa.activity_id = #{destinationId}
+          AND t.language_code = #{lang}
+    </select>
+
+    <!-- 쇼핑 -->
+    <select id="findShopAmenityTranslationsByDestinationId"
+            resultType="com.example.travlediary.model.AmenityTranslation">
+        SELECT t.*, a.code
+        FROM shop_amenities sa
+                 JOIN amenities a ON a.id = sa.amenity_id
+                 JOIN amenity_translations t ON t.amenity_id = a.id
+        WHERE sa.shop_id = #{destinationId}
+          AND t.language_code = #{lang}
+    </select>
+
+    <!-- 관광지 편의시설 전체 삭제 -->
+    <delete id="deleteAttractionAmenities" parameterType="long">
+        DELETE FROM attraction_amenities WHERE attraction_id = #{attractionId}
+    </delete>
+
+    <!-- 숙소 편의시설 전체 삭제 -->
+    <delete id="deleteAccommodationAmenities" parameterType="long">
+        DELETE FROM accommodation_amenities WHERE accommodation_id = #{accommodationId}
+    </delete>
+
+    <!-- 음식점/카페 편의시설 전체 삭제 -->
+    <delete id="deleteRestaurantAmenities" parameterType="long">
+        DELETE FROM restaurants_amenities WHERE restaurants_id = #{restaurantId}
+    </delete>
+
+    <!-- 액티비티 편의시설 전체 삭제 -->
+    <delete id="deleteActivityAmenities" parameterType="long">
+        DELETE FROM activity_amenities WHERE activity_id = #{activityId}
+    </delete>
+
+    <!-- 쇼핑 편의시설 전체 삭제 -->
+    <delete id="deleteShopAmenities" parameterType="long">
+        DELETE FROM shop_amenities WHERE shop_id = #{shopId}
+    </delete>
+
+    <insert id="insertAmenity" parameterType="com.example.travlediary.model.Amenity" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO amenities (code)
+        VALUES (#{code})
+    </insert>
+
+    <insert id="insertAmenityTranslation" parameterType="com.example.travlediary.model.AmenityTranslation" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO amenity_translations (amenity_id, language_code, name)
+        VALUES (#{amenityId}, #{languageCode}, #{name})
+    </insert>
+
+    <select id="findTranslation" resultType="com.example.travlediary.model.AmenityTranslation">
+        SELECT * FROM amenity_translations
+        WHERE amenity_id = #{amenityId} AND language_code = #{languageCode}
+    </select>
+
+
+
+</mapper>

@@ -1,0 +1,86 @@
+<!-- templates/home.html -->
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      lang="ko"
+      th:replace="layout/main :: layout(~{::body}, ~{::headFragment})">
+
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/slider.css" />
+  <link rel="stylesheet" href="/css/home.css">
+</th:block>
+
+<th:block th:fragment="body">
+<!-- 이벤트 슬라이더 -->
+<section id="event-slider">
+  <div class="swiper">
+    <div class="swiper-wrapper" id="slide-area"></div>
+    <div class="slider-ui">
+      <span id="slide-index">01</span> /
+      <span id="slide-total">--</span>
+      <button class="nav prev">❮</button>
+      <button class="nav pause">❚❚</button>
+      <button class="nav next">❯</button>
+      <div class="progress"><span id="progress-bar"></span></div>
+    </div>
+  </div>
+  <div class="event-slider-bottom"></div>
+</section>
+
+  <!-- 시즌 추천 -->
+  <section class="seasonal-recommend">
+    <div class="seasonal-bg-wrapper">
+      <div class="season-header">
+        <span class="season-badge"></span>
+        <h2 class="season-title"></h2>
+        <p class="season-sub"></p>
+      </div>
+      <div class="season-tag-list"></div>
+    </div>
+    <div class="trip-card-list"></div>
+  </section>
+
+  <!-- 인기 추천 -->
+  <section class="popular-recommend">
+    <div class="recommend-header">
+      <span class="recommend-badge">이런 여행지 어때요?</span>
+      <h2 class="recommend-title">국내·해외 인기 많은 여행지</h2>
+      <p class="recommend-sub">다양한 테마로 인기 많은 여행지를 만나보세요</p>
+    </div>
+    <div class="recommend-tag-list" id="popular-tag-list"></div>
+    <div class="recommend-card-list" id="recommend-card-list"></div>
+  </section>
+
+
+
+  <!-- 즉석 여행 -->
+  <section class="instant-trip">
+    <div class="instant-header">
+      <span class="instant-badge">즉석 여행 룰렛</span>
+      <h2 class="instant-title">운명처럼 떠나는 랜덤 지역 뽑기</h2>
+      <p class="instant-sub">룰렛을 돌려서 오늘의 여행 지역을 뽑아보세요</p>
+      <div class="trip-filter">
+        <button type="button" class="roulette-type-btn active" data-type="domestic">국내</button>
+        <button type="button" class="roulette-type-btn" data-type="asia">아시아</button>
+        <button type="button" class="roulette-type-btn" data-type="europe">유럽</button>
+        <button type="button" class="roulette-type-btn" data-type="north-america">북아메리카</button>
+        <button type="button" class="roulette-type-btn" data-type="south-america">남아메리카</button>
+        <button type="button" class="roulette-type-btn" data-type="oceania">오세아니아</button>
+        <button type="button" class="roulette-type-btn" data-type="africa">아프리카</button>
+        <button type="button" class="roulette-type-btn" data-type="random-overseas">랜덤해외</button>
+      </div>
+      <div class="roulette-wrapper" style="position:relative; width:520px; margin:70px auto 0;">
+        <div class="roulette-pointer"></div>
+        <canvas id="roulette-canvas" width="520" height="520" style="display:block; margin:0 auto;"></canvas>
+      </div>
+      <button id="spin-btn"><span style="font-size:1.1em;">🎲</span> 돌리기</button>
+      <div id="roulette-result" style="margin-top:18px;font-size:18px;font-weight:600;text-align:center;"></div>
+    </div>
+    <div class="recommend-card-list" id="roulette-trip-list">
+      <!-- JS로 삽입 -->
+    </div>
+  </section>
+  <script src="/js/home.js" defer></script>
+  <script src="/js/slider.js" defer></script>
+  <script src="/js/random.js" defer></script>
+</th:block>
+</html>

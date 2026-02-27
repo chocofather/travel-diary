@@ -1,0 +1,55 @@
+<!-- post/write.html -->
+<!DOCTYPE html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="layout/main :: layout(~{::body}, ~{::headFragment})">
+
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/post-write.css">
+  <link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css" />
+  <script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
+  <script src="/js/editor-init.js"></script>
+</th:block>
+
+<th:block th:fragment="body">
+  <section class="write-container">
+    <h1 class="write-title">글쓰기 <span th:text="${postType=='QUESTION'? '(여행 질문)':'(여행 팁)'}"></span></h1>
+
+    <form th:action="@{/post/write}" method="post" enctype="multipart/form-data" id="post-form" class="write-form">
+      <!-- 카테고리 -->
+      <div class="form-group">
+        <label for="postTypeSelect" class="select-label">카테고리</label>
+        <select name="postType" id="postTypeSelect" class="input-select">
+          <option value="QUESTION" th:selected="${postType=='QUESTION'}">여행질문</option>
+          <option value="TIP"      th:selected="${postType=='TIP'}">여행팁</option>
+        </select>
+      </div>
+
+      <!-- 제목 -->
+      <div class="form-group">
+        <input type="text" name="title" id="title" class="input-text" placeholder=" " required>
+        <label for="title" class="input-label">제목을 입력하세요</label>
+      </div>
+
+      <!-- 에디터 -->
+      <div class="form-group editor-group">
+        <div id="editor"></div>
+        <input type="hidden" name="content" id="content-input" />
+      </div>
+
+      <!-- 버튼 -->
+      <div class="button-group">
+        <button type="submit" class="btn btn-primary">등록</button>
+        <a th:href="@{/board/list?boardType=post}" class="btn btn-secondary">취소</a>
+      </div>
+    </form>
+  </section>
+
+  <script>
+    window.initToastEditor('#editor', 'content-input');
+    document.getElementById('post-form').addEventListener('submit', function() {
+      console.log('폼 제출 전 content:', document.getElementById('content-input').value);
+    });
+  </script>
+</th:block>
+</html>

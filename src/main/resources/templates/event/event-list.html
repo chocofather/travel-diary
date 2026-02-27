@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      lang="ko"
+      th:replace="layout/main :: layout(~{::body}, ~{::headFragment})">
+
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/event.css">
+</th:block>
+
+<th:block th:fragment="body">
+  <div class="event-list-wrapper">
+    <h1>이벤트 목록</h1>
+    <div class="event-tab">
+      <a th:href="@{/events(status='ongoing')}" th:classappend="${selectedStatus}=='ongoing' ? 'active'">진행중</a>
+      <a th:href="@{/events(status='upcoming')}" th:classappend="${selectedStatus}=='upcoming' ? 'active'">진행예정</a>
+      <a th:href="@{/events(status='ended')}" th:classappend="${selectedStatus}=='ended' ? 'active'">종료</a>
+      <a th:href="@{/events}" th:classappend="${selectedStatus==null} ? 'active'">전체</a>
+    </div>
+
+    <ul class="event-list">
+      <li th:each="event : ${eventList}">
+        <a th:href="@{/events/{id}(id=${event.id})}">
+          <img th:if="${event.eventImg}" th:src="@{${event.eventImg}}" alt="이벤트 이미지" />
+          <div class="event-meta-col">
+            <div class="event-title" th:text="${event.title}">이벤트 제목</div>
+            <div class="event-desc" th:text="${event.description}">이벤트 설명</div>
+            <div class="event-date"
+                 th:text="|${event.startDate} ~ ${event.endDate}|">2024-01-01 ~ 2024-01-31</div>
+          </div>
+        </a>
+      </li>
+    </ul>
+
+    <div th:if="${eventList.size() == 0}" style="margin-top:40px; text-align:center;">
+      <span>해당 이벤트가 없습니다.</span>
+    </div>
+  </div>
+</th:block>
+</html>

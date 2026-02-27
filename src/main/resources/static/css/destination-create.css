@@ -1,0 +1,163 @@
+body {
+    background: #f5f7fa;
+    font-family: 'Segoe UI', 'Apple SD Gothic Neo', 'Malgun Gothic', Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+h1 {
+    font-size: 2rem;
+    color: #2658e4;
+    margin-bottom: 24px;
+    text-align: center;
+    letter-spacing: -1px;
+}
+
+form {
+    max-width: 650px;
+    margin: 40px auto;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 8px 28px rgba(34,45,56,0.14);
+    padding: 40px 36px 36px 36px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+form > div, .type-fields > div {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 0;
+}
+
+label {
+    font-weight: 500;
+    color: #334e68;
+    font-size: 15px;
+    margin-bottom: 2px;
+}
+
+input[type="text"],
+input[type="number"],
+input[type="file"],
+input[type="email"],
+select,
+textarea {
+    padding: 10px 14px;
+    border: 1px solid #d1d9e6;
+    border-radius: 7px;
+    font-size: 15px;
+    transition: border 0.2s;
+    background: #fafbfc;
+    margin-bottom: 2px;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+input[type="file"]:focus,
+select:focus,
+textarea:focus {
+    border-color: #6b8fff;
+    outline: none;
+}
+
+textarea {
+    resize: vertical;
+    min-height: 42px;
+    max-height: 200px;
+}
+
+h4 {
+    font-size: 1.1rem;
+    color: #2658e4;
+    margin: 18px 0 6px 0;
+    font-weight: 600;
+}
+
+[type="checkbox"] {
+    accent-color: #2658e4;
+    width: 18px;
+    height: 18px;
+    margin-right: 4px;
+}
+
+button[type="submit"] {
+    margin-top: 16px;
+    background: linear-gradient(90deg, #4978f4 60%, #3db9fa 100%);
+    color: #fff;
+    font-weight: 600;
+    font-size: 1.1rem;
+    border: none;
+    border-radius: 9px;
+    padding: 13px 0;
+    box-shadow: 0 3px 15px rgba(34,45,56,0.08);
+    transition: background 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+}
+button[type="submit"]:hover {
+    background: linear-gradient(90deg, #3458c2 60%, #3da7e8 100%);
+    box-shadow: 0 6px 22px rgba(80,120,240,0.12);
+}
+
+[type="file"] {
+    background: #fff;
+}
+
+select:disabled {
+    background: #f2f2f2;
+    color: #888;
+}
+
+/* Amenity 체크박스 스타일 */
+[type="checkbox"] + span {
+    margin-left: 4px;
+    vertical-align: middle;
+}
+.type-fields > div > div {
+    flex-wrap: wrap;
+}
+
+/* Amenity 체크박스 그룹 */
+.type-fields h4 {
+    margin-top: 14px;
+    margin-bottom: 7px;
+    color: #237c91;
+    font-size: 1rem;
+}
+
+.type-fields {
+    border: 1px solid #d6e3f3;
+    border-radius: 10px;
+    padding: 24px 20px;
+    background: #f7fbfe;
+    margin-bottom: 12px;
+    display: none; /* 기본 숨김, JS로 show */
+}
+
+.type-fields.active {
+    display: flex !important;
+}
+
+/* Amenity 체크박스 그룹 레이아웃 */
+.type-fields .amenity-checkbox-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 2px;
+}
+.type-fields .amenity-checkbox-list > div {
+    width: 135px;
+    margin-bottom: 3px;
+}
+
+@media (max-width: 700px) {
+    form {
+        padding: 24px 8px;
+        max-width: 98vw;
+    }
+    .type-fields .amenity-checkbox-list > div {
+        width: 48vw;
+        min-width: 120px;
+    }
+}

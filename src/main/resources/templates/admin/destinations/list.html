@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="layout/main :: layout(~{::body}, ~{::headFragment})">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/admin-destination-list.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</th:block>
+<th:block th:fragment="body">
+
+  <div class="top-bar">
+    <h1>여행지 목록</h1>
+    <a href="/admin/destinations/create" class="btn">+ 새 여행지 등록</a>
+  </div>
+
+  <!-- ★ 선택된 지역 이름 표시 -->
+  <div class="filter-title" th:text="${selectedRegionName} ?: '전체 리스트'"></div>
+
+  <!-- 필터 바 -->
+  <div class="admin-destination-filter-bar">
+    <form method="get" th:action="@{/admin/destinations}" style="display: flex; gap: 14px; align-items: center;">
+
+
+      <!-- 국내/해외 버튼 그룹 -->
+      <div class="filter-btn-group">
+        <!-- 전체 버튼 -->
+        <button type="submit" value="all"
+                class="filter-btn"
+                onclick="this.form.type.value='all'"
+                th:classappend="${type} == null or ${type} == 'all' ? ' active' : ''">전체</button>
+        <!-- 국내 버튼 -->
+        <button type="submit" value="domestic"
+                class="filter-btn"
+                onclick="this.form.type.value='domestic'"
+                th:classappend="${type} == 'domestic' ? ' active' : ''">국내</button>
+        <!-- 해외 버튼 -->
+        <button type="submit" value="overseas"
+                class="filter-btn"
+                onclick="this.form.type.value='overseas'"
+                th:classappend="${type} == 'overseas' ? ' active' : ''">해외</button>
+        <!-- type 값을 실제로 전달하는 hidden input -->
+        <input type="hidden" name="type" th:value="${type}" />
+      </div>
+
+
+      <!-- 해외: 대륙/국가/도시 드롭다운 -->
+      <select name="continentId" th:if="${type} == 'overseas'" onchange="this.form.submit()">
+        <option value="">- 대륙 선택 -</option>
+        <option th:each="c : ${continents}" th:value="${c.id}" th:text="${c.regionName}" th:selected="${continentId} == ${c.id}"></option>
+      </select>
+      <select name="countryId" th:if="${type} == 'overseas' and ${countries} != null" onchange="this.form.submit()">
+        <option value="">- 국가 선택 -</option>
+        <option th:each="c : ${countries}" th:value="${c.id}" th:text="${c.regionName}" th:selected="${countryId} == ${c.id}"></option>
+      </select>
+      <select name="cityId" th:if="${type} == 'overseas' and ${cities} != null" onchange="this.form.submit()">
+        <option value="">- 도시 선택 -</option>
+        <option th:each="c : ${cities}" th:value="${c.id}" th:text="${c.regionName}" th:selected="${cityId} == ${c.id}"></option>
+      </select>
+
+      <!-- 국내: 시/도 드롭다운 -->
+      <select name="regionId" th:if="${type} == 'domestic'" onchange="this.form.submit()">
+        <option value="">- 시/도 선택 -</option>
+        <option th:each="r : ${regions}" th:value="${r.id}" th:text="${r.regionName}" th:selected="${regionId} == ${r.id}"></option>
+      </select>
+
+      <button type="submit" class="btn btn-small">검색</button>
+    </form>
+  </div>
+
+  <div class="destination-list-wrapper">
+    <table>
+      <thead>
+      <tr>
+        <th>#</th>
+        <th>여행지명</th>
+        <th>지역</th>
+        <th>이미지 등록</th>
+        <th>수정</th>
+        <th>삭제</th>
+      </tr>
+
+      </thead>
+      <tbody>
+      <tr th:each="dest, stat : ${destinationList}">
+        <td th:text="${stat.index + 1}">1</td>
+        <td th:text="${dest.name}">제주도</td>
+        <td th:text="${dest.regionName}">제주</td>
+        <td>
+          <a th:href="@{'/admin/destinations/' + ${dest.id} + '/images'}" class="btn btn-small">등록</a>
+        </td>
+        <td>
+          <a th:href="@{'/admin/destinations/edit/' + ${dest.id}}" class="btn btn-small btn-edit">수정</a>
+        </td>
+        <td>
+          <form th:action="@{'/admin/destinations/' + ${dest.id} + '/delete'}" method="post" onsubmit="return confirm('정말 삭제하시겠습니까?');" style="display:inline;">
+            <button type="submit" class="btn btn-small btn-delete">삭제</button>
+          </form>
+        </td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+
+</th:block>
+
+</html>

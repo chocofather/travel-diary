@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="layout/main :: layout(~{::body}, ~{::headFragment})">
+
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/destination-create.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</th:block>
+<th:block th:fragment="body">
+
+  <h1>여행지 수정</h1>
+
+  <form th:action="@{/admin/destinations/edit/{id}(id=${destinationForm.destinationId})}"
+        method="post" enctype="multipart/form-data"
+        th:object="${destinationForm}">
+
+    <!-- 위도 / 경도 -->
+    <div>
+      <label>위도</label>
+      <input type="text" th:field="*{latitude}" placeholder="위도">
+    </div>
+    <div>
+      <label>경도</label>
+      <input type="text" th:field="*{longitude}" placeholder="경도">
+    </div>
+
+    <!-- 지역 선택 -->
+    <div>
+      <label>여행지 지역 선택</label>
+      <select id="continent" name="continent"></select>
+      <select id="country" name="country"></select>
+      <select id="city" name="city"></select>
+      <select id="district" name="district"></select>
+      <input type="hidden" id="regionIdHidden" name="regionId" th:field="*{regionId}">
+    </div>
+
+    <!-- 시즌 선택 -->
+    <div>
+      <label>시즌</label>
+      <select th:field="*{season}">
+        <option value="SPRING">봄</option>
+        <option value="SUMMER">여름</option>
+        <option value="FALL">가을</option>
+        <option value="WINTER">겨울</option>
+        <option value="ALL_SEASONS">사계절</option>
+      </select>
+    </div>
+
+    <!-- 타입 선택 (수정 불가) -->
+    <div>
+      <label>타입</label>
+      <select th:field="*{type}" disabled>
+        <option value="ATTRACTION">관광지</option>
+        <option value="ACCOMMODATION">숙소</option>
+        <option value="RESTAURANTS">음식점</option>
+        <option value="CAFE">카페</option>
+        <option value="SHOP">쇼핑</option>
+        <option value="ACTIVITY">체험/액티비티</option>
+      </select>
+      <input type="hidden" th:field="*{type}"/>
+    </div>
+
+    <div id="attraction-fields" class="type-fields" style="display: none;">
+      <h4>관광지 상세 정보</h4>
+      <div>
+        <label>휴관일
+          <input type="text" th:field="*{attractionInfo.closedDays}" placeholder="예: 매주 월요일, 명절">
+        </label>
+      </div>
+      <div>
+        <label>운영시간
+          <input type="text" th:field="*{attractionInfo.openingHours}" placeholder="예: 09:00~18:00">
+        </label>
+      </div>
+      <div>
+        <label>입장료
+          <input type="text" th:field="*{attractionInfo.admissionFee}" placeholder="예: 무료, 어른 2,000원 등">
+        </label>
+      </div>
+      <div>
+        <label>주차 가능 여부
+          <input type="checkbox" th:field="*{attractionInfo.parkingAvailable}">
+        </label>
+      </div>
+      <div>
+        <label>전화번호
+          <input type="text" th:field="*{attractionInfo.contactNumber}" placeholder="예: 042-123-4567">
+        </label>
+      </div>
+      <div>
+        <label>홈페이지
+          <input type="text" th:field="*{attractionInfo.homepageUrl}" placeholder="예: http://...">
+        </label>
+      </div>
+      <div>
+        <label>관람 안내/기타
+          <textarea th:field="*{attractionInfo.guide}" placeholder="기타 안내사항"></textarea>
+        </label>
+      </div>
+      <!-- 👇 관광지 편의시설 (amenities) -->
+      <div>
+        <h4>관광지 편의시설</h4>
+        <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+          <div th:each="amenity : ${attractionAmenities}">
+            <label>
+              <input type="checkbox" th:field="*{attractionAmenityIds}" th:value="${amenity.amenityId}">
+              <span th:text="${amenity.name}"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="accommodation-fields" class="type-fields" style="display: none;">
+      <h4>숙소 상세 정보</h4>
+      <div>
+        <label>체크인 시간
+          <input type="text" th:field="*{accommodationInfo.checkinTime}" placeholder="예: 15:00">
+        </label>
+      </div>
+      <div>
+        <label>체크아웃 시간
+          <input type="text" th:field="*{accommodationInfo.checkoutTime}" placeholder="예: 11:00">
+        </label>
+      </div>
+      <div>
+        <label>객실 수
+          <input type="number" th:field="*{accommodationInfo.roomCount}" min="1" placeholder="예: 50">
+        </label>
+      </div>
+      <div>
+        <label>객실 유형
+          <input type="text" th:field="*{accommodationInfo.roomType}" placeholder="예: 싱글, 트윈, 더블">
+        </label>
+      </div>
+      <div>
+        <label>숙소 등급
+          <input type="number" th:field="*{accommodationInfo.starRating}" step="0.1" min="0" max="5" placeholder="예: 4.5">
+        </label>
+      </div>
+      <div>
+        <label>
+          <input type="checkbox" th:field="*{accommodationInfo.breakfastIncluded}">
+          조식 포함
+        </label>
+      </div>
+      <div>
+        <label>
+          <input type="checkbox" th:field="*{accommodationInfo.parkingAvailable}">
+          주차 가능
+        </label>
+      </div>
+      <div>
+        <label>
+          <input type="checkbox" th:field="*{accommodationInfo.petAllowed}">
+          반려동물 가능
+        </label>
+      </div>
+      <div>
+        <label>숙소 연락처
+          <input type="text" th:field="*{accommodationInfo.contactNumber}" placeholder="예: 042-000-1234">
+        </label>
+      </div>
+      <div>
+        <label>숙소 홈페이지
+          <input type="text" th:field="*{accommodationInfo.homepageUrl}" placeholder="예: http://...">
+        </label>
+      </div>
+      <div>
+        <label>기타 안내
+          <textarea th:field="*{accommodationInfo.etc}" placeholder="기타 안내사항"></textarea>
+        </label>
+      </div>
+      <!-- 👇 숙소 편의시설 (amenities) -->
+      <div>
+        <h4>숙소 편의시설</h4>
+        <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+          <div th:each="amenity : ${accommodationAmenities}">
+            <label>
+              <input type="checkbox" th:field="*{accommodationAmenityIds}" th:value="${amenity.amenityId}">
+              <span th:text="${amenity.name}"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="restaurant-fields" class="type-fields" style="display: none;">
+      <h4>음식점/카페 상세 정보</h4>
+      <div>
+        <label>대표메뉴
+          <input type="text" th:field="*{restaurantInfo.mainMenu}" placeholder="예: 돈까스, 커피 등">
+        </label>
+      </div>
+      <div>
+        <label>가격대
+          <input type="text" th:field="*{restaurantInfo.priceRange}" placeholder="예: 1만원대, 2만원대 등">
+        </label>
+      </div>
+      <div>
+        <label>영업시간
+          <input type="text" th:field="*{restaurantInfo.openingHours}" placeholder="예: 10:00~22:00">
+        </label>
+      </div>
+      <div>
+        <label>브레이크 타임
+          <input type="text" th:field="*{restaurantInfo.breakTime}" placeholder="예: 15:00~17:00">
+        </label>
+      </div>
+      <div>
+        <label>휴무일
+          <input type="text" th:field="*{restaurantInfo.closedDays}" placeholder="예: 매주 월요일">
+        </label>
+      </div>
+      <div>
+        <label>주차 가능 여부
+          <input type="checkbox" th:field="*{restaurantInfo.parkingAvailable}">
+        </label>
+      </div>
+      <div>
+        <label>반려동물 가능 여부
+          <input type="checkbox" th:field="*{restaurantInfo.petAllowed}">
+        </label>
+      </div>
+      <div>
+        <label>좌석 수
+          <input type="number" th:field="*{restaurantInfo.seatCount}" min="1" placeholder="예: 40">
+        </label>
+      </div>
+      <div>
+        <label>테이크아웃 가능
+          <input type="checkbox" th:field="*{restaurantInfo.takeoutAvailable}">
+        </label>
+      </div>
+      <div>
+        <label>배달 가능
+          <input type="checkbox" th:field="*{restaurantInfo.deliveryAvailable}">
+        </label>
+      </div>
+      <div>
+        <label>예약 가능
+          <input type="checkbox" th:field="*{restaurantInfo.reservation}">
+        </label>
+      </div>
+      <div>
+        <label>연락처
+          <input type="text" th:field="*{restaurantInfo.contactNumber}" placeholder="예: 02-1234-5678">
+        </label>
+      </div>
+      <div>
+        <label>홈페이지
+          <input type="text" th:field="*{restaurantInfo.homepageUrl}" placeholder="예: http://...">
+        </label>
+      </div>
+      <div>
+        <label>기타 안내사항
+          <textarea th:field="*{restaurantInfo.etc}" placeholder="기타 안내"></textarea>
+        </label>
+      </div>
+      <!-- 👇 음식점/카페 편의시설 (amenities) -->
+      <div>
+        <h4>음식점/카페 편의시설</h4>
+        <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+          <div th:each="amenity : ${restaurantAmenities}">
+            <label>
+              <input type="checkbox" th:field="*{restaurantAmenityIds}" th:value="${amenity.amenityId}">
+              <span th:text="${amenity.name}"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="activity-fields" class="type-fields" style="display: none;">
+      <h4>체험/액티비티 상세 정보</h4>
+      <div>
+        <label>운영 시간
+          <input type="text" th:field="*{activityInfo.openingHours}" placeholder="예: 09:00~18:00">
+        </label>
+      </div>
+      <div>
+        <label>소요 시간
+          <input type="text" th:field="*{activityInfo.requiredTime}" placeholder="예: 약 2시간">
+        </label>
+      </div>
+      <div>
+        <label>참가비/이용요금
+          <input type="text" th:field="*{activityInfo.admissionFee}" placeholder="예: 20,000원">
+        </label>
+      </div>
+      <div>
+        <label>연령 제한
+          <input type="text" th:field="*{activityInfo.ageLimit}" placeholder="예: 7세 이상">
+        </label>
+      </div>
+      <div>
+        <label>사전 예약 필요
+          <input type="checkbox" th:field="*{activityInfo.reservation}">
+        </label>
+      </div>
+      <div>
+        <label>장비 대여/포함 여부
+          <input type="checkbox" th:field="*{activityInfo.equipmentIncluded}">
+        </label>
+      </div>
+      <div>
+        <label>주차 가능 여부
+          <input type="checkbox" th:field="*{activityInfo.parkingAvailable}">
+        </label>
+      </div>
+      <div>
+        <label>연락처
+          <input type="text" th:field="*{activityInfo.contactNumber}" placeholder="예: 02-1234-5678">
+        </label>
+      </div>
+      <div>
+        <label>홈페이지
+          <input type="text" th:field="*{activityInfo.homepageUrl}" placeholder="예: http://...">
+        </label>
+      </div>
+      <div>
+        <label>이용 안내/기타
+          <textarea th:field="*{activityInfo.guide}" placeholder="기타 안내사항"></textarea>
+        </label>
+      </div>
+      <!-- Amenity (체험/액티비티용) -->
+      <div>
+        <h4>체험/액티비티 편의시설</h4>
+        <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+          <div th:each="amenity : ${activityAmenities}">
+            <label>
+              <input type="checkbox" th:field="*{activityAmenityIds}" th:value="${amenity.amenityId}">
+              <span th:text="${amenity.name}"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="shop-fields" class="type-fields" style="display: none;">
+      <h4>쇼핑 상세 정보</h4>
+      <div>
+        <label>휴점일
+          <input type="text" th:field="*{shopInfo.closedDays}" placeholder="예: 매주 월요일, 명절">
+        </label>
+      </div>
+      <div>
+        <label>영업시간
+          <input type="text" th:field="*{shopInfo.openingHours}" placeholder="예: 10:00~20:00">
+        </label>
+      </div>
+      <div>
+        <label>주요상품/카테고리
+          <input type="text" th:field="*{shopInfo.mainProducts}" placeholder="예: 의류, 소품, 식품">
+        </label>
+      </div>
+      <div>
+        <label>주차 가능 여부
+          <input type="checkbox" th:field="*{shopInfo.parkingAvailable}">
+        </label>
+      </div>
+      <div>
+        <label>연락처
+          <input type="text" th:field="*{shopInfo.contactNumber}" placeholder="예: 02-1234-5678">
+        </label>
+      </div>
+      <div>
+        <label>홈페이지
+          <input type="text" th:field="*{shopInfo.homepageUrl}" placeholder="예: http://...">
+        </label>
+      </div>
+      <div>
+        <label>기타 안내사항
+          <textarea th:field="*{shopInfo.guide}" placeholder="기타 안내"></textarea>
+        </label>
+      </div>
+      <!-- Amenity (쇼핑용) -->
+      <div>
+        <h4>쇼핑 편의시설</h4>
+        <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+          <div th:each="amenity : ${shopAmenities}">
+            <label>
+              <input type="checkbox" th:field="*{shopAmenityIds}" th:value="${amenity.amenityId}">
+              <span th:text="${amenity.name}"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 다국어 입력 -->
+    <h4>다국어 정보</h4>
+    <div>
+      <input type="hidden" th:field="*{translations[0].languageCode}" value="ko"/>
+      <input type="text" th:field="*{translations[0].name}" placeholder="이름 (한국어)">
+      <textarea th:field="*{translations[0].shortDescription}" placeholder="간단 설명 (한국어)"></textarea>
+      <textarea th:field="*{translations[0].description}" placeholder="설명 (한국어)"></textarea>
+    </div>
+    <div>
+      <input type="hidden" th:field="*{translations[1].languageCode}" value="en"/>
+      <input type="text" th:field="*{translations[1].name}" placeholder="Name (English)">
+      <textarea th:field="*{translations[1].shortDescription}" placeholder="Short Description (English)"></textarea>
+      <textarea th:field="*{translations[1].description}" placeholder="Description (English)"></textarea>
+    </div>
+
+    <!-- 카테고리 -->
+    <div>
+      <h4>카테고리</h4>
+      <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+        <div th:each="cat : ${categories}" style="width: 120px;">
+          <label>
+            <input type="checkbox" th:field="*{categoryIds}" th:value="${cat.id}" />
+            <span th:text="${cat.name}"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- 이미지 업로드 (선택/추가) -->
+    <div>
+      <label>이미지 업로드 (이미지 추가시만 첨부, 삭제/순서변경은 별도 관리)</label>
+      <input type="file" name="images" multiple>
+      <label><input type="checkbox" th:field="*{main}"/> 메인 이미지</label>
+      <label><input type="checkbox" th:field="*{slide}"/> 슬라이드 이미지</label>
+    </div>
+
+    <button type="submit">수정</button>
+  </form>
+  <script src="/js/region-selector.js" defer></script>
+  <script src="/js/type-fields.js" defer></script>
+</th:block>
+</html>

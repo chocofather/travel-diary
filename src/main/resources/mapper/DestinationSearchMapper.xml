@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.search.DestinationSearchMapper">
+
+    <resultMap id="DestinationSearchResultMap" type="com.example.travlediary.dto.DestinationSearchResultDto">
+        <id property="id" column="destination_id"/>
+        <result property="name" column="destination_name"/>
+        <result property="shortDescription" column="short_description"/>
+        <result property="thumbnailUrl" column="thumbnail_url"/>
+        <result property="regionName" column="region_name"/>
+        <result property="parentRegionName" column="parent_region_name"/>
+    </resultMap>
+
+    <select id="searchDestinations" resultMap="DestinationSearchResultMap">
+        SELECT
+            d.id AS destination_id,
+            dt.name AS destination_name,
+            dt.short_description,
+            di.image_url AS thumbnail_url,
+            cc.region_name,
+            pcc.region_name AS parent_region_name
+        FROM destinations d
+                 JOIN destination_translations dt ON d.id = dt.destination_id AND dt.language_code = 'ko'
+                 LEFT JOIN destination_images di ON di.destination_id = d.id AND di.is_main = 1
+                 LEFT JOIN country_categories cc ON d.region_id = cc.id
+                 LEFT JOIN country_categories pcc ON cc.parent_id = pcc.id
+        WHERE
+            (
+                dt.name LIKE CONCAT('%', #{keyword}, '%')
+                    OR dt.short_description LIKE CONCAT('%', #{keyword}, '%')
+                    OR dt.description LIKE CONCAT('%', #{keyword}, '%')
+                    OR cc.region_name LIKE CONCAT('%', #{keyword}, '%')
+                    OR pcc.region_name LIKE CONCAT('%', #{keyword}, '%')
+                )
+        ORDER BY d.id DESC
+            LIMIT #{limit}
+    </select>
+
+</mapper>

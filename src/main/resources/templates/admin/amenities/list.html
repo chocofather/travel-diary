@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="layout/main :: layout(~{::body}, ~{::headFragment})">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/admin.css">
+  <link rel="stylesheet" href="/css/amenity.css">
+</th:block>
+<th:block th:fragment="body">
+
+  <div class="amenity-list-outer">
+    <div class="amenity-list-wrapper">
+      <div class="top-bar">
+        <h1>편의시설 목록</h1>
+        <div class="amenity-btn-bar">
+          <a href="/admin/amenities/create" class="btn">+ 새 편의시설 등록</a>
+        </div>
+      </div>
+      <table>
+        <thead>
+        <tr>
+          <th>ID</th>
+          <th>코드</th>
+          <th>번역</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="a : ${amenities}">
+          <td th:text="${a.id}"></td>
+          <td th:text="${a.code}"></td>
+          <td>
+            <a th:href="@{|/admin/amenities/${a.id}/translations|}" class="btn btn-link">번역 보기</a>
+
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</th:block>
+</html>

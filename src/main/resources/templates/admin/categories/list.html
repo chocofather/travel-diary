@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="layout/main :: layout(~{::body}, ~{::headFragment})">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/admin.css">
+</th:block>
+<th:block th:fragment="body">
+  <div class="admin-category-list-page">
+    <div class="admin-header">
+      <h2>카테고리 관리</h2>
+      <a href="/admin/categories/create" class="btn btn-primary">+ 카테고리 등록</a>
+    </div>
+    <div class="category-card-list">
+      <div class="category-card" th:each="cat : ${categories}">
+        <div class="category-card-info">
+          <span class="category-id" th:text="${cat.id}">1</span>
+          <span class="category-name" th:text="${cat.name}">이름</span>
+        </div>
+        <div class="category-card-actions">
+          <form th:action="@{'/admin/categories/' + ${cat.id} + '/delete'}" method="post" style="display:inline;">
+            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('정말 삭제할까요?')">삭제</button>
+          </form>
+        </div>
+      </div>
+      <div th:if="${#lists.isEmpty(categories)}" class="empty-message">
+        등록된 카테고리가 없습니다.
+      </div>
+    </div>
+  </div>
+</th:block>
+</html>

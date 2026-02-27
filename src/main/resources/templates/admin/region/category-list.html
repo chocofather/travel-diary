@@ -1,0 +1,74 @@
+<!-- templates/admin/category-list.html -->
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="layout/main :: layout(~{::body}, ~{::headFragment})">
+
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/admin.css">
+</th:block>
+
+<th:block th:fragment="body">
+  <section class="admin-category-list">
+
+    <!-- 국내/해외 탭 -->
+    <div class="admin-category-tabs">
+      <a th:href="@{/admin/region-categories(type='domestic',depth=3)}"
+         th:classappend="${type} == 'domestic' ? 'active' : ''">국내 도시</a>
+      <a th:href="@{/admin/region-categories(type='overseas',depth=1)}"
+         th:classappend="${type} == 'overseas' ? 'active' : ''">해외 대륙</a>
+    </div>
+
+    <!-- 상위로 이동 버튼 (해외 only, parentId 있으면) -->
+    <div th:if="${type} == 'overseas' and parentId != null" style="margin-bottom: 24px;">
+      <a th:href="@{/admin/region-categories(type='overseas',depth=${depth-1},parentId=${category?.parentId})}" class="btn-back">
+        ← 상위로 이동
+      </a>
+    </div>
+
+    <h1 th:text="${type == 'domestic' ? '국내 도시(Depth3) 관리'
+               : depth == 1 ? '해외 대륙 관리'
+               : depth == 2 ? '해외 국가 관리'
+               : depth == 3 ? '해외 도시 관리'
+               : '지역 관리'}">
+      카테고리 관리
+    </h1>
+
+    <!-- 카드형 그리드 -->
+    <div class="category-card-list">
+      <div class="category-card" th:each="c : ${pageInfo.list}">
+        <div class="card-icon-wrap">
+          <img th:if="${c.iconPath != null}" th:src="@{${c.iconPath}}" alt="icon" class="icon-thumb"/>
+        </div>
+        <div class="card-info">
+          <div class="region-name" th:text="${c.regionName}">이름</div>
+          <div class="region-code" th:text="${c.code}">코드</div>
+        </div>
+        <div class="card-actions">
+          <a th:href="@{/admin/region-categories/{id}/icon(id=${c.id})}" class="card-btn btn-upload">아이콘 업로드</a>
+          <a th:if="${showSubregionLink}"
+             th:href="@{/admin/region-categories(type='overseas',depth=${depth+1},parentId=${c.id})}"
+             class="card-btn btn-subregion">하위 보기</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- 페이징 -->
+    <nav class="pagination-nav">
+      <ul class="pagination">
+        <li th:if="${pageInfo.hasPreviousPage}">
+          <a th:href="@{/admin/region-categories(type=${type},depth=${depth},parentId=${parentId},page=${pageInfo.pageNum-1})}">« 이전</a>
+        </li>
+        <li th:each="i : ${#numbers.sequence(1, pageInfo.pages)}"
+            th:classappend="${i == pageInfo.pageNum} ? 'active'">
+          <a th:href="@{/admin/region-categories(type=${type},depth=${depth},parentId=${parentId},page=${i})}"
+             th:text="${i}">1</a>
+        </li>
+        <li th:if="${pageInfo.hasNextPage}">
+          <a th:href="@{/admin/region-categories(type=${type},depth=${depth},parentId=${parentId},page=${pageInfo.pageNum+1})}">다음 »</a>
+        </li>
+      </ul>
+    </nav>
+  </section>
+</th:block>
+</html>

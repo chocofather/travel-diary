@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Login</title>
+  <link rel="stylesheet" type="text/css" href="/css/style.css">
+  <link rel="stylesheet" href="/css/login.css">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+<div class="login-logo">
+  <a th:href="@{/}">
+    <img src="/images/logo7.png" alt="로고">
+  </a>
+</div>
+<div class="login-container">
+<h2>Login</h2>
+
+<div th:if="${param.error}">
+  <p style="color: red;">Invalid username or password</p>
+</div>
+
+<div th:if="${param.logout}">
+  <p style="color: green;">You have been logged out successfully</p>
+</div>
+
+  <form method="POST" th:action="@{/login}" id="loginForm">
+    <!-- 현재 보고 있던 페이지로 돌아가기 위한 redirect 필드 -->
+    <input type="hidden" name="redirect"
+           th:value="${param.redirect ?: '/'}">
+    <!-- 아이디 -->
+    <div class="input-with-icon">
+      <input type="text" name="username" id="username" placeholder="아이디" required>
+      <span class="icon user-icon"></span>
+    </div>
+
+    <!-- 비밀번호 -->
+    <div class="input-with-icon">
+      <input type="password" id="loginPassword" name="password" placeholder="비밀번호" required>
+      <span class="icon lock-icon"></span>
+      <span class="toggle-password hide" data-toggle="#loginPassword"></span> <!-- 👁️ 추가됨 -->
+    </div>
+
+    <!-- redirect hidden 필드 -->
+    <input type="hidden" name="redirect" th:value="${param.redirect} ?: '/'">
+
+    <!-- 아이디 저장 체크박스 -->
+    <label class="remember-label">
+      <input type="checkbox" id="rememberId"> 아이디 저장
+    </label>
+
+    <button type="submit">로그인</button>
+  </form>
+
+
+  <p>계정이 없으신가요?<a th:href="@{/users/register}">회원가입</a></p>
+  <p class="extra-links">
+    <a th:href="@{/users/find-username}">아이디 찾기</a> |
+    <a th:href="@{/users/find-password}">비밀번호 찾기</a>
+  </p>
+</div>
+<script src="/js/login.js" defer></script>
+</body>
+</html>

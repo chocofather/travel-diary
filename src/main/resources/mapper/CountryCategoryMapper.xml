@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.category.CountryCategoryMapper">
+
+    <!-- resultMap 정의 -->
+    <resultMap id="CountryCategoryResultMap" type="com.example.travlediary.model.CountryCategory">
+        <id property="id" column="id"/>
+        <result property="regionName" column="region_name"/>
+        <result property="nameEn" column="name_en"/>
+        <result property="iconPath" column="icon_path"/>
+        <result property="code" column="code"/>
+        <result property="parentId" column="parent_id"/>
+        <result property="depth" column="depth"/>
+        <result property="subregion" column="subregion"/>
+        <result property="isVisible" column="is_visible"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.example.travlediary.model.CountryCategory">
+        INSERT INTO country_categories (
+            id, region_name, name_en, icon_path, code,
+            parent_id, depth, subregion, is_visible
+        )
+        VALUES (
+                   #{id}, #{regionName}, #{nameEn}, #{iconPath}, #{code},
+                   #{parentId}, #{depth}, #{subregion}, #{isVisible}
+               )
+    </insert>
+
+    <delete id="deleteAll">
+        DELETE FROM country_categories
+    </delete>
+
+    <select id="selectCountries" resultMap="CountryCategoryResultMap">
+        SELECT * FROM country_categories WHERE depth = 2
+    </select>
+
+        <!-- ✅ 유지: 조건 처리 포함된 쿼리 -->
+        <select id="selectByParentId" parameterType="long" resultMap="CountryCategoryResultMap">
+            SELECT *
+            FROM country_categories
+            <where>
+                <if test="parentId != null">
+                    parent_id = #{parentId}
+                </if>
+                <if test="parentId == null">
+                    parent_id IS NULL
+                </if>
+            </where>
+            ORDER BY id ASC
+        </select>
+
+    <select id="selectDepth1" resultMap="CountryCategoryResultMap">
+        SELECT * FROM country_categories
+        WHERE depth = 1
+        AND is_visible = 1
+        ORDER BY id ASC
+    </select>
+
+    <select id="selectAllIds" resultType="int">
+        SELECT id FROM country_categories
+    </select>
+
+    <select id="findByDepth" resultMap="CountryCategoryResultMap" parameterType="map">
+        SELECT
+        id,
+        region_name,
+        name_en,
+        icon_path,
+        code,
+        parent_id,
+        depth,
+        subregion,
+        is_visible
+        FROM country_categories
+        WHERE depth = #{depth}
+        <if test="parentId != null">
+            AND parent_id = #{parentId}
+        </if>
+        AND is_visible = 1
+        ORDER BY id
+    </select>
+
+
+    <!-- 아이콘 경로 업데이트 -->
+    <update id="updateIconPath">
+        UPDATE country_categories
+        SET icon_path = #{iconPath}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 단일 조회 -->
+    <select id="selectById" parameterType="long" resultMap="CountryCategoryResultMap">
+        SELECT * FROM country_categories WHERE id = #{id}
+    </select>
+
+    <select id="selectByParentIdAndDepth" resultType="com.example.travlediary.model.CountryCategory">
+        SELECT *
+        FROM country_categories
+        WHERE parent_id = #{parentId}
+          AND depth = #{depth}
+          AND is_visible = 1
+        ORDER BY id ASC
+    </select>
+
+    <select id="selectByRegionNameAndDepth" resultType="com.example.travlediary.model.CountryCategory">
+        SELECT *
+        FROM country_categories
+        WHERE region_name = #{name}
+          AND depth = #{depth}
+            LIMIT 1
+
+    </select>
+
+    <select id="getCodeById" resultType="string">
+        SELECT code FROM country_categories WHERE id = #{id}
+    </select>
+
+    <select id="selectByIds" resultType="com.example.travlediary.model.CountryCategory">
+        SELECT *
+        FROM country_categories
+        WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+    <select id="findRandomOverseasCountries" resultType="com.example.travlediary.model.CountryCategory">
+        SELECT *
+        FROM country_categories
+        WHERE depth = 2
+        AND parent_id IN (1,2,3,4,5,6)   <!-- 대륙 id (국가의 상위) 실제 DB id로! -->
+        ORDER BY RAND()
+        LIMIT #{limit}
+    </select>
+</mapper>

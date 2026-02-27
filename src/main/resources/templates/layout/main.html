@@ -1,0 +1,52 @@
+  <!DOCTYPE html>
+  <html xmlns:th="http://www.thymeleaf.org" lang="ko"
+        th:fragment="layout(body, headFragment)">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="referrer" content="no-referrer-when-downgrade">
+    <title th:text="${pageTitle} ?: '여행일기'">여행일기</title>
+
+    <!-- 공통 CSS -->
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/card.css" />
+    <link rel="stylesheet" href="https://unpkg.com/swiper@9/swiper-bundle.min.css" />
+
+    <!-- 각 페이지에서만 필요한 head/css -->
+    <th:block th:if="${headFragment != null}" th:replace="${headFragment}"></th:block>
+  </head>
+  <body th:class="${bodyClass}">
+
+  <!-- ✅ 로그인 여부를 JS에서 사용할 수 있도록 전역 변수 선언 -->
+  <script th:inline="javascript">
+    // principal이 null이 아니고 anonymousUser도 아닐 때만 true
+    const isLoggedIn =
+            /*[[${#authentication.principal != null and #authentication.principal != 'anonymousUser'}]]*/ false;
+  </script>
+
+  <!-- 공통 헤더 -->
+  <div th:replace="fragments/header :: siteHeader"></div>
+
+  <!-- 본문 슬롯 -->
+  <main>
+    <div th:insert="${body}"></div>
+  </main>
+
+  <!-- 공통 푸터 -->
+  <div th:replace="fragments/footer :: siteFooter"></div>
+
+  <!-- **jQuery**: 반드시 `$` 사용하는 스크립트보다 먼저! -->
+  <script src="/js/jquery-3.6.0.min.js"></script>
+
+  <!-- Color-Thief: SRI 제거 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js" ></script>
+
+  <!-- Swiper -->
+  <script src="https://unpkg.com/swiper@9/swiper-bundle.min.js" defer></script>
+
+  <!-- 페이지별 공통 스크립트 -->
+  <script src="/js/main.js" defer></script>
+  <script src="/js/menu.js" defer></script>
+
+  </body>
+  </html>

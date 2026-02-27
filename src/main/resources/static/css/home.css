@@ -1,0 +1,293 @@
+.instant-trip {
+    /*
+    background: #1a1a1a;
+    */
+    color: #000000;
+    padding: 48px 0 56px;
+}
+
+.instant-header {
+    max-width: 650px;
+    margin: 0 auto;
+    text-align: center;
+    padding-top: 30px;
+}
+
+.instant-badge {
+    background: #232529;       /* 진회색 */
+    color: #fff;
+    padding: 6px 20px;
+    border-radius: 22px;
+    font-size: 15px;
+    font-weight: 700;
+    box-shadow: 0 2px 10px #1115;
+    letter-spacing: 1.5px;
+    border: 1.5px solid #ffcc60;
+}
+
+.instant-title {
+    margin: 24px 0 7px;
+    font-size: 2.8rem;
+    font-weight: 900;
+    letter-spacing: -0.7px;
+    background: linear-gradient(90deg, #232529 20%, #5D6D89 80%);
+    color: transparent;
+    -webkit-background-clip: text;
+    background-clip: text;
+    text-shadow: 0 4px 18px #1112;
+    line-height: 1.15;
+    display: inline-block;
+    position: relative;
+}
+
+.instant-title::after {
+    content: " ✈️";
+    font-size: 1.8rem;
+    margin-left: 10px;
+    vertical-align: middle;
+    opacity: 0.6;
+}
+
+.instant-sub {
+    font-size: 1.18rem;
+    color: #5d6070;
+    margin-bottom: 18px;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    text-shadow: 0 1px 5px #fff8;
+}
+
+.trip-filter {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 13px 18px; /* 세로 13px, 가로 18px 간격 */
+    margin-bottom: 22px;
+    max-width: 720px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.roulette-type-btn {
+    background: #fff;
+    color: #181A1F;
+    border: 1.5px solid #d3d7de;
+    border-radius: 18px;
+    padding: 9px 22px;
+    min-width: 84px;
+    font-size: 16.2px;
+    margin: 0;
+    cursor: pointer;
+    font-weight: 600;
+    letter-spacing: 0.7px;
+    box-shadow: 0 2px 10px #191a1e05;
+    transition: background 0.15s, color 0.15s, border 0.15s;
+    margin-bottom: 0; /* flex gap으로 대체 */
+}
+.roulette-type-btn.active {
+    background: #181A1F;
+    color: #fff;
+    border: 1.5px solid #181A1F;
+    font-weight: 800;
+}
+
+
+.roulette-pointer {
+    position: absolute;
+    top: -36px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 18px solid transparent;
+    border-right: 18px solid transparent;
+    border-top: 34px solid #EF4444; /* 진한 레드! */
+    border-bottom: none;
+    z-index: 2;
+    filter: drop-shadow(0 3px 7px #a91c1ccc);
+    animation: pointer-bounce 0.8s infinite alternate;
+}
+
+@keyframes pointer-bounce {
+    0% { transform: translateX(-50%) translateY(0); }
+    100% { transform: translateX(-50%) translateY(-6px); }
+}
+
+
+.roulette-pointer::before {
+    content: '';
+    display: block;
+    width: 0;
+    height: 0;
+    margin: 0 auto;
+    border-left: 27px solid transparent;
+    border-right: 27px solid transparent;
+    filter: drop-shadow(0 4px 8px #2226);
+}
+
+.roulette-wrapper {
+    position: relative;
+    width: 520px;   /* 520px로! */
+    margin: 40px auto 0;
+}
+#roulette-canvas {
+    display: block;
+    margin: 0 auto;
+    width: 520px !important;
+    height: 520px !important;
+    border-radius: 50%;
+    max-width: 100vw;
+}
+
+#spin-btn {
+    background: #181A1F;
+    color: #fff;
+    border: none;
+    border-radius: 38px;
+    padding: 18px 50px;
+    font-size: 1.16rem;
+    font-weight: 900;
+    letter-spacing: 1.2px;
+    cursor: pointer;
+    box-shadow: 0 6px 26px #23262913, 0 1.5px 0.5px #2227;
+    margin-top: 38px;
+    transition: transform 0.09s, box-shadow 0.09s, background 0.16s;
+}
+#spin-btn:hover, #spin-btn:active {
+    background: #ef4444;      /* hover 시 빨간색 포인트로 전환! */
+    color: #fff;
+    transform: translateY(-2.5px) scale(1.03);
+    box-shadow: 0 12px 32px #ef444455;
+}
+#roulette-result {
+    margin-top: 18px;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.recommend-card-list {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+    margin: 36px auto 0;
+    max-width: 900px;
+}
+
+.recommend-card {
+    background: #fff;
+    color: #222;
+    border-radius: 18px;
+    box-shadow: 0 4px 16px #0002;
+    padding: 18px 12px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.recommend-card img {
+    width: 78px;
+    height: 78px;
+    border-radius: 12px;
+    object-fit: cover;
+    margin-bottom: 10px;
+}
+
+.recommend-card-title {
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.recommend-card-desc {
+    font-size: 13px;
+    color: #666;
+}
+
+/* 즉석여행 */
+
+#roulette-trip-list {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);   /* 한 줄 5개 고정! */
+    gap: 22px;
+    margin: 36px auto 0;
+    max-width: 1200px;
+    padding: 0;
+    justify-content: center;
+}
+
+#roulette-trip-list .recommend-card {
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 6px 22px rgba(30,40,80,0.12);
+    width: 212px;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    transition: transform 0.21s cubic-bezier(.5,.2,.48,1.5), box-shadow 0.21s;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+#roulette-trip-list .recommend-card img {
+    width: 100%;
+    height: 152px;
+    object-fit: cover;
+    display: block;
+    border-bottom: 1px solid #f2f2f5;
+}
+#roulette-trip-list .recommend-card-title {
+    font-size: 17px;
+    font-weight: 800;
+    margin: 14px 0 5px 0;
+    color: #232323;
+    padding: 0 14px;
+}
+
+#roulette-trip-list .recommend-card-desc {
+    font-size: 14px;
+    color: #777;
+    margin-bottom: 16px;
+    padding: 0 14px;
+}
+
+@media (max-width: 1300px) {
+    #roulette-trip-list {
+        grid-template-columns: repeat(3, 1fr);
+        max-width: 660px;
+    }
+    #roulette-trip-list .recommend-card {
+        width: 30vw;
+        min-width: 0;
+        max-width: 100%;
+    }
+}
+@media (max-width: 800px) {
+    #roulette-trip-list {
+        grid-template-columns: repeat(2, 1fr);
+        max-width: 99vw;
+    }
+    #roulette-trip-list .recommend-card {
+        width: 46vw;
+    }
+    #roulette-trip-list .recommend-card img {
+        height: 26vw;
+        max-height: 180px;
+    }
+}
+
+@media (max-width: 900px) {
+    .recommend-card-list {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .roulette-wrapper {
+        width: 90vw;
+        max-width: 340px;
+    }
+    #roulette-canvas {
+        width: 100% !important;
+        height: auto !important;
+        aspect-ratio: 1/1;
+        max-width: 340px;
+    }
+}

@@ -1,0 +1,30 @@
+<!-- templates/admin/index.html -->
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="layout/main :: layout(~{::body}, ~{::headFragment})">
+
+<th:block th:fragment="headFragment">
+    <link rel="stylesheet" href="/css/admin.css" />
+    <!-- 필요하면 여기다 개별 css/js 추가 -->
+</th:block>
+
+<th:block th:fragment="body">
+<!-- ★ 여기서 반드시 th:fragment="body" 로 본문 블록을 정의해야 합니다 -->
+
+<section th:fragment="body" class="admin-home">
+    <th:block sec:authorize="hasRole('ADMIN')">
+        <h1>관리자 페이지</h1>
+        <p>원하시는 기능을 선택하세요.</p>
+        <div class="btn-group">
+            <a href="/admin/destinations"        class="btn-admin">여행지 관리 페이지</a>
+            <a href="/admin/categories/create"   class="btn-admin">카테고리 등록</a>
+            <a href="/admin/categories"          class="btn-admin">카테고리 목록</a>
+            <a href="/admin/region-categories"   class="btn-admin">도시 관리</a>
+            <a href="/admin/event/list"          class="btn-admin">이벤트 관리 페이지</a>
+            <a href="/admin/amenities/list"      class="btn-admin">편의시설 관리</a>
+        </div>
+    </th:block>
+</section>
+</th:block>
+</html>

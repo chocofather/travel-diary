@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.comment.CommentLikeMapper">
+
+    <!-- 좋아요 추가 -->
+    <insert id="insert">
+        INSERT INTO comment_likes (user_id, comment_id)
+        VALUES (#{userId}, #{commentId})
+    </insert>
+
+    <!-- 좋아요 취소 -->
+    <delete id="delete">
+        DELETE FROM comment_likes
+        WHERE user_id = #{userId}
+          AND comment_id = #{commentId}
+    </delete>
+
+    <!-- 이미 좋아요 눌렀는지 여부 -->
+    <select id="exists" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1 FROM comment_likes
+            WHERE user_id = #{userId}
+              AND comment_id = #{commentId}
+        )
+    </select>
+
+</mapper>

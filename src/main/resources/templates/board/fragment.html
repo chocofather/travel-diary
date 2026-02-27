@@ -1,0 +1,57 @@
+<!-- templates/board/fragment.html -->
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<th:block th:fragment="boardListFragment (boardList, totalPages, currentPage, sort)">
+  <div class="board-list">
+    <!-- 동적 게시글 행 -->
+    <div th:each="item : ${boardList}" class="board-list-row">
+        <span class="board-type"
+              th:text="|[${item.boardType == 'course' ? '나만의 여행코스' : (item.postType == 'tip' ? '여행팁' : '여행질문')}]|"></span>
+      <span class="board-title" th:text="${item.title}"></span>
+      <span class="board-comments" th:text="|댓글: ${item.commentCount}|"></span>
+      <span class="board-nickname" th:text="|작성자: ${item.nickname}|"></span>
+      <span class="board-date" th:text="${item.createdAt}"></span>
+      <span class="board-views" th:text="|조회수: ${item.views}|"></span>
+    </div>
+
+    <!-- 임시 더미 행 (CSS 확인용) -->
+    <div class="board-list-row">
+      <span class="board-type">[여행질문]</span>
+      <span class="board-title"><a href="#">임시 샘플 제목입니다. 여행 관련 질문이에요</a></span>
+      <span class="board-comments">댓글: 3</span>
+      <span class="board-nickname">작성자: 소연</span>
+      <span class="board-date">2024-07-12</span>
+      <span class="board-views">조회수: 15</span>
+    </div>
+    <div class="board-list-row">
+      <span class="board-type">[여행팁]</span>
+      <span class="board-title"><a href="#">여행지에서 꿀팁! 저렴하게 맛집 가는 방법</a></span>
+      <span class="board-comments">댓글: 8</span>
+      <span class="board-nickname">작성자: minjun</span>
+      <span class="board-date">2024-07-11</span>
+      <span class="board-views">조회수: 55</span>
+    </div>
+    <div class="board-list-row">
+      <span class="board-type">[나만의 여행코스]</span>
+      <span class="board-title"><a href="#">제주 3박4일 완벽 여행코스 공개!</a></span>
+      <span class="board-comments">댓글: 0</span>
+      <span class="board-nickname">작성자: user01</span>
+      <span class="board-date">2024-06-29</span>
+      <span class="board-views">조회수: 121</span>
+    </div>
+
+    <!-- 페이징 버튼 -->
+    <div class="board-pagination">
+      <button th:if="${currentPage > 1}"
+              th:attr="onclick=|loadBoardList(${currentPage - 1}, '${sort}')|">
+        이전
+      </button>
+      <span th:text="|${currentPage} / ${totalPages}|"></span>
+      <button th:if="${currentPage < totalPages}"
+              th:attr="onclick=|loadBoardList(${currentPage + 1}, '${sort}')|">
+        다음
+      </button>
+    </div>
+  </div>
+</th:block>
+</html>

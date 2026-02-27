@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>아이디 찾기</title>
+  <link rel="stylesheet" type="text/css" href="/css/style.css">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body class="register-page">
+<div class="register-wrapper">
+  <div class="register-logo">
+    <a th:href="@{/}">
+      <img src="/images/logo7.png" alt="로고">
+    </a>
+  </div>
+
+  <div class="register-container">
+    <h2>아이디 찾기</h2>
+
+    <form method="post" action="/users/find-username">
+      <!-- 이름 -->
+      <div class="input-with-icon">
+        <input type="text" name="fullName" placeholder="이름" required>
+        <span class="icon user-icon"></span>
+      </div>
+
+      <!-- 이메일 -->
+      <div class="input-with-icon">
+        <input type="email" name="userEmail" placeholder="이메일 주소" required>
+        <span class="icon email-icon"></span>
+      </div>
+
+      <!-- 결과 메시지 -->
+      <div th:if="${message}" class="alert" th:text="${message}"></div>
+
+      <button type="submit">아이디 찾기</button>
+    </form>
+
+    <p>
+      <a th:href="@{/users/find-password}">비밀번호가 기억나지 않으신가요?</a><br>
+      <a th:href="@{/login}">로그인으로 돌아가기</a>
+    </p>
+  </div>
+</div>
+</body>
+</html>

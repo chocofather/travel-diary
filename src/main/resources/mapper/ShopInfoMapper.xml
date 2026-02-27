@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.info.ShopInfoMapper">
+
+    <insert id="insert" parameterType="com.example.travlediary.model.ShopInfo">
+        INSERT INTO shop_info
+        (destination_id, closed_days, opening_hours, main_products, parking_available, contact_number, homepage_url, guide)
+        VALUES
+            (#{destinationId}, #{closedDays}, #{openingHours}, #{mainProducts}, #{parkingAvailable}, #{contactNumber}, #{homepageUrl}, #{guide})
+    </insert>
+
+    <select id="findByDestinationId" resultType="com.example.travlediary.model.ShopInfo">
+        SELECT * FROM shop_info WHERE destination_id = #{destinationId}
+    </select>
+
+    <update id="update" parameterType="com.example.travlediary.model.ShopInfo">
+        UPDATE shop_info
+        SET
+            closed_days = #{closedDays},
+            opening_hours = #{openingHours},
+            main_products = #{mainProducts},
+            parking_available = #{parkingAvailable},
+            contact_number = #{contactNumber},
+            homepage_url = #{homepageUrl},
+            guide = #{guide}
+        WHERE destination_id = #{destinationId}
+    </update>
+
+
+</mapper>

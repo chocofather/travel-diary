@@ -1,0 +1,167 @@
+.search-result-section {
+    max-width: 1100px;
+    margin: 64px auto 48px;
+    padding: 0 22px;
+}
+
+/* === 상단 검색 헤더 === */
+.search-header {
+    text-align: left;
+    margin-bottom: 38px;
+    padding-left: 10px;
+}
+.search-title {
+    font-size: 2.35rem;
+    font-weight: 900;
+    margin-bottom: 10px;
+    letter-spacing: -1.1px;
+}
+.search-title span#search-keyword {
+    color: #3486fa;
+    background: #eef6ff;
+    padding: 0 12px;
+    border-radius: 12px;
+}
+.search-count {
+    color: #6c7584;
+    font-size: 1.13rem;
+    margin-left: 4px;
+}
+
+/* === 결과 섹션 박스 === */
+.search-block {
+    background: #fafdff;                         /* 완전 흰색 */
+    border-radius: 22px;
+    box-shadow: 0 2px 14px #dae0f822;
+    border: 2px solid #e5e8ef;               /* 연한 회색 테두리만 */
+    margin: 0 auto 52px auto;
+    padding: 42px 58px 34px 58px;
+    max-width: 1020px;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+.search-block-title {
+    font-size: 1.22rem;
+    font-weight: 900;
+    color: #276bdf;
+    margin-bottom: 22px;
+    letter-spacing: -0.7px;
+    display: flex;
+    align-items: center;
+    padding-left: 2px;
+    border-left: 5px solid #4595f7;
+    background: none;
+    height: 34px;
+}
+.search-block-title span {
+    padding-left: 10px;
+    font-size: 1.09em;
+}
+
+/* === 한 줄형 리스트(카드) === */
+.search-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    width: 100%;
+}
+.search-row-card {
+    background: #fff;
+    border-radius: 15px;
+    box-shadow: 0 2px 12px #dde2f217;
+    display: flex;
+    align-items: center;
+    padding: 0;
+    border: 1.3px solid #e7ebf2;
+    transition: transform 0.13s, box-shadow 0.13s, border-color 0.12s;
+    cursor: pointer;
+    min-height: 105px;
+}
+.search-row-card:hover {
+    transform: translateY(-2.5px) scale(1.018);
+    box-shadow: 0 10px 28px #3486fa13, 0 4px 12px #dbe9fd19;
+    border-color: #3486fa34;
+}
+.search-row-card img {
+    width: 120px;         /* 기존 98px → 120px (더 크게!) */
+    height: 120px;        /* 기존 98px → 120px */
+    border-radius: 13px;
+    object-fit: cover;
+    margin: 18px 0 18px 32px;  /* 왼쪽 여백도 살짝만 28→32 */
+    background: #f3f6fa;
+    flex-shrink: 0;
+}
+.search-row-info {
+    flex: 1;
+    padding: 19px 38px 19px 26px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+}
+.search-row-title {
+    font-size: 1.17rem;
+    font-weight: 800;
+    color: #23283d;
+    margin-bottom: 5px;
+    letter-spacing: -0.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.search-row-desc {
+    font-size: 0.97rem;
+    color: #567;
+    margin-bottom: 7px;
+    max-width: 97%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.search-row-region {
+    color: #3581e7;
+    font-size: 0.98em;
+    font-weight: 700;
+    opacity: 0.75;
+    margin-top: auto;
+    letter-spacing: -0.5px;
+}
+
+.no-result {
+    text-align: center;
+    color: #b7b9c9;
+    font-size: 1.14rem;
+    padding: 40px 0 18px 0;
+}
+
+/* 박스 간 여백 */
+.search-block:not(:last-child) { margin-bottom: 48px; }
+
+
+.search-highlight {
+    background: #ffedbb;
+    color: #e85619;
+    font-weight: 800;
+    padding: 1px 3px;
+    border-radius: 5px;
+}
+
+/* === 반응형 === */
+@media (max-width: 1200px) {
+    .search-result-section { max-width: 99vw; }
+    .search-block { max-width: 99vw; }
+}
+@media (max-width: 900px) {
+    .search-block { padding: 18px 5vw 13px 5vw; }
+    .search-row-card img { width: 72px; height: 72px; margin-left: 12px; }
+    .search-row-info { padding: 12px 6vw 10px 14px; }
+}
+@media (max-width: 600px) {
+    .search-title { font-size: 1.18rem; }
+    .search-block { padding: 8px 0.7vw 6px 0.7vw; }
+    .search-row-card img { width: 50px; height: 50px; margin: 5px 0 5px 2px; }
+    .search-row-info { padding: 7px 2vw 7px 7px; }
+    .search-row-title { font-size: 0.93rem; }
+    .search-row-desc { font-size: 0.81rem; }
+}

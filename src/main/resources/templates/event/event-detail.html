@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      lang="ko"
+      th:replace="layout/main :: layout(~{::body}, ~{::headFragment})">
+
+<th:block th:fragment="headFragment">
+    <link rel="stylesheet" href="/css/event.css">
+</th:block>
+
+<th:block th:fragment="body">
+    <!-- 1. posterImg가 있으면 오로지 포스터만, 카드 wrapper 없이 전체 표시 -->
+    <div th:if="${event.posterImg != null}" class="event-poster-outer">
+        <!-- 상단 인포 박스 -->
+        <div class="event-poster-info-bar">
+            <div class="event-poster-title" th:text="${event.title}">포스터 테스트용</div>
+            <div class="event-poster-period"
+                 th:text="|${event.startDate} ~ ${event.endDate}|">
+                2025-06-20 ~ 2025-12-31
+            </div>
+        </div>
+        <img th:src="@{${event.posterImg}}" alt="이벤트 포스터" class="event-poster-img"/>
+        <div class="event-detail-back" style="max-width:1120px; margin:0 auto; padding-top:20px;">
+            <a href="/events" class="back-link">&larr; 이벤트 목록</a>
+        </div>
+    </div>
+
+
+    <!-- 2. 포스터 없으면 기존 카드형 wrapper -->
+    <div th:if="${event.posterImg == null}" class="event-detail-wrapper">
+        <!-- 상단 대표 이미지(폭 넓게) -->
+        <div class="event-detail-banner" th:if="${event.eventImg}">
+            <img th:src="@{${event.eventImg}}" alt="이벤트 대표 이미지"/>
+        </div>
+        <!-- 메타영역 (제목/기간/상태) -->
+        <div class="event-detail-meta">
+            <span class="event-detail-period"
+                  th:text="|${event.startDate} ~ ${event.endDate}|">2025-06-19 ~ 2025-12-31</span>
+            <h2 class="event-detail-title" th:text="${event.title}">이벤트 제목</h2>
+        </div>
+        <!-- 상세 설명 (HTML 가능) -->
+        <div class="event-detail-desc" th:utext="${event.description}">
+            이벤트 상세 내용
+        </div>
+        <div class="event-detail-back">
+            <a href="/events" class="back-link">&larr; 이벤트 목록</a>
+        </div>
+    </div>
+</th:block>
+</html>

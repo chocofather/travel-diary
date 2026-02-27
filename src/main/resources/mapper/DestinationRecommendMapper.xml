@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.recommend.DestinationRecommendMapper">
+
+    <resultMap id="SeasonDestinationDtoMap" type="com.example.travlediary.dto.SeasonDestinationDto">
+        <id     property="id"           column="destination_id"/>
+        <result property="name"         column="name"/>
+        <result property="imageUrl"     column="image_url"/>
+        <result property="regionName"   column="region_name"/>
+        <result property="season"       column="season"/>
+        <result property="categoryId"   column="category_id"/>
+        <result property="categoryName" column="category_name"/>
+    </resultMap>
+
+    <!-- 시즌+카테고리(태그)별 여행지 N개 -->
+    <select id="findBySeasonAndCategory" resultMap="SeasonDestinationDtoMap">
+        SELECT
+        d.id AS destination_id,
+        dt.name,
+        di.image_url,
+        cc.region_name AS region_name,
+        d.season,
+        c.id AS category_id,
+        c.name AS category_name
+        FROM destinations d
+        LEFT JOIN destination_translations dt ON d.id = dt.destination_id AND dt.language_code = 'ko'
+        LEFT JOIN destination_images di ON d.id = di.destination_id AND di.is_main = 1
+        LEFT JOIN country_categories cc ON d.region_id = cc.id
+        LEFT JOIN destination_categories dc ON d.id = dc.destination_id
+        LEFT JOIN categories c ON dc.category_id = c.id
+        WHERE d.season = #{season}
+        <if test="categoryId != null">
+            AND c.id = #{categoryId}
+        </if>
+        ORDER BY RAND()
+        LIMIT #{limit}
+    </select>
+
+
+    <!-- 시즌별 전체 여행지 N개 (카테고리 조건 없음) -->
+    <select id="findBySeason" resultMap="SeasonDestinationDtoMap">
+        SELECT
+            d.id AS destination_id,
+            dt.name,
+            di.image_url,
+            cc.region_name AS region_name,
+            d.season,
+            NULL AS category_id,
+            NULL AS category_name
+        FROM destinations d
+                 LEFT JOIN destination_translations dt ON d.id = dt.destination_id AND dt.language_code = 'ko'
+                 LEFT JOIN destination_images di ON d.id = di.destination_id AND di.is_main = 1
+                 LEFT JOIN country_categories cc ON d.region_id = cc.id
+        WHERE d.season = #{season}
+        ORDER BY RAND()
+            LIMIT #{limit}
+    </select>
+
+
+    <!-- 카테고리 ID → 카테고리명 -->
+    <select id="findCategoryNameById" resultType="string">
+        SELECT name FROM categories WHERE id = #{categoryId}
+    </select>
+
+</mapper>
