@@ -80,3 +80,108 @@
     color: #fff;
     text-decoration: none;
 }
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.post-comments {
+    margin-top: 48px;
+    padding-top: 32px;
+    border-top: 1px solid #ddd;
+}
+
+.post-comments h2 {
+    margin: 0 0 20px;
+    font-size: 22px;
+}
+
+.post-comment-form textarea,
+.post-comment-edit-textarea {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 100px;
+    padding: 12px;
+    resize: vertical;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font: inherit;
+}
+
+.post-comment-form-actions,
+.post-comment-edit-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.post-comment-form button,
+.post-comment-actions button {
+    padding: 7px 13px;
+    border: 1px solid #397a63;
+    border-radius: 5px;
+    background: #fff;
+    color: #397a63;
+    cursor: pointer;
+}
+
+.post-comment-form button[type="submit"],
+.post-comment-actions .post-comment-save {
+    background: #397a63;
+    color: #fff;
+}
+
+.post-comment-length,
+.post-comment-login,
+.post-comment-date,
+.post-comment-empty {
+    color: #777;
+    font-size: 14px;
+}
+
+.post-comment-message {
+    margin: 14px 0;
+    color: #b42318;
+}
+
+.post-comment-list {
+    margin: 24px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.post-comment-item {
+    padding: 18px 0;
+    border-top: 1px solid #eee;
+}
+
+.post-comment-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.post-comment-content {
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    line-height: 1.6;
+}
+
+.post-comment-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+    margin-top: 10px;
+}

@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.post.PostCommentMapper">
+
+    <sql id="commentDtoColumns">
+        pc.id,
+        pc.post_id AS postId,
+        pc.content,
+        u.nickname AS writerNickname,
+        pc.created_at AS createdAt,
+        pc.updated_at AS updatedAt,
+        <choose>
+            <when test="currentUserId != null">
+                CASE WHEN pc.user_id = #{currentUserId} THEN TRUE ELSE FALSE END
+            </when>
+            <otherwise>
+                FALSE
+            </otherwise>
+        </choose>
+        AS myComment
+    </sql>
+
+    <select id="existsActivePost" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1
+            FROM user_posts
+            WHERE id = #{postId}
+              AND deleted = 0
+        )
+    </select>
+
+    <select id="findByPostId" resultType="com.example.travlediary.dto.PostCommentDto">
+        SELECT
+            <include refid="commentDtoColumns"/>
+        FROM post_comments pc
+        JOIN users u ON u.id = pc.user_id
+        WHERE pc.post_id = #{postId}
+          AND pc.deleted = 0
+        ORDER BY pc.created_at ASC, pc.id ASC
+    </select>
+
+    <select id="findActiveComment" resultType="com.example.travlediary.model.PostComment">
+        SELECT
+            id,
+            post_id AS postId,
+            user_id AS userId,
+            content,
+            created_at AS createdAt,
+            updated_at AS updatedAt,
+            deleted_at AS deletedAt,
+            deleted
+        FROM post_comments
+        WHERE id = #{commentId}
+          AND deleted = 0
+    </select>
+
+    <select id="findDtoById" resultType="com.example.travlediary.dto.PostCommentDto">
+        SELECT
+            <include refid="commentDtoColumns"/>
+        FROM post_comments pc
+        JOIN users u ON u.id = pc.user_id
+        WHERE pc.id = #{commentId}
+          AND pc.deleted = 0
+    </select>
+
+    <insert id="insert" parameterType="com.example.travlediary.model.PostComment"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO post_comments (
+            content, post_id, user_id, created_at, updated_at, deleted
+        ) VALUES (
+            #{content}, #{postId}, #{userId}, NOW(), NOW(), 0
+        )
+    </insert>
+
+    <update id="updateContent">
+        UPDATE post_comments
+        SET content = #{content},
+            updated_at = NOW()
+        WHERE id = #{commentId}
+          AND user_id = #{userId}
+          AND deleted = 0
+    </update>
+
+    <update id="softDelete">
+        UPDATE post_comments
+        SET deleted = 1,
+            deleted_at = NOW()
+        WHERE id = #{commentId}
+          AND user_id = #{userId}
+          AND deleted = 0
+    </update>
+
+</mapper>

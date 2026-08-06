@@ -5,6 +5,7 @@
 
 <th:block th:fragment="headFragment">
   <link rel="stylesheet" href="/css/post-detail.css" />
+  <script src="/js/post-comments.js" defer></script>
 </th:block>
 
 <th:block th:fragment="body">
@@ -35,6 +36,30 @@
         <a th:href="@{/board/list(boardType='post')}" class="back-to-list">목록으로</a>
       </div>
     </article>
+
+    <section id="post-comments" class="post-comments" th:attr="data-post-id=${post.id}">
+      <h2>댓글 <span id="post-comment-count">0</span></h2>
+
+      <form id="post-comment-form" class="post-comment-form" th:if="${#authorization.expression('isAuthenticated()')}">
+        <label for="post-comment-content" class="sr-only">댓글 내용</label>
+        <textarea id="post-comment-content"
+                  name="content"
+                  maxlength="2000"
+                  placeholder="댓글을 입력해 주세요."
+                  required></textarea>
+        <div class="post-comment-form-actions">
+          <span class="post-comment-length"><span id="post-comment-length">0</span>/2000</span>
+          <button type="submit">등록</button>
+        </div>
+      </form>
+
+      <p class="post-comment-login" th:unless="${#authorization.expression('isAuthenticated()')}">
+        댓글을 작성하려면 <a th:href="@{/login(redirect=${'/post/' + post.id})}">로그인</a>해 주세요.
+      </p>
+
+      <p id="post-comment-message" class="post-comment-message" role="alert" hidden></p>
+      <ul id="post-comment-list" class="post-comment-list" aria-live="polite"></ul>
+    </section>
   </main>
 </th:block>
 </html>
