@@ -68,6 +68,20 @@ public class PostCommentServiceImpl implements PostCommentService {
         }
     }
 
+    @Override
+    @Transactional
+    public void likeComment(Long commentId, Long userId) {
+        requireLockedActiveComment(commentId);
+        postCommentMapper.insertLike(userId, commentId);
+    }
+
+    @Override
+    @Transactional
+    public void unlikeComment(Long commentId, Long userId) {
+        requireLockedActiveComment(commentId);
+        postCommentMapper.deleteLike(userId, commentId);
+    }
+
     private void requireActivePost(Long postId) {
         if (postId == null || !postCommentMapper.existsActivePost(postId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다.");
@@ -81,6 +95,16 @@ public class PostCommentServiceImpl implements PostCommentService {
         }
         if (!comment.getUserId().equals(userId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "댓글 변경 권한이 없습니다.");
+        }
+        return comment;
+    }
+
+    private PostComment requireLockedActiveComment(Long commentId) {
+        PostComment comment = commentId == null
+                ? null
+                : postCommentMapper.findActiveCommentForUpdate(commentId);
+        if (comment == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "댓글을 찾을 수 없습니다.");
         }
         return comment;
     }

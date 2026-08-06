@@ -13,4 +13,8 @@ public interface CourseCommentService {
     CourseCommentDto update(Long commentId, Long userId, String content);
 
     void delete(Long commentId, Long userId);
+
+    void likeComment(Long commentId, Long userId);
+
+    void unlikeComment(Long commentId, Long userId);
 }

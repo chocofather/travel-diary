@@ -22,6 +22,8 @@ public class PostCommentDto {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private Timestamp updatedAt;
     private boolean deleted;
+    private long likeCount;
+    private boolean likedByMe;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private Boolean myComment;
 }

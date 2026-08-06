@@ -17,5 +17,7 @@ public class CourseCommentDto {
     private Timestamp createdAt;
     private Timestamp updatedAt;
     private boolean deleted;
+    private long likeCount;
+    private boolean likedByMe;
     private boolean myComment;
 }

@@ -211,9 +211,52 @@
 
 .post-comment-actions {
     display: flex;
+    align-items: center;
     justify-content: flex-end;
     gap: 6px;
     margin-top: 10px;
+}
+
+.post-comment-actions .post-comment-like-button,
+.post-comment-like-readonly {
+    margin-right: auto;
+}
+
+.post-comment-actions .post-comment-like-button {
+    border-color: #bbb;
+    color: #555;
+}
+
+.post-comment-actions .post-comment-like-button:hover,
+.post-comment-actions .post-comment-like-button:focus-visible {
+    border-color: #397a63;
+    color: #397a63;
+}
+
+.post-comment-actions .post-comment-like-button.is-liked {
+    border-color: #397a63;
+    background: #397a63;
+    color: #fff;
+}
+
+.post-comment-actions .post-comment-like-button:focus-visible {
+    outline: 2px solid #8bc3ae;
+    outline-offset: 2px;
+}
+
+.post-comment-actions .post-comment-like-button:disabled {
+    cursor: wait;
+    opacity: 0.55;
+}
+
+.post-comment-like-count {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+}
+
+.post-comment-like-readonly {
+    color: #777;
+    font-size: 14px;
 }
 
 .post-comment-replies {

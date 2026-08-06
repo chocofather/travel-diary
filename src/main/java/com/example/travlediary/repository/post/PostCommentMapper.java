@@ -32,4 +32,10 @@ public interface PostCommentMapper {
 
     int softDelete(@Param("commentId") Long commentId,
                    @Param("userId") Long userId);
+
+    int insertLike(@Param("userId") Long userId,
+                   @Param("commentId") Long commentId);
+
+    int deleteLike(@Param("userId") Long userId,
+                   @Param("commentId") Long commentId);
 }

@@ -98,6 +98,20 @@ class CourseCommentControllerTest {
         verify(service).delete(30L, 7L);
     }
 
+    @Test
+    void likeAndUnlikeUsePrincipalUserIdAndReturnNoContent() {
+        CourseCommentController controller = new CourseCommentController(service);
+        when(userDetails.getId()).thenReturn(7L);
+
+        var likeResponse = controller.likeComment(30L, userDetails);
+        var unlikeResponse = controller.unlikeComment(30L, userDetails);
+
+        assertThat(likeResponse.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        assertThat(unlikeResponse.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        verify(service).likeComment(30L, 7L);
+        verify(service).unlikeComment(30L, 7L);
+    }
+
     private CourseCommentRequest request(Long courseId, String content) {
         CourseCommentRequest request = new CourseCommentRequest();
         request.setCourseId(courseId);

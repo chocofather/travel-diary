@@ -315,6 +315,69 @@ class CourseCommentServiceImplTest {
         verify(mapper).softDelete(30L, 7L);
     }
 
+    @Test
+    void likesActiveRootCommentAndPassesCurrentUserId() {
+        CourseComment root = comment(30L, 8L);
+        root.setLikes(4);
+        when(mapper.findActiveCommentForUpdate(30L)).thenReturn(root);
+        when(mapper.insertLike(7L, 30L)).thenReturn(1);
+
+        service.likeComment(30L, 7L);
+
+        verify(mapper).findActiveCommentForUpdate(30L);
+        verify(mapper).insertLike(7L, 30L);
+        assertThat(root.getLikes()).isEqualTo(4);
+    }
+
+    @Test
+    void likesActiveReplyAndOwnCommentWhenInsertIsDuplicateNoop() {
+        CourseComment ownReply = comment(31L, 7L);
+        ownReply.setParentCommentId(30L);
+        when(mapper.findActiveCommentForUpdate(31L)).thenReturn(ownReply);
+        when(mapper.insertLike(7L, 31L)).thenReturn(0);
+
+        service.likeComment(31L, 7L);
+
+        verify(mapper).insertLike(7L, 31L);
+    }
+
+    @Test
+    void likeReturnsNotFoundForMissingOrDeletedComment() {
+        assertStatus(HttpStatus.NOT_FOUND, () -> service.likeComment(30L, 7L));
+        assertStatus(HttpStatus.NOT_FOUND, () -> service.likeComment(31L, 7L));
+
+        verify(mapper).findActiveCommentForUpdate(30L);
+        verify(mapper).findActiveCommentForUpdate(31L);
+        verify(mapper, never()).insertLike(any(), any());
+    }
+
+    @Test
+    void unlikesActiveRootAndReplyIncludingMissingLikeNoop() {
+        CourseComment root = comment(30L, 8L);
+        CourseComment reply = comment(31L, 9L);
+        reply.setParentCommentId(30L);
+        when(mapper.findActiveCommentForUpdate(30L)).thenReturn(root);
+        when(mapper.findActiveCommentForUpdate(31L)).thenReturn(reply);
+        when(mapper.deleteLike(7L, 30L)).thenReturn(1);
+        when(mapper.deleteLike(7L, 31L)).thenReturn(0);
+
+        service.unlikeComment(30L, 7L);
+        service.unlikeComment(31L, 7L);
+
+        verify(mapper).deleteLike(7L, 30L);
+        verify(mapper).deleteLike(7L, 31L);
+    }
+
+    @Test
+    void unlikeReturnsNotFoundForMissingOrDeletedComment() {
+        assertStatus(HttpStatus.NOT_FOUND, () -> service.unlikeComment(30L, 7L));
+        assertStatus(HttpStatus.NOT_FOUND, () -> service.unlikeComment(31L, 7L));
+
+        verify(mapper).findActiveCommentForUpdate(30L);
+        verify(mapper).findActiveCommentForUpdate(31L);
+        verify(mapper, never()).deleteLike(any(), any());
+    }
+
     private CourseComment comment(Long id, Long userId) {
         CourseComment comment = new CourseComment();
         comment.setId(id);

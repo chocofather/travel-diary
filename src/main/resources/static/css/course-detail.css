@@ -354,9 +354,52 @@
 
 .course-comment-actions {
     display: flex;
+    align-items: center;
     justify-content: flex-end;
     gap: 6px;
     margin-top: 10px;
+}
+
+.course-comment-actions .course-comment-like-button,
+.course-comment-like-readonly {
+    margin-right: auto;
+}
+
+.course-comment-actions .course-comment-like-button {
+    border-color: #bbb;
+    color: #555;
+}
+
+.course-comment-actions .course-comment-like-button:hover,
+.course-comment-actions .course-comment-like-button:focus-visible {
+    border-color: #397a63;
+    color: #397a63;
+}
+
+.course-comment-actions .course-comment-like-button.is-liked {
+    border-color: #397a63;
+    background: #397a63;
+    color: #fff;
+}
+
+.course-comment-actions .course-comment-like-button:focus-visible {
+    outline: 2px solid #8bc3ae;
+    outline-offset: 2px;
+}
+
+.course-comment-actions .course-comment-like-button:disabled {
+    cursor: wait;
+    opacity: 0.55;
+}
+
+.course-comment-like-count {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+}
+
+.course-comment-like-readonly {
+    color: #777;
+    font-size: 14px;
 }
 
 .course-comment-replies {

@@ -68,6 +68,20 @@ public class CourseCommentServiceImpl implements CourseCommentService {
         }
     }
 
+    @Override
+    @Transactional
+    public void likeComment(Long commentId, Long userId) {
+        requireLockedActiveComment(commentId);
+        courseCommentMapper.insertLike(userId, commentId);
+    }
+
+    @Override
+    @Transactional
+    public void unlikeComment(Long commentId, Long userId) {
+        requireLockedActiveComment(commentId);
+        courseCommentMapper.deleteLike(userId, commentId);
+    }
+
     private void requireActiveCourse(Long courseId) {
         if (courseId == null || !courseCommentMapper.existsActiveCourse(courseId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "여행 코스를 찾을 수 없습니다.");
@@ -81,6 +95,16 @@ public class CourseCommentServiceImpl implements CourseCommentService {
         }
         if (!Objects.equals(comment.getUserId(), userId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "댓글 변경 권한이 없습니다.");
+        }
+        return comment;
+    }
+
+    private CourseComment requireLockedActiveComment(Long commentId) {
+        CourseComment comment = commentId == null
+                ? null
+                : courseCommentMapper.findActiveCommentForUpdate(commentId);
+        if (comment == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "댓글을 찾을 수 없습니다.");
         }
         return comment;
     }

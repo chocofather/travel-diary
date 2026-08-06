@@ -1,20 +1,20 @@
-package com.example.travlediary.controller.course;
+package com.example.travlediary.controller.post;
 
 import com.example.travlediary.config.CustomLoginSuccessHandler;
 import com.example.travlediary.config.CustomLogoutSuccessHandler;
 import com.example.travlediary.config.SecurityConfig;
-import com.example.travlediary.dto.CourseCommentDto;
-import com.example.travlediary.security.CustomUserDetails;
+import com.example.travlediary.dto.PostCommentDto;
 import com.example.travlediary.repository.user.UserMapper;
-import com.example.travlediary.service.course.CourseCommentService;
+import com.example.travlediary.security.CustomUserDetails;
+import com.example.travlediary.service.post.PostCommentService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 
@@ -27,15 +27,15 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(CourseCommentController.class)
+@WebMvcTest(PostCommentController.class)
 @Import(SecurityConfig.class)
-class CourseCommentSecurityTest {
+class PostCommentSecurityTest {
 
     @Autowired
     private MockMvc mockMvc;
 
     @MockitoBean
-    private CourseCommentService service;
+    private PostCommentService service;
     @MockitoBean
     private CustomLoginSuccessHandler customLoginSuccessHandler;
     @MockitoBean
@@ -49,54 +49,54 @@ class CourseCommentSecurityTest {
     void guestCanGetComments() throws Exception {
         when(service.getComments(10L, null)).thenReturn(List.of());
 
-        mockMvc.perform(get("/course-comments").param("courseId", "10"))
+        mockMvc.perform(get("/post-comments").param("postId", "10"))
                 .andExpect(status().isOk());
     }
 
     @Test
-    void guestCannotMutateComments() throws Exception {
-        mockMvc.perform(post("/course-comments")
+    void guestCannotMutateCommentsOrLikes() throws Exception {
+        mockMvc.perform(post("/post-comments")
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
-                        .content("{\"courseId\":10,\"replyToCommentId\":20,\"content\":\"댓글\"}"))
+                        .content("{\"postId\":10,\"content\":\"댓글\"}"))
                 .andExpect(status().isUnauthorized());
-        mockMvc.perform(put("/course-comments/30")
+        mockMvc.perform(put("/post-comments/30")
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .content("{\"content\":\"수정\"}"))
                 .andExpect(status().isUnauthorized());
-        mockMvc.perform(delete("/course-comments/30").accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(delete("/post-comments/30").accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isUnauthorized());
-        mockMvc.perform(post("/course-comments/30/likes").accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(post("/post-comments/30/likes").accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isUnauthorized());
-        mockMvc.perform(delete("/course-comments/30/likes").accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(delete("/post-comments/30/likes").accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
-    void authenticatedUserCanMutateComments() throws Exception {
+    void authenticatedUserCanMutateCommentsAndLikes() throws Exception {
         when(userDetails.getId()).thenReturn(7L);
         UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(userDetails, null, List.of());
-        CourseCommentDto dto = new CourseCommentDto();
-        when(service.create(10L, 7L, "댓글", 20L)).thenReturn(dto);
+        PostCommentDto dto = new PostCommentDto();
+        when(service.create(10L, 7L, "댓글", null)).thenReturn(dto);
         when(service.update(30L, 7L, "수정")).thenReturn(dto);
 
-        mockMvc.perform(post("/course-comments")
+        mockMvc.perform(post("/post-comments")
                         .with(authentication(authentication))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"courseId\":10,\"replyToCommentId\":20,\"content\":\"댓글\"}"))
+                        .content("{\"postId\":10,\"content\":\"댓글\"}"))
                 .andExpect(status().isCreated());
-        mockMvc.perform(put("/course-comments/30")
+        mockMvc.perform(put("/post-comments/30")
                         .with(authentication(authentication))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"content\":\"수정\"}"))
                 .andExpect(status().isOk());
-        mockMvc.perform(delete("/course-comments/30").with(authentication(authentication)))
+        mockMvc.perform(delete("/post-comments/30").with(authentication(authentication)))
                 .andExpect(status().isNoContent());
-        mockMvc.perform(post("/course-comments/30/likes").with(authentication(authentication)))
+        mockMvc.perform(post("/post-comments/30/likes").with(authentication(authentication)))
                 .andExpect(status().isNoContent());
-        mockMvc.perform(delete("/course-comments/30/likes").with(authentication(authentication)))
+        mockMvc.perform(delete("/post-comments/30/likes").with(authentication(authentication)))
                 .andExpect(status().isNoContent());
 
         verify(service).likeComment(30L, 7L);

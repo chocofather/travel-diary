@@ -204,6 +204,69 @@ class PostCommentServiceImplTest {
     }
 
     @Test
+    void likesActiveRootCommentAndPassesCurrentUserId() {
+        PostComment root = comment(30L, 8L);
+        root.setLikes(4);
+        when(postCommentMapper.findActiveCommentForUpdate(30L)).thenReturn(root);
+        when(postCommentMapper.insertLike(7L, 30L)).thenReturn(1);
+
+        service.likeComment(30L, 7L);
+
+        verify(postCommentMapper).findActiveCommentForUpdate(30L);
+        verify(postCommentMapper).insertLike(7L, 30L);
+        assertThat(root.getLikes()).isEqualTo(4);
+    }
+
+    @Test
+    void likesActiveReplyAndOwnCommentWhenInsertIsDuplicateNoop() {
+        PostComment ownReply = comment(31L, 7L);
+        ownReply.setParentCommentId(30L);
+        when(postCommentMapper.findActiveCommentForUpdate(31L)).thenReturn(ownReply);
+        when(postCommentMapper.insertLike(7L, 31L)).thenReturn(0);
+
+        service.likeComment(31L, 7L);
+
+        verify(postCommentMapper).insertLike(7L, 31L);
+    }
+
+    @Test
+    void likeReturnsNotFoundForMissingOrDeletedComment() {
+        assertStatus(HttpStatus.NOT_FOUND, () -> service.likeComment(30L, 7L));
+        assertStatus(HttpStatus.NOT_FOUND, () -> service.likeComment(31L, 7L));
+
+        verify(postCommentMapper).findActiveCommentForUpdate(30L);
+        verify(postCommentMapper).findActiveCommentForUpdate(31L);
+        verify(postCommentMapper, never()).insertLike(any(), any());
+    }
+
+    @Test
+    void unlikesActiveRootAndReplyIncludingMissingLikeNoop() {
+        PostComment root = comment(30L, 8L);
+        PostComment reply = comment(31L, 9L);
+        reply.setParentCommentId(30L);
+        when(postCommentMapper.findActiveCommentForUpdate(30L)).thenReturn(root);
+        when(postCommentMapper.findActiveCommentForUpdate(31L)).thenReturn(reply);
+        when(postCommentMapper.deleteLike(7L, 30L)).thenReturn(1);
+        when(postCommentMapper.deleteLike(7L, 31L)).thenReturn(0);
+
+        service.unlikeComment(30L, 7L);
+        service.unlikeComment(31L, 7L);
+
+        verify(postCommentMapper).deleteLike(7L, 30L);
+        verify(postCommentMapper).deleteLike(7L, 31L);
+    }
+
+    @Test
+    void unlikeReturnsNotFoundForMissingOrDeletedComment() {
+        assertStatus(HttpStatus.NOT_FOUND, () -> service.unlikeComment(30L, 7L));
+        assertStatus(HttpStatus.NOT_FOUND, () -> service.unlikeComment(31L, 7L));
+
+        verify(postCommentMapper).findActiveCommentForUpdate(30L);
+        verify(postCommentMapper).findActiveCommentForUpdate(31L);
+        verify(postCommentMapper, never()).deleteLike(any(), any());
+    }
+
+    @Test
     void deletedRootDtoDoesNotExposeMaskedFields() throws Exception {
         PostCommentDto deletedRoot = new PostCommentDto();
         deletedRoot.setId(30L);

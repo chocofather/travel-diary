@@ -62,6 +62,27 @@ document.addEventListener('DOMContentLoaded', () => {
         return button;
     }
 
+    function makeLikeControl(comment, loggedIn) {
+        const likeCount = document.createElement('span');
+        likeCount.className = 'course-comment-like-count';
+        likeCount.textContent = String(comment.likeCount ?? 0);
+
+        if (!loggedIn) {
+            const readonly = document.createElement('span');
+            readonly.className = 'course-comment-like-readonly';
+            readonly.textContent = '좋아요 ';
+            readonly.append(likeCount);
+            return readonly;
+        }
+
+        const button = makeButton('좋아요 ', 'course-comment-like-button');
+        button.append(likeCount);
+        button.classList.toggle('is-liked', Boolean(comment.likedByMe));
+        button.setAttribute('aria-pressed', String(Boolean(comment.likedByMe)));
+        button.dataset.likedByMe = String(Boolean(comment.likedByMe));
+        return button;
+    }
+
     function renderComment(comment, isReply = false) {
         const item = document.createElement('li');
         item.className = isReply
@@ -101,20 +122,19 @@ document.addEventListener('DOMContentLoaded', () => {
         item.append(content);
 
         const loggedIn = typeof isLoggedIn !== 'undefined' && isLoggedIn;
-        if (comment.myComment || loggedIn) {
-            const actions = document.createElement('div');
-            actions.className = 'course-comment-actions';
-            if (comment.myComment) {
-                actions.append(
-                    makeButton('수정', 'course-comment-edit'),
-                    makeButton('삭제', 'course-comment-delete')
-                );
-            }
-            if (loggedIn) {
-                actions.append(makeButton('답글', 'course-comment-reply-button'));
-            }
-            item.append(actions);
+        const actions = document.createElement('div');
+        actions.className = 'course-comment-actions';
+        actions.append(makeLikeControl(comment, loggedIn));
+        if (comment.myComment) {
+            actions.append(
+                makeButton('수정', 'course-comment-edit'),
+                makeButton('삭제', 'course-comment-delete')
+            );
         }
+        if (loggedIn) {
+            actions.append(makeButton('답글', 'course-comment-reply-button'));
+        }
+        item.append(actions);
         return item;
     }
 
@@ -193,6 +213,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const item = event.target.closest('.course-comment-item');
         if (!item) return;
         const commentId = item.dataset.commentId;
+
+        if (event.target.closest('.course-comment-like-button')) {
+            const likeButton = event.target.closest('.course-comment-like-button');
+            if (likeButton.disabled) return;
+            likeButton.disabled = true;
+            try {
+                const method = likeButton.dataset.likedByMe === 'true' ? 'DELETE' : 'POST';
+                await requestJson(`/course-comments/${commentId}/likes`, {method});
+                await loadComments();
+            } catch (error) {
+                showMessage(error.message);
+            } finally {
+                if (likeButton.isConnected) likeButton.disabled = false;
+            }
+            return;
+        }
 
         if (event.target.matches('.course-comment-reply-button')) {
             list.querySelector('.course-comment-reply-form')?.remove();

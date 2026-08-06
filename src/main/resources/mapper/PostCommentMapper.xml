@@ -25,6 +25,29 @@
         pc.created_at AS createdAt,
         CASE WHEN pc.deleted = 1 THEN NULL ELSE pc.updated_at END AS updatedAt,
         pc.deleted AS deleted,
+        CASE
+            WHEN pc.deleted = 1 THEN 0
+            ELSE (
+                SELECT COUNT(*)
+                FROM post_comment_likes pcl
+                WHERE pcl.comment_id = pc.id
+            )
+        END AS likeCount,
+        <choose>
+            <when test="currentUserId != null">
+                CASE
+                    WHEN pc.deleted = 1 THEN FALSE
+                    ELSE EXISTS (
+                        SELECT 1
+                        FROM post_comment_likes my_like
+                        WHERE my_like.comment_id = pc.id
+                          AND my_like.user_id = #{currentUserId}
+                    )
+                END
+            </when>
+            <otherwise>FALSE</otherwise>
+        </choose>
+        AS likedByMe,
         <choose>
             <when test="currentUserId != null">
                 CASE
@@ -183,5 +206,23 @@
           AND user_id = #{userId}
           AND deleted = 0
     </update>
+
+    <insert id="insertLike">
+        INSERT IGNORE INTO post_comment_likes (
+            user_id,
+            comment_id,
+            created_at
+        ) VALUES (
+            #{userId},
+            #{commentId},
+            NOW()
+        )
+    </insert>
+
+    <delete id="deleteLike">
+        DELETE FROM post_comment_likes
+        WHERE user_id = #{userId}
+          AND comment_id = #{commentId}
+    </delete>
 
 </mapper>
