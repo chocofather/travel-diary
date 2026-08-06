@@ -89,10 +89,19 @@ document.addEventListener('DOMContentLoaded', () => {
         meta.append(writer, date);
 
         content.textContent = comment.content || '';
-        item.append(meta, content);
+        item.append(meta);
+        if (comment.replyToCommentId != null) {
+            const replyTarget = document.createElement('p');
+            replyTarget.className = 'course-comment-reply-target';
+            replyTarget.textContent = comment.replyToDeleted
+                ? '삭제된 댓글에 대한 답글'
+                : `@${comment.replyToNickname || '알 수 없는 사용자'}에게 답글`;
+            item.append(replyTarget);
+        }
+        item.append(content);
 
         const loggedIn = typeof isLoggedIn !== 'undefined' && isLoggedIn;
-        if (comment.myComment || (!isReply && loggedIn)) {
+        if (comment.myComment || loggedIn) {
             const actions = document.createElement('div');
             actions.className = 'course-comment-actions';
             if (comment.myComment) {
@@ -101,7 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     makeButton('삭제', 'course-comment-delete')
                 );
             }
-            if (!isReply && loggedIn) {
+            if (loggedIn) {
                 actions.append(makeButton('답글', 'course-comment-reply-button'));
             }
             item.append(actions);
@@ -190,7 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const replyForm = document.createElement('form');
             replyForm.className = 'course-comment-reply-form';
-            replyForm.dataset.parentCommentId = commentId;
+            replyForm.dataset.replyToCommentId = commentId;
 
             const textarea = document.createElement('textarea');
             textarea.name = 'content';
@@ -284,7 +293,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 method: 'POST',
                 body: JSON.stringify({
                     courseId,
-                    parentCommentId: Number(replyForm.dataset.parentCommentId),
+                    replyToCommentId: Number(replyForm.dataset.replyToCommentId),
                     content: textarea.value
                 })
             });

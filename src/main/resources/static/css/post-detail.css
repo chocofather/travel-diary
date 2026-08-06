@@ -202,6 +202,13 @@
     line-height: 1.6;
 }
 
+.post-comment-reply-target {
+    margin: 0 0 7px;
+    color: #397a63;
+    font-size: 13px;
+    font-weight: 700;
+}
+
 .post-comment-actions {
     display: flex;
     justify-content: flex-end;

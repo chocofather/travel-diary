@@ -71,6 +71,7 @@ class CourseCommentServiceImplTest {
             assertThat(comment.getUserId()).isEqualTo(7L);
             assertThat(comment.getContent()).isEqualTo("새 댓글");
             assertThat(comment.getParentCommentId()).isNull();
+            assertThat(comment.getReplyToCommentId()).isNull();
             comment.setId(30L);
             return 1;
         });
@@ -120,6 +121,7 @@ class CourseCommentServiceImplTest {
         when(mapper.insert(any(CourseComment.class))).thenAnswer(invocation -> {
             CourseComment reply = invocation.getArgument(0);
             assertThat(reply.getParentCommentId()).isEqualTo(20L);
+            assertThat(reply.getReplyToCommentId()).isEqualTo(20L);
             assertThat(reply.getContent()).isEqualTo("대댓글");
             reply.setId(30L);
             return 1;
@@ -164,14 +166,53 @@ class CourseCommentServiceImplTest {
     }
 
     @Test
-    void replyCannotBeUsedAsParent() {
-        CourseComment parent = comment(20L, 8L);
-        parent.setCourseId(10L);
-        parent.setParentCommentId(15L);
+    void replyToReplyKeepsRootGroupAndActualTarget() {
+        CourseComment target = comment(20L, 8L);
+        target.setCourseId(10L);
+        target.setParentCommentId(15L);
+        CourseComment root = comment(15L, 9L);
+        root.setCourseId(10L);
         when(mapper.existsActiveCourse(10L)).thenReturn(true);
-        when(mapper.findActiveCommentForUpdate(20L)).thenReturn(parent);
+        when(mapper.findActiveCommentForUpdate(20L)).thenReturn(target);
+        when(mapper.findCommentForUpdate(15L)).thenReturn(root);
+        when(mapper.insert(any(CourseComment.class))).thenAnswer(invocation -> {
+            CourseComment reply = invocation.getArgument(0);
+            assertThat(reply.getParentCommentId()).isEqualTo(15L);
+            assertThat(reply.getReplyToCommentId()).isEqualTo(20L);
+            reply.setId(30L);
+            return 1;
+        });
+        when(mapper.findDtoById(30L, 7L)).thenReturn(dto(30L, true));
 
-        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "중첩 답글", 20L));
+        service.create(10L, 7L, "중첩 답글", 20L);
+
+        verify(mapper).findCommentForUpdate(15L);
+    }
+
+    @Test
+    void replyToReplyRejectsMissingOrInvalidRoot() {
+        CourseComment target = comment(20L, 8L);
+        target.setCourseId(10L);
+        target.setParentCommentId(15L);
+        when(mapper.existsActiveCourse(10L)).thenReturn(true);
+        when(mapper.findActiveCommentForUpdate(20L)).thenReturn(target);
+
+        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "답글", 20L));
+        verify(mapper, never()).insert(any());
+    }
+
+    @Test
+    void replyToReplyRejectsRootFromAnotherCourse() {
+        CourseComment target = comment(20L, 8L);
+        target.setCourseId(10L);
+        target.setParentCommentId(15L);
+        CourseComment root = comment(15L, 9L);
+        root.setCourseId(11L);
+        when(mapper.existsActiveCourse(10L)).thenReturn(true);
+        when(mapper.findActiveCommentForUpdate(20L)).thenReturn(target);
+        when(mapper.findCommentForUpdate(15L)).thenReturn(root);
+
+        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "답글", 20L));
         verify(mapper, never()).insert(any());
     }
 

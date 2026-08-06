@@ -1,0 +1,69 @@
+package com.example.travlediary.controller.post;
+
+import com.example.travlediary.dto.PostCommentDto;
+import com.example.travlediary.dto.PostCommentRequest;
+import com.example.travlediary.security.CustomUserDetails;
+import com.example.travlediary.service.post.PostCommentService;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
+
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class PostCommentControllerTest {
+
+    @Mock
+    private PostCommentService service;
+    @Mock
+    private CustomUserDetails userDetails;
+
+    @Test
+    void guestGetPassesNullUserId() {
+        PostCommentController controller = new PostCommentController(service);
+        when(service.getComments(10L, null)).thenReturn(List.of());
+
+        assertThat(controller.getComments(10L, null)).isEmpty();
+        verify(service).getComments(10L, null);
+    }
+
+    @Test
+    void createUsesTargetAndPrincipalWithoutTrustingParentId() {
+        PostCommentController controller = new PostCommentController(service);
+        PostCommentRequest request = new PostCommentRequest();
+        request.setPostId(10L);
+        request.setParentCommentId(999L);
+        request.setReplyToCommentId(20L);
+        request.setContent("답글");
+        PostCommentDto created = new PostCommentDto();
+        when(userDetails.getId()).thenReturn(7L);
+        when(service.create(10L, 7L, "답글", 20L)).thenReturn(created);
+
+        var response = controller.create(request, userDetails);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody()).isSameAs(created);
+        verify(service).create(10L, 7L, "답글", 20L);
+    }
+
+    @Test
+    void updateAndDeleteUsePrincipalUserId() {
+        PostCommentController controller = new PostCommentController(service);
+        PostCommentRequest request = new PostCommentRequest();
+        request.setContent("수정");
+        PostCommentDto updated = new PostCommentDto();
+        when(userDetails.getId()).thenReturn(7L);
+        when(service.update(30L, 7L, "수정")).thenReturn(updated);
+
+        assertThat(controller.update(30L, request, userDetails)).isSameAs(updated);
+        assertThat(controller.delete(30L, userDetails).getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        verify(service).update(30L, 7L, "수정");
+        verify(service).delete(30L, 7L);
+    }
+}

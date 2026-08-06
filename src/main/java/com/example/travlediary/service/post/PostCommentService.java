@@ -8,7 +8,7 @@ public interface PostCommentService {
 
     List<PostCommentDto> getComments(Long postId, Long currentUserId);
 
-    PostCommentDto create(Long postId, Long userId, String content, Long parentCommentId);
+    PostCommentDto create(Long postId, Long userId, String content, Long replyToCommentId);
 
     PostCommentDto update(Long commentId, Long userId, String content);
 

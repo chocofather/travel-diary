@@ -37,6 +37,8 @@ class PostCommentServiceImplTest {
         when(postCommentMapper.existsActivePost(10L)).thenReturn(true);
         when(postCommentMapper.insert(any(PostComment.class))).thenAnswer(invocation -> {
             PostComment comment = invocation.getArgument(0);
+            assertThat(comment.getParentCommentId()).isNull();
+            assertThat(comment.getReplyToCommentId()).isNull();
             comment.setId(30L);
             return 1;
         });
@@ -73,6 +75,7 @@ class PostCommentServiceImplTest {
         when(postCommentMapper.insert(any(PostComment.class))).thenAnswer(invocation -> {
             PostComment reply = invocation.getArgument(0);
             assertThat(reply.getParentCommentId()).isEqualTo(20L);
+            assertThat(reply.getReplyToCommentId()).isEqualTo(20L);
             reply.setId(30L);
             return 1;
         });
@@ -105,11 +108,44 @@ class PostCommentServiceImplTest {
     }
 
     @Test
-    void createReplyRejectsReplyAsParent() {
+    void createReplyToReplyKeepsRootGroupAndActualTarget() {
         when(postCommentMapper.existsActivePost(10L)).thenReturn(true);
-        when(postCommentMapper.findActiveCommentForUpdate(20L)).thenReturn(comment(20L, 8L, 10L, 15L));
+        PostComment target = comment(20L, 8L, 10L, 15L);
+        when(postCommentMapper.findActiveCommentForUpdate(20L)).thenReturn(target);
+        when(postCommentMapper.findCommentForUpdate(15L)).thenReturn(comment(15L, 9L, 10L, null));
+        when(postCommentMapper.insert(any(PostComment.class))).thenAnswer(invocation -> {
+            PostComment reply = invocation.getArgument(0);
+            assertThat(reply.getParentCommentId()).isEqualTo(15L);
+            assertThat(reply.getReplyToCommentId()).isEqualTo(20L);
+            reply.setId(30L);
+            return 1;
+        });
+        when(postCommentMapper.findDtoById(30L, 7L)).thenReturn(dto(30L, true));
 
-        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "중첩 답글", 20L));
+        service.create(10L, 7L, "중첩 답글", 20L);
+
+        verify(postCommentMapper).findCommentForUpdate(15L);
+    }
+
+    @Test
+    void createReplyToReplyRejectsMissingOrInvalidRoot() {
+        when(postCommentMapper.existsActivePost(10L)).thenReturn(true);
+        when(postCommentMapper.findActiveCommentForUpdate(20L))
+                .thenReturn(comment(20L, 8L, 10L, 15L));
+
+        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "답글", 20L));
+        verify(postCommentMapper, never()).insert(any());
+    }
+
+    @Test
+    void createReplyToReplyRejectsRootFromAnotherPost() {
+        when(postCommentMapper.existsActivePost(10L)).thenReturn(true);
+        when(postCommentMapper.findActiveCommentForUpdate(20L))
+                .thenReturn(comment(20L, 8L, 10L, 15L));
+        when(postCommentMapper.findCommentForUpdate(15L))
+                .thenReturn(comment(15L, 9L, 11L, null));
+
+        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "답글", 20L));
         verify(postCommentMapper, never()).insert(any());
     }
 

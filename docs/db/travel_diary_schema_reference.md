@@ -257,6 +257,7 @@ CREATE TABLE `course_comment_likes` (
 CREATE TABLE `course_comments` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `parent_comment_id` bigint DEFAULT NULL,
+  `reply_to_comment_id` bigint DEFAULT NULL,
   `content` text NOT NULL,
   `image_url` varchar(255) DEFAULT NULL,
   `likes` int DEFAULT '0',
@@ -269,6 +270,8 @@ CREATE TABLE `course_comments` (
   PRIMARY KEY (`id`),
   KEY `fk_course_comments_user` (`user_id`),
   KEY `fk_course_comments_course` (`course_id`),
+  KEY `idx_course_comments_parent` (`parent_comment_id`),
+  KEY `idx_course_comments_reply_to` (`reply_to_comment_id`),
   CONSTRAINT `fk_course_comments_course` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_course_comments_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
@@ -621,6 +624,7 @@ CREATE TABLE `post_comments` (
   `post_id` bigint NOT NULL,
   `user_id` bigint NOT NULL,
   `parent_comment_id` bigint DEFAULT NULL,
+  `reply_to_comment_id` bigint DEFAULT NULL,
   `likes` int NOT NULL DEFAULT '0',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -630,6 +634,7 @@ CREATE TABLE `post_comments` (
   KEY `fk_post_comment_user_post1_idx` (`post_id`),
   KEY `fk_post_comment_users1_idx` (`user_id`),
   KEY `fk_comment_parent_idx` (`parent_comment_id`),
+  KEY `idx_post_comments_reply_to` (`reply_to_comment_id`),
   CONSTRAINT `fk_postcomments_post` FOREIGN KEY (`post_id`) REFERENCES `user_posts` (`id`),
   CONSTRAINT `fk_postcomments_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;

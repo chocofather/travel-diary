@@ -345,6 +345,13 @@
     line-height: 1.6;
 }
 
+.course-comment-reply-target {
+    margin: 0 0 7px;
+    color: #397a63;
+    font-size: 13px;
+    font-weight: 700;
+}
+
 .course-comment-actions {
     display: flex;
     justify-content: flex-end;

@@ -10,6 +10,10 @@ public class PostCommentDto {
     private Long id;
     private Long postId;
     private Long parentCommentId;
+    private Long replyToCommentId;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private String replyToNickname;
+    private boolean replyToDeleted;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private String content;
     @JsonInclude(JsonInclude.Include.NON_NULL)

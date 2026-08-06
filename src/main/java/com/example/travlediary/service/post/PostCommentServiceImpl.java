@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -28,16 +29,17 @@ public class PostCommentServiceImpl implements PostCommentService {
 
     @Override
     @Transactional
-    public PostCommentDto create(Long postId, Long userId, String content, Long parentCommentId) {
+    public PostCommentDto create(Long postId, Long userId, String content, Long replyToCommentId) {
         requireActivePost(postId);
         String validatedContent = validateContent(content);
-        validateParentComment(postId, parentCommentId);
+        Long parentCommentId = resolveParentCommentId(postId, replyToCommentId);
 
         PostComment comment = new PostComment();
         comment.setPostId(postId);
         comment.setUserId(userId);
         comment.setContent(validatedContent);
         comment.setParentCommentId(parentCommentId);
+        comment.setReplyToCommentId(replyToCommentId);
 
         if (postCommentMapper.insert(comment) != 1 || comment.getId() == null) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "댓글 등록에 실패했습니다.");
@@ -83,21 +85,31 @@ public class PostCommentServiceImpl implements PostCommentService {
         return comment;
     }
 
-    private void validateParentComment(Long postId, Long parentCommentId) {
-        if (parentCommentId == null) {
-            return;
+    private Long resolveParentCommentId(Long postId, Long replyToCommentId) {
+        if (replyToCommentId == null) {
+            return null;
         }
 
-        PostComment parent = postCommentMapper.findActiveCommentForUpdate(parentCommentId);
-        if (parent == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "부모 댓글을 찾을 수 없습니다.");
+        PostComment target = postCommentMapper.findActiveCommentForUpdate(replyToCommentId);
+        if (target == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "답글 대상 댓글을 찾을 수 없습니다.");
         }
-        if (!parent.getPostId().equals(postId)) {
+        if (!Objects.equals(target.getPostId(), postId)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "같은 게시글의 댓글에만 답글을 작성할 수 있습니다.");
         }
-        if (parent.getParentCommentId() != null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "대댓글에는 답글을 작성할 수 없습니다.");
+
+        if (target.getParentCommentId() == null) {
+            return target.getId();
         }
+
+        PostComment root = postCommentMapper.findCommentForUpdate(target.getParentCommentId());
+        if (root == null || root.getParentCommentId() != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "원댓글 구조가 올바르지 않습니다.");
+        }
+        if (!Objects.equals(root.getPostId(), postId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "같은 게시글의 원댓글만 사용할 수 있습니다.");
+        }
+        return root.getId();
     }
 
     private String validateContent(String content) {

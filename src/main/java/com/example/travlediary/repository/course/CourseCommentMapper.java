@@ -19,6 +19,8 @@ public interface CourseCommentMapper {
 
     CourseComment findActiveCommentForUpdate(@Param("commentId") Long commentId);
 
+    CourseComment findCommentForUpdate(@Param("commentId") Long commentId);
+
     CourseCommentDto findDtoById(@Param("commentId") Long commentId,
                                  @Param("currentUserId") Long currentUserId);
 

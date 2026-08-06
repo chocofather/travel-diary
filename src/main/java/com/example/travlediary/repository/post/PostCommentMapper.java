@@ -19,6 +19,8 @@ public interface PostCommentMapper {
 
     PostComment findActiveCommentForUpdate(@Param("commentId") Long commentId);
 
+    PostComment findCommentForUpdate(@Param("commentId") Long commentId);
+
     PostCommentDto findDtoById(@Param("commentId") Long commentId,
                                @Param("currentUserId") Long currentUserId);
 

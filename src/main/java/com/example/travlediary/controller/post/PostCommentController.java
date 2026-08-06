@@ -42,7 +42,7 @@ public class PostCommentController {
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         PostCommentDto created = postCommentService.create(
-                request.getPostId(), userDetails.getId(), request.getContent(), request.getParentCommentId());
+                request.getPostId(), userDetails.getId(), request.getContent(), request.getReplyToCommentId());
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 

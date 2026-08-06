@@ -9,6 +9,17 @@
         cc.id,
         cc.course_id AS courseId,
         cc.parent_comment_id AS parentCommentId,
+        cc.reply_to_comment_id AS replyToCommentId,
+        CASE
+            WHEN cc.reply_to_comment_id IS NULL THEN NULL
+            WHEN reply_target.id IS NULL OR reply_target.deleted = 1 THEN NULL
+            ELSE reply_target_user.nickname
+        END AS replyToNickname,
+        CASE
+            WHEN cc.reply_to_comment_id IS NOT NULL
+             AND (reply_target.id IS NULL OR reply_target.deleted = 1) THEN TRUE
+            ELSE FALSE
+        END AS replyToDeleted,
         CASE WHEN cc.deleted = 1 THEN NULL ELSE cc.content END AS content,
         CASE WHEN cc.deleted = 1 THEN NULL ELSE u.nickname END AS writerNickname,
         cc.create_at AS createdAt,
@@ -42,6 +53,10 @@
         FROM course_comments cc
         JOIN users u ON u.id = cc.user_id
         LEFT JOIN course_comments parent ON parent.id = cc.parent_comment_id
+        LEFT JOIN course_comments reply_target
+          ON reply_target.id = cc.reply_to_comment_id
+         AND reply_target.course_id = cc.course_id
+        LEFT JOIN users reply_target_user ON reply_target_user.id = reply_target.user_id
         WHERE cc.course_id = #{courseId}
           AND (
               (
@@ -77,6 +92,7 @@
         SELECT
             id,
             parent_comment_id AS parentCommentId,
+            reply_to_comment_id AS replyToCommentId,
             content,
             create_at AS createdAt,
             updated_at AS updatedAt,
@@ -93,6 +109,7 @@
         SELECT
             id,
             parent_comment_id AS parentCommentId,
+            reply_to_comment_id AS replyToCommentId,
             content,
             create_at AS createdAt,
             updated_at AS updatedAt,
@@ -106,11 +123,32 @@
         FOR UPDATE
     </select>
 
+    <select id="findCommentForUpdate" resultType="com.example.travlediary.model.CourseComment">
+        SELECT
+            id,
+            parent_comment_id AS parentCommentId,
+            reply_to_comment_id AS replyToCommentId,
+            content,
+            create_at AS createdAt,
+            updated_at AS updatedAt,
+            deleted_at AS deletedAt,
+            deleted,
+            user_id AS userId,
+            course_id AS courseId
+        FROM course_comments
+        WHERE id = #{commentId}
+        FOR UPDATE
+    </select>
+
     <select id="findDtoById" resultType="com.example.travlediary.dto.CourseCommentDto">
         SELECT
             <include refid="commentDtoColumns"/>
         FROM course_comments cc
         JOIN users u ON u.id = cc.user_id
+        LEFT JOIN course_comments reply_target
+          ON reply_target.id = cc.reply_to_comment_id
+         AND reply_target.course_id = cc.course_id
+        LEFT JOIN users reply_target_user ON reply_target_user.id = reply_target.user_id
         WHERE cc.id = #{commentId}
           AND cc.deleted = 0
     </select>
@@ -118,9 +156,11 @@
     <insert id="insert" parameterType="com.example.travlediary.model.CourseComment"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO course_comments (
-            parent_comment_id, content, deleted, create_at, updated_at, user_id, course_id
+            parent_comment_id, reply_to_comment_id, content, deleted,
+            create_at, updated_at, user_id, course_id
         ) VALUES (
-            #{parentCommentId}, #{content}, 0, NOW(), NOW(), #{userId}, #{courseId}
+            #{parentCommentId}, #{replyToCommentId}, #{content}, 0,
+            NOW(), NOW(), #{userId}, #{courseId}
         )
     </insert>
 

@@ -9,6 +9,9 @@ public class CourseCommentDto {
     private Long id;
     private Long courseId;
     private Long parentCommentId;
+    private Long replyToCommentId;
+    private String replyToNickname;
+    private boolean replyToDeleted;
     private String content;
     private String writerNickname;
     private Timestamp createdAt;

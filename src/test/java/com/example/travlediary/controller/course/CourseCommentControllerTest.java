@@ -60,18 +60,19 @@ class CourseCommentControllerTest {
     }
 
     @Test
-    void createReplyPassesParentIdAndPrincipalUserId() {
+    void createReplyPassesTargetIdAndPrincipalUserIdWithoutTrustingParentId() {
         CourseCommentController controller = new CourseCommentController(service);
         CourseCommentRequest request = request(10L, "대댓글");
         request.setParentCommentId(20L);
+        request.setReplyToCommentId(25L);
         CourseCommentDto created = new CourseCommentDto();
         when(userDetails.getId()).thenReturn(7L);
-        when(service.create(10L, 7L, "대댓글", 20L)).thenReturn(created);
+        when(service.create(10L, 7L, "대댓글", 25L)).thenReturn(created);
 
         var response = controller.create(request, userDetails);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        verify(service).create(10L, 7L, "대댓글", 20L);
+        verify(service).create(10L, 7L, "대댓글", 25L);
     }
 
     @Test

@@ -29,16 +29,17 @@ public class CourseCommentServiceImpl implements CourseCommentService {
 
     @Override
     @Transactional
-    public CourseCommentDto create(Long courseId, Long userId, String content, Long parentCommentId) {
+    public CourseCommentDto create(Long courseId, Long userId, String content, Long replyToCommentId) {
         requireActiveCourse(courseId);
         String validatedContent = validateContent(content);
-        validateParentComment(courseId, parentCommentId);
+        Long parentCommentId = resolveParentCommentId(courseId, replyToCommentId);
 
         CourseComment comment = new CourseComment();
         comment.setCourseId(courseId);
         comment.setUserId(userId);
         comment.setContent(validatedContent);
         comment.setParentCommentId(parentCommentId);
+        comment.setReplyToCommentId(replyToCommentId);
 
         if (courseCommentMapper.insert(comment) != 1 || comment.getId() == null) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "댓글 등록에 실패했습니다.");
@@ -84,22 +85,32 @@ public class CourseCommentServiceImpl implements CourseCommentService {
         return comment;
     }
 
-    private void validateParentComment(Long courseId, Long parentCommentId) {
-        if (parentCommentId == null) {
-            return;
+    private Long resolveParentCommentId(Long courseId, Long replyToCommentId) {
+        if (replyToCommentId == null) {
+            return null;
         }
 
-        CourseComment parent = courseCommentMapper.findActiveCommentForUpdate(parentCommentId);
-        if (parent == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "부모 댓글을 찾을 수 없습니다.");
+        CourseComment target = courseCommentMapper.findActiveCommentForUpdate(replyToCommentId);
+        if (target == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "답글 대상 댓글을 찾을 수 없습니다.");
         }
-        if (!Objects.equals(parent.getCourseId(), courseId)) {
+        if (!Objects.equals(target.getCourseId(), courseId)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "같은 여행 코스의 댓글에만 답글을 작성할 수 있습니다.");
         }
-        if (parent.getParentCommentId() != null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "대댓글에는 답글을 작성할 수 없습니다.");
+
+        if (target.getParentCommentId() == null) {
+            return target.getId();
         }
+
+        CourseComment root = courseCommentMapper.findCommentForUpdate(target.getParentCommentId());
+        if (root == null || root.getParentCommentId() != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "원댓글 구조가 올바르지 않습니다.");
+        }
+        if (!Objects.equals(root.getCourseId(), courseId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "같은 여행 코스의 원댓글만 사용할 수 있습니다.");
+        }
+        return root.getId();
     }
 
     private String validateContent(String content) {

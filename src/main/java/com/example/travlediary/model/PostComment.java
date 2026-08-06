@@ -19,5 +19,6 @@ public class PostComment {
     private Boolean deleted; // 삭제여부
     private Integer likes; // 좋아요 수
     private Long parentCommentId; // 부모 댓글 번호
+    private Long replyToCommentId; // 실제 답글 대상 댓글 번호
 
 }

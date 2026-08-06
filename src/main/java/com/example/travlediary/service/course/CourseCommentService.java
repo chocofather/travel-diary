@@ -8,7 +8,7 @@ public interface CourseCommentService {
 
     List<CourseCommentDto> getComments(Long courseId, Long currentUserId);
 
-    CourseCommentDto create(Long courseId, Long userId, String content, Long parentCommentId);
+    CourseCommentDto create(Long courseId, Long userId, String content, Long replyToCommentId);
 
     CourseCommentDto update(Long commentId, Long userId, String content);
 
