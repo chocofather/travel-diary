@@ -57,7 +57,7 @@ class CourseCommentSecurityTest {
         mockMvc.perform(post("/course-comments")
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
-                        .content("{\"courseId\":10,\"content\":\"댓글\"}"))
+                        .content("{\"courseId\":10,\"parentCommentId\":20,\"content\":\"댓글\"}"))
                 .andExpect(status().isUnauthorized());
         mockMvc.perform(put("/course-comments/30")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -74,13 +74,13 @@ class CourseCommentSecurityTest {
         UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(userDetails, null, List.of());
         CourseCommentDto dto = new CourseCommentDto();
-        when(service.create(10L, 7L, "댓글")).thenReturn(dto);
+        when(service.create(10L, 7L, "댓글", 20L)).thenReturn(dto);
         when(service.update(30L, 7L, "수정")).thenReturn(dto);
 
         mockMvc.perform(post("/course-comments")
                         .with(authentication(authentication))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"courseId\":10,\"content\":\"댓글\"}"))
+                        .content("{\"courseId\":10,\"parentCommentId\":20,\"content\":\"댓글\"}"))
                 .andExpect(status().isCreated());
         mockMvc.perform(put("/course-comments/30")
                         .with(authentication(authentication))

@@ -42,7 +42,7 @@ public class CourseCommentController {
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         CourseCommentDto created = courseCommentService.create(
-                request.getCourseId(), userDetails.getId(), request.getContent());
+                request.getCourseId(), userDetails.getId(), request.getContent(), request.getParentCommentId());
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 

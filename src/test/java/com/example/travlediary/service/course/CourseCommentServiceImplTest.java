@@ -77,7 +77,7 @@ class CourseCommentServiceImplTest {
         CourseCommentDto latest = dto(30L, true);
         when(mapper.findDtoById(30L, 7L)).thenReturn(latest);
 
-        assertThat(service.create(10L, 7L, "  새 댓글  ")).isSameAs(latest);
+        assertThat(service.create(10L, 7L, "  새 댓글  ", null)).isSameAs(latest);
     }
 
     @Test
@@ -85,7 +85,7 @@ class CourseCommentServiceImplTest {
         when(mapper.existsActiveCourse(10L)).thenReturn(true);
         when(mapper.insert(any())).thenReturn(0);
 
-        assertStatus(HttpStatus.INTERNAL_SERVER_ERROR, () -> service.create(10L, 7L, "댓글"));
+        assertStatus(HttpStatus.INTERNAL_SERVER_ERROR, () -> service.create(10L, 7L, "댓글", null));
     }
 
     @Test
@@ -93,12 +93,12 @@ class CourseCommentServiceImplTest {
         when(mapper.existsActiveCourse(10L)).thenReturn(true);
         when(mapper.insert(any())).thenReturn(1);
 
-        assertStatus(HttpStatus.INTERNAL_SERVER_ERROR, () -> service.create(10L, 7L, "댓글"));
+        assertStatus(HttpStatus.INTERNAL_SERVER_ERROR, () -> service.create(10L, 7L, "댓글", null));
     }
 
     @Test
     void missingOrDeletedCourseCreateReturnsNotFoundWithoutInsert() {
-        assertStatus(HttpStatus.NOT_FOUND, () -> service.create(10L, 7L, "댓글"));
+        assertStatus(HttpStatus.NOT_FOUND, () -> service.create(10L, 7L, "댓글", null));
         verify(mapper, never()).insert(any());
     }
 
@@ -106,9 +106,85 @@ class CourseCommentServiceImplTest {
     void createRejectsBlankAndOverTwoThousandCharacters() {
         when(mapper.existsActiveCourse(10L)).thenReturn(true);
 
-        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "   "));
-        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "가".repeat(2_001)));
+        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "   ", null));
+        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "가".repeat(2_001), null));
         verify(mapper, never()).insert(any());
+    }
+
+    @Test
+    void createsTrimmedReplyAfterLockingRootParent() {
+        CourseComment parent = comment(20L, 8L);
+        parent.setCourseId(10L);
+        when(mapper.existsActiveCourse(10L)).thenReturn(true);
+        when(mapper.findActiveCommentForUpdate(20L)).thenReturn(parent);
+        when(mapper.insert(any(CourseComment.class))).thenAnswer(invocation -> {
+            CourseComment reply = invocation.getArgument(0);
+            assertThat(reply.getParentCommentId()).isEqualTo(20L);
+            assertThat(reply.getContent()).isEqualTo("대댓글");
+            reply.setId(30L);
+            return 1;
+        });
+        CourseCommentDto latest = dto(30L, true);
+        latest.setParentCommentId(20L);
+        when(mapper.findDtoById(30L, 7L)).thenReturn(latest);
+
+        CourseCommentDto result = service.create(10L, 7L, "  대댓글  ", 20L);
+
+        assertThat(result.getParentCommentId()).isEqualTo(20L);
+        verify(mapper).findActiveCommentForUpdate(20L);
+    }
+
+    @Test
+    void replyRejectsBlankAndOverTwoThousandCharactersBeforeParentLookup() {
+        when(mapper.existsActiveCourse(10L)).thenReturn(true);
+
+        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "   ", 20L));
+        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "가".repeat(2_001), 20L));
+        verify(mapper, never()).findActiveCommentForUpdate(any());
+        verify(mapper, never()).insert(any());
+    }
+
+    @Test
+    void missingOrDeletedParentReturnsNotFoundWithoutInsert() {
+        when(mapper.existsActiveCourse(10L)).thenReturn(true);
+
+        assertStatus(HttpStatus.NOT_FOUND, () -> service.create(10L, 7L, "대댓글", 20L));
+        verify(mapper, never()).insert(any());
+    }
+
+    @Test
+    void parentFromAnotherCourseReturnsBadRequestWithoutInsert() {
+        CourseComment parent = comment(20L, 8L);
+        parent.setCourseId(11L);
+        when(mapper.existsActiveCourse(10L)).thenReturn(true);
+        when(mapper.findActiveCommentForUpdate(20L)).thenReturn(parent);
+
+        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "대댓글", 20L));
+        verify(mapper, never()).insert(any());
+    }
+
+    @Test
+    void replyCannotBeUsedAsParent() {
+        CourseComment parent = comment(20L, 8L);
+        parent.setCourseId(10L);
+        parent.setParentCommentId(15L);
+        when(mapper.existsActiveCourse(10L)).thenReturn(true);
+        when(mapper.findActiveCommentForUpdate(20L)).thenReturn(parent);
+
+        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "중첩 답글", 20L));
+        verify(mapper, never()).insert(any());
+    }
+
+    @Test
+    void replyInsertZeroRowsAndMissingGeneratedIdFail() {
+        CourseComment parent = comment(20L, 8L);
+        parent.setCourseId(10L);
+        when(mapper.existsActiveCourse(10L)).thenReturn(true);
+        when(mapper.findActiveCommentForUpdate(20L)).thenReturn(parent);
+        when(mapper.insert(any())).thenReturn(0, 1);
+
+        assertStatus(HttpStatus.INTERNAL_SERVER_ERROR, () -> service.create(10L, 7L, "대댓글", 20L));
+        assertStatus(HttpStatus.INTERNAL_SERVER_ERROR, () -> service.create(10L, 7L, "대댓글", 20L));
     }
 
     @Test
@@ -143,6 +219,19 @@ class CourseCommentServiceImplTest {
     }
 
     @Test
+    void ownedReplyCanBeUpdated() {
+        CourseComment reply = comment(30L, 7L);
+        reply.setParentCommentId(20L);
+        when(mapper.findActiveComment(30L)).thenReturn(reply);
+        when(mapper.updateContent(30L, 7L, "수정 대댓글")).thenReturn(1);
+        when(mapper.findDtoById(30L, 7L)).thenReturn(dto(30L, true));
+
+        service.update(30L, 7L, "수정 대댓글");
+
+        verify(mapper).updateContent(30L, 7L, "수정 대댓글");
+    }
+
+    @Test
     void deletesOwnedComment() {
         when(mapper.findActiveComment(30L)).thenReturn(comment(30L, 7L));
         when(mapper.softDelete(30L, 7L)).thenReturn(1);
@@ -171,6 +260,18 @@ class CourseCommentServiceImplTest {
         when(mapper.findActiveComment(30L)).thenReturn(comment(30L, 7L));
 
         assertStatus(HttpStatus.NOT_FOUND, () -> service.delete(30L, 7L));
+    }
+
+    @Test
+    void ownedReplyCanBeSoftDeleted() {
+        CourseComment reply = comment(30L, 7L);
+        reply.setParentCommentId(20L);
+        when(mapper.findActiveComment(30L)).thenReturn(reply);
+        when(mapper.softDelete(30L, 7L)).thenReturn(1);
+
+        service.delete(30L, 7L);
+
+        verify(mapper).softDelete(30L, 7L);
     }
 
     private CourseComment comment(Long id, Long userId) {

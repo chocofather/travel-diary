@@ -8,6 +8,7 @@ import java.sql.Timestamp;
 public class CourseCommentDto {
     private Long id;
     private Long courseId;
+    private Long parentCommentId;
     private String content;
     private String writerNickname;
     private Timestamp createdAt;
