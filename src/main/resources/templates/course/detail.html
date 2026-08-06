@@ -5,6 +5,7 @@
 
 <th:block th:fragment="headFragment">
   <link rel="stylesheet" href="/css/course-detail.css" />
+  <script src="/js/course-comments.js" defer></script>
 </th:block>
 
 <th:block th:fragment="body">
@@ -79,6 +80,30 @@
         <button type="submit">삭제</button>
       </form>
     </div>
+
+    <section id="course-comments" class="course-comments" th:attr="data-course-id=${course.id}">
+      <h2>댓글 <span id="course-comment-count">0</span></h2>
+
+      <form id="course-comment-form" class="course-comment-form"
+            th:if="${#authorization.expression('isAuthenticated()')}">
+        <label for="course-comment-content" class="sr-only">댓글 내용</label>
+        <textarea id="course-comment-content" name="content" maxlength="2000"
+                  placeholder="댓글을 입력해 주세요." required></textarea>
+        <div class="course-comment-form-actions">
+          <span class="course-comment-length"><span id="course-comment-length">0</span>/2000</span>
+          <button type="submit">등록</button>
+        </div>
+      </form>
+
+      <p class="course-comment-login"
+         th:unless="${#authorization.expression('isAuthenticated()')}">
+        댓글을 작성하려면
+        <a th:href="@{/login(redirect=${'/course/' + course.id})}">로그인</a>해 주세요.
+      </p>
+
+      <p id="course-comment-message" class="course-comment-message" role="alert" hidden></p>
+      <ul id="course-comment-list" class="course-comment-list" aria-live="polite"></ul>
+    </section>
   </main>
 </th:block>
 </html>

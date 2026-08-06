@@ -259,6 +259,99 @@
     cursor: pointer;
 }
 
+.course-comments {
+    margin-top: 48px;
+    padding-top: 32px;
+    border-top: 1px solid #ddd;
+}
+
+.course-comments h2 {
+    margin: 0 0 20px;
+    font-size: 22px;
+}
+
+.course-comment-form textarea,
+.course-comment-edit-textarea {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 100px;
+    padding: 12px;
+    resize: vertical;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font: inherit;
+}
+
+.course-comment-form-actions,
+.course-comment-edit-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.course-comment-form button,
+.course-comment-actions button {
+    padding: 7px 13px;
+    border: 1px solid #397a63;
+    border-radius: 5px;
+    background: #fff;
+    color: #397a63;
+    cursor: pointer;
+}
+
+.course-comment-form button[type="submit"],
+.course-comment-actions .course-comment-save {
+    background: #397a63;
+    color: #fff;
+}
+
+.course-comment-length,
+.course-comment-login,
+.course-comment-date,
+.course-comment-empty {
+    color: #777;
+    font-size: 14px;
+}
+
+.course-comment-message {
+    margin: 14px 0;
+    color: #b42318;
+}
+
+.course-comment-list {
+    margin: 24px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.course-comment-item {
+    padding: 18px 0;
+    border-top: 1px solid #eee;
+}
+
+.course-comment-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.course-comment-content {
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    line-height: 1.6;
+}
+
+.course-comment-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+    margin-top: 10px;
+}
+
 @media (max-width: 720px) {
     .course-detail-container {
         width: min(100% - 24px, 680px);

@@ -58,6 +58,12 @@ public class SecurityConfig {
                         // 게시글 댓글 작성·수정·삭제는 로그인 사용자만 가능
                         .requestMatchers("/post-comments", "/post-comments/**").authenticated()
 
+                        // 여행 코스 일반 댓글 목록은 비회원도 조회 가능
+                        .requestMatchers(HttpMethod.GET, "/course-comments").permitAll()
+
+                        // 여행 코스 댓글 작성·수정·삭제는 로그인 사용자만 가능
+                        .requestMatchers("/course-comments", "/course-comments/**").authenticated()
+
                         // 숫자 ID 게시글 상세 GET만 공개 (/post/write는 일치하지 않음)
                         .requestMatchers(new RegexRequestMatcher("^/post/[0-9]+$", "GET")).permitAll()
 

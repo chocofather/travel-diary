@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.course.CourseCommentMapper">
+
+    <sql id="commentDtoColumns">
+        cc.id,
+        cc.course_id AS courseId,
+        cc.content,
+        u.nickname AS writerNickname,
+        cc.create_at AS createdAt,
+        cc.updated_at AS updatedAt,
+        cc.deleted,
+        <choose>
+            <when test="currentUserId != null">
+                CASE WHEN cc.user_id = #{currentUserId} THEN TRUE ELSE FALSE END
+            </when>
+            <otherwise>FALSE</otherwise>
+        </choose>
+        AS myComment
+    </sql>
+
+    <select id="existsActiveCourse" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1
+            FROM courses
+            WHERE id = #{courseId}
+              AND deleted = 0
+        )
+    </select>
+
+    <select id="findByCourseId" resultType="com.example.travlediary.dto.CourseCommentDto">
+        SELECT
+            <include refid="commentDtoColumns"/>
+        FROM course_comments cc
+        JOIN users u ON u.id = cc.user_id
+        WHERE cc.course_id = #{courseId}
+          AND cc.parent_comment_id IS NULL
+          AND cc.deleted = 0
+        ORDER BY cc.create_at ASC, cc.id ASC
+    </select>
+
+    <select id="findActiveComment" resultType="com.example.travlediary.model.CourseComment">
+        SELECT
+            id,
+            parent_comment_id AS parentCommentId,
+            content,
+            create_at AS createdAt,
+            updated_at AS updatedAt,
+            deleted_at AS deletedAt,
+            deleted,
+            user_id AS userId,
+            course_id AS courseId
+        FROM course_comments
+        WHERE id = #{commentId}
+          AND parent_comment_id IS NULL
+          AND deleted = 0
+    </select>
+
+    <select id="findDtoById" resultType="com.example.travlediary.dto.CourseCommentDto">
+        SELECT
+            <include refid="commentDtoColumns"/>
+        FROM course_comments cc
+        JOIN users u ON u.id = cc.user_id
+        WHERE cc.id = #{commentId}
+          AND cc.parent_comment_id IS NULL
+          AND cc.deleted = 0
+    </select>
+
+    <insert id="insert" parameterType="com.example.travlediary.model.CourseComment"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO course_comments (
+            parent_comment_id, content, deleted, create_at, updated_at, user_id, course_id
+        ) VALUES (
+            NULL, #{content}, 0, NOW(), NOW(), #{userId}, #{courseId}
+        )
+    </insert>
+
+    <update id="updateContent">
+        UPDATE course_comments
+        SET content = #{content},
+            updated_at = NOW()
+        WHERE id = #{commentId}
+          AND parent_comment_id IS NULL
+          AND user_id = #{userId}
+          AND deleted = 0
+    </update>
+
+    <update id="softDelete">
+        UPDATE course_comments
+        SET deleted = 1,
+            deleted_at = NOW()
+        WHERE id = #{commentId}
+          AND parent_comment_id IS NULL
+          AND user_id = #{userId}
+          AND deleted = 0
+    </update>
+
+</mapper>
