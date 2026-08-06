@@ -46,10 +46,7 @@
   </section>
 
   <script>
-    window.initToastEditor('#editor', 'content-input');
-    document.getElementById('post-form').addEventListener('submit', function() {
-      console.log('폼 제출 전 content:', document.getElementById('content-input').value);
-    });
+    window.initToastEditor('#editor', 'content-input', 'post-form');
   </script>
 </th:block>
 </html>

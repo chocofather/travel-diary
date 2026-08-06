@@ -7,7 +7,12 @@
     <div th:each="item : ${boardList}" class="board-list-row">
         <span class="board-type"
               th:text="|[${item.boardType == 'course' ? '나만의 여행코스' : (item.postType == 'TIP' ? '여행팁' : '여행질문')}]|"></span>
-      <span class="board-title" th:text="${item.title}"></span>
+      <span class="board-title">
+        <a th:if="${item.boardType == 'post'}"
+           th:href="@{|/post/${item.id}|}"
+           th:text="${item.title}"></a>
+        <span th:if="${item.boardType == 'course'}" th:text="${item.title}"></span>
+      </span>
       <span class="board-comments" th:text="|댓글: ${item.commentCount}|"></span>
       <span class="board-nickname" th:text="|작성자: ${item.nickname}|"></span>
       <span class="board-date" th:text="${item.createdAt}"></span>

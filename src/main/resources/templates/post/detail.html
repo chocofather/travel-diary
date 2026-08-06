@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
+
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/post-detail.css" />
+</th:block>
+
+<th:block th:fragment="body">
+  <main class="post-detail-container">
+    <article class="post-detail">
+      <header class="post-detail-header">
+        <div class="post-type"
+             th:text="${post.postType.name() == 'TIP' ? '여행 팁' : '여행 질문'}">여행 질문</div>
+        <h1 th:text="${post.title}">게시글 제목</h1>
+        <dl class="post-meta">
+          <div><dt>작성자</dt><dd th:text="${post.nickname}">닉네임</dd></div>
+          <div><dt>작성일</dt><dd th:text="${#dates.format(post.createdAt, 'yyyy-MM-dd HH:mm')}">작성일</dd></div>
+          <div><dt>수정일</dt><dd th:text="${#dates.format(post.updatedAt, 'yyyy-MM-dd HH:mm')}">수정일</dd></div>
+          <div><dt>조회수</dt><dd th:text="${post.views}">0</dd></div>
+        </dl>
+      </header>
+
+      <section class="post-content toastui-editor-contents" th:utext="${post.content}"></section>
+
+      <section class="post-images" th:if="${post.images != null and !post.images.isEmpty()}">
+        <img th:each="image : ${post.images}"
+             th:src="${image.imageUrl}"
+             alt="게시글 첨부 이미지"
+             loading="lazy" />
+      </section>
+
+      <div class="post-detail-actions">
+        <a th:href="@{/board/list(boardType='post')}" class="back-to-list">목록으로</a>
+      </div>
+    </article>
+  </main>
+</th:block>
+</html>

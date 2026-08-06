@@ -1,11 +1,14 @@
 package com.example.travlediary.service.post;
 
+import com.example.travlediary.dto.PostDetailDto;
 import com.example.travlediary.model.PostImage;
 import com.example.travlediary.model.UserPost;
 
 import java.util.List;
 
 public interface PostService {
+
+    PostDetailDto getPostDetail(Long postId);
 
     /**
      * 게시글(질문/팁) 등록 + 이미지 등록

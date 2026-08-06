@@ -23,6 +23,12 @@ public class PostController {
     private final PostService postService;
     private final FileUploadService fileUploadService;
 
+    @GetMapping("/{id}")
+    public String postDetail(@PathVariable Long id, Model model) {
+        model.addAttribute("post", postService.getPostDetail(id));
+        return "post/detail";
+    }
+
     // 글쓰기 폼 페이지 (GET)
     @GetMapping("/write")
     public String postWritePage(Model model) {

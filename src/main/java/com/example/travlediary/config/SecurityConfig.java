@@ -10,6 +10,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.util.matcher.RegexRequestMatcher;
 
 @Configuration
 @EnableWebSecurity
@@ -49,6 +50,9 @@ public class SecurityConfig {
                                 "/events", "/events/**",
                                 "/board/list", "/board/fragment"
                                 ).permitAll()
+
+                        // 숫자 ID 게시글 상세 GET만 공개 (/post/write는 일치하지 않음)
+                        .requestMatchers(new RegexRequestMatcher("^/post/[0-9]+$", "GET")).permitAll()
 
                         /* === 관리자만 접근 가능한 영역 === */
                         .requestMatchers("/admin/**").hasRole("ADMIN")

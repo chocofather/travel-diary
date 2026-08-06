@@ -50,6 +50,9 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
     implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
 
+    // 게시글 에디터 HTML 정화
+    implementation 'org.jsoup:jsoup:1.18.3'
+
     // 메일 전송
     implementation 'org.springframework.boot:spring-boot-starter-mail'
 

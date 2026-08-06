@@ -5,6 +5,65 @@
 
 <mapper namespace="com.example.travlediary.repository.post.PostMapper">
 
+    <resultMap id="PostDetailMap" type="com.example.travlediary.dto.PostDetailDto">
+        <id property="id" column="post_id"/>
+        <result property="postType" column="post_type"/>
+        <result property="title" column="post_title"/>
+        <result property="content" column="post_content"/>
+        <result property="nickname" column="writer_nickname"/>
+        <result property="createdAt" column="post_created_at"/>
+        <result property="updatedAt" column="post_updated_at"/>
+        <result property="views" column="post_views"/>
+    </resultMap>
+
+    <resultMap id="PostImageMap" type="com.example.travlediary.model.PostImage">
+        <id property="id" column="image_id"/>
+        <result property="imageUrl" column="image_url"/>
+        <result property="deleted" column="image_deleted"/>
+        <result property="uploadedAt" column="image_uploaded_at"/>
+        <result property="updatedAt" column="image_updated_at"/>
+        <result property="deletedAt" column="image_deleted_at"/>
+        <result property="postId" column="image_post_id"/>
+    </resultMap>
+
+    <update id="incrementViews">
+        UPDATE user_posts
+        SET views = views + 1
+        WHERE id = #{postId}
+          AND deleted = 0
+    </update>
+
+    <select id="findPostDetail" resultMap="PostDetailMap">
+        SELECT
+            p.id AS post_id,
+            p.post_type AS post_type,
+            p.title AS post_title,
+            p.content AS post_content,
+            u.nickname AS writer_nickname,
+            p.created_at AS post_created_at,
+            p.updated_at AS post_updated_at,
+            p.views AS post_views
+        FROM user_posts p
+        JOIN users u ON p.user_id = u.id
+        WHERE p.id = #{postId}
+          AND p.deleted = 0
+    </select>
+
+    <select id="findPostImages" resultMap="PostImageMap">
+        SELECT
+            pi.id AS image_id,
+            pi.image_url AS image_url,
+            pi.deleted AS image_deleted,
+            pi.uploaded_at AS image_uploaded_at,
+            pi.updated_at AS image_updated_at,
+            pi.deleted_at AS image_deleted_at,
+            pi.post_id AS image_post_id
+        FROM post_images pi
+        WHERE pi.post_id = #{postId}
+          AND pi.deleted = 0
+        ORDER BY pi.uploaded_at ASC, pi.id ASC
+    </select>
+
     <!-- 게시글 저장 -->
     <insert id="insertPost" parameterType="com.example.travlediary.model.UserPost" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO user_posts (
