@@ -43,12 +43,12 @@
 
       <!-- 3. 리스트 fragment 컨테이너 -->
       <div id="board-fragment-container"
-           th:replace="board/fragment :: boardListFragment(
+           th:insert="~{board/fragment :: boardListFragment(
                ${boardList},
                ${totalPages},
                ${currentPage},
                ${sort}
-           )">
+           )}">
         <!-- SSR 최초 진입 시 서버에서 boardListFragment로 채워짐 -->
       </div>
     </main>

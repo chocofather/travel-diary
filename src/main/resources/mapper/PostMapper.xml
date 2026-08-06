@@ -5,54 +5,6 @@
 
 <mapper namespace="com.example.travlediary.repository.post.PostMapper">
 
-    <!-- 게시글 리스트 + 댓글수 + 작성자 닉네임 -->
-    <select id="findPosts" resultType="com.example.travlediary.dto.BoardListDto">
-        SELECT
-        p.id,
-        p.post_type AS postType,
-        p.title,
-        p.views,
-        p.created_at AS createdAt,
-        u.nickname,
-        (
-        SELECT COUNT(*)
-        FROM post_comments c
-        WHERE c.post_id = p.id
-        AND c.deleted = 0
-        ) AS commentCount
-        FROM user_posts p
-        JOIN users u ON p.user_id = u.id
-        WHERE p.deleted = 0
-        <if test="postType != null">
-            AND p.post_type = #{postType}
-        </if>
-        <choose>
-            <when test="sort == 'views'">
-                ORDER BY p.views DESC
-            </when>
-            <when test="sort == 'comments'">
-                ORDER BY commentCount DESC
-            </when>
-            <when test="sort == 'oldest'">
-                ORDER BY p.created_at ASC
-            </when>
-            <otherwise>
-                ORDER BY p.created_at DESC
-            </otherwise>
-        </choose>
-        LIMIT #{offset}, #{limit}
-    </select>
-
-    <!-- 전체 글 수 (페이징용) -->
-    <select id="countPosts" resultType="int">
-        SELECT COUNT(*)
-        FROM user_posts
-        WHERE deleted = 0
-        <if test="postType != null">
-            AND post_type = #{postType}
-        </if>
-    </select>
-
     <!-- 게시글 저장 -->
     <insert id="insertPost" parameterType="com.example.travlediary.model.UserPost" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO user_posts (

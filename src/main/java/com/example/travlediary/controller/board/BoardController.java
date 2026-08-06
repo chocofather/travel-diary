@@ -26,17 +26,19 @@ public class BoardController {
             @RequestParam(value = "size", defaultValue = "10") int size,
             Model model
     ) {
-        List<BoardListDto> boardList = boardService.getBoardList(boardType, postType, sort, page, size);
+        int safePage = Math.max(page, 1);
+        int safeSize = clampSize(size);
+        List<BoardListDto> boardList = boardService.getBoardList(boardType, postType, sort, safePage, safeSize);
         int totalCount = boardService.getBoardCount(boardType, postType);
-        int totalPages = (int) Math.ceil((double) totalCount / size);
+        int totalPages = (int) Math.ceil((double) totalCount / safeSize);
 
         model.addAttribute("boardList", boardList);
         model.addAttribute("boardType", boardType);
         model.addAttribute("postType", postType);
         model.addAttribute("sort", sort);
-        model.addAttribute("currentPage", page);
+        model.addAttribute("currentPage", safePage);
         model.addAttribute("totalPages", totalPages);
-        model.addAttribute("pageSize", size);
+        model.addAttribute("pageSize", safeSize);
 
         return "board/list";
     }
@@ -51,18 +53,24 @@ public class BoardController {
             @RequestParam(value = "size", defaultValue = "10") int size,
             Model model
     ) {
-        List<BoardListDto> boardList = boardService.getBoardList(boardType, postType, sort, page, size);
+        int safePage = Math.max(page, 1);
+        int safeSize = clampSize(size);
+        List<BoardListDto> boardList = boardService.getBoardList(boardType, postType, sort, safePage, safeSize);
         int totalCount = boardService.getBoardCount(boardType, postType);
-        int totalPages = (int) Math.ceil((double) totalCount / size);
+        int totalPages = (int) Math.ceil((double) totalCount / safeSize);
 
         model.addAttribute("boardList", boardList);
         model.addAttribute("boardType", boardType);
         model.addAttribute("postType", postType);
         model.addAttribute("sort", sort);
-        model.addAttribute("currentPage", page);
+        model.addAttribute("currentPage", safePage);
         model.addAttribute("totalPages", totalPages);
-        model.addAttribute("pageSize", size);
+        model.addAttribute("pageSize", safeSize);
 
         return "board/fragment :: boardListFragment";
+    }
+
+    private int clampSize(int size) {
+        return Math.min(Math.max(size, 1), 100);
     }
 }

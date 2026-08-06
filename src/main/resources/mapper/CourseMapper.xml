@@ -5,48 +5,6 @@
 
 <mapper namespace="com.example.travlediary.repository.course.CourseMapper">
 
-    <!-- 나만의 여행 코스 리스트 + 댓글수 + 작성자 닉네임 -->
-    <select id="findCourses" resultType="com.example.travlediary.dto.BoardListDto">
-        SELECT
-        c.id,
-        c.title,
-        c.views,
-        c.created_at AS createdAt,
-        u.nickname,
-        (
-        SELECT COUNT(*)
-        FROM course_comments cc
-        WHERE cc.course_id = c.id
-        AND cc.deleted = 0
-        ) AS commentCount
-        FROM courses c
-        JOIN users u ON c.user_id = u.id
-        WHERE c.deleted = 0
-        <choose>
-            <when test="sort == 'views'">
-                ORDER BY c.views DESC
-            </when>
-            <when test="sort == 'comments'">
-                ORDER BY commentCount DESC
-            </when>
-            <when test="sort == 'oldest'">
-                ORDER BY c.created_at ASC
-            </when>
-            <otherwise>
-                ORDER BY c.created_at DESC
-            </otherwise>
-        </choose>
-        LIMIT #{offset}, #{limit}
-    </select>
-
-    <!-- 전체 코스 개수 (페이징용) -->
-    <select id="countCourses" resultType="int">
-        SELECT COUNT(*)
-        FROM courses
-        WHERE deleted = 0
-    </select>
-
-
     <!-- 코스 등록 -->
     <insert id="insertCourse" parameterType="com.example.travlediary.model.Course" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO courses (

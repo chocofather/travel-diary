@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.board.BoardMapper">
+
+    <sql id="unifiedBoardSelect">
+        SELECT
+            p.id,
+            'post' AS boardType,
+            p.post_type AS postType,
+            p.title,
+            p.views,
+            p.created_at AS createdAt,
+            u.nickname,
+            (
+                SELECT COUNT(*)
+                FROM post_comments pc
+                WHERE pc.post_id = p.id
+                  AND pc.deleted = 0
+            ) AS commentCount
+        FROM user_posts p
+        JOIN users u ON p.user_id = u.id
+        WHERE p.deleted = 0
+
+        UNION ALL
+
+        SELECT
+            c.id,
+            'course' AS boardType,
+            NULL AS postType,
+            c.title,
+            c.views,
+            c.created_at AS createdAt,
+            u.nickname,
+            (
+                SELECT COUNT(*)
+                FROM course_comments cc
+                WHERE cc.course_id = c.id
+                  AND cc.deleted = 0
+            ) AS commentCount
+        FROM courses c
+        JOIN users u ON c.user_id = u.id
+        WHERE c.deleted = 0
+    </sql>
+
+    <sql id="boardFilters">
+        <if test="boardType != null">
+            AND board.boardType = #{boardType}
+        </if>
+        <if test="postType != null">
+            AND board.boardType = 'post'
+            AND board.postType = #{postType}
+        </if>
+    </sql>
+
+    <select id="findBoardList" resultType="com.example.travlediary.dto.BoardListDto">
+        SELECT
+            board.id,
+            board.boardType,
+            board.postType,
+            board.title,
+            board.commentCount,
+            board.nickname,
+            board.createdAt,
+            board.views
+        FROM (
+            <include refid="unifiedBoardSelect"/>
+        ) board
+        WHERE 1 = 1
+        <include refid="boardFilters"/>
+        <choose>
+            <when test="sort == 'oldest'">
+                ORDER BY board.createdAt ASC, board.boardType ASC, board.id ASC
+            </when>
+            <when test="sort == 'views'">
+                ORDER BY board.views DESC, board.createdAt DESC, board.boardType ASC, board.id DESC
+            </when>
+            <when test="sort == 'comments'">
+                ORDER BY board.commentCount DESC, board.createdAt DESC, board.boardType ASC, board.id DESC
+            </when>
+            <otherwise>
+                ORDER BY board.createdAt DESC, board.boardType ASC, board.id DESC
+            </otherwise>
+        </choose>
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <select id="countBoard" resultType="int">
+        SELECT COUNT(*)
+        FROM (
+            <include refid="unifiedBoardSelect"/>
+        ) board
+        WHERE 1 = 1
+        <include refid="boardFilters"/>
+    </select>
+
+</mapper>
