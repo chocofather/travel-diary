@@ -33,6 +33,15 @@
       </section>
 
       <div class="post-detail-actions">
+        <th:block th:if="${post.myPost}">
+          <a th:href="@{/post/{id}/edit(id=${post.id})}" class="post-edit-button">수정</a>
+          <form th:action="@{/post/{id}/delete(id=${post.id})}"
+                method="post"
+                class="post-delete-form"
+                onsubmit="return confirm('게시글을 삭제하시겠습니까?');">
+            <button type="submit" class="post-delete-button">삭제</button>
+          </form>
+        </th:block>
         <a th:href="@{/board/list(boardType='post')}" class="back-to-list">목록으로</a>
       </div>
     </article>

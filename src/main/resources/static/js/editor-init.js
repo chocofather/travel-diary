@@ -1,5 +1,5 @@
 // editor-init.js
-window.initToastEditor = function(editorSelector, contentInputId, formId) {
+window.initToastEditor = function(editorSelector, contentInputId, formId, initialContentId) {
     const editorElement = document.querySelector(editorSelector);
     const contentInput = document.getElementById(contentInputId);
     const form = document.getElementById(formId);
@@ -44,6 +44,13 @@ window.initToastEditor = function(editorSelector, contentInputId, formId) {
         }
     });
     editorElement.toastEditorInstance = editor;
+
+    if (initialContentId) {
+        const initialContent = document.getElementById(initialContentId);
+        if (initialContent && initialContent.value) {
+            editor.setHTML(initialContent.value, false);
+        }
+    }
 
     if (form.dataset.toastEditorSubmitBound !== 'true') {
         form.addEventListener('submit', event => {

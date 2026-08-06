@@ -1,5 +1,6 @@
 package com.example.travlediary.controller.post;
 
+import com.example.travlediary.dto.PostUpdateRequest;
 import com.example.travlediary.model.PostImage;
 import com.example.travlediary.model.UserPost;
 import com.example.travlediary.security.CustomUserDetails;
@@ -24,9 +25,35 @@ public class PostController {
     private final FileUploadService fileUploadService;
 
     @GetMapping("/{id}")
-    public String postDetail(@PathVariable Long id, Model model) {
-        model.addAttribute("post", postService.getPostDetail(id));
+    public String postDetail(@PathVariable Long id,
+                             @AuthenticationPrincipal CustomUserDetails loginUser,
+                             Model model) {
+        Long currentUserId = loginUser == null ? null : loginUser.getId();
+        model.addAttribute("post", postService.getPostDetail(id, currentUserId));
         return "post/detail";
+    }
+
+    @GetMapping("/{id}/edit")
+    public String postEditPage(@PathVariable Long id,
+                               @AuthenticationPrincipal CustomUserDetails loginUser,
+                               Model model) {
+        model.addAttribute("post", postService.getPostForEdit(id, loginUser.getId()));
+        return "post/edit";
+    }
+
+    @PostMapping("/{id}/edit")
+    public String updatePost(@PathVariable Long id,
+                             @ModelAttribute PostUpdateRequest request,
+                             @AuthenticationPrincipal CustomUserDetails loginUser) {
+        postService.updatePost(id, loginUser.getId(), request);
+        return "redirect:/post/" + id;
+    }
+
+    @PostMapping("/{id}/delete")
+    public String deletePost(@PathVariable Long id,
+                             @AuthenticationPrincipal CustomUserDetails loginUser) {
+        postService.deletePost(id, loginUser.getId());
+        return "redirect:/board/list?boardType=post";
     }
 
     // 글쓰기 폼 페이지 (GET)

@@ -26,6 +26,21 @@
         <result property="postId" column="image_post_id"/>
     </resultMap>
 
+    <resultMap id="ActivePostMap" type="com.example.travlediary.model.UserPost">
+        <id property="id" column="post_id"/>
+        <result property="userId" column="post_user_id"/>
+        <result property="title" column="post_title"/>
+        <result property="postType" column="post_type"/>
+        <result property="content" column="post_content"/>
+    </resultMap>
+
+    <resultMap id="PostEditMap" type="com.example.travlediary.dto.PostEditDto">
+        <id property="id" column="post_id"/>
+        <result property="title" column="post_title"/>
+        <result property="postType" column="post_type"/>
+        <result property="content" column="post_content"/>
+    </resultMap>
+
     <update id="incrementViews">
         UPDATE user_posts
         SET views = views + 1
@@ -45,6 +60,30 @@
             p.views AS post_views
         FROM user_posts p
         JOIN users u ON p.user_id = u.id
+        WHERE p.id = #{postId}
+          AND p.deleted = 0
+    </select>
+
+    <select id="findActivePost" resultMap="ActivePostMap">
+        SELECT
+            p.id AS post_id,
+            p.user_id AS post_user_id,
+            p.title AS post_title,
+            p.post_type AS post_type,
+            p.content AS post_content
+        FROM user_posts p
+        WHERE p.id = #{postId}
+          AND p.deleted = 0
+    </select>
+
+    <!-- 수정 화면 전용 조회: 조회수를 증가시키지 않는다. -->
+    <select id="findPostForEdit" resultMap="PostEditMap">
+        SELECT
+            p.id AS post_id,
+            p.title AS post_title,
+            p.post_type AS post_type,
+            p.content AS post_content
+        FROM user_posts p
         WHERE p.id = #{postId}
           AND p.deleted = 0
     </select>
@@ -81,5 +120,25 @@
                      #{imageUrl}, 0, NOW(), #{postId}
                  )
     </insert>
+
+    <update id="updatePost">
+        UPDATE user_posts
+        SET title = #{title},
+            post_type = #{postType},
+            content = #{content},
+            updated_at = NOW()
+        WHERE id = #{postId}
+          AND user_id = #{userId}
+          AND deleted = 0
+    </update>
+
+    <update id="softDeletePost">
+        UPDATE user_posts
+        SET deleted = 1,
+            deleted_at = NOW()
+        WHERE id = #{postId}
+          AND user_id = #{userId}
+          AND deleted = 0
+    </update>
 
 </mapper>

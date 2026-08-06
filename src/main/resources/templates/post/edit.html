@@ -1,4 +1,3 @@
-<!-- post/write.html -->
 <!DOCTYPE html>
 <html lang="ko"
       xmlns:th="http://www.thymeleaf.org"
@@ -13,40 +12,44 @@
 
 <th:block th:fragment="body">
   <section class="write-container">
-    <h1 class="write-title">글쓰기 <span th:text="${postType=='QUESTION'? '(여행 질문)':'(여행 팁)'}"></span></h1>
+    <h1 class="write-title">게시글 수정</h1>
 
-    <form th:action="@{/post/write}" method="post" enctype="multipart/form-data" id="post-form" class="write-form">
-      <!-- 카테고리 -->
+    <form th:action="@{/post/{id}/edit(id=${post.id})}" method="post" id="post-form" class="write-form">
       <div class="form-group">
         <label for="postTypeSelect" class="select-label">카테고리</label>
-        <select name="postType" id="postTypeSelect" class="input-select">
-          <option value="QUESTION" th:selected="${postType=='QUESTION'}">여행질문</option>
-          <option value="TIP"      th:selected="${postType=='TIP'}">여행팁</option>
+        <select name="postType" id="postTypeSelect" class="input-select" required>
+          <option value="QUESTION" th:selected="${post.postType.name() == 'QUESTION'}">여행질문</option>
+          <option value="TIP" th:selected="${post.postType.name() == 'TIP'}">여행팁</option>
         </select>
       </div>
 
-      <!-- 제목 -->
       <div class="form-group">
-        <input type="text" name="title" id="title" class="input-text" placeholder=" " maxlength="255" required>
+        <input type="text"
+               name="title"
+               id="title"
+               class="input-text"
+               placeholder=" "
+               maxlength="255"
+               required
+               th:value="${post.title}">
         <label for="title" class="input-label">제목을 입력하세요</label>
       </div>
 
-      <!-- 에디터 -->
       <div class="form-group editor-group">
         <div id="editor"></div>
         <input type="hidden" name="content" id="content-input" />
+        <textarea id="initial-content" hidden th:text="${post.content}"></textarea>
       </div>
 
-      <!-- 버튼 -->
       <div class="button-group">
-        <button type="submit" class="btn btn-primary">등록</button>
-        <a th:href="@{/board/list?boardType=post}" class="btn btn-secondary">취소</a>
+        <button type="submit" class="btn btn-primary">수정</button>
+        <a th:href="@{/post/{id}(id=${post.id})}" class="btn btn-secondary">취소</a>
       </div>
     </form>
   </section>
 
   <script>
-    window.initToastEditor('#editor', 'content-input', 'post-form');
+    window.initToastEditor('#editor', 'content-input', 'post-form', 'initial-content');
   </script>
 </th:block>
 </html>

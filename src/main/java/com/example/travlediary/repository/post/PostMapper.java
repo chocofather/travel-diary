@@ -1,7 +1,9 @@
 package com.example.travlediary.repository.post;
 
 import com.example.travlediary.dto.PostDetailDto;
+import com.example.travlediary.dto.PostEditDto;
 import com.example.travlediary.model.PostImage;
+import com.example.travlediary.model.PostType;
 import com.example.travlediary.model.UserPost;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -15,6 +17,10 @@ public interface PostMapper {
 
     PostDetailDto findPostDetail(@Param("postId") Long postId);
 
+    UserPost findActivePost(@Param("postId") Long postId);
+
+    PostEditDto findPostForEdit(@Param("postId") Long postId);
+
     List<PostImage> findPostImages(@Param("postId") Long postId);
 
     // 게시글 저장
@@ -22,4 +28,13 @@ public interface PostMapper {
 
     // 이미지 저장
     int insertPostImage(PostImage image);
+
+    int updatePost(@Param("postId") Long postId,
+                   @Param("userId") Long userId,
+                   @Param("title") String title,
+                   @Param("postType") PostType postType,
+                   @Param("content") String content);
+
+    int softDeletePost(@Param("postId") Long postId,
+                       @Param("userId") Long userId);
 }

@@ -20,4 +20,5 @@ public class PostDetailDto {
     private Timestamp updatedAt;
     private Integer views;
     private List<PostImage> images;
+    private boolean myPost;
 }

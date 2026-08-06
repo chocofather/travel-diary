@@ -67,18 +67,40 @@
 }
 
 .post-detail-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
     padding-top: 24px;
     border-top: 1px solid #e5e5e5;
-    text-align: right;
 }
 
-.back-to-list {
+.back-to-list,
+.post-edit-button,
+.post-delete-button {
     display: inline-block;
     padding: 10px 18px;
     border-radius: 6px;
     background: #397a63;
     color: #fff;
     text-decoration: none;
+}
+
+.post-delete-form {
+    margin: 0;
+}
+
+.post-delete-button {
+    border: 0;
+    background: #b42318;
+    font: inherit;
+    cursor: pointer;
+}
+
+.post-edit-button {
+    background: #fff;
+    color: #397a63;
+    border: 1px solid #397a63;
 }
 
 .sr-only {

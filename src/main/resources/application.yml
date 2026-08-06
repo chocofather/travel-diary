@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/mydb?serverTimezone=UTC&charEncoding=UTF-8
+    url: jdbc:mysql://localhost:3306/mydb?connectionTimeZone=LOCAL&characterEncoding=UTF-8
     username: localmaster
     password: 1234
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -49,4 +49,3 @@ logging:
   level:
     org.springframework.security: DEBUG
     org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping: INFO
-
