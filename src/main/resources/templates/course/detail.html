@@ -70,6 +70,14 @@
 
     <div class="course-detail-actions">
       <a th:href="@{/board/list(boardType='course')}">코스 목록으로</a>
+      <a th:if="${course.myCourse}"
+         th:href="@{/course/{id}/edit(id=${course.id})}">수정</a>
+      <form th:if="${course.myCourse}"
+            th:action="@{/course/{id}/delete(id=${course.id})}"
+            method="post"
+            onsubmit="return confirm('이 여행 코스를 삭제하시겠습니까?');">
+        <button type="submit">삭제</button>
+      </form>
     </div>
   </main>
 </th:block>

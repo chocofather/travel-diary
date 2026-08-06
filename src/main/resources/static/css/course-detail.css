@@ -229,6 +229,9 @@
 }
 
 .course-detail-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     margin-top: 42px;
     text-align: right;
 }
@@ -240,6 +243,20 @@
     background: #397a63;
     color: #fff;
     text-decoration: none;
+}
+
+.course-detail-actions form {
+    margin: 0;
+}
+
+.course-detail-actions button {
+    padding: 10px 16px;
+    border: 1px solid #b42318;
+    border-radius: 7px;
+    background: #fff;
+    color: #b42318;
+    font: inherit;
+    cursor: pointer;
 }
 
 @media (max-width: 720px) {

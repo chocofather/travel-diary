@@ -2,7 +2,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('course-form');
     if (!form) return;
 
-    const editor = window.initToastEditor('#editor', 'content-input', 'course-form');
+    const editor = window.initToastEditor(
+        '#editor',
+        'content-input',
+        'course-form',
+        form.dataset.initialContentId || undefined
+    );
     const contentInput = document.getElementById('content-input');
     const searchInput = document.getElementById('destination-search-input');
     const searchButton = document.getElementById('destination-search-button');
@@ -12,7 +17,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const message = document.getElementById('course-write-message');
     const submitButton = document.getElementById('course-submit-button');
 
-    const selectedDestinations = [];
+    const selectedDestinations = Array.from(document.querySelectorAll('[data-initial-destination]'))
+        .map(element => ({
+            id: Number(element.dataset.destinationId),
+            name: element.dataset.name,
+            regionName: element.dataset.regionName,
+            parentRegionName: element.dataset.parentRegionName,
+            thumbnailUrl: element.dataset.thumbnailUrl
+        }))
+        .filter(destination => Number.isSafeInteger(destination.id) && destination.id > 0);
     let latestResults = [];
     let debounceTimer;
     let activeSearchController;

@@ -16,6 +16,10 @@ public interface CourseMapper {
 
     CourseDetailDto findCourseDetail(@Param("courseId") Long courseId);
 
+    Course findActiveCourse(@Param("courseId") Long courseId);
+
+    Course findActiveCourseForUpdate(@Param("courseId") Long courseId);
+
     List<CourseStopDto> findCourseStops(@Param("courseId") Long courseId);
 
     int countExistingDestinations(@Param("destinationIds") List<Long> destinationIds);
@@ -25,4 +29,14 @@ public interface CourseMapper {
 
     // 코스-여행지 연결 등록
     int insertCourseDestination(CourseDestination courseDestination);
+
+    int updateCourse(@Param("courseId") Long courseId,
+                     @Param("userId") Long userId,
+                     @Param("title") String title,
+                     @Param("content") String content);
+
+    int deleteCourseDestinations(@Param("courseId") Long courseId);
+
+    int softDeleteCourse(@Param("courseId") Long courseId,
+                         @Param("userId") Long userId);
 }

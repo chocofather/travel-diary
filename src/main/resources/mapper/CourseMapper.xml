@@ -7,6 +7,7 @@
 
     <resultMap id="CourseDetailMap" type="com.example.travlediary.dto.CourseDetailDto">
         <id property="id" column="course_id"/>
+        <result property="userId" column="course_user_id"/>
         <result property="title" column="course_title"/>
         <result property="content" column="course_content"/>
         <result property="nickname" column="writer_nickname"/>
@@ -35,6 +36,7 @@
     <select id="findCourseDetail" resultMap="CourseDetailMap">
         SELECT
             c.id AS course_id,
+            c.user_id AS course_user_id,
             c.title AS course_title,
             c.content AS course_content,
             u.nickname AS writer_nickname,
@@ -45,6 +47,21 @@
         JOIN users u ON u.id = c.user_id
         WHERE c.id = #{courseId}
           AND c.deleted = 0
+    </select>
+
+    <select id="findActiveCourse" resultType="com.example.travlediary.model.Course">
+        SELECT id, user_id, title, content
+        FROM courses
+        WHERE id = #{courseId}
+          AND deleted = 0
+    </select>
+
+    <select id="findActiveCourseForUpdate" resultType="com.example.travlediary.model.Course">
+        SELECT id, user_id, title, content
+        FROM courses
+        WHERE id = #{courseId}
+          AND deleted = 0
+        FOR UPDATE
     </select>
 
     <select id="findCourseStops" resultMap="CourseStopMap">
@@ -108,4 +125,28 @@
                      #{courseId}, #{destinationId}, #{visitOrder}
                  )
     </insert>
+
+    <update id="updateCourse">
+        UPDATE courses
+        SET title = #{title},
+            content = #{content},
+            updated_at = NOW()
+        WHERE id = #{courseId}
+          AND user_id = #{userId}
+          AND deleted = 0
+    </update>
+
+    <delete id="deleteCourseDestinations">
+        DELETE FROM course_destinations
+        WHERE course_id = #{courseId}
+    </delete>
+
+    <update id="softDeleteCourse">
+        UPDATE courses
+        SET deleted = 1,
+            deleted_at = NOW()
+        WHERE id = #{courseId}
+          AND user_id = #{userId}
+          AND deleted = 0
+    </update>
 </mapper>

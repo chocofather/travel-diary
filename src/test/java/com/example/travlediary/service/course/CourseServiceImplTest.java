@@ -3,6 +3,7 @@ package com.example.travlediary.service.course;
 import com.example.travlediary.dto.CourseCreateRequest;
 import com.example.travlediary.dto.CourseDetailDto;
 import com.example.travlediary.dto.CourseStopDto;
+import com.example.travlediary.dto.CourseUpdateRequest;
 import com.example.travlediary.model.Course;
 import com.example.travlediary.model.CourseDestination;
 import com.example.travlediary.repository.course.CourseMapper;
@@ -50,12 +51,14 @@ class CourseServiceImplTest {
         when(courseMapper.findCourseDetail(10L)).thenReturn(detail);
         when(courseMapper.findCourseStops(10L)).thenReturn(List.of(stop));
 
-        CourseDetailDto result = service.getCourseDetail(10L);
+        detail.setUserId(5L);
+        CourseDetailDto result = service.getCourseDetail(10L, 5L);
 
         assertThat(result.getContent())
                 .isEqualTo("<p>코스 소개</p>")
                 .doesNotContain("script", "onclick");
         assertThat(result.getStops()).containsExactly(stop);
+        assertThat(result.isMyCourse()).isTrue();
         verify(courseMapper).incrementViews(10L);
         verify(courseMapper).findCourseStops(10L);
     }
@@ -68,14 +71,14 @@ class CourseServiceImplTest {
         when(courseMapper.findCourseDetail(10L)).thenReturn(detail);
         when(courseMapper.findCourseStops(10L)).thenReturn(List.of());
 
-        assertThat(service.getCourseDetail(10L).getStops()).isEmpty();
+        assertThat(service.getCourseDetail(10L, null).getStops()).isEmpty();
     }
 
     @Test
     void missingOrDeletedCourseReturnsNotFound() {
         when(courseMapper.incrementViews(10L)).thenReturn(0);
 
-        assertThatThrownBy(() -> service.getCourseDetail(10L))
+        assertThatThrownBy(() -> service.getCourseDetail(10L, null))
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(error -> assertThat(((ResponseStatusException) error).getStatusCode())
                         .isEqualTo(HttpStatus.NOT_FOUND));
@@ -89,7 +92,7 @@ class CourseServiceImplTest {
         when(courseMapper.incrementViews(10L)).thenReturn(1);
         when(courseMapper.findCourseDetail(10L)).thenReturn(null);
 
-        assertThatThrownBy(() -> service.getCourseDetail(10L))
+        assertThatThrownBy(() -> service.getCourseDetail(10L, null))
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(error -> assertThat(((ResponseStatusException) error).getStatusCode())
                         .isEqualTo(HttpStatus.NOT_FOUND));
@@ -184,6 +187,119 @@ class CourseServiceImplTest {
 
         assertThatThrownBy(() -> service.createCourse(request, 5L))
                 .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void editReadUsesUnlockedActiveCourseAndOrderedStops() {
+        Course course = activeCourse(10L, 5L);
+        CourseStopDto first = new CourseStopDto();
+        first.setDestinationId(12L);
+        CourseStopDto second = new CourseStopDto();
+        second.setDestinationId(7L);
+        when(courseMapper.findActiveCourse(10L)).thenReturn(course);
+        when(courseMapper.findCourseStops(10L)).thenReturn(List.of(first, second));
+
+        var edit = service.getCourseForEdit(10L, 5L);
+
+        assertThat(edit.getStops()).containsExactly(first, second);
+        verify(courseMapper, never()).findActiveCourseForUpdate(any());
+        verify(courseMapper, never()).incrementViews(any());
+    }
+
+    @Test
+    void editReadReturnsNotFoundOrForbidden() {
+        assertThatThrownBy(() -> service.getCourseForEdit(10L, 5L))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(error -> assertThat(((ResponseStatusException) error).getStatusCode())
+                        .isEqualTo(HttpStatus.NOT_FOUND));
+
+        when(courseMapper.findActiveCourse(11L)).thenReturn(activeCourse(11L, 9L));
+        assertThatThrownBy(() -> service.getCourseForEdit(11L, 5L))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(error -> assertThat(((ResponseStatusException) error).getStatusCode())
+                        .isEqualTo(HttpStatus.FORBIDDEN));
+    }
+
+    @Test
+    void updatesCourseAndReplacesDestinationsInRequestOrder() {
+        CourseUpdateRequest request = updateRequest("  수정 제목  ", "<p>수정 소개</p>", List.of(30L, 12L));
+        when(courseMapper.findActiveCourseForUpdate(10L)).thenReturn(activeCourse(10L, 5L));
+        when(courseMapper.countExistingDestinations(List.of(30L, 12L))).thenReturn(2);
+        when(courseMapper.updateCourse(10L, 5L, "수정 제목", "<p>수정 소개</p>")).thenReturn(1);
+        when(courseMapper.deleteCourseDestinations(10L)).thenReturn(0);
+        when(courseMapper.insertCourseDestination(any())).thenReturn(1);
+
+        service.updateCourse(10L, 5L, request);
+
+        verify(courseMapper).deleteCourseDestinations(10L);
+        ArgumentCaptor<CourseDestination> captor = ArgumentCaptor.forClass(CourseDestination.class);
+        verify(courseMapper, org.mockito.Mockito.times(2)).insertCourseDestination(captor.capture());
+        assertThat(captor.getAllValues()).extracting(CourseDestination::getDestinationId)
+                .containsExactly(30L, 12L);
+        assertThat(captor.getAllValues()).extracting(CourseDestination::getVisitOrder)
+                .containsExactly(1, 2);
+    }
+
+    @Test
+    void updateValidatesAllDestinationsBeforeDeletingConnections() {
+        CourseUpdateRequest request = updateRequest("제목", "<p>소개</p>", List.of(1L, 1L));
+        when(courseMapper.findActiveCourseForUpdate(10L)).thenReturn(activeCourse(10L, 5L));
+
+        assertThatThrownBy(() -> service.updateCourse(10L, 5L, request))
+                .isInstanceOf(ResponseStatusException.class);
+
+        verify(courseMapper, never()).updateCourse(any(), any(), any(), any());
+        verify(courseMapper, never()).deleteCourseDestinations(any());
+    }
+
+    @Test
+    void updatePerformsBasicValidationBeforeLocking() {
+        CourseUpdateRequest request = updateRequest("제목", "<p>소개</p>", List.of());
+
+        assertThatThrownBy(() -> service.updateCourse(10L, 5L, request))
+                .isInstanceOf(ResponseStatusException.class);
+
+        verify(courseMapper, never()).findActiveCourseForUpdate(any());
+    }
+
+    @Test
+    void updateInsertFailureRaisesRuntimeExceptionForTransactionalRollback() {
+        CourseUpdateRequest request = updateRequest("제목", "<p>소개</p>", List.of(1L, 2L));
+        when(courseMapper.findActiveCourseForUpdate(10L)).thenReturn(activeCourse(10L, 5L));
+        when(courseMapper.countExistingDestinations(List.of(1L, 2L))).thenReturn(2);
+        when(courseMapper.updateCourse(10L, 5L, "제목", "<p>소개</p>")).thenReturn(1);
+        when(courseMapper.insertCourseDestination(any())).thenReturn(1, 0);
+
+        assertThatThrownBy(() -> service.updateCourse(10L, 5L, request))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void softDeleteLocksOwnedCourseAndDoesNotDeleteDestinations() {
+        when(courseMapper.findActiveCourseForUpdate(10L)).thenReturn(activeCourse(10L, 5L));
+        when(courseMapper.softDeleteCourse(10L, 5L)).thenReturn(1);
+
+        service.deleteCourse(10L, 5L);
+
+        verify(courseMapper).softDeleteCourse(10L, 5L);
+        verify(courseMapper, never()).deleteCourseDestinations(any());
+    }
+
+    private Course activeCourse(Long id, Long userId) {
+        Course course = new Course();
+        course.setId(id);
+        course.setUserId(userId);
+        course.setTitle("기존 제목");
+        course.setContent("<p>기존 소개</p>");
+        return course;
+    }
+
+    private CourseUpdateRequest updateRequest(String title, String content, List<Long> destinationIds) {
+        CourseUpdateRequest request = new CourseUpdateRequest();
+        request.setTitle(title);
+        request.setContent(content);
+        request.setDestinationIds(destinationIds);
+        return request;
     }
 
     private CourseCreateRequest request(String title, String content, List<Long> destinationIds) {
