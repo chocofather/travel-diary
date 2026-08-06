@@ -5,21 +5,98 @@
 
 <mapper namespace="com.example.travlediary.repository.course.CourseMapper">
 
+    <resultMap id="CourseDetailMap" type="com.example.travlediary.dto.CourseDetailDto">
+        <id property="id" column="course_id"/>
+        <result property="title" column="course_title"/>
+        <result property="content" column="course_content"/>
+        <result property="nickname" column="writer_nickname"/>
+        <result property="createdAt" column="course_created_at"/>
+        <result property="updatedAt" column="course_updated_at"/>
+        <result property="views" column="course_views"/>
+    </resultMap>
+
+    <resultMap id="CourseStopMap" type="com.example.travlediary.dto.CourseStopDto">
+        <id property="courseDestinationId" column="course_destination_id"/>
+        <result property="destinationId" column="destination_id"/>
+        <result property="visitOrder" column="visit_order"/>
+        <result property="name" column="destination_name"/>
+        <result property="shortDescription" column="short_description"/>
+        <result property="regionName" column="region_name"/>
+        <result property="imageUrl" column="image_url"/>
+    </resultMap>
+
+    <update id="incrementViews">
+        UPDATE courses
+        SET views = views + 1
+        WHERE id = #{courseId}
+          AND deleted = 0
+    </update>
+
+    <select id="findCourseDetail" resultMap="CourseDetailMap">
+        SELECT
+            c.id AS course_id,
+            c.title AS course_title,
+            c.content AS course_content,
+            u.nickname AS writer_nickname,
+            c.created_at AS course_created_at,
+            c.updated_at AS course_updated_at,
+            c.views AS course_views
+        FROM courses c
+        JOIN users u ON u.id = c.user_id
+        WHERE c.id = #{courseId}
+          AND c.deleted = 0
+    </select>
+
+    <select id="findCourseStops" resultMap="CourseStopMap">
+        SELECT
+            cd.id AS course_destination_id,
+            cd.destination_id AS destination_id,
+            cd.visit_order AS visit_order,
+            COALESCE(dt.name, '이름 없는 여행지') AS destination_name,
+            dt.short_description AS short_description,
+            cc.region_name AS region_name,
+            COALESCE(
+                (
+                    SELECT di.image_url
+                    FROM destination_images di
+                    WHERE di.destination_id = d.id
+                      AND di.is_main = 1
+                    ORDER BY di.order_index ASC, di.id ASC
+                    LIMIT 1
+                ),
+                (
+                    SELECT di.image_url
+                    FROM destination_images di
+                    WHERE di.destination_id = d.id
+                    ORDER BY di.order_index ASC, di.id ASC
+                    LIMIT 1
+                )
+            ) AS image_url
+        FROM course_destinations cd
+        JOIN destinations d ON d.id = cd.destination_id
+        LEFT JOIN destination_translations dt
+          ON dt.destination_id = d.id
+         AND dt.language_code = 'ko'
+        JOIN country_categories cc ON cc.id = d.region_id
+        WHERE cd.course_id = #{courseId}
+        ORDER BY cd.visit_order ASC, cd.id ASC
+    </select>
+
+    <select id="countExistingDestinations" resultType="int">
+        SELECT COUNT(*)
+        FROM destinations
+        WHERE id IN
+        <foreach collection="destinationIds" item="destinationId" open="(" separator="," close=")">
+            #{destinationId}
+        </foreach>
+    </select>
+
     <!-- 코스 등록 -->
     <insert id="insertCourse" parameterType="com.example.travlediary.model.Course" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO courses (
             title, user_id, content, created_at, deleted
         ) VALUES (
                      #{title}, #{userId}, #{content}, NOW(), 0
-                 )
-    </insert>
-
-    <!-- 코스 이미지 등록 -->
-    <insert id="insertCourseImage" parameterType="com.example.travlediary.model.CourseImage" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO course_images (
-            course_id, image_url, uploaded_at, deleted
-        ) VALUES (
-                     #{courseId}, #{imageUrl}, NOW(), 0
                  )
     </insert>
 

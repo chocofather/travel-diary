@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css" />
   <script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js" defer></script>
   <script src="/js/editor-init.js" defer></script>
+  <script src="/js/course-write.js" defer></script>
 </th:block>
 
 <th:block th:fragment="body">
@@ -17,7 +18,6 @@
     <form id="course-form"
           th:action="@{/course/write}"
           method="post"
-          enctype="multipart/form-data"
           class="write-form">
 
       <!-- 제목 -->
@@ -25,6 +25,7 @@
         <input type="text"
                name="title"
                placeholder="코스 제목을 입력하세요"
+               maxlength="255"
                required
                class="input-text" />
       </div>
@@ -35,32 +36,42 @@
         <input type="hidden" name="content" id="content-input" />
       </div>
 
-      <!-- 여행지 선택 -->
-      <div class="form-group">
-        <label class="select-label">여행지(순서대로 추가)</label>
-        <div id="selected-destinations" class="dest-list"></div>
-        <input type="hidden" name="destinationIds" id="destinationIds" />
-        <button type="button"
-                id="add-destination-btn"
-                class="btn btn-secondary">
-          여행지 추가
-        </button>
-      </div>
+      <section class="course-destination-picker" aria-labelledby="destination-search-title">
+        <div class="picker-heading">
+          <h2 id="destination-search-title">여행지 검색</h2>
+          <p>방문할 장소를 검색해 코스에 추가하세요.</p>
+        </div>
+
+        <div class="destination-search-controls">
+          <label for="destination-search-input" class="sr-only">여행지 검색어</label>
+          <input type="search"
+                 id="destination-search-input"
+                 placeholder="장소명이나 지역을 검색하세요"
+                 autocomplete="off" />
+          <button type="button" id="destination-search-button" class="btn btn-secondary">검색</button>
+        </div>
+
+        <p id="course-write-message" class="course-write-message" role="status" aria-live="polite"></p>
+        <div id="destination-search-results" class="destination-search-results" aria-live="polite"></div>
+      </section>
+
+      <section class="selected-course-section" aria-labelledby="selected-course-title">
+        <div class="picker-heading">
+          <h2 id="selected-course-title">선택한 코스</h2>
+          <p>위·아래 버튼으로 실제 방문 순서를 정하세요.</p>
+        </div>
+        <ol id="selected-destinations" class="selected-destinations"></ol>
+        <div id="destination-id-inputs"></div>
+      </section>
 
       <!-- 버튼 그룹 -->
       <div class="button-group">
-        <button type="submit" class="btn btn-primary">등록</button>
+        <button type="submit" id="course-submit-button" class="btn btn-primary">코스 등록</button>
         <a th:href="@{/board/list?boardType=course}"
            class="btn btn-secondary">취소</a>
       </div>
     </form>
   </div>
 
-  <script defer>
-    document.addEventListener('DOMContentLoaded', function() {
-      // editorSelector, contentInputId, formId 순서대로 넘김
-      window.initToastEditor('#editor', 'content-input', 'course-form');
-    });
-  </script>
 </th:block>
 </html>

@@ -11,7 +11,9 @@
         <a th:if="${item.boardType == 'post'}"
            th:href="@{|/post/${item.id}|}"
            th:text="${item.title}"></a>
-        <span th:if="${item.boardType == 'course'}" th:text="${item.title}"></span>
+        <a th:if="${item.boardType == 'course'}"
+           th:href="@{|/course/${item.id}|}"
+           th:text="${item.title}"></a>
       </span>
       <span class="board-comments" th:text="|댓글: ${item.commentCount}|"></span>
       <span class="board-nickname" th:text="|작성자: ${item.nickname}|"></span>
