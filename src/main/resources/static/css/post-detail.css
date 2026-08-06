@@ -105,7 +105,8 @@
 }
 
 .post-comment-form textarea,
-.post-comment-edit-textarea {
+.post-comment-edit-textarea,
+.post-comment-reply-form textarea {
     box-sizing: border-box;
     width: 100%;
     min-height: 100px;
@@ -184,4 +185,50 @@
     justify-content: flex-end;
     gap: 6px;
     margin-top: 10px;
+}
+
+.post-comment-replies {
+    margin: 16px 0 0 28px;
+    padding: 0 0 0 18px;
+    border-left: 2px solid #e3eee9;
+    list-style: none;
+}
+
+.post-comment-reply {
+    padding: 16px 0;
+}
+
+.post-comment-deleted .post-comment-content {
+    color: #888;
+    font-style: italic;
+}
+
+.post-comment-reply-form {
+    margin: 16px 0 0 28px;
+}
+
+.post-comment-reply-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.post-comment-reply-actions button {
+    padding: 7px 13px;
+    border: 1px solid #397a63;
+    border-radius: 5px;
+    background: #fff;
+    color: #397a63;
+    cursor: pointer;
+}
+
+.post-comment-reply-actions .post-comment-reply-submit {
+    background: #397a63;
+    color: #fff;
+}
+
+.post-comment-reply-actions button:disabled {
+    cursor: wait;
+    opacity: 0.55;
 }

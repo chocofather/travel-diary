@@ -1,5 +1,6 @@
 package com.example.travlediary.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
 
 import java.sql.Timestamp;
@@ -8,9 +9,15 @@ import java.sql.Timestamp;
 public class PostCommentDto {
     private Long id;
     private Long postId;
+    private Long parentCommentId;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private String content;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private String writerNickname;
     private Timestamp createdAt;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private Timestamp updatedAt;
-    private boolean myComment;
+    private boolean deleted;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private Boolean myComment;
 }

@@ -1,5 +1,6 @@
 package com.example.travlediary.service.post;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.example.travlediary.dto.PostCommentDto;
 import com.example.travlediary.model.PostComment;
 import com.example.travlediary.repository.post.PostCommentMapper;
@@ -42,7 +43,7 @@ class PostCommentServiceImplTest {
         PostCommentDto latest = dto(30L, true);
         when(postCommentMapper.findDtoById(30L, 7L)).thenReturn(latest);
 
-        PostCommentDto result = service.create(10L, 7L, "  새 댓글  ");
+        PostCommentDto result = service.create(10L, 7L, "  새 댓글  ", null);
 
         assertThat(result).isSameAs(latest);
         verify(postCommentMapper).findDtoById(30L, 7L);
@@ -52,7 +53,7 @@ class PostCommentServiceImplTest {
     void createReturnsNotFoundWhenPostIsDeletedOrMissing() {
         when(postCommentMapper.existsActivePost(10L)).thenReturn(false);
 
-        assertStatus(HttpStatus.NOT_FOUND, () -> service.create(10L, 7L, "댓글"));
+        assertStatus(HttpStatus.NOT_FOUND, () -> service.create(10L, 7L, "댓글", null));
         verify(postCommentMapper, never()).insert(any());
     }
 
@@ -60,8 +61,55 @@ class PostCommentServiceImplTest {
     void createRejectsBlankAndOverTwoThousandCharacters() {
         when(postCommentMapper.existsActivePost(10L)).thenReturn(true);
 
-        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "   "));
-        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "가".repeat(2_001)));
+        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "   ", null));
+        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "가".repeat(2_001), null));
+        verify(postCommentMapper, never()).insert(any());
+    }
+
+    @Test
+    void createReplyValidatesParentAndReturnsLatestDto() {
+        when(postCommentMapper.existsActivePost(10L)).thenReturn(true);
+        when(postCommentMapper.findActiveCommentForUpdate(20L)).thenReturn(comment(20L, 8L, 10L, null));
+        when(postCommentMapper.insert(any(PostComment.class))).thenAnswer(invocation -> {
+            PostComment reply = invocation.getArgument(0);
+            assertThat(reply.getParentCommentId()).isEqualTo(20L);
+            reply.setId(30L);
+            return 1;
+        });
+        PostCommentDto latest = dto(30L, true);
+        latest.setParentCommentId(20L);
+        when(postCommentMapper.findDtoById(30L, 7L)).thenReturn(latest);
+
+        PostCommentDto result = service.create(10L, 7L, "답글", 20L);
+
+        assertThat(result.getParentCommentId()).isEqualTo(20L);
+        verify(postCommentMapper).findActiveCommentForUpdate(20L);
+    }
+
+    @Test
+    void createReplyReturnsNotFoundForMissingOrDeletedParent() {
+        when(postCommentMapper.existsActivePost(10L)).thenReturn(true);
+        when(postCommentMapper.findActiveCommentForUpdate(20L)).thenReturn(null);
+
+        assertStatus(HttpStatus.NOT_FOUND, () -> service.create(10L, 7L, "답글", 20L));
+        verify(postCommentMapper, never()).insert(any());
+    }
+
+    @Test
+    void createReplyRejectsParentFromAnotherPost() {
+        when(postCommentMapper.existsActivePost(10L)).thenReturn(true);
+        when(postCommentMapper.findActiveCommentForUpdate(20L)).thenReturn(comment(20L, 8L, 11L, null));
+
+        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "답글", 20L));
+        verify(postCommentMapper, never()).insert(any());
+    }
+
+    @Test
+    void createReplyRejectsReplyAsParent() {
+        when(postCommentMapper.existsActivePost(10L)).thenReturn(true);
+        when(postCommentMapper.findActiveCommentForUpdate(20L)).thenReturn(comment(20L, 8L, 10L, 15L));
+
+        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "중첩 답글", 20L));
         verify(postCommentMapper, never()).insert(any());
     }
 
@@ -119,6 +167,22 @@ class PostCommentServiceImplTest {
         verify(postCommentMapper).softDelete(30L, 7L);
     }
 
+    @Test
+    void deletedRootDtoDoesNotExposeMaskedFields() throws Exception {
+        PostCommentDto deletedRoot = new PostCommentDto();
+        deletedRoot.setId(30L);
+        deletedRoot.setPostId(10L);
+        deletedRoot.setDeleted(true);
+
+        String json = new ObjectMapper().writeValueAsString(deletedRoot);
+
+        assertThat(json)
+                .doesNotContain("content")
+                .doesNotContain("writerNickname")
+                .doesNotContain("updatedAt")
+                .doesNotContain("myComment");
+    }
+
     private void assertStatus(HttpStatus status, Runnable action) {
         assertThatThrownBy(action::run)
                 .isInstanceOf(ResponseStatusException.class)
@@ -126,9 +190,15 @@ class PostCommentServiceImplTest {
     }
 
     private PostComment comment(Long id, Long userId) {
+        return comment(id, userId, null, null);
+    }
+
+    private PostComment comment(Long id, Long userId, Long postId, Long parentCommentId) {
         PostComment comment = new PostComment();
         comment.setId(id);
         comment.setUserId(userId);
+        comment.setPostId(postId);
+        comment.setParentCommentId(parentCommentId);
         return comment;
     }
 

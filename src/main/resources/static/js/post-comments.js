@@ -62,37 +62,84 @@ document.addEventListener('DOMContentLoaded', () => {
         return button;
     }
 
-    function renderComment(comment) {
+    function renderComment(comment, isReply = false) {
         const item = document.createElement('li');
-        item.className = 'post-comment-item';
+        item.className = isReply
+            ? 'post-comment-item post-comment-reply'
+            : 'post-comment-item post-comment-root';
         item.dataset.commentId = comment.id;
+
+        const content = document.createElement('p');
+        content.className = 'post-comment-content';
+        if (comment.deleted) {
+            item.classList.add('post-comment-deleted');
+            content.textContent = '삭제된 댓글입니다.';
+            item.append(content);
+            return item;
+        }
 
         const meta = document.createElement('div');
         meta.className = 'post-comment-meta';
-
         const writer = document.createElement('strong');
-        writer.textContent = comment.writerNickname;
+        writer.textContent = comment.writerNickname || '';
         const date = document.createElement('time');
         date.className = 'post-comment-date';
         date.dateTime = comment.updatedAt || comment.createdAt;
         date.textContent = formatDate(comment.updatedAt || comment.createdAt);
         meta.append(writer, date);
 
-        const content = document.createElement('p');
-        content.className = 'post-comment-content';
-        content.textContent = comment.content;
+        content.textContent = comment.content || '';
         item.append(meta, content);
 
-        if (comment.myComment) {
+        const loggedIn = typeof isLoggedIn !== 'undefined' && isLoggedIn;
+        if (comment.myComment || (!isReply && loggedIn)) {
             const actions = document.createElement('div');
             actions.className = 'post-comment-actions';
-            actions.append(
-                makeButton('수정', 'post-comment-edit'),
-                makeButton('삭제', 'post-comment-delete')
-            );
+            if (comment.myComment) {
+                actions.append(
+                    makeButton('수정', 'post-comment-edit'),
+                    makeButton('삭제', 'post-comment-delete')
+                );
+            }
+            if (!isReply && loggedIn) {
+                actions.append(makeButton('답글', 'post-comment-reply-button'));
+            }
             item.append(actions);
         }
         return item;
+    }
+
+    function compareByCreatedAtAndId(left, right) {
+        const timeDifference = new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime();
+        return timeDifference || Number(left.id) - Number(right.id);
+    }
+
+    function renderCommentTree(comments) {
+        const roots = comments
+            .filter(comment => comment.parentCommentId == null)
+            .sort(compareByCreatedAtAndId);
+        const repliesByParent = new Map();
+
+        comments
+            .filter(comment => comment.parentCommentId != null && !comment.deleted)
+            .forEach(reply => {
+                const parentId = Number(reply.parentCommentId);
+                if (!repliesByParent.has(parentId)) repliesByParent.set(parentId, []);
+                repliesByParent.get(parentId).push(reply);
+            });
+
+        roots.forEach(root => {
+            const rootItem = renderComment(root);
+            const replies = repliesByParent.get(Number(root.id)) || [];
+            if (replies.length > 0) {
+                const replyList = document.createElement('ul');
+                replyList.className = 'post-comment-replies';
+                replies.sort(compareByCreatedAtAndId)
+                    .forEach(reply => replyList.append(renderComment(reply, true)));
+                rootItem.append(replyList);
+            }
+            list.append(rootItem);
+        });
     }
 
     async function loadComments() {
@@ -100,7 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showMessage();
             const comments = await requestJson(`/post-comments?postId=${encodeURIComponent(postId)}`);
             list.replaceChildren();
-            count.textContent = comments.length;
+            count.textContent = comments.filter(comment => !comment.deleted).length;
             if (comments.length === 0) {
                 const empty = document.createElement('li');
                 empty.className = 'post-comment-empty';
@@ -108,7 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 list.append(empty);
                 return;
             }
-            comments.forEach(comment => list.append(renderComment(comment)));
+            renderCommentTree(comments);
         } catch (error) {
             showMessage(error.message);
         }
@@ -137,6 +184,40 @@ document.addEventListener('DOMContentLoaded', () => {
         const item = event.target.closest('.post-comment-item');
         if (!item) return;
         const commentId = item.dataset.commentId;
+
+        if (event.target.matches('.post-comment-reply-button')) {
+            list.querySelector('.post-comment-reply-form')?.remove();
+
+            const replyForm = document.createElement('form');
+            replyForm.className = 'post-comment-reply-form';
+            replyForm.dataset.parentCommentId = commentId;
+
+            const textarea = document.createElement('textarea');
+            textarea.name = 'content';
+            textarea.maxLength = 2000;
+            textarea.required = true;
+            textarea.placeholder = '답글을 입력해 주세요.';
+
+            const actions = document.createElement('div');
+            actions.className = 'post-comment-reply-actions';
+            const submit = document.createElement('button');
+            submit.type = 'submit';
+            submit.className = 'post-comment-reply-submit';
+            submit.textContent = '등록';
+            actions.append(submit, makeButton('취소', 'post-comment-reply-cancel'));
+            replyForm.append(textarea, actions);
+
+            const replyList = item.querySelector(':scope > .post-comment-replies');
+            if (replyList) item.insertBefore(replyForm, replyList);
+            else item.append(replyForm);
+            textarea.focus();
+            return;
+        }
+
+        if (event.target.matches('.post-comment-reply-cancel')) {
+            event.target.closest('.post-comment-reply-form')?.remove();
+            return;
+        }
 
         if (event.target.matches('.post-comment-delete')) {
             if (!window.confirm('댓글을 삭제하시겠습니까?')) return;
@@ -185,6 +266,33 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (error) {
                 showMessage(error.message);
             }
+        }
+    });
+
+    list.addEventListener('submit', async event => {
+        const replyForm = event.target.closest('.post-comment-reply-form');
+        if (!replyForm) return;
+        event.preventDefault();
+
+        const submit = replyForm.querySelector('.post-comment-reply-submit');
+        if (submit.disabled) return;
+        submit.disabled = true;
+
+        try {
+            const textarea = replyForm.querySelector('textarea[name="content"]');
+            await requestJson('/post-comments', {
+                method: 'POST',
+                body: JSON.stringify({
+                    postId,
+                    parentCommentId: Number(replyForm.dataset.parentCommentId),
+                    content: textarea.value
+                })
+            });
+            await loadComments();
+        } catch (error) {
+            showMessage(error.message);
+        } finally {
+            submit.disabled = false;
         }
     });
 

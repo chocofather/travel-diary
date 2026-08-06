@@ -28,14 +28,16 @@ public class PostCommentServiceImpl implements PostCommentService {
 
     @Override
     @Transactional
-    public PostCommentDto create(Long postId, Long userId, String content) {
+    public PostCommentDto create(Long postId, Long userId, String content, Long parentCommentId) {
         requireActivePost(postId);
         String validatedContent = validateContent(content);
+        validateParentComment(postId, parentCommentId);
 
         PostComment comment = new PostComment();
         comment.setPostId(postId);
         comment.setUserId(userId);
         comment.setContent(validatedContent);
+        comment.setParentCommentId(parentCommentId);
 
         if (postCommentMapper.insert(comment) != 1 || comment.getId() == null) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "댓글 등록에 실패했습니다.");
@@ -79,6 +81,23 @@ public class PostCommentServiceImpl implements PostCommentService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "댓글 변경 권한이 없습니다.");
         }
         return comment;
+    }
+
+    private void validateParentComment(Long postId, Long parentCommentId) {
+        if (parentCommentId == null) {
+            return;
+        }
+
+        PostComment parent = postCommentMapper.findActiveCommentForUpdate(parentCommentId);
+        if (parent == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "부모 댓글을 찾을 수 없습니다.");
+        }
+        if (!parent.getPostId().equals(postId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "같은 게시글의 댓글에만 답글을 작성할 수 있습니다.");
+        }
+        if (parent.getParentCommentId() != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "대댓글에는 답글을 작성할 수 없습니다.");
+        }
     }
 
     private String validateContent(String content) {
