@@ -120,11 +120,15 @@ class PostServiceImplTest {
         when(postMapper.incrementViews(10L)).thenReturn(1);
         PostDetailDto detail = new PostDetailDto();
         detail.setContent("<p>본문</p>");
-        when(postMapper.findPostDetail(10L)).thenReturn(detail);
+        detail.setBookmarked(true);
+        when(postMapper.findPostDetail(10L, 7L)).thenReturn(detail);
         when(postMapper.findPostImages(10L)).thenReturn(List.of());
         when(postMapper.findActivePost(10L)).thenReturn(post(10L, 7L));
 
-        assertThat(service.getPostDetail(10L, 7L).isMyPost()).isTrue();
+        PostDetailDto result = service.getPostDetail(10L, 7L);
+
+        assertThat(result.isMyPost()).isTrue();
+        assertThat(result.isBookmarked()).isTrue();
     }
 
     private PostUpdateRequest request(String title, PostType postType, String content) {

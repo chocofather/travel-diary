@@ -17,4 +17,5 @@ public class CourseDetailDto {
     private Integer views;
     private List<CourseStopDto> stops;
     private boolean myCourse;
+    private boolean bookmarked;
 }

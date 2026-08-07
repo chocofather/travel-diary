@@ -6,6 +6,7 @@
 <th:block th:fragment="headFragment">
   <link rel="stylesheet" href="/css/course-detail.css" />
   <script src="/js/course-comments.js" defer></script>
+  <script src="/js/content-bookmarks.js" defer></script>
 </th:block>
 
 <th:block th:fragment="body">
@@ -70,6 +71,15 @@
     </section>
 
     <div class="course-detail-actions">
+      <button type="button"
+              class="content-bookmark-button"
+              th:classappend="${course.bookmarked} ? ' is-bookmarked'"
+              th:data-bookmark-url="@{/bookmarks/courses/{id}(id=${course.id})}"
+              th:data-bookmarked="${course.bookmarked}"
+              th:attr="aria-pressed=${course.bookmarked}">
+        <span class="content-bookmark-label"
+              th:text="${course.bookmarked} ? '북마크 취소' : '북마크 저장'">북마크 저장</span>
+      </button>
       <a th:href="@{/board/list(boardType='course')}">코스 목록으로</a>
       <a th:if="${course.myCourse}"
          th:href="@{/course/{id}/edit(id=${course.id})}">수정</a>

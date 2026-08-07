@@ -48,7 +48,8 @@ class CourseServiceImplTest {
         stop.setDestinationId(20L);
 
         when(courseMapper.incrementViews(10L)).thenReturn(1);
-        when(courseMapper.findCourseDetail(10L)).thenReturn(detail);
+        detail.setBookmarked(true);
+        when(courseMapper.findCourseDetail(10L, 5L)).thenReturn(detail);
         when(courseMapper.findCourseStops(10L)).thenReturn(List.of(stop));
 
         detail.setUserId(5L);
@@ -59,6 +60,7 @@ class CourseServiceImplTest {
                 .doesNotContain("script", "onclick");
         assertThat(result.getStops()).containsExactly(stop);
         assertThat(result.isMyCourse()).isTrue();
+        assertThat(result.isBookmarked()).isTrue();
         verify(courseMapper).incrementViews(10L);
         verify(courseMapper).findCourseStops(10L);
     }
@@ -68,7 +70,7 @@ class CourseServiceImplTest {
         CourseDetailDto detail = new CourseDetailDto();
         detail.setContent("<p>소개</p>");
         when(courseMapper.incrementViews(10L)).thenReturn(1);
-        when(courseMapper.findCourseDetail(10L)).thenReturn(detail);
+        when(courseMapper.findCourseDetail(10L, null)).thenReturn(detail);
         when(courseMapper.findCourseStops(10L)).thenReturn(List.of());
 
         assertThat(service.getCourseDetail(10L, null).getStops()).isEmpty();
@@ -83,14 +85,14 @@ class CourseServiceImplTest {
                 .satisfies(error -> assertThat(((ResponseStatusException) error).getStatusCode())
                         .isEqualTo(HttpStatus.NOT_FOUND));
 
-        verify(courseMapper, never()).findCourseDetail(10L);
+        verify(courseMapper, never()).findCourseDetail(10L, null);
         verify(courseMapper, never()).findCourseStops(10L);
     }
 
     @Test
     void missingDetailAfterIncrementStillReturnsNotFound() {
         when(courseMapper.incrementViews(10L)).thenReturn(1);
-        when(courseMapper.findCourseDetail(10L)).thenReturn(null);
+        when(courseMapper.findCourseDetail(10L, null)).thenReturn(null);
 
         assertThatThrownBy(() -> service.getCourseDetail(10L, null))
                 .isInstanceOf(ResponseStatusException.class)

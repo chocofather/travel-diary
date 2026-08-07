@@ -15,7 +15,7 @@ public class DestinationBookmarkService {
 
     private final BookmarkMapper bookmarkMapper;
 
-    private static final String TARGET_TYPE = "destination"; // Enum 쓸 경우 .getDbValue()로 대체
+    private static final String TARGET_TYPE = BookmarkTargetType.DESTINATION.name();
 
     // 찜 여부 확인
     public boolean isBookmarked(Long userId, Long destinationId) {

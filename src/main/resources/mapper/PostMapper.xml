@@ -14,6 +14,7 @@
         <result property="createdAt" column="post_created_at"/>
         <result property="updatedAt" column="post_updated_at"/>
         <result property="views" column="post_views"/>
+        <result property="bookmarked" column="bookmarked"/>
     </resultMap>
 
     <resultMap id="PostImageMap" type="com.example.travlediary.model.PostImage">
@@ -57,7 +58,20 @@
             u.nickname AS writer_nickname,
             p.created_at AS post_created_at,
             p.updated_at AS post_updated_at,
-            p.views AS post_views
+            p.views AS post_views,
+            <choose>
+                <when test="currentUserId != null">
+                    EXISTS (
+                        SELECT 1
+                        FROM bookmarks b
+                        WHERE b.user_id = #{currentUserId}
+                          AND b.target_type = 'POST'
+                          AND b.target_id = p.id
+                    )
+                </when>
+                <otherwise>FALSE</otherwise>
+            </choose>
+            AS bookmarked
         FROM user_posts p
         JOIN users u ON p.user_id = u.id
         WHERE p.id = #{postId}
@@ -74,6 +88,20 @@
         FROM user_posts p
         WHERE p.id = #{postId}
           AND p.deleted = 0
+    </select>
+
+    <select id="findActivePostForUpdate" resultMap="ActivePostMap">
+        SELECT
+            p.id AS post_id,
+            p.user_id AS post_user_id,
+            p.title AS post_title,
+            p.post_type AS post_type,
+            p.content AS post_content
+        FROM user_posts p
+        WHERE p.id = #{postId}
+          AND p.deleted = 0
+          AND p.post_type IN ('QUESTION', 'TIP')
+        FOR UPDATE
     </select>
 
     <!-- 수정 화면 전용 조회: 조회수를 증가시키지 않는다. -->

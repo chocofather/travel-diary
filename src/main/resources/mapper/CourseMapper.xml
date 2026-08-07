@@ -14,6 +14,7 @@
         <result property="createdAt" column="course_created_at"/>
         <result property="updatedAt" column="course_updated_at"/>
         <result property="views" column="course_views"/>
+        <result property="bookmarked" column="bookmarked"/>
     </resultMap>
 
     <resultMap id="CourseStopMap" type="com.example.travlediary.dto.CourseStopDto">
@@ -42,7 +43,20 @@
             u.nickname AS writer_nickname,
             c.created_at AS course_created_at,
             c.updated_at AS course_updated_at,
-            c.views AS course_views
+            c.views AS course_views,
+            <choose>
+                <when test="currentUserId != null">
+                    EXISTS (
+                        SELECT 1
+                        FROM bookmarks b
+                        WHERE b.user_id = #{currentUserId}
+                          AND b.target_type = 'COURSE'
+                          AND b.target_id = c.id
+                    )
+                </when>
+                <otherwise>FALSE</otherwise>
+            </choose>
+            AS bookmarked
         FROM courses c
         JOIN users u ON u.id = c.user_id
         WHERE c.id = #{courseId}

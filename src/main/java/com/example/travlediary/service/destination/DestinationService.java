@@ -294,7 +294,7 @@ public class DestinationService {
 
     public List<DestinationDto> convertToDtoWithBookmark(List<Destination> destinations, Long userId) {
         Set<Long> bookmarkedIds = (userId != null)
-                ? bookmarkMapper.findBookmarkedTargetIdsByUserId(userId, "destination")
+                ? bookmarkMapper.findBookmarkedTargetIdsByUserId(userId, "DESTINATION")
                 : Collections.emptySet();
 
         //  여행지 ID 목록 뽑기

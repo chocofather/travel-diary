@@ -14,7 +14,8 @@ public interface CourseMapper {
 
     int incrementViews(@Param("courseId") Long courseId);
 
-    CourseDetailDto findCourseDetail(@Param("courseId") Long courseId);
+    CourseDetailDto findCourseDetail(@Param("courseId") Long courseId,
+                                     @Param("currentUserId") Long currentUserId);
 
     Course findActiveCourse(@Param("courseId") Long courseId);
 

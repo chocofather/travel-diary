@@ -6,6 +6,7 @@
 <th:block th:fragment="headFragment">
   <link rel="stylesheet" href="/css/post-detail.css" />
   <script src="/js/post-comments.js" defer></script>
+  <script src="/js/content-bookmarks.js" defer></script>
 </th:block>
 
 <th:block th:fragment="body">
@@ -33,6 +34,15 @@
       </section>
 
       <div class="post-detail-actions">
+        <button type="button"
+                class="content-bookmark-button"
+                th:classappend="${post.bookmarked} ? ' is-bookmarked'"
+                th:data-bookmark-url="@{/bookmarks/posts/{id}(id=${post.id})}"
+                th:data-bookmarked="${post.bookmarked}"
+                th:attr="aria-pressed=${post.bookmarked}">
+          <span class="content-bookmark-label"
+                th:text="${post.bookmarked} ? '북마크 취소' : '북마크 저장'">북마크 저장</span>
+        </button>
         <th:block th:if="${post.myPost}">
           <a th:href="@{/post/{id}/edit(id=${post.id})}" class="post-edit-button">수정</a>
           <form th:action="@{/post/{id}/delete(id=${post.id})}"

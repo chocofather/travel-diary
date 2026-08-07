@@ -35,7 +35,7 @@ public class CourseServiceImpl implements CourseService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "여행 코스를 찾을 수 없습니다.");
         }
 
-        CourseDetailDto course = courseMapper.findCourseDetail(courseId);
+        CourseDetailDto course = courseMapper.findCourseDetail(courseId, currentUserId);
         if (course == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "여행 코스를 찾을 수 없습니다.");
         }

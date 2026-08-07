@@ -175,6 +175,7 @@ CREATE TABLE `bookmarks` (
   `target_id` bigint NOT NULL,
   `target_type` varchar(20) NOT NULL DEFAULT 'DESTINATION',
   PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_bookmarks_user_type_target` (`user_id`,`target_type`,`target_id`),
   KEY `fk_bookmark_users1_idx` (`user_id`),
   CONSTRAINT `bookmark_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=55 DEFAULT CHARSET=utf8mb3;

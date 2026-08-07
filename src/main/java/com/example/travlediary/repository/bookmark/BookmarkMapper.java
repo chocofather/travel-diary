@@ -12,6 +12,10 @@ public interface BookmarkMapper {
     // 북마크 추가 (통합)
     void insert(Bookmark bookmark);
 
+    int insertIgnore(@Param("userId") Long userId,
+                     @Param("targetType") String targetType,
+                     @Param("targetId") Long targetId);
+
     // 북마크 삭제 (통합)
     void delete(@Param("userId") Long userId,
                 @Param("targetType") String targetType,
@@ -33,4 +37,3 @@ public interface BookmarkMapper {
     // (원한다면) 유저가 북마크한 모든 대상 타입+ID 조회
     // List<Bookmark> findAllByUserId(Long userId);
 }
-

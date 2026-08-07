@@ -12,6 +12,11 @@
             ON DUPLICATE KEY UPDATE created_at = NOW()
     </insert>
 
+    <insert id="insertIgnore">
+        INSERT IGNORE INTO bookmarks (user_id, target_type, target_id, created_at)
+        VALUES (#{userId}, #{targetType}, #{targetId}, NOW())
+    </insert>
+
     <!-- 북마크 삭제 (통합 구조) -->
     <delete id="delete">
         DELETE FROM bookmarks

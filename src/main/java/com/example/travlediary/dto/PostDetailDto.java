@@ -21,4 +21,5 @@ public class PostDetailDto {
     private Integer views;
     private List<PostImage> images;
     private boolean myPost;
+    private boolean bookmarked;
 }

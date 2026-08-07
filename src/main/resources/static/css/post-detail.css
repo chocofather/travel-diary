@@ -75,6 +75,37 @@
     border-top: 1px solid #e5e5e5;
 }
 
+.post-detail-actions .content-bookmark-button {
+    margin-right: auto;
+    padding: 9px 16px;
+    border: 1px solid #397a63;
+    border-radius: 6px;
+    background: #fff;
+    color: #397a63;
+    font: inherit;
+    cursor: pointer;
+}
+
+.post-detail-actions .content-bookmark-button:hover,
+.post-detail-actions .content-bookmark-button:focus-visible {
+    background: #eef7f3;
+}
+
+.post-detail-actions .content-bookmark-button.is-bookmarked {
+    background: #397a63;
+    color: #fff;
+}
+
+.post-detail-actions .content-bookmark-button:focus-visible {
+    outline: 2px solid #8bc3ae;
+    outline-offset: 2px;
+}
+
+.post-detail-actions .content-bookmark-button:disabled {
+    cursor: wait;
+    opacity: 0.55;
+}
+
 .back-to-list,
 .post-edit-button,
 .post-delete-button {

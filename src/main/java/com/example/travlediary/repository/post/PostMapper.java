@@ -15,9 +15,12 @@ public interface PostMapper {
 
     int incrementViews(@Param("postId") Long postId);
 
-    PostDetailDto findPostDetail(@Param("postId") Long postId);
+    PostDetailDto findPostDetail(@Param("postId") Long postId,
+                                 @Param("currentUserId") Long currentUserId);
 
     UserPost findActivePost(@Param("postId") Long postId);
+
+    UserPost findActivePostForUpdate(@Param("postId") Long postId);
 
     PostEditDto findPostForEdit(@Param("postId") Long postId);
 
