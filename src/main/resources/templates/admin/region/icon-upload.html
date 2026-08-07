@@ -14,7 +14,7 @@
   <p th:text="'[' + ${category.regionName} + '] 에 대한 아이콘을 업로드하세요.'"></p>
 
   <!-- enctype="multipart/form-data" 반드시 필요 -->
-  <form th:action="@{/admin/categories/{id}/icon(id=${category.id})}"
+  <form th:action="@{/admin/region-categories/{id}/icon(id=${category.id})}"
         method="post"
         enctype="multipart/form-data"
         style="margin-top:20px;">
@@ -28,7 +28,7 @@
             style="margin-left:12px;">
       업로드
     </button>
-    <a href="/admin/categories" style="margin-left:8px; color:#555;">취소</a>
+    <a href="/admin/region-categories" style="margin-left:8px; color:#555;">취소</a>
   </form>
 </section>
 </th:block>
