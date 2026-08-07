@@ -22,7 +22,7 @@
 }
 
 .course-summary h1 {
-    margin: 0 0 20px;
+    margin: 0;
     overflow-wrap: anywhere;
     font-size: clamp(28px, 4vw, 42px);
 }
@@ -257,33 +257,6 @@
     color: #b42318;
     font: inherit;
     cursor: pointer;
-}
-
-.course-detail-actions .content-bookmark-button {
-    margin-right: auto;
-    border-color: #397a63;
-    background: #fff;
-    color: #397a63;
-}
-
-.course-detail-actions .content-bookmark-button:hover,
-.course-detail-actions .content-bookmark-button:focus-visible {
-    background: #eef7f3;
-}
-
-.course-detail-actions .content-bookmark-button.is-bookmarked {
-    background: #397a63;
-    color: #fff;
-}
-
-.course-detail-actions .content-bookmark-button:focus-visible {
-    outline: 2px solid #8bc3ae;
-    outline-offset: 2px;
-}
-
-.course-detail-actions .content-bookmark-button:disabled {
-    cursor: wait;
-    opacity: 0.55;
 }
 
 .course-comments {

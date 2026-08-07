@@ -5,6 +5,7 @@
 
 <th:block th:fragment="headFragment">
   <link rel="stylesheet" href="/css/course-detail.css" />
+  <link rel="stylesheet" href="/css/content-bookmark.css" />
   <script src="/js/course-comments.js" defer></script>
   <script src="/js/content-bookmarks.js" defer></script>
 </th:block>
@@ -14,7 +15,19 @@
     <article class="course-summary">
       <header class="course-summary-header">
         <p class="course-summary-label">나만의 여행 코스</p>
-        <h1 th:text="${course.title}">코스 제목</h1>
+        <div class="content-detail-title-row course-title-row">
+          <h1 th:text="${course.title}">코스 제목</h1>
+          <button type="button"
+                  class="content-bookmark-button"
+                  th:classappend="${course.bookmarked} ? ' is-bookmarked'"
+                  th:data-bookmark-url="@{/bookmarks/courses/{id}(id=${course.id})}"
+                  th:data-bookmarked="${course.bookmarked}"
+                  th:attr="aria-pressed=${course.bookmarked}">
+            <span class="content-bookmark-image" aria-hidden="true"></span>
+            <span class="content-bookmark-label"
+                  th:text="${course.bookmarked} ? '북마크 취소' : '북마크 저장'">북마크 저장</span>
+          </button>
+        </div>
         <dl class="course-meta">
           <div><dt>작성자</dt><dd th:text="${course.nickname}">작성자</dd></div>
           <div><dt>작성일</dt><dd th:text="${#dates.format(course.createdAt, 'yyyy-MM-dd HH:mm')}">작성일</dd></div>
@@ -71,15 +84,6 @@
     </section>
 
     <div class="course-detail-actions">
-      <button type="button"
-              class="content-bookmark-button"
-              th:classappend="${course.bookmarked} ? ' is-bookmarked'"
-              th:data-bookmark-url="@{/bookmarks/courses/{id}(id=${course.id})}"
-              th:data-bookmarked="${course.bookmarked}"
-              th:attr="aria-pressed=${course.bookmarked}">
-        <span class="content-bookmark-label"
-              th:text="${course.bookmarked} ? '북마크 취소' : '북마크 저장'">북마크 저장</span>
-      </button>
       <a th:href="@{/board/list(boardType='course')}">코스 목록으로</a>
       <a th:if="${course.myCourse}"
          th:href="@{/course/{id}/edit(id=${course.id})}">수정</a>

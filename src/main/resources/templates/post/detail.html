@@ -5,6 +5,7 @@
 
 <th:block th:fragment="headFragment">
   <link rel="stylesheet" href="/css/post-detail.css" />
+  <link rel="stylesheet" href="/css/content-bookmark.css" />
   <script src="/js/post-comments.js" defer></script>
   <script src="/js/content-bookmarks.js" defer></script>
 </th:block>
@@ -15,7 +16,19 @@
       <header class="post-detail-header">
         <div class="post-type"
              th:text="${post.postType.name() == 'TIP' ? '여행 팁' : '여행 질문'}">여행 질문</div>
-        <h1 th:text="${post.title}">게시글 제목</h1>
+        <div class="content-detail-title-row post-title-row">
+          <h1 th:text="${post.title}">게시글 제목</h1>
+          <button type="button"
+                  class="content-bookmark-button"
+                  th:classappend="${post.bookmarked} ? ' is-bookmarked'"
+                  th:data-bookmark-url="@{/bookmarks/posts/{id}(id=${post.id})}"
+                  th:data-bookmarked="${post.bookmarked}"
+                  th:attr="aria-pressed=${post.bookmarked}">
+            <span class="content-bookmark-image" aria-hidden="true"></span>
+            <span class="content-bookmark-label"
+                  th:text="${post.bookmarked} ? '북마크 취소' : '북마크 저장'">북마크 저장</span>
+          </button>
+        </div>
         <dl class="post-meta">
           <div><dt>작성자</dt><dd th:text="${post.nickname}">닉네임</dd></div>
           <div><dt>작성일</dt><dd th:text="${#dates.format(post.createdAt, 'yyyy-MM-dd HH:mm')}">작성일</dd></div>
@@ -34,15 +47,6 @@
       </section>
 
       <div class="post-detail-actions">
-        <button type="button"
-                class="content-bookmark-button"
-                th:classappend="${post.bookmarked} ? ' is-bookmarked'"
-                th:data-bookmark-url="@{/bookmarks/posts/{id}(id=${post.id})}"
-                th:data-bookmarked="${post.bookmarked}"
-                th:attr="aria-pressed=${post.bookmarked}">
-          <span class="content-bookmark-label"
-                th:text="${post.bookmarked} ? '북마크 취소' : '북마크 저장'">북마크 저장</span>
-        </button>
         <th:block th:if="${post.myPost}">
           <a th:href="@{/post/{id}/edit(id=${post.id})}" class="post-edit-button">수정</a>
           <form th:action="@{/post/{id}/delete(id=${post.id})}"
