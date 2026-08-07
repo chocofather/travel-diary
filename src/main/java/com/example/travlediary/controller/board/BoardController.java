@@ -39,6 +39,7 @@ public class BoardController {
         model.addAttribute("currentPage", safePage);
         model.addAttribute("totalPages", totalPages);
         model.addAttribute("pageSize", safeSize);
+        model.addAttribute("pageTitle", "여행 커뮤니티");
 
         return "board/list";
     }

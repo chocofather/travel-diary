@@ -1,6 +1,7 @@
 <!-- board/list.html -->
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
       th:replace="layout/main :: layout(~{::body}, ~{::headFragment})">
 
 <th:block th:fragment="headFragment">
@@ -25,23 +26,37 @@
 
     <!-- 본문 -->
     <main class="board-main">
-      <!-- 1. 여기! board-main 상단에 추가 -->
-      <div class="board-list-header"
-           style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-        <h1 style="margin:0;">게시판 리스트</h1>
-        <a th:href="${boardType == 'course'} ? @{/course/write} : @{/post/write}"
-           class="board-write-btn">글쓰기</a>
+      <div class="board-list-header">
+        <div class="board-heading">
+          <span class="board-heading-kicker">TRAVEL TOGETHER</span>
+          <h1>여행 커뮤니티</h1>
+          <p>여행의 궁금증과 유용한 팁, 직접 만든 코스를 함께 나눠보세요.</p>
+        </div>
       </div>
 
-      <!-- 2. 정렬 바 -->
-      <div class="board-sort-bar">
-        <button onclick="loadBoardList(1, 'latest')">최신순</button>
-        <button onclick="loadBoardList(1, 'oldest')">오래된순</button>
-        <button onclick="loadBoardList(1, 'views')">조회수순</button>
-        <button onclick="loadBoardList(1, 'comments')">댓글순</button>
+      <div class="board-sort-bar" role="group" aria-label="목록 정렬">
+        <button type="button" class="board-sort-button" data-sort="latest"
+                th:classappend="${sort != 'oldest' and sort != 'views' and sort != 'comments' and sort != 'bookmarks'} ? ' active'"
+                th:attr="aria-pressed=${sort != 'oldest' and sort != 'views' and sort != 'comments' and sort != 'bookmarks'}"
+                onclick="loadBoardList(1, 'latest')">최신순</button>
+        <button type="button" class="board-sort-button" data-sort="oldest"
+                th:classappend="${sort == 'oldest'} ? ' active'"
+                th:attr="aria-pressed=${sort == 'oldest'}"
+                onclick="loadBoardList(1, 'oldest')">오래된순</button>
+        <button type="button" class="board-sort-button" data-sort="views"
+                th:classappend="${sort == 'views'} ? ' active'"
+                th:attr="aria-pressed=${sort == 'views'}"
+                onclick="loadBoardList(1, 'views')">조회수순</button>
+        <button type="button" class="board-sort-button" data-sort="comments"
+                th:classappend="${sort == 'comments'} ? ' active'"
+                th:attr="aria-pressed=${sort == 'comments'}"
+                onclick="loadBoardList(1, 'comments')">댓글순</button>
+        <button type="button" class="board-sort-button" data-sort="bookmarks"
+                th:classappend="${sort == 'bookmarks'} ? ' active'"
+                th:attr="aria-pressed=${sort == 'bookmarks'}"
+                onclick="loadBoardList(1, 'bookmarks')">북마크순</button>
       </div>
 
-      <!-- 3. 리스트 fragment 컨테이너 -->
       <div id="board-fragment-container"
            th:insert="~{board/fragment :: boardListFragment(
                ${boardList},
@@ -49,7 +64,11 @@
                ${currentPage},
                ${sort}
            )}">
-        <!-- SSR 최초 진입 시 서버에서 boardListFragment로 채워짐 -->
+      </div>
+
+      <div class="board-list-actions" sec:authorize="isAuthenticated()">
+        <a th:href="${boardType == 'course'} ? @{/course/write} : @{/post/write}"
+           class="board-write-btn">글쓰기</a>
       </div>
     </main>
   </div>

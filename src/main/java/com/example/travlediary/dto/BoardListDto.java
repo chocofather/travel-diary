@@ -14,4 +14,5 @@ public class BoardListDto {
     private String nickname;
     private String createdAt;
     private int views;
+    private int bookmarkCount;
 }

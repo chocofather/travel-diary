@@ -1,184 +1,649 @@
-/* 1. 전체 레이아웃 - 사이드바와 본문 사이의 간격을 넓혀 시원하게 배치 */
 .board-layout {
+    --board-accent: #0f766e;
+    --board-accent-dark: #115e59;
+    --board-accent-soft: #f0fdfa;
+    --board-border: #e2e8f0;
+    --board-text: #172033;
+    --board-muted: #64748b;
     display: flex;
-    gap: 32px; /* 간격을 더 넓혀서 가독성 확보 */
-    max-width: 1240px;
-    margin: 50px auto;
-    min-height: 700px;
+    align-items: flex-start;
+    gap: 28px;
+    width: min(1240px, 100%);
+    min-height: 680px;
+    margin: 42px auto 64px;
     padding: 0 20px;
-    align-items: flex-start; /* 사이드바가 본문 길이에 따라 늘어지지 않게 */
+    box-sizing: border-box;
 }
 
-/* 2. 사이드바 - 폭을 넓히고 더 깔끔하게 디자인 */
 .board-sidebar {
-    min-width: 240px; /* 200px에서 240px로 확대 */
-    background: #ffffff;
-    border: 1px solid #eef2f6;
-    border-radius: 20px;
-    padding: 24px 16px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.03);
-    position: sticky; /* 스크롤 시 따라오는 효과 (선택사항) */
+    position: sticky;
     top: 20px;
+    flex: 0 0 220px;
+    min-width: 0;
+    padding: 14px;
+    border: 1px solid var(--board-border);
+    border-radius: 18px;
+    background: #fff;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
 }
 
-/* 사이드바 리스트 초기화 (점 제거) */
 .board-sidebar ul {
-    list-style: none !important; /* 리스트 점 절대 제거 */
-    padding: 0 !important;
     margin: 0;
+    padding: 0;
+    list-style: none;
 }
 
-.board-sidebar li {
-    margin-bottom: 6px;
+.board-sidebar li + li {
+    margin-top: 4px;
 }
 
-/* 사이드바 메뉴 링크 */
 .board-sidebar a {
-    color: #64748b;
-    text-decoration: none;
     display: flex;
     align-items: center;
-    border-radius: 12px;
-    padding: 14px 20px;
-    font-size: 16px;
-    font-weight: 500;
-    transition: all 0.25s ease;
+    min-height: 44px;
+    padding: 10px 14px;
+    box-sizing: border-box;
+    border-radius: 11px;
+    color: var(--board-muted);
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background-color 160ms ease, color 160ms ease;
 }
 
-/* 사이드바 호버 및 활성화(Active) 효과 */
 .board-sidebar a:hover {
     background: #f8fafc;
-    color: #1e293b;
-    padding-left: 24px; /* 호버 시 살짝 오른쪽으로 이동 */
+    color: var(--board-text);
+}
+
+.board-sidebar a:focus-visible {
+    outline: 3px solid rgba(13, 148, 136, 0.24);
+    outline-offset: 2px;
 }
 
 .board-sidebar a.active {
-    background: #eff6ff;
-    color: #2563eb;
-    font-weight: 700;
-    box-shadow: inset 4px 0 0 #2563eb; /* 왼쪽에 강조 선 추가 */
+    background: var(--board-accent-soft);
+    color: var(--board-accent-dark);
+    font-weight: 750;
 }
 
-/* 3. 메인 콘텐츠 영역 */
 .board-main {
-    flex: 1;
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 34px 36px 30px;
+    border: 1px solid var(--board-border);
+    border-radius: 22px;
     background: #fff;
-    border: 1px solid #eef2f6;
-    border-radius: 24px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
-    padding: 40px;
+    box-shadow: 0 14px 40px rgba(15, 23, 42, 0.06);
 }
 
-/* 게시판 제목 상단 영역 */
-.board-main h2 {
-    font-size: 26px;
+.board-list-header {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 26px;
+}
+
+.board-heading {
+    min-width: 0;
+}
+
+.board-heading-kicker {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--board-accent);
+    font-size: 11px;
     font-weight: 800;
-    color: #1e293b;
-    margin-bottom: 24px;
-    letter-spacing: -0.5px;
+    letter-spacing: 0.14em;
 }
 
-/* 4. 게시글 리스트 디자인 */
-.board-list {
-    border-top: 2px solid #1e293b; /* 상단 포인트 라인 */
+.board-heading h1 {
+    margin: 0;
+    color: var(--board-text);
+    font-size: clamp(28px, 3vw, 38px);
+    font-weight: 800;
+    letter-spacing: -0.045em;
+    line-height: 1.2;
+}
+
+.board-heading p {
+    margin: 10px 0 0;
+    color: var(--board-muted);
+    font-size: 14px;
+    line-height: 1.55;
+}
+
+.board-write-btn {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 20px;
+    border-radius: 12px;
+    background: var(--board-accent);
+    box-shadow: 0 8px 18px rgba(15, 118, 110, 0.2);
+    color: #fff !important;
+    font-size: 14px;
+    font-weight: 750;
+    text-decoration: none;
+    transition: background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.board-list-actions {
+    display: flex;
+    justify-content: flex-end;
     margin-top: 20px;
 }
 
-.board-list-row {
-    display: flex;
-    align-items: center;
-    border-bottom: 1px solid #f1f5f9;
-    padding: 20px 10px;
-    transition: all 0.2s ease-in-out;
-}
-
-.board-list-row:hover {
-    background: #fbfcfe;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.02);
-}
-
-/* 카테고리 태그 (나만의 여행코스 등) */
-.board-type {
-    display: inline-block;
-    background: #eff6ff;
-    color: #3b82f6;
-    font-weight: 600;
-    font-size: 13px;
-    border-radius: 6px;
-    padding: 5px 12px;
-    margin-right: 20px;
-    min-width: 90px;
-    text-align: center;
-}
-
-/* 글 제목 */
-.board-title {
-    flex: 1;
-    font-size: 16.5px;
-    font-weight: 600;
-    color: #334155;
-}
-
-.board-title a {
-    text-decoration: none;
-    color: inherit;
-}
-
-.board-title a:hover {
-    color: #2563eb;
-}
-
-/* 리스트 메타 데이터 (작성자, 날짜 등) */
-.board-comments { flex: 0 0 80px; color: #3b82f6; font-size: 14px; font-weight: 700; text-align: center; }
-.board-nickname { flex: 0 0 120px; color: #64748b; font-size: 14px; text-align: center; }
-.board-date { flex: 0 0 110px; color: #94a3b8; font-size: 13px; text-align: center; }
-.board-views { flex: 0 0 70px; color: #cbd5e1; font-size: 13px; text-align: center; }
-
-/* 5. 글쓰기 버튼 */
-.board-write-btn {
-    display: inline-block;
-    background: #2563eb;
-    color: #fff !important;
-    padding: 12px 24px;
-    border-radius: 12px;
-    font-weight: 700;
-    text-decoration: none;
-    font-size: 15px;
-    transition: all 0.2s;
-    float: right; /* 제목 우측 정렬 */
+.board-write-btn::before {
+    content: "+";
+    margin-right: 7px;
+    font-size: 19px;
+    font-weight: 500;
+    line-height: 1;
 }
 
 .board-write-btn:hover {
-    background: #1d4ed8;
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    background: var(--board-accent-dark);
+    box-shadow: 0 10px 22px rgba(15, 118, 110, 0.26);
+    transform: translateY(-1px);
 }
 
-/* 6. 반응형 디자인 */
+.board-write-btn:focus-visible {
+    outline: 3px solid rgba(13, 148, 136, 0.28);
+    outline-offset: 3px;
+}
+
+.board-sort-bar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 7px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--board-border);
+}
+
+.board-sort-button {
+    min-height: 38px;
+    padding: 0 14px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--board-muted);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 650;
+    cursor: pointer;
+    transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.board-sort-button:hover {
+    border-color: #cbd5e1;
+    background: #f8fafc;
+    color: var(--board-text);
+}
+
+.board-sort-button:focus-visible {
+    outline: 3px solid rgba(13, 148, 136, 0.24);
+    outline-offset: 2px;
+}
+
+.board-sort-button.active,
+.board-sort-button[aria-pressed="true"] {
+    border-color: #99f6e4;
+    background: var(--board-accent-soft);
+    color: var(--board-accent-dark);
+}
+
+.board-list {
+    width: 100%;
+}
+
+.board-list-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 20px;
+    min-width: 0;
+    padding: 20px 6px;
+    border-bottom: 1px solid #edf1f5;
+    transition: background-color 150ms ease;
+}
+
+.board-list-row:hover {
+    background: #fbfdfd;
+}
+
+.board-list-row--course {
+    padding-top: 14px;
+    padding-bottom: 14px;
+    background: linear-gradient(90deg, rgba(240, 253, 250, 0.46), transparent 52%);
+}
+
+.board-row-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.board-type {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    min-width: 72px;
+    min-height: 28px;
+    padding: 4px 9px;
+    box-sizing: border-box;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 750;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.board-type--question {
+    background: #eff6ff;
+    color: #2563eb;
+}
+
+.board-type--tip {
+    background: #fff7ed;
+    color: #c2410c;
+}
+
+.board-type--course {
+    min-height: 25px;
+    background: var(--board-accent-soft);
+    color: var(--board-accent-dark);
+    font-size: 11px;
+}
+
+.board-title {
+    min-width: 0;
+    margin: 0;
+    color: var(--board-text);
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.45;
+}
+
+.board-list-row--course .board-title {
+    font-size: 15px;
+}
+
+.board-title a {
+    display: block;
+    overflow: hidden;
+    color: inherit;
+    text-decoration: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.board-title a:hover {
+    color: var(--board-accent-dark);
+}
+
+.board-title a:focus-visible {
+    border-radius: 3px;
+    outline: 3px solid rgba(13, 148, 136, 0.22);
+    outline-offset: 3px;
+}
+
+.board-meta {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 14px;
+    min-width: 0;
+    color: var(--board-muted);
+}
+
+.board-meta-item {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    min-width: 0;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.board-meta-item + .board-meta-item::before {
+    content: "·";
+    margin-right: 2px;
+    color: #cbd5e1;
+    font-weight: 700;
+}
+
+.board-meta-label {
+    color: #94a3b8;
+    font-size: 11px;
+}
+
+.board-meta-value {
+    color: #526078;
+    font-weight: 650;
+}
+
+.board-nickname {
+    max-width: 110px;
+}
+
+.board-nickname .board-meta-value {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.board-comments .board-meta-value,
+.board-bookmarks .board-meta-value {
+    color: var(--board-accent-dark);
+}
+
+.board-list-empty {
+    padding: 72px 20px;
+    border-bottom: 1px solid var(--board-border);
+    color: var(--board-muted);
+    font-size: 14px;
+    text-align: center;
+}
+
+.board-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding-top: 28px;
+}
+
+.board-page-button {
+    min-width: 76px;
+    min-height: 42px;
+    padding: 0 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    background: #fff;
+    color: #334155;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.board-page-button:hover:not(:disabled) {
+    border-color: var(--board-accent);
+    background: var(--board-accent-soft);
+    color: var(--board-accent-dark);
+}
+
+.board-page-button:focus-visible {
+    outline: 3px solid rgba(13, 148, 136, 0.24);
+    outline-offset: 2px;
+}
+
+.board-page-button:disabled {
+    border-color: #e2e8f0;
+    background: #f8fafc;
+    color: #cbd5e1;
+    cursor: not-allowed;
+}
+
+.board-page-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-width: 74px;
+    color: #94a3b8;
+    font-size: 13px;
+}
+
+.board-page-status strong {
+    color: var(--board-accent-dark);
+    font-size: 15px;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+@media (max-width: 1100px) {
+    .board-list-row {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 10px;
+    }
+
+    .board-meta {
+        justify-content: flex-start;
+        padding-left: 84px;
+    }
+}
+
 @media (max-width: 1024px) {
     .board-layout {
         flex-direction: column;
-        gap: 20px;
+        gap: 18px;
+        margin-top: 30px;
     }
+
     .board-sidebar {
-        min-width: 100%;
         position: static;
+        width: 100%;
+        box-sizing: border-box;
     }
+
     .board-sidebar ul {
         display: flex;
         flex-wrap: wrap;
-        gap: 10px;
+        gap: 6px;
     }
-    .board-sidebar li {
-        margin-bottom: 0;
+
+    .board-sidebar li + li {
+        margin-top: 0;
+    }
+
+    .board-sidebar a {
+        padding-right: 16px;
+        padding-left: 16px;
+    }
+
+    .board-main {
+        width: 100%;
+        box-sizing: border-box;
     }
 }
 
 @media (max-width: 768px) {
-    .board-main {
-        padding: 20px;
+    .board-layout {
+        padding: 0 16px;
     }
-    .board-nickname, .board-date, .board-views {
-        display: none; /* 모바일에서 생략 */
+
+    .board-main {
+        padding: 26px 22px;
+        border-radius: 18px;
+    }
+
+    .board-list-header {
+        margin-bottom: 22px;
+    }
+
+    .board-heading p {
+        max-width: 460px;
+    }
+
+    .board-sort-bar {
+        justify-content: flex-start;
+    }
+
+    .board-list-row {
+        padding-right: 2px;
+        padding-left: 2px;
+    }
+
+    .board-list-row--course {
+        padding-top: 13px;
+        padding-bottom: 13px;
+    }
+
+    .board-meta {
+        flex-wrap: wrap;
+        gap: 7px 14px;
+        padding-left: 84px;
+    }
+}
+
+@media (max-width: 480px) {
+    .board-layout {
+        gap: 12px;
+        margin: 20px auto 42px;
+        padding: 0 12px;
+    }
+
+    .board-sidebar {
+        padding: 8px;
+        border-radius: 14px;
+        overflow: hidden;
+    }
+
+    .board-sidebar ul {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        scrollbar-width: thin;
+    }
+
+    .board-sidebar li {
+        flex: 0 0 auto;
+    }
+
+    .board-sidebar a {
+        min-height: 40px;
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+
+    .board-main {
+        padding: 22px 16px;
+        border-radius: 16px;
+    }
+
+    .board-list-header {
+        margin-bottom: 18px;
+    }
+
+    .board-heading-kicker {
+        font-size: 10px;
+    }
+
+    .board-heading h1 {
+        font-size: 26px;
+    }
+
+    .board-heading p {
+        display: none;
+    }
+
+    .board-write-btn {
+        min-height: 42px;
+        padding: 0 14px;
+        font-size: 13px;
+    }
+
+    .board-list-actions {
+        margin-top: 16px;
+    }
+
+    .board-sort-bar {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 4px;
+    }
+
+    .board-sort-button {
+        min-width: 0;
+        min-height: 42px;
+        padding: 0 5px;
+        font-size: 12px;
+    }
+
+    .board-row-main {
+        align-items: flex-start;
+        gap: 9px;
+    }
+
+    .board-type {
+        min-width: 62px;
+        min-height: 26px;
+        padding-right: 7px;
+        padding-left: 7px;
+        font-size: 11px;
+    }
+
+    .board-title,
+    .board-list-row--course .board-title {
+        padding-top: 1px;
+        font-size: 14px;
+    }
+
+    .board-meta {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 7px;
+        padding-left: 71px;
+    }
+
+    .board-meta-item {
+        gap: 3px;
+        font-size: 11px;
+    }
+
+    .board-meta-label {
+        font-size: 10px;
+    }
+
+    .board-nickname {
+        grid-column: span 3;
+        max-width: none;
+    }
+
+    .board-date {
+        grid-column: span 3;
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .board-date .board-meta-value {
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .board-views,
+    .board-comments,
+    .board-bookmarks {
+        grid-column: span 2;
+    }
+
+    .board-pagination {
+        gap: 8px;
+        padding-top: 22px;
+    }
+
+    .board-page-button {
+        min-width: 68px;
+        min-height: 44px;
+    }
+
+    .board-page-status {
+        min-width: 58px;
     }
 }

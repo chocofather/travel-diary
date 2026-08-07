@@ -15,7 +15,7 @@ public class BoardServiceImpl implements BoardService {
 
     private static final Set<String> BOARD_TYPES = Set.of("post", "course");
     private static final Set<String> POST_TYPES = Set.of("QUESTION", "TIP");
-    private static final Set<String> SORT_TYPES = Set.of("latest", "oldest", "views", "comments");
+    private static final Set<String> SORT_TYPES = Set.of("latest", "oldest", "views", "comments", "bookmarks");
 
     private final BoardMapper boardMapper;
 

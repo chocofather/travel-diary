@@ -64,10 +64,25 @@
             board.commentCount,
             board.nickname,
             board.createdAt,
-            board.views
+            board.views,
+            COALESCE(bookmarkCounts.bookmarkCount, 0) AS bookmarkCount
         FROM (
             <include refid="unifiedBoardSelect"/>
         ) board
+        LEFT JOIN (
+            SELECT
+                b.target_type,
+                b.target_id,
+                COUNT(*) AS bookmarkCount
+            FROM bookmarks b
+            WHERE b.target_type IN ('POST', 'COURSE')
+            GROUP BY b.target_type, b.target_id
+        ) bookmarkCounts
+          ON bookmarkCounts.target_id = board.id
+         AND bookmarkCounts.target_type = CASE
+             WHEN board.boardType = 'course' THEN 'COURSE'
+             ELSE 'POST'
+         END
         WHERE 1 = 1
         <include refid="boardFilters"/>
         <choose>
@@ -79,6 +94,9 @@
             </when>
             <when test="sort == 'comments'">
                 ORDER BY board.commentCount DESC, board.createdAt DESC, board.boardType ASC, board.id DESC
+            </when>
+            <when test="sort == 'bookmarks'">
+                ORDER BY bookmarkCount DESC, board.createdAt DESC, board.boardType ASC, board.id DESC
             </when>
             <otherwise>
                 ORDER BY board.createdAt DESC, board.boardType ASC, board.id DESC
