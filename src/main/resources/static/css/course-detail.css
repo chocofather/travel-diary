@@ -71,7 +71,7 @@
 }
 
 .course-route {
-    margin-top: 64px;
+    margin-top: 54px;
 }
 
 .course-route-heading {
@@ -89,6 +89,7 @@
     --route-row-gap: 42px;
     --route-marker-size: 44px;
     --route-line-color: #b8d6c9;
+    --route-turn-offset: 12px;
     position: relative;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -106,7 +107,7 @@
     display: grid;
     grid-template-rows: var(--route-marker-size) minmax(0, 1fr);
     align-items: stretch;
-    gap: 12px;
+    gap: 7px;
     height: 100%;
     min-width: 0;
 }
@@ -162,7 +163,7 @@
     content: "";
     top: calc(var(--route-marker-size) / 2 - 1px);
     left: 50%;
-    width: 50%;
+    width: calc(50% + var(--route-turn-offset));
     height: calc(100% + var(--route-row-gap));
     border: solid var(--route-line-color);
     border-width: 3px 3px 3px 0;
@@ -173,7 +174,7 @@
     content: "";
     top: calc(var(--route-marker-size) / 2 - 1px);
     right: 50%;
-    width: 50%;
+    width: calc(50% + var(--route-turn-offset));
     height: calc(100% + var(--route-row-gap));
     border: solid var(--route-line-color);
     border-width: 3px 0 3px 3px;
