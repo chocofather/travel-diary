@@ -51,9 +51,8 @@
       </div>
 
       <div class="course-timeline" th:if="${course.stops != null and !course.stops.isEmpty()}">
-        <article th:each="stop, stopStat : ${course.stops}"
-                 class="course-stop"
-                 th:classappend="${stopStat.odd} ? 'course-stop--left' : 'course-stop--right'">
+        <article th:each="stop : ${course.stops}"
+                 class="course-stop">
           <div class="course-stop-marker" th:text="${stop.visitOrder}">1</div>
 
           <a class="course-stop-card"

@@ -85,41 +85,111 @@
 }
 
 .course-timeline {
+    --route-column-gap: 26px;
+    --route-row-gap: 42px;
+    --route-marker-size: 44px;
+    --route-line-color: #b8d6c9;
     position: relative;
-    display: flex;
-    flex-direction: column;
-    gap: 28px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-auto-flow: row dense;
+    align-items: stretch;
+    gap: var(--route-row-gap) var(--route-column-gap);
 }
 
 .course-timeline::before {
-    content: "";
-    position: absolute;
-    top: 24px;
-    bottom: 24px;
-    left: 50%;
-    width: 4px;
-    border-radius: 999px;
-    background: linear-gradient(#7bb69e, #d8e9e2);
-    transform: translateX(-50%);
+    content: none;
 }
 
 .course-stop {
     position: relative;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 76px minmax(0, 1fr);
-    align-items: center;
+    grid-template-rows: var(--route-marker-size) minmax(0, 1fr);
+    align-items: stretch;
+    gap: 12px;
+    height: 100%;
     min-width: 0;
 }
 
-.course-stop-marker {
-    z-index: 2;
+.course-timeline > .course-stop:nth-of-type(6n + 1),
+.course-timeline > .course-stop:nth-of-type(6n) {
+    grid-column: 1;
+}
+
+.course-timeline > .course-stop:nth-of-type(6n + 2),
+.course-timeline > .course-stop:nth-of-type(6n + 5) {
     grid-column: 2;
+}
+
+.course-timeline > .course-stop:nth-of-type(6n + 3),
+.course-timeline > .course-stop:nth-of-type(6n + 4) {
+    grid-column: 3;
+}
+
+.course-timeline > .course-stop::before,
+.course-timeline > .course-stop::after {
+    box-sizing: border-box;
+    pointer-events: none;
+    position: absolute;
+    z-index: 0;
+}
+
+/* 홀수 행은 오른쪽으로, 짝수 행은 왼쪽으로 다음 STOP을 연결한다. */
+.course-timeline > .course-stop:nth-of-type(6n + 1):not(:last-child)::before,
+.course-timeline > .course-stop:nth-of-type(6n + 2):not(:last-child)::before {
+    content: "";
+    top: calc(var(--route-marker-size) / 2 - 1px);
+    left: 50%;
+    width: calc(100% + var(--route-column-gap));
+    height: 3px;
+    border-radius: 999px;
+    background: var(--route-line-color);
+}
+
+.course-timeline > .course-stop:nth-of-type(6n + 4):not(:last-child)::before,
+.course-timeline > .course-stop:nth-of-type(6n + 5):not(:last-child)::before {
+    content: "";
+    top: calc(var(--route-marker-size) / 2 - 1px);
+    right: 50%;
+    width: calc(100% + var(--route-column-gap));
+    height: 3px;
+    border-radius: 999px;
+    background: var(--route-line-color);
+}
+
+/* 행 끝에서는 카드 바깥쪽으로 돌아 다음 행의 같은 열 마커에 연결한다. */
+.course-timeline > .course-stop:nth-of-type(6n + 3):not(:last-child)::after {
+    content: "";
+    top: calc(var(--route-marker-size) / 2 - 1px);
+    left: 50%;
+    width: 50%;
+    height: calc(100% + var(--route-row-gap));
+    border: solid var(--route-line-color);
+    border-width: 3px 3px 3px 0;
+    border-radius: 0 20px 20px 0;
+}
+
+.course-timeline > .course-stop:nth-of-type(6n):not(:last-child)::after {
+    content: "";
+    top: calc(var(--route-marker-size) / 2 - 1px);
+    right: 50%;
+    width: 50%;
+    height: calc(100% + var(--route-row-gap));
+    border: solid var(--route-line-color);
+    border-width: 3px 0 3px 3px;
+    border-radius: 20px 0 0 20px;
+}
+
+.course-stop-marker {
+    position: relative;
+    z-index: 2;
     grid-row: 1;
     justify-self: center;
     display: grid;
     place-items: center;
-    width: 44px;
-    height: 44px;
+    box-sizing: border-box;
+    width: var(--route-marker-size);
+    height: var(--route-marker-size);
     border: 5px solid #eaf4ef;
     border-radius: 50%;
     background: #397a63;
@@ -129,7 +199,13 @@
 }
 
 .course-stop-card {
+    position: relative;
+    z-index: 1;
+    grid-row: 2;
+    display: flex;
+    flex-direction: column;
     min-width: 0;
+    height: 100%;
     overflow: hidden;
     border: 1px solid #e1e9e5;
     border-radius: 18px;
@@ -140,16 +216,6 @@
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.course-stop--left .course-stop-card {
-    grid-column: 1;
-    grid-row: 1;
-}
-
-.course-stop--right .course-stop-card {
-    grid-column: 3;
-    grid-row: 1;
-}
-
 .course-stop-card:hover,
 .course-stop-card:focus-visible {
     transform: translateY(-4px);
@@ -158,7 +224,8 @@
 
 .course-stop-image-wrap {
     position: relative;
-    height: 210px;
+    flex: 0 0 160px;
+    height: 160px;
     overflow: hidden;
     background: #edf2f0;
 }
@@ -188,13 +255,21 @@
 }
 
 .course-stop-body {
-    padding: 20px 22px 22px;
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    padding: 17px 18px 19px;
 }
 
 .course-stop-body h3 {
+    display: -webkit-box;
     margin: 0;
+    overflow: hidden;
     overflow-wrap: anywhere;
-    font-size: 21px;
+    font-size: 19px;
+    line-height: 1.4;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
 }
 
 .course-stop-description {
@@ -204,19 +279,26 @@
     color: #5f6b66;
     line-height: 1.6;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
+    -webkit-line-clamp: 2;
 }
 
 .course-stop-region {
     display: flex;
+    flex-wrap: wrap;
     gap: 9px;
-    margin: 16px 0 0;
+    margin: auto 0 0;
+    padding-top: 15px;
     color: #374b43;
     font-size: 14px;
 }
 
 .course-stop-region span {
     color: #78847f;
+}
+
+.course-stop-region strong {
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .course-route-empty {
@@ -459,9 +541,9 @@
     opacity: 0.55;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 900px) {
     .course-detail-container {
-        width: min(100% - 24px, 680px);
+        width: min(100% - 24px, 860px);
         margin-top: 24px;
         overflow-x: hidden;
     }
@@ -486,39 +568,116 @@
     }
 
     .course-timeline {
+        --route-marker-size: 38px;
+        display: flex;
+        flex-direction: column;
         gap: 22px;
     }
 
     .course-timeline::before {
-        left: 22px;
-        transform: none;
+        content: "";
+        position: absolute;
+        top: calc(var(--route-marker-size) / 2);
+        bottom: calc(var(--route-marker-size) / 2);
+        left: calc(var(--route-marker-size) / 2);
+        width: 3px;
+        border-radius: 999px;
+        background: linear-gradient(#7bb69e, #d8e9e2);
+        transform: translateX(-50%);
     }
 
-    .course-stop {
-        grid-template-columns: 46px minmax(0, 1fr);
+    .course-timeline > .course-stop:nth-of-type(n) {
+        grid-column: auto;
+        display: grid;
+        grid-template-columns: var(--route-marker-size) minmax(0, 1fr);
+        grid-template-rows: auto;
+        align-items: start;
         gap: 10px;
+        height: auto;
+    }
+
+    .course-timeline > .course-stop::before,
+    .course-timeline > .course-stop::after {
+        content: none !important;
+        display: none !important;
+        width: 0;
+        height: 0;
+        border: 0;
     }
 
     .course-stop-marker {
         grid-column: 1;
-        width: 38px;
-        height: 38px;
+        grid-row: 1;
         border-width: 4px;
         font-size: 13px;
     }
 
-    .course-stop--left .course-stop-card,
-    .course-stop--right .course-stop-card {
+    .course-stop-card {
         grid-column: 2;
         grid-row: 1;
         width: 100%;
+        height: auto;
     }
 
     .course-stop-image-wrap {
+        flex-basis: 170px;
         height: 170px;
     }
 
     .course-stop-body {
         padding: 17px;
+    }
+}
+
+@media (max-width: 480px) {
+    .course-detail-container {
+        width: calc(100% - 20px);
+    }
+
+    .course-timeline {
+        --route-marker-size: 36px;
+        gap: 18px;
+    }
+
+    .course-timeline > .course-stop:nth-of-type(n) {
+        gap: 8px;
+    }
+
+    .course-stop-image-wrap {
+        flex-basis: 145px;
+        height: 145px;
+    }
+
+    .course-stop-body {
+        padding: 15px;
+    }
+
+    .course-stop-body h3 {
+        font-size: 18px;
+    }
+}
+
+@media (max-width: 320px) {
+    .course-timeline {
+        --route-marker-size: 32px;
+        gap: 16px;
+    }
+
+    .course-timeline > .course-stop:nth-of-type(n) {
+        gap: 7px;
+    }
+
+    .course-stop-marker {
+        border-width: 3px;
+        font-size: 12px;
+    }
+
+    .course-stop-image-wrap {
+        flex-basis: 130px;
+        height: 130px;
+    }
+
+    .course-stop-body {
+        padding: 13px;
     }
 }
