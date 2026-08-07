@@ -6,6 +6,7 @@
 <th:block th:fragment="headFragment">
     <link rel="stylesheet" href="/css/detail.css">
     <link rel="stylesheet" href="/css/comment.css">
+    <link rel="stylesheet" href="/css/content-comment.css">
 </th:block>
 
 <th:block th:fragment="body">
@@ -344,16 +345,13 @@
         </div>
     </section>
 
-    <section class="comment-section">
-        <div class="comment-toolbar">
-            <div class="comment-count"><h2>댓글 (<span id="comment-count">7</span>)</h2></div>
-            <div class="comment-sort">
-                <button id="sort-toggle-btn">오래된순 ▼</button>
-                <ul id="sort-options" class="sort-options hidden">
-                    <li data-value="oldest">오래된순</li>
-                    <li data-value="recent">최신순</li>
-                    <li data-value="likes">좋아요순</li>
-                </ul>
+    <section class="comment-section content-comments">
+        <div class="comment-toolbar content-comment-toolbar">
+            <div class="comment-count"><h2 class="content-comment-heading">댓글 <span id="comment-count">0</span></h2></div>
+            <div class="comment-sort content-comment-sort" role="group" aria-label="댓글 정렬">
+                <button type="button" class="is-active" data-comment-sort="latest" aria-pressed="true">최신순</button>
+                <button type="button" data-comment-sort="oldest" aria-pressed="false">오래된순</button>
+                <button type="button" data-comment-sort="likes" aria-pressed="false">좋아요순</button>
             </div>
         </div>
 
@@ -386,13 +384,15 @@
         </form>
 
         <!-- ✅ 댓글 목록 -->
-        <ul id="comment-list" class="comment-list">
+        <ul id="comment-list" class="comment-list content-comment-list">
             <!-- 댓글 + 대댓글이 JavaScript로 렌더링됩니다 -->
         </ul>
 
-        <button id="load-more-comments" class="comment-more-btn">
-            <span class="icon">＋</span> 댓글 더보기
-        </button>
+        <div class="content-comment-more-row">
+            <button id="load-more-comments" type="button" class="comment-more-btn content-comment-more" hidden>
+                댓글 더보기
+            </button>
+        </div>
     </section>
 
     <!-- ====== 추천 여행지 ====== -->

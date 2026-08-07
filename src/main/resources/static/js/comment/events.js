@@ -4,22 +4,11 @@ import {
     fetchThumbnails,
     toggleLikeApi,
     deleteCommentApi,
-    updateCommentApi,
-    fetchCommentsPage
+    updateCommentApi
 } from './api.js';
 
-import { appendComments, createCommentItem, renderComments } from './render.js';
-import {
-    getLoadedComments,
-    setLoadedComments,
-    addComment,
-    concatComments
-} from './commentsState.js';
-
-let currentPage = 1;
-let currentSort = 'oldest';
-let isLoading = false;
-let isLastPage = false;
+import { createCommentItem } from './render.js';
+import { getLoadedComments } from './commentsState.js';
 
 // 비회원 클릭 시 로그인 페이지로 리다이렉트
 export function initGuestRedirect() {
@@ -31,47 +20,26 @@ export function initGuestRedirect() {
     });
 }
 
-// 정렬(dropdown)시 전체 초기화하고 새로 로딩
-export function setupSortDropdownEvent(destinationId) {
-    const btn = document.getElementById('sort-toggle-btn');
-    const menu = document.getElementById('sort-options');
-    btn?.addEventListener('click', () => menu.classList.toggle('hidden'));
-
-    menu?.addEventListener('click', e => {
-        if (e.target.tagName === 'LI') {
-            const sort = e.target.dataset.value;
-            currentSort = sort;
-            currentPage = 0;
-            isLastPage = false;
-            setLoadedComments([]);
-            btn.textContent = e.target.textContent + ' ▼';
-            menu.classList.add('hidden');
-            const container = document.getElementById('comment-list');
-            container.innerHTML = '';
-
-            fetchCommentsPage(destinationId, 0, 5, sort).then(data => {
-                setLoadedComments(data.content.slice());
-                renderComments(getLoadedComments(), container);
-                currentPage = 1;
-            });
-        }
+// 정렬 상태와 조회는 init.js 한 곳에서 관리한다.
+export function setupSortDropdownEvent(containerEl, onSortChange) {
+    containerEl?.addEventListener('click', e => {
+        const button = e.target.closest('[data-comment-sort]');
+        if (!button || !containerEl.contains(button)) return;
+        onSortChange(button.dataset.commentSort);
     });
 }
 
 // 댓글 등록 폼
-export function initCommentForm(destinationId, onThumbnailsReload) {
+export function initCommentForm(destinationId, onCommentsReload, onThumbnailsReload) {
     const form = document.getElementById('comment-form');
     if (!form) return;
     form.addEventListener('submit', e => {
         e.preventDefault();
         const data = new FormData(form);
         postComment(destinationId, data)
-            .then(newComment => {
+            .then(() => {
                 form.reset();
-                const countEl = document.getElementById('comment-count');
-                if (countEl) countEl.textContent = parseInt(countEl.textContent || 0) + 1;
-                addComment(newComment);
-                appendComments([newComment], document.getElementById('comment-list'));
+                onCommentsReload();
                 onThumbnailsReload();
             })
             .catch(err => console.error('댓글 등록 실패:', err));
@@ -79,7 +47,7 @@ export function initCommentForm(destinationId, onThumbnailsReload) {
 }
 
 // 답글(대댓글) 등록
-export function bindReplySubmit(containerEl, destinationId) {
+export function bindReplySubmit(containerEl, destinationId, onCommentsReload) {
     if (!containerEl) return;
     containerEl.addEventListener('submit', e => {
         const form = e.target.closest('.nested-reply-form');
@@ -107,44 +75,32 @@ export function bindReplySubmit(containerEl, destinationId) {
         data.set('parentCommentId', parentId);
 
         postReply(destinationId, parentId, data)
-            .then(newReply => {
+            .then(() => {
                 form.remove();
-                addComment(newReply);
-                // 부모 .reply-list에만 append
-                const commentList = document.getElementById('comment-list');
-                const parentLi = commentList.querySelector(`.comment-item[data-id="${parentId}"]`);
-                if (parentLi) {
-                    let replyUl = parentLi.querySelector('.reply-list');
-                    if (!replyUl) {
-                        replyUl = document.createElement('ul');
-                        replyUl.className = 'reply-list';
-                        parentLi.appendChild(replyUl);
-                    }
-                    replyUl.appendChild(createCommentItem(newReply, 1, newReply.writer?.nickname || ''));
-                }
+                onCommentsReload();
             })
             .catch(err => console.error('대댓글 등록 실패:', err));
     });
 }
 
 // 댓글 액션 바인딩(수정, 삭제 등은 필요시 배열 업데이트 & 부분 렌더로)
-export function bindCommentActions(containerEl, onThumbnailsReload, destinationId) {
+export function bindCommentActions(containerEl, onCommentsReload, onThumbnailsReload) {
     if (!containerEl) return;
     containerEl.addEventListener('click', e => {
         const commentDiv = e.target.closest('.comment-item');
         if (!commentDiv) return;
         const id = commentDiv.dataset.id;
-        if (handleLike(e, id)) return;
-        if (handleDelete(e, id, onThumbnailsReload, destinationId)) return;
+        if (handleLike(e, id, onCommentsReload)) return;
+        if (handleDelete(e, id, onCommentsReload, onThumbnailsReload)) return;
         if (showEditForm(e, commentDiv)) return;
-        if (handleSaveEdit(e, commentDiv, id)) return;
+        if (handleSaveEdit(e, commentDiv, id, onCommentsReload)) return;
         if (handleCancelEdit(e, commentDiv, id)) return;
         if (toggleReplyForm(e, commentDiv)) return;
         if (cancelReply(e)) return;
     });
 }
 
-function handleLike(e, id) {
+function handleLike(e, id, onCommentsReload) {
     const btn = e.target.closest('.like-btn');
     if (!btn) return false;
     if (!document.getElementById('comment-form')) {
@@ -152,64 +108,18 @@ function handleLike(e, id) {
         return true;
     }
     toggleLikeApi(id)
-        .then(status => {
-            const img = btn.querySelector('img');
-            img.src = status === 'liked'
-                ? '/uploads/icons/like2.png'
-                : '/uploads/icons/like.png';
-            const span = btn.querySelector('span');
-            span.innerText = status === 'liked'
-                ? +span.innerText + 1
-                : +span.innerText - 1;
-        })
+        .then(() => onCommentsReload())
         .catch(err => console.error('좋아요 실패:', err));
     return true;
 }
 
-function removeCommentAndRepliesFromArray(comments, id) {
-    const allIdsToRemove = new Set([Number(id)]);
-    let added = true;
-    while (added) {
-        added = false;
-        comments.forEach(c => {
-            if (allIdsToRemove.has(c.parentCommentId)) {
-                if (!allIdsToRemove.has(c.id)) {
-                    allIdsToRemove.add(c.id);
-                    added = true;
-                }
-            }
-        });
-    }
-    return comments.filter(c => !allIdsToRemove.has(c.id));
-}
-
-function handleDelete(e, id, onThumbnailsReload, destinationId) {
+function handleDelete(e, id, onCommentsReload, onThumbnailsReload) {
     if (!e.target.matches('.delete-btn')) return false;
     if (!confirm('댓글을 삭제하시겠습니까?')) return true;
     deleteCommentApi(id)
         .then(res => {
             if (res.ok) {
-                // 배열에서 삭제
-                setLoadedComments(getLoadedComments().filter(c => c.id !== Number(id)));
-                // 화면에서 LI 삭제
-                const li = document.querySelector(`.comment-item[data-id="${id}"]`);
-                if (li) li.remove();
-
-                // 전체 카운트 갱신 (destinationId가 undefined 아니게!)
-                if (destinationId) {
-                    fetchCommentsPage(destinationId, 0, 1)
-                        .then(data => {
-                            const countEl = document.getElementById('comment-count');
-                            if (countEl) countEl.textContent = data.totalElements;
-                        });
-                }
-
-                // 루트댓글이면 전체 다시 렌더 (트리구조 무너지지 않게)
-                const isRootComment = li && !li.classList.contains('reply');
-                if (isRootComment) {
-                    const commentList = document.getElementById('comment-list');
-                    renderComments(getLoadedComments(), commentList);
-                }
+                onCommentsReload();
                 onThumbnailsReload();
             } else {
                 alert('삭제 권한 없음');
@@ -249,26 +159,13 @@ function showEditForm(e, commentDiv) {
     return true;
 }
 
-function handleSaveEdit(e, commentDiv, id) {
+function handleSaveEdit(e, commentDiv, id, onCommentsReload) {
     if (!e.target.matches('.save-edit-btn')) return false;
     const newContent = commentDiv.querySelector('.edit-text').value;
     updateCommentApi(id, { content: newContent })
         .then(res => {
             if (res.ok) {
-                setLoadedComments(
-                    getLoadedComments().map(c =>
-                        c.id === Number(id)
-                            ? { ...c, content: newContent, updatedAt: new Date().toISOString() }
-                            : c
-                    )
-                );
-                const oldLi = document.querySelector(`.comment-item[data-id="${id}"]`);
-                if (oldLi) {
-                    const depth = oldLi.classList.contains('reply') ? 1 : 0;
-                    const target = getLoadedComments().find(c => c.id === Number(id));
-                    const newLi = createCommentItem(target, depth);
-                    oldLi.replaceWith(newLi);
-                }
+                onCommentsReload();
             } else {
                 alert('수정 실패');
             }
@@ -330,38 +227,13 @@ function cancelReply(e) {
     return true;
 }
 
-// 더보기 버튼 - 누적
-export function setupCommentPagingEvents(destinationId) {
+// 더보기 상태와 조회는 init.js 한 곳에서 관리한다.
+export function setupCommentPagingEvents(onLoadMore) {
     const moreBtn = document.getElementById('load-more-comments');
     if (!moreBtn) return;
     moreBtn.addEventListener('click', () => {
-        loadNextComments(destinationId);
+        onLoadMore();
     });
-}
-
-function loadNextComments(destinationId) {
-    if (isLoading) return;
-    isLoading = true;
-    fetchCommentsPage(destinationId, currentPage, 5, currentSort)
-        .then(data => {
-            const comments = data.content;
-            const container = document.getElementById('comment-list');
-            if (!Array.isArray(comments)) {
-                isLoading = false;
-                return;
-            }
-            concatComments(comments);
-            appendComments(comments, container);
-            currentPage += 1;
-            if (comments.length < 5) {
-                isLastPage = true;
-                const moreBtn = document.getElementById('load-more-comments');
-                if (moreBtn) moreBtn.style.display = 'none';
-            }
-        })
-        .finally(() => {
-            isLoading = false;
-        });
 }
 
 // 썸네일 전체보기(모달) 바인딩 함수

@@ -53,13 +53,13 @@ public class SecurityConfig {
                                 ).permitAll()
 
                         // 게시글 일반 댓글 목록은 비회원도 조회 가능
-                        .requestMatchers(HttpMethod.GET, "/post-comments").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/post-comments", "/post-comments/page").permitAll()
 
                         // 게시글 댓글 작성·수정·삭제는 로그인 사용자만 가능
                         .requestMatchers("/post-comments", "/post-comments/**").authenticated()
 
                         // 여행 코스 일반 댓글 목록은 비회원도 조회 가능
-                        .requestMatchers(HttpMethod.GET, "/course-comments").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/course-comments", "/course-comments/page").permitAll()
 
                         // 여행 코스 댓글 작성·수정·삭제는 로그인 사용자만 가능
                         .requestMatchers("/course-comments", "/course-comments/**").authenticated()

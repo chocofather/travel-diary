@@ -15,6 +15,20 @@ public interface CourseCommentMapper {
     List<CourseCommentDto> findByCourseId(@Param("courseId") Long courseId,
                                           @Param("currentUserId") Long currentUserId);
 
+    List<CourseCommentDto> findPagedRootComments(@Param("courseId") Long courseId,
+                                                 @Param("currentUserId") Long currentUserId,
+                                                 @Param("sort") String sort,
+                                                 @Param("limit") int limit,
+                                                 @Param("offset") int offset);
+
+    List<CourseCommentDto> findRepliesForRootComments(@Param("courseId") Long courseId,
+                                                      @Param("currentUserId") Long currentUserId,
+                                                      @Param("rootIds") List<Long> rootIds);
+
+    int countRootCommentThreads(@Param("courseId") Long courseId);
+
+    int countActiveComments(@Param("courseId") Long courseId);
+
     CourseComment findActiveComment(@Param("commentId") Long commentId);
 
     CourseComment findActiveCommentForUpdate(@Param("commentId") Long commentId);

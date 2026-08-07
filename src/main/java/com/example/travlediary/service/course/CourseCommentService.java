@@ -1,12 +1,16 @@
 package com.example.travlediary.service.course;
 
 import com.example.travlediary.dto.CourseCommentDto;
+import com.example.travlediary.dto.PageResult;
 
 import java.util.List;
 
 public interface CourseCommentService {
 
     List<CourseCommentDto> getComments(Long courseId, Long currentUserId);
+
+    PageResult<CourseCommentDto> getCommentsPage(Long courseId, Long currentUserId,
+                                                 int page, int size, String sort);
 
     CourseCommentDto create(Long courseId, Long userId, String content, Long replyToCommentId);
 

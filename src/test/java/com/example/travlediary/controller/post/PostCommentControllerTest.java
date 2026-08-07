@@ -2,6 +2,7 @@ package com.example.travlediary.controller.post;
 
 import com.example.travlediary.dto.PostCommentDto;
 import com.example.travlediary.dto.PostCommentRequest;
+import com.example.travlediary.dto.PageResult;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.post.PostCommentService;
 import org.junit.jupiter.api.Test;
@@ -31,6 +32,16 @@ class PostCommentControllerTest {
 
         assertThat(controller.getComments(10L, null)).isEmpty();
         verify(service).getComments(10L, null);
+    }
+
+    @Test
+    void guestPagedGetPassesPagingAndSortWithNullUserId() {
+        PostCommentController controller = new PostCommentController(service);
+        PageResult<PostCommentDto> page = new PageResult<>(List.of(), 6, 1, 5, 9);
+        when(service.getCommentsPage(10L, null, 1, 5, "likes")).thenReturn(page);
+
+        assertThat(controller.getCommentsPage(10L, 1, 5, "likes", null)).isSameAs(page);
+        verify(service).getCommentsPage(10L, null, 1, 5, "likes");
     }
 
     @Test

@@ -1,10 +1,51 @@
+const defaultProfileImage = '/images/default.png';
+const unlikedIcon = '/uploads/icons/like.png';
+const likedIcon = '/uploads/icons/like2.png';
+
+function parseDate(value) {
+    if (!value) return null;
+    const normalized = typeof value === 'string'
+        ? value.trim().replace(/^(\d{4}-\d{2}-\d{2})\s/, '$1T')
+        : value;
+    const date = new Date(normalized);
+    return Number.isFinite(date.getTime()) ? date : null;
+}
+
+function formatDate(value) {
+    const date = parseDate(value);
+    if (!date) return '';
+    const twoDigits = number => String(number).padStart(2, '0');
+    return `${twoDigits(date.getFullYear() % 100)}.${twoDigits(date.getMonth() + 1)}.${twoDigits(date.getDate())} `
+        + `${twoDigits(date.getHours())}:${twoDigits(date.getMinutes())}`;
+}
+
+function isEdited(comment) {
+    const createdAt = parseDate(comment.createdAt)?.getTime();
+    const updatedAt = parseDate(comment.updatedAt)?.getTime();
+    return Number.isFinite(createdAt) && Number.isFinite(updatedAt) && updatedAt > createdAt;
+}
+
+function profileImageUrl(value) {
+    if (typeof value !== 'string' || !value.trim()) return defaultProfileImage;
+    const trimmed = value.trim();
+    return /^(?:https?:|data:|blob:|\/)/i.test(trimmed) ? trimmed : `/${trimmed}`;
+}
+
+function bindProfileFallback(image) {
+    image?.addEventListener('error', () => {
+        if (image.dataset.fallbackApplied === 'true') return;
+        image.dataset.fallbackApplied = 'true';
+        image.src = defaultProfileImage;
+    });
+}
+
 /**
  * @닉네임 하이라이트(파란색, 클릭) 변환 함수
  */
 function highlightMentions(content) {
     if (!content) return '';
     return content.replace(/@([^\s@]+)/g, (match, nickname) =>
-        `<a href="/profile/${encodeURIComponent(nickname)}" class="mention" onclick="event.stopPropagation()">@${nickname}</a>`
+        `<span class="mention content-comment-mention">@${nickname}</span>`
     );
 }
 
@@ -25,41 +66,59 @@ export function groupByParent(comments) {
  */
 export function createCommentItem(comment, depth = 0, parentNickname = '') {
     const li = document.createElement('li');
-    li.className = 'comment-item' + (depth > 0 ? ' reply' : '');
+    li.className = 'comment-item content-comment-item' + (depth > 0 ? ' reply' : '');
     li.dataset.id = comment.id;
+    if (comment.writer?.id != null) li.dataset.userId = String(comment.writer.id);
     if (depth === 1) {
         li.dataset.parentId = comment.parentCommentId;
         li.dataset.writerNickname = parentNickname;
     }
-    const profileUrl = comment.writer?.profileImage || '/images/default.png';
+    const profileUrl = profileImageUrl(comment.writer?.profileImage);
     const nickname   = comment.writer?.nickname     || '알 수 없음';
     const isWriter   = comment.writer?.isWriter === true;
-    const isReply    = depth > 0;
     const isLoggedIn = comment.isLoggedIn === true;
+    const edited = isEdited(comment);
+    const likeControl = isLoggedIn
+        ? `<button type="button" class="like-btn content-comment-action content-comment-like${comment.likedByMe ? ' is-liked' : ''}"
+                   data-id="${comment.id}" aria-pressed="${Boolean(comment.likedByMe)}">
+                <img src="${comment.likedByMe ? likedIcon : unlikedIcon}" alt="" aria-hidden="true"
+                     class="likeicon content-comment-like-icon">
+                <span class="content-comment-sr-only">좋아요</span>
+                <span class="content-comment-like-count">${comment.likes ?? 0}</span>
+            </button>`
+        : `<span class="content-comment-like-readonly content-comment-like">
+                <img src="${comment.likedByMe ? likedIcon : unlikedIcon}" alt="" aria-hidden="true"
+                     class="likeicon content-comment-like-icon">
+                <span class="content-comment-sr-only">좋아요</span>
+                <span class="content-comment-like-count">${comment.likes ?? 0}</span>
+            </span>`;
 
     li.innerHTML = `
-        <div class="comment-header">
-            <img src="${profileUrl}" class="comment-profile" alt="프로필 이미지">
-            <span class="comment-nickname">${nickname}</span>
-            ${isReply && isWriter ? `<span class="comment-author-tag">작성자</span>` : ''}
-            ${comment.updatedAt !== comment.createdAt
-        ? '<span class="edited-tag"><img src="/uploads/icons/note.png" alt="수정됨 아이콘"> 수정됨</span>'
-        : ''}
-        </div>
-        <p class="comment-content">${highlightMentions(comment.content)}</p>
-        ${comment.imageUrl ? `<img src="${comment.imageUrl}" class="comment-image" alt="댓글 이미지">` : ''}
-        <div class="comment-actions">
-            <button class="like-btn" data-id="${comment.id}">
-                <img src="${comment.likedByMe ? '/uploads/icons/like2.png' : '/uploads/icons/like.png'}" alt="좋아요" class="likeicon">
-                <span>${comment.likes}</span>
-            </button>
-            ${comment.myComment || comment.admin ? `
-                <button class="edit-btn">수정</button>
-                <button class="delete-btn">삭제</button>
-            ` : ''}
-            ${isLoggedIn ? `<button class="reply-btn">답글달기</button>` : ''}
+        <div class="content-comment-card">
+            <img src="${profileUrl}" class="comment-profile content-comment-avatar" alt="${nickname} 프로필 이미지">
+            <div class="content-comment-body">
+                <div class="comment-header content-comment-header">
+                    <span class="comment-nickname content-comment-nickname">${nickname}</span>
+                    ${isWriter ? `<span class="comment-author-tag content-comment-author-tag">작성자</span>` : ''}
+                    <span class="content-comment-meta">
+                        <time datetime="${comment.createdAt || ''}">${formatDate(comment.createdAt)}</time>
+                        ${edited ? '<span class="edited-tag content-comment-edited">· 수정됨</span>' : ''}
+                    </span>
+                </div>
+                <p class="comment-content content-comment-text">${highlightMentions(comment.content)}</p>
+                ${comment.imageUrl ? `<img src="${comment.imageUrl}" class="comment-image content-comment-image" alt="댓글 이미지">` : ''}
+                <div class="comment-actions content-comment-actions">
+                    ${likeControl}
+                    ${isLoggedIn ? '<button type="button" class="reply-btn content-comment-action">답글</button>' : ''}
+                    ${comment.myComment || comment.admin ? `
+                        <button type="button" class="edit-btn content-comment-action">수정</button>
+                        <button type="button" class="delete-btn content-comment-action">삭제</button>
+                    ` : ''}
+                </div>
+            </div>
         </div>
     `;
+    bindProfileFallback(li.querySelector('.content-comment-avatar'));
     return li;
 }
 
@@ -79,7 +138,7 @@ export function appendComments(comments, container) {
             let replyUl = parentLi.querySelector('.reply-list');
             if (!replyUl) {
                 replyUl = document.createElement('ul');
-                replyUl.className = 'reply-list';
+                replyUl.className = 'reply-list content-comment-replies';
                 parentLi.appendChild(replyUl);
             }
             replyUl.appendChild(createCommentItem(comment, 1, comment.writer?.nickname || ''));
@@ -120,7 +179,7 @@ function renderFlatTree(grouped, comment, depth, parentUl, parentNickname = '') 
     const children = grouped[comment.id] || [];
     if (children.length) {
         const childUl = document.createElement('ul');
-        childUl.className = 'reply-list';
+        childUl.className = 'reply-list content-comment-replies';
         li.appendChild(childUl);
         children.forEach(child =>
             renderFlatTree(grouped, child, (depth > 0 ? 1 : depth + 1), childUl, comment.writer?.nickname || '')
@@ -160,4 +219,3 @@ export function renderCommentList(comments) {
         <div class="comment-item">${highlightMentions(comment.content)}</div>
     `).join('');
 }
-

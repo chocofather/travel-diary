@@ -18,6 +18,10 @@ public class PostCommentDto {
     private String content;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private String writerNickname;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private Long writerUserId;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private String writerProfileImage;
     private Timestamp createdAt;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private Timestamp updatedAt;

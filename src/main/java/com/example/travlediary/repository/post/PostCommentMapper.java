@@ -15,6 +15,20 @@ public interface PostCommentMapper {
     List<PostCommentDto> findByPostId(@Param("postId") Long postId,
                                       @Param("currentUserId") Long currentUserId);
 
+    List<PostCommentDto> findPagedRootComments(@Param("postId") Long postId,
+                                               @Param("currentUserId") Long currentUserId,
+                                               @Param("sort") String sort,
+                                               @Param("limit") int limit,
+                                               @Param("offset") int offset);
+
+    List<PostCommentDto> findRepliesForRootComments(@Param("postId") Long postId,
+                                                    @Param("currentUserId") Long currentUserId,
+                                                    @Param("rootIds") List<Long> rootIds);
+
+    int countRootCommentThreads(@Param("postId") Long postId);
+
+    int countActiveComments(@Param("postId") Long postId);
+
     PostComment findActiveComment(@Param("commentId") Long commentId);
 
     PostComment findActiveCommentForUpdate(@Param("commentId") Long commentId);

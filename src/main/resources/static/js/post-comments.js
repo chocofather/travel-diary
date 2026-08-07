@@ -9,11 +9,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('post-comment-form');
     const contentInput = document.getElementById('post-comment-content');
     const lengthOutput = document.getElementById('post-comment-length');
+    const sortButtons = section.querySelectorAll('[data-comment-sort]');
+    const moreButton = document.getElementById('post-comment-more');
+
+    const pageSize = 5;
+    let currentSort = 'latest';
+    let nextPage = 0;
+    let isLoading = false;
+    let isLastPage = false;
+    let requestGeneration = 0;
 
     const jsonHeaders = {
         'Accept': 'application/json',
         'Content-Type': 'application/json'
     };
+    const defaultProfileImage = '/images/default.png';
+    const unlikedIcon = '/uploads/icons/like.png';
+    const likedIcon = '/uploads/icons/like2.png';
 
     async function requestJson(url, options = {}) {
         const response = await fetch(url, {
@@ -46,12 +58,47 @@ document.addEventListener('DOMContentLoaded', () => {
         message.hidden = !text;
     }
 
+    function parseDate(value) {
+        if (!value) return null;
+        const normalized = typeof value === 'string'
+            ? value.trim().replace(/^(\d{4}-\d{2}-\d{2})\s/, '$1T')
+            : value;
+        const date = new Date(normalized);
+        return Number.isFinite(date.getTime()) ? date : null;
+    }
+
     function formatDate(value) {
-        if (!value) return '';
-        return new Intl.DateTimeFormat('ko-KR', {
-            year: 'numeric', month: '2-digit', day: '2-digit',
-            hour: '2-digit', minute: '2-digit'
-        }).format(new Date(value));
+        const date = parseDate(value);
+        if (!date) return '';
+        const twoDigits = number => String(number).padStart(2, '0');
+        return `${twoDigits(date.getFullYear() % 100)}.${twoDigits(date.getMonth() + 1)}.${twoDigits(date.getDate())} `
+            + `${twoDigits(date.getHours())}:${twoDigits(date.getMinutes())}`;
+    }
+
+    function isEdited(comment) {
+        const createdAt = parseDate(comment.createdAt)?.getTime();
+        const updatedAt = parseDate(comment.updatedAt)?.getTime();
+        return Number.isFinite(createdAt) && Number.isFinite(updatedAt) && updatedAt > createdAt;
+    }
+
+    function profileImageUrl(value) {
+        if (typeof value !== 'string' || !value.trim()) return defaultProfileImage;
+        const trimmed = value.trim();
+        return /^(?:https?:|data:|blob:|\/)/i.test(trimmed) ? trimmed : `/${trimmed}`;
+    }
+
+    function makeProfileImage(comment) {
+        const nickname = comment.writerNickname || '알 수 없는 사용자';
+        const image = document.createElement('img');
+        image.className = 'content-comment-avatar';
+        image.src = profileImageUrl(comment.writerProfileImage);
+        image.alt = `${nickname} 프로필 이미지`;
+        image.addEventListener('error', () => {
+            if (image.dataset.fallbackApplied === 'true') return;
+            image.dataset.fallbackApplied = 'true';
+            image.src = defaultProfileImage;
+        });
+        return image;
     }
 
     function makeButton(label, className) {
@@ -64,19 +111,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function makeLikeControl(comment, loggedIn) {
         const likeCount = document.createElement('span');
-        likeCount.className = 'post-comment-like-count';
+        likeCount.className = 'post-comment-like-count content-comment-like-count';
         likeCount.textContent = String(comment.likeCount ?? 0);
+
+        const icon = document.createElement('img');
+        icon.className = 'content-comment-like-icon';
+        icon.src = comment.likedByMe ? likedIcon : unlikedIcon;
+        icon.alt = '';
+        icon.setAttribute('aria-hidden', 'true');
+
+        const label = document.createElement('span');
+        label.className = 'content-comment-sr-only';
+        label.textContent = '좋아요';
 
         if (!loggedIn) {
             const readonly = document.createElement('span');
-            readonly.className = 'post-comment-like-readonly';
-            readonly.textContent = '좋아요 ';
-            readonly.append(likeCount);
+            readonly.className = 'post-comment-like-readonly content-comment-like-readonly content-comment-like';
+            readonly.append(icon, label, likeCount);
             return readonly;
         }
 
-        const button = makeButton('좋아요 ', 'post-comment-like-button');
-        button.append(likeCount);
+        const button = makeButton('', 'post-comment-like-button content-comment-action content-comment-like');
+        button.append(icon, label, likeCount);
         button.classList.toggle('is-liked', Boolean(comment.likedByMe));
         button.setAttribute('aria-pressed', String(Boolean(comment.likedByMe)));
         button.dataset.likedByMe = String(Boolean(comment.likedByMe));
@@ -86,55 +142,73 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderComment(comment, isReply = false) {
         const item = document.createElement('li');
         item.className = isReply
-            ? 'post-comment-item post-comment-reply'
-            : 'post-comment-item post-comment-root';
+            ? 'post-comment-item post-comment-reply content-comment-item'
+            : 'post-comment-item post-comment-root content-comment-item';
         item.dataset.commentId = comment.id;
+        if (comment.writerUserId != null) item.dataset.userId = String(comment.writerUserId);
 
         const content = document.createElement('p');
-        content.className = 'post-comment-content';
+        content.className = 'post-comment-content content-comment-text';
         if (comment.deleted) {
-            item.classList.add('post-comment-deleted');
+            item.classList.add('post-comment-deleted', 'content-comment-deleted');
+            content.classList.add('content-comment-deleted-text');
             content.textContent = '삭제된 댓글입니다.';
             item.append(content);
             return item;
         }
 
         const meta = document.createElement('div');
-        meta.className = 'post-comment-meta';
+        meta.className = 'post-comment-meta content-comment-header';
         const writer = document.createElement('strong');
-        writer.textContent = comment.writerNickname || '';
+        writer.className = 'content-comment-nickname';
+        writer.textContent = comment.writerNickname || '알 수 없는 사용자';
+        const timeMeta = document.createElement('span');
+        timeMeta.className = 'content-comment-meta';
         const date = document.createElement('time');
         date.className = 'post-comment-date';
-        date.dateTime = comment.updatedAt || comment.createdAt;
-        date.textContent = formatDate(comment.updatedAt || comment.createdAt);
-        meta.append(writer, date);
+        date.dateTime = comment.createdAt || '';
+        date.textContent = formatDate(comment.createdAt);
+        timeMeta.append(date);
+        if (isEdited(comment)) {
+            const edited = document.createElement('span');
+            edited.className = 'content-comment-edited';
+            edited.textContent = '· 수정됨';
+            timeMeta.append(edited);
+        }
+        meta.append(writer, timeMeta);
 
-        content.textContent = comment.content || '';
-        item.append(meta);
         if (comment.replyToCommentId != null) {
-            const replyTarget = document.createElement('p');
-            replyTarget.className = 'post-comment-reply-target';
+            const replyTarget = document.createElement('span');
+            replyTarget.className = 'post-comment-reply-target content-comment-mention';
             replyTarget.textContent = comment.replyToDeleted
                 ? '삭제된 댓글에 대한 답글'
-                : `@${comment.replyToNickname || '알 수 없는 사용자'}에게 답글`;
-            item.append(replyTarget);
+                : `@${comment.replyToNickname || '알 수 없는 사용자'}`;
+            content.append(replyTarget);
         }
-        item.append(content);
+        content.append(document.createTextNode(comment.content || ''));
 
         const loggedIn = typeof isLoggedIn !== 'undefined' && isLoggedIn;
         const actions = document.createElement('div');
-        actions.className = 'post-comment-actions';
+        actions.className = 'post-comment-actions content-comment-actions';
         actions.append(makeLikeControl(comment, loggedIn));
+        if (loggedIn) {
+            actions.append(makeButton('답글', 'post-comment-reply-button content-comment-action'));
+        }
         if (comment.myComment) {
             actions.append(
-                makeButton('수정', 'post-comment-edit'),
-                makeButton('삭제', 'post-comment-delete')
+                makeButton('수정', 'post-comment-edit content-comment-action'),
+                makeButton('삭제', 'post-comment-delete content-comment-action')
             );
         }
-        if (loggedIn) {
-            actions.append(makeButton('답글', 'post-comment-reply-button'));
-        }
-        item.append(actions);
+
+        const body = document.createElement('div');
+        body.className = 'content-comment-body';
+        body.append(meta, content, actions);
+
+        const card = document.createElement('div');
+        card.className = 'content-comment-card';
+        card.append(makeProfileImage(comment), body);
+        item.append(card);
         return item;
     }
 
@@ -145,8 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderCommentTree(comments) {
         const roots = comments
-            .filter(comment => comment.parentCommentId == null)
-            .sort(compareByCreatedAtAndId);
+            .filter(comment => comment.parentCommentId == null);
         const repliesByParent = new Map();
 
         comments
@@ -162,7 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const replies = repliesByParent.get(Number(root.id)) || [];
             if (replies.length > 0) {
                 const replyList = document.createElement('ul');
-                replyList.className = 'post-comment-replies';
+                replyList.className = 'post-comment-replies content-comment-replies';
                 replies.sort(compareByCreatedAtAndId)
                     .forEach(reply => replyList.append(renderComment(reply, true)));
                 rootItem.append(replyList);
@@ -171,24 +244,86 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    async function loadComments() {
+    function updateSortUi() {
+        sortButtons.forEach(button => {
+            const active = button.dataset.commentSort === currentSort;
+            button.classList.toggle('is-active', active);
+            button.setAttribute('aria-pressed', String(active));
+        });
+    }
+
+    function updateMoreButton() {
+        moreButton.hidden = isLastPage || nextPage === 0;
+        moreButton.disabled = isLoading;
+        moreButton.textContent = isLoading ? '불러오는 중…' : '댓글 더보기';
+    }
+
+    function emptyCommentItem() {
+        const empty = document.createElement('li');
+        empty.className = 'post-comment-empty';
+        empty.textContent = '첫 댓글을 작성해 보세요.';
+        return empty;
+    }
+
+    async function loadCommentPage({reset = false} = {}) {
+        if (isLoading && !reset) return;
+        const generation = reset ? ++requestGeneration : requestGeneration;
+        const page = reset ? 0 : nextPage;
+
+        if (reset) {
+            nextPage = 0;
+            isLastPage = false;
+            list.replaceChildren();
+        }
+
+        isLoading = true;
+        updateMoreButton();
         try {
             showMessage();
-            const comments = await requestJson(`/post-comments?postId=${encodeURIComponent(postId)}`);
-            list.replaceChildren();
-            count.textContent = comments.filter(comment => !comment.deleted).length;
-            if (comments.length === 0) {
-                const empty = document.createElement('li');
-                empty.className = 'post-comment-empty';
-                empty.textContent = '첫 댓글을 작성해 보세요.';
-                list.append(empty);
-                return;
+            const data = await requestJson(
+                `/post-comments/page?postId=${encodeURIComponent(postId)}`
+                + `&page=${page}&size=${pageSize}&sort=${encodeURIComponent(currentSort)}`
+            );
+            if (generation !== requestGeneration) return;
+            if (!Array.isArray(data.content)) throw new Error('댓글 응답 형식이 올바르지 않습니다.');
+
+            count.textContent = String(data.totalCommentCount ?? 0);
+            if (reset && data.totalElements === 0) {
+                list.append(emptyCommentItem());
+            } else {
+                renderCommentTree(data.content);
             }
-            renderCommentTree(comments);
+            nextPage = page + 1;
+            isLastPage = Boolean(data.last);
         } catch (error) {
-            showMessage(error.message);
+            if (generation === requestGeneration) {
+                showMessage(error.message);
+                if (reset && !list.children.length) list.append(emptyCommentItem());
+            }
+        } finally {
+            if (generation !== requestGeneration) return;
+            isLoading = false;
+            updateMoreButton();
         }
     }
+
+    async function resetComments() {
+        await loadCommentPage({reset: true});
+    }
+
+    sortButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const nextSort = button.dataset.commentSort;
+            if (!['latest', 'oldest', 'likes'].includes(nextSort) || nextSort === currentSort) return;
+            currentSort = nextSort;
+            updateSortUi();
+            void resetComments();
+        });
+    });
+
+    moreButton?.addEventListener('click', () => {
+        if (!isLastPage) void loadCommentPage();
+    });
 
     form?.addEventListener('submit', async event => {
         event.preventDefault();
@@ -199,7 +334,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             form.reset();
             lengthOutput.textContent = '0';
-            await loadComments();
+            await resetComments();
         } catch (error) {
             showMessage(error.message);
         }
@@ -221,7 +356,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const method = likeButton.dataset.likedByMe === 'true' ? 'DELETE' : 'POST';
                 await requestJson(`/post-comments/${commentId}/likes`, {method});
-                await loadComments();
+                await resetComments();
             } catch (error) {
                 showMessage(error.message);
             } finally {
@@ -268,7 +403,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!window.confirm('댓글을 삭제하시겠습니까?')) return;
             try {
                 await requestJson(`/post-comments/${commentId}`, {method: 'DELETE'});
-                await loadComments();
+                await resetComments();
             } catch (error) {
                 showMessage(error.message);
             }
@@ -296,7 +431,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (event.target.matches('.post-comment-cancel')) {
-            await loadComments();
+            await resetComments();
             return;
         }
 
@@ -307,7 +442,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     method: 'PUT',
                     body: JSON.stringify({content: textarea.value})
                 });
-                await loadComments();
+                await resetComments();
             } catch (error) {
                 showMessage(error.message);
             }
@@ -333,7 +468,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     content: textarea.value
                 })
             });
-            await loadComments();
+            await resetComments();
         } catch (error) {
             showMessage(error.message);
         } finally {
@@ -341,5 +476,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    loadComments();
+    updateSortUi();
+    void resetComments();
 });

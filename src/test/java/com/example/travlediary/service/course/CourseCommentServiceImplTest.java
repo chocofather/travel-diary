@@ -1,6 +1,7 @@
 package com.example.travlediary.service.course;
 
 import com.example.travlediary.dto.CourseCommentDto;
+import com.example.travlediary.dto.PageResult;
 import com.example.travlediary.model.CourseComment;
 import com.example.travlediary.repository.course.CourseCommentMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -376,6 +377,44 @@ class CourseCommentServiceImplTest {
         verify(mapper).findActiveCommentForUpdate(30L);
         verify(mapper).findActiveCommentForUpdate(31L);
         verify(mapper, never()).deleteLike(any(), any());
+    }
+
+    @Test
+    void pagedCommentsKeepServerRootOrderAndAttachReplies() {
+        when(mapper.existsActiveCourse(10L)).thenReturn(true);
+        when(mapper.countRootCommentThreads(10L)).thenReturn(6);
+        when(mapper.countActiveComments(10L)).thenReturn(9);
+        CourseCommentDto firstRoot = dto(10L, false);
+        CourseCommentDto secondRoot = dto(20L, false);
+        CourseCommentDto reply = dto(21L, false);
+        reply.setParentCommentId(20L);
+        when(mapper.findPagedRootComments(10L, 7L, "oldest", 5, 0))
+                .thenReturn(List.of(firstRoot, secondRoot));
+        when(mapper.findRepliesForRootComments(10L, 7L, List.of(10L, 20L)))
+                .thenReturn(List.of(reply));
+
+        PageResult<CourseCommentDto> result = service.getCommentsPage(10L, 7L, 0, 5, "oldest");
+
+        assertThat(result.getContent()).extracting(CourseCommentDto::getId)
+                .containsExactly(10L, 20L, 21L);
+        assertThat(result.getTotalElements()).isEqualTo(6);
+        assertThat(result.getTotalCommentCount()).isEqualTo(9);
+        assertThat(result.isLast()).isFalse();
+    }
+
+    @Test
+    void invalidSortFallsBackToLatestAndExactFiveThreadsAreLastPage() {
+        when(mapper.existsActiveCourse(10L)).thenReturn(true);
+        when(mapper.countRootCommentThreads(10L)).thenReturn(5);
+        when(mapper.countActiveComments(10L)).thenReturn(8);
+        when(mapper.findPagedRootComments(10L, null, "latest", 5, 0)).thenReturn(List.of());
+
+        PageResult<CourseCommentDto> result = service.getCommentsPage(10L, null, 0, 5, "invalid");
+
+        assertThat(result.isLast()).isTrue();
+        assertThat(result.getTotalElements()).isEqualTo(5);
+        assertThat(result.getTotalCommentCount()).isEqualTo(8);
+        verify(mapper).findPagedRootComments(10L, null, "latest", 5, 0);
     }
 
     private CourseComment comment(Long id, Long userId) {

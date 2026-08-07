@@ -89,6 +89,14 @@
           AND deleted = 0
     </select>
 
+    <select id="countRootComments" resultType="int">
+        SELECT COUNT(*)
+        FROM destination_comments
+        WHERE destination_id = #{destinationId}
+          AND parent_comment_id IS NULL
+          AND deleted = 0
+    </select>
+
     <!-- 댓글 이미지 추출 -->
     <select id="selectCommentsWithImages" resultMap="DestinationCommentMap">
         SELECT *
@@ -282,15 +290,17 @@
         WHERE c.destination_id = #{destinationId}
         AND c.parent_comment_id IS NULL
         AND c.deleted = 0
-        <if test="sort == 'recent'">
-            ORDER BY c.created_at DESC
-        </if>
-        <if test="sort == 'likes'">
-            ORDER BY c.likes DESC, c.created_at ASC
-        </if>
-        <if test="sort == 'oldest' or sort == null">
-            ORDER BY c.created_at ASC
-        </if>
+        <choose>
+            <when test="sort == 'oldest'">
+                ORDER BY c.created_at ASC, c.id ASC
+            </when>
+            <when test="sort == 'likes'">
+                ORDER BY c.likes DESC, c.created_at DESC, c.id DESC
+            </when>
+            <otherwise>
+                ORDER BY c.created_at DESC, c.id DESC
+            </otherwise>
+        </choose>
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
@@ -306,8 +316,9 @@
         <foreach item="id" collection="parentIds" open="(" separator="," close=")">
             #{id}
         </foreach>
+        AND c.destination_id = #{destinationId}
         AND c.deleted = 0
-        ORDER BY c.created_at ASC
+        ORDER BY c.created_at ASC, c.id ASC
     </select>
 
     <!-- 여러 여행지 댓글 수 카운트-->

@@ -6,6 +6,7 @@
 <th:block th:fragment="headFragment">
   <link rel="stylesheet" href="/css/post-detail.css" />
   <link rel="stylesheet" href="/css/content-bookmark.css" />
+  <link rel="stylesheet" href="/css/content-comment.css" />
   <script src="/js/post-comments.js" defer></script>
   <script src="/js/content-bookmarks.js" defer></script>
 </th:block>
@@ -60,8 +61,15 @@
       </div>
     </article>
 
-    <section id="post-comments" class="post-comments" th:attr="data-post-id=${post.id}">
-      <h2>댓글 <span id="post-comment-count">0</span></h2>
+    <section id="post-comments" class="post-comments content-comments" th:attr="data-post-id=${post.id}">
+      <div class="content-comment-toolbar">
+        <h2 class="content-comment-heading">댓글 <span id="post-comment-count">0</span></h2>
+        <div class="content-comment-sort" role="group" aria-label="댓글 정렬">
+          <button type="button" class="is-active" data-comment-sort="latest" aria-pressed="true">최신순</button>
+          <button type="button" data-comment-sort="oldest" aria-pressed="false">오래된순</button>
+          <button type="button" data-comment-sort="likes" aria-pressed="false">좋아요순</button>
+        </div>
+      </div>
 
       <form id="post-comment-form" class="post-comment-form" th:if="${#authorization.expression('isAuthenticated()')}">
         <label for="post-comment-content" class="sr-only">댓글 내용</label>
@@ -81,7 +89,10 @@
       </p>
 
       <p id="post-comment-message" class="post-comment-message" role="alert" hidden></p>
-      <ul id="post-comment-list" class="post-comment-list" aria-live="polite"></ul>
+      <ul id="post-comment-list" class="post-comment-list content-comment-list" aria-live="polite"></ul>
+      <div class="content-comment-more-row">
+        <button id="post-comment-more" type="button" class="content-comment-more" hidden>댓글 더보기</button>
+      </div>
     </section>
   </main>
 </th:block>

@@ -279,13 +279,23 @@ public class DestinationCommentService {
     }
 
     public PageResult<CommentDto> getCommentsPaged(Long destinationId, Long userId, int page, int size, String sort) {
-        int offset = page * size;
+        int safePage = Math.max(page, 0);
+        int safeSize = size <= 0 ? 5 : Math.min(size, 50);
+        String safeSort = normalizePageSort(sort);
+        int totalThreads = destinationCommentMapper.countRootComments(destinationId);
+        int totalCommentCount = destinationCommentMapper.countByDestinationId(destinationId);
+        long offset = (long) safePage * safeSize;
+
+        if (totalThreads == 0 || offset >= totalThreads) {
+            return new PageResult<>(List.of(), totalThreads, safePage, safeSize, totalCommentCount);
+        }
 
         // 1. 부모 댓글만 페이징으로 가져오기
-        List<DestinationComment> parentComments = destinationCommentMapper.findPagedParentComments(destinationId, offset, size, sort);
+        List<DestinationComment> parentComments = destinationCommentMapper.findPagedParentComments(
+                destinationId, (int) offset, safeSize, safeSort);
 
         if (parentComments.isEmpty()) {
-            return new PageResult<>(List.of(), 0, page, size);
+            return new PageResult<>(List.of(), totalThreads, safePage, safeSize, totalCommentCount);
         }
 
         // 2. 부모 ID 목록 뽑아서
@@ -307,10 +317,16 @@ public class DestinationCommentService {
                 .map(c -> enrichComment(c, userId))
                 .toList();
 
-        // 6. 전체 부모 댓글 수
-        int total = destinationCommentMapper.countByDestinationId(destinationId);
+        return new PageResult<>(dtos, totalThreads, safePage, safeSize, totalCommentCount);
+    }
 
-        return new PageResult<>(dtos, total, page, size);
+    private String normalizePageSort(String sort) {
+        return switch (sort == null ? "" : sort) {
+            case "oldest" -> "oldest";
+            case "likes" -> "likes";
+            case "recent", "latest" -> "latest";
+            default -> "latest";
+        };
     }
 
 

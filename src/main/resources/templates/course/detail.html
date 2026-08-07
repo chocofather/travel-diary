@@ -6,6 +6,7 @@
 <th:block th:fragment="headFragment">
   <link rel="stylesheet" href="/css/course-detail.css" />
   <link rel="stylesheet" href="/css/content-bookmark.css" />
+  <link rel="stylesheet" href="/css/content-comment.css" />
   <script src="/js/course-comments.js" defer></script>
   <script src="/js/content-bookmarks.js" defer></script>
 </th:block>
@@ -95,8 +96,15 @@
       </form>
     </div>
 
-    <section id="course-comments" class="course-comments" th:attr="data-course-id=${course.id}">
-      <h2>댓글 <span id="course-comment-count">0</span></h2>
+    <section id="course-comments" class="course-comments content-comments" th:attr="data-course-id=${course.id}">
+      <div class="content-comment-toolbar">
+        <h2 class="content-comment-heading">댓글 <span id="course-comment-count">0</span></h2>
+        <div class="content-comment-sort" role="group" aria-label="댓글 정렬">
+          <button type="button" class="is-active" data-comment-sort="latest" aria-pressed="true">최신순</button>
+          <button type="button" data-comment-sort="oldest" aria-pressed="false">오래된순</button>
+          <button type="button" data-comment-sort="likes" aria-pressed="false">좋아요순</button>
+        </div>
+      </div>
 
       <form id="course-comment-form" class="course-comment-form"
             th:if="${#authorization.expression('isAuthenticated()')}">
@@ -116,7 +124,10 @@
       </p>
 
       <p id="course-comment-message" class="course-comment-message" role="alert" hidden></p>
-      <ul id="course-comment-list" class="course-comment-list" aria-live="polite"></ul>
+      <ul id="course-comment-list" class="course-comment-list content-comment-list" aria-live="polite"></ul>
+      <div class="content-comment-more-row">
+        <button id="course-comment-more" type="button" class="content-comment-more" hidden>댓글 더보기</button>
+      </div>
     </section>
   </main>
 </th:block>

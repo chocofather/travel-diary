@@ -2,6 +2,7 @@ package com.example.travlediary.controller.course;
 
 import com.example.travlediary.dto.CourseCommentDto;
 import com.example.travlediary.dto.CourseCommentRequest;
+import com.example.travlediary.dto.PageResult;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.course.CourseCommentService;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +35,18 @@ public class CourseCommentController {
     ) {
         Long currentUserId = userDetails == null ? null : userDetails.getId();
         return courseCommentService.getComments(courseId, currentUserId);
+    }
+
+    @GetMapping("/page")
+    public PageResult<CourseCommentDto> getCommentsPage(
+            @RequestParam Long courseId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "5") int size,
+            @RequestParam(defaultValue = "latest") String sort,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        Long currentUserId = userDetails == null ? null : userDetails.getId();
+        return courseCommentService.getCommentsPage(courseId, currentUserId, page, size, sort);
     }
 
     @PostMapping

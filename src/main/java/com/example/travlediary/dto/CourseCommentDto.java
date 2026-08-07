@@ -14,6 +14,8 @@ public class CourseCommentDto {
     private boolean replyToDeleted;
     private String content;
     private String writerNickname;
+    private Long writerUserId;
+    private String writerProfileImage;
     private Timestamp createdAt;
     private Timestamp updatedAt;
     private boolean deleted;

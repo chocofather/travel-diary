@@ -27,6 +27,22 @@ class CommentLikeMapperContractTest {
     }
 
     @Test
+    void postAndCourseCommentDtosExposeWriterProfileData() {
+        PostCommentDto postComment = new PostCommentDto();
+        postComment.setWriterUserId(7L);
+        postComment.setWriterProfileImage("/uploads/profiles/post.png");
+
+        CourseCommentDto courseComment = new CourseCommentDto();
+        courseComment.setWriterUserId(8L);
+        courseComment.setWriterProfileImage("/uploads/profiles/course.png");
+
+        assertThat(postComment.getWriterUserId()).isEqualTo(7L);
+        assertThat(postComment.getWriterProfileImage()).isEqualTo("/uploads/profiles/post.png");
+        assertThat(courseComment.getWriterUserId()).isEqualTo(8L);
+        assertThat(courseComment.getWriterProfileImage()).isEqualTo("/uploads/profiles/course.png");
+    }
+
+    @Test
     void postCommentSqlUsesLikeRowsWithoutDuplicatingCommentRows() throws IOException {
         String xml = resource("/mapper/PostCommentMapper.xml");
 
@@ -43,12 +59,17 @@ class CommentLikeMapperContractTest {
                 .contains("DELETE FROM post_comment_likes")
                 .contains("AS replyToNickname")
                 .contains("AS replyToDeleted")
+                .contains("pc.user_id END AS writerUserId")
+                .contains("u.profile_image END AS writerProfileImage")
                 .contains("reply.parent_comment_id = pc.id")
                 .contains("parent.parent_comment_id IS NULL")
                 .contains("ORDER BY")
                 .doesNotContain("JOIN post_comment_likes")
                 .doesNotContain("SET likes");
-        assertThat(occurrences(xml, "<include refid=\"commentDtoColumns\"/>")).isEqualTo(2);
+        assertSelectUsesSingleDtoProjection(xml, "findByPostId", "pc");
+        assertSelectUsesSingleDtoProjection(xml, "findPagedRootComments", "pc");
+        assertSelectUsesSingleDtoProjection(xml, "findRepliesForRootComments", "pc");
+        assertSelectUsesSingleDtoProjection(xml, "findDtoById", "pc");
     }
 
     @Test
@@ -68,12 +89,18 @@ class CommentLikeMapperContractTest {
                 .contains("DELETE FROM course_comment_likes")
                 .contains("AS replyToNickname")
                 .contains("AS replyToDeleted")
+                .contains("cc.user_id END AS writerUserId")
+                .contains("u.profile_image END AS writerProfileImage")
+                .contains("cc.create_at AS createdAt")
                 .contains("reply.parent_comment_id = cc.id")
                 .contains("parent.parent_comment_id IS NULL")
                 .contains("ORDER BY")
                 .doesNotContain("JOIN course_comment_likes")
                 .doesNotContain("SET likes");
-        assertThat(occurrences(xml, "<include refid=\"commentDtoColumns\"/>")).isEqualTo(2);
+        assertSelectUsesSingleDtoProjection(xml, "findByCourseId", "cc");
+        assertSelectUsesSingleDtoProjection(xml, "findPagedRootComments", "cc");
+        assertSelectUsesSingleDtoProjection(xml, "findRepliesForRootComments", "cc");
+        assertSelectUsesSingleDtoProjection(xml, "findDtoById", "cc");
     }
 
     @Test
@@ -101,5 +128,15 @@ class CommentLikeMapperContractTest {
 
     private int occurrences(String value, String target) {
         return (value.length() - value.replace(target, "").length()) / target.length();
+    }
+
+    private void assertSelectUsesSingleDtoProjection(String xml, String selectId, String alias) {
+        int start = xml.indexOf("<select id=\"" + selectId + "\"");
+        int end = xml.indexOf("</select>", start);
+        assertThat(start).as("select %s", selectId).isNotNegative();
+        assertThat(end).as("select %s closing tag", selectId).isGreaterThan(start);
+        String select = xml.substring(start, end);
+        assertThat(occurrences(select, "<include refid=\"commentDtoColumns\"/>")).isEqualTo(1);
+        assertThat(occurrences(select, "JOIN users u ON u.id = " + alias + ".user_id")).isEqualTo(1);
     }
 }

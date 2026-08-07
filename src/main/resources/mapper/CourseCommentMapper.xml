@@ -22,6 +22,8 @@
         END AS replyToDeleted,
         CASE WHEN cc.deleted = 1 THEN NULL ELSE cc.content END AS content,
         CASE WHEN cc.deleted = 1 THEN NULL ELSE u.nickname END AS writerNickname,
+        CASE WHEN cc.deleted = 1 THEN NULL ELSE cc.user_id END AS writerUserId,
+        CASE WHEN cc.deleted = 1 THEN NULL ELSE u.profile_image END AS writerProfileImage,
         cc.create_at AS createdAt,
         CASE WHEN cc.deleted = 1 THEN NULL ELSE cc.updated_at END AS updatedAt,
         cc.deleted,
@@ -109,6 +111,83 @@
             CASE WHEN cc.parent_comment_id IS NULL THEN 0 ELSE 1 END ASC,
             cc.create_at ASC,
             cc.id ASC
+    </select>
+
+    <select id="findPagedRootComments" resultType="com.example.travlediary.dto.CourseCommentDto">
+        SELECT
+            <include refid="commentDtoColumns"/>
+        FROM course_comments cc
+        JOIN users u ON u.id = cc.user_id
+        LEFT JOIN course_comments reply_target
+          ON reply_target.id = cc.reply_to_comment_id
+         AND reply_target.course_id = cc.course_id
+        LEFT JOIN users reply_target_user ON reply_target_user.id = reply_target.user_id
+        WHERE cc.course_id = #{courseId}
+          AND cc.parent_comment_id IS NULL
+          AND (
+              cc.deleted = 0
+              OR EXISTS (
+                  SELECT 1
+                  FROM course_comments active_reply
+                  WHERE active_reply.parent_comment_id = cc.id
+                    AND active_reply.course_id = cc.course_id
+                    AND active_reply.deleted = 0
+              )
+          )
+        <choose>
+            <when test="sort == 'oldest'">
+                ORDER BY cc.create_at ASC, cc.id ASC
+            </when>
+            <when test="sort == 'likes'">
+                ORDER BY likeCount DESC, cc.create_at DESC, cc.id DESC
+            </when>
+            <otherwise>
+                ORDER BY cc.create_at DESC, cc.id DESC
+            </otherwise>
+        </choose>
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="findRepliesForRootComments" resultType="com.example.travlediary.dto.CourseCommentDto">
+        SELECT
+            <include refid="commentDtoColumns"/>
+        FROM course_comments cc
+        JOIN users u ON u.id = cc.user_id
+        LEFT JOIN course_comments reply_target
+          ON reply_target.id = cc.reply_to_comment_id
+         AND reply_target.course_id = cc.course_id
+        LEFT JOIN users reply_target_user ON reply_target_user.id = reply_target.user_id
+        WHERE cc.course_id = #{courseId}
+          AND cc.parent_comment_id IN
+          <foreach item="rootId" collection="rootIds" open="(" separator="," close=")">
+              #{rootId}
+          </foreach>
+          AND cc.deleted = 0
+        ORDER BY cc.create_at ASC, cc.id ASC
+    </select>
+
+    <select id="countRootCommentThreads" resultType="int">
+        SELECT COUNT(*)
+        FROM course_comments cc
+        WHERE cc.course_id = #{courseId}
+          AND cc.parent_comment_id IS NULL
+          AND (
+              cc.deleted = 0
+              OR EXISTS (
+                  SELECT 1
+                  FROM course_comments active_reply
+                  WHERE active_reply.parent_comment_id = cc.id
+                    AND active_reply.course_id = cc.course_id
+                    AND active_reply.deleted = 0
+              )
+          )
+    </select>
+
+    <select id="countActiveComments" resultType="int">
+        SELECT COUNT(*)
+        FROM course_comments
+        WHERE course_id = #{courseId}
+          AND deleted = 0
     </select>
 
     <select id="findActiveComment" resultType="com.example.travlediary.model.CourseComment">

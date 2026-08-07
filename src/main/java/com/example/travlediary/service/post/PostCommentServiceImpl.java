@@ -1,6 +1,7 @@
 package com.example.travlediary.service.post;
 
 import com.example.travlediary.dto.PostCommentDto;
+import com.example.travlediary.dto.PageResult;
 import com.example.travlediary.model.PostComment;
 import com.example.travlediary.repository.post.PostCommentMapper;
 import lombok.RequiredArgsConstructor;
@@ -9,7 +10,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 @Service
@@ -17,6 +21,8 @@ import java.util.Objects;
 public class PostCommentServiceImpl implements PostCommentService {
 
     private static final int MAX_CONTENT_LENGTH = 2_000;
+    private static final int DEFAULT_PAGE_SIZE = 5;
+    private static final int MAX_PAGE_SIZE = 50;
 
     private final PostCommentMapper postCommentMapper;
 
@@ -25,6 +31,33 @@ public class PostCommentServiceImpl implements PostCommentService {
     public List<PostCommentDto> getComments(Long postId, Long currentUserId) {
         requireActivePost(postId);
         return postCommentMapper.findByPostId(postId, currentUserId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResult<PostCommentDto> getCommentsPage(Long postId, Long currentUserId,
+                                                      int page, int size, String sort) {
+        requireActivePost(postId);
+        int safePage = Math.max(page, 0);
+        int safeSize = size <= 0 ? DEFAULT_PAGE_SIZE : Math.min(size, MAX_PAGE_SIZE);
+        String safeSort = normalizeSort(sort);
+        int totalThreads = postCommentMapper.countRootCommentThreads(postId);
+        int totalCommentCount = postCommentMapper.countActiveComments(postId);
+        long offset = (long) safePage * safeSize;
+
+        if (totalThreads == 0 || offset >= totalThreads) {
+            return new PageResult<>(List.of(), totalThreads, safePage, safeSize, totalCommentCount);
+        }
+
+        List<PostCommentDto> roots = postCommentMapper.findPagedRootComments(
+                postId, currentUserId, safeSort, safeSize, (int) offset);
+        List<Long> rootIds = roots.stream().map(PostCommentDto::getId).toList();
+        List<PostCommentDto> replies = rootIds.isEmpty()
+                ? List.of()
+                : postCommentMapper.findRepliesForRootComments(postId, currentUserId, rootIds);
+
+        return new PageResult<>(mergeRootThreads(roots, replies), totalThreads,
+                safePage, safeSize, totalCommentCount);
     }
 
     @Override
@@ -145,6 +178,30 @@ public class PostCommentServiceImpl implements PostCommentService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "댓글은 2,000자 이하로 입력해 주세요.");
         }
         return trimmed;
+    }
+
+    private String normalizeSort(String sort) {
+        return switch (sort == null ? "" : sort) {
+            case "oldest" -> "oldest";
+            case "likes" -> "likes";
+            default -> "latest";
+        };
+    }
+
+    private List<PostCommentDto> mergeRootThreads(List<PostCommentDto> roots,
+                                                  List<PostCommentDto> replies) {
+        Map<Long, List<PostCommentDto>> repliesByRoot = new HashMap<>();
+        for (PostCommentDto reply : replies) {
+            repliesByRoot.computeIfAbsent(reply.getParentCommentId(), ignored -> new ArrayList<>())
+                    .add(reply);
+        }
+
+        List<PostCommentDto> merged = new ArrayList<>(roots.size() + replies.size());
+        for (PostCommentDto root : roots) {
+            merged.add(root);
+            merged.addAll(repliesByRoot.getOrDefault(root.getId(), List.of()));
+        }
+        return merged;
     }
 
     private PostCommentDto requireLatestDto(Long commentId, Long currentUserId) {

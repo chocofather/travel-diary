@@ -41,10 +41,10 @@ export function postComment(destinationId, formData) {
  * @param {string|number} destinationId
  * @param {number} page - 0부터 시작하는 페이지 번호
  * @param {number} size - 한 페이지에 불러올 댓글 수
- * @param {string} [sort='oldest'] - 정렬 방식 ('oldest', 'newest', 'likes')
+ * @param {string} [sort='latest'] - 정렬 방식 ('latest', 'oldest', 'likes')
  * @returns {Promise<Object>} Page<CommentDto> 형태 응답
  */
-export function fetchCommentsPage(destinationId, page = 0, size = 10, sort = 'oldest') {
+export function fetchCommentsPage(destinationId, page = 0, size = 5, sort = 'latest') {
     const url = `/comments/list/page?destinationId=${destinationId}&page=${page}&size=${size}&sort=${sort}&_=${Date.now()}`;
     return fetch(url, {
         headers: { 'Accept': 'application/json' },
@@ -119,6 +119,5 @@ export function fetchThumbnails(destinationId) {
     return fetch(`/comments/images?destinationId=${destinationId}`)
         .then(res => handleJson(res, '썸네일 로드'));
 }
-
 
 

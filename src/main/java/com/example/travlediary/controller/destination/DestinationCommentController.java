@@ -112,8 +112,8 @@ public class DestinationCommentController {
     public ResponseEntity<PageResult<CommentDto>> getCommentsPaged(
             @RequestParam Long destinationId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "oldest") String sort,
+            @RequestParam(defaultValue = "5") int size,
+            @RequestParam(defaultValue = "latest") String sort,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         Long userId = (userDetails != null) ? userDetails.getId() : null;

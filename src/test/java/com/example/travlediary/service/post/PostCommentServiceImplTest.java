@@ -2,6 +2,7 @@ package com.example.travlediary.service.post;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.example.travlediary.dto.PostCommentDto;
+import com.example.travlediary.dto.PageResult;
 import com.example.travlediary.model.PostComment;
 import com.example.travlediary.repository.post.PostCommentMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -12,9 +13,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -264,6 +268,45 @@ class PostCommentServiceImplTest {
         verify(postCommentMapper).findActiveCommentForUpdate(30L);
         verify(postCommentMapper).findActiveCommentForUpdate(31L);
         verify(postCommentMapper, never()).deleteLike(any(), any());
+    }
+
+    @Test
+    void pagedCommentsUseRootCountAndMergeAllRepliesWithoutChangingRootOrder() {
+        when(postCommentMapper.existsActivePost(10L)).thenReturn(true);
+        when(postCommentMapper.countRootCommentThreads(10L)).thenReturn(6);
+        when(postCommentMapper.countActiveComments(10L)).thenReturn(9);
+        PostCommentDto firstRoot = dto(30L, false);
+        PostCommentDto secondRoot = dto(20L, false);
+        PostCommentDto firstReply = dto(31L, false);
+        firstReply.setParentCommentId(30L);
+        PostCommentDto secondReply = dto(21L, false);
+        secondReply.setParentCommentId(20L);
+        when(postCommentMapper.findPagedRootComments(10L, null, "likes", 5, 0))
+                .thenReturn(List.of(firstRoot, secondRoot));
+        when(postCommentMapper.findRepliesForRootComments(10L, null, List.of(30L, 20L)))
+                .thenReturn(List.of(secondReply, firstReply));
+
+        PageResult<PostCommentDto> result = service.getCommentsPage(10L, null, 0, 5, "likes");
+
+        assertThat(result.getContent()).extracting(PostCommentDto::getId)
+                .containsExactly(30L, 31L, 20L, 21L);
+        assertThat(result.getTotalElements()).isEqualTo(6);
+        assertThat(result.getTotalCommentCount()).isEqualTo(9);
+        assertThat(result.isLast()).isFalse();
+    }
+
+    @Test
+    void outOfRangePagePreservesCountsAndSkipsContentQueries() {
+        when(postCommentMapper.existsActivePost(10L)).thenReturn(true);
+        when(postCommentMapper.countRootCommentThreads(10L)).thenReturn(6);
+        when(postCommentMapper.countActiveComments(10L)).thenReturn(12);
+
+        PageResult<PostCommentDto> result = service.getCommentsPage(10L, null, 2, 5, "latest");
+
+        assertThat(result.getContent()).isEmpty();
+        assertThat(result.getTotalElements()).isEqualTo(6);
+        assertThat(result.getTotalCommentCount()).isEqualTo(12);
+        verify(postCommentMapper, never()).findPagedRootComments(any(), any(), any(), anyInt(), anyInt());
     }
 
     @Test

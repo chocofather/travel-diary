@@ -2,6 +2,7 @@ package com.example.travlediary.controller.post;
 
 import com.example.travlediary.dto.PostCommentDto;
 import com.example.travlediary.dto.PostCommentRequest;
+import com.example.travlediary.dto.PageResult;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.post.PostCommentService;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +35,18 @@ public class PostCommentController {
     ) {
         Long currentUserId = userDetails == null ? null : userDetails.getId();
         return postCommentService.getComments(postId, currentUserId);
+    }
+
+    @GetMapping("/page")
+    public PageResult<PostCommentDto> getCommentsPage(
+            @RequestParam Long postId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "5") int size,
+            @RequestParam(defaultValue = "latest") String sort,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        Long currentUserId = userDetails == null ? null : userDetails.getId();
+        return postCommentService.getCommentsPage(postId, currentUserId, page, size, sort);
     }
 
     @PostMapping

@@ -4,6 +4,7 @@ import com.example.travlediary.config.CustomLoginSuccessHandler;
 import com.example.travlediary.config.CustomLogoutSuccessHandler;
 import com.example.travlediary.config.SecurityConfig;
 import com.example.travlediary.dto.PostCommentDto;
+import com.example.travlediary.dto.PageResult;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.post.PostCommentService;
@@ -51,6 +52,21 @@ class PostCommentSecurityTest {
 
         mockMvc.perform(get("/post-comments").param("postId", "10"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void guestCanGetPagedComments() throws Exception {
+        when(service.getCommentsPage(10L, null, 0, 5, "latest"))
+                .thenReturn(new PageResult<>(List.of(), 0, 0, 5, 0));
+
+        mockMvc.perform(get("/post-comments/page")
+                        .param("postId", "10")
+                        .param("page", "0")
+                        .param("size", "5")
+                        .param("sort", "latest"))
+                .andExpect(status().isOk());
+
+        verify(service).getCommentsPage(10L, null, 0, 5, "latest");
     }
 
     @Test
