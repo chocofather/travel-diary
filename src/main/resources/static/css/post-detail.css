@@ -46,6 +46,22 @@
     margin: 0;
 }
 
+.post-meta .content-writer-link {
+    color: #397a63;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.post-meta .content-writer-link:hover {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.post-meta .content-writer-link:focus-visible {
+    outline: 2px solid rgba(57, 122, 99, 0.28);
+    outline-offset: 2px;
+}
+
 .post-content {
     min-height: 240px;
     padding: 32px 0;

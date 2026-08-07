@@ -31,7 +31,9 @@
           </button>
         </div>
         <dl class="post-meta">
-          <div><dt>작성자</dt><dd th:text="${post.nickname}">닉네임</dd></div>
+          <div><dt>작성자</dt><dd><a class="content-writer-link"
+                                       th:href="@{/users/{id}(id=${post.userId})}"
+                                       th:text="${post.nickname}">닉네임</a></dd></div>
           <div><dt>작성일</dt><dd th:text="${#dates.format(post.createdAt, 'yyyy-MM-dd HH:mm')}">작성일</dd></div>
           <div><dt>수정일</dt><dd th:text="${#dates.format(post.updatedAt, 'yyyy-MM-dd HH:mm')}">수정일</dd></div>
           <div><dt>조회수</dt><dd th:text="${post.views}">0</dd></div>

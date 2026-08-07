@@ -30,7 +30,9 @@
           </button>
         </div>
         <dl class="course-meta">
-          <div><dt>작성자</dt><dd th:text="${course.nickname}">작성자</dd></div>
+          <div><dt>작성자</dt><dd><a class="content-writer-link"
+                                       th:href="@{/users/{id}(id=${course.userId})}"
+                                       th:text="${course.nickname}">작성자</a></dd></div>
           <div><dt>작성일</dt><dd th:text="${#dates.format(course.createdAt, 'yyyy-MM-dd HH:mm')}">작성일</dd></div>
           <div><dt>수정일</dt><dd th:text="${#dates.format(course.updatedAt, 'yyyy-MM-dd HH:mm')}">수정일</dd></div>
           <div><dt>조회수</dt><dd th:text="${course.views}">0</dd></div>

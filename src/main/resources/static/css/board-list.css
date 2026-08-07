@@ -195,6 +195,22 @@
     color: var(--board-accent-dark);
 }
 
+.board-profile-link {
+    color: inherit;
+    text-decoration: none;
+}
+
+.board-profile-link:hover {
+    color: var(--board-accent-dark);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.board-profile-link:focus-visible {
+    outline: 2px solid rgba(13, 148, 136, 0.28);
+    outline-offset: 2px;
+}
+
 .board-list {
     width: 100%;
 }

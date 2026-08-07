@@ -5,9 +5,10 @@
 
 <mapper namespace="com.example.travlediary.repository.board.BoardMapper">
 
-    <sql id="unifiedBoardSelect">
+    <sql id="postBoardSelectBase">
         SELECT
             p.id,
+            p.user_id AS userId,
             'post' AS boardType,
             p.post_type AS postType,
             p.title,
@@ -22,12 +23,12 @@
             ) AS commentCount
         FROM user_posts p
         JOIN users u ON p.user_id = u.id
-        WHERE p.deleted = 0
+    </sql>
 
-        UNION ALL
-
+    <sql id="courseBoardSelectBase">
         SELECT
             c.id,
+            c.user_id AS userId,
             'course' AS boardType,
             NULL AS postType,
             c.title,
@@ -42,7 +43,31 @@
             ) AS commentCount
         FROM courses c
         JOIN users u ON c.user_id = u.id
+    </sql>
+
+    <sql id="unifiedBoardSelect">
+        <include refid="postBoardSelectBase"/>
+        WHERE p.deleted = 0
+
+        UNION ALL
+
+        <include refid="courseBoardSelectBase"/>
         WHERE c.deleted = 0
+    </sql>
+
+    <sql id="unifiedBoardSelectByUserId">
+        <include refid="postBoardSelectBase"/>
+        WHERE p.user_id = #{userId}
+          AND p.post_type IN ('QUESTION', 'TIP')
+          AND p.deleted = 0
+          AND p.deleted_at IS NULL
+
+        UNION ALL
+
+        <include refid="courseBoardSelectBase"/>
+        WHERE c.user_id = #{userId}
+          AND c.deleted = 0
+          AND c.deleted_at IS NULL
     </sql>
 
     <sql id="boardFilters">
@@ -58,6 +83,7 @@
     <select id="findBoardList" resultType="com.example.travlediary.dto.BoardListDto">
         SELECT
             board.id,
+            board.userId,
             board.boardType,
             board.postType,
             board.title,
@@ -109,6 +135,35 @@
         SELECT COUNT(*)
         FROM (
             <include refid="unifiedBoardSelect"/>
+        ) board
+        WHERE 1 = 1
+        <include refid="boardFilters"/>
+    </select>
+
+    <select id="findBoardListByUserId" resultType="com.example.travlediary.dto.BoardListDto">
+        SELECT
+            board.id,
+            board.userId,
+            board.boardType,
+            board.postType,
+            board.title,
+            board.commentCount,
+            board.nickname,
+            board.createdAt,
+            board.views
+        FROM (
+            <include refid="unifiedBoardSelectByUserId"/>
+        ) board
+        WHERE 1 = 1
+        <include refid="boardFilters"/>
+        ORDER BY board.createdAt DESC, board.boardType ASC, board.id DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <select id="countBoardByUserId" resultType="int">
+        SELECT COUNT(*)
+        FROM (
+            <include refid="unifiedBoardSelectByUserId"/>
         ) board
         WHERE 1 = 1
         <include refid="boardFilters"/>

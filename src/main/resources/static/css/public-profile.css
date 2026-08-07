@@ -1,0 +1,385 @@
+.public-profile-page {
+    --profile-accent: #0f766e;
+    --profile-accent-dark: #115e59;
+    --profile-accent-soft: #f0fdfa;
+    --profile-border: #e2e8f0;
+    --profile-text: #172033;
+    --profile-muted: #64748b;
+    box-sizing: border-box;
+    width: min(960px, 100%);
+    margin: 42px auto 72px;
+    padding: 0 20px;
+    color: var(--profile-text);
+}
+
+.public-profile-page *,
+.public-profile-page *::before,
+.public-profile-page *::after {
+    box-sizing: border-box;
+}
+
+.public-profile-header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    min-width: 0;
+    padding: 26px 30px;
+    border: 1px solid var(--profile-border);
+    border-radius: 22px;
+    background: linear-gradient(135deg, #fff 15%, #f0fdfa 100%);
+    box-shadow: 0 14px 40px rgba(15, 23, 42, 0.06);
+}
+
+.public-profile-avatar {
+    display: block;
+    flex: 0 0 82px;
+    width: 82px;
+    height: 82px;
+    border: 3px solid #fff;
+    border-radius: 50%;
+    background: #edf4f1;
+    box-shadow: 0 8px 22px rgba(15, 118, 110, 0.14);
+    object-fit: cover;
+}
+
+.public-profile-identity {
+    min-width: 0;
+}
+
+.public-profile-identity > span,
+.public-profile-content-heading span {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--profile-accent);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+}
+
+.public-profile-identity h1 {
+    margin: 0;
+    overflow-wrap: anywhere;
+    font-size: clamp(26px, 4vw, 36px);
+    letter-spacing: -0.035em;
+    line-height: 1.25;
+}
+
+.public-profile-content {
+    margin-top: 24px;
+    padding: 32px 36px 30px;
+    border: 1px solid var(--profile-border);
+    border-radius: 22px;
+    background: #fff;
+    box-shadow: 0 14px 40px rgba(15, 23, 42, 0.05);
+}
+
+.public-profile-content-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.public-profile-content-heading h2 {
+    margin: 0;
+    font-size: clamp(23px, 3vw, 30px);
+    letter-spacing: -0.035em;
+}
+
+.public-profile-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 24px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--profile-border);
+}
+
+.public-profile-filters a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 8px 15px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    color: var(--profile-muted);
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.public-profile-filters a:hover {
+    border-color: #cbd5e1;
+    background: #f8fafc;
+    color: var(--profile-text);
+}
+
+.public-profile-filters a.is-active {
+    border-color: #99f6e4;
+    background: var(--profile-accent-soft);
+    color: var(--profile-accent-dark);
+}
+
+.public-profile-filters a:focus-visible,
+.public-profile-pagination a:focus-visible,
+.public-profile-item h3 a:focus-visible {
+    outline: 3px solid rgba(13, 148, 136, 0.25);
+    outline-offset: 2px;
+}
+
+.public-profile-list {
+    width: 100%;
+}
+
+.public-profile-item {
+    min-width: 0;
+    padding: 20px 6px;
+    border-bottom: 1px solid #edf1f5;
+}
+
+.public-profile-item--course {
+    background: linear-gradient(90deg, rgba(240, 253, 250, 0.48), transparent 58%);
+}
+
+.public-profile-item-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.public-profile-type {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    min-height: 28px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 750;
+}
+
+.public-profile-type--tip {
+    background: #fff7ed;
+    color: #c2410c;
+}
+
+.public-profile-type--course {
+    background: var(--profile-accent-soft);
+    color: var(--profile-accent-dark);
+}
+
+.public-profile-item h3 {
+    min-width: 0;
+    margin: 0;
+    font-size: 17px;
+    line-height: 1.45;
+}
+
+.public-profile-item h3 a {
+    display: block;
+    overflow: hidden;
+    color: var(--profile-text);
+    text-decoration: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.public-profile-item h3 a:hover {
+    color: var(--profile-accent-dark);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.public-profile-item-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 5px;
+    margin-top: 9px;
+    color: var(--profile-muted);
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+}
+
+.public-profile-item-meta strong {
+    color: inherit;
+    font-weight: 700;
+}
+
+.public-profile-empty {
+    margin: 0;
+    padding: 56px 16px;
+    color: var(--profile-muted);
+    text-align: center;
+}
+
+.public-profile-pagination {
+    display: grid;
+    grid-template-columns: minmax(76px, auto) auto minmax(76px, auto);
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin-top: 26px;
+}
+
+.public-profile-pagination > a,
+.public-profile-pagination > .is-disabled {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 8px 15px;
+    border: 1px solid #cdded6;
+    border-radius: 999px;
+    color: var(--profile-accent-dark);
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.public-profile-pagination > a:hover {
+    border-color: #8fb5a5;
+    background: #f2f7f5;
+}
+
+.public-profile-pagination > .is-disabled {
+    color: #9ca3af;
+    cursor: default;
+    opacity: 0.65;
+}
+
+.public-profile-page-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--profile-muted);
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.public-profile-page-status strong {
+    color: var(--profile-text);
+}
+
+@media (max-width: 768px) {
+    .public-profile-page {
+        margin-top: 28px;
+        padding: 0 16px;
+    }
+
+    .public-profile-header {
+        padding: 22px 24px;
+    }
+
+    .public-profile-content {
+        padding: 26px 24px;
+    }
+}
+
+@media (max-width: 480px) {
+    .public-profile-page {
+        margin: 20px auto 48px;
+        padding: 0 12px;
+    }
+
+    .public-profile-header {
+        gap: 14px;
+        padding: 18px;
+        border-radius: 18px;
+    }
+
+    .public-profile-avatar {
+        flex-basis: 72px;
+        width: 72px;
+        height: 72px;
+    }
+
+    .public-profile-content {
+        margin-top: 16px;
+        padding: 22px 16px;
+        border-radius: 18px;
+    }
+
+    .public-profile-filters {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .public-profile-filters a {
+        width: 100%;
+        padding-right: 8px;
+        padding-left: 8px;
+    }
+
+    .public-profile-item {
+        padding: 18px 2px;
+    }
+
+    .public-profile-item-main {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 7px;
+    }
+
+    .public-profile-item h3 {
+        width: 100%;
+    }
+
+    .public-profile-item h3 a {
+        overflow: visible;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    .public-profile-pagination {
+        grid-template-columns: minmax(64px, 1fr) auto minmax(64px, 1fr);
+        gap: 8px;
+    }
+
+    .public-profile-pagination > a,
+    .public-profile-pagination > .is-disabled {
+        min-width: 0;
+        padding-right: 10px;
+        padding-left: 10px;
+    }
+}
+
+@media (max-width: 320px) {
+    .public-profile-page {
+        padding: 0 8px;
+    }
+
+    .public-profile-header {
+        align-items: flex-start;
+        flex-direction: column;
+        padding: 16px;
+    }
+
+    .public-profile-content {
+        padding: 20px 12px;
+    }
+
+    .public-profile-filters {
+        grid-template-columns: 1fr;
+    }
+
+    .public-profile-item-meta {
+        gap: 4px;
+        font-size: 12px;
+    }
+
+    .public-profile-pagination {
+        gap: 5px;
+    }
+
+    .public-profile-pagination > a,
+    .public-profile-pagination > .is-disabled {
+        padding-right: 7px;
+        padding-left: 7px;
+        font-size: 13px;
+    }
+}

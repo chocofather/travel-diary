@@ -25,7 +25,15 @@
       <div class="board-meta">
         <span class="board-meta-item board-nickname">
           <span class="board-meta-label">작성자</span>
-          <span class="board-meta-value" th:text="${item.nickname}" th:title="${item.nickname}"></span>
+          <a th:if="${item.userId != null}"
+             class="board-meta-value board-profile-link"
+             th:href="@{/users/{id}(id=${item.userId})}"
+             th:text="${item.nickname}"
+             th:title="${item.nickname}"></a>
+          <span th:unless="${item.userId != null}"
+                class="board-meta-value"
+                th:text="${item.nickname}"
+                th:title="${item.nickname}"></span>
         </span>
         <span class="board-meta-item board-date">
           <span class="board-meta-value"

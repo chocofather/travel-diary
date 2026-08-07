@@ -1,5 +1,6 @@
 package com.example.travlediary.repository.user;
 
+import com.example.travlediary.dto.PublicUserProfileDto;
 import com.example.travlediary.model.User;
 import com.example.travlediary.model.UserRole;
 import org.apache.ibatis.annotations.Mapper;
@@ -14,6 +15,8 @@ public interface UserMapper {
     void insertUser(User user);
     User findByUsername(@Param("username") String username);
     User findById(Long id);
+    PublicUserProfileDto findPublicProfileById(@Param("id") Long id);
+    String findProfileImageByUsername(@Param("username") String username);
 
     /* ---------- 관리자 역할 변경 ---------- */
     void updateUserRole(@Param("id") Long id,      // ★ Integer → Long

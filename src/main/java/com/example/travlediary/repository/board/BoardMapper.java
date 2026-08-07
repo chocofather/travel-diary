@@ -21,4 +21,18 @@ public interface BoardMapper {
             @Param("boardType") String boardType,
             @Param("postType") String postType
     );
+
+    List<BoardListDto> findBoardListByUserId(
+            @Param("userId") Long userId,
+            @Param("boardType") String boardType,
+            @Param("postType") String postType,
+            @Param("offset") long offset,
+            @Param("limit") int limit
+    );
+
+    int countBoardByUserId(
+            @Param("userId") Long userId,
+            @Param("boardType") String boardType,
+            @Param("postType") String postType
+    );
 }

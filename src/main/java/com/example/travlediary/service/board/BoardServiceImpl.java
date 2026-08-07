@@ -42,6 +42,28 @@ public class BoardServiceImpl implements BoardService {
         );
     }
 
+    @Override
+    public List<BoardListDto> getBoardListByUserId(Long userId, String type, int page, int size) {
+        int safePage = Math.max(page, 1);
+        int safeSize = clampSize(size);
+        long offset = (long) (safePage - 1) * safeSize;
+        ProfileFilter filter = profileFilter(type);
+
+        return boardMapper.findBoardListByUserId(
+                userId,
+                filter.boardType(),
+                filter.postType(),
+                offset,
+                safeSize
+        );
+    }
+
+    @Override
+    public int getBoardCountByUserId(Long userId, String type) {
+        ProfileFilter filter = profileFilter(type);
+        return boardMapper.countBoardByUserId(userId, filter.boardType(), filter.postType());
+    }
+
     private int clampSize(int size) {
         return Math.min(Math.max(size, 1), 100);
     }
@@ -68,5 +90,17 @@ public class BoardServiceImpl implements BoardService {
         }
         String normalized = sort.toLowerCase(Locale.ROOT);
         return SORT_TYPES.contains(normalized) ? normalized : "latest";
+    }
+
+    private ProfileFilter profileFilter(String type) {
+        return switch (type == null ? "" : type.toLowerCase(Locale.ROOT)) {
+            case "question" -> new ProfileFilter("post", "QUESTION");
+            case "tip" -> new ProfileFilter("post", "TIP");
+            case "course" -> new ProfileFilter("course", null);
+            default -> new ProfileFilter(null, null);
+        };
+    }
+
+    private record ProfileFilter(String boardType, String postType) {
     }
 }

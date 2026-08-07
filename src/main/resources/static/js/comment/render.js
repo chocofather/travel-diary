@@ -39,6 +39,15 @@ function bindProfileFallback(image) {
     });
 }
 
+function makePublicProfileLink(userId, child, className) {
+    if (userId == null) return child;
+    const link = document.createElement('a');
+    link.className = className;
+    link.href = `/users/${encodeURIComponent(String(userId))}`;
+    link.append(child);
+    return link;
+}
+
 /**
  * @닉네임 하이라이트(파란색, 클릭) 변환 함수
  */
@@ -93,32 +102,48 @@ export function createCommentItem(comment, depth = 0, parentNickname = '') {
                 <span class="content-comment-like-count">${comment.likes ?? 0}</span>
             </span>`;
 
-    li.innerHTML = `
-        <div class="content-comment-card">
-            <img src="${profileUrl}" class="comment-profile content-comment-avatar" alt="${nickname} 프로필 이미지">
-            <div class="content-comment-body">
-                <div class="comment-header content-comment-header">
-                    <span class="comment-nickname content-comment-nickname">${nickname}</span>
-                    ${isWriter ? `<span class="comment-author-tag content-comment-author-tag">작성자</span>` : ''}
-                    <span class="content-comment-meta">
-                        <time datetime="${comment.createdAt || ''}">${formatDate(comment.createdAt)}</time>
-                        ${edited ? '<span class="edited-tag content-comment-edited">· 수정됨</span>' : ''}
-                    </span>
-                </div>
-                <p class="comment-content content-comment-text">${highlightMentions(comment.content)}</p>
-                ${comment.imageUrl ? `<img src="${comment.imageUrl}" class="comment-image content-comment-image" alt="댓글 이미지">` : ''}
-                <div class="comment-actions content-comment-actions">
-                    ${likeControl}
-                    ${isLoggedIn ? '<button type="button" class="reply-btn content-comment-action">답글</button>' : ''}
-                    ${comment.myComment || comment.admin ? `
-                        <button type="button" class="edit-btn content-comment-action">수정</button>
-                        <button type="button" class="delete-btn content-comment-action">삭제</button>
-                    ` : ''}
-                </div>
-            </div>
+    const profileImage = document.createElement('img');
+    profileImage.src = profileUrl;
+    profileImage.className = 'comment-profile content-comment-avatar';
+    profileImage.alt = `${nickname} 프로필 이미지`;
+    bindProfileFallback(profileImage);
+
+    const nicknameElement = document.createElement('span');
+    nicknameElement.className = 'comment-nickname content-comment-nickname';
+    nicknameElement.textContent = nickname;
+
+    const body = document.createElement('div');
+    body.className = 'content-comment-body';
+    body.innerHTML = `
+        <div class="comment-header content-comment-header">
+            ${isWriter ? `<span class="comment-author-tag content-comment-author-tag">작성자</span>` : ''}
+            <span class="content-comment-meta">
+                <time datetime="${comment.createdAt || ''}">${formatDate(comment.createdAt)}</time>
+                ${edited ? '<span class="edited-tag content-comment-edited">· 수정됨</span>' : ''}
+            </span>
+        </div>
+        <p class="comment-content content-comment-text">${highlightMentions(comment.content)}</p>
+        ${comment.imageUrl ? `<img src="${comment.imageUrl}" class="comment-image content-comment-image" alt="댓글 이미지">` : ''}
+        <div class="comment-actions content-comment-actions">
+            ${likeControl}
+            ${isLoggedIn ? '<button type="button" class="reply-btn content-comment-action">답글</button>' : ''}
+            ${comment.myComment || comment.admin ? `
+                <button type="button" class="edit-btn content-comment-action">수정</button>
+                <button type="button" class="delete-btn content-comment-action">삭제</button>
+            ` : ''}
         </div>
     `;
-    bindProfileFallback(li.querySelector('.content-comment-avatar'));
+    body.querySelector('.content-comment-header').prepend(
+        makePublicProfileLink(comment.writer?.id, nicknameElement, 'content-comment-writer-link')
+    );
+
+    const card = document.createElement('div');
+    card.className = 'content-comment-card';
+    card.append(
+        makePublicProfileLink(comment.writer?.id, profileImage, 'content-comment-profile-link'),
+        body
+    );
+    li.append(card);
     return li;
 }
 

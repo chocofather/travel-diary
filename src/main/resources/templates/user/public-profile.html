@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
+
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/public-profile.css" />
+</th:block>
+
+<th:block th:fragment="body">
+  <main class="public-profile-page">
+    <section class="public-profile-header" aria-labelledby="public-profile-name">
+      <img class="public-profile-avatar"
+           th:src="${profile.profileImage}"
+           th:alt="|${profile.nickname} 프로필 이미지|"
+           onerror="this.onerror=null;this.src='/images/default.png';" />
+      <div class="public-profile-identity">
+        <span>TRAVELER PROFILE</span>
+        <h1 id="public-profile-name" th:text="${profile.nickname}">닉네임</h1>
+      </div>
+    </section>
+
+    <section class="public-profile-content" aria-labelledby="public-profile-content-title">
+      <div class="public-profile-content-heading">
+        <div>
+          <span>SHARED JOURNEYS</span>
+          <h2 id="public-profile-content-title">작성한 콘텐츠</h2>
+        </div>
+      </div>
+
+      <nav class="public-profile-filters" aria-label="작성 콘텐츠 유형">
+        <a th:href="@{/users/{id}(id=${profile.id},type='all',size=${pageSize})}"
+           th:classappend="${type == 'all'} ? ' is-active'"
+           th:attr="aria-current=${type == 'all'} ? 'page'">전체</a>
+        <a th:href="@{/users/{id}(id=${profile.id},type='question',size=${pageSize})}"
+           th:classappend="${type == 'question'} ? ' is-active'"
+           th:attr="aria-current=${type == 'question'} ? 'page'">여행 질문</a>
+        <a th:href="@{/users/{id}(id=${profile.id},type='tip',size=${pageSize})}"
+           th:classappend="${type == 'tip'} ? ' is-active'"
+           th:attr="aria-current=${type == 'tip'} ? 'page'">여행 팁</a>
+        <a th:href="@{/users/{id}(id=${profile.id},type='course',size=${pageSize})}"
+           th:classappend="${type == 'course'} ? ' is-active'"
+           th:attr="aria-current=${type == 'course'} ? 'page'">여행 코스</a>
+      </nav>
+
+      <div class="public-profile-list">
+        <article th:each="item : ${contents}"
+                 class="public-profile-item"
+                 th:classappend="${item.boardType == 'course'} ? ' public-profile-item--course'">
+          <div class="public-profile-item-main">
+            <span class="public-profile-type"
+                  th:classappend="${item.boardType == 'course' ? ' public-profile-type--course' : (item.postType == 'TIP' ? ' public-profile-type--tip' : ' public-profile-type--question')}"
+                  th:text="${item.boardType == 'course' ? '여행 코스' : (item.postType == 'TIP' ? '여행 팁' : '여행 질문')}">여행 질문</span>
+            <h3>
+              <a th:if="${item.boardType == 'post'}"
+                 th:href="@{/post/{id}(id=${item.id})}"
+                 th:text="${item.title}">게시글 제목</a>
+              <a th:if="${item.boardType == 'course'}"
+                 th:href="@{/course/{id}(id=${item.id})}"
+                 th:text="${item.title}">코스 제목</a>
+            </h3>
+          </div>
+          <div class="public-profile-item-meta">
+            <time th:datetime="${item.createdAt}"
+                  th:text="${item.createdAt != null and #strings.length(item.createdAt) >= 16
+                      ? #strings.replace(#strings.substring(item.createdAt, 2, 16), '-', '.')
+                      : item.createdAt}">26.08.07 20:30</time>
+            <span aria-hidden="true">·</span>
+            <span>조회 <strong th:text="${item.views}">0</strong></span>
+            <span aria-hidden="true">·</span>
+            <span>댓글 <strong th:text="${item.commentCount}">0</strong></span>
+          </div>
+        </article>
+
+        <p th:if="${#lists.isEmpty(contents)}" class="public-profile-empty">
+          작성한 콘텐츠가 없습니다.
+        </p>
+      </div>
+
+      <nav class="public-profile-pagination" th:if="${totalPages > 0}" aria-label="콘텐츠 페이지">
+        <a th:if="${currentPage > 1}"
+           th:href="@{/users/{id}(id=${profile.id},type=${type},page=${currentPage - 1},size=${pageSize})}">이전</a>
+        <span th:unless="${currentPage > 1}" class="is-disabled" aria-disabled="true">이전</span>
+        <span class="public-profile-page-status">
+          <strong th:text="${currentPage}">1</strong>
+          <span aria-hidden="true">/</span>
+          <span th:text="${totalPages}">1</span>
+        </span>
+        <a th:if="${currentPage < totalPages}"
+           th:href="@{/users/{id}(id=${profile.id},type=${type},page=${currentPage + 1},size=${pageSize})}">다음</a>
+        <span th:unless="${currentPage < totalPages}" class="is-disabled" aria-disabled="true">다음</span>
+      </nav>
+    </section>
+  </main>
+</th:block>
+</html>

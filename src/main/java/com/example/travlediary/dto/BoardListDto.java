@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class BoardListDto {
     private Long id;
+    private Long userId;
     private String boardType;      // "post" or "course"
     private String postType;       // (post만) "tip" "question"
     private String title;

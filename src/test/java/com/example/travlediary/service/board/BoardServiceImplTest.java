@@ -49,4 +49,22 @@ class BoardServiceImplTest {
 
         verify(boardMapper).countBoard(null, "QUESTION");
     }
+
+    @Test
+    void profileQuestionFilterUsesDedicatedAuthorQueryAndPagination() {
+        service.getBoardListByUserId(7L, "QUESTION", 2, 10);
+
+        verify(boardMapper).findBoardListByUserId(7L, "post", "QUESTION", 10L, 10);
+    }
+
+    @Test
+    void profileFiltersMapTipCourseAndInvalidTypeSafely() {
+        service.getBoardCountByUserId(7L, "tip");
+        service.getBoardCountByUserId(7L, "course");
+        service.getBoardCountByUserId(7L, "unsupported");
+
+        verify(boardMapper).countBoardByUserId(7L, "post", "TIP");
+        verify(boardMapper).countBoardByUserId(7L, "course", null);
+        verify(boardMapper).countBoardByUserId(7L, null, null);
+    }
 }

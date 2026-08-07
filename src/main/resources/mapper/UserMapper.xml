@@ -123,4 +123,21 @@
         WHERE id = #{id}
     </select>
 
+    <select id="findPublicProfileById" resultType="com.example.travlediary.dto.PublicUserProfileDto">
+        SELECT
+            id,
+            nickname,
+            profile_image AS profileImage
+        FROM users
+        WHERE id = #{id}
+          AND status = 'ACTIVE'
+          AND deleted_at IS NULL
+    </select>
+
+    <select id="findProfileImageByUsername" resultType="string">
+        SELECT profile_image
+        FROM users
+        WHERE username = #{username}
+    </select>
+
 </mapper>

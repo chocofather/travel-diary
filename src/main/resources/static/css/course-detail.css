@@ -49,6 +49,22 @@
     margin: 0;
 }
 
+.course-meta .content-writer-link {
+    color: #397a63;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.course-meta .content-writer-link:hover {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.course-meta .content-writer-link:focus-visible {
+    outline: 2px solid rgba(57, 122, 99, 0.28);
+    outline-offset: 2px;
+}
+
 .course-introduction {
     margin-top: 30px;
     padding-top: 26px;

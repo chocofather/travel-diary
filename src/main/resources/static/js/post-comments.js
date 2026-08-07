@@ -101,6 +101,15 @@ document.addEventListener('DOMContentLoaded', () => {
         return image;
     }
 
+    function makeProfileLink(comment, child, className) {
+        if (comment.writerUserId == null) return child;
+        const link = document.createElement('a');
+        link.className = className;
+        link.href = `/users/${encodeURIComponent(String(comment.writerUserId))}`;
+        link.append(child);
+        return link;
+    }
+
     function makeButton(label, className) {
         const button = document.createElement('button');
         button.type = 'button';
@@ -175,7 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
             edited.textContent = '· 수정됨';
             timeMeta.append(edited);
         }
-        meta.append(writer, timeMeta);
+        meta.append(makeProfileLink(comment, writer, 'content-comment-writer-link'), timeMeta);
 
         if (comment.replyToCommentId != null) {
             const replyTarget = document.createElement('span');
@@ -207,7 +216,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const card = document.createElement('div');
         card.className = 'content-comment-card';
-        card.append(makeProfileImage(comment), body);
+        card.append(
+            makeProfileLink(comment, makeProfileImage(comment), 'content-comment-profile-link'),
+            body
+        );
         item.append(card);
         return item;
     }

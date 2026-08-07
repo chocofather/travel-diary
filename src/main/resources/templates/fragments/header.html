@@ -32,7 +32,8 @@
           로그인
         </button>
         <img th:if="${isLoggedIn}" id="profile-img"
-             th:src="${user.profileImage != null} ? ${user.profileImage} : '/images/default-profile.png'"
+             th:src="${currentUserProfileImage}"
+             onerror="this.onerror=null;this.src='/images/default.png';"
              alt="내 프로필" />
         <th:block th:if="${isLoggedIn}">
           <a th:href="@{'/logout?redirect=' + ${currentUri}}" class="btn-logout">로그아웃</a>
