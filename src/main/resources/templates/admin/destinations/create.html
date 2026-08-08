@@ -5,6 +5,7 @@
 
 <th:block th:fragment="headFragment">
   <link rel="stylesheet" href="/css/destination-create.css">
+  <script src="/js/admin-destination-category-select.js" defer></script>
 </th:block>
 <th:block th:fragment="body">
 
@@ -22,54 +23,126 @@
 <form th:action="@{/admin/destinations}" method="post" enctype="multipart/form-data"
       th:object="${destinationForm}" class="admin-destination-form admin-form-card is-wide">
 
-  <!-- 위도 / 경도 -->
-  <div>
-    <label>위도</label>
-    <input type="text" th:field="*{latitude}" placeholder="위도">
-  </div>
-  <div>
-    <label>경도</label>
-    <input type="text" th:field="*{longitude}" placeholder="경도">
-  </div>
+  <section class="admin-destination-section">
+    <div class="admin-destination-section-header">
+      <div>
+        <h2>기본 정보</h2>
+        <p>여행지 유형과 계절, 화면에 표시할 이름과 설명을 입력합니다.</p>
+      </div>
+    </div>
 
-  <!-- 지역 선택 -->
-  <div>
-    <label>여행지 지역 선택</label>
-    <select id="continent"></select>
-    <select id="country"></select>
-    <select id="city"></select>
-    <select id="district"></select>
-    <input type="hidden" id="regionIdHidden" name="regionId" th:field="*{regionId}">
-  </div>
+    <div class="admin-form-grid is-compact">
+      <!-- 타입 선택 -->
+      <div class="admin-form-field">
+        <label>타입</label>
+        <select th:field="*{type}" required>
+          <option value="" disabled selected>-- 선택 --</option>
+          <option value="ATTRACTION">관광지</option>
+          <option value="ACCOMMODATION">숙소</option>
+          <option value="RESTAURANTS">음식점</option>
+          <option value="CAFE">카페</option>
+          <option value="SHOP">쇼핑</option>
+          <option value="ACTIVITY">체험/액티비티</option>
+        </select>
+      </div>
 
-  <!-- 시즌 선택 -->
-  <div>
-    <label>시즌</label>
-    <select th:field="*{season}">
-      <option value="SPRING">봄</option>
-      <option value="SUMMER">여름</option>
-      <option value="FALL">가을</option>
-      <option value="WINTER">겨울</option>
-      <option value="ALL_SEASONS">사계절</option>
-    </select>
-  </div>
+      <!-- 시즌 선택 -->
+      <div class="admin-form-field">
+        <label>시즌</label>
+        <select th:field="*{season}">
+          <option value="SPRING">봄</option>
+          <option value="SUMMER">여름</option>
+          <option value="FALL">가을</option>
+          <option value="WINTER">겨울</option>
+          <option value="ALL_SEASONS">사계절</option>
+        </select>
+      </div>
+    </div>
 
-  <!-- 타입 선택 -->
-  <div>
-    <label>타입</label>
-    <select th:field="*{type}" required>
-      <option value="" disabled selected>-- 선택 --</option>
-      <option value="ATTRACTION">관광지</option>
-      <option value="ACCOMMODATION">숙소</option>
-      <option value="RESTAURANTS">음식점</option>
-      <option value="CAFE">카페</option>
-      <option value="SHOP">쇼핑</option>
-      <option value="ACTIVITY">체험/액티비티</option>
-    </select>
-  </div>
+    <!-- 다국어 입력 -->
+    <div class="admin-translation-grid">
+      <section class="admin-language-card">
+        <h3>한국어</h3>
+        <input type="hidden" th:field="*{translations[0].languageCode}" value="ko"/>
+        <label>여행지명
+          <input type="text" th:field="*{translations[0].name}" placeholder="이름 (한국어)">
+        </label>
+        <label>간단 설명
+          <textarea th:field="*{translations[0].shortDescription}" placeholder="간단 설명 (한국어)"></textarea>
+        </label>
+        <label>상세 설명
+          <textarea class="is-description" th:field="*{translations[0].description}" placeholder="설명 (한국어)"></textarea>
+        </label>
+      </section>
+
+      <section class="admin-language-card">
+        <h3>English</h3>
+        <input type="hidden" th:field="*{translations[1].languageCode}" value="en"/>
+        <label>Destination name
+          <input type="text" th:field="*{translations[1].name}" placeholder="Name (English)">
+        </label>
+        <label>Short description
+          <textarea th:field="*{translations[1].shortDescription}" placeholder="Short Description (English)"></textarea>
+        </label>
+        <label>Description
+          <textarea class="is-description" th:field="*{translations[1].description}" placeholder="Description (English)"></textarea>
+        </label>
+      </section>
+    </div>
+  </section>
+
+  <section class="admin-destination-section">
+    <div class="admin-destination-section-header">
+      <div>
+        <h2>위치 정보</h2>
+        <p>지역을 단계별로 선택하고 여행지의 좌표를 입력합니다.</p>
+      </div>
+    </div>
+
+    <!-- 지역 선택 -->
+    <div class="admin-region-field">
+      <span class="admin-form-label">여행지 지역 선택</span>
+      <div class="admin-region-grid">
+        <label>대륙 / 국내
+          <select id="continent"></select>
+        </label>
+        <label>국가 / 시·도
+          <select id="country"></select>
+        </label>
+        <label>도시 / 시·군·구
+          <select id="city"></select>
+        </label>
+        <label>하위 지역
+          <select id="district"></select>
+        </label>
+      </div>
+      <input type="hidden" id="regionIdHidden" name="regionId" th:field="*{regionId}">
+    </div>
+
+    <!-- 위도 / 경도 -->
+    <div class="admin-form-grid is-compact">
+      <div class="admin-form-field">
+        <label>위도</label>
+        <input type="text" th:field="*{latitude}" placeholder="위도">
+      </div>
+      <div class="admin-form-field">
+        <label>경도</label>
+        <input type="text" th:field="*{longitude}" placeholder="경도">
+      </div>
+    </div>
+  </section>
+
+  <section class="admin-destination-section admin-type-detail-section">
+    <div class="admin-destination-section-header">
+      <div>
+        <h2>유형별 상세 정보</h2>
+        <p>기본 정보에서 선택한 여행지 유형에 맞는 항목만 표시됩니다.</p>
+      </div>
+    </div>
 
   <div id="attraction-fields" class="type-fields" style="display: none;">
     <h4>관광지 상세 정보</h4>
+    <div class="admin-type-fields-grid">
     <div>
       <label>휴관일
         <input type="text" th:field="*{attractionInfo.closedDays}" placeholder="예: 매주 월요일, 명절">
@@ -100,15 +173,15 @@
         <input type="text" th:field="*{attractionInfo.homepageUrl}" placeholder="예: http://...">
       </label>
     </div>
-    <div>
+    <div class="admin-type-field-wide">
       <label>관람 안내/기타
         <textarea th:field="*{attractionInfo.guide}" placeholder="기타 안내사항"></textarea>
       </label>
     </div>
     <!-- 👇 관광지 편의시설 (amenities) -->
-    <div>
+    <div class="admin-type-field-wide admin-amenity-field">
       <h4>관광지 편의시설</h4>
-      <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+      <div class="admin-amenity-options" style="display: flex; flex-wrap: wrap; gap: 12px;">
         <div th:each="amenity : ${attractionAmenities}">
           <label>
             <input type="checkbox" th:field="*{attractionAmenityIds}" th:value="${amenity.amenityId}">
@@ -117,10 +190,12 @@
         </div>
       </div>
     </div>
+    </div>
   </div>
 
   <div id="accommodation-fields" class="type-fields" style="display: none;">
     <h4>숙소 상세 정보</h4>
+    <div class="admin-type-fields-grid">
     <div>
       <label>체크인 시간
         <input type="text" th:field="*{accommodationInfo.checkinTime}" placeholder="예: 15:00">
@@ -174,15 +249,15 @@
         <input type="text" th:field="*{accommodationInfo.homepageUrl}" placeholder="예: http://...">
       </label>
     </div>
-    <div>
+    <div class="admin-type-field-wide">
       <label>기타 안내
         <textarea th:field="*{accommodationInfo.etc}" placeholder="기타 안내사항"></textarea>
       </label>
     </div>
     <!-- 👇 숙소 편의시설 (amenities) -->
-    <div>
+    <div class="admin-type-field-wide admin-amenity-field">
       <h4>숙소 편의시설</h4>
-      <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+      <div class="admin-amenity-options" style="display: flex; flex-wrap: wrap; gap: 12px;">
         <div th:each="amenity : ${accommodationAmenities}">
           <label>
             <input type="checkbox" th:field="*{accommodationAmenityIds}" th:value="${amenity.amenityId}">
@@ -191,10 +266,12 @@
         </div>
       </div>
     </div>
+    </div>
   </div>
 
   <div id="restaurant-fields" class="type-fields" style="display: none;">
     <h4>음식점/카페 상세 정보</h4>
+    <div class="admin-type-fields-grid">
     <div>
       <label>대표메뉴
         <input type="text" th:field="*{restaurantInfo.mainMenu}" placeholder="예: 돈까스, 커피 등">
@@ -260,15 +337,15 @@
         <input type="text" th:field="*{restaurantInfo.homepageUrl}" placeholder="예: http://...">
       </label>
     </div>
-    <div>
+    <div class="admin-type-field-wide">
       <label>기타 안내사항
         <textarea th:field="*{restaurantInfo.etc}" placeholder="기타 안내"></textarea>
       </label>
     </div>
     <!-- 👇 음식점/카페 편의시설 (amenities) -->
-    <div>
+    <div class="admin-type-field-wide admin-amenity-field">
       <h4>음식점/카페 편의시설</h4>
-      <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+      <div class="admin-amenity-options" style="display: flex; flex-wrap: wrap; gap: 12px;">
         <div th:each="amenity : ${restaurantAmenities}">
           <label>
             <input type="checkbox" th:field="*{restaurantAmenityIds}" th:value="${amenity.amenityId}">
@@ -277,10 +354,12 @@
         </div>
       </div>
     </div>
+    </div>
   </div>
 
   <div id="activity-fields" class="type-fields" style="display: none;">
     <h4>체험/액티비티 상세 정보</h4>
+    <div class="admin-type-fields-grid">
     <div>
       <label>운영 시간
         <input type="text" th:field="*{activityInfo.openingHours}" placeholder="예: 09:00~18:00">
@@ -326,15 +405,15 @@
         <input type="text" th:field="*{activityInfo.homepageUrl}" placeholder="예: http://...">
       </label>
     </div>
-    <div>
+    <div class="admin-type-field-wide">
       <label>이용 안내/기타
         <textarea th:field="*{activityInfo.guide}" placeholder="기타 안내사항"></textarea>
       </label>
     </div>
     <!-- Amenity (체험/액티비티용) -->
-    <div>
+    <div class="admin-type-field-wide admin-amenity-field">
       <h4>체험/액티비티 편의시설</h4>
-      <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+      <div class="admin-amenity-options" style="display: flex; flex-wrap: wrap; gap: 12px;">
         <div th:each="amenity : ${activityAmenities}">
           <label>
             <input type="checkbox" th:field="*{activityAmenityIds}" th:value="${amenity.amenityId}">
@@ -343,10 +422,12 @@
         </div>
       </div>
     </div>
+    </div>
   </div>
 
   <div id="shop-fields" class="type-fields" style="display: none;">
     <h4>쇼핑 상세 정보</h4>
+    <div class="admin-type-fields-grid">
     <div>
       <label>휴점일
         <input type="text" th:field="*{shopInfo.closedDays}" placeholder="예: 매주 월요일, 명절">
@@ -377,15 +458,15 @@
         <input type="text" th:field="*{shopInfo.homepageUrl}" placeholder="예: http://...">
       </label>
     </div>
-    <div>
+    <div class="admin-type-field-wide">
       <label>기타 안내사항
         <textarea th:field="*{shopInfo.guide}" placeholder="기타 안내"></textarea>
       </label>
     </div>
     <!-- Amenity (쇼핑용) -->
-    <div>
+    <div class="admin-type-field-wide admin-amenity-field">
       <h4>쇼핑 편의시설</h4>
-      <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+      <div class="admin-amenity-options" style="display: flex; flex-wrap: wrap; gap: 12px;">
         <div th:each="amenity : ${shopAmenities}">
           <label>
             <input type="checkbox" th:field="*{shopAmenityIds}" th:value="${amenity.amenityId}">
@@ -394,46 +475,54 @@
         </div>
       </div>
     </div>
-  </div>
-
-
-
-  <!-- 다국어 입력 -->
-  <h4>다국어 정보</h4>
-  <div>
-    <input type="hidden" th:field="*{translations[0].languageCode}" value="ko"/>
-    <input type="text" th:field="*{translations[0].name}" placeholder="이름 (한국어)">
-    <textarea th:field="*{translations[0].shortDescription}" placeholder="간단 설명 (한국어)"></textarea>
-    <textarea th:field="*{translations[0].description}" placeholder="설명 (한국어)"></textarea>
-  </div>
-
-  <div>
-    <input type="hidden" th:field="*{translations[1].languageCode}" value="en"/>
-    <input type="text" th:field="*{translations[1].name}" placeholder="Name (English)">
-    <textarea th:field="*{translations[1].shortDescription}" placeholder="Short Description (English)"></textarea>
-    <textarea th:field="*{translations[1].description}" placeholder="Description (English)"></textarea>
-  </div>
-
-  <!-- 카테고리 -->
-  <div>
-    <h4>카테고리</h4>
-    <div style="display: flex; flex-wrap: wrap; gap: 12px;">
-      <div th:each="cat : ${categories}" style="width: 120px;">
-        <label>
-          <input type="checkbox" th:field="*{categoryIds}" th:value="${cat.id}" />
-          <span th:text="${cat.name}"></span>
-        </label>
-      </div>
     </div>
   </div>
+  </section>
+
+  <!-- 카테고리 -->
+  <section class="admin-category-select" data-category-select>
+    <div class="admin-category-select-heading">
+      <h4>카테고리</h4>
+      <span>복수 선택 가능</span>
+    </div>
+
+    <div class="admin-category-selected" aria-live="polite">
+      <span class="admin-category-selected-label">선택된 카테고리</span>
+      <div class="admin-category-chips" data-category-chips></div>
+      <span class="admin-category-empty" data-category-empty>선택된 카테고리가 없습니다.</span>
+    </div>
+
+    <label class="admin-category-search">
+      <span>카테고리 검색</span>
+      <input type="search" placeholder="카테고리 검색" autocomplete="off" data-category-search />
+    </label>
+
+    <div class="admin-category-options" role="group" aria-label="여행지 카테고리" data-category-options>
+      <label class="admin-category-option" th:each="cat : ${categories}" data-category-option>
+        <input type="checkbox" th:field="*{categoryIds}" th:value="${cat.id}" data-category-checkbox />
+        <span th:text="${cat.name}" data-category-name></span>
+      </label>
+    </div>
+  </section>
 
   <!-- 이미지 업로드 -->
-  <div>
-    <label>이미지 업로드</label>
-    <input type="file" name="images" multiple>
-    <label><input type="checkbox" th:field="*{main}"/> 메인 이미지</label>
-    <label><input type="checkbox" th:field="*{slide}"/> 슬라이드 이미지</label>
-  </div>
+  <section class="admin-destination-section">
+    <div class="admin-destination-section-header">
+      <div>
+        <h2>이미지 추가</h2>
+        <p>여행지에 사용할 이미지를 선택하고 노출 방식을 지정합니다.</p>
+      </div>
+    </div>
+
+    <div class="admin-image-upload-field">
+      <label>이미지 업로드</label>
+      <input type="file" name="images" multiple>
+      <div class="admin-image-options">
+        <label><input type="checkbox" th:field="*{main}"/> 메인 이미지</label>
+        <label><input type="checkbox" th:field="*{slide}"/> 슬라이드 이미지</label>
+      </div>
+    </div>
+  </section>
 
   <div class="admin-form-actions">
     <a th:href="@{/admin/destinations}" class="admin-btn">취소</a>

@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org"
       th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'amenities')}">
-<th:block th:fragment="headFragment"></th:block>
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/admin-compact-lists.css">
+</th:block>
 <th:block th:fragment="body">
-  <section class="admin-page-section">
+  <section class="admin-page-section admin-amenity-list-page">
     <header class="admin-page-header">
       <div class="admin-page-heading">
         <h1 class="admin-page-title">편의시설 관리</h1>
@@ -16,7 +18,7 @@
 
     <div class="admin-card is-table-card">
       <div class="admin-table-wrapper">
-        <table class="admin-table">
+        <table class="admin-table admin-amenity-table">
           <thead>
           <tr>
             <th>ID</th>
