@@ -1,0 +1,339 @@
+.admin-page {
+    margin: 0;
+    min-width: 320px;
+    min-height: 100vh;
+    font-family: "Spoqa Han Sans Neo", "Noto Sans KR", "Apple SD Gothic Neo", sans-serif;
+    color: #25304a;
+    background: #f4f7fb;
+}
+
+.admin-shell,
+.admin-shell * {
+    box-sizing: border-box;
+}
+
+.admin-shell {
+    --admin-blue: #4265f7;
+    --admin-blue-dark: #2f4fc7;
+    --admin-blue-soft: #eef3ff;
+    --admin-border: #e2e8f3;
+    --admin-muted: #717b91;
+    display: grid;
+    grid-template-columns: 256px minmax(0, 1fr);
+    min-height: 100vh;
+}
+
+.admin-sidebar {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    padding: 28px 20px;
+    overflow-y: auto;
+    background: #fff;
+    border-right: 1px solid var(--admin-border);
+}
+
+.admin-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 8px 34px;
+    color: #24325c;
+    text-decoration: none;
+}
+
+.admin-brand-name {
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.admin-brand-label {
+    padding: 4px 8px;
+    color: #fff;
+    background: var(--admin-blue);
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.admin-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 26px;
+}
+
+.admin-nav-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin: 0;
+}
+
+.admin-nav-group-title {
+    margin: 0 10px 7px;
+    color: #929bad;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+}
+
+.admin-nav-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 42px;
+    padding: 10px 12px;
+    color: #4d5870;
+    border-radius: 11px;
+    font-size: 0.93rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.admin-nav-link:hover {
+    color: var(--admin-blue-dark);
+    background: #f5f7fd;
+}
+
+.admin-nav-link.is-active {
+    color: var(--admin-blue-dark);
+    background: var(--admin-blue-soft);
+    box-shadow: inset 3px 0 0 var(--admin-blue);
+}
+
+.admin-nav-link.is-disabled {
+    color: #a1a9b8;
+    cursor: default;
+}
+
+.admin-nav-link.is-disabled:hover {
+    color: #a1a9b8;
+    background: transparent;
+}
+
+.admin-nav-badge {
+    padding: 3px 7px;
+    color: #8791a6;
+    background: #f0f2f6;
+    border-radius: 999px;
+    font-size: 0.66rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.admin-main {
+    min-width: 0;
+}
+
+.admin-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 72px;
+    padding: 0 40px;
+    background: rgba(255, 255, 255, 0.96);
+    border-bottom: 1px solid var(--admin-border);
+}
+
+.admin-topbar-title {
+    color: #354267;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.admin-topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.admin-topbar-actions a {
+    color: #64708a;
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.admin-topbar-actions a:hover {
+    color: var(--admin-blue-dark);
+}
+
+.admin-topbar-divider {
+    width: 1px;
+    height: 14px;
+    background: #d9dfeb;
+}
+
+.admin-content {
+    width: 100%;
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 42px;
+}
+
+.admin-dashboard-header {
+    margin-bottom: 30px;
+}
+
+.admin-dashboard-header h1 {
+    margin: 0 0 10px;
+    color: #25345e;
+    font-size: clamp(1.65rem, 2.5vw, 2.1rem);
+    letter-spacing: -0.035em;
+}
+
+.admin-dashboard-header p {
+    margin: 0;
+    color: var(--admin-muted);
+    font-size: 1rem;
+}
+
+.admin-dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 22px;
+}
+
+.admin-dashboard-card {
+    min-width: 0;
+    padding: 28px;
+    background: #fff;
+    border: 1px solid var(--admin-border);
+    border-radius: 18px;
+    box-shadow: 0 7px 24px rgba(66, 83, 126, 0.07);
+}
+
+.admin-dashboard-card h2 {
+    margin: 0 0 9px;
+    color: #334373;
+    font-size: 1.2rem;
+    letter-spacing: -0.025em;
+}
+
+.admin-dashboard-card p {
+    min-height: 42px;
+    margin: 0 0 22px;
+    color: var(--admin-muted);
+    font-size: 0.91rem;
+    line-height: 1.55;
+}
+
+.admin-dashboard-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.admin-dashboard-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 9px 15px;
+    color: #3853ba;
+    background: #f5f7fd;
+    border: 1px solid #dce4f7;
+    border-radius: 10px;
+    font-size: 0.88rem;
+    font-weight: 650;
+    text-decoration: none;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.admin-dashboard-link:hover {
+    color: #fff;
+    background: var(--admin-blue);
+    border-color: var(--admin-blue);
+}
+
+.admin-dashboard-link.is-disabled {
+    gap: 8px;
+    color: #969fb0;
+    background: #f7f8fa;
+    border-color: #e7eaf0;
+    cursor: default;
+}
+
+.admin-dashboard-link.is-disabled:hover {
+    color: #969fb0;
+    background: #f7f8fa;
+    border-color: #e7eaf0;
+}
+
+.admin-dashboard-link small {
+    font-size: 0.68rem;
+    font-weight: 600;
+}
+
+@media (max-width: 960px) {
+    .admin-shell {
+        display: block;
+    }
+
+    .admin-sidebar {
+        position: static;
+        width: 100%;
+        height: auto;
+        padding: 20px;
+        overflow: visible;
+        border-right: 0;
+        border-bottom: 1px solid var(--admin-border);
+    }
+
+    .admin-brand {
+        margin-bottom: 20px;
+    }
+
+    .admin-nav {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+    }
+
+    .admin-topbar {
+        position: static;
+        padding: 0 24px;
+    }
+
+    .admin-content {
+        padding: 30px 24px;
+    }
+}
+
+@media (max-width: 680px) {
+    .admin-nav {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-topbar {
+        min-height: 64px;
+    }
+
+    .admin-topbar-title {
+        display: none;
+    }
+
+    .admin-topbar-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .admin-content {
+        padding: 26px 18px;
+    }
+
+    .admin-dashboard-card {
+        padding: 22px;
+    }
+}

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<body>
+<aside class="admin-sidebar" th:fragment="sidebar(activeMenu)">
+  <a class="admin-brand" th:href="@{/admin}" aria-label="관리자 홈으로 이동">
+    <span class="admin-brand-name">Travel Diary</span>
+    <span class="admin-brand-label">Admin</span>
+  </a>
+
+  <nav class="admin-nav" aria-label="관리자 메뉴">
+    <section class="admin-nav-group">
+      <h2 class="admin-nav-group-title">대시보드</h2>
+      <a class="admin-nav-link"
+         th:classappend="${activeMenu == 'dashboard'} ? ' is-active' : ''"
+         th:href="@{/admin}">관리자 홈</a>
+    </section>
+
+    <section class="admin-nav-group">
+      <h2 class="admin-nav-group-title">여행지 관리</h2>
+      <a class="admin-nav-link" th:href="@{/admin/destinations}">여행지</a>
+      <a class="admin-nav-link" th:href="@{/admin/categories}">여행지 카테고리</a>
+      <a class="admin-nav-link" th:href="@{/admin/region-categories}">지역·도시</a>
+      <a class="admin-nav-link" th:href="@{/admin/amenities/list}">편의시설</a>
+    </section>
+
+    <section class="admin-nav-group">
+      <h2 class="admin-nav-group-title">여행정보 관리</h2>
+      <span class="admin-nav-link is-disabled" aria-disabled="true">
+        <span>여행정보</span>
+        <span class="admin-nav-badge">준비 중</span>
+      </span>
+      <span class="admin-nav-link is-disabled" aria-disabled="true">
+        <span>정보 카테고리</span>
+        <span class="admin-nav-badge">준비 중</span>
+      </span>
+    </section>
+
+    <section class="admin-nav-group">
+      <h2 class="admin-nav-group-title">이벤트 관리</h2>
+      <a class="admin-nav-link" th:href="@{/admin/event/list}">이벤트</a>
+    </section>
+  </nav>
+</aside>
+</body>
+</html>

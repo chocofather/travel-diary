@@ -2,27 +2,50 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
-      th:replace="layout/main :: layout(~{::body}, ~{::headFragment})">
+      th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'dashboard')}">
 
-<th:block th:fragment="headFragment">
-    <link rel="stylesheet" href="/css/admin.css" />
-    <!-- 필요하면 여기다 개별 css/js 추가 -->
-</th:block>
+<th:block th:fragment="headFragment"></th:block>
 
 <th:block th:fragment="body">
-<!-- ★ 여기서 반드시 th:fragment="body" 로 본문 블록을 정의해야 합니다 -->
-
-<section th:fragment="body" class="admin-home">
+<section class="admin-dashboard">
     <th:block sec:authorize="hasRole('ADMIN')">
-        <h1>관리자 페이지</h1>
-        <p>원하시는 기능을 선택하세요.</p>
-        <div class="btn-group">
-            <a href="/admin/destinations"        class="btn-admin">여행지 관리 페이지</a>
-            <a href="/admin/categories/create"   class="btn-admin">카테고리 등록</a>
-            <a href="/admin/categories"          class="btn-admin">카테고리 목록</a>
-            <a href="/admin/region-categories"   class="btn-admin">도시 관리</a>
-            <a href="/admin/event/list"          class="btn-admin">이벤트 관리 페이지</a>
-            <a href="/admin/amenities/list"      class="btn-admin">편의시설 관리</a>
+        <header class="admin-dashboard-header">
+            <h1>관리자 대시보드</h1>
+            <p>사이트 콘텐츠와 운영 기능을 관리합니다.</p>
+        </header>
+
+        <div class="admin-dashboard-grid">
+            <article class="admin-dashboard-card">
+                <h2>여행지 관리</h2>
+                <p>여행지와 지역 정보를 관리합니다.</p>
+                <div class="admin-dashboard-actions">
+                    <a class="admin-dashboard-link" th:href="@{/admin/destinations}">여행지 관리</a>
+                    <a class="admin-dashboard-link" th:href="@{/admin/categories}">여행지 카테고리</a>
+                    <a class="admin-dashboard-link" th:href="@{/admin/region-categories}">지역·도시</a>
+                    <a class="admin-dashboard-link" th:href="@{/admin/amenities/list}">편의시설</a>
+                </div>
+            </article>
+
+            <article class="admin-dashboard-card">
+                <h2>여행정보 관리</h2>
+                <p>국내·해외 여행정보와 주제 카테고리를 관리합니다.</p>
+                <div class="admin-dashboard-actions">
+                    <span class="admin-dashboard-link is-disabled" aria-disabled="true">
+                        여행정보 <small>준비 중</small>
+                    </span>
+                    <span class="admin-dashboard-link is-disabled" aria-disabled="true">
+                        정보 카테고리 <small>준비 중</small>
+                    </span>
+                </div>
+            </article>
+
+            <article class="admin-dashboard-card">
+                <h2>이벤트 관리</h2>
+                <p>이벤트 콘텐츠를 관리합니다.</p>
+                <div class="admin-dashboard-actions">
+                    <a class="admin-dashboard-link" th:href="@{/admin/event/list}">이벤트 관리</a>
+                </div>
+            </article>
         </div>
     </th:block>
 </section>

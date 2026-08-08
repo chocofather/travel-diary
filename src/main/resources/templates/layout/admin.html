@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      lang="ko"
+      th:fragment="layout(body, headFragment, activeMenu)">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="referrer" content="no-referrer-when-downgrade" />
+  <title th:text="${pageTitle} ?: '관리자 페이지 | 여행일기'">관리자 페이지 | 여행일기</title>
+
+  <link rel="stylesheet" href="/css/admin-layout.css" />
+  <th:block th:if="${headFragment != null}" th:replace="${headFragment}"></th:block>
+</head>
+<body class="admin-page">
+<div class="admin-shell">
+  <aside th:replace="~{fragments/admin/sidebar :: sidebar(${activeMenu})}"></aside>
+
+  <div class="admin-main">
+    <header class="admin-topbar">
+      <span class="admin-topbar-title">관리자 페이지</span>
+      <nav class="admin-topbar-actions" aria-label="관리자 보조 메뉴">
+        <a th:href="@{/}">사이트 보기</a>
+        <span class="admin-topbar-divider" aria-hidden="true"></span>
+        <a th:href="@{'/logout?redirect=' + ${currentUri}}">로그아웃</a>
+      </nav>
+    </header>
+
+    <main class="admin-content">
+      <th:block th:insert="${body}"></th:block>
+    </main>
+  </div>
+</div>
+</body>
+</html>
