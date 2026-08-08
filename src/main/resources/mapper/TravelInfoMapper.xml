@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.travelinfo.TravelInfoMapper">
+
+    <resultMap id="TravelInfoResultMap" type="com.example.travlediary.model.TravelInfo">
+        <id property="id" column="id"/>
+        <result property="title" column="title"/>
+        <result property="content" column="content"/>
+        <result property="scope" column="scope"/>
+        <result property="contentType" column="content_type"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="categoryId" column="category_id"/>
+        <result property="views" column="views"/>
+        <result property="userId" column="user_id"/>
+    </resultMap>
+
+    <resultMap id="AdminListResultMap" type="com.example.travlediary.dto.AdminTravelInfoListItemDto">
+        <id property="id" column="id"/>
+        <result property="title" column="title"/>
+        <result property="scope" column="scope"/>
+        <result property="contentType" column="content_type"/>
+        <result property="categoryId" column="category_id"/>
+        <result property="categoryName" column="category_name"/>
+        <result property="views" column="views"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <resultMap id="InfoPeriodResultMap" type="com.example.travlediary.model.InfoPeriod">
+        <id property="id" column="id"/>
+        <result property="startDate" column="start_date"/>
+        <result property="endDate" column="end_date"/>
+        <result property="infoId" column="info_id"/>
+    </resultMap>
+
+    <select id="findAdminList" resultMap="AdminListResultMap">
+        SELECT ti.id,
+               ti.title,
+               ti.scope,
+               ti.content_type,
+               ti.category_id,
+               ic.name AS category_name,
+               ti.views,
+               ti.created_at
+        FROM travel_info ti
+        JOIN info_categories ic ON ic.id = ti.category_id
+        <where>
+            <if test="scope != null">
+                ti.scope = #{scope}
+            </if>
+            <if test="contentType != null">
+                AND ti.content_type = #{contentType}
+            </if>
+            <if test="categoryId != null">
+                AND ti.category_id = #{categoryId}
+            </if>
+        </where>
+        ORDER BY ti.created_at DESC, ti.id DESC
+    </select>
+
+    <select id="findById" parameterType="long" resultMap="TravelInfoResultMap">
+        SELECT id, title, content, scope, content_type, created_at, updated_at,
+               category_id, views, user_id
+        FROM travel_info
+        WHERE id = #{id}
+    </select>
+
+    <select id="findByIdForUpdate" parameterType="long" resultMap="TravelInfoResultMap">
+        SELECT id, title, content, scope, content_type, created_at, updated_at,
+               category_id, views, user_id
+        FROM travel_info
+        WHERE id = #{id}
+        FOR UPDATE
+    </select>
+
+    <insert id="insertTravelInfo" parameterType="com.example.travlediary.model.TravelInfo"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO travel_info (
+            title, content, scope, content_type, category_id, views, user_id, created_at, updated_at
+        ) VALUES (
+            #{title}, #{content}, #{scope}, #{contentType}, #{categoryId}, 0, #{userId}, NOW(), NOW()
+        )
+    </insert>
+
+    <update id="updateTravelInfo" parameterType="com.example.travlediary.model.TravelInfo">
+        UPDATE travel_info
+        SET title = #{title},
+            content = #{content},
+            scope = #{scope},
+            content_type = #{contentType},
+            category_id = #{categoryId},
+            updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteTravelInfo" parameterType="long">
+        DELETE FROM travel_info
+        WHERE id = #{id}
+    </delete>
+
+    <select id="findPeriodsByInfoId" parameterType="long" resultMap="InfoPeriodResultMap">
+        SELECT id, start_date, end_date, info_id
+        FROM info_periods
+        WHERE info_id = #{infoId}
+        ORDER BY start_date ASC, end_date ASC, id ASC
+    </select>
+
+    <insert id="insertPeriod" parameterType="com.example.travlediary.model.InfoPeriod"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO info_periods (start_date, end_date, info_id)
+        VALUES (#{startDate}, #{endDate}, #{infoId})
+    </insert>
+
+    <delete id="deletePeriodsByInfoId" parameterType="long">
+        DELETE FROM info_periods
+        WHERE info_id = #{infoId}
+    </delete>
+
+</mapper>

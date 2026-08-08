@@ -1,0 +1,201 @@
+.admin-travel-info-page,
+.admin-travel-info-form-page {
+    min-width: 0;
+}
+
+.admin-filter-field {
+    display: grid;
+    gap: 6px;
+    color: #53617c;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.admin-filter-actions {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    padding-top: 20px;
+}
+
+.admin-travel-info-table {
+    min-width: 920px;
+}
+
+.admin-travel-info-table th {
+    padding: 10px 13px;
+    font-size: 0.79rem;
+}
+
+.admin-travel-info-table td {
+    padding: 9px 13px;
+    line-height: 1.35;
+}
+
+.admin-travel-info-title {
+    max-width: 360px;
+    color: #34415e;
+    font-weight: 700;
+}
+
+.admin-travel-info-badge {
+    display: inline-flex;
+    min-width: 44px;
+    justify-content: center;
+    padding: 4px 8px;
+    color: #3558c6;
+    background: #eef3ff;
+    border: 1px solid #d6e0ff;
+    border-radius: 999px;
+    font-size: 0.73rem;
+    font-weight: 700;
+}
+
+.admin-travel-info-badge.is-type {
+    color: #496176;
+    background: #f2f6f9;
+    border-color: #dce5eb;
+}
+
+.admin-travel-info-actions {
+    flex-wrap: nowrap;
+    gap: 6px;
+}
+
+.admin-travel-info-actions form {
+    display: flex;
+    margin: 0;
+}
+
+.admin-travel-info-form {
+    display: grid;
+    gap: 20px;
+    max-width: 1080px;
+}
+
+.admin-travel-info-section {
+    max-width: none;
+}
+
+.admin-travel-info-section-header {
+    margin-bottom: 22px;
+}
+
+.admin-travel-info-section-header.is-action-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+}
+
+.admin-travel-info-section-header h2 {
+    margin: 0;
+    color: #334373;
+    font-size: 1.12rem;
+}
+
+.admin-travel-info-section-header p {
+    margin: 7px 0 0;
+    color: #717b91;
+    font-size: 0.87rem;
+    line-height: 1.55;
+}
+
+.admin-travel-info-basic-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.admin-travel-info-form .is-invalid {
+    background: #fffafa;
+    border-color: #df7777;
+}
+
+.admin-field-error {
+    margin: 0;
+    color: #bd4040;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.admin-travel-info-editor {
+    min-height: 400px;
+}
+
+.admin-travel-info-editor .toastui-editor-defaultUI {
+    overflow: hidden;
+    border-color: #d8dfeb;
+    border-radius: 10px;
+}
+
+.admin-period-section[hidden] {
+    display: none;
+}
+
+.admin-period-list {
+    display: grid;
+    gap: 12px;
+}
+
+.admin-period-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 12px;
+    padding: 14px;
+    background: #f8faff;
+    border: 1px solid #e3e9f4;
+    border-radius: 12px;
+}
+
+.admin-period-row > .admin-btn {
+    margin-bottom: 4px;
+}
+
+.admin-travel-info-submit-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 20px 0 4px;
+}
+
+.admin-travel-info-form .admin-alert {
+    margin: 0;
+}
+
+.admin-travel-info-form .admin-alert p {
+    margin: 0;
+}
+
+@media (max-width: 820px) {
+    .admin-travel-info-basic-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-period-row {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .admin-period-row > .admin-btn {
+        grid-column: 1 / -1;
+        justify-self: end;
+    }
+}
+
+@media (max-width: 560px) {
+    .admin-travel-info-section-header.is-action-header,
+    .admin-travel-info-submit-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .admin-period-row {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-period-row > .admin-btn {
+        grid-column: auto;
+        justify-self: stretch;
+    }
+}

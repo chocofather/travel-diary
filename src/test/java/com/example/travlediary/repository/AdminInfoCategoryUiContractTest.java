@@ -22,12 +22,12 @@ class AdminInfoCategoryUiContractTest {
     }
 
     @Test
-    void dashboardEnablesInfoCategoryAndKeepsTravelInfoDisabled() throws IOException {
+    void dashboardKeepsInfoCategoryLinkWhenTravelInfoIsEnabled() throws IOException {
         String dashboard = resource("/templates/admin/index.html");
 
         assertThat(dashboard)
                 .contains("<a class=\"admin-dashboard-link\" th:href=\"@{/admin/info-categories}\">정보 카테고리</a>")
-                .contains("여행정보 <small>준비 중</small>");
+                .contains("<a class=\"admin-dashboard-link\" th:href=\"@{/admin/travel-info}\">여행정보</a>");
     }
 
     private String resource(String path) throws IOException {

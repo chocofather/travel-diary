@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'travel-info')}">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/admin-travel-info.css">
+  <link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css">
+  <script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
+  <script src="/js/editor-init.js"></script>
+  <script src="/js/admin-travel-info-form.js" defer></script>
+</th:block>
+<th:block th:fragment="body">
+  <section class="admin-page-section admin-travel-info-form-page">
+    <header class="admin-page-header">
+      <div class="admin-page-heading">
+        <h1 class="admin-page-title" th:text="${pageTitle}">여행정보 등록</h1>
+        <p class="admin-page-description" th:text="${pageDescription}">새 여행정보를 등록합니다.</p>
+      </div>
+      <div class="admin-page-actions">
+        <a th:href="@{/admin/travel-info}" class="admin-btn">여행정보 목록</a>
+      </div>
+    </header>
+
+    <form id="travel-info-form" th:action="${formAction}" method="post"
+          th:object="${travelInfoForm}" class="admin-travel-info-form">
+      <div class="admin-alert" th:if="${#fields.hasGlobalErrors()}" role="alert">
+        <p th:each="error : ${#fields.globalErrors()}" th:text="${error}">입력 오류</p>
+      </div>
+
+      <section class="admin-form-card is-wide admin-travel-info-section">
+        <div class="admin-travel-info-section-header">
+          <h2>기본 정보</h2>
+          <p>여행정보의 제목과 분류를 선택합니다.</p>
+        </div>
+
+        <div class="admin-form-fields">
+          <div class="admin-form-field">
+            <label for="travel-info-title">제목</label>
+            <input id="travel-info-title" type="text" th:field="*{title}"
+                   maxlength="255" placeholder="여행정보 제목을 입력하세요"
+                   th:classappend="${#fields.hasErrors('title')} ? ' is-invalid' : ''">
+            <p class="admin-field-error" th:if="${#fields.hasErrors('title')}"
+               th:errors="*{title}">제목 오류</p>
+          </div>
+
+          <div class="admin-travel-info-basic-grid">
+            <div class="admin-form-field">
+              <label for="travel-info-scope">범위</label>
+              <select id="travel-info-scope" th:field="*{scope}"
+                      th:classappend="${#fields.hasErrors('scope')} ? ' is-invalid' : ''">
+                <option value="">-- 국내/해외 선택 --</option>
+                <option value="DOMESTIC">국내</option>
+                <option value="INTERNATIONAL">해외</option>
+              </select>
+              <p class="admin-field-error" th:if="${#fields.hasErrors('scope')}"
+                 th:errors="*{scope}">범위 오류</p>
+            </div>
+
+            <div class="admin-form-field">
+              <label for="travel-info-content-type">유형</label>
+              <select id="travel-info-content-type" th:field="*{contentType}"
+                      th:classappend="${#fields.hasErrors('contentType')} ? ' is-invalid' : ''">
+                <option value="GENERAL">일반</option>
+                <option value="FESTIVAL">축제</option>
+              </select>
+              <p class="admin-field-error" th:if="${#fields.hasErrors('contentType')}"
+                 th:errors="*{contentType}">유형 오류</p>
+            </div>
+
+            <div class="admin-form-field">
+              <label for="travel-info-category">정보 카테고리</label>
+              <select id="travel-info-category" th:field="*{categoryId}"
+                      th:classappend="${#fields.hasErrors('categoryId')} ? ' is-invalid' : ''">
+                <option value="">-- 정보 카테고리 선택 --</option>
+                <option th:each="category : ${categories}"
+                        th:value="${category.id}"
+                        th:text="${category.name} + (${category.isVisible} ? '' : ' (숨김)')">계절여행</option>
+              </select>
+              <p class="admin-field-error" th:if="${#fields.hasErrors('categoryId')}"
+                 th:errors="*{categoryId}">카테고리 오류</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="admin-form-card is-wide admin-travel-info-section">
+        <div class="admin-travel-info-section-header">
+          <h2>본문</h2>
+          <p>여행자에게 제공할 상세 내용을 작성합니다.</p>
+        </div>
+        <div id="travel-info-editor" class="admin-travel-info-editor"></div>
+        <input type="hidden" id="travel-info-content" th:field="*{content}">
+        <textarea id="travel-info-initial-content" hidden th:text="*{content}"></textarea>
+        <p class="admin-field-error" th:if="${#fields.hasErrors('content')}"
+           th:errors="*{content}">본문 오류</p>
+      </section>
+
+      <section id="travel-info-period-section"
+               class="admin-form-card is-wide admin-travel-info-section admin-period-section">
+        <div class="admin-travel-info-section-header is-action-header">
+          <div>
+            <h2>축제 기간</h2>
+            <p>축제 유형은 서로 겹치지 않는 기간을 한 개 이상 입력해야 합니다.</p>
+          </div>
+          <button type="button" id="add-travel-info-period" class="admin-btn is-small">+ 기간 추가</button>
+        </div>
+
+        <div id="travel-info-period-list" class="admin-period-list">
+          <div class="admin-period-row" data-period-row
+               th:each="period, periodStat : *{periods}">
+            <div class="admin-form-field">
+              <label th:for="${'period-start-' + periodStat.index}">시작일</label>
+              <input type="date" th:id="${'period-start-' + periodStat.index}"
+                     th:field="*{periods[__${periodStat.index}__].startDate}"
+                     th:classappend="${#fields.hasErrors('periods[' + periodStat.index + '].startDate')} ? ' is-invalid' : ''">
+              <p class="admin-field-error"
+                 th:if="${#fields.hasErrors('periods[' + periodStat.index + '].startDate')}"
+                 th:errors="*{periods[__${periodStat.index}__].startDate}">시작일 오류</p>
+            </div>
+            <div class="admin-form-field">
+              <label th:for="${'period-end-' + periodStat.index}">종료일</label>
+              <input type="date" th:id="${'period-end-' + periodStat.index}"
+                     th:field="*{periods[__${periodStat.index}__].endDate}"
+                     th:classappend="${#fields.hasErrors('periods[' + periodStat.index + '].endDate')} ? ' is-invalid' : ''">
+              <p class="admin-field-error"
+                 th:if="${#fields.hasErrors('periods[' + periodStat.index + '].endDate')}"
+                 th:errors="*{periods[__${periodStat.index}__].endDate}">종료일 오류</p>
+            </div>
+            <button type="button" class="admin-btn is-small is-danger" data-remove-period>삭제</button>
+          </div>
+        </div>
+      </section>
+
+      <div class="admin-travel-info-submit-actions">
+        <a th:href="@{/admin/travel-info}" class="admin-btn">취소</a>
+        <button type="submit" class="admin-btn is-primary" th:text="${submitLabel}">등록</button>
+      </div>
+    </form>
+  </section>
+</th:block>
+</html>

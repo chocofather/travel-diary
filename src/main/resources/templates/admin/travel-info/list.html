@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'travel-info')}">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/admin-travel-info.css">
+</th:block>
+<th:block th:fragment="body">
+  <section class="admin-page-section admin-travel-info-page">
+    <header class="admin-page-header">
+      <div class="admin-page-heading">
+        <h1 class="admin-page-title">여행정보 관리</h1>
+        <p class="admin-page-description">국내·해외 여행정보와 축제 콘텐츠를 조회하고 관리합니다.</p>
+      </div>
+      <div class="admin-page-actions">
+        <a th:href="@{/admin/travel-info/create}" class="admin-btn is-primary">+ 여행정보 등록</a>
+      </div>
+    </header>
+
+    <div class="admin-filter-card">
+      <form th:action="@{/admin/travel-info}" method="get" class="admin-filter-form">
+        <label class="admin-filter-field">
+          <span>범위</span>
+          <select name="scope" class="admin-select">
+            <option value="">전체</option>
+            <option value="DOMESTIC" th:selected="${scope != null and scope.name() == 'DOMESTIC'}">국내</option>
+            <option value="INTERNATIONAL" th:selected="${scope != null and scope.name() == 'INTERNATIONAL'}">해외</option>
+          </select>
+        </label>
+
+        <label class="admin-filter-field">
+          <span>유형</span>
+          <select name="contentType" class="admin-select">
+            <option value="">전체</option>
+            <option value="GENERAL" th:selected="${contentType != null and contentType.name() == 'GENERAL'}">일반</option>
+            <option value="FESTIVAL" th:selected="${contentType != null and contentType.name() == 'FESTIVAL'}">축제</option>
+          </select>
+        </label>
+
+        <label class="admin-filter-field">
+          <span>정보 카테고리</span>
+          <select name="categoryId" class="admin-select">
+            <option value="">전체</option>
+            <option th:each="category : ${categories}"
+                    th:value="${category.id}"
+                    th:selected="${category.id == categoryId}"
+                    th:text="${category.name} + (${category.isVisible} ? '' : ' (숨김)')">계절여행</option>
+          </select>
+        </label>
+
+        <div class="admin-filter-actions">
+          <button type="submit" class="admin-btn is-primary">조회</button>
+          <a th:href="@{/admin/travel-info}" class="admin-btn">초기화</a>
+        </div>
+      </form>
+    </div>
+
+    <div class="admin-card is-table-card">
+      <div class="admin-table-wrapper">
+        <table class="admin-table admin-travel-info-table">
+          <thead>
+          <tr>
+            <th>제목</th>
+            <th>범위</th>
+            <th>유형</th>
+            <th>카테고리</th>
+            <th>조회수</th>
+            <th>작성일</th>
+            <th>관리</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr th:each="info : ${travelInfoList}">
+            <td class="admin-travel-info-title" th:text="${info.title}">여행정보 제목</td>
+            <td>
+              <span class="admin-travel-info-badge"
+                    th:text="${info.scope.name() == 'DOMESTIC'} ? '국내' : '해외'">국내</span>
+            </td>
+            <td>
+              <span class="admin-travel-info-badge is-type"
+                    th:text="${info.contentType.name() == 'GENERAL'} ? '일반' : '축제'">일반</span>
+            </td>
+            <td th:text="${info.categoryName}">계절여행</td>
+            <td th:text="${info.views}">0</td>
+            <td th:text="${#dates.format(info.createdAt, 'yyyy-MM-dd')}">2026-08-09</td>
+            <td class="admin-table-actions">
+              <div class="admin-action-group admin-travel-info-actions">
+                <a th:href="@{/admin/travel-info/edit/{id}(id=${info.id})}"
+                   class="admin-btn is-small">수정</a>
+                <form th:action="@{/admin/travel-info/{id}/delete(id=${info.id})}"
+                      method="post" onsubmit="return confirm('이 여행정보를 삭제하시겠습니까?');">
+                  <button type="submit" class="admin-btn is-small is-danger">삭제</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(travelInfoList)}">
+            <td colspan="7" class="admin-table-empty">조건에 맞는 여행정보가 없습니다.</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</th:block>
+</html>
