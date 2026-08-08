@@ -10,6 +10,7 @@ import java.sql.Timestamp;
 public class InfoImage {
     private Long id; // 이미지번호
     private String imageUrl; // 이미지 url
+    private Boolean isMain; // 대표 이미지 여부
     private Integer orderIndex; // 정렬 순서
     private Timestamp createdAt; // 생성일
     private Long infoId; // 정보번호

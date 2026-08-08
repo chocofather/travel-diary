@@ -509,15 +509,15 @@ CREATE TABLE `faqs` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `festival_periods`
+-- Table structure for table `info_periods`
 --
 
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `festival_periods` (
+CREATE TABLE `info_periods` (
   `id` bigint NOT NULL AUTO_INCREMENT,
-  `start_date` date DEFAULT NULL,
-  `end_date` date DEFAULT NULL,
+  `start_date` date NOT NULL,
+  `end_date` date NOT NULL,
   `info_id` bigint NOT NULL,
   PRIMARY KEY (`id`),
   KEY `fk_festical_periods_travle_info1_idx` (`info_id`),
@@ -533,9 +533,11 @@ CREATE TABLE `festival_periods` (
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `info_categories` (
   `id` bigint NOT NULL AUTO_INCREMENT,
-  `name` varchar(100) DEFAULT NULL,
-  `type` varchar(32) DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  `name` varchar(100) NOT NULL,
+  `display_order` int NOT NULL DEFAULT '1',
+  `is_visible` tinyint NOT NULL DEFAULT '1',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_info_categories_name` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -547,7 +549,8 @@ CREATE TABLE `info_categories` (
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `info_images` (
   `id` bigint NOT NULL AUTO_INCREMENT,
-  `image_url` varchar(255) DEFAULT NULL,
+  `image_url` varchar(255) NOT NULL,
+  `is_main` tinyint NOT NULL DEFAULT '0',
   `order_index` int NOT NULL DEFAULT '1',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `info_id` bigint NOT NULL,
@@ -781,14 +784,18 @@ CREATE TABLE `shop_info` (
 CREATE TABLE `travel_info` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `title` varchar(255) NOT NULL,
-  `content` text NOT NULL,
+  `content` mediumtext NOT NULL,
+  `scope` varchar(20) NOT NULL,
+  `content_type` varchar(20) NOT NULL DEFAULT 'GENERAL',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `category_id` bigint NOT NULL,
+  `views` int NOT NULL DEFAULT '0',
   `user_id` bigint NOT NULL,
   PRIMARY KEY (`id`),
   KEY `fk_travle_info_info_category1_idx` (`category_id`),
   KEY `fk_travle_info_users1_idx` (`user_id`),
+  CONSTRAINT `fk_travelinfo_category` FOREIGN KEY (`category_id`) REFERENCES `info_categories` (`id`) ON DELETE RESTRICT,
   CONSTRAINT `fk_travelinfo_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;

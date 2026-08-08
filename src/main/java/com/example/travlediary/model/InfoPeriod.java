@@ -7,9 +7,9 @@ import java.time.LocalDate;
 
 @Data
 @NoArgsConstructor
-public class FestivalPeriod {
-    private Long id; // 축제기간번호
+public class InfoPeriod {
+    private Long id; // 여행정보 기간 번호
     private LocalDate startDate; // 시작일
     private LocalDate endDate; // 종료일
-    private Long infoId; // 정보번호
+    private Long infoId; // 여행정보 번호
 }

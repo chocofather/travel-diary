@@ -1,5 +1,5 @@
 package com.example.travlediary.model;
 
-public enum InfocategoryType {
+public enum TravelInfoScope {
     DOMESTIC, INTERNATIONAL
 }
