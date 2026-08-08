@@ -1,39 +1,42 @@
 <!DOCTYPE html>
-<html lang="ko"
-      xmlns:th="http://www.thymeleaf.org"
-      th:replace="layout/main :: layout(~{::body}, ~{::headFragment})">
-<th:block th:fragment="headFragment">
-  <link rel="stylesheet" href="/css/admin.css">
-  <link rel="stylesheet" href="/css/amenity.css">
-</th:block>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'amenities')}">
+<th:block th:fragment="headFragment"></th:block>
 <th:block th:fragment="body">
-  <div class="amenity-list-outer">
-    <div class="amenity-list-wrapper">
-      <div class="top-bar">
-        <h1>번역 목록</h1>
-        <div class="amenity-btn-bar">
-          <a th:href="@{|/admin/amenities/${amenityId}/translations/create|}" class="btn">+ 번역 등록</a>
-          <a th:href="@{/admin/amenities/list}" class="btn" style="margin-left:6px;">편의시설 목록</a>
-        </div>
+  <section class="admin-page-section">
+    <header class="admin-page-header">
+      <div class="admin-page-heading">
+        <h1 class="admin-page-title">편의시설 번역 관리</h1>
+        <p class="admin-page-description">선택한 편의시설의 언어별 표시 이름을 관리합니다.</p>
       </div>
-      <table>
-        <thead>
-        <tr>
-          <th>ID</th>
-          <th>언어</th>
-          <th>이름</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="t : ${translations}">
-          <td th:text="${t.id}"></td>
-          <td th:text="${t.languageCode}"></td>
-          <td th:text="${t.name}"></td>
-        </tr>
-        </tbody>
-      </table>
-      <div th:if="${error}" style="color:#e74c3c;margin-top:18px;font-weight:500;" th:text="${error}"></div>
+      <div class="admin-page-actions">
+        <a th:href="@{/admin/amenities/list}" class="admin-btn">편의시설 목록</a>
+        <a th:href="@{|/admin/amenities/${amenityId}/translations/create|}"
+           class="admin-btn is-primary">+ 번역 등록</a>
+      </div>
+    </header>
+
+    <div class="admin-card is-table-card">
+      <div class="admin-table-wrapper">
+        <table class="admin-table">
+          <thead>
+          <tr>
+            <th>ID</th>
+            <th>언어</th>
+            <th>이름</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr th:each="t : ${translations}">
+            <td class="admin-table-number" th:text="${t.id}"></td>
+            <td th:text="${t.languageCode}"></td>
+            <td th:text="${t.name}"></td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
-  </div>
+    <div th:if="${error}" class="admin-alert" th:text="${error}"></div>
+  </section>
 </th:block>
 </html>

@@ -1,35 +1,38 @@
 <!DOCTYPE html>
-<html lang="ko"
-      xmlns:th="http://www.thymeleaf.org"
-      th:replace="layout/main :: layout(~{::body}, ~{::headFragment})">
-<th:block th:fragment="headFragment">
-  <link rel="stylesheet" href="/css/admin.css">
-  <link rel="stylesheet" href="/css/amenity.css">
-</th:block>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'amenities')}">
+<th:block th:fragment="headFragment"></th:block>
 <th:block th:fragment="body">
-  <div class="amenity-list-outer">
-    <div class="amenity-list-wrapper">
-      <div class="top-bar">
-        <h1>번역 등록</h1>
-        <div class="amenity-btn-bar">
-          <a th:href="@{|/admin/amenities/${amenityId}/translations|}" class="btn">번역 목록으로</a>
+  <section class="admin-page-section">
+    <header class="admin-page-header">
+      <div class="admin-page-heading">
+        <h1 class="admin-page-title">편의시설 번역 등록</h1>
+        <p class="admin-page-description">언어 코드와 화면에 표시할 번역 이름을 등록합니다.</p>
+      </div>
+      <div class="admin-page-actions">
+        <a th:href="@{|/admin/amenities/${amenityId}/translations|}"
+           class="admin-btn">번역 목록</a>
+      </div>
+    </header>
+
+    <form th:action="@{|/admin/amenities/${amenityId}/translations/create|}"
+          method="post" class="admin-form-card">
+      <div class="admin-form-fields">
+        <div class="admin-form-field">
+          <label for="amenity-language-code">언어 코드</label>
+          <input id="amenity-language-code" type="text" name="languageCode" required placeholder="ko, en 등">
+        </div>
+        <div class="admin-form-field">
+          <label for="amenity-translation-name">번역 이름</label>
+          <input id="amenity-translation-name" type="text" name="name" required>
         </div>
       </div>
-      <form th:action="@{|/admin/amenities/${amenityId}/translations/create|}" method="post" style="margin-top:28px;">
-        <label style="font-weight:600;display:block;margin-bottom:16px;">
-          언어 코드:
-          <input type="text" name="languageCode" required placeholder="ko, en 등"
-                 style="margin-left:8px;padding:8px 14px;border-radius:7px;border:1.1px solid #e4e8f4;">
-        </label>
-        <label style="font-weight:600;display:block;margin-bottom:16px;">
-          번역 이름:
-          <input type="text" name="name" required
-                 style="margin-left:8px;padding:8px 14px;border-radius:7px;border:1.1px solid #e4e8f4;">
-        </label>
-        <button type="submit" class="btn" style="margin-top:8px;">등록</button>
-      </form>
-      <div th:if="${error}" style="color:#e74c3c;margin-top:18px;font-weight:500;" th:text="${error}"></div>
-    </div>
-  </div>
+      <div th:if="${error}" class="admin-alert" th:text="${error}"></div>
+      <div class="admin-form-actions">
+        <a th:href="@{|/admin/amenities/${amenityId}/translations|}" class="admin-btn">취소</a>
+        <button type="submit" class="admin-btn is-primary">등록</button>
+      </div>
+    </form>
+  </section>
 </th:block>
 </html>

@@ -1,32 +1,36 @@
 <!DOCTYPE html>
-<html lang="ko"
-      xmlns:th="http://www.thymeleaf.org"
-      th:replace="layout/main :: layout(~{::body}, ~{::headFragment})">
-<th:block th:fragment="headFragment">
-  <link rel="stylesheet" href="/css/admin.css">
-</th:block>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'categories')}">
+<th:block th:fragment="headFragment"></th:block>
 <th:block th:fragment="body">
-  <div class="admin-category-list-page">
-    <div class="admin-header">
-      <h2>카테고리 관리</h2>
-      <a href="/admin/categories/create" class="btn btn-primary">+ 카테고리 등록</a>
-    </div>
-    <div class="category-card-list">
-      <div class="category-card" th:each="cat : ${categories}">
-        <div class="category-card-info">
-          <span class="category-id" th:text="${cat.id}">1</span>
-          <span class="category-name" th:text="${cat.name}">이름</span>
+  <section class="admin-page-section">
+    <header class="admin-page-header">
+      <div class="admin-page-heading">
+        <h1 class="admin-page-title">여행지 카테고리 관리</h1>
+        <p class="admin-page-description">여행지에 사용할 카테고리를 등록하고 관리합니다.</p>
+      </div>
+      <div class="admin-page-actions">
+        <a th:href="@{/admin/categories/create}" class="admin-btn is-primary">+ 카테고리 등록</a>
+      </div>
+    </header>
+
+    <div class="admin-item-grid">
+      <article class="admin-item-card" th:each="cat : ${categories}">
+        <div class="admin-item-card-info">
+          <span class="admin-item-card-id" th:text="${cat.id}">1</span>
+          <span class="admin-item-card-name" th:text="${cat.name}">이름</span>
         </div>
-        <div class="category-card-actions">
-          <form th:action="@{'/admin/categories/' + ${cat.id} + '/delete'}" method="post" style="display:inline;">
-            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('정말 삭제할까요?')">삭제</button>
+        <div class="admin-action-group">
+          <form th:action="@{'/admin/categories/' + ${cat.id} + '/delete'}" method="post">
+            <button type="submit" class="admin-btn is-small is-danger"
+                    onclick="return confirm('정말 삭제할까요?')">삭제</button>
           </form>
         </div>
-      </div>
-      <div th:if="${#lists.isEmpty(categories)}" class="empty-message">
+      </article>
+      <div th:if="${#lists.isEmpty(categories)}" class="admin-card admin-empty-state">
         등록된 카테고리가 없습니다.
       </div>
     </div>
-  </div>
+  </section>
 </th:block>
 </html>

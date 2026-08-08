@@ -1,18 +1,26 @@
 <!DOCTYPE html>
 <html lang="ko"
       xmlns:th="http://www.thymeleaf.org"
-      th:replace="layout/main :: layout(~{::body}, ~{::headFragment})">
+      th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'destinations')}">
 
 <th:block th:fragment="headFragment">
   <link rel="stylesheet" href="/css/destination-create.css">
-  <link rel="stylesheet" href="/css/admin.css">
 </th:block>
 <th:block th:fragment="body">
 
-<h1>여행지 등록</h1>
+<section class="admin-page-section admin-destination-form-page">
+<header class="admin-page-header">
+  <div class="admin-page-heading">
+    <h1 class="admin-page-title">여행지 등록</h1>
+    <p class="admin-page-description">여행지의 지역, 유형별 상세 정보와 이미지를 등록합니다.</p>
+  </div>
+  <div class="admin-page-actions">
+    <a th:href="@{/admin/destinations}" class="admin-btn">여행지 목록</a>
+  </div>
+</header>
 
 <form th:action="@{/admin/destinations}" method="post" enctype="multipart/form-data"
-      th:object="${destinationForm}">
+      th:object="${destinationForm}" class="admin-destination-form admin-form-card is-wide">
 
   <!-- 위도 / 경도 -->
   <div>
@@ -31,7 +39,7 @@
     <select id="country"></select>
     <select id="city"></select>
     <select id="district"></select>
-    <input type="hidden" id="regionIdHidden" name="regionId" th:field="*{regionId}">>
+    <input type="hidden" id="regionIdHidden" name="regionId" th:field="*{regionId}">
   </div>
 
   <!-- 시즌 선택 -->
@@ -427,9 +435,13 @@
     <label><input type="checkbox" th:field="*{slide}"/> 슬라이드 이미지</label>
   </div>
 
-  <button type="submit">등록</button>
+  <div class="admin-form-actions">
+    <a th:href="@{/admin/destinations}" class="admin-btn">취소</a>
+    <button type="submit" class="admin-btn is-primary">등록</button>
+  </div>
 </form>
 <script src="/js/region-selector.js" defer></script>
 <script src="/js/type-fields.js" defer></script>
+</section>
 </th:block>
 </html>

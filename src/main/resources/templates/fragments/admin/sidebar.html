@@ -17,10 +17,18 @@
 
     <section class="admin-nav-group">
       <h2 class="admin-nav-group-title">여행지 관리</h2>
-      <a class="admin-nav-link" th:href="@{/admin/destinations}">여행지</a>
-      <a class="admin-nav-link" th:href="@{/admin/categories}">여행지 카테고리</a>
-      <a class="admin-nav-link" th:href="@{/admin/region-categories}">지역·도시</a>
-      <a class="admin-nav-link" th:href="@{/admin/amenities/list}">편의시설</a>
+      <a class="admin-nav-link"
+         th:classappend="${activeMenu == 'destinations'} ? ' is-active' : ''"
+         th:href="@{/admin/destinations}">여행지</a>
+      <a class="admin-nav-link"
+         th:classappend="${activeMenu == 'categories'} ? ' is-active' : ''"
+         th:href="@{/admin/categories}">여행지 카테고리</a>
+      <a class="admin-nav-link"
+         th:classappend="${activeMenu == 'regions'} ? ' is-active' : ''"
+         th:href="@{/admin/region-categories}">지역·도시</a>
+      <a class="admin-nav-link"
+         th:classappend="${activeMenu == 'amenities'} ? ' is-active' : ''"
+         th:href="@{/admin/amenities/list}">편의시설</a>
     </section>
 
     <section class="admin-nav-group">
@@ -37,7 +45,9 @@
 
     <section class="admin-nav-group">
       <h2 class="admin-nav-group-title">이벤트 관리</h2>
-      <a class="admin-nav-link" th:href="@{/admin/event/list}">이벤트</a>
+      <a class="admin-nav-link"
+         th:classappend="${activeMenu == 'events'} ? ' is-active' : ''"
+         th:href="@{/admin/event/list}">이벤트</a>
     </section>
   </nav>
 </aside>

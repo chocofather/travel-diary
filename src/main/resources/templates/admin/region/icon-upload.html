@@ -1,35 +1,36 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org"
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
-      th:replace="layout/main :: layout(~{::body}, ~{::headFragment})">
-
-<th:block th:fragment="headFragment">
-  <link rel="stylesheet" href="/css/admin.css">
-</th:block>
-
+      th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'regions')}">
+<th:block th:fragment="headFragment"></th:block>
 <th:block th:fragment="body">
+  <section class="admin-page-section">
+    <header class="admin-page-header">
+      <div class="admin-page-heading">
+        <h1 class="admin-page-title">카테고리 아이콘 업로드</h1>
+        <p class="admin-page-description"
+           th:text="'[' + ${category.regionName} + '] 에 대한 아이콘을 업로드하세요.'"></p>
+      </div>
+      <div class="admin-page-actions">
+        <a th:href="@{/admin/region-categories}" class="admin-btn">지역·도시 목록</a>
+      </div>
+    </header>
 
-<section th:fragment="body" class="icon-upload-form" style="padding:40px;">
-  <h1>카테고리 아이콘 업로드</h1>
-  <p th:text="'[' + ${category.regionName} + '] 에 대한 아이콘을 업로드하세요.'"></p>
-
-  <!-- enctype="multipart/form-data" 반드시 필요 -->
-  <form th:action="@{/admin/region-categories/{id}/icon(id=${category.id})}"
-        method="post"
-        enctype="multipart/form-data"
-        style="margin-top:20px;">
-
-    <input type="file"
-           name="icon"
-           accept="image/*"
-           required/>
-
-    <button type="submit" class="btn-admin"
-            style="margin-left:12px;">
-      업로드
-    </button>
-    <a href="/admin/region-categories" style="margin-left:8px; color:#555;">취소</a>
-  </form>
-</section>
+    <form th:action="@{/admin/region-categories/{id}/icon(id=${category.id})}"
+          method="post"
+          enctype="multipart/form-data"
+          class="admin-form-card">
+      <div class="admin-form-field">
+        <label for="region-icon">아이콘 이미지</label>
+        <input id="region-icon" type="file" name="icon" accept="image/*" required />
+        <span class="admin-help-text">원형 썸네일에 맞는 정사각형 이미지를 권장합니다.</span>
+      </div>
+      <div class="admin-form-actions">
+        <a th:href="@{/admin/region-categories}" class="admin-btn">취소</a>
+        <button type="submit" class="admin-btn is-primary">업로드</button>
+      </div>
+    </form>
+  </section>
 </th:block>
 </html>

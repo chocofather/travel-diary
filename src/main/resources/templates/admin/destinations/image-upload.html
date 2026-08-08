@@ -1,61 +1,75 @@
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org"
-      th:replace="layout/main :: layout(~{::body}, ~{::headFragment})">
-<th:block th:fragment="headFragment">
-  <link rel="stylesheet" href="/css/admin.css">
-</th:block>
+      th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'destinations')}">
+<th:block th:fragment="headFragment"></th:block>
 <th:block th:fragment="body">
+  <section class="admin-page-section">
+    <header class="admin-page-header">
+      <div class="admin-page-heading">
+        <h1 class="admin-page-title">여행지 이미지 관리</h1>
+        <p class="admin-page-description">대표 이미지와 슬라이드 이미지를 등록하고 관리합니다.</p>
+      </div>
+      <div class="admin-page-actions">
+        <a th:href="@{/admin/destinations}" class="admin-btn">여행지 목록</a>
+      </div>
+    </header>
 
-  <h1>여행지 이미지 등록</h1>
+    <form th:action="@{/admin/destinations/{id}/images(id=${destinationId})}"
+          method="post" enctype="multipart/form-data" class="admin-form-card">
+      <h2 class="admin-card-heading">새 이미지 업로드</h2>
+      <p class="admin-card-description">여러 장을 선택한 뒤 대표 및 슬라이드 이미지의 인덱스를 지정할 수 있습니다.</p>
+      <div class="admin-form-fields">
+        <div class="admin-form-field">
+          <label for="destination-image-files">이미지 파일 선택 (여러 장 가능)</label>
+          <input id="destination-image-files" type="file" name="files" multiple required>
+        </div>
+        <div class="admin-form-field">
+          <label for="destination-main-index">메인 이미지 인덱스 (예: 0)</label>
+          <input id="destination-main-index" type="number" name="mainIdx" placeholder="메인이미지 인덱스 (0부터)">
+        </div>
+        <div class="admin-form-field">
+          <label for="destination-slide-index">슬라이드 이미지 인덱스들 (쉼표로 구분, 예: 0,1,2)</label>
+          <input id="destination-slide-index" type="text" name="slideIdx" placeholder="슬라이드 인덱스">
+        </div>
+      </div>
+      <div class="admin-form-actions">
+        <button type="submit" class="admin-btn is-primary">이미지 업로드</button>
+      </div>
+    </form>
 
-  <form th:action="@{/admin/destinations/{id}/images(id=${destinationId})}"
-        method="post" enctype="multipart/form-data">
-
-    <div>
-      <label>이미지 파일 선택 (여러 장 가능)</label>
-      <input type="file" name="files" multiple required>
+    <div class="admin-card is-table-card admin-section-spacer">
+      <div class="admin-card-header">
+        <h2 class="admin-card-heading">등록된 이미지</h2>
+      </div>
+      <div class="admin-table-wrapper">
+        <table class="admin-table">
+          <thead>
+          <tr>
+            <th>썸네일</th>
+            <th>메인</th>
+            <th>슬라이드</th>
+            <th>관리</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr th:each="img : ${imageList}">
+            <td>
+              <img th:src="@{${img.imageUrl}}" alt="thumbnail" class="admin-image-preview">
+            </td>
+            <td th:text="${img.isMain} ? '✔' : ''"></td>
+            <td th:text="${img.isSlide} ? '✔' : ''"></td>
+            <td class="admin-table-actions">
+              <form th:action="@{/admin/destinations/images/{id}/delete(id=${img.id})}" method="post">
+                <input type="hidden" name="destinationId" th:value="${destinationId}">
+                <button type="submit" class="admin-btn is-small is-danger"
+                        onclick="return confirm('삭제하시겠습니까?')">삭제</button>
+              </form>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
-
-    <div>
-      <label>메인 이미지 인덱스 (예: 0)</label>
-      <input type="number" name="mainIdx" placeholder="메인이미지 인덱스 (0부터)">
-    </div>
-
-    <div>
-      <label>슬라이드 이미지 인덱스들 (쉼표로 구분, 예: 0,1,2)</label>
-      <input type="text" name="slideIdx" placeholder="슬라이드 인덱스">
-    </div>
-
-    <button type="submit">이미지 업로드</button>
-  </form>
-
-  <!-- ✅ 기존 이미지 목록 -->
-  <h2 style="margin-top: 40px;">등록된 이미지</h2>
-
-  <table>
-    <thead>
-    <tr>
-      <th>썸네일</th>
-      <th>메인</th>
-      <th>슬라이드</th>
-      <th>삭제</th>
-    </tr>
-    </thead>
-    <tbody>
-    <tr th:each="img : ${imageList}">
-      <td>
-        <img th:src="@{${img.imageUrl}}" alt="thumbnail" class="thumb">
-      </td>
-      <td th:text="${img.isMain} ? '✔' : ''"></td>
-      <td th:text="${img.isSlide} ? '✔' : ''"></td>
-      <td>
-        <form th:action="@{/admin/destinations/images/{id}/delete(id=${img.id})}" method="post">
-          <input type="hidden" name="destinationId" th:value="${destinationId}">
-          <button type="submit" class="delete-btn" onclick="return confirm('삭제하시겠습니까?')">삭제</button>
-        </form>
-      </td>
-    </tr>
-    </tbody>
-  </table>
+  </section>
 </th:block>
 </html>

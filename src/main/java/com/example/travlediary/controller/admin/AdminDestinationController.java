@@ -1,6 +1,7 @@
 package com.example.travlediary.controller.admin;
 
 import com.example.travlediary.dto.DestinationForm;
+import com.example.travlediary.model.CountryCategory;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.amenity.AmenityService;
 import com.example.travlediary.service.category.CategoryService;
@@ -66,6 +67,7 @@ public class AdminDestinationController {
             @RequestParam(value = "countryId", required = false) Long countryId,
             @RequestParam(value = "cityId", required = false) Long cityId,
             @RequestParam(value = "regionId", required = false) Long regionId,
+            @RequestParam(value = "districtId", required = false) Long districtId,
             Model model) {
 
         System.out.println("type: " + type);
@@ -78,9 +80,20 @@ public class AdminDestinationController {
 */
         List<Long> regionIds;
         Long koreaId = countryCategoryService.getKoreaRootId();
+        CountryCategory selectedDistrict = null;
+
+        // 국내 하위 지역은 선택한 시/도의 실제 자식일 때만 사용한다.
+        if ("domestic".equals(type) && regionId != null && districtId != null) {
+            CountryCategory district = countryCategoryService.getById(districtId);
+            if (district != null && Objects.equals(district.getParentId(), regionId)) {
+                selectedDistrict = district;
+            }
+        }
 
         // 1. 최하위 선택 우선
-        if (regionId != null) {
+        if (selectedDistrict != null) {
+            regionIds = countryCategoryService.getAllRegionIdsUnder(selectedDistrict.getId());
+        } else if (regionId != null) {
             regionIds = countryCategoryService.getAllRegionIdsUnder(regionId);
         } else if (cityId != null) {
             regionIds = countryCategoryService.getAllRegionIdsUnder(cityId);
@@ -131,17 +144,25 @@ public class AdminDestinationController {
         model.addAttribute("cities", cities);
         model.addAttribute("cityId", cityId);
 
-        // 국내: 서울/경기 등 시도 (대한민국의 자식 중 depth=3)
-        List regions = null;
+        // 국내: depth 값 대신 parent_id로 시/도와 시/군/구를 조회한다.
+        List<CountryCategory> regions = null;
+        List<CountryCategory> districts = null;
         if ("domestic".equals(type) && koreaId != null) {
-            regions = countryCategoryService.getRegionsByDepthAndParent(3, koreaId);  // 서울, 경기, 시군구 등을 depth=3으로 가져옵니다.
+            regions = countryCategoryService.getRegionsByParentId(koreaId);
+            if (regionId != null) {
+                districts = countryCategoryService.getRegionsByParentId(regionId);
+            }
         }
         model.addAttribute("regions", regions);
+        model.addAttribute("districts", districts);
         model.addAttribute("regionId", regionId);
+        model.addAttribute("districtId", selectedDistrict != null ? selectedDistrict.getId() : null);
 
         // **선택된 리스트 이름 구하기**
         String selectedRegionName = "전체 리스트";
-        if (regionId != null) {
+        if (selectedDistrict != null) {
+            selectedRegionName = selectedDistrict.getRegionName() + " 리스트";
+        } else if (regionId != null) {
             var region = countryCategoryService.getById(regionId);
             if (region != null) selectedRegionName = region.getRegionName() + " 리스트";
         } else if (cityId != null) {

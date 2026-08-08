@@ -1,41 +1,48 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org"
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
-      th:replace="layout/main :: layout(~{::body}, ~{::headFragment})">
-
-<th:block th:fragment="headFragment">
-  <link rel="stylesheet" href="/css/admin.css">
-</th:block>
-
+      th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'events')}">
+<th:block th:fragment="headFragment"></th:block>
 <th:block th:fragment="body">
-  <div class="event-list-wrapper">
-    <div class="event-list-header">
-      <h1>이벤트 목록</h1>
-      <a href="/admin/event/new" class="btn-admin">이벤트 등록</a>
-    </div>
-    <table>
-      <thead>
-      <tr>
-        <th>제목</th>
-        <th>슬라이드</th>
-        <th>기간</th>
-        <th>관리</th>
-      </tr>
-      </thead>
-      <tbody>
-      <tr th:each="event : ${eventList}">
-        <td th:text="${event.title}"></td>
-        <td th:text="${event.slide} ? 'O' : 'X'"></td>
-        <td th:text="${event.startDate} + ' ~ ' + ${event.endDate}"></td>
-        <td>
-          <form th:action="@{/admin/event/{id}/delete(id=${event.id})}" method="post" style="display:inline;">
-            <button type="submit" onclick="return confirm('삭제하시겠습니까?')">삭제</button>
-          </form>
-        </td>
-      </tr>
-      </tbody>
-    </table>
-  </div>
-</th:block>
+  <section class="admin-page-section">
+    <header class="admin-page-header">
+      <div class="admin-page-heading">
+        <h1 class="admin-page-title">이벤트 관리</h1>
+        <p class="admin-page-description">사이트에 노출할 이벤트 콘텐츠와 기간을 관리합니다.</p>
+      </div>
+      <div class="admin-page-actions">
+        <a th:href="@{/admin/event/new}" class="admin-btn is-primary">+ 이벤트 등록</a>
+      </div>
+    </header>
 
+    <div class="admin-card is-table-card">
+      <div class="admin-table-wrapper">
+        <table class="admin-table">
+          <thead>
+          <tr>
+            <th>제목</th>
+            <th>슬라이드</th>
+            <th>기간</th>
+            <th>관리</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr th:each="event : ${eventList}">
+            <td th:text="${event.title}"></td>
+            <td th:text="${event.slide} ? 'O' : 'X'"></td>
+            <td th:text="${event.startDate} + ' ~ ' + ${event.endDate}"></td>
+            <td class="admin-table-actions">
+              <form th:action="@{/admin/event/{id}/delete(id=${event.id})}" method="post">
+                <button type="submit" class="admin-btn is-small is-danger"
+                        onclick="return confirm('삭제하시겠습니까?')">삭제</button>
+              </form>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</th:block>
 </html>

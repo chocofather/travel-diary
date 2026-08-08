@@ -1,42 +1,42 @@
 <!DOCTYPE html>
-<html lang="ko"
-      xmlns:th="http://www.thymeleaf.org"
-      th:replace="layout/main :: layout(~{::body}, ~{::headFragment})">
-<th:block th:fragment="headFragment">
-  <link rel="stylesheet" href="/css/admin.css">
-  <link rel="stylesheet" href="/css/amenity.css">
-</th:block>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'amenities')}">
+<th:block th:fragment="headFragment"></th:block>
 <th:block th:fragment="body">
-
-  <div class="amenity-list-outer">
-    <div class="amenity-list-wrapper">
-      <div class="top-bar">
-        <h1>편의시설 목록</h1>
-        <div class="amenity-btn-bar">
-          <a href="/admin/amenities/create" class="btn">+ 새 편의시설 등록</a>
-        </div>
+  <section class="admin-page-section">
+    <header class="admin-page-header">
+      <div class="admin-page-heading">
+        <h1 class="admin-page-title">편의시설 관리</h1>
+        <p class="admin-page-description">여행지 유형별 편의시설 코드와 번역을 관리합니다.</p>
       </div>
-      <table>
-        <thead>
-        <tr>
-          <th>ID</th>
-          <th>코드</th>
-          <th>번역</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="a : ${amenities}">
-          <td th:text="${a.id}"></td>
-          <td th:text="${a.code}"></td>
-          <td>
-            <a th:href="@{|/admin/amenities/${a.id}/translations|}" class="btn btn-link">번역 보기</a>
+      <div class="admin-page-actions">
+        <a th:href="@{/admin/amenities/create}" class="admin-btn is-primary">+ 새 편의시설 등록</a>
+      </div>
+    </header>
 
-          </td>
-        </tr>
-        </tbody>
-      </table>
+    <div class="admin-card is-table-card">
+      <div class="admin-table-wrapper">
+        <table class="admin-table">
+          <thead>
+          <tr>
+            <th>ID</th>
+            <th>코드</th>
+            <th>관리</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr th:each="a : ${amenities}">
+            <td class="admin-table-number" th:text="${a.id}"></td>
+            <td th:text="${a.code}"></td>
+            <td class="admin-table-actions">
+              <a th:href="@{|/admin/amenities/${a.id}/translations|}"
+                 class="admin-btn is-small">번역 보기</a>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
-  </div>
-
+  </section>
 </th:block>
 </html>

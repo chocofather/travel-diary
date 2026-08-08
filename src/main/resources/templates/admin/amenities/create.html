@@ -1,30 +1,30 @@
 <!DOCTYPE html>
-<html lang="ko"
-      xmlns:th="http://www.thymeleaf.org"
-      th:replace="layout/main :: layout(~{::body}, ~{::headFragment})">
-<th:block th:fragment="headFragment">
-    <link rel="stylesheet" href="/css/admin.css">
-    <link rel="stylesheet" href="/css/amenity.css">
-</th:block>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'amenities')}">
+<th:block th:fragment="headFragment"></th:block>
 <th:block th:fragment="body">
-    <div class="amenity-list-outer">
-        <div class="amenity-list-wrapper">
-            <div class="top-bar">
-                <h1>편의시설 등록</h1>
-                <div class="amenity-btn-bar">
-                    <a th:href="@{/admin/amenities/list}" class="btn">목록으로</a>
-                </div>
-            </div>
-            <form th:action="@{/admin/amenities/create}" method="post" style="margin-top:28px;">
-                <label style="font-weight:600;display:block;margin-bottom:16px;">
-                    코드:
-                    <input type="text" name="code" required
-                           style="margin-left:8px;padding:8px 14px;border-radius:7px;border:1.1px solid #e4e8f4;">
-                </label>
-                <button type="submit" class="btn" style="margin-top:8px;">등록</button>
-            </form>
-            <div th:if="${error}" style="color:#e74c3c;margin-top:18px;font-weight:500;" th:text="${error}"></div>
-        </div>
-    </div>
+  <section class="admin-page-section">
+    <header class="admin-page-header">
+      <div class="admin-page-heading">
+        <h1 class="admin-page-title">편의시설 등록</h1>
+        <p class="admin-page-description">여행지 상세 정보에서 사용할 편의시설 코드를 등록합니다.</p>
+      </div>
+      <div class="admin-page-actions">
+        <a th:href="@{/admin/amenities/list}" class="admin-btn">편의시설 목록</a>
+      </div>
+    </header>
+
+    <form th:action="@{/admin/amenities/create}" method="post" class="admin-form-card">
+      <div class="admin-form-field">
+        <label for="amenity-code">코드</label>
+        <input id="amenity-code" type="text" name="code" required>
+      </div>
+      <div th:if="${error}" class="admin-alert" th:text="${error}"></div>
+      <div class="admin-form-actions">
+        <a th:href="@{/admin/amenities/list}" class="admin-btn">취소</a>
+        <button type="submit" class="admin-btn is-primary">등록</button>
+      </div>
+    </form>
+  </section>
 </th:block>
 </html>
