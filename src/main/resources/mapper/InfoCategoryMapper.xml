@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.category.InfoCategoryMapper">
+
+    <resultMap id="InfoCategoryResultMap" type="com.example.travlediary.model.InfoCategory">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="displayOrder" column="display_order"/>
+        <result property="isVisible" column="is_visible" javaType="java.lang.Boolean"/>
+    </resultMap>
+
+    <select id="findAll" resultMap="InfoCategoryResultMap">
+        SELECT id, name, display_order, is_visible
+        FROM info_categories
+        ORDER BY display_order ASC, id ASC
+    </select>
+
+    <select id="findById" parameterType="long" resultMap="InfoCategoryResultMap">
+        SELECT id, name, display_order, is_visible
+        FROM info_categories
+        WHERE id = #{id}
+    </select>
+
+    <insert id="insert" parameterType="com.example.travlediary.model.InfoCategory"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO info_categories (name, display_order, is_visible)
+        VALUES (#{name}, #{displayOrder}, #{isVisible})
+    </insert>
+
+    <update id="update" parameterType="com.example.travlediary.model.InfoCategory">
+        UPDATE info_categories
+        SET name = #{name},
+            display_order = #{displayOrder},
+            is_visible = #{isVisible}
+        WHERE id = #{id}
+    </update>
+
+    <select id="countByNameExcludingId" resultType="int">
+        SELECT COUNT(*)
+        FROM info_categories
+        WHERE name = #{name}
+        <if test="excludeId != null">
+            AND id &lt;&gt; #{excludeId}
+        </if>
+    </select>
+
+    <select id="countTravelInfoByCategoryId" parameterType="long" resultType="int">
+        SELECT COUNT(*)
+        FROM travel_info
+        WHERE category_id = #{categoryId}
+    </select>
+
+    <delete id="deleteById" parameterType="long">
+        DELETE FROM info_categories
+        WHERE id = #{id}
+    </delete>
+
+</mapper>

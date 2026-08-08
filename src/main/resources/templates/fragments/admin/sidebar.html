@@ -37,10 +37,9 @@
         <span>여행정보</span>
         <span class="admin-nav-badge">준비 중</span>
       </span>
-      <span class="admin-nav-link is-disabled" aria-disabled="true">
-        <span>정보 카테고리</span>
-        <span class="admin-nav-badge">준비 중</span>
-      </span>
+      <a class="admin-nav-link"
+         th:classappend="${activeMenu == 'info-categories'} ? ' is-active' : ''"
+         th:href="@{/admin/info-categories}">정보 카테고리</a>
     </section>
 
     <section class="admin-nav-group">
