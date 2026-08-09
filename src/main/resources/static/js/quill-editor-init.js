@@ -111,8 +111,8 @@ window.initQuillEditor = function (editorSelector, contentInputId, formId, initi
         });
     }
 
-    function groupToolbarRows(toolbar) {
-        if (toolbar.querySelector('.admin-travel-info-toolbar-row')) return;
+    function groupToolbarFormats(toolbar) {
+        if (toolbar.querySelector('.quill-toolbar-group-set')) return;
 
         const formatGroups = Array.from(toolbar.children)
             .filter(element => element.classList.contains('ql-formats'));
@@ -120,12 +120,12 @@ window.initQuillEditor = function (editorSelector, contentInputId, formId, initi
         if (secondRowIndex <= 0) return;
 
         const firstRow = document.createElement('div');
-        firstRow.className = 'admin-travel-info-toolbar-row is-primary';
+        firstRow.className = 'quill-toolbar-group-set is-text-format';
         firstRow.setAttribute('role', 'group');
         firstRow.setAttribute('aria-label', '글자 서식 도구');
 
         const secondRow = document.createElement('div');
-        secondRow.className = 'admin-travel-info-toolbar-row is-secondary';
+        secondRow.className = 'quill-toolbar-group-set is-block-format';
         secondRow.setAttribute('role', 'group');
         secondRow.setAttribute('aria-label', '문단 및 삽입 도구');
 
@@ -140,7 +140,7 @@ window.initQuillEditor = function (editorSelector, contentInputId, formId, initi
         if (!toolbar) return;
 
         toolbar.setAttribute('aria-label', '본문 편집 도구');
-        groupToolbarRows(toolbar);
+        groupToolbarFormats(toolbar);
         const buttonLabels = new Map([
             ['.ql-bold', '굵게'],
             ['.ql-italic', '기울임'],

@@ -38,12 +38,14 @@ class AdminTravelInfoUiContractTest {
     void formUsesSingleFormQuillEditorAndIndexedPeriods() throws IOException {
         String form = resource("/templates/admin/travel-info/form.html");
         String quillInitializer = resource("/static/js/quill-editor-init.js");
+        String quillCss = resource("/static/css/quill-content.css");
         String travelInfoCss = resource("/static/css/admin-travel-info.css");
 
         assertThat(form)
                 .containsOnlyOnce("<form id=\"travel-info-form\"")
-                .contains("class=\"admin-travel-info-editor-shell\"")
+                .contains("class=\"admin-travel-info-editor-shell quill-editor-shell\"")
                 .contains("id=\"travel-info-editor\"")
+                .contains("class=\"admin-travel-info-editor quill-editor\"")
                 .contains("th:field=\"*{content}\"")
                 .contains("id=\"travel-info-initial-content\"")
                 .contains("hidden th:text=\"*{content}\"")
@@ -56,6 +58,7 @@ class AdminTravelInfoUiContractTest {
                 .contains("pretendard@v1.3.9")
                 .contains("@fontsource/noto-sans-kr@5.3.0/400.css")
                 .contains("@fontsource/noto-serif-kr@5.3.0/400.css")
+                .contains("/css/quill-content.css")
                 .contains("/js/quill-editor-init.js")
                 .contains("/js/admin-travel-info-form.js")
                 .doesNotContain(
@@ -95,10 +98,10 @@ class AdminTravelInfoUiContractTest {
                 .contains("const fontFormatsByClass = new Map(")
                 .contains("quill.clipboard.addMatcher(Node.ELEMENT_NODE")
                 .contains("new Delta().retain(delta.length(), {font: fontFormat})")
-                .contains("function groupToolbarRows(toolbar)")
+                .contains("function groupToolbarFormats(toolbar)")
                 .contains("group.querySelector('.ql-blockquote')")
-                .contains("admin-travel-info-toolbar-row is-primary")
-                .contains("admin-travel-info-toolbar-row is-secondary")
+                .contains("quill-toolbar-group-set is-text-format")
+                .contains("quill-toolbar-group-set is-block-format")
                 .contains("const registeredResizeModule = Quill.import('modules/resize')")
                 .contains("typeof registeredResizeModule === 'function'")
                 .doesNotContain("Quill.register('modules/resize', window.QuillResize")
@@ -118,21 +121,19 @@ class AdminTravelInfoUiContractTest {
                 .contains("'링크'", "'이미지'", "'서식 지우기'")
                 .doesNotContain("quill.root.innerHTML", "FileReader");
 
-        assertThat(travelInfoCss)
-                .contains(".admin-travel-info-editor-shell")
-                .contains(".admin-travel-info-toolbar-row")
-                .contains(".admin-travel-info-form .admin-travel-info-section")
-                .contains(".admin-travel-info-editor.ql-container.ql-snow")
+        assertThat(quillCss)
+                .contains(".quill-editor-shell")
+                .contains(".quill-toolbar-group-set")
+                .contains(".quill-editor.ql-container.ql-snow")
                 .contains("display: flex;")
                 .contains("flex-wrap: wrap;")
                 .contains("display: contents;")
                 .contains("flex: 0 0 auto;")
                 .contains("flex-wrap: nowrap;")
                 .contains("float: none;")
-                .contains("max-width: 1120px;")
                 .contains("padding: 12px 16px;")
                 .contains("height: auto;")
-                .contains("min-height: 440px;")
+                .contains("--quill-editor-min-height, 440px")
                 .contains("box-sizing: border-box;")
                 .contains("content: \"본문\";")
                 .contains("content: \"기본\";")
@@ -155,12 +156,17 @@ class AdminTravelInfoUiContractTest {
                 .contains("projectnoonnu/noonfonts_twelve@1.1/Cafe24Dongdong.woff")
                 .contains("fonts-archive/GangwonEduSaeeum@886cd32897e795db4a8a160867e6478b0b1bc149/")
                 .doesNotContain(".ql-formats + .ql-formats::before");
+
+        assertThat(travelInfoCss)
+                .contains(".admin-travel-info-form .admin-travel-info-section")
+                .contains("max-width: 1120px;")
+                .doesNotContain("@font-face", ".rich-text-content");
     }
 
     @Test
     void detailRendersSanitizedHtmlWithoutToastUiDependency() throws IOException {
         String detail = resource("/templates/admin/travel-info/detail.html");
-        String travelInfoCss = resource("/static/css/admin-travel-info.css");
+        String quillCss = resource("/static/css/quill-content.css");
 
         assertThat(detail)
                 .contains("class=\"admin-travel-info-content rich-text-content\"")
@@ -168,9 +174,10 @@ class AdminTravelInfoUiContractTest {
                 .contains("pretendard@v1.3.9")
                 .contains("@fontsource/noto-sans-kr@5.3.0/400.css")
                 .contains("@fontsource/noto-serif-kr@5.3.0/400.css")
+                .contains("/css/quill-content.css")
                 .doesNotContain("toastui-editor-contents", "uicdn.toast.com");
 
-        assertThat(travelInfoCss)
+        assertThat(quillCss)
                 .contains(".rich-text-content .ql-font-pretendard")
                 .contains(".rich-text-content .ql-font-noto-sans-kr")
                 .contains(".rich-text-content .ql-font-noto-serif-kr")
