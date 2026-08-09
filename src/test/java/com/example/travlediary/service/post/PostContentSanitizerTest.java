@@ -14,7 +14,7 @@ class PostContentSanitizerTest {
     }
 
     @Test
-    void keepsToastEditorFormattingAndSafeImageSources() {
+    void keepsLegacyRichTextFormattingAndSafeImageSources() {
         String html = "<h2>제목</h2><p><strong>본문</strong></p>"
                 + "<table><tbody><tr><td>표</td></tr></tbody></table>"
                 + "<img src=\"/uploads/editor/a.png\" alt=\"내부\">"

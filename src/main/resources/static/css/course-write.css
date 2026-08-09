@@ -1,7 +1,9 @@
 .course-write-wrapper {
-    width: min(1040px, calc(100% - 40px));
+    width: calc(100% - 40px);
+    max-width: 1200px;
     margin: 48px auto 80px;
     padding: 40px;
+    box-sizing: border-box;
     border: 1px solid #e3ebe7;
     border-radius: 20px;
     background: #fff;
@@ -36,9 +38,21 @@
     border-color: #397a63;
 }
 
-.editor-group #editor {
+.course-write-wrapper .write-form {
+    width: 100%;
+    max-width: 1120px;
+}
+
+.editor-group {
+    min-width: 0;
+}
+
+.course-editor-shell {
     width: 100%;
     min-width: 0;
+    --quill-editor-min-height: 440px;
+    --quill-toolbar-background: #f8faff;
+    --quill-border-color: #d8dfeb;
 }
 
 .course-destination-picker,

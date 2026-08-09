@@ -4,6 +4,13 @@
       th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
 
 <th:block th:fragment="headFragment">
+  <link rel="stylesheet" crossorigin
+        href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.min.css">
+  <link rel="stylesheet" crossorigin
+        href="https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-kr@5.3.0/400.css">
+  <link rel="stylesheet" crossorigin
+        href="https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-kr@5.3.0/400.css">
+  <link rel="stylesheet" href="/css/quill-content.css">
   <link rel="stylesheet" href="/css/course-detail.css" />
   <link rel="stylesheet" href="/css/content-bookmark.css" />
   <link rel="stylesheet" href="/css/content-comment.css" />
@@ -41,7 +48,7 @@
 
       <section class="course-introduction">
         <h2>코스 소개</h2>
-        <div class="course-introduction-content toastui-editor-contents"
+        <div class="course-introduction-content rich-text-content"
              th:utext="${course.content}"></div>
       </section>
     </article>

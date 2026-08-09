@@ -2,7 +2,7 @@
 
 /* 1. 컨테이너 전체 스타일 */
 .write-container {
-    max-width: 1000px;
+    max-width: 1120px;
     margin: 50px auto;
     background: #fff;
     border-radius: 12px;
@@ -146,7 +146,6 @@
 .write-form .form-group .input-text {
     display: block;               /* inline → block */
     width: 100%;                  /* 최대 너비 */
-    max-width: 600px;             /* 필요 시 조절 */
     height: 48px;                 /* 충분한 높이 */
     padding: 0 12px !important;   /* !important 위치 수정 */
     font-size: 16px;

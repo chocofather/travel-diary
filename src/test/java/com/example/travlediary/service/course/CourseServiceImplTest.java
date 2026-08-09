@@ -130,6 +130,22 @@ class CourseServiceImplTest {
     }
 
     @Test
+    void createsCourseWithImageOnlyQuillContent() {
+        String imageOnlyContent = "<p><img src=\"/uploads/editor/course-map.png\" width=\"600\"></p>";
+        CourseCreateRequest request = request("이미지 코스", imageOnlyContent, List.of(12L));
+        when(courseMapper.countExistingDestinations(List.of(12L))).thenReturn(1);
+        when(courseMapper.insertCourse(any(Course.class))).thenAnswer(invocation -> {
+            Course course = invocation.getArgument(0);
+            assertThat(course.getContent()).isEqualTo(imageOnlyContent);
+            course.setId(100L);
+            return 1;
+        });
+        when(courseMapper.insertCourseDestination(any(CourseDestination.class))).thenReturn(1);
+
+        assertThat(service.createCourse(request, 5L)).isEqualTo(100L);
+    }
+
+    @Test
     void rejectsAllInvalidInputBeforeCourseInsert() {
         assertBadRequest(request(" ", "<p>소개</p>", List.of(1L)));
         assertBadRequest(request("가".repeat(256), "<p>소개</p>", List.of(1L)));

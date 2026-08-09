@@ -14,6 +14,7 @@ class PostQuillUiContractTest {
     void writeAndEditUseTheSharedQuillEditorWithoutToastUi() throws IOException {
         String write = resource("/templates/post/write.html");
         String edit = resource("/templates/post/edit.html");
+        String css = resource("/static/css/post-write.css");
 
         assertPostEditorAssetsAndForm(write);
         assertPostEditorAssetsAndForm(edit);
@@ -23,6 +24,13 @@ class PostQuillUiContractTest {
         assertThat(edit)
                 .contains("id=\"initial-content\" hidden th:text=\"${post.content}\"")
                 .contains("window.initQuillEditor('#editor', 'content-input', 'post-form', 'initial-content');");
+
+        assertThat(css)
+                .contains(".write-container {")
+                .contains("max-width: 1120px")
+                .contains(".post-editor-shell {")
+                .contains("width: 100%")
+                .doesNotContain("max-width: 1000px", "max-width: 600px");
     }
 
     @Test
@@ -58,12 +66,9 @@ class PostQuillUiContractTest {
     }
 
     @Test
-    void detailUsesSharedRichTextStylesAndCourseKeepsToastUi() throws IOException {
+    void detailUsesSharedRichTextStyles() throws IOException {
         String detail = resource("/templates/post/detail.html");
         String quillCss = resource("/static/css/quill-content.css");
-        String courseWrite = resource("/templates/course/write.html");
-        String courseEdit = resource("/templates/course/edit.html");
-        String courseDetail = resource("/templates/course/detail.html");
 
         assertThat(detail)
                 .contains("class=\"post-content rich-text-content\"")
@@ -89,9 +94,6 @@ class PostQuillUiContractTest {
                 .contains("max-width: 100%")
                 .contains("height: auto");
 
-        assertThat(courseWrite).contains("uicdn.toast.com/editor/latest/toastui-editor.min.css");
-        assertThat(courseEdit).contains("uicdn.toast.com/editor/latest/toastui-editor.min.css");
-        assertThat(courseDetail).contains("toastui-editor-contents");
     }
 
     private void assertPostEditorAssetsAndForm(String template) {

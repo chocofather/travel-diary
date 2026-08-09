@@ -2,13 +2,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('course-form');
     if (!form) return;
 
-    const editor = window.initToastEditor(
+    window.initQuillEditor(
         '#editor',
         'content-input',
         'course-form',
         form.dataset.initialContentId || undefined
     );
-    const contentInput = document.getElementById('content-input');
     const searchInput = document.getElementById('destination-search-input');
     const searchButton = document.getElementById('destination-search-button');
     const searchResults = document.getElementById('destination-search-results');
@@ -243,14 +242,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const markdown = editor?.getMarkdown().trim() || '';
-        if (!markdown) {
-            event.preventDefault();
-            showMessage('코스 소개를 입력해 주세요.', true);
-            editor?.focus();
-            return;
-        }
-        contentInput.value = editor.getHTML();
         submitButton.disabled = true;
     });
 
