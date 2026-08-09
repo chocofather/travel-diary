@@ -51,6 +51,10 @@ class PostContentSanitizerTest {
         String html = "<span class=\"ql-font-pretendard\">프리텐다드</span>"
                 + "<span class=\"ql-font-noto-sans-kr\">노토 산스</span>"
                 + "<span class=\"ql-font-noto-serif-kr\">노토 세리프</span>"
+                + "<span class=\"ql-font-nanum-human\">나눔휴먼</span>"
+                + "<span class=\"ql-font-school-safe-bareonbatang\">학교안심 바른바탕</span>"
+                + "<span class=\"ql-font-cafe24-dongdong\">카페24 동동</span>"
+                + "<span class=\"ql-font-gangwon-saeeum\">강원교육새음</span>"
                 + "<span class=\"ql-font-unknown\">미등록</span>";
 
         String cleaned = sanitizer.sanitize(html);
@@ -59,7 +63,43 @@ class PostContentSanitizerTest {
                 .contains("class=\"ql-font-pretendard\"")
                 .contains("class=\"ql-font-noto-sans-kr\"")
                 .contains("class=\"ql-font-noto-serif-kr\"")
+                .contains("class=\"ql-font-nanum-human\"")
+                .contains("class=\"ql-font-school-safe-bareonbatang\"")
+                .contains("class=\"ql-font-cafe24-dongdong\"")
+                .contains("class=\"ql-font-gangwon-saeeum\"")
                 .doesNotContain("ql-font-unknown");
+    }
+
+    @Test
+    void keepsOnlyQuillChecklistStateAttributeValues() {
+        String html = "<ul><li data-list=\"unchecked\">미완료</li>"
+                + "<li data-list=\"checked\">완료</li>"
+                + "<li data-list=\"pending\" data-arbitrary=\"value\">비정상</li></ul>";
+
+        String cleaned = sanitizer.sanitize(html);
+
+        assertThat(cleaned)
+                .contains("<li data-list=\"unchecked\">미완료</li>")
+                .contains("<li data-list=\"checked\">완료</li>")
+                .contains("<li>비정상</li>")
+                .doesNotContain("pending", "data-arbitrary");
+    }
+
+    @Test
+    void keepsOnlyQuillIndentClassesFromOneThroughEight() {
+        String html = "<p class=\"ql-indent-1\">한 단계</p>"
+                + "<p class=\"ql-indent-4 ql-align-center\">네 단계</p>"
+                + "<p class=\"ql-indent-8\">여덟 단계</p>"
+                + "<p class=\"ql-indent-0\">영 단계</p>"
+                + "<p class=\"ql-indent-9 ql-indent-999\">과도한 단계</p>";
+
+        String cleaned = sanitizer.sanitize(html);
+
+        assertThat(cleaned)
+                .contains("class=\"ql-indent-1\"")
+                .contains("class=\"ql-indent-4 ql-align-center\"")
+                .contains("class=\"ql-indent-8\"")
+                .doesNotContain("ql-indent-0", "ql-indent-9", "ql-indent-999");
     }
 
     @Test

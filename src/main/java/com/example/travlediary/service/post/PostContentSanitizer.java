@@ -22,17 +22,22 @@ public class PostContentSanitizer {
     private static final Set<String> INLINE_FORMAT_TAGS = Set.of(
             "span", "strong", "em", "u", "s", "a"
     );
-    private static final Set<String> BLOCK_ALIGNMENT_TAGS = Set.of(
+    private static final Set<String> BLOCK_FORMAT_TAGS = Set.of(
             "p", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote", "li"
     );
     private static final Set<String> INLINE_QUILL_CLASSES = Set.of(
             "ql-font-serif", "ql-font-monospace", "ql-font-pretendard",
             "ql-font-noto-sans-kr", "ql-font-noto-serif-kr",
+            "ql-font-nanum-human", "ql-font-school-safe-bareonbatang",
+            "ql-font-cafe24-dongdong", "ql-font-gangwon-saeeum",
             "ql-size-small", "ql-size-large", "ql-size-huge"
     );
-    private static final Set<String> ALIGNMENT_QUILL_CLASSES = Set.of(
-            "ql-align-center", "ql-align-right", "ql-align-justify"
+    private static final Set<String> BLOCK_QUILL_CLASSES = Set.of(
+            "ql-align-center", "ql-align-right", "ql-align-justify",
+            "ql-indent-1", "ql-indent-2", "ql-indent-3", "ql-indent-4",
+            "ql-indent-5", "ql-indent-6", "ql-indent-7", "ql-indent-8"
     );
+    private static final Set<String> CHECKLIST_STATES = Set.of("checked", "unchecked");
     private static final Set<String> ALLOWED_COLOR_PROPERTIES = Set.of("color", "background-color");
     private static final Pattern HEX_COLOR = Pattern.compile("^#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?$");
     private static final Pattern RGB_COLOR = Pattern.compile(
@@ -52,6 +57,7 @@ public class PostContentSanitizer {
 
         sanitizeQuillClasses(document);
         sanitizeQuillStyles(document);
+        sanitizeChecklistStates(document);
 
         for (Element link : document.select("a[href^=tel:]")) {
             if (!TEL_LINK.matcher(link.attr("href").trim()).matches()) {
@@ -76,13 +82,14 @@ public class PostContentSanitizer {
         Safelist safelist = Safelist.relaxed()
                 .addTags("del", "s", "figure", "figcaption")
                 .addAttributes("img", "class", "width")
+                .addAttributes("li", "data-list")
                 .addProtocols("a", "href", "tel")
                 .removeProtocols("img", "src", "http", "https");
 
         for (String tag : INLINE_FORMAT_TAGS) {
             safelist.addAttributes(tag, "class", "style");
         }
-        for (String tag : BLOCK_ALIGNMENT_TAGS) {
+        for (String tag : BLOCK_FORMAT_TAGS) {
             safelist.addAttributes(tag, "class");
         }
         return safelist;
@@ -93,7 +100,7 @@ public class PostContentSanitizer {
             String tagName = element.tagName();
             Set<String> allowedNames = INLINE_FORMAT_TAGS.contains(tagName)
                     ? INLINE_QUILL_CLASSES
-                    : BLOCK_ALIGNMENT_TAGS.contains(tagName) ? ALIGNMENT_QUILL_CLASSES : Set.of();
+                    : BLOCK_FORMAT_TAGS.contains(tagName) ? BLOCK_QUILL_CLASSES : Set.of();
 
             StringJoiner safeClasses = new StringJoiner(" ");
             for (String className : element.className().trim().split("\\s+")) {
@@ -107,6 +114,14 @@ public class PostContentSanitizer {
                 element.removeAttr("class");
             } else {
                 element.attr("class", result);
+            }
+        }
+    }
+
+    private void sanitizeChecklistStates(Document document) {
+        for (Element item : document.select("li[data-list]")) {
+            if (!CHECKLIST_STATES.contains(item.attr("data-list"))) {
+                item.removeAttr("data-list");
             }
         }
     }

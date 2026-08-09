@@ -29,9 +29,25 @@ window.initQuillEditor = function (editorSelector, contentInputId, formId, initi
         'monospace',
         'pretendard',
         'noto-sans-kr',
-        'noto-serif-kr'
+        'noto-serif-kr',
+        'nanum-human',
+        'school-safe-bareonbatang',
+        'cafe24-dongdong',
+        'gangwon-saeeum'
     ];
     Quill.register(Font, true);
+    const Delta = Quill.import('delta');
+    const fontFormatsByClass = new Map([
+        ['ql-font-serif', 'serif'],
+        ['ql-font-monospace', 'monospace'],
+        ['ql-font-pretendard', 'pretendard'],
+        ['ql-font-noto-sans-kr', 'noto-sans-kr'],
+        ['ql-font-noto-serif-kr', 'noto-serif-kr'],
+        ['ql-font-nanum-human', 'nanum-human'],
+        ['ql-font-school-safe-bareonbatang', 'school-safe-bareonbatang'],
+        ['ql-font-cafe24-dongdong', 'cafe24-dongdong'],
+        ['ql-font-gangwon-saeeum', 'gangwon-saeeum']
+    ]);
 
     function normalizeLinkUrl(rawUrl) {
         const url = rawUrl.trim();
@@ -95,11 +111,36 @@ window.initQuillEditor = function (editorSelector, contentInputId, formId, initi
         });
     }
 
+    function groupToolbarRows(toolbar) {
+        if (toolbar.querySelector('.admin-travel-info-toolbar-row')) return;
+
+        const formatGroups = Array.from(toolbar.children)
+            .filter(element => element.classList.contains('ql-formats'));
+        const secondRowIndex = formatGroups.findIndex(group => group.querySelector('.ql-blockquote'));
+        if (secondRowIndex <= 0) return;
+
+        const firstRow = document.createElement('div');
+        firstRow.className = 'admin-travel-info-toolbar-row is-primary';
+        firstRow.setAttribute('role', 'group');
+        firstRow.setAttribute('aria-label', '글자 서식 도구');
+
+        const secondRow = document.createElement('div');
+        secondRow.className = 'admin-travel-info-toolbar-row is-secondary';
+        secondRow.setAttribute('role', 'group');
+        secondRow.setAttribute('aria-label', '문단 및 삽입 도구');
+
+        formatGroups.forEach((group, index) => {
+            (index < secondRowIndex ? firstRow : secondRow).appendChild(group);
+        });
+        toolbar.append(firstRow, secondRow);
+    }
+
     function localizeToolbar(quillEditor) {
         const toolbar = quillEditor.getModule('toolbar')?.container;
         if (!toolbar) return;
 
         toolbar.setAttribute('aria-label', '본문 편집 도구');
+        groupToolbarRows(toolbar);
         const buttonLabels = new Map([
             ['.ql-bold', '굵게'],
             ['.ql-italic', '기울임'],
@@ -108,6 +149,11 @@ window.initQuillEditor = function (editorSelector, contentInputId, formId, initi
             ['.ql-blockquote', '인용'],
             ['.ql-list[value="ordered"]', '번호 목록'],
             ['.ql-list[value="bullet"]', '글머리 목록'],
+            ['.ql-list[value="check"]', '체크리스트'],
+            ['.ql-indent[value="-1"]', '내어쓰기'],
+            ['.ql-indent[value="+1"]', '들여쓰기'],
+            ['.ql-undo', '실행 취소'],
+            ['.ql-redo', '다시 실행'],
             ['.ql-link', '링크'],
             ['.ql-image', '이미지'],
             ['.ql-clean', '서식 지우기']
@@ -115,6 +161,11 @@ window.initQuillEditor = function (editorSelector, contentInputId, formId, initi
         buttonLabels.forEach((label, selector) => {
             setAccessibleLabel(toolbar.querySelector(selector), label);
         });
+
+        const undoButton = toolbar.querySelector('.ql-undo');
+        const redoButton = toolbar.querySelector('.ql-redo');
+        if (undoButton) undoButton.textContent = '↶';
+        if (redoButton) redoButton.textContent = '↷';
 
         localizePicker(toolbar, '.ql-header', '제목 형식', {
             '': '본문', '1': '제목 1', '2': '제목 2', '3': '제목 3',
@@ -125,6 +176,10 @@ window.initQuillEditor = function (editorSelector, contentInputId, formId, initi
             'pretendard': 'Pretendard',
             'noto-sans-kr': 'Noto Sans KR',
             'noto-serif-kr': 'Noto Serif KR',
+            'nanum-human': '나눔휴먼',
+            'school-safe-bareonbatang': '학교안심 바른바탕',
+            'cafe24-dongdong': '카페24 동동',
+            'gangwon-saeeum': '강원교육새음',
             'monospace': '고정폭'
         });
         localizePicker(toolbar, '.ql-size', '글자 크기', {
@@ -140,14 +195,18 @@ window.initQuillEditor = function (editorSelector, contentInputId, formId, initi
 
     const toolbarOptions = [
         [{header: [1, 2, 3, 4, 5, 6, false]}],
-        [{font: [false, 'pretendard', 'noto-sans-kr', 'noto-serif-kr', 'monospace']},
+        [{font: [false, 'pretendard', 'noto-sans-kr', 'noto-serif-kr',
+                'nanum-human', 'school-safe-bareonbatang', 'cafe24-dongdong',
+                'gangwon-saeeum', 'monospace']},
             {size: ['small', false, 'large', 'huge']}],
         ['bold', 'italic', 'underline', 'strike'],
         [{color: []}, {background: []}],
         [{align: []}],
         ['blockquote'],
-        [{list: 'ordered'}, {list: 'bullet'}],
+        [{list: 'ordered'}, {list: 'bullet'}, {list: 'check'}],
+        [{indent: '-1'}, {indent: '+1'}],
         ['link', 'image'],
+        ['undo', 'redo'],
         ['clean']
     ];
 
@@ -181,6 +240,12 @@ window.initQuillEditor = function (editorSelector, contentInputId, formId, initi
             toolbar: {
                 container: toolbarOptions,
                 handlers: {
+                    undo: function () {
+                        this.quill.history.undo();
+                    },
+                    redo: function () {
+                        this.quill.history.redo();
+                    },
                     link: function (value) {
                         const range = this.quill.getSelection(true) ?? {
                             index: Math.max(0, this.quill.getLength() - 1),
@@ -275,11 +340,23 @@ window.initQuillEditor = function (editorSelector, contentInputId, formId, initi
                     }
                 }
             },
+            history: true,
             ...(resizeModuleAvailable ? {resize: resizeOptions} : {})
         }
     });
     editorElement.quillEditorInstance = quill;
     localizeToolbar(quill);
+
+    // Quill's default Clipboard conversion does not reliably restore custom
+    // class-attributor font values. Reapply only the explicitly registered
+    // font classes while still loading all initial HTML through Clipboard.
+    quill.clipboard.addMatcher(Node.ELEMENT_NODE, (node, delta) => {
+        const fontFormat = Array.from(node.classList ?? [])
+            .map(className => fontFormatsByClass.get(className))
+            .find(Boolean);
+        if (!fontFormat) return delta;
+        return delta.compose(new Delta().retain(delta.length(), {font: fontFormat}));
+    });
 
     if (initialContentId) {
         const initialContent = document.getElementById(initialContentId);

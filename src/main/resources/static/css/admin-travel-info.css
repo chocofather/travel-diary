@@ -1,3 +1,51 @@
+@font-face {
+    font-family: "NanumHuman";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2501-1@1.1/NanumHumanTTFRegular.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "NanumHuman";
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/2501-1@1.1/NanumHumanTTFBold.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Hakgyoansim Bareonbatang";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2307-2@1.0/HakgyoansimBareonbatangR.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Hakgyoansim Bareonbatang";
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2307-2@1.0/HakgyoansimBareonbatangB.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Cafe24Dongdong";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_twelve@1.1/Cafe24Dongdong.woff") format("woff");
+}
+
+@font-face {
+    font-family: "GangwonEdu Saeeum";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("https://cdn.jsdelivr.net/gh/fonts-archive/GangwonEduSaeeum@886cd32897e795db4a8a160867e6478b0b1bc149/GangwonEduSaeeum.woff2") format("woff2");
+}
+
 .admin-travel-info-page,
 .admin-travel-info-form-page,
 .admin-travel-info-detail-page {
@@ -71,11 +119,15 @@
 .admin-travel-info-form {
     display: grid;
     gap: 20px;
-    max-width: 1080px;
+    width: 100%;
+    max-width: 1120px;
+    box-sizing: border-box;
 }
 
-.admin-travel-info-section {
+.admin-travel-info-form .admin-travel-info-section {
+    width: 100%;
     max-width: none;
+    box-sizing: border-box;
 }
 
 .admin-travel-info-section-header {
@@ -127,12 +179,59 @@
 }
 
 .admin-travel-info-editor-shell .ql-toolbar.ql-snow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
     width: 100%;
+    padding: 12px 16px;
     font-family: inherit;
     background: #f8faff;
     border-color: #d8dfeb;
     border-radius: 10px 10px 0 0;
     box-sizing: border-box;
+}
+
+.admin-travel-info-editor-shell .ql-toolbar.ql-snow .admin-travel-info-toolbar-row {
+    display: contents;
+}
+
+.admin-travel-info-editor-shell .ql-toolbar.ql-snow .ql-formats {
+    display: inline-flex;
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 3px;
+    max-width: 100%;
+    margin: 0;
+    float: none;
+    vertical-align: middle;
+}
+
+.admin-travel-info-editor-shell .ql-toolbar.ql-snow .ql-formats::after {
+    display: none;
+    content: none;
+}
+
+.admin-travel-info-editor-shell .ql-toolbar.ql-snow button,
+.admin-travel-info-editor-shell .ql-toolbar.ql-snow .ql-picker {
+    flex: 0 0 auto;
+    height: 28px;
+    float: none;
+}
+
+.admin-travel-info-editor-shell .ql-toolbar.ql-snow button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.admin-travel-info-editor-shell .ql-toolbar.ql-snow button svg {
+    float: none;
+}
+
+.admin-travel-info-editor-shell .ql-toolbar.ql-snow .ql-picker-label::before {
+    line-height: 26px;
 }
 
 .admin-travel-info-editor-shell .ql-picker.ql-header .ql-picker-label:not([data-value])::before,
@@ -176,7 +275,7 @@
 }
 
 .admin-travel-info-editor-shell .ql-picker.ql-font {
-    width: 142px;
+    width: 190px;
 }
 
 .admin-travel-info-editor-shell .ql-picker.ql-font .ql-picker-label[data-value="pretendard"]::before,
@@ -196,6 +295,30 @@
 .admin-travel-info-editor-shell .ql-picker.ql-font .ql-picker-label[data-value="serif"]::before {
     content: "Noto Serif KR";
     font-family: "Noto Serif KR", serif;
+}
+
+.admin-travel-info-editor-shell .ql-picker.ql-font .ql-picker-label[data-value="nanum-human"]::before,
+.admin-travel-info-editor-shell .ql-picker.ql-font .ql-picker-item[data-value="nanum-human"]::before {
+    content: "나눔휴먼";
+    font-family: "NanumHuman", sans-serif;
+}
+
+.admin-travel-info-editor-shell .ql-picker.ql-font .ql-picker-label[data-value="school-safe-bareonbatang"]::before,
+.admin-travel-info-editor-shell .ql-picker.ql-font .ql-picker-item[data-value="school-safe-bareonbatang"]::before {
+    content: "학교안심 바른바탕";
+    font-family: "Hakgyoansim Bareonbatang", serif;
+}
+
+.admin-travel-info-editor-shell .ql-picker.ql-font .ql-picker-label[data-value="cafe24-dongdong"]::before,
+.admin-travel-info-editor-shell .ql-picker.ql-font .ql-picker-item[data-value="cafe24-dongdong"]::before {
+    content: "카페24 동동";
+    font-family: "Cafe24Dongdong", sans-serif;
+}
+
+.admin-travel-info-editor-shell .ql-picker.ql-font .ql-picker-label[data-value="gangwon-saeeum"]::before,
+.admin-travel-info-editor-shell .ql-picker.ql-font .ql-picker-item[data-value="gangwon-saeeum"]::before {
+    content: "강원교육새음";
+    font-family: "GangwonEdu Saeeum", sans-serif;
 }
 
 .admin-travel-info-editor-shell .ql-picker.ql-font .ql-picker-label[data-value="monospace"]::before,
@@ -236,7 +359,7 @@
 .admin-travel-info-editor.ql-container .ql-editor {
     width: 100%;
     height: auto;
-    min-height: 350px;
+    min-height: 440px;
     color: #35415a;
     font-size: 1rem;
     line-height: 1.7;
@@ -265,9 +388,36 @@
     font-family: "Noto Serif KR", Georgia, "Times New Roman", serif;
 }
 
+.admin-travel-info-editor.ql-container .ql-font-nanum-human,
+.rich-text-content .ql-font-nanum-human {
+    font-family: "NanumHuman", "Malgun Gothic", sans-serif;
+}
+
+.admin-travel-info-editor.ql-container .ql-font-school-safe-bareonbatang,
+.rich-text-content .ql-font-school-safe-bareonbatang {
+    font-family: "Hakgyoansim Bareonbatang", "Noto Serif KR", serif;
+}
+
+.admin-travel-info-editor.ql-container .ql-font-cafe24-dongdong,
+.rich-text-content .ql-font-cafe24-dongdong {
+    font-family: "Cafe24Dongdong", "Malgun Gothic", sans-serif;
+}
+
+.admin-travel-info-editor.ql-container .ql-font-gangwon-saeeum,
+.rich-text-content .ql-font-gangwon-saeeum {
+    font-family: "GangwonEdu Saeeum", "Malgun Gothic", sans-serif;
+}
+
 .admin-travel-info-editor.ql-container .ql-font-monospace,
 .rich-text-content .ql-font-monospace {
     font-family: Monaco, "Courier New", monospace;
+}
+
+.admin-travel-info-editor-shell .ql-toolbar button.ql-undo,
+.admin-travel-info-editor-shell .ql-toolbar button.ql-redo {
+    color: #444;
+    font-size: 20px;
+    line-height: 1;
 }
 
 .admin-period-section[hidden] {
@@ -428,6 +578,62 @@
     padding-left: 1.7em;
 }
 
+.rich-text-content li[data-list="checked"],
+.rich-text-content li[data-list="unchecked"] {
+    position: relative;
+    list-style: none;
+}
+
+.rich-text-content li[data-list="checked"]::before,
+.rich-text-content li[data-list="unchecked"]::before {
+    position: absolute;
+    left: -1.45em;
+    width: 1.2em;
+    color: #53617c;
+    text-align: center;
+}
+
+.rich-text-content li[data-list="unchecked"]::before {
+    content: "\2610";
+}
+
+.rich-text-content li[data-list="checked"]::before {
+    content: "\2611";
+    color: #3558c6;
+}
+
+.rich-text-content .ql-indent-1 {
+    padding-left: 3em;
+}
+
+.rich-text-content .ql-indent-2 {
+    padding-left: 6em;
+}
+
+.rich-text-content .ql-indent-3 {
+    padding-left: 9em;
+}
+
+.rich-text-content .ql-indent-4 {
+    padding-left: 12em;
+}
+
+.rich-text-content .ql-indent-5 {
+    padding-left: 15em;
+}
+
+.rich-text-content .ql-indent-6 {
+    padding-left: 18em;
+}
+
+.rich-text-content .ql-indent-7 {
+    padding-left: 21em;
+}
+
+.rich-text-content .ql-indent-8 {
+    padding-left: 24em;
+}
+
 .rich-text-content blockquote {
     margin: 1em 0;
     padding: 0.7em 1em;
@@ -505,6 +711,15 @@
 }
 
 @media (max-width: 560px) {
+    .admin-travel-info-editor-shell .ql-toolbar.ql-snow {
+        gap: 7px;
+        padding: 9px;
+    }
+
+    .admin-travel-info-editor-shell .ql-toolbar.ql-snow .ql-formats {
+        flex-wrap: wrap;
+    }
+
     .admin-travel-info-section-header.is-action-header,
     .admin-travel-info-submit-actions {
         align-items: stretch;

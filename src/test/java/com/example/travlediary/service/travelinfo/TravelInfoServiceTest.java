@@ -55,6 +55,10 @@ class TravelInfoServiceTest {
         TravelInfo existing = existingInfo(10L, TravelInfoContentType.FESTIVAL);
         existing.setTitle("벚꽃 축제");
         existing.setContent("<p onclick=\"alert(1)\"><span class=\"ql-font-pretendard\">축제 본문</span></p>"
+                + "<p class=\"ql-indent-3\"><span class=\"ql-font-nanum-human\">들여쓴 안내</span></p>"
+                + "<ul><li data-list=\"unchecked\"><span class=\"ql-font-school-safe-bareonbatang\">준비물</span></li>"
+                + "<li data-list=\"checked\"><span class=\"ql-font-cafe24-dongdong\">예약</span></li></ul>"
+                + "<p><span class=\"ql-font-gangwon-saeeum\">출발</span></p>"
                 + "<img src=\"/uploads/editor/festival.png\" width=\"640\"><script>alert(1)</script>");
         existing.setViews(37);
         existing.setCreatedAt(Timestamp.valueOf("2026-04-01 10:00:00"));
@@ -79,6 +83,13 @@ class TravelInfoServiceTest {
         assertThat(detail.getContent())
                 .contains(
                         "<p><span class=\"ql-font-pretendard\">축제 본문</span></p>",
+                        "class=\"ql-indent-3\"",
+                        "class=\"ql-font-nanum-human\"",
+                        "data-list=\"unchecked\"",
+                        "class=\"ql-font-school-safe-bareonbatang\"",
+                        "data-list=\"checked\"",
+                        "class=\"ql-font-cafe24-dongdong\"",
+                        "class=\"ql-font-gangwon-saeeum\"",
                         "src=\"/uploads/editor/festival.png\" width=\"640\""
                 )
                 .doesNotContain("onclick", "script");
