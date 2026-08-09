@@ -26,7 +26,8 @@ public class PostContentSanitizer {
             "p", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote", "li"
     );
     private static final Set<String> INLINE_QUILL_CLASSES = Set.of(
-            "ql-font-serif", "ql-font-monospace",
+            "ql-font-serif", "ql-font-monospace", "ql-font-pretendard",
+            "ql-font-noto-sans-kr", "ql-font-noto-serif-kr",
             "ql-size-small", "ql-size-large", "ql-size-huge"
     );
     private static final Set<String> ALIGNMENT_QUILL_CLASSES = Set.of(
@@ -38,6 +39,9 @@ public class PostContentSanitizer {
             "(?i)^rgb\\(\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*\\)$"
     );
     private static final Pattern TEL_LINK = Pattern.compile("(?i)^tel:[+0-9(). -]+$");
+    private static final Pattern IMAGE_WIDTH = Pattern.compile("^[1-9]\\d{0,3}$");
+    private static final int MIN_IMAGE_WIDTH = 120;
+    private static final int MAX_IMAGE_WIDTH = 1200;
 
     private final Safelist safelist = createSafelist();
 
@@ -55,11 +59,14 @@ public class PostContentSanitizer {
             }
         }
 
-        for (Element image : document.select("img[src]")) {
-            String src = image.attr("src").trim();
-            if (!isSafeImageSource(src)) {
-                image.removeAttr("src");
+        for (Element image : document.select("img")) {
+            if (image.hasAttr("src")) {
+                String src = image.attr("src").trim();
+                if (!isSafeImageSource(src)) {
+                    image.removeAttr("src");
+                }
             }
+            sanitizeImageWidth(image);
         }
 
         return document.body().html();
@@ -68,7 +75,7 @@ public class PostContentSanitizer {
     private static Safelist createSafelist() {
         Safelist safelist = Safelist.relaxed()
                 .addTags("del", "s", "figure", "figcaption")
-                .addAttributes("img", "class")
+                .addAttributes("img", "class", "width")
                 .addProtocols("a", "href", "tel")
                 .removeProtocols("img", "src", "http", "https");
 
@@ -144,6 +151,25 @@ public class PostContentSanitizer {
         return Integer.parseInt(rgb.group(1)) <= 255
                 && Integer.parseInt(rgb.group(2)) <= 255
                 && Integer.parseInt(rgb.group(3)) <= 255;
+    }
+
+    private void sanitizeImageWidth(Element image) {
+        if (!image.hasAttr("width")) {
+            return;
+        }
+
+        String width = image.attr("width").trim();
+        if (!IMAGE_WIDTH.matcher(width).matches()) {
+            image.removeAttr("width");
+            return;
+        }
+
+        int numericWidth = Integer.parseInt(width);
+        if (numericWidth < MIN_IMAGE_WIDTH || numericWidth > MAX_IMAGE_WIDTH) {
+            image.removeAttr("width");
+            return;
+        }
+        image.attr("width", Integer.toString(numericWidth));
     }
 
     private Document.OutputSettings outputSettings() {

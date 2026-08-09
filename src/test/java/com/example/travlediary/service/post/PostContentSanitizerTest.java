@@ -47,6 +47,22 @@ class PostContentSanitizerTest {
     }
 
     @Test
+    void keepsOnlyConfiguredKoreanQuillFontClasses() {
+        String html = "<span class=\"ql-font-pretendard\">프리텐다드</span>"
+                + "<span class=\"ql-font-noto-sans-kr\">노토 산스</span>"
+                + "<span class=\"ql-font-noto-serif-kr\">노토 세리프</span>"
+                + "<span class=\"ql-font-unknown\">미등록</span>";
+
+        String cleaned = sanitizer.sanitize(html);
+
+        assertThat(cleaned)
+                .contains("class=\"ql-font-pretendard\"")
+                .contains("class=\"ql-font-noto-sans-kr\"")
+                .contains("class=\"ql-font-noto-serif-kr\"")
+                .doesNotContain("ql-font-unknown");
+    }
+
+    @Test
     void keepsAllowedQuillColorAndBackgroundStyles() {
         String html = "<span style=\"color: #e60000; background-color: rgb(255, 255, 0)\">색상</span>";
 
@@ -98,6 +114,38 @@ class PostContentSanitizerTest {
         assertThat(cleaned)
                 .contains("background-color: #fff")
                 .doesNotContain("javascript:", "background-image", "url(", "expression", "width");
+    }
+
+    @Test
+    void keepsExistingImagesAndValidatedNumericWidths() {
+        String html = "<img src=\"/uploads/editor/original.png\" alt=\"원본\">"
+                + "<img src=\"/uploads/editor/first.png\" width=\"320\" alt=\"첫번째\">"
+                + "<img src=\"/uploads/editor/second.png\" width=\"900\" alt=\"두번째\">"
+                + "<img src=\"/uploads/editor/infographic.png\" width=\"1200\" alt=\"인포그래픽\">";
+
+        String cleaned = sanitizer.sanitize(html);
+
+        assertThat(cleaned)
+                .contains("src=\"/uploads/editor/original.png\" alt=\"원본\"")
+                .contains("src=\"/uploads/editor/first.png\" width=\"320\"")
+                .contains("src=\"/uploads/editor/second.png\" width=\"900\"")
+                .contains("src=\"/uploads/editor/infographic.png\" width=\"1200\"");
+    }
+
+    @Test
+    void removesOutOfRangeOrMalformedImageWidthsAndImageStyles() {
+        String html = "<img src=\"/uploads/editor/a.png\" width=\"119\">"
+                + "<img src=\"/uploads/editor/b.png\" width=\"1201\">"
+                + "<img src=\"/uploads/editor/c.png\" width=\"-300\">"
+                + "<img src=\"/uploads/editor/d.png\" width=\"600px\">"
+                + "<img src=\"/uploads/editor/e.png\" width=\"100%\">"
+                + "<img src=\"/uploads/editor/f.png\" width=\"999999\">"
+                + "<img src=\"/uploads/editor/g.png\" style=\"width: 600px; height: auto\">";
+
+        String cleaned = sanitizer.sanitize(html);
+
+        assertThat(cleaned)
+                .doesNotContain("width=", "style=");
     }
 
     @Test

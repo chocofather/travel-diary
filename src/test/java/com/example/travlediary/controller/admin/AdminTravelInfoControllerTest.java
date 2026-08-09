@@ -97,7 +97,8 @@ class AdminTravelInfoControllerTest {
         AdminTravelInfoDetailDto detail = detail(TravelInfoContentType.FESTIVAL, List.of(
                 infoPeriod("2026-04-01", "2026-04-03"),
                 infoPeriod("2026-05-10", "2026-05-12")));
-        detail.setContent("<p>축제 본문</p><img src=\"/uploads/editor/festival.png\" alt=\"축제\">");
+        detail.setContent("<p><span class=\"ql-font-noto-serif-kr\">축제 본문</span></p>"
+                + "<img src=\"/uploads/editor/festival.png\" width=\"600\" alt=\"축제\">");
         when(travelInfoService.getAdminDetail(10L)).thenReturn(detail);
 
         mockMvc.perform(get("/admin/travel-info/10").with(user("admin").roles("ADMIN")))
@@ -113,7 +114,8 @@ class AdminTravelInfoControllerTest {
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "class=\"admin-travel-info-content rich-text-content\"")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "<p>축제 본문</p><img src=\"/uploads/editor/festival.png\" alt=\"축제\">")))
+                        "<p><span class=\"ql-font-noto-serif-kr\">축제 본문</span></p>"
+                                + "<img src=\"/uploads/editor/festival.png\" width=\"600\" alt=\"축제\">")))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("&lt;p&gt;축제 본문&lt;/p&gt;"))))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(

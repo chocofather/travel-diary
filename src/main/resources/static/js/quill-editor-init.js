@@ -23,6 +23,16 @@ window.initQuillEditor = function (editorSelector, contentInputId, formId, initi
         return editorElement.quillEditorInstance;
     }
 
+    const Font = Quill.import('formats/font');
+    Font.whitelist = [
+        'serif',
+        'monospace',
+        'pretendard',
+        'noto-sans-kr',
+        'noto-serif-kr'
+    ];
+    Quill.register(Font, true);
+
     function normalizeLinkUrl(rawUrl) {
         const url = rawUrl.trim();
         if (!url) return null;
@@ -111,7 +121,11 @@ window.initQuillEditor = function (editorSelector, contentInputId, formId, initi
             '4': '제목 4', '5': '제목 5', '6': '제목 6'
         });
         localizePicker(toolbar, '.ql-font', '글꼴', {
-            '': '기본', 'serif': '명조', 'monospace': '고정폭'
+            '': '기본',
+            'pretendard': 'Pretendard',
+            'noto-sans-kr': 'Noto Sans KR',
+            'noto-serif-kr': 'Noto Serif KR',
+            'monospace': '고정폭'
         });
         localizePicker(toolbar, '.ql-size', '글자 크기', {
             '': '보통', 'small': '작게', 'large': '크게', 'huge': '아주 크게'
@@ -126,7 +140,8 @@ window.initQuillEditor = function (editorSelector, contentInputId, formId, initi
 
     const toolbarOptions = [
         [{header: [1, 2, 3, 4, 5, 6, false]}],
-        [{font: []}, {size: ['small', false, 'large', 'huge']}],
+        [{font: [false, 'pretendard', 'noto-sans-kr', 'noto-serif-kr', 'monospace']},
+            {size: ['small', false, 'large', 'huge']}],
         ['bold', 'italic', 'underline', 'strike'],
         [{color: []}, {background: []}],
         [{align: []}],
@@ -135,6 +150,29 @@ window.initQuillEditor = function (editorSelector, contentInputId, formId, initi
         ['link', 'image'],
         ['clean']
     ];
+
+    // The script-tag UMD bundle registers modules/resize by itself. Its
+    // window.QuillResize export is a module namespace object, not the module
+    // constructor, so registering that object again breaks Quill creation.
+    const registeredResizeModule = Quill.import('modules/resize');
+    const resizeModuleAvailable = typeof registeredResizeModule === 'function';
+    if (!resizeModuleAvailable) {
+        console.warn('[initQuillEditor] 이미지 크기 조절 모듈을 불러오지 못했습니다.');
+    }
+
+    const resizeOptions = {
+        modules: ['Resize'],
+        embedTags: [],
+        parchment: {
+            image: {
+                attribute: ['width'],
+                limit: {
+                    minWidth: 120,
+                    maxWidth: 1200
+                }
+            }
+        }
+    };
 
     let pendingImageUploads = 0;
     const quill = new Quill(editorElement, {
@@ -236,7 +274,8 @@ window.initQuillEditor = function (editorSelector, contentInputId, formId, initi
                         imageInput.click();
                     }
                 }
-            }
+            },
+            ...(resizeModuleAvailable ? {resize: resizeOptions} : {})
         }
     });
     editorElement.quillEditorInstance = quill;

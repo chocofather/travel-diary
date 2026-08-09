@@ -54,8 +54,8 @@ class TravelInfoServiceTest {
     void getsFestivalAdminDetailWithCategorySanitizedContentAndMultiplePeriods() {
         TravelInfo existing = existingInfo(10L, TravelInfoContentType.FESTIVAL);
         existing.setTitle("벚꽃 축제");
-        existing.setContent("<p onclick=\"alert(1)\">축제 본문</p>"
-                + "<img src=\"/uploads/editor/festival.png\"><script>alert(1)</script>");
+        existing.setContent("<p onclick=\"alert(1)\"><span class=\"ql-font-pretendard\">축제 본문</span></p>"
+                + "<img src=\"/uploads/editor/festival.png\" width=\"640\"><script>alert(1)</script>");
         existing.setViews(37);
         existing.setCreatedAt(Timestamp.valueOf("2026-04-01 10:00:00"));
         existing.setUpdatedAt(Timestamp.valueOf("2026-04-02 11:30:00"));
@@ -77,7 +77,10 @@ class TravelInfoServiceTest {
         assertThat(detail.getUpdatedAt()).isEqualTo(existing.getUpdatedAt());
         assertThat(detail.getPeriods()).containsExactlyElementsOf(periods);
         assertThat(detail.getContent())
-                .contains("<p>축제 본문</p>", "src=\"/uploads/editor/festival.png\"")
+                .contains(
+                        "<p><span class=\"ql-font-pretendard\">축제 본문</span></p>",
+                        "src=\"/uploads/editor/festival.png\" width=\"640\""
+                )
                 .doesNotContain("onclick", "script");
         verify(travelInfoMapper).findById(10L);
         verify(travelInfoMapper).findPeriodsByInfoId(10L);
@@ -233,7 +236,8 @@ class TravelInfoServiceTest {
     void stripsTitleAndSanitizesContentBeforeInsert() {
         TravelInfoForm form = form(TravelInfoContentType.GENERAL);
         form.setTitle("  안전 여행  ");
-        form.setContent("<p onclick=\"alert(1)\">안전 정보</p><script>alert(1)</script>");
+        form.setContent("<p onclick=\"alert(1)\"><span class=\"ql-font-noto-sans-kr\">안전 정보</span></p>"
+                + "<img src=\"/uploads/editor/safe.png\" width=\"600\"><script>alert(1)</script>");
         allowCategory();
         stubTravelInfoInsert(100L);
 
@@ -243,7 +247,8 @@ class TravelInfoServiceTest {
         verify(travelInfoMapper).insertTravelInfo(captor.capture());
         assertThat(captor.getValue().getTitle()).isEqualTo("안전 여행");
         assertThat(captor.getValue().getContent())
-                .isEqualTo("<p>안전 정보</p>")
+                .isEqualTo("<p><span class=\"ql-font-noto-sans-kr\">안전 정보</span></p>"
+                        + "<img src=\"/uploads/editor/safe.png\" width=\"600\">")
                 .doesNotContain("script", "onclick");
     }
 

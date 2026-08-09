@@ -175,9 +175,27 @@
     content: "기본";
 }
 
-.admin-travel-info-editor-shell .ql-picker.ql-font .ql-picker-label[data-value="serif"]::before,
-.admin-travel-info-editor-shell .ql-picker.ql-font .ql-picker-item[data-value="serif"]::before {
-    content: "명조";
+.admin-travel-info-editor-shell .ql-picker.ql-font {
+    width: 142px;
+}
+
+.admin-travel-info-editor-shell .ql-picker.ql-font .ql-picker-label[data-value="pretendard"]::before,
+.admin-travel-info-editor-shell .ql-picker.ql-font .ql-picker-item[data-value="pretendard"]::before {
+    content: "Pretendard";
+    font-family: Pretendard, sans-serif;
+}
+
+.admin-travel-info-editor-shell .ql-picker.ql-font .ql-picker-label[data-value="noto-sans-kr"]::before,
+.admin-travel-info-editor-shell .ql-picker.ql-font .ql-picker-item[data-value="noto-sans-kr"]::before {
+    content: "Noto Sans KR";
+    font-family: "Noto Sans KR", sans-serif;
+}
+
+.admin-travel-info-editor-shell .ql-picker.ql-font .ql-picker-label[data-value="noto-serif-kr"]::before,
+.admin-travel-info-editor-shell .ql-picker.ql-font .ql-picker-item[data-value="noto-serif-kr"]::before,
+.admin-travel-info-editor-shell .ql-picker.ql-font .ql-picker-label[data-value="serif"]::before {
+    content: "Noto Serif KR";
+    font-family: "Noto Serif KR", serif;
 }
 
 .admin-travel-info-editor-shell .ql-picker.ql-font .ql-picker-label[data-value="monospace"]::before,
@@ -228,6 +246,28 @@
 .admin-travel-info-editor.ql-container .ql-editor img {
     max-width: 100%;
     height: auto;
+}
+
+.admin-travel-info-editor.ql-container .ql-font-pretendard,
+.rich-text-content .ql-font-pretendard {
+    font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.admin-travel-info-editor.ql-container .ql-font-noto-sans-kr,
+.rich-text-content .ql-font-noto-sans-kr {
+    font-family: "Noto Sans KR", "Malgun Gothic", sans-serif;
+}
+
+.admin-travel-info-editor.ql-container .ql-font-noto-serif-kr,
+.admin-travel-info-editor.ql-container .ql-font-serif,
+.rich-text-content .ql-font-noto-serif-kr,
+.rich-text-content .ql-font-serif {
+    font-family: "Noto Serif KR", Georgia, "Times New Roman", serif;
+}
+
+.admin-travel-info-editor.ql-container .ql-font-monospace,
+.rich-text-content .ql-font-monospace {
+    font-family: Monaco, "Courier New", monospace;
 }
 
 .admin-period-section[hidden] {
@@ -431,14 +471,6 @@
 
 .rich-text-content .ql-align-justify {
     text-align: justify;
-}
-
-.rich-text-content .ql-font-serif {
-    font-family: Georgia, "Times New Roman", serif;
-}
-
-.rich-text-content .ql-font-monospace {
-    font-family: Monaco, "Courier New", monospace;
 }
 
 .rich-text-content .ql-size-small {
