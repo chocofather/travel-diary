@@ -2,10 +2,10 @@
 <html lang="ko" xmlns:th="http://www.thymeleaf.org"
       th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'travel-info')}">
 <th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css">
   <link rel="stylesheet" href="/css/admin-travel-info.css">
-  <link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css">
-  <script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
-  <script src="/js/editor-init.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
+  <script src="/js/quill-editor-init.js"></script>
   <script src="/js/admin-travel-info-form.js" defer></script>
 </th:block>
 <th:block th:fragment="body">
@@ -87,7 +87,9 @@
           <h2>본문</h2>
           <p>여행자에게 제공할 상세 내용을 작성합니다.</p>
         </div>
-        <div id="travel-info-editor" class="admin-travel-info-editor"></div>
+        <div class="admin-travel-info-editor-shell">
+          <div id="travel-info-editor" class="admin-travel-info-editor"></div>
+        </div>
         <input type="hidden" id="travel-info-content" th:field="*{content}">
         <textarea id="travel-info-initial-content" hidden th:text="*{content}"></textarea>
         <p class="admin-field-error" th:if="${#fields.hasErrors('content')}"

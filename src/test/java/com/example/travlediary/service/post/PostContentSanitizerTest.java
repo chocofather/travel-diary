@@ -33,6 +33,74 @@ class PostContentSanitizerTest {
     }
 
     @Test
+    void keepsAllowedQuillFontSizeAndAlignmentClasses() {
+        String html = "<p class=\"ql-align-center\">"
+                + "<strong class=\"ql-font-serif ql-size-large\">본문</strong>"
+                + "</p><blockquote class=\"ql-align-right\">인용</blockquote>";
+
+        String cleaned = sanitizer.sanitize(html);
+
+        assertThat(cleaned)
+                .contains("class=\"ql-align-center\"")
+                .contains("class=\"ql-font-serif ql-size-large\"")
+                .contains("class=\"ql-align-right\"");
+    }
+
+    @Test
+    void keepsAllowedQuillColorAndBackgroundStyles() {
+        String html = "<span style=\"color: #e60000; background-color: rgb(255, 255, 0)\">색상</span>";
+
+        String cleaned = sanitizer.sanitize(html);
+
+        assertThat(cleaned)
+                .contains("color: #e60000")
+                .contains("background-color: rgb(255, 255, 0)");
+    }
+
+    @Test
+    void keepsQuillStrikeTag() {
+        assertThat(sanitizer.sanitize("<p><s>취소선</s></p>"))
+                .contains("<s>취소선</s>");
+    }
+
+    @Test
+    void keepsSafeTelephoneLinks() {
+        String cleaned = sanitizer.sanitize("<a href=\"tel:01012345678\">전화</a>"
+                + "<a href=\"tel:javascript:alert(1)\">위험</a>");
+
+        assertThat(cleaned)
+                .contains("href=\"tel:01012345678\"")
+                .doesNotContain("tel:javascript:");
+    }
+
+    @Test
+    void removesUnknownClassesWhileKeepingAllowedQuillClasses() {
+        String html = "<span class=\"evil ql-font-monospace ql-size-giant\">본문</span>"
+                + "<p class=\"ql-align-justify arbitrary\">문단</p>"
+                + "<img class=\"arbitrary\" src=\"/uploads/editor/a.png\">";
+
+        String cleaned = sanitizer.sanitize(html);
+
+        assertThat(cleaned)
+                .contains("class=\"ql-font-monospace\"")
+                .contains("class=\"ql-align-justify\"")
+                .doesNotContain("evil", "ql-size-giant", "arbitrary");
+    }
+
+    @Test
+    void removesDangerousStylesAndInvalidColorValues() {
+        String html = "<span style=\"color: url(javascript:alert(1)); "
+                + "background-color: #fff; background-image: url(https://example.com/a.png); "
+                + "width: expression(alert(1))\">본문</span>";
+
+        String cleaned = sanitizer.sanitize(html);
+
+        assertThat(cleaned)
+                .contains("background-color: #fff")
+                .doesNotContain("javascript:", "background-image", "url(", "expression", "width");
+    }
+
+    @Test
     void removesExecutableMarkupAndUnsafeImageSources() {
         String html = "<script>alert(1)</script>"
                 + "<iframe src=\"https://example.com\"></iframe>"

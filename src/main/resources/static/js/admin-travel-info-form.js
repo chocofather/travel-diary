@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('travel-info-form');
     if (!form) return;
 
-    window.initToastEditor(
+    window.initQuillEditor(
         '#travel-info-editor',
         'travel-info-content',
         'travel-info-form',

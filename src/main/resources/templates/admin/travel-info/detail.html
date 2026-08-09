@@ -3,7 +3,6 @@
       th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'travel-info')}">
 <th:block th:fragment="headFragment">
   <link rel="stylesheet" href="/css/admin-travel-info.css">
-  <link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css">
 </th:block>
 <th:block th:fragment="body">
   <section class="admin-page-section admin-travel-info-detail-page">
@@ -71,7 +70,7 @@
 
       <section class="admin-travel-info-detail-content-section">
         <h3>본문 미리보기</h3>
-        <div class="admin-travel-info-content toastui-editor-contents"
+        <div class="admin-travel-info-content rich-text-content"
              th:utext="${travelInfo.content}"></div>
       </section>
     </article>

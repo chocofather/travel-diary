@@ -120,14 +120,114 @@
     font-weight: 600;
 }
 
-.admin-travel-info-editor {
-    min-height: 400px;
+.admin-travel-info-editor-shell {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
 }
 
-.admin-travel-info-editor .toastui-editor-defaultUI {
-    overflow: hidden;
+.admin-travel-info-editor-shell .ql-toolbar.ql-snow {
+    width: 100%;
+    font-family: inherit;
+    background: #f8faff;
     border-color: #d8dfeb;
-    border-radius: 10px;
+    border-radius: 10px 10px 0 0;
+    box-sizing: border-box;
+}
+
+.admin-travel-info-editor-shell .ql-picker.ql-header .ql-picker-label:not([data-value])::before,
+.admin-travel-info-editor-shell .ql-picker.ql-header .ql-picker-item:not([data-value])::before {
+    content: "본문";
+}
+
+.admin-travel-info-editor-shell .ql-picker.ql-header .ql-picker-label[data-value="1"]::before,
+.admin-travel-info-editor-shell .ql-picker.ql-header .ql-picker-item[data-value="1"]::before {
+    content: "제목 1";
+}
+
+.admin-travel-info-editor-shell .ql-picker.ql-header .ql-picker-label[data-value="2"]::before,
+.admin-travel-info-editor-shell .ql-picker.ql-header .ql-picker-item[data-value="2"]::before {
+    content: "제목 2";
+}
+
+.admin-travel-info-editor-shell .ql-picker.ql-header .ql-picker-label[data-value="3"]::before,
+.admin-travel-info-editor-shell .ql-picker.ql-header .ql-picker-item[data-value="3"]::before {
+    content: "제목 3";
+}
+
+.admin-travel-info-editor-shell .ql-picker.ql-header .ql-picker-label[data-value="4"]::before,
+.admin-travel-info-editor-shell .ql-picker.ql-header .ql-picker-item[data-value="4"]::before {
+    content: "제목 4";
+}
+
+.admin-travel-info-editor-shell .ql-picker.ql-header .ql-picker-label[data-value="5"]::before,
+.admin-travel-info-editor-shell .ql-picker.ql-header .ql-picker-item[data-value="5"]::before {
+    content: "제목 5";
+}
+
+.admin-travel-info-editor-shell .ql-picker.ql-header .ql-picker-label[data-value="6"]::before,
+.admin-travel-info-editor-shell .ql-picker.ql-header .ql-picker-item[data-value="6"]::before {
+    content: "제목 6";
+}
+
+.admin-travel-info-editor-shell .ql-picker.ql-font .ql-picker-label:not([data-value])::before,
+.admin-travel-info-editor-shell .ql-picker.ql-font .ql-picker-item:not([data-value])::before {
+    content: "기본";
+}
+
+.admin-travel-info-editor-shell .ql-picker.ql-font .ql-picker-label[data-value="serif"]::before,
+.admin-travel-info-editor-shell .ql-picker.ql-font .ql-picker-item[data-value="serif"]::before {
+    content: "명조";
+}
+
+.admin-travel-info-editor-shell .ql-picker.ql-font .ql-picker-label[data-value="monospace"]::before,
+.admin-travel-info-editor-shell .ql-picker.ql-font .ql-picker-item[data-value="monospace"]::before {
+    content: "고정폭";
+}
+
+.admin-travel-info-editor-shell .ql-picker.ql-size .ql-picker-label:not([data-value])::before,
+.admin-travel-info-editor-shell .ql-picker.ql-size .ql-picker-item:not([data-value])::before {
+    content: "보통";
+}
+
+.admin-travel-info-editor-shell .ql-picker.ql-size .ql-picker-label[data-value="small"]::before,
+.admin-travel-info-editor-shell .ql-picker.ql-size .ql-picker-item[data-value="small"]::before {
+    content: "작게";
+}
+
+.admin-travel-info-editor-shell .ql-picker.ql-size .ql-picker-label[data-value="large"]::before,
+.admin-travel-info-editor-shell .ql-picker.ql-size .ql-picker-item[data-value="large"]::before {
+    content: "크게";
+}
+
+.admin-travel-info-editor-shell .ql-picker.ql-size .ql-picker-label[data-value="huge"]::before,
+.admin-travel-info-editor-shell .ql-picker.ql-size .ql-picker-item[data-value="huge"]::before {
+    content: "아주 크게";
+}
+
+.admin-travel-info-editor.ql-container.ql-snow {
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    font-family: inherit;
+    border-color: #d8dfeb;
+    border-radius: 0 0 10px 10px;
+    box-sizing: border-box;
+}
+
+.admin-travel-info-editor.ql-container .ql-editor {
+    width: 100%;
+    height: auto;
+    min-height: 350px;
+    color: #35415a;
+    font-size: 1rem;
+    line-height: 1.7;
+    box-sizing: border-box;
+}
+
+.admin-travel-info-editor.ql-container .ql-editor img {
+    max-width: 100%;
+    height: auto;
 }
 
 .admin-period-section[hidden] {
@@ -264,12 +364,93 @@
     color: #35415a;
     line-height: 1.75;
     overflow-wrap: anywhere;
+    overflow-x: auto;
 }
 
-.admin-travel-info-content img {
+.rich-text-content h1,
+.rich-text-content h2,
+.rich-text-content h3,
+.rich-text-content h4,
+.rich-text-content h5,
+.rich-text-content h6 {
+    margin: 1.35em 0 0.65em;
+    color: #25345e;
+    line-height: 1.4;
+}
+
+.rich-text-content p {
+    margin: 0 0 1em;
+}
+
+.rich-text-content ul,
+.rich-text-content ol {
+    margin: 0 0 1em;
+    padding-left: 1.7em;
+}
+
+.rich-text-content blockquote {
+    margin: 1em 0;
+    padding: 0.7em 1em;
+    color: #53617c;
+    background: #f8faff;
+    border-left: 4px solid #9eb1df;
+}
+
+.rich-text-content a {
+    color: #3558c6;
+    text-decoration: underline;
+    overflow-wrap: anywhere;
+}
+
+.rich-text-content table {
+    width: 100%;
+    margin: 1em 0;
+    border-collapse: collapse;
+}
+
+.rich-text-content th,
+.rich-text-content td {
+    padding: 8px 10px;
+    border: 1px solid #d8dfeb;
+    text-align: left;
+}
+
+.rich-text-content img {
     display: block;
     max-width: 100%;
     height: auto;
+}
+
+.rich-text-content .ql-align-center {
+    text-align: center;
+}
+
+.rich-text-content .ql-align-right {
+    text-align: right;
+}
+
+.rich-text-content .ql-align-justify {
+    text-align: justify;
+}
+
+.rich-text-content .ql-font-serif {
+    font-family: Georgia, "Times New Roman", serif;
+}
+
+.rich-text-content .ql-font-monospace {
+    font-family: Monaco, "Courier New", monospace;
+}
+
+.rich-text-content .ql-size-small {
+    font-size: 0.75em;
+}
+
+.rich-text-content .ql-size-large {
+    font-size: 1.5em;
+}
+
+.rich-text-content .ql-size-huge {
+    font-size: 2.5em;
 }
 
 @media (max-width: 820px) {
