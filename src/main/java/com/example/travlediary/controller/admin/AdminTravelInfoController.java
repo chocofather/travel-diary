@@ -30,6 +30,7 @@ public class AdminTravelInfoController {
 
     private static final String LIST_VIEW = "admin/travel-info/list";
     private static final String FORM_VIEW = "admin/travel-info/form";
+    private static final String DETAIL_VIEW = "admin/travel-info/detail";
     private static final String REDIRECT_LIST = "redirect:/admin/travel-info";
 
     private final TravelInfoService travelInfoService;
@@ -46,6 +47,13 @@ public class AdminTravelInfoController {
         model.addAttribute("contentType", contentType);
         model.addAttribute("categoryId", categoryId);
         return LIST_VIEW;
+    }
+
+    @GetMapping("/{id}")
+    public String detail(@PathVariable Long id, Model model) {
+        model.addAttribute("travelInfo", travelInfoService.getAdminDetail(id));
+        model.addAttribute("pageTitle", "여행정보 상세");
+        return DETAIL_VIEW;
     }
 
     @GetMapping("/create")

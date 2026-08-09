@@ -84,6 +84,8 @@
             <td th:text="${#dates.format(info.createdAt, 'yyyy-MM-dd')}">2026-08-09</td>
             <td class="admin-table-actions">
               <div class="admin-action-group admin-travel-info-actions">
+                <a th:href="@{/admin/travel-info/{id}(id=${info.id})}"
+                   class="admin-btn is-small">상세</a>
                 <a th:href="@{/admin/travel-info/edit/{id}(id=${info.id})}"
                    class="admin-btn is-small">수정</a>
                 <form th:action="@{/admin/travel-info/{id}/delete(id=${info.id})}"

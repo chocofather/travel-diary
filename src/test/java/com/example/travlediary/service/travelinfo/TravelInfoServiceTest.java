@@ -1,5 +1,6 @@
 package com.example.travlediary.service.travelinfo;
 
+import com.example.travlediary.dto.AdminTravelInfoDetailDto;
 import com.example.travlediary.dto.InfoPeriodForm;
 import com.example.travlediary.dto.TravelInfoForm;
 import com.example.travlediary.model.InfoCategory;
@@ -19,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -28,6 +30,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -44,6 +48,66 @@ class TravelInfoServiceTest {
     void setUp() {
         travelInfoService = new TravelInfoService(
                 travelInfoMapper, infoCategoryMapper, new PostContentSanitizer());
+    }
+
+    @Test
+    void getsFestivalAdminDetailWithCategorySanitizedContentAndMultiplePeriods() {
+        TravelInfo existing = existingInfo(10L, TravelInfoContentType.FESTIVAL);
+        existing.setTitle("벚꽃 축제");
+        existing.setContent("<p onclick=\"alert(1)\">축제 본문</p>"
+                + "<img src=\"/uploads/editor/festival.png\"><script>alert(1)</script>");
+        existing.setViews(37);
+        existing.setCreatedAt(Timestamp.valueOf("2026-04-01 10:00:00"));
+        existing.setUpdatedAt(Timestamp.valueOf("2026-04-02 11:30:00"));
+        List<InfoPeriod> periods = List.of(
+                infoPeriod("2026-04-01", "2026-04-03"),
+                infoPeriod("2026-05-10", "2026-05-12"));
+        when(travelInfoMapper.findById(10L)).thenReturn(existing);
+        when(travelInfoMapper.findPeriodsByInfoId(10L)).thenReturn(periods);
+        allowCategory();
+
+        AdminTravelInfoDetailDto detail = travelInfoService.getAdminDetail(10L);
+
+        assertThat(detail.getId()).isEqualTo(10L);
+        assertThat(detail.getTitle()).isEqualTo("벚꽃 축제");
+        assertThat(detail.getCategoryId()).isEqualTo(3L);
+        assertThat(detail.getCategoryName()).isEqualTo("계절여행");
+        assertThat(detail.getViews()).isEqualTo(37);
+        assertThat(detail.getCreatedAt()).isEqualTo(existing.getCreatedAt());
+        assertThat(detail.getUpdatedAt()).isEqualTo(existing.getUpdatedAt());
+        assertThat(detail.getPeriods()).containsExactlyElementsOf(periods);
+        assertThat(detail.getContent())
+                .contains("<p>축제 본문</p>", "src=\"/uploads/editor/festival.png\"")
+                .doesNotContain("onclick", "script");
+        verify(travelInfoMapper).findById(10L);
+        verify(travelInfoMapper).findPeriodsByInfoId(10L);
+        verifyNoMoreInteractions(travelInfoMapper);
+    }
+
+    @Test
+    void getsGeneralAdminDetailWithEmptyPeriodsAndNoPeriodQuery() {
+        when(travelInfoMapper.findById(10L))
+                .thenReturn(existingInfo(10L, TravelInfoContentType.GENERAL));
+        allowCategory();
+
+        AdminTravelInfoDetailDto detail = travelInfoService.getAdminDetail(10L);
+
+        assertThat(detail.getContentType()).isEqualTo(TravelInfoContentType.GENERAL);
+        assertThat(detail.getPeriods()).isEmpty();
+        verify(travelInfoMapper).findById(10L);
+        verify(travelInfoMapper, never()).findPeriodsByInfoId(any());
+        verifyNoMoreInteractions(travelInfoMapper);
+    }
+
+    @Test
+    void missingAdminDetailReturnsNotFoundBeforeCategoryOrPeriodLookup() {
+        when(travelInfoMapper.findById(99L)).thenReturn(null);
+
+        assertNotFound(() -> travelInfoService.getAdminDetail(99L));
+
+        verify(travelInfoMapper).findById(99L);
+        verifyNoMoreInteractions(travelInfoMapper);
+        verifyNoInteractions(infoCategoryMapper);
     }
 
     @Test
@@ -259,6 +323,14 @@ class TravelInfoServiceTest {
         form.setStartDate(LocalDate.parse(startDate));
         form.setEndDate(LocalDate.parse(endDate));
         return form;
+    }
+
+    private InfoPeriod infoPeriod(String startDate, String endDate) {
+        InfoPeriod period = new InfoPeriod();
+        period.setInfoId(10L);
+        period.setStartDate(LocalDate.parse(startDate));
+        period.setEndDate(LocalDate.parse(endDate));
+        return period;
     }
 
     private TravelInfo existingInfo(Long id, TravelInfoContentType contentType) {

@@ -1,5 +1,6 @@
 package com.example.travlediary.service.travelinfo;
 
+import com.example.travlediary.dto.AdminTravelInfoDetailDto;
 import com.example.travlediary.dto.AdminTravelInfoListItemDto;
 import com.example.travlediary.dto.InfoPeriodForm;
 import com.example.travlediary.dto.TravelInfoForm;
@@ -43,6 +44,29 @@ public class TravelInfoService {
     @Transactional(readOnly = true)
     public TravelInfo getById(Long id) {
         return requireTravelInfo(travelInfoMapper.findById(id));
+    }
+
+    @Transactional(readOnly = true)
+    public AdminTravelInfoDetailDto getAdminDetail(Long id) {
+        TravelInfo travelInfo = requireTravelInfo(travelInfoMapper.findById(id));
+        InfoCategory category = infoCategoryMapper.findById(travelInfo.getCategoryId());
+        List<InfoPeriod> periods = travelInfo.getContentType() == TravelInfoContentType.FESTIVAL
+                ? travelInfoMapper.findPeriodsByInfoId(id)
+                : List.of();
+
+        AdminTravelInfoDetailDto detail = new AdminTravelInfoDetailDto();
+        detail.setId(travelInfo.getId());
+        detail.setTitle(travelInfo.getTitle());
+        detail.setContent(postContentSanitizer.sanitize(travelInfo.getContent()));
+        detail.setScope(travelInfo.getScope());
+        detail.setContentType(travelInfo.getContentType());
+        detail.setCategoryId(travelInfo.getCategoryId());
+        detail.setCategoryName(category == null ? null : category.getName());
+        detail.setViews(travelInfo.getViews());
+        detail.setCreatedAt(travelInfo.getCreatedAt());
+        detail.setUpdatedAt(travelInfo.getUpdatedAt());
+        detail.setPeriods(periods == null ? List.of() : periods);
+        return detail;
     }
 
     @Transactional(readOnly = true)

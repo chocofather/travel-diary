@@ -3,10 +3,12 @@ package com.example.travlediary.controller.admin;
 import com.example.travlediary.config.CustomLoginSuccessHandler;
 import com.example.travlediary.config.CustomLogoutSuccessHandler;
 import com.example.travlediary.config.SecurityConfig;
+import com.example.travlediary.dto.AdminTravelInfoDetailDto;
 import com.example.travlediary.dto.AdminTravelInfoListItemDto;
 import com.example.travlediary.dto.InfoPeriodForm;
 import com.example.travlediary.dto.TravelInfoForm;
 import com.example.travlediary.model.InfoCategory;
+import com.example.travlediary.model.InfoPeriod;
 import com.example.travlediary.model.TravelInfoContentType;
 import com.example.travlediary.model.TravelInfoScope;
 import com.example.travlediary.model.User;
@@ -88,6 +90,56 @@ class AdminTravelInfoControllerTest {
                 .andExpect(model().attribute("categoryId", 3L))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("벚꽃 여행")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("12")));
+    }
+
+    @Test
+    void adminCanOpenFestivalDetailWithMultiplePeriodsAndHtmlContent() throws Exception {
+        AdminTravelInfoDetailDto detail = detail(TravelInfoContentType.FESTIVAL, List.of(
+                infoPeriod("2026-04-01", "2026-04-03"),
+                infoPeriod("2026-05-10", "2026-05-12")));
+        detail.setContent("<p>축제 본문</p><img src=\"/uploads/editor/festival.png\" alt=\"축제\">");
+        when(travelInfoService.getAdminDetail(10L)).thenReturn(detail);
+
+        mockMvc.perform(get("/admin/travel-info/10").with(user("admin").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/travel-info/detail"))
+                .andExpect(model().attribute("travelInfo", detail))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("벚꽃 축제")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("계절여행")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("2026-04-01")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("2026-04-03")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("2026-05-10")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("2026-05-12")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "class=\"admin-travel-info-content toastui-editor-contents\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "<p>축제 본문</p><img src=\"/uploads/editor/festival.png\" alt=\"축제\">")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("&lt;p&gt;축제 본문&lt;/p&gt;"))))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "href=\"/admin/travel-info\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "href=\"/admin/travel-info/edit/10\"")));
+    }
+
+    @Test
+    void generalDetailDoesNotRenderPeriodSection() throws Exception {
+        AdminTravelInfoDetailDto detail = detail(TravelInfoContentType.GENERAL, List.of());
+        when(travelInfoService.getAdminDetail(10L)).thenReturn(detail);
+
+        mockMvc.perform(get("/admin/travel-info/10").with(user("admin").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("축제 기간"))));
+    }
+
+    @Test
+    void missingDetailReturnsNotFound() throws Exception {
+        when(travelInfoService.getAdminDetail(99L))
+                .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        mockMvc.perform(get("/admin/travel-info/99").with(user("admin").roles("ADMIN")))
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -256,6 +308,30 @@ class AdminTravelInfoControllerTest {
         form.setContentType(TravelInfoContentType.GENERAL);
         form.setCategoryId(3L);
         return form;
+    }
+
+    private AdminTravelInfoDetailDto detail(TravelInfoContentType contentType, List<InfoPeriod> periods) {
+        AdminTravelInfoDetailDto detail = new AdminTravelInfoDetailDto();
+        detail.setId(10L);
+        detail.setTitle(contentType == TravelInfoContentType.FESTIVAL ? "벚꽃 축제" : "봄 여행 정보");
+        detail.setContent("<p>본문</p>");
+        detail.setScope(TravelInfoScope.DOMESTIC);
+        detail.setContentType(contentType);
+        detail.setCategoryId(3L);
+        detail.setCategoryName("계절여행");
+        detail.setViews(12);
+        detail.setCreatedAt(Timestamp.valueOf("2026-04-01 10:00:00"));
+        detail.setUpdatedAt(Timestamp.valueOf("2026-04-02 11:30:00"));
+        detail.setPeriods(periods);
+        return detail;
+    }
+
+    private InfoPeriod infoPeriod(String startDate, String endDate) {
+        InfoPeriod period = new InfoPeriod();
+        period.setInfoId(10L);
+        period.setStartDate(LocalDate.parse(startDate));
+        period.setEndDate(LocalDate.parse(endDate));
+        return period;
     }
 
     private InfoCategory category(Long id, String name, boolean visible) {

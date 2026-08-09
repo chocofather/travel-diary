@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'travel-info')}">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/admin-travel-info.css">
+  <link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css">
+</th:block>
+<th:block th:fragment="body">
+  <section class="admin-page-section admin-travel-info-detail-page">
+    <header class="admin-page-header">
+      <div class="admin-page-heading">
+        <h1 class="admin-page-title">여행정보 상세</h1>
+        <p class="admin-page-description">등록된 여행정보의 내용과 노출 형태를 미리 확인합니다.</p>
+      </div>
+      <div class="admin-page-actions">
+        <a th:href="@{/admin/travel-info}" class="admin-btn">목록</a>
+        <a th:href="@{/admin/travel-info/edit/{id}(id=${travelInfo.id})}"
+           class="admin-btn is-primary">수정</a>
+      </div>
+    </header>
+
+    <article class="admin-form-card is-wide admin-travel-info-detail-card">
+      <header class="admin-travel-info-detail-header">
+        <div class="admin-travel-info-detail-badges">
+          <span class="admin-travel-info-badge"
+                th:text="${travelInfo.scope.name() == 'DOMESTIC'} ? '국내' : '해외'">국내</span>
+          <span class="admin-travel-info-badge is-type"
+                th:text="${travelInfo.contentType.name() == 'GENERAL'} ? '일반' : '축제'">일반</span>
+        </div>
+        <h2 th:text="${travelInfo.title}">여행정보 제목</h2>
+      </header>
+
+      <dl class="admin-travel-info-detail-meta">
+        <div>
+          <dt>범위</dt>
+          <dd th:text="${travelInfo.scope.name() == 'DOMESTIC'} ? '국내' : '해외'">국내</dd>
+        </div>
+        <div>
+          <dt>유형</dt>
+          <dd th:text="${travelInfo.contentType.name() == 'GENERAL'} ? '일반' : '축제'">일반</dd>
+        </div>
+        <div>
+          <dt>정보 카테고리</dt>
+          <dd th:text="${travelInfo.categoryName != null} ? ${travelInfo.categoryName} : '-'">계절여행</dd>
+        </div>
+        <div>
+          <dt>조회수</dt>
+          <dd th:text="${travelInfo.views}">0</dd>
+        </div>
+        <div>
+          <dt>작성일</dt>
+          <dd th:text="${#dates.format(travelInfo.createdAt, 'yyyy-MM-dd HH:mm')}">2026-08-09 10:00</dd>
+        </div>
+        <div>
+          <dt>수정일</dt>
+          <dd th:text="${#dates.format(travelInfo.updatedAt, 'yyyy-MM-dd HH:mm')}">2026-08-09 10:00</dd>
+        </div>
+      </dl>
+
+      <section class="admin-travel-info-detail-periods"
+               th:if="${travelInfo.contentType.name() == 'FESTIVAL'}">
+        <h3>축제 기간</h3>
+        <ul>
+          <li th:each="period : ${travelInfo.periods}">
+            <time th:text="${period.startDate}">2026-04-01</time>
+            <span aria-hidden="true">~</span>
+            <time th:text="${period.endDate}">2026-04-03</time>
+          </li>
+        </ul>
+      </section>
+
+      <section class="admin-travel-info-detail-content-section">
+        <h3>본문 미리보기</h3>
+        <div class="admin-travel-info-content toastui-editor-contents"
+             th:utext="${travelInfo.content}"></div>
+      </section>
+    </article>
+  </section>
+</th:block>
+</html>
