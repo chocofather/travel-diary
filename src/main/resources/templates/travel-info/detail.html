@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" crossorigin
+        href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.min.css">
+  <link rel="stylesheet" crossorigin
+        href="https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-kr@5.3.0/400.css">
+  <link rel="stylesheet" crossorigin
+        href="https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-kr@5.3.0/400.css">
+  <link rel="stylesheet" href="/css/quill-content.css">
+  <link rel="stylesheet" href="/css/travel-info-detail.css">
+</th:block>
+<th:block th:fragment="body">
+  <article class="travel-info-detail" aria-labelledby="travel-info-detail-title">
+    <header class="travel-info-detail-header">
+      <p class="travel-info-detail-kicker">여행정보</p>
+      <span class="travel-info-detail-category"
+            th:text="${travelInfo.categoryName}">계절여행</span>
+      <h1 id="travel-info-detail-title" th:text="${travelInfo.title}">여행정보 제목</h1>
+
+      <div class="travel-info-detail-type">
+        <span th:text="${travelInfo.scope.name() == 'DOMESTIC'} ? '국내' : '해외'">국내</span>
+        <span aria-hidden="true">·</span>
+        <span th:text="${travelInfo.contentType.name() == 'GENERAL'} ? '일반' : '축제'">일반</span>
+      </div>
+
+      <dl class="travel-info-detail-meta">
+        <div>
+          <dt>작성일</dt>
+          <dd><time th:text="${#dates.format(travelInfo.createdAt, 'yyyy.MM.dd')}">2026.08.10</time></dd>
+        </div>
+        <div>
+          <dt>조회수</dt>
+          <dd th:text="${travelInfo.views}">0</dd>
+        </div>
+        <div th:if="${travelInfo.updated}">
+          <dt>최종 수정</dt>
+          <dd><time th:text="${#dates.format(travelInfo.updatedAt, 'yyyy.MM.dd')}">2026.08.11</time></dd>
+        </div>
+      </dl>
+    </header>
+
+    <section class="travel-info-detail-periods"
+             th:if="${travelInfo.contentType.name() == 'FESTIVAL'
+                      and !#lists.isEmpty(travelInfo.periods)}"
+             aria-labelledby="travel-info-period-title">
+      <h2 id="travel-info-period-title">행사 기간</h2>
+      <ul>
+        <li th:each="period : ${travelInfo.periods}">
+          <time th:text="${period.startDate}">2026.08.10</time>
+          <span aria-hidden="true">~</span>
+          <time th:text="${period.endDate}">2026.08.15</time>
+        </li>
+      </ul>
+    </section>
+
+    <section class="travel-info-detail-content rich-text-content"
+             aria-label="여행정보 본문"
+             th:utext="${travelInfo.content}"></section>
+
+    <footer class="travel-info-detail-actions">
+      <a class="travel-info-detail-back" th:href="${listUrl}">목록으로</a>
+    </footer>
+  </article>
+</th:block>
+</html>

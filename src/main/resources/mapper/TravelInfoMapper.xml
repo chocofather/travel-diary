@@ -43,6 +43,18 @@
         <result property="endDate" column="end_date"/>
     </resultMap>
 
+    <resultMap id="PublicDetailResultMap" type="com.example.travlediary.dto.TravelInfoDetailDto">
+        <id property="id" column="id"/>
+        <result property="title" column="title"/>
+        <result property="scope" column="scope"/>
+        <result property="contentType" column="content_type"/>
+        <result property="categoryName" column="category_name"/>
+        <result property="content" column="content"/>
+        <result property="views" column="views"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
     <resultMap id="InfoPeriodResultMap" type="com.example.travlediary.model.InfoPeriod">
         <id property="id" column="id"/>
         <result property="startDate" column="start_date"/>
@@ -163,6 +175,32 @@
         FROM travel_info ti
         JOIN info_categories ic ON ic.id = ti.category_id
         <include refid="PublicListFilters"/>
+    </select>
+
+    <update id="incrementPublicViews">
+        UPDATE travel_info ti
+        JOIN info_categories ic
+          ON ic.id = ti.category_id
+         AND ic.is_visible = 1
+        SET ti.views = ti.views + 1,
+            ti.updated_at = ti.updated_at
+        WHERE ti.id = #{id}
+    </update>
+
+    <select id="findPublicDetailById" parameterType="long" resultMap="PublicDetailResultMap">
+        SELECT ti.id,
+               ti.title,
+               ti.scope,
+               ti.content_type,
+               ic.name AS category_name,
+               ti.content,
+               ti.views,
+               ti.created_at,
+               ti.updated_at
+        FROM travel_info ti
+        JOIN info_categories ic ON ic.id = ti.category_id
+        WHERE ti.id = #{id}
+          AND ic.is_visible = 1
     </select>
 
     <select id="findById" parameterType="long" resultMap="TravelInfoResultMap">

@@ -4,7 +4,9 @@ import com.example.travlediary.dto.AdminTravelInfoDetailDto;
 import com.example.travlediary.dto.AdminTravelInfoListItemDto;
 import com.example.travlediary.dto.InfoPeriodForm;
 import com.example.travlediary.dto.TravelInfoForm;
+import com.example.travlediary.dto.TravelInfoDetailDto;
 import com.example.travlediary.dto.TravelInfoListItemDto;
+import com.example.travlediary.dto.TravelInfoPeriodDto;
 import com.example.travlediary.model.InfoCategory;
 import com.example.travlediary.model.InfoImage;
 import com.example.travlediary.model.InfoPeriod;
@@ -64,6 +66,30 @@ public class TravelInfoService {
                                 TravelInfoContentType contentType,
                                 List<Long> categoryIds) {
         return travelInfoMapper.countPublicList(scope, contentType, categoryIds);
+    }
+
+    @Transactional
+    public TravelInfoDetailDto getPublicDetail(Long id) {
+        if (id == null || travelInfoMapper.incrementPublicViews(id) != 1) {
+            throw notFound();
+        }
+
+        TravelInfoDetailDto detail = travelInfoMapper.findPublicDetailById(id);
+        if (detail == null) {
+            throw notFound();
+        }
+        detail.setContent(postContentSanitizer.sanitize(detail.getContent()));
+
+        if (detail.getContentType() == TravelInfoContentType.FESTIVAL) {
+            List<InfoPeriod> periods = travelInfoMapper.findPeriodsByInfoId(id);
+            detail.setPeriods(periods == null ? List.of() : periods.stream()
+                    .map(period -> new TravelInfoPeriodDto(
+                            period.getStartDate(), period.getEndDate()))
+                    .toList());
+        } else {
+            detail.setPeriods(List.of());
+        }
+        return detail;
     }
 
     @Transactional(readOnly = true)

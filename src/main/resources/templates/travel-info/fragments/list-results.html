@@ -22,7 +22,11 @@
 
       <div class="travel-info-card-body">
         <span class="travel-info-category" th:text="${info.categoryName}">계절여행</span>
-        <h2 th:text="${info.title}" th:title="${info.title}">여행정보 제목</h2>
+        <h2 th:title="${info.title}">
+          <a class="travel-info-card-link"
+             th:href="@{/travel-info/{id}(id=${info.id},returnUrl=${listUrl})}"
+             th:text="${info.title}">여행정보 제목</a>
+        </h2>
         <p class="travel-info-type-meta">
           <span th:text="${info.scope.name() == 'DOMESTIC'} ? '국내' : '해외'">국내</span>
           <span aria-hidden="true">·</span>

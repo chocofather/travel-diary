@@ -1,0 +1,206 @@
+.travel-info-detail {
+    --travel-info-detail-accent: #0f766e;
+    --travel-info-detail-accent-dark: #115e59;
+    --travel-info-detail-accent-soft: #f0fdfa;
+    --travel-info-detail-border: #e2e8f0;
+    width: min(960px, calc(100% - 40px));
+    margin: 46px auto 80px;
+    color: #172033;
+}
+
+.travel-info-detail-header {
+    padding-bottom: 30px;
+    border-bottom: 1px solid var(--travel-info-detail-border);
+}
+
+.travel-info-detail-kicker {
+    margin: 0 0 18px;
+    color: var(--travel-info-detail-accent);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+}
+
+.travel-info-detail-category {
+    display: inline-flex;
+    align-items: center;
+    min-height: 30px;
+    padding: 0 12px;
+    border-radius: 999px;
+    background: var(--travel-info-detail-accent-soft);
+    color: var(--travel-info-detail-accent-dark);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.travel-info-detail h1 {
+    margin: 16px 0 13px;
+    overflow-wrap: anywhere;
+    font-size: clamp(30px, 5vw, 46px);
+    font-weight: 800;
+    letter-spacing: -0.045em;
+    line-height: 1.25;
+}
+
+.travel-info-detail-type {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: #475569;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.travel-info-detail-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 9px 24px;
+    margin: 20px 0 0;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.travel-info-detail-meta > div {
+    display: flex;
+    gap: 7px;
+}
+
+.travel-info-detail-meta dt {
+    font-weight: 750;
+}
+
+.travel-info-detail-meta dd {
+    margin: 0;
+}
+
+.travel-info-detail-periods {
+    margin-top: 30px;
+    padding: 20px 22px;
+    border-radius: 14px;
+    background: #fff7ed;
+    color: #9a3412;
+}
+
+.travel-info-detail-periods h2 {
+    margin: 0 0 12px;
+    color: #c2410c;
+    font-size: 15px;
+    font-weight: 800;
+}
+
+.travel-info-detail-periods ul {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.travel-info-detail-periods li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 7px;
+    font-size: 14px;
+    font-weight: 650;
+}
+
+.travel-info-detail-content {
+    min-width: 0;
+    max-width: 100%;
+    padding: 42px 0 48px;
+    overflow-wrap: anywhere;
+    color: #263247;
+    font-size: 16px;
+    line-height: 1.8;
+}
+
+.travel-info-detail-content > :first-child {
+    margin-top: 0;
+}
+
+.travel-info-detail-content > :last-child {
+    margin-bottom: 0;
+}
+
+.travel-info-detail-content img {
+    max-width: 100%;
+    height: auto;
+}
+
+.travel-info-detail-content table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+.travel-info-detail-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 24px;
+    border-top: 1px solid var(--travel-info-detail-border);
+}
+
+.travel-info-detail-back {
+    display: inline-flex;
+    min-height: 42px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 18px;
+    border: 1px solid var(--travel-info-detail-accent);
+    border-radius: 9px;
+    background: var(--travel-info-detail-accent);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 750;
+    text-decoration: none;
+}
+
+.travel-info-detail-back:hover {
+    border-color: var(--travel-info-detail-accent-dark);
+    background: var(--travel-info-detail-accent-dark);
+}
+
+.travel-info-detail-back:focus-visible {
+    outline: 3px solid rgba(13, 148, 136, 0.25);
+    outline-offset: 3px;
+}
+
+@media (max-width: 720px) {
+    .travel-info-detail {
+        width: min(100% - 32px, 620px);
+        margin-top: 32px;
+    }
+
+    .travel-info-detail-header {
+        padding-bottom: 24px;
+    }
+
+    .travel-info-detail-content {
+        padding: 34px 0 40px;
+        font-size: 15px;
+    }
+}
+
+@media (max-width: 430px) {
+    .travel-info-detail {
+        width: calc(100% - 24px);
+    }
+
+    .travel-info-detail h1 {
+        font-size: 29px;
+    }
+
+    .travel-info-detail-periods {
+        padding: 18px;
+    }
+
+    .travel-info-detail-actions {
+        justify-content: flex-start;
+    }
+
+    .travel-info-detail-back {
+        width: 100%;
+        box-sizing: border-box;
+    }
+}

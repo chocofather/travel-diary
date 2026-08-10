@@ -36,7 +36,7 @@ class TravelInfoPublicUiContractTest {
     }
 
     @Test
-    void resultsFragmentKeepsCardsPlaceholderPeriodPaginationAndNoDeadDetailLink()
+    void resultsFragmentKeepsCardsAndAddsAccessibleDetailLinkWithServerReturnUrl()
             throws IOException {
         String fragment = resource("/templates/travel-info/fragments/list-results.html");
 
@@ -47,7 +47,8 @@ class TravelInfoPublicUiContractTest {
                 .contains("travel-info-thumbnail-placeholder", "등록된 이미지가 없습니다")
                 .contains("travel-info-period", "info.startDate", "info.endDate")
                 .contains("travel-info-pagination", "page=${pageNumber}")
-                .doesNotContain("@{/travel-info/{id}", "href=\"/travel-info/10\"");
+                .contains("class=\"travel-info-card-link\"")
+                .contains("@{/travel-info/{id}(id=${info.id},returnUrl=${listUrl})}");
     }
 
     @Test
@@ -67,7 +68,40 @@ class TravelInfoPublicUiContractTest {
                 .contains(".travel-info-thumbnail-placeholder")
                 .contains(".travel-info-results.is-loading")
                 .contains(".travel-info-category-pills .travel-info-filter-pill.is-active::after")
+                .contains(".travel-info-card-link::after")
+                .contains("position: absolute", "inset: 0")
+                .contains(".travel-info-card:focus-within")
                 .doesNotContain("/images/default.png");
+    }
+
+    @Test
+    void detailUsesPublicLayoutSharedQuillContentAllFestivalPeriodsAndNoThumbnailHero()
+            throws IOException {
+        String detail = resource("/templates/travel-info/detail.html");
+        String css = resource("/static/css/travel-info-detail.css");
+
+        assertThat(detail)
+                .contains("layout/main :: layout")
+                .contains("/css/quill-content.css")
+                .contains("/css/travel-info-detail.css")
+                .contains("travelInfo.categoryName", "travelInfo.title")
+                .contains("travelInfo.scope.name()", "travelInfo.contentType.name()")
+                .contains("travelInfo.createdAt", "travelInfo.views")
+                .contains("th:if=\"${travelInfo.updated}\"")
+                .contains("!#lists.isEmpty(travelInfo.periods)")
+                .contains("th:each=\"period : ${travelInfo.periods}\"")
+                .contains("period.startDate", "period.endDate")
+                .contains("class=\"travel-info-detail-content rich-text-content\"")
+                .contains("th:utext=\"${travelInfo.content}\"")
+                .contains("th:href=\"${listUrl}\"", "목록으로")
+                .doesNotContain("thumbnail", "info_images", "travelInfo.id", "userId", "categoryId");
+        assertThat(css)
+                .contains("width: min(960px, calc(100% - 40px))")
+                .contains("overflow-wrap: anywhere")
+                .contains(".travel-info-detail-content img")
+                .contains("max-width: 100%", "height: auto")
+                .contains("@media (max-width: 720px)")
+                .contains("@media (max-width: 430px)");
     }
 
     @Test

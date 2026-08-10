@@ -3,6 +3,7 @@ package com.example.travlediary.service.travelinfo;
 import com.example.travlediary.dto.AdminTravelInfoDetailDto;
 import com.example.travlediary.dto.InfoPeriodForm;
 import com.example.travlediary.dto.TravelInfoForm;
+import com.example.travlediary.dto.TravelInfoDetailDto;
 import com.example.travlediary.dto.TravelInfoListItemDto;
 import com.example.travlediary.model.InfoCategory;
 import com.example.travlediary.model.InfoImage;
@@ -25,6 +26,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.sql.Timestamp;
@@ -151,6 +153,82 @@ class TravelInfoServiceTest {
         verify(travelInfoMapper, never()).findMainImageByInfoId(any());
         verify(travelInfoMapper, never()).findPeriodsByInfoId(any());
         verifyNoInteractions(infoCategoryMapper, fileUploadService);
+    }
+
+    @Test
+    void getsGeneralPublicDetailAfterIncrementAndSanitizesWithoutPeriodOrThumbnailLookup() {
+        TravelInfoDetailDto detail = publicDetail(TravelInfoContentType.GENERAL);
+        detail.setContent("<p onclick=\"alert(1)\">일반 본문</p><script>alert(1)</script>");
+        when(travelInfoMapper.incrementPublicViews(10L)).thenReturn(1);
+        when(travelInfoMapper.findPublicDetailById(10L)).thenReturn(detail);
+
+        TravelInfoDetailDto result = travelInfoService.getPublicDetail(10L);
+
+        assertThat(result.getContent()).isEqualTo("<p>일반 본문</p>");
+        assertThat(result.getPeriods()).isEmpty();
+        var order = org.mockito.Mockito.inOrder(travelInfoMapper);
+        order.verify(travelInfoMapper).incrementPublicViews(10L);
+        order.verify(travelInfoMapper).findPublicDetailById(10L);
+        verify(travelInfoMapper, never()).findPeriodsByInfoId(any());
+        verify(travelInfoMapper, never()).findMainImageByInfoId(any());
+        verifyNoInteractions(infoCategoryMapper, fileUploadService);
+    }
+
+    @Test
+    void getsFestivalPublicDetailWithEveryPeriodMappedWithoutInternalIds() {
+        TravelInfoDetailDto detail = publicDetail(TravelInfoContentType.FESTIVAL);
+        List<InfoPeriod> periods = List.of(
+                infoPeriod("2026-08-10", "2026-08-15"),
+                infoPeriod("2026-08-20", "2026-08-25"));
+        periods.get(0).setId(101L);
+        periods.get(0).setInfoId(10L);
+        periods.get(1).setId(102L);
+        periods.get(1).setInfoId(10L);
+        when(travelInfoMapper.incrementPublicViews(10L)).thenReturn(1);
+        when(travelInfoMapper.findPublicDetailById(10L)).thenReturn(detail);
+        when(travelInfoMapper.findPeriodsByInfoId(10L)).thenReturn(periods);
+
+        TravelInfoDetailDto result = travelInfoService.getPublicDetail(10L);
+
+        assertThat(result.getPeriods())
+                .extracting(period -> period.getStartDate() + "/" + period.getEndDate())
+                .containsExactly(
+                        "2026-08-10/2026-08-15",
+                        "2026-08-20/2026-08-25");
+        verify(travelInfoMapper).findPeriodsByInfoId(10L);
+        verify(travelInfoMapper, never()).findMainImageByInfoId(any());
+    }
+
+    @Test
+    void missingOrHiddenPublicDetailReturnsNotFoundBeforeDetailAndPeriodQueries() {
+        when(travelInfoMapper.incrementPublicViews(99L)).thenReturn(0);
+
+        assertNotFound(() -> travelInfoService.getPublicDetail(99L));
+
+        verify(travelInfoMapper).incrementPublicViews(99L);
+        verify(travelInfoMapper, never()).findPublicDetailById(any());
+        verify(travelInfoMapper, never()).findPeriodsByInfoId(any());
+        verifyNoMoreInteractions(travelInfoMapper);
+    }
+
+    @Test
+    void publicDetailFailureAfterIncrementPropagatesForTransactionalRollback() {
+        when(travelInfoMapper.incrementPublicViews(10L)).thenReturn(1);
+        when(travelInfoMapper.findPublicDetailById(10L)).thenReturn(null);
+
+        assertNotFound(() -> travelInfoService.getPublicDetail(10L));
+
+        verify(travelInfoMapper, never()).findPeriodsByInfoId(any());
+    }
+
+    @Test
+    void publicDetailMethodUsesWritableTransaction() throws NoSuchMethodException {
+        Transactional transactional = TravelInfoService.class
+                .getMethod("getPublicDetail", Long.class)
+                .getAnnotation(Transactional.class);
+
+        assertThat(transactional).isNotNull();
+        assertThat(transactional.readOnly()).isFalse();
     }
 
     @Test
@@ -542,6 +620,20 @@ class TravelInfoServiceTest {
         period.setStartDate(LocalDate.parse(startDate));
         period.setEndDate(LocalDate.parse(endDate));
         return period;
+    }
+
+    private TravelInfoDetailDto publicDetail(TravelInfoContentType contentType) {
+        TravelInfoDetailDto detail = new TravelInfoDetailDto();
+        detail.setId(10L);
+        detail.setTitle("여행정보 제목");
+        detail.setScope(TravelInfoScope.DOMESTIC);
+        detail.setContentType(contentType);
+        detail.setCategoryName("계절여행");
+        detail.setContent("<p>본문</p>");
+        detail.setViews(38);
+        detail.setCreatedAt(Timestamp.valueOf("2026-08-01 10:00:00"));
+        detail.setUpdatedAt(Timestamp.valueOf("2026-08-02 11:00:00"));
+        return detail;
     }
 
     private TravelInfo existingInfo(Long id, TravelInfoContentType contentType) {

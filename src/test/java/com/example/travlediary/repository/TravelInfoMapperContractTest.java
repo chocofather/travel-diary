@@ -85,6 +85,38 @@ class TravelInfoMapperContractTest {
     }
 
     @Test
+    void publicDetailSelectsOnlyPublicFieldsFromVisibleCategories() throws IOException {
+        String query = between(mapper(), "<select id=\"findPublicDetailById\"", "</select>");
+        String projection = between(query, "SELECT", "FROM travel_info ti");
+
+        assertThat(query)
+                .contains("JOIN info_categories ic ON ic.id = ti.category_id")
+                .contains("WHERE ti.id = #{id}")
+                .contains("ic.is_visible = 1")
+                .contains("ic.name AS category_name")
+                .doesNotContain("info_images", "thumbnail_url");
+        assertThat(projection)
+                .contains("ti.id", "ti.title", "ti.content", "ti.views")
+                .contains("ti.created_at", "ti.updated_at")
+                .doesNotContain("ti.user_id", "ti.category_id");
+    }
+
+    @Test
+    void publicViewIncrementIsAtomicVisibleOnlyAndPreservesContentUpdatedAt() throws IOException {
+        String update = between(mapper(), "<update id=\"incrementPublicViews\"", "</update>");
+
+        assertThat(update)
+                .contains("UPDATE travel_info ti")
+                .contains("JOIN info_categories ic")
+                .contains("ic.id = ti.category_id")
+                .contains("ic.is_visible = 1")
+                .contains("ti.views = ti.views + 1")
+                .contains("ti.updated_at = ti.updated_at")
+                .contains("WHERE ti.id = #{id}")
+                .doesNotContain("FOR UPDATE");
+    }
+
+    @Test
     void travelInfoInsertUsesGeneratedKeyAndServerManagedViews() throws IOException {
         String insert = between(mapper(), "<insert id=\"insertTravelInfo\"", "</insert>");
 
@@ -145,9 +177,9 @@ class TravelInfoMapperContractTest {
     }
 
     @Test
-    void mapperDoesNotReferenceExcludedDomainsOrViewIncrement() throws IOException {
+    void mapperDoesNotReferenceExcludedDomains() throws IOException {
         assertThat(mapper())
-                .doesNotContain("events", "destinations", "incrementViews", "increment_views");
+                .doesNotContain("events", "destinations");
     }
 
     @Test
