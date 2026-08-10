@@ -5,18 +5,24 @@ import com.example.travlediary.dto.AdminTravelInfoListItemDto;
 import com.example.travlediary.dto.InfoPeriodForm;
 import com.example.travlediary.dto.TravelInfoForm;
 import com.example.travlediary.model.InfoCategory;
+import com.example.travlediary.model.InfoImage;
 import com.example.travlediary.model.InfoPeriod;
 import com.example.travlediary.model.TravelInfo;
 import com.example.travlediary.model.TravelInfoContentType;
 import com.example.travlediary.model.TravelInfoScope;
 import com.example.travlediary.repository.category.InfoCategoryMapper;
 import com.example.travlediary.repository.travelinfo.TravelInfoMapper;
+import com.example.travlediary.service.file.FileUploadService;
 import com.example.travlediary.service.post.PostContentSanitizer;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
@@ -28,11 +34,13 @@ import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class TravelInfoService {
 
     private final TravelInfoMapper travelInfoMapper;
     private final InfoCategoryMapper infoCategoryMapper;
     private final PostContentSanitizer postContentSanitizer;
+    private final FileUploadService fileUploadService;
 
     @Transactional(readOnly = true)
     public List<AdminTravelInfoListItemDto> getAdminList(TravelInfoScope scope,
@@ -44,6 +52,12 @@ public class TravelInfoService {
     @Transactional(readOnly = true)
     public TravelInfo getById(Long id) {
         return requireTravelInfo(travelInfoMapper.findById(id));
+    }
+
+    @Transactional(readOnly = true)
+    public String getThumbnailUrl(Long id) {
+        InfoImage thumbnail = travelInfoMapper.findMainImageByInfoId(id);
+        return thumbnail == null ? null : thumbnail.getImageUrl();
     }
 
     @Transactional(readOnly = true)
@@ -84,20 +98,34 @@ public class TravelInfoService {
         }
 
         ValidatedTravelInfo validated = validate(form);
-        TravelInfo travelInfo = new TravelInfo();
-        travelInfo.setTitle(validated.title());
-        travelInfo.setContent(validated.content());
-        travelInfo.setScope(form.getScope());
-        travelInfo.setContentType(form.getContentType());
-        travelInfo.setCategoryId(form.getCategoryId());
-        travelInfo.setViews(0);
-        travelInfo.setUserId(userId);
+        String newThumbnailUrl = saveNewThumbnail(form.getThumbnailFile());
+        boolean lifecycleRegistered = false;
+        try {
+            lifecycleRegistered = registerFileLifecycle(newThumbnailUrl, List.of());
 
-        if (travelInfoMapper.insertTravelInfo(travelInfo) != 1 || travelInfo.getId() == null) {
-            throw new IllegalStateException("여행정보 저장에 실패했습니다.");
+            TravelInfo travelInfo = new TravelInfo();
+            travelInfo.setTitle(validated.title());
+            travelInfo.setContent(validated.content());
+            travelInfo.setScope(form.getScope());
+            travelInfo.setContentType(form.getContentType());
+            travelInfo.setCategoryId(form.getCategoryId());
+            travelInfo.setViews(0);
+            travelInfo.setUserId(userId);
+
+            if (travelInfoMapper.insertTravelInfo(travelInfo) != 1 || travelInfo.getId() == null) {
+                throw new IllegalStateException("여행정보 저장에 실패했습니다.");
+            }
+            insertPeriods(travelInfo.getId(), validated.periods());
+            if (newThumbnailUrl != null) {
+                insertThumbnail(travelInfo.getId(), newThumbnailUrl);
+            }
+            return travelInfo.getId();
+        } catch (RuntimeException exception) {
+            if (!lifecycleRegistered) {
+                deleteFileSafely(newThumbnailUrl);
+            }
+            throw exception;
         }
-        insertPeriods(travelInfo.getId(), validated.periods());
-        return travelInfo.getId();
     }
 
     @Transactional
@@ -105,24 +133,130 @@ public class TravelInfoService {
         TravelInfo travelInfo = requireTravelInfo(travelInfoMapper.findByIdForUpdate(id));
         ValidatedTravelInfo validated = validate(form);
 
-        travelInfo.setTitle(validated.title());
-        travelInfo.setContent(validated.content());
-        travelInfo.setScope(form.getScope());
-        travelInfo.setContentType(form.getContentType());
-        travelInfo.setCategoryId(form.getCategoryId());
+        boolean replaceThumbnail = hasNewThumbnail(form.getThumbnailFile());
+        boolean deleteThumbnail = !replaceThumbnail && form.isRemoveThumbnail();
+        List<String> previousThumbnailUrls = replaceThumbnail || deleteThumbnail
+                ? mainThumbnailUrls(id)
+                : List.of();
+        String newThumbnailUrl = replaceThumbnail ? saveNewThumbnail(form.getThumbnailFile()) : null;
+        boolean lifecycleRegistered = false;
 
-        if (travelInfoMapper.updateTravelInfo(travelInfo) != 1) {
-            throw notFound();
+        try {
+            lifecycleRegistered = registerFileLifecycle(newThumbnailUrl, previousThumbnailUrls);
+
+            travelInfo.setTitle(validated.title());
+            travelInfo.setContent(validated.content());
+            travelInfo.setScope(form.getScope());
+            travelInfo.setContentType(form.getContentType());
+            travelInfo.setCategoryId(form.getCategoryId());
+
+            if (travelInfoMapper.updateTravelInfo(travelInfo) != 1) {
+                throw notFound();
+            }
+            travelInfoMapper.deletePeriodsByInfoId(id);
+            insertPeriods(id, validated.periods());
+
+            if (replaceThumbnail || deleteThumbnail) {
+                travelInfoMapper.deleteMainImagesByInfoId(id);
+                if (newThumbnailUrl != null) {
+                    insertThumbnail(id, newThumbnailUrl);
+                }
+            }
+
+            if (!lifecycleRegistered) {
+                deleteFilesSafely(previousThumbnailUrls);
+            }
+        } catch (RuntimeException exception) {
+            if (!lifecycleRegistered) {
+                deleteFileSafely(newThumbnailUrl);
+            }
+            throw exception;
         }
-        travelInfoMapper.deletePeriodsByInfoId(id);
-        insertPeriods(id, validated.periods());
     }
 
     @Transactional
     public void delete(Long id) {
         requireTravelInfo(travelInfoMapper.findByIdForUpdate(id));
+        List<String> previousThumbnailUrls = mainThumbnailUrls(id);
+        boolean lifecycleRegistered = registerFileLifecycle(null, previousThumbnailUrls);
         if (travelInfoMapper.deleteTravelInfo(id) != 1) {
             throw notFound();
+        }
+        if (!lifecycleRegistered) {
+            deleteFilesSafely(previousThumbnailUrls);
+        }
+    }
+
+    private boolean hasNewThumbnail(MultipartFile thumbnailFile) {
+        return thumbnailFile != null && !thumbnailFile.isEmpty();
+    }
+
+    private String saveNewThumbnail(MultipartFile thumbnailFile) {
+        if (!hasNewThumbnail(thumbnailFile)) {
+            return null;
+        }
+        try {
+            return fileUploadService.saveTravelInfoThumbnail(thumbnailFile);
+        } catch (IllegalArgumentException exception) {
+            throw new TravelInfoValidationException("thumbnailFile", exception.getMessage());
+        }
+    }
+
+    private void insertThumbnail(Long infoId, String imageUrl) {
+        InfoImage thumbnail = new InfoImage();
+        thumbnail.setImageUrl(imageUrl);
+        thumbnail.setIsMain(true);
+        thumbnail.setOrderIndex(1);
+        thumbnail.setInfoId(infoId);
+        if (travelInfoMapper.insertInfoImage(thumbnail) != 1) {
+            throw new IllegalStateException("여행정보 썸네일 저장에 실패했습니다.");
+        }
+    }
+
+    private List<String> mainThumbnailUrls(Long infoId) {
+        List<String> urls = travelInfoMapper.findMainImageUrlsByInfoId(infoId);
+        return urls == null ? List.of() : urls.stream()
+                .filter(url -> url != null && !url.isBlank())
+                .distinct()
+                .toList();
+    }
+
+    private boolean registerFileLifecycle(String newThumbnailUrl, List<String> previousThumbnailUrls) {
+        if (newThumbnailUrl == null && previousThumbnailUrls.isEmpty()) {
+            return false;
+        }
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            return false;
+        }
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                deleteFilesSafely(previousThumbnailUrls);
+            }
+
+            @Override
+            public void afterCompletion(int status) {
+                if (status != STATUS_COMMITTED) {
+                    deleteFileSafely(newThumbnailUrl);
+                }
+            }
+        });
+        return true;
+    }
+
+    private void deleteFilesSafely(List<String> imageUrls) {
+        imageUrls.forEach(this::deleteFileSafely);
+    }
+
+    private void deleteFileSafely(String imageUrl) {
+        if (imageUrl == null) {
+            return;
+        }
+        try {
+            fileUploadService.deleteTravelInfoThumbnail(imageUrl);
+        } catch (RuntimeException exception) {
+            log.warn("여행정보 썸네일 파일을 정리하지 못했습니다: {}", imageUrl, exception);
         }
     }
 

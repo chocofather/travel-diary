@@ -19,10 +19,12 @@ import com.example.travlediary.service.category.InfoCategoryService;
 import com.example.travlediary.service.travelinfo.TravelInfoService;
 import com.example.travlediary.service.travelinfo.TravelInfoValidationException;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.server.ResponseStatusException;
@@ -39,6 +41,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
@@ -175,6 +178,8 @@ class AdminTravelInfoControllerTest {
         period.setEndDate(LocalDate.parse("2026-04-03"));
         form.setPeriods(List.of(period));
         when(travelInfoService.getForm(10L)).thenReturn(form);
+        when(travelInfoService.getThumbnailUrl(10L))
+                .thenReturn("/uploads/travel-info/thumbnails/current.jpg");
         when(infoCategoryService.getAll()).thenReturn(List.of(
                 category(1L, "계절여행", true),
                 category(2L, "기존 숨김 분류", false),
@@ -184,6 +189,10 @@ class AdminTravelInfoControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(model().attribute("editMode", true))
                 .andExpect(model().attribute("formAction", "/admin/travel-info/edit/10"))
+                .andExpect(model().attribute("currentThumbnailUrl",
+                        "/uploads/travel-info/thumbnails/current.jpg"))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "src=\"/uploads/travel-info/thumbnails/current.jpg\"")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("기존 숨김 분류 (숨김)")))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("다른 숨김 분류"))));
@@ -202,6 +211,29 @@ class AdminTravelInfoControllerTest {
                 .andExpect(redirectedUrl("/admin/travel-info"));
 
         verify(travelInfoService).create(any(TravelInfoForm.class), org.mockito.ArgumentMatchers.eq(7L));
+    }
+
+    @Test
+    void multipartCreateBindsThumbnailToExistingTravelInfoForm() throws Exception {
+        MockMultipartFile thumbnail = new MockMultipartFile(
+                "thumbnailFile", "thumbnail.jpg", "image/jpeg",
+                new byte[]{(byte) 0xff, (byte) 0xd8, (byte) 0xff});
+
+        mockMvc.perform(multipart("/admin/travel-info")
+                        .file(thumbnail)
+                        .with(user(adminDetails()))
+                        .param("title", "썸네일 여행")
+                        .param("content", "<p>본문</p>")
+                        .param("scope", "DOMESTIC")
+                        .param("contentType", "GENERAL")
+                        .param("categoryId", "3"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/travel-info"));
+
+        ArgumentCaptor<TravelInfoForm> captor = ArgumentCaptor.forClass(TravelInfoForm.class);
+        verify(travelInfoService).create(captor.capture(), org.mockito.ArgumentMatchers.eq(7L));
+        assertThat(captor.getValue().getThumbnailFile()).isNotNull();
+        assertThat(captor.getValue().getThumbnailFile().getOriginalFilename()).isEqualTo("thumbnail.jpg");
     }
 
     @Test
@@ -262,6 +294,27 @@ class AdminTravelInfoControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/travel-info"));
         verify(travelInfoService).delete(10L);
+    }
+
+    @Test
+    void updateBindsThumbnailRemovalWithoutTrustingAClientImageUrl() throws Exception {
+        when(travelInfoService.getById(10L)).thenReturn(new com.example.travlediary.model.TravelInfo());
+
+        mockMvc.perform(post("/admin/travel-info/edit/10")
+                        .with(user("admin").roles("ADMIN"))
+                        .param("title", "수정 제목")
+                        .param("content", "<p>수정 본문</p>")
+                        .param("scope", "DOMESTIC")
+                        .param("contentType", "GENERAL")
+                        .param("categoryId", "3")
+                        .param("removeThumbnail", "true")
+                        .param("currentThumbnailUrl", "/uploads/travel-info/thumbnails/forged.jpg"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/travel-info"));
+
+        ArgumentCaptor<TravelInfoForm> captor = ArgumentCaptor.forClass(TravelInfoForm.class);
+        verify(travelInfoService).update(org.mockito.ArgumentMatchers.eq(10L), captor.capture());
+        assertThat(captor.getValue().isRemoveThumbnail()).isTrue();
     }
 
     @Test

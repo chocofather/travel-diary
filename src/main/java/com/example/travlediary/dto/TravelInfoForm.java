@@ -5,6 +5,7 @@ import com.example.travlediary.model.TravelInfo;
 import com.example.travlediary.model.TravelInfoContentType;
 import com.example.travlediary.model.TravelInfoScope;
 import lombok.Data;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,6 +19,8 @@ public class TravelInfoForm {
     private TravelInfoContentType contentType = TravelInfoContentType.GENERAL;
     private Long categoryId;
     private List<InfoPeriodForm> periods = new ArrayList<>();
+    private MultipartFile thumbnailFile;
+    private boolean removeThumbnail;
 
     public static TravelInfoForm from(TravelInfo travelInfo, List<InfoPeriod> periods) {
         TravelInfoForm form = new TravelInfoForm();

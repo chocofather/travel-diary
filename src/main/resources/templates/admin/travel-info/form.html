@@ -30,6 +30,7 @@
     </header>
 
     <form id="travel-info-form" th:action="${formAction}" method="post"
+          enctype="multipart/form-data"
           th:object="${travelInfoForm}" class="admin-travel-info-form">
       <div class="admin-alert" th:if="${#fields.hasGlobalErrors()}" role="alert">
         <p th:each="error : ${#fields.globalErrors()}" th:text="${error}">입력 오류</p>
@@ -87,6 +88,46 @@
               <p class="admin-field-error" th:if="${#fields.hasErrors('categoryId')}"
                  th:errors="*{categoryId}">카테고리 오류</p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="admin-form-card is-wide admin-travel-info-section admin-thumbnail-section">
+        <div class="admin-travel-info-section-header">
+          <h2>썸네일</h2>
+          <p>목록과 카드에 사용할 대표 이미지 한 장을 선택합니다. 본문 이미지는 Quill에서 별도로 관리합니다.</p>
+        </div>
+
+        <div class="admin-thumbnail-layout">
+          <div id="travel-info-thumbnail-preview"
+               class="admin-thumbnail-preview"
+               th:attr="data-current-thumbnail-url=${currentThumbnailUrl}">
+            <img id="travel-info-thumbnail-preview-image"
+                 th:src="${currentThumbnailUrl}"
+                 th:hidden="${currentThumbnailUrl == null}"
+                 alt="여행정보 썸네일 미리보기">
+            <p id="travel-info-thumbnail-empty"
+               th:hidden="${currentThumbnailUrl != null}">등록된 썸네일이 없습니다.</p>
+          </div>
+
+          <div class="admin-thumbnail-controls">
+            <div class="admin-form-field">
+              <label for="travel-info-thumbnail-file">썸네일 이미지</label>
+              <input id="travel-info-thumbnail-file" type="file" name="thumbnailFile"
+                     accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                     th:classappend="${#fields.hasErrors('thumbnailFile')} ? ' is-invalid' : ''">
+              <span class="admin-help-text">JPG, PNG, WebP 형식, 최대 5MB</span>
+              <p class="admin-field-error" th:if="${#fields.hasErrors('thumbnailFile')}"
+                 th:errors="*{thumbnailFile}">썸네일 오류</p>
+            </div>
+
+            <label id="travel-info-thumbnail-remove-control"
+                   class="admin-thumbnail-remove-control"
+                   th:hidden="${currentThumbnailUrl == null}">
+              <input id="travel-info-remove-thumbnail" type="checkbox"
+                     th:field="*{removeThumbnail}">
+              기존 썸네일 삭제
+            </label>
           </div>
         </div>
       </section>

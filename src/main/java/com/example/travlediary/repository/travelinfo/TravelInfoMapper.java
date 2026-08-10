@@ -2,6 +2,7 @@ package com.example.travlediary.repository.travelinfo;
 
 import com.example.travlediary.dto.AdminTravelInfoListItemDto;
 import com.example.travlediary.model.InfoPeriod;
+import com.example.travlediary.model.InfoImage;
 import com.example.travlediary.model.TravelInfo;
 import com.example.travlediary.model.TravelInfoContentType;
 import com.example.travlediary.model.TravelInfoScope;
@@ -33,4 +34,12 @@ public interface TravelInfoMapper {
     int insertPeriod(InfoPeriod period);
 
     int deletePeriodsByInfoId(Long infoId);
+
+    InfoImage findMainImageByInfoId(Long infoId);
+
+    List<String> findMainImageUrlsByInfoId(Long infoId);
+
+    int insertInfoImage(InfoImage infoImage);
+
+    int deleteMainImagesByInfoId(Long infoId);
 }

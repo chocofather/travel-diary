@@ -36,6 +36,15 @@
         <result property="infoId" column="info_id"/>
     </resultMap>
 
+    <resultMap id="InfoImageResultMap" type="com.example.travlediary.model.InfoImage">
+        <id property="id" column="id"/>
+        <result property="imageUrl" column="image_url"/>
+        <result property="isMain" column="is_main"/>
+        <result property="orderIndex" column="order_index"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="infoId" column="info_id"/>
+    </resultMap>
+
     <select id="findAdminList" resultMap="AdminListResultMap">
         SELECT ti.id,
                ti.title,
@@ -117,6 +126,35 @@
     <delete id="deletePeriodsByInfoId" parameterType="long">
         DELETE FROM info_periods
         WHERE info_id = #{infoId}
+    </delete>
+
+    <select id="findMainImageByInfoId" parameterType="long" resultMap="InfoImageResultMap">
+        SELECT id, image_url, is_main, order_index, created_at, info_id
+        FROM info_images
+        WHERE info_id = #{infoId}
+          AND is_main = 1
+        ORDER BY order_index ASC, id ASC
+        LIMIT 1
+    </select>
+
+    <select id="findMainImageUrlsByInfoId" parameterType="long" resultType="string">
+        SELECT image_url
+        FROM info_images
+        WHERE info_id = #{infoId}
+          AND is_main = 1
+        ORDER BY order_index ASC, id ASC
+    </select>
+
+    <insert id="insertInfoImage" parameterType="com.example.travlediary.model.InfoImage"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO info_images (image_url, is_main, order_index, info_id, created_at)
+        VALUES (#{imageUrl}, #{isMain}, #{orderIndex}, #{infoId}, NOW())
+    </insert>
+
+    <delete id="deleteMainImagesByInfoId" parameterType="long">
+        DELETE FROM info_images
+        WHERE info_id = #{infoId}
+          AND is_main = 1
     </delete>
 
 </mapper>

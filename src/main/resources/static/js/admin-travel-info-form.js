@@ -9,6 +9,68 @@ document.addEventListener('DOMContentLoaded', () => {
         'travel-info-initial-content'
     );
 
+    const thumbnailPreview = document.getElementById('travel-info-thumbnail-preview');
+    const thumbnailPreviewImage = document.getElementById('travel-info-thumbnail-preview-image');
+    const thumbnailEmpty = document.getElementById('travel-info-thumbnail-empty');
+    const thumbnailFile = document.getElementById('travel-info-thumbnail-file');
+    const removeThumbnail = document.getElementById('travel-info-remove-thumbnail');
+
+    if (thumbnailPreview && thumbnailPreviewImage && thumbnailEmpty && thumbnailFile) {
+        const currentThumbnailUrl = thumbnailPreview.dataset.currentThumbnailUrl || '';
+        let objectUrl = null;
+
+        function releaseObjectUrl() {
+            if (!objectUrl) return;
+            URL.revokeObjectURL(objectUrl);
+            objectUrl = null;
+        }
+
+        function showThumbnail(url) {
+            thumbnailPreviewImage.src = url;
+            thumbnailPreviewImage.hidden = false;
+            thumbnailEmpty.hidden = true;
+        }
+
+        function showEmptyThumbnail() {
+            thumbnailPreviewImage.hidden = true;
+            thumbnailPreviewImage.removeAttribute('src');
+            thumbnailEmpty.hidden = false;
+        }
+
+        function restoreCurrentThumbnail() {
+            if (removeThumbnail?.checked || !currentThumbnailUrl) {
+                showEmptyThumbnail();
+                return;
+            }
+            showThumbnail(currentThumbnailUrl);
+        }
+
+        thumbnailFile.addEventListener('change', () => {
+            releaseObjectUrl();
+            const selectedFile = thumbnailFile.files?.[0];
+            if (!selectedFile) {
+                if (removeThumbnail) removeThumbnail.disabled = false;
+                restoreCurrentThumbnail();
+                return;
+            }
+
+            if (removeThumbnail) {
+                removeThumbnail.checked = false;
+                removeThumbnail.disabled = true;
+            }
+            objectUrl = URL.createObjectURL(selectedFile);
+            showThumbnail(objectUrl);
+        });
+
+        removeThumbnail?.addEventListener('change', () => {
+            if (thumbnailFile.files?.length) return;
+            restoreCurrentThumbnail();
+        });
+
+        restoreCurrentThumbnail();
+        window.addEventListener('beforeunload', releaseObjectUrl, {once: true});
+    }
+
     const contentType = document.getElementById('travel-info-content-type');
     const periodSection = document.getElementById('travel-info-period-section');
     const periodList = document.getElementById('travel-info-period-list');

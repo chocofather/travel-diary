@@ -4,13 +4,16 @@ import com.example.travlediary.dto.AdminTravelInfoDetailDto;
 import com.example.travlediary.dto.InfoPeriodForm;
 import com.example.travlediary.dto.TravelInfoForm;
 import com.example.travlediary.model.InfoCategory;
+import com.example.travlediary.model.InfoImage;
 import com.example.travlediary.model.InfoPeriod;
 import com.example.travlediary.model.TravelInfo;
 import com.example.travlediary.model.TravelInfoContentType;
 import com.example.travlediary.model.TravelInfoScope;
 import com.example.travlediary.repository.category.InfoCategoryMapper;
 import com.example.travlediary.repository.travelinfo.TravelInfoMapper;
+import com.example.travlediary.service.file.FileUploadService;
 import com.example.travlediary.service.post.PostContentSanitizer;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,6 +21,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.sql.Timestamp;
@@ -41,13 +47,22 @@ class TravelInfoServiceTest {
     private TravelInfoMapper travelInfoMapper;
     @Mock
     private InfoCategoryMapper infoCategoryMapper;
+    @Mock
+    private FileUploadService fileUploadService;
 
     private TravelInfoService travelInfoService;
 
     @BeforeEach
     void setUp() {
         travelInfoService = new TravelInfoService(
-                travelInfoMapper, infoCategoryMapper, new PostContentSanitizer());
+                travelInfoMapper, infoCategoryMapper, new PostContentSanitizer(), fileUploadService);
+    }
+
+    @AfterEach
+    void clearTransactionSynchronization() {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
     }
 
     @Test
@@ -140,6 +155,49 @@ class TravelInfoServiceTest {
         assertThat(captor.getValue().getUserId()).isEqualTo(7L);
         assertThat(captor.getValue().getViews()).isZero();
         verify(travelInfoMapper, never()).insertPeriod(any());
+        verify(travelInfoMapper, never()).insertInfoImage(any());
+        verify(fileUploadService, never()).saveTravelInfoThumbnail(any());
+    }
+
+    @Test
+    void createsInfoWithOneMainThumbnail() {
+        TravelInfoForm form = form(TravelInfoContentType.GENERAL);
+        form.setThumbnailFile(thumbnailFile());
+        allowCategory();
+        stubTravelInfoInsert(100L);
+        when(fileUploadService.saveTravelInfoThumbnail(form.getThumbnailFile()))
+                .thenReturn("/uploads/travel-info/thumbnails/new.jpg");
+        when(travelInfoMapper.insertInfoImage(any())).thenReturn(1);
+
+        assertThat(travelInfoService.create(form, 7L)).isEqualTo(100L);
+
+        ArgumentCaptor<InfoImage> captor = ArgumentCaptor.forClass(InfoImage.class);
+        verify(travelInfoMapper).insertInfoImage(captor.capture());
+        assertThat(captor.getValue().getInfoId()).isEqualTo(100L);
+        assertThat(captor.getValue().getImageUrl())
+                .isEqualTo("/uploads/travel-info/thumbnails/new.jpg");
+        assertThat(captor.getValue().getIsMain()).isTrue();
+        assertThat(captor.getValue().getOrderIndex()).isEqualTo(1);
+    }
+
+    @Test
+    void createRollbackDeletesNewThumbnailFile() {
+        beginTransactionSynchronization();
+        TravelInfoForm form = form(TravelInfoContentType.GENERAL);
+        form.setThumbnailFile(thumbnailFile());
+        allowCategory();
+        when(fileUploadService.saveTravelInfoThumbnail(form.getThumbnailFile()))
+                .thenReturn("/uploads/travel-info/thumbnails/new.jpg");
+        when(travelInfoMapper.insertTravelInfo(any())).thenReturn(0);
+
+        assertThatThrownBy(() -> travelInfoService.create(form, 7L))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("여행정보 저장에 실패했습니다.");
+        completeTransaction(TransactionSynchronization.STATUS_ROLLED_BACK);
+
+        verify(fileUploadService).deleteTravelInfoThumbnail(
+                "/uploads/travel-info/thumbnails/new.jpg");
+        verify(travelInfoMapper, never()).insertInfoImage(any());
     }
 
     @Test
@@ -229,6 +287,89 @@ class TravelInfoServiceTest {
         assertThat(existing.getContentType()).isEqualTo(TravelInfoContentType.GENERAL);
         assertThat(existing.getUserId()).isEqualTo(42L);
         assertThat(existing.getViews()).isEqualTo(93);
+        verify(travelInfoMapper, never()).findMainImageUrlsByInfoId(any());
+        verify(travelInfoMapper, never()).deleteMainImagesByInfoId(any());
+    }
+
+    @Test
+    void replacesThumbnailAndDeletesOldFilesOnlyAfterCommit() {
+        beginTransactionSynchronization();
+        TravelInfo existing = existingInfo(10L, TravelInfoContentType.GENERAL);
+        TravelInfoForm form = form(TravelInfoContentType.GENERAL);
+        form.setThumbnailFile(thumbnailFile());
+        form.setRemoveThumbnail(true);
+        when(travelInfoMapper.findByIdForUpdate(10L)).thenReturn(existing);
+        when(travelInfoMapper.findMainImageUrlsByInfoId(10L)).thenReturn(List.of(
+                "/uploads/travel-info/thumbnails/old-a.jpg",
+                "/uploads/travel-info/thumbnails/old-b.jpg"));
+        when(fileUploadService.saveTravelInfoThumbnail(form.getThumbnailFile()))
+                .thenReturn("/uploads/travel-info/thumbnails/new.jpg");
+        when(travelInfoMapper.updateTravelInfo(existing)).thenReturn(1);
+        when(travelInfoMapper.insertInfoImage(any())).thenReturn(1);
+        allowCategory();
+
+        travelInfoService.update(10L, form);
+
+        verify(travelInfoMapper).deleteMainImagesByInfoId(10L);
+        verify(travelInfoMapper).insertInfoImage(any());
+        verify(fileUploadService, never()).deleteTravelInfoThumbnail(any());
+
+        completeTransaction(TransactionSynchronization.STATUS_COMMITTED);
+
+        verify(fileUploadService).deleteTravelInfoThumbnail(
+                "/uploads/travel-info/thumbnails/old-a.jpg");
+        verify(fileUploadService).deleteTravelInfoThumbnail(
+                "/uploads/travel-info/thumbnails/old-b.jpg");
+        verify(fileUploadService, never()).deleteTravelInfoThumbnail(
+                "/uploads/travel-info/thumbnails/new.jpg");
+    }
+
+    @Test
+    void removesThumbnailAndDeletesFileOnlyAfterCommit() {
+        beginTransactionSynchronization();
+        TravelInfo existing = existingInfo(10L, TravelInfoContentType.GENERAL);
+        TravelInfoForm form = form(TravelInfoContentType.GENERAL);
+        form.setRemoveThumbnail(true);
+        when(travelInfoMapper.findByIdForUpdate(10L)).thenReturn(existing);
+        when(travelInfoMapper.findMainImageUrlsByInfoId(10L))
+                .thenReturn(List.of("/uploads/travel-info/thumbnails/old.jpg"));
+        when(travelInfoMapper.updateTravelInfo(existing)).thenReturn(1);
+        allowCategory();
+
+        travelInfoService.update(10L, form);
+
+        verify(travelInfoMapper).deleteMainImagesByInfoId(10L);
+        verify(travelInfoMapper, never()).insertInfoImage(any());
+        verify(fileUploadService, never()).deleteTravelInfoThumbnail(any());
+
+        completeTransaction(TransactionSynchronization.STATUS_COMMITTED);
+
+        verify(fileUploadService).deleteTravelInfoThumbnail(
+                "/uploads/travel-info/thumbnails/old.jpg");
+    }
+
+    @Test
+    void rollbackDeletesNewThumbnailAndKeepsOldFile() {
+        beginTransactionSynchronization();
+        TravelInfo existing = existingInfo(10L, TravelInfoContentType.GENERAL);
+        TravelInfoForm form = form(TravelInfoContentType.GENERAL);
+        form.setThumbnailFile(thumbnailFile());
+        when(travelInfoMapper.findByIdForUpdate(10L)).thenReturn(existing);
+        when(travelInfoMapper.findMainImageUrlsByInfoId(10L))
+                .thenReturn(List.of("/uploads/travel-info/thumbnails/old.jpg"));
+        when(fileUploadService.saveTravelInfoThumbnail(form.getThumbnailFile()))
+                .thenReturn("/uploads/travel-info/thumbnails/new.jpg");
+        when(travelInfoMapper.updateTravelInfo(existing)).thenReturn(0);
+        allowCategory();
+
+        assertNotFound(() -> travelInfoService.update(10L, form));
+        completeTransaction(TransactionSynchronization.STATUS_ROLLED_BACK);
+
+        verify(fileUploadService).deleteTravelInfoThumbnail(
+                "/uploads/travel-info/thumbnails/new.jpg");
+        verify(fileUploadService, never()).deleteTravelInfoThumbnail(
+                "/uploads/travel-info/thumbnails/old.jpg");
+        verify(travelInfoMapper, never()).deleteMainImagesByInfoId(any());
     }
 
     @Test
@@ -300,15 +441,25 @@ class TravelInfoServiceTest {
     }
 
     @Test
-    void deletesExistingTravelInfoAndReliesOnDatabaseCascadeForPeriods() {
+    void deletesExistingTravelInfoAndReliesOnDatabaseCascadeBeforeDeletingFileAfterCommit() {
+        beginTransactionSynchronization();
         when(travelInfoMapper.findByIdForUpdate(10L))
                 .thenReturn(existingInfo(10L, TravelInfoContentType.FESTIVAL));
+        when(travelInfoMapper.findMainImageUrlsByInfoId(10L))
+                .thenReturn(List.of("/uploads/travel-info/thumbnails/old.jpg"));
         when(travelInfoMapper.deleteTravelInfo(10L)).thenReturn(1);
 
         travelInfoService.delete(10L);
 
         verify(travelInfoMapper).deleteTravelInfo(10L);
         verify(travelInfoMapper, never()).deletePeriodsByInfoId(any());
+        verify(travelInfoMapper, never()).deleteMainImagesByInfoId(any());
+        verify(fileUploadService, never()).deleteTravelInfoThumbnail(any());
+
+        completeTransaction(TransactionSynchronization.STATUS_COMMITTED);
+
+        verify(fileUploadService).deleteTravelInfoThumbnail(
+                "/uploads/travel-info/thumbnails/old.jpg");
     }
 
     @Test
@@ -332,6 +483,25 @@ class TravelInfoServiceTest {
         form.setContentType(contentType);
         form.setCategoryId(3L);
         return form;
+    }
+
+    private MockMultipartFile thumbnailFile() {
+        return new MockMultipartFile(
+                "thumbnailFile", "thumbnail.jpg", "image/jpeg", new byte[]{(byte) 0xff, (byte) 0xd8, (byte) 0xff});
+    }
+
+    private void beginTransactionSynchronization() {
+        TransactionSynchronizationManager.initSynchronization();
+    }
+
+    private void completeTransaction(int status) {
+        List<TransactionSynchronization> synchronizations =
+                TransactionSynchronizationManager.getSynchronizations();
+        if (status == TransactionSynchronization.STATUS_COMMITTED) {
+            synchronizations.forEach(TransactionSynchronization::afterCommit);
+        }
+        synchronizations.forEach(synchronization -> synchronization.afterCompletion(status));
+        TransactionSynchronizationManager.clearSynchronization();
     }
 
     private InfoPeriodForm period(String startDate, String endDate) {

@@ -40,9 +40,17 @@ class AdminTravelInfoUiContractTest {
         String quillInitializer = resource("/static/js/quill-editor-init.js");
         String quillCss = resource("/static/css/quill-content.css");
         String travelInfoCss = resource("/static/css/admin-travel-info.css");
+        String travelInfoJs = resource("/static/js/admin-travel-info-form.js");
 
         assertThat(form)
                 .containsOnlyOnce("<form id=\"travel-info-form\"")
+                .contains("enctype=\"multipart/form-data\"")
+                .contains("<h2>썸네일</h2>")
+                .contains("id=\"travel-info-thumbnail-preview\"")
+                .contains("data-current-thumbnail-url=${currentThumbnailUrl}")
+                .contains("name=\"thumbnailFile\"")
+                .contains("accept=\".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp\"")
+                .contains("th:field=\"*{removeThumbnail}\"")
                 .contains("class=\"admin-travel-info-editor-shell quill-editor-shell\"")
                 .contains("id=\"travel-info-editor\"")
                 .contains("class=\"admin-travel-info-editor quill-editor\"")
@@ -62,9 +70,11 @@ class AdminTravelInfoUiContractTest {
                 .contains("/js/quill-editor-init.js")
                 .contains("/js/admin-travel-info-form.js")
                 .doesNotContain(
-                        "multipart/form-data", "info_images", "mainIdx", "orderIndex",
+                        "info_images", "mainIdx", "orderIndex",
                         "toastui", "uicdn.toast.com", "/js/editor-init.js", "latest"
                 );
+        assertThat(form.indexOf("<h2>썸네일</h2>"))
+                .isLessThan(form.indexOf("<h2>본문</h2>"));
         assertThat(form.indexOf("quill@2.0.3/dist/quill.js"))
                 .isLessThan(form.indexOf("quill-resize-module@2.1.3/dist/resize.js"));
         assertThat(form.indexOf("quill-resize-module@2.1.3/dist/resize.js"))
@@ -159,8 +169,20 @@ class AdminTravelInfoUiContractTest {
 
         assertThat(travelInfoCss)
                 .contains(".admin-travel-info-form .admin-travel-info-section")
+                .contains(".admin-thumbnail-layout")
+                .contains(".admin-thumbnail-preview")
+                .contains(".admin-thumbnail-remove-control")
                 .contains("max-width: 1120px;")
                 .doesNotContain("@font-face", ".rich-text-content");
+
+        assertThat(travelInfoJs)
+                .contains("travel-info-thumbnail-file")
+                .contains("travel-info-remove-thumbnail")
+                .contains("URL.createObjectURL(selectedFile)")
+                .contains("URL.revokeObjectURL(objectUrl)")
+                .contains("removeThumbnail.checked = false")
+                .contains("removeThumbnail.disabled = true")
+                .contains("window.initQuillEditor(");
     }
 
     @Test

@@ -129,6 +129,8 @@ public class AdminTravelInfoController {
         model.addAttribute("categories", selectableCategories(form.getCategoryId()));
         model.addAttribute("editMode", editMode);
         model.addAttribute("travelInfoId", id);
+        model.addAttribute("currentThumbnailUrl",
+                editMode ? travelInfoService.getThumbnailUrl(id) : null);
         model.addAttribute("formAction", editMode
                 ? "/admin/travel-info/edit/" + id
                 : "/admin/travel-info");

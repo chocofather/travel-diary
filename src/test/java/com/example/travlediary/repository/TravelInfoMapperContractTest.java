@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -56,9 +58,49 @@ class TravelInfoMapperContractTest {
     }
 
     @Test
-    void mapperDoesNotReferenceExcludedDomainsOrImages() throws IOException {
+    void mainThumbnailQueriesUseOnlyMainInfoImagesAndStableOrdering() throws IOException {
+        String mapper = mapper();
+        String findOne = between(mapper, "<select id=\"findMainImageByInfoId\"", "</select>");
+        String findAllUrls = between(mapper, "<select id=\"findMainImageUrlsByInfoId\"", "</select>");
+        String insert = between(mapper, "<insert id=\"insertInfoImage\"", "</insert>");
+        String delete = between(mapper, "<delete id=\"deleteMainImagesByInfoId\"", "</delete>");
+
+        assertThat(findOne)
+                .contains("FROM info_images")
+                .contains("info_id = #{infoId}")
+                .contains("is_main = 1")
+                .contains("ORDER BY order_index ASC, id ASC")
+                .contains("LIMIT 1");
+        assertThat(findAllUrls)
+                .contains("SELECT image_url")
+                .contains("FROM info_images")
+                .contains("is_main = 1")
+                .contains("ORDER BY order_index ASC, id ASC")
+                .doesNotContain("LIMIT 1");
+        assertThat(insert)
+                .contains("INSERT INTO info_images (image_url, is_main, order_index, info_id, created_at)")
+                .contains("#{imageUrl}, #{isMain}, #{orderIndex}, #{infoId}, NOW()")
+                .contains("useGeneratedKeys=\"true\"");
+        assertThat(delete)
+                .contains("DELETE FROM info_images")
+                .contains("info_id = #{infoId}")
+                .contains("is_main = 1");
+    }
+
+    @Test
+    void mapperDoesNotReferenceExcludedDomainsOrViewIncrement() throws IOException {
         assertThat(mapper())
-                .doesNotContain("events", "destinations", "info_images", "incrementViews", "increment_views");
+                .doesNotContain("events", "destinations", "incrementViews", "increment_views");
+    }
+
+    @Test
+    void schemaReferenceCascadesInfoImagesWhenTravelInfoIsDeleted() throws IOException {
+        String schema = Files.readString(
+                Path.of("docs/db/travel_diary_schema_reference.md"), StandardCharsets.UTF_8);
+        String infoImages = between(schema, "CREATE TABLE `info_images`", ") ENGINE=InnoDB");
+
+        assertThat(infoImages)
+                .contains("FOREIGN KEY (`info_id`) REFERENCES `travel_info` (`id`) ON DELETE CASCADE");
     }
 
     private String mapper() throws IOException {
