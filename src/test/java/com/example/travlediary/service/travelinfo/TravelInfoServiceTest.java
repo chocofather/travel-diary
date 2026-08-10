@@ -136,23 +136,67 @@ class TravelInfoServiceTest {
         TravelInfoListItemDto item = new TravelInfoListItemDto();
         item.setId(10L);
         List<Long> categoryIds = List.of(3L, 5L, 7L);
+        String keyword = "  100%_!!test  ";
+        String keywordPattern = "100!%!_!!!!test";
         when(travelInfoMapper.findPublicList(
-                TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL, categoryIds, 12L, 12))
+                TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL,
+                categoryIds, keywordPattern, null, 12L, 12))
                 .thenReturn(List.of(item));
         when(travelInfoMapper.countPublicList(
-                TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL, categoryIds))
+                TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL,
+                categoryIds, keywordPattern, null))
                 .thenReturn(25L);
 
         assertThat(travelInfoService.getPublicList(
-                TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL, categoryIds, 12L, 12))
+                TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL,
+                categoryIds, keyword, 12L, 12))
                 .containsExactly(item);
         assertThat(travelInfoService.countPublicList(
-                TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL, categoryIds))
+                TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL,
+                categoryIds, keyword))
                 .isEqualTo(25L);
 
         verify(travelInfoMapper, never()).findMainImageByInfoId(any());
         verify(travelInfoMapper, never()).findPeriodsByInfoId(any());
         verifyNoInteractions(infoCategoryMapper, fileUploadService);
+    }
+
+    @Test
+    void blankPublicSearchKeywordDelegatesAsNoKeywordCondition() {
+        when(travelInfoMapper.findPublicList(null, null, List.of(), null, null, 0L, 12))
+                .thenReturn(List.of());
+        when(travelInfoMapper.countPublicList(null, null, List.of(), null, null))
+                .thenReturn(0L);
+
+        assertThat(travelInfoService.getPublicList(
+                null, null, List.of(), "   \t", 0L, 12)).isEmpty();
+        assertThat(travelInfoService.countPublicList(
+                null, null, List.of(), null)).isZero();
+
+        verify(travelInfoMapper).findPublicList(null, null, List.of(), null, null, 0L, 12);
+        verify(travelInfoMapper).countPublicList(null, null, List.of(), null, null);
+    }
+
+    @Test
+    void publicSearchDelegatesTheSameKoreanPatternToListAndCount() {
+        String keyword = "썸ㄴ";
+        String koreanPattern = TravelInfoSearchKeyword.toKoreanPrefixRegex(keyword);
+        when(travelInfoMapper.findPublicList(
+                null, null, List.of(), keyword, koreanPattern, 0L, 12))
+                .thenReturn(List.of());
+        when(travelInfoMapper.countPublicList(
+                null, null, List.of(), keyword, koreanPattern))
+                .thenReturn(0L);
+
+        assertThat(travelInfoService.getPublicList(
+                null, null, List.of(), keyword, 0L, 12)).isEmpty();
+        assertThat(travelInfoService.countPublicList(
+                null, null, List.of(), keyword)).isZero();
+
+        verify(travelInfoMapper).findPublicList(
+                null, null, List.of(), keyword, koreanPattern, 0L, 12);
+        verify(travelInfoMapper).countPublicList(
+                null, null, List.of(), keyword, koreanPattern);
     }
 
     @Test

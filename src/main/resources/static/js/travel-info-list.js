@@ -3,9 +3,16 @@
     const RESET_SELECTOR = '[data-travel-info-reset]';
     const RESULTS_SELECTOR = '#travel-info-results';
     const PAGINATION_LINK_SELECTOR = '#travel-info-results .travel-info-pagination a';
+    const SEARCH_FORM_SELECTOR = '[data-travel-info-search]';
+    const SEARCH_INPUT_SELECTOR = '[data-travel-info-search-input]';
+    const SEARCH_CLEAR_SELECTOR = '[data-travel-info-search-clear]';
     const SINGLE_FILTER_NAMES = ['scope'];
     const CATEGORY_FILTER_NAME = 'categoryId';
+    const KEYWORD_PARAMETER_NAME = 'keyword';
+    const KEYWORD_MAX_LENGTH = 100;
+    const SEARCH_DEBOUNCE_MS = 200;
     let activeController = null;
+    let searchTimer = null;
     let selectedUrl = new URL(window.location.href);
 
     function canIntercept(event, control) {
@@ -19,6 +26,12 @@
     }
 
     function cleanUrl(url) {
+        const keyword = normalizeKeyword(url.searchParams.get(KEYWORD_PARAMETER_NAME) || '');
+        if (keyword) {
+            url.searchParams.set(KEYWORD_PARAMETER_NAME, keyword);
+        } else {
+            url.searchParams.delete(KEYWORD_PARAMETER_NAME);
+        }
         if (url.searchParams.get('page') === '1') {
             url.searchParams.delete('page');
         }
@@ -26,6 +39,23 @@
             url.searchParams.delete('size');
         }
         return url;
+    }
+
+    function normalizeKeyword(value) {
+        return Array.from(value.trim()).slice(0, KEYWORD_MAX_LENGTH).join('');
+    }
+
+    function searchUrl(value) {
+        const url = new URL(selectedUrl.href);
+        const keyword = normalizeKeyword(value);
+
+        if (keyword) {
+            url.searchParams.set(KEYWORD_PARAMETER_NAME, keyword);
+        } else {
+            url.searchParams.delete(KEYWORD_PARAMETER_NAME);
+        }
+        url.searchParams.delete('page');
+        return cleanUrl(url);
     }
 
     function filterUrl(control) {
@@ -115,6 +145,51 @@
         });
     }
 
+    function syncSearchUi(url) {
+        const input = document.querySelector(SEARCH_INPUT_SELECTOR);
+        const clearButton = document.querySelector(SEARCH_CLEAR_SELECTOR);
+        if (!input) {
+            return;
+        }
+
+        const keyword = normalizeKeyword(url.searchParams.get(KEYWORD_PARAMETER_NAME) || '');
+        if (input.value !== keyword) {
+            input.value = keyword;
+        }
+        if (clearButton) {
+            clearButton.hidden = !keyword;
+        }
+    }
+
+    function syncUi(url) {
+        syncFilterUi(url);
+        syncSearchUi(url);
+    }
+
+    function clearSearchTimer() {
+        if (searchTimer !== null) {
+            window.clearTimeout(searchTimer);
+            searchTimer = null;
+        }
+    }
+
+    function runSearch() {
+        const input = document.querySelector(SEARCH_INPUT_SELECTOR);
+        if (!input) {
+            return;
+        }
+        clearSearchTimer();
+        loadResults(searchUrl(input.value), 'push');
+    }
+
+    function scheduleSearch() {
+        clearSearchTimer();
+        searchTimer = window.setTimeout(() => {
+            searchTimer = null;
+            runSearch();
+        }, SEARCH_DEBOUNCE_MS);
+    }
+
     function setLoading(loading) {
         const results = document.querySelector(RESULTS_SELECTOR);
         if (!results) {
@@ -154,7 +229,7 @@
         }
         activeController = controller;
         selectedUrl = url;
-        syncFilterUi(url);
+        syncUi(url);
         showMessage('');
         setLoading(true);
 
@@ -174,7 +249,7 @@
             if (historyMode === 'push') {
                 window.history.pushState({}, '', url.pathname + url.search);
             }
-            syncFilterUi(url);
+            syncUi(url);
         } catch (error) {
             if (error.name === 'AbortError') {
                 return;
@@ -204,22 +279,61 @@
         event.preventDefault();
 
         if (reset) {
+            clearSearchTimer();
             loadResults(new URL('/travel-info', window.location.origin), 'push');
             return;
         }
         if (filter) {
+            clearSearchTimer();
             const url = filter.dataset.filterName === CATEGORY_FILTER_NAME
                 ? categoryFilterUrl(filter)
                 : filterUrl(filter);
             loadResults(url, 'push');
             return;
         }
+        clearSearchTimer();
         loadResults(new URL(pageLink.href), 'push');
     });
 
+    const searchForm = document.querySelector(SEARCH_FORM_SELECTOR);
+    const searchInput = document.querySelector(SEARCH_INPUT_SELECTOR);
+    const searchClearButton = document.querySelector(SEARCH_CLEAR_SELECTOR);
+
+    if (searchForm && searchInput) {
+        searchForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            runSearch();
+        });
+
+        searchInput.addEventListener('input', () => {
+            scheduleSearch();
+        });
+
+        searchInput.addEventListener('compositionstart', () => {
+            clearSearchTimer();
+        });
+
+        searchInput.addEventListener('compositionupdate', () => {
+            scheduleSearch();
+        });
+
+        searchInput.addEventListener('compositionend', () => {
+            scheduleSearch();
+        });
+    }
+
+    if (searchClearButton && searchInput) {
+        searchClearButton.addEventListener('click', () => {
+            searchInput.value = '';
+            runSearch();
+            searchInput.focus();
+        });
+    }
+
     window.addEventListener('popstate', () => {
+        clearSearchTimer();
         loadResults(new URL(window.location.href), 'none');
     });
 
-    syncFilterUi(selectedUrl);
+    syncUi(selectedUrl);
 })();

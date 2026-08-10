@@ -68,9 +68,9 @@ class TravelInfoControllerTest {
         festival.setEndDate(LocalDate.parse("2026-04-03"));
         TravelInfoListItemDto general = item(11L, "해외여행 준비 체크리스트",
                 TravelInfoScope.INTERNATIONAL, TravelInfoContentType.GENERAL, null);
-        when(travelInfoService.getPublicList(null, null, List.of(), 0L, 12))
+        when(travelInfoService.getPublicList(null, null, List.of(), null, 0L, 12))
                 .thenReturn(List.of(festival, general));
-        when(travelInfoService.countPublicList(null, null, List.of())).thenReturn(2L);
+        when(travelInfoService.countPublicList(null, null, List.of(), null)).thenReturn(2L);
         when(infoCategoryService.getVisible()).thenReturn(List.of(category()));
 
         mockMvc.perform(get("/travel-info"))
@@ -78,6 +78,7 @@ class TravelInfoControllerTest {
                 .andExpect(view().name("travel-info/list"))
                 .andExpect(model().attribute("currentPage", 1))
                 .andExpect(model().attribute("pageSize", 12))
+                .andExpect(model().attribute("keyword", org.hamcrest.Matchers.nullValue()))
                 .andExpect(model().attribute("totalPages", 1))
                 .andExpect(model().attribute("totalCount", 2L))
                 .andExpect(model().attribute("pageTitle", "여행정보"))
@@ -105,10 +106,12 @@ class TravelInfoControllerTest {
     @Test
     void filtersAndPaginationAreNormalizedAndPassedToTheModel() throws Exception {
         when(travelInfoService.getPublicList(
-                TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL, List.of(3L), 48L, 48))
+                TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL,
+                List.of(3L), null, 48L, 48))
                 .thenReturn(List.of());
         when(travelInfoService.countPublicList(
-                TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL, List.of(3L)))
+                TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL,
+                List.of(3L), null))
                 .thenReturn(60L);
         when(infoCategoryService.getVisible()).thenReturn(List.of(category()));
 
@@ -132,7 +135,8 @@ class TravelInfoControllerTest {
                         "조건에 맞는 여행정보가 없습니다.")));
 
         verify(travelInfoService).getPublicList(
-                TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL, List.of(3L), 48L, 48);
+                TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL,
+                List.of(3L), null, 48L, 48);
     }
 
     @Test
@@ -140,10 +144,10 @@ class TravelInfoControllerTest {
         List<Long> selectedCategoryIds = List.of(1L, 3L, 5L);
         when(travelInfoService.getPublicList(
                 TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL,
-                selectedCategoryIds, 0L, 12)).thenReturn(List.of());
+                selectedCategoryIds, null, 0L, 12)).thenReturn(List.of());
         when(travelInfoService.countPublicList(
                 TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL,
-                selectedCategoryIds)).thenReturn(0L);
+                selectedCategoryIds, null)).thenReturn(0L);
         when(infoCategoryService.getVisible()).thenReturn(List.of(
                 category(1L, "계절여행", 1),
                 category(3L, "여행추천", 2),
@@ -169,10 +173,10 @@ class TravelInfoControllerTest {
 
         verify(travelInfoService).getPublicList(
                 TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL,
-                selectedCategoryIds, 0L, 12);
+                selectedCategoryIds, null, 0L, 12);
         verify(travelInfoService).countPublicList(
                 TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL,
-                selectedCategoryIds);
+                selectedCategoryIds, null);
     }
 
     @Test
@@ -182,10 +186,10 @@ class TravelInfoControllerTest {
         festival.setStartDate(LocalDate.parse("2026-08-01"));
         festival.setEndDate(LocalDate.parse("2026-08-03"));
         when(travelInfoService.getPublicList(
-                null, TravelInfoContentType.FESTIVAL, List.of(), 0L, 12))
+                null, TravelInfoContentType.FESTIVAL, List.of(), null, 0L, 12))
                 .thenReturn(List.of(festival));
         when(travelInfoService.countPublicList(
-                null, TravelInfoContentType.FESTIVAL, List.of())).thenReturn(1L);
+                null, TravelInfoContentType.FESTIVAL, List.of(), null)).thenReturn(1L);
         when(infoCategoryService.getVisible()).thenReturn(List.of(category()));
 
         mockMvc.perform(get("/travel-info").param("contentType", "FESTIVAL"))
@@ -200,7 +204,7 @@ class TravelInfoControllerTest {
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("2026-08-03")));
 
         verify(travelInfoService).getPublicList(
-                null, TravelInfoContentType.FESTIVAL, List.of(), 0L, 12);
+                null, TravelInfoContentType.FESTIVAL, List.of(), null, 0L, 12);
     }
 
     @Test
@@ -208,30 +212,37 @@ class TravelInfoControllerTest {
         TravelInfoListItemDto festival = item(10L, "국내 여름 축제", TravelInfoScope.DOMESTIC,
                 TravelInfoContentType.FESTIVAL, null);
         when(travelInfoService.getPublicList(
-                TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL, List.of(3L, 5L), 12L, 12))
+                TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL,
+                List.of(3L, 5L), "축제", 12L, 12))
                 .thenReturn(List.of(festival));
         when(travelInfoService.countPublicList(
-                TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL, List.of(3L, 5L)))
+                TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL,
+                List.of(3L, 5L), "축제"))
                 .thenReturn(25L);
 
-        mockMvc.perform(get("/travel-info?scope=DOMESTIC&contentType=FESTIVAL"
-                        + "&categoryId=3&categoryId=5&page=2")
+        mockMvc.perform(get(URI.create("/travel-info?keyword=%EC%B6%95%EC%A0%9C"
+                        + "&scope=DOMESTIC&contentType=FESTIVAL"
+                        + "&categoryId=3&categoryId=5&page=2"))
                         .header("X-Requested-With", "XMLHttpRequest"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("travel-info/fragments/list-results :: results"))
                 .andExpect(model().attribute("scope", TravelInfoScope.DOMESTIC))
                 .andExpect(model().attribute("contentType", TravelInfoContentType.FESTIVAL))
                 .andExpect(model().attribute("categoryIds", List.of(3L, 5L)))
+                .andExpect(model().attribute("keyword", "축제"))
                 .andExpect(model().attribute("currentPage", 2))
                 .andExpect(model().attribute("totalPages", 3))
                 .andExpect(model().attribute("listUrl",
-                        "/travel-info?scope=DOMESTIC&contentType=FESTIVAL"
+                        "/travel-info?keyword=%EC%B6%95%EC%A0%9C"
+                                + "&scope=DOMESTIC&contentType=FESTIVAL"
                                 + "&categoryId=3&categoryId=5&page=2"))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "id=\"travel-info-results\"")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("국내 여름 축제")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "contentType=FESTIVAL")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "keyword=%EC%B6%95%EC%A0%9C")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "categoryId=3&amp;categoryId=5")))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
@@ -243,9 +254,64 @@ class TravelInfoControllerTest {
     }
 
     @Test
+    void titleKeywordIsNormalizedCombinedWithFiltersAndRenderedSafely() throws Exception {
+        when(travelInfoService.getPublicList(
+                TravelInfoScope.INTERNATIONAL, null, List.of(2L, 5L), "파리", 0L, 12))
+                .thenReturn(List.of());
+        when(travelInfoService.countPublicList(
+                TravelInfoScope.INTERNATIONAL, null, List.of(2L, 5L), "파리"))
+                .thenReturn(0L);
+        when(infoCategoryService.getVisible()).thenReturn(List.of(category()));
+
+        mockMvc.perform(get("/travel-info")
+                        .param("keyword", "  파리  ")
+                        .param("scope", "INTERNATIONAL")
+                        .param("categoryId", "2", "5"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("keyword", "파리"))
+                .andExpect(model().attribute("listUrl",
+                        "/travel-info?keyword=%ED%8C%8C%EB%A6%AC"
+                                + "&scope=INTERNATIONAL&categoryId=2&categoryId=5"))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "value=\"파리\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "‘파리’</strong>에 해당하는 여행정보를 찾지 못했습니다.")));
+
+        verify(travelInfoService).getPublicList(
+                TravelInfoScope.INTERNATIONAL, null, List.of(2L, 5L), "파리", 0L, 12);
+        verify(travelInfoService).countPublicList(
+                TravelInfoScope.INTERNATIONAL, null, List.of(2L, 5L), "파리");
+    }
+
+    @Test
+    void blankKeywordIsIgnoredAndLongKeywordIsSafelyLimited() throws Exception {
+        String limitedKeyword = "가".repeat(100);
+        when(travelInfoService.getPublicList(null, null, List.of(), null, 0L, 12))
+                .thenReturn(List.of());
+        when(travelInfoService.countPublicList(null, null, List.of(), null)).thenReturn(0L);
+        when(travelInfoService.getPublicList(
+                null, null, List.of(), limitedKeyword, 0L, 12)).thenReturn(List.of());
+        when(travelInfoService.countPublicList(
+                null, null, List.of(), limitedKeyword)).thenReturn(0L);
+        when(infoCategoryService.getVisible()).thenReturn(List.of());
+
+        mockMvc.perform(get("/travel-info").param("keyword", "   \t"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("keyword", org.hamcrest.Matchers.nullValue()));
+        mockMvc.perform(get("/travel-info").param("keyword", "가".repeat(101)))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("keyword", limitedKeyword));
+
+        verify(travelInfoService).getPublicList(null, null, List.of(), null, 0L, 12);
+        verify(travelInfoService).getPublicList(
+                null, null, List.of(), limitedKeyword, 0L, 12);
+    }
+
+    @Test
     void invalidFiltersAndNonPositivePageSizeFallBackSafely() throws Exception {
-        when(travelInfoService.getPublicList(null, null, List.of(), 0L, 12)).thenReturn(List.of());
-        when(travelInfoService.countPublicList(null, null, List.of())).thenReturn(0L);
+        when(travelInfoService.getPublicList(null, null, List.of(), null, 0L, 12))
+                .thenReturn(List.of());
+        when(travelInfoService.countPublicList(null, null, List.of(), null)).thenReturn(0L);
         when(infoCategoryService.getVisible()).thenReturn(List.of());
 
         mockMvc.perform(get("/travel-info")
@@ -265,9 +331,9 @@ class TravelInfoControllerTest {
 
     @Test
     void unknownPositiveCategoryIdIsHandledAsAnEmptyPublicFilterResult() throws Exception {
-        when(travelInfoService.getPublicList(null, null, List.of(999L), 0L, 12))
+        when(travelInfoService.getPublicList(null, null, List.of(999L), null, 0L, 12))
                 .thenReturn(List.of());
-        when(travelInfoService.countPublicList(null, null, List.of(999L))).thenReturn(0L);
+        when(travelInfoService.countPublicList(null, null, List.of(999L), null)).thenReturn(0L);
         when(infoCategoryService.getVisible()).thenReturn(List.of(category()));
 
         mockMvc.perform(get("/travel-info").param("categoryId", "999"))
@@ -289,7 +355,8 @@ class TravelInfoControllerTest {
         when(travelInfoService.getPublicDetail(10L)).thenReturn(detail);
 
         mockMvc.perform(get(URI.create(
-                "/travel-info/10?returnUrl=%2Ftravel-info%3Fscope%3Ddomestic"
+                "/travel-info/10?returnUrl=%2Ftravel-info%3Fkeyword%3D"
+                        + "%25ED%258C%258C%25EB%25A6%25AC%26scope%3Ddomestic"
                         + "%26contentType%3Dfestival%26categoryId%3D1%26categoryId%3D3"
                         + "%26categoryId%3D1%26page%3D2%26size%3D24")))
                 .andExpect(status().isOk())
@@ -297,7 +364,8 @@ class TravelInfoControllerTest {
                 .andExpect(model().attribute("travelInfo", detail))
                 .andExpect(model().attribute("pageTitle", "공개 여행정보 | 여행정보"))
                 .andExpect(model().attribute("listUrl",
-                        "/travel-info?scope=DOMESTIC&contentType=FESTIVAL"
+                        "/travel-info?keyword=%ED%8C%8C%EB%A6%AC"
+                                + "&scope=DOMESTIC&contentType=FESTIVAL"
                                 + "&categoryId=1&categoryId=3&page=2&size=24"))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("공개 여행정보")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("행사 기간")))
@@ -339,6 +407,7 @@ class TravelInfoControllerTest {
                 "javascript:alert(1)",
                 "/post/1",
                 "/travel-info?unknown=value",
+                "/travel-info?keyword=one&keyword=two",
                 "/travel-info?scope=DOMESTIC&scope=INTERNATIONAL",
                 "/travel-info?categoryId=-1");
 
@@ -360,8 +429,9 @@ class TravelInfoControllerTest {
 
     @Test
     void onlyListAndNumericDetailGetsArePublicAndAdminPolicyStillRejectsRegularUsers() throws Exception {
-        when(travelInfoService.getPublicList(null, null, List.of(), 0L, 12)).thenReturn(List.of());
-        when(travelInfoService.countPublicList(null, null, List.of())).thenReturn(0L);
+        when(travelInfoService.getPublicList(null, null, List.of(), null, 0L, 12))
+                .thenReturn(List.of());
+        when(travelInfoService.countPublicList(null, null, List.of(), null)).thenReturn(0L);
         when(infoCategoryService.getVisible()).thenReturn(List.of());
         when(travelInfoService.getPublicDetail(10L))
                 .thenReturn(detail(TravelInfoContentType.GENERAL));

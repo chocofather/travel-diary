@@ -11,7 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class TravelInfoPublicUiContractTest {
 
     @Test
-    void listUsesPublicLayoutAndUnifiedAccessiblePillFiltersWithoutApplyForm()
+    void listUsesPublicLayoutAccessibleTitleSearchAndUnifiedPillFilters()
             throws IOException {
         String template = resource("/templates/travel-info/list.html");
 
@@ -19,6 +19,13 @@ class TravelInfoPublicUiContractTest {
                 .contains("layout/main :: layout")
                 .contains("/css/travel-info.css")
                 .contains("/js/travel-info-list.js")
+                .contains("method=\"get\"", "action=\"/travel-info\"")
+                .contains("role=\"search\"", "data-travel-info-search")
+                .contains("type=\"search\"", "name=\"keyword\"", "maxlength=\"100\"")
+                .contains("th:value=\"${keyword}\"")
+                .contains("data-travel-info-search-input", "data-travel-info-search-clear")
+                .contains("aria-label=\"검색어 지우기\"", "type=\"submit\"")
+                .contains("name=\"scope\"", "name=\"contentType\"", "name=\"categoryId\"")
                 .contains("contentType=${contentType}", "categoryId=${categoryIds}")
                 .contains("scope='DOMESTIC'", "scope='INTERNATIONAL'", "size=${pageSize}")
                 .contains("data-filter-name=\"scope\"")
@@ -32,7 +39,7 @@ class TravelInfoPublicUiContractTest {
                 .contains("travel-info/fragments/list-results :: results")
                 .doesNotContain("정보 유형", "data-filter-name=\"contentType\"")
                 .doesNotContain("contentType='GENERAL'", "contentType='FESTIVAL'")
-                .doesNotContain("<select", "type=\"submit\"", ">적용<", ">카테고리<");
+                .doesNotContain("<select", ">적용<", ">카테고리<");
     }
 
     @Test
@@ -46,7 +53,10 @@ class TravelInfoPublicUiContractTest {
                 .contains("travel-info-grid", "travel-info-card", "travel-info-thumbnail")
                 .contains("travel-info-thumbnail-placeholder", "등록된 이미지가 없습니다")
                 .contains("travel-info-period", "info.startDate", "info.endDate")
-                .contains("travel-info-pagination", "page=${pageNumber}")
+                .contains("travel-info-pagination", "keyword=${keyword}", "page=${pageNumber}")
+                .contains("th:if=\"${keyword != null}\"")
+                .contains("th:text=\"|‘${keyword}’|\"")
+                .doesNotContain("th:utext=\"${keyword}\"")
                 .contains("class=\"travel-info-card-link\"")
                 .contains("@{/travel-info/{id}(id=${info.id},returnUrl=${listUrl})}");
     }
@@ -67,6 +77,8 @@ class TravelInfoPublicUiContractTest {
                 .contains("object-fit: cover")
                 .contains(".travel-info-thumbnail-placeholder")
                 .contains(".travel-info-results.is-loading")
+                .contains(".travel-info-search-control", ".travel-info-search-submit")
+                .contains(".travel-info-search-clear", ".travel-info-search-control:focus-within")
                 .contains(".travel-info-category-pills .travel-info-filter-pill.is-active::after")
                 .contains(".travel-info-card-link::after")
                 .contains("position: absolute", "inset: 0")
@@ -112,6 +124,9 @@ class TravelInfoPublicUiContractTest {
         assertThat(javascript)
                 .contains("const SINGLE_FILTER_NAMES = ['scope']")
                 .contains("const CATEGORY_FILTER_NAME = 'categoryId'")
+                .contains("const KEYWORD_PARAMETER_NAME = 'keyword'")
+                .contains("const SEARCH_DEBOUNCE_MS = 200")
+                .contains("const KEYWORD_MAX_LENGTH = 100")
                 .contains("const url = new URL(selectedUrl.href)")
                 .contains("new URL('/travel-info', window.location.origin)")
                 .contains("searchParams.getAll(CATEGORY_FILTER_NAME)")
@@ -127,6 +142,19 @@ class TravelInfoPublicUiContractTest {
                 .contains("window.addEventListener('popstate'")
                 .contains("new AbortController()")
                 .contains("activeController.abort()")
+                .contains("searchParams.set(KEYWORD_PARAMETER_NAME, keyword)")
+                .contains("searchParams.delete(KEYWORD_PARAMETER_NAME)")
+                .contains("url.searchParams.delete('page')")
+                .contains("searchForm.addEventListener('submit'")
+                .contains("searchInput.addEventListener('input'")
+                .contains("searchInput.addEventListener('compositionstart'")
+                .contains("searchInput.addEventListener('compositionupdate'")
+                .contains("searchInput.addEventListener('compositionend'")
+                .doesNotContain("isComposing")
+                .contains("window.setTimeout", "SEARCH_DEBOUNCE_MS")
+                .contains("if (input.value !== keyword)")
+                .contains("syncSearchUi(url)")
+                .contains("searchInput.value = ''")
                 .contains(".travel-info-pagination a")
                 .contains("replaceResults(await response.text())")
                 .contains("window.location.assign(url.href)");
@@ -138,10 +166,10 @@ class TravelInfoPublicUiContractTest {
         String fragment = resource("/templates/travel-info/fragments/list-results.html");
 
         assertThat(template)
-                .contains("@{/travel-info(contentType=${contentType},categoryId=${categoryIds},size=${pageSize})}")
+                .contains("@{/travel-info(keyword=${keyword},contentType=${contentType},categoryId=${categoryIds},size=${pageSize})}")
                 .contains("categoryId=${categoryIds}");
         assertThat(fragment)
-                .contains("scope=${scope},contentType=${contentType},categoryId=${categoryIds}")
+                .contains("keyword=${keyword},scope=${scope},contentType=${contentType},categoryId=${categoryIds}")
                 .contains("page=${currentPage - 1}")
                 .contains("page=${pageNumber}")
                 .contains("page=${currentPage + 1}");

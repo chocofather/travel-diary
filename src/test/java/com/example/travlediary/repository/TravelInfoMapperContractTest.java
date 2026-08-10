@@ -44,6 +44,13 @@ class TravelInfoMapperContractTest {
                 .contains("item=\"categoryId\"")
                 .contains("open=\"(\"", "separator=\",\"", "close=\")\"")
                 .contains("#{categoryId}")
+                .contains("<if test=\"keywordPattern != null and !keywordPattern.isEmpty()\">")
+                .contains("AND (")
+                .contains("ti.title LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'")
+                .contains("<if test=\"koreanPattern != null and !koreanPattern.isEmpty()\">")
+                .contains("OR REGEXP_LIKE(ti.title, #{koreanPattern})")
+                .doesNotContain(
+                        "ti.content LIKE", "ic.name LIKE", "${keywordPattern}", "${koreanPattern}")
                 .doesNotContain("ti.category_id = #{categoryId}");
         assertThat(list)
                 .contains("<include refid=\"PublicListFilters\"/>")

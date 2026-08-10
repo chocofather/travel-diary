@@ -25,13 +25,17 @@ public interface TravelInfoMapper {
             @Param("scope") TravelInfoScope scope,
             @Param("contentType") TravelInfoContentType contentType,
             @Param("categoryIds") List<Long> categoryIds,
+            @Param("keywordPattern") String keywordPattern,
+            @Param("koreanPattern") String koreanPattern,
             @Param("offset") long offset,
             @Param("limit") int limit);
 
     long countPublicList(
             @Param("scope") TravelInfoScope scope,
             @Param("contentType") TravelInfoContentType contentType,
-            @Param("categoryIds") List<Long> categoryIds);
+            @Param("categoryIds") List<Long> categoryIds,
+            @Param("keywordPattern") String keywordPattern,
+            @Param("koreanPattern") String koreanPattern);
 
     int incrementPublicViews(@Param("id") Long id);
 

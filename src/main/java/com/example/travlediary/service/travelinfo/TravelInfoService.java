@@ -56,16 +56,24 @@ public class TravelInfoService {
     public List<TravelInfoListItemDto> getPublicList(TravelInfoScope scope,
                                                       TravelInfoContentType contentType,
                                                       List<Long> categoryIds,
+                                                      String keyword,
                                                       long offset,
                                                       int limit) {
-        return travelInfoMapper.findPublicList(scope, contentType, categoryIds, offset, limit);
+        return travelInfoMapper.findPublicList(
+                scope, contentType, categoryIds,
+                TravelInfoSearchKeyword.toLikeLiteral(keyword),
+                TravelInfoSearchKeyword.toKoreanPrefixRegex(keyword), offset, limit);
     }
 
     @Transactional(readOnly = true)
     public long countPublicList(TravelInfoScope scope,
                                 TravelInfoContentType contentType,
-                                List<Long> categoryIds) {
-        return travelInfoMapper.countPublicList(scope, contentType, categoryIds);
+                                List<Long> categoryIds,
+                                String keyword) {
+        return travelInfoMapper.countPublicList(
+                scope, contentType, categoryIds,
+                TravelInfoSearchKeyword.toLikeLiteral(keyword),
+                TravelInfoSearchKeyword.toKoreanPrefixRegex(keyword));
     }
 
     @Transactional

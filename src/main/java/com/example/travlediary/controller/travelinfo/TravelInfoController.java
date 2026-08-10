@@ -5,6 +5,7 @@ import com.example.travlediary.dto.TravelInfoListItemDto;
 import com.example.travlediary.model.TravelInfoContentType;
 import com.example.travlediary.model.TravelInfoScope;
 import com.example.travlediary.service.category.InfoCategoryService;
+import com.example.travlediary.service.travelinfo.TravelInfoSearchKeyword;
 import com.example.travlediary.service.travelinfo.TravelInfoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
@@ -16,7 +17,9 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.web.util.UriUtils;
 
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -31,19 +34,21 @@ public class TravelInfoController {
     private static final String LIST_PATH = "/travel-info";
     private static final String FRAGMENT_VIEW = "travel-info/fragments/list-results :: results";
     private static final Set<String> ALLOWED_RETURN_QUERY_PARAMETERS = Set.of(
-            "scope", "contentType", "categoryId", "page", "size");
+            "keyword", "scope", "contentType", "categoryId", "page", "size");
 
     private final TravelInfoService travelInfoService;
     private final InfoCategoryService infoCategoryService;
 
     @GetMapping("/travel-info")
-    public String list(@RequestParam(required = false) String scope,
+    public String list(@RequestParam(required = false) String keyword,
+                       @RequestParam(required = false) String scope,
                        @RequestParam(required = false) String contentType,
                        @RequestParam(name = "categoryId", required = false) List<String> categoryIdValues,
                        @RequestParam(defaultValue = "1") int page,
                        @RequestParam(defaultValue = "12") int size,
                        @RequestHeader(value = "X-Requested-With", required = false) String requestedWith,
                        Model model) {
+        String safeKeyword = TravelInfoSearchKeyword.normalize(keyword);
         TravelInfoScope safeScope = parseEnum(scope, TravelInfoScope.class);
         TravelInfoContentType safeContentType = parseEnum(contentType, TravelInfoContentType.class);
         List<Long> safeCategoryIds = parsePositiveLongs(categoryIdValues);
@@ -52,9 +57,9 @@ public class TravelInfoController {
         long offset = (long) (safePage - 1) * safeSize;
 
         List<TravelInfoListItemDto> travelInfoList = travelInfoService.getPublicList(
-                safeScope, safeContentType, safeCategoryIds, offset, safeSize);
+                safeScope, safeContentType, safeCategoryIds, safeKeyword, offset, safeSize);
         long totalCount = travelInfoService.countPublicList(
-                safeScope, safeContentType, safeCategoryIds);
+                safeScope, safeContentType, safeCategoryIds, safeKeyword);
         int totalPages = totalCount == 0
                 ? 0
                 : (int) Math.ceil((double) totalCount / safeSize);
@@ -63,6 +68,7 @@ public class TravelInfoController {
         pageStart = Math.max(1, pageEnd - 4);
 
         model.addAttribute("travelInfoList", travelInfoList);
+        model.addAttribute("keyword", safeKeyword);
         model.addAttribute("scope", safeScope);
         model.addAttribute("contentType", safeContentType);
         model.addAttribute("categoryIds", safeCategoryIds);
@@ -73,7 +79,8 @@ public class TravelInfoController {
         model.addAttribute("pageStart", pageStart);
         model.addAttribute("pageEnd", pageEnd);
         model.addAttribute("listUrl", buildListUrl(
-                safeScope, safeContentType, safeCategoryIds, safePage, safeSize));
+                safeKeyword, safeScope, safeContentType,
+                safeCategoryIds, safePage, safeSize));
 
         if ("XMLHttpRequest".equals(requestedWith)) {
             return FRAGMENT_VIEW;
@@ -148,23 +155,29 @@ public class TravelInfoController {
             TravelInfoScope safeScope = parseReturnEnum(query, "scope", TravelInfoScope.class);
             TravelInfoContentType safeContentType = parseReturnEnum(
                     query, "contentType", TravelInfoContentType.class);
+            String safeKeyword = parseReturnKeyword(query);
             List<Long> safeCategoryIds = parseReturnCategoryIds(query.get("categoryId"));
             int safePage = parseReturnPositiveInt(query, "page", 1, Integer.MAX_VALUE);
             int safeSize = parseReturnPositiveInt(
                     query, "size", DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
             return buildListUrl(
-                    safeScope, safeContentType, safeCategoryIds, safePage, safeSize);
+                    safeKeyword, safeScope, safeContentType,
+                    safeCategoryIds, safePage, safeSize);
         } catch (IllegalArgumentException ignored) {
             return LIST_PATH;
         }
     }
 
-    private String buildListUrl(TravelInfoScope scope,
+    private String buildListUrl(String keyword,
+                                TravelInfoScope scope,
                                 TravelInfoContentType contentType,
                                 List<Long> categoryIds,
                                 int page,
                                 int size) {
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath(LIST_PATH);
+        if (keyword != null) {
+            builder.queryParam("keyword", keyword);
+        }
         if (scope != null) {
             builder.queryParam("scope", scope.name());
         }
@@ -181,6 +194,18 @@ public class TravelInfoController {
             builder.queryParam("size", size);
         }
         return builder.build().encode().toUriString();
+    }
+
+    private String parseReturnKeyword(MultiValueMap<String, String> query) {
+        String value = singleReturnValue(query, "keyword");
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        String decoded = UriUtils.decode(value, StandardCharsets.UTF_8);
+        if (decoded.chars().anyMatch(Character::isISOControl)) {
+            throw new IllegalArgumentException("Invalid return URL keyword");
+        }
+        return TravelInfoSearchKeyword.normalize(decoded);
     }
 
     private <E extends Enum<E>> E parseReturnEnum(MultiValueMap<String, String> query,

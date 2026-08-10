@@ -51,25 +51,31 @@
   </div>
 
   <div class="travel-info-empty" th:if="${#lists.isEmpty(travelInfoList)}">
-    <p>조건에 맞는 여행정보가 없습니다.</p>
-    <span>다른 필터를 선택해 보세요.</span>
+    <th:block th:if="${keyword != null}">
+      <p><strong th:text="|‘${keyword}’|">‘파리’</strong>에 해당하는 여행정보를 찾지 못했습니다.</p>
+      <span>필터를 변경하거나 다른 검색어를 입력해보세요.</span>
+    </th:block>
+    <th:block th:unless="${keyword != null}">
+      <p>조건에 맞는 여행정보가 없습니다.</p>
+      <span>다른 필터를 선택해 보세요.</span>
+    </th:block>
   </div>
 
   <nav class="travel-info-pagination" th:if="${totalPages > 1}" aria-label="여행정보 페이지">
     <a th:if="${currentPage > 1}"
-       th:href="@{/travel-info(scope=${scope},contentType=${contentType},categoryId=${categoryIds},page=${currentPage - 1},size=${pageSize})}"
+       th:href="@{/travel-info(keyword=${keyword},scope=${scope},contentType=${contentType},categoryId=${categoryIds},page=${currentPage - 1},size=${pageSize})}"
        class="travel-info-page-direction">이전</a>
     <span th:unless="${currentPage > 1}"
           class="travel-info-page-direction is-disabled" aria-disabled="true">이전</span>
 
     <a th:each="pageNumber : ${#numbers.sequence(pageStart, pageEnd)}"
-       th:href="@{/travel-info(scope=${scope},contentType=${contentType},categoryId=${categoryIds},page=${pageNumber},size=${pageSize})}"
+       th:href="@{/travel-info(keyword=${keyword},scope=${scope},contentType=${contentType},categoryId=${categoryIds},page=${pageNumber},size=${pageSize})}"
        th:text="${pageNumber}"
        th:classappend="${pageNumber == currentPage} ? ' is-active'"
        th:attr="aria-current=${pageNumber == currentPage} ? 'page' : null">1</a>
 
     <a th:if="${currentPage < totalPages}"
-       th:href="@{/travel-info(scope=${scope},contentType=${contentType},categoryId=${categoryIds},page=${currentPage + 1},size=${pageSize})}"
+       th:href="@{/travel-info(keyword=${keyword},scope=${scope},contentType=${contentType},categoryId=${categoryIds},page=${currentPage + 1},size=${pageSize})}"
        class="travel-info-page-direction">다음</a>
     <span th:unless="${currentPage < totalPages}"
           class="travel-info-page-direction is-disabled" aria-disabled="true">다음</span>

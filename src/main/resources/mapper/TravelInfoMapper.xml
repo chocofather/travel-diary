@@ -115,6 +115,14 @@
                     #{categoryId}
                 </foreach>
             </if>
+            <if test="keywordPattern != null and !keywordPattern.isEmpty()">
+                AND (
+                    ti.title LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+                    <if test="koreanPattern != null and !koreanPattern.isEmpty()">
+                        OR REGEXP_LIKE(ti.title, #{koreanPattern})
+                    </if>
+                )
+            </if>
         </where>
     </sql>
 

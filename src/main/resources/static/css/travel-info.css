@@ -49,6 +49,104 @@
     box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
 }
 
+.travel-info-search {
+    min-width: 0;
+}
+
+.travel-info-search-label {
+    display: block;
+    margin-bottom: 9px;
+    color: #475569;
+    font-size: 13px;
+    font-weight: 750;
+}
+
+.travel-info-search-control {
+    display: flex;
+    min-height: 48px;
+    overflow: hidden;
+    border: 1px solid #cbd5e1;
+    border-radius: 13px;
+    background: #fff;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.travel-info-search-control:focus-within {
+    border-color: #5eead4;
+    box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
+}
+
+.travel-info-search input[type="search"] {
+    min-width: 0;
+    flex: 1 1 auto;
+    padding: 0 16px;
+    border: 0;
+    outline: 0;
+    color: var(--travel-info-text);
+    font: inherit;
+    font-size: 14px;
+}
+
+.travel-info-search input[type="search"]::placeholder {
+    color: #94a3b8;
+}
+
+.travel-info-search input[type="search"]::-webkit-search-cancel-button {
+    appearance: none;
+}
+
+.travel-info-search-clear,
+.travel-info-search-submit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    cursor: pointer;
+    font: inherit;
+}
+
+.travel-info-search-clear {
+    flex: 0 0 42px;
+    background: #fff;
+    color: #64748b;
+    font-size: 23px;
+}
+
+.travel-info-search-clear[hidden] {
+    display: none;
+}
+
+.travel-info-search-clear:hover {
+    background: #f1f5f9;
+    color: #334155;
+}
+
+.travel-info-search-submit {
+    flex: 0 0 48px;
+    background: var(--travel-info-accent);
+    color: #fff;
+    font-size: 16px;
+}
+
+.travel-info-search-submit:hover {
+    background: var(--travel-info-accent-dark);
+}
+
+.travel-info-search-clear:focus-visible,
+.travel-info-search-submit:focus-visible {
+    position: relative;
+    z-index: 1;
+    outline: 3px solid rgba(13, 148, 136, 0.28);
+    outline-offset: -3px;
+}
+
+.travel-info-search-noscript-clear {
+    display: inline-block;
+    margin-top: 8px;
+    color: var(--travel-info-accent-dark);
+    font-size: 13px;
+}
+
 .travel-info-filter-group {
     min-width: 0;
 }
@@ -441,6 +539,24 @@
 
     .travel-info-heading p {
         font-size: 14px;
+    }
+
+    .travel-info-search-control {
+        min-height: 46px;
+    }
+
+    .travel-info-search-clear {
+        flex-basis: 40px;
+    }
+
+    .travel-info-search-submit {
+        flex-basis: 44px;
+    }
+
+    .travel-info-search input[type="search"] {
+        padding-right: 10px;
+        padding-left: 12px;
+        font-size: 13px;
     }
 
     .travel-info-filter-group:not(.is-category) .travel-info-filter-pill {
