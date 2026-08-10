@@ -44,6 +44,15 @@ class InfoCategoryServiceTest {
     }
 
     @Test
+    void getVisibleReturnsOnlyMapperVisibleResult() {
+        List<InfoCategory> categories = List.of(category(1L, "계절여행", 1, true));
+        when(infoCategoryMapper.findVisible()).thenReturn(categories);
+
+        assertThat(infoCategoryService.getVisible()).isSameAs(categories);
+        verify(infoCategoryMapper).findVisible();
+    }
+
+    @Test
     void createStripsNameAndSavesAllFields() {
         InfoCategoryForm form = form("  여행준비  ", 3, false);
         when(infoCategoryMapper.countByNameExcludingId("여행준비", null)).thenReturn(0);

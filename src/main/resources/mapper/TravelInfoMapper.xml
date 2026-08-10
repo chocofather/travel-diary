@@ -29,6 +29,20 @@
         <result property="createdAt" column="created_at"/>
     </resultMap>
 
+    <resultMap id="PublicListResultMap" type="com.example.travlediary.dto.TravelInfoListItemDto">
+        <id property="id" column="id"/>
+        <result property="title" column="title"/>
+        <result property="scope" column="scope"/>
+        <result property="contentType" column="content_type"/>
+        <result property="categoryId" column="category_id"/>
+        <result property="categoryName" column="category_name"/>
+        <result property="thumbnailUrl" column="thumbnail_url"/>
+        <result property="views" column="views"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="startDate" column="start_date"/>
+        <result property="endDate" column="end_date"/>
+    </resultMap>
+
     <resultMap id="InfoPeriodResultMap" type="com.example.travlediary.model.InfoPeriod">
         <id property="id" column="id"/>
         <result property="startDate" column="start_date"/>
@@ -68,6 +82,87 @@
             </if>
         </where>
         ORDER BY ti.created_at DESC, ti.id DESC
+    </select>
+
+    <sql id="PublicListFilters">
+        <where>
+            ic.is_visible = 1
+            <if test="scope != null">
+                AND ti.scope = #{scope}
+            </if>
+            <if test="contentType != null">
+                AND ti.content_type = #{contentType}
+            </if>
+            <if test="categoryIds != null and !categoryIds.isEmpty()">
+                AND ti.category_id IN
+                <foreach collection="categoryIds"
+                         item="categoryId"
+                         open="("
+                         separator=","
+                         close=")">
+                    #{categoryId}
+                </foreach>
+            </if>
+        </where>
+    </sql>
+
+    <select id="findPublicList" resultMap="PublicListResultMap">
+        SELECT ti.id,
+               ti.title,
+               ti.scope,
+               ti.content_type,
+               ti.category_id,
+               ic.name AS category_name,
+               (
+                   SELECT ii.image_url
+                   FROM info_images ii
+                   WHERE ii.info_id = ti.id
+                     AND ii.is_main = 1
+                   ORDER BY ii.order_index ASC, ii.id ASC
+                   LIMIT 1
+               ) AS thumbnail_url,
+               ti.views,
+               ti.created_at,
+               representative_period.start_date,
+               representative_period.end_date
+        FROM travel_info ti
+        JOIN info_categories ic ON ic.id = ti.category_id
+        LEFT JOIN info_periods representative_period
+          ON representative_period.id = (
+              SELECT period_candidate.id
+              FROM info_periods period_candidate
+              WHERE period_candidate.info_id = ti.id
+                AND ti.content_type = 'FESTIVAL'
+              ORDER BY
+                  CASE
+                      WHEN period_candidate.start_date &lt;= CURDATE()
+                           AND period_candidate.end_date >= CURDATE() THEN 0
+                      WHEN period_candidate.start_date > CURDATE() THEN 1
+                      ELSE 2
+                  END ASC,
+                  CASE
+                      WHEN period_candidate.start_date > CURDATE()
+                          THEN period_candidate.start_date
+                  END ASC,
+                  CASE
+                      WHEN period_candidate.end_date &lt; CURDATE()
+                          THEN period_candidate.end_date
+                  END DESC,
+                  period_candidate.start_date ASC,
+                  period_candidate.id ASC
+              LIMIT 1
+          )
+        <include refid="PublicListFilters"/>
+        ORDER BY ti.created_at DESC, ti.id DESC
+        LIMIT #{limit}
+        OFFSET #{offset}
+    </select>
+
+    <select id="countPublicList" resultType="long">
+        SELECT COUNT(*)
+        FROM travel_info ti
+        JOIN info_categories ic ON ic.id = ti.category_id
+        <include refid="PublicListFilters"/>
     </select>
 
     <select id="findById" parameterType="long" resultMap="TravelInfoResultMap">

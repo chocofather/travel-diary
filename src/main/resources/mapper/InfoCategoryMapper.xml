@@ -18,6 +18,13 @@
         ORDER BY display_order ASC, id ASC
     </select>
 
+    <select id="findVisible" resultMap="InfoCategoryResultMap">
+        SELECT id, name, display_order, is_visible
+        FROM info_categories
+        WHERE is_visible = 1
+        ORDER BY display_order ASC, id ASC
+    </select>
+
     <select id="findById" parameterType="long" resultMap="InfoCategoryResultMap">
         SELECT id, name, display_order, is_visible
         FROM info_categories

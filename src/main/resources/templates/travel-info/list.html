@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/travel-info.css">
+</th:block>
+<th:block th:fragment="body">
+  <section class="travel-info-page" aria-labelledby="travel-info-title">
+    <header class="travel-info-heading">
+      <span class="travel-info-kicker">TRAVEL GUIDE</span>
+      <h1 id="travel-info-title">여행정보</h1>
+      <p>여행에 필요한 유용한 정보와 축제 소식을 확인해보세요.</p>
+    </header>
+
+    <div class="travel-info-filters" aria-label="여행정보 필터">
+      <div class="travel-info-filter-group">
+        <span class="travel-info-filter-label">여행 범위</span>
+        <div class="travel-info-pills">
+          <a th:href="@{/travel-info(contentType=${contentType},categoryId=${categoryIds},size=${pageSize})}"
+             class="travel-info-filter-pill"
+             data-filter-name="scope" data-filter-value=""
+             th:classappend="${scope == null} ? ' is-active'"
+             th:attr="aria-current=${scope == null} ? 'true' : null">전체</a>
+          <a th:href="@{/travel-info(scope='DOMESTIC',contentType=${contentType},categoryId=${categoryIds},size=${pageSize})}"
+             class="travel-info-filter-pill"
+             data-filter-name="scope" data-filter-value="DOMESTIC"
+             th:classappend="${scope != null and scope.name() == 'DOMESTIC'} ? ' is-active'"
+             th:attr="aria-current=${scope != null and scope.name() == 'DOMESTIC'} ? 'true' : null">국내</a>
+          <a th:href="@{/travel-info(scope='INTERNATIONAL',contentType=${contentType},categoryId=${categoryIds},size=${pageSize})}"
+             class="travel-info-filter-pill"
+             data-filter-name="scope" data-filter-value="INTERNATIONAL"
+             th:classappend="${scope != null and scope.name() == 'INTERNATIONAL'} ? ' is-active'"
+             th:attr="aria-current=${scope != null and scope.name() == 'INTERNATIONAL'} ? 'true' : null">해외</a>
+        </div>
+      </div>
+
+      <div class="travel-info-filter-group is-category">
+        <span class="travel-info-filter-label">주제</span>
+        <div class="travel-info-pills travel-info-category-pills">
+          <button type="button"
+                  class="travel-info-filter-pill"
+                  data-filter-name="categoryId" data-filter-value=""
+                  th:classappend="${#lists.isEmpty(categoryIds)} ? ' is-active'"
+                  th:attr="aria-pressed=${#lists.isEmpty(categoryIds)}">전체</button>
+          <button type="button"
+                  th:each="category : ${categories}"
+                  th:text="${category.name}"
+                  class="travel-info-filter-pill"
+                  data-filter-name="categoryId"
+                  th:attr="data-filter-value=${category.id},aria-pressed=${#lists.contains(categoryIds, category.id)}"
+                  th:classappend="${#lists.contains(categoryIds, category.id)} ? ' is-active'">계절여행</button>
+        </div>
+      </div>
+
+      <div class="travel-info-filter-actions">
+        <a class="travel-info-filter-reset" th:href="@{/travel-info}" data-travel-info-reset>필터 초기화</a>
+      </div>
+    </div>
+
+    <p id="travel-info-async-message" class="travel-info-async-message" role="status" hidden></p>
+    <div th:replace="~{travel-info/fragments/list-results :: results}"></div>
+  </section>
+  <script src="/js/travel-info-list.js" defer></script>
+</th:block>
+</html>

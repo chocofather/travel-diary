@@ -25,6 +25,11 @@ public class InfoCategoryService {
     }
 
     @Transactional(readOnly = true)
+    public List<InfoCategory> getVisible() {
+        return infoCategoryMapper.findVisible();
+    }
+
+    @Transactional(readOnly = true)
     public InfoCategory getById(Long id) {
         return requireCategory(id);
     }

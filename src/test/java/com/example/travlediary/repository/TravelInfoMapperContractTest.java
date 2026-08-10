@@ -28,6 +28,63 @@ class TravelInfoMapperContractTest {
     }
 
     @Test
+    void publicListAndCountShareVisibleCategoryAndOptionalFilters() throws IOException {
+        String mapper = mapper();
+        String filters = between(mapper, "<sql id=\"PublicListFilters\"", "</sql>");
+        String list = between(mapper, "<select id=\"findPublicList\"", "</select>");
+        String count = between(mapper, "<select id=\"countPublicList\"", "</select>");
+
+        assertThat(filters)
+                .contains("ic.is_visible = 1")
+                .contains("<if test=\"scope != null\">", "ti.scope = #{scope}")
+                .contains("<if test=\"contentType != null\">", "ti.content_type = #{contentType}")
+                .contains("<if test=\"categoryIds != null and !categoryIds.isEmpty()\">")
+                .contains("AND ti.category_id IN")
+                .contains("<foreach collection=\"categoryIds\"")
+                .contains("item=\"categoryId\"")
+                .contains("open=\"(\"", "separator=\",\"", "close=\")\"")
+                .contains("#{categoryId}")
+                .doesNotContain("ti.category_id = #{categoryId}");
+        assertThat(list)
+                .contains("<include refid=\"PublicListFilters\"/>")
+                .contains("ORDER BY ti.created_at DESC, ti.id DESC")
+                .contains("LIMIT #{limit}")
+                .contains("OFFSET #{offset}");
+        assertThat(count)
+                .contains("SELECT COUNT(*)")
+                .contains("JOIN info_categories ic ON ic.id = ti.category_id")
+                .contains("<include refid=\"PublicListFilters\"/>")
+                .doesNotContain("LIMIT", "ORDER BY");
+    }
+
+    @Test
+    void publicListUsesScalarThumbnailAndOneDeterministicRepresentativePeriod() throws IOException {
+        String query = between(mapper(), "<select id=\"findPublicList\"", "</select>");
+
+        assertThat(query)
+                .contains("SELECT ii.image_url")
+                .contains("FROM info_images ii")
+                .contains("ii.info_id = ti.id")
+                .contains("ii.is_main = 1")
+                .contains("ORDER BY ii.order_index ASC, ii.id ASC")
+                .contains("AS thumbnail_url")
+                .doesNotContain("JOIN info_images");
+        assertThat(query)
+                .contains("LEFT JOIN info_periods representative_period")
+                .contains("ON representative_period.id = (")
+                .contains("period_candidate.info_id = ti.id")
+                .contains("ti.content_type = 'FESTIVAL'")
+                .contains("period_candidate.start_date &lt;= CURDATE()")
+                .contains("period_candidate.end_date >= CURDATE()")
+                .contains("period_candidate.start_date > CURDATE()")
+                .contains("period_candidate.end_date &lt; CURDATE()")
+                .contains("representative_period.start_date")
+                .contains("representative_period.end_date")
+                .doesNotContain("MIN(", "MAX(");
+        assertThat(countOccurrences(query, "LIMIT 1")).isEqualTo(2);
+    }
+
+    @Test
     void travelInfoInsertUsesGeneratedKeyAndServerManagedViews() throws IOException {
         String insert = between(mapper(), "<insert id=\"insertTravelInfo\"", "</insert>");
 
@@ -116,5 +173,9 @@ class TravelInfoMapperContractTest {
         assertThat(startIndex).isGreaterThanOrEqualTo(0);
         assertThat(endIndex).isGreaterThan(startIndex);
         return source.substring(startIndex, endIndex);
+    }
+
+    private int countOccurrences(String source, String value) {
+        return source.split(java.util.regex.Pattern.quote(value), -1).length - 1;
     }
 }

@@ -4,6 +4,7 @@ import com.example.travlediary.dto.AdminTravelInfoDetailDto;
 import com.example.travlediary.dto.AdminTravelInfoListItemDto;
 import com.example.travlediary.dto.InfoPeriodForm;
 import com.example.travlediary.dto.TravelInfoForm;
+import com.example.travlediary.dto.TravelInfoListItemDto;
 import com.example.travlediary.model.InfoCategory;
 import com.example.travlediary.model.InfoImage;
 import com.example.travlediary.model.InfoPeriod;
@@ -47,6 +48,22 @@ public class TravelInfoService {
                                                          TravelInfoContentType contentType,
                                                          Long categoryId) {
         return travelInfoMapper.findAdminList(scope, contentType, categoryId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TravelInfoListItemDto> getPublicList(TravelInfoScope scope,
+                                                      TravelInfoContentType contentType,
+                                                      List<Long> categoryIds,
+                                                      long offset,
+                                                      int limit) {
+        return travelInfoMapper.findPublicList(scope, contentType, categoryIds, offset, limit);
+    }
+
+    @Transactional(readOnly = true)
+    public long countPublicList(TravelInfoScope scope,
+                                TravelInfoContentType contentType,
+                                List<Long> categoryIds) {
+        return travelInfoMapper.countPublicList(scope, contentType, categoryIds);
     }
 
     @Transactional(readOnly = true)

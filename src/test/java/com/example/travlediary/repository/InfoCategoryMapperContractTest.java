@@ -21,6 +21,17 @@ class InfoCategoryMapperContractTest {
     }
 
     @Test
+    void publicListUsesOnlyVisibleCategoriesWithStableDisplayOrder() throws IOException {
+        String mapper = resource("/mapper/InfoCategoryMapper.xml");
+        String query = between(mapper, "<select id=\"findVisible\"", "</select>");
+
+        assertThat(query)
+                .contains("FROM info_categories")
+                .contains("WHERE is_visible = 1")
+                .contains("ORDER BY display_order ASC, id ASC");
+    }
+
+    @Test
     void insertAndUpdatePersistAllManagedFields() throws IOException {
         String mapper = resource("/mapper/InfoCategoryMapper.xml");
         String insert = between(mapper, "<insert id=\"insert\"", "</insert>");

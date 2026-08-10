@@ -11,6 +11,8 @@ public interface InfoCategoryMapper {
 
     List<InfoCategory> findAll();
 
+    List<InfoCategory> findVisible();
+
     InfoCategory findById(Long id);
 
     int insert(InfoCategory category);

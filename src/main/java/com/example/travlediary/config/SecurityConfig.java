@@ -52,6 +52,9 @@ public class SecurityConfig {
                                 "/board/list", "/board/fragment"
                                 ).permitAll()
 
+                        // 사용자 여행정보 목록 GET만 공개
+                        .requestMatchers(HttpMethod.GET, "/travel-info").permitAll()
+
                         // 게시글 일반 댓글 목록은 비회원도 조회 가능
                         .requestMatchers(HttpMethod.GET, "/post-comments", "/post-comments/page").permitAll()
 

@@ -1,6 +1,7 @@
 package com.example.travlediary.repository.travelinfo;
 
 import com.example.travlediary.dto.AdminTravelInfoListItemDto;
+import com.example.travlediary.dto.TravelInfoListItemDto;
 import com.example.travlediary.model.InfoPeriod;
 import com.example.travlediary.model.InfoImage;
 import com.example.travlediary.model.TravelInfo;
@@ -18,6 +19,18 @@ public interface TravelInfoMapper {
             @Param("scope") TravelInfoScope scope,
             @Param("contentType") TravelInfoContentType contentType,
             @Param("categoryId") Long categoryId);
+
+    List<TravelInfoListItemDto> findPublicList(
+            @Param("scope") TravelInfoScope scope,
+            @Param("contentType") TravelInfoContentType contentType,
+            @Param("categoryIds") List<Long> categoryIds,
+            @Param("offset") long offset,
+            @Param("limit") int limit);
+
+    long countPublicList(
+            @Param("scope") TravelInfoScope scope,
+            @Param("contentType") TravelInfoContentType contentType,
+            @Param("categoryIds") List<Long> categoryIds);
 
     TravelInfo findById(Long id);
 

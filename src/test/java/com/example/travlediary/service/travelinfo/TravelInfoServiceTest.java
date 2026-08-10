@@ -3,6 +3,7 @@ package com.example.travlediary.service.travelinfo;
 import com.example.travlediary.dto.AdminTravelInfoDetailDto;
 import com.example.travlediary.dto.InfoPeriodForm;
 import com.example.travlediary.dto.TravelInfoForm;
+import com.example.travlediary.dto.TravelInfoListItemDto;
 import com.example.travlediary.model.InfoCategory;
 import com.example.travlediary.model.InfoImage;
 import com.example.travlediary.model.InfoPeriod;
@@ -126,6 +127,30 @@ class TravelInfoServiceTest {
         verify(travelInfoMapper).findById(10L);
         verify(travelInfoMapper, never()).findPeriodsByInfoId(any());
         verifyNoMoreInteractions(travelInfoMapper);
+    }
+
+    @Test
+    void publicListAndCountDelegateWithoutAdditionalThumbnailPeriodOrViewQueries() {
+        TravelInfoListItemDto item = new TravelInfoListItemDto();
+        item.setId(10L);
+        List<Long> categoryIds = List.of(3L, 5L, 7L);
+        when(travelInfoMapper.findPublicList(
+                TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL, categoryIds, 12L, 12))
+                .thenReturn(List.of(item));
+        when(travelInfoMapper.countPublicList(
+                TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL, categoryIds))
+                .thenReturn(25L);
+
+        assertThat(travelInfoService.getPublicList(
+                TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL, categoryIds, 12L, 12))
+                .containsExactly(item);
+        assertThat(travelInfoService.countPublicList(
+                TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL, categoryIds))
+                .isEqualTo(25L);
+
+        verify(travelInfoMapper, never()).findMainImageByInfoId(any());
+        verify(travelInfoMapper, never()).findPeriodsByInfoId(any());
+        verifyNoInteractions(infoCategoryMapper, fileUploadService);
     }
 
     @Test
