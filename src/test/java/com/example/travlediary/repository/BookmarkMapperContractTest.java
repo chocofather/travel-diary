@@ -102,7 +102,7 @@ class BookmarkMapperContractTest {
     }
 
     @Test
-    void csrfProtectionIsLimitedToTravelInfoBookmarkMutations() throws IOException {
+    void csrfProtectionCoversTravelInfoBookmarksAndAdminNoticeMutations() throws IOException {
         String security = resourceText(
                 "src/main/java/com/example/travlediary/config/SecurityConfig.java");
         String layout = resource("/templates/layout/main.html");
@@ -111,6 +111,10 @@ class BookmarkMapperContractTest {
         assertThat(security)
                 .contains("requireCsrfProtectionMatcher")
                 .contains("^/bookmarks/travel-info/[0-9]+$")
+                .contains("^/admin/notices$")
+                .contains("^/admin/notices/[0-9]+/edit$")
+                .contains("^/admin/notices/[0-9]+/delete$")
+                .contains("^/logout$")
                 .contains("HttpMethod.POST.name()", "HttpMethod.DELETE.name()")
                 .doesNotContain("csrf(AbstractHttpConfigurer::disable)");
         assertThat(layout)

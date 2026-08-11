@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.notice.NoticeMapper">
+
+    <resultMap id="NoticeResultMap" type="com.example.travlediary.model.Notice">
+        <id property="id" column="id"/>
+        <result property="title" column="title"/>
+        <result property="content" column="content"/>
+        <result property="pinned" column="is_pinned"/>
+        <result property="views" column="views"/>
+        <result property="userId" column="user_id"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <resultMap id="NoticeListResultMap" type="com.example.travlediary.dto.NoticeListItemDto">
+        <id property="id" column="id"/>
+        <result property="title" column="title"/>
+        <result property="pinned" column="is_pinned"/>
+        <result property="views" column="views"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <resultMap id="NoticeDetailResultMap" type="com.example.travlediary.dto.NoticeDetailDto">
+        <id property="id" column="id"/>
+        <result property="title" column="title"/>
+        <result property="content" column="content"/>
+        <result property="views" column="views"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <select id="findAdminList" resultMap="NoticeListResultMap">
+        SELECT id, title, is_pinned, views, created_at, updated_at
+        FROM notices
+        ORDER BY is_pinned DESC, created_at DESC, id DESC
+    </select>
+
+    <select id="findPublicList" resultMap="NoticeListResultMap">
+        SELECT id, title, is_pinned, views, created_at, updated_at
+        FROM notices
+        ORDER BY is_pinned DESC, created_at DESC, id DESC
+        LIMIT #{limit}
+        OFFSET #{offset}
+    </select>
+
+    <select id="countPublicList" resultType="long">
+        SELECT COUNT(*)
+        FROM notices
+    </select>
+
+    <update id="incrementPublicViews">
+        UPDATE notices
+        SET views = views + 1,
+            updated_at = updated_at
+        WHERE id = #{id}
+    </update>
+
+    <select id="findPublicDetailById" resultMap="NoticeDetailResultMap">
+        SELECT id, title, content, views, created_at
+        FROM notices
+        WHERE id = #{id}
+    </select>
+
+    <select id="findById" resultMap="NoticeResultMap">
+        SELECT id, title, content, is_pinned, views, user_id, created_at, updated_at
+        FROM notices
+        WHERE id = #{id}
+    </select>
+
+    <select id="findByIdForUpdate" resultMap="NoticeResultMap">
+        SELECT id, title, content, is_pinned, views, user_id, created_at, updated_at
+        FROM notices
+        WHERE id = #{id}
+        FOR UPDATE
+    </select>
+
+    <insert id="insertNotice" parameterType="com.example.travlediary.model.Notice"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO notices (title, content, is_pinned, views, user_id)
+        VALUES (#{title}, #{content}, #{pinned}, 0, #{userId})
+    </insert>
+
+    <update id="updateNotice" parameterType="com.example.travlediary.model.Notice">
+        UPDATE notices
+        SET title = #{title},
+            content = #{content},
+            is_pinned = #{pinned}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteNotice">
+        DELETE FROM notices
+        WHERE id = #{id}
+    </delete>
+
+</mapper>

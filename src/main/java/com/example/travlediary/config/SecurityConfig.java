@@ -33,7 +33,15 @@ public class SecurityConfig {
                         new RegexRequestMatcher(
                                 "^/bookmarks/travel-info/[0-9]+$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(
-                                "^/bookmarks/travel-info/[0-9]+$", HttpMethod.DELETE.name())
+                                "^/bookmarks/travel-info/[0-9]+$", HttpMethod.DELETE.name()),
+                        new RegexRequestMatcher(
+                                "^/admin/notices$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/admin/notices/[0-9]+/edit$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/admin/notices/[0-9]+/delete$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/logout$", HttpMethod.POST.name())
                 )))
                 .authorizeHttpRequests(auth -> auth
 
@@ -63,6 +71,11 @@ public class SecurityConfig {
                         // 숫자 ID 사용자 여행정보 상세 GET만 공개
                         .requestMatchers(new RegexRequestMatcher(
                                 "^/travel-info/[0-9]+(?:\\?.*)?$", "GET")).permitAll()
+
+                        // 고객센터 공지사항 목록과 숫자 ID 상세 GET만 공개
+                        .requestMatchers(HttpMethod.GET, "/support/notices").permitAll()
+                        .requestMatchers(new RegexRequestMatcher(
+                                "^/support/notices/[0-9]+$", HttpMethod.GET.name())).permitAll()
 
                         // 게시글 일반 댓글 목록은 비회원도 조회 가능
                         .requestMatchers(HttpMethod.GET, "/post-comments", "/post-comments/page").permitAll()

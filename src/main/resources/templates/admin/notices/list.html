@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'notices')}">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/admin-notices.css">
+</th:block>
+<th:block th:fragment="body">
+  <section class="admin-page-section admin-notices-page">
+    <header class="admin-page-header">
+      <div class="admin-page-heading">
+        <h1 class="admin-page-title">공지사항 관리</h1>
+        <p class="admin-page-description">고객센터에 공개되는 공지사항과 상단 고정 여부를 관리합니다.</p>
+      </div>
+      <div class="admin-page-actions">
+        <a th:href="@{/admin/notices/new}" class="admin-btn is-primary">+ 공지사항 등록</a>
+      </div>
+    </header>
+
+    <div class="admin-card is-table-card">
+      <div class="admin-table-wrapper">
+        <table class="admin-table admin-notices-table">
+          <thead>
+          <tr>
+            <th>구분</th>
+            <th>제목</th>
+            <th>조회수</th>
+            <th>작성일</th>
+            <th>수정일</th>
+            <th>관리</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr th:each="notice : ${notices}">
+            <td>
+              <span th:if="${notice.pinned}" class="admin-notice-badge">상단 고정</span>
+              <span th:unless="${notice.pinned}" class="admin-notice-normal">일반</span>
+            </td>
+            <td class="admin-notice-title" th:text="${notice.title}">공지사항 제목</td>
+            <td th:text="${notice.views}">0</td>
+            <td th:text="${#dates.format(notice.createdAt, 'yyyy-MM-dd')}">2026-08-12</td>
+            <td th:text="${#dates.format(notice.updatedAt, 'yyyy-MM-dd')}">2026-08-12</td>
+            <td class="admin-table-actions">
+              <div class="admin-action-group">
+                <a th:href="@{/admin/notices/{id}/edit(id=${notice.id})}"
+                   class="admin-btn is-small">수정</a>
+                <form th:action="@{/admin/notices/{id}/delete(id=${notice.id})}"
+                      method="post"
+                      onsubmit="return confirm('이 공지사항을 삭제하시겠습니까?');">
+                  <button type="submit" class="admin-btn is-small is-danger">삭제</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(notices)}">
+            <td colspan="6" class="admin-table-empty">등록된 공지사항이 없습니다.</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</th:block>
+</html>

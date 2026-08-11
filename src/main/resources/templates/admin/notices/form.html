@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'notices')}">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill-resize-module@2.1.3/dist/resize.css">
+  <link rel="stylesheet" crossorigin
+        href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.min.css">
+  <link rel="stylesheet" crossorigin
+        href="https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-kr@5.3.0/400.css">
+  <link rel="stylesheet" crossorigin
+        href="https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-kr@5.3.0/400.css">
+  <link rel="stylesheet" href="/css/quill-content.css">
+  <link rel="stylesheet" href="/css/admin-notices.css">
+  <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/quill-resize-module@2.1.3/dist/resize.js"></script>
+  <script src="/js/quill-editor-init.js"></script>
+  <script src="/js/admin-notice-form.js" defer></script>
+</th:block>
+<th:block th:fragment="body">
+  <section class="admin-page-section admin-notice-form-page">
+    <header class="admin-page-header">
+      <div class="admin-page-heading">
+        <h1 class="admin-page-title" th:text="${pageTitle}">공지사항 등록</h1>
+        <p class="admin-page-description" th:text="${pageDescription}">새 공지사항을 등록합니다.</p>
+      </div>
+      <div class="admin-page-actions">
+        <a th:href="@{/admin/notices}" class="admin-btn">공지사항 목록</a>
+      </div>
+    </header>
+
+    <form id="notice-form" th:action="${formAction}" method="post"
+          th:object="${noticeForm}" class="admin-notice-form">
+      <div class="admin-alert" th:if="${#fields.hasGlobalErrors()}" role="alert">
+        <p th:each="error : ${#fields.globalErrors()}" th:text="${error}">입력 오류</p>
+      </div>
+
+      <section class="admin-form-card is-wide admin-notice-section">
+        <div class="admin-notice-section-header">
+          <h2>기본 정보</h2>
+          <p>공지 제목과 사용자 목록 상단 고정 여부를 설정합니다.</p>
+        </div>
+        <div class="admin-form-fields">
+          <div class="admin-form-field">
+            <label for="notice-title">제목</label>
+            <input id="notice-title" type="text" th:field="*{title}"
+                   maxlength="255" placeholder="공지사항 제목을 입력하세요"
+                   th:classappend="${#fields.hasErrors('title')} ? ' is-invalid' : ''">
+            <p class="admin-field-error" th:if="${#fields.hasErrors('title')}"
+               th:errors="*{title}">제목 오류</p>
+          </div>
+
+          <label class="admin-notice-pin-control">
+            <input type="checkbox" th:field="*{pinned}">
+            <span>사용자 공지사항 목록 상단에 고정</span>
+          </label>
+        </div>
+      </section>
+
+      <section class="admin-form-card is-wide admin-notice-section">
+        <div class="admin-notice-section-header">
+          <h2>본문</h2>
+          <p>사용자에게 안내할 내용을 작성합니다.</p>
+        </div>
+        <div class="admin-notice-editor-shell quill-editor-shell">
+          <div id="notice-editor" class="admin-notice-editor quill-editor"></div>
+        </div>
+        <input type="hidden" id="notice-content" th:field="*{content}">
+        <textarea id="notice-initial-content" hidden th:text="*{content}"></textarea>
+        <p class="admin-field-error" th:if="${#fields.hasErrors('content')}"
+           th:errors="*{content}">본문 오류</p>
+      </section>
+
+      <div class="admin-form-actions">
+        <a th:href="@{/admin/notices}" class="admin-btn">취소</a>
+        <button type="submit" class="admin-btn is-primary" th:text="${submitLabel}">등록</button>
+      </div>
+    </form>
+  </section>
+</th:block>
+</html>

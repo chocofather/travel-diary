@@ -491,11 +491,11 @@ CREATE TABLE `faq_categories` (
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `faqs` (
-  `id` bigint NOT NULL,
+  `id` bigint NOT NULL AUTO_INCREMENT,
   `question` varchar(255) NOT NULL,
   `answer` text NOT NULL,
   `order_index` bigint NOT NULL DEFAULT '1',
-  `is_visible` tinyint DEFAULT '1',
+  `is_visible` tinyint NOT NULL DEFAULT '1',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `category_id` bigint NOT NULL,
@@ -572,9 +572,13 @@ CREATE TABLE `inquiries` (
   `content` text NOT NULL,
   `status` varchar(50) NOT NULL DEFAULT 'PENDING',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `user_id` bigint NOT NULL,
+  `inquiry_type` varchar(30) NOT NULL DEFAULT 'OTHER',
   PRIMARY KEY (`id`),
   KEY `fk_inquiry_users1_idx` (`user_id`),
+  KEY `idx_inquiries_user_created` (`user_id`,`created_at`,`id`),
+  KEY `idx_inquiries_status_created` (`status`,`created_at`,`id`),
   CONSTRAINT `fk_inquiries_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -587,15 +591,39 @@ CREATE TABLE `inquiries` (
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `inquiry_answers` (
   `id` bigint NOT NULL AUTO_INCREMENT,
-  `content` text,
+  `content` text NOT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `inquiry_id` bigint NOT NULL,
   `user_id` bigint NOT NULL,
   PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_inquiry_answers_inquiry_id` (`inquiry_id`),
   KEY `fk_inquiry_answer_inquiry1_idx` (`inquiry_id`),
   KEY `fk_inquiry_answer_users1_idx` (`user_id`),
   CONSTRAINT `fk_inquiryanswers_inquiry` FOREIGN KEY (`inquiry_id`) REFERENCES `inquiries` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_inquiryanswers_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `notices`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `notices` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `title` varchar(255) NOT NULL,
+  `content` mediumtext NOT NULL,
+  `is_pinned` tinyint NOT NULL DEFAULT '0',
+  `views` int NOT NULL DEFAULT '0',
+  `user_id` bigint NOT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_notices_public_order` (`is_pinned`,`created_at`,`id`),
+  KEY `idx_notices_user_id` (`user_id`),
+  CONSTRAINT `fk_notices_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 

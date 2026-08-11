@@ -1,0 +1,111 @@
+.admin-notices-page,
+.admin-notice-form-page {
+    min-width: 0;
+}
+
+.admin-notices-table {
+    min-width: 860px;
+}
+
+.admin-notice-title {
+    max-width: 430px;
+    color: #34415e;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.admin-notice-badge {
+    display: inline-flex;
+    min-width: 58px;
+    justify-content: center;
+    padding: 4px 8px;
+    color: #3558c6;
+    background: #eef3ff;
+    border: 1px solid #d6e0ff;
+    border-radius: 999px;
+    font-size: 0.73rem;
+    font-weight: 750;
+}
+
+.admin-notice-normal {
+    color: #7a8498;
+    font-size: 0.78rem;
+}
+
+.admin-notices-table .admin-action-group,
+.admin-notices-table .admin-action-group form {
+    flex-wrap: nowrap;
+    margin: 0;
+}
+
+.admin-notice-form {
+    display: grid;
+    gap: 20px;
+    width: 100%;
+    max-width: 1120px;
+    box-sizing: border-box;
+}
+
+.admin-notice-form .admin-notice-section {
+    width: 100%;
+    max-width: none;
+    box-sizing: border-box;
+}
+
+.admin-notice-section-header {
+    margin-bottom: 22px;
+}
+
+.admin-notice-section-header h2 {
+    margin: 0;
+    color: #334373;
+    font-size: 1.12rem;
+}
+
+.admin-notice-section-header p {
+    margin: 7px 0 0;
+    color: #717b91;
+    font-size: 0.87rem;
+    line-height: 1.55;
+}
+
+.admin-notice-pin-control {
+    display: inline-flex;
+    width: fit-content;
+    align-items: center;
+    gap: 9px;
+    color: #46536d;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.admin-notice-pin-control input {
+    width: 17px;
+    height: 17px;
+    accent-color: #3e63dd;
+}
+
+.admin-notice-editor-shell {
+    min-width: 0;
+}
+
+.admin-notice-editor {
+    min-height: 380px;
+}
+
+.admin-notice-form .is-invalid {
+    background: #fffafa;
+    border-color: #df7777;
+}
+
+.admin-notice-form .admin-alert,
+.admin-notice-form .admin-alert p {
+    margin: 0;
+}
+
+@media (max-width: 640px) {
+    .admin-notice-editor {
+        min-height: 300px;
+    }
+}

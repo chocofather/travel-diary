@@ -154,15 +154,34 @@
     gap: 14px;
 }
 
-.admin-topbar-actions a {
+.admin-topbar-actions a,
+.admin-logout-button {
     color: #64708a;
     font-size: 0.88rem;
     font-weight: 600;
     text-decoration: none;
 }
 
-.admin-topbar-actions a:hover {
+.admin-topbar-actions a:hover,
+.admin-logout-button:hover {
     color: var(--admin-blue-dark);
+}
+
+.admin-logout-form {
+    margin: 0;
+}
+
+.admin-logout-button {
+    padding: 0;
+    background: transparent;
+    border: 0;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.admin-logout-button:focus-visible {
+    outline: 3px solid rgba(62, 99, 221, 0.22);
+    outline-offset: 3px;
 }
 
 .admin-topbar-divider {

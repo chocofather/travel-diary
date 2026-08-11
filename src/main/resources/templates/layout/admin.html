@@ -22,7 +22,10 @@
       <nav class="admin-topbar-actions" aria-label="관리자 보조 메뉴">
         <a th:href="@{/}">사이트 보기</a>
         <span class="admin-topbar-divider" aria-hidden="true"></span>
-        <a th:href="@{'/logout?redirect=' + ${currentUri}}">로그아웃</a>
+        <form th:action="@{/logout}" method="post" class="admin-logout-form">
+          <input type="hidden" name="redirect" th:value="${currentUri}">
+          <button type="submit" class="admin-logout-button">로그아웃</button>
+        </form>
       </nav>
     </header>
 

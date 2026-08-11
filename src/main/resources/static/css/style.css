@@ -141,6 +141,11 @@ body {
     color: #333;
     text-decoration: none;
 }
+.submenu-col ul li .submenu-link-disabled {
+    font-size: 13px;
+    color: #9aa3af;
+    cursor: default;
+}
 
 /* Responsive */
 @media (max-width: 870px) {
@@ -262,16 +267,26 @@ body {
     cursor:pointer;
 }
 
+.logout-form {
+    margin: 0;
+}
+
 .btn-logout{
     margin-left:10px;
     padding:6px 12px;
     background:#666;
     color:#fff;
+    border:0;
     font-size:14px;
+    font-family:inherit;
     border-radius:4px;
-    text-decoration:none;
+    cursor:pointer;
 }
 .btn-logout:hover{ background:#444; }
+.btn-logout:focus-visible {
+    outline: 3px solid rgba(0, 102, 204, 0.3);
+    outline-offset: 2px;
+}
 
 /* 푸터 */
 .site-footer {

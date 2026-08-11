@@ -35,9 +35,10 @@
              th:src="${currentUserProfileImage}"
              onerror="this.onerror=null;this.src='/images/default.png';"
              alt="내 프로필" />
-        <th:block th:if="${isLoggedIn}">
-          <a th:href="@{'/logout?redirect=' + ${currentUri}}" class="btn-logout">로그아웃</a>
-        </th:block>
+        <form th:if="${isLoggedIn}" th:action="@{/logout}" method="post" class="logout-form">
+          <input type="hidden" name="redirect" th:value="${currentUri}">
+          <button type="submit" class="btn-logout">로그아웃</button>
+        </form>
       </div>
 
       <!-- 어드민 전용 링크 -->
@@ -53,7 +54,7 @@
         <li class="menu-item"><a href="/destinations?type=overseas">해외</a></li>
         <li class="menu-item"><a href="/board/list">여행 커뮤니티</a></li>
         <li class="menu-item"><a href="/travel-info">여행정보</a></li>
-        <li class="menu-item"><a href="#">공지/문의</a></li>
+        <li class="menu-item"><a href="/support/notices">고객센터</a></li>
         <li class="menu-item"><a th:href="@{/events}">이벤트</a></li>
       </ul>
     </div>
@@ -80,9 +81,9 @@
         </div>
         <div class="submenu-col">
           <ul>
-            <li><a href="#">공지사항</a></li>
-            <li><a href="#">자주묻는질문</a></li>
-            <li><a href="#">1:1 문의</a></li>
+            <li><a href="/support/notices">공지사항</a></li>
+            <li><span class="submenu-link-disabled" aria-disabled="true">자주 묻는 질문</span></li>
+            <li><span class="submenu-link-disabled" aria-disabled="true">1:1 문의</span></li>
           </ul>
         </div>
         <div class="submenu-col">

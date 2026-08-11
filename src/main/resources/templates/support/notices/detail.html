@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" crossorigin
+        href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.min.css">
+  <link rel="stylesheet" crossorigin
+        href="https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-kr@5.3.0/400.css">
+  <link rel="stylesheet" crossorigin
+        href="https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-kr@5.3.0/400.css">
+  <link rel="stylesheet" href="/css/quill-content.css">
+  <link rel="stylesheet" href="/css/support-notices.css">
+</th:block>
+<th:block th:fragment="body">
+  <article class="support-notice-detail" aria-labelledby="support-notice-detail-title">
+    <header class="support-notice-detail-header">
+      <p>고객센터 · 공지사항</p>
+      <h1 id="support-notice-detail-title" th:text="${notice.title}">공지사항 제목</h1>
+      <dl>
+        <div>
+          <dt>작성일</dt>
+          <dd><time th:text="${#dates.format(notice.createdAt, 'yyyy.MM.dd')}">2026.08.12</time></dd>
+        </div>
+        <div>
+          <dt>조회수</dt>
+          <dd th:text="${notice.views}">0</dd>
+        </div>
+      </dl>
+    </header>
+
+    <section class="support-notice-content rich-text-content"
+             aria-label="공지사항 본문"
+             th:utext="${notice.content}"></section>
+
+    <footer class="support-notice-detail-actions">
+      <a th:href="@{/support/notices}">목록으로</a>
+    </footer>
+  </article>
+</th:block>
+</html>

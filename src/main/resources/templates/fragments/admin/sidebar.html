@@ -47,6 +47,13 @@
          th:classappend="${activeMenu == 'events'} ? ' is-active' : ''"
          th:href="@{/admin/event/list}">이벤트</a>
     </section>
+
+    <section class="admin-nav-group">
+      <h2 class="admin-nav-group-title">고객지원</h2>
+      <a class="admin-nav-link"
+         th:classappend="${activeMenu == 'notices'} ? ' is-active' : ''"
+         th:href="@{/admin/notices}">공지사항</a>
+    </section>
   </nav>
 </aside>
 </body>
