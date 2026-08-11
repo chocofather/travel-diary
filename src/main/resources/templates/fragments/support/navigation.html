@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<body>
+<nav class="support-navigation"
+     th:fragment="navigation(activeMenu)"
+     aria-label="고객센터 메뉴">
+  <span class="support-navigation-title">고객센터</span>
+  <ul class="support-navigation-list">
+    <li>
+      <a class="support-navigation-link"
+         th:classappend="${activeMenu == 'notices'} ? ' is-active' : ''"
+         th:attr="aria-current=${activeMenu == 'notices'} ? 'page' : null"
+         th:href="@{/support/notices}">공지사항</a>
+    </li>
+    <li>
+      <a class="support-navigation-link"
+         th:classappend="${activeMenu == 'faq'} ? ' is-active' : ''"
+         th:attr="aria-current=${activeMenu == 'faq'} ? 'page' : null"
+         th:href="@{/support/faq}">자주 묻는 질문</a>
+    </li>
+    <li>
+      <span class="support-navigation-link is-disabled" aria-disabled="true">1:1 문의</span>
+    </li>
+  </ul>
+</nav>
+</body>
+</html>

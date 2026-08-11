@@ -41,6 +41,12 @@ public class SecurityConfig {
                         new RegexRequestMatcher(
                                 "^/admin/notices/[0-9]+/delete$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(
+                                "^/admin/faqs$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/admin/faqs/[0-9]+/edit$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/admin/faqs/[0-9]+/delete$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
                                 "^/logout$", HttpMethod.POST.name())
                 )))
                 .authorizeHttpRequests(auth -> auth
@@ -76,6 +82,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/support/notices").permitAll()
                         .requestMatchers(new RegexRequestMatcher(
                                 "^/support/notices/[0-9]+$", HttpMethod.GET.name())).permitAll()
+
+                        // 자주 묻는 질문 목록 GET만 공개
+                        .requestMatchers(HttpMethod.GET, "/support/faq").permitAll()
 
                         // 게시글 일반 댓글 목록은 비회원도 조회 가능
                         .requestMatchers(HttpMethod.GET, "/post-comments", "/post-comments/page").permitAll()

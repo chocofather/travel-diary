@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/support-layout.css">
+  <link rel="stylesheet" href="/css/support-faq.css">
+</th:block>
+<th:block th:fragment="body">
+  <div class="support-layout">
+    <nav th:replace="~{fragments/support/navigation :: navigation('faq')}"></nav>
+    <section class="support-faq-page support-layout-content" aria-labelledby="support-faq-title">
+    <header class="support-faq-page-header">
+      <p>고객센터</p>
+      <h1 id="support-faq-title">자주 묻는 질문</h1>
+      <span>궁금한 내용을 빠르게 확인해보세요.</span>
+    </header>
+
+    <div class="support-faq-list" th:unless="${#lists.isEmpty(faqs)}">
+      <details class="support-faq-item" th:each="faq : ${faqs}">
+        <summary>
+          <span class="support-faq-summary-content">
+            <span class="support-faq-category"
+                  th:classappend="${faq.categoryName == '회원/계정' ? ' is-account' : (faq.categoryName == '여행정보' ? ' is-travel' : (faq.categoryName == '커뮤니티' ? ' is-community' : (faq.categoryName == '서비스 이용' ? ' is-service' : (faq.categoryName == '기타' ? ' is-etc' : ' is-default'))))}"
+                  th:text="${faq.categoryName}">회원/계정</span>
+            <span class="support-faq-question">
+              <span class="support-faq-prefix" aria-hidden="true">Q.</span>
+              <span th:text="${faq.question}">회원 탈퇴는 어떻게 하나요?</span>
+            </span>
+          </span>
+          <span class="support-faq-toggle" aria-hidden="true"></span>
+        </summary>
+        <div class="support-faq-answer">
+          <span class="support-faq-prefix" aria-hidden="true">A.</span>
+          <p th:text="${faq.answer}">회원정보 수정에서 탈퇴할 수 있습니다.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="support-faq-empty" th:if="${#lists.isEmpty(faqs)}">
+      <p>등록된 자주 묻는 질문이 없습니다.</p>
+    </div>
+    </section>
+  </div>
+</th:block>
+</html>

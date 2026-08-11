@@ -18,6 +18,8 @@ class NoticeUiContractTest {
 
         assertThat(list)
                 .contains("layout/main")
+                .contains("/css/support-layout.css")
+                .contains("fragments/support/navigation :: navigation('notices')")
                 .contains("support-notice-pin")
                 .contains("class=\"support-notice-pin\">공지</span>")
                 .contains("th:if=\"${notice.pinned}\"")
@@ -29,6 +31,8 @@ class NoticeUiContractTest {
                 .contains("support-notice-pagination");
         assertThat(detail)
                 .contains("layout/main")
+                .contains("/css/support-layout.css")
+                .contains("fragments/support/navigation :: navigation('notices')")
                 .contains("quill-content.css")
                 .contains("rich-text-content")
                 .contains("th:utext=\"${notice.content}\"")
@@ -54,18 +58,20 @@ class NoticeUiContractTest {
     }
 
     @Test
-    void headerAndAdminSidebarExposeOnlyImplementedNoticeLinks() throws IOException {
+    void headerAndAdminSidebarPreserveNoticeLinksAlongsideImplementedFaq() throws IOException {
         String header = file("src/main/resources/templates/fragments/header.html");
         String sidebar = file("src/main/resources/templates/fragments/admin/sidebar.html");
 
         assertThat(header)
                 .contains(">고객센터</a>")
                 .contains("href=\"/support/notices\">공지사항</a>")
-                .contains("submenu-link-disabled", "자주 묻는 질문", "1:1 문의")
-                .doesNotContain("href=\"/support/faq\"", "href=\"/support/inquiries\"");
+                .contains("href=\"/support/faq\">자주 묻는 질문</a>")
+                .contains("submenu-link-disabled", "1:1 문의")
+                .doesNotContain("href=\"/support/inquiries\"");
         assertThat(sidebar)
                 .contains("고객지원", "@{/admin/notices}", "activeMenu == 'notices'")
-                .doesNotContain("@{/admin/faqs}", "@{/admin/inquiries}");
+                .contains("@{/admin/faqs}", "activeMenu == 'faqs'")
+                .doesNotContain("@{/admin/inquiries}");
     }
 
     @Test

@@ -2,10 +2,13 @@
 <html lang="ko" xmlns:th="http://www.thymeleaf.org"
       th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
 <th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/support-layout.css">
   <link rel="stylesheet" href="/css/support-notices.css">
 </th:block>
 <th:block th:fragment="body">
-  <section class="support-notice-page" aria-labelledby="support-notice-title">
+  <div class="support-layout">
+    <nav th:replace="~{fragments/support/navigation :: navigation('notices')}"></nav>
+    <section class="support-notice-page support-layout-content" aria-labelledby="support-notice-title">
     <header class="support-notice-page-header">
       <p>고객센터</p>
       <h1 id="support-notice-title">공지사항</h1>
@@ -64,6 +67,7 @@
          aria-label="다음 페이지">다음</a>
       <span th:unless="${currentPage < totalPages}" class="is-disabled" aria-disabled="true">다음</span>
     </nav>
-  </section>
+    </section>
+  </div>
 </th:block>
 </html>

@@ -53,6 +53,9 @@
       <a class="admin-nav-link"
          th:classappend="${activeMenu == 'notices'} ? ' is-active' : ''"
          th:href="@{/admin/notices}">공지사항</a>
+      <a class="admin-nav-link"
+         th:classappend="${activeMenu == 'faqs'} ? ' is-active' : ''"
+         th:href="@{/admin/faqs}">자주 묻는 질문</a>
     </section>
   </nav>
 </aside>

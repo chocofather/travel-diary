@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'faqs')}">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/admin-faqs.css">
+</th:block>
+<th:block th:fragment="body">
+  <section class="admin-page-section admin-faq-form-page">
+    <header class="admin-page-header">
+      <div class="admin-page-heading">
+        <h1 class="admin-page-title" th:text="${pageTitle}">자주 묻는 질문 등록</h1>
+        <p class="admin-page-description" th:text="${pageDescription}">새 FAQ를 등록합니다.</p>
+      </div>
+      <div class="admin-page-actions">
+        <a th:href="@{/admin/faqs}" class="admin-btn">FAQ 목록</a>
+      </div>
+    </header>
+
+    <form th:action="${formAction}" method="post"
+          th:object="${faqForm}" class="admin-faq-form">
+      <div class="admin-alert" th:if="${#fields.hasGlobalErrors()}" role="alert">
+        <p th:each="error : ${#fields.globalErrors()}" th:text="${error}">입력 오류</p>
+      </div>
+
+      <section class="admin-form-card is-wide admin-faq-section">
+        <div class="admin-faq-section-header">
+          <h2>FAQ 정보</h2>
+          <p>카테고리와 노출 순서를 지정하고 질문과 답변을 입력합니다.</p>
+        </div>
+
+        <div class="admin-form-fields">
+          <div class="admin-faq-form-grid">
+            <div class="admin-form-field">
+              <label for="faq-category">카테고리</label>
+              <select id="faq-category" th:field="*{categoryId}"
+                      th:classappend="${#fields.hasErrors('categoryId')} ? ' is-invalid' : ''"
+                      required>
+                <option value="">카테고리를 선택하세요</option>
+                <option th:each="category : ${categories}"
+                        th:value="${category.id}"
+                        th:text="${category.categoryName}">회원/계정</option>
+              </select>
+              <p class="admin-field-error" th:if="${#fields.hasErrors('categoryId')}"
+                 th:errors="*{categoryId}">카테고리 오류</p>
+            </div>
+
+            <div class="admin-form-field">
+              <label for="faq-order-index">노출 순서</label>
+              <input id="faq-order-index" type="number" th:field="*{orderIndex}"
+                     min="1" step="1" inputmode="numeric"
+                     th:classappend="${#fields.hasErrors('orderIndex')} ? ' is-invalid' : ''"
+                     required>
+              <p class="admin-field-error" th:if="${#fields.hasErrors('orderIndex')}"
+                 th:errors="*{orderIndex}">노출 순서 오류</p>
+            </div>
+          </div>
+
+          <div class="admin-form-field">
+            <label for="faq-question">질문</label>
+            <input id="faq-question" type="text" th:field="*{question}"
+                   maxlength="255" placeholder="자주 묻는 질문을 입력하세요"
+                   th:classappend="${#fields.hasErrors('question')} ? ' is-invalid' : ''"
+                   required>
+            <p class="admin-field-error" th:if="${#fields.hasErrors('question')}"
+               th:errors="*{question}">질문 오류</p>
+          </div>
+
+          <div class="admin-form-field">
+            <label for="faq-answer">답변</label>
+            <textarea id="faq-answer" th:field="*{answer}"
+                      rows="10" placeholder="사용자에게 안내할 답변을 입력하세요"
+                      th:classappend="${#fields.hasErrors('answer')} ? ' is-invalid' : ''"
+                      required></textarea>
+            <p class="admin-field-error" th:if="${#fields.hasErrors('answer')}"
+               th:errors="*{answer}">답변 오류</p>
+          </div>
+
+          <label class="admin-faq-visible-control">
+            <input type="checkbox" th:field="*{visible}">
+            <span>사용자에게 노출</span>
+          </label>
+        </div>
+      </section>
+
+      <div class="admin-form-actions">
+        <a th:href="@{/admin/faqs}" class="admin-btn">취소</a>
+        <button type="submit" class="admin-btn is-primary" th:text="${submitLabel}">등록</button>
+      </div>
+    </form>
+  </section>
+</th:block>
+</html>

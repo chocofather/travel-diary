@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'faqs')}">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/admin-faqs.css">
+</th:block>
+<th:block th:fragment="body">
+  <section class="admin-page-section admin-faqs-page">
+    <header class="admin-page-header">
+      <div class="admin-page-heading">
+        <h1 class="admin-page-title">자주 묻는 질문 관리</h1>
+        <p class="admin-page-description">FAQ의 카테고리, 노출 순서와 공개 상태를 관리합니다.</p>
+      </div>
+      <div class="admin-page-actions">
+        <a th:href="@{/admin/faqs/new}" class="admin-btn is-primary">+ FAQ 등록</a>
+      </div>
+    </header>
+
+    <div class="admin-card is-table-card">
+      <div class="admin-table-wrapper">
+        <table class="admin-table admin-faqs-table">
+          <thead>
+          <tr>
+            <th>ID</th>
+            <th>카테고리</th>
+            <th>질문</th>
+            <th>노출 여부</th>
+            <th>노출 순서</th>
+            <th>작성일</th>
+            <th>수정일</th>
+            <th>관리</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr th:each="faq : ${faqs}">
+            <td class="admin-table-number" th:text="${faq.id}">1</td>
+            <td><span class="admin-faq-category" th:text="${faq.categoryName}">회원/계정</span></td>
+            <td class="admin-faq-question" th:text="${faq.question}">회원 탈퇴는 어떻게 하나요?</td>
+            <td>
+              <span class="admin-faq-visibility"
+                    th:classappend="${faq.visible} ? ' is-visible' : ' is-hidden'"
+                    th:text="${faq.visible} ? '노출' : '숨김'">노출</span>
+            </td>
+            <td th:text="${faq.orderIndex}">1</td>
+            <td th:text="${#dates.format(faq.createdAt, 'yyyy-MM-dd')}">2026-08-12</td>
+            <td th:text="${#dates.format(faq.updatedAt, 'yyyy-MM-dd')}">2026-08-12</td>
+            <td class="admin-table-actions">
+              <div class="admin-action-group">
+                <a th:href="@{/admin/faqs/{id}/edit(id=${faq.id})}"
+                   class="admin-btn is-small">수정</a>
+                <form th:action="@{/admin/faqs/{id}/delete(id=${faq.id})}"
+                      method="post"
+                      onsubmit="return confirm('이 자주 묻는 질문을 삭제하시겠습니까?');">
+                  <button type="submit" class="admin-btn is-small is-danger">삭제</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(faqs)}">
+            <td colspan="8" class="admin-table-empty">등록된 자주 묻는 질문이 없습니다.</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</th:block>
+</html>

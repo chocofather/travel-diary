@@ -1,0 +1,129 @@
+.admin-faqs-page,
+.admin-faq-form-page {
+    min-width: 0;
+}
+
+.admin-faqs-table {
+    min-width: 1120px;
+}
+
+.admin-faq-category,
+.admin-faq-visibility {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 0.73rem;
+    font-weight: 750;
+    white-space: nowrap;
+}
+
+.admin-faq-category {
+    color: #475569;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+}
+
+.admin-faq-visibility.is-visible {
+    color: #0f766e;
+    background: #f0fdfa;
+    border: 1px solid #bfe9e3;
+}
+
+.admin-faq-visibility.is-hidden {
+    color: #7a8498;
+    background: #f7f8fa;
+    border: 1px solid #e4e7ec;
+}
+
+.admin-faq-question {
+    max-width: 390px;
+    color: #34415e;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.admin-faqs-table .admin-action-group,
+.admin-faqs-table .admin-action-group form {
+    flex-wrap: nowrap;
+    margin: 0;
+}
+
+.admin-faq-form {
+    display: grid;
+    gap: 20px;
+    width: 100%;
+    max-width: 980px;
+}
+
+.admin-faq-form .admin-faq-section {
+    width: 100%;
+    max-width: none;
+    box-sizing: border-box;
+}
+
+.admin-faq-section-header {
+    margin-bottom: 22px;
+}
+
+.admin-faq-section-header h2 {
+    margin: 0;
+    color: #334373;
+    font-size: 1.12rem;
+}
+
+.admin-faq-section-header p {
+    margin: 7px 0 0;
+    color: #717b91;
+    font-size: 0.87rem;
+    line-height: 1.55;
+}
+
+.admin-faq-form-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(160px, 0.32fr);
+    gap: 18px;
+}
+
+.admin-faq-form textarea {
+    min-height: 240px;
+    line-height: 1.65;
+}
+
+.admin-faq-visible-control {
+    display: inline-flex;
+    width: fit-content;
+    align-items: center;
+    gap: 9px;
+    color: #46536d;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.admin-faq-visible-control input {
+    width: 17px;
+    height: 17px;
+    accent-color: #3e63dd;
+}
+
+.admin-faq-form .is-invalid {
+    background: #fffafa;
+    border-color: #df7777;
+}
+
+.admin-faq-form .admin-alert,
+.admin-faq-form .admin-alert p {
+    margin: 0;
+}
+
+@media (max-width: 640px) {
+    .admin-faq-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-faq-form textarea {
+        min-height: 200px;
+    }
+}

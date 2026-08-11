@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.faq.FaqMapper">
+
+    <resultMap id="FaqResultMap" type="com.example.travlediary.model.Faq">
+        <id property="id" column="id"/>
+        <result property="question" column="question"/>
+        <result property="answer" column="answer"/>
+        <result property="orderIndex" column="order_index"/>
+        <result property="isVisible" column="is_visible"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="categoryId" column="category_id"/>
+        <result property="userId" column="user_id"/>
+    </resultMap>
+
+    <resultMap id="FaqListResultMap" type="com.example.travlediary.dto.FaqListItemDto">
+        <id property="id" column="id"/>
+        <result property="question" column="question"/>
+        <result property="answer" column="answer"/>
+        <result property="orderIndex" column="order_index"/>
+        <result property="visible" column="is_visible"/>
+        <result property="categoryId" column="category_id"/>
+        <result property="categoryName" column="category_name"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <resultMap id="FaqCategoryResultMap" type="com.example.travlediary.model.FaqCategory">
+        <id property="id" column="id"/>
+        <result property="categoryName" column="category_name"/>
+    </resultMap>
+
+    <sql id="FaqListColumns">
+        f.id,
+        f.question,
+        f.answer,
+        f.order_index,
+        f.is_visible,
+        f.category_id,
+        fc.category_name,
+        f.created_at,
+        f.updated_at
+    </sql>
+
+    <select id="findAdminList" resultMap="FaqListResultMap">
+        SELECT
+        <include refid="FaqListColumns"/>
+        FROM faqs f
+        JOIN faq_categories fc ON fc.id = f.category_id
+        ORDER BY f.order_index ASC, f.id ASC
+    </select>
+
+    <select id="findPublicList" resultMap="FaqListResultMap">
+        SELECT
+        <include refid="FaqListColumns"/>
+        FROM faqs f
+        JOIN faq_categories fc ON fc.id = f.category_id
+        WHERE f.is_visible = 1
+        ORDER BY f.order_index ASC, f.id ASC
+    </select>
+
+    <select id="findCategories" resultMap="FaqCategoryResultMap">
+        SELECT id, category_name
+        FROM faq_categories
+        ORDER BY category_name ASC, id ASC
+    </select>
+
+    <select id="findCategoryById" resultMap="FaqCategoryResultMap">
+        SELECT id, category_name
+        FROM faq_categories
+        WHERE id = #{id}
+    </select>
+
+    <select id="findById" resultMap="FaqResultMap">
+        SELECT id, question, answer, order_index, is_visible,
+               created_at, updated_at, category_id, user_id
+        FROM faqs
+        WHERE id = #{id}
+    </select>
+
+    <select id="findByIdForUpdate" resultMap="FaqResultMap">
+        SELECT id, question, answer, order_index, is_visible,
+               created_at, updated_at, category_id, user_id
+        FROM faqs
+        WHERE id = #{id}
+        FOR UPDATE
+    </select>
+
+    <insert id="insertFaq" parameterType="com.example.travlediary.model.Faq"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO faqs (question, answer, order_index, is_visible, category_id, user_id)
+        VALUES (#{question}, #{answer}, #{orderIndex}, #{isVisible}, #{categoryId}, #{userId})
+    </insert>
+
+    <update id="updateFaq" parameterType="com.example.travlediary.model.Faq">
+        UPDATE faqs
+        SET question = #{question},
+            answer = #{answer},
+            order_index = #{orderIndex},
+            is_visible = #{isVisible},
+            category_id = #{categoryId}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteFaq">
+        DELETE FROM faqs
+        WHERE id = #{id}
+    </delete>
+
+</mapper>
