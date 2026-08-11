@@ -49,4 +49,32 @@
         WHERE user_id = #{userId}
           AND target_type = #{targetType}
     </select>
+
+    <select id="findBookmarkedTargetIds" resultType="long">
+        SELECT target_id
+        FROM bookmarks
+        WHERE user_id = #{userId}
+          AND target_type = #{targetType}
+        <choose>
+            <when test="targetIds != null and !targetIds.isEmpty()">
+                AND target_id IN
+                <foreach collection="targetIds"
+                         item="targetId"
+                         open="("
+                         separator=","
+                         close=")">
+                    #{targetId}
+                </foreach>
+            </when>
+            <otherwise>
+                AND 1 = 0
+            </otherwise>
+        </choose>
+    </select>
+
+    <delete id="deleteByTarget">
+        DELETE FROM bookmarks
+        WHERE target_type = #{targetType}
+          AND target_id = #{targetId}
+    </delete>
 </mapper>

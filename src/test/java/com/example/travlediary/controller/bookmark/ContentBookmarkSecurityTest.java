@@ -20,6 +20,7 @@ import java.util.List;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -73,5 +74,51 @@ class ContentBookmarkSecurityTest {
         verify(service).unbookmarkPost(10L, 7L);
         verify(service).bookmarkCourse(20L, 7L);
         verify(service).unbookmarkCourse(20L, 7L);
+    }
+
+    @Test
+    void guestCannotChangeTravelInfoBookmarks() throws Exception {
+        mockMvc.perform(post("/bookmarks/travel-info/30")
+                        .with(csrf()).accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(delete("/bookmarks/travel-info/30")
+                        .with(csrf()).accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void travelInfoBookmarkRequiresCsrfOnlyForAuthenticatedMutation() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(userDetails, null, List.of());
+
+        mockMvc.perform(post("/bookmarks/travel-info/30")
+                        .with(authentication(authentication)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(delete("/bookmarks/travel-info/30")
+                        .with(authentication(authentication)))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/bookmarks/travel-info/30")
+                        .with(authentication(authentication)).with(csrf()))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(delete("/bookmarks/travel-info/30")
+                        .with(authentication(authentication)).with(csrf()))
+                .andExpect(status().isNoContent());
+
+        verify(service).bookmarkTravelInfo(30L, 7L);
+        verify(service).unbookmarkTravelInfo(30L, 7L);
+    }
+
+    @Test
+    void existingContentBookmarkEndpointsStillDoNotRequireCsrf() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(userDetails, null, List.of());
+
+        mockMvc.perform(post("/bookmarks/posts/10").with(authentication(authentication)))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(delete("/bookmarks/courses/20").with(authentication(authentication)))
+                .andExpect(status().isNoContent());
     }
 }

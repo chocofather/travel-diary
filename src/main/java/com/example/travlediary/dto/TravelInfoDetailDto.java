@@ -20,6 +20,7 @@ public class TravelInfoDetailDto {
     private Timestamp createdAt;
     private Timestamp updatedAt;
     private List<TravelInfoPeriodDto> periods = List.of();
+    private boolean bookmarked;
 
     public boolean isUpdated() {
         if (createdAt == null || updatedAt == null) {

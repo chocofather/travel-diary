@@ -21,4 +21,5 @@ public class TravelInfoListItemDto {
     private Timestamp createdAt;
     private LocalDate startDate;
     private LocalDate endDate;
+    private boolean bookmarked;
 }

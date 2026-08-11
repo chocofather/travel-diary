@@ -7,10 +7,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.security.web.util.matcher.RegexRequestMatcher;
 
 @Configuration
@@ -29,7 +29,12 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
-        http.csrf(AbstractHttpConfigurer::disable)
+        http.csrf(csrf -> csrf.requireCsrfProtectionMatcher(new OrRequestMatcher(
+                        new RegexRequestMatcher(
+                                "^/bookmarks/travel-info/[0-9]+$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/bookmarks/travel-info/[0-9]+$", HttpMethod.DELETE.name())
+                )))
                 .authorizeHttpRequests(auth -> auth
 
                         /* === 비회원도 접근 가능한 공개 영역 === */

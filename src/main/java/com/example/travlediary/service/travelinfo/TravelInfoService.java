@@ -7,12 +7,14 @@ import com.example.travlediary.dto.TravelInfoForm;
 import com.example.travlediary.dto.TravelInfoDetailDto;
 import com.example.travlediary.dto.TravelInfoListItemDto;
 import com.example.travlediary.dto.TravelInfoPeriodDto;
+import com.example.travlediary.model.BookmarkTargetType;
 import com.example.travlediary.model.InfoCategory;
 import com.example.travlediary.model.InfoImage;
 import com.example.travlediary.model.InfoPeriod;
 import com.example.travlediary.model.TravelInfo;
 import com.example.travlediary.model.TravelInfoContentType;
 import com.example.travlediary.model.TravelInfoScope;
+import com.example.travlediary.repository.bookmark.BookmarkMapper;
 import com.example.travlediary.repository.category.InfoCategoryMapper;
 import com.example.travlediary.repository.travelinfo.TravelInfoMapper;
 import com.example.travlediary.service.file.FileUploadService;
@@ -33,6 +35,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 @Service
@@ -41,6 +44,7 @@ import java.util.Set;
 public class TravelInfoService {
 
     private final TravelInfoMapper travelInfoMapper;
+    private final BookmarkMapper bookmarkMapper;
     private final InfoCategoryMapper infoCategoryMapper;
     private final PostContentSanitizer postContentSanitizer;
     private final FileUploadService fileUploadService;
@@ -74,6 +78,46 @@ public class TravelInfoService {
                 scope, contentType, categoryIds,
                 TravelInfoSearchKeyword.toLikeLiteral(keyword),
                 TravelInfoSearchKeyword.toKoreanPrefixRegex(keyword));
+    }
+
+    @Transactional(readOnly = true)
+    public void populatePublicListBookmarks(List<TravelInfoListItemDto> travelInfoList,
+                                            Long currentUserId) {
+        if (travelInfoList == null || travelInfoList.isEmpty()) {
+            return;
+        }
+        travelInfoList.forEach(item -> item.setBookmarked(false));
+        if (currentUserId == null) {
+            return;
+        }
+
+        List<Long> infoIds = travelInfoList.stream()
+                .map(TravelInfoListItemDto::getId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (infoIds.isEmpty()) {
+            return;
+        }
+
+        Set<Long> bookmarkedIds = bookmarkMapper.findBookmarkedTargetIds(
+                currentUserId, BookmarkTargetType.TRAVEL_INFO.name(), infoIds);
+        Set<Long> safeBookmarkedIds = bookmarkedIds == null ? Set.of() : bookmarkedIds;
+        travelInfoList.forEach(item -> item.setBookmarked(
+                item.getId() != null && safeBookmarkedIds.contains(item.getId())));
+    }
+
+    @Transactional(readOnly = true)
+    public void populatePublicDetailBookmark(TravelInfoDetailDto detail, Long currentUserId) {
+        if (detail == null) {
+            return;
+        }
+        detail.setBookmarked(false);
+        if (currentUserId == null || detail.getId() == null) {
+            return;
+        }
+        detail.setBookmarked(bookmarkMapper.findByUserAndTarget(
+                currentUserId, BookmarkTargetType.TRAVEL_INFO.name(), detail.getId()) != null);
     }
 
     @Transactional
@@ -230,6 +274,7 @@ public class TravelInfoService {
         requireTravelInfo(travelInfoMapper.findByIdForUpdate(id));
         List<String> previousThumbnailUrls = mainThumbnailUrls(id);
         boolean lifecycleRegistered = registerFileLifecycle(null, previousThumbnailUrls);
+        bookmarkMapper.deleteByTarget(BookmarkTargetType.TRAVEL_INFO.name(), id);
         if (travelInfoMapper.deleteTravelInfo(id) != 1) {
             throw notFound();
         }

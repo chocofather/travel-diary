@@ -9,7 +9,10 @@ import com.example.travlediary.dto.TravelInfoPeriodDto;
 import com.example.travlediary.model.InfoCategory;
 import com.example.travlediary.model.TravelInfoContentType;
 import com.example.travlediary.model.TravelInfoScope;
+import com.example.travlediary.model.User;
+import com.example.travlediary.model.UserRole;
 import com.example.travlediary.repository.user.UserMapper;
+import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.category.InfoCategoryService;
 import com.example.travlediary.service.travelinfo.TravelInfoService;
 import org.junit.jupiter.api.Test;
@@ -18,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.server.ResponseStatusException;
@@ -32,6 +36,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -101,6 +106,36 @@ class TravelInfoControllerTest {
                             .asString()
                             .startsWith("/travel-info/10?returnUrl=");
                 });
+    }
+
+    @Test
+    void loggedInUserIdIsPassedToListAndDetailBookmarkPopulation() throws Exception {
+        TravelInfoListItemDto item = item(10L, "저장할 여행정보", TravelInfoScope.DOMESTIC,
+                TravelInfoContentType.GENERAL, null);
+        item.setBookmarked(true);
+        TravelInfoDetailDto detail = detail(TravelInfoContentType.GENERAL);
+        detail.setBookmarked(true);
+        when(travelInfoService.getPublicList(null, null, List.of(), null, 0L, 12))
+                .thenReturn(List.of(item));
+        when(travelInfoService.countPublicList(null, null, List.of(), null)).thenReturn(1L);
+        when(infoCategoryService.getVisible()).thenReturn(List.of(category()));
+        when(travelInfoService.getPublicDetail(10L)).thenReturn(detail);
+        CustomUserDetails principal = principal(7L);
+        var authentication = new UsernamePasswordAuthenticationToken(
+                principal, null, principal.getAuthorities());
+
+        mockMvc.perform(get("/travel-info").with(authentication(authentication)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "data-bookmarked=\"true\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "aria-label=\"여행정보 저장 취소\"")));
+        mockMvc.perform(get("/travel-info/10").with(authentication(authentication)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("저장됨")));
+
+        verify(travelInfoService).populatePublicListBookmarks(List.of(item), 7L);
+        verify(travelInfoService).populatePublicDetailBookmark(detail, 7L);
     }
 
     @Test
@@ -499,5 +534,14 @@ class TravelInfoControllerTest {
         detail.setCreatedAt(Timestamp.valueOf("2026-08-01 10:00:00"));
         detail.setUpdatedAt(Timestamp.valueOf("2026-08-02 11:00:00"));
         return detail;
+    }
+
+    private CustomUserDetails principal(Long id) {
+        User user = new User();
+        user.setId(id);
+        user.setUsername("traveler");
+        user.setUserPassword("password");
+        user.setUserRole(UserRole.USER);
+        return new CustomUserDetails(user);
     }
 }

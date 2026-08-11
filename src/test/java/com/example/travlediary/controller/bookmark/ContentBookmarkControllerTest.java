@@ -47,4 +47,18 @@ class ContentBookmarkControllerTest {
         verify(service).bookmarkCourse(20L, 7L);
         verify(service).unbookmarkCourse(20L, 7L);
     }
+
+    @Test
+    void travelInfoBookmarkEndpointsUsePrincipalIdAndReturnNoContent() {
+        ContentBookmarkController controller = new ContentBookmarkController(service);
+        when(userDetails.getId()).thenReturn(7L);
+
+        var create = controller.bookmarkTravelInfo(30L, userDetails);
+        var delete = controller.unbookmarkTravelInfo(30L, userDetails);
+
+        assertThat(create.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        assertThat(delete.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        verify(service).bookmarkTravelInfo(30L, 7L);
+        verify(service).unbookmarkTravelInfo(30L, 7L);
+    }
 }

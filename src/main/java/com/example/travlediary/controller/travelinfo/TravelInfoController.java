@@ -4,12 +4,14 @@ import com.example.travlediary.dto.TravelInfoDetailDto;
 import com.example.travlediary.dto.TravelInfoListItemDto;
 import com.example.travlediary.model.TravelInfoContentType;
 import com.example.travlediary.model.TravelInfoScope;
+import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.category.InfoCategoryService;
 import com.example.travlediary.service.travelinfo.TravelInfoSearchKeyword;
 import com.example.travlediary.service.travelinfo.TravelInfoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -47,6 +49,7 @@ public class TravelInfoController {
                        @RequestParam(defaultValue = "1") int page,
                        @RequestParam(defaultValue = "12") int size,
                        @RequestHeader(value = "X-Requested-With", required = false) String requestedWith,
+                       @AuthenticationPrincipal CustomUserDetails userDetails,
                        Model model) {
         String safeKeyword = TravelInfoSearchKeyword.normalize(keyword);
         TravelInfoScope safeScope = parseEnum(scope, TravelInfoScope.class);
@@ -58,6 +61,8 @@ public class TravelInfoController {
 
         List<TravelInfoListItemDto> travelInfoList = travelInfoService.getPublicList(
                 safeScope, safeContentType, safeCategoryIds, safeKeyword, offset, safeSize);
+        Long currentUserId = userDetails == null ? null : userDetails.getId();
+        travelInfoService.populatePublicListBookmarks(travelInfoList, currentUserId);
         long totalCount = travelInfoService.countPublicList(
                 safeScope, safeContentType, safeCategoryIds, safeKeyword);
         int totalPages = totalCount == 0
@@ -94,8 +99,11 @@ public class TravelInfoController {
     @GetMapping("/travel-info/{id:\\d+}")
     public String detail(@PathVariable Long id,
                          @RequestParam(required = false) String returnUrl,
+                         @AuthenticationPrincipal CustomUserDetails userDetails,
                          Model model) {
         TravelInfoDetailDto travelInfo = travelInfoService.getPublicDetail(id);
+        Long currentUserId = userDetails == null ? null : userDetails.getId();
+        travelInfoService.populatePublicDetailBookmark(travelInfo, currentUserId);
         model.addAttribute("travelInfo", travelInfo);
         model.addAttribute("listUrl", validateReturnUrl(returnUrl));
         model.addAttribute("pageTitle", travelInfo.getTitle() + " | 여행정보");

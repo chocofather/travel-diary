@@ -5,6 +5,7 @@ import com.example.travlediary.model.UserPost;
 import com.example.travlediary.repository.bookmark.BookmarkMapper;
 import com.example.travlediary.repository.course.CourseMapper;
 import com.example.travlediary.repository.post.PostMapper;
+import com.example.travlediary.repository.travelinfo.TravelInfoMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,12 +30,15 @@ class ContentBookmarkServiceTest {
     private PostMapper postMapper;
     @Mock
     private CourseMapper courseMapper;
+    @Mock
+    private TravelInfoMapper travelInfoMapper;
 
     private ContentBookmarkService service;
 
     @BeforeEach
     void setUp() {
-        service = new ContentBookmarkService(bookmarkMapper, postMapper, courseMapper);
+        service = new ContentBookmarkService(
+                bookmarkMapper, postMapper, courseMapper, travelInfoMapper);
     }
 
     @Test
@@ -112,6 +116,37 @@ class ContentBookmarkServiceTest {
     void missingOrDeletedCourseReturnsNotFound() {
         assertNotFound(() -> service.bookmarkCourse(20L, 7L));
         assertNotFound(() -> service.unbookmarkCourse(20L, 7L));
+
+        verify(bookmarkMapper, never()).insertIgnore(any(), any(), any());
+        verify(bookmarkMapper, never()).delete(any(), any(), any());
+    }
+
+    @Test
+    void bookmarksPublicTravelInfoIdempotentlyWithServerFixedTargetType() {
+        when(travelInfoMapper.findPublicBookmarkTargetForUpdate(30L)).thenReturn(30L);
+        when(bookmarkMapper.insertIgnore(7L, "TRAVEL_INFO", 30L)).thenReturn(0);
+
+        service.bookmarkTravelInfo(30L, 7L);
+
+        verify(travelInfoMapper).findPublicBookmarkTargetForUpdate(30L);
+        verify(travelInfoMapper, never()).incrementPublicViews(any());
+        verify(bookmarkMapper).insertIgnore(7L, "TRAVEL_INFO", 30L);
+    }
+
+    @Test
+    void unbookmarksPublicTravelInfoIdempotently() {
+        when(travelInfoMapper.findPublicBookmarkTargetForUpdate(30L)).thenReturn(30L);
+
+        service.unbookmarkTravelInfo(30L, 7L);
+
+        verify(travelInfoMapper).findPublicBookmarkTargetForUpdate(30L);
+        verify(bookmarkMapper).delete(7L, "TRAVEL_INFO", 30L);
+    }
+
+    @Test
+    void missingOrHiddenTravelInfoReturnsNotFoundWithoutBookmarkMutation() {
+        assertNotFound(() -> service.bookmarkTravelInfo(30L, 7L));
+        assertNotFound(() -> service.unbookmarkTravelInfo(30L, 7L));
 
         verify(bookmarkMapper, never()).insertIgnore(any(), any(), any());
         verify(bookmarkMapper, never()).delete(any(), any(), any());

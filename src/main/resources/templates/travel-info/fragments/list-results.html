@@ -8,6 +8,18 @@
 
   <div class="travel-info-grid" th:if="${!#lists.isEmpty(travelInfoList)}">
     <article class="travel-info-card" th:each="info : ${travelInfoList}">
+      <button type="button"
+              class="travel-info-bookmark-button travel-info-card-bookmark"
+              th:classappend="${info.bookmarked} ? ' is-bookmarked'"
+              th:data-bookmark-url="@{/bookmarks/travel-info/{id}(id=${info.id})}"
+              th:data-bookmarked="${info.bookmarked}"
+              th:attr="aria-pressed=${info.bookmarked},aria-label=${info.bookmarked} ? '여행정보 저장 취소' : '여행정보 저장'"
+              data-travel-info-bookmark>
+        <span class="travel-info-bookmark-icon" aria-hidden="true"></span>
+        <span class="travel-info-bookmark-label"
+              th:text="${info.bookmarked} ? '저장됨' : '저장'">저장</span>
+      </button>
+
       <div class="travel-info-thumbnail">
         <img th:if="${info.thumbnailUrl != null and !#strings.isEmpty(info.thumbnailUrl)}"
              th:src="@{${info.thumbnailUrl}}"

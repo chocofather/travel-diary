@@ -19,6 +19,7 @@ class TravelInfoPublicUiContractTest {
                 .contains("layout/main :: layout")
                 .contains("/css/travel-info.css")
                 .contains("/js/travel-info-list.js")
+                .contains("/js/travel-info-bookmark.js")
                 .contains("method=\"get\"", "action=\"/travel-info\"")
                 .contains("role=\"search\"", "data-travel-info-search")
                 .contains("type=\"search\"", "name=\"keyword\"", "maxlength=\"100\"")
@@ -58,7 +59,12 @@ class TravelInfoPublicUiContractTest {
                 .contains("th:text=\"|‘${keyword}’|\"")
                 .doesNotContain("th:utext=\"${keyword}\"")
                 .contains("class=\"travel-info-card-link\"")
-                .contains("@{/travel-info/{id}(id=${info.id},returnUrl=${listUrl})}");
+                .contains("data-travel-info-bookmark")
+                .contains("data-bookmark-url", "info.bookmarked")
+                .contains("aria-pressed", "여행정보 저장 취소")
+                .contains("travel-info-bookmark-icon")
+                .contains("@{/travel-info/{id}(id=${info.id},returnUrl=${listUrl})}")
+                .doesNotContain("♡", "♥");
     }
 
     @Test
@@ -81,6 +87,10 @@ class TravelInfoPublicUiContractTest {
                 .contains(".travel-info-search-clear", ".travel-info-search-control:focus-within")
                 .contains(".travel-info-category-pills .travel-info-filter-pill.is-active::after")
                 .contains(".travel-info-card-link::after")
+                .contains(".travel-info-card-bookmark")
+                .contains("url('/uploads/icons/bookmark.png')")
+                .contains("url('/uploads/icons/bookmark2.png')")
+                .contains("z-index: 2")
                 .contains("position: absolute", "inset: 0")
                 .contains(".travel-info-card:focus-within")
                 .doesNotContain("/images/default.png");
@@ -106,14 +116,42 @@ class TravelInfoPublicUiContractTest {
                 .contains("class=\"travel-info-detail-content rich-text-content\"")
                 .contains("th:utext=\"${travelInfo.content}\"")
                 .contains("th:href=\"${listUrl}\"", "목록으로")
-                .doesNotContain("thumbnail", "info_images", "travelInfo.id", "userId", "categoryId");
+                .contains("/js/travel-info-bookmark.js")
+                .contains("travel-info-detail-bookmark", "travelInfo.bookmarked")
+                .contains("저장됨", "저장")
+                .doesNotContain("thumbnail", "info_images", "userId", "categoryId", "♡", "♥");
         assertThat(css)
                 .contains("width: min(960px, calc(100% - 40px))")
                 .contains("overflow-wrap: anywhere")
                 .contains(".travel-info-detail-content img")
                 .contains("max-width: 100%", "height: auto")
+                .contains("url('/uploads/icons/bookmark.png')")
+                .contains("url('/uploads/icons/bookmark2.png')")
                 .contains("@media (max-width: 720px)")
                 .contains("@media (max-width: 430px)");
+    }
+
+    @Test
+    void travelInfoBookmarkJavascriptUsesDelegationCsrfAndPessimisticStateUpdate()
+            throws IOException {
+        String javascript = resource("/static/js/travel-info-bookmark.js");
+
+        assertThat(javascript)
+                .contains("document.addEventListener('click'")
+                .contains("event.target.closest(BOOKMARK_SELECTOR)")
+                .contains("event.preventDefault()", "event.stopPropagation()")
+                .contains("window.location.assign(LOGIN_URL)")
+                .contains("const LOGIN_URL = '/login'")
+                .doesNotContain("redirect=")
+                .contains("button.disabled = true", "button.disabled = false")
+                .contains("bookmarked ? 'DELETE' : 'POST'")
+                .contains("meta[name=\"_csrf\"]", "meta[name=\"_csrf_header\"]")
+                .contains("[csrfHeader]: csrfToken")
+                .contains("if (!response.ok)")
+                .contains("updateButton(button, !bookmarked)")
+                .contains("aria-pressed", "aria-label")
+                .doesNotContain("♡", "♥", "icon.textContent")
+                .doesNotContain("AbortController");
     }
 
     @Test

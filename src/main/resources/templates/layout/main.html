@@ -5,6 +5,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="referrer" content="no-referrer-when-downgrade">
+    <meta name="_csrf"
+          th:if="${#authentication.principal != null and #authentication.principal != 'anonymousUser' and _csrf != null}"
+          th:content="${_csrf.token}">
+    <meta name="_csrf_header"
+          th:if="${#authentication.principal != null and #authentication.principal != 'anonymousUser' and _csrf != null}"
+          th:content="${_csrf.headerName}">
     <title th:text="${pageTitle} ?: '여행일기'">여행일기</title>
 
     <!-- 공통 CSS -->

@@ -305,6 +305,68 @@
     transform: translateY(-3px);
 }
 
+.travel-info-card-bookmark {
+    position: absolute;
+    z-index: 2;
+    top: 12px;
+    right: 12px;
+    display: inline-grid;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    place-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.86);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.94);
+    color: #475569;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.18);
+    transition: color 160ms ease, background-color 160ms ease, transform 160ms ease;
+}
+
+.travel-info-card-bookmark:hover {
+    transform: scale(1.06);
+}
+
+.travel-info-card-bookmark.is-bookmarked {
+    border-color: #f3c64f;
+    background: #fffaf0;
+}
+
+.travel-info-card-bookmark:focus-visible {
+    outline: 3px solid rgba(13, 148, 136, 0.4);
+    outline-offset: 2px;
+}
+
+.travel-info-card-bookmark:disabled {
+    cursor: wait;
+    opacity: 0.62;
+    transform: none;
+}
+
+.travel-info-card-bookmark .travel-info-bookmark-icon {
+    display: block;
+    width: 27px;
+    height: 27px;
+    background: url('/uploads/icons/bookmark.png') center / contain no-repeat;
+}
+
+.travel-info-card-bookmark.is-bookmarked .travel-info-bookmark-icon {
+    background-image: url('/uploads/icons/bookmark2.png');
+}
+
+.travel-info-card-bookmark .travel-info-bookmark-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
 .travel-info-thumbnail {
     width: 100%;
     aspect-ratio: 16 / 9;

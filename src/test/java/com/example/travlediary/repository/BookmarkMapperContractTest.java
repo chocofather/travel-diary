@@ -47,7 +47,8 @@ class BookmarkMapperContractTest {
     void contentBookmarkMutationsAreTransactionalAndSchemaReferenceHasUniqueKey()
             throws NoSuchMethodException, IOException {
         for (String method : new String[]{
-                "bookmarkPost", "unbookmarkPost", "bookmarkCourse", "unbookmarkCourse"}) {
+                "bookmarkPost", "unbookmarkPost", "bookmarkCourse", "unbookmarkCourse",
+                "bookmarkTravelInfo", "unbookmarkTravelInfo"}) {
             Transactional transactional = ContentBookmarkService.class
                     .getMethod(method, Long.class, Long.class)
                     .getAnnotation(Transactional.class);
@@ -57,6 +58,25 @@ class BookmarkMapperContractTest {
         assertThat(resourceText("docs/db/travel_diary_schema_reference.md"))
                 .contains("uq_bookmarks_user_type_target")
                 .contains("(`user_id`,`target_type`,`target_id`)");
+    }
+
+    @Test
+    void travelInfoUsesExistingGenericTableWithBoundedBatchLookupAndTargetCleanup()
+            throws IOException {
+        String bookmarkXml = resource("/mapper/BookmarkMapper.xml");
+        String targetTypes = resourceText(
+                "src/main/java/com/example/travlediary/model/BookmarkTargetType.java");
+
+        assertThat(targetTypes).contains("TRAVEL_INFO");
+        assertThat(bookmarkXml)
+                .contains("<select id=\"findBookmarkedTargetIds\"")
+                .contains("user_id = #{userId}", "target_type = #{targetType}")
+                .contains("<when test=\"targetIds != null and !targetIds.isEmpty()\">")
+                .contains("AND target_id IN")
+                .contains("<foreach collection=\"targetIds\"")
+                .contains("#{targetId}")
+                .contains("<otherwise>", "AND 1 = 0")
+                .contains("<delete id=\"deleteByTarget\"");
     }
 
     @Test
@@ -79,6 +99,26 @@ class BookmarkMapperContractTest {
                 .contains("/js/content-bookmarks.js")
                 .contains("/bookmarks/courses/{id}")
                 .contains("content-bookmark-button");
+    }
+
+    @Test
+    void csrfProtectionIsLimitedToTravelInfoBookmarkMutations() throws IOException {
+        String security = resourceText(
+                "src/main/java/com/example/travlediary/config/SecurityConfig.java");
+        String layout = resource("/templates/layout/main.html");
+        String javascript = resource("/static/js/travel-info-bookmark.js");
+
+        assertThat(security)
+                .contains("requireCsrfProtectionMatcher")
+                .contains("^/bookmarks/travel-info/[0-9]+$")
+                .contains("HttpMethod.POST.name()", "HttpMethod.DELETE.name()")
+                .doesNotContain("csrf(AbstractHttpConfigurer::disable)");
+        assertThat(layout)
+                .contains("name=\"_csrf\"", "name=\"_csrf_header\"")
+                .contains("${_csrf.token}", "${_csrf.headerName}");
+        assertThat(javascript)
+                .contains("[csrfHeader]: csrfToken")
+                .contains("credentials: 'same-origin'");
     }
 
     private String resource(String path) throws IOException {

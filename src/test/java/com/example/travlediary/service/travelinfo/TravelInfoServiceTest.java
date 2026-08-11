@@ -5,12 +5,14 @@ import com.example.travlediary.dto.InfoPeriodForm;
 import com.example.travlediary.dto.TravelInfoForm;
 import com.example.travlediary.dto.TravelInfoDetailDto;
 import com.example.travlediary.dto.TravelInfoListItemDto;
+import com.example.travlediary.model.Bookmark;
 import com.example.travlediary.model.InfoCategory;
 import com.example.travlediary.model.InfoImage;
 import com.example.travlediary.model.InfoPeriod;
 import com.example.travlediary.model.TravelInfo;
 import com.example.travlediary.model.TravelInfoContentType;
 import com.example.travlediary.model.TravelInfoScope;
+import com.example.travlediary.repository.bookmark.BookmarkMapper;
 import com.example.travlediary.repository.category.InfoCategoryMapper;
 import com.example.travlediary.repository.travelinfo.TravelInfoMapper;
 import com.example.travlediary.service.file.FileUploadService;
@@ -32,6 +34,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -49,6 +52,8 @@ class TravelInfoServiceTest {
     @Mock
     private TravelInfoMapper travelInfoMapper;
     @Mock
+    private BookmarkMapper bookmarkMapper;
+    @Mock
     private InfoCategoryMapper infoCategoryMapper;
     @Mock
     private FileUploadService fileUploadService;
@@ -58,7 +63,8 @@ class TravelInfoServiceTest {
     @BeforeEach
     void setUp() {
         travelInfoService = new TravelInfoService(
-                travelInfoMapper, infoCategoryMapper, new PostContentSanitizer(), fileUploadService);
+                travelInfoMapper, bookmarkMapper, infoCategoryMapper,
+                new PostContentSanitizer(), fileUploadService);
     }
 
     @AfterEach
@@ -197,6 +203,67 @@ class TravelInfoServiceTest {
                 null, null, List.of(), keyword, koreanPattern, 0L, 12);
         verify(travelInfoMapper).countPublicList(
                 null, null, List.of(), keyword, koreanPattern);
+    }
+
+    @Test
+    void populatesLoggedInPublicListBookmarksWithOneBoundedQuery() {
+        TravelInfoListItemDto first = new TravelInfoListItemDto();
+        first.setId(10L);
+        TravelInfoListItemDto second = new TravelInfoListItemDto();
+        second.setId(20L);
+        TravelInfoListItemDto duplicate = new TravelInfoListItemDto();
+        duplicate.setId(10L);
+        when(bookmarkMapper.findBookmarkedTargetIds(
+                7L, "TRAVEL_INFO", List.of(10L, 20L)))
+                .thenReturn(Set.of(20L));
+
+        travelInfoService.populatePublicListBookmarks(
+                List.of(first, second, duplicate), 7L);
+
+        assertThat(first.isBookmarked()).isFalse();
+        assertThat(second.isBookmarked()).isTrue();
+        assertThat(duplicate.isBookmarked()).isFalse();
+        verify(bookmarkMapper).findBookmarkedTargetIds(
+                7L, "TRAVEL_INFO", List.of(10L, 20L));
+    }
+
+    @Test
+    void guestOrEmptyPublicListDoesNotQueryBookmarks() {
+        TravelInfoListItemDto item = new TravelInfoListItemDto();
+        item.setId(10L);
+        item.setBookmarked(true);
+
+        travelInfoService.populatePublicListBookmarks(List.of(item), null);
+        travelInfoService.populatePublicListBookmarks(List.of(), 7L);
+
+        assertThat(item.isBookmarked()).isFalse();
+        verifyNoInteractions(bookmarkMapper);
+    }
+
+    @Test
+    void populatesPublicDetailBookmarkOnlyForLoggedInUserWithoutChangingViews() {
+        TravelInfoDetailDto detail = publicDetail(TravelInfoContentType.GENERAL);
+        int existingViews = detail.getViews();
+        when(bookmarkMapper.findByUserAndTarget(7L, "TRAVEL_INFO", 10L))
+                .thenReturn(new Bookmark());
+
+        travelInfoService.populatePublicDetailBookmark(detail, 7L);
+
+        assertThat(detail.isBookmarked()).isTrue();
+        assertThat(detail.getViews()).isEqualTo(existingViews);
+        verify(bookmarkMapper).findByUserAndTarget(7L, "TRAVEL_INFO", 10L);
+        verify(travelInfoMapper, never()).incrementPublicViews(any());
+    }
+
+    @Test
+    void guestPublicDetailDoesNotQueryBookmarks() {
+        TravelInfoDetailDto detail = publicDetail(TravelInfoContentType.GENERAL);
+        detail.setBookmarked(true);
+
+        travelInfoService.populatePublicDetailBookmark(detail, null);
+
+        assertThat(detail.isBookmarked()).isFalse();
+        verifyNoInteractions(bookmarkMapper);
     }
 
     @Test
@@ -598,7 +665,9 @@ class TravelInfoServiceTest {
 
         travelInfoService.delete(10L);
 
-        verify(travelInfoMapper).deleteTravelInfo(10L);
+        var deleteOrder = org.mockito.Mockito.inOrder(bookmarkMapper, travelInfoMapper);
+        deleteOrder.verify(bookmarkMapper).deleteByTarget("TRAVEL_INFO", 10L);
+        deleteOrder.verify(travelInfoMapper).deleteTravelInfo(10L);
         verify(travelInfoMapper, never()).deletePeriodsByInfoId(any());
         verify(travelInfoMapper, never()).deleteMainImagesByInfoId(any());
         verify(fileUploadService, never()).deleteTravelInfoThumbnail(any());

@@ -211,6 +211,15 @@
           AND ic.is_visible = 1
     </select>
 
+    <select id="findPublicBookmarkTargetForUpdate" resultType="long">
+        SELECT ti.id
+        FROM travel_info ti
+        JOIN info_categories ic ON ic.id = ti.category_id
+        WHERE ti.id = #{id}
+          AND ic.is_visible = 1
+        FOR UPDATE
+    </select>
+
     <select id="findById" parameterType="long" resultMap="TravelInfoResultMap">
         SELECT id, title, content, scope, content_type, created_at, updated_at,
                category_id, views, user_id

@@ -53,4 +53,22 @@ public class ContentBookmarkController {
         contentBookmarkService.unbookmarkCourse(courseId, userDetails.getId());
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/travel-info/{infoId:\\d+}")
+    public ResponseEntity<Void> bookmarkTravelInfo(
+            @PathVariable Long infoId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        contentBookmarkService.bookmarkTravelInfo(infoId, userDetails.getId());
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/travel-info/{infoId:\\d+}")
+    public ResponseEntity<Void> unbookmarkTravelInfo(
+            @PathVariable Long infoId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        contentBookmarkService.unbookmarkTravelInfo(infoId, userDetails.getId());
+        return ResponseEntity.noContent().build();
+    }
 }

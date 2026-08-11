@@ -17,7 +17,20 @@
       <p class="travel-info-detail-kicker">여행정보</p>
       <span class="travel-info-detail-category"
             th:text="${travelInfo.categoryName}">계절여행</span>
-      <h1 id="travel-info-detail-title" th:text="${travelInfo.title}">여행정보 제목</h1>
+      <div class="travel-info-detail-title-row">
+        <h1 id="travel-info-detail-title" th:text="${travelInfo.title}">여행정보 제목</h1>
+        <button type="button"
+                class="travel-info-bookmark-button travel-info-detail-bookmark"
+                th:classappend="${travelInfo.bookmarked} ? ' is-bookmarked'"
+                th:data-bookmark-url="@{/bookmarks/travel-info/{id}(id=${travelInfo.id})}"
+                th:data-bookmarked="${travelInfo.bookmarked}"
+                th:attr="aria-pressed=${travelInfo.bookmarked},aria-label=${travelInfo.bookmarked} ? '여행정보 저장 취소' : '여행정보 저장'"
+                data-travel-info-bookmark>
+          <span class="travel-info-bookmark-icon" aria-hidden="true"></span>
+          <span class="travel-info-bookmark-label"
+                th:text="${travelInfo.bookmarked} ? '저장됨' : '저장'">저장</span>
+        </button>
+      </div>
 
       <div class="travel-info-detail-type">
         <span th:text="${travelInfo.scope.name() == 'DOMESTIC'} ? '국내' : '해외'">국내</span>
@@ -63,5 +76,6 @@
       <a class="travel-info-detail-back" th:href="${listUrl}">목록으로</a>
     </footer>
   </article>
+  <script src="/js/travel-info-bookmark.js" defer></script>
 </th:block>
 </html>

@@ -41,6 +41,8 @@ public interface TravelInfoMapper {
 
     TravelInfoDetailDto findPublicDetailById(@Param("id") Long id);
 
+    Long findPublicBookmarkTargetForUpdate(@Param("id") Long id);
+
     TravelInfo findById(Long id);
 
     TravelInfo findByIdForUpdate(Long id);

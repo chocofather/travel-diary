@@ -33,13 +33,78 @@
     font-weight: 800;
 }
 
+.travel-info-detail-title-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+}
+
 .travel-info-detail h1 {
+    min-width: 0;
+    flex: 1;
     margin: 16px 0 13px;
     overflow-wrap: anywhere;
     font-size: clamp(30px, 5vw, 46px);
     font-weight: 800;
     letter-spacing: -0.045em;
     line-height: 1.25;
+}
+
+.travel-info-detail-bookmark {
+    display: inline-flex;
+    min-width: 104px;
+    min-height: 44px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    margin-top: 17px;
+    padding: 0 15px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    background: #fff;
+    color: #475569;
+    font-size: 14px;
+    font-weight: 750;
+    cursor: pointer;
+    transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease;
+}
+
+.travel-info-detail-bookmark:hover {
+    border-color: #94a3b8;
+    background: #f8fafc;
+}
+
+.travel-info-detail-bookmark.is-bookmarked {
+    border-color: #f3c64f;
+    background: #fffaf0;
+}
+
+.travel-info-detail-bookmark:focus-visible {
+    outline: 3px solid rgba(13, 148, 136, 0.3);
+    outline-offset: 3px;
+}
+
+.travel-info-detail-bookmark:disabled {
+    cursor: wait;
+    opacity: 0.58;
+}
+
+.travel-info-detail-bookmark .travel-info-bookmark-icon {
+    display: block;
+    width: 24px;
+    height: 24px;
+    background: url('/uploads/icons/bookmark.png') center / contain no-repeat;
+    transition: transform 160ms ease;
+}
+
+.travel-info-detail-bookmark:hover .travel-info-bookmark-icon {
+    transform: scale(1.08);
+}
+
+.travel-info-detail-bookmark.is-bookmarked .travel-info-bookmark-icon {
+    background-image: url('/uploads/icons/bookmark2.png');
 }
 
 .travel-info-detail-type {
@@ -174,6 +239,15 @@
 
     .travel-info-detail-header {
         padding-bottom: 24px;
+    }
+
+    .travel-info-detail-title-row {
+        flex-direction: column;
+        gap: 0;
+    }
+
+    .travel-info-detail-bookmark {
+        margin: 0 0 16px;
     }
 
     .travel-info-detail-content {

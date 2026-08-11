@@ -4,6 +4,7 @@ import com.example.travlediary.model.Bookmark;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.util.List;
 import java.util.Set;
 
 @Mapper
@@ -33,6 +34,13 @@ public interface BookmarkMapper {
     // 유저가 북마크한 특정 타입(예: 여행지) ID 목록 반환
     Set<Long> findBookmarkedTargetIdsByUserId(@Param("userId") Long userId,
                                               @Param("targetType") String targetType);
+
+    Set<Long> findBookmarkedTargetIds(@Param("userId") Long userId,
+                                      @Param("targetType") String targetType,
+                                      @Param("targetIds") List<Long> targetIds);
+
+    int deleteByTarget(@Param("targetType") String targetType,
+                       @Param("targetId") Long targetId);
 
     // (원한다면) 유저가 북마크한 모든 대상 타입+ID 조회
     // List<Bookmark> findAllByUserId(Long userId);

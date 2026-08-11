@@ -109,6 +109,21 @@ class TravelInfoMapperContractTest {
     }
 
     @Test
+    void publicBookmarkTargetLocksOnlyVisibleTravelInfoWithoutIncrementingViews()
+            throws IOException {
+        String query = between(mapper(),
+                "<select id=\"findPublicBookmarkTargetForUpdate\"", "</select>");
+
+        assertThat(query)
+                .contains("SELECT ti.id")
+                .contains("JOIN info_categories ic ON ic.id = ti.category_id")
+                .contains("WHERE ti.id = #{id}")
+                .contains("ic.is_visible = 1")
+                .contains("FOR UPDATE")
+                .doesNotContain("views", "content", "SET ti.");
+    }
+
+    @Test
     void publicViewIncrementIsAtomicVisibleOnlyAndPreservesContentUpdatedAt() throws IOException {
         String update = between(mapper(), "<update id=\"incrementPublicViews\"", "</update>");
 
