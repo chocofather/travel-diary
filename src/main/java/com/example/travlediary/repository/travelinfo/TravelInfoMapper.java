@@ -27,6 +27,7 @@ public interface TravelInfoMapper {
             @Param("categoryIds") List<Long> categoryIds,
             @Param("keywordPattern") String keywordPattern,
             @Param("koreanPattern") String koreanPattern,
+            @Param("sort") String sort,
             @Param("offset") long offset,
             @Param("limit") int limit);
 

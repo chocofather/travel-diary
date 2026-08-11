@@ -55,6 +55,15 @@ class TravelInfoPublicUiContractTest {
                 .contains("travel-info-thumbnail-placeholder", "등록된 이미지가 없습니다")
                 .contains("travel-info-period", "info.startDate", "info.endDate")
                 .contains("travel-info-pagination", "keyword=${keyword}", "page=${pageNumber}")
+                .contains("class=\"travel-info-sort\"", "data-travel-info-sort")
+                .contains("aria-label=\"여행정보 정렬\"")
+                .contains("data-sort-value=\"latest\"", "최신순")
+                .contains("data-sort-value=\"views\"", "조회순")
+                .contains("th:classappend=\"${sort == 'latest'} ? ' is-active'\"")
+                .contains("th:classappend=\"${sort == 'views'} ? ' is-active'\"")
+                .contains("aria-current=${sort == 'latest'}")
+                .contains("aria-current=${sort == 'views'}")
+                .contains("sort=${sort == 'views' ? sort : null}")
                 .contains("th:if=\"${keyword != null}\"")
                 .contains("th:text=\"|‘${keyword}’|\"")
                 .doesNotContain("th:utext=\"${keyword}\"")
@@ -64,7 +73,7 @@ class TravelInfoPublicUiContractTest {
                 .contains("aria-pressed", "여행정보 저장 취소")
                 .contains("travel-info-bookmark-icon")
                 .contains("@{/travel-info/{id}(id=${info.id},returnUrl=${listUrl})}")
-                .doesNotContain("♡", "♥");
+                .doesNotContain("♡", "♥", "<select", "travel-info-sort-select");
     }
 
     @Test
@@ -88,6 +97,8 @@ class TravelInfoPublicUiContractTest {
                 .contains(".travel-info-category-pills .travel-info-filter-pill.is-active::after")
                 .contains(".travel-info-card-link::after")
                 .contains(".travel-info-card-bookmark")
+                .contains(".travel-info-sort", ".travel-info-sort-option")
+                .contains(".travel-info-sort-option.is-active")
                 .contains("url('/uploads/icons/bookmark.png')")
                 .contains("url('/uploads/icons/bookmark2.png')")
                 .contains("z-index: 2")
@@ -163,6 +174,8 @@ class TravelInfoPublicUiContractTest {
                 .contains("const SINGLE_FILTER_NAMES = ['scope']")
                 .contains("const CATEGORY_FILTER_NAME = 'categoryId'")
                 .contains("const KEYWORD_PARAMETER_NAME = 'keyword'")
+                .contains("const SORT_PARAMETER_NAME = 'sort'")
+                .contains("const SORT_VIEWS = 'views'")
                 .contains("const SEARCH_DEBOUNCE_MS = 200")
                 .contains("const KEYWORD_MAX_LENGTH = 100")
                 .contains("const url = new URL(selectedUrl.href)")
@@ -173,6 +186,13 @@ class TravelInfoPublicUiContractTest {
                 .contains("selectedCategoryIds.has(value)")
                 .contains("selectedCategoryIds.delete(value)")
                 .contains("selectedCategoryIds.clear()")
+                .contains("const sortOption = event.target.closest(SORT_SELECTOR)")
+                .contains("loadResults(sortUrl(sortOption), 'push')")
+                .contains("control.dataset.sortValue")
+                .contains("url.searchParams.delete('page')")
+                .contains("url.searchParams.delete(SORT_PARAMETER_NAME)")
+                .contains("url.searchParams.set(SORT_PARAMETER_NAME, SORT_VIEWS)")
+                .contains("syncSortUi(url)")
                 .contains("pill.setAttribute('aria-pressed', String(isActive))")
                 .contains("fetch(")
                 .contains("'X-Requested-With': 'XMLHttpRequest'")
@@ -196,6 +216,7 @@ class TravelInfoPublicUiContractTest {
                 .contains(".travel-info-pagination a")
                 .contains("replaceResults(await response.text())")
                 .contains("window.location.assign(url.href)");
+        assertThat(javascript).doesNotContain("document.addEventListener('change'");
     }
 
     @Test
@@ -204,10 +225,11 @@ class TravelInfoPublicUiContractTest {
         String fragment = resource("/templates/travel-info/fragments/list-results.html");
 
         assertThat(template)
-                .contains("@{/travel-info(keyword=${keyword},contentType=${contentType},categoryId=${categoryIds},size=${pageSize})}")
+                .contains("sort=${sort == 'views' ? sort : null}")
                 .contains("categoryId=${categoryIds}");
         assertThat(fragment)
                 .contains("keyword=${keyword},scope=${scope},contentType=${contentType},categoryId=${categoryIds}")
+                .contains("sort=${sort == 'views' ? sort : null}")
                 .contains("page=${currentPage - 1}")
                 .contains("page=${pageNumber}")
                 .contains("page=${currentPage + 1}");

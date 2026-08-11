@@ -54,9 +54,13 @@ class TravelInfoMapperContractTest {
                 .doesNotContain("ti.category_id = #{categoryId}");
         assertThat(list)
                 .contains("<include refid=\"PublicListFilters\"/>")
+                .contains("<choose>", "<when test=\"sort == 'views'\">")
+                .contains("ORDER BY ti.views DESC, ti.created_at DESC, ti.id DESC")
+                .contains("<otherwise>")
                 .contains("ORDER BY ti.created_at DESC, ti.id DESC")
                 .contains("LIMIT #{limit}")
-                .contains("OFFSET #{offset}");
+                .contains("OFFSET #{offset}")
+                .doesNotContain("${sort}");
         assertThat(count)
                 .contains("SELECT COUNT(*)")
                 .contains("JOIN info_categories ic ON ic.id = ti.category_id")

@@ -6,9 +6,12 @@
     const SEARCH_FORM_SELECTOR = '[data-travel-info-search]';
     const SEARCH_INPUT_SELECTOR = '[data-travel-info-search-input]';
     const SEARCH_CLEAR_SELECTOR = '[data-travel-info-search-clear]';
+    const SORT_SELECTOR = '[data-travel-info-sort]';
     const SINGLE_FILTER_NAMES = ['scope'];
     const CATEGORY_FILTER_NAME = 'categoryId';
     const KEYWORD_PARAMETER_NAME = 'keyword';
+    const SORT_PARAMETER_NAME = 'sort';
+    const SORT_VIEWS = 'views';
     const KEYWORD_MAX_LENGTH = 100;
     const SEARCH_DEBOUNCE_MS = 200;
     let activeController = null;
@@ -37,6 +40,11 @@
         }
         if (url.searchParams.get('size') === '12') {
             url.searchParams.delete('size');
+        }
+        if (url.searchParams.get(SORT_PARAMETER_NAME) === SORT_VIEWS) {
+            url.searchParams.set(SORT_PARAMETER_NAME, SORT_VIEWS);
+        } else {
+            url.searchParams.delete(SORT_PARAMETER_NAME);
         }
         return url;
     }
@@ -95,6 +103,17 @@
         selectedCategoryIds.forEach((categoryId) => {
             url.searchParams.append(CATEGORY_FILTER_NAME, categoryId);
         });
+        url.searchParams.delete('page');
+        return cleanUrl(url);
+    }
+
+    function sortUrl(control) {
+        const url = new URL(selectedUrl.href);
+        if (control.dataset.sortValue === SORT_VIEWS) {
+            url.searchParams.set(SORT_PARAMETER_NAME, SORT_VIEWS);
+        } else {
+            url.searchParams.delete(SORT_PARAMETER_NAME);
+        }
         url.searchParams.delete('page');
         return cleanUrl(url);
     }
@@ -161,9 +180,36 @@
         }
     }
 
+    function syncSortUi(url) {
+        const options = Array.from(document.querySelectorAll(SORT_SELECTOR));
+        const activeSort = url.searchParams.get(SORT_PARAMETER_NAME) === SORT_VIEWS
+            ? SORT_VIEWS
+            : 'latest';
+        options.forEach((option) => {
+            const isActive = option.dataset.sortValue === activeSort;
+            option.classList.toggle('is-active', isActive);
+            if (isActive) {
+                option.setAttribute('aria-current', 'true');
+            } else {
+                option.removeAttribute('aria-current');
+            }
+
+            const nextUrl = new URL(url.href);
+            if (option.dataset.sortValue === SORT_VIEWS) {
+                nextUrl.searchParams.set(SORT_PARAMETER_NAME, SORT_VIEWS);
+            } else {
+                nextUrl.searchParams.delete(SORT_PARAMETER_NAME);
+            }
+            nextUrl.searchParams.delete('page');
+            cleanUrl(nextUrl);
+            option.href = nextUrl.pathname + nextUrl.search;
+        });
+    }
+
     function syncUi(url) {
         syncFilterUi(url);
         syncSearchUi(url);
+        syncSortUi(url);
     }
 
     function clearSearchTimer() {
@@ -271,7 +317,8 @@
         const filter = event.target.closest(FILTER_SELECTOR);
         const reset = event.target.closest(RESET_SELECTOR);
         const pageLink = event.target.closest(PAGINATION_LINK_SELECTOR);
-        const anchor = filter || reset || pageLink;
+        const sortOption = event.target.closest(SORT_SELECTOR);
+        const anchor = filter || reset || pageLink || sortOption;
 
         if (!anchor || !canIntercept(event, anchor)) {
             return;
@@ -289,6 +336,11 @@
                 ? categoryFilterUrl(filter)
                 : filterUrl(filter);
             loadResults(url, 'push');
+            return;
+        }
+        if (sortOption) {
+            clearSearchTimer();
+            loadResults(sortUrl(sortOption), 'push');
             return;
         }
         clearSearchTimer();

@@ -35,8 +35,10 @@ public class TravelInfoController {
     private static final int MAX_PAGE_SIZE = 48;
     private static final String LIST_PATH = "/travel-info";
     private static final String FRAGMENT_VIEW = "travel-info/fragments/list-results :: results";
+    private static final String SORT_LATEST = "latest";
+    private static final String SORT_VIEWS = "views";
     private static final Set<String> ALLOWED_RETURN_QUERY_PARAMETERS = Set.of(
-            "keyword", "scope", "contentType", "categoryId", "page", "size");
+            "keyword", "scope", "contentType", "categoryId", "sort", "page", "size");
 
     private final TravelInfoService travelInfoService;
     private final InfoCategoryService infoCategoryService;
@@ -46,6 +48,7 @@ public class TravelInfoController {
                        @RequestParam(required = false) String scope,
                        @RequestParam(required = false) String contentType,
                        @RequestParam(name = "categoryId", required = false) List<String> categoryIdValues,
+                       @RequestParam(required = false) String sort,
                        @RequestParam(defaultValue = "1") int page,
                        @RequestParam(defaultValue = "12") int size,
                        @RequestHeader(value = "X-Requested-With", required = false) String requestedWith,
@@ -55,12 +58,14 @@ public class TravelInfoController {
         TravelInfoScope safeScope = parseEnum(scope, TravelInfoScope.class);
         TravelInfoContentType safeContentType = parseEnum(contentType, TravelInfoContentType.class);
         List<Long> safeCategoryIds = parsePositiveLongs(categoryIdValues);
+        String safeSort = normalizeSort(sort);
         int safePage = Math.max(page, 1);
         int safeSize = normalizeSize(size);
         long offset = (long) (safePage - 1) * safeSize;
 
         List<TravelInfoListItemDto> travelInfoList = travelInfoService.getPublicList(
-                safeScope, safeContentType, safeCategoryIds, safeKeyword, offset, safeSize);
+                safeScope, safeContentType, safeCategoryIds, safeKeyword,
+                safeSort, offset, safeSize);
         Long currentUserId = userDetails == null ? null : userDetails.getId();
         travelInfoService.populatePublicListBookmarks(travelInfoList, currentUserId);
         long totalCount = travelInfoService.countPublicList(
@@ -77,6 +82,7 @@ public class TravelInfoController {
         model.addAttribute("scope", safeScope);
         model.addAttribute("contentType", safeContentType);
         model.addAttribute("categoryIds", safeCategoryIds);
+        model.addAttribute("sort", safeSort);
         model.addAttribute("currentPage", safePage);
         model.addAttribute("pageSize", safeSize);
         model.addAttribute("totalPages", totalPages);
@@ -85,7 +91,7 @@ public class TravelInfoController {
         model.addAttribute("pageEnd", pageEnd);
         model.addAttribute("listUrl", buildListUrl(
                 safeKeyword, safeScope, safeContentType,
-                safeCategoryIds, safePage, safeSize));
+                safeCategoryIds, safeSort, safePage, safeSize));
 
         if ("XMLHttpRequest".equals(requestedWith)) {
             return FRAGMENT_VIEW;
@@ -165,12 +171,13 @@ public class TravelInfoController {
                     query, "contentType", TravelInfoContentType.class);
             String safeKeyword = parseReturnKeyword(query);
             List<Long> safeCategoryIds = parseReturnCategoryIds(query.get("categoryId"));
+            String safeSort = parseReturnSort(query);
             int safePage = parseReturnPositiveInt(query, "page", 1, Integer.MAX_VALUE);
             int safeSize = parseReturnPositiveInt(
                     query, "size", DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
             return buildListUrl(
                     safeKeyword, safeScope, safeContentType,
-                    safeCategoryIds, safePage, safeSize);
+                    safeCategoryIds, safeSort, safePage, safeSize);
         } catch (IllegalArgumentException ignored) {
             return LIST_PATH;
         }
@@ -180,6 +187,7 @@ public class TravelInfoController {
                                 TravelInfoScope scope,
                                 TravelInfoContentType contentType,
                                 List<Long> categoryIds,
+                                String sort,
                                 int page,
                                 int size) {
         UriComponentsBuilder builder = UriComponentsBuilder.fromPath(LIST_PATH);
@@ -195,6 +203,9 @@ public class TravelInfoController {
         if (categoryIds != null) {
             categoryIds.forEach(categoryId -> builder.queryParam("categoryId", categoryId));
         }
+        if (SORT_VIEWS.equals(sort)) {
+            builder.queryParam("sort", SORT_VIEWS);
+        }
         if (page > 1) {
             builder.queryParam("page", page);
         }
@@ -202,6 +213,24 @@ public class TravelInfoController {
             builder.queryParam("size", size);
         }
         return builder.build().encode().toUriString();
+    }
+
+    private String parseReturnSort(MultiValueMap<String, String> query) {
+        String value = singleReturnValue(query, "sort");
+        if (value == null || value.isBlank() || SORT_LATEST.equals(value)) {
+            return SORT_LATEST;
+        }
+        if (SORT_VIEWS.equals(value)) {
+            return SORT_VIEWS;
+        }
+        throw new IllegalArgumentException("Invalid return URL sort");
+    }
+
+    private String normalizeSort(String sort) {
+        if (sort == null) {
+            return SORT_LATEST;
+        }
+        return SORT_VIEWS.equals(sort.strip()) ? SORT_VIEWS : SORT_LATEST;
     }
 
     private String parseReturnKeyword(MultiValueMap<String, String> query) {

@@ -173,7 +173,14 @@
               LIMIT 1
           )
         <include refid="PublicListFilters"/>
-        ORDER BY ti.created_at DESC, ti.id DESC
+        <choose>
+            <when test="sort == 'views'">
+                ORDER BY ti.views DESC, ti.created_at DESC, ti.id DESC
+            </when>
+            <otherwise>
+                ORDER BY ti.created_at DESC, ti.id DESC
+            </otherwise>
+        </choose>
         LIMIT #{limit}
         OFFSET #{offset}
     </select>

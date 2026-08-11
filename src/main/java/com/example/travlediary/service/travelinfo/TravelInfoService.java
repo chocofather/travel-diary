@@ -61,12 +61,13 @@ public class TravelInfoService {
                                                       TravelInfoContentType contentType,
                                                       List<Long> categoryIds,
                                                       String keyword,
+                                                      String sort,
                                                       long offset,
                                                       int limit) {
         return travelInfoMapper.findPublicList(
                 scope, contentType, categoryIds,
                 TravelInfoSearchKeyword.toLikeLiteral(keyword),
-                TravelInfoSearchKeyword.toKoreanPrefixRegex(keyword), offset, limit);
+                TravelInfoSearchKeyword.toKoreanPrefixRegex(keyword), sort, offset, limit);
     }
 
     @Transactional(readOnly = true)

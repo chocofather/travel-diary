@@ -146,7 +146,7 @@ class TravelInfoServiceTest {
         String keywordPattern = "100!%!_!!!!test";
         when(travelInfoMapper.findPublicList(
                 TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL,
-                categoryIds, keywordPattern, null, 12L, 12))
+                categoryIds, keywordPattern, null, "views", 12L, 12))
                 .thenReturn(List.of(item));
         when(travelInfoMapper.countPublicList(
                 TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL,
@@ -155,7 +155,7 @@ class TravelInfoServiceTest {
 
         assertThat(travelInfoService.getPublicList(
                 TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL,
-                categoryIds, keyword, 12L, 12))
+                categoryIds, keyword, "views", 12L, 12))
                 .containsExactly(item);
         assertThat(travelInfoService.countPublicList(
                 TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL,
@@ -169,17 +169,19 @@ class TravelInfoServiceTest {
 
     @Test
     void blankPublicSearchKeywordDelegatesAsNoKeywordCondition() {
-        when(travelInfoMapper.findPublicList(null, null, List.of(), null, null, 0L, 12))
+        when(travelInfoMapper.findPublicList(
+                null, null, List.of(), null, null, "latest", 0L, 12))
                 .thenReturn(List.of());
         when(travelInfoMapper.countPublicList(null, null, List.of(), null, null))
                 .thenReturn(0L);
 
         assertThat(travelInfoService.getPublicList(
-                null, null, List.of(), "   \t", 0L, 12)).isEmpty();
+                null, null, List.of(), "   \t", "latest", 0L, 12)).isEmpty();
         assertThat(travelInfoService.countPublicList(
                 null, null, List.of(), null)).isZero();
 
-        verify(travelInfoMapper).findPublicList(null, null, List.of(), null, null, 0L, 12);
+        verify(travelInfoMapper).findPublicList(
+                null, null, List.of(), null, null, "latest", 0L, 12);
         verify(travelInfoMapper).countPublicList(null, null, List.of(), null, null);
     }
 
@@ -188,19 +190,19 @@ class TravelInfoServiceTest {
         String keyword = "썸ㄴ";
         String koreanPattern = TravelInfoSearchKeyword.toKoreanPrefixRegex(keyword);
         when(travelInfoMapper.findPublicList(
-                null, null, List.of(), keyword, koreanPattern, 0L, 12))
+                null, null, List.of(), keyword, koreanPattern, "latest", 0L, 12))
                 .thenReturn(List.of());
         when(travelInfoMapper.countPublicList(
                 null, null, List.of(), keyword, koreanPattern))
                 .thenReturn(0L);
 
         assertThat(travelInfoService.getPublicList(
-                null, null, List.of(), keyword, 0L, 12)).isEmpty();
+                null, null, List.of(), keyword, "latest", 0L, 12)).isEmpty();
         assertThat(travelInfoService.countPublicList(
                 null, null, List.of(), keyword)).isZero();
 
         verify(travelInfoMapper).findPublicList(
-                null, null, List.of(), keyword, koreanPattern, 0L, 12);
+                null, null, List.of(), keyword, koreanPattern, "latest", 0L, 12);
         verify(travelInfoMapper).countPublicList(
                 null, null, List.of(), keyword, koreanPattern);
     }
