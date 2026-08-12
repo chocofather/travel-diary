@@ -13,6 +13,7 @@ import com.example.travlediary.model.UserRole;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.board.BoardService;
+import com.example.travlediary.service.bookmark.MyPageBookmarkService;
 import com.example.travlediary.service.comment.MyPageCommentService;
 import com.example.travlediary.service.user.MyPageService;
 import com.example.travlediary.service.user.NicknameCheckStatus;
@@ -65,6 +66,8 @@ class MyPageControllerTest {
     @MockitoBean
     private MyPageCommentService myPageCommentService;
     @MockitoBean
+    private MyPageBookmarkService myPageBookmarkService;
+    @MockitoBean
     private CustomLoginSuccessHandler customLoginSuccessHandler;
     @MockitoBean
     private CustomLogoutSuccessHandler customLogoutSuccessHandler;
@@ -72,7 +75,7 @@ class MyPageControllerTest {
     private UserMapper userMapper;
 
     @Test
-    void guestCannotOpenMyPageProfilePostsOrComments() throws Exception {
+    void guestCannotOpenMyPageProfilePostsCommentsOrBookmarks() throws Exception {
         mockMvc.perform(get("/mypage"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/login?redirect=/mypage"));
@@ -85,6 +88,9 @@ class MyPageControllerTest {
         mockMvc.perform(get("/mypage/comments"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/login?redirect=/mypage/comments"));
+        mockMvc.perform(get("/mypage/bookmarks"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login?redirect=/mypage/bookmarks"));
         mockMvc.perform(get("/mypage/profile/check-nickname").param("nickname", "여행민준"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/login?redirect=/mypage/profile/check-nickname"));
@@ -126,12 +132,13 @@ class MyPageControllerTest {
                     assertThat(document.select("a[href=/mypage/profile]")).isNotEmpty();
                     assertThat(document.select("a[href=/mypage/posts]")).isNotEmpty();
                     assertThat(document.select("a[href=/mypage/comments]")).isNotEmpty();
+                    assertThat(document.select("a[href=/mypage/bookmarks]")).isNotEmpty();
                     assertThat(document.select("a[href=/support/inquiries]")).isNotEmpty();
                     assertThat(document.select("a[href=/mypage/inquiries]")).isEmpty();
                     assertThat(document.select(".mypage-layout a[href='#']")).isEmpty();
                     assertThat(document.select("[aria-disabled=true]").text())
-                            .doesNotContain("내가 작성한 글", "내가 작성한 댓글")
-                            .contains("북마크", "회원정보 수정");
+                            .doesNotContain("내가 작성한 글", "내가 작성한 댓글", "북마크")
+                            .contains("회원정보 수정");
                     assertThat(document.select(
                             ".mypage-navigation-title.is-active[aria-current=page]").text())
                             .isEqualTo("마이페이지");

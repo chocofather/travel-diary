@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/mypage-layout.css">
+  <link rel="stylesheet" href="/css/mypage-bookmarks.css">
+  <script src="/js/mypage-bookmarks.js" defer></script>
+</th:block>
+<th:block th:fragment="body">
+  <div class="mypage-layout">
+    <nav th:replace="~{fragments/mypage/navigation :: navigation('bookmarks')}"></nav>
+
+    <section class="mypage-content mypage-bookmarks-page" aria-labelledby="mypage-bookmarks-title"
+             th:data-current-section="${section}"
+             th:data-current-scope="${scope}"
+             th:data-current-type="${type}"
+             th:data-current-page="${currentPage}"
+             data-bookmark-page>
+      <header class="mypage-page-header">
+        <p>MY BOOKMARKS</p>
+        <h1 id="mypage-bookmarks-title">북마크</h1>
+        <span>저장한 여행 콘텐츠를 최근 북마크한 순서로 확인할 수 있습니다.</span>
+      </header>
+
+      <nav class="mypage-bookmark-sections" aria-label="북마크 콘텐츠 유형">
+        <a th:href="@{/mypage/bookmarks(section='destination')}"
+           th:classappend="${section == 'destination'} ? ' is-active' : ''"
+           th:attr="aria-current=${section == 'destination'} ? 'page' : null">여행지</a>
+        <a th:href="@{/mypage/bookmarks(section='community')}"
+           th:classappend="${section == 'community'} ? ' is-active' : ''"
+           th:attr="aria-current=${section == 'community'} ? 'page' : null">여행 커뮤니티</a>
+        <a th:href="@{/mypage/bookmarks(section='travel-info')}"
+           th:classappend="${section == 'travel-info'} ? ' is-active' : ''"
+           th:attr="aria-current=${section == 'travel-info'} ? 'page' : null">여행정보</a>
+      </nav>
+
+      <nav class="mypage-bookmark-filters"
+           th:if="${section == 'destination' or section == 'travel-info'}"
+           aria-label="국내외 필터">
+        <a th:href="@{/mypage/bookmarks(section=${section},scope='all')}"
+           th:classappend="${scope == 'all'} ? ' is-active' : ''"
+           th:attr="aria-current=${scope == 'all'} ? 'page' : null">전체</a>
+        <a th:href="@{/mypage/bookmarks(section=${section},scope='domestic')}"
+           th:classappend="${scope == 'domestic'} ? ' is-active' : ''"
+           th:attr="aria-current=${scope == 'domestic'} ? 'page' : null">국내</a>
+        <a th:href="@{/mypage/bookmarks(section=${section},scope='international')}"
+           th:classappend="${scope == 'international'} ? ' is-active' : ''"
+           th:attr="aria-current=${scope == 'international'} ? 'page' : null">해외</a>
+      </nav>
+
+      <nav class="mypage-bookmark-filters"
+           th:if="${section == 'community'}"
+           aria-label="여행 커뮤니티 필터">
+        <a th:href="@{/mypage/bookmarks(section='community',type='all')}"
+           th:classappend="${type == 'all'} ? ' is-active' : ''"
+           th:attr="aria-current=${type == 'all'} ? 'page' : null">전체</a>
+        <a th:href="@{/mypage/bookmarks(section='community',type='question')}"
+           th:classappend="${type == 'question'} ? ' is-active' : ''"
+           th:attr="aria-current=${type == 'question'} ? 'page' : null">여행 질문</a>
+        <a th:href="@{/mypage/bookmarks(section='community',type='tip')}"
+           th:classappend="${type == 'tip'} ? ' is-active' : ''"
+           th:attr="aria-current=${type == 'tip'} ? 'page' : null">여행 팁</a>
+        <a th:href="@{/mypage/bookmarks(section='community',type='course')}"
+           th:classappend="${type == 'course'} ? ' is-active' : ''"
+           th:attr="aria-current=${type == 'course'} ? 'page' : null">여행 코스</a>
+      </nav>
+
+      <p class="mypage-bookmark-status" role="status" aria-live="polite"
+         data-bookmark-status hidden></p>
+
+      <div class="mypage-bookmark-grid"
+           th:if="${section == 'destination' and !#lists.isEmpty(bookmarks)}"
+           data-bookmark-list>
+        <article class="mypage-bookmark-card" th:each="bookmark : ${bookmarks}"
+                 data-bookmark-item>
+          <button type="button" class="mypage-bookmark-remove"
+                  th:data-bookmark-delete-url="@{/bookmarks/destinations/{id}(id=${bookmark.targetId})}"
+                  th:attr="aria-label=|${bookmark.name} 북마크 해제|"
+                  data-bookmark-remove>
+            <span aria-hidden="true"></span>
+          </button>
+          <a class="mypage-bookmark-thumbnail"
+             th:href="@{/destinations/{id}(id=${bookmark.targetId})}">
+            <img th:if="${bookmark.thumbnailUrl != null and !#strings.isEmpty(bookmark.thumbnailUrl)}"
+                 th:src="@{${bookmark.thumbnailUrl}}"
+                 th:alt="|${bookmark.name} 대표 이미지|">
+            <span th:unless="${bookmark.thumbnailUrl != null and !#strings.isEmpty(bookmark.thumbnailUrl)}"
+                  class="mypage-bookmark-placeholder" role="img"
+                  aria-label="등록된 이미지가 없습니다">
+              <span aria-hidden="true">▧</span>
+              등록된 이미지가 없습니다
+            </span>
+          </a>
+          <div class="mypage-bookmark-card-body">
+            <h2><a th:href="@{/destinations/{id}(id=${bookmark.targetId})}"
+                   th:text="${bookmark.name}">여행지명</a></h2>
+            <p th:text="${bookmark.regionName}">지역명</p>
+          </div>
+        </article>
+      </div>
+
+      <div class="mypage-bookmark-community-list"
+           th:if="${section == 'community' and !#lists.isEmpty(bookmarks)}"
+           data-bookmark-list>
+        <article class="mypage-bookmark-community-row" th:each="bookmark : ${bookmarks}"
+                 data-bookmark-item>
+          <div class="mypage-bookmark-community-main">
+            <span class="mypage-bookmark-type"
+                  th:classappend="${bookmark.boardType == 'course'
+                      ? ' mypage-bookmark-type--course'
+                      : (bookmark.postType == 'TIP' ? ' mypage-bookmark-type--tip' : '')}"
+                  th:text="${bookmark.boardType == 'course'
+                      ? '여행 코스'
+                      : (bookmark.postType == 'TIP' ? '여행 팁' : '여행 질문')}">여행 질문</span>
+            <div class="mypage-bookmark-community-copy">
+              <h2>
+                <a th:if="${bookmark.boardType == 'post'}"
+                   th:href="@{/post/{id}(id=${bookmark.targetId})}"
+                   th:text="${bookmark.title}">게시글 제목</a>
+                <a th:if="${bookmark.boardType == 'course'}"
+                   th:href="@{/course/{id}(id=${bookmark.targetId})}"
+                   th:text="${bookmark.title}">코스 제목</a>
+              </h2>
+              <p class="mypage-bookmark-community-meta">
+                <span th:text="${bookmark.nickname}">작성자</span>
+                <span aria-hidden="true">·</span>
+                <time th:if="${bookmark.createdAt != null}"
+                      th:datetime="${bookmark.createdAt}"
+                      th:text="${#strings.replace(#strings.substring(bookmark.createdAt, 0, 10), '-', '.')}">2026.08.13</time>
+                <span aria-hidden="true">·</span>
+                <span>조회 <strong th:text="${bookmark.views}">0</strong></span>
+              </p>
+            </div>
+          </div>
+          <button type="button" class="mypage-bookmark-row-remove"
+                  th:data-bookmark-delete-url="${bookmark.boardType == 'course'
+                      ? '/bookmarks/courses/' + bookmark.targetId
+                      : '/bookmarks/posts/' + bookmark.targetId}"
+                  th:attr="aria-label=|${bookmark.title} 북마크 해제|"
+                  data-bookmark-remove>북마크 해제</button>
+        </article>
+      </div>
+
+      <div class="mypage-bookmark-grid"
+           th:if="${section == 'travel-info' and !#lists.isEmpty(bookmarks)}"
+           data-bookmark-list>
+        <article class="mypage-bookmark-card" th:each="bookmark : ${bookmarks}"
+                 data-bookmark-item>
+          <button type="button" class="mypage-bookmark-remove"
+                  th:data-bookmark-delete-url="@{/bookmarks/travel-info/{id}(id=${bookmark.targetId})}"
+                  th:attr="aria-label=|${bookmark.title} 북마크 해제|"
+                  data-bookmark-remove>
+            <span aria-hidden="true"></span>
+          </button>
+          <a class="mypage-bookmark-thumbnail"
+             th:href="@{/travel-info/{id}(id=${bookmark.targetId})}">
+            <img th:if="${bookmark.thumbnailUrl != null and !#strings.isEmpty(bookmark.thumbnailUrl)}"
+                 th:src="@{${bookmark.thumbnailUrl}}"
+                 th:alt="|${bookmark.title} 대표 이미지|">
+            <span th:unless="${bookmark.thumbnailUrl != null and !#strings.isEmpty(bookmark.thumbnailUrl)}"
+                  class="mypage-bookmark-placeholder" role="img"
+                  aria-label="등록된 이미지가 없습니다">
+              <span aria-hidden="true">▧</span>
+              등록된 이미지가 없습니다
+            </span>
+          </a>
+          <div class="mypage-bookmark-card-body">
+            <p class="mypage-bookmark-card-tags">
+              <span th:text="${bookmark.scope == 'DOMESTIC' ? '국내' : '해외'}">국내</span>
+              <span th:text="${bookmark.categoryName}">카테고리</span>
+              <span th:text="${bookmark.contentType == 'FESTIVAL' ? '축제' : '일반'}">일반</span>
+            </p>
+            <h2><a th:href="@{/travel-info/{id}(id=${bookmark.targetId})}"
+                   th:text="${bookmark.title}">여행정보 제목</a></h2>
+            <time th:if="${bookmark.createdAt != null}"
+                  th:datetime="${bookmark.createdAt}"
+                  th:text="${#strings.replace(#strings.substring(bookmark.createdAt, 0, 10), '-', '.')}">2026.08.13</time>
+          </div>
+        </article>
+      </div>
+
+      <p class="mypage-bookmark-empty" th:if="${#lists.isEmpty(bookmarks)}"
+         data-bookmark-empty>저장한 북마크가 없습니다.</p>
+      <p class="mypage-bookmark-empty" th:unless="${#lists.isEmpty(bookmarks)}"
+         data-bookmark-empty hidden>저장한 북마크가 없습니다.</p>
+
+      <nav class="mypage-bookmark-pagination"
+           th:if="${totalPages > 0}" aria-label="북마크 페이지" data-bookmark-pagination>
+        <th:block th:if="${section == 'community'}">
+          <a th:if="${currentPage > 1}"
+             th:href="@{/mypage/bookmarks(section='community',type=${type},page=${currentPage - 1})}">이전</a>
+          <span th:unless="${currentPage > 1}" class="is-disabled" aria-disabled="true">이전</span>
+          <span class="mypage-bookmark-page-status"><strong th:text="${currentPage}">1</strong><span aria-hidden="true">/</span><span th:text="${totalPages}">1</span></span>
+          <a th:if="${currentPage < totalPages}"
+             th:href="@{/mypage/bookmarks(section='community',type=${type},page=${currentPage + 1})}">다음</a>
+          <span th:unless="${currentPage < totalPages}" class="is-disabled" aria-disabled="true">다음</span>
+        </th:block>
+        <th:block th:unless="${section == 'community'}">
+          <a th:if="${currentPage > 1}"
+             th:href="@{/mypage/bookmarks(section=${section},scope=${scope},page=${currentPage - 1})}">이전</a>
+          <span th:unless="${currentPage > 1}" class="is-disabled" aria-disabled="true">이전</span>
+          <span class="mypage-bookmark-page-status"><strong th:text="${currentPage}">1</strong><span aria-hidden="true">/</span><span th:text="${totalPages}">1</span></span>
+          <a th:if="${currentPage < totalPages}"
+             th:href="@{/mypage/bookmarks(section=${section},scope=${scope},page=${currentPage + 1})}">다음</a>
+          <span th:unless="${currentPage < totalPages}" class="is-disabled" aria-disabled="true">다음</span>
+        </th:block>
+      </nav>
+    </section>
+  </div>
+</th:block>
+</html>

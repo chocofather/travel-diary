@@ -11,11 +11,19 @@ document.addEventListener('DOMContentLoaded', () => {
             button.disabled = true;
 
             try {
+                const csrfToken = document.querySelector('meta[name="_csrf"]')?.content;
+                const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.content;
+                if (!csrfToken || !csrfHeader) {
+                    throw new Error('CSRF 토큰을 확인할 수 없습니다.');
+                }
                 const bookmarked = button.dataset.bookmarked === 'true';
                 const response = await fetch(button.dataset.bookmarkUrl, {
                     method: bookmarked ? 'DELETE' : 'POST',
                     credentials: 'same-origin',
-                    headers: {'Accept': 'application/json'}
+                    headers: {
+                        'Accept': 'application/json',
+                        [csrfHeader]: csrfToken
+                    }
                 });
 
                 if (response.status === 401) {

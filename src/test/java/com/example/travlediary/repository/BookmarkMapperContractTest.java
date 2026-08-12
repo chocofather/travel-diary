@@ -102,7 +102,7 @@ class BookmarkMapperContractTest {
     }
 
     @Test
-    void csrfProtectionCoversTravelInfoBookmarksAndAdminNoticeMutations() throws IOException {
+    void csrfProtectionCoversAllBookmarkAndAdminNoticeMutations() throws IOException {
         String security = resourceText(
                 "src/main/java/com/example/travlediary/config/SecurityConfig.java");
         String layout = resource("/templates/layout/main.html");
@@ -110,6 +110,10 @@ class BookmarkMapperContractTest {
 
         assertThat(security)
                 .contains("requireCsrfProtectionMatcher")
+                .contains("^/bookmarks$")
+                .contains("^/bookmarks/destinations/[0-9]+$")
+                .contains("^/bookmarks/posts/[0-9]+$")
+                .contains("^/bookmarks/courses/[0-9]+$")
                 .contains("^/bookmarks/travel-info/[0-9]+$")
                 .contains("^/admin/notices$")
                 .contains("^/admin/notices/[0-9]+/edit$")
@@ -121,6 +125,12 @@ class BookmarkMapperContractTest {
                 .contains("name=\"_csrf\"", "name=\"_csrf_header\"")
                 .contains("${_csrf.token}", "${_csrf.headerName}");
         assertThat(javascript)
+                .contains("[csrfHeader]: csrfToken")
+                .contains("credentials: 'same-origin'");
+        assertThat(resource("/static/js/bookmark.js"))
+                .contains("[csrfHeader]: csrfToken")
+                .contains("credentials: 'same-origin'");
+        assertThat(resource("/static/js/content-bookmarks.js"))
                 .contains("[csrfHeader]: csrfToken")
                 .contains("credentials: 'same-origin'");
     }

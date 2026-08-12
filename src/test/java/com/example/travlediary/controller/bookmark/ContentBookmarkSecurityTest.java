@@ -45,13 +45,13 @@ class ContentBookmarkSecurityTest {
 
     @Test
     void guestCannotChangeContentBookmarks() throws Exception {
-        mockMvc.perform(post("/bookmarks/posts/10").accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(post("/bookmarks/posts/10").with(csrf()).accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isUnauthorized());
-        mockMvc.perform(delete("/bookmarks/posts/10").accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(delete("/bookmarks/posts/10").with(csrf()).accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isUnauthorized());
-        mockMvc.perform(post("/bookmarks/courses/20").accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(post("/bookmarks/courses/20").with(csrf()).accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isUnauthorized());
-        mockMvc.perform(delete("/bookmarks/courses/20").accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(delete("/bookmarks/courses/20").with(csrf()).accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -61,13 +61,13 @@ class ContentBookmarkSecurityTest {
         UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(userDetails, null, List.of());
 
-        mockMvc.perform(post("/bookmarks/posts/10").with(authentication(authentication)))
+        mockMvc.perform(post("/bookmarks/posts/10").with(authentication(authentication)).with(csrf()))
                 .andExpect(status().isNoContent());
-        mockMvc.perform(delete("/bookmarks/posts/10").with(authentication(authentication)))
+        mockMvc.perform(delete("/bookmarks/posts/10").with(authentication(authentication)).with(csrf()))
                 .andExpect(status().isNoContent());
-        mockMvc.perform(post("/bookmarks/courses/20").with(authentication(authentication)))
+        mockMvc.perform(post("/bookmarks/courses/20").with(authentication(authentication)).with(csrf()))
                 .andExpect(status().isNoContent());
-        mockMvc.perform(delete("/bookmarks/courses/20").with(authentication(authentication)))
+        mockMvc.perform(delete("/bookmarks/courses/20").with(authentication(authentication)).with(csrf()))
                 .andExpect(status().isNoContent());
 
         verify(service).bookmarkPost(10L, 7L);
@@ -111,14 +111,17 @@ class ContentBookmarkSecurityTest {
     }
 
     @Test
-    void existingContentBookmarkEndpointsStillDoNotRequireCsrf() throws Exception {
+    void postAndCourseBookmarkEndpointsRequireCsrf() throws Exception {
         when(userDetails.getId()).thenReturn(7L);
         UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(userDetails, null, List.of());
 
         mockMvc.perform(post("/bookmarks/posts/10").with(authentication(authentication)))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isForbidden());
         mockMvc.perform(delete("/bookmarks/courses/20").with(authentication(authentication)))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isForbidden());
+
+        verify(service, org.mockito.Mockito.never()).bookmarkPost(10L, 7L);
+        verify(service, org.mockito.Mockito.never()).unbookmarkCourse(20L, 7L);
     }
 }

@@ -43,4 +43,9 @@ public class DestinationBookmarkService {
     public int getBookmarkCount(Long destinationId) {
         return bookmarkMapper.countByTarget(TARGET_TYPE, destinationId);
     }
+
+    @Transactional
+    public void removeBookmark(Long userId, Long destinationId) {
+        bookmarkMapper.delete(userId, TARGET_TYPE, destinationId);
+    }
 }

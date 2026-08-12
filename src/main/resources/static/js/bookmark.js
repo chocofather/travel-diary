@@ -20,10 +20,20 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        const csrfToken = document.querySelector('meta[name="_csrf"]')?.content;
+        const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.content;
+        if (!csrfToken || !csrfHeader) {
+            console.error('CSRF 토큰을 확인할 수 없습니다.');
+            return;
+        }
+
         // destinationId만 서버로 보냄
         fetch('/bookmarks', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                [csrfHeader]: csrfToken
+            },
             credentials: 'same-origin',
             body: `destinationId=${encodeURIComponent(targetId)}`
         })

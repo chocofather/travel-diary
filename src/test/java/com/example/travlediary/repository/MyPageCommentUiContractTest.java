@@ -60,7 +60,8 @@ class MyPageCommentUiContractTest {
         assertThat(navigation)
                 .contains("activeMenu == 'comments'")
                 .contains("th:href=\"@{/mypage/comments}\">내가 작성한 댓글</a>")
-                .contains("is-disabled\" aria-disabled=\"true\">북마크")
+                .contains("activeMenu == 'bookmarks'")
+                .contains("th:href=\"@{/mypage/bookmarks}\">북마크</a>")
                 .contains("is-disabled\" aria-disabled=\"true\">회원정보 수정");
         assertThat(index)
                 .contains("<a class=\"mypage-menu-item\" th:href=\"@{/mypage/comments}\">")

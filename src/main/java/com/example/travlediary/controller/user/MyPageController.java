@@ -2,10 +2,12 @@ package com.example.travlediary.controller.user;
 
 import com.example.travlediary.dto.BoardListDto;
 import com.example.travlediary.dto.MyPageCommentPageDto;
+import com.example.travlediary.dto.MyPageBookmarkPageDto;
 import com.example.travlediary.dto.MyPageProfileDto;
 import com.example.travlediary.dto.ProfileUpdateForm;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.board.BoardService;
+import com.example.travlediary.service.bookmark.MyPageBookmarkService;
 import com.example.travlediary.service.comment.MyPageCommentService;
 import com.example.travlediary.service.user.MyPageService;
 import com.example.travlediary.service.user.NicknameCheckStatus;
@@ -42,6 +44,7 @@ public class MyPageController {
     private final MyPageService myPageService;
     private final BoardService boardService;
     private final MyPageCommentService myPageCommentService;
+    private final MyPageBookmarkService myPageBookmarkService;
 
     @GetMapping
     public String myPage(@AuthenticationPrincipal CustomUserDetails userDetails,
@@ -87,6 +90,27 @@ public class MyPageController {
         model.addAttribute("totalPages", commentPage.getTotalPages());
         model.addAttribute("pageTitle", "내가 작성한 댓글 | 마이페이지");
         return "mypage/comments";
+    }
+
+    @GetMapping("/bookmarks")
+    public String bookmarks(@AuthenticationPrincipal CustomUserDetails userDetails,
+                            @RequestParam(defaultValue = "destination") String section,
+                            @RequestParam(defaultValue = "all") String scope,
+                            @RequestParam(defaultValue = "all") String type,
+                            @RequestParam(defaultValue = "1") int page,
+                            Model model) {
+        MyPageBookmarkPageDto bookmarkPage = myPageBookmarkService.getBookmarks(
+                userDetails.getId(), section, scope, type, page);
+
+        model.addAttribute("bookmarks", bookmarkPage.getBookmarks());
+        model.addAttribute("section", bookmarkPage.getSection());
+        model.addAttribute("scope", bookmarkPage.getScope());
+        model.addAttribute("type", bookmarkPage.getType());
+        model.addAttribute("currentPage", bookmarkPage.getCurrentPage());
+        model.addAttribute("totalPages", bookmarkPage.getTotalPages());
+        model.addAttribute("totalCount", bookmarkPage.getTotalCount());
+        model.addAttribute("pageTitle", "북마크 | 마이페이지");
+        return "mypage/bookmarks";
     }
 
     @GetMapping("/profile")

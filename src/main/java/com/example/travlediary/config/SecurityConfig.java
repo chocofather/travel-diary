@@ -31,6 +31,18 @@ public class SecurityConfig {
 
         http.csrf(csrf -> csrf.requireCsrfProtectionMatcher(new OrRequestMatcher(
                         new RegexRequestMatcher(
+                                "^/bookmarks$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/bookmarks/destinations/[0-9]+$", HttpMethod.DELETE.name()),
+                        new RegexRequestMatcher(
+                                "^/bookmarks/posts/[0-9]+$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/bookmarks/posts/[0-9]+$", HttpMethod.DELETE.name()),
+                        new RegexRequestMatcher(
+                                "^/bookmarks/courses/[0-9]+$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/bookmarks/courses/[0-9]+$", HttpMethod.DELETE.name()),
+                        new RegexRequestMatcher(
                                 "^/bookmarks/travel-info/[0-9]+$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(
                                 "^/bookmarks/travel-info/[0-9]+$", HttpMethod.DELETE.name()),

@@ -3,9 +3,11 @@ package com.example.travlediary.controller.destination;
 
 import com.example.travlediary.model.User;
 import com.example.travlediary.repository.user.UserMapper;
+import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.destination.DestinationBookmarkService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -52,5 +54,14 @@ public class DestinationBookmarkController {
     @GetMapping("/count")
     public ResponseEntity<Integer> getBookmarkCount(@RequestParam Long destinationId) {
         return ResponseEntity.ok(destinationBookmarkService.getBookmarkCount(destinationId));
+    }
+
+    @DeleteMapping("/destinations/{destinationId}")
+    public ResponseEntity<Void> removeBookmark(
+            @PathVariable Long destinationId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        destinationBookmarkService.removeBookmark(userDetails.getId(), destinationId);
+        return ResponseEntity.noContent().build();
     }
 }

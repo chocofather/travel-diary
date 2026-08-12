@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.bookmark.MyPageBookmarkMapper">
+
+    <sql id="koreaRegionTree">
+        WITH RECURSIVE korea_regions AS (
+            SELECT id
+            FROM country_categories
+            WHERE id = #{koreaRootId}
+
+            UNION ALL
+
+            SELECT child.id
+            FROM country_categories child
+            JOIN korea_regions parent ON child.parent_id = parent.id
+        )
+    </sql>
+
+    <sql id="destinationBookmarkFromAndFilters">
+        FROM bookmarks b
+        JOIN destinations d ON d.id = b.target_id
+        JOIN destination_translations dt
+          ON dt.destination_id = d.id
+         AND dt.language_code = 'ko'
+        JOIN country_categories cc ON cc.id = d.region_id
+        WHERE b.user_id = #{userId}
+          AND b.target_type = 'DESTINATION'
+        <if test="scope == 'domestic'">
+            AND d.region_id IN (SELECT id FROM korea_regions)
+        </if>
+        <if test="scope == 'international'">
+            AND d.region_id NOT IN (SELECT id FROM korea_regions)
+        </if>
+    </sql>
+
+    <select id="findDestinationBookmarks"
+            resultType="com.example.travlediary.dto.MyPageDestinationBookmarkDto">
+        <include refid="koreaRegionTree"/>
+        SELECT
+            b.target_id AS targetId,
+            dt.name,
+            cc.region_name AS regionName,
+            (
+                SELECT di.image_url
+                FROM destination_images di
+                WHERE di.destination_id = d.id
+                  AND di.is_main = 1
+                ORDER BY di.order_index ASC, di.id ASC
+                LIMIT 1
+            ) AS thumbnailUrl,
+            b.created_at AS bookmarkCreatedAt
+        <include refid="destinationBookmarkFromAndFilters"/>
+        ORDER BY b.created_at DESC, b.id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countDestinationBookmarks" resultType="int">
+        <include refid="koreaRegionTree"/>
+        SELECT COUNT(*)
+        <include refid="destinationBookmarkFromAndFilters"/>
+    </select>
+
+    <sql id="unifiedCommunityBookmarkSelect">
+        SELECT
+            b.id AS bookmarkId,
+            b.target_id AS targetId,
+            'post' AS boardType,
+            p.post_type AS postType,
+            p.title,
+            u.nickname,
+            p.created_at AS createdAt,
+            p.views,
+            b.created_at AS bookmarkCreatedAt
+        FROM bookmarks b
+        JOIN user_posts p ON p.id = b.target_id
+        JOIN users u ON u.id = p.user_id
+        WHERE b.user_id = #{userId}
+          AND b.target_type = 'POST'
+          AND p.post_type IN ('QUESTION', 'TIP')
+          AND p.deleted = 0
+          AND p.deleted_at IS NULL
+
+        UNION ALL
+
+        SELECT
+            b.id AS bookmarkId,
+            b.target_id AS targetId,
+            'course' AS boardType,
+            CAST(NULL AS CHAR) AS postType,
+            c.title,
+            u.nickname,
+            c.created_at AS createdAt,
+            c.views,
+            b.created_at AS bookmarkCreatedAt
+        FROM bookmarks b
+        JOIN courses c ON c.id = b.target_id
+        JOIN users u ON u.id = c.user_id
+        WHERE b.user_id = #{userId}
+          AND b.target_type = 'COURSE'
+          AND c.deleted = 0
+          AND c.deleted_at IS NULL
+    </sql>
+
+    <sql id="communityBookmarkFilter">
+        <if test="type == 'question'">
+            AND bookmarked_content.boardType = 'post'
+            AND bookmarked_content.postType = 'QUESTION'
+        </if>
+        <if test="type == 'tip'">
+            AND bookmarked_content.boardType = 'post'
+            AND bookmarked_content.postType = 'TIP'
+        </if>
+        <if test="type == 'course'">
+            AND bookmarked_content.boardType = 'course'
+        </if>
+    </sql>
+
+    <select id="findCommunityBookmarks"
+            resultType="com.example.travlediary.dto.MyPageCommunityBookmarkDto">
+        SELECT
+            bookmarked_content.targetId,
+            bookmarked_content.boardType,
+            bookmarked_content.postType,
+            bookmarked_content.title,
+            bookmarked_content.nickname,
+            bookmarked_content.createdAt,
+            bookmarked_content.views,
+            bookmarked_content.bookmarkCreatedAt
+        FROM (
+            <include refid="unifiedCommunityBookmarkSelect"/>
+        ) bookmarked_content
+        WHERE 1 = 1
+        <include refid="communityBookmarkFilter"/>
+        ORDER BY bookmarked_content.bookmarkCreatedAt DESC,
+                 bookmarked_content.bookmarkId DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countCommunityBookmarks" resultType="int">
+        SELECT COUNT(*)
+        FROM (
+            <include refid="unifiedCommunityBookmarkSelect"/>
+        ) bookmarked_content
+        WHERE 1 = 1
+        <include refid="communityBookmarkFilter"/>
+    </select>
+
+    <sql id="travelInfoBookmarkFromAndFilters">
+        FROM bookmarks b
+        JOIN travel_info ti ON ti.id = b.target_id
+        JOIN info_categories ic
+          ON ic.id = ti.category_id
+         AND ic.is_visible = 1
+        WHERE b.user_id = #{userId}
+          AND b.target_type = 'TRAVEL_INFO'
+        <if test="scope != null">
+            AND ti.scope = #{scope}
+        </if>
+    </sql>
+
+    <select id="findTravelInfoBookmarks"
+            resultType="com.example.travlediary.dto.MyPageTravelInfoBookmarkDto">
+        SELECT
+            b.target_id AS targetId,
+            ti.title,
+            ti.scope,
+            ti.content_type AS contentType,
+            ic.name AS categoryName,
+            (
+                SELECT ii.image_url
+                FROM info_images ii
+                WHERE ii.info_id = ti.id
+                  AND ii.is_main = 1
+                ORDER BY ii.order_index ASC, ii.id ASC
+                LIMIT 1
+            ) AS thumbnailUrl,
+            ti.created_at AS createdAt,
+            b.created_at AS bookmarkCreatedAt
+        <include refid="travelInfoBookmarkFromAndFilters"/>
+        ORDER BY b.created_at DESC, b.id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countTravelInfoBookmarks" resultType="int">
+        SELECT COUNT(*)
+        <include refid="travelInfoBookmarkFromAndFilters"/>
+    </select>
+
+</mapper>
