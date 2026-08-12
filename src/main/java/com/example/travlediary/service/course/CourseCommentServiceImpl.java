@@ -1,5 +1,6 @@
 package com.example.travlediary.service.course;
 
+import com.example.travlediary.dto.CommentLocationDto;
 import com.example.travlediary.dto.CourseCommentDto;
 import com.example.travlediary.dto.PageResult;
 import com.example.travlediary.model.CourseComment;
@@ -15,6 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -58,6 +60,21 @@ public class CourseCommentServiceImpl implements CourseCommentService {
 
         return new PageResult<>(mergeRootThreads(roots, replies), totalThreads,
                 safePage, safeSize, totalCommentCount);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<CommentLocationDto> getCommentLocation(Long courseId, Long commentId) {
+        if (courseId == null || commentId == null) {
+            return Optional.empty();
+        }
+        Long rootId = courseCommentMapper.findActiveRootIdForLocation(courseId, commentId);
+        if (rootId == null) {
+            return Optional.empty();
+        }
+        int precedingRootCount = courseCommentMapper.countRootCommentsBefore(courseId, rootId);
+        return Optional.of(new CommentLocationDto(
+                precedingRootCount / DEFAULT_PAGE_SIZE + 1));
     }
 
     @Override

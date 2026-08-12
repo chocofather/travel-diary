@@ -1,10 +1,12 @@
 package com.example.travlediary.controller.user;
 
 import com.example.travlediary.dto.BoardListDto;
+import com.example.travlediary.dto.MyPageCommentPageDto;
 import com.example.travlediary.dto.MyPageProfileDto;
 import com.example.travlediary.dto.ProfileUpdateForm;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.board.BoardService;
+import com.example.travlediary.service.comment.MyPageCommentService;
 import com.example.travlediary.service.user.MyPageService;
 import com.example.travlediary.service.user.NicknameCheckStatus;
 import com.example.travlediary.service.user.NicknamePolicy;
@@ -39,6 +41,7 @@ public class MyPageController {
 
     private final MyPageService myPageService;
     private final BoardService boardService;
+    private final MyPageCommentService myPageCommentService;
 
     @GetMapping
     public String myPage(@AuthenticationPrincipal CustomUserDetails userDetails,
@@ -68,6 +71,22 @@ public class MyPageController {
         model.addAttribute("totalPages", totalPages);
         model.addAttribute("pageTitle", "내가 작성한 글 | 마이페이지");
         return "mypage/posts";
+    }
+
+    @GetMapping("/comments")
+    public String comments(@AuthenticationPrincipal CustomUserDetails userDetails,
+                           @RequestParam(defaultValue = "all") String type,
+                           @RequestParam(defaultValue = "1") int page,
+                           Model model) {
+        MyPageCommentPageDto commentPage = myPageCommentService.getMyComments(
+                userDetails.getId(), type, page);
+
+        model.addAttribute("comments", commentPage.getComments());
+        model.addAttribute("type", commentPage.getType());
+        model.addAttribute("currentPage", commentPage.getCurrentPage());
+        model.addAttribute("totalPages", commentPage.getTotalPages());
+        model.addAttribute("pageTitle", "내가 작성한 댓글 | 마이페이지");
+        return "mypage/comments";
     }
 
     @GetMapping("/profile")

@@ -97,6 +97,42 @@
           AND deleted = 0
     </select>
 
+    <select id="findActiveRootIdForLocation" resultType="long">
+        SELECT root.id
+        FROM destination_comments target
+        JOIN destination_comments root
+          ON root.id = COALESCE(target.parent_comment_id, target.id)
+         AND root.destination_id = target.destination_id
+         AND root.parent_comment_id IS NULL
+         AND root.deleted = 0
+        JOIN destinations d ON d.id = target.destination_id
+        WHERE target.id = #{commentId}
+          AND target.destination_id = #{destinationId}
+          AND target.deleted = 0
+    </select>
+
+    <select id="countRootCommentsBefore" resultType="int">
+        SELECT COUNT(*)
+        FROM destination_comments preceding
+        JOIN destination_comments target_root
+          ON target_root.id = #{rootId}
+         AND target_root.destination_id = #{destinationId}
+         AND target_root.parent_comment_id IS NULL
+         AND target_root.deleted = 0
+        WHERE preceding.destination_id = #{destinationId}
+          AND preceding.parent_comment_id IS NULL
+          AND preceding.deleted = 0
+          AND (
+              (target_root.created_at IS NULL AND preceding.created_at IS NOT NULL)
+              OR preceding.created_at &gt; target_root.created_at
+              OR (
+                  (preceding.created_at = target_root.created_at
+                      OR (preceding.created_at IS NULL AND target_root.created_at IS NULL))
+                  AND preceding.id &gt; target_root.id
+              )
+          )
+    </select>
+
     <!-- 댓글 이미지 추출 -->
     <select id="selectCommentsWithImages" resultMap="DestinationCommentMap">
         SELECT *

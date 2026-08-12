@@ -29,6 +29,12 @@ public interface PostCommentMapper {
 
     int countActiveComments(@Param("postId") Long postId);
 
+    Long findActiveRootIdForLocation(@Param("postId") Long postId,
+                                     @Param("commentId") Long commentId);
+
+    int countRootCommentsBefore(@Param("postId") Long postId,
+                                @Param("rootId") Long rootId);
+
     PostComment findActiveComment(@Param("commentId") Long commentId);
 
     PostComment findActiveCommentForUpdate(@Param("commentId") Long commentId);

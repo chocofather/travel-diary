@@ -64,4 +64,26 @@ class DestinationCommentServicePagingTest {
         assertThat(result.getTotalCommentCount()).isEqualTo(9);
         verify(commentMapper).findPagedParentComments(10L, 0, 5, "latest");
     }
+
+    @Test
+    void rootAndReplyLocationsUseTheVisibleRootGroup() {
+        when(commentMapper.findActiveRootIdForLocation(10L, 30L)).thenReturn(30L);
+        when(commentMapper.countRootCommentsBefore(10L, 30L)).thenReturn(0);
+        when(commentMapper.findActiveRootIdForLocation(10L, 36L)).thenReturn(31L);
+        when(commentMapper.countRootCommentsBefore(10L, 31L)).thenReturn(6);
+
+        assertThat(service.getCommentLocation(10L, 30L))
+                .hasValueSatisfying(location -> assertThat(location.getPage()).isEqualTo(1));
+        assertThat(service.getCommentLocation(10L, 36L))
+                .hasValueSatisfying(location -> assertThat(location.getPage()).isEqualTo(2));
+        verify(commentMapper).countRootCommentsBefore(10L, 31L);
+    }
+
+    @Test
+    void deletedTargetWrongDestinationOrReplyBelowDeletedRootHasNoLocation() {
+        when(commentMapper.findActiveRootIdForLocation(10L, 36L)).thenReturn(null);
+
+        assertThat(service.getCommentLocation(10L, 36L)).isEmpty();
+        verify(commentMapper, never()).countRootCommentsBefore(anyLong(), anyLong());
+    }
 }

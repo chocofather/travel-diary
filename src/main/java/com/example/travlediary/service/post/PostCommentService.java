@@ -1,9 +1,11 @@
 package com.example.travlediary.service.post;
 
 import com.example.travlediary.dto.PostCommentDto;
+import com.example.travlediary.dto.CommentLocationDto;
 import com.example.travlediary.dto.PageResult;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface PostCommentService {
 
@@ -11,6 +13,8 @@ public interface PostCommentService {
 
     PageResult<PostCommentDto> getCommentsPage(Long postId, Long currentUserId,
                                                int page, int size, String sort);
+
+    Optional<CommentLocationDto> getCommentLocation(Long postId, Long commentId);
 
     PostCommentDto create(Long postId, Long userId, String content, Long replyToCommentId);
 

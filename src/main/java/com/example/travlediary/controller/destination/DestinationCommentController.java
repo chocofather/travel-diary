@@ -2,6 +2,7 @@ package com.example.travlediary.controller.destination;
 
 import com.example.travlediary.dto.CommentDto;
 import com.example.travlediary.dto.CommentImageDto;
+import com.example.travlediary.dto.CommentLocationDto;
 import com.example.travlediary.dto.PageResult;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.comment.CommentLikeService;
@@ -119,6 +120,16 @@ public class DestinationCommentController {
         Long userId = (userDetails != null) ? userDetails.getId() : null;
         PageResult<CommentDto> result = destinationCommentService.getCommentsPaged(destinationId, userId, page, size, sort);
         return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/{commentId}/location")
+    public ResponseEntity<CommentLocationDto> getCommentLocation(
+            @PathVariable Long commentId,
+            @RequestParam Long destinationId
+    ) {
+        return destinationCommentService.getCommentLocation(destinationId, commentId)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
 }

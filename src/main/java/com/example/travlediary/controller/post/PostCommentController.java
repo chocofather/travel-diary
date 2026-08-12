@@ -1,5 +1,6 @@
 package com.example.travlediary.controller.post;
 
+import com.example.travlediary.dto.CommentLocationDto;
 import com.example.travlediary.dto.PostCommentDto;
 import com.example.travlediary.dto.PostCommentRequest;
 import com.example.travlediary.dto.PageResult;
@@ -47,6 +48,16 @@ public class PostCommentController {
     ) {
         Long currentUserId = userDetails == null ? null : userDetails.getId();
         return postCommentService.getCommentsPage(postId, currentUserId, page, size, sort);
+    }
+
+    @GetMapping("/{commentId}/location")
+    public ResponseEntity<CommentLocationDto> getCommentLocation(
+            @PathVariable Long commentId,
+            @RequestParam Long postId
+    ) {
+        return postCommentService.getCommentLocation(postId, commentId)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping

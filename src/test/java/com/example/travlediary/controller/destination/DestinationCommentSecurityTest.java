@@ -4,6 +4,7 @@ import com.example.travlediary.config.CustomLoginSuccessHandler;
 import com.example.travlediary.config.CustomLogoutSuccessHandler;
 import com.example.travlediary.config.SecurityConfig;
 import com.example.travlediary.dto.PageResult;
+import com.example.travlediary.dto.CommentLocationDto;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.service.comment.CommentLikeService;
 import com.example.travlediary.service.comment.DestinationCommentService;
@@ -15,6 +16,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -56,5 +58,18 @@ class DestinationCommentSecurityTest {
                 .andExpect(jsonPath("$.last").value(false));
 
         verify(destinationCommentService).getCommentsPaged(10L, null, 0, 5, "latest");
+    }
+
+    @Test
+    void guestCanResolveAValidatedCommentLocation() throws Exception {
+        when(destinationCommentService.getCommentLocation(10L, 35L))
+                .thenReturn(Optional.of(new CommentLocationDto(2)));
+
+        mockMvc.perform(get("/comments/35/location")
+                        .param("destinationId", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.page").value(2));
+
+        verify(destinationCommentService).getCommentLocation(10L, 35L);
     }
 }

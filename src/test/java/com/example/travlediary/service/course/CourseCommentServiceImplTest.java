@@ -317,6 +317,28 @@ class CourseCommentServiceImplTest {
     }
 
     @Test
+    void rootAndReplyLocationsUseRootGroupsAndFiveRootPages() {
+        when(mapper.findActiveRootIdForLocation(10L, 30L)).thenReturn(30L);
+        when(mapper.countRootCommentsBefore(10L, 30L)).thenReturn(0);
+        when(mapper.findActiveRootIdForLocation(10L, 36L)).thenReturn(31L);
+        when(mapper.countRootCommentsBefore(10L, 31L)).thenReturn(10);
+
+        assertThat(service.getCommentLocation(10L, 30L))
+                .hasValueSatisfying(location -> assertThat(location.getPage()).isEqualTo(1));
+        assertThat(service.getCommentLocation(10L, 36L))
+                .hasValueSatisfying(location -> assertThat(location.getPage()).isEqualTo(3));
+        verify(mapper).countRootCommentsBefore(10L, 31L);
+    }
+
+    @Test
+    void deletedMissingOrOtherCoursesCommentHasNoLocation() {
+        when(mapper.findActiveRootIdForLocation(10L, 36L)).thenReturn(null);
+
+        assertThat(service.getCommentLocation(10L, 36L)).isEmpty();
+        verify(mapper, never()).countRootCommentsBefore(any(), any());
+    }
+
+    @Test
     void likesActiveRootCommentAndPassesCurrentUserId() {
         CourseComment root = comment(30L, 8L);
         root.setLikes(4);

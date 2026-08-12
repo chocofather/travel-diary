@@ -1,6 +1,7 @@
 import {
     getDestinationId,
     fetchCommentsPage,
+    fetchCommentLocation,
     fetchThumbnails
 } from './api.js';
 
@@ -36,6 +37,8 @@ export function init() {
     const countEl = document.getElementById('comment-count');
     const moreButton = document.getElementById('load-more-comments');
     const sortButtons = commentSectionEl?.querySelectorAll('[data-comment-sort]') || [];
+    const deepLink = window.TravelDiaryCommentDeepLink;
+    const targetCommentId = deepLink?.readTargetCommentId() ?? null;
 
     const pageSize = 5;
     let currentSort = 'latest';
@@ -73,10 +76,12 @@ export function init() {
         moreButton.textContent = isLoading ? '불러오는 중…' : '댓글 더보기';
     }
 
-    async function loadCommentPage({reset = false} = {}) {
+    async function loadCommentPage({reset = false, pageOverride = null} = {}) {
         if (isLoading && !reset) return;
         const generation = reset ? ++requestGeneration : requestGeneration;
-        const page = reset ? 0 : nextPage;
+        const page = Number.isInteger(pageOverride) && pageOverride >= 0
+            ? pageOverride
+            : (reset ? 0 : nextPage);
 
         if (reset) {
             nextPage = 0;
@@ -119,6 +124,32 @@ export function init() {
         return loadCommentPage({reset: true});
     }
 
+    async function loadInitialComments() {
+        if (targetCommentId == null || !deepLink) {
+            await reloadComments();
+            return;
+        }
+
+        const locationGeneration = ++requestGeneration;
+        try {
+            const location = await fetchCommentLocation(destinationId, targetCommentId);
+            if (locationGeneration !== requestGeneration) return;
+            const targetPage = Number(location.page) - 1;
+            if (!Number.isInteger(targetPage) || targetPage < 0) {
+                throw new Error('댓글 위치 응답이 올바르지 않습니다.');
+            }
+
+            await loadCommentPage({reset: true, pageOverride: targetPage});
+            if (!deepLink.focusTarget(commentListEl, 'data-id', targetCommentId)) {
+                deepLink.scrollToSection(commentSectionEl);
+            }
+        } catch (error) {
+            if (locationGeneration !== requestGeneration) return;
+            await reloadComments();
+            deepLink.scrollToSection(commentSectionEl);
+        }
+    }
+
     setupSortDropdownEvent(commentSectionEl, sort => {
         if (!['latest', 'oldest', 'likes'].includes(sort) || sort === currentSort) return;
         currentSort = sort;
@@ -140,7 +171,7 @@ export function init() {
     bindSingleImageModal();
 
     updateSortUi();
-    void reloadComments();
+    void loadInitialComments();
     reloadThumbnails();
 }
 

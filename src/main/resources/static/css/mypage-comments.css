@@ -1,0 +1,284 @@
+.mypage-comment-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    padding: 18px 20px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-bottom: 0;
+    border-radius: 14px 14px 0 0;
+}
+
+.mypage-comment-filters a {
+    display: inline-flex;
+    min-height: 40px;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 15px;
+    color: #64748b;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.mypage-comment-filters a:hover {
+    color: #172033;
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+.mypage-comment-filters a.is-active {
+    color: #115e59;
+    background: #f0fdfa;
+    border-color: #99f6e4;
+}
+
+.mypage-comment-filters a:focus-visible,
+.mypage-comment-target a:focus-visible,
+.mypage-comment-footer a:focus-visible,
+.mypage-comment-pagination a:focus-visible {
+    outline: 3px solid rgba(13, 148, 136, 0.25);
+    outline-offset: 2px;
+}
+
+.mypage-comment-list {
+    overflow: hidden;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 0 0 14px 14px;
+}
+
+.mypage-comment-row {
+    display: grid;
+    gap: 13px;
+    min-width: 0;
+    padding: 21px 20px;
+    border-bottom: 1px solid #edf1f5;
+    transition: background-color 0.15s ease;
+}
+
+.mypage-comment-row:last-of-type {
+    border-bottom: 0;
+}
+
+.mypage-comment-row:hover {
+    background: #fbfdfd;
+}
+
+.mypage-comment-heading {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 12px;
+}
+
+.mypage-comment-badges {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 6px;
+}
+
+.mypage-comment-type,
+.mypage-comment-reply {
+    display: inline-flex;
+    min-height: 28px;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 9px;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 750;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.mypage-comment-type--destination {
+    color: #7c3aed;
+    background: #f5f3ff;
+}
+
+.mypage-comment-type--question {
+    color: #2563eb;
+    background: #eff6ff;
+}
+
+.mypage-comment-type--tip {
+    color: #c2410c;
+    background: #fff7ed;
+}
+
+.mypage-comment-type--course {
+    color: #115e59;
+    background: #f0fdfa;
+}
+
+.mypage-comment-reply {
+    color: #475569;
+    background: #f1f5f9;
+}
+
+.mypage-comment-target {
+    min-width: 0;
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.45;
+}
+
+.mypage-comment-target a {
+    display: block;
+    overflow: hidden;
+    color: #172033;
+    text-decoration: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mypage-comment-target a:hover {
+    color: #115e59;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.mypage-comment-preview {
+    display: -webkit-box;
+    margin: 0;
+    overflow: hidden;
+    color: #475569;
+    font-size: 14px;
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+}
+
+.mypage-comment-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    color: #64748b;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+}
+
+.mypage-comment-footer a {
+    flex: 0 0 auto;
+    color: #115e59;
+    font-weight: 750;
+    text-decoration: none;
+}
+
+.mypage-comment-footer a:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.mypage-comment-empty {
+    margin: 0;
+    padding: 64px 20px;
+    color: #64748b;
+    text-align: center;
+}
+
+.mypage-comment-pagination {
+    display: grid;
+    grid-template-columns: minmax(76px, auto) auto minmax(76px, auto);
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin-top: 26px;
+}
+
+.mypage-comment-pagination > a,
+.mypage-comment-pagination > .is-disabled {
+    display: inline-flex;
+    min-height: 40px;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 15px;
+    color: #115e59;
+    border: 1px solid #cdded6;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.mypage-comment-pagination > a:hover {
+    background: #f2f7f5;
+    border-color: #8fb5a5;
+}
+
+.mypage-comment-pagination > .is-disabled {
+    color: #9ca3af;
+    cursor: default;
+    opacity: 0.65;
+}
+
+.mypage-comment-page-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #64748b;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.mypage-comment-page-status strong {
+    color: #172033;
+}
+
+@media (max-width: 680px) {
+    .mypage-comment-filters {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        padding: 14px;
+    }
+
+    .mypage-comment-filters a {
+        width: 100%;
+        padding-right: 8px;
+        padding-left: 8px;
+    }
+
+    .mypage-comment-row {
+        gap: 12px;
+        padding: 18px 16px;
+    }
+
+    .mypage-comment-heading {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 9px;
+    }
+
+    .mypage-comment-target,
+    .mypage-comment-target a {
+        width: 100%;
+        overflow: visible;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    .mypage-comment-footer {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .mypage-comment-pagination {
+        grid-template-columns: minmax(64px, 1fr) auto minmax(64px, 1fr);
+        gap: 8px;
+    }
+
+    .mypage-comment-pagination > a,
+    .mypage-comment-pagination > .is-disabled {
+        min-width: 0;
+        padding-right: 10px;
+        padding-left: 10px;
+    }
+}

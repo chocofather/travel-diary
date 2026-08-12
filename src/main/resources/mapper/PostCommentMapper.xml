@@ -192,6 +192,62 @@
           AND deleted = 0
     </select>
 
+    <select id="findActiveRootIdForLocation" resultType="long">
+        SELECT root.id
+        FROM post_comments target
+        JOIN post_comments root
+          ON root.id = COALESCE(target.parent_comment_id, target.id)
+         AND root.post_id = target.post_id
+         AND root.parent_comment_id IS NULL
+        JOIN user_posts p
+          ON p.id = target.post_id
+         AND p.deleted = 0
+         AND p.deleted_at IS NULL
+        WHERE target.id = #{commentId}
+          AND target.post_id = #{postId}
+          AND target.deleted = 0
+          AND (
+              root.deleted = 0
+              OR EXISTS (
+                  SELECT 1
+                  FROM post_comments active_reply
+                  WHERE active_reply.parent_comment_id = root.id
+                    AND active_reply.post_id = root.post_id
+                    AND active_reply.deleted = 0
+              )
+          )
+    </select>
+
+    <select id="countRootCommentsBefore" resultType="int">
+        SELECT COUNT(*)
+        FROM post_comments preceding
+        JOIN post_comments target_root
+          ON target_root.id = #{rootId}
+         AND target_root.post_id = #{postId}
+         AND target_root.parent_comment_id IS NULL
+        WHERE preceding.post_id = #{postId}
+          AND preceding.parent_comment_id IS NULL
+          AND (
+              preceding.deleted = 0
+              OR EXISTS (
+                  SELECT 1
+                  FROM post_comments active_reply
+                  WHERE active_reply.parent_comment_id = preceding.id
+                    AND active_reply.post_id = preceding.post_id
+                    AND active_reply.deleted = 0
+              )
+          )
+          AND (
+              (target_root.created_at IS NULL AND preceding.created_at IS NOT NULL)
+              OR preceding.created_at &gt; target_root.created_at
+              OR (
+                  (preceding.created_at = target_root.created_at
+                      OR (preceding.created_at IS NULL AND target_root.created_at IS NULL))
+                  AND preceding.id &gt; target_root.id
+              )
+          )
+    </select>
+
     <select id="findActiveComment" resultType="com.example.travlediary.model.PostComment">
         SELECT
             id,

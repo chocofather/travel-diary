@@ -1,5 +1,6 @@
 package com.example.travlediary.controller.course;
 
+import com.example.travlediary.dto.CommentLocationDto;
 import com.example.travlediary.dto.CourseCommentDto;
 import com.example.travlediary.dto.CourseCommentRequest;
 import com.example.travlediary.dto.PageResult;
@@ -12,6 +13,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
@@ -42,6 +44,21 @@ class CourseCommentControllerTest {
 
         assertThat(controller.getCommentsPage(10L, 1, 5, "likes", null)).isSameAs(page);
         verify(service).getCommentsPage(10L, null, 1, 5, "likes");
+    }
+
+    @Test
+    void locationReturnsOnlyThePageAndNotFoundForInvalidRelation() {
+        CourseCommentController controller = new CourseCommentController(service);
+        when(service.getCommentLocation(10L, 35L))
+                .thenReturn(Optional.of(new CommentLocationDto(2)));
+        when(service.getCommentLocation(10L, 99L)).thenReturn(Optional.empty());
+
+        var found = controller.getCommentLocation(35L, 10L);
+        var missing = controller.getCommentLocation(99L, 10L);
+
+        assertThat(found.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(found.getBody().getPage()).isEqualTo(2);
+        assertThat(missing.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
     @Test

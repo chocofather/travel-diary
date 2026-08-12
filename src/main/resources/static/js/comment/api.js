@@ -53,6 +53,19 @@ export function fetchCommentsPage(destinationId, page = 0, size = 5, sort = 'lat
 }
 
 /**
+ * 특정 활성 댓글이 포함된 루트 댓글 페이지를 조회한다.
+ * 반환되는 page는 1부터 시작한다.
+ */
+export function fetchCommentLocation(destinationId, commentId) {
+    const url = `/comments/${encodeURIComponent(commentId)}/location`
+        + `?destinationId=${encodeURIComponent(destinationId)}`;
+    return fetch(url, {
+        headers: {'Accept': 'application/json'},
+        cache: 'no-store'
+    }).then(res => handleJson(res, '댓글 위치 조회'));
+}
+
+/**
  * 대댓글(답글) 등록
  * @param {string|number} destinationId
  * @param parentCommentId
@@ -119,5 +132,4 @@ export function fetchThumbnails(destinationId) {
     return fetch(`/comments/images?destinationId=${destinationId}`)
         .then(res => handleJson(res, '썸네일 로드'));
 }
-
 

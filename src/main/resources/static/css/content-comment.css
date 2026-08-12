@@ -106,6 +106,16 @@
     background: transparent;
 }
 
+.content-comments .content-comment-item > .content-comment-card {
+    border-radius: 10px;
+    transition: background-color 180ms ease, box-shadow 180ms ease;
+}
+
+.content-comments .content-comment-item.is-deep-link-target > .content-comment-card {
+    background: #ecf9f6;
+    box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.24);
+}
+
 .content-comments .content-comment-card {
     display: grid;
     grid-template-columns: 40px minmax(0, 1fr);

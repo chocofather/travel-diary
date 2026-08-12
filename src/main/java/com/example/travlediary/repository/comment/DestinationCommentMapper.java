@@ -32,6 +32,12 @@ public interface DestinationCommentMapper {
     // 페이징 대상 원댓글 수 카운트
     int countRootComments(@Param("destinationId") Long destinationId);
 
+    Long findActiveRootIdForLocation(@Param("destinationId") Long destinationId,
+                                     @Param("commentId") Long commentId);
+
+    int countRootCommentsBefore(@Param("destinationId") Long destinationId,
+                                @Param("rootId") Long rootId);
+
     // 댓글 이미지만 추출
     List<DestinationComment> selectCommentsWithImages(Long destinationId);
 

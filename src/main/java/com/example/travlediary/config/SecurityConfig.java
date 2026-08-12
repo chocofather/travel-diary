@@ -81,6 +81,10 @@ public class SecurityConfig {
                                 "/board/list", "/board/fragment"
                                 ).permitAll()
 
+                        // 댓글 deep-link 위치 조회는 상세페이지와 동일하게 공개 읽기만 허용
+                        .requestMatchers(new RegexRequestMatcher(
+                                "^/comments/[0-9]+/location$", HttpMethod.GET.name())).permitAll()
+
                         // 사용자 여행정보 목록 GET만 공개
                         .requestMatchers(HttpMethod.GET, "/travel-info").permitAll()
 
@@ -101,12 +105,16 @@ public class SecurityConfig {
 
                         // 게시글 일반 댓글 목록은 비회원도 조회 가능
                         .requestMatchers(HttpMethod.GET, "/post-comments", "/post-comments/page").permitAll()
+                        .requestMatchers(new RegexRequestMatcher(
+                                "^/post-comments/[0-9]+/location$", HttpMethod.GET.name())).permitAll()
 
                         // 게시글 댓글 작성·수정·삭제는 로그인 사용자만 가능
                         .requestMatchers("/post-comments", "/post-comments/**").authenticated()
 
                         // 여행 코스 일반 댓글 목록은 비회원도 조회 가능
                         .requestMatchers(HttpMethod.GET, "/course-comments", "/course-comments/page").permitAll()
+                        .requestMatchers(new RegexRequestMatcher(
+                                "^/course-comments/[0-9]+/location$", HttpMethod.GET.name())).permitAll()
 
                         // 여행 코스 댓글 작성·수정·삭제는 로그인 사용자만 가능
                         .requestMatchers("/course-comments", "/course-comments/**").authenticated()

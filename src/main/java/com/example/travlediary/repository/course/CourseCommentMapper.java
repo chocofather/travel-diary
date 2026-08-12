@@ -29,6 +29,12 @@ public interface CourseCommentMapper {
 
     int countActiveComments(@Param("courseId") Long courseId);
 
+    Long findActiveRootIdForLocation(@Param("courseId") Long courseId,
+                                     @Param("commentId") Long commentId);
+
+    int countRootCommentsBefore(@Param("courseId") Long courseId,
+                                @Param("rootId") Long rootId);
+
     CourseComment findActiveComment(@Param("commentId") Long commentId);
 
     CourseComment findActiveCommentForUpdate(@Param("commentId") Long commentId);

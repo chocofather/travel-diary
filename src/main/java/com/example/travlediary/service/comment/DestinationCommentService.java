@@ -2,6 +2,7 @@ package com.example.travlediary.service.comment;
 
 import com.example.travlediary.dto.CommentDto;
 import com.example.travlediary.dto.CommentImageDto;
+import com.example.travlediary.dto.CommentLocationDto;
 import com.example.travlediary.dto.PageResult;
 import com.example.travlediary.dto.WriterDto;
 import com.example.travlediary.model.DestinationComment;
@@ -27,6 +28,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class DestinationCommentService {
+    private static final int DEFAULT_PAGE_SIZE = 5;
+
     private final DestinationMapper destinationMapper; // 또는 별도 CommentMapper
     private final DestinationCommentMapper destinationCommentMapper;
     private final UserMapper userMapper;
@@ -280,7 +283,7 @@ public class DestinationCommentService {
 
     public PageResult<CommentDto> getCommentsPaged(Long destinationId, Long userId, int page, int size, String sort) {
         int safePage = Math.max(page, 0);
-        int safeSize = size <= 0 ? 5 : Math.min(size, 50);
+        int safeSize = size <= 0 ? DEFAULT_PAGE_SIZE : Math.min(size, 50);
         String safeSort = normalizePageSort(sort);
         int totalThreads = destinationCommentMapper.countRootComments(destinationId);
         int totalCommentCount = destinationCommentMapper.countByDestinationId(destinationId);
@@ -318,6 +321,22 @@ public class DestinationCommentService {
                 .toList();
 
         return new PageResult<>(dtos, totalThreads, safePage, safeSize, totalCommentCount);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<CommentLocationDto> getCommentLocation(Long destinationId, Long commentId) {
+        if (destinationId == null || commentId == null) {
+            return Optional.empty();
+        }
+        Long rootId = destinationCommentMapper.findActiveRootIdForLocation(
+                destinationId, commentId);
+        if (rootId == null) {
+            return Optional.empty();
+        }
+        int precedingRootCount = destinationCommentMapper.countRootCommentsBefore(
+                destinationId, rootId);
+        return Optional.of(new CommentLocationDto(
+                precedingRootCount / DEFAULT_PAGE_SIZE + 1));
     }
 
     private String normalizePageSort(String sort) {

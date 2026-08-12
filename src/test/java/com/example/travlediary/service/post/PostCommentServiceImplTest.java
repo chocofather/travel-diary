@@ -310,6 +310,33 @@ class PostCommentServiceImplTest {
     }
 
     @Test
+    void rootCommentLocationUsesTheFirstLatestPage() {
+        when(postCommentMapper.findActiveRootIdForLocation(10L, 30L)).thenReturn(30L);
+        when(postCommentMapper.countRootCommentsBefore(10L, 30L)).thenReturn(0);
+
+        assertThat(service.getCommentLocation(10L, 30L))
+                .hasValueSatisfying(location -> assertThat(location.getPage()).isEqualTo(1));
+    }
+
+    @Test
+    void replyLocationUsesItsRootGroupAndCalculatesALaterPage() {
+        when(postCommentMapper.findActiveRootIdForLocation(10L, 35L)).thenReturn(30L);
+        when(postCommentMapper.countRootCommentsBefore(10L, 30L)).thenReturn(7);
+
+        assertThat(service.getCommentLocation(10L, 35L))
+                .hasValueSatisfying(location -> assertThat(location.getPage()).isEqualTo(2));
+        verify(postCommentMapper).countRootCommentsBefore(10L, 30L);
+    }
+
+    @Test
+    void deletedMissingOrOtherPostsCommentHasNoLocation() {
+        when(postCommentMapper.findActiveRootIdForLocation(10L, 35L)).thenReturn(null);
+
+        assertThat(service.getCommentLocation(10L, 35L)).isEmpty();
+        verify(postCommentMapper, never()).countRootCommentsBefore(any(), any());
+    }
+
+    @Test
     void deletedRootDtoDoesNotExposeMaskedFields() throws Exception {
         PostCommentDto deletedRoot = new PostCommentDto();
         deletedRoot.setId(30L);

@@ -11,6 +11,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const lengthOutput = document.getElementById('course-comment-length');
     const sortButtons = section.querySelectorAll('[data-comment-sort]');
     const moreButton = document.getElementById('course-comment-more');
+    const deepLink = window.TravelDiaryCommentDeepLink;
+    const targetCommentId = deepLink?.readTargetCommentId() ?? null;
 
     const pageSize = 5;
     let currentSort = 'latest';
@@ -277,10 +279,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return empty;
     }
 
-    async function loadCommentPage({reset = false} = {}) {
+    async function loadCommentPage({reset = false, pageOverride = null} = {}) {
         if (isLoading && !reset) return;
         const generation = reset ? ++requestGeneration : requestGeneration;
-        const page = reset ? 0 : nextPage;
+        const page = Number.isInteger(pageOverride) && pageOverride >= 0
+            ? pageOverride
+            : (reset ? 0 : nextPage);
 
         if (reset) {
             nextPage = 0;
@@ -321,6 +325,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function resetComments() {
         await loadCommentPage({reset: true});
+    }
+
+    async function loadInitialComments() {
+        if (targetCommentId == null || !deepLink) {
+            await resetComments();
+            return;
+        }
+
+        const locationGeneration = ++requestGeneration;
+        try {
+            const location = await requestJson(
+                `/course-comments/${encodeURIComponent(targetCommentId)}/location`
+                + `?courseId=${encodeURIComponent(courseId)}`
+            );
+            if (locationGeneration !== requestGeneration) return;
+            const targetPage = Number(location.page) - 1;
+            if (!Number.isInteger(targetPage) || targetPage < 0) {
+                throw new Error('댓글 위치 응답이 올바르지 않습니다.');
+            }
+
+            await loadCommentPage({reset: true, pageOverride: targetPage});
+            if (!deepLink.focusTarget(list, 'data-comment-id', targetCommentId)) {
+                deepLink.scrollToSection(section);
+            }
+        } catch (error) {
+            if (locationGeneration !== requestGeneration) return;
+            await resetComments();
+            deepLink.scrollToSection(section);
+        }
     }
 
     sortButtons.forEach(button => {
@@ -489,5 +522,5 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     updateSortUi();
-    void resetComments();
+    void loadInitialComments();
 });

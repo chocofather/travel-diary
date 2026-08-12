@@ -109,6 +109,30 @@ class CommentPagingContractTest {
         }
     }
 
+    @Test
+    void locationQueriesResolveActiveTargetsToRootGroupsUsingTheVisibleLatestOrder() throws IOException {
+        String post = compact(read("src/main/resources/mapper/PostCommentMapper.xml"));
+        String course = compact(read("src/main/resources/mapper/CourseCommentMapper.xml"));
+        String destination = compact(read("src/main/resources/mapper/DestinationCommentMapper.xml"));
+
+        assertLocationMapper(post, "post_id", "created_at", true);
+        assertLocationMapper(course, "course_id", "create_at", true);
+        assertLocationMapper(destination, "destination_id", "created_at", false);
+
+        assertThat(course).doesNotContain("preceding.created_at", "target_root.created_at");
+        assertThat(post)
+                .contains("JOIN user_posts p")
+                .contains("p.deleted = 0")
+                .contains("p.deleted_at IS NULL");
+        assertThat(course)
+                .contains("JOIN courses c")
+                .contains("c.deleted = 0")
+                .contains("c.deleted_at IS NULL");
+        assertThat(destination)
+                .contains("JOIN destinations d ON d.id = target.destination_id")
+                .contains("AND root.deleted = 0");
+    }
+
     private void assertPagedMapper(String xml, String contentCondition, String createdColumn,
                                    String tableName) {
         assertThat(xml)
@@ -125,6 +149,34 @@ class CommentPagingContractTest {
                 .contains("<foreach item=\"rootId\" collection=\"rootIds\"")
                 .contains("active_reply.deleted = 0")
                 .contains("FROM " + tableName);
+    }
+
+    private void assertLocationMapper(String xml, String targetColumn, String createdColumn,
+                                      boolean keepsDeletedRootPlaceholder) {
+        assertThat(xml)
+                .contains("id=\"findActiveRootIdForLocation\"")
+                .contains("id=\"countRootCommentsBefore\"")
+                .contains("root.id = COALESCE(target.parent_comment_id, target.id)")
+                .contains("target." + targetColumn + " = #{" + camelCase(targetColumn) + "}")
+                .contains("target.deleted = 0")
+                .contains("preceding.parent_comment_id IS NULL")
+                .contains("preceding." + createdColumn + " &gt; target_root." + createdColumn)
+                .contains("preceding.id &gt; target_root.id");
+        if (keepsDeletedRootPlaceholder) {
+            assertThat(xml)
+                    .contains("root.deleted = 0 OR EXISTS")
+                    .contains("active_reply.parent_comment_id = root.id")
+                    .contains("preceding.deleted = 0 OR EXISTS");
+        }
+    }
+
+    private String camelCase(String snakeCase) {
+        return switch (snakeCase) {
+            case "post_id" -> "postId";
+            case "course_id" -> "courseId";
+            case "destination_id" -> "destinationId";
+            default -> throw new IllegalArgumentException(snakeCase);
+        };
     }
 
     private String read(String relativePath) throws IOException {

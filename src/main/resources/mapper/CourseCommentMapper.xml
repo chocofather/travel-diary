@@ -190,6 +190,62 @@
           AND deleted = 0
     </select>
 
+    <select id="findActiveRootIdForLocation" resultType="long">
+        SELECT root.id
+        FROM course_comments target
+        JOIN course_comments root
+          ON root.id = COALESCE(target.parent_comment_id, target.id)
+         AND root.course_id = target.course_id
+         AND root.parent_comment_id IS NULL
+        JOIN courses c
+          ON c.id = target.course_id
+         AND c.deleted = 0
+         AND c.deleted_at IS NULL
+        WHERE target.id = #{commentId}
+          AND target.course_id = #{courseId}
+          AND target.deleted = 0
+          AND (
+              root.deleted = 0
+              OR EXISTS (
+                  SELECT 1
+                  FROM course_comments active_reply
+                  WHERE active_reply.parent_comment_id = root.id
+                    AND active_reply.course_id = root.course_id
+                    AND active_reply.deleted = 0
+              )
+          )
+    </select>
+
+    <select id="countRootCommentsBefore" resultType="int">
+        SELECT COUNT(*)
+        FROM course_comments preceding
+        JOIN course_comments target_root
+          ON target_root.id = #{rootId}
+         AND target_root.course_id = #{courseId}
+         AND target_root.parent_comment_id IS NULL
+        WHERE preceding.course_id = #{courseId}
+          AND preceding.parent_comment_id IS NULL
+          AND (
+              preceding.deleted = 0
+              OR EXISTS (
+                  SELECT 1
+                  FROM course_comments active_reply
+                  WHERE active_reply.parent_comment_id = preceding.id
+                    AND active_reply.course_id = preceding.course_id
+                    AND active_reply.deleted = 0
+              )
+          )
+          AND (
+              (target_root.create_at IS NULL AND preceding.create_at IS NOT NULL)
+              OR preceding.create_at &gt; target_root.create_at
+              OR (
+                  (preceding.create_at = target_root.create_at
+                      OR (preceding.create_at IS NULL AND target_root.create_at IS NULL))
+                  AND preceding.id &gt; target_root.id
+              )
+          )
+    </select>
+
     <select id="findActiveComment" resultType="com.example.travlediary.model.CourseComment">
         SELECT
             id,

@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.comment.MyPageCommentMapper">
+
+    <sql id="unifiedMyCommentSelect">
+        SELECT
+            dc.id AS commentId,
+            'destination' AS commentType,
+            LEFT(dc.content, 200) AS contentPreview,
+            dc.created_at AS createdAt,
+            CASE WHEN dc.parent_comment_id IS NOT NULL THEN 1 ELSE 0 END AS reply,
+            dc.destination_id AS targetId,
+            dt.name AS targetTitle,
+            CAST(NULL AS CHAR) AS postType
+        FROM destination_comments dc
+        JOIN destinations d ON d.id = dc.destination_id
+        JOIN destination_translations dt
+          ON dt.destination_id = d.id
+         AND dt.language_code = 'ko'
+        WHERE dc.user_id = #{userId}
+          AND dc.deleted = 0
+
+        UNION ALL
+
+        SELECT
+            pc.id AS commentId,
+            'post' AS commentType,
+            LEFT(pc.content, 200) AS contentPreview,
+            pc.created_at AS createdAt,
+            CASE WHEN pc.parent_comment_id IS NOT NULL THEN 1 ELSE 0 END AS reply,
+            pc.post_id AS targetId,
+            p.title AS targetTitle,
+            p.post_type AS postType
+        FROM post_comments pc
+        JOIN user_posts p ON p.id = pc.post_id
+        WHERE pc.user_id = #{userId}
+          AND pc.deleted = 0
+          AND p.deleted = 0
+          AND p.deleted_at IS NULL
+
+        UNION ALL
+
+        SELECT
+            cc.id AS commentId,
+            'course' AS commentType,
+            LEFT(cc.content, 200) AS contentPreview,
+            cc.create_at AS createdAt,
+            CASE WHEN cc.parent_comment_id IS NOT NULL THEN 1 ELSE 0 END AS reply,
+            cc.course_id AS targetId,
+            c.title AS targetTitle,
+            CAST(NULL AS CHAR) AS postType
+        FROM course_comments cc
+        JOIN courses c ON c.id = cc.course_id
+        WHERE cc.user_id = #{userId}
+          AND cc.deleted = 0
+          AND c.deleted = 0
+          AND c.deleted_at IS NULL
+    </sql>
+
+    <sql id="commentTypeFilter">
+        <if test="commentType != null">
+            AND my_comments.commentType = #{commentType}
+        </if>
+    </sql>
+
+    <select id="findMyComments" resultType="com.example.travlediary.dto.MyPageCommentDto">
+        SELECT
+            my_comments.commentId,
+            my_comments.commentType,
+            my_comments.contentPreview,
+            my_comments.createdAt,
+            my_comments.reply,
+            my_comments.targetId,
+            my_comments.targetTitle,
+            my_comments.postType
+        FROM (
+            <include refid="unifiedMyCommentSelect"/>
+        ) my_comments
+        WHERE 1 = 1
+        <include refid="commentTypeFilter"/>
+        ORDER BY
+            my_comments.createdAt DESC,
+            my_comments.commentType ASC,
+            my_comments.commentId DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countMyComments" resultType="int">
+        SELECT COUNT(*)
+        FROM (
+            <include refid="unifiedMyCommentSelect"/>
+        ) my_comments
+        WHERE 1 = 1
+        <include refid="commentTypeFilter"/>
+    </select>
+
+</mapper>

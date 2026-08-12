@@ -21,7 +21,12 @@
          th:attr="aria-current=${activeMenu == 'posts'} ? 'page' : null"
          th:href="@{/mypage/posts}">내가 작성한 글</a>
     </li>
-    <li><span class="mypage-navigation-link is-disabled" aria-disabled="true">내가 작성한 댓글</span></li>
+    <li>
+      <a class="mypage-navigation-link"
+         th:classappend="${activeMenu == 'comments'} ? ' is-active' : ''"
+         th:attr="aria-current=${activeMenu == 'comments'} ? 'page' : null"
+         th:href="@{/mypage/comments}">내가 작성한 댓글</a>
+    </li>
     <li><span class="mypage-navigation-link is-disabled" aria-disabled="true">북마크</span></li>
     <li><a class="mypage-navigation-link" th:href="@{/support/inquiries}">내 문의내역</a></li>
     <li><span class="mypage-navigation-link is-disabled" aria-disabled="true">회원정보 수정</span></li>

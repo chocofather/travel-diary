@@ -4,6 +4,8 @@ import com.example.travlediary.config.CustomLoginSuccessHandler;
 import com.example.travlediary.config.CustomLogoutSuccessHandler;
 import com.example.travlediary.config.SecurityConfig;
 import com.example.travlediary.dto.BoardListDto;
+import com.example.travlediary.dto.MyPageCommentDto;
+import com.example.travlediary.dto.MyPageCommentPageDto;
 import com.example.travlediary.dto.MyPageProfileDto;
 import com.example.travlediary.dto.ProfileUpdateForm;
 import com.example.travlediary.model.User;
@@ -11,6 +13,7 @@ import com.example.travlediary.model.UserRole;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.board.BoardService;
+import com.example.travlediary.service.comment.MyPageCommentService;
 import com.example.travlediary.service.user.MyPageService;
 import com.example.travlediary.service.user.NicknameCheckStatus;
 import com.example.travlediary.service.user.NicknamePolicy;
@@ -24,6 +27,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -59,6 +63,8 @@ class MyPageControllerTest {
     @MockitoBean
     private BoardService boardService;
     @MockitoBean
+    private MyPageCommentService myPageCommentService;
+    @MockitoBean
     private CustomLoginSuccessHandler customLoginSuccessHandler;
     @MockitoBean
     private CustomLogoutSuccessHandler customLogoutSuccessHandler;
@@ -66,7 +72,7 @@ class MyPageControllerTest {
     private UserMapper userMapper;
 
     @Test
-    void guestCannotOpenMyPageProfileOrPosts() throws Exception {
+    void guestCannotOpenMyPageProfilePostsOrComments() throws Exception {
         mockMvc.perform(get("/mypage"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/login?redirect=/mypage"));
@@ -76,6 +82,9 @@ class MyPageControllerTest {
         mockMvc.perform(get("/mypage/posts"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/login?redirect=/mypage/posts"));
+        mockMvc.perform(get("/mypage/comments"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login?redirect=/mypage/comments"));
         mockMvc.perform(get("/mypage/profile/check-nickname").param("nickname", "여행민준"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/login?redirect=/mypage/profile/check-nickname"));
@@ -116,15 +125,102 @@ class MyPageControllerTest {
                     var document = Jsoup.parse(result.getResponse().getContentAsString());
                     assertThat(document.select("a[href=/mypage/profile]")).isNotEmpty();
                     assertThat(document.select("a[href=/mypage/posts]")).isNotEmpty();
+                    assertThat(document.select("a[href=/mypage/comments]")).isNotEmpty();
                     assertThat(document.select("a[href=/support/inquiries]")).isNotEmpty();
                     assertThat(document.select("a[href=/mypage/inquiries]")).isEmpty();
                     assertThat(document.select(".mypage-layout a[href='#']")).isEmpty();
                     assertThat(document.select("[aria-disabled=true]").text())
-                            .doesNotContain("내가 작성한 글")
-                            .contains("내가 작성한 댓글", "북마크", "회원정보 수정");
+                            .doesNotContain("내가 작성한 글", "내가 작성한 댓글")
+                            .contains("북마크", "회원정보 수정");
                     assertThat(document.select(
                             ".mypage-navigation-title.is-active[aria-current=page]").text())
                             .isEqualTo("마이페이지");
+                });
+    }
+
+    @Test
+    void userAndAdminCanOpenCommentsUsingOnlyTheirPrincipalId() throws Exception {
+        MyPageCommentPageDto emptyPage = commentPage(List.of(), "all", 1, 0, 0);
+        when(myPageCommentService.getMyComments(7L, "all", 1)).thenReturn(emptyPage);
+        when(myPageCommentService.getMyComments(99L, "all", 1)).thenReturn(emptyPage);
+
+        mockMvc.perform(get("/mypage/comments")
+                        .param("userId", "999")
+                        .with(user(principal(7L, UserRole.USER))))
+                .andExpect(status().isOk())
+                .andExpect(view().name("mypage/comments"))
+                .andExpect(model().attribute("type", "all"))
+                .andExpect(model().attribute("currentPage", 1));
+
+        mockMvc.perform(get("/mypage/comments")
+                        .with(user(principal(99L, UserRole.ADMIN))))
+                .andExpect(status().isOk())
+                .andExpect(view().name("mypage/comments"));
+
+        verify(myPageCommentService).getMyComments(7L, "all", 1);
+        verify(myPageCommentService).getMyComments(99L, "all", 1);
+    }
+
+    @Test
+    void commentsRendersTypesRepliesOriginalLinksActiveNavigationAndEscapedContent() throws Exception {
+        List<MyPageCommentDto> comments = List.of(
+                commentItem(31L, "destination", null, "경복궁", "야간개장이 좋아요", false, 101L),
+                commentItem(32L, "post", "QUESTION", "제주도 렌터카 질문", "<script>alert(1)</script>", true, 102L),
+                commentItem(33L, "post", "TIP", "부산 여행 팁", "좋은 정보입니다", false, 103L),
+                commentItem(34L, "course", null, "서울 당일치기 코스", "좋은 코스네요", true, 104L)
+        );
+        when(myPageCommentService.getMyComments(7L, "post", 1))
+                .thenReturn(commentPage(comments, "post", 1, 2, 14));
+
+        mockMvc.perform(get("/mypage/comments")
+                        .param("type", "post")
+                        .with(user(principal(7L, UserRole.USER))))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("comments", comments))
+                .andExpect(result -> {
+                    var document = Jsoup.parse(result.getResponse().getContentAsString());
+                    assertOriginalLinks(document, "/destinations/101?commentId=31", "경복궁");
+                    assertOriginalLinks(document, "/post/102?commentId=32", "제주도 렌터카 질문");
+                    assertOriginalLinks(document, "/post/103?commentId=33", "부산 여행 팁");
+                    assertOriginalLinks(document, "/course/104?commentId=34", "서울 당일치기 코스");
+                    assertThat(document.select(".mypage-comment-type").text())
+                            .contains("여행지", "여행 질문", "여행 팁", "여행 코스");
+                    assertThat(document.select(".mypage-comment-reply")).hasSize(2);
+                    assertThat(document.select(".mypage-comment-preview script")).isEmpty();
+                    assertThat(document.select(".mypage-comment-preview").get(1).text())
+                            .isEqualTo("<script>alert(1)</script>");
+                    assertThat(document.select(
+                            ".mypage-navigation-link.is-active[aria-current=page]").text())
+                            .isEqualTo("내가 작성한 댓글");
+                    assertThat(document.select(
+                            ".mypage-comment-filters a.is-active[aria-current=page]").text())
+                            .isEqualTo("커뮤니티");
+                    assertThat(document.select(
+                            ".mypage-comment-pagination a[href='/mypage/comments?type=post&page=2']"))
+                            .hasSize(1);
+                });
+    }
+
+    @Test
+    void commentsUsesCanonicalServiceResultAndShowsEmptyState() throws Exception {
+        when(myPageCommentService.getMyComments(7L, "abc", -2))
+                .thenReturn(commentPage(List.of(), "all", 1, 0, 0));
+
+        mockMvc.perform(get("/mypage/comments")
+                        .param("type", "abc")
+                        .param("page", "-2")
+                        .with(user(principal(7L, UserRole.USER))))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("type", "all"))
+                .andExpect(model().attribute("currentPage", 1))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "작성한 댓글이 없습니다.")))
+                .andExpect(result -> {
+                    var document = Jsoup.parse(result.getResponse().getContentAsString());
+                    assertThat(document.select(".mypage-comment-pagination")).isEmpty();
+                    assertThat(document.select(
+                            ".mypage-comment-filters a.is-active[aria-current=page]").text())
+                            .isEqualTo("전체");
                 });
     }
 
@@ -433,6 +529,39 @@ class MyPageControllerTest {
         item.setCreatedAt("2026-08-12 10:20:30");
         item.setViews(views);
         return item;
+    }
+
+    private MyPageCommentDto commentItem(Long commentId, String commentType, String postType,
+                                         String targetTitle, String content, boolean reply,
+                                         Long targetId) {
+        MyPageCommentDto item = new MyPageCommentDto();
+        item.setCommentId(commentId);
+        item.setCommentType(commentType);
+        item.setPostType(postType);
+        item.setTargetTitle(targetTitle);
+        item.setContentPreview(content);
+        item.setReply(reply);
+        item.setTargetId(targetId);
+        item.setCreatedAt(LocalDateTime.of(2026, 8, 12, 10, 20, 30));
+        return item;
+    }
+
+    private void assertOriginalLinks(org.jsoup.nodes.Document document, String href,
+                                     String targetTitle) {
+        assertThat(document.select(".mypage-comment-target a[href='" + href + "']"))
+                .singleElement()
+                .extracting(org.jsoup.nodes.Element::text)
+                .isEqualTo(targetTitle);
+        assertThat(document.select(".mypage-comment-footer a[href='" + href + "']"))
+                .singleElement()
+                .extracting(org.jsoup.nodes.Element::text)
+                .isEqualTo("원문 보기");
+    }
+
+    private MyPageCommentPageDto commentPage(List<MyPageCommentDto> comments, String type,
+                                              int currentPage, int totalPages, int totalCount) {
+        return new MyPageCommentPageDto(
+                comments, type, currentPage, totalPages, totalCount);
     }
 
     private CustomUserDetails principal(Long id, UserRole role) {

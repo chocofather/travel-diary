@@ -3,6 +3,7 @@ package com.example.travlediary.controller.course;
 import com.example.travlediary.config.CustomLoginSuccessHandler;
 import com.example.travlediary.config.CustomLogoutSuccessHandler;
 import com.example.travlediary.config.SecurityConfig;
+import com.example.travlediary.dto.CommentLocationDto;
 import com.example.travlediary.dto.CourseCommentDto;
 import com.example.travlediary.dto.PageResult;
 import com.example.travlediary.security.CustomUserDetails;
@@ -18,6 +19,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -67,6 +69,17 @@ class CourseCommentSecurityTest {
                 .andExpect(status().isOk());
 
         verify(service).getCommentsPage(10L, null, 0, 5, "latest");
+    }
+
+    @Test
+    void guestCanResolveAValidatedCommentLocation() throws Exception {
+        when(service.getCommentLocation(10L, 35L))
+                .thenReturn(Optional.of(new CommentLocationDto(2)));
+
+        mockMvc.perform(get("/course-comments/35/location").param("courseId", "10"))
+                .andExpect(status().isOk());
+
+        verify(service).getCommentLocation(10L, 35L);
     }
 
     @Test
