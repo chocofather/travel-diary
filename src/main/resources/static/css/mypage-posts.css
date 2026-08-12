@@ -1,0 +1,248 @@
+.mypage-post-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    padding: 18px 20px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-bottom: 0;
+    border-radius: 14px 14px 0 0;
+}
+
+.mypage-post-filters a {
+    display: inline-flex;
+    min-height: 40px;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 15px;
+    color: #64748b;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.mypage-post-filters a:hover {
+    color: #172033;
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+.mypage-post-filters a.is-active {
+    color: #115e59;
+    background: #f0fdfa;
+    border-color: #99f6e4;
+}
+
+.mypage-post-filters a:focus-visible,
+.mypage-post-title a:focus-visible,
+.mypage-post-pagination a:focus-visible {
+    outline: 3px solid rgba(13, 148, 136, 0.25);
+    outline-offset: 2px;
+}
+
+.mypage-post-list {
+    overflow: hidden;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 0 0 14px 14px;
+}
+
+.mypage-post-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 22px;
+    min-width: 0;
+    padding: 20px;
+    border-bottom: 1px solid #edf1f5;
+    transition: background-color 0.15s ease;
+}
+
+.mypage-post-row:last-of-type {
+    border-bottom: 0;
+}
+
+.mypage-post-row:hover {
+    background: #fbfdfd;
+}
+
+.mypage-post-row--course {
+    background: linear-gradient(90deg, rgba(240, 253, 250, 0.48), transparent 58%);
+}
+
+.mypage-post-main {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 12px;
+}
+
+.mypage-post-type {
+    display: inline-flex;
+    flex: 0 0 auto;
+    min-width: 72px;
+    min-height: 28px;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 9px;
+    color: #2563eb;
+    background: #eff6ff;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 750;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.mypage-post-type--tip {
+    color: #c2410c;
+    background: #fff7ed;
+}
+
+.mypage-post-type--course {
+    color: #115e59;
+    background: #f0fdfa;
+}
+
+.mypage-post-title {
+    min-width: 0;
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.45;
+}
+
+.mypage-post-title a {
+    display: block;
+    overflow: hidden;
+    color: #172033;
+    text-decoration: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mypage-post-title a:hover {
+    color: #115e59;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.mypage-post-meta {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: #64748b;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.mypage-post-meta strong {
+    color: inherit;
+    font-weight: 700;
+}
+
+.mypage-post-empty {
+    margin: 0;
+    padding: 64px 20px;
+    color: #64748b;
+    text-align: center;
+}
+
+.mypage-post-pagination {
+    display: grid;
+    grid-template-columns: minmax(76px, auto) auto minmax(76px, auto);
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin-top: 26px;
+}
+
+.mypage-post-pagination > a,
+.mypage-post-pagination > .is-disabled {
+    display: inline-flex;
+    min-height: 40px;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 15px;
+    color: #115e59;
+    border: 1px solid #cdded6;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.mypage-post-pagination > a:hover {
+    background: #f2f7f5;
+    border-color: #8fb5a5;
+}
+
+.mypage-post-pagination > .is-disabled {
+    color: #9ca3af;
+    cursor: default;
+    opacity: 0.65;
+}
+
+.mypage-post-page-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #64748b;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.mypage-post-page-status strong {
+    color: #172033;
+}
+
+@media (max-width: 680px) {
+    .mypage-post-filters {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        padding: 14px;
+    }
+
+    .mypage-post-filters a {
+        width: 100%;
+        padding-right: 8px;
+        padding-left: 8px;
+    }
+
+    .mypage-post-row {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 9px;
+        padding: 18px 16px;
+    }
+
+    .mypage-post-main {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .mypage-post-title,
+    .mypage-post-title a {
+        width: 100%;
+    }
+
+    .mypage-post-title a {
+        overflow: visible;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    .mypage-post-pagination {
+        grid-template-columns: minmax(64px, 1fr) auto minmax(64px, 1fr);
+        gap: 8px;
+    }
+
+    .mypage-post-pagination > a,
+    .mypage-post-pagination > .is-disabled {
+        min-width: 0;
+        padding-right: 10px;
+        padding-left: 10px;
+    }
+}

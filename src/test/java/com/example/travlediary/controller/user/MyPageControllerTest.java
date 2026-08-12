@@ -3,12 +3,14 @@ package com.example.travlediary.controller.user;
 import com.example.travlediary.config.CustomLoginSuccessHandler;
 import com.example.travlediary.config.CustomLogoutSuccessHandler;
 import com.example.travlediary.config.SecurityConfig;
+import com.example.travlediary.dto.BoardListDto;
 import com.example.travlediary.dto.MyPageProfileDto;
 import com.example.travlediary.dto.ProfileUpdateForm;
 import com.example.travlediary.model.User;
 import com.example.travlediary.model.UserRole;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
+import com.example.travlediary.service.board.BoardService;
 import com.example.travlediary.service.user.MyPageService;
 import com.example.travlediary.service.user.NicknameCheckStatus;
 import com.example.travlediary.service.user.NicknamePolicy;
@@ -22,11 +24,14 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -52,6 +57,8 @@ class MyPageControllerTest {
     @MockitoBean
     private MyPageService myPageService;
     @MockitoBean
+    private BoardService boardService;
+    @MockitoBean
     private CustomLoginSuccessHandler customLoginSuccessHandler;
     @MockitoBean
     private CustomLogoutSuccessHandler customLogoutSuccessHandler;
@@ -59,13 +66,16 @@ class MyPageControllerTest {
     private UserMapper userMapper;
 
     @Test
-    void guestCannotOpenMyPageOrProfile() throws Exception {
+    void guestCannotOpenMyPageProfileOrPosts() throws Exception {
         mockMvc.perform(get("/mypage"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/login?redirect=/mypage"));
         mockMvc.perform(get("/mypage/profile"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/login?redirect=/mypage/profile"));
+        mockMvc.perform(get("/mypage/posts"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login?redirect=/mypage/posts"));
         mockMvc.perform(get("/mypage/profile/check-nickname").param("nickname", "여행민준"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/login?redirect=/mypage/profile/check-nickname"));
@@ -105,14 +115,162 @@ class MyPageControllerTest {
                 .andExpect(result -> {
                     var document = Jsoup.parse(result.getResponse().getContentAsString());
                     assertThat(document.select("a[href=/mypage/profile]")).isNotEmpty();
+                    assertThat(document.select("a[href=/mypage/posts]")).isNotEmpty();
                     assertThat(document.select("a[href=/support/inquiries]")).isNotEmpty();
                     assertThat(document.select("a[href=/mypage/inquiries]")).isEmpty();
                     assertThat(document.select(".mypage-layout a[href='#']")).isEmpty();
                     assertThat(document.select("[aria-disabled=true]").text())
-                            .contains("내가 작성한 글", "내가 작성한 댓글", "북마크", "회원정보 수정");
+                            .doesNotContain("내가 작성한 글")
+                            .contains("내가 작성한 댓글", "북마크", "회원정보 수정");
                     assertThat(document.select(
                             ".mypage-navigation-title.is-active[aria-current=page]").text())
                             .isEqualTo("마이페이지");
+                });
+    }
+
+    @Test
+    void userAndAdminCanOpenPostsUsingOnlyTheirPrincipalId() throws Exception {
+        when(boardService.getBoardListByUserId(7L, "all", 1, 10)).thenReturn(List.of());
+        when(boardService.getBoardCountByUserId(7L, "all")).thenReturn(0);
+        when(boardService.getBoardListByUserId(99L, "all", 1, 10)).thenReturn(List.of());
+        when(boardService.getBoardCountByUserId(99L, "all")).thenReturn(0);
+
+        mockMvc.perform(get("/mypage/posts")
+                        .param("userId", "999")
+                        .with(user(principal(7L, UserRole.USER))))
+                .andExpect(status().isOk())
+                .andExpect(view().name("mypage/posts"))
+                .andExpect(model().attribute("type", "all"))
+                .andExpect(model().attribute("currentPage", 1));
+
+        mockMvc.perform(get("/mypage/posts")
+                        .with(user(principal(99L, UserRole.ADMIN))))
+                .andExpect(status().isOk())
+                .andExpect(view().name("mypage/posts"));
+
+        verify(boardService).getBoardListByUserId(7L, "all", 1, 10);
+        verify(boardService).getBoardCountByUserId(7L, "all");
+        verify(boardService).getBoardListByUserId(99L, "all", 1, 10);
+        verify(boardService).getBoardCountByUserId(99L, "all");
+    }
+
+    @Test
+    void postsSupportsEveryFilterAndFallsBackToAllForInvalidType() throws Exception {
+        CustomUserDetails member = principal(7L, UserRole.USER);
+
+        for (String type : List.of("all", "question", "tip", "course")) {
+            mockMvc.perform(get("/mypage/posts")
+                            .param("type", type)
+                            .with(user(member)))
+                    .andExpect(status().isOk())
+                    .andExpect(model().attribute("type", type));
+
+            verify(boardService).getBoardListByUserId(7L, type, 1, 10);
+            verify(boardService).getBoardCountByUserId(7L, type);
+        }
+
+        mockMvc.perform(get("/mypage/posts")
+                        .param("type", "abc")
+                        .with(user(member)))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("type", "all"));
+
+        verify(boardService, times(2)).getBoardListByUserId(7L, "all", 1, 10);
+        verify(boardService, times(2)).getBoardCountByUserId(7L, "all");
+    }
+
+    @Test
+    void postsCorrectsNonPositivePageAndKeepsTheFixedPageSize() throws Exception {
+        CustomUserDetails member = principal(7L, UserRole.USER);
+
+        mockMvc.perform(get("/mypage/posts")
+                        .param("type", "question")
+                        .param("page", "0")
+                        .param("size", "100")
+                        .with(user(member)))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("currentPage", 1));
+
+        mockMvc.perform(get("/mypage/posts")
+                        .param("type", "tip")
+                        .param("page", "-3")
+                        .with(user(member)))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("currentPage", 1));
+
+        verify(boardService).getBoardListByUserId(7L, "question", 1, 10);
+        verify(boardService).getBoardListByUserId(7L, "tip", 1, 10);
+    }
+
+    @Test
+    void postsRendersExistingDetailLinksActiveNavigationAndFilterPreservingPagination() throws Exception {
+        List<BoardListDto> posts = List.of(
+                boardItem(11L, "post", "QUESTION", "제주도 렌터카 질문", 12),
+                boardItem(12L, "post", "TIP", "부산 여행 팁", 31),
+                boardItem(13L, "course", null, "서울 당일치기 코스", 52)
+        );
+        when(boardService.getBoardListByUserId(7L, "all", 1, 10)).thenReturn(posts);
+        when(boardService.getBoardCountByUserId(7L, "all")).thenReturn(12);
+
+        mockMvc.perform(get("/mypage/posts")
+                        .with(user(principal(7L, UserRole.USER))))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("posts", posts))
+                .andExpect(model().attribute("totalPages", 2))
+                .andExpect(result -> {
+                    var document = Jsoup.parse(result.getResponse().getContentAsString());
+                    assertThat(document.select("a[href=/post/11]")).hasSize(1);
+                    assertThat(document.select("a[href=/post/12]")).hasSize(1);
+                    assertThat(document.select("a[href=/course/13]")).hasSize(1);
+                    assertThat(document.select(".mypage-post-type").text())
+                            .contains("여행 질문", "여행 팁", "여행 코스");
+                    assertThat(document.select(
+                            ".mypage-navigation-link.is-active[aria-current=page]").text())
+                            .isEqualTo("내가 작성한 글");
+                    assertThat(document.select(
+                            ".mypage-post-filters a.is-active[aria-current=page]").text())
+                            .isEqualTo("전체");
+                    assertThat(document.select(
+                            ".mypage-post-pagination a[href='/mypage/posts?type=all&page=2']"))
+                            .hasSize(1);
+                });
+    }
+
+    @Test
+    void postsShowsEmptyStateWhenThereAreNoResults() throws Exception {
+        when(boardService.getBoardListByUserId(7L, "question", 1, 10)).thenReturn(List.of());
+        when(boardService.getBoardCountByUserId(7L, "question")).thenReturn(0);
+
+        mockMvc.perform(get("/mypage/posts")
+                        .param("type", "question")
+                        .with(user(principal(7L, UserRole.USER))))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("작성한 글이 없습니다.")))
+                .andExpect(result -> {
+                    var document = Jsoup.parse(result.getResponse().getContentAsString());
+                    assertThat(document.select(".mypage-post-pagination")).isEmpty();
+                    assertThat(document.select(
+                            ".mypage-post-filters a.is-active[aria-current=page]").text())
+                            .isEqualTo("여행 질문");
+                });
+    }
+
+    @Test
+    void postsPaginationKeepsTheSelectedFilter() throws Exception {
+        BoardListDto item = boardItem(12L, "post", "QUESTION", "두 번째 페이지 질문", 3);
+        when(boardService.getBoardListByUserId(7L, "question", 2, 10)).thenReturn(List.of(item));
+        when(boardService.getBoardCountByUserId(7L, "question")).thenReturn(12);
+
+        mockMvc.perform(get("/mypage/posts")
+                        .param("type", "question")
+                        .param("page", "2")
+                        .with(user(principal(7L, UserRole.USER))))
+                .andExpect(status().isOk())
+                .andExpect(result -> {
+                    var document = Jsoup.parse(result.getResponse().getContentAsString());
+                    assertThat(document.select(
+                            ".mypage-post-pagination a[href='/mypage/posts?type=question&page=1']"))
+                            .hasSize(1);
                 });
     }
 
@@ -263,6 +421,18 @@ class MyPageControllerTest {
         profile.setUserEmail(email);
         profile.setProfileImage(image);
         return profile;
+    }
+
+    private BoardListDto boardItem(Long id, String boardType, String postType,
+                                   String title, int views) {
+        BoardListDto item = new BoardListDto();
+        item.setId(id);
+        item.setBoardType(boardType);
+        item.setPostType(postType);
+        item.setTitle(title);
+        item.setCreatedAt("2026-08-12 10:20:30");
+        item.setViews(views);
+        return item;
     }
 
     private CustomUserDetails principal(Long id, UserRole role) {

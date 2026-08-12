@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/mypage-layout.css">
+  <link rel="stylesheet" href="/css/mypage-posts.css">
+</th:block>
+<th:block th:fragment="body">
+  <div class="mypage-layout">
+    <nav th:replace="~{fragments/mypage/navigation :: navigation('posts')}"></nav>
+
+    <section class="mypage-content mypage-posts-page" aria-labelledby="mypage-posts-title">
+      <header class="mypage-page-header">
+        <p>MY POSTS</p>
+        <h1 id="mypage-posts-title">내가 작성한 글</h1>
+        <span>내가 작성한 여행 질문, 여행 팁과 여행 코스를 확인할 수 있습니다.</span>
+      </header>
+
+      <nav class="mypage-post-filters" aria-label="작성 글 유형">
+        <a th:href="@{/mypage/posts(type='all')}"
+           th:classappend="${type == 'all'} ? ' is-active' : ''"
+           th:attr="aria-current=${type == 'all'} ? 'page' : null">전체</a>
+        <a th:href="@{/mypage/posts(type='question')}"
+           th:classappend="${type == 'question'} ? ' is-active' : ''"
+           th:attr="aria-current=${type == 'question'} ? 'page' : null">여행 질문</a>
+        <a th:href="@{/mypage/posts(type='tip')}"
+           th:classappend="${type == 'tip'} ? ' is-active' : ''"
+           th:attr="aria-current=${type == 'tip'} ? 'page' : null">여행 팁</a>
+        <a th:href="@{/mypage/posts(type='course')}"
+           th:classappend="${type == 'course'} ? ' is-active' : ''"
+           th:attr="aria-current=${type == 'course'} ? 'page' : null">여행 코스</a>
+      </nav>
+
+      <div class="mypage-post-list">
+        <article class="mypage-post-row"
+                 th:each="item : ${posts}"
+                 th:classappend="${item.boardType == 'course'} ? ' mypage-post-row--course'">
+          <div class="mypage-post-main">
+            <span class="mypage-post-type"
+                  th:classappend="${item.boardType == 'course' ? ' mypage-post-type--course' : (item.postType == 'TIP' ? ' mypage-post-type--tip' : ' mypage-post-type--question')}"
+                  th:text="${item.boardType == 'course' ? '여행 코스' : (item.postType == 'TIP' ? '여행 팁' : '여행 질문')}">여행 질문</span>
+            <h2 class="mypage-post-title">
+              <a th:if="${item.boardType == 'post'}"
+                 th:href="@{/post/{id}(id=${item.id})}"
+                 th:text="${item.title}"
+                 th:title="${item.title}">게시글 제목</a>
+              <a th:if="${item.boardType == 'course'}"
+                 th:href="@{/course/{id}(id=${item.id})}"
+                 th:text="${item.title}"
+                 th:title="${item.title}">여행 코스 제목</a>
+            </h2>
+          </div>
+
+          <div class="mypage-post-meta">
+            <time th:datetime="${item.createdAt}"
+                  th:text="${item.createdAt != null and #strings.length(item.createdAt) >= 10
+                      ? #strings.replace(#strings.substring(item.createdAt, 2, 10), '-', '.')
+                      : item.createdAt}">26.08.12</time>
+            <span aria-hidden="true">·</span>
+            <span>조회 <strong th:text="${item.views}">0</strong></span>
+          </div>
+        </article>
+
+        <p class="mypage-post-empty" th:if="${#lists.isEmpty(posts)}">
+          작성한 글이 없습니다.
+        </p>
+      </div>
+
+      <nav class="mypage-post-pagination" th:if="${totalPages > 0}" aria-label="작성 글 페이지">
+        <a th:if="${currentPage > 1}"
+           th:href="@{/mypage/posts(type=${type},page=${currentPage - 1})}">이전</a>
+        <span th:unless="${currentPage > 1}" class="is-disabled" aria-disabled="true">이전</span>
+        <span class="mypage-post-page-status">
+          <strong th:text="${currentPage}">1</strong>
+          <span aria-hidden="true">/</span>
+          <span th:text="${totalPages}">1</span>
+        </span>
+        <a th:if="${currentPage < totalPages}"
+           th:href="@{/mypage/posts(type=${type},page=${currentPage + 1})}">다음</a>
+        <span th:unless="${currentPage < totalPages}" class="is-disabled" aria-disabled="true">다음</span>
+      </nav>
+    </section>
+  </div>
+</th:block>
+</html>

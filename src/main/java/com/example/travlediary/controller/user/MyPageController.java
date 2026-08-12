@@ -1,8 +1,10 @@
 package com.example.travlediary.controller.user;
 
+import com.example.travlediary.dto.BoardListDto;
 import com.example.travlediary.dto.MyPageProfileDto;
 import com.example.travlediary.dto.ProfileUpdateForm;
 import com.example.travlediary.security.CustomUserDetails;
+import com.example.travlediary.service.board.BoardService;
 import com.example.travlediary.service.user.MyPageService;
 import com.example.travlediary.service.user.NicknameCheckStatus;
 import com.example.travlediary.service.user.NicknamePolicy;
@@ -21,14 +23,22 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 @Controller
 @RequiredArgsConstructor
 @RequestMapping("/mypage")
 public class MyPageController {
 
+    private static final int POSTS_PAGE_SIZE = 10;
+    private static final Set<String> POST_FILTER_TYPES =
+            Set.of("all", "question", "tip", "course");
+
     private final MyPageService myPageService;
+    private final BoardService boardService;
 
     @GetMapping
     public String myPage(@AuthenticationPrincipal CustomUserDetails userDetails,
@@ -36,6 +46,28 @@ public class MyPageController {
         model.addAttribute("profile", myPageService.getProfile(userDetails.getId()));
         model.addAttribute("pageTitle", "마이페이지 | 여행일기");
         return "mypage/index";
+    }
+
+    @GetMapping("/posts")
+    public String posts(@AuthenticationPrincipal CustomUserDetails userDetails,
+                        @RequestParam(defaultValue = "all") String type,
+                        @RequestParam(defaultValue = "1") int page,
+                        Model model) {
+        String safeType = normalizePostFilter(type);
+        int safePage = Math.max(page, 1);
+        Long userId = userDetails.getId();
+
+        List<BoardListDto> posts = boardService.getBoardListByUserId(
+                userId, safeType, safePage, POSTS_PAGE_SIZE);
+        int totalCount = boardService.getBoardCountByUserId(userId, safeType);
+        int totalPages = (int) Math.ceil((double) totalCount / POSTS_PAGE_SIZE);
+
+        model.addAttribute("posts", posts);
+        model.addAttribute("type", safeType);
+        model.addAttribute("currentPage", safePage);
+        model.addAttribute("totalPages", totalPages);
+        model.addAttribute("pageTitle", "내가 작성한 글 | 마이페이지");
+        return "mypage/posts";
     }
 
     @GetMapping("/profile")
@@ -91,6 +123,14 @@ public class MyPageController {
                 "available", status.isAvailable(),
                 "message", status.getMessage()
         );
+    }
+
+    private String normalizePostFilter(String type) {
+        if (type == null) {
+            return "all";
+        }
+        String normalized = type.toLowerCase(Locale.ROOT);
+        return POST_FILTER_TYPES.contains(normalized) ? normalized : "all";
     }
 
     private void prepareProfileModel(Model model, MyPageProfileDto profile,

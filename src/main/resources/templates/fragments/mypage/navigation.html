@@ -15,7 +15,12 @@
          th:attr="aria-current=${activeMenu == 'profile'} ? 'page' : null"
          th:href="@{/mypage/profile}">프로필</a>
     </li>
-    <li><span class="mypage-navigation-link is-disabled" aria-disabled="true">내가 작성한 글</span></li>
+    <li>
+      <a class="mypage-navigation-link"
+         th:classappend="${activeMenu == 'posts'} ? ' is-active' : ''"
+         th:attr="aria-current=${activeMenu == 'posts'} ? 'page' : null"
+         th:href="@{/mypage/posts}">내가 작성한 글</a>
+    </li>
     <li><span class="mypage-navigation-link is-disabled" aria-disabled="true">내가 작성한 댓글</span></li>
     <li><span class="mypage-navigation-link is-disabled" aria-disabled="true">북마크</span></li>
     <li><a class="mypage-navigation-link" th:href="@{/support/inquiries}">내 문의내역</a></li>
