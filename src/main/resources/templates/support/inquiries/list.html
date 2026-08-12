@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/support-layout.css">
+  <link rel="stylesheet" href="/css/support-inquiries.css">
+</th:block>
+<th:block th:fragment="body">
+  <div class="support-layout">
+    <nav th:replace="~{fragments/support/navigation :: navigation('inquiries')}"></nav>
+    <section class="support-inquiry-page support-layout-content" aria-labelledby="support-inquiry-title">
+      <header class="support-inquiry-page-header">
+        <p>고객센터</p>
+        <h1 id="support-inquiry-title">1:1 문의</h1>
+        <span>궁금한 내용을 남겨주시면 확인 후 답변해드립니다.</span>
+      </header>
+
+      <nav th:replace="~{fragments/support/inquiry-tabs :: tabs('list')}"></nav>
+
+      <div class="support-inquiry-board" th:unless="${#lists.isEmpty(inquiries)}">
+        <div class="support-inquiry-board-header" aria-hidden="true">
+          <span>상태</span>
+          <span>문의 유형</span>
+          <span>제목</span>
+          <span>작성일</span>
+        </div>
+        <ol class="support-inquiry-list">
+          <li class="support-inquiry-item" th:each="inquiry : ${inquiries}">
+            <span class="support-inquiry-status"
+                  th:classappend="${inquiry.answered} ? ' is-answered' : ' is-pending'"
+                  th:text="${inquiry.status.displayName}">답변대기</span>
+            <span class="support-inquiry-type" th:text="${inquiry.inquiryType.displayName}">회원/계정</span>
+            <a class="support-inquiry-subject"
+               th:href="@{/support/inquiries/{id}(id=${inquiry.id})}"
+               th:text="${inquiry.subject}">로그인 오류 문의</a>
+            <time th:datetime="${#dates.format(inquiry.createdAt, 'yyyy-MM-dd')}"
+                  th:text="${#dates.format(inquiry.createdAt, 'yyyy.MM.dd')}">2026.08.12</time>
+          </li>
+        </ol>
+      </div>
+
+      <div class="support-inquiry-empty" th:if="${#lists.isEmpty(inquiries)}">
+        <p>등록한 1:1 문의가 없습니다.</p>
+        <a th:href="@{/support/inquiries/new}">문의하기</a>
+      </div>
+
+      <nav class="support-inquiry-pagination"
+           th:if="${totalPages > 1}" aria-label="내 문의내역 페이지">
+        <a th:if="${currentPage > 1}"
+           th:href="@{/support/inquiries(page=${currentPage - 1})}">이전</a>
+        <span th:unless="${currentPage > 1}" class="is-disabled" aria-disabled="true">이전</span>
+
+        <a th:each="pageNumber : ${#numbers.sequence(pageStart, pageEnd)}"
+           th:href="@{/support/inquiries(page=${pageNumber == 1 ? null : pageNumber})}"
+           th:text="${pageNumber}"
+           th:classappend="${pageNumber == currentPage} ? ' is-active'"
+           th:attr="aria-current=${pageNumber == currentPage} ? 'page' : null">1</a>
+
+        <a th:if="${currentPage < totalPages}"
+           th:href="@{/support/inquiries(page=${currentPage + 1})}">다음</a>
+        <span th:unless="${currentPage < totalPages}" class="is-disabled" aria-disabled="true">다음</span>
+      </nav>
+    </section>
+  </div>
+</th:block>
+</html>

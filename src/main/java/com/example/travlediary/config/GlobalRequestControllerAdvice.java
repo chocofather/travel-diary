@@ -9,7 +9,10 @@ public class GlobalRequestControllerAdvice {
 
     @ModelAttribute("currentUri")
     public String currentUri(HttpServletRequest request) {
-        return request.getRequestURI();
+        String query = request.getQueryString();
+        return query == null || query.isBlank()
+                ? request.getRequestURI()
+                : request.getRequestURI() + "?" + query;
     }
 
 }

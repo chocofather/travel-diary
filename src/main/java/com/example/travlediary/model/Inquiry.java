@@ -12,7 +12,9 @@ public class Inquiry {
     private String subject; // 질문명
     private String content; // 문의 내용
     private InquiryStatus status; // PENDING(처리전):기본값, IN_PROGRESS(처리중), ANSWERED(답변완료), CANCELLED(사용자 취소)
+    private InquiryType inquiryType; // 문의 유형
     private Timestamp createdAt;
+    private Timestamp updatedAt;
     private Long userId;
 
 }

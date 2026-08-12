@@ -7,15 +7,21 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
+import org.springframework.security.web.savedrequest.RequestCache;
+import org.springframework.security.web.savedrequest.SavedRequest;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 @Component
 @RequiredArgsConstructor
 public class CustomLoginSuccessHandler implements AuthenticationSuccessHandler {
 
     private final UserMapper userMapper;
+    private final RequestCache requestCache = new HttpSessionRequestCache();
 
     @Override
     public void onAuthenticationSuccess(
@@ -27,13 +33,79 @@ public class CustomLoginSuccessHandler implements AuthenticationSuccessHandler {
         User user = userMapper.findByUsername(authentication.getName());
         request.getSession().setAttribute("userId", user.getId());
 
-        // 2) redirect 처리
-        String redirect = request.getParameter("redirect");
-        if (redirect != null && !redirect.isBlank()) {
-            response.sendRedirect(redirect);
-        } else {
+        // 2) 같은 로그인 세션에서 저장된 원래 요청을 우선하되 권한을 다시 확인한다.
+        boolean admin = authentication.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
+        String savedRedirect = savedRequestRedirect(request, response);
+        String requestedRedirect = InternalRedirectValidator.normalize(
+                request.getParameter("redirect"));
+        String target = savedRedirect != null ? savedRedirect : requestedRedirect;
+
+        requestCache.removeRequest(request, response);
+        if (target == null || (isAdminPath(target) && !admin)) {
             response.sendRedirect("/");
+        } else {
+            response.sendRedirect(target);
         }
     }
 
+    private boolean isAdminPath(String redirect) {
+        String path = URI.create(redirect).getPath();
+        return "/admin".equals(path) || path.startsWith("/admin/");
+    }
+
+    private String savedRequestRedirect(HttpServletRequest request,
+                                        HttpServletResponse response) {
+        SavedRequest savedRequest = requestCache.getRequest(request, response);
+        if (savedRequest == null || !"GET".equalsIgnoreCase(savedRequest.getMethod())) {
+            return null;
+        }
+
+        try {
+            URI savedUri = new URI(savedRequest.getRedirectUrl());
+            if (!sameOrigin(request, savedUri)) {
+                return null;
+            }
+            StringBuilder target = new StringBuilder(savedUri.getRawPath());
+            String query = originalQuery(savedUri.getRawQuery());
+            if (query != null) {
+                target.append('?').append(query);
+            }
+            return InternalRedirectValidator.normalize(target.toString());
+        } catch (URISyntaxException exception) {
+            return null;
+        }
+    }
+
+    private String originalQuery(String rawQuery) {
+        if (rawQuery == null || rawQuery.isBlank()) {
+            return null;
+        }
+
+        StringBuilder result = new StringBuilder();
+        for (String parameter : rawQuery.split("&")) {
+            if (parameter.isBlank() || "continue".equals(parameter)) {
+                continue;
+            }
+            if (!result.isEmpty()) {
+                result.append('&');
+            }
+            result.append(parameter);
+        }
+        return result.isEmpty() ? null : result.toString();
+    }
+
+    private boolean sameOrigin(HttpServletRequest request, URI uri) {
+        return request.getScheme().equalsIgnoreCase(uri.getScheme())
+                && request.getServerName().equalsIgnoreCase(uri.getHost())
+                && effectivePort(request.getScheme(), request.getServerPort())
+                == effectivePort(uri.getScheme(), uri.getPort());
+    }
+
+    private int effectivePort(String scheme, int port) {
+        if (port >= 0) {
+            return port;
+        }
+        return "https".equalsIgnoreCase(scheme) ? 443 : 80;
+    }
 }

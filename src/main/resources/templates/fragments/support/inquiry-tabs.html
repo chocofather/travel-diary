@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<body>
+<nav class="support-inquiry-tabs"
+     th:fragment="tabs(activeTab)"
+     aria-label="1:1 문의 메뉴">
+  <a class="support-inquiry-tab"
+     th:classappend="${activeTab == 'new'} ? ' is-active' : ''"
+     th:attr="aria-current=${activeTab == 'new'} ? 'page' : null"
+     th:href="@{/support/inquiries/new}">문의하기</a>
+  <a class="support-inquiry-tab"
+     th:classappend="${activeTab == 'list'} ? ' is-active' : ''"
+     th:attr="aria-current=${activeTab == 'list'} ? 'page' : null"
+     th:href="@{/support/inquiries}">내 문의내역</a>
+</nav>
+</body>
+</html>

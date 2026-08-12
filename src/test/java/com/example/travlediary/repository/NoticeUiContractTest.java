@@ -58,7 +58,7 @@ class NoticeUiContractTest {
     }
 
     @Test
-    void headerAndAdminSidebarPreserveNoticeLinksAlongsideImplementedFaq() throws IOException {
+    void headerAndAdminSidebarPreserveNoticeLinksAlongsideCustomerSupportFeatures() throws IOException {
         String header = file("src/main/resources/templates/fragments/header.html");
         String sidebar = file("src/main/resources/templates/fragments/admin/sidebar.html");
 
@@ -66,18 +66,20 @@ class NoticeUiContractTest {
                 .contains(">고객센터</a>")
                 .contains("href=\"/support/notices\">공지사항</a>")
                 .contains("href=\"/support/faq\">자주 묻는 질문</a>")
-                .contains("submenu-link-disabled", "1:1 문의")
-                .doesNotContain("href=\"/support/inquiries\"");
+                .contains("href=\"/support/inquiries\">1:1 문의</a>")
+                .contains("hasRole(''ADMIN'')")
+                .contains("href=\"/admin\" class=\"admin-link\"");
         assertThat(sidebar)
                 .contains("고객지원", "@{/admin/notices}", "activeMenu == 'notices'")
                 .contains("@{/admin/faqs}", "activeMenu == 'faqs'")
-                .doesNotContain("@{/admin/inquiries}");
+                .contains("@{/admin/inquiries}", "activeMenu == 'inquiries'");
     }
 
     @Test
     void userAndAdminLogoutControlsUsePostFormsWithServerCsrfSupport() throws IOException {
         String header = file("src/main/resources/templates/fragments/header.html");
         String adminLayout = file("src/main/resources/templates/layout/admin.html");
+        String login = file("src/main/resources/templates/login.html");
 
         assertThat(header)
                 .contains("th:action=\"@{/logout}\"")
@@ -87,11 +89,15 @@ class NoticeUiContractTest {
         assertThat(adminLayout)
                 .contains("th:action=\"@{/logout}\"")
                 .contains("method=\"post\"")
-                .contains("name=\"redirect\" th:value=\"${currentUri}\"")
-                .doesNotContain("href=\"/logout", "@{'/logout?");
+                .doesNotContain("name=\"redirect\"", "href=\"/logout", "@{'/logout?");
+        assertThat(occurrences(login, "name=\"redirect\"")).isEqualTo(1);
     }
 
     private String file(String path) throws IOException {
         return Files.readString(Path.of(path), StandardCharsets.UTF_8);
+    }
+
+    private int occurrences(String source, String value) {
+        return (source.length() - source.replace(value, "").length()) / value.length();
     }
 }

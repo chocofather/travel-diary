@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.inquiry.InquiryMapper">
+
+    <resultMap id="InquiryResultMap" type="com.example.travlediary.model.Inquiry">
+        <id property="id" column="id"/>
+        <result property="subject" column="subject"/>
+        <result property="content" column="content"/>
+        <result property="status" column="status"/>
+        <result property="inquiryType" column="inquiry_type"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="userId" column="user_id"/>
+    </resultMap>
+
+    <resultMap id="InquiryAnswerResultMap" type="com.example.travlediary.model.InquiryAnswer">
+        <id property="id" column="id"/>
+        <result property="content" column="content"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="inquiryId" column="inquiry_id"/>
+        <result property="userId" column="user_id"/>
+    </resultMap>
+
+    <resultMap id="InquiryListResultMap" type="com.example.travlediary.dto.InquiryListItemDto">
+        <id property="id" column="id"/>
+        <result property="subject" column="subject"/>
+        <result property="status" column="status"/>
+        <result property="inquiryType" column="inquiry_type"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="userId" column="user_id"/>
+        <result property="userDisplayName" column="user_display_name"/>
+    </resultMap>
+
+    <resultMap id="InquiryDetailResultMap" type="com.example.travlediary.dto.InquiryDetailDto">
+        <id property="id" column="id"/>
+        <result property="subject" column="subject"/>
+        <result property="content" column="content"/>
+        <result property="status" column="status"/>
+        <result property="inquiryType" column="inquiry_type"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="userId" column="user_id"/>
+        <result property="userDisplayName" column="user_display_name"/>
+        <result property="answerId" column="answer_id"/>
+        <result property="answerContent" column="answer_content"/>
+        <result property="answerCreatedAt" column="answer_created_at"/>
+        <result property="answerUpdatedAt" column="answer_updated_at"/>
+    </resultMap>
+
+    <sql id="InquiryDetailColumns">
+        i.id,
+        i.subject,
+        i.content,
+        i.status,
+        i.inquiry_type,
+        i.created_at,
+        i.updated_at,
+        i.user_id,
+        COALESCE(NULLIF(u.nickname, ''), u.username) AS user_display_name,
+        ia.id AS answer_id,
+        ia.content AS answer_content,
+        ia.created_at AS answer_created_at,
+        ia.updated_at AS answer_updated_at
+    </sql>
+
+    <insert id="insertInquiry" parameterType="com.example.travlediary.model.Inquiry"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO inquiries (subject, content, status, user_id, inquiry_type)
+        VALUES (#{subject}, #{content}, #{status}, #{userId}, #{inquiryType})
+    </insert>
+
+    <select id="countMyInquiries" resultType="long">
+        SELECT COUNT(*)
+        FROM inquiries
+        WHERE user_id = #{userId}
+    </select>
+
+    <select id="findMyInquiries" resultMap="InquiryListResultMap">
+        SELECT id, subject, status, inquiry_type, created_at, user_id
+        FROM inquiries
+        WHERE user_id = #{userId}
+        ORDER BY created_at DESC, id DESC
+        LIMIT #{limit}
+        OFFSET #{offset}
+    </select>
+
+    <select id="findMyInquiryById" resultMap="InquiryDetailResultMap">
+        SELECT
+        <include refid="InquiryDetailColumns"/>
+        FROM inquiries i
+        JOIN users u ON u.id = i.user_id
+        LEFT JOIN inquiry_answers ia ON ia.inquiry_id = i.id
+        WHERE i.id = #{id}
+          AND i.user_id = #{userId}
+    </select>
+
+    <select id="findEditableMyInquiry" resultMap="InquiryResultMap">
+        SELECT id, subject, content, status, created_at, updated_at, user_id, inquiry_type
+        FROM inquiries
+        WHERE id = #{id}
+          AND user_id = #{userId}
+          AND status = 'PENDING'
+    </select>
+
+    <update id="updatePendingMyInquiry" parameterType="com.example.travlediary.model.Inquiry">
+        UPDATE inquiries
+        SET inquiry_type = #{inquiryType},
+            subject = #{subject},
+            content = #{content}
+        WHERE id = #{id}
+          AND user_id = #{userId}
+          AND status = 'PENDING'
+    </update>
+
+    <delete id="deletePendingMyInquiry">
+        DELETE FROM inquiries
+        WHERE id = #{id}
+          AND user_id = #{userId}
+          AND status = 'PENDING'
+    </delete>
+
+    <select id="countAdminInquiries" resultType="long">
+        SELECT COUNT(*)
+        FROM inquiries i
+        <if test="status != null">
+            WHERE i.status = #{status}
+        </if>
+    </select>
+
+    <select id="findAdminInquiries" resultMap="InquiryListResultMap">
+        SELECT i.id,
+               i.subject,
+               i.status,
+               i.inquiry_type,
+               i.created_at,
+               i.user_id,
+               COALESCE(NULLIF(u.nickname, ''), u.username) AS user_display_name
+        FROM inquiries i
+        JOIN users u ON u.id = i.user_id
+        <if test="status != null">
+            WHERE i.status = #{status}
+        </if>
+        ORDER BY i.created_at DESC, i.id DESC
+        LIMIT #{limit}
+        OFFSET #{offset}
+    </select>
+
+    <select id="findAdminInquiryById" resultMap="InquiryDetailResultMap">
+        SELECT
+        <include refid="InquiryDetailColumns"/>
+        FROM inquiries i
+        JOIN users u ON u.id = i.user_id
+        LEFT JOIN inquiry_answers ia ON ia.inquiry_id = i.id
+        WHERE i.id = #{id}
+    </select>
+
+    <select id="findByIdForUpdate" resultMap="InquiryResultMap">
+        SELECT id, subject, content, status, created_at, updated_at, user_id, inquiry_type
+        FROM inquiries
+        WHERE id = #{id}
+        FOR UPDATE
+    </select>
+
+    <select id="findAnswerByInquiryId" resultMap="InquiryAnswerResultMap">
+        SELECT id, content, created_at, updated_at, inquiry_id, user_id
+        FROM inquiry_answers
+        WHERE inquiry_id = #{inquiryId}
+    </select>
+
+    <insert id="insertAnswer" parameterType="com.example.travlediary.model.InquiryAnswer"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO inquiry_answers (content, inquiry_id, user_id)
+        VALUES (#{content}, #{inquiryId}, #{userId})
+    </insert>
+
+    <update id="updateAnswer" parameterType="com.example.travlediary.model.InquiryAnswer">
+        UPDATE inquiry_answers
+        SET content = #{content}
+        WHERE id = #{id}
+          AND inquiry_id = #{inquiryId}
+    </update>
+
+    <update id="updateInquiryStatus">
+        UPDATE inquiries
+        SET status = #{status}
+        WHERE id = #{id}
+    </update>
+
+</mapper>

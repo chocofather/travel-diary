@@ -23,7 +23,6 @@
         <a th:href="@{/}">사이트 보기</a>
         <span class="admin-topbar-divider" aria-hidden="true"></span>
         <form th:action="@{/logout}" method="post" class="admin-logout-form">
-          <input type="hidden" name="redirect" th:value="${currentUri}">
           <button type="submit" class="admin-logout-button">로그아웃</button>
         </form>
       </nav>

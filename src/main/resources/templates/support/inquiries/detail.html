@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/support-layout.css">
+  <link rel="stylesheet" href="/css/support-inquiries.css">
+</th:block>
+<th:block th:fragment="body">
+  <div class="support-layout">
+    <nav th:replace="~{fragments/support/navigation :: navigation('inquiries')}"></nav>
+    <article class="support-inquiry-detail support-layout-content" aria-labelledby="support-inquiry-detail-title">
+      <header class="support-inquiry-detail-header">
+        <p>고객센터 · 1:1 문의</p>
+        <div class="support-inquiry-detail-badges">
+          <span class="support-inquiry-status"
+                th:classappend="${inquiry.answered} ? ' is-answered' : ' is-pending'"
+                th:text="${inquiry.status.displayName}">답변대기</span>
+          <span class="support-inquiry-type" th:text="${inquiry.inquiryType.displayName}">회원/계정</span>
+        </div>
+        <h1 id="support-inquiry-detail-title" th:text="${inquiry.subject}">문의 제목</h1>
+        <time th:datetime="${#dates.format(inquiry.createdAt, 'yyyy-MM-dd')}"
+              th:text="|작성일 ${#dates.format(inquiry.createdAt, 'yyyy.MM.dd')}|">작성일 2026.08.12</time>
+      </header>
+
+      <nav th:replace="~{fragments/support/inquiry-tabs :: tabs('list')}"></nav>
+
+      <p class="support-inquiry-message" th:if="${inquiryMessage}" role="alert"
+         th:text="${inquiryMessage}">문의 수정 안내</p>
+
+      <section class="support-inquiry-detail-section" aria-labelledby="my-inquiry-content-title">
+        <h2 id="my-inquiry-content-title">내 문의</h2>
+        <p class="support-inquiry-plain-content" th:text="${inquiry.content}">문의 내용</p>
+      </section>
+
+      <section class="support-inquiry-detail-section is-answer" aria-labelledby="inquiry-answer-title">
+        <h2 id="inquiry-answer-title">관리자 답변</h2>
+        <div th:if="${inquiry.hasAnswer}">
+          <p class="support-inquiry-plain-content" th:text="${inquiry.answerContent}">관리자 답변</p>
+          <time class="support-inquiry-answer-date"
+                th:datetime="${#dates.format(inquiry.answerCreatedAt, 'yyyy-MM-dd')}"
+                th:text="|답변일 ${#dates.format(inquiry.answerCreatedAt, 'yyyy.MM.dd')}|">답변일 2026.08.12</time>
+        </div>
+        <p class="support-inquiry-waiting" th:unless="${inquiry.hasAnswer}">
+          아직 답변이 등록되지 않았습니다.
+        </p>
+      </section>
+
+      <footer class="support-inquiry-detail-actions">
+        <a th:if="${inquiry.pending}"
+           class="is-edit"
+           th:href="@{/support/inquiries/{id}/edit(id=${inquiry.id})}">문의 수정</a>
+        <form th:if="${inquiry.pending}"
+              th:action="@{/support/inquiries/{id}/delete(id=${inquiry.id})}"
+              method="post"
+              onsubmit="return confirm('이 문의를 삭제하시겠습니까?');">
+          <button type="submit" class="is-danger">문의 삭제</button>
+        </form>
+        <a th:href="@{/support/inquiries}">목록으로</a>
+      </footer>
+    </article>
+  </div>
+</th:block>
+</html>

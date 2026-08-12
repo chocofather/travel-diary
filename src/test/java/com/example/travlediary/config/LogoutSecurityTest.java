@@ -41,7 +41,7 @@ class LogoutSecurityTest {
     private UserMapper userMapper;
 
     @Test
-    void authenticatedPostLogoutWithCsrfInvalidatesSessionAndKeepsRedirect() throws Exception {
+    void authenticatedPostLogoutWithCsrfKeepsValidatedPublicPage() throws Exception {
         MockHttpSession session = authenticatedSession();
 
         mockMvc.perform(post("/logout")
@@ -53,6 +53,78 @@ class LogoutSecurityTest {
                 .andExpect(unauthenticated());
 
         assertThat(session.isInvalid()).isTrue();
+    }
+
+    @Test
+    void publicDetailFaqAndFilteredListRemainAfterLogout() throws Exception {
+        assertPublicLogoutRedirect("/destinations/25", "/destinations/25");
+        assertPublicLogoutRedirect("/support/notices/10", "/support/notices/10");
+        assertPublicLogoutRedirect("/support/faq", "/support/faq");
+        assertPublicLogoutRedirect(
+                "/travel-info?scope=DOMESTIC&sort=views",
+                "/travel-info?scope=DOMESTIC&sort=views");
+        assertPublicLogoutRedirect("/post/12", "/post/12");
+    }
+
+    @Test
+    void logoutDoesNotCarryPreviousAccountsPrivateOrExternalRedirect() throws Exception {
+        mockMvc.perform(post("/logout")
+                        .session(authenticatedSession())
+                        .with(csrf())
+                        .param("redirect", "/support/inquiries/10"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/"))
+                .andExpect(unauthenticated());
+
+        mockMvc.perform(post("/logout")
+                        .session(authenticatedSession())
+                        .with(csrf())
+                        .param("redirect", "/admin/inquiries"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/"))
+                .andExpect(unauthenticated());
+
+        mockMvc.perform(post("/logout")
+                        .session(authenticatedSession())
+                        .with(csrf())
+                        .param("redirect", "/mypage"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/"))
+                .andExpect(unauthenticated());
+
+        mockMvc.perform(post("/logout")
+                        .session(authenticatedSession())
+                        .with(csrf())
+                        .param("redirect", "https://evil.example"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/"))
+                .andExpect(unauthenticated());
+
+        mockMvc.perform(post("/logout")
+                        .session(authenticatedSession())
+                        .with(csrf())
+                        .param("redirect", "//evil.example"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/"))
+                .andExpect(unauthenticated());
+
+        mockMvc.perform(post("/logout")
+                        .session(authenticatedSession())
+                        .with(csrf())
+                        .param("redirect", "javascript:alert(1)"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/"))
+                .andExpect(unauthenticated());
+    }
+
+    private void assertPublicLogoutRedirect(String redirect, String expected) throws Exception {
+        mockMvc.perform(post("/logout")
+                        .session(authenticatedSession())
+                        .with(csrf())
+                        .param("redirect", redirect))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl(expected))
+                .andExpect(unauthenticated());
     }
 
     @Test

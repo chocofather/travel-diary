@@ -1,0 +1,242 @@
+.admin-inquiries-page,
+.admin-inquiry-detail-page {
+    min-width: 0;
+}
+
+.admin-inquiry-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 18px;
+}
+
+.admin-inquiry-filters a {
+    display: inline-flex;
+    min-height: 38px;
+    align-items: center;
+    padding: 7px 14px;
+    color: #58657d;
+    background: #fff;
+    border: 1px solid #dce2eb;
+    border-radius: 9px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.admin-inquiry-filters a:hover,
+.admin-inquiry-filters a.is-active {
+    color: #fff;
+    background: #4265f7;
+    border-color: #4265f7;
+}
+
+.admin-inquiries-table {
+    min-width: 900px;
+}
+
+.admin-inquiry-status,
+.admin-inquiry-type {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 0.73rem;
+    font-weight: 750;
+    white-space: nowrap;
+}
+
+.admin-inquiry-status.is-pending {
+    color: #8a5a12;
+    background: #fff8e8;
+    border: 1px solid #f0d9aa;
+}
+
+.admin-inquiry-status.is-answered {
+    color: #11685e;
+    background: #eafaf6;
+    border: 1px solid #bde9de;
+}
+
+.admin-inquiry-type {
+    color: #4f5f75;
+    background: #f2f5f8;
+    border: 1px solid #dbe2e9;
+}
+
+.admin-inquiry-subject {
+    max-width: 430px;
+}
+
+.admin-inquiry-subject a {
+    color: #34415e;
+    font-weight: 700;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+}
+
+.admin-inquiry-subject a:hover {
+    color: #3558c6;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.admin-inquiry-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 7px;
+    margin-top: 24px;
+}
+
+.admin-inquiry-pagination a,
+.admin-inquiry-pagination .is-disabled {
+    display: inline-flex;
+    min-width: 38px;
+    min-height: 38px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 11px;
+    color: #53617c;
+    background: #fff;
+    border: 1px solid #dce2eb;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.admin-inquiry-pagination a:hover,
+.admin-inquiry-pagination a.is-active {
+    color: #fff;
+    background: #4265f7;
+    border-color: #4265f7;
+}
+
+.admin-inquiry-pagination .is-disabled {
+    color: #a4adba;
+    background: #f8fafc;
+}
+
+.admin-inquiry-detail-page {
+    display: grid;
+    gap: 20px;
+}
+
+.admin-inquiry-detail-page .admin-page-header,
+.admin-inquiry-detail-page .admin-inquiry-section {
+    width: 100%;
+    max-width: 980px;
+}
+
+.admin-inquiry-section-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.admin-inquiry-section-header h2,
+.admin-inquiry-section-header p {
+    margin: 0;
+}
+
+.admin-inquiry-section-header h2 {
+    color: #334373;
+    font-size: 1.12rem;
+}
+
+.admin-inquiry-section-header p {
+    color: #717b91;
+    font-size: 0.87rem;
+}
+
+.admin-inquiry-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+}
+
+.admin-inquiry-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 28px;
+    margin: 0 0 24px;
+}
+
+.admin-inquiry-meta div {
+    display: flex;
+    gap: 8px;
+    font-size: 0.86rem;
+}
+
+.admin-inquiry-meta dt {
+    color: #788399;
+    font-weight: 700;
+}
+
+.admin-inquiry-meta dd {
+    margin: 0;
+    color: #3c465d;
+}
+
+.admin-inquiry-subject-heading {
+    margin: 0;
+    color: #27344d;
+    font-size: 1.35rem;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
+.admin-inquiry-plain-content {
+    margin: 0;
+    color: #3f4b61;
+    font-size: 0.95rem;
+    line-height: 1.75;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.admin-inquiry-answer-form {
+    display: grid;
+    gap: 18px;
+}
+
+.admin-inquiry-answer-form textarea {
+    min-height: 240px;
+    line-height: 1.65;
+}
+
+.admin-inquiry-answer-form .is-invalid {
+    background: #fffafa;
+    border-color: #df7777;
+}
+
+.admin-inquiry-answer-form .admin-alert,
+.admin-inquiry-answer-form .admin-alert p,
+.admin-inquiry-answer-form .admin-field-help {
+    margin: 0;
+}
+
+.admin-inquiry-answer-form .admin-field-help {
+    color: #7a8498;
+    font-size: 0.78rem;
+}
+
+.admin-inquiry-state-message {
+    margin: 0;
+    color: #7a8498;
+}
+
+@media (max-width: 640px) {
+    .admin-inquiry-section-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .admin-inquiry-answer-form textarea {
+        min-height: 200px;
+    }
+}

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'inquiries')}">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/admin-inquiries.css">
+</th:block>
+<th:block th:fragment="body">
+  <section class="admin-page-section admin-inquiries-page">
+    <header class="admin-page-header">
+      <div class="admin-page-heading">
+        <h1 class="admin-page-title">1:1 문의 관리</h1>
+        <p class="admin-page-description">회원 문의를 확인하고 답변 상태를 관리합니다.</p>
+      </div>
+    </header>
+
+    <nav class="admin-inquiry-filters" aria-label="문의 상태 필터">
+      <a th:href="@{/admin/inquiries}"
+         th:classappend="${currentStatus == 'ALL'} ? ' is-active'"
+         th:attr="aria-current=${currentStatus == 'ALL'} ? 'page' : null">전체</a>
+      <a th:href="@{/admin/inquiries(status='PENDING')}"
+         th:classappend="${currentStatus == 'PENDING'} ? ' is-active'"
+         th:attr="aria-current=${currentStatus == 'PENDING'} ? 'page' : null">답변대기</a>
+      <a th:href="@{/admin/inquiries(status='ANSWERED')}"
+         th:classappend="${currentStatus == 'ANSWERED'} ? ' is-active'"
+         th:attr="aria-current=${currentStatus == 'ANSWERED'} ? 'page' : null">답변완료</a>
+    </nav>
+
+    <div class="admin-card is-table-card">
+      <div class="admin-table-wrapper">
+        <table class="admin-table admin-inquiries-table">
+          <thead>
+          <tr>
+            <th>상태</th>
+            <th>문의 유형</th>
+            <th>제목</th>
+            <th>회원</th>
+            <th>작성일</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr th:each="inquiry : ${inquiries}">
+            <td>
+              <span class="admin-inquiry-status"
+                    th:classappend="${inquiry.answered} ? ' is-answered' : ' is-pending'"
+                    th:text="${inquiry.status.displayName}">답변대기</span>
+            </td>
+            <td><span class="admin-inquiry-type" th:text="${inquiry.inquiryType.displayName}">회원/계정</span></td>
+            <td class="admin-inquiry-subject">
+              <a th:href="@{/admin/inquiries/{id}(id=${inquiry.id})}"
+                 th:text="${inquiry.subject}">문의 제목</a>
+            </td>
+            <td th:text="${inquiry.userDisplayName}">회원</td>
+            <td th:text="${#dates.format(inquiry.createdAt, 'yyyy-MM-dd')}">2026-08-12</td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(inquiries)}">
+            <td colspan="5" class="admin-table-empty">등록된 문의가 없습니다.</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <nav class="admin-inquiry-pagination"
+         th:if="${totalPages > 1}" aria-label="관리자 문의 페이지">
+      <a th:if="${currentPage > 1}"
+         th:href="@{/admin/inquiries(status=${currentStatus == 'ALL' ? null : currentStatus},page=${currentPage - 1})}">이전</a>
+      <span th:unless="${currentPage > 1}" class="is-disabled" aria-disabled="true">이전</span>
+
+      <a th:each="pageNumber : ${#numbers.sequence(pageStart, pageEnd)}"
+         th:href="@{/admin/inquiries(status=${currentStatus == 'ALL' ? null : currentStatus},page=${pageNumber == 1 ? null : pageNumber})}"
+         th:text="${pageNumber}"
+         th:classappend="${pageNumber == currentPage} ? ' is-active'"
+         th:attr="aria-current=${pageNumber == currentPage} ? 'page' : null">1</a>
+
+      <a th:if="${currentPage < totalPages}"
+         th:href="@{/admin/inquiries(status=${currentStatus == 'ALL' ? null : currentStatus},page=${currentPage + 1})}">다음</a>
+      <span th:unless="${currentPage < totalPages}" class="is-disabled" aria-disabled="true">다음</span>
+    </nav>
+  </section>
+</th:block>
+</html>

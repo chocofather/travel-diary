@@ -58,19 +58,18 @@ class FaqUiContractTest {
     }
 
     @Test
-    void headerAndSidebarExposeImplementedFaqWithoutInquiryLinks() throws IOException {
+    void headerAndSidebarPreserveFaqAlongsideImplementedInquiryLinks() throws IOException {
         String header = file("src/main/resources/templates/fragments/header.html");
         String sidebar = file("src/main/resources/templates/fragments/admin/sidebar.html");
 
         assertThat(header)
                 .contains("href=\"/support/notices\">공지사항</a>")
                 .contains("href=\"/support/faq\">자주 묻는 질문</a>")
-                .contains("submenu-link-disabled", "1:1 문의")
-                .doesNotContain("href=\"/support/inquiries");
+                .contains("href=\"/support/inquiries\">1:1 문의</a>");
         assertThat(sidebar)
                 .contains("@{/admin/notices}", "@{/admin/faqs}")
                 .contains("activeMenu == 'faqs'")
-                .doesNotContain("@{/admin/inquiries}");
+                .contains("@{/admin/inquiries}", "activeMenu == 'inquiries'");
     }
 
     @Test
@@ -95,11 +94,10 @@ class FaqUiContractTest {
 
         assertThat(navigation)
                 .contains("<nav", "aria-label=\"고객센터 메뉴\"")
-                .contains("@{/support/notices}", "@{/support/faq}")
+                .contains("@{/support/notices}", "@{/support/faq}", "@{/support/inquiries}")
                 .contains("aria-current=${activeMenu == 'notices'} ? 'page' : null")
                 .contains("aria-current=${activeMenu == 'faq'} ? 'page' : null")
-                .contains("aria-disabled=\"true\">1:1 문의</span>")
-                .doesNotContain("/support/inquiries");
+                .contains("aria-current=${activeMenu == 'inquiries'} ? 'page' : null");
         assertThat(layoutCss)
                 .contains("grid-template-columns: 210px minmax(0, 1fr)")
                 .contains("@media (max-width: 900px)")

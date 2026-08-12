@@ -19,7 +19,10 @@
          th:href="@{/support/faq}">자주 묻는 질문</a>
     </li>
     <li>
-      <span class="support-navigation-link is-disabled" aria-disabled="true">1:1 문의</span>
+      <a class="support-navigation-link"
+         th:classappend="${activeMenu == 'inquiries'} ? ' is-active' : ''"
+         th:attr="aria-current=${activeMenu == 'inquiries'} ? 'page' : null"
+         th:href="@{/support/inquiries}">1:1 문의</a>
     </li>
   </ul>
 </nav>
