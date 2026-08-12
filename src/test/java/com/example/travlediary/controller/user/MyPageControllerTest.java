@@ -133,12 +133,12 @@ class MyPageControllerTest {
                     assertThat(document.select("a[href=/mypage/posts]")).isNotEmpty();
                     assertThat(document.select("a[href=/mypage/comments]")).isNotEmpty();
                     assertThat(document.select("a[href=/mypage/bookmarks]")).isNotEmpty();
+                    assertThat(document.select("a[href=/mypage/account]")).isNotEmpty();
                     assertThat(document.select("a[href=/support/inquiries]")).isNotEmpty();
                     assertThat(document.select("a[href=/mypage/inquiries]")).isEmpty();
                     assertThat(document.select(".mypage-layout a[href='#']")).isEmpty();
                     assertThat(document.select("[aria-disabled=true]").text())
-                            .doesNotContain("내가 작성한 글", "내가 작성한 댓글", "북마크")
-                            .contains("회원정보 수정");
+                            .doesNotContain("내가 작성한 글", "내가 작성한 댓글", "북마크", "회원정보 수정");
                     assertThat(document.select(
                             ".mypage-navigation-title.is-active[aria-current=page]").text())
                             .isEqualTo("마이페이지");

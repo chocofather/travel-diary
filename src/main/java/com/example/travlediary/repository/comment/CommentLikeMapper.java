@@ -13,4 +13,8 @@ public interface CommentLikeMapper {
 
     // 해당 유저가 이미 좋아요 눌렀는지 확인
     boolean exists(@Param("userId") Long userId, @Param("commentId") Long commentId);
+
+    int decrementDestinationLikeCountsByUserId(@Param("userId") Long userId);
+
+    int deleteAllByUserId(@Param("userId") Long userId);
 }

@@ -1,3 +1,14 @@
+.home-account-status {
+    width: min(1180px, calc(100% - 40px));
+    margin: 24px auto 0;
+    padding: 12px 14px;
+    border: 1px solid #a7e3d8;
+    border-radius: 9px;
+    background: #f0fdfa;
+    color: #115e59;
+    font-size: 14px;
+}
+
 .instant-trip {
     /*
     background: #1a1a1a;

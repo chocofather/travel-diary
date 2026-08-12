@@ -2,6 +2,7 @@ package com.example.travlediary.controller.user;
 
 import com.example.travlediary.service.user.UserService;
 import com.example.travlediary.service.user.NicknamePolicy;
+import com.example.travlediary.service.user.PasswordPolicy;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -70,8 +71,8 @@ public class UserApiController {
 
     @PostMapping("/validate-password")
     public ResponseEntity<?> validatePassword(@RequestParam String password) {
-        if (password == null || !password.matches("^(?=.*[!@#$%^&*])[A-Za-z\\d!@#$%^&*]{8,}$")) {
-            return ResponseEntity.badRequest().body("비밀번호는 8자 이상이며, 특수문자 1개 이상 포함해야 합니다.");
+        if (!PasswordPolicy.isValid(password)) {
+            return ResponseEntity.badRequest().body(PasswordPolicy.INVALID_MESSAGE);
         }
         return ResponseEntity.ok("사용 가능한 비밀번호입니다.");
     }

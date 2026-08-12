@@ -10,6 +10,10 @@
 </th:block>
 
 <th:block th:fragment="body">
+  <p class="home-account-status"
+     th:if="${param.withdrawn != null and param.withdrawn[0] == 'true'}" role="status">
+    회원 탈퇴가 완료되었습니다.
+  </p>
 <!-- 이벤트 슬라이더 -->
 <section id="event-slider">
   <div class="swiper">

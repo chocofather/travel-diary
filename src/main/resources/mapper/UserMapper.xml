@@ -35,6 +35,41 @@
         UPDATE users SET user_password = #{userPassword} WHERE id = #{id}
     </update>
 
+    <update id="updateActiveUserPassword">
+        UPDATE users
+        SET user_password = #{userPassword},
+            updated_at = NOW()
+        WHERE id = #{id}
+          AND status = 'ACTIVE'
+          AND deleted_at IS NULL
+    </update>
+
+    <update id="updateAccountDetails">
+        UPDATE users
+        SET full_name = #{fullName},
+            user_phone = #{userPhone},
+            user_birth = #{userBirth},
+            updated_at = NOW()
+        WHERE id = #{id}
+          AND status = 'ACTIVE'
+          AND deleted_at IS NULL
+    </update>
+
+    <update id="deactivateAccount">
+        UPDATE users
+        SET user_email = #{userEmail},
+            nickname = #{nickname},
+            status = #{status},
+            deleted_at = NOW(),
+            verification_token = NULL,
+            reset_token = NULL,
+            reset_token_exp = NULL,
+            updated_at = NOW()
+        WHERE id = #{id}
+          AND status = 'ACTIVE'
+          AND deleted_at IS NULL
+    </update>
+
     <!--  아이디 중복 개수 확인 -->
     <select id="countByUsername" parameterType="java.lang.String" resultType="int">
         SELECT COUNT(*) FROM users WHERE username = #{username}
@@ -78,6 +113,8 @@
     <select id="findByFullNameAndEmail" resultType="com.example.travlediary.model.User">
         SELECT * FROM users
         WHERE full_name = #{fullName} AND user_email = #{userEmail}
+          AND status = 'ACTIVE'
+          AND deleted_at IS NULL
     </select>
 
     <!-- ① 아이디+이메일로 사용자 찾기 (비밀번호 재설정 요청 단계) -->
@@ -88,6 +125,8 @@
         FROM users
         WHERE username   = #{username}
           AND user_email = #{userEmail}
+          AND status = 'ACTIVE'
+          AND deleted_at IS NULL
     </select>
 
     <!-- ② 비밀번호 재설정 토큰·만료시간 저장 -->
@@ -107,6 +146,8 @@
                reset_token_exp  AS resetTokenExp
         FROM users
         WHERE reset_token = #{token}
+          AND status = 'ACTIVE'
+          AND deleted_at IS NULL
     </select>
 
     <!-- ④ 토큰 사용 후 무효화 -->
@@ -121,6 +162,45 @@
         SELECT *
         FROM users
         WHERE id = #{id}
+    </select>
+
+    <select id="findAccountDetailsById" resultType="com.example.travlediary.dto.AccountDetailsDto">
+        SELECT username,
+               user_email AS userEmail,
+               full_name AS fullName,
+               user_phone AS userPhone,
+               user_birth AS userBirth
+        FROM users
+        WHERE id = #{id}
+          AND status = 'ACTIVE'
+          AND deleted_at IS NULL
+    </select>
+
+    <select id="findActiveAccountSecurityById" resultType="com.example.travlediary.model.User">
+        SELECT id,
+               username,
+               user_password AS userPassword,
+               user_role AS userRole,
+               status,
+               deleted_at AS deletedAt
+        FROM users
+        WHERE id = #{id}
+          AND status = 'ACTIVE'
+          AND deleted_at IS NULL
+    </select>
+
+    <select id="findActiveAccountSecurityByIdForUpdate" resultType="com.example.travlediary.model.User">
+        SELECT id,
+               username,
+               user_password AS userPassword,
+               user_role AS userRole,
+               status,
+               deleted_at AS deletedAt
+        FROM users
+        WHERE id = #{id}
+          AND status = 'ACTIVE'
+          AND deleted_at IS NULL
+        FOR UPDATE
     </select>
 
     <select id="findPublicProfileById" resultType="com.example.travlediary.dto.PublicUserProfileDto">

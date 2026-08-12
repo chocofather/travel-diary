@@ -77,4 +77,9 @@
         WHERE target_type = #{targetType}
           AND target_id = #{targetId}
     </delete>
+
+    <delete id="deleteAllByUserId">
+        DELETE FROM bookmarks
+        WHERE user_id = #{userId}
+    </delete>
 </mapper>

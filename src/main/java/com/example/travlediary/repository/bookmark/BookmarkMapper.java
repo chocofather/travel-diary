@@ -42,6 +42,8 @@ public interface BookmarkMapper {
     int deleteByTarget(@Param("targetType") String targetType,
                        @Param("targetId") Long targetId);
 
+    int deleteAllByUserId(@Param("userId") Long userId);
+
     // (원한다면) 유저가 북마크한 모든 대상 타입+ID 조회
     // List<Bookmark> findAllByUserId(Long userId);
 }

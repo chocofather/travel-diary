@@ -27,4 +27,16 @@
         )
     </select>
 
+    <update id="decrementDestinationLikeCountsByUserId">
+        UPDATE destination_comments dc
+        JOIN comment_likes cl ON cl.comment_id = dc.id
+        SET dc.likes = GREATEST(dc.likes - 1, 0)
+        WHERE cl.user_id = #{userId}
+    </update>
+
+    <delete id="deleteAllByUserId">
+        DELETE FROM comment_likes
+        WHERE user_id = #{userId}
+    </delete>
+
 </mapper>

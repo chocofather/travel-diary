@@ -1,0 +1,200 @@
+.mypage-account-page {
+    display: grid;
+    gap: 22px;
+}
+
+.mypage-account-panel {
+    display: grid;
+    gap: 18px;
+    padding: 24px;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    background: #fff;
+}
+
+.mypage-account-verify-form {
+    max-width: 560px;
+}
+
+.mypage-account-section-heading h2 {
+    margin: 0 0 6px;
+    color: #172033;
+    font-size: 19px;
+}
+
+.mypage-account-section-heading span,
+.mypage-account-field small {
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.mypage-account-readonly-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin: 0;
+}
+
+.mypage-account-readonly-list > div {
+    padding: 15px 16px;
+    border-radius: 10px;
+    background: #f8fafc;
+}
+
+.mypage-account-readonly-list dt {
+    margin-bottom: 6px;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.mypage-account-readonly-list dd {
+    overflow-wrap: anywhere;
+    margin: 0;
+    color: #172033;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.mypage-account-field {
+    display: grid;
+    gap: 7px;
+}
+
+.mypage-account-field label {
+    color: #253044;
+    font-size: 14px;
+    font-weight: 750;
+}
+
+.mypage-account-field input {
+    width: 100%;
+    min-height: 46px;
+    padding: 10px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+    background: #fff;
+    color: #172033;
+    font: inherit;
+}
+
+.mypage-account-field input:focus-visible {
+    outline: 3px solid rgba(13, 148, 136, 0.2);
+    outline-offset: 1px;
+    border-color: #0f766e;
+}
+
+.mypage-account-field-error,
+.mypage-account-global-error p {
+    margin: 0;
+    color: #b42318;
+    font-size: 13px;
+}
+
+.mypage-account-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.mypage-account-actions a,
+.mypage-account-actions button {
+    display: inline-flex;
+    min-height: 42px;
+    align-items: center;
+    justify-content: center;
+    padding: 9px 18px;
+    border: 1px solid #0f766e;
+    border-radius: 9px;
+    background: #0f766e;
+    color: #fff;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 750;
+    text-decoration: none;
+}
+
+.mypage-account-actions a {
+    border-color: #cbd5e1;
+    background: #fff;
+    color: #475569;
+}
+
+.mypage-account-actions button:hover {
+    background: #115e59;
+}
+
+.mypage-account-actions a:focus-visible,
+.mypage-account-actions button:focus-visible {
+    outline: 3px solid rgba(13, 148, 136, 0.25);
+    outline-offset: 2px;
+}
+
+.mypage-account-notice {
+    margin: 0;
+    padding: 12px 14px;
+    border: 1px solid #fed7aa;
+    border-radius: 9px;
+    background: #fff7ed;
+    color: #9a3412;
+    font-size: 13px;
+}
+
+.mypage-account-notice.is-success {
+    border-color: #a7e3d8;
+    background: #f0fdfa;
+    color: #115e59;
+}
+
+.mypage-account-danger {
+    border-color: #fecaca;
+    background: #fffafa;
+}
+
+.mypage-account-danger ul {
+    display: grid;
+    gap: 5px;
+    margin: 0;
+    padding-left: 20px;
+    color: #6b4550;
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.mypage-account-danger .is-danger {
+    border-color: #b42318;
+    background: #b42318;
+}
+
+.mypage-account-danger .is-danger:hover {
+    background: #912018;
+}
+
+.mypage-account-admin-warning {
+    margin: 0;
+    color: #b42318;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+@media (max-width: 680px) {
+    .mypage-account-page {
+        gap: 16px;
+    }
+
+    .mypage-account-panel {
+        gap: 16px;
+        padding: 19px 16px;
+    }
+
+    .mypage-account-readonly-list {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .mypage-account-actions,
+    .mypage-account-actions a,
+    .mypage-account-actions button {
+        width: 100%;
+    }
+}

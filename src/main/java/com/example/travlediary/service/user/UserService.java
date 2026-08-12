@@ -41,21 +41,13 @@ public class UserService {
         User user = userMapper.findByUsername(username);
 
         if (user == null) {
-            System.out.println("❌ 로그인 실패 - 사용자를 찾을 수 없습니다: " + username);
             throw new UsernameNotFoundException("사용자를 찾을 수 없습니다.");
         }
 
-        System.out.println("🔍 DB에서 찾은 사용자: " + user.getUsername());
-        System.out.println("🔐 DB에 저장된 암호화된 비밀번호: " + user.getUserPassword());
-        System.out.println("🔐 입력된 비밀번호: " + password);
-
         // 비밀번호 검증
         if (!passwordEncoder.matches(password, user.getUserPassword())) {
-            System.out.println("❌ 비밀번호 불일치!");
             throw new BadCredentialsException("비밀번호가 일치하지 않습니다.");
         }
-
-        System.out.println("✅ 로그인 성공!");
         return user;
     }
 
@@ -64,10 +56,7 @@ public class UserService {
         user.setNickname(NicknamePolicy.normalizeAndValidate(user.getNickname()));
         String rawPassword = user.getUserPassword();
 
-        // ✅ 비밀번호 유효성 검사 (8자 이상, 특수문자 포함)
-        if (rawPassword == null || !rawPassword.matches("^(?=.*[!@#$%^&*])[A-Za-z\\d!@#$%^&*]{8,}$")) {
-            throw new IllegalArgumentException("비밀번호는 8자 이상이며, 특수문자 1개 이상 포함해야 합니다.");
-        }
+        PasswordPolicy.validate(rawPassword);
 
         // ✅ 암호화된 비밀번호가 아닌 경우만 암호화
         if (!rawPassword.startsWith("$2a$")) {
@@ -97,7 +86,6 @@ public class UserService {
 
         }
 
-        System.out.println("✅ DB 저장 전 데이터: " + user);
         userMapper.insertUser(user);
 
         // ✅ 이메일 인증 메일 전송
@@ -115,12 +103,8 @@ public class UserService {
         User user = userMapper.findByUsername(username);
 
         if (user == null) {
-            System.out.println("❌ 사용자 찾기 실패 - DB에 존재하지 않음: " + username);
             throw new UsernameNotFoundException("사용자를 찾을 수 없습니다: " + username);
         }
-
-        System.out.println("✅ 사용자 찾기 성공 - username: " + user.getUsername());
-        System.out.println("🔐 DB에 저장된 암호화된 비밀번호: " + user.getUserPassword());
 
         return user;
     }
@@ -218,6 +202,7 @@ public class UserService {
         User u = validateResetToken(token);
         if (u == null) throw new IllegalArgumentException("만료되었거나 잘못된 토큰입니다.");
 
+        PasswordPolicy.validate(rawPw);
         String encPw = passwordEncoder.encode(rawPw);
         userMapper.updateUserPassword(u.getId(), encPw);
         userMapper.clearResetToken(u.getId());   // 1회 사용 후 폐기

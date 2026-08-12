@@ -360,4 +360,9 @@
           AND comment_id = #{commentId}
     </delete>
 
+    <delete id="deleteAllLikesByUserId">
+        DELETE FROM post_comment_likes
+        WHERE user_id = #{userId}
+    </delete>
+
 </mapper>

@@ -34,7 +34,12 @@
          th:href="@{/mypage/bookmarks}">북마크</a>
     </li>
     <li><a class="mypage-navigation-link" th:href="@{/support/inquiries}">내 문의내역</a></li>
-    <li><span class="mypage-navigation-link is-disabled" aria-disabled="true">회원정보 수정</span></li>
+    <li>
+      <a class="mypage-navigation-link"
+         th:classappend="${activeMenu == 'account'} ? ' is-active' : ''"
+         th:attr="aria-current=${activeMenu == 'account'} ? 'page' : null"
+         th:href="@{/mypage/account}">회원정보 수정</a>
+    </li>
   </ul>
 </nav>
 </body>

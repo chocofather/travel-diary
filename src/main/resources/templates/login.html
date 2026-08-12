@@ -23,6 +23,10 @@
   <p style="color: green;">You have been logged out successfully</p>
 </div>
 
+<div th:if="${param.passwordChanged != null and param.passwordChanged[0] == 'true'}">
+  <p style="color: green;">비밀번호가 변경되었습니다. 다시 로그인해주세요.</p>
+</div>
+
   <form method="POST" th:action="@{/login}" id="loginForm">
     <!-- 현재 보고 있던 페이지로 돌아가기 위한 redirect 필드 -->
     <input type="hidden" name="redirect"

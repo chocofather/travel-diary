@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/mypage-layout.css">
+  <link rel="stylesheet" href="/css/mypage-account.css">
+</th:block>
+<th:block th:fragment="body">
+  <div class="mypage-layout">
+    <nav th:replace="~{fragments/mypage/navigation :: navigation('account')}"></nav>
+
+    <section class="mypage-content mypage-account-page" aria-labelledby="account-edit-title">
+      <header class="mypage-page-header">
+        <p>ACCOUNT</p>
+        <h1 id="account-edit-title">회원정보 수정</h1>
+        <span>계정 정보와 개인정보를 안전하게 관리합니다.</span>
+      </header>
+
+      <p class="mypage-account-notice is-success" th:if="${accountMessage}"
+         role="status" th:text="${accountMessage}">회원정보가 수정되었습니다.</p>
+
+      <section class="mypage-account-panel" aria-labelledby="account-info-title">
+        <div class="mypage-account-section-heading">
+          <h2 id="account-info-title">계정 정보</h2>
+          <span>로그인 ID와 이메일은 현재 변경할 수 없습니다.</span>
+        </div>
+        <dl class="mypage-account-readonly-list">
+          <div>
+            <dt>로그인 ID</dt>
+            <dd th:text="${account.username}">minjun</dd>
+          </div>
+          <div>
+            <dt>이메일</dt>
+            <dd th:text="${account.userEmail}">test@example.com</dd>
+          </div>
+        </dl>
+      </section>
+
+      <form class="mypage-account-panel" th:action="@{/mypage/account/edit}"
+            th:object="${accountForm}" method="post">
+        <div class="mypage-account-section-heading">
+          <h2>개인정보</h2>
+          <span>이름, 전화번호, 생년월일을 수정할 수 있습니다.</span>
+        </div>
+        <div class="mypage-account-field">
+          <label for="fullName">이름</label>
+          <input id="fullName" type="text" th:field="*{fullName}"
+                 maxlength="50" autocomplete="name" required>
+          <p class="mypage-account-field-error" th:if="${#fields.hasErrors('fullName')}"
+             th:errors="*{fullName}">이름 오류</p>
+        </div>
+        <div class="mypage-account-field">
+          <label for="userPhone">전화번호</label>
+          <input id="userPhone" type="tel" th:field="*{userPhone}"
+                 maxlength="13" inputmode="numeric" autocomplete="tel"
+                 placeholder="010-1234-5678">
+          <p class="mypage-account-field-error" th:if="${#fields.hasErrors('userPhone')}"
+             th:errors="*{userPhone}">전화번호 오류</p>
+        </div>
+        <div class="mypage-account-field">
+          <label for="userBirth">생년월일</label>
+          <input id="userBirth" type="date" th:field="*{userBirth}" required>
+          <p class="mypage-account-field-error" th:if="${#fields.hasErrors('userBirth')}"
+             th:errors="*{userBirth}">생년월일 오류</p>
+        </div>
+        <div class="mypage-account-actions">
+          <button type="submit">회원정보 저장</button>
+        </div>
+      </form>
+
+      <form class="mypage-account-panel" th:action="@{/mypage/account/password}"
+            th:object="${passwordForm}" method="post">
+        <div class="mypage-account-section-heading">
+          <h2>비밀번호 변경</h2>
+          <span>변경 후에는 안전을 위해 다시 로그인해야 합니다.</span>
+        </div>
+        <div class="mypage-account-field">
+          <label for="newPassword">새 비밀번호</label>
+          <input id="newPassword" type="password" th:field="*{newPassword}"
+                 autocomplete="new-password" required>
+          <small>8자 이상이며 영문, 숫자, !@#$%^&amp;*만 사용할 수 있고 특수문자를 1개 이상 포함해야 합니다.</small>
+          <p class="mypage-account-field-error" th:if="${#fields.hasErrors('newPassword')}"
+             th:errors="*{newPassword}">비밀번호 오류</p>
+        </div>
+        <div class="mypage-account-field">
+          <label for="newPasswordConfirm">새 비밀번호 확인</label>
+          <input id="newPasswordConfirm" type="password"
+                 th:field="*{newPasswordConfirm}" autocomplete="new-password" required>
+          <p class="mypage-account-field-error"
+             th:if="${#fields.hasErrors('newPasswordConfirm')}"
+             th:errors="*{newPasswordConfirm}">비밀번호 확인 오류</p>
+        </div>
+        <div class="mypage-account-actions">
+          <button type="submit">비밀번호 변경</button>
+        </div>
+      </form>
+
+      <section class="mypage-account-panel mypage-account-danger"
+               aria-labelledby="withdrawal-title">
+        <div class="mypage-account-section-heading">
+          <h2 id="withdrawal-title">회원 탈퇴</h2>
+        </div>
+        <ul>
+          <li>탈퇴 후 계정은 복구할 수 없습니다.</li>
+          <li>작성한 게시글, 댓글, 여행 코스와 문의 기록은 유지됩니다.</li>
+          <li>북마크와 좋아요는 삭제됩니다.</li>
+          <li>기존 이메일과 닉네임은 새 계정에서 다시 사용할 수 있습니다.</li>
+          <li>기존 로그인 ID는 다시 사용할 수 없습니다.</li>
+        </ul>
+
+        <p class="mypage-account-admin-warning" sec:authorize="hasRole('ADMIN')">
+          관리자 계정은 마이페이지에서 탈퇴할 수 없습니다.
+        </p>
+        <form th:action="@{/mypage/account/withdraw}" th:object="${withdrawalForm}"
+              method="post" sec:authorize="hasRole('USER')">
+          <div class="mypage-account-field">
+            <label for="withdrawalPassword">현재 비밀번호</label>
+            <input id="withdrawalPassword" type="password"
+                   th:field="*{currentPassword}" autocomplete="current-password" required>
+            <p class="mypage-account-field-error"
+               th:if="${#fields.hasErrors('currentPassword')}"
+               th:errors="*{currentPassword}">비밀번호 오류</p>
+          </div>
+          <div class="mypage-account-global-error" th:if="${#fields.hasGlobalErrors()}"
+               role="alert">
+            <p th:each="error : ${#fields.globalErrors()}" th:text="${error}">탈퇴 오류</p>
+          </div>
+          <div class="mypage-account-actions">
+            <button class="is-danger" type="submit">회원 탈퇴</button>
+          </div>
+        </form>
+      </section>
+    </section>
+  </div>
+</th:block>
+</html>

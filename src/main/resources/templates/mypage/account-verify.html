@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/mypage-layout.css">
+  <link rel="stylesheet" href="/css/mypage-account.css">
+</th:block>
+<th:block th:fragment="body">
+  <div class="mypage-layout">
+    <nav th:replace="~{fragments/mypage/navigation :: navigation('account')}"></nav>
+
+    <section class="mypage-content mypage-account-page" aria-labelledby="account-verify-title">
+      <header class="mypage-page-header">
+        <p>ACCOUNT</p>
+        <h1 id="account-verify-title">회원정보 수정</h1>
+        <span>회원정보 보호를 위해 현재 비밀번호를 다시 입력해주세요.</span>
+      </header>
+
+      <p class="mypage-account-notice" th:if="${verificationMessage}"
+         role="alert" th:text="${verificationMessage}">본인 확인이 필요합니다.</p>
+
+      <form class="mypage-account-panel mypage-account-verify-form"
+            th:action="@{/mypage/account/verify-password}"
+            th:object="${verifyForm}" method="post">
+        <div class="mypage-account-field">
+          <label for="currentPassword">현재 비밀번호</label>
+          <input id="currentPassword" type="password"
+                 th:field="*{currentPassword}"
+                 autocomplete="current-password" required autofocus>
+          <p class="mypage-account-field-error"
+             th:if="${#fields.hasErrors('currentPassword')}"
+             th:errors="*{currentPassword}">비밀번호 오류</p>
+        </div>
+        <div class="mypage-account-actions">
+          <a th:href="@{/mypage}">취소</a>
+          <button type="submit">확인</button>
+        </div>
+      </form>
+    </section>
+  </div>
+</th:block>
+</html>

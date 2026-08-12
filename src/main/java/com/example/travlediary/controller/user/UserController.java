@@ -5,6 +5,7 @@ import com.example.travlediary.model.UserStatus;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.service.email.EmailService;
 import com.example.travlediary.service.user.UserService;
+import com.example.travlediary.service.user.PasswordPolicy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -44,9 +45,6 @@ public class UserController {
                                @RequestParam("passwordConfirm") String passwordConfirm,
                                @RequestParam(value = "profileImageFile", required = false) MultipartFile profileImage,
                                Model model) {
-
-        System.out.println("회원가입 시도: " + user);
-        System.out.println("비밀번호 확인 값: " + passwordConfirm);
 
         // 비밀번호 확인
         if (!user.getUserPassword().equals(passwordConfirm)) {
@@ -95,10 +93,8 @@ public class UserController {
             return ResponseEntity.badRequest().body("비밀번호를 입력하세요.");
         }
 
-        String regex = "^(?=.*[!@#$%^&*])[A-Za-z\\d!@#$%^&*]{8,}$";
-
-        if (!password.matches(regex)) {
-            return ResponseEntity.badRequest().body("비밀번호는 8자 이상, 특수문자 1개 이상 포함해야 합니다.");
+        if (!PasswordPolicy.isValid(password)) {
+            return ResponseEntity.badRequest().body(PasswordPolicy.INVALID_MESSAGE);
         }
 
         return ResponseEntity.ok("사용 가능한 비밀번호입니다.");
@@ -120,8 +116,6 @@ public class UserController {
     // ✅ 이메일 인증 처리
     @GetMapping("/verify")
     public String verifyEmail(@RequestParam("token") String token) {
-        System.out.println("📩 이메일 인증 요청 token: " + token); // 🔍 여기 찍히는 값 확인
-
         User user = userService.findByVerificationToken(token);
 
         if (user == null) {

@@ -58,4 +58,6 @@ public interface PostCommentMapper {
 
     int deleteLike(@Param("userId") Long userId,
                    @Param("commentId") Long commentId);
+
+    int deleteAllLikesByUserId(@Param("userId") Long userId);
 }

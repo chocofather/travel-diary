@@ -1,12 +1,15 @@
 package com.example.travlediary.repository.user;
 
+import com.example.travlediary.dto.AccountDetailsDto;
 import com.example.travlediary.dto.MyPageProfileDto;
 import com.example.travlediary.dto.PublicUserProfileDto;
 import com.example.travlediary.model.User;
 import com.example.travlediary.model.UserRole;
+import com.example.travlediary.model.UserStatus;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Mapper
@@ -20,6 +23,9 @@ public interface UserMapper {
     String findProfileImageByUsername(@Param("username") String username);
     MyPageProfileDto findMyPageProfileById(@Param("id") Long id);
     MyPageProfileDto findMyPageProfileByIdForUpdate(@Param("id") Long id);
+    AccountDetailsDto findAccountDetailsById(@Param("id") Long id);
+    User findActiveAccountSecurityById(@Param("id") Long id);
+    User findActiveAccountSecurityByIdForUpdate(@Param("id") Long id);
 
     /* ---------- 관리자 역할 변경 ---------- */
     void updateUserRole(@Param("id") Long id,      // ★ Integer → Long
@@ -28,6 +34,18 @@ public interface UserMapper {
     /* ---------- 비밀번호 변경 ---------- */
     void updateUserPassword(@Param("id") Long id,  // ★ Integer → Long
                             @Param("userPassword") String userPassword);
+    int updateActiveUserPassword(@Param("id") Long id,
+                                 @Param("userPassword") String userPassword);
+
+    int updateAccountDetails(@Param("id") Long id,
+                             @Param("fullName") String fullName,
+                             @Param("userPhone") String userPhone,
+                             @Param("userBirth") LocalDate userBirth);
+
+    int deactivateAccount(@Param("id") Long id,
+                          @Param("userEmail") String userEmail,
+                          @Param("nickname") String nickname,
+                          @Param("status") UserStatus status);
 
     /* ---------- 중복 체크 ---------- */
     int countByUsername(String username);
