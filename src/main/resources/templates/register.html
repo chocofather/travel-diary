@@ -130,11 +130,15 @@
             <!-- 닉네임 -->
             <div class="input-group">
             <div class="input-with-icon nickname-row">
-                <input type="text" id="nickname" name="nickname" placeholder="닉네임" required>
+                <input type="text" id="nickname" name="nickname" placeholder="닉네임"
+                       minlength="2" maxlength="12" required>
                 <span class="icon user-icon"></span>
                 <button type="button" id="generateNickname">자동 추천</button>
             </div>
-            <span id="nicknameMessage" class="alert"></span>
+            <span id="nicknameMessage" class="alert">
+                2~12자의 한글, 영문, 숫자만 사용할 수 있습니다.<br>
+                공백·특수문자 및 부적절한 표현은 사용할 수 없습니다.
+            </span>
             </div>
 
             <!-- 이름 -->

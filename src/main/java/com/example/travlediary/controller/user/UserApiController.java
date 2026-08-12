@@ -1,6 +1,7 @@
 package com.example.travlediary.controller.user;
 
 import com.example.travlediary.service.user.UserService;
+import com.example.travlediary.service.user.NicknamePolicy;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -36,10 +37,16 @@ public class UserApiController {
 
     // 닉네임 중복 검사 API (AJAX 요청 처리)
     @GetMapping("/check-nickname")
-    public Map<String, Boolean> checkNickname(@RequestParam String nickname) {
-        boolean exists = userService.isNicknameExists(nickname);
-        Map<String, Boolean> response = new HashMap<>();
-        response.put("exists", exists);
+    public Map<String, Object> checkNickname(@RequestParam String nickname) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            boolean exists = userService.isNicknameExists(nickname);
+            response.put("exists", exists);
+            response.put("status", exists ? "DUPLICATE" : "AVAILABLE");
+        } catch (NicknamePolicy.ViolationException exception) {
+            response.put("exists", true);
+            response.put("status", exception.getViolationType().name());
+        }
         return response;
     }
 

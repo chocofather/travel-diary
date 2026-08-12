@@ -1,5 +1,15 @@
 $(document).ready(function () {
     let currentStep = 1;
+    const nicknamePattern = /^[가-힣A-Za-z0-9]{2,12}$/;
+    const nicknameErrorMessage = "2~12자의 한글, 영문, 숫자만 사용할 수 있습니다. 공백·특수문자 및 부적절한 표현은 사용할 수 없습니다.";
+
+    function normalizeNickname() {
+        return $("#nickname").val()?.trim() || "";
+    }
+
+    function isValidNickname(nickname) {
+        return nicknamePattern.test(nickname);
+    }
 
     // 전체 동의 → 하위 약관 모두 체크/해제
     $("#agreeAll").on("change", function () {
@@ -50,11 +60,11 @@ $(document).ready(function () {
         const fullNameInput = $("#fullName");
         const birthInput = $("input[name='userBirth']");
 
-        const nickname = nicknameInput.length ? nicknameInput.val().trim() : "";
+        const nickname = nicknameInput.length ? normalizeNickname() : "";
         const fullName = fullNameInput.length ? fullNameInput.val().trim() : "";
         const birth = birthInput.length ? birthInput.val().trim() : "";
 
-        const isValid = nickname.length >= 2 && fullName && birth;
+        const isValid = isValidNickname(nickname) && fullName && birth;
         $("#step3-submit").prop("disabled", !isValid);
     }
 
@@ -107,12 +117,12 @@ $(document).ready(function () {
         }
 
         if (step === 3) {
-            const nickname = $("#nickname").val().trim();
+            const nickname = normalizeNickname();
             const fullName = $("#fullName").val().trim();
             const birth = $("input[name='userBirth']").val().trim();
 
-            if (!nickname || nickname.length < 2) {
-                alert("닉네임은 최소 2자 이상 입력해주세요.");
+            if (!isValidNickname(nickname)) {
+                alert(nicknameErrorMessage);
                 return false;
             }
 
@@ -223,11 +233,11 @@ $(document).ready(function () {
 
     // 닉네임 중복 확인
     $("#nickname").on("keyup", function () {
-        const nickname = $(this).val();
+        const nickname = normalizeNickname();
         const msg = $("#nicknameMessage");
 
-        if (nickname.length < 2) {
-            msg.text("닉네임은 최소 2자 이상 입력하세요.").removeClass("success").addClass("error");
+        if (!isValidNickname(nickname)) {
+            msg.text(nicknameErrorMessage).removeClass("success").addClass("error");
             return;
         }
 
@@ -236,13 +246,25 @@ $(document).ready(function () {
             url: "/api/users/check-nickname",
             data: { nickname },
             success: function (res) {
-                if (res.exists) {
+                if (res.status === "FORBIDDEN") {
+                    msg.text("사용할 수 없는 닉네임입니다.").removeClass("success").addClass("error");
+                } else if (res.exists) {
                     msg.text("중복된 닉네임입니다.").removeClass("success").addClass("error");
                 } else {
                     msg.text("사용 가능한 닉네임입니다.").removeClass("error").addClass("success");
                 }
             }
         });
+    });
+
+    $("form").on("submit", function (event) {
+        const nickname = normalizeNickname();
+        $("#nickname").val(nickname);
+        if (!isValidNickname(nickname)) {
+            event.preventDefault();
+            $("#nicknameMessage").text(nicknameErrorMessage)
+                .removeClass("success").addClass("error");
+        }
     });
 
     // 닉네임 자동 추천
@@ -326,5 +348,3 @@ $(document).ready(function () {
     updateStep3Button();
 
 });
-
-

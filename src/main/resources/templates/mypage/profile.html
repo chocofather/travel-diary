@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/mypage-layout.css">
+  <link rel="stylesheet" href="/css/mypage-profile.css">
+  <script src="/js/mypage-profile.js" defer></script>
+</th:block>
+<th:block th:fragment="body">
+  <div class="mypage-layout">
+    <nav th:replace="~{fragments/mypage/navigation :: navigation('profile')}"></nav>
+
+    <section class="mypage-content mypage-profile-page" aria-labelledby="mypage-profile-title">
+      <header class="mypage-page-header">
+        <p>PROFILE</p>
+        <h1 id="mypage-profile-title">프로필 변경</h1>
+        <span>사이트에 표시되는 닉네임과 프로필 이미지를 관리합니다.</span>
+      </header>
+
+      <p class="mypage-success-message" th:if="${profileMessage}" th:text="${profileMessage}">
+        프로필이 변경되었습니다.
+      </p>
+
+      <form class="mypage-profile-form"
+            th:action="@{/mypage/profile}"
+            th:object="${profileForm}"
+            method="post"
+            enctype="multipart/form-data">
+        <div class="mypage-current-profile">
+          <img class="mypage-profile-image"
+               th:src="${profile.profileImage}"
+               th:alt="|${profile.nickname} 프로필 이미지|"
+               onerror="this.onerror=null;this.src='/images/default.png';">
+          <div>
+            <strong>현재 프로필 이미지</strong>
+            <span>새 이미지를 선택하지 않으면 기존 이미지가 유지됩니다.</span>
+          </div>
+        </div>
+
+        <div class="mypage-form-field">
+          <label for="profileImageFile">프로필 이미지</label>
+          <input id="profileImageFile"
+                 type="file"
+                 th:field="*{profileImageFile}"
+                 accept="image/jpeg,image/png,image/webp">
+          <small>JPG, PNG, WEBP 형식의 5MB 이하 이미지를 사용할 수 있습니다.</small>
+          <p class="mypage-field-error"
+             th:if="${#fields.hasErrors('profileImageFile')}"
+             th:errors="*{profileImageFile}">이미지 오류</p>
+        </div>
+
+        <div class="mypage-form-field">
+          <label for="nickname">닉네임</label>
+          <input id="nickname"
+                 type="text"
+                 th:field="*{nickname}"
+                 th:attr="data-current-nickname=${profile.nickname}"
+                 minlength="2"
+                 maxlength="12"
+                 autocomplete="nickname"
+                 aria-describedby="nickname-help nickname-availability"
+                 required>
+          <small id="nickname-help">
+            2~12자의 한글, 영문, 숫자만 사용할 수 있습니다.<br>
+            공백·특수문자 및 부적절한 표현은 사용할 수 없습니다.
+          </small>
+          <p id="nickname-availability"
+             class="mypage-nickname-status"
+             aria-live="polite"></p>
+          <p class="mypage-field-error"
+             th:if="${#fields.hasErrors('nickname')}"
+             th:errors="*{nickname}">닉네임 오류</p>
+        </div>
+
+        <div class="mypage-global-error" th:if="${#fields.hasGlobalErrors()}">
+          <p th:each="error : ${#fields.globalErrors()}" th:text="${error}">프로필 오류</p>
+        </div>
+
+        <div class="mypage-form-actions">
+          <a th:href="@{/mypage}">취소</a>
+          <button id="profileSaveButton" type="submit">저장</button>
+        </div>
+      </form>
+    </section>
+  </div>
+</th:block>
+</html>

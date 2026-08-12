@@ -61,6 +61,7 @@ public class UserService {
 
     // 📝 회원가입 기능
     public void registerUser(User user, MultipartFile profileImageFile) {
+        user.setNickname(NicknamePolicy.normalizeAndValidate(user.getNickname()));
         String rawPassword = user.getUserPassword();
 
         // ✅ 비밀번호 유효성 검사 (8자 이상, 특수문자 포함)
@@ -131,7 +132,8 @@ public class UserService {
 
     // 🏷 닉네임 중복 검사
     public boolean isNicknameExists(String nickname) {
-        return userMapper.countByNickname(nickname) > 0;
+        String normalized = NicknamePolicy.normalizeAndValidate(nickname);
+        return userMapper.countByNickname(normalized) > 0;
     }
 
     public User findByVerificationToken(String token) {

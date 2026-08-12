@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<body>
+<nav class="mypage-navigation"
+     th:fragment="navigation(activeMenu)"
+     aria-label="마이페이지 메뉴">
+  <a class="mypage-navigation-title"
+     th:classappend="${activeMenu == 'home'} ? ' is-active' : ''"
+     th:attr="aria-current=${activeMenu == 'home'} ? 'page' : null"
+     th:href="@{/mypage}">마이페이지</a>
+  <ul class="mypage-navigation-list">
+    <li>
+      <a class="mypage-navigation-link"
+         th:classappend="${activeMenu == 'profile'} ? ' is-active' : ''"
+         th:attr="aria-current=${activeMenu == 'profile'} ? 'page' : null"
+         th:href="@{/mypage/profile}">프로필</a>
+    </li>
+    <li><span class="mypage-navigation-link is-disabled" aria-disabled="true">내가 작성한 글</span></li>
+    <li><span class="mypage-navigation-link is-disabled" aria-disabled="true">내가 작성한 댓글</span></li>
+    <li><span class="mypage-navigation-link is-disabled" aria-disabled="true">북마크</span></li>
+    <li><a class="mypage-navigation-link" th:href="@{/support/inquiries}">내 문의내역</a></li>
+    <li><span class="mypage-navigation-link is-disabled" aria-disabled="true">회원정보 수정</span></li>
+  </ul>
+</nav>
+</body>
+</html>

@@ -1,5 +1,6 @@
 package com.example.travlediary.repository.user;
 
+import com.example.travlediary.dto.MyPageProfileDto;
 import com.example.travlediary.dto.PublicUserProfileDto;
 import com.example.travlediary.model.User;
 import com.example.travlediary.model.UserRole;
@@ -17,6 +18,8 @@ public interface UserMapper {
     User findById(Long id);
     PublicUserProfileDto findPublicProfileById(@Param("id") Long id);
     String findProfileImageByUsername(@Param("username") String username);
+    MyPageProfileDto findMyPageProfileById(@Param("id") Long id);
+    MyPageProfileDto findMyPageProfileByIdForUpdate(@Param("id") Long id);
 
     /* ---------- 관리자 역할 변경 ---------- */
     void updateUserRole(@Param("id") Long id,      // ★ Integer → Long
@@ -29,6 +32,12 @@ public interface UserMapper {
     /* ---------- 중복 체크 ---------- */
     int countByUsername(String username);
     int countByNickname(String nickname);
+    int countByNicknameExcludingUserId(@Param("nickname") String nickname,
+                                       @Param("userId") Long userId);
+
+    int updateMyPageProfile(@Param("userId") Long userId,
+                            @Param("nickname") String nickname,
+                            @Param("profileImage") String profileImage);
 
     /* ---------- 이메일 인증 ---------- */
     User findByVerificationToken(String token);

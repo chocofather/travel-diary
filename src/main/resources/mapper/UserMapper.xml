@@ -140,4 +140,47 @@
         WHERE username = #{username}
     </select>
 
+    <sql id="MyPageProfileColumns">
+        nickname,
+        user_email AS userEmail,
+        profile_image AS profileImage
+    </sql>
+
+    <select id="findMyPageProfileById" resultType="com.example.travlediary.dto.MyPageProfileDto">
+        SELECT
+        <include refid="MyPageProfileColumns"/>
+        FROM users
+        WHERE id = #{id}
+          AND status = 'ACTIVE'
+          AND deleted_at IS NULL
+    </select>
+
+    <select id="findMyPageProfileByIdForUpdate" resultType="com.example.travlediary.dto.MyPageProfileDto">
+        SELECT
+        <include refid="MyPageProfileColumns"/>
+        FROM users
+        WHERE id = #{id}
+          AND status = 'ACTIVE'
+          AND deleted_at IS NULL
+        FOR UPDATE
+    </select>
+
+    <select id="countByNicknameExcludingUserId" resultType="int">
+        SELECT COUNT(*)
+        FROM users
+        WHERE nickname = #{nickname}
+          AND id &lt;&gt; #{userId}
+    </select>
+
+    <update id="updateMyPageProfile">
+        UPDATE users
+        SET nickname = #{nickname}
+        <if test="profileImage != null">
+            , profile_image = #{profileImage}
+        </if>
+        WHERE id = #{userId}
+          AND status = 'ACTIVE'
+          AND deleted_at IS NULL
+    </update>
+
 </mapper>

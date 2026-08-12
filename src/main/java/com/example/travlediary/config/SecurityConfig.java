@@ -55,6 +55,8 @@ public class SecurityConfig {
                         new RegexRequestMatcher(
                                 "^/admin/inquiries/[0-9]+/answer$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(
+                                "^/mypage/profile$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
                                 "^/logout$", HttpMethod.POST.name())
                 )))
                 .authorizeHttpRequests(auth -> auth
