@@ -37,6 +37,32 @@
         SELECT * FROM country_categories WHERE depth = 2
     </select>
 
+    <select id="selectCourseCountries" resultMap="CountryCategoryResultMap">
+        SELECT country.*
+        FROM country_categories country
+        LEFT JOIN country_categories parent ON parent.id = country.parent_id
+        WHERE country.is_visible = 1
+          AND (
+              (
+                  country.parent_id IS NULL
+                  AND EXISTS (
+                      SELECT 1
+                      FROM country_categories country_child
+                      WHERE country_child.parent_id = country.id
+                        AND country_child.code LIKE CONCAT(country.code, '-%')
+                  )
+              )
+              OR (
+                  country.parent_id IS NOT NULL
+                  AND parent.parent_id IS NULL
+                  AND country.code NOT LIKE '%-%'
+              )
+          )
+        ORDER BY
+            CASE WHEN country.parent_id IS NULL THEN 0 ELSE 1 END,
+            country.region_name ASC
+    </select>
+
         <!-- ✅ 유지: 조건 처리 포함된 쿼리 -->
         <select id="selectByParentId" parameterType="long" resultMap="CountryCategoryResultMap">
             SELECT *

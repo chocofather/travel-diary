@@ -2,8 +2,11 @@ package com.example.travlediary.service.course;
 
 import com.example.travlediary.dto.CourseCreateRequest;
 import com.example.travlediary.dto.CourseDetailDto;
+import com.example.travlediary.dto.CourseDestinationCountryDto;
 import com.example.travlediary.dto.CourseEditDto;
 import com.example.travlediary.dto.CourseUpdateRequest;
+import com.example.travlediary.dto.HomePopularCourseDto;
+import com.example.travlediary.dto.HomePopularCourseStopDto;
 import com.example.travlediary.model.Course;
 import com.example.travlediary.model.CourseDestination;
 import com.example.travlediary.repository.course.CourseMapper;
@@ -16,14 +19,19 @@ import org.springframework.web.server.ResponseStatusException;
 
 import org.jsoup.Jsoup;
 
-import java.util.HashSet;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
 public class CourseServiceImpl implements CourseService {
+
+    private static final int HOME_POPULAR_COURSE_LIMIT = 3;
+    private static final int HOME_COURSE_PREVIEW_STOP_LIMIT = 3;
 
     private final CourseMapper courseMapper;
     private final PostContentSanitizer postContentSanitizer;
@@ -60,17 +68,47 @@ public class CourseServiceImpl implements CourseService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<HomePopularCourseDto> getPopularCoursesForHome() {
+        List<HomePopularCourseDto> courses = courseMapper
+                .findPopularCourses(HOME_POPULAR_COURSE_LIMIT)
+                .stream()
+                .limit(HOME_POPULAR_COURSE_LIMIT)
+                .toList();
+        if (courses.isEmpty()) {
+            return courses;
+        }
+
+        Map<Long, List<String>> previewNamesByCourseId = new LinkedHashMap<>();
+        for (HomePopularCourseStopDto stop : courseMapper.findPopularCourseStops(
+                courses.stream().map(HomePopularCourseDto::getCourseId).toList())) {
+            List<String> names = previewNamesByCourseId.computeIfAbsent(
+                    stop.getCourseId(), ignored -> new ArrayList<>());
+            if (names.size() < HOME_COURSE_PREVIEW_STOP_LIMIT) {
+                names.add(stop.getDestinationName());
+            }
+        }
+
+        courses.forEach(course -> course.setPreviewDestinationNames(
+                List.copyOf(previewNamesByCourseId.getOrDefault(course.getCourseId(), List.of()))));
+        return courses;
+    }
+
+    @Override
     @Transactional
     public Long createCourse(CourseCreateRequest request, Long userId) {
         ValidatedCourse validated = validateBasic(request == null ? null : request.getTitle(),
                 request == null ? null : request.getContent(),
                 request == null ? null : request.getDestinationIds());
+        Long requestedCountryId = validateRequestedCountryId(request == null ? null : request.getCountryId());
         validateDestinations(validated.destinationIds());
+        Long countryId = validateCountryForCreate(requestedCountryId, validated.destinationIds());
 
         Course course = new Course();
         course.setTitle(validated.title());
         course.setContent(validated.content());
         course.setUserId(userId);
+        course.setCountryId(countryId);
 
         if (courseMapper.insertCourse(course) != 1 || course.getId() == null) {
             throw new IllegalStateException("여행 코스 저장에 실패했습니다.");
@@ -149,6 +187,37 @@ public class CourseServiceImpl implements CourseService {
         if (courseMapper.countExistingDestinations(destinationIds) != destinationIds.size()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "존재하지 않는 여행지가 포함되어 있습니다.");
         }
+    }
+
+    private Long validateRequestedCountryId(Long countryId) {
+        if (countryId == null || countryId <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "코스 국가를 선택해 주세요.");
+        }
+        return countryId;
+    }
+
+    private Long validateCountryForCreate(Long requestedCountryId, List<Long> destinationIds) {
+        List<CourseDestinationCountryDto> destinations = courseMapper.findDestinationCountries(destinationIds);
+        if (destinations.size() != destinationIds.size()
+                || destinations.stream().anyMatch(destination -> destination.getCountryId() == null)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "국가 정보를 확인할 수 없는 여행지가 포함되어 있습니다.");
+        }
+
+        List<Long> countryIds = destinations.stream()
+                .map(CourseDestinationCountryDto::getCountryId)
+                .distinct()
+                .toList();
+        if (countryIds.size() != 1) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "하나의 여행 코스에는 같은 국가의 여행지만 추가할 수 있습니다.");
+        }
+        Long actualCountryId = countryIds.get(0);
+        if (!Objects.equals(requestedCountryId, actualCountryId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "선택한 국가와 여행지의 국가가 일치하지 않습니다.");
+        }
+        return actualCountryId;
     }
 
     private Course requireOwnedActiveCourse(Course course, Long userId) {

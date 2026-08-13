@@ -14,7 +14,7 @@ public class DestinationSearchServiceImpl implements DestinationSearchService {
     private final DestinationSearchMapper destinationSearchMapper;
 
     @Override
-    public List<DestinationSearchResultDto> search(String keyword, int limit) {
-        return destinationSearchMapper.searchDestinations(keyword, limit);
+    public List<DestinationSearchResultDto> search(String keyword, int limit, Long countryId) {
+        return destinationSearchMapper.searchDestinations(keyword, limit, countryId);
     }
 }

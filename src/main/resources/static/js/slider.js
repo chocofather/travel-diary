@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           <a href="/events/${ev.id}" class="more">자세히 보기</a>
         </div>
         <div class="slide-img">
-          <img src="${ev.eventImg}" alt="${ev.title}" data-id="${ev.id}" style="cursor:pointer;">
+          <img src="${ev.eventImg}" alt="${ev.title}" data-id="${ev.id}">
         </div>
       </div>
     `;

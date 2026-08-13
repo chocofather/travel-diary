@@ -18,6 +18,8 @@ public interface CountryCategoryMapper {
 
     List<CountryCategory> selectCountries(); // 국가만 조회
 
+    List<CountryCategory> selectCourseCountries();
+
 /*
     List<CountryCategory> selectByParentId(Integer parentId);
 */

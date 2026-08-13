@@ -1,169 +1,215 @@
-/* 전체 영역 */
 #event-slider {
-    width: 100%;
-   /* padding: 60px 0;*/
     position: relative;
-    overflow: hidden;
-    transition: background 0.35s;
     z-index: 1;
-    padding-top: 150px; /* 헤더 가려지지 않도록 */
+    width: 100%;
+    overflow: hidden;
+    padding-top: 150px;
     padding-bottom: 60px;
+    transition: background-color 0.35s ease;
 }
 
-/* 슬라이드 전체 */
+#event-slider .swiper {
+    position: relative;
+    z-index: 1;
+}
+
 #event-slider .swiper-slide {
     display: flex;
-    justify-content: center; /* 중앙정렬 */
+    justify-content: center;
 }
 
-/* 슬라이드 내부 컨텐츠 래퍼 */
 #event-slider .slide-inner {
+    width: 100%;
+    max-width: 1100px;
+    padding: 0 20px;
     display: flex;
     align-items: center;
-    gap: 30px; /* 자연스러운 간격 */
-    max-width: 1100px;
-    width: 100%;
-    padding: 0 20px;
+    gap: 30px;
 }
 
-/* 텍스트 */
-.slide-text {
+#event-slider .slide-text {
     flex: 1.2;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     justify-content: center;
+    align-items: flex-start;
     gap: 10px;
 }
 
-/* 이미지 */
-.slide-img {
+#event-slider .slide-img {
     flex: 1.5;
+    height: 400px;
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 400px; /* 높이 고정 */
-    overflow: hidden; /* 넘치는 건 숨기기 */
-}
-.slide-img img {
-    width: 100%;
-    height: 100%; /* 높이에 맞추고 */
-    object-fit: cover; /* 비율 유지하면서 꽉 채움 */
+    overflow: hidden;
 }
 
-/* 텍스트 스타일 */
-.slide-text .badge {
-    display: inline-block; /* ✅ 추가 */
-    align-self: flex-start; /* ✅ 부모 flex에 영향받지 말고 왼쪽 정렬 */
+#event-slider .slide-img img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+    cursor: pointer;
+}
+
+#event-slider .slide-text .badge {
+    display: inline-block;
+    align-self: flex-start;
+    margin-bottom: 16px;
     padding: 5px 12px;
-    font-size: 14px;
-    font-weight: 600;
+    border-radius: 999px;
     background: #000;
     color: #fff;
-    border-radius: 999px;
-    margin-bottom: 16px;
-}
-
-.slide-text .title {
-    font-size: 36px;
-    font-weight: 700;
-    color: #222;
-}
-
-.slide-text .description {
-    font-size: 16px;
-    color: #555;
-}
-
-.slide-text a.more {
-    font-size: 16px;
-    color: #0066cc;
-    text-decoration: underline;
+    font-size: 14px;
     font-weight: 600;
 }
 
-/* 하단 UI */
-.slider-ui {
-    max-width: 500px; /* ✅ 게이지 길이 줄임 */
-    margin-top: 0; /* 위쪽 여백 조정 */
-    margin-left: 250px; /* 왼쪽 여백을 30px로 설정하여 왼쪽으로 배치하면서 너무 붙지 않게 조정 */
+#event-slider .slide-text .title {
+    margin: 0;
+    color: #222;
+    font-size: 36px;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+#event-slider .slide-text .description {
+    display: -webkit-box;
+    overflow: hidden;
+    margin: 0;
+    color: #555;
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+}
+
+#event-slider .slide-text a.more {
+    display: inline-flex;
+    min-height: 32px;
+    margin-top: 7px;
+    padding: 6px 12px;
+    align-items: center;
+    border: 1px solid #20252b;
+    border-radius: 5px;
+    background: #20252b;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.2;
+    text-decoration: none;
+    transition: background-color 0.18s ease, border-color 0.18s ease;
+}
+
+#event-slider .slide-text a.more:hover {
+    border-color: #0066cc;
+    background: #0066cc;
+}
+
+#event-slider .slide-text a.more:focus-visible,
+#event-slider button.nav:focus-visible {
+    outline: 3px solid rgba(0, 102, 204, 0.32);
+    outline-offset: 3px;
+}
+
+#event-slider .slider-ui {
+    position: relative;
+    z-index: 2;
+    max-width: 500px;
+    margin-top: 0;
+    margin-left: 250px;
+    padding: 10px 30px;
     display: flex;
     align-items: center;
+    justify-content: flex-start;
     gap: 12px;
+    box-sizing: border-box;
+    color: #313841;
     font-family: Arial, Helvetica, sans-serif;
     font-size: 16px;
-    padding: 10px 30px; /* 왼쪽 오른쪽 여백을 없애고 상하만 여백을 추가 */
-    box-sizing: border-box;
-    justify-content: flex-start; /* 버튼과 게이지를 왼쪽으로 정렬 */
 }
 
-.slider-ui .progress {
+#event-slider .slider-ui .progress {
     flex: 1;
     height: 2px;
-    background: #ddd;
     position: relative;
+    background: #ddd;
 }
 
-#progress-bar {
+#event-slider #progress-bar {
     position: absolute;
-    left: 0;
     top: 0;
     bottom: 0;
+    left: 0;
     width: 0;
     background: #000;
 }
 
-button.nav {
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    font-size: 18px;
+#event-slider button.nav {
     padding: 4px 8px;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font-size: 18px;
+    cursor: pointer;
 }
 
-/* 반응형 */
-@media (max-width: 768px) {
-    #event-slider .slide-inner {
-        flex-direction: column;
-        text-align: center;
-    }
-    .slide-text {
-        align-items: center;
-    }
-
-    .slider-ui {
-        flex-direction: column;
-        align-items: center;
-        margin-top: 10px;
-    }
+#event-slider button.nav:hover {
+    background: rgba(255, 255, 255, 0.42);
 }
 
-.text-progress {
-    width: 100%;
-    height: 3px;
-    background: #eee;
-    margin-top: 20px; /* 텍스트랑 살짝 간격 */
-    overflow: hidden;
-    border-radius: 999px;
-}
-
-
-/* 아래 흰색 오버레이 섹션 */
-.event-slider-bottom {
+#event-slider .event-slider-bottom {
     position: absolute;
+    z-index: 0;
+    right: 0;
     bottom: 0;
     left: 0;
-    width: 100%;
     height: 160px;
-    background-color: #fff;
-    z-index: 0;
+    background: #fff;
 }
 
-.swiper {
-    position: relative;
-    z-index: 1; /* 위에 올라오도록 */
-}
+@media (max-width: 768px) {
+    #event-slider {
+        padding-top: 80px;
+        padding-bottom: 48px;
+    }
 
-.slider-ui {
-    z-index: 2;
-    position: relative;
+    #event-slider .slide-inner {
+        padding: 0 14px;
+        flex-direction: column;
+        gap: 22px;
+        text-align: center;
+    }
+
+    #event-slider .slide-text {
+        align-items: center;
+    }
+
+    #event-slider .slide-text .badge {
+        align-self: center;
+        margin-bottom: 6px;
+    }
+
+    #event-slider .slide-text .title {
+        font-size: 27px;
+    }
+
+    #event-slider .slide-img {
+        flex: none;
+        width: 100%;
+        height: 280px;
+    }
+
+    #event-slider .slider-ui {
+        width: calc(100% - 28px);
+        max-width: 500px;
+        margin: 10px auto 0;
+        padding-right: 0;
+        padding-left: 0;
+    }
+
+    #event-slider .event-slider-bottom {
+        height: 116px;
+    }
 }

@@ -99,6 +99,20 @@ function renderTags() {
 }
 renderTags();
 
+function createDestinationCard(dest) {
+    const card = document.createElement('div');
+    card.className = 'trip-card';
+    card.innerHTML = `
+        <img src="${dest.imageUrl}" alt="${dest.name}" />
+        <div class="trip-info">
+          <h4>${dest.name}</h4>
+          <p>${dest.regionName}</p>
+        </div>
+    `;
+    card.onclick = () => location.href = `/destinations/${dest.id}`;
+    return card;
+}
+
 // 5. 추천 여행지 뿌리기 (API 연동)
 async function renderSeasonDestinations(season, categoryId = null) {
     let url = `/api/season-destinations?season=${season}`;
@@ -110,18 +124,7 @@ async function renderSeasonDestinations(season, categoryId = null) {
     if (!listDiv) return;
     listDiv.innerHTML = '';
     data.forEach(dest => {
-        const card = document.createElement('div');
-        card.className = 'trip-card';
-        card.innerHTML = `
-            <img src="${dest.imageUrl}" alt="${dest.name}" />
-            <div class="trip-info">
-              <h4>${dest.name}</h4>
-              <p>${dest.regionName}</p>
-            </div>
-        `;
-        // 상세 이동
-        card.onclick = () => location.href = `/destinations/${dest.id}`;
-        listDiv.appendChild(card);
+        listDiv.appendChild(createDestinationCard(dest));
     });
 }
 
@@ -167,28 +170,17 @@ async function renderPopularRecommend(api, limit = 5) {
         const res = await fetch(`${api}?limit=${limit}`);
         const data = await res.json();
         if (!Array.isArray(data) || data.length === 0) {
-            recommendCardList.innerHTML = "<div style='padding:40px'>데이터가 없습니다.</div>";
+            recommendCardList.innerHTML = '<div class="home-empty-state">데이터가 없습니다.</div>';
             return;
         }
         data.forEach(dest => {
-            const card = document.createElement('div');
-            card.className = 'trip-card';
-            card.innerHTML = `
-                <img src="${dest.imageUrl}" alt="${dest.name}" />
-                <div class="trip-info">
-                  <h4>${dest.name}</h4>
-                  <p>${dest.regionName}</p>
-                </div>
-            `;
-            card.onclick = () => location.href = `/destinations/${dest.id}`;
-            recommendCardList.appendChild(card);
+            recommendCardList.appendChild(createDestinationCard(dest));
         });
     } catch (e) {
-        recommendCardList.innerHTML = "<div style='padding:40px'>불러오기에 실패했습니다.</div>";
+        recommendCardList.innerHTML = '<div class="home-empty-state">불러오기에 실패했습니다.</div>';
     }
 }
 
 // =========== 8. 인기 태그/카드 최초 랜더링 ===========
 renderPopularTags();
 renderPopularRecommend(popularTags[0].api);
-

@@ -326,6 +326,7 @@ CREATE TABLE `course_images` (
 CREATE TABLE `courses` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `user_id` bigint NOT NULL,
+  `country_id` bigint DEFAULT NULL,
   `title` varchar(255) NOT NULL,
   `content` mediumtext,
   `views` int NOT NULL DEFAULT '0',
@@ -335,6 +336,8 @@ CREATE TABLE `courses` (
   `deleted` tinyint DEFAULT '0',
   PRIMARY KEY (`id`),
   KEY `fk_courses_user` (`user_id`),
+  KEY `idx_courses_country_id` (`country_id`),
+  CONSTRAINT `fk_courses_country` FOREIGN KEY (`country_id`) REFERENCES `country_categories` (`id`),
   CONSTRAINT `fk_courses_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;

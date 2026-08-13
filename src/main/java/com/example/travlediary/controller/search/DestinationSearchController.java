@@ -19,8 +19,9 @@ public class DestinationSearchController {
     @GetMapping
     public List<DestinationSearchResultDto> searchDestinations(
             @RequestParam("q") String keyword,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) Long countryId) {
         // size는 검색결과 개수 제한 (기본 20)
-        return destinationSearchService.search(keyword, size);
+        return destinationSearchService.search(keyword, size, countryId);
     }
 }

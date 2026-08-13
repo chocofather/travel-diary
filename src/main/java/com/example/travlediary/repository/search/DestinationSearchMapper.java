@@ -8,5 +8,7 @@ import java.util.List;
 
 @Mapper
 public interface DestinationSearchMapper {
-    List<DestinationSearchResultDto> searchDestinations(@Param("keyword") String keyword, @Param("limit") int limit);
+    List<DestinationSearchResultDto> searchDestinations(@Param("keyword") String keyword,
+                                                        @Param("limit") int limit,
+                                                        @Param("countryId") Long countryId);
 }

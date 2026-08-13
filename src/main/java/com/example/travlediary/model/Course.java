@@ -11,6 +11,7 @@ import java.sql.Timestamp;
 public class Course {
     private Long id; // 코스번호
     private Long userId; // 작성자 id
+    private Long countryId; // 코스 국가 id
     private String title; // 코스제목
     private String content; // 코스설명
     private Integer likes; // 좋아요 수 기본값 0

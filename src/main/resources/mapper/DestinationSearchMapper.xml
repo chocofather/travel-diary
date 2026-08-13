@@ -12,21 +12,66 @@
         <result property="thumbnailUrl" column="thumbnail_url"/>
         <result property="regionName" column="region_name"/>
         <result property="parentRegionName" column="parent_region_name"/>
+        <result property="countryId" column="country_id"/>
+        <result property="countryName" column="country_name"/>
     </resultMap>
 
     <select id="searchDestinations" resultMap="DestinationSearchResultMap">
+        WITH RECURSIVE destination_regions AS (
+            SELECT
+                d.id AS destination_id,
+                region.id AS region_id,
+                region.parent_id,
+                region.region_name,
+                region.code,
+                SUBSTRING_INDEX(region.code, '-', 1) AS country_code
+            FROM destinations d
+            JOIN country_categories region ON region.id = d.region_id
+
+            UNION ALL
+
+            SELECT
+                destination_regions.destination_id,
+                parent.id AS region_id,
+                parent.parent_id,
+                parent.region_name,
+                parent.code,
+                destination_regions.country_code
+            FROM destination_regions
+            JOIN country_categories parent ON parent.id = destination_regions.parent_id
+        ),
+        destination_countries AS (
+            SELECT
+                destination_id,
+                region_id AS country_id,
+                region_name AS country_name
+            FROM destination_regions
+            WHERE code = country_code
+              AND (
+                  parent_id IS NOT NULL
+                  OR EXISTS (
+                      SELECT 1
+                      FROM country_categories country_child
+                      WHERE country_child.parent_id = destination_regions.region_id
+                        AND country_child.code LIKE CONCAT(destination_regions.code, '-%')
+                  )
+              )
+        )
         SELECT
             d.id AS destination_id,
             dt.name AS destination_name,
             dt.short_description,
             di.image_url AS thumbnail_url,
             cc.region_name,
-            pcc.region_name AS parent_region_name
+            pcc.region_name AS parent_region_name,
+            dc.country_id,
+            dc.country_name
         FROM destinations d
                  JOIN destination_translations dt ON d.id = dt.destination_id AND dt.language_code = 'ko'
                  LEFT JOIN destination_images di ON di.destination_id = d.id AND di.is_main = 1
                  LEFT JOIN country_categories cc ON d.region_id = cc.id
                  LEFT JOIN country_categories pcc ON cc.parent_id = pcc.id
+                 LEFT JOIN destination_countries dc ON dc.destination_id = d.id
         WHERE
             (
                 dt.name LIKE CONCAT('%', #{keyword}, '%')
@@ -35,6 +80,9 @@
                     OR cc.region_name LIKE CONCAT('%', #{keyword}, '%')
                     OR pcc.region_name LIKE CONCAT('%', #{keyword}, '%')
                 )
+        <if test="countryId != null">
+            AND dc.country_id = #{countryId}
+        </if>
         ORDER BY d.id DESC
             LIMIT #{limit}
     </select>

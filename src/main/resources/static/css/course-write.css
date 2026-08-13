@@ -21,7 +21,8 @@
 }
 
 .write-form .input-text,
-.destination-search-controls input {
+.destination-search-controls input,
+.overseas-country-field input {
     box-sizing: border-box;
     width: 100%;
     min-width: 0;
@@ -33,7 +34,8 @@
 }
 
 .write-form .input-text:focus,
-.destination-search-controls input:focus {
+.destination-search-controls input:focus,
+.overseas-country-field input:focus {
     outline: 3px solid rgba(57, 122, 99, 0.15);
     border-color: #397a63;
 }
@@ -55,11 +57,130 @@
     --quill-border-color: #d8dfeb;
 }
 
+.course-country-picker,
 .course-destination-picker,
 .selected-course-section {
     margin-top: 34px;
     padding-top: 30px;
     border-top: 1px solid #e8eeeb;
+}
+
+.course-country-control {
+    width: min(100%, 520px);
+    margin-top: 18px;
+}
+
+.course-country-control label {
+    display: block;
+    margin-bottom: 8px;
+    color: #34453f;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.course-country-control label span,
+.course-country-picker .picker-heading h2 span {
+    color: #b42318;
+}
+
+.course-scope-options {
+    display: flex;
+    gap: 8px;
+}
+
+.course-scope-button {
+    min-width: 84px;
+    padding: 9px 18px;
+    border: 1px solid #cfdad5;
+    border-radius: 8px;
+    background: #fff;
+    color: #43524c;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.course-scope-button:hover {
+    background: #f5f8f6;
+}
+
+.course-scope-button.is-active {
+    border-color: #397a63;
+    background: #397a63;
+    color: #fff;
+}
+
+.course-scope-button:focus-visible,
+.country-option:focus-visible {
+    outline: 3px solid rgba(57, 122, 99, 0.15);
+    outline-offset: 2px;
+}
+
+.overseas-country-field {
+    margin-top: 16px;
+}
+
+.country-combobox {
+    position: relative;
+}
+
+.country-option-list {
+    position: absolute;
+    z-index: 20;
+    top: calc(100% + 6px);
+    right: 0;
+    left: 0;
+    max-height: 240px;
+    overflow-y: auto;
+    padding: 6px;
+    border: 1px solid #cfdad5;
+    border-radius: 9px;
+    background: #fff;
+    box-shadow: 0 8px 20px rgba(31, 80, 62, 0.09);
+}
+
+.country-option {
+    width: 100%;
+    padding: 9px 10px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #34453f;
+    font: inherit;
+    font-size: 14px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.country-option:hover,
+.country-option.is-highlighted {
+    background: #edf4f0;
+}
+
+.country-option[aria-selected="true"] {
+    color: #245b48;
+    font-weight: 700;
+}
+
+.country-option-empty {
+    margin: 0;
+    padding: 16px 10px;
+    color: #7a8681;
+    font-size: 13px;
+    text-align: center;
+}
+
+.course-country-helper {
+    margin: 8px 0 0;
+    color: #66756f;
+    font-size: 13px;
+}
+
+.destination-search-controls input:disabled {
+    background: #f3f5f4;
+    color: #8b9691;
+    cursor: not-allowed;
 }
 
 .picker-heading h2 {

@@ -39,6 +39,10 @@ public class CountryCategoryService {
         return mapper.findByDepth(depth, null);
     }
 
+    public List<CountryCategory> getCourseCountries() {
+        return mapper.selectCourseCountries();
+    }
+
     // 4. 카테고리 ID로 조회
     public CountryCategory getById(Long id) {
         return mapper.selectById(id);

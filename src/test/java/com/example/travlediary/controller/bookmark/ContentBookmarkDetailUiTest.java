@@ -10,6 +10,7 @@ import com.example.travlediary.dto.PostDetailDto;
 import com.example.travlediary.model.PostType;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.service.course.CourseService;
+import com.example.travlediary.service.category.CountryCategoryService;
 import com.example.travlediary.service.file.FileUploadService;
 import com.example.travlediary.service.post.PostService;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -41,6 +42,8 @@ class ContentBookmarkDetailUiTest {
     private PostService postService;
     @MockitoBean
     private CourseService courseService;
+    @MockitoBean
+    private CountryCategoryService countryCategoryService;
     @MockitoBean
     private FileUploadService fileUploadService;
     @MockitoBean

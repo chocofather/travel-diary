@@ -27,6 +27,20 @@
         <result property="imageUrl" column="image_url"/>
     </resultMap>
 
+    <resultMap id="HomePopularCourseMap" type="com.example.travlediary.dto.HomePopularCourseDto">
+        <id property="courseId" column="course_id"/>
+        <result property="title" column="course_title"/>
+        <result property="nickname" column="writer_nickname"/>
+        <result property="views" column="course_views"/>
+        <result property="totalDestinationCount" column="destination_count"/>
+    </resultMap>
+
+    <resultMap id="HomePopularCourseStopMap" type="com.example.travlediary.dto.HomePopularCourseStopDto">
+        <result property="courseId" column="course_id"/>
+        <result property="visitOrder" column="visit_order"/>
+        <result property="destinationName" column="destination_name"/>
+    </resultMap>
+
     <update id="incrementViews">
         UPDATE courses
         SET views = views + 1
@@ -113,6 +127,40 @@
         ORDER BY cd.visit_order ASC, cd.id ASC
     </select>
 
+    <select id="findPopularCourses" resultMap="HomePopularCourseMap">
+        SELECT
+            c.id AS course_id,
+            c.title AS course_title,
+            u.nickname AS writer_nickname,
+            c.views AS course_views,
+            COUNT(cd.id) AS destination_count
+        FROM courses c
+        JOIN users u ON u.id = c.user_id
+        JOIN course_destinations cd ON cd.course_id = c.id
+        WHERE c.deleted = 0
+          AND c.deleted_at IS NULL
+        GROUP BY c.id, c.title, u.nickname, c.views, c.created_at
+        ORDER BY c.views DESC, c.created_at DESC, c.id DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="findPopularCourseStops" resultMap="HomePopularCourseStopMap">
+        SELECT
+            cd.course_id,
+            cd.visit_order,
+            COALESCE(dt.name, '이름 없는 여행지') AS destination_name
+        FROM course_destinations cd
+        JOIN destinations d ON d.id = cd.destination_id
+        LEFT JOIN destination_translations dt
+          ON dt.destination_id = d.id
+         AND dt.language_code = 'ko'
+        WHERE cd.course_id IN
+        <foreach collection="courseIds" item="courseId" open="(" separator="," close=")">
+            #{courseId}
+        </foreach>
+        ORDER BY cd.course_id ASC, cd.visit_order ASC, cd.id ASC
+    </select>
+
     <select id="countExistingDestinations" resultType="int">
         SELECT COUNT(*)
         FROM destinations
@@ -122,12 +170,58 @@
         </foreach>
     </select>
 
+    <select id="findDestinationCountries"
+            resultType="com.example.travlediary.dto.CourseDestinationCountryDto">
+        WITH RECURSIVE destination_regions AS (
+            SELECT
+                d.id AS destination_id,
+                region.id AS region_id,
+                region.parent_id,
+                region.region_name,
+                region.code,
+                SUBSTRING_INDEX(region.code, '-', 1) AS country_code
+            FROM destinations d
+            JOIN country_categories region ON region.id = d.region_id
+            WHERE d.id IN
+            <foreach collection="destinationIds" item="destinationId" open="(" separator="," close=")">
+                #{destinationId}
+            </foreach>
+
+            UNION ALL
+
+            SELECT
+                destination_regions.destination_id,
+                parent.id AS region_id,
+                parent.parent_id,
+                parent.region_name,
+                parent.code,
+                destination_regions.country_code
+            FROM destination_regions
+            JOIN country_categories parent ON parent.id = destination_regions.parent_id
+        )
+        SELECT
+            destination_id AS destinationId,
+            region_id AS countryId,
+            region_name AS countryName
+        FROM destination_regions
+        WHERE code = country_code
+          AND (
+              parent_id IS NOT NULL
+              OR EXISTS (
+                  SELECT 1
+                  FROM country_categories country_child
+                  WHERE country_child.parent_id = destination_regions.region_id
+                    AND country_child.code LIKE CONCAT(destination_regions.code, '-%')
+              )
+          )
+    </select>
+
     <!-- 코스 등록 -->
     <insert id="insertCourse" parameterType="com.example.travlediary.model.Course" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO courses (
-            title, user_id, content, created_at, deleted
+            title, user_id, country_id, content, created_at, deleted
         ) VALUES (
-                     #{title}, #{userId}, #{content}, NOW(), 0
+                     #{title}, #{userId}, #{countryId}, #{content}, NOW(), 0
                  )
     </insert>
 

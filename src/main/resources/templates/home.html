@@ -6,85 +6,103 @@
 
 <th:block th:fragment="headFragment">
   <link rel="stylesheet" href="/css/slider.css" />
-  <link rel="stylesheet" href="/css/home.css">
+  <link rel="stylesheet" href="/css/home.css" />
 </th:block>
 
 <th:block th:fragment="body">
-  <p class="home-account-status"
-     th:if="${param.withdrawn != null and param.withdrawn[0] == 'true'}" role="status">
-    회원 탈퇴가 완료되었습니다.
-  </p>
-<!-- 이벤트 슬라이더 -->
-<section id="event-slider">
-  <div class="swiper">
-    <div class="swiper-wrapper" id="slide-area"></div>
-    <div class="slider-ui">
-      <span id="slide-index">01</span> /
-      <span id="slide-total">--</span>
-      <button class="nav prev">❮</button>
-      <button class="nav pause">❚❚</button>
-      <button class="nav next">❯</button>
-      <div class="progress"><span id="progress-bar"></span></div>
-    </div>
+  <div class="home-page">
+    <p class="home-account-status"
+       th:if="${param.withdrawn != null and param.withdrawn[0] == 'true'}" role="status">
+      회원 탈퇴가 완료되었습니다.
+    </p>
+
+    <!-- 이벤트 슬라이더 -->
+    <section id="event-slider" aria-label="진행 중인 이벤트">
+      <div class="swiper">
+        <div class="swiper-wrapper" id="slide-area"></div>
+        <div class="slider-ui">
+          <span id="slide-index">01</span> /
+          <span id="slide-total">--</span>
+          <button type="button" class="nav prev" aria-label="이전 이벤트">❮</button>
+          <button type="button" class="nav pause" aria-label="자동 재생 일시정지">❚❚</button>
+          <button type="button" class="nav next" aria-label="다음 이벤트">❯</button>
+          <div class="progress" aria-hidden="true"><span id="progress-bar"></span></div>
+        </div>
+      </div>
+      <div class="event-slider-bottom"></div>
+    </section>
+
+    <!-- 시즌 추천 -->
+    <section class="seasonal-recommend">
+      <div class="seasonal-bg-wrapper">
+        <div class="season-header">
+          <span class="season-badge"></span>
+          <h2 class="season-title"></h2>
+          <p class="season-sub"></p>
+        </div>
+        <div class="season-tag-list"></div>
+      </div>
+      <div class="trip-card-list"></div>
+    </section>
+
+    <!-- 인기 여행지 -->
+    <section class="popular-recommend">
+      <div class="recommend-header">
+        <span class="recommend-badge">이런 여행지 어때요?</span>
+        <h2 class="recommend-title">국내·해외 인기 많은 여행지</h2>
+        <p class="recommend-sub">다양한 테마로 인기 많은 여행지를 만나보세요.</p>
+      </div>
+      <div class="recommend-tag-list" id="popular-tag-list"></div>
+      <div class="recommend-card-list" id="recommend-card-list"></div>
+    </section>
+
+    <!-- 여행자 인기 코스 -->
+    <section class="popular-course-section" aria-labelledby="popular-course-title">
+      <div class="home-section-header">
+        <span class="home-section-badge">여행자의 기록</span>
+        <h2 id="popular-course-title">여행자들이 많이 본 코스</h2>
+        <p>다른 여행자들이 직접 만든 동선을 참고해 다음 여행을 계획해 보세요.</p>
+      </div>
+
+      <div class="popular-course-list" th:if="${!#lists.isEmpty(popularCourses)}">
+        <a class="popular-course-card" th:each="course : ${popularCourses}"
+           th:href="${course.detailUrl}">
+          <h3 th:text="${course.title}">서울 하루 고궁 산책</h3>
+          <p class="popular-course-meta">
+            <span th:text="${course.nickname}">minjun</span>
+            <span aria-hidden="true">·</span>
+            <span th:text="|조회 ${#numbers.formatInteger(course.views, 1, 'COMMA')}|">조회 1,284</span>
+          </p>
+          <div class="popular-course-route">
+            <span class="popular-course-route-label">경로</span>
+            <div class="popular-course-route-track">
+              <th:block th:each="destinationName, stopStatus : ${course.previewDestinationNames}">
+                <span class="popular-course-route-stop">
+                  <span class="popular-course-route-dot" aria-hidden="true"></span>
+                  <span class="popular-course-route-name" th:text="${destinationName}">경복궁</span>
+                </span>
+                <span class="popular-course-route-connector"
+                      th:unless="${stopStatus.last}"
+                      aria-hidden="true">→</span>
+              </th:block>
+              <strong class="popular-course-more"
+                      th:if="${course.remainingDestinationCount > 0}"
+                      th:text="|+${course.remainingDestinationCount}|">+2</strong>
+            </div>
+          </div>
+          <div class="popular-course-footer">
+            <span th:text="|장소 ${course.totalDestinationCount}곳|">장소 5곳</span>
+            <span class="popular-course-arrow" aria-hidden="true">→</span>
+          </div>
+        </a>
+      </div>
+      <p class="home-empty-state" th:if="${#lists.isEmpty(popularCourses)}">
+        아직 소개할 여행 코스가 없습니다.
+      </p>
+    </section>
   </div>
-  <div class="event-slider-bottom"></div>
-</section>
 
-  <!-- 시즌 추천 -->
-  <section class="seasonal-recommend">
-    <div class="seasonal-bg-wrapper">
-      <div class="season-header">
-        <span class="season-badge"></span>
-        <h2 class="season-title"></h2>
-        <p class="season-sub"></p>
-      </div>
-      <div class="season-tag-list"></div>
-    </div>
-    <div class="trip-card-list"></div>
-  </section>
-
-  <!-- 인기 추천 -->
-  <section class="popular-recommend">
-    <div class="recommend-header">
-      <span class="recommend-badge">이런 여행지 어때요?</span>
-      <h2 class="recommend-title">국내·해외 인기 많은 여행지</h2>
-      <p class="recommend-sub">다양한 테마로 인기 많은 여행지를 만나보세요</p>
-    </div>
-    <div class="recommend-tag-list" id="popular-tag-list"></div>
-    <div class="recommend-card-list" id="recommend-card-list"></div>
-  </section>
-
-
-
-  <!-- 즉석 여행 -->
-  <section class="instant-trip">
-    <div class="instant-header">
-      <span class="instant-badge">즉석 여행 룰렛</span>
-      <h2 class="instant-title">운명처럼 떠나는 랜덤 지역 뽑기</h2>
-      <p class="instant-sub">룰렛을 돌려서 오늘의 여행 지역을 뽑아보세요</p>
-      <div class="trip-filter">
-        <button type="button" class="roulette-type-btn active" data-type="domestic">국내</button>
-        <button type="button" class="roulette-type-btn" data-type="asia">아시아</button>
-        <button type="button" class="roulette-type-btn" data-type="europe">유럽</button>
-        <button type="button" class="roulette-type-btn" data-type="north-america">북아메리카</button>
-        <button type="button" class="roulette-type-btn" data-type="south-america">남아메리카</button>
-        <button type="button" class="roulette-type-btn" data-type="oceania">오세아니아</button>
-        <button type="button" class="roulette-type-btn" data-type="africa">아프리카</button>
-        <button type="button" class="roulette-type-btn" data-type="random-overseas">랜덤해외</button>
-      </div>
-      <div class="roulette-wrapper" style="position:relative; width:520px; margin:70px auto 0;">
-        <div class="roulette-pointer"></div>
-        <canvas id="roulette-canvas" width="520" height="520" style="display:block; margin:0 auto;"></canvas>
-      </div>
-      <button id="spin-btn"><span style="font-size:1.1em;">🎲</span> 돌리기</button>
-      <div id="roulette-result" style="margin-top:18px;font-size:18px;font-weight:600;text-align:center;"></div>
-    </div>
-    <div class="recommend-card-list" id="roulette-trip-list">
-      <!-- JS로 삽입 -->
-    </div>
-  </section>
   <script src="/js/home.js" defer></script>
   <script src="/js/slider.js" defer></script>
-  <script src="/js/random.js" defer></script>
 </th:block>
 </html>

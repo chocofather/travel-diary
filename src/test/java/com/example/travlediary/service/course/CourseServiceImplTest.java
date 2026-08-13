@@ -2,8 +2,11 @@ package com.example.travlediary.service.course;
 
 import com.example.travlediary.dto.CourseCreateRequest;
 import com.example.travlediary.dto.CourseDetailDto;
+import com.example.travlediary.dto.CourseDestinationCountryDto;
 import com.example.travlediary.dto.CourseStopDto;
 import com.example.travlediary.dto.CourseUpdateRequest;
+import com.example.travlediary.dto.HomePopularCourseDto;
+import com.example.travlediary.dto.HomePopularCourseStopDto;
 import com.example.travlediary.model.Course;
 import com.example.travlediary.model.CourseDestination;
 import com.example.travlediary.repository.course.CourseMapper;
@@ -104,11 +107,14 @@ class CourseServiceImplTest {
     void createsCourseAndDestinationsInRequestOrder() {
         CourseCreateRequest request = request("  서울 여행  ", "<p>코스 소개</p>", List.of(12L, 7L, 30L));
         when(courseMapper.countExistingDestinations(List.of(12L, 7L, 30L))).thenReturn(3);
+        when(courseMapper.findDestinationCountries(List.of(12L, 7L, 30L)))
+                .thenReturn(destinationCountries(List.of(12L, 7L, 30L), 7L, "대한민국"));
         when(courseMapper.insertCourse(any(Course.class))).thenAnswer(invocation -> {
             Course course = invocation.getArgument(0);
             assertThat(course.getTitle()).isEqualTo("서울 여행");
             assertThat(course.getContent()).isEqualTo("<p>코스 소개</p>");
             assertThat(course.getUserId()).isEqualTo(5L);
+            assertThat(course.getCountryId()).isEqualTo(7L);
             course.setId(100L);
             return 1;
         });
@@ -134,6 +140,8 @@ class CourseServiceImplTest {
         String imageOnlyContent = "<p><img src=\"/uploads/editor/course-map.png\" width=\"600\"></p>";
         CourseCreateRequest request = request("이미지 코스", imageOnlyContent, List.of(12L));
         when(courseMapper.countExistingDestinations(List.of(12L))).thenReturn(1);
+        when(courseMapper.findDestinationCountries(List.of(12L)))
+                .thenReturn(destinationCountries(List.of(12L), 7L, "대한민국"));
         when(courseMapper.insertCourse(any(Course.class))).thenAnswer(invocation -> {
             Course course = invocation.getArgument(0);
             assertThat(course.getContent()).isEqualTo(imageOnlyContent);
@@ -143,6 +151,111 @@ class CourseServiceImplTest {
         when(courseMapper.insertCourseDestination(any(CourseDestination.class))).thenReturn(1);
 
         assertThat(service.createCourse(request, 5L)).isEqualTo(100L);
+    }
+
+    @Test
+    void createsJapaneseCourseWithDestinationsFromDifferentCities() {
+        CourseCreateRequest request = request("일본 도시 여행", "<p>도쿄와 오사카</p>", List.of(71L, 72L));
+        request.setCountryId(8L);
+        when(courseMapper.countExistingDestinations(List.of(71L, 72L))).thenReturn(2);
+        when(courseMapper.findDestinationCountries(List.of(71L, 72L)))
+                .thenReturn(destinationCountries(List.of(71L, 72L), 8L, "일본"));
+        when(courseMapper.insertCourse(any(Course.class))).thenAnswer(invocation -> {
+            Course course = invocation.getArgument(0);
+            assertThat(course.getCountryId()).isEqualTo(8L);
+            course.setId(101L);
+            return 1;
+        });
+        when(courseMapper.insertCourseDestination(any(CourseDestination.class))).thenReturn(1);
+
+        assertThat(service.createCourse(request, 5L)).isEqualTo(101L);
+
+        ArgumentCaptor<CourseDestination> captor = ArgumentCaptor.forClass(CourseDestination.class);
+        verify(courseMapper, org.mockito.Mockito.times(2)).insertCourseDestination(captor.capture());
+        assertThat(captor.getAllValues())
+                .extracting(CourseDestination::getDestinationId)
+                .containsExactly(71L, 72L);
+    }
+
+    @Test
+    void rejectsDomesticAndJapaneseDestinationsBeforeAnyInsert() {
+        CourseCreateRequest request = request("혼합 코스", "<p>서울과 도쿄</p>", List.of(38L, 71L));
+        when(courseMapper.countExistingDestinations(List.of(38L, 71L))).thenReturn(2);
+        when(courseMapper.findDestinationCountries(List.of(38L, 71L))).thenReturn(List.of(
+                destinationCountry(38L, 7L, "대한민국"),
+                destinationCountry(71L, 8L, "일본")
+        ));
+
+        assertThatThrownBy(() -> service.createCourse(request, 5L))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(error -> assertThat(((ResponseStatusException) error).getReason())
+                        .isEqualTo("하나의 여행 코스에는 같은 국가의 여행지만 추가할 수 있습니다."));
+
+        verify(courseMapper, never()).insertCourse(any());
+        verify(courseMapper, never()).insertCourseDestination(any());
+    }
+
+    @Test
+    void rejectsDestinationsFromDifferentOverseasCountriesBeforeAnyInsert() {
+        CourseCreateRequest request = request("해외 혼합 코스", "<p>일본과 프랑스</p>", List.of(71L, 106L));
+        when(courseMapper.countExistingDestinations(List.of(71L, 106L))).thenReturn(2);
+        when(courseMapper.findDestinationCountries(List.of(71L, 106L))).thenReturn(List.of(
+                destinationCountry(71L, 8L, "일본"),
+                destinationCountry(106L, 17L, "프랑스")
+        ));
+
+        assertThatThrownBy(() -> service.createCourse(request, 5L))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(error -> assertThat(((ResponseStatusException) error).getStatusCode())
+                        .isEqualTo(HttpStatus.BAD_REQUEST));
+
+        verify(courseMapper, never()).insertCourse(any());
+        verify(courseMapper, never()).insertCourseDestination(any());
+    }
+
+    @Test
+    void rejectsDestinationWithoutResolvedCountryBeforeAnyInsert() {
+        CourseCreateRequest request = request("국가 미확인", "<p>소개</p>", List.of(1L, 2L));
+        when(courseMapper.countExistingDestinations(List.of(1L, 2L))).thenReturn(2);
+        when(courseMapper.findDestinationCountries(List.of(1L, 2L)))
+                .thenReturn(List.of(destinationCountry(1L, 7L, "대한민국")));
+
+        assertBadRequest(request);
+
+        verify(courseMapper, never()).insertCourse(any());
+        verify(courseMapper, never()).insertCourseDestination(any());
+    }
+
+    @Test
+    void rejectsCreateWhenCountryIsNotSelected() {
+        CourseCreateRequest request = request("국가 미선택", "<p>소개</p>", List.of(1L));
+        request.setCountryId(null);
+
+        assertThatThrownBy(() -> service.createCourse(request, 5L))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(error -> assertThat(((ResponseStatusException) error).getReason())
+                        .isEqualTo("코스 국가를 선택해 주세요."));
+
+        verify(courseMapper, never()).countExistingDestinations(any());
+        verify(courseMapper, never()).findDestinationCountries(any());
+        verify(courseMapper, never()).insertCourse(any());
+    }
+
+    @Test
+    void rejectsWhenSelectedCountryDoesNotMatchDestinationCountry() {
+        CourseCreateRequest request = request("국가 불일치", "<p>소개</p>", List.of(38L, 44L));
+        request.setCountryId(8L);
+        when(courseMapper.countExistingDestinations(List.of(38L, 44L))).thenReturn(2);
+        when(courseMapper.findDestinationCountries(List.of(38L, 44L)))
+                .thenReturn(destinationCountries(List.of(38L, 44L), 7L, "대한민국"));
+
+        assertThatThrownBy(() -> service.createCourse(request, 5L))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(error -> assertThat(((ResponseStatusException) error).getReason())
+                        .isEqualTo("선택한 국가와 여행지의 국가가 일치하지 않습니다."));
+
+        verify(courseMapper, never()).insertCourse(any());
+        verify(courseMapper, never()).insertCourseDestination(any());
     }
 
     @Test
@@ -172,6 +285,8 @@ class CourseServiceImplTest {
     void failsWhenCourseInsertDoesNotReturnOneOrGeneratedIdIsMissing() {
         CourseCreateRequest request = request("제목", "<p>소개</p>", List.of(1L));
         when(courseMapper.countExistingDestinations(List.of(1L))).thenReturn(1);
+        when(courseMapper.findDestinationCountries(List.of(1L)))
+                .thenReturn(destinationCountries(List.of(1L), 7L, "대한민국"));
         when(courseMapper.insertCourse(any(Course.class))).thenReturn(0);
 
         assertThatThrownBy(() -> service.createCourse(request, 5L))
@@ -183,6 +298,8 @@ class CourseServiceImplTest {
     void failsWhenGeneratedCourseIdIsMissing() {
         CourseCreateRequest request = request("제목", "<p>소개</p>", List.of(1L));
         when(courseMapper.countExistingDestinations(List.of(1L))).thenReturn(1);
+        when(courseMapper.findDestinationCountries(List.of(1L)))
+                .thenReturn(destinationCountries(List.of(1L), 7L, "대한민국"));
         when(courseMapper.insertCourse(any(Course.class))).thenReturn(1);
 
         assertThatThrownBy(() -> service.createCourse(request, 5L))
@@ -194,6 +311,8 @@ class CourseServiceImplTest {
     void destinationInsertFailureRaisesRuntimeExceptionForRollback() {
         CourseCreateRequest request = request("제목", "<p>소개</p>", List.of(1L, 2L));
         when(courseMapper.countExistingDestinations(List.of(1L, 2L))).thenReturn(2);
+        when(courseMapper.findDestinationCountries(List.of(1L, 2L)))
+                .thenReturn(destinationCountries(List.of(1L, 2L), 7L, "대한민국"));
         when(courseMapper.insertCourse(any(Course.class))).thenAnswer(invocation -> {
             Course course = invocation.getArgument(0);
             course.setId(100L);
@@ -256,6 +375,7 @@ class CourseServiceImplTest {
                 .containsExactly(30L, 12L);
         assertThat(captor.getAllValues()).extracting(CourseDestination::getVisitOrder)
                 .containsExactly(1, 2);
+        verify(courseMapper, never()).findDestinationCountries(any());
     }
 
     @Test
@@ -303,6 +423,43 @@ class CourseServiceImplTest {
         verify(courseMapper, never()).deleteCourseDestinations(any());
     }
 
+    @Test
+    void homePopularCoursesUseAtMostThreeCoursesAndThreeOrderedPreviewStops() {
+        HomePopularCourseDto first = homeCourse(10L, 5);
+        HomePopularCourseDto second = homeCourse(20L, 2);
+        HomePopularCourseDto third = homeCourse(30L, 1);
+        HomePopularCourseDto unexpectedFourth = homeCourse(40L, 1);
+        when(courseMapper.findPopularCourses(3))
+                .thenReturn(List.of(first, second, third, unexpectedFourth));
+        when(courseMapper.findPopularCourseStops(List.of(10L, 20L, 30L))).thenReturn(List.of(
+                homeStop(10L, 1, "경복궁"),
+                homeStop(10L, 2, "북촌한옥마을"),
+                homeStop(10L, 3, "창덕궁"),
+                homeStop(10L, 4, "익선동"),
+                homeStop(20L, 1, "해운대")
+        ));
+
+        List<HomePopularCourseDto> result = service.getPopularCoursesForHome();
+
+        assertThat(result).containsExactly(first, second, third);
+        assertThat(first.getPreviewDestinationNames())
+                .containsExactly("경복궁", "북촌한옥마을", "창덕궁");
+        assertThat(first.getRoutePreview()).isEqualTo("경복궁 → 북촌한옥마을 → 창덕궁");
+        assertThat(first.getRemainingDestinationCount()).isEqualTo(2);
+        assertThat(second.getPreviewDestinationNames()).containsExactly("해운대");
+        assertThat(second.getRemainingDestinationCount()).isEqualTo(1);
+        verify(courseMapper).findPopularCourseStops(List.of(10L, 20L, 30L));
+    }
+
+    @Test
+    void emptyHomePopularCoursesDoNotRunStopQuery() {
+        when(courseMapper.findPopularCourses(3)).thenReturn(List.of());
+
+        assertThat(service.getPopularCoursesForHome()).isEmpty();
+
+        verify(courseMapper, never()).findPopularCourseStops(any());
+    }
+
     private Course activeCourse(Long id, Long userId) {
         Course course = new Course();
         course.setId(id);
@@ -310,6 +467,21 @@ class CourseServiceImplTest {
         course.setTitle("기존 제목");
         course.setContent("<p>기존 소개</p>");
         return course;
+    }
+
+    private HomePopularCourseDto homeCourse(Long id, int totalDestinationCount) {
+        HomePopularCourseDto course = new HomePopularCourseDto();
+        course.setCourseId(id);
+        course.setTotalDestinationCount(totalDestinationCount);
+        return course;
+    }
+
+    private HomePopularCourseStopDto homeStop(Long courseId, int visitOrder, String name) {
+        HomePopularCourseStopDto stop = new HomePopularCourseStopDto();
+        stop.setCourseId(courseId);
+        stop.setVisitOrder(visitOrder);
+        stop.setDestinationName(name);
+        return stop;
     }
 
     private CourseUpdateRequest updateRequest(String title, String content, List<Long> destinationIds) {
@@ -320,8 +492,25 @@ class CourseServiceImplTest {
         return request;
     }
 
+    private List<CourseDestinationCountryDto> destinationCountries(
+            List<Long> destinationIds, Long countryId, String countryName) {
+        return destinationIds.stream()
+                .map(destinationId -> destinationCountry(destinationId, countryId, countryName))
+                .toList();
+    }
+
+    private CourseDestinationCountryDto destinationCountry(
+            Long destinationId, Long countryId, String countryName) {
+        CourseDestinationCountryDto destination = new CourseDestinationCountryDto();
+        destination.setDestinationId(destinationId);
+        destination.setCountryId(countryId);
+        destination.setCountryName(countryName);
+        return destination;
+    }
+
     private CourseCreateRequest request(String title, String content, List<Long> destinationIds) {
         CourseCreateRequest request = new CourseCreateRequest();
+        request.setCountryId(7L);
         request.setTitle(title);
         request.setContent(content);
         request.setDestinationIds(destinationIds);

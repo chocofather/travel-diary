@@ -1,304 +1,457 @@
+.home-page {
+    --home-content-width: 1120px;
+    --home-section-padding: 72px;
+    --home-card-gap: 22px;
+    color: #20262e;
+}
+
+.home-page *,
+.home-page *::before,
+.home-page *::after {
+    box-sizing: border-box;
+}
+
 .home-account-status {
-    width: min(1180px, calc(100% - 40px));
+    width: min(var(--home-content-width), calc(100% - 40px));
     margin: 24px auto 0;
     padding: 12px 14px;
     border: 1px solid #a7e3d8;
-    border-radius: 9px;
+    border-radius: 8px;
     background: #f0fdfa;
     color: #115e59;
     font-size: 14px;
 }
 
-.instant-trip {
-    /*
-    background: #1a1a1a;
-    */
-    color: #000000;
-    padding: 48px 0 56px;
-}
-
-.instant-header {
-    max-width: 650px;
-    margin: 0 auto;
+.seasonal-recommend,
+.popular-recommend,
+.popular-course-section {
+    padding: var(--home-section-padding) 20px;
     text-align: center;
-    padding-top: 30px;
 }
 
-.instant-badge {
-    background: #232529;       /* 진회색 */
+.season-badge,
+.recommend-badge,
+.home-section-badge {
+    display: inline-flex;
+    min-height: 28px;
+    padding: 5px 14px;
+    align-items: center;
+    border-radius: 999px;
+    background: #20252b;
     color: #fff;
-    padding: 6px 20px;
-    border-radius: 22px;
-    font-size: 15px;
+    font-size: 13px;
     font-weight: 700;
-    box-shadow: 0 2px 10px #1115;
-    letter-spacing: 1.5px;
-    border: 1.5px solid #ffcc60;
+    line-height: 1.2;
 }
 
-.instant-title {
-    margin: 24px 0 7px;
-    font-size: 2.8rem;
-    font-weight: 900;
-    letter-spacing: -0.7px;
-    background: linear-gradient(90deg, #232529 20%, #5D6D89 80%);
-    color: transparent;
-    -webkit-background-clip: text;
-    background-clip: text;
-    text-shadow: 0 4px 18px #1112;
-    line-height: 1.15;
-    display: inline-block;
-    position: relative;
+.season-title,
+.recommend-title,
+.home-section-header h2 {
+    margin: 14px 0 8px;
+    font-size: 28px;
+    font-weight: 750;
+    line-height: 1.35;
+    letter-spacing: -0.6px;
 }
 
-.instant-title::after {
-    content: " ✈️";
-    font-size: 1.8rem;
-    margin-left: 10px;
-    vertical-align: middle;
-    opacity: 0.6;
-}
-
-.instant-sub {
-    font-size: 1.18rem;
-    color: #5d6070;
-    margin-bottom: 18px;
-    font-weight: 600;
-    letter-spacing: 0.4px;
-    text-shadow: 0 1px 5px #fff8;
-}
-
-.trip-filter {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 13px 18px; /* 세로 13px, 가로 18px 간격 */
-    margin-bottom: 22px;
-    max-width: 720px;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-.roulette-type-btn {
-    background: #fff;
-    color: #181A1F;
-    border: 1.5px solid #d3d7de;
-    border-radius: 18px;
-    padding: 9px 22px;
-    min-width: 84px;
-    font-size: 16.2px;
+.season-sub,
+.recommend-sub,
+.home-section-header p {
     margin: 0;
-    cursor: pointer;
-    font-weight: 600;
-    letter-spacing: 0.7px;
-    box-shadow: 0 2px 10px #191a1e05;
-    transition: background 0.15s, color 0.15s, border 0.15s;
-    margin-bottom: 0; /* flex gap으로 대체 */
-}
-.roulette-type-btn.active {
-    background: #181A1F;
-    color: #fff;
-    border: 1.5px solid #181A1F;
-    font-weight: 800;
+    color: #66717f;
+    font-size: 15px;
+    line-height: 1.65;
 }
 
-
-.roulette-pointer {
-    position: absolute;
-    top: -36px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 0; height: 0;
-    border-left: 18px solid transparent;
-    border-right: 18px solid transparent;
-    border-top: 34px solid #EF4444; /* 진한 레드! */
-    border-bottom: none;
-    z-index: 2;
-    filter: drop-shadow(0 3px 7px #a91c1ccc);
-    animation: pointer-bounce 0.8s infinite alternate;
-}
-
-@keyframes pointer-bounce {
-    0% { transform: translateX(-50%) translateY(0); }
-    100% { transform: translateX(-50%) translateY(-6px); }
-}
-
-
-.roulette-pointer::before {
-    content: '';
-    display: block;
-    width: 0;
-    height: 0;
-    margin: 0 auto;
-    border-left: 27px solid transparent;
-    border-right: 27px solid transparent;
-    filter: drop-shadow(0 4px 8px #2226);
-}
-
-.roulette-wrapper {
+/* 계절 여행 */
+.seasonal-recommend {
     position: relative;
-    width: 520px;   /* 520px로! */
-    margin: 40px auto 0;
-}
-#roulette-canvas {
-    display: block;
-    margin: 0 auto;
-    width: 520px !important;
-    height: 520px !important;
-    border-radius: 50%;
-    max-width: 100vw;
+    padding: 44px 0 var(--home-section-padding);
+    overflow: hidden;
 }
 
-#spin-btn {
-    background: #181A1F;
+.seasonal-bg-wrapper {
+    min-height: 390px;
+    padding: 78px 20px 112px;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: cover;
+}
+
+.seasonal-bg-wrapper.spring {
+    background-image: url('/images/spring4.png');
+}
+
+.seasonal-bg-wrapper.summer {
+    background-image: url('/images/summer2.png');
+}
+
+.seasonal-bg-wrapper.fall {
+    background-image: url('/images/fall2.png');
+}
+
+.seasonal-bg-wrapper.winter {
+    background-image: url('/images/winter.png');
+}
+
+.season-title,
+.season-sub {
     color: #fff;
-    border: none;
-    border-radius: 38px;
-    padding: 18px 50px;
-    font-size: 1.16rem;
-    font-weight: 900;
-    letter-spacing: 1.2px;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.55);
+}
+
+.season-sub {
+    margin-bottom: 30px;
+}
+
+.season-tag-list,
+.recommend-tag-list {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 9px;
+}
+
+.season-tag-list .tag,
+.recommend-tag-list .tag {
+    padding: 8px 17px;
+    border: 1px solid #cbd1d8;
+    border-radius: 999px;
+    background: #fff;
+    color: #343b44;
+    font: inherit;
+    font-size: 13px;
     cursor: pointer;
-    box-shadow: 0 6px 26px #23262913, 0 1.5px 0.5px #2227;
-    margin-top: 38px;
-    transition: transform 0.09s, box-shadow 0.09s, background 0.16s;
+    transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
 }
-#spin-btn:hover, #spin-btn:active {
-    background: #ef4444;      /* hover 시 빨간색 포인트로 전환! */
+
+.season-tag-list .tag:hover,
+.recommend-tag-list .tag:hover {
+    background: #f1f3f5;
+}
+
+.season-tag-list .tag.active,
+.recommend-tag-list .tag.active {
+    border-color: #20252b;
+    background: #20252b;
     color: #fff;
-    transform: translateY(-2.5px) scale(1.03);
-    box-shadow: 0 12px 32px #ef444455;
+    font-weight: 700;
 }
-#roulette-result {
-    margin-top: 18px;
-    font-size: 18px;
-    font-weight: 600;
+
+.season-tag-list .tag:focus-visible,
+.recommend-tag-list .tag:focus-visible {
+    outline: 3px solid rgba(0, 102, 204, 0.3);
+    outline-offset: 2px;
+}
+
+.trip-card-list {
+    position: relative;
+    z-index: 2;
+    width: min(var(--home-content-width), calc(100% - 40px));
+    min-height: 236px;
+    margin: -76px auto 0;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: var(--home-card-gap);
+}
+
+.trip-card {
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid #e1e5ea;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 5px 16px rgba(25, 36, 51, 0.07);
+    cursor: pointer;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.trip-card:hover {
+    border-color: #b9c9da;
+    box-shadow: 0 7px 20px rgba(25, 36, 51, 0.1);
+}
+
+.trip-card img {
+    width: 100%;
+    height: 176px;
+    display: block;
+    object-fit: cover;
+    transition: transform 0.25s ease;
+}
+
+.trip-card:hover img {
+    transform: scale(1.025);
+}
+
+.trip-info {
+    padding: 14px;
+    text-align: left;
+}
+
+.trip-info h4 {
+    margin: 0 0 5px;
+    overflow: hidden;
+    color: #222831;
+    font-size: 16px;
+    font-weight: 700;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.trip-card:hover .trip-info h4 {
+    color: #0066cc;
+}
+
+.trip-info p {
+    margin: 0;
+    overflow: hidden;
+    color: #77818d;
+    font-size: 13px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+/* 인기 여행지 */
+.popular-recommend {
+    background: #f7f8fa;
+}
+
+.recommend-sub {
+    margin-bottom: 28px;
+}
+
+.recommend-tag-list {
+    margin-bottom: 34px;
 }
 
 .recommend-card-list {
+    width: min(var(--home-content-width), 100%);
+    min-height: 226px;
+    margin: 0 auto;
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 16px;
-    margin: 36px auto 0;
-    max-width: 900px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: var(--home-card-gap);
 }
 
-.recommend-card {
+.home-empty-state {
+    width: min(var(--home-content-width), 100%);
+    margin: 28px auto 0;
+    padding: 32px 20px;
+    border: 1px solid #e2e6eb;
+    border-radius: 8px;
+    color: #78828e;
     background: #fff;
-    color: #222;
-    border-radius: 18px;
-    box-shadow: 0 4px 16px #0002;
-    padding: 18px 12px 12px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
 }
 
-.recommend-card img {
-    width: 78px;
-    height: 78px;
-    border-radius: 12px;
-    object-fit: cover;
-    margin-bottom: 10px;
+.recommend-card-list > .home-empty-state {
+    grid-column: 1 / -1;
 }
 
-.recommend-card-title {
-    font-weight: 700;
-    margin-bottom: 4px;
-}
-
-.recommend-card-desc {
-    font-size: 13px;
-    color: #666;
-}
-
-/* 즉석여행 */
-
-#roulette-trip-list {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);   /* 한 줄 5개 고정! */
-    gap: 22px;
-    margin: 36px auto 0;
-    max-width: 1200px;
-    padding: 0;
-    justify-content: center;
-}
-
-#roulette-trip-list .recommend-card {
+/* 여행자 인기 코스 */
+.popular-course-section {
     background: #fff;
-    border-radius: 18px;
-    box-shadow: 0 6px 22px rgba(30,40,80,0.12);
-    width: 212px;
-    min-width: 0;
-    max-width: 100%;
-    overflow: hidden;
-    transition: transform 0.21s cubic-bezier(.5,.2,.48,1.5), box-shadow 0.21s;
+}
+
+.home-section-header {
+    margin-bottom: 34px;
+}
+
+.popular-course-list {
+    width: min(var(--home-content-width), 100%);
     margin: 0 auto;
     display: flex;
-    flex-direction: column;
-    align-items: stretch;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px;
+    text-align: left;
 }
 
-#roulette-trip-list .recommend-card img {
+.popular-course-card {
+    flex: 0 1 360px;
     width: 100%;
-    height: 152px;
-    object-fit: cover;
+    min-width: 0;
+    padding: 20px;
+    border: 1px solid #dfe4e9;
+    border-radius: 10px;
+    color: inherit;
+    background: #fff;
+    text-decoration: none;
+    transition: border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.popular-course-card:hover {
+    border-color: #bdc7d1;
+    background: #fafbfc;
+}
+
+.popular-course-card:focus-visible {
+    outline: 3px solid rgba(0, 102, 204, 0.28);
+    outline-offset: 3px;
+}
+
+.popular-course-card h3 {
+    margin: 0 0 8px;
+    overflow: hidden;
+    color: #222831;
+    font-size: 19px;
+    font-weight: 750;
+    line-height: 1.45;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.popular-course-meta {
+    display: flex;
+    gap: 6px;
+    margin: 0 0 16px;
+    color: #77818d;
+    font-size: 13px;
+}
+
+.popular-course-route {
+    padding: 10px 11px;
+    border-radius: 6px;
+    background: #f7f8fa;
+    color: #344253;
+}
+
+.popular-course-route-label {
     display: block;
-    border-bottom: 1px solid #f2f2f5;
-}
-#roulette-trip-list .recommend-card-title {
-    font-size: 17px;
-    font-weight: 800;
-    margin: 14px 0 5px 0;
-    color: #232323;
-    padding: 0 14px;
+    margin-bottom: 6px;
+    color: #7a8693;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
 }
 
-#roulette-trip-list .recommend-card-desc {
-    font-size: 14px;
-    color: #777;
-    margin-bottom: 16px;
-    padding: 0 14px;
+.popular-course-route-track {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+    font-size: 13px;
+    font-weight: 650;
+    line-height: 1.55;
 }
 
-@media (max-width: 1300px) {
-    #roulette-trip-list {
-        grid-template-columns: repeat(3, 1fr);
-        max-width: 660px;
-    }
-    #roulette-trip-list .recommend-card {
-        width: 30vw;
-        min-width: 0;
-        max-width: 100%;
-    }
-}
-@media (max-width: 800px) {
-    #roulette-trip-list {
-        grid-template-columns: repeat(2, 1fr);
-        max-width: 99vw;
-    }
-    #roulette-trip-list .recommend-card {
-        width: 46vw;
-    }
-    #roulette-trip-list .recommend-card img {
-        height: 26vw;
-        max-height: 180px;
-    }
+.popular-course-route-stop {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+    max-width: 100%;
+    white-space: nowrap;
 }
 
-@media (max-width: 900px) {
+.popular-course-route-dot {
+    width: 5px;
+    height: 5px;
+    flex: 0 0 5px;
+    border-radius: 50%;
+    background: #5f7892;
+}
+
+.popular-course-route-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.popular-course-route-connector {
+    flex: 0 0 auto;
+    color: #a0aab4;
+    font-size: 12px;
+}
+
+.popular-course-more {
+    flex: 0 0 auto;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: #e3e8ed;
+    color: #596675;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.popular-course-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 16px;
+    padding-top: 13px;
+    border-top: 1px solid #ebedf0;
+    color: #66717f;
+    font-size: 13px;
+}
+
+.popular-course-arrow {
+    color: #596675;
+    font-size: 18px;
+    transition: transform 0.18s ease;
+}
+
+.popular-course-card:hover .popular-course-arrow {
+    transform: translateX(3px);
+}
+
+@media (max-width: 960px) {
+    .home-page {
+        --home-card-gap: 16px;
+    }
+
+    .trip-card-list,
     .recommend-card-list {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
-    .roulette-wrapper {
-        width: 90vw;
-        max-width: 340px;
+}
+
+@media (max-width: 680px) {
+    .home-page {
+        --home-section-padding: 52px;
     }
-    #roulette-canvas {
-        width: 100% !important;
-        height: auto !important;
-        aspect-ratio: 1/1;
-        max-width: 340px;
+
+    .season-title,
+    .recommend-title,
+    .home-section-header h2 {
+        font-size: 24px;
+    }
+
+    .seasonal-bg-wrapper {
+        min-height: 350px;
+        padding: 62px 18px 102px;
+        background-position: center center;
+    }
+
+    .trip-card-list,
+    .recommend-card-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .trip-card-list {
+        width: calc(100% - 28px);
+        margin-top: -64px;
+    }
+
+    .trip-card img {
+        height: 150px;
+    }
+
+    .popular-recommend,
+    .popular-course-section {
+        padding-right: 14px;
+        padding-left: 14px;
+    }
+
+}
+
+@media (max-width: 420px) {
+    .trip-card-list,
+    .recommend-card-list {
+        grid-template-columns: 1fr;
+    }
+
+    .trip-card img {
+        height: 190px;
     }
 }
