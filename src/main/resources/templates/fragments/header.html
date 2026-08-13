@@ -15,14 +15,20 @@
     <!-- 검색 + 로그인/프로필 -->
     <div class="search-box">
       <!-- 검색 버튼 -->
-      <button id="search-toggle" aria-label="검색 열기">
-        <img src="/images/magnify.svg" alt="검색 아이콘" />
+      <button type="button" id="search-toggle" aria-label="검색 열기"
+              aria-controls="search-form" aria-expanded="false">
+        <img src="/images/magnify.svg" alt="" aria-hidden="true" />
       </button>
 
       <!-- 숨겨진 검색창 -->
-      <form id="search-form" class="hidden">
-        <input type="text" placeholder="어디로 떠나 볼까요?" />
-        <button type="submit">검색</button>
+      <form id="search-form" class="hidden" action="/search" method="get" role="search">
+        <label class="sr-only" for="header-search-input">통합검색</label>
+        <input id="header-search-input" type="search" name="q"
+               placeholder="어디로 떠나 볼까요?" autocomplete="off"
+               th:value="${param.q != null ? param.q[0] : ''}" />
+        <button class="search-submit" type="submit" aria-label="검색 실행">
+          <img src="/images/magnify.svg" alt="" aria-hidden="true" />
+        </button>
       </form>
 
       <!-- 로그인 / 프로필 -->

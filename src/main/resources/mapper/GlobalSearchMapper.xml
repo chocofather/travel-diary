@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.search.GlobalSearchMapper">
+
+    <resultMap id="GlobalSearchResultMap" type="com.example.travlediary.dto.GlobalSearchResultDto">
+        <id property="type" column="search_type"/>
+        <id property="id" column="id"/>
+        <result property="title" column="title"/>
+        <result property="summary" column="summary"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="detailUrl" column="detail_url"/>
+        <result property="thumbnailUrl" column="thumbnail_url"/>
+        <result property="startDate" column="start_date"/>
+        <result property="endDate" column="end_date"/>
+    </resultMap>
+
+    <sql id="GlobalSearchUnion">
+        SELECT
+            'destination' AS search_type,
+            d.id,
+            dt.name AS title,
+            COALESCE(NULLIF(dt.short_description, ''), dt.description, '') AS summary,
+            d.created_at,
+            CONCAT('/destinations/', d.id) AS detail_url,
+            (
+                SELECT di.image_url
+                FROM destination_images di
+                WHERE di.destination_id = d.id
+                  AND di.is_main = 1
+                ORDER BY di.order_index ASC, di.id ASC
+                LIMIT 1
+            ) AS thumbnail_url,
+            NULL AS start_date,
+            NULL AS end_date,
+            CASE WHEN dt.name LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!' THEN 2 ELSE 1 END AS relevance
+        FROM destinations d
+        JOIN destination_translations dt
+          ON dt.destination_id = d.id
+         AND dt.language_code = 'ko'
+        LEFT JOIN country_categories cc ON cc.id = d.region_id
+        LEFT JOIN country_categories pcc ON pcc.id = cc.parent_id
+        WHERE #{type} IN ('all', 'destination')
+          AND (
+              dt.name LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+              OR dt.short_description LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+              OR dt.description LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+              OR cc.region_name LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+              OR pcc.region_name LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+          )
+
+        UNION ALL
+
+        SELECT
+            'community' AS search_type,
+            p.id,
+            p.title,
+            p.content AS summary,
+            p.created_at,
+            CONCAT('/post/', p.id) AS detail_url,
+            NULL AS thumbnail_url,
+            NULL AS start_date,
+            NULL AS end_date,
+            CASE WHEN p.title LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!' THEN 2 ELSE 1 END AS relevance
+        FROM user_posts p
+        WHERE #{type} IN ('all', 'community')
+          AND p.post_type IN ('QUESTION', 'TIP')
+          AND p.deleted = 0
+          AND p.deleted_at IS NULL
+          AND (
+              p.title LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+              OR p.content LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+          )
+
+        UNION ALL
+
+        SELECT
+            'course' AS search_type,
+            c.id,
+            c.title,
+            c.content AS summary,
+            c.created_at,
+            CONCAT('/course/', c.id) AS detail_url,
+            NULL AS thumbnail_url,
+            NULL AS start_date,
+            NULL AS end_date,
+            CASE WHEN c.title LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!' THEN 2 ELSE 1 END AS relevance
+        FROM courses c
+        WHERE #{type} IN ('all', 'course')
+          AND c.deleted = 0
+          AND c.deleted_at IS NULL
+          AND (
+              c.title LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+              OR c.content LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+          )
+
+        UNION ALL
+
+        SELECT
+            'travel-info' AS search_type,
+            ti.id,
+            ti.title,
+            ti.content AS summary,
+            ti.created_at,
+            CONCAT('/travel-info/', ti.id) AS detail_url,
+            NULL AS thumbnail_url,
+            NULL AS start_date,
+            NULL AS end_date,
+            CASE WHEN ti.title LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!' THEN 2 ELSE 1 END AS relevance
+        FROM travel_info ti
+        JOIN info_categories ic
+          ON ic.id = ti.category_id
+         AND ic.is_visible = 1
+        WHERE #{type} IN ('all', 'travel-info')
+          AND (
+              ti.title LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+              OR ti.content LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+          )
+
+        UNION ALL
+
+        SELECT
+            'event' AS search_type,
+            e.id,
+            e.title,
+            e.description AS summary,
+            e.created_at,
+            CONCAT('/events/', e.id) AS detail_url,
+            COALESCE(NULLIF(e.event_img, ''), NULLIF(e.poster_img, '')) AS thumbnail_url,
+            e.start_date,
+            e.end_date,
+            CASE WHEN e.title LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!' THEN 2 ELSE 1 END AS relevance
+        FROM events e
+        WHERE #{type} IN ('all', 'event')
+          AND (
+              e.title LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+              OR e.description LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+          )
+
+        UNION ALL
+
+        SELECT
+            'notice' AS search_type,
+            n.id,
+            n.title,
+            n.content AS summary,
+            n.created_at,
+            CONCAT('/support/notices/', n.id) AS detail_url,
+            NULL AS thumbnail_url,
+            NULL AS start_date,
+            NULL AS end_date,
+            CASE WHEN n.title LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!' THEN 2 ELSE 1 END AS relevance
+        FROM notices n
+        WHERE #{type} IN ('all', 'notice')
+          AND (
+              n.title LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+              OR n.content LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+          )
+    </sql>
+
+    <select id="search" resultMap="GlobalSearchResultMap">
+        SELECT search_type, id, title, summary, created_at, detail_url,
+               thumbnail_url, start_date, end_date
+        FROM (
+            <include refid="GlobalSearchUnion"/>
+        ) search_results
+        ORDER BY relevance DESC, created_at DESC, search_type ASC, id DESC
+        LIMIT #{limit}
+        OFFSET #{offset}
+    </select>
+
+    <select id="count" resultType="long">
+        SELECT COUNT(*)
+        FROM (
+            <include refid="GlobalSearchUnion"/>
+        ) search_results
+    </select>
+
+</mapper>

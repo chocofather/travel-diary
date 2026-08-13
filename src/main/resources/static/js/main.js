@@ -3,25 +3,34 @@ document.addEventListener('DOMContentLoaded', () => {
     /* 검색창 토글 */
     const toggleBtn = document.getElementById('search-toggle');
     const form = document.getElementById('search-form');
+    const searchBox = toggleBtn?.closest('.search-box');
 
-    if (toggleBtn && form) {
+    if (toggleBtn && form && searchBox) {
+        const setSearchOpen = (isOpen, restoreFocus = false) => {
+            form.classList.toggle('open', isOpen);
+            searchBox.classList.toggle('search-open', isOpen);
+            toggleBtn.setAttribute('aria-expanded', String(isOpen));
+            if (isOpen) {
+                form.querySelector('input')?.focus();
+            } else if (restoreFocus) {
+                toggleBtn.focus();
+            }
+        };
+
         toggleBtn.addEventListener('click', e => {
             e.preventDefault();
-            form.classList.toggle('open');
-            if (form.classList.contains('open')) {
-                form.querySelector('input')?.focus();
+            setSearchOpen(true);
+        });
+
+        form.addEventListener('keydown', e => {
+            if (e.key === 'Escape') {
+                setSearchOpen(false, true);
             }
         });
-    }
 
-    /* 검색창 submit → 검색결과 페이지로 이동 */
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            e.preventDefault(); // 새로고침 막기
-            const input = this.querySelector('input');
-            const keyword = input.value.trim();
-            if (keyword) {
-                window.location.href = `/search?q=${encodeURIComponent(keyword)}`;
+        document.addEventListener('click', e => {
+            if (form.classList.contains('open') && !searchBox.contains(e.target)) {
+                setSearchOpen(false);
             }
         });
     }
