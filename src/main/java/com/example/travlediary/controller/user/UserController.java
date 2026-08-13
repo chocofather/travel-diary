@@ -1,139 +1,121 @@
 package com.example.travlediary.controller.user;
 
-import com.example.travlediary.model.User;
-import com.example.travlediary.model.UserStatus;
-import com.example.travlediary.repository.user.UserMapper;
-import com.example.travlediary.service.email.EmailService;
+import com.example.travlediary.dto.RegistrationForm;
+import com.example.travlediary.service.email.EmailDeliveryException;
+import com.example.travlediary.service.user.EmailPolicy;
+import com.example.travlediary.service.user.RegistrationResult;
+import com.example.travlediary.service.user.RegistrationValidationException;
 import com.example.travlediary.service.user.UserService;
-import com.example.travlediary.service.user.PasswordPolicy;
+import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-
-
-import java.util.HashMap;
-import java.util.Map;
-
 
 @Controller
 @RequestMapping("/users")
 public class UserController {
+    private static final Logger log = LoggerFactory.getLogger(UserController.class);
+
     private final UserService userService;
-    private final UserMapper userMapper;
-    private final EmailService emailService;
 
     @Autowired
-    public UserController(UserService userService, UserMapper userMapper, EmailService emailService) {
+    public UserController(UserService userService) {
         this.userService = userService;
-        this.userMapper = userMapper;
-        this.emailService = emailService;
     }
 
     // 회원가입 폼 화면
     @GetMapping("/register")
-    public String showRegisterForm() {
-       // model.addAttribute("user", new User());
+    public String showRegisterForm(Authentication authentication, Model model) {
+        if (isAuthenticated(authentication)) {
+            return "redirect:/";
+        }
+        if (!model.containsAttribute("registrationForm")) {
+            model.addAttribute("registrationForm", new RegistrationForm());
+        }
         return "register";
     }
 
     @PostMapping("/register")
-    public String registerUser(@ModelAttribute User user,
-                               @RequestParam("passwordConfirm") String passwordConfirm,
-                               @RequestParam(value = "profileImageFile", required = false) MultipartFile profileImage,
-                               Model model) {
+    public String registerUser(@Valid @ModelAttribute("registrationForm") RegistrationForm form,
+                               BindingResult bindingResult,
+                               Authentication authentication,
+                               HttpSession session,
+                               RedirectAttributes redirectAttributes) {
+        if (isAuthenticated(authentication)) {
+            return "redirect:/";
+        }
+        if (bindingResult.hasErrors()) {
+            clearSensitiveFields(form);
+            return "register";
+        }
 
-        // 비밀번호 확인
-        if (!user.getUserPassword().equals(passwordConfirm)) {
-            model.addAttribute("error", "비밀번호가 일치하지 않습니다.");
-            model.addAttribute("user", user);
+        final RegistrationResult result;
+        try {
+            result = userService.registerUser(form);
+        } catch (RegistrationValidationException exception) {
+            log.info("Registration rejected before completion: field={}", exception.getField());
+            if ("registration".equals(exception.getField())) {
+                bindingResult.reject("registration.duplicate", exception.getMessage());
+            } else {
+                bindingResult.rejectValue(
+                        exception.getField(), "registration.invalid", exception.getMessage());
+            }
+            clearSensitiveFields(form);
+            return "register";
+        } catch (RuntimeException exception) {
+            log.error("Registration failed before a completion result was returned: exceptionType={}",
+                    exception.getClass().getSimpleName());
+            bindingResult.reject("registration.failed",
+                    "회원가입을 완료할 수 없습니다. 잠시 후 다시 시도해주세요.");
+            clearSensitiveFields(form);
             return "register";
         }
 
         try {
-            // ✅ 회원가입 로직을 UserService에서 처리
-            userService.registerUser(user, profileImage);
-
-            return "redirect:/users/register/verify-waiting";  // ✅ 이메일 인증 대기 페이지로 리다이렉트
-
-        } catch (Exception e) {
-            model.addAttribute("error", "회원가입 실패: " + e.getMessage());
-            model.addAttribute("user", user);
-            return "register";
+            session.setAttribute(
+                    EmailVerificationController.PENDING_EMAIL_SESSION_ATTRIBUTE, result.email());
+            if (result.verificationEmailRequested()) {
+                redirectAttributes.addFlashAttribute("verificationMessageType", "success");
+                redirectAttributes.addFlashAttribute(
+                        "verificationMessage",
+                        "인증메일 발송을 요청했습니다. 잠시 후 메일함을 확인해주세요.");
+            } else {
+                redirectAttributes.addFlashAttribute("verificationMessageType", "error");
+                redirectAttributes.addFlashAttribute("verificationMessage",
+                        "회원가입은 완료되었지만 인증메일 발송 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.");
+            }
+            log.info("Registration completed; redirecting to verification waiting: recipient={}, emailRequested={}",
+                    EmailPolicy.mask(result.email()),
+                    result.verificationEmailRequested());
+            return "redirect:/users/register/verify-waiting";
+        } catch (RuntimeException exception) {
+            log.error("Registration was completed but verification redirect preparation failed: "
+                            + "recipient={}, exceptionType={}",
+                    EmailPolicy.mask(result.email()),
+                    exception.getClass().getSimpleName());
+            return "redirect:/users/verification/resend";
         }
     }
 
-    // ✅ 아이디 중복 검사 API (AJAX 요청 처리)
-    @GetMapping("/check-username")
-    @ResponseBody
-    public Map<String, Boolean> checkUsername(@RequestParam String username) {
-        System.out.println("check-username API 호출됨. 입력값: " + username); // ✅ 디버깅 로그 추가
-
-        boolean exists = false;
-        try {
-            exists = userService.isUsernameExists(username);
-        } catch (Exception e) {
-            e.printStackTrace(); // ✅ 오류 로그 출력
-        }
-        // boolean exists = userService.isUsernameExists(username);
-        Map<String, Boolean> response = new HashMap<>();
-        response.put("exists", exists);
-        return response;
+    private void clearSensitiveFields(RegistrationForm form) {
+        form.setUserPassword(null);
+        form.setPasswordConfirm(null);
     }
 
-    // 비밀번호 검증 API
-    @PostMapping("/validate-password")
-    public ResponseEntity<String> validatePassword(@RequestBody PasswordRequest request) {
-        String password = request.getPassword();
-
-        if (password == null || password.isEmpty()) {
-            return ResponseEntity.badRequest().body("비밀번호를 입력하세요.");
-        }
-
-        if (!PasswordPolicy.isValid(password)) {
-            return ResponseEntity.badRequest().body(PasswordPolicy.INVALID_MESSAGE);
-        }
-
-        return ResponseEntity.ok("사용 가능한 비밀번호입니다.");
+    private boolean isAuthenticated(Authentication authentication) {
+        return authentication != null
+                && authentication.isAuthenticated()
+                && !(authentication instanceof AnonymousAuthenticationToken);
     }
 
-    // ⚠️ JSON 데이터를 받을 클래스
-    public static class PasswordRequest {
-        private String password;
-
-        public String getPassword() {
-            return password;
-        }
-
-        public void setPassword(String password) {
-            this.password = password;
-        }
-    }
-
-    // ✅ 이메일 인증 처리
-    @GetMapping("/verify")
-    public String verifyEmail(@RequestParam("token") String token) {
-        User user = userService.findByVerificationToken(token);
-
-        if (user == null) {
-            return "redirect:/login?error=invalid_token";
-        }
-
-        user.setStatus(UserStatus.ACTIVE); // 이메일 인증 완료
-        user.setVerificationToken(null);    // 토큰 제거
-        userMapper.updateUser(user);        // DB 업데이트
-
-        return "redirect:/login?verified=true";
-    }
-
-    // 이메일인증 대기 페이지
-    @GetMapping("/register/verify-waiting")
-    public String showVerifyWaitingPage() {
-        return "verify-waiting"; // verify-waiting.html로 이동
-    }
 
     // 아이디 찾기
     @GetMapping("/find-username")
@@ -148,6 +130,11 @@ public class UserController {
         try {
             userService.processFindUsername(fullName, userEmail);
             ra.addFlashAttribute("message", "아이디가 이메일로 전송되었습니다.");
+        } catch (EmailDeliveryException exception) {
+            log.error("Username recovery email delivery failed: exceptionType={}",
+                    exception.getClass().getSimpleName());
+            ra.addFlashAttribute("error",
+                    "이메일 발송 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.");
         } catch (Exception e) {
             ra.addFlashAttribute("error", e.getMessage());
         }
@@ -168,6 +155,11 @@ public class UserController {
         try {
             userService.processResetPasswordRequest(username, userEmail);
             ra.addFlashAttribute("message", "재설정 링크가 이메일로 전송되었습니다.");
+        } catch (EmailDeliveryException exception) {
+            log.error("Password reset email delivery failed: exceptionType={}",
+                    exception.getClass().getSimpleName());
+            ra.addFlashAttribute("error",
+                    "이메일 발송 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.");
         } catch (Exception e) {
             ra.addFlashAttribute("error", e.getMessage());
         }

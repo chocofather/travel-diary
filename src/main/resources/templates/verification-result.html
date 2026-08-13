@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/email-verification.css">
+</th:block>
+<th:block th:fragment="body">
+  <section class="verification-page" aria-labelledby="verification-result-title">
+    <div class="verification-card verification-result-card"
+         th:classappend="| is-${verificationStatus}|">
+      <div class="verification-icon" aria-hidden="true"
+           th:text="${verificationStatus == 'success' ? '✓' : '!'}">✓</div>
+      <p class="verification-eyebrow">EMAIL VERIFICATION</p>
+      <h1 id="verification-result-title" th:text="${verificationTitle}">이메일 인증 결과</h1>
+      <p class="verification-description" th:text="${verificationDescription}">
+        이메일 인증 결과를 확인해주세요.
+      </p>
+
+      <a class="verification-primary-link" th:if="${verificationStatus == 'success'}"
+         th:href="@{/login}">로그인하기</a>
+
+      <form th:if="${canResend}" class="verification-resend-form"
+            th:action="@{/users/verification/resend}" method="post">
+        <input type="hidden" th:if="${_csrf != null}"
+               th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+        <button type="submit">인증메일 다시 보내기</button>
+      </form>
+
+      <div class="verification-links" th:unless="${verificationStatus == 'success'}">
+        <a th:href="@{/users/register/verify-waiting}" th:if="${canResend}">인증 대기 화면</a>
+        <a th:href="@{/users/register}" th:unless="${canResend}">회원가입</a>
+        <a th:href="@{/login}">로그인 페이지</a>
+      </div>
+    </div>
+  </section>
+</th:block>
+</html>

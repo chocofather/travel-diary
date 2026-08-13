@@ -3,6 +3,7 @@ package com.example.travlediary.controller.user;
 import com.example.travlediary.service.user.UserService;
 import com.example.travlediary.service.user.NicknamePolicy;
 import com.example.travlediary.service.user.PasswordPolicy;
+import com.example.travlediary.service.user.RegistrationValidationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,17 +23,8 @@ public class UserApiController {
     // 아이디 중복 검사 API (JSON 응답)
     @GetMapping("/check-username")
     public Map<String, Boolean> checkUsername(@RequestParam String username) {
-        System.out.println("check-username API 호출됨. 입력값: " + username); // ✅ 디버깅 로그 추가
-
-        boolean exists = false;
-        try {
-            exists = userService.isUsernameExists(username);
-        } catch (Exception e) {
-            e.printStackTrace(); // ✅ 오류 로그 출력
-        }
-
         Map<String, Boolean> response = new HashMap<>();
-        response.put("exists", exists);
+        response.put("exists", userService.isUsernameExists(username));
         return response;
     }
 
@@ -79,10 +71,15 @@ public class UserApiController {
 
     /*이메일 중복 */
     @GetMapping("/check-email")
-    public Map<String, Boolean> checkEmail(@RequestParam String email) {
-        boolean exists = userService.isEmailExists(email);
-        Map<String, Boolean> response = new HashMap<>();
-        response.put("exists", exists);
+    public Map<String, Object> checkEmail(@RequestParam String email) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            response.put("exists", userService.isEmailExists(email));
+            response.put("valid", true);
+        } catch (RegistrationValidationException exception) {
+            response.put("exists", false);
+            response.put("valid", false);
+        }
         return response;
     }
 

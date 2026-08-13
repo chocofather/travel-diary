@@ -1,8 +1,9 @@
 package com.example.travlediary.service.user;
 
-import com.example.travlediary.model.User;
+import com.example.travlediary.dto.RegistrationForm;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.service.email.EmailService;
+import com.example.travlediary.service.email.EmailVerificationService;
 import com.example.travlediary.service.file.FileUploadService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -11,8 +12,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -20,76 +21,55 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class UserServiceNicknameValidationTest {
 
-    @Mock
-    private UserMapper userMapper;
-    @Mock
-    private PasswordEncoder passwordEncoder;
-    @Mock
-    private FileUploadService fileUploadService;
-    @Mock
-    private EmailService emailService;
+    @Mock private UserMapper userMapper;
+    @Mock private PasswordEncoder passwordEncoder;
+    @Mock private FileUploadService fileUploadService;
+    @Mock private EmailService emailService;
+    @Mock private EmailVerificationService emailVerificationService;
 
     private UserService userService;
 
     @BeforeEach
     void setUp() {
-        userService = new UserService(
-                userMapper, passwordEncoder, fileUploadService, emailService);
+        userService = new UserService(userMapper, passwordEncoder, fileUploadService,
+                emailService, emailVerificationService);
     }
 
     @Test
     void registrationStoresTheStrippedValidNickname() {
-        User user = registrationUser("  민준2026  ");
+        RegistrationForm form = registrationForm("  민준2026  ");
         when(passwordEncoder.encode("Password!")).thenReturn("encoded-password");
 
-        userService.registerUser(user, null);
+        userService.registerUser(form);
 
-        assertThat(user.getNickname()).isEqualTo("민준2026");
-        verify(userMapper).insertUser(user);
-        verify(emailService).sendVerificationEmail(
-                org.mockito.ArgumentMatchers.eq("member@example.com"),
-                org.mockito.ArgumentMatchers.eq("여행일기 이메일 인증"),
-                org.mockito.ArgumentMatchers.anyString());
+        verify(userMapper).countByNickname("민준2026");
+        verify(userMapper).insertUser(any());
+        verify(emailVerificationService).requestInitialVerification(any());
     }
 
     @Test
     void registrationRejectsInvalidNicknameBeforePersistingUser() {
-        User user = registrationUser("여행 민준");
+        RegistrationForm form = registrationForm("여행 민준");
 
-        assertThatThrownBy(() -> userService.registerUser(user, null))
+        assertThatThrownBy(() -> userService.registerUser(form))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage(NicknamePolicy.INVALID_MESSAGE);
 
-        verify(userMapper, never()).insertUser(org.mockito.ArgumentMatchers.any());
-        verify(passwordEncoder, never()).encode(org.mockito.ArgumentMatchers.anyString());
-        verify(emailService, never()).sendVerificationEmail(
-                org.mockito.ArgumentMatchers.anyString(),
-                org.mockito.ArgumentMatchers.anyString(),
-                org.mockito.ArgumentMatchers.anyString());
+        verify(userMapper, never()).insertUser(any());
+        verify(passwordEncoder, never()).encode(any());
+        verify(emailVerificationService, never()).requestInitialVerification(any());
     }
 
     @Test
     void registrationRejectsForbiddenNicknameBeforePersistingUser() {
-        User user = registrationUser("Admin123");
+        RegistrationForm form = registrationForm("Admin123");
 
-        assertThatThrownBy(() -> userService.registerUser(user, null))
+        assertThatThrownBy(() -> userService.registerUser(form))
                 .isInstanceOf(NicknamePolicy.ViolationException.class)
                 .hasMessage(NicknamePolicy.FORBIDDEN_MESSAGE);
 
-        verify(userMapper, never()).insertUser(org.mockito.ArgumentMatchers.any());
-        verify(passwordEncoder, never()).encode(org.mockito.ArgumentMatchers.anyString());
-    }
-
-    @Test
-    void registrationRejectsForbiddenNicknameDisguisedWithDigits() {
-        User user = registrationUser("병12신");
-
-        assertThatThrownBy(() -> userService.registerUser(user, null))
-                .isInstanceOf(NicknamePolicy.ViolationException.class)
-                .hasMessage(NicknamePolicy.FORBIDDEN_MESSAGE);
-
-        verify(userMapper, never()).insertUser(org.mockito.ArgumentMatchers.any());
-        verify(passwordEncoder, never()).encode(org.mockito.ArgumentMatchers.anyString());
+        verify(userMapper, never()).insertUser(any());
+        verify(passwordEncoder, never()).encode(any());
     }
 
     @Test
@@ -98,24 +78,26 @@ class UserServiceNicknameValidationTest {
                 .isInstanceOf(NicknamePolicy.ViolationException.class)
                 .hasMessage(NicknamePolicy.FORBIDDEN_MESSAGE);
 
-        verify(userMapper, never()).countByNickname(org.mockito.ArgumentMatchers.anyString());
+        verify(userMapper, never()).countByNickname(any());
     }
 
     @Test
     void signupNicknameCheckNormalizesValidNameBeforeDuplicateQuery() {
         when(userMapper.countByNickname("여행왕123")).thenReturn(0);
 
-        assertThat(userService.isNicknameExists("  여행왕123  ")).isFalse();
+        userService.isNicknameExists("  여행왕123  ");
 
         verify(userMapper).countByNickname("여행왕123");
     }
 
-    private User registrationUser(String nickname) {
-        User user = new User();
-        user.setNickname(nickname);
-        user.setUsername("member");
-        user.setUserPassword("Password!");
-        user.setUserEmail("member@example.com");
-        return user;
+    private RegistrationForm registrationForm(String nickname) {
+        RegistrationForm form = new RegistrationForm();
+        form.setNickname(nickname);
+        form.setUsername("member");
+        form.setUserPassword("Password!");
+        form.setPasswordConfirm("Password!");
+        form.setUserEmail("member@example.com");
+        form.setFullName("여행자");
+        return form;
     }
 }

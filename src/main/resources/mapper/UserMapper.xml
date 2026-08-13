@@ -5,15 +5,18 @@
 <mapper namespace="com.example.travlediary.repository.user.UserMapper">
 
     <!-- 사용자 저장 -->
-    <insert id="insertUser" parameterType="com.example.travlediary.model.User">
+    <insert id="insertUser" parameterType="com.example.travlediary.model.User"
+            useGeneratedKeys="true" keyProperty="id">
         INSERT INTO users (
             username, full_name, nickname, user_email, user_password, user_phone, profile_image,
-            user_birth, status, user_role, verification_token, created_at, updated_at,
+            user_birth, status, user_role, verification_token, verification_token_exp,
+            verification_requested_at, created_at, updated_at,
             deleted_at, last_login)
         VALUES (
             #{username}, #{fullName}, #{nickname}, #{userEmail}, #{userPassword}, #{userPhone},
             #{profileImage}, #{userBirth}, #{status}, #{userRole}, #{verificationToken},
-            #{createdAt}, #{updatedAt}, #{deletedAt}, #{lastLogin}
+            #{verificationTokenExp}, #{verificationRequestedAt}, #{createdAt}, #{updatedAt},
+            #{deletedAt}, #{lastLogin}
             )
     </insert>
 
@@ -62,6 +65,8 @@
             status = #{status},
             deleted_at = NOW(),
             verification_token = NULL,
+            verification_token_exp = NULL,
+            verification_requested_at = NULL,
             reset_token = NULL,
             reset_token_exp = NULL,
             updated_at = NOW()
@@ -80,17 +85,45 @@
         SELECT COUNT(*) FROM users WHERE nickname = #{nickname}
     </select>
 
-    <select id="findByVerificationToken" parameterType="string" resultType="com.example.travlediary.model.User">
-        SELECT * FROM users WHERE verification_token = #{token}
+    <select id="findPendingVerificationByToken" resultType="com.example.travlediary.model.User">
+        SELECT *
+        FROM users
+        WHERE verification_token = #{token}
+          AND status = 'INACTIVE'
+          AND deleted_at IS NULL
     </select>
 
-    <update id="updateUser" parameterType="com.example.travlediary.model.User">
+    <select id="findPendingVerificationByEmail" resultType="com.example.travlediary.model.User">
+        SELECT *
+        FROM users
+        WHERE user_email = #{userEmail}
+          AND status = 'INACTIVE'
+          AND deleted_at IS NULL
+    </select>
+
+    <update id="activatePendingUser">
         UPDATE users
-        SET
-            status = #{status},
-            verification_token = #{verificationToken},
-            updated_at = NOW()
+        SET status = 'ACTIVE',
+            verification_token = NULL,
+            verification_token_exp = NULL,
+            updated_at = #{verifiedAt}
         WHERE id = #{id}
+          AND status = 'INACTIVE'
+          AND verification_token = #{token}
+          AND deleted_at IS NULL
+    </update>
+
+    <update id="refreshVerificationToken">
+        UPDATE users
+        SET verification_token = #{token},
+            verification_token_exp = #{expiresAt},
+            verification_requested_at = #{requestedAt},
+            updated_at = #{requestedAt}
+        WHERE id = #{id}
+          AND status = 'INACTIVE'
+          AND deleted_at IS NULL
+          AND (verification_requested_at IS NULL
+               OR verification_requested_at &lt;= #{cooldownCutoff})
     </update>
 
     <select id="findByUsername" parameterType="java.lang.String" resultType="com.example.travlediary.model.User">

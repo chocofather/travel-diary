@@ -38,6 +38,8 @@ public class User {
 
     // 메일인증
     private String verificationToken; // 메일 인증 토큰
+    private LocalDateTime verificationTokenExp; // 메일 인증 토큰 만료 시각
+    private LocalDateTime verificationRequestedAt; // 마지막 인증메일 발송 요청 시각
     private String resetToken;               // 비밀번호 재설정 토큰
     private LocalDateTime resetTokenExp; // 만료 시각
 

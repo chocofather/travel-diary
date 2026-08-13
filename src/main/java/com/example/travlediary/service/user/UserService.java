@@ -1,39 +1,49 @@
 package com.example.travlediary.service.user;
 
+import com.example.travlediary.dto.RegistrationForm;
 import com.example.travlediary.model.User;
 import com.example.travlediary.model.UserRole;
 import com.example.travlediary.model.UserStatus;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.service.email.EmailService;
+import com.example.travlediary.service.email.EmailVerificationService;
 import com.example.travlediary.service.file.FileUploadService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Service
 public class UserService {
+    private static final Logger log = LoggerFactory.getLogger(UserService.class);
+
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
     private final FileUploadService fileUploadService;
-    private final EmailService emailService; // 이메일 전송 서비스 주입
+    private final EmailService emailService;
+    private final EmailVerificationService emailVerificationService;
 
     @Value("${custom.server-url}")
     private String serverUrl;
 
     @Autowired
     public UserService(UserMapper userMapper, PasswordEncoder passwordEncoder,
-                       FileUploadService fileUploadService, EmailService emailService) {
+                       FileUploadService fileUploadService,
+                       EmailService emailService,
+                       EmailVerificationService emailVerificationService) {
         this.userMapper = userMapper;
         this.passwordEncoder = passwordEncoder;
         this.fileUploadService = fileUploadService;
         this.emailService = emailService;
+        this.emailVerificationService = emailVerificationService;
     }
 
     // 🔐 로그인 기능
@@ -52,49 +62,80 @@ public class UserService {
     }
 
     // 📝 회원가입 기능
-    public void registerUser(User user, MultipartFile profileImageFile) {
-        user.setNickname(NicknamePolicy.normalizeAndValidate(user.getNickname()));
-        String rawPassword = user.getUserPassword();
+    public RegistrationResult registerUser(RegistrationForm form) {
+        String username = form.getUsername().strip();
+        String email = EmailPolicy.normalizeAndValidate(form.getUserEmail());
+        String nickname = NicknamePolicy.normalizeAndValidate(form.getNickname());
+        String rawPassword = form.getUserPassword();
 
         PasswordPolicy.validate(rawPassword);
-
-        // ✅ 암호화된 비밀번호가 아닌 경우만 암호화
-        if (!rawPassword.startsWith("$2a$")) {
-            user.setUserPassword(passwordEncoder.encode(rawPassword));
+        if (!rawPassword.equals(form.getPasswordConfirm())) {
+            throw new RegistrationValidationException(
+                    "passwordConfirm", "비밀번호가 일치하지 않습니다.");
         }
+
+        validateRegistrationDuplicates(username, email, nickname);
+
+        User user = new User();
+        user.setUsername(username);
+        user.setUserEmail(email);
+        user.setNickname(nickname);
+        user.setFullName(FullNamePolicy.normalizeAndValidate(form.getFullName()));
+        user.setUserPhone(normalizeOptional(form.getUserPhone()));
+        user.setUserBirth(form.getUserBirth());
+
+        user.setUserPassword(passwordEncoder.encode(rawPassword));
 
         // ✅ 기본 사용자 정보 설정
         user.setUserRole(UserRole.USER);
         user.setStatus(UserStatus.INACTIVE);
         user.setCreatedAt(Timestamp.valueOf(LocalDateTime.now()));
 
-        // ✅ 이메일 인증 토큰 생성
-        String token = UUID.randomUUID().toString();
-        user.setVerificationToken(token);
+        emailVerificationService.initializeVerification(user);
 
         // 📷 프로필 이미지 업로드 처리
         try {
-            if (profileImageFile != null && !profileImageFile.isEmpty()) {
-                String imagePath = fileUploadService.saveFile(profileImageFile);
+            if (form.getProfileImageFile() != null && !form.getProfileImageFile().isEmpty()) {
+                String imagePath = fileUploadService.saveFile(form.getProfileImageFile());
                 user.setProfileImage(imagePath);
             } else {
                 user.setProfileImage("uploads/default.png"); // 기본 프로필 이미지 설정
             }
         } catch (Exception e) {
-            System.out.println("⚠ 프로필 이미지 저장 실패! 기본 이미지 사용");
+            log.warn("Registration profile image could not be stored; using the default image: exceptionType={}",
+                    e.getClass().getSimpleName());
             user.setProfileImage("uploads/default.png");
-
         }
 
-        userMapper.insertUser(user);
+        try {
+            userMapper.insertUser(user);
+        } catch (DataIntegrityViolationException exception) {
+            throw new RegistrationValidationException(
+                    "registration", "이미 사용 중인 회원가입 정보가 있습니다.");
+        }
+        log.info("Registration user stored: userId={}, recipient={}",
+                user.getId(), EmailPolicy.mask(email));
 
-        // ✅ 이메일 인증 메일 전송
-        String subject = "여행일기 이메일 인증";
-        String verificationLink = "http://localhost:8080/users/verify?token=" + token;
-        String body = "회원가입을 완료하려면 아래 링크를 클릭하세요:\n" + verificationLink;
+        boolean emailRequested = emailVerificationService.requestInitialVerification(user);
+        log.info("Registration verification email dispatch completed: userId={}, requested={}",
+                user.getId(), emailRequested);
+        return new RegistrationResult(email, emailRequested);
+    }
 
-        emailService.sendVerificationEmail(user.getUserEmail(), subject, token);
+    private void validateRegistrationDuplicates(String username, String email, String nickname) {
+        if (userMapper.countByUsername(username) > 0) {
+            throw new RegistrationValidationException("username", "이미 사용 중인 아이디입니다.");
+        }
+        if (userMapper.findByEmail(email) != null) {
+            throw new RegistrationValidationException("userEmail", "이미 사용 중인 이메일입니다.");
+        }
+        if (userMapper.countByNickname(nickname) > 0) {
+            throw new RegistrationValidationException("nickname", "이미 사용 중인 닉네임입니다.");
+        }
+    }
 
+    private String normalizeOptional(String value) {
+        return value == null || value.isBlank() ? null : value.strip();
     }
 
 
@@ -120,13 +161,9 @@ public class UserService {
         return userMapper.countByNickname(normalized) > 0;
     }
 
-    public User findByVerificationToken(String token) {
-        return userMapper.findByVerificationToken(token);
-    }
-
     // 이메일 중복검사
     public boolean isEmailExists(String email) {
-        return userMapper.findByEmail(email) != null;
+        return userMapper.findByEmail(EmailPolicy.normalizeAndValidate(email)) != null;
     }
 
     // 프로필 이미지

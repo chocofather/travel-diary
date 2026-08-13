@@ -77,6 +77,8 @@ public class SecurityConfig {
                         new RegexRequestMatcher(
                                 "^/mypage/account/withdraw$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(
+                                "^/users/verification/resend$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
                                 "^/logout$", HttpMethod.POST.name())
                 )))
                 .authorizeHttpRequests(auth -> auth
@@ -87,6 +89,7 @@ public class SecurityConfig {
                                 "/login", "/logout",
                                 "/register", "/users/register",
                                 "/users/verify", "/users/register/verify-waiting",
+                                "/users/verification/resend",
                                 "/users/find-username", "/users/find-password", "/users/reset-password/**",
                                 "/css/**", "/js/**", "/images/**", "/uploads/**",
                                 "/api/**",     "/api/destinations/**",

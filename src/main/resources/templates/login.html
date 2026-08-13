@@ -57,6 +57,10 @@
   <p class="extra-links">
     <a th:href="@{/users/find-username}">아이디 찾기</a> |
     <a th:href="@{/users/find-password}">비밀번호 찾기</a>
+    <span class="verification-resend-entry">
+      인증메일을 받지 못하셨나요?
+      <a th:href="@{/users/verification/resend}">인증메일 다시 받기</a>
+    </span>
   </p>
 </div>
 <script src="/js/login.js" defer></script>

@@ -868,6 +868,8 @@ CREATE TABLE `users` (
   `nickname` varchar(50) NOT NULL,
   `user_role` varchar(50) NOT NULL,
   `verification_token` varchar(255) DEFAULT NULL,
+  `verification_token_exp` datetime DEFAULT NULL,
+  `verification_requested_at` datetime DEFAULT NULL,
   `profile_image` varchar(255) DEFAULT NULL,
   `status` enum('INACTIVE','ACTIVE','SUSPENDED','DEACTIVATED') NOT NULL DEFAULT 'INACTIVE',
   `last_login` timestamp NULL DEFAULT NULL,

@@ -1,13 +1,63 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>이메일 인증 대기</title>
-</head>
-<body>
-<h2>📧 이메일 인증을 완료해주세요!</h2>
-<p>가입하신 이메일로 인증 메일이 전송되었습니다. 메일함을 확인해 주세요.</p>
-<p>이메일 인증을 완료하셔야 로그인이 가능합니다.</p>
-<a href="/login">로그인 페이지로 이동</a>
-</body>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/email-verification.css">
+  <script src="/js/email-verification.js" defer></script>
+</th:block>
+<th:block th:fragment="body">
+  <section class="verification-page" aria-labelledby="verification-title">
+    <div class="verification-card">
+      <div class="verification-icon" aria-hidden="true">✉</div>
+      <p class="verification-eyebrow">EMAIL VERIFICATION</p>
+      <h1 id="verification-title">이메일 인증이 필요해요</h1>
+      <p class="verification-description">
+        입력하신 이메일로 인증메일을 보내고 있습니다.<br>
+        잠시 후 메일함을 확인해주세요.
+      </p>
+
+      <p class="verification-email" th:if="${verificationAvailable and !#strings.isEmpty(maskedEmail)}">
+        발송 주소 <strong th:text="${maskedEmail}">dae***@gmail.com</strong>
+      </p>
+
+      <div class="verification-notice"
+           th:if="${verificationMessage}"
+           th:classappend="| is-${verificationMessageType}|"
+           th:attr="role=${verificationMessageType == 'error' ? 'alert' : 'status'}"
+           th:text="${verificationMessage}">
+        인증메일 발송을 요청했습니다.
+      </div>
+
+      <ul class="verification-checklist">
+        <li>받은편지함에서 <strong>Travel Diary</strong> 메일을 확인해주세요.</li>
+        <li>메일이 보이지 않으면 스팸함과 입력한 이메일 주소를 확인해주세요.</li>
+        <li>인증 링크는 발급 후 24시간 동안 유효합니다.</li>
+      </ul>
+
+      <form th:if="${verificationAvailable}" class="verification-resend-form"
+            th:action="@{/users/verification/resend}" method="post">
+        <input type="hidden" th:if="${_csrf != null}"
+               th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+        <button type="submit" id="resendVerificationButton"
+                th:attr="data-cooldown-seconds=${cooldownSeconds}"
+                th:disabled="${cooldownSeconds > 0}">
+          인증메일 다시 보내기
+        </button>
+        <p id="resendCooldown" class="verification-cooldown" aria-live="polite"
+           th:text="${cooldownSeconds > 0 ? cooldownSeconds + '초 후 다시 요청할 수 있습니다.' : ''}"></p>
+      </form>
+
+      <div th:unless="${verificationAvailable}" class="verification-notice is-info" role="status">
+        현재 브라우저에서 확인 중인 가입 정보가 없습니다.
+        아래 인증메일 다시 받기 화면에서 가입 이메일을 입력해주세요.
+      </div>
+
+      <div class="verification-links">
+        <a th:href="@{/users/verification/resend}" th:unless="${verificationAvailable}">인증메일 다시 받기</a>
+        <a th:href="@{/login}">로그인 페이지</a>
+        <a th:href="@{/users/register}" th:unless="${verificationAvailable}">회원가입</a>
+      </div>
+    </div>
+  </section>
+</th:block>
 </html>

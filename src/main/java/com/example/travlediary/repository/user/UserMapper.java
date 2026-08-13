@@ -58,9 +58,17 @@ public interface UserMapper {
                             @Param("profileImage") String profileImage);
 
     /* ---------- 이메일 인증 ---------- */
-    User findByVerificationToken(String token);
-    void updateUser(User user);
     User findByEmail(String email);
+    User findPendingVerificationByToken(@Param("token") String token);
+    User findPendingVerificationByEmail(@Param("userEmail") String userEmail);
+    int activatePendingUser(@Param("id") Long id,
+                            @Param("token") String token,
+                            @Param("verifiedAt") LocalDateTime verifiedAt);
+    int refreshVerificationToken(@Param("id") Long id,
+                                 @Param("token") String token,
+                                 @Param("expiresAt") LocalDateTime expiresAt,
+                                 @Param("requestedAt") LocalDateTime requestedAt,
+                                 @Param("cooldownCutoff") LocalDateTime cooldownCutoff);
 
     /* ---------- 아이디/비밀번호 찾기 ---------- */
     User findByFullNameAndEmail(@Param("fullName") String fullName,

@@ -1,179 +1,266 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <title>회원가입</title>
-    <link rel="stylesheet" type="text/css" href="/css/style.css">
-    <link>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>회원가입 | Travel Diary</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/registration.css">
 </head>
 <body class="register-page">
-<div class="register-wrapper">
-<div class="register-logo">
-    <a th:href="@{/}">
-        <img src="/images/logo7.png" alt="로고">
+<main class="register-wrapper">
+  <div class="register-logo">
+    <a th:href="@{/}" aria-label="Travel Diary 홈">
+      <img src="/images/logo7.png" alt="Travel Diary">
     </a>
-</div>
+  </div>
 
-<div class="register-container">
-    <form action="/users/register" method="post" enctype="multipart/form-data">
+  <section class="register-container" aria-labelledby="register-title">
+    <header class="registration-heading">
+      <h1 id="register-title">회원가입</h1>
+      <p>Travel Diary와 함께 여행의 기록을 시작해보세요.</p>
+    </header>
 
-        <!-- Step 1: 약관 동의 -->
-        <div id="step-1" class="form-step">
-            <h2>이용약관 동의</h2>
+    <nav class="registration-progress" aria-label="회원가입 진행 단계">
+      <p id="registrationStepStatus" class="registration-step-status" aria-live="polite">
+        3단계 중 1단계 · 약관 동의
+      </p>
+      <ol>
+        <li data-step-indicator="1" aria-current="step">
+          <span>1</span><strong>약관 동의</strong>
+        </li>
+        <li data-step-indicator="2">
+          <span>2</span><strong>계정 정보</strong>
+        </li>
+        <li data-step-indicator="3">
+          <span>3</span><strong>기본 정보</strong>
+        </li>
+      </ol>
+    </nav>
 
-            <!-- 전체 동의 -->
-            <div class="agree-box">
-                <div class="agree-check">
-                    <input type="checkbox" id="agreeAll">
-                </div>
-                <div class="agree-text">
-                    <div class="agree-title"><strong>전체 동의하기</strong></div>
-                    <p class="agree-desc">아래 모든 약관(필수/선택 포함)에 동의합니다.</p>
-                </div>
-            </div>
+    <form th:action="@{/users/register}" th:object="${registrationForm}"
+          method="post" enctype="multipart/form-data" novalidate>
+      <input type="hidden" th:if="${_csrf != null}"
+             th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
 
-            <!-- 약관 1 -->
-            <div class="agree-box">
-                <div class="agree-check">
-                    <input type="checkbox" id="termsAgree1">
-                </div>
-                <div class="agree-text">
-                    <div class="agree-title">[필수] 서비스 이용약관</div>
-                    <textarea readonly rows="4">여기에 서비스 이용약관 내용이 들어갑니다.</textarea>
-                </div>
-            </div>
+      <div class="registration-global-error" role="alert"
+           th:if="${#fields.hasGlobalErrors()}" data-server-error="true">
+        <p th:each="error : ${#fields.globalErrors()}" th:text="${error}">입력 내용을 확인해주세요.</p>
+      </div>
 
-            <!-- 약관 2 -->
-            <div class="agree-box">
-                <div class="agree-check">
-                    <input type="checkbox" id="termsAgree2">
-                </div>
-                <div class="agree-text">
-                    <div class="agree-title">[필수] 개인정보 수집 및 이용</div>
-                    <textarea readonly rows="4">여기에 개인정보 수집 및 이용 동의 내용이 들어갑니다.</textarea>
-                </div>
-            </div>
-
-            <!-- 약관 3 -->
-            <div class="agree-box">
-                <div class="agree-check">
-                    <input type="checkbox" id="termsAgree3">
-                </div>
-                <div class="agree-text">
-                    <div class="agree-title">[선택] 마케팅 정보 수신 동의</div>
-                    <textarea readonly rows="4">여기에 마케팅 정보 수신 동의 내용이 들어갑니다.</textarea>
-                </div>
-            </div>
-            <div class="step-buttons">
-                <button type="button" class="next-step" id="step1-next" disabled>다음 단계</button>
-            </div>
+      <section id="step-1" class="form-step" aria-labelledby="terms-title">
+        <div class="step-heading">
+          <h2 id="terms-title">이용약관에 동의해주세요</h2>
+          <p>서비스 이용에 필요한 동의 항목을 확인해주세요.</p>
         </div>
 
-        <!-- Step 2 -->
-        <div id="step-2" class="form-step" style="display:none">
-            <h2>계정 정보 입력</h2>
-
-            <!-- 아이디 -->
-            <div class="input-group">
-            <div class="input-with-icon">
-                <input type="text" id="username" name="username" placeholder="아이디" required>
-                <span class="icon user-icon"></span>
-            </div>
-            <span id="usernameMessage" class="alert"></span>
-            </div>
-
-            <!-- 이메일 -->
-            <div class="input-group">
-            <div class="input-with-icon">
-                <input type="email" name="userEmail" placeholder="이메일 주소" required>
-                <span class="icon email-icon"></span>
-            </div>
-            <span id="emailMessage" class="alert"></span>
-            </div>
-
-            <!-- 비밀번호 -->
-            <div class="input-group">
-            <div class="input-with-icon">
-                <input type="password" id="userPassword" name="userPassword" placeholder="비밀번호" required>
-                <span class="icon lock-icon"></span>
-                <span class="toggle-password hide" data-toggle="#userPassword"></span>
-            </div>
-            <span id="passwordValidationMessage" class="alert error">
-                비밀번호는 8자 이상, 특수문자 1개 이상 포함해야 합니다.
+        <div class="terms-card">
+          <label class="terms-summary" for="agreeAll">
+            <input type="checkbox" id="agreeAll">
+            <span>
+              <strong>전체 동의</strong>
+              <small>필수 및 선택 항목에 모두 동의합니다.</small>
             </span>
-            </div>
+          </label>
 
+          <div class="terms-list">
+            <article class="term-item">
+              <div class="term-row">
+                <label for="termsAgree1">
+                  <input type="checkbox" id="termsAgree1" name="serviceTermsAccepted" value="true"
+                         th:checked="*{serviceTermsAccepted}">
+                  <span class="term-badge required">필수</span>
+                  <span>서비스 이용약관</span>
+                </label>
+                <button type="button" class="term-toggle" aria-expanded="false"
+                        aria-controls="serviceTermsContent">내용 보기</button>
+              </div>
+              <div id="serviceTermsContent" class="term-content" hidden>
+                <p>여기에 서비스 이용약관 내용이 들어갑니다.</p>
+              </div>
+              <span class="field-error" th:if="${#fields.hasErrors('serviceTermsAccepted')}"
+                    th:errors="*{serviceTermsAccepted}">서비스 이용약관 동의 오류</span>
+            </article>
 
-            <!-- 비밀번호 확인 -->
-            <div class="input-group">
-            <div class="input-with-icon">
-                <input type="password" id="passwordConfirm" name="passwordConfirm" placeholder="비밀번호 확인" required>
-                <span class="icon lock-icon"></span>
-                <span class="toggle-password hide" data-toggle="#passwordConfirm"></span>
-            </div>
-            <span id="passwordMessage" class="alert"></span>
-            </div>
+            <article class="term-item">
+              <div class="term-row">
+                <label for="termsAgree2">
+                  <input type="checkbox" id="termsAgree2" name="privacyTermsAccepted" value="true"
+                         th:checked="*{privacyTermsAccepted}">
+                  <span class="term-badge required">필수</span>
+                  <span>개인정보 수집 및 이용</span>
+                </label>
+                <button type="button" class="term-toggle" aria-expanded="false"
+                        aria-controls="privacyTermsContent">내용 보기</button>
+              </div>
+              <div id="privacyTermsContent" class="term-content" hidden>
+                <p>여기에 개인정보 수집 및 이용 동의 내용이 들어갑니다.</p>
+              </div>
+              <span class="field-error" th:if="${#fields.hasErrors('privacyTermsAccepted')}"
+                    th:errors="*{privacyTermsAccepted}">개인정보 수집 및 이용 동의 오류</span>
+            </article>
 
-            <div class="step-buttons">
-                <button type="button" class="prev-step">이전</button>
-                <button type="button" class="next-step" id="step2-next" disabled>다음 단계</button>
-            </div>
+            <article class="term-item">
+              <div class="term-row">
+                <label for="termsAgree3">
+                  <input type="checkbox" id="termsAgree3">
+                  <span class="term-badge optional">선택</span>
+                  <span>마케팅 정보 수신 동의</span>
+                </label>
+                <button type="button" class="term-toggle" aria-expanded="false"
+                        aria-controls="marketingTermsContent">내용 보기</button>
+              </div>
+              <div id="marketingTermsContent" class="term-content" hidden>
+                <p>여기에 마케팅 정보 수신 동의 내용이 들어갑니다.</p>
+              </div>
+            </article>
+          </div>
         </div>
 
+        <div class="step-actions single-action">
+          <button type="button" class="button-primary next-step" id="step1-next" disabled>다음</button>
+        </div>
+      </section>
 
-
-        <!-- Step 3 -->
-        <div id="step-3" class="form-step" style="display:none">
-            <h2>개인 정보 입력</h2>
-
-            <!-- 닉네임 -->
-            <div class="input-group">
-            <div class="input-with-icon nickname-row">
-                <input type="text" id="nickname" name="nickname" placeholder="닉네임"
-                       minlength="2" maxlength="12" required>
-                <span class="icon user-icon"></span>
-                <button type="button" id="generateNickname">자동 추천</button>
-            </div>
-            <span id="nicknameMessage" class="alert">
-                2~12자의 한글, 영문, 숫자만 사용할 수 있습니다.<br>
-                공백·특수문자 및 부적절한 표현은 사용할 수 없습니다.
-            </span>
-            </div>
-
-            <!-- 이름 -->
-            <div class="input-with-icon">
-                <input type="text" id="fullName" name="fullName" placeholder="이름" required>
-                <span class="icon user-icon"></span>
-            </div>
-
-            <!-- 전화번호 -->
-            <div class="input-with-icon">
-                <input type="text" id="userPhone" name="userPhone" maxlength="13" placeholder="전화번호">
-                <span class="icon phone-icon"></span>
-            </div>
-
-            <!-- 생년월일 -->
-            <div class="input-with-icon">
-                <input type="date" name="userBirth" required>
-                <span class="icon calendar-icon"></span>
-            </div>
-
-            <!-- 프로필 이미지 -->
-            <div class="input-with-icon">
-                <input type="file" name="profileImageFile">
-                <span class="icon image-icon"></span>
-            </div>
-
-            <div class="step-buttons">
-                <button type="button" class="prev-step">이전</button>
-                <button type="submit" id="step3-submit" disabled>가입하기</button>
-            </div>
+      <section id="step-2" class="form-step" aria-labelledby="account-title" hidden>
+        <div class="step-heading">
+          <h2 id="account-title">계정 정보를 입력해주세요</h2>
+          <p>로그인과 이메일 인증에 사용할 정보를 입력합니다.</p>
         </div>
 
+        <div class="input-group">
+          <label class="field-label" for="username">아이디</label>
+          <input class="field-control" type="text" id="username" th:field="*{username}"
+                 autocomplete="username" minlength="3" maxlength="16"
+                 aria-describedby="usernameMessage usernameServerError" required>
+          <span id="usernameMessage" class="field-feedback" aria-live="polite">
+            영문 소문자를 포함한 3~16자의 영문, 숫자, -, _를 사용할 수 있습니다.
+          </span>
+          <span id="usernameServerError" class="field-error" data-field-error="username"
+                th:if="${#fields.hasErrors('username')}" th:errors="*{username}">아이디 오류</span>
+        </div>
+
+        <div class="input-group email-field">
+          <label class="field-label" for="userEmail">이메일</label>
+          <div class="email-input-wrap">
+            <input class="field-control" type="email" id="userEmail" th:field="*{userEmail}"
+                   autocomplete="email" inputmode="email" maxlength="100"
+                   aria-describedby="emailMessage emailSuggestion emailServerError"
+                   aria-autocomplete="list" aria-controls="emailDomainSuggestions"
+                   aria-expanded="false" required>
+            <div id="emailDomainSuggestions" class="email-domain-suggestions"
+                 role="listbox" aria-label="이메일 도메인 추천" hidden></div>
+          </div>
+          <span id="emailMessage" class="field-feedback" aria-live="polite"></span>
+          <div id="emailSuggestion" class="email-suggestion" hidden>
+            <span id="emailSuggestionText"></span>
+            <button type="button" id="applyEmailSuggestion">수정하기</button>
+          </div>
+          <span id="emailServerError" class="field-error" data-field-error="userEmail"
+                th:if="${#fields.hasErrors('userEmail')}" th:errors="*{userEmail}">이메일 오류</span>
+        </div>
+
+        <div class="input-group">
+          <label class="field-label" for="userPassword">비밀번호</label>
+          <div class="password-control">
+            <input class="field-control" type="password" id="userPassword" name="userPassword"
+                   autocomplete="new-password" aria-describedby="passwordValidationMessage" required>
+            <button class="toggle-password hide" type="button" data-toggle="#userPassword"
+                    aria-label="비밀번호 표시"></button>
+          </div>
+          <span id="passwordValidationMessage" class="field-feedback">
+            8자 이상이며 영문, 숫자, !@#$%^&amp;*만 사용할 수 있고 특수문자를 포함해야 합니다.
+          </span>
+          <span class="field-error" data-field-error="userPassword"
+                th:if="${#fields.hasErrors('userPassword')}" th:errors="*{userPassword}">비밀번호 오류</span>
+        </div>
+
+        <div class="input-group">
+          <label class="field-label" for="passwordConfirm">비밀번호 확인</label>
+          <div class="password-control">
+            <input class="field-control" type="password" id="passwordConfirm" name="passwordConfirm"
+                   autocomplete="new-password" aria-describedby="passwordMessage" required>
+            <button class="toggle-password hide" type="button" data-toggle="#passwordConfirm"
+                    aria-label="비밀번호 확인 표시"></button>
+          </div>
+          <span id="passwordMessage" class="field-feedback" aria-live="polite"></span>
+          <span class="field-error" data-field-error="passwordConfirm"
+                th:if="${#fields.hasErrors('passwordConfirm')}" th:errors="*{passwordConfirm}">비밀번호 확인 오류</span>
+          <span class="field-error" data-field-error="passwordConfirm"
+                th:if="${#fields.hasErrors('passwordConfirmed')}" th:errors="*{passwordConfirmed}">비밀번호 확인 오류</span>
+        </div>
+
+        <div class="step-actions">
+          <button type="button" class="button-secondary prev-step">이전</button>
+          <button type="button" class="button-primary next-step" id="step2-next" disabled>다음</button>
+        </div>
+      </section>
+
+      <section id="step-3" class="form-step" aria-labelledby="profile-title" hidden>
+        <div class="step-heading">
+          <h2 id="profile-title">기본 정보를 알려주세요</h2>
+          <p>여행 기록에 사용할 프로필 정보를 입력합니다.</p>
+        </div>
+
+        <div class="input-group">
+          <label class="field-label" for="nickname">닉네임</label>
+          <div class="nickname-row">
+            <input class="field-control" type="text" id="nickname" th:field="*{nickname}"
+                   autocomplete="nickname" minlength="2" maxlength="12"
+                   aria-describedby="nicknameMessage nicknameServerError" required>
+            <button type="button" class="button-tertiary" id="generateNickname">자동 추천</button>
+          </div>
+          <span id="nicknameMessage" class="field-feedback">
+            2~12자의 한글, 영문, 숫자만 사용할 수 있습니다. 공백·특수문자 및 부적절한 표현은 사용할 수 없습니다.
+          </span>
+          <span id="nicknameServerError" class="field-error" data-field-error="nickname"
+                th:if="${#fields.hasErrors('nickname')}" th:errors="*{nickname}">닉네임 오류</span>
+        </div>
+
+        <div class="input-group">
+          <label class="field-label" for="fullName">이름</label>
+          <input class="field-control" type="text" id="fullName" th:field="*{fullName}"
+                 autocomplete="name" maxlength="50"
+                 aria-describedby="fullNameMessage fullNameServerError" required>
+          <span id="fullNameMessage" class="field-feedback">한글, 영문과 이름 사이의 공백만 입력할 수 있습니다.</span>
+          <span id="fullNameServerError" class="field-error" data-field-error="fullName"
+                th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}">이름 오류</span>
+        </div>
+
+        <div class="form-grid">
+          <div class="input-group">
+            <label class="field-label" for="userPhone">전화번호 <span>(선택)</span></label>
+            <input class="field-control" type="tel" id="userPhone" th:field="*{userPhone}"
+                   autocomplete="tel" inputmode="tel" maxlength="13" placeholder="010-1234-5678">
+            <span class="field-error" data-field-error="userPhone"
+                  th:if="${#fields.hasErrors('userPhone')}" th:errors="*{userPhone}">전화번호 오류</span>
+          </div>
+
+          <div class="input-group">
+            <label class="field-label" for="userBirth">생년월일</label>
+            <input class="field-control" type="date" id="userBirth" th:field="*{userBirth}"
+                   autocomplete="bday" required>
+            <span class="field-error" data-field-error="userBirth"
+                  th:if="${#fields.hasErrors('userBirth')}" th:errors="*{userBirth}">생년월일 오류</span>
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label class="field-label" for="profileImageFile">프로필 이미지 <span>(선택)</span></label>
+          <input class="field-control file-control" type="file" id="profileImageFile"
+                 th:field="*{profileImageFile}" accept="image/*">
+        </div>
+
+        <div class="step-actions">
+          <button type="button" class="button-secondary prev-step">이전</button>
+          <button type="submit" class="button-primary" id="step3-submit" disabled>회원가입</button>
+        </div>
+      </section>
     </form>
-</div>
-</div>
+  </section>
+</main>
+<script src="/js/jquery-3.6.0.min.js"></script>
+<script src="/js/email-domain-suggestion.js"></script>
 <script src="/js/register.js" defer></script>
 </body>
 </html>

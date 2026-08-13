@@ -1,57 +1,116 @@
 package com.example.travlediary.service.email;
 
+import com.example.travlediary.service.user.EmailPolicy;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.jsoup.Jsoup;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+import org.springframework.web.util.UriComponentsBuilder;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
+
+import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 
 @Service
 public class EmailServiceImpl implements EmailService {
 
-    /* 1️⃣ 필드 선언 */
+    static final String VERIFICATION_SUBJECT = "[Travel Diary] 이메일 인증을 완료해주세요";
+    private static final String SENDER_NAME = "Travel Diary";
+    private static final String MISSING_CONFIGURATION_MESSAGE =
+            "메일 발송 설정이 구성되지 않았습니다. MAIL_USERNAME / MAIL_PASSWORD 환경변수를 확인하세요.";
+    private static final Logger log = LoggerFactory.getLogger(EmailServiceImpl.class);
+
     private final JavaMailSender mailSender;
+    private final TemplateEngine templateEngine;
+    private final String fromAddress;
+    private final String mailPassword;
+    private final String serverUrl;
 
-    @Value("${custom.server-url}")
-    private String serverUrl;
-
-    /* 2️⃣ 생성자 주입 */
-    @Autowired
-    public EmailServiceImpl(JavaMailSender mailSender) {
+    public EmailServiceImpl(JavaMailSender mailSender,
+                            TemplateEngine templateEngine,
+                            @Value("${spring.mail.username:}") String fromAddress,
+                            @Value("${spring.mail.password:}") String mailPassword,
+                            @Value("${custom.server-url}") String serverUrl) {
         this.mailSender = mailSender;
+        this.templateEngine = templateEngine;
+        this.fromAddress = fromAddress;
+        this.mailPassword = mailPassword;
+        this.serverUrl = serverUrl;
     }
-    /* (회원가입용) 인증 메일 */
-    /* 이메일 인증 링크 발송 */
+
     @Override
-    public void sendVerificationEmail(String to, String subject, String token) {
-        String link = serverUrl + "/users/verify?token=" + token;
-        String html = """
-            <h3>이메일 인증</h3>
-            <p>아래 링크를 클릭하여 이메일 인증을 완료하세요.</p>
-            <p><a href="%s">이메일 인증하기</a></p>
-            """.formatted(link);
+    public void sendVerificationEmail(String to, String token) {
+        String verificationUrl = buildVerificationUrl(token);
+        Context context = new Context(Locale.KOREAN);
+        context.setVariable("verificationUrl", verificationUrl);
+        context.setVariable("validHours", EmailVerificationService.TOKEN_VALIDITY.toHours());
 
-        sendEmail(to, subject, html);   // ⬅️ 아래의 sendEmail 재사용
+        String html = templateEngine.process("email/verification-email", context);
+        String plainText = """
+                Travel Diary 이메일 인증
+
+                Travel Diary 회원가입을 위해 이메일 주소 확인이 필요합니다.
+                아래 주소를 브라우저에 붙여넣어 인증을 완료해주세요.
+
+                %s
+
+                이 링크는 24시간 동안 유효합니다.
+                본인이 회원가입을 요청하지 않았다면 이 메일을 무시해주세요.
+                """.formatted(verificationUrl);
+
+        sendMimeMessage(to, VERIFICATION_SUBJECT, plainText, html);
     }
 
-    /* (공통) HTML 이메일 전송 */
     @Override
     public void sendEmail(String to, String subject, String htmlContent) {
+        sendMimeMessage(to, subject, Jsoup.parse(htmlContent).text(), htmlContent);
+    }
+
+    String buildVerificationUrl(String token) {
+        return UriComponentsBuilder.fromUriString(serverUrl)
+                .path("/users/verify")
+                .queryParam("token", token)
+                .build()
+                .encode(StandardCharsets.UTF_8)
+                .toUriString();
+    }
+
+    private void sendMimeMessage(String to, String subject, String plainText, String htmlContent) {
+        ensureMailConfigured();
         try {
             MimeMessage message = mailSender.createMimeMessage();
-            // true : multipart,  UTF-8 인코딩
-            MimeMessageHelper helper =
-                    new MimeMessageHelper(message, MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED, "UTF-8");
+            MimeMessageHelper helper = new MimeMessageHelper(
+                    message, MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED,
+                    StandardCharsets.UTF_8.name());
 
+            helper.setFrom(fromAddress, SENDER_NAME);
             helper.setTo(to);
             helper.setSubject(subject);
-            helper.setText(htmlContent, true);       // second param true → HTML
+            helper.setText(plainText, htmlContent);
 
             mailSender.send(message);
-        } catch (MessagingException e) {
-            throw new RuntimeException("이메일 전송 실패", e);
+        } catch (MailException | MessagingException | UnsupportedEncodingException exception) {
+            log.error("Email delivery failed: exceptionType={}",
+                    exception.getClass().getSimpleName());
+            throw new EmailDeliveryException(
+                    "이메일 발송을 완료할 수 없습니다. 수신자=" + EmailPolicy.mask(to),
+                    exception);
+        }
+    }
+
+    private void ensureMailConfigured() {
+        if (fromAddress == null || fromAddress.isBlank()
+                || mailPassword == null || mailPassword.isBlank()) {
+            log.error(MISSING_CONFIGURATION_MESSAGE);
+            throw new EmailDeliveryException(MISSING_CONFIGURATION_MESSAGE);
         }
     }
 }
