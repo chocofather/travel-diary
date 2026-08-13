@@ -57,6 +57,30 @@ class BoardMapperContractTest {
         assertThat(dto.getBookmarkCount()).isEqualTo(3);
     }
 
+    @Test
+    void listAndCountShareCourseCountryFiltersWithoutAffectingPosts() throws IOException {
+        String mapper = resource("/mapper/BoardMapper.xml");
+        String filters = between(mapper, "<sql id=\"courseCountryFilters\"", "</sql>");
+        String listQuery = between(mapper, "<select id=\"findBoardList\"", "</select>");
+        String countQuery = between(mapper, "<select id=\"countBoard\"", "</select>");
+
+        assertThat(filters)
+                .contains("boardType == 'course' and scope == 'domestic'")
+                .contains("country.parent_id IS NULL")
+                .contains("country_child.code LIKE CONCAT(country.code, '-%')")
+                .contains("boardType == 'course' and scope == 'overseas'")
+                .contains("JOIN country_categories parent ON parent.id = country.parent_id")
+                .contains("parent.parent_id IS NULL")
+                .contains("country.code NOT LIKE '%-%'")
+                .contains("country.id = #{countryId}")
+                .doesNotContain("= 7");
+        assertThat(listQuery).contains("<include refid=\"courseCountryFilters\"/>");
+        assertThat(countQuery).contains("<include refid=\"courseCountryFilters\"/>");
+        assertThat(mapper)
+                .contains("NULL AS countryId")
+                .contains("c.country_id AS countryId");
+    }
+
     private String resource(String path) throws IOException {
         try (InputStream input = getClass().getResourceAsStream(path)) {
             assertThat(input).as("resource %s", path).isNotNull();

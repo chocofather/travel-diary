@@ -10,5 +10,7 @@ public class CourseStopDto {
     private String name;
     private String shortDescription;
     private String regionName;
+    private Long countryId;
+    private String countryName;
     private String imageUrl;
 }

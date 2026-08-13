@@ -44,6 +44,7 @@ public interface CourseMapper {
 
     int updateCourse(@Param("courseId") Long courseId,
                      @Param("userId") Long userId,
+                     @Param("countryId") Long countryId,
                      @Param("title") String title,
                      @Param("content") String content);
 

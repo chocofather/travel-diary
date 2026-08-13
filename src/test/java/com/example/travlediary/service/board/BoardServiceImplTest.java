@@ -24,30 +24,45 @@ class BoardServiceImplTest {
 
     @Test
     void listNormalizesFiltersSortAndPagination() {
-        service.getBoardList("POST", "tip", "unsupported", 0, 200);
+        service.getBoardList("POST", "tip", "overseas", 8L, "unsupported", 0, 200);
 
-        verify(boardMapper).findBoardList("post", "TIP", "latest", 0L, 100);
+        verify(boardMapper).findBoardList("post", "TIP", "all", null, "latest", 0L, 100);
     }
 
     @Test
     void listKeepsSupportedSortAndCalculatesOffset() {
-        service.getBoardList("course", null, "comments", 3, 10);
+        service.getBoardList("course", null, "overseas", 8L, "comments", 3, 10);
+        service.getBoardCount("course", null, "overseas", 8L);
 
-        verify(boardMapper).findBoardList("course", null, "comments", 20L, 10);
+        verify(boardMapper).findBoardList("course", null, "overseas", 8L, "comments", 20L, 10);
+        verify(boardMapper).countBoard("course", null, "overseas", 8L);
     }
 
     @Test
     void listKeepsBookmarkSort() {
-        service.getBoardList(null, null, "BOOKMARKS", 1, 10);
+        service.getBoardList(null, null, "domestic", 7L, "BOOKMARKS", 1, 10);
 
-        verify(boardMapper).findBoardList(null, null, "bookmarks", 0L, 10);
+        verify(boardMapper).findBoardList(null, null, "all", null, "bookmarks", 0L, 10);
     }
 
     @Test
     void countUsesTheSameNormalizedFilters() {
-        service.getBoardCount("invalid", "question");
+        service.getBoardCount("invalid", "question", "overseas", 8L);
 
-        verify(boardMapper).countBoard(null, "QUESTION");
+        verify(boardMapper).countBoard(null, "QUESTION", "all", null);
+    }
+
+    @Test
+    void courseScopeAndCountryAreNormalizedTheSameForListAndCount() {
+        service.getBoardList("course", null, "DOMESTIC", 8L, "views", 1, 10);
+        service.getBoardCount("course", null, "DOMESTIC", 8L);
+        service.getBoardList("course", null, "unsupported", 8L, "latest", 1, 10);
+        service.getBoardCount("course", null, "unsupported", 8L);
+
+        verify(boardMapper).findBoardList("course", null, "domestic", null, "views", 0L, 10);
+        verify(boardMapper).countBoard("course", null, "domestic", null);
+        verify(boardMapper).findBoardList("course", null, "all", null, "latest", 0L, 10);
+        verify(boardMapper).countBoard("course", null, "all", null);
     }
 
     @Test

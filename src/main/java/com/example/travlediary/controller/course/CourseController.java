@@ -36,6 +36,7 @@ public class CourseController {
                                  @AuthenticationPrincipal CustomUserDetails principal,
                                  Model model) {
         model.addAttribute("course", courseService.getCourseForEdit(id, principal.getId()));
+        addCourseCountries(model);
         return "course/edit";
     }
 
@@ -57,6 +58,11 @@ public class CourseController {
     // 글쓰기 폼 페이지 (GET)
     @GetMapping("/write")
     public String courseWritePage(Model model) {
+        addCourseCountries(model);
+        return "course/write";
+    }
+
+    private void addCourseCountries(Model model) {
         List<CountryCategory> countries = countryCategoryService.getCourseCountries();
         model.addAttribute("domesticCourseCountries", countries.stream()
                 .filter(country -> country.getParentId() == null)
@@ -64,7 +70,6 @@ public class CourseController {
         model.addAttribute("overseasCourseCountries", countries.stream()
                 .filter(country -> country.getParentId() != null)
                 .toList());
-        return "course/write";
     }
 
     // 글쓰기 저장 (POST)

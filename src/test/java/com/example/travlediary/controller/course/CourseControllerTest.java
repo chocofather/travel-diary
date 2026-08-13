@@ -1,6 +1,7 @@
 package com.example.travlediary.controller.course;
 
 import com.example.travlediary.dto.CourseCreateRequest;
+import com.example.travlediary.dto.CourseEditDto;
 import com.example.travlediary.dto.CourseUpdateRequest;
 import com.example.travlediary.model.CountryCategory;
 import com.example.travlediary.security.CustomUserDetails;
@@ -75,6 +76,28 @@ class CourseControllerTest {
         String view = controller.courseWritePage(model);
 
         assertThat(view).isEqualTo("course/write");
+        assertThat(model.get("domesticCourseCountries")).isEqualTo(List.of(korea));
+        assertThat(model.get("overseasCourseCountries")).isEqualTo(List.of(japan));
+    }
+
+    @Test
+    void editPageLoadsExistingCourseAndTheSameCountryOptionsAsCreate() {
+        CourseController controller = new CourseController(courseService, countryCategoryService);
+        CourseEditDto course = new CourseEditDto();
+        course.setId(100L);
+        course.setCountryId(8L);
+        course.setCountryName("일본");
+        CountryCategory korea = country(7L, "대한민국", null);
+        CountryCategory japan = country(8L, "일본", 1L);
+        when(userDetails.getId()).thenReturn(5L);
+        when(courseService.getCourseForEdit(100L, 5L)).thenReturn(course);
+        when(countryCategoryService.getCourseCountries()).thenReturn(List.of(korea, japan));
+        ExtendedModelMap model = new ExtendedModelMap();
+
+        String view = controller.courseEditPage(100L, userDetails, model);
+
+        assertThat(view).isEqualTo("course/edit");
+        assertThat(model.get("course")).isSameAs(course);
         assertThat(model.get("domesticCourseCountries")).isEqualTo(List.of(korea));
         assertThat(model.get("overseasCourseCountries")).isEqualTo(List.of(japan));
     }

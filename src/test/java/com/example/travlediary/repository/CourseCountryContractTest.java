@@ -42,6 +42,24 @@ class CourseCountryContractTest {
     }
 
     @Test
+    void courseUpdateLoadsAndStoresCountryBeforeReplacingStops() throws IOException {
+        String mapper = resource("/mapper/CourseMapper.xml");
+        String editQuery = between(mapper, "<select id=\"findActiveCourse\"", "</select>");
+        String update = between(mapper, "<update id=\"updateCourse\"", "</update>");
+        String stops = between(mapper, "<select id=\"findCourseStops\"", "</select>");
+
+        assertThat(editQuery)
+                .contains("c.country_id")
+                .contains("country.region_name AS country_name")
+                .contains("LEFT JOIN country_categories country ON country.id = c.country_id");
+        assertThat(update).contains("country_id = #{countryId}");
+        assertThat(stops)
+                .contains("course.country_id AS country_id")
+                .contains("country.region_name AS country_name")
+                .contains("ORDER BY cd.visit_order ASC");
+    }
+
+    @Test
     void destinationSearchProvidesCountryDataForCreateUx() throws IOException {
         DestinationSearchResultDto result = new DestinationSearchResultDto();
         result.setCountryId(8L);
@@ -107,10 +125,11 @@ class CourseCountryContractTest {
     }
 
     @Test
-    void createUsesScopedSearchableCountryComboboxAndKeepsChangeConfirmation() throws IOException {
+    void createAndEditUseSharedScopedCountryComboboxAndChangeConfirmation() throws IOException {
         String writeTemplate = resource("/templates/course/write.html");
         String editTemplate = resource("/templates/course/edit.html");
         String script = resource("/static/js/course-write.js");
+        String combobox = resource("/static/js/country-combobox.js");
 
         assertThat(writeTemplate).contains("data-country-restriction=\"true\"");
         assertThat(writeTemplate)
@@ -122,7 +141,17 @@ class CourseCountryContractTest {
                 .contains("name=\"countryId\"")
                 .contains("domesticCourseCountries")
                 .contains("overseasCourseCountries");
-        assertThat(editTemplate).doesNotContain("data-country-restriction=\"true\"");
+        assertThat(editTemplate)
+                .contains("data-country-restriction=\"true\"")
+                .contains("data-initial-country-id=${course.countryId}")
+                .contains("data-initial-country-name=${course.countryName}")
+                .contains("th:value=\"${course.countryId}\"")
+                .contains("data-country-scope=\"domestic\"")
+                .contains("data-country-scope=\"overseas\"")
+                .contains("id=\"overseas-country-input\"")
+                .contains("name=\"countryId\"")
+                .contains("data-country-id=${stop.countryId}")
+                .contains("data-country-name=${stop.countryName}");
         assertThat(script)
                 .contains("form.dataset.countryRestriction === 'true' && countryIdInput !== null")
                 .contains("searchInput.disabled = !countrySelected")
@@ -130,16 +159,20 @@ class CourseCountryContractTest {
                 .contains("selectedCountryId !== destinationCountryId")
                 .contains("국가를 변경하면 현재 선택한 여행지가 모두 제거됩니다. 변경하시겠습니까?")
                 .contains("selectedDestinations.splice(0, selectedDestinations.length)")
+                .contains("const initialCountryId = selectedCourseCountryId()")
+                .contains("domesticCountryButton ? 'domestic' : 'overseas'")
+                .contains("window.CountryCombobox?.init({");
+        assertThat(combobox)
                 .contains("event.key === 'ArrowDown'")
                 .contains("event.key === 'ArrowUp'")
                 .contains("event.key === 'Enter'")
                 .contains("event.key === 'Escape'")
-                .contains("event.target.closest('.country-combobox')");
+                .contains("if (!root.contains(event.target))");
     }
 
     @Test
     void countryFilterSupportsRegularNamesAndHangulInitials() throws IOException {
-        String script = resource("/static/js/course-write.js");
+        String script = resource("/static/js/country-combobox.js");
 
         assertThat(script)
                 .contains("function extractHangulInitials(value)")
@@ -148,7 +181,7 @@ class CourseCountryContractTest {
                 .contains("Math.floor((codePoint - 0xAC00) / 588)")
                 .contains(".trim().toLocaleLowerCase('ko-KR')")
                 .contains("!normalizedName.includes(keyword)")
-                .contains("!countryInitials.includes(keyword)");
+                .contains("!extractHangulInitials(normalizedName).includes(keyword)");
     }
 
     private boolean hasCountryPrefixedChild(JsonNode categories, long parentId, String countryCode) {

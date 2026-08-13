@@ -12,6 +12,8 @@ public interface BoardMapper {
     List<BoardListDto> findBoardList(
             @Param("boardType") String boardType,
             @Param("postType") String postType,
+            @Param("scope") String scope,
+            @Param("countryId") Long countryId,
             @Param("sort") String sort,
             @Param("offset") long offset,
             @Param("limit") int limit
@@ -19,7 +21,9 @@ public interface BoardMapper {
 
     int countBoard(
             @Param("boardType") String boardType,
-            @Param("postType") String postType
+            @Param("postType") String postType,
+            @Param("scope") String scope,
+            @Param("countryId") Long countryId
     );
 
     List<BoardListDto> findBoardListByUserId(

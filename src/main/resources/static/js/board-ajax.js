@@ -14,7 +14,7 @@ function updateBoardSortState(sort) {
     });
 }
 
-function loadBoardList(page, sort) {
+function loadBoardList(page, sort, updateHistory = true) {
     const params = new URLSearchParams(window.location.search);
     params.set('page', Math.max(Number(page) || 1, 1).toString());
     const activeSort = normalizeBoardSort(sort);
@@ -34,6 +34,9 @@ function loadBoardList(page, sort) {
         .then(html => {
             document.getElementById('board-fragment-container').innerHTML = html;
             updateBoardSortState(activeSort);
+            if (updateHistory) {
+                window.history.pushState(null, '', `${window.location.pathname}?${params.toString()}`);
+            }
         })
         .catch(error => {
             console.error(error);
@@ -41,7 +44,56 @@ function loadBoardList(page, sort) {
         });
 }
 
+function changeBoardCountry(countryId) {
+    const params = new URLSearchParams(window.location.search);
+    params.set('boardType', 'course');
+    params.set('scope', 'overseas');
+    params.set('page', '1');
+    if (countryId) {
+        params.set('countryId', countryId);
+    } else {
+        params.delete('countryId');
+    }
+    window.location.assign(`/board/list?${params.toString()}`);
+}
+
+function changeBoardScope(event, scope) {
+    event.preventDefault();
+    const allowedScopes = new Set(['all', 'domestic', 'overseas']);
+    const nextScope = allowedScopes.has(scope) ? scope : 'all';
+    const params = new URLSearchParams(window.location.search);
+    params.set('boardType', 'course');
+    params.set('scope', nextScope);
+    params.set('page', '1');
+    params.delete('countryId');
+    window.location.assign(`/board/list?${params.toString()}`);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(window.location.search);
     updateBoardSortState(params.get('sort'));
+
+    const field = document.querySelector('.board-country-select-wrap');
+    const input = document.getElementById('board-country-input');
+    const listbox = document.getElementById('board-country-listbox');
+    const options = document.querySelectorAll('.board-country-option');
+    if (field && input && listbox) {
+        window.CountryCombobox?.init({
+            root: field.querySelector('.board-country-combobox'),
+            input,
+            listbox,
+            options,
+            empty: document.getElementById('board-country-option-empty'),
+            getSelectedName: () => field.dataset.selectedCountryName || '',
+            onSelect: countryId => {
+                changeBoardCountry(countryId);
+                return true;
+            }
+        });
+    }
+});
+
+window.addEventListener('popstate', () => {
+    const params = new URLSearchParams(window.location.search);
+    loadBoardList(params.get('page'), params.get('sort'), false);
 });

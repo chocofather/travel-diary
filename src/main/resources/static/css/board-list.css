@@ -121,7 +121,7 @@
     padding: 0 20px;
     border-radius: 12px;
     background: var(--board-accent);
-    box-shadow: 0 8px 18px rgba(15, 118, 110, 0.2);
+    box-shadow: 0 4px 10px rgba(15, 118, 110, 0.16);
     color: #fff !important;
     font-size: 14px;
     font-weight: 750;
@@ -145,8 +145,7 @@
 
 .board-write-btn:hover {
     background: var(--board-accent-dark);
-    box-shadow: 0 10px 22px rgba(15, 118, 110, 0.26);
-    transform: translateY(-1px);
+    box-shadow: 0 5px 12px rgba(15, 118, 110, 0.2);
 }
 
 .board-write-btn:focus-visible {
@@ -163,16 +162,193 @@
     border-bottom: 1px solid var(--board-border);
 }
 
-.board-sort-button {
-    min-height: 38px;
-    padding: 0 14px;
+.board-country-filter {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 14px;
+    padding: 11px 12px;
+    border: 1px solid var(--board-border);
+    border-radius: 12px;
+    background: #fafbfc;
+}
+
+.board-scope-options {
+    display: flex;
+    gap: 5px;
+}
+
+.board-scope-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 58px;
+    min-height: 34px;
+    padding: 0 12px;
+    box-sizing: border-box;
     border: 1px solid transparent;
-    border-radius: 999px;
+    border-radius: 8px;
+    color: var(--board-muted);
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.board-scope-link:hover {
+    border-color: #cbd5e1;
+    background: #fff;
+    color: var(--board-text);
+}
+
+.board-scope-link:focus-visible,
+.board-country-select-wrap input:focus-visible {
+    outline: 3px solid rgba(13, 148, 136, 0.24);
+    outline-offset: 2px;
+}
+
+.board-scope-link.active,
+.board-scope-link[aria-current="page"] {
+    font-weight: 800;
+}
+
+.board-scope-link--all.active,
+.board-scope-link--all[aria-current="page"] {
+    border-color: #cbd5e1;
+    background: #f1f5f9;
+    color: #334155;
+}
+
+.board-scope-link--domestic.active,
+.board-scope-link--domestic[aria-current="page"] {
+    border-color: #99f6e4;
+    background: var(--board-accent-soft);
+    color: var(--board-accent-dark);
+}
+
+.board-scope-link--overseas.active,
+.board-scope-link--overseas[aria-current="page"] {
+    border-color: #bfdbfe;
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.board-country-select-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.board-country-select-wrap label {
+    color: var(--board-muted);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.board-country-combobox {
+    position: relative;
+    width: 210px;
+}
+
+.board-country-select-wrap input {
+    width: 100%;
+    min-height: 36px;
+    padding: 0 12px 0 34px;
+    box-sizing: border-box;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #fff;
+    color: #334155;
+    font: inherit;
+    font-size: 13px;
+}
+
+.board-country-search-icon {
+    position: absolute;
+    z-index: 1;
+    top: 50%;
+    left: 12px;
+    width: 11px;
+    height: 11px;
+    border: 1.5px solid #64748b;
+    border-radius: 50%;
+    transform: translateY(-58%);
+    pointer-events: none;
+}
+
+.board-country-search-icon::after {
+    position: absolute;
+    right: -4px;
+    bottom: -3px;
+    width: 5px;
+    height: 1.5px;
+    background: #64748b;
+    content: "";
+    transform: rotate(45deg);
+}
+
+.board-country-option-list {
+    position: absolute;
+    z-index: 30;
+    top: calc(100% + 5px);
+    right: 0;
+    left: 0;
+    max-height: 220px;
+    overflow-y: auto;
+    padding: 5px;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+    background: #fff;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.09);
+}
+
+.board-country-option {
+    width: 100%;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #334155;
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.board-country-option:hover,
+.board-country-option.is-highlighted {
+    background: #f1f5f9;
+}
+
+.board-country-option[aria-selected="true"] {
+    color: #1d4ed8;
+    font-weight: 750;
+}
+
+.board-country-option:focus-visible {
+    outline: 2px solid rgba(37, 99, 235, 0.24);
+    outline-offset: -1px;
+}
+
+.board-country-option-empty {
+    margin: 0;
+    padding: 14px 8px;
+    color: #94a3b8;
+    font-size: 12px;
+    text-align: center;
+}
+
+.board-sort-button {
+    position: relative;
+    min-height: 34px;
+    padding: 0 9px;
+    border: 1px solid transparent;
+    border-radius: 5px;
     background: transparent;
     color: var(--board-muted);
     font: inherit;
     font-size: 13px;
-    font-weight: 650;
+    font-weight: 600;
     cursor: pointer;
     transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
 }
@@ -190,9 +366,22 @@
 
 .board-sort-button.active,
 .board-sort-button[aria-pressed="true"] {
-    border-color: #99f6e4;
-    background: var(--board-accent-soft);
+    border-color: transparent;
+    background: #f8fafc;
     color: var(--board-accent-dark);
+    font-weight: 750;
+}
+
+.board-sort-button.active::after,
+.board-sort-button[aria-pressed="true"]::after {
+    position: absolute;
+    right: 9px;
+    bottom: 2px;
+    left: 9px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--board-accent);
+    content: "";
 }
 
 .board-profile-link {
@@ -271,8 +460,8 @@
 
 .board-type--course {
     min-height: 25px;
-    background: var(--board-accent-soft);
-    color: var(--board-accent-dark);
+    background: #f1f5f9;
+    color: #64748b;
     font-size: 11px;
 }
 
@@ -502,6 +691,11 @@
         justify-content: flex-start;
     }
 
+    .board-country-filter {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
     .board-list-row {
         padding-right: 2px;
         padding-left: 2px;
@@ -583,6 +777,24 @@
         display: grid;
         grid-template-columns: repeat(5, minmax(0, 1fr));
         gap: 4px;
+    }
+
+    .board-country-filter {
+        padding: 9px;
+    }
+
+    .board-scope-options,
+    .board-country-select-wrap,
+    .board-country-combobox {
+        width: 100%;
+    }
+
+    .board-scope-link {
+        flex: 1 1 0;
+    }
+
+    .board-country-select-wrap label {
+        flex: 0 0 auto;
     }
 
     .board-sort-button {

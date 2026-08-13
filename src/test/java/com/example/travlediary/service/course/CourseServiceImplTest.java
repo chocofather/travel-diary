@@ -338,6 +338,8 @@ class CourseServiceImplTest {
 
         var edit = service.getCourseForEdit(10L, 5L);
 
+        assertThat(edit.getCountryId()).isEqualTo(7L);
+        assertThat(edit.getCountryName()).isEqualTo("대한민국");
         assertThat(edit.getStops()).containsExactly(first, second);
         verify(courseMapper, never()).findActiveCourseForUpdate(any());
         verify(courseMapper, never()).incrementViews(any());
@@ -362,7 +364,10 @@ class CourseServiceImplTest {
         CourseUpdateRequest request = updateRequest("  수정 제목  ", "<p>수정 소개</p>", List.of(30L, 12L));
         when(courseMapper.findActiveCourseForUpdate(10L)).thenReturn(activeCourse(10L, 5L));
         when(courseMapper.countExistingDestinations(List.of(30L, 12L))).thenReturn(2);
-        when(courseMapper.updateCourse(10L, 5L, "수정 제목", "<p>수정 소개</p>")).thenReturn(1);
+        when(courseMapper.findDestinationCountries(List.of(30L, 12L)))
+                .thenReturn(destinationCountries(List.of(30L, 12L), 7L, "대한민국"));
+        when(courseMapper.updateCourse(10L, 5L, 7L,
+                "수정 제목", "<p>수정 소개</p>")).thenReturn(1);
         when(courseMapper.deleteCourseDestinations(10L)).thenReturn(0);
         when(courseMapper.insertCourseDestination(any())).thenReturn(1);
 
@@ -375,7 +380,8 @@ class CourseServiceImplTest {
                 .containsExactly(30L, 12L);
         assertThat(captor.getAllValues()).extracting(CourseDestination::getVisitOrder)
                 .containsExactly(1, 2);
-        verify(courseMapper, never()).findDestinationCountries(any());
+        verify(courseMapper).updateCourse(10L, 5L, 7L,
+                "수정 제목", "<p>수정 소개</p>");
     }
 
     @Test
@@ -386,7 +392,7 @@ class CourseServiceImplTest {
         assertThatThrownBy(() -> service.updateCourse(10L, 5L, request))
                 .isInstanceOf(ResponseStatusException.class);
 
-        verify(courseMapper, never()).updateCourse(any(), any(), any(), any());
+        verify(courseMapper, never()).updateCourse(any(), any(), any(), any(), any());
         verify(courseMapper, never()).deleteCourseDestinations(any());
     }
 
@@ -401,15 +407,104 @@ class CourseServiceImplTest {
     }
 
     @Test
+    void updateRejectsMissingCountryWithoutChangingExistingData() {
+        CourseUpdateRequest request = updateRequest("제목", "<p>소개</p>", List.of(1L));
+        request.setCountryId(null);
+        when(courseMapper.findActiveCourseForUpdate(10L)).thenReturn(activeCourse(10L, 5L));
+
+        assertThatThrownBy(() -> service.updateCourse(10L, 5L, request))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(error -> assertThat(((ResponseStatusException) error).getReason())
+                        .isEqualTo("코스 국가를 선택해 주세요."));
+
+        verify(courseMapper, never()).countExistingDestinations(any());
+        verify(courseMapper, never()).updateCourse(any(), any(), any(), any(), any());
+        verify(courseMapper, never()).deleteCourseDestinations(any());
+    }
+
+    @Test
+    void updateRejectsMissingDestinationBeforeCountryValidationOrMutation() {
+        CourseUpdateRequest request = updateRequest("제목", "<p>소개</p>", List.of(1L, 2L));
+        when(courseMapper.findActiveCourseForUpdate(10L)).thenReturn(activeCourse(10L, 5L));
+        when(courseMapper.countExistingDestinations(List.of(1L, 2L))).thenReturn(1);
+
+        assertThatThrownBy(() -> service.updateCourse(10L, 5L, request))
+                .isInstanceOf(ResponseStatusException.class);
+
+        verify(courseMapper, never()).findDestinationCountries(any());
+        verify(courseMapper, never()).updateCourse(any(), any(), any(), any(), any());
+        verify(courseMapper, never()).deleteCourseDestinations(any());
+    }
+
+    @Test
     void updateInsertFailureRaisesRuntimeExceptionForTransactionalRollback() {
         CourseUpdateRequest request = updateRequest("제목", "<p>소개</p>", List.of(1L, 2L));
         when(courseMapper.findActiveCourseForUpdate(10L)).thenReturn(activeCourse(10L, 5L));
         when(courseMapper.countExistingDestinations(List.of(1L, 2L))).thenReturn(2);
-        when(courseMapper.updateCourse(10L, 5L, "제목", "<p>소개</p>")).thenReturn(1);
+        when(courseMapper.findDestinationCountries(List.of(1L, 2L)))
+                .thenReturn(destinationCountries(List.of(1L, 2L), 7L, "대한민국"));
+        when(courseMapper.updateCourse(10L, 5L, 7L, "제목", "<p>소개</p>")).thenReturn(1);
         when(courseMapper.insertCourseDestination(any())).thenReturn(1, 0);
 
         assertThatThrownBy(() -> service.updateCourse(10L, 5L, request))
                 .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void updateRejectsCountryMismatchBeforeChangingCourseOrDestinations() {
+        CourseUpdateRequest request = updateRequest("제목", "<p>소개</p>", List.of(30L, 12L));
+        request.setCountryId(8L);
+        when(courseMapper.findActiveCourseForUpdate(10L)).thenReturn(activeCourse(10L, 5L));
+        when(courseMapper.countExistingDestinations(List.of(30L, 12L))).thenReturn(2);
+        when(courseMapper.findDestinationCountries(List.of(30L, 12L)))
+                .thenReturn(destinationCountries(List.of(30L, 12L), 7L, "대한민국"));
+
+        assertThatThrownBy(() -> service.updateCourse(10L, 5L, request))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(error -> assertThat(((ResponseStatusException) error).getReason())
+                        .isEqualTo("선택한 국가와 여행지의 국가가 일치하지 않습니다."));
+
+        verify(courseMapper, never()).updateCourse(any(), any(), any(), any(), any());
+        verify(courseMapper, never()).deleteCourseDestinations(any());
+        verify(courseMapper, never()).insertCourseDestination(any());
+    }
+
+    @Test
+    void updateRejectsMixedCountriesBeforeChangingExistingData() {
+        CourseUpdateRequest request = updateRequest("제목", "<p>소개</p>", List.of(30L, 71L));
+        when(courseMapper.findActiveCourseForUpdate(10L)).thenReturn(activeCourse(10L, 5L));
+        when(courseMapper.countExistingDestinations(List.of(30L, 71L))).thenReturn(2);
+        when(courseMapper.findDestinationCountries(List.of(30L, 71L))).thenReturn(List.of(
+                destinationCountry(30L, 7L, "대한민국"),
+                destinationCountry(71L, 8L, "일본")
+        ));
+
+        assertThatThrownBy(() -> service.updateCourse(10L, 5L, request))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(error -> assertThat(((ResponseStatusException) error).getReason())
+                        .isEqualTo("하나의 여행 코스에는 같은 국가의 여행지만 추가할 수 있습니다."));
+
+        verify(courseMapper, never()).updateCourse(any(), any(), any(), any(), any());
+        verify(courseMapper, never()).deleteCourseDestinations(any());
+    }
+
+    @Test
+    void updateCanChangeCourseCountryAfterValidatingNewDestinations() {
+        CourseUpdateRequest request = updateRequest("일본 코스", "<p>도쿄와 오사카</p>", List.of(71L, 72L));
+        request.setCountryId(8L);
+        when(courseMapper.findActiveCourseForUpdate(10L)).thenReturn(activeCourse(10L, 5L));
+        when(courseMapper.countExistingDestinations(List.of(71L, 72L))).thenReturn(2);
+        when(courseMapper.findDestinationCountries(List.of(71L, 72L)))
+                .thenReturn(destinationCountries(List.of(71L, 72L), 8L, "일본"));
+        when(courseMapper.updateCourse(10L, 5L, 8L,
+                "일본 코스", "<p>도쿄와 오사카</p>")).thenReturn(1);
+        when(courseMapper.insertCourseDestination(any())).thenReturn(1);
+
+        service.updateCourse(10L, 5L, request);
+
+        verify(courseMapper).updateCourse(10L, 5L, 8L,
+                "일본 코스", "<p>도쿄와 오사카</p>");
+        verify(courseMapper).deleteCourseDestinations(10L);
     }
 
     @Test
@@ -464,6 +559,8 @@ class CourseServiceImplTest {
         Course course = new Course();
         course.setId(id);
         course.setUserId(userId);
+        course.setCountryId(7L);
+        course.setCountryName("대한민국");
         course.setTitle("기존 제목");
         course.setContent("<p>기존 소개</p>");
         return course;
@@ -486,6 +583,7 @@ class CourseServiceImplTest {
 
     private CourseUpdateRequest updateRequest(String title, String content, List<Long> destinationIds) {
         CourseUpdateRequest request = new CourseUpdateRequest();
+        request.setCountryId(7L);
         request.setTitle(title);
         request.setContent(content);
         request.setDestinationIds(destinationIds);

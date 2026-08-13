@@ -56,7 +56,9 @@
       </div>
     </div>
 
-    <div th:if="${#lists.isEmpty(boardList)}" class="board-list-empty">
+    <div th:if="${#lists.isEmpty(boardList)}"
+         class="board-list-empty"
+         th:text="${emptyMessage}">
       등록된 게시글이 없습니다.
     </div>
 

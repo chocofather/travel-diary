@@ -61,6 +61,8 @@ public class CourseServiceImpl implements CourseService {
 
         CourseEditDto edit = new CourseEditDto();
         edit.setId(course.getId());
+        edit.setCountryId(course.getCountryId());
+        edit.setCountryName(course.getCountryName());
         edit.setTitle(course.getTitle());
         edit.setContent(postContentSanitizer.sanitize(course.getContent()));
         edit.setStops(courseMapper.findCourseStops(courseId));
@@ -102,7 +104,7 @@ public class CourseServiceImpl implements CourseService {
                 request == null ? null : request.getDestinationIds());
         Long requestedCountryId = validateRequestedCountryId(request == null ? null : request.getCountryId());
         validateDestinations(validated.destinationIds());
-        Long countryId = validateCountryForCreate(requestedCountryId, validated.destinationIds());
+        Long countryId = validateCourseCountry(requestedCountryId, validated.destinationIds());
 
         Course course = new Course();
         course.setTitle(validated.title());
@@ -134,9 +136,12 @@ public class CourseServiceImpl implements CourseService {
                 request == null ? null : request.getDestinationIds());
 
         requireOwnedActiveCourse(courseMapper.findActiveCourseForUpdate(courseId), userId);
+        Long requestedCountryId = validateRequestedCountryId(request == null ? null : request.getCountryId());
         validateDestinations(validated.destinationIds());
+        Long countryId = validateCourseCountry(requestedCountryId, validated.destinationIds());
 
-        if (courseMapper.updateCourse(courseId, userId, validated.title(), validated.content()) != 1) {
+        if (courseMapper.updateCourse(courseId, userId, countryId,
+                validated.title(), validated.content()) != 1) {
             throw new IllegalStateException("여행 코스 수정에 실패했습니다.");
         }
 
@@ -196,7 +201,7 @@ public class CourseServiceImpl implements CourseService {
         return countryId;
     }
 
-    private Long validateCountryForCreate(Long requestedCountryId, List<Long> destinationIds) {
+    private Long validateCourseCountry(Long requestedCountryId, List<Long> destinationIds) {
         List<CourseDestinationCountryDto> destinations = courseMapper.findDestinationCountries(destinationIds);
         if (destinations.size() != destinationIds.size()
                 || destinations.stream().anyMatch(destination -> destination.getCountryId() == null)) {

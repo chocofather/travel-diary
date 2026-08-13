@@ -31,6 +31,8 @@ document.addEventListener('DOMContentLoaded', () => {
             name: element.dataset.name,
             regionName: element.dataset.regionName,
             parentRegionName: element.dataset.parentRegionName,
+            countryId: element.dataset.countryId,
+            countryName: element.dataset.countryName,
             thumbnailUrl: element.dataset.thumbnailUrl
         }))
         .filter(destination => Number.isSafeInteger(destination.id) && destination.id > 0);
@@ -40,8 +42,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let searchRequestNumber = 0;
     let activeCountryScope = '';
     let activeCountryId = countryIdInput?.value || '';
-    let activeCountryName = '';
-    let highlightedCountryIndex = -1;
+    let activeCountryName = form.dataset.initialCountryName || '';
+    let countryCombobox;
 
     function countryIdOf(destination) {
         const countryId = Number(destination?.countryId);
@@ -66,62 +68,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function visibleCountryOptions() {
-        return countryOptions.filter(option => !option.hidden);
-    }
-
-    function closeCountryList() {
-        if (!countryListbox || !overseasCountryInput) return;
-        countryListbox.hidden = true;
-        overseasCountryInput.setAttribute('aria-expanded', 'false');
-        overseasCountryInput.removeAttribute('aria-activedescendant');
-        countryOptions.forEach(option => option.classList.remove('is-highlighted'));
-        highlightedCountryIndex = -1;
-    }
-
-    function openCountryList() {
-        if (!countryListbox || !overseasCountryInput || overseasCountryField?.hidden) return;
-        countryListbox.hidden = false;
-        overseasCountryInput.setAttribute('aria-expanded', 'true');
-    }
-
-    function extractHangulInitials(value) {
-        const initials = 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ';
-        return Array.from(String(value ?? ''), character => {
-            const codePoint = character.codePointAt(0);
-            if (codePoint < 0xAC00 || codePoint > 0xD7A3) return character;
-            return initials[Math.floor((codePoint - 0xAC00) / 588)];
-        }).join('');
-    }
-
-    function filterCountryOptions() {
-        const keyword = (overseasCountryInput?.value || '').trim().toLocaleLowerCase('ko-KR');
-        countryOptions.forEach(option => {
-            const countryName = option.dataset.countryName || option.textContent || '';
-            const normalizedName = countryName.toLocaleLowerCase('ko-KR');
-            const countryInitials = extractHangulInitials(normalizedName);
-            option.hidden = keyword !== ''
-                && !normalizedName.includes(keyword)
-                && !countryInitials.includes(keyword);
-        });
-        if (countryOptionEmpty) {
-            countryOptionEmpty.hidden = visibleCountryOptions().length > 0;
-        }
-        highlightedCountryIndex = -1;
-        openCountryList();
-    }
-
-    function highlightCountryOption(index) {
-        const visibleOptions = visibleCountryOptions();
-        if (visibleOptions.length === 0) return;
-        highlightedCountryIndex = (index + visibleOptions.length) % visibleOptions.length;
-        countryOptions.forEach(option => option.classList.remove('is-highlighted'));
-        const highlightedOption = visibleOptions[highlightedCountryIndex];
-        highlightedOption.classList.add('is-highlighted');
-        overseasCountryInput.setAttribute('aria-activedescendant', highlightedOption.id);
-        highlightedOption.scrollIntoView({block: 'nearest'});
-    }
-
     function applyCountrySelection(scope, countryId, countryName) {
         activeCountryScope = scope;
         activeCountryId = countryId ? String(countryId) : '';
@@ -137,15 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (overseasCountryField) {
             overseasCountryField.hidden = scope !== 'overseas';
         }
-        if (overseasCountryInput) {
-            overseasCountryInput.value = scope === 'overseas' ? activeCountryName : '';
-        }
-        countryOptions.forEach(option => {
-            option.setAttribute('aria-selected', String(option.dataset.countryId === activeCountryId));
-            option.hidden = false;
-        });
-        if (countryOptionEmpty) countryOptionEmpty.hidden = true;
-        closeCountryList();
+        countryCombobox?.setSelected(activeCountryId, activeCountryName, scope === 'overseas');
 
         latestResults = [];
         searchResults.replaceChildren();
@@ -409,6 +347,17 @@ document.addEventListener('DOMContentLoaded', () => {
         searchDestinations();
     });
 
+    countryCombobox = window.CountryCombobox?.init({
+        root: overseasCountryInput?.closest('.country-combobox'),
+        input: overseasCountryInput,
+        listbox: countryListbox,
+        options: countryOptions,
+        empty: countryOptionEmpty,
+        isDisabled: () => overseasCountryField?.hidden,
+        getSelectedName: () => activeCountryScope === 'overseas' ? activeCountryName : '',
+        onSelect: (countryId, countryName) => requestCountryChange('overseas', countryId, countryName)
+    });
+
     scopeButtons.forEach(button => {
         button.addEventListener('click', () => {
             const scope = button.dataset.countryScope;
@@ -418,60 +367,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (scope === 'overseas' && activeCountryScope === 'overseas') {
                 overseasCountryInput?.focus();
-                filterCountryOptions();
+                countryCombobox?.filter();
                 return;
             }
             if (scope === 'overseas' && requestCountryChange(scope, '', '')) {
                 overseasCountryInput?.focus();
-                filterCountryOptions();
+                countryCombobox?.filter();
             }
         });
-    });
-
-    countryOptions.forEach(option => {
-        option.addEventListener('click', () => {
-            if (!requestCountryChange('overseas', option.dataset.countryId, option.dataset.countryName)) {
-                overseasCountryInput.value = activeCountryName;
-                closeCountryList();
-            }
-        });
-    });
-
-    overseasCountryInput?.addEventListener('focus', filterCountryOptions);
-    overseasCountryInput?.addEventListener('click', filterCountryOptions);
-    overseasCountryInput?.addEventListener('input', () => {
-        filterCountryOptions();
-    });
-    overseasCountryInput?.addEventListener('keydown', event => {
-        const options = visibleCountryOptions();
-        if (event.key === 'ArrowDown') {
-            event.preventDefault();
-            openCountryList();
-            highlightCountryOption(highlightedCountryIndex + 1);
-        } else if (event.key === 'ArrowUp') {
-            event.preventDefault();
-            openCountryList();
-            highlightCountryOption(highlightedCountryIndex - 1);
-        } else if (event.key === 'Enter' && !countryListbox.hidden) {
-            event.preventDefault();
-            const option = options[highlightedCountryIndex] || (options.length === 1 ? options[0] : null);
-            option?.click();
-        } else if (event.key === 'Escape') {
-            event.preventDefault();
-            closeCountryList();
-            overseasCountryInput.value = activeCountryName;
-            countryIdInput.value = activeCountryId;
-            updateCountrySearchState();
-        }
-    });
-
-    document.addEventListener('click', event => {
-        if (!event.target.closest('.country-combobox')) {
-            closeCountryList();
-            if (activeCountryId && activeCountryScope === 'overseas') {
-                overseasCountryInput.value = activeCountryName;
-            }
-        }
     });
 
     form.addEventListener('submit', event => {
@@ -499,10 +402,22 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     renderSelectedDestinations();
-    updateCountrySearchState();
-    if (!useCountrySelection || selectedCourseCountryId() !== null) {
+    const initialCountryId = selectedCourseCountryId();
+    if (useCountrySelection && initialCountryId !== null) {
+        const domesticCountryButton = scopeButtons.find(button =>
+            button.dataset.countryScope === 'domestic'
+            && button.dataset.countryId === String(initialCountryId)
+        );
+        applyCountrySelection(
+            domesticCountryButton ? 'domestic' : 'overseas',
+            String(initialCountryId),
+            activeCountryName || domesticCountryButton?.dataset.countryName || ''
+        );
+    } else if (!useCountrySelection) {
+        updateCountrySearchState();
         searchDestinations();
     } else {
+        updateCountrySearchState();
         showMessage('코스 국가를 먼저 선택해 주세요.');
     }
 });

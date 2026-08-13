@@ -4,9 +4,11 @@ import com.example.travlediary.config.CustomLoginSuccessHandler;
 import com.example.travlediary.config.CustomLogoutSuccessHandler;
 import com.example.travlediary.config.SecurityConfig;
 import com.example.travlediary.dto.BoardListDto;
+import com.example.travlediary.model.CountryCategory;
 import com.example.travlediary.model.User;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.service.board.BoardService;
+import com.example.travlediary.service.category.CountryCategoryService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -18,6 +20,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -35,6 +38,8 @@ class BoardControllerSecurityTest {
     @MockitoBean
     private BoardService boardService;
     @MockitoBean
+    private CountryCategoryService countryCategoryService;
+    @MockitoBean
     private CustomLoginSuccessHandler customLoginSuccessHandler;
     @MockitoBean
     private CustomLogoutSuccessHandler customLogoutSuccessHandler;
@@ -43,8 +48,8 @@ class BoardControllerSecurityTest {
 
     @Test
     void guestCanOpenBoardListWithoutWriteAction() throws Exception {
-        when(boardService.getBoardList(null, null, "latest", 1, 10)).thenReturn(List.of());
-        when(boardService.getBoardCount(null, null)).thenReturn(0);
+        when(boardService.getBoardList(null, null, "all", null, "latest", 1, 10)).thenReturn(List.of());
+        when(boardService.getBoardCount(null, null, "all", null)).thenReturn(0);
 
         mockMvc.perform(get("/board/list"))
                 .andExpect(status().isOk())
@@ -61,8 +66,9 @@ class BoardControllerSecurityTest {
     void memberSeesCourseWriteActionBelowTheList() throws Exception {
         User member = new User();
         when(userMapper.findByUsername("member")).thenReturn(member);
-        when(boardService.getBoardList("course", null, "latest", 1, 10)).thenReturn(List.of());
-        when(boardService.getBoardCount("course", null)).thenReturn(0);
+        when(countryCategoryService.getCourseCountries()).thenReturn(List.of());
+        when(boardService.getBoardList("course", null, "all", null, "latest", 1, 10)).thenReturn(List.of());
+        when(boardService.getBoardCount("course", null, "all", null)).thenReturn(0);
 
         mockMvc.perform(get("/board/list")
                         .param("boardType", "course")
@@ -79,8 +85,8 @@ class BoardControllerSecurityTest {
 
     @Test
     void unsupportedSortShowsLatestAsActive() throws Exception {
-        when(boardService.getBoardList(null, null, "unsupported", 1, 10)).thenReturn(List.of());
-        when(boardService.getBoardCount(null, null)).thenReturn(0);
+        when(boardService.getBoardList(null, null, "all", null, "unsupported", 1, 10)).thenReturn(List.of());
+        when(boardService.getBoardCount(null, null, "all", null)).thenReturn(0);
 
         mockMvc.perform(get("/board/list").param("sort", "unsupported"))
                 .andExpect(status().isOk())
@@ -92,8 +98,8 @@ class BoardControllerSecurityTest {
 
     @Test
     void bookmarkSortShowsAsActive() throws Exception {
-        when(boardService.getBoardList(null, null, "bookmarks", 1, 10)).thenReturn(List.of());
-        when(boardService.getBoardCount(null, null)).thenReturn(0);
+        when(boardService.getBoardList(null, null, "all", null, "bookmarks", 1, 10)).thenReturn(List.of());
+        when(boardService.getBoardCount(null, null, "all", null)).thenReturn(0);
 
         mockMvc.perform(get("/board/list").param("sort", "bookmarks"))
                 .andExpect(status().isOk())
@@ -112,8 +118,10 @@ class BoardControllerSecurityTest {
         course.setNickname("여행자");
         course.setCreatedAt("2026-08-07 00:18:47");
         course.setBookmarkCount(4);
-        when(boardService.getBoardList("course", null, "comments", 2, 10)).thenReturn(List.of(course));
-        when(boardService.getBoardCount("course", null)).thenReturn(12);
+        when(countryCategoryService.getCourseCountries()).thenReturn(List.of());
+        when(boardService.getBoardList("course", null, "all", null, "comments", 2, 10))
+                .thenReturn(List.of(course));
+        when(boardService.getBoardCount("course", null, "all", null)).thenReturn(12);
 
         mockMvc.perform(get("/board/fragment")
                         .param("boardType", "course")
@@ -130,5 +138,64 @@ class BoardControllerSecurityTest {
                         org.hamcrest.Matchers.containsString("2026-08-07 00:18:47"))))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString(">작성일<"))));
+    }
+
+    @Test
+    void overseasCountryFilterAcceptsOnlyCountriesFromTheSharedCourseCountryList() throws Exception {
+        CountryCategory korea = country(7L, "대한민국", null);
+        CountryCategory japan = country(8L, "일본", 1L);
+        CountryCategory france = country(17L, "프랑스", 2L);
+        when(countryCategoryService.getCourseCountries()).thenReturn(List.of(korea, japan, france));
+        when(boardService.getBoardList("course", null, "overseas", 8L, "views", 1, 10))
+                .thenReturn(List.of());
+        when(boardService.getBoardCount("course", null, "overseas", 8L)).thenReturn(0);
+
+        mockMvc.perform(get("/board/list")
+                        .param("boardType", "course")
+                        .param("scope", "overseas")
+                        .param("countryId", "8")
+                        .param("sort", "views"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("scope", "overseas"))
+                .andExpect(model().attribute("countryId", 8L))
+                .andExpect(model().attribute("overseasCourseCountries", List.of(japan, france)))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("전체 국가")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("일본")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString(">대한민국</option>"))));
+    }
+
+    @Test
+    void continentOrDomesticRegionIdIsIgnoredAsAnOverseasCountryFilter() throws Exception {
+        CountryCategory korea = country(7L, "대한민국", null);
+        CountryCategory japan = country(8L, "일본", 1L);
+        when(countryCategoryService.getCourseCountries()).thenReturn(List.of(korea, japan));
+
+        mockMvc.perform(get("/board/list")
+                        .param("boardType", "course")
+                        .param("scope", "overseas")
+                        .param("countryId", "1"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("countryId", org.hamcrest.Matchers.nullValue()));
+
+        mockMvc.perform(get("/board/list")
+                        .param("boardType", "course")
+                        .param("scope", "overseas")
+                        .param("countryId", "70"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("countryId", org.hamcrest.Matchers.nullValue()));
+
+        verify(boardService, org.mockito.Mockito.times(2))
+                .getBoardList("course", null, "overseas", null, "latest", 1, 10);
+        verify(boardService, org.mockito.Mockito.times(2))
+                .getBoardCount("course", null, "overseas", null);
+    }
+
+    private CountryCategory country(Long id, String name, Long parentId) {
+        CountryCategory country = new CountryCategory();
+        country.setId(id);
+        country.setRegionName(name);
+        country.setParentId(parentId);
+        return country;
     }
 }

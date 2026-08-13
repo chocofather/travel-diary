@@ -11,6 +11,7 @@
             p.user_id AS userId,
             'post' AS boardType,
             p.post_type AS postType,
+            NULL AS countryId,
             p.title,
             p.views,
             p.created_at AS createdAt,
@@ -31,6 +32,7 @@
             c.user_id AS userId,
             'course' AS boardType,
             NULL AS postType,
+            c.country_id AS countryId,
             c.title,
             c.views,
             c.created_at AS createdAt,
@@ -80,6 +82,39 @@
         </if>
     </sql>
 
+    <sql id="courseCountryFilters">
+        <if test="boardType == 'course' and scope == 'domestic'">
+            AND EXISTS (
+                SELECT 1
+                FROM country_categories country
+                WHERE country.id = board.countryId
+                  AND country.is_visible = 1
+                  AND country.parent_id IS NULL
+                  AND EXISTS (
+                      SELECT 1
+                      FROM country_categories country_child
+                      WHERE country_child.parent_id = country.id
+                        AND country_child.code LIKE CONCAT(country.code, '-%')
+                  )
+            )
+        </if>
+        <if test="boardType == 'course' and scope == 'overseas'">
+            AND EXISTS (
+                SELECT 1
+                FROM country_categories country
+                JOIN country_categories parent ON parent.id = country.parent_id
+                WHERE country.id = board.countryId
+                  AND country.is_visible = 1
+                  AND country.parent_id IS NOT NULL
+                  AND parent.parent_id IS NULL
+                  AND country.code NOT LIKE '%-%'
+                <if test="countryId != null">
+                  AND country.id = #{countryId}
+                </if>
+            )
+        </if>
+    </sql>
+
     <select id="findBoardList" resultType="com.example.travlediary.dto.BoardListDto">
         SELECT
             board.id,
@@ -111,6 +146,7 @@
          END
         WHERE 1 = 1
         <include refid="boardFilters"/>
+        <include refid="courseCountryFilters"/>
         <choose>
             <when test="sort == 'oldest'">
                 ORDER BY board.createdAt ASC, board.boardType ASC, board.id ASC
@@ -138,6 +174,7 @@
         ) board
         WHERE 1 = 1
         <include refid="boardFilters"/>
+        <include refid="courseCountryFilters"/>
     </select>
 
     <select id="findBoardListByUserId" resultType="com.example.travlediary.dto.BoardListDto">

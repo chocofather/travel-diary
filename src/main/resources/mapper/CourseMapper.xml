@@ -24,6 +24,8 @@
         <result property="name" column="destination_name"/>
         <result property="shortDescription" column="short_description"/>
         <result property="regionName" column="region_name"/>
+        <result property="countryId" column="country_id"/>
+        <result property="countryName" column="country_name"/>
         <result property="imageUrl" column="image_url"/>
     </resultMap>
 
@@ -78,14 +80,20 @@
     </select>
 
     <select id="findActiveCourse" resultType="com.example.travlediary.model.Course">
-        SELECT id, user_id, title, content
-        FROM courses
-        WHERE id = #{courseId}
-          AND deleted = 0
+        SELECT c.id,
+               c.user_id,
+               c.country_id,
+               country.region_name AS country_name,
+               c.title,
+               c.content
+        FROM courses c
+        LEFT JOIN country_categories country ON country.id = c.country_id
+        WHERE c.id = #{courseId}
+          AND c.deleted = 0
     </select>
 
     <select id="findActiveCourseForUpdate" resultType="com.example.travlediary.model.Course">
-        SELECT id, user_id, title, content
+        SELECT id, user_id, country_id, title, content
         FROM courses
         WHERE id = #{courseId}
           AND deleted = 0
@@ -100,6 +108,8 @@
             COALESCE(dt.name, '이름 없는 여행지') AS destination_name,
             dt.short_description AS short_description,
             cc.region_name AS region_name,
+            course.country_id AS country_id,
+            country.region_name AS country_name,
             COALESCE(
                 (
                     SELECT di.image_url
@@ -118,11 +128,13 @@
                 )
             ) AS image_url
         FROM course_destinations cd
+        JOIN courses course ON course.id = cd.course_id
         JOIN destinations d ON d.id = cd.destination_id
         LEFT JOIN destination_translations dt
           ON dt.destination_id = d.id
          AND dt.language_code = 'ko'
         JOIN country_categories cc ON cc.id = d.region_id
+        LEFT JOIN country_categories country ON country.id = course.country_id
         WHERE cd.course_id = #{courseId}
         ORDER BY cd.visit_order ASC, cd.id ASC
     </select>
@@ -237,6 +249,7 @@
     <update id="updateCourse">
         UPDATE courses
         SET title = #{title},
+            country_id = #{countryId},
             content = #{content},
             updated_at = NOW()
         WHERE id = #{courseId}
