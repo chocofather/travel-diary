@@ -143,9 +143,12 @@
         SELECT * FROM users WHERE user_email = #{email}
     </select>
 
-    <select id="findByFullNameAndEmail" resultType="com.example.travlediary.model.User">
-        SELECT * FROM users
-        WHERE full_name = #{fullName} AND user_email = #{userEmail}
+    <select id="findActiveByEmailForUsernameRecovery"
+            parameterType="string"
+            resultType="com.example.travlediary.model.User">
+        SELECT id, username
+        FROM users
+        WHERE user_email = #{userEmail}
           AND status = 'ACTIVE'
           AND deleted_at IS NULL
     </select>
@@ -165,7 +168,7 @@
     <!-- ② 비밀번호 재설정 토큰·만료시간 저장 -->
     <update id="updateResetToken">
         UPDATE users
-        SET reset_token      = #{token},
+        SET reset_token      = #{tokenHash},
             reset_token_exp  = #{expiresAt}
         WHERE id = #{id}
     </update>
@@ -178,7 +181,7 @@
                reset_token      AS resetToken,
                reset_token_exp  AS resetTokenExp
         FROM users
-        WHERE reset_token = #{token}
+        WHERE reset_token = #{tokenHash}
           AND status = 'ACTIVE'
           AND deleted_at IS NULL
     </select>

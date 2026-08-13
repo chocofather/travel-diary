@@ -84,6 +84,53 @@ class EmailServiceImplTest {
     }
 
     @Test
+    void usernameRecoveryMailContainsTheFullUsernameAndServiceLinks() throws Exception {
+        emailService.sendUsernameRecoveryEmail(
+                "member@gmail.com",
+                "travel-member",
+                "https://travel.example/login",
+                "https://travel.example/users/find-password");
+
+        verify(mailSender).send(message);
+        message.saveChanges();
+        assertThat(message.getSubject())
+                .isEqualTo("[Travel Diary] 아이디를 안내해 드려요")
+                .doesNotContain("travel-member");
+
+        MailBodies bodies = mailBodies(message.getContent());
+        assertThat(bodies.plainText())
+                .contains("travel-member")
+                .contains("https://travel.example/login")
+                .contains("https://travel.example/users/find-password");
+        assertThat(bodies.html())
+                .contains("Travel Diary", "아이디를 안내해 드려요", "travel-member")
+                .contains("로그인하기", "비밀번호 재설정")
+                .contains("https://travel.example/login")
+                .contains("https://travel.example/users/find-password");
+    }
+
+    @Test
+    void passwordResetMailKeepsTheResetUrlAndThirtyMinuteSecurityGuidance()
+            throws Exception {
+        String resetUrl = "https://travel.example/users/reset-password?token=safe-token";
+
+        emailService.sendPasswordResetEmail("member@gmail.com", resetUrl);
+
+        verify(mailSender).send(message);
+        message.saveChanges();
+        assertThat(message.getSubject())
+                .isEqualTo("[Travel Diary] 비밀번호를 재설정해 주세요")
+                .doesNotContain("safe-token");
+
+        MailBodies bodies = mailBodies(message.getContent());
+        assertThat(bodies.plainText())
+                .contains(resetUrl, "30분", "요청하지 않았다면");
+        assertThat(bodies.html())
+                .contains("Travel Diary", "비밀번호를 재설정해 주세요")
+                .contains("비밀번호 재설정", resetUrl, "30분", "요청하지 않았다면");
+    }
+
+    @Test
     void springMailFailureIsConvertedToTheProjectDeliveryException() {
         doThrow(new MailSendException("smtp unavailable")).when(mailSender).send(message);
 

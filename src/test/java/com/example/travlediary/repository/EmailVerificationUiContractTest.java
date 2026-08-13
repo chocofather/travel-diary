@@ -31,7 +31,7 @@ class EmailVerificationUiContractTest {
         String waiting = resource("templates/verify-waiting.html");
 
         assertThat(login)
-                .contains("인증메일을 받지 못하셨나요?")
+                .contains("이메일 인증이 완료되지 않았나요?")
                 .contains("@{/users/verification/resend}");
         assertThat(waiting)
                 .contains("@{/users/verification/resend}")

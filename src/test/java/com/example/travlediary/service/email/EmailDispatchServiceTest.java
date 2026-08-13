@@ -71,6 +71,42 @@ class EmailDispatchServiceTest {
     }
 
     @Test
+    void passwordResetSmtpDeliveryRunsOutsideTheRequestThread() throws Exception {
+        CountDownLatch smtpStarted = new CountDownLatch(1);
+        CountDownLatch releaseSmtp = new CountDownLatch(1);
+        doAnswer(invocation -> {
+            smtpStarted.countDown();
+            releaseSmtp.await(2, TimeUnit.SECONDS);
+            return null;
+        }).when(emailService).sendPasswordResetEmail(anyString(), anyString());
+
+        assertTimeout(Duration.ofMillis(500), () ->
+                emailDispatchService.dispatchPasswordResetEmail(
+                        "member@gmail.com", "https://travel.example/reset"));
+        assertThat(smtpStarted.await(1, TimeUnit.SECONDS)).isTrue();
+
+        releaseSmtp.countDown();
+        verify(emailService, timeout(2_000))
+                .sendPasswordResetEmail(
+                        "member@gmail.com", "https://travel.example/reset");
+    }
+
+    @Test
+    void usernameRecoverySmtpFailureDoesNotEscapeToTheCaller() {
+        doThrow(new EmailDeliveryException("delivery failed"))
+                .when(emailService).sendUsernameRecoveryEmail(
+                        anyString(), anyString(), anyString(), anyString());
+
+        assertDoesNotThrow(() -> emailDispatchService.dispatchUsernameRecoveryEmail(
+                "member@gmail.com", "travel-member",
+                "https://travel.example/login", "https://travel.example/find-password"));
+        verify(emailService, timeout(2_000))
+                .sendUsernameRecoveryEmail(
+                        "member@gmail.com", "travel-member",
+                        "https://travel.example/login", "https://travel.example/find-password");
+    }
+
+    @Test
     void dedicatedMailExecutorIsBoundedAndNamed() {
         assertThat(mailExecutor.getCorePoolSize()).isEqualTo(2);
         assertThat(mailExecutor.getMaxPoolSize()).isEqualTo(4);

@@ -1,46 +1,65 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="UTF-8">
-  <title>아이디 찾기</title>
-  <link rel="stylesheet" type="text/css" href="/css/style.css">
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>아이디 찾기 | Travel Diary</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/login.css">
 </head>
-<body class="register-page">
-<div class="register-wrapper">
-  <div class="register-logo">
-    <a th:href="@{/}">
-      <img src="/images/logo7.png" alt="로고">
-    </a>
-  </div>
+<body class="login-page">
+<main class="login-page__main">
+  <a class="login-page__brand" th:href="@{/}" aria-label="Travel Diary 홈으로 이동">
+    <img src="/images/logo7.png" alt="Travel Diary">
+  </a>
 
-  <div class="register-container">
-    <h2>아이디 찾기</h2>
+  <section class="login-container" aria-labelledby="recoveryTitle">
+    <div th:unless="${recoveryRequested}">
+      <header class="login-header">
+        <h1 id="recoveryTitle">아이디 찾기</h1>
+        <p>가입한 이메일을 입력하면 아이디 안내 메일을 보내드려요.</p>
+      </header>
 
-    <form method="post" action="/users/find-username">
-      <!-- 이름 -->
-      <div class="input-with-icon">
-        <input type="text" name="fullName" placeholder="이름" required>
-        <span class="icon user-icon"></span>
-      </div>
+      <form method="post"
+            th:action="@{/users/find-username}"
+            class="login-form">
+        <div class="login-field">
+          <label for="findUsernameEmail">가입 이메일</label>
+          <input type="email"
+                 id="findUsernameEmail"
+                 name="userEmail"
+                 placeholder="이메일을 입력해주세요"
+                 autocomplete="email"
+                 inputmode="email"
+                 required>
+        </div>
 
-      <!-- 이메일 -->
-      <div class="input-with-icon">
-        <input type="email" name="userEmail" placeholder="이메일 주소" required>
-        <span class="icon email-icon"></span>
-      </div>
+        <button type="submit" class="login-submit">아이디 안내 메일 받기</button>
+      </form>
 
-      <!-- 결과 메시지 -->
-      <div th:if="${message}" class="alert" th:text="${message}"></div>
+      <nav class="account-recovery" aria-label="계정 복구 이동">
+        <a th:href="@{/users/find-password}">비밀번호 재설정</a>
+        <span aria-hidden="true"></span>
+        <a th:href="@{/login}">로그인으로 돌아가기</a>
+      </nav>
+    </div>
 
-      <button type="submit">아이디 찾기</button>
-    </form>
-
-    <p>
-      <a th:href="@{/users/find-password}">비밀번호가 기억나지 않으신가요?</a><br>
-      <a th:href="@{/login}">로그인으로 돌아가기</a>
-    </p>
-  </div>
-</div>
+    <div class="recovery-complete"
+         th:if="${recoveryRequested}"
+         role="status"
+         aria-live="polite">
+      <header class="login-header">
+        <h1 id="recoveryTitle">아이디 안내를 요청했어요</h1>
+        <p>입력하신 이메일과 일치하는 계정이 있다면 아이디 안내 메일을 보내드렸습니다.</p>
+      </header>
+      <p class="recovery-note">메일이 보이지 않는다면 스팸함도 확인해 주세요.</p>
+      <nav class="account-recovery" aria-label="완료 후 이동">
+        <a th:href="@{/login}">로그인으로 돌아가기</a>
+        <span aria-hidden="true"></span>
+        <a th:href="@{/users/find-password}">비밀번호 재설정</a>
+      </nav>
+    </div>
+  </section>
+</main>
 </body>
 </html>

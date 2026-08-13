@@ -3,9 +3,10 @@ package com.example.travlediary.controller.user;
 import com.example.travlediary.config.CustomLoginSuccessHandler;
 import com.example.travlediary.config.CustomLogoutSuccessHandler;
 import com.example.travlediary.dto.RegistrationForm;
+import com.example.travlediary.model.User;
 import com.example.travlediary.repository.user.UserMapper;
-import com.example.travlediary.service.email.EmailDeliveryException;
 import com.example.travlediary.service.user.RegistrationResult;
+import com.example.travlediary.service.user.PasswordPolicy;
 import com.example.travlediary.service.user.UserService;
 import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.Test;
@@ -26,6 +27,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
@@ -146,22 +148,43 @@ class UserRegistrationControllerTest {
     }
 
     @Test
-    void missingMailConfigurationIsHiddenFromUsernameRecoveryUser() throws Exception {
-        doThrow(new EmailDeliveryException("mail configuration missing"))
-                .when(userService).processFindUsername("여행자", "member@gmail.com");
-
+    void usernameRecoveryAcceptsEmailOnlyAndShowsTheGenericCompletionState() throws Exception {
         mockMvc.perform(post("/users/find-username")
-                        .param("fullName", "여행자")
                         .param("userEmail", "member@gmail.com"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/users/find-username"))
-                .andExpect(flash().attribute("error",
-                        "이메일 발송 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요."));
+                .andExpect(flash().attribute("recoveryRequested", true));
+
+        verify(userService).processFindUsername("member@gmail.com");
     }
 
     @Test
-    void missingMailConfigurationIsHiddenFromPasswordRecoveryUser() throws Exception {
-        doThrow(new EmailDeliveryException("mail configuration missing"))
+    void passwordRecoveryShowsTheGenericCompletionState() throws Exception {
+        mockMvc.perform(post("/users/find-password")
+                        .param("username", "member")
+                        .param("userEmail", "member@gmail.com"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/users/find-password"))
+                .andExpect(flash().attribute("recoveryRequested", true));
+
+        verify(userService).processResetPasswordRequest("member", "member@gmail.com");
+    }
+
+    @Test
+    void usernameRecoveryFailureUsesTheSameGenericCompletionState() throws Exception {
+        doThrow(new IllegalStateException("recovery unavailable"))
+                .when(userService).processFindUsername("member@gmail.com");
+
+        mockMvc.perform(post("/users/find-username")
+                        .param("userEmail", "member@gmail.com"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/users/find-username"))
+                .andExpect(flash().attribute("recoveryRequested", true));
+    }
+
+    @Test
+    void passwordRecoveryFailureUsesTheSameGenericCompletionState() throws Exception {
+        doThrow(new IllegalStateException("recovery unavailable"))
                 .when(userService).processResetPasswordRequest("member", "member@gmail.com");
 
         mockMvc.perform(post("/users/find-password")
@@ -169,8 +192,65 @@ class UserRegistrationControllerTest {
                         .param("userEmail", "member@gmail.com"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/users/find-password"))
-                .andExpect(flash().attribute("error",
-                        "이메일 발송 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요."));
+                .andExpect(flash().attribute("recoveryRequested", true));
+    }
+
+    @Test
+    void successfulPasswordResetRequiresConfirmationAndReturnsToLogin() throws Exception {
+        mockMvc.perform(post("/users/reset-password")
+                        .param("token", "safe-token")
+                        .param("newPassword", "StrongPassword!")
+                        .param("newPasswordConfirm", "StrongPassword!"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login?passwordChanged=true"));
+
+        verify(userService).resetPassword(
+                "safe-token", "StrongPassword!", "StrongPassword!");
+    }
+
+    @Test
+    void resetPasswordPagePassesTheRawTokenThroughTheSharedValidationPath()
+            throws Exception {
+        when(userService.validateResetToken("safe-token")).thenReturn(new User());
+
+        mockMvc.perform(get("/users/reset-password")
+                        .param("token", "safe-token"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("reset-password"))
+                .andExpect(model().attribute("token", "safe-token"))
+                .andExpect(model().attribute(
+                        "passwordPolicyMessage", PasswordPolicy.INVALID_MESSAGE));
+
+        verify(userService).validateResetToken("safe-token");
+    }
+
+    @Test
+    void mismatchedPasswordResetReturnsToTheFormWithAnError() throws Exception {
+        doThrow(new IllegalArgumentException(PasswordPolicy.MISMATCH_MESSAGE))
+                .when(userService).resetPassword(
+                        "safe-token", "StrongPassword!", "DifferentPassword!");
+
+        mockMvc.perform(post("/users/reset-password")
+                        .param("token", "safe-token")
+                        .param("newPassword", "StrongPassword!")
+                        .param("newPasswordConfirm", "DifferentPassword!"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/users/reset-password?token=safe-token"))
+                .andExpect(flash().attribute("error", PasswordPolicy.MISMATCH_MESSAGE));
+    }
+
+    @Test
+    void invalidPasswordResetTokenKeepsTheExistingLoginErrorFlow() throws Exception {
+        doThrow(new IllegalArgumentException(UserService.INVALID_RESET_TOKEN_MESSAGE))
+                .when(userService).resetPassword(
+                        "invalid-token", "StrongPassword!", "StrongPassword!");
+
+        mockMvc.perform(post("/users/reset-password")
+                        .param("token", "invalid-token")
+                        .param("newPassword", "StrongPassword!")
+                        .param("newPasswordConfirm", "StrongPassword!"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login?error=invalid_token"));
     }
 
     private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder

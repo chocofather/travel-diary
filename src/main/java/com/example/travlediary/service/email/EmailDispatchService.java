@@ -28,4 +28,40 @@ public class EmailDispatchService {
                     userId, EmailPolicy.mask(recipient), exception.getClass().getSimpleName());
         }
     }
+
+    @Async(MailAsyncConfig.MAIL_EXECUTOR)
+    public void dispatchAccountRecoveryEmail(String recipient,
+                                             String subject,
+                                             String htmlContent) {
+        try {
+            emailService.sendEmail(recipient, subject, htmlContent);
+        } catch (RuntimeException exception) {
+            log.error("Asynchronous account recovery email delivery failed: exceptionType={}",
+                    exception.getClass().getSimpleName());
+        }
+    }
+
+    @Async(MailAsyncConfig.MAIL_EXECUTOR)
+    public void dispatchUsernameRecoveryEmail(String recipient,
+                                              String username,
+                                              String loginUrl,
+                                              String passwordResetUrl) {
+        try {
+            emailService.sendUsernameRecoveryEmail(
+                    recipient, username, loginUrl, passwordResetUrl);
+        } catch (RuntimeException exception) {
+            log.error("Asynchronous username recovery email delivery failed: exceptionType={}",
+                    exception.getClass().getSimpleName());
+        }
+    }
+
+    @Async(MailAsyncConfig.MAIL_EXECUTOR)
+    public void dispatchPasswordResetEmail(String recipient, String resetUrl) {
+        try {
+            emailService.sendPasswordResetEmail(recipient, resetUrl);
+        } catch (RuntimeException exception) {
+            log.error("Asynchronous password reset email delivery failed: exceptionType={}",
+                    exception.getClass().getSimpleName());
+        }
+    }
 }

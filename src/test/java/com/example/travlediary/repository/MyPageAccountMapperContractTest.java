@@ -81,6 +81,24 @@ class MyPageAccountMapperContractTest {
                 .contains("status = 'ACTIVE'", "deleted_at IS NULL");
     }
 
+    @Test
+    void passwordResetMapperStoresAndFindsOnlyTheTokenHashParameter() throws IOException {
+        assertThat(statement(userXml(), "update", "updateResetToken"))
+                .contains("reset_token      = #{tokenHash}")
+                .doesNotContain("#{token}");
+        assertThat(statement(userXml(), "select", "findByResetToken"))
+                .contains("reset_token = #{tokenHash}")
+                .doesNotContain("#{token}");
+    }
+
+    @Test
+    void usernameRecoveryUsesEmailOnlyAndExcludesInactiveOrDeletedAccounts() throws IOException {
+        assertThat(statement(userXml(), "select", "findActiveByEmailForUsernameRecovery"))
+                .contains("user_email = #{userEmail}", "status = 'ACTIVE'",
+                        "deleted_at IS NULL")
+                .doesNotContain("full_name");
+    }
+
     private String userXml() throws IOException {
         return resource("mapper/UserMapper.xml");
     }

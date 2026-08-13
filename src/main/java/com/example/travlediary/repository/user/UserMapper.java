@@ -71,17 +71,16 @@ public interface UserMapper {
                                  @Param("cooldownCutoff") LocalDateTime cooldownCutoff);
 
     /* ---------- 아이디/비밀번호 찾기 ---------- */
-    User findByFullNameAndEmail(@Param("fullName") String fullName,
-                                @Param("userEmail") String userEmail);
+    User findActiveByEmailForUsernameRecovery(@Param("userEmail") String userEmail);
 
     User findByUsernameAndEmail(@Param("username") String username,
                                 @Param("userEmail") String userEmail);
 
     /* ---------- 재설정 토큰 ---------- */
     void updateResetToken(@Param("id") Long id,
-                          @Param("token") String token,
+                          @Param("tokenHash") String tokenHash,
                           @Param("expiresAt") LocalDateTime expiresAt);
 
-    User findByResetToken(String token);
+    User findByResetToken(@Param("tokenHash") String tokenHash);
     void clearResetToken(Long id);                 // 이미 Long ✔
 }

@@ -1,8 +1,8 @@
 package com.example.travlediary.controller.user;
 
 import com.example.travlediary.dto.RegistrationForm;
-import com.example.travlediary.service.email.EmailDeliveryException;
 import com.example.travlediary.service.user.EmailPolicy;
+import com.example.travlediary.service.user.PasswordPolicy;
 import com.example.travlediary.service.user.RegistrationResult;
 import com.example.travlediary.service.user.RegistrationValidationException;
 import com.example.travlediary.service.user.UserService;
@@ -124,20 +124,15 @@ public class UserController {
     }
 
     @PostMapping("/find-username")
-    public String findUsername(@RequestParam String fullName,
-                               @RequestParam String userEmail,
+    public String findUsername(@RequestParam String userEmail,
                                RedirectAttributes ra) {  // POST 처리
         try {
-            userService.processFindUsername(fullName, userEmail);
-            ra.addFlashAttribute("message", "아이디가 이메일로 전송되었습니다.");
-        } catch (EmailDeliveryException exception) {
-            log.error("Username recovery email delivery failed: exceptionType={}",
+            userService.processFindUsername(userEmail);
+        } catch (RuntimeException exception) {
+            log.error("Username recovery request could not be completed: exceptionType={}",
                     exception.getClass().getSimpleName());
-            ra.addFlashAttribute("error",
-                    "이메일 발송 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.");
-        } catch (Exception e) {
-            ra.addFlashAttribute("error", e.getMessage());
         }
+        ra.addFlashAttribute("recoveryRequested", true);
         return "redirect:/users/find-username";
     }
 
@@ -154,15 +149,11 @@ public class UserController {
                                RedirectAttributes ra) {  // POST 처리
         try {
             userService.processResetPasswordRequest(username, userEmail);
-            ra.addFlashAttribute("message", "재설정 링크가 이메일로 전송되었습니다.");
-        } catch (EmailDeliveryException exception) {
-            log.error("Password reset email delivery failed: exceptionType={}",
+        } catch (RuntimeException exception) {
+            log.error("Password recovery request could not be completed: exceptionType={}",
                     exception.getClass().getSimpleName());
-            ra.addFlashAttribute("error",
-                    "이메일 발송 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.");
-        } catch (Exception e) {
-            ra.addFlashAttribute("error", e.getMessage());
         }
+        ra.addFlashAttribute("recoveryRequested", true);
         return "redirect:/users/find-password";
     }
 
@@ -174,6 +165,7 @@ public class UserController {
             return "redirect:/login?error=invalid_token";
         }
         m.addAttribute("token", token);         // hidden 으로 전달
+        m.addAttribute("passwordPolicyMessage", PasswordPolicy.INVALID_MESSAGE);
         return "reset-password";
     }
 
@@ -182,13 +174,18 @@ public class UserController {
     @PostMapping("/reset-password")
     public String doResetPassword(@RequestParam String token,
                                   @RequestParam String newPassword,
+                                  @RequestParam String newPasswordConfirm,
                                   RedirectAttributes ra) {
         try {
-            userService.resetPassword(token, newPassword);
-            ra.addFlashAttribute("resetSuccess", true);
-        } catch (Exception e) {
-            ra.addFlashAttribute("error", e.getMessage());
+            userService.resetPassword(token, newPassword, newPasswordConfirm);
+            return "redirect:/login?passwordChanged=true";
+        } catch (IllegalArgumentException exception) {
+            if (UserService.INVALID_RESET_TOKEN_MESSAGE.equals(exception.getMessage())) {
+                return "redirect:/login?error=invalid_token";
+            }
+            ra.addFlashAttribute("error", exception.getMessage());
+            ra.addAttribute("token", token);
+            return "redirect:/users/reset-password";
         }
-        return "redirect:/login";
     }
 }

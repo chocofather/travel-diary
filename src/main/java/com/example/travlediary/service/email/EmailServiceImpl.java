@@ -23,6 +23,8 @@ import java.util.Locale;
 public class EmailServiceImpl implements EmailService {
 
     static final String VERIFICATION_SUBJECT = "[Travel Diary] 이메일 인증을 완료해주세요";
+    static final String USERNAME_RECOVERY_SUBJECT = "[Travel Diary] 아이디를 안내해 드려요";
+    static final String PASSWORD_RESET_SUBJECT = "[Travel Diary] 비밀번호를 재설정해 주세요";
     private static final String SENDER_NAME = "Travel Diary";
     private static final String MISSING_CONFIGURATION_MESSAGE =
             "메일 발송 설정이 구성되지 않았습니다. MAIL_USERNAME / MAIL_PASSWORD 환경변수를 확인하세요.";
@@ -67,6 +69,51 @@ public class EmailServiceImpl implements EmailService {
                 """.formatted(verificationUrl);
 
         sendMimeMessage(to, VERIFICATION_SUBJECT, plainText, html);
+    }
+
+    @Override
+    public void sendUsernameRecoveryEmail(String to, String username,
+                                          String loginUrl, String passwordResetUrl) {
+        Context context = new Context(Locale.KOREAN);
+        context.setVariable("username", username);
+        context.setVariable("loginUrl", loginUrl);
+        context.setVariable("passwordResetUrl", passwordResetUrl);
+
+        String html = templateEngine.process("email/username-recovery-email", context);
+        String plainText = """
+                Travel Diary 아이디 안내
+
+                요청하신 계정의 아이디를 안내해 드립니다.
+                아이디: %s
+
+                로그인: %s
+                비밀번호 재설정: %s
+
+                본인이 요청하지 않았다면 이 메일을 무시해주세요.
+                """.formatted(username, loginUrl, passwordResetUrl);
+
+        sendMimeMessage(to, USERNAME_RECOVERY_SUBJECT, plainText, html);
+    }
+
+    @Override
+    public void sendPasswordResetEmail(String to, String resetUrl) {
+        Context context = new Context(Locale.KOREAN);
+        context.setVariable("resetUrl", resetUrl);
+        context.setVariable("validMinutes", 30);
+
+        String html = templateEngine.process("email/password-reset-email", context);
+        String plainText = """
+                Travel Diary 비밀번호 재설정
+
+                비밀번호 재설정 요청을 받았습니다.
+                아래 주소에서 30분 이내에 새 비밀번호를 설정해주세요.
+
+                %s
+
+                본인이 요청하지 않았다면 이 메일을 무시해주세요.
+                """.formatted(resetUrl);
+
+        sendMimeMessage(to, PASSWORD_RESET_SUBJECT, plainText, html);
     }
 
     @Override

@@ -5,7 +5,7 @@ import com.example.travlediary.model.User;
 import com.example.travlediary.model.UserRole;
 import com.example.travlediary.model.UserStatus;
 import com.example.travlediary.repository.user.UserMapper;
-import com.example.travlediary.service.email.EmailService;
+import com.example.travlediary.service.email.EmailDispatchService;
 import com.example.travlediary.service.email.EmailVerificationService;
 import com.example.travlediary.service.file.FileUploadService;
 import org.slf4j.Logger;
@@ -23,12 +23,16 @@ import java.util.UUID;
 
 @Service
 public class UserService {
+    public static final String INVALID_RESET_TOKEN_MESSAGE =
+            "만료되었거나 잘못된 토큰입니다.";
+    public static final String SAME_AS_CURRENT_PASSWORD_MESSAGE =
+            "현재 사용 중인 비밀번호와 다른 비밀번호를 입력해 주세요.";
     private static final Logger log = LoggerFactory.getLogger(UserService.class);
 
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
     private final FileUploadService fileUploadService;
-    private final EmailService emailService;
+    private final EmailDispatchService emailDispatchService;
     private final EmailVerificationService emailVerificationService;
 
     @Value("${custom.server-url}")
@@ -37,12 +41,12 @@ public class UserService {
     @Autowired
     public UserService(UserMapper userMapper, PasswordEncoder passwordEncoder,
                        FileUploadService fileUploadService,
-                       EmailService emailService,
+                       EmailDispatchService emailDispatchService,
                        EmailVerificationService emailVerificationService) {
         this.userMapper = userMapper;
         this.passwordEncoder = passwordEncoder;
         this.fileUploadService = fileUploadService;
-        this.emailService = emailService;
+        this.emailDispatchService = emailDispatchService;
         this.emailVerificationService = emailVerificationService;
     }
 
@@ -175,71 +179,78 @@ public class UserService {
     }
 
     /* ================= [ 아이디 찾기 메일 ] ================= */
-    public void processFindUsername(String fullName, String email) {
-        User u = userMapper.findByFullNameAndEmail(fullName, email);
-        if (u == null) throw new IllegalArgumentException("정보가 일치하지 않습니다.");
+    public void processFindUsername(String email) {
+        String normalizedEmail = EmailPolicy.normalizeAndValidate(email);
+        User u = userMapper.findActiveByEmailForUsernameRecovery(normalizedEmail);
+        if (u == null) {
+            return;
+        }
 
-        String html = """
-          <h3>아이디 찾기 결과</h3>
-          <p>회원님의 아이디는 <strong>%s</strong> 입니다.</p>
-          <hr>
-          <p>비밀번호가 기억나지 않으시면
-             <a href="%s/users/find-password">여기</a>를 클릭해 재설정하세요.</p>
-        """.formatted(u.getUsername(), serverUrl);
-
-        emailService.sendEmail(email, "[여행일기] 아이디 안내", html);
+        dispatchUsernameRecoveryEmail(normalizedEmail, u.getUsername());
     }
 
     /* =========== [ 비밀번호 재설정 링크 발송 ] =========== */
     public void processResetPasswordRequest(String username, String email) {
-        User u = userMapper.findByUsernameAndEmail(username, email);
-        if (u == null) throw new IllegalArgumentException("정보가 일치하지 않습니다.");
+        String normalizedEmail = EmailPolicy.normalizeAndValidate(email);
+        User u = userMapper.findByUsernameAndEmail(username.strip(), normalizedEmail);
+        if (u == null) {
+            return;
+        }
 
-        String token = UUID.randomUUID().toString();
+        String rawToken = UUID.randomUUID().toString();
+        String tokenHash = ResetTokenHasher.hash(rawToken);
         LocalDateTime exp = LocalDateTime.now().plusMinutes(30);
 
-        userMapper.updateResetToken(u.getId(), token, exp);
+        userMapper.updateResetToken(u.getId(), tokenHash, exp);
 
-        String link = serverUrl + "/users/reset-password?token=" + token;
-        String html = """
-          <h3 style="margin:0 0 12px 0;font-size:20px;font-weight:700;color:#222;">비밀번호 재설정</h3>
-        
-          <p style="margin:0 0 24px 0;font-size:15px;line-height:1.6;color:#555;">
-             아래 버튼을 눌러 <strong>30분 이내</strong>에 새 비밀번호를 설정하세요.
-          </p>
-        
-          <p style="margin:0 0 32px 0;">
-             <a href="%s"
-                style="display:inline-block;
-                       padding:14px 32px;
-                       background:#0066cc;             /* 메인 색상 */
-                       color:#ffffff !important;        /* 글자색 */
-                       font-size:16px;
-                       font-weight:600;
-                       text-decoration:none;
-                       border-radius:6px;               /* 둥글게 */
-                       box-shadow:0 3px 8px rgba(0,0,0,.15);
-                       transition:background .2s ease;">
-                비밀번호 재설정
-             </a>
-          </p>
-          """.formatted(link);
-        emailService.sendEmail(email, "[여행일기] 비밀번호 재설정 링크", html);
+        String link = serverUrl + "/users/reset-password?token=" + rawToken;
+        dispatchPasswordResetEmail(normalizedEmail, link);
+    }
+
+    private void dispatchUsernameRecoveryEmail(String recipient, String username) {
+        try {
+            emailDispatchService.dispatchUsernameRecoveryEmail(
+                    recipient,
+                    username,
+                    serverUrl + "/login",
+                    serverUrl + "/users/find-password");
+        } catch (RuntimeException exception) {
+            log.error("Username recovery email could not be scheduled: exceptionType={}",
+                    exception.getClass().getSimpleName());
+        }
+    }
+
+    private void dispatchPasswordResetEmail(String recipient, String resetUrl) {
+        try {
+            emailDispatchService.dispatchPasswordResetEmail(recipient, resetUrl);
+        } catch (RuntimeException exception) {
+            log.error("Password reset email could not be scheduled: exceptionType={}",
+                    exception.getClass().getSimpleName());
+        }
     }
 
     /* =========== [ 토큰 검증 ] =========== */
-    public User validateResetToken(String token) {
-        User u = userMapper.findByResetToken(token);
+    public User validateResetToken(String rawToken) {
+        String tokenHash = ResetTokenHasher.hash(rawToken);
+        User u = userMapper.findByResetToken(tokenHash);
         if (u == null) return null;
         return u.getResetTokenExp().isAfter(LocalDateTime.now()) ? u : null;
     }
 
     /* =========== [ 실제 비밀번호 변경 ] =========== */
-    public void resetPassword(String token, String rawPw) {
-        User u = validateResetToken(token);
-        if (u == null) throw new IllegalArgumentException("만료되었거나 잘못된 토큰입니다.");
+    public void resetPassword(String rawToken, String rawPw) {
+        resetPassword(rawToken, rawPw, rawPw);
+    }
+
+    public void resetPassword(String rawToken, String rawPw, String passwordConfirmation) {
+        User u = validateResetToken(rawToken);
+        if (u == null) throw new IllegalArgumentException(INVALID_RESET_TOKEN_MESSAGE);
 
         PasswordPolicy.validate(rawPw);
+        PasswordPolicy.validateConfirmation(rawPw, passwordConfirmation);
+        if (passwordEncoder.matches(rawPw, u.getUserPassword())) {
+            throw new IllegalArgumentException(SAME_AS_CURRENT_PASSWORD_MESSAGE);
+        }
         String encPw = passwordEncoder.encode(rawPw);
         userMapper.updateUserPassword(u.getId(), encPw);
         userMapper.clearResetToken(u.getId());   // 1회 사용 후 폐기

@@ -2,7 +2,7 @@ package com.example.travlediary.service.user;
 
 import com.example.travlediary.dto.RegistrationForm;
 import com.example.travlediary.repository.user.UserMapper;
-import com.example.travlediary.service.email.EmailService;
+import com.example.travlediary.service.email.EmailDispatchService;
 import com.example.travlediary.service.email.EmailVerificationService;
 import com.example.travlediary.service.file.FileUploadService;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,7 +24,7 @@ class UserServiceNicknameValidationTest {
     @Mock private UserMapper userMapper;
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private FileUploadService fileUploadService;
-    @Mock private EmailService emailService;
+    @Mock private EmailDispatchService emailDispatchService;
     @Mock private EmailVerificationService emailVerificationService;
 
     private UserService userService;
@@ -32,7 +32,7 @@ class UserServiceNicknameValidationTest {
     @BeforeEach
     void setUp() {
         userService = new UserService(userMapper, passwordEncoder, fileUploadService,
-                emailService, emailVerificationService);
+                emailDispatchService, emailVerificationService);
     }
 
     @Test

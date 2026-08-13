@@ -47,7 +47,7 @@ function deleteCookie(name) {
     document.cookie = name + "=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
 }
 
-// 비밀번호 숨기기
+// 비밀번호 표시/숨김
 $(document).on("click", ".toggle-password", function () {
     const targetSelector = $(this).data("toggle");
     const input = $(targetSelector);
@@ -58,4 +58,26 @@ $(document).on("click", ".toggle-password", function () {
     // 아이콘 상태 토글
     $(this).toggleClass("show", isPassword);
     $(this).toggleClass("hide", !isPassword);
+    $(this).attr("aria-pressed", isPassword);
+    $(this).attr("aria-label", isPassword ? "비밀번호 숨기기" : "비밀번호 표시");
+});
+
+// 새 비밀번호와 확인 값 일치 여부를 브라우저에서도 안내
+$(document).ready(function () {
+    const password = document.getElementById("newPassword");
+    const passwordConfirmation = document.getElementById("newPasswordConfirm");
+    if (!password || !passwordConfirmation) {
+        return;
+    }
+
+    const validatePasswordConfirmation = function () {
+        const mismatched = passwordConfirmation.value.length > 0
+            && password.value !== passwordConfirmation.value;
+        passwordConfirmation.setCustomValidity(
+            mismatched ? "새 비밀번호가 일치하지 않습니다." : "");
+        passwordConfirmation.setAttribute("aria-invalid", String(mismatched));
+    };
+
+    password.addEventListener("input", validatePasswordConfirmation);
+    passwordConfirmation.addEventListener("input", validatePasswordConfirmation);
 });
