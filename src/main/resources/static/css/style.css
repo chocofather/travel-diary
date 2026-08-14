@@ -27,9 +27,9 @@ body {
 
 
 :root {
-    --columns: 6; /* 메뉴 컬럼 개수 */
+    --columns: 7; /* 메뉴 컬럼 개수 */
     --gap: 0px;
-    --menu-width: 700px; /* 각 열 200px로 넓히고 싶다면 여기도 조정 */
+    --menu-width: 820px;
 }
 
 /* ---------- Navigation Bar ---------- */

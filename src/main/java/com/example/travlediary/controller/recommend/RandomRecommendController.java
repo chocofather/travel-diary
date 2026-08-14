@@ -1,7 +1,9 @@
 package com.example.travlediary.controller.recommend;
 
 import com.example.travlediary.dto.RandomDestinationDto;
+import com.example.travlediary.dto.RandomTravelResultDto;
 import com.example.travlediary.service.recommend.RandomRecommendService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,5 +24,18 @@ public class RandomRecommendController {
             @PathVariable Long regionId,
             @RequestParam(defaultValue = "5", name = "size") int limit) { // 쿼리 파라미터도 size로 맞춰줌
         return randomRecommendService.getRandomDestinationsByRegion(regionId, limit);
+    }
+
+    @GetMapping
+    public ResponseEntity<RandomTravelResultDto> getRandomTravelByScope(
+            @RequestParam String scope,
+            @RequestParam(required = false) Long excludeRegionId) {
+        try {
+            return randomRecommendService.getRandomTravelByScope(scope, excludeRegionId)
+                    .map(ResponseEntity::ok)
+                    .orElseGet(() -> ResponseEntity.noContent().build());
+        } catch (IllegalArgumentException exception) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 }

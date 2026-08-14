@@ -8,4 +8,10 @@ public class RandomDestinationDto {
     private String destinationName;
     private String shortDescription;
     private String imageUrl;
+    private String countryName;
+    private String regionName;
+
+    public String getDetailUrl() {
+        return destinationId == null ? null : "/destinations/" + destinationId;
+    }
 }

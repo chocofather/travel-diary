@@ -85,7 +85,7 @@ public class SecurityConfig {
 
                         /* === 비회원도 접근 가능한 공개 영역 === */
                         .requestMatchers(
-                                "/", "/home",
+                                "/", "/home", "/random-travel",
                                 "/login", "/logout",
                                 "/register", "/users/register",
                                 "/users/verify", "/users/register/verify-waiting",

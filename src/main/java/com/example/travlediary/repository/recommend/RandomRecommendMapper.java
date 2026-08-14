@@ -1,6 +1,7 @@
 package com.example.travlediary.repository.recommend;
 
 import com.example.travlediary.dto.RandomDestinationDto;
+import com.example.travlediary.dto.RandomTravelRegionDto;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -19,5 +20,16 @@ public interface RandomRecommendMapper {
             @Param("regionIds") List<Long> regionIds,
             @Param("limit") int limit
     );
-}
 
+    RandomTravelRegionDto findRandomEligibleCountry(
+            @Param("countryIds") List<Long> countryIds,
+            @Param("excludeRegionId") Long excludeRegionId
+    );
+
+    RandomTravelRegionDto findRandomEligibleChildRegion(
+            @Param("countryId") Long countryId,
+            @Param("excludeRegionId") Long excludeRegionId
+    );
+
+    List<Long> findAllVisibleRegionIdsUnder(@Param("regionId") Long regionId);
+}

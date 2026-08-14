@@ -86,16 +86,18 @@ public class CountryCategoryService {
         return mapper.selectByParentIdAndDepth(parentId, depth);
     }
 
-    // 8. [국내] 대한민국 root id만 반환 (통일된 List<Long> 타입)
+    // 8. [국내] 현재 계층에서 최상위에 놓인 실제 국가 root id 반환
     public List<Long> getDomesticRootIds() {
-        return List.of(7L); // 대한민국 ID
+        return getRootCountries().stream()
+                .map(CountryCategory::getId)
+                .toList();
     }
 
     // 9. [해외] 대륙 루트 id 복수 반환
     public List<Long> getOverseasRootIds() {
-        // 아시아, 유럽, 북미, 남미, 아프리카, 오세아니아 등
+        Set<Long> domesticRootIds = new HashSet<>(getDomesticRootIds());
         return mapper.findByDepth(1, null).stream()
-                .filter(c -> !c.getId().equals(7L)) // 대한민국(국내)만 제외
+                .filter(category -> !domesticRootIds.contains(category.getId()))
                 .map(CountryCategory::getId)
                 .toList();
     }
@@ -110,10 +112,12 @@ public class CountryCategoryService {
         return mapper.findByDepth(depth, parentId);
     }
 
-    // 대한민국 뽑기
+    // 현재 구조상 최상위에 놓인 실제 국가(대한민국) 뽑기
     public Long getKoreaRootId() {
-        CountryCategory korea = mapper.selectByRegionNameAndDepth("대한민국", 1);
-        return korea != null ? korea.getId() : null;
+        return getRootCountries().stream()
+                .map(CountryCategory::getId)
+                .findFirst()
+                .orElse(null);
     }
 
     // region_id로 code 반환
@@ -122,11 +126,16 @@ public class CountryCategoryService {
     }
 
     public List<CountryCategory> getOverseasContinentRegions() {
-        // 기존 하드코딩 or 필요시 is_domestic 컬럼 추가해 분기
+        Set<Long> domesticRootIds = new HashSet<>(getDomesticRootIds());
         return mapper.findByDepth(1, null).stream()
-                .filter(cat -> !cat.getId().equals(7L))
+                .filter(category -> !domesticRootIds.contains(category.getId()))
                 .toList();
-        // 또는 id != 7L
+    }
+
+    private List<CountryCategory> getRootCountries() {
+        return getCourseCountries().stream()
+                .filter(country -> country.getParentId() == null)
+                .toList();
     }
 
     public List<CountryCategory> getRegionsByIds(List<Long> ids) {

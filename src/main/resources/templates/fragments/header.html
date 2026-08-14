@@ -60,6 +60,7 @@
         <li class="menu-item"><a href="/destinations?type=overseas">해외</a></li>
         <li class="menu-item"><a href="/board/list">여행 커뮤니티</a></li>
         <li class="menu-item"><a href="/travel-info">여행정보</a></li>
+        <li class="menu-item"><a href="/random-travel">여행기록</a></li>
         <li class="menu-item"><a href="/support/notices">고객센터</a></li>
         <li class="menu-item"><a th:href="@{/events}">이벤트</a></li>
       </ul>
@@ -68,8 +69,8 @@
     <!-- 서브메뉴 -->
     <div class="global-submenu">
       <div class="submenu-grid">
-        <div class="submenu-col"></div>
-        <div class="submenu-col"></div>
+        <div class="submenu-col" aria-hidden="true"></div>
+        <div class="submenu-col" aria-hidden="true"></div>
         <div class="submenu-col">
           <ul>
             <li><a href="/board/list?boardType=post&postType=question">여행 질문</a></li>
@@ -83,6 +84,11 @@
             <li><a href="/travel-info?scope=DOMESTIC">국내정보</a></li>
             <li><a href="/travel-info?scope=INTERNATIONAL">해외정보</a></li>
             <li><a href="/travel-info?contentType=FESTIVAL">축제 정보</a></li>
+          </ul>
+        </div>
+        <div class="submenu-col">
+          <ul>
+            <li><a href="/random-travel">랜덤 여행</a></li>
           </ul>
         </div>
         <div class="submenu-col">

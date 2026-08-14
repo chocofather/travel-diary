@@ -10,6 +10,15 @@
         <result property="destinationName" column="name"/>
         <result property="shortDescription" column="short_description"/>
         <result property="imageUrl" column="image_url"/>
+        <result property="countryName" column="country_name"/>
+        <result property="regionName" column="region_name"/>
+    </resultMap>
+
+    <resultMap id="RandomTravelRegionDtoMap" type="com.example.travlediary.dto.RandomTravelRegionDto">
+        <id property="regionId" column="region_id"/>
+        <result property="regionName" column="region_name"/>
+        <result property="countryId" column="country_id"/>
+        <result property="countryName" column="country_name"/>
     </resultMap>
 
     <!-- regionId 하나로 랜덤 -->
@@ -29,19 +38,199 @@
 
     <!-- 여러 regionId로 랜덤 -->
     <select id="findRandomByRegionIds" resultMap="RandomDestinationDtoMap">
+        WITH RECURSIVE destination_regions AS (
+            SELECT
+                d.id AS destination_id,
+                region.id AS region_id,
+                region.parent_id,
+                region.region_name,
+                region.code,
+                region.is_visible,
+                SUBSTRING_INDEX(region.code, '-', 1) AS country_code
+            FROM destinations d
+            JOIN country_categories region ON region.id = d.region_id
+            WHERE d.region_id IN
+            <foreach collection="regionIds" item="id" open="(" separator="," close=")">
+                #{id}
+            </foreach>
+
+            UNION ALL
+
+            SELECT
+                destination_regions.destination_id,
+                parent.id AS region_id,
+                parent.parent_id,
+                parent.region_name,
+                parent.code,
+                parent.is_visible,
+                destination_regions.country_code
+            FROM destination_regions
+            JOIN country_categories parent ON parent.id = destination_regions.parent_id
+        ),
+        destination_countries AS (
+            SELECT
+                destination_regions.destination_id,
+                destination_regions.region_name AS country_name
+            FROM destination_regions
+            WHERE destination_regions.code = destination_regions.country_code
+              AND (
+                  destination_regions.parent_id IS NOT NULL
+                  OR EXISTS (
+                      SELECT 1
+                      FROM country_categories country_child
+                      WHERE country_child.parent_id = destination_regions.region_id
+                        AND country_child.code LIKE CONCAT(destination_regions.code, '-%')
+                  )
+              )
+        )
         SELECT
-        d.id AS destination_id,
-        dt.name,
-        dt.short_description,
-        di.image_url
+            d.id AS destination_id,
+            dt.name,
+            dt.short_description,
+            di.image_url,
+            destination_countries.country_name,
+            region.region_name
         FROM destinations d
         JOIN destination_translations dt ON dt.destination_id = d.id AND dt.language_code = 'ko'
+        JOIN country_categories region ON region.id = d.region_id
+        JOIN destination_countries ON destination_countries.destination_id = d.id
         LEFT JOIN destination_images di ON di.destination_id = d.id AND di.is_main = 1
         WHERE d.region_id IN
         <foreach collection="regionIds" item="id" open="(" separator="," close=")">
             #{id}
         </foreach>
+        AND NOT EXISTS (
+            SELECT 1
+            FROM destination_regions hidden_path
+            WHERE hidden_path.destination_id = d.id
+              AND COALESCE(hidden_path.is_visible, 1) != 1
+        )
         ORDER BY RAND()
         LIMIT #{limit}
+    </select>
+
+    <select id="findRandomEligibleCountry" resultMap="RandomTravelRegionDtoMap">
+        WITH RECURSIVE country_regions AS (
+            SELECT
+                country.id AS country_id,
+                country.id AS region_id
+            FROM country_categories country
+            WHERE country.id IN
+            <foreach collection="countryIds" item="id" open="(" separator="," close=")">
+                #{id}
+            </foreach>
+              AND country.is_visible = 1
+
+            UNION ALL
+
+            SELECT
+                country_regions.country_id,
+                child.id AS region_id
+            FROM country_regions
+            JOIN country_categories child
+              ON child.parent_id = country_regions.region_id
+             AND child.is_visible = 1
+        ),
+        eligible_countries AS (
+            SELECT DISTINCT
+                country.id AS country_id,
+                country.region_name AS country_name
+            FROM country_categories country
+            JOIN country_regions
+              ON country_regions.country_id = country.id
+            JOIN destinations destination
+              ON destination.region_id = country_regions.region_id
+            JOIN destination_translations translation
+              ON translation.destination_id = destination.id
+             AND translation.language_code = 'ko'
+            WHERE country.id IN
+            <foreach collection="countryIds" item="id" open="(" separator="," close=")">
+                #{id}
+            </foreach>
+        )
+        SELECT
+            eligible_countries.country_id,
+            eligible_countries.country_name,
+            eligible_countries.country_id AS region_id,
+            eligible_countries.country_name AS region_name
+        FROM eligible_countries
+        ORDER BY
+        <if test="excludeRegionId != null">
+            CASE WHEN EXISTS (
+                SELECT 1
+                FROM country_regions excluded_region
+                WHERE excluded_region.country_id = eligible_countries.country_id
+                  AND excluded_region.region_id = #{excludeRegionId}
+            ) THEN 1 ELSE 0 END,
+        </if>
+        RAND()
+        LIMIT 1
+    </select>
+
+    <select id="findRandomEligibleChildRegion" resultMap="RandomTravelRegionDtoMap">
+        WITH RECURSIVE child_regions AS (
+            SELECT
+                child.id AS candidate_id,
+                child.id AS region_id
+            FROM country_categories child
+            WHERE child.parent_id = #{countryId}
+              AND child.is_visible = 1
+
+            UNION ALL
+
+            SELECT
+                child_regions.candidate_id,
+                descendant.id AS region_id
+            FROM child_regions
+            JOIN country_categories descendant
+              ON descendant.parent_id = child_regions.region_id
+             AND descendant.is_visible = 1
+        ),
+        eligible_children AS (
+            SELECT DISTINCT
+                child.id AS region_id,
+                child.region_name AS region_name
+            FROM country_categories child
+            JOIN child_regions
+              ON child_regions.candidate_id = child.id
+            JOIN destinations destination
+              ON destination.region_id = child_regions.region_id
+            JOIN destination_translations translation
+              ON translation.destination_id = destination.id
+             AND translation.language_code = 'ko'
+            WHERE child.parent_id = #{countryId}
+              AND child.is_visible = 1
+        )
+        SELECT
+            country.id AS country_id,
+            country.region_name AS country_name,
+            eligible_children.region_id,
+            eligible_children.region_name
+        FROM eligible_children
+        JOIN country_categories country ON country.id = #{countryId}
+        ORDER BY
+        <if test="excludeRegionId != null">
+            CASE WHEN eligible_children.region_id = #{excludeRegionId} THEN 1 ELSE 0 END,
+        </if>
+        RAND()
+        LIMIT 1
+    </select>
+
+    <select id="findAllVisibleRegionIdsUnder" resultType="long">
+        WITH RECURSIVE region_tree AS (
+            SELECT id
+            FROM country_categories
+            WHERE id = #{regionId}
+              AND is_visible = 1
+
+            UNION ALL
+
+            SELECT child.id
+            FROM country_categories child
+            JOIN region_tree ON child.parent_id = region_tree.id
+            WHERE child.is_visible = 1
+        )
+        SELECT id
+        FROM region_tree
     </select>
 </mapper>
