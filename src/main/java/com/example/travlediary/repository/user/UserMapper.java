@@ -1,6 +1,8 @@
 package com.example.travlediary.repository.user;
 
 import com.example.travlediary.dto.AccountDetailsDto;
+import com.example.travlediary.dto.AdminUserDetailDto;
+import com.example.travlediary.dto.AdminUserListItemDto;
 import com.example.travlediary.dto.MyPageProfileDto;
 import com.example.travlediary.dto.PublicUserProfileDto;
 import com.example.travlediary.model.User;
@@ -11,6 +13,7 @@ import org.apache.ibatis.annotations.Param;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Mapper
 public interface UserMapper {
@@ -26,6 +29,17 @@ public interface UserMapper {
     AccountDetailsDto findAccountDetailsById(@Param("id") Long id);
     User findActiveAccountSecurityById(@Param("id") Long id);
     User findActiveAccountSecurityByIdForUpdate(@Param("id") Long id);
+
+    /* ---------- 관리자 회원 조회 ---------- */
+    long countAdminUsers(@Param("keyword") String keyword,
+                         @Param("status") UserStatus status);
+
+    List<AdminUserListItemDto> findAdminUsers(@Param("keyword") String keyword,
+                                              @Param("status") UserStatus status,
+                                              @Param("offset") long offset,
+                                              @Param("limit") int limit);
+
+    AdminUserDetailDto findAdminUserById(@Param("id") Long id);
 
     /* ---------- 관리자 역할 변경 ---------- */
     void updateUserRole(@Param("id") Long id,      // ★ Integer → Long

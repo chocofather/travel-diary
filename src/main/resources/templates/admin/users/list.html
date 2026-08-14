@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'users')}">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/admin-users.css">
+</th:block>
+<th:block th:fragment="body">
+  <section class="admin-page-section admin-users-page">
+    <header class="admin-page-header">
+      <div class="admin-page-heading">
+        <h1 class="admin-page-title">회원 관리</h1>
+        <p class="admin-page-description">가입한 회원과 계정 상태를 확인합니다.</p>
+      </div>
+    </header>
+
+    <div class="admin-filter-card">
+      <form th:action="@{/admin/users}" method="get" class="admin-filter-form">
+        <label class="admin-filter-field admin-user-search-field">
+          <span>검색</span>
+          <input type="text" name="keyword" class="admin-input"
+                 th:value="${keyword}" maxlength="100"
+                 placeholder="아이디 · 닉네임 · 이메일">
+        </label>
+
+        <label class="admin-filter-field">
+          <span>회원 상태</span>
+          <select name="status" class="admin-select">
+            <option value="">전체</option>
+            <option th:each="userStatus : ${statuses}"
+                    th:value="${userStatus.name()}"
+                    th:selected="${currentStatus == userStatus.name()}"
+                    th:text="${userStatus.displayName}">정상</option>
+          </select>
+        </label>
+
+        <div class="admin-filter-actions">
+          <button type="submit" class="admin-btn is-primary">조회</button>
+          <a th:href="@{/admin/users}" class="admin-btn">초기화</a>
+        </div>
+      </form>
+    </div>
+
+    <p class="admin-user-result-count">
+      전체 <strong th:text="${totalCount}">0</strong>명
+    </p>
+
+    <div class="admin-card is-table-card">
+      <div class="admin-table-wrapper">
+        <table class="admin-table admin-users-table">
+          <thead>
+          <tr>
+            <th>아이디</th>
+            <th>닉네임</th>
+            <th>이메일</th>
+            <th>권한</th>
+            <th>회원 상태</th>
+            <th>가입일</th>
+            <th>관리</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr th:each="user : ${users}">
+            <td class="admin-user-username">
+              <a th:href="@{/admin/users/{id}(id=${user.id})}"
+                 th:text="${user.username}">travler</a>
+            </td>
+            <td th:text="${user.nickname}">여행자</td>
+            <td class="admin-user-email" th:text="${user.userEmail}">user@example.com</td>
+            <td>
+              <span class="admin-user-role"
+                    th:classappend="${user.admin} ? ' is-admin'"
+                    th:text="${user.admin} ? '관리자' : '일반회원'">일반회원</span>
+            </td>
+            <td>
+              <span class="admin-user-status"
+                    th:classappend="|is-${#strings.toLowerCase(user.status.name())}|"
+                    th:text="${user.status.displayName}">정상</span>
+            </td>
+            <td th:text="${user.createdAt != null ? #dates.format(user.createdAt, 'yyyy-MM-dd') : '-'}">2026-08-12</td>
+            <td class="admin-table-actions">
+              <a th:href="@{/admin/users/{id}(id=${user.id})}"
+                 class="admin-btn is-small">상세</a>
+            </td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(users)}">
+            <td colspan="7" class="admin-table-empty">조회된 회원이 없습니다.</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <nav class="admin-user-pagination"
+         th:if="${totalPages > 1}" aria-label="회원 목록 페이지">
+      <a th:if="${currentPage > 1}"
+         th:href="@{/admin/users(keyword=${keyword},status=${currentStatus == 'ALL' ? null : currentStatus},page=${currentPage - 1})}">이전</a>
+      <span th:unless="${currentPage > 1}" class="is-disabled" aria-disabled="true">이전</span>
+
+      <a th:each="pageNumber : ${#numbers.sequence(pageStart, pageEnd)}"
+         th:href="@{/admin/users(keyword=${keyword},status=${currentStatus == 'ALL' ? null : currentStatus},page=${pageNumber == 1 ? null : pageNumber})}"
+         th:text="${pageNumber}"
+         th:classappend="${pageNumber == currentPage} ? ' is-active'"
+         th:attr="aria-current=${pageNumber == currentPage} ? 'page' : null">1</a>
+
+      <a th:if="${currentPage < totalPages}"
+         th:href="@{/admin/users(keyword=${keyword},status=${currentStatus == 'ALL' ? null : currentStatus},page=${currentPage + 1})}">다음</a>
+      <span th:unless="${currentPage < totalPages}" class="is-disabled" aria-disabled="true">다음</span>
+    </nav>
+  </section>
+</th:block>
+</html>

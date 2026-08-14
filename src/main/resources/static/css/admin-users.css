@@ -1,0 +1,216 @@
+.admin-users-page,
+.admin-user-detail-page {
+    min-width: 0;
+}
+
+.admin-user-search-field .admin-input {
+    min-width: 240px;
+}
+
+.admin-user-result-count {
+    margin: 16px 0 12px;
+    color: #66738a;
+    font-size: 0.86rem;
+    font-weight: 650;
+}
+
+.admin-user-result-count strong {
+    color: #34415e;
+}
+
+.admin-users-table {
+    min-width: 900px;
+}
+
+.admin-users-table th,
+.admin-users-table td {
+    padding-top: 12px;
+    padding-bottom: 12px;
+}
+
+.admin-user-username a {
+    color: #34415e;
+    font-weight: 750;
+    text-decoration: none;
+}
+
+.admin-user-username a:hover {
+    color: #3853ba;
+    text-decoration: underline;
+}
+
+.admin-user-email {
+    color: #66738a;
+    font-size: 0.86rem;
+}
+
+/* 회원 상태 배지 */
+.admin-user-status,
+.admin-user-role {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 25px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    font-size: 0.74rem;
+    font-weight: 750;
+    white-space: nowrap;
+}
+
+.admin-user-status.is-active {
+    color: #14766f;
+    background: #e6f7f4;
+    border: 1px solid #bde9de;
+}
+
+.admin-user-status.is-inactive {
+    color: #8a5a12;
+    background: #fff8e8;
+    border: 1px solid #f0d9aa;
+}
+
+.admin-user-status.is-suspended {
+    color: #4a5a75;
+    background: #eef2f8;
+    border: 1px solid #d6dfeb;
+}
+
+.admin-user-status.is-restricted {
+    color: #a53a3a;
+    background: #fdecec;
+    border: 1px solid #f2c7c7;
+}
+
+.admin-user-status.is-deactivated {
+    color: #6e7781;
+    background: #eff1f3;
+    border: 1px solid #dfe3e7;
+}
+
+.admin-user-role {
+    color: #58657d;
+    background: #fff;
+    border: 1px solid #dce2eb;
+}
+
+.admin-user-role.is-admin {
+    color: #365ab5;
+    background: #edf2ff;
+    border-color: #c6d4f5;
+}
+
+/* 상세 */
+.admin-user-detail-page .admin-user-section {
+    max-width: none;
+    padding: 24px;
+}
+
+.admin-user-detail-page .admin-user-section + .admin-user-section {
+    margin-top: 14px;
+}
+
+.admin-user-section-header {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 18px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #edf0f5;
+}
+
+.admin-user-section-header h2 {
+    margin: 0;
+    color: #334373;
+    font-size: 1.08rem;
+    letter-spacing: -0.02em;
+}
+
+.admin-user-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.admin-user-meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 18px;
+    margin: 0;
+}
+
+.admin-user-meta > div {
+    display: grid;
+    min-width: 0;
+    grid-template-columns: 110px minmax(0, 1fr);
+    align-items: baseline;
+    gap: 10px;
+}
+
+.admin-user-meta dt {
+    color: #7d879b;
+    font-size: 0.84rem;
+    font-weight: 700;
+}
+
+.admin-user-meta dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: #34415e;
+    font-size: 0.92rem;
+}
+
+/* 페이지네이션 */
+.admin-user-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 20px;
+}
+
+.admin-user-pagination a,
+.admin-user-pagination span {
+    display: inline-flex;
+    min-width: 38px;
+    min-height: 38px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 10px;
+    color: #58657d;
+    background: #fff;
+    border: 1px solid #dce2eb;
+    border-radius: 9px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.admin-user-pagination a:hover,
+.admin-user-pagination a.is-active {
+    color: #fff;
+    background: #4265f7;
+    border-color: #4265f7;
+}
+
+.admin-user-pagination span.is-disabled {
+    color: #aab3c2;
+    background: #f6f8fc;
+}
+
+@media (max-width: 700px) {
+    .admin-user-search-field .admin-input {
+        min-width: 0;
+    }
+
+    .admin-user-meta {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-user-meta > div {
+        grid-template-columns: 96px minmax(0, 1fr);
+    }
+}

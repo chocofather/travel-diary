@@ -3,8 +3,10 @@ package com.example.travlediary.controller.admin;
 import com.example.travlediary.config.CustomLoginSuccessHandler;
 import com.example.travlediary.config.CustomLogoutSuccessHandler;
 import com.example.travlediary.config.SecurityConfig;
+import com.example.travlediary.model.UserStatus;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.service.destination.DestinationService;
+import com.example.travlediary.service.user.AdminUserService;
 import org.jsoup.Jsoup;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +21,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -33,6 +36,8 @@ class AdminDashboardControllerTest {
     @MockitoBean
     private DestinationService destinationService;
     @MockitoBean
+    private AdminUserService adminUserService;
+    @MockitoBean
     private UserMapper userMapper;
     @MockitoBean
     private CustomLoginSuccessHandler customLoginSuccessHandler;
@@ -46,13 +51,13 @@ class AdminDashboardControllerTest {
     }
 
     @Test
-    void adminDashboardUsesOnlyDetailButtonsAcrossFourManagementCards() throws Exception {
+    void adminDashboardUsesOnlyDetailButtonsAcrossManagementCards() throws Exception {
         var document = adminPage();
 
         assertThat(document.select(".admin-dashboard h1").text()).isEqualTo("관리자 대시보드");
-        assertThat(document.select(".admin-dashboard-card")).hasSize(4);
+        assertThat(document.select(".admin-dashboard-card")).hasSize(5);
         assertThat(document.select(".admin-dashboard-card > h2").eachText())
-                .containsExactly("여행지 관리", "여행정보 관리", "이벤트 관리", "고객지원 관리");
+                .containsExactly("여행지 관리", "여행정보 관리", "이벤트 관리", "고객지원 관리", "회원 관리");
         assertThat(document.select(".admin-dashboard-entry, .admin-dashboard-entry-arrow"))
                 .isEmpty();
         assertThat(document.select(".admin-dashboard-actions a").eachAttr("href"))
@@ -66,10 +71,25 @@ class AdminDashboardControllerTest {
                         "/admin/event/list",
                         "/admin/notices",
                         "/admin/faqs",
-                        "/admin/inquiries"));
+                        "/admin/inquiries",
+                        "/admin/users"));
         assertThat(document.select(".admin-dashboard-card:last-child p").text())
-                .isEqualTo("공지사항과 FAQ, 사용자 문의를 관리합니다.");
+                .isEqualTo("회원 목록과 계정 상태를 확인합니다.");
         assertThat(document.select(".admin-dashboard-card a a")).isEmpty();
+    }
+
+    @Test
+    void memberCardShowsSimpleStatusCountsFromTheUserService() throws Exception {
+        when(adminUserService.countUsers(null, null)).thenReturn(12L);
+        when(adminUserService.countUsers(null, UserStatus.ACTIVE)).thenReturn(9L);
+        when(adminUserService.countUsers(null, UserStatus.RESTRICTED)).thenReturn(2L);
+
+        var document = adminPage();
+
+        assertThat(document.select(".admin-dashboard-stats li span").eachText())
+                .containsExactly("전체", "정상", "이용정지");
+        assertThat(document.select(".admin-dashboard-stats li strong").eachText())
+                .containsExactly("12", "9", "2");
     }
 
     @Test
@@ -92,7 +112,8 @@ class AdminDashboardControllerTest {
                         "/admin/event/list",
                         "/admin/notices",
                         "/admin/faqs",
-                        "/admin/inquiries");
+                        "/admin/inquiries",
+                        "/admin/users");
     }
 
     @Test

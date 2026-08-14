@@ -1,6 +1,8 @@
 package com.example.travlediary.controller.admin;
 
+import com.example.travlediary.model.UserStatus;
 import com.example.travlediary.service.destination.DestinationService;
+import com.example.travlediary.service.user.AdminUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
@@ -15,11 +17,17 @@ import org.springframework.web.bind.annotation.RequestMapping;
 public class AdminController {
 
     private final DestinationService destinationService;
+    private final AdminUserService adminUserService;
 
     @GetMapping
     public String adminHome(Model model) {
         model.addAttribute("pageTitle", "관리자 홈");
         // ↳ layout/main.html 의 <title>이 이 값으로 대체됩니다.
+        model.addAttribute("totalUserCount", adminUserService.countUsers(null, null));
+        model.addAttribute("activeUserCount",
+                adminUserService.countUsers(null, UserStatus.ACTIVE));
+        model.addAttribute("restrictedUserCount",
+                adminUserService.countUsers(null, UserStatus.RESTRICTED));
         return "admin/index";
     }
 

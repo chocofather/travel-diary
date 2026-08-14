@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'users')}">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/admin-users.css">
+</th:block>
+<th:block th:fragment="body">
+  <section class="admin-page-section admin-user-detail-page">
+    <header class="admin-page-header">
+      <div class="admin-page-heading">
+        <h1 class="admin-page-title">회원 상세</h1>
+        <p class="admin-page-description">회원 가입 정보와 현재 계정 상태를 확인합니다.</p>
+      </div>
+      <div class="admin-page-actions">
+        <a th:href="@{/admin/users}" class="admin-btn">회원 목록</a>
+      </div>
+    </header>
+
+    <section class="admin-form-card is-wide admin-user-section">
+      <div class="admin-user-section-header">
+        <h2 th:text="${user.username}">travler</h2>
+        <div class="admin-user-badges">
+          <span class="admin-user-status"
+                th:classappend="|is-${#strings.toLowerCase(user.status.name())}|"
+                th:text="${user.status.displayName}">정상</span>
+          <span class="admin-user-role"
+                th:classappend="${user.admin} ? ' is-admin'"
+                th:text="${user.admin} ? '관리자' : '일반회원'">일반회원</span>
+        </div>
+      </div>
+
+      <dl class="admin-user-meta">
+        <div><dt>회원 번호</dt><dd th:text="${user.id}">1</dd></div>
+        <div><dt>아이디</dt><dd th:text="${user.username}">travler</dd></div>
+        <div><dt>닉네임</dt><dd th:text="${user.nickname}">여행자</dd></div>
+        <div><dt>이메일</dt><dd th:text="${user.userEmail}">user@example.com</dd></div>
+        <div><dt>이름</dt><dd th:text="${user.fullName}">홍길동</dd></div>
+        <div>
+          <dt>전화번호</dt>
+          <dd th:text="${user.userPhone != null and !#strings.isEmpty(user.userPhone)} ? ${user.userPhone} : '-'">-</dd>
+        </div>
+        <div>
+          <dt>생년월일</dt>
+          <dd th:text="${user.userBirth != null} ? ${user.userBirth} : '-'">-</dd>
+        </div>
+      </dl>
+    </section>
+
+    <section class="admin-form-card is-wide admin-user-section">
+      <div class="admin-user-section-header">
+        <h2>계정 상태</h2>
+      </div>
+      <dl class="admin-user-meta">
+        <div>
+          <dt>현재 상태</dt>
+          <dd th:text="${user.status.displayName}">정상</dd>
+        </div>
+        <div>
+          <dt>권한</dt>
+          <dd class="admin-user-role-value"
+              th:text="${user.admin} ? '관리자 (ADMIN)' : '일반회원 (USER)'">일반회원 (USER)</dd>
+        </div>
+        <div>
+          <dt>가입일</dt>
+          <dd th:text="${user.createdAt != null ? #dates.format(user.createdAt, 'yyyy-MM-dd HH:mm') : '-'}">2026-08-12 10:00</dd>
+        </div>
+        <div>
+          <dt>최근 수정일</dt>
+          <dd th:text="${user.updatedAt != null ? #dates.format(user.updatedAt, 'yyyy-MM-dd HH:mm') : '-'}">-</dd>
+        </div>
+        <div>
+          <dt>마지막 로그인</dt>
+          <dd th:text="${user.lastLogin != null ? #dates.format(user.lastLogin, 'yyyy-MM-dd HH:mm') : '-'}">-</dd>
+        </div>
+        <div>
+          <dt>탈퇴일</dt>
+          <dd th:text="${user.deletedAt != null ? #dates.format(user.deletedAt, 'yyyy-MM-dd HH:mm') : '-'}">-</dd>
+        </div>
+      </dl>
+    </section>
+  </section>
+</th:block>
+</html>
