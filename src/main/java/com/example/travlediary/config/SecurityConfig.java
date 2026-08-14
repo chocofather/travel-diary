@@ -91,7 +91,7 @@ public class SecurityConfig {
                                 "/users/verify", "/users/register/verify-waiting",
                                 "/users/verification/resend",
                                 "/users/find-username", "/users/find-password", "/users/reset-password/**",
-                                "/css/**", "/js/**", "/images/**", "/uploads/**",
+                                "/css/**", "/js/**", "/images/**", "/fonts/**", "/uploads/**",
                                 "/api/**",     "/api/destinations/**",
                                 "/search", "/search.html",
                                 "/destinations/**",
