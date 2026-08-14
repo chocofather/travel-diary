@@ -163,6 +163,36 @@ CREATE TABLE `attraction_info` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `blocked_emails`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `blocked_emails` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `email_hash` char(64) CHARACTER SET ascii COLLATE ascii_general_ci NOT NULL COMMENT 'SHA-256(정규화 이메일 + 서버 pepper), 원본 미보관',
+  `user_id` bigint DEFAULT NULL COMMENT '참고용(익명화 후에도 id는 유지)',
+  `sanction_id` bigint DEFAULT NULL,
+  `reason` varchar(255) DEFAULT NULL,
+  `created_by` bigint DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `released_at` datetime DEFAULT NULL,
+  `released_by` bigint DEFAULT NULL,
+  `active_email_hash` char(64) CHARACTER SET ascii COLLATE ascii_general_ci GENERATED ALWAYS AS ((case when (`released_at` is null) then `email_hash` end)) VIRTUAL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_blocked_emails_active` (`active_email_hash`),
+  KEY `idx_blocked_emails_sanction` (`sanction_id`),
+  KEY `idx_blocked_emails_user` (`user_id`),
+  KEY `fk_blocked_emails_admin` (`created_by`),
+  KEY `fk_blocked_emails_release` (`released_by`),
+  CONSTRAINT `fk_blocked_emails_admin` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`),
+  CONSTRAINT `fk_blocked_emails_release` FOREIGN KEY (`released_by`) REFERENCES `users` (`id`),
+  CONSTRAINT `fk_blocked_emails_sanction` FOREIGN KEY (`sanction_id`) REFERENCES `user_sanctions` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_blocked_emails_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `bookmarks`
 --
 
@@ -210,6 +240,40 @@ CREATE TABLE `comment_likes` (
   CONSTRAINT `fk_commentlike_coment` FOREIGN KEY (`comment_id`) REFERENCES `destination_comments` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_commentlike_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `content_moderations`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `content_moderations` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `target_type` varchar(24) NOT NULL COMMENT 'POST | COURSE | POST_COMMENT | COURSE_COMMENT | DESTINATION_COMMENT',
+  `target_id` bigint NOT NULL,
+  `target_user_id` bigint NOT NULL COMMENT '콘텐츠 작성자',
+  `status` varchar(20) NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE(숨김중) | RESTORED',
+  `reason` varchar(500) NOT NULL,
+  `admin_note` text,
+  `created_by` bigint NOT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `restored_at` datetime DEFAULT NULL,
+  `restored_by` bigint DEFAULT NULL,
+  `restore_reason` varchar(500) DEFAULT NULL,
+  `active_target_type` varchar(24) GENERATED ALWAYS AS ((case when (`status` = 'ACTIVE') then `target_type` end)) VIRTUAL,
+  `active_target_id` bigint GENERATED ALWAYS AS ((case when (`status` = 'ACTIVE') then `target_id` end)) VIRTUAL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_content_moderations_active` (`active_target_type`,`active_target_id`),
+  KEY `idx_content_moderations_target` (`target_type`,`target_id`,`created_at`),
+  KEY `idx_content_moderations_user` (`target_user_id`,`created_at`),
+  KEY `idx_content_moderations_status` (`status`,`created_at`,`id`),
+  KEY `fk_content_moderations_admin` (`created_by`),
+  KEY `fk_content_moderations_restore` (`restored_by`),
+  CONSTRAINT `fk_content_moderations_admin` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`),
+  CONSTRAINT `fk_content_moderations_restore` FOREIGN KEY (`restored_by`) REFERENCES `users` (`id`),
+  CONSTRAINT `fk_content_moderations_user` FOREIGN KEY (`target_user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -833,6 +897,68 @@ CREATE TABLE `travel_info` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `user_account_actions`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_account_actions` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `user_id` bigint NOT NULL COMMENT '조치 대상 회원',
+  `action_type` varchar(30) NOT NULL COMMENT 'FORCED_WITHDRAWAL',
+  `sanction_id` bigint DEFAULT NULL COMMENT '이어진 제재가 있으면 연결(없으면 NULL)',
+  `reason` varchar(500) NOT NULL COMMENT '조치 사유',
+  `admin_note` text COMMENT '내부 메모(비공개)',
+  `created_by` bigint NOT NULL COMMENT '조치 관리자',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_user_account_actions_user_created` (`user_id`,`created_at`,`id`),
+  KEY `idx_user_account_actions_type_created` (`action_type`,`created_at`,`id`),
+  KEY `idx_user_account_actions_admin_created` (`created_by`,`created_at`),
+  KEY `idx_user_account_actions_sanction` (`sanction_id`),
+  CONSTRAINT `fk_user_account_actions_admin` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`),
+  CONSTRAINT `fk_user_account_actions_sanction` FOREIGN KEY (`sanction_id`) REFERENCES `user_sanctions` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_user_account_actions_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `user_appeals`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_appeals` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `sanction_id` bigint NOT NULL,
+  `user_id` bigint NOT NULL,
+  `status` varchar(20) NOT NULL DEFAULT 'DRAFT' COMMENT 'DRAFT(이메일 인증 대기) | PENDING | APPROVED | REJECTED',
+  `content` text COMMENT '제출 시 채워짐',
+  `token_hash` char(64) CHARACTER SET ascii COLLATE ascii_general_ci DEFAULT NULL,
+  `token_exp` datetime DEFAULT NULL,
+  `requested_at` datetime DEFAULT NULL COMMENT '인증메일 발송 시각(쿨다운)',
+  `verified_at` datetime DEFAULT NULL,
+  `submitted_at` datetime DEFAULT NULL,
+  `admin_id` bigint DEFAULT NULL,
+  `admin_reply` varchar(1000) DEFAULT NULL COMMENT '승인/기각 사유',
+  `handled_at` datetime DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `pending_sanction_id` bigint GENERATED ALWAYS AS ((case when (`status` = 'PENDING') then `sanction_id` end)) VIRTUAL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_user_appeals_pending` (`pending_sanction_id`),
+  UNIQUE KEY `uq_user_appeals_token` (`token_hash`),
+  KEY `idx_user_appeals_status_created` (`status`,`created_at`,`id`),
+  KEY `idx_user_appeals_sanction` (`sanction_id`),
+  KEY `idx_user_appeals_user_created` (`user_id`,`created_at`),
+  KEY `fk_user_appeals_admin` (`admin_id`),
+  CONSTRAINT `fk_user_appeals_admin` FOREIGN KEY (`admin_id`) REFERENCES `users` (`id`),
+  CONSTRAINT `fk_user_appeals_sanction` FOREIGN KEY (`sanction_id`) REFERENCES `user_sanctions` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_user_appeals_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `user_posts`
 --
 
@@ -856,6 +982,43 @@ CREATE TABLE `user_posts` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `user_sanctions`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_sanctions` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `user_id` bigint NOT NULL,
+  `type` varchar(20) NOT NULL COMMENT 'TEMPORARY | PERMANENT',
+  `status` varchar(20) NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE | EXPIRED | LIFTED',
+  `reason` varchar(500) NOT NULL COMMENT '회원 안내용 사유',
+  `admin_note` text COMMENT '내부 메모(비공개)',
+  `previous_status` varchar(20) NOT NULL COMMENT '제재 직전 users.status (해제 시 복원)',
+  `starts_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `expires_at` datetime DEFAULT NULL COMMENT 'TEMPORARY만 값 존재, PERMANENT는 NULL',
+  `released_at` datetime DEFAULT NULL,
+  `released_by` bigint DEFAULT NULL,
+  `released_via` varchar(20) DEFAULT NULL COMMENT 'ADMIN | APPEAL | SYSTEM',
+  `release_reason` varchar(500) DEFAULT NULL,
+  `created_by` bigint NOT NULL COMMENT '조치 관리자',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `active_user_id` bigint GENERATED ALWAYS AS ((case when (`status` = 'ACTIVE') then `user_id` end)) VIRTUAL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_user_sanctions_active` (`active_user_id`),
+  KEY `idx_user_sanctions_user_created` (`user_id`,`created_at`,`id`),
+  KEY `idx_user_sanctions_expiry` (`status`,`expires_at`),
+  KEY `idx_user_sanctions_status_created` (`status`,`created_at`,`id`),
+  KEY `fk_user_sanctions_admin` (`created_by`),
+  KEY `fk_user_sanctions_release` (`released_by`),
+  CONSTRAINT `fk_user_sanctions_admin` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`),
+  CONSTRAINT `fk_user_sanctions_release` FOREIGN KEY (`released_by`) REFERENCES `users` (`id`),
+  CONSTRAINT `fk_user_sanctions_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `users`
 --
 
@@ -875,7 +1038,7 @@ CREATE TABLE `users` (
   `verification_token_exp` datetime DEFAULT NULL,
   `verification_requested_at` datetime DEFAULT NULL,
   `profile_image` varchar(255) DEFAULT NULL,
-  `status` enum('INACTIVE','ACTIVE','SUSPENDED','DEACTIVATED') NOT NULL DEFAULT 'INACTIVE',
+  `status` enum('INACTIVE','ACTIVE','SUSPENDED','DEACTIVATED','RESTRICTED') NOT NULL DEFAULT 'INACTIVE',
   `last_login` timestamp NULL DEFAULT NULL,
   `deleted_at` timestamp NULL DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
