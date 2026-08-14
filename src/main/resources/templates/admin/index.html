@@ -42,6 +42,16 @@
                     <a class="admin-dashboard-link" th:href="@{/admin/event/list}">이벤트 관리</a>
                 </div>
             </article>
+
+            <article class="admin-dashboard-card">
+                <h2>고객지원 관리</h2>
+                <p>공지사항과 FAQ, 사용자 문의를 관리합니다.</p>
+                <div class="admin-dashboard-actions">
+                    <a class="admin-dashboard-link" th:href="@{/admin/notices}">공지사항</a>
+                    <a class="admin-dashboard-link" th:href="@{/admin/faqs}">자주 묻는 질문</a>
+                    <a class="admin-dashboard-link" th:href="@{/admin/inquiries}">1:1 문의</a>
+                </div>
+            </article>
         </div>
     </th:block>
 </section>

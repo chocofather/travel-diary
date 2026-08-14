@@ -35,11 +35,36 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    /* 프로필 클릭 → 마이페이지 이동 */
-    const profile = document.getElementById('profile-img');
-    if (profile) {
-        profile.addEventListener('click', () => {
-            location.href = '/mypage';
+    /* 프로필 메뉴 */
+    const profileToggle = document.getElementById('profile-menu-toggle');
+    const profileMenu = document.getElementById('profile-menu');
+    const profileMenuContainer = profileToggle?.closest('.profile-menu-container');
+
+    if (profileToggle && profileMenu && profileMenuContainer) {
+        const setProfileMenuOpen = (isOpen, restoreFocus = false) => {
+            profileMenu.hidden = !isOpen;
+            profileToggle.setAttribute('aria-expanded', String(isOpen));
+            profileToggle.setAttribute(
+                    'aria-label', isOpen ? '프로필 메뉴 닫기' : '프로필 메뉴 열기');
+            if (!isOpen && restoreFocus) {
+                profileToggle.focus();
+            }
+        };
+
+        profileToggle.addEventListener('click', () => {
+            setProfileMenuOpen(profileMenu.hidden);
+        });
+
+        document.addEventListener('click', e => {
+            if (!profileMenu.hidden && !profileMenuContainer.contains(e.target)) {
+                setProfileMenuOpen(false);
+            }
+        });
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && !profileMenu.hidden) {
+                setProfileMenuOpen(false, true);
+            }
         });
     }
 

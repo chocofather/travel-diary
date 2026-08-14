@@ -37,20 +37,30 @@
                 onclick="location.href='/login?redirect=' + encodeURIComponent(location.pathname + location.search)">
           로그인
         </button>
-        <img th:if="${isLoggedIn}" id="profile-img"
-             th:src="${currentUserProfileImage}"
-             onerror="this.onerror=null;this.src='/images/default.png';"
-             alt="내 프로필" />
-        <form th:if="${isLoggedIn}" th:action="@{/logout}" method="post" class="logout-form">
-          <input type="hidden" name="redirect" th:value="${currentUri}">
-          <button type="submit" class="btn-logout">로그아웃</button>
-        </form>
-      </div>
+        <div th:if="${isLoggedIn}" class="profile-menu-container">
+          <button type="button" id="profile-menu-toggle" class="profile-menu-toggle"
+                  aria-label="프로필 메뉴 열기" aria-haspopup="menu"
+                  aria-controls="profile-menu" aria-expanded="false">
+            <img id="profile-img"
+                 th:src="${currentUserProfileImage}"
+                 onerror="this.onerror=null;this.src='/images/default.png';"
+                 alt="" />
+          </button>
 
-      <!-- 어드민 전용 링크 -->
-      <th:block th:if="${#authorization.expression('hasRole(''ADMIN'')')}">
-        <a href="/admin" class="admin-link">Admin</a>
-      </th:block>
+          <div id="profile-menu" class="profile-menu" role="menu" hidden>
+            <p class="profile-menu-title">프로필</p>
+            <a href="/mypage" class="profile-menu-item" role="menuitem">마이페이지</a>
+            <a th:if="${#authorization.expression('hasRole(''ADMIN'')')}"
+               href="/admin" class="profile-menu-item profile-menu-admin"
+               role="menuitem">관리자 페이지</a>
+            <form th:action="@{/logout}" method="post" class="profile-menu-logout-form">
+              <input type="hidden" name="redirect" th:value="${currentUri}">
+              <button type="submit" class="profile-menu-item profile-menu-logout"
+                      role="menuitem">로그아웃</button>
+            </form>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- 메뉴 -->

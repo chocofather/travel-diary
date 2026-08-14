@@ -68,7 +68,8 @@ class NoticeUiContractTest {
                 .contains("href=\"/support/faq\">자주 묻는 질문</a>")
                 .contains("href=\"/support/inquiries\">1:1 문의</a>")
                 .contains("hasRole(''ADMIN'')")
-                .contains("href=\"/admin\" class=\"admin-link\"");
+                .contains("href=\"/admin\" class=\"profile-menu-item profile-menu-admin\"")
+                .doesNotContain("class=\"admin-link\"");
         assertThat(sidebar)
                 .contains("고객지원", "@{/admin/notices}", "activeMenu == 'notices'")
                 .contains("@{/admin/faqs}", "activeMenu == 'faqs'")
