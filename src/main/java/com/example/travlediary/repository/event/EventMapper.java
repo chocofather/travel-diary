@@ -12,6 +12,8 @@ public interface EventMapper {
     /** 새 이벤트 저장 */
     int insert(Event event);     // 성공 시 1 반환
 
+    int updateEvent(Event event);
+
     void deleteEventById(Long id);
 
     List<Event> selectAllEvents(); // 모든 이벤트

@@ -462,6 +462,7 @@ CREATE TABLE `events` (
   `description` text NOT NULL,
   `event_img` varchar(255) DEFAULT NULL,
   `poster_img` varchar(255) DEFAULT NULL,
+  `event_type` varchar(20) NOT NULL DEFAULT 'INFOGRAPHIC',
   `start_date` date NOT NULL,
   `end_date` date NOT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,

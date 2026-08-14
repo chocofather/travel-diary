@@ -19,14 +19,14 @@ public class EventController {
 
     private final EventService eventService;
 
-    /** 전체 이벤트 리스트 (진행중/예정/종료 탭 지원) */
+    /** 이벤트 리스트 (진행중/예정/종료 탭 지원) */
     @GetMapping
     public String eventList(@RequestParam(required = false) String status, Model model) {
-        // status: "ongoing", "upcoming", "ended" (필요없으면 null)
-        List<Event> events = eventService.getEventsByStatus(status);
+        String selectedStatus = normalizeStatus(status);
+        List<Event> events = eventService.getEventsByStatus(selectedStatus);
         model.addAttribute("eventList", events);
-        model.addAttribute("selectedStatus", status);
-        return "event/event-list"; // templates/event/event-list.html
+        model.addAttribute("selectedStatus", selectedStatus);
+        return "event/event-list";
     }
 
     /** 이벤트 상세 */
@@ -35,6 +35,13 @@ public class EventController {
         Event event = eventService.getEventDetail(id);
         model.addAttribute("event", event);
         return "event/event-detail"; // templates/event/event-detail.html
+    }
+
+    private String normalizeStatus(String status) {
+        return switch (status == null ? "" : status) {
+            case "ongoing", "upcoming", "ended" -> status;
+            default -> "ongoing";
+        };
     }
 
 

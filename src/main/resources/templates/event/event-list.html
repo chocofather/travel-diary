@@ -1,39 +1,67 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
       lang="ko"
-      th:replace="layout/main :: layout(~{::body}, ~{::headFragment})">
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
 
 <th:block th:fragment="headFragment">
   <link rel="stylesheet" href="/css/event.css">
 </th:block>
 
 <th:block th:fragment="body">
-  <div class="event-list-wrapper">
-    <h1>이벤트 목록</h1>
-    <div class="event-tab">
-      <a th:href="@{/events(status='ongoing')}" th:classappend="${selectedStatus}=='ongoing' ? 'active'">진행중</a>
-      <a th:href="@{/events(status='upcoming')}" th:classappend="${selectedStatus}=='upcoming' ? 'active'">진행예정</a>
-      <a th:href="@{/events(status='ended')}" th:classappend="${selectedStatus}=='ended' ? 'active'">종료</a>
-      <a th:href="@{/events}" th:classappend="${selectedStatus==null} ? 'active'">전체</a>
-    </div>
+  <section class="event-list-wrapper" aria-labelledby="event-list-title">
+    <header class="event-list-header">
+      <p class="event-list-eyebrow">TRAVEL DIARY EVENT</p>
+      <h1 id="event-list-title">이벤트</h1>
+      <p>Travel Diary에서 준비한 여행 소식과 혜택을 확인해 보세요.</p>
+    </header>
 
-    <ul class="event-list">
-      <li th:each="event : ${eventList}">
-        <a th:href="@{/events/{id}(id=${event.id})}">
-          <img th:if="${event.eventImg}" th:src="@{${event.eventImg}}" alt="이벤트 이미지" />
-          <div class="event-meta-col">
-            <div class="event-title" th:text="${event.title}">이벤트 제목</div>
-            <div class="event-desc" th:text="${event.description}">이벤트 설명</div>
-            <div class="event-date"
-                 th:text="|${event.startDate} ~ ${event.endDate}|">2024-01-01 ~ 2024-01-31</div>
+    <nav class="event-tab" aria-label="이벤트 상태">
+      <a th:href="@{/events(status='ongoing')}"
+         th:classappend="${selectedStatus == 'ongoing'} ? 'active'"
+         th:attr="aria-current=${selectedStatus == 'ongoing'} ? 'page'">진행중</a>
+      <a th:href="@{/events(status='upcoming')}"
+         th:classappend="${selectedStatus == 'upcoming'} ? 'active'"
+         th:attr="aria-current=${selectedStatus == 'upcoming'} ? 'page'">진행예정</a>
+      <a th:href="@{/events(status='ended')}"
+         th:classappend="${selectedStatus == 'ended'} ? 'active'"
+         th:attr="aria-current=${selectedStatus == 'ended'} ? 'page'">종료</a>
+    </nav>
+
+    <ul class="event-list" th:if="${!#lists.isEmpty(eventList)}">
+      <!-- 썸네일은 event_type 기준으로 고른다. 일반 이벤트는 메인 이미지, 인포그래픽은 인포그래픽 이미지. -->
+      <li class="event-card" th:each="event : ${eventList}"
+          th:with="thumbnail=${(event.eventType != null and event.eventType.name() == 'STANDARD')
+                       ? event.eventImg
+                       : (event.posterImg != null and !#strings.isEmpty(event.posterImg)
+                           ? event.posterImg : event.eventImg)}">
+        <a th:href="@{/events/{id}(id=${event.id})}" class="event-card-link"
+           th:classappend="${thumbnail == null or #strings.isEmpty(thumbnail)} ? 'is-text-only'">
+          <!-- 이미지가 없는 이벤트는 이미지 영역 없이 텍스트 카드로 보여준다 -->
+          <div class="event-card-image-wrap"
+               th:if="${thumbnail != null and !#strings.isEmpty(thumbnail)}">
+            <img class="event-card-image"
+                 th:src="${thumbnail}"
+                 onerror="this.onerror=null;this.src='/images/default.png';"
+                 th:alt="|${event.title} 대표 이미지|" />
+          </div>
+          <div class="event-card-content">
+            <span class="event-status-badge"
+                  th:classappend="|is-${selectedStatus}|"
+                  th:text="${selectedStatus == 'ongoing' ? '진행중' : (selectedStatus == 'upcoming' ? '진행예정' : '종료')}">진행중</span>
+            <h2 class="event-title" th:text="${event.title}">이벤트 제목</h2>
+            <p class="event-date" th:text="|${event.startDate} ~ ${event.endDate}|">2026-08-01 ~ 2026-08-31</p>
+            <p class="event-desc" th:if="${event.description != null and !#strings.isEmpty(event.description)}"
+               th:text="${event.description}">이벤트 설명</p>
           </div>
         </a>
       </li>
     </ul>
 
-    <div th:if="${eventList.size() == 0}" style="margin-top:40px; text-align:center;">
-      <span>해당 이벤트가 없습니다.</span>
+    <div class="event-empty-state" th:if="${#lists.isEmpty(eventList)}" role="status">
+      <p th:if="${selectedStatus == 'ongoing'}">현재 진행 중인 이벤트가 없습니다.</p>
+      <p th:if="${selectedStatus == 'upcoming'}">예정된 이벤트가 없습니다.</p>
+      <p th:if="${selectedStatus == 'ended'}">종료된 이벤트가 없습니다.</p>
     </div>
-  </div>
+  </section>
 </th:block>
 </html>

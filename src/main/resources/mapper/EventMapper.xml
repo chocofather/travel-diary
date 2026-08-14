@@ -12,6 +12,7 @@
         <result property="description" column="description"/>
         <result property="eventImg"  column="event_img"/>
         <result property="posterImg" column="poster_img"/>
+        <result property="eventType" column="event_type"/>
         <result property="slide" column="is_slide" javaType="boolean"/>
         <result property="userId"    column="user_id"/>
         <result property="startDate" column="start_date"/>
@@ -22,7 +23,7 @@
     <!-- is_slide = 1 인 슬라이드용 이벤트만 가져오기 -->
     <select id="selectSlideEvents" resultMap="EventMap">
         SELECT
-            id, title, description, event_img, is_slide,
+            id, title, description, event_img, event_type, is_slide,
             user_id, start_date, end_date, created_at
         FROM events
         WHERE is_slide = 1
@@ -34,11 +35,25 @@
 
     <insert id="insert"
             parameterType="com.example.travlediary.model.Event">
-        INSERT INTO events(title,description,event_img,poster_img,is_slide,user_id,
+        INSERT INTO events(title,description,event_img,poster_img,event_type,is_slide,user_id,
                            start_date,end_date,created_at)
-        VALUES (#{title},#{description},#{eventImg},#{posterImg},#{slide},#{userId},
+        VALUES (#{title},#{description},#{eventImg},#{posterImg},#{eventType},#{slide},#{userId},
                 #{startDate},#{endDate},NOW())
     </insert>
+
+    <update id="updateEvent"
+            parameterType="com.example.travlediary.model.Event">
+        UPDATE events
+        SET title = #{title},
+            description = #{description},
+            event_img = #{eventImg},
+            poster_img = #{posterImg},
+            event_type = #{eventType},
+            is_slide = #{slide},
+            start_date = #{startDate},
+            end_date = #{endDate}
+        WHERE id = #{id}
+    </update>
 
 
     <delete id="deleteEventById" parameterType="long">

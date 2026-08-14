@@ -8,8 +8,13 @@
 </th:block>
 
 <th:block th:fragment="body">
-    <!-- 1. posterImg가 있으면 오로지 포스터만, 카드 wrapper 없이 전체 표시 -->
-    <div th:if="${event.posterImg != null}" class="event-poster-outer">
+    <!-- 렌더링 분기는 poster 존재 여부가 아니라 event_type 을 기준으로 한다.
+         (event_type 이 비어 있는 과거 데이터는 INFOGRAPHIC 으로 본다) -->
+    <th:block th:with="isStandard=${event.eventType != null and event.eventType.name() == 'STANDARD'},
+                       hasPoster=${event.posterImg != null and !#strings.isEmpty(event.posterImg)},
+                       posterLayout=${!isStandard and hasPoster}">
+    <!-- 1. 인포그래픽 이벤트: 이미지 한 장으로 안내가 끝나므로 별도 상세 내용 영역이 없다 -->
+    <div th:if="${posterLayout}" class="event-poster-outer">
         <!-- 상단 인포 박스 -->
         <div class="event-poster-info-bar">
             <div class="event-poster-title" th:text="${event.title}">포스터 테스트용</div>
@@ -25,10 +30,11 @@
     </div>
 
 
-    <!-- 2. 포스터 없으면 기존 카드형 wrapper -->
-    <div th:if="${event.posterImg == null}" class="event-detail-wrapper">
-        <!-- 상단 대표 이미지(폭 넓게) -->
-        <div class="event-detail-banner" th:if="${event.eventImg}">
+    <!-- 2. 일반 이벤트: 메인 이미지가 있을 때만 이미지 영역을 그리고 상세 내용을 보여준다 -->
+    <div th:unless="${posterLayout}" class="event-detail-wrapper">
+        <!-- 상단 메인 이미지(폭 넓게) -->
+        <div class="event-detail-banner"
+             th:if="${event.eventImg != null and !#strings.isEmpty(event.eventImg)}">
             <img th:src="@{${event.eventImg}}" alt="이벤트 대표 이미지"/>
         </div>
         <!-- 메타영역 (제목/기간/상태) -->
@@ -38,12 +44,15 @@
             <h2 class="event-detail-title" th:text="${event.title}">이벤트 제목</h2>
         </div>
         <!-- 상세 설명 (HTML 가능) -->
-        <div class="event-detail-desc" th:utext="${event.description}">
+        <div class="event-detail-desc"
+             th:if="${event.description != null and !#strings.isEmpty(event.description)}"
+             th:utext="${event.description}">
             이벤트 상세 내용
         </div>
         <div class="event-detail-back">
             <a href="/events" class="back-link">&larr; 이벤트 목록</a>
         </div>
     </div>
+    </th:block>
 </th:block>
 </html>
