@@ -41,6 +41,17 @@ public interface UserMapper {
 
     AdminUserDetailDto findAdminUserById(@Param("id") Long id);
 
+    /** 관리자 조치용 잠금 조회. 상태와 무관하게 회원을 가져온다. */
+    User findByIdForUpdate(@Param("id") Long id);
+
+    /** 요청마다 현재 상태만 확인할 때 사용하는 가벼운 조회. */
+    UserStatus findStatusById(@Param("id") Long id);
+
+    /** 관리자 조치로 회원 상태만 변경한다. */
+    int updateStatusForAdmin(@Param("id") Long id,
+                             @Param("status") UserStatus status,
+                             @Param("expectedStatus") UserStatus expectedStatus);
+
     /* ---------- 관리자 역할 변경 ---------- */
     void updateUserRole(@Param("id") Long id,      // ★ Integer → Long
                         @Param("userRole") UserRole userRole);

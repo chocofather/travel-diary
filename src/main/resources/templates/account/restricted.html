@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      lang="ko"
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
+
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/account-restricted.css">
+</th:block>
+
+<th:block th:fragment="body">
+  <section class="restricted-wrapper" aria-labelledby="restricted-title">
+    <div class="restricted-card">
+      <p class="restricted-eyebrow">ACCOUNT NOTICE</p>
+      <h1 id="restricted-title">이용이 제한된 계정입니다</h1>
+      <p class="restricted-lead">
+        운영 정책에 따라 현재 계정의 서비스 이용이 제한되어 있습니다.
+        아래 내용을 확인해 주세요.
+      </p>
+
+      <dl class="restricted-detail" th:if="${sanction != null}">
+        <div>
+          <dt>제한 유형</dt>
+          <dd>
+            <span class="restricted-badge"
+                  th:classappend="${sanction.permanent} ? ' is-permanent'"
+                  th:text="${sanction.type.displayName}">기간제한</span>
+          </dd>
+        </div>
+        <div>
+          <dt>제한 사유</dt>
+          <dd th:text="${sanction.reason}">이용약관 위반</dd>
+        </div>
+        <div>
+          <dt>시작일</dt>
+          <dd th:text="${sanction.startsAt != null}
+                      ? ${#strings.replace(#strings.substring(sanction.startsAt, 0, 16), 'T', ' ')}
+                      : '-'">2026-08-15 09:00</dd>
+        </div>
+        <div>
+          <dt>종료일</dt>
+          <dd th:if="${sanction.expiresAt != null}"
+              th:text="${#strings.replace(#strings.substring(sanction.expiresAt, 0, 16), 'T', ' ')}">2026-09-01 10:00</dd>
+          <dd th:unless="${sanction.expiresAt != null}" class="restricted-permanent">영구 이용제한</dd>
+        </div>
+      </dl>
+
+      <p class="restricted-empty" th:if="${sanction == null}">
+        제한 상세 내용을 확인할 수 없습니다. 고객센터로 문의해 주세요.
+      </p>
+
+      <div class="restricted-actions">
+        <!-- 이의제기 기능 연결 예정 자리 -->
+        <span class="restricted-appeal-note">
+          제한에 이의가 있으신 경우 이의제기 기능이 준비되는 대로 이 화면에서 신청하실 수 있습니다.
+        </span>
+        <form th:action="@{/logout}" method="post" class="restricted-logout">
+          <button type="submit" class="restricted-button">로그아웃</button>
+        </form>
+      </div>
+    </div>
+  </section>
+</th:block>
+</html>

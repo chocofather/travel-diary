@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.user.UserSanctionMapper">
+
+    <resultMap id="UserSanctionResultMap" type="com.example.travlediary.model.UserSanction">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="type" column="type"/>
+        <result property="status" column="status"/>
+        <result property="reason" column="reason"/>
+        <result property="adminNote" column="admin_note"/>
+        <result property="previousStatus" column="previous_status"/>
+        <result property="startsAt" column="starts_at"/>
+        <result property="expiresAt" column="expires_at"/>
+        <result property="releasedAt" column="released_at"/>
+        <result property="releasedBy" column="released_by"/>
+        <result property="releasedVia" column="released_via"/>
+        <result property="releaseReason" column="release_reason"/>
+        <result property="createdBy" column="created_by"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <sql id="SanctionColumns">
+        id, user_id, type, status, reason, admin_note, previous_status,
+        starts_at, expires_at, released_at, released_by, released_via,
+        release_reason, created_by, created_at, updated_at
+    </sql>
+
+    <insert id="insert" parameterType="com.example.travlediary.model.UserSanction"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user_sanctions (user_id, type, status, reason, admin_note,
+                                    previous_status, starts_at, expires_at, created_by)
+        VALUES (#{userId}, #{type}, #{status}, #{reason}, #{adminNote},
+                #{previousStatus}, #{startsAt}, #{expiresAt}, #{createdBy})
+    </insert>
+
+    <select id="findActiveByUserId" resultMap="UserSanctionResultMap">
+        SELECT <include refid="SanctionColumns"/>
+        FROM user_sanctions
+        WHERE user_id = #{userId}
+          AND status = 'ACTIVE'
+    </select>
+
+    <select id="findActiveByUserIdForUpdate" resultMap="UserSanctionResultMap">
+        SELECT <include refid="SanctionColumns"/>
+        FROM user_sanctions
+        WHERE user_id = #{userId}
+          AND status = 'ACTIVE'
+        FOR UPDATE
+    </select>
+
+    <select id="findByUserId" resultMap="UserSanctionResultMap">
+        SELECT <include refid="SanctionColumns"/>
+        FROM user_sanctions
+        WHERE user_id = #{userId}
+        ORDER BY created_at DESC, id DESC
+    </select>
+
+    <select id="findExpiredActiveSanctions" resultMap="UserSanctionResultMap">
+        SELECT <include refid="SanctionColumns"/>
+        FROM user_sanctions
+        WHERE status = 'ACTIVE'
+          AND type = 'TEMPORARY'
+          AND expires_at IS NOT NULL
+          AND expires_at &lt;= #{now}
+        ORDER BY expires_at
+    </select>
+
+    <update id="release">
+        UPDATE user_sanctions
+        SET status = #{status},
+            released_at = #{releasedAt},
+            released_by = #{releasedBy},
+            released_via = #{releasedVia},
+            release_reason = #{releaseReason}
+        WHERE id = #{id}
+          AND status = 'ACTIVE'
+    </update>
+
+</mapper>

@@ -3,6 +3,7 @@
       th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'users')}">
 <th:block th:fragment="headFragment">
   <link rel="stylesheet" href="/css/admin-users.css">
+  <script src="/js/admin-user-sanction.js" defer></script>
 </th:block>
 <th:block th:fragment="body">
   <section class="admin-page-section admin-user-detail-page">
@@ -77,6 +78,136 @@
           <dd th:text="${user.deletedAt != null ? #dates.format(user.deletedAt, 'yyyy-MM-dd HH:mm') : '-'}">-</dd>
         </div>
       </dl>
+    </section>
+
+    <section class="admin-form-card is-wide admin-user-section admin-user-sanction-section">
+      <div class="admin-user-section-header">
+        <h2>이용제한</h2>
+      </div>
+
+      <div class="admin-alert" th:if="${sanctionError != null}" role="alert">
+        <p th:text="${sanctionError}">처리할 수 없습니다.</p>
+      </div>
+
+      <!-- 관리자 계정은 제재 대상이 아니다 -->
+      <p class="admin-user-sanction-guide" th:if="${user.admin}">
+        관리자 계정은 이용제한 대상이 아닙니다.
+      </p>
+
+      <!-- 현재 제한 중인 회원: 제재 내용과 해제 -->
+      <th:block th:if="${!user.admin and activeSanction != null}">
+        <dl class="admin-user-meta admin-user-sanction-meta">
+          <div>
+            <dt>제한 유형</dt>
+            <dd th:text="${activeSanction.type.displayName}">기간제한</dd>
+          </div>
+          <div>
+            <dt>적용일시</dt>
+            <dd th:text="${activeSanction.startsAt != null} ? ${#strings.replace(#strings.substring(activeSanction.startsAt, 0, 16), 'T', ' ')} : '-'">-</dd>
+          </div>
+          <div>
+            <dt>종료일시</dt>
+            <dd th:text="${activeSanction.expiresAt != null} ? ${#strings.replace(#strings.substring(activeSanction.expiresAt, 0, 16), 'T', ' ')} : '영구'">영구</dd>
+          </div>
+          <div>
+            <dt>처리 관리자</dt>
+            <dd th:text="${activeSanction.createdBy}">1</dd>
+          </div>
+          <div class="admin-user-meta-wide">
+            <dt>제한 사유</dt>
+            <dd th:text="${activeSanction.reason}">이용약관 위반</dd>
+          </div>
+          <div class="admin-user-meta-wide" th:if="${activeSanction.adminNote != null}">
+            <dt>내부 메모</dt>
+            <dd th:text="${activeSanction.adminNote}">메모</dd>
+          </div>
+        </dl>
+
+        <form th:action="@{/admin/users/{id}/release(id=${user.id})}" method="post"
+              th:object="${releaseForm}" class="admin-user-sanction-form">
+          <div class="admin-form-field">
+            <label for="release-reason">해제 사유 <span class="admin-optional">선택</span></label>
+            <input id="release-reason" type="text" th:field="*{releaseReason}"
+                   maxlength="500" placeholder="해제 사유를 입력할 수 있습니다">
+          </div>
+          <div class="admin-user-sanction-actions">
+            <button type="submit" class="admin-btn is-primary"
+                    onclick="return confirm('이용제한을 해제하시겠습니까?')">제한 해제</button>
+          </div>
+        </form>
+      </th:block>
+
+      <!-- 제한 가능한 회원: 이용제한 적용 -->
+      <form th:if="${!user.admin and activeSanction == null}"
+            th:action="@{/admin/users/{id}/restrict(id=${user.id})}" method="post"
+            th:object="${sanctionForm}" class="admin-user-sanction-form"
+            id="admin-user-sanction-form">
+        <fieldset class="admin-user-sanction-type">
+          <legend>제한 유형 <span class="admin-required">필수</span></legend>
+          <label>
+            <input type="radio" th:field="*{type}" value="TEMPORARY" data-sanction-type>
+            <span>기간제한</span>
+          </label>
+          <label>
+            <input type="radio" th:field="*{type}" value="PERMANENT" data-sanction-type>
+            <span>영구제한</span>
+          </label>
+        </fieldset>
+
+        <div class="admin-form-field" id="sanction-expires-field">
+          <label for="sanction-expires-at">종료일시 <span class="admin-required">필수</span></label>
+          <input id="sanction-expires-at" type="datetime-local" th:field="*{expiresAt}">
+          <span class="admin-help-text">기간제한일 때만 사용하며 현재 시각보다 뒤여야 합니다.</span>
+        </div>
+
+        <div class="admin-form-field">
+          <label for="sanction-reason">제한 사유 <span class="admin-required">필수</span></label>
+          <input id="sanction-reason" type="text" th:field="*{reason}"
+                 maxlength="500" required placeholder="회원에게 안내할 사유를 입력하세요">
+        </div>
+
+        <div class="admin-form-field">
+          <label for="sanction-admin-note">내부 메모 <span class="admin-optional">선택</span></label>
+          <textarea id="sanction-admin-note" th:field="*{adminNote}"
+                    placeholder="관리자만 확인하는 메모입니다"></textarea>
+        </div>
+
+        <div class="admin-user-sanction-actions">
+          <button type="submit" class="admin-btn is-primary"
+                  onclick="return confirm('이 회원의 이용을 제한하시겠습니까?')">이용제한 적용</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="admin-form-card is-wide admin-user-section"
+             th:if="${!#lists.isEmpty(sanctionHistory)}">
+      <div class="admin-user-section-header">
+        <h2>이용제한 이력</h2>
+      </div>
+      <div class="admin-table-wrapper">
+        <table class="admin-table admin-user-sanction-table">
+          <thead>
+          <tr>
+            <th>상태</th>
+            <th>유형</th>
+            <th>사유</th>
+            <th>적용</th>
+            <th>종료</th>
+            <th>해제</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr th:each="sanction : ${sanctionHistory}">
+            <td th:text="${sanction.status.displayName}">적용중</td>
+            <td th:text="${sanction.type.displayName}">기간제한</td>
+            <td class="admin-user-sanction-reason" th:text="${sanction.reason}">사유</td>
+            <td th:text="${sanction.startsAt != null} ? ${#strings.replace(#strings.substring(sanction.startsAt, 0, 16), 'T', ' ')} : '-'">-</td>
+            <td th:text="${sanction.expiresAt != null} ? ${#strings.replace(#strings.substring(sanction.expiresAt, 0, 16), 'T', ' ')} : '영구'">영구</td>
+            <td th:text="${sanction.releasedAt != null} ? ${#strings.replace(#strings.substring(sanction.releasedAt, 0, 16), 'T', ' ')} : '-'">-</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
     </section>
   </section>
 </th:block>

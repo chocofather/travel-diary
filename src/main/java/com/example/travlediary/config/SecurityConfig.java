@@ -1,7 +1,9 @@
 package com.example.travlediary.config;
 
+import com.example.travlediary.security.RestrictedAccountFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -10,6 +12,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.security.web.util.matcher.RegexRequestMatcher;
 
@@ -27,7 +30,13 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            ObjectProvider<RestrictedAccountFilter> restrictedAccountFilter) throws Exception {
+
+        // 이용제한 회원 접근 통제. 웹 계층 테스트 슬라이스에는 빈이 없으므로 선택 주입한다.
+        restrictedAccountFilter.ifAvailable(
+                filter -> http.addFilterAfter(filter, AuthorizationFilter.class));
 
         http.csrf(csrf -> csrf.requireCsrfProtectionMatcher(new OrRequestMatcher(
                         new RegexRequestMatcher(
@@ -66,6 +75,10 @@ public class SecurityConfig {
                                 "^/support/inquiries/[0-9]+/edit$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(
                                 "^/admin/inquiries/[0-9]+/answer$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/admin/users/[0-9]+/restrict$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/admin/users/[0-9]+/release$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(
                                 "^/mypage/profile$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(

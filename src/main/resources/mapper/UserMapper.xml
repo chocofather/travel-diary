@@ -356,6 +356,33 @@
         OFFSET #{offset}
     </select>
 
+    <select id="findByIdForUpdate" resultType="com.example.travlediary.model.User">
+        SELECT id,
+               username,
+               user_email AS userEmail,
+               nickname,
+               user_role AS userRole,
+               status,
+               deleted_at AS deletedAt
+        FROM users
+        WHERE id = #{id}
+        FOR UPDATE
+    </select>
+
+    <select id="findStatusById" resultType="com.example.travlediary.model.UserStatus">
+        SELECT status
+        FROM users
+        WHERE id = #{id}
+    </select>
+
+    <update id="updateStatusForAdmin">
+        UPDATE users
+        SET status = #{status},
+            updated_at = NOW()
+        WHERE id = #{id}
+          AND status = #{expectedStatus}
+    </update>
+
     <select id="findAdminUserById" resultMap="AdminUserDetailResultMap">
         SELECT id, username, nickname, user_email, full_name, user_phone, user_birth,
                profile_image, user_role, status, created_at, updated_at,

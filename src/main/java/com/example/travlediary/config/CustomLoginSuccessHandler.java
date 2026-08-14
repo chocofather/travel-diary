@@ -1,7 +1,9 @@
 package com.example.travlediary.config;
 
 import com.example.travlediary.model.User;
+import com.example.travlediary.model.UserStatus;
 import com.example.travlediary.repository.user.UserMapper;
+import com.example.travlediary.security.RestrictedAccountFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +35,14 @@ public class CustomLoginSuccessHandler implements AuthenticationSuccessHandler {
         User user = userMapper.findByUsername(authentication.getName());
         request.getSession().setAttribute("userId", user.getId());
 
-        // 2) 같은 로그인 세션에서 저장된 원래 요청을 우선하되 권한을 다시 확인한다.
+        // 2) 이용제한 회원은 저장된 요청보다 제한 안내 화면을 우선한다.
+        if (user.getStatus() == UserStatus.RESTRICTED) {
+            requestCache.removeRequest(request, response);
+            response.sendRedirect(RestrictedAccountFilter.RESTRICTED_PATH);
+            return;
+        }
+
+        // 3) 같은 로그인 세션에서 저장된 원래 요청을 우선하되 권한을 다시 확인한다.
         boolean admin = authentication.getAuthorities().stream()
                 .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
         String savedRedirect = savedRequestRedirect(request, response);

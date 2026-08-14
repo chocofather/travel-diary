@@ -162,6 +162,78 @@
     font-size: 0.92rem;
 }
 
+/* 이용제한 */
+.admin-user-sanction-guide {
+    margin: 0;
+    color: #7d879b;
+    font-size: 0.9rem;
+}
+
+.admin-user-sanction-meta {
+    margin-bottom: 20px;
+}
+
+.admin-user-meta-wide {
+    grid-column: 1 / -1;
+}
+
+.admin-user-sanction-form {
+    display: grid;
+    gap: 14px;
+    max-width: 560px;
+}
+
+.admin-user-sanction-type {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.admin-user-sanction-type legend {
+    margin-bottom: 9px;
+    color: #3d4962;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.admin-user-sanction-type label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-right: 16px;
+    color: #3d4962;
+    font-size: 0.9rem;
+    font-weight: 650;
+    cursor: pointer;
+}
+
+.admin-user-sanction-form textarea {
+    min-height: 90px;
+    line-height: 1.6;
+}
+
+.admin-user-sanction-form [hidden] {
+    display: none;
+}
+
+.admin-user-sanction-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.admin-user-sanction-table {
+    min-width: 820px;
+}
+
+.admin-user-sanction-reason {
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 /* 페이지네이션 */
 .admin-user-pagination {
     display: flex;

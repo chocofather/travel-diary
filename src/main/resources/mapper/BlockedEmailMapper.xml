@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.user.BlockedEmailMapper">
+
+    <insert id="insert" parameterType="com.example.travlediary.model.BlockedEmail"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO blocked_emails (email_hash, user_id, sanction_id, reason, created_by)
+        VALUES (#{emailHash}, #{userId}, #{sanctionId}, #{reason}, #{createdBy})
+    </insert>
+
+    <update id="releaseBySanctionId">
+        UPDATE blocked_emails
+        SET released_at = #{releasedAt},
+            released_by = #{releasedBy}
+        WHERE sanction_id = #{sanctionId}
+          AND released_at IS NULL
+    </update>
+
+    <select id="countActiveByEmailHash" resultType="int">
+        SELECT COUNT(*)
+        FROM blocked_emails
+        WHERE email_hash = #{emailHash}
+          AND released_at IS NULL
+    </select>
+
+</mapper>

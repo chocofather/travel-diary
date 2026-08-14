@@ -2,6 +2,7 @@ package com.example.travlediary.config;
 
 import com.example.travlediary.model.User;
 import com.example.travlediary.model.UserRole;
+import com.example.travlediary.model.UserStatus;
 import com.example.travlediary.repository.user.UserMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,6 +32,33 @@ class CustomLoginSuccessHandlerTest {
     @BeforeEach
     void setUp() {
         handler = new CustomLoginSuccessHandler(userMapper);
+    }
+
+    @Test
+    void restrictedMemberGoesToTheRestrictedPageBeforeAnySavedRedirect() throws Exception {
+        User restricted = user(7L, "travler", UserRole.USER);
+        restricted.setStatus(UserStatus.RESTRICTED);
+        when(userMapper.findByUsername("travler")).thenReturn(restricted);
+        MockHttpServletRequest request = requestWithRedirect("/mypage");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication("travler", "ROLE_USER"));
+
+        assertThat(response.getRedirectedUrl()).isEqualTo("/account/restricted");
+        assertThat(request.getSession().getAttribute("userId")).isEqualTo(7L);
+    }
+
+    @Test
+    void activeMemberKeepsTheExistingRedirectBehaviour() throws Exception {
+        User active = user(7L, "travler", UserRole.USER);
+        active.setStatus(UserStatus.ACTIVE);
+        when(userMapper.findByUsername("travler")).thenReturn(active);
+        MockHttpServletRequest request = requestWithRedirect("/mypage");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication("travler", "ROLE_USER"));
+
+        assertThat(response.getRedirectedUrl()).isEqualTo("/mypage");
     }
 
     @Test
