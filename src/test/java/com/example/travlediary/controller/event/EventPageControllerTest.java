@@ -129,11 +129,10 @@ class EventPageControllerTest {
         org.jsoup.nodes.Document document = renderDetail();
 
         // poster 가 남아 있어도 event_type 이 STANDARD 면 포스터 레이아웃을 쓰지 않는다
-        assertThat(document.select(".event-poster-outer")).isEmpty();
-        assertThat(document.select(".event-detail-wrapper")).hasSize(1);
-        assertThat(document.selectFirst(".event-detail-banner img").attr("src"))
+        assertThat(document.select(".event-detail-media.is-poster")).isEmpty();
+        assertThat(document.selectFirst(".event-detail-media.is-hero img").attr("src"))
                 .isEqualTo("/uploads/events/main.jpg");
-        assertThat(document.selectFirst(".event-detail-desc").text())
+        assertThat(document.selectFirst(".event-detail-body").text())
                 .isEqualTo("여행 이벤트 설명");
     }
 
@@ -146,9 +145,11 @@ class EventPageControllerTest {
 
         org.jsoup.nodes.Document document = renderDetail();
 
-        assertThat(document.select(".event-detail-banner")).isEmpty();
+        // 빈 이미지 영역이나 placeholder 없이 텍스트만으로 완성되어야 한다
+        assertThat(document.select(".event-detail-media")).isEmpty();
+        assertThat(document.selectFirst(".event-detail").hasClass("is-text-only")).isTrue();
         assertThat(document.selectFirst(".event-detail-title").text()).isEqualTo("진행 중 이벤트");
-        assertThat(document.selectFirst(".event-detail-desc").text())
+        assertThat(document.selectFirst(".event-detail-body").text())
                 .isEqualTo("여행 이벤트 설명");
     }
 
@@ -161,11 +162,55 @@ class EventPageControllerTest {
 
         org.jsoup.nodes.Document document = renderDetail();
 
-        assertThat(document.select(".event-detail-wrapper")).isEmpty();
-        assertThat(document.selectFirst(".event-poster-img").attr("src"))
+        assertThat(document.selectFirst(".event-detail-media.is-poster img").attr("src"))
                 .isEqualTo("/uploads/events/posters/main.jpg");
-        assertThat(document.selectFirst(".event-poster-title").text()).isEqualTo("진행 중 이벤트");
-        assertThat(document.select(".event-detail-desc")).isEmpty();
+        assertThat(document.select(".event-detail-media.is-hero")).isEmpty();
+        assertThat(document.select(".event-detail-body")).isEmpty();
+        assertThat(document.selectFirst(".event-detail-title").text()).isEqualTo("진행 중 이벤트");
+    }
+
+    @Test
+    void standardDetailUsesEventHeaderAndIntroSection() throws Exception {
+        Event standard = event();
+        standard.setEventType(EventType.STANDARD);
+        standard.setEventImg("/uploads/events/main.jpg");
+        when(eventService.getEventDetail(10L)).thenReturn(standard);
+
+        org.jsoup.nodes.Document document = renderDetail();
+
+        assertThat(document.selectFirst(".event-detail").hasClass("is-standard")).isTrue();
+        assertThat(document.selectFirst(".event-detail-section-title").text())
+                .isEqualTo("이벤트 소개");
+        assertThat(document.selectFirst(".event-detail-section .event-detail-body").text())
+                .isEqualTo("여행 이벤트 설명");
+    }
+
+    @Test
+    void standardDetailWithoutImageKeepsHeaderAndIntroSectionOnly() throws Exception {
+        Event standard = event();
+        standard.setEventType(EventType.STANDARD);
+        standard.setEventImg(null);
+        when(eventService.getEventDetail(10L)).thenReturn(standard);
+
+        org.jsoup.nodes.Document document = renderDetail();
+
+        assertThat(document.selectFirst(".event-detail").hasClass("is-standard")).isTrue();
+        assertThat(document.select(".event-detail-media")).isEmpty();
+        assertThat(document.select(".event-detail-section")).hasSize(1);
+    }
+
+    @Test
+    void infographicDetailKeepsPosterLayoutWithoutStandardStyling() throws Exception {
+        Event infographic = event();
+        infographic.setEventType(EventType.INFOGRAPHIC);
+        infographic.setPosterImg("/uploads/events/posters/main.jpg");
+        when(eventService.getEventDetail(10L)).thenReturn(infographic);
+
+        org.jsoup.nodes.Document document = renderDetail();
+
+        assertThat(document.selectFirst(".event-detail").hasClass("is-standard")).isFalse();
+        assertThat(document.select(".event-detail-section")).isEmpty();
+        assertThat(document.select(".event-detail-media.is-poster")).hasSize(1);
     }
 
     @Test
@@ -176,8 +221,56 @@ class EventPageControllerTest {
 
         org.jsoup.nodes.Document document = renderDetail();
 
-        assertThat(document.selectFirst(".event-poster-img").attr("src"))
+        assertThat(document.selectFirst(".event-detail-media.is-poster img").attr("src"))
                 .isEqualTo("/uploads/events/posters/legacy.jpg");
+    }
+
+    @Test
+    void detailHeaderShowsPeriodStatusAndDurationFromExistingDatesOnly() throws Exception {
+        LocalDate today = LocalDate.now();
+        Event ongoing = event();
+        ongoing.setEventType(EventType.STANDARD);
+        ongoing.setStartDate(today.minusDays(2));
+        ongoing.setEndDate(today.plusDays(3));
+        when(eventService.getEventDetail(10L)).thenReturn(ongoing);
+
+        org.jsoup.nodes.Document document = renderDetail();
+
+        assertThat(document.selectFirst(".event-detail-status").text()).isEqualTo("진행중");
+        assertThat(document.selectFirst(".event-detail-status").hasClass("is-ongoing")).isTrue();
+        assertThat(document.selectFirst(".event-detail-period").text())
+                .isEqualTo(today.minusDays(2).toString().replace('-', '.')
+                        + " ~ " + today.plusDays(3).toString().replace('-', '.'));
+        assertThat(document.select(".event-detail-meta li").eachText())
+                .contains("총 6일간", "종료까지 D-3");
+    }
+
+    @Test
+    void upcomingAndEndedDetailHeadersUseTheirOwnStatusLabels() throws Exception {
+        LocalDate today = LocalDate.now();
+        Event upcoming = event();
+        upcoming.setStartDate(today.plusDays(4));
+        upcoming.setEndDate(today.plusDays(10));
+        upcoming.setPosterImg("/uploads/events/posters/main.jpg");
+        when(eventService.getEventDetail(10L)).thenReturn(upcoming);
+
+        org.jsoup.nodes.Document upcomingDocument = renderDetail();
+        assertThat(upcomingDocument.selectFirst(".event-detail-status").text()).isEqualTo("진행예정");
+        assertThat(upcomingDocument.select(".event-detail-meta li").eachText())
+                .contains("시작까지 D-4");
+
+        Event ended = event();
+        ended.setStartDate(today.minusDays(10));
+        ended.setEndDate(today.minusDays(4));
+        ended.setPosterImg("/uploads/events/posters/main.jpg");
+        when(eventService.getEventDetail(11L)).thenReturn(ended);
+
+        org.jsoup.nodes.Document endedDocument = org.jsoup.Jsoup.parse(
+                mockMvc.perform(get("/events/11")).andExpect(status().isOk())
+                        .andReturn().getResponse().getContentAsString());
+        assertThat(endedDocument.selectFirst(".event-detail-status").text()).isEqualTo("종료");
+        assertThat(endedDocument.select(".event-detail-meta li").eachText())
+                .noneMatch(text -> text.contains("D-"));
     }
 
     private org.jsoup.nodes.Document renderDetail() throws Exception {
@@ -203,14 +296,11 @@ class EventPageControllerTest {
         infographic.setPosterImg(null);
         when(eventService.getEventDetail(10L)).thenReturn(infographic);
 
-        MvcResult result = mockMvc.perform(get("/events/10"))
-                .andExpect(status().isOk())
-                .andReturn();
+        org.jsoup.nodes.Document document = renderDetail();
 
-        org.jsoup.nodes.Document document = org.jsoup.Jsoup.parse(
-                result.getResponse().getContentAsString());
-        assertThat(document.select(".event-poster-outer")).isEmpty();
-        assertThat(document.select(".event-detail-wrapper")).hasSize(1);
+        assertThat(document.select(".event-detail-media")).isEmpty();
+        assertThat(document.selectFirst(".event-detail-title").text()).isEqualTo("진행 중 이벤트");
+        assertThat(document.selectFirst(".event-detail-body").text()).isEqualTo("여행 이벤트 설명");
     }
 
     private Event event() {

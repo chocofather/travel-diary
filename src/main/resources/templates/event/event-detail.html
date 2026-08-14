@@ -4,55 +4,72 @@
       th:replace="layout/main :: layout(~{::body}, ~{::headFragment})">
 
 <th:block th:fragment="headFragment">
-    <link rel="stylesheet" href="/css/event.css">
+    <link rel="stylesheet" href="/css/event-detail.css">
 </th:block>
 
 <th:block th:fragment="body">
-    <!-- 렌더링 분기는 poster 존재 여부가 아니라 event_type 을 기준으로 한다.
-         (event_type 이 비어 있는 과거 데이터는 INFOGRAPHIC 으로 본다) -->
+    <!-- 레이아웃 분기는 poster 존재 여부가 아니라 event_type 을 기준으로 한다.
+         (event_type 이 비어 있는 과거 데이터는 INFOGRAPHIC 으로 본다)
+         상태·기간 정보는 기존 startDate/endDate 만으로 계산한다. -->
     <th:block th:with="isStandard=${event.eventType != null and event.eventType.name() == 'STANDARD'},
                        hasPoster=${event.posterImg != null and !#strings.isEmpty(event.posterImg)},
-                       posterLayout=${!isStandard and hasPoster}">
-    <!-- 1. 인포그래픽 이벤트: 이미지 한 장으로 안내가 끝나므로 별도 상세 내용 영역이 없다 -->
-    <div th:if="${posterLayout}" class="event-poster-outer">
-        <!-- 상단 인포 박스 -->
-        <div class="event-poster-info-bar">
-            <div class="event-poster-title" th:text="${event.title}">포스터 테스트용</div>
-            <div class="event-poster-period"
-                 th:text="|${event.startDate} ~ ${event.endDate}|">
-                2025-06-20 ~ 2025-12-31
+                       hasEventImg=${event.eventImg != null and !#strings.isEmpty(event.eventImg)},
+                       hasBody=${event.description != null and !#strings.isEmpty(event.description)},
+                       today=${T(java.time.LocalDate).now()}">
+    <th:block th:with="posterLayout=${!isStandard and hasPoster},
+                       status=${event.startDate.isAfter(today)
+                                   ? 'upcoming'
+                                   : (event.endDate.isBefore(today) ? 'ended' : 'ongoing')},
+                       totalDays=${T(java.time.temporal.ChronoUnit).DAYS.between(event.startDate, event.endDate) + 1}">
+    <!-- is-standard 는 일반 이벤트 레이아웃(포스터를 쓰지 않는 경우) 전용 스타일 -->
+    <article class="event-detail"
+             th:classappend="${(posterLayout ? '' : 'is-standard ')
+                               + ((posterLayout or hasEventImg) ? '' : 'is-text-only')}">
+
+        <header class="event-detail-header">
+            <div class="event-detail-kicker-row">
+                <p class="event-detail-kicker">TRAVEL DIARY EVENT</p>
+                <span class="event-detail-status" th:classappend="|is-${status}|"
+                      th:text="${status == 'ongoing' ? '진행중' : (status == 'upcoming' ? '진행예정' : '종료')}">진행중</span>
             </div>
-        </div>
-        <img th:src="@{${event.posterImg}}" alt="이벤트 포스터" class="event-poster-img"/>
-        <div class="event-detail-back" style="max-width:1120px; margin:0 auto; padding-top:20px;">
-            <a href="/events" class="back-link">&larr; 이벤트 목록</a>
-        </div>
-    </div>
+            <h1 class="event-detail-title" th:text="${event.title}">이벤트 제목</h1>
+            <ul class="event-detail-meta">
+                <li class="event-detail-period"
+                    th:text="|${#strings.replace(event.startDate, '-', '.')} ~ ${#strings.replace(event.endDate, '-', '.')}|">
+                    2026.08.01 ~ 2026.08.31
+                </li>
+                <li th:text="|총 ${totalDays}일간|">총 31일간</li>
+                <li th:if="${status == 'upcoming'}"
+                    th:text="|시작까지 D-${T(java.time.temporal.ChronoUnit).DAYS.between(today, event.startDate)}|">시작까지 D-7</li>
+                <li th:if="${status == 'ongoing'}"
+                    th:with="left=${T(java.time.temporal.ChronoUnit).DAYS.between(today, event.endDate)}"
+                    th:text="${left == 0} ? '오늘 마감' : |종료까지 D-${left}|">종료까지 D-5</li>
+            </ul>
+        </header>
 
+        <!-- 인포그래픽 이벤트: 이미지 한 장이 곧 본문이므로 별도 상세 내용 영역을 두지 않는다 -->
+        <figure class="event-detail-media is-poster" th:if="${posterLayout}">
+            <img th:src="@{${event.posterImg}}" th:alt="|${event.title} 인포그래픽|">
+        </figure>
 
-    <!-- 2. 일반 이벤트: 메인 이미지가 있을 때만 이미지 영역을 그리고 상세 내용을 보여준다 -->
-    <div th:unless="${posterLayout}" class="event-detail-wrapper">
-        <!-- 상단 메인 이미지(폭 넓게) -->
-        <div class="event-detail-banner"
-             th:if="${event.eventImg != null and !#strings.isEmpty(event.eventImg)}">
-            <img th:src="@{${event.eventImg}}" alt="이벤트 대표 이미지"/>
+        <!-- 일반 이벤트: 메인 이미지가 있을 때만 이미지 영역을 그린다 -->
+        <figure class="event-detail-media is-hero" th:if="${!posterLayout and hasEventImg}">
+            <img th:src="@{${event.eventImg}}" th:alt="|${event.title} 대표 이미지|">
+        </figure>
+
+        <!-- 일반 이벤트: 이미지 아래 소개 영역으로 본문을 연결한다 -->
+        <section class="event-detail-section" th:if="${!posterLayout and hasBody}">
+            <h2 class="event-detail-section-title">이벤트 소개</h2>
+            <div class="event-detail-body" th:utext="${event.description}">
+                이벤트 상세 내용
+            </div>
+        </section>
+
+        <div class="event-detail-actions">
+            <a th:href="@{/events}" class="event-detail-back-link">&larr; 이벤트 목록</a>
         </div>
-        <!-- 메타영역 (제목/기간/상태) -->
-        <div class="event-detail-meta">
-            <span class="event-detail-period"
-                  th:text="|${event.startDate} ~ ${event.endDate}|">2025-06-19 ~ 2025-12-31</span>
-            <h2 class="event-detail-title" th:text="${event.title}">이벤트 제목</h2>
-        </div>
-        <!-- 상세 설명 (HTML 가능) -->
-        <div class="event-detail-desc"
-             th:if="${event.description != null and !#strings.isEmpty(event.description)}"
-             th:utext="${event.description}">
-            이벤트 상세 내용
-        </div>
-        <div class="event-detail-back">
-            <a href="/events" class="back-link">&larr; 이벤트 목록</a>
-        </div>
-    </div>
+    </article>
+    </th:block>
     </th:block>
 </th:block>
 </html>

@@ -1,0 +1,290 @@
+/* 이벤트 상세 전용 스타일. 목록(event.css)과 분리해 서로 영향을 주지 않는다. */
+.event-detail {
+    --event-detail-accent: #0f766e;
+    --event-detail-accent-dark: #115e59;
+    --event-detail-accent-soft: #f0fdfa;
+    --event-detail-border: #e2e8f0;
+    width: min(960px, calc(100% - 40px));
+    margin: 46px auto 90px;
+    color: #172033;
+}
+
+/* ---------- 공통 헤더 ---------- */
+.event-detail-header {
+    padding-bottom: 26px;
+    border-bottom: 1px solid var(--event-detail-border);
+}
+
+/* 이미지가 없는 이벤트는 헤더 자체를 옅은 밴드로 채워 상단이 비어 보이지 않게 한다 */
+.event-detail.is-text-only .event-detail-header {
+    padding: 34px 32px 30px;
+    background: linear-gradient(140deg, #f0fdfa 0%, #f6fbfc 62%, #ffffff 100%);
+    border: 1px solid #d8ebe8;
+    border-radius: 18px;
+}
+
+.event-detail-kicker-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.event-detail-kicker {
+    margin: 0;
+    color: var(--event-detail-accent);
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+}
+
+.event-detail-status {
+    display: inline-flex;
+    align-items: center;
+    min-height: 26px;
+    padding: 0 11px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 800;
+}
+
+.event-detail-status.is-ongoing {
+    color: #14766f;
+    background: #e6f7f4;
+}
+
+.event-detail-status.is-upcoming {
+    color: #356ba1;
+    background: #eaf3fb;
+}
+
+.event-detail-status.is-ended {
+    color: #6e7781;
+    background: #eff1f3;
+}
+
+.event-detail-title {
+    margin: 16px 0 0;
+    overflow-wrap: anywhere;
+    font-size: clamp(1.75rem, 4.6vw, 2.75rem);
+    font-weight: 800;
+    line-height: 1.25;
+    letter-spacing: -0.045em;
+}
+
+.event-detail-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    margin: 17px 0 0;
+    padding: 0;
+    color: #5b6b7c;
+    font-size: 0.94rem;
+    font-weight: 650;
+    list-style: none;
+}
+
+.event-detail-meta li {
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.event-detail-meta li + li::before {
+    width: 3px;
+    height: 3px;
+    background: #c3ced8;
+    border-radius: 50%;
+    content: "";
+}
+
+.event-detail-period {
+    color: var(--event-detail-accent-dark);
+    font-weight: 750;
+    letter-spacing: -0.01em;
+}
+
+/* ---------- 이미지 영역 ---------- */
+.event-detail-media {
+    margin: 30px 0 0;
+}
+
+.event-detail-media img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 16px;
+}
+
+/* 인포그래픽: 세로로 긴 이미지도 잘리지 않도록 원본 비율을 그대로 유지한다 */
+.event-detail-media.is-poster {
+    display: flex;
+    justify-content: center;
+}
+
+.event-detail-media.is-poster img {
+    max-width: 900px;
+    background: #fff;
+    border: 1px solid #eaeef3;
+}
+
+/* 일반 행사 이미지: 넓은 히어로로 보여주되 과한 잘림을 막는다 */
+.event-detail-media.is-hero img {
+    aspect-ratio: 16 / 9;
+    background: #eef2f5;
+    object-fit: cover;
+}
+
+/* ---------- 본문 ---------- */
+.event-detail-body {
+    max-width: 720px;
+    margin: 32px 0 0;
+    color: #2c3a4b;
+    font-size: 1.05rem;
+    line-height: 1.9;
+    overflow-wrap: anywhere;
+    white-space: pre-line;
+}
+
+.event-detail-body img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 12px;
+}
+
+/* ---------- 하단 액션 ---------- */
+.event-detail-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: 46px;
+    padding-top: 26px;
+    border-top: 1px solid var(--event-detail-border);
+}
+
+.event-detail-back-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 46px;
+    gap: 8px;
+    padding: 0 22px;
+    color: #31485c;
+    background: #fff;
+    border: 1px solid #cbd5e1;
+    border-radius: 999px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: color 0.16s ease, background-color 0.16s ease, border-color 0.16s ease;
+}
+
+.event-detail-back-link:hover,
+.event-detail-back-link:focus-visible {
+    color: var(--event-detail-accent);
+    background: var(--event-detail-accent-soft);
+    border-color: #9fd3cd;
+}
+
+.event-detail-back-link:focus-visible {
+    outline: 3px solid rgba(15, 118, 110, 0.18);
+    outline-offset: 2px;
+}
+
+/* ===========================================================
+   일반(STANDARD) 이벤트 전용
+   인포그래픽 레이아웃(.is-poster)에는 적용되지 않는다.
+   =========================================================== */
+
+/* 헤더는 인포그래픽과 동일한 구성을 그대로 사용한다(별도 밴드/칩 없음). */
+
+/* 대표 이미지는 콘텐츠 폭을 꽉 채우는 키 비주얼로 둔다 */
+.event-detail.is-standard .event-detail-media.is-hero {
+    margin-top: 30px;
+}
+
+/* 본문 안내 영역: 글만 흐르는 블로그형 대신 하나의 정보 블록으로 묶는다 */
+.event-detail-section {
+    margin: 26px 0 0;
+    padding: 36px 40px 38px;
+    background: #f7fbfb;
+    border: 1px solid #e3efed;
+    border-radius: 18px;
+}
+
+.event-detail-section-title {
+    margin: 0 0 16px;
+    padding-bottom: 14px;
+    color: var(--event-detail-accent-dark);
+    border-bottom: 1px solid #dfece9;
+    font-size: 0.98rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+}
+
+.event-detail-section .event-detail-body {
+    max-width: 760px;
+    margin-top: 0;
+    color: #26333f;
+}
+
+@media (max-width: 700px) {
+    .event-detail {
+        width: min(100% - 32px, 960px);
+        margin: 30px auto 64px;
+    }
+
+    .event-detail.is-text-only .event-detail-header {
+        padding: 26px 20px 24px;
+    }
+
+    .event-detail-title {
+        margin-top: 13px;
+    }
+
+    .event-detail.is-standard .event-detail-media.is-hero {
+        margin-top: 24px;
+    }
+
+    .event-detail-section {
+        margin-top: 22px;
+        padding: 26px 20px 28px;
+        border-radius: 14px;
+    }
+
+    /* 좁은 화면에서는 기간·상태 메타를 세로로 쌓는다 */
+    .event-detail-meta {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 0.88rem;
+    }
+
+    .event-detail-meta li + li::before {
+        display: none;
+    }
+
+    .event-detail-media {
+        margin-top: 24px;
+    }
+
+    .event-detail-body {
+        margin-top: 26px;
+        font-size: 1rem;
+        line-height: 1.85;
+    }
+
+    .event-detail-actions {
+        margin-top: 36px;
+    }
+
+    .event-detail-back-link {
+        width: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .event-detail-back-link {
+        transition: none;
+    }
+}
