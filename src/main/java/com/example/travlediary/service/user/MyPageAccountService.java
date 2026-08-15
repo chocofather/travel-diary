@@ -6,10 +6,6 @@ import com.example.travlediary.dto.PasswordChangeForm;
 import com.example.travlediary.model.User;
 import com.example.travlediary.model.UserRole;
 import com.example.travlediary.model.UserStatus;
-import com.example.travlediary.repository.bookmark.BookmarkMapper;
-import com.example.travlediary.repository.comment.CommentLikeMapper;
-import com.example.travlediary.repository.course.CourseCommentMapper;
-import com.example.travlediary.repository.post.PostCommentMapper;
 import com.example.travlediary.repository.user.UserMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -19,7 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -28,10 +23,7 @@ public class MyPageAccountService {
     private static final int MAX_NAME_LENGTH = 50;
 
     private final UserMapper userMapper;
-    private final BookmarkMapper bookmarkMapper;
-    private final CommentLikeMapper commentLikeMapper;
-    private final PostCommentMapper postCommentMapper;
-    private final CourseCommentMapper courseCommentMapper;
+    private final AccountAnonymizationService accountAnonymizationService;
     private final PasswordEncoder passwordEncoder;
 
     @Transactional(readOnly = true)
@@ -113,14 +105,10 @@ public class MyPageAccountService {
                     "currentPassword", "비밀번호가 일치하지 않습니다.");
         }
 
-        String withdrawnEmail = withdrawnEmail(userId);
-        String withdrawnNickname = withdrawnNickname();
+        String withdrawnEmail = accountAnonymizationService.anonymizedEmail(userId);
+        String withdrawnNickname = accountAnonymizationService.anonymizedNickname();
 
-        commentLikeMapper.decrementDestinationLikeCountsByUserId(userId);
-        commentLikeMapper.deleteAllByUserId(userId);
-        postCommentMapper.deleteAllLikesByUserId(userId);
-        courseCommentMapper.deleteAllLikesByUserId(userId);
-        bookmarkMapper.deleteAllByUserId(userId);
+        accountAnonymizationService.clearPersonalTraces(userId);
 
         int updated = userMapper.deactivateAccount(
                 userId, withdrawnEmail, withdrawnNickname, UserStatus.DEACTIVATED);
@@ -172,12 +160,4 @@ public class MyPageAccountService {
         return userBirth;
     }
 
-    private String withdrawnEmail(Long userId) {
-        String random = UUID.randomUUID().toString().replace("-", "");
-        return "withdrawn-" + userId + "-" + random + "@example.invalid";
-    }
-
-    private String withdrawnNickname() {
-        return "탈퇴" + UUID.randomUUID().toString().replace("-", "").substring(0, 10);
-    }
 }

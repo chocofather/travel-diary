@@ -310,6 +310,7 @@ class AdminUserControllerTest {
                 .isEqualTo("이미 적용 중인 이용제한이 있습니다.");
     }
 
+
     @Test
     void sanctionPostsRequireCsrfAndAdminRole() throws Exception {
         mockMvc.perform(post("/admin/users/7/restrict")

@@ -80,6 +80,31 @@
       </dl>
     </section>
 
+    <section class="admin-form-card is-wide admin-user-section admin-user-policy-section">
+      <div class="admin-user-section-header">
+        <h2>조치 기준 안내</h2>
+      </div>
+      <ul class="admin-user-policy-list">
+        <li>
+          <strong>기간정지</strong>
+          <span>지정한 종료일시까지 서비스 이용을 제한합니다. 기간이 지나면 자동으로 해제됩니다.</span>
+        </li>
+        <li>
+          <strong>영구정지</strong>
+          <span>최고 수준의 이용제재입니다. 기간 제한이 없으며 <em>동일 이메일 재가입도 차단</em>됩니다.</span>
+        </li>
+        <li>
+          <strong>제한 해제</strong>
+          <span>적용 중인 이용제한을 해제하고 이전 회원 상태로 되돌립니다.
+            영구정지를 해제하면 동일 이메일 재가입 차단도 함께 풀립니다.</span>
+        </li>
+      </ul>
+      <p class="admin-user-policy-note">
+        회원 관리에서는 이용제한과 해제만 처리합니다.
+        이용제한은 계정을 삭제하지 않으며 작성한 글과 댓글도 그대로 유지됩니다.
+      </p>
+    </section>
+
     <section class="admin-form-card is-wide admin-user-section admin-user-sanction-section">
       <div class="admin-user-section-header">
         <h2>이용제한</h2>
@@ -178,6 +203,7 @@
         </div>
       </form>
     </section>
+
 
     <section class="admin-form-card is-wide admin-user-section"
              th:if="${!#lists.isEmpty(sanctionHistory)}">

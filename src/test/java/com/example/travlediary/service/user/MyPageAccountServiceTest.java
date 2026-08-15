@@ -43,9 +43,12 @@ class MyPageAccountServiceTest {
 
     @BeforeEach
     void setUp() {
+        // 익명화/흔적 정리는 관리자 강제탈퇴와 공용하는 실제 컴포넌트를 그대로 사용한다.
         service = new MyPageAccountService(
-                userMapper, bookmarkMapper, commentLikeMapper,
-                postCommentMapper, courseCommentMapper, passwordEncoder);
+                userMapper,
+                new AccountAnonymizationService(bookmarkMapper, commentLikeMapper,
+                        postCommentMapper, courseCommentMapper),
+                passwordEncoder);
     }
 
     @Test
