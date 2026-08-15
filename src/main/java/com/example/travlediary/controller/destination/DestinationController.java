@@ -26,6 +26,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class DestinationController {
 
+    /** 여행지 목록 기본 페이지 크기. 목록 카드가 4열이라 12개가 3줄로 떨어진다. */
+    private static final String DEFAULT_PAGE_SIZE = "12";
+
     private final DestinationService destinationService;
     private final DestinationImageService destinationImageService;
     private final CategoryService categoryService;
@@ -38,7 +41,7 @@ public class DestinationController {
             @RequestParam(value = "type", defaultValue = "domestic") String type,
             @RequestParam(value = "region", required = false) Long regionId,
             @RequestParam(value = "page", defaultValue = "1") int page,
-            @RequestParam(value = "size", defaultValue = "5") int size,
+            @RequestParam(value = "size", defaultValue = DEFAULT_PAGE_SIZE) int size,
             @RequestParam(value = "sort", defaultValue = "default") String sort,
             @AuthenticationPrincipal CustomUserDetails userDetails,
             HttpServletRequest request,
@@ -295,7 +298,7 @@ public class DestinationController {
             @RequestParam(value = "type", defaultValue = "domestic") String type,
             @RequestParam(value = "region", required = false) Long regionId,
             @RequestParam(value = "page", defaultValue = "1") int page,
-            @RequestParam(value = "size", defaultValue = "5") int size,
+            @RequestParam(value = "size", defaultValue = DEFAULT_PAGE_SIZE) int size,
             @RequestParam(value = "sort", defaultValue = "default") String sort,
             @AuthenticationPrincipal CustomUserDetails userDetails,
             Model model) {
@@ -405,7 +408,7 @@ public class DestinationController {
             @RequestParam(value = "type", defaultValue = "domestic") String type,
             @RequestParam(value = "region", required = false) Long regionId,
             @RequestParam(value = "page", defaultValue = "1") int page,
-            @RequestParam(value = "size", defaultValue = "5") int size,
+            @RequestParam(value = "size", defaultValue = DEFAULT_PAGE_SIZE) int size,
             @RequestParam(value = "sort", defaultValue = "default") String sort,
             @AuthenticationPrincipal CustomUserDetails userDetails,
             Model model) {

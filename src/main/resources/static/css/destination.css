@@ -184,75 +184,140 @@
     max-width: 1300px;
     margin: 40px auto;
 }
-.destination-card {
-    width: 220px;
-    height: 340px;  /* 고정 높이로 균일하게 맞추기 */
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 12px;
-    overflow: hidden;
-    text-decoration: none;
-    color: inherit;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-    transition: transform .2s, box-shadow .2s;
-    position: relative; /* 필수: bookmark 위치 기준 */
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between; /* 상단 텍스트 + 하단 북마크 간 거리 확보 */
-}
-
+/* 데스크톱 4열 그리드 */
 .destination-card-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 55px 45px;
-    justify-content: flex-start;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 42px 30px; /* 세로 42px · 가로 30px */
 }
 
 .destination-card-wrapper {
-    flex: 0 0 220px;
-}
-.destination-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 6px 12px rgba(0,0,0,0.12);
-}
-.destination-card img {
-    width: 100%;
-    height: 180px;
-    object-fit: cover;
-    margin-bottom: 12px;
-}
-.destination-card h3 {
-    margin: 12px;
-    font-size: 1.05rem;
-    font-weight: 600;
-}
-.destination-card p {
-    margin: 0 12px 12px;
-    font-size: .9rem;
-    line-height: 1.35;
-    color: #555;
+    position: relative; /* 북마크 버튼 기준 */
+    min-width: 0;
 }
 
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap');
+.destination-card {
+    display: flex;
+    height: 100%;
+    flex-direction: column;
+    overflow: hidden;
+    color: inherit;
+    background: #fff;
+    border: 1px solid #e6e9ee;
+    border-radius: 14px;
+    text-decoration: none;
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+
+.destination-card:hover {
+    border-color: #dbe0e8;
+    box-shadow: 0 6px 16px rgba(30, 41, 59, 0.08);
+    transform: translateY(-2px);
+}
+
+/* 썸네일: 카드 폭에 맞춰 크게 */
+.destination-card-media {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    background: #eef1f5;
+}
+
+.destination-card-media img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform .3s ease;
+}
+
+.destination-card:hover .destination-card-media img {
+    transform: scale(1.03);
+}
+
+.destination-card .card-text-wrapper {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    padding: 16px 16px 14px;
+}
+
+.destination-card h3 {
+    margin: 0;
+    overflow: hidden;
+    color: #1e2939;
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: -0.02em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.destination-card p {
+    margin: 0;
+    font-size: .9rem;
+    line-height: 1.55;
+    color: #5b6676;
+}
 
 .destination-card .short-description {
-    font-family: 'Spoqa Han Sans Neo', sans-serif;
-    font-size: 12px;
-    margin: 0 12px 8px;
-    color: #444;
-    min-height: 44px;   /* ✅ 높이 통일 */
+    margin-top: 7px;
+    min-height: 2.9em;   /* 두 줄 기준 높이 통일 */
+    font-size: 0.86rem;
+    color: #6b7686;
+}
+
+/* 지역 · 댓글 메타 */
+.destination-card .card-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid #f1f3f6;
 }
 
 .destination-card .region {
-    margin: 0 12px 16px;
+    min-width: 0;
+    overflow: hidden;
+    color: #8c94a3;
     font-size: 0.82rem;
-    color: #999;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-@media (max-width: 768px) {
-    .destination-card {
-        width: 100%;
-        max-width: 90%;
+.destination-card .card-comment-count {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    gap: 4px;
+    color: #8c94a3;
+    font-size: 0.82rem;
+}
+
+.destination-card .card-comment-count img {
+    width: 15px;
+    height: 15px;
+    opacity: .65;
+}
+
+@media (max-width: 1024px) {
+    .destination-card-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 28px 22px;
+    }
+}
+
+@media (max-width: 600px) {
+    .destination-card-list {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 20px;
+    }
+
+    .destination-card .short-description {
+        min-height: 0;
     }
 }
 
@@ -327,28 +392,42 @@
 /* 북마크 */
 
 
+/* 이미지 위 반투명 원형 버튼 (선택 상태는 아이콘 이미지로 유지) */
 .bookmark-icon {
     position: absolute;
-    top: 14px;          /* 카드/이미지 상단에서 여백 */
-    right: 14px;        /* 우측 여백 */
-    width: 28px;        /* 크기 살짝 키움, 취향대로 24~32px */
-    height: 28px;
-    cursor: pointer;
-    z-index: 10;        /* 충분히 위로 */
-    background: none;
-    border: none;
+    top: 10px;
+    right: 10px;
+    display: inline-flex;
+    width: 34px;
+    height: 34px;
+    align-items: center;
+    justify-content: center;
     padding: 0;
+    background: rgba(255, 255, 255, 0.82);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    border-radius: 50%;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.18);
+    backdrop-filter: blur(2px);
+    cursor: pointer;
+    z-index: 10;
+    transition: background-color .18s ease, transform .18s ease;
+}
+
+.bookmark-icon:hover,
+.bookmark-icon:focus-visible {
+    background: #fff;
+    transform: scale(1.06);
+}
+
+.bookmark-icon:focus-visible {
+    outline: 3px solid rgba(53, 88, 240, 0.25);
+    outline-offset: 2px;
 }
 
 .bookmark-icon img {
-    width: 100%;
-    height: auto;
-    transition: transform 0.2s ease;
-    filter: drop-shadow(0 1px 3px rgba(0,0,0,0.15));
-}
-
-.bookmark-icon img:hover {
-    transform: scale(1.1);
+    width: 19px;
+    height: 19px;
+    transition: none;
 }
 
 .pagination-wrapper {
@@ -374,98 +453,124 @@
 /* 페이징 */
 .pagination {
     display: flex;
-    gap: 4px;
     align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px;
 }
 
 .pagination a,
 .pagination span {
     display: inline-flex;
+    min-width: 34px;
+    height: 34px;
     align-items: center;
     justify-content: center;
-    min-width: 28px;
-    height: 34px;
-    padding: 0 8px;
     margin: 0;
-    font-size: 1.02rem;
-    font-weight: 500;
-    border: none;
-    border-radius: 7px;
-    background: #f5f7fa;
-    color: #333;
+    padding: 0 9px;
+    color: #5b6676;
+    background: #fff;
+    border: 1px solid #e6e9ee;
+    border-radius: 9px;
+    font-size: 0.9rem;
+    font-weight: 650;
     text-decoration: none;
-    box-shadow: none;
-    transition: background 0.18s, color 0.18s;
     cursor: pointer;
     outline: none;
+    transition: color .16s ease, background-color .16s ease, border-color .16s ease;
 }
 
 .pagination a:hover {
-    background: #e2e8f0;
-    color: #111;
+    color: #1e2939;
+    background: #f4f6fa;
+    border-color: #dbe0e8;
 }
 
-.pagination span[style*="font-weight:bold"],
-.pagination .active {
-    background: #3558f0;
+.pagination a:focus-visible {
+    outline: 3px solid rgba(53, 88, 240, 0.22);
+    outline-offset: 2px;
+}
+
+.pagination .page-nav {
+    font-size: 1.05rem;
+    line-height: 1;
+}
+
+.pagination .page-number.is-current {
     color: #fff;
-    font-weight: 700;
-    pointer-events: none;
-    box-shadow: none;
-}
-
-.pagination a[disabled] {
-    opacity: 0.35;
+    background: #1e2939;
+    border-color: #1e2939;
+    font-weight: 750;
     pointer-events: none;
 }
 
-@media (max-width: 768px) {
+.pagination .is-disabled {
+    color: #c2c8d2;
+    background: #f7f8fb;
+    border-color: #eceff4;
+    pointer-events: none;
+}
+
+@media (max-width: 600px) {
     .pagination a,
     .pagination span {
-        min-width: 22px;
-        height: 28px;
-        font-size: 0.92rem;
-        border-radius: 5px;
-        padding: 0 4px;
+        min-width: 30px;
+        height: 30px;
+        padding: 0 7px;
+        font-size: 0.85rem;
+        border-radius: 8px;
     }
 
     .pagination-wrapper {
-        margin: 15px 0 0 0;
+        margin: 24px 0 0 0;
     }
 }
 
-/* 정렬 버튼 */
+/* 정렬 (세그먼트 컨트롤) */
 .list-sort-buttons {
+    display: inline-flex;
+    gap: 2px;
+    margin: 0 0 22px auto !important;
+    padding: 3px;
+    background: #f1f3f7;
+    border: 1px solid #e6e9ee;
+    border-radius: 10px;
+    width: fit-content;
+}
+
+.destination-list-wrapper .list-sort-buttons {
     display: flex;
-    gap: 20px;
-    justify-content: flex-end;
-    margin-bottom: 32px !important;
+    width: fit-content;
 }
 
 .sort-btn {
-    padding: 0 2px;
-    font-size: 0.98rem;   /* 기존보다 살짝 작게! */
-    background: none;
+    display: inline-flex;
+    min-height: 34px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 14px;
+    color: #6b7686;
+    background: transparent;
     border: none;
-    color: #a0a4aa;
-    font-weight: 400;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    font-weight: 650;
+    letter-spacing: -0.01em;
     cursor: pointer;
-    border-radius: 0;
-    transition: color 0.15s, border-bottom 0.2s;
-    border-bottom: 2px solid transparent;
+    transition: color .15s ease, background-color .15s ease;
     outline: none;
 }
 
 .sort-btn:hover,
-.sort-btn:focus {
-    color: #222;
+.sort-btn:focus-visible {
+    color: #1e2939;
+    background: rgba(255, 255, 255, 0.7);
 }
 
 .sort-btn.active {
-    color: #111;
-    font-weight: 700;
-    border-bottom: 2.5px solid #111;
-    letter-spacing: 0.01em;
-    background: none;
+    color: #1e2939;
+    background: #fff;
+    font-weight: 750;
+    box-shadow: 0 1px 3px rgba(30, 41, 59, 0.1);
 }
 
