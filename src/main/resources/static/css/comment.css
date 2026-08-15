@@ -443,29 +443,63 @@
 }
 
 /* 좌우 버튼 */
+/* 좌/우 이동 버튼 (메인 여행지 이미지 모달과 같은 디자인) */
 .photo-prev, .photo-next {
     position: absolute;
     top: 50%;
-    transform: translateY(-50%);
     z-index: 10;
-    background: rgba(0, 0, 0, 0.5);
-    color: white;
-    border: none;
-    font-size: 30px;
+    display: flex;
+    width: 46px;
+    height: 46px;
+    align-items: center;
+    justify-content: center;
     padding: 0;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 50%;
+    font-size: 18px;
+    line-height: 1;
     cursor: pointer;
+    transform: translateY(-50%);
+    transition: background-color 0.18s ease;
 }
 
 .photo-prev:hover,
-.photo-next:hover {
-    background-color: rgba(0, 0, 0, 0.7);
+.photo-next:hover,
+.photo-prev:focus-visible,
+.photo-next:focus-visible {
+    background: rgba(0, 0, 0, 0.72);
 }
 
 .photo-prev {
-    left: -90px; /* 필요시 -70px 등으로 조정 */
+    left: 20px;
 }
+
 .photo-next {
-    right: -90px;
+    right: 20px;
+}
+
+/* 사진이 한 장이면 이동 버튼을 감춘다 */
+.photo-modal.is-single .photo-prev,
+.photo-modal.is-single .photo-next {
+    display: none;
+}
+
+@media (max-width: 600px) {
+    .photo-prev, .photo-next {
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+    }
+
+    .photo-prev {
+        left: 10px;
+    }
+
+    .photo-next {
+        right: 10px;
+    }
 }
 
 

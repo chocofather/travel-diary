@@ -38,18 +38,29 @@ export function initPhotoModal(modalSel, sidebarSel, mainSel) {
         idx = i;
         if (mainImg) mainImg.src = list[idx].imageUrl;
         renderSidebar();
-        if (modal) modal.style.display = 'flex';
+        if (modal) {
+            // 사진이 한 장뿐이면 좌/우 버튼을 숨긴다.
+            modal.classList.toggle('is-single', list.length <= 1);
+            modal.style.display = 'flex';
+        }
     }
 
     function hide() {
         if (modal) modal.style.display = 'none';
     }
 
+    /** 모달이 열려 있는지 (키보드 처리를 열린 동안으로만 제한하기 위해 사용) */
+    function isOpen() {
+        return !!modal && modal.style.display !== 'none';
+    }
+
     function prev() {
+        if (list.length <= 1) return;
         show((idx - 1 + list.length) % list.length);
     }
 
     function next() {
+        if (list.length <= 1) return;
         show((idx + 1) % list.length);
     }
 
@@ -61,8 +72,22 @@ export function initPhotoModal(modalSel, sidebarSel, mainSel) {
         const mainImg  = modal.querySelector('#main-photo'); // 메인 이미지
 
         if (closeBtn) closeBtn.onclick = hide;
-        if (prevBtn)  prevBtn.onclick  = prev;
-        if (nextBtn)  nextBtn.onclick  = next;
+
+        // 좌/우 버튼 클릭이 이미지 클릭(닫기)으로 전파되지 않게 막는다.
+        if (prevBtn) {
+            prevBtn.addEventListener('click', e => {
+                e.preventDefault();
+                e.stopPropagation();
+                prev();
+            });
+        }
+        if (nextBtn) {
+            nextBtn.addEventListener('click', e => {
+                e.preventDefault();
+                e.stopPropagation();
+                next();
+            });
+        }
 
         // 메인 이미지 클릭 시만 닫기
         if (mainImg) {
@@ -77,9 +102,23 @@ export function initPhotoModal(modalSel, sidebarSel, mainSel) {
         });*/
     }
 
-    // ESC 키로 닫기
+    // 모달이 열려 있을 때만 키보드에 반응한다. (닫혀 있으면 방향키에 간섭하지 않음)
     document.addEventListener('keydown', e => {
-        if (e.key === 'Escape') hide();
+        if (!isOpen()) return;
+
+        if (e.key === 'Escape') {
+            hide();
+            return;
+        }
+        if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            prev();
+            return;
+        }
+        if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            next();
+        }
     });
 
     /**

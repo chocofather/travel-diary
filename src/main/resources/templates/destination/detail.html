@@ -71,6 +71,14 @@
              th:alt="${destination.name + ' 대표 이미지'}"/>
     </div>
 
+    <!-- ────── 이미지 확대 모달 ────── -->
+    <dialog id="destination-image-modal" class="image-modal" aria-label="여행지 이미지 확대 보기">
+        <button type="button" class="image-modal-close" aria-label="이미지 닫기">&times;</button>
+        <button type="button" class="image-modal-nav prev" aria-label="이전 이미지">&#10094;</button>
+        <img class="image-modal-img" src="" alt="" />
+        <button type="button" class="image-modal-nav next" aria-label="다음 이미지">&#10095;</button>
+    </dialog>
+
     <!-- ────── 본문 소개 영역 ────── -->
     <main class="detail-container">
         <section class="info">
@@ -438,11 +446,12 @@
         <div class="photo-modal-overlay"></div>
         <div class="photo-modal-container">
             <span class="photo-close">&times;</span>
-            <button class="photo-prev">&#10094;</button>
+            <!-- 좌/우 버튼은 이미지 영역 안에 두어 항상 사진 위에 겹치게 한다 -->
             <div class="photo-main">
+                <button type="button" class="photo-prev" aria-label="이전 사진">&#10094;</button>
                 <img id="main-photo" src="" alt="메인 이미지">
+                <button type="button" class="photo-next" aria-label="다음 사진">&#10095;</button>
             </div>
-            <button class="photo-next">&#10095;</button>
             <div class="photo-sidebar-thumbnails" id="sidebar-thumbnails">
                 <!-- 썸네일 동적 삽입 -->
             </div>
@@ -459,6 +468,7 @@
 
     <!-- 자체 JS -->
     <script src="/js/detail-carousel.js" defer></script>
+    <script src="/js/destination-image-modal.js" defer></script>
     <script src="/js/map-init.js" defer></script>
     <script src="/js/bookmark.js" defer></script>
     <script src="/js/detail.js" defer></script>

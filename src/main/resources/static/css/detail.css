@@ -143,6 +143,200 @@ body {
     border-radius: 6px;
 }
 
+/* ===== 이미지 확대 ===== */
+/* 클릭하면 크게 볼 수 있다는 힌트 */
+.carousel .slide,
+.carousel.no-image {
+    position: relative;
+}
+
+.carousel .slide img,
+.carousel.no-image img {
+    cursor: zoom-in;
+}
+
+.carousel .slide::after,
+.carousel.no-image::after {
+    position: absolute;
+    right: 14px;
+    bottom: 14px;
+    display: flex;
+    width: 36px;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.45);
+    border-radius: 50%;
+    color: #fff;
+    font-size: 15px;
+    line-height: 1;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    content: "\2922"; /* 대각 확대 화살표 */
+}
+
+.carousel .slide:hover::after,
+.carousel.no-image:hover::after {
+    opacity: 1;
+}
+
+/* 확대 모달 */
+.image-modal {
+    padding: 0;
+    background: transparent;
+    border: none;
+    overflow: visible;
+}
+
+/* 열렸을 때는 화면 전체를 덮는다 (top layer / 대체 경로 공통) */
+.image-modal.is-open {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    max-width: none;
+    max-height: none;
+    width: auto;
+    height: auto;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    visibility: visible;
+    opacity: 1;
+}
+
+.image-modal::backdrop {
+    background: rgba(0, 0, 0, 0.82);
+}
+
+/* <dialog> 미지원 환경에서는 ::backdrop 이 없으므로 직접 어둡게 처리 */
+.image-modal.is-fallback.is-open {
+    z-index: 2000;
+    background: rgba(0, 0, 0, 0.82);
+}
+
+.image-modal .image-modal-img {
+    display: block;
+    max-width: 92vw;
+    max-height: 92vh;
+    width: auto;
+    height: auto;      /* 원본 비율 유지 · 잘림 없음 */
+    border-radius: 8px;
+    background: #111;
+}
+
+/* 좌/우 이동 버튼 */
+.image-modal .image-modal-nav {
+    position: absolute;
+    top: 50%;
+    z-index: 1;
+    display: flex;
+    width: 46px;
+    height: 46px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 50%;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    transform: translateY(-50%);
+    transition: background-color 0.18s ease;
+}
+
+.image-modal .image-modal-nav:hover,
+.image-modal .image-modal-nav:focus-visible {
+    background: rgba(0, 0, 0, 0.72);
+}
+
+.image-modal .image-modal-nav.prev {
+    left: 20px;
+}
+
+.image-modal .image-modal-nav.next {
+    right: 20px;
+}
+
+/* 이미지가 한 장이면 이동 버튼을 감춘다 */
+.image-modal.is-single .image-modal-nav {
+    display: none;
+}
+
+.image-modal .image-modal-close {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    z-index: 2;
+    display: flex;
+    width: 38px;
+    height: 38px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    font-size: 26px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background-color 0.18s ease;
+}
+
+.image-modal .image-modal-close:hover,
+.image-modal .image-modal-close:focus-visible {
+    background: rgba(255, 255, 255, 0.32);
+}
+
+@media (max-width: 600px) {
+    .image-modal .image-modal-img {
+        max-width: 94vw;
+        max-height: 78vh;
+    }
+
+    .image-modal .image-modal-close {
+        top: 12px;
+        right: 12px;
+        width: 34px;
+        height: 34px;
+        font-size: 23px;
+    }
+
+    .image-modal .image-modal-nav {
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+    }
+
+    .image-modal .image-modal-nav.prev {
+        left: 10px;
+    }
+
+    .image-modal .image-modal-nav.next {
+        right: 10px;
+    }
+
+    .carousel .slide::after,
+    .carousel.no-image::after {
+        right: 10px;
+        bottom: 10px;
+        width: 30px;
+        height: 30px;
+        font-size: 13px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .carousel .slide::after,
+    .carousel.no-image::after,
+    .image-modal .image-modal-close {
+        transition: none;
+    }
+}
+
 /* ===== 반응형 대응 ===== */
 @media (max-width: 600px) {
     .carousel-wrapper {
