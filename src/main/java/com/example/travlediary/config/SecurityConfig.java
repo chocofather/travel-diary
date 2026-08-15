@@ -80,6 +80,10 @@ public class SecurityConfig {
                         new RegexRequestMatcher(
                                 "^/admin/users/[0-9]+/release$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(
+                                "^/admin/contents/[A-Z_]+/[0-9]+/hide$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/admin/contents/[A-Z_]+/[0-9]+/restore$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
                                 "^/mypage/profile$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(
                                 "^/mypage/account/verify-password$", HttpMethod.POST.name()),

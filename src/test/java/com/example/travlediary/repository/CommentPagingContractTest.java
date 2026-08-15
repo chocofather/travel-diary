@@ -163,10 +163,13 @@ class CommentPagingContractTest {
                 .contains("preceding." + createdColumn + " &gt; target_root." + createdColumn)
                 .contains("preceding.id &gt; target_root.id");
         if (keepsDeletedRootPlaceholder) {
+            // 살아있는 답글이 있거나 관리자 조치된 원댓글은 placeholder 로 남는다
             assertThat(xml)
-                    .contains("root.deleted = 0 OR EXISTS")
+                    .contains("root.deleted = 0 OR <include refid=\"ModeratedComment\">"
+                            + "<property name=\"alias\" value=\"root\"/></include> OR EXISTS")
                     .contains("active_reply.parent_comment_id = root.id")
-                    .contains("preceding.deleted = 0 OR EXISTS");
+                    .contains("preceding.deleted = 0 OR <include refid=\"ModeratedComment\">"
+                            + "<property name=\"alias\" value=\"preceding\"/></include> OR EXISTS");
         }
     }
 

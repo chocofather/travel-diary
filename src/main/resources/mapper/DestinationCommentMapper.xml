@@ -29,6 +29,8 @@
         <result property="likes"      column="likes"/>
         <result property="parentCommentId" column="parent_comment_id"/>
         <result property="userId"     column="user_id"/>
+        <result property="deleted"    column="deleted"/>
+        <result property="moderated"  column="moderated"/>
 
         <!-- nested user -->
         <association property="writer" javaType="com.example.travlediary.model.User">
@@ -38,6 +40,21 @@
         </association>
     </resultMap>
 
+
+    <!-- 관리자 조치로 숨겨진 댓글 판별. 사용자 직접 삭제분은 포함하지 않는다. -->
+    <sql id="ModeratedExists">
+        EXISTS (
+            SELECT 1
+            FROM content_moderations cm
+            WHERE cm.target_type = 'DESTINATION_COMMENT'
+              AND cm.target_id = c.id
+              AND cm.status = 'ACTIVE'
+        )
+    </sql>
+
+    <sql id="ModeratedFlag">
+        <include refid="ModeratedExists"/> AS moderated,
+    </sql>
 
     <!-- 댓글 등록 -->
     <insert id="insert" parameterType="DestinationComment" useGeneratedKeys="true" keyProperty="id">
@@ -147,22 +164,24 @@
     <select id="findByDestinationIdWithWriter" resultMap="commentWithWriterMap">
     SELECT
         c.id as c_id,
-        c.content,
-        c.image_url,
+        CASE WHEN c.deleted = 1 THEN NULL ELSE c.content END AS content,
+        CASE WHEN c.deleted = 1 THEN NULL ELSE c.image_url END AS image_url,
         c.created_at,
         c.updated_at,
         c.likes,
         c.parent_comment_id,
         c.user_id,
+        c.deleted,
+        <include refid="ModeratedFlag"/>
 
         u.id as u_id,
-        u.nickname,
-        u.profile_image
+        CASE WHEN c.deleted = 1 THEN NULL ELSE u.nickname END AS nickname,
+        CASE WHEN c.deleted = 1 THEN NULL ELSE u.profile_image END AS profile_image
 
     FROM destination_comments c
              JOIN users u ON c.user_id = u.id
     WHERE c.destination_id = #{destinationId}
-      AND c.deleted = 0
+      AND (c.deleted = 0 OR <include refid="ModeratedExists"/>)
     ORDER BY c.created_at ASC
 </select>
 
@@ -170,22 +189,24 @@
     <select id="findByDestinationIdOrderByCreatedAtDesc" resultMap="commentWithWriterMap">
         SELECT
             c.id as c_id,
-            c.content,
-            c.image_url,
+            CASE WHEN c.deleted = 1 THEN NULL ELSE c.content END AS content,
+            CASE WHEN c.deleted = 1 THEN NULL ELSE c.image_url END AS image_url,
             c.created_at,
             c.updated_at,
             c.likes,
             c.parent_comment_id,
             c.user_id,
+            c.deleted,
+            <include refid="ModeratedFlag"/>
 
             u.id as u_id,
-            u.nickname,
-            u.profile_image
+            CASE WHEN c.deleted = 1 THEN NULL ELSE u.nickname END AS nickname,
+            CASE WHEN c.deleted = 1 THEN NULL ELSE u.profile_image END AS profile_image
 
         FROM destination_comments c
                  JOIN users u ON c.user_id = u.id
         WHERE c.destination_id = #{destinationId}
-          AND c.deleted = 0
+          AND (c.deleted = 0 OR <include refid="ModeratedExists"/>)
         ORDER BY c.created_at DESC
     </select>
 
@@ -193,22 +214,24 @@
     <select id="findByDestinationIdOrderByLikesDesc" resultMap="commentWithWriterMap">
         SELECT
             c.id as c_id,
-            c.content,
-            c.image_url,
+            CASE WHEN c.deleted = 1 THEN NULL ELSE c.content END AS content,
+            CASE WHEN c.deleted = 1 THEN NULL ELSE c.image_url END AS image_url,
             c.created_at,
             c.updated_at,
             c.likes,
             c.parent_comment_id,
             c.user_id,
+            c.deleted,
+            <include refid="ModeratedFlag"/>
 
             u.id as u_id,
-            u.nickname,
-            u.profile_image
+            CASE WHEN c.deleted = 1 THEN NULL ELSE u.nickname END AS nickname,
+            CASE WHEN c.deleted = 1 THEN NULL ELSE u.profile_image END AS profile_image
 
         FROM destination_comments c
                  JOIN users u ON c.user_id = u.id
         WHERE c.destination_id = #{destinationId}
-          AND c.deleted = 0
+          AND (c.deleted = 0 OR <include refid="ModeratedExists"/>)
         ORDER BY c.likes DESC, c.created_at ASC
     </select>
 

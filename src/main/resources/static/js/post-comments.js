@@ -163,7 +163,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (comment.deleted) {
             item.classList.add('post-comment-deleted', 'content-comment-deleted');
             content.classList.add('content-comment-deleted-text');
-            content.textContent = '삭제된 댓글입니다.';
+            content.textContent = comment.moderated
+                ? '관리자에 의해 조치된 댓글입니다.'
+                : '삭제된 댓글입니다.';
             item.append(content);
             return item;
         }
@@ -211,6 +213,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 makeButton('삭제', 'post-comment-delete content-comment-action')
             );
         }
+        // 관리자 조치 버튼은 ADMIN 에게만 노출한다. 권한은 서버에서 다시 확인한다.
+        if (window.adminModeration?.isAdminUser()) {
+            actions.append(window.adminModeration.makeButton(
+                'POST_COMMENT', comment.id, 'post-comment-moderate content-comment-action'));
+        }
 
         const body = document.createElement('div');
         body.className = 'content-comment-body';
@@ -237,7 +244,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const repliesByParent = new Map();
 
         comments
-            .filter(comment => comment.parentCommentId != null && !comment.deleted)
+            // 관리자 조치된 대댓글은 트리에서 빼지 않고 placeholder 로 남긴다.
+            // 사용자가 직접 삭제한 대댓글은 기존대로 제외한다.
+            .filter(comment => comment.parentCommentId != null
+                && (!comment.deleted || comment.moderated))
             .forEach(reply => {
                 const parentId = Number(reply.parentCommentId);
                 if (!repliesByParent.has(parentId)) repliesByParent.set(parentId, []);

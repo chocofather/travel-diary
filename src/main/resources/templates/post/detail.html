@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko"
       xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
       th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
 
 <th:block th:fragment="headFragment">
@@ -67,6 +68,16 @@
             <button type="submit" class="post-delete-button">삭제</button>
           </form>
         </th:block>
+        <!-- 관리자 콘텐츠 조치. 버튼은 ADMIN 에게만 보이고 서비스에서도 권한을 다시 확인한다. -->
+        <form sec:authorize="hasRole('ADMIN')"
+              th:action="@{/admin/contents/POST/{id}/hide(id=${post.id})}"
+              method="post" class="content-moderation-form"
+              onsubmit="return confirm('이 게시글을 관리자 조치로 숨기시겠습니까?');">
+          <input type="hidden" name="redirect" th:value="@{/board/list(boardType='post')}">
+          <input type="text" name="reason" maxlength="500" required
+                 class="content-moderation-reason" placeholder="숨김 사유(필수)">
+          <button type="submit" class="content-moderation-button">숨김 처리</button>
+        </form>
         <a th:href="@{/board/list(boardType='post')}" class="back-to-list">목록으로</a>
       </div>
     </article>

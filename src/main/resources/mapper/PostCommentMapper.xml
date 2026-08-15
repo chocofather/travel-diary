@@ -5,6 +5,17 @@
 
 <mapper namespace="com.example.travlediary.repository.post.PostCommentMapper">
 
+    <!-- 관리자 조치(ACTIVE)로 숨겨진 댓글. 사용자 직접 삭제와 구분한다. -->
+    <sql id="ModeratedComment">
+        EXISTS (
+            SELECT 1
+            FROM content_moderations cm
+            WHERE cm.target_type = 'POST_COMMENT'
+              AND cm.target_id = ${alias}.id
+              AND cm.status = 'ACTIVE'
+        )
+    </sql>
+
     <sql id="commentDtoColumns">
         pc.id,
         pc.post_id AS postId,
@@ -27,6 +38,13 @@
         pc.created_at AS createdAt,
         CASE WHEN pc.deleted = 1 THEN NULL ELSE pc.updated_at END AS updatedAt,
         pc.deleted AS deleted,
+        EXISTS (
+            SELECT 1
+            FROM content_moderations cm
+            WHERE cm.target_type = 'POST_COMMENT'
+              AND cm.target_id = pc.id
+              AND cm.status = 'ACTIVE'
+        ) AS moderated,
         CASE
             WHEN pc.deleted = 1 THEN 0
             ELSE (
@@ -90,18 +108,25 @@
                   pc.parent_comment_id IS NULL
                   AND (
                       pc.deleted = 0
+                      OR <include refid="ModeratedComment"><property name="alias" value="pc"/></include>
                       OR EXISTS (
                           SELECT 1
                           FROM post_comments reply
                           WHERE reply.parent_comment_id = pc.id
                             AND reply.post_id = pc.post_id
-                            AND reply.deleted = 0
+                            AND (
+                                reply.deleted = 0
+                                OR <include refid="ModeratedComment"><property name="alias" value="reply"/></include>
+                            )
                       )
                   )
               )
               OR (
                   pc.parent_comment_id IS NOT NULL
-                  AND pc.deleted = 0
+                  AND (
+                      pc.deleted = 0
+                      OR <include refid="ModeratedComment"><property name="alias" value="pc"/></include>
+                  )
                   AND parent.id IS NOT NULL
                   AND parent.post_id = pc.post_id
                   AND parent.parent_comment_id IS NULL
@@ -128,12 +153,16 @@
           AND pc.parent_comment_id IS NULL
           AND (
               pc.deleted = 0
+              OR <include refid="ModeratedComment"><property name="alias" value="pc"/></include>
               OR EXISTS (
                   SELECT 1
                   FROM post_comments active_reply
                   WHERE active_reply.parent_comment_id = pc.id
                     AND active_reply.post_id = pc.post_id
-                    AND active_reply.deleted = 0
+                    AND (
+                        active_reply.deleted = 0
+                        OR <include refid="ModeratedComment"><property name="alias" value="active_reply"/></include>
+                    )
               )
           )
         <choose>
@@ -164,7 +193,10 @@
           <foreach item="rootId" collection="rootIds" open="(" separator="," close=")">
               #{rootId}
           </foreach>
-          AND pc.deleted = 0
+          AND (
+              pc.deleted = 0
+              OR <include refid="ModeratedComment"><property name="alias" value="pc"/></include>
+          )
         ORDER BY pc.created_at ASC, pc.id ASC
     </select>
 
@@ -175,12 +207,16 @@
           AND pc.parent_comment_id IS NULL
           AND (
               pc.deleted = 0
+              OR <include refid="ModeratedComment"><property name="alias" value="pc"/></include>
               OR EXISTS (
                   SELECT 1
                   FROM post_comments active_reply
                   WHERE active_reply.parent_comment_id = pc.id
                     AND active_reply.post_id = pc.post_id
-                    AND active_reply.deleted = 0
+                    AND (
+                        active_reply.deleted = 0
+                        OR <include refid="ModeratedComment"><property name="alias" value="active_reply"/></include>
+                    )
               )
           )
     </select>
@@ -208,12 +244,16 @@
           AND target.deleted = 0
           AND (
               root.deleted = 0
+              OR <include refid="ModeratedComment"><property name="alias" value="root"/></include>
               OR EXISTS (
                   SELECT 1
                   FROM post_comments active_reply
                   WHERE active_reply.parent_comment_id = root.id
                     AND active_reply.post_id = root.post_id
-                    AND active_reply.deleted = 0
+                    AND (
+                        active_reply.deleted = 0
+                        OR <include refid="ModeratedComment"><property name="alias" value="active_reply"/></include>
+                    )
               )
           )
     </select>
@@ -229,12 +269,16 @@
           AND preceding.parent_comment_id IS NULL
           AND (
               preceding.deleted = 0
+              OR <include refid="ModeratedComment"><property name="alias" value="preceding"/></include>
               OR EXISTS (
                   SELECT 1
                   FROM post_comments active_reply
                   WHERE active_reply.parent_comment_id = preceding.id
                     AND active_reply.post_id = preceding.post_id
-                    AND active_reply.deleted = 0
+                    AND (
+                        active_reply.deleted = 0
+                        OR <include refid="ModeratedComment"><property name="alias" value="active_reply"/></include>
+                    )
               )
           )
           AND (

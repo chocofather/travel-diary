@@ -5,6 +5,17 @@
 
 <mapper namespace="com.example.travlediary.repository.course.CourseCommentMapper">
 
+    <!-- 관리자 조치(ACTIVE)로 숨겨진 댓글. 사용자 직접 삭제와 구분한다. -->
+    <sql id="ModeratedComment">
+        EXISTS (
+            SELECT 1
+            FROM content_moderations cm
+            WHERE cm.target_type = 'COURSE_COMMENT'
+              AND cm.target_id = ${alias}.id
+              AND cm.status = 'ACTIVE'
+        )
+    </sql>
+
     <sql id="commentDtoColumns">
         cc.id,
         cc.course_id AS courseId,
@@ -27,6 +38,13 @@
         cc.create_at AS createdAt,
         CASE WHEN cc.deleted = 1 THEN NULL ELSE cc.updated_at END AS updatedAt,
         cc.deleted,
+        EXISTS (
+            SELECT 1
+            FROM content_moderations cm
+            WHERE cm.target_type = 'COURSE_COMMENT'
+              AND cm.target_id = cc.id
+              AND cm.status = 'ACTIVE'
+        ) AS moderated,
         CASE
             WHEN cc.deleted = 1 THEN 0
             ELSE (
@@ -88,18 +106,25 @@
                   cc.parent_comment_id IS NULL
                   AND (
                       cc.deleted = 0
+                      OR <include refid="ModeratedComment"><property name="alias" value="cc"/></include>
                       OR EXISTS (
                           SELECT 1
                           FROM course_comments reply
                           WHERE reply.parent_comment_id = cc.id
                             AND reply.course_id = cc.course_id
-                            AND reply.deleted = 0
+                            AND (
+                                reply.deleted = 0
+                                OR <include refid="ModeratedComment"><property name="alias" value="reply"/></include>
+                            )
                       )
                   )
               )
               OR (
                   cc.parent_comment_id IS NOT NULL
-                  AND cc.deleted = 0
+                  AND (
+                      cc.deleted = 0
+                      OR <include refid="ModeratedComment"><property name="alias" value="cc"/></include>
+                  )
                   AND parent.id IS NOT NULL
                   AND parent.course_id = cc.course_id
                   AND parent.parent_comment_id IS NULL
@@ -126,12 +151,16 @@
           AND cc.parent_comment_id IS NULL
           AND (
               cc.deleted = 0
+              OR <include refid="ModeratedComment"><property name="alias" value="cc"/></include>
               OR EXISTS (
                   SELECT 1
                   FROM course_comments active_reply
                   WHERE active_reply.parent_comment_id = cc.id
                     AND active_reply.course_id = cc.course_id
-                    AND active_reply.deleted = 0
+                    AND (
+                        active_reply.deleted = 0
+                        OR <include refid="ModeratedComment"><property name="alias" value="active_reply"/></include>
+                    )
               )
           )
         <choose>
@@ -162,7 +191,10 @@
           <foreach item="rootId" collection="rootIds" open="(" separator="," close=")">
               #{rootId}
           </foreach>
-          AND cc.deleted = 0
+          AND (
+              cc.deleted = 0
+              OR <include refid="ModeratedComment"><property name="alias" value="cc"/></include>
+          )
         ORDER BY cc.create_at ASC, cc.id ASC
     </select>
 
@@ -173,12 +205,16 @@
           AND cc.parent_comment_id IS NULL
           AND (
               cc.deleted = 0
+              OR <include refid="ModeratedComment"><property name="alias" value="cc"/></include>
               OR EXISTS (
                   SELECT 1
                   FROM course_comments active_reply
                   WHERE active_reply.parent_comment_id = cc.id
                     AND active_reply.course_id = cc.course_id
-                    AND active_reply.deleted = 0
+                    AND (
+                        active_reply.deleted = 0
+                        OR <include refid="ModeratedComment"><property name="alias" value="active_reply"/></include>
+                    )
               )
           )
     </select>
@@ -206,12 +242,16 @@
           AND target.deleted = 0
           AND (
               root.deleted = 0
+              OR <include refid="ModeratedComment"><property name="alias" value="root"/></include>
               OR EXISTS (
                   SELECT 1
                   FROM course_comments active_reply
                   WHERE active_reply.parent_comment_id = root.id
                     AND active_reply.course_id = root.course_id
-                    AND active_reply.deleted = 0
+                    AND (
+                        active_reply.deleted = 0
+                        OR <include refid="ModeratedComment"><property name="alias" value="active_reply"/></include>
+                    )
               )
           )
     </select>
@@ -227,12 +267,16 @@
           AND preceding.parent_comment_id IS NULL
           AND (
               preceding.deleted = 0
+              OR <include refid="ModeratedComment"><property name="alias" value="preceding"/></include>
               OR EXISTS (
                   SELECT 1
                   FROM course_comments active_reply
                   WHERE active_reply.parent_comment_id = preceding.id
                     AND active_reply.course_id = preceding.course_id
-                    AND active_reply.deleted = 0
+                    AND (
+                        active_reply.deleted = 0
+                        OR <include refid="ModeratedComment"><property name="alias" value="active_reply"/></include>
+                    )
               )
           )
           AND (

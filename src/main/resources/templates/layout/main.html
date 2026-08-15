@@ -27,6 +27,9 @@
     // principal이 null이 아니고 anonymousUser도 아닐 때만 true
     const isLoggedIn =
             /*[[${#authentication.principal != null and #authentication.principal != 'anonymousUser'}]]*/ false;
+    // 관리자 조치 버튼 노출용. 실제 권한은 서버에서 다시 검증한다.
+    const isAdmin =
+            /*[[${#authorization.expression('hasRole(''ADMIN'')')}]]*/ false;
   </script>
 
   <!-- 공통 헤더 -->
@@ -52,6 +55,7 @@
   <!-- 페이지별 공통 스크립트 -->
   <script src="/js/main.js" defer></script>
   <script src="/js/menu.js" defer></script>
+  <script src="/js/admin-content-moderation.js" defer></script>
 
   </body>
   </html>

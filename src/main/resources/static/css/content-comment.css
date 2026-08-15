@@ -458,3 +458,51 @@
         column-gap: 8px;
     }
 }
+
+/* 관리자 콘텐츠 조치 (ADMIN 에게만 노출) */
+.content-moderation-form {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0;
+}
+
+.content-moderation-reason {
+    min-width: 0;
+    width: 180px;
+    height: 34px;
+    padding: 0 10px;
+    color: #34415e;
+    border: 1px solid #dcd2d2;
+    border-radius: 8px;
+    font-size: 0.84rem;
+}
+
+.content-moderation-button {
+    height: 34px;
+    padding: 0 12px;
+    color: #fff;
+    background: #b04a42;
+    border: 1px solid #b04a42;
+    border-radius: 8px;
+    font-size: 0.84rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.content-moderation-button:hover {
+    background: #963c35;
+    border-color: #963c35;
+}
+
+@media (max-width: 700px) {
+    .content-moderation-form {
+        width: 100%;
+    }
+
+    .content-moderation-reason {
+        flex: 1 1 auto;
+        width: auto;
+    }
+}

@@ -82,6 +82,22 @@ export function createCommentItem(comment, depth = 0, parentNickname = '') {
         li.dataset.parentId = comment.parentCommentId;
         li.dataset.writerNickname = parentNickname;
     }
+    // 관리자 조치된 댓글: 트리(대댓글)는 유지하고 본문만 안내 문구로 대체한다.
+    if (comment.moderated === true || comment.deleted === true) {
+        li.classList.add('content-comment-deleted');
+        const moderatedBody = document.createElement('div');
+        moderatedBody.className = 'content-comment-body';
+        const moderatedText = document.createElement('p');
+        moderatedText.className = 'comment-content content-comment-text content-comment-deleted-text';
+        moderatedText.textContent = '관리자에 의해 조치된 댓글입니다.';
+        moderatedBody.append(moderatedText);
+        const moderatedCard = document.createElement('div');
+        moderatedCard.className = 'content-comment-card';
+        moderatedCard.append(moderatedBody);
+        li.append(moderatedCard);
+        return li;
+    }
+
     const profileUrl = profileImageUrl(comment.writer?.profileImage);
     const nickname   = comment.writer?.nickname     || '알 수 없음';
     const isWriter   = comment.writer?.isWriter === true;
@@ -133,6 +149,11 @@ export function createCommentItem(comment, depth = 0, parentNickname = '') {
             ` : ''}
         </div>
     `;
+    if (window.adminModeration?.isAdminUser()) {
+        body.querySelector('.content-comment-actions').append(
+            window.adminModeration.makeButton(
+                'DESTINATION_COMMENT', comment.id, 'moderate-btn content-comment-action'));
+    }
     body.querySelector('.content-comment-header').prepend(
         makePublicProfileLink(comment.writer?.id, nicknameElement, 'content-comment-writer-link')
     );

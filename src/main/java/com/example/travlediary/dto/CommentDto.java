@@ -17,6 +17,7 @@ public class CommentDto {
 
     private boolean myComment; //  현재 로그인한 사용자가 이 댓글의 작성자인가?
     private boolean admin;    // 관리자 여부
+    private boolean moderated; // 관리자 조치로 숨겨진 댓글이면 true
 
     @JsonProperty("isLoggedIn")
     private Boolean isLoggedIn;

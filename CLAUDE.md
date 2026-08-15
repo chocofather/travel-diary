@@ -89,3 +89,4 @@ Use this order unless the user explicitly requests otherwise:
 - Never ask the user to paste secret values when the task can be completed without them.
 - If a secret appears in command output or configuration, do not repeat it in summaries.
 
+- Do not use Python/Perl scripts, sed, or other bulk replacement commands to modify source files. Edit the target files directly and keep each change small and reviewable.

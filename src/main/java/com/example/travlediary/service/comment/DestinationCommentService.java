@@ -245,6 +245,7 @@ public class DestinationCommentService {
 
             dto.setMyComment(currentUserId != null && comment.getUserId().equals(currentUserId));
             dto.setAdmin(isAdmin);
+            dto.setModerated(comment.isModerated());
             dto.setIsLoggedIn(currentUserId != null);
 
             // 좋아요 여부

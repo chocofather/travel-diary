@@ -4,12 +4,12 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Locale;
 
-final class InternalRedirectValidator {
+public final class InternalRedirectValidator {
 
     private InternalRedirectValidator() {
     }
 
-    static String normalize(String redirect) {
+    public static String normalize(String redirect) {
         if (redirect == null || redirect.isBlank()) {
             return null;
         }
