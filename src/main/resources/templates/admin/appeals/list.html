@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'appeals')}">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/admin-appeals.css">
+</th:block>
+<th:block th:fragment="body">
+  <section class="admin-page-section admin-appeals-page">
+    <header class="admin-page-header">
+      <div class="admin-page-heading">
+        <h1 class="admin-page-title">이의제기 관리</h1>
+        <p class="admin-page-description">이용제한 회원이 제출한 이의제기를 확인하고 처리합니다.</p>
+      </div>
+    </header>
+
+    <nav class="admin-appeal-filters" aria-label="이의제기 상태 필터">
+      <a th:href="@{/admin/appeals(keyword=${keyword})}"
+         th:classappend="${currentStatus == 'ALL'} ? ' is-active'"
+         th:attr="aria-current=${currentStatus == 'ALL'} ? 'page' : null">전체</a>
+      <a th:href="@{/admin/appeals(status='PENDING',keyword=${keyword})}"
+         th:classappend="${currentStatus == 'PENDING'} ? ' is-active'"
+         th:attr="aria-current=${currentStatus == 'PENDING'} ? 'page' : null">접수됨</a>
+      <a th:href="@{/admin/appeals(status='APPROVED',keyword=${keyword})}"
+         th:classappend="${currentStatus == 'APPROVED'} ? ' is-active'"
+         th:attr="aria-current=${currentStatus == 'APPROVED'} ? 'page' : null">승인됨</a>
+      <a th:href="@{/admin/appeals(status='REJECTED',keyword=${keyword})}"
+         th:classappend="${currentStatus == 'REJECTED'} ? ' is-active'"
+         th:attr="aria-current=${currentStatus == 'REJECTED'} ? 'page' : null">기각됨</a>
+    </nav>
+
+    <div class="admin-filter-card">
+      <form th:action="@{/admin/appeals}" method="get" class="admin-filter-form">
+        <input type="hidden" name="status"
+               th:if="${currentStatus != 'ALL'}" th:value="${currentStatus}">
+        <label class="admin-filter-field admin-appeal-search-field">
+          <span>회원 검색</span>
+          <input type="text" name="keyword" class="admin-input"
+                 th:value="${keyword}" maxlength="100"
+                 placeholder="아이디 · 닉네임 · 이메일">
+        </label>
+        <div class="admin-filter-actions">
+          <button type="submit" class="admin-btn is-primary">조회</button>
+          <a th:href="@{/admin/appeals}" class="admin-btn">초기화</a>
+        </div>
+      </form>
+    </div>
+
+    <p class="admin-appeal-result-count">
+      전체 <strong th:text="${totalCount}">0</strong>건
+    </p>
+
+    <div class="admin-card is-table-card">
+      <div class="admin-table-wrapper">
+        <table class="admin-table admin-appeals-table">
+          <thead>
+          <tr>
+            <th>상태</th>
+            <th>회원</th>
+            <th>제재</th>
+            <th>이의제기 내용</th>
+            <th>제출일</th>
+            <th>처리</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr th:each="appeal : ${appeals}">
+            <td>
+              <span class="admin-appeal-status"
+                    th:classappend="|is-${#strings.toLowerCase(appeal.status.name())}|"
+                    th:text="${appeal.status.displayName}">접수됨</span>
+            </td>
+            <td class="admin-appeal-member">
+              <strong th:text="${appeal.username}">travler</strong>
+              <span th:text="${appeal.nickname}">여행자</span>
+            </td>
+            <td>
+              <span class="admin-appeal-sanction"
+                    th:classappend="${appeal.permanentSanction} ? ' is-permanent'"
+                    th:text="${appeal.sanctionType.displayName}">기간제한</span>
+            </td>
+            <td class="admin-appeal-content" th:text="${appeal.content}">이의제기 내용</td>
+            <td th:text="${appeal.submittedAt != null}
+                        ? ${#strings.replace(#strings.substring(appeal.submittedAt, 0, 16), 'T', ' ')}
+                        : '-'">2026-08-15 12:00</td>
+            <td class="admin-table-actions">
+              <a th:href="@{/admin/appeals/{id}(id=${appeal.id})}"
+                 class="admin-btn is-small">상세</a>
+            </td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(appeals)}">
+            <td colspan="6" class="admin-table-empty">이의제기가 없습니다.</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <nav class="admin-appeal-pagination" th:if="${totalPages > 1}" aria-label="이의제기 페이지">
+      <a th:if="${currentPage > 1}"
+         th:href="@{/admin/appeals(status=${currentStatus == 'ALL' ? null : currentStatus},keyword=${keyword},page=${currentPage - 1})}">이전</a>
+      <span th:unless="${currentPage > 1}" class="is-disabled" aria-disabled="true">이전</span>
+      <a th:each="pageNumber : ${#numbers.sequence(1, totalPages)}"
+         th:href="@{/admin/appeals(status=${currentStatus == 'ALL' ? null : currentStatus},keyword=${keyword},page=${pageNumber == 1 ? null : pageNumber})}"
+         th:text="${pageNumber}"
+         th:classappend="${pageNumber == currentPage} ? ' is-active'"
+         th:attr="aria-current=${pageNumber == currentPage} ? 'page' : null">1</a>
+      <a th:if="${currentPage < totalPages}"
+         th:href="@{/admin/appeals(status=${currentStatus == 'ALL' ? null : currentStatus},keyword=${keyword},page=${currentPage + 1})}">다음</a>
+      <span th:unless="${currentPage < totalPages}" class="is-disabled" aria-disabled="true">다음</span>
+    </nav>
+  </section>
+</th:block>
+</html>

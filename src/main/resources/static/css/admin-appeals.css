@@ -1,0 +1,308 @@
+.admin-appeals-page,
+.admin-appeal-detail-page {
+    min-width: 0;
+}
+
+/* 상태 필터 */
+.admin-appeal-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 18px;
+}
+
+.admin-appeal-filters a {
+    display: inline-flex;
+    min-height: 38px;
+    align-items: center;
+    padding: 7px 14px;
+    color: #58657d;
+    background: #fff;
+    border: 1px solid var(--admin-border);
+    border-radius: 9px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.admin-appeal-filters a:hover,
+.admin-appeal-filters a.is-active {
+    color: #fff;
+    background: var(--admin-blue);
+    border-color: var(--admin-blue);
+}
+
+.admin-appeal-search-field {
+    display: grid;
+    gap: 6px;
+    flex: 1 1 260px;
+    max-width: 340px;
+}
+
+.admin-appeal-search-field > span {
+    color: var(--admin-muted);
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.admin-appeal-result-count {
+    margin: 16px 0 12px;
+    color: var(--admin-muted);
+    font-size: 0.85rem;
+    font-weight: 650;
+}
+
+.admin-appeal-result-count strong {
+    color: #35415a;
+    font-weight: 800;
+}
+
+/* 목록 */
+.admin-appeals-table {
+    min-width: 960px;
+}
+
+.admin-appeal-status,
+.admin-appeal-sanction {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 25px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.74rem;
+    font-weight: 750;
+    white-space: nowrap;
+}
+
+.admin-appeal-status.is-pending {
+    color: #8a5a12;
+    background: #fff8e8;
+    border: 1px solid #f0d9aa;
+}
+
+.admin-appeal-status.is-approved {
+    color: #14766f;
+    background: #e6f7f4;
+    border: 1px solid #bde9de;
+}
+
+.admin-appeal-status.is-rejected {
+    color: #a53a3a;
+    background: #fdecec;
+    border: 1px solid #f2c7c7;
+}
+
+.admin-appeal-sanction {
+    color: #4a5a75;
+    background: #eef2f8;
+    border: 1px solid #d6dfeb;
+}
+
+.admin-appeal-sanction.is-permanent {
+    color: #a53a3a;
+    background: #fdecec;
+    border-color: #f2c7c7;
+}
+
+.admin-appeal-member {
+    display: grid;
+    gap: 2px;
+}
+
+.admin-appeal-member strong {
+    color: #34415e;
+    font-size: 0.88rem;
+    font-weight: 750;
+}
+
+.admin-appeal-member span {
+    color: var(--admin-muted);
+    font-size: 0.8rem;
+}
+
+.admin-appeal-content {
+    display: -webkit-box;
+    max-width: 320px;
+    overflow: hidden;
+    color: #5b6680;
+    font-size: 0.85rem;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+/* 상세 */
+.admin-appeal-detail-page .admin-appeal-section {
+    max-width: none;
+    padding: 24px;
+}
+
+.admin-appeal-detail-page .admin-appeal-section + .admin-appeal-section {
+    margin-top: 14px;
+}
+
+.admin-appeal-section-header {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 18px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #edf0f5;
+}
+
+.admin-appeal-section-header h2 {
+    margin: 0;
+    color: #334373;
+    font-size: 1.08rem;
+    letter-spacing: -0.02em;
+}
+
+.admin-appeal-submitted {
+    color: var(--admin-muted);
+    font-size: 0.82rem;
+    font-weight: 650;
+}
+
+.admin-appeal-meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 18px;
+    margin: 0;
+}
+
+.admin-appeal-meta > div {
+    display: grid;
+    min-width: 0;
+    grid-template-columns: 100px minmax(0, 1fr);
+    align-items: baseline;
+    gap: 10px;
+}
+
+.admin-appeal-meta-wide {
+    grid-column: 1 / -1;
+}
+
+.admin-appeal-meta dt {
+    color: #7d879b;
+    font-size: 0.84rem;
+    font-weight: 700;
+}
+
+.admin-appeal-meta dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: #34415e;
+    font-size: 0.92rem;
+}
+
+.admin-appeal-hint {
+    margin: 16px 0 0;
+    padding: 12px 14px;
+    border-radius: 10px;
+    font-size: 0.86rem;
+}
+
+.admin-appeal-hint.is-warning {
+    color: #8a5a12;
+    background: #fff8e8;
+    border: 1px solid #f0d9aa;
+}
+
+.admin-appeal-hint.is-success {
+    color: #14766f;
+    background: #e6f7f4;
+    border: 1px solid #bde9de;
+}
+
+.admin-appeal-hint.is-rejected {
+    color: #5b6680;
+    background: #f4f6fa;
+    border: 1px solid #dfe4ee;
+}
+
+.admin-appeal-body {
+    margin: 0;
+    color: #2c3a4b;
+    font-size: 0.95rem;
+    line-height: 1.8;
+    overflow-wrap: anywhere;
+    white-space: pre-line;
+}
+
+.admin-appeal-handle-form textarea {
+    min-height: 120px;
+    line-height: 1.65;
+}
+
+.admin-appeal-handle-actions {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+/* 페이지네이션 */
+.admin-appeal-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 22px;
+}
+
+.admin-appeal-pagination a,
+.admin-appeal-pagination span {
+    display: inline-flex;
+    min-width: 38px;
+    min-height: 38px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 10px;
+    color: #58657d;
+    background: #fff;
+    border: 1px solid var(--admin-border);
+    border-radius: 9px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.admin-appeal-pagination a:hover,
+.admin-appeal-pagination a.is-active {
+    color: #fff;
+    background: var(--admin-blue);
+    border-color: var(--admin-blue);
+}
+
+.admin-appeal-pagination span.is-disabled {
+    color: #aab3c2;
+    background: #f6f8fc;
+}
+
+@media (max-width: 700px) {
+    .admin-appeal-search-field {
+        max-width: none;
+    }
+
+    .admin-appeal-content {
+        max-width: none;
+    }
+
+    .admin-appeal-meta {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-appeal-meta > div {
+        grid-template-columns: 92px minmax(0, 1fr);
+    }
+
+    .admin-appeal-handle-actions .admin-btn {
+        flex: 1;
+    }
+}

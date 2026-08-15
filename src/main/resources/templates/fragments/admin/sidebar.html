@@ -66,6 +66,9 @@
       <a class="admin-nav-link"
          th:classappend="${activeMenu == 'users'} ? ' is-active' : ''"
          th:href="@{/admin/users}">회원 목록</a>
+      <a class="admin-nav-link"
+         th:classappend="${activeMenu == 'appeals'} ? ' is-active' : ''"
+         th:href="@{/admin/appeals}">이의제기 관리</a>
     </section>
 
     <section class="admin-nav-group">

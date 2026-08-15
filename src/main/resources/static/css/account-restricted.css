@@ -101,6 +101,154 @@
     font-size: 0.94rem;
 }
 
+/* 이의제기 */
+.restricted-appeal {
+    margin-top: 30px;
+    padding-top: 26px;
+    border-top: 1px solid #e6edf0;
+}
+
+.restricted-appeal-title {
+    margin: 0 0 14px;
+    color: #172033;
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+.restricted-alert {
+    margin: 0 0 14px;
+    padding: 12px 14px;
+    color: #8f3b3b;
+    background: #fdf1f1;
+    border: 1px solid #f2cdcd;
+    border-radius: 10px;
+    font-size: 0.9rem;
+}
+
+.restricted-alert p {
+    margin: 0;
+}
+
+.restricted-appeal-guide {
+    margin: 0 0 16px;
+    color: #5b6b7c;
+    font-size: 0.92rem;
+    line-height: 1.7;
+}
+
+.restricted-appeal-label {
+    display: block;
+    margin-bottom: 8px;
+    color: #3d4962;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.restricted-required {
+    margin-left: 5px;
+    color: #168e89;
+    font-size: 0.74rem;
+    font-weight: 700;
+}
+
+.restricted-appeal-form textarea {
+    width: 100%;
+    min-height: 132px;
+    padding: 13px 14px;
+    color: #172033;
+    background: #fbfdfd;
+    border: 1px solid #d9e3e6;
+    border-radius: 12px;
+    font: inherit;
+    line-height: 1.7;
+    resize: vertical;
+}
+
+.restricted-appeal-form textarea:focus {
+    background: #fff;
+    border-color: #8fcbc7;
+    outline: 3px solid rgba(22, 142, 137, 0.14);
+}
+
+.restricted-appeal-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 14px;
+}
+
+.restricted-button.is-primary {
+    color: #fff;
+    background: #168e89;
+    border-color: #168e89;
+}
+
+.restricted-button.is-primary:hover,
+.restricted-button.is-primary:focus-visible {
+    color: #fff;
+    background: #12746f;
+    border-color: #12746f;
+}
+
+/* 접수 상태 */
+.restricted-appeal-status {
+    padding: 18px 20px;
+    background: #f2fbfa;
+    border: 1px solid #cfe9e6;
+    border-radius: 14px;
+}
+
+.restricted-appeal-status-title {
+    margin: 0;
+    color: #12746f;
+    font-size: 0.98rem;
+    font-weight: 800;
+}
+
+.restricted-appeal-status-desc {
+    margin: 8px 0 0;
+    color: #5b6b7c;
+    font-size: 0.88rem;
+    line-height: 1.65;
+}
+
+.restricted-appeal-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 22px;
+    margin: 14px 0 0;
+}
+
+.restricted-appeal-meta > div {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.restricted-appeal-meta dt {
+    color: #7d879b;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.restricted-appeal-meta dd {
+    margin: 0;
+    color: #34415e;
+    font-size: 0.88rem;
+    font-weight: 650;
+}
+
+.restricted-appeal-content {
+    margin: 14px 0 0;
+    padding-top: 13px;
+    border-top: 1px solid #dcece9;
+    color: #2c3a4b;
+    font-size: 0.9rem;
+    line-height: 1.75;
+    overflow-wrap: anywhere;
+    white-space: pre-line;
+}
+
 .restricted-actions {
     display: flex;
     align-items: center;
@@ -165,6 +313,15 @@
     .restricted-actions {
         flex-direction: column;
         align-items: stretch;
+    }
+
+    .restricted-appeal-actions .restricted-button {
+        width: 100%;
+    }
+
+    .restricted-appeal-meta {
+        flex-direction: column;
+        gap: 6px;
     }
 
     .restricted-button {

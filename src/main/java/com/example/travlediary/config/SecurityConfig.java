@@ -80,6 +80,10 @@ public class SecurityConfig {
                         new RegexRequestMatcher(
                                 "^/admin/users/[0-9]+/release$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(
+                                "^/admin/appeals/[0-9]+/approve$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/admin/appeals/[0-9]+/reject$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
                                 "^/admin/contents/[A-Z_]+/[0-9]+/hide$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(
                                 "^/admin/contents/[A-Z_]+/[0-9]+/restore$", HttpMethod.POST.name()),
@@ -95,6 +99,8 @@ public class SecurityConfig {
                                 "^/mypage/account/withdraw$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(
                                 "^/users/verification/resend$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/account/restricted/appeals$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(
                                 "^/logout$", HttpMethod.POST.name())
                 )))

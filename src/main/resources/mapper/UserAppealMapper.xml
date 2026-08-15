@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.user.UserAppealMapper">
+
+    <resultMap id="UserAppealResultMap" type="com.example.travlediary.model.UserAppeal">
+        <id property="id" column="id"/>
+        <result property="sanctionId" column="sanction_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="status" column="status"/>
+        <result property="content" column="content"/>
+        <result property="submittedAt" column="submitted_at"/>
+        <result property="adminId" column="admin_id"/>
+        <result property="adminReply" column="admin_reply"/>
+        <result property="handledAt" column="handled_at"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <sql id="AppealColumns">
+        id, sanction_id, user_id, status, content, submitted_at,
+        admin_id, admin_reply, handled_at, created_at, updated_at
+    </sql>
+
+    <!-- 로그인 상태로 제출하므로 이메일 인증(DRAFT/token) 단계 없이 바로 접수한다. -->
+    <insert id="insert" parameterType="com.example.travlediary.model.UserAppeal"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user_appeals (sanction_id, user_id, status, content, submitted_at)
+        VALUES (#{sanctionId}, #{userId}, #{status}, #{content}, #{submittedAt})
+    </insert>
+
+    <select id="findPendingBySanctionId" resultMap="UserAppealResultMap">
+        SELECT <include refid="AppealColumns"/>
+        FROM user_appeals
+        WHERE sanction_id = #{sanctionId}
+          AND status = 'PENDING'
+    </select>
+
+    <select id="findLatestBySanctionId" resultMap="UserAppealResultMap">
+        SELECT <include refid="AppealColumns"/>
+        FROM user_appeals
+        WHERE sanction_id = #{sanctionId}
+        ORDER BY created_at DESC, id DESC
+        LIMIT 1
+    </select>
+
+    <select id="findByIdForUpdate" resultMap="UserAppealResultMap">
+        SELECT <include refid="AppealColumns"/>
+        FROM user_appeals
+        WHERE id = #{id}
+        FOR UPDATE
+    </select>
+
+    <!-- PENDING 인 건만 마감되므로 중복 처리가 불가능하다. -->
+    <update id="handle">
+        UPDATE user_appeals
+        SET status = #{status},
+            admin_id = #{adminId},
+            admin_reply = #{adminReply},
+            handled_at = #{handledAt}
+        WHERE id = #{id}
+          AND status = 'PENDING'
+    </update>
+
+    <!-- ================= 관리자 목록·상세 ================= -->
+
+    <resultMap id="AdminAppealResultMap" type="com.example.travlediary.dto.AdminAppealDto">
+        <id property="id" column="id"/>
+        <result property="status" column="status"/>
+        <result property="content" column="content"/>
+        <result property="submittedAt" column="submitted_at"/>
+        <result property="adminReply" column="admin_reply"/>
+        <result property="handledAt" column="handled_at"/>
+        <result property="handledAdminName" column="handled_admin_name"/>
+        <result property="userId" column="user_id"/>
+        <result property="username" column="username"/>
+        <result property="nickname" column="nickname"/>
+        <result property="userEmail" column="user_email"/>
+        <result property="sanctionId" column="sanction_id"/>
+        <result property="sanctionType" column="sanction_type"/>
+        <result property="sanctionStatus" column="sanction_status"/>
+        <result property="sanctionReason" column="sanction_reason"/>
+        <result property="sanctionStartsAt" column="sanction_starts_at"/>
+        <result property="sanctionExpiresAt" column="sanction_expires_at"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <sql id="AdminAppealColumns">
+        a.id,
+        a.status,
+        a.content,
+        a.submitted_at,
+        a.admin_reply,
+        a.handled_at,
+        a.created_at,
+        a.user_id,
+        u.username,
+        u.nickname,
+        u.user_email,
+        a.sanction_id,
+        s.type AS sanction_type,
+        s.status AS sanction_status,
+        s.reason AS sanction_reason,
+        s.starts_at AS sanction_starts_at,
+        s.expires_at AS sanction_expires_at,
+        COALESCE(NULLIF(handled_admin.nickname, ''), handled_admin.username) AS handled_admin_name
+    </sql>
+
+    <sql id="AdminAppealJoins">
+        FROM user_appeals a
+        JOIN users u ON u.id = a.user_id
+        JOIN user_sanctions s ON s.id = a.sanction_id
+        LEFT JOIN users handled_admin ON handled_admin.id = a.admin_id
+    </sql>
+
+    <sql id="AdminAppealFilter">
+        <where>
+            <!-- 로그인 경로로만 접수되므로 DRAFT 는 목록에 나오지 않는다 -->
+            AND a.status &lt;&gt; 'DRAFT'
+            <if test="status != null">
+                AND a.status = #{status}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (u.username LIKE CONCAT('%', #{keyword}, '%')
+                     OR u.nickname LIKE CONCAT('%', #{keyword}, '%')
+                     OR u.user_email LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        </where>
+    </sql>
+
+    <select id="countAdminAppeals" resultType="long">
+        SELECT COUNT(*)
+        <include refid="AdminAppealJoins"/>
+        <include refid="AdminAppealFilter"/>
+    </select>
+
+    <select id="findAdminAppeals" resultMap="AdminAppealResultMap">
+        SELECT <include refid="AdminAppealColumns"/>
+        <include refid="AdminAppealJoins"/>
+        <include refid="AdminAppealFilter"/>
+        ORDER BY
+            CASE WHEN a.status = 'PENDING' THEN 0 ELSE 1 END,
+            a.created_at DESC, a.id DESC
+        LIMIT #{limit}
+        OFFSET #{offset}
+    </select>
+
+    <select id="findAdminAppealById" resultMap="AdminAppealResultMap">
+        SELECT <include refid="AdminAppealColumns"/>
+        <include refid="AdminAppealJoins"/>
+        WHERE a.id = #{id}
+    </select>
+
+</mapper>

@@ -2,6 +2,7 @@ package com.example.travlediary.controller.admin;
 
 import com.example.travlediary.model.UserStatus;
 import com.example.travlediary.service.destination.DestinationService;
+import com.example.travlediary.service.user.AdminAppealService;
 import com.example.travlediary.service.user.AdminUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -18,6 +19,7 @@ public class AdminController {
 
     private final DestinationService destinationService;
     private final AdminUserService adminUserService;
+    private final AdminAppealService adminAppealService;
 
     @GetMapping
     public String adminHome(Model model) {
@@ -28,6 +30,7 @@ public class AdminController {
                 adminUserService.countUsers(null, UserStatus.ACTIVE));
         model.addAttribute("restrictedUserCount",
                 adminUserService.countUsers(null, UserStatus.RESTRICTED));
+        model.addAttribute("pendingAppealCount", adminAppealService.countPendingAppeals());
         return "admin/index";
     }
 

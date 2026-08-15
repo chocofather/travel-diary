@@ -6,6 +6,7 @@ import com.example.travlediary.config.SecurityConfig;
 import com.example.travlediary.model.UserStatus;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.service.destination.DestinationService;
+import com.example.travlediary.service.user.AdminAppealService;
 import com.example.travlediary.service.user.AdminUserService;
 import org.jsoup.Jsoup;
 import org.junit.jupiter.api.Test;
@@ -37,6 +38,8 @@ class AdminDashboardControllerTest {
     private DestinationService destinationService;
     @MockitoBean
     private AdminUserService adminUserService;
+    @MockitoBean
+    private AdminAppealService adminAppealService;
     @MockitoBean
     private UserMapper userMapper;
     @MockitoBean
@@ -74,6 +77,7 @@ class AdminDashboardControllerTest {
                         "/admin/faqs",
                         "/admin/inquiries",
                         "/admin/users",
+                        "/admin/appeals",
                         "/admin/contents"));
         assertThat(document.select(".admin-dashboard-card:last-child p").text())
                 .isEqualTo("관리자가 숨긴 글·코스·댓글을 확인하고 복구합니다.");
@@ -85,13 +89,14 @@ class AdminDashboardControllerTest {
         when(adminUserService.countUsers(null, null)).thenReturn(12L);
         when(adminUserService.countUsers(null, UserStatus.ACTIVE)).thenReturn(9L);
         when(adminUserService.countUsers(null, UserStatus.RESTRICTED)).thenReturn(2L);
+        when(adminAppealService.countPendingAppeals()).thenReturn(3L);
 
         var document = adminPage();
 
         assertThat(document.select(".admin-dashboard-stats li span").eachText())
-                .containsExactly("전체", "정상", "이용정지");
+                .containsExactly("전체", "정상", "이용정지", "이의제기 대기");
         assertThat(document.select(".admin-dashboard-stats li strong").eachText())
-                .containsExactly("12", "9", "2");
+                .containsExactly("12", "9", "2", "3");
     }
 
     @Test
@@ -116,6 +121,7 @@ class AdminDashboardControllerTest {
                         "/admin/faqs",
                         "/admin/inquiries",
                         "/admin/users",
+                        "/admin/appeals",
                         "/admin/contents");
     }
 

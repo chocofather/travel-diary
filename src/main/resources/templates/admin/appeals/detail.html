@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'appeals')}">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/admin-appeals.css">
+</th:block>
+<th:block th:fragment="body">
+  <section class="admin-page-section admin-appeal-detail-page">
+    <header class="admin-page-header">
+      <div class="admin-page-heading">
+        <h1 class="admin-page-title">이의제기 상세</h1>
+        <p class="admin-page-description">회원 정보와 제재 내용을 확인하고 승인 또는 기각합니다.</p>
+      </div>
+      <div class="admin-page-actions">
+        <a th:href="@{/admin/appeals}" class="admin-btn">이의제기 목록</a>
+      </div>
+    </header>
+
+    <div class="admin-alert" th:if="${appealError != null}" role="alert">
+      <p th:text="${appealError}">처리할 수 없습니다.</p>
+    </div>
+
+    <section class="admin-form-card is-wide admin-appeal-section">
+      <div class="admin-appeal-section-header">
+        <h2>신청 회원</h2>
+        <span class="admin-appeal-status"
+              th:classappend="|is-${#strings.toLowerCase(appeal.status.name())}|"
+              th:text="${appeal.status.displayName}">접수됨</span>
+      </div>
+      <dl class="admin-appeal-meta">
+        <div><dt>아이디</dt><dd th:text="${appeal.username}">travler</dd></div>
+        <div><dt>닉네임</dt><dd th:text="${appeal.nickname}">여행자</dd></div>
+        <div><dt>이메일</dt><dd th:text="${appeal.userEmail}">user@example.com</dd></div>
+        <div>
+          <dt>회원 상세</dt>
+          <dd><a th:href="@{/admin/users/{id}(id=${appeal.userId})}">회원 정보 보기</a></dd>
+        </div>
+      </dl>
+    </section>
+
+    <section class="admin-form-card is-wide admin-appeal-section">
+      <div class="admin-appeal-section-header">
+        <h2>연결된 이용제한</h2>
+        <span class="admin-appeal-sanction"
+              th:classappend="${appeal.permanentSanction} ? ' is-permanent'"
+              th:text="${appeal.sanctionType.displayName}">기간제한</span>
+      </div>
+      <dl class="admin-appeal-meta">
+        <div>
+          <dt>제재 상태</dt>
+          <dd th:text="${appeal.sanctionStatus.displayName}">적용중</dd>
+        </div>
+        <div>
+          <dt>적용일시</dt>
+          <dd th:text="${appeal.sanctionStartsAt != null}
+                      ? ${#strings.replace(#strings.substring(appeal.sanctionStartsAt, 0, 16), 'T', ' ')}
+                      : '-'">-</dd>
+        </div>
+        <div>
+          <dt>종료일시</dt>
+          <dd th:text="${appeal.sanctionExpiresAt != null}
+                      ? ${#strings.replace(#strings.substring(appeal.sanctionExpiresAt, 0, 16), 'T', ' ')}
+                      : '영구'">영구</dd>
+        </div>
+        <div class="admin-appeal-meta-wide">
+          <dt>제재 사유</dt>
+          <dd th:text="${appeal.sanctionReason}">이용약관 위반</dd>
+        </div>
+      </dl>
+      <!-- 처리 대기 중인데 제재가 이미 끝난 경우에만 경고한다 -->
+      <p class="admin-appeal-hint is-warning"
+         th:if="${appeal.pending and !appeal.sanctionActive}">
+        이미 해제되었거나 만료된 제재라 승인으로 추가 해제할 수 없습니다.
+      </p>
+      <p class="admin-appeal-hint is-success"
+         th:if="${appeal.status.name() == 'APPROVED'}">
+        이의제기가 승인되어 이용제한이 해제되었습니다.
+      </p>
+      <p class="admin-appeal-hint is-rejected"
+         th:if="${appeal.status.name() == 'REJECTED'}">
+        이의제기가 기각되어 이용제한이 그대로 유지됩니다.
+      </p>
+    </section>
+
+    <section class="admin-form-card is-wide admin-appeal-section">
+      <div class="admin-appeal-section-header">
+        <h2>이의제기 내용</h2>
+        <span class="admin-appeal-submitted"
+              th:text="${appeal.submittedAt != null}
+                      ? '제출 ' + ${#strings.replace(#strings.substring(appeal.submittedAt, 0, 16), 'T', ' ')}
+                      : ''">제출 2026-08-15 12:00</span>
+      </div>
+      <p class="admin-appeal-body" th:text="${appeal.content}">이의제기 내용</p>
+    </section>
+
+    <!-- 처리 대기 건만 승인/기각할 수 있다 -->
+    <section class="admin-form-card is-wide admin-appeal-section" th:if="${appeal.pending}">
+      <div class="admin-appeal-section-header">
+        <h2>처리</h2>
+      </div>
+      <!-- 제재가 끝난 건은 승인 대상이 아니므로 기각만 남긴다 -->
+      <form th:action="${appeal.sanctionActive}
+                      ? @{/admin/appeals/{id}/approve(id=${appeal.id})}
+                      : @{/admin/appeals/{id}/reject(id=${appeal.id})}"
+            method="post"
+            th:object="${handleForm}" class="admin-appeal-handle-form" id="appeal-handle-form">
+        <div class="admin-form-field">
+          <label for="appeal-admin-reply">처리 사유 <span class="admin-required">필수</span></label>
+          <textarea id="appeal-admin-reply" th:field="*{adminReply}" required maxlength="1000"
+                    placeholder="회원에게 안내할 처리 사유를 입력하세요"></textarea>
+        </div>
+        <div class="admin-appeal-handle-actions">
+          <button type="submit" class="admin-btn is-primary" th:if="${appeal.sanctionActive}"
+                  onclick="return confirm('이의제기를 승인하고 이용제한을 해제할까요?')">승인 (제한 해제)</button>
+          <button type="submit" class="admin-btn is-danger"
+                  th:formaction="@{/admin/appeals/{id}/reject(id=${appeal.id})}"
+                  onclick="return confirm('이의제기를 기각할까요? 이용제한은 유지됩니다.')">기각</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- 처리 완료 건은 결과만 표시 -->
+    <section class="admin-form-card is-wide admin-appeal-section" th:unless="${appeal.pending}">
+      <div class="admin-appeal-section-header">
+        <h2>처리 결과</h2>
+      </div>
+      <dl class="admin-appeal-meta">
+        <div>
+          <dt>처리 결과</dt>
+          <dd th:text="${appeal.status.displayName}">승인됨</dd>
+        </div>
+        <div>
+          <dt>처리 관리자</dt>
+          <dd th:text="${appeal.handledAdminName != null ? appeal.handledAdminName : '-'}">master</dd>
+        </div>
+        <div>
+          <dt>처리일시</dt>
+          <dd th:text="${appeal.handledAt != null}
+                      ? ${#strings.replace(#strings.substring(appeal.handledAt, 0, 16), 'T', ' ')}
+                      : '-'">-</dd>
+        </div>
+        <div class="admin-appeal-meta-wide">
+          <dt>처리 사유</dt>
+          <dd th:text="${appeal.adminReply}">사유</dd>
+        </div>
+      </dl>
+    </section>
+  </section>
+</th:block>
+</html>

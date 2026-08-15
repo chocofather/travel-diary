@@ -124,6 +124,34 @@ public class UserSanctionService {
     }
 
     /**
+     * 이의제기 승인에 따른 해제.
+     * 관리자 수동 해제와 같은 처리를 그대로 쓰고 해제 경로만 APPEAL 로 남긴다.
+     * expectedSanctionId 로 이의제기가 가리키는 제재와 현재 제재가 같은지 확인한다.
+     */
+    @Transactional
+    public void releaseByAppeal(Long userId, Long expectedSanctionId,
+                                String releaseReason, Long adminId) {
+        if (adminId == null) {
+            throw new IllegalArgumentException("관리자 정보를 확인할 수 없습니다.");
+        }
+        User target = requireUser(userId);
+        requireNotAdminAccount(target);
+
+        UserSanction sanction = userSanctionMapper.findActiveByUserIdForUpdate(userId);
+        if (sanction == null) {
+            throw new SanctionValidationException(null, "이미 해제되었거나 만료된 이용제한입니다.");
+        }
+        if (expectedSanctionId != null && !expectedSanctionId.equals(sanction.getId())) {
+            throw new SanctionValidationException(null, "이의제기와 연결된 이용제한이 아닙니다.");
+        }
+
+        finishSanction(target, sanction, SanctionStatus.LIFTED,
+                SanctionReleaseVia.APPEAL, adminId, releaseReason);
+        log.info("User sanction lifted by appeal: userId={}, sanctionId={}, adminId={}",
+                userId, sanction.getId(), adminId);
+    }
+
+    /**
      * 기간이 지난 제재를 만료 처리한다.
      * 자동 만료 배치와 로그인 시 보조 확인이 함께 사용한다.
      */
