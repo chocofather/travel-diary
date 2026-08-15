@@ -72,6 +72,38 @@ class DestinationDetailRegionLinkTest {
     }
 
     @Test
+    void heroBreadcrumbPointsAtTheParentRegionList() {
+        givenRegionTree(
+                region(101L, "종로구", 4, 10L),
+                region(10L, "서울", 3, KOREA_ROOT_ID),
+                region(KOREA_ROOT_ID, "대한민국", 1, null));
+
+        Model model = renderDetail(101L);
+
+        // 상단 breadcrumb "서울" → 서울이 선택된 국내 목록 (하위 지역 UI 노출)
+        assertThat(model.getAttribute("regionPath")).isEqualTo("서울");
+        assertThat(model.getAttribute("regionPathId")).isEqualTo(10L);
+        assertThat("/destinations?type=" + model.getAttribute("type")
+                + "&region=" + model.getAttribute("regionPathId"))
+                .isEqualTo("/destinations?type=domestic&region=10");
+    }
+
+    @Test
+    void heroRegionLinksUseTheSameParameterSyntaxAsTheRecommendationLink() throws java.io.IOException {
+        String hero = heroBlock();
+
+        // 서울(regionPathId) / 종로구(regionId) 두 링크 모두 목록 필터 파라미터를 그대로 사용
+        assertThat(hero)
+                .contains("@{/destinations(type=${type},region=${regionPathId})}")
+                .contains("@{/destinations(type=${type},region=${regionId})}")
+                // 문자열 연결은 &reg; 엔티티로 깨지므로 남아 있으면 안 된다
+                .doesNotContain("'&region='")
+                .doesNotContain("href=\"#\"");
+        // 카테고리(랜드마크)는 링크로 만들지 않는다
+        assertThat(hero).contains("<span th:text=\"${categoryName}\">");
+    }
+
+    @Test
     void overseasDetailBuildsACityFilteredListLink() {
         givenRegionTree(
                 region(201L, "도쿄", 3, 20L),
@@ -96,6 +128,17 @@ class DestinationDetailRegionLinkTest {
         assertThat(moreLink)
                 .contains("@{/destinations(type=${type},region=${regionId})}")
                 .doesNotContain("'&region='");
+    }
+
+    private String heroBlock() throws java.io.IOException {
+        String detail = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/resources/templates/destination/detail.html"),
+                java.nio.charset.StandardCharsets.UTF_8);
+        int start = detail.indexOf("class=\"destination-hero\"");
+        int end = detail.indexOf("</section>", start);
+        assertThat(start).isGreaterThan(0);
+        assertThat(end).isGreaterThan(start);
+        return detail.substring(start, end);
     }
 
     /** detail.html 의 지역 링크 표현식과 같은 방식으로 URL 을 만든다. */

@@ -16,8 +16,11 @@
     <!-- ────── 여행지 상단 정보 (타이틀 + 메타) ────── -->
     <section class="destination-hero">
         <p class="breadcrumb">
+            <!-- 상위 지역(예: 서울)이 선택된 목록.
+                 쿼리스트링을 문자열로 이어 붙이면 HTML 엔티티로 깨지므로
+                 Thymeleaf 파라미터 문법을 쓴다. -->
             <a th:if="${regionPath != null}"
-               th:href="@{'/destinations?type=' + ${type} + '&region=' + ${regionPathId}}"
+               th:href="@{/destinations(type=${type},region=${regionPathId})}"
                th:text="${regionPath}"
                class="region-path-link"></a>
             <span th:if="${regionPath != null}"> . </span>
@@ -27,7 +30,8 @@
         <div class="meta-icons">
   <span>
     <img src="/uploads/icons/marker.png" alt="위치">
-       <a th:href="@{'/destinations?type=' + ${type} + '&region=' + ${regionId}}"
+       <!-- 현재 지역(예: 종로구)이 선택된 목록 -->
+       <a th:href="@{/destinations(type=${type},region=${regionId})}"
           class="region-path-link"
           th:text="${regionName}"></a>
   </span>
