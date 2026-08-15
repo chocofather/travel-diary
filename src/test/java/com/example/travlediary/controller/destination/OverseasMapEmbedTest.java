@@ -46,6 +46,9 @@ class OverseasMapEmbedTest {
     @Mock
     private DestinationCommentService destinationCommentService;
 
+    /** 테스트용 더미 Place ID */
+    private static final String PLACE_ID = "ChIJTestPlaceIdForUnitTest";
+
     private DestinationController controller;
 
     @BeforeEach
@@ -56,41 +59,49 @@ class OverseasMapEmbedTest {
     }
 
     @Test
-    void overseasDestinationUsesPlaceModeWithNameCityCountrySoAMarkerShowsOnLoad() {
+    void placeIdSelectsTheExactPlaceInPlaceModeSoAMarkerShowsOnLoad() {
         givenApiKey("test-key");
 
-        Model model = renderDetail(overseasCityRegion("후쿠오카"), "후쿠오카 타워",
+        Model model = renderDetail(overseasCityRegion("후쿠오카"), "후쿠오카 타워", PLACE_ID,
                 new BigDecimal("33.5932"), new BigDecimal("130.3514"));
 
-        // q 는 좌표가 아니라 "여행지명, 도시, 국가" (마커 표시 + 장소 조회 실패 방지)
-        String expectedQuery = URLEncoder.encode("후쿠오카 타워, 후쿠오카, 일본", StandardCharsets.UTF_8);
+        // 텍스트 검색이 아니라 place_id 로 장소를 확정한다
         assertThat(model.getAttribute("overseasMapEmbedUrl"))
                 .isEqualTo("https://www.google.com/maps/embed/v1/place"
                         + "?key=test-key"
-                        + "&q=" + expectedQuery
+                        + "&q=" + URLEncoder.encode("place_id:" + PLACE_ID, StandardCharsets.UTF_8)
                         + "&center=33.5932%2C130.3514&zoom=15");
     }
 
     @Test
-    void overseasDestinationWithoutANameFallsBackToViewModeInsteadOfAFailingLookup() {
+    void withoutAPlaceIdItFallsBackToCoordinateViewModeAndNeverGuessesAPlace() {
         givenApiKey("test-key");
 
-        Model model = renderDetail(overseasRegion(), "  ",
+        Model model = renderDetail(overseasCityRegion("후쿠오카"), "후쿠오카 타워", "  ",
                 new BigDecimal("35.6586"), new BigDecimal("139.7454"));
 
         assertThat(model.getAttribute("overseasMapEmbedUrl"))
                 .isEqualTo("https://www.google.com/maps/embed/v1/view"
                         + "?key=test-key&center=35.6586%2C139.7454&zoom=15");
+        // 여행지명 텍스트 검색은 더 이상 쓰지 않는다
+        assertThat((String) model.getAttribute("overseasMapEmbedUrl")).doesNotContain("%ED%9B%84");
     }
 
     @Test
-    void overseasDestinationGetsAGoogleMapsLinkEvenWithoutAnApiKey() {
+    void bigViewLinkKeepsCoordinatesAndPointsAtThePlaceWhenAPlaceIdExists() {
         givenApiKey("");
 
-        Model model = renderDetail(overseasRegion(), new BigDecimal("35.6586"), new BigDecimal("139.7454"));
-
-        assertThat(model.getAttribute("overseasMapLinkUrl"))
+        // Place ID 없음 → 기존 좌표 링크 그대로
+        assertThat(renderDetail(overseasRegion(), new BigDecimal("35.6586"), new BigDecimal("139.7454"))
+                .getAttribute("overseasMapLinkUrl"))
                 .isEqualTo("https://www.google.com/maps/search/?api=1&query=35.6586%2C139.7454");
+
+        // Place ID 있음 → 같은 장소로 열리도록 query_place_id 추가 (query 는 필수라 유지)
+        Model model = renderDetail(overseasRegion(), "여행지", PLACE_ID,
+                new BigDecimal("35.6586"), new BigDecimal("139.7454"));
+        assertThat(model.getAttribute("overseasMapLinkUrl"))
+                .isEqualTo("https://www.google.com/maps/search/?api=1&query=35.6586%2C139.7454"
+                        + "&query_place_id=" + PLACE_ID);
     }
 
     @Test
@@ -100,23 +111,23 @@ class OverseasMapEmbedTest {
         assertThat(renderDetail(overseasRegion(), new BigDecimal("35.6"), new BigDecimal("139.7"))
                 .getAttribute("overseasMapEmbedUrl")).isNull();
 
-        // 장소명도 좌표도 없으면 만들 수 있는 URL 이 없다
+        // Place ID 도 좌표도 없으면 만들 수 있는 URL 이 없다 → 지도 미표시
         givenApiKey("test-key");
-        assertThat(renderDetail(overseasRegion(), null, null, null)
+        assertThat(renderDetail(overseasRegion(), "여행지", null, null, null)
                 .getAttribute("overseasMapEmbedUrl")).isNull();
     }
 
     @Test
-    void placeModeStillMarksTheSpotWhenCoordinatesAreMissing() {
+    void placeIdStillMarksTheSpotWhenCoordinatesAreMissing() {
         givenApiKey("test-key");
 
-        Model model = renderDetail(overseasCityRegion("후쿠오카"), "후쿠오카 타워", null, null);
+        Model model = renderDetail(overseasCityRegion("후쿠오카"), "후쿠오카 타워", PLACE_ID, null, null);
 
-        // 좌표가 없어도 장소 검색으로 마커는 표시된다 (center/zoom 만 생략)
+        // 좌표가 없어도 place_id 로 마커는 표시된다 (center/zoom 만 생략)
         assertThat(model.getAttribute("overseasMapEmbedUrl"))
                 .isEqualTo("https://www.google.com/maps/embed/v1/place"
                         + "?key=test-key"
-                        + "&q=" + URLEncoder.encode("후쿠오카 타워, 후쿠오카, 일본", StandardCharsets.UTF_8));
+                        + "&q=" + URLEncoder.encode("place_id:" + PLACE_ID, StandardCharsets.UTF_8));
         // 크게 보기 링크는 좌표 기반이라 이때는 없다
         assertThat(model.getAttribute("overseasMapLinkUrl")).isNull();
     }
@@ -185,16 +196,17 @@ class OverseasMapEmbedTest {
     }
 
     private Model renderDetail(CountryCategory region, BigDecimal latitude, BigDecimal longitude) {
-        return renderDetail(region, "여행지", latitude, longitude);
+        return renderDetail(region, "여행지", null, latitude, longitude);
     }
 
-    private Model renderDetail(CountryCategory region, String name,
+    private Model renderDetail(CountryCategory region, String name, String googlePlaceId,
                                BigDecimal latitude, BigDecimal longitude) {
         when(countryCategoryService.getById(region.getId())).thenReturn(region);
 
         Destination destination = new Destination();
         destination.setId(7L);
         destination.setName(name);
+        destination.setGooglePlaceId(googlePlaceId);
         destination.setRegionId(region.getId());
         destination.setLatitude(latitude);
         destination.setLongitude(longitude);

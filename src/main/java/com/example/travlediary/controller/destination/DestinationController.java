@@ -295,9 +295,8 @@ public class DestinationController {
         }
 
         // 해외 지도는 Maps Embed API iframe 으로 표시한다. 만들 수 없으면 null → 지도 영역만 감춘다.
-        // 장소명(도시·국가 포함)을 알아야 마커가 찍히므로 상위 지역을 구한 뒤에 만든다.
         model.addAttribute("overseasMapEmbedUrl",
-                buildOverseasMapEmbedUrl(countryCode, dto.getDestination(), region, parentRegion));
+                buildOverseasMapEmbedUrl(countryCode, dto.getDestination()));
         model.addAttribute("overseasMapLinkUrl",
                 buildOverseasMapLinkUrl(countryCode, dto.getDestination()));
 
@@ -321,8 +320,7 @@ public class DestinationController {
      * - GOOGLE_MAPS_API_KEY 환경변수 미설정
      * - 좌표 미입력
      */
-    private String buildOverseasMapEmbedUrl(String countryCode, Destination destination,
-                                            CountryCategory region, CountryCategory parentRegion) {
+    private String buildOverseasMapEmbedUrl(String countryCode, Destination destination) {
         if (googleMapsApiKey == null || googleMapsApiKey.isBlank()) {
             return null;
         }
@@ -331,14 +329,14 @@ public class DestinationController {
         }
         String key = URLEncoder.encode(googleMapsApiKey, StandardCharsets.UTF_8);
         String position = overseasPosition(countryCode, destination);
-        String query = buildOverseasMapQuery(destination, region, parentRegion);
+        String placeId = trimmedPlaceId(destination);
 
-        // 장소명이 있으면 place 모드로 마커까지 표시한다.
-        // (q 는 장소명/주소/place_id 용이라 좌표를 넣으면 "장소 정보를 로드할 수 없음"이 뜬다)
-        if (query != null) {
+        // 1) Place ID 가 있으면 place 모드로 해당 장소를 정확히 지정한다. (마커 표시)
+        //    텍스트 검색은 다른 장소가 선택될 수 있어 쓰지 않는다.
+        if (placeId != null) {
             String url = "https://www.google.com/maps/embed/v1/place"
                     + "?key=" + key
-                    + "&q=" + URLEncoder.encode(query, StandardCharsets.UTF_8);
+                    + "&q=" + URLEncoder.encode("place_id:" + placeId, StandardCharsets.UTF_8);
             if (position != null) {
                 url += "&center=" + URLEncoder.encode(position, StandardCharsets.UTF_8)
                         + "&zoom=" + EMBED_MAP_ZOOM;
@@ -346,7 +344,7 @@ public class DestinationController {
             return url;
         }
 
-        // 장소명이 없으면 장소 조회가 없는 view 모드로 안전하게 좌표만 보여준다.
+        // 2) Place ID 가 없으면 장소를 추측하지 않고 좌표 중심 view 모드만 보여준다.
         if (position == null) {
             return null;
         }
@@ -356,28 +354,13 @@ public class DestinationController {
                 + "&zoom=" + EMBED_MAP_ZOOM;
     }
 
-    /**
-     * 마커가 찍힐 장소 검색어. 보유 데이터 중 식별력이 가장 높은 조합인
-     * "여행지명, 도시, 국가" 순으로 잇는다. (예: "후쿠오카 타워, 후쿠오카, 일본")
-     * destinations 에 주소 컬럼이 없어 이 조합이 최선이다.
-     */
-    private String buildOverseasMapQuery(Destination destination,
-                                         CountryCategory region, CountryCategory parentRegion) {
-        String name = destination.getName();
-        if (name == null || name.isBlank()) {
+    /** 입력되지 않았거나 공백뿐이면 null. */
+    private String trimmedPlaceId(Destination destination) {
+        String placeId = destination.getGooglePlaceId();
+        if (placeId == null || placeId.isBlank()) {
             return null;
         }
-        StringBuilder query = new StringBuilder(name.trim());
-        appendRegionName(query, region);
-        appendRegionName(query, parentRegion);
-        return query.toString();
-    }
-
-    private void appendRegionName(StringBuilder query, CountryCategory region) {
-        if (region == null || region.getRegionName() == null || region.getRegionName().isBlank()) {
-            return;
-        }
-        query.append(", ").append(region.getRegionName().trim());
+        return placeId.trim();
     }
 
     /** "Google 지도에서 크게 보기" 링크. API 키 없이도 열 수 있어 좌표만 있으면 만든다. */
@@ -386,8 +369,14 @@ public class DestinationController {
         if (position == null) {
             return null;
         }
-        return "https://www.google.com/maps/search/?api=1"
+        String url = "https://www.google.com/maps/search/?api=1"
                 + "&query=" + URLEncoder.encode(position, StandardCharsets.UTF_8);
+        // Place ID 가 있으면 같은 장소로 정확히 열리게 한다. (query 는 필수라 좌표를 유지)
+        String placeId = trimmedPlaceId(destination);
+        if (placeId != null) {
+            url += "&query_place_id=" + URLEncoder.encode(placeId, StandardCharsets.UTF_8);
+        }
+        return url;
     }
 
     /** 해외 여행지의 "위도,경도" 문자열. 국내이거나 좌표가 없으면 null. */
