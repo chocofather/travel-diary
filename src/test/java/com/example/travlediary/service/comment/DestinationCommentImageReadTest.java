@@ -1,0 +1,146 @@
+package com.example.travlediary.service.comment;
+
+import com.example.travlediary.dto.CommentDto;
+import com.example.travlediary.dto.PageResult;
+import com.example.travlediary.model.DestinationComment;
+import com.example.travlediary.model.DestinationCommentImage;
+import com.example.travlediary.model.User;
+import com.example.travlediary.repository.comment.DestinationCommentImageMapper;
+import com.example.travlediary.repository.comment.DestinationCommentMapper;
+import com.example.travlediary.repository.destination.DestinationMapper;
+import com.example.travlediary.repository.user.UserMapper;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.sql.Timestamp;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+/** STEP D: 댓글 조회는 destination_comment_images 기준으로 사진을 채운다. */
+@ExtendWith(MockitoExtension.class)
+class DestinationCommentImageReadTest {
+
+    @Mock
+    private DestinationMapper destinationMapper;
+    @Mock
+    private DestinationCommentMapper commentMapper;
+    @Mock
+    private DestinationCommentImageMapper commentImageMapper;
+    @Mock
+    private UserMapper userMapper;
+
+    private DestinationCommentService service;
+
+    @BeforeEach
+    void setUp() {
+        service = new DestinationCommentService(
+                destinationMapper, commentMapper, commentImageMapper, userMapper);
+    }
+
+    @Test
+    void pagedCommentsReadAllImagesInOneQueryAndKeepDisplayOrder() {
+        when(commentMapper.countRootComments(10L)).thenReturn(1);
+        when(commentMapper.countByDestinationId(10L)).thenReturn(2);
+        when(commentMapper.findPagedParentComments(10L, 0, 5, "latest"))
+                .thenReturn(List.of(comment(1L, null, false)));
+        when(commentMapper.findRepliesForParents(10L, List.of(1L)))
+                .thenReturn(List.of(comment(2L, 1L, false)));
+        when(commentImageMapper.findByCommentIds(List.of(1L, 2L))).thenReturn(List.of(
+                image(1L, "/uploads/comments/a.jpg", 1),
+                image(1L, "/uploads/comments/b.jpg", 2),
+                image(1L, "/uploads/comments/c.jpg", 3),
+                image(2L, "/uploads/comments/reply.jpg", 1)));
+
+        PageResult<CommentDto> result = service.getCommentsPaged(10L, null, 0, 5, "latest");
+
+        assertThat(result.getContent()).hasSize(2);
+        assertThat(result.getContent().get(0).getImageUrls()).containsExactly(
+                "/uploads/comments/a.jpg", "/uploads/comments/b.jpg", "/uploads/comments/c.jpg");
+        assertThat(result.getContent().get(1).getImageUrls())
+                .containsExactly("/uploads/comments/reply.jpg");
+        // 댓글마다 SELECT 하지 않는다
+        verify(commentImageMapper, times(1)).findByCommentIds(anyList());
+    }
+
+    @Test
+    void deletedCommentsAreExcludedFromTheImageQueryAndGetNoImages() {
+        when(commentMapper.countRootComments(10L)).thenReturn(1);
+        when(commentMapper.countByDestinationId(10L)).thenReturn(2);
+        when(commentMapper.findPagedParentComments(10L, 0, 5, "latest"))
+                .thenReturn(List.of(comment(1L, null, true)));
+        when(commentMapper.findRepliesForParents(10L, List.of(1L)))
+                .thenReturn(List.of(comment(2L, 1L, false)));
+        when(commentImageMapper.findByCommentIds(List.of(2L))).thenReturn(List.of());
+
+        PageResult<CommentDto> result = service.getCommentsPaged(10L, null, 0, 5, "latest");
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<Long>> captor = ArgumentCaptor.forClass(List.class);
+        verify(commentImageMapper).findByCommentIds(captor.capture());
+        assertThat(captor.getValue()).containsExactly(2L);
+        // 조치/삭제된 댓글은 사진 없이 내려간다 (플레이스홀더 렌더링은 그대로)
+        assertThat(result.getContent().get(0).getImageUrls()).isEmpty();
+    }
+
+    @Test
+    void listPathAlsoFillsImageUrlsInOneQuery() {
+        when(commentMapper.findByDestinationIdWithWriter(10L))
+                .thenReturn(List.of(comment(1L, null, false), comment(2L, null, false)));
+        when(commentImageMapper.findByCommentIds(List.of(1L, 2L))).thenReturn(List.of(
+                image(2L, "/uploads/comments/only.jpg", 1)));
+
+        List<CommentDto> comments = service.getCommentDtosWithWriter(10L, null, "oldest");
+
+        assertThat(comments.get(0).getImageUrls()).isEmpty();
+        assertThat(comments.get(1).getImageUrls()).containsExactly("/uploads/comments/only.jpg");
+        verify(commentImageMapper, times(1)).findByCommentIds(anyList());
+    }
+
+    @Test
+    void commentsWithoutImagesGetAnEmptyListNeverNull() {
+        when(commentMapper.findByDestinationIdWithWriter(10L))
+                .thenReturn(List.of(comment(1L, null, false)));
+        when(commentImageMapper.findByCommentIds(List.of(1L))).thenReturn(List.of());
+
+        assertThat(service.getCommentDtosWithWriter(10L, null, "oldest").get(0).getImageUrls())
+                .isNotNull()
+                .isEmpty();
+    }
+
+    private DestinationComment comment(long id, Long parentId, boolean deleted) {
+        DestinationComment comment = new DestinationComment();
+        comment.setId(id);
+        comment.setParentCommentId(parentId);
+        comment.setContent("내용 " + id);
+        comment.setLikes(0);
+        comment.setDeleted(deleted);
+        comment.setUserId(7L);
+        comment.setDestinationId(10L);
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+        comment.setCreatedAt(now);
+        comment.setUpdatedAt(now);
+
+        User writer = new User();
+        writer.setId(7L);
+        writer.setNickname("여행자");
+        comment.setWriter(writer);
+        return comment;
+    }
+
+    private DestinationCommentImage image(long commentId, String url, int order) {
+        DestinationCommentImage image = new DestinationCommentImage();
+        image.setCommentId(commentId);
+        image.setImageUrl(url);
+        image.setDisplayOrder(order);
+        return image;
+    }
+}

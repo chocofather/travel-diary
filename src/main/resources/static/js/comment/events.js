@@ -10,6 +10,22 @@ import {
 import { createCommentItem } from './render.js';
 import { getLoadedComments } from './commentsState.js';
 
+/** 댓글 하나에 첨부할 수 있는 사진 수. 서버 DestinationCommentService.MAX_COMMENT_IMAGES 와 같은 값. */
+const MAX_COMMENT_IMAGES = 3;
+const IMAGE_LIMIT_MESSAGE = `사진은 최대 ${MAX_COMMENT_IMAGES}장까지 첨부할 수 있습니다.`;
+
+/**
+ * 선택한 사진이 제한을 넘으면 안내하고 전송을 막는다.
+ * @param {HTMLFormElement} form 댓글/답글 작성 폼
+ * @returns {boolean} 제한을 넘어 전송하면 안 되는 경우 true
+ */
+function exceedsImageLimit(form) {
+    const input = form.querySelector('input[type="file"][name="images"]');
+    if (!input || input.files.length <= MAX_COMMENT_IMAGES) return false;
+    alert(IMAGE_LIMIT_MESSAGE);
+    return true;
+}
+
 // 비회원 클릭 시 로그인 페이지로 리다이렉트
 export function initGuestRedirect() {
     const guestBox = document.getElementById('guest-comment-box');
@@ -29,12 +45,111 @@ export function setupSortDropdownEvent(containerEl, onSortChange) {
     });
 }
 
+/**
+ * 댓글 작성 사진 선택/미리보기.
+ * 파일 선택창을 다시 열면 브라우저가 input.files 를 통째로 교체하므로,
+ * 선택 목록(selected)을 따로 들고 DataTransfer 로 input.files 와 동기화해
+ * 여러 번 나눠 고른 사진이 누적되게 한다.
+ * @param {HTMLFormElement} form 댓글 작성 폼
+ */
+function initCommentImagePreview(form) {
+    const input = form.querySelector('#comment-image-input');
+    const preview = form.querySelector('#comment-image-preview');
+    if (!input || !preview) return;
+
+    /** 전송 대상 사진 목록. input.files 는 항상 이 목록과 같게 맞춘다. */
+    let selected = [];
+
+    const fileKey = file => `${file.name}|${file.size}|${file.lastModified}`;
+
+    /** selected 를 실제 input.files 에 반영한다. */
+    function syncInput() {
+        try {
+            const transfer = new DataTransfer();
+            selected.forEach(file => transfer.items.add(file));
+            input.files = transfer.files;
+        } catch (error) {
+            // DataTransfer 미지원 환경에서는 마지막 선택만 유지한다.
+            selected = Array.from(input.files || []).slice(0, MAX_COMMENT_IMAGES);
+        }
+        // value 가 비면 같은 파일을 다시 골라도 change 가 정상 발생한다.
+        if (selected.length === 0) input.value = '';
+    }
+
+    /** 새로 고른 파일을 기존 선택에 누적한다. 중복은 제외하고 최대 3장까지만 남긴다. */
+    function addFiles(files) {
+        const keys = new Set(selected.map(fileKey));
+        const added = Array.from(files || []).filter(file => {
+            if (keys.has(fileKey(file))) return false;
+            keys.add(fileKey(file));
+            return true;
+        });
+        const merged = selected.concat(added);
+        if (merged.length > MAX_COMMENT_IMAGES) {
+            alert(IMAGE_LIMIT_MESSAGE);
+        }
+        selected = merged.slice(0, MAX_COMMENT_IMAGES);
+        syncInput();
+        render();
+    }
+
+    function removeFileAt(index) {
+        selected.splice(index, 1);
+        syncInput();
+        render();
+    }
+
+    function clearFiles() {
+        selected = [];
+        syncInput();
+        render();
+    }
+
+    function render() {
+        preview.querySelectorAll('img[data-object-url]').forEach(img => {
+            URL.revokeObjectURL(img.src);
+        });
+        preview.innerHTML = '';
+
+        // 선택된 사진이 없으면 미리보기 영역 자체를 감춘다.
+        preview.hidden = selected.length === 0;
+        if (selected.length === 0) return;
+
+        selected.forEach((file, index) => {
+            const item = document.createElement('div');
+            item.className = 'comment-image-preview-item';
+
+            const image = document.createElement('img');
+            image.src = URL.createObjectURL(file);
+            image.dataset.objectUrl = 'true';
+            image.alt = `${file.name} 미리보기`;
+
+            const remove = document.createElement('button');
+            remove.type = 'button';
+            remove.className = 'comment-image-remove';
+            remove.setAttribute('aria-label', `${file.name} 선택 취소`);
+            remove.textContent = '×';
+            remove.addEventListener('click', () => removeFileAt(index));
+
+            item.append(image, remove);
+            preview.append(item);
+        });
+    }
+
+    input.addEventListener('change', () => addFiles(input.files));
+    // 등록 성공 후 form.reset() 이 호출되면 선택/미리보기도 함께 비운다.
+    form.addEventListener('reset', () => setTimeout(clearFiles, 0));
+}
+
 // 댓글 등록 폼
 export function initCommentForm(destinationId, onCommentsReload, onThumbnailsReload) {
     const form = document.getElementById('comment-form');
     if (!form) return;
+    initCommentImagePreview(form);
     form.addEventListener('submit', e => {
         e.preventDefault();
+        if (exceedsImageLimit(form)) return;
+        // input[name="images"] 이므로 선택한 파일이 모두 images 키로 담긴다.
         const data = new FormData(form);
         postComment(destinationId, data)
             .then(() => {
@@ -53,6 +168,7 @@ export function bindReplySubmit(containerEl, destinationId, onCommentsReload) {
         const form = e.target.closest('.nested-reply-form');
         if (!form) return;
         e.preventDefault();
+        if (exceedsImageLimit(form)) return;
 
         const commentDiv = form.closest('.comment-item');
         let parentId = commentDiv.dataset.id;
@@ -208,7 +324,7 @@ function toggleReplyForm(e, commentDiv) {
         <textarea name="content" placeholder="답글을 입력하세요" required></textarea>
       </div>
       <div class="comment-controls">
-        <input type="file" id="${uniqueId}" name="image" accept="image/*" hidden>
+        <input type="file" id="${uniqueId}" name="images" accept="image/*" multiple hidden>
         <label for="${uniqueId}" class="image-upload-label">
           <img src="/uploads/icons/camera.png" alt="사진"> 사진
         </label>
@@ -256,32 +372,82 @@ export function bindGalleryEvents(destinationId, openModalFn) {
     });
 }
 
-// 댓글 이미지 클릭 시 단일 이미지 모달 오픈
+// 댓글 이미지 클릭 시 확대 모달 오픈. 이동은 그 댓글에 첨부된 사진 안에서만 순환한다.
 export function bindSingleImageModal() {
     const modal = document.getElementById('image-modal');
     const modalImg = document.getElementById('modal-img');
+    if (!modal || !modalImg) return;
+
+    /** 현재 보고 있는 댓글의 사진 목록과 위치 */
+    let images = [];
+    let index = 0;
+
+    const isOpen = () => modal.style.display !== 'none';
+
+    /** 목록 범위를 벗어나면 반대쪽 끝으로 순환한다. */
+    function show(nextIndex) {
+        if (images.length === 0) return;
+        index = (nextIndex + images.length) % images.length;
+        modalImg.src = images[index];
+    }
+
+    function open(target) {
+        const group = target.closest('.comment-images');
+        images = group
+            ? Array.from(group.querySelectorAll('.comment-image')).map(image => image.src)
+            : [target.src];
+        modal.classList.toggle('is-single', images.length <= 1);
+        show(Math.max(images.indexOf(target.src), 0));
+        modal.style.display = 'flex';
+    }
+
+    function close() {
+        modal.style.display = 'none';
+        images = [];
+        index = 0;
+    }
 
     document.addEventListener('click', e => {
+        const nav = e.target.closest?.('.comment-image-nav');
+        if (nav && modal.contains(nav)) {
+            // 확대 이미지 클릭(닫기)으로 이어지지 않도록 여기서 끊는다.
+            e.preventDefault();
+            e.stopPropagation();
+            show(index + (nav.classList.contains('prev') ? -1 : 1));
+            return;
+        }
+
         if (e.target.matches('.comment-image')) {
-            modalImg.src = e.target.src;
-            modal.style.display = 'flex';
+            open(e.target);
             return;
         }
 
         if (e.target === modalImg) {
-            modal.style.display = 'none';
+            close();
             return;
         }
 
         if (e.target.matches('.close-btn')) {
-            modal.style.display = 'none';
-            return;
+            close();
         }
     });
 
     document.addEventListener('keydown', e => {
+        // 모달이 닫혀 있으면 방향키/ESC 에 간섭하지 않는다.
+        if (!isOpen()) return;
+
         if (e.key === 'Escape') {
-            modal.style.display = 'none';
+            close();
+            return;
+        }
+        if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            show(index - 1);
+            return;
+        }
+        if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            show(index + 1);
         }
     });
 }

@@ -133,6 +133,47 @@ class ContentCommentUiContractTest {
                 .contains("/comments/images");
     }
 
+    @Test
+    void destinationCommentsFollowTheCommunityLayoutInsteadOfLegacyRules() throws IOException {
+        String css = resource("static/css/comment.css");
+
+        // 공통 디자인은 content-comment.css 가 담당하고 여기서 다시 정의하지 않는다
+        assertThat(css)
+                .doesNotContain("\n.comment-item.reply {")
+                .doesNotContain("content: '↳'")
+                .doesNotContain("\n.comment-profile {")
+                .doesNotContain("\n.comment-nickname {")
+                .doesNotContain("\n.comment-header {")
+                .doesNotContain("\n.comment-content {")
+                // .comment-item.editing .comment-actions (수정 중 액션 숨김)는 기능이라 남는다
+                .doesNotContain("\n.comment-actions {")
+                .doesNotContain("\n.likeicon {")
+                .doesNotContain(".reply-list > .comment-item");
+        // 대댓글이 중첩돼도 들여쓰기가 누적되지 않아야 본문 폭이 유지된다
+        assertThat(css)
+                .contains(".content-comments .content-comment-replies .content-comment-replies")
+                // 사진 1~3장은 본문 폭 안에서 줄바꿈된다
+                .contains(".content-comments .comment-images")
+                .contains("flex-wrap: wrap")
+                .contains("@media (max-width: 480px)");
+    }
+
+    @Test
+    void destinationModeratedPlaceholderUsesFullBodyWidthLikeCommunity() throws IOException {
+        String renderer = resource("static/js/comment/render.js");
+
+        // 커뮤니티와 동일하게 카드 그리드 없이 안내 문구만 li 에 붙인다 (대댓글 폭 붕괴 방지)
+        assertThat(renderer)
+                .contains("li.classList.add('content-comment-deleted')")
+                .contains("content-comment-deleted-text")
+                .contains("li.append(moderatedText)")
+                .doesNotContain("moderatedCard");
+        // 다중 이미지 렌더링과 모달 연결은 그대로 유지된다
+        assertThat(renderer)
+                .contains("renderCommentImages(comment)")
+                .contains("class=\"comment-image content-comment-image\"");
+    }
+
     private String resource(String relativePath) throws IOException {
         return Files.readString(RESOURCES.resolve(relativePath), StandardCharsets.UTF_8);
     }

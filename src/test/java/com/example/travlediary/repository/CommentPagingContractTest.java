@@ -50,7 +50,23 @@ class CommentPagingContractTest {
                 .contains("ORDER BY c.created_at ASC, c.id ASC")
                 .contains("ORDER BY c.likes DESC, c.created_at DESC, c.id DESC")
                 .contains("AND c.destination_id = #{destinationId}");
+        // 조치된 댓글은 페이징 목록/개수 양쪽에서 같은 조건으로 살아남아야 플레이스홀더가 유지된다
+        String pagedParents = between(xml, "id=\"findPagedParentComments\"", "</select>");
+        String pagedReplies = between(xml, "id=\"findRepliesForParents\"", "</select>");
+        String rootCount = between(xml, "id=\"countRootComments\"", "</select>");
+        for (String select : new String[]{pagedParents, pagedReplies, rootCount}) {
+            assertThat(select).contains("(c.deleted = 0 OR <include refid=\"ModeratedExists\"/>)");
+        }
+        for (String select : new String[]{pagedParents, pagedReplies}) {
+            assertThat(select)
+                    .contains("<include refid=\"ModeratedFlag\"/>")
+                    .contains("c.deleted,")
+                    // 숨겨진 본문/작성자는 그대로 내려보내지 않는다
+                    .contains("CASE WHEN c.deleted = 1 THEN NULL ELSE c.content END AS content")
+                    .contains("CASE WHEN c.deleted = 1 THEN NULL ELSE u.nickname END AS nickname");
+        }
         assertThat(service)
+                .contains("dto.setModerated(comment.isModerated())")
                 .contains("countRootComments(destinationId)")
                 .contains("countByDestinationId(destinationId)")
                 .contains("offset >= totalThreads")
@@ -188,6 +204,14 @@ class CommentPagingContractTest {
 
     private String compact(String value) {
         return value.replaceAll("\\s+", " ").trim();
+    }
+
+    private String between(String source, String start, String end) {
+        int startIndex = source.indexOf(start);
+        int endIndex = source.indexOf(end, startIndex);
+        assertThat(startIndex).as("start %s", start).isGreaterThanOrEqualTo(0);
+        assertThat(endIndex).isGreaterThan(startIndex);
+        return source.substring(startIndex, endIndex);
     }
 
     private int occurrences(String value, String fragment) {

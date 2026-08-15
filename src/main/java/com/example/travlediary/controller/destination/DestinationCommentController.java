@@ -5,6 +5,7 @@ import com.example.travlediary.dto.CommentImageDto;
 import com.example.travlediary.dto.CommentLocationDto;
 import com.example.travlediary.dto.PageResult;
 import com.example.travlediary.security.CustomUserDetails;
+import com.example.travlediary.service.comment.CommentImageLimitException;
 import com.example.travlediary.service.comment.CommentLikeService;
 import com.example.travlediary.service.comment.DestinationCommentService;
 import lombok.RequiredArgsConstructor;
@@ -81,14 +82,19 @@ public class DestinationCommentController {
     }
 
     @PostMapping
-    public ResponseEntity<CommentDto> create(@RequestParam("destinationId") Long destinationId,
-                                             @RequestParam("content") String content,
-                                             @RequestParam(value = "image", required = false) MultipartFile image,
-                                             @RequestParam(value = "parentCommentId", required = false) Long parentCommentId,
-                                             @AuthenticationPrincipal CustomUserDetails userDetails) {
-
-        CommentDto dto = destinationCommentService.create(destinationId, userDetails.getId(), content, image, parentCommentId);
-        return ResponseEntity.ok(dto);
+    public ResponseEntity<?> create(@RequestParam("destinationId") Long destinationId,
+                                    @RequestParam("content") String content,
+                                    @RequestParam(value = "images", required = false) List<MultipartFile> images,
+                                    @RequestParam(value = "parentCommentId", required = false) Long parentCommentId,
+                                    @AuthenticationPrincipal CustomUserDetails userDetails) {
+        try {
+            CommentDto dto = destinationCommentService.create(
+                    destinationId, userDetails.getId(), content, images, parentCommentId);
+            return ResponseEntity.ok(dto);
+        } catch (CommentImageLimitException e) {
+            // 프런트에서 그대로 안내할 수 있도록 메시지를 JSON 으로 돌려준다.
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
     }
 
     // 댓글 이미지 추출

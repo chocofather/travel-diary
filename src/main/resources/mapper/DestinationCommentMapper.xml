@@ -106,12 +106,13 @@
           AND deleted = 0
     </select>
 
+    <!-- 페이징 목록과 같은 노출 조건을 써야 마지막 페이지 판정이 어긋나지 않는다. -->
     <select id="countRootComments" resultType="int">
         SELECT COUNT(*)
-        FROM destination_comments
-        WHERE destination_id = #{destinationId}
-          AND parent_comment_id IS NULL
-          AND deleted = 0
+        FROM destination_comments c
+        WHERE c.destination_id = #{destinationId}
+          AND c.parent_comment_id IS NULL
+          AND (c.deleted = 0 OR <include refid="ModeratedExists"/>)
     </select>
 
     <select id="findActiveRootIdForLocation" resultType="long">
@@ -341,14 +342,21 @@
     <!-- 1. 부모 댓글 페이징 조회 -->
     <select id="findPagedParentComments" resultMap="commentWithWriterMap">
         SELECT
-        c.id as c_id, c.content, c.image_url, c.created_at, c.updated_at, c.likes,
+        c.id as c_id,
+        CASE WHEN c.deleted = 1 THEN NULL ELSE c.content END AS content,
+        CASE WHEN c.deleted = 1 THEN NULL ELSE c.image_url END AS image_url,
+        c.created_at, c.updated_at, c.likes,
         c.parent_comment_id, c.user_id,
-        u.id as u_id, u.nickname, u.profile_image
+        c.deleted,
+        <include refid="ModeratedFlag"/>
+        u.id as u_id,
+        CASE WHEN c.deleted = 1 THEN NULL ELSE u.nickname END AS nickname,
+        CASE WHEN c.deleted = 1 THEN NULL ELSE u.profile_image END AS profile_image
         FROM destination_comments c
         JOIN users u ON c.user_id = u.id
         WHERE c.destination_id = #{destinationId}
         AND c.parent_comment_id IS NULL
-        AND c.deleted = 0
+        AND (c.deleted = 0 OR <include refid="ModeratedExists"/>)
         <choose>
             <when test="sort == 'oldest'">
                 ORDER BY c.created_at ASC, c.id ASC
@@ -366,9 +374,16 @@
     <!-- 2. 부모댓글 id 목록에 해당하는 자식(대댓글) 전체 조회 -->
     <select id="findRepliesForParents" resultMap="commentWithWriterMap">
         SELECT
-        c.id as c_id, c.content, c.image_url, c.created_at, c.updated_at, c.likes,
+        c.id as c_id,
+        CASE WHEN c.deleted = 1 THEN NULL ELSE c.content END AS content,
+        CASE WHEN c.deleted = 1 THEN NULL ELSE c.image_url END AS image_url,
+        c.created_at, c.updated_at, c.likes,
         c.parent_comment_id, c.user_id,
-        u.id as u_id, u.nickname, u.profile_image
+        c.deleted,
+        <include refid="ModeratedFlag"/>
+        u.id as u_id,
+        CASE WHEN c.deleted = 1 THEN NULL ELSE u.nickname END AS nickname,
+        CASE WHEN c.deleted = 1 THEN NULL ELSE u.profile_image END AS profile_image
         FROM destination_comments c
         JOIN users u ON c.user_id = u.id
         WHERE c.parent_comment_id IN
@@ -376,7 +391,7 @@
             #{id}
         </foreach>
         AND c.destination_id = #{destinationId}
-        AND c.deleted = 0
+        AND (c.deleted = 0 OR <include refid="ModeratedExists"/>)
         ORDER BY c.created_at ASC, c.id ASC
     </select>
 

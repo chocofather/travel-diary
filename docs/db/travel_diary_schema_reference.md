@@ -424,6 +424,25 @@ CREATE TABLE `destination_categories` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `destination_comment_images`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `destination_comment_images` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `comment_id` bigint NOT NULL,
+  `image_url` varchar(255) NOT NULL,
+  `display_order` int NOT NULL DEFAULT '1',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_destination_comment_images_order` (`comment_id`,`display_order`),
+  CONSTRAINT `fk_destination_comment_images_comment` FOREIGN KEY (`comment_id`) REFERENCES `destination_comments` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `chk_destination_comment_images_order` CHECK (((`display_order` >= 1) and (`display_order` <= 3)))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `destination_comments`
 --
 

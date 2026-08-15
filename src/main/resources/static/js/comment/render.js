@@ -59,6 +59,20 @@ function highlightMentions(content) {
 }
 
 /**
+ * 댓글 첨부 사진(최대 3장) 마크업.
+ * 클릭 시 모달은 .comment-image 를 기준으로 잡히므로 클래스는 그대로 둔다.
+ */
+function renderCommentImages(comment) {
+    const imageUrls = Array.isArray(comment.imageUrls) ? comment.imageUrls : [];
+    if (imageUrls.length === 0) return '';
+    const items = imageUrls
+        .map((url, index) =>
+            `<img src="${url}" class="comment-image content-comment-image" alt="댓글 이미지 ${index + 1}">`)
+        .join('');
+    return `<div class="comment-images content-comment-images">${items}</div>`;
+}
+
+/**
  * 부모 ID별로 댓글을 그룹화
  */
 export function groupByParent(comments) {
@@ -83,18 +97,14 @@ export function createCommentItem(comment, depth = 0, parentNickname = '') {
         li.dataset.writerNickname = parentNickname;
     }
     // 관리자 조치된 댓글: 트리(대댓글)는 유지하고 본문만 안내 문구로 대체한다.
+    // 커뮤니티 댓글과 동일하게 카드 그리드(40px 프로필 열) 없이 안내 문구만 붙여
+    // 대댓글에서도 본문 폭을 그대로 쓰게 한다.
     if (comment.moderated === true || comment.deleted === true) {
         li.classList.add('content-comment-deleted');
-        const moderatedBody = document.createElement('div');
-        moderatedBody.className = 'content-comment-body';
         const moderatedText = document.createElement('p');
         moderatedText.className = 'comment-content content-comment-text content-comment-deleted-text';
         moderatedText.textContent = '관리자에 의해 조치된 댓글입니다.';
-        moderatedBody.append(moderatedText);
-        const moderatedCard = document.createElement('div');
-        moderatedCard.className = 'content-comment-card';
-        moderatedCard.append(moderatedBody);
-        li.append(moderatedCard);
+        li.append(moderatedText);
         return li;
     }
 
@@ -139,7 +149,7 @@ export function createCommentItem(comment, depth = 0, parentNickname = '') {
             </span>
         </div>
         <p class="comment-content content-comment-text">${highlightMentions(comment.content)}</p>
-        ${comment.imageUrl ? `<img src="${comment.imageUrl}" class="comment-image content-comment-image" alt="댓글 이미지">` : ''}
+        ${renderCommentImages(comment)}
         <div class="comment-actions content-comment-actions">
             ${likeControl}
             ${isLoggedIn ? '<button type="button" class="reply-btn content-comment-action">답글</button>' : ''}
