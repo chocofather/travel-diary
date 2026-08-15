@@ -67,6 +67,13 @@
          th:classappend="${activeMenu == 'users'} ? ' is-active' : ''"
          th:href="@{/admin/users}">회원 목록</a>
     </section>
+
+    <section class="admin-nav-group">
+      <h2 class="admin-nav-group-title">콘텐츠 관리</h2>
+      <a class="admin-nav-link"
+         th:classappend="${activeMenu == 'contents'} ? ' is-active' : ''"
+         th:href="@{/admin/contents}">조치된 콘텐츠</a>
+    </section>
   </nav>
 </aside>
 </body>

@@ -100,6 +100,89 @@
         ORDER BY created_at DESC, id DESC
     </select>
 
+    <!-- 조치된 콘텐츠 관리 목록 -->
+    <resultMap id="ModeratedContentResultMap"
+               type="com.example.travlediary.dto.ModeratedContentDto">
+        <id property="moderationId" column="moderation_id"/>
+        <result property="targetType" column="target_type"/>
+        <result property="targetId" column="target_id"/>
+        <result property="parentId" column="parent_id"/>
+        <result property="title" column="title"/>
+        <result property="contentSnippet" column="content_snippet"/>
+        <result property="authorUserId" column="author_user_id"/>
+        <result property="authorName" column="author_name"/>
+        <result property="reason" column="reason"/>
+        <result property="adminName" column="admin_name"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <!-- 대상 5종의 식별 정보를 한 형태로 모은다. -->
+    <sql id="ModeratedTargets">
+        SELECT 'POST' AS target_type, p.id AS target_id, NULL AS parent_id,
+               p.title AS title, p.content AS content_snippet, p.user_id AS author_user_id
+        FROM user_posts p
+        UNION ALL
+        SELECT 'COURSE', c.id, NULL, c.title, c.content, c.user_id
+        FROM courses c
+        UNION ALL
+        SELECT 'POST_COMMENT', pc.id, pc.post_id, NULL, pc.content, pc.user_id
+        FROM post_comments pc
+        UNION ALL
+        SELECT 'COURSE_COMMENT', cc.id, cc.course_id, NULL, cc.content, cc.user_id
+        FROM course_comments cc
+        UNION ALL
+        SELECT 'DESTINATION_COMMENT', dc.id, dc.destination_id, NULL, dc.content, dc.user_id
+        FROM destination_comments dc
+    </sql>
+
+    <!-- 사용자가 직접 지운 콘텐츠는 조치 행이 없으므로 애초에 조인되지 않는다. -->
+    <sql id="ModeratedContentFilter">
+        WHERE cm.status = 'ACTIVE'
+        <if test="targetType != null">
+            AND cm.target_type = #{targetType}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND (t.title LIKE CONCAT('%', #{keyword}, '%')
+                 OR t.content_snippet LIKE CONCAT('%', #{keyword}, '%')
+                 OR author.nickname LIKE CONCAT('%', #{keyword}, '%')
+                 OR author.username LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+    </sql>
+
+    <select id="countModeratedContents" resultType="long">
+        SELECT COUNT(*)
+        FROM content_moderations cm
+        JOIN (<include refid="ModeratedTargets"/>) t
+          ON t.target_type = cm.target_type
+         AND t.target_id = cm.target_id
+        JOIN users author ON author.id = t.author_user_id
+        <include refid="ModeratedContentFilter"/>
+    </select>
+
+    <select id="findModeratedContents" resultMap="ModeratedContentResultMap">
+        SELECT cm.id AS moderation_id,
+               cm.target_type,
+               cm.target_id,
+               cm.reason,
+               cm.created_at,
+               t.parent_id,
+               t.title,
+               LEFT(t.content_snippet, 200) AS content_snippet,
+               t.author_user_id,
+               COALESCE(NULLIF(author.nickname, ''), author.username) AS author_name,
+               COALESCE(NULLIF(admin_user.nickname, ''), admin_user.username) AS admin_name
+        FROM content_moderations cm
+        JOIN (<include refid="ModeratedTargets"/>) t
+          ON t.target_type = cm.target_type
+         AND t.target_id = cm.target_id
+        JOIN users author ON author.id = t.author_user_id
+        JOIN users admin_user ON admin_user.id = cm.created_by
+        <include refid="ModeratedContentFilter"/>
+        ORDER BY cm.created_at DESC, cm.id DESC
+        LIMIT #{limit}
+        OFFSET #{offset}
+    </select>
+
     <update id="restoreModeration">
         UPDATE content_moderations
         SET status = 'RESTORED',

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'contents')}">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/admin-contents.css">
+  <script src="/js/admin-content-filter.js" defer></script>
+</th:block>
+<th:block th:fragment="body">
+  <section class="admin-page-section admin-contents-page">
+    <header class="admin-page-header">
+      <div class="admin-page-heading">
+        <h1 class="admin-page-title">조치된 콘텐츠 관리</h1>
+        <p class="admin-page-description">
+          관리자가 숨긴 글·코스·댓글만 표시됩니다. 사용자가 직접 삭제한 콘텐츠는 포함되지 않습니다.
+        </p>
+      </div>
+    </header>
+
+    <div class="admin-filter-card">
+      <form id="admin-content-filter-form"
+            th:action="@{/admin/contents}" method="get" class="admin-filter-form">
+        <label class="admin-filter-field">
+          <span>콘텐츠 유형</span>
+          <select name="targetType" class="admin-select" aria-label="콘텐츠 유형 필터">
+            <option value="">전체</option>
+            <option th:each="type : ${targetTypes}"
+                    th:value="${type.name()}"
+                    th:selected="${currentType == type.name()}"
+                    th:text="${type.displayName}">게시글</option>
+          </select>
+        </label>
+
+        <label class="admin-filter-field admin-content-search-field">
+          <span>검색</span>
+          <input type="text" name="keyword" class="admin-input"
+                 th:value="${keyword}" maxlength="100"
+                 placeholder="제목 · 내용 · 작성자">
+        </label>
+
+        <div class="admin-filter-actions">
+          <button type="submit" class="admin-btn is-primary">조회</button>
+          <a th:href="@{/admin/contents}" class="admin-btn">초기화</a>
+        </div>
+      </form>
+    </div>
+
+    <div class="admin-content-list-header">
+      <p class="admin-content-result-count">
+        조치 중 <strong th:text="${totalCount}">0</strong>건
+      </p>
+      <p class="admin-content-list-hint">복구하면 원래 위치에 다시 노출됩니다.</p>
+    </div>
+
+    <div class="admin-card is-table-card">
+      <div class="admin-table-wrapper">
+        <table class="admin-table admin-contents-table">
+          <thead>
+          <tr>
+            <th>유형</th>
+            <th>콘텐츠</th>
+            <th>작성자</th>
+            <th>조치 사유</th>
+            <th>조치 관리자</th>
+            <th>조치일</th>
+            <th>복구</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr th:each="content : ${contents}">
+            <td>
+              <span class="admin-content-type"
+                    th:classappend="${content.comment} ? ' is-comment' : ' is-article'"
+                    th:text="${content.targetType.displayName}">게시글</span>
+            </td>
+            <td class="admin-content-body">
+              <span class="admin-content-title"
+                    th:if="${content.title != null}" th:text="${content.title}">제목</span>
+              <span class="admin-content-snippet"
+                    th:text="${content.contentSnippet != null ? content.contentSnippet : '(내용 없음)'}">내용</span>
+              <span class="admin-content-origin"
+                    th:text="${content.comment}
+                        ? '원본 ' + ${content.targetType.displayName} + ' #' + ${content.parentId} + ' · 댓글 #' + ${content.targetId}
+                        : ${content.targetType.displayName} + ' #' + ${content.targetId}">식별 정보</span>
+            </td>
+            <td>
+              <a class="admin-content-author"
+                 th:href="@{/users/{id}(id=${content.authorUserId})}"
+                 th:text="${content.authorName}">작성자</a>
+            </td>
+            <td><span class="admin-content-reason" th:text="${content.reason}">사유</span></td>
+            <td><span class="admin-content-admin" th:text="${content.adminName}">관리자</span></td>
+            <td><span class="admin-content-date"
+                     th:text="${content.createdAt != null ? #dates.format(content.createdAt, 'yyyy-MM-dd HH:mm') : '-'}">2026-08-15 10:00</span></td>
+            <td class="admin-table-actions">
+              <form th:action="@{/admin/contents/{type}/{id}/restore(type=${content.targetType.name()},id=${content.targetId})}"
+                    method="post" class="admin-content-restore-form"
+                    onsubmit="return confirm('이 콘텐츠를 복구하시겠습니까?');">
+                <input type="hidden" name="redirect"
+                       th:value="@{/admin/contents(targetType=${currentType == 'ALL' ? null : currentType},keyword=${keyword},page=${currentPage == 1 ? null : currentPage})}">
+                <input type="text" name="reason" maxlength="500"
+                       class="admin-input admin-content-restore-reason"
+                       aria-label="복구 사유" placeholder="복구 사유(선택)">
+                <button type="submit" class="admin-btn is-small is-primary">복구</button>
+              </form>
+            </td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(contents)}">
+            <td colspan="7" class="admin-table-empty">조치 중인 콘텐츠가 없습니다.</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <nav class="admin-content-pagination" th:if="${totalPages > 1}" aria-label="조치 콘텐츠 페이지">
+      <a th:if="${currentPage > 1}"
+         th:href="@{/admin/contents(targetType=${currentType == 'ALL' ? null : currentType},keyword=${keyword},page=${currentPage - 1})}">이전</a>
+      <span th:unless="${currentPage > 1}" class="is-disabled" aria-disabled="true">이전</span>
+
+      <a th:each="pageNumber : ${#numbers.sequence(pageStart, pageEnd)}"
+         th:href="@{/admin/contents(targetType=${currentType == 'ALL' ? null : currentType},keyword=${keyword},page=${pageNumber == 1 ? null : pageNumber})}"
+         th:text="${pageNumber}"
+         th:classappend="${pageNumber == currentPage} ? ' is-active'"
+         th:attr="aria-current=${pageNumber == currentPage} ? 'page' : null">1</a>
+
+      <a th:if="${currentPage < totalPages}"
+         th:href="@{/admin/contents(targetType=${currentType == 'ALL' ? null : currentType},keyword=${keyword},page=${currentPage + 1})}">다음</a>
+      <span th:unless="${currentPage < totalPages}" class="is-disabled" aria-disabled="true">다음</span>
+    </nav>
+  </section>
+</th:block>
+</html>

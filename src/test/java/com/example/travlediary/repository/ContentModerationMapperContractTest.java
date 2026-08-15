@@ -250,6 +250,43 @@ class ContentModerationMapperContractTest {
         assertThat(resource("/static/js/course-comments.js")).contains("삭제된 댓글입니다.");
     }
 
+    @Test
+    void contentTypeFilterAppliesOnChangeWithoutTouchingTheSearchFlow() throws IOException {
+        assertThat(resource("/static/js/admin-content-filter.js"))
+                .contains("admin-content-filter-form")
+                .contains("select[name=\"targetType\"]")
+                .contains("addEventListener('change', () => form.submit())")
+                .doesNotContain("keyword");
+    }
+
+    @Test
+    void moderatedContentListShowsOnlyActiveAdminActions() throws IOException {
+        String mapper = resource("/mapper/ContentModerationMapper.xml");
+
+        // 사용자 직접 삭제분은 조치 행이 없어 조인 자체가 되지 않는다
+        assertThat(between(mapper, "<sql id=\"ModeratedContentFilter\">", "</sql>"))
+                .contains("WHERE cm.status = 'ACTIVE'")
+                .contains("AND cm.target_type = #{targetType}")
+                .contains("author.nickname LIKE CONCAT('%', #{keyword}, '%')")
+                .contains("t.title LIKE", "t.content_snippet LIKE");
+
+        // 대상 5종의 식별 정보를 모두 모은다
+        String targets = between(mapper, "<sql id=\"ModeratedTargets\">", "</sql>");
+        assertThat(targets)
+                .contains("'POST' AS target_type", "FROM user_posts p")
+                .contains("'COURSE'", "FROM courses c")
+                .contains("'POST_COMMENT'", "FROM post_comments pc")
+                .contains("'COURSE_COMMENT'", "FROM course_comments cc")
+                .contains("'DESTINATION_COMMENT'", "FROM destination_comments dc");
+
+        String list = between(mapper, "<select id=\"findModeratedContents\"", "</select>");
+        assertThat(list)
+                .contains("<include refid=\"ModeratedContentFilter\"/>")
+                .contains("cm.reason", "cm.created_at", "admin_name", "author_name")
+                .contains("t.parent_id")
+                .contains("ORDER BY cm.created_at DESC");
+    }
+
     private String resource(String path) throws IOException {
         try (InputStream input = getClass().getResourceAsStream(path)) {
             assertThat(input).as("resource %s", path).isNotNull();

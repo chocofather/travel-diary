@@ -1,0 +1,271 @@
+.admin-contents-page {
+    min-width: 0;
+}
+
+/* ---------- 검색·필터 ---------- */
+.admin-contents-page .admin-filter-form {
+    align-items: flex-end;
+    gap: 14px;
+}
+
+.admin-contents-page .admin-filter-field {
+    display: grid;
+    gap: 6px;
+}
+
+.admin-contents-page .admin-filter-field > span {
+    color: var(--admin-muted);
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.admin-content-search-field {
+    flex: 1 1 260px;
+    min-width: 0;
+    max-width: 340px;
+}
+
+.admin-contents-page .admin-filter-actions {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+}
+
+/* ---------- 목록 헤더 ---------- */
+.admin-content-list-header {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 20px 0 10px;
+}
+
+.admin-content-result-count {
+    margin: 0;
+    color: var(--admin-muted);
+    font-size: 0.85rem;
+    font-weight: 650;
+}
+
+.admin-content-result-count strong {
+    color: #35415a;
+    font-weight: 800;
+}
+
+.admin-content-list-hint {
+    margin: 0;
+    color: #98a2b6;
+    font-size: 0.8rem;
+}
+
+/* ---------- 표 ---------- */
+.admin-contents-table {
+    min-width: 1080px;
+}
+
+.admin-contents-table td {
+    vertical-align: middle;
+}
+
+.admin-contents-table .admin-content-body {
+    vertical-align: top;
+}
+
+.admin-contents-table th:first-child,
+.admin-contents-table td:first-child {
+    width: 120px;
+}
+
+/* 유형 배지: 글과 댓글 계열을 색으로 구분 */
+.admin-content-type {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 24px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.73rem;
+    font-weight: 750;
+    white-space: nowrap;
+}
+
+.admin-content-type.is-article {
+    color: #3550a8;
+    background: var(--admin-blue-soft);
+    border: 1px solid #ccd8fb;
+}
+
+.admin-content-type.is-comment {
+    color: #7a5416;
+    background: #fff7e8;
+    border: 1px solid #f0dcb0;
+}
+
+/* 콘텐츠: 제목 > 미리보기 > 식별정보 순으로 위계를 준다 */
+.admin-content-body {
+    display: grid;
+    max-width: 420px;
+    gap: 3px;
+}
+
+.admin-content-title {
+    overflow: hidden;
+    color: #2f3a53;
+    font-size: 0.9rem;
+    font-weight: 750;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.admin-content-snippet {
+    display: -webkit-box;
+    overflow: hidden;
+    color: #6b7690;
+    font-size: 0.84rem;
+    line-height: 1.55;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.admin-content-origin {
+    margin-top: 2px;
+    color: #9aa4b8;
+    font-size: 0.75rem;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+}
+
+.admin-content-author {
+    color: #3c465d;
+    font-size: 0.86rem;
+    font-weight: 650;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.admin-content-author:hover {
+    color: var(--admin-blue);
+    text-decoration: underline;
+}
+
+.admin-content-reason {
+    display: -webkit-box;
+    max-width: 220px;
+    overflow: hidden;
+    color: #5b6680;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.admin-content-admin,
+.admin-content-date {
+    color: var(--admin-muted);
+    font-size: 0.83rem;
+    white-space: nowrap;
+}
+
+/* ---------- 복구 ---------- */
+.admin-contents-table th:last-child,
+.admin-contents-table td:last-child {
+    width: 240px;
+}
+
+.admin-content-restore-form {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 6px;
+    margin: 0;
+}
+
+.admin-content-restore-reason.admin-input {
+    width: 130px;
+    min-width: 0;
+    min-height: 34px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 0.82rem;
+}
+
+.admin-content-restore-form .admin-btn {
+    flex: 0 0 auto;
+}
+
+/* ---------- 페이지네이션 ---------- */
+.admin-content-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 22px;
+}
+
+.admin-content-pagination a,
+.admin-content-pagination span {
+    display: inline-flex;
+    min-width: 38px;
+    min-height: 38px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 10px;
+    color: #58657d;
+    background: #fff;
+    border: 1px solid var(--admin-border);
+    border-radius: 9px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.admin-content-pagination a:hover,
+.admin-content-pagination a.is-active {
+    color: #fff;
+    background: var(--admin-blue);
+    border-color: var(--admin-blue);
+}
+
+.admin-content-pagination span.is-disabled {
+    color: #aab3c2;
+    background: #f6f8fc;
+}
+
+@media (max-width: 900px) {
+    .admin-contents-page .admin-filter-actions {
+        margin-left: 0;
+    }
+
+    .admin-content-search-field {
+        max-width: none;
+    }
+}
+
+@media (max-width: 700px) {
+    .admin-contents-page .admin-filter-form {
+        align-items: stretch;
+    }
+
+    .admin-content-list-header {
+        margin-top: 16px;
+    }
+
+    .admin-content-body {
+        max-width: none;
+    }
+
+    .admin-content-restore-form {
+        flex-wrap: wrap;
+    }
+
+    .admin-content-restore-reason.admin-input {
+        width: 100%;
+    }
+
+    .admin-content-restore-form .admin-btn {
+        width: 100%;
+    }
+}

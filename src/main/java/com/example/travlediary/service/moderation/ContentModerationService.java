@@ -1,6 +1,7 @@
 package com.example.travlediary.service.moderation;
 
 import com.example.travlediary.dto.ContentModerationForm;
+import com.example.travlediary.dto.ModeratedContentDto;
 import com.example.travlediary.model.ContentModeration;
 import com.example.travlediary.model.ModerationStatus;
 import com.example.travlediary.model.ModerationTargetType;
@@ -43,6 +44,20 @@ public class ContentModerationService {
     public List<ContentModeration> getModerationHistory(ModerationTargetType targetType,
                                                         Long targetId) {
         return contentModerationMapper.findByTarget(targetType, targetId);
+    }
+
+    /** 조치 중(ACTIVE)인 콘텐츠만 센다. 사용자 직접 삭제분은 포함되지 않는다. */
+    @Transactional(readOnly = true)
+    public long countModeratedContents(ModerationTargetType targetType, String keyword) {
+        return contentModerationMapper.countModeratedContents(targetType, keyword);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ModeratedContentDto> getModeratedContents(ModerationTargetType targetType,
+                                                          String keyword,
+                                                          long offset,
+                                                          int limit) {
+        return contentModerationMapper.findModeratedContents(targetType, keyword, offset, limit);
     }
 
     /** 관리자 숨김. 아직 노출 중인 콘텐츠만 대상으로 한다. */

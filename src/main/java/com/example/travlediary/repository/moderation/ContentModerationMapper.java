@@ -1,5 +1,6 @@
 package com.example.travlediary.repository.moderation;
 
+import com.example.travlediary.dto.ModeratedContentDto;
 import com.example.travlediary.model.ContentModeration;
 import com.example.travlediary.model.ModerationTargetType;
 import org.apache.ibatis.annotations.Mapper;
@@ -47,6 +48,17 @@ public interface ContentModerationMapper {
 
     List<ContentModeration> findByTarget(@Param("targetType") ModerationTargetType targetType,
                                          @Param("targetId") Long targetId);
+
+    /* ---------- 조치된 콘텐츠 관리 목록 ---------- */
+
+    long countModeratedContents(@Param("targetType") ModerationTargetType targetType,
+                                @Param("keyword") String keyword);
+
+    List<ModeratedContentDto> findModeratedContents(
+            @Param("targetType") ModerationTargetType targetType,
+            @Param("keyword") String keyword,
+            @Param("offset") long offset,
+            @Param("limit") int limit);
 
     int restoreModeration(@Param("id") Long id,
                           @Param("restoredAt") LocalDateTime restoredAt,
