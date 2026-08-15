@@ -59,7 +59,7 @@ class DestinationCommentImageWriteTest {
     }
 
     @Test
-    void imagesAreStoredInOrderAndLegacyColumnStaysEmpty() {
+    void imagesAreStoredInOrderInTheirOwnTable() {
         givenCommentIsInserted(50L);
         givenWriterExists();
         when(commentImageMapper.insert(any(DestinationCommentImage.class))).thenReturn(1);
@@ -79,11 +79,8 @@ class DestinationCommentImageWriteTest {
         assertThat(captor.getAllValues())
                 .allSatisfy(image -> assertThat(image.getImageUrl()).startsWith("/uploads/comments/"));
 
-        // 기존 컬럼에는 더 이상 저장하지 않는다
-        ArgumentCaptor<DestinationComment> commentCaptor =
-                ArgumentCaptor.forClass(DestinationComment.class);
-        verify(commentMapper).insert(commentCaptor.capture());
-        assertThat(commentCaptor.getValue().getImageUrl()).isNull();
+        // 댓글 자체는 한 번만 저장된다 (사진은 별도 테이블)
+        verify(commentMapper).insert(any(DestinationComment.class));
     }
 
     @Test

@@ -9,7 +9,6 @@
         <id property="id" column="id"/>
         <result property="parentCommentId" column="parent_comment_id"/>
         <result property="content" column="content"/>
-        <result property="imageUrl" column="image_url"/>
         <result property="likes" column="likes"/>
         <result property="deleted" column="deleted"/>
         <result property="createdAt" column="created_at"/>
@@ -23,7 +22,6 @@
     <resultMap id="commentWithWriterMap" type="com.example.travlediary.model.DestinationComment">
         <id     property="id"         column="c_id"/>
         <result property="content"    column="content"/>
-        <result property="imageUrl"   column="image_url"/>
         <result property="createdAt"  column="created_at"/>
         <result property="updatedAt"  column="updated_at"/>
         <result property="likes"      column="likes"/>
@@ -59,11 +57,11 @@
     <!-- 댓글 등록 -->
     <insert id="insert" parameterType="DestinationComment" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO destination_comments (
-            destination_id, user_id, content, image_url, likes, deleted,
+            destination_id, user_id, content, likes, deleted,
             created_at, updated_at, parent_comment_id
         )
         VALUES (
-                   #{destinationId}, #{userId}, #{content}, #{imageUrl}, #{likes}, #{deleted},
+                   #{destinationId}, #{userId}, #{content}, #{likes}, #{deleted},
                    #{createdAt}, #{updatedAt}, #{parentCommentId}
                )
     </insert>
@@ -151,22 +149,10 @@
           )
     </select>
 
-    <!-- 댓글 이미지 추출 -->
-    <select id="selectCommentsWithImages" resultMap="DestinationCommentMap">
-        SELECT *
-        FROM destination_comments
-        WHERE destination_id = #{destinationId}
-          AND image_url IS NOT NULL
-          AND deleted = 0
-        ORDER BY created_at DESC
-            LIMIT 12
-    </select>
-
     <select id="findByDestinationIdWithWriter" resultMap="commentWithWriterMap">
     SELECT
         c.id as c_id,
         CASE WHEN c.deleted = 1 THEN NULL ELSE c.content END AS content,
-        CASE WHEN c.deleted = 1 THEN NULL ELSE c.image_url END AS image_url,
         c.created_at,
         c.updated_at,
         c.likes,
@@ -191,7 +177,6 @@
         SELECT
             c.id as c_id,
             CASE WHEN c.deleted = 1 THEN NULL ELSE c.content END AS content,
-            CASE WHEN c.deleted = 1 THEN NULL ELSE c.image_url END AS image_url,
             c.created_at,
             c.updated_at,
             c.likes,
@@ -216,7 +201,6 @@
         SELECT
             c.id as c_id,
             CASE WHEN c.deleted = 1 THEN NULL ELSE c.content END AS content,
-            CASE WHEN c.deleted = 1 THEN NULL ELSE c.image_url END AS image_url,
             c.created_at,
             c.updated_at,
             c.likes,
@@ -244,52 +228,6 @@
         )
     </select>
 
-    <select id="findImagePathById" resultType="String">
-        SELECT image_path
-        FROM destination_comments
-        WHERE id = #{id}
-    </select>
-
-    <update id="updateImagePath">
-        UPDATE destination_comments
-        SET image_path = #{imagePath},
-            updated_at = NOW()
-        WHERE id = #{id}
-    </update>
-
-   <!-- <select id="findPagedComments" resultMap="commentWithWriterMap">
-        SELECT
-        c.id as c_id,
-        c.content,
-        c.image_url,
-        c.created_at,
-        c.updated_at,
-        c.likes,
-        c.parent_comment_id,
-        c.user_id,
-
-        u.id as u_id,
-        u.nickname,
-        u.profile_image
-
-        FROM destination_comments c
-        JOIN users u ON c.user_id = u.id
-        WHERE c.destination_id = #{destinationId}
-        AND c.deleted = 0
-        <choose>
-            <when test="sort == 'recent'">
-                ORDER BY c.created_at DESC
-            </when>
-            <when test="sort == 'likes'">
-                ORDER BY c.likes DESC, c.created_at ASC
-            </when>
-            <otherwise>
-                ORDER BY c.created_at ASC
-            </otherwise>
-        </choose>
-        LIMIT #{limit} OFFSET #{offset}
-    </select>-->
-
     <select id="countComments" resultType="int">
         SELECT COUNT(*)
         FROM destination_comments
@@ -300,7 +238,7 @@
     <!-- 오래된 순 -->
     <select id="findPagedByCreatedAtAsc" resultMap="commentWithWriterMap">
         SELECT
-            c.id as c_id, c.content, c.image_url, c.created_at, c.updated_at, c.likes,
+            c.id as c_id, c.content, c.created_at, c.updated_at, c.likes,
             c.parent_comment_id, c.user_id,
             u.id as u_id, u.nickname, u.profile_image
         FROM destination_comments c
@@ -314,7 +252,7 @@
     <!-- 최신순 -->
     <select id="findPagedByCreatedAtDesc" resultMap="commentWithWriterMap">
         SELECT
-            c.id as c_id, c.content, c.image_url, c.created_at, c.updated_at, c.likes,
+            c.id as c_id, c.content, c.created_at, c.updated_at, c.likes,
             c.parent_comment_id, c.user_id,
             u.id as u_id, u.nickname, u.profile_image
         FROM destination_comments c
@@ -328,7 +266,7 @@
     <!-- 좋아요순 -->
     <select id="findPagedByLikesDesc" resultMap="commentWithWriterMap">
         SELECT
-            c.id as c_id, c.content, c.image_url, c.created_at, c.updated_at, c.likes,
+            c.id as c_id, c.content, c.created_at, c.updated_at, c.likes,
             c.parent_comment_id, c.user_id,
             u.id as u_id, u.nickname, u.profile_image
         FROM destination_comments c
@@ -344,7 +282,6 @@
         SELECT
         c.id as c_id,
         CASE WHEN c.deleted = 1 THEN NULL ELSE c.content END AS content,
-        CASE WHEN c.deleted = 1 THEN NULL ELSE c.image_url END AS image_url,
         c.created_at, c.updated_at, c.likes,
         c.parent_comment_id, c.user_id,
         c.deleted,
@@ -376,7 +313,6 @@
         SELECT
         c.id as c_id,
         CASE WHEN c.deleted = 1 THEN NULL ELSE c.content END AS content,
-        CASE WHEN c.deleted = 1 THEN NULL ELSE c.image_url END AS image_url,
         c.created_at, c.updated_at, c.likes,
         c.parent_comment_id, c.user_id,
         c.deleted,

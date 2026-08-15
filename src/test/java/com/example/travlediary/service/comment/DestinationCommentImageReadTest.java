@@ -1,6 +1,7 @@
 package com.example.travlediary.service.comment;
 
 import com.example.travlediary.dto.CommentDto;
+import com.example.travlediary.dto.CommentImageDto;
 import com.example.travlediary.dto.PageResult;
 import com.example.travlediary.model.DestinationComment;
 import com.example.travlediary.model.DestinationCommentImage;
@@ -114,6 +115,26 @@ class DestinationCommentImageReadTest {
         assertThat(service.getCommentDtosWithWriter(10L, null, "oldest").get(0).getImageUrls())
                 .isNotNull()
                 .isEmpty();
+    }
+
+    @Test
+    void photoGalleryReadsEveryImageFromTheNewStorageKeepingTheLimitAndOrder() {
+        when(commentImageMapper.findGalleryByDestinationId(10L, 12)).thenReturn(List.of(
+                image(9L, "/uploads/comments/new-1.jpg", 1),
+                image(9L, "/uploads/comments/new-2.jpg", 2),
+                image(9L, "/uploads/comments/new-3.jpg", 3),
+                image(8L, "/uploads/comments/old.jpg", 1)));
+
+        List<CommentImageDto> gallery = service.getCommentImageDtos(10L);
+
+        // 댓글 한 건의 사진 3장이 각각 독립된 사진으로 노출되고, 매퍼가 준 순서를 유지한다
+        assertThat(gallery)
+                .extracting(CommentImageDto::getImageUrl)
+                .containsExactly(
+                        "/uploads/comments/new-1.jpg",
+                        "/uploads/comments/new-2.jpg",
+                        "/uploads/comments/new-3.jpg",
+                        "/uploads/comments/old.jpg");
     }
 
     private DestinationComment comment(long id, Long parentId, boolean deleted) {

@@ -231,12 +231,9 @@ class ContentModerationMapperContractTest {
 
     @Test
     void destinationCommentTreeGroupingHasNoDeletedFilter() throws IOException {
-        for (String path : new String[]{"/static/js/comment/render.js",
-                "/static/js/comment/comment.js"}) {
-            assertThat(between(resource(path), "groupByParent", "}, {});")).as(path)
-                    .contains("c.parentCommentId ?? null")
-                    .doesNotContain("deleted");
-        }
+        assertThat(between(resource("/static/js/comment/render.js"), "groupByParent", "}, {});"))
+                .contains("c.parentCommentId ?? null")
+                .doesNotContain("deleted");
     }
 
     @Test

@@ -256,16 +256,12 @@ function showEditForm(e, commentDiv) {
     const original = contentEl.innerText.replace('수정됨', '').trim();
     const form = document.createElement('form');
     form.className = 'edit-comment-form comment-write-form';
-    const inputId = `edit-image-${commentDiv.dataset.id}`;
+    // 수정은 본문만 저장한다. (사진 변경 경로는 사용되지 않아 제거됨)
     form.innerHTML = `
     <div class="textarea-wrapper">
       <textarea name="content" class="edit-text" required>${original}</textarea>
     </div>
     <div class="comment-controls">
-      <input type="file" id="${inputId}" name="image" accept="image/*" hidden>
-      <label for="${inputId}" class="image-upload-label">
-        <img src="/uploads/icons/camera.png" alt="사진"> 사진 변경
-      </label>
       <button type="button" class="save-edit-btn submit-btn">저장</button>
       <button type="button" class="cancel-edit-btn">취소</button>
     </div>

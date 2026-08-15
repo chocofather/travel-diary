@@ -12,7 +12,6 @@ public class DestinationComment {
     private Long id; // 여행지 댓글 번호
     private Long parentCommentId; // 부모 댓글 번호
     private String content; // 내용
-    private String imageUrl; // 이미지 첨부 url
     private Integer likes; // 좋아요수
     private Boolean deleted; // 삭제여부
     private boolean moderated; // 관리자 조치로 숨겨진 댓글이면 true (사용자 직접 삭제와 구분)

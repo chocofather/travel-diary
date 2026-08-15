@@ -38,17 +38,8 @@ public interface DestinationCommentMapper {
     int countRootCommentsBefore(@Param("destinationId") Long destinationId,
                                 @Param("rootId") Long rootId);
 
-    // 댓글 이미지만 추출
-    List<DestinationComment> selectCommentsWithImages(Long destinationId);
-
     // 좋아요 여부 체크
     boolean existsLikeByUserAndComment(@Param("userId") Long userId, @Param("commentId") Long commentId);
-
-    // 댓글 이미지 경로 수정
-    void updateImagePath(@Param("id") Long id, @Param("imagePath") String imagePath);
-
-    // 기존 이미지 경로 가져오기 (삭제 전 삭제용)
-    String findImagePathById(@Param("id") Long id);
 
     // 기본 정렬 (오래된 순)
     List<DestinationComment> findByDestinationIdWithWriter(@Param("destinationId") Long destinationId);

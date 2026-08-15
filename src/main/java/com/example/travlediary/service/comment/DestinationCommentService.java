@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.sql.Timestamp;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -33,6 +32,8 @@ public class DestinationCommentService {
     private static final int DEFAULT_PAGE_SIZE = 5;
     /** 댓글 하나에 첨부할 수 있는 사진 수 (DB CHECK 제약과 동일) */
     public static final int MAX_COMMENT_IMAGES = 3;
+    /** 상단 사진 후기에 노출할 사진 수 (기존 정책 유지) */
+    private static final int GALLERY_LIMIT = 12;
 
     private final DestinationMapper destinationMapper; // 또는 별도 CommentMapper
     private final DestinationCommentMapper destinationCommentMapper;
@@ -152,12 +153,11 @@ public class DestinationCommentService {
             throw new RuntimeException("댓글 이미지 업로드 실패", e);
         }
 
-        // 3) 댓글 객체 생성 (신규 사진은 destination_comment_images 에만 저장한다)
+        // 3) 댓글 객체 생성 (사진은 destination_comment_images 에 따로 저장한다)
         DestinationComment comment = new DestinationComment();
         comment.setDestinationId(destinationId);
         comment.setUserId(userId);
         comment.setContent(content);
-        comment.setImageUrl(null);
         comment.setLikes(0);
         comment.setDeleted(false);
         comment.setCreatedAt(new Timestamp(System.currentTimeMillis()));
@@ -203,10 +203,15 @@ public class DestinationCommentService {
     }
 
 
+    /**
+     * 상단 사진 후기(사진 모아보기).
+     * 댓글 한 건에 사진이 여러 장이면 각각 독립된 사진으로 노출되며,
+     * 최신 댓글 → 같은 댓글 안에서는 display_order 순서를 따른다.
+     */
     public List<CommentImageDto> getCommentImageDtos(Long destinationId) {
-        List<DestinationComment> comments = destinationCommentMapper.selectCommentsWithImages(destinationId);
-        return comments.stream()
-                .map(c -> new CommentImageDto(c.getImageUrl()))
+        return destinationCommentImageMapper
+                .findGalleryByDestinationId(destinationId, GALLERY_LIMIT).stream()
+                .map(image -> new CommentImageDto(image.getImageUrl()))
                 .collect(Collectors.toList());
     }
 
@@ -326,31 +331,6 @@ public class DestinationCommentService {
             } catch (IOException ignored) {
                 // 파일 정리 실패는 등록 실패 원인을 덮지 않도록 무시한다.
             }
-        }
-    }
-
-    // 댓글 이미지 수정
-    public void updateCommentImage(Long commentId, MultipartFile imageFile) throws IOException {
-        // 1. 기존 이미지 경로 조회
-        String oldImagePath = destinationCommentMapper.findImagePathById(commentId);
-
-        // 2. 기존 이미지가 있다면 삭제
-        if (oldImagePath != null && !oldImagePath.isEmpty()) {
-            // "/uploads/comments/abc.jpg" → "comments/abc.jpg"
-            String relativePath = oldImagePath.replaceFirst("^/uploads/", "");
-            Path oldPath = Paths.get(uploadPath, relativePath);
-            Files.deleteIfExists(oldPath);
-        }
-
-        // 3. 새 이미지가 있다면 저장
-        if (imageFile != null && !imageFile.isEmpty()) {
-            String newFilename = UUID.randomUUID() + "_" + imageFile.getOriginalFilename();
-            Path savePath = Paths.get(uploadPath, "comments", newFilename);
-            Files.createDirectories(savePath.getParent()); // 폴더 없으면 생성
-            Files.copy(imageFile.getInputStream(), savePath, StandardCopyOption.REPLACE_EXISTING);
-
-            // 4. DB에 새 이미지 경로 반영
-            destinationCommentMapper.updateImagePath(commentId, "/uploads/comments/" + newFilename);
         }
     }
 

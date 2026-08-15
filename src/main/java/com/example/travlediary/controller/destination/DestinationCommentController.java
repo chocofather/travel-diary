@@ -15,7 +15,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -102,17 +101,6 @@ public class DestinationCommentController {
     public ResponseEntity<List<CommentImageDto>> getCommentImages(@RequestParam Long destinationId) {
         List<CommentImageDto> images = destinationCommentService.getCommentImageDtos(destinationId);
         return ResponseEntity.ok(images);
-    }
-
-    @PostMapping("/comments/{id}/edit-image")
-    public ResponseEntity<?> updateCommentImage(@PathVariable Long id,
-                                                @RequestParam("image") MultipartFile imageFile) {
-        try {
-            destinationCommentService.updateCommentImage(id, imageFile);
-            return ResponseEntity.ok("이미지 수정 완료");
-        } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("이미지 수정 실패");
-        }
     }
 
     @GetMapping("/list/page")

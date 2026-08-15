@@ -452,7 +452,6 @@ CREATE TABLE `destination_comments` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `parent_comment_id` bigint DEFAULT NULL,
   `content` text,
-  `image_url` varchar(255) DEFAULT NULL,
   `likes` int NOT NULL DEFAULT '0',
   `deleted` tinyint NOT NULL DEFAULT '0',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
