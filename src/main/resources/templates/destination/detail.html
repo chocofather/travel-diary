@@ -410,25 +410,30 @@
     <!-- ====== 추천 여행지 ====== -->
     <section class="similar-destinations" th:if="${similarDestinations != null and !similarDestinations.isEmpty()}">
         <div class="container">
-                <h2>
-                    <span th:if="${regionName != null}" th:text="${regionName} + '에 이런 여행지는 어떠세요?'">추천</span>
-                    <span th:if="${regionName == null}">이런 여행지는 어떠세요?</span>
+                <h2 class="similar-destinations-title">
+                    <span th:if="${regionName != null}" th:text="${regionName} + '의 다른 여행지도 둘러보세요'">추천</span>
+                    <span th:if="${regionName == null}">이런 여행지도 둘러보세요</span>
                 </h2>
                 <div class="similar-destination-list">
                     <div th:each="d : ${similarDestinations}" class="similar-destination-card">
-                        <!-- 북마크 버튼: 카드 우상단 -->
-                        <button
-                                class="bookmark-icon"
-                                type="button"
-                                th:data-type="'DESTINATION'"
-                                th:data-id="${d.id}"
-                                th:data-bookmarked="${d.bookmarked != null ? d.bookmarked : false}">
-                            <img th:src="@{${d.bookmarked != null and d.bookmarked} ? '/uploads/icons/bookmark2.png' : '/uploads/icons/bookmark.png'}"
-                                 alt="북마크"/>
-                        </button>
-                        <!-- 카드 내용 -->
-                        <a th:href="@{'/destinations/' + ${d.id}}">
-                            <img th:src="${d.thumbnailPath}" th:alt="${d.name}" class="similar-destination-thumbnail"/>
+                        <div class="similar-destination-media">
+                            <a class="similar-destination-media-link"
+                               th:href="@{'/destinations/' + ${d.id}}"
+                               th:attr="aria-label=${d.name}">
+                                <img th:src="${d.thumbnailPath}" th:alt="${d.name}" class="similar-destination-thumbnail"/>
+                            </a>
+                            <!-- 북마크 버튼: 이미지 우상단 오버레이 (토글 로직은 기존 그대로) -->
+                            <button
+                                    class="bookmark-icon similar-destination-bookmark"
+                                    type="button"
+                                    th:data-type="'DESTINATION'"
+                                    th:data-id="${d.id}"
+                                    th:data-bookmarked="${d.bookmarked != null ? d.bookmarked : false}">
+                                <img th:src="@{${d.bookmarked != null and d.bookmarked} ? '/uploads/icons/bookmark2.png' : '/uploads/icons/bookmark.png'}"
+                                     alt="북마크"/>
+                            </button>
+                        </div>
+                        <a class="similar-destination-body" th:href="@{'/destinations/' + ${d.id}}">
                             <div class="similar-destination-name" th:text="${d.name}"></div>
                             <div class="similar-destination-region" th:text="${d.regionName}"></div>
                         </a>
