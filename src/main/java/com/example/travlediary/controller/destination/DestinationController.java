@@ -265,6 +265,9 @@ public class DestinationController {
         CountryCategory region = countryCategoryService.getById(dto.getDestination().getRegionId());
         model.addAttribute("regionName", region.getRegionName());
         model.addAttribute("regionId", region.getId());
+        // 목록으로 돌아가는 링크(/destinations?type=..&region=..)가 쓰는 값.
+        // 비어 있으면 목록이 지역 필터를 적용하지 못한다.
+        model.addAttribute("type", resolveRegionType(region));
 
         String code = region.getCode(); // 또는 countryCategoryService.getCodeById(region.getId());
         String countryCode = code != null ? code.split("-")[0] : null;
@@ -291,6 +294,23 @@ public class DestinationController {
         model.addAttribute("similarDestinations", similarDtos);
 
         return "destination/detail";
+    }
+
+    /**
+     * 지역이 속한 최상위 루트까지 거슬러 올라가 목록의 type 값(domestic/overseas)을 정한다.
+     * 지역 ID 는 하드코딩하지 않고 CountryCategoryService 로 판별한다.
+     */
+    private String resolveRegionType(CountryCategory region) {
+        CountryCategory root = region;
+        while (root != null && root.getParentId() != null) {
+            root = countryCategoryService.getById(root.getParentId());
+        }
+        if (root == null) {
+            return "domestic";
+        }
+        return countryCategoryService.getDomesticRootIds().contains(root.getId())
+                ? "domestic"
+                : "overseas";
     }
 
     @GetMapping("/destinations/fragment")

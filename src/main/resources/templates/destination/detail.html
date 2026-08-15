@@ -410,10 +410,21 @@
     <!-- ====== 추천 여행지 ====== -->
     <section class="similar-destinations" th:if="${similarDestinations != null and !similarDestinations.isEmpty()}">
         <div class="container">
-                <h2 class="similar-destinations-title">
-                    <span th:if="${regionName != null}" th:text="${regionName} + '의 다른 여행지도 둘러보세요'">추천</span>
-                    <span th:if="${regionName == null}">이런 여행지도 둘러보세요</span>
-                </h2>
+                <div class="similar-destinations-header">
+                    <h2 class="similar-destinations-title">
+                        <span th:if="${regionName != null}" th:text="${regionName} + '의 다른 여행지도 둘러보세요'">추천</span>
+                        <span th:if="${regionName == null}">이런 여행지도 둘러보세요</span>
+                    </h2>
+                    <!-- 목록의 지역 필터 파라미터(type/region)를 그대로 사용.
+                         쿼리스트링을 문자열로 이어 붙이면 '&region='이 &reg; 엔티티로 깨지므로
+                         Thymeleaf 파라미터 문법을 쓴다. -->
+                    <a th:if="${regionName != null}"
+                       class="similar-destinations-more"
+                       th:href="@{/destinations(type=${type},region=${regionId})}">
+                        <span th:text="${regionName} + ' 여행지 더보기'">여행지 더보기</span>
+                        <span class="similar-destinations-more-arrow" aria-hidden="true">→</span>
+                    </a>
+                </div>
                 <div class="similar-destination-list">
                     <div th:each="d : ${similarDestinations}" class="similar-destination-card">
                         <div class="similar-destination-media">
@@ -435,7 +446,11 @@
                         </div>
                         <a class="similar-destination-body" th:href="@{'/destinations/' + ${d.id}}">
                             <div class="similar-destination-name" th:text="${d.name}"></div>
-                            <div class="similar-destination-region" th:text="${d.regionName}"></div>
+                            <div class="similar-destination-region">
+                                <img src="/uploads/icons/marker.png" alt="" aria-hidden="true"
+                                     class="similar-destination-region-icon"/>
+                                <span th:text="${d.regionName}">지역명</span>
+                            </div>
                         </a>
                     </div>
                 </div>

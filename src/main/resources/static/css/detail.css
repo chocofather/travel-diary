@@ -667,9 +667,10 @@ body {
 
 /* 여행지 추천 — 상세 페이지의 다음 탐색 섹션 */
 .similar-destinations {
-    margin: 64px 0 88px;
-    padding-top: 28px;
+    margin: 72px 0 56px; /* 아래쪽은 footer 와의 간격 */
+    padding: 56px 0 64px;
     border-top: 1px solid #eceef0;
+    background: #f8f9fb; /* 본문과 자연스럽게 구분되는 아주 연한 오프화이트 */
 }
 
 .similar-destinations .container {
@@ -679,8 +680,17 @@ body {
     box-sizing: border-box;
 }
 
+.similar-destinations-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
 .similar-destinations-title {
-    margin: 0 0 22px;
+    margin: 0;
+    min-width: 0;
     color: #1e2939;
     font-size: 1.22rem;
     font-weight: 700;
@@ -688,11 +698,36 @@ body {
     letter-spacing: -0.02em;
 }
 
+.similar-destinations-more {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 4px;
+    color: #5b6676;
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: color .18s ease;
+}
+
+.similar-destinations-more:hover,
+.similar-destinations-more:focus-visible {
+    color: #1e2939;
+}
+
+.similar-destinations-more-arrow {
+    transition: transform .18s ease;
+}
+
+.similar-destinations-more:hover .similar-destinations-more-arrow {
+    transform: translateX(2px);
+}
+
 /* 데스크톱 4열 */
 .similar-destination-list {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 20px;
+    gap: 24px;
 }
 
 .similar-destination-card {
@@ -708,8 +743,8 @@ body {
 }
 
 .similar-destination-card:hover {
-    border-color: #dbe0e8;
-    box-shadow: 0 6px 16px rgba(30, 41, 59, 0.08);
+    border-color: #e0e4ea;
+    box-shadow: 0 4px 12px rgba(30, 41, 59, 0.07);
     transform: translateY(-2px);
 }
 
@@ -717,7 +752,7 @@ body {
 .similar-destination-media {
     position: relative;
     width: 100%;
-    aspect-ratio: 5 / 4;
+    aspect-ratio: 4 / 3;
     overflow: hidden;
     background: #eef1f5;
 }
@@ -760,13 +795,29 @@ body {
 }
 
 .similar-destination-region {
-    margin: 4px 0 0;
-    overflow: hidden;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    margin: 5px 0 0;
     color: #8c94a3;
     font-size: 0.82rem;
     line-height: 1.45;
+}
+
+.similar-destination-region span {
+    min-width: 0;
+    overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.similar-destination-region-icon {
+    flex: 0 0 auto;
+    width: 13px;
+    height: 13px;
+    object-fit: contain;
+    opacity: .6;
 }
 
 .similar-destination-card a {
@@ -803,25 +854,39 @@ body {
 }
 
 @media (max-width: 1024px) {
+    .similar-destinations {
+        padding: 44px 0 52px;
+    }
+
     .similar-destination-list {
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 22px 20px;
+        gap: 26px 22px;
     }
 }
 
 @media (max-width: 600px) {
     .similar-destinations {
-        margin: 48px 0 64px;
-        padding-top: 22px;
+        margin: 52px 0 40px;
+        padding: 36px 0 44px;
+    }
+
+    .similar-destinations-header {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 18px;
     }
 
     .similar-destinations-title {
-        margin-bottom: 16px;
         font-size: 1.1rem;
     }
 
+    .similar-destinations-more {
+        font-size: 0.84rem;
+    }
+
     .similar-destination-list {
-        gap: 16px 12px;
+        gap: 18px 14px;
     }
 
     .similar-destination-body {
