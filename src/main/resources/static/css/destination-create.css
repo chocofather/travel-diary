@@ -475,3 +475,37 @@
         max-height: 260px;
     }
 }
+
+/* 선택 입력 표시 + 필드 도움말 (위도/경도와 같은 디자인 언어) */
+.admin-field-optional {
+    margin-left: 5px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: #eef2fb;
+    color: #6b7897;
+    font-size: 0.72rem;
+    font-weight: 600;
+}
+
+.admin-field-help {
+    margin: 0;
+    color: #78839c;
+    font-size: 0.8rem;
+    line-height: 1.55;
+    word-break: keep-all;
+}
+
+.admin-field-help-link {
+    display: inline-block;
+    margin-left: 4px;
+    color: #4860bd;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.admin-field-help-link:hover,
+.admin-field-help-link:focus-visible {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}

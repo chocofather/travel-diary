@@ -11,6 +11,7 @@ import com.example.travlediary.service.comment.DestinationCommentService;
 import com.example.travlediary.service.destination.DestinationImageService;
 import com.example.travlediary.service.destination.DestinationService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -20,6 +21,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.util.HtmlUtils;
 import jakarta.servlet.http.HttpServletRequest; // Spring Boot 3.x
 
+import java.math.BigDecimal;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @Controller
@@ -28,6 +32,13 @@ public class DestinationController {
 
     /** 여행지 목록 기본 페이지 크기. 목록 카드가 4열이라 12개가 3줄로 떨어진다. */
     private static final String DEFAULT_PAGE_SIZE = "12";
+
+    /** Maps Embed API 기본 확대 수준 */
+    private static final int EMBED_MAP_ZOOM = 15;
+
+    /** 해외 지도(Maps Embed API) 키. 환경변수 GOOGLE_MAPS_API_KEY 로만 주입한다. */
+    @Value("${GOOGLE_MAPS_API_KEY:}")
+    private String googleMapsApiKey;
 
     private final DestinationService destinationService;
     private final DestinationImageService destinationImageService;
@@ -283,6 +294,13 @@ public class DestinationController {
             model.addAttribute("regionPathId", null);
         }
 
+        // 해외 지도는 Maps Embed API iframe 으로 표시한다. 만들 수 없으면 null → 지도 영역만 감춘다.
+        // 장소명(도시·국가 포함)을 알아야 마커가 찍히므로 상위 지역을 구한 뒤에 만든다.
+        model.addAttribute("overseasMapEmbedUrl",
+                buildOverseasMapEmbedUrl(countryCode, dto.getDestination(), region, parentRegion));
+        model.addAttribute("overseasMapLinkUrl",
+                buildOverseasMapLinkUrl(countryCode, dto.getDestination()));
+
         String categoryName = categoryService.getFirstCategoryNameByDestinationId(id);
         model.addAttribute("categoryName", categoryName);
 
@@ -294,6 +312,95 @@ public class DestinationController {
         model.addAttribute("similarDestinations", similarDtos);
 
         return "destination/detail";
+    }
+
+    /**
+     * 해외 여행지의 Maps Embed API URL. 아래 중 하나라도 없으면 null 을 반환해
+     * 잘못된 iframe 대신 지도 영역을 감추게 한다.
+     * - 해외 여행지가 아님(국내는 Kakao 지도 유지)
+     * - GOOGLE_MAPS_API_KEY 환경변수 미설정
+     * - 좌표 미입력
+     */
+    private String buildOverseasMapEmbedUrl(String countryCode, Destination destination,
+                                            CountryCategory region, CountryCategory parentRegion) {
+        if (googleMapsApiKey == null || googleMapsApiKey.isBlank()) {
+            return null;
+        }
+        if (countryCode == null || "KR".equals(countryCode)) {
+            return null;
+        }
+        String key = URLEncoder.encode(googleMapsApiKey, StandardCharsets.UTF_8);
+        String position = overseasPosition(countryCode, destination);
+        String query = buildOverseasMapQuery(destination, region, parentRegion);
+
+        // 장소명이 있으면 place 모드로 마커까지 표시한다.
+        // (q 는 장소명/주소/place_id 용이라 좌표를 넣으면 "장소 정보를 로드할 수 없음"이 뜬다)
+        if (query != null) {
+            String url = "https://www.google.com/maps/embed/v1/place"
+                    + "?key=" + key
+                    + "&q=" + URLEncoder.encode(query, StandardCharsets.UTF_8);
+            if (position != null) {
+                url += "&center=" + URLEncoder.encode(position, StandardCharsets.UTF_8)
+                        + "&zoom=" + EMBED_MAP_ZOOM;
+            }
+            return url;
+        }
+
+        // 장소명이 없으면 장소 조회가 없는 view 모드로 안전하게 좌표만 보여준다.
+        if (position == null) {
+            return null;
+        }
+        return "https://www.google.com/maps/embed/v1/view"
+                + "?key=" + key
+                + "&center=" + URLEncoder.encode(position, StandardCharsets.UTF_8)
+                + "&zoom=" + EMBED_MAP_ZOOM;
+    }
+
+    /**
+     * 마커가 찍힐 장소 검색어. 보유 데이터 중 식별력이 가장 높은 조합인
+     * "여행지명, 도시, 국가" 순으로 잇는다. (예: "후쿠오카 타워, 후쿠오카, 일본")
+     * destinations 에 주소 컬럼이 없어 이 조합이 최선이다.
+     */
+    private String buildOverseasMapQuery(Destination destination,
+                                         CountryCategory region, CountryCategory parentRegion) {
+        String name = destination.getName();
+        if (name == null || name.isBlank()) {
+            return null;
+        }
+        StringBuilder query = new StringBuilder(name.trim());
+        appendRegionName(query, region);
+        appendRegionName(query, parentRegion);
+        return query.toString();
+    }
+
+    private void appendRegionName(StringBuilder query, CountryCategory region) {
+        if (region == null || region.getRegionName() == null || region.getRegionName().isBlank()) {
+            return;
+        }
+        query.append(", ").append(region.getRegionName().trim());
+    }
+
+    /** "Google 지도에서 크게 보기" 링크. API 키 없이도 열 수 있어 좌표만 있으면 만든다. */
+    private String buildOverseasMapLinkUrl(String countryCode, Destination destination) {
+        String position = overseasPosition(countryCode, destination);
+        if (position == null) {
+            return null;
+        }
+        return "https://www.google.com/maps/search/?api=1"
+                + "&query=" + URLEncoder.encode(position, StandardCharsets.UTF_8);
+    }
+
+    /** 해외 여행지의 "위도,경도" 문자열. 국내이거나 좌표가 없으면 null. */
+    private String overseasPosition(String countryCode, Destination destination) {
+        if (countryCode == null || "KR".equals(countryCode)) {
+            return null;
+        }
+        BigDecimal latitude = destination.getLatitude();
+        BigDecimal longitude = destination.getLongitude();
+        if (latitude == null || longitude == null) {
+            return null;
+        }
+        return latitude.toPlainString() + "," + longitude.toPlainString();
     }
 
     /**

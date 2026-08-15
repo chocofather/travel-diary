@@ -13,6 +13,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.AuthorizationFilter;
+import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
+import org.springframework.security.web.savedrequest.RequestCache;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.security.web.util.matcher.RegexRequestMatcher;
 
@@ -29,14 +31,29 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+    /**
+     * 로그인 후 복귀 대상은 실제 페이지 이동 요청만 저장한다.
+     * 기본 설정은 favicon·정적 리소스·/.well-known/** 같은 브라우저 보조 요청까지 저장해
+     * 원래 보던 페이지의 SavedRequest 를 덮어쓴다.
+     */
+    @Bean
+    public RequestCache navigationRequestCache() {
+        HttpSessionRequestCache requestCache = new HttpSessionRequestCache();
+        requestCache.setRequestMatcher(new NavigationRequestMatcher());
+        return requestCache;
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
+            RequestCache navigationRequestCache,
             ObjectProvider<RestrictedAccountFilter> restrictedAccountFilter) throws Exception {
 
         // 이용제한 회원 접근 통제. 웹 계층 테스트 슬라이스에는 빈이 없으므로 선택 주입한다.
         restrictedAccountFilter.ifAvailable(
                 filter -> http.addFilterAfter(filter, AuthorizationFilter.class));
+
+        http.requestCache(cache -> cache.requestCache(navigationRequestCache));
 
         http.csrf(csrf -> csrf.requireCsrfProtectionMatcher(new OrRequestMatcher(
                         new RegexRequestMatcher(

@@ -1106,3 +1106,54 @@ body {
     color: #005cc8;           /* 마우스 올릴 때만 색 바꾸고 싶으면 */
     text-decoration: underline; /* (옵션) 호버시에만 밑줄 */
 }
+
+/* 해외 지도(Maps Embed API): 기존 #map 과 같은 크기/여백 */
+.map-embed {
+    display: block;
+    width: 100%;
+    height: 350px;
+    margin-top: 20px;
+    border: 0;
+}
+
+/* 지도 아래 작은 외부 링크 */
+.map-external-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 10px;
+    color: #5b6676;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: color .18s ease;
+}
+
+.map-external-link:hover,
+.map-external-link:focus-visible {
+    color: #1e2939;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.map-external-link-arrow {
+    font-size: 0.85em;
+}
+
+/* 키/좌표가 없어 지도를 만들 수 없을 때 */
+.map-unavailable {
+    margin-top: 20px;
+    padding: 22px 18px;
+    border: 1px solid #e6e9ee;
+    border-radius: 14px;
+    background: #f8f9fb;
+    color: #6b7686;
+    font-size: 0.93rem;
+    text-align: center;
+}
+
+@media (max-width: 600px) {
+    .map-embed {
+        height: 260px;
+    }
+}

@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 public class DestinationForm {
     private BigDecimal latitude;
     private BigDecimal longitude;
+    private String googlePlaceId; // 해외 여행지 Google 지도 마커용. 선택 입력
     private String season;
     private Long regionId;
 
@@ -57,6 +58,7 @@ public class DestinationForm {
         // 1. 기본 필드 복사
         form.setLatitude(dto.getDestination().getLatitude());
         form.setLongitude(dto.getDestination().getLongitude());
+        form.setGooglePlaceId(dto.getDestination().getGooglePlaceId());
         form.setSeason(dto.getDestination().getSeason() != null ? dto.getDestination().getSeason().name() : null);
         form.setRegionId(dto.getDestination().getRegionId());
         form.setType(dto.getDestination().getType());

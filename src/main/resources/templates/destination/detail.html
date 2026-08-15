@@ -404,10 +404,30 @@
             <!-- 지도 영역 -->
             <section class="map">
                 <h2>지도</h2>
-                <div id="map"
+                <!-- 국내: Kakao 지도 (기존 그대로) -->
+                <div th:if="${countryCode == 'KR'}"
+                     id="map"
                      th:attr="data-lat=${destination.latitude},data-lng=${destination.longitude},data-country-code=${countryCode}"
                      style="width:100%; height:350px; margin-top:20px;">
                 </div>
+                <!-- 해외: Maps Embed API. URL 이 없으면(키/좌표 없음) 아무것도 그리지 않는다 -->
+                <iframe th:if="${countryCode != 'KR' and overseasMapEmbedUrl != null}"
+                        class="map-embed"
+                        th:src="${overseasMapEmbedUrl}"
+                        th:title="${destination.name} + ' 위치'"
+                        loading="lazy"
+                        allowfullscreen
+                        referrerpolicy="no-referrer-when-downgrade"></iframe>
+                <p th:if="${countryCode != 'KR' and overseasMapEmbedUrl == null}" class="map-unavailable">
+                    지도 정보를 표시할 수 없습니다.
+                </p>
+                <a th:if="${overseasMapLinkUrl != null}"
+                   class="map-external-link"
+                   th:href="${overseasMapLinkUrl}"
+                   target="_blank" rel="noopener">
+                    Google 지도에서 크게 보기
+                    <span class="map-external-link-arrow" aria-hidden="true">↗</span>
+                </a>
             </section>
         </section>
     </main>
@@ -591,18 +611,17 @@
     </script>-->
     <script th:inline="javascript">
         document.addEventListener('DOMContentLoaded', function () {
+            // 해외는 Maps Embed API iframe 이라 #map 이 없다. 국내(Kakao)만 여기서 초기화한다.
             const mapDiv = document.getElementById('map');
-            if (mapDiv) {
-                const lat = parseFloat(mapDiv.dataset.lat);
-                const lng = parseFloat(mapDiv.dataset.lng);
-                const countryCode = mapDiv.dataset.countryCode;
-                if (!isNaN(lat) && !isNaN(lng) && countryCode) {
-                    initMap(lat, lng, countryCode);
-                } else {
-                    console.warn("Map data missing or invalid");
-                }
+            if (!mapDiv) return;
+
+            const lat = parseFloat(mapDiv.dataset.lat);
+            const lng = parseFloat(mapDiv.dataset.lng);
+            const countryCode = mapDiv.dataset.countryCode;
+            if (!isNaN(lat) && !isNaN(lng) && countryCode) {
+                initMap(lat, lng, countryCode);
             } else {
-                console.warn("map div not found!");
+                console.warn("Map data missing or invalid");
             }
         });
     </script>

@@ -518,6 +518,7 @@ CREATE TABLE `destinations` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `latitude` decimal(10,8) DEFAULT NULL,
   `longitude` decimal(11,8) DEFAULT NULL,
+  `google_place_id` varchar(255) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `views` int NOT NULL DEFAULT '0',
   `season` enum('SPRING','SUMMER','FALL','WINTER','ALL_SEASONS') NOT NULL,

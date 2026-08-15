@@ -51,6 +51,7 @@ public class DestinationService {
         Destination destination = new Destination();
         destination.setLatitude(form.getLatitude());
         destination.setLongitude(form.getLongitude());
+        destination.setGooglePlaceId(form.getGooglePlaceId());
         destination.setSeason(DestinationSeason.valueOf(form.getSeason()));
         destination.setUserID(userId);
         destination.setViews(0);
@@ -324,6 +325,7 @@ public class DestinationService {
         Destination destination = destinationMapper.findById(destinationId);
         destination.setLatitude(form.getLatitude());
         destination.setLongitude(form.getLongitude());
+        destination.setGooglePlaceId(form.getGooglePlaceId());
         destination.setSeason(DestinationSeason.valueOf(form.getSeason()));
         destination.setRegionId(form.getRegionId());
         destination.setType(form.getType());

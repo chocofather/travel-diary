@@ -36,6 +36,7 @@
         <id     property="id"            column="id"/>
         <result property="latitude"      column="latitude"/>
         <result property="longitude"     column="longitude"/>
+        <result property="googlePlaceId" column="google_place_id"/>
         <result property="season"        column="season"/>
         <result property="userID"        column="user_id"/>
         <result property="regionId"      column="region_id"/>
@@ -79,8 +80,8 @@
 
     <!-- ========== INSERT / UPDATE ========== -->
     <insert id="insertDestination" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO destinations (latitude, longitude, created_at, views, season, user_id, region_id, type)
-        VALUES (#{latitude}, #{longitude}, #{createdAt}, #{views}, #{season}, #{userID}, #{regionId}, #{type})
+        INSERT INTO destinations (latitude, longitude, google_place_id, created_at, views, season, user_id, region_id, type)
+        VALUES (#{latitude}, #{longitude}, #{googlePlaceId}, #{createdAt}, #{views}, #{season}, #{userID}, #{regionId}, #{type})
     </insert>
 
     <insert id="insertTranslation" parameterType="com.example.travlediary.model.DestinationTranslation">
@@ -279,6 +280,7 @@
         SET
             latitude = #{latitude},
             longitude = #{longitude},
+            google_place_id = #{googlePlaceId},
             season = #{season},
             region_id = #{regionId},
             type = #{type}

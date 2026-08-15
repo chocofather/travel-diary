@@ -131,6 +131,20 @@
           <input type="text" th:field="*{longitude}" placeholder="경도">
         </div>
       </div>
+
+      <!-- Google Place ID (선택) -->
+      <div class="admin-form-grid is-compact">
+        <div class="admin-form-field">
+          <label>Google Place ID <span class="admin-field-optional">선택</span></label>
+          <input type="text" th:field="*{googlePlaceId}" placeholder="예: ChIJ...">
+          <p class="admin-field-help">
+            해외 여행지의 Google 지도 마커를 정확한 위치에 표시할 때 사용합니다. 국내 여행지는 비워 두세요.
+            <a class="admin-field-help-link"
+               href="https://developers.google.com/maps/documentation/places/web-service/place-id"
+               target="_blank" rel="noopener">Place ID 찾기 <span aria-hidden="true">↗</span></a>
+          </p>
+        </div>
+      </div>
     </section>
 
     <section class="admin-destination-section admin-type-detail-section">

@@ -1,12 +1,12 @@
+/**
+ * 국내(KR)만 Kakao 지도를 그린다.
+ * 해외 지도는 상세 템플릿의 Maps Embed API iframe 이 담당하므로 여기서 처리하지 않는다.
+ */
 function initMap(lat, lng, countryCode) {
-    const parsedLat = parseFloat(lat);
-    const parsedLng = parseFloat(lng);
-
-    if (countryCode === 'KR') {
-        loadKakaoMap(parsedLat, parsedLng);
-    } else {
-        loadGoogleMap(parsedLat, parsedLng);
+    if (countryCode !== 'KR') {
+        return;
     }
+    loadKakaoMap(parseFloat(lat), parseFloat(lng));
 }
 
 function loadKakaoMap(lat, lng) {
@@ -40,47 +40,4 @@ function drawKakaoMap(lat, lng) {
     const options = { center: new kakao.maps.LatLng(lat, lng), level: 3 };
     const map = new kakao.maps.Map(container, options);
     new kakao.maps.Marker({ position: new kakao.maps.LatLng(lat, lng), map });
-}
-
-// ---------------------- Google Maps ------------------------
-
-function loadGoogleMap(lat, lng) {
-    if (!window.google || !window.google.maps) {
-        loadGoogleScript(() => drawGoogleMap(lat, lng), lat, lng);
-    } else {
-        drawGoogleMap(lat, lng);
-    }
-}
-
-function loadGoogleScript(callback, lat, lng) {
-    if (document.getElementById('google-map-script')) {
-        callback(lat, lng);
-        return;
-    }
-    window.__googleMapLat = lat;
-    window.__googleMapLng = lng;
-    window.onGoogleMapLoaded = function () {
-        callback(window.__googleMapLat, window.__googleMapLng);
-    };
-    const script = document.createElement('script');
-    script.id = 'google-map-script';
-    script.src = 'https://maps.googleapis.com/maps/api/js?key=AIzaSyBHbZyqqBRhW4Wb4dn80c12jHoUe_WtaHI&callback=onGoogleMapLoaded';
-    document.head.appendChild(script);
-}
-
-function drawGoogleMap(lat, lng) {
-    if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
-        console.error('Invalid GoogleMap lat/lng', lat, lng);
-        return;
-    }
-    const container = document.getElementById('map');
-    if (!container) {
-        console.error('drawGoogleMap: map container not found');
-        return;
-    }
-    const map = new google.maps.Map(container, {
-        center: { lat: lat, lng: lng },
-        zoom: 15
-    });
-    new google.maps.Marker({ position: { lat: lat, lng: lng }, map: map });
 }

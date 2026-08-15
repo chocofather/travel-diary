@@ -15,6 +15,7 @@ public class Destination {
     private Long id; // 여행지번호
     private BigDecimal latitude; // 위도
     private BigDecimal longitude; // 경도
+    private String googlePlaceId; // 해외 지도(Maps Embed API) 장소 식별자. 선택 값
     private Timestamp createdAt; // 생성일
     private Integer views; // 조회수
     private DestinationSeason season; // 시즌
