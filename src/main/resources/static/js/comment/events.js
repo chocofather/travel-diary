@@ -141,11 +141,30 @@ function initCommentImagePreview(form) {
     form.addEventListener('reset', () => setTimeout(clearFiles, 0));
 }
 
+/**
+ * 0/2000 글자수 표시. (커뮤니티 게시글 댓글 작성폼과 같은 방식)
+ * @param {HTMLFormElement} form 댓글 작성 폼
+ */
+function initCommentLengthCounter(form) {
+    const textarea = form.querySelector('textarea[name="content"]');
+    const output = form.querySelector('#comment-length');
+    if (!textarea || !output) return;
+
+    const update = () => {
+        output.textContent = String(textarea.value.length);
+    };
+    textarea.addEventListener('input', update);
+    // 등록 성공 후 form.reset() 이 호출되면 글자수도 함께 되돌린다.
+    form.addEventListener('reset', () => setTimeout(update, 0));
+    update();
+}
+
 // 댓글 등록 폼
 export function initCommentForm(destinationId, onCommentsReload, onThumbnailsReload) {
     const form = document.getElementById('comment-form');
     if (!form) return;
     initCommentImagePreview(form);
+    initCommentLengthCounter(form);
     form.addEventListener('submit', e => {
         e.preventDefault();
         if (exceedsImageLimit(form)) return;

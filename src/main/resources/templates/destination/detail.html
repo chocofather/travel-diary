@@ -466,13 +466,15 @@
               th:if="${#authentication.name != 'anonymousUser'}" class="comment-write-form">
 
             <div class="textarea-wrapper">
-                <textarea name="content" placeholder="댓글을 입력하세요" required></textarea>
+                <textarea name="content" maxlength="2000"
+                          placeholder="댓글을 입력하세요" required></textarea>
             </div>
 
             <!-- 선택한 사진 미리보기 (등록 전) -->
             <div class="comment-image-preview" id="comment-image-preview" hidden></div>
 
             <div class="comment-controls">
+                <span class="comment-length"><span id="comment-length">0</span>/2000</span>
                 <input type="file" id="comment-image-input" name="images" accept="image/*" multiple hidden>
 
                 <label for="comment-image-input" class="image-upload-label">
