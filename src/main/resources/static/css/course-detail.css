@@ -76,9 +76,17 @@
     font-size: 20px;
 }
 
+/* 짧은 소개 글도 본문 영역으로 읽히도록 최소 높이만 주고, 긴 글은 내용 높이를 따른다. */
 .course-introduction-content {
+    min-height: 190px;
     line-height: 1.75;
     overflow-wrap: anywhere;
+}
+
+@media (max-width: 600px) {
+    .course-introduction-content {
+        min-height: 140px;
+    }
 }
 
 .course-introduction-content img {
@@ -327,41 +335,216 @@
     text-align: center;
 }
 
+/* 하단 액션: 구분선 없이 여백으로만 구분하고, 한 줄에 목록 이동 / 작성자·관리자 액션을 둔다.
+   버튼 규격은 커뮤니티 게시글 상세와 동일하게 맞춘다. */
+.course-detail-footer {
+    margin-top: 42px;
+}
+
+.course-detail-footer-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
 .course-detail-actions {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-top: 42px;
-    text-align: right;
+    gap: 8px;
 }
 
-.course-detail-actions a {
-    display: inline-block;
-    padding: 11px 18px;
-    border-radius: 7px;
-    background: #397a63;
-    color: #fff;
+/* 코스 목록으로: solid 버튼 대신 가벼운 텍스트 링크 */
+.course-back-to-list {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 0;
+    color: #6b7280;
+    font-size: 14px;
+    line-height: 1.4;
     text-decoration: none;
 }
 
-.course-detail-actions form {
+.course-back-to-list:hover {
+    color: #397a63;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.course-back-to-list-arrow {
+    font-size: 15px;
+    line-height: 1;
+}
+
+.course-edit-button,
+.course-delete-button,
+.course-hide-button {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 6px;
+    background: #fff;
+    font-size: 13px;
+    line-height: 1.4;
+    text-decoration: none;
+}
+
+.course-delete-form {
     margin: 0;
 }
 
-.course-detail-actions button {
-    padding: 10px 16px;
-    border: 1px solid #b42318;
-    border-radius: 7px;
-    background: #fff;
+/* 수정: 중립 outline */
+.course-edit-button {
+    color: #4b5563;
+    border: 1px solid #d5d7db;
+}
+
+.course-edit-button:hover {
+    background: #f6f7f8;
+    border-color: #c2c5cb;
+}
+
+/* 삭제: 강한 solid 대신 연한 red outline */
+.course-delete-button {
     color: #b42318;
-    font: inherit;
+    border: 1px solid #e8c4c0;
+    font-family: inherit;
     cursor: pointer;
 }
 
+.course-delete-button:hover {
+    background: #fdf4f3;
+    border-color: #d9a9a3;
+}
+
+/* 숨김(관리자): 삭제와 구분되는 amber 계열의 낮은 위계 outline */
+.course-hide-button {
+    color: #b45309;
+    border: 1px solid #ecd9b0;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.course-hide-button:hover {
+    background: #fdf7ec;
+    border-color: #dcc490;
+}
+
+/* ===== 관리자 숨김 모달 ===== */
+.course-hide-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.45);
+}
+
+.course-hide-modal[hidden] {
+    display: none;
+}
+
+.course-hide-dialog {
+    position: relative;
+    width: 100%;
+    max-width: 460px;
+    padding: 20px;
+    border: 1px solid #e5e5e5;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+.course-hide-close {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: #9ca3af;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.course-hide-close:hover {
+    color: #4b5563;
+}
+
+.course-hide-title {
+    margin: 0 0 8px;
+    font-size: 17px;
+}
+
+.course-hide-text {
+    margin: 0 0 16px;
+    color: #4b5563;
+    font-size: 14px;
+}
+
+.course-hide-label {
+    display: block;
+    margin-bottom: 6px;
+    color: #6b7280;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.course-hide-reason {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font: inherit;
+    font-size: 14px;
+    resize: vertical;
+}
+
+.course-hide-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.course-hide-cancel,
+.course-hide-submit {
+    padding: 7px 14px;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.course-hide-cancel {
+    color: #4b5563;
+    background: #fff;
+    border: 1px solid #d5d7db;
+}
+
+.course-hide-cancel:hover {
+    background: #f6f7f8;
+}
+
+/* 숨김 처리는 destructive action */
+.course-hide-submit {
+    color: #fff;
+    background: #b42318;
+    border: 1px solid #b42318;
+}
+
+.course-hide-submit:hover {
+    background: #9a1d14;
+    border-color: #9a1d14;
+}
+
+/* 하단 액션과 댓글 사이는 구분선 없이 여백으로만 구분한다. */
 .course-comments {
-    margin-top: 48px;
-    padding-top: 32px;
-    border-top: 1px solid #ddd;
+    margin-top: 44px;
 }
 
 .course-comments h2 {

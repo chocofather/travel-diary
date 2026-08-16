@@ -14,9 +14,73 @@
 .write-title {
     font-size: 32px;
     font-weight: 700;
-    margin-bottom: 32px;
+    margin-bottom: 8px;
     color: #1a1a1a;
     line-height: 1.2;
+}
+
+/* 글 종류별 짧은 안내 문구 */
+.write-guide {
+    margin: 0 0 20px;
+    color: #6b7280;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+/* 입력 영역 라벨 + 글자수 */
+.write-field-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.write-field-label {
+    color: #374151;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.write-field-count {
+    color: #9ca3af;
+    font-size: 13px;
+}
+
+/* 현재 글 종류 배지 + 낮은 위계의 종류 변경 버튼 */
+.write-type-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 28px;
+}
+
+.write-type-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 12px;
+    border: 1px solid #cfe0d8;
+    border-radius: 999px;
+    background: #f0fdfa;
+    color: #115e59;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.write-type-change {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: #6b7280;
+    font-family: inherit;
+    font-size: 13px;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+}
+
+.write-type-change:hover {
+    color: #115e59;
 }
 
 /* 3. 각 폼 그룹 공통 */
@@ -112,34 +176,38 @@
     justify-content: flex-end;
 }
 
-/* 10. 버튼 기본 */
+/* 10. 버튼 기본 (상세페이지·댓글 작성폼 버튼과 같은 규격) */
 .btn {
-    padding: 10px 20px;
-    font-size: 15px;
+    padding: 9px 18px;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.4;
     border-radius: 6px;
     cursor: pointer;
     text-decoration: none;
     text-align: center;
 }
 
-/* 11. 주 버튼 */
+/* 11. 주 버튼: 사이트 primary 초록 */
 .btn-primary {
-    background: #2077c9;
+    background: #397a63;
     color: #fff;
-    border: none;
+    border: 1px solid #397a63;
 }
 .btn-primary:hover {
-    background: #185a9d;
+    background: #2f6653;
+    border-color: #2f6653;
 }
 
-/* 12. 보조 버튼 */
+/* 12. 보조 버튼: 중립 outline */
 .btn-secondary {
-    background: #f1f4fa;
-    color: #2077c9;
-    border: 1px solid #2077c9;
+    background: #fff;
+    color: #4b5563;
+    border: 1px solid #d5d7db;
 }
 .btn-secondary:hover {
-    background: #e1e6f2;
+    background: #f6f7f8;
+    border-color: #c2c5cb;
 }
 
 /* 제목 입력칸이 보이도록 반드시 적용할 스타일 */

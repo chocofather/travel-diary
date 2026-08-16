@@ -18,6 +18,7 @@
   <script src="/js/comment-deep-link.js" defer></script>
   <script src="/js/course-comments.js" defer></script>
   <script src="/js/content-bookmarks.js" defer></script>
+  <script src="/js/course-hide-modal.js" defer></script>
 </th:block>
 
 <th:block th:fragment="body">
@@ -94,26 +95,50 @@
          th:if="${course.stops == null or course.stops.isEmpty()}">등록된 여행지가 없습니다.</p>
     </section>
 
-    <div class="course-detail-actions">
-      <a th:href="@{/board/list(boardType='course')}">코스 목록으로</a>
-      <a th:if="${course.myCourse}"
-         th:href="@{/course/{id}/edit(id=${course.id})}">수정</a>
-      <form th:if="${course.myCourse}"
-            th:action="@{/course/{id}/delete(id=${course.id})}"
-            method="post"
-            onsubmit="return confirm('이 여행 코스를 삭제하시겠습니까?');">
-        <button type="submit">삭제</button>
-      </form>
-      <!-- 관리자 콘텐츠 조치. 버튼은 ADMIN 에게만 보이고 서비스에서도 권한을 다시 확인한다. -->
-      <form sec:authorize="hasRole('ADMIN')"
-            th:action="@{/admin/contents/COURSE/{id}/hide(id=${course.id})}"
-            method="post" class="content-moderation-form"
-            onsubmit="return confirm('이 여행 코스를 관리자 조치로 숨기시겠습니까?');">
-        <input type="hidden" name="redirect" th:value="@{/board/list(boardType='course')}">
-        <input type="text" name="reason" maxlength="500" required
-               class="content-moderation-reason" placeholder="숨김 사유(필수)">
-        <button type="submit" class="content-moderation-button">숨김 처리</button>
-      </form>
+    <footer class="course-detail-footer">
+      <!-- 한 줄 액션: 왼쪽은 목록 이동, 오른쪽은 작성자/관리자 액션 -->
+      <div class="course-detail-footer-row">
+        <a th:href="@{/board/list(boardType='course')}" class="course-back-to-list">
+          <span class="course-back-to-list-arrow" aria-hidden="true">←</span>코스 목록으로
+        </a>
+        <div class="course-detail-actions">
+          <th:block th:if="${course.myCourse}">
+            <a th:href="@{/course/{id}/edit(id=${course.id})}" class="course-edit-button">수정</a>
+            <form th:action="@{/course/{id}/delete(id=${course.id})}"
+                  method="post"
+                  class="course-delete-form"
+                  onsubmit="return confirm('이 여행 코스를 삭제하시겠습니까?');">
+              <button type="submit" class="course-delete-button">삭제</button>
+            </form>
+          </th:block>
+          <!-- 관리자 숨김. 사유는 상시 노출하지 않고 모달에서 받는다.
+               버튼은 ADMIN 에게만 보이고 서비스에서도 권한을 다시 확인한다. -->
+          <button type="button" sec:authorize="hasRole('ADMIN')"
+                  class="course-hide-button" data-course-hide-open>숨김</button>
+        </div>
+      </div>
+    </footer>
+
+    <!-- 숨김 사유 입력 모달 (ADMIN 전용) -->
+    <div sec:authorize="hasRole('ADMIN')" id="course-hide-modal" class="course-hide-modal" hidden>
+      <div class="course-hide-dialog" role="dialog" aria-modal="true"
+           aria-labelledby="course-hide-title">
+        <button type="button" class="course-hide-close" data-course-hide-close
+                aria-label="닫기">&times;</button>
+        <h2 id="course-hide-title" class="course-hide-title">코스 숨김</h2>
+        <p class="course-hide-text">이 코스를 숨김 처리하시겠습니까?</p>
+        <form th:action="@{/admin/contents/COURSE/{id}/hide(id=${course.id})}"
+              method="post" class="course-hide-form">
+          <input type="hidden" name="redirect" th:value="@{/board/list(boardType='course')}">
+          <label class="course-hide-label" for="course-hide-reason">숨김 사유</label>
+          <textarea id="course-hide-reason" name="reason" rows="3" maxlength="500" required
+                    class="course-hide-reason" placeholder="사유를 입력해 주세요."></textarea>
+          <div class="course-hide-actions">
+            <button type="button" class="course-hide-cancel" data-course-hide-close>취소</button>
+            <button type="submit" class="course-hide-submit">숨김 처리</button>
+          </div>
+        </form>
+      </div>
     </div>
 
     <section id="course-comments" class="course-comments content-comments" th:attr="data-course-id=${course.id}">

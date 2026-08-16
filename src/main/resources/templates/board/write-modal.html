@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<body>
+<!--
+  커뮤니티 글쓰기 종류 선택 모달.
+  목록(전체/질문/팁/코스)과 질문·팁 작성폼에서 같은 UI 를 쓴다.
+  각 항목은 기존 작성 route 로 이동하며 저장 로직은 그대로다.
+-->
+<div th:fragment="writeModal" sec:authorize="isAuthenticated()"
+     id="board-write-modal" class="board-write-modal" hidden>
+  <div class="board-write-dialog" role="dialog" aria-modal="true"
+       aria-labelledby="board-write-title">
+    <button type="button" class="board-write-close" data-board-write-close
+            aria-label="닫기">&times;</button>
+    <h2 id="board-write-title" class="board-write-title">글쓰기</h2>
+    <p class="board-write-text">어떤 글을 작성하시겠어요?</p>
+    <ul class="board-write-options">
+      <li>
+        <a th:href="@{/post/write(postType='QUESTION')}" class="board-write-option">
+          <span class="board-write-option-name">여행 질문</span>
+          <span class="board-write-option-desc">궁금한 여행 정보를 질문해보세요.</span>
+        </a>
+      </li>
+      <li>
+        <a th:href="@{/post/write(postType='TIP')}" class="board-write-option">
+          <span class="board-write-option-name">여행 팁</span>
+          <span class="board-write-option-desc">유용한 여행 정보를 공유해보세요.</span>
+        </a>
+      </li>
+      <li>
+        <a th:href="@{/course/write}" class="board-write-option">
+          <span class="board-write-option-name">나의 여행코스</span>
+          <span class="board-write-option-desc">직접 여행 동선을 만들어 공유해보세요.</span>
+        </a>
+      </li>
+    </ul>
+    <div class="board-write-modal-actions">
+      <button type="button" class="board-write-cancel" data-board-write-close>취소</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

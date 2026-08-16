@@ -6,6 +6,7 @@
 
 <th:block th:fragment="headFragment">
   <link rel="stylesheet" href="/css/board-list.css">
+  <link rel="stylesheet" href="/css/board-write-modal.css">
   <script src="/js/country-combobox.js" defer></script>
 </th:block>
 
@@ -130,12 +131,16 @@
            )}">
       </div>
 
+      <!-- 어느 게시판에서 눌러도 같은 선택 모달을 연다. -->
       <div class="board-list-actions" sec:authorize="isAuthenticated()">
-        <a th:href="${boardType == 'course'} ? @{/course/write} : @{/post/write}"
-           class="board-write-btn">글쓰기</a>
+        <button type="button" class="board-write-btn" data-board-write-open>글쓰기</button>
       </div>
+
+      <!-- 글쓰기 종류 선택 모달. 작성폼과 같은 조각을 쓴다. -->
+      <div th:replace="~{board/write-modal :: writeModal}"></div>
     </main>
   </div>
   <script src="/js/board-ajax.js" defer></script>
+  <script src="/js/board-write-modal.js" defer></script>
 </th:block>
 </html>

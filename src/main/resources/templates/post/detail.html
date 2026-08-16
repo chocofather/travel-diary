@@ -18,6 +18,7 @@
   <script src="/js/comment-deep-link.js" defer></script>
   <script src="/js/post-comments.js" defer></script>
   <script src="/js/content-bookmarks.js" defer></script>
+  <script src="/js/post-hide-modal.js" defer></script>
 </th:block>
 
 <th:block th:fragment="body">
@@ -58,27 +59,50 @@
              loading="lazy" />
       </section>
 
-      <div class="post-detail-actions">
-        <th:block th:if="${post.myPost}">
-          <a th:href="@{/post/{id}/edit(id=${post.id})}" class="post-edit-button">수정</a>
-          <form th:action="@{/post/{id}/delete(id=${post.id})}"
-                method="post"
-                class="post-delete-form"
-                onsubmit="return confirm('게시글을 삭제하시겠습니까?');">
-            <button type="submit" class="post-delete-button">삭제</button>
+      <footer class="post-detail-footer">
+        <!-- 한 줄 footer: 왼쪽은 목록 이동, 오른쪽은 작성자 액션 -->
+        <div class="post-detail-footer-row">
+          <a th:href="@{/board/list(boardType='post')}" class="back-to-list">
+            <span class="back-to-list-arrow" aria-hidden="true">←</span>목록으로
+          </a>
+          <div class="post-detail-actions">
+            <th:block th:if="${post.myPost}">
+              <a th:href="@{/post/{id}/edit(id=${post.id})}" class="post-edit-button">수정</a>
+              <form th:action="@{/post/{id}/delete(id=${post.id})}"
+                    method="post"
+                    class="post-delete-form"
+                    onsubmit="return confirm('게시글을 삭제하시겠습니까?');">
+                <button type="submit" class="post-delete-button">삭제</button>
+              </form>
+            </th:block>
+            <!-- 관리자 숨김. 사유는 상시 노출하지 않고 모달에서 받는다.
+                 버튼은 ADMIN 에게만 보이고 서비스에서도 권한을 다시 확인한다. -->
+            <button type="button" sec:authorize="hasRole('ADMIN')"
+                    class="post-hide-button" data-post-hide-open>숨김</button>
+          </div>
+        </div>
+      </footer>
+
+      <!-- 숨김 사유 입력 모달 (ADMIN 전용) -->
+      <div sec:authorize="hasRole('ADMIN')" id="post-hide-modal" class="post-hide-modal" hidden>
+        <div class="post-hide-dialog" role="dialog" aria-modal="true"
+             aria-labelledby="post-hide-title">
+          <button type="button" class="post-hide-close" data-post-hide-close
+                  aria-label="닫기">&times;</button>
+          <h2 id="post-hide-title" class="post-hide-title">게시글 숨김</h2>
+          <p class="post-hide-text">이 게시글을 숨김 처리하시겠습니까?</p>
+          <form th:action="@{/admin/contents/POST/{id}/hide(id=${post.id})}"
+                method="post" class="post-hide-form">
+            <input type="hidden" name="redirect" th:value="@{/board/list(boardType='post')}">
+            <label class="post-hide-label" for="post-hide-reason">숨김 사유</label>
+            <textarea id="post-hide-reason" name="reason" rows="3" maxlength="500" required
+                      class="post-hide-reason" placeholder="사유를 입력해 주세요."></textarea>
+            <div class="post-hide-actions">
+              <button type="button" class="post-hide-cancel" data-post-hide-close>취소</button>
+              <button type="submit" class="post-hide-submit">숨김 처리</button>
+            </div>
           </form>
-        </th:block>
-        <!-- 관리자 콘텐츠 조치. 버튼은 ADMIN 에게만 보이고 서비스에서도 권한을 다시 확인한다. -->
-        <form sec:authorize="hasRole('ADMIN')"
-              th:action="@{/admin/contents/POST/{id}/hide(id=${post.id})}"
-              method="post" class="content-moderation-form"
-              onsubmit="return confirm('이 게시글을 관리자 조치로 숨기시겠습니까?');">
-          <input type="hidden" name="redirect" th:value="@{/board/list(boardType='post')}">
-          <input type="text" name="reason" maxlength="500" required
-                 class="content-moderation-reason" placeholder="숨김 사유(필수)">
-          <button type="submit" class="content-moderation-button">숨김 처리</button>
-        </form>
-        <a th:href="@{/board/list(boardType='post')}" class="back-to-list">목록으로</a>
+        </div>
       </div>
     </article>
 

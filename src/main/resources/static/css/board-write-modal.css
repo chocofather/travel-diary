@@ -1,0 +1,128 @@
+/* ===== 커뮤니티 글쓰기 종류 선택 모달 =====
+   목록(board/list)과 질문·팁 작성폼에서 같이 쓰므로 색 변수는 여기서 직접 갖는다. */
+.board-write-modal {
+    --board-accent: #0f766e;
+    --board-accent-dark: #115e59;
+    --board-accent-soft: #f0fdfa;
+    --board-border: #e2e8f0;
+    --board-text: #172033;
+    --board-muted: #64748b;
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.45);
+}
+
+.board-write-modal[hidden] {
+    display: none;
+}
+
+.board-write-dialog {
+    position: relative;
+    width: 100%;
+    max-width: 460px;
+    padding: 20px;
+    border: 1px solid var(--board-border);
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
+}
+
+.board-write-close {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: #9ca3af;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.board-write-close:hover {
+    color: var(--board-text);
+}
+
+.board-write-title {
+    margin: 0 0 8px;
+    color: var(--board-text);
+    font-size: 17px;
+}
+
+.board-write-text {
+    margin: 0 0 16px;
+    color: var(--board-muted);
+    font-size: 14px;
+}
+
+.board-write-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.board-write-option {
+    display: block;
+    padding: 12px 14px;
+    border: 1px solid var(--board-border);
+    border-radius: 10px;
+    background: #fff;
+    text-decoration: none;
+    transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+.board-write-option:hover,
+.board-write-option:focus-visible {
+    border-color: var(--board-accent);
+    background: var(--board-accent-soft);
+}
+
+.board-write-option-name {
+    display: block;
+    color: var(--board-text);
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.board-write-option:hover .board-write-option-name,
+.board-write-option:focus-visible .board-write-option-name {
+    color: var(--board-accent-dark);
+}
+
+.board-write-option-desc {
+    display: block;
+    margin-top: 3px;
+    color: var(--board-muted);
+    font-size: 13px;
+}
+
+.board-write-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 16px;
+}
+
+.board-write-cancel {
+    padding: 7px 14px;
+    border: 1px solid var(--board-border);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--board-muted);
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.board-write-cancel:hover {
+    background: #f6f8fa;
+    color: var(--board-text);
+}
