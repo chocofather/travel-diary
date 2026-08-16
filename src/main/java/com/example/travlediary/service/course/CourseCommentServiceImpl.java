@@ -4,19 +4,30 @@ import com.example.travlediary.dto.CommentLocationDto;
 import com.example.travlediary.dto.CourseCommentDto;
 import com.example.travlediary.dto.PageResult;
 import com.example.travlediary.model.CourseComment;
+import com.example.travlediary.model.CourseCommentImage;
+import com.example.travlediary.repository.course.CourseCommentImageMapper;
 import com.example.travlediary.repository.course.CourseCommentMapper;
+import com.example.travlediary.service.comment.CommentImageLimitException;
+import com.example.travlediary.service.file.FileUploadService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -25,14 +36,23 @@ public class CourseCommentServiceImpl implements CourseCommentService {
     private static final int MAX_CONTENT_LENGTH = 2_000;
     private static final int DEFAULT_PAGE_SIZE = 5;
     private static final int MAX_PAGE_SIZE = 50;
+    /** 댓글 하나에 첨부할 수 있는 사진 수 (DB CHECK 제약과 동일) */
+    public static final int MAX_COMMENT_IMAGES = 3;
+    /** 코스 댓글 사진 저장 위치. 다른 댓글 사진과 섞지 않는다. */
+    private static final String IMAGE_DIRECTORY = "course-comments";
 
     private final CourseCommentMapper courseCommentMapper;
+    private final CourseCommentImageMapper courseCommentImageMapper;
+    private final FileUploadService fileUploadService;
+
+    @Value("${custom.upload-path}")
+    private String uploadPath;
 
     @Override
     @Transactional(readOnly = true)
     public List<CourseCommentDto> getComments(Long courseId, Long currentUserId) {
         requireActiveCourse(courseId);
-        return courseCommentMapper.findByCourseId(courseId, currentUserId);
+        return attachImageUrls(courseCommentMapper.findByCourseId(courseId, currentUserId));
     }
 
     @Override
@@ -58,7 +78,7 @@ public class CourseCommentServiceImpl implements CourseCommentService {
                 ? List.of()
                 : courseCommentMapper.findRepliesForRootComments(courseId, currentUserId, rootIds);
 
-        return new PageResult<>(mergeRootThreads(roots, replies), totalThreads,
+        return new PageResult<>(attachImageUrls(mergeRootThreads(roots, replies)), totalThreads,
                 safePage, safeSize, totalCommentCount);
     }
 
@@ -79,9 +99,12 @@ public class CourseCommentServiceImpl implements CourseCommentService {
 
     @Override
     @Transactional
-    public CourseCommentDto create(Long courseId, Long userId, String content, Long replyToCommentId) {
+    public CourseCommentDto create(Long courseId, Long userId, String content, Long replyToCommentId,
+                                   List<MultipartFile> images) {
         requireActiveCourse(courseId);
         String validatedContent = validateContent(content);
+        // 3장을 넘으면 앞쪽만 저장하지 않고 요청 전체를 거부한다.
+        List<MultipartFile> uploads = validateImageCount(images);
         Long parentCommentId = resolveParentCommentId(courseId, replyToCommentId);
 
         CourseComment comment = new CourseComment();
@@ -93,6 +116,18 @@ public class CourseCommentServiceImpl implements CourseCommentService {
 
         if (courseCommentMapper.insert(comment) != 1 || comment.getId() == null) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "댓글 등록에 실패했습니다.");
+        }
+
+        // 이번 요청에서 저장한 파일만 추적한다. 실패하면 그 파일들만 지운다.
+        List<String> savedImageUrls = new ArrayList<>();
+        try {
+            for (MultipartFile imageFile : uploads) {
+                savedImageUrls.add(fileUploadService.saveFile(imageFile, IMAGE_DIRECTORY));
+            }
+            saveCommentImages(comment.getId(), savedImageUrls);
+        } catch (RuntimeException e) {
+            deleteStoredFiles(savedImageUrls);
+            throw e;
         }
         return requireLatestDto(comment.getId(), userId);
     }
@@ -187,6 +222,44 @@ public class CourseCommentServiceImpl implements CourseCommentService {
         return root.getId();
     }
 
+    /** 실제로 내용이 있는 파일만 추린 뒤 개수를 검증한다. (빈 파일은 장수에서 제외) */
+    private List<MultipartFile> validateImageCount(List<MultipartFile> images) {
+        List<MultipartFile> uploads = (images == null ? List.<MultipartFile>of() : images).stream()
+                .filter(file -> file != null && !file.isEmpty())
+                .toList();
+        if (uploads.size() > MAX_COMMENT_IMAGES) {
+            throw new CommentImageLimitException(
+                    "사진은 최대 " + MAX_COMMENT_IMAGES + "장까지 첨부할 수 있습니다.");
+        }
+        return uploads;
+    }
+
+    /** 첨부 사진을 display_order 1,2,3 순서로 course_comment_images 에만 저장한다. */
+    private void saveCommentImages(Long commentId, List<String> imageUrls) {
+        for (int i = 0; i < imageUrls.size(); i++) {
+            CourseCommentImage image = new CourseCommentImage();
+            image.setCommentId(commentId);
+            image.setImageUrl(imageUrls.get(i));
+            image.setDisplayOrder(i + 1);
+            if (courseCommentImageMapper.insert(image) != 1) {
+                throw new IllegalStateException("댓글 이미지를 저장하지 못했습니다.");
+            }
+        }
+    }
+
+    /** 저장에 실패했을 때 이번 요청에서 올라간 파일만 정리한다. */
+    private void deleteStoredFiles(List<String> imageUrls) {
+        for (String imageUrl : imageUrls) {
+            if (imageUrl == null || imageUrl.isEmpty()) continue;
+            try {
+                String relativePath = imageUrl.replaceFirst("^/uploads/", "");
+                Files.deleteIfExists(Paths.get(uploadPath, relativePath));
+            } catch (IOException ignored) {
+                // 파일 정리 실패는 등록 실패 원인을 덮지 않도록 무시한다.
+            }
+        }
+    }
+
     private String validateContent(String content) {
         if (content == null || content.trim().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "댓글 내용을 입력해 주세요.");
@@ -227,6 +300,34 @@ public class CourseCommentServiceImpl implements CourseCommentService {
         if (dto == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "댓글을 찾을 수 없습니다.");
         }
+        attachImageUrls(List.of(dto));
         return dto;
+    }
+
+    /**
+     * 댓글 목록의 첨부 사진을 한 번에 읽어 각 DTO 에 채운다. (댓글마다 SELECT 하지 않는다)
+     * 사용자 삭제·관리자 조치로 숨겨진 댓글은 조회 대상에서 빼고 빈 목록으로 남겨
+     * 플레이스홀더만 노출되게 한다. (사진 행 자체는 지우지 않으므로 복구하면 다시 보인다)
+     */
+    private List<CourseCommentDto> attachImageUrls(List<CourseCommentDto> comments) {
+        List<Long> visibleCommentIds = comments.stream()
+                .filter(comment -> !comment.isDeleted())
+                .map(CourseCommentDto::getId)
+                .toList();
+        if (visibleCommentIds.isEmpty()) {
+            return comments;
+        }
+
+        // XML 에서 comment_id, display_order 순으로 정렬하므로 그룹 안의 순서가 그대로 유지된다.
+        Map<Long, List<String>> imagesByComment = courseCommentImageMapper
+                .findByCommentIds(visibleCommentIds).stream()
+                .collect(Collectors.groupingBy(
+                        CourseCommentImage::getCommentId,
+                        LinkedHashMap::new,
+                        Collectors.mapping(CourseCommentImage::getImageUrl, Collectors.toList())));
+
+        comments.forEach(comment -> comment.setImageUrls(
+                imagesByComment.getOrDefault(comment.getId(), List.of())));
+        return comments;
     }
 }

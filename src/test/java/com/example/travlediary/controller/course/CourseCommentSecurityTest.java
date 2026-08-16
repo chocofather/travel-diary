@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -21,11 +22,14 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import java.util.List;
 import java.util.Optional;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -84,10 +88,11 @@ class CourseCommentSecurityTest {
 
     @Test
     void guestCannotMutateComments() throws Exception {
-        mockMvc.perform(post("/course-comments")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON)
-                        .content("{\"courseId\":10,\"replyToCommentId\":20,\"content\":\"댓글\"}"))
+        mockMvc.perform(multipart("/course-comments")
+                        .param("courseId", "10")
+                        .param("replyToCommentId", "20")
+                        .param("content", "댓글")
+                        .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isUnauthorized());
         mockMvc.perform(put("/course-comments/30")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -108,13 +113,15 @@ class CourseCommentSecurityTest {
         UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(userDetails, null, List.of());
         CourseCommentDto dto = new CourseCommentDto();
-        when(service.create(10L, 7L, "댓글", 20L)).thenReturn(dto);
+        when(service.create(eq(10L), eq(7L), eq("댓글"), eq(20L), any())).thenReturn(dto);
         when(service.update(30L, 7L, "수정")).thenReturn(dto);
 
-        mockMvc.perform(post("/course-comments")
-                        .with(authentication(authentication))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"courseId\":10,\"replyToCommentId\":20,\"content\":\"댓글\"}"))
+        mockMvc.perform(multipart("/course-comments")
+                        .file(new MockMultipartFile("images", "a.jpg", "image/jpeg", new byte[]{1}))
+                        .param("courseId", "10")
+                        .param("replyToCommentId", "20")
+                        .param("content", "댓글")
+                        .with(authentication(authentication)))
                 .andExpect(status().isCreated());
         mockMvc.perform(put("/course-comments/30")
                         .with(authentication(authentication))

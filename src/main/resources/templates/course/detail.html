@@ -53,6 +53,11 @@
         <h2>코스 소개</h2>
         <div class="course-introduction-content rich-text-content"
              th:utext="${course.content}"></div>
+        <!-- 이미 화면에 내려온 stops 목록 크기만 사용한다. (추가 조회 없음) -->
+        <p class="course-introduction-meta"
+           th:if="${course.stops != null and !course.stops.isEmpty()}">
+          총 <span th:text="${course.stops.size()}">0</span>개의 여행지
+        </p>
       </section>
     </article>
 
@@ -151,13 +156,21 @@
         </div>
       </div>
 
-      <form id="course-comment-form" class="course-comment-form"
+      <form id="course-comment-form" class="course-comment-form" enctype="multipart/form-data"
             th:if="${#authorization.expression('isAuthenticated()')}">
         <label for="course-comment-content" class="sr-only">댓글 내용</label>
         <textarea id="course-comment-content" name="content" maxlength="2000"
                   placeholder="댓글을 입력해 주세요." required></textarea>
+
+        <!-- 선택한 사진 미리보기 (등록 전) -->
+        <div class="comment-image-preview" id="course-comment-image-preview" hidden></div>
+
         <div class="course-comment-form-actions">
           <span class="course-comment-length"><span id="course-comment-length">0</span>/2000</span>
+          <input type="file" id="course-comment-image-input" name="images" accept="image/*" multiple hidden>
+          <label for="course-comment-image-input" class="image-upload-label">
+            <img src="/uploads/icons/camera.png" alt="" aria-hidden="true"> 사진
+          </label>
           <button type="submit">등록</button>
         </div>
       </form>
@@ -172,6 +185,14 @@
       <ul id="course-comment-list" class="course-comment-list content-comment-list" aria-live="polite"></ul>
       <div class="content-comment-more-row">
         <button id="course-comment-more" type="button" class="content-comment-more" hidden>댓글 더보기</button>
+      </div>
+
+      <!-- 댓글 사진 확대 모달. 이동은 클릭한 댓글에 첨부된 사진 안에서만 순환한다 -->
+      <div id="course-comment-image-modal" class="image-modal" style="display:none;">
+        <span class="close-btn" role="button" aria-label="닫기">&times;</span>
+        <button type="button" class="comment-image-nav prev" aria-label="이전 사진">&#10094;</button>
+        <img class="modal-content" id="course-comment-modal-img" alt="확대 이미지">
+        <button type="button" class="comment-image-nav next" aria-label="다음 사진">&#10095;</button>
       </div>
     </section>
   </main>

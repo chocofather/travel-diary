@@ -3,7 +3,9 @@ package com.example.travlediary.service.course;
 import com.example.travlediary.dto.CourseCommentDto;
 import com.example.travlediary.dto.PageResult;
 import com.example.travlediary.model.CourseComment;
+import com.example.travlediary.repository.course.CourseCommentImageMapper;
 import com.example.travlediary.repository.course.CourseCommentMapper;
+import com.example.travlediary.service.file.FileUploadService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,12 +28,16 @@ class CourseCommentServiceImplTest {
 
     @Mock
     private CourseCommentMapper mapper;
+    @Mock
+    private CourseCommentImageMapper imageMapper;
+    @Mock
+    private FileUploadService fileUploadService;
 
     private CourseCommentServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        service = new CourseCommentServiceImpl(mapper);
+        service = new CourseCommentServiceImpl(mapper, imageMapper, fileUploadService);
     }
 
     @Test
@@ -79,7 +85,7 @@ class CourseCommentServiceImplTest {
         CourseCommentDto latest = dto(30L, true);
         when(mapper.findDtoById(30L, 7L)).thenReturn(latest);
 
-        assertThat(service.create(10L, 7L, "  새 댓글  ", null)).isSameAs(latest);
+        assertThat(service.create(10L, 7L, "  새 댓글  ", null, null)).isSameAs(latest);
     }
 
     @Test
@@ -87,7 +93,7 @@ class CourseCommentServiceImplTest {
         when(mapper.existsActiveCourse(10L)).thenReturn(true);
         when(mapper.insert(any())).thenReturn(0);
 
-        assertStatus(HttpStatus.INTERNAL_SERVER_ERROR, () -> service.create(10L, 7L, "댓글", null));
+        assertStatus(HttpStatus.INTERNAL_SERVER_ERROR, () -> service.create(10L, 7L, "댓글", null, null));
     }
 
     @Test
@@ -95,12 +101,12 @@ class CourseCommentServiceImplTest {
         when(mapper.existsActiveCourse(10L)).thenReturn(true);
         when(mapper.insert(any())).thenReturn(1);
 
-        assertStatus(HttpStatus.INTERNAL_SERVER_ERROR, () -> service.create(10L, 7L, "댓글", null));
+        assertStatus(HttpStatus.INTERNAL_SERVER_ERROR, () -> service.create(10L, 7L, "댓글", null, null));
     }
 
     @Test
     void missingOrDeletedCourseCreateReturnsNotFoundWithoutInsert() {
-        assertStatus(HttpStatus.NOT_FOUND, () -> service.create(10L, 7L, "댓글", null));
+        assertStatus(HttpStatus.NOT_FOUND, () -> service.create(10L, 7L, "댓글", null, null));
         verify(mapper, never()).insert(any());
     }
 
@@ -108,8 +114,9 @@ class CourseCommentServiceImplTest {
     void createRejectsBlankAndOverTwoThousandCharacters() {
         when(mapper.existsActiveCourse(10L)).thenReturn(true);
 
-        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "   ", null));
-        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "가".repeat(2_001), null));
+        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "   ", null, null));
+        assertStatus(HttpStatus.BAD_REQUEST,
+                () -> service.create(10L, 7L, "가".repeat(2_001), null, null));
         verify(mapper, never()).insert(any());
     }
 
@@ -131,7 +138,7 @@ class CourseCommentServiceImplTest {
         latest.setParentCommentId(20L);
         when(mapper.findDtoById(30L, 7L)).thenReturn(latest);
 
-        CourseCommentDto result = service.create(10L, 7L, "  대댓글  ", 20L);
+        CourseCommentDto result = service.create(10L, 7L, "  대댓글  ", 20L, null);
 
         assertThat(result.getParentCommentId()).isEqualTo(20L);
         verify(mapper).findActiveCommentForUpdate(20L);
@@ -141,8 +148,9 @@ class CourseCommentServiceImplTest {
     void replyRejectsBlankAndOverTwoThousandCharactersBeforeParentLookup() {
         when(mapper.existsActiveCourse(10L)).thenReturn(true);
 
-        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "   ", 20L));
-        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "가".repeat(2_001), 20L));
+        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "   ", 20L, null));
+        assertStatus(HttpStatus.BAD_REQUEST,
+                () -> service.create(10L, 7L, "가".repeat(2_001), 20L, null));
         verify(mapper, never()).findActiveCommentForUpdate(any());
         verify(mapper, never()).insert(any());
     }
@@ -151,7 +159,7 @@ class CourseCommentServiceImplTest {
     void missingOrDeletedParentReturnsNotFoundWithoutInsert() {
         when(mapper.existsActiveCourse(10L)).thenReturn(true);
 
-        assertStatus(HttpStatus.NOT_FOUND, () -> service.create(10L, 7L, "대댓글", 20L));
+        assertStatus(HttpStatus.NOT_FOUND, () -> service.create(10L, 7L, "대댓글", 20L, null));
         verify(mapper, never()).insert(any());
     }
 
@@ -162,7 +170,7 @@ class CourseCommentServiceImplTest {
         when(mapper.existsActiveCourse(10L)).thenReturn(true);
         when(mapper.findActiveCommentForUpdate(20L)).thenReturn(parent);
 
-        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "대댓글", 20L));
+        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "대댓글", 20L, null));
         verify(mapper, never()).insert(any());
     }
 
@@ -185,7 +193,7 @@ class CourseCommentServiceImplTest {
         });
         when(mapper.findDtoById(30L, 7L)).thenReturn(dto(30L, true));
 
-        service.create(10L, 7L, "중첩 답글", 20L);
+        service.create(10L, 7L, "중첩 답글", 20L, null);
 
         verify(mapper).findCommentForUpdate(15L);
     }
@@ -198,7 +206,7 @@ class CourseCommentServiceImplTest {
         when(mapper.existsActiveCourse(10L)).thenReturn(true);
         when(mapper.findActiveCommentForUpdate(20L)).thenReturn(target);
 
-        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "답글", 20L));
+        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "답글", 20L, null));
         verify(mapper, never()).insert(any());
     }
 
@@ -213,7 +221,7 @@ class CourseCommentServiceImplTest {
         when(mapper.findActiveCommentForUpdate(20L)).thenReturn(target);
         when(mapper.findCommentForUpdate(15L)).thenReturn(root);
 
-        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "답글", 20L));
+        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "답글", 20L, null));
         verify(mapper, never()).insert(any());
     }
 
@@ -225,8 +233,8 @@ class CourseCommentServiceImplTest {
         when(mapper.findActiveCommentForUpdate(20L)).thenReturn(parent);
         when(mapper.insert(any())).thenReturn(0, 1);
 
-        assertStatus(HttpStatus.INTERNAL_SERVER_ERROR, () -> service.create(10L, 7L, "대댓글", 20L));
-        assertStatus(HttpStatus.INTERNAL_SERVER_ERROR, () -> service.create(10L, 7L, "대댓글", 20L));
+        assertStatus(HttpStatus.INTERNAL_SERVER_ERROR, () -> service.create(10L, 7L, "대댓글", 20L, null));
+        assertStatus(HttpStatus.INTERNAL_SERVER_ERROR, () -> service.create(10L, 7L, "대댓글", 20L, null));
     }
 
     @Test

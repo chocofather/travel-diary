@@ -5,14 +5,18 @@ import com.example.travlediary.dto.CourseCommentDto;
 import com.example.travlediary.dto.CourseCommentRequest;
 import com.example.travlediary.dto.PageResult;
 import com.example.travlediary.security.CustomUserDetails;
+import com.example.travlediary.service.comment.CommentImageLimitException;
 import com.example.travlediary.service.course.CourseCommentService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -78,13 +82,35 @@ class CourseCommentControllerTest {
         CourseCommentRequest request = request(10L, "댓글");
         CourseCommentDto created = new CourseCommentDto();
         when(userDetails.getId()).thenReturn(7L);
-        when(service.create(10L, 7L, "댓글", null)).thenReturn(created);
+        when(service.create(10L, 7L, "댓글", null, null)).thenReturn(created);
 
-        var response = controller.create(request, userDetails);
+        var response = controller.create(request, null, userDetails);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getBody()).isSameAs(created);
-        verify(service).create(10L, 7L, "댓글", null);
+        verify(service).create(10L, 7L, "댓글", null, null);
+    }
+
+    @Test
+    void createPassesAttachedImagesAndReportsTheLimitAsABadRequestMessage() {
+        CourseCommentController controller = new CourseCommentController(service);
+        CourseCommentRequest request = request(10L, "사진 댓글");
+        List<MultipartFile> images = List.of(
+                new MockMultipartFile("images", "a.jpg", "image/jpeg", new byte[]{1}),
+                new MockMultipartFile("images", "b.jpg", "image/jpeg", new byte[]{2}));
+        CourseCommentDto created = new CourseCommentDto();
+        when(userDetails.getId()).thenReturn(7L);
+        when(service.create(10L, 7L, "사진 댓글", null, images)).thenReturn(created);
+
+        assertThat(controller.create(request, images, userDetails).getBody()).isSameAs(created);
+
+        when(service.create(10L, 7L, "사진 댓글", null, images))
+                .thenThrow(new CommentImageLimitException("사진은 최대 3장까지 첨부할 수 있습니다."));
+
+        var rejected = controller.create(request, images, userDetails);
+
+        assertThat(rejected.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(rejected.getBody()).isEqualTo(Map.of("message", "사진은 최대 3장까지 첨부할 수 있습니다."));
     }
 
     @Test
@@ -95,12 +121,12 @@ class CourseCommentControllerTest {
         request.setReplyToCommentId(25L);
         CourseCommentDto created = new CourseCommentDto();
         when(userDetails.getId()).thenReturn(7L);
-        when(service.create(10L, 7L, "대댓글", 25L)).thenReturn(created);
+        when(service.create(10L, 7L, "대댓글", 25L, null)).thenReturn(created);
 
-        var response = controller.create(request, userDetails);
+        var response = controller.create(request, null, userDetails);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        verify(service).create(10L, 7L, "대댓글", 25L);
+        verify(service).create(10L, 7L, "대댓글", 25L, null);
     }
 
     @Test
