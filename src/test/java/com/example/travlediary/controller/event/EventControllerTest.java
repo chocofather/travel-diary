@@ -31,37 +31,72 @@ class EventControllerTest {
     @Test
     void eventsWithoutStatusShowsOngoingEventsByDefault() {
         Event ongoing = event(1L, "진행 중 이벤트");
-        when(eventService.getEventsByStatus("ongoing")).thenReturn(List.of(ongoing));
+        when(eventService.countEventsByStatus("ongoing")).thenReturn(1L);
+        when(eventService.getEventsByStatus("ongoing", 0L, 9)).thenReturn(List.of(ongoing));
         ConcurrentModel model = new ConcurrentModel();
 
-        String view = controller.eventList(null, model);
+        String view = controller.eventList(null, 1, 9, model);
 
         assertThat(view).isEqualTo("event/event-list");
         assertThat(model.getAttribute("selectedStatus")).isEqualTo("ongoing");
         assertThat(model.getAttribute("eventList")).isEqualTo(List.of(ongoing));
-        verify(eventService).getEventsByStatus("ongoing");
+        verify(eventService).getEventsByStatus("ongoing", 0L, 9);
     }
 
     @Test
     void invalidStatusSafelyFallsBackToOngoing() {
-        when(eventService.getEventsByStatus("ongoing")).thenReturn(List.of());
+        when(eventService.countEventsByStatus("ongoing")).thenReturn(0L);
+        when(eventService.getEventsByStatus("ongoing", 0L, 9)).thenReturn(List.of());
         ConcurrentModel model = new ConcurrentModel();
 
-        controller.eventList("all", model);
+        controller.eventList("all", 1, 9, model);
 
         assertThat(model.getAttribute("selectedStatus")).isEqualTo("ongoing");
-        verify(eventService).getEventsByStatus("ongoing");
+        verify(eventService).getEventsByStatus("ongoing", 0L, 9);
     }
 
     @Test
     void supportedStatusIsPreserved() {
-        when(eventService.getEventsByStatus("upcoming")).thenReturn(List.of());
+        when(eventService.countEventsByStatus("upcoming")).thenReturn(0L);
+        when(eventService.getEventsByStatus("upcoming", 0L, 9)).thenReturn(List.of());
         ConcurrentModel model = new ConcurrentModel();
 
-        controller.eventList("upcoming", model);
+        controller.eventList("upcoming", 1, 9, model);
 
         assertThat(model.getAttribute("selectedStatus")).isEqualTo("upcoming");
-        verify(eventService).getEventsByStatus("upcoming");
+        verify(eventService).getEventsByStatus("upcoming", 0L, 9);
+    }
+
+    @Test
+    void pagingUsesOffsetAndClampsPageToTheLastAvailablePage() {
+        Event ongoing = event(1L, "진행 중 이벤트");
+        when(eventService.countEventsByStatus("ongoing")).thenReturn(10L);
+        when(eventService.getEventsByStatus("ongoing", 9L, 9)).thenReturn(List.of(ongoing));
+        ConcurrentModel model = new ConcurrentModel();
+
+        // 마지막 페이지(2)를 넘겨서 요청해도 마지막 페이지로 맞춰진다
+        controller.eventList("ongoing", 5, 9, model);
+
+        assertThat(model.getAttribute("currentPage")).isEqualTo(2);
+        assertThat(model.getAttribute("totalPages")).isEqualTo(2);
+        assertThat(model.getAttribute("totalCount")).isEqualTo(10L);
+        assertThat(model.getAttribute("pageSize")).isEqualTo(9);
+        assertThat(model.getAttribute("pageStart")).isEqualTo(1);
+        assertThat(model.getAttribute("pageEnd")).isEqualTo(2);
+        verify(eventService).getEventsByStatus("ongoing", 9L, 9);
+    }
+
+    @Test
+    void invalidPageSizeFallsBackToTheDefaultAndIsCapped() {
+        when(eventService.countEventsByStatus("ongoing")).thenReturn(0L);
+        ConcurrentModel model = new ConcurrentModel();
+
+        controller.eventList("ongoing", 0, 0, model);
+        assertThat(model.getAttribute("pageSize")).isEqualTo(9);
+        assertThat(model.getAttribute("currentPage")).isEqualTo(1);
+
+        controller.eventList("ongoing", 1, 999, model);
+        assertThat(model.getAttribute("pageSize")).isEqualTo(48);
     }
 
     private Event event(Long id, String title) {

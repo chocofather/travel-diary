@@ -103,6 +103,23 @@ public class EventService {
         return eventMapper.selectOngoingEvents();
     }
 
+    /** 상태별 이벤트 한 페이지. 상태 값은 컨트롤러에서 ongoing/upcoming/ended 로 정규화된다. */
+    public List<Event> getEventsByStatus(String status, long offset, int size) {
+        return eventMapper.selectEventsByStatusPaged(normalizeStatus(status), Math.max(offset, 0), size);
+    }
+
+    /** 상태별 전체 개수 (페이지 수 계산용) */
+    public long countEventsByStatus(String status) {
+        return eventMapper.countEventsByStatus(normalizeStatus(status));
+    }
+
+    private String normalizeStatus(String status) {
+        return switch (status == null ? "" : status) {
+            case "upcoming", "ended" -> status;
+            default -> "ongoing";
+        };
+    }
+
     //이벤트 상세
     public Event getEventDetail(Long id) {
         return eventMapper.selectEventById(id);

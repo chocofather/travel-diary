@@ -48,7 +48,7 @@ class EventPageControllerTest {
         Event event = event();
         event.setDescription(null);
         event.setPosterImg("/uploads/events/posters/main.jpg");
-        when(eventService.getEventsByStatus("ongoing")).thenReturn(List.of(event));
+        when(eventService.getEventsByStatus("ongoing", 0L, 9)).thenReturn(List.of(event));
 
         MvcResult result = mockMvc.perform(get("/events"))
                 .andExpect(status().isOk())
@@ -70,7 +70,7 @@ class EventPageControllerTest {
 
     @Test
     void emptyUpcomingPageKeepsUpcomingStateAndMessage() throws Exception {
-        when(eventService.getEventsByStatus("upcoming")).thenReturn(List.of());
+        when(eventService.getEventsByStatus("upcoming", 0L, 9)).thenReturn(List.of());
 
         mockMvc.perform(get("/events").param("status", "upcoming"))
                 .andExpect(status().isOk())
@@ -80,13 +80,32 @@ class EventPageControllerTest {
 
     @Test
     void invalidStatusUsesOngoingQuery() throws Exception {
-        when(eventService.getEventsByStatus("ongoing")).thenReturn(List.of());
+        when(eventService.getEventsByStatus("ongoing", 0L, 9)).thenReturn(List.of());
 
         mockMvc.perform(get("/events").param("status", "all"))
                 .andExpect(status().isOk())
                 .andExpect(model().attribute("selectedStatus", "ongoing"));
 
-        verify(eventService).getEventsByStatus("ongoing");
+        verify(eventService).getEventsByStatus("ongoing", 0L, 9);
+    }
+
+    @Test
+    void paginationKeepsTheSelectedStatusTab() throws Exception {
+        when(eventService.countEventsByStatus("ended")).thenReturn(10L);
+        when(eventService.getEventsByStatus("ended", 0L, 9)).thenReturn(List.of(event()));
+
+        MvcResult result = mockMvc.perform(get("/events").param("status", "ended"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("totalPages", 2))
+                .andReturn();
+
+        org.jsoup.nodes.Document document = org.jsoup.Jsoup.parse(
+                result.getResponse().getContentAsString());
+        assertThat(document.select(".pagination .page-number").eachText())
+                .containsExactly("1", "2");
+        assertThat(document.selectFirst(".pagination .page-number.is-current").text()).isEqualTo("1");
+        assertThat(document.select(".pagination a").attr("href"))
+                .contains("status=ended");
     }
 
     @Test
@@ -95,7 +114,7 @@ class EventPageControllerTest {
         standard.setEventType(EventType.STANDARD);
         standard.setEventImg("/uploads/events/main.jpg");
         standard.setPosterImg("/uploads/events/posters/unused.jpg");
-        when(eventService.getEventsByStatus("ongoing")).thenReturn(List.of(standard));
+        when(eventService.getEventsByStatus("ongoing", 0L, 9)).thenReturn(List.of(standard));
 
         org.jsoup.nodes.Document document = renderList(null);
 
@@ -108,7 +127,7 @@ class EventPageControllerTest {
         Event standard = event();
         standard.setEventType(EventType.STANDARD);
         standard.setEventImg(null);
-        when(eventService.getEventsByStatus("ongoing")).thenReturn(List.of(standard));
+        when(eventService.getEventsByStatus("ongoing", 0L, 9)).thenReturn(List.of(standard));
 
         org.jsoup.nodes.Document document = renderList(null);
 

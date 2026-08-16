@@ -359,32 +359,32 @@
     transform: translateY(-3px);
 }
 
+/* 이미지 위 반투명 원형 버튼. 크기·색은 여행지 목록의 .bookmark-icon 과 같은 값으로 맞춘다.
+   (선택 상태는 여행지와 동일하게 아이콘 이미지로만 표시) */
 .travel-info-card-bookmark {
     position: absolute;
     z-index: 2;
-    top: 12px;
-    right: 12px;
+    top: 10px;
+    right: 10px;
     display: inline-grid;
-    width: 40px;
-    height: 40px;
+    width: 34px;
+    height: 34px;
     padding: 0;
     place-items: center;
-    border: 1px solid rgba(255, 255, 255, 0.86);
+    border: 1px solid rgba(255, 255, 255, 0.9);
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.94);
+    background: rgba(255, 255, 255, 0.82);
     color: #475569;
     cursor: pointer;
-    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.18);
-    transition: color 160ms ease, background-color 160ms ease, transform 160ms ease;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.18);
+    backdrop-filter: blur(2px);
+    transition: background-color 0.18s ease, transform 0.18s ease;
 }
 
-.travel-info-card-bookmark:hover {
+.travel-info-card-bookmark:hover,
+.travel-info-card-bookmark:focus-visible {
+    background: #fff;
     transform: scale(1.06);
-}
-
-.travel-info-card-bookmark.is-bookmarked {
-    border-color: #f3c64f;
-    background: #fffaf0;
 }
 
 .travel-info-card-bookmark:focus-visible {
@@ -400,8 +400,8 @@
 
 .travel-info-card-bookmark .travel-info-bookmark-icon {
     display: block;
-    width: 27px;
-    height: 27px;
+    width: 19px;
+    height: 19px;
     background: url('/uploads/icons/bookmark.png') center / contain no-repeat;
 }
 
