@@ -77,9 +77,19 @@ class CourseCommentImageMapperContractTest {
                 .contains("REFERENCES `course_comments` (`id`) ON DELETE CASCADE")
                 .contains("`display_order` >= 1")
                 .contains("`display_order` <= 3");
-        // course_comments 에는 컬럼을 추가하지 않았고, 기존 레거시 컬럼도 그대로 둔다
+        // 코스 댓글 사진 저장소는 course_comment_images 하나뿐이다.
+        // (레거시 단일 이미지 컬럼은 실제 DB 에서도 DROP 완료)
         String courseComments = between(schema, "CREATE TABLE `course_comments`", "ENGINE=InnoDB");
-        assertThat(courseComments).contains("`image_url` varchar(255) DEFAULT NULL");
+        assertThat(courseComments).doesNotContain("image_url");
+    }
+
+    @Test
+    void commentCodeNoLongerDependsOnTheLegacyImageUrlColumn() throws IOException {
+        // DB 에서 course_comments.image_url 을 DROP 했으므로 코드에도 흔적이 없어야 한다.
+        assertThat(resource("/mapper/CourseCommentMapper.xml"))
+                .doesNotContain("image_url");
+        assertThat(readFile("src/main/java/com/example/travlediary/model/CourseComment.java"))
+                .doesNotContain("imageUrl");
     }
 
     private String mapperXml() throws IOException {

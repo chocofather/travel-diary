@@ -343,7 +343,6 @@ CREATE TABLE `course_comments` (
   `parent_comment_id` bigint DEFAULT NULL,
   `reply_to_comment_id` bigint DEFAULT NULL,
   `content` text NOT NULL,
-  `image_url` varchar(255) DEFAULT NULL,
   `likes` int DEFAULT '0',
   `deleted` tinyint(1) DEFAULT '0',
   `create_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
