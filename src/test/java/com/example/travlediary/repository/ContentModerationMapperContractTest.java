@@ -204,6 +204,53 @@ class ContentModerationMapperContractTest {
     }
 
     @Test
+    void commentHideReasonIsAskedInAModalInsteadOfAPrompt() throws IOException {
+        String helper = resource("/static/js/admin-content-moderation.js");
+
+        // 사유 입력은 prompt 가 아니라 커스텀 모달로 받는다
+        assertThat(helper)
+                .doesNotContain("window.prompt")
+                .contains("overlay.className = 'content-moderation-modal'")
+                .contains("'댓글 숨김'")
+                .contains("'이 댓글을 숨김 처리하시겠습니까?'")
+                .contains("'사유를 입력해 주세요.'")
+                // 열 때 대상 댓글을 보관하고 입력창에 focus, 닫을 때 함께 비운다
+                .contains("target = {targetType, targetId};")
+                .contains("modal.reason.focus();")
+                .contains("ui.reason.value = '';")
+                .contains("target = null;")
+                // backdrop / 닫기 버튼 / 취소 / Escape 로 닫는다 (내부 클릭은 제외)
+                .contains("if (event.target === overlay) close();")
+                .contains("closeButton.addEventListener('click', close);")
+                .contains("cancel.addEventListener('click', close);")
+                .contains("event.key === 'Escape'")
+                // 공백 사유는 요청하지 않고, 중복 제출을 막는다
+                .contains("if (!reason.trim())")
+                .contains("ui.submit.disabled = true;");
+
+        // 요청 형식(엔드포인트/필드명/CSRF)은 그대로다
+        String submitForm = between(helper, "function submitHideForm(", "function makeButton(");
+        assertThat(submitForm)
+                .contains("form.method = 'post'")
+                .contains("/admin/contents/${targetType}/${targetId}/hide")
+                .contains("reason: reason")
+                .contains("adminNote")
+                .contains("redirect: window.location.pathname + window.location.search")
+                .contains("meta[name=\"_csrf\"]");
+
+        // 모달 스타일은 세 댓글 화면이 모두 로드하는 공용 CSS 에 둔다
+        assertThat(resource("/static/css/content-comment.css"))
+                .contains(".content-moderation-modal[hidden]")
+                .contains(".content-moderation-dialog")
+                .contains("max-width: 460px")
+                .contains(".content-moderation-modal-submit");
+        for (String path : new String[]{"/templates/destination/detail.html",
+                "/templates/post/detail.html", "/templates/course/detail.html"}) {
+            assertThat(resource(path)).as(path).contains("/css/content-comment.css");
+        }
+    }
+
+    @Test
     void moderatedRepliesAreNotFilteredOutWhenTheTreeIsBuilt() throws IOException {
         // 자식 댓글 그룹핑에서 관리자 조치분을 제외하면 화면에서 사라진다
         for (String path : new String[]{"/static/js/post-comments.js",

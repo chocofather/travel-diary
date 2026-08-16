@@ -506,3 +506,120 @@
         width: auto;
     }
 }
+
+/* ===== 관리자 댓글 숨김 모달 (게시글 숨김 모달과 같은 디자인) ===== */
+.content-moderation-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.45);
+}
+
+.content-moderation-modal[hidden] {
+    display: none;
+}
+
+.content-moderation-dialog {
+    position: relative;
+    width: 100%;
+    max-width: 460px;
+    padding: 20px;
+    border: 1px solid #e5e5e5;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+.content-moderation-modal-close {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: #9ca3af;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.content-moderation-modal-close:hover {
+    color: #4b5563;
+}
+
+.content-moderation-modal-title {
+    margin: 0 0 8px;
+    color: #1f2937;
+    font-size: 17px;
+}
+
+.content-moderation-modal-text {
+    margin: 0 0 16px;
+    color: #4b5563;
+    font-size: 14px;
+}
+
+.content-moderation-modal-label {
+    display: block;
+    margin-bottom: 6px;
+    color: #6b7280;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.content-moderation-modal-reason {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font: inherit;
+    font-size: 14px;
+    resize: vertical;
+}
+
+.content-moderation-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.content-moderation-modal-cancel,
+.content-moderation-modal-submit {
+    padding: 7px 14px;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.content-moderation-modal-cancel {
+    color: #4b5563;
+    background: #fff;
+    border: 1px solid #d5d7db;
+}
+
+.content-moderation-modal-cancel:hover {
+    background: #f6f7f8;
+}
+
+/* 숨김 처리는 destructive action */
+.content-moderation-modal-submit {
+    color: #fff;
+    background: #b42318;
+    border: 1px solid #b42318;
+}
+
+.content-moderation-modal-submit:hover {
+    background: #9a1d14;
+}
+
+.content-moderation-modal-submit:disabled {
+    cursor: wait;
+    opacity: 0.6;
+}
