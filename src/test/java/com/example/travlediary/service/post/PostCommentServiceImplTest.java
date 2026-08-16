@@ -4,7 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.example.travlediary.dto.PostCommentDto;
 import com.example.travlediary.dto.PageResult;
 import com.example.travlediary.model.PostComment;
+import com.example.travlediary.repository.post.PostCommentImageMapper;
 import com.example.travlediary.repository.post.PostCommentMapper;
+import com.example.travlediary.service.file.FileUploadService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,12 +30,17 @@ class PostCommentServiceImplTest {
 
     @Mock
     private PostCommentMapper postCommentMapper;
+    @Mock
+    private PostCommentImageMapper postCommentImageMapper;
+    @Mock
+    private FileUploadService fileUploadService;
 
     private PostCommentServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        service = new PostCommentServiceImpl(postCommentMapper);
+        service = new PostCommentServiceImpl(
+                postCommentMapper, postCommentImageMapper, fileUploadService);
     }
 
     @Test
@@ -49,7 +56,7 @@ class PostCommentServiceImplTest {
         PostCommentDto latest = dto(30L, true);
         when(postCommentMapper.findDtoById(30L, 7L)).thenReturn(latest);
 
-        PostCommentDto result = service.create(10L, 7L, "  새 댓글  ", null);
+        PostCommentDto result = service.create(10L, 7L, "  새 댓글  ", null, null);
 
         assertThat(result).isSameAs(latest);
         verify(postCommentMapper).findDtoById(30L, 7L);
@@ -59,7 +66,7 @@ class PostCommentServiceImplTest {
     void createReturnsNotFoundWhenPostIsDeletedOrMissing() {
         when(postCommentMapper.existsActivePost(10L)).thenReturn(false);
 
-        assertStatus(HttpStatus.NOT_FOUND, () -> service.create(10L, 7L, "댓글", null));
+        assertStatus(HttpStatus.NOT_FOUND, () -> service.create(10L, 7L, "댓글", null, null));
         verify(postCommentMapper, never()).insert(any());
     }
 
@@ -67,8 +74,9 @@ class PostCommentServiceImplTest {
     void createRejectsBlankAndOverTwoThousandCharacters() {
         when(postCommentMapper.existsActivePost(10L)).thenReturn(true);
 
-        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "   ", null));
-        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "가".repeat(2_001), null));
+        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "   ", null, null));
+        assertStatus(HttpStatus.BAD_REQUEST,
+                () -> service.create(10L, 7L, "가".repeat(2_001), null, null));
         verify(postCommentMapper, never()).insert(any());
     }
 
@@ -87,7 +95,7 @@ class PostCommentServiceImplTest {
         latest.setParentCommentId(20L);
         when(postCommentMapper.findDtoById(30L, 7L)).thenReturn(latest);
 
-        PostCommentDto result = service.create(10L, 7L, "답글", 20L);
+        PostCommentDto result = service.create(10L, 7L, "답글", 20L, null);
 
         assertThat(result.getParentCommentId()).isEqualTo(20L);
         verify(postCommentMapper).findActiveCommentForUpdate(20L);
@@ -98,7 +106,7 @@ class PostCommentServiceImplTest {
         when(postCommentMapper.existsActivePost(10L)).thenReturn(true);
         when(postCommentMapper.findActiveCommentForUpdate(20L)).thenReturn(null);
 
-        assertStatus(HttpStatus.NOT_FOUND, () -> service.create(10L, 7L, "답글", 20L));
+        assertStatus(HttpStatus.NOT_FOUND, () -> service.create(10L, 7L, "답글", 20L, null));
         verify(postCommentMapper, never()).insert(any());
     }
 
@@ -107,7 +115,7 @@ class PostCommentServiceImplTest {
         when(postCommentMapper.existsActivePost(10L)).thenReturn(true);
         when(postCommentMapper.findActiveCommentForUpdate(20L)).thenReturn(comment(20L, 8L, 11L, null));
 
-        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "답글", 20L));
+        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "답글", 20L, null));
         verify(postCommentMapper, never()).insert(any());
     }
 
@@ -126,7 +134,7 @@ class PostCommentServiceImplTest {
         });
         when(postCommentMapper.findDtoById(30L, 7L)).thenReturn(dto(30L, true));
 
-        service.create(10L, 7L, "중첩 답글", 20L);
+        service.create(10L, 7L, "중첩 답글", 20L, null);
 
         verify(postCommentMapper).findCommentForUpdate(15L);
     }
@@ -137,7 +145,7 @@ class PostCommentServiceImplTest {
         when(postCommentMapper.findActiveCommentForUpdate(20L))
                 .thenReturn(comment(20L, 8L, 10L, 15L));
 
-        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "답글", 20L));
+        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "답글", 20L, null));
         verify(postCommentMapper, never()).insert(any());
     }
 
@@ -149,7 +157,7 @@ class PostCommentServiceImplTest {
         when(postCommentMapper.findCommentForUpdate(15L))
                 .thenReturn(comment(15L, 9L, 11L, null));
 
-        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "답글", 20L));
+        assertStatus(HttpStatus.BAD_REQUEST, () -> service.create(10L, 7L, "답글", 20L, null));
         verify(postCommentMapper, never()).insert(any());
     }
 

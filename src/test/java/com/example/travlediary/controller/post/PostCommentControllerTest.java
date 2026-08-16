@@ -5,14 +5,18 @@ import com.example.travlediary.dto.PostCommentDto;
 import com.example.travlediary.dto.PostCommentRequest;
 import com.example.travlediary.dto.PageResult;
 import com.example.travlediary.security.CustomUserDetails;
+import com.example.travlediary.service.comment.CommentImageLimitException;
 import com.example.travlediary.service.post.PostCommentService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -71,13 +75,37 @@ class PostCommentControllerTest {
         request.setContent("답글");
         PostCommentDto created = new PostCommentDto();
         when(userDetails.getId()).thenReturn(7L);
-        when(service.create(10L, 7L, "답글", 20L)).thenReturn(created);
+        when(service.create(10L, 7L, "답글", 20L, null)).thenReturn(created);
 
-        var response = controller.create(request, userDetails);
+        var response = controller.create(request, null, userDetails);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getBody()).isSameAs(created);
-        verify(service).create(10L, 7L, "답글", 20L);
+        verify(service).create(10L, 7L, "답글", 20L, null);
+    }
+
+    @Test
+    void createPassesAttachedImagesAndReportsTheLimitAsABadRequestMessage() {
+        PostCommentController controller = new PostCommentController(service);
+        PostCommentRequest request = new PostCommentRequest();
+        request.setPostId(10L);
+        request.setContent("사진 댓글");
+        List<MultipartFile> images = List.of(
+                new MockMultipartFile("images", "a.jpg", "image/jpeg", new byte[]{1}),
+                new MockMultipartFile("images", "b.jpg", "image/jpeg", new byte[]{2}));
+        PostCommentDto created = new PostCommentDto();
+        when(userDetails.getId()).thenReturn(7L);
+        when(service.create(10L, 7L, "사진 댓글", null, images)).thenReturn(created);
+
+        assertThat(controller.create(request, images, userDetails).getBody()).isSameAs(created);
+
+        when(service.create(10L, 7L, "사진 댓글", null, images))
+                .thenThrow(new CommentImageLimitException("사진은 최대 3장까지 첨부할 수 있습니다."));
+
+        var rejected = controller.create(request, images, userDetails);
+
+        assertThat(rejected.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(rejected.getBody()).isEqualTo(Map.of("message", "사진은 최대 3장까지 첨부할 수 있습니다."));
     }
 
     @Test

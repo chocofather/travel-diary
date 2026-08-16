@@ -180,6 +180,208 @@
     color: #fff;
 }
 
+/* 사진 첨부 버튼/미리보기: 여행지 댓글(comment.css)과 같은 클래스명·디자인을 쓰되,
+   커뮤니티 댓글 영역 안에서만 적용되도록 .post-comments 아래로 한정한다. */
+.post-comments .image-upload-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background: #fff;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.post-comments .image-upload-label:hover {
+    background: #f2f4f6;
+}
+
+.post-comments .image-upload-label img {
+    width: 18px;
+    height: 18px;
+}
+
+/* 선택한 사진 미리보기 (댓글 등록 전). 사진이 없으면 영역 자체를 감춘다. */
+.post-comments .comment-image-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.post-comments .comment-image-preview[hidden] {
+    display: none;
+}
+
+.post-comments .comment-image-preview-item {
+    position: relative;
+    flex: 0 0 auto;
+    width: 84px;
+    height: 84px;
+}
+
+.post-comments .comment-image-preview-item img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    background: #f2f4f6;
+    border: 1px solid #e2e6ec;
+    border-radius: 8px;
+}
+
+.post-comments .comment-image-remove {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    display: flex;
+    width: 22px;
+    height: 22px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.62);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 50%;
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background-color 0.18s ease;
+}
+
+.post-comments .comment-image-remove:hover,
+.post-comments .comment-image-remove:focus-visible {
+    background: rgba(0, 0, 0, 0.82);
+}
+
+@media (max-width: 600px) {
+    .post-comments .comment-image-preview-item {
+        width: 72px;
+        height: 72px;
+    }
+}
+
+/* 댓글 첨부 사진(최대 3장)은 가로로 나열하고 좁으면 줄바꿈한다 (여행지 댓글과 같은 크기/간격) */
+.post-comments .comment-images {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-width: 0;
+    margin-top: 10px;
+}
+
+.post-comments .comment-images .comment-image {
+    width: 150px;
+    height: 150px;
+    margin-top: 0;
+    border-radius: 8px;
+    object-fit: cover;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.post-comments .comment-images .comment-image:hover {
+    transform: scale(1.05);
+}
+
+@media (max-width: 480px) {
+    .post-comments .comment-images .comment-image {
+        width: calc(50% - 4px);
+        height: auto;
+        aspect-ratio: 1 / 1;
+    }
+}
+
+/* ===== 댓글 사진 확대 모달 ===== */
+.post-comments .image-modal {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.85);
+    justify-content: center;
+    align-items: center;
+}
+
+.post-comments .image-modal img.modal-content {
+    max-width: 90%;
+    max-height: 90%;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+    cursor: zoom-out;
+}
+
+.post-comments .image-modal .close-btn {
+    position: absolute;
+    top: 30px;
+    right: 40px;
+    font-size: 30px;
+    color: #fff;
+    cursor: pointer;
+}
+
+.post-comments .image-modal .comment-image-nav {
+    position: absolute;
+    top: 50%;
+    z-index: 1;
+    display: flex;
+    width: 46px;
+    height: 46px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 50%;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    transform: translateY(-50%);
+    transition: background-color 0.18s ease;
+}
+
+.post-comments .image-modal .comment-image-nav:hover,
+.post-comments .image-modal .comment-image-nav:focus-visible {
+    background: rgba(0, 0, 0, 0.72);
+}
+
+.post-comments .image-modal .comment-image-nav.prev {
+    left: 20px;
+}
+
+.post-comments .image-modal .comment-image-nav.next {
+    right: 20px;
+}
+
+/* 사진이 한 장인 댓글에서는 이동 버튼을 감춘다 */
+.post-comments .image-modal.is-single .comment-image-nav {
+    display: none;
+}
+
+@media (max-width: 600px) {
+    .post-comments .image-modal .comment-image-nav {
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+    }
+
+    .post-comments .image-modal .comment-image-nav.prev {
+        left: 10px;
+    }
+
+    .post-comments .image-modal .comment-image-nav.next {
+        right: 10px;
+    }
+}
+
 .post-comment-length,
 .post-comment-login,
 .post-comment-date,
