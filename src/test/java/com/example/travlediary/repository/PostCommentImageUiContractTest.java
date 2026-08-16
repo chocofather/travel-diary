@@ -165,6 +165,8 @@ class PostCommentImageUiContractTest {
                 // 클릭한 댓글의 사진 목록 안에서만 순환한다
                 .contains("const group = target.closest('.comment-images');")
                 .contains("index = (nextIndex + images.length) % images.length;")
+                // 클릭한 사진부터 보여준다 (주소가 아니라 위치로 찾는다)
+                .contains("show(Math.max(items.indexOf(target), 0));")
                 // 사진이 한 장이면 좌/우 버튼을 감춘다
                 .contains("modal.classList.toggle('is-single', images.length <= 1);")
                 // 좌/우 버튼 클릭이 닫기로 전파되지 않는다
@@ -191,6 +193,16 @@ class PostCommentImageUiContractTest {
                 .contains(".post-comments .image-modal")
                 .contains(".post-comments .image-modal .comment-image-nav")
                 .contains(".post-comments .image-modal.is-single .comment-image-nav");
+
+        // 원본 비율을 지키면서 화면을 넘지 않는다
+        String modalImage = between(css, ".post-comments .image-modal img.modal-content", "}");
+        assertThat(modalImage)
+                .contains("max-width: 90%")
+                .contains("max-height: 90%");
+        // 모바일에서도 닫기/이동 버튼이 보이게 위치를 조정한다
+        String mobile = between(css, "@media (max-width: 600px) {\n"
+                + "    /* 좁은 화면에서도", ".post-comments .image-modal .comment-image-nav.prev");
+        assertThat(mobile).contains(".post-comments .image-modal .close-btn");
     }
 
     private String resource(String path) throws IOException {

@@ -736,13 +736,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         function open(target) {
+            // 목록은 클릭한 댓글의 사진 그룹으로만 만든다. (다른 댓글 사진은 섞이지 않는다)
             const group = target.closest('.comment-images');
-            images = group
-                ? Array.from(group.querySelectorAll('.comment-image')).map(image => image.src)
-                : [target.src];
+            const items = group
+                ? Array.from(group.querySelectorAll('.comment-image'))
+                : [target];
+            images = items.map(image => image.src);
             // 사진이 한 장뿐이면 좌/우 버튼을 숨긴다.
             modal.classList.toggle('is-single', images.length <= 1);
-            show(Math.max(images.indexOf(target.src), 0));
+            // 클릭한 사진부터 보여준다. (같은 주소가 있어도 위치로 찾는다)
+            show(Math.max(items.indexOf(target), 0));
             modal.style.display = 'flex';
         }
 

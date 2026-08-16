@@ -367,6 +367,14 @@
 }
 
 @media (max-width: 600px) {
+    /* 좁은 화면에서도 닫기/이동 버튼이 사진에 가리지 않게 안쪽으로 당긴다 */
+    .post-comments .image-modal .close-btn {
+        top: 16px;
+        right: 18px;
+        font-size: 34px;
+        line-height: 1;
+    }
+
     .post-comments .image-modal .comment-image-nav {
         width: 40px;
         height: 40px;
