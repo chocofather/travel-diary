@@ -65,9 +65,54 @@ class RandomTravelPageContractTest {
         assertThat(document.select("canvas, .roulette-canvas")).isEmpty();
         assertThat(script)
                 .contains("window.matchMedia('(prefers-reduced-motion: reduce)')")
-                .contains("window.setInterval")
-                .contains("1200")
+                .contains("window.setTimeout")
                 .contains("result.regionName");
+
+        // 4~5초 동안 점점 느려지는 감속 연출 + 확정 직전 짧은 정지
+        assertThat(script)
+                .contains("const drawDuration = 4200")
+                .contains("const minTickInterval = 55")
+                .contains("const maxTickInterval = 430")
+                .contains("const suspenseDelay = 520")
+                .contains("const eased = progress * progress")
+                .contains("stage.classList.add('is-locked')");
+        // 단계별 진행 문구
+        assertThat(script)
+                .contains("여행 지역을 고르는 중...")
+                .contains("어디가 좋을까요?")
+                .contains("거의 다 골랐어요...")
+                .contains("이번 여행지는...");
+        // 결과 등장 효과와 작은 축하 효과 (모션 최소화 설정에서는 끈다)
+        assertThat(script)
+                .contains("resultContainer.classList.add('is-revealed')")
+                .contains("function playConfetti(")
+                .contains("if (reducedMotion.matches || !host) return;");
+        assertThat(document.selectFirst("#random-stage-label")).isNotNull();
+    }
+
+    @Test
+    void resultLinksToTheRegionFilteredDestinationList() throws IOException {
+        String script = resource("/static/js/random-travel.js");
+        String css = resource("/static/css/random-travel.css");
+
+        // 여행지 상세의 '여행지 더보기'와 같은 목록 필터(type/region)를 사용한다
+        assertThat(script)
+                .contains("function buildRegionListUrl(result)")
+                .contains("scope === 'overseas' ? 'overseas' : 'domestic'")
+                .contains("region: String(result.regionId)")
+                .contains("`/destinations?${params.toString()}`")
+                .contains("전체 여행지 보기");
+        assertThat(css)
+                .contains(".random-all-destinations-link")
+                .contains(".random-destinations-actions");
+    }
+
+    @Test
+    void destinationGridShowsFourColumnsOnDesktop() throws IOException {
+        String css = resource("/static/css/random-travel.css");
+
+        // PC 4열 × 2줄(최대 8곳)
+        assertThat(css).contains("grid-template-columns: repeat(4, minmax(0, 1fr))");
     }
 
     @Test

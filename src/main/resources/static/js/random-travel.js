@@ -6,10 +6,23 @@
         overseas: ['오사카', '파리', '방콕', '로마', '뉴욕']
     };
 
+    /** 뽑기 연출 길이와 단계별 문구. 빠르게 시작해 점점 느려진다. */
+    const drawDuration = 4200;
+    const minTickInterval = 55;
+    const maxTickInterval = 430;
+    const suspenseDelay = 520;
+    const drawPhases = [
+        {until: 0.30, label: '여행 지역을 고르는 중...'},
+        {until: 0.60, label: '어디가 좋을까요?'},
+        {until: 0.85, label: '거의 다 골랐어요...'},
+        {until: 1, label: '이번 여행지는...'}
+    ];
+
     const scopeButtons = Array.from(document.querySelectorAll('[data-random-scope]'));
     const drawButton = document.getElementById('random-draw-button');
     const status = document.getElementById('random-status');
     const stage = document.getElementById('random-stage');
+    const stageLabel = document.getElementById('random-stage-label');
     const stageName = document.getElementById('random-stage-name');
     const resultContainer = document.getElementById('random-result');
 
@@ -94,41 +107,85 @@
         stageName.textContent = '';
     }
 
+    /**
+     * 지역명을 빠르게 바꾸다가 점점 느려지는 감속 연출.
+     * 마지막에는 잠깐 멈춰 긴장감을 준 뒤 결과를 확정한다.
+     */
     function playDrawAnimation(result) {
         if (reducedMotion.matches) {
             return Promise.resolve();
         }
 
-        const duration = 1200;
-        const interval = 150;
-        const totalSteps = Math.floor(duration / interval) - 1;
         const names = [...previewNames[selectedScope], result.regionName];
+        const startedAt = performance.now();
         let step = 0;
 
         stage.hidden = false;
         stage.setAttribute('aria-hidden', 'true');
+        stage.classList.remove('is-locked');
         stageName.textContent = names[0];
+        updateStageLabel(0);
 
         return new Promise((resolve) => {
-            const timer = window.setInterval(() => {
-                step += 1;
-                if (step >= totalSteps) {
-                    window.clearInterval(timer);
+            const tick = () => {
+                const progress = Math.min((performance.now() - startedAt) / drawDuration, 1);
+                updateStageLabel(progress);
+
+                if (progress >= 1) {
+                    // 결과 확정 직전 잠깐 멈춰 긴장감을 준다.
                     stageName.textContent = result.regionName;
+                    stage.classList.add('is-locked');
                     window.setTimeout(() => {
+                        stage.classList.remove('is-locked');
                         hideStage();
                         resolve();
-                    }, interval);
+                    }, suspenseDelay);
                     return;
                 }
+
+                step += 1;
                 stageName.textContent = names[step % names.length];
-            }, interval);
+                // 진행할수록 간격이 길어져(ease-in) 마지막에는 지역명이 또렷하게 보인다.
+                const eased = progress * progress;
+                const interval = minTickInterval + (maxTickInterval - minTickInterval) * eased;
+                window.setTimeout(tick, interval);
+            };
+
+            window.setTimeout(tick, minTickInterval);
         });
+    }
+
+    function updateStageLabel(progress) {
+        if (!stageLabel) return;
+        const phase = drawPhases.find((candidate) => progress < candidate.until)
+                ?? drawPhases[drawPhases.length - 1];
+        if (stageLabel.textContent !== phase.label) {
+            stageLabel.textContent = phase.label;
+        }
+    }
+
+    /** 결과 확정 순간의 작은 축하 효과. (과하지 않게 짧게만 보여준다) */
+    function playConfetti(host) {
+        if (reducedMotion.matches || !host) return;
+
+        const confetti = document.createElement('div');
+        confetti.className = 'random-confetti';
+        confetti.setAttribute('aria-hidden', 'true');
+        for (let index = 0; index < 14; index += 1) {
+            const piece = document.createElement('span');
+            piece.className = 'random-confetti-piece';
+            piece.style.left = `${6 + (index * 88) / 14}%`;
+            piece.style.animationDelay = `${(index % 5) * 60}ms`;
+            confetti.append(piece);
+        }
+        host.append(confetti);
+        window.setTimeout(() => confetti.remove(), 1600);
     }
 
     function renderResult(result, destinations) {
         const fragment = document.createDocumentFragment();
-        fragment.append(createRegionHero(result));
+        const hero = createRegionHero(result);
+        fragment.append(hero);
 
         const destinationSection = document.createElement('section');
         destinationSection.className = 'random-destinations';
@@ -146,17 +203,48 @@
             grid.append(createDestinationCard(destination));
         });
 
+        const actions = document.createElement('div');
+        actions.className = 'random-destinations-actions';
+
+        // 여행지 상세의 '여행지 더보기'와 같은 목록 필터(type/region)로 이동한다.
+        const allDestinationsLink = document.createElement('a');
+        allDestinationsLink.className = 'random-all-destinations-link';
+        allDestinationsLink.href = buildRegionListUrl(result);
+        allDestinationsLink.append(
+                createTextElement('span', '', `${result.regionName} 전체 여행지 보기`),
+                createTextElement('span', 'random-all-destinations-arrow', '→')
+        );
+        allDestinationsLink.lastElementChild.setAttribute('aria-hidden', 'true');
+
         const redrawButton = document.createElement('button');
         redrawButton.type = 'button';
         redrawButton.className = 'random-redraw-button';
         redrawButton.textContent = '다시 뽑기 ↻';
         redrawButton.addEventListener('click', drawTravelRegion);
 
-        destinationSection.append(heading, grid, redrawButton);
+        actions.append(allDestinationsLink, redrawButton);
+        destinationSection.append(heading, grid, actions);
         fragment.append(destinationSection);
         resultContainer.replaceChildren(fragment);
+        resultContainer.classList.remove('is-revealed');
         resultContainer.hidden = false;
         status.textContent = `${result.countryName} · ${result.regionName} 지역을 골랐어요.`;
+
+        // 결과 카드가 갑자기 나타나지 않도록 다음 프레임에 등장 효과를 켠다.
+        window.requestAnimationFrame(() => {
+            resultContainer.classList.add('is-revealed');
+        });
+        playConfetti(hero);
+    }
+
+    /** 랜덤 결과 지역으로 필터된 기존 여행지 목록 URL */
+    function buildRegionListUrl(result) {
+        const scope = normalizedText(result.scope) || selectedScope;
+        const params = new URLSearchParams({
+            type: scope === 'overseas' ? 'overseas' : 'domestic',
+            region: String(result.regionId)
+        });
+        return `/destinations?${params.toString()}`;
     }
 
     function createRegionHero(result) {
@@ -256,6 +344,7 @@
                 createTextElement('p', '', message)
         );
         resultContainer.replaceChildren(messageBox);
+        resultContainer.classList.add('is-revealed');
         resultContainer.hidden = false;
         status.textContent = title;
     }
@@ -275,12 +364,14 @@
         status.textContent = '';
         hideStage();
         resultContainer.replaceChildren();
+        resultContainer.classList.remove('is-revealed');
         resultContainer.hidden = true;
     }
 
     function hideStage() {
         stage.hidden = true;
         stage.setAttribute('aria-hidden', 'true');
+        stage.classList.remove('is-locked');
         stageName.textContent = '';
     }
 

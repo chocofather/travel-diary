@@ -186,9 +186,65 @@
     line-height: 1.5;
 }
 
+/* 결과 카드는 갑자기 나타나지 않고 살짝 올라오며 등장한다 */
 .random-result {
     width: 100%;
     margin: 0 auto;
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+    transition: opacity 420ms ease, transform 420ms ease;
+}
+
+.random-result.is-revealed {
+    opacity: 1;
+    transform: none;
+}
+
+/* 결과 확정 직전의 짧은 정지 */
+.random-stage.is-locked strong {
+    transform: scale(1.06);
+    transition: transform 260ms ease;
+}
+
+/* 당첨 순간의 작은 축하 효과 */
+.random-confetti {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.random-confetti-piece {
+    position: absolute;
+    top: -12px;
+    width: 7px;
+    height: 11px;
+    border-radius: 2px;
+    background: #087f7c;
+    opacity: 0;
+    animation: random-confetti-fall 1200ms ease-in forwards;
+}
+
+.random-confetti-piece:nth-child(3n) {
+    background: #f3a88f;
+}
+
+.random-confetti-piece:nth-child(3n + 1) {
+    background: #73c9d6;
+}
+
+@keyframes random-confetti-fall {
+    0% {
+        opacity: 0;
+        transform: translateY(0) rotate(0deg);
+    }
+    15% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(180px) rotate(320deg);
+    }
 }
 
 .random-region-result {
@@ -262,10 +318,12 @@
     font-size: 14px;
 }
 
+/* PC 4열 × 2줄(최대 8곳). 좁아지면 아래 미디어쿼리에서 3 → 2 → 1열로 줄어든다. */
 .random-destination-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    column-gap: 26px;
+    row-gap: 32px;
 }
 
 .random-destination-card {
@@ -288,7 +346,7 @@
 
 .random-destination-image-wrap {
     overflow: hidden;
-    aspect-ratio: 4 / 3;
+    aspect-ratio: 16 / 11;
     background: #e7f1f3;
 }
 
@@ -307,7 +365,7 @@
     display: flex;
     flex: 1;
     flex-direction: column;
-    padding: 20px;
+    padding: 15px 16px 14px;
 }
 
 .random-destination-location {
@@ -317,46 +375,99 @@
 }
 
 .random-destination-name {
-    margin-top: 7px;
+    margin-top: 5px;
     color: #173e44;
-    font-size: 20px;
-    line-height: 1.35;
+    font-size: 19px;
+    line-height: 1.32;
     letter-spacing: -0.02em;
 }
 
 .random-destination-description {
     display: -webkit-box;
     overflow: hidden;
-    margin-top: 10px;
+    margin-top: 7px;
     color: #617d82;
-    line-height: 1.6;
+    font-size: 14px;
+    line-height: 1.55;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 3;
 }
 
 .random-destination-cta {
     margin-top: auto;
-    padding-top: 18px;
+    padding-top: 12px;
     color: #087f7c;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 800;
 }
 
+/* 두 버튼이 같은 폭·높이를 갖도록 2열 그리드로 배치한다 */
+.random-destinations-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+    justify-content: center;
+    gap: 8px;
+    width: min(100%, 360px);
+    margin: 24px auto 0;
+}
+
+/* 다시 뽑기: 작은 중립 outline 버튼 */
 .random-redraw-button {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 150px;
-    min-height: 46px;
-    margin: 28px auto 0;
-    padding: 10px 18px;
-    border: 1px solid #b8d9dc;
-    border-radius: 12px;
+    min-height: 34px;
+    margin: 0;
+    padding: 6px 12px;
+    border: 1px solid #d5dee0;
+    border-radius: 8px;
     background: #fff;
-    color: #356b71;
+    color: #5b7276;
     font: inherit;
-    font-weight: 700;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
     cursor: pointer;
+}
+
+.random-redraw-button:hover {
+    background: #f6f9f9;
+    border-color: #c2d1d4;
+}
+
+/* 결과 지역으로 필터된 여행지 목록으로 이동 (primary, 컴팩트하게) */
+.random-all-destinations-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 34px;
+    padding: 6px 12px;
+    border: 1px solid #087f7c;
+    border-radius: 8px;
+    background: #087f7c;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    text-align: center;
+    text-decoration: none;
+    transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.random-all-destinations-link:hover {
+    background: #066b68;
+    border-color: #066b68;
+}
+
+.random-all-destinations-link:focus-visible {
+    outline: 3px solid #73c9d6;
+    outline-offset: 3px;
+}
+
+.random-all-destinations-arrow {
+    font-size: 14px;
+    line-height: 1;
 }
 
 .random-message {
@@ -381,6 +492,12 @@
 .random-message.is-error {
     border-color: #f2c9bf;
     background: #fff9f6;
+}
+
+@media (max-width: 1180px) {
+    .random-destination-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
 }
 
 @media (max-width: 900px) {
@@ -466,7 +583,8 @@
     }
 
     .random-destination-card,
-    .random-redraw-button {
+    .random-redraw-button,
+    .random-all-destinations-link {
         width: 100%;
     }
 }
@@ -482,5 +600,16 @@
     .random-destination-card:hover,
     .random-destination-card:hover .random-destination-image {
         transform: none;
+    }
+
+    /* 등장 효과와 축하 효과는 끄고 결과만 바로 보여준다 */
+    .random-result {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
+
+    .random-confetti {
+        display: none;
     }
 }
