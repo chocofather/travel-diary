@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
+
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/diary.css">
+  <script src="/js/diary-canvas-drag.js" defer></script>
+  <script src="/js/diary-page-flip.js" defer></script>
+  <script src="/js/diary-photo-picker.js" defer></script>
+</th:block>
+
+<th:block th:fragment="body">
+  <section class="diary-detail-page" aria-labelledby="diary-detail-title">
+    <header class="diary-detail-header">
+      <a class="diary-detail-back" th:href="@{/diaries}">← 나의 여행일기로</a>
+      <h1 id="diary-detail-title" th:text="${diary.title}">여행일기 제목</h1>
+      <p class="diary-detail-meta">
+        <time th:text="|${diary.startDate} ~ ${diary.endDate}|">2026-08-01 ~ 2026-08-05</time>
+        <span aria-hidden="true">·</span>
+        <span th:text="|전체 ${#lists.size(diaryPages)}장|">전체 0장</span>
+      </p>
+
+      <!-- 다이어리 자체 관리 액션 -->
+      <div class="diary-detail-actions">
+        <a class="diary-detail-action" th:href="@{/diaries/{id}/edit(id=${diary.id})}">다이어리 설정</a>
+        <form th:action="@{/diaries/{id}/delete(id=${diary.id})}" method="post"
+              onsubmit="return confirm('이 여행일기를 삭제하면 모든 페이지와 사진이 함께 삭제됩니다. 삭제하시겠습니까?');">
+          <button type="submit" class="diary-detail-action is-danger">다이어리 삭제</button>
+        </form>
+      </div>
+    </header>
+
+    <p class="diary-flash-message" th:if="${diaryMessage}" th:text="${diaryMessage}"
+       role="status">새 페이지가 추가되었습니다.</p>
+    <p class="diary-form-error" th:if="${diaryPageError}" th:text="${diaryPageError}"
+       role="alert">입력값을 확인해 주세요.</p>
+
+    <!-- 새 페이지: 날짜와 배경만 고르고 순서는 서버가 정한다 -->
+    <form class="diary-page-form" th:action="@{/diaries/{id}/pages(id=${diary.id})}" method="post">
+      <div class="diary-page-form-field">
+        <label for="diary-page-date">페이지 날짜</label>
+        <input type="date" id="diary-page-date" name="pageDate" required
+               th:attr="min=${diary.startDate},max=${diary.endDate}"
+               th:value="${diary.startDate}" />
+      </div>
+      <div class="diary-page-form-field">
+        <label for="diary-page-background">페이지 배경</label>
+        <select id="diary-page-background" name="backgroundType">
+          <option value="PLAIN">무지</option>
+          <option value="LINED">줄노트</option>
+          <option value="GRID">모눈</option>
+          <option value="DOT">도트</option>
+        </select>
+      </div>
+      <button type="submit" class="diary-page-add-button">새 페이지 추가</button>
+    </form>
+
+    <!-- 펼친 공책: 왼쪽 페이지 / 중앙 제본선 / 오른쪽 페이지 -->
+    <div class="diary-book-spread">
+      <article class="diary-sheet diary-sheet-left"
+               th:classappend="${leftPage != null and leftPage.backgroundType != null}
+                               ? ' diary-sheet-bg-' + ${#strings.toLowerCase(leftPage.backgroundType)} : ''">
+        <th:block th:if="${leftPage != null}">
+          <div class="diary-sheet-head"
+               th:replace="~{diary/detail :: sheetHead(${leftPage})}"></div>
+          <div class="diary-sheet-body"
+               th:replace="~{diary/detail :: sheetBody(${leftPage}, ${leftElements})}"></div>
+          <p class="diary-sheet-number" th:text="${leftPage.pageOrder}">1</p>
+        </th:block>
+
+        <!-- 아직 페이지가 한 장도 없는 다이어리. 위의 폼으로 첫 장을 만든다. -->
+        <div class="diary-sheet-empty" th:if="${leftPage == null}">
+          <p class="diary-sheet-empty-title">아직 작성한 페이지가 없습니다.</p>
+          <p class="diary-sheet-empty-text">여행의 첫 장을 남겨보세요.</p>
+        </div>
+      </article>
+
+      <div class="diary-book-gutter" aria-hidden="true"></div>
+
+      <article class="diary-sheet diary-sheet-right"
+               th:classappend="${rightPage != null and rightPage.backgroundType != null}
+                               ? ' diary-sheet-bg-' + ${#strings.toLowerCase(rightPage.backgroundType)} : ''">
+        <th:block th:if="${rightPage != null}">
+          <div class="diary-sheet-head"
+               th:replace="~{diary/detail :: sheetHead(${rightPage})}"></div>
+          <div class="diary-sheet-body"
+               th:replace="~{diary/detail :: sheetBody(${rightPage}, ${rightElements})}"></div>
+          <p class="diary-sheet-number" th:text="${rightPage.pageOrder}">2</p>
+        </th:block>
+        <!-- 오른쪽 장이 아직 없으면 빈 종이로 둔다 -->
+      </article>
+    </div>
+
+    <!-- 펼침 단위 이동. 현재 위치는 spread 쿼리 파라미터로만 관리한다. -->
+    <nav class="diary-spread-nav" th:if="${!#lists.isEmpty(diaryPages)}" aria-label="페이지 이동">
+      <a th:if="${hasPreviousSpread}" class="diary-spread-button" data-flip="previous"
+         th:href="@{/diaries/{id}(id=${diary.id},spread=${currentSpread - 1})}">← 이전</a>
+      <span th:unless="${hasPreviousSpread}" class="diary-spread-button is-disabled"
+            aria-disabled="true">← 이전</span>
+
+      <span class="diary-spread-position"
+            th:text="${rightPage != null}
+                     ? |${leftPage.pageOrder}-${rightPage.pageOrder} / 전체 ${#lists.size(diaryPages)}장|
+                     : |${leftPage.pageOrder} / 전체 ${#lists.size(diaryPages)}장|">1-2 / 전체 6장</span>
+
+      <a th:if="${hasNextSpread}" class="diary-spread-button" data-flip="next"
+         th:href="@{/diaries/{id}(id=${diary.id},spread=${currentSpread + 1})}">다음 →</a>
+      <span th:unless="${hasNextSpread}" class="diary-spread-button is-disabled"
+            aria-disabled="true">다음 →</span>
+    </nav>
+  </section>
+</th:block>
+
+<!-- 한 장의 머리말: 날짜/페이지 액션 한 줄 + 그 아래 작은 편집 툴바 -->
+<div th:fragment="sheetHead(page)" class="diary-sheet-head">
+  <div class="diary-sheet-head-row">
+    <time class="diary-sheet-date" th:text="${page.pageDate}">2026-08-01</time>
+
+    <!-- 페이지 설정/삭제는 같은 높이·같은 크기의 한 묶음으로 둔다 -->
+    <div class="diary-page-actions">
+      <details class="diary-page-settings">
+        <summary class="diary-page-action">페이지 설정</summary>
+        <form th:action="@{/diaries/{diaryId}/pages/{pageId}/update
+                          (diaryId=${diary.id},pageId=${page.id})}" method="post">
+          <input type="hidden" name="spread" th:value="${currentSpread}" />
+          <label>
+            <span>날짜</span>
+            <input type="date" name="pageDate" required
+                   th:attr="min=${diary.startDate},max=${diary.endDate}"
+                   th:value="${page.pageDate}" />
+          </label>
+          <label>
+            <span>배경</span>
+            <select name="backgroundType">
+              <option value="PLAIN" th:selected="${page.backgroundType == 'PLAIN'}">무지</option>
+              <option value="LINED" th:selected="${page.backgroundType == 'LINED'}">줄노트</option>
+              <option value="GRID" th:selected="${page.backgroundType == 'GRID'}">모눈</option>
+              <option value="DOT" th:selected="${page.backgroundType == 'DOT'}">도트</option>
+            </select>
+          </label>
+          <div class="diary-text-edit-actions">
+            <button type="submit" class="diary-text-action is-primary">저장</button>
+          </div>
+        </form>
+      </details>
+
+      <form th:action="@{/diaries/{diaryId}/pages/{pageId}/delete
+                        (diaryId=${diary.id},pageId=${page.id})}"
+            method="post"
+            onsubmit="return confirm('이 페이지와 페이지의 글·사진이 모두 삭제됩니다. 삭제하시겠습니까?');">
+        <input type="hidden" name="spread" th:value="${currentSpread}" />
+        <button type="submit" class="diary-page-action is-danger">페이지 삭제</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 페이지 편집 툴바: 글쓰기 / 사진 -->
+  <div class="diary-sheet-toolbar">
+    <details class="diary-text-add">
+      <summary class="diary-tool-button">
+        <span class="diary-tool-icon" aria-hidden="true">T</span>글쓰기
+      </summary>
+      <form th:action="@{/diaries/{diaryId}/pages/{pageId}/elements/text
+                        (diaryId=${diary.id},pageId=${page.id})}" method="post">
+        <input type="hidden" name="spread" th:value="${currentSpread}" />
+        <textarea name="textContent" rows="3" maxlength="2000" required
+                  placeholder="이 날의 기록을 남겨보세요."></textarea>
+        <div class="diary-text-edit-actions">
+          <button type="submit" class="diary-text-action is-primary">남기기</button>
+        </div>
+      </form>
+    </details>
+
+    <!-- 사진은 파일을 고르면 이 폼이 그대로 전송된다 (기존 PHOTO 생성 경로 재사용) -->
+    <form class="diary-photo-add"
+          th:action="@{/diaries/{diaryId}/pages/{pageId}/elements/photo
+                      (diaryId=${diary.id},pageId=${page.id})}"
+          method="post" enctype="multipart/form-data">
+      <input type="hidden" name="spread" th:value="${currentSpread}" />
+      <input type="file" class="diary-photo-input" name="image" accept="image/*" required
+             th:id="|diary-photo-input-${page.id}|" />
+      <label class="diary-tool-button" th:for="|diary-photo-input-${page.id}|">
+        <span class="diary-tool-icon" aria-hidden="true">▣</span>사진
+      </label>
+      <span class="diary-photo-status" role="status" hidden>올리는 중…</span>
+    </form>
+  </div>
+</div>
+
+<!-- 한 장의 본문: 저장된 글과 글쓰기 액션. 왼쪽/오른쪽 장이 같은 구조를 쓴다. -->
+<div th:fragment="sheetBody(page, elements)" class="diary-sheet-body">
+  <!-- 자유배치 캔버스. 저장된 상대 좌표(0~1)를 % 로 그대로 옮긴다. -->
+  <div class="diary-canvas">
+    <th:block th:each="element : ${elements}">
+      <!-- 글 -->
+      <article class="diary-canvas-item diary-canvas-text"
+               th:if="${element.elementType == 'TEXT'}"
+               th:data-element-id="${element.id}"
+               th:data-element-type="${element.elementType}"
+               th:data-position-x="${element.positionX}"
+               th:data-position-y="${element.positionY}"
+               th:data-width="${element.width}"
+               th:data-height="${element.height}"
+               th:data-rotation="${element.rotation}"
+               th:data-position-url="@{/diaries/{diaryId}/pages/{pageId}/elements/{elementId}/position
+                                       (diaryId=${diary.id},pageId=${page.id},elementId=${element.id})}"
+               th:data-size-url="@{/diaries/{diaryId}/pages/{pageId}/elements/{elementId}/size
+                                   (diaryId=${diary.id},pageId=${page.id},elementId=${element.id})}"
+               th:data-rotation-url="@{/diaries/{diaryId}/pages/{pageId}/elements/{elementId}/rotation
+                                       (diaryId=${diary.id},pageId=${page.id},elementId=${element.id})}"
+               th:data-layer-url="@{/diaries/{diaryId}/pages/{pageId}/elements/{elementId}/layer
+                                    (diaryId=${diary.id},pageId=${page.id},elementId=${element.id})}"
+               th:style="|left:${element.positionX * 100}%;
+                          top:${element.positionY * 100}%;
+                          width:${element.width * 100}%;
+                          height:${element.height * 100}%;
+                          transform:rotate(${element.rotation}deg);
+                          z-index:${element.zIndex};|">
+        <p class="diary-text-content" th:text="${element.textContent}">여행 기록</p>
+
+        <div class="diary-text-actions">
+          <!-- details/summary 로 열고 닫아 별도 스크립트 없이 인라인 수정 -->
+          <details class="diary-text-edit">
+            <summary>수정</summary>
+            <form th:action="@{/diaries/{diaryId}/pages/{pageId}/elements/{elementId}/text
+                              (diaryId=${diary.id},pageId=${page.id},elementId=${element.id})}"
+                  method="post">
+              <input type="hidden" name="spread" th:value="${currentSpread}" />
+              <textarea name="textContent" rows="3" maxlength="2000" required
+                        th:text="${element.textContent}"></textarea>
+              <div class="diary-text-edit-actions">
+                <button type="submit" class="diary-text-action is-primary">저장</button>
+              </div>
+            </form>
+          </details>
+
+          <form th:action="@{/diaries/{diaryId}/pages/{pageId}/elements/{elementId}/delete
+                            (diaryId=${diary.id},pageId=${page.id},elementId=${element.id})}"
+                method="post"
+                onsubmit="return confirm('이 글을 삭제하시겠습니까?');">
+            <input type="hidden" name="spread" th:value="${currentSpread}" />
+            <button type="submit" class="diary-text-action">삭제</button>
+          </form>
+        </div>
+
+        <!-- 선택했을 때만 보이는 조작점: 상단 중앙 회전 / 우측 하단 크기 -->
+        <button type="button" class="diary-rotate-handle" aria-label="회전"></button>
+        <button type="button" class="diary-resize-handle" aria-label="크기 조절"></button>
+
+        <!-- 선택했을 때만 보이는 겹침 순서 액션 -->
+        <div class="diary-layer-actions">
+          <button type="button" class="diary-layer-action" data-layer-direction="BACKWARD">뒤로</button>
+          <button type="button" class="diary-layer-action" data-layer-direction="FORWARD">앞으로</button>
+        </div>
+      </article>
+
+      <!-- 사진 -->
+      <figure class="diary-canvas-item diary-canvas-photo diary-photo"
+              th:if="${element.elementType == 'PHOTO'}"
+              th:data-element-id="${element.id}"
+              th:data-element-type="${element.elementType}"
+              th:data-position-x="${element.positionX}"
+              th:data-position-y="${element.positionY}"
+              th:data-width="${element.width}"
+              th:data-height="${element.height}"
+              th:data-rotation="${element.rotation}"
+              th:data-position-url="@{/diaries/{diaryId}/pages/{pageId}/elements/{elementId}/position
+                                      (diaryId=${diary.id},pageId=${page.id},elementId=${element.id})}"
+              th:data-size-url="@{/diaries/{diaryId}/pages/{pageId}/elements/{elementId}/size
+                                  (diaryId=${diary.id},pageId=${page.id},elementId=${element.id})}"
+              th:data-rotation-url="@{/diaries/{diaryId}/pages/{pageId}/elements/{elementId}/rotation
+                                      (diaryId=${diary.id},pageId=${page.id},elementId=${element.id})}"
+              th:data-layer-url="@{/diaries/{diaryId}/pages/{pageId}/elements/{elementId}/layer
+                                   (diaryId=${diary.id},pageId=${page.id},elementId=${element.id})}"
+              th:style="|left:${element.positionX * 100}%;
+                         top:${element.positionY * 100}%;
+                         width:${element.width * 100}%;
+                         height:${element.height * 100}%;
+                         transform:rotate(${element.rotation}deg);
+                         z-index:${element.zIndex};|">
+        <img th:src="${element.imageUrl}" alt="여행일기 사진" loading="lazy" />
+        <form class="diary-photo-delete"
+              th:action="@{/diaries/{diaryId}/pages/{pageId}/elements/{elementId}/photo/delete
+                          (diaryId=${diary.id},pageId=${page.id},elementId=${element.id})}"
+              method="post"
+              onsubmit="return confirm('이 사진을 삭제하시겠습니까?');">
+          <input type="hidden" name="spread" th:value="${currentSpread}" />
+          <button type="submit" class="diary-text-action">삭제</button>
+        </form>
+
+        <!-- 선택했을 때만 보이는 조작점: 상단 중앙 회전 / 우측 하단 크기 -->
+        <button type="button" class="diary-rotate-handle" aria-label="회전"></button>
+        <button type="button" class="diary-resize-handle" aria-label="크기 조절"></button>
+
+        <!-- 선택했을 때만 보이는 겹침 순서 액션 -->
+        <div class="diary-layer-actions">
+          <button type="button" class="diary-layer-action" data-layer-direction="BACKWARD">뒤로</button>
+          <button type="button" class="diary-layer-action" data-layer-direction="FORWARD">앞으로</button>
+        </div>
+      </figure>
+    </th:block>
+  </div>
+
+  <!-- 글/사진 추가 액션은 페이지 상단 편집 툴바(sheetHead)로 옮겼다 -->
+</div>
+</html>

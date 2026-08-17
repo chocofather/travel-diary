@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
+
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/diary.css">
+</th:block>
+
+<th:block th:fragment="body">
+  <section class="diary-form-page" aria-labelledby="diary-form-title">
+    <header class="diary-form-header">
+      <a class="diary-detail-back" th:href="@{/diaries/{id}(id=${diaryId})}">← 여행일기로</a>
+      <h1 id="diary-form-title">여행일기 수정</h1>
+      <p class="diary-list-subtitle">제목과 여행 기간, 표지를 바꿀 수 있어요.</p>
+    </header>
+
+    <p class="diary-form-error" th:if="${diaryError}" th:text="${diaryError}" role="alert">
+      입력값을 확인해 주세요.
+    </p>
+
+    <form class="diary-form" th:action="@{/diaries/{id}/update(id=${diaryId})}" method="post"
+          enctype="multipart/form-data" th:object="${diaryForm}">
+      <div class="diary-form-field">
+        <label for="diary-title">제목</label>
+        <input type="text" id="diary-title" name="title" th:value="*{title}"
+               maxlength="150" required
+               placeholder="여행일기 제목을 입력해 주세요." />
+      </div>
+
+      <div class="diary-form-row">
+        <div class="diary-form-field">
+          <label for="diary-start-date">여행 시작일</label>
+          <input type="date" id="diary-start-date" name="startDate"
+                 th:value="*{startDate}" required />
+        </div>
+        <div class="diary-form-field">
+          <label for="diary-end-date">여행 종료일</label>
+          <input type="date" id="diary-end-date" name="endDate"
+                 th:value="*{endDate}" required />
+        </div>
+      </div>
+
+      <div class="diary-form-field">
+        <label for="diary-cover-image">대표 이미지</label>
+        <img class="diary-form-cover-preview"
+             th:if="${currentCoverImageUrl != null and !#strings.isEmpty(currentCoverImageUrl)}"
+             th:src="${currentCoverImageUrl}" alt="현재 표지" />
+        <input type="file" id="diary-cover-image" name="coverImage" accept="image/*" />
+        <span class="diary-form-hint">새로 선택하지 않으면 지금 표지가 그대로 유지됩니다.</span>
+      </div>
+
+      <div class="diary-form-actions">
+        <a class="diary-form-cancel" th:href="@{/diaries/{id}(id=${diaryId})}">취소</a>
+        <button type="submit" class="diary-form-submit">저장</button>
+      </div>
+    </form>
+  </section>
+</th:block>
+</html>

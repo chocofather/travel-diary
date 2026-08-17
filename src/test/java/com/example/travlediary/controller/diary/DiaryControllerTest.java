@@ -1,0 +1,934 @@
+package com.example.travlediary.controller.diary;
+
+import com.example.travlediary.config.CustomLoginSuccessHandler;
+import com.example.travlediary.config.CustomLogoutSuccessHandler;
+import com.example.travlediary.config.SecurityConfig;
+import com.example.travlediary.dto.DiaryListItemDto;
+import com.example.travlediary.model.Diary;
+import com.example.travlediary.model.DiaryElement;
+import com.example.travlediary.model.DiaryPage;
+import com.example.travlediary.repository.user.UserMapper;
+import com.example.travlediary.security.CustomUserDetails;
+import com.example.travlediary.service.diary.DiaryElementService;
+import com.example.travlediary.service.diary.DiaryPageService;
+import com.example.travlediary.service.diary.DiaryService;
+import com.example.travlediary.service.file.FileUploadService;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpStatus;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.time.LocalDate;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
+
+@WebMvcTest(DiaryController.class)
+@Import(SecurityConfig.class)
+class DiaryControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockitoBean
+    private DiaryService diaryService;
+    @MockitoBean
+    private DiaryPageService diaryPageService;
+    @MockitoBean
+    private DiaryElementService diaryElementService;
+    @MockitoBean
+    private FileUploadService fileUploadService;
+    @MockitoBean
+    private CustomLoginSuccessHandler customLoginSuccessHandler;
+    @MockitoBean
+    private CustomLogoutSuccessHandler customLogoutSuccessHandler;
+    @MockitoBean
+    private UserMapper userMapper;
+    @MockitoBean
+    private CustomUserDetails userDetails;
+
+    @Test
+    void guestIsSentToLogin() throws Exception {
+        mockMvc.perform(get("/diaries"))
+                .andExpect(status().is3xxRedirection());
+    }
+
+    @Test
+    void listShowsOnlyTheCurrentUsersDiaries() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiaryList(7L)).thenReturn(List.of(item()));
+
+        mockMvc.perform(get("/diaries")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andExpect(view().name("diary/list"))
+                .andExpect(content().string(containsString("나의 여행일기")))
+                .andExpect(content().string(containsString("여름 제주 여행")))
+                .andExpect(content().string(containsString("3장")));
+
+        verify(diaryService).getMyDiaryList(7L);
+    }
+
+    @Test
+    void emptyListShowsAGuideMessage() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiaryList(7L)).thenReturn(List.of());
+
+        mockMvc.perform(get("/diaries")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("아직 작성한 여행일기가 없습니다.")));
+    }
+
+    @Test
+    void detailOpensTheOwnedDiaryWithItsPagesInOrder() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-01")));
+
+        mockMvc.perform(get("/diaries/10")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andExpect(view().name("diary/detail"))
+                .andExpect(content().string(containsString("여름 제주 여행")))
+                .andExpect(content().string(containsString("전체 1장")))
+                .andExpect(content().string(containsString("diary-book-spread")))
+                .andExpect(content().string(containsString("나의 여행일기로")));
+
+        // 소유권은 서비스에서 확인한다 (diaryId 만으로 조회하지 않는다)
+        verify(diaryService).getMyDiary(10L, 7L);
+        verify(diaryPageService).getPages(10L, 7L);
+    }
+
+    @Test
+    void detailOfAnotherUsersDiaryIsNotFound() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(99L, 7L)).thenThrow(
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "다이어리를 찾을 수 없습니다."));
+
+        mockMvc.perform(get("/diaries/99")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void detailWithoutPagesShowsTheEmptySheetMessage() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of());
+
+        mockMvc.perform(get("/diaries/10")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("아직 작성한 페이지가 없습니다.")))
+                .andExpect(content().string(containsString("여행의 첫 장을 남겨보세요.")));
+    }
+
+    @Test
+    void detailShowsTwoPagesPerSpreadAndMovesWithTheSpreadParameter() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(
+                page(1, "2026-08-01"), page(2, "2026-08-01"),
+                page(3, "2026-08-02"), page(4, "2026-08-02"),
+                page(5, "2026-08-03")));
+
+        // 두 번째 펼침: 3,4 장
+        mockMvc.perform(get("/diaries/10").param("spread", "1")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("currentSpread", 1))
+                .andExpect(model().attribute("totalSpreads", 3))
+                .andExpect(model().attribute("hasPreviousSpread", true))
+                .andExpect(model().attribute("hasNextSpread", true))
+                .andExpect(content().string(containsString("3-4 / 전체 5장")))
+                .andExpect(content().string(containsString("spread=0")))
+                .andExpect(content().string(containsString("spread=2")));
+
+        // 마지막 펼침: 한 장만 남으면 오른쪽은 빈 종이
+        mockMvc.perform(get("/diaries/10").param("spread", "2")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("rightPage", org.hamcrest.Matchers.nullValue()))
+                .andExpect(model().attribute("hasNextSpread", false))
+                .andExpect(content().string(containsString("5 / 전체 5장")));
+    }
+
+    @Test
+    void outOfRangeSpreadIsClampedInsteadOfFailing() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L))
+                .thenReturn(List.of(page(1, "2026-08-01"), page(2, "2026-08-01")));
+
+        mockMvc.perform(get("/diaries/10").param("spread", "-5")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("currentSpread", 0));
+
+        mockMvc.perform(get("/diaries/10").param("spread", "99")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("currentSpread", 0))
+                .andExpect(model().attribute("hasNextSpread", false));
+    }
+
+    @Test
+    void detailOffersTheAddPageFormLimitedToTheTravelPeriod() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of());
+
+        mockMvc.perform(get("/diaries/10")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("새 페이지 추가")))
+                .andExpect(content().string(containsString("action=\"/diaries/10/pages\"")))
+                .andExpect(content().string(containsString("min=\"2026-08-01\"")))
+                .andExpect(content().string(containsString("max=\"2026-08-05\"")))
+                // 배경은 한국어 라벨로 보여준다
+                .andExpect(content().string(containsString("무지")))
+                .andExpect(content().string(containsString("줄노트")))
+                .andExpect(content().string(containsString("모눈")))
+                .andExpect(content().string(containsString("도트")))
+                // 순서는 사용자가 입력하지 않는다
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        containsString("name=\"pageOrder\""))));
+    }
+
+    @Test
+    void addPageDelegatesToTheServiceAndRedirectsBackToTheDiary() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryPageService.append(eq(10L), eq(7L), any(DiaryPage.class)))
+                .thenReturn(page(1, "2026-08-01"));
+
+        mockMvc.perform(post("/diaries/10/pages")
+                        .param("pageDate", "2026-08-02")
+                        .param("backgroundType", "LINED")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/diaries/10"))
+                .andExpect(flash().attribute("diaryMessage", "새 페이지가 추가되었습니다."));
+
+        ArgumentCaptor<DiaryPage> captor = ArgumentCaptor.forClass(DiaryPage.class);
+        verify(diaryPageService).append(eq(10L), eq(7L), captor.capture());
+        assertThat(captor.getValue().getPageDate()).isEqualTo(LocalDate.of(2026, 8, 2));
+        assertThat(captor.getValue().getBackgroundType()).isEqualTo("LINED");
+        // 순서는 서비스가 정한다 (요청 값 사용 안 함)
+        assertThat(captor.getValue().getPageOrder()).isNull();
+    }
+
+    @Test
+    void addPageValidationFailureShowsTheMessageOnTheDiary() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryPageService.append(eq(10L), eq(7L), any(DiaryPage.class))).thenThrow(
+                new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "페이지 날짜는 여행 기간 안에서 선택해 주세요."));
+
+        mockMvc.perform(post("/diaries/10/pages")
+                        .param("pageDate", "2026-09-09")
+                        .param("backgroundType", "PLAIN")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/diaries/10"))
+                .andExpect(flash().attribute(
+                        "diaryPageError", "페이지 날짜는 여행 기간 안에서 선택해 주세요."));
+    }
+
+    @Test
+    void detailRendersTextAndPhotoElementsOfTheOpenedPagesOnly() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L))
+                .thenReturn(List.of(page(1, "2026-08-01"), page(2, "2026-08-02")));
+        when(diaryElementService.getElements(10L, 1L, 7L)).thenReturn(List.of(
+                textElement(100L, "첫째 날 기록"),
+                photoElement(101L, "/uploads/diary/photo.jpg")));
+        when(diaryElementService.getElements(10L, 2L, 7L)).thenReturn(List.of());
+
+        mockMvc.perform(get("/diaries/10")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("첫째 날 기록")))
+                .andExpect(content().string(containsString("/uploads/diary/photo.jpg")))
+                // 글/사진 추가는 페이지 상단 편집 툴바로 노출된다
+                .andExpect(content().string(containsString("글쓰기")))
+                .andExpect(content().string(containsString("diary-photo-input")));
+
+        // 펼친 두 장만 조회한다
+        verify(diaryElementService).getElements(10L, 1L, 7L);
+        verify(diaryElementService).getElements(10L, 2L, 7L);
+    }
+
+    @Test
+    void elementsAreDrawnOnTheCanvasWithTheirStoredRelativeGeometry() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-01")));
+
+        DiaryElement text = textElement(100L, "기록");
+        text.setPositionX(new java.math.BigDecimal("0.25000"));
+        text.setPositionY(new java.math.BigDecimal("0.40000"));
+        text.setWidth(new java.math.BigDecimal("0.30000"));
+        text.setHeight(new java.math.BigDecimal("0.20000"));
+        text.setRotation(new java.math.BigDecimal("-4.50"));
+        text.setZIndex(2);
+        when(diaryElementService.getElements(10L, 1L, 7L)).thenReturn(List.of(text));
+
+        String body = mockMvc.perform(get("/diaries/10")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).contains("diary-canvas");
+        // 상대값(0~1)이 % 로 그대로 옮겨진다
+        assertThat(body).contains("left:25.00000%");
+        assertThat(body).contains("top:40.00000%");
+        assertThat(body).contains("width:30.00000%");
+        assertThat(body).contains("height:20.00000%");
+        assertThat(body).contains("rotate(-4.50deg)");
+        assertThat(body).contains("z-index:2");
+    }
+
+    @Test
+    void diaryEditFormIsPrefilledForTheOwner() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        Diary existing = diary();
+        existing.setCoverImageUrl("/uploads/diary-covers/old.jpg");
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(existing);
+
+        mockMvc.perform(get("/diaries/10/edit")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andExpect(view().name("diary/edit"))
+                .andExpect(content().string(containsString("여름 제주 여행")))
+                .andExpect(content().string(containsString("/uploads/diary-covers/old.jpg")))
+                .andExpect(content().string(containsString("action=\"/diaries/10/update\"")));
+    }
+
+    @Test
+    void diaryUpdateKeepsTheOldCoverWhenNoNewFileIsChosen() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        Diary existing = diary();
+        existing.setCoverImageUrl("/uploads/diary-covers/old.jpg");
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(existing);
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-02")));
+
+        mockMvc.perform(multipart("/diaries/10/update")
+                        .param("title", "제주 여행 다시")
+                        .param("startDate", "2026-08-01")
+                        .param("endDate", "2026-08-05")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/diaries/10"));
+
+        ArgumentCaptor<Diary> captor = ArgumentCaptor.forClass(Diary.class);
+        verify(diaryService).update(eq(10L), eq(7L), captor.capture());
+        assertThat(captor.getValue().getTitle()).isEqualTo("제주 여행 다시");
+        assertThat(captor.getValue().getCoverImageUrl()).isEqualTo("/uploads/diary-covers/old.jpg");
+        // 표지를 바꾸지 않았으므로 새 파일 저장도 없다
+        verify(fileUploadService, org.mockito.Mockito.never()).saveFile(any(), any());
+    }
+
+    @Test
+    void shrinkingThePeriodIsBlockedWhenAPageWouldFallOutside() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(
+                page(1, "2026-08-01"), page(2, "2026-08-05")));
+
+        mockMvc.perform(multipart("/diaries/10/update")
+                        .param("title", "여름 제주 여행")
+                        .param("startDate", "2026-08-02")
+                        .param("endDate", "2026-08-04")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andExpect(view().name("diary/edit"))
+                .andExpect(content().string(containsString("여행 기간 밖으로 밀려나는 페이지가 있어")));
+
+        verify(diaryService, org.mockito.Mockito.never())
+                .update(any(), any(), any(Diary.class));
+    }
+
+    @Test
+    void diaryDeleteCollectsCoverAndPhotoFilesBeforeRemovingTheRow() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        Diary existing = diary();
+        existing.setCoverImageUrl("/uploads/diary-covers/cover.jpg");
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(existing);
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-01")));
+        when(diaryElementService.getElements(10L, 1L, 7L)).thenReturn(List.of(
+                textElement(100L, "기록"),
+                photoElement(101L, "/uploads/diary-pages/a.jpg")));
+
+        mockMvc.perform(post("/diaries/10/delete")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/diaries"))
+                .andExpect(flash().attribute("diaryMessage", "여행일기가 삭제되었습니다."));
+
+        // 파일 경로를 모두 확보한 뒤 다이어리를 지운다
+        InOrder inOrder = org.mockito.Mockito.inOrder(diaryPageService, diaryElementService, diaryService);
+        inOrder.verify(diaryPageService).getPages(10L, 7L);
+        inOrder.verify(diaryElementService).getElements(10L, 1L, 7L);
+        inOrder.verify(diaryService).delete(10L, 7L);
+    }
+
+    @Test
+    void updatePageKeepsItsOrderAndChangesOnlyDateAndBackground() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        DiaryPage existing = page(3, "2026-08-02");
+        when(diaryPageService.getPage(10L, 3L, 7L)).thenReturn(existing);
+
+        mockMvc.perform(post("/diaries/10/pages/3/update")
+                        .param("pageDate", "2026-08-04")
+                        .param("backgroundType", "GRID")
+                        .param("pageOrder", "1")
+                        .param("spread", "1")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/diaries/10?spread=1"));
+
+        ArgumentCaptor<DiaryPage> captor = ArgumentCaptor.forClass(DiaryPage.class);
+        verify(diaryPageService).update(eq(10L), eq(3L), eq(7L), captor.capture());
+        assertThat(captor.getValue().getPageDate()).isEqualTo(LocalDate.of(2026, 8, 4));
+        assertThat(captor.getValue().getBackgroundType()).isEqualTo("GRID");
+        // 요청으로 넘어온 pageOrder(1) 가 아니라 기존 순서(3) 를 유지한다
+        assertThat(captor.getValue().getPageOrder()).isEqualTo(3);
+    }
+
+    @Test
+    void deletePageRemovesPhotoFilesAfterTheRowIsGone() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryElementService.getElements(10L, 3L, 7L)).thenReturn(List.of(
+                textElement(100L, "기록"),
+                photoElement(101L, "/uploads/diary-pages/a.jpg"),
+                photoElement(102L, "/uploads/diary-pages/b.jpg")));
+
+        mockMvc.perform(post("/diaries/10/pages/3/delete")
+                        .param("spread", "2")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/diaries/10?spread=2"));
+
+        // 사진 경로를 먼저 확보한 뒤 페이지를 지운다
+        InOrder inOrder = org.mockito.Mockito.inOrder(diaryElementService, diaryPageService);
+        inOrder.verify(diaryElementService).getElements(10L, 3L, 7L);
+        inOrder.verify(diaryPageService).delete(10L, 3L, 7L);
+    }
+
+    @Test
+    void pageUpdateValidationFailureShowsTheMessage() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryPageService.getPage(10L, 3L, 7L)).thenReturn(page(3, "2026-08-02"));
+        org.mockito.Mockito.doThrow(new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "페이지 날짜는 여행 기간 안에서 선택해 주세요."))
+                .when(diaryPageService).update(eq(10L), eq(3L), eq(7L), any(DiaryPage.class));
+
+        mockMvc.perform(post("/diaries/10/pages/3/update")
+                        .param("pageDate", "2026-09-09")
+                        .param("backgroundType", "PLAIN")
+                        .param("spread", "0")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(redirectedUrl("/diaries/10?spread=0"))
+                .andExpect(flash().attribute(
+                        "diaryPageError", "페이지 날짜는 여행 기간 안에서 선택해 주세요."));
+    }
+
+    @Test
+    void movingAnElementSavesOnlyItsPosition() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryElementService.move(eq(10L), eq(3L), eq(100L), eq(7L), any(), any()))
+                .thenReturn(textElement(100L, "기록"));
+
+        mockMvc.perform(post("/diaries/10/pages/3/elements/100/position")
+                        .param("positionX", "0.42000")
+                        .param("positionY", "0.15000")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isNoContent());
+
+        verify(diaryElementService).move(10L, 3L, 100L, 7L,
+                new java.math.BigDecimal("0.42000"), new java.math.BigDecimal("0.15000"));
+    }
+
+    @Test
+    void movingOutOfRangeReturnsAMessageInsteadOfAnErrorPage() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryElementService.move(eq(10L), eq(3L), eq(100L), eq(7L), any(), any()))
+                .thenThrow(new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "가로 위치가 허용 범위를 벗어났습니다."));
+
+        mockMvc.perform(post("/diaries/10/pages/3/elements/100/position")
+                        .param("positionX", "9")
+                        .param("positionY", "0")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(containsString("가로 위치가 허용 범위를 벗어났습니다.")));
+    }
+
+    @Test
+    void resizingAnElementSavesOnlyItsSize() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryElementService.resize(eq(10L), eq(3L), eq(100L), eq(7L), any(), any()))
+                .thenReturn(textElement(100L, "기록"));
+
+        mockMvc.perform(post("/diaries/10/pages/3/elements/100/size")
+                        .param("width", "0.45000")
+                        .param("height", "0.22000")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isNoContent());
+
+        verify(diaryElementService).resize(10L, 3L, 100L, 7L,
+                new java.math.BigDecimal("0.45000"), new java.math.BigDecimal("0.22000"));
+    }
+
+    @Test
+    void resizingOutOfRangeReturnsAMessageInsteadOfAnErrorPage() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryElementService.resize(eq(10L), eq(3L), eq(100L), eq(7L), any(), any()))
+                .thenThrow(new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "너비가 허용 범위를 벗어났습니다."));
+
+        mockMvc.perform(post("/diaries/10/pages/3/elements/100/size")
+                        .param("width", "3")
+                        .param("height", "0.3")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(containsString("너비가 허용 범위를 벗어났습니다.")));
+    }
+
+    @Test
+    void rotatingAnElementSavesOnlyItsRotation() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryElementService.rotate(eq(10L), eq(3L), eq(100L), eq(7L), any()))
+                .thenReturn(textElement(100L, "기록"));
+
+        mockMvc.perform(post("/diaries/10/pages/3/elements/100/rotation")
+                        .param("rotation", "-12.50")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isNoContent());
+
+        verify(diaryElementService).rotate(10L, 3L, 100L, 7L,
+                new java.math.BigDecimal("-12.50"));
+    }
+
+    @Test
+    void rotatingOutOfRangeReturnsAMessageInsteadOfAnErrorPage() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryElementService.rotate(eq(10L), eq(3L), eq(100L), eq(7L), any()))
+                .thenThrow(new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "회전 각도가 허용 범위를 벗어났습니다."));
+
+        mockMvc.perform(post("/diaries/10/pages/3/elements/100/rotation")
+                        .param("rotation", "720")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(containsString("회전 각도가 허용 범위를 벗어났습니다.")));
+    }
+
+    @Test
+    void layerChangeReturnsTheRenumberedOrder() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        DiaryElement first = textElement(100L, "기록");
+        first.setZIndex(0);
+        DiaryElement second = photoElement(101L, "/uploads/diary-pages/a.jpg");
+        second.setZIndex(1);
+        when(diaryElementService.changeLayer(10L, 3L, 100L, 7L, true))
+                .thenReturn(List.of(second, first));
+
+        mockMvc.perform(post("/diaries/10/pages/3/elements/100/layer")
+                        .param("direction", "FORWARD")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("\"id\":101")))
+                .andExpect(content().string(containsString("\"id\":100")));
+
+        verify(diaryElementService).changeLayer(10L, 3L, 100L, 7L, true);
+    }
+
+    @Test
+    void unknownLayerDirectionIsRejected() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+
+        mockMvc.perform(post("/diaries/10/pages/3/elements/100/layer")
+                        .param("direction", "SIDEWAYS")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isBadRequest());
+
+        verify(diaryElementService, org.mockito.Mockito.never())
+                .changeLayer(any(), any(), any(), any(), org.mockito.ArgumentMatchers.anyBoolean());
+    }
+
+    @Test
+    void canvasElementsCarryTheDragMetadata() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-01")));
+        when(diaryElementService.getElements(10L, 1L, 7L))
+                .thenReturn(List.of(textElement(100L, "기록")));
+
+        mockMvc.perform(get("/diaries/10")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString(
+                        "data-position-url=\"/diaries/10/pages/1/elements/100/position\"")))
+                .andExpect(content().string(containsString(
+                        "data-size-url=\"/diaries/10/pages/1/elements/100/size\"")))
+                .andExpect(content().string(containsString(
+                        "data-rotation-url=\"/diaries/10/pages/1/elements/100/rotation\"")))
+                .andExpect(content().string(containsString("data-position-x=\"0.00000\"")))
+                .andExpect(content().string(containsString("data-width=\"0.30000\"")))
+                .andExpect(content().string(containsString("data-rotation=\"0.00\"")))
+                .andExpect(content().string(containsString("diary-resize-handle")))
+                .andExpect(content().string(containsString("diary-rotate-handle")))
+                .andExpect(content().string(containsString(
+                        "data-layer-url=\"/diaries/10/pages/1/elements/100/layer\"")))
+                .andExpect(content().string(containsString("data-layer-direction=\"FORWARD\"")))
+                .andExpect(content().string(containsString("/js/diary-canvas-drag.js")));
+    }
+
+    @Test
+    void addTextKeepsTheCurrentSpread() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+
+        mockMvc.perform(post("/diaries/10/pages/3/elements/text")
+                        .param("textContent", "오늘의 기록")
+                        .param("spread", "1")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/diaries/10?spread=1"));
+
+        ArgumentCaptor<DiaryElement> captor = ArgumentCaptor.forClass(DiaryElement.class);
+        verify(diaryElementService).create(eq(10L), eq(3L), eq(7L), captor.capture());
+        assertThat(captor.getValue().getElementType()).isEqualTo("TEXT");
+        assertThat(captor.getValue().getTextContent()).isEqualTo("오늘의 기록");
+        assertThat(captor.getValue().getImageUrl()).isNull();
+        // 페이지는 경로 값으로 정해진다
+        assertThat(captor.getValue().getPageId()).isNull();
+    }
+
+    @Test
+    void blankTextShowsTheErrorOnTheDiary() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryElementService.create(eq(10L), eq(3L), eq(7L), any(DiaryElement.class)))
+                .thenThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "내용을 입력해 주세요."));
+
+        mockMvc.perform(post("/diaries/10/pages/3/elements/text")
+                        .param("textContent", "   ")
+                        .param("spread", "2")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/diaries/10?spread=2"))
+                .andExpect(flash().attribute("diaryPageError", "내용을 입력해 주세요."));
+    }
+
+    @Test
+    void updateTextKeepsGeometryAndRejectsPhotoElements() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        DiaryElement existing = textElement(100L, "예전 기록");
+        existing.setZIndex(3);
+        when(diaryElementService.getElement(10L, 3L, 100L, 7L)).thenReturn(existing);
+
+        mockMvc.perform(post("/diaries/10/pages/3/elements/100/text")
+                        .param("textContent", "고친 기록")
+                        .param("spread", "1")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(redirectedUrl("/diaries/10?spread=1"));
+
+        ArgumentCaptor<DiaryElement> captor = ArgumentCaptor.forClass(DiaryElement.class);
+        verify(diaryElementService).update(eq(10L), eq(3L), eq(100L), eq(7L), captor.capture());
+        assertThat(captor.getValue().getTextContent()).isEqualTo("고친 기록");
+        // 위치/겹침 값은 기존 요소 값을 그대로 유지한다
+        assertThat(captor.getValue().getZIndex()).isEqualTo(3);
+
+        // 사진 요소는 이 경로로 수정할 수 없다
+        when(diaryElementService.getElement(10L, 3L, 101L, 7L))
+                .thenReturn(photoElement(101L, "/uploads/diary/photo.jpg"));
+
+        mockMvc.perform(post("/diaries/10/pages/3/elements/101/text")
+                        .param("textContent", "바꿔치기")
+                        .param("spread", "0")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(flash().attribute("diaryPageError", "글 요소가 아닙니다."));
+        verify(diaryElementService, org.mockito.Mockito.never())
+                .update(eq(10L), eq(3L), eq(101L), eq(7L), any(DiaryElement.class));
+    }
+
+    @Test
+    void addPhotoStoresTheUploadedFileAsAPhotoElement() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(fileUploadService.saveFile(any(), eq("diary-pages")))
+                .thenReturn("/uploads/diary-pages/new.jpg");
+
+        mockMvc.perform(multipart("/diaries/10/pages/3/elements/photo")
+                        .file(new MockMultipartFile("image", "trip.jpg", "image/jpeg", new byte[]{1}))
+                        .param("spread", "1")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/diaries/10?spread=1"));
+
+        ArgumentCaptor<DiaryElement> captor = ArgumentCaptor.forClass(DiaryElement.class);
+        verify(diaryElementService).create(eq(10L), eq(3L), eq(7L), captor.capture());
+        assertThat(captor.getValue().getElementType()).isEqualTo("PHOTO");
+        assertThat(captor.getValue().getImageUrl()).isEqualTo("/uploads/diary-pages/new.jpg");
+        assertThat(captor.getValue().getTextContent()).isNull();
+    }
+
+    @Test
+    void photoWithoutFileShowsTheErrorAndDoesNotSaveAnything() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+
+        mockMvc.perform(multipart("/diaries/10/pages/3/elements/photo")
+                        .param("spread", "0")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(redirectedUrl("/diaries/10?spread=0"))
+                .andExpect(flash().attribute("diaryPageError", "사진을 선택해 주세요."));
+
+        verify(fileUploadService, org.mockito.Mockito.never()).saveFile(any(), any());
+        verify(diaryElementService, org.mockito.Mockito.never())
+                .create(any(), any(), any(), any());
+    }
+
+    @Test
+    void photoDeleteRemovesTheRowAndRejectsTextElements() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryElementService.getElement(10L, 3L, 101L, 7L))
+                .thenReturn(photoElement(101L, "/uploads/diary-pages/old.jpg"));
+
+        mockMvc.perform(post("/diaries/10/pages/3/elements/101/photo/delete")
+                        .param("spread", "1")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(redirectedUrl("/diaries/10?spread=1"));
+
+        verify(diaryElementService).delete(10L, 3L, 101L, 7L);
+
+        // 글 요소는 사진 삭제 경로로 지울 수 없다
+        when(diaryElementService.getElement(10L, 3L, 100L, 7L))
+                .thenReturn(textElement(100L, "기록"));
+
+        mockMvc.perform(post("/diaries/10/pages/3/elements/100/photo/delete")
+                        .param("spread", "0")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(flash().attribute("diaryPageError", "사진 요소가 아닙니다."));
+        verify(diaryElementService, org.mockito.Mockito.never()).delete(10L, 3L, 100L, 7L);
+    }
+
+    @Test
+    void deleteElementGoesThroughTheServiceAndKeepsTheSpread() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+
+        mockMvc.perform(post("/diaries/10/pages/3/elements/100/delete")
+                        .param("spread", "1")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/diaries/10?spread=1"));
+
+        verify(diaryElementService).delete(10L, 3L, 100L, 7L);
+    }
+
+    @Test
+    void newFormShowsTheDiaryCreationFields() throws Exception {
+        mockMvc.perform(get("/diaries/new")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andExpect(view().name("diary/new"))
+                .andExpect(content().string(containsString("새 여행일기")))
+                .andExpect(content().string(containsString("name=\"title\"")))
+                .andExpect(content().string(containsString("name=\"startDate\"")))
+                .andExpect(content().string(containsString("name=\"endDate\"")))
+                .andExpect(content().string(containsString("name=\"coverImage\"")))
+                .andExpect(content().string(containsString("maxlength=\"150\"")));
+    }
+
+    @Test
+    void createSavesWithTheCurrentUserAndRedirects() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.create(eq(7L), any(Diary.class))).thenReturn(new Diary());
+
+        mockMvc.perform(multipart("/diaries")
+                        .param("title", "여름 제주 여행")
+                        .param("startDate", "2026-08-01")
+                        .param("endDate", "2026-08-05")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/diaries"))
+                .andExpect(flash().attribute("diaryMessage", "여행일기가 만들어졌습니다."));
+
+        ArgumentCaptor<Diary> captor = ArgumentCaptor.forClass(Diary.class);
+        verify(diaryService).create(eq(7L), captor.capture());
+        assertThat(captor.getValue().getTitle()).isEqualTo("여름 제주 여행");
+        assertThat(captor.getValue().getStartDate()).isEqualTo(LocalDate.of(2026, 8, 1));
+        assertThat(captor.getValue().getEndDate()).isEqualTo(LocalDate.of(2026, 8, 5));
+        // 이미지를 고르지 않으면 표지는 비워 둔다 (목록에서 기본 표지 사용)
+        assertThat(captor.getValue().getCoverImageUrl()).isNull();
+        // 소유자는 요청 값이 아니라 로그인 사용자로 정해진다
+        assertThat(captor.getValue().getUserId()).isNull();
+    }
+
+    @Test
+    void validationFailureKeepsTheInputAndShowsTheMessage() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.create(eq(7L), any(Diary.class))).thenThrow(
+                new ResponseStatusException(HttpStatus.BAD_REQUEST, "여행 종료일은 시작일 이후여야 합니다."));
+
+        mockMvc.perform(multipart("/diaries")
+                        .param("title", "여름 제주 여행")
+                        .param("startDate", "2026-08-05")
+                        .param("endDate", "2026-08-01")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andExpect(view().name("diary/new"))
+                .andExpect(content().string(containsString("여행 종료일은 시작일 이후여야 합니다.")))
+                .andExpect(content().string(containsString("여름 제주 여행")));
+    }
+
+    private Diary diary() {
+        Diary diary = new Diary();
+        diary.setId(10L);
+        diary.setUserId(7L);
+        diary.setTitle("여름 제주 여행");
+        diary.setStartDate(LocalDate.of(2026, 8, 1));
+        diary.setEndDate(LocalDate.of(2026, 8, 5));
+        return diary;
+    }
+
+    private DiaryElement textElement(Long id, String content) {
+        DiaryElement element = element(id, "TEXT");
+        element.setTextContent(content);
+        return element;
+    }
+
+    private DiaryElement photoElement(Long id, String imageUrl) {
+        DiaryElement element = element(id, "PHOTO");
+        element.setImageUrl(imageUrl);
+        return element;
+    }
+
+    /** 좌표/크기는 DB 기본값(NOT NULL)과 같은 값을 채운다. */
+    private DiaryElement element(Long id, String elementType) {
+        DiaryElement element = new DiaryElement();
+        element.setId(id);
+        element.setPageId(1L);
+        element.setElementType(elementType);
+        element.setPositionX(new java.math.BigDecimal("0.00000"));
+        element.setPositionY(new java.math.BigDecimal("0.00000"));
+        element.setWidth(new java.math.BigDecimal("0.30000"));
+        element.setHeight(new java.math.BigDecimal("0.30000"));
+        element.setRotation(new java.math.BigDecimal("0.00"));
+        element.setZIndex(0);
+        return element;
+    }
+
+    private DiaryPage page(int order, String date) {
+        DiaryPage page = new DiaryPage();
+        page.setId((long) order);
+        page.setDiaryId(10L);
+        page.setPageDate(LocalDate.parse(date));
+        page.setPageOrder(order);
+        page.setBackgroundType("PLAIN");
+        return page;
+    }
+
+    private DiaryListItemDto item() {
+        DiaryListItemDto item = new DiaryListItemDto();
+        item.setId(10L);
+        item.setTitle("여름 제주 여행");
+        item.setStartDate(LocalDate.of(2026, 8, 1));
+        item.setEndDate(LocalDate.of(2026, 8, 5));
+        item.setPageCount(3);
+        return item;
+    }
+}

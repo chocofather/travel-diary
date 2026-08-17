@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.diary.DiaryPageMapper">
+
+    <resultMap id="DiaryPageMap" type="com.example.travlediary.model.DiaryPage">
+        <id     property="id"             column="id"/>
+        <result property="diaryId"        column="diary_id"/>
+        <result property="pageDate"       column="page_date"/>
+        <result property="pageOrder"      column="page_order"/>
+        <result property="backgroundType" column="background_type"/>
+        <result property="content"        column="content"/>
+        <result property="createdAt"      column="created_at"/>
+        <result property="updatedAt"      column="updated_at"/>
+    </resultMap>
+
+    <sql id="DiaryPageColumns">
+        id, diary_id, page_date, page_order, background_type, content, created_at, updated_at
+    </sql>
+
+    <!-- 다이어리 안의 페이지 순서(page_order)대로 조회한다. -->
+    <select id="findByDiaryId" resultMap="DiaryPageMap">
+        SELECT <include refid="DiaryPageColumns"/>
+        FROM diary_pages
+        WHERE diary_id = #{diaryId}
+        ORDER BY page_order
+    </select>
+
+    <!-- 다른 다이어리의 페이지를 다루지 못하도록 diary_id 로 함께 확인한다. -->
+    <select id="findByIdAndDiaryId" resultMap="DiaryPageMap">
+        SELECT <include refid="DiaryPageColumns"/>
+        FROM diary_pages
+        WHERE id = #{pageId}
+          AND diary_id = #{diaryId}
+    </select>
+
+    <!-- 새 페이지 순서를 정할 때 쓴다. 페이지가 없으면 null 이 돌아온다. -->
+    <select id="findMaxPageOrder" resultType="java.lang.Integer">
+        SELECT MAX(page_order)
+        FROM diary_pages
+        WHERE diary_id = #{diaryId}
+    </select>
+
+    <insert id="insert" parameterType="com.example.travlediary.model.DiaryPage"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO diary_pages (
+            diary_id, page_date, page_order, background_type, content, created_at, updated_at
+        ) VALUES (
+            #{diaryId}, #{pageDate}, #{pageOrder}, #{backgroundType}, #{content}, NOW(), NOW()
+        )
+    </insert>
+
+    <update id="update" parameterType="com.example.travlediary.model.DiaryPage">
+        UPDATE diary_pages
+        SET page_date = #{pageDate},
+            page_order = #{pageOrder},
+            background_type = #{backgroundType},
+            content = #{content},
+            updated_at = NOW()
+        WHERE id = #{id}
+          AND diary_id = #{diaryId}
+    </update>
+
+    <!-- 요소는 FK ON DELETE CASCADE 로 함께 삭제된다. -->
+    <delete id="delete">
+        DELETE FROM diary_pages
+        WHERE id = #{pageId}
+          AND diary_id = #{diaryId}
+    </delete>
+
+</mapper>

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
+
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/diary.css">
+  <script src="/js/diary-cover-picker.js" defer></script>
+</th:block>
+
+<th:block th:fragment="body">
+  <section class="diary-form-page" aria-labelledby="diary-form-title">
+    <header class="diary-form-header">
+      <p class="diary-list-eyebrow">NEW TRAVEL DIARY</p>
+      <h1 id="diary-form-title">새 여행일기</h1>
+      <p class="diary-list-subtitle">여행 제목과 기간을 정하면 나만의 다이어리 한 권이 만들어집니다.</p>
+    </header>
+
+    <p class="diary-form-error" th:if="${diaryError}" th:text="${diaryError}" role="alert">
+      입력값을 확인해 주세요.
+    </p>
+
+    <form class="diary-form" th:action="@{/diaries}" method="post"
+          enctype="multipart/form-data" th:object="${diaryForm}">
+      <div class="diary-form-field">
+        <label for="diary-title">제목</label>
+        <input type="text" id="diary-title" name="title" th:value="*{title}"
+               maxlength="150" required
+               placeholder="여행일기 제목을 입력해 주세요." />
+      </div>
+
+      <!-- 연도 4자리(1000~9999)만 고르도록 min/max 를 두고, 서버에서도 같은 범위를 검증한다. -->
+      <div class="diary-form-field">
+        <span class="diary-form-label">여행 기간</span>
+        <div class="diary-period-inputs">
+          <div class="diary-period-item">
+            <label for="diary-start-date">여행 시작일</label>
+            <input type="date" id="diary-start-date" name="startDate"
+                   th:value="*{startDate}" required
+                   min="1000-01-01" max="9999-12-31" />
+          </div>
+          <span class="diary-period-separator" aria-hidden="true">~</span>
+          <div class="diary-period-item">
+            <label for="diary-end-date">여행 종료일</label>
+            <input type="date" id="diary-end-date" name="endDate"
+                   th:value="*{endDate}" required
+                   min="1000-01-01" max="9999-12-31" />
+          </div>
+        </div>
+      </div>
+
+      <div class="diary-form-field">
+        <span class="diary-form-label">대표 이미지</span>
+        <!-- 기본 파일 선택 버튼은 감추고 아래 버튼으로 열되, 제출 시 함께 올라가는 구조는 그대로 둔다. -->
+        <input type="file" id="diary-cover-image" name="coverImage" accept="image/*"
+               class="diary-cover-input" />
+        <div class="diary-cover-picker">
+          <label class="diary-cover-button" for="diary-cover-image">대표 이미지 선택</label>
+          <span class="diary-cover-name" id="diary-cover-name">선택된 이미지 없음</span>
+        </div>
+        <div class="diary-cover-preview" id="diary-cover-preview" hidden>
+          <img id="diary-cover-preview-image" src="" alt="선택한 대표 이미지 미리보기" />
+        </div>
+        <span class="diary-form-hint">한 장만 등록할 수 있어요. 선택하지 않으면 기본 표지가 사용됩니다.</span>
+      </div>
+
+      <div class="diary-form-actions">
+        <a class="diary-form-cancel" th:href="@{/diaries}">취소</a>
+        <button type="submit" class="diary-form-submit">여행일기 만들기</button>
+      </div>
+    </form>
+  </section>
+</th:block>
+</html>

@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.diary.DiaryMapper">
+
+    <resultMap id="DiaryMap" type="com.example.travlediary.model.Diary">
+        <id     property="id"            column="id"/>
+        <result property="userId"        column="user_id"/>
+        <result property="title"         column="title"/>
+        <result property="startDate"     column="start_date"/>
+        <result property="endDate"       column="end_date"/>
+        <result property="coverImageUrl" column="cover_image_url"/>
+        <result property="coverStyle"    column="cover_style"/>
+        <result property="createdAt"     column="created_at"/>
+        <result property="updatedAt"     column="updated_at"/>
+    </resultMap>
+
+    <resultMap id="DiaryListItemMap" type="com.example.travlediary.dto.DiaryListItemDto">
+        <id     property="id"            column="id"/>
+        <result property="title"         column="title"/>
+        <result property="startDate"     column="start_date"/>
+        <result property="endDate"       column="end_date"/>
+        <result property="coverImageUrl" column="cover_image_url"/>
+        <result property="coverStyle"    column="cover_style"/>
+        <result property="pageCount"     column="page_count"/>
+    </resultMap>
+
+    <sql id="DiaryColumns">
+        id, user_id, title, start_date, end_date,
+        cover_image_url, cover_style, created_at, updated_at
+    </sql>
+
+    <!-- 회원 본인의 다이어리 목록. 최근 여행부터 보여준다. -->
+    <select id="findByUserId" resultMap="DiaryMap">
+        SELECT <include refid="DiaryColumns"/>
+        FROM diaries
+        WHERE user_id = #{userId}
+        ORDER BY start_date DESC, id DESC
+    </select>
+
+    <!-- 일기장형 목록. 페이지 수는 LEFT JOIN + COUNT 로 한 번에 계산한다.
+         페이지가 없는 다이어리는 page_count 가 0 이 된다. -->
+    <select id="findListItemsByUserId" resultMap="DiaryListItemMap">
+        SELECT
+            d.id,
+            d.title,
+            d.start_date,
+            d.end_date,
+            d.cover_image_url,
+            d.cover_style,
+            COUNT(p.id) AS page_count
+        FROM diaries d
+        LEFT JOIN diary_pages p ON p.diary_id = d.id
+        WHERE d.user_id = #{userId}
+        GROUP BY d.id, d.title, d.start_date, d.end_date, d.cover_image_url, d.cover_style
+        ORDER BY d.start_date DESC, d.id DESC
+    </select>
+
+    <!-- 본인 소유 다이어리 1건 -->
+    <select id="findByIdAndUserId" resultMap="DiaryMap">
+        SELECT <include refid="DiaryColumns"/>
+        FROM diaries
+        WHERE id = #{diaryId}
+          AND user_id = #{userId}
+    </select>
+
+    <insert id="insert" parameterType="com.example.travlediary.model.Diary"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO diaries (
+            user_id, title, start_date, end_date,
+            cover_image_url, cover_style, created_at, updated_at
+        ) VALUES (
+            #{userId}, #{title}, #{startDate}, #{endDate},
+            #{coverImageUrl}, #{coverStyle}, NOW(), NOW()
+        )
+    </insert>
+
+    <!-- 소유권은 서비스에서도 확인하지만 여기서도 user_id 로 한 번 더 막는다. -->
+    <update id="update" parameterType="com.example.travlediary.model.Diary">
+        UPDATE diaries
+        SET title = #{title},
+            start_date = #{startDate},
+            end_date = #{endDate},
+            cover_image_url = #{coverImageUrl},
+            cover_style = #{coverStyle},
+            updated_at = NOW()
+        WHERE id = #{id}
+          AND user_id = #{userId}
+    </update>
+
+    <!-- 페이지/요소는 FK ON DELETE CASCADE 로 함께 삭제된다. -->
+    <delete id="delete">
+        DELETE FROM diaries
+        WHERE id = #{diaryId}
+          AND user_id = #{userId}
+    </delete>
+
+</mapper>

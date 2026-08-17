@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
+
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/diary.css">
+</th:block>
+
+<th:block th:fragment="body">
+  <section class="diary-list-page" aria-labelledby="diary-list-title">
+    <header class="diary-list-header">
+      <div class="diary-list-heading">
+        <p class="diary-list-eyebrow">MY TRAVEL DIARY</p>
+        <h1 id="diary-list-title">나의 여행일기</h1>
+        <p class="diary-list-subtitle">여행에서의 순간을 나만의 다이어리로 남겨보세요.</p>
+      </div>
+      <a class="diary-new-button" th:href="@{/diaries/new}">새 여행일기 만들기</a>
+    </header>
+
+    <p class="diary-flash-message" th:if="${diaryMessage}" th:text="${diaryMessage}"
+       role="status">여행일기가 만들어졌습니다.</p>
+
+    <!-- 표지 스타일(cover_style)은 클래스로 붙여 이후 스타일이 늘어나도 그대로 쓸 수 있게 한다. -->
+    <ul class="diary-shelf" th:unless="${#lists.isEmpty(diaryList)}">
+      <li class="diary-book" th:each="diary : ${diaryList}"
+          th:classappend="${diary.coverStyle != null and !#strings.isEmpty(diary.coverStyle)}
+                          ? ' diary-cover-' + ${#strings.toLowerCase(diary.coverStyle)} : ''">
+        <a class="diary-book-inner" th:href="@{/diaries/{id}(id=${diary.id})}">
+          <div class="diary-book-cover">
+            <img th:if="${diary.coverImageUrl != null and !#strings.isEmpty(diary.coverImageUrl)}"
+                 class="diary-book-image"
+                 th:src="${diary.coverImageUrl}"
+                 th:alt="|${diary.title} 표지|"
+                 loading="lazy" />
+            <!-- 대표 이미지가 없으면 깨진 이미지 대신 기본 표지를 보여준다 -->
+            <div th:unless="${diary.coverImageUrl != null and !#strings.isEmpty(diary.coverImageUrl)}"
+                 class="diary-book-placeholder" aria-hidden="true">
+              <span class="diary-book-placeholder-mark">✎</span>
+            </div>
+            <span class="diary-book-spine" aria-hidden="true"></span>
+            <div class="diary-book-label">
+              <h2 class="diary-book-title" th:text="${diary.title}">여행일기 제목</h2>
+            </div>
+          </div>
+
+          <div class="diary-book-meta">
+            <time class="diary-book-period"
+                  th:text="|${diary.startDate} ~ ${diary.endDate}|">2026-08-01 ~ 2026-08-05</time>
+            <span class="diary-book-pages" th:text="|${diary.pageCount}장|">0장</span>
+          </div>
+        </a>
+      </li>
+    </ul>
+
+    <div class="diary-empty" th:if="${#lists.isEmpty(diaryList)}" role="status">
+      <span class="diary-empty-mark" aria-hidden="true">✎</span>
+      <p class="diary-empty-title">아직 작성한 여행일기가 없습니다.</p>
+      <p class="diary-empty-text">여행에서의 추억을 한 권의 다이어리로 남겨보세요.</p>
+      <a class="diary-new-button" th:href="@{/diaries/new}">새 여행일기 만들기</a>
+    </div>
+  </section>
+</th:block>
+</html>

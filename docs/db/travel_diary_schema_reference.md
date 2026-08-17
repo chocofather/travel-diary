@@ -552,6 +552,93 @@ CREATE TABLE `destinations` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- 개인 여행일기 구조: users -> diaries -> diary_pages -> diary_elements
+--   * 한 회원이 여러 여행 다이어리를 가질 수 있다.
+--   * 한 다이어리가 여러 페이지를 가질 수 있고, 같은 날짜에 여러 페이지를 만들 수 있다.
+--   * 한 페이지가 여러 TEXT/PHOTO 요소를 가질 수 있으며, PHOTO 한 장은 diary_elements 한 행이다.
+--   * 별도 diary_images 테이블은 없고, 대표 이미지만 diaries.cover_image_url 을 사용한다.
+--   * 요소의 위치/크기는 페이지 크기 기준 0~1 상대값으로 저장한다.
+--
+
+--
+-- Table structure for table `diaries`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `diaries` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `user_id` bigint NOT NULL,
+  `title` varchar(150) NOT NULL,
+  `start_date` date NOT NULL,
+  `end_date` date NOT NULL,
+  `cover_image_url` varchar(255) DEFAULT NULL,
+  `cover_style` varchar(30) NOT NULL DEFAULT 'DEFAULT',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_diaries_user` (`user_id`,`start_date`,`id`),
+  CONSTRAINT `fk_diaries_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `chk_diaries_period` CHECK ((`end_date` >= `start_date`))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `diary_elements`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `diary_elements` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `page_id` bigint NOT NULL,
+  `element_type` varchar(10) NOT NULL,
+  `text_content` text,
+  `image_url` varchar(255) DEFAULT NULL,
+  `position_x` decimal(6,5) NOT NULL DEFAULT '0.00000',
+  `position_y` decimal(6,5) NOT NULL DEFAULT '0.00000',
+  `width` decimal(6,5) NOT NULL DEFAULT '0.30000',
+  `height` decimal(6,5) NOT NULL DEFAULT '0.30000',
+  `rotation` decimal(6,2) NOT NULL DEFAULT '0.00',
+  `z_index` int NOT NULL DEFAULT '0',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_diary_elements_page` (`page_id`,`z_index`,`id`),
+  CONSTRAINT `fk_diary_elements_page` FOREIGN KEY (`page_id`) REFERENCES `diary_pages` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `chk_diary_elements_type` CHECK ((`element_type` in (_utf8mb4'TEXT',_utf8mb4'PHOTO'))),
+  CONSTRAINT `chk_diary_elements_payload` CHECK ((((`element_type` = _utf8mb4'TEXT') and (`text_content` is not null) and (`image_url` is null)) or ((`element_type` = _utf8mb4'PHOTO') and (`image_url` is not null) and (`text_content` is null)))),
+  CONSTRAINT `chk_diary_elements_position` CHECK (((`position_x` between -(0.5) and 1.5) and (`position_y` between -(0.5) and 1.5))),
+  CONSTRAINT `chk_diary_elements_size` CHECK (((`width` > 0) and (`width` <= 1) and (`height` > 0) and (`height` <= 1))),
+  CONSTRAINT `chk_diary_elements_rotation` CHECK ((`rotation` between -(360) and 360)),
+  CONSTRAINT `chk_diary_elements_z_index` CHECK ((`z_index` >= 0))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `diary_pages`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `diary_pages` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `diary_id` bigint NOT NULL,
+  `page_date` date NOT NULL,
+  `page_order` int NOT NULL,
+  `background_type` varchar(30) NOT NULL DEFAULT 'PLAIN',
+  `content` mediumtext COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_diary_pages_order` (`diary_id`,`page_order`),
+  KEY `idx_diary_pages_date` (`diary_id`,`page_date`,`page_order`),
+  CONSTRAINT `fk_diary_pages_diary` FOREIGN KEY (`diary_id`) REFERENCES `diaries` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `chk_diary_pages_order` CHECK ((`page_order` >= 1))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `events`
 --
 

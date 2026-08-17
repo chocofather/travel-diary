@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.diary.DiaryElementMapper">
+
+    <resultMap id="DiaryElementMap" type="com.example.travlediary.model.DiaryElement">
+        <id     property="id"          column="id"/>
+        <result property="pageId"      column="page_id"/>
+        <result property="elementType" column="element_type"/>
+        <result property="textContent" column="text_content"/>
+        <result property="imageUrl"    column="image_url"/>
+        <result property="positionX"   column="position_x"/>
+        <result property="positionY"   column="position_y"/>
+        <result property="width"       column="width"/>
+        <result property="height"      column="height"/>
+        <result property="rotation"    column="rotation"/>
+        <result property="zIndex"      column="z_index"/>
+        <result property="createdAt"   column="created_at"/>
+        <result property="updatedAt"   column="updated_at"/>
+    </resultMap>
+
+    <sql id="DiaryElementColumns">
+        id, page_id, element_type, text_content, image_url,
+        position_x, position_y, width, height, rotation, z_index,
+        created_at, updated_at
+    </sql>
+
+    <!-- 화면 겹침 순서를 그대로 복원하도록 z_index, id 순으로 조회한다. -->
+    <select id="findByPageId" resultMap="DiaryElementMap">
+        SELECT <include refid="DiaryElementColumns"/>
+        FROM diary_elements
+        WHERE page_id = #{pageId}
+        ORDER BY z_index, id
+    </select>
+
+    <!-- 다른 페이지의 요소를 다루지 못하도록 page_id 로 함께 확인한다. -->
+    <select id="findByIdAndPageId" resultMap="DiaryElementMap">
+        SELECT <include refid="DiaryElementColumns"/>
+        FROM diary_elements
+        WHERE id = #{elementId}
+          AND page_id = #{pageId}
+    </select>
+
+    <!-- TEXT 는 text_content, PHOTO 는 image_url 만 채운다 (DB CHECK 와 동일) -->
+    <insert id="insert" parameterType="com.example.travlediary.model.DiaryElement"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO diary_elements (
+            page_id, element_type, text_content, image_url,
+            position_x, position_y, width, height, rotation, z_index,
+            created_at, updated_at
+        ) VALUES (
+            #{pageId}, #{elementType}, #{textContent}, #{imageUrl},
+            #{positionX}, #{positionY}, #{width}, #{height}, #{rotation}, #{zIndex},
+            NOW(), NOW()
+        )
+    </insert>
+
+    <!-- element_type 은 등록 시 값을 유지한다. (TEXT ↔ PHOTO 전환은 하지 않는다) -->
+    <update id="update" parameterType="com.example.travlediary.model.DiaryElement">
+        UPDATE diary_elements
+        SET text_content = #{textContent},
+            image_url = #{imageUrl},
+            position_x = #{positionX},
+            position_y = #{positionY},
+            width = #{width},
+            height = #{height},
+            rotation = #{rotation},
+            z_index = #{zIndex},
+            updated_at = NOW()
+        WHERE id = #{id}
+          AND page_id = #{pageId}
+    </update>
+
+    <delete id="delete">
+        DELETE FROM diary_elements
+        WHERE id = #{elementId}
+          AND page_id = #{pageId}
+    </delete>
+
+</mapper>

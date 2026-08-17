@@ -105,6 +105,45 @@ public class SecurityConfig {
                         new RegexRequestMatcher(
                                 "^/admin/contents/[A-Z_]+/[0-9]+/restore$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(
+                                "^/diaries$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/diaries/[0-9]+/update$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/diaries/[0-9]+/delete$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/diaries/[0-9]+/pages$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/diaries/[0-9]+/pages/[0-9]+/update$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/diaries/[0-9]+/pages/[0-9]+/delete$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/diaries/[0-9]+/pages/[0-9]+/elements/text$",
+                                HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/diaries/[0-9]+/pages/[0-9]+/elements/[0-9]+/text$",
+                                HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/diaries/[0-9]+/pages/[0-9]+/elements/[0-9]+/delete$",
+                                HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/diaries/[0-9]+/pages/[0-9]+/elements/[0-9]+/position$",
+                                HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/diaries/[0-9]+/pages/[0-9]+/elements/[0-9]+/size$",
+                                HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/diaries/[0-9]+/pages/[0-9]+/elements/[0-9]+/rotation$",
+                                HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/diaries/[0-9]+/pages/[0-9]+/elements/[0-9]+/layer$",
+                                HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/diaries/[0-9]+/pages/[0-9]+/elements/photo$",
+                                HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/diaries/[0-9]+/pages/[0-9]+/elements/[0-9]+/photo/delete$",
+                                HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
                                 "^/mypage/profile$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(
                                 "^/mypage/account/verify-password$", HttpMethod.POST.name()),
@@ -198,6 +237,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/bookmark/**",
                                 "/comments/**", // 여전히 필요하지만 list/images는 위에서 permitAll 되었음
+                                "/diaries/**",  // 개인 여행일기는 본인만 접근
                                 "/mypage/**",
                                 "/users/profile/**",
                                 "/bookmarks/**"
