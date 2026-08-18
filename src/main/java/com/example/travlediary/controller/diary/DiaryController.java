@@ -71,6 +71,7 @@ public class DiaryController {
     public String diaryDetail(@PathVariable Long diaryId,
                               @RequestParam(defaultValue = "0") int spread,
                               @RequestParam(defaultValue = "false") boolean edit,
+                              @RequestParam(required = false) Integer page,
                               @AuthenticationPrincipal CustomUserDetails userDetails,
                               Model model) {
         Long userId = userDetails.getId();
@@ -90,16 +91,61 @@ public class DiaryController {
         model.addAttribute("leftPage", leftPage);
         model.addAttribute("rightPage", rightPage);
         // 펼쳐 놓은 두 장만 요소를 읽는다. 순서(z_index, id)는 조회 결과를 그대로 쓴다.
-        model.addAttribute("leftElements", pageElements(diaryId, leftPage, userId));
-        model.addAttribute("rightElements", pageElements(diaryId, rightPage, userId));
+        // 편집 모드는 한 장만 그리므로 아래에서 그 장만 따로 읽는다.
+        model.addAttribute("leftElements", edit ? List.of() : pageElements(diaryId, leftPage, userId));
+        model.addAttribute("rightElements", edit ? List.of() : pageElements(diaryId, rightPage, userId));
         model.addAttribute("currentSpread", currentSpread);
         model.addAttribute("totalSpreads", totalSpreads);
         model.addAttribute("hasPreviousSpread", currentSpread > 0);
         model.addAttribute("hasNextSpread", currentSpread < totalSpreads - 1);
         // 편집 여부는 화면 상태일 뿐이다. 실제 수정 권한은 각 저장 경로에서 다시 확인한다.
         model.addAttribute("editMode", edit);
+        if (edit) {
+            addEditPageAttributes(diaryId, userId, pages, leftPage, rightPage, page, model);
+        }
         model.addAttribute("pageTitle", diary.getTitle() + " | 나의 여행일기");
         return "diary/detail";
+    }
+
+    /**
+     * 편집 모드는 실제 페이지 한 장만 크게 보여준다.
+     * 편집 대상은 요청 값(pageOrder)을 그대로 믿지 않고, 본인 다이어리에서 읽어 온 목록 안에서만 고른다.
+     */
+    private void addEditPageAttributes(Long diaryId,
+                                       Long userId,
+                                       List<DiaryPage> pages,
+                                       DiaryPage leftPage,
+                                       DiaryPage rightPage,
+                                       Integer requestedPageOrder,
+                                       Model model) {
+        int editIndex = -1;
+        if (requestedPageOrder != null) {
+            for (int i = 0; i < pages.size(); i++) {
+                if (requestedPageOrder.equals(pages.get(i).getPageOrder())) {
+                    editIndex = i;
+                    break;
+                }
+            }
+        }
+        if (editIndex < 0) {
+            // 요청한 순서가 목록에 없으면 지금 펼친 장(왼쪽 → 오른쪽)으로 되돌린다.
+            DiaryPage fallback = leftPage != null ? leftPage : rightPage;
+            editIndex = fallback == null ? -1 : pages.indexOf(fallback);
+        }
+
+        DiaryPage editPage = editIndex >= 0 ? pages.get(editIndex) : null;
+        model.addAttribute("editPage", editPage);
+        model.addAttribute("editElements", pageElements(diaryId, editPage, userId));
+        model.addAttribute("editPageNumber", editIndex + 1);
+        model.addAttribute("hasPreviousPage", editIndex > 0);
+        model.addAttribute("hasNextPage", editIndex >= 0 && editIndex < pages.size() - 1);
+        model.addAttribute("previousPageOrder",
+                editIndex > 0 ? pages.get(editIndex - 1).getPageOrder() : null);
+        model.addAttribute("nextPageOrder",
+                editIndex >= 0 && editIndex < pages.size() - 1
+                        ? pages.get(editIndex + 1).getPageOrder() : null);
+        // 편집을 마치면 이 장이 들어 있는 펼침으로 돌아간다. (읽기 모드의 spread 계산과 같은 기준)
+        model.addAttribute("editSpread", Math.max(editIndex, 0) / SPREAD_SIZE);
     }
 
     /** 다이어리 기본정보 수정 화면 */
@@ -224,11 +270,12 @@ public class DiaryController {
                              @ModelAttribute DiaryPage pageForm,
                              BindingResult bindingResult,
                              @RequestParam(defaultValue = "0") int spread,
+                             @RequestParam(required = false) Integer page,
                              @AuthenticationPrincipal CustomUserDetails userDetails,
                              RedirectAttributes redirectAttributes) {
         if (bindingResult.hasErrors()) {
             redirectAttributes.addFlashAttribute("diaryPageError", "페이지 날짜를 올바르게 선택해 주세요.");
-            return redirectToSpread(diaryId, spread);
+            return redirectToEditPage(diaryId, spread, page);
         }
 
         Long userId = userDetails.getId();
@@ -242,9 +289,9 @@ public class DiaryController {
             changed.setPageOrder(existing.getPageOrder());
             diaryPageService.update(diaryId, pageId, userId, changed);
         } catch (ResponseStatusException exception) {
-            return redirectWithElementError(exception, diaryId, spread, redirectAttributes);
+            return redirectWithElementError(exception, diaryId, spread, page, redirectAttributes);
         }
-        return redirectToSpread(diaryId, spread);
+        return redirectToEditPage(diaryId, spread, page);
     }
 
     /** 페이지 삭제. 요소 행은 FK CASCADE 로 지워지므로 사진 파일만 따로 정리한다. */
@@ -304,11 +351,12 @@ public class DiaryController {
                                      @RequestParam(value = "image", required = false)
                                      MultipartFile image,
                                      @RequestParam(defaultValue = "0") int spread,
+                                     @RequestParam(required = false) Integer page,
                                      @AuthenticationPrincipal CustomUserDetails userDetails,
                                      RedirectAttributes redirectAttributes) {
         if (image == null || image.isEmpty()) {
             redirectAttributes.addFlashAttribute("diaryPageError", "사진을 선택해 주세요.");
-            return redirectToSpread(diaryId, spread);
+            return redirectToEditPage(diaryId, spread, page);
         }
 
         // 이번 요청에서 저장한 파일만 추적해 실패 시 정리한다.
@@ -322,12 +370,12 @@ public class DiaryController {
             diaryElementService.create(diaryId, pageId, userDetails.getId(), element);
         } catch (ResponseStatusException exception) {
             deleteStoredFile(savedImageUrl);
-            return redirectWithElementError(exception, diaryId, spread, redirectAttributes);
+            return redirectWithElementError(exception, diaryId, spread, page, redirectAttributes);
         } catch (RuntimeException exception) {
             deleteStoredFile(savedImageUrl);
             throw exception;
         }
-        return redirectToSpread(diaryId, spread);
+        return redirectToEditPage(diaryId, spread, page);
     }
 
     /** 사진 요소 삭제. DB 행을 먼저 지우고 실제 파일을 정리한다. */
@@ -336,6 +384,7 @@ public class DiaryController {
                                      @PathVariable Long pageId,
                                      @PathVariable Long elementId,
                                      @RequestParam(defaultValue = "0") int spread,
+                                     @RequestParam(required = false) Integer page,
                                      @AuthenticationPrincipal CustomUserDetails userDetails,
                                      RedirectAttributes redirectAttributes) {
         Long userId = userDetails.getId();
@@ -349,12 +398,12 @@ public class DiaryController {
             imageUrl = existing.getImageUrl();
             diaryElementService.delete(diaryId, pageId, elementId, userId);
         } catch (ResponseStatusException exception) {
-            return redirectWithElementError(exception, diaryId, spread, redirectAttributes);
+            return redirectWithElementError(exception, diaryId, spread, page, redirectAttributes);
         }
 
         // DB 삭제가 끝난 뒤 실제 파일을 정리한다. (정리 실패는 요청을 깨뜨리지 않는다)
         deleteStoredFile(imageUrl);
-        return redirectToSpread(diaryId, spread);
+        return redirectToEditPage(diaryId, spread, page);
     }
 
     /** 드래그로 옮긴 위치 저장. 화면 갱신 없이 좌표만 반영한다. */
@@ -468,17 +517,31 @@ public class DiaryController {
 
     /** 작업 후에는 보고 있던 펼침 위치로, 편집 화면 그대로 돌아온다. */
     private String redirectToSpread(Long diaryId, int spread) {
-        return "redirect:/diaries/" + diaryId + "?spread=" + Math.max(spread, 0) + "&edit=true";
+        return redirectToEditPage(diaryId, spread, null);
+    }
+
+    /** 편집 모드는 한 장만 보여주므로 편집 중이던 페이지(pageOrder)까지 유지한다. */
+    private String redirectToEditPage(Long diaryId, int spread, Integer pageOrder) {
+        return "redirect:/diaries/" + diaryId + "?spread=" + Math.max(spread, 0) + "&edit=true"
+                + (pageOrder == null ? "" : "&page=" + pageOrder);
     }
 
     private String redirectWithElementError(ResponseStatusException exception,
                                             Long diaryId,
                                             int spread,
                                             RedirectAttributes redirectAttributes) {
+        return redirectWithElementError(exception, diaryId, spread, null, redirectAttributes);
+    }
+
+    private String redirectWithElementError(ResponseStatusException exception,
+                                            Long diaryId,
+                                            int spread,
+                                            Integer pageOrder,
+                                            RedirectAttributes redirectAttributes) {
         if (exception.getStatusCode().is4xxClientError()
                 && !HttpStatus.NOT_FOUND.equals(exception.getStatusCode())) {
             redirectAttributes.addFlashAttribute("diaryPageError", exception.getReason());
-            return redirectToSpread(diaryId, spread);
+            return redirectToEditPage(diaryId, spread, pageOrder);
         }
         throw exception;
     }
@@ -496,11 +559,12 @@ public class DiaryController {
             return "redirect:/diaries/" + diaryId + "?edit=true";
         }
 
+        DiaryPage added;
         try {
             DiaryPage page = new DiaryPage();
             page.setPageDate(pageForm.getPageDate());
             page.setBackgroundType(pageForm.getBackgroundType());
-            diaryPageService.append(diaryId, userDetails.getId(), page);
+            added = diaryPageService.append(diaryId, userDetails.getId(), page);
         } catch (ResponseStatusException exception) {
             if (exception.getStatusCode().is4xxClientError()
                     && !HttpStatus.NOT_FOUND.equals(exception.getStatusCode())) {
@@ -511,7 +575,8 @@ public class DiaryController {
         }
 
         redirectAttributes.addFlashAttribute("diaryMessage", "새 페이지가 추가되었습니다.");
-        return "redirect:/diaries/" + diaryId + "?edit=true";
+        // 편집 모드는 한 장씩 보므로 방금 추가한 장을 바로 열어 준다.
+        return "redirect:/diaries/" + diaryId + "?edit=true&page=" + added.getPageOrder();
     }
 
     /** 새 여행일기 작성 화면 */

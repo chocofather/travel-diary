@@ -15,6 +15,7 @@
   <script src="/js/diary-editor.js" defer></script>
   <script src="/js/diary-page-flip.js" defer></script>
   <script src="/js/diary-photo-picker.js" defer></script>
+  <script src="/js/diary-page-picker.js" defer></script>
 </th:block>
 
 <th:block th:fragment="body">
@@ -30,24 +31,57 @@
         <span th:text="|전체 ${#lists.size(diaryPages)}장|">전체 0장</span>
       </p>
 
-      <!-- 읽기 모드: 편집으로 들어가는 작은 버튼 하나만 둔다 -->
+      <!-- 읽기 모드: 책을 읽는 화면이자 책 자체(제목/기간/표지)를 관리하는 자리 -->
       <div class="diary-detail-actions" th:unless="${editMode}">
-        <a class="diary-mode-button"
-           th:href="@{/diaries/{id}(id=${diary.id},spread=${currentSpread},edit=true)}">편집하기</a>
-      </div>
-
-      <!-- 편집 모드: 다이어리 자체 관리 액션과 편집 완료 -->
-      <div class="diary-detail-actions" th:if="${editMode}">
+        <button type="button" class="diary-mode-button" id="diary-page-picker-button"
+                aria-haspopup="dialog" aria-expanded="false"
+                aria-controls="diary-page-picker">편집하기</button>
         <a class="diary-detail-action" th:href="@{/diaries/{id}/edit(id=${diary.id})}">다이어리 설정</a>
         <form th:action="@{/diaries/{id}/delete(id=${diary.id})}" method="post"
               onsubmit="return confirm('이 여행일기를 삭제하면 모든 페이지와 사진이 함께 삭제됩니다. 삭제하시겠습니까?');">
           <button type="submit" class="diary-detail-action is-danger">다이어리 삭제</button>
         </form>
-        <!-- 저장이 끝난 뒤에 읽기 모드로 넘어간다 (JS 가 처리) -->
+      </div>
+
+      <!-- 편집 모드: 페이지 내용 편집에 필요한 것만 남긴다 -->
+      <div class="diary-detail-actions" th:if="${editMode}">
+        <!-- 저장이 끝난 뒤, 편집하던 장이 들어 있는 펼침으로 돌아간다 (JS 가 처리) -->
         <a class="diary-mode-button" data-editor-done="true"
-           th:href="@{/diaries/{id}(id=${diary.id},spread=${currentSpread})}">편집 완료</a>
+           th:href="@{/diaries/{id}(id=${diary.id},spread=${editSpread != null ? editSpread : currentSpread})}">편집 완료</a>
       </div>
     </header>
+
+    <!-- 편집할 페이지 고르기. 읽기 화면 위에 작게 띄운다. -->
+    <div class="diary-page-picker-backdrop" id="diary-page-picker-backdrop"
+         th:unless="${editMode}" hidden>
+      <div class="diary-page-picker" id="diary-page-picker" role="dialog" aria-modal="true"
+           aria-labelledby="diary-page-picker-title">
+        <div class="diary-page-picker-head">
+          <h2 class="diary-page-picker-title" id="diary-page-picker-title">편집할 페이지를 선택해 주세요</h2>
+          <button type="button" class="diary-page-picker-close" id="diary-page-picker-close"
+                  aria-label="닫기">✕</button>
+        </div>
+
+        <!-- 페이지가 한 장도 없으면 빈 목록 대신 안내를 보여준다 -->
+        <div class="diary-page-picker-empty" th:if="${#lists.isEmpty(diaryPages)}">
+          <p>편집할 페이지가 없습니다. 먼저 새 페이지를 추가해 주세요.</p>
+          <a class="diary-mode-button" th:href="@{/diaries/{id}(id=${diary.id},edit=true)}">새 페이지 추가</a>
+        </div>
+
+        <ul class="diary-page-picker-list" th:unless="${#lists.isEmpty(diaryPages)}">
+          <!-- 지금 보고 있는 펼침의 장은 옅게 표시만 하고 자동 선택하지는 않는다 -->
+          <li th:each="pageItem, itemStat : ${diaryPages}">
+            <a class="diary-page-picker-item"
+               th:classappend="${itemStat.index / 2 == currentSpread} ? 'is-current' : ''"
+               th:href="@{/diaries/{id}(id=${diary.id},spread=${itemStat.index / 2},
+                          edit=true,page=${pageItem.pageOrder})}">
+              <span class="diary-page-picker-order" th:text="|${pageItem.pageOrder}페이지|">1페이지</span>
+              <span class="diary-page-picker-date" th:text="${pageItem.pageDate}">2026-08-01</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
 
     <p class="diary-flash-message" th:if="${diaryMessage}" th:text="${diaryMessage}"
        role="status">새 페이지가 추가되었습니다.</p>
@@ -135,8 +169,51 @@
       <p class="diary-save-status" id="diary-save-status" role="status">저장됨</p>
     </div>
 
-    <!-- 펼친 공책: 왼쪽 페이지 / 중앙 제본선 / 오른쪽 페이지 -->
-    <div class="diary-book-spread">
+    <!-- 편집 모드: 종이 바깥에 페이지 정보/관리 액션을 두고, 종이 안에는 내용만 남긴다.
+         (th:replace 가 th:if 보다 먼저 처리되므로 조건은 바깥 th:block 에 둔다) -->
+    <th:block th:if="${editMode and editPage != null}">
+      <div class="diary-page-meta" th:replace="~{diary/detail :: pageMeta(${editPage})}"></div>
+    </th:block>
+
+    <!-- 편집 모드: 한 장만 크게 펼쳐 놓고 집중해서 쓴다. (읽기 모드 2페이지 구조는 그대로 둔다) -->
+    <div class="diary-book-single" th:if="${editMode}">
+      <article class="diary-sheet diary-sheet-single"
+               th:classappend="${editPage != null and editPage.backgroundType != null}
+                               ? ' diary-sheet-bg-' + ${#strings.toLowerCase(editPage.backgroundType)} : ''">
+        <th:block th:if="${editPage != null}">
+          <div class="diary-sheet-head"
+               th:replace="~{diary/detail :: sheetHead(${editPage})}"></div>
+          <div class="diary-sheet-body"
+               th:replace="~{diary/detail :: sheetBody(${editPage}, ${editElements})}"></div>
+          <p class="diary-sheet-number" th:text="${editPage.pageOrder}">1</p>
+        </th:block>
+
+        <!-- 아직 페이지가 한 장도 없는 다이어리. 위의 폼으로 첫 장을 만든다. -->
+        <div class="diary-sheet-empty" th:if="${editPage == null}">
+          <p class="diary-sheet-empty-title">아직 작성한 페이지가 없습니다.</p>
+          <p class="diary-sheet-empty-text">여행의 첫 장을 남겨보세요.</p>
+        </div>
+      </article>
+    </div>
+
+    <!-- 편집 모드 이동: 실제 페이지 한 장씩. 저장이 끝난 뒤에 이동한다. -->
+    <nav class="diary-spread-nav" th:if="${editMode and editPage != null}" aria-label="페이지 이동">
+      <a th:if="${hasPreviousPage}" class="diary-spread-button" data-editor-done="true"
+         th:href="@{/diaries/{id}(id=${diary.id},spread=${currentSpread},edit=true,page=${previousPageOrder})}">← 이전 페이지</a>
+      <span th:unless="${hasPreviousPage}" class="diary-spread-button is-disabled"
+            aria-disabled="true">← 이전 페이지</span>
+
+      <span class="diary-spread-position"
+            th:text="|${editPageNumber} / ${#lists.size(diaryPages)} 페이지|">2 / 6 페이지</span>
+
+      <a th:if="${hasNextPage}" class="diary-spread-button" data-editor-done="true"
+         th:href="@{/diaries/{id}(id=${diary.id},spread=${currentSpread},edit=true,page=${nextPageOrder})}">다음 페이지 →</a>
+      <span th:unless="${hasNextPage}" class="diary-spread-button is-disabled"
+            aria-disabled="true">다음 페이지 →</span>
+    </nav>
+
+    <!-- 펼친 공책: 왼쪽 페이지 / 중앙 제본선 / 오른쪽 페이지 (읽기 모드) -->
+    <div class="diary-book-spread" th:unless="${editMode}">
       <article class="diary-sheet diary-sheet-left"
                th:classappend="${leftPage != null and leftPage.backgroundType != null}
                                ? ' diary-sheet-bg-' + ${#strings.toLowerCase(leftPage.backgroundType)} : ''">
@@ -171,13 +248,11 @@
       </article>
     </div>
 
-    <!-- 펼침 단위 이동. 현재 위치는 spread 쿼리 파라미터로만 관리한다. -->
-    <nav class="diary-spread-nav" th:if="${!#lists.isEmpty(diaryPages)}" aria-label="페이지 이동">
-      <!-- 페이지를 넘겨도 지금 보고 있는 모드(읽기/편집)를 그대로 유지한다 -->
+    <!-- 펼침 단위 이동(읽기 모드). 현재 위치는 spread 쿼리 파라미터로만 관리한다. -->
+    <nav class="diary-spread-nav" th:if="${!editMode and !#lists.isEmpty(diaryPages)}"
+         aria-label="페이지 이동">
       <a th:if="${hasPreviousSpread}" class="diary-spread-button" data-flip="previous"
-         th:href="${editMode}
-                  ? @{/diaries/{id}(id=${diary.id},spread=${currentSpread - 1},edit=true)}
-                  : @{/diaries/{id}(id=${diary.id},spread=${currentSpread - 1})}">← 이전</a>
+         th:href="@{/diaries/{id}(id=${diary.id},spread=${currentSpread - 1})}">← 이전</a>
       <span th:unless="${hasPreviousSpread}" class="diary-spread-button is-disabled"
             aria-disabled="true">← 이전</span>
 
@@ -187,56 +262,17 @@
                      : |${leftPage.pageOrder} / 전체 ${#lists.size(diaryPages)}장|">1-2 / 전체 6장</span>
 
       <a th:if="${hasNextSpread}" class="diary-spread-button" data-flip="next"
-         th:href="${editMode}
-                  ? @{/diaries/{id}(id=${diary.id},spread=${currentSpread + 1},edit=true)}
-                  : @{/diaries/{id}(id=${diary.id},spread=${currentSpread + 1})}">다음 →</a>
+         th:href="@{/diaries/{id}(id=${diary.id},spread=${currentSpread + 1})}">다음 →</a>
       <span th:unless="${hasNextSpread}" class="diary-spread-button is-disabled"
             aria-disabled="true">다음 →</span>
     </nav>
   </section>
 </th:block>
 
-<!-- 한 장의 머리말: 날짜/페이지 액션 한 줄 + 그 아래 작은 편집 툴바 -->
+<!-- 한 장의 머리말: 종이 안에는 날짜 같은 내용만 두고, 관리 액션은 종이 밖(pageMeta)에 있다 -->
 <div th:fragment="sheetHead(page)" class="diary-sheet-head">
   <div class="diary-sheet-head-row">
     <time class="diary-sheet-date" th:text="${page.pageDate}">2026-08-01</time>
-
-    <!-- 페이지 설정/삭제는 같은 높이·같은 크기의 한 묶음으로 둔다 (편집 모드에서만) -->
-    <div class="diary-page-actions" th:if="${editMode}">
-      <details class="diary-page-settings">
-        <summary class="diary-page-action">페이지 설정</summary>
-        <form th:action="@{/diaries/{diaryId}/pages/{pageId}/update
-                          (diaryId=${diary.id},pageId=${page.id})}" method="post">
-          <input type="hidden" name="spread" th:value="${currentSpread}" />
-          <label>
-            <span>날짜</span>
-            <input type="date" name="pageDate" required
-                   th:attr="min=${diary.startDate},max=${diary.endDate}"
-                   th:value="${page.pageDate}" />
-          </label>
-          <label>
-            <span>배경</span>
-            <select name="backgroundType">
-              <option value="PLAIN" th:selected="${page.backgroundType == 'PLAIN'}">무지</option>
-              <option value="LINED" th:selected="${page.backgroundType == 'LINED'}">줄노트</option>
-              <option value="GRID" th:selected="${page.backgroundType == 'GRID'}">모눈</option>
-              <option value="DOT" th:selected="${page.backgroundType == 'DOT'}">도트</option>
-            </select>
-          </label>
-          <div class="diary-text-edit-actions">
-            <button type="submit" class="diary-text-action is-primary">저장</button>
-          </div>
-        </form>
-      </details>
-
-      <form th:action="@{/diaries/{diaryId}/pages/{pageId}/delete
-                        (diaryId=${diary.id},pageId=${page.id})}"
-            method="post"
-            onsubmit="return confirm('이 페이지와 페이지의 글·사진이 모두 삭제됩니다. 삭제하시겠습니까?');">
-        <input type="hidden" name="spread" th:value="${currentSpread}" />
-        <button type="submit" class="diary-page-action is-danger">페이지 삭제</button>
-      </form>
-    </div>
   </div>
 
   <!-- 페이지 편집 툴바: 사진 (본문 서식은 펼침 위 공통 툴바가 담당한다) -->
@@ -247,12 +283,61 @@
                       (diaryId=${diary.id},pageId=${page.id})}"
           method="post" enctype="multipart/form-data">
       <input type="hidden" name="spread" th:value="${currentSpread}" />
+      <input type="hidden" name="page" th:value="${page.pageOrder}" />
       <input type="file" class="diary-photo-input" name="image" accept="image/*" required
              th:id="|diary-photo-input-${page.id}|" />
       <label class="diary-tool-button" th:for="|diary-photo-input-${page.id}|">
         <span class="diary-tool-icon" aria-hidden="true">▣</span>사진
       </label>
       <span class="diary-photo-status" role="status" hidden>올리는 중…</span>
+    </form>
+  </div>
+</div>
+
+<!-- 종이 바깥 상단 줄: 왼쪽에 페이지 번호/날짜, 오른쪽에 페이지 관리 액션 -->
+<div th:fragment="pageMeta(page)" class="diary-page-meta">
+  <p class="diary-page-meta-label">
+    <span th:text="|${page.pageOrder}페이지|">1페이지</span>
+    <span aria-hidden="true">·</span>
+    <time th:text="${page.pageDate}">2026-08-01</time>
+  </p>
+
+  <!-- 페이지 설정/삭제는 같은 높이·같은 크기의 한 묶음으로 둔다 -->
+  <div class="diary-page-actions">
+    <details class="diary-page-settings">
+      <summary class="diary-page-action">페이지 설정</summary>
+      <form th:action="@{/diaries/{diaryId}/pages/{pageId}/update
+                        (diaryId=${diary.id},pageId=${page.id})}" method="post">
+        <input type="hidden" name="spread" th:value="${currentSpread}" />
+        <!-- 편집 모드는 한 장씩 보므로 돌아올 페이지를 함께 보낸다 -->
+        <input type="hidden" name="page" th:value="${page.pageOrder}" />
+        <label>
+          <span>날짜</span>
+          <input type="date" name="pageDate" required
+                 th:attr="min=${diary.startDate},max=${diary.endDate}"
+                 th:value="${page.pageDate}" />
+        </label>
+        <label>
+          <span>배경</span>
+          <select name="backgroundType">
+            <option value="PLAIN" th:selected="${page.backgroundType == 'PLAIN'}">무지</option>
+            <option value="LINED" th:selected="${page.backgroundType == 'LINED'}">줄노트</option>
+            <option value="GRID" th:selected="${page.backgroundType == 'GRID'}">모눈</option>
+            <option value="DOT" th:selected="${page.backgroundType == 'DOT'}">도트</option>
+          </select>
+        </label>
+        <div class="diary-text-edit-actions">
+          <button type="submit" class="diary-text-action is-primary">저장</button>
+        </div>
+      </form>
+    </details>
+
+    <form th:action="@{/diaries/{diaryId}/pages/{pageId}/delete
+                      (diaryId=${diary.id},pageId=${page.id})}"
+          method="post"
+          onsubmit="return confirm('이 페이지와 페이지의 글·사진이 모두 삭제됩니다. 삭제하시겠습니까?');">
+      <input type="hidden" name="spread" th:value="${currentSpread}" />
+      <button type="submit" class="diary-page-action is-danger">페이지 삭제</button>
     </form>
   </div>
 </div>
@@ -308,6 +393,7 @@
                 method="post"
                 onsubmit="return confirm('이 사진을 삭제하시겠습니까?');">
             <input type="hidden" name="spread" th:value="${currentSpread}" />
+            <input type="hidden" name="page" th:value="${page.pageOrder}" />
             <button type="submit" class="diary-text-action">삭제</button>
           </form>
 

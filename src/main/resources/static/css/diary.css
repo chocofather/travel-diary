@@ -1291,6 +1291,167 @@
     outline-offset: 1px;
 }
 
+/* ===== 편집할 페이지 고르기 ===== */
+.diary-page-picker-backdrop {
+    position: fixed;
+    z-index: 60;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(40, 33, 24, 0.35);
+}
+
+.diary-page-picker-backdrop[hidden] {
+    display: none;
+}
+
+.diary-page-picker {
+    display: flex;
+    width: min(360px, 100%);
+    max-height: min(420px, 80vh);
+    flex-direction: column;
+    gap: 10px;
+    padding: 18px;
+    border: 1px solid #e3dcd1;
+    border-radius: 12px;
+    background: #fffdf8;
+    box-shadow: 0 10px 26px rgba(63, 52, 38, 0.18);
+}
+
+.diary-page-picker-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.diary-page-picker-title {
+    margin: 0;
+    color: #3f3427;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.diary-page-picker-close {
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: #8b8378;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.diary-page-picker-close:hover {
+    background: #f3ece0;
+}
+
+.diary-page-picker-list {
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+}
+
+.diary-page-picker-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    color: #4a4238;
+    font-size: 14px;
+    text-decoration: none;
+}
+
+.diary-page-picker-item:hover {
+    background: #f3ece0;
+}
+
+/* 지금 보고 있는 펼침의 장은 옅게만 구분한다 (자동 선택은 하지 않는다) */
+.diary-page-picker-item.is-current {
+    background: #f7f0e4;
+    box-shadow: inset 2px 0 0 #cbbba0;
+}
+
+.diary-page-picker-order {
+    font-weight: 700;
+}
+
+.diary-page-picker-date {
+    color: #8b8378;
+    font-size: 13px;
+}
+
+.diary-page-picker-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    color: #6b6259;
+    font-size: 14px;
+}
+
+.diary-page-picker-empty p {
+    margin: 0;
+}
+
+/* ===== 편집 모드: 종이 바깥의 페이지 정보/관리 줄 ===== */
+.diary-page-meta {
+    display: flex;
+    width: min(820px, 100%);
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 0 auto 8px;
+}
+
+.diary-page-meta-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    color: #8a7b62;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+/* ===== 편집 모드: 한 장 집중 편집 =====
+   읽기 모드의 2페이지 펼침(.diary-book-spread) 규칙은 그대로 두고, 여기에만 규칙을 더한다. */
+.diary-book-single {
+    display: flex;
+    justify-content: center;
+}
+
+.diary-book-single .diary-sheet-single {
+    box-sizing: border-box;
+    width: min(820px, 100%);
+    min-height: 760px;
+    padding: 40px 44px 52px;
+    border: 1px solid #e0d8cb;
+    border-radius: 12px;
+    box-shadow: 0 10px 26px rgba(63, 52, 38, 0.14);
+}
+
+/* 툴바는 종이 너비에 맞춰 가운데로 */
+.is-edit-mode .diary-toolbar,
+.is-edit-mode .diary-page-form {
+    width: min(820px, 100%);
+    margin-right: auto;
+    margin-left: auto;
+}
+
+.is-edit-mode .diary-spread-nav {
+    width: min(820px, 100%);
+    margin-right: auto;
+    margin-left: auto;
+}
+
 /* 읽기 모드에서는 본문/사진 모두 조작 대상이 아니다 */
 .is-read-mode .diary-editor.is-read-only {
     cursor: default;
@@ -1818,6 +1979,19 @@
 
     .diary-spread-nav {
         gap: 8px;
+    }
+
+    /* 편집 모드 한 장은 화면 폭에 맞춘다 (읽기 모드 가로 스냅은 그대로) */
+    .diary-book-single .diary-sheet-single {
+        width: 100%;
+        min-height: 520px;
+        padding: 24px 20px 34px;
+    }
+
+    .is-edit-mode .diary-toolbar,
+    .is-edit-mode .diary-page-form,
+    .is-edit-mode .diary-spread-nav {
+        width: 100%;
     }
 
     /* 툴바가 화면을 많이 차지하지 않게 한 줄로 두고 가로로 넘긴다 */

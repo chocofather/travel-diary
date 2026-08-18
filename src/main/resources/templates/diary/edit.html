@@ -4,6 +4,8 @@
 
 <th:block th:fragment="headFragment">
   <link rel="stylesheet" href="/css/diary.css">
+  <!-- 작성 화면과 같은 대표 이미지 선택 UI 를 그대로 쓴다 -->
+  <script src="/js/diary-cover-picker.js" defer></script>
 </th:block>
 
 <th:block th:fragment="body">
@@ -27,31 +29,52 @@
                placeholder="여행일기 제목을 입력해 주세요." />
       </div>
 
-      <div class="diary-form-row">
-        <div class="diary-form-field">
-          <label for="diary-start-date">여행 시작일</label>
-          <input type="date" id="diary-start-date" name="startDate"
-                 th:value="*{startDate}" required />
-        </div>
-        <div class="diary-form-field">
-          <label for="diary-end-date">여행 종료일</label>
-          <input type="date" id="diary-end-date" name="endDate"
-                 th:value="*{endDate}" required />
+      <!-- 연도 4자리(1000~9999)만 고르도록 min/max 를 두고, 서버에서도 같은 범위를 검증한다. -->
+      <div class="diary-form-field">
+        <span class="diary-form-label">여행 기간</span>
+        <div class="diary-period-inputs">
+          <div class="diary-period-item">
+            <label for="diary-start-date">여행 시작일</label>
+            <input type="date" id="diary-start-date" name="startDate"
+                   th:value="*{startDate}" required
+                   min="1000-01-01" max="9999-12-31" />
+          </div>
+          <span class="diary-period-separator" aria-hidden="true">~</span>
+          <div class="diary-period-item">
+            <label for="diary-end-date">여행 종료일</label>
+            <input type="date" id="diary-end-date" name="endDate"
+                   th:value="*{endDate}" required
+                   min="1000-01-01" max="9999-12-31" />
+          </div>
         </div>
       </div>
 
       <div class="diary-form-field">
-        <label for="diary-cover-image">대표 이미지</label>
-        <img class="diary-form-cover-preview"
-             th:if="${currentCoverImageUrl != null and !#strings.isEmpty(currentCoverImageUrl)}"
-             th:src="${currentCoverImageUrl}" alt="현재 표지" />
-        <input type="file" id="diary-cover-image" name="coverImage" accept="image/*" />
+        <span class="diary-form-label">대표 이미지</span>
+        <!-- 기본 파일 선택 버튼은 감추고 아래 버튼으로 열되, 제출 시 함께 올라가는 구조는 그대로 둔다. -->
+        <input type="file" id="diary-cover-image" name="coverImage" accept="image/*"
+               class="diary-cover-input" />
+        <div class="diary-cover-picker">
+          <label class="diary-cover-button" for="diary-cover-image"
+                 th:text="${currentCoverImageUrl != null and !#strings.isEmpty(currentCoverImageUrl)}
+                          ? '대표 이미지 변경' : '대표 이미지 선택'">대표 이미지 변경</label>
+          <span class="diary-cover-name" id="diary-cover-name"
+                th:text="${currentCoverImageUrl != null and !#strings.isEmpty(currentCoverImageUrl)}
+                         ? '지금 표지를 사용 중' : '선택된 이미지 없음'">지금 표지를 사용 중</span>
+        </div>
+        <!-- 지금 표지를 미리보기에 그대로 띄우고, 새 파일을 고르면 JS 가 갈아 끼운다. -->
+        <div class="diary-cover-preview" id="diary-cover-preview"
+             th:attr="hidden=${currentCoverImageUrl != null and !#strings.isEmpty(currentCoverImageUrl)}
+                      ? null : true">
+          <img id="diary-cover-preview-image" th:src="${currentCoverImageUrl}"
+               alt="대표 이미지 미리보기" />
+        </div>
         <span class="diary-form-hint">새로 선택하지 않으면 지금 표지가 그대로 유지됩니다.</span>
       </div>
 
       <div class="diary-form-actions">
         <a class="diary-form-cancel" th:href="@{/diaries/{id}(id=${diaryId})}">취소</a>
-        <button type="submit" class="diary-form-submit">저장</button>
+        <button type="submit" class="diary-form-submit">수정 완료</button>
       </div>
     </form>
   </section>

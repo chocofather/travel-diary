@@ -244,7 +244,8 @@ class DiaryControllerTest {
                         .with(authentication(new UsernamePasswordAuthenticationToken(
                                 userDetails, null, List.of()))))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/diaries/10?edit=true"))
+                // 편집 모드는 한 장씩 보므로 방금 추가한 장을 바로 연다
+                .andExpect(redirectedUrl("/diaries/10?edit=true&page=1"))
                 .andExpect(flash().attribute("diaryMessage", "새 페이지가 추가되었습니다."));
 
         ArgumentCaptor<DiaryPage> captor = ArgumentCaptor.forClass(DiaryPage.class);
@@ -286,16 +287,14 @@ class DiaryControllerTest {
                 photoElement(101L, "/uploads/diary/photo.jpg")));
         when(diaryElementService.getElements(10L, 2L, 7L)).thenReturn(List.of());
 
-        mockMvc.perform(get("/diaries/10").param("edit", "true")
+        mockMvc.perform(get("/diaries/10")
                         .with(authentication(new UsernamePasswordAuthenticationToken(
                                 userDetails, null, List.of()))))
                 .andExpect(status().isOk())
-                // 본문은 종이 자체(Quill 편집 영역)에 그대로 그려진다
+                // 본문은 종이 자체에 그대로 그려진다
                 .andExpect(content().string(containsString("<p>첫째 날 기록</p>")))
                 .andExpect(content().string(containsString("diary-editor")))
-                .andExpect(content().string(containsString("/diaries/10/pages/1/content")))
-                .andExpect(content().string(containsString("/uploads/diary/photo.jpg")))
-                .andExpect(content().string(containsString("diary-photo-input")));
+                .andExpect(content().string(containsString("/uploads/diary/photo.jpg")));
 
         // 펼친 두 장만 조회한다
         verify(diaryElementService).getElements(10L, 1L, 7L);
@@ -677,15 +676,19 @@ class DiaryControllerTest {
                 .andReturn().getResponse().getContentAsString();
 
         assertThat(body).contains("is-read-mode");
+        // 읽기 모드는 책 감상 + 책 자체 관리 자리다
         assertThat(body).contains("편집하기");
-        // 읽기 모드에는 편집 UI 가 없다
+        assertThat(body).contains("다이어리 설정");
+        assertThat(body).contains("/diaries/10/edit");
+        assertThat(body).contains("다이어리 삭제");
+        assertThat(body).contains("/diaries/10/delete");
+        // 읽기 모드에는 페이지 내용 편집 UI 가 없다
         assertThat(body).doesNotContain("diary-toolbar");
         assertThat(body).doesNotContain("diary-photo-input");
         assertThat(body).doesNotContain("diary-page-action");
         assertThat(body).doesNotContain("/diaries/10/pages/1/update");
         assertThat(body).doesNotContain("/diaries/10/pages/1/delete");
         assertThat(body).doesNotContain("diary-page-add-button");
-        assertThat(body).doesNotContain("/diaries/10/delete");
         assertThat(body).doesNotContain("diary-resize-handle");
         assertThat(body).doesNotContain("diary-rotate-handle");
         assertThat(body).doesNotContain("diary-layer-action");
@@ -724,31 +727,168 @@ class DiaryControllerTest {
         assertThat(body).contains("/diaries/10/pages/1/content");
         // 편집 완료는 edit 이 빠진 읽기 모드 주소로 간다
         assertThat(body).contains("data-editor-done=\"true\"");
+        // 책 자체 관리(설정/삭제)는 읽기 모드 몫이라 편집 모드에는 없다
+        assertThat(body).doesNotContain("다이어리 설정");
+        assertThat(body).doesNotContain("다이어리 삭제");
+        assertThat(body).doesNotContain("/diaries/10/edit");
+        assertThat(body).doesNotContain("/diaries/10/delete");
+        // 페이지 관리 액션은 종이 안이 아니라 종이 바깥 줄에 있다
+        assertThat(body.indexOf("diary-page-meta")).isLessThan(body.indexOf("diary-book-single"));
+        assertThat(body.substring(body.indexOf("diary-sheet-single")))
+                .doesNotContain("diary-page-action");
     }
 
     @Test
-    void spreadLinksKeepTheCurrentMode() throws Exception {
+    void editStartsFromThePagePickerDialog() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(
+                page(1, "2026-08-01"), page(2, "2026-08-02"), page(3, "2026-08-03")));
+
+        String body = mockMvc.perform(get("/diaries/10").param("spread", "1")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        // 편집하기는 바로 이동하지 않고 선택 dialog 를 연다
+        assertThat(body).contains("id=\"diary-page-picker-button\"");
+        assertThat(body).contains("aria-haspopup=\"dialog\"");
+        assertThat(body).contains("aria-expanded=\"false\"");
+        assertThat(body).containsPattern("id=\"diary-page-picker-backdrop\"[^>]*hidden");
+        assertThat(body).contains("편집할 페이지를 선택해 주세요");
+        assertThat(body).contains("/js/diary-page-picker.js");
+
+        // 모든 페이지가 pageOrder 순으로, 각자의 편집 주소로 들어 있다
+        assertThat(body).contains("1페이지").contains("2페이지").contains("3페이지");
+        assertThat(body).contains("spread=0&amp;edit=true&amp;page=1");
+        assertThat(body).contains("spread=0&amp;edit=true&amp;page=2");
+        assertThat(body).contains("spread=1&amp;edit=true&amp;page=3");
+        assertThat(body.indexOf("page=1")).isLessThan(body.indexOf("page=3"));
+        // 지금 보고 있는 펼침의 장만 옅게 표시한다 (자동 선택은 아님)
+        assertThat(body).contains("diary-page-picker-item is-current");
+    }
+
+    @Test
+    void pagePickerGuidesToAddAPageWhenTheDiaryIsEmpty() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of());
+
+        String body = mockMvc.perform(get("/diaries/10")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).contains("편집할 페이지가 없습니다. 먼저 새 페이지를 추가해 주세요.");
+        assertThat(body).doesNotContain("diary-page-picker-item");
+    }
+
+    @Test
+    void diaryEditFormUsesTheSameLayoutAsTheNewForm() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        Diary diary = diary();
+        diary.setCoverImageUrl("/uploads/diary-covers/old.jpg");
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary);
+
+        String body = mockMvc.perform(get("/diaries/10/edit")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        // 작성 화면과 같은 여행 기간 묶음 + 4자리 연도 제한
+        assertThat(body).contains("여행 기간");
+        assertThat(body).contains("diary-period-inputs");
+        assertThat(body).contains("diary-period-separator");
+        assertThat(body).contains("min=\"1000-01-01\"").contains("max=\"9999-12-31\"");
+        // 작성 화면과 같은 커스텀 대표 이미지 선택 (기본 파일 선택 UI 숨김)
+        assertThat(body).contains("diary-cover-input");
+        assertThat(body).contains("diary-cover-picker");
+        assertThat(body).contains("대표 이미지 변경");
+        assertThat(body).contains("id=\"diary-cover-preview\"");
+        assertThat(body).contains("/uploads/diary-covers/old.jpg");
+        assertThat(body).contains("/js/diary-cover-picker.js");
+        assertThat(body).contains("수정 완료");
+    }
+
+    @Test
+    void readModeMovesBySpreadAndEditModeMovesByOnePage() throws Exception {
         when(userDetails.getId()).thenReturn(7L);
         when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
         when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(
                 page(1, "2026-08-01"), page(2, "2026-08-02"),
                 page(3, "2026-08-03"), page(4, "2026-08-04")));
 
+        // 읽기 모드: 두 장 펼침 그대로, 이동도 펼침 단위
         String readBody = mockMvc.perform(get("/diaries/10").param("spread", "1")
                         .with(authentication(new UsernamePasswordAuthenticationToken(
                                 userDetails, null, List.of()))))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
+        assertThat(readBody).contains("diary-book-spread");
+        assertThat(readBody).doesNotContain("diary-book-single");
         assertThat(readBody).contains("href=\"/diaries/10?spread=0\"");
-        assertThat(readBody).doesNotContain("spread=0&amp;edit=true");
+        assertThat(readBody).contains("data-flip=\"previous\"");
+        // 편집하기는 지금 펼친 왼쪽 장부터 연다
+        assertThat(readBody).contains("spread=1&amp;edit=true&amp;page=3");
 
+        // 편집 모드: 한 장만, 이동도 한 장씩
         String editBody = mockMvc.perform(get("/diaries/10")
-                        .param("spread", "1").param("edit", "true")
+                        .param("spread", "1").param("edit", "true").param("page", "3")
                         .with(authentication(new UsernamePasswordAuthenticationToken(
                                 userDetails, null, List.of()))))
                 .andExpect(status().isOk())
+                .andExpect(model().attribute("editPageNumber", 3))
                 .andReturn().getResponse().getContentAsString();
-        assertThat(editBody).contains("spread=0&amp;edit=true");
+        assertThat(editBody).contains("diary-book-single");
+        assertThat(editBody).doesNotContain("diary-book-spread");
+        assertThat(editBody).contains("3 / 4 페이지");
+        assertThat(editBody).contains("page=2");
+        assertThat(editBody).contains("page=4");
+        // 편집 모드 이동에는 읽기 모드의 책장 넘김 연출을 붙이지 않는다
+        assertThat(editBody).doesNotContain("data-flip=");
+    }
+
+    @Test
+    void editModeClampsAnUnknownPageAndDisablesEndOfBookMoves() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(
+                page(1, "2026-08-01"), page(2, "2026-08-02"), page(3, "2026-08-03")));
+
+        // 목록에 없는 page 값은 지금 펼친 장으로 되돌린다 (요청 값을 그대로 믿지 않는다)
+        mockMvc.perform(get("/diaries/10").param("edit", "true").param("page", "99")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("editPageNumber", 1))
+                .andExpect(model().attribute("hasPreviousPage", false))
+                .andExpect(model().attribute("hasNextPage", true));
+
+        // 마지막 장에서는 다음 이동이 막힌다
+        mockMvc.perform(get("/diaries/10").param("spread", "1")
+                        .param("edit", "true").param("page", "3")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("hasPreviousPage", true))
+                .andExpect(model().attribute("hasNextPage", false))
+                // 3페이지는 읽기 모드 두 번째 펼침에 들어 있다
+                .andExpect(model().attribute("editSpread", 1));
+    }
+
+    @Test
+    void editingAnotherUsersDiaryIsStillNotFound() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L))
+                .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "다이어리를 찾을 수 없습니다."));
+
+        mockMvc.perform(get("/diaries/10").param("edit", "true").param("page", "1")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isNotFound());
     }
 
     @Test
