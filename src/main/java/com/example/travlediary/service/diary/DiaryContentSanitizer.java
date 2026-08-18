@@ -7,6 +7,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.springframework.stereotype.Component;
 
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
 import java.util.StringJoiner;
@@ -24,13 +25,19 @@ public class DiaryContentSanitizer {
     private static final Set<String> ALLOWED_TAGS = Set.of(
             "p", "br", "span", "strong", "em", "b", "i", "u", "s", "del"
     );
-    /** 툴바에서 쓰는 글꼴/글자 크기/정렬 클래스만 허용한다. */
-    private static final Set<String> ALLOWED_CLASSES = Set.of(
-            "ql-font-serif", "ql-font-monospace", "ql-font-pretendard",
-            "ql-font-noto-sans-kr", "ql-font-noto-serif-kr", "ql-font-nanum-human",
-            "ql-size-small", "ql-size-large", "ql-size-huge",
-            "ql-align-center", "ql-align-right", "ql-align-justify"
+    /**
+     * 다이어리 툴바에서 고를 수 있는 글꼴 클래스.
+     * (여행정보 등 다른 화면의 글꼴 허용 목록과 섞지 않는다)
+     */
+    public static final Set<String> DIARY_FONT_CLASSES = Set.of(
+            "ql-font-fromsol", "ql-font-nanum-square", "ql-font-bookk-myeongjo",
+            "ql-font-hiker", "ql-font-cafe24-surround", "ql-font-lee-seoyun",
+            "ql-font-ggubulim", "ql-font-ohchungi", "ql-font-chosun-gungsuh",
+            "ql-font-gunham", "ql-font-dunggeunmo", "ql-font-mitmi",
+            "ql-font-green-umbrella", "ql-font-incheon-jaram", "ql-font-park-dahyun"
     );
+    /** 툴바에서 쓰는 글꼴/글자 크기/정렬 클래스만 허용한다. */
+    private static final Set<String> ALLOWED_CLASSES = allowedClasses();
     /** 글자색만 남긴다. (배경색과 그 밖의 style 은 버린다) */
     private static final String ALLOWED_STYLE_PROPERTY = "color";
     /** Jsoup 이 &nbsp; 를 돌려주는 문자 */
@@ -47,7 +54,9 @@ public class DiaryContentSanitizer {
             return null;
         }
 
-        Document document = Jsoup.parseBodyFragment(postContentSanitizer.sanitize(content));
+        // 위험 요소 제거는 공통 정리기에 맡기되, 다이어리 글꼴 클래스는 살아남게 함께 넘긴다.
+        Document document = Jsoup.parseBodyFragment(
+                postContentSanitizer.sanitize(content, DIARY_FONT_CLASSES));
         // body 자체는 대상이 아니므로 자식부터 훑는다.
         for (Element element : document.body().children().select("*")) {
             if (ALLOWED_TAGS.contains(element.tagName())) {
@@ -66,6 +75,16 @@ public class DiaryContentSanitizer {
     /** 빈 편집기가 만드는 &lt;p&gt;&lt;br&gt;&lt;/p&gt; 같은 값은 빈 본문으로 본다. */
     private boolean isEmpty(String text) {
         return text.replace(NO_BREAK_SPACE, ' ').isBlank();
+    }
+
+    /** 글꼴 + 글자 크기 + 정렬 클래스. 그 밖의 클래스는 모두 지운다. */
+    private static Set<String> allowedClasses() {
+        Set<String> allowed = new HashSet<>(DIARY_FONT_CLASSES);
+        allowed.addAll(Set.of(
+                "ql-size-small", "ql-size-large", "ql-size-huge",
+                "ql-align-center", "ql-align-right", "ql-align-justify"
+        ));
+        return Set.copyOf(allowed);
     }
 
     private void keepAllowedClasses(Element element) {

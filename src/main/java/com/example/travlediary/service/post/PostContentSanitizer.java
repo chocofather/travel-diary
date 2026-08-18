@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -51,11 +52,19 @@ public class PostContentSanitizer {
     private final Safelist safelist = createSafelist();
 
     public String sanitize(String content) {
+        return sanitize(content, Set.of());
+    }
+
+    /**
+     * 기능별로 추가 허용할 인라인 클래스를 받아 정리한다.
+     * (예: 다이어리 전용 글꼴 클래스. 여행정보 등 다른 화면의 허용 목록은 그대로 둔다.)
+     */
+    public String sanitize(String content, Set<String> additionalInlineClasses) {
         String nonNullContent = content == null ? "" : content;
         String cleaned = Jsoup.clean(nonNullContent, "", safelist, outputSettings());
         Document document = Jsoup.parseBodyFragment(cleaned);
 
-        sanitizeQuillClasses(document);
+        sanitizeQuillClasses(document, additionalInlineClasses);
         sanitizeQuillStyles(document);
         sanitizeChecklistStates(document);
 
@@ -95,11 +104,11 @@ public class PostContentSanitizer {
         return safelist;
     }
 
-    private void sanitizeQuillClasses(Document document) {
+    private void sanitizeQuillClasses(Document document, Set<String> additionalInlineClasses) {
         for (Element element : document.select("[class]")) {
             String tagName = element.tagName();
             Set<String> allowedNames = INLINE_FORMAT_TAGS.contains(tagName)
-                    ? INLINE_QUILL_CLASSES
+                    ? inlineClasses(additionalInlineClasses)
                     : BLOCK_FORMAT_TAGS.contains(tagName) ? BLOCK_QUILL_CLASSES : Set.of();
 
             StringJoiner safeClasses = new StringJoiner(" ");
@@ -116,6 +125,16 @@ public class PostContentSanitizer {
                 element.attr("class", result);
             }
         }
+    }
+
+    /** 기본 허용 인라인 클래스에 기능별 추가 클래스만 더한다. */
+    private Set<String> inlineClasses(Set<String> additionalInlineClasses) {
+        if (additionalInlineClasses.isEmpty()) {
+            return INLINE_QUILL_CLASSES;
+        }
+        Set<String> allowed = new HashSet<>(INLINE_QUILL_CLASSES);
+        allowed.addAll(additionalInlineClasses);
+        return allowed;
     }
 
     private void sanitizeChecklistStates(Document document) {

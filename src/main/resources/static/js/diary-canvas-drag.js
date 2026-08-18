@@ -4,6 +4,9 @@
  * Pointer Events 만 사용하고 별도 드래그/리사이즈 라이브러리는 쓰지 않는다.
  */
 document.addEventListener('DOMContentLoaded', () => {
+    // 읽기 모드에서는 어떤 조작도 시작되지 않도록 아예 붙이지 않는다.
+    if (!document.querySelector('.diary-detail-page.is-edit-mode')) return;
+
     const items = Array.from(document.querySelectorAll('.diary-canvas-item[data-element-id]'));
     if (items.length === 0) return;
 

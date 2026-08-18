@@ -1,0 +1,207 @@
+/*
+ * 개인 여행일기 전용 글꼴.
+ * 이 파일은 다이어리 상세 화면에서만 불러온다. (다른 화면의 글꼴에는 영향을 주지 않는다)
+ * 각 폰트는 제작사/눈누가 안내하는 공식 웹폰트 주소를 그대로 쓰고, 저장소에 폰트 파일을 넣지 않는다.
+ * 일기 본문에는 한 굵기만 쓰므로 Regular 한 벌만 불러온다.
+ */
+
+/* 그리운 프롬솔 (그리운) */
+@font-face {
+    font-family: 'DearFromsol';
+    src: url('https://cdn.jsdelivr.net/gh/Project-Noonnu/2607161334@griun-fromsol-rg/griun-fromsol-rg/Griun_Fromsol-Rg.woff2') format('woff2');
+    font-weight: 400;
+    font-display: swap;
+}
+
+/* 하이커체 (하이커 그라운드) — 제공되는 웹폰트가 ExtraBold 이므로 굵기를 그대로 쓴다 */
+@font-face {
+    font-family: 'Hiikr';
+    src: url('https://cdn.jsdelivr.net/gh/Project-Noonnu/2607101609@hikr-extrabold/hikr-extrabold/HiKR-ExtraBold.woff2') format('woff2');
+    font-weight: 700;
+    font-display: swap;
+}
+
+/* 그리운 국한박 오춘기 김작가 (그리운 X 국립한글박물관) */
+@font-face {
+    font-family: 'NostalgicGukhanbakOchungiWriterKim';
+    src: url('https://cdn.jsdelivr.net/gh/Project-Noonnu/2607161334@griunxhangeulochungikim-regular/griunxhangeulochungikim-regular/GriunXHangeulOCHUNGIKIM-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-display: swap;
+}
+
+/* 군함이말문트였체 (경남FC) */
+@font-face {
+    font-family: 'Gunhamimalmunteuyeot';
+    src: url('https://cdn.jsdelivr.net/gh/Project-Noonnu/2607131613@gfcgunhamitalks/gfcgunhamitalks/GFCGunhamiTalks.woff2') format('woff2');
+    font-weight: 400;
+    font-display: swap;
+}
+
+/* 나눔스퀘어 (네이버) */
+@font-face {
+    font-family: 'NanumSquare';
+    src: url('https://cdn.jsdelivr.net/gh/moonspam/NanumSquare@master/NanumSquareR.woff2') format('woff2');
+    font-weight: normal;
+    font-display: swap;
+}
+
+/* 부크크 명조 ((주)부크크) */
+@font-face {
+    font-family: 'BookkMyungjo';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2302@1.0/BookkMyungjo-Lt.woff2') format('woff2');
+    font-weight: normal;
+    font-display: swap;
+}
+
+/* 카페24 써라운드 (카페24) */
+@font-face {
+    font-family: 'Cafe24Ssurround';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2105_2@1.0/Cafe24Ssurround.woff') format('woff');
+    font-weight: normal;
+    font-display: swap;
+}
+
+/* 이서윤체 (흥국생명) */
+@font-face {
+    font-family: 'LeeSeoyun';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2202-2@1.0/LeeSeoyun.woff') format('woff');
+    font-weight: normal;
+    font-display: swap;
+}
+
+/* 꾸불림체 (우아한형제들) */
+@font-face {
+    font-family: 'BMKkubulim';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2410-1@1.0/BMkkubulimTTF-Regular.woff2') format('woff2');
+    font-weight: normal;
+    font-display: swap;
+}
+
+/* 조선궁서체 (조선일보) */
+@font-face {
+    font-family: 'ChosunGs';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_20-04@1.0/ChosunGs.woff') format('woff');
+    font-weight: normal;
+    font-display: swap;
+}
+
+/* 둥근모꼴+ Fixedsys (길형진) */
+@font-face {
+    font-family: 'DungGeunMo';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/DungGeunMo.woff') format('woff');
+    font-weight: normal;
+    font-display: swap;
+}
+
+/* 밑미 폰트 (밑미 X 보이저엑스) */
+@font-face {
+    font-family: 'MitmiFont';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2402_1@1.0/Ownglyph_meetme-Rg.woff2') format('woff2');
+    font-weight: normal;
+    font-display: swap;
+}
+
+/* 윤초록우산어린이 만세 (초록우산어린이재단 X 윤디자인그룹) */
+@font-face {
+    font-family: 'YoonChildfundkoreaManSeh';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408@1.0/YoonChildfundkoreaManSeh.woff2') format('woff2');
+    font-weight: normal;
+    font-display: swap;
+}
+
+/* 인천교육자람체 (인천광역시교육청) */
+@font-face {
+    font-family: 'IceJaram';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2307-2@1.0/iceJaram-Rg.woff2') format('woff2');
+    font-weight: normal;
+    font-display: swap;
+}
+
+/* 온글잎 박다현체 (온글잎 / 보이저엑스) */
+@font-face {
+    font-family: 'OwnglyphParkDaHyun';
+    src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2411-3@1.0/Ownglyph_ParkDaHyun.woff2') format('woff2');
+    font-weight: normal;
+    font-display: swap;
+}
+
+/*
+ * 본문(편집/읽기 공통)과 글꼴 드롭다운 미리보기가 같은 글꼴을 쓰도록 한 규칙으로 묶는다.
+ * 본문에는 Quill 이 ql-font-{식별자} 클래스를 붙인다.
+ */
+.diary-editor .ql-font-fromsol,
+.diary-font-fromsol {
+    font-family: 'DearFromsol', "Malgun Gothic", sans-serif;
+}
+
+/* 하이커체는 ExtraBold 한 벌만 제공되므로 굵기를 함께 지정한다 */
+.diary-editor .ql-font-hiker,
+.diary-font-hiker {
+    font-family: 'Hiikr', "Malgun Gothic", sans-serif;
+    font-weight: 700;
+}
+
+.diary-editor .ql-font-ohchungi,
+.diary-font-ohchungi {
+    font-family: 'NostalgicGukhanbakOchungiWriterKim', "Malgun Gothic", sans-serif;
+}
+
+.diary-editor .ql-font-gunham,
+.diary-font-gunham {
+    font-family: 'Gunhamimalmunteuyeot', "Malgun Gothic", sans-serif;
+}
+
+.diary-editor .ql-font-nanum-square,
+.diary-font-nanum-square {
+    font-family: 'NanumSquare', "Malgun Gothic", sans-serif;
+}
+
+.diary-editor .ql-font-bookk-myeongjo,
+.diary-font-bookk-myeongjo {
+    font-family: 'BookkMyungjo', Georgia, serif;
+}
+
+.diary-editor .ql-font-cafe24-surround,
+.diary-font-cafe24-surround {
+    font-family: 'Cafe24Ssurround', "Malgun Gothic", sans-serif;
+}
+
+.diary-editor .ql-font-lee-seoyun,
+.diary-font-lee-seoyun {
+    font-family: 'LeeSeoyun', "Malgun Gothic", sans-serif;
+}
+
+.diary-editor .ql-font-ggubulim,
+.diary-font-ggubulim {
+    font-family: 'BMKkubulim', "Malgun Gothic", sans-serif;
+}
+
+.diary-editor .ql-font-chosun-gungsuh,
+.diary-font-chosun-gungsuh {
+    font-family: 'ChosunGs', "Batang", serif;
+}
+
+.diary-editor .ql-font-dunggeunmo,
+.diary-font-dunggeunmo {
+    font-family: 'DungGeunMo', "Courier New", monospace;
+}
+
+.diary-editor .ql-font-mitmi,
+.diary-font-mitmi {
+    font-family: 'MitmiFont', "Malgun Gothic", sans-serif;
+}
+
+.diary-editor .ql-font-green-umbrella,
+.diary-font-green-umbrella {
+    font-family: 'YoonChildfundkoreaManSeh', "Malgun Gothic", sans-serif;
+}
+
+.diary-editor .ql-font-incheon-jaram,
+.diary-font-incheon-jaram {
+    font-family: 'IceJaram', "Malgun Gothic", sans-serif;
+}
+
+.diary-editor .ql-font-park-dahyun,
+.diary-font-park-dahyun {
+    font-family: 'OwnglyphParkDaHyun', "Malgun Gothic", sans-serif;
+}

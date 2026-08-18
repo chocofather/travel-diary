@@ -72,6 +72,16 @@
           AND diary_id = #{diaryId}
     </update>
 
+    <!-- 삭제한 순서 뒤의 페이지를 한 칸씩 당긴다.
+         작은 page_order 부터 갱신해야 UNIQUE(diary_id, page_order) 와 충돌하지 않는다. -->
+    <update id="shiftPageOrdersAfter">
+        UPDATE diary_pages
+        SET page_order = page_order - 1
+        WHERE diary_id = #{diaryId}
+          AND page_order > #{pageOrder}
+        ORDER BY page_order ASC
+    </update>
+
     <!-- 요소는 FK ON DELETE CASCADE 로 함께 삭제된다. -->
     <delete id="delete">
         DELETE FROM diary_pages

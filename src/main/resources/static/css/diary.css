@@ -914,7 +914,10 @@
     font-size: inherit;
 }
 
-.diary-editor .ql-editor {
+/* 편집/읽기 모두 같은 종이 글꼴과 줄간격을 쓴다 */
+.diary-editor .ql-editor,
+.diary-editor.is-read-only {
+    width: 100%;
     height: 100%;
     padding: 0;
     color: #3b352d;
@@ -922,6 +925,10 @@
     line-height: 30px; /* 줄노트 배경 간격과 맞춘다 */
     overflow-y: auto;
     overflow-wrap: anywhere;
+}
+
+.diary-editor.is-read-only p {
+    margin: 0;
 }
 
 .diary-editor .ql-editor.ql-blank::before {
@@ -937,28 +944,7 @@
     outline-offset: -1px;
 }
 
-/* 툴바에서 쓰는 글꼴/크기/정렬 (글꼴 정의는 quill-content.css 의 @font-face 를 그대로 쓴다) */
-.diary-editor .ql-font-pretendard {
-    font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-}
-
-.diary-editor .ql-font-noto-sans-kr {
-    font-family: "Noto Sans KR", "Malgun Gothic", sans-serif;
-}
-
-.diary-editor .ql-font-noto-serif-kr,
-.diary-editor .ql-font-serif {
-    font-family: "Noto Serif KR", Georgia, "Times New Roman", serif;
-}
-
-.diary-editor .ql-font-nanum-human {
-    font-family: "NanumHuman", "Malgun Gothic", sans-serif;
-}
-
-.diary-editor .ql-font-monospace {
-    font-family: Monaco, "Courier New", monospace;
-}
-
+/* 툴바에서 쓰는 글꼴은 diary-fonts.css 에서 정의한다 (다이어리 화면에서만 불러온다) */
 .diary-editor .ql-size-small {
     font-size: 0.8em;
 }
@@ -1064,6 +1050,95 @@
     outline-offset: 1px;
 }
 
+/* 글꼴 드롭다운: 항목 이름을 실제 글꼴로 보여준다 */
+.diary-font-picker {
+    position: relative;
+}
+
+.diary-font-trigger {
+    box-sizing: border-box;
+    height: 28px;
+    min-width: 132px;
+    max-width: 168px;
+    padding: 2px 10px;
+    border: 1px solid #e0d6c6;
+    border-radius: 6px;
+    background: #fff;
+    color: #5c5346;
+    font-family: inherit;
+    font-size: 13px;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.diary-font-trigger:hover {
+    border-color: #cbbba0;
+    background: #fffdf8;
+}
+
+.diary-font-trigger.is-active {
+    border-color: #b39a75;
+    background: #fdf8ef;
+}
+
+.diary-font-trigger:focus-visible {
+    outline: 2px solid #b39a75;
+    outline-offset: 1px;
+}
+
+.diary-font-list {
+    position: absolute;
+    z-index: 50;
+    top: calc(100% + 6px);
+    left: 0;
+    display: flex;
+    width: min(240px, calc(100vw - 40px));
+    max-height: 260px;
+    flex-direction: column;
+    gap: 1px;
+    padding: 6px;
+    border: 1px solid #e3dcd1;
+    border-radius: 10px;
+    background: #fffdf8;
+    box-shadow: 0 6px 16px rgba(63, 52, 38, 0.14);
+    overflow-y: auto;
+}
+
+/* 기본은 닫힘. display 를 지정한 뒤에도 hidden 이 이기도록 따로 둔다. */
+.diary-font-list[hidden] {
+    display: none;
+}
+
+.diary-font-option {
+    padding: 7px 10px;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: #4a4238;
+    font-size: 15px;
+    line-height: 1.4;
+    text-align: left;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.diary-font-option:hover {
+    background: #f3ece0;
+}
+
+.diary-font-option.is-selected {
+    background: #ece0cc;
+    font-weight: 700;
+}
+
+.diary-font-option:focus-visible {
+    outline: 2px solid #b39a75;
+    outline-offset: -2px;
+}
+
 /* 이모지 */
 .diary-emoji {
     position: relative;
@@ -1074,25 +1149,74 @@
     z-index: 50;
     top: calc(100% + 6px);
     left: 0;
-    display: grid;
-    width: max-content;
-    grid-template-columns: repeat(4, 28px);
-    gap: 4px;
+    display: flex;
+    width: min(320px, calc(100vw - 40px));
+    max-height: 260px;
+    flex-direction: column;
+    gap: 6px;
     padding: 8px;
     border: 1px solid #e3dcd1;
     border-radius: 10px;
     background: #fffdf8;
-    box-shadow: 0 8px 20px rgba(63, 52, 38, 0.16);
+    box-shadow: 0 6px 16px rgba(63, 52, 38, 0.14);
 }
 
-.diary-emoji-item {
+/* 기본은 닫힘. display 를 지정한 뒤에도 hidden 이 이기도록 따로 둔다. */
+.diary-emoji-popover[hidden] {
+    display: none;
+}
+
+.diary-emoji-tabs {
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    gap: 2px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #efe7da;
+}
+
+.diary-emoji-tab {
     width: 28px;
-    height: 28px;
+    height: 26px;
     padding: 0;
     border: 0;
     border-radius: 6px;
     background: none;
-    font-size: 16px;
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.diary-emoji-tab:hover {
+    background: #f3ece0;
+}
+
+.diary-emoji-tab.is-active {
+    background: #ece0cc;
+    box-shadow: inset 0 -2px 0 #b39a75;
+}
+
+.diary-emoji-tab:focus-visible {
+    outline: 2px solid #b39a75;
+    outline-offset: 1px;
+}
+
+.diary-emoji-grid {
+    display: grid;
+    flex: 1 1 auto;
+    grid-template-columns: repeat(auto-fill, minmax(30px, 1fr));
+    gap: 2px;
+    overflow-y: auto;
+}
+
+.diary-emoji-item {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    font-size: 17px;
     line-height: 1;
     cursor: pointer;
 }
@@ -1106,6 +1230,19 @@
     outline-offset: 1px;
 }
 
+/* 편집 중이라는 조용한 표시 */
+.diary-edit-badge {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: #f2e8d8;
+    color: #6f5a3c;
+    font-size: 12px;
+    font-weight: 700;
+}
+
 /* 저장 상태는 색이 아니라 문구로 알린다 */
 .diary-save-status {
     margin: 0 0 0 auto;
@@ -1116,6 +1253,41 @@
 .diary-save-status.is-error {
     color: #b0564a;
     font-weight: 700;
+}
+
+/* ===== 읽기 모드 / 편집 모드 ===== */
+.diary-mode-button {
+    display: inline-flex;
+    align-items: center;
+    height: 30px;
+    padding: 0 14px;
+    border: 1px solid #cbbba0;
+    border-radius: 999px;
+    background: #fffdf8;
+    color: #5c4a31;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.diary-mode-button:hover {
+    background: #f5ecdd;
+}
+
+.diary-mode-button:focus-visible {
+    outline: 2px solid #b39a75;
+    outline-offset: 1px;
+}
+
+/* 읽기 모드에서는 본문/사진 모두 조작 대상이 아니다 */
+.is-read-mode .diary-editor.is-read-only {
+    cursor: default;
+}
+
+.is-read-mode .diary-canvas-item {
+    cursor: default;
+    touch-action: auto;
 }
 
 /* 저장된 상대 좌표는 인라인 style 로 %, deg, z-index 만 채운다 */

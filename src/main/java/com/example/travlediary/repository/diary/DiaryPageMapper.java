@@ -35,6 +35,13 @@ public interface DiaryPageMapper {
                       @Param("diaryId") Long diaryId,
                       @Param("content") String content);
 
+    /**
+     * 삭제한 자리 뒤의 페이지 순서를 한 칸씩 당긴다.
+     * UNIQUE(diary_id, page_order) 충돌이 없도록 작은 순서부터 갱신한다.
+     */
+    int shiftPageOrdersAfter(@Param("diaryId") Long diaryId,
+                             @Param("pageOrder") Integer pageOrder);
+
     /** 페이지 삭제 (요소는 FK CASCADE 로 함께 지워진다) */
     int delete(@Param("pageId") Long pageId,
                @Param("diaryId") Long diaryId);

@@ -108,15 +108,19 @@ public class DiaryPageServiceImpl implements DiaryPageService {
         return requirePageOfDiary(existing.getId(), diary.getId());
     }
 
+    /** 페이지 삭제와 뒤 페이지 순서 정리는 한 트랜잭션에서 함께 처리한다. */
     @Override
     @Transactional
     public void delete(Long diaryId, Long pageId, Long userId) {
         Diary diary = requireOwnedDiary(diaryId, userId);
-        requirePageOfDiary(pageId, diary.getId());
+        DiaryPage existing = requirePageOfDiary(pageId, diary.getId());
+
         // 요소 행은 FK ON DELETE CASCADE 로 함께 삭제된다.
         if (diaryPageMapper.delete(pageId, diary.getId()) != 1) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "페이지를 찾을 수 없습니다.");
         }
+        // 삭제한 자리 뒤의 페이지를 한 칸씩 당겨 1,2,3... 이 이어지게 한다.
+        diaryPageMapper.shiftPageOrdersAfter(diary.getId(), existing.getPageOrder());
     }
 
     /** 부모 다이어리 소유권 확인. 없는 다이어리와 남의 다이어리를 같은 404 로 처리한다. */

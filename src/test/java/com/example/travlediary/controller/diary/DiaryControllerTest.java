@@ -212,7 +212,8 @@ class DiaryControllerTest {
         when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
         when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of());
 
-        mockMvc.perform(get("/diaries/10")
+        // 페이지 추가 폼은 편집 모드에서만 보여준다
+        mockMvc.perform(get("/diaries/10").param("edit", "true")
                         .with(authentication(new UsernamePasswordAuthenticationToken(
                                 userDetails, null, List.of()))))
                 .andExpect(status().isOk())
@@ -243,7 +244,7 @@ class DiaryControllerTest {
                         .with(authentication(new UsernamePasswordAuthenticationToken(
                                 userDetails, null, List.of()))))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/diaries/10"))
+                .andExpect(redirectedUrl("/diaries/10?edit=true"))
                 .andExpect(flash().attribute("diaryMessage", "새 페이지가 추가되었습니다."));
 
         ArgumentCaptor<DiaryPage> captor = ArgumentCaptor.forClass(DiaryPage.class);
@@ -268,7 +269,7 @@ class DiaryControllerTest {
                         .with(authentication(new UsernamePasswordAuthenticationToken(
                                 userDetails, null, List.of()))))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/diaries/10"))
+                .andExpect(redirectedUrl("/diaries/10?edit=true"))
                 .andExpect(flash().attribute(
                         "diaryPageError", "페이지 날짜는 여행 기간 안에서 선택해 주세요."));
     }
@@ -285,7 +286,7 @@ class DiaryControllerTest {
                 photoElement(101L, "/uploads/diary/photo.jpg")));
         when(diaryElementService.getElements(10L, 2L, 7L)).thenReturn(List.of());
 
-        mockMvc.perform(get("/diaries/10")
+        mockMvc.perform(get("/diaries/10").param("edit", "true")
                         .with(authentication(new UsernamePasswordAuthenticationToken(
                                 userDetails, null, List.of()))))
                 .andExpect(status().isOk())
@@ -438,7 +439,7 @@ class DiaryControllerTest {
                         .with(authentication(new UsernamePasswordAuthenticationToken(
                                 userDetails, null, List.of()))))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/diaries/10?spread=1"));
+                .andExpect(redirectedUrl("/diaries/10?spread=1&edit=true"));
 
         ArgumentCaptor<DiaryPage> captor = ArgumentCaptor.forClass(DiaryPage.class);
         verify(diaryPageService).update(eq(10L), eq(3L), eq(7L), captor.capture());
@@ -462,7 +463,7 @@ class DiaryControllerTest {
                         .with(authentication(new UsernamePasswordAuthenticationToken(
                                 userDetails, null, List.of()))))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/diaries/10?spread=2"));
+                .andExpect(redirectedUrl("/diaries/10?spread=2&edit=true"));
 
         // 사진 경로를 먼저 확보한 뒤 페이지를 지운다
         InOrder inOrder = org.mockito.Mockito.inOrder(diaryElementService, diaryPageService);
@@ -485,7 +486,7 @@ class DiaryControllerTest {
                         .with(csrf())
                         .with(authentication(new UsernamePasswordAuthenticationToken(
                                 userDetails, null, List.of()))))
-                .andExpect(redirectedUrl("/diaries/10?spread=0"))
+                .andExpect(redirectedUrl("/diaries/10?spread=0&edit=true"))
                 .andExpect(flash().attribute(
                         "diaryPageError", "페이지 날짜는 여행 기간 안에서 선택해 주세요."));
     }
@@ -638,7 +639,8 @@ class DiaryControllerTest {
         when(diaryElementService.getElements(10L, 1L, 7L))
                 .thenReturn(List.of(photoElement(100L, "/uploads/diary/photo.jpg")));
 
-        mockMvc.perform(get("/diaries/10")
+        // 조작점/레이어 액션은 편집 모드에서만 그린다
+        mockMvc.perform(get("/diaries/10").param("edit", "true")
                         .with(authentication(new UsernamePasswordAuthenticationToken(
                                 userDetails, null, List.of()))))
                 .andExpect(status().isOk())
@@ -657,6 +659,147 @@ class DiaryControllerTest {
                         "data-layer-url=\"/diaries/10/pages/1/elements/100/layer\"")))
                 .andExpect(content().string(containsString("data-layer-direction=\"FORWARD\"")))
                 .andExpect(content().string(containsString("/js/diary-canvas-drag.js")));
+    }
+
+    @Test
+    void detailOpensInReadModeByDefault() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-01")));
+        when(diaryElementService.getElements(10L, 1L, 7L))
+                .thenReturn(List.of(photoElement(100L, "/uploads/diary/photo.jpg")));
+
+        String body = mockMvc.perform(get("/diaries/10")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("editMode", false))
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).contains("is-read-mode");
+        assertThat(body).contains("편집하기");
+        // 읽기 모드에는 편집 UI 가 없다
+        assertThat(body).doesNotContain("diary-toolbar");
+        assertThat(body).doesNotContain("diary-photo-input");
+        assertThat(body).doesNotContain("diary-page-action");
+        assertThat(body).doesNotContain("/diaries/10/pages/1/update");
+        assertThat(body).doesNotContain("/diaries/10/pages/1/delete");
+        assertThat(body).doesNotContain("diary-page-add-button");
+        assertThat(body).doesNotContain("/diaries/10/delete");
+        assertThat(body).doesNotContain("diary-resize-handle");
+        assertThat(body).doesNotContain("diary-rotate-handle");
+        assertThat(body).doesNotContain("diary-layer-action");
+        assertThat(body).doesNotContain("photo/delete");
+        // 본문은 편집기가 아니라 읽기 전용으로 그려진다
+        assertThat(body).contains("is-read-only");
+        assertThat(body).doesNotContain("data-content-url");
+        // 사진 자체는 그대로 보인다
+        assertThat(body).contains("/uploads/diary/photo.jpg");
+    }
+
+    @Test
+    void editQueryOpensTheEditingUi() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-01")));
+        when(diaryElementService.getElements(10L, 1L, 7L))
+                .thenReturn(List.of(photoElement(100L, "/uploads/diary/photo.jpg")));
+
+        String body = mockMvc.perform(get("/diaries/10").param("edit", "true")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("editMode", true))
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).contains("is-edit-mode");
+        assertThat(body).contains("편집 중");
+        assertThat(body).contains("편집 완료");
+        assertThat(body).contains("diary-toolbar");
+        assertThat(body).contains("diary-photo-input");
+        assertThat(body).contains("diary-page-action");
+        assertThat(body).contains("/diaries/10/pages/1/update");
+        assertThat(body).contains("diary-page-add-button");
+        assertThat(body).contains("diary-resize-handle");
+        assertThat(body).contains("/diaries/10/pages/1/content");
+        // 편집 완료는 edit 이 빠진 읽기 모드 주소로 간다
+        assertThat(body).contains("data-editor-done=\"true\"");
+    }
+
+    @Test
+    void spreadLinksKeepTheCurrentMode() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(
+                page(1, "2026-08-01"), page(2, "2026-08-02"),
+                page(3, "2026-08-03"), page(4, "2026-08-04")));
+
+        String readBody = mockMvc.perform(get("/diaries/10").param("spread", "1")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        assertThat(readBody).contains("href=\"/diaries/10?spread=0\"");
+        assertThat(readBody).doesNotContain("spread=0&amp;edit=true");
+
+        String editBody = mockMvc.perform(get("/diaries/10")
+                        .param("spread", "1").param("edit", "true")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        assertThat(editBody).contains("spread=0&amp;edit=true");
+    }
+
+    @Test
+    void emojiPickerStartsClosed() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-01")));
+
+        String body = mockMvc.perform(get("/diaries/10").param("edit", "true")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).contains("id=\"diary-emoji-popover\"");
+        assertThat(body).contains("aria-expanded=\"false\"");
+        assertThat(body).contains("aria-controls=\"diary-emoji-popover\"");
+        // 열림/닫힘은 hidden 속성으로 관리한다
+        assertThat(body).containsPattern("id=\"diary-emoji-popover\"[^>]*hidden");
+        assertThat(body).contains("id=\"diary-emoji-tabs\"");
+        assertThat(body).contains("/js/diary-emoji-data.js");
+    }
+
+    @Test
+    void fontPickerOffersOnlyTheDiaryFonts() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-01")));
+
+        String body = mockMvc.perform(get("/diaries/10").param("edit", "true")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        // 이름 미리보기용 커스텀 드롭다운과 다이어리 전용 글꼴 CSS
+        assertThat(body).contains("id=\"diary-font-trigger\"");
+        assertThat(body).contains("id=\"diary-font-list\"");
+        assertThat(body).containsPattern("id=\"diary-font-list\"[^>]*hidden");
+        assertThat(body).contains("aria-haspopup=\"listbox\"");
+        assertThat(body).contains("aria-expanded=\"false\"");
+        assertThat(body).contains("aria-controls=\"diary-font-list\"");
+        assertThat(body).contains("role=\"listbox\"");
+        // 목록을 채우는 스크립트가 함께 실려야 한다
+        assertThat(body).contains("/js/diary-editor.js");
+        assertThat(body).contains("/css/diary-fonts.css");
+        // 예전 글꼴 select 와 옵션은 더 이상 없다
+        assertThat(body).doesNotContain("id=\"diary-font\"");
+        assertThat(body).doesNotContain("Pretendard");
+        assertThat(body).doesNotContain("Noto Sans KR");
+        assertThat(body).doesNotContain("나눔휴먼");
     }
 
     @Test
@@ -718,7 +861,7 @@ class DiaryControllerTest {
                         .with(authentication(new UsernamePasswordAuthenticationToken(
                                 userDetails, null, List.of()))))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/diaries/10?spread=1"));
+                .andExpect(redirectedUrl("/diaries/10?spread=1&edit=true"));
 
         ArgumentCaptor<DiaryElement> captor = ArgumentCaptor.forClass(DiaryElement.class);
         verify(diaryElementService).create(eq(10L), eq(3L), eq(7L), captor.capture());
@@ -736,7 +879,7 @@ class DiaryControllerTest {
                         .with(csrf())
                         .with(authentication(new UsernamePasswordAuthenticationToken(
                                 userDetails, null, List.of()))))
-                .andExpect(redirectedUrl("/diaries/10?spread=0"))
+                .andExpect(redirectedUrl("/diaries/10?spread=0&edit=true"))
                 .andExpect(flash().attribute("diaryPageError", "사진을 선택해 주세요."));
 
         verify(fileUploadService, org.mockito.Mockito.never()).saveFile(any(), any());
@@ -755,7 +898,7 @@ class DiaryControllerTest {
                         .with(csrf())
                         .with(authentication(new UsernamePasswordAuthenticationToken(
                                 userDetails, null, List.of()))))
-                .andExpect(redirectedUrl("/diaries/10?spread=1"));
+                .andExpect(redirectedUrl("/diaries/10?spread=1&edit=true"));
 
         verify(diaryElementService).delete(10L, 3L, 101L, 7L);
 

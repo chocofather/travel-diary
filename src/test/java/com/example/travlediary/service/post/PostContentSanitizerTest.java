@@ -71,6 +71,35 @@ class PostContentSanitizerTest {
     }
 
     @Test
+    void diaryOnlyFontClassesAreNotAllowedForOtherFeatures() {
+        String html = "<span class=\"ql-font-park-dahyun\">다이어리 글꼴</span>"
+                + "<span class=\"ql-font-pretendard\">여행정보 글꼴</span>";
+
+        String cleaned = sanitizer.sanitize(html);
+
+        // 여행정보 등 기본 허용 목록은 그대로다
+        assertThat(cleaned)
+                .contains("class=\"ql-font-pretendard\"")
+                .doesNotContain("ql-font-park-dahyun");
+    }
+
+    @Test
+    void extraInlineClassesAreAllowedOnlyWhenTheCallerAsksForThem() {
+        String html = "<span class=\"ql-font-park-dahyun\">다이어리 글꼴</span>"
+                + "<span class=\"ql-font-unknown\">미등록</span>"
+                + "<span onclick=\"steal()\" class=\"ql-font-mitmi\">이벤트</span>";
+
+        String cleaned = sanitizer.sanitize(html,
+                java.util.Set.of("ql-font-park-dahyun", "ql-font-mitmi"));
+
+        assertThat(cleaned)
+                .contains("class=\"ql-font-park-dahyun\"")
+                .contains("class=\"ql-font-mitmi\"")
+                .doesNotContain("ql-font-unknown")
+                .doesNotContain("onclick");
+    }
+
+    @Test
     void keepsOnlyQuillChecklistStateAttributeValues() {
         String html = "<ul><li data-list=\"unchecked\">미완료</li>"
                 + "<li data-list=\"checked\">완료</li>"

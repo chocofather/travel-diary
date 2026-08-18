@@ -8,9 +8,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
@@ -19,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -63,7 +66,7 @@ class DiaryPageServiceImplTest {
 
         diaryPageService.updateContent(10L, 3L, 7L,
                 "<p class=\"ql-align-center\"><strong>제주</strong>"
-                        + "<span class=\"ql-size-large ql-font-pretendard\" style=\"color: #ff0000;\">여행</span>"
+                        + "<span class=\"ql-size-large ql-font-mitmi\" style=\"color: #ff0000;\">여행</span>"
                         + "<em>기록</em></p>"
                         + "<script>alert(1)</script>"
                         + "<p onclick=\"steal()\" data-x=\"1\">두 번째 줄</p>"
@@ -78,10 +81,39 @@ class DiaryPageServiceImplTest {
         assertThat(saved).contains("<em>기록</em>");
         assertThat(saved).contains("ql-align-center");
         assertThat(saved).contains("ql-size-large");
-        assertThat(saved).contains("ql-font-pretendard");
+        assertThat(saved).contains("ql-font-mitmi");
         assertThat(saved).contains("color: #ff0000");
         // 허용하지 않은 태그는 글자만 남는다
         assertThat(saved).contains("두 번째 줄");
+    }
+
+    @Test
+    void diaryFontClassesSurviveSanitizeButUnknownOnesDoNot() {
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageMapper.findByIdAndDiaryId(3L, 10L)).thenReturn(page());
+        when(diaryPageMapper.updateContent(eq(3L), eq(10L), any())).thenReturn(1);
+
+        diaryPageService.updateContent(10L, 3L, 7L,
+                "<p><span class=\"ql-font-park-dahyun\">박다현체</span>"
+                        + "<span class=\"ql-font-dunggeunmo\">둥근모꼴</span>"
+                        + "<span class=\"ql-font-chosun-gungsuh ql-size-large\">조선궁서체</span>"
+                        + "<span class=\"ql-font-pretendard\">이제 다이어리 목록에 없는 글꼴</span>"
+                        + "<span class=\"ql-font-evil\" onclick=\"steal()\">임의 클래스</span></p>");
+
+        ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+        verify(diaryPageMapper).updateContent(eq(3L), eq(10L), captor.capture());
+        String saved = captor.getValue();
+
+        assertThat(saved).contains("ql-font-park-dahyun");
+        assertThat(saved).contains("ql-font-dunggeunmo");
+        assertThat(saved).contains("ql-font-chosun-gungsuh");
+        assertThat(saved).contains("ql-size-large");
+        // 다이어리 목록에 없는 글꼴과 임의 클래스, 이벤트 핸들러는 남지 않는다
+        assertThat(saved).doesNotContain("ql-font-pretendard");
+        assertThat(saved).doesNotContain("ql-font-evil");
+        assertThat(saved).doesNotContain("onclick");
+        // 글자는 지워지지 않는다
+        assertThat(saved).contains("박다현체").contains("임의 클래스");
     }
 
     @Test
@@ -135,6 +167,99 @@ class DiaryPageServiceImplTest {
         verify(diaryPageMapper).update(captor.capture());
         assertThat(captor.getValue().getContent()).isEqualTo("<p>지키고 싶은 기록</p>");
         assertThat(captor.getValue().getBackgroundType()).isEqualTo("LINED");
+    }
+
+    @Test
+    void deletingAMiddlePageShiftsTheFollowingOrdersForward() {
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        DiaryPage second = page();
+        second.setPageOrder(2);
+        when(diaryPageMapper.findByIdAndDiaryId(3L, 10L)).thenReturn(second);
+        when(diaryPageMapper.delete(3L, 10L)).thenReturn(1);
+
+        diaryPageService.delete(10L, 3L, 7L);
+
+        // 1,2,3,4 에서 2 를 지우면 3,4 가 2,3 이 된다
+        InOrder inOrder = inOrder(diaryPageMapper);
+        inOrder.verify(diaryPageMapper).delete(3L, 10L);
+        inOrder.verify(diaryPageMapper).shiftPageOrdersAfter(10L, 2);
+    }
+
+    @Test
+    void deletingTheLastPageStillRunsTheRenumbering() {
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        DiaryPage last = page();
+        last.setPageOrder(4);
+        when(diaryPageMapper.findByIdAndDiaryId(3L, 10L)).thenReturn(last);
+        when(diaryPageMapper.delete(3L, 10L)).thenReturn(1);
+
+        diaryPageService.delete(10L, 3L, 7L);
+
+        // 뒤에 페이지가 없으면 옮길 행이 없을 뿐, 같은 경로를 그대로 탄다
+        verify(diaryPageMapper).shiftPageOrdersAfter(10L, 4);
+    }
+
+    @Test
+    void deletingTheFirstPageMovesEveryLaterPageForward() {
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        DiaryPage first = page();
+        first.setPageOrder(1);
+        when(diaryPageMapper.findByIdAndDiaryId(3L, 10L)).thenReturn(first);
+        when(diaryPageMapper.delete(3L, 10L)).thenReturn(1);
+
+        diaryPageService.delete(10L, 3L, 7L);
+
+        verify(diaryPageMapper).shiftPageOrdersAfter(10L, 1);
+    }
+
+    @Test
+    void failedDeleteDoesNotRenumber() {
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageMapper.findByIdAndDiaryId(3L, 10L)).thenReturn(page());
+        when(diaryPageMapper.delete(3L, 10L)).thenReturn(0);
+
+        assertThatThrownBy(() -> diaryPageService.delete(10L, 3L, 7L))
+                .isInstanceOf(ResponseStatusException.class);
+        verify(diaryPageMapper, never()).shiftPageOrdersAfter(any(), any());
+    }
+
+    @Test
+    void deletingAnotherUsersPageIsBlockedBeforeAnyChange() {
+        when(diaryService.getMyDiary(10L, 8L))
+                .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "다이어리를 찾을 수 없습니다."));
+
+        assertThatThrownBy(() -> diaryPageService.delete(10L, 3L, 8L))
+                .isInstanceOf(ResponseStatusException.class);
+        verify(diaryPageMapper, never()).delete(any(), any());
+        verify(diaryPageMapper, never()).shiftPageOrdersAfter(any(), any());
+    }
+
+    @Test
+    void deleteAndRenumberingRunInOneTransaction() throws NoSuchMethodException {
+        assertThat(DiaryPageServiceImpl.class
+                .getDeclaredMethod("delete", Long.class, Long.class, Long.class)
+                .isAnnotationPresent(Transactional.class)).isTrue();
+    }
+
+    @Test
+    void newPageAfterRenumberingTakesTheLastOrderPlusOne() {
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        // 재번호화 뒤라 마지막 순서는 3 이다
+        when(diaryPageMapper.findMaxPageOrder(10L)).thenReturn(3);
+        when(diaryPageMapper.insert(any(DiaryPage.class))).thenAnswer(invocation -> {
+            invocation.getArgument(0, DiaryPage.class).setId(9L);
+            return 1;
+        });
+        when(diaryPageMapper.findByIdAndDiaryId(9L, 10L)).thenReturn(page());
+
+        DiaryPage added = new DiaryPage();
+        added.setPageDate(LocalDate.of(2026, 8, 3));
+        added.setBackgroundType("PLAIN");
+        diaryPageService.append(10L, 7L, added);
+
+        ArgumentCaptor<DiaryPage> captor = ArgumentCaptor.forClass(DiaryPage.class);
+        verify(diaryPageMapper).insert(captor.capture());
+        assertThat(captor.getValue().getPageOrder()).isEqualTo(4);
     }
 
     private Diary diary() {

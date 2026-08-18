@@ -10,29 +10,52 @@ document.addEventListener('DOMContentLoaded', () => {
     const toolbar = document.querySelector('.diary-toolbar');
     const statusText = document.getElementById('diary-save-status');
     const SAVE_DELAY = 800;
-    /** 프로젝트에서 이미 허용 중인 글꼴 중 일기에 쓰는 것만 */
-    const FONTS = ['serif', 'monospace', 'pretendard', 'noto-sans-kr', 'noto-serif-kr', 'nanum-human'];
+    /**
+     * 다이어리 전용 글꼴. 값은 Quill 의 font 포맷 값이자 ql-font-{값} 클래스가 된다.
+     * (스타일은 diary-fonts.css, 서버 허용 목록은 DiaryContentSanitizer 와 같은 값을 쓴다)
+     */
+    const FONTS = [
+        {value: '', label: '기본'},
+        {value: 'fromsol', label: '그리운 프롬솔'},
+        {value: 'nanum-square', label: '나눔스퀘어'},
+        {value: 'bookk-myeongjo', label: '부크크 명조'},
+        {value: 'hiker', label: '하이커체'},
+        {value: 'cafe24-surround', label: '카페24 써라운드'},
+        {value: 'lee-seoyun', label: '이서윤체'},
+        {value: 'ggubulim', label: '꾸불림체'},
+        {value: 'ohchungi', label: '그리운 국한박 오춘기 김작가'},
+        {value: 'chosun-gungsuh', label: '조선궁서체'},
+        {value: 'gunham', label: '군함이말문트였체'},
+        {value: 'dunggeunmo', label: '둥근모꼴+ Fixedsys'},
+        {value: 'mitmi', label: '밑미 폰트'},
+        {value: 'green-umbrella', label: '윤초록우산어린이 만세'},
+        {value: 'incheon-jaram', label: '인천교육자람체'},
+        {value: 'park-dahyun', label: '온글잎 박다현체'}
+    ];
+    const FONT_VALUES = FONTS.map(font => font.value).filter(Boolean);
     /** 일기 본문에 필요한 서식만 허용한다. (붙여넣기도 이 범위로 걸러진다) */
     const FORMATS = ['bold', 'italic', 'underline', 'font', 'size', 'color', 'align'];
-    const EMOJIS = [
-        '😊', '😂', '🥰', '❤️',
-        '✈️', '🚗', '🚆', '🚌',
-        '🌸', '🌊', '🌅', '🌙',
-        '☕', '🍜', '🍰', '🍻',
-        '📍', '📷', '⭐', '🎉'
-    ];
+    /** 이모지 목록은 diary-emoji-data.js 가 제공한다. */
+    const EMOJI_CATEGORIES = window.DIARY_EMOJI_CATEGORIES || [];
 
     const Font = Quill.import('formats/font');
-    Font.whitelist = FONTS;
+    Font.whitelist = FONT_VALUES;
     Quill.register(Font, true);
 
     const pages = editorElements.map(createPage);
     let activePage = null;
+    // 툴바 동기화(setupToolbar)가 글꼴 드롭다운 초기화보다 먼저 읽으므로 여기서 선언해 둔다.
+    let fontTrigger = null;
+
+    /** 툴바 팝오버(글꼴/이모지)는 한 번에 하나만 열어 둔다. */
+    const popovers = [];
 
     setActivePage(pages[0]);
     setupToolbar();
+    setupFontPicker();
     setupEmoji();
     setupSaveBeforeLeaving();
+    setupEditDone();
 
     function createPage(element) {
         const quill = new Quill(element, {
@@ -57,6 +80,11 @@ document.addEventListener('DOMContentLoaded', () => {
         quill.on('text-change', (delta, oldDelta, source) => {
             if (source !== 'user') return;
             scheduleSave(page);
+            // 입력으로 커서가 옮겨질 때는 selection-change 가 따로 오지 않는다.
+            // Quill 이 선택 영역을 갱신한 다음에 읽도록 마이크로태스크로 한 번 미룬다.
+            Promise.resolve().then(() => {
+                if (activePage === page) syncToolbar();
+            });
         });
         quill.on('selection-change', (range) => {
             if (!range) return;
@@ -194,7 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
             button.addEventListener('mousedown', event => event.preventDefault());
             button.addEventListener('click', () => {
                 const command = button.dataset.editorCommand;
-                const current = currentFormats();
+                const current = formatsForEditing();
                 applyFormat(command, !current[command]);
             });
         });
@@ -213,10 +241,21 @@ document.addEventListener('DOMContentLoaded', () => {
         syncToolbar();
     }
 
-    function currentFormats() {
+    /**
+     * 툴바 표시용 서식. 기억해 둔 값이 아니라 지금 커서가 있는 위치의 실제 Quill 서식만 읽는다.
+     * 커서가 없으면 null 을 돌려주고 표시를 건드리지 않는다.
+     */
+    function selectionFormats() {
+        if (!activePage) return null;
+        const range = activePage.quill.getSelection();
+        return range ? activePage.quill.getFormat(range) : null;
+    }
+
+    /** 서식을 적용할 때 쓰는 기준. 툴바를 누르며 선택이 풀린 경우 lastRange 로 복원한다. */
+    function formatsForEditing() {
         if (!activePage) return {};
         const range = activePage.quill.getSelection() || activePage.lastRange;
-        return range ? activePage.quill.getFormat(range) : activePage.quill.getFormat();
+        return range ? activePage.quill.getFormat(range) : {};
     }
 
     function applyFormat(name, value) {
@@ -236,7 +275,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function syncToolbar() {
         if (!toolbar) return;
-        const formats = currentFormats();
+        // 커서가 없는 순간에는 마지막 표시를 그대로 둔다. (기억한 값으로 덮어쓰지 않는다)
+        const formats = selectionFormats();
+        if (!formats) return;
 
         toolbar.querySelectorAll('.diary-toolbar-button[data-editor-command]').forEach(button => {
             const active = Boolean(formats[button.dataset.editorCommand]);
@@ -247,6 +288,131 @@ document.addEventListener('DOMContentLoaded', () => {
             const value = formats[select.dataset.editorCommand];
             select.value = typeof value === 'string' ? value : '';
         });
+        syncFontTrigger(formats);
+    }
+
+    /* ===== 글꼴 드롭다운 (이름을 실제 글꼴로 보여준다) ===== */
+
+    function setupFontPicker() {
+        const trigger = document.getElementById('diary-font-trigger');
+        const list = document.getElementById('diary-font-list');
+        if (!trigger || !list) return;
+
+        fontTrigger = trigger;
+        FONTS.forEach(font => {
+            const option = document.createElement('button');
+            option.type = 'button';
+            option.className = `diary-font-option diary-font-${font.value || 'default'}`;
+            option.textContent = font.label;
+            option.dataset.fontValue = font.value;
+            option.setAttribute('role', 'option');
+            option.setAttribute('aria-selected', 'false');
+            option.addEventListener('mousedown', event => event.preventDefault());
+            option.addEventListener('click', () => {
+                // 선택 영역이 있으면 그 영역 전체, 커서만 있으면 다음 입력부터 적용된다.
+                applyFormat('font', font.value || false);
+                toggle(false);
+                trigger.focus();
+            });
+            list.append(option);
+        });
+
+        const toggle = registerPopover(trigger, list, () => trigger.focus());
+        trigger.addEventListener('mousedown', event => event.preventDefault());
+        trigger.addEventListener('click', () => toggle(list.hidden));
+
+        // 방향키로 목록을 훑을 수 있게 한다. (Enter/Space 는 버튼 기본 동작)
+        list.addEventListener('keydown', (event) => {
+            if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+            event.preventDefault();
+            const options = Array.from(list.querySelectorAll('.diary-font-option'));
+            const current = options.indexOf(document.activeElement);
+            const step = event.key === 'ArrowDown' ? 1 : -1;
+            const next = current < 0 ? 0 : (current + step + options.length) % options.length;
+            options[next]?.focus();
+        });
+        trigger.addEventListener('keydown', (event) => {
+            if (event.key !== 'ArrowDown' || list.hidden) return;
+            event.preventDefault();
+            list.querySelector('.diary-font-option')?.focus();
+        });
+
+        // 처음에는 커서가 없으므로 서식 없음(기본) 상태로 시작한다.
+        syncFontTrigger(selectionFormats() || {});
+    }
+
+    /** 커서 위치의 글꼴 이름을 버튼에 보여준다. 여러 글꼴이 섞여 있으면 중립 표시. */
+    function syncFontTrigger(formats) {
+        if (!fontTrigger) return;
+        const value = formats.font;
+        const label = value === undefined
+            ? '기본'
+            : (typeof value === 'string'
+                ? (FONTS.find(font => font.value === value)?.label ?? '글꼴')
+                : '여러 글꼴');
+
+        fontTrigger.textContent = label;
+        fontTrigger.className = 'diary-font-trigger'
+            + (fontTrigger.classList.contains('is-active') ? ' is-active' : '')
+            + (typeof value === 'string' && value ? ` diary-font-${value}` : '');
+
+        // 여러 글꼴이 섞인 선택 영역에서는 어떤 항목도 선택 표시하지 않는다.
+        const selectedValue = value === undefined ? '' : value;
+        document.querySelectorAll('#diary-font-list .diary-font-option').forEach(option => {
+            const selected = typeof selectedValue === 'string'
+                && option.dataset.fontValue === selectedValue;
+            option.setAttribute('aria-selected', selected ? 'true' : 'false');
+            option.classList.toggle('is-selected', selected);
+        });
+    }
+
+    /**
+     * 툴바 팝오버 공통 처리.
+     * 하나를 열면 나머지는 닫고, 바깥 클릭과 Esc 로 닫는다.
+     */
+    function registerPopover(trigger, panel, onClose) {
+        function toggle(open) {
+            // 자기 자신을 다시 닫지 않도록 다른 팝오버만 닫는다.
+            if (open) popovers.forEach(other => {
+                if (other.panel !== panel) other.close();
+            });
+            panel.hidden = !open;
+            panel.classList.toggle('is-open', open);
+            trigger.classList.toggle('is-active', open);
+            trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+        }
+
+        popovers.push({panel, close: () => toggle(false)});
+
+        document.addEventListener('click', (event) => {
+            if (!panel.hidden && !panel.contains(event.target) && event.target !== trigger
+                && !trigger.contains(event.target)) {
+                toggle(false);
+            }
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && !panel.hidden) {
+                toggle(false);
+                onClose?.();
+            }
+        });
+
+        toggle(false);
+        return toggle;
+    }
+
+    /** 편집 완료: 저장이 끝난 뒤에만 읽기 모드로 넘어간다. */
+    function setupEditDone() {
+        document.querySelectorAll('[data-editor-done]').forEach(link => {
+            link.addEventListener('click', (event) => {
+                if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                event.preventDefault();
+                flush().then(saved => {
+                    // 실패하면 편집 화면을 그대로 두고 상태 문구만 남긴다.
+                    if (saved) window.location.href = link.href;
+                });
+            });
+        });
     }
 
     /* ===== 이모지 ===== */
@@ -254,38 +420,54 @@ document.addEventListener('DOMContentLoaded', () => {
     function setupEmoji() {
         const button = document.getElementById('diary-emoji-button');
         const popover = document.getElementById('diary-emoji-popover');
-        if (!button || !popover) return;
+        const tabs = document.getElementById('diary-emoji-tabs');
+        const grid = document.getElementById('diary-emoji-grid');
+        if (!button || !popover || !tabs || !grid || EMOJI_CATEGORIES.length === 0) return;
 
-        EMOJIS.forEach(emoji => {
-            const item = document.createElement('button');
-            item.type = 'button';
-            item.className = 'diary-emoji-item';
-            item.textContent = emoji;
-            item.title = `이모지 ${emoji}`;
-            item.setAttribute('aria-label', `이모지 ${emoji} 넣기`);
-            item.addEventListener('mousedown', event => event.preventDefault());
-            item.addEventListener('click', () => {
-                insertEmoji(emoji);
-                togglePopover(false);
-            });
-            popover.append(item);
+        // 기본 상태는 반드시 닫힘 (열고 닫기와 바깥 클릭/Esc 는 공통 처리를 쓴다)
+        const togglePopover = registerPopover(button, popover, () => button.focus());
+
+        EMOJI_CATEGORIES.forEach((category, index) => {
+            const tab = document.createElement('button');
+            tab.type = 'button';
+            tab.className = 'diary-emoji-tab';
+            tab.textContent = category.icon;
+            tab.title = category.name;
+            tab.setAttribute('role', 'tab');
+            tab.setAttribute('aria-label', `${category.name} 이모지`);
+            tab.setAttribute('aria-selected', index === 0 ? 'true' : 'false');
+            tab.addEventListener('mousedown', event => event.preventDefault());
+            tab.addEventListener('click', () => showCategory(category));
+            tabs.append(tab);
         });
+        showCategory(EMOJI_CATEGORIES[0]);
 
         button.addEventListener('mousedown', event => event.preventDefault());
         button.addEventListener('click', () => togglePopover(popover.hidden));
-        document.addEventListener('click', (event) => {
-            if (!popover.hidden && !event.target.closest('.diary-emoji')) togglePopover(false);
-        });
-        document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape' && !popover.hidden) {
-                togglePopover(false);
-                button.focus();
-            }
-        });
 
-        function togglePopover(open) {
-            popover.hidden = !open;
-            button.setAttribute('aria-expanded', open ? 'true' : 'false');
+        function showCategory(category) {
+            Array.from(tabs.children).forEach(tab => {
+                const selected = tab.title === category.name;
+                tab.classList.toggle('is-active', selected);
+                tab.setAttribute('aria-selected', selected ? 'true' : 'false');
+            });
+
+            grid.replaceChildren();
+            grid.scrollTop = 0;
+            category.emojis.forEach(emoji => {
+                const item = document.createElement('button');
+                item.type = 'button';
+                item.className = 'diary-emoji-item';
+                item.textContent = emoji;
+                item.title = `이모지 ${emoji}`;
+                item.setAttribute('aria-label', `이모지 ${emoji} 넣기`);
+                item.addEventListener('mousedown', event => event.preventDefault());
+                item.addEventListener('click', () => {
+                    insertEmoji(emoji);
+                    togglePopover(false);
+                });
+                grid.append(item);
+            });
         }
     }
 

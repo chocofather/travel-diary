@@ -70,6 +70,7 @@ public class DiaryController {
     @GetMapping("/{diaryId:\\d+}")
     public String diaryDetail(@PathVariable Long diaryId,
                               @RequestParam(defaultValue = "0") int spread,
+                              @RequestParam(defaultValue = "false") boolean edit,
                               @AuthenticationPrincipal CustomUserDetails userDetails,
                               Model model) {
         Long userId = userDetails.getId();
@@ -95,6 +96,8 @@ public class DiaryController {
         model.addAttribute("totalSpreads", totalSpreads);
         model.addAttribute("hasPreviousSpread", currentSpread > 0);
         model.addAttribute("hasNextSpread", currentSpread < totalSpreads - 1);
+        // 편집 여부는 화면 상태일 뿐이다. 실제 수정 권한은 각 저장 경로에서 다시 확인한다.
+        model.addAttribute("editMode", edit);
         model.addAttribute("pageTitle", diary.getTitle() + " | 나의 여행일기");
         return "diary/detail";
     }
@@ -463,9 +466,9 @@ public class DiaryController {
         return diaryElementService.getElements(diaryId, page.getId(), userId);
     }
 
-    /** 작업 후에는 보고 있던 펼침 위치로 돌아온다. */
+    /** 작업 후에는 보고 있던 펼침 위치로, 편집 화면 그대로 돌아온다. */
     private String redirectToSpread(Long diaryId, int spread) {
-        return "redirect:/diaries/" + diaryId + "?spread=" + Math.max(spread, 0);
+        return "redirect:/diaries/" + diaryId + "?spread=" + Math.max(spread, 0) + "&edit=true";
     }
 
     private String redirectWithElementError(ResponseStatusException exception,
@@ -487,9 +490,10 @@ public class DiaryController {
                              BindingResult bindingResult,
                              @AuthenticationPrincipal CustomUserDetails userDetails,
                              RedirectAttributes redirectAttributes) {
+        // 페이지 추가는 편집 화면에서만 하므로 편집 화면으로 되돌아온다.
         if (bindingResult.hasErrors()) {
             redirectAttributes.addFlashAttribute("diaryPageError", "페이지 날짜를 올바르게 선택해 주세요.");
-            return "redirect:/diaries/" + diaryId;
+            return "redirect:/diaries/" + diaryId + "?edit=true";
         }
 
         try {
@@ -501,13 +505,13 @@ public class DiaryController {
             if (exception.getStatusCode().is4xxClientError()
                     && !HttpStatus.NOT_FOUND.equals(exception.getStatusCode())) {
                 redirectAttributes.addFlashAttribute("diaryPageError", exception.getReason());
-                return "redirect:/diaries/" + diaryId;
+                return "redirect:/diaries/" + diaryId + "?edit=true";
             }
             throw exception;
         }
 
         redirectAttributes.addFlashAttribute("diaryMessage", "새 페이지가 추가되었습니다.");
-        return "redirect:/diaries/" + diaryId;
+        return "redirect:/diaries/" + diaryId + "?edit=true";
     }
 
     /** 새 여행일기 작성 화면 */
