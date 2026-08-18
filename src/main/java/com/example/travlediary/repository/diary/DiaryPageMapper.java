@@ -30,6 +30,11 @@ public interface DiaryPageMapper {
     /** 페이지 수정 (같은 다이어리 안에서만) */
     int update(DiaryPage page);
 
+    /** 본문(content)만 수정. 날짜/순서/배경은 건드리지 않는다. */
+    int updateContent(@Param("pageId") Long pageId,
+                      @Param("diaryId") Long diaryId,
+                      @Param("content") String content);
+
     /** 페이지 삭제 (요소는 FK CASCADE 로 함께 지워진다) */
     int delete(@Param("pageId") Long pageId,
                @Param("diaryId") Long diaryId);

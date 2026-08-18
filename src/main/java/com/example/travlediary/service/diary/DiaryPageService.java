@@ -21,6 +21,9 @@ public interface DiaryPageService {
     /** 페이지 수정 (날짜/순서/배경) */
     DiaryPage update(Long diaryId, Long pageId, Long userId, DiaryPage page);
 
+    /** 본문만 저장한다. 날짜/순서/배경은 건드리지 않는다. */
+    DiaryPage updateContent(Long diaryId, Long pageId, Long userId, String content);
+
     /** 페이지 삭제 */
     void delete(Long diaryId, Long pageId, Long userId);
 }

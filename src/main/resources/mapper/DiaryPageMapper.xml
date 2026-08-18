@@ -63,6 +63,15 @@
           AND diary_id = #{diaryId}
     </update>
 
+    <!-- 본문 자동저장 전용. 날짜/순서/배경은 그대로 둔다. -->
+    <update id="updateContent">
+        UPDATE diary_pages
+        SET content = #{content},
+            updated_at = NOW()
+        WHERE id = #{pageId}
+          AND diary_id = #{diaryId}
+    </update>
+
     <!-- 요소는 FK ON DELETE CASCADE 로 함께 삭제된다. -->
     <delete id="delete">
         DELETE FROM diary_pages

@@ -24,9 +24,12 @@ public class DiaryPageServiceImpl implements DiaryPageService {
     /** 현재 화면에서 쓰는 배경 유형 */
     private static final Set<String> BACKGROUND_TYPES =
             Set.of("PLAIN", "LINED", "GRID", "DOT");
+    /** 본문 길이 상한 (MEDIUMTEXT 안에서 안전한 선) */
+    private static final int MAX_CONTENT_LENGTH = 200_000;
 
     private final DiaryService diaryService;
     private final DiaryPageMapper diaryPageMapper;
+    private final DiaryContentSanitizer diaryContentSanitizer;
 
     @Override
     @Transactional(readOnly = true)
@@ -83,6 +86,25 @@ public class DiaryPageServiceImpl implements DiaryPageService {
         }
 
         updatePage(prepared);
+        return requirePageOfDiary(existing.getId(), diary.getId());
+    }
+
+    /** 본문 자동저장. 날짜/순서/배경은 건드리지 않고 content 만 바꾼다. */
+    @Override
+    @Transactional
+    public DiaryPage updateContent(Long diaryId, Long pageId, Long userId, String content) {
+        Diary diary = requireOwnedDiary(diaryId, userId);
+        DiaryPage existing = requirePageOfDiary(pageId, diary.getId());
+
+        if (content != null && content.length() > MAX_CONTENT_LENGTH) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "본문이 너무 깁니다.");
+        }
+        // 허용한 서식만 남기고, 사실상 빈 본문은 null 로 저장한다.
+        String sanitized = diaryContentSanitizer.sanitize(content);
+
+        if (diaryPageMapper.updateContent(existing.getId(), diary.getId(), sanitized) != 1) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "페이지를 찾을 수 없습니다.");
+        }
         return requirePageOfDiary(existing.getId(), diary.getId());
     }
 

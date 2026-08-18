@@ -47,7 +47,6 @@ public class DiaryController {
     private static final String PAGE_IMAGE_DIRECTORY = "diary-pages";
     /** 한 번에 펼쳐 보여주는 페이지 수 (좌/우 두 장) */
     private static final int SPREAD_SIZE = 2;
-    private static final String TEXT_ELEMENT_TYPE = "TEXT";
     private static final String PHOTO_ELEMENT_TYPE = "PHOTO";
 
     private final DiaryService diaryService;
@@ -270,55 +269,29 @@ public class DiaryController {
         return redirectToSpread(diaryId, spread);
     }
 
-    /** 페이지에 글(TEXT)을 추가한다. 위치/크기는 서비스 기본값을 쓴다. */
-    @PostMapping("/{diaryId:\\d+}/pages/{pageId:\\d+}/elements/text")
-    public String createTextElement(@PathVariable Long diaryId,
-                                    @PathVariable Long pageId,
-                                    @RequestParam(required = false) String textContent,
-                                    @RequestParam(defaultValue = "0") int spread,
-                                    @AuthenticationPrincipal CustomUserDetails userDetails,
-                                    RedirectAttributes redirectAttributes) {
+    /**
+     * 본문 자동저장. 종이에 쓴 글은 요소가 아니라 diary_pages.content 에 저장한다.
+     * 날짜/배경을 바꾸는 페이지 수정과 섞이지 않도록 경로를 따로 둔다.
+     */
+    @PostMapping("/{diaryId:\\d+}/pages/{pageId:\\d+}/content")
+    @ResponseBody
+    public ResponseEntity<?> savePageContent(@PathVariable Long diaryId,
+                                             @PathVariable Long pageId,
+                                             @RequestParam(required = false) String content,
+                                             @AuthenticationPrincipal CustomUserDetails userDetails) {
         try {
-            DiaryElement element = new DiaryElement();
-            element.setElementType(TEXT_ELEMENT_TYPE);
-            element.setTextContent(textContent);
-            diaryElementService.create(diaryId, pageId, userDetails.getId(), element);
+            // 소유권·페이지 소속 확인과 정리(sanitize)는 서비스가 담당한다.
+            diaryPageService.updateContent(diaryId, pageId, userDetails.getId(), content);
         } catch (ResponseStatusException exception) {
-            return redirectWithElementError(exception, diaryId, spread, redirectAttributes);
-        }
-        return redirectToSpread(diaryId, spread);
-    }
-
-    /** 글 내용만 수정한다. 위치/크기 등 나머지 값은 기존 요소의 값을 그대로 유지한다. */
-    @PostMapping("/{diaryId:\\d+}/pages/{pageId:\\d+}/elements/{elementId:\\d+}/text")
-    public String updateTextElement(@PathVariable Long diaryId,
-                                    @PathVariable Long pageId,
-                                    @PathVariable Long elementId,
-                                    @RequestParam(required = false) String textContent,
-                                    @RequestParam(defaultValue = "0") int spread,
-                                    @AuthenticationPrincipal CustomUserDetails userDetails,
-                                    RedirectAttributes redirectAttributes) {
-        Long userId = userDetails.getId();
-        try {
-            DiaryElement existing = diaryElementService.getElement(diaryId, pageId, elementId, userId);
-            // 사진 요소를 이 경로로 수정할 수 없다.
-            if (!TEXT_ELEMENT_TYPE.equals(existing.getElementType())) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "글 요소가 아닙니다.");
+            if (exception.getStatusCode().is4xxClientError()
+                    && !HttpStatus.NOT_FOUND.equals(exception.getStatusCode())) {
+                return ResponseEntity.status(exception.getStatusCode())
+                        .body(Map.of("message", exception.getReason() == null
+                                ? "본문을 저장하지 못했습니다." : exception.getReason()));
             }
-
-            DiaryElement changed = new DiaryElement();
-            changed.setTextContent(textContent);
-            changed.setPositionX(existing.getPositionX());
-            changed.setPositionY(existing.getPositionY());
-            changed.setWidth(existing.getWidth());
-            changed.setHeight(existing.getHeight());
-            changed.setRotation(existing.getRotation());
-            changed.setZIndex(existing.getZIndex());
-            diaryElementService.update(diaryId, pageId, elementId, userId, changed);
-        } catch (ResponseStatusException exception) {
-            return redirectWithElementError(exception, diaryId, spread, redirectAttributes);
+            throw exception;
         }
-        return redirectToSpread(diaryId, spread);
+        return ResponseEntity.noContent().build();
     }
 
     /** 페이지에 사진(PHOTO)을 한 장 추가한다. 사진 한 장이 요소 한 행이다. */
@@ -480,22 +453,6 @@ public class DiaryController {
                         "id", element.getId(), "zIndex", element.getZIndex()))
                 .toList();
         return ResponseEntity.ok(Map.of("elements", layers));
-    }
-
-    /** 요소 삭제 */
-    @PostMapping("/{diaryId:\\d+}/pages/{pageId:\\d+}/elements/{elementId:\\d+}/delete")
-    public String deleteElement(@PathVariable Long diaryId,
-                                @PathVariable Long pageId,
-                                @PathVariable Long elementId,
-                                @RequestParam(defaultValue = "0") int spread,
-                                @AuthenticationPrincipal CustomUserDetails userDetails,
-                                RedirectAttributes redirectAttributes) {
-        try {
-            diaryElementService.delete(diaryId, pageId, elementId, userDetails.getId());
-        } catch (ResponseStatusException exception) {
-            return redirectWithElementError(exception, diaryId, spread, redirectAttributes);
-        }
-        return redirectToSpread(diaryId, spread);
     }
 
     /** 펼친 장의 요소를 읽는다. 페이지가 없으면 조회하지 않는다. */

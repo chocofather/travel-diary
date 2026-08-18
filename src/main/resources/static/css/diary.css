@@ -867,7 +867,9 @@
     letter-spacing: 0.02em;
 }
 
+/* 아래층: 종이에 쓰는 본문 / 위층: 자유배치 사진 */
 .diary-sheet-body {
+    position: relative;
     display: flex;
     flex: 1;
     flex-direction: column;
@@ -876,11 +878,244 @@
     padding-top: 14px;
 }
 
-/* 자유배치 캔버스. 날짜/페이지 번호 영역과 겹치지 않는 실제 작성 영역이다. */
-.diary-canvas {
+/* 글쓰기 층. 종이 안에서만 스크롤되므로 사진 좌표(상대값) 기준은 그대로 유지된다. */
+.diary-writing-layer {
     position: relative;
+    z-index: 1;
+    display: flex;
     flex: 1;
     min-height: 300px;
+    overflow: hidden;
+}
+
+/* 자유배치 캔버스. 종이 클릭이 막히지 않도록 캔버스 자체는 입력을 받지 않는다. */
+.diary-canvas {
+    position: absolute;
+    z-index: 2;
+    top: 14px;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    pointer-events: none;
+}
+
+.diary-canvas .diary-canvas-item {
+    pointer-events: auto;
+}
+
+/* ===== 종이 자체가 편집기 (Quill) =====
+   기본 편집기 테두리/흰 배경을 지우고 종이 배경(PLAIN/LINED/GRID/DOT)이 그대로 보이게 한다. */
+.diary-editor.ql-container {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: transparent;
+    font-family: inherit;
+    font-size: inherit;
+}
+
+.diary-editor .ql-editor {
+    height: 100%;
+    padding: 0;
+    color: #3b352d;
+    font-size: 15px;
+    line-height: 30px; /* 줄노트 배경 간격과 맞춘다 */
+    overflow-y: auto;
+    overflow-wrap: anywhere;
+}
+
+.diary-editor .ql-editor.ql-blank::before {
+    left: 0;
+    right: 0;
+    color: #b3a897;
+    font-style: normal;
+}
+
+/* 편집 중임이 보이도록 아주 얕은 강조만 준다 */
+.diary-sheet.is-active-page {
+    outline: 1px solid rgba(179, 154, 117, 0.5);
+    outline-offset: -1px;
+}
+
+/* 툴바에서 쓰는 글꼴/크기/정렬 (글꼴 정의는 quill-content.css 의 @font-face 를 그대로 쓴다) */
+.diary-editor .ql-font-pretendard {
+    font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.diary-editor .ql-font-noto-sans-kr {
+    font-family: "Noto Sans KR", "Malgun Gothic", sans-serif;
+}
+
+.diary-editor .ql-font-noto-serif-kr,
+.diary-editor .ql-font-serif {
+    font-family: "Noto Serif KR", Georgia, "Times New Roman", serif;
+}
+
+.diary-editor .ql-font-nanum-human {
+    font-family: "NanumHuman", "Malgun Gothic", sans-serif;
+}
+
+.diary-editor .ql-font-monospace {
+    font-family: Monaco, "Courier New", monospace;
+}
+
+.diary-editor .ql-size-small {
+    font-size: 0.8em;
+}
+
+.diary-editor .ql-size-large {
+    font-size: 1.4em;
+}
+
+.diary-editor .ql-size-huge {
+    font-size: 2em;
+}
+
+.diary-editor .ql-align-center {
+    text-align: center;
+}
+
+.diary-editor .ql-align-right {
+    text-align: right;
+}
+
+.diary-editor .ql-align-justify {
+    text-align: justify;
+}
+
+/* ===== 펼침 공통 편집 툴바 ===== */
+.diary-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 14px;
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    border: 1px solid #e3dcd1;
+    border-radius: 10px;
+    background: #fffdf8;
+}
+
+.diary-toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.diary-toolbar-label {
+    color: #8b8378;
+    font-size: 12px;
+}
+
+.diary-toolbar-select {
+    box-sizing: border-box;
+    height: 28px;
+    max-width: 130px;
+    padding: 2px 6px;
+    border: 1px solid #e0d6c6;
+    border-radius: 6px;
+    background: #fff;
+    color: #5c5346;
+    font: inherit;
+    font-size: 12px;
+}
+
+.diary-toolbar-button {
+    display: inline-flex;
+    width: 28px;
+    height: 28px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 1px solid #e0d6c6;
+    border-radius: 6px;
+    background: #fff;
+    color: #5c5346;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.diary-toolbar-button:hover {
+    border-color: #cbbba0;
+    background: #fdf8ef;
+}
+
+.diary-toolbar-button.is-active {
+    border-color: #b39a75;
+    background: #f2e8d8;
+    color: #4a3d2b;
+}
+
+.diary-toolbar-color {
+    width: 30px;
+    height: 28px;
+    padding: 2px;
+    border: 1px solid #e0d6c6;
+    border-radius: 6px;
+    background: #fff;
+    cursor: pointer;
+}
+
+.diary-toolbar-select:focus-visible,
+.diary-toolbar-button:focus-visible,
+.diary-toolbar-color:focus-visible {
+    outline: 2px solid #b39a75;
+    outline-offset: 1px;
+}
+
+/* 이모지 */
+.diary-emoji {
+    position: relative;
+}
+
+.diary-emoji-popover {
+    position: absolute;
+    z-index: 50;
+    top: calc(100% + 6px);
+    left: 0;
+    display: grid;
+    width: max-content;
+    grid-template-columns: repeat(4, 28px);
+    gap: 4px;
+    padding: 8px;
+    border: 1px solid #e3dcd1;
+    border-radius: 10px;
+    background: #fffdf8;
+    box-shadow: 0 8px 20px rgba(63, 52, 38, 0.16);
+}
+
+.diary-emoji-item {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.diary-emoji-item:hover {
+    background: #f3ece0;
+}
+
+.diary-emoji-item:focus-visible {
+    outline: 2px solid #b39a75;
+    outline-offset: 1px;
+}
+
+/* 저장 상태는 색이 아니라 문구로 알린다 */
+.diary-save-status {
+    margin: 0 0 0 auto;
+    color: #9a8f7f;
+    font-size: 12px;
+}
+
+.diary-save-status.is-error {
+    color: #b0564a;
+    font-weight: 700;
 }
 
 /* 저장된 상대 좌표는 인라인 style 로 %, deg, z-index 만 채운다 */
@@ -1027,42 +1262,6 @@
     opacity: 0.6;
 }
 
-/* 글은 카드가 아니라 종이에 그대로 적힌 것처럼 보이게 한다 */
-.diary-canvas-text {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-    overflow: auto;
-}
-
-.diary-text-content {
-    margin: 0;
-    color: #3b352d;
-    font-size: 15px;
-    line-height: 30px; /* 줄노트 배경 간격과 맞춘다 */
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
-}
-
-/* 수정/삭제는 평소에는 흐리게, 글 위에 올렸을 때만 또렷하게 */
-.diary-text-actions {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    margin-top: 4px;
-    opacity: 0;
-    transition: opacity 160ms ease;
-}
-
-.diary-canvas-text:hover .diary-text-actions,
-.diary-canvas-text:focus-within .diary-text-actions {
-    opacity: 1;
-}
-
-.diary-text-actions form {
-    margin: 0;
-}
-
 .diary-text-action {
     padding: 0;
     border: 0;
@@ -1084,24 +1283,7 @@
     font-weight: 700;
 }
 
-.diary-text-edit > summary {
-    color: #9a8f7f;
-    font-size: 12px;
-    list-style: none;
-    text-decoration: underline;
-    text-underline-offset: 3px;
-    cursor: pointer;
-}
-
-.diary-text-edit > summary::-webkit-details-marker {
-    display: none;
-}
-
-.diary-text-edit > summary:hover {
-    color: #6f5a3c;
-}
-
-/* ===== 페이지 편집 툴바 (글쓰기 / 사진) ===== */
+/* ===== 페이지 편집 툴바 (사진) ===== */
 .diary-sheet-toolbar {
     display: flex;
     flex-wrap: wrap;
@@ -1148,24 +1330,6 @@
     color: #a3937c;
     font-size: 11px;
     font-weight: 700;
-}
-
-/* 글쓰기 입력은 툴바 아래에 겹쳐 띄운다 */
-.diary-text-add {
-    position: relative;
-}
-
-.diary-text-add > form {
-    position: absolute;
-    z-index: 40;
-    top: calc(100% + 8px);
-    left: 0;
-    width: min(300px, 78vw);
-    padding: 12px;
-    border: 1px solid #e3dcd1;
-    border-radius: 10px;
-    background: #fffdf8;
-    box-shadow: 0 8px 20px rgba(63, 52, 38, 0.16);
 }
 
 /* 사진 액션: 실제 file input 은 감추고 툴바 버튼으로만 연다 */
@@ -1229,28 +1393,6 @@
 .diary-photo:hover .diary-photo-delete,
 .diary-photo:focus-within .diary-photo-delete {
     opacity: 1;
-}
-
-.diary-text-edit textarea,
-.diary-text-add textarea {
-    box-sizing: border-box;
-    width: 100%;
-    margin-top: 8px;
-    padding: 10px;
-    border: 1px solid #ded5c8;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.86);
-    font: inherit;
-    font-size: 14px;
-    line-height: 1.6;
-    resize: vertical;
-}
-
-.diary-text-edit textarea:focus,
-.diary-text-add textarea:focus {
-    outline: none;
-    border-color: #b39a75;
-    box-shadow: 0 0 0 3px rgba(179, 154, 117, 0.18);
 }
 
 .diary-text-edit-actions {
@@ -1493,6 +1635,29 @@
 
     .diary-spread-nav {
         gap: 8px;
+    }
+
+    /* 툴바가 화면을 많이 차지하지 않게 한 줄로 두고 가로로 넘긴다 */
+    .diary-toolbar {
+        flex-wrap: nowrap;
+        gap: 10px;
+        overflow-x: auto;
+        padding: 6px 10px;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .diary-toolbar-group {
+        flex: 0 0 auto;
+    }
+
+    .diary-toolbar-label {
+        white-space: nowrap;
+    }
+
+    .diary-save-status {
+        flex: 0 0 auto;
+        margin-left: 8px;
+        white-space: nowrap;
     }
 }
 

@@ -17,21 +17,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
     links.forEach((link) => {
         link.addEventListener('click', (event) => {
-            // 모션을 줄이는 설정이면 연출 없이 링크 그대로 이동한다.
-            if (reducedMotion.matches) return;
-            if (flipping) {
-                // 넘어가는 동안의 연속 클릭은 무시한다.
-                event.preventDefault();
-                return;
-            }
+            // 새 탭으로 여는 조작은 그대로 둔다.
+            if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
 
             event.preventDefault();
+            if (flipping) return; // 넘어가는 동안의 연속 클릭은 무시한다.
+
             flipping = true;
-            startFlip(link.dataset.flip === 'next', () => {
-                window.location.href = link.href;
+            // 본문에 저장하지 않은 입력이 있으면 먼저 저장하고, 실패하면 이동하지 않는다.
+            saveOpenPages().then((saved) => {
+                if (!saved) {
+                    flipping = false;
+                    return;
+                }
+                // 모션을 줄이는 설정이면 연출 없이 바로 이동한다.
+                if (reducedMotion.matches) {
+                    window.location.href = link.href;
+                    return;
+                }
+                startFlip(link.dataset.flip === 'next', () => {
+                    window.location.href = link.href;
+                });
             });
         });
     });
+
+    /** 본문 편집기가 있으면 저장을 먼저 끝낸다. (편집기가 없으면 그대로 통과) */
+    function saveOpenPages() {
+        const editor = window.diaryEditor;
+        if (!editor || typeof editor.flush !== 'function') {
+            return Promise.resolve(true);
+        }
+        return editor.flush().catch(() => false);
+    }
 
     function startFlip(isNext, done) {
         // 넘어가는 동안에는 편집(드래그/resize/rotate)과 액션이 시작되지 않게 막는다.
