@@ -1150,8 +1150,8 @@
     top: calc(100% + 6px);
     left: 0;
     display: flex;
-    width: min(320px, calc(100vw - 40px));
-    max-height: 260px;
+    width: min(340px, calc(100vw - 32px));
+    max-height: 280px;
     flex-direction: column;
     gap: 6px;
     padding: 8px;
@@ -1204,21 +1204,32 @@
 .diary-emoji-grid {
     display: grid;
     flex: 1 1 auto;
-    grid-template-columns: repeat(auto-fill, minmax(30px, 1fr));
-    gap: 2px;
+    grid-template-columns: repeat(auto-fill, minmax(36px, 1fr));
+    gap: 4px;
     overflow-y: auto;
 }
 
+/* 손가락/마우스로 고르기 쉽도록 이모지 하나의 크기와 클릭 영역만 키운다 */
 .diary-emoji-item {
-    width: 30px;
-    height: 30px;
+    width: 36px;
+    height: 36px;
     padding: 0;
     border: 0;
-    border-radius: 6px;
+    border-radius: 8px;
     background: none;
-    font-size: 17px;
+    font-size: 21px;
     line-height: 1;
     cursor: pointer;
+}
+
+/* 최근 탭이 비어 있을 때의 안내 */
+.diary-emoji-empty {
+    grid-column: 1 / -1;
+    margin: 0;
+    padding: 14px 4px;
+    color: #9a8f7f;
+    font-size: 13px;
+    text-align: center;
 }
 
 .diary-emoji-item:hover {

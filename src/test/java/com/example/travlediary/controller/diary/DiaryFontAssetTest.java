@@ -84,6 +84,23 @@ class DiaryFontAssetTest {
     }
 
     @Test
+    void choosingAFontReturnsFocusToThePaper() throws IOException {
+        String script = Files.readString(EDITOR_SCRIPT);
+
+        String applyFormat = script.substring(script.indexOf("function applyFormat(name, value) {"));
+        applyFormat = applyFormat.substring(0, applyFormat.indexOf("\n    }"));
+        // focus 복귀 → range 복원 → 마지막에 서식 적용 순서여야 커서 서식이 유지된다
+        assertThat(applyFormat.indexOf("quill.focus();"))
+                .isLessThan(applyFormat.indexOf("quill.setSelection("));
+        assertThat(applyFormat.indexOf("quill.setSelection("))
+                .isLessThan(applyFormat.indexOf("quill.format(name, value, 'user');"));
+        // 글꼴을 고른 뒤 툴바 버튼으로 포커스를 되돌리지 않는다
+        String optionClick = script.substring(script.indexOf("applyFormat('font', font.value || false);"));
+        assertThat(optionClick.substring(0, optionClick.indexOf("});")))
+                .doesNotContain("trigger.focus()");
+    }
+
+    @Test
     void openingOnePopoverDoesNotCloseItself() throws IOException {
         String script = Files.readString(EDITOR_SCRIPT);
 

@@ -54,6 +54,39 @@ class DiaryEmojiPickerAssetTest {
     }
 
     @Test
+    void recentTabIsKeptInLocalStorageWithoutDuplicates() throws IOException {
+        String script = Files.readString(EDITOR_SCRIPT);
+
+        assertThat(script).contains("const RECENT_EMOJI_KEY = 'travelDiaryRecentEmojis';");
+        assertThat(script).contains("const RECENT_EMOJI_LIMIT = 30;");
+        assertThat(script).contains("name: '최근', icon: '🕘'");
+        // 고른 이모지를 맨 앞으로 올리고 같은 값은 한 번만 남긴다
+        assertThat(script).contains(
+                "[emoji, ...readRecentEmojis().filter(item => item !== emoji)]");
+        assertThat(script).contains(".slice(0, RECENT_EMOJI_LIMIT)");
+        // 최근 탭은 맨 앞이고, 처음 보여주는 카테고리는 기존 그대로다
+        assertThat(script).contains("[RECENT_EMOJI_CATEGORY, ...EMOJI_CATEGORIES]");
+        assertThat(script).contains("let shownCategory = EMOJI_CATEGORIES[0];");
+        // 빈 상태 문구
+        assertThat(script).contains("아직 사용한 이모지가 없어요.");
+        // localStorage 가 막혀도 이모지 기능은 그대로 동작한다
+        assertThat(script).containsPattern("(?s)function readRecentEmojis\\(\\).*?catch \\(error\\)");
+        assertThat(script).containsPattern("(?s)function rememberRecentEmoji\\(emoji\\).*?catch \\(error\\)");
+    }
+
+    @Test
+    void emojiButtonsAreBigEnoughToTap() throws IOException {
+        String css = Files.readString(DIARY_CSS);
+
+        String item = css.substring(css.indexOf(".diary-emoji-item {"));
+        item = item.substring(0, item.indexOf('}'));
+        assertThat(item).contains("width: 36px;").contains("height: 36px;").contains("font-size: 21px;");
+        // 크기를 키워도 picker 는 스크롤 구조를 유지한다
+        assertThat(css).contains("max-height: 280px;");
+        assertThat(css).contains(".diary-emoji-empty {");
+    }
+
+    @Test
     void emojiDataHasEnoughUniqueEmojisAcrossCategories() throws IOException {
         String data = Files.readString(EMOJI_DATA);
 

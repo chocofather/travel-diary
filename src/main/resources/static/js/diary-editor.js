@@ -37,6 +37,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const FORMATS = ['bold', 'italic', 'underline', 'font', 'size', 'color', 'align'];
     /** 이모지 목록은 diary-emoji-data.js 가 제공한다. */
     const EMOJI_CATEGORIES = window.DIARY_EMOJI_CATEGORIES || [];
+    /** 최근 사용 이모지는 이 브라우저에만 남긴다. (서버 저장 없음) */
+    const RECENT_EMOJI_KEY = 'travelDiaryRecentEmojis';
+    const RECENT_EMOJI_LIMIT = 30;
+    const RECENT_EMOJI_CATEGORY = {id: 'recent', name: '최근', icon: '🕘'};
 
     const Font = Quill.import('formats/font');
     Font.whitelist = FONT_VALUES;
@@ -258,14 +262,21 @@ document.addEventListener('DOMContentLoaded', () => {
         return range ? activePage.quill.getFormat(range) : {};
     }
 
+    /**
+     * 서식 적용.
+     * 툴바를 누르며 선택이 풀렸을 수 있으므로 (1) 종이로 focus 복귀 → (2) 눌리기 직전 range 복원
+     * → (3) 마지막에 서식 적용 순서로 처리한다. 서식을 마지막에 적용해야 커서 서식(다음 입력에
+     * 적용될 값)이 focus 복귀 때문에 초기화되지 않는다.
+     */
     function applyFormat(name, value) {
         if (!activePage) return;
         const quill = activePage.quill;
         const range = quill.getSelection() || activePage.lastRange;
+
+        quill.focus();
         if (range) {
             quill.setSelection(range.index, range.length, 'silent');
-        } else {
-            quill.focus();
+            activePage.lastRange = range;
         }
 
         quill.format(name, value, 'user');
@@ -310,9 +321,9 @@ document.addEventListener('DOMContentLoaded', () => {
             option.addEventListener('mousedown', event => event.preventDefault());
             option.addEventListener('click', () => {
                 // 선택 영역이 있으면 그 영역 전체, 커서만 있으면 다음 입력부터 적용된다.
+                // applyFormat 이 종이로 focus 를 돌려주므로 바로 이어서 입력할 수 있다.
                 applyFormat('font', font.value || false);
                 toggle(false);
-                trigger.focus();
             });
             list.append(option);
         });
@@ -427,7 +438,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // 기본 상태는 반드시 닫힘 (열고 닫기와 바깥 클릭/Esc 는 공통 처리를 쓴다)
         const togglePopover = registerPopover(button, popover, () => button.focus());
 
-        EMOJI_CATEGORIES.forEach((category, index) => {
+        // 맨 앞에 '최근' 탭을 두고, 처음 보여주는 카테고리는 기존과 같게 유지한다.
+        const categories = [RECENT_EMOJI_CATEGORY, ...EMOJI_CATEGORIES];
+        let shownCategory = EMOJI_CATEGORIES[0];
+
+        categories.forEach(category => {
             const tab = document.createElement('button');
             tab.type = 'button';
             tab.className = 'diary-emoji-tab';
@@ -435,26 +450,38 @@ document.addEventListener('DOMContentLoaded', () => {
             tab.title = category.name;
             tab.setAttribute('role', 'tab');
             tab.setAttribute('aria-label', `${category.name} 이모지`);
-            tab.setAttribute('aria-selected', index === 0 ? 'true' : 'false');
+            tab.setAttribute('aria-selected', 'false');
             tab.addEventListener('mousedown', event => event.preventDefault());
             tab.addEventListener('click', () => showCategory(category));
             tabs.append(tab);
         });
-        showCategory(EMOJI_CATEGORIES[0]);
+        showCategory(shownCategory);
 
         button.addEventListener('mousedown', event => event.preventDefault());
         button.addEventListener('click', () => togglePopover(popover.hidden));
 
         function showCategory(category) {
+            shownCategory = category;
             Array.from(tabs.children).forEach(tab => {
                 const selected = tab.title === category.name;
                 tab.classList.toggle('is-active', selected);
                 tab.setAttribute('aria-selected', selected ? 'true' : 'false');
             });
 
+            const emojis = category === RECENT_EMOJI_CATEGORY
+                ? readRecentEmojis() : category.emojis;
+
             grid.replaceChildren();
             grid.scrollTop = 0;
-            category.emojis.forEach(emoji => {
+            if (emojis.length === 0) {
+                const empty = document.createElement('p');
+                empty.className = 'diary-emoji-empty';
+                empty.textContent = '아직 사용한 이모지가 없어요.';
+                grid.append(empty);
+                return;
+            }
+
+            emojis.forEach(emoji => {
                 const item = document.createElement('button');
                 item.type = 'button';
                 item.className = 'diary-emoji-item';
@@ -464,11 +491,38 @@ document.addEventListener('DOMContentLoaded', () => {
                 item.addEventListener('mousedown', event => event.preventDefault());
                 item.addEventListener('click', () => {
                     insertEmoji(emoji);
+                    // picker 로 직접 고른 것만 최근 목록에 남긴다.
+                    rememberRecentEmoji(emoji);
+                    if (shownCategory === RECENT_EMOJI_CATEGORY) showCategory(RECENT_EMOJI_CATEGORY);
                     togglePopover(false);
                 });
                 grid.append(item);
             });
         }
+    }
+
+    /** 최근 사용 이모지 읽기. localStorage 를 못 쓰면 빈 목록으로 조용히 넘어간다. */
+    function readRecentEmojis() {
+        try {
+            const stored = JSON.parse(window.localStorage.getItem(RECENT_EMOJI_KEY) || '[]');
+            return Array.isArray(stored)
+                ? stored.filter(emoji => typeof emoji === 'string').slice(0, RECENT_EMOJI_LIMIT)
+                : [];
+        } catch (error) {
+            return [];
+        }
+    }
+
+    /** 고른 이모지를 맨 앞으로 올린다. 같은 이모지는 기존 자리에서 빼고 최대 30개만 남긴다. */
+    function rememberRecentEmoji(emoji) {
+        const next = [emoji, ...readRecentEmojis().filter(item => item !== emoji)]
+            .slice(0, RECENT_EMOJI_LIMIT);
+        try {
+            window.localStorage.setItem(RECENT_EMOJI_KEY, JSON.stringify(next));
+        } catch (error) {
+            // 저장이 막혀 있어도 이모지 넣기 자체는 그대로 동작한다.
+        }
+        return next;
     }
 
     function insertEmoji(emoji) {
@@ -477,6 +531,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const range = quill.getSelection() || activePage.lastRange
             || {index: Math.max(0, quill.getLength() - 1), length: 0};
 
+        // 넣은 뒤 바로 이어서 쓸 수 있게 종이로 focus 를 돌려준다.
+        quill.focus();
         quill.deleteText(range.index, range.length, 'user');
         quill.insertText(range.index, emoji, 'user');
         quill.setSelection(range.index + emoji.length, 0, 'silent');
