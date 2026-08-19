@@ -51,24 +51,28 @@
 
       <div class="diary-form-field">
         <span class="diary-form-label">대표 이미지</span>
-        <!-- 기본 파일 선택 버튼은 감추고 아래 버튼으로 열되, 제출 시 함께 올라가는 구조는 그대로 둔다. -->
+        <!-- 기본 파일 선택 버튼은 감추고 아래 picker 로 열되, 제출 시 함께 올라가는 구조는 그대로 둔다. -->
         <input type="file" id="diary-cover-image" name="coverImage" accept="image/*"
                class="diary-cover-input" />
-        <div class="diary-cover-picker">
-          <label class="diary-cover-button" for="diary-cover-image"
-                 th:text="${currentCoverImageUrl != null and !#strings.isEmpty(currentCoverImageUrl)}
-                          ? '대표 이미지 변경' : '대표 이미지 선택'">대표 이미지 변경</label>
+        <!-- 작성 화면과 같은 picker. 지금 표지가 있으면 그 썸네일로 시작하고,
+             새 파일을 고르면 JS 가 같은 자리에서 갈아 끼운다. -->
+        <label class="diary-cover-picker" id="diary-cover-picker" for="diary-cover-image"
+               th:classappend="${currentCoverImageUrl != null and !#strings.isEmpty(currentCoverImageUrl)}
+                               ? ' has-image' : ''">
+          <span class="diary-cover-thumb">
+            <img class="diary-cover-thumb-image" id="diary-cover-preview-image"
+                 th:src="${currentCoverImageUrl}" alt=""
+                 th:attr="hidden=${currentCoverImageUrl != null and !#strings.isEmpty(currentCoverImageUrl)}
+                          ? null : true" />
+            <span class="diary-cover-thumb-mark" aria-hidden="true">▣</span>
+          </span>
           <span class="diary-cover-name" id="diary-cover-name"
                 th:text="${currentCoverImageUrl != null and !#strings.isEmpty(currentCoverImageUrl)}
-                         ? '지금 표지를 사용 중' : '선택된 이미지 없음'">지금 표지를 사용 중</span>
-        </div>
-        <!-- 지금 표지를 미리보기에 그대로 띄우고, 새 파일을 고르면 JS 가 갈아 끼운다. -->
-        <div class="diary-cover-preview" id="diary-cover-preview"
-             th:attr="hidden=${currentCoverImageUrl != null and !#strings.isEmpty(currentCoverImageUrl)}
-                      ? null : true">
-          <img id="diary-cover-preview-image" th:src="${currentCoverImageUrl}"
-               alt="대표 이미지 미리보기" />
-        </div>
+                         ? '지금 표지를 사용 중' : '대표 이미지 선택'">지금 표지를 사용 중</span>
+          <span class="diary-cover-action" id="diary-cover-action"
+                th:text="${currentCoverImageUrl != null and !#strings.isEmpty(currentCoverImageUrl)}
+                         ? '변경' : '선택'">변경</span>
+        </label>
         <span class="diary-form-hint">새로 선택하지 않으면 지금 표지가 그대로 유지됩니다.</span>
       </div>
 

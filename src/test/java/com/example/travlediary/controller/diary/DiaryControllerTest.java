@@ -677,12 +677,13 @@ class DiaryControllerTest {
                 .andReturn().getResponse().getContentAsString();
 
         assertThat(body).contains("is-read-mode");
-        // 읽기 모드는 책 감상 + 책 자체 관리 자리다
+        // 읽기 모드는 감상 화면이다. 상단 액션은 새 페이지 추가 / 편집하기만 남는다.
         assertThat(body).contains("편집하기");
-        assertThat(body).contains("다이어리 설정");
-        assertThat(body).contains("/diaries/10/edit");
-        assertThat(body).contains("다이어리 삭제");
-        assertThat(body).contains("/diaries/10/delete");
+        // 책 자체 관리(설정/삭제)는 목록 카드의 ⋯ 메뉴로 옮겼다
+        assertThat(body).doesNotContain("다이어리 설정");
+        assertThat(body).doesNotContain("/diaries/10/edit");
+        assertThat(body).doesNotContain("다이어리 삭제");
+        assertThat(body).doesNotContain("/diaries/10/delete");
         // 읽기 모드에는 페이지 내용 편집 UI 가 없다
         assertThat(body).doesNotContain("diary-toolbar");
         assertThat(body).doesNotContain("diary-photo-input");
@@ -810,14 +811,33 @@ class DiaryControllerTest {
         assertThat(body).contains("diary-period-inputs");
         assertThat(body).contains("diary-period-separator");
         assertThat(body).contains("min=\"1000-01-01\"").contains("max=\"9999-12-31\"");
-        // 작성 화면과 같은 커스텀 대표 이미지 선택 (기본 파일 선택 UI 숨김)
+        // 작성 화면과 같은 compact picker (기본 파일 선택 UI 숨김, 별도 미리보기 상자 없음)
         assertThat(body).contains("diary-cover-input");
         assertThat(body).contains("diary-cover-picker");
-        assertThat(body).contains("대표 이미지 변경");
-        assertThat(body).contains("id=\"diary-cover-preview\"");
+        assertThat(body).contains("diary-cover-thumb");
+        assertThat(body).doesNotContain("diary-cover-preview\"");
+        // 지금 표지는 같은 picker 안의 썸네일로 보인다
+        assertThat(body).contains("has-image");
+        assertThat(body).contains("지금 표지를 사용 중");
         assertThat(body).contains("/uploads/diary-covers/old.jpg");
         assertThat(body).contains("/js/diary-cover-picker.js");
         assertThat(body).contains("수정 완료");
+    }
+
+    @Test
+    void newFormUsesTheSameCompactCoverPickerInItsEmptyState() throws Exception {
+        String body = mockMvc.perform(get("/diaries/new")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).contains("diary-cover-picker");
+        assertThat(body).contains("diary-cover-thumb");
+        assertThat(body).contains("대표 이미지 선택");
+        // 고르기 전에는 썸네일 이미지가 숨겨져 있고 별도 미리보기 상자도 없다
+        assertThat(body).doesNotContain("has-image");
+        assertThat(body).doesNotContain("diary-cover-preview\"");
     }
 
     @Test
@@ -1124,7 +1144,7 @@ class DiaryControllerTest {
     }
 
     @Test
-    void bothModesHangTheSilkRibbonFromTheirBindingEdge() throws Exception {
+    void onlyTheReadSpreadHangsTheSilkRibbonFromItsSpine() throws Exception {
         when(userDetails.getId()).thenReturn(7L);
         when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
         when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-01")));
@@ -1147,9 +1167,9 @@ class DiaryControllerTest {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
-        // 편집 한 장에서는 가운데 제본선 대신 종이 왼쪽 제본 자리에서 내려온다
+        // 편집은 한 장 집중 화면이라 제본/책갈피 장식이 없다
         assertThat(editBody).doesNotContain("diary-book-gutter");
-        assertThat(editBody).contains("diary-book-ribbon is-single");
+        assertThat(editBody).doesNotContain("diary-book-ribbon");
     }
 
     @Test
@@ -1204,6 +1224,34 @@ class DiaryControllerTest {
         assertThat(body).contains("diary-book-spine");
         assertThat(body).contains("diary-book-title");
         assertThat(body).contains("3장");
+        // 제목은 표지 위쪽에 인쇄된 자리에 있고, 대표 이미지는 그 아래 칸을 쓴다
+        assertThat(body.indexOf("diary-book-title"))
+                .isLessThan(body.indexOf("diary-book-image"));
+    }
+
+    @Test
+    void listCardCarriesTheBookLevelActionsInACompactMenu() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiaryList(7L)).thenReturn(List.of(item()));
+
+        String body = mockMvc.perform(get("/diaries")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).contains("diary-book-menu-button");
+        assertThat(body).contains("aria-haspopup=\"menu\"");
+        assertThat(body).contains("id=\"diary-book-menu-10\"");
+        // 상세에서 옮겨 온 액션은 기존 route 를 그대로 쓴다
+        assertThat(body).contains("다이어리 설정").contains("/diaries/10/edit");
+        assertThat(body).contains("다이어리 삭제").contains("action=\"/diaries/10/delete\"");
+        // 삭제는 바로 실행되지 않고 확인을 거친다
+        assertThat(body).contains("onsubmit=\"return confirm(");
+        // 메뉴는 카드 링크(a) 바깥에 있어 표지 클릭을 가로채지 않는다
+        assertThat(body.indexOf("diary-book-meta"))
+                .isLessThan(body.indexOf("diary-book-menu-button"));
+        assertThat(body).contains("/js/diary-book-menu.js");
     }
 
     @Test

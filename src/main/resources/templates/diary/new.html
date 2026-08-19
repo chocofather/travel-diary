@@ -50,16 +50,19 @@
 
       <div class="diary-form-field">
         <span class="diary-form-label">대표 이미지</span>
-        <!-- 기본 파일 선택 버튼은 감추고 아래 버튼으로 열되, 제출 시 함께 올라가는 구조는 그대로 둔다. -->
+        <!-- 기본 파일 선택 버튼은 감추고 아래 picker 로 열되, 제출 시 함께 올라가는 구조는 그대로 둔다. -->
         <input type="file" id="diary-cover-image" name="coverImage" accept="image/*"
                class="diary-cover-input" />
-        <div class="diary-cover-picker">
-          <label class="diary-cover-button" for="diary-cover-image">대표 이미지 선택</label>
-          <span class="diary-cover-name" id="diary-cover-name">선택된 이미지 없음</span>
-        </div>
-        <div class="diary-cover-preview" id="diary-cover-preview" hidden>
-          <img id="diary-cover-preview-image" src="" alt="선택한 대표 이미지 미리보기" />
-        </div>
+        <!-- 고르기 전에는 작은 아이콘, 고른 뒤에는 같은 자리에 썸네일 + 파일명이 들어온다 -->
+        <label class="diary-cover-picker" id="diary-cover-picker" for="diary-cover-image">
+          <span class="diary-cover-thumb">
+            <img class="diary-cover-thumb-image" id="diary-cover-preview-image" src="" alt=""
+                 hidden />
+            <span class="diary-cover-thumb-mark" aria-hidden="true">▣</span>
+          </span>
+          <span class="diary-cover-name" id="diary-cover-name">대표 이미지 선택</span>
+          <span class="diary-cover-action" id="diary-cover-action">선택</span>
+        </label>
         <span class="diary-form-hint">한 장만 등록할 수 있어요. 선택하지 않으면 기본 표지가 사용됩니다.</span>
       </div>
 

@@ -4,6 +4,7 @@
 
 <th:block th:fragment="headFragment">
   <link rel="stylesheet" href="/css/diary.css">
+  <script src="/js/diary-book-menu.js" defer></script>
 </th:block>
 
 <th:block th:fragment="body">
@@ -29,6 +30,10 @@
                             + ${#strings.replace(#strings.toLowerCase(diary.coverStyle), '_', '-')} : ''">
         <a class="diary-book-inner" th:href="@{/diaries/{id}(id=${diary.id})}">
           <div class="diary-book-cover">
+            <!-- 제목은 실제 책처럼 표지 위쪽에 인쇄된 자리에 둔다 (대표 이미지와 겹치지 않는다) -->
+            <div class="diary-book-label">
+              <h2 class="diary-book-title" th:text="${diary.title}">여행일기 제목</h2>
+            </div>
             <img th:if="${diary.coverImageUrl != null and !#strings.isEmpty(diary.coverImageUrl)}"
                  class="diary-book-image"
                  th:src="${diary.coverImageUrl}"
@@ -38,9 +43,6 @@
             <div th:unless="${diary.coverImageUrl != null and !#strings.isEmpty(diary.coverImageUrl)}"
                  class="diary-book-placeholder" aria-hidden="true"></div>
             <span class="diary-book-spine" aria-hidden="true"></span>
-            <div class="diary-book-label">
-              <h2 class="diary-book-title" th:text="${diary.title}">여행일기 제목</h2>
-            </div>
           </div>
 
           <div class="diary-book-meta">
@@ -49,6 +51,26 @@
             <span class="diary-book-pages" th:text="|${diary.pageCount}장|">0장</span>
           </div>
         </a>
+
+        <!-- 책 관리 메뉴. 카드 링크(a) 바깥에 두어 표지 클릭을 가로채지 않는다.
+             설정/삭제는 기존 route 를 그대로 쓴다. -->
+        <div class="diary-book-menu">
+          <button type="button" class="diary-book-menu-button"
+                  aria-haspopup="menu" aria-expanded="false"
+                  th:attr="aria-controls=|diary-book-menu-${diary.id}|,
+                           aria-label=|${diary.title} 관리 메뉴|">⋯</button>
+          <div class="diary-book-menu-panel" role="menu"
+               th:id="|diary-book-menu-${diary.id}|"
+               th:attr="aria-label=|${diary.title} 관리|" hidden>
+            <a class="diary-book-menu-item" role="menuitem"
+               th:href="@{/diaries/{id}/edit(id=${diary.id})}">다이어리 설정</a>
+            <form th:action="@{/diaries/{id}/delete(id=${diary.id})}" method="post"
+                  onsubmit="return confirm('이 여행일기를 삭제하면 모든 페이지와 사진이 함께 삭제됩니다. 삭제하시겠습니까?');">
+              <button type="submit" class="diary-book-menu-item is-danger"
+                      role="menuitem">다이어리 삭제</button>
+            </form>
+          </div>
+        </div>
       </li>
     </ul>
 

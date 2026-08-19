@@ -67,8 +67,8 @@ class DiaryPaperAssetTest {
         assertThat(ribbon).containsPattern("height: (5[5-9]|6[0-9]|7[0-5])%;");
         // 실크 줄처럼 아주 얇다 (막대기로 보이면 안 된다)
         assertThat(ribbon).containsPattern("width: [3-7]px;");
-        // 편집 한 장에서도 같은 리본을 제본 자리에서 내려 준다
-        assertThat(css).contains(".diary-book-ribbon.is-single {");
+        // 읽기 펼침의 제본선 장식일 뿐이라 편집 한 장용 변형은 두지 않는다
+        assertThat(css).doesNotContain(".diary-book-ribbon.is-single");
     }
 
     @Test

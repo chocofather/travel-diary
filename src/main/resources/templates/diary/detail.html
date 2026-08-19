@@ -31,7 +31,8 @@
         <span th:text="|전체 ${#lists.size(diaryPages)}장|">전체 0장</span>
       </p>
 
-      <!-- 읽기 모드: 책을 읽는 화면이자 책 자체(제목/기간/표지)를 관리하는 자리 -->
+      <!-- 읽기 모드: 다이어리를 감상하는 화면.
+           책 자체 관리(설정/삭제)는 목록 카드의 ⋯ 메뉴로 옮겼고 route 는 그대로 쓴다. -->
       <div class="diary-detail-actions" th:unless="${editMode}">
         <button type="button" class="diary-mode-button" id="diary-page-picker-button"
                 aria-haspopup="dialog" aria-expanded="false"
@@ -62,12 +63,6 @@
             </div>
           </form>
         </details>
-
-        <a class="diary-detail-action" th:href="@{/diaries/{id}/edit(id=${diary.id})}">다이어리 설정</a>
-        <form th:action="@{/diaries/{id}/delete(id=${diary.id})}" method="post"
-              onsubmit="return confirm('이 여행일기를 삭제하면 모든 페이지와 사진이 함께 삭제됩니다. 삭제하시겠습니까?');">
-          <button type="submit" class="diary-detail-action is-danger">다이어리 삭제</button>
-        </form>
       </div>
 
       <!-- 편집 모드: 페이지 내용 편집에 필요한 것만 남긴다 -->
@@ -202,8 +197,7 @@
       <article class="diary-sheet diary-sheet-single"
                th:classappend="${editPage != null and editPage.backgroundType != null}
                                ? ' diary-sheet-bg-' + ${#strings.toLowerCase(editPage.backgroundType)} : ''">
-        <!-- 읽기 펼침과 같은 실크 리본. 편집 한 장에서는 제본 쪽(왼쪽)에서 내려온다. -->
-        <span class="diary-book-ribbon is-single" aria-hidden="true"></span>
+        <!-- 편집은 한 장 집중 화면이라 제본 장식 없이 종이만 둔다. -->
         <th:block th:if="${editPage != null}">
           <div class="diary-sheet-head"
                th:replace="~{diary/detail :: sheetHead(${editPage})}"></div>
