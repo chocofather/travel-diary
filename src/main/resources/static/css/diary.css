@@ -72,8 +72,6 @@
     --diary-cover-light: rgba(255, 255, 255, 0.5);
     --diary-cover-shade: rgba(63, 52, 38, 0.09);
     --diary-cover-grain: var(--diary-cover-grain-hardcover);
-    /* 표지에 인쇄된 제목 잉크색. 표지 바탕색은 그대로 두고 읽히는 색만 맞춘다. */
-    --diary-cover-title: #4a3d2b;
 }
 
 .diary-cover-leather-black {
@@ -82,7 +80,6 @@
     --diary-cover-light: rgba(255, 255, 255, 0.14);
     --diary-cover-shade: rgba(0, 0, 0, 0.38);
     --diary-cover-grain: var(--diary-cover-grain-leather);
-    --diary-cover-title: rgba(228, 219, 202, 0.92);
 }
 
 .diary-cover-leather-dark-brown {
@@ -91,7 +88,6 @@
     --diary-cover-light: rgba(255, 255, 255, 0.16);
     --diary-cover-shade: rgba(0, 0, 0, 0.34);
     --diary-cover-grain: var(--diary-cover-grain-leather);
-    --diary-cover-title: rgba(237, 225, 205, 0.92);
 }
 
 .diary-cover-leather-light-brown {
@@ -100,7 +96,6 @@
     --diary-cover-light: rgba(255, 255, 255, 0.22);
     --diary-cover-shade: rgba(0, 0, 0, 0.28);
     --diary-cover-grain: var(--diary-cover-grain-leather);
-    --diary-cover-title: rgba(255, 247, 236, 0.94);
 }
 
 .diary-cover-leather-deep-green {
@@ -109,7 +104,6 @@
     --diary-cover-light: rgba(255, 255, 255, 0.15);
     --diary-cover-shade: rgba(0, 0, 0, 0.32);
     --diary-cover-grain: var(--diary-cover-grain-leather);
-    --diary-cover-title: rgba(230, 233, 218, 0.92);
 }
 
 .diary-cover-hardcover-navy {
@@ -118,7 +112,6 @@
     --diary-cover-light: rgba(255, 255, 255, 0.16);
     --diary-cover-shade: rgba(0, 0, 0, 0.3);
     --diary-cover-grain: var(--diary-cover-grain-hardcover);
-    --diary-cover-title: rgba(230, 235, 244, 0.94);
 }
 
 .diary-cover-hardcover-burgundy {
@@ -127,7 +120,6 @@
     --diary-cover-light: rgba(255, 255, 255, 0.17);
     --diary-cover-shade: rgba(0, 0, 0, 0.3);
     --diary-cover-grain: var(--diary-cover-grain-hardcover);
-    --diary-cover-title: rgba(247, 233, 227, 0.94);
 }
 
 .diary-cover-hardcover-beige {
@@ -136,7 +128,6 @@
     --diary-cover-light: rgba(255, 255, 255, 0.5);
     --diary-cover-shade: rgba(63, 52, 38, 0.12);
     --diary-cover-grain: var(--diary-cover-grain-hardcover);
-    --diary-cover-title: #56472e;
 }
 
 /* ===== 상단 ===== */
@@ -292,11 +283,10 @@
     display: block;
     box-sizing: border-box;
     width: 100%;
-    /* 제목 칸 아래 남은 자리를 쓴다 */
+    /* 표지 전체를 쓰되, 사진 둘레로 표지 소재가 조금 보이게만 띄운다 */
     flex: 1;
     min-height: 0;
-    /* 사진 둘레로 표지 소재가 조금 보이게만 띄운다 */
-    padding: 0 16px 22px 28px;
+    padding: 18px 16px 20px 28px;
     object-fit: contain;
     filter:
         drop-shadow(0 0 0.5px rgba(255, 255, 255, 0.45))
@@ -353,32 +343,6 @@
         rgba(255, 255, 255, 0.12) 78%,
         rgba(255, 255, 255, 0) 100%
     );
-}
-
-/* 제목은 실제 책처럼 표지 위쪽 1/3 자리에 인쇄된 것처럼 둔다.
-   대표 이미지는 그 아래 칸을 쓰므로 서로 겹치지 않는다. */
-.diary-book-label {
-    position: relative;
-    z-index: 4;
-    display: flex;
-    box-sizing: border-box;
-    flex: 0 0 32%;
-    align-items: center;
-    padding: 14px 14px 8px 28px;
-}
-
-.diary-book-title {
-    display: -webkit-box;
-    overflow: hidden;
-    margin: 0;
-    /* 표지 색에 맞춘 잉크색. 금박 같은 강조 없이 인쇄된 글자 정도로만 둔다. */
-    color: var(--diary-cover-title);
-    font-size: 15px;
-    font-weight: 700;
-    line-height: 1.35;
-    letter-spacing: -0.01em;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
 }
 
 /* ===== 카드 관리 메뉴 (⋯) =====
@@ -496,15 +460,38 @@
     outline-offset: -2px;
 }
 
-/* 보조 정보는 표지 밖에 작게 */
+/* ===== 책 아래 목록 정보 =====
+   1줄 제목 / 2줄 기간 + 페이지 수. 카드 높이가 늘지 않게 촘촘히 붙인다. */
+.diary-book-info {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 3px;
+    margin-top: 10px;
+}
+
+/* 제목은 기간보다 조금 크고 진하게. 길면 한 줄에서 말줄임한다. */
+.diary-book-title {
+    min-width: 0;
+    overflow: hidden;
+    margin: 0;
+    color: #3f3427;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: -0.01em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 보조 정보는 제목 아래 작은 회색 줄 */
 .diary-book-meta {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
     gap: 10px;
-    margin-top: 12px;
     color: #8b8378;
-    font-size: 13px;
+    font-size: 12px;
 }
 
 .diary-book-period {
@@ -2703,12 +2690,13 @@
     }
 
     .diary-book-title {
-        font-size: 14px;
+        font-size: 13px;
     }
 
+    /* 좁은 화면에서도 기간과 페이지 수는 한 줄에 둔다 (페이지 수는 오른쪽) */
     .diary-book-meta {
-        flex-direction: column;
-        gap: 2px;
+        gap: 6px;
+        font-size: 11px;
     }
 }
 

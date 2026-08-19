@@ -29,11 +29,8 @@
                           ? ' diary-cover-'
                             + ${#strings.replace(#strings.toLowerCase(diary.coverStyle), '_', '-')} : ''">
         <a class="diary-book-inner" th:href="@{/diaries/{id}(id=${diary.id})}">
+          <!-- 표지에는 대표 이미지와 책 재질/책등만 남긴다 (제목은 표지 아래 정보로) -->
           <div class="diary-book-cover">
-            <!-- 제목은 실제 책처럼 표지 위쪽에 인쇄된 자리에 둔다 (대표 이미지와 겹치지 않는다) -->
-            <div class="diary-book-label">
-              <h2 class="diary-book-title" th:text="${diary.title}">여행일기 제목</h2>
-            </div>
             <img th:if="${diary.coverImageUrl != null and !#strings.isEmpty(diary.coverImageUrl)}"
                  class="diary-book-image"
                  th:src="${diary.coverImageUrl}"
@@ -45,10 +42,14 @@
             <span class="diary-book-spine" aria-hidden="true"></span>
           </div>
 
-          <div class="diary-book-meta">
-            <time class="diary-book-period"
-                  th:text="|${diary.startDate} ~ ${diary.endDate}|">2026-08-01 ~ 2026-08-05</time>
-            <span class="diary-book-pages" th:text="|${diary.pageCount}장|">0장</span>
+          <!-- 책 아래 목록 정보: 1줄 제목 / 2줄 기간 + 페이지 수 -->
+          <div class="diary-book-info">
+            <h2 class="diary-book-title" th:text="${diary.title}">여행일기 제목</h2>
+            <div class="diary-book-meta">
+              <time class="diary-book-period"
+                    th:text="|${diary.startDate} ~ ${diary.endDate}|">2026-08-01 ~ 2026-08-05</time>
+              <span class="diary-book-pages" th:text="|${diary.pageCount}장|">0장</span>
+            </div>
           </div>
         </a>
 

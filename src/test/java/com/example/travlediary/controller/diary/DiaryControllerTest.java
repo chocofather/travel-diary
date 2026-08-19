@@ -1224,9 +1224,12 @@ class DiaryControllerTest {
         assertThat(body).contains("diary-book-spine");
         assertThat(body).contains("diary-book-title");
         assertThat(body).contains("3장");
-        // 제목은 표지 위쪽에 인쇄된 자리에 있고, 대표 이미지는 그 아래 칸을 쓴다
+        // 제목은 표지 안이 아니라 표지 아래 정보 영역에 있다
+        assertThat(body.indexOf("diary-book-image"))
+                .isLessThan(body.indexOf("diary-book-title"));
         assertThat(body.indexOf("diary-book-title"))
-                .isLessThan(body.indexOf("diary-book-image"));
+                .isLessThan(body.indexOf("diary-book-period"));
+        assertThat(body).doesNotContain("diary-book-label");
     }
 
     @Test
