@@ -18,6 +18,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.time.MonthDay;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -52,6 +53,27 @@ public class HolidayService {
     /** 오래 켜 둬도 메모리가 늘지 않도록 담아 두는 달 수를 제한한다. */
     private static final int MAX_CACHED_MONTHS = 60;
 
+    /**
+     * 화면에 적을 이름만 바꾼다. (응답 원문이나 공휴일 판정은 그대로 둔다)
+     * 달력에서 낯설게 읽히는 이름만 여기에 한 줄씩 더하면 된다.
+     */
+    private static final Map<String, String> DISPLAY_NAMES = Map.of(
+            "기독탄신일", "크리스마스",
+            // 응답에 오는 이름은 띄어쓰기 없는 '1월1일' 이다.
+            "1월1일", "새해");
+
+    /**
+     * 공휴일도 절기도 아니지만 달력에 적어 두면 좋은 날.
+     * 해마다 같은 날짜라 외부 API 없이 여기에서만 정한다. (공휴일로 치지 않는다)
+     */
+    private static final List<LocalDay> LOCAL_DAYS = List.of(
+            new LocalDay(MonthDay.of(5, 8), "어버이날"),
+            new LocalDay(MonthDay.of(12, 24), "크리스마스 이브"));
+
+    /** 달력이 스스로 아는 표시일. (날짜 + 이름, 종류는 언제나 LOCAL_DAY) */
+    private record LocalDay(MonthDay date, String name) {
+    }
+
     /** 달력을 열 때마다 다시 부르지 않도록 월 단위로 담아 둔다. (서버를 내리면 사라진다) */
     private final Map<YearMonth, Map<LocalDate, SpecialDays>> cache = new ConcurrentHashMap<>();
     private final RestClient restClient;
@@ -67,12 +89,12 @@ public class HolidayService {
     }
 
     /**
-     * 그 달의 특일 정보(공휴일 + 24절기 + 잡절).
+     * 그 달의 특일 정보(공휴일 + 24절기 + 잡절 + 달력 자체 표시일).
      * 날짜 하나에 여러 건이 있을 수 있어 날짜별 목록으로 담는다.
      * 인증키가 없거나 외부 API 가 실패하면 그만큼만 비고, 달력은 그대로 그려진다.
      */
     public Map<LocalDate, SpecialDays> findSpecialDays(YearMonth month) {
-        if (month == null || apiKey.isEmpty()) {
+        if (month == null) {
             return Map.of();
         }
 
@@ -82,31 +104,40 @@ public class HolidayService {
         }
 
         // 세 가지를 따로 부른다. 하나가 실패해도 나머지는 그대로 보여 준다.
-        List<Dated> holidays = fetch(month, REST_DAY, SpecialDay.Kind.HOLIDAY);
-        List<Dated> terms = fetch(month, DIVISIONS, SpecialDay.Kind.SEASONAL_TERM);
-        List<Dated> sundries = fetch(month, SUNDRY_DAY, SpecialDay.Kind.SUNDRY_DAY);
-        if (holidays == null && terms == null && sundries == null) {
-            return Map.of();
-        }
+        boolean asked = !apiKey.isEmpty();
+        List<Dated> holidays = asked ? fetch(month, REST_DAY, SpecialDay.Kind.HOLIDAY) : null;
+        List<Dated> terms = asked ? fetch(month, DIVISIONS, SpecialDay.Kind.SEASONAL_TERM) : null;
+        List<Dated> sundries = asked ? fetch(month, SUNDRY_DAY, SpecialDay.Kind.SUNDRY_DAY) : null;
 
         Map<LocalDate, List<SpecialDay>> byDate = new LinkedHashMap<>();
-        // 공휴일 → 절기 → 잡절 순으로 담아 화면에서도 같은 순서로 적힌다.
+        // 공휴일 → 절기 → 잡절 → 달력 표시일 순으로 담아 화면에서도 같은 순서로 적힌다.
         collect(byDate, holidays);
         collect(byDate, terms);
         collect(byDate, sundries);
+        collect(byDate, localDays(month));
 
         Map<LocalDate, SpecialDays> specialDays = new LinkedHashMap<>();
         byDate.forEach((date, days) -> specialDays.put(date, new SpecialDays(List.copyOf(days))));
         Map<LocalDate, SpecialDays> result = Map.copyOf(specialDays);
 
-        // 세 가지가 모두 성공했을 때만 담아 둔다. (실패한 달은 다음에 다시 부른다)
-        if (holidays != null && terms != null && sundries != null) {
+        // 부른 것이 모두 성공했을 때만 담아 둔다. (실패한 달은 다음에 다시 부른다)
+        if (!asked || (holidays != null && terms != null && sundries != null)) {
             if (cache.size() >= MAX_CACHED_MONTHS) {
                 cache.clear();
             }
             cache.put(month, result);
         }
         return result;
+    }
+
+    /** 그 달에 해당하는 달력 표시일. 해마다 같은 날짜라 외부에 물어볼 것이 없다. */
+    private List<Dated> localDays(YearMonth month) {
+        return LOCAL_DAYS.stream()
+                .filter(day -> day.date().getMonthValue() == month.getMonthValue()
+                        && day.date().getDayOfMonth() <= month.lengthOfMonth())
+                .map(day -> new Dated(month.atDay(day.date().getDayOfMonth()),
+                        new SpecialDay(day.name(), SpecialDay.Kind.LOCAL_DAY)))
+                .toList();
     }
 
     /** 한 종류를 읽는다. 실패하면 null 을 돌려줘 '못 읽음'과 '없음'을 구분한다. */
@@ -170,10 +201,15 @@ public class HolidayService {
             if (date == null || name.isEmpty()) {
                 continue;
             }
-            // 같은 날짜에 여러 건이 와도 하나도 버리지 않는다.
-            found.add(new Dated(date, new SpecialDay(name, kind)));
+            // 같은 날짜에 여러 건이 와도 하나도 버리지 않는다. (이름만 읽기 쉬운 쪽으로 바꿔 둔다)
+            found.add(new Dated(date, new SpecialDay(displayName(name), kind)));
         }
         return List.copyOf(found);
+    }
+
+    /** 달력에 적을 이름. 정해 둔 것이 없으면 응답에 온 이름을 그대로 쓴다. */
+    private String displayName(String name) {
+        return DISPLAY_NAMES.getOrDefault(name, name);
     }
 
     /** 파싱 결과를 날짜와 함께 옮기기 위한 값. (화면으로 나가지 않는다) */

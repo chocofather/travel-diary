@@ -150,17 +150,76 @@ class DiaryControllerTest {
         // 달 이동은 주소의 month 로만 오간다
         assertThat(body).contains("/diaries/calendar?month=2026-07");
         assertThat(body).contains("/diaries/calendar?month=2026-09");
-        // 연/월은 직접 고를 수 있고 지금 보고 있는 값이 선택돼 있다
+        // 연/월은 직접 고를 수 있고 지금 보고 있는 값이 선택돼 있다 (커스텀 팝오버)
         assertThat(body).contains("id=\"diary-calendar-year\"");
         assertThat(body).contains("id=\"diary-calendar-month\"");
-        assertThat(body).containsPattern("value=\"2026\"\\s+selected");
-        assertThat(body).containsPattern("value=\"8\"\\s+selected");
+        assertThat(body).contains("id=\"diary-calendar-year-menu\"");
+        assertThat(body).contains("id=\"diary-calendar-month-menu\"");
+        assertThat(body).containsPattern("is-current[^>]*data-year=\"2026\"");
+        assertThat(body).containsPattern("is-current[^>]*data-month=\"8\"");
+        // 시스템 드롭다운(native select)은 더 이상 쓰지 않는다
+        assertThat(body).doesNotContain("<select");
         // 이번 달로 돌아오는 버튼은 month 없는 주소를 쓴다
         assertThat(body).contains("diary-calendar-today");
         assertThat(body).contains("href=\"/diaries/calendar\"");
         assertThat(body).contains("/js/diary-calendar.js");
+        // 달만 갈아 끼울 수 있도록 조각 주소와 지금 보고 있는 달을 실어 둔다
+        assertThat(body).contains("id=\"diary-calendar-board\"");
+        assertThat(body).contains("data-fragment-url=\"/diaries/calendar/fragment\"");
+        assertThat(body).contains("data-month=\"2026-08\"");
         // 책장 보기로 돌아갈 수 있다
         assertThat(body).contains("diary-view-switch");
+    }
+
+    /** 달 이동용 조각. 달력 자리만 돌려주고 페이지 껍데기는 다시 그리지 않는다. */
+    @Test
+    void calendarFragmentReturnsOnlyTheCalendarBoard() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiaryCalendar(7L, YearMonth.of(2026, 9)))
+                .thenReturn(calendar(YearMonth.of(2026, 9), diary()));
+        when(holidayService.findSpecialDays(YearMonth.of(2026, 9)))
+                .thenReturn(Map.of(LocalDate.of(2026, 9, 1), new SpecialDays(List.of(
+                        new SpecialDay("추석", SpecialDay.Kind.HOLIDAY)))));
+
+        String body = mockMvc.perform(get("/diaries/calendar/fragment").param("month", "2026-09")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andExpect(view().name("diary/calendar :: board"))
+                .andReturn().getResponse().getContentAsString();
+
+        // 달력 조회/공휴일 조회는 전체 페이지와 같은 서비스 호출을 그대로 쓴다
+        verify(diaryService).getMyDiaryCalendar(7L, YearMonth.of(2026, 9));
+        verify(holidayService).findSpecialDays(YearMonth.of(2026, 9));
+        // 월 네비게이션·날짜·공휴일·여행일기 chip 이 모두 조각 안에 들어 있다
+        assertThat(body).contains("id=\"diary-calendar-board\"");
+        assertThat(body).contains("data-month=\"2026-09\"");
+        assertThat(body).contains("id=\"diary-calendar-year\"");
+        assertThat(body).contains("/diaries/calendar?month=2026-10");
+        assertThat(body).contains("추석");
+        assertThat(body).contains("여름 제주 여행");
+        // 페이지 껍데기(레이아웃/머리말)는 들어 있지 않다
+        assertThat(body).doesNotContain("<html");
+        assertThat(body).doesNotContain("MY TRAVEL DIARY");
+    }
+
+    /** month 가 없으면 조각도 전체 페이지와 똑같이 이번 달을 본다. ('오늘' 버튼) */
+    @Test
+    void calendarFragmentWithoutMonthShowsThisMonth() throws Exception {
+        YearMonth now = YearMonth.now();
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiaryCalendar(7L, now)).thenReturn(calendar(now, diary()));
+
+        String body = mockMvc.perform(get("/diaries/calendar/fragment")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        verify(diaryService).getMyDiaryCalendar(7L, now);
+        assertThat(body).contains("data-month=\"" + now + "\"");
+        // 이번 달이라 '오늘' 은 눌러도 옮길 곳이 없다
+        assertThat(body).containsPattern("diary-calendar-today\\s+is-current");
     }
 
     @Test
@@ -267,7 +326,7 @@ class DiaryControllerTest {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
-        assertThat(body).containsPattern("value=\"1998\"\\s+selected");
+        assertThat(body).containsPattern("is-current[^>]*data-year=\"1998\"");
         assertThat(body).contains(String.valueOf(YearMonth.now().getYear()));
     }
 

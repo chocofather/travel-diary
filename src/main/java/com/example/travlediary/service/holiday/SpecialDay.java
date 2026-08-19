@@ -12,7 +12,9 @@ public record SpecialDay(String name, Kind kind) {
         /** 24절기 (입춘·하지·동지 …) */
         SEASONAL_TERM,
         /** 잡절 (초복·중복·말복 …) */
-        SUNDRY_DAY
+        SUNDRY_DAY,
+        /** 달력이 스스로 적어 두는 날 (크리스마스 이브 …). 쉬는 날이 아니다. */
+        LOCAL_DAY
     }
 
     public boolean isHoliday() {

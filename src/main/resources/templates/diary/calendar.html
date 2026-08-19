@@ -26,30 +26,60 @@
       </div>
     </header>
 
+    <!-- 달이 바뀌면 이 안쪽만 통째로 갈아 끼운다. 서버가 그린 그대로를 쓰므로
+         비동기로 바꿔도 새로고침/직접 접근과 화면이 완전히 같다. -->
+    <div class="diary-calendar-board" id="diary-calendar-board" th:fragment="board"
+         th:data-fragment-url="@{/diaries/calendar/fragment}"
+         th:data-month="${calendar.monthValue}">
+
     <!-- 달 이동은 언제나 주소의 month(YYYY-MM) 로만 오간다. (일반 GET)
-         이전/다음/오늘은 링크라 JS 없이도 동작하고, 연·월 고르기만 JS 가 주소를 만든다. -->
+         이전/다음/오늘은 링크라 JS 없이도 동작하고, 연·월 팝오버만 JS 가 주소를 만든다. -->
     <div class="diary-calendar-head" id="diary-calendar-head"
          th:data-calendar-url="@{/diaries/calendar}">
       <a class="diary-calendar-move" aria-label="이전 달"
          th:href="@{/diaries/calendar(month=${calendar.previousMonthValue})}">&#8249;</a>
 
+      <!-- 연/월 고르기. 시스템 드롭다운 대신 달력과 같은 결의 작은 팝오버를 쓴다.
+           목록도 서버가 함께 그려 두므로 여는 순간 만들 것이 없다. -->
       <h2 class="diary-calendar-month">
-        <label class="diary-calendar-pick">
-          <select class="diary-calendar-select" id="diary-calendar-year"
-                  aria-label="연도 고르기">
-            <option th:each="year : ${calendar.selectableYears}"
-                    th:value="${year}" th:selected="${year == calendar.month.year}"
-                    th:text="|${year}년|">2026년</option>
-          </select>
-        </label>
-        <label class="diary-calendar-pick">
-          <select class="diary-calendar-select" id="diary-calendar-month"
-                  aria-label="월 고르기">
-            <option th:each="m : ${calendar.selectableMonths}"
-                    th:value="${m}" th:selected="${m == calendar.month.monthValue}"
-                    th:text="|${m}월|">8월</option>
-          </select>
-        </label>
+        <div class="diary-calendar-pick">
+          <button class="diary-calendar-pick-button" type="button" id="diary-calendar-year"
+                  aria-haspopup="listbox" aria-expanded="false"
+                  aria-controls="diary-calendar-year-menu" aria-label="연도 고르기">
+            <span th:text="|${calendar.month.year}년|">2026년</span>
+            <span class="diary-calendar-pick-arrow" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="diary-calendar-popover diary-calendar-year-popover"
+               id="diary-calendar-year-menu"
+               role="listbox" aria-label="연도" hidden>
+            <button class="diary-calendar-option" type="button" role="option"
+                    th:each="year : ${calendar.selectableYears}"
+                    th:data-year="${year}"
+                    th:classappend="${year == calendar.month.year} ? ' is-current' : ''"
+                    th:attr="aria-selected=${year == calendar.month.year}"
+                    th:text="|${year}년|">2026년</button>
+          </div>
+        </div>
+
+        <div class="diary-calendar-pick">
+          <button class="diary-calendar-pick-button" type="button" id="diary-calendar-month"
+                  aria-haspopup="listbox" aria-expanded="false"
+                  aria-controls="diary-calendar-month-menu" aria-label="월 고르기">
+            <span th:text="|${calendar.month.monthValue}월|">8월</span>
+            <span class="diary-calendar-pick-arrow" aria-hidden="true">&#9662;</span>
+          </button>
+          <!-- 12개는 세로로 길게 늘어놓기보다 3열로 두는 편이 달력과 어울린다 -->
+          <div class="diary-calendar-popover diary-calendar-month-popover"
+               id="diary-calendar-month-menu"
+               role="listbox" aria-label="월" hidden>
+            <button class="diary-calendar-option" type="button" role="option"
+                    th:each="m : ${calendar.selectableMonths}"
+                    th:data-month="${m}"
+                    th:classappend="${m == calendar.month.monthValue} ? ' is-current' : ''"
+                    th:attr="aria-selected=${m == calendar.month.monthValue}"
+                    th:text="|${m}월|">8월</button>
+          </div>
+        </div>
       </h2>
 
       <a class="diary-calendar-move" aria-label="다음 달"
@@ -112,6 +142,12 @@
 
     <p class="diary-calendar-empty" th:if="${calendar.empty}" role="status">
       이 달에는 기록한 여행이 없어요.
+    </p>
+    </div>
+
+    <!-- 달을 못 불러왔을 때만 잠깐 보인다. 보고 있던 달력은 그대로 둔다. -->
+    <p class="diary-calendar-error" id="diary-calendar-error" role="status" hidden>
+      달력을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
     </p>
   </section>
 </th:block>

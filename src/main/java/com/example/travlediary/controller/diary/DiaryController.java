@@ -111,14 +111,29 @@ public class DiaryController {
     public String diaryCalendar(@RequestParam(name = "month", required = false) String month,
                                 @AuthenticationPrincipal CustomUserDetails userDetails,
                                 Model model) {
-        YearMonth target = yearMonth(month);
-
-        model.addAttribute("calendar",
-                diaryService.getMyDiaryCalendar(userDetails.getId(), target));
-        // 공휴일/절기/잡절은 표시만 하는 값이라 못 불러와도 달력은 그대로 그려진다. (빈 목록)
-        model.addAttribute("specialDays", holidayService.findSpecialDays(target));
+        addCalendarAttributes(model, userDetails.getId(), month);
         model.addAttribute("pageTitle", "나의 여행일기 달력");
         return "diary/calendar";
+    }
+
+    /**
+     * 달력 조각만 돌려준다. (달 이동을 화면 새로고침 없이 갈아 끼우는 데 쓴다)
+     * 조회 조건·소유권·공휴일 조회는 위 달력과 완전히 같은 서비스 호출을 그대로 쓴다.
+     */
+    @GetMapping("/calendar/fragment")
+    public String diaryCalendarFragment(@RequestParam(name = "month", required = false) String month,
+                                        @AuthenticationPrincipal CustomUserDetails userDetails,
+                                        Model model) {
+        addCalendarAttributes(model, userDetails.getId(), month);
+        return "diary/calendar :: board";
+    }
+
+    private void addCalendarAttributes(Model model, Long userId, String month) {
+        YearMonth target = yearMonth(month);
+
+        model.addAttribute("calendar", diaryService.getMyDiaryCalendar(userId, target));
+        // 공휴일/절기/잡절은 표시만 하는 값이라 못 불러와도 달력은 그대로 그려진다. (빈 목록)
+        model.addAttribute("specialDays", holidayService.findSpecialDays(target));
     }
 
     /** yyyy-MM 만 받는다. 없거나 형식이 다르면 이번 달로 본다. */

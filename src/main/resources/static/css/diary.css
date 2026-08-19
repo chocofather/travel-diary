@@ -700,6 +700,21 @@
 }
 
 /* ===== 월간 달력 보기 ===== */
+/* 달을 옮기는 동안. 달력이 사라지지 않고 아주 옅게만 가라앉는다.
+   금방 오는 응답에서는 눈에 띄지 않도록 조금 늦게 흐려진다. */
+.diary-calendar-board.is-loading {
+    opacity: 0.62;
+    transition: opacity 140ms ease 120ms;
+}
+
+/* 달을 못 불러왔을 때만 한 줄. 보고 있던 달력은 그대로 둔다. */
+.diary-calendar-error {
+    margin: 14px 0 0;
+    color: #b5726b;
+    font-size: 13px;
+    text-align: center;
+}
+
 .diary-calendar-head {
     display: flex;
     flex-wrap: wrap;
@@ -718,10 +733,13 @@
 
 /* 연/월 고르기: form 처럼 보이지 않게 글자 그대로 두고 밑에서만 반응한다 */
 .diary-calendar-pick {
+    position: relative;
     display: inline-flex;
 }
 
-.diary-calendar-select {
+.diary-calendar-pick-button {
+    display: inline-flex;
+    align-items: baseline;
     padding: 3px 6px;
     border: 1px solid transparent;
     border-radius: 8px;
@@ -731,17 +749,105 @@
     font-size: 18px;
     font-weight: 700;
     letter-spacing: -0.01em;
+    gap: 3px;
     cursor: pointer;
 }
 
-.diary-calendar-select:hover {
+.diary-calendar-pick-button:hover,
+.diary-calendar-pick-button[aria-expanded="true"] {
     border-color: #e3dcd1;
     background: #fffdf8;
 }
 
-.diary-calendar-select:focus-visible {
+.diary-calendar-pick-button:focus-visible {
     outline: 2px solid #b39a75;
     outline-offset: 1px;
+}
+
+.diary-calendar-pick-arrow {
+    color: #b0a48d;
+    font-size: 10px;
+}
+
+/* 연/월 목록. 시스템 메뉴처럼 보이지 않게 종이 위에 놓인 작은 쪽지로 둔다 */
+.diary-calendar-popover {
+    position: absolute;
+    z-index: 30;
+    top: calc(100% + 6px);
+    left: 50%;
+    display: flex;
+    max-height: 232px;
+    flex-direction: column;
+    padding: 5px;
+    border: 1px solid #e6ded1;
+    border-radius: 10px;
+    background: #fffdf8;
+    box-shadow: 0 4px 14px rgba(120, 100, 70, 0.12);
+    gap: 1px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    transform: translateX(-50%);
+}
+
+/* 연도는 세로 목록. 항목 하나 너비면 충분하다. */
+.diary-calendar-year-popover {
+    min-width: 104px;
+}
+
+/*
+ * 월은 12개뿐이라 세로로 늘어놓기보다 3열이 한눈에 들어온다.
+ * 자리 잡는 상자(.diary-calendar-pick)가 버튼만 한 너비라 그대로 두면
+ * 3열이 그 폭 안으로 눌려 '10월' 같은 글자가 세로로 접힌다. 그래서 폭을 따로 준다.
+ */
+.diary-calendar-month-popover {
+    display: grid;
+    width: max-content;
+    min-width: 204px;
+    max-height: none;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 2px;
+}
+
+/* display 를 준 뒤라 닫힘 처리는 마지막에 둔다 */
+.diary-calendar-popover[hidden] {
+    display: none;
+}
+
+.diary-calendar-option {
+    padding: 5px 14px;
+    border: 0;
+    border-radius: 7px;
+    background: none;
+    color: #6b6259;
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.5;
+    text-align: center;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.diary-calendar-option:hover {
+    background: #f6efe3;
+    color: #4a3d2b;
+}
+
+.diary-calendar-option:focus-visible {
+    outline: 2px solid #b39a75;
+    outline-offset: -2px;
+}
+
+/* 지금 보고 있는 연/월만 옅은 베이지로 알린다 */
+.diary-calendar-option.is-current {
+    background: #f2e9d9;
+    color: #5c4a31;
+    font-weight: 700;
+}
+
+.diary-calendar-year-popover .diary-calendar-option.is-current::after {
+    margin-left: 6px;
+    color: #b39a75;
+    content: "\2713";
 }
 
 /* 이번 달로 돌아오는 작은 보조 액션 */
@@ -3522,8 +3628,13 @@
         gap: 6px;
     }
 
-    .diary-calendar-select {
+    .diary-calendar-pick-button {
         font-size: 16px;
+    }
+
+    /* 좁은 화면에서는 팝오버가 화면 밖으로 나가지 않을 만큼만 둔다 */
+    .diary-calendar-popover {
+        max-height: 200px;
     }
 
     .diary-calendar-today {

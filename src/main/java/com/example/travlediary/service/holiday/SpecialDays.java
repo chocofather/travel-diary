@@ -18,7 +18,7 @@ public record SpecialDays(List<SpecialDay> all) {
         return all.stream().filter(SpecialDay::isHoliday).map(SpecialDay::name).toList();
     }
 
-    /** 절기·잡절 이름 (예: 입추, 말복). 화면에서는 같은 모양으로 옅게 적는다. */
+    /** 절기·잡절·달력 표시일 이름 (예: 입추, 말복, 크리스마스 이브). 옅은 글씨로만 적는다. */
     public List<String> termNames() {
         return all.stream().filter(day -> !day.isHoliday()).map(SpecialDay::name).toList();
     }
