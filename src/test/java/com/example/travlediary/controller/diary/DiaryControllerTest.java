@@ -367,7 +367,8 @@ class DiaryControllerTest {
                         .with(authentication(new UsernamePasswordAuthenticationToken(
                                 userDetails, null, List.of()))))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/diaries/10"));
+                // 다이어리 설정은 목록의 ⋯ 메뉴에서 들어오므로 저장 뒤 목록으로 돌아간다
+                .andExpect(redirectedUrl("/diaries"));
 
         ArgumentCaptor<Diary> captor = ArgumentCaptor.forClass(Diary.class);
         verify(diaryService).update(eq(10L), eq(7L), captor.capture());
@@ -1673,7 +1674,7 @@ class DiaryControllerTest {
                         .with(csrf())
                         .with(authentication(new UsernamePasswordAuthenticationToken(
                                 userDetails, null, List.of()))))
-                .andExpect(redirectedUrl("/diaries/10"));
+                .andExpect(redirectedUrl("/diaries"));
 
         ArgumentCaptor<Diary> captor = ArgumentCaptor.forClass(Diary.class);
         verify(diaryService).update(eq(10L), eq(7L), captor.capture());

@@ -236,6 +236,9 @@
     position: relative;
     display: flex;
     flex-direction: column;
+    /* 대표 이미지는 원본 비율대로 크기가 정해지므로 표지 안에서 가운데로 모은다 */
+    align-items: center;
+    justify-content: center;
     overflow: hidden;
     aspect-ratio: 3 / 4;
     border: 1px solid var(--diary-cover-edge);
@@ -277,16 +280,20 @@
 
 /* 대표 이미지는 잘리지 않게 전체를 보여준다. (표지 비율은 그대로 유지)
    장식 틀 없이, 표지에 붙여 둔 사진 한 장처럼 얇은 가장자리와 옅은 그림자만 준다. */
+/* 사진은 자르지 않고 원본 비율 그대로 두되, 표지 안에서 쓸 수 있는 최대 영역을 같게 정한다.
+   가로 사진은 폭(82%)에, 세로 사진은 높이(70%)에 먼저 걸려서
+   비율이 달라도 표지에서 차지하는 크기가 비슷하게 보인다. */
 .diary-book-image {
     position: relative;
     z-index: 2;
     display: block;
-    box-sizing: border-box;
-    width: 100%;
-    /* 표지 전체를 쓰되, 사진 둘레로 표지 소재가 조금 보이게만 띄운다 */
-    flex: 1;
-    min-height: 0;
-    padding: 18px 16px 20px 28px;
+    flex: 0 0 auto;
+    width: auto;
+    height: auto;
+    max-width: 82%;
+    max-height: 70%;
+    /* 왼쪽 책등을 뺀 앞표지 면의 가운데에 오도록 책등 폭만큼만 오른쪽으로 민다 */
+    margin-left: 15px;
     object-fit: contain;
     filter:
         drop-shadow(0 0 0.5px rgba(255, 255, 255, 0.45))
@@ -298,7 +305,9 @@
     position: relative;
     z-index: 2;
     width: 100%;
+    /* 무지 표지는 사진과 달리 표지 전체를 그대로 덮는다 */
     flex: 1;
+    align-self: stretch;
     min-height: 0;
     background: radial-gradient(
         78% 58% at 48% 36%,
