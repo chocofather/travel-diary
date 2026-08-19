@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="햄버거 스티커">
+  <g stroke="#a8813a" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M8 26c0-9 11-15 24-15s24 6 24 15z" fill="#eec98c"/>
+    <path d="M8 44h48c0 6-4 10-10 10H18c-6 0-10-4-10-10z" fill="#eec98c"/>
+  </g>
+  <path d="M9 30h46c1.6 0 2.6 3 0 3H9c-2.6 0-1.6-3 0-3z" fill="#c4dcb8"
+        stroke="#4f6b53" stroke-width="2.2" stroke-linejoin="round"/>
+  <path d="M9 35h46v7H9z" fill="#b57a52" stroke="#7d4e30"
+        stroke-width="2.2" stroke-linejoin="round"/>
+  <g fill="#fdf8ee">
+    <circle cx="22" cy="19" r="1.6"/>
+    <circle cx="32" cy="16" r="1.6"/>
+    <circle cx="42" cy="19" r="1.6"/>
+  </g>
+</svg>

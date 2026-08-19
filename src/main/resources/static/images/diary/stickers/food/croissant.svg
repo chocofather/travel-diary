@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="크루아상 스티커">
+  <g stroke="#a8813a" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M32 16c12 0 22 9 22 20l-8 4c0-11-6-16-14-16s-14 5-14 16l-8-4c0-11 10-20 22-20z" fill="#eec98c"/>
+    <path d="M10 36l-4 10 10-2z" fill="#e0b573"/>
+    <path d="M54 36l4 10-10-2z" fill="#e0b573"/>
+    <path d="M26 25v14M32 22v18M38 25v14" fill="none" stroke="#c9a061"/>
+  </g>
+</svg>

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="화분 스티커">
+  <g stroke="#4f6b53" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M32 36V16" fill="none"/>
+    <path d="M32 24c-8-2-13-7-13-13 7-1 12 4 13 13z" fill="#9dbf9a"/>
+    <path d="M32 28c8-2 13-7 13-13-7-1-12 4-13 13z" fill="#c4dcb8"/>
+  </g>
+  <path d="M17 36h30l-4 18a5 5 0 0 1-5 4.4H26A5 5 0 0 1 21 54z"
+        fill="#e0906f" stroke="#a05f42" stroke-width="2.4" stroke-linejoin="round"/>
+  <path d="M18 43h28" fill="none" stroke="#a05f42" stroke-width="2.2" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="주스 스티커">
+  <g stroke="#a8813a" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M18 20h28l-3 32a6 6 0 0 1-6 5.4H27A6 6 0 0 1 21 52z" fill="#f6b96a"/>
+    <path d="M18.6 27h26.8" fill="none"/>
+    <path d="M40 20l5-11" fill="none" stroke-width="3" stroke="#e79a8f"/>
+  </g>
+  <path d="M46 16a8 8 0 0 1-8 8 8 8 0 0 1 8-8z" fill="#9dbf9a"
+        stroke="#4f6b53" stroke-width="2" stroke-linejoin="round"/>
+</svg>

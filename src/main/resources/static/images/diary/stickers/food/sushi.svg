@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="초밥 스티커">
+  <g stroke="#8a6a45" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+    <rect x="10" y="32" width="44" height="16" rx="8" fill="#fdf8ee"/>
+  </g>
+  <path d="M12 32c2-8 12-13 22-13s16 4 18 9c1 3-1 5-4 4-6-2-12 1-18 1s-11-2-15-1c-2 .6-3.4-.4-3-2z"
+        fill="#e79a8f" stroke="#a85f52" stroke-width="2.4" stroke-linejoin="round"/>
+  <path d="M24 22c4 2 9 2 14 0" fill="none" stroke="#f3c6bf"
+        stroke-width="2.4" stroke-linecap="round"/>
+  <path d="M27 30h10v18H27z" fill="#4f6b53" stroke="#3a5240"
+        stroke-width="2.2" stroke-linejoin="round"/>
+</svg>

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="무지개 스티커">
+  <g fill="none" stroke-width="5" stroke-linecap="round">
+    <path d="M6 48a26 26 0 0 1 52 0" stroke="#e0707a"/>
+    <path d="M12 48a20 20 0 0 1 40 0" stroke="#f4b46a"/>
+    <path d="M18 48a14 14 0 0 1 28 0" stroke="#f4d17a"/>
+    <path d="M24 48a8 8 0 0 1 16 0" stroke="#9dbf9a"/>
+  </g>
+  <g fill="#dceaf6" stroke="#7ea3c4" stroke-width="2.2" stroke-linejoin="round">
+    <path d="M10 56a6 6 0 0 1-.8-12 7.5 7.5 0 0 1 14.2-2 5.5 5.5 0 0 1 1.4 14z"/>
+    <path d="M44 56a5 5 0 0 1-.6-10 6.5 6.5 0 0 1 12.2-1.6A4.8 4.8 0 0 1 57 56z"/>
+  </g>
+</svg>

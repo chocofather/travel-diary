@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="찻잔 스티커">
+  <g stroke="#4f6b53" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M13 24h30v14a15 15 0 0 1-30 0z" fill="#fdf8ee"/>
+    <path d="M43 28h5a6 6 0 0 1 0 12h-5" fill="none"/>
+    <path d="M16 28h24v8a12 12 0 0 1-24 0z" fill="#c4dcb8"/>
+    <path d="M8 53h44" fill="none" stroke="#8a6a45"/>
+  </g>
+  <path d="M24 18c0-3 3-3 3-6M33 18c0-3 3-3 3-6" fill="none"
+        stroke="#b0a08a" stroke-width="2.4" stroke-linecap="round"/>
+</svg>

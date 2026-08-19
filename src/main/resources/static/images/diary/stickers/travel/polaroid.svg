@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="폴라로이드 스티커">
+  <g stroke="#6f5a3c" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+    <rect x="10" y="9" width="44" height="46" rx="4" fill="#fdf8ee"/>
+    <rect x="16" y="15" width="32" height="24" rx="2" fill="#a8c8e6"/>
+    <path d="M16 39l9-9 6 5 6-6 11 10z" fill="#9dbf9a"/>
+    <circle cx="41" cy="22" r="3.2" fill="#f2d68a"/>
+  </g>
+  <path d="M18 47h16" fill="none" stroke="#c7b79c" stroke-width="2.4" stroke-linecap="round"/>
+</svg>

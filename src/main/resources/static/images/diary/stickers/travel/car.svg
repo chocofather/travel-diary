@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="자동차 스티커">
+  <g stroke="#a85f52" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M9 42V33l6-12a6 6 0 0 1 5.4-3.4h23.2A6 6 0 0 1 49 21l6 12v9z" fill="#e79a8f"/>
+    <path d="M16 32h32" fill="none"/>
+    <path d="M22 21h20l3.5 8h-27z" fill="#fdf8ee"/>
+    <circle cx="19" cy="45" r="6" fill="#e0d6c6"/>
+    <circle cx="45" cy="45" r="6" fill="#e0d6c6"/>
+  </g>
+</svg>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="구름 낀 해 스티커">
+  <circle cx="24" cy="22" r="11" fill="#f4d17a" stroke="#a8813a" stroke-width="2.4"/>
+  <g fill="none" stroke="#a8813a" stroke-width="2.4" stroke-linecap="round">
+    <path d="M24 6v-3M9 22H6M11.6 11.6l-2.2-2.2M36.4 11.6l2.2-2.2"/>
+  </g>
+  <path d="M24 52a11 11 0 0 1-1.4-21.9A13.5 13.5 0 0 1 48 26a10 10 0 0 1 2.6 26z"
+        fill="#dceaf6" stroke="#7ea3c4" stroke-width="2.4" stroke-linejoin="round"/>
+</svg>

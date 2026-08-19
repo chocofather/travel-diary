@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="쌍안경 스티커">
+  <g stroke="#4f6b53" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M18 14h8l3 14h-14z" fill="#e0d6c6"/>
+    <path d="M46 14h-8l-3 14h14z" fill="#e0d6c6"/>
+    <circle cx="18" cy="39" r="13" fill="#9dbf9a"/>
+    <circle cx="46" cy="39" r="13" fill="#9dbf9a"/>
+    <circle cx="18" cy="39" r="5.5" fill="#fdf8ee"/>
+    <circle cx="46" cy="39" r="5.5" fill="#fdf8ee"/>
+    <path d="M28 32h8" fill="none"/>
+  </g>
+</svg>

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="탄산음료 스티커">
+  <g stroke="#4f7396" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+    <rect x="20" y="12" width="24" height="44" rx="7" fill="#a8c8e6"/>
+    <path d="M20 22h24" fill="none"/>
+    <path d="M20 46h24" fill="none"/>
+  </g>
+  <g fill="#fdf8ee">
+    <circle cx="28" cy="30" r="2.6"/>
+    <circle cx="36" cy="36" r="2"/>
+    <circle cx="30" cy="40" r="1.6"/>
+  </g>
+  <path d="M27 8v4M37 8v4" fill="none" stroke="#4f7396"
+        stroke-width="2.4" stroke-linecap="round"/>
+</svg>

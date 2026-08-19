@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="버스 스티커">
+  <g stroke="#a8813a" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+    <rect x="7" y="12" width="50" height="34" rx="7" fill="#f2d68a"/>
+    <rect x="13" y="19" width="16" height="12" rx="2" fill="#fdf8ee"/>
+    <rect x="35" y="19" width="16" height="12" rx="2" fill="#fdf8ee"/>
+    <path d="M7 37h50" fill="none"/>
+    <circle cx="19" cy="50" r="6" fill="#e0d6c6"/>
+    <circle cx="45" cy="50" r="6" fill="#e0d6c6"/>
+  </g>
+</svg>

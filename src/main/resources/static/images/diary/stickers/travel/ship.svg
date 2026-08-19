@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="배 스티커">
+  <g stroke="#4f7396" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M32 8v24" fill="none" stroke="#8a6a45"/>
+    <path d="M32 10l14 9-14 6z" fill="#e79a8f" stroke="#a85f52"/>
+    <path d="M30 12l-11 7 11 5z" fill="#f6efe3" stroke="#8a6a45"/>
+    <path d="M8 34h48l-6 14a6 6 0 0 1-5.4 3.4H19.4A6 6 0 0 1 14 48z" fill="#a8c8e6"/>
+  </g>
+  <path d="M6 56c4-3 7-3 11 0s7 3 11 0 7-3 11 0 7 3 11 0" fill="none"
+        stroke="#9dc3dd" stroke-width="2.4" stroke-linecap="round"/>
+</svg>

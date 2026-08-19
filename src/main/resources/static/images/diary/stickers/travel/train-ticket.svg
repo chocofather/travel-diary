@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="기차표 스티커">
+  <g stroke="#8a5a63" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+    <rect x="6" y="16" width="52" height="32" rx="5" fill="#f3dfe1"/>
+    <path d="M22 16v32" fill="none" stroke-dasharray="0.1 6"/>
+    <circle cx="14" cy="32" r="4.5" fill="#fdf8ee"/>
+  </g>
+  <path d="M29 26h20M29 33h20M29 40h12" fill="none" stroke="#b08791"
+        stroke-width="2.4" stroke-linecap="round"/>
+</svg>

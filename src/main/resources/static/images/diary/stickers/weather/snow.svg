@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="눈 스티커">
+  <g fill="none" stroke="#7ea3c4" stroke-width="2.8" stroke-linecap="round">
+    <path d="M32 6v52M9 19l46 26M55 19 9 45"/>
+    <path d="M32 16l-6-6M32 16l6-6M32 48l-6 6M32 48l6 6"/>
+    <path d="M17 25l-8-1M17 25l-1-8M47 39l8 1M47 39l1 8"/>
+    <path d="M47 25l8-1M47 25l1-8M17 39l-8 1M17 39l-1 8"/>
+  </g>
+  <circle cx="32" cy="32" r="4" fill="#dceaf6" stroke="#7ea3c4" stroke-width="2.4"/>
+</svg>

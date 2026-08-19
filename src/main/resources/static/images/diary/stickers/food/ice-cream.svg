@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="아이스크림 스티커">
+  <g stroke="#8a6a45" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M22 30h20L32 58z" fill="#e6c79b"/>
+    <path d="M26 36l6 8M38 36l-6 8" fill="none"/>
+  </g>
+  <g stroke-width="2.4" stroke-linejoin="round">
+    <circle cx="24" cy="24" r="9" fill="#f0b6c4" stroke="#b06a7c"/>
+    <circle cx="40" cy="24" r="9" fill="#c4dcb8" stroke="#4f6b53"/>
+    <circle cx="32" cy="15" r="9" fill="#f2d68a" stroke="#a8813a"/>
+  </g>
+</svg>

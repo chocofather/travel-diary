@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="빵 스티커">
+  <g stroke="#a8813a" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M12 26c0-8 9-13 20-13s20 5 20 13v22a6 6 0 0 1-6 5.4H18A6 6 0 0 1 12 48z" fill="#eec98c"/>
+    <path d="M12 30h40" fill="none"/>
+  </g>
+  <path d="M22 20c3-3 6-3 8 0M34 20c3-3 6-3 8 0" fill="none"
+        stroke="#c9a061" stroke-width="2.2" stroke-linecap="round"/>
+</svg>

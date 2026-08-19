@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="샌드위치 스티커">
+  <g stroke="#a8813a" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M10 50 32 14l22 36z" fill="#eec98c"/>
+  </g>
+  <path d="M17 39h30l3 5H14z" fill="#c4dcb8" stroke="#4f6b53"
+        stroke-width="2.2" stroke-linejoin="round"/>
+  <path d="M22 31h20l2 4H20z" fill="#e79a8f" stroke="#a85f52"
+        stroke-width="2.2" stroke-linejoin="round"/>
+</svg>

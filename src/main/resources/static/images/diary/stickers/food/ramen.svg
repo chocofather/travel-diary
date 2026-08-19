@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="라면 스티커">
+  <g stroke="#a85f52" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M8 28h48l-5 22a7 7 0 0 1-6.8 5.4H19.8A7 7 0 0 1 13 50z" fill="#e79a8f"/>
+    <path d="M9 36h46" fill="none"/>
+  </g>
+  <path d="M8 28c0-5 11-8 24-8s24 3 24 8" fill="#f2d68a"
+        stroke="#a8813a" stroke-width="2.4" stroke-linejoin="round"/>
+  <circle cx="24" cy="25" r="4" fill="#fdf8ee" stroke="#a8813a" stroke-width="2"/>
+  <path d="M40 24h8" fill="none" stroke="#4f6b53" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M46 12l12 6M44 17l12 6" fill="none" stroke="#8a6a45"
+        stroke-width="2.6" stroke-linecap="round"/>
+</svg>

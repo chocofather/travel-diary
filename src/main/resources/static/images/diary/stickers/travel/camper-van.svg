@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="캠핑카 스티커">
+  <g stroke="#4f8a80" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M6 20h30v22H6z" fill="#a5d5cc"/>
+    <path d="M36 26h11l11 10v6H36z" fill="#dff0ec"/>
+    <rect x="11" y="25" width="12" height="10" rx="2" fill="#fdf8ee"/>
+    <path d="M40 30h5l6 6h-11z" fill="#fdf8ee"/>
+    <circle cx="19" cy="46" r="5.5" fill="#e0d6c6"/>
+    <circle cx="46" cy="46" r="5.5" fill="#e0d6c6"/>
+  </g>
+  <path d="M6 20l12-8h18v8" fill="#c9ece4" stroke="#4f8a80" stroke-width="2.4" stroke-linejoin="round"/>
+</svg>

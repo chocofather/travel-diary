@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="우산 스티커">
+  <path d="M32 8c14 0 25 10 25 22H7C7 18 18 8 32 8z" fill="#e0707a"
+        stroke="#a8434e" stroke-width="2.4" stroke-linejoin="round"/>
+  <path d="M7 30c5-8 8-8 12 0 4-8 8-8 13 0 5-8 9-8 13 0 4-8 7-8 12 0" fill="none"
+        stroke="#a8434e" stroke-width="2.2" stroke-linejoin="round"/>
+  <path d="M32 30v18a6 6 0 0 1-12 0" fill="none" stroke="#8a6a45"
+        stroke-width="2.8" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="나무 스티커">
+  <path d="M32 38v18" fill="none" stroke="#8a6a45" stroke-width="4" stroke-linecap="round"/>
+  <path d="M24 46l-7-6M40 46l7-6" fill="none" stroke="#8a6a45"
+        stroke-width="2.8" stroke-linecap="round"/>
+  <path d="M32 6c10 0 17 7 17 15 0 10-8 17-17 17s-17-7-17-17c0-8 7-15 17-15z"
+        fill="#9dbf9a" stroke="#4f6b53" stroke-width="2.4" stroke-linejoin="round"/>
+  <path d="M23 18c1-4 4-6 8-6.5" fill="none" stroke="#c4dcb8"
+        stroke-width="2.6" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="파도 스티커">
+  <path d="M8 34c6-16 20-22 32-16 8 4 12 12 12 20H8z" fill="#a8c8e6"
+        stroke="#4f7396" stroke-width="2.4" stroke-linejoin="round"/>
+  <path d="M20 30c4-8 12-10 18-6" fill="none" stroke="#dceaf6"
+        stroke-width="3" stroke-linecap="round"/>
+  <g fill="none" stroke="#7ea3c4" stroke-width="2.8" stroke-linecap="round">
+    <path d="M6 45c4-3 7-3 11 0s7 3 11 0 7-3 11 0 7 3 11 0"/>
+    <path d="M6 54c4-3 7-3 11 0s7 3 11 0 7-3 11 0 7 3 11 0"/>
+  </g>
+</svg>

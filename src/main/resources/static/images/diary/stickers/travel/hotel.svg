@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="호텔 스티커">
+  <g stroke="#8a6a45" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M12 20h40v36H12z" fill="#f0e2cc"/>
+    <path d="M8 20 32 8l24 12z" fill="#c96f68" stroke="#8a4a44"/>
+    <rect x="19" y="27" width="9" height="9" rx="1.5" fill="#fdf8ee"/>
+    <rect x="36" y="27" width="9" height="9" rx="1.5" fill="#fdf8ee"/>
+    <path d="M26 56V44a6 6 0 0 1 12 0v12z" fill="#a8c8e6"/>
+  </g>
+</svg>

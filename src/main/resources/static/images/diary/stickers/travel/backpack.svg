@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="백팩 스티커">
+  <g stroke="#4f6b53" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M24 16c0-5 3.6-8 8-8s8 3 8 8" fill="none"/>
+    <rect x="11" y="16" width="42" height="40" rx="11" fill="#9dbf9a"/>
+    <path d="M11 33h42" fill="none"/>
+    <rect x="24" y="37" width="16" height="12" rx="3" fill="#f2ead8"/>
+    <path d="M22 16v14" fill="none"/>
+    <path d="M42 16v14" fill="none"/>
+  </g>
+</svg>

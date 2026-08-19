@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="지구본 스티커">
+  <g stroke="#4f7396" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+    <circle cx="32" cy="26" r="19" fill="#a8c8e6"/>
+    <path d="M17 15c7 4 8 9 6 14s-2 10 4 15" fill="#9dbf9a" stroke="#4f6b53"/>
+    <path d="M45 17c-5 1-8 4-7 8s5 5 9 3" fill="#9dbf9a" stroke="#4f6b53"/>
+  </g>
+  <g stroke="#8a6a45" stroke-width="2.6" stroke-linecap="round" fill="none">
+    <path d="M32 45v8"/>
+    <path d="M20 57h24"/>
+  </g>
+</svg>

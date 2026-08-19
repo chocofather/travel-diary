@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="조개 스티커">
+  <path d="M32 8c14 0 24 12 24 26 0 8-4 14-8 16H16c-4-2-8-8-8-16C8 20 18 8 32 8z"
+        fill="#f3cfd6" stroke="#b06a7c" stroke-width="2.4" stroke-linejoin="round"/>
+  <g fill="none" stroke="#b06a7c" stroke-width="2.2" stroke-linecap="round">
+    <path d="M32 12v38"/>
+    <path d="M22 14c-4 10-6 24-6 36"/>
+    <path d="M42 14c4 10 6 24 6 36"/>
+  </g>
+</svg>

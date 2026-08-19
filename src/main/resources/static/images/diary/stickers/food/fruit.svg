@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="과일 스티커">
+  <path d="M32 18c5-4 12-3 15 2 4 6 3 20-4 30-3 4-7 5-11 3-4 2-8 1-11-3-7-10-8-24-4-30 3-5 10-6 15-2z"
+        fill="#e79a8f" stroke="#a85f52" stroke-width="2.4" stroke-linejoin="round"/>
+  <path d="M32 18V9" fill="none" stroke="#8a6a45" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M33 13c4-6 10-6 12-4 1 4-4 8-12 4z" fill="#9dbf9a"
+        stroke="#4f6b53" stroke-width="2.2" stroke-linejoin="round"/>
+  <path d="M23 27c1-3 3-4 5-4" fill="none" stroke="#f3c6bf"
+        stroke-width="2.6" stroke-linecap="round"/>
+</svg>

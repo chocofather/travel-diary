@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="국수 스티커">
+  <g stroke="#4f7396" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M10 30h44l-4 20a7 7 0 0 1-6.8 5.4H20.8A7 7 0 0 1 14 50z" fill="#a8c8e6"/>
+    <path d="M11 37h42" fill="none"/>
+  </g>
+  <g fill="none" stroke="#eec98c" stroke-width="3" stroke-linecap="round">
+    <path d="M20 30c0-8 3-12 6-14"/>
+    <path d="M28 30c0-9 4-13 8-15"/>
+    <path d="M36 30c0-8 4-11 8-12"/>
+  </g>
+  <path d="M44 10l10 4M43 15l10 4" fill="none" stroke="#8a6a45"
+        stroke-width="2.6" stroke-linecap="round"/>
+</svg>

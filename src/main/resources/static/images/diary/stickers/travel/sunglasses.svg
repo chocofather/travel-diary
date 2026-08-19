@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="선글라스 스티커">
+  <g stroke="#6f5a3c" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M6 24h20a4 4 0 0 1 4 4v3a10 10 0 0 1-20 0 10 10 0 0 0-4-7z" fill="#c3b0dd"/>
+    <path d="M58 24H38a4 4 0 0 0-4 4v3a10 10 0 0 0 20 0 10 10 0 0 1 4-7z" fill="#c3b0dd"/>
+    <path d="M30 29h4" fill="none"/>
+  </g>
+  <path d="M13 29c1.5-2 4-2.5 6-1.5" fill="none" stroke="#efe7fa"
+        stroke-width="2.4" stroke-linecap="round"/>
+</svg>

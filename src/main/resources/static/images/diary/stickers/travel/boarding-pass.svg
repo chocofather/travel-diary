@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="항공권 스티커">
+  <g stroke="#6f5a3c" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M6 18h52v10a5 5 0 0 0 0 10v10H6V38a5 5 0 0 0 0-10z" fill="#fdf8ee"/>
+    <path d="M40 18v6M40 30v6M40 42v6" fill="none" stroke-dasharray="0.1 6"/>
+    <path d="M12 28h20M12 36h14" fill="none" stroke="#c7b79c"/>
+  </g>
+  <path d="M45 38l10-8-2-4-12 8-4-2-3 2 4 4-1 4 3 1z" fill="#a8c8e6"
+        stroke="#4f7396" stroke-width="2" stroke-linejoin="round"/>
+</svg>

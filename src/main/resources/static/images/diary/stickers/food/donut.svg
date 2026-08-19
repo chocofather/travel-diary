@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="도넛 스티커">
+  <g stroke="#8a6a45" stroke-width="2.4" stroke-linejoin="round">
+    <circle cx="32" cy="32" r="24" fill="#e6c79b"/>
+    <path d="M56 32c0 13-11 24-24 24S8 45 8 32c3-5 7-2 10-5s2-7 6-8 6 3 10 2 5-6 9-5 3 6 6 8 5 3 7 8z"
+          fill="#f0b6c4" stroke="#b06a7c"/>
+    <circle cx="32" cy="32" r="8" fill="#fdf8ee"/>
+  </g>
+  <g stroke-width="2.6" stroke-linecap="round">
+    <path d="M20 22l3-3" stroke="#f2d68a"/>
+    <path d="M42 24l3 3" stroke="#a5d5cc"/>
+    <path d="M22 43l3 3" stroke="#c3b0dd"/>
+    <path d="M43 41l-3 3" stroke="#f2d68a"/>
+  </g>
+</svg>

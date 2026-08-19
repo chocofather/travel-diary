@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="케이크 스티커">
+  <g stroke="#b06a7c" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M10 34h44v16a5 5 0 0 1-5 5H15a5 5 0 0 1-5-5z" fill="#f6efe3"/>
+    <path d="M10 34c0-5 10-8 22-8s22 3 22 8c0 4-6 6-11 4s-11 3-16 1-7-3-11-1-6-1-6-4z" fill="#f0b6c4"/>
+    <path d="M10 44h44" fill="none"/>
+  </g>
+  <g stroke="#a8813a" stroke-width="2.4" stroke-linecap="round">
+    <path d="M32 26v-8" fill="none"/>
+  </g>
+  <path d="M32 10c3 3 3 6 0 8-3-2-3-5 0-8z" fill="#f2d68a" stroke="#a8813a"
+        stroke-width="2" stroke-linejoin="round"/>
+</svg>

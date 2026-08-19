@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="자전거 스티커">
+  <g fill="none" stroke="#4f8a80" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round">
+    <circle cx="15" cy="42" r="12" fill="#dff0ec"/>
+    <circle cx="49" cy="42" r="12" fill="#dff0ec"/>
+    <path d="M15 42l10-18h13l-11 18h22"/>
+    <path d="M24 24h-6M38 24l4-6h5"/>
+  </g>
+  <circle cx="15" cy="42" r="2.4" fill="#4f8a80"/>
+  <circle cx="49" cy="42" r="2.4" fill="#4f8a80"/>
+</svg>

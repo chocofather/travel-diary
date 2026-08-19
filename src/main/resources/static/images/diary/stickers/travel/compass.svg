@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="나침반 스티커">
+  <g stroke="#6f5a3c" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+    <circle cx="32" cy="33" r="23" fill="#e9d9bf"/>
+    <circle cx="32" cy="33" r="16" fill="#fdf8ee"/>
+    <path d="M40 25 28 30l-4 12 12-5z" fill="#c96f68"/>
+    <path d="M32 10V6" fill="none"/>
+  </g>
+  <circle cx="32" cy="33" r="2" fill="#6f5a3c"/>
+</svg>

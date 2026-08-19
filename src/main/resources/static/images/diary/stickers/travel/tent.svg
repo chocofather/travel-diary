@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="텐트 스티커">
+  <g stroke="#4f6b53" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M32 12 56 50H8z" fill="#9dbf9a"/>
+    <path d="M32 12 42 50H22z" fill="#f0e2cc"/>
+    <path d="M32 24v26" fill="none"/>
+  </g>
+  <path d="M4 50h56" fill="none" stroke="#c7b79c" stroke-width="2.6" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="여행 모자 스티커">
+  <g stroke="#a8813a" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M18 36c0-11 6-19 14-19s14 8 14 19z" fill="#f2d68a"/>
+    <path d="M4 38c0-4 12-6 28-6s28 2 28 6-12 8-28 8S4 42 4 38z" fill="#eac975"/>
+  </g>
+  <path d="M18 34c8-3 20-3 28 0" fill="none" stroke="#c96f68"
+        stroke-width="3.2" stroke-linecap="round"/>
+</svg>

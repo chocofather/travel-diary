@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="비 스티커">
+  <path d="M19 38a11 11 0 0 1-1.4-21.9A13.5 13.5 0 0 1 43 12a10 10 0 0 1 2.6 26z"
+        fill="#dceaf6" stroke="#7ea3c4" stroke-width="2.4" stroke-linejoin="round"/>
+  <g fill="#a8c8e6" stroke="#4f7396" stroke-width="2" stroke-linejoin="round">
+    <path d="M21 44c2 3 3 4.4 3 6a3 3 0 0 1-6 0c0-1.6 1-3 3-6z"/>
+    <path d="M32 48c2 3 3 4.4 3 6a3 3 0 0 1-6 0c0-1.6 1-3 3-6z"/>
+    <path d="M43 44c2 3 3 4.4 3 6a3 3 0 0 1-6 0c0-1.6 1-3 3-6z"/>
+  </g>
+</svg>
