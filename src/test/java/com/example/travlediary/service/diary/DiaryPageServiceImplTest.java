@@ -45,6 +45,57 @@ class DiaryPageServiceImplTest {
     }
 
     @Test
+    void paperColorIsStoredOnlyAsAHexColor() {
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageMapper.findByIdAndDiaryId(3L, 10L)).thenReturn(page());
+        when(diaryPageMapper.update(any(DiaryPage.class))).thenReturn(1);
+
+        DiaryPage changed = pageForm();
+        changed.setPaperColor("#fff9e8");
+
+        diaryPageService.update(10L, 3L, 7L, changed);
+
+        ArgumentCaptor<DiaryPage> captor = ArgumentCaptor.forClass(DiaryPage.class);
+        verify(diaryPageMapper).update(captor.capture());
+        assertThat(captor.getValue().getPaperColor()).isEqualTo("#FFF9E8");
+    }
+
+    /** 고르지 않으면 기본 종이색(NULL)이다. */
+    @Test
+    void blankPaperColorIsStoredAsNull() {
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageMapper.findByIdAndDiaryId(3L, 10L)).thenReturn(page());
+        when(diaryPageMapper.update(any(DiaryPage.class))).thenReturn(1);
+
+        DiaryPage changed = pageForm();
+        changed.setPaperColor("   ");
+
+        diaryPageService.update(10L, 3L, 7L, changed);
+
+        ArgumentCaptor<DiaryPage> captor = ArgumentCaptor.forClass(DiaryPage.class);
+        verify(diaryPageMapper).update(captor.capture());
+        assertThat(captor.getValue().getPaperColor()).isNull();
+    }
+
+    @Test
+    void arbitraryCssIsNotStoredAsAPaperColor() {
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageMapper.findByIdAndDiaryId(3L, 10L)).thenReturn(page());
+
+        for (String bad : new String[]{"red", "rgb(255,0,0)", "url(x)", "var(--x)",
+                "#FFF", "#FFFFFFF", "#FFF9E8; position:fixed"}) {
+            DiaryPage changed = pageForm();
+            changed.setPaperColor(bad);
+
+            assertThatThrownBy(() -> diaryPageService.update(10L, 3L, 7L, changed))
+                    .as("종이 색상: " + bad)
+                    .isInstanceOf(ResponseStatusException.class)
+                    .hasMessageContaining("종이 색상을 다시 선택해 주세요.");
+        }
+        verify(diaryPageMapper, never()).update(any(DiaryPage.class));
+    }
+
+    @Test
     void pageHeaderSaveTouchesOnlyItsOwnColumns() {
         when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
         when(diaryPageMapper.findByIdAndDiaryId(3L, 10L)).thenReturn(page());
@@ -349,5 +400,14 @@ class DiaryPageServiceImplTest {
         page.setPageOrder(1);
         page.setBackgroundType("PLAIN");
         return page;
+    }
+
+    /** 페이지 설정 폼이 보내는 값 (id/diaryId 는 서버가 채운다) */
+    private DiaryPage pageForm() {
+        DiaryPage form = new DiaryPage();
+        form.setPageDate(LocalDate.of(2026, 8, 1));
+        form.setPageOrder(1);
+        form.setBackgroundType("PLAIN");
+        return form;
     }
 }

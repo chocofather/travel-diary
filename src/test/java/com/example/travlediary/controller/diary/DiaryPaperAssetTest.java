@@ -20,7 +20,8 @@ class DiaryPaperAssetTest {
     void paperBaseColorIsAVariableSoPaperColorCanBeAddedLater() throws IOException {
         String css = Files.readString(DIARY_CSS);
 
-        assertThat(css).contains("--diary-paper-color: #fdfaf3;");
+        // paper_color 가 없는 페이지의 기본 종이색은 흰 종이에 가깝다
+        assertThat(css).contains("--diary-paper-color: #fdfdfa;");
         // 종이 질감은 기본색을 알지 못한 채 빛/그늘만 얹는다
         assertThat(css).contains("--diary-paper-grain:");
         assertThat(css).contains("--diary-paper-edge:");

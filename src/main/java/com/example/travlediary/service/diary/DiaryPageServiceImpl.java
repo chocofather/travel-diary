@@ -14,6 +14,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +31,8 @@ public class DiaryPageServiceImpl implements DiaryPageService {
     private static final int MAX_PAGE_HEADER_LENGTH = 100;
     /** 상단 한 줄 메모 글꼴 기본값 (DB 기본값과 같은 값) */
     private static final String DEFAULT_PAGE_HEADER_FONT = "DEFAULT";
+    /** 종이 바탕색은 #RRGGBB 만 저장한다. (paper_color VARCHAR(7)) */
+    private static final Pattern PAPER_COLOR = Pattern.compile("^#[0-9a-fA-F]{6}$");
 
     private final DiaryService diaryService;
     private final DiaryPageMapper diaryPageMapper;
@@ -235,7 +238,23 @@ public class DiaryPageServiceImpl implements DiaryPageService {
         prepared.setPageDate(pageDate);
         prepared.setPageOrder(pageOrder);
         prepared.setBackgroundType(backgroundType);
+        prepared.setPaperColor(paperColor(page.getPaperColor()));
         prepared.setContent(page.getContent());
         return prepared;
+    }
+
+    /**
+     * 종이 바탕색. 고르지 않았으면 null(기본 종이색)이고,
+     * 값이 있으면 #RRGGBB 만 허용한다. (임의 CSS 문자열이 스타일로 들어가지 못하게 한다)
+     */
+    private String paperColor(String value) {
+        String color = value == null ? "" : value.strip();
+        if (color.isEmpty()) {
+            return null;
+        }
+        if (!PAPER_COLOR.matcher(color).matches()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "종이 색상을 다시 선택해 주세요.");
+        }
+        return color.toUpperCase(Locale.ROOT);
     }
 }

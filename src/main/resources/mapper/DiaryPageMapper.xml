@@ -11,6 +11,7 @@
         <result property="pageDate"       column="page_date"/>
         <result property="pageOrder"      column="page_order"/>
         <result property="backgroundType" column="background_type"/>
+        <result property="paperColor"     column="paper_color"/>
         <result property="pageHeader"     column="page_header"/>
         <result property="pageHeaderFont" column="page_header_font"/>
         <result property="pageHeaderBold" column="page_header_bold"/>
@@ -20,7 +21,7 @@
     </resultMap>
 
     <sql id="DiaryPageColumns">
-        id, diary_id, page_date, page_order, background_type,
+        id, diary_id, page_date, page_order, background_type, paper_color,
         page_header, page_header_font, page_header_bold, content,
         created_at, updated_at
     </sql>
@@ -51,10 +52,11 @@
     <insert id="insert" parameterType="com.example.travlediary.model.DiaryPage"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO diary_pages (
-            diary_id, page_date, page_order, background_type, page_header, content,
+            diary_id, page_date, page_order, background_type, paper_color, page_header, content,
             created_at, updated_at
         ) VALUES (
-            #{diaryId}, #{pageDate}, #{pageOrder}, #{backgroundType}, #{pageHeader}, #{content},
+            #{diaryId}, #{pageDate}, #{pageOrder}, #{backgroundType}, #{paperColor},
+            #{pageHeader}, #{content},
             NOW(), NOW()
         )
     </insert>
@@ -64,6 +66,7 @@
         SET page_date = #{pageDate},
             page_order = #{pageOrder},
             background_type = #{backgroundType},
+            paper_color = #{paperColor},
             content = #{content},
             updated_at = NOW()
         WHERE id = #{id}

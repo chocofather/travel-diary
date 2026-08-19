@@ -558,6 +558,9 @@ CREATE TABLE `destinations` (
 --   * 한 페이지가 여러 TEXT/PHOTO/STICKER 요소를 가질 수 있으며, PHOTO 한 장은 diary_elements 한 행이다.
 --   * STICKER 는 PHOTO 와 같은 자유배치 이미지 요소다. image_url 과
 --     position/size/rotation/z_index 컬럼을 PHOTO 와 똑같이 사용한다. (text_content 는 쓰지 않는다)
+--   * 각 페이지는 paper_color(#RRGGBB)로 독립적인 종이 바탕색을 가질 수 있고,
+--     background_type(PLAIN/LINED/GRID/DOT) 무늬와 조합해서 쓴다.
+--     NULL 이면 기본 종이색을 쓰며, 펼침의 좌/우 페이지 색을 같게 맞추지 않는다.
 --   * 페이지 본문은 diary_pages.content 를, 페이지 상단(page_date 오른쪽)의 짧은 한 줄 메모는
 --     diary_pages.page_header 를 사용한다. (예: '제주 여행 첫째 날', 'Day 1 ✈️')
 --   * 그 한 줄 메모의 꾸밈은 page_header_font(글꼴)와 page_header_bold(0 보통 / 1 굵게)로 함께 저장한다.
@@ -632,6 +635,7 @@ CREATE TABLE `diary_pages` (
   `page_date` date NOT NULL,
   `page_order` int NOT NULL,
   `background_type` varchar(30) NOT NULL DEFAULT 'PLAIN',
+  `paper_color` varchar(7) DEFAULT NULL,
   `page_header` varchar(100) DEFAULT NULL,
   `page_header_font` varchar(50) NOT NULL DEFAULT 'DEFAULT',
   `page_header_bold` tinyint(1) NOT NULL DEFAULT '0',

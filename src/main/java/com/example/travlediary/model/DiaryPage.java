@@ -19,6 +19,7 @@ public class DiaryPage {
     private LocalDate pageDate; // 페이지 날짜
     private Integer pageOrder; // 다이어리 안에서의 순서 (1부터)
     private String backgroundType; // 배경 유형
+    private String paperColor; // 종이 바탕색 #RRGGBB (없으면 null = 기본 종이색)
     private String pageHeader; // 날짜 옆에 적는 짧은 한 줄 메모 (없으면 null)
     private String pageHeaderFont; // 그 한 줄 메모의 글꼴 (기본 'DEFAULT')
     private Boolean pageHeaderBold; // 그 한 줄 메모를 굵게 쓸지 (기본 false)

@@ -18,6 +18,7 @@
   <script src="/js/diary-page-flip.js" defer></script>
   <script src="/js/diary-photo-picker.js" defer></script>
   <script src="/js/diary-sticker-picker.js" defer></script>
+  <script src="/js/diary-paper-color.js" defer></script>
   <script src="/js/diary-page-picker.js" defer></script>
 </th:block>
 
@@ -283,9 +284,13 @@
 
     <!-- 편집 모드: 한 장만 크게 펼쳐 놓고 집중해서 쓴다. (읽기 모드 2페이지 구조는 그대로 둔다) -->
     <div class="diary-book-single" th:if="${editMode}">
+      <!-- 종이색은 --diary-paper-color 변수만 덮어써서 무늬/질감 위에 그대로 얹는다.
+           (서버가 #RRGGBB 만 저장하므로 임의 CSS 가 들어올 수 없다) -->
       <article class="diary-sheet diary-sheet-single"
                th:classappend="${editPage != null and editPage.backgroundType != null}
-                               ? ' diary-sheet-bg-' + ${#strings.toLowerCase(editPage.backgroundType)} : ''">
+                               ? ' diary-sheet-bg-' + ${#strings.toLowerCase(editPage.backgroundType)} : ''"
+               th:style="${editPage != null and editPage.paperColor != null}
+                         ? '--diary-paper-color:' + ${editPage.paperColor} : null">
         <!-- 편집은 한 장 집중 화면이라 제본 장식 없이 종이만 둔다. -->
         <th:block th:if="${editPage != null}">
           <div class="diary-sheet-head"
@@ -324,9 +329,12 @@
 
     <!-- 펼친 공책: 왼쪽 페이지 / 중앙 제본선 / 오른쪽 페이지 (읽기 모드) -->
     <div class="diary-book-spread" th:unless="${editMode}">
+      <!-- 좌/우 종이색은 서로 독립이다. (같은 색으로 맞추지 않는다) -->
       <article class="diary-sheet diary-sheet-left"
                th:classappend="${leftPage != null and leftPage.backgroundType != null}
-                               ? ' diary-sheet-bg-' + ${#strings.toLowerCase(leftPage.backgroundType)} : ''">
+                               ? ' diary-sheet-bg-' + ${#strings.toLowerCase(leftPage.backgroundType)} : ''"
+               th:style="${leftPage != null and leftPage.paperColor != null}
+                         ? '--diary-paper-color:' + ${leftPage.paperColor} : null">
         <th:block th:if="${leftPage != null}">
           <div class="diary-sheet-head"
                th:replace="~{diary/detail :: sheetHead(${leftPage})}"></div>
@@ -351,7 +359,9 @@
 
       <article class="diary-sheet diary-sheet-right"
                th:classappend="${rightPage != null and rightPage.backgroundType != null}
-                               ? ' diary-sheet-bg-' + ${#strings.toLowerCase(rightPage.backgroundType)} : ''">
+                               ? ' diary-sheet-bg-' + ${#strings.toLowerCase(rightPage.backgroundType)} : ''"
+               th:style="${rightPage != null and rightPage.paperColor != null}
+                         ? '--diary-paper-color:' + ${rightPage.paperColor} : null">
         <th:block th:if="${rightPage != null}">
           <div class="diary-sheet-head"
                th:replace="~{diary/detail :: sheetHead(${rightPage})}"></div>
@@ -431,7 +441,16 @@
   <!-- 페이지 설정/삭제는 같은 높이·같은 크기의 한 묶음으로 둔다 -->
   <div class="diary-page-actions">
     <details class="diary-page-settings">
-      <summary class="diary-page-action">페이지 설정</summary>
+      <!-- 찾기 쉽도록 작은 outline 버튼으로 둔다 (삭제보다 한 단계 위) -->
+      <summary class="diary-page-action diary-page-settings-toggle">
+        <svg class="diary-page-action-icon" viewBox="0 0 16 16" aria-hidden="true"
+             fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+          <path d="M2 4.5h4M9 4.5h5M2 11.5h5M10 11.5h4" />
+          <circle cx="7.5" cy="4.5" r="1.8" />
+          <circle cx="8.5" cy="11.5" r="1.8" />
+        </svg>
+        페이지 설정
+      </summary>
       <form th:action="@{/diaries/{diaryId}/pages/{pageId}/update
                         (diaryId=${diary.id},pageId=${page.id})}" method="post">
         <input type="hidden" name="spread" th:value="${currentSpread}" />
@@ -452,6 +471,54 @@
             <option value="DOT" th:selected="${page.backgroundType == 'DOT'}">도트</option>
           </select>
         </label>
+        <!-- 종이 색상. 고른 값은 hidden 으로 담기고 서버가 #RRGGBB 만 저장한다.
+             (기본을 고르면 빈 값 → paper_color NULL) -->
+        <div class="diary-paper-color">
+          <span class="diary-paper-color-label">종이 색상</span>
+          <input type="hidden" name="paperColor" class="diary-paper-color-value"
+                 th:value="${page.paperColor}" />
+          <div class="diary-paper-color-swatches" role="radiogroup" aria-label="종이 색상">
+            <button type="button" class="diary-paper-swatch is-default" data-paper-color=""
+                    title="기본" aria-label="기본 종이색" aria-pressed="true"></button>
+            <button type="button" class="diary-paper-swatch" data-paper-color="#FFFFFF"
+                    style="--diary-swatch:#FFFFFF" title="화이트"
+                    aria-label="화이트" aria-pressed="false"></button>
+            <!-- 예전 기본 종이색이던 따뜻한 아이보리는 프리셋으로 남긴다 -->
+            <button type="button" class="diary-paper-swatch" data-paper-color="#FDFAF3"
+                    style="--diary-swatch:#FDFAF3" title="아이보리"
+                    aria-label="아이보리" aria-pressed="false"></button>
+            <button type="button" class="diary-paper-swatch" data-paper-color="#FFF9E8"
+                    style="--diary-swatch:#FFF9E8" title="버터"
+                    aria-label="버터" aria-pressed="false"></button>
+            <button type="button" class="diary-paper-swatch" data-paper-color="#F7F0DC"
+                    style="--diary-swatch:#F7F0DC" title="크림"
+                    aria-label="크림" aria-pressed="false"></button>
+            <button type="button" class="diary-paper-swatch" data-paper-color="#FCEBEC"
+                    style="--diary-swatch:#FCEBEC" title="연분홍"
+                    aria-label="연분홍" aria-pressed="false"></button>
+            <button type="button" class="diary-paper-swatch" data-paper-color="#FBE9DD"
+                    style="--diary-swatch:#FBE9DD" title="피치"
+                    aria-label="피치" aria-pressed="false"></button>
+            <button type="button" class="diary-paper-swatch" data-paper-color="#FFF5CC"
+                    style="--diary-swatch:#FFF5CC" title="연노랑"
+                    aria-label="연노랑" aria-pressed="false"></button>
+            <button type="button" class="diary-paper-swatch" data-paper-color="#EAF4E3"
+                    style="--diary-swatch:#EAF4E3" title="연초록"
+                    aria-label="연초록" aria-pressed="false"></button>
+            <button type="button" class="diary-paper-swatch" data-paper-color="#E8F2F8"
+                    style="--diary-swatch:#E8F2F8" title="연하늘"
+                    aria-label="연하늘" aria-pressed="false"></button>
+            <button type="button" class="diary-paper-swatch" data-paper-color="#F1EAF7"
+                    style="--diary-swatch:#F1EAF7" title="연보라"
+                    aria-label="연보라" aria-pressed="false"></button>
+          </div>
+          <label class="diary-paper-color-custom">
+            <input type="color" class="diary-paper-color-picker"
+                   th:value="${page.paperColor != null} ? ${page.paperColor} : '#FDFDFA'" />
+            <span>직접 선택</span>
+          </label>
+        </div>
+
         <div class="diary-text-edit-actions">
           <button type="submit" class="diary-text-action is-primary">저장</button>
         </div>

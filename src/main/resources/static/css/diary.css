@@ -907,11 +907,14 @@
     color: #2b2b2b;
 
     /* 종이 기본색 (아이보리) */
-    --diary-paper-color: #fdfaf3;
-    /* 질감을 이루는 빛/그늘. 색상이 아니라 밝기만 바꾼다 */
+    /* 종이 기본색 (paper_color 가 없을 때). 흰 종이에 가깝게 두고 온기는 아주 조금만 남긴다.
+       따뜻한 아이보리는 색상 프리셋으로 고를 수 있다. */
+    --diary-paper-color: #fdfdfa;
+    /* 질감을 이루는 빛/그늘. 색상이 아니라 밝기만 바꾼다.
+       흰 종이 위에서도 결이 보이도록 그늘 쪽을 조금 더 준다. */
     --diary-paper-light: rgba(255, 255, 255, 0.55);
-    --diary-paper-shade: rgba(92, 76, 54, 0.05);
-    --diary-paper-fiber: rgba(120, 100, 72, 0.035);
+    --diary-paper-shade: rgba(92, 76, 54, 0.065);
+    --diary-paper-fiber: rgba(120, 100, 72, 0.045);
 
     /* 아주 미세한 섬유결 + 불규칙한 명암 */
     --diary-paper-grain:
@@ -1302,6 +1305,43 @@
     color: #96574c;
 }
 
+/* 페이지 설정만 작은 outline 버튼으로 올린다. (삭제는 그대로 낮은 위계의 텍스트) */
+.diary-page-settings-toggle {
+    height: 24px;
+    gap: 5px;
+    padding: 0 9px;
+    border: 1px solid #e0d6c6;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.9);
+    color: #6f6355;
+    font-weight: 600;
+    line-height: 22px;
+    text-decoration: none;
+}
+
+.diary-page-settings-toggle:hover {
+    border-color: #cbbba0;
+    background: #faf4ea;
+    color: #5c4a31;
+}
+
+.diary-page-settings-toggle:focus-visible {
+    outline: 2px solid #b39a75;
+    outline-offset: 1px;
+}
+
+.diary-page-settings[open] > .diary-page-settings-toggle {
+    border-color: #b39a75;
+    background: #f6efe3;
+    color: #4a3d2b;
+}
+
+.diary-page-action-icon {
+    width: 13px;
+    height: 13px;
+    color: #a3937c;
+}
+
 /* 설정 패널은 종이 위에 겹쳐 띄워 머리말 높이가 흔들리지 않게 한다 */
 .diary-page-settings {
     position: relative;
@@ -1348,6 +1388,85 @@
     outline: none;
     border-color: #b39a75;
     box-shadow: 0 0 0 3px rgba(179, 154, 117, 0.18);
+}
+
+/* 종이 색상: 페이지 설정 안의 작은 색 견본 줄 */
+.diary-paper-color {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.diary-paper-color-label {
+    color: #6b6259;
+    font-size: 12px;
+}
+
+.diary-paper-color-swatches {
+    display: grid;
+    grid-template-columns: repeat(11, 20px);
+    gap: 5px;
+}
+
+.diary-paper-swatch {
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: 1px solid #ded5c8;
+    border-radius: 50%;
+    background: var(--diary-swatch, var(--diary-paper-color));
+    cursor: pointer;
+}
+
+/* 기본(=저장값 없음)은 색 대신 종이 그대로라는 표시만 둔다 */
+.diary-paper-swatch.is-default {
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0) 44%,
+            rgba(150, 128, 96, 0.5) 44%,
+            rgba(150, 128, 96, 0.5) 56%,
+            rgba(255, 255, 255, 0) 56%
+        ),
+        var(--diary-paper-color);
+}
+
+.diary-paper-swatch:hover {
+    border-color: #b39a75;
+}
+
+.diary-paper-swatch.is-selected {
+    border-color: #6f5a3c;
+    box-shadow: 0 0 0 2px rgba(179, 154, 117, 0.35);
+}
+
+.diary-paper-swatch:focus-visible {
+    outline: 2px solid #b39a75;
+    outline-offset: 1px;
+}
+
+.diary-paper-color-custom {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #9a8f7f;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.diary-paper-color-picker {
+    width: 24px;
+    height: 20px;
+    padding: 1px;
+    border: 1px solid #ded5c8;
+    border-radius: 5px;
+    background: #fff;
+    cursor: pointer;
+}
+
+.diary-paper-color-picker:focus-visible {
+    outline: 2px solid #b39a75;
+    outline-offset: 1px;
 }
 
 .diary-sheet-date {
@@ -2239,13 +2358,14 @@
 }
 
 /* ===== 편집 모드: 종이 바깥의 페이지 정보/관리 줄 ===== */
+/* 설정 버튼이 텍스트보다 4px 높아진 만큼 아래 여백을 줄여 종이 위치를 그대로 둔다 */
 .diary-page-meta {
     display: flex;
     width: min(820px, 100%);
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    margin: 0 auto 8px;
+    margin: 0 auto 4px;
 }
 
 .diary-page-meta-label {

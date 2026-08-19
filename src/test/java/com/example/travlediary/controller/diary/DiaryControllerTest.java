@@ -1062,6 +1062,90 @@ class DiaryControllerTest {
     }
 
     @Test
+    void pageSettingsCarryThePaperColorToTheService() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryPageService.getPage(10L, 3L, 7L)).thenReturn(page(2, "2026-08-02"));
+
+        mockMvc.perform(post("/diaries/10/pages/3/update")
+                        .param("pageDate", "2026-08-03")
+                        .param("backgroundType", "LINED")
+                        .param("paperColor", "#FFF9E8")
+                        .param("spread", "1")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().is3xxRedirection());
+
+        ArgumentCaptor<DiaryPage> captor = ArgumentCaptor.forClass(DiaryPage.class);
+        verify(diaryPageService).update(eq(10L), eq(3L), eq(7L), captor.capture());
+        assertThat(captor.getValue().getPaperColor()).isEqualTo("#FFF9E8");
+        // 배경 무늬는 종이색과 따로 저장된다
+        assertThat(captor.getValue().getBackgroundType()).isEqualTo("LINED");
+    }
+
+    @Test
+    void paperColorIsPickedInThePageSettingsAndShownOnBothModes() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        DiaryPage left = page(1, "2026-08-01");
+        left.setPaperColor("#FFF9E8");
+        DiaryPage right = page(2, "2026-08-02");
+        right.setPaperColor("#E8F2F8");
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(left, right));
+
+        String editBody = mockMvc.perform(get("/diaries/10").param("edit", "true")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        // 색 고르기는 기존 페이지 설정 안에 있다 (새 툴바를 만들지 않는다)
+        assertThat(editBody.indexOf("diary-page-settings"))
+                .isLessThan(editBody.indexOf("class=\"diary-paper-color\""));
+        assertThat(editBody).contains("name=\"paperColor\"");
+        assertThat(editBody).contains("data-paper-color=\"#FFF9E8\"");
+        // 예전 기본 종이색은 아이보리 프리셋으로 남아 있다
+        assertThat(editBody).contains("data-paper-color=\"#FDFAF3\"");
+        // 설정은 작은 outline 버튼이다 (삭제는 그대로 낮은 위계)
+        assertThat(editBody).contains("diary-page-settings-toggle");
+        assertThat(editBody).contains("diary-page-action-icon");
+        assertThat(editBody).contains("diary-paper-color-picker");
+        assertThat(editBody).contains("/js/diary-paper-color.js");
+        // 저장된 색은 변수만 덮어써서 무늬/질감 위에 얹는다
+        assertThat(editBody).contains("--diary-paper-color:#FFF9E8");
+
+        String readBody = mockMvc.perform(get("/diaries/10")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        // 좌/우 종이색은 서로 독립이다
+        assertThat(readBody).contains("--diary-paper-color:#FFF9E8");
+        assertThat(readBody).contains("--diary-paper-color:#E8F2F8");
+        // 읽기 모드에는 색 고르기 UI 가 없다
+        assertThat(readBody).doesNotContain("class=\"diary-paper-color\"");
+        assertThat(readBody).doesNotContain("name=\"paperColor\"");
+        assertThat(readBody).doesNotContain("diary-paper-swatch");
+    }
+
+    /** 색을 고르지 않은 페이지는 기본 종이색을 그대로 쓴다. */
+    @Test
+    void pageWithoutAPaperColorKeepsTheDefaultPaper() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-01")));
+
+        String body = mockMvc.perform(get("/diaries/10")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).doesNotContain("--diary-paper-color:");
+    }
+
+    @Test
     void pageHeaderIsSavedThroughItsOwnEndpoint() throws Exception {
         when(userDetails.getId()).thenReturn(7L);
 

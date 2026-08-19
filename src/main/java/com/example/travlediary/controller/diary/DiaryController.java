@@ -303,6 +303,8 @@ public class DiaryController {
             DiaryPage changed = new DiaryPage();
             changed.setPageDate(pageForm.getPageDate());
             changed.setBackgroundType(pageForm.getBackgroundType());
+            // 종이색은 비어 있으면 기본 종이색(NULL)이 된다. 형식 확인은 서비스가 한다.
+            changed.setPaperColor(pageForm.getPaperColor());
             // 순서는 요청 값을 쓰지 않고 기존 값을 유지한다.
             changed.setPageOrder(existing.getPageOrder());
             diaryPageService.update(diaryId, pageId, userId, changed);
