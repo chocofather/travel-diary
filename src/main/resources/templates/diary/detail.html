@@ -276,8 +276,11 @@
           <div class="diary-sheet-head"
                th:replace="~{diary/detail :: sheetHead(${editPage})}"></div>
           <div class="diary-sheet-body"
-               th:replace="~{diary/detail :: sheetBody(${editPage}, ${editElements})}"></div>
+               th:replace="~{diary/detail :: sheetBody(${editPage})}"></div>
           <p class="diary-sheet-number" th:text="${editPage.pageOrder}">1</p>
+          <!-- 자유배치 층은 종이 전체를 기준으로 삼도록 종이 바로 아래에 둔다 -->
+          <div class="diary-canvas"
+               th:replace="~{diary/detail :: sheetCanvas(${editPage}, ${editElements})}"></div>
         </th:block>
 
         <!-- 아직 페이지가 한 장도 없는 다이어리. 위의 폼으로 첫 장을 만든다. -->
@@ -313,8 +316,10 @@
           <div class="diary-sheet-head"
                th:replace="~{diary/detail :: sheetHead(${leftPage})}"></div>
           <div class="diary-sheet-body"
-               th:replace="~{diary/detail :: sheetBody(${leftPage}, ${leftElements})}"></div>
+               th:replace="~{diary/detail :: sheetBody(${leftPage})}"></div>
           <p class="diary-sheet-number" th:text="${leftPage.pageOrder}">1</p>
+          <div class="diary-canvas"
+               th:replace="~{diary/detail :: sheetCanvas(${leftPage}, ${leftElements})}"></div>
         </th:block>
 
         <!-- 아직 페이지가 한 장도 없는 다이어리. 위의 폼으로 첫 장을 만든다. -->
@@ -336,8 +341,10 @@
           <div class="diary-sheet-head"
                th:replace="~{diary/detail :: sheetHead(${rightPage})}"></div>
           <div class="diary-sheet-body"
-               th:replace="~{diary/detail :: sheetBody(${rightPage}, ${rightElements})}"></div>
+               th:replace="~{diary/detail :: sheetBody(${rightPage})}"></div>
           <p class="diary-sheet-number" th:text="${rightPage.pageOrder}">2</p>
+          <div class="diary-canvas"
+               th:replace="~{diary/detail :: sheetCanvas(${rightPage}, ${rightElements})}"></div>
         </th:block>
         <!-- 오른쪽 장이 아직 없으면 빈 종이로 둔다 -->
       </article>
@@ -446,8 +453,8 @@
   </div>
 </div>
 
-<!-- 한 장의 본문: 종이에 바로 쓰는 글(아래 층)과 자유배치 사진(위 층). -->
-<div th:fragment="sheetBody(page, elements)" class="diary-sheet-body">
+<!-- 한 장의 본문: 종이에 바로 쓰는 글. (자유배치 사진/스티커는 종이 전체를 덮는 sheetCanvas 가 맡는다) -->
+<div th:fragment="sheetBody(page)" class="diary-sheet-body">
   <!-- 글쓰기 층. 편집 모드에서만 저장 주소를 실어 Quill 이 붙고,
        읽기 모드에서는 정리된 본문 HTML 을 그대로 보여주기만 한다. -->
   <div class="diary-writing-layer">
@@ -459,9 +466,12 @@
                       (diaryId=${diary.id},pageId=${page.id})} : null"
          th:utext="${page.content}"></div>
   </div>
+</div>
 
-  <!-- 자유배치 캔버스. 저장된 상대 좌표(0~1)를 % 로 그대로 옮긴다. -->
-  <div class="diary-canvas">
+<!-- 자유배치 캔버스.
+     종이(.diary-sheet) 전체를 덮으므로 읽기/편집의 종이 크기가 달라도 상대 좌표(0~1)가 같은 자리를 가리킨다.
+     날짜/한 줄 메모/본문 영역과 무관하게 종이 어디에나 놓을 수 있다. -->
+<div th:fragment="sheetCanvas(page, elements)" class="diary-canvas">
     <th:block th:each="element : ${elements}">
       <!-- 사진 -->
       <figure class="diary-canvas-item diary-canvas-photo diary-photo"
@@ -563,8 +573,6 @@
         </th:block>
       </figure>
     </th:block>
-  </div>
-
   <!-- 글/사진/스티커 추가 액션은 페이지 상단 편집 툴바로 옮겼다 -->
 </div>
 

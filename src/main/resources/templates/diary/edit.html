@@ -11,7 +11,7 @@
 <th:block th:fragment="body">
   <section class="diary-form-page" aria-labelledby="diary-form-title">
     <header class="diary-form-header">
-      <a class="diary-detail-back" th:href="@{/diaries/{id}(id=${diaryId})}">← 여행일기로</a>
+      <a class="diary-detail-back" th:href="@{/diaries}">← 나의 여행일기로</a>
       <h1 id="diary-form-title">여행일기 수정</h1>
       <p class="diary-list-subtitle">제목과 여행 기간, 표지를 바꿀 수 있어요.</p>
     </header>
@@ -80,7 +80,7 @@
       <div class="diary-form-field" th:replace="~{diary/cover-style :: picker(${coverStyles}, *{coverStyle})}"></div>
 
       <div class="diary-form-actions">
-        <a class="diary-form-cancel" th:href="@{/diaries/{id}(id=${diaryId})}">취소</a>
+        <a class="diary-form-cancel" th:href="@{/diaries}">취소</a>
         <button type="submit" class="diary-form-submit">수정 완료</button>
       </div>
     </form>

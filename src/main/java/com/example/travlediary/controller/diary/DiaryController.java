@@ -222,7 +222,8 @@ public class DiaryController {
         if (savedCoverImageUrl != null) {
             deleteStoredFile(existing.getCoverImageUrl());
         }
-        return "redirect:/diaries/" + diaryId;
+        // 다이어리 설정은 목록의 ⋯ 메뉴에서 들어오므로 저장 뒤에도 목록으로 돌아간다.
+        return "redirect:/diaries";
     }
 
     /** 다이어리 삭제. 페이지/요소 행은 FK CASCADE 로 지워지므로 실제 파일만 따로 정리한다. */

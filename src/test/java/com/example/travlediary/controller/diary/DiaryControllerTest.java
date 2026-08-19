@@ -1194,6 +1194,39 @@ class DiaryControllerTest {
         assertThat(editBody).contains("diary-font-mitmi");
     }
 
+    /**
+     * 자유배치 좌표의 기준은 읽기/편집 모두 종이 전체다.
+     * 캔버스가 본문 영역(.diary-sheet-body) 안에 있으면 머리말 높이만큼 기준이 밀려
+     * 같은 상대 좌표가 두 모드에서 다른 자리를 가리킨다.
+     */
+    @Test
+    void canvasCoversTheWholeSheetInBothModes() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-01")));
+        when(diaryElementService.getElements(10L, 1L, 7L)).thenReturn(List.of(
+                stickerElement(200L, "/images/diary-stickers/heart.svg")));
+
+        for (boolean edit : new boolean[]{false, true}) {
+            String body = mockMvc.perform(get("/diaries/10")
+                            .param("edit", String.valueOf(edit))
+                            .with(authentication(new UsernamePasswordAuthenticationToken(
+                                    userDetails, null, List.of()))))
+                    .andExpect(status().isOk())
+                    .andReturn().getResponse().getContentAsString();
+
+            // 캔버스는 본문 층/페이지 번호 다음(종이 직속)에 온다
+            assertThat(body.indexOf("diary-writing-layer"))
+                    .as("편집 모드=" + edit)
+                    .isLessThan(body.indexOf("class=\"diary-canvas\""));
+            assertThat(body.indexOf("diary-sheet-number"))
+                    .as("편집 모드=" + edit)
+                    .isLessThan(body.indexOf("class=\"diary-canvas\""));
+            // 저장된 상대 좌표는 두 모드에서 같은 % 로 그려진다
+            assertThat(body).as("편집 모드=" + edit).contains("left:41.");
+        }
+    }
+
     @Test
     void photoButtonMovedFromThePaperToTheTopToolbar() throws Exception {
         when(userDetails.getId()).thenReturn(7L);

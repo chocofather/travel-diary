@@ -57,6 +57,18 @@ class DiaryPaperAssetTest {
         }
     }
 
+    /** 자유배치 좌표의 기준은 종이 전체다. (머리말 높이만큼 밀린 offset 을 두지 않는다) */
+    @Test
+    void canvasIsAnchoredToTheWholeSheet() throws IOException {
+        String css = Files.readString(DIARY_CSS);
+        String canvas = rule(css, ".diary-canvas");
+
+        assertThat(canvas).contains("inset: 0;");
+        assertThat(canvas).contains("pointer-events: none;");
+        // 읽기/편집을 맞추려고 고정 px 보정을 넣지 않는다
+        assertThat(canvas).doesNotContain("top:").doesNotContain("margin");
+    }
+
     @Test
     void ribbonIsDecorationOnlyAndCannotBlockThePaper() throws IOException {
         String css = Files.readString(DIARY_CSS);
