@@ -4,6 +4,7 @@ import com.example.travlediary.config.CustomLoginSuccessHandler;
 import com.example.travlediary.config.CustomLogoutSuccessHandler;
 import com.example.travlediary.config.SecurityConfig;
 import com.example.travlediary.dto.DiaryListItemDto;
+import com.example.travlediary.dto.DiaryListPageDto;
 import com.example.travlediary.model.Diary;
 import com.example.travlediary.model.DiaryElement;
 import com.example.travlediary.model.DiaryPage;
@@ -82,7 +83,7 @@ class DiaryControllerTest {
     @Test
     void listShowsOnlyTheCurrentUsersDiaries() throws Exception {
         when(userDetails.getId()).thenReturn(7L);
-        when(diaryService.getMyDiaryList(7L)).thenReturn(List.of(item()));
+        when(diaryService.getMyDiaryPage(7L, null, 1)).thenReturn(listPage(List.of(item())));
 
         mockMvc.perform(get("/diaries")
                         .with(authentication(new UsernamePasswordAuthenticationToken(
@@ -93,13 +94,70 @@ class DiaryControllerTest {
                 .andExpect(content().string(containsString("여름 제주 여행")))
                 .andExpect(content().string(containsString("3장")));
 
-        verify(diaryService).getMyDiaryList(7L);
+        verify(diaryService).getMyDiaryPage(7L, null, 1);
+    }
+
+    @Test
+    void searchKeywordAndPageComeFromTheQueryString() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiaryPage(7L, "제주", 2))
+                .thenReturn(new DiaryListPageDto(List.of(item()), "제주", 2, 3, 30, 12));
+
+        String body = mockMvc.perform(get("/diaries").param("q", "제주").param("page", "2")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        verify(diaryService).getMyDiaryPage(7L, "제주", 2);
+        // 검색어는 입력창에 그대로 남는다
+        assertThat(body).contains("value=\"제주\"");
+        // 쪽 링크는 검색어를 계속 달고 다닌다
+        assertThat(body).contains("/diaries?q=%EC%A0%9C%EC%A3%BC&amp;page=1");
+        assertThat(body).contains("/diaries?q=%EC%A0%9C%EC%A3%BC&amp;page=3");
+        assertThat(body).contains("page-number is-current");
+    }
+
+    /** 0/음수/숫자가 아닌 쪽 번호는 첫 쪽으로 본다. */
+    @Test
+    void oddPageNumbersFallBackToTheFirstPage() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiaryPage(eq(7L), any(), eq(1)))
+                .thenReturn(listPage(List.of(item())));
+
+        for (String page : new String[]{"0", "-3", "abc", ""}) {
+            mockMvc.perform(get("/diaries").param("page", page)
+                            .with(authentication(new UsernamePasswordAuthenticationToken(
+                                    userDetails, null, List.of()))))
+                    .andExpect(status().isOk());
+        }
+
+        verify(diaryService, org.mockito.Mockito.times(4)).getMyDiaryPage(eq(7L), any(), eq(1));
+    }
+
+    @Test
+    void emptySearchResultIsShownApartFromAnEmptyShelf() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiaryPage(7L, "부산", 1))
+                .thenReturn(new DiaryListPageDto(List.of(), "부산", 1, 1, 0, 12));
+
+        String body = mockMvc.perform(get("/diaries").param("q", "부산")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).contains("해당하는 여행일기를 찾지 못했어요.");
+        assertThat(body).contains("전체 여행일기 보기");
+        // 아직 한 권도 없는 상태의 안내와는 구분한다
+        assertThat(body).doesNotContain("아직 작성한 여행일기가 없습니다.");
+        assertThat(body).contains("value=\"부산\"");
     }
 
     @Test
     void emptyListShowsAGuideMessage() throws Exception {
         when(userDetails.getId()).thenReturn(7L);
-        when(diaryService.getMyDiaryList(7L)).thenReturn(List.of());
+        when(diaryService.getMyDiaryPage(7L, null, 1)).thenReturn(listPage(List.of()));
 
         mockMvc.perform(get("/diaries")
                         .with(authentication(new UsernamePasswordAuthenticationToken(
@@ -1651,7 +1709,8 @@ class DiaryControllerTest {
         DiaryListItemDto withoutCover = item();
         withoutCover.setId(11L);
         withoutCover.setTitle("겨울 강릉 여행");
-        when(diaryService.getMyDiaryList(7L)).thenReturn(List.of(withCover, withoutCover));
+        when(diaryService.getMyDiaryPage(7L, null, 1))
+                .thenReturn(listPage(List.of(withCover, withoutCover)));
 
         String body = mockMvc.perform(get("/diaries")
                         .with(authentication(new UsernamePasswordAuthenticationToken(
@@ -1677,7 +1736,7 @@ class DiaryControllerTest {
     @Test
     void listCardCarriesTheBookLevelActionsInACompactMenu() throws Exception {
         when(userDetails.getId()).thenReturn(7L);
-        when(diaryService.getMyDiaryList(7L)).thenReturn(List.of(item()));
+        when(diaryService.getMyDiaryPage(7L, null, 1)).thenReturn(listPage(List.of(item())));
 
         String body = mockMvc.perform(get("/diaries")
                         .with(authentication(new UsernamePasswordAuthenticationToken(
@@ -1707,7 +1766,7 @@ class DiaryControllerTest {
         DiaryListItemDto legacy = item();
         legacy.setId(11L);
         legacy.setCoverStyle("DEFAULT");
-        when(diaryService.getMyDiaryList(7L)).thenReturn(List.of(leather, legacy));
+        when(diaryService.getMyDiaryPage(7L, null, 1)).thenReturn(listPage(List.of(leather, legacy)));
 
         String body = mockMvc.perform(get("/diaries")
                         .with(authentication(new UsernamePasswordAuthenticationToken(
@@ -1863,6 +1922,11 @@ class DiaryControllerTest {
         page.setPageOrder(order);
         page.setBackgroundType("PLAIN");
         return page;
+    }
+
+    /** 검색어 없는 첫 쪽. (쪽 계산은 서비스가 하므로 화면 확인에는 한 쪽이면 충분하다) */
+    private DiaryListPageDto listPage(List<DiaryListItemDto> items) {
+        return new DiaryListPageDto(items, "", 1, 1, items.size(), 12);
     }
 
     private DiaryListItemDto item() {

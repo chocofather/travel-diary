@@ -139,6 +139,89 @@
     margin-bottom: 34px;
 }
 
+/* 검색 + 새 여행일기 만들기는 한 묶음으로 오른쪽에 둔다 */
+.diary-list-tools {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* 검색: 아이콘 + 한 줄 입력. 큰 검색창처럼 보이지 않게 한다. */
+.diary-search {
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin: 0;
+}
+
+.diary-search-icon {
+    position: absolute;
+    left: 10px;
+    width: 15px;
+    height: 15px;
+    color: #a3937c;
+    pointer-events: none;
+}
+
+.diary-search-input {
+    box-sizing: border-box;
+    width: 210px;
+    height: 36px;
+    padding: 0 12px 0 31px;
+    border: 1px solid #ded5c8;
+    border-radius: 999px;
+    background: #fff;
+    color: #5c5346;
+    font: inherit;
+    font-size: 13px;
+}
+
+.diary-search-input::placeholder {
+    color: #b3a897;
+}
+
+.diary-search-input:hover {
+    border-color: #cbbba0;
+}
+
+.diary-search-input:focus {
+    outline: none;
+    border-color: #b39a75;
+    box-shadow: 0 0 0 3px rgba(179, 154, 117, 0.18);
+}
+
+/* 제출 버튼은 Enter 로 찾는 사용자를 위한 보조 수단이라 화면에서는 감춘다 */
+.diary-search-submit {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+/* 키보드로 옮겨 왔을 때만 실제 버튼으로 보여 준다 */
+.diary-search-submit:focus-visible {
+    position: static;
+    width: auto;
+    height: 32px;
+    margin: 0 0 0 6px;
+    padding: 0 12px;
+    border: 1px solid #b39a75;
+    border-radius: 999px;
+    background: #fff;
+    clip: auto;
+    clip-path: none;
+    color: #5c5346;
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
 .diary-list-heading {
     min-width: 0;
 }
@@ -541,6 +624,73 @@
     margin: 8px 0 0;
     color: #8b8378;
     font-size: 14px;
+}
+
+/* 검색 결과가 없을 때 전체 목록으로 돌아가는 작은 액션 */
+.diary-empty-reset {
+    margin-top: 14px;
+    color: #6f5a3c;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+/* ===== 목록 쪽 이동 ===== */
+.diary-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    margin-top: 40px;
+}
+
+.diary-pagination a,
+.diary-pagination span {
+    box-sizing: border-box;
+    display: inline-flex;
+    min-width: 32px;
+    height: 32px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 9px;
+    border: 1px solid #e3dcd1;
+    border-radius: 8px;
+    background: #fffdf8;
+    color: #6b6259;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.diary-pagination a:hover {
+    border-color: #cbbba0;
+    background: #f6efe3;
+    color: #5c4a31;
+}
+
+.diary-pagination a:focus-visible {
+    outline: 2px solid #b39a75;
+    outline-offset: 1px;
+}
+
+.diary-pagination .page-nav {
+    font-size: 15px;
+    line-height: 1;
+}
+
+/* 현재 쪽은 약한 강조만 준다 */
+.diary-pagination .page-number.is-current {
+    border-color: #b39a75;
+    background: #f2e8d8;
+    color: #4a3d2b;
+}
+
+.diary-pagination .is-disabled {
+    border-color: #efe9df;
+    background: #fbf8f2;
+    color: #c9c1b4;
 }
 
 .diary-empty .diary-new-button {
@@ -2983,6 +3133,21 @@
         flex-direction: column;
         align-items: flex-start;
         gap: 14px;
+    }
+
+    /* 좁은 화면에서는 검색창이 줄 전체를 쓰도록 둔다 */
+    .diary-list-tools {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+
+    .diary-search {
+        flex: 1;
+        min-width: 180px;
+    }
+
+    .diary-search-input {
+        width: 100%;
     }
 
     .diary-list-header h1 {

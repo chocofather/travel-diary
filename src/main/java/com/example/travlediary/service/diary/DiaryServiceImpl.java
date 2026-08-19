@@ -1,6 +1,7 @@
 package com.example.travlediary.service.diary;
 
 import com.example.travlediary.dto.DiaryListItemDto;
+import com.example.travlediary.dto.DiaryListPageDto;
 import com.example.travlediary.model.Diary;
 import com.example.travlediary.model.DiaryCoverStyle;
 import com.example.travlediary.repository.diary.DiaryMapper;
@@ -23,6 +24,10 @@ public class DiaryServiceImpl implements DiaryService {
     private static final int MAX_YEAR = 9999;
     /** 표지 스타일 기본값 (DB 기본값과 같은 값) */
     private static final String DEFAULT_COVER_STYLE = DiaryCoverStyle.DEFAULT.getCode();
+    /** 목록 한 쪽에 보여주는 다이어리 수 */
+    private static final int PAGE_SIZE = 12;
+    /** 검색어 길이 상한 (제목 길이와 같은 선) */
+    private static final int MAX_KEYWORD_LENGTH = MAX_TITLE_LENGTH;
 
     private final DiaryMapper diaryMapper;
 
@@ -33,11 +38,39 @@ public class DiaryServiceImpl implements DiaryService {
         return diaryMapper.findByUserId(userId);
     }
 
+    /**
+     * 목록 한 쪽. 검색어가 있으면 제목/한 줄 메모/본문에서 찾는다.
+     * 소유권은 SQL 의 user_id 조건이 함께 막는다.
+     */
     @Override
     @Transactional(readOnly = true)
-    public List<DiaryListItemDto> getMyDiaryList(Long userId) {
+    public DiaryListPageDto getMyDiaryPage(Long userId, String keyword, int page) {
         requireUser(userId);
-        return diaryMapper.findListItemsByUserId(userId);
+
+        String searched = keyword == null ? "" : keyword.strip();
+        if (searched.length() > MAX_KEYWORD_LENGTH) {
+            searched = searched.substring(0, MAX_KEYWORD_LENGTH);
+        }
+        String pattern = searched.isEmpty() ? null : likePattern(searched);
+
+        int totalCount = diaryMapper.countListItems(userId, pattern);
+        // 결과가 없어도 1쪽은 있는 것으로 본다. (쪽 번호는 1부터)
+        int totalPages = Math.max(1, (totalCount + PAGE_SIZE - 1) / PAGE_SIZE);
+        int currentPage = Math.min(Math.max(page, 1), totalPages);
+
+        List<DiaryListItemDto> items = totalCount == 0
+                ? List.of()
+                : diaryMapper.findListItems(userId, pattern, (currentPage - 1) * PAGE_SIZE, PAGE_SIZE);
+        return new DiaryListPageDto(items, searched, currentPage, totalPages, totalCount, PAGE_SIZE);
+    }
+
+    /** LIKE 특수문자를 그대로 찾도록 이스케이프한 뒤 양쪽을 % 로 감싼다. (SQL 의 ESCAPE '!' 와 짝) */
+    private String likePattern(String keyword) {
+        String escaped = keyword
+                .replace("!", "!!")
+                .replace("%", "!%")
+                .replace("_", "!_");
+        return "%" + escaped + "%";
     }
 
     @Override

@@ -1,5 +1,6 @@
 package com.example.travlediary.service.diary;
 
+import com.example.travlediary.dto.DiaryListPageDto;
 import com.example.travlediary.model.Diary;
 import com.example.travlediary.model.DiaryCoverStyle;
 import com.example.travlediary.repository.diary.DiaryMapper;
@@ -12,10 +13,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -31,6 +35,58 @@ class DiaryServiceImplTest {
     @BeforeEach
     void setUp() {
         diaryService = new DiaryServiceImpl(diaryMapper);
+    }
+
+    /** 검색어가 없으면 조건 없이 첫 12권을 읽는다. */
+    @Test
+    void listPageReadsTwelveDiariesWithoutAKeyword() {
+        when(diaryMapper.countListItems(1L, null)).thenReturn(30);
+        when(diaryMapper.findListItems(1L, null, 12, 12)).thenReturn(List.of());
+
+        DiaryListPageDto page = diaryService.getMyDiaryPage(1L, "  ", 2);
+
+        assertThat(page.currentPage()).isEqualTo(2);
+        assertThat(page.totalPages()).isEqualTo(3);
+        assertThat(page.totalCount()).isEqualTo(30);
+        assertThat(page.pageSize()).isEqualTo(12);
+        assertThat(page.isSearching()).isFalse();
+        verify(diaryMapper).findListItems(1L, null, 12, 12);
+    }
+
+    /** 검색어는 LIKE 특수문자를 그대로 찾도록 이스케이프해서 넘긴다. */
+    @Test
+    void keywordIsEscapedAndWrappedForLike() {
+        when(diaryMapper.countListItems(eq(1L), any())).thenReturn(1);
+        when(diaryMapper.findListItems(eq(1L), any(), eq(0), eq(12))).thenReturn(List.of());
+
+        diaryService.getMyDiaryPage(1L, "  100%_할인!  ", 1);
+
+        ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+        verify(diaryMapper).countListItems(eq(1L), captor.capture());
+        assertThat(captor.getValue()).isEqualTo("%100!%!_할인!!%");
+    }
+
+    /** 범위를 벗어난 쪽 번호는 있는 쪽으로 맞춘다. */
+    @Test
+    void pageNumberIsClampedToTheAvailableRange() {
+        when(diaryMapper.countListItems(1L, null)).thenReturn(5);
+        when(diaryMapper.findListItems(1L, null, 0, 12)).thenReturn(List.of());
+
+        assertThat(diaryService.getMyDiaryPage(1L, null, 9).currentPage()).isEqualTo(1);
+        assertThat(diaryService.getMyDiaryPage(1L, null, 0).currentPage()).isEqualTo(1);
+    }
+
+    /** 결과가 없으면 목록 조회를 하지 않는다. */
+    @Test
+    void noResultSkipsTheListQuery() {
+        when(diaryMapper.countListItems(eq(1L), any())).thenReturn(0);
+
+        DiaryListPageDto page = diaryService.getMyDiaryPage(1L, "제주", 1);
+
+        assertThat(page.items()).isEmpty();
+        assertThat(page.isSearching()).isTrue();
+        assertThat(page.keyword()).isEqualTo("제주");
+        verify(diaryMapper, never()).findListItems(any(), any(), anyInt(), anyInt());
     }
 
     @Test

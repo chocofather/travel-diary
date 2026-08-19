@@ -17,8 +17,18 @@ public interface DiaryMapper {
     /** 회원이 가진 다이어리 목록 (최근 여행부터) */
     List<Diary> findByUserId(@Param("userId") Long userId);
 
-    /** 일기장형 목록 화면용. 페이지 수까지 한 번에 읽는다. (다이어리마다 재조회하지 않는다) */
-    List<DiaryListItemDto> findListItemsByUserId(@Param("userId") Long userId);
+    /**
+     * 일기장형 목록 한 쪽. 페이지 수까지 한 번에 읽는다. (다이어리마다 재조회하지 않는다)
+     * keyword 가 있으면 제목/한 줄 메모/본문에서 찾고, 결과는 다이어리 한 권 단위다.
+     */
+    List<DiaryListItemDto> findListItems(@Param("userId") Long userId,
+                                         @Param("keyword") String keyword,
+                                         @Param("offset") int offset,
+                                         @Param("limit") int limit);
+
+    /** 같은 조건의 전체 다이어리 수 (쪽수 계산용) */
+    int countListItems(@Param("userId") Long userId,
+                       @Param("keyword") String keyword);
 
     /** 본인 소유 다이어리 1건 */
     Diary findByIdAndUserId(@Param("diaryId") Long diaryId,

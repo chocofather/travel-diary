@@ -1,5 +1,6 @@
 package com.example.travlediary.controller.diary;
 
+import com.example.travlediary.dto.DiaryListPageDto;
 import com.example.travlediary.model.Diary;
 import com.example.travlediary.model.DiaryCoverStyle;
 import com.example.travlediary.model.DiaryElement;
@@ -67,13 +68,34 @@ public class DiaryController {
     @Value("${custom.upload-path}")
     private String uploadPath;
 
-    /** 내 여행일기 목록 (본인 다이어리만) */
+    /**
+     * 내 여행일기 목록 (본인 다이어리만).
+     * q 로 제목/한 줄 메모/본문을 함께 찾고, 12권씩 나눠 보여준다.
+     */
     @GetMapping
-    public String diaryList(@AuthenticationPrincipal CustomUserDetails userDetails,
+    public String diaryList(@RequestParam(name = "q", required = false) String keyword,
+                            @RequestParam(name = "page", required = false) String page,
+                            @AuthenticationPrincipal CustomUserDetails userDetails,
                             Model model) {
-        model.addAttribute("diaryList", diaryService.getMyDiaryList(userDetails.getId()));
+        DiaryListPageDto diaryPage =
+                diaryService.getMyDiaryPage(userDetails.getId(), keyword, pageNumber(page));
+
+        model.addAttribute("diaryList", diaryPage.items());
+        model.addAttribute("diaryPage", diaryPage);
         model.addAttribute("pageTitle", "나의 여행일기");
         return "diary/list";
+    }
+
+    /** 쪽 번호는 1부터. 비어 있거나 숫자가 아니거나 1보다 작으면 첫 쪽으로 본다. */
+    private int pageNumber(String page) {
+        if (page == null || page.isBlank()) {
+            return 1;
+        }
+        try {
+            return Math.max(1, Integer.parseInt(page.strip()));
+        } catch (NumberFormatException exception) {
+            return 1;
+        }
     }
 
     /** 다이어리 한 권 펼쳐보기. 소유권은 서비스에서 확인한다. */

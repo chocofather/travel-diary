@@ -15,7 +15,21 @@
         <h1 id="diary-list-title">나의 여행일기</h1>
         <p class="diary-list-subtitle">여행에서의 순간을 나만의 다이어리로 남겨보세요.</p>
       </div>
-      <a class="diary-new-button" th:href="@{/diaries/new}">새 여행일기 만들기</a>
+      <div class="diary-list-tools">
+        <!-- 제목/한 줄 메모/본문을 한 입력창으로 찾는다. 검색어는 q 로 주소에 남는다. -->
+        <form class="diary-search" th:action="@{/diaries}" method="get" role="search">
+          <svg class="diary-search-icon" viewBox="0 0 16 16" aria-hidden="true"
+               fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <circle cx="7" cy="7" r="4.6" />
+            <path d="M10.4 10.4 14 14" />
+          </svg>
+          <input type="search" name="q" class="diary-search-input"
+                 placeholder="여행일기 검색" aria-label="여행일기 검색"
+                 maxlength="150" th:value="${diaryPage.keyword}" />
+          <button type="submit" class="diary-search-submit" aria-label="검색">검색</button>
+        </form>
+        <a class="diary-new-button" th:href="@{/diaries/new}">새 여행일기 만들기</a>
+      </div>
     </header>
 
     <p class="diary-flash-message" th:if="${diaryMessage}" th:text="${diaryMessage}"
@@ -75,7 +89,40 @@
       </li>
     </ul>
 
-    <div class="diary-empty" th:if="${#lists.isEmpty(diaryList)}" role="status">
+    <!-- 목록 쪽 이동. 검색 중이면 q 를 그대로 달고 다닌다. -->
+    <nav class="diary-pagination" th:if="${diaryPage.totalPages > 1}"
+         aria-label="여행일기 목록 페이지">
+      <a th:if="${diaryPage.currentPage > 1}" class="page-nav" aria-label="이전 페이지"
+         th:href="@{/diaries(q=${diaryPage.searching ? diaryPage.keyword : null},page=${diaryPage.currentPage - 1})}">&#8249;</a>
+      <span th:unless="${diaryPage.currentPage > 1}" class="page-nav is-disabled"
+            aria-disabled="true">&#8249;</span>
+
+      <th:block th:each="i : ${#numbers.sequence(1, diaryPage.totalPages)}">
+        <a th:if="${i != diaryPage.currentPage}" class="page-number"
+           th:href="@{/diaries(q=${diaryPage.searching ? diaryPage.keyword : null},page=${i})}" th:text="${i}">1</a>
+        <span th:if="${i == diaryPage.currentPage}" class="page-number is-current"
+              aria-current="page" th:text="${i}">1</span>
+      </th:block>
+
+      <a th:if="${diaryPage.currentPage < diaryPage.totalPages}" class="page-nav"
+         aria-label="다음 페이지"
+         th:href="@{/diaries(q=${diaryPage.searching ? diaryPage.keyword : null},page=${diaryPage.currentPage + 1})}">&#8250;</a>
+      <span th:unless="${diaryPage.currentPage < diaryPage.totalPages}"
+            class="page-nav is-disabled" aria-disabled="true">&#8250;</span>
+    </nav>
+
+    <!-- 검색 결과가 없을 때. (한 권도 없는 상태와 구분한다) -->
+    <div class="diary-empty" th:if="${#lists.isEmpty(diaryList) and diaryPage.searching}"
+         role="status">
+      <span class="diary-empty-mark" aria-hidden="true">✎</span>
+      <p class="diary-empty-title"
+         th:text="|“${diaryPage.keyword}”에 해당하는 여행일기를 찾지 못했어요.|">검색 결과가 없습니다.</p>
+      <p class="diary-empty-text">제목이나 페이지 내용에 들어간 다른 낱말로 찾아보세요.</p>
+      <a class="diary-empty-reset" th:href="@{/diaries}">전체 여행일기 보기</a>
+    </div>
+
+    <div class="diary-empty" th:if="${#lists.isEmpty(diaryList) and !diaryPage.searching}"
+         role="status">
       <span class="diary-empty-mark" aria-hidden="true">✎</span>
       <p class="diary-empty-title">아직 작성한 여행일기가 없습니다.</p>
       <p class="diary-empty-text">여행에서의 추억을 한 권의 다이어리로 남겨보세요.</p>
