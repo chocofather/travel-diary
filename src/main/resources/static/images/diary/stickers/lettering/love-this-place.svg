@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 48" role="img" aria-label="여기 좋아 레터링 스티커">
+  <rect x="4" y="10" width="112" height="32" rx="16" fill="#fdeef1"
+        stroke="#b06a7c" stroke-width="2.4"/>
+  <path d="M100 12c1.8-2.2 4.4-1.4 4.4 1 0 2-2.2 3.5-4.4 5.1-2.2-1.6-4.4-3.1-4.4-5.1 0-2.4 2.6-3.2 4.4-1z"
+        fill="#e0707a" stroke="#a8434e" stroke-width="1.6" stroke-linejoin="round"/>
+  <text x="58" y="33" text-anchor="middle" textLength="80" lengthAdjust="spacingAndGlyphs"
+        font-family="'Apple SD Gothic Neo','Malgun Gothic','맑은 고딕','Noto Sans KR',sans-serif"
+        font-size="18" font-weight="700" fill="#9c4f61">여기 좋아</text>
+</svg>

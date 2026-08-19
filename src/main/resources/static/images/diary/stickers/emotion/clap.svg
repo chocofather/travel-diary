@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="박수 스티커">
+  <g stroke="#b07d4e" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M26 24 14 36a10 10 0 0 0 0 14l4 4a10 10 0 0 0 14 0l10-10z" fill="#f9dcc4"/>
+    <path d="M38 22 50 34a10 10 0 0 1 0 14l-4 4" fill="#f2c9a4"/>
+    <path d="M22 30l-6-6M32 22l-3-7M42 26l6-5" fill="none"/>
+  </g>
+  <g fill="none" stroke="#f4d17a" stroke-width="2.6" stroke-linecap="round">
+    <path d="M8 14l4 4M20 6l1 5M34 6l-1 5"/>
+  </g>
+</svg>

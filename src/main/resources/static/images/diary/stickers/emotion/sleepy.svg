@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="졸림 스티커">
+  <circle cx="30" cy="36" r="23" fill="#d8d0e8" stroke="#705e91" stroke-width="2.4"/>
+  <g fill="none" stroke="#55467a" stroke-width="3" stroke-linecap="round">
+    <path d="M19 33c3 3 6 3 9 0M33 33c3 3 6 3 9 0"/>
+    <path d="M27 45c2 2.6 5 2.6 7 0"/>
+  </g>
+  <g fill="none" stroke="#8878b0" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M46 20h7l-7 8h7"/>
+    <path d="M52 6h5l-5 6h5"/>
+  </g>
+</svg>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 56" role="img" aria-label="체크 표시 스티커">
+  <path d="M8 30l14 16L56 8" fill="none" stroke="#7fa383"
+        stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M8 30l14 16L56 8" fill="none" stroke="#c4dcb8"
+        stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

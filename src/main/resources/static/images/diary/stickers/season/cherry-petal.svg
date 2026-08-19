@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 48" role="img" aria-label="벚꽃잎 스티커">
+  <g fill="#f9d7e0" stroke="#c98d9c" stroke-width="2" stroke-linejoin="round">
+    <path d="M10 10c6-2 12 2 12 8 0 4-4 7-8 7s-8-4-8-8c0-3 1.6-6 4-7z"/>
+    <path d="M34 24c6-2 12 2 12 8 0 4-4 7-8 7s-8-4-8-8c0-3 1.6-6 4-7z"
+          transform="rotate(28 40 32)"/>
+    <path d="M46 4c5-1.6 10 1.6 10 6.6 0 3.4-3.4 5.8-6.8 5.8s-6.8-3.4-6.8-6.8c0-2.6 1.4-4.8 3.6-5.6z"
+          transform="rotate(-20 49 11)"/>
+  </g>
+</svg>

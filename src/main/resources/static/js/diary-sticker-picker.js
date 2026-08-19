@@ -170,37 +170,18 @@ document.addEventListener('DOMContentLoaded', () => {
         return item;
     }
 
-    /** 떼기는 사진 삭제와 같은 폼 전송이다. (공용 asset 이라 서버는 행만 지운다) */
-    function deleteForm(action) {
-        const form = document.createElement('form');
-        form.className = 'diary-sticker-delete';
-        form.action = action;
-        form.method = 'post';
-        form.setAttribute('onsubmit', "return confirm('이 스티커를 떼시겠습니까?');");
-        form.append(
-            hiddenInput('spread', button.dataset.spread || '0'),
-            hiddenInput('page', button.dataset.page || ''));
-
-        // 서버 렌더링 폼은 Thymeleaf 가 넣어 주는 값을 여기서는 meta 에서 가져온다.
-        const csrfToken = document.querySelector('meta[name="_csrf"]')?.content;
-        const csrfField = document.querySelector('meta[name="_csrf_parameter"]')?.content
-            || '_csrf';
-        if (csrfToken) form.append(hiddenInput(csrfField, csrfToken));
-
-        const submit = document.createElement('button');
-        submit.type = 'submit';
-        submit.className = 'diary-layer-action is-danger';
-        submit.textContent = '떼기';
-        form.append(submit);
-        return form;
-    }
-
-    function hiddenInput(name, value) {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = name;
-        input.value = value;
-        return input;
+    /**
+     * 떼기 버튼. 실제 삭제 요청과 화면에서 빼는 일은 diary-canvas-drag.js 가 맡는다.
+     * (서버 렌더링 스티커와 같은 data-delete-url / data-delete-confirm 만 실어 준다)
+     */
+    function deleteButton(deleteUrl) {
+        const action = document.createElement('button');
+        action.type = 'button';
+        action.className = 'diary-layer-action is-danger';
+        action.dataset.deleteUrl = deleteUrl;
+        action.dataset.deleteConfirm = '이 스티커를 떼시겠습니까?';
+        action.textContent = '떼기';
+        return action;
     }
 
     function rotateHandle() {
@@ -231,7 +212,7 @@ document.addEventListener('DOMContentLoaded', () => {
             action.textContent = label;
             actions.append(action);
         });
-        actions.append(deleteForm(deleteUrl));
+        actions.append(deleteButton(deleteUrl));
         return actions;
     }
 });

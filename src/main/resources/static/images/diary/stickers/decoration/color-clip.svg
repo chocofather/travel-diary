@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 64" role="img" aria-label="컬러 클립 스티커">
+  <path d="M14 54V18a8 8 0 0 1 16 0v34a11 11 0 0 1-22 0V20"
+        fill="none" stroke="#e0707a" stroke-width="5" stroke-linecap="round"/>
+  <path d="M14 54V18a8 8 0 0 1 16 0" fill="none" stroke="#f6b3b8"
+        stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M22 12c1.6-2 4-1.2 4 .9 0 1.8-2 3-4 4.4-2-1.4-4-2.6-4-4.4 0-2.1 2.4-2.9 4-.9z"
+        fill="#f0b6c4" stroke="#b06a7c" stroke-width="1.6" stroke-linejoin="round"/>
+</svg>

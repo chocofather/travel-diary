@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="목도리 스티커">
+  <g stroke="#4f6b53" stroke-width="2.4" stroke-linejoin="round">
+    <path d="M12 16c0-6 9-10 20-10s20 4 20 10-9 10-20 10-20-4-20-10z" fill="#9dbf9a"/>
+    <path d="M18 22v28a6 6 0 0 0 12 0V24" fill="#c4dcb8"/>
+    <path d="M36 24v20a6 6 0 0 0 12 0V20" fill="#9dbf9a"/>
+  </g>
+  <g fill="none" stroke="#e8f2e2" stroke-width="2.6" stroke-linecap="round">
+    <path d="M20 32h8M38 34h8M20 42h8"/>
+  </g>
+</svg>

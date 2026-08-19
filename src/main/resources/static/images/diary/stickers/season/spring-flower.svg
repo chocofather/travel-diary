@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="봄꽃 스티커">
+  <path d="M22 58c0-12 4-20 10-24" fill="none" stroke="#4f6b53"
+        stroke-width="2.8" stroke-linecap="round"/>
+  <path d="M44 58c0-10-3-16-8-19" fill="none" stroke="#4f6b53"
+        stroke-width="2.8" stroke-linecap="round"/>
+  <path d="M26 42c-6 0-9-3-9-7 6-1 9 2 9 7z" fill="#9dbf9a"
+        stroke="#4f6b53" stroke-width="2" stroke-linejoin="round"/>
+  <g stroke="#b06a7c" stroke-width="2.2" stroke-linejoin="round">
+    <circle cx="24" cy="16" r="7" fill="#f9d7e0"/>
+    <circle cx="38" cy="12" r="6" fill="#f0b6c4"/>
+    <circle cx="44" cy="26" r="6.5" fill="#f9d7e0"/>
+    <circle cx="30" cy="28" r="6" fill="#f0b6c4"/>
+  </g>
+  <g fill="#f4d17a">
+    <circle cx="24" cy="16" r="2.4"/><circle cx="38" cy="12" r="2.2"/>
+    <circle cx="44" cy="26" r="2.2"/><circle cx="30" cy="28" r="2.2"/>
+  </g>
+</svg>

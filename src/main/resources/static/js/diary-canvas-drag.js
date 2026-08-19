@@ -26,6 +26,18 @@ document.addEventListener('DOMContentLoaded', () => {
         items.forEach(other => other.classList.remove('is-selected'));
     }
 
+    /**
+     * 지운 요소를 화면과 목록에서 함께 뺀다.
+     * 조작점/액션 줄은 요소 안에 있으므로 요소를 지우면 같이 사라지고,
+     * 목록에서도 빠져 이후 저장 요청 대상이 되지 않는다.
+     */
+    function removeItem(item) {
+        const index = items.indexOf(item);
+        if (index >= 0) items.splice(index, 1);
+        item.classList.remove('is-selected');
+        item.remove();
+    }
+
     // 페이지의 빈 곳을 누르면 선택을 푼다.
     document.addEventListener('pointerdown', (event) => {
         if (!event.target.closest('.diary-canvas-item')) clearSelection();
@@ -301,8 +313,27 @@ document.addEventListener('DOMContentLoaded', () => {
         rotateHandle.addEventListener('pointerup', finishRotate);
         rotateHandle.addEventListener('pointercancel', finishRotate);
 
+        // ===== 삭제 / 떼기 =====
+        // 화면을 새로 고치지 않고 이 요소만 지운다. (본문/한 줄 메모의 편집 상태는 그대로 둔다)
+        const deleteButton = item.querySelector('.diary-layer-action[data-delete-url]');
+        deleteButton?.addEventListener('click', async () => {
+            if (deleteButton.disabled) return;
+            const confirmText = deleteButton.dataset.deleteConfirm;
+            if (confirmText && !window.confirm(confirmText)) return;
+
+            deleteButton.disabled = true;
+            try {
+                await save(deleteButton.dataset.deleteUrl, {}, '삭제하지 못했습니다.');
+                removeItem(item);
+            } catch (error) {
+                // 실패하면 요소를 그대로 두고 지금 화면에 머문다.
+                deleteButton.disabled = false;
+                window.alert(error.message);
+            }
+        });
+
         // ===== 겹침 순서 (앞으로 / 뒤로) =====
-        // 같은 액션 줄에 있는 삭제 버튼은 폼 전송이므로 방향값이 있는 버튼만 고른다.
+        // 같은 액션 줄에 삭제 버튼이 있으므로 방향값이 있는 버튼만 고른다.
         item.querySelectorAll('.diary-layer-action[data-layer-direction]').forEach((button) => {
             button.addEventListener('click', async () => {
                 if (button.disabled) return;
@@ -310,7 +341,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 try {
                     // 새 순서는 서버가 계산해서 돌려준다.
                     const result = await saveLayer(item, button.dataset.layerDirection);
-                    applyLayers(canvas, result.elements);
+                    applyLayers(canvas, result?.elements);
                 } catch (error) {
                     // 실패하면 화면은 그대로 두고 안내만 한다.
                     window.alert(error.message);
@@ -333,7 +364,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    /** 이미 지운 요소는 저장 대상이 아니다. (삭제 직후 남은 조작이 요청을 보내지 않게 한다) */
+    function isRemoved(item) {
+        return !item.isConnected;
+    }
+
     function savePosition(item, positionX, positionY) {
+        if (isRemoved(item)) return Promise.resolve(null);
         return save(item.dataset.positionUrl, {
             positionX: String(positionX),
             positionY: String(positionY)
@@ -341,6 +378,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function saveSize(item, width, height) {
+        if (isRemoved(item)) return Promise.resolve(null);
         return save(item.dataset.sizeUrl, {
             width: String(width),
             height: String(height)
@@ -348,12 +386,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function saveRotation(item, rotation) {
+        if (isRemoved(item)) return Promise.resolve(null);
         return save(item.dataset.rotationUrl, {
             rotation: String(rotation)
         }, '회전 각도를 저장하지 못했습니다.');
     }
 
     function saveLayer(item, direction) {
+        if (isRemoved(item)) return Promise.resolve(null);
         return save(item.dataset.layerUrl, {
             direction: String(direction)
         }, '겹침 순서를 저장하지 못했습니다.');

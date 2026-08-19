@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 44" role="img" aria-label="MEMORIES 레터링 스티커">
+  <path d="M4 6h142v22a10 10 0 0 1-10 10H14A10 10 0 0 1 4 28z"
+        fill="#e8dff5" stroke="#705e91" stroke-width="2.4" stroke-linejoin="round"/>
+  <text x="75" y="29" text-anchor="middle" textLength="108" lengthAdjust="spacingAndGlyphs"
+        font-family="Georgia,'Times New Roman',serif"
+        font-size="19" font-style="italic" font-weight="700" letter-spacing="2" fill="#584878">MEMORIES</text>
+</svg>

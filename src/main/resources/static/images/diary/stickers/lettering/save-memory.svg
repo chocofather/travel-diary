@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 44" role="img" aria-label="추억 저장 레터링 스티커">
+  <path d="M4 22 18 6h92a6 6 0 0 1 6 6v20a6 6 0 0 1-6 6H18z"
+        fill="#e8dff5" stroke="#705e91" stroke-width="2.4" stroke-linejoin="round"/>
+  <circle cx="24" cy="22" r="3.4" fill="#fdf8ee" stroke="#705e91" stroke-width="2"/>
+  <text x="70" y="28" text-anchor="middle" textLength="72" lengthAdjust="spacingAndGlyphs"
+        font-family="'Apple SD Gothic Neo','Malgun Gothic','맑은 고딕','Noto Sans KR',sans-serif"
+        font-size="18" font-weight="700" fill="#584878">추억 저장</text>
+</svg>

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 72" role="img" aria-label="우표 장식 스티커">
+  <path d="M6 8h52v56H6z" fill="#fdf8ee" stroke="#c7b79c"
+        stroke-width="2.4" stroke-linejoin="round"/>
+  <g fill="#fdf8ee">
+    <circle cx="6" cy="18" r="3"/><circle cx="6" cy="30" r="3"/>
+    <circle cx="6" cy="42" r="3"/><circle cx="6" cy="54" r="3"/>
+    <circle cx="58" cy="18" r="3"/><circle cx="58" cy="30" r="3"/>
+    <circle cx="58" cy="42" r="3"/><circle cx="58" cy="54" r="3"/>
+    <circle cx="18" cy="8" r="3"/><circle cx="32" cy="8" r="3"/><circle cx="46" cy="8" r="3"/>
+    <circle cx="18" cy="64" r="3"/><circle cx="32" cy="64" r="3"/><circle cx="46" cy="64" r="3"/>
+  </g>
+  <rect x="13" y="15" width="38" height="42" rx="3" fill="#dceaf6"
+        stroke="#7ea3c4" stroke-width="2.2"/>
+  <path d="M13 46l11-11 8 7 7-8 12 12v10H13z" fill="#9dbf9a"
+        stroke="#4f6b53" stroke-width="2" stroke-linejoin="round"/>
+  <circle cx="24" cy="26" r="4" fill="#f4d17a" stroke="#a8813a" stroke-width="2"/>
+</svg>

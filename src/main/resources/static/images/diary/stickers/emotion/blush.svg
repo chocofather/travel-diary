@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="설레는 표정 스티커">
+  <circle cx="32" cy="34" r="24" fill="#f9dcc4" stroke="#b07d4e" stroke-width="2.4"/>
+  <g fill="#c96f68" stroke="#a8434e" stroke-width="1.6" stroke-linejoin="round">
+    <path d="M23 27c2-2.4 5-1.6 5 1.2 0 2.4-2.6 4.2-5 6-2.4-1.8-5-3.6-5-6 0-2.8 3-3.6 5-1.2z"/>
+    <path d="M41 27c2-2.4 5-1.6 5 1.2 0 2.4-2.6 4.2-5 6-2.4-1.8-5-3.6-5-6 0-2.8 3-3.6 5-1.2z"/>
+  </g>
+  <path d="M27 43c3 3.4 7 3.4 10 0" fill="none" stroke="#8a5a3c"
+        stroke-width="3" stroke-linecap="round"/>
+  <g fill="#f2a8b4">
+    <circle cx="17" cy="41" r="3.4"/>
+    <circle cx="47" cy="41" r="3.4"/>
+  </g>
+</svg>

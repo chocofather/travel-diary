@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 64" role="img" aria-label="아이스바 스티커">
+  <path d="M22 44v18" fill="none" stroke="#c9a061" stroke-width="6" stroke-linecap="round"/>
+  <path d="M6 16a16 16 0 0 1 32 0v24a8 8 0 0 1-8 7.4H14A8 8 0 0 1 6 40z"
+        fill="#f2a4b4" stroke="#b05a70" stroke-width="2.4" stroke-linejoin="round"/>
+  <path d="M6 30h32" fill="none" stroke="#b05a70" stroke-width="2.2"/>
+  <path d="M6 30h32v10H6z" fill="#fdf1cf" fill-opacity="0.55"/>
+  <path d="M13 16c0-5 3-8 6-9" fill="none" stroke="#f9d2da"
+        stroke-width="3" stroke-linecap="round"/>
+</svg>

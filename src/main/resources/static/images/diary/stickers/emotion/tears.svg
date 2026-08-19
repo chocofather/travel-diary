@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="눈물 스티커">
+  <circle cx="32" cy="32" r="24" fill="#dceaf6" stroke="#7ea3c4" stroke-width="2.4"/>
+  <g fill="none" stroke="#4f7396" stroke-width="3" stroke-linecap="round">
+    <path d="M20 26c3 3 6 3 9 0M35 26c3 3 6 3 9 0"/>
+    <path d="M26 44c3.6-4 8.4-4 12 0"/>
+  </g>
+  <path d="M22 33c2.6 4 4 5.8 4 8a4 4 0 0 1-8 0c0-2.2 1.4-4 4-8z"
+        fill="#a8c8e6" stroke="#4f7396" stroke-width="2" stroke-linejoin="round"/>
+</svg>

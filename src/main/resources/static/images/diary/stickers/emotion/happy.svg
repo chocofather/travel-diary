@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="행복한 얼굴 스티커">
+  <circle cx="32" cy="32" r="25" fill="#f7c98f" stroke="#a8752f" stroke-width="2.4"/>
+  <g fill="none" stroke="#7d5a25" stroke-width="3" stroke-linecap="round">
+    <path d="M19 29c2-3 5-3 7 0M38 29c2-3 5-3 7 0"/>
+    <path d="M22 38c4 7 16 7 20 0z" fill="#c96f68" stroke="#7d5a25" stroke-linejoin="round"/>
+  </g>
+  <g fill="#f0b6c4">
+    <circle cx="18" cy="38" r="3.4"/>
+    <circle cx="46" cy="38" r="3.4"/>
+  </g>
+</svg>

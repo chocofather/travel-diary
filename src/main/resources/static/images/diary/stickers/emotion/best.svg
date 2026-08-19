@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="최고 스티커">
+  <g stroke="#a8434e" stroke-width="2.4" stroke-linejoin="round">
+    <path d="M20 40l-8 20 10-4 6 6 6-18z" fill="#e0707a"/>
+    <path d="M44 40l8 20-10-4-6 6-6-18z" fill="#e0707a"/>
+  </g>
+  <circle cx="32" cy="26" r="19" fill="#f4d17a" stroke="#a8813a" stroke-width="2.4"/>
+  <path d="M32 14l3.6 7.4 8.2 1.2-6 5.8 1.4 8.2L32 32.8 24.8 36.6l1.4-8.2-6-5.8 8.2-1.2z"
+        fill="#fdf3d8" stroke="#a8813a" stroke-width="2" stroke-linejoin="round"/>
+</svg>

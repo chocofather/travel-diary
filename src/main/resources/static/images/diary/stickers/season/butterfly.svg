@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="나비 스티커">
+  <g stroke="#705e91" stroke-width="2.4" stroke-linejoin="round">
+    <path d="M31 32C22 16 12 10 7 15c-5 5-1 16 8 20-8 3-11 12-6 16 5 4 15-3 22-19z" fill="#c9b6e4"/>
+    <path d="M33 32c9-16 19-22 24-17 5 5 1 16-8 20 8 3 11 12 6 16-5 4-15-3-22-19z" fill="#d9c9ee"/>
+  </g>
+  <path d="M32 22v24" fill="none" stroke="#584878" stroke-width="3.4" stroke-linecap="round"/>
+  <path d="M32 22l-5-8M32 22l5-8" fill="none" stroke="#584878"
+        stroke-width="2.4" stroke-linecap="round"/>
+</svg>

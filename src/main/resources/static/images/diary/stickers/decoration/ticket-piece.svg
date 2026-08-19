@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 48" role="img" aria-label="티켓 조각 스티커">
+  <path d="M6 6h84v10a8 8 0 0 0 0 16v10H6V32a8 8 0 0 0 0-16z"
+        fill="#dff0ec" stroke="#4f8a80" stroke-width="2.4" stroke-linejoin="round"/>
+  <path d="M62 6v36" fill="none" stroke="#4f8a80"
+        stroke-width="2.2" stroke-dasharray="0.1 6" stroke-linecap="round"/>
+  <g stroke="#8dc3b9" stroke-width="2.6" stroke-linecap="round">
+    <path d="M16 19h34M16 29h24"/>
+  </g>
+  <circle cx="76" cy="24" r="6" fill="none" stroke="#8dc3b9" stroke-width="2.6"/>
+</svg>

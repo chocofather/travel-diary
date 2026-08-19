@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="압정 스티커">
+  <path d="M32 40v20" fill="none" stroke="#8d8579" stroke-width="3.2" stroke-linecap="round"/>
+  <ellipse cx="32" cy="26" rx="20" ry="14" fill="#e0707a"
+           stroke="#a8434e" stroke-width="2.4"/>
+  <ellipse cx="32" cy="26" rx="9" ry="6" fill="#f6b3b8" stroke="#a8434e" stroke-width="2"/>
+  <path d="M20 18c2-3 5-4.6 8-5" fill="none" stroke="#f9d3d6"
+        stroke-width="2.6" stroke-linecap="round"/>
+</svg>

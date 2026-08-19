@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 136 44" role="img" aria-label="소중한 순간 레터링 스티커">
+  <rect x="4" y="6" width="128" height="32" rx="6" fill="#f9dcc4"
+        stroke="#b07d4e" stroke-width="2.4"/>
+  <rect x="9" y="11" width="118" height="22" rx="4" fill="none"
+        stroke="#d5ab84" stroke-width="1.8"/>
+  <text x="68" y="28" text-anchor="middle" textLength="102" lengthAdjust="spacingAndGlyphs"
+        font-family="'Apple SD Gothic Neo','Malgun Gothic','맑은 고딕','Noto Sans KR',sans-serif"
+        font-size="17" font-weight="700" fill="#8a5a30">소중한 순간</text>
+</svg>

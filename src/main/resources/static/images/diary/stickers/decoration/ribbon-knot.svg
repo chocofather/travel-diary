@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 48" role="img" aria-label="리본 매듭 스티커">
+  <g stroke="#8a6a45" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M28 20C22 6 8 6 6 14c-2 8 12 10 22 6z" fill="#f4d17a"/>
+    <path d="M36 20C42 6 56 6 58 14c2 8-12 10-22 6z" fill="#f4d17a"/>
+    <path d="M28 22l-8 22 12-18z" fill="#eac975"/>
+    <path d="M36 22l8 22-12-18z" fill="#eac975"/>
+    <ellipse cx="32" cy="21" rx="5.5" ry="4.5" fill="#fdf1cf"/>
+  </g>
+</svg>

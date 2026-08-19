@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 34" role="img" aria-label="줄무늬 테이프 스티커">
+  <path d="M2 9l116-5v25L2 28z" fill="#fdf1e2" fill-opacity="0.95"
+        stroke="#d59f7e" stroke-width="1.6" stroke-linejoin="round"/>
+  <g stroke="#eaa87f" stroke-width="4">
+    <path d="M12 30l8-25M32 30l8-25M52 30l8-25M72 30l8-25M92 30l8-25M112 30l6-19"/>
+  </g>
+  <path d="M2 9l116-5v25L2 28z" fill="none" stroke="#d59f7e"
+        stroke-width="1.6" stroke-linejoin="round"/>
+</svg>

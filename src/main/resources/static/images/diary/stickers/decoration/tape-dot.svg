@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 34" role="img" aria-label="점무늬 테이프 스티커">
+  <path d="M3 5l114 4v22L3 27z" fill="#dfeedd" fill-opacity="0.92"
+        stroke="#8dae8a" stroke-width="1.6" stroke-linejoin="round"/>
+  <g fill="#8dae8a">
+    <circle cx="14" cy="13" r="2.4"/><circle cx="32" cy="15" r="2.4"/>
+    <circle cx="50" cy="17" r="2.4"/><circle cx="68" cy="19" r="2.4"/>
+    <circle cx="86" cy="20" r="2.4"/><circle cx="104" cy="22" r="2.4"/>
+    <circle cx="23" cy="22" r="2"/><circle cx="41" cy="24" r="2"/>
+    <circle cx="59" cy="25" r="2"/><circle cx="77" cy="27" r="2"/>
+    <circle cx="95" cy="28" r="2"/>
+  </g>
+</svg>

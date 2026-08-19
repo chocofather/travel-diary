@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="엄지척 스티커">
+  <g stroke="#b07d4e" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M22 28c4-2 7-6 8-11 1-5 3-9 6-9 4 0 6 4 5 9l-1.6 8H50a5 5 0 0 1 4.8 6.4l-4.6 16A7 7 0 0 1 43.6 52H22z"
+          fill="#f9dcc4"/>
+    <rect x="8" y="28" width="14" height="26" rx="4" fill="#f2c9a4"/>
+  </g>
+  <g fill="none" stroke="#f4d17a" stroke-width="2.6" stroke-linecap="round">
+    <path d="M46 8l4-4M54 16l5-2M50 11l5-4"/>
+  </g>
+</svg>

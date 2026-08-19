@@ -734,6 +734,10 @@ class DiaryControllerTest {
         assertThat(body).doesNotContain("diary-page-add");
         assertThat(body).contains("diary-resize-handle");
         assertThat(body).contains("/diaries/10/pages/1/content");
+        // 사진 삭제는 폼 전송(=화면 새로고침)이 아니라 비동기 요청으로 처리한다
+        assertThat(body).contains("data-delete-confirm=\"이 사진을 삭제하시겠습니까?\"");
+        assertThat(body).contains("/diaries/10/pages/1/elements/100/photo/delete");
+        assertThat(body).doesNotContain("diary-photo-delete");
         // 편집 완료는 edit 이 빠진 읽기 모드 주소로 간다
         assertThat(body).contains("data-editor-done=\"true\"");
         // 책 자체 관리(설정/삭제)는 읽기 모드 몫이라 편집 모드에는 없다
@@ -1321,13 +1325,12 @@ class DiaryControllerTest {
         when(diaryElementService.getElement(10L, 3L, 200L, 7L))
                 .thenReturn(stickerElement(200L, "/images/diary/stickers/travel/airplane.svg"));
 
+        // 꾸미던 화면을 새로 고치지 않도록 리다이렉트 없이 204 로 끝낸다
         mockMvc.perform(post("/diaries/10/pages/3/elements/200/sticker/delete")
-                        .param("spread", "1")
-                        .param("page", "2")
                         .with(csrf())
                         .with(authentication(new UsernamePasswordAuthenticationToken(
                                 userDetails, null, List.of()))))
-                .andExpect(status().is3xxRedirection());
+                .andExpect(status().isNoContent());
 
         verify(diaryElementService).delete(10L, 3L, 200L, 7L);
         // 공용 asset 이므로 업로드 파일 정리 경로를 타지 않는다
@@ -1338,12 +1341,28 @@ class DiaryControllerTest {
                 .thenReturn(photoElement(201L, "/uploads/diary-pages/trip.jpg"));
 
         mockMvc.perform(post("/diaries/10/pages/3/elements/201/sticker/delete")
-                        .param("spread", "0")
                         .with(csrf())
                         .with(authentication(new UsernamePasswordAuthenticationToken(
                                 userDetails, null, List.of()))))
-                .andExpect(flash().attribute("diaryPageError", "스티커 요소가 아닙니다."));
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(containsString("스티커 요소가 아닙니다.")));
         verify(diaryElementService, org.mockito.Mockito.never()).delete(10L, 3L, 201L, 7L);
+    }
+
+    /** 남의 요소는 예전처럼 정보를 드러내지 않는 404 로 끝난다. */
+    @Test
+    void deletingAnotherUsersElementIsStillNotFound() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryElementService.getElement(10L, 3L, 999L, 7L)).thenThrow(
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "요소를 찾을 수 없습니다."));
+
+        mockMvc.perform(post("/diaries/10/pages/3/elements/999/sticker/delete")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isNotFound());
+
+        verify(diaryElementService, org.mockito.Mockito.never()).delete(any(), any(), any(), any());
     }
 
     @Test
@@ -1375,6 +1394,9 @@ class DiaryControllerTest {
         assertThat(actions).contains("data-layer-direction=\"BACKWARD\"")
                 .contains("data-layer-direction=\"FORWARD\"")
                 .contains("sticker/delete");
+        // 떼기는 폼 전송(=화면 새로고침)이 아니라 비동기 요청으로 처리한다
+        assertThat(actions).contains("data-delete-url").contains("data-delete-confirm");
+        assertThat(actions).doesNotContain("<form").doesNotContain("type=\"submit\"");
 
         String readBody = mockMvc.perform(get("/diaries/10")
                         .with(authentication(new UsernamePasswordAuthenticationToken(
@@ -1396,12 +1418,12 @@ class DiaryControllerTest {
         when(diaryElementService.getElement(10L, 3L, 101L, 7L))
                 .thenReturn(photoElement(101L, "/uploads/diary-pages/old.jpg"));
 
+        // 사진도 화면 이동 없이 204 로 끝난다 (업로드 파일 정리는 서버가 그대로 한다)
         mockMvc.perform(post("/diaries/10/pages/3/elements/101/photo/delete")
-                        .param("spread", "1")
                         .with(csrf())
                         .with(authentication(new UsernamePasswordAuthenticationToken(
                                 userDetails, null, List.of()))))
-                .andExpect(redirectedUrl("/diaries/10?spread=1&edit=true"));
+                .andExpect(status().isNoContent());
 
         verify(diaryElementService).delete(10L, 3L, 101L, 7L);
 
@@ -1410,11 +1432,11 @@ class DiaryControllerTest {
                 .thenReturn(textElement(100L, "기록"));
 
         mockMvc.perform(post("/diaries/10/pages/3/elements/100/photo/delete")
-                        .param("spread", "0")
                         .with(csrf())
                         .with(authentication(new UsernamePasswordAuthenticationToken(
                                 userDetails, null, List.of()))))
-                .andExpect(flash().attribute("diaryPageError", "사진 요소가 아닙니다."));
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(containsString("사진 요소가 아닙니다.")));
         verify(diaryElementService, org.mockito.Mockito.never()).delete(10L, 3L, 100L, 7L);
     }
 

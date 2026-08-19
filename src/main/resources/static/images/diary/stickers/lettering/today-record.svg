@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 44" role="img" aria-label="오늘의 기록 레터링 스티커">
+  <rect x="4" y="5" width="122" height="34" rx="5" fill="#fdf8ee"
+        stroke="#c7b79c" stroke-width="2.2" stroke-dasharray="6 4"/>
+  <text x="65" y="28" text-anchor="middle" textLength="98" lengthAdjust="spacingAndGlyphs"
+        font-family="'Apple SD Gothic Neo','Malgun Gothic','맑은 고딕','Noto Sans KR',sans-serif"
+        font-size="18" font-weight="700" fill="#6f5a3c">오늘의 기록</text>
+</svg>

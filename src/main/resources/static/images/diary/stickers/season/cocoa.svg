@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="코코아 스티커">
+  <g stroke="#7d4e30" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M12 26h32v18a12 12 0 0 1-24 0z" fill="#fdf8ee" transform="translate(0 2)"/>
+    <path d="M12 26h32v20a12 12 0 0 1-32 0z" fill="#fdf8ee"/>
+    <path d="M44 30h5a7 7 0 0 1 0 14h-5" fill="none"/>
+    <path d="M15 30h26v6H15z" fill="#8a5a30"/>
+  </g>
+  <g fill="#fdf8ee" stroke="#c7b79c" stroke-width="1.6">
+    <circle cx="22" cy="32" r="3"/><circle cx="31" cy="30" r="3.4"/>
+    <circle cx="39" cy="32" r="2.8"/>
+  </g>
+  <path d="M22 18c0-4 4-4 4-8M32 18c0-4 4-4 4-8" fill="none"
+        stroke="#c7b79c" stroke-width="2.4" stroke-linecap="round"/>
+  <path d="M8 58h44" fill="none" stroke="#8a6a45" stroke-width="2.6" stroke-linecap="round"/>
+</svg>

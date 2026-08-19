@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 24" role="img" aria-label="점선 스티커">
+  <g fill="#a9a396">
+    <circle cx="8" cy="12" r="3"/><circle cx="24" cy="12" r="3"/>
+    <circle cx="40" cy="12" r="3"/><circle cx="56" cy="12" r="3"/>
+    <circle cx="72" cy="12" r="3"/><circle cx="88" cy="12" r="3"/>
+    <circle cx="104" cy="12" r="3"/>
+  </g>
+  <circle cx="112" cy="12" r="4.4" fill="#e0707a"/>
+</svg>

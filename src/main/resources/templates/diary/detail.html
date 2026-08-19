@@ -219,11 +219,7 @@
         <button type="button" class="diary-toolbar-button" id="diary-sticker-button"
                 aria-haspopup="dialog" aria-expanded="false" aria-controls="diary-sticker-popover"
                 th:attr="data-create-url=@{/diaries/{diaryId}/pages/{pageId}/elements/sticker
-                                          (diaryId=${diary.id},pageId=${editPage.id})},
-                         data-delete-url-base=@{/diaries/{diaryId}/pages/{pageId}/elements
-                                                (diaryId=${diary.id},pageId=${editPage.id})},
-                         data-spread=${currentSpread},
-                         data-page=${editPage.pageOrder}"
+                                          (diaryId=${diary.id},pageId=${editPage.id})}"
                 title="스티커" aria-label="스티커 붙이기">✦</button>
         <div class="diary-sticker-popover" id="diary-sticker-popover" role="dialog"
              aria-label="스티커 고르기" hidden>
@@ -529,15 +525,11 @@
                     data-layer-direction="BACKWARD">뒤로</button>
             <button type="button" class="diary-layer-action"
                     data-layer-direction="FORWARD">앞으로</button>
-            <form class="diary-photo-delete"
-                  th:action="@{/diaries/{diaryId}/pages/{pageId}/elements/{elementId}/photo/delete
-                              (diaryId=${diary.id},pageId=${page.id},elementId=${element.id})}"
-                  method="post"
-                  onsubmit="return confirm('이 사진을 삭제하시겠습니까?');">
-              <input type="hidden" name="spread" th:value="${currentSpread}" />
-              <input type="hidden" name="page" th:value="${page.pageOrder}" />
-              <button type="submit" class="diary-layer-action is-danger">삭제</button>
-            </form>
+            <!-- 삭제는 화면을 새로 고치지 않고 이 요소만 지운다 (diary-canvas-drag.js) -->
+            <button type="button" class="diary-layer-action is-danger"
+                    data-delete-confirm="이 사진을 삭제하시겠습니까?"
+                    th:data-delete-url="@{/diaries/{diaryId}/pages/{pageId}/elements/{elementId}/photo/delete
+                                          (diaryId=${diary.id},pageId=${page.id},elementId=${element.id})}">삭제</button>
           </div>
         </th:block>
       </figure>
@@ -579,15 +571,11 @@
                     data-layer-direction="BACKWARD">뒤로</button>
             <button type="button" class="diary-layer-action"
                     data-layer-direction="FORWARD">앞으로</button>
-            <form class="diary-sticker-delete"
-                  th:action="@{/diaries/{diaryId}/pages/{pageId}/elements/{elementId}/sticker/delete
-                              (diaryId=${diary.id},pageId=${page.id},elementId=${element.id})}"
-                  method="post"
-                  onsubmit="return confirm('이 스티커를 떼시겠습니까?');">
-              <input type="hidden" name="spread" th:value="${currentSpread}" />
-              <input type="hidden" name="page" th:value="${page.pageOrder}" />
-              <button type="submit" class="diary-layer-action is-danger">떼기</button>
-            </form>
+            <!-- 떼기도 화면을 새로 고치지 않고 이 요소만 지운다 (diary-canvas-drag.js) -->
+            <button type="button" class="diary-layer-action is-danger"
+                    data-delete-confirm="이 스티커를 떼시겠습니까?"
+                    th:data-delete-url="@{/diaries/{diaryId}/pages/{pageId}/elements/{elementId}/sticker/delete
+                                          (diaryId=${diary.id},pageId=${page.id},elementId=${element.id})}">떼기</button>
           </div>
         </th:block>
       </figure>

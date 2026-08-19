@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="폴라로이드 코너 스티커">
+  <path d="M4 4h34L4 38z" fill="#e6ddcc" stroke="#b7a68a"
+        stroke-width="2.4" stroke-linejoin="round"/>
+  <path d="M4 12h18L4 30z" fill="#fdf8ee" stroke="#b7a68a"
+        stroke-width="2" stroke-linejoin="round"/>
+  <path d="M60 60H26L60 26z" fill="#e6ddcc" stroke="#b7a68a"
+        stroke-width="2.4" stroke-linejoin="round"/>
+  <path d="M60 52H42L60 34z" fill="#fdf8ee" stroke="#b7a68a"
+        stroke-width="2" stroke-linejoin="round"/>
+</svg>

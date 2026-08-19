@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="놀람 스티커">
+  <circle cx="32" cy="34" r="24" fill="#f4e0a8" stroke="#a8813a" stroke-width="2.4"/>
+  <g fill="#7d5a25">
+    <circle cx="23" cy="30" r="3.4"/>
+    <circle cx="41" cy="30" r="3.4"/>
+  </g>
+  <ellipse cx="32" cy="43" rx="5.5" ry="7" fill="#c96f68"
+           stroke="#7d5a25" stroke-width="2.4"/>
+  <g fill="none" stroke="#a8813a" stroke-width="2.6" stroke-linecap="round">
+    <path d="M12 12l4 5M52 12l-4 5M32 6v6"/>
+  </g>
+</svg>

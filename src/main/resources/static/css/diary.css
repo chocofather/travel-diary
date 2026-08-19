@@ -2424,11 +2424,6 @@
     white-space: nowrap;
 }
 
-.diary-layer-actions form {
-    display: flex;
-    margin: 0;
-}
-
 .diary-canvas-item.is-selected .diary-layer-actions,
 .diary-canvas-item:focus-within .diary-layer-actions {
     display: flex;

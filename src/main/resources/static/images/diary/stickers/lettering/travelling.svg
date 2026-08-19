@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 44" role="img" aria-label="여행 중 레터링 스티커">
+  <path d="M4 10 14 4h96a6 6 0 0 1 6 6v24a6 6 0 0 1-6 6H14L4 34z"
+        fill="#f7e6a0" stroke="#c9a94f" stroke-width="2.4" stroke-linejoin="round"/>
+  <text x="64" y="28" text-anchor="middle" textLength="80" lengthAdjust="spacingAndGlyphs"
+        font-family="'Apple SD Gothic Neo','Malgun Gothic','맑은 고딕','Noto Sans KR',sans-serif"
+        font-size="18" font-weight="700" fill="#8a6a2f">여행 중</text>
+</svg>

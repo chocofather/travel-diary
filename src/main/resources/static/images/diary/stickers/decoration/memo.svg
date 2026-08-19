@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 72" role="img" aria-label="메모지 스티커">
+  <path d="M8 6h48v52l-8 8H8z" fill="#fdf8ee" stroke="#c7b79c"
+        stroke-width="2.4" stroke-linejoin="round"/>
+  <path d="M56 58h-8v8z" fill="#e6ddcc" stroke="#c7b79c"
+        stroke-width="2.4" stroke-linejoin="round"/>
+  <g stroke="#dfd4c0" stroke-width="2.4" stroke-linecap="round">
+    <path d="M16 20h32M16 30h32M16 40h24M16 50h18"/>
+  </g>
+</svg>

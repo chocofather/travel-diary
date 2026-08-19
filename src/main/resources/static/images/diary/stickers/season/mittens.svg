@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 56" role="img" aria-label="장갑 스티커">
+  <g stroke="#a8434e" stroke-width="2.4" stroke-linejoin="round">
+    <path d="M8 20c0-8 5-12 11-12s11 4 11 12v22H8z" fill="#e0707a"/>
+    <path d="M8 8h22v8H8z" fill="#fdeef1"/>
+    <path d="M8 24c-4 0-6 3-6 6s2 6 6 6" fill="#e0707a"/>
+    <path d="M34 22c0-8 5-12 11-12s11 4 11 12v22H34z" fill="#e0707a"/>
+    <path d="M34 10h22v8H34z" fill="#fdeef1"/>
+    <path d="M56 26c4 0 6 3 6 6s-2 6-6 6" fill="#e0707a"/>
+  </g>
+  <g fill="none" stroke="#f9d2da" stroke-width="2.4" stroke-linecap="round">
+    <path d="M14 26h10M40 28h10"/>
+  </g>
+</svg>

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 34" role="img" aria-label="체크무늬 테이프 스티커">
+  <path d="M3 6l114-3v28L3 31z" fill="#dceaf6" fill-opacity="0.92"
+        stroke="#8fb4d1" stroke-width="1.6" stroke-linejoin="round"/>
+  <g stroke="#a8c8e6" stroke-width="3.4">
+    <path d="M12 4v28M28 4v28M44 3v28M60 3v28M76 3v28M92 3v28M108 3v28"/>
+  </g>
+  <g stroke="#a8c8e6" stroke-width="3.4">
+    <path d="M3 12h114M3 22h114"/>
+  </g>
+  <path d="M3 6l114-3v28L3 31z" fill="none" stroke="#8fb4d1"
+        stroke-width="1.6" stroke-linejoin="round"/>
+</svg>

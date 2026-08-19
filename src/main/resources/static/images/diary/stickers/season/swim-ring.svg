@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="튜브 스티커">
+  <circle cx="32" cy="32" r="25" fill="#fdf8ee" stroke="#c96f68" stroke-width="2.4"/>
+  <g fill="#e79a8f" stroke="#a85f52" stroke-width="2.2" stroke-linejoin="round">
+    <path d="M32 7a25 25 0 0 1 17.7 7.3l-9.9 9.9A11 11 0 0 0 32 21z"/>
+    <path d="M32 57a25 25 0 0 1-17.7-7.3l9.9-9.9A11 11 0 0 0 32 43z"/>
+    <path d="M57 32a25 25 0 0 1-7.3 17.7l-9.9-9.9A11 11 0 0 0 43 32z"/>
+    <path d="M7 32a25 25 0 0 1 7.3-17.7l9.9 9.9A11 11 0 0 0 21 32z"/>
+  </g>
+  <circle cx="32" cy="32" r="11" fill="none" stroke="#c96f68" stroke-width="2.4"/>
+</svg>

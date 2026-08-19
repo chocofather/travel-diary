@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 34" role="img" aria-label="마스킹테이프 스티커">
+  <path d="M4 8l112-4v26L4 30z" fill="#f2d68a" fill-opacity="0.9"
+        stroke="#cfa94f" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M4 12l112-4M4 22l112-4" fill="none" stroke="#e5c274" stroke-width="1.4"/>
+</svg>

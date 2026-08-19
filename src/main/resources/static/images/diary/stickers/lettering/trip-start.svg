@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 44" role="img" aria-label="여행 시작 레터링 스티커">
+  <rect x="4" y="6" width="112" height="32" rx="16" fill="#dff0ec"
+        stroke="#4f8a80" stroke-width="2.4"/>
+  <text x="60" y="28" text-anchor="middle" textLength="86" lengthAdjust="spacingAndGlyphs"
+        font-family="'Apple SD Gothic Neo','Malgun Gothic','맑은 고딕','Noto Sans KR',sans-serif"
+        font-size="18" font-weight="700" fill="#3f6f66">여행 시작</text>
+</svg>

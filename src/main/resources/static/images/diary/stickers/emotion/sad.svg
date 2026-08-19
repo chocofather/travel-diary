@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="속상함 스티커">
+  <circle cx="32" cy="34" r="24" fill="#cfd6e6" stroke="#6d7893" stroke-width="2.4"/>
+  <g fill="none" stroke="#4a5470" stroke-width="3" stroke-linecap="round">
+    <path d="M22 30v3M42 30v3"/>
+    <path d="M25 45c4-4 10-4 14 0"/>
+    <path d="M17 22c3-2 6-2 8 0M39 22c3-2 6-2 8 0"/>
+  </g>
+  <g fill="none" stroke="#8fa0bd" stroke-width="2.4" stroke-linecap="round">
+    <path d="M14 8c-2 3-2 5 0 8M24 6c-2 3-2 5 0 8"/>
+  </g>
+</svg>

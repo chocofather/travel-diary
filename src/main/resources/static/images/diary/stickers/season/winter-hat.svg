@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="겨울 모자 스티커">
+  <circle cx="32" cy="10" r="7" fill="#f4fafd" stroke="#7ea3c4" stroke-width="2.4"/>
+  <path d="M14 42c0-15 8-26 18-26s18 11 18 26z" fill="#7ea3c4"
+        stroke="#4f7396" stroke-width="2.4" stroke-linejoin="round"/>
+  <path d="M8 42h48v10a5 5 0 0 1-5 4.4H13A5 5 0 0 1 8 52z" fill="#f4fafd"
+        stroke="#4f7396" stroke-width="2.4" stroke-linejoin="round"/>
+  <g fill="none" stroke="#a8c8e6" stroke-width="2.6" stroke-linecap="round">
+    <path d="M24 24v14M32 20v18M40 24v14"/>
+  </g>
+</svg>

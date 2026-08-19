@@ -421,15 +421,16 @@ public class DiaryController {
         return redirectToEditPage(diaryId, spread, page);
     }
 
-    /** 사진 요소 삭제. DB 행을 먼저 지우고 실제 파일을 정리한다. */
+    /**
+     * 사진 요소 삭제. DB 행을 먼저 지우고 실제 업로드 파일을 정리한다.
+     * 꾸미던 자리를 잃지 않도록 화면 이동 없이 값만 돌려준다. (지운 요소는 화면에서 JS 가 뺀다)
+     */
     @PostMapping("/{diaryId:\\d+}/pages/{pageId:\\d+}/elements/{elementId:\\d+}/photo/delete")
-    public String deletePhotoElement(@PathVariable Long diaryId,
-                                     @PathVariable Long pageId,
-                                     @PathVariable Long elementId,
-                                     @RequestParam(defaultValue = "0") int spread,
-                                     @RequestParam(required = false) Integer page,
-                                     @AuthenticationPrincipal CustomUserDetails userDetails,
-                                     RedirectAttributes redirectAttributes) {
+    @ResponseBody
+    public ResponseEntity<?> deletePhotoElement(@PathVariable Long diaryId,
+                                                @PathVariable Long pageId,
+                                                @PathVariable Long elementId,
+                                                @AuthenticationPrincipal CustomUserDetails userDetails) {
         Long userId = userDetails.getId();
         String imageUrl;
         try {
@@ -441,12 +442,12 @@ public class DiaryController {
             imageUrl = existing.getImageUrl();
             diaryElementService.delete(diaryId, pageId, elementId, userId);
         } catch (ResponseStatusException exception) {
-            return redirectWithElementError(exception, diaryId, spread, page, redirectAttributes);
+            return elementErrorResponse(exception, "사진을 삭제하지 못했습니다.");
         }
 
         // DB 삭제가 끝난 뒤 실제 파일을 정리한다. (정리 실패는 요청을 깨뜨리지 않는다)
         deleteStoredFile(imageUrl);
-        return redirectToEditPage(diaryId, spread, page);
+        return ResponseEntity.noContent().build();
     }
 
     /**
@@ -496,15 +497,14 @@ public class DiaryController {
     /**
      * 스티커 요소 삭제.
      * 공용 asset 이므로 DB 행만 지우고 실제 SVG 파일은 건드리지 않는다. (사진 삭제와 다른 점)
+     * 사진과 마찬가지로 화면 이동 없이 값만 돌려준다.
      */
     @PostMapping("/{diaryId:\\d+}/pages/{pageId:\\d+}/elements/{elementId:\\d+}/sticker/delete")
-    public String deleteStickerElement(@PathVariable Long diaryId,
-                                       @PathVariable Long pageId,
-                                       @PathVariable Long elementId,
-                                       @RequestParam(defaultValue = "0") int spread,
-                                       @RequestParam(required = false) Integer page,
-                                       @AuthenticationPrincipal CustomUserDetails userDetails,
-                                       RedirectAttributes redirectAttributes) {
+    @ResponseBody
+    public ResponseEntity<?> deleteStickerElement(@PathVariable Long diaryId,
+                                                  @PathVariable Long pageId,
+                                                  @PathVariable Long elementId,
+                                                  @AuthenticationPrincipal CustomUserDetails userDetails) {
         Long userId = userDetails.getId();
         try {
             // 소유권·페이지·요소 소속은 서비스가 확인한다.
@@ -514,9 +514,24 @@ public class DiaryController {
             }
             diaryElementService.delete(diaryId, pageId, elementId, userId);
         } catch (ResponseStatusException exception) {
-            return redirectWithElementError(exception, diaryId, spread, page, redirectAttributes);
+            return elementErrorResponse(exception, "스티커를 떼지 못했습니다.");
         }
-        return redirectToEditPage(diaryId, spread, page);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * 요소 조작 요청의 오류 응답.
+     * 없는 요소/남의 요소는 그대로 다시 던져 기존 404 정책(정보를 드러내지 않음)을 지킨다.
+     */
+    private ResponseEntity<?> elementErrorResponse(ResponseStatusException exception,
+                                                   String defaultMessage) {
+        if (exception.getStatusCode().is4xxClientError()
+                && !HttpStatus.NOT_FOUND.equals(exception.getStatusCode())) {
+            return ResponseEntity.status(exception.getStatusCode())
+                    .body(Map.of("message", exception.getReason() == null
+                            ? defaultMessage : exception.getReason()));
+        }
+        throw exception;
     }
 
     /** 새로 붙인 스티커를 화면이 바로 그릴 수 있도록 좌표/크기와 저장 주소를 함께 돌려준다. */

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="크리스마스트리 스티커">
+  <path d="M27 52h10v8H27z" fill="#8a5a30" stroke="#5f3a1e"
+        stroke-width="2.2" stroke-linejoin="round"/>
+  <g fill="#7fa383" stroke="#3f5c45" stroke-width="2.4" stroke-linejoin="round">
+    <path d="M32 6 46 26H18z"/>
+    <path d="M32 18 50 40H14z"/>
+    <path d="M32 30 54 54H10z"/>
+  </g>
+  <g fill="#e0707a" stroke="#a8434e" stroke-width="1.6">
+    <circle cx="26" cy="34" r="2.6"/><circle cx="39" cy="36" r="2.6"/>
+    <circle cx="22" cy="47" r="2.6"/><circle cx="42" cy="48" r="2.6"/>
+    <circle cx="32" cy="44" r="2.4"/>
+  </g>
+  <path d="M32 2l2.4 5 5.4.8-3.9 3.8.9 5.4L32 14.4 27.2 17l.9-5.4-3.9-3.8 5.4-.8z"
+        fill="#f4d17a" stroke="#a8813a" stroke-width="1.8" stroke-linejoin="round"/>
+</svg>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="분홍 하트 스티커">
+  <path d="M32 54C18 44.4 8 36 8 25.4 8 17.9 13.9 12 21.3 12c4.4 0 8.4 2.2 10.7 5.6C34.3 14.2 38.3 12 42.7 12 50.1 12 56 17.9 56 25.4 56 36 46 44.4 32 54z"
+        fill="#f6cfd9" stroke="#b06a7c" stroke-width="2.4" stroke-linejoin="round"/>
+  <path d="M19 24c0-3.4 2.6-6 6-6" fill="none" stroke="#fdeef1"
+        stroke-width="3" stroke-linecap="round"/>
+</svg>
