@@ -2,6 +2,7 @@ package com.example.travlediary.service.diary;
 
 import com.example.travlediary.dto.DiaryListItemDto;
 import com.example.travlediary.model.Diary;
+import com.example.travlediary.model.DiaryCoverStyle;
 import com.example.travlediary.repository.diary.DiaryMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -21,7 +22,7 @@ public class DiaryServiceImpl implements DiaryService {
     private static final int MIN_YEAR = 1000;
     private static final int MAX_YEAR = 9999;
     /** 표지 스타일 기본값 (DB 기본값과 같은 값) */
-    private static final String DEFAULT_COVER_STYLE = "DEFAULT";
+    private static final String DEFAULT_COVER_STYLE = DiaryCoverStyle.DEFAULT.getCode();
 
     private final DiaryMapper diaryMapper;
 
@@ -136,14 +137,20 @@ public class DiaryServiceImpl implements DiaryService {
         }
 
         String coverImageUrl = diary.getCoverImageUrl() == null ? null : diary.getCoverImageUrl().strip();
+        // 고르지 않았으면 기본 표지로 두고, 값이 왔다면 아는 표지 스타일만 통과시킨다.
         String coverStyle = diary.getCoverStyle() == null ? "" : diary.getCoverStyle().strip();
+        if (coverStyle.isEmpty()) {
+            coverStyle = DEFAULT_COVER_STYLE;
+        } else if (!DiaryCoverStyle.isSupported(coverStyle)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "표지 스타일을 다시 선택해 주세요.");
+        }
 
         Diary prepared = new Diary();
         prepared.setTitle(title);
         prepared.setStartDate(startDate);
         prepared.setEndDate(endDate);
         prepared.setCoverImageUrl(coverImageUrl == null || coverImageUrl.isEmpty() ? null : coverImageUrl);
-        prepared.setCoverStyle(coverStyle.isEmpty() ? DEFAULT_COVER_STYLE : coverStyle);
+        prepared.setCoverStyle(coverStyle);
         return prepared;
     }
 }

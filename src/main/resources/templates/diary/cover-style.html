@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- 표지 스타일 고르기. 새 여행일기/수정 화면이 같은 조각을 쓴다.
+     견본은 목록 표지와 같은 diary-cover-* 클래스에서 색/재질을 그대로 물려받는다. -->
+<div th:fragment="picker(styles, selected)" class="diary-form-field">
+  <span class="diary-form-label">표지 스타일</span>
+  <div class="diary-cover-style-picker" role="radiogroup" aria-label="표지 스타일">
+    <label th:each="style, stat : ${styles}"
+           class="diary-cover-option" th:classappend="${style.cssClass}">
+      <input type="radio" name="coverStyle" class="diary-cover-option-input"
+             th:value="${style.code}"
+             th:checked="${selected != null and !#strings.isEmpty(selected)}
+                         ? ${selected == style.code} : ${stat.first}" />
+      <span class="diary-cover-option-swatch" aria-hidden="true"></span>
+      <span class="diary-cover-option-name" th:text="${style.label}">기본 아이보리</span>
+    </label>
+  </div>
+  <span class="diary-form-hint">고른 표지는 나의 여행일기 목록의 책 표지에 그대로 쓰입니다.</span>
+</div>
+
+</body>
+</html>

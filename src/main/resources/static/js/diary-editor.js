@@ -33,8 +33,20 @@ document.addEventListener('DOMContentLoaded', () => {
         {value: 'park-dahyun', label: '온글잎 박다현체'}
     ];
     const FONT_VALUES = FONTS.map(font => font.value).filter(Boolean);
+    /**
+     * 형광펜 색상. 문구용 파스텔 형광펜 정도의 밝기만 쓴다.
+     * (서버 허용 목록은 DiaryContentSanitizer.DIARY_HIGHLIGHT_COLORS 와 같은 값이다)
+     */
+    const HIGHLIGHTS = [
+        {value: '#fff5a5', name: '노랑'},
+        {value: '#ffd6e4', name: '핑크'},
+        {value: '#c9f2e3', name: '민트'},
+        {value: '#cfe6fb', name: '하늘'},
+        {value: '#e2d9f7', name: '연보라'},
+        {value: '#ffdec2', name: '살구'}
+    ];
     /** 일기 본문에 필요한 서식만 허용한다. (붙여넣기도 이 범위로 걸러진다) */
-    const FORMATS = ['bold', 'italic', 'underline', 'font', 'size', 'color', 'align'];
+    const FORMATS = ['bold', 'italic', 'underline', 'font', 'size', 'color', 'background', 'align'];
     /** 이모지 목록은 diary-emoji-data.js 가 제공한다. */
     const EMOJI_CATEGORIES = window.DIARY_EMOJI_CATEGORIES || [];
     /** 최근 사용 이모지는 이 브라우저에만 남긴다. (서버 저장 없음) */
@@ -48,15 +60,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const pages = editorElements.map(createPage);
     let activePage = null;
-    // 툴바 동기화(setupToolbar)가 글꼴 드롭다운 초기화보다 먼저 읽으므로 여기서 선언해 둔다.
+    // 툴바 동기화(setupToolbar)가 글꼴/형광펜 초기화보다 먼저 읽으므로 여기서 선언해 둔다.
     let fontTrigger = null;
+    let highlightTrigger = null;
+    let highlightSwatch = null;
 
-    /** 툴바 팝오버(글꼴/이모지)는 한 번에 하나만 열어 둔다. */
+    /** 툴바 팝오버(글꼴/형광펜/이모지)는 한 번에 하나만 열어 둔다. */
     const popovers = [];
 
     setActivePage(pages[0]);
     setupToolbar();
     setupFontPicker();
+    setupHighlightPicker();
     setupEmoji();
     setupSaveBeforeLeaving();
     setupEditDone();
@@ -300,6 +315,7 @@ document.addEventListener('DOMContentLoaded', () => {
             select.value = typeof value === 'string' ? value : '';
         });
         syncFontTrigger(formats);
+        syncHighlightTrigger(formats);
     }
 
     /* ===== 글꼴 드롭다운 (이름을 실제 글꼴로 보여준다) ===== */
@@ -375,6 +391,123 @@ document.addEventListener('DOMContentLoaded', () => {
             option.setAttribute('aria-selected', selected ? 'true' : 'false');
             option.classList.toggle('is-selected', selected);
         });
+    }
+
+    /* ===== 형광펜 (색 팔레트) ===== */
+
+    /**
+     * 형광펜은 Quill 의 background 서식을 그대로 쓴다.
+     * 팔레트에서 색을 고르면 글꼴과 같은 방식(applyFormat)으로 바로 적용되므로,
+     * 고른 뒤 종이를 다시 클릭하지 않아도 선택 영역/커서에 그대로 칠해진다.
+     */
+    function setupHighlightPicker() {
+        const trigger = document.getElementById('diary-highlight-trigger');
+        const palette = document.getElementById('diary-highlight-palette');
+        if (!trigger || !palette) return;
+
+        highlightTrigger = trigger;
+        highlightSwatch = document.getElementById('diary-highlight-current');
+
+        HIGHLIGHTS.forEach(highlight => palette.append(
+            createOption(highlight.value, highlight.name, `${highlight.name} 형광펜`)));
+        // 이미 칠해 둔 곳의 형광펜을 지우는 항목
+        palette.append(createOption('', '형광펜 없음', '형광펜 지우기'));
+
+        const toggle = registerPopover(trigger, palette, () => trigger.focus());
+        trigger.addEventListener('mousedown', event => event.preventDefault());
+        trigger.addEventListener('click', () => toggle(palette.hidden));
+
+        // 방향키로 색을 훑을 수 있게 한다. (글꼴 목록과 같은 조작)
+        palette.addEventListener('keydown', (event) => {
+            if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+            event.preventDefault();
+            const options = Array.from(palette.querySelectorAll('.diary-highlight-option'));
+            const current = options.indexOf(document.activeElement);
+            const step = event.key === 'ArrowDown' ? 1 : -1;
+            const next = current < 0 ? 0 : (current + step + options.length) % options.length;
+            options[next]?.focus();
+        });
+        trigger.addEventListener('keydown', (event) => {
+            if (event.key !== 'ArrowDown' || palette.hidden) return;
+            event.preventDefault();
+            palette.querySelector('.diary-highlight-option')?.focus();
+        });
+
+        // 처음에는 커서가 없으므로 형광펜 없음 상태로 시작한다.
+        syncHighlightTrigger(selectionFormats() || {});
+
+        function createOption(value, label, description) {
+            const option = document.createElement('button');
+            option.type = 'button';
+            option.className = 'diary-highlight-option' + (value ? '' : ' is-none');
+            option.dataset.highlightValue = value;
+            option.title = description;
+            option.setAttribute('role', 'option');
+            option.setAttribute('aria-selected', 'false');
+            option.setAttribute('aria-label', description);
+
+            const swatch = document.createElement('span');
+            swatch.className = 'diary-highlight-swatch';
+            swatch.setAttribute('aria-hidden', 'true');
+            if (value) swatch.style.backgroundColor = value;
+
+            const name = document.createElement('span');
+            name.className = 'diary-highlight-name';
+            name.textContent = label;
+
+            option.append(swatch, name);
+            option.addEventListener('mousedown', event => event.preventDefault());
+            option.addEventListener('click', () => {
+                // 선택 영역이 있으면 그 영역 전체, 커서만 있으면 다음 입력부터 칠해진다.
+                applyFormat('background', value || false);
+                toggle(false);
+            });
+            return option;
+        }
+    }
+
+    /** 커서 위치의 형광펜 색을 버튼 색칠로 보여준다. 여러 색이 섞여 있으면 표시하지 않는다. */
+    function syncHighlightTrigger(formats) {
+        if (!highlightTrigger) return;
+        const current = matchHighlight(formats.background);
+
+        highlightTrigger.classList.toggle('has-highlight', Boolean(current));
+        highlightTrigger.title = current ? `형광펜 ${current.name}` : '형광펜';
+        if (highlightSwatch) {
+            highlightSwatch.style.backgroundColor = current ? current.value : 'transparent';
+        }
+
+        const selectedValue = current ? current.value : '';
+        document.querySelectorAll('#diary-highlight-palette .diary-highlight-option')
+            .forEach(option => {
+                const selected = option.dataset.highlightValue === selectedValue;
+                option.setAttribute('aria-selected', selected ? 'true' : 'false');
+                option.classList.toggle('is-selected', selected);
+            });
+    }
+
+    /** Quill 이 rgb() 로 돌려줘도 같은 색으로 알아보게 맞춘다. */
+    function matchHighlight(value) {
+        const key = colorKey(value);
+        return key ? HIGHLIGHTS.find(highlight => colorKey(highlight.value) === key) ?? null : null;
+    }
+
+    function colorKey(value) {
+        if (typeof value !== 'string') return null;
+
+        const hex = value.trim().match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+        if (hex) {
+            const digits = hex[1].length === 3
+                ? hex[1].split('').map(digit => digit + digit).join('')
+                : hex[1];
+            return digits.toLowerCase();
+        }
+
+        const rgb = value.trim().match(/^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/i);
+        return rgb
+            ? [rgb[1], rgb[2], rgb[3]]
+                .map(part => Number(part).toString(16).padStart(2, '0')).join('')
+            : null;
     }
 
     /**

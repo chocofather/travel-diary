@@ -20,11 +20,13 @@
     <p class="diary-flash-message" th:if="${diaryMessage}" th:text="${diaryMessage}"
        role="status">여행일기가 만들어졌습니다.</p>
 
-    <!-- 표지 스타일(cover_style)은 클래스로 붙여 이후 스타일이 늘어나도 그대로 쓸 수 있게 한다. -->
+    <!-- 표지 스타일(cover_style)은 클래스로 붙여 이후 스타일이 늘어나도 그대로 쓸 수 있게 한다.
+         LEATHER_BLACK → diary-cover-leather-black (폼의 견본과 같은 클래스) -->
     <ul class="diary-shelf" th:unless="${#lists.isEmpty(diaryList)}">
       <li class="diary-book" th:each="diary : ${diaryList}"
           th:classappend="${diary.coverStyle != null and !#strings.isEmpty(diary.coverStyle)}
-                          ? ' diary-cover-' + ${#strings.toLowerCase(diary.coverStyle)} : ''">
+                          ? ' diary-cover-'
+                            + ${#strings.replace(#strings.toLowerCase(diary.coverStyle), '_', '-')} : ''">
         <a class="diary-book-inner" th:href="@{/diaries/{id}(id=${diary.id})}">
           <div class="diary-book-cover">
             <img th:if="${diary.coverImageUrl != null and !#strings.isEmpty(diary.coverImageUrl)}"
@@ -32,11 +34,9 @@
                  th:src="${diary.coverImageUrl}"
                  th:alt="|${diary.title} 표지|"
                  loading="lazy" />
-            <!-- 대표 이미지가 없으면 깨진 이미지 대신 기본 표지를 보여준다 -->
+            <!-- 대표 이미지가 없으면 깨진 이미지 대신 표지 소재만 보이는 무지 표지를 쓴다 -->
             <div th:unless="${diary.coverImageUrl != null and !#strings.isEmpty(diary.coverImageUrl)}"
-                 class="diary-book-placeholder" aria-hidden="true">
-              <span class="diary-book-placeholder-mark">✎</span>
-            </div>
+                 class="diary-book-placeholder" aria-hidden="true"></div>
             <span class="diary-book-spine" aria-hidden="true"></span>
             <div class="diary-book-label">
               <h2 class="diary-book-title" th:text="${diary.title}">여행일기 제목</h2>

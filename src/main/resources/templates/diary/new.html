@@ -63,6 +63,9 @@
         <span class="diary-form-hint">한 장만 등록할 수 있어요. 선택하지 않으면 기본 표지가 사용됩니다.</span>
       </div>
 
+      <!-- 표지 스타일: 값은 diaries.cover_style 그대로이고, 허용 값 확인은 서버에서 한다 -->
+      <div class="diary-form-field" th:replace="~{diary/cover-style :: picker(${coverStyles}, *{coverStyle})}"></div>
+
       <div class="diary-form-actions">
         <a class="diary-form-cancel" th:href="@{/diaries}">취소</a>
         <button type="submit" class="diary-form-submit">여행일기 만들기</button>

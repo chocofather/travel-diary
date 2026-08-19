@@ -72,6 +72,9 @@
         <span class="diary-form-hint">새로 선택하지 않으면 지금 표지가 그대로 유지됩니다.</span>
       </div>
 
+      <!-- 표지 스타일: 값은 diaries.cover_style 그대로이고, 허용 값 확인은 서버에서 한다 -->
+      <div class="diary-form-field" th:replace="~{diary/cover-style :: picker(${coverStyles}, *{coverStyle})}"></div>
+
       <div class="diary-form-actions">
         <a class="diary-form-cancel" th:href="@{/diaries/{id}(id=${diaryId})}">취소</a>
         <button type="submit" class="diary-form-submit">수정 완료</button>

@@ -212,8 +212,8 @@ class DiaryControllerTest {
         when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
         when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of());
 
-        // 페이지 추가 폼은 편집 모드에서만 보여준다
-        mockMvc.perform(get("/diaries/10").param("edit", "true")
+        // 페이지 추가 폼은 읽기 상단 액션에서 펼친다
+        mockMvc.perform(get("/diaries/10")
                         .with(authentication(new UsernamePasswordAuthenticationToken(
                                 userDetails, null, List.of()))))
                 .andExpect(status().isOk())
@@ -270,7 +270,8 @@ class DiaryControllerTest {
                         .with(authentication(new UsernamePasswordAuthenticationToken(
                                 userDetails, null, List.of()))))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/diaries/10?edit=true"))
+                // 추가 폼은 읽기 화면 상단에 있으므로 실패하면 읽기 화면으로 돌아온다
+                .andExpect(redirectedUrl("/diaries/10"))
                 .andExpect(flash().attribute(
                         "diaryPageError", "페이지 날짜는 여행 기간 안에서 선택해 주세요."));
     }
@@ -688,7 +689,10 @@ class DiaryControllerTest {
         assertThat(body).doesNotContain("diary-page-action");
         assertThat(body).doesNotContain("/diaries/10/pages/1/update");
         assertThat(body).doesNotContain("/diaries/10/pages/1/delete");
-        assertThat(body).doesNotContain("diary-page-add-button");
+        // 새 페이지 추가는 읽기 상단 액션에 있다 (편집 캔버스가 아니라 책 관리 쪽)
+        assertThat(body).contains("diary-page-add");
+        assertThat(body).contains("새 페이지 추가");
+        assertThat(body).contains("action=\"/diaries/10/pages\"");
         assertThat(body).doesNotContain("diary-resize-handle");
         assertThat(body).doesNotContain("diary-rotate-handle");
         assertThat(body).doesNotContain("diary-layer-action");
@@ -722,7 +726,8 @@ class DiaryControllerTest {
         assertThat(body).contains("diary-photo-input");
         assertThat(body).contains("diary-page-action");
         assertThat(body).contains("/diaries/10/pages/1/update");
-        assertThat(body).contains("diary-page-add-button");
+        // 새 페이지 추가 폼은 편집 화면에서 빠지고 읽기 상단으로 옮겼다
+        assertThat(body).doesNotContain("diary-page-add");
         assertThat(body).contains("diary-resize-handle");
         assertThat(body).contains("/diaries/10/pages/1/content");
         // 편집 완료는 edit 이 빠진 읽기 모드 주소로 간다
@@ -781,7 +786,9 @@ class DiaryControllerTest {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
-        assertThat(body).contains("편집할 페이지가 없습니다. 먼저 새 페이지를 추가해 주세요.");
+        assertThat(body).contains("편집할 페이지가 없습니다.");
+        // 첫 장은 상단 액션의 새 페이지 추가로 만든다
+        assertThat(body).contains("새 페이지 추가");
         assertThat(body).doesNotContain("diary-page-picker-item");
     }
 
@@ -1114,6 +1121,197 @@ class DiaryControllerTest {
                 .andExpect(view().name("diary/new"))
                 .andExpect(content().string(containsString("여행 종료일은 시작일 이후여야 합니다.")))
                 .andExpect(content().string(containsString("여름 제주 여행")));
+    }
+
+    @Test
+    void bothModesHangTheSilkRibbonFromTheirBindingEdge() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-01")));
+
+        String readBody = mockMvc.perform(get("/diaries/10")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        // 리본은 제본선(gutter) 안에 있는 장식이라 읽는 데 걸리지 않는다
+        assertThat(readBody).contains("diary-book-ribbon");
+        assertThat(readBody.indexOf("diary-book-gutter"))
+                .isLessThan(readBody.indexOf("diary-book-ribbon"));
+        assertThat(readBody).contains("aria-hidden=\"true\"");
+
+        String editBody = mockMvc.perform(get("/diaries/10").param("edit", "true")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        // 편집 한 장에서는 가운데 제본선 대신 종이 왼쪽 제본 자리에서 내려온다
+        assertThat(editBody).doesNotContain("diary-book-gutter");
+        assertThat(editBody).contains("diary-book-ribbon is-single");
+    }
+
+    @Test
+    void editModeShowsTheHighlighterControlAndReadModeKeepsTheSavedHighlight() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        DiaryPage first = page(1, "2026-08-01");
+        first.setContent("<p><span style=\"background-color: #fff5a5;\">형광펜 문장</span></p>");
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(first));
+
+        String editBody = mockMvc.perform(get("/diaries/10").param("edit", "true")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(editBody).contains("형광펜");
+        assertThat(editBody).contains("diary-highlight-trigger");
+        assertThat(editBody).contains("diary-highlight-palette");
+
+        String readBody = mockMvc.perform(get("/diaries/10")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        // 읽기 모드는 편집 도구만 감추고 형광펜 자국은 그대로 보여준다
+        assertThat(readBody).contains("background-color: #fff5a5").contains("형광펜 문장");
+        assertThat(readBody).doesNotContain("diary-highlight-trigger");
+    }
+
+    @Test
+    void listKeepsTheBookLinkCoverImageAndPlaceholderStructure() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        DiaryListItemDto withCover = item();
+        withCover.setCoverImageUrl("/uploads/diary/cover.jpg");
+        DiaryListItemDto withoutCover = item();
+        withoutCover.setId(11L);
+        withoutCover.setTitle("겨울 강릉 여행");
+        when(diaryService.getMyDiaryList(7L)).thenReturn(List.of(withCover, withoutCover));
+
+        String body = mockMvc.perform(get("/diaries")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).contains("href=\"/diaries/10\"").contains("href=\"/diaries/11\"");
+        // 대표 이미지가 있으면 표지 이미지, 없으면 기본 표지
+        assertThat(body).contains("diary-book-image").contains("/uploads/diary/cover.jpg");
+        assertThat(body).contains("diary-book-placeholder");
+        assertThat(body).contains("diary-book-spine");
+        assertThat(body).contains("diary-book-title");
+        assertThat(body).contains("3장");
+    }
+
+    @Test
+    void listRendersTheStoredCoverStyleAsAHyphenatedClass() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        DiaryListItemDto leather = item();
+        leather.setCoverStyle("LEATHER_DARK_BROWN");
+        DiaryListItemDto legacy = item();
+        legacy.setId(11L);
+        legacy.setCoverStyle("DEFAULT");
+        when(diaryService.getMyDiaryList(7L)).thenReturn(List.of(leather, legacy));
+
+        String body = mockMvc.perform(get("/diaries")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).contains("diary-cover-leather-dark-brown");
+        // 기존 DEFAULT 데이터도 그대로 동작한다
+        assertThat(body).contains("diary-cover-default");
+    }
+
+    @Test
+    void newAndEditFormsLetTheUserPickACoverStyle() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+
+        String newBody = mockMvc.perform(get("/diaries/new")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(newBody).contains("name=\"coverStyle\"");
+        assertThat(newBody).contains("value=\"DEFAULT\"").contains("value=\"LEATHER_BLACK\"")
+                .contains("value=\"HARDCOVER_BEIGE\"");
+        assertThat(newBody).contains("diary-cover-option");
+
+        String editBody = mockMvc.perform(get("/diaries/10/edit")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(editBody).contains("name=\"coverStyle\"");
+        assertThat(editBody).contains("value=\"HARDCOVER_NAVY\"");
+    }
+
+    @Test
+    void createPassesTheChosenCoverStyleToTheService() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.create(eq(7L), any(Diary.class))).thenReturn(new Diary());
+
+        mockMvc.perform(multipart("/diaries")
+                        .param("title", "여름 제주 여행")
+                        .param("startDate", "2026-08-01")
+                        .param("endDate", "2026-08-05")
+                        .param("coverStyle", "LEATHER_DEEP_GREEN")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(redirectedUrl("/diaries"));
+
+        ArgumentCaptor<Diary> captor = ArgumentCaptor.forClass(Diary.class);
+        verify(diaryService).create(eq(7L), captor.capture());
+        assertThat(captor.getValue().getCoverStyle()).isEqualTo("LEATHER_DEEP_GREEN");
+    }
+
+    @Test
+    void updateKeepsTheCurrentCoverStyleWhenNoneIsSubmitted() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        Diary existing = diary();
+        existing.setCoverStyle("HARDCOVER_BURGUNDY");
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(existing);
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of());
+
+        mockMvc.perform(multipart("/diaries/10/update")
+                        .param("title", "여름 제주 여행")
+                        .param("startDate", "2026-08-01")
+                        .param("endDate", "2026-08-05")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(redirectedUrl("/diaries/10"));
+
+        ArgumentCaptor<Diary> captor = ArgumentCaptor.forClass(Diary.class);
+        verify(diaryService).update(eq(10L), eq(7L), captor.capture());
+        assertThat(captor.getValue().getCoverStyle()).isEqualTo("HARDCOVER_BURGUNDY");
+    }
+
+    @Test
+    void unknownCoverStyleIsRejectedWithTheFormMessage() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.create(eq(7L), any(Diary.class))).thenThrow(
+                new ResponseStatusException(HttpStatus.BAD_REQUEST, "표지 스타일을 다시 선택해 주세요."));
+
+        mockMvc.perform(multipart("/diaries")
+                        .param("title", "여름 제주 여행")
+                        .param("startDate", "2026-08-01")
+                        .param("endDate", "2026-08-05")
+                        .param("coverStyle", "GOLD_PLATED")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andExpect(view().name("diary/new"))
+                .andExpect(content().string(containsString("표지 스타일을 다시 선택해 주세요.")));
     }
 
     private Diary diary() {

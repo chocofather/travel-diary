@@ -1,6 +1,7 @@
 package com.example.travlediary.controller.diary;
 
 import com.example.travlediary.model.Diary;
+import com.example.travlediary.model.DiaryCoverStyle;
 import com.example.travlediary.model.DiaryElement;
 import com.example.travlediary.model.DiaryPage;
 import com.example.travlediary.security.CustomUserDetails;
@@ -157,6 +158,7 @@ public class DiaryController {
         model.addAttribute("diaryForm", diary);
         model.addAttribute("diaryId", diaryId);
         model.addAttribute("currentCoverImageUrl", diary.getCoverImageUrl());
+        model.addAttribute("coverStyles", DiaryCoverStyle.values());
         model.addAttribute("pageTitle", "여행일기 수정");
         return "diary/edit";
     }
@@ -191,6 +193,9 @@ public class DiaryController {
             // 새 표지를 고르지 않았으면 기존 표지를 그대로 둔다.
             diary.setCoverImageUrl(savedCoverImageUrl != null
                     ? savedCoverImageUrl : existing.getCoverImageUrl());
+            // 표지 스타일은 고른 값을 쓰고, 값이 없으면 지금 쓰던 스타일을 유지한다.
+            diary.setCoverStyle(diaryForm.getCoverStyle() != null && !diaryForm.getCoverStyle().isBlank()
+                    ? diaryForm.getCoverStyle() : existing.getCoverStyle());
             diaryService.update(diaryId, userId, diary);
         } catch (ResponseStatusException exception) {
             deleteStoredFile(savedCoverImageUrl);
@@ -259,6 +264,7 @@ public class DiaryController {
         model.addAttribute("diaryForm", diaryForm);
         model.addAttribute("diaryId", diaryId);
         model.addAttribute("diaryError", errorMessage);
+        model.addAttribute("coverStyles", DiaryCoverStyle.values());
         model.addAttribute("pageTitle", "여행일기 수정");
         return "diary/edit";
     }
@@ -553,10 +559,10 @@ public class DiaryController {
                              BindingResult bindingResult,
                              @AuthenticationPrincipal CustomUserDetails userDetails,
                              RedirectAttributes redirectAttributes) {
-        // 페이지 추가는 편집 화면에서만 하므로 편집 화면으로 되돌아온다.
+        // 페이지 추가 폼은 읽기 화면 상단에 있으므로 실패하면 읽기 화면으로 되돌아온다.
         if (bindingResult.hasErrors()) {
             redirectAttributes.addFlashAttribute("diaryPageError", "페이지 날짜를 올바르게 선택해 주세요.");
-            return "redirect:/diaries/" + diaryId + "?edit=true";
+            return "redirect:/diaries/" + diaryId;
         }
 
         DiaryPage added;
@@ -569,7 +575,7 @@ public class DiaryController {
             if (exception.getStatusCode().is4xxClientError()
                     && !HttpStatus.NOT_FOUND.equals(exception.getStatusCode())) {
                 redirectAttributes.addFlashAttribute("diaryPageError", exception.getReason());
-                return "redirect:/diaries/" + diaryId + "?edit=true";
+                return "redirect:/diaries/" + diaryId;
             }
             throw exception;
         }
@@ -583,6 +589,7 @@ public class DiaryController {
     @GetMapping("/new")
     public String newDiaryForm(Model model) {
         model.addAttribute("diaryForm", new Diary());
+        model.addAttribute("coverStyles", DiaryCoverStyle.values());
         model.addAttribute("pageTitle", "새 여행일기");
         return "diary/new";
     }
@@ -607,12 +614,14 @@ public class DiaryController {
                 savedCoverImageUrl = fileUploadService.saveFile(coverImage, COVER_IMAGE_DIRECTORY);
             }
 
-            // 제목/기간과 업로드 결과만 사용하고 요청의 다른 값은 신뢰하지 않는다.
+            // 제목/기간/표지 스타일과 업로드 결과만 사용하고 요청의 다른 값은 신뢰하지 않는다.
+            // (표지 스타일 허용 값 확인은 서비스가 한다)
             Diary diary = new Diary();
             diary.setTitle(diaryForm.getTitle());
             diary.setStartDate(diaryForm.getStartDate());
             diary.setEndDate(diaryForm.getEndDate());
             diary.setCoverImageUrl(savedCoverImageUrl);
+            diary.setCoverStyle(diaryForm.getCoverStyle());
             diaryService.create(userDetails.getId(), diary);
         } catch (ResponseStatusException exception) {
             deleteStoredFile(savedCoverImageUrl);
@@ -632,6 +641,7 @@ public class DiaryController {
     /** 입력값을 그대로 둔 채 오류 메시지와 함께 작성 화면을 다시 보여준다. */
     private String renderNewForm(Model model, String errorMessage) {
         model.addAttribute("diaryError", errorMessage);
+        model.addAttribute("coverStyles", DiaryCoverStyle.values());
         model.addAttribute("pageTitle", "새 여행일기");
         return "diary/new";
     }

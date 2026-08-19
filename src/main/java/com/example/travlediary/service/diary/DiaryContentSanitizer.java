@@ -8,9 +8,13 @@ import org.jsoup.nodes.Element;
 import org.springframework.stereotype.Component;
 
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.StringJoiner;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * 다이어리 본문(diary_pages.content) 전용 정리기.
@@ -36,10 +40,28 @@ public class DiaryContentSanitizer {
             "ql-font-gunham", "ql-font-dunggeunmo", "ql-font-mitmi",
             "ql-font-green-umbrella", "ql-font-incheon-jaram", "ql-font-park-dahyun"
     );
+    /**
+     * 다이어리 툴바의 형광펜 색상. (diary-editor.js 의 HIGHLIGHTS 와 같은 값을 쓴다)
+     * 배경색은 이 6종만 살리고, 그 밖의 값은 색 자체가 안전해도 버린다.
+     */
+    public static final Set<String> DIARY_HIGHLIGHT_COLORS = Set.of(
+            "#fff5a5", "#ffd6e4", "#c9f2e3", "#cfe6fb", "#e2d9f7", "#ffdec2"
+    );
     /** 툴바에서 쓰는 글꼴/글자 크기/정렬 클래스만 허용한다. */
     private static final Set<String> ALLOWED_CLASSES = allowedClasses();
-    /** 글자색만 남긴다. (배경색과 그 밖의 style 은 버린다) */
-    private static final String ALLOWED_STYLE_PROPERTY = "color";
+    /** 글자색과 형광펜 배경색만 남긴다. (그 밖의 style 은 버린다) */
+    private static final String COLOR_PROPERTY = "color";
+    private static final String HIGHLIGHT_PROPERTY = "background-color";
+    private static final Pattern HEX_COLOR =
+            Pattern.compile("^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$");
+    private static final Pattern RGB_COLOR = Pattern.compile(
+            "(?i)^rgb\\(\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*\\)$"
+    );
+    /**
+     * 브라우저가 rgb() 로 돌려줘도 같은 색으로 알아보도록 정규화한 값으로 찾는다.
+     * (위의 색상 패턴을 쓰므로 반드시 그 뒤에서 초기화한다)
+     */
+    private static final Map<String, String> HIGHLIGHTS_BY_RGB = highlightsByRgb();
     /** Jsoup 이 &nbsp; 를 돌려주는 문자 */
     private static final char NO_BREAK_SPACE = ' ';
 
@@ -87,6 +109,48 @@ public class DiaryContentSanitizer {
         return Set.copyOf(allowed);
     }
 
+    /** 형광펜 색상을 "r,g,b" 로 펼쳐 두고, 어떤 표기로 저장돼도 같은 색을 찾을 수 있게 한다. */
+    private static Map<String, String> highlightsByRgb() {
+        Map<String, String> byRgb = new LinkedHashMap<>();
+        for (String highlight : DIARY_HIGHLIGHT_COLORS) {
+            byRgb.put(toRgbKey(highlight), highlight);
+        }
+        return Map.copyOf(byRgb);
+    }
+
+    /** #rgb / #rrggbb / rgb(r, g, b) 를 "r,g,b" 로 맞춘다. 알아볼 수 없으면 null. */
+    private static String toRgbKey(String value) {
+        Matcher hex = HEX_COLOR.matcher(value);
+        if (hex.matches()) {
+            String digits = hex.group(1);
+            if (digits.length() == 3) {
+                StringBuilder expanded = new StringBuilder();
+                for (char digit : digits.toCharArray()) {
+                    expanded.append(digit).append(digit);
+                }
+                digits = expanded.toString();
+            }
+            return rgbKey(
+                    Integer.parseInt(digits.substring(0, 2), 16),
+                    Integer.parseInt(digits.substring(2, 4), 16),
+                    Integer.parseInt(digits.substring(4, 6), 16));
+        }
+
+        Matcher rgb = RGB_COLOR.matcher(value);
+        if (!rgb.matches()) {
+            return null;
+        }
+        int red = Integer.parseInt(rgb.group(1));
+        int green = Integer.parseInt(rgb.group(2));
+        int blue = Integer.parseInt(rgb.group(3));
+        boolean inRange = red <= 255 && green <= 255 && blue <= 255;
+        return inRange ? rgbKey(red, green, blue) : null;
+    }
+
+    private static String rgbKey(int red, int green, int blue) {
+        return red + "," + green + "," + blue;
+    }
+
     private void keepAllowedClasses(Element element) {
         if (!element.hasAttr("class")) {
             return;
@@ -121,8 +185,15 @@ public class DiaryContentSanitizer {
             }
             String property = declaration.substring(0, separator).trim().toLowerCase(Locale.ROOT);
             String value = declaration.substring(separator + 1).trim();
-            if (ALLOWED_STYLE_PROPERTY.equals(property)) {
+            if (COLOR_PROPERTY.equals(property)) {
                 safeStyle.add(property + ": " + value);
+            } else if (HIGHLIGHT_PROPERTY.equals(property)) {
+                // 형광펜은 툴바가 주는 6종만 남기고, 저장 값은 항상 같은 표기로 맞춘다.
+                String rgbKey = toRgbKey(value);
+                String highlight = rgbKey == null ? null : HIGHLIGHTS_BY_RGB.get(rgbKey);
+                if (highlight != null) {
+                    safeStyle.add(property + ": " + highlight);
+                }
             }
         }
 
