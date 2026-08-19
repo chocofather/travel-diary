@@ -41,6 +41,29 @@
           <span class="diary-search-spinner" aria-hidden="true" hidden></span>
           <button type="submit" class="diary-search-submit" aria-label="검색">검색</button>
         </form>
+
+        <!-- 정렬 고르기. 검색과 같은 비동기 흐름을 그대로 타고, 기본값(최근 수정순)은
+             주소를 깔끔하게 두려고 sort 를 생략한다. -->
+        <div class="diary-sort" id="diary-sort" th:data-default-sort="${diaryPage.defaultSortName}">
+          <button type="button" class="diary-sort-button" id="diary-sort-button"
+                  aria-haspopup="listbox" aria-expanded="false"
+                  aria-controls="diary-sort-menu" aria-label="정렬 기준">
+            <span class="diary-sort-mark" aria-hidden="true">&#8597;</span>
+            <span class="diary-sort-value" id="diary-sort-value"
+                  th:text="${diaryPage.sort.label}">최근 수정순</span>
+            <span class="diary-sort-arrow" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="diary-sort-menu" id="diary-sort-menu" role="listbox"
+               aria-label="정렬 기준" hidden>
+            <button type="button" class="diary-sort-option" role="option"
+                    th:each="option : ${diaryPage.sortOptions}"
+                    th:data-sort="${option.name()}"
+                    th:classappend="${option == diaryPage.sort} ? ' is-current' : ''"
+                    th:attr="aria-selected=${option == diaryPage.sort}"
+                    th:text="${option.label}">최근 수정순</button>
+          </div>
+        </div>
+
         <a class="diary-new-button" th:href="@{/diaries/new}">새 여행일기 만들기</a>
       </div>
     </header>
@@ -110,24 +133,24 @@
       </li>
     </ul>
 
-    <!-- 목록 쪽 이동. 검색 중이면 q 를 그대로 달고 다닌다. -->
+    <!-- 목록 쪽 이동. 검색 중이면 q 를, 기본이 아닌 정렬이면 sort 를 그대로 달고 다닌다. -->
     <nav class="diary-pagination" th:if="${diaryPage.totalPages > 1}"
          aria-label="여행일기 목록 페이지">
       <a th:if="${diaryPage.currentPage > 1}" class="page-nav" aria-label="이전 페이지"
-         th:href="@{/diaries(q=${diaryPage.searching ? diaryPage.keyword : null},page=${diaryPage.currentPage - 1})}">&#8249;</a>
+         th:href="@{/diaries(q=${diaryPage.searching ? diaryPage.keyword : null},sort=${diaryPage.sortParam},page=${diaryPage.currentPage - 1})}">&#8249;</a>
       <span th:unless="${diaryPage.currentPage > 1}" class="page-nav is-disabled"
             aria-disabled="true">&#8249;</span>
 
       <th:block th:each="i : ${#numbers.sequence(1, diaryPage.totalPages)}">
         <a th:if="${i != diaryPage.currentPage}" class="page-number"
-           th:href="@{/diaries(q=${diaryPage.searching ? diaryPage.keyword : null},page=${i})}" th:text="${i}">1</a>
+           th:href="@{/diaries(q=${diaryPage.searching ? diaryPage.keyword : null},sort=${diaryPage.sortParam},page=${i})}" th:text="${i}">1</a>
         <span th:if="${i == diaryPage.currentPage}" class="page-number is-current"
               aria-current="page" th:text="${i}">1</span>
       </th:block>
 
       <a th:if="${diaryPage.currentPage < diaryPage.totalPages}" class="page-nav"
          aria-label="다음 페이지"
-         th:href="@{/diaries(q=${diaryPage.searching ? diaryPage.keyword : null},page=${diaryPage.currentPage + 1})}">&#8250;</a>
+         th:href="@{/diaries(q=${diaryPage.searching ? diaryPage.keyword : null},sort=${diaryPage.sortParam},page=${diaryPage.currentPage + 1})}">&#8250;</a>
       <span th:unless="${diaryPage.currentPage < diaryPage.totalPages}"
             class="page-nav is-disabled" aria-disabled="true">&#8250;</span>
     </nav>

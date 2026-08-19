@@ -3,6 +3,7 @@ package com.example.travlediary.service.diary;
 import com.example.travlediary.dto.DiaryCalendarDto;
 import com.example.travlediary.dto.DiaryListItemDto;
 import com.example.travlediary.dto.DiaryListPageDto;
+import com.example.travlediary.dto.DiarySort;
 import com.example.travlediary.model.Diary;
 import com.example.travlediary.model.DiaryCoverStyle;
 import com.example.travlediary.repository.diary.DiaryMapper;
@@ -49,7 +50,7 @@ public class DiaryServiceImpl implements DiaryService {
      */
     @Override
     @Transactional(readOnly = true)
-    public DiaryListPageDto getMyDiaryPage(Long userId, String keyword, int page) {
+    public DiaryListPageDto getMyDiaryPage(Long userId, String keyword, DiarySort sort, int page) {
         requireUser(userId);
 
         String searched = keyword == null ? "" : keyword.strip();
@@ -57,7 +58,10 @@ public class DiaryServiceImpl implements DiaryService {
             searched = searched.substring(0, MAX_KEYWORD_LENGTH);
         }
         String pattern = searched.isEmpty() ? null : likePattern(searched);
+        // 모르는 정렬값은 여기서 기본값으로 바뀌므로 Mapper 에는 허용된 이름만 간다.
+        DiarySort order = sort == null ? DiarySort.DEFAULT : sort;
 
+        // 쪽수는 정렬과 무관하므로 세는 쿼리는 그대로 둔다.
         int totalCount = diaryMapper.countListItems(userId, pattern);
         // 결과가 없어도 1쪽은 있는 것으로 본다. (쪽 번호는 1부터)
         int totalPages = Math.max(1, (totalCount + PAGE_SIZE - 1) / PAGE_SIZE);
@@ -65,8 +69,10 @@ public class DiaryServiceImpl implements DiaryService {
 
         List<DiaryListItemDto> items = totalCount == 0
                 ? List.of()
-                : diaryMapper.findListItems(userId, pattern, (currentPage - 1) * PAGE_SIZE, PAGE_SIZE);
-        return new DiaryListPageDto(items, searched, currentPage, totalPages, totalCount, PAGE_SIZE);
+                : diaryMapper.findListItems(userId, pattern, order.name(),
+                        (currentPage - 1) * PAGE_SIZE, PAGE_SIZE);
+        return new DiaryListPageDto(items, searched, order,
+                currentPage, totalPages, totalCount, PAGE_SIZE);
     }
 
     /**

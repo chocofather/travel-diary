@@ -75,7 +75,15 @@
         LEFT JOIN diary_pages p ON p.diary_id = d.id
         WHERE <include refid="DiaryListCondition"/>
         GROUP BY d.id, d.title, d.start_date, d.end_date, d.cover_image_url, d.cover_style
-        ORDER BY d.start_date DESC, d.id DESC
+        <!-- 정렬은 허용된 이름으로만 고른다. (SQL 조각을 밖에서 받지 않는다)
+             값이 같을 때 쪽마다 순서가 흔들리지 않도록 마지막은 언제나 id DESC 로 묶는다. -->
+        ORDER BY
+        <choose>
+            <when test="sort == 'TRIP_DESC'">d.start_date DESC, d.id DESC</when>
+            <when test="sort == 'TRIP_ASC'">d.start_date ASC, d.id DESC</when>
+            <when test="sort == 'TITLE_ASC'">d.title ASC, d.id DESC</when>
+            <otherwise>d.updated_at DESC, d.id DESC</otherwise>
+        </choose>
         LIMIT #{limit} OFFSET #{offset}
     </select>
 

@@ -1,6 +1,7 @@
 package com.example.travlediary.controller.diary;
 
 import com.example.travlediary.dto.DiaryListPageDto;
+import com.example.travlediary.dto.DiarySort;
 import com.example.travlediary.model.Diary;
 import com.example.travlediary.model.DiaryCoverStyle;
 import com.example.travlediary.model.DiaryElement;
@@ -78,11 +79,12 @@ public class DiaryController {
      */
     @GetMapping
     public String diaryList(@RequestParam(name = "q", required = false) String keyword,
+                            @RequestParam(name = "sort", required = false) String sort,
                             @RequestParam(name = "page", required = false) String page,
                             @AuthenticationPrincipal CustomUserDetails userDetails,
                             Model model) {
-        DiaryListPageDto diaryPage =
-                diaryService.getMyDiaryPage(userDetails.getId(), keyword, pageNumber(page));
+        DiaryListPageDto diaryPage = diaryService.getMyDiaryPage(
+                userDetails.getId(), keyword, DiarySort.of(sort), pageNumber(page));
 
         addDiaryListAttributes(model, diaryPage);
         model.addAttribute("pageTitle", "나의 여행일기");
@@ -95,11 +97,12 @@ public class DiaryController {
      */
     @GetMapping("/fragment")
     public String diaryListFragment(@RequestParam(name = "q", required = false) String keyword,
+                                    @RequestParam(name = "sort", required = false) String sort,
                                     @RequestParam(name = "page", required = false) String page,
                                     @AuthenticationPrincipal CustomUserDetails userDetails,
                                     Model model) {
-        addDiaryListAttributes(model,
-                diaryService.getMyDiaryPage(userDetails.getId(), keyword, pageNumber(page)));
+        addDiaryListAttributes(model, diaryService.getMyDiaryPage(
+                userDetails.getId(), keyword, DiarySort.of(sort), pageNumber(page)));
         return "diary/list :: results";
     }
 

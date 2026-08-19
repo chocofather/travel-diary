@@ -21,9 +21,11 @@ public interface DiaryMapper {
     /**
      * 일기장형 목록 한 쪽. 페이지 수까지 한 번에 읽는다. (다이어리마다 재조회하지 않는다)
      * keyword 가 있으면 제목/한 줄 메모/본문에서 찾고, 결과는 다이어리 한 권 단위다.
+     * sort 는 허용된 이름(DiarySort)만 오고, 실제 ORDER BY 는 XML 이 정한다.
      */
     List<DiaryListItemDto> findListItems(@Param("userId") Long userId,
                                          @Param("keyword") String keyword,
+                                         @Param("sort") String sort,
                                          @Param("offset") int offset,
                                          @Param("limit") int limit);
 

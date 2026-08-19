@@ -285,6 +285,118 @@
     cursor: pointer;
 }
 
+/* 정렬 고르기. 검색창 옆에 놓이는 작은 컨트롤이라 버튼처럼 두드러지지 않게 둔다. */
+.diary-sort {
+    position: relative;
+    display: inline-flex;
+    flex: 0 0 auto;
+}
+
+/* 검색창 옆의 보조 컨트롤이라 테두리 없이 글자만 둔다.
+   (강조는 '새 여행일기 만들기' 하나에만 남긴다) */
+.diary-sort-button {
+    display: inline-flex;
+    box-sizing: border-box;
+    height: 36px;
+    align-items: center;
+    padding: 0 9px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    background: none;
+    color: #8b8378;
+    font: inherit;
+    font-size: 12.5px;
+    gap: 5px;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+/* 눌러서 열려 있을 때도 바탕만 아주 옅게 바뀐다 */
+.diary-sort-button:hover,
+.diary-sort-button.is-open {
+    background: #f7f3ec;
+    color: #5c5346;
+}
+
+.diary-sort-button:focus-visible {
+    outline: 2px solid #b39a75;
+    outline-offset: 1px;
+}
+
+.diary-sort-mark {
+    color: #bdb2a0;
+    font-size: 12px;
+}
+
+.diary-sort-arrow {
+    color: #bdb2a0;
+    font-size: 9px;
+}
+
+/* 목록. 종이 위에 놓인 작은 쪽지 정도로만 띄운다. */
+.diary-sort-menu {
+    position: absolute;
+    z-index: 30;
+    top: calc(100% + 5px);
+    right: 0;
+    display: flex;
+    min-width: 152px;
+    flex-direction: column;
+    padding: 4px;
+    border: 1px solid #ebe5db;
+    border-radius: 9px;
+    background: #fff;
+    box-shadow: 0 3px 10px rgba(120, 100, 70, 0.08);
+    gap: 1px;
+}
+
+.diary-sort-menu[hidden] {
+    display: none;
+}
+
+.diary-sort-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 10px;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: #6b6259;
+    font: inherit;
+    font-size: 12.5px;
+    gap: 10px;
+    text-align: left;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+/* 체크 자리는 늘 오른쪽에 비워 둬 고른 것이 바뀌어도 글자가 흔들리지 않는다 */
+.diary-sort-option::after {
+    color: #c3b7a2;
+    content: "";
+}
+
+.diary-sort-option:hover {
+    background: #f7f3ec;
+    color: #4a3d2b;
+}
+
+.diary-sort-option:focus-visible {
+    outline: 2px solid #b39a75;
+    outline-offset: -2px;
+}
+
+/* 지금 보고 있는 정렬은 칠하지 않고 글씨와 체크로만 알린다 */
+.diary-sort-option.is-current {
+    color: #4a3d2b;
+    font-weight: 600;
+}
+
+.diary-sort-option.is-current::after {
+    content: "\2713";
+}
+
 .diary-list-heading {
     min-width: 0;
 }

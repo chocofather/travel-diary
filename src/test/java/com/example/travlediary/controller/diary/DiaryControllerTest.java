@@ -11,6 +11,7 @@ import com.example.travlediary.model.DiaryElement;
 import com.example.travlediary.model.DiaryPage;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
+import com.example.travlediary.dto.DiarySort;
 import com.example.travlediary.service.diary.DiaryElementService;
 import com.example.travlediary.service.diary.DiaryPageService;
 import com.example.travlediary.service.diary.DiaryService;
@@ -91,7 +92,7 @@ class DiaryControllerTest {
     @Test
     void listShowsOnlyTheCurrentUsersDiaries() throws Exception {
         when(userDetails.getId()).thenReturn(7L);
-        when(diaryService.getMyDiaryPage(7L, null, 1)).thenReturn(listPage(List.of(item())));
+        when(diaryService.getMyDiaryPage(7L, null, DiarySort.UPDATED_DESC, 1)).thenReturn(listPage(List.of(item())));
 
         mockMvc.perform(get("/diaries")
                         .with(authentication(new UsernamePasswordAuthenticationToken(
@@ -102,14 +103,14 @@ class DiaryControllerTest {
                 .andExpect(content().string(containsString("여름 제주 여행")))
                 .andExpect(content().string(containsString("3장")));
 
-        verify(diaryService).getMyDiaryPage(7L, null, 1);
+        verify(diaryService).getMyDiaryPage(7L, null, DiarySort.UPDATED_DESC, 1);
     }
 
     @Test
     void searchKeywordAndPageComeFromTheQueryString() throws Exception {
         when(userDetails.getId()).thenReturn(7L);
-        when(diaryService.getMyDiaryPage(7L, "제주", 2))
-                .thenReturn(new DiaryListPageDto(List.of(item()), "제주", 2, 3, 30, 12));
+        when(diaryService.getMyDiaryPage(7L, "제주", DiarySort.UPDATED_DESC, 2))
+                .thenReturn(new DiaryListPageDto(List.of(item()), "제주", DiarySort.UPDATED_DESC, 2, 3, 30, 12));
 
         String body = mockMvc.perform(get("/diaries").param("q", "제주").param("page", "2")
                         .with(authentication(new UsernamePasswordAuthenticationToken(
@@ -117,7 +118,7 @@ class DiaryControllerTest {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
-        verify(diaryService).getMyDiaryPage(7L, "제주", 2);
+        verify(diaryService).getMyDiaryPage(7L, "제주", DiarySort.UPDATED_DESC, 2);
         // 검색어는 입력창에 그대로 남는다
         assertThat(body).contains("value=\"제주\"");
         // 결과만 갈아 끼울 수 있도록 조각 주소를 폼에 실어 둔다
@@ -125,8 +126,9 @@ class DiaryControllerTest {
         assertThat(body).contains("id=\"diary-results\"");
         assertThat(body).contains("/js/diary-search.js");
         // 쪽 링크는 검색어를 계속 달고 다닌다
-        assertThat(body).contains("/diaries?q=%EC%A0%9C%EC%A3%BC&amp;page=1");
-        assertThat(body).contains("/diaries?q=%EC%A0%9C%EC%A3%BC&amp;page=3");
+        // 기본 정렬이라 sort 는 빈 값으로만 붙는다 (서버는 빈 값을 기본 정렬로 본다)
+        assertThat(body).contains("/diaries?q=%EC%A0%9C%EC%A3%BC&amp;sort=&amp;page=1");
+        assertThat(body).contains("/diaries?q=%EC%A0%9C%EC%A3%BC&amp;sort=&amp;page=3");
         assertThat(body).contains("page-number is-current");
     }
 
@@ -358,8 +360,8 @@ class DiaryControllerTest {
     @Test
     void fragmentReturnsOnlyTheResultsPart() throws Exception {
         when(userDetails.getId()).thenReturn(7L);
-        when(diaryService.getMyDiaryPage(7L, "제주", 2))
-                .thenReturn(new DiaryListPageDto(List.of(item()), "제주", 2, 3, 30, 12));
+        when(diaryService.getMyDiaryPage(7L, "제주", DiarySort.UPDATED_DESC, 2))
+                .thenReturn(new DiaryListPageDto(List.of(item()), "제주", DiarySort.UPDATED_DESC, 2, 3, 30, 12));
 
         String body = mockMvc.perform(get("/diaries/fragment").param("q", "제주").param("page", "2")
                         .with(authentication(new UsernamePasswordAuthenticationToken(
@@ -368,7 +370,7 @@ class DiaryControllerTest {
                 .andExpect(view().name("diary/list :: results"))
                 .andReturn().getResponse().getContentAsString();
 
-        verify(diaryService).getMyDiaryPage(7L, "제주", 2);
+        verify(diaryService).getMyDiaryPage(7L, "제주", DiarySort.UPDATED_DESC, 2);
         // 카드/쪽 이동은 그대로 들어 있다
         assertThat(body).contains("id=\"diary-results\"");
         assertThat(body).contains("여름 제주 여행");
@@ -377,6 +379,69 @@ class DiaryControllerTest {
         // 머리말/검색창 같은 페이지 껍데기는 없다
         assertThat(body).doesNotContain("diary-search-input");
         assertThat(body).doesNotContain("<html");
+    }
+
+    /** 정렬은 주소의 sort 로 오간다. 고른 정렬은 검색어/쪽과 함께 그대로 남는다. */
+    @Test
+    void sortComesFromTheQueryStringAndStaysInTheLinks() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiaryPage(7L, "제주", DiarySort.TRIP_ASC, 2))
+                .thenReturn(new DiaryListPageDto(List.of(item()), "제주", DiarySort.TRIP_ASC,
+                        2, 3, 30, 12));
+
+        String body = mockMvc.perform(get("/diaries")
+                        .param("q", "제주").param("sort", "TRIP_ASC").param("page", "2")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        verify(diaryService).getMyDiaryPage(7L, "제주", DiarySort.TRIP_ASC, 2);
+        // 고른 정렬이 버튼 이름과 체크 표시에 그대로 보인다
+        assertThat(body).contains("id=\"diary-sort-button\"");
+        assertThat(body).contains("data-default-sort=\"UPDATED_DESC\"");
+        assertThat(body).containsPattern("is-current[^>]*data-sort=\"TRIP_ASC\"");
+        assertThat(body).contains("오래된 여행순");
+        // 시스템 드롭다운은 쓰지 않는다
+        assertThat(body).doesNotContain("<select");
+        // 쪽 링크는 검색어와 정렬을 함께 달고 다닌다
+        assertThat(body).contains("/diaries?q=%EC%A0%9C%EC%A3%BC&amp;sort=TRIP_ASC&amp;page=1");
+        assertThat(body).contains("/diaries?q=%EC%A0%9C%EC%A3%BC&amp;sort=TRIP_ASC&amp;page=3");
+    }
+
+    /** 목록에 없는 정렬값은 기본 정렬(최근 수정순)로 본다. (SQL 조각이 들어올 자리가 없다) */
+    @Test
+    void unknownSortFallsBackToTheDefault() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiaryPage(7L, null, DiarySort.UPDATED_DESC, 1))
+                .thenReturn(listPage(List.of(item())));
+
+        for (String sort : new String[]{"id; DROP TABLE diaries", "start_date", ""}) {
+            mockMvc.perform(get("/diaries").param("sort", sort)
+                            .with(authentication(new UsernamePasswordAuthenticationToken(
+                                    userDetails, null, List.of()))))
+                    .andExpect(status().isOk());
+        }
+
+        verify(diaryService, org.mockito.Mockito.times(3))
+                .getMyDiaryPage(7L, null, DiarySort.UPDATED_DESC, 1);
+    }
+
+    /** 조각도 같은 정렬 규칙을 그대로 쓴다. (비동기 정렬 변경) */
+    @Test
+    void fragmentUsesTheSameSort() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiaryPage(7L, null, DiarySort.TITLE_ASC, 1))
+                .thenReturn(new DiaryListPageDto(List.of(item()), "", DiarySort.TITLE_ASC,
+                        1, 1, 1, 12));
+
+        mockMvc.perform(get("/diaries/fragment").param("sort", "TITLE_ASC")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andExpect(view().name("diary/list :: results"));
+
+        verify(diaryService).getMyDiaryPage(7L, null, DiarySort.TITLE_ASC, 1);
     }
 
     @Test
@@ -389,7 +454,7 @@ class DiaryControllerTest {
     @Test
     void oddPageNumbersFallBackToTheFirstPage() throws Exception {
         when(userDetails.getId()).thenReturn(7L);
-        when(diaryService.getMyDiaryPage(eq(7L), any(), eq(1)))
+        when(diaryService.getMyDiaryPage(eq(7L), any(), any(), eq(1)))
                 .thenReturn(listPage(List.of(item())));
 
         for (String page : new String[]{"0", "-3", "abc", ""}) {
@@ -399,14 +464,16 @@ class DiaryControllerTest {
                     .andExpect(status().isOk());
         }
 
-        verify(diaryService, org.mockito.Mockito.times(4)).getMyDiaryPage(eq(7L), any(), eq(1));
+        verify(diaryService, org.mockito.Mockito.times(4))
+                .getMyDiaryPage(eq(7L), any(), any(), eq(1));
     }
 
     @Test
     void emptySearchResultIsShownApartFromAnEmptyShelf() throws Exception {
         when(userDetails.getId()).thenReturn(7L);
-        when(diaryService.getMyDiaryPage(7L, "부산", 1))
-                .thenReturn(new DiaryListPageDto(List.of(), "부산", 1, 1, 0, 12));
+        when(diaryService.getMyDiaryPage(7L, "부산", DiarySort.UPDATED_DESC, 1))
+                .thenReturn(new DiaryListPageDto(List.of(), "부산", DiarySort.UPDATED_DESC,
+                        1, 1, 0, 12));
 
         String body = mockMvc.perform(get("/diaries").param("q", "부산")
                         .with(authentication(new UsernamePasswordAuthenticationToken(
@@ -424,7 +491,7 @@ class DiaryControllerTest {
     @Test
     void emptyListShowsAGuideMessage() throws Exception {
         when(userDetails.getId()).thenReturn(7L);
-        when(diaryService.getMyDiaryPage(7L, null, 1)).thenReturn(listPage(List.of()));
+        when(diaryService.getMyDiaryPage(7L, null, DiarySort.UPDATED_DESC, 1)).thenReturn(listPage(List.of()));
 
         mockMvc.perform(get("/diaries")
                         .with(authentication(new UsernamePasswordAuthenticationToken(
@@ -1980,7 +2047,7 @@ class DiaryControllerTest {
         DiaryListItemDto withoutCover = item();
         withoutCover.setId(11L);
         withoutCover.setTitle("겨울 강릉 여행");
-        when(diaryService.getMyDiaryPage(7L, null, 1))
+        when(diaryService.getMyDiaryPage(7L, null, DiarySort.UPDATED_DESC, 1))
                 .thenReturn(listPage(List.of(withCover, withoutCover)));
 
         String body = mockMvc.perform(get("/diaries")
@@ -2007,7 +2074,7 @@ class DiaryControllerTest {
     @Test
     void listCardCarriesTheBookLevelActionsInACompactMenu() throws Exception {
         when(userDetails.getId()).thenReturn(7L);
-        when(diaryService.getMyDiaryPage(7L, null, 1)).thenReturn(listPage(List.of(item())));
+        when(diaryService.getMyDiaryPage(7L, null, DiarySort.UPDATED_DESC, 1)).thenReturn(listPage(List.of(item())));
 
         String body = mockMvc.perform(get("/diaries")
                         .with(authentication(new UsernamePasswordAuthenticationToken(
@@ -2037,7 +2104,7 @@ class DiaryControllerTest {
         DiaryListItemDto legacy = item();
         legacy.setId(11L);
         legacy.setCoverStyle("DEFAULT");
-        when(diaryService.getMyDiaryPage(7L, null, 1)).thenReturn(listPage(List.of(leather, legacy)));
+        when(diaryService.getMyDiaryPage(7L, null, DiarySort.UPDATED_DESC, 1)).thenReturn(listPage(List.of(leather, legacy)));
 
         String body = mockMvc.perform(get("/diaries")
                         .with(authentication(new UsernamePasswordAuthenticationToken(
@@ -2214,7 +2281,7 @@ class DiaryControllerTest {
 
     /** 검색어 없는 첫 쪽. (쪽 계산은 서비스가 하므로 화면 확인에는 한 쪽이면 충분하다) */
     private DiaryListPageDto listPage(List<DiaryListItemDto> items) {
-        return new DiaryListPageDto(items, "", 1, 1, items.size(), 12);
+        return new DiaryListPageDto(items, "", DiarySort.UPDATED_DESC, 1, 1, items.size(), 12);
     }
 
     private DiaryListItemDto item() {

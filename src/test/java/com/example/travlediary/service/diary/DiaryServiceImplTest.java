@@ -2,6 +2,7 @@ package com.example.travlediary.service.diary;
 
 import com.example.travlediary.dto.DiaryCalendarDto;
 import com.example.travlediary.dto.DiaryListPageDto;
+import com.example.travlediary.dto.DiarySort;
 import com.example.travlediary.model.Diary;
 import com.example.travlediary.model.DiaryCoverStyle;
 import com.example.travlediary.repository.diary.DiaryMapper;
@@ -43,25 +44,41 @@ class DiaryServiceImplTest {
     @Test
     void listPageReadsTwelveDiariesWithoutAKeyword() {
         when(diaryMapper.countListItems(1L, null)).thenReturn(30);
-        when(diaryMapper.findListItems(1L, null, 12, 12)).thenReturn(List.of());
+        when(diaryMapper.findListItems(1L, null, "UPDATED_DESC", 12, 12)).thenReturn(List.of());
 
-        DiaryListPageDto page = diaryService.getMyDiaryPage(1L, "  ", 2);
+        DiaryListPageDto page = diaryService.getMyDiaryPage(1L, "  ", null, 2);
 
         assertThat(page.currentPage()).isEqualTo(2);
         assertThat(page.totalPages()).isEqualTo(3);
         assertThat(page.totalCount()).isEqualTo(30);
         assertThat(page.pageSize()).isEqualTo(12);
         assertThat(page.isSearching()).isFalse();
-        verify(diaryMapper).findListItems(1L, null, 12, 12);
+        // 정렬을 고르지 않으면 최근 수정순으로 본다. (주소에도 남기지 않는다)
+        assertThat(page.sort()).isEqualTo(DiarySort.UPDATED_DESC);
+        assertThat(page.sortParam()).isNull();
+        verify(diaryMapper).findListItems(1L, null, "UPDATED_DESC", 12, 12);
+    }
+
+    /** 고른 정렬은 허용된 이름 그대로 Mapper 로 넘어간다. (SQL 조각을 넘기지 않는다) */
+    @Test
+    void chosenSortIsPassedToTheMapperByName() {
+        when(diaryMapper.countListItems(1L, null)).thenReturn(3);
+        when(diaryMapper.findListItems(1L, null, "TRIP_ASC", 0, 12)).thenReturn(List.of());
+
+        DiaryListPageDto page = diaryService.getMyDiaryPage(1L, null, DiarySort.TRIP_ASC, 1);
+
+        assertThat(page.sort()).isEqualTo(DiarySort.TRIP_ASC);
+        assertThat(page.sortParam()).isEqualTo("TRIP_ASC");
+        verify(diaryMapper).findListItems(1L, null, "TRIP_ASC", 0, 12);
     }
 
     /** 검색어는 LIKE 특수문자를 그대로 찾도록 이스케이프해서 넘긴다. */
     @Test
     void keywordIsEscapedAndWrappedForLike() {
         when(diaryMapper.countListItems(eq(1L), any())).thenReturn(1);
-        when(diaryMapper.findListItems(eq(1L), any(), eq(0), eq(12))).thenReturn(List.of());
+        when(diaryMapper.findListItems(eq(1L), any(), any(), eq(0), eq(12))).thenReturn(List.of());
 
-        diaryService.getMyDiaryPage(1L, "  100%_할인!  ", 1);
+        diaryService.getMyDiaryPage(1L, "  100%_할인!  ", null, 1);
 
         ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
         verify(diaryMapper).countListItems(eq(1L), captor.capture());
@@ -72,10 +89,10 @@ class DiaryServiceImplTest {
     @Test
     void pageNumberIsClampedToTheAvailableRange() {
         when(diaryMapper.countListItems(1L, null)).thenReturn(5);
-        when(diaryMapper.findListItems(1L, null, 0, 12)).thenReturn(List.of());
+        when(diaryMapper.findListItems(1L, null, "UPDATED_DESC", 0, 12)).thenReturn(List.of());
 
-        assertThat(diaryService.getMyDiaryPage(1L, null, 9).currentPage()).isEqualTo(1);
-        assertThat(diaryService.getMyDiaryPage(1L, null, 0).currentPage()).isEqualTo(1);
+        assertThat(diaryService.getMyDiaryPage(1L, null, null, 9).currentPage()).isEqualTo(1);
+        assertThat(diaryService.getMyDiaryPage(1L, null, null, 0).currentPage()).isEqualTo(1);
     }
 
     /** 결과가 없으면 목록 조회를 하지 않는다. */
@@ -83,12 +100,12 @@ class DiaryServiceImplTest {
     void noResultSkipsTheListQuery() {
         when(diaryMapper.countListItems(eq(1L), any())).thenReturn(0);
 
-        DiaryListPageDto page = diaryService.getMyDiaryPage(1L, "제주", 1);
+        DiaryListPageDto page = diaryService.getMyDiaryPage(1L, "제주", DiarySort.TITLE_ASC, 1);
 
         assertThat(page.items()).isEmpty();
         assertThat(page.isSearching()).isTrue();
         assertThat(page.keyword()).isEqualTo("제주");
-        verify(diaryMapper, never()).findListItems(any(), any(), anyInt(), anyInt());
+        verify(diaryMapper, never()).findListItems(any(), any(), any(), anyInt(), anyInt());
     }
 
     /** 달력은 그 달과 겹치는 다이어리만 읽고, 월 경계에 걸친 여행도 그대로 표시한다. */

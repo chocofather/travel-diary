@@ -2,6 +2,7 @@ package com.example.travlediary.service.diary;
 
 import com.example.travlediary.dto.DiaryCalendarDto;
 import com.example.travlediary.dto.DiaryListPageDto;
+import com.example.travlediary.dto.DiarySort;
 import com.example.travlediary.model.Diary;
 
 import java.time.YearMonth;
@@ -16,8 +17,9 @@ public interface DiaryService {
      * 일기장형 목록 한 쪽 (표지 + 페이지 수).
      * 검색어가 있으면 제목/한 줄 메모/본문에서 찾는다.
      * (검색 결과도 다이어리 한 권 단위다)
+     * sort 가 null 이면 기본 정렬(최근 수정순)로 본다.
      */
-    DiaryListPageDto getMyDiaryPage(Long userId, String keyword, int page);
+    DiaryListPageDto getMyDiaryPage(Long userId, String keyword, DiarySort sort, int page);
 
     /** 그 달의 월간 달력. 표시 월과 여행 기간이 겹치는 다이어리만 읽는다. */
     DiaryCalendarDto getMyDiaryCalendar(Long userId, YearMonth month);
