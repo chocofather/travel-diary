@@ -80,10 +80,28 @@ public class DiaryController {
         DiaryListPageDto diaryPage =
                 diaryService.getMyDiaryPage(userDetails.getId(), keyword, pageNumber(page));
 
-        model.addAttribute("diaryList", diaryPage.items());
-        model.addAttribute("diaryPage", diaryPage);
+        addDiaryListAttributes(model, diaryPage);
         model.addAttribute("pageTitle", "나의 여행일기");
         return "diary/list";
+    }
+
+    /**
+     * 목록 결과 조각만 돌려준다. (검색/쪽 이동을 화면 새로고침 없이 갈아 끼우는 데 쓴다)
+     * 조회 조건·소유권은 위 목록과 완전히 같은 서비스 호출을 그대로 쓴다.
+     */
+    @GetMapping("/fragment")
+    public String diaryListFragment(@RequestParam(name = "q", required = false) String keyword,
+                                    @RequestParam(name = "page", required = false) String page,
+                                    @AuthenticationPrincipal CustomUserDetails userDetails,
+                                    Model model) {
+        addDiaryListAttributes(model,
+                diaryService.getMyDiaryPage(userDetails.getId(), keyword, pageNumber(page)));
+        return "diary/list :: results";
+    }
+
+    private void addDiaryListAttributes(Model model, DiaryListPageDto diaryPage) {
+        model.addAttribute("diaryList", diaryPage.items());
+        model.addAttribute("diaryPage", diaryPage);
     }
 
     /** 쪽 번호는 1부터. 비어 있거나 숫자가 아니거나 1보다 작으면 첫 쪽으로 본다. */

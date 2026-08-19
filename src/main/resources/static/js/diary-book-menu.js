@@ -4,9 +4,18 @@
  * 설정/삭제 동작은 기존 링크·폼이 그대로 처리하고, 여기서는 열고 닫기만 맡는다.
  */
 document.addEventListener('DOMContentLoaded', () => {
-    const menus = Array.from(document.querySelectorAll('.diary-book-menu')).map(setupMenu)
-        .filter(Boolean);
-    if (menus.length === 0) return;
+    // 검색 결과가 비동기로 갈릴 수 있으므로 지금 화면의 메뉴만 담아 두고 다시 훑는다.
+    let menus = [];
+    refresh();
+
+    // 목록을 갈아 끼운 쪽에서 새 카드의 메뉴를 다시 연결할 수 있게 열어 둔다.
+    window.diaryBookMenu = {refresh};
+
+    function refresh() {
+        menus = Array.from(document.querySelectorAll('.diary-book-menu'))
+            .map(setupMenu)
+            .filter(Boolean);
+    }
 
     // 바깥을 누르면 열려 있던 메뉴를 닫는다.
     document.addEventListener('click', (event) => {
@@ -29,6 +38,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const button = root.querySelector('.diary-book-menu-button');
         const panel = root.querySelector('.diary-book-menu-panel');
         if (!button || !panel) return null;
+        // 이미 연결해 둔 메뉴는 그대로 쓴다. (다시 훑어도 핸들러가 겹치지 않게)
+        if (root.diaryBookMenu) return root.diaryBookMenu;
 
         const menu = {
             root,
@@ -67,6 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         toggle(false);
+        root.diaryBookMenu = menu;
         return menu;
 
         function toggle(open) {

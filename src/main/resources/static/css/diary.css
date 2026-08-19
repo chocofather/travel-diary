@@ -190,6 +190,35 @@
     box-shadow: 0 0 0 3px rgba(179, 154, 117, 0.18);
 }
 
+/* 찾는 중 표시. 결과를 깜빡이게 하지 않고 검색창 안에서만 조용히 알린다. */
+.diary-search-spinner {
+    position: absolute;
+    right: 11px;
+    width: 13px;
+    height: 13px;
+    border: 2px solid #e6dccb;
+    border-top-color: #b39a75;
+    border-radius: 50%;
+    animation: diary-search-spin 700ms linear infinite;
+    pointer-events: none;
+}
+
+.diary-search-spinner[hidden] {
+    display: none;
+}
+
+@keyframes diary-search-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .diary-search-spinner {
+        animation: none;
+    }
+}
+
 /* 제출 버튼은 Enter 로 찾는 사용자를 위한 보조 수단이라 화면에서는 감춘다 */
 .diary-search-submit {
     position: absolute;

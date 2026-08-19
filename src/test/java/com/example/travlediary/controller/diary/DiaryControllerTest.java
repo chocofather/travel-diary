@@ -112,10 +112,45 @@ class DiaryControllerTest {
         verify(diaryService).getMyDiaryPage(7L, "제주", 2);
         // 검색어는 입력창에 그대로 남는다
         assertThat(body).contains("value=\"제주\"");
+        // 결과만 갈아 끼울 수 있도록 조각 주소를 폼에 실어 둔다
+        assertThat(body).contains("data-fragment-url=\"/diaries/fragment\"");
+        assertThat(body).contains("id=\"diary-results\"");
+        assertThat(body).contains("/js/diary-search.js");
         // 쪽 링크는 검색어를 계속 달고 다닌다
         assertThat(body).contains("/diaries?q=%EC%A0%9C%EC%A3%BC&amp;page=1");
         assertThat(body).contains("/diaries?q=%EC%A0%9C%EC%A3%BC&amp;page=3");
         assertThat(body).contains("page-number is-current");
+    }
+
+    /** 비동기 검색은 같은 서비스 호출로 결과 조각만 돌려준다. (전체 페이지가 아니다) */
+    @Test
+    void fragmentReturnsOnlyTheResultsPart() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiaryPage(7L, "제주", 2))
+                .thenReturn(new DiaryListPageDto(List.of(item()), "제주", 2, 3, 30, 12));
+
+        String body = mockMvc.perform(get("/diaries/fragment").param("q", "제주").param("page", "2")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andExpect(view().name("diary/list :: results"))
+                .andReturn().getResponse().getContentAsString();
+
+        verify(diaryService).getMyDiaryPage(7L, "제주", 2);
+        // 카드/쪽 이동은 그대로 들어 있다
+        assertThat(body).contains("id=\"diary-results\"");
+        assertThat(body).contains("여름 제주 여행");
+        assertThat(body).contains("diary-pagination");
+        assertThat(body).contains("diary-book-menu-button");
+        // 머리말/검색창 같은 페이지 껍데기는 없다
+        assertThat(body).doesNotContain("diary-search-input");
+        assertThat(body).doesNotContain("<html");
+    }
+
+    @Test
+    void fragmentOfAGuestIsSentToLogin() throws Exception {
+        mockMvc.perform(get("/diaries/fragment").param("q", "제주"))
+                .andExpect(status().is3xxRedirection());
     }
 
     /** 0/음수/숫자가 아닌 쪽 번호는 첫 쪽으로 본다. */

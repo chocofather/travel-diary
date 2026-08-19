@@ -5,6 +5,7 @@
 <th:block th:fragment="headFragment">
   <link rel="stylesheet" href="/css/diary.css">
   <script src="/js/diary-book-menu.js" defer></script>
+  <script src="/js/diary-search.js" defer></script>
 </th:block>
 
 <th:block th:fragment="body">
@@ -16,8 +17,12 @@
         <p class="diary-list-subtitle">여행에서의 순간을 나만의 다이어리로 남겨보세요.</p>
       </div>
       <div class="diary-list-tools">
-        <!-- 제목/한 줄 메모/본문을 한 입력창으로 찾는다. 검색어는 q 로 주소에 남는다. -->
-        <form class="diary-search" th:action="@{/diaries}" method="get" role="search">
+        <!-- 제목/한 줄 메모/본문을 한 입력창으로 찾는다.
+             입력하는 대로 결과 영역만 비동기로 갈아 끼우고, 검색어는 q 로 주소에 남는다.
+             (JS 가 없으면 폼 전송으로도 같은 화면이 나온다) -->
+        <form class="diary-search" id="diary-search-form" th:action="@{/diaries}"
+              method="get" role="search"
+              th:data-fragment-url="@{/diaries/fragment}">
           <svg class="diary-search-icon" viewBox="0 0 16 16" aria-hidden="true"
                fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
             <circle cx="7" cy="7" r="4.6" />
@@ -25,7 +30,8 @@
           </svg>
           <input type="search" name="q" class="diary-search-input"
                  placeholder="여행일기 검색" aria-label="여행일기 검색"
-                 maxlength="150" th:value="${diaryPage.keyword}" />
+                 autocomplete="off" maxlength="150" th:value="${diaryPage.keyword}" />
+          <span class="diary-search-spinner" aria-hidden="true" hidden></span>
           <button type="submit" class="diary-search-submit" aria-label="검색">검색</button>
         </form>
         <a class="diary-new-button" th:href="@{/diaries/new}">새 여행일기 만들기</a>
@@ -35,6 +41,14 @@
     <p class="diary-flash-message" th:if="${diaryMessage}" th:text="${diaryMessage}"
        role="status">여행일기가 만들어졌습니다.</p>
 
+    <!-- 검색 결과는 이 자리만 비동기로 갈아 끼운다. (아래 results 조각과 같은 HTML) -->
+    <div th:replace="~{diary/list :: results}"></div>
+  </section>
+</th:block>
+
+<!-- 목록 결과: 카드 / 쪽 이동 / 빈 상태.
+     첫 화면과 비동기 검색이 같은 조각을 써서 카드 HTML 을 두 벌로 만들지 않는다. -->
+<div th:fragment="results" id="diary-results" class="diary-results">
     <!-- 표지 스타일(cover_style)은 클래스로 붙여 이후 스타일이 늘어나도 그대로 쓸 수 있게 한다.
          LEATHER_BLACK → diary-cover-leather-black (폼의 견본과 같은 클래스) -->
     <ul class="diary-shelf" th:unless="${#lists.isEmpty(diaryList)}">
@@ -128,6 +142,5 @@
       <p class="diary-empty-text">여행에서의 추억을 한 권의 다이어리로 남겨보세요.</p>
       <a class="diary-new-button" th:href="@{/diaries/new}">새 여행일기 만들기</a>
     </div>
-  </section>
-</th:block>
+</div>
 </html>
