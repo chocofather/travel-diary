@@ -43,7 +43,7 @@
           AND page_id = #{pageId}
     </select>
 
-    <!-- TEXT 는 text_content, PHOTO 는 image_url 만 채운다 (DB CHECK 와 동일) -->
+    <!-- TEXT 는 text_content, PHOTO/STICKER 는 image_url 만 채운다 (DB CHECK 와 동일) -->
     <insert id="insert" parameterType="com.example.travlediary.model.DiaryElement"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO diary_elements (
@@ -57,7 +57,7 @@
         )
     </insert>
 
-    <!-- element_type 은 등록 시 값을 유지한다. (TEXT ↔ PHOTO 전환은 하지 않는다) -->
+    <!-- element_type 은 등록 시 값을 유지한다. (TEXT ↔ PHOTO ↔ STICKER 전환은 하지 않는다) -->
     <update id="update" parameterType="com.example.travlediary.model.DiaryElement">
         UPDATE diary_elements
         SET text_content = #{textContent},

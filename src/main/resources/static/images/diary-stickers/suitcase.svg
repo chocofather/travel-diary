@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="캐리어 스티커">
+  <path d="M24 15v-3a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v3" fill="none"
+        stroke="#6f5a3c" stroke-width="2.6" stroke-linecap="round"/>
+  <rect x="10" y="15" width="44" height="36" rx="6" fill="#d9b48a"
+        stroke="#6f5a3c" stroke-width="2.6"/>
+  <rect x="21" y="15" width="8" height="36" fill="#c1936a"/>
+  <rect x="21" y="15" width="8" height="36" fill="none" stroke="#6f5a3c" stroke-width="2.2"/>
+  <rect x="38" y="26" width="11" height="7" rx="2" fill="#f4ece0"
+        stroke="#6f5a3c" stroke-width="2.2"/>
+  <path d="M17 51v5M47 51v5" fill="none" stroke="#6f5a3c" stroke-width="2.6" stroke-linecap="round"/>
+</svg>

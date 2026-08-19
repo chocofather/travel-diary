@@ -555,7 +555,12 @@ CREATE TABLE `destinations` (
 -- 개인 여행일기 구조: users -> diaries -> diary_pages -> diary_elements
 --   * 한 회원이 여러 여행 다이어리를 가질 수 있다.
 --   * 한 다이어리가 여러 페이지를 가질 수 있고, 같은 날짜에 여러 페이지를 만들 수 있다.
---   * 한 페이지가 여러 TEXT/PHOTO 요소를 가질 수 있으며, PHOTO 한 장은 diary_elements 한 행이다.
+--   * 한 페이지가 여러 TEXT/PHOTO/STICKER 요소를 가질 수 있으며, PHOTO 한 장은 diary_elements 한 행이다.
+--   * STICKER 는 PHOTO 와 같은 자유배치 이미지 요소다. image_url 과
+--     position/size/rotation/z_index 컬럼을 PHOTO 와 똑같이 사용한다. (text_content 는 쓰지 않는다)
+--   * 페이지 본문은 diary_pages.content 를, 페이지 상단(page_date 오른쪽)의 짧은 한 줄 메모는
+--     diary_pages.page_header 를 사용한다. (예: '제주 여행 첫째 날', 'Day 1 ✈️')
+--   * 그 한 줄 메모의 꾸밈은 page_header_font(글꼴)와 page_header_bold(0 보통 / 1 굵게)로 함께 저장한다.
 --   * 별도 diary_images 테이블은 없고, 대표 이미지만 diaries.cover_image_url 을 사용한다.
 --   * 요소의 위치/크기는 페이지 크기 기준 0~1 상대값으로 저장한다.
 --
@@ -606,8 +611,8 @@ CREATE TABLE `diary_elements` (
   PRIMARY KEY (`id`),
   KEY `idx_diary_elements_page` (`page_id`,`z_index`,`id`),
   CONSTRAINT `fk_diary_elements_page` FOREIGN KEY (`page_id`) REFERENCES `diary_pages` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `chk_diary_elements_type` CHECK ((`element_type` in (_utf8mb4'TEXT',_utf8mb4'PHOTO'))),
-  CONSTRAINT `chk_diary_elements_payload` CHECK ((((`element_type` = _utf8mb4'TEXT') and (`text_content` is not null) and (`image_url` is null)) or ((`element_type` = _utf8mb4'PHOTO') and (`image_url` is not null) and (`text_content` is null)))),
+  CONSTRAINT `chk_diary_elements_type` CHECK ((`element_type` in (_utf8mb4'TEXT',_utf8mb4'PHOTO',_utf8mb4'STICKER'))),
+  CONSTRAINT `chk_diary_elements_payload` CHECK ((((`element_type` = _utf8mb4'TEXT') and (`text_content` is not null) and (`image_url` is null)) or ((`element_type` in (_utf8mb4'PHOTO',_utf8mb4'STICKER')) and (`image_url` is not null) and (`text_content` is null)))),
   CONSTRAINT `chk_diary_elements_position` CHECK (((`position_x` between -(0.5) and 1.5) and (`position_y` between -(0.5) and 1.5))),
   CONSTRAINT `chk_diary_elements_size` CHECK (((`width` > 0) and (`width` <= 1) and (`height` > 0) and (`height` <= 1))),
   CONSTRAINT `chk_diary_elements_rotation` CHECK ((`rotation` between -(360) and 360)),
@@ -627,6 +632,9 @@ CREATE TABLE `diary_pages` (
   `page_date` date NOT NULL,
   `page_order` int NOT NULL,
   `background_type` varchar(30) NOT NULL DEFAULT 'PLAIN',
+  `page_header` varchar(100) DEFAULT NULL,
+  `page_header_font` varchar(50) NOT NULL DEFAULT 'DEFAULT',
+  `page_header_bold` tinyint(1) NOT NULL DEFAULT '0',
   `content` mediumtext COLLATE utf8mb4_general_ci DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

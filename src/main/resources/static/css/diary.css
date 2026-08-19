@@ -1221,11 +1221,11 @@
     );
 }
 
+/* 날짜 + 한 줄 메모 한 줄 바로 아래에 구분선이 붙는다. (사진 버튼은 상단 툴바로 옮겼다) */
 .diary-sheet-head {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding-bottom: 12px;
+    padding-bottom: 7px;
     border-bottom: 1px solid rgba(150, 128, 96, 0.24);
 }
 
@@ -1342,10 +1342,63 @@
 }
 
 .diary-sheet-date {
+    flex: 0 0 auto;
     color: #8a7b62;
     font-size: 13px;
     font-weight: 700;
     letter-spacing: 0.02em;
+}
+
+/* 날짜 옆 한 줄 메모 (읽기 모드). 날짜보다 가볍게, 제목처럼 보이지 않게 둔다. */
+.diary-sheet-header {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    color: #7e7364;
+    font-size: 13px;
+    letter-spacing: 0.01em;
+    text-align: right;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 편집 모드. 입력 상자가 아니라 종이에 그대로 적는 자리처럼 보이게 한다. */
+.diary-sheet-header-input {
+    min-width: 0;
+    flex: 1;
+    padding: 2px 4px;
+    border: 0;
+    border-bottom: 1px solid transparent;
+    border-radius: 3px;
+    background: none;
+    color: #7e7364;
+    font-family: inherit;
+    font-size: 13px;
+    letter-spacing: 0.01em;
+    text-align: right;
+    text-overflow: ellipsis;
+    transition: border-color 160ms ease, background-color 160ms ease;
+}
+
+.diary-sheet-header-input::placeholder {
+    color: #c3b8a6;
+}
+
+/* 적을 수 있는 자리라는 것만 아주 옅게 알린다 */
+.diary-sheet-header-input:hover {
+    border-bottom-color: rgba(150, 128, 96, 0.28);
+}
+
+.diary-sheet-header-input:focus {
+    outline: none;
+    border-bottom-color: rgba(150, 128, 96, 0.5);
+    background: rgba(255, 255, 255, 0.4);
+}
+
+/* 굵기는 메모에만 적용한다. (날짜는 기존 스타일 그대로) */
+.diary-sheet-header.is-bold,
+.diary-sheet-header-input.is-bold {
+    font-weight: 700;
 }
 
 /* 아래층: 종이에 쓰는 본문 / 위층: 자유배치 사진 */
@@ -1356,7 +1409,8 @@
     flex-direction: column;
     gap: 14px;
     min-height: 0;
-    padding-top: 14px;
+    /* 구분선 아래에서 본문이 바로 이어지도록 좁게 둔다 */
+    padding-top: 10px;
 }
 
 /* 글쓰기 층. 종이 안에서만 스크롤되므로 사진 좌표(상대값) 기준은 그대로 유지된다. */
@@ -1373,7 +1427,9 @@
 .diary-canvas {
     position: absolute;
     z-index: 2;
-    top: 14px;
+    /* 글쓰기 층과 같은 시작점이어야 저장된 상대 좌표가 어긋나지 않는다
+       (.diary-sheet-body 의 padding-top 과 같은 값) */
+    top: 10px;
     right: 0;
     bottom: 0;
     left: 0;
@@ -1459,12 +1515,13 @@
     -webkit-box-decoration-break: clone;
 }
 
-/* ===== 펼침 공통 편집 툴바 ===== */
+/* ===== 펼침 공통 편집 툴바 =====
+   첫 줄: 본문 서식 + 사진/스티커 + 저장 상태 / 둘째 줄: 한 줄 메모 전용 */
 .diary-toolbar {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 10px 14px;
+    gap: 8px 10px;
     margin-bottom: 12px;
     padding: 8px 12px;
     border: 1px solid #e3dcd1;
@@ -1523,6 +1580,12 @@
     color: #4a3d2b;
 }
 
+/* 툴바 버튼 안의 outline 아이콘 (사진 등) */
+.diary-toolbar-icon {
+    width: 17px;
+    height: 17px;
+}
+
 .diary-toolbar-color {
     width: 30px;
     height: 28px;
@@ -1548,9 +1611,9 @@
 .diary-font-trigger {
     box-sizing: border-box;
     height: 28px;
-    min-width: 132px;
-    max-width: 168px;
-    padding: 2px 10px;
+    min-width: 118px;
+    max-width: 152px;
+    padding: 2px 9px;
     border: 1px solid #e0d6c6;
     border-radius: 6px;
     background: #fff;
@@ -1562,6 +1625,27 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     cursor: pointer;
+}
+
+/* 한 줄 메모는 툴바 둘째 줄을 통째로 쓴다. (사진/스티커는 첫 줄에 남는다) */
+.diary-header-style {
+    position: relative;
+    flex: 0 0 100%;
+    padding-top: 8px;
+    border-top: 1px solid #f0e8db;
+}
+
+.diary-font-trigger.is-compact {
+    min-width: 94px;
+    max-width: 124px;
+    padding: 2px 8px;
+    font-size: 12px;
+}
+
+/* 툴바 오른쪽 끝에 있으므로 목록은 오른쪽에 붙여 화면 밖으로 나가지 않게 한다 */
+.diary-header-style .diary-font-list {
+    right: 0;
+    left: auto;
 }
 
 .diary-font-trigger:hover {
@@ -1665,6 +1749,13 @@
     background: #fdf8ef;
 }
 
+/* 형광펜을 들고 있는 동안의 표시. 얇은 링 하나만 더한다. */
+.diary-highlight-trigger.is-marking {
+    border-color: #b39a75;
+    background: #f6ecdc;
+    box-shadow: 0 0 0 2px rgba(179, 154, 117, 0.22);
+}
+
 .diary-highlight-trigger:focus-visible {
     outline: 2px solid #b39a75;
     outline-offset: 1px;
@@ -1756,6 +1847,85 @@
             rgba(255, 255, 255, 0) 55%
         ),
         #fff;
+}
+
+/* 스티커 고르기. 이모지 picker 와 같은 팝오버 언어를 쓴다. */
+.diary-sticker-picker {
+    position: relative;
+}
+
+.diary-sticker-popover {
+    position: absolute;
+    z-index: 50;
+    top: calc(100% + 6px);
+    left: 0;
+    display: flex;
+    width: min(268px, calc(100vw - 32px));
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px;
+    border: 1px solid #e3dcd1;
+    border-radius: 10px;
+    background: #fffdf8;
+    box-shadow: 0 6px 16px rgba(63, 52, 38, 0.14);
+}
+
+/* 기본은 닫힘. display 를 지정한 뒤에도 hidden 이 이기도록 따로 둔다. */
+.diary-sticker-popover[hidden] {
+    display: none;
+}
+
+/* 지금은 묶음이 하나뿐이지만 늘어나면 같은 제목 + grid 를 반복한다 */
+.diary-sticker-category {
+    margin: 0;
+    color: #8b8378;
+    font-size: 12px;
+}
+
+.diary-sticker-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 4px;
+}
+
+.diary-sticker-option {
+    display: inline-flex;
+    aspect-ratio: 1 / 1;
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: none;
+    cursor: pointer;
+}
+
+.diary-sticker-option:hover {
+    border-color: #e0d6c6;
+    background: #f6efe3;
+}
+
+.diary-sticker-option:focus-visible {
+    outline: 2px solid #b39a75;
+    outline-offset: -2px;
+}
+
+.diary-sticker-option img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+}
+
+.diary-sticker-status {
+    margin: 0;
+    min-height: 15px;
+    color: #8b8378;
+    font-size: 12px;
+}
+
+.diary-sticker-status.is-error {
+    color: #b0554a;
 }
 
 /* 이모지 */
@@ -2188,14 +2358,27 @@
 }
 
 /* 겹침 순서 액션: 선택된 요소 아래쪽의 작은 텍스트 액션 */
+/* 선택했을 때만 보이는 액션 줄 (뒤로 / 앞으로 / 삭제).
+   요소 바깥 아래에 두어 이미지와 조절점을 가리지 않는다. */
 .diary-layer-actions {
     position: absolute;
     top: 100%;
     left: 0;
     display: none;
-    gap: 8px;
-    margin-top: 6px;
-    z-index: 2;
+    width: max-content;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+    z-index: 3;
+    /* 요소가 기울어도 액션 글자는 똑바로 읽히게 반대로 돌린다 */
+    transform: rotate(calc(-1 * var(--diary-item-rotation, 0deg)));
+    transform-origin: left top;
+    white-space: nowrap;
+}
+
+.diary-layer-actions form {
+    display: flex;
+    margin: 0;
 }
 
 .diary-canvas-item.is-selected .diary-layer-actions,
@@ -2217,6 +2400,22 @@
 .diary-layer-action:hover {
     background: #f6f2ec;
     color: #6f5a3c;
+}
+
+/* 삭제는 색으로만 낮게 구분한다 (강한 버튼으로 만들지 않는다) */
+.diary-layer-action.is-danger {
+    border-color: #e7d3cd;
+    color: #b07a70;
+}
+
+.diary-layer-action.is-danger:hover {
+    background: #f7ece9;
+    color: #96574c;
+}
+
+.diary-layer-action:focus-visible {
+    outline: 2px solid #b39a75;
+    outline-offset: 1px;
 }
 
 .diary-layer-action:disabled {
@@ -2245,53 +2444,10 @@
     font-weight: 700;
 }
 
-/* ===== 페이지 편집 툴바 (사진) ===== */
-.diary-sheet-toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-}
-
-.diary-tool-button {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    height: 26px;
-    padding: 0 10px;
-    border: 1px solid #e0d6c6;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.86);
-    color: #6f6355;
-    font-family: inherit;
-    font-size: 12px;
-    font-weight: 600;
-    line-height: 24px;
-    list-style: none;
-    cursor: pointer;
-}
-
-.diary-tool-button::-webkit-details-marker,
-.diary-tool-button::marker {
-    display: none;
-    content: "";
-}
-
-.diary-tool-button:hover {
-    border-color: #cbbba0;
-    background: #fffdf8;
-    color: #5c4a31;
-}
-
-.diary-tool-button.is-uploading {
+/* ===== 사진 붙이기 (상단 편집 툴바) ===== */
+.diary-toolbar-button.is-uploading {
     opacity: 0.5;
     cursor: default;
-}
-
-.diary-tool-icon {
-    color: #a3937c;
-    font-size: 11px;
-    font-weight: 700;
 }
 
 /* 사진 액션: 실제 file input 은 감추고 툴바 버튼으로만 연다 */
@@ -2316,7 +2472,7 @@
     white-space: nowrap;
 }
 
-.diary-photo-input:focus-visible + .diary-tool-button {
+.diary-photo-input:focus-visible + .diary-toolbar-button {
     border-color: #b39a75;
     box-shadow: 0 0 0 3px rgba(179, 154, 117, 0.18);
 }
@@ -2342,20 +2498,26 @@
     object-fit: contain;
 }
 
-/* 삭제 액션은 사진 영역을 밀어내지 않도록 아래에 겹쳐 둔다 */
-.diary-photo-delete {
-    position: absolute;
-    right: 6px;
-    bottom: 4px;
-    margin: 0;
-    opacity: 0;
-    transition: opacity 160ms ease;
+/* 종이에 붙인 스티커. 사진과 달리 액자/그림자 없이 그림만 놓인다. */
+.diary-sticker {
+    box-sizing: border-box;
+    padding: 0;
+    border: 0;
+    background: none;
+    box-shadow: none;
 }
 
-.diary-photo:hover .diary-photo-delete,
-.diary-photo:focus-within .diary-photo-delete {
-    opacity: 1;
+.diary-sticker img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    /* 투명 SVG 를 늘려도 흐려지지 않게 한다 */
+    pointer-events: none;
+    user-select: none;
 }
+
+/* 사진/스티커 삭제는 아래 액션 줄(.diary-layer-actions) 안에 함께 놓인다 */
 
 .diary-text-edit-actions {
     display: flex;
@@ -2622,6 +2784,13 @@
 
     .diary-toolbar-group {
         flex: 0 0 auto;
+    }
+
+    /* 가로로 넘기는 한 줄이 되므로 한 줄 메모 묶음도 같은 줄에 이어 둔다 */
+    .diary-header-style {
+        flex: 0 0 auto;
+        padding-top: 0;
+        border-top: 0;
     }
 
     .diary-toolbar-label {

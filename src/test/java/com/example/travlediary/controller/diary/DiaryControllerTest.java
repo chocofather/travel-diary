@@ -32,6 +32,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -1055,6 +1056,306 @@ class DiaryControllerTest {
     }
 
     @Test
+    void pageHeaderIsSavedThroughItsOwnEndpoint() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+
+        mockMvc.perform(post("/diaries/10/pages/3/header")
+                        .param("pageHeader", "제주 여행 첫째 날")
+                        .param("pageHeaderFont", "mitmi")
+                        .param("pageHeaderBold", "true")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isNoContent());
+
+        // 내용/글꼴/굵기를 한 번에 저장한다
+        verify(diaryPageService).updatePageHeader(10L, 3L, 7L, "제주 여행 첫째 날", "mitmi", true);
+        // 본문 저장 경로는 건드리지 않는다
+        verify(diaryPageService, org.mockito.Mockito.never())
+                .updateContent(any(), any(), any(), any());
+    }
+
+    /** 글꼴/굵기를 보내지 않던 요청도 그대로 동작한다. (기본값) */
+    @Test
+    void pageHeaderWithoutStyleParametersUsesTheDefaults() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+
+        mockMvc.perform(post("/diaries/10/pages/3/header")
+                        .param("pageHeader", "메모")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isNoContent());
+
+        verify(diaryPageService).updatePageHeader(10L, 3L, 7L, "메모", null, false);
+    }
+
+    @Test
+    void pageHeaderOfAnotherUsersPageIsNotFound() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryPageService.updatePageHeader(eq(10L), eq(3L), eq(7L), any(), any(), anyBoolean()))
+                .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "페이지를 찾을 수 없습니다."));
+
+        mockMvc.perform(post("/diaries/10/pages/3/header")
+                        .param("pageHeader", "남의 메모")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void tooLongPageHeaderReturnsAMessageInsteadOfAnErrorPage() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryPageService.updatePageHeader(eq(10L), eq(3L), eq(7L), any(), any(), anyBoolean()))
+                .thenThrow(new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "한 줄 메모는 100자 이하로 입력해 주세요."));
+
+        mockMvc.perform(post("/diaries/10/pages/3/header")
+                        .param("pageHeader", "가".repeat(101))
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(containsString("한 줄 메모는 100자 이하로 입력해 주세요.")));
+    }
+
+    @Test
+    void pageHeaderIsEditableInEditModeAndReadOnlyTextInReadMode() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        DiaryPage first = page(1, "2026-08-01");
+        first.setPageHeader("제주 여행 첫째 날");
+        DiaryPage second = page(2, "2026-08-02");
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(first, second));
+
+        String editBody = mockMvc.perform(get("/diaries/10").param("edit", "true")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(editBody).contains("diary-sheet-header-input");
+        assertThat(editBody).contains("maxlength=\"100\"");
+        assertThat(editBody).contains("오늘의 한 줄...");
+        assertThat(editBody).contains("/diaries/10/pages/1/header");
+        assertThat(editBody).contains("제주 여행 첫째 날");
+        // 한 줄 메모 전용 글꼴/굵기 컨트롤은 상단 툴바에 있다
+        assertThat(editBody).contains("diary-header-font-trigger");
+        assertThat(editBody).contains("diary-header-bold");
+
+        String readBody = mockMvc.perform(get("/diaries/10")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        // 읽기 모드는 입력 요소 없이 적어 둔 메모만 보여준다
+        assertThat(readBody).contains("diary-sheet-header");
+        assertThat(readBody).contains("제주 여행 첫째 날");
+        assertThat(readBody).doesNotContain("diary-sheet-header-input");
+        assertThat(readBody).doesNotContain("오늘의 한 줄...");
+        assertThat(readBody).doesNotContain("diary-header-font-trigger");
+        assertThat(readBody).doesNotContain("diary-header-bold");
+        // 비어 있는 페이지는 아무것도 두지 않는다 (날짜만 남는다)
+        assertThat(readBody.split("diary-sheet-header", -1).length - 1).isEqualTo(1);
+    }
+
+    @Test
+    void pageHeaderKeepsItsFontAndBoldInBothModes() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        DiaryPage first = page(1, "2026-08-01");
+        first.setPageHeader("Day 1");
+        first.setPageHeaderFont("mitmi");
+        first.setPageHeaderBold(true);
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(first));
+
+        String readBody = mockMvc.perform(get("/diaries/10")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        // 본문 글꼴과 같은 클래스를 그대로 쓴다
+        assertThat(readBody).contains("diary-font-mitmi");
+        assertThat(readBody).contains("is-bold");
+        // 날짜에는 사용자 글꼴/굵기를 적용하지 않는다
+        assertThat(readBody).contains("class=\"diary-sheet-date\"");
+
+        String editBody = mockMvc.perform(get("/diaries/10").param("edit", "true")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(editBody).contains("data-header-font=\"mitmi\"");
+        assertThat(editBody).contains("data-header-bold=\"true\"");
+        assertThat(editBody).contains("diary-font-mitmi");
+    }
+
+    @Test
+    void photoButtonMovedFromThePaperToTheTopToolbar() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-01")));
+
+        String body = mockMvc.perform(get("/diaries/10").param("edit", "true")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        // 기존 PHOTO 생성 폼은 그대로 쓰고 자리만 상단 툴바로 옮겼다
+        assertThat(body).contains("diary-photo-add");
+        // 아이콘은 이모지 문자가 아니라 inline SVG 이고 의미는 라벨로 남긴다
+        assertThat(body).contains("diary-toolbar-icon");
+        assertThat(body).contains("aria-label=\"사진 추가\"");
+        assertThat(body).contains("/diaries/10/pages/1/elements/photo");
+        assertThat(body).contains("diary-photo-input");
+        assertThat(body.indexOf("diary-photo-add"))
+                .isLessThan(body.indexOf("diary-book-single"));
+        // 종이 안에는 사진 버튼이 남아 있지 않다
+        assertThat(body).doesNotContain("diary-sheet-toolbar");
+        assertThat(body.substring(body.indexOf("diary-sheet-single")))
+                .doesNotContain("diary-photo-add");
+    }
+
+    @Test
+    void stickerIsCreatedFromTheServerSideCatalogOnly() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryElementService.getElements(10L, 3L, 7L)).thenReturn(List.of());
+        when(diaryElementService.create(eq(10L), eq(3L), eq(7L), any()))
+                .thenReturn(stickerElement(200L, "/images/diary-stickers/plane.svg"));
+
+        mockMvc.perform(post("/diaries/10/pages/3/elements/sticker")
+                        .param("sticker", "PLANE")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("/images/diary-stickers/plane.svg")))
+                .andExpect(content().string(containsString("/sticker/delete")));
+
+        ArgumentCaptor<DiaryElement> captor = ArgumentCaptor.forClass(DiaryElement.class);
+        verify(diaryElementService).create(eq(10L), eq(3L), eq(7L), captor.capture());
+        DiaryElement saved = captor.getValue();
+        assertThat(saved.getElementType()).isEqualTo("STICKER");
+        // 경로는 요청 값이 아니라 서버 목록에서 나온다
+        assertThat(saved.getImageUrl()).isEqualTo("/images/diary-stickers/plane.svg");
+        assertThat(saved.getTextContent()).isNull();
+        // 종이 가운데 부근의 작은 기본 크기
+        assertThat(saved.getWidth()).isEqualByComparingTo("0.18000");
+        assertThat(saved.getHeight()).isEqualByComparingTo("0.18000");
+        assertThat(saved.getPositionX()).isEqualByComparingTo("0.41000");
+    }
+
+    @Test
+    void arbitraryStickerImageUrlsAreRejected() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+
+        mockMvc.perform(post("/diaries/10/pages/3/elements/sticker")
+                        .param("sticker", "https://evil.example.com/tracker.svg")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(containsString("알 수 없는 스티커입니다.")));
+
+        verify(diaryElementService, org.mockito.Mockito.never())
+                .create(any(), any(), any(), any());
+    }
+
+    @Test
+    void stickerOnAnotherUsersPageIsNotFound() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryElementService.getElements(99L, 3L, 7L)).thenThrow(
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "다이어리를 찾을 수 없습니다."));
+
+        mockMvc.perform(post("/diaries/99/pages/3/elements/sticker")
+                        .param("sticker", "PLANE")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void stickerDeleteRemovesTheRowWithoutTouchingTheSharedAsset() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryElementService.getElement(10L, 3L, 200L, 7L))
+                .thenReturn(stickerElement(200L, "/images/diary-stickers/plane.svg"));
+
+        mockMvc.perform(post("/diaries/10/pages/3/elements/200/sticker/delete")
+                        .param("spread", "1")
+                        .param("page", "2")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().is3xxRedirection());
+
+        verify(diaryElementService).delete(10L, 3L, 200L, 7L);
+        // 공용 asset 이므로 업로드 파일 정리 경로를 타지 않는다
+        verify(fileUploadService, org.mockito.Mockito.never()).saveFile(any(), any());
+
+        // 사진은 스티커 삭제 경로로 지울 수 없다
+        when(diaryElementService.getElement(10L, 3L, 201L, 7L))
+                .thenReturn(photoElement(201L, "/uploads/diary-pages/trip.jpg"));
+
+        mockMvc.perform(post("/diaries/10/pages/3/elements/201/sticker/delete")
+                        .param("spread", "0")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(flash().attribute("diaryPageError", "스티커 요소가 아닙니다."));
+        verify(diaryElementService, org.mockito.Mockito.never()).delete(10L, 3L, 201L, 7L);
+    }
+
+    @Test
+    void editModeOffersTheStickerPickerAndReadModeShowsSavedStickersOnly() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-01")));
+        when(diaryElementService.getElements(10L, 1L, 7L)).thenReturn(List.of(
+                stickerElement(200L, "/images/diary-stickers/heart.svg")));
+
+        String editBody = mockMvc.perform(get("/diaries/10").param("edit", "true")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(editBody).contains("diary-sticker-button");
+        assertThat(editBody).contains("data-sticker-code=\"PLANE\"");
+        assertThat(editBody).contains("/images/diary-stickers/heart.svg");
+        // 스티커도 사진과 같은 자유배치 조작을 쓴다
+        assertThat(editBody).contains("diary-canvas-sticker");
+        assertThat(editBody).contains("/diaries/10/pages/1/elements/200/position");
+        assertThat(editBody).contains("/diaries/10/pages/1/elements/200/layer");
+        assertThat(editBody).contains("/diaries/10/pages/1/elements/200/sticker/delete");
+        assertThat(editBody).contains("/js/diary-sticker-picker.js");
+        // 삭제/떼기는 이미지 위가 아니라 뒤로·앞으로와 같은 액션 줄 안에 있다
+        String actions = editBody.substring(editBody.indexOf("diary-layer-actions"));
+        actions = actions.substring(0, actions.indexOf("</div>", actions.indexOf("sticker/delete")));
+        assertThat(actions).contains("data-layer-direction=\"BACKWARD\"")
+                .contains("data-layer-direction=\"FORWARD\"")
+                .contains("sticker/delete");
+
+        String readBody = mockMvc.perform(get("/diaries/10")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        // 읽기 모드에는 스티커 그림만 남고 편집 UI 는 없다
+        assertThat(readBody).contains("diary-canvas-sticker");
+        assertThat(readBody).contains("/images/diary-stickers/heart.svg");
+        assertThat(readBody).doesNotContain("diary-sticker-button");
+        assertThat(readBody).doesNotContain("sticker/delete");
+        assertThat(readBody).doesNotContain("diary-resize-handle");
+    }
+
+    @Test
     void photoDeleteRemovesTheRowAndRejectsTextElements() throws Exception {
         when(userDetails.getId()).thenReturn(7L);
         when(diaryElementService.getElement(10L, 3L, 101L, 7L))
@@ -1384,6 +1685,17 @@ class DiaryControllerTest {
     private DiaryElement photoElement(Long id, String imageUrl) {
         DiaryElement element = element(id, "PHOTO");
         element.setImageUrl(imageUrl);
+        return element;
+    }
+
+    /** 스티커는 사진과 같은 자유배치 이미지 요소다. (공용 asset 경로만 다르다) */
+    private DiaryElement stickerElement(Long id, String imageUrl) {
+        DiaryElement element = element(id, "STICKER");
+        element.setImageUrl(imageUrl);
+        element.setWidth(new java.math.BigDecimal("0.18000"));
+        element.setHeight(new java.math.BigDecimal("0.18000"));
+        element.setPositionX(new java.math.BigDecimal("0.41000"));
+        element.setPositionY(new java.math.BigDecimal("0.41000"));
         return element;
     }
 

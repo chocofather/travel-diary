@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -21,6 +22,14 @@ public class DiaryElementServiceImpl implements DiaryElementService {
 
     private static final String TYPE_TEXT = "TEXT";
     private static final String TYPE_PHOTO = "PHOTO";
+    private static final String TYPE_STICKER = "STICKER";
+    /**
+     * 사진과 스티커는 같은 자유배치 이미지 요소다.
+     * (image_url 만 쓰고 text_content 는 비운다 — DB payload CHECK 와 같은 규칙)
+     */
+    private static final Set<String> IMAGE_TYPES = Set.of(TYPE_PHOTO, TYPE_STICKER);
+    /** 저장할 수 있는 요소 유형. (DB chk_diary_elements_type 과 같은 값) */
+    private static final Set<String> ALLOWED_TYPES = Set.of(TYPE_TEXT, TYPE_PHOTO, TYPE_STICKER);
 
     /** 좌표/크기 기본값과 허용 범위 (DB 기본값·CHECK 제약과 같은 값) */
     private static final BigDecimal DEFAULT_POSITION = new BigDecimal("0.00000");
@@ -70,7 +79,7 @@ public class DiaryElementServiceImpl implements DiaryElementService {
                                DiaryElement element) {
         DiaryPage page = requireOwnedPage(diaryId, pageId, userId);
         DiaryElement existing = requireElementOfPage(elementId, page.getId());
-        // 유형은 기존 요소의 값을 유지한다. (TEXT ↔ PHOTO 전환 없음)
+        // 유형은 기존 요소의 값을 유지한다. (TEXT ↔ PHOTO ↔ STICKER 전환 없음)
         DiaryElement prepared = validated(element, existing.getElementType());
         // 대상 요소/페이지는 요청 값이 아니라 검증된 값으로 고정한다. (페이지 이동 없음)
         prepared.setId(existing.getId());
@@ -207,14 +216,14 @@ public class DiaryElementServiceImpl implements DiaryElementService {
         return element;
     }
 
-    /** 생성 시 요청한 유형. 현재는 TEXT/PHOTO 만 허용한다. */
+    /** 생성 시 요청한 유형. TEXT/PHOTO/STICKER 만 허용한다. */
     private String requireElementType(DiaryElement element) {
         if (element == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "요소 정보를 입력해 주세요.");
         }
         String elementType = element.getElementType() == null
                 ? "" : element.getElementType().strip();
-        if (!TYPE_TEXT.equals(elementType) && !TYPE_PHOTO.equals(elementType)) {
+        if (!ALLOWED_TYPES.contains(elementType)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "지원하지 않는 요소 유형입니다.");
         }
         return elementType;
@@ -242,7 +251,10 @@ public class DiaryElementServiceImpl implements DiaryElementService {
         return prepared;
     }
 
-    /** TEXT 는 본문만, PHOTO 는 사진 경로만 남긴다. (DB payload CHECK 와 같은 규칙) */
+    /**
+     * TEXT 는 본문만, PHOTO/STICKER 는 이미지 경로만 남긴다. (DB payload CHECK 와 같은 규칙)
+     * 사진과 스티커는 같은 이미지 요소라 검증도 한 곳에서 공유한다.
+     */
     private void applyPayload(DiaryElement prepared, DiaryElement element, String elementType) {
         String textContent = element.getTextContent() == null
                 ? "" : element.getTextContent().strip();
@@ -257,8 +269,12 @@ public class DiaryElementServiceImpl implements DiaryElementService {
             return;
         }
 
+        if (!IMAGE_TYPES.contains(elementType)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "지원하지 않는 요소 유형입니다.");
+        }
         if (imageUrl.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "사진을 선택해 주세요.");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    TYPE_STICKER.equals(elementType) ? "스티커를 선택해 주세요." : "사진을 선택해 주세요.");
         }
         prepared.setImageUrl(imageUrl);
         prepared.setTextContent(null);

@@ -7,7 +7,7 @@ import org.apache.ibatis.annotations.Param;
 import java.util.List;
 
 /**
- * 페이지에 올린 요소(TEXT/PHOTO) 저장소.
+ * 페이지에 올린 요소(TEXT/PHOTO/STICKER) 저장소.
  * 소유권은 서비스에서 다이어리 → 페이지 순으로 확인하고, 여기서는 page_id 범위로만 제한한다.
  */
 @Mapper

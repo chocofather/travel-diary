@@ -20,6 +20,7 @@ import java.time.LocalDate;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
@@ -41,6 +42,75 @@ class DiaryPageServiceImplTest {
         // 정리(sanitize)까지 실제 동작을 확인하기 위해 실제 구현을 쓴다.
         diaryPageService = new DiaryPageServiceImpl(diaryService, diaryPageMapper,
                 new DiaryContentSanitizer(new PostContentSanitizer()));
+    }
+
+    @Test
+    void pageHeaderSaveTouchesOnlyItsOwnColumns() {
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageMapper.findByIdAndDiaryId(3L, 10L)).thenReturn(page());
+        when(diaryPageMapper.updatePageHeader(eq(3L), eq(10L), any(), any(), anyBoolean()))
+                .thenReturn(1);
+
+        diaryPageService.updatePageHeader(10L, 3L, 7L, "  제주 여행 첫째 날  ", "mitmi", true);
+
+        verify(diaryPageMapper).updatePageHeader(3L, 10L, "제주 여행 첫째 날", "mitmi", true);
+        // 본문/날짜/순서/배경을 바꾸는 UPDATE 는 실행되지 않는다
+        verify(diaryPageMapper, never()).update(any(DiaryPage.class));
+        verify(diaryPageMapper, never()).updateContent(any(), any(), any());
+    }
+
+    /** 빈 메모는 NULL 로, 고르지 않은 글꼴은 기본값으로 저장한다. */
+    @Test
+    void blankPageHeaderIsStoredAsNullWithTheDefaultFont() {
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageMapper.findByIdAndDiaryId(3L, 10L)).thenReturn(page());
+        when(diaryPageMapper.updatePageHeader(3L, 10L, null, "DEFAULT", false)).thenReturn(1);
+
+        diaryPageService.updatePageHeader(10L, 3L, 7L, "   ", null, false);
+
+        verify(diaryPageMapper).updatePageHeader(3L, 10L, null, "DEFAULT", false);
+    }
+
+    @Test
+    void tooLongPageHeaderIsRejected() {
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageMapper.findByIdAndDiaryId(3L, 10L)).thenReturn(page());
+
+        assertThatThrownBy(() ->
+                diaryPageService.updatePageHeader(10L, 3L, 7L, "가".repeat(101), "DEFAULT", false))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("한 줄 메모는 100자 이하로 입력해 주세요.");
+        verify(diaryPageMapper, never())
+                .updatePageHeader(any(), any(), any(), any(), anyBoolean());
+    }
+
+    /** 글꼴은 본문에서 쓰는 16종(기본 포함)만 저장할 수 있다. */
+    @Test
+    void unknownPageHeaderFontIsRejected() {
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageMapper.findByIdAndDiaryId(3L, 10L)).thenReturn(page());
+
+        assertThatThrownBy(() ->
+                diaryPageService.updatePageHeader(10L, 3L, 7L, "메모", "comic-sans", false))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("지원하지 않는 글꼴입니다.");
+        verify(diaryPageMapper, never())
+                .updatePageHeader(any(), any(), any(), any(), anyBoolean());
+    }
+
+    @Test
+    void everyBodyFontKeyIsAlsoAllowedForThePageHeader() {
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageMapper.findByIdAndDiaryId(3L, 10L)).thenReturn(page());
+        when(diaryPageMapper.updatePageHeader(eq(3L), eq(10L), any(), any(), anyBoolean()))
+                .thenReturn(1);
+
+        // 본문 글꼴 클래스(ql-font-{키})와 같은 목록을 쓴다
+        assertThat(DiaryContentSanitizer.DIARY_FONT_KEYS).hasSize(15);
+        for (String fontKey : DiaryContentSanitizer.DIARY_FONT_KEYS) {
+            diaryPageService.updatePageHeader(10L, 3L, 7L, "메모", fontKey, false);
+            verify(diaryPageMapper).updatePageHeader(3L, 10L, "메모", fontKey, false);
+        }
     }
 
     @Test

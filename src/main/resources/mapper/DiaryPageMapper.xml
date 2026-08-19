@@ -11,13 +11,18 @@
         <result property="pageDate"       column="page_date"/>
         <result property="pageOrder"      column="page_order"/>
         <result property="backgroundType" column="background_type"/>
+        <result property="pageHeader"     column="page_header"/>
+        <result property="pageHeaderFont" column="page_header_font"/>
+        <result property="pageHeaderBold" column="page_header_bold"/>
         <result property="content"        column="content"/>
         <result property="createdAt"      column="created_at"/>
         <result property="updatedAt"      column="updated_at"/>
     </resultMap>
 
     <sql id="DiaryPageColumns">
-        id, diary_id, page_date, page_order, background_type, content, created_at, updated_at
+        id, diary_id, page_date, page_order, background_type,
+        page_header, page_header_font, page_header_bold, content,
+        created_at, updated_at
     </sql>
 
     <!-- 다이어리 안의 페이지 순서(page_order)대로 조회한다. -->
@@ -46,9 +51,11 @@
     <insert id="insert" parameterType="com.example.travlediary.model.DiaryPage"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO diary_pages (
-            diary_id, page_date, page_order, background_type, content, created_at, updated_at
+            diary_id, page_date, page_order, background_type, page_header, content,
+            created_at, updated_at
         ) VALUES (
-            #{diaryId}, #{pageDate}, #{pageOrder}, #{backgroundType}, #{content}, NOW(), NOW()
+            #{diaryId}, #{pageDate}, #{pageOrder}, #{backgroundType}, #{pageHeader}, #{content},
+            NOW(), NOW()
         )
     </insert>
 
@@ -67,6 +74,17 @@
     <update id="updateContent">
         UPDATE diary_pages
         SET content = #{content},
+            updated_at = NOW()
+        WHERE id = #{pageId}
+          AND diary_id = #{diaryId}
+    </update>
+
+    <!-- 상단 한 줄 메모(내용/글꼴/굵기) 자동저장 전용. 본문/날짜/순서/배경은 그대로 둔다. -->
+    <update id="updatePageHeader">
+        UPDATE diary_pages
+        SET page_header = #{pageHeader},
+            page_header_font = #{pageHeaderFont},
+            page_header_bold = #{pageHeaderBold},
             updated_at = NOW()
         WHERE id = #{pageId}
           AND diary_id = #{diaryId}

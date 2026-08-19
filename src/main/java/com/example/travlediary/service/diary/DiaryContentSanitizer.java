@@ -40,6 +40,13 @@ public class DiaryContentSanitizer {
             "ql-font-gunham", "ql-font-dunggeunmo", "ql-font-mitmi",
             "ql-font-green-umbrella", "ql-font-incheon-jaram", "ql-font-park-dahyun"
     );
+    /** ql-font- 접두어. 클래스 이름과 글꼴 키를 오가는 데 쓴다. */
+    private static final String FONT_CLASS_PREFIX = "ql-font-";
+    /**
+     * 글꼴 키 (ql-font-{키} 의 뒷부분).
+     * 본문 글꼴과 페이지 상단 한 줄 메모 글꼴이 같은 목록을 쓰도록 여기서 한 번만 정한다.
+     */
+    public static final Set<String> DIARY_FONT_KEYS = fontKeys();
     /**
      * 다이어리 툴바의 형광펜 색상. (diary-editor.js 의 HIGHLIGHTS 와 같은 값을 쓴다)
      * 배경색은 이 6종만 살리고, 그 밖의 값은 색 자체가 안전해도 버린다.
@@ -97,6 +104,15 @@ public class DiaryContentSanitizer {
     /** 빈 편집기가 만드는 &lt;p&gt;&lt;br&gt;&lt;/p&gt; 같은 값은 빈 본문으로 본다. */
     private boolean isEmpty(String text) {
         return text.replace(NO_BREAK_SPACE, ' ').isBlank();
+    }
+
+    /** 허용 글꼴 클래스에서 키만 뽑아 둔다. (목록을 두 벌로 관리하지 않기 위해) */
+    private static Set<String> fontKeys() {
+        Set<String> keys = new HashSet<>();
+        for (String className : DIARY_FONT_CLASSES) {
+            keys.add(className.substring(FONT_CLASS_PREFIX.length()));
+        }
+        return Set.copyOf(keys);
     }
 
     /** 글꼴 + 글자 크기 + 정렬 클래스. 그 밖의 클래스는 모두 지운다. */

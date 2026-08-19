@@ -1,11 +1,11 @@
 /**
- * 페이지 편집 툴바의 '사진' 액션.
+ * 상단 편집 툴바의 '사진' 액션.
  * 파일을 고르면 기존 PHOTO 생성 폼을 그대로 전송한다. (별도 업로드 API 없음)
  */
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.diary-photo-add').forEach((form) => {
         const input = form.querySelector('.diary-photo-input');
-        const button = form.querySelector('.diary-tool-button');
+        const button = form.querySelector('.diary-toolbar-button');
         const status = form.querySelector('.diary-photo-status');
         if (!input || !button) return;
 

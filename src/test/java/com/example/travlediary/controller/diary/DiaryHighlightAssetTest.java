@@ -59,14 +59,54 @@ class DiaryHighlightAssetTest {
     }
 
     @Test
-    void choosingAHighlightAppliesItThroughTheSameFocusRestoreAsTheFontPicker()
-            throws IOException {
+    void choosingAColorPicksUpTheMarkerInsteadOfPaintingImmediately() throws IOException {
         String script = Files.readString(EDITOR_SCRIPT);
 
-        // 선택 영역/커서 복원은 글꼴과 같은 applyFormat 경로를 쓴다
-        // (색을 고른 뒤 종이를 다시 클릭할 필요가 없다)
-        assertThat(script).contains("applyFormat('background', value || false);");
+        // 색을 고르면 형광펜을 든 상태가 되고, 칠하기는 그다음 드래그부터다
+        assertThat(script).contains("startHighlighting({value, name: label});");
+        assertThat(script).contains("let highlightMode = null;");
         assertThat(script).contains("syncHighlightTrigger(formats);");
+    }
+
+    @Test
+    void draggingWithTheMarkerPaintsTheReleasedSelectionOnly() throws IOException {
+        String script = Files.readString(EDITOR_SCRIPT);
+
+        // 드래그를 놓는 순간 그 구간을 칠한다
+        assertThat(script).contains("document.addEventListener('mouseup', finishMarking);");
+
+        String paintSelection = script.substring(script.indexOf("function paintSelection(page) {"));
+        paintSelection = paintSelection.substring(0, paintSelection.indexOf("\n    }"));
+        // 선택 길이가 0이면 아무것도 하지 않는다
+        assertThat(paintSelection).contains("range.length === 0");
+
+        String paintRange = script.substring(script.indexOf("function paintRange(page, range) {"));
+        paintRange = paintRange.substring(0, paintRange.indexOf("\n    }"));
+        // 커서 서식을 건드리지 않도록 그 구간만 바꾸고, 선택/포커스를 그대로 둔다
+        assertThat(paintRange).contains("formatText(range.index, range.length,");
+        assertThat(paintRange).contains("'background'");
+        assertThat(paintRange).contains("setSelection(range.index, range.length, 'silent')");
+        // 칠하기도 기존 자동저장 흐름을 그대로 탄다
+        assertThat(paintRange).contains("scheduleSave(page);");
+    }
+
+    @Test
+    void theMarkerIsPutDownByTheButtonEscapeOrAnotherTool() throws IOException {
+        String script = Files.readString(EDITOR_SCRIPT);
+
+        // 형광펜 버튼을 다시 누르면 종료
+        assertThat(script).containsPattern(
+                "(?s)if \\(highlightMode\\) \\{\\s*\\n\\s*setHighlightMode\\(null\\);");
+        // Esc 로도 종료
+        assertThat(script).contains("if (event.key === 'Escape' && highlightMode) setHighlightMode(null);");
+
+        // 다른 편집 도구(글꼴/굵게/정렬/글자색…)를 고르면 함께 종료
+        String applyFormat = script.substring(script.indexOf("function applyFormat(name, value) {"));
+        assertThat(applyFormat.substring(0, applyFormat.indexOf("\n    }")))
+                .contains("setHighlightMode(null);");
+        String insertEmoji = script.substring(script.indexOf("function insertEmoji(emoji) {"));
+        assertThat(insertEmoji.substring(0, insertEmoji.indexOf("\n    }")))
+                .contains("setHighlightMode(null);");
     }
 
     @Test

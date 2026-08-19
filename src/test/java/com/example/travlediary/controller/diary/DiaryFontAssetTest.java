@@ -108,6 +108,19 @@ class DiaryFontAssetTest {
         assertThat(script).contains("trigger.addEventListener('click', () => toggle(list.hidden));");
     }
 
+    /**
+     * .diary-font-{키} 는 diary.css 의 font-family 와 우선순위가 같으므로 뒤에 와야 실제로 적용된다.
+     * (순서가 바뀌면 한 줄 메모/글꼴 버튼의 글꼴 미리보기가 조용히 무시된다)
+     */
+    @Test
+    void fontStylesheetIsLoadedAfterTheDiaryStylesheet() throws IOException {
+        String template = Files.readString(
+                Path.of("src/main/resources/templates/diary/detail.html"));
+
+        assertThat(template.indexOf("/css/diary.css"))
+                .isLessThan(template.indexOf("/css/diary-fonts.css"));
+    }
+
     @Test
     void everyFontValueHasAWebfontAndStyleRule() throws IOException {
         String css = Files.readString(FONT_CSS);

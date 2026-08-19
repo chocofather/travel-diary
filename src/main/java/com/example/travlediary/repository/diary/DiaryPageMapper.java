@@ -35,6 +35,13 @@ public interface DiaryPageMapper {
                       @Param("diaryId") Long diaryId,
                       @Param("content") String content);
 
+    /** 상단 한 줄 메모(내용/글꼴/굵기)만 수정. 본문/날짜/순서/배경은 건드리지 않는다. */
+    int updatePageHeader(@Param("pageId") Long pageId,
+                         @Param("diaryId") Long diaryId,
+                         @Param("pageHeader") String pageHeader,
+                         @Param("pageHeaderFont") String pageHeaderFont,
+                         @Param("pageHeaderBold") boolean pageHeaderBold);
+
     /**
      * 삭제한 자리 뒤의 페이지 순서를 한 칸씩 당긴다.
      * UNIQUE(diary_id, page_order) 충돌이 없도록 작은 순서부터 갱신한다.

@@ -3,6 +3,7 @@ package com.example.travlediary.controller.diary;
 import com.example.travlediary.model.Diary;
 import com.example.travlediary.model.DiaryCoverStyle;
 import com.example.travlediary.model.DiaryElement;
+import com.example.travlediary.model.DiarySticker;
 import com.example.travlediary.model.DiaryPage;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.diary.DiaryElementService;
@@ -49,6 +50,12 @@ public class DiaryController {
     /** 한 번에 펼쳐 보여주는 페이지 수 (좌/우 두 장) */
     private static final int SPREAD_SIZE = 2;
     private static final String PHOTO_ELEMENT_TYPE = "PHOTO";
+    private static final String STICKER_ELEMENT_TYPE = "STICKER";
+    /** 스티커를 처음 붙이는 자리/크기. 종이 가운데 부근에서 조금씩 어긋나게 놓는다. */
+    private static final BigDecimal STICKER_SIZE = new BigDecimal("0.18000");
+    private static final BigDecimal STICKER_CENTER = new BigDecimal("0.41000");
+    private static final BigDecimal STICKER_OFFSET_STEP = new BigDecimal("0.04000");
+    private static final int STICKER_OFFSET_CYCLE = 5;
 
     private final DiaryService diaryService;
     private final DiaryPageService diaryPageService;
@@ -103,6 +110,8 @@ public class DiaryController {
         model.addAttribute("editMode", edit);
         if (edit) {
             addEditPageAttributes(diaryId, userId, pages, leftPage, rightPage, page, model);
+            // 스티커 picker 목록. 저장 가능한 스티커는 이 목록이 그대로 허용 목록이다.
+            model.addAttribute("diaryStickers", DiarySticker.values());
         }
         model.addAttribute("pageTitle", diary.getTitle() + " | 나의 여행일기");
         return "diary/detail";
@@ -350,6 +359,31 @@ public class DiaryController {
         return ResponseEntity.noContent().build();
     }
 
+    /** 날짜 옆 한 줄 메모 자동저장. 본문 저장과 같은 방식으로 값만 받는다. */
+    @PostMapping("/{diaryId:\\d+}/pages/{pageId:\\d+}/header")
+    @ResponseBody
+    public ResponseEntity<?> savePageHeader(@PathVariable Long diaryId,
+                                            @PathVariable Long pageId,
+                                            @RequestParam(required = false) String pageHeader,
+                                            @RequestParam(required = false) String pageHeaderFont,
+                                            @RequestParam(defaultValue = "false") boolean pageHeaderBold,
+                                            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        try {
+            // 소유권·페이지 소속 확인과 길이/글꼴 검증은 서비스가 담당한다.
+            diaryPageService.updatePageHeader(diaryId, pageId, userDetails.getId(),
+                    pageHeader, pageHeaderFont, pageHeaderBold);
+        } catch (ResponseStatusException exception) {
+            if (exception.getStatusCode().is4xxClientError()
+                    && !HttpStatus.NOT_FOUND.equals(exception.getStatusCode())) {
+                return ResponseEntity.status(exception.getStatusCode())
+                        .body(Map.of("message", exception.getReason() == null
+                                ? "한 줄 메모를 저장하지 못했습니다." : exception.getReason()));
+            }
+            throw exception;
+        }
+        return ResponseEntity.noContent().build();
+    }
+
     /** 페이지에 사진(PHOTO)을 한 장 추가한다. 사진 한 장이 요소 한 행이다. */
     @PostMapping("/{diaryId:\\d+}/pages/{pageId:\\d+}/elements/photo")
     public String createPhotoElement(@PathVariable Long diaryId,
@@ -410,6 +444,98 @@ public class DiaryController {
         // DB 삭제가 끝난 뒤 실제 파일을 정리한다. (정리 실패는 요청을 깨뜨리지 않는다)
         deleteStoredFile(imageUrl);
         return redirectToEditPage(diaryId, spread, page);
+    }
+
+    /**
+     * 페이지에 공용 스티커를 한 장 붙인다.
+     * 클라이언트는 스티커 코드만 보내고 실제 경로는 서버가 허용 목록(DiarySticker)에서 고른다.
+     * 소유권 확인은 기존 요소 생성 흐름(diaryElementService)이 그대로 맡는다.
+     */
+    @PostMapping("/{diaryId:\\d+}/pages/{pageId:\\d+}/elements/sticker")
+    @ResponseBody
+    public ResponseEntity<?> createStickerElement(@PathVariable Long diaryId,
+                                                  @PathVariable Long pageId,
+                                                  @RequestParam("sticker") String stickerCode,
+                                                  @AuthenticationPrincipal CustomUserDetails userDetails) {
+        DiarySticker sticker = DiarySticker.find(stickerCode).orElse(null);
+        if (sticker == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "알 수 없는 스티커입니다."));
+        }
+
+        Long userId = userDetails.getId();
+        DiaryElement created;
+        try {
+            // 같은 자리에 겹쳐 쌓이지 않게 이미 붙어 있는 요소 수만큼 조금씩 어긋나게 놓는다.
+            int placed = diaryElementService.getElements(diaryId, pageId, userId).size();
+            BigDecimal offset = STICKER_OFFSET_STEP
+                    .multiply(BigDecimal.valueOf(placed % STICKER_OFFSET_CYCLE));
+
+            DiaryElement element = new DiaryElement();
+            element.setElementType(STICKER_ELEMENT_TYPE);
+            element.setImageUrl(sticker.getImageUrl());
+            element.setPositionX(STICKER_CENTER.add(offset));
+            element.setPositionY(STICKER_CENTER.add(offset));
+            element.setWidth(STICKER_SIZE);
+            element.setHeight(STICKER_SIZE);
+            // 회전 0 / 겹침 순서는 사진과 같은 기본값을 쓴다.
+            created = diaryElementService.create(diaryId, pageId, userId, element);
+        } catch (ResponseStatusException exception) {
+            if (exception.getStatusCode().is4xxClientError()) {
+                return ResponseEntity.status(exception.getStatusCode())
+                        .body(Map.of("message", exception.getReason() == null
+                                ? "스티커를 붙이지 못했습니다." : exception.getReason()));
+            }
+            throw exception;
+        }
+        return ResponseEntity.ok(stickerPayload(diaryId, pageId, created, sticker.getLabel()));
+    }
+
+    /**
+     * 스티커 요소 삭제.
+     * 공용 asset 이므로 DB 행만 지우고 실제 SVG 파일은 건드리지 않는다. (사진 삭제와 다른 점)
+     */
+    @PostMapping("/{diaryId:\\d+}/pages/{pageId:\\d+}/elements/{elementId:\\d+}/sticker/delete")
+    public String deleteStickerElement(@PathVariable Long diaryId,
+                                       @PathVariable Long pageId,
+                                       @PathVariable Long elementId,
+                                       @RequestParam(defaultValue = "0") int spread,
+                                       @RequestParam(required = false) Integer page,
+                                       @AuthenticationPrincipal CustomUserDetails userDetails,
+                                       RedirectAttributes redirectAttributes) {
+        Long userId = userDetails.getId();
+        try {
+            // 소유권·페이지·요소 소속은 서비스가 확인한다.
+            DiaryElement existing = diaryElementService.getElement(diaryId, pageId, elementId, userId);
+            if (!STICKER_ELEMENT_TYPE.equals(existing.getElementType())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "스티커 요소가 아닙니다.");
+            }
+            diaryElementService.delete(diaryId, pageId, elementId, userId);
+        } catch (ResponseStatusException exception) {
+            return redirectWithElementError(exception, diaryId, spread, page, redirectAttributes);
+        }
+        return redirectToEditPage(diaryId, spread, page);
+    }
+
+    /** 새로 붙인 스티커를 화면이 바로 그릴 수 있도록 좌표/크기와 저장 주소를 함께 돌려준다. */
+    private Map<String, Object> stickerPayload(Long diaryId, Long pageId,
+                                               DiaryElement element, String label) {
+        String base = "/diaries/" + diaryId + "/pages/" + pageId + "/elements/" + element.getId();
+        return Map.of(
+                "id", element.getId(),
+                "imageUrl", element.getImageUrl(),
+                "label", label,
+                "positionX", element.getPositionX(),
+                "positionY", element.getPositionY(),
+                "width", element.getWidth(),
+                "height", element.getHeight(),
+                "rotation", element.getRotation(),
+                "zIndex", element.getZIndex(),
+                "urls", Map.of(
+                        "position", base + "/position",
+                        "size", base + "/size",
+                        "rotation", base + "/rotation",
+                        "layer", base + "/layer",
+                        "delete", base + "/sticker/delete"));
     }
 
     /** 드래그로 옮긴 위치 저장. 화면 갱신 없이 좌표만 반영한다. */

@@ -7,8 +7,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // 읽기 모드에서는 어떤 조작도 시작되지 않도록 아예 붙이지 않는다.
     if (!document.querySelector('.diary-detail-page.is-edit-mode')) return;
 
+    // 나중에 붙는 요소(스티커)도 같은 조작을 쓰도록 목록에 더해 나간다.
     const items = Array.from(document.querySelectorAll('.diary-canvas-item[data-element-id]'));
-    if (items.length === 0) return;
 
     /** 너무 작아져 잡을 수 없는 요소가 생기지 않게 하는 최소 크기 (상대값) */
     const MIN_SIZE = 0.08;
@@ -31,7 +31,19 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!event.target.closest('.diary-canvas-item')) clearSelection();
     });
 
-    items.forEach((item) => {
+    items.forEach(setupItem);
+
+    // 스티커처럼 화면을 새로 고치지 않고 붙는 요소도 같은 조작을 쓸 수 있게 열어 둔다.
+    window.diaryCanvas = {
+        register(item) {
+            if (!item || items.includes(item)) return;
+            items.push(item);
+            setupItem(item);
+        },
+        select
+    };
+
+    function setupItem(item) {
         const canvas = item.closest('.diary-canvas');
         if (!canvas) return;
 
@@ -233,6 +245,8 @@ document.addEventListener('DOMContentLoaded', () => {
         function applyRotation(degrees) {
             // transform 에는 회전만 들어간다. (이동은 left/top, 크기는 width/height)
             item.style.transform = `rotate(${degrees.toFixed(2)}deg)`;
+            // 액션 줄이 같이 기울어 읽기 어려워지지 않도록 반대로 돌릴 각도를 알려 준다.
+            item.style.setProperty('--diary-item-rotation', `${degrees.toFixed(2)}deg`);
         }
 
         rotateHandle.addEventListener('pointerdown', (event) => {
@@ -288,7 +302,8 @@ document.addEventListener('DOMContentLoaded', () => {
         rotateHandle.addEventListener('pointercancel', finishRotate);
 
         // ===== 겹침 순서 (앞으로 / 뒤로) =====
-        item.querySelectorAll('.diary-layer-action').forEach((button) => {
+        // 같은 액션 줄에 있는 삭제 버튼은 폼 전송이므로 방향값이 있는 버튼만 고른다.
+        item.querySelectorAll('.diary-layer-action[data-layer-direction]').forEach((button) => {
             button.addEventListener('click', async () => {
                 if (button.disabled) return;
                 button.disabled = true;
@@ -304,7 +319,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         });
-    });
+    }
 
     /** 서버가 정리한 순서를 현재 캔버스 요소에 그대로 반영한다. */
     function applyLayers(canvas, layers) {

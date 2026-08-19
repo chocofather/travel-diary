@@ -6,15 +6,18 @@
   <!-- 본문 작성은 프로젝트에서 이미 쓰는 Quill 2.0.3 을 그대로 사용한다 -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css">
   <link rel="stylesheet" href="/css/quill-content.css">
-  <!-- 다이어리 전용 글꼴 (이 화면에서만 불러온다) -->
-  <link rel="stylesheet" href="/css/diary-fonts.css">
   <link rel="stylesheet" href="/css/diary.css">
+  <!-- 다이어리 전용 글꼴 (이 화면에서만 불러온다).
+       .diary-font-{키} 는 화면 곳곳(한 줄 메모/글꼴 버튼)에 덧붙이는 글꼴 지정이므로
+       같은 우선순위인 diary.css 의 font-family 보다 뒤에 와야 실제로 적용된다. -->
+  <link rel="stylesheet" href="/css/diary-fonts.css">
   <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
   <script src="/js/diary-canvas-drag.js" defer></script>
   <script src="/js/diary-emoji-data.js" defer></script>
   <script src="/js/diary-editor.js" defer></script>
   <script src="/js/diary-page-flip.js" defer></script>
   <script src="/js/diary-photo-picker.js" defer></script>
+  <script src="/js/diary-sticker-picker.js" defer></script>
   <script src="/js/diary-page-picker.js" defer></script>
 </th:block>
 
@@ -144,11 +147,12 @@
         <input type="color" class="diary-toolbar-color" id="diary-color" value="#3f3427"
                data-editor-command="color" aria-label="글자 색" />
 
-        <!-- 형광펜: 색 목록은 diary-editor.js 가 채운다 (일반 배경색 입력이 아니다) -->
+        <!-- 형광펜: 색 목록은 diary-editor.js 가 채운다 (일반 배경색 입력이 아니다).
+             색을 고르면 형광펜을 든 상태가 되고, 본문에서 문장을 드래그하면 칠해진다. -->
         <span class="diary-toolbar-label" id="diary-highlight-label">형광펜</span>
         <span class="diary-highlight">
           <button type="button" class="diary-highlight-trigger" id="diary-highlight-trigger"
-                  aria-haspopup="listbox" aria-expanded="false"
+                  aria-haspopup="listbox" aria-expanded="false" aria-pressed="false"
                   aria-controls="diary-highlight-palette"
                   aria-labelledby="diary-highlight-label diary-highlight-trigger"
                   title="형광펜">
@@ -181,6 +185,76 @@
           <div class="diary-emoji-grid" id="diary-emoji-grid" role="group"
                aria-label="이모지 목록"></div>
         </div>
+      </div>
+
+      <!-- 사진: 종이 안이 아니라 여기서 고른다. 생성 경로/폼은 기존 PHOTO 흐름 그대로다. -->
+      <div class="diary-toolbar-group" th:if="${editPage != null}">
+        <form class="diary-photo-add"
+              th:action="@{/diaries/{diaryId}/pages/{pageId}/elements/photo
+                          (diaryId=${diary.id},pageId=${editPage.id})}"
+              method="post" enctype="multipart/form-data">
+          <input type="hidden" name="spread" th:value="${currentSpread}" />
+          <input type="hidden" name="page" th:value="${editPage.pageOrder}" />
+          <input type="file" class="diary-photo-input" name="image" accept="image/*" required
+                 th:id="|diary-photo-input-${editPage.id}|" />
+          <!-- 사진임을 바로 알 수 있는 outline 아이콘 (이모지 문자 대신 inline SVG) -->
+          <label class="diary-toolbar-button" th:for="|diary-photo-input-${editPage.id}|"
+                 title="사진 추가" aria-label="사진 추가">
+            <svg class="diary-toolbar-icon" viewBox="0 0 20 20" aria-hidden="true"
+                 fill="none" stroke="currentColor" stroke-width="1.5"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2.5" y="4" width="15" height="12" rx="2" />
+              <circle cx="7" cy="8" r="1.4" />
+              <path d="M3 13.5l3.6-3.2a1.4 1.4 0 0 1 1.9 0l2.7 2.5 1.8-1.5a1.4 1.4 0 0 1 1.8 0L17 13.2" />
+            </svg>
+          </label>
+          <span class="diary-photo-status" role="status" hidden>올리는 중…</span>
+        </form>
+      </div>
+
+      <!-- 스티커: 공용 asset 목록에서 고르면 지금 편집 중인 장에 바로 붙는다.
+           저장 주소/스티커 코드는 서버가 정한 목록(DiarySticker)만 쓴다. -->
+      <div class="diary-toolbar-group diary-sticker-picker" th:if="${editPage != null}">
+        <button type="button" class="diary-toolbar-button" id="diary-sticker-button"
+                aria-haspopup="dialog" aria-expanded="false" aria-controls="diary-sticker-popover"
+                th:attr="data-create-url=@{/diaries/{diaryId}/pages/{pageId}/elements/sticker
+                                          (diaryId=${diary.id},pageId=${editPage.id})},
+                         data-delete-url-base=@{/diaries/{diaryId}/pages/{pageId}/elements
+                                                (diaryId=${diary.id},pageId=${editPage.id})},
+                         data-spread=${currentSpread},
+                         data-page=${editPage.pageOrder}"
+                title="스티커" aria-label="스티커 붙이기">✦</button>
+        <div class="diary-sticker-popover" id="diary-sticker-popover" role="dialog"
+             aria-label="스티커 고르기" hidden>
+          <!-- 지금은 여행 한 묶음만 둔다. 묶음이 늘어나면 같은 구조를 반복하면 된다. -->
+          <p class="diary-sticker-category">여행</p>
+          <div class="diary-sticker-grid" role="group" aria-label="여행 스티커">
+            <button type="button" class="diary-sticker-option"
+                    th:each="sticker : ${diaryStickers}"
+                    th:data-sticker-code="${sticker.code}"
+                    th:title="${sticker.label}"
+                    th:attr="aria-label=|${sticker.label} 스티커 붙이기|">
+              <img th:src="${sticker.imageUrl}" alt="" aria-hidden="true" loading="lazy" />
+            </button>
+          </div>
+          <p class="diary-sticker-status" id="diary-sticker-status" role="status"></p>
+        </div>
+      </div>
+
+      <!-- 한 줄 메모 전용 서식. 본문 Quill 글꼴/굵기와는 서로 영향을 주지 않는다. -->
+      <div class="diary-toolbar-group diary-header-style" th:if="${editPage != null}">
+        <span class="diary-toolbar-label" id="diary-header-font-label">한 줄 메모</span>
+        <!-- 목록은 본문 글꼴과 같은 16종을 diary-editor.js 가 채운다 -->
+        <button type="button" class="diary-font-trigger is-compact" id="diary-header-font-trigger"
+                aria-haspopup="listbox" aria-expanded="false"
+                aria-controls="diary-header-font-list"
+                aria-labelledby="diary-header-font-label diary-header-font-trigger">기본</button>
+        <div class="diary-font-list" id="diary-header-font-list" role="listbox"
+             aria-label="한 줄 메모 글꼴 고르기" hidden></div>
+
+        <button type="button" class="diary-toolbar-button" id="diary-header-bold"
+                title="한 줄 메모 굵게" aria-label="한 줄 메모 굵게"
+                aria-pressed="false"><strong>B</strong></button>
       </div>
 
       <p class="diary-save-status" id="diary-save-status" role="status">저장됨</p>
@@ -290,28 +364,37 @@
   </section>
 </th:block>
 
-<!-- 한 장의 머리말: 종이 안에는 날짜 같은 내용만 두고, 관리 액션은 종이 밖(pageMeta)에 있다 -->
+<!-- 한 장의 머리말: 종이 안에는 날짜/한 줄 메모 같은 내용만 두고,
+     사진 등 관리 액션은 종이 밖(상단 편집 툴바 / pageMeta)에 있다 -->
 <div th:fragment="sheetHead(page)" class="diary-sheet-head">
+  <!-- 날짜는 페이지 정보라 고정이고, 그 오른쪽 빈 자리만 한 줄 메모로 쓴다.
+       글꼴/굵기는 메모에만 적용하고 날짜에는 적용하지 않는다. -->
   <div class="diary-sheet-head-row">
     <time class="diary-sheet-date" th:text="${page.pageDate}">2026-08-01</time>
-  </div>
 
-  <!-- 페이지 편집 툴바: 사진 (본문 서식은 펼침 위 공통 툴바가 담당한다) -->
-  <div class="diary-sheet-toolbar" th:if="${editMode}">
-    <!-- 사진은 파일을 고르면 이 폼이 그대로 전송된다 (기존 PHOTO 생성 경로 재사용) -->
-    <form class="diary-photo-add"
-          th:action="@{/diaries/{diaryId}/pages/{pageId}/elements/photo
-                      (diaryId=${diary.id},pageId=${page.id})}"
-          method="post" enctype="multipart/form-data">
-      <input type="hidden" name="spread" th:value="${currentSpread}" />
-      <input type="hidden" name="page" th:value="${page.pageOrder}" />
-      <input type="file" class="diary-photo-input" name="image" accept="image/*" required
-             th:id="|diary-photo-input-${page.id}|" />
-      <label class="diary-tool-button" th:for="|diary-photo-input-${page.id}|">
-        <span class="diary-tool-icon" aria-hidden="true">▣</span>사진
-      </label>
-      <span class="diary-photo-status" role="status" hidden>올리는 중…</span>
-    </form>
+    <!-- 편집 모드: 종이에 바로 적는 느낌의 한 줄. 자동저장은 diary-editor.js 가 맡는다. -->
+    <input th:if="${editMode}" type="text" class="diary-sheet-header-input"
+           th:classappend="${(page.pageHeaderFont != null and page.pageHeaderFont != 'DEFAULT')
+                             ? ' diary-font-' + page.pageHeaderFont : ''}
+                           + ${(page.pageHeaderBold != null and page.pageHeaderBold) ? ' is-bold' : ''}"
+           maxlength="100" autocomplete="off" placeholder="오늘의 한 줄..."
+           aria-label="이 페이지의 한 줄 메모"
+           th:value="${page.pageHeader}"
+           th:data-header-font="${page.pageHeaderFont != null ? page.pageHeaderFont : 'DEFAULT'}"
+           th:data-header-bold="${(page.pageHeaderBold != null and page.pageHeaderBold) ? 'true' : 'false'}"
+           th:data-header-url="@{/diaries/{diaryId}/pages/{pageId}/header
+                                 (diaryId=${diary.id},pageId=${page.id})}" />
+
+    <!-- 읽기 모드: 적어 둔 메모를 저장 당시 글꼴/굵기 그대로 보여준다.
+         비어 있으면 아무것도 두지 않는다. -->
+    <th:block th:unless="${editMode}">
+      <span class="diary-sheet-header"
+            th:if="${page.pageHeader != null and !#strings.isEmpty(page.pageHeader)}"
+            th:classappend="${(page.pageHeaderFont != null and page.pageHeaderFont != 'DEFAULT')
+                              ? ' diary-font-' + page.pageHeaderFont : ''}
+                            + ${(page.pageHeaderBold != null and page.pageHeaderBold) ? ' is-bold' : ''}"
+            th:text="${page.pageHeader}">제주 여행 첫째 날</span>
+    </th:block>
   </div>
 </div>
 
@@ -403,35 +486,93 @@
                          width:${element.width * 100}%;
                          height:${element.height * 100}%;
                          transform:rotate(${element.rotation}deg);
+                         --diary-item-rotation:${element.rotation}deg;
                          z-index:${element.zIndex};|">
         <img th:src="${element.imageUrl}" alt="여행일기 사진" loading="lazy" />
 
         <!-- 조작 UI 는 편집 모드에서만 만든다. 읽기 모드에는 사진만 남는다. -->
         <th:block th:if="${editMode}">
-          <form class="diary-photo-delete"
-                th:action="@{/diaries/{diaryId}/pages/{pageId}/elements/{elementId}/photo/delete
-                            (diaryId=${diary.id},pageId=${page.id},elementId=${element.id})}"
-                method="post"
-                onsubmit="return confirm('이 사진을 삭제하시겠습니까?');">
-            <input type="hidden" name="spread" th:value="${currentSpread}" />
-            <input type="hidden" name="page" th:value="${page.pageOrder}" />
-            <button type="submit" class="diary-text-action">삭제</button>
-          </form>
+          <div th:replace="~{diary/detail :: canvasHandles}"></div>
 
-          <!-- 선택했을 때만 보이는 조작점: 상단 중앙 회전 / 우측 하단 크기 -->
-          <button type="button" class="diary-rotate-handle" aria-label="회전"></button>
-          <button type="button" class="diary-resize-handle" aria-label="크기 조절"></button>
-
-          <!-- 선택했을 때만 보이는 겹침 순서 액션 -->
+          <!-- 선택했을 때만 보이는 액션 줄. 사진 바깥 아래에 두어 이미지를 가리지 않는다. -->
           <div class="diary-layer-actions">
-            <button type="button" class="diary-layer-action" data-layer-direction="BACKWARD">뒤로</button>
-            <button type="button" class="diary-layer-action" data-layer-direction="FORWARD">앞으로</button>
+            <button type="button" class="diary-layer-action"
+                    data-layer-direction="BACKWARD">뒤로</button>
+            <button type="button" class="diary-layer-action"
+                    data-layer-direction="FORWARD">앞으로</button>
+            <form class="diary-photo-delete"
+                  th:action="@{/diaries/{diaryId}/pages/{pageId}/elements/{elementId}/photo/delete
+                              (diaryId=${diary.id},pageId=${page.id},elementId=${element.id})}"
+                  method="post"
+                  onsubmit="return confirm('이 사진을 삭제하시겠습니까?');">
+              <input type="hidden" name="spread" th:value="${currentSpread}" />
+              <input type="hidden" name="page" th:value="${page.pageOrder}" />
+              <button type="submit" class="diary-layer-action is-danger">삭제</button>
+            </form>
+          </div>
+        </th:block>
+      </figure>
+
+      <!-- 스티커. 사진과 같은 자유배치 요소지만 사진 액자/그림자는 쓰지 않는다. -->
+      <figure class="diary-canvas-item diary-canvas-sticker diary-sticker"
+              th:if="${element.elementType == 'STICKER'}"
+              th:data-element-id="${element.id}"
+              th:data-element-type="${element.elementType}"
+              th:data-position-x="${element.positionX}"
+              th:data-position-y="${element.positionY}"
+              th:data-width="${element.width}"
+              th:data-height="${element.height}"
+              th:data-rotation="${element.rotation}"
+              th:data-position-url="@{/diaries/{diaryId}/pages/{pageId}/elements/{elementId}/position
+                                      (diaryId=${diary.id},pageId=${page.id},elementId=${element.id})}"
+              th:data-size-url="@{/diaries/{diaryId}/pages/{pageId}/elements/{elementId}/size
+                                  (diaryId=${diary.id},pageId=${page.id},elementId=${element.id})}"
+              th:data-rotation-url="@{/diaries/{diaryId}/pages/{pageId}/elements/{elementId}/rotation
+                                      (diaryId=${diary.id},pageId=${page.id},elementId=${element.id})}"
+              th:data-layer-url="@{/diaries/{diaryId}/pages/{pageId}/elements/{elementId}/layer
+                                   (diaryId=${diary.id},pageId=${page.id},elementId=${element.id})}"
+              th:style="|left:${element.positionX * 100}%;
+                         top:${element.positionY * 100}%;
+                         width:${element.width * 100}%;
+                         height:${element.height * 100}%;
+                         transform:rotate(${element.rotation}deg);
+                         --diary-item-rotation:${element.rotation}deg;
+                         z-index:${element.zIndex};|">
+        <img th:src="${element.imageUrl}" alt="여행일기 스티커" loading="lazy" />
+
+        <!-- 조작 UI 는 편집 모드에서만 만든다. 읽기 모드에는 스티커 그림만 남는다. -->
+        <th:block th:if="${editMode}">
+          <div th:replace="~{diary/detail :: canvasHandles}"></div>
+
+          <!-- 사진과 같은 액션 줄 구조. 공용 asset 이라 요소 행만 지운다. -->
+          <div class="diary-layer-actions">
+            <button type="button" class="diary-layer-action"
+                    data-layer-direction="BACKWARD">뒤로</button>
+            <button type="button" class="diary-layer-action"
+                    data-layer-direction="FORWARD">앞으로</button>
+            <form class="diary-sticker-delete"
+                  th:action="@{/diaries/{diaryId}/pages/{pageId}/elements/{elementId}/sticker/delete
+                              (diaryId=${diary.id},pageId=${page.id},elementId=${element.id})}"
+                  method="post"
+                  onsubmit="return confirm('이 스티커를 떼시겠습니까?');">
+              <input type="hidden" name="spread" th:value="${currentSpread}" />
+              <input type="hidden" name="page" th:value="${page.pageOrder}" />
+              <button type="submit" class="diary-layer-action is-danger">떼기</button>
+            </form>
           </div>
         </th:block>
       </figure>
     </th:block>
   </div>
 
-  <!-- 글/사진 추가 액션은 페이지 상단 편집 툴바(sheetHead)로 옮겼다 -->
+  <!-- 글/사진/스티커 추가 액션은 페이지 상단 편집 툴바로 옮겼다 -->
 </div>
+
+<!-- 선택했을 때만 보이는 조작점. 사진과 스티커가 같은 것을 쓴다.
+     (액션 줄은 요소마다 삭제 경로가 달라 각 figure 안에 둔다) -->
+<th:block th:fragment="canvasHandles">
+  <!-- 상단 중앙 회전 / 우측 하단 크기 -->
+  <button type="button" class="diary-rotate-handle" aria-label="회전"></button>
+  <button type="button" class="diary-resize-handle" aria-label="크기 조절"></button>
+</th:block>
 </html>

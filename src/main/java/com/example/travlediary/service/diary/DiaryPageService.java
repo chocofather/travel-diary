@@ -24,6 +24,10 @@ public interface DiaryPageService {
     /** 본문만 저장한다. 날짜/순서/배경은 건드리지 않는다. */
     DiaryPage updateContent(Long diaryId, Long pageId, Long userId, String content);
 
+    /** 날짜 옆 한 줄 메모(내용/글꼴/굵기)만 저장한다. 본문/날짜/순서/배경은 건드리지 않는다. */
+    DiaryPage updatePageHeader(Long diaryId, Long pageId, Long userId,
+                               String pageHeader, String pageHeaderFont, boolean pageHeaderBold);
+
     /** 페이지 삭제 */
     void delete(Long diaryId, Long pageId, Long userId);
 }

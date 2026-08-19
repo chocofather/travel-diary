@@ -26,6 +26,10 @@ public class DiaryPageServiceImpl implements DiaryPageService {
             Set.of("PLAIN", "LINED", "GRID", "DOT");
     /** 본문 길이 상한 (MEDIUMTEXT 안에서 안전한 선) */
     private static final int MAX_CONTENT_LENGTH = 200_000;
+    /** 상단 한 줄 메모 길이 상한 (page_header VARCHAR(100) 과 같은 값) */
+    private static final int MAX_PAGE_HEADER_LENGTH = 100;
+    /** 상단 한 줄 메모 글꼴 기본값 (DB 기본값과 같은 값) */
+    private static final String DEFAULT_PAGE_HEADER_FONT = "DEFAULT";
 
     private final DiaryService diaryService;
     private final DiaryPageMapper diaryPageMapper;
@@ -103,6 +107,39 @@ public class DiaryPageServiceImpl implements DiaryPageService {
         String sanitized = diaryContentSanitizer.sanitize(content);
 
         if (diaryPageMapper.updateContent(existing.getId(), diary.getId(), sanitized) != 1) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "페이지를 찾을 수 없습니다.");
+        }
+        return requirePageOfDiary(existing.getId(), diary.getId());
+    }
+
+    /**
+     * 상단 한 줄 메모 자동저장. 본문/날짜/순서/배경은 건드리지 않는다.
+     * 비어 있으면 NULL 로 저장해 '메모 없음'과 빈 문자열을 구분하지 않는다.
+     */
+    @Override
+    @Transactional
+    public DiaryPage updatePageHeader(Long diaryId, Long pageId, Long userId,
+                                      String pageHeader, String pageHeaderFont,
+                                      boolean pageHeaderBold) {
+        Diary diary = requireOwnedDiary(diaryId, userId);
+        DiaryPage existing = requirePageOfDiary(pageId, diary.getId());
+
+        String header = pageHeader == null ? "" : pageHeader.strip();
+        if (header.length() > MAX_PAGE_HEADER_LENGTH) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "한 줄 메모는 100자 이하로 입력해 주세요.");
+        }
+
+        // 글꼴은 본문에서 쓰는 글꼴 키와 기본값만 허용한다. (임의 문자열 저장 금지)
+        String font = pageHeaderFont == null ? "" : pageHeaderFont.strip();
+        if (font.isEmpty()) {
+            font = DEFAULT_PAGE_HEADER_FONT;
+        } else if (!DEFAULT_PAGE_HEADER_FONT.equals(font)
+                && !DiaryContentSanitizer.DIARY_FONT_KEYS.contains(font)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "지원하지 않는 글꼴입니다.");
+        }
+
+        if (diaryPageMapper.updatePageHeader(existing.getId(), diary.getId(),
+                header.isEmpty() ? null : header, font, pageHeaderBold) != 1) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "페이지를 찾을 수 없습니다.");
         }
         return requirePageOfDiary(existing.getId(), diary.getId());
