@@ -5,6 +5,7 @@ import com.example.travlediary.model.Diary;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -29,6 +30,11 @@ public interface DiaryMapper {
     /** 같은 조건의 전체 다이어리 수 (쪽수 계산용) */
     int countListItems(@Param("userId") Long userId,
                        @Param("keyword") String keyword);
+
+    /** 그 기간과 여행 기간이 겹치는 회원의 다이어리 (달력 한 달치) */
+    List<Diary> findByUserIdAndPeriod(@Param("userId") Long userId,
+                                      @Param("from") LocalDate from,
+                                      @Param("to") LocalDate to);
 
     /** 본인 소유 다이어리 1건 */
     Diary findByIdAndUserId(@Param("diaryId") Long diaryId,

@@ -17,6 +17,13 @@
         <p class="diary-list-subtitle">여행에서의 순간을 나만의 다이어리로 남겨보세요.</p>
       </div>
       <div class="diary-list-tools">
+        <!-- 책장 ↔ 달력. 각자 다른 주소를 쓰므로 검색/페이징과 상태가 섞이지 않는다. -->
+        <div class="diary-view-switch" role="group" aria-label="보기 방식">
+          <a class="diary-view-option is-current" aria-current="page"
+             th:href="@{/diaries}">책장 보기</a>
+          <a class="diary-view-option" th:href="@{/diaries/calendar}">달력 보기</a>
+        </div>
+
         <!-- 제목/한 줄 메모/본문을 한 입력창으로 찾는다.
              입력하는 대로 결과 영역만 비동기로 갈아 끼우고, 검색어는 q 로 주소에 남는다.
              (JS 가 없으면 폼 전송으로도 같은 화면이 나온다) -->

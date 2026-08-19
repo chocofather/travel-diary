@@ -12,6 +12,7 @@ import com.example.travlediary.service.diary.DiaryPageService;
 import com.example.travlediary.service.diary.DiaryService;
 import com.example.travlediary.service.diary.DiaryStickerCatalog;
 import com.example.travlediary.service.file.FileUploadService;
+import com.example.travlediary.service.holiday.HolidayService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -36,6 +37,8 @@ import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -64,6 +67,7 @@ public class DiaryController {
     private final DiaryElementService diaryElementService;
     private final FileUploadService fileUploadService;
     private final DiaryStickerCatalog diaryStickerCatalog;
+    private final HolidayService holidayService;
 
     @Value("${custom.upload-path}")
     private String uploadPath;
@@ -97,6 +101,36 @@ public class DiaryController {
         addDiaryListAttributes(model,
                 diaryService.getMyDiaryPage(userDetails.getId(), keyword, pageNumber(page)));
         return "diary/list :: results";
+    }
+
+    /**
+     * 월간 달력 보기. 표시 월과 겹치는 본인 다이어리만 읽는다.
+     * 달 이동은 주소의 month 로만 오가므로 새로고침/뒤로가기가 그대로 동작한다.
+     */
+    @GetMapping("/calendar")
+    public String diaryCalendar(@RequestParam(name = "month", required = false) String month,
+                                @AuthenticationPrincipal CustomUserDetails userDetails,
+                                Model model) {
+        YearMonth target = yearMonth(month);
+
+        model.addAttribute("calendar",
+                diaryService.getMyDiaryCalendar(userDetails.getId(), target));
+        // 공휴일/절기/잡절은 표시만 하는 값이라 못 불러와도 달력은 그대로 그려진다. (빈 목록)
+        model.addAttribute("specialDays", holidayService.findSpecialDays(target));
+        model.addAttribute("pageTitle", "나의 여행일기 달력");
+        return "diary/calendar";
+    }
+
+    /** yyyy-MM 만 받는다. 없거나 형식이 다르면 이번 달로 본다. */
+    private YearMonth yearMonth(String month) {
+        if (month == null || month.isBlank()) {
+            return YearMonth.now();
+        }
+        try {
+            return YearMonth.parse(month.strip());
+        } catch (DateTimeParseException exception) {
+            return YearMonth.now();
+        }
     }
 
     private void addDiaryListAttributes(Model model, DiaryListPageDto diaryPage) {

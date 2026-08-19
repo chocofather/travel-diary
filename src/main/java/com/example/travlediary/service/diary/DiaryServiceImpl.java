@@ -1,5 +1,6 @@
 package com.example.travlediary.service.diary;
 
+import com.example.travlediary.dto.DiaryCalendarDto;
 import com.example.travlediary.dto.DiaryListItemDto;
 import com.example.travlediary.dto.DiaryListPageDto;
 import com.example.travlediary.model.Diary;
@@ -12,6 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.time.YearMonth;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -26,6 +29,8 @@ public class DiaryServiceImpl implements DiaryService {
     private static final String DEFAULT_COVER_STYLE = DiaryCoverStyle.DEFAULT.getCode();
     /** 목록 한 쪽에 보여주는 다이어리 수 */
     private static final int PAGE_SIZE = 12;
+    /** 월간 달력은 어느 달이든 같은 높이가 되도록 6주로 그린다. */
+    private static final int CALENDAR_WEEKS = 6;
     /** 검색어 길이 상한 (제목 길이와 같은 선) */
     private static final int MAX_KEYWORD_LENGTH = MAX_TITLE_LENGTH;
 
@@ -62,6 +67,51 @@ public class DiaryServiceImpl implements DiaryService {
                 ? List.of()
                 : diaryMapper.findListItems(userId, pattern, (currentPage - 1) * PAGE_SIZE, PAGE_SIZE);
         return new DiaryListPageDto(items, searched, currentPage, totalPages, totalCount, PAGE_SIZE);
+    }
+
+    /**
+     * 월간 달력 한 장.
+     * 표시 월과 날짜가 겹치는 다이어리만 한 번 읽고, 화면이 그대로 그릴 수 있게 주 단위로 나눈다.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public DiaryCalendarDto getMyDiaryCalendar(Long userId, YearMonth month) {
+        requireUser(userId);
+        YearMonth target = month == null ? YearMonth.now() : month;
+
+        LocalDate firstDay = target.atDay(1);
+        LocalDate lastDay = target.atEndOfMonth();
+        List<Diary> diaries = diaryMapper.findByUserIdAndPeriod(userId, firstDay, lastDay);
+
+        // 일요일에서 시작해 6주(42칸)를 채운다. 앞뒤 칸은 옆 달 날짜다.
+        LocalDate cursor = firstDay.minusDays(firstDay.getDayOfWeek().getValue() % 7);
+        LocalDate today = LocalDate.now();
+
+        List<List<DiaryCalendarDto.Day>> weeks = new ArrayList<>();
+        for (int week = 0; week < CALENDAR_WEEKS; week++) {
+            List<DiaryCalendarDto.Day> days = new ArrayList<>();
+            for (int day = 0; day < 7; day++) {
+                days.add(new DiaryCalendarDto.Day(
+                        cursor,
+                        YearMonth.from(cursor).equals(target),
+                        cursor.isEqual(today),
+                        diariesOn(diaries, cursor)));
+                cursor = cursor.plusDays(1);
+            }
+            weeks.add(List.copyOf(days));
+        }
+        return new DiaryCalendarDto(target, List.copyOf(weeks));
+    }
+
+    /** 그 날짜에 걸쳐 있는 다이어리. (여행 기간 안이면 모두 담는다) */
+    private List<Diary> diariesOn(List<Diary> diaries, LocalDate date) {
+        List<Diary> onDate = new ArrayList<>();
+        for (Diary diary : diaries) {
+            if (!date.isBefore(diary.getStartDate()) && !date.isAfter(diary.getEndDate())) {
+                onDate.add(diary);
+            }
+        }
+        return List.copyOf(onDate);
     }
 
     /** LIKE 특수문자를 그대로 찾도록 이스케이프한 뒤 양쪽을 % 로 감싼다. (SQL 의 ESCAPE '!' 와 짝) */

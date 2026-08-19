@@ -3,6 +3,7 @@ package com.example.travlediary.controller.diary;
 import com.example.travlediary.config.CustomLoginSuccessHandler;
 import com.example.travlediary.config.CustomLogoutSuccessHandler;
 import com.example.travlediary.config.SecurityConfig;
+import com.example.travlediary.dto.DiaryCalendarDto;
 import com.example.travlediary.dto.DiaryListItemDto;
 import com.example.travlediary.dto.DiaryListPageDto;
 import com.example.travlediary.model.Diary;
@@ -15,6 +16,9 @@ import com.example.travlediary.service.diary.DiaryPageService;
 import com.example.travlediary.service.diary.DiaryService;
 import com.example.travlediary.service.diary.DiaryStickerCatalog;
 import com.example.travlediary.service.file.FileUploadService;
+import com.example.travlediary.service.holiday.HolidayService;
+import com.example.travlediary.service.holiday.SpecialDay;
+import com.example.travlediary.service.holiday.SpecialDays;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
@@ -29,7 +33,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -65,6 +71,8 @@ class DiaryControllerTest {
     private DiaryElementService diaryElementService;
     @MockitoBean
     private FileUploadService fileUploadService;
+    @MockitoBean
+    private HolidayService holidayService;
     @MockitoBean
     private CustomLoginSuccessHandler customLoginSuccessHandler;
     @MockitoBean
@@ -120,6 +128,171 @@ class DiaryControllerTest {
         assertThat(body).contains("/diaries?q=%EC%A0%9C%EC%A3%BC&amp;page=1");
         assertThat(body).contains("/diaries?q=%EC%A0%9C%EC%A3%BC&amp;page=3");
         assertThat(body).contains("page-number is-current");
+    }
+
+    @Test
+    void calendarShowsTripsOfTheRequestedMonth() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiaryCalendar(7L, YearMonth.of(2026, 8)))
+                .thenReturn(calendar(YearMonth.of(2026, 8), diary()));
+
+        String body = mockMvc.perform(get("/diaries/calendar").param("month", "2026-08")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andExpect(view().name("diary/calendar"))
+                .andReturn().getResponse().getContentAsString();
+
+        verify(diaryService).getMyDiaryCalendar(7L, YearMonth.of(2026, 8));
+        assertThat(body).contains("여름 제주 여행");
+        // 기록을 누르면 기존 READ 로 간다
+        assertThat(body).contains("href=\"/diaries/10\"");
+        // 달 이동은 주소의 month 로만 오간다
+        assertThat(body).contains("/diaries/calendar?month=2026-07");
+        assertThat(body).contains("/diaries/calendar?month=2026-09");
+        // 연/월은 직접 고를 수 있고 지금 보고 있는 값이 선택돼 있다
+        assertThat(body).contains("id=\"diary-calendar-year\"");
+        assertThat(body).contains("id=\"diary-calendar-month\"");
+        assertThat(body).containsPattern("value=\"2026\"\\s+selected");
+        assertThat(body).containsPattern("value=\"8\"\\s+selected");
+        // 이번 달로 돌아오는 버튼은 month 없는 주소를 쓴다
+        assertThat(body).contains("diary-calendar-today");
+        assertThat(body).contains("href=\"/diaries/calendar\"");
+        assertThat(body).contains("/js/diary-calendar.js");
+        // 책장 보기로 돌아갈 수 있다
+        assertThat(body).contains("diary-view-switch");
+    }
+
+    @Test
+    void calendarMarksHolidaysAndKeepsTripChips() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiaryCalendar(7L, YearMonth.of(2026, 8)))
+                .thenReturn(calendar(YearMonth.of(2026, 8), diary()));
+        // calendar() 는 그 달 1일에 여행을 둔다
+        when(holidayService.findSpecialDays(YearMonth.of(2026, 8)))
+                .thenReturn(Map.of(LocalDate.of(2026, 8, 1), new SpecialDays(List.of(
+                        new SpecialDay("광복절", SpecialDay.Kind.HOLIDAY),
+                        new SpecialDay("임시공휴일", SpecialDay.Kind.HOLIDAY)))));
+
+        String body = mockMvc.perform(get("/diaries/calendar").param("month", "2026-08")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        // 같은 날짜의 공휴일 이름은 하나도 빠지지 않는다
+        assertThat(body).contains("광복절").contains("임시공휴일");
+        assertThat(body).contains("is-holiday");
+        // 공휴일이 있어도 여행 chip 과 상세 링크는 그대로다
+        assertThat(body).contains("여름 제주 여행");
+        assertThat(body).contains("href=\"/diaries/10\"");
+    }
+
+    /** 24절기·잡절은 이름만 적히고 공휴일처럼 빨간 날이 되지 않는다. */
+    @Test
+    void calendarShowsSeasonalTermsWithoutMarkingThemAsHolidays() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiaryCalendar(7L, YearMonth.of(2026, 8)))
+                .thenReturn(calendar(YearMonth.of(2026, 8), diary()));
+        when(holidayService.findSpecialDays(YearMonth.of(2026, 8)))
+                .thenReturn(Map.of(LocalDate.of(2026, 8, 1), new SpecialDays(List.of(
+                        new SpecialDay("입추", SpecialDay.Kind.SEASONAL_TERM),
+                        new SpecialDay("말복", SpecialDay.Kind.SUNDRY_DAY)))));
+
+        String body = mockMvc.perform(get("/diaries/calendar").param("month", "2026-08")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).contains("입추").contains("말복");
+        assertThat(body).contains("diary-calendar-term");
+        // 절기·잡절만 있는 날은 빨간 날이 아니다
+        assertThat(body).doesNotContain("is-holiday");
+        assertThat(body).contains("여름 제주 여행");
+    }
+
+    /** 공휴일/절기를 못 불러와도(빈 목록) 달력은 그대로 그려진다. */
+    @Test
+    void calendarStillRendersWhenHolidaysAreUnavailable() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiaryCalendar(7L, YearMonth.of(2026, 8)))
+                .thenReturn(calendar(YearMonth.of(2026, 8), diary()));
+        when(holidayService.findSpecialDays(YearMonth.of(2026, 8))).thenReturn(Map.of());
+
+        String body = mockMvc.perform(get("/diaries/calendar").param("month", "2026-08")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).contains("여름 제주 여행");
+        assertThat(body).doesNotContain("is-holiday");
+        // 특일 이름이 하나도 없어도 특일 자리는 모든 칸에 남는다 (여행일기 줄 시작 높이 고정)
+        assertThat(body).contains("class=\"diary-calendar-special\"");
+        assertThat(body).doesNotContain("diary-calendar-holiday");
+    }
+
+    /** 특일이 있는 칸과 없는 칸이 섞여도 특일 자리는 42칸 모두에 똑같이 있다. */
+    @Test
+    void everyDayCellKeepsTheSpecialDayRowSoChipsLineUp() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiaryCalendar(7L, YearMonth.of(2026, 8)))
+                .thenReturn(calendar(YearMonth.of(2026, 8), diary()));
+        when(holidayService.findSpecialDays(YearMonth.of(2026, 8)))
+                .thenReturn(Map.of(LocalDate.of(2026, 8, 1), new SpecialDays(List.of(
+                        new SpecialDay("광복절", SpecialDay.Kind.HOLIDAY)))));
+
+        String body = mockMvc.perform(get("/diaries/calendar").param("month", "2026-08")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        // 6주 x 7일
+        assertThat(body.split("class=\"diary-calendar-special\"", -1)).hasSize(43);
+        assertThat(body).contains("광복절");
+    }
+
+    /** 주소로 바로 들어온 연도도 연도 목록에 들어간다. */
+    @Test
+    void calendarYearOptionsAlwaysContainTheShownYear() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiaryCalendar(7L, YearMonth.of(1998, 3)))
+                .thenReturn(calendar(YearMonth.of(1998, 3)));
+
+        String body = mockMvc.perform(get("/diaries/calendar").param("month", "1998-03")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).containsPattern("value=\"1998\"\\s+selected");
+        assertThat(body).contains(String.valueOf(YearMonth.now().getYear()));
+    }
+
+    /** month 가 없거나 형식이 다르면 이번 달을 본다. (서버 오류가 나지 않는다) */
+    @Test
+    void oddMonthParameterFallsBackToThisMonth() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiaryCalendar(eq(7L), any()))
+                .thenReturn(calendar(YearMonth.now()));
+
+        for (String month : new String[]{"", "2026-13", "abc", "2026/08"}) {
+            mockMvc.perform(get("/diaries/calendar").param("month", month)
+                            .with(authentication(new UsernamePasswordAuthenticationToken(
+                                    userDetails, null, List.of()))))
+                    .andExpect(status().isOk());
+        }
+
+        verify(diaryService, org.mockito.Mockito.times(4))
+                .getMyDiaryCalendar(7L, YearMonth.now());
+    }
+
+    @Test
+    void calendarOfAGuestIsSentToLogin() throws Exception {
+        mockMvc.perform(get("/diaries/calendar"))
+                .andExpect(status().is3xxRedirection());
     }
 
     /** 비동기 검색은 같은 서비스 호출로 결과 조각만 돌려준다. (전체 페이지가 아니다) */
@@ -1957,6 +2130,23 @@ class DiaryControllerTest {
         page.setPageOrder(order);
         page.setBackgroundType("PLAIN");
         return page;
+    }
+
+    /** 그 달 1일에만 여행이 걸쳐 있는 6주짜리 달력. (칸 나누기는 서비스가 한다) */
+    private DiaryCalendarDto calendar(YearMonth month, Diary... trips) {
+        List<List<DiaryCalendarDto.Day>> weeks = new java.util.ArrayList<>();
+        LocalDate cursor = month.atDay(1);
+        for (int week = 0; week < 6; week++) {
+            List<DiaryCalendarDto.Day> days = new java.util.ArrayList<>();
+            for (int day = 0; day < 7; day++) {
+                boolean first = week == 0 && day == 0;
+                days.add(new DiaryCalendarDto.Day(cursor, true, false,
+                        first ? List.of(trips) : List.of()));
+                cursor = cursor.plusDays(1);
+            }
+            weeks.add(days);
+        }
+        return new DiaryCalendarDto(month, weeks);
     }
 
     /** 검색어 없는 첫 쪽. (쪽 계산은 서비스가 하므로 화면 확인에는 한 쪽이면 충분하다) */

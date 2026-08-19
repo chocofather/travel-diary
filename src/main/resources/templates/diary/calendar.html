@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
+
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/diary.css">
+  <script src="/js/diary-calendar.js" defer></script>
+</th:block>
+
+<th:block th:fragment="body">
+  <section class="diary-list-page" aria-labelledby="diary-calendar-title">
+    <header class="diary-list-header">
+      <div class="diary-list-heading">
+        <p class="diary-list-eyebrow">MY TRAVEL DIARY</p>
+        <h1 id="diary-calendar-title">나의 여행일기</h1>
+        <p class="diary-list-subtitle">달력에서 그동안의 여행을 한눈에 돌아보세요.</p>
+      </div>
+      <div class="diary-list-tools">
+        <!-- 책장 ↔ 달력. 각자 다른 주소를 쓰므로 검색/페이징과 상태가 섞이지 않는다. -->
+        <div class="diary-view-switch" role="group" aria-label="보기 방식">
+          <a class="diary-view-option" th:href="@{/diaries}">책장 보기</a>
+          <a class="diary-view-option is-current" aria-current="page"
+             th:href="@{/diaries/calendar}">달력 보기</a>
+        </div>
+        <a class="diary-new-button" th:href="@{/diaries/new}">새 여행일기 만들기</a>
+      </div>
+    </header>
+
+    <!-- 달 이동은 언제나 주소의 month(YYYY-MM) 로만 오간다. (일반 GET)
+         이전/다음/오늘은 링크라 JS 없이도 동작하고, 연·월 고르기만 JS 가 주소를 만든다. -->
+    <div class="diary-calendar-head" id="diary-calendar-head"
+         th:data-calendar-url="@{/diaries/calendar}">
+      <a class="diary-calendar-move" aria-label="이전 달"
+         th:href="@{/diaries/calendar(month=${calendar.previousMonthValue})}">&#8249;</a>
+
+      <h2 class="diary-calendar-month">
+        <label class="diary-calendar-pick">
+          <select class="diary-calendar-select" id="diary-calendar-year"
+                  aria-label="연도 고르기">
+            <option th:each="year : ${calendar.selectableYears}"
+                    th:value="${year}" th:selected="${year == calendar.month.year}"
+                    th:text="|${year}년|">2026년</option>
+          </select>
+        </label>
+        <label class="diary-calendar-pick">
+          <select class="diary-calendar-select" id="diary-calendar-month"
+                  aria-label="월 고르기">
+            <option th:each="m : ${calendar.selectableMonths}"
+                    th:value="${m}" th:selected="${m == calendar.month.monthValue}"
+                    th:text="|${m}월|">8월</option>
+          </select>
+        </label>
+      </h2>
+
+      <a class="diary-calendar-move" aria-label="다음 달"
+         th:href="@{/diaries/calendar(month=${calendar.nextMonthValue})}">&#8250;</a>
+
+      <!-- 이번 달로 바로 돌아온다. (month 를 빼면 서버가 이번 달을 본다) -->
+      <a class="diary-calendar-today" th:href="@{/diaries/calendar}"
+         th:classappend="${calendar.thisMonth} ? ' is-current' : ''">오늘</a>
+    </div>
+
+    <div class="diary-calendar">
+      <div class="diary-calendar-weekdays" aria-hidden="true">
+        <span class="is-sunday">일</span><span>월</span><span>화</span><span>수</span>
+        <span>목</span><span>금</span><span class="is-saturday">토</span>
+      </div>
+
+      <div class="diary-calendar-grid">
+        <th:block th:each="week : ${calendar.weeks}">
+          <!-- 공휴일이면 요일 색보다 공휴일 빨강이 앞선다. (이 달 날짜만 본다)
+               절기·잡절은 날짜 색을 바꾸지 않고 이름만 옅게 적는다. -->
+          <div class="diary-calendar-day" th:each="day, dayStat : ${week}"
+               th:with="special=${day.inCurrentMonth ? specialDays.get(day.date) : null}"
+               th:classappend="${(day.inCurrentMonth ? '' : ' is-outside')}
+                               + ${(day.today ? ' is-today' : '')}
+                               + ${(dayStat.index == 0 ? ' is-sunday' : '')}
+                               + ${(dayStat.index == 6 ? ' is-saturday' : '')}
+                               + ${(special != null and special.hasHoliday) ? ' is-holiday' : ''}">
+            <span class="diary-calendar-date" th:text="${day.dayOfMonth}">1</span>
+
+            <!-- 특일 영역. 눌러도 아무 일도 없는 표시 전용이고,
+                 특일이 없는 날에도 자리를 남겨 아래 여행일기 줄이 모든 칸에서 같은 높이에서 시작한다.
+                 (공휴일 → 절기 → 잡절 순서, 여러 건이면 가운뎃점으로 이어 붙는다) -->
+            <p class="diary-calendar-special">
+              <span class="diary-calendar-holiday"
+                    th:each="name : ${special?.holidayNames}" th:text="${name}">광복절</span>
+              <span class="diary-calendar-term"
+                    th:each="name : ${special?.termNames}" th:text="${name}">입추</span>
+            </p>
+
+            <!-- 같은 여행은 어느 날짜에서도 같은 색으로 보이고, 시작/끝 날만 모서리가 둥글다 -->
+            <div class="diary-calendar-trips">
+              <a class="diary-calendar-chip"
+                 th:each="trip, tripStat : ${day.diaries}" th:if="${tripStat.index < 3}"
+                 th:href="@{/diaries/{id}(id=${trip.id})}"
+                 th:classappend="|diary-calendar-chip-${trip.id % 6}|
+                                 + ${(trip.startDate.isEqual(day.date) ? ' is-start' : '')}
+                                 + ${(trip.endDate.isEqual(day.date) ? ' is-end' : '')}"
+                 th:title="|${trip.title} (${trip.startDate} ~ ${trip.endDate})|"
+                 th:text="${trip.title}">제주 여행</a>
+
+              <!-- 셀이 길어지지 않게 3개까지만 두고 나머지는 개수로 알린다 -->
+              <span class="diary-calendar-more" th:if="${#lists.size(day.diaries) > 3}"
+                    th:text="|+${#lists.size(day.diaries) - 3}|"
+                    th:title="${#strings.listJoin(day.diaries.![title], ', ')}">+2</span>
+            </div>
+          </div>
+        </th:block>
+      </div>
+    </div>
+
+    <p class="diary-calendar-empty" th:if="${calendar.empty}" role="status">
+      이 달에는 기록한 여행이 없어요.
+    </p>
+  </section>
+</th:block>
+</html>

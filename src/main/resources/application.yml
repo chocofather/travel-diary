@@ -54,3 +54,6 @@ logging:
   level:
     org.springframework.security: DEBUG
     org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping: INFO
+
+holiday:
+  api-key: ${HOLIDAY_API_KEY:}

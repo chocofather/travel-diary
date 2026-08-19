@@ -1,5 +1,6 @@
 package com.example.travlediary.service.diary;
 
+import com.example.travlediary.dto.DiaryCalendarDto;
 import com.example.travlediary.dto.DiaryListPageDto;
 import com.example.travlediary.model.Diary;
 import com.example.travlediary.model.DiaryCoverStyle;
@@ -13,6 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -87,6 +89,65 @@ class DiaryServiceImplTest {
         assertThat(page.isSearching()).isTrue();
         assertThat(page.keyword()).isEqualTo("제주");
         verify(diaryMapper, never()).findListItems(any(), any(), anyInt(), anyInt());
+    }
+
+    /** 달력은 그 달과 겹치는 다이어리만 읽고, 월 경계에 걸친 여행도 그대로 표시한다. */
+    @Test
+    void calendarReadsOnlyTheDiariesOverlappingTheMonth() {
+        Diary trip = diary(LocalDate.of(2026, 7, 29), LocalDate.of(2026, 8, 3));
+        trip.setId(10L);
+        when(diaryMapper.findByUserIdAndPeriod(
+                1L, LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31)))
+                .thenReturn(List.of(trip));
+
+        DiaryCalendarDto calendar = diaryService.getMyDiaryCalendar(1L, YearMonth.of(2026, 8));
+
+        // 6주 × 7칸으로 어느 달이든 높이가 같다
+        assertThat(calendar.weeks()).hasSize(6);
+        assertThat(calendar.weeks()).allSatisfy(week -> assertThat(week).hasSize(7));
+        assertThat(calendar.monthValue()).isEqualTo("2026-08");
+        assertThat(calendar.previousMonthValue()).isEqualTo("2026-07");
+        assertThat(calendar.nextMonthValue()).isEqualTo("2026-09");
+
+        // 8월 1~3일에만 걸쳐 있다 (7월 29~31일은 이 달 밖)
+        assertThat(tripCount(calendar, LocalDate.of(2026, 8, 1))).isEqualTo(1);
+        assertThat(tripCount(calendar, LocalDate.of(2026, 8, 3))).isEqualTo(1);
+        assertThat(tripCount(calendar, LocalDate.of(2026, 8, 4))).isZero();
+        assertThat(calendar.isEmpty()).isFalse();
+    }
+
+    /** 같은 날짜에 여러 다이어리가 있으면 모두 담는다. */
+    @Test
+    void calendarKeepsEveryDiaryOnTheSameDay() {
+        Diary jeju = diary(LocalDate.of(2026, 8, 5), LocalDate.of(2026, 8, 5));
+        jeju.setId(1L);
+        Diary family = diary(LocalDate.of(2026, 8, 5), LocalDate.of(2026, 8, 7));
+        family.setId(2L);
+        when(diaryMapper.findByUserIdAndPeriod(eq(1L), any(), any()))
+                .thenReturn(List.of(jeju, family));
+
+        DiaryCalendarDto calendar = diaryService.getMyDiaryCalendar(1L, YearMonth.of(2026, 8));
+
+        assertThat(tripCount(calendar, LocalDate.of(2026, 8, 5))).isEqualTo(2);
+        assertThat(tripCount(calendar, LocalDate.of(2026, 8, 7))).isEqualTo(1);
+    }
+
+    @Test
+    void calendarWithoutAMonthUsesThisMonth() {
+        when(diaryMapper.findByUserIdAndPeriod(eq(1L), any(), any())).thenReturn(List.of());
+
+        DiaryCalendarDto calendar = diaryService.getMyDiaryCalendar(1L, null);
+
+        assertThat(calendar.month()).isEqualTo(YearMonth.now());
+        assertThat(calendar.isEmpty()).isTrue();
+    }
+
+    private int tripCount(DiaryCalendarDto calendar, LocalDate date) {
+        return calendar.weeks().stream().flatMap(List::stream)
+                .filter(day -> day.date().isEqual(date))
+                .findFirst()
+                .map(day -> day.diaries().size())
+                .orElseThrow();
     }
 
     @Test

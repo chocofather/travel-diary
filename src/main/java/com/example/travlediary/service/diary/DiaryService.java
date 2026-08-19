@@ -1,8 +1,10 @@
 package com.example.travlediary.service.diary;
 
+import com.example.travlediary.dto.DiaryCalendarDto;
 import com.example.travlediary.dto.DiaryListPageDto;
 import com.example.travlediary.model.Diary;
 
+import java.time.YearMonth;
 import java.util.List;
 
 public interface DiaryService {
@@ -16,6 +18,9 @@ public interface DiaryService {
      * (검색 결과도 다이어리 한 권 단위다)
      */
     DiaryListPageDto getMyDiaryPage(Long userId, String keyword, int page);
+
+    /** 그 달의 월간 달력. 표시 월과 여행 기간이 겹치는 다이어리만 읽는다. */
+    DiaryCalendarDto getMyDiaryCalendar(Long userId, YearMonth month);
 
     /** 본인 소유 다이어리 상세 */
     Diary getMyDiary(Long diaryId, Long userId);

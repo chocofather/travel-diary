@@ -86,6 +86,17 @@
         WHERE <include refid="DiaryListCondition"/>
     </select>
 
+    <!-- 달력 한 달과 날짜가 겹치는 다이어리만 읽는다. (전체를 훑지 않는다)
+         소유권은 여기서도 user_id 로 먼저 막는다. -->
+    <select id="findByUserIdAndPeriod" resultMap="DiaryMap">
+        SELECT <include refid="DiaryColumns"/>
+        FROM diaries
+        WHERE user_id = #{userId}
+          AND start_date &lt;= #{to}
+          AND end_date &gt;= #{from}
+        ORDER BY start_date, id
+    </select>
+
     <!-- 본인 소유 다이어리 1건 -->
     <select id="findByIdAndUserId" resultMap="DiaryMap">
         SELECT <include refid="DiaryColumns"/>

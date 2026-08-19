@@ -146,6 +146,40 @@
     gap: 10px;
 }
 
+/* 책장 ↔ 달력 전환. 작은 세그먼트 하나로만 둔다. */
+.diary-view-switch {
+    display: inline-flex;
+    padding: 3px;
+    border: 1px solid #ded5c8;
+    border-radius: 999px;
+    background: #faf6ef;
+}
+
+.diary-view-option {
+    padding: 5px 12px;
+    border-radius: 999px;
+    color: #8b8378;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.diary-view-option:hover {
+    color: #6f5a3c;
+}
+
+.diary-view-option.is-current {
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(63, 52, 38, 0.12);
+    color: #4a3d2b;
+}
+
+.diary-view-option:focus-visible {
+    outline: 2px solid #b39a75;
+    outline-offset: 1px;
+}
+
 /* 검색: 아이콘 + 한 줄 입력. 큰 검색창처럼 보이지 않게 한다. */
 .diary-search {
     position: relative;
@@ -663,6 +697,310 @@
     font-weight: 600;
     text-decoration: underline;
     text-underline-offset: 3px;
+}
+
+/* ===== 월간 달력 보기 ===== */
+.diary-calendar-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.diary-calendar-month {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin: 0 4px;
+}
+
+/* 연/월 고르기: form 처럼 보이지 않게 글자 그대로 두고 밑에서만 반응한다 */
+.diary-calendar-pick {
+    display: inline-flex;
+}
+
+.diary-calendar-select {
+    padding: 3px 6px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: none;
+    color: #4a3d2b;
+    font-family: inherit;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    cursor: pointer;
+}
+
+.diary-calendar-select:hover {
+    border-color: #e3dcd1;
+    background: #fffdf8;
+}
+
+.diary-calendar-select:focus-visible {
+    outline: 2px solid #b39a75;
+    outline-offset: 1px;
+}
+
+/* 이번 달로 돌아오는 작은 보조 액션 */
+.diary-calendar-today {
+    display: inline-flex;
+    height: 28px;
+    align-items: center;
+    margin-left: 4px;
+    padding: 0 11px;
+    border: 1px solid #e0d6c6;
+    border-radius: 999px;
+    background: #fffdf8;
+    color: #8b8378;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.diary-calendar-today:hover {
+    border-color: #cbbba0;
+    background: #f6efe3;
+    color: #5c4a31;
+}
+
+/* 이미 이번 달을 보고 있으면 굳이 강조하지 않는다 */
+.diary-calendar-today.is-current {
+    border-color: #efe9df;
+    background: #fbf8f2;
+    color: #c2b9aa;
+}
+
+.diary-calendar-today:focus-visible {
+    outline: 2px solid #b39a75;
+    outline-offset: 1px;
+}
+
+.diary-calendar-move {
+    display: inline-flex;
+    width: 30px;
+    height: 30px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e3dcd1;
+    border-radius: 999px;
+    background: #fffdf8;
+    color: #8b8378;
+    font-size: 16px;
+    line-height: 1;
+    text-decoration: none;
+}
+
+.diary-calendar-move:hover {
+    border-color: #cbbba0;
+    background: #f6efe3;
+    color: #5c4a31;
+}
+
+.diary-calendar-move:focus-visible {
+    outline: 2px solid #b39a75;
+    outline-offset: 1px;
+}
+
+.diary-calendar {
+    overflow: hidden;
+    border: 1px solid #e3dcd1;
+    border-radius: 12px;
+    background: #fffdf8;
+}
+
+.diary-calendar-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    border-bottom: 1px solid #efe7db;
+    background: #faf6ef;
+}
+
+.diary-calendar-weekdays span {
+    padding: 8px 0;
+    color: #8b8378;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.diary-calendar-weekdays .is-sunday,
+.diary-calendar-day.is-sunday .diary-calendar-date {
+    color: #bb7d76;
+}
+
+.diary-calendar-weekdays .is-saturday,
+.diary-calendar-day.is-saturday .diary-calendar-date {
+    color: #7d93ab;
+}
+
+.diary-calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.diary-calendar-day {
+    display: flex;
+    min-height: 96px;
+    flex-direction: column;
+    gap: 4px;
+    padding: 7px 7px 9px;
+    border-right: 1px solid #f2ebdf;
+    border-bottom: 1px solid #f2ebdf;
+}
+
+.diary-calendar-day:nth-child(7n) {
+    border-right: 0;
+}
+
+.diary-calendar-grid > .diary-calendar-day:nth-last-child(-n + 7) {
+    border-bottom: 0;
+}
+
+/* 옆 달 날짜는 옅게만 둔다 */
+.diary-calendar-day.is-outside {
+    background: #fdfbf6;
+}
+
+.diary-calendar-day.is-outside .diary-calendar-date {
+    color: #cdc4b5;
+}
+
+.diary-calendar-day.is-outside .diary-calendar-chip {
+    opacity: 0.55;
+}
+
+.diary-calendar-date {
+    align-self: flex-start;
+    min-width: 20px;
+    color: #6b6259;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 20px;
+    text-align: center;
+}
+
+/* 오늘은 얇은 원 하나로만 알린다 */
+.diary-calendar-day.is-today .diary-calendar-date {
+    border: 1px solid #b39a75;
+    border-radius: 50%;
+    color: #4a3d2b;
+}
+
+/* 공휴일은 날짜 숫자를 빨갛게. 토요일 파랑보다 뒤에 둬 공휴일이 이긴다. */
+.diary-calendar-day.is-holiday .diary-calendar-date {
+    color: #c96f68;
+}
+
+/*
+ * 특일(공휴일/절기/잡절) 영역.
+ * 특일이 없는 날도 이 줄만큼은 늘 자리를 잡아, 아래 여행일기 줄이
+ * 모든 칸에서 같은 높이에서 시작한다. (날짜별 px 보정 없이 한 줄 높이로만 맞춘다)
+ * 길면 자연스럽게 한 줄 더 넘어가되 두 줄에서 멈춰 칸이 늘어지지 않게 한다.
+ */
+.diary-calendar-special {
+    display: flex;
+    overflow: hidden;
+    min-width: 0;
+    min-height: 14px;
+    max-height: 28px;
+    flex-wrap: wrap;
+    align-items: baseline;
+    margin: -1px 0 1px;
+    padding: 0 2px;
+    gap: 0 3px;
+    line-height: 14px;
+}
+
+/* 같은 날 여러 건은 '광복절 · 말복'처럼 한 줄로 이어 적는다 */
+.diary-calendar-special > span + span::before {
+    margin-right: 3px;
+    color: #d8cebd;
+    content: "\00B7";
+}
+
+.diary-calendar-special > span {
+    overflow: hidden;
+    min-width: 0;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 공휴일명. 여행일기 chip 과 헷갈리지 않게 바탕 없이 작은 글씨로만 둔다. */
+.diary-calendar-holiday {
+    color: #cf8e88;
+    font-size: 10px;
+}
+
+/* 24절기 / 잡절. 쉬는 날이 아니라 종이달력에 적어 둔 메모처럼 옅은 갈색으로만 둔다 */
+.diary-calendar-term {
+    color: #a08b74;
+    font-size: 9.5px;
+}
+
+.diary-calendar-trips {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 3px;
+}
+
+/* 여행 하나가 여러 날에 걸쳐도 같은 색이라 같은 기록으로 읽힌다 */
+.diary-calendar-chip {
+    overflow: hidden;
+    padding: 2px 6px;
+    border-left: 3px solid transparent;
+    border-radius: 0;
+    color: #5c5346;
+    font-size: 11px;
+    line-height: 1.5;
+    text-decoration: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.diary-calendar-chip.is-start {
+    border-top-left-radius: 6px;
+    border-bottom-left-radius: 6px;
+}
+
+.diary-calendar-chip.is-end {
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+}
+
+.diary-calendar-chip:hover {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.diary-calendar-chip:focus-visible {
+    outline: 2px solid #b39a75;
+    outline-offset: -1px;
+}
+
+/* 업무 달력처럼 진한 막대가 되지 않게 옅은 바탕 + 왼쪽 선만 쓴다 */
+.diary-calendar-chip-0 { background: #f7ecdd; border-left-color: #d0a875; }
+.diary-calendar-chip-1 { background: #eef3ea; border-left-color: #8fae8c; }
+.diary-calendar-chip-2 { background: #eaf0f6; border-left-color: #86a8c6; }
+.diary-calendar-chip-3 { background: #f9ecee; border-left-color: #cc8f97; }
+.diary-calendar-chip-4 { background: #f1edf7; border-left-color: #a293c2; }
+.diary-calendar-chip-5 { background: #e9f2f0; border-left-color: #7fb0a6; }
+
+.diary-calendar-more {
+    padding: 0 6px;
+    color: #9a8f7f;
+    font-size: 11px;
+    cursor: default;
+}
+
+.diary-calendar-empty {
+    margin: 18px 0 0;
+    color: #8b8378;
+    font-size: 14px;
+    text-align: center;
 }
 
 /* ===== 목록 쪽 이동 ===== */
@@ -3177,6 +3515,51 @@
 
     .diary-search-input {
         width: 100%;
+    }
+
+    /* 상단 컨트롤이 겹치지 않게 줄바꿈을 허용하고 크기만 줄인다 */
+    .diary-calendar-head {
+        gap: 6px;
+    }
+
+    .diary-calendar-select {
+        font-size: 16px;
+    }
+
+    .diary-calendar-today {
+        height: 26px;
+        padding: 0 9px;
+    }
+
+    /* 좁은 화면에서도 7열은 그대로 두고 칸 안쪽만 줄인다 */
+    .diary-calendar-day {
+        min-height: 76px;
+        padding: 5px 4px 7px;
+    }
+
+    .diary-calendar-chip {
+        padding: 2px 4px;
+        border-left-width: 2px;
+        font-size: 10px;
+    }
+
+    .diary-calendar-date {
+        font-size: 11px;
+    }
+
+    /* 좁은 화면에서도 특일 줄 높이는 모든 칸이 똑같이 유지한다 */
+    .diary-calendar-special {
+        min-height: 13px;
+        max-height: 26px;
+        line-height: 13px;
+    }
+
+    .diary-calendar-holiday {
+        font-size: 9px;
+    }
+
+    .diary-calendar-term {
+        font-size: 9px;
     }
 
     .diary-list-header h1 {
