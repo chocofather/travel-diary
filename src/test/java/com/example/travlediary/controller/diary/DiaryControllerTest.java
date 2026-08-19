@@ -1790,6 +1790,10 @@ class DiaryControllerTest {
 
         assertThat(editBody).contains("diary-sticker-button");
         assertThat(editBody).contains("data-sticker-id=\"airplane\"");
+        // '최근' 은 manifest 분류가 아니라 브라우저에만 남는 화면용 탭이다
+        assertThat(editBody).contains("data-sticker-category=\"recent\"");
+        assertThat(editBody).contains("id=\"diary-sticker-grid-recent\"");
+        assertThat(editBody).contains("아직 사용한 스티커가 없어요.");
         assertThat(editBody).contains("/images/diary/stickers/emotion/heart.svg");
         // 스티커도 사진과 같은 자유배치 조작을 쓴다
         assertThat(editBody).contains("diary-canvas-sticker");

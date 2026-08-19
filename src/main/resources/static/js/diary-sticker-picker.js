@@ -2,6 +2,7 @@
  * 다이어리 편집 화면의 스티커 붙이기.
  * picker 에서 고른 스티커 id 만 서버로 보내고, 실제 이미지 경로는 서버가 허용 목록에서 정한다.
  * 분류 탭/스티커 목록은 서버가 manifest(json/diary_stickers.json)대로 그려 주므로 여기서 목록을 들지 않는다.
+ * '최근' 탭만 이 브라우저(localStorage)에 남는 화면용 분류로, 서버 목록에 있는 스티커만 담는다.
  * 서버가 만들어 준 요소를 지금 보고 있는 캔버스에 바로 그려 화면을 새로 고치지 않는다.
  * (이동/크기/회전/겹침 순서 저장은 사진과 같은 endpoint 를 그대로 쓴다)
  */
@@ -14,6 +15,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const createUrl = button.dataset.createUrl;
     const canvas = document.querySelector('.diary-book-single .diary-canvas');
     if (!createUrl || !canvas) return;
+
+    /** 최근 쓴 스티커는 이 브라우저에만 남긴다. (이모지 최근 목록과 같은 방식, 서버 저장 없음) */
+    const RECENT_KEY = 'travelDiaryRecentStickers';
+    const RECENT_LIMIT = 30;
+    const RECENT_CATEGORY = 'recent';
+
+    const recentGrid = document.getElementById('diary-sticker-grid-recent');
+    const recentEmpty = document.getElementById('diary-sticker-recent-empty');
+    // 지금 목록(manifest)에 있는 스티커만 id 로 찾아 쓴다.
+    const stickers = new Map();
+    popover.querySelectorAll('.diary-sticker-grid:not(#diary-sticker-grid-recent) '
+        + '.diary-sticker-option').forEach((option) => {
+        stickers.set(option.dataset.stickerId, option);
+    });
 
     let busy = false;
 
@@ -43,6 +58,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     toggle(false);
+
+    // 최근에 쓴 것이 있으면 그 탭부터, 없으면 지금까지처럼 첫 분류부터 보여 준다.
+    const recent = renderRecent();
+    if (recent.length > 0) showCategory(RECENT_CATEGORY);
 
     /** 고른 분류의 그리드만 남기고 나머지는 감춘다. */
     function showCategory(categoryId) {
@@ -77,6 +96,66 @@ document.addEventListener('DOMContentLoaded', () => {
         status.classList.toggle('is-error', isError);
     }
 
+    /**
+     * 최근 목록 읽기. localStorage 를 못 쓰면 빈 목록으로 조용히 넘어간다.
+     * 지금 목록에 없는 스티커(빠졌거나 id 가 바뀐 것)는 여기서 걸러 다시 저장해 둔다.
+     */
+    function readRecent() {
+        let stored = [];
+        try {
+            const raw = JSON.parse(window.localStorage.getItem(RECENT_KEY) || '[]');
+            if (Array.isArray(raw)) stored = raw.filter((id) => typeof id === 'string');
+        } catch (error) {
+            return [];
+        }
+
+        const kept = [];
+        stored.forEach((id) => {
+            if (stickers.has(id) && !kept.includes(id)) kept.push(id);
+        });
+        const next = kept.slice(0, RECENT_LIMIT);
+        if (next.length !== stored.length) save(next);
+        return next;
+    }
+
+    /** 방금 쓴 스티커를 맨 앞으로 올린다. 같은 스티커는 기존 자리에서 빼고 30개만 남긴다. */
+    function rememberRecent(stickerId) {
+        const next = [stickerId, ...readRecent().filter((id) => id !== stickerId)]
+            .slice(0, RECENT_LIMIT);
+        save(next);
+        return next;
+    }
+
+    function save(ids) {
+        try {
+            window.localStorage.setItem(RECENT_KEY, JSON.stringify(ids));
+        } catch (error) {
+            // 저장이 막혀 있어도 스티커 붙이기 자체는 그대로 동작한다.
+        }
+    }
+
+    /**
+     * 최근 탭 다시 그리기.
+     * 이미지/이름은 서버가 그려 둔 버튼을 그대로 복사해 쓰므로 지난 경로를 믿지 않는다.
+     */
+    function renderRecent() {
+        const ids = readRecent();
+        if (!recentGrid) return ids;
+
+        recentGrid.replaceChildren();
+        if (ids.length === 0) {
+            if (recentEmpty) recentGrid.append(recentEmpty);
+            return ids;
+        }
+
+        ids.forEach((id) => {
+            const option = stickers.get(id).cloneNode(true);
+            option.addEventListener('click', () => attach(id));
+            recentGrid.append(option);
+        });
+        return ids;
+    }
+
     async function attach(stickerId) {
         if (!stickerId || busy) return;
         busy = true;
@@ -95,6 +174,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // 새로 붙은 스티커도 기존 드래그/크기/회전/겹침 조작을 그대로 쓴다.
             window.diaryCanvas?.register(item);
             window.diaryCanvas?.select(item);
+            // 실제로 붙인 것만 최근 목록에 남기고, 최근 탭도 바로 다시 그린다.
+            rememberRecent(stickerId);
+            renderRecent();
             showStatus('붙였습니다');
         } catch (error) {
             showStatus(error.message || '스티커를 붙이지 못했습니다', true);

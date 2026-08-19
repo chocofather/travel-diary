@@ -2678,6 +2678,16 @@
     display: none;
 }
 
+/* 최근 쓴 스티커가 아직 없을 때. 한 줄만 조용히 알린다. */
+.diary-sticker-empty {
+    grid-column: 1 / -1;
+    margin: 0;
+    padding: 14px 4px;
+    color: #9a8f7f;
+    font-size: 13px;
+    text-align: center;
+}
+
 .diary-sticker-option {
     display: inline-flex;
     aspect-ratio: 1 / 1;
