@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="지도 스티커">
+  <path d="M6 16.5 22 11v42L6 58.5zM22 11l20 5.5v42L22 53zM42 16.5 58 11v42l-16 5.5z"
+        fill="#eee2c9" stroke="#6f5a3c" stroke-width="2.6" stroke-linejoin="round"/>
+  <path d="M22 11v42M42 16.5v42" fill="none" stroke="#6f5a3c" stroke-width="2.2"/>
+  <path d="M13 25c6 3 9 9 16 10s10 6 15 9" fill="none" stroke="#9fb8a8"
+        stroke-width="2.6" stroke-linecap="round" stroke-dasharray="1 5"/>
+  <circle cx="44" cy="27" r="4.6" fill="#c96f68" stroke="#6f5a3c" stroke-width="2.2"/>
+</svg>

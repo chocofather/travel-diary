@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="카메라 스티커">
+  <path d="M23 15h18l3 6h7a5 5 0 0 1 5 5v20a5 5 0 0 1-5 5H13a5 5 0 0 1-5-5V26a5 5 0 0 1 5-5h7z"
+        fill="#e6dccb" stroke="#6f5a3c" stroke-width="2.6" stroke-linejoin="round"/>
+  <circle cx="32" cy="35" r="10" fill="#9fb8a8" stroke="#6f5a3c" stroke-width="2.6"/>
+  <circle cx="32" cy="35" r="4.5" fill="#f4ece0" stroke="#6f5a3c" stroke-width="2"/>
+  <circle cx="47" cy="27" r="2.2" fill="#c96f68"/>
+</svg>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="별 스티커">
+  <path d="M32 7l7.6 15.9 17.1 2.4-12.4 12.3 2.9 17.4L32 46.7 16.8 55l2.9-17.4L7.3 25.3l17.1-2.4z"
+        fill="#e8c26a" stroke="#8a6a2f" stroke-width="2.6" stroke-linejoin="round"/>
+  <path d="M32 16.5l4.4 9.2 9.9 1.4" fill="none" stroke="#fbf1d8"
+        stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

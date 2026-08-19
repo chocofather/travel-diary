@@ -12,6 +12,7 @@ import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.diary.DiaryElementService;
 import com.example.travlediary.service.diary.DiaryPageService;
 import com.example.travlediary.service.diary.DiaryService;
+import com.example.travlediary.service.diary.DiaryStickerCatalog;
 import com.example.travlediary.service.file.FileUploadService;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -49,7 +50,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 @WebMvcTest(DiaryController.class)
-@Import(SecurityConfig.class)
+@Import({SecurityConfig.class, DiaryStickerCatalog.class})
 class DiaryControllerTest {
 
     @Autowired
@@ -1206,7 +1207,7 @@ class DiaryControllerTest {
         when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
         when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-01")));
         when(diaryElementService.getElements(10L, 1L, 7L)).thenReturn(List.of(
-                stickerElement(200L, "/images/diary-stickers/heart.svg")));
+                stickerElement(200L, "/images/diary/stickers/emotion/heart.svg")));
 
         for (boolean edit : new boolean[]{false, true}) {
             String body = mockMvc.perform(get("/diaries/10")
@@ -1260,15 +1261,15 @@ class DiaryControllerTest {
         when(userDetails.getId()).thenReturn(7L);
         when(diaryElementService.getElements(10L, 3L, 7L)).thenReturn(List.of());
         when(diaryElementService.create(eq(10L), eq(3L), eq(7L), any()))
-                .thenReturn(stickerElement(200L, "/images/diary-stickers/plane.svg"));
+                .thenReturn(stickerElement(200L, "/images/diary/stickers/travel/airplane.svg"));
 
         mockMvc.perform(post("/diaries/10/pages/3/elements/sticker")
-                        .param("sticker", "PLANE")
+                        .param("sticker", "airplane")
                         .with(csrf())
                         .with(authentication(new UsernamePasswordAuthenticationToken(
                                 userDetails, null, List.of()))))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("/images/diary-stickers/plane.svg")))
+                .andExpect(content().string(containsString("/images/diary/stickers/travel/airplane.svg")))
                 .andExpect(content().string(containsString("/sticker/delete")));
 
         ArgumentCaptor<DiaryElement> captor = ArgumentCaptor.forClass(DiaryElement.class);
@@ -1276,7 +1277,7 @@ class DiaryControllerTest {
         DiaryElement saved = captor.getValue();
         assertThat(saved.getElementType()).isEqualTo("STICKER");
         // 경로는 요청 값이 아니라 서버 목록에서 나온다
-        assertThat(saved.getImageUrl()).isEqualTo("/images/diary-stickers/plane.svg");
+        assertThat(saved.getImageUrl()).isEqualTo("/images/diary/stickers/travel/airplane.svg");
         assertThat(saved.getTextContent()).isNull();
         // 종이 가운데 부근의 작은 기본 크기
         assertThat(saved.getWidth()).isEqualByComparingTo("0.18000");
@@ -1307,7 +1308,7 @@ class DiaryControllerTest {
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "다이어리를 찾을 수 없습니다."));
 
         mockMvc.perform(post("/diaries/99/pages/3/elements/sticker")
-                        .param("sticker", "PLANE")
+                        .param("sticker", "airplane")
                         .with(csrf())
                         .with(authentication(new UsernamePasswordAuthenticationToken(
                                 userDetails, null, List.of()))))
@@ -1318,7 +1319,7 @@ class DiaryControllerTest {
     void stickerDeleteRemovesTheRowWithoutTouchingTheSharedAsset() throws Exception {
         when(userDetails.getId()).thenReturn(7L);
         when(diaryElementService.getElement(10L, 3L, 200L, 7L))
-                .thenReturn(stickerElement(200L, "/images/diary-stickers/plane.svg"));
+                .thenReturn(stickerElement(200L, "/images/diary/stickers/travel/airplane.svg"));
 
         mockMvc.perform(post("/diaries/10/pages/3/elements/200/sticker/delete")
                         .param("spread", "1")
@@ -1351,7 +1352,7 @@ class DiaryControllerTest {
         when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
         when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-01")));
         when(diaryElementService.getElements(10L, 1L, 7L)).thenReturn(List.of(
-                stickerElement(200L, "/images/diary-stickers/heart.svg")));
+                stickerElement(200L, "/images/diary/stickers/emotion/heart.svg")));
 
         String editBody = mockMvc.perform(get("/diaries/10").param("edit", "true")
                         .with(authentication(new UsernamePasswordAuthenticationToken(
@@ -1360,8 +1361,8 @@ class DiaryControllerTest {
                 .andReturn().getResponse().getContentAsString();
 
         assertThat(editBody).contains("diary-sticker-button");
-        assertThat(editBody).contains("data-sticker-code=\"PLANE\"");
-        assertThat(editBody).contains("/images/diary-stickers/heart.svg");
+        assertThat(editBody).contains("data-sticker-id=\"airplane\"");
+        assertThat(editBody).contains("/images/diary/stickers/emotion/heart.svg");
         // 스티커도 사진과 같은 자유배치 조작을 쓴다
         assertThat(editBody).contains("diary-canvas-sticker");
         assertThat(editBody).contains("/diaries/10/pages/1/elements/200/position");
@@ -1383,7 +1384,7 @@ class DiaryControllerTest {
 
         // 읽기 모드에는 스티커 그림만 남고 편집 UI 는 없다
         assertThat(readBody).contains("diary-canvas-sticker");
-        assertThat(readBody).contains("/images/diary-stickers/heart.svg");
+        assertThat(readBody).contains("/images/diary/stickers/emotion/heart.svg");
         assertThat(readBody).doesNotContain("diary-sticker-button");
         assertThat(readBody).doesNotContain("sticker/delete");
         assertThat(readBody).doesNotContain("diary-resize-handle");

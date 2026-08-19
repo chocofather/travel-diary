@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="커피 스티커">
+  <path d="M12 22h34v18a12 12 0 0 1-12 12H24a12 12 0 0 1-12-12z"
+        fill="#f2e7d6" stroke="#6f5a3c" stroke-width="2.6" stroke-linejoin="round"/>
+  <path d="M12 22h34v6H12z" fill="#8a6a45"/>
+  <path d="M12 22h34v6H12z" fill="none" stroke="#6f5a3c" stroke-width="2.2"/>
+  <path d="M46 27h5a6 6 0 0 1 0 12h-5" fill="none" stroke="#6f5a3c"
+        stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M22 15c0-3 3-3 3-6M31 15c0-3 3-3 3-6" fill="none" stroke="#b0a08a"
+        stroke-width="2.4" stroke-linecap="round"/>
+</svg>

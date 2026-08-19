@@ -1,6 +1,7 @@
 /**
  * 다이어리 편집 화면의 스티커 붙이기.
- * picker 에서 고른 스티커 코드만 서버로 보내고, 실제 이미지 경로는 서버가 허용 목록에서 정한다.
+ * picker 에서 고른 스티커 id 만 서버로 보내고, 실제 이미지 경로는 서버가 허용 목록에서 정한다.
+ * 분류 탭/스티커 목록은 서버가 manifest(json/diary_stickers.json)대로 그려 주므로 여기서 목록을 들지 않는다.
  * 서버가 만들어 준 요소를 지금 보고 있는 캔버스에 바로 그려 화면을 새로 고치지 않는다.
  * (이동/크기/회전/겹침 순서 저장은 사진과 같은 endpoint 를 그대로 쓴다)
  */
@@ -32,11 +33,30 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // 분류 탭과 스티커 버튼 모두 서버가 그려 준 것을 그대로 쓴다.
+    // (스티커가 늘어나도 이 로직은 바뀌지 않는다)
+    popover.querySelectorAll('.diary-sticker-tab').forEach((tab) => {
+        tab.addEventListener('click', () => showCategory(tab.dataset.stickerCategory));
+    });
     popover.querySelectorAll('.diary-sticker-option').forEach((option) => {
-        option.addEventListener('click', () => attach(option.dataset.stickerCode));
+        option.addEventListener('click', () => attach(option.dataset.stickerId));
     });
 
     toggle(false);
+
+    /** 고른 분류의 그리드만 남기고 나머지는 감춘다. */
+    function showCategory(categoryId) {
+        popover.querySelectorAll('.diary-sticker-tab').forEach((tab) => {
+            const active = tab.dataset.stickerCategory === categoryId;
+            tab.classList.toggle('is-active', active);
+            tab.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+        popover.querySelectorAll('.diary-sticker-grid').forEach((grid) => {
+            grid.hidden = grid.dataset.stickerCategory !== categoryId;
+            if (!grid.hidden) grid.scrollTop = 0;
+        });
+        showStatus('');
+    }
 
     /**
      * 열고 닫기.
@@ -57,8 +77,8 @@ document.addEventListener('DOMContentLoaded', () => {
         status.classList.toggle('is-error', isError);
     }
 
-    async function attach(stickerCode) {
-        if (!stickerCode || busy) return;
+    async function attach(stickerId) {
+        if (!stickerId || busy) return;
         busy = true;
         showStatus('붙이는 중…');
 
@@ -69,7 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!saved) throw new Error('본문을 저장하지 못해 스티커를 붙이지 못했습니다.');
             }
 
-            const created = await createSticker(stickerCode);
+            const created = await createSticker(stickerId);
             const item = renderSticker(created);
             canvas.append(item);
             // 새로 붙은 스티커도 기존 드래그/크기/회전/겹침 조작을 그대로 쓴다.
@@ -84,7 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /** CSRF 토큰은 layout 의 meta 값을 그대로 쓴다. (기존 저장 요청과 같은 방식) */
-    async function createSticker(stickerCode) {
+    async function createSticker(stickerId) {
         const csrfToken = document.querySelector('meta[name="_csrf"]')?.content;
         const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.content;
         if (!csrfToken || !csrfHeader) {
@@ -99,7 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
                 [csrfHeader]: csrfToken
             },
-            body: new URLSearchParams({sticker: stickerCode})
+            body: new URLSearchParams({sticker: stickerId})
         });
 
         if (response.status === 401) {

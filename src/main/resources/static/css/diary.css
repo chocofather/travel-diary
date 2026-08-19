@@ -1882,17 +1882,58 @@
     display: none;
 }
 
-/* 지금은 묶음이 하나뿐이지만 늘어나면 같은 제목 + grid 를 반복한다 */
-.diary-sticker-category {
-    margin: 0;
+/* 분류 탭. 묶음이 늘어나면 가로로만 조금 넘겨 본다. */
+.diary-sticker-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #f0e8db;
+}
+
+.diary-sticker-tab {
+    padding: 3px 8px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    background: none;
     color: #8b8378;
+    font-family: inherit;
     font-size: 12px;
+    line-height: 1.5;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.diary-sticker-tab:hover {
+    background: #f6efe3;
+    color: #6f5a3c;
+}
+
+.diary-sticker-tab.is-active {
+    border-color: #e0d6c6;
+    background: #f2e8d8;
+    color: #4a3d2b;
+}
+
+.diary-sticker-tab:focus-visible {
+    outline: 2px solid #b39a75;
+    outline-offset: -2px;
+}
+
+/* 스티커가 많아져도 이 안에서만 스크롤된다 */
+.diary-sticker-panels {
+    max-height: 216px;
+    overflow-y: auto;
 }
 
 .diary-sticker-grid {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 4px;
+}
+
+.diary-sticker-grid[hidden] {
+    display: none;
 }
 
 .diary-sticker-option {

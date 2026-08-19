@@ -9,6 +9,7 @@ import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.diary.DiaryElementService;
 import com.example.travlediary.service.diary.DiaryPageService;
 import com.example.travlediary.service.diary.DiaryService;
+import com.example.travlediary.service.diary.DiaryStickerCatalog;
 import com.example.travlediary.service.file.FileUploadService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -61,6 +62,7 @@ public class DiaryController {
     private final DiaryPageService diaryPageService;
     private final DiaryElementService diaryElementService;
     private final FileUploadService fileUploadService;
+    private final DiaryStickerCatalog diaryStickerCatalog;
 
     @Value("${custom.upload-path}")
     private String uploadPath;
@@ -110,8 +112,8 @@ public class DiaryController {
         model.addAttribute("editMode", edit);
         if (edit) {
             addEditPageAttributes(diaryId, userId, pages, leftPage, rightPage, page, model);
-            // 스티커 picker 목록. 저장 가능한 스티커는 이 목록이 그대로 허용 목록이다.
-            model.addAttribute("diaryStickers", DiarySticker.values());
+            // 스티커 picker 목록(분류별). 저장 가능한 스티커는 이 목록이 그대로 허용 목록이다.
+            model.addAttribute("diaryStickerCategories", diaryStickerCatalog.getCategories());
         }
         model.addAttribute("pageTitle", diary.getTitle() + " | 나의 여행일기");
         return "diary/detail";
@@ -449,16 +451,16 @@ public class DiaryController {
 
     /**
      * 페이지에 공용 스티커를 한 장 붙인다.
-     * 클라이언트는 스티커 코드만 보내고 실제 경로는 서버가 허용 목록(DiarySticker)에서 고른다.
+     * 클라이언트는 스티커 id 만 보내고 실제 경로는 서버가 허용 목록(DiaryStickerCatalog)에서 고른다.
      * 소유권 확인은 기존 요소 생성 흐름(diaryElementService)이 그대로 맡는다.
      */
     @PostMapping("/{diaryId:\\d+}/pages/{pageId:\\d+}/elements/sticker")
     @ResponseBody
     public ResponseEntity<?> createStickerElement(@PathVariable Long diaryId,
                                                   @PathVariable Long pageId,
-                                                  @RequestParam("sticker") String stickerCode,
+                                                  @RequestParam("sticker") String stickerId,
                                                   @AuthenticationPrincipal CustomUserDetails userDetails) {
-        DiarySticker sticker = DiarySticker.find(stickerCode).orElse(null);
+        DiarySticker sticker = diaryStickerCatalog.find(stickerId).orElse(null);
         if (sticker == null) {
             return ResponseEntity.badRequest().body(Map.of("message", "알 수 없는 스티커입니다."));
         }
@@ -473,7 +475,7 @@ public class DiaryController {
 
             DiaryElement element = new DiaryElement();
             element.setElementType(STICKER_ELEMENT_TYPE);
-            element.setImageUrl(sticker.getImageUrl());
+            element.setImageUrl(sticker.imageUrl());
             element.setPositionX(STICKER_CENTER.add(offset));
             element.setPositionY(STICKER_CENTER.add(offset));
             element.setWidth(STICKER_SIZE);
@@ -488,7 +490,7 @@ public class DiaryController {
             }
             throw exception;
         }
-        return ResponseEntity.ok(stickerPayload(diaryId, pageId, created, sticker.getLabel()));
+        return ResponseEntity.ok(stickerPayload(diaryId, pageId, created, sticker.name()));
     }
 
     /**

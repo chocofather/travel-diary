@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 48" role="img" aria-label="Good Trip 레터링 스티커">
+  <rect x="2" y="6" width="116" height="34" rx="17" fill="#fdf6e8"
+        stroke="#6f5a3c" stroke-width="2.4"/>
+  <text x="60" y="30" text-anchor="middle" fill="#6f5a3c"
+        font-family="Georgia, 'Times New Roman', serif" font-size="18"
+        font-style="italic" font-weight="700">Good Trip</text>
+</svg>

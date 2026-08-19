@@ -48,7 +48,7 @@ class DiaryElementServiceImplTest {
         });
         when(diaryElementMapper.findByIdAndPageId(101L, 3L)).thenReturn(new DiaryElement());
 
-        DiaryElement sticker = imageElement("STICKER", "/uploads/diary-stickers/heart.png");
+        DiaryElement sticker = imageElement("STICKER", "/images/diary/stickers/emotion/heart.svg");
         sticker.setPositionX(new BigDecimal("0.20000"));
         sticker.setRotation(new BigDecimal("12.00"));
         sticker.setZIndex(2);
@@ -59,7 +59,7 @@ class DiaryElementServiceImplTest {
         verify(diaryElementMapper).insert(captor.capture());
         DiaryElement saved = captor.getValue();
         assertThat(saved.getElementType()).isEqualTo("STICKER");
-        assertThat(saved.getImageUrl()).isEqualTo("/uploads/diary-stickers/heart.png");
+        assertThat(saved.getImageUrl()).isEqualTo("/images/diary/stickers/emotion/heart.svg");
         // 사진과 같은 payload 규칙: 본문은 비운다
         assertThat(saved.getTextContent()).isNull();
         // 좌표/회전/겹침 순서 검증도 사진과 똑같이 지나간다
@@ -85,7 +85,7 @@ class DiaryElementServiceImplTest {
     void stickerOutsideTheAllowedAreaIsRejected() {
         when(diaryPageService.getPage(10L, 3L, 7L)).thenReturn(page());
 
-        DiaryElement sticker = imageElement("STICKER", "/uploads/diary-stickers/heart.png");
+        DiaryElement sticker = imageElement("STICKER", "/images/diary/stickers/emotion/heart.svg");
         sticker.setPositionY(new BigDecimal("9.00000"));
 
         assertThatThrownBy(() -> diaryElementService.create(10L, 3L, 7L, sticker))
@@ -111,7 +111,7 @@ class DiaryElementServiceImplTest {
     void unknownElementTypesAreStillRejected() {
         when(diaryPageService.getPage(10L, 3L, 7L)).thenReturn(page());
 
-        DiaryElement tape = imageElement("TAPE", "/uploads/diary-stickers/tape.png");
+        DiaryElement tape = imageElement("TAPE", "/images/diary/stickers/decoration/tape.svg");
 
         assertThatThrownBy(() -> diaryElementService.create(10L, 3L, 7L, tape))
                 .isInstanceOf(ResponseStatusException.class)

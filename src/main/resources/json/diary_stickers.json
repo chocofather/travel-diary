@@ -1,0 +1,54 @@
+{
+  "_comment": [
+    "다이어리에 붙일 수 있는 공용 스티커 목록.",
+    "이 파일이 곧 서버가 허용하는 스티커 목록이다. 여기에 없는 값은 저장되지 않는다.",
+    "스티커를 추가하려면 static/images/diary/stickers/{category}/ 에 SVG 를 넣고",
+    "아래 stickers 배열에 한 줄만 더하면 picker 에 자동으로 나타난다.",
+    "imageUrl 은 반드시 /images/diary/stickers/ 아래 경로여야 한다. (외부 주소 저장 금지)"
+  ],
+  "categories": [
+    {"id": "travel", "name": "여행"},
+    {"id": "emotion", "name": "감정"},
+    {"id": "food", "name": "음식"},
+    {"id": "nature", "name": "자연"},
+    {"id": "weather", "name": "날씨"},
+    {"id": "decoration", "name": "장식"},
+    {"id": "lettering", "name": "레터링"},
+    {"id": "season", "name": "계절"}
+  ],
+  "stickers": [
+    {"id": "airplane", "name": "비행기", "category": "travel",
+     "imageUrl": "/images/diary/stickers/travel/airplane.svg"},
+    {"id": "suitcase", "name": "캐리어", "category": "travel",
+     "imageUrl": "/images/diary/stickers/travel/suitcase.svg"},
+    {"id": "camera", "name": "카메라", "category": "travel",
+     "imageUrl": "/images/diary/stickers/travel/camera.svg"},
+    {"id": "passport", "name": "여권", "category": "travel",
+     "imageUrl": "/images/diary/stickers/travel/passport.svg"},
+    {"id": "map", "name": "지도", "category": "travel",
+     "imageUrl": "/images/diary/stickers/travel/map.svg"},
+    {"id": "map-pin", "name": "위치", "category": "travel",
+     "imageUrl": "/images/diary/stickers/travel/map-pin.svg"},
+
+    {"id": "heart", "name": "하트", "category": "emotion",
+     "imageUrl": "/images/diary/stickers/emotion/heart.svg"},
+
+    {"id": "coffee", "name": "커피", "category": "food",
+     "imageUrl": "/images/diary/stickers/food/coffee.svg"},
+
+    {"id": "palm", "name": "야자수", "category": "nature",
+     "imageUrl": "/images/diary/stickers/nature/palm.svg"},
+
+    {"id": "sun", "name": "해", "category": "weather",
+     "imageUrl": "/images/diary/stickers/weather/sun.svg"},
+
+    {"id": "star", "name": "별", "category": "decoration",
+     "imageUrl": "/images/diary/stickers/decoration/star.svg"},
+
+    {"id": "good-trip", "name": "Good Trip", "category": "lettering",
+     "imageUrl": "/images/diary/stickers/lettering/good-trip.svg"},
+
+    {"id": "maple", "name": "단풍", "category": "season",
+     "imageUrl": "/images/diary/stickers/season/maple.svg"}
+  ]
+}

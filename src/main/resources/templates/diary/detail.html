@@ -213,7 +213,8 @@
       </div>
 
       <!-- 스티커: 공용 asset 목록에서 고르면 지금 편집 중인 장에 바로 붙는다.
-           저장 주소/스티커 코드는 서버가 정한 목록(DiarySticker)만 쓴다. -->
+           분류/스티커 모두 서버 목록(json/diary_stickers.json)을 그대로 그리므로
+           스티커를 늘려도 이 마크업은 손대지 않는다. -->
       <div class="diary-toolbar-group diary-sticker-picker" th:if="${editPage != null}">
         <button type="button" class="diary-toolbar-button" id="diary-sticker-button"
                 aria-haspopup="dialog" aria-expanded="false" aria-controls="diary-sticker-popover"
@@ -226,17 +227,35 @@
                 title="스티커" aria-label="스티커 붙이기">✦</button>
         <div class="diary-sticker-popover" id="diary-sticker-popover" role="dialog"
              aria-label="스티커 고르기" hidden>
-          <!-- 지금은 여행 한 묶음만 둔다. 묶음이 늘어나면 같은 구조를 반복하면 된다. -->
-          <p class="diary-sticker-category">여행</p>
-          <div class="diary-sticker-grid" role="group" aria-label="여행 스티커">
-            <button type="button" class="diary-sticker-option"
-                    th:each="sticker : ${diaryStickers}"
-                    th:data-sticker-code="${sticker.code}"
-                    th:title="${sticker.label}"
-                    th:attr="aria-label=|${sticker.label} 스티커 붙이기|">
-              <img th:src="${sticker.imageUrl}" alt="" aria-hidden="true" loading="lazy" />
-            </button>
+          <!-- 분류 탭. 목록이 늘어나면 가로로만 조금 넘겨 본다. -->
+          <div class="diary-sticker-tabs" role="tablist" aria-label="스티커 분류">
+            <button type="button" class="diary-sticker-tab" role="tab"
+                    th:each="category, stat : ${diaryStickerCategories}"
+                    th:data-sticker-category="${category.id}"
+                    th:classappend="${stat.first} ? ' is-active' : ''"
+                    th:attr="aria-selected=${stat.first} ? 'true' : 'false',
+                             aria-controls=|diary-sticker-grid-${category.id}|"
+                    th:text="${category.name}">여행</button>
           </div>
+
+          <!-- 분류별 그리드. 고른 분류만 보여 준다. (스크롤은 이 안에서만 생긴다) -->
+          <div class="diary-sticker-panels">
+            <div class="diary-sticker-grid" role="group"
+                 th:each="category, stat : ${diaryStickerCategories}"
+                 th:id="|diary-sticker-grid-${category.id}|"
+                 th:data-sticker-category="${category.id}"
+                 th:attr="aria-label=|${category.name} 스티커|"
+                 th:hidden="${!stat.first}">
+              <button type="button" class="diary-sticker-option"
+                      th:each="sticker : ${category.stickers}"
+                      th:data-sticker-id="${sticker.id}"
+                      th:title="${sticker.name}"
+                      th:attr="aria-label=|${sticker.name} 스티커 붙이기|">
+                <img th:src="${sticker.imageUrl}" alt="" aria-hidden="true" loading="lazy" />
+              </button>
+            </div>
+          </div>
+
           <p class="diary-sticker-status" id="diary-sticker-status" role="status"></p>
         </div>
       </div>
