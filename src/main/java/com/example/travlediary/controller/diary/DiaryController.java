@@ -180,7 +180,29 @@ public class DiaryController {
                               @RequestParam(required = false) Integer page,
                               @AuthenticationPrincipal CustomUserDetails userDetails,
                               Model model) {
-        Long userId = userDetails.getId();
+        addDetailAttributes(diaryId, spread, edit, page, userDetails.getId(), model);
+        return "diary/detail";
+    }
+
+    /**
+     * 읽기 화면의 펼침 하나만 돌려준다. (이전/다음 이동을 화면 새로고침 없이 갈아 끼우는 데 쓴다)
+     * 조회 조건·소유권은 위 상세와 완전히 같은 호출을 그대로 쓴다.
+     */
+    @GetMapping("/{diaryId:\\d+}/spread")
+    public String diarySpreadFragment(@PathVariable Long diaryId,
+                                      @RequestParam(defaultValue = "0") int spread,
+                                      @AuthenticationPrincipal CustomUserDetails userDetails,
+                                      Model model) {
+        addDetailAttributes(diaryId, spread, false, null, userDetails.getId(), model);
+        return "diary/detail :: readBoard";
+    }
+
+    private void addDetailAttributes(Long diaryId,
+                                     int spread,
+                                     boolean edit,
+                                     Integer page,
+                                     Long userId,
+                                     Model model) {
         Diary diary = diaryService.getMyDiary(diaryId, userId);
         List<DiaryPage> pages = diaryPageService.getPages(diaryId, userId);
 
@@ -215,7 +237,6 @@ public class DiaryController {
             model.addAttribute("diaryStickerCategories", diaryStickerCatalog.getCategories());
         }
         model.addAttribute("pageTitle", diary.getTitle() + " | 나의 여행일기");
-        return "diary/detail";
     }
 
     /**

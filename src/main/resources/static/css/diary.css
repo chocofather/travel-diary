@@ -1640,6 +1640,7 @@
     width: min(1180px, calc(100% - 40px));
     margin: 44px auto 90px;
     color: #2b2b2b;
+    /* 읽기 화면은 상단 버튼이 빠진 만큼 책을 조금 더 크게 본다. (아래 is-read-mode) */
 
     /* 종이 기본색 (아이보리) */
     /* 종이 기본색 (paper_color 가 없을 때). 흰 종이에 가깝게 두고 온기는 아주 조금만 남긴다.
@@ -1729,50 +1730,7 @@
 }
 
 /* 다이어리 설정/삭제는 낮은 위계의 작은 액션. 두 액션을 같은 줄에 정확히 맞춘다. */
-.diary-detail-actions {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin-top: 10px;
-}
-
-.diary-detail-actions form {
-    display: flex;
-    margin: 0;
-}
-
-.diary-detail-action {
-    display: inline-flex;
-    align-items: center;
-    height: 20px;
-    padding: 0;
-    border: 0;
-    background: none;
-    color: #9a8f7f;
-    font-family: inherit;
-    font-size: 13px;
-    font-weight: 500;
-    line-height: 20px;
-    text-decoration: underline;
-    text-underline-offset: 3px;
-    vertical-align: middle;
-    cursor: pointer;
-}
-
-.diary-detail-action:hover {
-    color: #6f5a3c;
-}
-
-/* 삭제는 색으로만 낮게 구분한다 (강한 버튼으로 만들지 않는다) */
-.diary-detail-action.is-danger {
-    color: #b07a70;
-}
-
-.diary-detail-action.is-danger:hover {
-    color: #96574c;
-}
-
-/* 새 페이지 추가: 읽기 상단 액션에서 펼치는 작은 패널.
+/* 새 페이지 추가: 읽기 화면의 + 에서 펼치는 작은 패널.
    페이지 설정(.diary-page-settings)과 같은 언어를 쓴다. */
 .diary-page-add {
     position: relative;
@@ -2021,22 +1979,33 @@
 }
 
 /* summary 와 button 이 같은 크기·같은 높이로 보이게 한 규칙으로 묶는다 */
+/* 종이 바깥의 작은 아이콘 액션(설정 / 삭제). 평소에는 존재감을 낮게 둔다. */
 .diary-page-action {
     display: inline-flex;
+    width: 26px;
+    height: 26px;
     align-items: center;
-    height: 20px;
+    justify-content: center;
     padding: 0;
-    border: 0;
+    border: 1px solid transparent;
+    border-radius: 8px;
     background: none;
-    color: #9a8f7f;
+    color: #a89a83;
     font-family: inherit;
-    font-size: 12px;
-    line-height: 20px;
     list-style: none;
-    text-decoration: underline;
-    text-underline-offset: 3px;
     vertical-align: middle;
     cursor: pointer;
+}
+
+.diary-page-action:hover {
+    border-color: #e6ded1;
+    background: #f7f3ec;
+    color: #6f5a3c;
+}
+
+.diary-page-action:focus-visible {
+    outline: 2px solid #b39a75;
+    outline-offset: 1px;
 }
 
 /* summary 기본 marker 때문에 높이가 달라지지 않게 한다 */
@@ -2046,53 +2015,23 @@
     content: "";
 }
 
-.diary-page-action:hover {
-    color: #6f5a3c;
-}
-
-.diary-page-action.is-danger {
-    color: #b07a70;
-}
-
+/* 삭제는 눌러 볼 때만 조심하라는 색을 띤다 */
 .diary-page-action.is-danger:hover {
-    color: #96574c;
+    border-color: #ecd5cf;
+    background: #fbf1ee;
+    color: #a4675c;
 }
 
-/* 페이지 설정만 작은 outline 버튼으로 올린다. (삭제는 그대로 낮은 위계의 텍스트) */
-.diary-page-settings-toggle {
-    height: 24px;
-    gap: 5px;
-    padding: 0 9px;
-    border: 1px solid #e0d6c6;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.9);
-    color: #6f6355;
-    font-weight: 600;
-    line-height: 22px;
-    text-decoration: none;
-}
-
-.diary-page-settings-toggle:hover {
-    border-color: #cbbba0;
-    background: #faf4ea;
+/* 열려 있는 동안에는 눌린 상태를 옅게 남긴다 */
+.diary-page-settings[open] > .diary-page-settings-toggle {
+    border-color: #e0d6c6;
+    background: #f6efe3;
     color: #5c4a31;
 }
 
-.diary-page-settings-toggle:focus-visible {
-    outline: 2px solid #b39a75;
-    outline-offset: 1px;
-}
-
-.diary-page-settings[open] > .diary-page-settings-toggle {
-    border-color: #b39a75;
-    background: #f6efe3;
-    color: #4a3d2b;
-}
-
 .diary-page-action-icon {
-    width: 13px;
-    height: 13px;
-    color: #a3937c;
+    width: 15px;
+    height: 15px;
 }
 
 /* 설정 패널은 종이 위에 겹쳐 띄워 머리말 높이가 흔들리지 않게 한다 */
@@ -3048,160 +2987,77 @@
     font-weight: 700;
 }
 
-/* ===== 읽기 모드 / 편집 모드 ===== */
-.diary-mode-button {
-    display: inline-flex;
+/* ===== 읽기 모드: 종이 바깥 위쪽 줄 (장별 편집 / 새 페이지 추가) =====
+   펼침과 같은 3열이라 각 연필이 자기 종이 위에 놓인다. */
+.diary-read-tools {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 26px minmax(0, 1fr);
     align-items: center;
-    height: 30px;
-    padding: 0 14px;
-    border: 1px solid #cbbba0;
-    border-radius: 999px;
-    background: #fffdf8;
-    color: #5c4a31;
-    font-size: 13px;
-    font-weight: 700;
-    text-decoration: none;
+    margin-bottom: 6px;
+}
+
+.diary-read-tools-page {
+    display: flex;
+    min-height: 30px;
+    align-items: center;
+    gap: 4px;
+}
+
+.diary-read-tools-page.is-right {
+    justify-content: flex-end;
+}
+
+/* 감상을 방해하지 않게 평소에는 아주 옅게만 둔다 */
+.diary-page-edit,
+.diary-page-add-button {
+    display: inline-flex;
+    width: 26px;
+    height: 26px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: none;
+    color: #a89a83;
     cursor: pointer;
+    list-style: none;
 }
 
-.diary-mode-button:hover {
-    background: #f5ecdd;
+.diary-page-edit:hover,
+.diary-page-add-button:hover {
+    border-color: #e6ded1;
+    background: #f7f3ec;
+    color: #6f5a3c;
 }
 
-.diary-mode-button:focus-visible {
+.diary-page-edit:focus-visible,
+.diary-page-add-button:focus-visible {
     outline: 2px solid #b39a75;
     outline-offset: 1px;
 }
 
-/* ===== 편집할 페이지 고르기 ===== */
-.diary-page-picker-backdrop {
-    position: fixed;
-    z-index: 60;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    background: rgba(40, 33, 24, 0.35);
+.diary-page-edit-icon,
+.diary-page-add-button svg {
+    width: 15px;
+    height: 15px;
 }
 
-.diary-page-picker-backdrop[hidden] {
-    display: none;
-}
-
-.diary-page-picker {
-    display: flex;
-    width: min(360px, 100%);
-    max-height: min(420px, 80vh);
-    flex-direction: column;
-    gap: 10px;
-    padding: 18px;
-    border: 1px solid #e3dcd1;
-    border-radius: 12px;
-    background: #fffdf8;
-    box-shadow: 0 10px 26px rgba(63, 52, 38, 0.18);
-}
-
-.diary-page-picker-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-}
-
-.diary-page-picker-title {
-    margin: 0;
-    color: #3f3427;
-    font-size: 15px;
-    font-weight: 700;
-}
-
-.diary-page-picker-close {
-    width: 26px;
-    height: 26px;
-    padding: 0;
-    border: 0;
-    border-radius: 6px;
-    background: none;
-    color: #8b8378;
-    font-size: 14px;
-    cursor: pointer;
-}
-
-.diary-page-picker-close:hover {
-    background: #f3ece0;
-}
-
-.diary-page-picker-list {
-    margin: 0;
-    padding: 0;
-    overflow-y: auto;
-    list-style: none;
-}
-
-.diary-page-picker-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 10px 12px;
-    border-radius: 8px;
-    color: #4a4238;
-    font-size: 14px;
-    text-decoration: none;
-}
-
-.diary-page-picker-item:hover {
-    background: #f3ece0;
-}
-
-/* 지금 보고 있는 펼침의 장은 옅게만 구분한다 (자동 선택은 하지 않는다) */
-.diary-page-picker-item.is-current {
-    background: #f7f0e4;
-    box-shadow: inset 2px 0 0 #cbbba0;
-}
-
-.diary-page-picker-order {
-    font-weight: 700;
-}
-
-.diary-page-picker-date {
-    color: #8b8378;
-    font-size: 13px;
-}
-
-.diary-page-picker-empty {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-    color: #6b6259;
-    font-size: 14px;
-}
-
-.diary-page-picker-empty p {
-    margin: 0;
+/* + 가 오른쪽 끝에 있으므로 추가 폼도 오른쪽에 맞춰 편다 */
+.diary-read-tools .diary-page-add form {
+    right: 0;
+    left: auto;
 }
 
 /* ===== 편집 모드: 종이 바깥의 페이지 정보/관리 줄 ===== */
 /* 설정 버튼이 텍스트보다 4px 높아진 만큼 아래 여백을 줄여 종이 위치를 그대로 둔다 */
+/* 툴바 바로 위 오른쪽의 작은 액션 줄. (쪽번호/날짜는 종이 안·아래 이동 줄에 있다) */
 .diary-page-meta {
     display: flex;
     width: min(820px, 100%);
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     gap: 12px;
-    margin: 0 auto 4px;
-}
-
-.diary-page-meta-label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin: 0;
-    color: #8a7b62;
-    font-size: 13px;
-    font-weight: 700;
+    margin: 0 auto 6px;
 }
 
 /* ===== 편집 모드: 한 장 집중 편집 =====
@@ -3220,9 +3076,16 @@
 }
 
 /* 툴바는 종이 너비에 맞춰 가운데로 */
+/* 상단 정보 → 액션 줄 → 툴바 → 종이가 바로 이어지도록 사이 여백만 조금 줄인다 */
+.is-edit-mode .diary-detail-header {
+    margin-bottom: 18px;
+}
+
+/* 툴바 아래와 종이 사이는 붙지 않을 만큼만 남긴다 */
 .is-edit-mode .diary-toolbar {
     width: min(820px, 100%);
     margin-right: auto;
+    margin-bottom: 12px;
     margin-left: auto;
 }
 
@@ -3230,6 +3093,15 @@
     width: min(820px, 100%);
     margin-right: auto;
     margin-left: auto;
+}
+
+/*
+ * 읽기 화면은 책이 중심이라 폭을 약 10% 넓게 잡는다. (1180px → 1300px)
+ * 종이 안쪽은 종이 너비에 비례해 그려지므로 책이 커져도 본문/사진/스티커의
+ * 상대 위치와 겹침은 그대로다. (요소별 보정값 없음)
+ */
+.diary-detail-page.is-read-mode {
+    width: min(1300px, calc(100% - 40px));
 }
 
 /* 읽기 모드에서는 본문/사진 모두 조작 대상이 아니다 */
@@ -3758,6 +3630,46 @@
 .diary-spread-position {
     color: #8b8378;
     font-size: 13px;
+}
+
+/* 펼침/페이지 이동: 작은 화살표 두 개와 위치 글자만 남긴다.
+   (이동 경로/저장 흐름/키보드 이동/비활성 처리는 그대로다) */
+.diary-spread-nav.is-read,
+.diary-spread-nav.is-compact {
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.diary-spread-arrow {
+    display: inline-flex;
+    width: 28px;
+    height: 28px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    color: #8b8378;
+    font-size: 17px;
+    line-height: 1;
+    text-decoration: none;
+    transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.diary-spread-arrow:hover {
+    border-color: #ebe3d6;
+    background: #f7f3ec;
+    color: #5c4a31;
+}
+
+.diary-spread-arrow:focus-visible {
+    outline: 2px solid #b39a75;
+    outline-offset: 1px;
+}
+
+/* 더 갈 곳이 없을 때는 아주 옅게만 남긴다 */
+.diary-spread-arrow.is-disabled {
+    color: #ded7cb;
+    pointer-events: none;
 }
 
 @media (max-width: 1080px) {

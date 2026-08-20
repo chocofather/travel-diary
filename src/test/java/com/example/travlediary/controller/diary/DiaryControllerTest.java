@@ -1072,8 +1072,9 @@ class DiaryControllerTest {
                 .andReturn().getResponse().getContentAsString();
 
         assertThat(body).contains("is-read-mode");
-        // 읽기 모드는 감상 화면이다. 상단 액션은 새 페이지 추가 / 편집하기만 남는다.
-        assertThat(body).contains("편집하기");
+        // 읽기 모드는 감상 화면이다. 조작은 종이 바깥의 작은 아이콘(연필 / +)만 남는다.
+        assertThat(body).doesNotContain("편집하기");
+        assertThat(body).contains("diary-read-tools");
         // 책 자체 관리(설정/삭제)는 목록 카드의 ⋯ 메뉴로 옮겼다
         assertThat(body).doesNotContain("다이어리 설정");
         assertThat(body).doesNotContain("/diaries/10/edit");
@@ -1117,7 +1118,20 @@ class DiaryControllerTest {
 
         assertThat(body).contains("is-edit-mode");
         assertThat(body).contains("편집 중");
-        assertThat(body).contains("편집 완료");
+        // 완료 / 설정 / 삭제는 툴바 바로 위 한 줄에 같은 모양으로 모여 있다
+        assertThat(body).contains("aria-label=\"편집 완료\"");
+        assertThat(body.indexOf("diary-page-meta")).isLessThan(body.indexOf("diary-toolbar"));
+        assertThat(body.indexOf("편집 완료"))
+                .isLessThan(body.indexOf("페이지 설정"));
+        assertThat(body.indexOf("페이지 설정"))
+                .isLessThan(body.indexOf("페이지 삭제"));
+        // 페이지 설정/삭제는 글자 대신 아이콘만 남는다
+        assertThat(body).contains("aria-label=\"페이지 설정\"");
+        assertThat(body).contains("aria-label=\"페이지 삭제\"");
+        assertThat(body).doesNotContain(">페이지 설정</");
+        assertThat(body).doesNotContain(">페이지 삭제</");
+        // 종이 바깥의 쪽번호·날짜 줄은 없앴다 (종이 안 날짜는 그대로)
+        assertThat(body).doesNotContain("diary-page-meta-label");
         assertThat(body).contains("diary-toolbar");
         assertThat(body).contains("diary-photo-input");
         assertThat(body).contains("diary-page-action");
@@ -1143,8 +1157,107 @@ class DiaryControllerTest {
                 .doesNotContain("diary-page-action");
     }
 
+    /** 읽기 화면의 편집 진입: 고르는 창 없이 그 장의 연필로 바로 간다. */
     @Test
-    void editStartsFromThePagePickerDialog() throws Exception {
+    void eachOpenPageHasItsOwnEditPencil() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(
+                page(1, "2026-08-01"), page(2, "2026-08-02"), page(3, "2026-08-03")));
+
+        String body = mockMvc.perform(get("/diaries/10")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        // 펼쳐 놓은 두 장이 각자의 편집 주소를 들고 있다
+        assertThat(body).contains("diary-read-tools");
+        assertThat(body).contains("class=\"diary-page-edit\"");
+        assertThat(body).contains("spread=0&amp;edit=true&amp;page=1");
+        assertThat(body).contains("spread=0&amp;edit=true&amp;page=2");
+        assertThat(body).contains("1페이지 편집").contains("2페이지 편집");
+        // 지금 펼치지 않은 장은 이 화면에 없다
+        assertThat(body).doesNotContain("edit=true&amp;page=3");
+
+        // 고르는 창과 '편집하기' 버튼은 없앴다
+        assertThat(body).doesNotContain("편집하기");
+        assertThat(body).doesNotContain("diary-page-picker");
+        assertThat(body).doesNotContain("편집할 페이지를 선택해 주세요");
+        assertThat(body).doesNotContain("/js/diary-page-picker.js");
+    }
+
+    /** 오른쪽 장이 없는 펼침에서는 그 자리에 연필도 없다. */
+    @Test
+    void aMissingRightPageHasNoEditPencil() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-01")));
+
+        String body = mockMvc.perform(get("/diaries/10")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).contains("1페이지 편집");
+        assertThat(body).doesNotContain("2페이지 편집");
+    }
+
+    /** 펼침 이동용 조각. 책 자리만 돌려주고 페이지 껍데기는 다시 그리지 않는다. */
+    @Test
+    void spreadFragmentReturnsOnlyTheReadBoard() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(
+                page(1, "2026-08-01"), page(2, "2026-08-02"), page(3, "2026-08-03")));
+        when(diaryElementService.getElements(10L, 3L, 7L)).thenReturn(List.of(stickerElement(
+                200L, "/images/diary/stickers/masking-tape/tape-cat-cream.svg")));
+
+        String body = mockMvc.perform(get("/diaries/10/spread").param("spread", "1")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andExpect(view().name("diary/detail :: readBoard"))
+                .andReturn().getResponse().getContentAsString();
+
+        // 책 + 장별 연필 + 펼침 이동이 모두 조각 안에 들어 있다
+        assertThat(body).contains("id=\"diary-read-board\"");
+        assertThat(body).contains("data-spread=\"1\"");
+        assertThat(body).contains("diary-read-tools");
+        assertThat(body).contains("3페이지 편집");
+        assertThat(body).contains("diary-book-spread");
+        assertThat(body).contains("diary-spread-arrow");
+        // 저장된 요소도 상세 화면과 같은 값으로 그려진다 (좌표/되풀이 조각 포함)
+        assertThat(body).contains("data-tape-center");
+        assertThat(body).contains("data-sticker-kind=\"masking-tape\"");
+        // 페이지 껍데기(제목/기간/레이아웃)는 들어 있지 않다
+        assertThat(body).doesNotContain("<html");
+        assertThat(body).doesNotContain("diary-detail-header");
+    }
+
+    /** 조각도 상세와 같은 소유권/범위 규칙을 그대로 쓴다. */
+    @Test
+    void spreadFragmentClampsTheSpreadAndNeedsLogin() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-01")));
+
+        String body = mockMvc.perform(get("/diaries/10/spread").param("spread", "9")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).contains("data-spread=\"0\"");
+
+        mockMvc.perform(get("/diaries/10/spread").param("spread", "0"))
+                .andExpect(status().is3xxRedirection());
+    }
+
+    /** 아래쪽 펼침 이동은 작은 화살표만 남기고 경로/비활성 처리는 그대로다. */
+    @Test
+    void readSpreadNavIsACompactArrowPair() throws Exception {
         when(userDetails.getId()).thenReturn(7L);
         when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
         when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(
@@ -1156,26 +1269,26 @@ class DiaryControllerTest {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
-        // 편집하기는 바로 이동하지 않고 선택 dialog 를 연다
-        assertThat(body).contains("id=\"diary-page-picker-button\"");
-        assertThat(body).contains("aria-haspopup=\"dialog\"");
-        assertThat(body).contains("aria-expanded=\"false\"");
-        assertThat(body).containsPattern("id=\"diary-page-picker-backdrop\"[^>]*hidden");
-        assertThat(body).contains("편집할 페이지를 선택해 주세요");
-        assertThat(body).contains("/js/diary-page-picker.js");
-
-        // 모든 페이지가 pageOrder 순으로, 각자의 편집 주소로 들어 있다
-        assertThat(body).contains("1페이지").contains("2페이지").contains("3페이지");
-        assertThat(body).contains("spread=0&amp;edit=true&amp;page=1");
-        assertThat(body).contains("spread=0&amp;edit=true&amp;page=2");
-        assertThat(body).contains("spread=1&amp;edit=true&amp;page=3");
-        assertThat(body.indexOf("page=1")).isLessThan(body.indexOf("page=3"));
-        // 지금 보고 있는 펼침의 장만 옅게 표시한다 (자동 선택은 아님)
-        assertThat(body).contains("diary-page-picker-item is-current");
+        assertThat(body).contains("diary-spread-nav is-read");
+        assertThat(body).contains("class=\"diary-spread-arrow\"");
+        // 이동은 조각만 갈아 끼운다 (조각 주소와 지금 펼침을 함께 실어 둔다)
+        assertThat(body).contains("data-spread-url=\"/diaries/10/spread\"");
+        assertThat(body).contains("data-spread=\"1\"");
+        assertThat(body).contains("aria-label=\"이전 페이지\"");
+        // 큰 사각 버튼과 글자는 빠졌다
+        assertThat(body).doesNotContain("← 이전");
+        assertThat(body).doesNotContain("다음 →");
+        // 이동 경로와 넘김 연출 표시는 그대로다
+        assertThat(body).contains("data-flip=\"previous\"");
+        assertThat(body).contains("/diaries/10?spread=0");
+        // 더 갈 곳이 없으면 옅게만 남긴다
+        assertThat(body).contains("diary-spread-arrow is-disabled");
+        assertThat(body).contains("3 / 전체 3장");
     }
 
+    /** 한 장도 없는 다이어리: 편집할 장이 없으니 연필도 없고 + 만 남는다. */
     @Test
-    void pagePickerGuidesToAddAPageWhenTheDiaryIsEmpty() throws Exception {
+    void anEmptyDiaryOnlyOffersAddPage() throws Exception {
         when(userDetails.getId()).thenReturn(7L);
         when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
         when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of());
@@ -1186,10 +1299,13 @@ class DiaryControllerTest {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
-        assertThat(body).contains("편집할 페이지가 없습니다.");
-        // 첫 장은 상단 액션의 새 페이지 추가로 만든다
+        assertThat(body).contains("아직 작성한 페이지가 없습니다.");
+        // 첫 장은 종이 바깥의 + 로 만든다
         assertThat(body).contains("새 페이지 추가");
-        assertThat(body).doesNotContain("diary-page-picker-item");
+        assertThat(body).contains("action=\"/diaries/10/pages\"");
+        assertThat(body).doesNotContain("class=\"diary-page-edit\"");
+        // 펼침 이동 줄은 아예 나오지 않는다
+        assertThat(body).doesNotContain("diary-spread-arrow");
     }
 
     @Test
@@ -1270,7 +1386,11 @@ class DiaryControllerTest {
                 .andReturn().getResponse().getContentAsString();
         assertThat(editBody).contains("diary-book-single");
         assertThat(editBody).doesNotContain("diary-book-spread");
-        assertThat(editBody).contains("3 / 4 페이지");
+        // 지금 몇 번째 장인지는 아래 이동 줄 가운데에서만 알려 준다
+        assertThat(editBody).contains("diary-spread-nav is-compact");
+        assertThat(editBody).contains("3 / 4");
+        assertThat(editBody).contains("class=\"diary-spread-arrow\"");
+        assertThat(editBody).doesNotContain("← 이전 페이지");
         assertThat(editBody).contains("page=2");
         assertThat(editBody).contains("page=4");
         // 편집 모드 이동에는 읽기 모드의 책장 넘김 연출을 붙이지 않는다
