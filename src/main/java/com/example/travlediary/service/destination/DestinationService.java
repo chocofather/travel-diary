@@ -47,7 +47,7 @@ public class DestinationService {
     private String uploadPath;
 
 
-    public void registerDestination(DestinationForm form, Long userId) {
+    public Long registerDestination(DestinationForm form, Long userId) {
         Destination destination = new Destination();
         destination.setLatitude(form.getLatitude());
         destination.setLongitude(form.getLongitude());
@@ -134,6 +134,7 @@ public class DestinationService {
 
         destinationImageService.saveImages(
                 destinationId, form.getImages(), form.isMain(), form.isSlide());
+        return destinationId;
     }
 
     public List<Destination> getDomesticDestinations() {

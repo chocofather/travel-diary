@@ -111,6 +111,19 @@ class DestinationImageMapperContractTest {
                 );
     }
 
+    @Test
+    void slideStateCanBeUpdatedForOneImage() throws IOException {
+        Configuration configuration = mapperConfiguration();
+
+        String sql = normalizedSql(configuration, "updateImageSlide", Map.of(
+                "imageId", 2L,
+                "isSlide", true
+        ));
+
+        assertThat(sql)
+                .isEqualTo("UPDATE destination_images SET is_slide = ? WHERE id = ?");
+    }
+
     private Configuration mapperConfiguration() throws IOException {
         Configuration configuration = new Configuration();
         configuration.setMapUnderscoreToCamelCase(true);

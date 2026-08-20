@@ -3,10 +3,13 @@
 <body>
 <section class="admin-destination-section admin-kto-photo-section"
          th:fragment="search" data-kto-photo-search>
+  <input type="hidden" name="ktoSelectedPhotosJson" value="[]"
+         data-kto-selected-photos-json>
+
   <div class="admin-destination-section-header">
     <div>
       <h2>한국관광공사 관광사진</h2>
-      <p>여행지와 관련된 관광사진을 검색하고 미리 확인합니다. 이 단계에서는 사진이 저장되지 않습니다.</p>
+      <p>여행지와 관련된 관광사진을 검색하고 사용할 사진을 선택합니다.</p>
     </div>
   </div>
 

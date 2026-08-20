@@ -17,6 +17,8 @@ import java.util.regex.Pattern;
 @Service
 public class FileUploadService {
 
+    private static final String DESTINATION_DIRECTORY = "destinations";
+    private static final String DESTINATION_URL_PREFIX = "/uploads/destinations/";
     private static final long TRAVEL_INFO_THUMBNAIL_MAX_SIZE = 5L * 1024 * 1024;
     private static final String TRAVEL_INFO_THUMBNAIL_DIRECTORY = "travel-info/thumbnails";
     private static final String TRAVEL_INFO_THUMBNAIL_URL_PREFIX =
@@ -77,6 +79,30 @@ public class FileUploadService {
         return subDir.isEmpty()
                 ? "/uploads/" + savedName
                 : "/uploads/" + subDir + "/" + savedName;
+    }
+
+    public boolean deleteDestinationFile(String imageUrl) {
+        String fileName = managedDestinationFileName(imageUrl);
+        Path uploadRoot = Paths.get(uploadDir).toAbsolutePath().normalize();
+        try {
+            if (Files.notExists(uploadRoot)) {
+                return false;
+            }
+            Path realUploadRoot = uploadRoot.toRealPath();
+            Path destinationDirectory = realUploadRoot.resolve(DESTINATION_DIRECTORY).normalize();
+            ensureContained(realUploadRoot, destinationDirectory);
+            if (Files.notExists(destinationDirectory)) {
+                return false;
+            }
+
+            Path realDestinationDirectory = destinationDirectory.toRealPath();
+            ensureContained(realUploadRoot, realDestinationDirectory);
+            Path target = realDestinationDirectory.resolve(fileName).normalize();
+            ensureContained(realDestinationDirectory, target);
+            return Files.deleteIfExists(target);
+        } catch (IOException exception) {
+            throw new RuntimeException("여행지 이미지 파일 삭제에 실패했습니다.", exception);
+        }
     }
 
     public String saveTravelInfoThumbnail(MultipartFile file) {
@@ -215,6 +241,20 @@ public class FileUploadService {
         String fileName = imageUrl.substring(TRAVEL_INFO_THUMBNAIL_URL_PREFIX.length());
         if (!MANAGED_THUMBNAIL_NAME.matcher(fileName).matches()) {
             throw new IllegalArgumentException("올바르지 않은 썸네일 경로입니다.");
+        }
+        return fileName;
+    }
+
+    private String managedDestinationFileName(String imageUrl) {
+        if (imageUrl == null || !imageUrl.startsWith(DESTINATION_URL_PREFIX)) {
+            throw new IllegalArgumentException("관리 대상이 아닌 여행지 이미지 경로입니다.");
+        }
+        String fileName = imageUrl.substring(DESTINATION_URL_PREFIX.length());
+        if (fileName.isBlank()
+                || fileName.contains("/")
+                || fileName.contains("\\")
+                || fileName.contains("..")) {
+            throw new IllegalArgumentException("올바르지 않은 여행지 이미지 경로입니다.");
         }
         return fileName;
     }

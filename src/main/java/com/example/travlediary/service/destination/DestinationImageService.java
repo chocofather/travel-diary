@@ -4,9 +4,12 @@ import com.example.travlediary.model.DestinationImage;
 import com.example.travlediary.repository.destination.DestinationMapper;
 import com.example.travlediary.service.file.FileUploadService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
@@ -16,6 +19,7 @@ import java.util.List;
 
 @RequiredArgsConstructor
 @Service
+@Slf4j
 public class DestinationImageService {
 
     private final DestinationMapper destinationMapper;
@@ -40,23 +44,30 @@ public class DestinationImageService {
 
             // ✅ 실제 저장 및 URL 경로 반환
             String imageUrl = fileUploadService.saveFile(file, "destinations");
+            registerRollbackCleanup(imageUrl);
             boolean isMain = mainIdx != null && mainIdx == uploadIndex;
-            if (isMain) {
-                destinationMapper.clearMainImagesByDestinationId(destId);
-            }
 
             DestinationImage img = new DestinationImage();
-            img.setDestinationId(destId);
             img.setImageUrl(imageUrl);
-            img.setIsMain(isMain);
 
             int finalIdx = uploadIndex;
             img.setIsSlide(slideIdx != null &&
                     Arrays.stream(slideIdx).anyMatch(i -> i == finalIdx));
 
-            img.setOrderIndex(orderIndex++);
-            destinationMapper.insertImage(img);
+            insertImage(destId, img, isMain, orderIndex++);
             uploadIndex++;
+        }
+    }
+
+    @Transactional
+    public void saveImages(Long destId, List<DestinationImage> images) {
+        if (images == null || images.isEmpty()) return;
+
+        List<DestinationImage> existingImages = destinationMapper.findImagesByDestinationId(destId);
+        int orderIndex = nextOrderIndex(existingImages);
+        for (DestinationImage image : images) {
+            if (image == null) continue;
+            insertImage(destId, image, Boolean.TRUE.equals(image.getIsMain()), orderIndex++);
         }
     }
 
@@ -72,6 +83,19 @@ public class DestinationImageService {
 
     public List<DestinationImage> getImages(Long destId) {
         return destinationMapper.findImagesByDestinationId(destId);
+    }
+
+    @Transactional
+    public void setMainImage(Long destinationId, Long imageId) {
+        requireDestinationImage(destinationId, imageId);
+        destinationMapper.clearMainImagesByDestinationId(destinationId);
+        destinationMapper.setMainImage(imageId);
+    }
+
+    @Transactional
+    public void toggleSlideImage(Long destinationId, Long imageId) {
+        DestinationImage image = requireDestinationImage(destinationId, imageId);
+        destinationMapper.updateImageSlide(imageId, !Boolean.TRUE.equals(image.getIsSlide()));
     }
 
     @Transactional
@@ -107,6 +131,30 @@ public class DestinationImageService {
                 .orElse(-1) + 1;
     }
 
+    private DestinationImage requireDestinationImage(Long destinationId, Long imageId) {
+        DestinationImage image = destinationMapper.findImageById(imageId);
+        if (image == null || !java.util.Objects.equals(destinationId, image.getDestinationId())) {
+            throw new IllegalArgumentException("여행지 이미지를 찾을 수 없습니다.");
+        }
+        return image;
+    }
+
+    private void insertImage(Long destId,
+                             DestinationImage image,
+                             boolean isMain,
+                             int orderIndex) {
+        if (isMain) {
+            destinationMapper.clearMainImagesByDestinationId(destId);
+        }
+        image.setDestinationId(destId);
+        image.setIsMain(isMain);
+        if (image.getIsSlide() == null) {
+            image.setIsSlide(false);
+        }
+        image.setOrderIndex(orderIndex);
+        destinationMapper.insertImage(image);
+    }
+
     private Integer[] allUploadIndexes(MultipartFile[] files) {
         if (files == null || files.length == 0) return new Integer[0];
 
@@ -127,5 +175,25 @@ public class DestinationImageService {
         for (int orderIndex = 0; orderIndex < remainingImages.size(); orderIndex++) {
             destinationMapper.updateImageOrder(remainingImages.get(orderIndex).getId(), orderIndex);
         }
+    }
+
+    private void registerRollbackCleanup(String imageUrl) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                if (status == TransactionSynchronization.STATUS_COMMITTED) {
+                    return;
+                }
+                try {
+                    fileUploadService.deleteDestinationFile(imageUrl);
+                } catch (RuntimeException cleanupFailure) {
+                    log.warn("롤백된 신규 여행지 이미지 파일을 정리하지 못했습니다. (원인: {})",
+                            cleanupFailure.getClass().getSimpleName());
+                }
+            }
+        });
     }
 }

@@ -36,6 +36,8 @@ import java.nio.file.Path;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
@@ -79,6 +81,17 @@ class DestinationPlaceIdBindingTest {
         service.registerDestination(form(PLACE_ID), 3L);
 
         assertThat(insertedDestination().getGooglePlaceId()).isEqualTo(PLACE_ID);
+    }
+
+    @Test
+    void registerReturnsTheGeneratedDestinationId() {
+        doAnswer(invocation -> {
+            Destination destination = invocation.getArgument(0);
+            destination.setId(77L);
+            return null;
+        }).when(destinationMapper).insertDestination(any(Destination.class));
+
+        assertThat(service.registerDestination(form(PLACE_ID), 3L)).isEqualTo(77L);
     }
 
     @Test

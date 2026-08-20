@@ -81,6 +81,16 @@ function createKtoPhotoSelectionState() {
     };
 }
 
+function serializeKtoSelectedPhotos(entries) {
+    return entries.map(({ item, isMain }) => ({
+        externalContentId: String(item.externalContentId ?? "").trim(),
+        imageUrl: String(item.imageUrl ?? "").trim(),
+        title: String(item.title ?? "").trim(),
+        photographer: String(item.photographer ?? "").trim(),
+        isMain: Boolean(isMain)
+    }));
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     const endpoint = "/admin/api/kto/photos/search";
     const pageSize = 12;
@@ -96,10 +106,12 @@ document.addEventListener("DOMContentLoaded", () => {
         const selectedCount = searchArea.querySelector("[data-kto-photo-selected-count]");
         const mainStatus = searchArea.querySelector("[data-kto-photo-main-status]");
         const selectedList = searchArea.querySelector("[data-kto-photo-selected-list]");
+        const selectedPhotosJson = searchArea.querySelector("[data-kto-selected-photos-json]");
         const destinationNameInput = document.querySelector("[data-destination-korean-name]");
 
         if (!keywordInput || !searchButton || !status || !results || !moreButton
-            || !selectedArea || !selectedCount || !mainStatus || !selectedList) return;
+            || !selectedArea || !selectedCount || !mainStatus || !selectedList
+            || !selectedPhotosJson) return;
 
         let currentKeyword = "";
         let currentPage = 0;
@@ -323,6 +335,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const fragment = document.createDocumentFragment();
             selections.forEach(selection => fragment.append(createSelectedPhoto(selection)));
             selectedList.replaceChildren(fragment);
+            selectedPhotosJson.value = JSON.stringify(serializeKtoSelectedPhotos(selectionState.entries()));
 
             selectedCount.textContent = `${selectionState.count()}장`;
             selectedArea.hidden = selections.length === 0;
@@ -410,6 +423,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!keywordInput.value.trim()) {
             keywordInput.value = destinationName();
         }
+        renderSelectedPhotos();
 
         searchButton.addEventListener("click", () => loadPhotos(false));
         moreButton.addEventListener("click", () => loadPhotos(true));

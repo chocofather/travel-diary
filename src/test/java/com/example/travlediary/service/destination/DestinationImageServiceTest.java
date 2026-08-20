@@ -15,16 +15,21 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.file.Path;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mockingDetails;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -100,6 +105,114 @@ class DestinationImageServiceTest {
     }
 
     @Test
+    void addingNonMainImageToEmptyDestinationKeepsItWithoutMainAtOrderZero() {
+        when(destinationMapper.findImagesByDestinationId(10L)).thenReturn(List.of());
+        when(fileUploadService.saveFile(any(), eq("destinations")))
+                .thenReturn("/uploads/destinations/first.jpg");
+
+        service.saveImages(10L, files("first.jpg"), null, new Integer[0]);
+
+        assertThat(insertedImages())
+                .singleElement()
+                .satisfies(image -> {
+                    assertThat(image.getOrderIndex()).isZero();
+                    assertThat(image.getIsMain()).isFalse();
+                });
+        assertThat(invocationsNamed("clearMainImagesByDestinationId")).isEmpty();
+        assertThat(invocationsNamed("setMainImage")).isEmpty();
+    }
+
+    @Test
+    void metadataBatchForcesDestinationAndAppendsInOrderUsingExistingMainRule() {
+        when(destinationMapper.findImagesByDestinationId(10L)).thenReturn(List.of(
+                image(1L, 10L, 4, true)
+        ));
+        DestinationImage first = image(null, 999L, 99, false);
+        first.setImageUrl("/uploads/destinations/kto-a.jpg");
+        DestinationImage second = image(null, 888L, 88, true);
+        second.setImageUrl("/uploads/destinations/kto-b.jpg");
+
+        service.saveImages(10L, List.of(first, second));
+
+        assertThat(insertedImages())
+                .extracting(
+                        DestinationImage::getImageUrl,
+                        DestinationImage::getDestinationId,
+                        DestinationImage::getOrderIndex,
+                        DestinationImage::getIsMain)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple(
+                                "/uploads/destinations/kto-a.jpg", 10L, 5, false),
+                        org.assertj.core.groups.Tuple.tuple(
+                                "/uploads/destinations/kto-b.jpg", 10L, 6, true));
+        assertThat(invocationsNamed("clearMainImagesByDestinationId")).hasSize(1);
+    }
+
+    @Test
+    void metadataBatchKeepsNonMainFirstImageWithoutPromotionAtOrderZero() {
+        when(destinationMapper.findImagesByDestinationId(10L)).thenReturn(List.of());
+        DestinationImage first = image(null, 999L, 99, false);
+
+        service.saveImages(10L, List.of(first));
+
+        assertThat(insertedImages())
+                .singleElement()
+                .satisfies(image -> {
+                    assertThat(image.getDestinationId()).isEqualTo(10L);
+                    assertThat(image.getOrderIndex()).isZero();
+                    assertThat(image.getIsMain()).isFalse();
+                });
+        assertThat(invocationsNamed("clearMainImagesByDestinationId")).isEmpty();
+        assertThat(invocationsNamed("setMainImage")).isEmpty();
+    }
+
+    @Test
+    void outerTransactionRollbackDeletesOnlyNewDirectUpload() {
+        String newImageUrl = "/uploads/destinations/new-direct.jpg";
+        when(destinationMapper.findImagesByDestinationId(10L)).thenReturn(List.of());
+        when(fileUploadService.saveFile(any(), eq("destinations"))).thenReturn(newImageUrl);
+
+        withTransactionSynchronization(() -> {
+            service.saveImages(10L, files("new-direct.jpg"), null, new Integer[0]);
+
+            completeSynchronizations(TransactionSynchronization.STATUS_ROLLED_BACK);
+        });
+
+        verify(fileUploadService).deleteDestinationFile(newImageUrl);
+    }
+
+    @Test
+    void successfulOuterTransactionKeepsNewDirectUpload() {
+        String newImageUrl = "/uploads/destinations/new-direct.jpg";
+        when(destinationMapper.findImagesByDestinationId(10L)).thenReturn(List.of());
+        when(fileUploadService.saveFile(any(), eq("destinations"))).thenReturn(newImageUrl);
+
+        withTransactionSynchronization(() -> {
+            service.saveImages(10L, files("new-direct.jpg"), null, new Integer[0]);
+
+            completeSynchronizations(TransactionSynchronization.STATUS_COMMITTED);
+        });
+
+        verify(fileUploadService, never()).deleteDestinationFile(newImageUrl);
+    }
+
+    @Test
+    void rollbackCleanupFailureDoesNotEscapeTransactionCompletion() {
+        String newImageUrl = "/uploads/destinations/new-direct.jpg";
+        when(destinationMapper.findImagesByDestinationId(10L)).thenReturn(List.of());
+        when(fileUploadService.saveFile(any(), eq("destinations"))).thenReturn(newImageUrl);
+        doThrow(new RuntimeException("cleanup failed"))
+                .when(fileUploadService).deleteDestinationFile(newImageUrl);
+
+        withTransactionSynchronization(() -> {
+            service.saveImages(10L, files("new-direct.jpg"), null, new Integer[0]);
+
+            assertThatCode(() -> completeSynchronizations(TransactionSynchronization.STATUS_ROLLED_BACK))
+                    .doesNotThrowAnyException();
+        });
+    }
+
+    @Test
     void deletingMainImageReordersRemainingImagesAndPromotesFirst() {
         DestinationImage deleted = image(1L, 10L, 0, true);
         when(destinationMapper.findImageById(1L)).thenReturn(deleted);
@@ -130,6 +243,44 @@ class DestinationImageServiceTest {
         assertThat(orderUpdates()).containsExactly(List.of(1L, 0), List.of(3L, 1));
         assertThat(invocationsNamed("setMainImage")).isEmpty();
         assertThat(invocationsNamed("clearMainImagesByDestinationId")).isEmpty();
+    }
+
+    @Test
+    void settingMainFromImageCardUsesExistingSingleMainRule() {
+        DestinationImage selected = image(2L, 10L, 3, false);
+        when(destinationMapper.findImageById(2L)).thenReturn(selected);
+
+        service.setMainImage(10L, 2L);
+
+        verify(destinationMapper).clearMainImagesByDestinationId(10L);
+        verify(destinationMapper).setMainImage(2L);
+    }
+
+    @Test
+    void togglingSlideFromImageCardPersistsTheOppositeState() {
+        DestinationImage selected = image(2L, 10L, 3, false);
+        selected.setIsSlide(true);
+        when(destinationMapper.findImageById(2L)).thenReturn(selected);
+
+        service.toggleSlideImage(10L, 2L);
+
+        verify(destinationMapper).updateImageSlide(2L, false);
+    }
+
+    @Test
+    void imageCardActionsRejectAnImageFromAnotherDestination() {
+        DestinationImage selected = image(2L, 99L, 3, false);
+        when(destinationMapper.findImageById(2L)).thenReturn(selected);
+
+        assertThatThrownBy(() -> service.setMainImage(10L, 2L))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.toggleSlideImage(10L, 2L))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        verify(destinationMapper, never()).clearMainImagesByDestinationId(10L);
+        verify(destinationMapper, never()).setMainImage(2L);
+        verify(destinationMapper, never()).updateImageSlide(2L, true);
+        verify(destinationMapper, never()).updateImageSlide(2L, false);
     }
 
     private MultipartFile[] files(String... names) {
@@ -165,5 +316,19 @@ class DestinationImageServiceTest {
         return invocationsNamed("updateImageOrder").stream()
                 .map(invocation -> List.of(invocation.getArgument(0), invocation.getArgument(1)))
                 .toList();
+    }
+
+    private void withTransactionSynchronization(Runnable action) {
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            action.run();
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
+
+    private void completeSynchronizations(int status) {
+        TransactionSynchronizationManager.getSynchronizations()
+                .forEach(synchronization -> synchronization.afterCompletion(status));
     }
 }

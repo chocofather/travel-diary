@@ -6,7 +6,6 @@
 <th:block th:fragment="headFragment">
   <link rel="stylesheet" href="/css/destination-create.css">
   <script src="/js/admin-destination-category-select.js" defer></script>
-  <script src="/js/admin-kto-photo-search.js" defer></script>
 </th:block>
 <th:block th:fragment="body">
 
@@ -22,7 +21,7 @@
   </header>
 
   <form th:action="@{/admin/destinations/edit/{id}(id=${destinationForm.destinationId})}"
-        method="post" enctype="multipart/form-data"
+        method="post"
         th:object="${destinationForm}" class="admin-destination-form admin-form-card is-wide">
 
     <section class="admin-destination-section">
@@ -67,8 +66,7 @@
           <h3>한국어</h3>
           <input type="hidden" th:field="*{translations[0].languageCode}" value="ko"/>
           <label>여행지명
-            <input type="text" th:field="*{translations[0].name}" placeholder="이름 (한국어)"
-                   data-destination-korean-name>
+            <input type="text" th:field="*{translations[0].name}" placeholder="이름 (한국어)">
           </label>
           <label>간단 설명
             <textarea th:field="*{translations[0].shortDescription}" placeholder="간단 설명 (한국어)"></textarea>
@@ -522,26 +520,20 @@
       </div>
     </section>
 
-    <!-- 이미지 업로드 (선택/추가) -->
-    <section class="admin-destination-section">
+    <section class="admin-destination-section admin-image-management-notice">
       <div class="admin-destination-section-header">
         <div>
-          <h2>이미지 추가</h2>
-          <p>이미지 추가만 첨부하고 삭제와 순서 변경은 별도 이미지 관리에서 진행합니다.</p>
+          <h2>이미지 관리</h2>
+          <p>등록된 여행지 사진의 추가, 삭제, 대표 이미지 및 슬라이드 설정은 이미지 관리 화면에서 진행합니다.</p>
         </div>
       </div>
-
-      <div class="admin-image-upload-field">
-        <label>이미지 업로드 (이미지 추가시만 첨부, 삭제/순서변경은 별도 관리)</label>
-        <input type="file" name="images" multiple>
-        <div class="admin-image-options">
-          <label><input type="checkbox" th:field="*{main}"/> 메인 이미지</label>
-          <label><input type="checkbox" th:field="*{slide}"/> 슬라이드 이미지</label>
-        </div>
+      <div>
+        <a class="admin-btn is-primary"
+           th:href="@{/admin/destinations/{id}/images(id=${destinationForm.destinationId})}">
+          이미지 관리로 이동 →
+        </a>
       </div>
     </section>
-
-    <th:block th:replace="~{admin/destinations/fragments/kto-photo-search :: search}"></th:block>
 
     <div class="admin-form-actions">
       <a th:href="@{/admin/destinations}" class="admin-btn">취소</a>

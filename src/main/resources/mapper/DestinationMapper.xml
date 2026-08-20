@@ -240,6 +240,12 @@
         WHERE id = #{imageId}
     </update>
 
+    <update id="updateImageSlide">
+        UPDATE destination_images
+        SET is_slide = #{isSlide}
+        WHERE id = #{imageId}
+    </update>
+
     <update id="updateImageOrder">
         UPDATE destination_images
         SET order_index = #{orderIndex}

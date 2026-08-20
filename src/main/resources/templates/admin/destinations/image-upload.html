@@ -1,75 +1,118 @@
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org"
       th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'destinations')}">
-<th:block th:fragment="headFragment"></th:block>
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/destination-create.css">
+  <link rel="stylesheet" href="/css/admin-destination-images.css">
+  <script src="/js/admin-kto-photo-search.js" defer></script>
+</th:block>
 <th:block th:fragment="body">
-  <section class="admin-page-section">
+  <section class="admin-page-section admin-destination-images-page">
     <header class="admin-page-header">
       <div class="admin-page-heading">
         <h1 class="admin-page-title">여행지 이미지 관리</h1>
-        <p class="admin-page-description">대표 이미지와 슬라이드 이미지를 등록하고 관리합니다.</p>
+        <p class="admin-page-description">
+          <strong th:text="${destinationName}">여행지</strong>
+          <span aria-hidden="true"> · </span>
+          현재 이미지 <span th:text="${imageCount}">0</span>장
+        </p>
       </div>
       <div class="admin-page-actions">
+        <a th:href="@{/admin/destinations/edit/{id}(id=${destinationId})}" class="admin-btn">여행지 정보 수정</a>
         <a th:href="@{/admin/destinations}" class="admin-btn">여행지 목록</a>
       </div>
     </header>
 
-    <form th:action="@{/admin/destinations/{id}/images(id=${destinationId})}"
-          method="post" enctype="multipart/form-data" class="admin-form-card">
-      <h2 class="admin-card-heading">새 이미지 업로드</h2>
-      <p class="admin-card-description">여러 장을 선택한 뒤 대표 및 슬라이드 이미지의 인덱스를 지정할 수 있습니다.</p>
-      <div class="admin-form-fields">
-        <div class="admin-form-field">
-          <label for="destination-image-files">이미지 파일 선택 (여러 장 가능)</label>
-          <input id="destination-image-files" type="file" name="files" multiple required>
-        </div>
-        <div class="admin-form-field">
-          <label for="destination-main-index">메인 이미지 인덱스 (예: 0)</label>
-          <input id="destination-main-index" type="number" name="mainIdx" placeholder="메인이미지 인덱스 (0부터)">
-        </div>
-        <div class="admin-form-field">
-          <label for="destination-slide-index">슬라이드 이미지 인덱스들 (쉼표로 구분, 예: 0,1,2)</label>
-          <input id="destination-slide-index" type="text" name="slideIdx" placeholder="슬라이드 인덱스">
+    <input type="hidden" th:value="${destinationName}" data-destination-korean-name>
+
+    <section class="admin-destination-section">
+      <div class="admin-destination-section-header">
+        <div>
+          <h2>새 이미지 추가</h2>
+          <p>직접 보유한 이미지 또는 한국관광공사 관광사진을 추가할 수 있습니다.</p>
         </div>
       </div>
-      <div class="admin-form-actions">
-        <button type="submit" class="admin-btn is-primary">이미지 업로드</button>
+
+      <form th:action="@{/admin/destinations/{id}/images(id=${destinationId})}"
+            method="post" enctype="multipart/form-data"
+            class="admin-destination-image-upload-form">
+        <div class="admin-form-field">
+          <label for="destination-image-files">직접 업로드</label>
+          <input id="destination-image-files" type="file" name="files" multiple required>
+          <p class="admin-field-help">여러 장을 선택할 수 있습니다. 업로드 후 아래 카드에서 대표 및 슬라이드 여부를 설정하세요.</p>
+        </div>
+        <div class="admin-form-actions">
+          <button type="submit" class="admin-btn is-primary">이미지 업로드</button>
+        </div>
+      </form>
+    </section>
+
+    <form th:action="@{/admin/destinations/{id}/images/kto(id=${destinationId})}"
+          method="post" class="admin-destination-form admin-kto-photo-management-form">
+      <th:block th:replace="~{admin/destinations/fragments/kto-photo-search :: search}"></th:block>
+      <div class="admin-kto-photo-save-actions">
+        <button type="submit" class="admin-btn is-primary" data-kto-photo-submit>
+          선택한 관광사진 추가
+        </button>
       </div>
     </form>
 
-    <div class="admin-card is-table-card admin-section-spacer">
+    <section class="admin-card admin-destination-images-card admin-section-spacer">
       <div class="admin-card-header">
-        <h2 class="admin-card-heading">등록된 이미지</h2>
+        <div>
+          <h2 class="admin-card-heading">등록된 이미지</h2>
+          <p class="admin-card-description">카드에서 대표 이미지, 슬라이드 포함 여부와 삭제를 관리합니다.</p>
+        </div>
       </div>
-      <div class="admin-table-wrapper">
-        <table class="admin-table">
-          <thead>
-          <tr>
-            <th>썸네일</th>
-            <th>메인</th>
-            <th>슬라이드</th>
-            <th>관리</th>
-          </tr>
-          </thead>
-          <tbody>
-          <tr th:each="img : ${imageList}">
-            <td>
-              <img th:src="@{${img.imageUrl}}" alt="thumbnail" class="admin-image-preview">
-            </td>
-            <td th:text="${img.isMain} ? '✔' : ''"></td>
-            <td th:text="${img.isSlide} ? '✔' : ''"></td>
-            <td class="admin-table-actions">
-              <form th:action="@{/admin/destinations/images/{id}/delete(id=${img.id})}" method="post">
-                <input type="hidden" name="destinationId" th:value="${destinationId}">
-                <button type="submit" class="admin-btn is-small is-danger"
-                        onclick="return confirm('삭제하시겠습니까?')">삭제</button>
-              </form>
-            </td>
-          </tr>
-          </tbody>
-        </table>
+
+      <p class="admin-destination-images-empty" th:if="${#lists.isEmpty(imageList)}">
+        아직 등록된 이미지가 없습니다.
+      </p>
+
+      <div class="admin-destination-image-grid" th:unless="${#lists.isEmpty(imageList)}">
+        <article class="admin-destination-image-card" th:each="img : ${imageList}">
+          <div class="admin-destination-image-preview">
+            <img th:src="@{${img.imageUrl}}"
+                 th:alt="${img.sourceTitle != null and !#strings.isEmpty(img.sourceTitle) ? img.sourceTitle : '여행지 이미지'}"
+                 onerror="this.onerror=null;this.src='/images/default.png';">
+            <span class="admin-image-state-badge is-main" th:if="${img.isMain}">대표 이미지</span>
+            <span class="admin-image-state-badge is-slide" th:if="${img.isSlide}">슬라이드</span>
+          </div>
+
+          <div class="admin-destination-image-meta"
+               th:if="${img.sourceType == 'KTO_PHOTO_GALLERY'}">
+            <span class="admin-image-source-badge">한국관광공사</span>
+            <strong th:if="${img.sourceTitle != null and !#strings.isEmpty(img.sourceTitle)}"
+                    th:text="${img.sourceTitle}">사진 제목</strong>
+            <span th:if="${img.photographer != null and !#strings.isEmpty(img.photographer)}"
+                  th:text="${img.photographer}">촬영자</span>
+          </div>
+
+          <div class="admin-destination-image-actions">
+            <span class="admin-image-current-state" th:if="${img.isMain}">현재 대표</span>
+            <form th:unless="${img.isMain}"
+                  th:action="@{/admin/destinations/images/{imageId}/main(imageId=${img.id})}"
+                  method="post">
+              <input type="hidden" name="destinationId" th:value="${destinationId}">
+              <button type="submit" class="admin-btn is-small">대표로 지정</button>
+            </form>
+
+            <form th:action="@{/admin/destinations/images/{imageId}/slide(imageId=${img.id})}"
+                  method="post">
+              <input type="hidden" name="destinationId" th:value="${destinationId}">
+              <button type="submit" class="admin-btn is-small"
+                      th:text="${img.isSlide} ? '슬라이드 해제' : '슬라이드에 포함'">슬라이드에 포함</button>
+            </form>
+
+            <form th:action="@{/admin/destinations/images/{id}/delete(id=${img.id})}" method="post">
+              <input type="hidden" name="destinationId" th:value="${destinationId}">
+              <button type="submit" class="admin-btn is-small is-danger"
+                      onclick="return confirm('삭제하시겠습니까?')">삭제</button>
+            </form>
+          </div>
+        </article>
       </div>
-    </div>
+    </section>
   </section>
 </th:block>
 </html>

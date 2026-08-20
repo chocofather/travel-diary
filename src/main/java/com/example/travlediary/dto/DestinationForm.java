@@ -33,6 +33,7 @@ public class DestinationForm {
     private boolean slide;
 
     private MultipartFile[] images;
+    private String ktoSelectedPhotosJson = "[]";
 
     private List<Integer> attractionAmenityIds;
     private List<Integer> accommodationAmenityIds;
@@ -106,4 +107,3 @@ public class DestinationForm {
 
 
 }
-

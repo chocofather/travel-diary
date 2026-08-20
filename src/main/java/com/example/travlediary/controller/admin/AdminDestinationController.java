@@ -1,17 +1,23 @@
 package com.example.travlediary.controller.admin;
 
 import com.example.travlediary.dto.DestinationForm;
+import com.example.travlediary.dto.kto.KtoSelectedPhotoRequest;
 import com.example.travlediary.model.CountryCategory;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.amenity.AmenityService;
 import com.example.travlediary.service.category.CategoryService;
 import com.example.travlediary.service.category.CountryCategoryService;
 import com.example.travlediary.service.destination.DestinationService;
+import com.example.travlediary.service.destination.DestinationSaveOrchestrationService;
+import com.example.travlediary.service.kto.InvalidKtoSelectedPhotosException;
+import com.example.travlediary.service.kto.KtoSelectedPhotoRequestParser;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.*;
 
@@ -24,15 +30,21 @@ public class AdminDestinationController {
     private final CategoryService categoryService;
     private final AmenityService amenityService;
     private final CountryCategoryService countryCategoryService;
+    private final KtoSelectedPhotoRequestParser ktoSelectedPhotoRequestParser;
+    private final DestinationSaveOrchestrationService destinationSaveOrchestrationService;
 
     public AdminDestinationController(DestinationService destinationService,
                                       CategoryService categoryService,
                                       AmenityService amenityService,
-                                      CountryCategoryService countryCategoryService) {
+                                      CountryCategoryService countryCategoryService,
+                                      KtoSelectedPhotoRequestParser ktoSelectedPhotoRequestParser,
+                                      DestinationSaveOrchestrationService destinationSaveOrchestrationService) {
         this.destinationService = destinationService;
         this.categoryService = categoryService;
         this.amenityService = amenityService;
         this.countryCategoryService = countryCategoryService;
+        this.ktoSelectedPhotoRequestParser = ktoSelectedPhotoRequestParser;
+        this.destinationSaveOrchestrationService = destinationSaveOrchestrationService;
     }
 
     // 여행지 등록
@@ -52,9 +64,15 @@ public class AdminDestinationController {
     @PostMapping
     public String registerDestination(@ModelAttribute DestinationForm form,
                                       @AuthenticationPrincipal CustomUserDetails userDetails) {
+        List<KtoSelectedPhotoRequest> selectedKtoPhotos = parseSelectedKtoPhotos(form);
         System.out.println("regionId: " + form.getRegionId());  // regionId 출력 확인
 
-        destinationService.registerDestination(form, userDetails.getId());
+        try {
+            destinationSaveOrchestrationService.registerDestination(
+                    form, userDetails.getId(), selectedKtoPhotos);
+        } catch (InvalidKtoSelectedPhotosException exception) {
+            throw invalidKtoSelection();
+        }
         return "redirect:/admin";
     }
 
@@ -214,5 +232,20 @@ public class AdminDestinationController {
                                     @ModelAttribute DestinationForm form) {
         destinationService.updateDestination(id, form);
         return "redirect:/admin/destinations";
+    }
+
+    private List<KtoSelectedPhotoRequest> parseSelectedKtoPhotos(DestinationForm form) {
+        try {
+            return ktoSelectedPhotoRequestParser.parse(form.getKtoSelectedPhotosJson());
+        } catch (InvalidKtoSelectedPhotosException exception) {
+            throw invalidKtoSelection();
+        }
+    }
+
+    private ResponseStatusException invalidKtoSelection() {
+        return new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "선택한 관광사진 정보가 올바르지 않습니다."
+        );
     }
 }

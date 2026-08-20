@@ -11,9 +11,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 class AdminKtoPhotoSearchUiContractTest {
 
     @Test
-    void createAndEditUseTheSameKtoPhotoSearchUi() throws IOException {
+    void createAndImageManagementUseTheSameKtoPhotoSearchUiWhileEditStaysInformationOnly() throws IOException {
         String create = resource("/templates/admin/destinations/create.html");
         String edit = resource("/templates/admin/destinations/edit.html");
+        String imageManagement = resource("/templates/admin/destinations/image-upload.html");
         String fragment = resource("/templates/admin/destinations/fragments/kto-photo-search.html");
 
         assertThat(create)
@@ -21,9 +22,15 @@ class AdminKtoPhotoSearchUiContractTest {
                 .contains("admin/destinations/fragments/kto-photo-search")
                 .contains("/js/admin-kto-photo-search.js");
         assertThat(edit)
+                .doesNotContain(
+                        "admin/destinations/fragments/kto-photo-search",
+                        "/js/admin-kto-photo-search.js",
+                        "name=\"ktoSelectedPhotosJson\"");
+        assertThat(imageManagement)
                 .contains("data-destination-korean-name")
                 .contains("admin/destinations/fragments/kto-photo-search")
-                .contains("/js/admin-kto-photo-search.js");
+                .contains("/js/admin-kto-photo-search.js")
+                .contains("data-kto-photo-submit");
         assertThat(fragment)
                 .contains("data-kto-photo-search")
                 .contains("data-kto-photo-keyword")
@@ -32,7 +39,10 @@ class AdminKtoPhotoSearchUiContractTest {
                 .contains("data-kto-photo-results")
                 .contains("data-kto-photo-more")
                 .contains("type=\"button\"")
-                .doesNotContain("type=\"checkbox\"", "name=\"kto");
+                .contains("type=\"hidden\"")
+                .contains("name=\"ktoSelectedPhotosJson\"")
+                .contains("data-kto-selected-photos-json")
+                .doesNotContain("type=\"checkbox\"");
     }
 
     @Test
@@ -79,7 +89,7 @@ class AdminKtoPhotoSearchUiContractTest {
     }
 
     @Test
-    void sharedUiKeepsSelectedPhotosOutsideTheDestinationFormSubmission() throws IOException {
+    void sharedUiSerializesSelectedPhotosIntoTheDestinationForm() throws IOException {
         String fragment = resource("/templates/admin/destinations/fragments/kto-photo-search.html");
         String script = resource("/static/js/admin-kto-photo-search.js");
         String css = resource("/static/css/destination-create.css");
@@ -89,13 +99,24 @@ class AdminKtoPhotoSearchUiContractTest {
                 .contains("data-kto-photo-selected-count")
                 .contains("data-kto-photo-main-status")
                 .contains("data-kto-photo-selected-list")
-                .doesNotContain("type=\"hidden\"", "name=\"selected", "name=\"kto");
+                .contains("type=\"hidden\"")
+                .contains("name=\"ktoSelectedPhotosJson\"")
+                .contains("value=\"[]\"")
+                .doesNotContain("name=\"selected");
 
         assertThat(script)
                 .contains("data-kto-photo-selected-area")
                 .contains("data-kto-photo-selected-count")
                 .contains("data-kto-photo-main-status")
                 .contains("data-kto-photo-selected-list")
+                .contains("data-kto-selected-photos-json")
+                .contains("function serializeKtoSelectedPhotos")
+                .contains("externalContentId:")
+                .contains("imageUrl:")
+                .contains("title:")
+                .contains("photographer:")
+                .contains("isMain: Boolean(isMain)")
+                .contains("JSON.stringify(serializeKtoSelectedPhotos(selectionState.entries()))")
                 .contains("aria-pressed")
                 .doesNotContain("FormData", "localStorage", "sessionStorage");
 

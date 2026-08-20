@@ -38,6 +38,8 @@
         void deleteImageById(Long imageId);
         void clearMainImagesByDestinationId(Long destinationId);
         void setMainImage(Long imageId);
+        void updateImageSlide(@Param("imageId") Long imageId,
+                              @Param("isSlide") boolean isSlide);
         void updateImageOrder(@Param("imageId") Long imageId,
                               @Param("orderIndex") int orderIndex);
 
