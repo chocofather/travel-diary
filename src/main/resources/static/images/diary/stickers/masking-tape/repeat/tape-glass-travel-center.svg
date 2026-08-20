@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 40" role="img"
+     aria-label="클리어 여행 마스킹테이프 무늬">
+  <rect width="60" height="40" fill="#ffffff" fill-opacity="0.1"/>
+  <!-- 점선 비행운은 마디 끝까지 이어져 이음새가 보이지 않는다 -->
+  <path d="M0 27h60" fill="none" stroke="#7f97ac" stroke-width="1.6"
+        stroke-linecap="round" stroke-dasharray="1 6"/>
+  <path d="M14 18 30 12 28 17 31 20 24 20 21 23 20 19Z" fill="#6d8ba3"/>
+  <g fill="#a9bccd">
+    <circle cx="46" cy="16" r="2"/>
+    <circle cx="52" cy="22" r="1.4"/>
+  </g>
+</svg>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 40" preserveAspectRatio="none"
+     role="img" aria-label="고양이 마스킹테이프 왼쪽 끝">
+  <!-- 테이프 왼쪽 끝. 찢어진 결만 남기고 무늬는 가운데 조각이 맡는다.
+       (가로로 늘어나지 않도록 화면에서는 높이에 맞춰 비율대로만 그린다) -->
+  <path d="M18 0H4l4 5-4 5 4 5-4 5 4 5-4 5 4 5-4 5h14Z" fill="#f6ebd8"/>
+</svg>

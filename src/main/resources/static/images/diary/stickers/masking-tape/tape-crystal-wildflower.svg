@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" preserveAspectRatio="none"
+     role="img" aria-label="클리어 작은 들꽃 마스킹테이프 스티커">
+  <defs>
+    <clipPath id="tape">
+      <path d="M10 6H150l-4 4 4 4-4 4 4 4-4 4 4 4-4 4H10l4-4-4-4 4-4-4-4 4-4-4-4Z"/>
+    </clipPath>
+    <g id="sprig">
+      <g fill="none" stroke="#7d9a6d" stroke-width="1.2" stroke-linecap="round">
+        <path d="M0 12V0M0 8l-4-3M0 5l4-3"/>
+      </g>
+      <g fill="#c3a3c9">
+        <circle cx="0" cy="-2" r="2.2"/>
+        <circle cx="-4.6" cy="-5" r="1.8"/>
+        <circle cx="4.4" cy="-4.6" r="1.8"/>
+      </g>
+    </g>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="160" height="40" fill="#ffffff" fill-opacity="0.11"/>
+    <use href="#sprig" x="26" y="20"/>
+    <use href="#sprig" x="62" y="20"/>
+    <use href="#sprig" x="98" y="20"/>
+    <use href="#sprig" x="134" y="20"/>
+    <g fill="#a8bf97">
+      <circle cx="44" cy="24" r="1.6"/><circle cx="80" cy="24" r="1.6"/>
+      <circle cx="116" cy="24" r="1.6"/><circle cx="152" cy="24" r="1.6"/>
+    </g>
+  </g>
+</svg>

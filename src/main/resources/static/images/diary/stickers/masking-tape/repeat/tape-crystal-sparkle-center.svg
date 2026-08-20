@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 40" role="img"
+     aria-label="클리어 반짝이 마스킹테이프 무늬">
+  <rect width="56" height="40" fill="#ffffff" fill-opacity="0.1"/>
+  <path d="M16 11c.6 5.2 3.2 7.8 8.4 9-5.2 1.2-7.8 3.8-8.4 9-.6-5.2-3.2-7.8-8.4-9
+           5.2-1.2 7.8-3.8 8.4-9Z" fill="#d9b45a"/>
+  <g fill="#c7b9dd">
+    <path d="M38 10 39 15 44 16 39 17 38 22 37 17 32 16 37 15Z"/>
+    <circle cx="46" cy="29" r="1.6"/>
+  </g>
+</svg>

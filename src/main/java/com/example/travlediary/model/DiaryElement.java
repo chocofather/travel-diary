@@ -29,4 +29,12 @@ public class DiaryElement {
     private Integer zIndex; // 겹침 순서
     private Timestamp createdAt; // 생성일
     private Timestamp updatedAt; // 수정일
+
+    /**
+     * 스티커의 성격. 이미 붙여 둔 요소도 저장된 image_url 만 보고 같은 값을 얻는다.
+     * (마스킹테이프는 길이만 늘려도 두께가 따라 커지지 않게 화면에서 다르게 다룬다)
+     */
+    public String getStickerKind() {
+        return DiaryStickerKind.of(imageUrl);
+    }
 }

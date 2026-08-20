@@ -1765,6 +1765,62 @@ class DiaryControllerTest {
         assertThat(saved.getPositionX()).isEqualByComparingTo("0.41000");
     }
 
+    /** 마스킹테이프는 처음부터 띠 모양으로 놓이고, 화면도 그렇게 다루도록 함께 알려 준다. */
+    @Test
+    void maskingTapeIsPlacedAsAStrip() throws Exception {
+        String tapeUrl = "/images/diary/stickers/masking-tape/tape-cloud-sky.svg";
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryElementService.getElements(10L, 3L, 7L)).thenReturn(List.of());
+        when(diaryElementService.create(eq(10L), eq(3L), eq(7L), any()))
+                .thenReturn(stickerElement(201L, tapeUrl));
+
+        String body = mockMvc.perform(post("/diaries/10/pages/3/elements/sticker")
+                        .param("sticker", "tape-cloud-sky")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        ArgumentCaptor<DiaryElement> captor = ArgumentCaptor.forClass(DiaryElement.class);
+        verify(diaryElementService).create(eq(10L), eq(3L), eq(7L), captor.capture());
+        DiaryElement saved = captor.getValue();
+        // 유형은 그대로 STICKER 이고 크기만 띠 모양이다
+        assertThat(saved.getElementType()).isEqualTo("STICKER");
+        assertThat(saved.getWidth()).isEqualByComparingTo("0.46000");
+        assertThat(saved.getHeight()).isEqualByComparingTo("0.09000");
+        // 화면이 곧바로 마스킹테이프로 알아보게 함께 내려 준다
+        assertThat(body).contains("\"maskingTape\":true");
+        // 마스킹테이프는 모두 되풀이형이라 조각 경로도 함께 온다
+        assertThat(body).contains("repeat/tape-cloud-sky-center.svg");
+    }
+
+    /** 되풀이형 테이프는 붙는 즉시(새로고침 전에도) 같은 조각으로 그려지도록 함께 내려 준다. */
+    @Test
+    void repeatingTapeCreateResponseCarriesItsPieces() throws Exception {
+        String tapeUrl = "/images/diary/stickers/masking-tape/tape-cat-cream.svg";
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryElementService.getElements(10L, 3L, 7L)).thenReturn(List.of());
+        when(diaryElementService.create(eq(10L), eq(3L), eq(7L), any()))
+                .thenReturn(stickerElement(202L, tapeUrl));
+
+        String body = mockMvc.perform(post("/diaries/10/pages/3/elements/sticker")
+                        .param("sticker", "tape-cat-cream")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).contains("repeat/tape-cat-cream-left.svg");
+        assertThat(body).contains("repeat/tape-cat-cream-center.svg");
+        assertThat(body).contains("repeat/tape-cat-cream-right.svg");
+        // DB 에 남는 그림 경로는 지금까지처럼 완성형 하나뿐이다
+        ArgumentCaptor<DiaryElement> captor = ArgumentCaptor.forClass(DiaryElement.class);
+        verify(diaryElementService).create(eq(10L), eq(3L), eq(7L), captor.capture());
+        assertThat(captor.getValue().getImageUrl()).isEqualTo(tapeUrl);
+    }
+
     @Test
     void arbitraryStickerImageUrlsAreRejected() throws Exception {
         when(userDetails.getId()).thenReturn(7L);
@@ -1841,6 +1897,77 @@ class DiaryControllerTest {
         verify(diaryElementService, org.mockito.Mockito.never()).delete(any(), any(), any(), any());
     }
 
+    /**
+     * 되풀이형 테이프는 저장된 imageUrl 하나만으로 조각을 다시 찾아 화면에 실어 준다.
+     * (DB 에는 조각 경로가 없고, 읽기/편집 화면이 같은 값을 쓴다)
+     */
+    @Test
+    void savedRepeatingTapeGetsItsPiecesBackOnBothModes() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-01")));
+        when(diaryElementService.getElements(10L, 1L, 7L)).thenReturn(List.of(stickerElement(
+                200L, "/images/diary/stickers/masking-tape/tape-cat-cream.svg")));
+
+        for (boolean edit : new boolean[]{true, false}) {
+            String body = mockMvc.perform(get("/diaries/10").param("edit", String.valueOf(edit))
+                            .with(authentication(new UsernamePasswordAuthenticationToken(
+                                    userDetails, null, List.of()))))
+                    .andExpect(status().isOk())
+                    .andReturn().getResponse().getContentAsString();
+
+            String sticker = body.substring(body.indexOf("diary-canvas-sticker"));
+            assertThat(sticker).contains(
+                    "data-tape-left=\"/images/diary/stickers/masking-tape/repeat/tape-cat-cream-left.svg\"");
+            assertThat(sticker).contains(
+                    "data-tape-center=\"/images/diary/stickers/masking-tape/repeat/tape-cat-cream-center.svg\"");
+            assertThat(sticker).contains(
+                    "data-tape-right=\"/images/diary/stickers/masking-tape/repeat/tape-cat-cream-right.svg\"");
+            // 조각을 이어 붙이는 일은 읽기 화면에서도 같은 스크립트가 맡는다
+            assertThat(body).contains("/js/diary-tape-repeat.js");
+        }
+    }
+
+    /** 마스킹테이프가 아닌 스티커는 지금까지처럼 완성형 그림 하나로 그린다. */
+    @Test
+    void ordinaryStickerHasNoRepeatPieces() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-01")));
+        when(diaryElementService.getElements(10L, 1L, 7L)).thenReturn(List.of(stickerElement(
+                200L, "/images/diary/stickers/emotion/heart.svg")));
+
+        String body = mockMvc.perform(get("/diaries/10")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body.substring(body.indexOf("diary-canvas-sticker")))
+                .doesNotContain("data-tape-center");
+    }
+
+    /** 이미 붙여 둔 마스킹테이프도 저장된 경로만으로 다시 알아본다. (EDIT/READ 모두) */
+    @Test
+    void savedMaskingTapeKeepsItsKindOnBothModes() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-01")));
+        when(diaryElementService.getElements(10L, 1L, 7L)).thenReturn(List.of(stickerElement(
+                200L, "/images/diary/stickers/masking-tape/tape-cloud-sky.svg")));
+
+        for (boolean edit : new boolean[]{true, false}) {
+            String body = mockMvc.perform(get("/diaries/10").param("edit", String.valueOf(edit))
+                            .with(authentication(new UsernamePasswordAuthenticationToken(
+                                    userDetails, null, List.of()))))
+                    .andExpect(status().isOk())
+                    .andReturn().getResponse().getContentAsString();
+
+            String sticker = body.substring(body.indexOf("diary-canvas-sticker"));
+            assertThat(sticker).contains("data-sticker-kind=\"masking-tape\"");
+        }
+    }
+
     @Test
     void editModeOffersTheStickerPickerAndReadModeShowsSavedStickersOnly() throws Exception {
         when(userDetails.getId()).thenReturn(7L);
@@ -1861,6 +1988,21 @@ class DiaryControllerTest {
         assertThat(editBody).contains("data-sticker-category=\"recent\"");
         assertThat(editBody).contains("id=\"diary-sticker-grid-recent\"");
         assertThat(editBody).contains("아직 사용한 스티커가 없어요.");
+        // 가로로 긴 마스킹테이프는 picker 에서 넓게 보이도록 성격을 함께 실어 준다
+        assertThat(editBody).containsPattern(
+                "data-sticker-id=\"tape-cloud-sky\"\\s+data-sticker-kind=\"masking-tape\"");
+        // 마스킹테이프 묶음 안에서만 일반/투명을 다시 고를 수 있다
+        assertThat(editBody).contains("diary-sticker-subfilter");
+        assertThat(editBody).contains("data-tape-type=\"TRANSLUCENT\"");
+        assertThat(editBody).contains("data-tape-type=\"CLEAR\"");
+        assertThat(editBody).containsPattern(
+                "data-sticker-id=\"tape-clear-star\"[^>]*data-tape-type=\"TRANSLUCENT\"");
+        assertThat(editBody).containsPattern(
+                "data-sticker-id=\"tape-glass-star\"[^>]*data-tape-type=\"CLEAR\"");
+        assertThat(editBody).containsPattern(
+                "data-sticker-id=\"tape-cloud-sky\"[^>]*data-tape-type=\"NORMAL\"");
+        // 일반 스티커에는 성격 표시가 붙지 않는다
+        assertThat(editBody).doesNotContain("data-sticker-id=\"airplane\" data-sticker-kind");
         assertThat(editBody).contains("/images/diary/stickers/emotion/heart.svg");
         // 스티커도 사진과 같은 자유배치 조작을 쓴다
         assertThat(editBody).contains("diary-canvas-sticker");

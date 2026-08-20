@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 40" preserveAspectRatio="none"
+     role="img" aria-label="반투명 나비 마스킹테이프 오른쪽 끝">
+  <defs>
+    <clipPath id="cap">
+      <path d="M0 0h14l-4 5 4 5-4 5 4 5-4 5 4 5-4 5 4 5H0Z"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#cap)">
+    <rect width="18" height="40" fill="#e4f0ec" fill-opacity="0.55"/>
+    <path d="M0 30h18" fill="none" stroke="#a7cfc4" stroke-width="1.2"
+          stroke-linecap="round" stroke-dasharray="1 5"/>
+  </g>
+</svg>

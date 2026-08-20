@@ -13,6 +13,8 @@
   <link rel="stylesheet" href="/css/diary-fonts.css">
   <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
   <script src="/js/diary-canvas-drag.js" defer></script>
+  <!-- 되풀이형 마스킹테이프는 읽기 화면에서도 같은 모습이어야 하므로 편집 여부와 무관하게 싣는다 -->
+  <script src="/js/diary-tape-repeat.js" defer></script>
   <script src="/js/diary-emoji-data.js" defer></script>
   <script src="/js/diary-editor.js" defer></script>
   <script src="/js/diary-page-flip.js" defer></script>
@@ -256,9 +258,25 @@
                  th:data-sticker-category="${category.id}"
                  th:attr="aria-label=|${category.name} 스티커|"
                  th:hidden="${!stat.first}">
+              <!-- 마스킹테이프만 안에서 한 번 더 나눠 본다. (상단 분류 탭은 그대로) -->
+              <div class="diary-sticker-subfilter" th:if="${category.id == 'masking-tape'}"
+                   role="group" aria-label="마스킹테이프 종류">
+                <button type="button" class="diary-sticker-subtab is-active"
+                        data-tape-type="ALL" aria-pressed="true">전체</button>
+                <button type="button" class="diary-sticker-subtab"
+                        data-tape-type="NORMAL" aria-pressed="false">일반</button>
+                <button type="button" class="diary-sticker-subtab"
+                        data-tape-type="TRANSLUCENT" aria-pressed="false">반투명</button>
+                <button type="button" class="diary-sticker-subtab"
+                        data-tape-type="CLEAR" aria-pressed="false">클리어</button>
+              </div>
+
+              <!-- 마스킹테이프처럼 가로로 긴 스티커는 두 칸을 써서 디자인이 보이게 한다 -->
               <button type="button" class="diary-sticker-option"
                       th:each="sticker : ${category.stickers}"
                       th:data-sticker-id="${sticker.id}"
+                      th:data-sticker-kind="${sticker.kind}"
+                      th:data-tape-type="${sticker.tapeType}"
                       th:title="${sticker.name}"
                       th:attr="aria-label=|${sticker.name} 스티커 붙이기|">
                 <img th:src="${sticker.imageUrl}" alt="" aria-hidden="true" loading="lazy" />
@@ -614,11 +632,18 @@
         </th:block>
       </figure>
 
-      <!-- 스티커. 사진과 같은 자유배치 요소지만 사진 액자/그림자는 쓰지 않는다. -->
+      <!-- 스티커. 사진과 같은 자유배치 요소지만 사진 액자/그림자는 쓰지 않는다.
+           되풀이해서 그리는 스티커(마스킹테이프)는 저장된 그림 경로로 조각을 찾아 함께 실어 준다.
+           실제로 조각을 이어 붙이는 일은 diary-tape-repeat.js 한 곳이 맡는다. -->
       <figure class="diary-canvas-item diary-canvas-sticker diary-sticker"
               th:if="${element.elementType == 'STICKER'}"
+              th:with="tape=${stickerRepeats.get(element.imageUrl)}"
               th:data-element-id="${element.id}"
               th:data-element-type="${element.elementType}"
+              th:data-sticker-kind="${element.stickerKind}"
+              th:data-tape-left="${tape?.leftUrl}"
+              th:data-tape-center="${tape?.centerUrl}"
+              th:data-tape-right="${tape?.rightUrl}"
               th:data-position-x="${element.positionX}"
               th:data-position-y="${element.positionY}"
               th:data-width="${element.width}"

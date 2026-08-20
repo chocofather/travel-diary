@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" preserveAspectRatio="none"
+     role="img" aria-label="투명 하트 마스킹테이프 스티커">
+  <defs>
+    <clipPath id="tape">
+      <path d="M10 6H150l-4 4 4 4-4 4 4 4-4 4 4 4-4 4H10l4-4-4-4 4-4-4-4 4-4-4-4Z"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="160" height="40" fill="#f7e9ec" fill-opacity="0.5"/>
+    <g fill="#e08d9c" fill-opacity="0.9">
+      <path d="M26 14c0-2.6 4-4 5.5-1.4C33 10 37 11.4 37 14c0 3.6-5.5 7-5.5 7S26 17.6 26 14Z"/>
+      <path d="M78 14c0-2.6 4-4 5.5-1.4C85 10 89 11.4 89 14c0 3.6-5.5 7-5.5 7S78 17.6 78 14Z"/>
+      <path d="M130 14c0-2.6 4-4 5.5-1.4C137 10 141 11.4 141 14c0 3.6-5.5 7-5.5 7S130 17.6 130 14Z"/>
+    </g>
+    <g fill="#ffffff" fill-opacity="0.9">
+      <path d="M56 24c0-1.8 2.6-2.7 3.6-.9 1-1.8 3.6-.9 3.6.9 0 2.4-3.6 4.6-3.6 4.6S56 26.4 56 24Z"/>
+      <path d="M108 24c0-1.8 2.6-2.7 3.6-.9 1-1.8 3.6-.9 3.6.9 0 2.4-3.6 4.6-3.6 4.6S108 26.4 108 24Z"/>
+    </g>
+  </g>
+</svg>

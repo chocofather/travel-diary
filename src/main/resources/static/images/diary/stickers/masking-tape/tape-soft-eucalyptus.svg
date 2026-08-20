@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" preserveAspectRatio="none"
+     role="img" aria-label="반투명 유칼립투스 마스킹테이프 스티커">
+  <defs>
+    <clipPath id="tape">
+      <path d="M10 6H150l-4 4 4 4-4 4 4 4-4 4 4 4-4 4H10l4-4-4-4 4-4-4-4 4-4-4-4Z"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="160" height="40" fill="#e9f1ea" fill-opacity="0.55"/>
+    <!-- 둥근 잎이 줄기를 따라 번갈아 달린 유칼립투스 -->
+    <path d="M0 21h160" fill="none" stroke="#8aa383" stroke-opacity="0.9" stroke-width="1.4"/>
+    <g fill="#8aa383" fill-opacity="0.9">
+      <circle cx="20" cy="14" r="4.4"/><circle cx="46" cy="14" r="4.4"/>
+      <circle cx="72" cy="14" r="4.4"/><circle cx="98" cy="14" r="4.4"/>
+      <circle cx="124" cy="14" r="4.4"/><circle cx="150" cy="14" r="4.4"/>
+    </g>
+    <g fill="#b9cdb2" fill-opacity="0.9">
+      <circle cx="33" cy="28" r="4"/><circle cx="59" cy="28" r="4"/>
+      <circle cx="85" cy="28" r="4"/><circle cx="111" cy="28" r="4"/>
+      <circle cx="137" cy="28" r="4"/><circle cx="7" cy="28" r="4"/>
+    </g>
+  </g>
+</svg>

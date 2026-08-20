@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" preserveAspectRatio="none" role="img" aria-label="구름 하늘 마스킹테이프 스티커">
+  <!-- 찢어 붙인 테이프 조각. 바탕은 투명하고 띠 안쪽에만 색을 둔다. -->
+  <defs>
+    <clipPath id="tape">
+      <path d="M10 6H150l-4 4 4 4-4 4 4 4-4 4 4 4-4 4H10l4-4-4-4 4-4-4-4 4-4-4-4Z"/>
+    </clipPath>
+    <g id="cloud">
+      <ellipse cx="0" cy="0" rx="10" ry="4.6"/>
+      <circle cx="-4.5" cy="-2.6" r="4.4"/>
+      <circle cx="3.5" cy="-3.6" r="5.4"/>
+    </g>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="160" height="40" fill="#d9eaf7"/>
+    <g fill="#ffffff">
+      <use href="#cloud" x="34" y="23"/>
+      <use href="#cloud" x="86" y="17"/>
+      <use href="#cloud" x="128" y="25"/>
+    </g>
+    <g fill="#b7d6ef">
+      <circle cx="60" cy="12" r="1.7"/>
+      <circle cx="110" cy="30" r="1.7"/>
+      <circle cx="20" cy="31" r="1.4"/>
+    </g>
+  </g>
+</svg>

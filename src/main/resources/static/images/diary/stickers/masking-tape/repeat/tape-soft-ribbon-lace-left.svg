@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 40" preserveAspectRatio="none"
+     role="img" aria-label="반투명 리본 레이스 마스킹테이프 왼쪽 끝">
+  <defs>
+    <clipPath id="cap">
+      <path d="M18 0H4l4 5-4 5 4 5-4 5 4 5-4 5 4 5-4 5h14Z"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#cap)">
+    <rect width="18" height="40" fill="#f8ecef" fill-opacity="0.55"/>
+    <path d="M0 30q5 5 10 0t10 0" fill="none"
+          stroke="#ffffff" stroke-opacity="0.95" stroke-width="1.6"/>
+  </g>
+</svg>

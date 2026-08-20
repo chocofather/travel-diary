@@ -4,7 +4,13 @@
     "이 파일이 곧 서버가 허용하는 스티커 목록이다. 여기에 없는 값은 저장되지 않는다.",
     "스티커를 추가하려면 static/images/diary/stickers/{category}/ 에 SVG 를 넣고",
     "아래 stickers 배열에 한 줄만 더하면 picker 에 자동으로 나타난다.",
-    "imageUrl 은 반드시 /images/diary/stickers/ 아래 경로여야 한다. (외부 주소 저장 금지)"
+    "imageUrl 은 반드시 /images/diary/stickers/ 아래 경로여야 한다. (외부 주소 저장 금지)",
+    "renderMode 를 REPEAT_X 로 두고 repeat.left/center/right 를 적으면",
+    "종이에 붙였을 때 가운데 무늬만 되풀이해서 그린다. (길게 늘여도 그림이 찌그러지지 않는다)",
+    "이 값은 화면에서만 쓰고 DB 에는 지금처럼 imageUrl 하나만 저장한다.",
+    "tapeType 은 마스킹테이프 picker 안의 작은 갈래일 뿐이다.",
+    "NORMAL(일반) / TRANSLUCENT(반투명) / CLEAR(클리어) 중 하나이고,",
+    "적지 않으면 일반(NORMAL)으로 본다."
   ],
   "categories": [
     {"id": "travel", "name": "여행"},
@@ -14,7 +20,8 @@
     {"id": "weather", "name": "날씨"},
     {"id": "decoration", "name": "장식"},
     {"id": "lettering", "name": "레터링"},
-    {"id": "season", "name": "계절"}
+    {"id": "season", "name": "계절"},
+    {"id": "masking-tape", "name": "마스킹테이프"}
   ],
   "stickers": [
     {"id": "airplane", "name": "비행기", "category": "travel",
@@ -333,6 +340,538 @@
     {"id": "cocoa", "name": "코코아", "category": "season",
      "imageUrl": "/images/diary/stickers/season/cocoa.svg"},
     {"id": "christmas-tree", "name": "크리스마스트리", "category": "season",
-     "imageUrl": "/images/diary/stickers/season/christmas-tree.svg"}
+     "imageUrl": "/images/diary/stickers/season/christmas-tree.svg"},
+
+    {"id": "tape-cloud-sky", "name": "구름 하늘 테이프", "category": "masking-tape",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-cloud-sky.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-cloud-sky-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-cloud-sky-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-cloud-sky-right.svg"
+     }},
+    {"id": "tape-night-star", "name": "밤하늘 별 테이프", "category": "masking-tape",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-night-star.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-night-star-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-night-star-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-night-star-right.svg"
+     }},
+    {"id": "tape-cloud-mint", "name": "민트 구름 테이프", "category": "masking-tape",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-cloud-mint.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-cloud-mint-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-cloud-mint-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-cloud-mint-right.svg"
+     }},
+    {"id": "tape-rainbow-sky", "name": "무지개 하늘 테이프", "category": "masking-tape",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-rainbow-sky.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-rainbow-sky-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-rainbow-sky-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-rainbow-sky-right.svg"
+     }},
+    {"id": "tape-rabbit-pink", "name": "토끼 테이프", "category": "masking-tape",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-rabbit-pink.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-rabbit-pink-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-rabbit-pink-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-rabbit-pink-right.svg"
+     }},
+    {"id": "tape-cat-cream", "name": "고양이 테이프", "category": "masking-tape",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-cat-cream.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-cat-cream-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-cat-cream-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-cat-cream-right.svg"
+     }},
+    {"id": "tape-bear-beige", "name": "곰 테이프", "category": "masking-tape",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-bear-beige.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-bear-beige-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-bear-beige-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-bear-beige-right.svg"
+     }},
+    {"id": "tape-duck-yellow", "name": "오리 테이프", "category": "masking-tape",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-duck-yellow.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-duck-yellow-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-duck-yellow-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-duck-yellow-right.svg"
+     }},
+    {"id": "tape-bird-sky", "name": "작은 새 테이프", "category": "masking-tape",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-bird-sky.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-bird-sky-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-bird-sky-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-bird-sky-right.svg"
+     }},
+    {"id": "tape-puppy-apricot", "name": "강아지 테이프", "category": "masking-tape",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-puppy-apricot.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-puppy-apricot-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-puppy-apricot-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-puppy-apricot-right.svg"
+     }},
+    {"id": "tape-flower-beige", "name": "들꽃 테이프", "category": "masking-tape",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-flower-beige.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-flower-beige-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-flower-beige-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-flower-beige-right.svg"
+     }},
+    {"id": "tape-leaf-green", "name": "잎사귀 테이프", "category": "masking-tape",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-leaf-green.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-leaf-green-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-leaf-green-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-leaf-green-right.svg"
+     }},
+    {"id": "tape-daisy-ivory", "name": "데이지 테이프", "category": "masking-tape",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-daisy-ivory.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-daisy-ivory-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-daisy-ivory-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-daisy-ivory-right.svg"
+     }},
+    {"id": "tape-tulip-pink", "name": "튤립 테이프", "category": "masking-tape",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-tulip-pink.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-tulip-pink-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-tulip-pink-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-tulip-pink-right.svg"
+     }},
+    {"id": "tape-check-mint", "name": "민트 체크 테이프", "category": "masking-tape",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-check-mint.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-check-mint-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-check-mint-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-check-mint-right.svg"
+     }},
+    {"id": "tape-dot-lavender", "name": "연보라 도트 테이프", "category": "masking-tape",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-dot-lavender.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-dot-lavender-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-dot-lavender-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-dot-lavender-right.svg"
+     }},
+    {"id": "tape-ribbon-pink", "name": "리본 테이프", "category": "masking-tape",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-ribbon-pink.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-ribbon-pink-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-ribbon-pink-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-ribbon-pink-right.svg"
+     }},
+    {"id": "tape-lace-ivory", "name": "레이스 테이프", "category": "masking-tape",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-lace-ivory.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-lace-ivory-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-lace-ivory-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-lace-ivory-right.svg"
+     }},
+    {"id": "tape-travel-plane", "name": "비행기 구름 테이프", "category": "masking-tape",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-travel-plane.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-travel-plane-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-travel-plane-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-travel-plane-right.svg"
+     }},
+    {"id": "tape-stamp-kraft", "name": "우표 테이프", "category": "masking-tape",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-stamp-kraft.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-stamp-kraft-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-stamp-kraft-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-stamp-kraft-right.svg"
+     }},
+    {"id": "tape-map-route", "name": "지도 경로 테이프", "category": "masking-tape",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-map-route.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-map-route-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-map-route-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-map-route-right.svg"
+     }},
+    {"id": "tape-doodle-note", "name": "손글씨 낙서 테이프", "category": "masking-tape",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-doodle-note.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-doodle-note-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-doodle-note-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-doodle-note-right.svg"
+     }},
+
+    {"id": "tape-clear-flower", "name": "투명 들꽃 테이프", "category": "masking-tape",
+     "tapeType": "TRANSLUCENT",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-clear-flower.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-clear-flower-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-clear-flower-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-clear-flower-right.svg"
+     }},
+    {"id": "tape-clear-leaf", "name": "투명 잎사귀 테이프", "category": "masking-tape",
+     "tapeType": "TRANSLUCENT",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-clear-leaf.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-clear-leaf-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-clear-leaf-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-clear-leaf-right.svg"
+     }},
+    {"id": "tape-clear-star", "name": "투명 반짝이 테이프", "category": "masking-tape",
+     "tapeType": "TRANSLUCENT",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-clear-star.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-clear-star-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-clear-star-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-clear-star-right.svg"
+     }},
+    {"id": "tape-clear-heart", "name": "투명 하트 테이프", "category": "masking-tape",
+     "tapeType": "TRANSLUCENT",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-clear-heart.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-clear-heart-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-clear-heart-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-clear-heart-right.svg"
+     }},
+    {"id": "tape-clear-cloud", "name": "투명 구름 테이프", "category": "masking-tape",
+     "tapeType": "TRANSLUCENT",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-clear-cloud.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-clear-cloud-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-clear-cloud-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-clear-cloud-right.svg"
+     }},
+    {"id": "tape-clear-paw", "name": "투명 발자국 테이프", "category": "masking-tape",
+     "tapeType": "TRANSLUCENT",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-clear-paw.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-clear-paw-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-clear-paw-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-clear-paw-right.svg"
+     }},
+    {"id": "tape-clear-travel", "name": "투명 여행 테이프", "category": "masking-tape",
+     "tapeType": "TRANSLUCENT",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-clear-travel.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-clear-travel-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-clear-travel-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-clear-travel-right.svg"
+     }},
+
+    {"id": "tape-glass-flower", "name": "클리어 들꽃 테이프", "category": "masking-tape",
+     "tapeType": "CLEAR",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-glass-flower.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-glass-flower-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-glass-flower-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-glass-flower-right.svg"
+     }},
+    {"id": "tape-glass-star", "name": "클리어 반짝이 테이프", "category": "masking-tape",
+     "tapeType": "CLEAR",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-glass-star.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-glass-star-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-glass-star-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-glass-star-right.svg"
+     }},
+    {"id": "tape-glass-heart", "name": "클리어 하트 테이프", "category": "masking-tape",
+     "tapeType": "CLEAR",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-glass-heart.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-glass-heart-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-glass-heart-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-glass-heart-right.svg"
+     }},
+    {"id": "tape-glass-cloud", "name": "클리어 구름 테이프", "category": "masking-tape",
+     "tapeType": "CLEAR",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-glass-cloud.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-glass-cloud-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-glass-cloud-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-glass-cloud-right.svg"
+     }},
+    {"id": "tape-glass-paw", "name": "클리어 발자국 테이프", "category": "masking-tape",
+     "tapeType": "CLEAR",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-glass-paw.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-glass-paw-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-glass-paw-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-glass-paw-right.svg"
+     }},
+    {"id": "tape-glass-travel", "name": "클리어 여행 테이프", "category": "masking-tape",
+     "tapeType": "CLEAR",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-glass-travel.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-glass-travel-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-glass-travel-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-glass-travel-right.svg"
+     }},
+
+    {"id": "tape-soft-blossom", "name": "반투명 벚꽃 테이프", "category": "masking-tape",
+     "tapeType": "TRANSLUCENT",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-soft-blossom.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-soft-blossom-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-soft-blossom-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-soft-blossom-right.svg"
+     }},
+    {"id": "tape-soft-daisy", "name": "반투명 데이지 테이프", "category": "masking-tape",
+     "tapeType": "TRANSLUCENT",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-soft-daisy.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-soft-daisy-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-soft-daisy-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-soft-daisy-right.svg"
+     }},
+    {"id": "tape-soft-tulip", "name": "반투명 튤립 테이프", "category": "masking-tape",
+     "tapeType": "TRANSLUCENT",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-soft-tulip.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-soft-tulip-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-soft-tulip-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-soft-tulip-right.svg"
+     }},
+    {"id": "tape-soft-eucalyptus", "name": "반투명 유칼립투스 테이프", "category": "masking-tape",
+     "tapeType": "TRANSLUCENT",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-soft-eucalyptus.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-soft-eucalyptus-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-soft-eucalyptus-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-soft-eucalyptus-right.svg"
+     }},
+    {"id": "tape-soft-cherry", "name": "반투명 체리 테이프", "category": "masking-tape",
+     "tapeType": "TRANSLUCENT",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-soft-cherry.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-soft-cherry-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-soft-cherry-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-soft-cherry-right.svg"
+     }},
+    {"id": "tape-soft-berry", "name": "반투명 딸기 테이프", "category": "masking-tape",
+     "tapeType": "TRANSLUCENT",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-soft-berry.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-soft-berry-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-soft-berry-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-soft-berry-right.svg"
+     }},
+    {"id": "tape-soft-lemon", "name": "반투명 레몬 테이프", "category": "masking-tape",
+     "tapeType": "TRANSLUCENT",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-soft-lemon.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-soft-lemon-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-soft-lemon-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-soft-lemon-right.svg"
+     }},
+    {"id": "tape-soft-moon", "name": "반투명 달과 별 테이프", "category": "masking-tape",
+     "tapeType": "TRANSLUCENT",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-soft-moon.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-soft-moon-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-soft-moon-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-soft-moon-right.svg"
+     }},
+    {"id": "tape-soft-butterfly", "name": "반투명 나비 테이프", "category": "masking-tape",
+     "tapeType": "TRANSLUCENT",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-soft-butterfly.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-soft-butterfly-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-soft-butterfly-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-soft-butterfly-right.svg"
+     }},
+    {"id": "tape-soft-gingham", "name": "반투명 깅엄체크 테이프", "category": "masking-tape",
+     "tapeType": "TRANSLUCENT",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-soft-gingham.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-soft-gingham-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-soft-gingham-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-soft-gingham-right.svg"
+     }},
+    {"id": "tape-soft-dot-cream", "name": "반투명 크림 도트 테이프", "category": "masking-tape",
+     "tapeType": "TRANSLUCENT",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-soft-dot-cream.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-soft-dot-cream-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-soft-dot-cream-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-soft-dot-cream-right.svg"
+     }},
+    {"id": "tape-soft-postcard", "name": "반투명 여행 우표 테이프", "category": "masking-tape",
+     "tapeType": "TRANSLUCENT",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-soft-postcard.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-soft-postcard-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-soft-postcard-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-soft-postcard-right.svg"
+     }},
+    {"id": "tape-soft-ribbon-lace", "name": "반투명 리본 레이스 테이프", "category": "masking-tape",
+     "tapeType": "TRANSLUCENT",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-soft-ribbon-lace.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-soft-ribbon-lace-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-soft-ribbon-lace-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-soft-ribbon-lace-right.svg"
+     }},
+
+    {"id": "tape-crystal-pressed", "name": "클리어 압화 테이프", "category": "masking-tape",
+     "tapeType": "CLEAR",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-crystal-pressed.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-crystal-cap-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-crystal-pressed-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-crystal-cap-right.svg"
+     }},
+    {"id": "tape-crystal-wildflower", "name": "클리어 들꽃 테이프", "category": "masking-tape",
+     "tapeType": "CLEAR",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-crystal-wildflower.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-crystal-cap-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-crystal-wildflower-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-crystal-cap-right.svg"
+     }},
+    {"id": "tape-crystal-vine", "name": "클리어 덩굴 테이프", "category": "masking-tape",
+     "tapeType": "CLEAR",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-crystal-vine.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-crystal-cap-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-crystal-vine-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-crystal-cap-right.svg"
+     }},
+    {"id": "tape-crystal-sparkle", "name": "클리어 반짝이 테이프", "category": "masking-tape",
+     "tapeType": "CLEAR",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-crystal-sparkle.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-crystal-cap-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-crystal-sparkle-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-crystal-cap-right.svg"
+     }},
+    {"id": "tape-crystal-heartline", "name": "클리어 하트 라인 테이프", "category": "masking-tape",
+     "tapeType": "CLEAR",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-crystal-heartline.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-crystal-cap-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-crystal-heartline-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-crystal-cap-right.svg"
+     }},
+    {"id": "tape-crystal-bear", "name": "클리어 곰 테이프", "category": "masking-tape",
+     "tapeType": "CLEAR",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-crystal-bear.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-crystal-cap-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-crystal-bear-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-crystal-cap-right.svg"
+     }},
+    {"id": "tape-crystal-bunny", "name": "클리어 토끼 테이프", "category": "masking-tape",
+     "tapeType": "CLEAR",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-crystal-bunny.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-crystal-cap-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-crystal-bunny-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-crystal-cap-right.svg"
+     }},
+    {"id": "tape-crystal-cat", "name": "클리어 고양이 테이프", "category": "masking-tape",
+     "tapeType": "CLEAR",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-crystal-cat.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-crystal-cap-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-crystal-cat-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-crystal-cap-right.svg"
+     }},
+    {"id": "tape-crystal-camera", "name": "클리어 여행 소품 테이프", "category": "masking-tape",
+     "tapeType": "CLEAR",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-crystal-camera.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-crystal-cap-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-crystal-camera-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-crystal-cap-right.svg"
+     }},
+    {"id": "tape-crystal-postmark", "name": "클리어 우표 소인 테이프", "category": "masking-tape",
+     "tapeType": "CLEAR",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-crystal-postmark.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-crystal-cap-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-crystal-postmark-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-crystal-cap-right.svg"
+     }},
+    {"id": "tape-crystal-script", "name": "클리어 손글씨 테이프", "category": "masking-tape",
+     "tapeType": "CLEAR",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-crystal-script.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-crystal-cap-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-crystal-script-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-crystal-cap-right.svg"
+     }},
+    {"id": "tape-crystal-ribbon", "name": "클리어 리본 테이프", "category": "masking-tape",
+     "tapeType": "CLEAR",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-crystal-ribbon.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-crystal-cap-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-crystal-ribbon-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-crystal-cap-right.svg"
+     }},
+    {"id": "tape-crystal-checkline", "name": "클리어 라인 체크 테이프", "category": "masking-tape",
+     "tapeType": "CLEAR",
+     "imageUrl": "/images/diary/stickers/masking-tape/tape-crystal-checkline.svg",
+     "renderMode": "REPEAT_X",
+     "repeat": {
+       "left": "/images/diary/stickers/masking-tape/repeat/tape-crystal-cap-left.svg",
+       "center": "/images/diary/stickers/masking-tape/repeat/tape-crystal-checkline-center.svg",
+       "right": "/images/diary/stickers/masking-tape/repeat/tape-crystal-cap-right.svg"
+     }}
   ]
 }

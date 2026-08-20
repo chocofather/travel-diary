@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 40" role="img"
+     aria-label="들꽃 마스킹테이프 무늬">
+  <rect width="52" height="40" fill="#f1e7d5"/>
+  <!-- 잔가지 위에 흰 들꽃 -->
+  <g fill="none" stroke="#a8bb8f" stroke-width="1.6" stroke-linecap="round">
+    <path d="M16 34v-9M16 30l-4-3M16 28l4-3"/>
+  </g>
+  <g transform="translate(16 20)">
+    <g fill="#ffffff">
+      <ellipse cx="0" cy="-4.4" rx="2.6" ry="3.4"/>
+      <ellipse cx="4.2" cy="-1.4" rx="3.4" ry="2.6"/>
+      <ellipse cx="2.6" cy="3.6" rx="2.8" ry="3.2"/>
+      <ellipse cx="-2.6" cy="3.6" rx="2.8" ry="3.2"/>
+      <ellipse cx="-4.2" cy="-1.4" rx="3.4" ry="2.6"/>
+    </g>
+    <circle cx="0" cy="0" r="2.2" fill="#e8b96f"/>
+  </g>
+  <g fill="#d9c8a5">
+    <circle cx="38" cy="16" r="1.8"/>
+    <circle cx="42" cy="27" r="1.3"/>
+  </g>
+</svg>

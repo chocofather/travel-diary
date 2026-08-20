@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" preserveAspectRatio="none"
+     role="img" aria-label="클리어 반짝이 마스킹테이프 스티커">
+  <defs>
+    <clipPath id="tape">
+      <path d="M10 6H150l-4 4 4 4-4 4 4 4-4 4 4 4-4 4H10l4-4-4-4 4-4-4-4 4-4-4-4Z"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="160" height="40" fill="#ffffff" fill-opacity="0.1"/>
+    <g fill="#dcae51">
+      <path d="M28 12l1.7 4 4.3.5-3.2 2.9.9 4.2-3.7-2.2-3.7 2.2.9-4.2-3.2-2.9 4.3-.5Z"/>
+      <path d="M80 12l1.7 4 4.3.5-3.2 2.9.9 4.2-3.7-2.2-3.7 2.2.9-4.2-3.2-2.9 4.3-.5Z"/>
+      <path d="M132 12l1.7 4 4.3.5-3.2 2.9.9 4.2-3.7-2.2-3.7 2.2.9-4.2-3.2-2.9 4.3-.5Z"/>
+    </g>
+    <g fill="#b8a7d6">
+      <path d="M54 24l.9 2.2 2.3.3-1.7 1.5.5 2.3-2-1.2-2 1.2.5-2.3-1.7-1.5 2.3-.3Z"/>
+      <path d="M106 24l.9 2.2 2.3.3-1.7 1.5.5 2.3-2-1.2-2 1.2.5-2.3-1.7-1.5 2.3-.3Z"/>
+      <circle cx="54" cy="14" r="1.6"/><circle cx="106" cy="14" r="1.6"/>
+      <circle cx="16" cy="26" r="1.4"/><circle cx="150" cy="15" r="1.4"/>
+    </g>
+  </g>
+</svg>

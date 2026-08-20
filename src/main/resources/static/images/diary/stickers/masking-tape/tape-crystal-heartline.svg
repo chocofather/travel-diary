@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" preserveAspectRatio="none"
+     role="img" aria-label="클리어 하트 라인 마스킹테이프 스티커">
+  <defs>
+    <clipPath id="tape">
+      <path d="M10 6H150l-4 4 4 4-4 4 4 4-4 4 4 4-4 4H10l4-4-4-4 4-4-4-4 4-4-4-4Z"/>
+    </clipPath>
+    <path id="line-heart" d="M0 6.4C-4.6 3-7 .4-7-2.4-7-5 -4.6-6.4-2.6-5.2-1.4-4.4-.4-3.2 0-2.2
+                             .4-3.2 1.4-4.4 2.6-5.2 4.6-6.4 7-5 7-2.4 7 .4 4.6 3 0 6.4Z"/>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="160" height="40" fill="#ffffff" fill-opacity="0.1"/>
+    <!-- 가는 선 위에 빈 하트가 이어 달린다 -->
+    <path d="M0 20h160" fill="none" stroke="#e0aeb8" stroke-width="1.2"/>
+    <g fill="none" stroke="#d3808f" stroke-width="1.5" stroke-linejoin="round">
+      <use href="#line-heart" x="24" y="20"/>
+      <use href="#line-heart" x="64" y="20"/>
+      <use href="#line-heart" x="104" y="20"/>
+      <use href="#line-heart" x="144" y="20"/>
+    </g>
+    <g fill="#e8bcc4">
+      <circle cx="44" cy="20" r="1.8"/><circle cx="84" cy="20" r="1.8"/>
+      <circle cx="124" cy="20" r="1.8"/>
+    </g>
+  </g>
+</svg>

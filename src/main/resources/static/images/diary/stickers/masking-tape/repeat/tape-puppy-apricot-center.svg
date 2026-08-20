@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 40" role="img"
+     aria-label="강아지 마스킹테이프 무늬">
+  <rect width="60" height="40" fill="#f8ddc9"/>
+  <!-- 늘어진 귀 강아지 얼굴 -->
+  <g transform="translate(17 21)">
+    <ellipse cx="-8" cy="-1" rx="3.4" ry="6" fill="#d9a77a"/>
+    <ellipse cx="8" cy="-1" rx="3.4" ry="6" fill="#d9a77a"/>
+    <circle cx="0" cy="0" r="7.8" fill="#ffffff"/>
+    <circle cx="-3" cy="-1.4" r="1.2" fill="#7a6455"/>
+    <circle cx="3" cy="-1.4" r="1.2" fill="#7a6455"/>
+    <ellipse cx="0" cy="2" rx="1.6" ry="1.2" fill="#a8806a"/>
+    <path d="M-2 4.4q2 2 4 0" fill="none" stroke="#a8806a" stroke-width="1.1" stroke-linecap="round"/>
+  </g>
+  <!-- 뼈다귀 -->
+  <g fill="#eec4a4" transform="translate(38 20)">
+    <path d="M2 0h8v3H2z"/>
+    <circle cx="1" cy="0" r="2.2"/>
+    <circle cx="1" cy="3" r="2.2"/>
+    <circle cx="11" cy="0" r="2.2"/>
+    <circle cx="11" cy="3" r="2.2"/>
+  </g>
+</svg>

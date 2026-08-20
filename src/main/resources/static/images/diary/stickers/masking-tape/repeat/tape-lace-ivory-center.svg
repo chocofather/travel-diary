@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 40" role="img"
+     aria-label="레이스 마스킹테이프 무늬">
+  <rect width="18" height="40" fill="#fdf7ee"/>
+  <!-- 윗단 띠와 아랫단 물결은 마디 끝까지 이어지고, 구멍 하나가 한 마디를 이룬다 -->
+  <rect y="7" width="18" height="4" fill="#f0e3cf"/>
+  <circle cx="9" cy="17" r="2.4" fill="#f0e3cf"/>
+  <path d="M0 26h18" fill="none" stroke="#e6d6bd" stroke-width="1.2"/>
+  <path d="M0 30q4.5 4 9 0t9 0" fill="none" stroke="#e6d6bd" stroke-width="1.2"/>
+</svg>

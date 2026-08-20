@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 40" role="img"
+     aria-label="클리어 손글씨 레터링 마스킹테이프 무늬">
+  <rect width="48" height="40" fill="#ffffff" fill-opacity="0.1"/>
+  <!-- 두 획이 한 마디. 마디 끝에서 획이 끊겨 손글씨 흐름이 이어진다 -->
+  <g fill="none" stroke="#8a7f74" stroke-width="1.6" stroke-linecap="round">
+    <path d="M4 24c4-10 8-10 10-4s-3 8-6 6 0-9 8-9"/>
+    <path d="M28 16c-2 8-1 10 2 8s4-8 4-8-1 8 2 8 4-4 4-4"/>
+  </g>
+  <path d="M20 28c0-1.6 2.4-2.4 3.2-.8.8-1.6 3.2-.8 3.2.8 0 2.2-3.2 4-3.2 4S20 30.2 20 28Z"
+        fill="#c7a9a9"/>
+</svg>

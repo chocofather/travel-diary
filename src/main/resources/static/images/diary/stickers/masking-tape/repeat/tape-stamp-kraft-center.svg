@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 40" role="img"
+     aria-label="우표 마스킹테이프 무늬">
+  <rect width="56" height="40" fill="#ecdfc9"/>
+  <!-- 작은 우표 한 장 + 소인 자국 -->
+  <g transform="translate(17 20)">
+    <rect x="-11" y="-9" width="22" height="18" rx="1.5" fill="#fdf8ee"/>
+    <rect x="-8" y="-6" width="16" height="12" rx="1" fill="#cfe0ec"/>
+    <path d="M-8 6l5-5 3 3 4-4 4 6Z" fill="#a8c4a0"/>
+    <circle cx="4" cy="-2.4" r="1.8" fill="#f0c86a"/>
+  </g>
+  <g fill="none" stroke="#cdb694" stroke-width="1.4" stroke-linecap="round">
+    <path d="M38 15h10M38 19h8M38 23h10"/>
+  </g>
+</svg>

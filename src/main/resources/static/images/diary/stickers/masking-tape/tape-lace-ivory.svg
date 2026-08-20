@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" preserveAspectRatio="none" role="img" aria-label="레이스 마스킹테이프 스티커">
+  <!-- 아래쪽만 물결로 잘린 레이스 띠 -->
+  <defs>
+    <clipPath id="tape">
+      <path d="M8 7H152v18q-9 0-9 5t-9 0-9 5-9-5-9 0-9-5-9 5-9-5-9 0-9 5-9-5-9 0-9-5-9 5-9-5-9 0-9-5Z"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="160" height="40" fill="#fdf7ee"/>
+    <!-- 윗단 굵은 띠 + 구멍 무늬 -->
+    <rect y="7" width="160" height="4" fill="#f0e3cf"/>
+    <g fill="#f0e3cf">
+      <circle cx="16" cy="17" r="2.4"/>
+      <circle cx="34" cy="17" r="2.4"/>
+      <circle cx="52" cy="17" r="2.4"/>
+      <circle cx="70" cy="17" r="2.4"/>
+      <circle cx="88" cy="17" r="2.4"/>
+      <circle cx="106" cy="17" r="2.4"/>
+      <circle cx="124" cy="17" r="2.4"/>
+      <circle cx="142" cy="17" r="2.4"/>
+    </g>
+    <g fill="none" stroke="#e6d6bd" stroke-width="1.2">
+      <path d="M0 23h160"/>
+      <path d="M8 27q6 4 12 0t12 0 12 0 12 0 12 0 12 0 12 0 12 0 12 0 12 0 12 0"/>
+    </g>
+  </g>
+</svg>

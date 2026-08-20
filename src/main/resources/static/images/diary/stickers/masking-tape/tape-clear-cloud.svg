@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" preserveAspectRatio="none"
+     role="img" aria-label="투명 구름 마스킹테이프 스티커">
+  <defs>
+    <clipPath id="tape">
+      <path d="M10 6H150l-4 4 4 4-4 4 4 4-4 4 4 4-4 4H10l4-4-4-4 4-4-4-4 4-4-4-4Z"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="160" height="40" fill="#e4eff8" fill-opacity="0.5"/>
+    <g fill="#ffffff" fill-opacity="0.92">
+      <ellipse cx="30" cy="22" rx="10" ry="4.6"/>
+      <circle cx="25.5" cy="19.4" r="4.4"/><circle cx="33.5" cy="18.4" r="5.4"/>
+      <ellipse cx="82" cy="22" rx="10" ry="4.6"/>
+      <circle cx="77.5" cy="19.4" r="4.4"/><circle cx="85.5" cy="18.4" r="5.4"/>
+      <ellipse cx="134" cy="22" rx="10" ry="4.6"/>
+      <circle cx="129.5" cy="19.4" r="4.4"/><circle cx="137.5" cy="18.4" r="5.4"/>
+    </g>
+    <g fill="#8fb6d6" fill-opacity="0.85">
+      <circle cx="56" cy="15" r="1.7"/><circle cx="108" cy="15" r="1.7"/>
+      <circle cx="58" cy="28" r="1.4"/><circle cx="110" cy="28" r="1.4"/>
+    </g>
+  </g>
+</svg>

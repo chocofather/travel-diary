@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 40" role="img"
+     aria-label="데이지 마스킹테이프 무늬">
+  <rect width="48" height="40" fill="#fbf6ec"/>
+  <g transform="translate(16 20)">
+    <g fill="#ffffff">
+      <ellipse cx="0" cy="-5" rx="2.2" ry="3.6"/>
+      <ellipse cx="0" cy="5" rx="2.2" ry="3.6"/>
+      <ellipse cx="-5" cy="0" rx="3.6" ry="2.2"/>
+      <ellipse cx="5" cy="0" rx="3.6" ry="2.2"/>
+      <ellipse cx="-3.6" cy="-3.6" rx="3" ry="2" transform="rotate(45 -3.6 -3.6)"/>
+      <ellipse cx="3.6" cy="3.6" rx="3" ry="2" transform="rotate(45 3.6 3.6)"/>
+      <ellipse cx="3.6" cy="-3.6" rx="3" ry="2" transform="rotate(-45 3.6 -3.6)"/>
+      <ellipse cx="-3.6" cy="3.6" rx="3" ry="2" transform="rotate(-45 -3.6 3.6)"/>
+    </g>
+    <circle cx="0" cy="0" r="2.4" fill="#f0c86a"/>
+  </g>
+  <g fill="#cfe0c4">
+    <ellipse cx="36" cy="15" rx="4.4" ry="2.2" transform="rotate(-20 36 15)"/>
+    <ellipse cx="34" cy="26" rx="4.4" ry="2.2" transform="rotate(20 34 26)"/>
+  </g>
+</svg>

@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 40"
+     role="img" aria-label="고양이 마스킹테이프 무늬">
+  <!--
+    되풀이되는 한 마디: 고양이 얼굴 + 발자국.
+    좌우 끝은 바탕색만 남겨 두어 옆 마디와 이어 붙여도 이음새가 보이지 않는다.
+    화면에서는 높이에만 맞추고 가로는 이 비율 그대로 되풀이된다. (그림이 늘어나지 않는다)
+  -->
+  <rect width="56" height="40" fill="#f6ebd8"/>
+
+  <!-- 삼각 귀 + 수염만 있는 단순한 고양이 얼굴 (완성형 테이프와 같은 그림) -->
+  <g transform="translate(17 20)">
+    <path d="M-8-3-6.5-10-1.5-6.5 1.5-6.5 6.5-10 8-3Z" fill="#ffffff"/>
+    <circle cx="0" cy="0" r="7.6" fill="#ffffff"/>
+    <circle cx="-2.8" cy="-1" r="1.1" fill="#7a6455"/>
+    <circle cx="2.8" cy="-1" r="1.1" fill="#7a6455"/>
+    <path d="M0 1.6 -1.4 3 1.4 3Z" fill="#e8a79f"/>
+    <g stroke="#c9b49c" stroke-width="1" stroke-linecap="round">
+      <path d="M-5 1h-4M-5 3.4l-4 1M5 1h4M5 3.4l4 1"/>
+    </g>
+  </g>
+
+  <!-- 발자국 -->
+  <g fill="#dcc8a8" transform="translate(41 21)">
+    <circle cx="0" cy="0" r="2.6"/>
+    <circle cx="-3" cy="-3.6" r="1.1"/>
+    <circle cx="0" cy="-4.4" r="1.1"/>
+    <circle cx="3" cy="-3.4" r="1.1"/>
+  </g>
+</svg>

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 40" preserveAspectRatio="none"
+     role="img" aria-label="클리어 여행 마스킹테이프 왼쪽 끝">
+  <defs>
+    <clipPath id="cap">
+      <path d="M18 0H4l4 5-4 5 4 5-4 5 4 5-4 5 4 5-4 5h14Z"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#cap)">
+    <rect width="18" height="40" fill="#ffffff" fill-opacity="0.1"/>
+    <path d="M0 27h18" fill="none" stroke="#7f97ac" stroke-width="1.6"
+          stroke-linecap="round" stroke-dasharray="1 6"/>
+  </g>
+</svg>

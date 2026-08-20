@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" preserveAspectRatio="none"
+     role="img" aria-label="반투명 크림 도트 마스킹테이프 스티커">
+  <defs>
+    <clipPath id="tape">
+      <path d="M10 6H150l-4 4 4 4-4 4 4 4-4 4 4 4-4 4H10l4-4-4-4 4-4-4-4 4-4-4-4Z"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="160" height="40" fill="#f5eee1" fill-opacity="0.55"/>
+    <!-- 큰 도트와 작은 도트를 엇갈려 둔 잔잔한 무늬 -->
+    <g fill="#ffffff" fill-opacity="0.95">
+      <circle cx="16" cy="14" r="4"/><circle cx="44" cy="26" r="4"/>
+      <circle cx="72" cy="14" r="4"/><circle cx="100" cy="26" r="4"/>
+      <circle cx="128" cy="14" r="4"/><circle cx="152" cy="26" r="4"/>
+    </g>
+    <g fill="#d9c4a4" fill-opacity="0.9">
+      <circle cx="30" cy="27" r="1.9"/><circle cx="58" cy="15" r="1.9"/>
+      <circle cx="86" cy="27" r="1.9"/><circle cx="114" cy="15" r="1.9"/>
+      <circle cx="142" cy="27" r="1.9"/>
+    </g>
+  </g>
+</svg>

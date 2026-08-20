@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" preserveAspectRatio="none" role="img" aria-label="민트 체크 마스킹테이프 스티커">
+  <defs>
+    <clipPath id="tape">
+      <path d="M10 6H150l-4 4 4 4-4 4 4 4-4 4 4 4-4 4H10l4-4-4-4 4-4-4-4 4-4-4-4Z"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="160" height="40" fill="#dff0ea"/>
+    <!-- 굵은 흰 격자 위에 가는 선을 한 겹 더 얹은 체크 -->
+    <g stroke="#ffffff" stroke-width="6">
+      <path d="M0 14h160M0 28h160"/>
+      <path d="M20 0v40M52 0v40M84 0v40M116 0v40M148 0v40"/>
+    </g>
+    <g stroke="#a9d8c6" stroke-width="1.2">
+      <path d="M0 10h160M0 32h160"/>
+      <path d="M36 0v40M68 0v40M100 0v40M132 0v40"/>
+    </g>
+  </g>
+</svg>

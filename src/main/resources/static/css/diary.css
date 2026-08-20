@@ -1848,12 +1848,24 @@
 
 /* 종이: 무늬(있으면) → 종이 질감 → 종이 기본색 순으로 겹친다.
    질감은 모두 background 층이라 본문/사진 클릭을 가로막지 않는다. */
+/*
+ * 종이 한 장은 읽기(2면 펼침)와 편집(1면 크게)에서 크기만 다르고 좌표계는 같다.
+ * - 비율(aspect-ratio)을 고정해 세로 위치의 % 가 두 화면에서 같은 자리를 가리키고,
+ * - 안쪽 여백/글자/줄 간격을 모두 종이 너비에 비례한 단위(--diary-page-unit)로 그린다.
+ * 그래서 자유배치 요소(상대좌표)와 본문의 겹침이 두 화면에서 똑같이 재현된다.
+ * (자유배치 층 .diary-canvas 는 예전처럼 이 종이를 inset:0 으로 덮는다)
+ */
 .diary-sheet {
     position: relative;
+    box-sizing: border-box;
     display: flex;
-    min-height: 520px;
+    aspect-ratio: 41 / 38;
     flex-direction: column;
-    padding: 30px 30px 40px;
+    /* 종이 너비 576px 짜리 한 장을 기준으로 삼는다. (읽기 화면의 한 면 크기)
+       좁은 화면에서는 읽기/편집 종이 너비가 같아지므로 최소값을 둬도 두 화면이 어긋나지 않는다. */
+    container-type: inline-size;
+    --diary-page-unit: max(0.87px, 100cqw / 576);
+    padding: 5.2% 5.2% 6.95%;
     background: var(--diary-paper-texture), var(--diary-paper-color);
 }
 
@@ -1863,13 +1875,19 @@
     background: var(--diary-paper-texture), var(--diary-paper-color);
 }
 
+/*
+ * 무늬 간격도 종이 크기에 비례한다. (줄노트 간격이 본문 줄 간격과 계속 맞물린다)
+ * 무늬는 종이 자신에게 그려지므로 종이 안쪽 단위(--diary-page-unit) 대신 %를 쓴다.
+ * 종이 비율이 고정이라 %도 결국 같은 비율로 커지고 줄어든다.
+ * (기준 한 장 576 x 534: 줄 간격 30px = 세로 5.62%)
+ */
 .diary-sheet-bg-lined {
     background:
         repeating-linear-gradient(
             0deg,
             rgba(255, 255, 255, 0) 0,
-            rgba(255, 255, 255, 0) 29px,
-            rgba(150, 128, 96, 0.17) 30px
+            rgba(255, 255, 255, 0) 5.43%,
+            rgba(150, 128, 96, 0.17) 5.62%
         ),
         var(--diary-paper-texture),
         var(--diary-paper-color);
@@ -1880,14 +1898,14 @@
         repeating-linear-gradient(
             0deg,
             rgba(255, 255, 255, 0) 0,
-            rgba(255, 255, 255, 0) 23px,
-            rgba(150, 128, 96, 0.13) 24px
+            rgba(255, 255, 255, 0) 4.31%,
+            rgba(150, 128, 96, 0.13) 4.49%
         ),
         repeating-linear-gradient(
             90deg,
             rgba(255, 255, 255, 0) 0,
-            rgba(255, 255, 255, 0) 23px,
-            rgba(150, 128, 96, 0.13) 24px
+            rgba(255, 255, 255, 0) 3.99%,
+            rgba(150, 128, 96, 0.13) 4.17%
         ),
         var(--diary-paper-texture),
         var(--diary-paper-color);
@@ -1896,7 +1914,7 @@
 .diary-sheet-bg-dot {
     background:
         radial-gradient(rgba(150, 128, 96, 0.3) 1px, rgba(255, 255, 255, 0) 1.4px)
-            0 0 / 22px 22px,
+            0 0 / 3.82% 4.12%,
         var(--diary-paper-texture),
         var(--diary-paper-color);
 }
@@ -1972,7 +1990,7 @@
 .diary-sheet-head {
     display: flex;
     flex-direction: column;
-    padding-bottom: 7px;
+    padding-bottom: calc(7 * var(--diary-page-unit));
     border-bottom: 1px solid rgba(150, 128, 96, 0.24);
 }
 
@@ -1980,7 +1998,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
+    gap: calc(10 * var(--diary-page-unit));
 }
 
 /* 페이지 설정/삭제는 날짜 옆의 작은 보조 액션. 두 액션의 높이/기준선을 맞춘다. */
@@ -2207,7 +2225,7 @@
 .diary-sheet-date {
     flex: 0 0 auto;
     color: #8a7b62;
-    font-size: 13px;
+    font-size: calc(13 * var(--diary-page-unit));
     font-weight: 700;
     letter-spacing: 0.02em;
 }
@@ -2218,7 +2236,7 @@
     flex: 1;
     overflow: hidden;
     color: #7e7364;
-    font-size: 13px;
+    font-size: calc(13 * var(--diary-page-unit));
     letter-spacing: 0.01em;
     text-align: right;
     text-overflow: ellipsis;
@@ -2229,14 +2247,14 @@
 .diary-sheet-header-input {
     min-width: 0;
     flex: 1;
-    padding: 2px 4px;
+    padding: calc(2 * var(--diary-page-unit)) calc(4 * var(--diary-page-unit));
     border: 0;
     border-bottom: 1px solid transparent;
     border-radius: 3px;
     background: none;
     color: #7e7364;
     font-family: inherit;
-    font-size: 13px;
+    font-size: calc(13 * var(--diary-page-unit));
     letter-spacing: 0.01em;
     text-align: right;
     text-overflow: ellipsis;
@@ -2270,10 +2288,10 @@
     display: flex;
     flex: 1;
     flex-direction: column;
-    gap: 14px;
+    gap: calc(14 * var(--diary-page-unit));
     min-height: 0;
     /* 구분선 아래에서 본문이 바로 이어지도록 좁게 둔다 */
-    padding-top: 10px;
+    padding-top: calc(10 * var(--diary-page-unit));
 }
 
 /* 글쓰기 층. 종이 안에서만 스크롤되므로 사진 좌표(상대값) 기준은 그대로 유지된다. */
@@ -2313,14 +2331,15 @@
 }
 
 /* 편집/읽기 모두 같은 종이 글꼴과 줄간격을 쓴다 */
+/* 본문도 종이 너비에 비례해 그린다. (읽기/편집에서 글자와 자유배치 요소의 겹침이 같아진다) */
 .diary-editor .ql-editor,
 .diary-editor.is-read-only {
     width: 100%;
     height: 100%;
     padding: 0;
     color: #3b352d;
-    font-size: 15px;
-    line-height: 30px; /* 줄노트 배경 간격과 맞춘다 */
+    font-size: calc(15 * var(--diary-page-unit));
+    line-height: calc(30 * var(--diary-page-unit)); /* 줄노트 배경 간격과 맞춘다 */
     overflow-y: auto;
     overflow-wrap: anywhere;
 }
@@ -2721,7 +2740,8 @@
     top: calc(100% + 6px);
     left: 0;
     display: flex;
-    width: min(268px, calc(100vw - 32px));
+    /* 붙이기 전에 그림을 알아볼 수 있을 만큼은 넓게. (화면 밖으로는 나가지 않는다) */
+    width: min(416px, calc(100vw - 32px));
     flex-direction: column;
     gap: 6px;
     padding: 8px;
@@ -2776,17 +2796,65 @@
 
 /* 스티커가 많아져도 이 안에서만 스크롤된다 */
 .diary-sticker-panels {
-    max-height: 216px;
+    max-height: 300px;
     overflow-y: auto;
 }
 
+/* 그림을 알아볼 만큼은 크게, 한 화면에 여러 개가 들어올 만큼은 작게 */
 .diary-sticker-grid {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 4px;
+    gap: 5px;
+}
+
+/* 마스킹테이프 묶음은 띠가 보이도록 두 줄만 놓는다 */
+.diary-sticker-grid[data-sticker-category="masking-tape"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .diary-sticker-grid[hidden] {
+    display: none;
+}
+
+/* 마스킹테이프 묶음 안의 작은 갈래. 위 분류 탭보다 한 단계 약하게 둔다. */
+.diary-sticker-subfilter {
+    display: flex;
+    grid-column: 1 / -1;
+    gap: 4px;
+    padding: 0 1px 4px;
+}
+
+.diary-sticker-subtab {
+    padding: 2px 9px;
+    border: 1px solid #ece4d7;
+    border-radius: 999px;
+    background: none;
+    color: #9a8f7f;
+    font-family: inherit;
+    font-size: 11.5px;
+    line-height: 1.6;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.diary-sticker-subtab:hover {
+    background: #f7f3ec;
+    color: #6f5a3c;
+}
+
+.diary-sticker-subtab.is-active {
+    border-color: #e0d6c6;
+    background: #f5eee1;
+    color: #5c4a31;
+}
+
+.diary-sticker-subtab:focus-visible {
+    outline: 2px solid #b39a75;
+    outline-offset: -2px;
+}
+
+/* 갈래로 걸러 낸 테이프는 자리도 차지하지 않는다 */
+.diary-sticker-option[hidden] {
     display: none;
 }
 
@@ -2810,6 +2878,19 @@
     border-radius: 8px;
     background: none;
     cursor: pointer;
+}
+
+/* 마스킹테이프는 띠 그대로 얇고 길게 본다. 섞여 있는 '최근' 탭에서는 두 칸을 이어 쓴다.
+   (일반 스티커 칸 크기와 서로 영향을 주지 않게 여기서만 값을 정한다) */
+.diary-sticker-option[data-sticker-kind="masking-tape"] {
+    aspect-ratio: 18 / 5;
+    grid-column: span 2;
+    padding: 2px;
+}
+
+/* 마스킹테이프 묶음 안에서는 이미 2열이라 칸을 더 이어 붙이지 않는다 */
+.diary-sticker-grid[data-sticker-category="masking-tape"] .diary-sticker-option {
+    grid-column: auto;
 }
 
 .diary-sticker-option:hover {
@@ -3130,11 +3211,9 @@
     justify-content: center;
 }
 
+/* 편집은 한 장을 크게 본다. 안쪽 여백/글자 크기는 종이 너비에 비례하므로 따로 정하지 않는다. */
 .diary-book-single .diary-sheet-single {
-    box-sizing: border-box;
     width: min(820px, 100%);
-    min-height: 760px;
-    padding: 40px 44px 52px;
     border: 1px solid #e0d8cb;
     border-radius: 12px;
     box-shadow: 0 10px 26px rgba(63, 52, 38, 0.14);
@@ -3215,6 +3294,11 @@
     position: absolute;
     inset: -9px;
     content: '';
+}
+
+/* 마스킹테이프는 길이만 조절하므로 좌우 화살표로 알려 준다 */
+.diary-canvas-item[data-sticker-kind="masking-tape"] .diary-resize-handle {
+    cursor: ew-resize;
 }
 
 /* 회전점: 요소 상단 중앙 바깥쪽, 짧은 연결선과 함께 */
@@ -3425,6 +3509,55 @@
     user-select: none;
 }
 
+/*
+ * 마스킹테이프는 그림 비율에 얽매이지 않고 상자를 그대로 채운다.
+ * contain 이면 길이를 늘리는 만큼 두께도 함께 커지므로, 여기서만 fill 을 쓴다.
+ * (SVG 쪽 preserveAspectRatio="none" 과 짝이다)
+ */
+.diary-sticker[data-sticker-kind="masking-tape"] img {
+    object-fit: fill;
+}
+
+/*
+ * 되풀이형 테이프: [왼쪽 끝][가운데 무늬 되풀이][오른쪽 끝].
+ * 양끝은 두께에 맞춰 비율대로만 그리고, 가운데만 가로로 되풀이된다.
+ * (완성형 그림은 대체 텍스트를 위해 남겨 두고 화면에서만 감춘다)
+ */
+.diary-sticker.is-tape-repeat > img {
+    display: none;
+}
+
+.diary-tape {
+    position: absolute;
+    display: flex;
+    overflow: hidden;
+    inset: 0;
+    pointer-events: none;
+}
+
+/* 끝 조각. 길이를 늘려도 옆으로 늘어나지 않도록 두께에 비례한 폭만 차지한다. */
+.diary-tape-cap {
+    display: block;
+    height: 100%;
+    flex: 0 0 auto;
+    aspect-ratio: 18 / 40;
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+}
+
+/* 가운데. 무늬 비율은 그대로 두고 가로로만 되풀이한다. */
+.diary-tape-fill {
+    display: block;
+    height: 100%;
+    min-width: 0;
+    flex: 1 1 auto;
+    /* 끝 조각과의 경계에 실선처럼 보이는 틈이 생기지 않게 아주 조금 겹친다 */
+    margin: 0 -0.5px;
+    background-position: left center;
+    background-repeat: repeat-x;
+    background-size: auto 100%;
+}
+
 /* 사진/스티커 삭제는 아래 액션 줄(.diary-layer-actions) 안에 함께 놓인다 */
 
 .diary-text-edit-actions {
@@ -3436,7 +3569,7 @@
 .diary-sheet-number {
     margin: 0;
     color: #a89a83;
-    font-size: 12px;
+    font-size: calc(12 * var(--diary-page-unit));
     text-align: center;
 }
 
@@ -3643,10 +3776,9 @@
         -webkit-overflow-scrolling: touch;
     }
 
+    /* 좁은 화면에서도 종이 안쪽은 같은 비율로 그려진다. (여백/글자 크기를 따로 정하지 않는다) */
     .diary-sheet {
         flex: 0 0 100%;
-        min-height: 420px;
-        padding: 24px 20px 34px;
         scroll-snap-align: start;
     }
 
@@ -3669,11 +3801,10 @@
         gap: 8px;
     }
 
-    /* 편집 모드 한 장은 화면 폭에 맞춘다 (읽기 모드 가로 스냅은 그대로) */
+    /* 편집 모드 한 장은 화면 폭에 맞춘다 (읽기 모드 가로 스냅은 그대로)
+       안쪽 여백/글자 크기는 종이 너비에 비례하므로 여기서 따로 정하지 않는다. */
     .diary-book-single .diary-sheet-single {
         width: 100%;
-        min-height: 520px;
-        padding: 24px 20px 34px;
     }
 
     .is-edit-mode .diary-toolbar,

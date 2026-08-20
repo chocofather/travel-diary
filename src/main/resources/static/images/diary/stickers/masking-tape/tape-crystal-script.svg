@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" preserveAspectRatio="none"
+     role="img" aria-label="클리어 손글씨 레터링 마스킹테이프 스티커">
+  <defs>
+    <clipPath id="tape">
+      <path d="M10 6H150l-4 4 4 4-4 4 4 4-4 4 4 4-4 4H10l4-4-4-4 4-4-4-4 4-4-4-4Z"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="160" height="40" fill="#ffffff" fill-opacity="0.1"/>
+    <!-- 흘려 쓴 손글씨처럼 이어지는 획 -->
+    <g fill="none" stroke="#8a7f74" stroke-width="1.6" stroke-linecap="round">
+      <path d="M8 24c4-10 8-10 10-4s-3 8-6 6 0-9 8-9"/>
+      <path d="M32 16c-2 8-1 10 2 8s4-8 4-8-1 8 2 8 4-4 4-4"/>
+      <path d="M56 24c4-10 8-10 10-4s-3 8-6 6 0-9 8-9"/>
+      <path d="M80 16c-2 8-1 10 2 8s4-8 4-8-1 8 2 8 4-4 4-4"/>
+      <path d="M104 24c4-10 8-10 10-4s-3 8-6 6 0-9 8-9"/>
+      <path d="M128 16c-2 8-1 10 2 8s4-8 4-8-1 8 2 8 4-4 4-4"/>
+    </g>
+    <g fill="#c7a9a9">
+      <path d="M50 27c0-1.6 2.4-2.4 3.2-.8.8-1.6 3.2-.8 3.2.8 0 2.2-3.2 4-3.2 4S50 29.2 50 27Z"/>
+      <path d="M146 27c0-1.6 2.4-2.4 3.2-.8.8-1.6 3.2-.8 3.2.8 0 2.2-3.2 4-3.2 4S146 29.2 146 27Z"/>
+    </g>
+  </g>
+</svg>

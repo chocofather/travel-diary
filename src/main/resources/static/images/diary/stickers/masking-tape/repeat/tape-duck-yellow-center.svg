@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 40" role="img"
+     aria-label="오리 마스킹테이프 무늬">
+  <rect width="52" height="40" fill="#fbf1cf"/>
+  <!-- 옆모습 아기 오리 -->
+  <g transform="translate(20 20)">
+    <ellipse cx="1" cy="3" rx="8" ry="5.6" fill="#ffffff"/>
+    <circle cx="-5" cy="-3" r="5" fill="#ffffff"/>
+    <path d="M-9.6-3.4-14-2l4.4 2Z" fill="#f0b45f"/>
+    <circle cx="-6" cy="-4" r="1.1" fill="#7a6455"/>
+    <path d="M2 2q4-2 6 1" fill="none" stroke="#f2dfae" stroke-width="1.4" stroke-linecap="round"/>
+  </g>
+  <!-- 물결은 마디 끝까지 이어져 옆 마디와 자연스럽게 붙는다 -->
+  <path d="M34 29q4-3 8 0t8 0" fill="none" stroke="#ecd9a0"
+        stroke-width="1.6" stroke-linecap="round"/>
+</svg>

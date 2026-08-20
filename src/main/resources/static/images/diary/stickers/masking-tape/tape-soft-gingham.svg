@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" preserveAspectRatio="none"
+     role="img" aria-label="반투명 깅엄체크 마스킹테이프 스티커">
+  <defs>
+    <clipPath id="tape">
+      <path d="M10 6H150l-4 4 4 4-4 4 4 4-4 4 4 4-4 4H10l4-4-4-4 4-4-4-4 4-4-4-4Z"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="160" height="40" fill="#e6eef6" fill-opacity="0.55"/>
+    <!-- 가로/세로 띠가 겹치는 곳이 진해지는 깅엄체크 -->
+    <g fill="#bcd7ea" fill-opacity="0.8">
+      <rect y="8" width="160" height="9"/>
+      <rect y="25" width="160" height="9"/>
+    </g>
+    <g fill="#bcd7ea" fill-opacity="0.8">
+      <rect x="6" width="9" height="40"/><rect x="30" width="9" height="40"/>
+      <rect x="54" width="9" height="40"/><rect x="78" width="9" height="40"/>
+      <rect x="102" width="9" height="40"/><rect x="126" width="9" height="40"/>
+      <rect x="150" width="9" height="40"/>
+    </g>
+  </g>
+</svg>

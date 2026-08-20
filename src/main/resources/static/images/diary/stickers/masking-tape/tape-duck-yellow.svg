@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" preserveAspectRatio="none" role="img" aria-label="오리 마스킹테이프 스티커">
+  <defs>
+    <clipPath id="tape">
+      <path d="M8 8L152 5L154 32L6 35Z"/>
+    </clipPath>
+    <!-- 옆모습 아기 오리 -->
+    <g id="duck">
+      <ellipse cx="1" cy="3" rx="8" ry="5.6" fill="#ffffff"/>
+      <circle cx="-5" cy="-3" r="5" fill="#ffffff"/>
+      <path d="M-9.6-3.4-14-2l4.4 2Z" fill="#f0b45f"/>
+      <circle cx="-6" cy="-4" r="1.1" fill="#7a6455"/>
+      <path d="M2 2q4-2 6 1" fill="none" stroke="#f2dfae" stroke-width="1.4" stroke-linecap="round"/>
+    </g>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="160" height="40" fill="#fbf1cf"/>
+    <use href="#duck" x="34" y="20"/>
+    <use href="#duck" x="82" y="21"/>
+    <use href="#duck" x="130" y="20"/>
+    <!-- 물결 -->
+    <g fill="none" stroke="#ecd9a0" stroke-width="1.6" stroke-linecap="round">
+      <path d="M56 28q4-3 8 0t8 0"/>
+      <path d="M104 29q4-3 8 0t8 0"/>
+      <path d="M12 26q4-3 8 0"/>
+    </g>
+  </g>
+</svg>

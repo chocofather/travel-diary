@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 40" role="img"
+     aria-label="민트 체크 마스킹테이프 무늬">
+  <rect width="32" height="40" fill="#dff0ea"/>
+  <!-- 가로줄은 마디 끝까지, 세로줄은 마디 가운데에 둬서 되풀이해도 간격이 고르다 -->
+  <g fill="none" stroke="#ffffff" stroke-width="6">
+    <path d="M0 14h32M0 28h32"/>
+    <path d="M16 0v40"/>
+  </g>
+  <g fill="none" stroke="#a9d8c6" stroke-width="1.2">
+    <path d="M0 10h32M0 32h32"/>
+    <path d="M4 0v40M28 0v40"/>
+  </g>
+</svg>

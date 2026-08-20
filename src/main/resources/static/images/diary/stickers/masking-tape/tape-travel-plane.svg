@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 38" preserveAspectRatio="none" role="img" aria-label="비행기 구름 마스킹테이프 스티커">
+  <defs>
+    <clipPath id="tape">
+      <path d="M8 7L192 4L194 30L6 33Z"/>
+    </clipPath>
+    <g id="plane">
+      <path d="M-8 2 8-4 6 1 9 4 2 4 -1 7 -2 3Z" fill="#ffffff"/>
+    </g>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="200" height="38" fill="#e4eef8"/>
+    <!-- 점선 비행운을 따라 비행기가 지나간다 -->
+    <path d="M0 26q40-14 80-6t80-12" fill="none" stroke="#b7d0e6"
+          stroke-width="1.6" stroke-linecap="round" stroke-dasharray="1 6"/>
+    <use href="#plane" x="46" y="16"/>
+    <use href="#plane" x="118" y="20"/>
+    <use href="#plane" x="182" y="10"/>
+    <g fill="#ffffff" opacity="0.85">
+      <ellipse cx="20" cy="12" rx="8" ry="3.6"/>
+      <circle cx="16" cy="10" r="3.2"/>
+      <ellipse cx="86" cy="10" rx="7" ry="3.2"/>
+      <circle cx="90" cy="8" r="3"/>
+    </g>
+  </g>
+</svg>

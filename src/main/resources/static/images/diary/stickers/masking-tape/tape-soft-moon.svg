@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" preserveAspectRatio="none"
+     role="img" aria-label="반투명 달과 별 마스킹테이프 스티커">
+  <defs>
+    <clipPath id="tape">
+      <path d="M10 6H150l-4 4 4 4-4 4 4 4-4 4 4 4-4 4H10l4-4-4-4 4-4-4-4 4-4-4-4Z"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="160" height="40" fill="#e6e6f4" fill-opacity="0.55"/>
+    <g fill="#f3e2b0" fill-opacity="0.95">
+      <path d="M26 12a8.6 8.6 0 1 0 7.6 13.4A7 7 0 0 1 26 12Z"/>
+      <path d="M104 12a8.6 8.6 0 1 0 7.6 13.4A7 7 0 0 1 104 12Z"/>
+    </g>
+    <g fill="#ffffff" fill-opacity="0.95">
+      <path d="M60 14l1.4 3.4 3.6.4-2.7 2.4.8 3.6-3.1-1.9-3.1 1.9.8-3.6-2.7-2.4 3.6-.4Z"/>
+      <path d="M138 14l1.4 3.4 3.6.4-2.7 2.4.8 3.6-3.1-1.9-3.1 1.9.8-3.6-2.7-2.4 3.6-.4Z"/>
+    </g>
+    <g fill="#c9c6e6" fill-opacity="0.9">
+      <circle cx="80" cy="15" r="1.6"/><circle cx="82" cy="28" r="1.3"/>
+      <circle cx="46" cy="28" r="1.3"/><circle cx="124" cy="28" r="1.3"/>
+    </g>
+  </g>
+</svg>

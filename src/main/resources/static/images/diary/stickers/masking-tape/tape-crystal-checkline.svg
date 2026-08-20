@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" preserveAspectRatio="none"
+     role="img" aria-label="클리어 라인 체크 마스킹테이프 스티커">
+  <defs>
+    <clipPath id="tape">
+      <path d="M10 6H150l-4 4 4 4-4 4 4 4-4 4 4 4-4 4H10l4-4-4-4 4-4-4-4 4-4-4-4Z"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="160" height="40" fill="#ffffff" fill-opacity="0.1"/>
+    <!-- 가는 선만 남긴 격자. 아래 글자가 선 사이로 그대로 읽힌다 -->
+    <g fill="none" stroke="#a8b4bd" stroke-width="1">
+      <path d="M0 12h160M0 28h160"/>
+      <path d="M12 0v40M36 0v40M60 0v40M84 0v40M108 0v40M132 0v40M156 0v40"/>
+    </g>
+    <g fill="#b9c4cc">
+      <circle cx="24" cy="20" r="1.5"/><circle cx="72" cy="20" r="1.5"/>
+      <circle cx="120" cy="20" r="1.5"/>
+    </g>
+  </g>
+</svg>

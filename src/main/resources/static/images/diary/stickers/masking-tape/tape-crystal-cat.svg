@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" preserveAspectRatio="none"
+     role="img" aria-label="클리어 고양이 마스킹테이프 스티커">
+  <defs>
+    <clipPath id="tape">
+      <path d="M10 6H150l-4 4 4 4-4 4 4 4-4 4 4 4-4 4H10l4-4-4-4 4-4-4-4 4-4-4-4Z"/>
+    </clipPath>
+    <g id="cat-face" fill="none" stroke="#8a7c6d" stroke-width="1.5" stroke-linejoin="round">
+      <path d="M-7.4-2.4-6-9.6-1.4-6.4h2.8L6-9.6 7.4-2.4"/>
+      <circle cx="0" cy="0" r="7.2"/>
+      <circle cx="-2.6" cy="-1.2" r="0.8" fill="#8a7c6d"/>
+      <circle cx="2.6" cy="-1.2" r="0.8" fill="#8a7c6d"/>
+      <path d="M-4.6 1.6h-4M-4.6 3.8l-4 1M4.6 1.6h4M4.6 3.8l4 1" stroke-width="1"
+            stroke-linecap="round"/>
+    </g>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="160" height="40" fill="#ffffff" fill-opacity="0.1"/>
+    <use href="#cat-face" x="28" y="21"/>
+    <use href="#cat-face" x="80" y="21"/>
+    <use href="#cat-face" x="132" y="21"/>
+    <g fill="#c2b6a6">
+      <circle cx="54" cy="15" r="2"/><circle cx="106" cy="15" r="2"/>
+      <circle cx="56" cy="29" r="1.4"/><circle cx="108" cy="29" r="1.4"/>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 40" role="img"
+     aria-label="반투명 크림 도트 마스킹테이프 무늬">
+  <rect width="28" height="40" fill="#f5eee1" fill-opacity="0.55"/>
+  <circle cx="7" cy="14" r="4" fill="#ffffff" fill-opacity="0.95"/>
+  <circle cx="21" cy="26" r="4" fill="#ffffff" fill-opacity="0.95"/>
+  <circle cx="21" cy="13" r="1.9" fill="#d9c4a4" fill-opacity="0.9"/>
+  <circle cx="7" cy="27" r="1.9" fill="#d9c4a4" fill-opacity="0.9"/>
+</svg>

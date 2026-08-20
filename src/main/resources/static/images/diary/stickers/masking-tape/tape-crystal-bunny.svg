@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" preserveAspectRatio="none"
+     role="img" aria-label="클리어 토끼 마스킹테이프 스티커">
+  <defs>
+    <clipPath id="tape">
+      <path d="M10 6H150l-4 4 4 4-4 4 4 4-4 4 4 4-4 4H10l4-4-4-4 4-4-4-4 4-4-4-4Z"/>
+    </clipPath>
+    <g id="bunny-face" fill="none" stroke="#b39aa6" stroke-width="1.5">
+      <path d="M-4.4-7.4c-.4-4 .4-6.6 1.4-6.6s2 2.6 1.8 6.4" stroke-linecap="round"/>
+      <path d="M4.4-7.4c.4-4-.4-6.6-1.4-6.6s-2 2.6-1.8 6.4" stroke-linecap="round"/>
+      <circle cx="0" cy="0" r="7.4"/>
+      <circle cx="-2.8" cy="-1.4" r="0.8" fill="#b39aa6"/>
+      <circle cx="2.8" cy="-1.4" r="0.8" fill="#b39aa6"/>
+      <path d="M-2 2.6q2 2 4 0" stroke-linecap="round"/>
+    </g>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="160" height="40" fill="#ffffff" fill-opacity="0.1"/>
+    <use href="#bunny-face" x="28" y="22"/>
+    <use href="#bunny-face" x="80" y="22"/>
+    <use href="#bunny-face" x="132" y="22"/>
+    <g fill="#dcc7d1">
+      <circle cx="54" cy="15" r="2"/><circle cx="106" cy="15" r="2"/>
+      <circle cx="56" cy="29" r="1.4"/><circle cx="108" cy="29" r="1.4"/>
+    </g>
+  </g>
+</svg>

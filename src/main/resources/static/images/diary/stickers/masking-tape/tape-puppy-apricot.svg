@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" preserveAspectRatio="none" role="img" aria-label="강아지 마스킹테이프 스티커">
+  <defs>
+    <clipPath id="tape">
+      <path d="M10 6H150l-4 4 4 4-4 4 4 4-4 4 4 4-4 4H10l4-4-4-4 4-4-4-4 4-4-4-4Z"/>
+    </clipPath>
+    <!-- 늘어진 귀 강아지 얼굴 -->
+    <g id="puppy">
+      <ellipse cx="-8" cy="-1" rx="3.4" ry="6" fill="#d9a77a"/>
+      <ellipse cx="8" cy="-1" rx="3.4" ry="6" fill="#d9a77a"/>
+      <circle cx="0" cy="0" r="7.8" fill="#ffffff"/>
+      <circle cx="-3" cy="-1.4" r="1.2" fill="#7a6455"/>
+      <circle cx="3" cy="-1.4" r="1.2" fill="#7a6455"/>
+      <ellipse cx="0" cy="2" rx="1.6" ry="1.2" fill="#a8806a"/>
+      <path d="M-2 4.4q2 2 4 0" fill="none" stroke="#a8806a" stroke-width="1.1" stroke-linecap="round"/>
+    </g>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="160" height="40" fill="#f8ddc9"/>
+    <use href="#puppy" x="32" y="21"/>
+    <use href="#puppy" x="84" y="21"/>
+    <use href="#puppy" x="136" y="21"/>
+    <!-- 사이사이 뼈다귀 -->
+    <g fill="#eec4a4">
+      <path d="M56 20h8v3h-8z"/>
+      <circle cx="55" cy="20" r="2.2"/>
+      <circle cx="55" cy="23" r="2.2"/>
+      <circle cx="65" cy="20" r="2.2"/>
+      <circle cx="65" cy="23" r="2.2"/>
+      <path d="M108 20h8v3h-8z"/>
+      <circle cx="107" cy="20" r="2.2"/>
+      <circle cx="107" cy="23" r="2.2"/>
+      <circle cx="117" cy="20" r="2.2"/>
+      <circle cx="117" cy="23" r="2.2"/>
+    </g>
+  </g>
+</svg>

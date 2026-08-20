@@ -13,6 +13,10 @@ document.addEventListener('DOMContentLoaded', () => {
     /** 너무 작아져 잡을 수 없는 요소가 생기지 않게 하는 최소 크기 (상대값) */
     const MIN_SIZE = 0.08;
     const MAX_SIZE = 1;
+    /** 마스킹테이프는 띠라서 일반 스티커보다 짧게도, 길게도 붙일 수 있다. */
+    const MIN_TAPE_LENGTH = 0.1;
+    /** 끝 조각 한 개의 가로세로 비율. (CSS 의 .diary-tape-cap aspect-ratio 와 같은 값) */
+    const TAPE_CAP_ASPECT = 18 / 40;
 
     /** 액션(수정/삭제 등)을 눌렀을 때는 드래그를 시작하지 않는다. */
     const isActionTarget = target =>
@@ -58,6 +62,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function setupItem(item) {
         const canvas = item.closest('.diary-canvas');
         if (!canvas) return;
+        // 같은 요소에 조작을 두 번 붙이면 한 번의 움직임이 두 번 반영돼 크기가 튄다.
+        if (item.dataset.canvasReady) return;
+        item.dataset.canvasReady = 'true';
 
         let dragging = false;
         let startPointerX = 0;
@@ -149,7 +156,35 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!handle) return;
 
         const keepsRatio = item.dataset.elementType === 'PHOTO';
+        /**
+         * 마스킹테이프는 띠라서 길이만 잡는다.
+         * 두께는 종이 높이의 몇 %밖에 안 되는 값이라, 조절점이 세로로 조금만 흔들려도
+         * 두께가 몇 배로 뛰거나 최소치에 붙어 버린다. 그래서 길이만 바꾸고 두께는 그대로 둔다.
+         * (일반 스티커/사진 동작은 그대로다)
+         */
+        const isMaskingTape = item.dataset.stickerKind === 'masking-tape';
+        /**
+         * 조절할 수 있는 가장 짧은 길이.
+         * 끝 조각을 이어 붙여 그리는 테이프는 그 두 조각이 겹치지 않을 만큼만 필요하고,
+         * 조각 폭은 두께에서 나오므로 잡은 순간의 두께로 그때그때 구한다.
+         * (고정 숫자를 크게 잡아 두면 짧은 테이프를 잡는 순간 길이가 튄다)
+         */
+        function minWidthOf(heightRatio, canvasWidth, canvasHeight) {
+            if (!isMaskingTape) return MIN_SIZE;
+            if (!item.dataset.tapeCenter) return MIN_TAPE_LENGTH;
+
+            const capsRatio = 2 * heightRatio * canvasHeight * TAPE_CAP_ASPECT / canvasWidth;
+            return Math.max(MIN_TAPE_LENGTH, capsRatio);
+        }
+
         let resizing = false;
+        // 조절을 시작한 순간의 값만 쓴다. (진행 중에는 다시 읽지 않아 값이 쌓이지 않는다)
+        let resizePointerId = null;
+        let resizeStartX = 0;
+        let resizeStartY = 0;
+        let resizeCanvasWidth = 0;
+        let resizeCanvasHeight = 0;
+        let resizeMinWidth = MIN_SIZE;
         let startWidth = 0;
         let startHeight = 0;
         let currentWidth = 0;
@@ -160,14 +195,27 @@ document.addEventListener('DOMContentLoaded', () => {
             item.style.height = `${(height * 100).toFixed(5)}%`;
         }
 
+        function limit(value, min) {
+            return Math.min(Math.max(value, min), MAX_SIZE);
+        }
+
         handle.addEventListener('pointerdown', (event) => {
             if (event.button !== 0 && event.pointerType === 'mouse') return;
 
+            const canvasWidth = canvas.clientWidth;
+            const canvasHeight = canvas.clientHeight;
+            if (canvasWidth === 0 || canvasHeight === 0) return;
+
             resizing = true;
-            startPointerX = event.clientX;
-            startPointerY = event.clientY;
+            // 조절 중에 다른 손가락이 종이를 눌러도 이 값들이 바뀌지 않게 여기서만 잡아 둔다.
+            resizePointerId = event.pointerId;
+            resizeStartX = event.clientX;
+            resizeStartY = event.clientY;
+            resizeCanvasWidth = canvasWidth;
+            resizeCanvasHeight = canvasHeight;
             startWidth = ratio(item.dataset.width);
             startHeight = ratio(item.dataset.height);
+            resizeMinWidth = minWidthOf(startHeight, canvasWidth, canvasHeight);
             currentWidth = startWidth;
             currentHeight = startHeight;
 
@@ -179,25 +227,30 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         handle.addEventListener('pointermove', (event) => {
-            if (!resizing) return;
+            if (!resizing || event.pointerId !== resizePointerId) return;
+            // 이미 버튼을 뗀 뒤에 들어온 움직임이면(창 밖에서 놓기 등) 여기서 조절을 끝낸다.
+            // 그대로 두면 다음에 조절점 위를 지나기만 해도 옛 시작점 기준으로 크기가 튄다.
+            if (event.pointerType === 'mouse' && (event.buttons & 1) === 0) {
+                finishResize(event);
+                return;
+            }
 
-            const canvasWidth = canvas.clientWidth;
-            const canvasHeight = canvas.clientHeight;
-            if (canvasWidth === 0 || canvasHeight === 0) return;
+            // 픽셀 변화량을 캔버스 크기로 나눠 상대값으로 바꾼다. (시작값 기준으로만 더한다)
+            const deltaWidth = (event.clientX - resizeStartX) / resizeCanvasWidth;
+            const deltaHeight = (event.clientY - resizeStartY) / resizeCanvasHeight;
 
-            // 픽셀 변화량을 캔버스 크기로 나눠 상대값으로 바꾼다.
-            const deltaWidth = (event.clientX - startPointerX) / canvasWidth;
-            const deltaHeight = (event.clientY - startPointerY) / canvasHeight;
-
-            let width = Math.min(Math.max(startWidth + deltaWidth, MIN_SIZE), MAX_SIZE);
+            let width = limit(startWidth + deltaWidth, resizeMinWidth);
             let height;
             if (keepsRatio && startHeight > 0) {
                 // 사진은 지금 비율을 유지한 채 대각선으로만 커지고 작아진다.
                 const aspect = startWidth / startHeight;
-                height = Math.min(Math.max(width / aspect, MIN_SIZE), MAX_SIZE);
-                width = Math.min(Math.max(height * aspect, MIN_SIZE), MAX_SIZE);
+                height = limit(width / aspect, MIN_SIZE);
+                width = limit(height * aspect, MIN_SIZE);
+            } else if (isMaskingTape) {
+                // 테이프는 잡은 순간의 두께를 그대로 두고 길이만 따라온다.
+                height = startHeight;
             } else {
-                height = Math.min(Math.max(startHeight + deltaHeight, MIN_SIZE), MAX_SIZE);
+                height = limit(startHeight + deltaHeight, MIN_SIZE);
             }
 
             currentWidth = width;
@@ -206,8 +259,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         async function finishResize(event) {
-            if (!resizing) return;
+            if (!resizing || event.pointerId !== resizePointerId) return;
             resizing = false;
+            resizePointerId = null;
             item.classList.remove('is-resizing');
             if (handle.hasPointerCapture(event.pointerId)) {
                 handle.releasePointerCapture(event.pointerId);
@@ -232,6 +286,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         handle.addEventListener('pointerup', finishResize);
         handle.addEventListener('pointercancel', finishResize);
+        // 어떤 이유로든 포인터를 놓치면(조절점이 가려짐/창 밖에서 놓기 등) 조절을 끝낸다.
+        handle.addEventListener('lostpointercapture', finishResize);
 
         // ===== 회전 =====
         const rotateHandle = item.querySelector('.diary-rotate-handle');

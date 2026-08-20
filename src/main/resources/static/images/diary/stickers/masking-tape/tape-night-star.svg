@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" preserveAspectRatio="none" role="img" aria-label="밤하늘 별 마스킹테이프 스티커">
+  <defs>
+    <clipPath id="tape">
+      <path d="M8 8L152 5L154 32L6 35Z"/>
+    </clipPath>
+    <path id="star" d="M0-5.2 1.5-1.6 5.2-1.2 2.3 1.4 3.2 5 0 3 -3.2 5 -2.3 1.4 -5.2-1.2 -1.5-1.6Z"/>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="160" height="40" fill="#cbd2ec"/>
+    <!-- 초승달 하나만 두고 나머지는 잔별로 채운다 -->
+    <path d="M40 12a9 9 0 1 0 8 14 7.4 7.4 0 0 1-8-14Z" fill="#fbeec2"/>
+    <g fill="#fffaf0">
+      <use href="#star" x="20" y="27"/>
+      <use href="#star" x="72" y="14"/>
+      <use href="#star" x="104" y="28"/>
+      <use href="#star" x="136" y="15"/>
+    </g>
+    <g fill="#e6ebfa">
+      <circle cx="58" cy="30" r="1.6"/>
+      <circle cx="88" cy="24" r="1.4"/>
+      <circle cx="120" cy="11" r="1.6"/>
+      <circle cx="148" cy="28" r="1.4"/>
+    </g>
+  </g>
+</svg>

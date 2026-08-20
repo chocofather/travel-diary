@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 40" role="img"
+     aria-label="곰 마스킹테이프 무늬">
+  <rect width="52" height="40" fill="#f0e2cd"/>
+  <g transform="translate(17 21)">
+    <circle cx="-6.4" cy="-6" r="3.4" fill="#c9a179"/>
+    <circle cx="6.4" cy="-6" r="3.4" fill="#c9a179"/>
+    <circle cx="0" cy="0" r="8" fill="#dcbb95"/>
+    <ellipse cx="0" cy="3" rx="4.6" ry="3.4" fill="#f4e6d2"/>
+    <circle cx="-3.2" cy="-1.6" r="1.1" fill="#6f5a3c"/>
+    <circle cx="3.2" cy="-1.6" r="1.1" fill="#6f5a3c"/>
+    <ellipse cx="0" cy="1.8" rx="1.4" ry="1.1" fill="#6f5a3c"/>
+    <path d="M0 2.9v1.6" fill="none" stroke="#6f5a3c" stroke-width="0.9" stroke-linecap="round"/>
+  </g>
+  <g fill="#e0c39a">
+    <circle cx="40" cy="14" r="2.2"/>
+    <circle cx="38" cy="28" r="1.4"/>
+  </g>
+</svg>

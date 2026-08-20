@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" preserveAspectRatio="none" role="img" aria-label="들꽃 마스킹테이프 스티커">
+  <defs>
+    <clipPath id="tape">
+      <path d="M10 6H150l-4 4 4 4-4 4 4 4-4 4 4 4-4 4H10l4-4-4-4 4-4-4-4 4-4-4-4Z"/>
+    </clipPath>
+    <g id="bloom">
+      <g fill="#ffffff">
+        <ellipse cx="0" cy="-4.4" rx="2.6" ry="3.4"/>
+        <ellipse cx="4.2" cy="-1.4" rx="3.4" ry="2.6"/>
+        <ellipse cx="2.6" cy="3.6" rx="2.8" ry="3.2"/>
+        <ellipse cx="-2.6" cy="3.6" rx="2.8" ry="3.2"/>
+        <ellipse cx="-4.2" cy="-1.4" rx="3.4" ry="2.6"/>
+      </g>
+      <circle cx="0" cy="0" r="2.2" fill="#e8b96f"/>
+    </g>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="160" height="40" fill="#f1e7d5"/>
+    <!-- 잔가지 위에 흰 들꽃 -->
+    <g fill="none" stroke="#a8bb8f" stroke-width="1.6" stroke-linecap="round">
+      <path d="M28 33v-8M28 29l-4-3M28 27l4-3"/>
+      <path d="M80 33v-9M80 29l4-3M80 26l-4-3"/>
+      <path d="M132 33v-8M132 29l-4-3M132 27l4-3"/>
+    </g>
+    <use href="#bloom" x="28" y="20"/>
+    <use href="#bloom" x="80" y="19"/>
+    <use href="#bloom" x="132" y="20"/>
+    <g fill="#d9c8a5">
+      <circle cx="54" cy="15" r="1.8"/>
+      <circle cx="106" cy="26" r="1.8"/>
+      <circle cx="56" cy="28" r="1.3"/>
+    </g>
+  </g>
+</svg>

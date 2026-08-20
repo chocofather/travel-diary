@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" preserveAspectRatio="none"
+     role="img" aria-label="클리어 반짝이 마스킹테이프 스티커">
+  <defs>
+    <clipPath id="tape">
+      <path d="M10 6H150l-4 4 4 4-4 4 4 4-4 4 4 4-4 4H10l4-4-4-4 4-4-4-4 4-4-4-4Z"/>
+    </clipPath>
+    <!-- 네 갈래로 뻗는 반짝임 -->
+    <path id="sparkle" d="M0-9c.6 5.2 3.2 7.8 8.4 9-5.2 1.2-7.8 3.8-8.4 9-.6-5.2-3.2-7.8-8.4-9
+                          5.2-1.2 7.8-3.8 8.4-9Z"/>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="160" height="40" fill="#ffffff" fill-opacity="0.1"/>
+    <g fill="#d9b45a">
+      <use href="#sparkle" x="26" y="20"/>
+      <use href="#sparkle" x="82" y="20"/>
+      <use href="#sparkle" x="138" y="20"/>
+    </g>
+    <g fill="#c7b9dd">
+      <path d="M54 10 55 15 60 16 55 17 54 22 53 17 48 16 53 15Z"/>
+      <path d="M110 18 111 23 116 24 111 25 110 30 109 25 104 24 109 23Z"/>
+      <circle cx="70" cy="28" r="1.6"/>
+      <circle cx="126" cy="13" r="1.6"/>
+      <circle cx="16" cy="28" r="1.5"/>
+    </g>
+  </g>
+</svg>

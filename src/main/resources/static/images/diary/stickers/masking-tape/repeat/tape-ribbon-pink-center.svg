@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 40" role="img"
+     aria-label="리본 마스킹테이프 무늬">
+  <rect width="50" height="40" fill="#faeaef"/>
+  <!-- 가는 줄은 마디 끝까지 이어지고 그 위에 리본이 걸린다 -->
+  <path d="M0 16h50" fill="none" stroke="#f3ccd6" stroke-width="1.4"/>
+  <g transform="translate(16 16)">
+    <path d="M-3-1-10-6-11 4-3 2Z" fill="#f0aebd"/>
+    <path d="M3-1 10-6 11 4 3 2Z" fill="#f0aebd"/>
+    <path d="M-2 2-5 9-1 8Z" fill="#f6c8d2"/>
+    <path d="M2 2 5 9 1 8Z" fill="#f6c8d2"/>
+    <circle cx="0" cy="0.4" r="2.4" fill="#e58fa2"/>
+  </g>
+  <circle cx="38" cy="28" r="2" fill="#f3ccd6"/>
+</svg>

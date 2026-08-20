@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" preserveAspectRatio="none" role="img" aria-label="토끼 마스킹테이프 스티커">
+  <defs>
+    <clipPath id="tape">
+      <path d="M10 6H150l-4 4 4 4-4 4 4 4-4 4 4 4-4 4H10l4-4-4-4 4-4-4-4 4-4-4-4Z"/>
+    </clipPath>
+    <!-- 직접 그린 단순한 토끼 얼굴 (긴 귀 + 볼) -->
+    <g id="rabbit">
+      <path d="M-5-8c0-4 1-7 2-7s2 3 2 7Zm6 0c0-4 1-7 2-7s2 3 2 7Z" fill="#ffffff"/>
+      <circle cx="0" cy="0" r="8.4" fill="#ffffff"/>
+      <circle cx="-3" cy="-1" r="1.2" fill="#8a6a6a"/>
+      <circle cx="3" cy="-1" r="1.2" fill="#8a6a6a"/>
+      <circle cx="-5.4" cy="2.4" r="1.7" fill="#f4b3bd"/>
+      <circle cx="5.4" cy="2.4" r="1.7" fill="#f4b3bd"/>
+      <path d="M-2 2.6q2 2 4 0" fill="none" stroke="#8a6a6a" stroke-width="1.2" stroke-linecap="round"/>
+    </g>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="160" height="40" fill="#f7dfe3"/>
+    <use href="#rabbit" x="32" y="22"/>
+    <use href="#rabbit" x="80" y="22"/>
+    <use href="#rabbit" x="128" y="22"/>
+    <g fill="#f0bcc6">
+      <circle cx="56" cy="14" r="2"/>
+      <circle cx="104" cy="14" r="2"/>
+      <circle cx="14" cy="16" r="1.6"/>
+      <circle cx="150" cy="26" r="1.6"/>
+    </g>
+  </g>
+</svg>

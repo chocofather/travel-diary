@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" preserveAspectRatio="none"
+     role="img" aria-label="반투명 딸기 마스킹테이프 스티커">
+  <defs>
+    <clipPath id="tape">
+      <path d="M10 6H150l-4 4 4 4-4 4 4 4-4 4 4 4-4 4H10l4-4-4-4 4-4-4-4 4-4-4-4Z"/>
+    </clipPath>
+    <g id="berry">
+      <path d="M-6 -2c0 6 3 11 6 13 3-2 6-7 6-13-3-2-9-2-12 0Z" fill="#e0616a"/>
+      <path d="M-6-2 -7-6l4 2 3-3 3 3 4-2-1 4c-3-2-9-2-13 0Z" fill="#8ba97f"/>
+      <g fill="#fbe3e2">
+        <circle cx="-2" cy="2" r="0.8"/><circle cx="2.4" cy="1.4" r="0.8"/>
+        <circle cx="0" cy="6" r="0.8"/><circle cx="-3" cy="6.6" r="0.8"/>
+        <circle cx="3" cy="6" r="0.8"/>
+      </g>
+    </g>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="160" height="40" fill="#fbe7e6" fill-opacity="0.55"/>
+    <use href="#berry" x="28" y="16"/>
+    <use href="#berry" x="80" y="16"/>
+    <use href="#berry" x="132" y="16"/>
+    <g fill="#f0bcbb" fill-opacity="0.9">
+      <circle cx="54" cy="14" r="2"/><circle cx="106" cy="14" r="2"/>
+      <circle cx="56" cy="28" r="1.4"/><circle cx="108" cy="28" r="1.4"/>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 38" preserveAspectRatio="none" role="img" aria-label="지도 경로 마스킹테이프 스티커">
+  <defs>
+    <clipPath id="tape">
+      <path d="M8 7L192 4L194 30L6 33Z"/>
+    </clipPath>
+    <g id="pin">
+      <path d="M0 0c-3.4 0-6-2.6-6-6 0-4 6-10 6-10s6 6 6 10c0 3.4-2.6 6-6 6Z" fill="#c96f68"/>
+      <circle cx="0" cy="-6.4" r="2.2" fill="#fdf5ec"/>
+    </g>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="200" height="38" fill="#ece5d7"/>
+    <!-- 옛 지도의 등고선 같은 잔선 -->
+    <g fill="none" stroke="#dbceb6" stroke-width="1.2">
+      <path d="M0 10q30 6 60 0t60 0 60 0"/>
+      <path d="M0 30q30-6 60 0t60 0 60 0"/>
+    </g>
+    <path d="M14 24q26-12 48 0t48-2 48 4" fill="none" stroke="#b08968"
+          stroke-width="1.8" stroke-linecap="round" stroke-dasharray="4 5"/>
+    <use href="#pin" x="62" y="26"/>
+    <use href="#pin" x="158" y="24"/>
+    <g fill="#b08968">
+      <circle cx="14" cy="24" r="2.2"/>
+      <circle cx="110" cy="22" r="2.2"/>
+    </g>
+  </g>
+</svg>

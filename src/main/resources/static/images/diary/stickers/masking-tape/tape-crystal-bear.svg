@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" preserveAspectRatio="none"
+     role="img" aria-label="클리어 곰 마스킹테이프 스티커">
+  <defs>
+    <clipPath id="tape">
+      <path d="M10 6H150l-4 4 4 4-4 4 4 4-4 4 4 4-4 4H10l4-4-4-4 4-4-4-4 4-4-4-4Z"/>
+    </clipPath>
+    <!-- 선으로만 그린 곰 얼굴 (필름이 없어도 형태가 또렷하다) -->
+    <g id="bear-face" fill="none" stroke="#a98b6a" stroke-width="1.5">
+      <circle cx="-6" cy="-6" r="3"/>
+      <circle cx="6" cy="-6" r="3"/>
+      <circle cx="0" cy="0" r="7.4"/>
+      <circle cx="-2.8" cy="-1.4" r="0.8" fill="#a98b6a"/>
+      <circle cx="2.8" cy="-1.4" r="0.8" fill="#a98b6a"/>
+      <path d="M-2 3q2 2 4 0" stroke-linecap="round"/>
+    </g>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="160" height="40" fill="#ffffff" fill-opacity="0.1"/>
+    <use href="#bear-face" x="28" y="20"/>
+    <use href="#bear-face" x="80" y="20"/>
+    <use href="#bear-face" x="132" y="20"/>
+    <g fill="#cbb49a">
+      <circle cx="54" cy="14" r="2"/><circle cx="106" cy="14" r="2"/>
+      <circle cx="56" cy="28" r="1.4"/><circle cx="108" cy="28" r="1.4"/>
+    </g>
+  </g>
+</svg>

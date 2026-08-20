@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" preserveAspectRatio="none" role="img" aria-label="연보라 도트 마스킹테이프 스티커">
+  <defs>
+    <clipPath id="tape">
+      <path d="M8 8L152 5L154 32L6 35Z"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="160" height="40" fill="#e7e1f2"/>
+    <!-- 큰 흰 물방울과 작은 보라 물방울을 엇갈려 둔다 -->
+    <g fill="#ffffff">
+      <circle cx="18" cy="14" r="4.2"/>
+      <circle cx="46" cy="26" r="4.2"/>
+      <circle cx="74" cy="13" r="4.2"/>
+      <circle cx="102" cy="25" r="4.2"/>
+      <circle cx="130" cy="13" r="4.2"/>
+      <circle cx="152" cy="26" r="4.2"/>
+    </g>
+    <g fill="#c3b6de">
+      <circle cx="32" cy="27" r="2"/>
+      <circle cx="60" cy="14" r="2"/>
+      <circle cx="88" cy="26" r="2"/>
+      <circle cx="116" cy="13" r="2"/>
+      <circle cx="144" cy="25" r="2"/>
+      <circle cx="6" cy="26" r="1.6"/>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 40" role="img"
+     aria-label="연보라 도트 마스킹테이프 무늬">
+  <rect width="28" height="40" fill="#e7e1f2"/>
+  <!-- 큰 물방울과 작은 물방울을 엇갈려 둔 한 마디 -->
+  <circle cx="7" cy="14" r="4.2" fill="#ffffff"/>
+  <circle cx="21" cy="26" r="4.2" fill="#ffffff"/>
+  <circle cx="21" cy="13" r="2" fill="#c3b6de"/>
+  <circle cx="7" cy="27" r="2" fill="#c3b6de"/>
+</svg>

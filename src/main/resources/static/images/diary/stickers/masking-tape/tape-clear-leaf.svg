@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" preserveAspectRatio="none"
+     role="img" aria-label="투명 잎사귀 마스킹테이프 스티커">
+  <defs>
+    <clipPath id="tape">
+      <path d="M10 6H150l-4 4 4 4-4 4 4 4-4 4 4 4-4 4H10l4-4-4-4 4-4-4-4 4-4-4-4Z"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="160" height="40" fill="#e8f0e6" fill-opacity="0.5"/>
+    <path d="M0 22h160" fill="none" stroke="#7d9a6d" stroke-opacity="0.75" stroke-width="1.4"/>
+    <g fill="#7d9a6d" fill-opacity="0.85">
+      <ellipse cx="26" cy="14" rx="7" ry="3.4" transform="rotate(-22 26 14)"/>
+      <ellipse cx="74" cy="14" rx="7" ry="3.4" transform="rotate(-22 74 14)"/>
+      <ellipse cx="122" cy="14" rx="7" ry="3.4" transform="rotate(-22 122 14)"/>
+    </g>
+    <g fill="#ffffff" fill-opacity="0.9">
+      <ellipse cx="50" cy="29" rx="6.4" ry="3.2" transform="rotate(20 50 29)"/>
+      <ellipse cx="98" cy="29" rx="6.4" ry="3.2" transform="rotate(20 98 29)"/>
+      <ellipse cx="146" cy="29" rx="6.4" ry="3.2" transform="rotate(20 146 29)"/>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" preserveAspectRatio="none"
+     role="img" aria-label="반투명 리본 레이스 마스킹테이프 스티커">
+  <defs>
+    <clipPath id="tape">
+      <path d="M10 6H150l-4 4 4 4-4 4 4 4-4 4 4 4-4 4H10l4-4-4-4 4-4-4-4 4-4-4-4Z"/>
+    </clipPath>
+    <g id="bow">
+      <path d="M-2.6-1-9-5.6-10 3.4-2.6 1.6Z" fill="#eaa9bb"/>
+      <path d="M2.6-1 9-5.6 10 3.4 2.6 1.6Z" fill="#eaa9bb"/>
+      <path d="M-1.8 1.8-4.6 8-1 7Z" fill="#f5cdd8"/>
+      <path d="M1.8 1.8 4.6 8 1 7Z" fill="#f5cdd8"/>
+      <circle cx="0" cy="0.4" r="2.2" fill="#dd8fa4"/>
+    </g>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="160" height="40" fill="#f8ecef" fill-opacity="0.55"/>
+    <!-- 아래쪽 레이스 물결 -->
+    <path d="M0 30q5 5 10 0t10 0 10 0 10 0 10 0 10 0 10 0 10 0 10 0 10 0 10 0 10 0 10 0 10 0 10 0 10 0"
+          fill="none" stroke="#ffffff" stroke-opacity="0.95" stroke-width="1.6"/>
+    <use href="#bow" x="30" y="17"/>
+    <use href="#bow" x="80" y="17"/>
+    <use href="#bow" x="130" y="17"/>
+    <g fill="#f0c3d0" fill-opacity="0.9">
+      <circle cx="55" cy="14" r="1.8"/><circle cx="105" cy="14" r="1.8"/>
+    </g>
+  </g>
+</svg>

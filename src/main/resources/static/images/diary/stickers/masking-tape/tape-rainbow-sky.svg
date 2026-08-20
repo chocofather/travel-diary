@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 38" preserveAspectRatio="none" role="img" aria-label="무지개 하늘 마스킹테이프 스티커">
+  <!-- 긴 가로형. 페이지를 가로질러 붙이기 좋은 길이. -->
+  <defs>
+    <clipPath id="tape">
+      <path d="M8 7L192 4L194 30L6 33Z"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="200" height="38" fill="#eaf3fb"/>
+    <g fill="none" stroke-width="3.4" stroke-linecap="round">
+      <path d="M28 32a24 24 0 0 1 48 0" stroke="#f3bdb7"/>
+      <path d="M35 32a17 17 0 0 1 34 0" stroke="#f6dcae"/>
+      <path d="M42 32a10 10 0 0 1 20 0" stroke="#b7d6ef"/>
+      <path d="M132 32a24 24 0 0 1 48 0" stroke="#f3bdb7"/>
+      <path d="M139 32a17 17 0 0 1 34 0" stroke="#f6dcae"/>
+      <path d="M146 32a10 10 0 0 1 20 0" stroke="#b7d6ef"/>
+    </g>
+    <g fill="#ffffff">
+      <ellipse cx="104" cy="18" rx="9" ry="4.4"/>
+      <circle cx="100" cy="15.6" r="4"/>
+      <circle cx="107" cy="14.6" r="4.8"/>
+    </g>
+  </g>
+</svg>

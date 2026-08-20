@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" preserveAspectRatio="none" role="img" aria-label="곰 마스킹테이프 스티커">
+  <defs>
+    <clipPath id="tape">
+      <path d="M10 6H150l-4 4 4 4-4 4 4 4-4 4 4 4-4 4H10l4-4-4-4 4-4-4-4 4-4-4-4Z"/>
+    </clipPath>
+    <g id="bear">
+      <circle cx="-6.4" cy="-6" r="3.4" fill="#c9a179"/>
+      <circle cx="6.4" cy="-6" r="3.4" fill="#c9a179"/>
+      <circle cx="0" cy="0" r="8" fill="#dcbb95"/>
+      <ellipse cx="0" cy="3" rx="4.6" ry="3.4" fill="#f4e6d2"/>
+      <circle cx="-3.2" cy="-1.6" r="1.1" fill="#6f5a3c"/>
+      <circle cx="3.2" cy="-1.6" r="1.1" fill="#6f5a3c"/>
+      <ellipse cx="0" cy="1.8" rx="1.4" ry="1.1" fill="#6f5a3c"/>
+      <path d="M0 2.9v1.6" fill="none" stroke="#6f5a3c" stroke-width="0.9" stroke-linecap="round"/>
+    </g>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="160" height="40" fill="#f0e2cd"/>
+    <use href="#bear" x="34" y="21"/>
+    <use href="#bear" x="86" y="21"/>
+    <use href="#bear" x="138" y="21"/>
+    <!-- 곰 사이의 작은 꿀단지 점 -->
+    <g fill="#e0c39a">
+      <circle cx="60" cy="14" r="2.2"/>
+      <circle cx="60" cy="28" r="1.4"/>
+      <circle cx="112" cy="14" r="2.2"/>
+      <circle cx="112" cy="28" r="1.4"/>
+      <circle cx="16" cy="21" r="1.6"/>
+    </g>
+  </g>
+</svg>

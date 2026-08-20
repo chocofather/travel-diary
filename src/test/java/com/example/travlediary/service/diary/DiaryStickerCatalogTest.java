@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -49,6 +50,86 @@ class DiaryStickerCatalogTest {
                             .as("스티커 파일: " + sticker.id())
                             .exists();
                 }));
+    }
+
+    /**
+     * 되풀이해서 그리는 스티커(마스킹테이프)의 조각 정보.
+     * 화면에서만 쓰는 값이라 요소에는 완성형 imageUrl 하나만 남고, 여기서 다시 찾는다.
+     */
+    @Test
+    void repeatingStickersExposeTheirPiecesByImageUrl() {
+        DiarySticker cat = catalog.find("tape-cat-cream").orElseThrow();
+
+        assertThat(cat.isRepeating()).isTrue();
+        assertThat(catalog.getRepeatsByImageUrl().get(cat.imageUrl())).isEqualTo(cat.repeat());
+
+        // 조각도 완성형 그림과 같은 공용 asset 규칙을 따르고 실제 파일이 있다
+        for (String piece : new String[]{cat.repeat().leftUrl(),
+                cat.repeat().centerUrl(), cat.repeat().rightUrl()}) {
+            assertThat(piece).startsWith("/images/diary/stickers/");
+            assertThat(ASSET_ROOT.resolve(piece.substring(1))).exists();
+        }
+    }
+
+    /** 마스킹테이프는 모두 되풀이형이고, 조각 파일도 전부 있어야 한다. */
+    @Test
+    void everyMaskingTapeIsRepeatingWithRealPieces() {
+        List<DiarySticker> tapes = catalog.getCategories().stream()
+                .filter(category -> "masking-tape".equals(category.id()))
+                .flatMap(category -> category.stickers().stream())
+                .toList();
+
+        assertThat(tapes).hasSizeGreaterThanOrEqualTo(20);
+        assertThat(tapes).allSatisfy(tape -> {
+            assertThat(tape.isRepeating()).as("되풀이 정보: " + tape.id()).isTrue();
+            for (String piece : new String[]{tape.repeat().leftUrl(),
+                    tape.repeat().centerUrl(), tape.repeat().rightUrl()}) {
+                assertThat(piece).startsWith("/images/diary/stickers/");
+                assertThat(ASSET_ROOT.resolve(piece.substring(1)))
+                        .as("조각 파일: " + piece).exists();
+            }
+        });
+        // 그림 경로로 되찾을 수 있어야 이미 붙여 둔 테이프도 같게 그려진다
+        assertThat(catalog.getRepeatsByImageUrl()).hasSize(tapes.size());
+    }
+
+    /**
+     * 마스킹테이프의 작은 갈래(일반/반투명/클리어).
+     * tapeType 을 적지 않은 기존 항목은 모두 일반으로 읽혀야 한다.
+     */
+    @Test
+    void tapeTypeDefaultsToNormalAndSeeThroughOnesAreMarked() {
+        assertThat(catalog.find("tape-cat-cream").orElseThrow().tapeType())
+                .isEqualTo(DiarySticker.TAPE_NORMAL);
+        assertThat(catalog.find("airplane").orElseThrow().tapeType())
+                .isEqualTo(DiarySticker.TAPE_NORMAL);
+        assertThat(catalog.find("tape-clear-flower").orElseThrow().tapeType())
+                .isEqualTo(DiarySticker.TAPE_TRANSLUCENT);
+        assertThat(catalog.find("tape-glass-flower").orElseThrow().tapeType())
+                .isEqualTo(DiarySticker.TAPE_CLEAR);
+
+        for (String tapeType : new String[]{DiarySticker.TAPE_TRANSLUCENT, DiarySticker.TAPE_CLEAR}) {
+            List<DiarySticker> seeThrough = catalog.getCategories().stream()
+                    .flatMap(category -> category.stickers().stream())
+                    .filter(sticker -> tapeType.equals(sticker.tapeType()))
+                    .toList();
+            // 비치는 테이프도 같은 되풀이 구조를 쓴다
+            assertThat(seeThrough).as(tapeType).hasSizeGreaterThanOrEqualTo(6);
+            assertThat(seeThrough).allSatisfy(tape -> {
+                assertThat(tape.category()).isEqualTo("masking-tape");
+                assertThat(tape.isRepeating()).isTrue();
+            });
+        }
+    }
+
+    /** 마스킹테이프가 아닌 스티커는 지금까지처럼 완성형 그림 한 장으로 그린다. */
+    @Test
+    void ordinaryStickersHaveNoRepeatInformation() {
+        assertThat(catalog.find("airplane").orElseThrow().isRepeating()).isFalse();
+        assertThat(catalog.find("heart").orElseThrow().isRepeating()).isFalse();
+        assertThat(catalog.getRepeatsByImageUrl().keySet())
+                .allSatisfy(url -> assertThat(url)
+                        .startsWith("/images/diary/stickers/masking-tape/"));
     }
 
     @Test

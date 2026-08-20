@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" preserveAspectRatio="none"
+     role="img" aria-label="반투명 튤립 마스킹테이프 스티커">
+  <defs>
+    <clipPath id="tape">
+      <path d="M10 6H150l-4 4 4 4-4 4 4 4-4 4 4 4-4 4H10l4-4-4-4 4-4-4-4 4-4-4-4Z"/>
+    </clipPath>
+    <g id="tulip">
+      <path d="M0 33V20" fill="none" stroke="#9db98d" stroke-width="1.6" stroke-linecap="round"/>
+      <ellipse cx="-4.4" cy="26" rx="4.2" ry="1.9" transform="rotate(-18 -4.4 26)" fill="#a8c497"/>
+      <path d="M-5 19c0-5 2-8 5-9 3 1 5 4 5 9 0 3-2 5-5 5s-5-2-5-5Z" fill="#c9a3cf"/>
+      <path d="M0 11v8" fill="none" stroke="#e6d3ea" stroke-width="1.2" stroke-linecap="round"/>
+    </g>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="160" height="40" fill="#f1e9f2" fill-opacity="0.55"/>
+    <use href="#tulip" x="28" y="0"/>
+    <use href="#tulip" x="80" y="0"/>
+    <use href="#tulip" x="132" y="0"/>
+    <g fill="#d8c2de" fill-opacity="0.9">
+      <circle cx="54" cy="14" r="2"/><circle cx="106" cy="14" r="2"/>
+      <circle cx="56" cy="29" r="1.4"/><circle cx="108" cy="29" r="1.4"/>
+    </g>
+  </g>
+</svg>

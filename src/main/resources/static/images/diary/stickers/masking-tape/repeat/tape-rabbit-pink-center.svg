@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 40" role="img"
+     aria-label="토끼 마스킹테이프 무늬">
+  <rect width="52" height="40" fill="#f7dfe3"/>
+  <!-- 완성형 테이프와 같은 토끼 얼굴 (긴 귀 + 볼) -->
+  <g transform="translate(17 22)">
+    <path d="M-5-8c0-4 1-7 2-7s2 3 2 7Zm6 0c0-4 1-7 2-7s2 3 2 7Z" fill="#ffffff"/>
+    <circle cx="0" cy="0" r="8.4" fill="#ffffff"/>
+    <circle cx="-3" cy="-1" r="1.2" fill="#8a6a6a"/>
+    <circle cx="3" cy="-1" r="1.2" fill="#8a6a6a"/>
+    <circle cx="-5.4" cy="2.4" r="1.7" fill="#f4b3bd"/>
+    <circle cx="5.4" cy="2.4" r="1.7" fill="#f4b3bd"/>
+    <path d="M-2 2.6q2 2 4 0" fill="none" stroke="#8a6a6a" stroke-width="1.2" stroke-linecap="round"/>
+  </g>
+  <g fill="#f0bcc6">
+    <circle cx="40" cy="14" r="2"/>
+    <circle cx="38" cy="28" r="1.6"/>
+  </g>
+</svg>

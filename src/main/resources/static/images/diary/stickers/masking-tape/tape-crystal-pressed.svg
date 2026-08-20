@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" preserveAspectRatio="none"
+     role="img" aria-label="클리어 압화 마스킹테이프 스티커">
+  <defs>
+    <clipPath id="tape">
+      <path d="M10 6H150l-4 4 4 4-4 4 4 4-4 4 4 4-4 4H10l4-4-4-4 4-4-4-4 4-4-4-4Z"/>
+    </clipPath>
+    <g id="pressed">
+      <path d="M0 26V12" stroke="#8a9a6b" stroke-width="1.2" stroke-linecap="round"/>
+      <ellipse cx="-5" cy="20" rx="4.6" ry="1.8" transform="rotate(-24 -5 20)" fill="#93a473"/>
+      <ellipse cx="5" cy="23" rx="4.6" ry="1.8" transform="rotate(24 5 23)" fill="#93a473"/>
+      <g fill="#c4a8c2">
+        <ellipse cx="0" cy="7" rx="2.2" ry="4"/>
+        <ellipse cx="-4" cy="10" rx="4" ry="2.2" transform="rotate(-30 -4 10)"/>
+        <ellipse cx="4" cy="10" rx="4" ry="2.2" transform="rotate(30 4 10)"/>
+      </g>
+      <circle cx="0" cy="10.6" r="1.6" fill="#d9b45a"/>
+    </g>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="160" height="40" fill="#ffffff" fill-opacity="0.12"/>
+    <use href="#pressed" x="28" y="6"/>
+    <use href="#pressed" x="80" y="6"/>
+    <use href="#pressed" x="132" y="6"/>
+    <g fill="#b9a7b8">
+      <circle cx="54" cy="17" r="1.8"/><circle cx="106" cy="17" r="1.8"/>
+    </g>
+  </g>
+</svg>

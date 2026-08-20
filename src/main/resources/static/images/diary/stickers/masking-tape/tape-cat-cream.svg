@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" preserveAspectRatio="none" role="img" aria-label="고양이 마스킹테이프 스티커">
+  <defs>
+    <clipPath id="tape">
+      <path d="M8 8L152 5L154 32L6 35Z"/>
+    </clipPath>
+    <!-- 삼각 귀 + 수염만 있는 단순한 고양이 얼굴 -->
+    <g id="cat">
+      <path d="M-8-3-6.5-10-1.5-6.5 1.5-6.5 6.5-10 8-3Z" fill="#ffffff"/>
+      <circle cx="0" cy="0" r="7.6" fill="#ffffff"/>
+      <circle cx="-2.8" cy="-1" r="1.1" fill="#7a6455"/>
+      <circle cx="2.8" cy="-1" r="1.1" fill="#7a6455"/>
+      <path d="M0 1.6 -1.4 3 1.4 3Z" fill="#e8a79f"/>
+      <g stroke="#c9b49c" stroke-width="1" stroke-linecap="round">
+        <path d="M-5 1h-4M-5 3.4l-4 1M5 1h4M5 3.4l4 1"/>
+      </g>
+    </g>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="160" height="40" fill="#f6ebd8"/>
+    <use href="#cat" x="30" y="20"/>
+    <use href="#cat" x="82" y="21"/>
+    <use href="#cat" x="134" y="20"/>
+    <!-- 사이사이 발자국 -->
+    <g fill="#dcc8a8">
+      <circle cx="56" cy="22" r="2.6"/>
+      <circle cx="53" cy="18.4" r="1.1"/>
+      <circle cx="56" cy="17.6" r="1.1"/>
+      <circle cx="59" cy="18.6" r="1.1"/>
+      <circle cx="108" cy="21" r="2.6"/>
+      <circle cx="105" cy="17.4" r="1.1"/>
+      <circle cx="108" cy="16.6" r="1.1"/>
+      <circle cx="111" cy="17.6" r="1.1"/>
+    </g>
+  </g>
+</svg>

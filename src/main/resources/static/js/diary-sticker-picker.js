@@ -57,6 +57,11 @@ document.addEventListener('DOMContentLoaded', () => {
         option.addEventListener('click', () => attach(option.dataset.stickerId));
     });
 
+    // 마스킹테이프 안의 작은 갈래(전체/일반/투명). 그 묶음 안에서만 걸러 보여 준다.
+    popover.querySelectorAll('.diary-sticker-subtab').forEach((subtab) => {
+        subtab.addEventListener('click', () => showTapeType(subtab));
+    });
+
     toggle(false);
 
     // 최근에 쓴 것이 있으면 그 탭부터, 없으면 지금까지처럼 첫 분류부터 보여 준다.
@@ -74,6 +79,24 @@ document.addEventListener('DOMContentLoaded', () => {
             grid.hidden = grid.dataset.stickerCategory !== categoryId;
             if (!grid.hidden) grid.scrollTop = 0;
         });
+        showStatus('');
+    }
+
+    /** 고른 갈래의 테이프만 남긴다. (같은 묶음 안에서만 걸러 최근 탭 등에는 영향이 없다) */
+    function showTapeType(subtab) {
+        const grid = subtab.closest('.diary-sticker-grid');
+        const chosen = subtab.dataset.tapeType;
+        if (!grid) return;
+
+        grid.querySelectorAll('.diary-sticker-subtab').forEach((other) => {
+            const active = other === subtab;
+            other.classList.toggle('is-active', active);
+            other.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+        grid.querySelectorAll('.diary-sticker-option').forEach((option) => {
+            option.hidden = chosen !== 'ALL' && option.dataset.tapeType !== chosen;
+        });
+        grid.scrollTop = 0;
         showStatus('');
     }
 
@@ -171,6 +194,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const created = await createSticker(stickerId);
             const item = renderSticker(created);
             canvas.append(item);
+            // 되풀이형 테이프는 붙는 즉시 새로고침 뒤와 같은 모습으로 그린다. (같은 렌더러)
+            window.diaryTape?.render(item);
             // 새로 붙은 스티커도 기존 드래그/크기/회전/겹침 조작을 그대로 쓴다.
             window.diaryCanvas?.register(item);
             window.diaryCanvas?.select(item);
@@ -226,6 +251,14 @@ document.addEventListener('DOMContentLoaded', () => {
         item.className = 'diary-canvas-item diary-canvas-sticker diary-sticker';
         item.dataset.elementId = String(sticker.id);
         item.dataset.elementType = 'STICKER';
+        // 방금 붙인 마스킹테이프도 서버 렌더링과 같은 표시를 달아 준다. (길이만 늘리는 조작)
+        if (sticker.maskingTape) item.dataset.stickerKind = 'masking-tape';
+        // 되풀이해서 그리는 스티커면 조각 경로도 서버 렌더링과 똑같이 실어 둔다.
+        if (sticker.repeat && sticker.repeat.center) {
+            item.dataset.tapeLeft = sticker.repeat.left;
+            item.dataset.tapeCenter = sticker.repeat.center;
+            item.dataset.tapeRight = sticker.repeat.right;
+        }
         item.dataset.positionX = String(sticker.positionX);
         item.dataset.positionY = String(sticker.positionY);
         item.dataset.width = String(sticker.width);

@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" preserveAspectRatio="none"
+     role="img" aria-label="투명 발자국 마스킹테이프 스티커">
+  <defs>
+    <clipPath id="tape">
+      <path d="M10 6H150l-4 4 4 4-4 4 4 4-4 4 4 4-4 4H10l4-4-4-4 4-4-4-4 4-4-4-4Z"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="160" height="40" fill="#f3ece1" fill-opacity="0.52"/>
+    <g fill="#a98b6a" fill-opacity="0.88">
+      <circle cx="28" cy="23" r="3.2"/>
+      <circle cx="24.2" cy="18.6" r="1.4"/><circle cx="28" cy="17.4" r="1.4"/>
+      <circle cx="31.8" cy="18.8" r="1.4"/>
+      <circle cx="80" cy="23" r="3.2"/>
+      <circle cx="76.2" cy="18.6" r="1.4"/><circle cx="80" cy="17.4" r="1.4"/>
+      <circle cx="83.8" cy="18.8" r="1.4"/>
+      <circle cx="132" cy="23" r="3.2"/>
+      <circle cx="128.2" cy="18.6" r="1.4"/><circle cx="132" cy="17.4" r="1.4"/>
+      <circle cx="135.8" cy="18.8" r="1.4"/>
+    </g>
+    <g fill="#ffffff" fill-opacity="0.9">
+      <circle cx="54" cy="17" r="2.4"/>
+      <circle cx="51.4" cy="13.6" r="1.1"/><circle cx="54" cy="12.8" r="1.1"/>
+      <circle cx="56.6" cy="13.8" r="1.1"/>
+      <circle cx="106" cy="17" r="2.4"/>
+      <circle cx="103.4" cy="13.6" r="1.1"/><circle cx="106" cy="12.8" r="1.1"/>
+      <circle cx="108.6" cy="13.8" r="1.1"/>
+    </g>
+  </g>
+</svg>

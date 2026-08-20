@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 40" role="img"
+     aria-label="클리어 구름 마스킹테이프 무늬">
+  <rect width="52" height="40" fill="#ffffff" fill-opacity="0.1"/>
+  <!-- 구름은 윤곽선으로만 그려 아래 글자가 그대로 읽힌다 -->
+  <path d="M16 24q-5 0-5-4t5-4q1-4 5-4t5 3q4-1 6 2t-2 7Z" fill="none"
+        stroke="#7aa6c8" stroke-width="1.6" stroke-linejoin="round"/>
+  <g fill="#a8c9e0">
+    <circle cx="42" cy="15" r="1.8"/>
+    <circle cx="40" cy="28" r="1.4"/>
+  </g>
+</svg>

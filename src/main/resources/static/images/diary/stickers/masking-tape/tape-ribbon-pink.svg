@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" preserveAspectRatio="none" role="img" aria-label="리본 마스킹테이프 스티커">
+  <defs>
+    <clipPath id="tape">
+      <path d="M10 6H150l-4 4 4 4-4 4 4 4-4 4 4 4-4 4H10l4-4-4-4 4-4-4-4 4-4-4-4Z"/>
+    </clipPath>
+    <g id="ribbon">
+      <path d="M-3-1-10-6-11 4-3 2Z" fill="#f0aebd"/>
+      <path d="M3-1 10-6 11 4 3 2Z" fill="#f0aebd"/>
+      <path d="M-2 2-5 9-1 8Z" fill="#f6c8d2"/>
+      <path d="M2 2 5 9 1 8Z" fill="#f6c8d2"/>
+      <circle cx="0" cy="0.4" r="2.4" fill="#e58fa2"/>
+    </g>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="160" height="40" fill="#faeaef"/>
+    <!-- 가는 줄 위에 리본이 걸린 모양 -->
+    <path d="M0 16h160" fill="none" stroke="#f3ccd6" stroke-width="1.4"/>
+    <use href="#ribbon" x="30" y="16"/>
+    <use href="#ribbon" x="80" y="16"/>
+    <use href="#ribbon" x="130" y="16"/>
+    <g fill="#f3ccd6">
+      <circle cx="55" cy="28" r="2"/>
+      <circle cx="105" cy="28" r="2"/>
+      <circle cx="12" cy="28" r="1.6"/>
+      <circle cx="150" cy="29" r="1.6"/>
+    </g>
+  </g>
+</svg>

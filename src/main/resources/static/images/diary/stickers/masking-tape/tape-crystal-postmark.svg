@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" preserveAspectRatio="none"
+     role="img" aria-label="클리어 우표 소인 마스킹테이프 스티커">
+  <defs>
+    <clipPath id="tape">
+      <path d="M10 6H150l-4 4 4 4-4 4 4 4-4 4 4 4-4 4H10l4-4-4-4 4-4-4-4 4-4-4-4Z"/>
+    </clipPath>
+    <g id="stamp-outline" fill="none" stroke="#9b8a72" stroke-width="1.4">
+      <rect x="-9" y="-7" width="18" height="14" rx="1.4"/>
+      <path d="M-5.5-3.5h11v7h-11z" stroke-width="1"/>
+    </g>
+    <g id="postmark" fill="none" stroke="#9b8a72" stroke-width="1.2">
+      <circle cx="0" cy="0" r="6.4"/>
+      <path d="M-4 -1.6h8M-4 1.6h8" stroke-linecap="round"/>
+    </g>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="160" height="40" fill="#ffffff" fill-opacity="0.1"/>
+    <use href="#stamp-outline" x="26" y="20"/>
+    <use href="#stamp-outline" x="98" y="20"/>
+    <use href="#postmark" x="62" y="20"/>
+    <use href="#postmark" x="134" y="20"/>
+  </g>
+</svg>

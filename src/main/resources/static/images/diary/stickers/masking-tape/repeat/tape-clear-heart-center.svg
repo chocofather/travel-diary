@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 40" role="img"
+     aria-label="투명 하트 마스킹테이프 무늬">
+  <rect width="52" height="40" fill="#f7e9ec" fill-opacity="0.5"/>
+  <path d="M12 14c0-2.6 4-4 5.5-1.4C19 10 23 11.4 23 14c0 3.6-5.5 7-5.5 7S12 17.6 12 14Z"
+        fill="#e08d9c" fill-opacity="0.9"/>
+  <path d="M34 24c0-1.8 2.6-2.7 3.6-.9 1-1.8 3.6-.9 3.6.9 0 2.4-3.6 4.6-3.6 4.6S34 26.4 34 24Z"
+        fill="#ffffff" fill-opacity="0.9"/>
+</svg>

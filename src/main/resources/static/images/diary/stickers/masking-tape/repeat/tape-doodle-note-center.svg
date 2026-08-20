@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 40" role="img"
+     aria-label="손글씨 낙서 마스킹테이프 무늬">
+  <rect width="56" height="40" fill="#fbf1e2"/>
+  <!-- 흘려 쓴 글씨 같은 물결선은 마디 끝에서 같은 높이로 끝나 자연스럽게 이어진다 -->
+  <path d="M0 22q4-6 8 0t8 0 8 0 8 0 8 0 8 0 8 0" fill="none" stroke="#b3927a"
+        stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M14 12c0-2 3-3 4-1 1-2 4-1 4 1 0 2.6-4 5-4 5s-4-2.4-4-5Z" fill="#e2a0a0"/>
+  <path d="M38 28l1.4 3 3.2.4-2.4 2.2.7 3.2-2.9-1.6-2.9 1.6.7-3.2-2.4-2.2 3.2-.4Z" fill="#e8c88a"/>
+</svg>

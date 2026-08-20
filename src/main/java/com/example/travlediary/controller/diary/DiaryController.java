@@ -6,6 +6,7 @@ import com.example.travlediary.model.Diary;
 import com.example.travlediary.model.DiaryCoverStyle;
 import com.example.travlediary.model.DiaryElement;
 import com.example.travlediary.model.DiarySticker;
+import com.example.travlediary.model.DiaryStickerKind;
 import com.example.travlediary.model.DiaryPage;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.diary.DiaryElementService;
@@ -59,6 +60,9 @@ public class DiaryController {
     private static final String STICKER_ELEMENT_TYPE = "STICKER";
     /** 스티커를 처음 붙이는 자리/크기. 종이 가운데 부근에서 조금씩 어긋나게 놓는다. */
     private static final BigDecimal STICKER_SIZE = new BigDecimal("0.18000");
+    /** 마스킹테이프는 처음부터 띠 모양으로 놓는다. (길이 ↔ 두께를 따로 조절한다) */
+    private static final BigDecimal TAPE_WIDTH = new BigDecimal("0.46000");
+    private static final BigDecimal TAPE_HEIGHT = new BigDecimal("0.09000");
     private static final BigDecimal STICKER_CENTER = new BigDecimal("0.41000");
     private static final BigDecimal STICKER_OFFSET_STEP = new BigDecimal("0.04000");
     private static final int STICKER_OFFSET_CYCLE = 5;
@@ -202,6 +206,9 @@ public class DiaryController {
         model.addAttribute("hasNextSpread", currentSpread < totalSpreads - 1);
         // 편집 여부는 화면 상태일 뿐이다. 실제 수정 권한은 각 저장 경로에서 다시 확인한다.
         model.addAttribute("editMode", edit);
+        // 되풀이해서 그리는 스티커(마스킹테이프)의 조각 경로. 저장된 그림 경로로 다시 찾는다.
+        // (읽기/편집 화면이 같은 값을 써서 같은 모습으로 그려진다)
+        model.addAttribute("stickerRepeats", diaryStickerCatalog.getRepeatsByImageUrl());
         if (edit) {
             addEditPageAttributes(diaryId, userId, pages, leftPage, rightPage, page, model);
             // 스티커 picker 목록(분류별). 저장 가능한 스티커는 이 목록이 그대로 허용 목록이다.
@@ -568,13 +575,14 @@ public class DiaryController {
             BigDecimal offset = STICKER_OFFSET_STEP
                     .multiply(BigDecimal.valueOf(placed % STICKER_OFFSET_CYCLE));
 
+            boolean tape = DiaryStickerKind.isMaskingTape(sticker.imageUrl());
             DiaryElement element = new DiaryElement();
             element.setElementType(STICKER_ELEMENT_TYPE);
             element.setImageUrl(sticker.imageUrl());
             element.setPositionX(STICKER_CENTER.add(offset));
             element.setPositionY(STICKER_CENTER.add(offset));
-            element.setWidth(STICKER_SIZE);
-            element.setHeight(STICKER_SIZE);
+            element.setWidth(tape ? TAPE_WIDTH : STICKER_SIZE);
+            element.setHeight(tape ? TAPE_HEIGHT : STICKER_SIZE);
             // 회전 0 / 겹침 순서는 사진과 같은 기본값을 쓴다.
             created = diaryElementService.create(diaryId, pageId, userId, element);
         } catch (ResponseStatusException exception) {
@@ -585,7 +593,7 @@ public class DiaryController {
             }
             throw exception;
         }
-        return ResponseEntity.ok(stickerPayload(diaryId, pageId, created, sticker.name()));
+        return ResponseEntity.ok(stickerPayload(diaryId, pageId, created, sticker));
     }
 
     /**
@@ -628,26 +636,37 @@ public class DiaryController {
         throw exception;
     }
 
-    /** 새로 붙인 스티커를 화면이 바로 그릴 수 있도록 좌표/크기와 저장 주소를 함께 돌려준다. */
+    /**
+     * 새로 붙인 스티커를 화면이 바로 그릴 수 있도록 좌표/크기와 저장 주소를 함께 돌려준다.
+     * 되풀이해서 그리는 스티커면 조각 경로도 같이 준다. (새로고침 전후 모습이 같아진다)
+     */
     private Map<String, Object> stickerPayload(Long diaryId, Long pageId,
-                                               DiaryElement element, String label) {
+                                               DiaryElement element, DiarySticker sticker) {
         String base = "/diaries/" + diaryId + "/pages/" + pageId + "/elements/" + element.getId();
-        return Map.of(
-                "id", element.getId(),
-                "imageUrl", element.getImageUrl(),
-                "label", label,
-                "positionX", element.getPositionX(),
-                "positionY", element.getPositionY(),
-                "width", element.getWidth(),
-                "height", element.getHeight(),
-                "rotation", element.getRotation(),
-                "zIndex", element.getZIndex(),
-                "urls", Map.of(
+        Map<String, String> repeat = sticker.isRepeating()
+                ? Map.of("left", sticker.repeat().leftUrl(),
+                         "center", sticker.repeat().centerUrl(),
+                         "right", sticker.repeat().rightUrl())
+                : Map.of();
+        return Map.ofEntries(
+                Map.entry("id", element.getId()),
+                Map.entry("imageUrl", element.getImageUrl()),
+                Map.entry("label", sticker.name()),
+                Map.entry("repeat", repeat),
+                // 방금 붙인 스티커도 화면에서 곧바로 마스킹테이프로 다뤄지게 함께 알려 준다.
+                Map.entry("maskingTape", DiaryStickerKind.isMaskingTape(element.getImageUrl())),
+                Map.entry("positionX", element.getPositionX()),
+                Map.entry("positionY", element.getPositionY()),
+                Map.entry("width", element.getWidth()),
+                Map.entry("height", element.getHeight()),
+                Map.entry("rotation", element.getRotation()),
+                Map.entry("zIndex", element.getZIndex()),
+                Map.entry("urls", Map.of(
                         "position", base + "/position",
                         "size", base + "/size",
                         "rotation", base + "/rotation",
                         "layer", base + "/layer",
-                        "delete", base + "/sticker/delete"));
+                        "delete", base + "/sticker/delete")));
     }
 
     /** 드래그로 옮긴 위치 저장. 화면 갱신 없이 좌표만 반영한다. */

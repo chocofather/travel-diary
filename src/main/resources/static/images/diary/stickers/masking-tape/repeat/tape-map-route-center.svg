@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 40" role="img"
+     aria-label="지도 경로 마스킹테이프 무늬">
+  <rect width="64" height="40" fill="#ece5d7"/>
+  <!-- 등고선과 점선 경로는 마디 끝까지 이어진다 -->
+  <g fill="none" stroke="#dbceb6" stroke-width="1.2">
+    <path d="M0 10h64M0 30h64"/>
+  </g>
+  <path d="M0 22h64" fill="none" stroke="#b08968" stroke-width="1.8"
+        stroke-linecap="round" stroke-dasharray="4 5"/>
+  <g transform="translate(22 22)">
+    <path d="M0 0c-3.4 0-6-2.6-6-6 0-4 6-10 6-10s6 6 6 10c0 3.4-2.6 6-6 6Z" fill="#c96f68"/>
+    <circle cx="0" cy="-6.4" r="2.2" fill="#fdf5ec"/>
+  </g>
+  <circle cx="48" cy="22" r="2.2" fill="#b08968"/>
+</svg>

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 40" role="img"
+     aria-label="투명 발자국 마스킹테이프 무늬">
+  <rect width="52" height="40" fill="#f3ece1" fill-opacity="0.52"/>
+  <g fill="#a98b6a" fill-opacity="0.88">
+    <circle cx="16" cy="23" r="3.2"/>
+    <circle cx="12.2" cy="18.6" r="1.4"/>
+    <circle cx="16" cy="17.4" r="1.4"/>
+    <circle cx="19.8" cy="18.8" r="1.4"/>
+  </g>
+  <g fill="#ffffff" fill-opacity="0.9">
+    <circle cx="38" cy="17" r="2.4"/>
+    <circle cx="35.4" cy="13.6" r="1.1"/>
+    <circle cx="38" cy="12.8" r="1.1"/>
+    <circle cx="40.6" cy="13.8" r="1.1"/>
+  </g>
+</svg>

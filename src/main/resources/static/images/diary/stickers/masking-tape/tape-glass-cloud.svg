@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" preserveAspectRatio="none"
+     role="img" aria-label="클리어 구름 마스킹테이프 스티커">
+  <defs>
+    <clipPath id="tape">
+      <path d="M10 6H150l-4 4 4 4-4 4 4 4-4 4 4 4-4 4H10l4-4-4-4 4-4-4-4 4-4-4-4Z"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="160" height="40" fill="#ffffff" fill-opacity="0.1"/>
+    <!-- 바탕이 거의 없으므로 구름은 윤곽선으로 그려 아래 글자가 그대로 읽힌다 -->
+    <g fill="none" stroke="#7aa6c8" stroke-width="1.6" stroke-linejoin="round">
+      <path d="M20 24q-5 0-5-4t5-4q1-4 5-4t5 3q4-1 6 2t-2 7Z"/>
+      <path d="M72 24q-5 0-5-4t5-4q1-4 5-4t5 3q4-1 6 2t-2 7Z"/>
+      <path d="M124 24q-5 0-5-4t5-4q1-4 5-4t5 3q4-1 6 2t-2 7Z"/>
+    </g>
+    <g fill="#a8c9e0">
+      <circle cx="56" cy="15" r="1.8"/><circle cx="108" cy="15" r="1.8"/>
+      <circle cx="58" cy="28" r="1.4"/><circle cx="110" cy="28" r="1.4"/>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 40" role="img"
+     aria-label="반투명 레몬 마스킹테이프 무늬">
+  <rect width="52" height="40" fill="#fbf3dd" fill-opacity="0.55"/>
+  <g transform="translate(18 20)">
+    <ellipse cx="0" cy="0" rx="8" ry="5.4" transform="rotate(-18)" fill="#f2cf6a"/>
+    <path d="M7.6-2.4 10.4-3.4" stroke="#e0b94e" stroke-width="1.4" stroke-linecap="round"/>
+    <ellipse cx="-3" cy="-3.4" rx="2.4" ry="1.2" transform="rotate(-18 -3 -3.4)" fill="#f8e6a8"/>
+    <ellipse cx="-9" cy="-4.6" rx="3.6" ry="2" transform="rotate(-30 -9 -4.6)" fill="#a8c497"/>
+  </g>
+  <g fill="#e8d79a" fill-opacity="0.9">
+    <circle cx="40" cy="14" r="2"/>
+    <circle cx="42" cy="28" r="1.4"/>
+  </g>
+</svg>

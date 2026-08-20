@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" preserveAspectRatio="none" role="img" aria-label="손글씨 낙서 마스킹테이프 스티커">
+  <defs>
+    <clipPath id="tape">
+      <path d="M8 8L152 5L154 32L6 35Z"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="160" height="40" fill="#fbf1e2"/>
+    <!-- 흘려 쓴 글씨처럼 보이는 물결선과 낙서들 -->
+    <g fill="none" stroke="#b3927a" stroke-width="1.6" stroke-linecap="round">
+      <path d="M10 22q4-6 8 0t8 0 8 0"/>
+      <path d="M64 22q4-6 8 0t8 0"/>
+      <path d="M116 22q4-6 8 0t8 0 8 0"/>
+    </g>
+    <g fill="#e2a0a0">
+      <path d="M48 17c0-2 3-3 4-1 1-2 4-1 4 1 0 2.6-4 5-4 5s-4-2.4-4-5Z"/>
+      <path d="M100 25c0-2 3-3 4-1 1-2 4-1 4 1 0 2.6-4 5-4 5s-4-2.4-4-5Z"/>
+    </g>
+    <g fill="#e8c88a">
+      <path d="M92 14l1.4 3 3.2.4-2.4 2.2.7 3.2-2.9-1.6-2.9 1.6.7-3.2-2.4-2.2 3.2-.4Z"/>
+      <path d="M44 28l1 2.2 2.4.3-1.8 1.6.5 2.4-2.1-1.2-2.1 1.2.5-2.4-1.8-1.6 2.4-.3Z"/>
+    </g>
+  </g>
+</svg>

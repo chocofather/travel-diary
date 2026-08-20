@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 40" preserveAspectRatio="none"
+     role="img" aria-label="민트 체크 마스킹테이프 오른쪽 끝">
+  <defs>
+    <clipPath id="cap">
+      <path d="M0 0h14l-4 5 4 5-4 5 4 5-4 5 4 5-4 5 4 5H0Z"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#cap)">
+    <rect width="18" height="40" fill="#dff0ea"/>
+    <g fill="none" stroke="#ffffff" stroke-width="6">
+      <path d="M0 14h18M0 28h18"/>
+    </g>
+    <g fill="none" stroke="#a9d8c6" stroke-width="1.2">
+      <path d="M0 10h18M0 32h18"/>
+    </g>
+  </g>
+</svg>

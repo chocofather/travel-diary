@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 40" role="img"
+     aria-label="반투명 유칼립투스 마스킹테이프 무늬">
+  <rect width="26" height="40" fill="#e9f1ea" fill-opacity="0.55"/>
+  <!-- 줄기는 마디 끝까지, 잎은 위아래 하나씩이라 되풀이하면 번갈아 달린 모양이 된다 -->
+  <path d="M0 21h26" fill="none" stroke="#8aa383" stroke-opacity="0.9" stroke-width="1.4"/>
+  <circle cx="7" cy="14" r="4.4" fill="#8aa383" fill-opacity="0.9"/>
+  <circle cx="20" cy="28" r="4" fill="#b9cdb2" fill-opacity="0.9"/>
+</svg>

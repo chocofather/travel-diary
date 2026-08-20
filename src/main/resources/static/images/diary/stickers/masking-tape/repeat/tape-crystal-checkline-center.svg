@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 40" role="img"
+     aria-label="클리어 라인 체크 마스킹테이프 무늬">
+  <rect width="24" height="40" fill="#ffffff" fill-opacity="0.1"/>
+  <!-- 가로선은 마디 끝까지, 세로선은 마디 가운데 한 줄 -->
+  <g fill="none" stroke="#a8b4bd" stroke-width="1">
+    <path d="M0 12h24M0 28h24"/>
+    <path d="M12 0v40"/>
+  </g>
+  <circle cx="0" cy="20" r="1.5" fill="#b9c4cc"/>
+  <circle cx="24" cy="20" r="1.5" fill="#b9c4cc"/>
+</svg>

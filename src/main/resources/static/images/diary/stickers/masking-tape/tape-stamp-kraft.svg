@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" preserveAspectRatio="none" role="img" aria-label="우표 마스킹테이프 스티커">
+  <defs>
+    <clipPath id="tape">
+      <path d="M10 6H150l-4 4 4 4-4 4 4 4-4 4 4 4-4 4H10l4-4-4-4 4-4-4-4 4-4-4-4Z"/>
+    </clipPath>
+    <!-- 톱니 가장자리를 가진 작은 우표 -->
+    <g id="stamp">
+      <rect x="-11" y="-9" width="22" height="18" rx="1.5" fill="#fdf8ee"/>
+      <rect x="-8" y="-6" width="16" height="12" rx="1" fill="#cfe0ec"/>
+      <path d="M-8 6l5-5 3 3 4-4 4 6Z" fill="#a8c4a0"/>
+      <circle cx="4" cy="-2.4" r="1.8" fill="#f0c86a"/>
+    </g>
+  </defs>
+  <g clip-path="url(#tape)">
+    <rect width="160" height="40" fill="#ecdfc9"/>
+    <use href="#stamp" x="30" y="20"/>
+    <use href="#stamp" x="80" y="20"/>
+    <use href="#stamp" x="130" y="20"/>
+    <!-- 소인 자국처럼 보이는 잔선 -->
+    <g fill="none" stroke="#cdb694" stroke-width="1.4" stroke-linecap="round">
+      <path d="M52 15h10M52 19h8M52 23h10"/>
+      <path d="M102 15h10M102 19h8M102 23h10"/>
+      <path d="M8 19h6M148 19h6"/>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 40" role="img"
+     aria-label="밤하늘 별 마스킹테이프 무늬">
+  <rect width="56" height="40" fill="#cbd2ec"/>
+  <!-- 초승달 하나와 잔별 -->
+  <path d="M14 12a9 9 0 1 0 8 14 7.4 7.4 0 0 1-8-14Z" fill="#fbeec2"/>
+  <g fill="#fffaf0">
+    <path d="M38 14 39.5 17.6 43.2 18 40.3 20.6 41.2 24.2 38 22.2 34.8 24.2 35.7 20.6 32.8 18 36.5 17.6Z"/>
+  </g>
+  <g fill="#e6ebfa">
+    <circle cx="48" cy="28" r="1.6"/>
+    <circle cx="28" cy="31" r="1.4"/>
+    <circle cx="50" cy="12" r="1.4"/>
+  </g>
+</svg>

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" role="img"
+     aria-label="클리어 하트 라인 마스킹테이프 무늬">
+  <rect width="40" height="40" fill="#ffffff" fill-opacity="0.1"/>
+  <!-- 선은 마디 끝까지 이어지고 하트 하나 + 점 하나가 한 마디 -->
+  <path d="M0 20h40" fill="none" stroke="#e0aeb8" stroke-width="1.2"/>
+  <path d="M12 26.4C7.4 23 5 20.4 5 17.6 5 15 7.4 13.6 9.4 14.8c1.2.8 2.2 2 2.6 3
+           .4-1 1.4-2.2 2.6-3C16.6 13.6 19 15 19 17.6c0 2.8-2.4 5.4-7 8.8Z"
+        fill="none" stroke="#d3808f" stroke-width="1.5" stroke-linejoin="round"/>
+  <circle cx="32" cy="20" r="1.8" fill="#e8bcc4"/>
+</svg>
