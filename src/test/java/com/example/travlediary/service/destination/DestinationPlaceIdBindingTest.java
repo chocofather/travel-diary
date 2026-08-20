@@ -3,6 +3,7 @@ package com.example.travlediary.service.destination;
 import com.example.travlediary.dto.DestinationDetailDto;
 import com.example.travlediary.dto.DestinationForm;
 import com.example.travlediary.model.Destination;
+import com.example.travlediary.model.DestinationImage;
 import com.example.travlediary.model.DestinationSeason;
 import com.example.travlediary.model.DestinationType;
 import com.example.travlediary.repository.bookmark.BookmarkMapper;
@@ -14,6 +15,7 @@ import com.example.travlediary.service.info.ActivityInfoService;
 import com.example.travlediary.service.info.AttractionInfoService;
 import com.example.travlediary.service.info.RestaurantInfoService;
 import com.example.travlediary.service.info.ShopInfoService;
+import com.example.travlediary.service.file.FileUploadService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,6 +25,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -30,9 +33,11 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 
 /** 관리자 폼의 Google Place ID 가 Destination 을 거쳐 Mapper INSERT/UPDATE 까지 전달되는지. */
@@ -59,7 +64,11 @@ class DestinationPlaceIdBindingTest {
 
     @BeforeEach
     void setUp() {
-        service = new DestinationService(destinationMapper, bookmarkMapper, amenityService,
+        DestinationImageService destinationImageService = new DestinationImageService(
+                destinationMapper, new FileUploadService(uploadDir.toString()));
+        ReflectionTestUtils.setField(destinationImageService, "uploadDir", uploadDir.toString());
+        service = new DestinationService(destinationMapper, destinationImageService,
+                bookmarkMapper, amenityService,
                 destinationCommentService, accommodationInfoService, attractionInfoService,
                 restaurantInfoService, activityInfoService, shopInfoService);
         ReflectionTestUtils.setField(service, "uploadPath", uploadDir.toString());
@@ -77,6 +86,29 @@ class DestinationPlaceIdBindingTest {
         service.registerDestination(form(null), 3L);
 
         assertThat(insertedDestination().getGooglePlaceId()).isNull();
+    }
+
+    @Test
+    void registerStoresUploadedImagesWithSingleMainAndSequentialOrder() {
+        DestinationForm form = form(null);
+        form.setMain(true);
+        form.setSlide(true);
+        form.setImages(new MultipartFile[]{
+                new MockMultipartFile("images", "a.jpg", "image/jpeg", new byte[]{1}),
+                new MockMultipartFile("images", "b.jpg", "image/jpeg", new byte[]{2})
+        });
+
+        service.registerDestination(form, 3L);
+
+        ArgumentCaptor<DestinationImage> captor = ArgumentCaptor.forClass(DestinationImage.class);
+        verify(destinationMapper, times(2)).insertImage(captor.capture());
+        List<DestinationImage> images = captor.getAllValues();
+        assertThat(images).extracting(DestinationImage::getIsMain)
+                .containsExactly(true, false);
+        assertThat(images).extracting(DestinationImage::getIsSlide)
+                .containsExactly(true, true);
+        assertThat(images).extracting(DestinationImage::getOrderIndex)
+                .containsExactly(0, 1);
     }
 
     @Test

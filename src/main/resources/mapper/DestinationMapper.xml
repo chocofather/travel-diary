@@ -143,7 +143,7 @@
             created_at
         FROM destination_images
         WHERE destination_id = #{destinationId}
-        ORDER BY order_index
+        ORDER BY order_index, id
     </select>
 
     <select id="findAllWithRegion" resultType="com.example.travlediary.model.Destination">
@@ -172,6 +172,25 @@
     <delete id="deleteImageById" parameterType="long">
         DELETE FROM destination_images WHERE id = #{imageId}
     </delete>
+
+    <update id="clearMainImagesByDestinationId" parameterType="long">
+        UPDATE destination_images
+        SET is_main = false
+        WHERE destination_id = #{destinationId}
+          AND is_main = true
+    </update>
+
+    <update id="setMainImage" parameterType="long">
+        UPDATE destination_images
+        SET is_main = true
+        WHERE id = #{imageId}
+    </update>
+
+    <update id="updateImageOrder">
+        UPDATE destination_images
+        SET order_index = #{orderIndex}
+        WHERE id = #{imageId}
+    </update>
 
     <!--<select id="findByCountryCategoryId" resultType="com.example.travlediary.model.Destination">
         SELECT

@@ -36,6 +36,10 @@
 
         DestinationImage findImageById(Long imageId);
         void deleteImageById(Long imageId);
+        void clearMainImagesByDestinationId(Long destinationId);
+        void setMainImage(Long imageId);
+        void updateImageOrder(@Param("imageId") Long imageId,
+                              @Param("orderIndex") int orderIndex);
 
         List<Destination> findByCountryCategoryId(@Param("cityId") Long cityId);
 

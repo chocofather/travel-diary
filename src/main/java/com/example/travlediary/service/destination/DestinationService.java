@@ -17,7 +17,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -31,6 +30,7 @@ import java.util.stream.Collectors;
 public class DestinationService {
 
     private final DestinationMapper destinationMapper;
+    private final DestinationImageService destinationImageService;
     private final BookmarkMapper bookmarkMapper;
     private final AmenityService amenityService;
     private final DestinationCommentService destinationCommentService;
@@ -132,36 +132,8 @@ public class DestinationService {
                 break;
         }
 
-        // ✅ 업로드 디렉토리 준비
-        Path dirPath = Paths.get(uploadPath, "destinations");
-        try {
-            if (Files.notExists(dirPath)) {
-                Files.createDirectories(dirPath);
-            }
-        } catch (IOException e) {
-            throw new RuntimeException("업로드 폴더 생성 실패", e);
-        }
-
-        for (MultipartFile imageFile : form.getImages()) {
-            if (!imageFile.isEmpty()) {
-                try {
-                    String filename = UUID.randomUUID() + "_" + imageFile.getOriginalFilename();
-                    Path filePath = dirPath.resolve(filename);
-                    imageFile.transferTo(filePath.toFile());
-
-                    DestinationImage image = new DestinationImage();
-                    image.setDestinationId(destinationId);
-                    image.setImageUrl("/uploads/destinations/" + filename);// 클라이언트에 노출될 URL 경로
-                    image.setIsMain(form.isMain());
-                    image.setIsSlide(form.isSlide());
-                    image.setOrderIndex(0);
-
-                    destinationMapper.insertImage(image);
-                } catch (IOException e) {
-                    throw new RuntimeException("이미지 업로드 실패", e);
-                }
-            }
-        }
+        destinationImageService.saveImages(
+                destinationId, form.getImages(), form.isMain(), form.isSlide());
     }
 
     public List<Destination> getDomesticDestinations() {
