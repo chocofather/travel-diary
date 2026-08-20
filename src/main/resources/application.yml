@@ -35,6 +35,9 @@ custom:
   upload-path: /Users/minjun/travlediary-uploads/ # ✅ 이 줄 추가
 
 server:
+  error:
+    include-stacktrace: never
+    include-message: never
   servlet:
     session:
       tracking-modes: cookie
@@ -57,3 +60,8 @@ logging:
 
 holiday:
   api-key: ${HOLIDAY_API_KEY:}
+
+kto:
+  photo:
+    api-key: ${KTO_PHOTO_API_KEY:}
+    base-url: https://apis.data.go.kr/B551011/PhotoGalleryService1

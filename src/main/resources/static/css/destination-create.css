@@ -250,6 +250,366 @@
     font-size: 0.84rem;
 }
 
+.admin-kto-photo-search-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 12px;
+    max-width: 720px;
+}
+
+.admin-kto-photo-search-field {
+    display: grid;
+    min-width: 0;
+    gap: 7px;
+}
+
+.admin-destination-form .admin-kto-photo-search-field input[type="search"] {
+    width: 100%;
+    min-height: 42px;
+    padding: 10px 12px;
+    color: #35415a;
+    background: #fbfcfe;
+    border: 1px solid #d8dfeb;
+    border-radius: 9px;
+    font: inherit;
+}
+
+.admin-destination-form .admin-kto-photo-search-field input[type="search"]:focus {
+    background: #fff;
+    border-color: #7892f5;
+    outline: 3px solid rgba(66, 101, 247, 0.11);
+}
+
+.admin-kto-photo-search-controls .admin-btn {
+    min-width: 78px;
+}
+
+.admin-kto-photo-status {
+    min-height: 22px;
+    margin: -2px 0 0;
+    color: #707b91;
+    font-size: 0.85rem;
+    line-height: 1.55;
+}
+
+.admin-kto-photo-status[data-state="loading"] {
+    color: #4e66bd;
+}
+
+.admin-kto-photo-status[data-state="error"] {
+    color: #b34f4f;
+}
+
+.admin-kto-photo-status[data-state="success"] {
+    color: #455373;
+    font-weight: 650;
+}
+
+.admin-kto-photo-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.admin-kto-photo-card {
+    min-width: 0;
+    overflow: hidden;
+    background: #fff;
+    border: 1px solid #e0e6f0;
+    border-radius: 12px;
+    transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+}
+
+.admin-kto-photo-card:not([aria-disabled="true"]) {
+    cursor: pointer;
+}
+
+.admin-kto-photo-card[aria-disabled="true"] {
+    cursor: default;
+}
+
+.admin-kto-photo-card:not([aria-disabled="true"]):not(.is-selected):hover {
+    border-color: #bdc9df;
+    box-shadow: 0 4px 14px rgba(57, 75, 120, 0.09);
+}
+
+.admin-kto-photo-card:focus-visible {
+    outline: 3px solid #5575e7;
+    outline-offset: 2px;
+}
+
+.admin-kto-photo-card:not([aria-disabled="true"]):hover .admin-kto-photo-preview img {
+    filter: brightness(0.94);
+}
+
+.admin-kto-photo-card.is-selected {
+    background: #f8faff;
+    border-color: #5575e7;
+    box-shadow: 0 0 0 2px rgba(85, 117, 231, 0.13);
+}
+
+.admin-kto-photo-card.is-main {
+    border-color: #d28b23;
+    box-shadow: 0 0 0 2px rgba(210, 139, 35, 0.16);
+}
+
+.admin-kto-photo-preview {
+    position: relative;
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    color: inherit;
+    background: #eef2f8;
+    text-align: left;
+}
+
+.admin-kto-photo-preview img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: filter 0.14s ease;
+}
+
+.admin-kto-photo-image-fallback {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+    color: #8993a7;
+    background: #f1f4f9;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    text-align: center;
+}
+
+.admin-kto-photo-image-fallback[hidden] {
+    display: none;
+}
+
+.admin-kto-photo-selected-check {
+    position: absolute;
+    z-index: 2;
+    top: 8px;
+    right: 8px;
+    display: grid;
+    place-items: center;
+    width: 25px;
+    height: 25px;
+    color: #fff;
+    background: #5575e7;
+    border: 2px solid rgba(255, 255, 255, 0.96);
+    border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(35, 47, 77, 0.2);
+    font-size: 0.76rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.admin-kto-photo-main-badge {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    min-height: 23px;
+    padding: 3px 7px;
+    color: #80510c;
+    background: #fff2d6;
+    border: 1px solid #efc879;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 750;
+    line-height: 1;
+}
+
+.admin-kto-photo-preview > .admin-kto-photo-main-badge {
+    position: absolute;
+    z-index: 2;
+    bottom: 8px;
+    left: 8px;
+}
+
+.admin-kto-photo-card-body {
+    display: grid;
+    gap: 7px;
+    padding: 12px 13px 13px;
+}
+
+.admin-kto-photo-title {
+    display: -webkit-box;
+    min-height: 2.8em;
+    margin: 0;
+    overflow: hidden;
+    color: #334373;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.admin-kto-photo-details,
+.admin-kto-photo-source,
+.admin-kto-photo-license {
+    margin: 0;
+    color: #747f94;
+    font-size: 0.75rem;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
+.admin-kto-photo-source {
+    color: #5f6d89;
+}
+
+.admin-kto-photo-license {
+    color: #6577b7;
+}
+
+.admin-kto-photo-selected-area {
+    display: grid;
+    gap: 11px;
+    padding: 14px;
+    background: #f7f9fd;
+    border: 1px solid #dce3f0;
+    border-radius: 11px;
+}
+
+.admin-kto-photo-selected-area[hidden] {
+    display: none;
+}
+
+.admin-kto-photo-selected-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.admin-kto-photo-selected-header h3,
+.admin-kto-photo-selected-header p {
+    margin: 0;
+}
+
+.admin-kto-photo-selected-header h3 {
+    color: #3c4966;
+    font-size: 0.9rem;
+}
+
+.admin-kto-photo-selected-header p {
+    color: #707b91;
+    font-size: 0.76rem;
+}
+
+.admin-kto-photo-selected-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+}
+
+.admin-kto-photo-selected-item {
+    display: grid;
+    grid-template-columns: 74px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    padding: 8px;
+    background: #fff;
+    border: 1px solid #e0e6f0;
+    border-radius: 9px;
+}
+
+.admin-kto-photo-selected-item.is-main {
+    border-color: #e1ae53;
+}
+
+.admin-kto-photo-selected-thumbnail {
+    position: relative;
+    width: 74px;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    background: #e9edf4;
+    border-radius: 7px;
+}
+
+.admin-kto-photo-selected-thumbnail img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.admin-kto-photo-selected-thumbnail.has-image-error::after {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 5px;
+    color: #8a94a7;
+    content: "이미지 없음";
+    font-size: 0.65rem;
+    text-align: center;
+}
+
+.admin-kto-photo-selected-summary {
+    display: grid;
+    min-width: 0;
+    gap: 5px;
+}
+
+.admin-kto-photo-selected-title {
+    margin: 0;
+    overflow: hidden;
+    color: #42506c;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.admin-kto-photo-selected-actions {
+    display: grid;
+    gap: 5px;
+}
+
+.admin-kto-photo-compact-button {
+    min-height: 28px;
+    padding: 4px 8px;
+    color: #4f6091;
+    background: #fff;
+    border: 1px solid #cfd8e8;
+    border-radius: 7px;
+    font: inherit;
+    font-size: 0.7rem;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.admin-kto-photo-compact-button[aria-pressed="true"] {
+    color: #80510c;
+    background: #fff2d6;
+    border-color: #efc879;
+}
+
+.admin-kto-photo-compact-button.is-remove {
+    color: #9a4f58;
+}
+
+.admin-kto-photo-compact-button:disabled {
+    cursor: default;
+}
+
+.admin-kto-photo-more-actions {
+    display: flex;
+    justify-content: center;
+}
+
+.admin-kto-photo-more-actions:has([hidden]) {
+    display: none;
+}
+
 .admin-destination-form .admin-form-actions {
     display: flex;
     justify-content: flex-end;
@@ -435,6 +795,12 @@
     }
 }
 
+@media (max-width: 960px) {
+    .admin-kto-photo-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
 @media (max-width: 760px) {
     .admin-form-grid,
     .admin-translation-grid,
@@ -473,6 +839,40 @@
     .admin-category-options {
         grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
         max-height: 260px;
+    }
+
+    .admin-kto-photo-selected-list {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 560px) {
+    .admin-kto-photo-search-controls,
+    .admin-kto-photo-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-kto-photo-search-controls .admin-btn {
+        width: 100%;
+    }
+
+    .admin-kto-photo-selected-header {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .admin-kto-photo-selected-item {
+        grid-template-columns: 64px minmax(0, 1fr);
+    }
+
+    .admin-kto-photo-selected-thumbnail {
+        width: 64px;
+    }
+
+    .admin-kto-photo-selected-actions {
+        grid-column: 1 / -1;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 

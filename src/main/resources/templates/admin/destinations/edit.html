@@ -6,6 +6,7 @@
 <th:block th:fragment="headFragment">
   <link rel="stylesheet" href="/css/destination-create.css">
   <script src="/js/admin-destination-category-select.js" defer></script>
+  <script src="/js/admin-kto-photo-search.js" defer></script>
 </th:block>
 <th:block th:fragment="body">
 
@@ -66,7 +67,8 @@
           <h3>한국어</h3>
           <input type="hidden" th:field="*{translations[0].languageCode}" value="ko"/>
           <label>여행지명
-            <input type="text" th:field="*{translations[0].name}" placeholder="이름 (한국어)">
+            <input type="text" th:field="*{translations[0].name}" placeholder="이름 (한국어)"
+                   data-destination-korean-name>
           </label>
           <label>간단 설명
             <textarea th:field="*{translations[0].shortDescription}" placeholder="간단 설명 (한국어)"></textarea>
@@ -538,6 +540,8 @@
         </div>
       </div>
     </section>
+
+    <th:block th:replace="~{admin/destinations/fragments/kto-photo-search :: search}"></th:block>
 
     <div class="admin-form-actions">
       <a th:href="@{/admin/destinations}" class="admin-btn">취소</a>

@@ -24,6 +24,14 @@
     <resultMap id="imageMap" type="com.example.travlediary.model.DestinationImage">
         <id     property="id"         column="img_id"/>
         <result property="imageUrl"   column="image_url"/>
+        <result property="sourceType" column="source_type"/>
+        <result property="sourceName" column="source_name"/>
+        <result property="externalContentId" column="external_content_id"/>
+        <result property="sourceTitle" column="source_title"/>
+        <result property="photographer" column="photographer"/>
+        <result property="licenseType" column="license_type"/>
+        <result property="sourceImageUrl" column="source_image_url"/>
+        <result property="licenseCheckedAt" column="license_checked_at"/>
         <result property="isMain"     column="is_main"/>
         <result property="isSlide"    column="is_slide"/>
         <result property="orderIndex" column="order_index"/>
@@ -65,6 +73,14 @@
             t.short_description,
             di.id           AS img_id,
             di.image_url,
+            di.source_type,
+            di.source_name,
+            di.external_content_id,
+            di.source_title,
+            di.photographer,
+            di.license_type,
+            di.source_image_url,
+            di.license_checked_at,
             di.is_main,
             di.is_slide,
             di.order_index,
@@ -95,8 +111,38 @@
     </insert>
 
     <insert id="insertImage">
-        INSERT INTO destination_images (image_url, is_main, is_slide, order_index, destination_id, created_at)
-        VALUES (#{imageUrl}, #{isMain}, #{isSlide}, #{orderIndex}, #{destinationId}, #{createdAt})
+        INSERT INTO destination_images (
+            image_url,
+            source_type,
+            source_name,
+            external_content_id,
+            source_title,
+            photographer,
+            license_type,
+            source_image_url,
+            license_checked_at,
+            is_main,
+            is_slide,
+            order_index,
+            destination_id,
+            created_at
+        )
+        VALUES (
+            #{imageUrl},
+            COALESCE(#{sourceType}, 'ADMIN_UPLOAD'),
+            #{sourceName},
+            #{externalContentId},
+            #{sourceTitle},
+            #{photographer},
+            #{licenseType},
+            #{sourceImageUrl},
+            #{licenseCheckedAt},
+            #{isMain},
+            #{isSlide},
+            #{orderIndex},
+            #{destinationId},
+            #{createdAt}
+        )
     </insert>
 
     <!-- ========== SELECT ========== -->
@@ -136,6 +182,14 @@
         SELECT
             id           AS img_id,
             image_url,
+            source_type,
+            source_name,
+            external_content_id,
+            source_title,
+            photographer,
+            license_type,
+            source_image_url,
+            license_checked_at,
             is_main,
             is_slide,
             order_index,

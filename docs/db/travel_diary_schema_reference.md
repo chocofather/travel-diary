@@ -489,12 +489,24 @@ CREATE TABLE `destination_comments` (
 --
 -- Table structure for table `destination_images`
 --
+-- `image_url`은 서비스 표시 URL이며, 외부 사진을 로컬 저장하면 `/uploads/...`를 사용한다.
+-- `source_image_url`은 외부 제공처의 원래 이미지 URL이다.
+-- `source_type`은 라이선스가 아닌 이미지 유입 경로이며, 기존 관리자 업로드는 `ADMIN_UPLOAD`이다.
+-- 외부 사진의 출처·촬영자·라이선스 metadata는 이미지별로 보존한다.
 
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `destination_images` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `image_url` varchar(255) NOT NULL,
+  `source_type` varchar(30) NOT NULL DEFAULT 'ADMIN_UPLOAD' COMMENT '이미지 유입 경로: ADMIN_UPLOAD, KTO_PHOTO_GALLERY, KTO_TOURAPI, PUBLIC_KOGL, USER_UPLOAD',
+  `source_name` varchar(100) DEFAULT NULL COMMENT '사진 제공기관명 (예: 한국관광공사)',
+  `external_content_id` varchar(100) DEFAULT NULL COMMENT '외부 API 콘텐츠 식별자 (예: galContentId)',
+  `source_title` varchar(255) DEFAULT NULL COMMENT '외부 원본 사진 제목',
+  `photographer` varchar(100) DEFAULT NULL COMMENT '촬영자/저작자',
+  `license_type` varchar(50) DEFAULT NULL COMMENT '라이선스 유형 (예: KOGL_TYPE_1)',
+  `source_image_url` varchar(1000) DEFAULT NULL COMMENT '외부 API가 제공한 원본 웹 이미지 URL',
+  `license_checked_at` datetime DEFAULT NULL COMMENT '해당 라이선스 조건을 확인한 시각',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `is_main` tinyint NOT NULL DEFAULT '0',
   `is_slide` tinyint NOT NULL DEFAULT '0',

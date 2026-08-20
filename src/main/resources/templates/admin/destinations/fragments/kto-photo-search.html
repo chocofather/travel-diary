@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+<section class="admin-destination-section admin-kto-photo-section"
+         th:fragment="search" data-kto-photo-search>
+  <div class="admin-destination-section-header">
+    <div>
+      <h2>한국관광공사 관광사진</h2>
+      <p>여행지와 관련된 관광사진을 검색하고 미리 확인합니다. 이 단계에서는 사진이 저장되지 않습니다.</p>
+    </div>
+  </div>
+
+  <div class="admin-kto-photo-search-controls" role="search">
+    <label class="admin-kto-photo-search-field">
+      <span class="admin-form-label">관광사진 검색어</span>
+      <input type="search" placeholder="예: 경복궁 야경" autocomplete="off"
+             data-kto-photo-keyword>
+    </label>
+    <button type="button" class="admin-btn is-primary" data-kto-photo-search-button>검색</button>
+  </div>
+
+  <p class="admin-kto-photo-status" aria-live="polite" data-kto-photo-status>
+    여행지명을 이용하거나 원하는 검색어를 입력해 관광사진을 찾아보세요.
+  </p>
+
+  <section class="admin-kto-photo-selected-area" data-kto-photo-selected-area hidden>
+    <div class="admin-kto-photo-selected-header">
+      <h3>선택한 관광사진 <span data-kto-photo-selected-count>0장</span></h3>
+      <p data-kto-photo-main-status>대표사진 없음</p>
+    </div>
+    <div class="admin-kto-photo-selected-list" data-kto-photo-selected-list></div>
+  </section>
+
+  <div class="admin-kto-photo-grid" data-kto-photo-results></div>
+
+  <div class="admin-kto-photo-more-actions">
+    <button type="button" class="admin-btn" data-kto-photo-more hidden>더보기</button>
+  </div>
+</section>
+</body>
+</html>
