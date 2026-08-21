@@ -1,3 +1,7 @@
+// 서버 KtoSelectedPhotoRequestParser.MAX_SELECTED_PHOTOS 와 같은 값
+const MAX_KTO_SELECTED_PHOTOS = 30;
+const KTO_SELECTION_LIMIT_MESSAGE = "KTO 사진은 최대 30장까지 선택할 수 있습니다.";
+
 function ktoPhotoRelevanceRank(item, keyword) {
     const normalizedKeyword = String(keyword ?? "").trim();
     const title = String(item.title ?? "").trim();
@@ -25,7 +29,8 @@ function stablySortKtoPhotos(items, keyword) {
 function ktoPhotoSelectionKey(item) {
     const externalContentId = String(item?.externalContentId ?? "").trim();
     const imageUrl = String(item?.imageUrl ?? "").trim();
-    if (!externalContentId && !imageUrl) return null;
+    // 서버 parser 가 두 값을 모두 필수로 요구하므로 하나라도 없으면 선택 대상에서 제외한다
+    if (!externalContentId || !imageUrl) return null;
     return JSON.stringify([externalContentId, imageUrl]);
 }
 
@@ -43,6 +48,9 @@ function createKtoPhotoSelectionState() {
                 if (mainSelectionKey === key) mainSelectionKey = null;
                 return false;
             }
+
+            // 해제는 항상 허용하고, 새로 추가할 때만 서버와 같은 상한을 적용한다
+            if (selectedItems.size >= MAX_KTO_SELECTED_PHOTOS) return "limit";
 
             selectedItems.set(key, item);
             return true;
@@ -134,6 +142,10 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
+        function clearSelectionLimitNotice() {
+            if (status.textContent === KTO_SELECTION_LIMIT_MESSAGE) setStatus("");
+        }
+
         function setLoading(nextLoading, append) {
             loading = nextLoading;
             searchArea.setAttribute("aria-busy", String(nextLoading));
@@ -189,7 +201,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 card.tabIndex = 0;
 
                 const toggleCardSelection = () => {
-                    selectionState.toggle(item);
+                    const result = selectionState.toggle(item);
+                    if (result === null) return;
+                    if (result === "limit") {
+                        setStatus(KTO_SELECTION_LIMIT_MESSAGE, "error");
+                        return;
+                    }
+
+                    clearSelectionLimitNotice();
                     renderLoadedPhotos();
                     renderSelectedPhotos();
                 };
@@ -314,6 +333,7 @@ document.addEventListener("DOMContentLoaded", () => {
             removeButton.setAttribute("aria-label", `${String(item.title ?? "관광사진")} 선택 해제`);
             removeButton.addEventListener("click", () => {
                 selectionState.remove(key);
+                clearSelectionLimitNotice();
                 renderLoadedPhotos();
                 renderSelectedPhotos();
             });

@@ -10,6 +10,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class AdminKtoPhotoSearchUiContractTest {
 
+    /** 선택 계약이 바뀌었으므로 두 화면 모두 새 스크립트를 받아야 한다. */
+    private static final String KTO_PHOTO_SCRIPT_VERSION = "20260821-4";
+
     @Test
     void createAndImageManagementUseTheSameKtoPhotoSearchUiWhileEditStaysInformationOnly() throws IOException {
         String create = resource("/templates/admin/destinations/create.html");
@@ -165,7 +168,9 @@ class AdminKtoPhotoSearchUiContractTest {
         assertThat(script)
                 .contains("function ktoPhotoSelectionKey")
                 .contains("JSON.stringify([externalContentId, imageUrl])")
-                .contains("if (!externalContentId && !imageUrl) return null")
+                // 서버 parser 는 두 값을 모두 요구한다 (@NotBlank externalContentId, imageUrl)
+                .contains("if (!externalContentId || !imageUrl) return null")
+                .doesNotContain("if (!externalContentId && !imageUrl) return null")
                 .contains("function createKtoPhotoSelectionState")
                 .contains("const selectedItems = new Map()")
                 .contains("selectedItems.has(key)")
@@ -176,6 +181,41 @@ class AdminKtoPhotoSearchUiContractTest {
                 .contains("renderLoadedPhotos()")
                 .contains("renderSelectedPhotos()")
                 .doesNotContain("title + createdTime", "createdTime + title");
+    }
+
+    @Test
+    void selectionStopsAtTheSameThirtyPhotoLimitTheServerParserEnforces() throws IOException {
+        String script = resource("/static/js/admin-kto-photo-search.js");
+
+        assertThat(script)
+                // 서버 parser 의 MAX_SELECTED_PHOTOS 와 같은 값
+                .contains("const MAX_KTO_SELECTED_PHOTOS = 30")
+                // 새로 추가할 때만 막고, 이미 선택된 사진 해제는 항상 허용한다
+                .contains("if (selectedItems.has(key)) {")
+                .contains("if (selectedItems.size >= MAX_KTO_SELECTED_PHOTOS) return \"limit\"")
+                .contains("KTO 사진은 최대 30장까지 선택할 수 있습니다.")
+                // 제한에 걸리면 선택/렌더 상태를 그대로 둔다
+                .contains("if (result === \"limit\")");
+
+        // 서버 계약은 그대로 유지된다
+        assertThat(readFile("src/main/java/com/example/travlediary/service/kto/"
+                + "KtoSelectedPhotoRequestParser.java"))
+                .contains("MAX_SELECTED_PHOTOS = 30");
+    }
+
+    @Test
+    void bothKtoScreensLoadTheSameUpdatedSelectionScript() throws IOException {
+        String create = resource("/templates/admin/destinations/create.html");
+        String imageManagement = resource("/templates/admin/destinations/image-upload.html");
+
+        assertThat(create).contains("/js/admin-kto-photo-search.js?v=" + KTO_PHOTO_SCRIPT_VERSION);
+        assertThat(imageManagement)
+                .contains("/js/admin-kto-photo-search.js?v=" + KTO_PHOTO_SCRIPT_VERSION);
+    }
+
+    private String readFile(String path) throws IOException {
+        return new String(java.nio.file.Files.readAllBytes(java.nio.file.Path.of(path)),
+                StandardCharsets.UTF_8);
     }
 
     private String resource(String path) throws IOException {
