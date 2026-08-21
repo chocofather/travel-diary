@@ -4,9 +4,45 @@ document.addEventListener("DOMContentLoaded", () => {
         const chipsContainer = categorySelect.querySelector("[data-category-chips]");
         const emptyMessage = categorySelect.querySelector("[data-category-empty]");
         const options = Array.from(categorySelect.querySelectorAll("[data-category-option]"));
+        const filterButtons = Array.from(categorySelect.querySelectorAll("[data-category-filter]"));
+        const typeSelect = document.querySelector('select[name="type"]');
+
+        // 유형 필터와 검색어는 AND 로 함께 적용한다. (표시/숨김만 담당)
+        let typeFilter = "ALL";
 
         function getOptionName(option) {
             return option.querySelector("[data-category-name]")?.textContent.trim() ?? "";
+        }
+
+        function tokensOf(value) {
+            return String(value || "").trim().split(/\s+/).filter(token => token !== "");
+        }
+
+        function applyVisibility() {
+            const wanted = tokensOf(typeFilter);
+            const showAllTypes = wanted.length === 0 || wanted.includes("ALL");
+            const keyword = (searchInput?.value ?? "").trim().toLocaleLowerCase();
+
+            options.forEach(option => {
+                const owned = tokensOf(option.dataset.categoryTypes);
+                const matchesType = showAllTypes || owned.some(type => wanted.includes(type));
+                const matchesKeyword = keyword === ""
+                    || getOptionName(option).toLocaleLowerCase().includes(keyword);
+                option.hidden = !(matchesType && matchesKeyword);
+            });
+
+            filterButtons.forEach(button => {
+                const pressed = button.dataset.categoryFilter === typeFilter;
+                button.setAttribute("aria-pressed", String(pressed));
+                button.classList.toggle("active", pressed);
+            });
+            categorySelect.dataset.categoryMode = typeFilter;
+        }
+
+        function defaultTypeFilter() {
+            const type = typeSelect?.value ?? "";
+            if (type === "RESTAURANTS" || type === "CAFE") return "RESTAURANTS CAFE";
+            return type === "" ? "ALL" : type;
         }
 
         function syncSelectedCategories() {
@@ -49,17 +85,26 @@ document.addEventListener("DOMContentLoaded", () => {
                 ?.addEventListener("change", syncSelectedCategories);
         });
 
-        searchInput?.addEventListener("input", () => {
-            const keyword = searchInput.value.trim().toLocaleLowerCase();
-            options.forEach(option => {
-                option.hidden = !getOptionName(option).toLocaleLowerCase().includes(keyword);
-            });
-        });
+        searchInput?.addEventListener("input", applyVisibility);
 
         searchInput?.addEventListener("keydown", event => {
             if (event.key === "Enter") event.preventDefault();
         });
 
+        filterButtons.forEach(button => button.addEventListener("click", () => {
+            // 유형 탭만 바꾸고 검색어와 체크 상태는 그대로 둔다.
+            typeFilter = button.dataset.categoryFilter || "ALL";
+            applyVisibility();
+        }));
+
+        // 여행지 유형이 바뀌면 해당 유형 탭으로 자동 전환한다.
+        typeSelect?.addEventListener("change", () => {
+            typeFilter = defaultTypeFilter();
+            applyVisibility();
+        });
+
+        typeFilter = defaultTypeFilter();
+        applyVisibility();
         syncSelectedCategories();
     });
 });

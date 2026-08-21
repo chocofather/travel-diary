@@ -230,6 +230,76 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+/* 직접 업로드 미리보기 (등록 폼 / 이미지 관리 공용) */
+.admin-upload-preview {
+    margin-top: 10px;
+}
+
+.admin-upload-preview-count {
+    margin: 0 0 8px;
+}
+
+.admin-upload-preview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+    max-height: 420px;
+    overflow-y: auto;
+}
+
+.admin-upload-preview-card {
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    background: #fff;
+    border: 1px solid #dfe5ef;
+    border-radius: 10px;
+}
+
+.admin-upload-preview-image,
+.admin-upload-preview-fallback {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    background: #eef2f8;
+}
+
+.admin-upload-preview-image {
+    object-fit: cover;
+}
+
+.admin-upload-preview-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    color: #6b768d;
+    font-size: 12px;
+    text-align: center;
+}
+
+.admin-upload-preview-name {
+    overflow: hidden;
+    padding: 6px 8px;
+    color: #3e4b68;
+    font-size: 12px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+/* 편의시설·카테고리 필터 (보이기/숨기기 전용) */
+.admin-category-filters,
+.admin-amenity-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.admin-amenity-option[hidden] {
+    display: none;
+}
+
 /* 국내/해외 선택에 따라 필요한 단계만 보여 준다 */
 .admin-region-modes {
     display: flex;

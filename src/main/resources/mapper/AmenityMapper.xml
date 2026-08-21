@@ -65,6 +65,26 @@
         WHERE t.language_code = #{languageCode}
     </select>
 
+    <!-- 여행지 유형별 편의시설 마스터 목록 (amenity_destination_types 기준) -->
+    <select id="findTranslationsByDestinationTypeAndLang"
+            resultType="com.example.travlediary.model.AmenityTranslation">
+        SELECT t.*, a.code
+        FROM amenity_destination_types adt
+                 JOIN amenities a ON a.id = adt.amenity_id
+                 JOIN amenity_translations t ON t.amenity_id = a.id
+        WHERE adt.destination_type = #{destinationType}
+          AND t.language_code = #{languageCode}
+        ORDER BY t.id
+    </select>
+
+    <!-- 편의시설 ↔ 여행지 유형 마스터 매핑 전체 (화면 필터 태그용) -->
+    <select id="findAmenityDestinationTypes"
+            resultType="com.example.travlediary.model.AmenityDestinationType">
+        SELECT amenity_id, destination_type
+        FROM amenity_destination_types
+        ORDER BY amenity_id, destination_type
+    </select>
+
     <!-- 관광지 -->
     <select id="findAttractionAmenityTranslationsByDestinationId"
             resultType="com.example.travlediary.model.AmenityTranslation">

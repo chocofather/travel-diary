@@ -1,6 +1,7 @@
 package com.example.travlediary.repository.amenity;
 
 import com.example.travlediary.model.Amenity;
+import com.example.travlediary.model.AmenityDestinationType;
 import com.example.travlediary.model.AmenityTranslation;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -29,6 +30,20 @@ public interface AmenityMapper {
             @Param("type") String type,
             @Param("languageCode") String languageCode
     );
+
+    /**
+     * 여행지 유형별 편의시설 마스터 목록.
+     * 사용 이력(*_amenities)이 아니라 amenity_destination_types 매핑을 읽는다.
+     *
+     * @param destinationType DestinationType enum 이름
+     */
+    List<AmenityTranslation> findTranslationsByDestinationTypeAndLang(
+            @Param("destinationType") String destinationType,
+            @Param("languageCode") String languageCode
+    );
+
+    /** 편의시설 ↔ 여행지 유형 마스터 매핑 전체. 화면 필터가 쓰는 태그의 원본이다. */
+    List<AmenityDestinationType> findAmenityDestinationTypes();
 
 
 

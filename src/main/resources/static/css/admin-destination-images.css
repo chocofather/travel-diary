@@ -215,64 +215,13 @@
     margin-bottom: 10px;
 }
 
-/* 직접 업로드 미리보기 (업로드 전 로컬 확인용) - 상단 2열 아래 전체 폭 */
-.admin-upload-preview {
+/* 직접 업로드 미리보기: 이미지 관리 화면에서는 상단 2열 아래 전체 폭에 놓는다.
+   (공통 모양은 destination-create.css 에 있고 두 화면이 함께 쓴다) */
+.admin-image-add-grid .admin-upload-preview {
     grid-column: 1 / -1;
     grid-row: 4;
     padding-top: 14px;
     border-top: 1px solid #e6ebf4;
-}
-
-.admin-upload-preview-count {
-    margin: 0 0 8px;
-}
-
-.admin-upload-preview-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 12px;
-    max-height: 420px;
-    overflow-y: auto;
-}
-
-.admin-upload-preview-card {
-    min-width: 0;
-    margin: 0;
-    overflow: hidden;
-    background: #fff;
-    border: 1px solid #dfe5ef;
-    border-radius: 10px;
-}
-
-.admin-upload-preview-image,
-.admin-upload-preview-fallback {
-    display: block;
-    width: 100%;
-    aspect-ratio: 4 / 3;
-    background: #eef2f8;
-}
-
-.admin-upload-preview-image {
-    object-fit: cover;
-}
-
-.admin-upload-preview-fallback {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 6px;
-    color: #6b768d;
-    font-size: 12px;
-    text-align: center;
-}
-
-.admin-upload-preview-name {
-    overflow: hidden;
-    padding: 6px 8px;
-    color: #3e4b68;
-    font-size: 12px;
-    white-space: nowrap;
-    text-overflow: ellipsis;
 }
 
 .admin-image-add-grid .admin-kto-photo-section > .admin-destination-section-header {

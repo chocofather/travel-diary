@@ -3,6 +3,7 @@ package com.example.travlediary.controller.admin;
 import com.example.travlediary.dto.DestinationForm;
 import com.example.travlediary.dto.kto.KtoSelectedPhotoRequest;
 import com.example.travlediary.model.CountryCategory;
+import com.example.travlediary.model.DestinationType;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.amenity.AmenityService;
 import com.example.travlediary.service.category.CategoryService;
@@ -66,12 +67,46 @@ public class AdminDestinationController {
         model.addAttribute("destinationForm", form);
         // 지역 선택 UI 의 국내/해외 구분 기준. 숫자 ID 를 화면에 하드코딩하지 않는다.
         model.addAttribute("domesticRootId", countryCategoryService.getKoreaRootId());
+        addCategoryModel(model);
+        addAmenityModel(model, lang);
+    }
+
+    /** 전체 카테고리(기존 binding)와 여행지 유형별 카테고리 목록. */
+    private void addCategoryModel(Model model) {
         model.addAttribute("categories", categoryService.getAll());
-        model.addAttribute("attractionAmenities", amenityService.getAllAmenityTranslations(lang));
-        model.addAttribute("accommodationAmenities", amenityService.getAllAmenityTranslations(lang));
-        model.addAttribute("restaurantAmenities", amenityService.getAllAmenityTranslations(lang));
-        model.addAttribute("activityAmenities", amenityService.getAllAmenityTranslations(lang));
-        model.addAttribute("shopAmenities", amenityService.getAllAmenityTranslations(lang));
+        model.addAttribute("attractionCategories",
+                categoryService.getByDestinationTypes(DestinationType.ATTRACTION));
+        model.addAttribute("accommodationCategories",
+                categoryService.getByDestinationTypes(DestinationType.ACCOMMODATION));
+        // 음식점과 카페는 같은 입력 화면을 쓰므로 두 유형을 합쳐 전달한다.
+        model.addAttribute("restaurantCategories",
+                categoryService.getByDestinationTypes(
+                        DestinationType.RESTAURANTS, DestinationType.CAFE));
+        model.addAttribute("activityCategories",
+                categoryService.getByDestinationTypes(DestinationType.ACTIVITY));
+        model.addAttribute("shopCategories",
+                categoryService.getByDestinationTypes(DestinationType.SHOP));
+        // 화면 필터는 이 태그(카테고리 → 적용 가능한 유형)만 보고 동작한다.
+        model.addAttribute("categoryTypeTags", categoryService.getCategoryDestinationTypeTags());
+    }
+
+    /** 여행지 유형별 편의시설 목록. 유형 매핑이 없는 편의시설은 전체 목록에서만 보인다. */
+    private void addAmenityModel(Model model, String lang) {
+        model.addAttribute("attractionAmenities",
+                amenityService.getAmenityTranslationsByDestinationTypes(lang, DestinationType.ATTRACTION));
+        model.addAttribute("accommodationAmenities",
+                amenityService.getAmenityTranslationsByDestinationTypes(lang, DestinationType.ACCOMMODATION));
+        // 음식점과 카페는 같은 입력 화면과 저장 테이블을 쓰므로 두 유형을 합쳐 전달한다.
+        model.addAttribute("restaurantAmenities",
+                amenityService.getAmenityTranslationsByDestinationTypes(
+                        lang, DestinationType.RESTAURANTS, DestinationType.CAFE));
+        model.addAttribute("activityAmenities",
+                amenityService.getAmenityTranslationsByDestinationTypes(lang, DestinationType.ACTIVITY));
+        model.addAttribute("shopAmenities",
+                amenityService.getAmenityTranslationsByDestinationTypes(lang, DestinationType.SHOP));
+        model.addAttribute("allAmenities", amenityService.getAllAmenityTranslations(lang));
+        // 화면 필터는 이 태그(편의시설 → 적용 가능한 유형)만 보고 동작한다.
+        model.addAttribute("amenityTypeTags", amenityService.getAmenityDestinationTypeTags());
     }
 
     @PostMapping
@@ -258,12 +293,8 @@ public class AdminDestinationController {
         model.addAttribute("destinationForm", form);
         model.addAttribute("domesticRootId", countryCategoryService.getKoreaRootId());
         model.addAttribute("regionPathIds", joinRegionPathIds(form.getRegionId()));
-        model.addAttribute("categories", categoryService.getAll());
-        model.addAttribute("attractionAmenities", amenityService.getAllAmenityTranslations(lang));
-        model.addAttribute("accommodationAmenities", amenityService.getAllAmenityTranslations(lang));
-        model.addAttribute("restaurantAmenities", amenityService.getAllAmenityTranslations(lang));
-        model.addAttribute("activityAmenities", amenityService.getAllAmenityTranslations(lang));
-        model.addAttribute("shopAmenities", amenityService.getAllAmenityTranslations(lang));
+        addCategoryModel(model);
+        addAmenityModel(model, lang);
     }
 
     // 지역 select를 기존 저장 값으로 복원하기 위한 최상위 -> 현재 지역 ID 경로

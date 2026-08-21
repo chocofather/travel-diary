@@ -5,7 +5,7 @@
   <link rel="stylesheet" href="/css/destination-create.css">
   <link rel="stylesheet" href="/css/admin-destination-images.css">
   <script src="/js/admin-kto-photo-search.js?v=20260821-4" defer></script>
-  <script src="/js/admin-destination-image-upload-preview.js?v=20260821-1" defer></script>
+  <script src="/js/admin-destination-image-upload-preview.js?v=20260822-2" defer></script>
 </th:block>
 <th:block th:fragment="body">
   <section class="admin-page-section admin-destination-images-page">
@@ -49,7 +49,8 @@
         </form>
 
         <!-- 선택한 파일 미리보기는 상단 입력 열 높이에 영향을 주지 않도록 전체 폭에 둔다. -->
-        <div class="admin-upload-preview" data-destination-upload-preview hidden>
+        <div class="admin-upload-preview" data-destination-upload-preview="destination-image-files"
+             hidden>
           <p class="admin-field-help admin-upload-preview-count"
              data-destination-upload-preview-count></p>
           <div class="admin-upload-preview-grid" data-destination-upload-preview-grid></div>

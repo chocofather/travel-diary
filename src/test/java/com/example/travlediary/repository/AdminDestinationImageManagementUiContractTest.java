@@ -143,8 +143,10 @@ class AdminDestinationImageManagementUiContractTest {
         assertThat(css)
                 // 미리보기와 KTO 결과 모두 상단 그리드에서 전체 폭을 쓴다
                 .contains(".admin-upload-preview")
-                .contains("grid-column: 1 / -1")
-                // 전체 폭에서는 더 촘촘한 썸네일 그리드를 쓴다
+                .contains("grid-column: 1 / -1");
+        // 썸네일 그리드 모양은 등록 폼과 공용 CSS 에 있다
+        assertThat(resource("/static/css/destination-create.css"))
+                .contains(".admin-upload-preview-grid")
                 .contains("repeat(auto-fill, minmax(");
         assertThat(source).contains("admin/destinations/fragments/kto-photo-search");
     }
@@ -153,8 +155,10 @@ class AdminDestinationImageManagementUiContractTest {
     void uploadPreviewRendersEachFileLocallyAndReleasesItsObjectUrls() throws IOException {
         String script = resource("/static/js/admin-destination-image-upload-preview.js");
 
+        // 파일 input 은 화면 템플릿이 id 로 지정하고, 스크립트는 공용이다
+        assertThat(resource("/templates/admin/destinations/image-upload.html"))
+                .contains("data-destination-upload-preview=\"destination-image-files\"");
         assertThat(script)
-                .contains("destination-image-files")
                 .contains("addEventListener(\"change\"")
                 // 로컬 미리보기만 사용하고 서버에 올리지 않는다
                 .contains("URL.createObjectURL")

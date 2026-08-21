@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--
+  카테고리 목록 위 필터.
+  보이기/숨기기 전용이며 체크 상태와 저장 값에는 관여하지 않는다.
+  값은 DestinationType enum 이름이고, 식당·카페는 두 유형의 합집합이다.
+-->
+<div class="admin-category-filters" th:fragment="filters" role="group" aria-label="카테고리 필터">
+  <button type="button" class="admin-filter-tab is-small" aria-pressed="false"
+          data-category-filter="ALL">전체</button>
+  <button type="button" class="admin-filter-tab is-small" aria-pressed="false"
+          data-category-filter="ATTRACTION">여행지</button>
+  <button type="button" class="admin-filter-tab is-small" aria-pressed="false"
+          data-category-filter="RESTAURANTS CAFE">식당·카페</button>
+  <button type="button" class="admin-filter-tab is-small" aria-pressed="false"
+          data-category-filter="ACCOMMODATION">숙소</button>
+  <button type="button" class="admin-filter-tab is-small" aria-pressed="false"
+          data-category-filter="ACTIVITY">액티비티</button>
+  <button type="button" class="admin-filter-tab is-small" aria-pressed="false"
+          data-category-filter="SHOP">쇼핑</button>
+</div>
+</body>
+</html>

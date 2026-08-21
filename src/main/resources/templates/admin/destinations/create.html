@@ -5,7 +5,9 @@
 
 <th:block th:fragment="headFragment">
   <link rel="stylesheet" href="/css/destination-create.css">
-  <script src="/js/admin-destination-category-select.js" defer></script>
+  <script src="/js/admin-destination-category-select.js?v=20260822-2" defer></script>
+  <script src="/js/admin-destination-amenity-filter.js?v=20260822-1" defer></script>
+  <script src="/js/admin-destination-image-upload-preview.js?v=20260822-2" defer></script>
   <script src="/js/admin-kto-tour-autofill.js?v=20260821-2" defer></script>
   <script src="/js/admin-kto-photo-search.js?v=20260821-4" defer></script>
 </th:block>
@@ -235,10 +237,14 @@
       </label>
     </div>
     <!-- 👇 관광지 편의시설 (amenities) -->
-    <div class="admin-type-field-wide admin-amenity-field">
+    <div class="admin-type-field-wide admin-amenity-field"
+         data-amenity-field data-amenity-default-filter="ATTRACTION">
       <h4>관광지 편의시설</h4>
-      <div class="admin-amenity-options" style="display: flex; flex-wrap: wrap; gap: 12px;">
-        <div th:each="amenity : ${attractionAmenities}">
+      <div th:replace="~{admin/destinations/fragments/amenity-filter :: filters}"></div>
+      <div class="admin-amenity-options" data-amenity-options
+           style="display: flex; flex-wrap: wrap; gap: 12px;">
+        <div th:each="amenity : ${allAmenities}" class="admin-amenity-option" data-amenity-option
+             th:attr="data-amenity-types=${amenityTypeTags.get(amenity.amenityId)}">
           <label>
             <input type="checkbox" th:field="*{attractionAmenityIds}" th:value="${amenity.amenityId}">
             <span th:text="${amenity.name}"></span>
@@ -311,10 +317,14 @@
       </label>
     </div>
     <!-- 👇 숙소 편의시설 (amenities) -->
-    <div class="admin-type-field-wide admin-amenity-field">
+    <div class="admin-type-field-wide admin-amenity-field"
+         data-amenity-field data-amenity-default-filter="ACCOMMODATION">
       <h4>숙소 편의시설</h4>
-      <div class="admin-amenity-options" style="display: flex; flex-wrap: wrap; gap: 12px;">
-        <div th:each="amenity : ${accommodationAmenities}">
+      <div th:replace="~{admin/destinations/fragments/amenity-filter :: filters}"></div>
+      <div class="admin-amenity-options" data-amenity-options
+           style="display: flex; flex-wrap: wrap; gap: 12px;">
+        <div th:each="amenity : ${allAmenities}" class="admin-amenity-option" data-amenity-option
+             th:attr="data-amenity-types=${amenityTypeTags.get(amenity.amenityId)}">
           <label>
             <input type="checkbox" th:field="*{accommodationAmenityIds}" th:value="${amenity.amenityId}">
             <span th:text="${amenity.name}"></span>
@@ -399,10 +409,14 @@
       </label>
     </div>
     <!-- 👇 음식점/카페 편의시설 (amenities) -->
-    <div class="admin-type-field-wide admin-amenity-field">
+    <div class="admin-type-field-wide admin-amenity-field"
+         data-amenity-field data-amenity-default-filter="RESTAURANTS CAFE">
       <h4>음식점/카페 편의시설</h4>
-      <div class="admin-amenity-options" style="display: flex; flex-wrap: wrap; gap: 12px;">
-        <div th:each="amenity : ${restaurantAmenities}">
+      <div th:replace="~{admin/destinations/fragments/amenity-filter :: filters}"></div>
+      <div class="admin-amenity-options" data-amenity-options
+           style="display: flex; flex-wrap: wrap; gap: 12px;">
+        <div th:each="amenity : ${allAmenities}" class="admin-amenity-option" data-amenity-option
+             th:attr="data-amenity-types=${amenityTypeTags.get(amenity.amenityId)}">
           <label>
             <input type="checkbox" th:field="*{restaurantAmenityIds}" th:value="${amenity.amenityId}">
             <span th:text="${amenity.name}"></span>
@@ -472,10 +486,14 @@
       </label>
     </div>
     <!-- Amenity (체험/액티비티용) -->
-    <div class="admin-type-field-wide admin-amenity-field">
+    <div class="admin-type-field-wide admin-amenity-field"
+         data-amenity-field data-amenity-default-filter="ACTIVITY">
       <h4>체험/액티비티 편의시설</h4>
-      <div class="admin-amenity-options" style="display: flex; flex-wrap: wrap; gap: 12px;">
-        <div th:each="amenity : ${activityAmenities}">
+      <div th:replace="~{admin/destinations/fragments/amenity-filter :: filters}"></div>
+      <div class="admin-amenity-options" data-amenity-options
+           style="display: flex; flex-wrap: wrap; gap: 12px;">
+        <div th:each="amenity : ${allAmenities}" class="admin-amenity-option" data-amenity-option
+             th:attr="data-amenity-types=${amenityTypeTags.get(amenity.amenityId)}">
           <label>
             <input type="checkbox" th:field="*{activityAmenityIds}" th:value="${amenity.amenityId}">
             <span th:text="${amenity.name}"></span>
@@ -530,10 +548,14 @@
       </label>
     </div>
     <!-- Amenity (쇼핑용) -->
-    <div class="admin-type-field-wide admin-amenity-field">
+    <div class="admin-type-field-wide admin-amenity-field"
+         data-amenity-field data-amenity-default-filter="SHOP">
       <h4>쇼핑 편의시설</h4>
-      <div class="admin-amenity-options" style="display: flex; flex-wrap: wrap; gap: 12px;">
-        <div th:each="amenity : ${shopAmenities}">
+      <div th:replace="~{admin/destinations/fragments/amenity-filter :: filters}"></div>
+      <div class="admin-amenity-options" data-amenity-options
+           style="display: flex; flex-wrap: wrap; gap: 12px;">
+        <div th:each="amenity : ${allAmenities}" class="admin-amenity-option" data-amenity-option
+             th:attr="data-amenity-types=${amenityTypeTags.get(amenity.amenityId)}">
           <label>
             <input type="checkbox" th:field="*{shopAmenityIds}" th:value="${amenity.amenityId}">
             <span th:text="${amenity.name}"></span>
@@ -546,7 +568,7 @@
   </section>
 
   <!-- 카테고리 -->
-  <section class="admin-category-select" data-category-select>
+  <section class="admin-category-select" data-category-select data-category-mode="">
     <div class="admin-category-select-heading">
       <h4>카테고리</h4>
       <span>복수 선택 가능</span>
@@ -558,13 +580,16 @@
       <span class="admin-category-empty" data-category-empty>선택된 카테고리가 없습니다.</span>
     </div>
 
+    <div th:replace="~{admin/destinations/fragments/category-filter :: filters}"></div>
+
     <label class="admin-category-search">
       <span>카테고리 검색</span>
       <input type="search" placeholder="카테고리 검색" autocomplete="off" data-category-search />
     </label>
 
     <div class="admin-category-options" role="group" aria-label="여행지 카테고리" data-category-options>
-      <label class="admin-category-option" th:each="cat : ${categories}" data-category-option>
+      <label class="admin-category-option" th:each="cat : ${categories}" data-category-option
+             th:attr="data-category-types=${categoryTypeTags.get(cat.id)}">
         <input type="checkbox" th:field="*{categoryIds}" th:value="${cat.id}" data-category-checkbox />
         <span th:text="${cat.name}" data-category-name></span>
       </label>
@@ -581,11 +606,19 @@
     </div>
 
     <div class="admin-image-upload-field">
-      <label>이미지 업로드</label>
-      <input type="file" name="images" multiple>
+      <label for="destination-create-image-files">이미지 업로드</label>
+      <input id="destination-create-image-files" type="file" name="images" multiple>
       <div class="admin-image-options">
         <label><input type="checkbox" th:field="*{main}"/> 메인 이미지</label>
         <label><input type="checkbox" th:field="*{slide}"/> 슬라이드 이미지</label>
+      </div>
+
+      <!-- 업로드 전 로컬 미리보기 (이미지 관리 화면과 같은 공용 스크립트) -->
+      <div class="admin-upload-preview" data-destination-upload-preview="destination-create-image-files"
+           hidden>
+        <p class="admin-field-help admin-upload-preview-count"
+           data-destination-upload-preview-count></p>
+        <div class="admin-upload-preview-grid" data-destination-upload-preview-grid></div>
       </div>
     </div>
   </section>

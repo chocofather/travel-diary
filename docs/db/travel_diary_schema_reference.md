@@ -109,6 +109,25 @@ CREATE TABLE `amenities` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `amenity_destination_types`
+--
+-- 편의시설이 어떤 여행지 유형에 적용 가능한지 정의하는 마스터 N:M 매핑이다.
+-- 실제 여행지별 선택 값은 `*_amenities` 테이블이 따로 저장한다.
+-- `destination_type`은 DestinationType enum 값을 그대로 쓴다.
+-- (ATTRACTION / RESTAURANTS / CAFE / ACCOMMODATION / ACTIVITY / SHOP)
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `amenity_destination_types` (
+  `amenity_id` int NOT NULL,
+  `destination_type` varchar(30) NOT NULL,
+  PRIMARY KEY (`amenity_id`,`destination_type`),
+  KEY `idx_amenity_destination_types_type` (`destination_type`,`amenity_id`),
+  CONSTRAINT `fk_amenity_destination_types_amenity` FOREIGN KEY (`amenity_id`) REFERENCES `amenities` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `amenity_translations`
 --
 
@@ -223,6 +242,25 @@ CREATE TABLE `categories` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `name_UNIQUE` (`name`)
 ) ENGINE=InnoDB AUTO_INCREMENT=104 DEFAULT CHARSET=utf8mb3;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `category_destination_types`
+--
+-- 카테고리가 어떤 여행지 유형에 적용 가능한지 정의하는 마스터 N:M 매핑이다.
+-- 실제 여행지별 선택 값은 `destination_categories` 가 따로 저장한다.
+-- `destination_type`은 DestinationType enum 값을 그대로 쓴다.
+-- (ATTRACTION / RESTAURANTS / CAFE / ACCOMMODATION / ACTIVITY / SHOP)
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `category_destination_types` (
+  `category_id` bigint NOT NULL,
+  `destination_type` varchar(30) NOT NULL,
+  PRIMARY KEY (`category_id`,`destination_type`),
+  KEY `idx_category_destination_types_type` (`destination_type`,`category_id`),
+  CONSTRAINT `fk_category_destination_types_category` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --

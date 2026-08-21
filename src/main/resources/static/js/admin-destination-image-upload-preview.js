@@ -3,11 +3,15 @@
  * 선택한 파일을 브라우저에서만 보여 주며, 실제 저장과 JPEG/PNG 검증은 서버가 담당한다.
  */
 document.addEventListener("DOMContentLoaded", () => {
-    const input = document.getElementById("destination-image-files");
-    const preview = document.querySelector("[data-destination-upload-preview]");
-    const count = document.querySelector("[data-destination-upload-preview-count]");
-    const grid = document.querySelector("[data-destination-upload-preview-grid]");
-    if (!input || !preview || !count || !grid) return;
+    // 화면마다 파일 input 이 다르므로 블록이 자기 input 을 id 로 가리킨다.
+    document.querySelectorAll("[data-destination-upload-preview]").forEach(setUpPreview);
+});
+
+function setUpPreview(preview) {
+    const input = document.getElementById(preview.dataset.destinationUploadPreview);
+    const count = preview.querySelector("[data-destination-upload-preview-count]");
+    const grid = preview.querySelector("[data-destination-upload-preview-grid]");
+    if (!input || !count || !grid) return;
 
     let objectUrls = [];
 
@@ -75,4 +79,4 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     window.addEventListener("pagehide", releaseObjectUrls);
-});
+}

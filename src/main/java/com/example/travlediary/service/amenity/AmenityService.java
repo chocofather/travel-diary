@@ -2,13 +2,17 @@ package com.example.travlediary.service.amenity;
 
 import com.example.travlediary.dto.AmenityDto;
 import com.example.travlediary.model.Amenity;
+import com.example.travlediary.model.AmenityDestinationType;
 import com.example.travlediary.model.AmenityTranslation;
+import com.example.travlediary.model.DestinationType;
 import com.example.travlediary.repository.amenity.AmenityMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -97,6 +101,60 @@ public class AmenityService {
 
     public List<AmenityTranslation> getAmenityTranslationsByType(String type, String languageCode) {
         return amenityMapper.findTranslationsByTypeAndLang(type, languageCode);
+    }
+
+    /**
+     * 편의시설별 "적용 가능한 여행지 유형" 태그 (예: 1 -> "ATTRACTION CAFE").
+     * 화면 필터가 이름이 아니라 이 매핑만 보고 동작하도록 서버에서 만들어 준다.
+     * 매핑이 없는 편의시설은 키 자체가 없으며 [전체] 에서만 보인다.
+     */
+    public Map<Integer, String> getAmenityDestinationTypeTags() {
+        List<AmenityDestinationType> mappings = amenityMapper.findAmenityDestinationTypes();
+        if (mappings == null || mappings.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<Integer, StringBuilder> tags = new LinkedHashMap<>();
+        for (AmenityDestinationType mapping : mappings) {
+            if (mapping == null || mapping.getAmenityId() == null
+                    || mapping.getDestinationType() == null || mapping.getDestinationType().isBlank()) {
+                continue;
+            }
+            StringBuilder tag = tags.computeIfAbsent(mapping.getAmenityId(), id -> new StringBuilder());
+            if (!tag.isEmpty()) {
+                tag.append(' ');
+            }
+            tag.append(mapping.getDestinationType());
+        }
+
+        Map<Integer, String> result = new LinkedHashMap<>();
+        tags.forEach((amenityId, tag) -> result.put(amenityId, tag.toString()));
+        return result;
+    }
+
+    /** 해당 여행지 유형에 적용 가능한 편의시설만 (amenity_destination_types 매핑 기준). */
+    public List<AmenityTranslation> getAmenityTranslationsByDestinationType(DestinationType type,
+                                                                           String languageCode) {
+        List<AmenityTranslation> translations =
+                amenityMapper.findTranslationsByDestinationTypeAndLang(type.name(), languageCode);
+        return translations == null ? List.of() : translations;
+    }
+
+    /**
+     * 여러 유형을 한 화면에서 함께 쓰는 경우(음식점/카페처럼)의 합집합.
+     * 같은 편의시설이 여러 유형에 매핑돼 있어도 한 번만 담는다.
+     */
+    public List<AmenityTranslation> getAmenityTranslationsByDestinationTypes(String languageCode,
+                                                                            DestinationType... types) {
+        Map<Integer, AmenityTranslation> merged = new LinkedHashMap<>();
+        for (DestinationType type : types) {
+            for (AmenityTranslation translation : getAmenityTranslationsByDestinationType(type, languageCode)) {
+                if (translation != null) {
+                    merged.putIfAbsent(translation.getAmenityId(), translation);
+                }
+            }
+        }
+        return List.copyOf(merged.values());
     }
 
     // --- 등록용(그대로 유지) ---

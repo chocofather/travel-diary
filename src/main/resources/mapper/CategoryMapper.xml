@@ -10,6 +10,23 @@
         ORDER BY id
     </select>
 
+    <!-- 여행지 유형별 카테고리 마스터 목록 (category_destination_types 기준) -->
+    <select id="findByDestinationType" resultType="com.example.travlediary.model.Category">
+        SELECT c.id, c.name
+        FROM category_destination_types cdt
+                 JOIN categories c ON c.id = cdt.category_id
+        WHERE cdt.destination_type = #{destinationType}
+        ORDER BY c.id
+    </select>
+
+    <!-- 카테고리 ↔ 여행지 유형 마스터 매핑 전체 (화면 필터 태그용) -->
+    <select id="findCategoryDestinationTypes"
+            resultType="com.example.travlediary.model.CategoryDestinationType">
+        SELECT category_id, destination_type
+        FROM category_destination_types
+        ORDER BY category_id, destination_type
+    </select>
+
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO categories (name) VALUES (#{name})
     </insert>
