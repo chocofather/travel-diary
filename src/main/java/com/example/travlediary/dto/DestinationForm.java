@@ -9,7 +9,6 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Data
 public class DestinationForm {
@@ -24,9 +23,13 @@ public class DestinationForm {
 
     private Long destinationId; // 여행지 기본키
 
+    /** 관리자 화면 번역 슬롯 순서: 0 = 한국어, 1 = 영어 */
+    private static final String KOREAN = "ko";
+    private static final String ENGLISH = "en";
+
     private List<DestinationTranslationForm> translations = Arrays.asList(
-            new DestinationTranslationForm("ko", "", "", ""),
-            new DestinationTranslationForm("en", "", "", "")
+            new DestinationTranslationForm(KOREAN, "", "", ""),
+            new DestinationTranslationForm(ENGLISH, "", "", "")
     );
 
     private List<Long> categoryIds = new ArrayList<>();
@@ -66,19 +69,11 @@ public class DestinationForm {
         form.setRegionId(dto.getDestination().getRegionId());
         form.setType(dto.getDestination().getType());
 
-        // --- 번역값 변환 (외부에서 받아온 translations만 쓴다) ---
-        if (translations != null && !translations.isEmpty()) {
-            form.setTranslations(
-                    translations.stream()
-                            .map(t -> new DestinationTranslationForm(
-                                    t.getLanguageCode(),
-                                    t.getName(),
-                                    t.getDescription(),
-                                    t.getShortDescription()
-                            ))
-                            .collect(Collectors.toList())
-            );
-        }
+        // --- 번역값 변환 (조회 순서가 아니라 languageCode 기준으로 슬롯을 채운다) ---
+        form.setTranslations(new ArrayList<>(List.of(
+                translationSlot(translations, KOREAN),
+                translationSlot(translations, ENGLISH)
+        )));
 
         // 2. 상세 정보 복사
         form.setAttractionInfo(dto.getAttractionInfo());
@@ -106,6 +101,25 @@ public class DestinationForm {
         return form;
     }
 
-
+    /**
+     * 조회 순서를 신뢰하지 않고 languageCode 가 일치하는 번역만 슬롯에 넣는다.
+     * 해당 언어가 없으면 빈 폼을 돌려주어 화면의 index 바인딩이 항상 두 칸을 갖도록 한다.
+     */
+    private static DestinationTranslationForm translationSlot(List<DestinationTranslation> translations,
+                                                             String languageCode) {
+        if (translations != null) {
+            for (DestinationTranslation translation : translations) {
+                if (translation != null && languageCode.equals(translation.getLanguageCode())) {
+                    return new DestinationTranslationForm(
+                            languageCode,
+                            translation.getName(),
+                            translation.getDescription(),
+                            translation.getShortDescription()
+                    );
+                }
+            }
+        }
+        return new DestinationTranslationForm(languageCode, "", "", "");
+    }
 
 }
