@@ -290,7 +290,11 @@ public class DestinationService {
     @Transactional
     public void updateDestination(Long destinationId, DestinationForm form) {
         // 1. 기본 정보 update
+        // 이미 삭제된 여행지의 stale 수정 폼이면 어떤 DB 작업도 시작하지 않는다.
         Destination destination = destinationMapper.findById(destinationId);
+        if (destination == null) {
+            throw new DestinationNotFoundException();
+        }
         destination.setLatitude(form.getLatitude());
         destination.setLongitude(form.getLongitude());
         destination.setGooglePlaceId(form.getGooglePlaceId());

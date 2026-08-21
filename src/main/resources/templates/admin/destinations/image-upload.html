@@ -25,6 +25,8 @@
 
     <input type="hidden" th:value="${destinationName}" data-destination-korean-name>
 
+    <div th:if="${imageError}" class="admin-alert" role="alert" th:text="${imageError}"></div>
+
     <section class="admin-destination-section">
       <div class="admin-destination-section-header">
         <div>

@@ -16,6 +16,8 @@
       </div>
     </header>
 
+    <div th:if="${error}" class="admin-alert" role="alert" th:text="${error}"></div>
+
     <div class="admin-filter-card">
       <h2 class="admin-card-heading" th:text="${selectedRegionName} ?: '전체 리스트'">전체 리스트</h2>
       <form id="admin-destination-filter-form" method="get"

@@ -139,10 +139,13 @@ class AdminDestinationKtoSelectionControllerTest {
                         .param("ktoSelectedPhotosJson", "[]"))
                 .andReturn();
 
+        // 400 은 유지하되 Whitelabel 대신 등록 폼을 다시 그린다
         assertThat(result.getResponse().getStatus()).isEqualTo(400);
-        assertThat(result.getResolvedException()).isInstanceOf(ResponseStatusException.class);
-        assertThat(result.getResolvedException().getMessage())
-                .contains("JPEG 또는 PNG 이미지 파일만 업로드할 수 있습니다.");
+        assertThat(result.getResolvedException()).isNull();
+        assertThat(result.getModelAndView()).isNotNull();
+        assertThat(result.getModelAndView().getViewName()).isEqualTo("admin/destinations/create");
+        assertThat(result.getModelAndView().getModel().get("imageError"))
+                .isEqualTo("JPEG 또는 PNG 이미지 파일만 업로드할 수 있습니다.");
     }
 
     @Test
@@ -239,6 +242,7 @@ class AdminDestinationKtoSelectionControllerTest {
                 new BeanPropertyBindingResult(form, "destinationForm"),
                 userDetails,
                 new ExtendedModelMap(),
+                new org.springframework.mock.web.MockHttpServletResponse(),
                 "ko"
         );
     }
@@ -249,6 +253,7 @@ class AdminDestinationKtoSelectionControllerTest {
                 form,
                 new BeanPropertyBindingResult(form, "destinationForm"),
                 new ExtendedModelMap(),
+                new org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap(),
                 "ko"
         );
     }

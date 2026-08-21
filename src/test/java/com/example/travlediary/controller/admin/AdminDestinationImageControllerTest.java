@@ -83,7 +83,11 @@ class AdminDestinationImageControllerTest {
         MockMultipartFile first = image("first.jpg");
         MockMultipartFile second = image("second.jpg");
 
-        String view = controller.uploadImages(10L, new MockMultipartFile[]{first, second});
+        String view = controller.uploadImages(
+                10L,
+                new MockMultipartFile[]{first, second},
+                new ExtendedModelMap(),
+                new org.springframework.mock.web.MockHttpServletResponse());
 
         assertThat(view).isEqualTo("redirect:/admin/destinations/10/images");
         verify(destinationImageService).saveImages(
@@ -165,15 +169,22 @@ class AdminDestinationImageControllerTest {
                         eq((Integer) null),
                         any(Integer[].class));
 
+        // Whitelabel 400 대신 이미지 관리 화면을 다시 그리고 폼 안에서 이유를 알려준다
         var result = mockMvc.perform(multipart("/admin/destinations/10/images")
                         .file(new MockMultipartFile("files", "fake.jpg", "image/jpeg",
                                 "hello".getBytes(StandardCharsets.UTF_8))))
                 .andExpect(status().isBadRequest())
                 .andReturn();
 
-        assertThat(result.getResolvedException()).isInstanceOf(ResponseStatusException.class);
-        assertThat(result.getResolvedException().getMessage())
-                .contains("JPEG 또는 PNG 이미지 파일만 업로드할 수 있습니다.");
+        assertThat(result.getResolvedException()).isNull();
+        assertThat(result.getModelAndView()).isNotNull();
+        assertThat(result.getModelAndView().getViewName())
+                .isEqualTo("admin/destinations/image-upload");
+        assertThat(result.getModelAndView().getModel().get("imageError"))
+                .isEqualTo("JPEG 또는 PNG 이미지 파일만 업로드할 수 있습니다.");
+        // 화면 재렌더링에 필요한 모델이 그대로 복구된다
+        assertThat(result.getModelAndView().getModel()).containsKeys(
+                "destinationId", "destinationName", "imageList", "imageCount");
     }
 
     @Test

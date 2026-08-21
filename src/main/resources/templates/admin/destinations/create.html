@@ -22,6 +22,8 @@
   </div>
 </header>
 
+<div th:if="${imageError}" class="admin-alert" role="alert" th:text="${imageError}"></div>
+
 <form th:action="@{/admin/destinations}" method="post" enctype="multipart/form-data"
       th:object="${destinationForm}" class="admin-destination-form admin-form-card is-wide">
 

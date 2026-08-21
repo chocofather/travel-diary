@@ -12,12 +12,14 @@ import com.example.travlediary.service.destination.DestinationImageService;
 import com.example.travlediary.service.destination.DestinationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.HtmlUtils;
 import jakarta.servlet.http.HttpServletRequest; // Spring Boot 3.x
 
@@ -224,13 +226,18 @@ public class DestinationController {
     public String destinationDetail(@PathVariable Long id,
                                     @AuthenticationPrincipal CustomUserDetails userDetails,
                                     Model model) {
-        // ✅ 조회수 증가
-        destinationService.incrementViewCount(id);
-
         Long userId = (userDetails != null) ? userDetails.getId() : null;
 
         // 1. 여행지 + 타입별 상세 + amenity + 이미지 전부
+        // 삭제됐거나 없는 여행지는 정상적인 404 로 응답한다.
         DestinationDetailDto dto = destinationService.getDestinationDetailWithInfo(id);
+        if (dto == null || dto.getDestination() == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "여행지를 찾을 수 없습니다.");
+        }
+
+        // ✅ 조회수 증가
+        destinationService.incrementViewCount(id);
+
         model.addAttribute("destination", dto.getDestination());
         model.addAttribute("images", dto.getImages());
 

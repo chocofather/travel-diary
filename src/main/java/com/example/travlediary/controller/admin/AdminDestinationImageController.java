@@ -9,6 +9,7 @@ import com.example.travlediary.service.destination.DestinationService;
 import com.example.travlediary.service.file.UnsupportedImageFormatException;
 import com.example.travlediary.service.kto.InvalidKtoSelectedPhotosException;
 import com.example.travlediary.service.kto.KtoSelectedPhotoRequestParser;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
@@ -45,11 +46,16 @@ public class AdminDestinationImageController {
 
     @PostMapping("/{id}/images")
     public String uploadImages(@PathVariable Long id,
-                               @RequestParam("files") MultipartFile[] files) {
+                               @RequestParam("files") MultipartFile[] files,
+                               Model model,
+                               HttpServletResponse response) {
         try {
             destinationImageService.saveImages(id, files, null, new Integer[0]);
         } catch (UnsupportedImageFormatException exception) {
-            throw unsupportedImage(exception);
+            // 잘못된 이미지는 입력 오류이므로 400 을 유지하되 관리 화면 안에서 이유를 보여준다
+            response.setStatus(HttpStatus.BAD_REQUEST.value());
+            model.addAttribute("imageError", exception.getMessage());
+            return showImageUploadForm(id, model);
         }
         return managementRedirect(id);
     }
@@ -101,10 +107,6 @@ public class AdminDestinationImageController {
             throw invalidImageRequest();
         }
         return managementRedirect(destinationId);
-    }
-
-    private ResponseStatusException unsupportedImage(UnsupportedImageFormatException exception) {
-        return new ResponseStatusException(HttpStatus.BAD_REQUEST, exception.getMessage());
     }
 
     private ResponseStatusException invalidImageRequest() {

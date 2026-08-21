@@ -7,11 +7,13 @@ import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.amenity.AmenityService;
 import com.example.travlediary.service.category.CategoryService;
 import com.example.travlediary.service.category.CountryCategoryService;
+import com.example.travlediary.service.destination.DestinationNotFoundException;
 import com.example.travlediary.service.destination.DestinationService;
 import com.example.travlediary.service.destination.DestinationSaveOrchestrationService;
 import com.example.travlediary.service.file.UnsupportedImageFormatException;
 import com.example.travlediary.service.kto.InvalidKtoSelectedPhotosException;
 import com.example.travlediary.service.kto.KtoSelectedPhotoRequestParser;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -21,6 +23,7 @@ import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -75,6 +78,7 @@ public class AdminDestinationController {
             BindingResult bindingResult,
             @AuthenticationPrincipal CustomUserDetails userDetails,
             Model model,
+            HttpServletResponse response,
             @RequestParam(defaultValue = "ko") String lang) {
         if (bindingResult.hasErrors()) {
             prepareCreateFormModel(model, form, lang);
@@ -89,7 +93,11 @@ public class AdminDestinationController {
         } catch (InvalidKtoSelectedPhotosException exception) {
             throw invalidKtoSelection();
         } catch (UnsupportedImageFormatException exception) {
-            throw unsupportedImage(exception);
+            // 잘못된 이미지는 입력 오류이므로 400 을 유지하되 등록 폼 안에서 이유를 보여준다
+            response.setStatus(HttpStatus.BAD_REQUEST.value());
+            model.addAttribute("imageError", exception.getMessage());
+            prepareCreateFormModel(model, form, lang);
+            return "admin/destinations/create";
         }
         return "redirect:/admin";
     }
@@ -265,13 +273,19 @@ public class AdminDestinationController {
                                     @Valid @ModelAttribute("destinationForm") DestinationForm form,
                                     BindingResult bindingResult,
                                     Model model,
+                                    RedirectAttributes redirectAttributes,
                                     @RequestParam(defaultValue = "ko") String lang) {
         if (bindingResult.hasErrors()) {
             prepareEditFormModel(model, form, lang);
             return "admin/destinations/edit";
         }
 
-        destinationService.updateDestination(id, form);
+        try {
+            destinationService.updateDestination(id, form);
+        } catch (DestinationNotFoundException exception) {
+            // 다른 화면에서 이미 지워진 여행지의 stale 폼 저장 → 목록에서 이유를 알려준다
+            redirectAttributes.addFlashAttribute("error", "이미 삭제된 여행지입니다.");
+        }
         return "redirect:/admin/destinations";
     }
 
@@ -281,10 +295,6 @@ public class AdminDestinationController {
         } catch (InvalidKtoSelectedPhotosException exception) {
             throw invalidKtoSelection();
         }
-    }
-
-    private ResponseStatusException unsupportedImage(UnsupportedImageFormatException exception) {
-        return new ResponseStatusException(HttpStatus.BAD_REQUEST, exception.getMessage());
     }
 
     private ResponseStatusException invalidKtoSelection() {
