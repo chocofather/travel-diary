@@ -4,6 +4,7 @@ import com.example.travlediary.dto.DestinationDetailDto;
 import com.example.travlediary.dto.DestinationDto;
 import com.example.travlediary.dto.DestinationForm;
 import com.example.travlediary.dto.DestinationTranslationForm;
+import com.example.travlediary.model.BookmarkTargetType;
 import com.example.travlediary.model.Destination;
 import com.example.travlediary.model.DestinationImage;
 import com.example.travlediary.model.DestinationSeason;
@@ -243,8 +244,12 @@ public class DestinationService {
                 : images.stream()
                 .map(DestinationImage::getImageUrl)
                 .toList();
+        // 댓글 row 가 지워지기 전에 정리 대상 사진 URL 을 모아 둔다
+        List<String> commentImageUrls = destinationCommentService.findAllCommentImageUrls(id);
 
         // 연관 테이블 먼저 삭제
+        // 북마크는 target_type/target_id 구조라 FK cascade 대상이 아니므로 직접 지운다
+        bookmarkMapper.deleteByTarget(BookmarkTargetType.DESTINATION.name(), id);
         destinationMapper.deleteImagesByDestinationId(id);
         destinationMapper.deleteTranslationsByDestinationId(id);
         destinationMapper.deleteCommentsByDestinationId(id);
@@ -253,6 +258,7 @@ public class DestinationService {
         // 마지막으로 본체 삭제
         destinationMapper.deleteById(id);
         destinationImageService.deleteFilesAfterCommit(imageUrls);
+        destinationCommentService.deleteImageFilesAfterCommit(commentImageUrls);
     }
 
     public List<DestinationDto> convertToDtoWithBookmark(List<Destination> destinations, Long userId) {

@@ -48,6 +48,26 @@ public class CountryCategoryService {
         return mapper.selectById(id);
     }
 
+    // 4-1. 최상위부터 해당 지역까지의 경로 (수정 화면 지역 select 복원용)
+    public List<CountryCategory> getRegionPath(Long regionId) {
+        LinkedList<CountryCategory> path = new LinkedList<>();
+        Set<Long> visitedIds = new HashSet<>();
+
+        Long currentId = regionId;
+        while (currentId != null) {
+            if (!visitedIds.add(currentId)) {
+                return List.of();
+            }
+            CountryCategory region = mapper.selectById(currentId);
+            if (region == null) {
+                return List.of();
+            }
+            path.addFirst(region);
+            currentId = region.getParentId();
+        }
+        return path;
+    }
+
     // 5. 아이콘 저장/업데이트
     public void saveIcon(Long id, MultipartFile file) throws IOException {
         if (file == null || file.isEmpty()) return;

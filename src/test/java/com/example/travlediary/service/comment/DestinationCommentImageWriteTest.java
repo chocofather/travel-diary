@@ -8,6 +8,7 @@ import com.example.travlediary.repository.comment.DestinationCommentImageMapper;
 import com.example.travlediary.repository.comment.DestinationCommentMapper;
 import com.example.travlediary.repository.destination.DestinationMapper;
 import com.example.travlediary.repository.user.UserMapper;
+import com.example.travlediary.service.file.FileUploadService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -54,7 +55,8 @@ class DestinationCommentImageWriteTest {
     @BeforeEach
     void setUp() {
         service = new DestinationCommentService(
-                destinationMapper, commentMapper, commentImageMapper, userMapper);
+                destinationMapper, commentMapper, commentImageMapper, userMapper,
+                new FileUploadService(uploadDir.toString()));
         ReflectionTestUtils.setField(service, "uploadPath", uploadDir.toString());
     }
 

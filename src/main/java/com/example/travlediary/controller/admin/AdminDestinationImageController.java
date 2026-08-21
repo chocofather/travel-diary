@@ -6,6 +6,7 @@ import com.example.travlediary.model.DestinationTranslation;
 import com.example.travlediary.service.destination.DestinationImageService;
 import com.example.travlediary.service.destination.DestinationKtoImageManagementService;
 import com.example.travlediary.service.destination.DestinationService;
+import com.example.travlediary.service.file.UnsupportedImageFormatException;
 import com.example.travlediary.service.kto.InvalidKtoSelectedPhotosException;
 import com.example.travlediary.service.kto.KtoSelectedPhotoRequestParser;
 import lombok.RequiredArgsConstructor;
@@ -45,7 +46,11 @@ public class AdminDestinationImageController {
     @PostMapping("/{id}/images")
     public String uploadImages(@PathVariable Long id,
                                @RequestParam("files") MultipartFile[] files) {
-        destinationImageService.saveImages(id, files, null, new Integer[0]);
+        try {
+            destinationImageService.saveImages(id, files, null, new Integer[0]);
+        } catch (UnsupportedImageFormatException exception) {
+            throw unsupportedImage(exception);
+        }
         return managementRedirect(id);
     }
 
@@ -68,22 +73,44 @@ public class AdminDestinationImageController {
     @PostMapping("/images/{imageId}/main")
     public String setMainImage(@RequestParam("destinationId") Long destinationId,
                                @PathVariable Long imageId) {
-        destinationImageService.setMainImage(destinationId, imageId);
+        try {
+            destinationImageService.setMainImage(destinationId, imageId);
+        } catch (IllegalArgumentException exception) {
+            throw invalidImageRequest();
+        }
         return managementRedirect(destinationId);
     }
 
     @PostMapping("/images/{imageId}/slide")
     public String toggleSlideImage(@RequestParam("destinationId") Long destinationId,
                                    @PathVariable Long imageId) {
-        destinationImageService.toggleSlideImage(destinationId, imageId);
+        try {
+            destinationImageService.toggleSlideImage(destinationId, imageId);
+        } catch (IllegalArgumentException exception) {
+            throw invalidImageRequest();
+        }
         return managementRedirect(destinationId);
     }
 
     @PostMapping("/images/{imageId}/delete")
     public String deleteImage(@PathVariable Long imageId,
                               @RequestParam("destinationId") Long destinationId) {
-        destinationImageService.deleteImageById(imageId);
+        try {
+            destinationImageService.deleteImage(destinationId, imageId);
+        } catch (IllegalArgumentException exception) {
+            throw invalidImageRequest();
+        }
         return managementRedirect(destinationId);
+    }
+
+    private ResponseStatusException unsupportedImage(UnsupportedImageFormatException exception) {
+        return new ResponseStatusException(HttpStatus.BAD_REQUEST, exception.getMessage());
+    }
+
+    private ResponseStatusException invalidImageRequest() {
+        return new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "잘못된 이미지 요청입니다.");
     }
 
     private String destinationName(Long destinationId) {

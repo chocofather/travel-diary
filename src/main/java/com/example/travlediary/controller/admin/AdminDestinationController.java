@@ -9,6 +9,7 @@ import com.example.travlediary.service.category.CategoryService;
 import com.example.travlediary.service.category.CountryCategoryService;
 import com.example.travlediary.service.destination.DestinationService;
 import com.example.travlediary.service.destination.DestinationSaveOrchestrationService;
+import com.example.travlediary.service.file.UnsupportedImageFormatException;
 import com.example.travlediary.service.kto.InvalidKtoSelectedPhotosException;
 import com.example.travlediary.service.kto.KtoSelectedPhotoRequestParser;
 import jakarta.validation.Valid;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/admin/destinations")
@@ -86,6 +88,8 @@ public class AdminDestinationController {
                     form, userDetails.getId(), selectedKtoPhotos);
         } catch (InvalidKtoSelectedPhotosException exception) {
             throw invalidKtoSelection();
+        } catch (UnsupportedImageFormatException exception) {
+            throw unsupportedImage(exception);
         }
         return "redirect:/admin";
     }
@@ -231,19 +235,42 @@ public class AdminDestinationController {
         var translations = destinationService.getTranslationsByDestinationId(id);
         var form = DestinationForm.fromDetailDto(detailDto, translations);
 
+        prepareEditFormModel(model, form, lang);
+        return "admin/destinations/edit";
+    }
+
+    private void prepareEditFormModel(Model model, DestinationForm form, String lang) {
         model.addAttribute("destinationForm", form);
+        model.addAttribute("regionPathIds", joinRegionPathIds(form.getRegionId()));
         model.addAttribute("categories", categoryService.getAll());
         model.addAttribute("attractionAmenities", amenityService.getAllAmenityTranslations(lang));
         model.addAttribute("accommodationAmenities", amenityService.getAllAmenityTranslations(lang));
         model.addAttribute("restaurantAmenities", amenityService.getAllAmenityTranslations(lang));
         model.addAttribute("activityAmenities", amenityService.getAllAmenityTranslations(lang));
         model.addAttribute("shopAmenities", amenityService.getAllAmenityTranslations(lang));
-        return "admin/destinations/edit";
+    }
+
+    // 지역 select를 기존 저장 값으로 복원하기 위한 최상위 -> 현재 지역 ID 경로
+    private String joinRegionPathIds(Long regionId) {
+        if (regionId == null) {
+            return "";
+        }
+        return countryCategoryService.getRegionPath(regionId).stream()
+                .map(region -> String.valueOf(region.getId()))
+                .collect(Collectors.joining(","));
     }
 
     @PostMapping("/edit/{id}")
     public String updateDestination(@PathVariable Long id,
-                                    @ModelAttribute DestinationForm form) {
+                                    @Valid @ModelAttribute("destinationForm") DestinationForm form,
+                                    BindingResult bindingResult,
+                                    Model model,
+                                    @RequestParam(defaultValue = "ko") String lang) {
+        if (bindingResult.hasErrors()) {
+            prepareEditFormModel(model, form, lang);
+            return "admin/destinations/edit";
+        }
+
         destinationService.updateDestination(id, form);
         return "redirect:/admin/destinations";
     }
@@ -254,6 +281,10 @@ public class AdminDestinationController {
         } catch (InvalidKtoSelectedPhotosException exception) {
             throw invalidKtoSelection();
         }
+    }
+
+    private ResponseStatusException unsupportedImage(UnsupportedImageFormatException exception) {
+        return new ResponseStatusException(HttpStatus.BAD_REQUEST, exception.getMessage());
     }
 
     private ResponseStatusException invalidKtoSelection() {

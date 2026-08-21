@@ -117,7 +117,10 @@
             <select id="district" name="district"></select>
           </label>
         </div>
-        <input type="hidden" id="regionIdHidden" name="regionId" th:field="*{regionId}">
+        <input type="hidden" id="regionIdHidden" name="regionId" th:field="*{regionId}"
+               th:attr="data-initial-region-path=${regionPathIds}">
+        <p class="admin-field-error" th:if="${#fields.hasErrors('regionId')}"
+           th:errors="*{regionId}">지역 선택 오류</p>
       </div>
 
       <!-- 위도 / 경도 -->
@@ -540,7 +543,7 @@
       <button type="submit" class="admin-btn is-primary">수정</button>
     </div>
   </form>
-  <script src="/js/region-selector.js?v=20260821-2" defer></script>
+  <script src="/js/region-selector.js?v=20260821-3" defer></script>
   <script src="/js/type-fields.js" defer></script>
   </section>
 </th:block>

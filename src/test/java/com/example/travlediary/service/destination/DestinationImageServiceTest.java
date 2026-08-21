@@ -32,11 +32,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mockingDetails;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -63,7 +65,7 @@ class DestinationImageServiceTest {
                 image(1L, 10L, 1, true),
                 image(2L, 10L, 4, false)
         ));
-        when(fileUploadService.saveFile(any(), eq("destinations")))
+        when(fileUploadService.saveDestinationImage(any()))
                 .thenReturn("/uploads/destinations/new-a.jpg")
                 .thenReturn("/uploads/destinations/new-b.jpg");
 
@@ -79,7 +81,7 @@ class DestinationImageServiceTest {
         when(destinationMapper.findImagesByDestinationId(10L)).thenReturn(List.of(
                 image(1L, 10L, 0, true)
         ));
-        when(fileUploadService.saveFile(any(), eq("destinations")))
+        when(fileUploadService.saveDestinationImage(any()))
                 .thenReturn("/uploads/destinations/new-a.jpg")
                 .thenReturn("/uploads/destinations/new-b.jpg")
                 .thenReturn("/uploads/destinations/new-c.jpg");
@@ -99,7 +101,7 @@ class DestinationImageServiceTest {
         when(destinationMapper.findImagesByDestinationId(10L)).thenReturn(List.of(
                 image(1L, 10L, 3, true)
         ));
-        when(fileUploadService.saveFile(any(), eq("destinations")))
+        when(fileUploadService.saveDestinationImage(any()))
                 .thenReturn("/uploads/destinations/new.jpg");
 
         service.saveImages(10L, files("new.jpg"), null, new Integer[0]);
@@ -113,7 +115,7 @@ class DestinationImageServiceTest {
     @Test
     void addingNonMainImageToEmptyDestinationKeepsItWithoutMainAtOrderZero() {
         when(destinationMapper.findImagesByDestinationId(10L)).thenReturn(List.of());
-        when(fileUploadService.saveFile(any(), eq("destinations")))
+        when(fileUploadService.saveDestinationImage(any()))
                 .thenReturn("/uploads/destinations/first.jpg");
 
         service.saveImages(10L, files("first.jpg"), null, new Integer[0]);
@@ -176,7 +178,7 @@ class DestinationImageServiceTest {
     void outerTransactionRollbackDeletesOnlyNewDirectUpload() {
         String newImageUrl = "/uploads/destinations/new-direct.jpg";
         when(destinationMapper.findImagesByDestinationId(10L)).thenReturn(List.of());
-        when(fileUploadService.saveFile(any(), eq("destinations"))).thenReturn(newImageUrl);
+        when(fileUploadService.saveDestinationImage(any())).thenReturn(newImageUrl);
 
         withTransactionSynchronization(() -> {
             service.saveImages(10L, files("new-direct.jpg"), null, new Integer[0]);
@@ -191,7 +193,7 @@ class DestinationImageServiceTest {
     void successfulOuterTransactionKeepsNewDirectUpload() {
         String newImageUrl = "/uploads/destinations/new-direct.jpg";
         when(destinationMapper.findImagesByDestinationId(10L)).thenReturn(List.of());
-        when(fileUploadService.saveFile(any(), eq("destinations"))).thenReturn(newImageUrl);
+        when(fileUploadService.saveDestinationImage(any())).thenReturn(newImageUrl);
 
         withTransactionSynchronization(() -> {
             service.saveImages(10L, files("new-direct.jpg"), null, new Integer[0]);
@@ -206,7 +208,7 @@ class DestinationImageServiceTest {
     void rollbackCleanupFailureDoesNotEscapeTransactionCompletion() {
         String newImageUrl = "/uploads/destinations/new-direct.jpg";
         when(destinationMapper.findImagesByDestinationId(10L)).thenReturn(List.of());
-        when(fileUploadService.saveFile(any(), eq("destinations"))).thenReturn(newImageUrl);
+        when(fileUploadService.saveDestinationImage(any())).thenReturn(newImageUrl);
         doThrow(new RuntimeException("cleanup failed"))
                 .when(fileUploadService).deleteDestinationFile(newImageUrl);
 
@@ -227,7 +229,7 @@ class DestinationImageServiceTest {
                 image(3L, 10L, 8, false)
         ));
 
-        service.deleteImageById(1L);
+        service.deleteImage(10L, 1L);
 
         assertThat(orderUpdates()).containsExactly(List.of(2L, 0), List.of(3L, 1));
         assertThat(invocationsNamed("setMainImage"))
@@ -244,7 +246,7 @@ class DestinationImageServiceTest {
                 image(3L, 10L, 7, false)
         ));
 
-        service.deleteImageById(2L);
+        service.deleteImage(10L, 2L);
 
         assertThat(orderUpdates()).containsExactly(List.of(1L, 0), List.of(3L, 1));
         assertThat(invocationsNamed("setMainImage")).isEmpty();
@@ -258,7 +260,7 @@ class DestinationImageServiceTest {
         when(destinationMapper.findImagesByDestinationId(10L)).thenReturn(List.of());
 
         withTransactionSynchronization(() -> {
-            service.deleteImageById(2L);
+            service.deleteImage(10L, 2L);
 
             verify(fileUploadService, never()).deleteDestinationFile(deleted.getImageUrl());
             commitSynchronizations();
@@ -277,7 +279,7 @@ class DestinationImageServiceTest {
                 .when(destinationMapper).deleteImageById(2L);
 
         withTransactionSynchronization(() -> {
-            assertThatThrownBy(() -> service.deleteImageById(2L))
+            assertThatThrownBy(() -> service.deleteImage(10L, 2L))
                     .isInstanceOf(IllegalStateException.class);
             completeSynchronizations(TransactionSynchronization.STATUS_ROLLED_BACK);
         });
@@ -300,7 +302,7 @@ class DestinationImageServiceTest {
 
         try {
             withTransactionSynchronization(() -> {
-                service.deleteImageById(2L);
+                service.deleteImage(10L, 2L);
 
                 assertThatCode(this::commitSynchronizations).doesNotThrowAnyException();
             });
@@ -339,6 +341,71 @@ class DestinationImageServiceTest {
     }
 
     @Test
+    void directUploadsGoThroughTheDestinationOnlyImageValidation() {
+        when(fileUploadService.saveDestinationImage(any()))
+                .thenReturn("/uploads/destinations/new-a.jpg");
+
+        service.saveImages(10L, files("a.jpg"), null, new Integer[0]);
+
+        // 공용 saveFile() 은 더 이상 여행지 업로드에 쓰이지 않는다
+        verify(fileUploadService, never()).saveFile(any(), any());
+        verify(fileUploadService).saveDestinationImage(any());
+    }
+
+    @Test
+    void aRejectedFileInTheBatchCleansUpTheAlreadyStoredUploads() {
+        when(fileUploadService.saveDestinationImage(any()))
+                .thenReturn("/uploads/destinations/new-a.jpg")
+                .thenThrow(new IllegalArgumentException(
+                        "JPEG 또는 PNG 이미지 파일만 업로드할 수 있습니다."));
+
+        withTransactionSynchronization(() -> {
+            assertThatThrownBy(() -> service.saveImages(
+                    10L, files("a.jpg", "fake.jpg"), null, new Integer[0]))
+                    .isInstanceOf(IllegalArgumentException.class);
+            completeSynchronizations(TransactionSynchronization.STATUS_ROLLED_BACK);
+        });
+
+        // 먼저 저장된 정상 파일도 이번 요청 롤백과 함께 정리된다
+        verify(fileUploadService).deleteDestinationFile("/uploads/destinations/new-a.jpg");
+    }
+
+    @Test
+    void deletingRejectsAnImageThatBelongsToAnotherDestination() {
+        DestinationImage otherDestinationImage = image(2001L, 200L, 3, true);
+        when(destinationMapper.findImageById(2001L)).thenReturn(otherDestinationImage);
+
+        withTransactionSynchronization(() -> {
+            assertThatThrownBy(() -> service.deleteImage(100L, 2001L))
+                    .isInstanceOf(IllegalArgumentException.class);
+
+            // 커밋되더라도 예약된 파일 정리 자체가 없어야 한다
+            commitSynchronizations();
+        });
+
+        verify(destinationMapper, never()).deleteImageById(anyLong());
+        assertThat(invocationsNamed("updateImageOrder")).isEmpty();
+        assertThat(invocationsNamed("setMainImage")).isEmpty();
+        assertThat(invocationsNamed("clearMainImagesByDestinationId")).isEmpty();
+        assertThat(invocationsNamed("findImagesByDestinationId")).isEmpty();
+        verifyNoInteractions(fileUploadService);
+    }
+
+    @Test
+    void deletingAnUnknownImageIsRejectedLikeMainAndSlide() {
+        when(destinationMapper.findImageById(404L)).thenReturn(null);
+
+        withTransactionSynchronization(() -> {
+            assertThatThrownBy(() -> service.deleteImage(100L, 404L))
+                    .isInstanceOf(IllegalArgumentException.class);
+            commitSynchronizations();
+        });
+
+        verify(destinationMapper, never()).deleteImageById(anyLong());
+        verifyNoInteractions(fileUploadService);
+    }
+
+    @Test
     void imageCardActionsRejectAnImageFromAnotherDestination() {
         DestinationImage selected = image(2L, 99L, 3, false);
         when(destinationMapper.findImageById(2L)).thenReturn(selected);
@@ -355,9 +422,22 @@ class DestinationImageServiceTest {
     }
 
     private MultipartFile[] files(String... names) {
+        byte[] jpeg = jpegBytes();
         return java.util.Arrays.stream(names)
-                .map(name -> new MockMultipartFile("files", name, "image/jpeg", new byte[]{1}))
+                .map(name -> new MockMultipartFile("files", name, "image/jpeg", jpeg))
                 .toArray(MultipartFile[]::new);
+    }
+
+    private byte[] jpegBytes() {
+        java.awt.image.BufferedImage image =
+                new java.awt.image.BufferedImage(4, 4, java.awt.image.BufferedImage.TYPE_INT_RGB);
+        java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+        try {
+            javax.imageio.ImageIO.write(image, "jpg", bytes);
+        } catch (java.io.IOException exception) {
+            throw new IllegalStateException(exception);
+        }
+        return bytes.toByteArray();
     }
 
     private DestinationImage image(Long id, Long destinationId, int orderIndex, boolean main) {

@@ -4,12 +4,16 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Iterator;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -19,6 +23,10 @@ public class FileUploadService {
 
     private static final String DESTINATION_DIRECTORY = "destinations";
     private static final String DESTINATION_URL_PREFIX = "/uploads/destinations/";
+    public static final String UNSUPPORTED_DESTINATION_IMAGE_MESSAGE =
+            "JPEG 또는 PNG 이미지 파일만 업로드할 수 있습니다.";
+    private static final String COMMENT_DIRECTORY = "comments";
+    private static final String COMMENT_URL_PREFIX = "/uploads/comments/";
     private static final long TRAVEL_INFO_THUMBNAIL_MAX_SIZE = 5L * 1024 * 1024;
     private static final String TRAVEL_INFO_THUMBNAIL_DIRECTORY = "travel-info/thumbnails";
     private static final String TRAVEL_INFO_THUMBNAIL_URL_PREFIX =
@@ -81,6 +89,31 @@ public class FileUploadService {
                 : "/uploads/" + subDir + "/" + savedName;
     }
 
+    /**
+     * 관리자 여행지 직접 업로드 전용 저장.
+     * 클라이언트가 보낸 파일명/Content-Type 은 신뢰하지 않고,
+     * 실제 bytes 를 decode 해 JPEG/PNG 인 경우에만 저장한다.
+     */
+    public String saveDestinationImage(MultipartFile file) {
+        DestinationImageFormat format = validateDestinationImage(file);
+        Path destinationDirectory = resolveDestinationDirectory(true);
+        String savedName = UUID.randomUUID() + "." + format.extension;
+        Path destination = destinationDirectory.resolve(savedName).normalize();
+        ensureContained(destinationDirectory, destination);
+
+        try (InputStream input = file.getInputStream()) {
+            Files.copy(input, destination);
+        } catch (IOException exception) {
+            try {
+                Files.deleteIfExists(destination);
+            } catch (IOException ignored) {
+                // 원래 저장 실패를 우선 전달한다.
+            }
+            throw new RuntimeException("여행지 이미지 파일 저장에 실패했습니다.", exception);
+        }
+        return DESTINATION_URL_PREFIX + savedName;
+    }
+
     public boolean deleteDestinationFile(String imageUrl) {
         String fileName = managedDestinationFileName(imageUrl);
         Path uploadRoot = Paths.get(uploadDir).toAbsolutePath().normalize();
@@ -102,6 +135,30 @@ public class FileUploadService {
             return Files.deleteIfExists(target);
         } catch (IOException exception) {
             throw new RuntimeException("여행지 이미지 파일 삭제에 실패했습니다.", exception);
+        }
+    }
+
+    public boolean deleteCommentFile(String imageUrl) {
+        String fileName = managedCommentFileName(imageUrl);
+        Path uploadRoot = Paths.get(uploadDir).toAbsolutePath().normalize();
+        try {
+            if (Files.notExists(uploadRoot)) {
+                return false;
+            }
+            Path realUploadRoot = uploadRoot.toRealPath();
+            Path commentDirectory = realUploadRoot.resolve(COMMENT_DIRECTORY).normalize();
+            ensureContained(realUploadRoot, commentDirectory);
+            if (Files.notExists(commentDirectory)) {
+                return false;
+            }
+
+            Path realCommentDirectory = commentDirectory.toRealPath();
+            ensureContained(realUploadRoot, realCommentDirectory);
+            Path target = realCommentDirectory.resolve(fileName).normalize();
+            ensureContained(realCommentDirectory, target);
+            return Files.deleteIfExists(target);
+        } catch (IOException exception) {
+            throw new RuntimeException("댓글 이미지 파일 삭제에 실패했습니다.", exception);
         }
     }
 
@@ -259,6 +316,83 @@ public class FileUploadService {
         return fileName;
     }
 
+    private DestinationImageFormat validateDestinationImage(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new UnsupportedImageFormatException("이미지 파일을 선택해 주세요.");
+        }
+
+        try (InputStream input = file.getInputStream();
+             ImageInputStream imageInput = ImageIO.createImageInputStream(input)) {
+            if (imageInput == null) {
+                throw unsupportedDestinationImage();
+            }
+            Iterator<ImageReader> readers = ImageIO.getImageReaders(imageInput);
+            if (!readers.hasNext()) {
+                throw unsupportedDestinationImage();
+            }
+
+            ImageReader reader = readers.next();
+            try {
+                DestinationImageFormat format = DestinationImageFormat.of(reader.getFormatName());
+                reader.setInput(imageInput);
+                if (reader.getWidth(0) <= 0 || reader.getHeight(0) <= 0) {
+                    throw unsupportedDestinationImage();
+                }
+                // 실제로 decode 되는 이미지인지까지 확인한다
+                reader.read(0);
+                return format;
+            } finally {
+                reader.dispose();
+            }
+        } catch (IOException exception) {
+            throw unsupportedDestinationImage();
+        }
+    }
+
+    private UnsupportedImageFormatException unsupportedDestinationImage() {
+        return new UnsupportedImageFormatException(UNSUPPORTED_DESTINATION_IMAGE_MESSAGE);
+    }
+
+    private Path resolveDestinationDirectory(boolean create) {
+        Path uploadRoot = Paths.get(uploadDir).toAbsolutePath().normalize();
+        try {
+            if (create) {
+                Files.createDirectories(uploadRoot);
+            } else if (Files.notExists(uploadRoot)) {
+                return null;
+            }
+
+            Path realUploadRoot = uploadRoot.toRealPath();
+            Path destinationDirectory = realUploadRoot.resolve(DESTINATION_DIRECTORY).normalize();
+            ensureContained(realUploadRoot, destinationDirectory);
+            if (create) {
+                Files.createDirectories(destinationDirectory);
+            } else if (Files.notExists(destinationDirectory)) {
+                return null;
+            }
+
+            Path realDestinationDirectory = destinationDirectory.toRealPath();
+            ensureContained(realUploadRoot, realDestinationDirectory);
+            return realDestinationDirectory;
+        } catch (IOException exception) {
+            throw new RuntimeException("여행지 이미지 저장 경로를 준비할 수 없습니다.", exception);
+        }
+    }
+
+    private String managedCommentFileName(String imageUrl) {
+        if (imageUrl == null || !imageUrl.startsWith(COMMENT_URL_PREFIX)) {
+            throw new IllegalArgumentException("관리 대상이 아닌 댓글 이미지 경로입니다.");
+        }
+        String fileName = imageUrl.substring(COMMENT_URL_PREFIX.length());
+        if (fileName.isBlank()
+                || fileName.contains("/")
+                || fileName.contains("\\")
+                || fileName.contains("..")) {
+            throw new IllegalArgumentException("올바르지 않은 댓글 이미지 경로입니다.");
+        }
+        return fileName;
+    }
+
     private void ensureContained(Path root, Path target) {
         if (!target.startsWith(root)) {
             throw new IllegalArgumentException("허용된 업로드 경로를 벗어날 수 없습니다.");
@@ -267,6 +401,28 @@ public class FileUploadService {
 
     private int unsigned(byte value) {
         return value & 0xff;
+    }
+
+    /** 여행지 직접 업로드 허용 포맷 (KTO 사진과 동일하게 JPEG/PNG 만 허용) */
+    private enum DestinationImageFormat {
+        JPEG("jpg"),
+        PNG("png");
+
+        private final String extension;
+
+        DestinationImageFormat(String extension) {
+            this.extension = extension;
+        }
+
+        private static DestinationImageFormat of(String formatName) {
+            if ("JPEG".equalsIgnoreCase(formatName) || "JPG".equalsIgnoreCase(formatName)) {
+                return JPEG;
+            }
+            if ("PNG".equalsIgnoreCase(formatName)) {
+                return PNG;
+            }
+            throw new UnsupportedImageFormatException(UNSUPPORTED_DESTINATION_IMAGE_MESSAGE);
+        }
     }
 
     private enum ThumbnailFormat {

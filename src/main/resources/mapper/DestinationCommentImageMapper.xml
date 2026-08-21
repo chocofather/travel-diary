@@ -56,4 +56,13 @@
         LIMIT #{limit}
     </select>
 
+    <!-- 여행지 삭제 시 파일 정리용. 삭제된 댓글의 사진도 포함하고 개수 제한이 없다. -->
+    <select id="findAllImageUrlsByDestinationId" resultType="string">
+        SELECT i.image_url
+        FROM destination_comment_images i
+        JOIN destination_comments c ON c.id = i.comment_id
+        WHERE c.destination_id = #{destinationId}
+        ORDER BY i.comment_id, i.display_order
+    </select>
+
 </mapper>

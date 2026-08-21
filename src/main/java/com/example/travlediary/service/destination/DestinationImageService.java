@@ -41,8 +41,8 @@ public class DestinationImageService {
         for (MultipartFile file : files) {
             if (file == null || file.isEmpty()) continue;
 
-            // ✅ 실제 저장 및 URL 경로 반환
-            String imageUrl = fileUploadService.saveFile(file, "destinations");
+            // ✅ 실제 이미지 검증 후 저장하고 URL 경로 반환
+            String imageUrl = fileUploadService.saveDestinationImage(file);
             registerRollbackCleanup(imageUrl);
             boolean isMain = mainIdx != null && mainIdx == uploadIndex;
 
@@ -98,22 +98,20 @@ public class DestinationImageService {
     }
 
     @Transactional
-    public void deleteImageById(Long imageId) {
-        DestinationImage image = destinationMapper.findImageById(imageId);
-        if (image != null) {
-            destinationMapper.deleteImageById(imageId);
+    public void deleteImage(Long destinationId, Long imageId) {
+        DestinationImage image = requireDestinationImage(destinationId, imageId);
+        destinationMapper.deleteImageById(imageId);
 
-            List<DestinationImage> remainingImages = destinationMapper
-                    .findImagesByDestinationId(image.getDestinationId());
-            reorderImages(remainingImages);
+        List<DestinationImage> remainingImages = destinationMapper
+                .findImagesByDestinationId(image.getDestinationId());
+        reorderImages(remainingImages);
 
-            if (Boolean.TRUE.equals(image.getIsMain()) && !remainingImages.isEmpty()) {
-                destinationMapper.clearMainImagesByDestinationId(image.getDestinationId());
-                destinationMapper.setMainImage(remainingImages.get(0).getId());
-            }
-
-            deleteFilesAfterCommit(Collections.singletonList(image.getImageUrl()));
+        if (Boolean.TRUE.equals(image.getIsMain()) && !remainingImages.isEmpty()) {
+            destinationMapper.clearMainImagesByDestinationId(image.getDestinationId());
+            destinationMapper.setMainImage(remainingImages.get(0).getId());
         }
+
+        deleteFilesAfterCommit(Collections.singletonList(image.getImageUrl()));
     }
 
     public void deleteFilesAfterCommit(List<String> imageUrls) {

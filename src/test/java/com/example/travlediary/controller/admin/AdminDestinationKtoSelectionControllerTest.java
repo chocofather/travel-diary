@@ -122,6 +122,30 @@ class AdminDestinationKtoSelectionControllerTest {
     }
 
     @Test
+    void rejectedDirectImageUploadAnswersBadRequestInsteadOfServerError() throws Exception {
+        org.mockito.Mockito.doThrow(
+                        new com.example.travlediary.service.file.UnsupportedImageFormatException(
+                                "JPEG 또는 PNG 이미지 파일만 업로드할 수 있습니다."))
+                .when(destinationSaveOrchestrationService)
+                .registerDestination(org.mockito.ArgumentMatchers.any(),
+                        org.mockito.ArgumentMatchers.any(),
+                        org.mockito.ArgumentMatchers.any());
+
+        var result = mockMvc.perform(multipart("/admin/destinations")
+                        .file(new org.springframework.mock.web.MockMultipartFile(
+                                "images", "fake.jpg", "image/jpeg",
+                                "hello".getBytes(java.nio.charset.StandardCharsets.UTF_8)))
+                        .param("regionId", "9")
+                        .param("ktoSelectedPhotosJson", "[]"))
+                .andReturn();
+
+        assertThat(result.getResponse().getStatus()).isEqualTo(400);
+        assertThat(result.getResolvedException()).isInstanceOf(ResponseStatusException.class);
+        assertThat(result.getResolvedException().getMessage())
+                .contains("JPEG 또는 PNG 이미지 파일만 업로드할 수 있습니다.");
+    }
+
+    @Test
     void rejectsMalformedRegistrationJsonBeforeCallingDestinationService() {
         DestinationForm form = new DestinationForm();
         form.setKtoSelectedPhotosJson("[{");
@@ -141,7 +165,7 @@ class AdminDestinationKtoSelectionControllerTest {
                 ]
                 """);
 
-        String view = controller.updateDestination(9L, form);
+        String view = update(form);
 
         assertThat(view).isEqualTo("redirect:/admin/destinations");
         verify(destinationService).updateDestination(9L, form);
@@ -181,7 +205,7 @@ class AdminDestinationKtoSelectionControllerTest {
                 }]
                 """);
 
-        String view = controller.updateDestination(9L, form);
+        String view = update(form);
 
         assertThat(view).isEqualTo("redirect:/admin/destinations");
         verify(destinationService).updateDestination(9L, form);
@@ -214,6 +238,16 @@ class AdminDestinationKtoSelectionControllerTest {
                 form,
                 new BeanPropertyBindingResult(form, "destinationForm"),
                 userDetails,
+                new ExtendedModelMap(),
+                "ko"
+        );
+    }
+
+    private String update(DestinationForm form) {
+        return controller.updateDestination(
+                9L,
+                form,
+                new BeanPropertyBindingResult(form, "destinationForm"),
                 new ExtendedModelMap(),
                 "ko"
         );

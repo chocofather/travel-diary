@@ -12,10 +12,14 @@ import com.example.travlediary.repository.comment.DestinationCommentImageMapper;
 import com.example.travlediary.repository.comment.DestinationCommentMapper;
 import com.example.travlediary.repository.destination.DestinationMapper;
 import com.example.travlediary.repository.user.UserMapper;
+import com.example.travlediary.service.file.FileUploadService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -28,6 +32,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class DestinationCommentService {
     private static final int DEFAULT_PAGE_SIZE = 5;
     /** 댓글 하나에 첨부할 수 있는 사진 수 (DB CHECK 제약과 동일) */
@@ -39,6 +44,7 @@ public class DestinationCommentService {
     private final DestinationCommentMapper destinationCommentMapper;
     private final DestinationCommentImageMapper destinationCommentImageMapper;
     private final UserMapper userMapper;
+    private final FileUploadService fileUploadService;
 
     @Value("${custom.upload-path}")
     private String uploadPath;
@@ -215,6 +221,56 @@ public class DestinationCommentService {
                 .collect(Collectors.toList());
     }
 
+
+    /**
+     * 여행지 삭제 lifecycle 전용.
+     * 댓글 row 가 지워지기 전에 정리 대상 사진 URL 을 전부 모아 둔다.
+     * (갤러리와 달리 삭제된 댓글의 사진도 포함하고 개수 제한이 없다)
+     */
+    public List<String> findAllCommentImageUrls(Long destinationId) {
+        List<String> imageUrls =
+                destinationCommentImageMapper.findAllImageUrlsByDestinationId(destinationId);
+        return imageUrls == null ? List.of() : imageUrls;
+    }
+
+    /**
+     * 댓글 사진 파일 정리.
+     * 파일 시스템은 rollback 대상이 아니므로 commit 이후에만 삭제한다.
+     */
+    public void deleteImageFilesAfterCommit(List<String> imageUrls) {
+        List<String> managedImageUrls = imageUrls == null
+                ? List.of()
+                : imageUrls.stream()
+                .filter(imageUrl -> imageUrl != null && !imageUrl.isBlank())
+                .distinct()
+                .toList();
+        if (managedImageUrls.isEmpty()) {
+            return;
+        }
+
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    deleteImageFilesSafely(managedImageUrls);
+                }
+            });
+            return;
+        }
+
+        deleteImageFilesSafely(managedImageUrls);
+    }
+
+    private void deleteImageFilesSafely(List<String> imageUrls) {
+        for (String imageUrl : imageUrls) {
+            try {
+                fileUploadService.deleteCommentFile(imageUrl);
+            } catch (RuntimeException cleanupFailure) {
+                log.warn("댓글 이미지 파일을 정리하지 못했습니다. (원인: {})",
+                        cleanupFailure.getClass().getSimpleName());
+            }
+        }
+    }
 
     public List<CommentDto> getCommentDtosWithWriter(Long destinationId, Long userId, String sort) {
         List<DestinationComment> comments = switch (sort) {

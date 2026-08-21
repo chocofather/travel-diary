@@ -6,8 +6,21 @@ document.addEventListener("DOMContentLoaded", function () {
     const regionIdHidden = document.getElementById("regionIdHidden");
     const selects = [continentSelect, countrySelect, citySelect, districtSelect];
     let regionRequestGeneration = 0;
+    let regionSelectionChanged = false;
 
     if (selects.some(select => !select) || !regionIdHidden) return;
+
+    function parseRegionPathIds(value) {
+        return (value || "")
+            .split(",")
+            .map(regionId => regionId.trim())
+            .filter(regionId => regionId !== "")
+            .map(regionId => ({id: regionId}));
+    }
+
+    // 수정 화면에서 서버가 내려준 기존 지역 값 (신규 등록에서는 비어 있다)
+    const initialRegionId = regionIdHidden.value;
+    const initialRegionPath = parseRegionPathIds(regionIdHidden.dataset.initialRegionPath);
 
     function resetSelect(select) {
         select.replaceChildren(new Option("선택", ""));
@@ -38,8 +51,10 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function updateRegionId() {
-        regionIdHidden.value =
+        const selectedId =
             districtSelect.value || citySelect.value || countrySelect.value || continentSelect.value || "";
+        // 지역을 실제로 바꾸지 않았다면 기존에 저장된 지역을 그대로 유지한다.
+        regionIdHidden.value = selectedId || (regionSelectionChanged ? "" : initialRegionId);
     }
 
     function clearAfter(index) {
@@ -50,6 +65,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     async function handleManualChange(index) {
         const requestGeneration = ++regionRequestGeneration;
+        regionSelectionChanged = true;
         clearAfter(index);
         updateRegionId();
         const selectedId = selects[index].value;
@@ -61,14 +77,14 @@ document.addEventListener("DOMContentLoaded", function () {
     function clearSelection() {
         const requestGeneration = ++regionRequestGeneration;
         selects.forEach(resetSelect);
-        regionIdHidden.value = "";
+        updateRegionId();
         void fetchRegions(undefined, continentSelect, requestGeneration);
     }
 
     async function applyRegionPath(path) {
         const requestGeneration = ++regionRequestGeneration;
         selects.forEach(resetSelect);
-        regionIdHidden.value = "";
+        updateRegionId();
         if (!Array.isArray(path) || path.length === 0 || path.length > selects.length) {
             void fetchRegions(undefined, continentSelect, requestGeneration);
             return false;
@@ -101,16 +117,28 @@ document.addEventListener("DOMContentLoaded", function () {
     citySelect.addEventListener("change", () => void handleManualChange(2));
     districtSelect.addEventListener("change", () => void handleManualChange(3));
 
-    const initialRequestGeneration = ++regionRequestGeneration;
-    void fetchRegions(undefined, continentSelect, initialRequestGeneration);
+    // 수정 화면이면 기존 지역 경로를 복원하고, 그 외에는 최상위 목록만 불러온다.
+    if (initialRegionPath.length > 0) {
+        void applyRegionPath(initialRegionPath);
+    } else {
+        const initialRequestGeneration = ++regionRequestGeneration;
+        void fetchRegions(undefined, continentSelect, initialRequestGeneration);
+    }
 
     const form = regionIdHidden.closest("form");
     if (form) {
         form.addEventListener("submit", updateRegionId);
     }
 
+    // 외부(TourAPI 자동선택)에서 호출하는 경우는 사용자가 지역을 바꾼 것으로 본다.
     window.TravelDiaryRegionSelector = {
-        applyRegionPath,
-        clearSelection
+        applyRegionPath: path => {
+            regionSelectionChanged = true;
+            return applyRegionPath(path);
+        },
+        clearSelection: () => {
+            regionSelectionChanged = true;
+            clearSelection();
+        }
     };
 });

@@ -41,7 +41,7 @@
 
     <!-- 음식점/카페 편의시설 연결 (restaurants/cafe 공용) -->
     <insert id="insertRestaurantAmenity">
-        INSERT INTO restaurants_amenities (restaurants_id, amenity_id)
+        INSERT INTO restaurant_amenities (restaurant_id, amenity_id)
         VALUES (#{restaurantId}, #{amenityId})
     </insert>
 
@@ -91,10 +91,10 @@
     <select id="findRestaurantAmenityTranslationsByDestinationId"
             resultType="com.example.travlediary.model.AmenityTranslation">
         SELECT t.*, a.code
-        FROM restaurants_amenities ra
+        FROM restaurant_amenities ra
                  JOIN amenities a ON a.id = ra.amenity_id
                  JOIN amenity_translations t ON t.amenity_id = a.id
-        WHERE ra.restaurants_id = #{destinationId}
+        WHERE ra.restaurant_id = #{destinationId}
           AND t.language_code = #{lang}
     </select>
 
@@ -132,7 +132,7 @@
 
     <!-- 음식점/카페 편의시설 전체 삭제 -->
     <delete id="deleteRestaurantAmenities" parameterType="long">
-        DELETE FROM restaurants_amenities WHERE restaurants_id = #{restaurantId}
+        DELETE FROM restaurant_amenities WHERE restaurant_id = #{restaurantId}
     </delete>
 
     <!-- 액티비티 편의시설 전체 삭제 -->

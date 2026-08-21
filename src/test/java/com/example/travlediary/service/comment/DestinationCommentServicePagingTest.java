@@ -8,6 +8,7 @@ import com.example.travlediary.repository.comment.DestinationCommentImageMapper;
 import com.example.travlediary.repository.comment.DestinationCommentMapper;
 import com.example.travlediary.repository.destination.DestinationMapper;
 import com.example.travlediary.repository.user.UserMapper;
+import com.example.travlediary.service.file.FileUploadService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,13 +38,15 @@ class DestinationCommentServicePagingTest {
     private DestinationCommentImageMapper commentImageMapper;
     @Mock
     private UserMapper userMapper;
+    @Mock
+    private FileUploadService fileUploadService;
 
     private DestinationCommentService service;
 
     @BeforeEach
     void setUp() {
         service = new DestinationCommentService(
-                destinationMapper, commentMapper, commentImageMapper, userMapper);
+                destinationMapper, commentMapper, commentImageMapper, userMapper, fileUploadService);
     }
 
     @Test

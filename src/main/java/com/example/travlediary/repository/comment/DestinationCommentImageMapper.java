@@ -29,4 +29,10 @@ public interface DestinationCommentImageMapper {
     List<DestinationCommentImage> findGalleryByDestinationId(
             @Param("destinationId") Long destinationId,
             @Param("limit") int limit);
+
+    /**
+     * 여행지 삭제 lifecycle 전용 조회.
+     * 파일 정리가 목적이라 삭제된 댓글의 사진까지 전부, 개수 제한 없이 URL 만 돌려준다.
+     */
+    List<String> findAllImageUrlsByDestinationId(@Param("destinationId") Long destinationId);
 }

@@ -106,9 +106,10 @@ class DestinationPlaceIdBindingTest {
         DestinationForm form = form(null);
         form.setMain(true);
         form.setSlide(true);
+        byte[] jpeg = jpegBytes();
         form.setImages(new MultipartFile[]{
-                new MockMultipartFile("images", "a.jpg", "image/jpeg", new byte[]{1}),
-                new MockMultipartFile("images", "b.jpg", "image/jpeg", new byte[]{2})
+                new MockMultipartFile("images", "a.jpg", "image/jpeg", jpeg),
+                new MockMultipartFile("images", "b.jpg", "image/jpeg", jpeg)
         });
 
         service.registerDestination(form, 3L);
@@ -168,6 +169,18 @@ class DestinationPlaceIdBindingTest {
         ArgumentCaptor<Destination> captor = ArgumentCaptor.forClass(Destination.class);
         verify(destinationMapper).insertDestination(captor.capture());
         return captor.getValue();
+    }
+
+    private byte[] jpegBytes() {
+        java.awt.image.BufferedImage image =
+                new java.awt.image.BufferedImage(4, 4, java.awt.image.BufferedImage.TYPE_INT_RGB);
+        java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+        try {
+            javax.imageio.ImageIO.write(image, "jpg", bytes);
+        } catch (java.io.IOException exception) {
+            throw new IllegalStateException(exception);
+        }
+        return bytes.toByteArray();
     }
 
     private DestinationForm form(String googlePlaceId) {
