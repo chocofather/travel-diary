@@ -10,7 +10,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class AdminDestinationRegionSelectionUiContractTest {
 
-    private static final String REGION_SELECTOR_ASSET = "/js/region-selector.js?v=20260822-1";
+    private static final String REGION_SELECTOR_ASSET = "/js/region-selector.js?v=20260822-3";
 
     @Test
     void editFormPassesTheStoredRegionPathAndRegionErrorToTheSelector() throws IOException {

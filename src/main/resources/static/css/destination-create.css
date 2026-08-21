@@ -324,6 +324,67 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+/* 단계별 UI: 첫 단계는 버튼 grid, 하위 단계는 검색 + 기존 select */
+.admin-region-step {
+    display: grid;
+    min-width: 0;
+    gap: 6px;
+}
+
+.admin-region-step[data-region-view="chips"] > select,
+.admin-region-step[data-region-view="chips"] .admin-region-search,
+.admin-region-step[data-region-view="select"] .admin-region-chips {
+    display: none;
+}
+
+.admin-region-step[data-region-view="chips"] {
+    grid-column: 1 / -1;
+}
+
+.admin-region-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.admin-region-chip {
+    min-height: 30px;
+    padding: 5px 11px;
+    color: #48536a;
+    background: #fbfcfe;
+    border: 1px solid #dfe5ef;
+    border-radius: 999px;
+    font: inherit;
+    font-size: 0.83rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.admin-region-chip:hover,
+.admin-region-chip:focus-visible {
+    color: #3853ba;
+    background: #f2f6ff;
+    border-color: #c8d6f7;
+}
+
+.admin-region-chip.active {
+    color: #fff;
+    background: #4a63c8;
+    border-color: #4a63c8;
+}
+
+.admin-destination-form .admin-region-search {
+    width: 100%;
+    min-height: 34px;
+    padding: 6px 10px;
+    color: #35415a;
+    background: #fff;
+    border: 1px solid #d8dfeb;
+    border-radius: 8px;
+    font: inherit;
+    font-size: 0.84rem;
+}
+
 .admin-destination-form .type-fields {
     display: none;
     padding: 16px;

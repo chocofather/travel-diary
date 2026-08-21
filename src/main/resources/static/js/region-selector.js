@@ -56,6 +56,102 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
+    // ---- 단계별 보조 UI (첫 단계 버튼 grid / 하위 단계 검색) -------------------
+    const steps = selects.map((select, index) => regionField
+        ? regionField.querySelector(`[data-region-step="${index}"]`)
+        : null);
+    const chipBoxes = selects.map((select, index) => regionField
+        ? regionField.querySelector(`[data-region-chips="${index}"]`)
+        : null);
+    const searchInputs = selects.map((select, index) => regionField
+        ? regionField.querySelector(`[data-region-search="${index}"]`)
+        : null);
+    // 검색으로 걸러내도 원래 목록을 잃지 않도록 단계별 전체 옵션을 들고 있는다.
+    const loadedOptions = selects.map(() => []);
+
+    /** 모드별 첫 단계: 국내는 시/도(1), 해외는 대륙(0) */
+    function firstStepIndex() {
+        return regionMode === "domestic" ? 1 : 0;
+    }
+
+    function clearSearch(index) {
+        const input = searchInputs[index];
+        if (input) input.value = "";
+    }
+
+    function snapshotOptions(index) {
+        loadedOptions[index] = Array.from(selects[index].options)
+            .filter(option => option.value !== "")
+            .map(option => ({value: option.value, label: option.textContent}));
+    }
+
+    /** 현재 검색어에 맞는 옵션만 남긴다. 선택된 값은 숨겨져도 유지한다. */
+    function renderOptions(index) {
+        const select = selects[index];
+        const keyword = (searchInputs[index]?.value ?? "").trim().toLocaleLowerCase();
+        const selectedValue = select.value;
+
+        const visible = loadedOptions[index].filter(option =>
+            keyword === "" || option.label.toLocaleLowerCase().includes(keyword)
+                || option.value === selectedValue);
+
+        select.replaceChildren(new Option("선택", ""));
+        visible.forEach(option => select.appendChild(new Option(option.label, option.value)));
+        select.value = selectedValue;
+    }
+
+    function renderChips(index) {
+        const chipBox = chipBoxes[index];
+        if (!chipBox) return;
+        const select = selects[index];
+
+        chipBox.replaceChildren();
+        Array.from(select.options).forEach(option => {
+            if (!option.value) return;
+            const chip = document.createElement("button");
+            chip.type = "button";
+            chip.className = "admin-region-chip";
+            chip.textContent = option.textContent;
+            chip.dataset.regionChipValue = option.value;
+            const pressed = select.value === option.value;
+            chip.setAttribute("aria-pressed", String(pressed));
+            chip.classList.toggle("active", pressed);
+            chip.addEventListener("click", () => {
+                // 버튼은 보조 UI 일 뿐이고 실제 상태는 기존 select 가 갖는다.
+                select.value = option.value;
+                void handleManualChange(index);
+            });
+            chipBox.appendChild(chip);
+        });
+    }
+
+    /** 단계별 표시 방식(버튼 / 검색+select)과 빈 단계 숨김을 정한다. */
+    function updateStepViews() {
+        steps.forEach((step, index) => {
+            if (!step) return;
+            const hasOptions = loadedOptions[index].length > 0;
+            const isFirstStep = index === firstStepIndex();
+
+            if (regionMode === "") {
+                step.hidden = true;
+                return;
+            }
+            if (regionMode === "domestic" && index === 0) {
+                step.hidden = true;
+                return;
+            }
+            step.hidden = !hasOptions;
+            step.dataset.regionView = isFirstStep && chipBoxes[index] ? "chips" : "select";
+        });
+    }
+
+    function refreshStep(index) {
+        snapshotOptions(index);
+        renderOptions(index);
+        renderChips(index);
+        updateStepViews();
+    }
+
     function resetSelect(select) {
         select.replaceChildren(new Option("선택", ""));
     }
@@ -96,6 +192,10 @@ document.addEventListener("DOMContentLoaded", function () {
     function clearAfter(index) {
         for (let targetIndex = index + 1; targetIndex < selects.length; targetIndex++) {
             resetSelect(selects[targetIndex]);
+            // 부모가 바뀌면 하위 단계의 검색어와 버튼도 함께 비운다.
+            clearSearch(targetIndex);
+            loadedOptions[targetIndex] = [];
+            chipBoxes[targetIndex]?.replaceChildren();
         }
     }
 
@@ -104,17 +204,28 @@ document.addEventListener("DOMContentLoaded", function () {
         regionSelectionChanged = true;
         clearAfter(index);
         updateRegionId();
+        renderChips(index);
+        updateStepViews();
         const selectedId = selects[index].value;
         if (selectedId && index + 1 < selects.length) {
-            await fetchRegions(selectedId, selects[index + 1], requestGeneration);
+            const loaded = await fetchRegions(selectedId, selects[index + 1], requestGeneration);
+            if (loaded && requestGeneration === regionRequestGeneration) {
+                refreshStep(index + 1);
+            }
         }
     }
 
     function clearSelection() {
         ++regionRequestGeneration;
         selects.forEach(resetSelect);
+        selects.forEach((select, index) => {
+            clearSearch(index);
+            loadedOptions[index] = [];
+            chipBoxes[index]?.replaceChildren();
+        });
         markMode("");
         updateRegionId();
+        updateStepViews();
     }
 
     /** 국내/해외 버튼: 이전 모드의 선택과 hidden regionId 를 남기지 않는다. */
@@ -129,6 +240,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const loaded = await fetchRegions(undefined, continentSelect, requestGeneration);
         if (!loaded || requestGeneration !== regionRequestGeneration) return;
         filterRootOptions();
+        refreshStep(0);
 
         if (mode !== "domestic") return;
         // 국내는 대한민국 아래 시/도부터 고르게 한다.
@@ -137,7 +249,11 @@ document.addEventListener("DOMContentLoaded", function () {
         if (!domesticOption) return;
         continentSelect.value = domesticOption.value;
         updateRegionId();
-        await fetchRegions(domesticOption.value, countrySelect, requestGeneration);
+        const childrenLoaded =
+            await fetchRegions(domesticOption.value, countrySelect, requestGeneration);
+        if (childrenLoaded && requestGeneration === regionRequestGeneration) {
+            refreshStep(1);
+        }
     }
 
     async function applyRegionPath(path) {
@@ -168,10 +284,13 @@ document.addEventListener("DOMContentLoaded", function () {
             }
             selects[index].value = matchingOptions[0].value;
             parentId = matchingOptions[0].value;
+            // 버튼 grid / 검색 목록도 복원된 선택에 맞춘다.
+            refreshStep(index);
         }
 
         if (requestGeneration !== regionRequestGeneration) return false;
         updateRegionId();
+        updateStepViews();
         return true;
     }
 
@@ -183,8 +302,18 @@ document.addEventListener("DOMContentLoaded", function () {
     citySelect.addEventListener("change", () => void handleManualChange(2));
     districtSelect.addEventListener("change", () => void handleManualChange(3));
 
+    // 하위 단계 검색: 이름 부분검색으로 옵션만 걸러내고 선택값은 유지한다.
+    searchInputs.forEach((input, index) => {
+        if (!input) return;
+        input.addEventListener("input", () => renderOptions(index));
+        input.addEventListener("keydown", event => {
+            if (event.key === "Enter") event.preventDefault();
+        });
+    });
+
     // 수정 화면이면 기존 지역 경로(+모드)를 복원하고, 신규 등록은 모드 선택부터 시작한다.
     markMode("");
+    updateStepViews();
     if (initialRegionPath.length > 0) {
         void applyRegionPath(initialRegionPath);
     }

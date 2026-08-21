@@ -132,24 +132,34 @@
         국내 또는 해외를 먼저 선택하세요.
       </p>
       <div class="admin-region-grid">
-        <label class="admin-region-step" data-region-step="0">
+        <div class="admin-region-step" data-region-step="0">
           <span class="admin-region-step-label is-overseas">대륙</span>
-          <select id="continent"></select>
-        </label>
-        <label class="admin-region-step" data-region-step="1">
+          <div class="admin-region-chips" data-region-chips="0" role="group"
+               aria-label="대륙 선택"></div>
+          <select id="continent" aria-label="대륙"></select>
+        </div>
+        <div class="admin-region-step" data-region-step="1">
           <span class="admin-region-step-label is-domestic">시/도</span>
           <span class="admin-region-step-label is-overseas">국가</span>
-          <select id="country"></select>
-        </label>
-        <label class="admin-region-step" data-region-step="2">
+          <div class="admin-region-chips" data-region-chips="1" role="group"
+               aria-label="시/도 선택"></div>
+          <input type="search" class="admin-region-search" data-region-search="1"
+                 placeholder="국가 검색" aria-label="국가 검색" autocomplete="off">
+          <select id="country" aria-label="국가 또는 시/도"></select>
+        </div>
+        <div class="admin-region-step" data-region-step="2">
           <span class="admin-region-step-label is-domestic">시/군·구</span>
           <span class="admin-region-step-label is-overseas">도시/지역</span>
-          <select id="city"></select>
-        </label>
-        <label class="admin-region-step" data-region-step="3">
+          <input type="search" class="admin-region-search" data-region-search="2"
+                 placeholder="검색" aria-label="도시 또는 시/군·구 검색" autocomplete="off">
+          <select id="city" aria-label="도시 또는 시/군·구"></select>
+        </div>
+        <div class="admin-region-step" data-region-step="3">
           <span class="admin-region-step-label">하위 지역</span>
-          <select id="district"></select>
-        </label>
+          <input type="search" class="admin-region-search" data-region-search="3"
+                 placeholder="검색" aria-label="하위 지역 검색" autocomplete="off">
+          <select id="district" aria-label="하위 지역"></select>
+        </div>
       </div>
       <input type="hidden" id="regionIdHidden" name="regionId" th:field="*{regionId}"
              th:attr="data-domestic-root-id=${domesticRootId}">
@@ -625,7 +635,7 @@
     <button type="submit" class="admin-btn is-primary">등록</button>
   </div>
 </form>
-<script src="/js/region-selector.js?v=20260822-1" defer></script>
+<script src="/js/region-selector.js?v=20260822-3" defer></script>
 <script src="/js/type-fields.js" defer></script>
 </section>
 </th:block>
