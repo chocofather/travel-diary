@@ -89,6 +89,67 @@
     font-size: 0.9rem;
 }
 
+.admin-kto-tour-name-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: stretch;
+}
+
+.admin-kto-tour-name-row .admin-btn {
+    min-height: 42px;
+    white-space: nowrap;
+}
+
+.admin-kto-tour-autofill {
+    display: grid;
+    gap: 8px;
+}
+
+.admin-kto-tour-status {
+    margin: 0;
+    color: #748096;
+    font-size: 0.78rem;
+    line-height: 1.45;
+}
+
+.admin-kto-tour-status.is-error {
+    color: #b04444;
+}
+
+.admin-kto-tour-results {
+    display: grid;
+    gap: 6px;
+}
+
+.admin-kto-tour-candidate {
+    display: grid;
+    gap: 3px;
+    width: 100%;
+    padding: 9px 11px;
+    color: #35415a;
+    text-align: left;
+    background: #fff;
+    border: 1px solid #dce3ef;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.admin-kto-tour-candidate:hover,
+.admin-kto-tour-candidate:focus-visible {
+    border-color: #7892f5;
+    outline: none;
+}
+
+.admin-kto-tour-candidate strong {
+    font-size: 0.84rem;
+}
+
+.admin-kto-tour-candidate span {
+    color: #7b8599;
+    font-size: 0.75rem;
+}
+
 .admin-language-card label,
 .admin-region-grid label {
     display: grid;

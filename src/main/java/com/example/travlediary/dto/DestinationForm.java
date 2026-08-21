@@ -2,6 +2,7 @@ package com.example.travlediary.dto;
 
 import com.example.travlediary.model.*;
 import lombok.Data;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
@@ -16,6 +17,7 @@ public class DestinationForm {
     private BigDecimal longitude;
     private String googlePlaceId; // 해외 여행지 Google 지도 마커용. 선택 입력
     private String season;
+    @NotNull(message = "지역을 선택해 주세요.")
     private Long regionId;
 
     private DestinationType type; // enum 직접 받아도 됨 (권장)

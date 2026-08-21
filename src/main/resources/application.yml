@@ -65,3 +65,8 @@ kto:
   photo:
     api-key: ${KTO_PHOTO_API_KEY:}
     base-url: https://apis.data.go.kr/B551011/PhotoGalleryService1
+  tour:
+    api-key: ${KTO_TOUR_API_KEY:}
+    kor-base-url: https://apis.data.go.kr/B551011/KorService2
+    eng-api-key: ${KTO_ENG_TOUR_API_KEY:}
+    eng-base-url: https://apis.data.go.kr/B551011/EngService2

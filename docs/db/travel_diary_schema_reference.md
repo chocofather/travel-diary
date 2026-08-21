@@ -79,16 +79,16 @@ CREATE TABLE `activity_amenities` (
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `activity_info` (
   `destination_id` bigint NOT NULL,
-  `opening_hours` varchar(64) DEFAULT NULL,
+  `opening_hours` varchar(1000) DEFAULT NULL,
   `required_time` varchar(32) DEFAULT NULL,
-  `admission_fee` varchar(32) DEFAULT NULL,
+  `admission_fee` text DEFAULT NULL,
   `age_limit` varchar(32) DEFAULT NULL,
   `reservation` tinyint(1) DEFAULT NULL,
   `equipment_included` tinyint(1) DEFAULT NULL,
   `parking_available` tinyint(1) DEFAULT NULL,
-  `contact_number` varchar(32) DEFAULT NULL,
+  `contact_number` varchar(255) DEFAULT NULL,
   `homepage_url` varchar(255) DEFAULT NULL,
-  `guide` varchar(255) DEFAULT NULL,
+  `guide` text DEFAULT NULL,
   PRIMARY KEY (`destination_id`),
   CONSTRAINT `fk_activity_dest_id` FOREIGN KEY (`destination_id`) REFERENCES `destinations` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
@@ -150,13 +150,13 @@ CREATE TABLE `attraction_amenities` (
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `attraction_info` (
   `destination_id` bigint NOT NULL,
-  `closed_days` varchar(32) DEFAULT NULL,
-  `opening_hours` varchar(64) DEFAULT NULL,
-  `admission_fee` varchar(32) DEFAULT NULL,
+  `closed_days` varchar(500) DEFAULT NULL,
+  `opening_hours` varchar(1000) DEFAULT NULL,
+  `admission_fee` text DEFAULT NULL,
   `parking_available` tinyint(1) DEFAULT NULL,
-  `contact_number` varchar(32) DEFAULT NULL,
+  `contact_number` varchar(255) DEFAULT NULL,
   `homepage_url` varchar(255) DEFAULT NULL,
-  `guide` varchar(255) DEFAULT NULL,
+  `guide` text DEFAULT NULL,
   PRIMARY KEY (`destination_id`),
   CONSTRAINT `fk_attraction_dest_id` FOREIGN KEY (`destination_id`) REFERENCES `destinations` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
@@ -1026,13 +1026,13 @@ CREATE TABLE `shop_amenities` (
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `shop_info` (
   `destination_id` bigint NOT NULL,
-  `closed_days` varchar(32) DEFAULT NULL,
-  `opening_hours` varchar(64) DEFAULT NULL,
+  `closed_days` varchar(500) DEFAULT NULL,
+  `opening_hours` varchar(1000) DEFAULT NULL,
   `main_products` varchar(255) DEFAULT NULL,
   `parking_available` tinyint(1) DEFAULT NULL,
-  `contact_number` varchar(32) DEFAULT NULL,
+  `contact_number` varchar(255) DEFAULT NULL,
   `homepage_url` varchar(255) DEFAULT NULL,
-  `guide` varchar(255) DEFAULT NULL,
+  `guide` text DEFAULT NULL,
   PRIMARY KEY (`destination_id`),
   CONSTRAINT `fk_shop_dest_id` FOREIGN KEY (`destination_id`) REFERENCES `destinations` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;

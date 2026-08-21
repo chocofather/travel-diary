@@ -6,6 +6,7 @@
 <th:block th:fragment="headFragment">
   <link rel="stylesheet" href="/css/destination-create.css">
   <script src="/js/admin-destination-category-select.js" defer></script>
+  <script src="/js/admin-kto-tour-autofill.js?v=20260821" defer></script>
   <script src="/js/admin-kto-photo-search.js" defer></script>
 </th:block>
 <th:block th:fragment="body">
@@ -36,7 +37,7 @@
       <!-- 타입 선택 -->
       <div class="admin-form-field">
         <label>타입</label>
-        <select th:field="*{type}" required>
+        <select th:field="*{type}" required data-kto-tour-destination-type>
           <option value="" disabled selected>-- 선택 --</option>
           <option value="ATTRACTION">관광지</option>
           <option value="ACCOMMODATION">숙소</option>
@@ -66,14 +67,22 @@
         <h3>한국어</h3>
         <input type="hidden" th:field="*{translations[0].languageCode}" value="ko"/>
         <label>여행지명
-          <input type="text" th:field="*{translations[0].name}" placeholder="이름 (한국어)"
-                 data-destination-korean-name>
+          <span class="admin-kto-tour-name-row">
+            <input type="text" th:field="*{translations[0].name}" placeholder="이름 (한국어)"
+                   data-destination-korean-name>
+            <button type="button" class="admin-btn" data-kto-tour-search-button>TourAPI 검색</button>
+          </span>
         </label>
+        <div class="admin-kto-tour-autofill" aria-live="polite">
+          <p class="admin-kto-tour-status" data-kto-tour-status>여행지명을 입력한 뒤 TourAPI에서 후보를 검색할 수 있습니다.</p>
+          <div class="admin-kto-tour-results" data-kto-tour-results></div>
+        </div>
         <label>간단 설명
           <textarea th:field="*{translations[0].shortDescription}" placeholder="간단 설명 (한국어)"></textarea>
         </label>
         <label>상세 설명
-          <textarea class="is-description" th:field="*{translations[0].description}" placeholder="설명 (한국어)"></textarea>
+          <textarea class="is-description" th:field="*{translations[0].description}" placeholder="설명 (한국어)"
+                    data-kto-tour-overview></textarea>
         </label>
       </section>
 
@@ -81,14 +90,19 @@
         <h3>English</h3>
         <input type="hidden" th:field="*{translations[1].languageCode}" value="en"/>
         <label>Destination name
-          <input type="text" th:field="*{translations[1].name}" placeholder="Name (English)">
+          <input type="text" th:field="*{translations[1].name}" placeholder="Name (English)"
+                 data-kto-tour-english-name>
         </label>
         <label>Short description
           <textarea th:field="*{translations[1].shortDescription}" placeholder="Short Description (English)"></textarea>
         </label>
         <label>Description
-          <textarea class="is-description" th:field="*{translations[1].description}" placeholder="Description (English)"></textarea>
+          <textarea class="is-description" th:field="*{translations[1].description}" placeholder="Description (English)"
+                    data-kto-tour-english-overview></textarea>
         </label>
+        <div class="admin-kto-tour-autofill" aria-live="polite">
+          <p class="admin-kto-tour-status" data-kto-tour-english-status>국문 후보를 선택하면 영문 관광정보를 찾아봅니다.</p>
+        </div>
       </section>
     </div>
   </section>
@@ -119,17 +133,19 @@
         </label>
       </div>
       <input type="hidden" id="regionIdHidden" name="regionId" th:field="*{regionId}">
+      <p class="admin-field-error" th:if="${#fields.hasErrors('regionId')}"
+         th:errors="*{regionId}">지역 선택 오류</p>
     </div>
 
     <!-- 위도 / 경도 -->
     <div class="admin-form-grid is-compact">
       <div class="admin-form-field">
         <label>위도</label>
-        <input type="text" th:field="*{latitude}" placeholder="위도">
+        <input type="text" th:field="*{latitude}" placeholder="위도" data-kto-tour-latitude>
       </div>
       <div class="admin-form-field">
         <label>경도</label>
-        <input type="text" th:field="*{longitude}" placeholder="경도">
+        <input type="text" th:field="*{longitude}" placeholder="경도" data-kto-tour-longitude>
       </div>
     </div>
 
@@ -161,17 +177,20 @@
     <div class="admin-type-fields-grid">
     <div>
       <label>휴관일
-        <input type="text" th:field="*{attractionInfo.closedDays}" placeholder="예: 매주 월요일, 명절">
+        <input type="text" th:field="*{attractionInfo.closedDays}" placeholder="예: 매주 월요일, 명절"
+               data-kto-tour-field="closedDays" data-kto-tour-type="ATTRACTION">
       </label>
     </div>
     <div>
       <label>운영시간
-        <input type="text" th:field="*{attractionInfo.openingHours}" placeholder="예: 09:00~18:00">
+        <input type="text" th:field="*{attractionInfo.openingHours}" placeholder="예: 09:00~18:00"
+               data-kto-tour-field="openingHours" data-kto-tour-type="ATTRACTION">
       </label>
     </div>
     <div>
       <label>입장료
-        <input type="text" th:field="*{attractionInfo.admissionFee}" placeholder="예: 무료, 어른 2,000원 등">
+        <input type="text" th:field="*{attractionInfo.admissionFee}" placeholder="예: 무료, 어른 2,000원 등"
+               data-kto-tour-field="admissionFee" data-kto-tour-type="ATTRACTION">
       </label>
     </div>
     <div>
@@ -181,17 +200,20 @@
     </div>
     <div>
       <label>전화번호
-        <input type="text" th:field="*{attractionInfo.contactNumber}" placeholder="예: 042-123-4567">
+        <input type="text" th:field="*{attractionInfo.contactNumber}" placeholder="예: 042-123-4567"
+               data-kto-tour-field="contactNumber" data-kto-tour-type="ATTRACTION">
       </label>
     </div>
     <div>
       <label>홈페이지
-        <input type="text" th:field="*{attractionInfo.homepageUrl}" placeholder="예: http://...">
+        <input type="text" th:field="*{attractionInfo.homepageUrl}" placeholder="예: http://..."
+               data-kto-tour-field="homepageUrl" data-kto-tour-type="ATTRACTION">
       </label>
     </div>
     <div class="admin-type-field-wide">
       <label>관람 안내/기타
-        <textarea th:field="*{attractionInfo.guide}" placeholder="기타 안내사항"></textarea>
+        <textarea th:field="*{attractionInfo.guide}" placeholder="기타 안내사항"
+                  data-kto-tour-field="guide" data-kto-tour-type="ATTRACTION"></textarea>
       </label>
     </div>
     <!-- 👇 관광지 편의시설 (amenities) -->
@@ -378,7 +400,8 @@
     <div class="admin-type-fields-grid">
     <div>
       <label>운영 시간
-        <input type="text" th:field="*{activityInfo.openingHours}" placeholder="예: 09:00~18:00">
+        <input type="text" th:field="*{activityInfo.openingHours}" placeholder="예: 09:00~18:00"
+               data-kto-tour-field="openingHours" data-kto-tour-type="ACTIVITY">
       </label>
     </div>
     <div>
@@ -388,7 +411,8 @@
     </div>
     <div>
       <label>참가비/이용요금
-        <input type="text" th:field="*{activityInfo.admissionFee}" placeholder="예: 20,000원">
+        <input type="text" th:field="*{activityInfo.admissionFee}" placeholder="예: 20,000원"
+               data-kto-tour-field="admissionFee" data-kto-tour-type="ACTIVITY">
       </label>
     </div>
     <div>
@@ -413,17 +437,20 @@
     </div>
     <div>
       <label>연락처
-        <input type="text" th:field="*{activityInfo.contactNumber}" placeholder="예: 02-1234-5678">
+        <input type="text" th:field="*{activityInfo.contactNumber}" placeholder="예: 02-1234-5678"
+               data-kto-tour-field="contactNumber" data-kto-tour-type="ACTIVITY">
       </label>
     </div>
     <div>
       <label>홈페이지
-        <input type="text" th:field="*{activityInfo.homepageUrl}" placeholder="예: http://...">
+        <input type="text" th:field="*{activityInfo.homepageUrl}" placeholder="예: http://..."
+               data-kto-tour-field="homepageUrl" data-kto-tour-type="ACTIVITY">
       </label>
     </div>
     <div class="admin-type-field-wide">
       <label>이용 안내/기타
-        <textarea th:field="*{activityInfo.guide}" placeholder="기타 안내사항"></textarea>
+        <textarea th:field="*{activityInfo.guide}" placeholder="기타 안내사항"
+                  data-kto-tour-field="guide" data-kto-tour-type="ACTIVITY"></textarea>
       </label>
     </div>
     <!-- Amenity (체험/액티비티용) -->
@@ -446,12 +473,14 @@
     <div class="admin-type-fields-grid">
     <div>
       <label>휴점일
-        <input type="text" th:field="*{shopInfo.closedDays}" placeholder="예: 매주 월요일, 명절">
+        <input type="text" th:field="*{shopInfo.closedDays}" placeholder="예: 매주 월요일, 명절"
+               data-kto-tour-field="closedDays" data-kto-tour-type="SHOP">
       </label>
     </div>
     <div>
       <label>영업시간
-        <input type="text" th:field="*{shopInfo.openingHours}" placeholder="예: 10:00~20:00">
+        <input type="text" th:field="*{shopInfo.openingHours}" placeholder="예: 10:00~20:00"
+               data-kto-tour-field="openingHours" data-kto-tour-type="SHOP">
       </label>
     </div>
     <div>
@@ -466,17 +495,20 @@
     </div>
     <div>
       <label>연락처
-        <input type="text" th:field="*{shopInfo.contactNumber}" placeholder="예: 02-1234-5678">
+        <input type="text" th:field="*{shopInfo.contactNumber}" placeholder="예: 02-1234-5678"
+               data-kto-tour-field="contactNumber" data-kto-tour-type="SHOP">
       </label>
     </div>
     <div>
       <label>홈페이지
-        <input type="text" th:field="*{shopInfo.homepageUrl}" placeholder="예: http://...">
+        <input type="text" th:field="*{shopInfo.homepageUrl}" placeholder="예: http://..."
+               data-kto-tour-field="homepageUrl" data-kto-tour-type="SHOP">
       </label>
     </div>
     <div class="admin-type-field-wide">
       <label>기타 안내사항
-        <textarea th:field="*{shopInfo.guide}" placeholder="기타 안내"></textarea>
+        <textarea th:field="*{shopInfo.guide}" placeholder="기타 안내"
+                  data-kto-tour-field="guide" data-kto-tour-type="SHOP"></textarea>
       </label>
     </div>
     <!-- Amenity (쇼핑용) -->

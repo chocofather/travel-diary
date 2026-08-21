@@ -11,11 +11,13 @@ import com.example.travlediary.service.destination.DestinationService;
 import com.example.travlediary.service.destination.DestinationSaveOrchestrationService;
 import com.example.travlediary.service.kto.InvalidKtoSelectedPhotosException;
 import com.example.travlediary.service.kto.KtoSelectedPhotoRequestParser;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -51,21 +53,33 @@ public class AdminDestinationController {
     @GetMapping("/create")
     public String showCreateForm(Model model,
                                  @RequestParam(defaultValue = "ko") String lang) {
-        model.addAttribute("destinationForm", new DestinationForm());
+        prepareCreateFormModel(model, new DestinationForm(), lang);
+        return "admin/destinations/create";
+    }
+
+    private void prepareCreateFormModel(Model model, DestinationForm form, String lang) {
+        model.addAttribute("destinationForm", form);
         model.addAttribute("categories", categoryService.getAll());
         model.addAttribute("attractionAmenities", amenityService.getAllAmenityTranslations(lang));
         model.addAttribute("accommodationAmenities", amenityService.getAllAmenityTranslations(lang));
         model.addAttribute("restaurantAmenities", amenityService.getAllAmenityTranslations(lang));
         model.addAttribute("activityAmenities", amenityService.getAllAmenityTranslations(lang));
         model.addAttribute("shopAmenities", amenityService.getAllAmenityTranslations(lang));
-        return "admin/destinations/create";
     }
 
     @PostMapping
-    public String registerDestination(@ModelAttribute DestinationForm form,
-                                      @AuthenticationPrincipal CustomUserDetails userDetails) {
+    public String registerDestination(
+            @Valid @ModelAttribute("destinationForm") DestinationForm form,
+            BindingResult bindingResult,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            Model model,
+            @RequestParam(defaultValue = "ko") String lang) {
+        if (bindingResult.hasErrors()) {
+            prepareCreateFormModel(model, form, lang);
+            return "admin/destinations/create";
+        }
+
         List<KtoSelectedPhotoRequest> selectedKtoPhotos = parseSelectedKtoPhotos(form);
-        System.out.println("regionId: " + form.getRegionId());  // regionId 출력 확인
 
         try {
             destinationSaveOrchestrationService.registerDestination(

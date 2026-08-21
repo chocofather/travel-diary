@@ -18,11 +18,24 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.core.MethodParameter;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.ui.ExtendedModelMap;
+import org.springframework.validation.BeanPropertyBindingResult;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.beanvalidation.SpringValidatorAdapter;
+import org.springframework.web.bind.support.WebDataBinderFactory;
+import org.springframework.web.context.request.NativeWebRequest;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
+import org.springframework.web.method.support.ModelAndViewContainer;
 import org.springframework.web.server.ResponseStatusException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 
 @ExtendWith(MockitoExtension.class)
 class AdminDestinationKtoSelectionControllerTest {
@@ -39,6 +52,8 @@ class AdminDestinationKtoSelectionControllerTest {
     private DestinationSaveOrchestrationService destinationSaveOrchestrationService;
 
     private AdminDestinationController controller;
+    private MockMvc mockMvc;
+    private CustomUserDetails authenticatedAdmin;
 
     @BeforeEach
     void setUp() {
@@ -54,6 +69,56 @@ class AdminDestinationKtoSelectionControllerTest {
                 parser,
                 destinationSaveOrchestrationService
         );
+        authenticatedAdmin = mock(CustomUserDetails.class);
+        lenient().when(authenticatedAdmin.getId()).thenReturn(7L);
+        mockMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setValidator(new SpringValidatorAdapter(
+                        Validation.buildDefaultValidatorFactory().getValidator()))
+                .setCustomArgumentResolvers(authenticationPrincipalResolver(authenticatedAdmin))
+                .build();
+    }
+
+    @Test
+    void missingRegionReturnsThePopulatedCreateFormWithoutCallingPersistence() throws Exception {
+        var result = mockMvc.perform(multipart("/admin/destinations")
+                        .param("translations[0].languageCode", "ko")
+                        .param("translations[0].name", "창덕궁")
+                        .param("translations[0].description", "TourAPI로 채운 설명")
+                        .param("latitude", "37.579")
+                        .param("longitude", "126.991")
+                        .param("ktoSelectedPhotosJson", "[]"))
+                .andReturn();
+
+        assertThat(result.getModelAndView()).isNotNull();
+        assertThat(result.getResponse().getStatus()).isEqualTo(200);
+        assertThat(result.getModelAndView().getViewName()).isEqualTo("admin/destinations/create");
+        assertThat(result.getModelAndView().getModel()).containsKey("destinationForm");
+        DestinationForm submittedForm = (DestinationForm) result.getModelAndView()
+                .getModel().get("destinationForm");
+        assertThat(submittedForm.getTranslations().get(0).getName()).isEqualTo("창덕궁");
+        assertThat(submittedForm.getTranslations().get(0).getDescription()).isEqualTo("TourAPI로 채운 설명");
+        assertThat(submittedForm.getLatitude()).isEqualByComparingTo("37.579");
+        assertThat(submittedForm.getLongitude()).isEqualByComparingTo("126.991");
+        BindingResult bindingResult = (BindingResult) result.getModelAndView().getModel()
+                .get("org.springframework.validation.BindingResult.destinationForm");
+        assertThat(bindingResult.hasFieldErrors("regionId")).isTrue();
+        assertThat(bindingResult.getFieldError("regionId").getDefaultMessage())
+                .isEqualTo("지역을 선택해 주세요.");
+        verifyNoInteractions(destinationSaveOrchestrationService);
+    }
+
+    @Test
+    void selectedRegionKeepsTheExistingRegistrationFlow() throws Exception {
+        var result = mockMvc.perform(multipart("/admin/destinations")
+                        .param("regionId", "9")
+                        .param("ktoSelectedPhotosJson", "[]"))
+                .andReturn();
+
+        assertThat(result.getResponse().getRedirectedUrl()).isEqualTo("/admin");
+        verify(destinationSaveOrchestrationService).registerDestination(
+                argThat(form -> Long.valueOf(9L).equals(form.getRegionId())),
+                eq(7L),
+                eq(java.util.List.of()));
     }
 
     @Test
@@ -61,7 +126,7 @@ class AdminDestinationKtoSelectionControllerTest {
         DestinationForm form = new DestinationForm();
         form.setKtoSelectedPhotosJson("[{");
 
-        assertBadRequest(() -> controller.registerDestination(form, null));
+        assertBadRequest(() -> register(form, null));
         verifyNoInteractions(destinationService);
         verifyNoInteractions(destinationSaveOrchestrationService);
     }
@@ -94,7 +159,7 @@ class AdminDestinationKtoSelectionControllerTest {
         CustomUserDetails userDetails = mock(CustomUserDetails.class);
         when(userDetails.getId()).thenReturn(7L);
 
-        String view = controller.registerDestination(form, userDetails);
+        String view = register(form, userDetails);
 
         assertThat(view).isEqualTo("redirect:/admin");
         assertThat(form.getImages()).containsExactly(image);
@@ -133,7 +198,7 @@ class AdminDestinationKtoSelectionControllerTest {
                 .when(destinationSaveOrchestrationService)
                 .registerDestination(form, 7L, java.util.List.of());
 
-        assertBadRequest(() -> controller.registerDestination(form, userDetails));
+        assertBadRequest(() -> register(form, userDetails));
     }
 
     private void assertBadRequest(Runnable request) {
@@ -142,5 +207,32 @@ class AdminDestinationKtoSelectionControllerTest {
                 .satisfies(exception -> assertThat(((ResponseStatusException) exception).getStatusCode())
                         .isEqualTo(HttpStatus.BAD_REQUEST))
                 .hasMessageContaining("선택한 관광사진 정보가 올바르지 않습니다.");
+    }
+
+    private String register(DestinationForm form, CustomUserDetails userDetails) {
+        return controller.registerDestination(
+                form,
+                new BeanPropertyBindingResult(form, "destinationForm"),
+                userDetails,
+                new ExtendedModelMap(),
+                "ko"
+        );
+    }
+
+    private HandlerMethodArgumentResolver authenticationPrincipalResolver(CustomUserDetails principal) {
+        return new HandlerMethodArgumentResolver() {
+            @Override
+            public boolean supportsParameter(MethodParameter parameter) {
+                return parameter.hasParameterAnnotation(AuthenticationPrincipal.class);
+            }
+
+            @Override
+            public Object resolveArgument(MethodParameter parameter,
+                                          ModelAndViewContainer mavContainer,
+                                          NativeWebRequest webRequest,
+                                          WebDataBinderFactory binderFactory) {
+                return principal;
+            }
+        };
     }
 }
