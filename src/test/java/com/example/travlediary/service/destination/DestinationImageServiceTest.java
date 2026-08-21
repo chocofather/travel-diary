@@ -1,5 +1,9 @@
 package com.example.travlediary.service.destination;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.example.travlediary.model.DestinationImage;
 import com.example.travlediary.repository.destination.DestinationMapper;
 import com.example.travlediary.service.file.FileUploadService;
@@ -18,7 +22,9 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
+import org.slf4j.LoggerFactory;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
@@ -246,6 +252,71 @@ class DestinationImageServiceTest {
     }
 
     @Test
+    void individualImageFileIsDeletedOnlyAfterCommit() {
+        DestinationImage deleted = image(2L, 10L, 0, false);
+        when(destinationMapper.findImageById(2L)).thenReturn(deleted);
+        when(destinationMapper.findImagesByDestinationId(10L)).thenReturn(List.of());
+
+        withTransactionSynchronization(() -> {
+            service.deleteImageById(2L);
+
+            verify(fileUploadService, never()).deleteDestinationFile(deleted.getImageUrl());
+            commitSynchronizations();
+        });
+
+        verify(fileUploadService).deleteDestinationFile(deleted.getImageUrl());
+    }
+
+    @Test
+    void individualImageDatabaseFailureKeepsExistingFileOnRollback() throws Exception {
+        DestinationImage deleted = image(2L, 10L, 0, false);
+        Path destinations = Files.createDirectories(uploadDir.resolve("destinations"));
+        Path existingFile = Files.write(destinations.resolve("2.jpg"), new byte[]{1, 2, 3});
+        when(destinationMapper.findImageById(2L)).thenReturn(deleted);
+        doThrow(new IllegalStateException("db failure"))
+                .when(destinationMapper).deleteImageById(2L);
+
+        withTransactionSynchronization(() -> {
+            assertThatThrownBy(() -> service.deleteImageById(2L))
+                    .isInstanceOf(IllegalStateException.class);
+            completeSynchronizations(TransactionSynchronization.STATUS_ROLLED_BACK);
+        });
+
+        assertThat(existingFile).exists();
+        verify(fileUploadService, never()).deleteDestinationFile(deleted.getImageUrl());
+    }
+
+    @Test
+    void committedFileDeletionFailureIsLoggedWithoutEscapingCompletion() {
+        DestinationImage deleted = image(2L, 10L, 0, false);
+        when(destinationMapper.findImageById(2L)).thenReturn(deleted);
+        when(destinationMapper.findImagesByDestinationId(10L)).thenReturn(List.of());
+        doThrow(new RuntimeException("filesystem failure"))
+                .when(fileUploadService).deleteDestinationFile(deleted.getImageUrl());
+        Logger logger = (Logger) LoggerFactory.getLogger(DestinationImageService.class);
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+
+        try {
+            withTransactionSynchronization(() -> {
+                service.deleteImageById(2L);
+
+                assertThatCode(this::commitSynchronizations).doesNotThrowAnyException();
+            });
+        } finally {
+            logger.detachAppender(appender);
+        }
+
+        assertThat(appender.list)
+                .anySatisfy(event -> {
+                    assertThat(event.getLevel()).isEqualTo(Level.WARN);
+                    assertThat(event.getFormattedMessage())
+                            .contains("여행지 이미지 파일을 정리하지 못했습니다");
+                });
+    }
+
+    @Test
     void settingMainFromImageCardUsesExistingSingleMainRule() {
         DestinationImage selected = image(2L, 10L, 3, false);
         when(destinationMapper.findImageById(2L)).thenReturn(selected);
@@ -330,5 +401,13 @@ class DestinationImageServiceTest {
     private void completeSynchronizations(int status) {
         TransactionSynchronizationManager.getSynchronizations()
                 .forEach(synchronization -> synchronization.afterCompletion(status));
+    }
+
+    private void commitSynchronizations() {
+        List<TransactionSynchronization> synchronizations =
+                TransactionSynchronizationManager.getSynchronizations();
+        synchronizations.forEach(TransactionSynchronization::afterCommit);
+        synchronizations.forEach(synchronization ->
+                synchronization.afterCompletion(TransactionSynchronization.STATUS_COMMITTED));
     }
 }

@@ -12,7 +12,6 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -102,12 +101,6 @@ public class DestinationImageService {
     public void deleteImageById(Long imageId) {
         DestinationImage image = destinationMapper.findImageById(imageId);
         if (image != null) {
-            String relativePath = image.getImageUrl().replaceFirst("/uploads/", "");
-            String fullPath = uploadDir + File.separator + relativePath;
-
-            File file = new File(fullPath);
-            if (file.exists()) file.delete();
-
             destinationMapper.deleteImageById(imageId);
 
             List<DestinationImage> remainingImages = destinationMapper
@@ -118,7 +111,33 @@ public class DestinationImageService {
                 destinationMapper.clearMainImagesByDestinationId(image.getDestinationId());
                 destinationMapper.setMainImage(remainingImages.get(0).getId());
             }
+
+            deleteFilesAfterCommit(Collections.singletonList(image.getImageUrl()));
         }
+    }
+
+    public void deleteFilesAfterCommit(List<String> imageUrls) {
+        List<String> managedImageUrls = imageUrls == null
+                ? List.of()
+                : imageUrls.stream()
+                .filter(imageUrl -> imageUrl != null && !imageUrl.isBlank())
+                .distinct()
+                .toList();
+        if (managedImageUrls.isEmpty()) {
+            return;
+        }
+
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    deleteFilesSafely(managedImageUrls);
+                }
+            });
+            return;
+        }
+
+        deleteFilesSafely(managedImageUrls);
     }
 
     private int nextOrderIndex(List<DestinationImage> images) {
@@ -195,5 +214,16 @@ public class DestinationImageService {
                 }
             }
         });
+    }
+
+    private void deleteFilesSafely(List<String> imageUrls) {
+        for (String imageUrl : imageUrls) {
+            try {
+                fileUploadService.deleteDestinationFile(imageUrl);
+            } catch (RuntimeException cleanupFailure) {
+                log.warn("여행지 이미지 파일을 정리하지 못했습니다. (원인: {})",
+                        cleanupFailure.getClass().getSimpleName());
+            }
+        }
     }
 }

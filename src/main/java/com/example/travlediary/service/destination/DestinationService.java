@@ -18,10 +18,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -161,6 +157,7 @@ public class DestinationService {
 
         // 이미지 리스트
         dto.setImages(destinationMapper.findImagesByDestinationId(id));
+        dto.setCategoryIds(destinationMapper.findCategoryIdsByDestinationId(id));
 
         // 타입별 상세정보 및 amenity 리스트 셋팅
         switch (destination.getType()) {
@@ -240,21 +237,12 @@ public class DestinationService {
 
     @Transactional
     public void deleteById(Long id) {
-        // 1. 이미지 경로 조회
         List<DestinationImage> images = destinationMapper.findImagesByDestinationId(id);
-
-        for (DestinationImage image : images) {
-            // DB에는 /uploads/destinations/filename.jpg 형태로 저장되어 있으므로 실제 경로 구성
-            String imageUrl = image.getImageUrl(); // ex: /uploads/destinations/abc.jpg
-            String filename = imageUrl.replace("/uploads/", ""); // → destinations/abc.jpg
-            Path imagePath = Paths.get(uploadPath).resolve(filename); // ex: /your/full/path/destinations/abc.jpg
-
-            try {
-                Files.deleteIfExists(imagePath);
-            } catch (IOException e) {
-                System.err.println("이미지 삭제 실패: " + imagePath);
-            }
-        }
+        List<String> imageUrls = images == null
+                ? List.of()
+                : images.stream()
+                .map(DestinationImage::getImageUrl)
+                .toList();
 
         // 연관 테이블 먼저 삭제
         destinationMapper.deleteImagesByDestinationId(id);
@@ -264,6 +252,7 @@ public class DestinationService {
 
         // 마지막으로 본체 삭제
         destinationMapper.deleteById(id);
+        destinationImageService.deleteFilesAfterCommit(imageUrls);
     }
 
     public List<DestinationDto> convertToDtoWithBookmark(List<Destination> destinations, Long userId) {
