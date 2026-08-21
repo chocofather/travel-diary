@@ -3,64 +3,114 @@ document.addEventListener("DOMContentLoaded", function () {
     const countrySelect = document.getElementById("country");
     const citySelect = document.getElementById("city");
     const districtSelect = document.getElementById("district");
-    const regionIdHidden = document.getElementById("regionIdHidden");  // 선언 추가
+    const regionIdHidden = document.getElementById("regionIdHidden");
+    const selects = [continentSelect, countrySelect, citySelect, districtSelect];
+    let regionRequestGeneration = 0;
 
-    function fetchRegions(parentId, targetSelect) {
-        // 기본 선택 옵션 유지
-        targetSelect.innerHTML = '<option value="">선택</option>';
+    if (selects.some(select => !select) || !regionIdHidden) return;
 
+    function resetSelect(select) {
+        select.replaceChildren(new Option("선택", ""));
+    }
+
+    async function fetchRegions(parentId, targetSelect, requestGeneration) {
+        resetSelect(targetSelect);
         let url = "/api/regions";
-        if (parentId) url += `?parentId=${parentId}`;
+        if (parentId) url += `?parentId=${encodeURIComponent(parentId)}`;
 
-        fetch(url)
-            .then(res => res.json())
-            .then(data => {
-                if (data.length === 0) return;
-                data.forEach(region => {
-                    const option = document.createElement("option");
-                    option.value = region.id;
-                    option.textContent = region.regionName;
-                    targetSelect.appendChild(option);
-                });
-            })
-            .catch(err => console.error("API 오류:", err));
+        try {
+            const response = await fetch(url, {headers: {Accept: "application/json"}});
+            if (!response.ok) throw new Error("지역 정보를 불러오지 못했습니다.");
+            const data = await response.json();
+            if (requestGeneration !== regionRequestGeneration) return false;
+            if (!Array.isArray(data)) return false;
+            data.forEach(region => {
+                const option = new Option(region.regionName || "", String(region.id));
+                targetSelect.appendChild(option);
+            });
+            return true;
+        } catch (error) {
+            if (requestGeneration === regionRequestGeneration) {
+                console.error("지역 정보를 불러오지 못했습니다.");
+            }
+            return false;
+        }
     }
 
     function updateRegionId() {
-        // 선택 가능한 셀렉트 순서대로 depth4 → depth3 → depth2 → depth1
-        const selected =
-            (districtSelect && districtSelect.value) ||
-            (citySelect && citySelect.value) ||
-            (countrySelect && countrySelect.value) ||
-            (continentSelect && continentSelect.value) ||
-            "";
-        regionIdHidden.value = selected;
-        // console.log("최종 regionId:", selected);
+        regionIdHidden.value =
+            districtSelect.value || citySelect.value || countrySelect.value || continentSelect.value || "";
     }
 
-    continentSelect.addEventListener("change", () => {
-        fetchRegions(continentSelect.value, countrySelect);
-        citySelect.innerHTML = '<option value="">선택</option>';
-        districtSelect.innerHTML = '<option value="">선택</option>';
+    function clearAfter(index) {
+        for (let targetIndex = index + 1; targetIndex < selects.length; targetIndex++) {
+            resetSelect(selects[targetIndex]);
+        }
+    }
+
+    async function handleManualChange(index) {
+        const requestGeneration = ++regionRequestGeneration;
+        clearAfter(index);
         updateRegionId();
-    });
+        const selectedId = selects[index].value;
+        if (selectedId && index + 1 < selects.length) {
+            await fetchRegions(selectedId, selects[index + 1], requestGeneration);
+        }
+    }
 
-    countrySelect.addEventListener("change", () => {
-        fetchRegions(countrySelect.value, citySelect);
-        districtSelect.innerHTML = '<option value="">선택</option>';
+    function clearSelection() {
+        const requestGeneration = ++regionRequestGeneration;
+        selects.forEach(resetSelect);
+        regionIdHidden.value = "";
+        void fetchRegions(undefined, continentSelect, requestGeneration);
+    }
+
+    async function applyRegionPath(path) {
+        const requestGeneration = ++regionRequestGeneration;
+        selects.forEach(resetSelect);
+        regionIdHidden.value = "";
+        if (!Array.isArray(path) || path.length === 0 || path.length > selects.length) {
+            void fetchRegions(undefined, continentSelect, requestGeneration);
+            return false;
+        }
+
+        let parentId;
+        for (let index = 0; index < path.length; index++) {
+            const loaded = await fetchRegions(parentId, selects[index], requestGeneration);
+            if (!loaded || requestGeneration !== regionRequestGeneration) return false;
+
+            const region = path[index];
+            const matchingOptions = Array.from(selects[index].options).filter(option =>
+                option.value === String(region.id)
+                && (!region.regionName || option.textContent === region.regionName));
+            if (matchingOptions.length !== 1) {
+                clearSelection();
+                return false;
+            }
+            selects[index].value = matchingOptions[0].value;
+            parentId = matchingOptions[0].value;
+        }
+
+        if (requestGeneration !== regionRequestGeneration) return false;
         updateRegionId();
-    });
+        return true;
+    }
 
-    citySelect.addEventListener("change", () => {
-        fetchRegions(citySelect.value, districtSelect);
-        updateRegionId();
-    });
+    continentSelect.addEventListener("change", () => void handleManualChange(0));
+    countrySelect.addEventListener("change", () => void handleManualChange(1));
+    citySelect.addEventListener("change", () => void handleManualChange(2));
+    districtSelect.addEventListener("change", () => void handleManualChange(3));
 
-    districtSelect.addEventListener("change", updateRegionId);
+    const initialRequestGeneration = ++regionRequestGeneration;
+    void fetchRegions(undefined, continentSelect, initialRequestGeneration);
 
-    fetchRegions(undefined, continentSelect);
+    const form = regionIdHidden.closest("form");
+    if (form) {
+        form.addEventListener("submit", updateRegionId);
+    }
 
-    document.querySelector("form").addEventListener("submit", function() {
-        updateRegionId();
-    });
+    window.TravelDiaryRegionSelector = {
+        applyRegionPath,
+        clearSelection
+    };
 });

@@ -1,6 +1,8 @@
 package com.example.travlediary.controller.admin;
 
 import com.example.travlediary.service.kto.KtoTourApiException;
+import com.example.travlediary.dto.kto.KtoTourRegionMatchResponse;
+import com.example.travlediary.service.kto.KtoTourRegionMatchService;
 import com.example.travlediary.service.kto.KtoTourService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -20,6 +22,7 @@ public class AdminKtoTourController {
     private static final int MAX_NUM_OF_ROWS = 30;
 
     private final KtoTourService ktoTourService;
+    private final KtoTourRegionMatchService ktoTourRegionMatchService;
 
     @GetMapping("/search")
     public ResponseEntity<?> search(@RequestParam(required = false) String keyword,
@@ -52,9 +55,18 @@ public class AdminKtoTourController {
             return error(HttpStatus.BAD_REQUEST, "관광정보 식별값이 올바르지 않습니다.");
         }
         try {
-            return ResponseEntity.ok(ktoTourService.getDetail(normalizedContentId, normalizedContentTypeId));
+            var detail = ktoTourService.getDetail(normalizedContentId, normalizedContentTypeId);
+            return ResponseEntity.ok(detail.withRegionMatch(matchRegion(detail.address())));
         } catch (KtoTourApiException exception) {
             return apiError(exception);
+        }
+    }
+
+    private KtoTourRegionMatchResponse matchRegion(String address) {
+        try {
+            return ktoTourRegionMatchService.match(address);
+        } catch (RuntimeException exception) {
+            return KtoTourRegionMatchResponse.unmatched();
         }
     }
 

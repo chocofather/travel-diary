@@ -16,7 +16,8 @@ class AdminKtoTourAutofillUiContractTest {
         String edit = resource("/templates/admin/destinations/edit.html");
 
         assertThat(create)
-                .contains("/js/admin-kto-tour-autofill.js?v=20260821")
+                .contains("/js/admin-kto-tour-autofill.js?v=20260821-2")
+                .contains("/js/region-selector.js?v=20260821-2")
                 .contains("data-kto-tour-search-button")
                 .contains("data-kto-tour-results")
                 .contains("data-kto-tour-status")
@@ -34,6 +35,7 @@ class AdminKtoTourAutofillUiContractTest {
                 "data-kto-tour-search-button",
                 "data-kto-tour-results",
                 "data-kto-tour-english-name");
+        assertThat(edit).contains("/js/region-selector.js?v=20260821-2");
     }
 
     @Test
@@ -112,7 +114,7 @@ class AdminKtoTourAutofillUiContractTest {
         assertThat(create)
                 .contains("/js/admin-kto-photo-search.js")
                 .contains("admin/destinations/fragments/kto-photo-search")
-                .contains("/js/admin-kto-tour-autofill.js?v=20260821");
+                .contains("/js/admin-kto-tour-autofill.js?v=20260821-2");
     }
 
     private String resource(String path) throws IOException {

@@ -65,11 +65,13 @@ document.addEventListener("DOMContentLoaded", () => {
     async function loadDetail(item) {
         const contentChanged = lastSelectedContentId !== null
             && lastSelectedContentId !== item.contentId;
+        const shouldApplyRegion = lastSelectedContentId === null || contentChanged;
         const requestGeneration = ++englishRequestGeneration;
         const loadingGeneration = ++koreanDetailRequestGeneration;
         if (contentChanged) {
             clearTourApiManagedFields();
             clearEnglishAutofill();
+            window.TravelDiaryRegionSelector?.clearSelection();
         }
         lastSelectedContentId = item.contentId;
         setLoading(true, `${item.title || "선택한 장소"} 정보를 불러오고 있습니다.`);
@@ -86,6 +88,9 @@ document.addEventListener("DOMContentLoaded", () => {
             if (requestGeneration !== englishRequestGeneration) return;
             applyAutofill(payload);
             setStatus(`${payload.title || item.title || "선택한 장소"} 정보를 빈 항목에 입력했습니다.`);
+            if (shouldApplyRegion) {
+                void applyRegionMatch(payload.regionMatch, requestGeneration);
+            }
             void matchEnglishTour(
                 payload.title || item.title,
                 payload.longitude || item.longitude,
@@ -99,6 +104,22 @@ document.addEventListener("DOMContentLoaded", () => {
             if (loadingGeneration === koreanDetailRequestGeneration) {
                 searchButton.disabled = false;
             }
+        }
+    }
+
+    async function applyRegionMatch(regionMatch, requestGeneration) {
+        if (requestGeneration !== englishRequestGeneration) return;
+        const regionSelector = window.TravelDiaryRegionSelector;
+        if (!regionSelector) return;
+        if (!regionMatch?.matched || !Array.isArray(regionMatch.path)) {
+            setStatus("지역을 자동으로 찾지 못했습니다. 직접 선택해 주세요.");
+            return;
+        }
+
+        const applied = await regionSelector.applyRegionPath(regionMatch.path);
+        if (requestGeneration !== englishRequestGeneration) return;
+        if (!applied) {
+            setStatus("지역을 자동으로 찾지 못했습니다. 직접 선택해 주세요.");
         }
     }
 
