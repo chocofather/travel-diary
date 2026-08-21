@@ -17,7 +17,7 @@ class AdminKtoTourAutofillUiContractTest {
 
         assertThat(create)
                 .contains("/js/admin-kto-tour-autofill.js?v=20260821-2")
-                .contains("/js/region-selector.js?v=20260821-3")
+                .contains("/js/region-selector.js?v=20260822-1")
                 .contains("data-kto-tour-search-button")
                 .contains("data-kto-tour-results")
                 .contains("data-kto-tour-status")
@@ -35,7 +35,7 @@ class AdminKtoTourAutofillUiContractTest {
                 "data-kto-tour-search-button",
                 "data-kto-tour-results",
                 "data-kto-tour-english-name");
-        assertThat(edit).contains("/js/region-selector.js?v=20260821-3");
+        assertThat(edit).contains("/js/region-selector.js?v=20260822-1");
     }
 
     @Test

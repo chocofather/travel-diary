@@ -21,6 +21,40 @@ document.addEventListener("DOMContentLoaded", function () {
     // 수정 화면에서 서버가 내려준 기존 지역 값 (신규 등록에서는 비어 있다)
     const initialRegionId = regionIdHidden.value;
     const initialRegionPath = parseRegionPathIds(regionIdHidden.dataset.initialRegionPath);
+    // 국내/해외 구분 기준은 서버가 내려준 국내 root id 뿐이다 (숫자 하드코딩 없음)
+    const domesticRootId = (regionIdHidden.dataset.domesticRootId || "").trim();
+
+    const regionField = regionIdHidden.closest("[data-region-field]");
+    const modeButtons = regionField
+        ? Array.from(regionField.querySelectorAll("[data-region-mode-button]"))
+        : [];
+    const modeHelp = regionField ? regionField.querySelector("[data-region-mode-help]") : null;
+    let regionMode = "";
+
+    function isDomesticRoot(regionId) {
+        return domesticRootId !== "" && String(regionId) === domesticRootId;
+    }
+
+    /** 버튼/표시 상태만 바꾼다. 선택값은 건드리지 않는다. */
+    function markMode(mode) {
+        regionMode = mode;
+        if (regionField) regionField.dataset.regionMode = mode;
+        modeButtons.forEach(button => {
+            const pressed = button.dataset.regionModeButton === mode;
+            button.setAttribute("aria-pressed", String(pressed));
+            button.classList.toggle("active", pressed);
+        });
+        if (modeHelp) modeHelp.hidden = mode !== "";
+    }
+
+    /** 첫 select 에서 현재 모드에 해당하지 않는 최상위 지역을 없앤다. */
+    function filterRootOptions() {
+        if (!domesticRootId || regionMode === "") return;
+        Array.from(continentSelect.options).forEach(option => {
+            if (!option.value) return;
+            if (isDomesticRoot(option.value) !== (regionMode === "domestic")) option.remove();
+        });
+    }
 
     function resetSelect(select) {
         select.replaceChildren(new Option("선택", ""));
@@ -51,8 +85,10 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function updateRegionId() {
+        // 국내 모드의 첫 select(대한민국)는 자동 선택이므로 저장 대상 지역으로 보지 않는다.
+        const rootValue = regionMode === "domestic" ? "" : continentSelect.value;
         const selectedId =
-            districtSelect.value || citySelect.value || countrySelect.value || continentSelect.value || "";
+            districtSelect.value || citySelect.value || countrySelect.value || rootValue || "";
         // 지역을 실제로 바꾸지 않았다면 기존에 저장된 지역을 그대로 유지한다.
         regionIdHidden.value = selectedId || (regionSelectionChanged ? "" : initialRegionId);
     }
@@ -75,10 +111,33 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function clearSelection() {
+        ++regionRequestGeneration;
+        selects.forEach(resetSelect);
+        markMode("");
+        updateRegionId();
+    }
+
+    /** 국내/해외 버튼: 이전 모드의 선택과 hidden regionId 를 남기지 않는다. */
+    async function selectMode(mode) {
+        if (mode === regionMode) return;
         const requestGeneration = ++regionRequestGeneration;
+        regionSelectionChanged = true;
+        markMode(mode);
         selects.forEach(resetSelect);
         updateRegionId();
-        void fetchRegions(undefined, continentSelect, requestGeneration);
+
+        const loaded = await fetchRegions(undefined, continentSelect, requestGeneration);
+        if (!loaded || requestGeneration !== regionRequestGeneration) return;
+        filterRootOptions();
+
+        if (mode !== "domestic") return;
+        // 국내는 대한민국 아래 시/도부터 고르게 한다.
+        const domesticOption = Array.from(continentSelect.options)
+            .find(option => isDomesticRoot(option.value));
+        if (!domesticOption) return;
+        continentSelect.value = domesticOption.value;
+        updateRegionId();
+        await fetchRegions(domesticOption.value, countrySelect, requestGeneration);
     }
 
     async function applyRegionPath(path) {
@@ -90,10 +149,14 @@ document.addEventListener("DOMContentLoaded", function () {
             return false;
         }
 
+        // 경로의 최상위로 국내/해외 모드를 함께 복원한다.
+        markMode(isDomesticRoot(path[0].id) ? "domestic" : "overseas");
+
         let parentId;
         for (let index = 0; index < path.length; index++) {
             const loaded = await fetchRegions(parentId, selects[index], requestGeneration);
             if (!loaded || requestGeneration !== regionRequestGeneration) return false;
+            if (index === 0) filterRootOptions();
 
             const region = path[index];
             const matchingOptions = Array.from(selects[index].options).filter(option =>
@@ -112,17 +175,18 @@ document.addEventListener("DOMContentLoaded", function () {
         return true;
     }
 
+    modeButtons.forEach(button =>
+        button.addEventListener("click", () => void selectMode(button.dataset.regionModeButton)));
+
     continentSelect.addEventListener("change", () => void handleManualChange(0));
     countrySelect.addEventListener("change", () => void handleManualChange(1));
     citySelect.addEventListener("change", () => void handleManualChange(2));
     districtSelect.addEventListener("change", () => void handleManualChange(3));
 
-    // 수정 화면이면 기존 지역 경로를 복원하고, 그 외에는 최상위 목록만 불러온다.
+    // 수정 화면이면 기존 지역 경로(+모드)를 복원하고, 신규 등록은 모드 선택부터 시작한다.
+    markMode("");
     if (initialRegionPath.length > 0) {
         void applyRegionPath(initialRegionPath);
-    } else {
-        const initialRequestGeneration = ++regionRequestGeneration;
-        void fetchRegions(undefined, continentSelect, initialRequestGeneration);
     }
 
     const form = regionIdHidden.closest("form");

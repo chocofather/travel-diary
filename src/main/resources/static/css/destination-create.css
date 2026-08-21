@@ -230,6 +230,30 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+/* 국내/해외 선택에 따라 필요한 단계만 보여 준다 */
+.admin-region-modes {
+    display: flex;
+    gap: 8px;
+}
+
+.admin-region-mode-help {
+    margin: 0;
+}
+
+.admin-region-field[data-region-mode=""] .admin-region-grid {
+    display: none;
+}
+
+.admin-region-field[data-region-mode="domestic"] .admin-region-step[data-region-step="0"],
+.admin-region-field[data-region-mode="domestic"] .admin-region-step-label.is-overseas,
+.admin-region-field[data-region-mode="overseas"] .admin-region-step-label.is-domestic {
+    display: none;
+}
+
+.admin-region-field[data-region-mode="domestic"] .admin-region-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .admin-destination-form .type-fields {
     display: none;
     padding: 20px;

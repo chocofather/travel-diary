@@ -89,17 +89,17 @@
       </section>
 
       <section class="admin-language-card">
-        <h3>English</h3>
+        <h3>영문 정보</h3>
         <input type="hidden" th:field="*{translations[1].languageCode}" value="en"/>
-        <label>Destination name
-          <input type="text" th:field="*{translations[1].name}" placeholder="Name (English)"
+        <label>여행지명 (영문)
+          <input type="text" th:field="*{translations[1].name}" placeholder="여행지명 (영문)"
                  data-kto-tour-english-name>
         </label>
-        <label>Short description
-          <textarea th:field="*{translations[1].shortDescription}" placeholder="Short Description (English)"></textarea>
+        <label>간단 설명 (영문)
+          <textarea th:field="*{translations[1].shortDescription}" placeholder="간단 설명 (영문)"></textarea>
         </label>
-        <label>Description
-          <textarea class="is-description" th:field="*{translations[1].description}" placeholder="Description (English)"
+        <label>상세 설명 (영문)
+          <textarea class="is-description" th:field="*{translations[1].description}" placeholder="상세 설명 (영문)"
                     data-kto-tour-english-overview></textarea>
         </label>
         <div class="admin-kto-tour-autofill" aria-live="polite">
@@ -118,23 +118,39 @@
     </div>
 
     <!-- 지역 선택 -->
-    <div class="admin-region-field">
+    <div class="admin-region-field" data-region-field data-region-mode="">
       <span class="admin-form-label">여행지 지역 선택</span>
+      <div class="admin-region-modes" role="group" aria-label="여행지 위치 구분">
+        <button type="button" class="admin-filter-tab" aria-pressed="false"
+                data-region-mode-button="domestic">국내</button>
+        <button type="button" class="admin-filter-tab" aria-pressed="false"
+                data-region-mode-button="overseas">해외</button>
+      </div>
+      <p class="admin-field-help admin-region-mode-help" data-region-mode-help>
+        국내 또는 해외를 먼저 선택하세요.
+      </p>
       <div class="admin-region-grid">
-        <label>대륙 / 국내
+        <label class="admin-region-step" data-region-step="0">
+          <span class="admin-region-step-label is-overseas">대륙</span>
           <select id="continent"></select>
         </label>
-        <label>국가 / 시·도
+        <label class="admin-region-step" data-region-step="1">
+          <span class="admin-region-step-label is-domestic">시/도</span>
+          <span class="admin-region-step-label is-overseas">국가</span>
           <select id="country"></select>
         </label>
-        <label>도시 / 시·군·구
+        <label class="admin-region-step" data-region-step="2">
+          <span class="admin-region-step-label is-domestic">시/군·구</span>
+          <span class="admin-region-step-label is-overseas">도시/지역</span>
           <select id="city"></select>
         </label>
-        <label>하위 지역
+        <label class="admin-region-step" data-region-step="3">
+          <span class="admin-region-step-label">하위 지역</span>
           <select id="district"></select>
         </label>
       </div>
-      <input type="hidden" id="regionIdHidden" name="regionId" th:field="*{regionId}">
+      <input type="hidden" id="regionIdHidden" name="regionId" th:field="*{regionId}"
+             th:attr="data-domestic-root-id=${domesticRootId}">
       <p class="admin-field-error" th:if="${#fields.hasErrors('regionId')}"
          th:errors="*{regionId}">지역 선택 오류</p>
     </div>
@@ -581,7 +597,7 @@
     <button type="submit" class="admin-btn is-primary">등록</button>
   </div>
 </form>
-<script src="/js/region-selector.js?v=20260821-3" defer></script>
+<script src="/js/region-selector.js?v=20260822-1" defer></script>
 <script src="/js/type-fields.js" defer></script>
 </section>
 </th:block>

@@ -64,6 +64,8 @@ public class AdminDestinationController {
 
     private void prepareCreateFormModel(Model model, DestinationForm form, String lang) {
         model.addAttribute("destinationForm", form);
+        // 지역 선택 UI 의 국내/해외 구분 기준. 숫자 ID 를 화면에 하드코딩하지 않는다.
+        model.addAttribute("domesticRootId", countryCategoryService.getKoreaRootId());
         model.addAttribute("categories", categoryService.getAll());
         model.addAttribute("attractionAmenities", amenityService.getAllAmenityTranslations(lang));
         model.addAttribute("accommodationAmenities", amenityService.getAllAmenityTranslations(lang));
@@ -254,6 +256,7 @@ public class AdminDestinationController {
 
     private void prepareEditFormModel(Model model, DestinationForm form, String lang) {
         model.addAttribute("destinationForm", form);
+        model.addAttribute("domesticRootId", countryCategoryService.getKoreaRootId());
         model.addAttribute("regionPathIds", joinRegionPathIds(form.getRegionId()));
         model.addAttribute("categories", categoryService.getAll());
         model.addAttribute("attractionAmenities", amenityService.getAllAmenityTranslations(lang));
