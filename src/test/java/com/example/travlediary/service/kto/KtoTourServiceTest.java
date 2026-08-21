@@ -15,6 +15,7 @@ import java.util.Arrays;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
@@ -32,7 +33,9 @@ class KtoTourServiceTest {
                      "addr2":"","mapx":"126.991","mapy":"37.579"},
                     {"contentid":"culture-1","contenttypeid":"14","title":"창덕궁 문화관","addr1":"서울 종로구",
                      "mapx":"126.992","mapy":"37.580"},
-                    {"contentid":"food-1","contenttypeid":"39","title":"창덕궁 식당","addr1":"서울 종로구"}
+                    {"contentid":"food-1","contenttypeid":"39","title":"창덕궁 식당","addr1":"서울 종로구"},
+                    {"contentid":"stay-1","contenttypeid":"32","title":"창덕궁 호텔","addr1":"서울 종로구"},
+                    {"contentid":"festival-1","contenttypeid":"15","title":"창덕궁 축제","addr1":"서울 종로구"}
                   ]}}}}
                 """;
 
@@ -44,7 +47,11 @@ class KtoTourServiceTest {
         assertThat(response.pageNo()).isEqualTo(1);
         assertThat(response.numOfRows()).isEqualTo(10);
         assertThat(response.totalCount()).isEqualTo(3);
-        assertThat(response.items()).extracting("contentId").containsExactly("126508", "culture-1");
+        // 음식점(39)·숙박(32)도 검색 결과에 포함되고, 지원하지 않는 타입(15)만 걸러진다.
+        assertThat(response.items()).extracting("contentId")
+                .containsExactly("126508", "culture-1", "food-1", "stay-1");
+        assertThat(response.items()).extracting("contentTypeId", "contentTypeName")
+                .contains(tuple("39", "음식점"), tuple("32", "숙박"));
         assertThat(response.items().get(0)).satisfies(item -> {
             assertThat(item.contentTypeId()).isEqualTo("12");
             assertThat(item.contentTypeName()).isEqualTo("관광지");
@@ -183,6 +190,304 @@ class KtoTourServiceTest {
                 .hasMessage("관광정보를 불러오지 못했습니다.")
                 .hasMessageNotContaining(key);
         server.verify();
+    }
+
+    @Test
+    void restaurantDetailFillsMenuHoursClosedDaysAndFallsBackToTheInformationCenter() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        KtoTourService service = service(builder, "sample-key");
+
+        server.expect(request -> {})
+                .andRespond(withSuccess(detailBody("""
+                        "contentid":"2891928","contenttypeid":"39","title":"가야밀면돼지국밥",
+                        "addr1":"경기 고양시","tel":""
+                        """), MediaType.APPLICATION_JSON));
+        server.expect(request -> {})
+                .andRespond(withSuccess(detailBody("""
+                        "contentid":"2891928","contenttypeid":"39","firstmenu":"밀면",
+                        "opentimefood":"11:00~22:00","restdatefood":"연중무휴",
+                        "infocenterfood":"031-915-1459","treatmenu":"돼지국밥 / 비빔면 등",
+                        "parkingfood":"가능","packing":"불가능","seat":"","reservationfood":""
+                        """), MediaType.APPLICATION_JSON));
+
+        KtoTourAutofillResponse result = service.getDetail("2891928", "39");
+
+        assertThat(result.mainMenu()).isEqualTo("밀면");
+        assertThat(result.openingHours()).isEqualTo("11:00~22:00");
+        assertThat(result.closedDays()).isEqualTo("연중무휴");
+        // tel 이 비어 있으면 infocenterfood 로 대체한다 (기존 계약 유지)
+        assertThat(result.contactNumber()).isEqualTo("031-915-1459");
+        // 이번 단계에서는 숙박 전용 값이 채워지지 않는다
+        assertThat(result.checkinTime()).isNull();
+        assertThat(result.roomCount()).isNull();
+        server.verify();
+    }
+
+    @Test
+    void restaurantDetailPrefersTheCommonTelOverTheInformationCenter() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        KtoTourService service = service(builder, "sample-key");
+
+        server.expect(request -> {})
+                .andRespond(withSuccess(detailBody("""
+                        "contentid":"2891928","contenttypeid":"39","tel":"031-000-0000"
+                        """), MediaType.APPLICATION_JSON));
+        server.expect(request -> {})
+                .andRespond(withSuccess(detailBody("""
+                        "contentid":"2891928","contenttypeid":"39","infocenterfood":"031-915-1459"
+                        """), MediaType.APPLICATION_JSON));
+
+        assertThat(service.getDetail("2891928", "39").contactNumber()).isEqualTo("031-000-0000");
+        server.verify();
+    }
+
+    @Test
+    void accommodationDetailFillsCheckInOutRoomCountAndRoomType() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        KtoTourService service = service(builder, "sample-key");
+        String longRoomType = "크리스탈 더블 / 크리스탈 트윈 / 사파이어 더블 / 사파이어 디럭스 / "
+                + "사파이어 패밀리 더블 / 사파이어 트리플 / 스위트";
+
+        server.expect(request -> {})
+                .andRespond(withSuccess(detailBody("""
+                        "contentid":"2650614","contenttypeid":"32","title":"강남아르누보씨티호텔",
+                        "addr1":"서울 서초구","tel":""
+                        """), MediaType.APPLICATION_JSON));
+        server.expect(request -> {})
+                .andRespond(withSuccess(detailBody("""
+                        "contentid":"2650614","contenttypeid":"32","checkintime":"15:00",
+                        "checkouttime":"11:00","roomcount":"192실","roomtype":"%s",
+                        "infocenterlodging":"02-580-7500","parkinglodging":"가능"
+                        """.formatted(longRoomType)), MediaType.APPLICATION_JSON));
+
+        KtoTourAutofillResponse result = service.getDetail("2650614", "32");
+
+        assertThat(result.checkinTime()).isEqualTo("15:00");
+        assertThat(result.checkoutTime()).isEqualTo("11:00");
+        assertThat(result.roomCount()).isEqualTo(192);
+        assertThat(result.contactNumber()).isEqualTo("02-580-7500");
+        // room_type 이 varchar(255) 이므로 32자를 넘는 원문도 자르지 않고 그대로 보존한다
+        assertThat(longRoomType.length()).isGreaterThan(32);
+        assertThat(result.roomType()).isEqualTo(longRoomType);
+        assertThat(result.mainMenu()).isNull();
+        server.verify();
+    }
+
+    @Test
+    void unreadableRoomCountBecomesNullInsteadOfFailing() {
+        for (String roomCount : new String[]{"", "객실 정보 없음", "많음"}) {
+            RestClient.Builder builder = RestClient.builder();
+            MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+            KtoTourService service = service(builder, "sample-key");
+
+            server.expect(request -> {})
+                    .andRespond(withSuccess(detailBody("""
+                            "contentid":"2650614","contenttypeid":"32","tel":"02-580-7500"
+                            """), MediaType.APPLICATION_JSON));
+            server.expect(request -> {})
+                    .andRespond(withSuccess(detailBody("""
+                            "contentid":"2650614","contenttypeid":"32","roomcount":"%s"
+                            """.formatted(roomCount)), MediaType.APPLICATION_JSON));
+
+            assertThat(service.getDetail("2650614", "32").roomCount())
+                    .as("roomcount=%s", roomCount).isNull();
+            server.verify();
+        }
+    }
+
+    @Test
+    void stringFlagsBecomeNullableBooleansAndNeverGuess() {
+        record Case(String raw, Boolean expected) {}
+        Case[] cases = {
+                new Case(null, null),
+                new Case("", null),
+                new Case("가능", true),
+                new Case("가능요금 (무료)", true),
+                new Case("가능 (객실당 1대 무료 주차)", true),
+                new Case("있음", true),
+                // "불가능" 은 "가능" 을 포함하므로 부정 판정이 먼저 이뤄져야 한다 (회귀 방지)
+                new Case("불가능", false),
+                new Case("불가", false),
+                new Case("없음", false),
+                new Case("1", true),
+                new Case("0", false),
+                // 추측성 판정 금지 - 어느 쪽도 확실하지 않으면 null 로 남긴다
+                new Case("주차 관련 문의", null),
+                new Case("전화 예약 문의", null)
+        };
+
+        for (Case testCase : cases) {
+            RestClient.Builder builder = RestClient.builder();
+            MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+            KtoTourService service = service(builder, "sample-key");
+            String parkingfood = testCase.raw() == null ? "" : ",\"parkingfood\":\"%s\"".formatted(testCase.raw());
+
+            server.expect(request -> {})
+                    .andRespond(withSuccess(detailBody("""
+                            "contentid":"2891928","contenttypeid":"39","tel":"031-000-0000"
+                            """), MediaType.APPLICATION_JSON));
+            server.expect(request -> {})
+                    .andRespond(withSuccess(detailBody("""
+                            "contentid":"2891928","contenttypeid":"39"%s
+                            """.formatted(parkingfood)), MediaType.APPLICATION_JSON));
+
+            assertThat(service.getDetail("2891928", "39").parkingAvailable())
+                    .as("parkingfood=%s", testCase.raw()).isEqualTo(testCase.expected());
+            server.verify();
+        }
+    }
+
+    @Test
+    void restaurantDetailNormalizesParkingTakeoutAndReservationFlags() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        KtoTourService service = service(builder, "sample-key");
+
+        server.expect(request -> {})
+                .andRespond(withSuccess(detailBody("""
+                        "contentid":"2891928","contenttypeid":"39","title":"가야밀면돼지국밥","tel":""
+                        """), MediaType.APPLICATION_JSON));
+        server.expect(request -> {})
+                .andRespond(withSuccess(detailBody("""
+                        "contentid":"2891928","contenttypeid":"39","firstmenu":"밀면",
+                        "opentimefood":"11:00~22:00","restdatefood":"연중무휴",
+                        "infocenterfood":"031-915-1459","parkingfood":"가능요금 (무료)",
+                        "packing":"불가능","reservationfood":""
+                        """), MediaType.APPLICATION_JSON));
+
+        KtoTourAutofillResponse result = service.getDetail("2891928", "39");
+
+        assertThat(result.parkingAvailable()).isTrue();
+        assertThat(result.takeoutAvailable()).isFalse();
+        assertThat(result.reservation()).isNull();
+        // 기존 자동입력 값은 그대로 유지된다
+        assertThat(result.mainMenu()).isEqualTo("밀면");
+        assertThat(result.openingHours()).isEqualTo("11:00~22:00");
+        assertThat(result.closedDays()).isEqualTo("연중무휴");
+        assertThat(result.contactNumber()).isEqualTo("031-915-1459");
+        server.verify();
+    }
+
+    @Test
+    void accommodationDetailNormalizesOnlyTheLodgingParkingFlag() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        KtoTourService service = service(builder, "sample-key");
+
+        server.expect(request -> {})
+                .andRespond(withSuccess(detailBody("""
+                        "contentid":"2650614","contenttypeid":"32","title":"강남아르누보씨티호텔","tel":""
+                        """), MediaType.APPLICATION_JSON));
+        server.expect(request -> {})
+                .andRespond(withSuccess(detailBody("""
+                        "contentid":"2650614","contenttypeid":"32","checkintime":"15:00",
+                        "checkouttime":"11:00","roomcount":"192실","roomtype":"트윈",
+                        "infocenterlodging":"02-580-7500",
+                        "parkinglodging":"가능 (객실당 1대 무료 주차)","reservationlodging":"가능"
+                        """), MediaType.APPLICATION_JSON));
+
+        KtoTourAutofillResponse result = service.getDetail("2650614", "32");
+
+        assertThat(result.parkingAvailable()).isTrue();
+        // 음식점 전용 플래그는 숙박 응답에 섞이지 않는다
+        assertThat(result.takeoutAvailable()).isNull();
+        // accommodation_info 에 대응 컬럼이 없으므로 reservationlodging 은 매핑하지 않는다
+        assertThat(result.reservation()).isNull();
+        // 기존 자동입력 값은 그대로 유지된다
+        assertThat(result.checkinTime()).isEqualTo("15:00");
+        assertThat(result.checkoutTime()).isEqualTo("11:00");
+        assertThat(result.roomCount()).isEqualTo(192);
+        assertThat(result.roomType()).isEqualTo("트윈");
+        assertThat(result.contactNumber()).isEqualTo("02-580-7500");
+        server.verify();
+    }
+
+    @Test
+    void otherContentTypesNeverReceiveTheNewBooleanFlags() {
+        for (String contentTypeId : new String[]{"12", "14", "25", "28", "38"}) {
+            RestClient.Builder builder = RestClient.builder();
+            MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+            KtoTourService service = service(builder, "sample-key");
+
+            server.expect(request -> {})
+                    .andRespond(withSuccess(detailBody("""
+                            "contentid":"126508","contenttypeid":"%s","tel":"02-000-0000"
+                            """.formatted(contentTypeId)), MediaType.APPLICATION_JSON));
+            server.expect(request -> {})
+                    .andRespond(withSuccess(detailBody("""
+                            "contentid":"126508","contenttypeid":"%s","parking":"가능",
+                            "parkingfood":"가능","packing":"가능","reservationfood":"가능",
+                            "parkinglodging":"가능"
+                            """.formatted(contentTypeId)), MediaType.APPLICATION_JSON));
+
+            KtoTourAutofillResponse result = service.getDetail("126508", contentTypeId);
+
+            assertThat(result.parkingAvailable()).as("contentTypeId=%s", contentTypeId).isNull();
+            assertThat(result.takeoutAvailable()).as("contentTypeId=%s", contentTypeId).isNull();
+            assertThat(result.reservation()).as("contentTypeId=%s", contentTypeId).isNull();
+            server.verify();
+        }
+    }
+
+    @Test
+    void restaurantAndCafeSearchesAskTourApiForFoodContentTypeOnly() {
+        for (String destinationType : new String[]{"RESTAURANTS", "CAFE"}) {
+            RestClient.Builder builder = RestClient.builder();
+            MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+            KtoTourService service = service(builder, "sample-key");
+
+            server.expect(request -> {
+                assertSearchRequest(request.getURI(), "국밥", "sample-key");
+                assertDecodedQuery(request.getURI(), "contentTypeId", "39");
+            }).andRespond(withSuccess(emptyResponse(), MediaType.APPLICATION_JSON));
+
+            service.search("국밥", 1, 10, destinationType);
+            server.verify();
+        }
+    }
+
+    @Test
+    void accommodationSearchAsksTourApiForStayContentTypeOnly() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        KtoTourService service = service(builder, "sample-key");
+
+        server.expect(request -> {
+            assertSearchRequest(request.getURI(), "호텔", "sample-key");
+            assertDecodedQuery(request.getURI(), "contentTypeId", "32");
+        }).andRespond(withSuccess(emptyResponse(), MediaType.APPLICATION_JSON));
+
+        service.search("호텔", 1, 10, "ACCOMMODATION");
+        server.verify();
+    }
+
+    @Test
+    void otherDestinationTypesKeepTheExistingUnrestrictedSearch() {
+        for (String destinationType : new String[]{"ATTRACTION", "ACTIVITY", "SHOP", null, ""}) {
+            RestClient.Builder builder = RestClient.builder();
+            MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+            KtoTourService service = service(builder, "sample-key");
+
+            server.expect(request -> {
+                assertSearchRequest(request.getURI(), "창덕궁", "sample-key");
+                // 기존 계약 그대로: contentTypeId 로 범위를 좁히지 않는다
+                assertThat(request.getURI().getQuery()).doesNotContain("contentTypeId");
+            }).andRespond(withSuccess(emptyResponse(), MediaType.APPLICATION_JSON));
+
+            service.search("창덕궁", 1, 10, destinationType);
+            server.verify();
+        }
+    }
+
+    private String detailBody(String itemFields) {
+        return """
+                {"response":{"header":{"resultCode":"0000","resultMsg":"OK"},"body":{"items":{"item":[{
+                %s
+                }]}}}}
+                """.formatted(itemFields);
     }
 
     private KtoTourService service(RestClient.Builder builder, String apiKey) {

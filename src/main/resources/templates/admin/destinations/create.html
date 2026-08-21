@@ -8,7 +8,7 @@
   <script src="/js/admin-destination-category-select.js?v=20260822-2" defer></script>
   <script src="/js/admin-destination-amenity-filter.js?v=20260822-1" defer></script>
   <script src="/js/admin-destination-image-upload-preview.js?v=20260822-2" defer></script>
-  <script src="/js/admin-kto-tour-autofill.js?v=20260821-2" defer></script>
+  <script src="/js/admin-kto-tour-autofill.js?v=20260822-3" defer></script>
   <script src="/js/admin-kto-photo-search.js?v=20260821-4" defer></script>
 </th:block>
 <th:block th:fragment="body">
@@ -269,22 +269,26 @@
     <div class="admin-type-fields-grid">
     <div>
       <label>체크인 시간
-        <input type="text" th:field="*{accommodationInfo.checkinTime}" placeholder="예: 15:00">
+        <input type="text" th:field="*{accommodationInfo.checkinTime}" placeholder="예: 15:00"
+               data-kto-tour-field="checkinTime" data-kto-tour-type="ACCOMMODATION">
       </label>
     </div>
     <div>
       <label>체크아웃 시간
-        <input type="text" th:field="*{accommodationInfo.checkoutTime}" placeholder="예: 11:00">
+        <input type="text" th:field="*{accommodationInfo.checkoutTime}" placeholder="예: 11:00"
+               data-kto-tour-field="checkoutTime" data-kto-tour-type="ACCOMMODATION">
       </label>
     </div>
     <div>
       <label>객실 수
-        <input type="number" th:field="*{accommodationInfo.roomCount}" min="1" placeholder="예: 50">
+        <input type="number" th:field="*{accommodationInfo.roomCount}" min="1" placeholder="예: 50"
+               data-kto-tour-field="roomCount" data-kto-tour-type="ACCOMMODATION">
       </label>
     </div>
     <div>
       <label>객실 유형
-        <input type="text" th:field="*{accommodationInfo.roomType}" placeholder="예: 싱글, 트윈, 더블">
+        <input type="text" th:field="*{accommodationInfo.roomType}" placeholder="예: 싱글, 트윈, 더블"
+               data-kto-tour-field="roomType" data-kto-tour-type="ACCOMMODATION">
       </label>
     </div>
     <div>
@@ -300,7 +304,8 @@
     </div>
     <div>
       <label>
-        <input type="checkbox" th:field="*{accommodationInfo.parkingAvailable}">
+        <input type="checkbox" th:field="*{accommodationInfo.parkingAvailable}"
+               data-kto-tour-field="parkingAvailable" data-kto-tour-type="ACCOMMODATION">
         주차 가능
       </label>
     </div>
@@ -312,12 +317,14 @@
     </div>
     <div>
       <label>숙소 연락처
-        <input type="text" th:field="*{accommodationInfo.contactNumber}" placeholder="예: 042-000-1234">
+        <input type="text" th:field="*{accommodationInfo.contactNumber}" placeholder="예: 042-000-1234"
+               data-kto-tour-field="contactNumber" data-kto-tour-type="ACCOMMODATION">
       </label>
     </div>
     <div>
       <label>숙소 홈페이지
-        <input type="text" th:field="*{accommodationInfo.homepageUrl}" placeholder="예: http://...">
+        <input type="text" th:field="*{accommodationInfo.homepageUrl}" placeholder="예: http://..."
+               data-kto-tour-field="homepageUrl" data-kto-tour-type="ACCOMMODATION">
       </label>
     </div>
     <div class="admin-type-field-wide">
@@ -348,7 +355,8 @@
     <div class="admin-type-fields-grid">
     <div>
       <label>대표메뉴
-        <input type="text" th:field="*{restaurantInfo.mainMenu}" placeholder="예: 돈까스, 커피 등">
+        <input type="text" th:field="*{restaurantInfo.mainMenu}" placeholder="예: 돈까스, 커피 등"
+               data-kto-tour-field="mainMenu" data-kto-tour-type="RESTAURANTS CAFE">
       </label>
     </div>
     <div>
@@ -358,7 +366,8 @@
     </div>
     <div>
       <label>영업시간
-        <input type="text" th:field="*{restaurantInfo.openingHours}" placeholder="예: 10:00~22:00">
+        <input type="text" th:field="*{restaurantInfo.openingHours}" placeholder="예: 10:00~22:00"
+               data-kto-tour-field="openingHours" data-kto-tour-type="RESTAURANTS CAFE">
       </label>
     </div>
     <div>
@@ -368,12 +377,14 @@
     </div>
     <div>
       <label>휴무일
-        <input type="text" th:field="*{restaurantInfo.closedDays}" placeholder="예: 매주 월요일">
+        <input type="text" th:field="*{restaurantInfo.closedDays}" placeholder="예: 매주 월요일"
+               data-kto-tour-field="closedDays" data-kto-tour-type="RESTAURANTS CAFE">
       </label>
     </div>
     <div>
       <label>주차 가능 여부
-        <input type="checkbox" th:field="*{restaurantInfo.parkingAvailable}">
+        <input type="checkbox" th:field="*{restaurantInfo.parkingAvailable}"
+               data-kto-tour-field="parkingAvailable" data-kto-tour-type="RESTAURANTS CAFE">
       </label>
     </div>
     <div>
@@ -388,7 +399,8 @@
     </div>
     <div>
       <label>테이크아웃 가능
-        <input type="checkbox" th:field="*{restaurantInfo.takeoutAvailable}">
+        <input type="checkbox" th:field="*{restaurantInfo.takeoutAvailable}"
+               data-kto-tour-field="takeoutAvailable" data-kto-tour-type="RESTAURANTS CAFE">
       </label>
     </div>
     <div>
@@ -398,17 +410,20 @@
     </div>
     <div>
       <label>예약 가능
-        <input type="checkbox" th:field="*{restaurantInfo.reservation}">
+        <input type="checkbox" th:field="*{restaurantInfo.reservation}"
+               data-kto-tour-field="reservation" data-kto-tour-type="RESTAURANTS CAFE">
       </label>
     </div>
     <div>
       <label>연락처
-        <input type="text" th:field="*{restaurantInfo.contactNumber}" placeholder="예: 02-1234-5678">
+        <input type="text" th:field="*{restaurantInfo.contactNumber}" placeholder="예: 02-1234-5678"
+               data-kto-tour-field="contactNumber" data-kto-tour-type="RESTAURANTS CAFE">
       </label>
     </div>
     <div>
       <label>홈페이지
-        <input type="text" th:field="*{restaurantInfo.homepageUrl}" placeholder="예: http://...">
+        <input type="text" th:field="*{restaurantInfo.homepageUrl}" placeholder="예: http://..."
+               data-kto-tour-field="homepageUrl" data-kto-tour-type="RESTAURANTS CAFE">
       </label>
     </div>
     <div class="admin-type-field-wide">

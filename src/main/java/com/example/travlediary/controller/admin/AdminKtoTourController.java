@@ -27,7 +27,8 @@ public class AdminKtoTourController {
     @GetMapping("/search")
     public ResponseEntity<?> search(@RequestParam(required = false) String keyword,
                                     @RequestParam(defaultValue = "1") int pageNo,
-                                    @RequestParam(defaultValue = "10") int numOfRows) {
+                                    @RequestParam(defaultValue = "10") int numOfRows,
+                                    @RequestParam(required = false) String destinationType) {
         String normalizedKeyword = normalize(keyword);
         if (normalizedKeyword.isEmpty()) {
             return error(HttpStatus.BAD_REQUEST, "검색어를 입력해 주세요.");
@@ -40,7 +41,9 @@ public class AdminKtoTourController {
                     "numOfRows는 1에서 " + MAX_NUM_OF_ROWS + " 사이여야 합니다.");
         }
         try {
-            return ResponseEntity.ok(ktoTourService.search(normalizedKeyword, pageNo, numOfRows));
+            // DestinationType -> TourAPI contentTypeId 매핑 기준은 서버(KtoTourService)가 갖는다.
+            return ResponseEntity.ok(
+                    ktoTourService.search(normalizedKeyword, pageNo, numOfRows, destinationType));
         } catch (KtoTourApiException exception) {
             return apiError(exception);
         }

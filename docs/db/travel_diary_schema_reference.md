@@ -42,7 +42,7 @@ CREATE TABLE `accommodation_info` (
   `checkin_time` varchar(10) DEFAULT NULL,
   `checkout_time` varchar(10) DEFAULT NULL,
   `room_count` int DEFAULT NULL,
-  `room_type` varchar(32) DEFAULT NULL,
+  `room_type` varchar(255) DEFAULT NULL,
   `star_rating` decimal(2,1) DEFAULT NULL,
   `breakfast_included` tinyint(1) DEFAULT NULL,
   `parking_available` tinyint(1) DEFAULT NULL,

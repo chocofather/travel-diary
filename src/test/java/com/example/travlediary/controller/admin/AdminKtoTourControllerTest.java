@@ -49,7 +49,7 @@ class AdminKtoTourControllerTest {
 
     @Test
     void adminCanSearchAndLoadADetail() throws Exception {
-        when(ktoTourService.search("창덕궁", 1, 10)).thenReturn(new KtoTourSearchResponse(
+        when(ktoTourService.search("창덕궁", 1, 10, null)).thenReturn(new KtoTourSearchResponse(
                 1, 10, 1, List.of(new KtoTourSearchItemResponse(
                 "126508", "12", "관광지", "창덕궁", "서울 종로구", "126.991", "37.579"))));
         when(ktoTourService.getDetail("126508", "12")).thenReturn(new KtoTourAutofillResponse(
@@ -82,7 +82,7 @@ class AdminKtoTourControllerTest {
                 .andExpect(jsonPath("$.regionMatch.path[2].id").value(235))
                 .andExpect(jsonPath("$.regionMatch.deepestRegionId").value(235));
 
-        verify(ktoTourService).search("창덕궁", 1, 10);
+        verify(ktoTourService).search("창덕궁", 1, 10, null);
         verify(ktoTourService).getDetail("126508", "12");
         verify(ktoTourRegionMatchService).match("서울 종로구");
     }
@@ -123,14 +123,31 @@ class AdminKtoTourControllerTest {
                 .andExpect(status().isBadRequest());
 
         verify(ktoTourService, never()).search(org.mockito.ArgumentMatchers.any(),
-                org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt());
+                org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.any());
         verify(ktoTourService, never()).getDetail(org.mockito.ArgumentMatchers.any(),
                 org.mockito.ArgumentMatchers.any());
     }
 
     @Test
+    void selectedDestinationTypeIsForwardedToTheSearchService() throws Exception {
+        when(ktoTourService.search("국밥", 1, 10, "RESTAURANTS"))
+                .thenReturn(new KtoTourSearchResponse(1, 10, 0, List.of()));
+
+        mockMvc.perform(get("/admin/api/kto/tour/search")
+                        .param("keyword", "국밥")
+                        .param("destinationType", "RESTAURANTS")
+                        .with(user("admin").roles("ADMIN")))
+                .andExpect(status().isOk());
+
+        // contentTypeId 변환은 서버(KtoTourService)가 담당하고, 컨트롤러는 유형만 넘긴다.
+        verify(ktoTourService).search("국밥", 1, 10, "RESTAURANTS");
+    }
+
+    @Test
     void configurationAndUpstreamFailuresUseSafeJsonStatuses() throws Exception {
-        when(ktoTourService.search("창덕궁", 1, 10)).thenThrow(KtoTourApiException.missingApiKey());
+        when(ktoTourService.search("창덕궁", 1, 10, null))
+                .thenThrow(KtoTourApiException.missingApiKey());
         mockMvc.perform(get("/admin/api/kto/tour/search")
                         .param("keyword", "창덕궁")
                         .with(user("admin").roles("ADMIN")))

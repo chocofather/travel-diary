@@ -25,7 +25,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
         setLoading(true, "TourAPI에서 검색하고 있습니다.");
         try {
-            const params = new URLSearchParams({keyword, pageNo: "1", numOfRows: "10"});
+            // 선택한 여행지 유형을 그대로 넘기고, TourAPI contentTypeId 변환은 서버가 한다.
+            const params = new URLSearchParams({
+                keyword,
+                pageNo: "1",
+                numOfRows: "10",
+                destinationType: destinationType ? destinationType.value : ""
+            });
             const response = await fetch(`/admin/api/kto/tour/search?${params.toString()}`, {
                 headers: {Accept: "application/json"}
             });
@@ -136,6 +142,15 @@ document.addEventListener("DOMContentLoaded", () => {
         fillTypeField("contactNumber", currentType, detail.contactNumber);
         fillTypeField("homepageUrl", currentType, detail.homepageUrl);
         fillTypeField("guide", currentType, detail.guide);
+        fillTypeField("mainMenu", currentType, detail.mainMenu);
+        fillTypeField("checkinTime", currentType, detail.checkinTime);
+        fillTypeField("checkoutTime", currentType, detail.checkoutTime);
+        fillTypeField("roomCount", currentType, detail.roomCount);
+        fillTypeField("roomType", currentType, detail.roomType);
+        // 문자열 판정은 서버에서 끝났으므로 여기서는 Boolean 값만 그대로 반영한다.
+        fillTypeField("parkingAvailable", currentType, detail.parkingAvailable);
+        fillTypeField("takeoutAvailable", currentType, detail.takeoutAvailable);
+        fillTypeField("reservation", currentType, detail.reservation);
     }
 
     async function matchEnglishTour(koreanTitle, mapX, mapY, requestGeneration) {
@@ -195,9 +210,23 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function fillTypeField(fieldName, type, value) {
+        if (!type) return;
+        // 음식점/카페처럼 같은 입력칸을 공유하는 유형은 data-kto-tour-type에 공백으로 나열한다.
         const element = Array.from(document.querySelectorAll(`[data-kto-tour-field="${fieldName}"]`))
-            .find(candidate => candidate.dataset.ktoTourType === type);
+            .find(candidate => (candidate.dataset.ktoTourType || "").split(/\s+/).includes(type));
+        if (element && element.type === "checkbox") {
+            setCheckboxIfKnown(element, value);
+            return;
+        }
         fillIfEmpty(element, value);
+    }
+
+    // 서버가 판별한 nullable Boolean 만 반영한다. null/undefined 면 기존 체크 상태를 건드리지 않는다.
+    function setCheckboxIfKnown(element, value) {
+        if (value !== true && value !== false) return;
+        if (element.checked === value) return;
+        element.checked = value;
+        element.dispatchEvent(new Event("change", {bubbles: true}));
     }
 
     function fillIfEmpty(element, value) {
@@ -223,7 +252,12 @@ document.addEventListener("DOMContentLoaded", () => {
         ]);
         for (const element of managedFields) {
             if (!element) continue;
-            element.value = "";
+            // 체크박스는 value 가 제출값이므로 비우지 않고 체크만 해제한다.
+            if (element.type === "checkbox") {
+                element.checked = false;
+            } else {
+                element.value = "";
+            }
             element.dispatchEvent(new Event("change", {bubbles: true}));
         }
     }
