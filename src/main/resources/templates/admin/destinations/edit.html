@@ -217,8 +217,7 @@
            data-amenity-field data-amenity-default-filter="ATTRACTION">
         <h4>관광지 편의시설</h4>
         <div th:replace="~{admin/destinations/fragments/amenity-filter :: filters}"></div>
-        <div class="admin-amenity-options" data-amenity-options
-             style="display: flex; flex-wrap: wrap; gap: 12px;">
+        <div class="admin-amenity-options" data-amenity-options>
           <div th:each="amenity : ${allAmenities}" class="admin-amenity-option" data-amenity-option
                th:attr="data-amenity-types=${amenityTypeTags.get(amenity.amenityId)}">
             <label>
@@ -297,8 +296,7 @@
            data-amenity-field data-amenity-default-filter="ACCOMMODATION">
         <h4>숙소 편의시설</h4>
         <div th:replace="~{admin/destinations/fragments/amenity-filter :: filters}"></div>
-        <div class="admin-amenity-options" data-amenity-options
-             style="display: flex; flex-wrap: wrap; gap: 12px;">
+        <div class="admin-amenity-options" data-amenity-options>
           <div th:each="amenity : ${allAmenities}" class="admin-amenity-option" data-amenity-option
                th:attr="data-amenity-types=${amenityTypeTags.get(amenity.amenityId)}">
             <label>
@@ -389,8 +387,7 @@
            data-amenity-field data-amenity-default-filter="RESTAURANTS CAFE">
         <h4>음식점/카페 편의시설</h4>
         <div th:replace="~{admin/destinations/fragments/amenity-filter :: filters}"></div>
-        <div class="admin-amenity-options" data-amenity-options
-             style="display: flex; flex-wrap: wrap; gap: 12px;">
+        <div class="admin-amenity-options" data-amenity-options>
           <div th:each="amenity : ${allAmenities}" class="admin-amenity-option" data-amenity-option
                th:attr="data-amenity-types=${amenityTypeTags.get(amenity.amenityId)}">
             <label>
@@ -461,8 +458,7 @@
            data-amenity-field data-amenity-default-filter="ACTIVITY">
         <h4>체험/액티비티 편의시설</h4>
         <div th:replace="~{admin/destinations/fragments/amenity-filter :: filters}"></div>
-        <div class="admin-amenity-options" data-amenity-options
-             style="display: flex; flex-wrap: wrap; gap: 12px;">
+        <div class="admin-amenity-options" data-amenity-options>
           <div th:each="amenity : ${allAmenities}" class="admin-amenity-option" data-amenity-option
                th:attr="data-amenity-types=${amenityTypeTags.get(amenity.amenityId)}">
             <label>
@@ -518,8 +514,7 @@
            data-amenity-field data-amenity-default-filter="SHOP">
         <h4>쇼핑 편의시설</h4>
         <div th:replace="~{admin/destinations/fragments/amenity-filter :: filters}"></div>
-        <div class="admin-amenity-options" data-amenity-options
-             style="display: flex; flex-wrap: wrap; gap: 12px;">
+        <div class="admin-amenity-options" data-amenity-options>
           <div th:each="amenity : ${allAmenities}" class="admin-amenity-option" data-amenity-option
                th:attr="data-amenity-types=${amenityTypeTags.get(amenity.amenityId)}">
             <label>

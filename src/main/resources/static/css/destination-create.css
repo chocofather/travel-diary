@@ -1,6 +1,6 @@
 .admin-destination-form-page .admin-destination-form {
     display: grid;
-    gap: 18px;
+    gap: 14px;
     width: 100%;
     max-width: 1080px;
     padding: 0;
@@ -14,8 +14,8 @@
 .admin-destination-section {
     display: grid;
     min-width: 0;
-    gap: 20px;
-    padding: 22px 24px;
+    gap: 14px;
+    padding: 16px 18px;
     background: #fff;
     border: 1px solid #e1e7f0;
     border-radius: 16px;
@@ -26,8 +26,8 @@
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 18px;
-    padding-bottom: 15px;
+    gap: 12px;
+    padding-bottom: 10px;
     border-bottom: 1px solid #edf0f5;
 }
 
@@ -51,7 +51,7 @@
 .admin-type-fields-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px;
+    gap: 12px;
 }
 
 .admin-form-grid.is-compact {
@@ -64,7 +64,7 @@
 .admin-language-card {
     display: grid;
     min-width: 0;
-    gap: 8px;
+    gap: 6px;
 }
 
 .admin-form-label {
@@ -76,8 +76,8 @@
 
 .admin-language-card {
     align-content: start;
-    gap: 13px;
-    padding: 17px;
+    gap: 10px;
+    padding: 14px;
     background: #f8faff;
     border: 1px solid #e1e7f3;
     border-radius: 12px;
@@ -326,14 +326,14 @@
 
 .admin-destination-form .type-fields {
     display: none;
-    padding: 20px;
+    padding: 16px;
     background: #f7faff;
     border: 1px solid #dce5f5;
     border-radius: 12px;
 }
 
 .admin-type-fields-grid {
-    margin-top: 16px;
+    margin-top: 12px;
 }
 
 .admin-type-fields-grid > div {
@@ -362,12 +362,51 @@
 
 .admin-amenity-field {
     margin-top: 3px;
-    padding-top: 17px;
+    padding-top: 13px;
     border-top: 1px solid #dde5f2;
 }
 
+/* 카테고리 목록과 같은 밀도의 체크박스 그리드 */
 .admin-amenity-options {
-    gap: 9px !important;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 6px;
+    max-height: 300px;
+    padding: 10px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid #dfe5ef;
+    border-radius: 11px;
+}
+
+.admin-amenity-option {
+    min-width: 0;
+}
+
+.admin-amenity-option > label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    min-height: 34px;
+    padding: 6px 8px;
+    color: #48536a;
+    background: #fbfcfe;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    font-size: 0.84rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.admin-amenity-option > label:hover {
+    background: #f2f6ff;
+}
+
+.admin-amenity-option > label > span {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 .admin-amenity-options > div > label {
@@ -784,8 +823,8 @@
 
 .admin-destination-form .admin-category-select {
     display: grid;
-    gap: 14px;
-    padding: 20px;
+    gap: 10px;
+    padding: 16px;
     background: #f8faff;
     border: 1px solid #dce5f5;
     border-radius: 14px;
@@ -899,10 +938,10 @@
 
 .admin-category-options {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 8px;
-    max-height: 280px;
-    padding: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 6px;
+    max-height: 320px;
+    padding: 10px;
     overflow-y: auto;
     background: #fff;
     border: 1px solid #dfe5ef;
@@ -912,9 +951,10 @@
 .admin-destination-form .admin-category-option {
     display: flex;
     align-items: center;
+    gap: 6px;
     min-width: 0;
-    min-height: 38px;
-    padding: 7px 9px;
+    min-height: 34px;
+    padding: 6px 8px;
     color: #48536a;
     background: #fbfcfe;
     border: 1px solid transparent;
