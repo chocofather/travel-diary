@@ -5,6 +5,7 @@
   <link rel="stylesheet" href="/css/destination-create.css">
   <link rel="stylesheet" href="/css/admin-destination-images.css">
   <script src="/js/admin-kto-photo-search.js?v=20260821-4" defer></script>
+  <script src="/js/admin-destination-image-upload-preview.js?v=20260821-1" defer></script>
 </th:block>
 <th:block th:fragment="body">
   <section class="admin-page-section admin-destination-images-page">
@@ -25,9 +26,7 @@
 
     <input type="hidden" th:value="${destinationName}" data-destination-korean-name>
 
-    <div th:if="${imageError}" class="admin-alert" role="alert" th:text="${imageError}"></div>
-
-    <section class="admin-destination-section">
+    <section class="admin-destination-section admin-image-add-section">
       <div class="admin-destination-section-header">
         <div>
           <h2>새 이미지 추가</h2>
@@ -35,29 +34,38 @@
         </div>
       </div>
 
-      <form th:action="@{/admin/destinations/{id}/images(id=${destinationId})}"
-            method="post" enctype="multipart/form-data"
-            class="admin-destination-image-upload-form">
-        <div class="admin-form-field">
-          <label for="destination-image-files">직접 업로드</label>
-          <input id="destination-image-files" type="file" name="files" multiple required>
-          <p class="admin-field-help">여러 장을 선택할 수 있습니다. 업로드 후 아래 카드에서 대표 및 슬라이드 여부를 설정하세요.</p>
-        </div>
-        <div class="admin-form-actions">
-          <button type="submit" class="admin-btn is-primary">이미지 업로드</button>
-        </div>
-      </form>
-    </section>
+      <div class="admin-image-add-grid">
+        <form th:action="@{/admin/destinations/{id}/images(id=${destinationId})}"
+              method="post" enctype="multipart/form-data"
+              class="admin-destination-image-upload-form admin-image-add-upload">
+          <h3 class="admin-image-add-title">직접 업로드</h3>
+          <div th:if="${imageError}" class="admin-alert" role="alert" th:text="${imageError}"></div>
+          <div class="admin-image-add-upload-row">
+            <input id="destination-image-files" type="file" name="files" multiple required
+                   aria-label="직접 업로드할 이미지 파일">
+            <button type="submit" class="admin-btn is-primary">이미지 업로드</button>
+          </div>
+          <p class="admin-field-help">여러 장 선택 가능. 업로드 후 아래 카드에서 대표·슬라이드를 설정합니다.</p>
+        </form>
 
-    <form th:action="@{/admin/destinations/{id}/images/kto(id=${destinationId})}"
-          method="post" class="admin-destination-form admin-kto-photo-management-form">
-      <th:block th:replace="~{admin/destinations/fragments/kto-photo-search :: search}"></th:block>
-      <div class="admin-kto-photo-save-actions">
-        <button type="submit" class="admin-btn is-primary" data-kto-photo-submit>
-          선택한 관광사진 추가
-        </button>
+        <!-- 선택한 파일 미리보기는 상단 입력 열 높이에 영향을 주지 않도록 전체 폭에 둔다. -->
+        <div class="admin-upload-preview" data-destination-upload-preview hidden>
+          <p class="admin-field-help admin-upload-preview-count"
+             data-destination-upload-preview-count></p>
+          <div class="admin-upload-preview-grid" data-destination-upload-preview-grid></div>
+        </div>
+
+        <form th:action="@{/admin/destinations/{id}/images/kto(id=${destinationId})}"
+              method="post" class="admin-destination-form admin-kto-photo-management-form">
+          <th:block th:replace="~{admin/destinations/fragments/kto-photo-search :: search}"></th:block>
+          <div class="admin-kto-photo-save-actions">
+            <button type="submit" class="admin-btn is-primary" data-kto-photo-submit>
+              선택한 관광사진 추가
+            </button>
+          </div>
+        </form>
       </div>
-    </form>
+    </section>
 
     <section class="admin-card admin-destination-images-card admin-section-spacer">
       <div class="admin-card-header">

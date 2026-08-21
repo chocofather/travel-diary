@@ -45,7 +45,9 @@
 
         List<Destination> findByCountryCategoryId(@Param("cityId") Long cityId);
 
-        List<Destination> findByRegionIds(@Param("regionIds") List<Long> regionIds);
+        List<Destination> findByRegionIds(@Param("regionIds") List<Long> regionIds,
+                                          @Param("keyword") String keyword,
+                                          @Param("chosungPattern") String chosungPattern);
 
         // 조회수 증가
         void incrementViewCount(Long id);

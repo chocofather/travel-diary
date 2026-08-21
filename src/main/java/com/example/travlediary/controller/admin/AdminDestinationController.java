@@ -112,7 +112,11 @@ public class AdminDestinationController {
             @RequestParam(value = "cityId", required = false) Long cityId,
             @RequestParam(value = "regionId", required = false) Long regionId,
             @RequestParam(value = "districtId", required = false) Long districtId,
+            @RequestParam(value = "keyword", required = false) String keyword,
             Model model) {
+
+        // 공백만 입력한 검색어는 검색 조건 없음으로 본다.
+        String searchKeyword = (keyword == null || keyword.isBlank()) ? null : keyword.strip();
 
         System.out.println("type: " + type);
         System.out.println("continentId: " + continentId);
@@ -163,9 +167,10 @@ public class AdminDestinationController {
             }
         }
 
-        var destinationList = destinationService.getDestinationsByRegionIds(regionIds);
+        var destinationList = destinationService.getDestinationsByRegionIds(regionIds, searchKeyword);
         model.addAttribute("destinationList", destinationList);
         model.addAttribute("type", type);
+        model.addAttribute("keyword", searchKeyword);
 
         // 대륙 리스트 (depth=1)
         var continents = countryCategoryService.getRegionsByDepth(1);

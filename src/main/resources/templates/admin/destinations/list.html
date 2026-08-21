@@ -2,7 +2,7 @@
 <html lang="ko" xmlns:th="http://www.thymeleaf.org"
       th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'destinations')}">
 <th:block th:fragment="headFragment">
-  <script src="/js/admin-destination-filter.js" defer></script>
+  <script src="/js/admin-destination-filter.js?v=20260821-5" defer></script>
 </th:block>
 <th:block th:fragment="body">
   <section class="admin-page-section">
@@ -18,10 +18,14 @@
 
     <div th:if="${error}" class="admin-alert" role="alert" th:text="${error}"></div>
 
-    <div class="admin-filter-card">
-      <h2 class="admin-card-heading" th:text="${selectedRegionName} ?: '전체 리스트'">전체 리스트</h2>
+    <div class="admin-filter-card is-toolbar">
       <form id="admin-destination-filter-form" method="get"
             th:action="@{/admin/destinations}" class="admin-filter-form">
+        <input id="destination-keyword-filter" type="search" name="keyword"
+               class="admin-input admin-filter-search"
+               placeholder="여행지명 검색 (초성 검색 가능: ㄱㅂㄱ)" aria-label="여행지명 검색"
+               autocomplete="off" th:value="${keyword}"/>
+
         <div class="admin-filter-tabs" aria-label="여행지 범위 필터">
           <button type="submit" value="all"
                   class="admin-filter-tab"
@@ -70,7 +74,9 @@
                   th:selected="${districtId} == ${d.id}"></option>
         </select>
 
-        <button type="submit" class="admin-btn">조회</button>
+        <div class="admin-filter-actions">
+          <a th:href="@{/admin/destinations}" class="admin-btn is-small">초기화</a>
+        </div>
       </form>
     </div>
 

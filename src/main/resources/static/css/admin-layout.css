@@ -267,6 +267,25 @@
     padding: 20px 22px;
 }
 
+/* 검색 + 범위 필터를 한 줄로 담는 컴팩트 툴바 */
+.admin-filter-card.is-toolbar {
+    margin-bottom: 16px;
+    padding: 12px 14px;
+}
+
+.admin-filter-form .admin-filter-search {
+    flex: 1 1 220px;
+    min-width: 180px;
+    min-height: 38px;
+}
+
+.admin-filter-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+}
+
 .admin-form-card {
     width: 100%;
     max-width: 780px;

@@ -224,8 +224,10 @@ public class DestinationService {
         return destinationMapper.findByCountryCategoryId(cityId);
     }
 
-    public List<Destination> getDestinationsByRegionIds(List<Long> regionIds) {
-        return destinationMapper.findByRegionIds(regionIds);
+    public List<Destination> getDestinationsByRegionIds(List<Long> regionIds, String keyword) {
+        DestinationSearchKeyword search = DestinationSearchKeyword.of(keyword);
+        return destinationMapper.findByRegionIds(
+                regionIds, search.namePattern(), search.chosungPattern());
     }
 
 

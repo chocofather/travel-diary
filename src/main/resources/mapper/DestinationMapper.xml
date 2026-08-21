@@ -304,6 +304,14 @@
         <foreach item="id" collection="regionIds" open="(" separator="," close=")">
             #{id}
         </foreach>
+        <!-- 관리자 목록의 여행지명 검색. 목록에 보여주는 이름(dt.name)을 그대로 부분 검색한다. -->
+        <if test="keyword != null and keyword != ''">
+            AND dt.name LIKE CONCAT('%', #{keyword}, '%')
+        </if>
+        <!-- 초성검색(ㄱㅂㄱ 등). 패턴은 서버에서 초성 범위로만 조립해 bind 한다. -->
+        <if test="chosungPattern != null and chosungPattern != ''">
+            AND dt.name REGEXP #{chosungPattern}
+        </if>
     </select>
 
     <!-- 조회수 증가 -->
