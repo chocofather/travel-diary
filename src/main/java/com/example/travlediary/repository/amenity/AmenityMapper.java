@@ -15,6 +15,12 @@ public interface AmenityMapper {
     Amenity selectAmenityById(@Param("id") Integer id); // 단일 amenity 조회
     int insertAmenity(Amenity amenity); // amenity 등록
 
+    /** amenities.code 는 UNIQUE 이므로 등록 전에 중복을 먼저 확인한다. */
+    int countByCode(@Param("code") String code);
+
+    /** 아이콘 파일 저장 성공 후 실제 웹 경로를 기록한다. code 는 바꾸지 않는다. */
+    int updateAmenityIconUrl(@Param("id") Integer id, @Param("iconUrl") String iconUrl);
+
     // 타입별로 필요한 편의시설 목록 (ex: attraction/숙소/음식점 등등)
     List<Amenity> findByType(@Param("type") String type);
 
@@ -25,6 +31,13 @@ public interface AmenityMapper {
 
 
     int insertAmenityTranslation(AmenityTranslation translation); // 번역 등록
+
+    /** 기존 번역 이름 변경. UNIQUE(amenity_id, language_code) 기준 단건. */
+    int updateAmenityTranslation(AmenityTranslation translation);
+
+    /** 선택 언어 값을 비운 경우 해당 번역 행을 지운다. */
+    int deleteAmenityTranslation(@Param("amenityId") Integer amenityId,
+                                 @Param("languageCode") String languageCode);
 
     List<AmenityTranslation> findTranslationsByTypeAndLang(
             @Param("type") String type,
@@ -44,6 +57,21 @@ public interface AmenityMapper {
 
     /** 편의시설 ↔ 여행지 유형 마스터 매핑 전체. 화면 필터가 쓰는 태그의 원본이다. */
     List<AmenityDestinationType> findAmenityDestinationTypes();
+
+    /** 편의시설 1건의 적용 가능한 여행지 유형. 수정 화면 체크 상태 복원용. */
+    List<AmenityDestinationType> findAmenityDestinationTypesByAmenityId(
+            @Param("amenityId") Integer amenityId);
+
+    /**
+     * 편의시설 ↔ 여행지 유형 매핑 1건 등록.
+     *
+     * @param destinationType DestinationType enum 이름을 그대로 저장한다.
+     */
+    int insertAmenityDestinationType(@Param("amenityId") Integer amenityId,
+                                     @Param("destinationType") String destinationType);
+
+    /** 편의시설 1건의 매핑 전체 삭제. 수정 시 삭제 후 선택값 재삽입에 쓴다. */
+    int deleteAmenityDestinationTypesByAmenityId(@Param("amenityId") Integer amenityId);
 
 
 

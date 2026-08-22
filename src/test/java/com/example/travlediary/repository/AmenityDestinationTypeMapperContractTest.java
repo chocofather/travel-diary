@@ -1,10 +1,13 @@
 package com.example.travlediary.repository;
 
+import com.example.travlediary.model.DestinationType;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -31,6 +34,46 @@ class AmenityDestinationTypeMapperContractTest {
                 .doesNotContain("_amenities ta")
                 .doesNotContain("attraction_amenities")
                 .doesNotContain("restaurant_amenities");
+    }
+
+    @Test
+    void masterMappingCanBeWrittenAndReadPerAmenity() throws IOException {
+        String mapper = mapperXml();
+
+        // 매핑 1건 등록. destination_type 은 DestinationType enum 이름을 그대로 저장한다.
+        assertThat(between(mapper, "<insert id=\"insertAmenityDestinationType\"", "</insert>"))
+                .contains("INSERT INTO amenity_destination_types (amenity_id, destination_type)")
+                .contains("VALUES (#{amenityId}, #{destinationType})")
+                .doesNotContain("${");
+
+        // 수정은 "전체 삭제 후 선택값 재삽입" 방식이므로 amenityId 기준 전체 삭제가 필요하다
+        assertThat(between(mapper, "<delete id=\"deleteAmenityDestinationTypesByAmenityId\"", "</delete>"))
+                .contains("DELETE FROM amenity_destination_types WHERE amenity_id = #{amenityId}");
+
+        // 수정 화면 체크 상태 복원용 단건 조회
+        assertThat(between(mapper, "<select id=\"findAmenityDestinationTypesByAmenityId\"", "</select>"))
+                .contains("SELECT amenity_id, destination_type")
+                .contains("FROM amenity_destination_types")
+                .contains("WHERE amenity_id = #{amenityId}")
+                .doesNotContain("${");
+    }
+
+    @Test
+    void destinationTypeColumnMatchesTheEnumNameContractInTheSchema() throws IOException {
+        String schema = Files.readString(
+                Path.of("docs/db/travel_diary_schema_reference.md"), StandardCharsets.UTF_8);
+        String table = between(schema,
+                "CREATE TABLE `amenity_destination_types`", ") ENGINE=InnoDB");
+
+        // enum 이름을 문자열로 담는 컬럼이며 복합 PK 라 별도 id/부가 컬럼이 없다
+        assertThat(table)
+                .contains("`amenity_id` int NOT NULL")
+                .contains("`destination_type` varchar(30) NOT NULL")
+                .contains("PRIMARY KEY (`amenity_id`,`destination_type`)");
+        // DestinationType enum 값 중 가장 긴 이름도 varchar(30) 안에 들어간다
+        for (DestinationType type : DestinationType.values()) {
+            assertThat(type.name().length()).as("enum %s", type).isLessThanOrEqualTo(30);
+        }
     }
 
     @Test

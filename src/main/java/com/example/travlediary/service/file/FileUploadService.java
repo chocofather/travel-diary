@@ -3,18 +3,34 @@ package com.example.travlediary.service.file;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.NamedNodeMap;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
+import javax.xml.XMLConstants;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -34,6 +50,23 @@ public class FileUploadService {
     private static final Pattern MANAGED_THUMBNAIL_NAME = Pattern.compile(
             "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\\.(?:jpg|png|webp)$",
             Pattern.CASE_INSENSITIVE);
+    private static final String AMENITY_ICON_DIRECTORY = "icons/amenities";
+    private static final String AMENITY_ICON_URL_PREFIX = "/uploads/" + AMENITY_ICON_DIRECTORY + "/";
+    private static final long AMENITY_ICON_MAX_SIZE = 512L * 1024;
+    /** 아이콘 파일명은 code 에서 만들어지므로 code 형식을 저장 직전에 한 번 더 확인한다. */
+    private static final Pattern AMENITY_CODE = Pattern.compile("^[A-Z0-9_]{2,50}$");
+    public static final String UNSUPPORTED_AMENITY_ICON_MESSAGE =
+            "PNG, JPG 또는 SVG 이미지 파일만 업로드할 수 있습니다.";
+    public static final String UNSAFE_AMENITY_SVG_MESSAGE =
+            "안전하지 않은 SVG 파일입니다. 스크립트나 외부 참조가 없는 아이콘만 업로드할 수 있습니다.";
+    /** 저장 파일명 후보. 같은 code 로 확장자만 다른 아이콘이 중복 생기지 않게 한다. */
+    private static final List<String> AMENITY_ICON_EXTENSIONS =
+            List.of("png", "jpg", "jpeg", "svg");
+    private static final Set<String> FORBIDDEN_SVG_ELEMENTS = Set.of(
+            "script", "iframe", "object", "embed", "foreignobject");
+    /** 속성 값에서 금지하는 URI. 공백을 제거한 소문자 값으로 비교한다. */
+    private static final List<String> FORBIDDEN_SVG_URI_SCHEMES =
+            List.of("javascript:", "http://", "https://", "file:");
 
     private final String uploadDir;
 
@@ -393,6 +426,323 @@ public class FileUploadService {
         return fileName;
     }
 
+    /**
+     * 편의시설 아이콘 파일만 검증한다. 저장은 하지 않으므로 DB INSERT 전에 먼저 부를 수 있다.
+     * 클라이언트가 보낸 확장자/Content-Type 을 믿지 않고 실제 bytes 까지 확인한다.
+     */
+    public void validateAmenityIcon(MultipartFile file) {
+        verifyAmenityIcon(file);
+    }
+
+    /**
+     * 업로드된 아이콘을 검증하고 저장에 쓸 확장자를 돌려준다. 포맷 변환은 하지 않는다.
+     * 확장자, Content-Type, 실제 내용이 모두 같은 포맷을 가리킬 때만 통과한다.
+     *
+     * @return 저장 확장자 ("png" / "jpg" / "jpeg" / "svg")
+     */
+    private String verifyAmenityIcon(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("아이콘 이미지를 선택해 주세요.");
+        }
+        if (file.getSize() > AMENITY_ICON_MAX_SIZE) {
+            throw new IllegalArgumentException("아이콘 이미지는 512KB 이하만 업로드할 수 있습니다.");
+        }
+
+        String originalName = file.getOriginalFilename();
+        if (originalName == null || originalName.isBlank()
+                || originalName.contains("/") || originalName.contains("\\")
+                || originalName.contains("..")) {
+            throw new IllegalArgumentException("올바르지 않은 아이콘 파일명입니다.");
+        }
+
+        int dotIndex = originalName.lastIndexOf('.');
+        if (dotIndex <= 0 || dotIndex == originalName.length() - 1) {
+            throw unsupportedAmenityIcon();
+        }
+        String requestedExtension = originalName.substring(dotIndex + 1).toLowerCase(Locale.ROOT);
+        String contentType = file.getContentType();
+
+        // SVG 는 이미지가 아니라 XML 이므로 ImageIO 가 아닌 별도 경로로 검사한다.
+        if ("svg".equals(requestedExtension)) {
+            if (!"image/svg+xml".equalsIgnoreCase(contentType)) {
+                throw unsupportedAmenityIcon();
+            }
+            validateSvgIcon(file);
+            return "svg";
+        }
+
+        AmenityIconFormat detected = detectAmenityIconFormat(file);
+        // 확장자만 바꾼 위장 파일을 막기 위해 세 값이 모두 같은 포맷을 가리켜야 한다.
+        boolean matches = switch (detected) {
+            case PNG -> "png".equals(requestedExtension)
+                    && "image/png".equalsIgnoreCase(contentType);
+            case JPEG -> ("jpg".equals(requestedExtension) || "jpeg".equals(requestedExtension))
+                    && "image/jpeg".equalsIgnoreCase(contentType);
+        };
+        if (!matches) {
+            throw unsupportedAmenityIcon();
+        }
+        decodeAmenityIcon(file, detected);
+        // JPG 와 JPEG 는 올린 그대로의 확장자를 유지한다.
+        return requestedExtension;
+    }
+
+    private AmenityIconFormat detectAmenityIconFormat(MultipartFile file) {
+        byte[] header = new byte[8];
+        int length;
+        try (InputStream input = file.getInputStream()) {
+            length = input.read(header);
+        } catch (IOException exception) {
+            throw unsupportedAmenityIcon();
+        }
+
+        if (length >= 8
+                && unsigned(header[0]) == 0x89
+                && header[1] == 'P' && header[2] == 'N' && header[3] == 'G'
+                && unsigned(header[4]) == 0x0d && unsigned(header[5]) == 0x0a
+                && unsigned(header[6]) == 0x1a && unsigned(header[7]) == 0x0a) {
+            return AmenityIconFormat.PNG;
+        }
+        if (length >= 3
+                && unsigned(header[0]) == 0xff
+                && unsigned(header[1]) == 0xd8
+                && unsigned(header[2]) == 0xff) {
+            return AmenityIconFormat.JPEG;
+        }
+        throw unsupportedAmenityIcon();
+    }
+
+    private UnsupportedImageFormatException unsupportedAmenityIcon() {
+        return new UnsupportedImageFormatException(UNSUPPORTED_AMENITY_ICON_MESSAGE);
+    }
+
+    private UnsupportedImageFormatException unsafeSvgIcon() {
+        return new UnsupportedImageFormatException(UNSAFE_AMENITY_SVG_MESSAGE);
+    }
+
+    /**
+     * SVG 아이콘 검사. 파일로 저장해 &lt;img&gt; 로만 렌더링하지만, 업로드 자체를 보수적으로 막는다.
+     * DTD/외부 엔티티(XXE)를 끄고 파싱한 뒤 위험한 요소·속성·URI 를 전부 거부한다.
+     */
+    private void validateSvgIcon(MultipartFile file) {
+        Document document;
+        try (InputStream input = file.getInputStream()) {
+            document = secureSvgDocumentBuilder().parse(input);
+        } catch (ParserConfigurationException | SAXException | IOException exception) {
+            // DOCTYPE 선언도 여기서 걸린다(disallow-doctype-decl).
+            throw unsafeSvgIcon();
+        }
+
+        Element root = document.getDocumentElement();
+        if (root == null || !"svg".equalsIgnoreCase(localName(root))) {
+            throw unsupportedAmenityIcon();
+        }
+        checkSvgElement(root);
+    }
+
+    private DocumentBuilder secureSvgDocumentBuilder() throws ParserConfigurationException {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+        factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+        factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+        factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+        factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+        factory.setXIncludeAware(false);
+        factory.setExpandEntityReferences(false);
+        factory.setNamespaceAware(true);
+        factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+        factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
+        DocumentBuilder builder = factory.newDocumentBuilder();
+        builder.setEntityResolver((publicId, systemId) -> {
+            throw new SAXException("external entity is not allowed");
+        });
+        return builder;
+    }
+
+    private void checkSvgElement(Element element) {
+        if (FORBIDDEN_SVG_ELEMENTS.contains(localName(element).toLowerCase(Locale.ROOT))) {
+            throw unsafeSvgIcon();
+        }
+
+        NamedNodeMap attributes = element.getAttributes();
+        for (int i = 0; i < attributes.getLength(); i++) {
+            Node attribute = attributes.item(i);
+            String name = attribute.getNodeName();
+            // 네임스페이스 선언은 정상적으로 http://www.w3.org/... 를 가리키므로 제외한다.
+            if ("xmlns".equals(name) || name.startsWith("xmlns:")
+                    || XMLConstants.XMLNS_ATTRIBUTE_NS_URI.equals(attribute.getNamespaceURI())) {
+                continue;
+            }
+            if (localName(attribute).toLowerCase(Locale.ROOT).startsWith("on")) {
+                throw unsafeSvgIcon();
+            }
+            String value = attribute.getNodeValue() == null
+                    ? "" : attribute.getNodeValue().toLowerCase(Locale.ROOT).replace(" ", "");
+            for (String forbidden : FORBIDDEN_SVG_URI_SCHEMES) {
+                if (value.contains(forbidden)) {
+                    throw unsafeSvgIcon();
+                }
+            }
+        }
+
+        NodeList children = element.getChildNodes();
+        for (int i = 0; i < children.getLength(); i++) {
+            Node child = children.item(i);
+            if (child instanceof Element childElement) {
+                checkSvgElement(childElement);
+            }
+        }
+    }
+
+    private String localName(Node node) {
+        return node.getLocalName() == null ? node.getNodeName() : node.getLocalName();
+    }
+
+    /**
+     * 신규 편의시설 아이콘 저장.
+     * 업로드한 포맷을 변환하지 않고 원본 bytes 를 그대로 저장하며,
+     * 파일명만 {code 소문자}.{실제확장자} 로 고정한다.
+     *
+     * @return 웹 URL (예: /uploads/icons/amenities/free_wifi.svg)
+     */
+    public String saveAmenityIcon(String code, MultipartFile file) {
+        String extension = verifyAmenityIcon(file);
+        String savedName = amenityIconFileName(code, extension);
+        Path iconDirectory = resolveAmenityIconDirectory(true);
+        Path destination = iconDirectory.resolve(savedName).normalize();
+        ensureContained(iconDirectory, destination);
+        // 확장자가 달라도 같은 code 의 아이콘이 이미 있으면 신규 등록으로 보지 않는다.
+        ensureNoExistingAmenityIcon(iconDirectory, code);
+
+        boolean created = false;
+        try (InputStream input = file.getInputStream();
+             OutputStream output = Files.newOutputStream(
+                     destination, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)) {
+            created = true;
+            input.transferTo(output);
+        } catch (FileAlreadyExistsException exception) {
+            throw amenityIconAlreadyExists(exception);
+        } catch (IOException exception) {
+            if (created) {
+                deleteAmenityIconPathQuietly(destination);
+            }
+            throw new IllegalStateException("편의시설 아이콘 파일 저장에 실패했습니다.", exception);
+        }
+        return AMENITY_ICON_URL_PREFIX + savedName;
+    }
+
+    /** 롤백 정리용. 이번 등록에서 만든 아이콘만 지운다(확장자는 포맷마다 다르다). */
+    public boolean deleteAmenityIcon(String code) {
+        Path iconDirectory = resolveAmenityIconDirectory(false);
+        if (iconDirectory == null) {
+            return false;
+        }
+
+        boolean deleted = false;
+        for (String extension : AMENITY_ICON_EXTENSIONS) {
+            Path target = iconDirectory.resolve(amenityIconFileName(code, extension)).normalize();
+            ensureContained(iconDirectory, target);
+            try {
+                deleted |= Files.deleteIfExists(target);
+            } catch (IOException exception) {
+                throw new IllegalStateException("편의시설 아이콘 파일 삭제에 실패했습니다.", exception);
+            }
+        }
+        return deleted;
+    }
+
+    /** DB 에 code 가 없어도 파일만 남아 있을 수 있으므로 확장자 전체를 확인한다. */
+    private void ensureNoExistingAmenityIcon(Path iconDirectory, String code) {
+        for (String extension : AMENITY_ICON_EXTENSIONS) {
+            Path existing = iconDirectory.resolve(amenityIconFileName(code, extension)).normalize();
+            ensureContained(iconDirectory, existing);
+            if (Files.exists(existing)) {
+                throw amenityIconAlreadyExists(null);
+            }
+        }
+    }
+
+    private IllegalStateException amenityIconAlreadyExists(Throwable cause) {
+        return new IllegalStateException(
+                "같은 코드의 아이콘 파일이 이미 있습니다. 다른 코드를 사용해 주세요.", cause);
+    }
+
+    /** code -> 파일명. 경로 문자가 섞일 수 없도록 형식을 먼저 확인한다. */
+    private String amenityIconFileName(String code, String extension) {
+        if (code == null || !AMENITY_CODE.matcher(code).matches()) {
+            throw new IllegalArgumentException("올바르지 않은 편의시설 코드입니다.");
+        }
+        return code.toLowerCase(Locale.ROOT) + "." + extension;
+    }
+
+    /** 실제로 decode 되는 이미지인지 확인하고, 저장에 쓸 이미지를 그대로 돌려준다. */
+    private BufferedImage decodeAmenityIcon(MultipartFile file, AmenityIconFormat expected) {
+        try (InputStream input = file.getInputStream();
+             ImageInputStream imageInput = ImageIO.createImageInputStream(input)) {
+            if (imageInput == null) {
+                throw unsupportedAmenityIcon();
+            }
+            Iterator<ImageReader> readers = ImageIO.getImageReaders(imageInput);
+            if (!readers.hasNext()) {
+                throw unsupportedAmenityIcon();
+            }
+
+            ImageReader reader = readers.next();
+            try {
+                if (expected != AmenityIconFormat.of(reader.getFormatName())) {
+                    throw unsupportedAmenityIcon();
+                }
+                reader.setInput(imageInput);
+                if (reader.getWidth(0) <= 0 || reader.getHeight(0) <= 0) {
+                    throw unsupportedAmenityIcon();
+                }
+                BufferedImage image = reader.read(0);
+                if (image == null) {
+                    throw unsupportedAmenityIcon();
+                }
+                return image;
+            } finally {
+                reader.dispose();
+            }
+        } catch (IOException exception) {
+            throw unsupportedAmenityIcon();
+        }
+    }
+
+    private Path resolveAmenityIconDirectory(boolean create) {
+        Path uploadRoot = Paths.get(uploadDir).toAbsolutePath().normalize();
+        try {
+            if (create) {
+                Files.createDirectories(uploadRoot);
+            } else if (Files.notExists(uploadRoot)) {
+                return null;
+            }
+
+            Path realUploadRoot = uploadRoot.toRealPath();
+            Path iconDirectory = realUploadRoot.resolve(AMENITY_ICON_DIRECTORY).normalize();
+            ensureContained(realUploadRoot, iconDirectory);
+            if (create) {
+                Files.createDirectories(iconDirectory);
+            } else if (Files.notExists(iconDirectory)) {
+                return null;
+            }
+
+            Path realIconDirectory = iconDirectory.toRealPath();
+            ensureContained(realUploadRoot, realIconDirectory);
+            return realIconDirectory;
+        } catch (IOException exception) {
+            throw new IllegalStateException("편의시설 아이콘 저장 경로를 준비할 수 없습니다.", exception);
+        }
+    }
+
+    private void deleteAmenityIconPathQuietly(Path path) {
+        try {
+            Files.deleteIfExists(path);
+        } catch (IOException ignored) {
+            // 원래 저장 실패를 우선 전달한다.
+        }
+    }
+
     private void ensureContained(Path root, Path target) {
         if (!target.startsWith(root)) {
             throw new IllegalArgumentException("허용된 업로드 경로를 벗어날 수 없습니다.");
@@ -422,6 +772,22 @@ public class FileUploadService {
                 return PNG;
             }
             throw new UnsupportedImageFormatException(UNSUPPORTED_DESTINATION_IMAGE_MESSAGE);
+        }
+    }
+
+    /** 편의시설 아이콘 업로드 허용 포맷. 저장은 항상 PNG 로 한다. */
+    private enum AmenityIconFormat {
+        PNG,
+        JPEG;
+
+        private static AmenityIconFormat of(String formatName) {
+            if ("PNG".equalsIgnoreCase(formatName)) {
+                return PNG;
+            }
+            if ("JPEG".equalsIgnoreCase(formatName) || "JPG".equalsIgnoreCase(formatName)) {
+                return JPEG;
+            }
+            throw new UnsupportedImageFormatException(UNSUPPORTED_AMENITY_ICON_MESSAGE);
         }
     }
 

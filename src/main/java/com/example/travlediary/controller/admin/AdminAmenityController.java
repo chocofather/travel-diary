@@ -1,14 +1,20 @@
 package com.example.travlediary.controller.admin;
 
+import com.example.travlediary.dto.AmenityForm;
 import com.example.travlediary.model.Amenity;
 import com.example.travlediary.model.AmenityTranslation;
+import com.example.travlediary.model.DestinationType;
 import com.example.travlediary.service.amenity.AmenityService;
+import com.example.travlediary.service.amenity.AmenityValidationException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 
 @Controller
@@ -17,21 +23,65 @@ import java.util.List;
 public class AdminAmenityController {
     private final AmenityService amenityService;
 
+    private static final String CREATE_VIEW = "admin/amenities/create";
+    private static final String REDIRECT_LIST = "redirect:/admin/amenities/list";
+
+    private static final Set<String> FORM_FIELDS = Set.of(
+            "code", "nameKo", "nameEn", "nameJa", "nameZh", "destinationTypes", "icon");
+
+    /** 체크박스 표시용 라벨. 값 자체는 DestinationType enum 에서 온다. */
+    private static final Map<DestinationType, String> DESTINATION_TYPE_LABELS = Map.of(
+            DestinationType.ATTRACTION, "여행지",
+            DestinationType.RESTAURANTS, "식당",
+            DestinationType.CAFE, "카페",
+            DestinationType.ACCOMMODATION, "숙소",
+            DestinationType.ACTIVITY, "액티비티",
+            DestinationType.SHOP, "쇼핑"
+    );
+
     // 1. Amenity 등록 폼
     @GetMapping("/create")
-    public String showCreateForm() {
-        return "admin/amenities/create"; // amenity 등록 폼
+    public String showCreateForm(Model model) {
+        // 검증 실패로 다시 그릴 때는 이미 담긴 폼(입력값 + 오류)을 그대로 쓴다.
+        if (!model.containsAttribute("amenityForm")) {
+            model.addAttribute("amenityForm", new AmenityForm());
+        }
+        addFormOptions(model);
+        return CREATE_VIEW;
     }
 
-    // 2. Amenity 등록 처리
+    // 2. Amenity 등록 처리 (코드/아이콘/번역/적용 대상 통합)
     @PostMapping("/create")
-    public String createAmenity(@RequestParam("code") String code, Model model) {
-        if (code == null || code.trim().isEmpty()) {
-            model.addAttribute("error", "코드를 입력하세요.");
-            return "admin/amenities/create";
+    public String createAmenity(@ModelAttribute("amenityForm") AmenityForm form,
+                                BindingResult bindingResult,
+                                Model model) {
+        try {
+            amenityService.registerAmenity(form);
+        } catch (AmenityValidationException exception) {
+            rejectValidation(bindingResult, exception.getField(), exception.getMessage());
+            addFormOptions(model);
+            return CREATE_VIEW;
+        } catch (IllegalArgumentException | IllegalStateException exception) {
+            // 아이콘 검증/저장 실패. 내부 경로나 stack trace 는 노출하지 않는다.
+            rejectValidation(bindingResult, "icon", exception.getMessage());
+            addFormOptions(model);
+            return CREATE_VIEW;
         }
-        amenityService.registerAmenity(code);
-        return "redirect:/admin/amenities/list";
+        return REDIRECT_LIST;
+    }
+
+    private void addFormOptions(Model model) {
+        model.addAttribute("destinationTypes", DestinationType.values());
+        model.addAttribute("destinationTypeLabels", DESTINATION_TYPE_LABELS);
+    }
+
+    private void rejectValidation(BindingResult bindingResult, String field, String message) {
+        // 폼에 없는 이름으로 rejectValue 하면 바인딩이 깨지므로 아는 필드만 필드 오류로 남긴다.
+        if (field == null || !FORM_FIELDS.contains(field)) {
+            bindingResult.reject("amenity.invalid", message);
+            return;
+        }
+        bindingResult.rejectValue(field, "amenity.invalid", message);
     }
 
     // 3. Amenity 전체 리스트 (번역등록 버튼 포함)

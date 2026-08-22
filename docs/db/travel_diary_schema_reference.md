@@ -97,12 +97,16 @@ CREATE TABLE `activity_info` (
 --
 -- Table structure for table `amenities`
 --
+-- `icon_url`은 편의시설 아이콘의 실제 웹 경로다.
+-- 신규/수정 편의시설은 실제 아이콘 경로를 저장하며,
+-- 기존 NULL 데이터는 애플리케이션에서 code 기반 .png 경로로 호환한다.
 
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `amenities` (
   `id` int NOT NULL AUTO_INCREMENT,
   `code` varchar(50) NOT NULL,
+  `icon_url` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `code_UNIQUE` (`code`)
 ) ENGINE=InnoDB AUTO_INCREMENT=39 DEFAULT CHARSET=utf8mb3;

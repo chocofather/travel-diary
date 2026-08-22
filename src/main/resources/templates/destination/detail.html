@@ -137,7 +137,10 @@
                 <ul class="amenities-list">
                     <li th:each="a : ${accommodationAmenities}"
                         th:attr="data-tooltip=${a.name}">
-                        <img th:src="@{'/uploads/icons/amenities/' + ${#strings.toLowerCase(a.code)} + '.png'}"
+                        <!-- iconUrl 이 있으면 그대로, 없으면(기존 데이터) code 기반 .png 로 대체한다. -->
+                        <img th:src="${#strings.isEmpty(a.iconUrl)}
+                                     ? @{'/uploads/icons/amenities/' + ${#strings.toLowerCase(a.code)} + '.png'}
+                                     : @{${a.iconUrl}}"
                              th:alt="${a.name}" class="amenity-icon"/>
                         <!-- <span th:text="${a.name}" style="display:none;"></span>  // 숨김 처리 필요 없으면 생략 -->
                     </li>
@@ -256,7 +259,10 @@
                 <ul class="amenities-list">
                     <li th:each="a : ${attractionAmenities}"
                         th:attr="data-tooltip=${a.name}">
-                        <img th:src="@{'/uploads/icons/amenities/' + ${a.code.toLowerCase()} + '.png'}"
+                        <!-- iconUrl 이 있으면 그대로, 없으면(기존 데이터) code 기반 .png 로 대체한다. -->
+                        <img th:src="${#strings.isEmpty(a.iconUrl)}
+                                     ? @{'/uploads/icons/amenities/' + ${#strings.toLowerCase(a.code)} + '.png'}
+                                     : @{${a.iconUrl}}"
                              th:alt="${a.name}" class="amenity-icon"/>
                     </li>
                 </ul>
@@ -301,7 +307,10 @@
                 <ul class="amenities-list">
                     <li th:each="a : ${activityAmenities}"
                         th:attr="data-tooltip=${a.name}">
-                        <img th:src="@{'/uploads/icons/amenities/' + ${a.code.toLowerCase()} + '.png'}"
+                        <!-- iconUrl 이 있으면 그대로, 없으면(기존 데이터) code 기반 .png 로 대체한다. -->
+                        <img th:src="${#strings.isEmpty(a.iconUrl)}
+                                     ? @{'/uploads/icons/amenities/' + ${#strings.toLowerCase(a.code)} + '.png'}
+                                     : @{${a.iconUrl}}"
                              th:alt="${a.name}" class="amenity-icon"/>
                     </li>
                 </ul>
@@ -360,7 +369,10 @@
                 <ul class="amenities-list">
                     <li th:each="a : ${restaurantAmenities}"
                         th:attr="data-tooltip=${a.name}">
-                        <img th:src="@{'/uploads/icons/amenities/' + ${a.code.toLowerCase()} + '.png'}"
+                        <!-- iconUrl 이 있으면 그대로, 없으면(기존 데이터) code 기반 .png 로 대체한다. -->
+                        <img th:src="${#strings.isEmpty(a.iconUrl)}
+                                     ? @{'/uploads/icons/amenities/' + ${#strings.toLowerCase(a.code)} + '.png'}
+                                     : @{${a.iconUrl}}"
                              th:alt="${a.name}" class="amenity-icon"/>
                     </li>
                 </ul>
@@ -394,7 +406,10 @@
                 <ul class="amenities-list">
                     <li th:each="a : ${shopAmenities}"
                         th:attr="data-tooltip=${a.name}">
-                        <img th:src="@{'/uploads/icons/amenities/' + ${a.code.toLowerCase()} + '.png'}"
+                        <!-- iconUrl 이 있으면 그대로, 없으면(기존 데이터) code 기반 .png 로 대체한다. -->
+                        <img th:src="${#strings.isEmpty(a.iconUrl)}
+                                     ? @{'/uploads/icons/amenities/' + ${#strings.toLowerCase(a.code)} + '.png'}
+                                     : @{${a.iconUrl}}"
                              th:alt="${a.name}" class="amenity-icon"/>
                     </li>
                 </ul>
