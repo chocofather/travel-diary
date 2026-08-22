@@ -125,21 +125,122 @@
     line-height: 1.45;
 }
 
-.admin-category-compact-grid {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 10px;
+/* ── 목록 도구: 적용 대상 필터 + 이름 검색 (표시/숨김 전용) ── */
+.admin-category-toolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px 14px;
+    margin-bottom: 14px;
 }
 
+.admin-category-toolbar .admin-category-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+/* 목록 필터는 폼 탭보다 한 단계 작게 */
+.admin-category-toolbar .admin-filter-tab.is-small {
+    min-height: 30px;
+    padding: 5px 12px;
+    font-size: 0.8rem;
+}
+
+.admin-category-search {
+    position: relative;
+    flex: 1 1 200px;
+    max-width: 280px;
+}
+
+.admin-category-search input {
+    width: 100%;
+    min-height: 32px;
+    padding: 6px 30px 6px 12px;
+    color: #34415e;
+    background: #fff;
+    border: 1px solid #dfe5f0;
+    border-radius: 999px;
+    font-family: inherit;
+    font-size: 0.83rem;
+}
+
+.admin-category-search input:focus {
+    border-color: #7892f5;
+    outline: 3px solid rgba(66, 101, 247, 0.11);
+}
+
+.admin-category-search-clear {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    display: flex;
+    width: 18px;
+    height: 18px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    color: #8791a6;
+    background: none;
+    border: 0;
+    border-radius: 50%;
+    font-size: 1rem;
+    line-height: 1;
+    transform: translateY(-50%);
+    cursor: pointer;
+}
+
+.admin-category-search-clear:hover {
+    color: #53617c;
+    background: #eef1f6;
+}
+
+.admin-category-count {
+    color: #8791a6;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+/* 화면에는 숨기고 스크린리더에는 남기는 라벨 */
+.admin-category-toolbar .admin-visually-hidden {
+    position: absolute;
+    overflow: hidden;
+    width: 1px;
+    height: 1px;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+/* 카드 최소 너비를 기준으로 열 수가 자연스럽게 정해진다 (넓은 화면 4~5열 → 모바일 1열) */
+.admin-category-compact-grid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+}
+
+/* 이름 → 적용 대상 → 액션 순으로 쌓고, 버튼은 카드 아래에 맞춘다 */
 .admin-category-compact-card {
-    min-height: 52px;
-    padding: 10px 12px;
-    gap: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    min-height: 128px;
+    padding: 14px 15px;
+    gap: 10px;
     border-radius: 12px;
     box-shadow: 0 3px 12px rgba(66, 83, 126, 0.05);
 }
 
+/*
+  카드 class 의 display:flex 가 브라우저 기본 [hidden] { display:none } 을 이긴다.
+  필터/검색이 숨긴 카드는 레이아웃에서도 빠져야 하므로 명시적으로 되돌린다.
+*/
+.admin-category-compact-card[hidden] {
+    display: none;
+}
+
 .admin-category-compact-card .admin-item-card-info {
-    gap: 8px;
+    display: block;
+    gap: 0;
 }
 
 .admin-category-compact-card .admin-item-card-id {
@@ -148,12 +249,49 @@
 }
 
 .admin-category-compact-card .admin-item-card-name {
-    font-size: 0.88rem;
+    display: block;
+    overflow: visible;
+    font-size: 0.97rem;
+    font-weight: 700;
+    line-height: 1.35;
+    /* 긴 이름은 잘라내지 않고 줄바꿈한다 */
+    overflow-wrap: break-word;
+    white-space: normal;
+}
+
+/* 적용 대상 badge: 타입별로 색을 나누지 않고 같은 계열로 통일한다 */
+.admin-category-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.admin-category-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    color: #7b8493;
+    background: #f4f5f8;
+    border: 1px solid #e6e9f0;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.admin-category-badge.is-type {
+    color: #46578a;
+    background: #eef1fb;
+    border-color: #dde3f6;
 }
 
 .admin-category-compact-card .admin-action-group {
+    display: flex;
+    justify-content: flex-end;
     flex: 0 0 auto;
-    gap: 5px;
+    gap: 6px;
+    /* 카드 높이가 달라도 버튼 줄은 하단에 정렬된다 */
+    margin-top: auto;
 }
 
 .admin-category-compact-card .admin-action-group form {
@@ -172,34 +310,13 @@
     grid-column: 1 / -1;
 }
 
-@media (max-width: 1300px) {
-    .admin-category-compact-grid {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-}
-
-@media (max-width: 900px) {
-    .admin-category-compact-grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-}
-
+/*
+  열 수는 auto-fill + minmax(220px) 가 알아서 정한다.
+  좁은 화면에서 카드가 너무 작아지지 않도록 최소 너비만 한 번 낮춘다.
+*/
 @media (max-width: 680px) {
     .admin-category-compact-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .admin-category-compact-card {
-        align-items: center;
-        flex-direction: row;
-    }
-
-    .admin-category-compact-card .admin-action-group {
-        width: auto;
-    }
-
-    .admin-category-compact-card .admin-action-group .admin-btn {
-        flex: 0 0 auto;
+        grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
     }
 }
 

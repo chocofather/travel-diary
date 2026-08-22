@@ -3,26 +3,69 @@
       th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'categories')}">
 <th:block th:fragment="headFragment">
   <link rel="stylesheet" href="/css/admin-compact-lists.css">
+  <script src="/js/admin-category-list-filter.js" defer></script>
 </th:block>
 <th:block th:fragment="body">
   <section class="admin-page-section admin-category-compact-page">
     <header class="admin-page-header">
       <div class="admin-page-heading">
         <h1 class="admin-page-title">여행지 카테고리 관리</h1>
-        <p class="admin-page-description">여행지에 사용할 카테고리를 등록하고 관리합니다.</p>
+        <p class="admin-page-description">여행지 유형별 카테고리를 등록하고 관리합니다.</p>
       </div>
       <div class="admin-page-actions">
         <a th:href="@{/admin/categories/create}" class="admin-btn is-primary">+ 카테고리 등록</a>
       </div>
     </header>
 
+    <!-- 사용 중이라 삭제가 막힌 경우의 사유 -->
+    <div th:if="${error}" class="admin-alert" role="alert" th:text="${error}"></div>
+
+    <!--
+      목록 도구. 서버 재조회 없이 이미 렌더링된 카드를 보이기/숨기기만 한다.
+      값은 DestinationType enum 이름이고, 카드의 data-category-types 와 대조한다.
+    -->
+    <div class="admin-category-toolbar" data-category-list>
+      <div class="admin-category-filters" role="group" aria-label="적용 대상 필터">
+        <button type="button" class="admin-filter-tab is-small" aria-pressed="true"
+                data-category-filter="ALL">전체</button>
+        <button type="button" class="admin-filter-tab is-small" aria-pressed="false"
+                th:each="type : ${destinationTypes}"
+                th:attr="data-category-filter=${type}"
+                th:text="${destinationTypeLabels.get(type)} ?: ${type}">여행지</button>
+      </div>
+
+      <div class="admin-category-search">
+        <label class="admin-visually-hidden" for="category-search">카테고리 이름 검색</label>
+        <input id="category-search" type="search" autocomplete="off"
+               placeholder="카테고리 이름 검색" data-category-search>
+        <button type="button" class="admin-category-search-clear" hidden
+                aria-label="검색어 지우기" data-category-search-clear>&times;</button>
+      </div>
+
+      <span class="admin-category-count" aria-live="polite" data-category-count></span>
+    </div>
+
     <div class="admin-item-grid admin-category-compact-grid">
-      <article class="admin-item-card admin-category-compact-card" th:each="cat : ${categories}">
+      <article class="admin-item-card admin-category-compact-card" th:each="cat : ${categories}"
+               th:with="tag=${categoryTypeTags.get(cat.id)}"
+               th:attr="data-category-types=${tag}"
+               data-category-card>
         <div class="admin-item-card-info">
-          <span class="admin-item-card-id" th:text="${cat.id}">1</span>
-          <span class="admin-item-card-name" th:text="${cat.name}">이름</span>
+          <span class="admin-item-card-name" th:text="${cat.name}"
+                data-category-name>이름</span>
         </div>
+
+        <div class="admin-category-badges">
+          <span class="admin-category-badge" th:if="${#strings.isEmpty(tag)}">미분류</span>
+          <span class="admin-category-badge is-type"
+                th:unless="${#strings.isEmpty(tag)}"
+                th:each="type : ${#strings.arraySplit(tag, ' ')}"
+                th:text="${destinationTypeLabelsByName.get(type)} ?: ${type}">여행지</span>
+        </div>
+
         <div class="admin-action-group">
+          <a th:href="@{|/admin/categories/${cat.id}/edit|}"
+             class="admin-btn is-small is-primary">수정</a>
           <form th:action="@{'/admin/categories/' + ${cat.id} + '/delete'}" method="post">
             <button type="submit" class="admin-btn is-small is-danger"
                     onclick="return confirm('정말 삭제할까요?')">삭제</button>
@@ -31,6 +74,9 @@
       </article>
       <div th:if="${#lists.isEmpty(categories)}" class="admin-card admin-empty-state">
         등록된 카테고리가 없습니다.
+      </div>
+      <div class="admin-card admin-empty-state" hidden data-category-no-result>
+        조건에 맞는 카테고리가 없습니다.
       </div>
     </div>
   </section>
