@@ -91,45 +91,177 @@
 
             <!-- 추가 정보 -->
             <!-- 숙소 정보 AccommodationInfo -->
-            <div th:if="${accommodationInfo != null}" class="accommodation-info detail-info-block">
+            <div th:if="${accommodationInfo != null}" class="accommodation-info type-info-block">
                 <h2>숙소 정보</h2>
-                <ul>
-                    <li>체크인 시간: <span th:text="${accommodationInfo.checkinTime ?: '-'}">-</span></li>
-                    <li>체크아웃 시간: <span th:text="${accommodationInfo.checkoutTime ?: '-'}">-</span></li>
-                    <li>객실 수: <span
-                            th:text="${accommodationInfo.roomCount != null ? accommodationInfo.roomCount : '-'}">-</span>
-                    </li>
-                    <li>객실 유형: <span th:text="${accommodationInfo.roomType ?: '-'}">-</span></li>
-                    <li>등급:
-                        <span th:if="${accommodationInfo.starRating != null}"
-                              th:text="${accommodationInfo.starRating} + '★'">4.5★</span>
-                        <span th:if="${accommodationInfo.starRating == null}">-</span>
-                    </li>
-                    <li>조식 포함:
-                        <span th:if="${accommodationInfo.breakfastIncluded != null}"
-                              th:text="${accommodationInfo.breakfastIncluded ? '포함' : '불포함'}">포함</span>
-                        <span th:if="${accommodationInfo.breakfastIncluded == null}">-</span>
-                    </li>
-                    <li>주차 가능:
-                        <span th:if="${accommodationInfo.parkingAvailable != null}"
-                              th:text="${accommodationInfo.parkingAvailable ? '가능' : '불가'}">가능</span>
-                        <span th:if="${accommodationInfo.parkingAvailable == null}">-</span>
-                    </li>
-                    <li>반려동물:
-                        <span th:if="${accommodationInfo.petAllowed != null}"
-                              th:text="${accommodationInfo.petAllowed ? '가능' : '불가'}">가능</span>
-                        <span th:if="${accommodationInfo.petAllowed == null}">-</span>
-                    </li>
-                    <li>연락처: <span th:text="${accommodationInfo.contactNumber ?: '-'}">-</span></li>
-                    <li>홈페이지:
-                        <span th:if="${accommodationInfo.homepageUrl != null}">
-                <a th:href="${accommodationInfo.homepageUrl}" target="_blank"
-                   th:text="${accommodationInfo.homepageUrl}">홈페이지</a>
-            </span>
-                        <span th:if="${accommodationInfo.homepageUrl == null}">-</span>
-                    </li>
-                    <li>기타 안내사항: <span th:text="${accommodationInfo.etc ?: '-'}">-</span></li>
-                </ul>
+                <div class="info-card">
+                    <dl class="info-grid">
+                        <div class="info-item">
+                            <span class="info-item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="9"/>
+                                    <path d="M12 7v5l3 2"/>
+                                </svg>
+                            </span>
+                            <div class="info-item-text">
+                                <dt class="info-item-label">체크인 시간</dt>
+                                <dd class="info-item-value" th:text="${accommodationInfo.checkinTime ?: '-'}">-</dd>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="9"/>
+                                    <path d="M12 7v5l-3 2"/>
+                                </svg>
+                            </span>
+                            <div class="info-item-text">
+                                <dt class="info-item-label">체크아웃 시간</dt>
+                                <dd class="info-item-value" th:text="${accommodationInfo.checkoutTime ?: '-'}">-</dd>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M3 18v-6h18v6M3 12V7M21 12v-1a3 3 0 0 0-3-3h-5v4"/>
+                                    <circle cx="7.5" cy="10.5" r="1.7"/>
+                                </svg>
+                            </span>
+                            <div class="info-item-text">
+                                <dt class="info-item-label">객실 수</dt>
+                                <dd class="info-item-value"
+                                    th:text="${accommodationInfo.roomCount != null ? accommodationInfo.roomCount : '-'}">-</dd>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="4" y="3" width="16" height="18" rx="2"/>
+                                    <path d="M8 7h8M8 11h8M8 15h5"/>
+                                </svg>
+                            </span>
+                            <div class="info-item-text">
+                                <dt class="info-item-label">객실 유형</dt>
+                                <dd class="info-item-value" th:text="${accommodationInfo.roomType ?: '-'}">-</dd>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.2-5.4-2.9-5.4 2.9 1-6.2L3.2 9.5l6.1-.9Z"/>
+                                </svg>
+                            </span>
+                            <div class="info-item-text">
+                                <dt class="info-item-label">등급</dt>
+                                <dd class="info-item-value info-item-value-inline">
+                                    <span th:if="${accommodationInfo.starRating != null}"
+                                          th:text="${accommodationInfo.starRating} + '★'">4.5★</span>
+                                    <span th:if="${accommodationInfo.starRating == null}">-</span>
+                                </dd>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M4 13h13a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3ZM3 19h16"/>
+                                    <path d="M17 9h1.5a2 2 0 0 1 0 4H17"/>
+                                    <path d="M8 5v2M12 4v3"/>
+                                </svg>
+                            </span>
+                            <div class="info-item-text">
+                                <dt class="info-item-label">조식 포함</dt>
+                                <dd class="info-item-value info-item-value-inline">
+                                    <span th:if="${accommodationInfo.breakfastIncluded != null}"
+                                          th:text="${accommodationInfo.breakfastIncluded ? '포함' : '불포함'}">포함</span>
+                                    <span th:if="${accommodationInfo.breakfastIncluded == null}">-</span>
+                                </dd>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="3" width="18" height="18" rx="4"/>
+                                    <path d="M9.5 17V7h3.2a3 3 0 0 1 0 6H9.5"/>
+                                </svg>
+                            </span>
+                            <div class="info-item-text">
+                                <dt class="info-item-label">주차 가능</dt>
+                                <dd class="info-item-value info-item-value-inline">
+                                    <span th:if="${accommodationInfo.parkingAvailable != null}"
+                                          th:text="${accommodationInfo.parkingAvailable ? '가능' : '불가'}">가능</span>
+                                    <span th:if="${accommodationInfo.parkingAvailable == null}">-</span>
+                                </dd>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="6.5" cy="9" r="1.8"/>
+                                    <circle cx="10.5" cy="5.5" r="1.8"/>
+                                    <circle cx="15.5" cy="5.5" r="1.8"/>
+                                    <circle cx="18.5" cy="9.5" r="1.8"/>
+                                    <path d="M12.5 11c2.4 0 4.6 2.3 5 4.4.3 1.9-1.1 3.4-3 3.1-1.4-.2-2.6-.5-3.7-.2-1 .3-2.1.6-3.1.4-1.7-.3-2.6-1.9-2-3.5.7-2 2.6-4.2 6.8-4.2Z"/>
+                                </svg>
+                            </span>
+                            <div class="info-item-text">
+                                <dt class="info-item-label">반려동물</dt>
+                                <dd class="info-item-value info-item-value-inline">
+                                    <span th:if="${accommodationInfo.petAllowed != null}"
+                                          th:text="${accommodationInfo.petAllowed ? '가능' : '불가'}">가능</span>
+                                    <span th:if="${accommodationInfo.petAllowed == null}">-</span>
+                                </dd>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M6 3h3l2 5-2.5 1.5a12 12 0 0 0 5 5L15 12l5 2v3a2 2 0 0 1-2.2 2A16 16 0 0 1 4 5.2 2 2 0 0 1 6 3Z"/>
+                                </svg>
+                            </span>
+                            <div class="info-item-text">
+                                <dt class="info-item-label">연락처</dt>
+                                <dd class="info-item-value info-item-tel"
+                                    th:text="${accommodationInfo.contactNumber ?: '-'}">-</dd>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="9"/>
+                                    <path d="M3.6 9h16.8M3.6 15h16.8M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18Z"/>
+                                </svg>
+                            </span>
+                            <div class="info-item-text">
+                                <dt class="info-item-label">홈페이지</dt>
+                                <dd class="info-item-value info-item-value-inline">
+                                    <a th:if="${accommodationInfo.homepageUrl != null}"
+                                       class="info-item-link"
+                                       th:href="${accommodationInfo.homepageUrl}"
+                                       target="_blank" rel="noopener">
+                                        공식 홈페이지
+                                        <span class="info-item-link-arrow" aria-hidden="true">↗</span>
+                                    </a>
+                                    <span th:if="${accommodationInfo.homepageUrl == null}">-</span>
+                                </dd>
+                            </div>
+                        </div>
+                    </dl>
+
+                    <!-- 긴 안내문은 정보 그리드와 분리해 카드 하단에 둔다 -->
+                    <div class="info-note">
+                        <div class="info-note-label">기타 안내사항</div>
+                        <div class="info-note-text" th:text="${accommodationInfo.etc ?: '-'}">-</div>
+                    </div>
+                </div>
             </div>
             <!-- 편의시설 -->
             <div th:if="${accommodationAmenities != null and !accommodationAmenities.isEmpty()}" class="amenity-row">
@@ -148,7 +280,7 @@
             </div>
 
             <!-- 관광명소 정보 AttractionInfo -->
-            <div th:if="${attractionInfo != null}" class="attraction-info">
+            <div th:if="${attractionInfo != null}" class="attraction-info type-info-block">
                 <h2>관광명소 정보</h2>
                 <div class="info-card">
                     <dl class="info-grid">
@@ -269,37 +401,156 @@
             </div>
 
             <!-- 체험/액티비티 정보 ActivityInfo -->
-            <div th:if="${activityInfo != null}" class="activity-info detail-info-block">
+            <div th:if="${activityInfo != null}" class="activity-info type-info-block">
                 <h2>체험/액티비티 정보</h2>
-                <ul>
-                    <li>운영 시간: <span th:text="${activityInfo.openingHours ?: '-'}">-</span></li>
-                    <li>소요 시간: <span th:text="${activityInfo.requiredTime ?: '-'}">-</span></li>
-                    <li>참가비/이용요금: <span th:text="${activityInfo.admissionFee ?: '-'}">-</span></li>
-                    <li>연령 제한: <span th:text="${activityInfo.ageLimit ?: '-'}">-</span></li>
-                    <li>사전 예약:
-                        <span th:if="${activityInfo.reservation != null}"
-                              th:text="${activityInfo.reservation ? '필요' : '불필요'}">필요</span>
-                        <span th:if="${activityInfo.reservation == null}">-</span>
-                    </li>
-                    <li>장비 대여/포함:
-                        <span th:if="${activityInfo.equipmentIncluded != null}"
-                              th:text="${activityInfo.equipmentIncluded ? '포함' : '미포함'}">포함</span>
-                        <span th:if="${activityInfo.equipmentIncluded == null}">-</span>
-                    </li>
-                    <li>주차 가능:
-                        <span th:if="${activityInfo.parkingAvailable != null}"
-                              th:text="${activityInfo.parkingAvailable ? '가능' : '불가'}">가능</span>
-                        <span th:if="${activityInfo.parkingAvailable == null}">-</span>
-                    </li>
-                    <li>연락처: <span th:text="${activityInfo.contactNumber ?: '-'}">-</span></li>
-                    <li>홈페이지:
-                        <span th:if="${activityInfo.homepageUrl != null}">
-                <a th:href="${activityInfo.homepageUrl}" target="_blank" th:text="${activityInfo.homepageUrl}">홈페이지</a>
-            </span>
-                        <span th:if="${activityInfo.homepageUrl == null}">-</span>
-                    </li>
-                    <li>이용 안내: <span th:text="${activityInfo.guide ?: '-'}">-</span></li>
-                </ul>
+                <div class="info-card">
+                    <dl class="info-grid">
+                        <div class="info-item">
+                            <span class="info-item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="9"/>
+                                    <path d="M12 7v5l3 2"/>
+                                </svg>
+                            </span>
+                            <div class="info-item-text">
+                                <dt class="info-item-label">운영 시간</dt>
+                                <dd class="info-item-value" th:text="${activityInfo.openingHours ?: '-'}">-</dd>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M10 2h4M12 6v5l3 3"/>
+                                    <circle cx="12" cy="13" r="8"/>
+                                </svg>
+                            </span>
+                            <div class="info-item-text">
+                                <dt class="info-item-label">소요 시간</dt>
+                                <dd class="info-item-value" th:text="${activityInfo.requiredTime ?: '-'}">-</dd>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4V8Z"/>
+                                    <path d="M14 6v12"/>
+                                </svg>
+                            </span>
+                            <div class="info-item-text">
+                                <dt class="info-item-label">참가비/이용요금</dt>
+                                <dd class="info-item-value" th:text="${activityInfo.admissionFee ?: '-'}">-</dd>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="8" r="3.5"/>
+                                    <path d="M5 20a7 7 0 0 1 14 0"/>
+                                </svg>
+                            </span>
+                            <div class="info-item-text">
+                                <dt class="info-item-label">연령 제한</dt>
+                                <dd class="info-item-value" th:text="${activityInfo.ageLimit ?: '-'}">-</dd>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="5" width="18" height="16" rx="2"/>
+                                    <path d="M3 10h18M8 3v4M16 3v4M9 15l2 2 4-4"/>
+                                </svg>
+                            </span>
+                            <div class="info-item-text">
+                                <dt class="info-item-label">사전 예약</dt>
+                                <dd class="info-item-value info-item-value-inline">
+                                    <span th:if="${activityInfo.reservation != null}"
+                                          th:text="${activityInfo.reservation ? '필요' : '불필요'}">필요</span>
+                                    <span th:if="${activityInfo.reservation == null}">-</span>
+                                </dd>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M14.7 6.3a4 4 0 0 1 5 5l-8.5 8.5-5-5 8.5-8.5Z"/>
+                                    <path d="M4 20l2.2-2.2"/>
+                                </svg>
+                            </span>
+                            <div class="info-item-text">
+                                <dt class="info-item-label">장비 대여/포함</dt>
+                                <dd class="info-item-value info-item-value-inline">
+                                    <span th:if="${activityInfo.equipmentIncluded != null}"
+                                          th:text="${activityInfo.equipmentIncluded ? '포함' : '미포함'}">포함</span>
+                                    <span th:if="${activityInfo.equipmentIncluded == null}">-</span>
+                                </dd>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="3" width="18" height="18" rx="4"/>
+                                    <path d="M9.5 17V7h3.2a3 3 0 0 1 0 6H9.5"/>
+                                </svg>
+                            </span>
+                            <div class="info-item-text">
+                                <dt class="info-item-label">주차 가능</dt>
+                                <dd class="info-item-value info-item-value-inline">
+                                    <span th:if="${activityInfo.parkingAvailable != null}"
+                                          th:text="${activityInfo.parkingAvailable ? '가능' : '불가'}">가능</span>
+                                    <span th:if="${activityInfo.parkingAvailable == null}">-</span>
+                                </dd>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M6 3h3l2 5-2.5 1.5a12 12 0 0 0 5 5L15 12l5 2v3a2 2 0 0 1-2.2 2A16 16 0 0 1 4 5.2 2 2 0 0 1 6 3Z"/>
+                                </svg>
+                            </span>
+                            <div class="info-item-text">
+                                <dt class="info-item-label">연락처</dt>
+                                <dd class="info-item-value info-item-tel"
+                                    th:text="${activityInfo.contactNumber ?: '-'}">-</dd>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="9"/>
+                                    <path d="M3.6 9h16.8M3.6 15h16.8M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18Z"/>
+                                </svg>
+                            </span>
+                            <div class="info-item-text">
+                                <dt class="info-item-label">홈페이지</dt>
+                                <dd class="info-item-value info-item-value-inline">
+                                    <a th:if="${activityInfo.homepageUrl != null}"
+                                       class="info-item-link"
+                                       th:href="${activityInfo.homepageUrl}"
+                                       target="_blank" rel="noopener">
+                                        공식 홈페이지
+                                        <span class="info-item-link-arrow" aria-hidden="true">↗</span>
+                                    </a>
+                                    <span th:if="${activityInfo.homepageUrl == null}">-</span>
+                                </dd>
+                            </div>
+                        </div>
+                    </dl>
+
+                    <!-- 긴 안내문은 정보 그리드와 분리해 카드 하단에 둔다 -->
+                    <div class="info-note">
+                        <div class="info-note-label">이용 안내</div>
+                        <div class="info-note-text" th:text="${activityInfo.guide ?: '-'}">-</div>
+                    </div>
+                </div>
             </div>
             <!-- 편의시설 -->
             <div th:if="${activityAmenities != null and !activityAmenities.isEmpty()}" class="amenity-row">
@@ -317,51 +568,221 @@
             </div>
 
             <!-- 맛집/음식점 정보 RestaurantInfo -->
-            <div th:if="${restaurantInfo != null}" class="restaurant-info detail-info-block">
+            <div th:if="${restaurantInfo != null}" class="restaurant-info type-info-block">
                 <h2>맛집 정보</h2>
-                <ul>
-                    <li>대표 메뉴: <span th:text="${restaurantInfo.mainMenu ?: '-'}">-</span></li>
-                    <li>가격대: <span th:text="${restaurantInfo.priceRange ?: '-'}">-</span></li>
-                    <li>영업시간: <span th:text="${restaurantInfo.openingHours ?: '-'}">-</span></li>
-                    <li>브레이크 타임: <span th:text="${restaurantInfo.breakTime ?: '-'}">-</span></li>
-                    <li>휴무일: <span th:text="${restaurantInfo.closedDays ?: '-'}">-</span></li>
-                    <li>주차 가능:
-                        <span th:if="${restaurantInfo.parkingAvailable != null}"
-                              th:text="${restaurantInfo.parkingAvailable ? '가능' : '불가'}">가능</span>
-                        <span th:if="${restaurantInfo.parkingAvailable == null}">-</span>
-                    </li>
-                    <li>반려동물 동반:
-                        <span th:if="${restaurantInfo.petAllowed != null}"
-                              th:text="${restaurantInfo.petAllowed ? '가능' : '불가'}">가능</span>
-                        <span th:if="${restaurantInfo.petAllowed == null}">-</span>
-                    </li>
-                    <li>좌석 수: <span
-                            th:text="${restaurantInfo.seatCount != null ? restaurantInfo.seatCount : '-'}">-</span></li>
-                    <li>테이크아웃:
-                        <span th:if="${restaurantInfo.takeoutAvailable != null}"
-                              th:text="${restaurantInfo.takeoutAvailable ? '가능' : '불가'}">가능</span>
-                        <span th:if="${restaurantInfo.takeoutAvailable == null}">-</span>
-                    </li>
-                    <li>배달:
-                        <span th:if="${restaurantInfo.deliveryAvailable != null}"
-                              th:text="${restaurantInfo.deliveryAvailable ? '가능' : '불가'}">가능</span>
-                        <span th:if="${restaurantInfo.deliveryAvailable == null}">-</span>
-                    </li>
-                    <li>예약:
-                        <span th:if="${restaurantInfo.reservation != null}"
-                              th:text="${restaurantInfo.reservation ? '가능' : '불가'}">가능</span>
-                        <span th:if="${restaurantInfo.reservation == null}">-</span>
-                    </li>
-                    <li>연락처: <span th:text="${restaurantInfo.contactNumber ?: '-'}">-</span></li>
-                    <li>홈페이지:
-                        <span th:if="${restaurantInfo.homepageUrl != null}">
-                <a th:href="${restaurantInfo.homepageUrl}" target="_blank"
-                   th:text="${restaurantInfo.homepageUrl}">홈페이지</a>
-            </span>
-                        <span th:if="${restaurantInfo.homepageUrl == null}">-</span>
-                    </li>
-                    <li>기타 안내: <span th:text="${restaurantInfo.etc ?: '-'}">-</span></li>
-                </ul>
+                <div class="info-card">
+                    <dl class="info-grid">
+                        <div class="info-item">
+                            <span class="info-item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M6 3v8a2 2 0 0 0 4 0V3M8 11v10"/>
+                                    <path d="M17 3c-1.7 1.2-2.5 3-2.5 5.5S15.3 12 17 12v9"/>
+                                </svg>
+                            </span>
+                            <div class="info-item-text">
+                                <dt class="info-item-label">대표 메뉴</dt>
+                                <dd class="info-item-value" th:text="${restaurantInfo.mainMenu ?: '-'}">-</dd>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="9"/>
+                                    <path d="M9 8.5h6M9 12h6M12 7.5v9"/>
+                                </svg>
+                            </span>
+                            <div class="info-item-text">
+                                <dt class="info-item-label">가격대</dt>
+                                <dd class="info-item-value" th:text="${restaurantInfo.priceRange ?: '-'}">-</dd>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="9"/>
+                                    <path d="M12 7v5l3 2"/>
+                                </svg>
+                            </span>
+                            <div class="info-item-text">
+                                <dt class="info-item-label">영업시간</dt>
+                                <dd class="info-item-value" th:text="${restaurantInfo.openingHours ?: '-'}">-</dd>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="9"/>
+                                    <path d="M9.5 9v6M14.5 9v6"/>
+                                </svg>
+                            </span>
+                            <div class="info-item-text">
+                                <dt class="info-item-label">브레이크 타임</dt>
+                                <dd class="info-item-value" th:text="${restaurantInfo.breakTime ?: '-'}">-</dd>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="5" width="18" height="16" rx="2"/>
+                                    <path d="M3 10h18M8 3v4M16 3v4"/>
+                                </svg>
+                            </span>
+                            <div class="info-item-text">
+                                <dt class="info-item-label">휴무일</dt>
+                                <dd class="info-item-value" th:text="${restaurantInfo.closedDays ?: '-'}">-</dd>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="3" width="18" height="18" rx="4"/>
+                                    <path d="M9.5 17V7h3.2a3 3 0 0 1 0 6H9.5"/>
+                                </svg>
+                            </span>
+                            <div class="info-item-text">
+                                <dt class="info-item-label">주차 가능</dt>
+                                <dd class="info-item-value info-item-value-inline">
+                                    <span th:if="${restaurantInfo.parkingAvailable != null}"
+                                          th:text="${restaurantInfo.parkingAvailable ? '가능' : '불가'}">가능</span>
+                                    <span th:if="${restaurantInfo.parkingAvailable == null}">-</span>
+                                </dd>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="6.5" cy="9" r="1.8"/>
+                                    <circle cx="10.5" cy="5.5" r="1.8"/>
+                                    <circle cx="15.5" cy="5.5" r="1.8"/>
+                                    <circle cx="18.5" cy="9.5" r="1.8"/>
+                                    <path d="M12.5 11c2.4 0 4.6 2.3 5 4.4.3 1.9-1.1 3.4-3 3.1-1.4-.2-2.6-.5-3.7-.2-1 .3-2.1.6-3.1.4-1.7-.3-2.6-1.9-2-3.5.7-2 2.6-4.2 6.8-4.2Z"/>
+                                </svg>
+                            </span>
+                            <div class="info-item-text">
+                                <dt class="info-item-label">반려동물 동반</dt>
+                                <dd class="info-item-value info-item-value-inline">
+                                    <span th:if="${restaurantInfo.petAllowed != null}"
+                                          th:text="${restaurantInfo.petAllowed ? '가능' : '불가'}">가능</span>
+                                    <span th:if="${restaurantInfo.petAllowed == null}">-</span>
+                                </dd>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M5 11V7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v4"/>
+                                    <path d="M4 11h16v5H4zM6 16v3M18 16v3"/>
+                                </svg>
+                            </span>
+                            <div class="info-item-text">
+                                <dt class="info-item-label">좌석 수</dt>
+                                <dd class="info-item-value"
+                                    th:text="${restaurantInfo.seatCount != null ? restaurantInfo.seatCount : '-'}">-</dd>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M4 8h16l-1.4 12H5.4L4 8Z"/>
+                                    <path d="M8 8V6a4 4 0 0 1 8 0v2"/>
+                                </svg>
+                            </span>
+                            <div class="info-item-text">
+                                <dt class="info-item-label">테이크아웃</dt>
+                                <dd class="info-item-value info-item-value-inline">
+                                    <span th:if="${restaurantInfo.takeoutAvailable != null}"
+                                          th:text="${restaurantInfo.takeoutAvailable ? '가능' : '불가'}">가능</span>
+                                    <span th:if="${restaurantInfo.takeoutAvailable == null}">-</span>
+                                </dd>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M3 7h10v9H3zM13 10h4l3 3v3h-7z"/>
+                                    <circle cx="7" cy="18" r="1.8"/>
+                                    <circle cx="17" cy="18" r="1.8"/>
+                                </svg>
+                            </span>
+                            <div class="info-item-text">
+                                <dt class="info-item-label">배달</dt>
+                                <dd class="info-item-value info-item-value-inline">
+                                    <span th:if="${restaurantInfo.deliveryAvailable != null}"
+                                          th:text="${restaurantInfo.deliveryAvailable ? '가능' : '불가'}">가능</span>
+                                    <span th:if="${restaurantInfo.deliveryAvailable == null}">-</span>
+                                </dd>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="5" width="18" height="16" rx="2"/>
+                                    <path d="M3 10h18M8 3v4M16 3v4M9 15l2 2 4-4"/>
+                                </svg>
+                            </span>
+                            <div class="info-item-text">
+                                <dt class="info-item-label">예약</dt>
+                                <dd class="info-item-value info-item-value-inline">
+                                    <span th:if="${restaurantInfo.reservation != null}"
+                                          th:text="${restaurantInfo.reservation ? '가능' : '불가'}">가능</span>
+                                    <span th:if="${restaurantInfo.reservation == null}">-</span>
+                                </dd>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M6 3h3l2 5-2.5 1.5a12 12 0 0 0 5 5L15 12l5 2v3a2 2 0 0 1-2.2 2A16 16 0 0 1 4 5.2 2 2 0 0 1 6 3Z"/>
+                                </svg>
+                            </span>
+                            <div class="info-item-text">
+                                <dt class="info-item-label">연락처</dt>
+                                <dd class="info-item-value info-item-tel"
+                                    th:text="${restaurantInfo.contactNumber ?: '-'}">-</dd>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="9"/>
+                                    <path d="M3.6 9h16.8M3.6 15h16.8M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18Z"/>
+                                </svg>
+                            </span>
+                            <div class="info-item-text">
+                                <dt class="info-item-label">홈페이지</dt>
+                                <dd class="info-item-value info-item-value-inline">
+                                    <a th:if="${restaurantInfo.homepageUrl != null}"
+                                       class="info-item-link"
+                                       th:href="${restaurantInfo.homepageUrl}"
+                                       target="_blank" rel="noopener">
+                                        공식 홈페이지
+                                        <span class="info-item-link-arrow" aria-hidden="true">↗</span>
+                                    </a>
+                                    <span th:if="${restaurantInfo.homepageUrl == null}">-</span>
+                                </dd>
+                            </div>
+                        </div>
+                    </dl>
+
+                    <!-- 긴 안내문은 정보 그리드와 분리해 카드 하단에 둔다 -->
+                    <div class="info-note">
+                        <div class="info-note-label">기타 안내</div>
+                        <div class="info-note-text" th:text="${restaurantInfo.etc ?: '-'}">-</div>
+                    </div>
+                </div>
             </div>
             <!-- 편의시설 -->
             <div th:if="${restaurantAmenities != null and !restaurantAmenities.isEmpty()}" class="amenity-row">
@@ -379,26 +800,109 @@
             </div>
 
             <!-- 상점/쇼핑 정보 ShopInfo -->
-            <div th:if="${shopInfo != null}" class="shop-info detail-info-block">
+            <div th:if="${shopInfo != null}" class="shop-info type-info-block">
                 <h2>상점 정보</h2>
-                <ul>
-                    <li>주요 상품: <span th:text="${shopInfo.mainProducts ?: '-'}">-</span></li>
-                    <li>영업시간: <span th:text="${shopInfo.openingHours ?: '-'}">-</span></li>
-                    <li>휴점일: <span th:text="${shopInfo.closedDays ?: '-'}">-</span></li>
-                    <li>주차 가능:
-                        <span th:if="${shopInfo.parkingAvailable != null}"
-                              th:text="${shopInfo.parkingAvailable ? '가능' : '불가'}">가능</span>
-                        <span th:if="${shopInfo.parkingAvailable == null}">-</span>
-                    </li>
-                    <li>연락처: <span th:text="${shopInfo.contactNumber ?: '-'}">-</span></li>
-                    <li>홈페이지:
-                        <span th:if="${shopInfo.homepageUrl != null}">
-                <a th:href="${shopInfo.homepageUrl}" target="_blank" th:text="${shopInfo.homepageUrl}">홈페이지</a>
-            </span>
-                        <span th:if="${shopInfo.homepageUrl == null}">-</span>
-                    </li>
-                    <li>기타 안내: <span th:text="${shopInfo.guide ?: '-'}">-</span></li>
-                </ul>
+                <div class="info-card">
+                    <dl class="info-grid">
+                        <div class="info-item">
+                            <span class="info-item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M4 8h16l-1.4 12H5.4L4 8Z"/>
+                                    <path d="M8 8V6a4 4 0 0 1 8 0v2"/>
+                                </svg>
+                            </span>
+                            <div class="info-item-text">
+                                <dt class="info-item-label">주요 상품</dt>
+                                <dd class="info-item-value" th:text="${shopInfo.mainProducts ?: '-'}">-</dd>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="9"/>
+                                    <path d="M12 7v5l3 2"/>
+                                </svg>
+                            </span>
+                            <div class="info-item-text">
+                                <dt class="info-item-label">영업시간</dt>
+                                <dd class="info-item-value" th:text="${shopInfo.openingHours ?: '-'}">-</dd>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="5" width="18" height="16" rx="2"/>
+                                    <path d="M3 10h18M8 3v4M16 3v4"/>
+                                </svg>
+                            </span>
+                            <div class="info-item-text">
+                                <dt class="info-item-label">휴점일</dt>
+                                <dd class="info-item-value" th:text="${shopInfo.closedDays ?: '-'}">-</dd>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="3" width="18" height="18" rx="4"/>
+                                    <path d="M9.5 17V7h3.2a3 3 0 0 1 0 6H9.5"/>
+                                </svg>
+                            </span>
+                            <div class="info-item-text">
+                                <dt class="info-item-label">주차 가능</dt>
+                                <dd class="info-item-value info-item-value-inline">
+                                    <span th:if="${shopInfo.parkingAvailable != null}"
+                                          th:text="${shopInfo.parkingAvailable ? '가능' : '불가'}">가능</span>
+                                    <span th:if="${shopInfo.parkingAvailable == null}">-</span>
+                                </dd>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M6 3h3l2 5-2.5 1.5a12 12 0 0 0 5 5L15 12l5 2v3a2 2 0 0 1-2.2 2A16 16 0 0 1 4 5.2 2 2 0 0 1 6 3Z"/>
+                                </svg>
+                            </span>
+                            <div class="info-item-text">
+                                <dt class="info-item-label">연락처</dt>
+                                <dd class="info-item-value info-item-tel"
+                                    th:text="${shopInfo.contactNumber ?: '-'}">-</dd>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-item-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="9"/>
+                                    <path d="M3.6 9h16.8M3.6 15h16.8M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18Z"/>
+                                </svg>
+                            </span>
+                            <div class="info-item-text">
+                                <dt class="info-item-label">홈페이지</dt>
+                                <dd class="info-item-value info-item-value-inline">
+                                    <a th:if="${shopInfo.homepageUrl != null}"
+                                       class="info-item-link"
+                                       th:href="${shopInfo.homepageUrl}"
+                                       target="_blank" rel="noopener">
+                                        공식 홈페이지
+                                        <span class="info-item-link-arrow" aria-hidden="true">↗</span>
+                                    </a>
+                                    <span th:if="${shopInfo.homepageUrl == null}">-</span>
+                                </dd>
+                            </div>
+                        </div>
+                    </dl>
+
+                    <!-- 긴 안내문은 정보 그리드와 분리해 카드 하단에 둔다 -->
+                    <div class="info-note">
+                        <div class="info-note-label">기타 안내</div>
+                        <div class="info-note-text" th:text="${shopInfo.guide ?: '-'}">-</div>
+                    </div>
+                </div>
             </div>
             <!-- 편의시설 -->
             <div th:if="${shopAmenities != null and !shopAmenities.isEmpty()}" class="amenity-row">

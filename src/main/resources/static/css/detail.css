@@ -481,8 +481,9 @@ body {
     overflow-wrap: break-word;
     !* 필요시 min-width, width 등 조정 *!
 }*/
-/* ───── 관광명소 정보 카드 (2열 정보 그리드) ───── */
-.attraction-info h2 {
+/* ───── 타입별 상세정보 카드 (2열 정보 그리드) ─────
+   관광명소에서 시작한 디자인이며 숙소/맛집·카페/액티비티/상점이 함께 쓴다. */
+.type-info-block h2 {
     margin-bottom: 17px;
     padding-bottom: 7px;
     border-bottom: 2px solid #e3e6ef;
@@ -492,7 +493,7 @@ body {
     letter-spacing: 0.01em;
 }
 
-.attraction-info .info-card {
+.type-info-block .info-card {
     margin-bottom: 38px;
     padding: 18px 22px;
     border: 1px solid #e6e9ee;
@@ -500,7 +501,7 @@ body {
     background: #fff;
 }
 
-.attraction-info .info-grid {
+.type-info-block .info-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 2px 24px;
@@ -508,7 +509,7 @@ body {
 }
 
 /* 아이콘 + 라벨 + 값을 하나의 컴팩트한 블록으로 (표처럼 보이지 않게 구분선 없음) */
-.attraction-info .info-item {
+.type-info-block .info-item {
     display: flex;
     align-items: flex-start;
     gap: 8px;
@@ -516,7 +517,7 @@ body {
     padding: 8px 0;
 }
 
-.attraction-info .info-item-icon {
+.type-info-block .info-item-icon {
     display: flex;
     flex: 0 0 auto;
     width: 17px;
@@ -527,16 +528,16 @@ body {
     color: #6b7686;
 }
 
-.attraction-info .info-item-icon svg {
+.type-info-block .info-item-icon svg {
     width: 16px;
     height: 16px;
 }
 
-.attraction-info .info-item-text {
+.type-info-block .info-item-text {
     min-width: 0;
 }
 
-.attraction-info .info-item-label {
+.type-info-block .info-item-label {
     margin: 0;
     color: #6b7686;
     font-size: 0.78rem;
@@ -545,7 +546,7 @@ body {
     letter-spacing: 0.01em;
 }
 
-.attraction-info .info-item-value {
+.type-info-block .info-item-value {
     margin: 1px 0 0;
     overflow-wrap: break-word;
     color: #27303c;
@@ -556,17 +557,17 @@ body {
 }
 
 /* 값이 여러 요소로 구성된 항목(주차/홈페이지)은 소스 들여쓰기가 줄바꿈으로 보이면 안 된다 */
-.attraction-info .info-item-value-inline {
+.type-info-block .info-item-value-inline {
     white-space: normal;
 }
 
-.attraction-info .info-item-tel {
+.type-info-block .info-item-tel {
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.01em;
 }
 
 /* 긴 URL 대신 가벼운 강조 텍스트 링크 */
-.attraction-info .info-item-link {
+.type-info-block .info-item-link {
     display: inline-flex;
     align-items: center;
     gap: 3px;
@@ -576,25 +577,25 @@ body {
     text-decoration: none;
 }
 
-.attraction-info .info-item-link:hover,
-.attraction-info .info-item-link:focus-visible {
+.type-info-block .info-item-link:hover,
+.type-info-block .info-item-link:focus-visible {
     text-decoration: underline;
     text-underline-offset: 2px;
 }
 
-.attraction-info .info-item-link-arrow {
+.type-info-block .info-item-link-arrow {
     font-size: 0.85em;
 }
 
-/* 관람 안내: 일반 정보와 분리된 하단 안내 영역 */
-.attraction-info .info-note {
+/* 긴 안내문: 일반 정보와 분리된 카드 하단 가로 전체 영역 */
+.type-info-block .info-note {
     margin-top: 20px;
     padding: 16px 18px;
     border-radius: 10px;
     background: #f8f9fb;
 }
 
-.attraction-info .info-note-label {
+.type-info-block .info-note-label {
     margin-bottom: 6px;
     color: #6b7686;
     font-size: 0.8rem;
@@ -602,7 +603,7 @@ body {
     letter-spacing: 0.01em;
 }
 
-.attraction-info .info-note-text {
+.type-info-block .info-note-text {
     overflow-wrap: break-word;
     color: #3b4653;
     font-size: 0.92rem;
@@ -610,16 +611,16 @@ body {
 }
 
 @media (max-width: 720px) {
-    .attraction-info .info-card {
+    .type-info-block .info-card {
         padding: 16px 15px;
     }
 
-    .attraction-info .info-grid {
+    .type-info-block .info-grid {
         grid-template-columns: minmax(0, 1fr);
         gap: 0;
     }
 
-    .attraction-info .info-note {
+    .type-info-block .info-note {
         margin-top: 16px;
         padding: 14px 14px;
     }

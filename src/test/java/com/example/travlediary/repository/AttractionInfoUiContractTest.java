@@ -48,12 +48,13 @@ class AttractionInfoUiContractTest {
         String css = readFile("src/main/resources/static/css/detail.css");
         String live = stripComments(css);
 
+        // 카드 스타일은 타입별 정보 블록이 함께 쓰는 공통 class 로 정의된다
         assertThat(live)
-                .contains(".attraction-info .info-card")
+                .contains(".type-info-block .info-card")
                 .contains("grid-template-columns: repeat(2, minmax(0, 1fr))")
-                .contains(".attraction-info .info-item-icon")
-                .contains(".attraction-info .info-item-link")
-                .contains(".attraction-info .info-note");
+                .contains(".type-info-block .info-item-icon")
+                .contains(".type-info-block .info-item-link")
+                .contains(".type-info-block .info-note");
         // 모바일 1열 전환
         String mobile = live.substring(live.indexOf("@media (max-width: 720px)"));
         assertThat(mobile).contains("grid-template-columns: minmax(0, 1fr)");
@@ -69,7 +70,7 @@ class AttractionInfoUiContractTest {
 
     private String attractionBlock() throws IOException {
         String detail = readFile("src/main/resources/templates/destination/detail.html");
-        int start = detail.indexOf("class=\"attraction-info\"");
+        int start = detail.indexOf("class=\"attraction-info type-info-block\"");
         int end = detail.indexOf("<!-- 편의시설 -->", start);
         assertThat(start).isGreaterThan(0);
         assertThat(end).isGreaterThan(start);
