@@ -3,13 +3,14 @@
       th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'amenities')}">
 <th:block th:fragment="headFragment">
   <link rel="stylesheet" href="/css/admin-compact-lists.css">
+  <link rel="stylesheet" href="/css/admin-amenity-list.css">
 </th:block>
 <th:block th:fragment="body">
   <section class="admin-page-section admin-amenity-list-page">
     <header class="admin-page-header">
       <div class="admin-page-heading">
         <h1 class="admin-page-title">편의시설 관리</h1>
-        <p class="admin-page-description">여행지 유형별 편의시설 코드와 번역을 관리합니다.</p>
+        <p class="admin-page-description">여행지 유형별 편의시설과 아이콘, 번역을 관리합니다.</p>
       </div>
       <div class="admin-page-actions">
         <a th:href="@{/admin/amenities/create}" class="admin-btn is-primary">+ 새 편의시설 등록</a>
@@ -21,19 +22,52 @@
         <table class="admin-table admin-amenity-table">
           <thead>
           <tr>
-            <th>ID</th>
-            <th>코드</th>
+            <th class="admin-amenity-icon-cell">아이콘</th>
+            <th>편의시설</th>
+            <th>내부 코드</th>
+            <th>적용 대상</th>
             <th>관리</th>
           </tr>
           </thead>
           <tbody>
           <tr th:each="a : ${amenities}">
-            <td class="admin-table-number" th:text="${a.id}"></td>
-            <td th:text="${a.code}"></td>
+            <td class="admin-amenity-icon-cell">
+              <span class="admin-amenity-icon-frame">
+                <!-- iconUrl 이 있으면 그대로, 없으면(기존 데이터) code 기반 .png 로 대체한다. -->
+                <img class="admin-amenity-icon"
+                     th:src="${#strings.isEmpty(a.iconUrl)}
+                             ? @{'/uploads/icons/amenities/' + ${#strings.toLowerCase(a.code)} + '.png'}
+                             : @{${a.iconUrl}}"
+                     th:alt="${a.name} ?: ${a.code}" loading="lazy">
+              </span>
+            </td>
+            <td>
+              <span class="admin-amenity-name" th:if="${!#strings.isEmpty(a.name)}"
+                    th:text="${a.name}">와이파이</span>
+              <span class="admin-amenity-name is-missing" th:if="${#strings.isEmpty(a.name)}">
+                이름 미등록
+              </span>
+            </td>
+            <td><code class="admin-amenity-code" th:text="${a.code}">WIFI</code></td>
+            <td>
+              <div class="admin-amenity-badges"
+                   th:with="tag=${amenityTypeTags.get(a.id)}">
+                <span class="admin-amenity-badge" th:if="${#strings.isEmpty(tag)}">미분류</span>
+                <span class="admin-amenity-badge is-type"
+                      th:unless="${#strings.isEmpty(tag)}"
+                      th:each="type : ${#strings.arraySplit(tag, ' ')}"
+                      th:text="${destinationTypeLabelsByName.get(type)} ?: ${type}">숙소</span>
+              </div>
+            </td>
             <td class="admin-table-actions">
+              <a th:href="@{|/admin/amenities/${a.id}/edit|}"
+                 class="admin-btn is-small is-primary">수정</a>
               <a th:href="@{|/admin/amenities/${a.id}/translations|}"
                  class="admin-btn is-small">번역 보기</a>
             </td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(amenities)}">
+            <td colspan="5" class="admin-table-empty">등록된 편의시설이 없습니다.</td>
           </tr>
           </tbody>
         </table>

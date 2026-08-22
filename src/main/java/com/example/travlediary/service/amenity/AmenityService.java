@@ -16,9 +16,11 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -38,6 +40,8 @@ public class AmenityService {
     private static final Pattern AMENITY_CODE = Pattern.compile("^[A-Z0-9_]{2,50}$");
     /** amenity_translations.name 은 varchar(100) */
     private static final int MAX_TRANSLATION_NAME_LENGTH = 100;
+    /** icon_url 이 비어 있는 기존 데이터의 대체 경로 (상세 페이지 fallback 과 같은 규칙) */
+    private static final String LEGACY_ICON_URL_PREFIX = "/uploads/icons/amenities/";
 
     // 관광지용 Amenity DTO 반환
     public List<AmenityDto> getAttractionAmenities(Long destinationId) {
@@ -372,6 +376,154 @@ public class AmenityService {
         return List.copyOf(types);
     }
 
+    /** 수정 화면 복원용. code / 4개 언어 / 적용 대상을 폼에 담아 돌려준다. */
+    public AmenityForm getAmenityForm(Integer id) {
+        Amenity amenity = requireAmenity(id);
+
+        AmenityForm form = new AmenityForm();
+        form.setId(amenity.getId());
+        form.setCode(amenity.getCode());
+
+        Map<String, String> names = new LinkedHashMap<>();
+        List<AmenityTranslation> translations = amenityMapper.findTranslationsByAmenityId(id);
+        if (translations != null) {
+            for (AmenityTranslation translation : translations) {
+                if (translation != null && translation.getLanguageCode() != null) {
+                    names.put(translation.getLanguageCode(), translation.getName());
+                }
+            }
+        }
+        form.setNameKo(names.get("ko"));
+        form.setNameEn(names.get("en"));
+        form.setNameJa(names.get("ja"));
+        form.setNameZh(names.get("zh"));
+
+        List<DestinationType> types = new ArrayList<>();
+        List<AmenityDestinationType> mappings =
+                amenityMapper.findAmenityDestinationTypesByAmenityId(id);
+        if (mappings != null) {
+            for (AmenityDestinationType mapping : mappings) {
+                if (mapping != null && mapping.getDestinationType() != null) {
+                    types.add(DestinationType.valueOf(mapping.getDestinationType()));
+                }
+            }
+        }
+        form.setDestinationTypes(types);
+        return form;
+    }
+
+    /** 수정 화면 아이콘 미리보기 경로. icon_url 이 없는 기존 데이터는 code 기반 .png 로 대체한다. */
+    public String getAmenityIconUrl(Integer id) {
+        Amenity amenity = requireAmenity(id);
+        if (amenity.getIconUrl() != null && !amenity.getIconUrl().isBlank()) {
+            return amenity.getIconUrl();
+        }
+        return LEGACY_ICON_URL_PREFIX + amenity.getCode().toLowerCase(Locale.ROOT) + ".png";
+    }
+
+    /**
+     * 관리자 편의시설 수정.
+     * code 는 아이콘 파일명과 연결된 식별자이므로 절대 갱신하지 않는다.
+     * 아이콘은 파일을 새로 고른 경우에만 교체하며, 커밋된 뒤에야 옛 파일을 정리한다.
+     */
+    @Transactional
+    public void updateAmenity(AmenityForm form) {
+        if (form == null || form.getId() == null) {
+            throw new AmenityValidationException("form", "수정할 편의시설을 찾을 수 없습니다.");
+        }
+
+        Amenity amenity = requireAmenity(form.getId());
+        Integer amenityId = amenity.getId();
+        // 폼으로 넘어온 code 는 신뢰하지 않고 저장된 값만 쓴다.
+        String code = amenity.getCode();
+
+        String nameKo = requiredName("nameKo", form.getNameKo(), "한국어 이름을 입력해 주세요.");
+        String nameEn = optionalName("nameEn", form.getNameEn());
+        String nameJa = optionalName("nameJa", form.getNameJa());
+        String nameZh = optionalName("nameZh", form.getNameZh());
+        List<DestinationType> types = requiredDestinationTypes(form.getDestinationTypes());
+
+        MultipartFile icon = form.getIcon();
+        boolean replacingIcon = icon != null && !icon.isEmpty();
+        if (replacingIcon) {
+            // DB 를 건드리기 전에 잘못된 업로드를 먼저 걸러낸다.
+            fileUploadService.validateAmenityIcon(icon);
+        }
+
+        upsertTranslation(amenityId, "ko", nameKo);
+        upsertTranslation(amenityId, "en", nameEn);
+        upsertTranslation(amenityId, "ja", nameJa);
+        upsertTranslation(amenityId, "zh", nameZh);
+
+        // 복합 PK 뿐이라 잃을 정보가 없다. 전체 삭제 후 선택값을 다시 넣는다.
+        amenityMapper.deleteAmenityDestinationTypesByAmenityId(amenityId);
+        for (DestinationType type : types) {
+            amenityMapper.insertAmenityDestinationType(amenityId, type.name());
+        }
+
+        if (replacingIcon) {
+            FileUploadService.AmenityIconReplacement replacement =
+                    fileUploadService.replaceAmenityIcon(code, icon);
+            registerIconReplacementCleanup(replacement);
+            amenityMapper.updateAmenityIconUrl(amenityId, replacement.iconUrl());
+        }
+    }
+
+    private Amenity requireAmenity(Integer id) {
+        Amenity amenity = id == null ? null : amenityMapper.selectAmenityById(id);
+        if (amenity == null) {
+            throw new AmenityValidationException("id", "수정할 편의시설을 찾을 수 없습니다.");
+        }
+        return amenity;
+    }
+
+    /** 값이 있으면 있으면 UPDATE / 없으면 INSERT, 값을 비웠으면 DELETE. */
+    private void upsertTranslation(Integer amenityId, String languageCode, String name) {
+        AmenityTranslation existing = amenityMapper.findTranslation(amenityId, languageCode);
+        if (name == null) {
+            if (existing != null) {
+                amenityMapper.deleteAmenityTranslation(amenityId, languageCode);
+            }
+            return;
+        }
+
+        AmenityTranslation translation = new AmenityTranslation();
+        translation.setAmenityId(amenityId);
+        translation.setLanguageCode(languageCode);
+        translation.setName(name);
+        if (existing == null) {
+            amenityMapper.insertAmenityTranslation(translation);
+        } else {
+            amenityMapper.updateAmenityTranslation(translation);
+        }
+    }
+
+    /**
+     * 커밋되면 백업과 옛 확장자 파일을 정리하고, 롤백되면 새 파일을 지우고 기존 아이콘을 되돌린다.
+     * 기존 운영 아이콘은 커밋이 확정되기 전까지 삭제하지 않는다.
+     */
+    private void registerIconReplacementCleanup(
+            FileUploadService.AmenityIconReplacement replacement) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                try {
+                    if (status == TransactionSynchronization.STATUS_COMMITTED) {
+                        fileUploadService.commitAmenityIconReplacement(replacement);
+                    } else {
+                        fileUploadService.rollbackAmenityIconReplacement(replacement);
+                    }
+                } catch (RuntimeException cleanupFailure) {
+                    log.warn("편의시설 아이콘 교체 뒷정리에 실패했습니다. (원인: {})",
+                            cleanupFailure.getClass().getSimpleName());
+                }
+            }
+        });
+    }
+
     private void insertTranslation(Integer amenityId, String languageCode, String name) {
         if (name == null) {
             return;
@@ -413,6 +565,12 @@ public class AmenityService {
         Amenity amenity = new Amenity();
         amenity.setCode(code);
         amenityMapper.insertAmenity(amenity);
+    }
+
+    /** 관리자 목록용 한 줄 목록. ko 번역이 없는 편의시설도 그대로 포함된다. */
+    public List<AmenityDto> getAdminAmenityRows() {
+        List<AmenityDto> rows = amenityMapper.findAdminAmenityRows();
+        return rows == null ? List.of() : rows;
     }
 
     // === Amenity 전체 리스트 ===

@@ -1,0 +1,110 @@
+/* 관리자 편의시설 목록 전용 스타일 (compact 테이블 유지) */
+
+.admin-amenity-table td {
+    vertical-align: middle;
+}
+
+.admin-amenity-table tbody tr:hover {
+    background: #fafbfd;
+}
+
+/* 아이콘 열은 고정 폭으로 두어 이름 열이 흔들리지 않게 한다 */
+.admin-amenity-table .admin-amenity-icon-cell {
+    width: 62px;
+    min-width: 62px;
+    text-align: center;
+}
+
+.admin-amenity-icon-frame {
+    display: inline-flex;
+    width: 40px;
+    height: 40px;
+    align-items: center;
+    justify-content: center;
+    /* 투명 배경 SVG/PNG 도 형태가 보이도록 옅은 바탕을 깐다 */
+    background: #f7f8fb;
+    border: 1px solid #e6e9f0;
+    border-radius: 9px;
+}
+
+.admin-amenity-icon {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+}
+
+.admin-amenity-name {
+    color: #27303c;
+    font-size: 0.93rem;
+    font-weight: 600;
+}
+
+.admin-amenity-name.is-missing {
+    color: #a5adba;
+    font-weight: 500;
+}
+
+/* 코드는 이름보다 한 단계 낮은 위계로 */
+.admin-amenity-code {
+    display: inline-block;
+    padding: 2px 7px;
+    color: #6b7686;
+    background: #f4f5f8;
+    border-radius: 6px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.78rem;
+    letter-spacing: 0.02em;
+}
+
+.admin-amenity-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+/* 타입별로 색을 나누지 않고 같은 계열 badge 로 통일한다 */
+.admin-amenity-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    color: #7b8493;
+    background: #f4f5f8;
+    border: 1px solid #e6e9f0;
+    border-radius: 999px;
+    font-size: 0.76rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.admin-amenity-badge.is-type {
+    color: #46578a;
+    background: #eef1fb;
+    border-color: #dde3f6;
+}
+
+.admin-amenity-table .admin-table-actions {
+    width: 150px;
+    min-width: 150px;
+    white-space: nowrap;
+}
+
+.admin-amenity-table .admin-table-actions .admin-btn.is-small + .admin-btn.is-small {
+    margin-left: 6px;
+}
+
+@media (max-width: 720px) {
+    .admin-amenity-table .admin-amenity-icon-cell {
+        width: 54px;
+        min-width: 54px;
+    }
+
+    .admin-amenity-icon-frame {
+        width: 36px;
+        height: 36px;
+    }
+
+    .admin-amenity-icon {
+        width: 28px;
+        height: 28px;
+    }
+}

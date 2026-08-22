@@ -190,6 +190,19 @@
         UPDATE amenities SET icon_url = #{iconUrl} WHERE id = #{id}
     </update>
 
+    <!--
+      관리자 목록 전용.
+      ko 번역을 LEFT JOIN 하므로 번역이 없는 편의시설도 목록에서 빠지지 않는다.
+      정렬은 기존 findAll 과 동일하게 id 오름차순.
+    -->
+    <select id="findAdminAmenityRows" resultType="com.example.travlediary.dto.AmenityDto">
+        SELECT a.id, a.code, a.icon_url, t.name
+        FROM amenities a
+                 LEFT JOIN amenity_translations t
+                           ON t.amenity_id = a.id AND t.language_code = 'ko'
+        ORDER BY a.id ASC
+    </select>
+
     <!-- code UNIQUE 중복 사전 검사 -->
     <select id="countByCode" resultType="int">
         SELECT COUNT(*) FROM amenities WHERE code = #{code}

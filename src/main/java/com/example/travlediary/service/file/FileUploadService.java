@@ -22,10 +22,12 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.util.Iterator;
 import java.util.List;
@@ -631,6 +633,113 @@ public class FileUploadService {
         return AMENITY_ICON_URL_PREFIX + savedName;
     }
 
+    /**
+     * 기존 편의시설 아이콘 교체 준비.
+     * 임시 파일에 먼저 쓰고, 같은 이름의 기존 파일은 백업해 둔 뒤 원자적으로 바꿔치기한다.
+     * 호출자는 트랜잭션 결과에 따라 {@link #commitAmenityIconReplacement}
+     * 또는 {@link #rollbackAmenityIconReplacement} 를 반드시 불러야 한다.
+     */
+    public AmenityIconReplacement replaceAmenityIcon(String code, MultipartFile file) {
+        String extension = verifyAmenityIcon(file);
+        String savedName = amenityIconFileName(code, extension);
+        Path iconDirectory = resolveAmenityIconDirectory(true);
+        Path destination = iconDirectory.resolve(savedName).normalize();
+        ensureContained(iconDirectory, destination);
+
+        // 1) 새 내용을 임시 파일에 먼저 기록한다. 여기서 실패해도 기존 아이콘은 그대로다.
+        Path temporary = iconDirectory.resolve(savedName + ".tmp-" + UUID.randomUUID()).normalize();
+        ensureContained(iconDirectory, temporary);
+        try (InputStream input = file.getInputStream();
+             OutputStream output = Files.newOutputStream(
+                     temporary, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)) {
+            input.transferTo(output);
+        } catch (IOException exception) {
+            deleteAmenityIconPathQuietly(temporary);
+            throw new IllegalStateException("편의시설 아이콘 파일 저장에 실패했습니다.", exception);
+        }
+
+        // 2) 같은 이름의 기존 파일은 지우지 않고 백업해 둔다(롤백 시 되돌린다).
+        Path backup = null;
+        try {
+            if (Files.exists(destination)) {
+                backup = iconDirectory.resolve(savedName + ".bak-" + UUID.randomUUID()).normalize();
+                ensureContained(iconDirectory, backup);
+                Files.move(destination, backup, StandardCopyOption.ATOMIC_MOVE);
+            }
+            // 3) 임시 파일을 최종 이름으로 옮긴다.
+            moveIntoPlace(temporary, destination);
+        } catch (IOException exception) {
+            deleteAmenityIconPathQuietly(temporary);
+            restoreAmenityIconBackup(backup, destination);
+            throw new IllegalStateException("편의시설 아이콘 파일 교체에 실패했습니다.", exception);
+        }
+        return new AmenityIconReplacement(
+                AMENITY_ICON_URL_PREFIX + savedName, code, extension, destination, backup);
+    }
+
+    /** 교체 확정. 백업과 이전 확장자로 남아 있던 아이콘을 정리한다. */
+    public void commitAmenityIconReplacement(AmenityIconReplacement replacement) {
+        if (replacement == null) {
+            return;
+        }
+        deleteAmenityIconPathQuietly(replacement.backup());
+
+        Path iconDirectory = resolveAmenityIconDirectory(false);
+        if (iconDirectory == null) {
+            return;
+        }
+        for (String extension : AMENITY_ICON_EXTENSIONS) {
+            if (extension.equals(replacement.extension())) {
+                continue;
+            }
+            Path stale = iconDirectory
+                    .resolve(amenityIconFileName(replacement.code(), extension)).normalize();
+            ensureContained(iconDirectory, stale);
+            deleteAmenityIconPathQuietly(stale);
+        }
+    }
+
+    /** 교체 취소. 새로 쓴 파일을 지우고 백업해 둔 기존 아이콘을 되돌린다. */
+    public void rollbackAmenityIconReplacement(AmenityIconReplacement replacement) {
+        if (replacement == null) {
+            return;
+        }
+        deleteAmenityIconPathQuietly(replacement.target());
+        restoreAmenityIconBackup(replacement.backup(), replacement.target());
+    }
+
+    private void moveIntoPlace(Path source, Path destination) throws IOException {
+        try {
+            Files.move(source, destination,
+                    StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+        } catch (AtomicMoveNotSupportedException unsupported) {
+            Files.move(source, destination, StandardCopyOption.REPLACE_EXISTING);
+        }
+    }
+
+    private void restoreAmenityIconBackup(Path backup, Path destination) {
+        if (backup == null) {
+            return;
+        }
+        try {
+            if (Files.exists(backup)) {
+                moveIntoPlace(backup, destination);
+            }
+        } catch (IOException ignored) {
+            // 되돌리기까지 실패하면 백업 파일은 남겨 둔다. 원본 실패를 우선 전달한다.
+        }
+    }
+
+    /**
+     * 아이콘 교체 진행 상태. 트랜잭션 결과에 따라 commit/rollback 에 그대로 넘긴다.
+     *
+     * @param iconUrl   새 아이콘 웹 경로
+     * @param backup    같은 이름의 기존 파일 백업 (없으면 null)
+     */
+    public record AmenityIconReplacement(
+            String iconUrl, String code, String extension, Path target, Path backup) {
+    }
+
     /** 롤백 정리용. 이번 등록에서 만든 아이콘만 지운다(확장자는 포맷마다 다르다). */
     public boolean deleteAmenityIcon(String code) {
         Path iconDirectory = resolveAmenityIconDirectory(false);
@@ -736,6 +845,9 @@ public class FileUploadService {
     }
 
     private void deleteAmenityIconPathQuietly(Path path) {
+        if (path == null) {
+            return;
+        }
         try {
             Files.deleteIfExists(path);
         } catch (IOException ignored) {

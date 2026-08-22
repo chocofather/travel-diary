@@ -263,6 +263,91 @@ class FileUploadServiceAmenityIconTest {
     }
 
     @Test
+    void replaceSwapsTheIconAndCleansUpTheOldExtensionOnlyAfterCommit() throws Exception {
+        service().saveAmenityIcon("SLIPPERS", pngFile("icon.png"));
+        Path oldIcon = uploadRoot.resolve("icons/amenities/slippers.png");
+        byte[] newContent = svgBytes("<path d=\"M2 2 L20 20\"/>");
+
+        FileUploadService.AmenityIconReplacement replacement =
+                service().replaceAmenityIcon("SLIPPERS", svgFile(newContent));
+
+        assertThat(replacement.iconUrl()).isEqualTo("/uploads/icons/amenities/slippers.svg");
+        Path newIcon = uploadRoot.resolve("icons/amenities/slippers.svg");
+        assertThat(Files.readAllBytes(newIcon)).isEqualTo(newContent);
+        // 커밋 전에는 기존 아이콘을 지우지 않는다
+        assertThat(oldIcon).isRegularFile();
+
+        service().commitAmenityIconReplacement(replacement);
+        assertThat(oldIcon).doesNotExist();
+        assertThat(storedFiles()).containsExactly(newIcon);
+    }
+
+    @Test
+    void replaceKeepsTheSameExtensionAndRestoresTheOldFileOnRollback() throws Exception {
+        service().saveAmenityIcon("SLIPPERS", pngFile("icon.png"));
+        Path icon = uploadRoot.resolve("icons/amenities/slippers.png");
+        byte[] original = Files.readAllBytes(icon);
+        byte[] replacementBytes = imageBytes("png", 16);
+
+        FileUploadService.AmenityIconReplacement replacement = service().replaceAmenityIcon(
+                "SLIPPERS", file("new.png", "image/png", replacementBytes));
+
+        assertThat(replacement.iconUrl()).isEqualTo("/uploads/icons/amenities/slippers.png");
+        assertThat(Files.readAllBytes(icon)).isEqualTo(replacementBytes);
+
+        // 롤백하면 새 파일이 사라지고 기존 아이콘이 되살아난다
+        service().rollbackAmenityIconReplacement(replacement);
+        assertThat(icon).isRegularFile();
+        assertThat(Files.readAllBytes(icon)).isEqualTo(original);
+        assertThat(storedFiles()).containsExactly(icon);
+    }
+
+    @Test
+    void rollbackAfterAnExtensionChangeLeavesTheOriginalIconInPlace() throws Exception {
+        service().saveAmenityIcon("SLIPPERS", pngFile("icon.png"));
+        Path oldIcon = uploadRoot.resolve("icons/amenities/slippers.png");
+        byte[] original = Files.readAllBytes(oldIcon);
+
+        FileUploadService.AmenityIconReplacement replacement =
+                service().replaceAmenityIcon("SLIPPERS", svgFile(svgBytes("<path d=\"M0 0\"/>")));
+        service().rollbackAmenityIconReplacement(replacement);
+
+        assertThat(uploadRoot.resolve("icons/amenities/slippers.svg")).doesNotExist();
+        assertThat(Files.readAllBytes(oldIcon)).isEqualTo(original);
+        assertThat(storedFiles()).containsExactly(oldIcon);
+    }
+
+    @Test
+    void aRejectedReplacementNeverTouchesTheCurrentIcon() throws Exception {
+        service().saveAmenityIcon("SLIPPERS", pngFile("icon.png"));
+        Path icon = uploadRoot.resolve("icons/amenities/slippers.png");
+        byte[] original = Files.readAllBytes(icon);
+
+        assertThatThrownBy(() -> service().replaceAmenityIcon(
+                "SLIPPERS", file("icon.gif", "image/gif", imageBytes("gif"))))
+                .isInstanceOf(UnsupportedImageFormatException.class);
+        assertThatThrownBy(() -> service().replaceAmenityIcon(
+                "SLIPPERS", svgFile("<svg xmlns=\"http://www.w3.org/2000/svg\"><script/></svg>"
+                        .getBytes(StandardCharsets.UTF_8))))
+                .isInstanceOf(UnsupportedImageFormatException.class);
+
+        assertThat(Files.readAllBytes(icon)).isEqualTo(original);
+        // 임시 파일도 남지 않는다
+        assertThat(storedFiles()).containsExactly(icon);
+    }
+
+    @Test
+    void replaceWorksWhenNoIconExistsYet() throws Exception {
+        FileUploadService.AmenityIconReplacement replacement =
+                service().replaceAmenityIcon("SLIPPERS", pngFile("icon.png"));
+
+        assertThat(replacement.iconUrl()).isEqualTo("/uploads/icons/amenities/slippers.png");
+        assertThat(replacement.backup()).isNull();
+        service().commitAmenityIconReplacement(replacement);
+        assertThat(uploadRoot.resolve("icons/amenities/slippers.png")).isRegularFile();
+    }
+
+    @Test
     void validateDoesNotWriteAnyFile() throws Exception {
         service().validateAmenityIcon(pngFile("icon.png"));
 

@@ -3,6 +3,7 @@ package com.example.travlediary.controller.admin;
 import com.example.travlediary.config.CustomLoginSuccessHandler;
 import com.example.travlediary.config.CustomLogoutSuccessHandler;
 import com.example.travlediary.config.SecurityConfig;
+import com.example.travlediary.dto.AmenityDto;
 import com.example.travlediary.dto.AmenityForm;
 import com.example.travlediary.model.DestinationType;
 import com.example.travlediary.model.User;
@@ -22,11 +23,13 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -150,6 +153,117 @@ class AdminAmenityControllerTest {
                         .param("nameKo", "무료 와이파이"))
                 .andExpect(status().isOk())
                 .andExpect(model().attributeHasFieldErrors("amenityForm", "destinationTypes"));
+    }
+
+    @Test
+    void editFormRestoresTheStoredValuesAndTheCurrentIcon() throws Exception {
+        AmenityForm stored = new AmenityForm();
+        stored.setId(3);
+        stored.setCode("SLIPPERS");
+        stored.setNameKo("슬리퍼");
+        stored.setDestinationTypes(List.of(DestinationType.ACCOMMODATION));
+        when(amenityService.getAmenityForm(3)).thenReturn(stored);
+        when(amenityService.getAmenityIconUrl(3))
+                .thenReturn("/uploads/icons/amenities/slippers.png");
+
+        mockMvc.perform(get("/admin/amenities/3/edit").with(user(admin())))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/amenities/edit"))
+                .andExpect(model().attribute("amenityForm", stored))
+                .andExpect(model().attribute("amenityId", 3))
+                .andExpect(model().attribute("currentIconUrl",
+                        "/uploads/icons/amenities/slippers.png"))
+                .andExpect(model().attribute("destinationTypes", DestinationType.values()))
+                .andExpect(model().attributeExists("destinationTypeLabels"));
+    }
+
+    @Test
+    void submitsTheEditToTheServiceAndRedirectsToTheList() throws Exception {
+        mockMvc.perform(multipart("/admin/amenities/3/edit")
+                        .file(new MockMultipartFile("icon", "", "application/octet-stream", new byte[0]))
+                        .with(user(admin())).with(csrf())
+                        .param("code", "SLIPPERS")
+                        .param("nameKo", "실내 슬리퍼")
+                        .param("nameEn", "Indoor Slippers")
+                        .param("destinationTypes", "ACCOMMODATION", "CAFE"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/amenities/list"));
+
+        ArgumentCaptor<AmenityForm> captor = ArgumentCaptor.forClass(AmenityForm.class);
+        verify(amenityService).updateAmenity(captor.capture());
+        AmenityForm submitted = captor.getValue();
+        // 경로의 id 를 그대로 쓴다
+        assertThat(submitted.getId()).isEqualTo(3);
+        assertThat(submitted.getNameKo()).isEqualTo("실내 슬리퍼");
+        assertThat(submitted.getNameEn()).isEqualTo("Indoor Slippers");
+        assertThat(submitted.getDestinationTypes())
+                .containsExactly(DestinationType.ACCOMMODATION, DestinationType.CAFE);
+        assertThat(submitted.getIcon().isEmpty()).isTrue();
+    }
+
+    @Test
+    void editValidationFailureRedisplaysTheFormWithTheCurrentIcon() throws Exception {
+        when(amenityService.getAmenityIconUrl(3))
+                .thenReturn("/uploads/icons/amenities/slippers.png");
+        doThrow(new AmenityValidationException("nameKo", "한국어 이름을 입력해 주세요."))
+                .when(amenityService).updateAmenity(any(AmenityForm.class));
+
+        mockMvc.perform(multipart("/admin/amenities/3/edit")
+                        .with(user(admin())).with(csrf())
+                        .param("code", "SLIPPERS")
+                        .param("nameEn", "Indoor Slippers")
+                        .param("destinationTypes", "CAFE"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/amenities/edit"))
+                .andExpect(model().attribute("currentIconUrl",
+                        "/uploads/icons/amenities/slippers.png"))
+                .andExpect(model().attribute("amenityForm",
+                        org.hamcrest.Matchers.hasProperty("nameEn",
+                                org.hamcrest.Matchers.equalTo("Indoor Slippers"))))
+                .andExpect(model().attribute("amenityForm",
+                        org.hamcrest.Matchers.hasProperty("destinationTypes",
+                                org.hamcrest.Matchers.equalTo(List.of(DestinationType.CAFE)))))
+                .andExpect(model().attributeHasFieldErrors("amenityForm", "nameKo"));
+    }
+
+    @Test
+    void editIconFailureIsShownOnTheIconField() throws Exception {
+        when(amenityService.getAmenityIconUrl(3))
+                .thenReturn("/uploads/icons/amenities/slippers.png");
+        doThrow(new UnsupportedImageFormatException("PNG, JPG 또는 SVG 이미지 파일만 업로드할 수 있습니다."))
+                .when(amenityService).updateAmenity(any(AmenityForm.class));
+
+        mockMvc.perform(multipart("/admin/amenities/3/edit")
+                        .file(new MockMultipartFile("icon", "icon.gif", "image/gif", new byte[]{1}))
+                        .with(user(admin())).with(csrf())
+                        .param("code", "SLIPPERS")
+                        .param("nameKo", "슬리퍼")
+                        .param("destinationTypes", "CAFE"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/amenities/edit"))
+                .andExpect(model().attributeHasFieldErrors("amenityForm", "icon"));
+    }
+
+    @Test
+    void listProvidesRowsTypeTagsAndKoreanTypeLabels() throws Exception {
+        AmenityDto row = new AmenityDto();
+        row.setId(3);
+        row.setCode("SLIPPERS");
+        row.setName("슬리퍼");
+        row.setIconUrl("/uploads/icons/amenities/slippers.svg");
+        when(amenityService.getAdminAmenityRows()).thenReturn(List.of(row));
+        when(amenityService.getAmenityDestinationTypeTags())
+                .thenReturn(Map.of(3, "ACCOMMODATION CAFE"));
+
+        mockMvc.perform(get("/admin/amenities/list").with(user(admin())))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/amenities/list"))
+                .andExpect(model().attribute("amenities", List.of(row)))
+                .andExpect(model().attribute("amenityTypeTags", Map.of(3, "ACCOMMODATION CAFE")))
+                .andExpect(model().attribute("destinationTypeLabelsByName",
+                        org.hamcrest.Matchers.hasEntry("ACCOMMODATION", "숙소")))
+                .andExpect(model().attribute("destinationTypeLabelsByName",
+                        org.hamcrest.Matchers.hasEntry("CAFE", "카페")));
     }
 
     @Test

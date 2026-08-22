@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 
 @Controller
@@ -24,6 +25,7 @@ public class AdminAmenityController {
     private final AmenityService amenityService;
 
     private static final String CREATE_VIEW = "admin/amenities/create";
+    private static final String EDIT_VIEW = "admin/amenities/edit";
     private static final String REDIRECT_LIST = "redirect:/admin/amenities/list";
 
     private static final Set<String> FORM_FIELDS = Set.of(
@@ -38,6 +40,12 @@ public class AdminAmenityController {
             DestinationType.ACTIVITY, "액티비티",
             DestinationType.SHOP, "쇼핑"
     );
+
+    /** 목록의 badge 는 enum 이름 문자열로 조회하므로 같은 라벨을 이름 키로도 제공한다. */
+    private static final Map<String, String> DESTINATION_TYPE_LABELS_BY_NAME =
+            DESTINATION_TYPE_LABELS.entrySet().stream()
+                    .collect(Collectors.toUnmodifiableMap(
+                            entry -> entry.getKey().name(), Map.Entry::getValue));
 
     // 1. Amenity 등록 폼
     @GetMapping("/create")
@@ -70,6 +78,44 @@ public class AdminAmenityController {
         return REDIRECT_LIST;
     }
 
+    // 2-1. Amenity 수정 폼 (code 는 readonly, 아이콘은 선택 교체)
+    @GetMapping("/{id}/edit")
+    public String showEditForm(@PathVariable Integer id, Model model) {
+        if (!model.containsAttribute("amenityForm")) {
+            model.addAttribute("amenityForm", amenityService.getAmenityForm(id));
+        }
+        prepareEditModel(model, id);
+        return EDIT_VIEW;
+    }
+
+    // 2-2. Amenity 수정 처리
+    @PostMapping("/{id}/edit")
+    public String updateAmenity(@PathVariable Integer id,
+                                @ModelAttribute("amenityForm") AmenityForm form,
+                                BindingResult bindingResult,
+                                Model model) {
+        form.setId(id);
+        try {
+            amenityService.updateAmenity(form);
+        } catch (AmenityValidationException exception) {
+            rejectValidation(bindingResult, exception.getField(), exception.getMessage());
+            prepareEditModel(model, id);
+            return EDIT_VIEW;
+        } catch (IllegalArgumentException | IllegalStateException exception) {
+            rejectValidation(bindingResult, "icon", exception.getMessage());
+            prepareEditModel(model, id);
+            return EDIT_VIEW;
+        }
+        return REDIRECT_LIST;
+    }
+
+    /** 검증 실패로 다시 그릴 때도 현재 아이콘은 저장된 값에서 다시 읽는다. */
+    private void prepareEditModel(Model model, Integer id) {
+        addFormOptions(model);
+        model.addAttribute("amenityId", id);
+        model.addAttribute("currentIconUrl", amenityService.getAmenityIconUrl(id));
+    }
+
     private void addFormOptions(Model model) {
         model.addAttribute("destinationTypes", DestinationType.values());
         model.addAttribute("destinationTypeLabels", DESTINATION_TYPE_LABELS);
@@ -87,8 +133,10 @@ public class AdminAmenityController {
     // 3. Amenity 전체 리스트 (번역등록 버튼 포함)
     @GetMapping("/list")
     public String listAmenities(Model model) {
-        List<Amenity> amenityList = amenityService.getAllAmenities();
-        model.addAttribute("amenities", amenityList);
+        model.addAttribute("amenities", amenityService.getAdminAmenityRows());
+        // 적용 대상 badge 는 기존 태그 맵(편의시설 -> "ATTRACTION CAFE")을 그대로 쓴다.
+        model.addAttribute("amenityTypeTags", amenityService.getAmenityDestinationTypeTags());
+        model.addAttribute("destinationTypeLabelsByName", DESTINATION_TYPE_LABELS_BY_NAME);
         return "admin/amenities/list"; // amenity 리스트(테이블)
     }
 

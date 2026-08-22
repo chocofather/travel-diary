@@ -1,5 +1,6 @@
 package com.example.travlediary.repository.amenity;
 
+import com.example.travlediary.dto.AmenityDto;
 import com.example.travlediary.model.Amenity;
 import com.example.travlediary.model.AmenityDestinationType;
 import com.example.travlediary.model.AmenityTranslation;
@@ -14,6 +15,12 @@ public interface AmenityMapper {
 
     Amenity selectAmenityById(@Param("id") Integer id); // 단일 amenity 조회
     int insertAmenity(Amenity amenity); // amenity 등록
+
+    /**
+     * 관리자 목록 한 줄(아이콘 / ko 이름 / code).
+     * ko 번역이 없는 편의시설도 빠지지 않도록 LEFT JOIN 으로 읽는다.
+     */
+    List<AmenityDto> findAdminAmenityRows();
 
     /** amenities.code 는 UNIQUE 이므로 등록 전에 중복을 먼저 확인한다. */
     int countByCode(@Param("code") String code);

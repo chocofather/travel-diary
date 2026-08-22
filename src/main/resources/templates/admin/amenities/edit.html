@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'amenities')}">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/admin-amenity-form.css">
+</th:block>
+<th:block th:fragment="body">
+  <section class="admin-page-section">
+    <header class="admin-page-header">
+      <div class="admin-page-heading">
+        <h1 class="admin-page-title">편의시설 수정</h1>
+        <p class="admin-page-description">언어별 이름과 적용 대상을 수정하고, 필요하면 아이콘을 교체합니다.</p>
+      </div>
+      <div class="admin-page-actions">
+        <a th:href="@{/admin/amenities/list}" class="admin-btn">편의시설 목록</a>
+      </div>
+    </header>
+
+    <form th:action="@{|/admin/amenities/${amenityId}/edit|}" th:object="${amenityForm}"
+          method="post" enctype="multipart/form-data" class="admin-form-card">
+
+      <div th:if="${#fields.hasGlobalErrors()}" class="admin-alert" role="alert">
+        <p th:each="error : ${#fields.globalErrors()}" th:text="${error}"></p>
+      </div>
+
+      <h2 class="admin-section-title">기본 정보</h2>
+      <div class="admin-form-fields">
+        <div class="admin-form-field">
+          <label for="amenity-code">내부 코드</label>
+          <!-- 아이콘 파일명과 연결된 식별자라 화면과 서버 양쪽에서 수정하지 않는다 -->
+          <input id="amenity-code" type="text" th:field="*{code}" readonly>
+          <span class="admin-help-text">내부 코드는 등록 후 변경할 수 없습니다.</span>
+        </div>
+
+        <div class="admin-form-field">
+          <span class="admin-field-label">현재 아이콘</span>
+          <img class="admin-amenity-icon-preview" th:src="@{${currentIconUrl}}"
+               alt="현재 편의시설 아이콘" data-amenity-icon-current>
+        </div>
+
+        <div class="admin-form-field">
+          <label for="amenity-icon">아이콘 변경</label>
+          <!-- 파일 input 은 프로젝트 관례대로 th:field 대신 name 으로 바인딩한다. -->
+          <input id="amenity-icon" type="file" name="icon"
+                 accept="image/png,image/jpeg,image/svg+xml,.svg" data-amenity-icon-input>
+          <span class="admin-help-text">
+            변경하지 않으려면 선택하지 마세요. PNG, JPG 또는 SVG · 최대 512KB
+          </span>
+          <img class="admin-amenity-icon-preview" alt="" hidden data-amenity-icon-preview>
+          <p class="admin-field-error admin-alert" th:if="${#fields.hasErrors('icon')}"
+             th:errors="*{icon}"></p>
+        </div>
+      </div>
+
+      <h2 class="admin-section-title">번역</h2>
+      <div class="admin-form-fields">
+        <div class="admin-form-field">
+          <label for="amenity-name-ko">한국어 <span class="admin-required">필수</span></label>
+          <input id="amenity-name-ko" type="text" th:field="*{nameKo}" required
+                 maxlength="100" placeholder="예: 무료 와이파이"
+                 th:classappend="${#fields.hasErrors('nameKo')} ? 'is-invalid'">
+          <p class="admin-field-error admin-alert" th:if="${#fields.hasErrors('nameKo')}"
+             th:errors="*{nameKo}"></p>
+        </div>
+        <div class="admin-form-field">
+          <label for="amenity-name-en">영어</label>
+          <input id="amenity-name-en" type="text" th:field="*{nameEn}"
+                 maxlength="100" placeholder="예: Free Wi-Fi">
+          <p class="admin-field-error admin-alert" th:if="${#fields.hasErrors('nameEn')}"
+             th:errors="*{nameEn}"></p>
+        </div>
+        <div class="admin-form-field">
+          <label for="amenity-name-ja">일본어</label>
+          <input id="amenity-name-ja" type="text" th:field="*{nameJa}"
+                 maxlength="100" placeholder="예: 無料Wi-Fi">
+          <p class="admin-field-error admin-alert" th:if="${#fields.hasErrors('nameJa')}"
+             th:errors="*{nameJa}"></p>
+        </div>
+        <div class="admin-form-field">
+          <label for="amenity-name-zh">중국어</label>
+          <input id="amenity-name-zh" type="text" th:field="*{nameZh}"
+                 maxlength="100" placeholder="예: 免费Wi-Fi">
+          <p class="admin-field-error admin-alert" th:if="${#fields.hasErrors('nameZh')}"
+             th:errors="*{nameZh}"></p>
+        </div>
+      </div>
+
+      <h2 class="admin-section-title">적용 대상 <span class="admin-required">필수</span></h2>
+      <div class="admin-form-field">
+        <!-- 값은 DestinationType enum 에서 오고, 라벨만 화면 표시용이다. -->
+        <div class="admin-amenity-type-options">
+          <label th:each="type : ${destinationTypes}">
+            <input type="checkbox" th:field="*{destinationTypes}" th:value="${type}">
+            <span th:text="${destinationTypeLabels.get(type)} ?: ${type}"></span>
+          </label>
+        </div>
+        <span class="admin-help-text">하나 이상의 적용 대상을 선택해 주세요.</span>
+        <p class="admin-field-error admin-alert" th:if="${#fields.hasErrors('destinationTypes')}"
+           th:errors="*{destinationTypes}"></p>
+      </div>
+
+      <div class="admin-form-actions is-centered">
+        <a th:href="@{/admin/amenities/list}" class="admin-btn">취소</a>
+        <button type="submit" class="admin-btn is-primary">수정</button>
+      </div>
+    </form>
+  </section>
+
+  <script>
+    // 새로 고른 아이콘만 임시로 미리 보여준다. 저장 전에는 서버 파일에 영향을 주지 않는다.
+    (() => {
+      const input = document.querySelector("[data-amenity-icon-input]");
+      const preview = document.querySelector("[data-amenity-icon-preview]");
+      const current = document.querySelector("[data-amenity-icon-current]");
+      if (!input || !preview) return;
+      let objectUrl = null;
+      input.addEventListener("change", () => {
+        if (objectUrl) {
+          URL.revokeObjectURL(objectUrl);
+          objectUrl = null;
+        }
+        const file = input.files && input.files[0];
+        if (!file) {
+          preview.removeAttribute("src");
+          preview.hidden = true;
+          if (current) current.hidden = false;
+          return;
+        }
+        objectUrl = URL.createObjectURL(file);
+        preview.src = objectUrl;
+        preview.hidden = false;
+      });
+    })();
+  </script>
+</th:block>
+</html>
