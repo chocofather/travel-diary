@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.travelplan.TravelPlanMapper">
+
+    <!--
+      방 1건 등록.
+      last_activity_at / created_at / updated_at 은 DB DEFAULT 를 그대로 쓴다.
+      status 는 TravelPlanStatus enum 이름이 저장된다.
+    -->
+    <insert id="insertPlan" parameterType="com.example.travlediary.model.TravelPlan"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO travel_plans (
+            created_by_user_id, title, start_date, end_date,
+            representative_image_url, status
+        ) VALUES (
+            #{createdByUserId}, #{title}, #{startDate}, #{endDate},
+            #{representativeImageUrl}, #{status}
+        )
+    </insert>
+
+    <!--
+      참여자 1건 등록. 방 생성 시 OWNER 가 이 경로로 들어온다.
+      rejoin_allowed / joined_at / created_at / updated_at 은 DB DEFAULT 를 쓴다.
+      role, status 는 각각 TravelPlanRole / TravelPlanMemberStatus enum 이름이 저장된다.
+    -->
+    <insert id="insertMember" parameterType="com.example.travlediary.model.TravelPlanMember"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO travel_plan_members (
+            travel_plan_id, user_id, display_name, role, status
+        ) VALUES (
+            #{travelPlanId}, #{userId}, #{displayName}, #{role}, #{status}
+        )
+    </insert>
+
+    <!-- 여행 기간의 DAY 를 한 문장으로 등록한다. day_number 는 1부터 -->
+    <insert id="insertDays">
+        INSERT INTO travel_plan_days (travel_plan_id, day_number, plan_date)
+        VALUES
+        <foreach collection="days" item="day" separator=",">
+            (#{travelPlanId}, #{day.dayNumber}, #{day.planDate})
+        </foreach>
+    </insert>
+</mapper>

@@ -193,7 +193,7 @@ CREATE TABLE `attraction_info` (
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `blocked_emails` (
   `id` bigint NOT NULL AUTO_INCREMENT,
-  `email_hash` char(64) CHARACTER SET ascii COLLATE ascii_general_ci NOT NULL COMMENT 'SHA-256(정규화 이메일 + 서버 pepper), 원본 미보관',
+  `email_hash` char(64) CHARACTER SET ascii COLLATE ascii_general_ci NOT NULL COMMENT 'SHA-256(EmailPolicy 정규화 이메일 + 서버 pepper), 원본 미보관',
   `user_id` bigint DEFAULT NULL COMMENT '참고용(익명화 후에도 id는 유지)',
   `sanction_id` bigint DEFAULT NULL,
   `reason` varchar(255) DEFAULT NULL,
@@ -450,7 +450,6 @@ CREATE TABLE `course_images` (
 CREATE TABLE `courses` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `user_id` bigint NOT NULL,
-  `country_id` bigint DEFAULT NULL,
   `title` varchar(255) NOT NULL,
   `content` mediumtext,
   `views` int NOT NULL DEFAULT '0',
@@ -458,6 +457,7 @@ CREATE TABLE `courses` (
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `deleted_at` timestamp NULL DEFAULT NULL,
   `deleted` tinyint DEFAULT '0',
+  `country_id` bigint DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `fk_courses_user` (`user_id`),
   KEY `idx_courses_country_id` (`country_id`),
@@ -497,6 +497,7 @@ CREATE TABLE `destination_comment_images` (
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_destination_comment_images_order` (`comment_id`,`display_order`),
+  KEY `idx_destination_comment_images_comment` (`comment_id`),
   CONSTRAINT `fk_destination_comment_images_comment` FOREIGN KEY (`comment_id`) REFERENCES `destination_comments` (`id`) ON DELETE CASCADE,
   CONSTRAINT `chk_destination_comment_images_order` CHECK (((`display_order` >= 1) and (`display_order` <= 3)))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
@@ -1272,3 +1273,434 @@ CREATE TABLE `users` (
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
 -- Dump completed on 2026-08-06  3:33:22
+-- (위 문구는 최초 덤프 시각이며 이 문서의 최신 기준이 아니다.
+--  이 문서 전체는 2026-08-23 22:01:32 실제 MySQL structure dump와 대조 완료.)
+
+--
+-- ============================================================
+-- 실시간 공동 여행계획 (travel_plan_*) — 위 덤프 이후 추가된 테이블
+-- ============================================================
+-- 신규 테이블은 utf8mb4 / utf8mb4_unicode_ci 를 사용한다 (기존 utf8mb3 테이블과 다름).
+-- status / role / tag / selection_type 등 enum 처럼 보이는 값은
+-- 기존 관례대로 DB ENUM 이 아니라 varchar + Java enum 이름으로 저장한다.
+--
+
+--
+-- Table structure for table `travel_plans`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `travel_plans` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `created_by_user_id` bigint NOT NULL,
+  `title` varchar(150) NOT NULL,
+  `start_date` date NOT NULL,
+  `end_date` date NOT NULL,
+  `representative_image_url` varchar(255) DEFAULT NULL,
+  `status` varchar(20) NOT NULL DEFAULT 'ACTIVE',
+  `last_activity_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `finalized_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_travel_plans_created_by_user_id` (`created_by_user_id`),
+  KEY `idx_travel_plans_status_activity` (`status`,`last_activity_at`,`id`),
+  CONSTRAINT `fk_travel_plans_created_by_user` FOREIGN KEY (`created_by_user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `chk_travel_plans_date_range` CHECK ((`end_date` >= `start_date`))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `travel_plan_members`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `travel_plan_members` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `travel_plan_id` bigint NOT NULL,
+  `user_id` bigint NOT NULL,
+  `display_name` varchar(50) NOT NULL,
+  `role` varchar(20) NOT NULL DEFAULT 'MEMBER',
+  `status` varchar(20) NOT NULL DEFAULT 'ACTIVE',
+  `rejoin_allowed` tinyint(1) NOT NULL DEFAULT '1',
+  `joined_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `left_at` timestamp NULL DEFAULT NULL,
+  `removed_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_travel_plan_members_plan_user` (`travel_plan_id`,`user_id`),
+  UNIQUE KEY `uk_travel_plan_members_plan_display_name` (`travel_plan_id`,`display_name`),
+  KEY `idx_travel_plan_members_user_status` (`user_id`,`status`,`travel_plan_id`),
+  KEY `idx_travel_plan_members_plan_role_status` (`travel_plan_id`,`role`,`status`),
+  CONSTRAINT `fk_travel_plan_members_plan` FOREIGN KEY (`travel_plan_id`) REFERENCES `travel_plans` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_travel_plan_members_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `travel_plan_invitations`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `travel_plan_invitations` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `travel_plan_id` bigint NOT NULL,
+  `created_by_user_id` bigint NOT NULL,
+  `token_hash` char(64) NOT NULL,
+  `status` varchar(20) NOT NULL DEFAULT 'ACTIVE',
+  `invalidated_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_travel_plan_invitations_token_hash` (`token_hash`),
+  KEY `idx_travel_plan_invitations_plan_status` (`travel_plan_id`,`status`,`created_at`),
+  KEY `idx_travel_plan_invitations_created_by` (`created_by_user_id`),
+  CONSTRAINT `fk_travel_plan_invitations_created_by` FOREIGN KEY (`created_by_user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_travel_plan_invitations_plan` FOREIGN KEY (`travel_plan_id`) REFERENCES `travel_plans` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `travel_plan_days`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `travel_plan_days` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `travel_plan_id` bigint NOT NULL,
+  `day_number` int NOT NULL,
+  `plan_date` date NOT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_travel_plan_days_plan_day_number` (`travel_plan_id`,`day_number`),
+  UNIQUE KEY `uk_travel_plan_days_plan_date` (`travel_plan_id`,`plan_date`),
+  CONSTRAINT `fk_travel_plan_days_plan` FOREIGN KEY (`travel_plan_id`) REFERENCES `travel_plans` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `chk_travel_plan_days_day_number` CHECK ((`day_number` >= 1))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `travel_plan_items`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `travel_plan_items` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `travel_plan_day_id` bigint NOT NULL,
+  `content` text NOT NULL,
+  `tag` varchar(20) DEFAULT NULL,
+  `display_order` int NOT NULL DEFAULT '1',
+  `created_by_member_id` bigint DEFAULT NULL,
+  `version` int NOT NULL DEFAULT '0',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_travel_plan_items_day_order` (`travel_plan_day_id`,`display_order`,`id`),
+  KEY `idx_travel_plan_items_created_by_member` (`created_by_member_id`),
+  CONSTRAINT `fk_travel_plan_items_created_by_member` FOREIGN KEY (`created_by_member_id`) REFERENCES `travel_plan_members` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_travel_plan_items_day` FOREIGN KEY (`travel_plan_day_id`) REFERENCES `travel_plan_days` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `chk_travel_plan_items_display_order` CHECK ((`display_order` >= 1)),
+  CONSTRAINT `chk_travel_plan_items_version` CHECK ((`version` >= 0))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `travel_plan_item_alternatives`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `travel_plan_item_alternatives` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `travel_plan_item_id` bigint NOT NULL,
+  `alternative_order` int NOT NULL,
+  `condition_label` varchar(100) DEFAULT NULL,
+  `content` text NOT NULL,
+  `tag` varchar(20) DEFAULT NULL,
+  `created_by_member_id` bigint DEFAULT NULL,
+  `version` int NOT NULL DEFAULT '0',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_travel_plan_item_alternatives_item_order` (`travel_plan_item_id`,`alternative_order`),
+  KEY `idx_travel_plan_item_alternatives_created_by_member` (`created_by_member_id`),
+  CONSTRAINT `fk_travel_plan_item_alternatives_created_by_member` FOREIGN KEY (`created_by_member_id`) REFERENCES `travel_plan_members` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_travel_plan_item_alternatives_item` FOREIGN KEY (`travel_plan_item_id`) REFERENCES `travel_plan_items` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `chk_travel_plan_item_alternatives_order` CHECK ((`alternative_order` in (1,2))),
+  CONSTRAINT `chk_travel_plan_item_alternatives_version` CHECK ((`version` >= 0))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `travel_plan_polls`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `travel_plan_polls` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `travel_plan_id` bigint NOT NULL,
+  `created_by_member_id` bigint DEFAULT NULL,
+  `title` varchar(200) NOT NULL,
+  `selection_type` varchar(20) NOT NULL,
+  `result_visibility` varchar(20) NOT NULL,
+  `close_type` varchar(20) NOT NULL,
+  `deadline_at` timestamp NULL DEFAULT NULL,
+  `status` varchar(20) NOT NULL DEFAULT 'OPEN',
+  `close_reason` varchar(20) DEFAULT NULL,
+  `closed_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_travel_plan_polls_plan_status_created` (`travel_plan_id`,`status`,`created_at`),
+  KEY `idx_travel_plan_polls_plan_closed` (`travel_plan_id`,`status`,`closed_at`),
+  KEY `idx_travel_plan_polls_created_by_member` (`created_by_member_id`),
+  KEY `idx_travel_plan_polls_deadline` (`status`,`close_type`,`deadline_at`),
+  CONSTRAINT `fk_travel_plan_polls_created_by_member` FOREIGN KEY (`created_by_member_id`) REFERENCES `travel_plan_members` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_travel_plan_polls_plan` FOREIGN KEY (`travel_plan_id`) REFERENCES `travel_plans` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `travel_plan_poll_options`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `travel_plan_poll_options` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `poll_id` bigint NOT NULL,
+  `content` text NOT NULL,
+  `display_order` int NOT NULL DEFAULT '1',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_travel_plan_poll_options_poll_order` (`poll_id`,`display_order`,`id`),
+  CONSTRAINT `fk_travel_plan_poll_options_poll` FOREIGN KEY (`poll_id`) REFERENCES `travel_plan_polls` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `chk_travel_plan_poll_options_display_order` CHECK ((`display_order` >= 1))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `travel_plan_poll_votes`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `travel_plan_poll_votes` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `poll_id` bigint NOT NULL,
+  `member_id` bigint DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_travel_plan_poll_votes_poll_member` (`poll_id`,`member_id`),
+  KEY `idx_travel_plan_poll_votes_member` (`member_id`),
+  CONSTRAINT `fk_travel_plan_poll_votes_member` FOREIGN KEY (`member_id`) REFERENCES `travel_plan_members` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_travel_plan_poll_votes_poll` FOREIGN KEY (`poll_id`) REFERENCES `travel_plan_polls` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `travel_plan_poll_vote_selections`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `travel_plan_poll_vote_selections` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `vote_id` bigint NOT NULL,
+  `option_id` bigint NOT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_travel_plan_poll_vote_selections_vote_option` (`vote_id`,`option_id`),
+  KEY `idx_travel_plan_poll_vote_selections_option` (`option_id`),
+  CONSTRAINT `fk_travel_plan_poll_vote_selections_option` FOREIGN KEY (`option_id`) REFERENCES `travel_plan_poll_options` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_travel_plan_poll_vote_selections_vote` FOREIGN KEY (`vote_id`) REFERENCES `travel_plan_poll_votes` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `travel_plan_chat_messages`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `travel_plan_chat_messages` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `travel_plan_id` bigint NOT NULL,
+  `sender_member_id` bigint DEFAULT NULL,
+  `message_type` varchar(20) NOT NULL DEFAULT 'USER',
+  `content` text,
+  `system_event_type` varchar(30) DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_travel_plan_chat_messages_plan_id` (`travel_plan_id`,`id`),
+  KEY `idx_travel_plan_chat_messages_sender` (`sender_member_id`),
+  CONSTRAINT `fk_travel_plan_chat_messages_plan` FOREIGN KEY (`travel_plan_id`) REFERENCES `travel_plans` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_travel_plan_chat_messages_sender` FOREIGN KEY (`sender_member_id`) REFERENCES `travel_plan_members` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `chk_travel_plan_chat_messages_type` CHECK ((`message_type` in (_utf8mb4'USER',_utf8mb4'SYSTEM')))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `travel_plan_chat_read_positions`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `travel_plan_chat_read_positions` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `travel_plan_id` bigint NOT NULL,
+  `member_id` bigint NOT NULL,
+  `last_read_message_id` bigint DEFAULT NULL,
+  `last_read_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_travel_plan_chat_read_positions_plan_member` (`travel_plan_id`,`member_id`),
+  KEY `idx_travel_plan_chat_read_positions_member` (`member_id`),
+  KEY `idx_travel_plan_chat_read_positions_last_message` (`last_read_message_id`),
+  CONSTRAINT `fk_travel_plan_chat_read_positions_last_message` FOREIGN KEY (`last_read_message_id`) REFERENCES `travel_plan_chat_messages` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_travel_plan_chat_read_positions_member` FOREIGN KEY (`member_id`) REFERENCES `travel_plan_members` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_travel_plan_chat_read_positions_plan` FOREIGN KEY (`travel_plan_id`) REFERENCES `travel_plans` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `travel_plan_member_settings`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `travel_plan_member_settings` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `member_id` bigint NOT NULL,
+  `chat_sound_enabled` tinyint NOT NULL DEFAULT '0',
+  `browser_notification_enabled` tinyint NOT NULL DEFAULT '0',
+  `message_preview_enabled` tinyint NOT NULL DEFAULT '0',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_travel_plan_member_settings_member` (`member_id`),
+  CONSTRAINT `fk_travel_plan_member_settings_member` FOREIGN KEY (`member_id`) REFERENCES `travel_plan_members` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `chk_travel_plan_member_settings_browser_notification` CHECK ((`browser_notification_enabled` in (0,1))),
+  CONSTRAINT `chk_travel_plan_member_settings_chat_sound` CHECK ((`chat_sound_enabled` in (0,1))),
+  CONSTRAINT `chk_travel_plan_member_settings_message_preview` CHECK ((`message_preview_enabled` in (0,1)))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `travel_plan_final_snapshots`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `travel_plan_final_snapshots` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `travel_plan_id` bigint NOT NULL,
+  `title` varchar(150) NOT NULL,
+  `start_date` date NOT NULL,
+  `end_date` date NOT NULL,
+  `representative_image_url` varchar(255) DEFAULT NULL,
+  `finalized_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_travel_plan_final_snapshots_plan` (`travel_plan_id`),
+  KEY `idx_travel_plan_final_snapshots_finalized` (`finalized_at`,`id`),
+  CONSTRAINT `fk_travel_plan_final_snapshots_plan` FOREIGN KEY (`travel_plan_id`) REFERENCES `travel_plans` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `chk_travel_plan_final_snapshots_date_range` CHECK ((`end_date` >= `start_date`))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `travel_plan_final_members`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `travel_plan_final_members` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `snapshot_id` bigint NOT NULL,
+  `user_id` bigint DEFAULT NULL,
+  `display_name` varchar(50) NOT NULL,
+  `role` varchar(20) NOT NULL,
+  `hidden_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_travel_plan_final_members_snapshot_display_name` (`snapshot_id`,`display_name`),
+  UNIQUE KEY `uk_travel_plan_final_members_snapshot_user` (`snapshot_id`,`user_id`),
+  KEY `idx_travel_plan_final_members_user_visible` (`user_id`,`hidden_at`,`snapshot_id`),
+  CONSTRAINT `fk_travel_plan_final_members_snapshot` FOREIGN KEY (`snapshot_id`) REFERENCES `travel_plan_final_snapshots` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_travel_plan_final_members_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `travel_plan_final_days`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `travel_plan_final_days` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `snapshot_id` bigint NOT NULL,
+  `day_number` int NOT NULL,
+  `plan_date` date NOT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_travel_plan_final_days_snapshot_day_number` (`snapshot_id`,`day_number`),
+  UNIQUE KEY `uk_travel_plan_final_days_snapshot_date` (`snapshot_id`,`plan_date`),
+  CONSTRAINT `fk_travel_plan_final_days_snapshot` FOREIGN KEY (`snapshot_id`) REFERENCES `travel_plan_final_snapshots` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `chk_travel_plan_final_days_day_number` CHECK ((`day_number` >= 1))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `travel_plan_final_items`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `travel_plan_final_items` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `final_day_id` bigint NOT NULL,
+  `content` text NOT NULL,
+  `tag` varchar(20) DEFAULT NULL,
+  `display_order` int NOT NULL DEFAULT '1',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_travel_plan_final_items_day_order` (`final_day_id`,`display_order`,`id`),
+  CONSTRAINT `fk_travel_plan_final_items_day` FOREIGN KEY (`final_day_id`) REFERENCES `travel_plan_final_days` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `chk_travel_plan_final_items_display_order` CHECK ((`display_order` >= 1))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `travel_plan_final_item_alternatives`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `travel_plan_final_item_alternatives` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `final_item_id` bigint NOT NULL,
+  `alternative_order` int NOT NULL,
+  `condition_label` varchar(100) DEFAULT NULL,
+  `content` text NOT NULL,
+  `tag` varchar(20) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_travel_plan_final_item_alternatives_item_order` (`final_item_id`,`alternative_order`),
+  CONSTRAINT `fk_travel_plan_final_item_alternatives_item` FOREIGN KEY (`final_item_id`) REFERENCES `travel_plan_final_items` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `chk_travel_plan_final_item_alternatives_order` CHECK ((`alternative_order` in (1,2)))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;

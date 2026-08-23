@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
+
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/travel-plan.css">
+</th:block>
+
+<th:block th:fragment="body">
+  <section class="travel-plan-form-page" aria-labelledby="travel-plan-form-title">
+    <header class="travel-plan-form-header">
+      <p class="travel-plan-eyebrow">NEW TRAVEL PLAN</p>
+      <h1 id="travel-plan-form-title">공동 여행계획 만들기</h1>
+      <p class="travel-plan-subtitle">
+        여행 제목과 기간을 정하면 함께 채워 갈 여행계획 방이 만들어집니다.
+      </p>
+    </header>
+
+    <p class="travel-plan-notice" th:if="${travelPlanMessage}"
+       th:text="${travelPlanMessage}" role="status">공동 여행계획이 만들어졌어요.</p>
+
+    <form class="travel-plan-form" th:action="@{/travel-plans}" method="post"
+          th:object="${travelPlanCreateForm}">
+
+      <div class="travel-plan-form-error" th:if="${#fields.hasGlobalErrors()}" role="alert">
+        <p th:each="error : ${#fields.globalErrors()}" th:text="${error}"></p>
+      </div>
+
+      <div class="travel-plan-form-field">
+        <label for="travel-plan-title">여행 제목</label>
+        <input type="text" id="travel-plan-title" th:field="*{title}"
+               maxlength="150" required
+               placeholder="여행 제목을 입력해 주세요."
+               th:classappend="${#fields.hasErrors('title')} ? 'is-invalid'">
+        <p class="travel-plan-field-error" th:if="${#fields.hasErrors('title')}"
+           th:errors="*{title}"></p>
+      </div>
+
+      <div class="travel-plan-form-field">
+        <span class="travel-plan-form-label">여행 기간</span>
+        <div class="travel-plan-period-inputs">
+          <div class="travel-plan-period-item">
+            <label for="travel-plan-start-date">여행 시작일</label>
+            <input type="date" id="travel-plan-start-date" th:field="*{startDate}" required
+                   th:classappend="${#fields.hasErrors('startDate')} ? 'is-invalid'">
+            <p class="travel-plan-field-error" th:if="${#fields.hasErrors('startDate')}"
+               th:errors="*{startDate}"></p>
+          </div>
+          <span class="travel-plan-period-separator" aria-hidden="true">~</span>
+          <div class="travel-plan-period-item">
+            <label for="travel-plan-end-date">여행 종료일</label>
+            <input type="date" id="travel-plan-end-date" th:field="*{endDate}" required
+                   th:classappend="${#fields.hasErrors('endDate')} ? 'is-invalid'">
+            <p class="travel-plan-field-error" th:if="${#fields.hasErrors('endDate')}"
+               th:errors="*{endDate}"></p>
+          </div>
+        </div>
+        <span class="travel-plan-form-hint">시작일과 종료일을 포함해 최대 90일까지 만들 수 있어요.</span>
+      </div>
+
+      <div class="travel-plan-form-field">
+        <label for="travel-plan-display-name">이 방에서 사용할 이름</label>
+        <input type="text" id="travel-plan-display-name" th:field="*{displayName}"
+               maxlength="50" required
+               placeholder="예: 민준"
+               th:classappend="${#fields.hasErrors('displayName')} ? 'is-invalid'">
+        <span class="travel-plan-form-hint">
+          이 여행계획 방에서 다른 참여자에게 표시되는 이름입니다.
+        </span>
+        <p class="travel-plan-field-error" th:if="${#fields.hasErrors('displayName')}"
+           th:errors="*{displayName}"></p>
+      </div>
+
+      <div class="travel-plan-form-actions">
+        <button type="submit" class="travel-plan-form-submit">공동 여행계획 만들기</button>
+      </div>
+    </form>
+  </section>
+</th:block>
+</html>
