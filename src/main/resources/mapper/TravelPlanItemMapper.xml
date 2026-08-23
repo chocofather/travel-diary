@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.travelplan.TravelPlanItemMapper">
+
+    <!-- DAY 의 A 일정 목록 -->
+    <select id="findByDayId" resultType="com.example.travlediary.model.TravelPlanItem">
+        SELECT id, travel_plan_day_id, content, tag, display_order,
+               created_by_member_id, version, created_at, updated_at
+        FROM travel_plan_items
+        WHERE travel_plan_day_id = #{travelPlanDayId}
+        ORDER BY display_order ASC, id ASC
+    </select>
+
+    <!-- 방 전체의 A 일정. DAY 수만큼 조회가 나가지 않도록 한 문장으로 읽는다 -->
+    <select id="findByPlanId" resultType="com.example.travlediary.model.TravelPlanItem">
+        SELECT i.id, i.travel_plan_day_id, i.content, i.tag, i.display_order,
+               i.created_by_member_id, i.version, i.created_at, i.updated_at
+        FROM travel_plan_items i
+                 JOIN travel_plan_days d ON d.id = i.travel_plan_day_id
+        WHERE d.travel_plan_id = #{travelPlanId}
+        ORDER BY d.day_number ASC, i.display_order ASC, i.id ASC
+    </select>
+
+    <!-- 마지막 순서. 일정이 없으면 0 -->
+    <select id="findMaxDisplayOrder" resultType="int">
+        SELECT COALESCE(MAX(display_order), 0)
+        FROM travel_plan_items
+        WHERE travel_plan_day_id = #{travelPlanDayId}
+    </select>
+
+    <!--
+      A 일정 1건 등록.
+      tag 는 아직 화면이 없어 항상 NULL 이고, version / created_at / updated_at 은 DB DEFAULT 를 쓴다.
+    -->
+    <insert id="insertItem" parameterType="com.example.travlediary.model.TravelPlanItem"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO travel_plan_items (
+            travel_plan_day_id, content, tag, display_order, created_by_member_id
+        ) VALUES (
+            #{travelPlanDayId}, #{content}, #{tag}, #{displayOrder}, #{createdByMemberId}
+        )
+    </insert>
+</mapper>

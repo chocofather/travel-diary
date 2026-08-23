@@ -4,36 +4,91 @@
 
 <th:block th:fragment="headFragment">
   <link rel="stylesheet" href="/css/travel-plan.css">
+  <script src="/js/travel-plan-scheduler.js" defer></script>
 </th:block>
 
 <th:block th:fragment="body">
-  <section class="travel-plan-detail-page" aria-labelledby="travel-plan-detail-title"
-           th:object="${travelPlan}">
+  <!-- 바깥은 연한 바탕, 그 위에 플래너 종이 한 장이 놓인 구조 -->
+  <div class="travel-plan-page">
+    <div class="travel-plan-page-top">
+      <a class="travel-plan-back-link" th:href="@{/travel-plans}">← 함께 계획하기</a>
+      <p class="travel-plan-notice" th:if="${travelPlanMessage}"
+         th:text="${travelPlanMessage}" role="status">공동 여행계획이 만들어졌어요.</p>
+    </div>
 
-    <p class="travel-plan-notice" th:if="${travelPlanMessage}"
-       th:text="${travelPlanMessage}" role="status">공동 여행계획이 만들어졌어요.</p>
+    <!--
+      PC 메인 협업 스케줄러.
+      줄은 실제 저장된 travel_plan_items 만큼만 생기고, DAY 끝의 추가 슬롯 하나만 화면용이다.
+      data-plan-id / data-day-id / data-slot-index / data-item-id 는
+      이후 실시간 편집(draft, lock, "OO님이 입력 중")이 위치를 집어낼 때 쓴다.
+    -->
+    <article class="travel-plan-paper" aria-labelledby="travel-plan-detail-title"
+             th:attr="data-plan-id=${travelPlan.plan.id}">
 
-    <a class="travel-plan-back-link" th:href="@{/travel-plans}">← 함께 계획하기</a>
+      <header class="travel-plan-detail-header">
+        <h1 id="travel-plan-detail-title" th:text="${travelPlan.plan.title}">제주도 여행</h1>
+        <p class="travel-plan-detail-period"
+           th:text="${#temporals.format(travelPlan.plan.startDate, 'yyyy.MM.dd')} + ' ~ '
+                    + ${#temporals.format(travelPlan.plan.endDate, 'yyyy.MM.dd')}">
+          2026.09.13 ~ 2026.09.15
+        </p>
+      </header>
 
-    <header class="travel-plan-detail-header">
-      <h1 id="travel-plan-detail-title" th:text="*{plan.title}">제주도 여행</h1>
-      <p class="travel-plan-detail-period"
-         th:text="${#temporals.format(travelPlan.plan.startDate, 'yyyy.MM.dd')} + ' ~ '
-                  + ${#temporals.format(travelPlan.plan.endDate, 'yyyy.MM.dd')}">
-        2026.09.01 ~ 2026.09.03
-      </p>
-    </header>
+      <section class="travel-plan-day" th:each="day : ${travelPlan.days}"
+               th:id="'day-' + ${day.id}"
+               th:attr="data-day-id=${day.id}"
+               th:with="dayItems=${travelPlan.itemsByDayId.get(day.id)},
+                        itemCount=${dayItems == null ? 0 : dayItems.size()},
+                        dayOpen=${openDayId != null and openDayId == day.id}">
 
-    <div class="travel-plan-days">
-      <article class="travel-plan-day" th:each="day : *{days}">
-        <header class="travel-plan-day-header">
+        <h2 class="travel-plan-day-heading">
           <span class="travel-plan-day-number" th:text="'DAY ' + ${day.dayNumber}">DAY 1</span>
           <span class="travel-plan-day-date"
-                th:text="${#temporals.format(day.planDate, 'M월 d일')}">9월 1일</span>
-        </header>
-        <p class="travel-plan-day-empty">아직 등록된 일정이 없습니다.</p>
-      </article>
-    </div>
-  </section>
+                th:text="${#temporals.format(day.planDate, 'M월 d일')}">9월 13일</span>
+        </h2>
+
+        <ol class="travel-plan-lines">
+          <!-- 저장된 일정만 번호가 붙은 줄이 된다 -->
+          <li class="travel-plan-line is-item" th:each="item, status : ${dayItems}"
+              th:attr="data-item-id=${item.id},data-display-order=${item.displayOrder}">
+            <span class="travel-plan-line-order"
+                  th:text="${#numbers.formatInteger(status.count, 2)}">01</span>
+            <p class="travel-plan-line-content" th:text="${item.content}">
+              오전 10시 경복궁 도착
+            </p>
+          </li>
+
+          <!-- DAY 끝의 추가 슬롯 하나. 실제 일정 row 가 아니라 번호를 붙이지 않는다 -->
+          <li class="travel-plan-line is-slot"
+              th:attr="data-day-id=${day.id},data-slot-index=${itemCount + 1}"
+              data-travel-plan-slot>
+            <span class="travel-plan-line-order" aria-hidden="true"></span>
+
+            <span class="travel-plan-slot-hint">+ 일정 추가</span>
+
+            <form class="travel-plan-slot-form" method="post"
+                  th:hidden="${!dayOpen}"
+                  th:action="@{|/travel-plans/${travelPlan.plan.id}/days/${day.id}/items|}"
+                  th:object="${travelPlanItemCreateForm}"
+                  data-travel-plan-slot-form>
+              <!--
+                DAY 마다 폼이 하나씩 있으므로 th:field 대신 name 을 직접 준다.
+                (th:field 는 id 를 필드명으로 고정해 중복 id 가 생긴다)
+                작성 중이던 값은 저장에 실패한 DAY 에서만 되살린다.
+              -->
+              <textarea name="content" rows="1" autocomplete="off"
+                        th:id="'content-' + ${day.id}"
+                        placeholder="여기에 일정 입력..."
+                        th:text="${dayOpen} ? *{content} : ''"
+                        th:classappend="${dayOpen and #fields.hasErrors('content')}
+                                        ? 'is-invalid'"></textarea>
+              <p class="travel-plan-slot-error"
+                 th:if="${dayOpen and #fields.hasErrors('content')}" th:errors="*{content}"></p>
+            </form>
+          </li>
+        </ol>
+      </section>
+    </article>
+  </div>
 </th:block>
 </html>

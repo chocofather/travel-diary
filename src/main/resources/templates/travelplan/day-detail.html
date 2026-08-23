@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
+
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/travel-plan.css">
+</th:block>
+
+<th:block th:fragment="body">
+  <section class="travel-plan-day-page" aria-labelledby="travel-plan-day-title"
+           th:object="${travelPlanDay}">
+
+    <a class="travel-plan-back-link"
+       th:href="@{|/travel-plans/${travelPlanDay.plan.id}|}"
+       th:text="'← ' + *{plan.title}">← 제주도 여행</a>
+
+    <header class="travel-plan-day-page-header">
+      <h1 id="travel-plan-day-title" th:text="'DAY ' + *{day.dayNumber}">DAY 1</h1>
+      <p class="travel-plan-day-page-date"
+         th:text="${#temporals.format(travelPlanDay.day.planDate, 'M월 d일')}">9월 13일</p>
+    </header>
+
+    <ol class="travel-plan-item-list" th:if="${!#lists.isEmpty(travelPlanDay.items)}">
+      <li class="travel-plan-item" th:each="item, status : *{items}">
+        <span class="travel-plan-item-order"
+              th:text="${#numbers.formatInteger(status.count, 2)}">01</span>
+        <!-- 자유 텍스트라 줄바꿈을 그대로 살린다 -->
+        <p class="travel-plan-item-content" th:text="${item.content}">
+          오전 10시 경복궁 도착
+        </p>
+      </li>
+    </ol>
+
+    <p class="travel-plan-item-empty" th:if="${#lists.isEmpty(travelPlanDay.items)}">
+      아직 등록된 일정이 없습니다.
+    </p>
+
+    <form class="travel-plan-item-form" method="post"
+          th:action="@{|/travel-plans/${travelPlanDay.plan.id}/days/${travelPlanDay.day.id}/items|}"
+          th:object="${travelPlanItemCreateForm}">
+      <!-- th:field 가 id 를 필드명(content)으로 바꾸므로 label 도 같은 값을 가리킨다 -->
+      <label class="travel-plan-item-form-label" for="content">+ 일정 추가</label>
+      <!--
+        저장 후에는 빈 칸으로 시작해야 한다.
+        서버는 redirect 후 빈 폼을 내려주지만, 브라우저가 새로고침/뒤로가기에서
+        직전 입력을 복원하지 않도록 autocomplete 을 끈다.
+      -->
+      <textarea th:field="*{content}" rows="4" autocomplete="off"
+                placeholder="오전 10시 경복궁 도착&#10;한복 빌리고 천천히 둘러보기"
+                th:classappend="${#fields.hasErrors('content')} ? 'is-invalid'"></textarea>
+      <p class="travel-plan-field-error" th:if="${#fields.hasErrors('content')}"
+         th:errors="*{content}"></p>
+      <div class="travel-plan-item-form-actions">
+        <button type="submit" class="travel-plan-form-submit">일정 추가</button>
+      </div>
+    </form>
+  </section>
+</th:block>
+</html>

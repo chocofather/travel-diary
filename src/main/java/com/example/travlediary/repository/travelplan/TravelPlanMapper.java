@@ -45,4 +45,10 @@ public interface TravelPlanMapper {
 
     /** 방의 DAY 목록. day_number 오름차순. */
     List<TravelPlanDay> findDaysByPlanId(@Param("travelPlanId") Long travelPlanId);
+
+    /**
+     * DAY 1건. 방 소속 조건을 함께 걸어 다른 방의 dayId 를 섞어 넣을 수 없게 한다.
+     */
+    TravelPlanDay findDayByPlanAndId(@Param("travelPlanId") Long travelPlanId,
+                                     @Param("dayId") Long dayId);
 }

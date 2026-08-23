@@ -8,17 +8,15 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.util.List;
-import java.util.Map;
 
-/** 방 기본 상세. 일정(travel_plan_items)은 아직 담지 않는다. */
+/** DAY 편집 화면 한 벌. Plan B/C 는 아직 담지 않는다. */
 @Data
 @AllArgsConstructor
-public class TravelPlanDetailDto {
+public class TravelPlanDayDetailDto {
     private TravelPlan plan;
     /** 이 방에서의 현재 사용자 참여 정보 */
     private TravelPlanMember currentMember;
-    /** day_number 오름차순 */
-    private List<TravelPlanDay> days;
-    /** DAY id -> 그 DAY 의 A 일정(display_order 오름차순). 일정이 없는 DAY 는 키가 없다. */
-    private Map<Long, List<TravelPlanItem>> itemsByDayId;
+    private TravelPlanDay day;
+    /** display_order 오름차순 A 일정 */
+    private List<TravelPlanItem> items;
 }

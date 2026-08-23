@@ -1,13 +1,16 @@
 package com.example.travlediary.service.travelplan;
 
+import com.example.travlediary.dto.TravelPlanDayDetailDto;
 import com.example.travlediary.dto.TravelPlanDetailDto;
 import com.example.travlediary.dto.TravelPlanListItemDto;
 import com.example.travlediary.model.TravelPlan;
 import com.example.travlediary.model.TravelPlanDay;
+import com.example.travlediary.model.TravelPlanItem;
 import com.example.travlediary.model.TravelPlanMember;
 import com.example.travlediary.model.TravelPlanMemberStatus;
 import com.example.travlediary.model.TravelPlanRole;
 import com.example.travlediary.model.TravelPlanStatus;
+import com.example.travlediary.repository.travelplan.TravelPlanItemMapper;
 import com.example.travlediary.repository.travelplan.TravelPlanMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -18,7 +21,10 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +38,7 @@ public class TravelPlanService {
     private static final int MAX_PLAN_DAYS = 90;
 
     private final TravelPlanMapper travelPlanMapper;
+    private final TravelPlanItemMapper travelPlanItemMapper;
 
     /**
      * 현재 사용자가 ACTIVE 멤버로 참여 중인 ACTIVE 방 목록.
@@ -52,6 +59,62 @@ public class TravelPlanService {
      */
     @Transactional(readOnly = true)
     public TravelPlanDetailDto getActivePlanDetail(Long userId, Long travelPlanId) {
+        PlanAccess access = requireActiveAccess(userId, travelPlanId);
+
+        List<TravelPlanDay> days = travelPlanMapper.findDaysByPlanId(travelPlanId);
+        // DAY 마다 조회하지 않고 방 전체 일정을 한 번에 읽어 DAY 별로 묶는다.
+        List<TravelPlanItem> items = travelPlanItemMapper.findByPlanId(travelPlanId);
+        Map<Long, List<TravelPlanItem>> itemsByDayId = items == null
+                ? Map.of()
+                : items.stream().collect(Collectors.groupingBy(
+                        TravelPlanItem::getTravelPlanDayId, LinkedHashMap::new, Collectors.toList()));
+
+        return new TravelPlanDetailDto(
+                access.plan(), access.member(), days == null ? List.of() : days, itemsByDayId);
+    }
+
+    /**
+     * DAY 편집 화면 한 벌.
+     * 방 접근 권한에 더해 dayId 가 그 방 소속인지까지 확인한다.
+     */
+    @Transactional(readOnly = true)
+    public TravelPlanDayDetailDto getActiveDayDetail(Long userId, Long travelPlanId, Long dayId) {
+        PlanAccess access = requireActiveAccess(userId, travelPlanId);
+        TravelPlanDay day = requireDayOfPlan(travelPlanId, dayId);
+
+        List<TravelPlanItem> items = travelPlanItemMapper.findByDayId(dayId);
+        return new TravelPlanDayDetailDto(
+                access.plan(), access.member(), day, items == null ? List.of() : items);
+    }
+
+    /**
+     * DAY 마지막에 A 일정을 추가한다.
+     * 작성자는 요청 값을 믿지 않고 현재 사용자의 방 참여 정보에서 가져온다.
+     */
+    @Transactional
+    public void addItem(Long userId, Long travelPlanId, Long dayId, String content) {
+        PlanAccess access = requireActiveAccess(userId, travelPlanId);
+        requireDayOfPlan(travelPlanId, dayId);
+
+        String normalizedContent = requiredContent(content);
+
+        TravelPlanItem item = new TravelPlanItem();
+        item.setTravelPlanDayId(dayId);
+        item.setContent(normalizedContent);
+        // 태그 UI 는 아직 없다.
+        item.setTag(null);
+        item.setCreatedByMemberId(access.member().getId());
+        // 같은 트랜잭션 안에서 마지막 순서를 읽어 뒤에 붙인다.
+        item.setDisplayOrder(travelPlanItemMapper.findMaxDisplayOrder(dayId) + 1);
+
+        if (travelPlanItemMapper.insertItem(item) != 1) {
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, "일정을 저장하지 못했습니다.");
+        }
+    }
+
+    /** 방이 ACTIVE 이고 현재 사용자가 그 방의 ACTIVE 멤버인지 확인한다. */
+    private PlanAccess requireActiveAccess(Long userId, Long travelPlanId) {
         requireUser(userId);
         if (travelPlanId == null) {
             throw planNotFound();
@@ -67,9 +130,30 @@ public class TravelPlanService {
         if (plan == null) {
             throw planNotFound();
         }
+        return new PlanAccess(plan, currentMember);
+    }
 
-        List<TravelPlanDay> days = travelPlanMapper.findDaysByPlanId(travelPlanId);
-        return new TravelPlanDetailDto(plan, currentMember, days == null ? List.of() : days);
+    /** 다른 방의 dayId 를 URL 에 섞어 넣어도 통과하지 못하게 한다. */
+    private TravelPlanDay requireDayOfPlan(Long travelPlanId, Long dayId) {
+        TravelPlanDay day = dayId == null
+                ? null : travelPlanMapper.findDayByPlanAndId(travelPlanId, dayId);
+        if (day == null) {
+            throw planNotFound();
+        }
+        return day;
+    }
+
+    /** 자유 텍스트. 양끝 공백만 정리하고 내부 줄바꿈은 그대로 둔다. */
+    private String requiredContent(String value) {
+        String content = value == null ? "" : value.trim();
+        if (content.isEmpty()) {
+            throw new TravelPlanValidationException("content", "일정 내용을 입력해 주세요.");
+        }
+        return content;
+    }
+
+    /** 접근 확인 결과. 방과 현재 사용자의 참여 정보를 함께 들고 다닌다. */
+    private record PlanAccess(TravelPlan plan, TravelPlanMember member) {
     }
 
     private void requireUser(Long userId) {

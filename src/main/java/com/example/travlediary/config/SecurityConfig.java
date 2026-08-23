@@ -107,6 +107,8 @@ public class SecurityConfig {
                         new RegexRequestMatcher(
                                 "^/travel-plans$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(
+                                "^/travel-plans/[0-9]+/days/[0-9]+/items$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
                                 "^/diaries$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(
                                 "^/diaries/[0-9]+/update$", HttpMethod.POST.name()),

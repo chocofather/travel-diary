@@ -1,6 +1,7 @@
 package com.example.travlediary.controller.travelplan;
 
 import com.example.travlediary.dto.TravelPlanCreateForm;
+import com.example.travlediary.dto.TravelPlanItemCreateForm;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.travelplan.TravelPlanService;
 import com.example.travlediary.service.travelplan.TravelPlanValidationException;
@@ -27,6 +28,8 @@ public class TravelPlanController {
     private static final String LIST_VIEW = "travelplan/list";
     private static final String CREATE_VIEW = "travelplan/create";
     private static final String DETAIL_VIEW = "travelplan/detail";
+    private static final String DAY_DETAIL_VIEW = "travelplan/day-detail";
+    private static final String ITEM_FORM_ATTRIBUTE = "travelPlanItemCreateForm";
 
     /** 폼에 실제로 있는 필드만 필드 오류로 남길 수 있다. */
     private static final Set<String> FORM_FIELDS =
@@ -83,9 +86,48 @@ public class TravelPlanController {
     public String detail(@PathVariable Long travelPlanId,
                          @AuthenticationPrincipal CustomUserDetails userDetails,
                          Model model) {
+        if (!model.containsAttribute(ITEM_FORM_ATTRIBUTE)) {
+            model.addAttribute(ITEM_FORM_ATTRIBUTE, new TravelPlanItemCreateForm());
+        }
         model.addAttribute("travelPlan",
                 travelPlanService.getActivePlanDetail(userDetails.getId(), travelPlanId));
         return DETAIL_VIEW;
+    }
+
+    // DAY 편집 화면
+    @GetMapping("/{travelPlanId:\\d+}/days/{dayId:\\d+}")
+    public String dayDetail(@PathVariable Long travelPlanId,
+                            @PathVariable Long dayId,
+                            @AuthenticationPrincipal CustomUserDetails userDetails,
+                            Model model) {
+        if (!model.containsAttribute(ITEM_FORM_ATTRIBUTE)) {
+            model.addAttribute(ITEM_FORM_ATTRIBUTE, new TravelPlanItemCreateForm());
+        }
+        model.addAttribute("travelPlanDay",
+                travelPlanService.getActiveDayDetail(userDetails.getId(), travelPlanId, dayId));
+        return DAY_DETAIL_VIEW;
+    }
+
+    // A 일정 추가
+    @PostMapping("/{travelPlanId:\\d+}/days/{dayId:\\d+}/items")
+    public String addItem(@PathVariable Long travelPlanId,
+                          @PathVariable Long dayId,
+                          @ModelAttribute(ITEM_FORM_ATTRIBUTE) TravelPlanItemCreateForm form,
+                          BindingResult bindingResult,
+                          @AuthenticationPrincipal CustomUserDetails userDetails,
+                          Model model) {
+        try {
+            travelPlanService.addItem(userDetails.getId(), travelPlanId, dayId, form.getContent());
+        } catch (TravelPlanValidationException exception) {
+            bindingResult.rejectValue("content", "travelPlan.invalid", exception.getMessage());
+            // 편집 화면을 그대로 다시 그리고, 문제가 난 DAY 의 입력칸만 열어 둔다.
+            model.addAttribute("travelPlan",
+                    travelPlanService.getActivePlanDetail(userDetails.getId(), travelPlanId));
+            model.addAttribute("openDayId", dayId);
+            return DETAIL_VIEW;
+        }
+        // 메인 편집 화면의 해당 DAY 자리로 돌아온다.
+        return "redirect:/travel-plans/" + travelPlanId + "#day-" + dayId;
     }
 
     private void rejectValidation(BindingResult bindingResult,

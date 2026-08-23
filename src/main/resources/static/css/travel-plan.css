@@ -313,12 +313,41 @@
     margin: 0 0 4px;
 }
 
-/* ───── 방 상세 (플래너 뼈대) ───── */
+/* ───── 메인 협업 플래너 (종이 스케줄러) ───── */
 
-.travel-plan-detail-page {
-    max-width: 720px;
+/*
+  바깥은 아주 연한 바탕, 그 위에 종이 한 장.
+  header/footer 는 건드리지 않고 본문 영역에서만 배경을 나눈다.
+*/
+.travel-plan-page {
+    padding: 36px 20px 88px;
+    background: #f5f2ec;
+}
+
+.travel-plan-page-top {
+    max-width: 900px;
+    margin: 0 auto 14px;
+}
+
+/* 스케줄러가 주 콘텐츠라 본문만 넓게 쓴다 */
+.travel-plan-paper {
+    max-width: 900px;
     margin: 0 auto;
-    padding: 28px 20px 64px;
+    padding: 52px 56px 60px;
+    background: #fffdf8;
+    border: 1px solid #e8e1d5;
+    border-radius: 3px;
+    box-shadow: 0 1px 3px rgba(78, 66, 48, 0.06);
+}
+
+@media (max-width: 720px) {
+    .travel-plan-page {
+        padding: 20px 12px 56px;
+    }
+
+    .travel-plan-paper {
+        padding: 32px 22px 40px;
+    }
 }
 
 .travel-plan-back-link {
@@ -334,9 +363,7 @@
 }
 
 .travel-plan-detail-header {
-    margin-bottom: 28px;
-    padding-bottom: 18px;
-    border-bottom: 1px solid #e8e1d6;
+    margin-bottom: 46px;
 }
 
 .travel-plan-detail-header h1 {
@@ -352,43 +379,246 @@
     font-size: 15px;
 }
 
-.travel-plan-days {
-    display: flex;
-    flex-direction: column;
-    gap: 26px;
-}
-
+/* DAY 는 카드가 아니라 플래너의 한 구획이다 */
 .travel-plan-day {
-    padding-bottom: 22px;
-    border-bottom: 1px solid #f0ebe2;
+    margin-bottom: 56px;
 }
 
 .travel-plan-day:last-child {
-    border-bottom: 0;
+    margin-bottom: 0;
 }
 
-.travel-plan-day-header {
+/* DAY 번호는 왼쪽, 날짜는 같은 줄 오른쪽 끝 */
+.travel-plan-day-heading {
     display: flex;
     align-items: baseline;
+    justify-content: space-between;
     gap: 12px;
-    margin-bottom: 12px;
+    margin: 0 0 8px;
+    font-size: 16px;
+    font-weight: 700;
 }
 
 .travel-plan-day-number {
     color: #3f3426;
-    font-size: 15px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.05em;
 }
 
 .travel-plan-day-date {
     color: #a09585;
     font-size: 14px;
+    font-weight: 500;
 }
 
-.travel-plan-day-empty {
+/* 얇은 가로선이 이어지는 "줄" 느낌. 실제 빈 줄을 저장하지는 않는다 */
+.travel-plan-lines {
     margin: 0;
-    padding: 18px 2px;
+    padding: 0;
+    border-top: 1px solid #ece6dc;
+    list-style: none;
+}
+
+.travel-plan-line {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px 2px;
+    border-bottom: 1px solid #ece6dc;
+}
+
+.travel-plan-line-order {
+    flex: 0 0 auto;
+    min-width: 20px;
+    padding-top: 1px;
+    color: #c4b8a5;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+}
+
+.travel-plan-line-content {
+    margin: 0;
+    color: #3f3426;
+    font-size: 15px;
+    line-height: 1.75;
+    /* 자유 텍스트의 줄바꿈을 그대로 보여 준다 */
+    white-space: pre-line;
+    overflow-wrap: break-word;
+}
+
+/*
+  빈 줄. 평소에는 그냥 줄이고, hover 했을 때만 안내가 옅게 뜬다.
+  DB row 가 아니라 화면에만 있는 슬롯이다.
+*/
+.travel-plan-line.is-slot {
+    border-bottom: 0;
+    cursor: text;
+}
+
+/* 추가 슬롯에는 번호를 붙이지 않는다 (자리만 맞춘다) */
+.travel-plan-line.is-slot .travel-plan-line-order {
+    color: transparent;
+}
+
+.travel-plan-slot-hint {
+    flex: 1;
+    padding-top: 1px;
+    color: #cdc3b2;
+    font-size: 14px;
+    transition: color 0.12s ease;
+}
+
+.travel-plan-line.is-slot:hover .travel-plan-slot-hint {
+    color: #9a8f7d;
+}
+
+.travel-plan-line.is-slot.is-editing .travel-plan-slot-hint {
+    display: none;
+}
+
+/* 입력칸은 그 줄 안에 그대로 들어간다. 별도 박스를 만들지 않는다 */
+.travel-plan-slot-form {
+    flex: 1;
+    min-width: 0;
+}
+
+.travel-plan-slot-form textarea {
+    box-sizing: border-box;
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: #3f3426;
+    font-family: inherit;
+    font-size: 15px;
+    line-height: 1.75;
+    resize: none;
+    overflow: hidden;
+}
+
+.travel-plan-slot-form textarea:focus {
+    outline: none;
+}
+
+.travel-plan-slot-form textarea::placeholder {
+    color: #c9bfae;
+}
+
+.travel-plan-slot-form textarea.is-invalid {
+    color: #b42318;
+}
+
+.travel-plan-slot-error {
+    margin: 4px 0 0;
+    color: #b42318;
+    font-size: 13px;
+}
+
+/* ───── DAY 편집 화면 ───── */
+
+.travel-plan-day-page {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 28px 20px 72px;
+}
+
+.travel-plan-day-page-header {
+    margin-bottom: 30px;
+}
+
+.travel-plan-day-page-header h1 {
+    margin: 0 0 4px;
+    color: #3f3426;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+.travel-plan-day-page-date {
+    margin: 0;
+    color: #a09585;
+    font-size: 15px;
+}
+
+.travel-plan-item-list {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    margin: 0 0 30px;
+    padding: 0;
+    list-style: none;
+}
+
+.travel-plan-item {
+    display: flex;
+    gap: 14px;
+}
+
+.travel-plan-item-order {
+    flex: 0 0 auto;
+    padding-top: 2px;
+    color: #c4b8a5;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+}
+
+.travel-plan-item-content {
+    margin: 0;
+    color: #3f3426;
+    font-size: 15px;
+    line-height: 1.75;
+    /* 자유 텍스트의 줄바꿈을 그대로 보여 준다 */
+    white-space: pre-line;
+    overflow-wrap: break-word;
+}
+
+.travel-plan-item-empty {
+    margin: 0 0 30px;
+    padding: 30px 2px;
     color: #a89e91;
     font-size: 14px;
+}
+
+.travel-plan-item-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 22px;
+    border-top: 1px solid #f0ebe2;
+}
+
+.travel-plan-item-form-label {
+    color: #8b8378;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.travel-plan-item-form textarea {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid #ded5c8;
+    border-radius: 10px;
+    background: #fff;
+    color: #3f3426;
+    font-family: inherit;
+    font-size: 15px;
+    line-height: 1.7;
+    resize: vertical;
+}
+
+.travel-plan-item-form textarea:focus {
+    border-color: #b9a98f;
+    outline: 3px solid rgba(185, 169, 143, 0.18);
+}
+
+.travel-plan-item-form textarea.is-invalid {
+    border-color: #e0a49d;
+}
+
+.travel-plan-item-form-actions {
+    display: flex;
+    justify-content: flex-end;
 }

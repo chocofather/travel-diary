@@ -3,9 +3,11 @@ package com.example.travlediary.controller.travelplan;
 import com.example.travlediary.config.CustomLoginSuccessHandler;
 import com.example.travlediary.config.CustomLogoutSuccessHandler;
 import com.example.travlediary.config.SecurityConfig;
+import com.example.travlediary.dto.TravelPlanDayDetailDto;
 import com.example.travlediary.dto.TravelPlanDetailDto;
 import com.example.travlediary.dto.TravelPlanListItemDto;
 import com.example.travlediary.model.TravelPlan;
+import com.example.travlediary.model.TravelPlanDay;
 import com.example.travlediary.model.TravelPlanMember;
 import com.example.travlediary.model.TravelPlanRole;
 import com.example.travlediary.model.User;
@@ -25,6 +27,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -225,7 +228,8 @@ class TravelPlanControllerTest {
         plan.setTitle("제주 여행");
         plan.setStartDate(LocalDate.parse(START));
         plan.setEndDate(LocalDate.parse(END));
-        TravelPlanDetailDto detail = new TravelPlanDetailDto(plan, new TravelPlanMember(), List.of());
+        TravelPlanDetailDto detail =
+                new TravelPlanDetailDto(plan, new TravelPlanMember(), List.of(), Map.of());
         when(travelPlanService.getActivePlanDetail(7L, 42L)).thenReturn(detail);
 
         mockMvc.perform(get("/travel-plans/42").with(user(member())))
@@ -252,6 +256,106 @@ class TravelPlanControllerTest {
         mockMvc.perform(get("/travel-plans/42"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/login?redirect=/travel-plans/42"));
+    }
+
+    @Test
+    void theDayPageAsksTheServiceWithTheCurrentUserAndBothIds() throws Exception {
+        when(travelPlanService.getActiveDayDetail(7L, 42L, 100L)).thenReturn(dayDetail());
+
+        mockMvc.perform(get("/travel-plans/42/days/100").with(user(member())))
+                .andExpect(status().isOk())
+                .andExpect(view().name("travelplan/day-detail"))
+                .andExpect(model().attributeExists("travelPlanDay"))
+                .andExpect(model().attributeExists("travelPlanItemCreateForm"));
+
+        verify(travelPlanService).getActiveDayDetail(7L, 42L, 100L);
+    }
+
+    @Test
+    void aDayTheUserCannotSeeComesBackAsNotFound() throws Exception {
+        when(travelPlanService.getActiveDayDetail(anyLong(), anyLong(), anyLong()))
+                .thenThrow(new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "여행계획을 찾을 수 없습니다."));
+
+        mockMvc.perform(get("/travel-plans/42/days/999").with(user(member())))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void anonymousDayAccessIsSentToLogin() throws Exception {
+        mockMvc.perform(get("/travel-plans/42/days/100"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login?redirect=/travel-plans/42/days/100"));
+    }
+
+    @Test
+    void addingAnItemComesBackToThatDayOnTheMainPlanner() throws Exception {
+        mockMvc.perform(post("/travel-plans/42/days/100/items")
+                        .with(user(member())).with(csrf())
+                        .param("content", "오전 10시 경복궁 도착\n한복 빌리고 천천히 둘러보기"))
+                .andExpect(status().is3xxRedirection())
+                // DAY 상세가 아니라 메인 편집 화면의 그 DAY 자리로 돌아온다
+                .andExpect(redirectedUrl("/travel-plans/42#day-100"));
+
+        verify(travelPlanService).addItem(
+                7L, 42L, 100L, "오전 10시 경복궁 도착\n한복 빌리고 천천히 둘러보기");
+    }
+
+    @Test
+    void aBlankItemRedisplaysThePlannerWithThatDaysEditorOpen() throws Exception {
+        doThrow(new TravelPlanValidationException("content", "일정 내용을 입력해 주세요."))
+                .when(travelPlanService).addItem(anyLong(), anyLong(), anyLong(), any());
+        when(travelPlanService.getActivePlanDetail(7L, 42L)).thenReturn(planDetail());
+
+        mockMvc.perform(post("/travel-plans/42/days/100/items")
+                        .with(user(member())).with(csrf())
+                        .param("content", "   "))
+                .andExpect(status().isOk())
+                // 오류 페이지가 아니라 같은 편집 화면을 다시 그린다
+                .andExpect(view().name("travelplan/detail"))
+                .andExpect(model().attributeHasFieldErrors("travelPlanItemCreateForm", "content"))
+                // 작성 중이던 내용이 남고, 어느 DAY 입력칸을 열지 알려 준다
+                .andExpect(model().attribute("travelPlanItemCreateForm",
+                        org.hamcrest.Matchers.hasProperty("content",
+                                org.hamcrest.Matchers.equalTo("   "))))
+                .andExpect(model().attribute("openDayId", 100L))
+                .andExpect(model().attributeExists("travelPlan"));
+    }
+
+    @Test
+    void addingAnItemWithoutCsrfIsRejected() throws Exception {
+        mockMvc.perform(post("/travel-plans/42/days/100/items")
+                        .with(user(member()))
+                        .param("content", "일정"))
+                .andExpect(status().isForbidden());
+
+        verify(travelPlanService, never()).addItem(anyLong(), anyLong(), anyLong(), any());
+    }
+
+    private TravelPlanDetailDto planDetail() {
+        TravelPlan plan = new TravelPlan();
+        plan.setId(42L);
+        plan.setTitle("제주 여행");
+        plan.setStartDate(LocalDate.parse(START));
+        plan.setEndDate(LocalDate.parse(END));
+        TravelPlanDay day = new TravelPlanDay();
+        day.setId(100L);
+        day.setTravelPlanId(42L);
+        day.setDayNumber(1);
+        day.setPlanDate(LocalDate.parse(START));
+        return new TravelPlanDetailDto(plan, new TravelPlanMember(), List.of(day), Map.of());
+    }
+
+    private TravelPlanDayDetailDto dayDetail() {
+        TravelPlan plan = new TravelPlan();
+        plan.setId(42L);
+        plan.setTitle("제주 여행");
+        TravelPlanDay day = new TravelPlanDay();
+        day.setId(100L);
+        day.setTravelPlanId(42L);
+        day.setDayNumber(1);
+        day.setPlanDate(LocalDate.parse(START));
+        return new TravelPlanDayDetailDto(plan, new TravelPlanMember(), day, List.of());
     }
 
     private CustomUserDetails member() {

@@ -4,10 +4,12 @@ import com.example.travlediary.dto.TravelPlanDetailDto;
 import com.example.travlediary.dto.TravelPlanListItemDto;
 import com.example.travlediary.model.TravelPlan;
 import com.example.travlediary.model.TravelPlanDay;
+import com.example.travlediary.model.TravelPlanItem;
 import com.example.travlediary.model.TravelPlanMember;
 import com.example.travlediary.model.TravelPlanMemberStatus;
 import com.example.travlediary.model.TravelPlanRole;
 import com.example.travlediary.model.TravelPlanStatus;
+import com.example.travlediary.repository.travelplan.TravelPlanItemMapper;
 import com.example.travlediary.repository.travelplan.TravelPlanMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -41,6 +43,8 @@ class TravelPlanReadServiceTest {
 
     @Mock
     private TravelPlanMapper travelPlanMapper;
+    @Mock
+    private TravelPlanItemMapper travelPlanItemMapper;
     @InjectMocks
     private TravelPlanService travelPlanService;
 
@@ -83,6 +87,40 @@ class TravelPlanReadServiceTest {
         assertThat(detail.getDays())
                 .extracting(TravelPlanDay::getDayNumber)
                 .containsExactly(1, 2);
+    }
+
+    @Test
+    void detailGroupsItemsByTheirDayWithoutMixingThem() {
+        givenActiveMembership();
+        when(travelPlanMapper.findPlanByIdAndStatus(PLAN_ID, "ACTIVE")).thenReturn(plan());
+        when(travelPlanMapper.findDaysByPlanId(PLAN_ID))
+                .thenReturn(List.of(day(100L, 1, START), day(200L, 2, START.plusDays(1))));
+        // 방 전체 일정을 한 번에 읽는다 (DAY 수만큼 조회하지 않는다)
+        when(travelPlanItemMapper.findByPlanId(PLAN_ID)).thenReturn(List.of(
+                item(100L, 1, "DAY1 첫 일정"),
+                item(100L, 2, "DAY1 둘째 일정"),
+                item(200L, 1, "DAY2 첫 일정")));
+
+        TravelPlanDetailDto detail = travelPlanService.getActivePlanDetail(USER_ID, PLAN_ID);
+
+        assertThat(detail.getItemsByDayId().get(100L))
+                .extracting(TravelPlanItem::getContent)
+                .containsExactly("DAY1 첫 일정", "DAY1 둘째 일정");
+        assertThat(detail.getItemsByDayId().get(200L))
+                .extracting(TravelPlanItem::getContent)
+                .containsExactly("DAY2 첫 일정");
+        verify(travelPlanItemMapper).findByPlanId(PLAN_ID);
+    }
+
+    @Test
+    void aDayWithoutItemsSimplyHasNoEntry() {
+        givenActiveMembership();
+        when(travelPlanMapper.findPlanByIdAndStatus(PLAN_ID, "ACTIVE")).thenReturn(plan());
+        when(travelPlanMapper.findDaysByPlanId(PLAN_ID)).thenReturn(List.of(day(100L, 1, START)));
+        when(travelPlanItemMapper.findByPlanId(PLAN_ID)).thenReturn(null);
+
+        assertThat(travelPlanService.getActivePlanDetail(USER_ID, PLAN_ID).getItemsByDayId())
+                .doesNotContainKey(100L);
     }
 
     @Test
@@ -173,9 +211,23 @@ class TravelPlanReadServiceTest {
     }
 
     private TravelPlanDay day(int dayNumber, LocalDate planDate) {
+        return day(null, dayNumber, planDate);
+    }
+
+    private TravelPlanDay day(Long id, int dayNumber, LocalDate planDate) {
         TravelPlanDay day = new TravelPlanDay();
+        day.setId(id);
+        day.setTravelPlanId(PLAN_ID);
         day.setDayNumber(dayNumber);
         day.setPlanDate(planDate);
         return day;
+    }
+
+    private TravelPlanItem item(Long dayId, int displayOrder, String content) {
+        TravelPlanItem item = new TravelPlanItem();
+        item.setTravelPlanDayId(dayId);
+        item.setDisplayOrder(displayOrder);
+        item.setContent(content);
+        return item;
     }
 }
