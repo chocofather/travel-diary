@@ -11,6 +11,7 @@ import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -23,14 +24,22 @@ import java.util.Set;
 public class TravelPlanController {
 
     private static final String FORM_ATTRIBUTE = "travelPlanCreateForm";
+    private static final String LIST_VIEW = "travelplan/list";
     private static final String CREATE_VIEW = "travelplan/create";
-    private static final String REDIRECT_NEW = "redirect:/travel-plans/new";
+    private static final String DETAIL_VIEW = "travelplan/detail";
 
     /** 폼에 실제로 있는 필드만 필드 오류로 남길 수 있다. */
     private static final Set<String> FORM_FIELDS =
             Set.of("title", "startDate", "endDate", "displayName");
 
     private final TravelPlanService travelPlanService;
+
+    // 함께 계획하기 목록
+    @GetMapping
+    public String list(@AuthenticationPrincipal CustomUserDetails userDetails, Model model) {
+        model.addAttribute("travelPlans", travelPlanService.getActivePlans(userDetails.getId()));
+        return LIST_VIEW;
+    }
 
     // 방 생성 폼
     @GetMapping("/new")
@@ -65,10 +74,18 @@ public class TravelPlanController {
             return CREATE_VIEW;
         }
 
-        // 아직 목록/상세 화면이 없어 생성 폼으로 되돌린다. id 는 URL 에 노출하지 않는다.
         redirectAttributes.addFlashAttribute("travelPlanMessage", "공동 여행계획이 만들어졌어요.");
-        redirectAttributes.addFlashAttribute("createdTravelPlanId", travelPlanId);
-        return REDIRECT_NEW;
+        return "redirect:/travel-plans/" + travelPlanId;
+    }
+
+    // 방 기본 상세. 접근 권한은 Service 가 사용자 기준으로 확인한다.
+    @GetMapping("/{travelPlanId:\\d+}")
+    public String detail(@PathVariable Long travelPlanId,
+                         @AuthenticationPrincipal CustomUserDetails userDetails,
+                         Model model) {
+        model.addAttribute("travelPlan",
+                travelPlanService.getActivePlanDetail(userDetails.getId(), travelPlanId));
+        return DETAIL_VIEW;
     }
 
     private void rejectValidation(BindingResult bindingResult,

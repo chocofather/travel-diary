@@ -1,5 +1,7 @@
 package com.example.travlediary.service.travelplan;
 
+import com.example.travlediary.dto.TravelPlanDetailDto;
+import com.example.travlediary.dto.TravelPlanListItemDto;
 import com.example.travlediary.model.TravelPlan;
 import com.example.travlediary.model.TravelPlanDay;
 import com.example.travlediary.model.TravelPlanMember;
@@ -32,6 +34,55 @@ public class TravelPlanService {
     private final TravelPlanMapper travelPlanMapper;
 
     /**
+     * 현재 사용자가 ACTIVE 멤버로 참여 중인 ACTIVE 방 목록.
+     * 호출자가 다른 사용자의 목록을 볼 수 없도록 항상 userId 기준으로만 읽는다.
+     */
+    @Transactional(readOnly = true)
+    public List<TravelPlanListItemDto> getActivePlans(Long userId) {
+        requireUser(userId);
+        List<TravelPlanListItemDto> plans = travelPlanMapper.findActivePlansByUserId(
+                userId, TravelPlanStatus.ACTIVE.name(), TravelPlanMemberStatus.ACTIVE.name());
+        return plans == null ? List.of() : plans;
+    }
+
+    /**
+     * 방 기본 상세.
+     * 방이 ACTIVE 이고 현재 사용자가 그 방의 ACTIVE 멤버일 때만 돌려준다.
+     * 그 외에는 방의 존재 자체를 알리지 않도록 404 로 처리한다(다이어리와 같은 관례).
+     */
+    @Transactional(readOnly = true)
+    public TravelPlanDetailDto getActivePlanDetail(Long userId, Long travelPlanId) {
+        requireUser(userId);
+        if (travelPlanId == null) {
+            throw planNotFound();
+        }
+
+        TravelPlanMember currentMember = travelPlanMapper.findMemberByPlanAndUser(
+                travelPlanId, userId, TravelPlanMemberStatus.ACTIVE.name());
+        if (currentMember == null) {
+            throw planNotFound();
+        }
+        TravelPlan plan = travelPlanMapper.findPlanByIdAndStatus(
+                travelPlanId, TravelPlanStatus.ACTIVE.name());
+        if (plan == null) {
+            throw planNotFound();
+        }
+
+        List<TravelPlanDay> days = travelPlanMapper.findDaysByPlanId(travelPlanId);
+        return new TravelPlanDetailDto(plan, currentMember, days == null ? List.of() : days);
+    }
+
+    private void requireUser(Long userId) {
+        if (userId == null) {
+            throw new TravelPlanValidationException("userId", "로그인이 필요합니다.");
+        }
+    }
+
+    private ResponseStatusException planNotFound() {
+        return new ResponseStatusException(HttpStatus.NOT_FOUND, "여행계획을 찾을 수 없습니다.");
+    }
+
+    /**
      * 공동 여행계획 방을 만든다.
      * 방 / OWNER 참여자 / 기간만큼의 DAY 를 한 트랜잭션에서 저장한다.
      *
@@ -41,9 +92,7 @@ public class TravelPlanService {
     @Transactional
     public Long createPlan(Long userId, String title, LocalDate startDate, LocalDate endDate,
                            String displayName) {
-        if (userId == null) {
-            throw new TravelPlanValidationException("userId", "로그인이 필요합니다.");
-        }
+        requireUser(userId);
         String normalizedTitle = requiredText(
                 "title", title, MAX_TITLE_LENGTH, "여행계획 이름", "여행계획 이름을 입력해 주세요.");
         String normalizedDisplayName = requiredText(

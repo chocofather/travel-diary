@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
+
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/travel-plan.css">
+</th:block>
+
+<th:block th:fragment="body">
+  <section class="travel-plan-list-page" aria-labelledby="travel-plan-list-title">
+    <header class="travel-plan-list-header">
+      <div>
+        <p class="travel-plan-eyebrow">TRAVEL PLAN</p>
+        <h1 id="travel-plan-list-title">함께 계획하기</h1>
+        <p class="travel-plan-subtitle">지금 함께 채워 가고 있는 여행계획이에요.</p>
+      </div>
+      <a class="travel-plan-new-link" th:href="@{/travel-plans/new}">새 공동 여행계획</a>
+    </header>
+
+    <ul class="travel-plan-card-list" th:if="${!#lists.isEmpty(travelPlans)}">
+      <li class="travel-plan-card" th:each="plan : ${travelPlans}">
+        <a class="travel-plan-card-link" th:href="@{|/travel-plans/${plan.travelPlanId}|}">
+          <!-- 대표 이미지가 없으면 빈 img 대신 단색 자리를 둔다 -->
+          <span class="travel-plan-card-thumb"
+                th:if="${#strings.isEmpty(plan.representativeImageUrl)}" aria-hidden="true"></span>
+          <img class="travel-plan-card-thumb" th:unless="${#strings.isEmpty(plan.representativeImageUrl)}"
+               th:src="@{${plan.representativeImageUrl}}" alt="">
+
+          <span class="travel-plan-card-body">
+            <span class="travel-plan-card-title-row">
+              <span class="travel-plan-card-title" th:text="${plan.title}">제주도 여행</span>
+              <span class="travel-plan-card-role"
+                    th:if="${plan.role != null and plan.role.name() == 'OWNER'}">OWNER</span>
+            </span>
+            <span class="travel-plan-card-period"
+                  th:text="${#temporals.format(plan.startDate, 'yyyy.MM.dd')} + ' ~ '
+                           + ${#temporals.format(plan.endDate, 'yyyy.MM.dd')}">
+              2026.09.01 ~ 2026.09.03
+            </span>
+            <span class="travel-plan-card-meta">
+              <span th:text="${plan.dayCount} + '일'">3일</span>
+              <span aria-hidden="true">·</span>
+              <span th:text="'참여 ' + ${plan.memberCount} + '/8'">참여 1/8</span>
+            </span>
+          </span>
+        </a>
+      </li>
+    </ul>
+
+    <div class="travel-plan-empty" th:if="${#lists.isEmpty(travelPlans)}">
+      <p>아직 함께 계획 중인 여행이 없어요.</p>
+      <p>새로운 여행계획을 만들어 보세요.</p>
+    </div>
+  </section>
+</th:block>
+</html>

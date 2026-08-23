@@ -86,6 +86,66 @@ class TravelPlanCreateFormUiContractTest {
         assertThat(securityConfig).doesNotContain("/travel-plans/**");
     }
 
+    @Test
+    void listShowsTitlePeriodMemberCountAndTheOwnerBadge() throws IOException {
+        String list = resource("/templates/travelplan/list.html");
+
+        assertThat(list)
+                .contains("~{layout/main :: layout(~{::body}, ~{::headFragment})}")
+                .contains("함께 계획하기")
+                .contains("th:each=\"plan : ${travelPlans}\"")
+                .contains("th:text=\"${plan.title}\"")
+                .contains("${#temporals.format(plan.startDate, 'yyyy.MM.dd')}")
+                .contains("${#temporals.format(plan.endDate, 'yyyy.MM.dd')}")
+                .contains("${plan.dayCount}")
+                .contains("'참여 ' + ${plan.memberCount} + '/8'")
+                .contains("plan.role.name() == 'OWNER'")
+                .contains("th:href=\"@{|/travel-plans/${plan.travelPlanId}|}\"")
+                .contains("th:href=\"@{/travel-plans/new}\"");
+
+        // 대표 이미지가 없으면 깨진 img 대신 단색 자리를 쓴다
+        assertThat(list)
+                .contains("th:if=\"${#strings.isEmpty(plan.representativeImageUrl)}\"")
+                .contains("th:unless=\"${#strings.isEmpty(plan.representativeImageUrl)}\"");
+
+        // 빈 상태
+        assertThat(list)
+                .contains("${#lists.isEmpty(travelPlans)}")
+                .contains("아직 함께 계획 중인 여행이 없어요.")
+                .contains("새로운 여행계획을 만들어 보세요.");
+    }
+
+    @Test
+    void detailShowsThePlannerSkeletonOnly() throws IOException {
+        String detail = resource("/templates/travelplan/detail.html");
+
+        assertThat(detail)
+                .contains("~{layout/main :: layout(~{::body}, ~{::headFragment})}")
+                .contains("th:object=\"${travelPlan}\"")
+                .contains("th:text=\"*{plan.title}\"")
+                .contains("${#temporals.format(travelPlan.plan.startDate, 'yyyy.MM.dd')}")
+                // DAY 반복 + 아직 일정 없음
+                .contains("th:each=\"day : *{days}\"")
+                .contains("'DAY ' + ${day.dayNumber}")
+                .contains("${#temporals.format(day.planDate, 'M월 d일')}")
+                .contains("아직 등록된 일정이 없습니다.")
+                // 생성 성공 메시지와 목록 복귀
+                .contains("${travelPlanMessage}")
+                .contains("th:href=\"@{/travel-plans}\"");
+    }
+
+    @Test
+    void detailDoesNotShowAnyNotYetImplementedAction() throws IOException {
+        String detail = resource("/templates/travelplan/detail.html");
+
+        // 다음 단계에서 붙일 기능의 버튼이 미리 노출되면 안 된다
+        for (String notYet : new String[]{
+                "일정 추가", "초대", "멤버 관리", "방 설정", "삭제", "최종 확정", "채팅", "투표"}) {
+            assertThat(detail).as("아직 없는 기능: %s", notYet).doesNotContain(notYet);
+        }
+        assertThat(detail).doesNotContain("<form").doesNotContain("<button");
+    }
+
     private String createHtml() throws IOException {
         return resource("/templates/travelplan/create.html");
     }

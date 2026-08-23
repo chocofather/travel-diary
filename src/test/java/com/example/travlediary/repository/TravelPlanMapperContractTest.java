@@ -28,7 +28,10 @@ class TravelPlanMapperContractTest {
 
         assertThat(mapper).contains(
                 "namespace=\"com.example.travlediary.repository.travelplan.TravelPlanMapper\"");
-        for (String id : new String[]{"insertPlan", "insertMember", "insertDays"}) {
+        for (String id : new String[]{
+                "insertPlan", "insertMember", "insertDays",
+                "findActivePlansByUserId", "findPlanByIdAndStatus",
+                "findMemberByPlanAndUser", "findDaysByPlanId"}) {
             assertThat(mapperInterface).as("interface declares %s", id).contains(id);
             assertThat(mapper).as("xml defines %s", id).contains("id=\"" + id + "\"");
         }
@@ -83,6 +86,79 @@ class TravelPlanMapperContractTest {
                 .contains("<foreach collection=\"days\" item=\"day\" separator=\",\">")
                 .contains("(#{travelPlanId}, #{day.dayNumber}, #{day.planDate})")
                 .doesNotContain("${");
+    }
+
+    @Test
+    void theListQueryOnlyReturnsRoomsTheUserIsStillActiveIn() throws IOException {
+        String select = between(mapperXml(),
+                "<select id=\"findActivePlansByUserId\"", "</select>");
+
+        assertThat(select)
+                .contains("resultType=\"com.example.travlediary.dto.TravelPlanListItemDto\"")
+                .contains("FROM travel_plan_members m")
+                .contains("JOIN travel_plans p ON p.id = m.travel_plan_id")
+                // 내 멤버십과 방이 모두 ACTIVE 여야 한다
+                .contains("WHERE m.user_id = #{userId}")
+                .contains("AND m.status = #{memberStatus}")
+                .contains("AND p.status = #{planStatus}")
+                // 참여자 수는 ACTIVE 멤버만 센다
+                .contains("FROM travel_plan_members active_member")
+                .contains("WHERE active_member.travel_plan_id = p.id")
+                .contains("AND active_member.status = #{memberStatus}")
+                .contains("AS member_count")
+                .contains("ORDER BY p.last_activity_at DESC, p.id DESC");
+        // 상태 문자열은 SQL 에 박지 않고 파라미터로 받는다
+        assertThat(select).doesNotContain("'ACTIVE'").doesNotContain("${");
+    }
+
+    @Test
+    void detailQueriesAreScopedByStatusAndSortDaysByNumber() throws IOException {
+        String mapper = mapperXml();
+
+        assertThat(between(mapper, "<select id=\"findPlanByIdAndStatus\"", "</select>"))
+                .contains("FROM travel_plans")
+                .contains("WHERE id = #{travelPlanId}")
+                .contains("AND status = #{planStatus}")
+                .doesNotContain("'ACTIVE'");
+        // 접근 권한 확인은 방 + 사용자 + ACTIVE 세 조건을 모두 건다
+        assertThat(between(mapper, "<select id=\"findMemberByPlanAndUser\"", "</select>"))
+                .contains("FROM travel_plan_members")
+                .contains("WHERE travel_plan_id = #{travelPlanId}")
+                .contains("AND user_id = #{userId}")
+                .contains("AND status = #{memberStatus}")
+                .doesNotContain("'ACTIVE'");
+        assertThat(between(mapper, "<select id=\"findDaysByPlanId\"", "</select>"))
+                .contains("FROM travel_plan_days")
+                .contains("WHERE travel_plan_id = #{travelPlanId}")
+                .contains("ORDER BY day_number ASC");
+        // 여행지와 연결하지 않는다
+        assertThat(mapper).doesNotContain("destinations");
+    }
+
+    @Test
+    void selectColumnsExistInTheSchemaReference() throws IOException {
+        String schema = Files.readString(
+                Path.of("docs/db/travel_diary_schema_reference.md"), StandardCharsets.UTF_8);
+        String mapper = mapperXml();
+
+        String plans = between(schema, "CREATE TABLE `travel_plans`", ") ENGINE=InnoDB");
+        for (String column : new String[]{
+                "last_activity_at", "finalized_at", "created_at", "updated_at"}) {
+            assertThat(plans).as("travel_plans.%s", column).contains("`" + column + "`");
+        }
+        String members = between(schema, "CREATE TABLE `travel_plan_members`", ") ENGINE=InnoDB");
+        for (String column : new String[]{
+                "rejoin_allowed", "joined_at", "left_at", "removed_at"}) {
+            assertThat(members).as("travel_plan_members.%s", column).contains("`" + column + "`");
+        }
+        String days = between(schema, "CREATE TABLE `travel_plan_days`", ") ENGINE=InnoDB");
+        assertThat(days).contains("`day_number`").contains("`plan_date`");
+
+        // 조회 SQL 이 위 컬럼들을 실제로 읽는다
+        assertThat(between(mapper, "<select id=\"findPlanByIdAndStatus\"", "</select>"))
+                .contains("last_activity_at, finalized_at");
+        assertThat(between(mapper, "<select id=\"findMemberByPlanAndUser\"", "</select>"))
+                .contains("rejoin_allowed, joined_at, left_at, removed_at");
     }
 
     @Test

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
+
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/travel-plan.css">
+</th:block>
+
+<th:block th:fragment="body">
+  <section class="travel-plan-detail-page" aria-labelledby="travel-plan-detail-title"
+           th:object="${travelPlan}">
+
+    <p class="travel-plan-notice" th:if="${travelPlanMessage}"
+       th:text="${travelPlanMessage}" role="status">공동 여행계획이 만들어졌어요.</p>
+
+    <a class="travel-plan-back-link" th:href="@{/travel-plans}">← 함께 계획하기</a>
+
+    <header class="travel-plan-detail-header">
+      <h1 id="travel-plan-detail-title" th:text="*{plan.title}">제주도 여행</h1>
+      <p class="travel-plan-detail-period"
+         th:text="${#temporals.format(travelPlan.plan.startDate, 'yyyy.MM.dd')} + ' ~ '
+                  + ${#temporals.format(travelPlan.plan.endDate, 'yyyy.MM.dd')}">
+        2026.09.01 ~ 2026.09.03
+      </p>
+    </header>
+
+    <div class="travel-plan-days">
+      <article class="travel-plan-day" th:each="day : *{days}">
+        <header class="travel-plan-day-header">
+          <span class="travel-plan-day-number" th:text="'DAY ' + ${day.dayNumber}">DAY 1</span>
+          <span class="travel-plan-day-date"
+                th:text="${#temporals.format(day.planDate, 'M월 d일')}">9월 1일</span>
+        </header>
+        <p class="travel-plan-day-empty">아직 등록된 일정이 없습니다.</p>
+      </article>
+    </div>
+  </section>
+</th:block>
+</html>

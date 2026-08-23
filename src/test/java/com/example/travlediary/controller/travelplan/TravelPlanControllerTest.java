@@ -3,6 +3,11 @@ package com.example.travlediary.controller.travelplan;
 import com.example.travlediary.config.CustomLoginSuccessHandler;
 import com.example.travlediary.config.CustomLogoutSuccessHandler;
 import com.example.travlediary.config.SecurityConfig;
+import com.example.travlediary.dto.TravelPlanDetailDto;
+import com.example.travlediary.dto.TravelPlanListItemDto;
+import com.example.travlediary.model.TravelPlan;
+import com.example.travlediary.model.TravelPlanMember;
+import com.example.travlediary.model.TravelPlanRole;
 import com.example.travlediary.model.User;
 import com.example.travlediary.model.UserRole;
 import com.example.travlediary.repository.user.UserMapper;
@@ -13,10 +18,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -89,9 +97,9 @@ class TravelPlanControllerTest {
                         .param("endDate", END)
                         .param("displayName", "민준"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/travel-plans/new"))
-                .andExpect(flash().attribute("travelPlanMessage", "공동 여행계획이 만들어졌어요."))
-                .andExpect(flash().attribute("createdTravelPlanId", 42L));
+                // 상세 화면이 생겼으므로 생성된 방으로 바로 보낸다
+                .andExpect(redirectedUrl("/travel-plans/42"))
+                .andExpect(flash().attribute("travelPlanMessage", "공동 여행계획이 만들어졌어요."));
 
         // 로그인 사용자 id 와 폼 값이 그대로 전달된다
         verify(travelPlanService).createPlan(
@@ -182,6 +190,68 @@ class TravelPlanControllerTest {
                 .andExpect(status().isForbidden());
 
         verify(travelPlanService, never()).createPlan(anyLong(), any(), any(), any(), any());
+    }
+
+    @Test
+    void theListShowsOnlyTheCurrentUsersRooms() throws Exception {
+        TravelPlanListItemDto row = new TravelPlanListItemDto();
+        row.setTravelPlanId(42L);
+        row.setTitle("제주 여행");
+        row.setStartDate(LocalDate.parse(START));
+        row.setEndDate(LocalDate.parse(END));
+        row.setRole(TravelPlanRole.OWNER);
+        row.setMemberCount(1);
+        when(travelPlanService.getActivePlans(7L)).thenReturn(List.of(row));
+
+        mockMvc.perform(get("/travel-plans").with(user(member())))
+                .andExpect(status().isOk())
+                .andExpect(view().name("travelplan/list"))
+                .andExpect(model().attribute("travelPlans", List.of(row)));
+
+        verify(travelPlanService).getActivePlans(7L);
+    }
+
+    @Test
+    void anonymousListAccessIsSentToLogin() throws Exception {
+        mockMvc.perform(get("/travel-plans"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login?redirect=/travel-plans"));
+    }
+
+    @Test
+    void theDetailPageAsksTheServiceWithTheCurrentUser() throws Exception {
+        TravelPlan plan = new TravelPlan();
+        plan.setId(42L);
+        plan.setTitle("제주 여행");
+        plan.setStartDate(LocalDate.parse(START));
+        plan.setEndDate(LocalDate.parse(END));
+        TravelPlanDetailDto detail = new TravelPlanDetailDto(plan, new TravelPlanMember(), List.of());
+        when(travelPlanService.getActivePlanDetail(7L, 42L)).thenReturn(detail);
+
+        mockMvc.perform(get("/travel-plans/42").with(user(member())))
+                .andExpect(status().isOk())
+                .andExpect(view().name("travelplan/detail"))
+                .andExpect(model().attribute("travelPlan", detail));
+
+        // planId 만으로 조회하지 않고 항상 로그인 사용자와 함께 넘긴다
+        verify(travelPlanService).getActivePlanDetail(7L, 42L);
+    }
+
+    @Test
+    void aRoomTheUserCannotSeeComesBackAsNotFound() throws Exception {
+        when(travelPlanService.getActivePlanDetail(anyLong(), anyLong()))
+                .thenThrow(new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "여행계획을 찾을 수 없습니다."));
+
+        mockMvc.perform(get("/travel-plans/999").with(user(member())))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void anonymousDetailAccessIsSentToLogin() throws Exception {
+        mockMvc.perform(get("/travel-plans/42"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login?redirect=/travel-plans/42"));
     }
 
     private CustomUserDetails member() {

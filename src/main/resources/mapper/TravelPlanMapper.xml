@@ -43,4 +43,58 @@
             (#{travelPlanId}, #{day.dayNumber}, #{day.planDate})
         </foreach>
     </insert>
+
+    <!--
+      "함께 계획하기" 목록.
+      내가 ACTIVE 멤버인 ACTIVE 방만 읽고, 참여자 수는 서브쿼리로 한 번에 가져와
+      목록 크기만큼 추가 조회가 나가지 않게 한다.
+    -->
+    <select id="findActivePlansByUserId"
+            resultType="com.example.travlediary.dto.TravelPlanListItemDto">
+        SELECT p.id                       AS travel_plan_id,
+               p.title                    AS title,
+               p.start_date               AS start_date,
+               p.end_date                 AS end_date,
+               p.representative_image_url AS representative_image_url,
+               m.role                     AS role,
+               p.last_activity_at         AS last_activity_at,
+               (SELECT COUNT(*)
+                  FROM travel_plan_members active_member
+                 WHERE active_member.travel_plan_id = p.id
+                   AND active_member.status = #{memberStatus}) AS member_count
+        FROM travel_plan_members m
+                 JOIN travel_plans p ON p.id = m.travel_plan_id
+        WHERE m.user_id = #{userId}
+          AND m.status = #{memberStatus}
+          AND p.status = #{planStatus}
+        ORDER BY p.last_activity_at DESC, p.id DESC
+    </select>
+
+    <!-- 방 1건. 상태 조건을 함께 건다 -->
+    <select id="findPlanByIdAndStatus" resultType="com.example.travlediary.model.TravelPlan">
+        SELECT id, created_by_user_id, title, start_date, end_date,
+               representative_image_url, status, last_activity_at, finalized_at,
+               created_at, updated_at
+        FROM travel_plans
+        WHERE id = #{travelPlanId}
+          AND status = #{planStatus}
+    </select>
+
+    <!-- 이 방에서의 현재 사용자 참여 정보. 접근 권한 확인에 쓴다 -->
+    <select id="findMemberByPlanAndUser" resultType="com.example.travlediary.model.TravelPlanMember">
+        SELECT id, travel_plan_id, user_id, display_name, role, status,
+               rejoin_allowed, joined_at, left_at, removed_at, created_at, updated_at
+        FROM travel_plan_members
+        WHERE travel_plan_id = #{travelPlanId}
+          AND user_id = #{userId}
+          AND status = #{memberStatus}
+    </select>
+
+    <!-- 방의 DAY 목록 -->
+    <select id="findDaysByPlanId" resultType="com.example.travlediary.model.TravelPlanDay">
+        SELECT id, travel_plan_id, day_number, plan_date, created_at, updated_at
+        FROM travel_plan_days
+        WHERE travel_plan_id = #{travelPlanId}
+        ORDER BY day_number ASC
+    </select>
 </mapper>
