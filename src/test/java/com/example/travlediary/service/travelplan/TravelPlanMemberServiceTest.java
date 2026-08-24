@@ -227,6 +227,253 @@ class TravelPlanMemberServiceTest {
         verify(travelPlanMapper, never()).findMemberByPlanAndId(anyLong(), anyLong());
     }
 
+    // ── 방장 넘기기 ─────────────────────────────────────────
+
+    @Test
+    void handingOverSwapsTheTwoRolesAndLeavesEverythingElseAlone() {
+        givenLockedPlan();
+        givenCurrentMember(member(OWNER_MEMBER_ID, OWNER_USER_ID, TravelPlanRole.OWNER,
+                TravelPlanMemberStatus.ACTIVE));
+        givenTarget(member(MEMBER_A_ID, MEMBER_USER_ID, TravelPlanRole.MEMBER,
+                TravelPlanMemberStatus.ACTIVE));
+        givenRoleChange(OWNER_MEMBER_ID, "OWNER", "MEMBER", 1);
+        givenRoleChange(MEMBER_A_ID, "MEMBER", "OWNER", 1);
+
+        travelPlanMemberService.transferOwnership(OWNER_USER_ID, PLAN_ID, MEMBER_A_ID);
+
+        // 먼저 내려놓고 넘긴다. 중간에도 방장이 둘인 순간이 없다
+        InOrder order = inOrder(travelPlanMapper);
+        order.verify(travelPlanMapper).findPlanByIdAndStatusForUpdate(PLAN_ID, "ACTIVE");
+        order.verify(travelPlanMapper)
+                .changeMemberRole(OWNER_MEMBER_ID, PLAN_ID, "ACTIVE", "OWNER", "MEMBER");
+        order.verify(travelPlanMapper)
+                .changeMemberRole(MEMBER_A_ID, PLAN_ID, "ACTIVE", "MEMBER", "OWNER");
+        order.verify(travelPlanMapper).touchLastActivity(PLAN_ID);
+
+        // row 를 만들거나 지우거나 상태를 바꾸지 않는다 (id / displayName / ACTIVE 유지)
+        verify(travelPlanMapper, never()).insertMember(any());
+        verify(travelPlanMapper, never()).markMemberLeft(
+                anyLong(), anyLong(), anyString(), anyString(), anyString());
+        verify(travelPlanMapper, never()).markMemberRemoved(
+                anyLong(), anyLong(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void theHandoverIsSerialisedByLockingTheRoomRowFirst() {
+        givenLockedPlan();
+        givenCurrentMember(member(OWNER_MEMBER_ID, OWNER_USER_ID, TravelPlanRole.OWNER,
+                TravelPlanMemberStatus.ACTIVE));
+        givenTarget(member(MEMBER_A_ID, MEMBER_USER_ID, TravelPlanRole.MEMBER,
+                TravelPlanMemberStatus.ACTIVE));
+        givenRoleChange(OWNER_MEMBER_ID, "OWNER", "MEMBER", 1);
+        givenRoleChange(MEMBER_A_ID, "MEMBER", "OWNER", 1);
+
+        travelPlanMemberService.transferOwnership(OWNER_USER_ID, PLAN_ID, MEMBER_A_ID);
+
+        // 잠근 뒤에 방장 여부를 다시 확인한다. 잠금 없는 조회로 판단하지 않는다
+        InOrder order = inOrder(travelPlanMapper);
+        order.verify(travelPlanMapper).findPlanByIdAndStatusForUpdate(PLAN_ID, "ACTIVE");
+        order.verify(travelPlanMapper).findMemberByPlanAndUser(PLAN_ID, OWNER_USER_ID, "ACTIVE");
+        verify(travelPlanMapper, never()).findPlanByIdAndStatus(PLAN_ID, "ACTIVE");
+    }
+
+    @Test
+    void aStaleFirstUpdateStopsTheHandoverBeforeAnyoneIsPromoted() {
+        givenLockedPlan();
+        givenCurrentMember(member(OWNER_MEMBER_ID, OWNER_USER_ID, TravelPlanRole.OWNER,
+                TravelPlanMemberStatus.ACTIVE));
+        givenTarget(member(MEMBER_A_ID, MEMBER_USER_ID, TravelPlanRole.MEMBER,
+                TravelPlanMemberStatus.ACTIVE));
+        // 그 사이 다른 요청이 먼저 넘겨 이 방장은 더 이상 OWNER 가 아니다
+        givenRoleChange(OWNER_MEMBER_ID, "OWNER", "MEMBER", 0);
+
+        assertThatThrownBy(() ->
+                travelPlanMemberService.transferOwnership(OWNER_USER_ID, PLAN_ID, MEMBER_A_ID))
+                .isInstanceOf(ResponseStatusException.class);
+
+        // 방장이 둘이 되는 상태를 만들지 않는다
+        verify(travelPlanMapper, never())
+                .changeMemberRole(MEMBER_A_ID, PLAN_ID, "ACTIVE", "MEMBER", "OWNER");
+        verify(travelPlanMapper, never()).touchLastActivity(anyLong());
+    }
+
+    @Test
+    void aStaleSecondUpdateRollsTheWholeHandoverBack() {
+        givenLockedPlan();
+        givenCurrentMember(member(OWNER_MEMBER_ID, OWNER_USER_ID, TravelPlanRole.OWNER,
+                TravelPlanMemberStatus.ACTIVE));
+        givenTarget(member(MEMBER_A_ID, MEMBER_USER_ID, TravelPlanRole.MEMBER,
+                TravelPlanMemberStatus.ACTIVE));
+        givenRoleChange(OWNER_MEMBER_ID, "OWNER", "MEMBER", 1);
+        // 대상이 그 사이 나갔다 -> 영향 행 0
+        givenRoleChange(MEMBER_A_ID, "MEMBER", "OWNER", 0);
+
+        // 예외로 빠져나가 트랜잭션 전체가 되돌아간다 (방장 0명으로 commit 되지 않는다)
+        assertThatThrownBy(() ->
+                travelPlanMemberService.transferOwnership(OWNER_USER_ID, PLAN_ID, MEMBER_A_ID))
+                .isInstanceOf(ResponseStatusException.class);
+
+        verify(travelPlanMapper, never()).touchLastActivity(anyLong());
+    }
+
+    @Test
+    void aPlainMemberCannotHandOverTheRoom() {
+        givenLockedPlan();
+        givenCurrentMember(member(MEMBER_A_ID, MEMBER_USER_ID, TravelPlanRole.MEMBER,
+                TravelPlanMemberStatus.ACTIVE));
+
+        assertThatThrownBy(() ->
+                travelPlanMemberService.transferOwnership(MEMBER_USER_ID, PLAN_ID, MEMBER_B_ID))
+                .isInstanceOf(ResponseStatusException.class);
+
+        // 권한이 없으면 대상 조회까지 가지 않는다
+        verify(travelPlanMapper, never()).findMemberByPlanAndId(anyLong(), anyLong());
+        verify(travelPlanMapper, never()).changeMemberRole(
+                anyLong(), anyLong(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void theOwnerCannotHandTheRoomToThemselves() {
+        givenLockedPlan();
+        givenCurrentMember(member(OWNER_MEMBER_ID, OWNER_USER_ID, TravelPlanRole.OWNER,
+                TravelPlanMemberStatus.ACTIVE));
+        givenTarget(member(OWNER_MEMBER_ID, OWNER_USER_ID, TravelPlanRole.OWNER,
+                TravelPlanMemberStatus.ACTIVE));
+
+        assertThatThrownBy(() ->
+                travelPlanMemberService.transferOwnership(OWNER_USER_ID, PLAN_ID, OWNER_MEMBER_ID))
+                .isInstanceOf(ResponseStatusException.class);
+
+        verify(travelPlanMapper, never()).changeMemberRole(
+                anyLong(), anyLong(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void someoneWhoLeftOrWasRemovedCannotBecomeTheOwner() {
+        givenLockedPlan();
+        givenCurrentMember(member(OWNER_MEMBER_ID, OWNER_USER_ID, TravelPlanRole.OWNER,
+                TravelPlanMemberStatus.ACTIVE));
+
+        for (TravelPlanMemberStatus status : new TravelPlanMemberStatus[]{
+                TravelPlanMemberStatus.LEFT, TravelPlanMemberStatus.REMOVED}) {
+            givenTarget(member(MEMBER_A_ID, MEMBER_USER_ID, TravelPlanRole.MEMBER, status));
+
+            assertThatThrownBy(() ->
+                    travelPlanMemberService.transferOwnership(OWNER_USER_ID, PLAN_ID, MEMBER_A_ID))
+                    .as("status=%s", status)
+                    .isInstanceOf(ResponseStatusException.class);
+        }
+        verify(travelPlanMapper, never()).changeMemberRole(
+                anyLong(), anyLong(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void aMemberIdFromAnotherRoomOrNoneAtAllIsRefused() {
+        givenLockedPlan();
+        givenCurrentMember(member(OWNER_MEMBER_ID, OWNER_USER_ID, TravelPlanRole.OWNER,
+                TravelPlanMemberStatus.ACTIVE));
+        // 방 조건이 걸려 있어 다른 방의 memberId 는 조회되지 않는다
+        when(travelPlanMapper.findMemberByPlanAndId(PLAN_ID, MEMBER_B_ID)).thenReturn(null);
+
+        assertThatThrownBy(() ->
+                travelPlanMemberService.transferOwnership(OWNER_USER_ID, PLAN_ID, MEMBER_B_ID))
+                .isInstanceOf(ResponseStatusException.class);
+        assertThatThrownBy(() ->
+                travelPlanMemberService.transferOwnership(OWNER_USER_ID, PLAN_ID, null))
+                .isInstanceOf(ResponseStatusException.class);
+
+        verify(travelPlanMapper, never()).findMemberByPlanAndId(OTHER_PLAN_ID, MEMBER_B_ID);
+        verify(travelPlanMapper, never()).changeMemberRole(
+                anyLong(), anyLong(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void aRoomThatIsNoLongerActiveCannotChangeHands() {
+        when(travelPlanMapper.findPlanByIdAndStatusForUpdate(PLAN_ID, "ACTIVE")).thenReturn(null);
+
+        assertThatThrownBy(() ->
+                travelPlanMemberService.transferOwnership(OWNER_USER_ID, PLAN_ID, MEMBER_A_ID))
+                .isInstanceOf(ResponseStatusException.class);
+
+        verify(travelPlanMapper, never()).findMemberByPlanAndUser(
+                anyLong(), anyLong(), anyString());
+    }
+
+    @Test
+    void theFormerOwnerStaysInTheRoomAndCanThenLeaveLikeAnyMember() {
+        // 넘긴 뒤에는 MEMBER 이므로 기존 나가기 기능이 그대로 통한다.
+        // leave Service 는 손대지 않았다.
+        givenActivePlan();
+        givenCurrentMember(member(OWNER_MEMBER_ID, OWNER_USER_ID, TravelPlanRole.MEMBER,
+                TravelPlanMemberStatus.ACTIVE));
+        when(travelPlanMapper.markMemberLeft(
+                OWNER_MEMBER_ID, PLAN_ID, "ACTIVE", "LEFT", "MEMBER")).thenReturn(1);
+
+        travelPlanMemberService.leave(OWNER_USER_ID, PLAN_ID);
+
+        verify(travelPlanMapper)
+                .markMemberLeft(OWNER_MEMBER_ID, PLAN_ID, "ACTIVE", "LEFT", "MEMBER");
+    }
+
+    @Test
+    void theNewOwnerIsStillBlockedFromWalkingOut() {
+        // 넘겨받은 사람은 이제 OWNER 라 기존 차단이 그대로 걸린다
+        givenActivePlan();
+        givenCurrentMember(member(MEMBER_A_ID, MEMBER_USER_ID, TravelPlanRole.OWNER,
+                TravelPlanMemberStatus.ACTIVE));
+
+        assertThatThrownBy(() -> travelPlanMemberService.leave(MEMBER_USER_ID, PLAN_ID))
+                .isInstanceOf(TravelPlanValidationException.class)
+                .hasMessageContaining("방장은 바로 나갈 수 없습니다.");
+    }
+
+    @Test
+    void theFormerOwnerCanNoLongerRunOwnerOnlyActions() {
+        // role 이 MEMBER 로 내려갔으므로 기존 OWNER 검증에서 막힌다
+        givenLockedPlan();
+        givenActivePlan();
+        givenCurrentMember(member(OWNER_MEMBER_ID, OWNER_USER_ID, TravelPlanRole.MEMBER,
+                TravelPlanMemberStatus.ACTIVE));
+
+        assertThatThrownBy(() ->
+                travelPlanMemberService.removeMember(OWNER_USER_ID, PLAN_ID, MEMBER_A_ID))
+                .isInstanceOf(ResponseStatusException.class);
+        assertThatThrownBy(() ->
+                travelPlanMemberService.transferOwnership(OWNER_USER_ID, PLAN_ID, MEMBER_A_ID))
+                .isInstanceOf(ResponseStatusException.class);
+
+        verify(travelPlanMapper, never()).changeMemberRole(
+                anyLong(), anyLong(), anyString(), anyString(), anyString());
+        verify(travelPlanMapper, never()).markMemberRemoved(
+                anyLong(), anyLong(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void theNewOwnerCanRunOwnerOnlyActions() {
+        givenLockedPlan();
+        givenCurrentMember(member(MEMBER_A_ID, MEMBER_USER_ID, TravelPlanRole.OWNER,
+                TravelPlanMemberStatus.ACTIVE));
+        givenTarget(member(MEMBER_B_ID, 99L, TravelPlanRole.MEMBER,
+                TravelPlanMemberStatus.ACTIVE));
+        givenRoleChange(MEMBER_A_ID, "OWNER", "MEMBER", 1);
+        givenRoleChange(MEMBER_B_ID, "MEMBER", "OWNER", 1);
+
+        // 넘겨받은 사람이 다시 다른 사람에게 넘길 수 있다
+        travelPlanMemberService.transferOwnership(MEMBER_USER_ID, PLAN_ID, MEMBER_B_ID);
+
+        verify(travelPlanMapper)
+                .changeMemberRole(MEMBER_B_ID, PLAN_ID, "ACTIVE", "MEMBER", "OWNER");
+    }
+
+    @Test
+    void handingOverRunsInsideATransaction() throws NoSuchMethodException {
+        Method transfer = TravelPlanMemberService.class.getMethod(
+                "transferOwnership", Long.class, Long.class, Long.class);
+
+        // 두 role UPDATE 와 활동 시각 갱신이 한 덩어리여야 한다
+        assertThat(transfer.isAnnotationPresent(Transactional.class)).isTrue();
+    }
+
     // ── 공통 ────────────────────────────────────────────────
 
     @Test
@@ -289,6 +536,19 @@ class TravelPlanMemberServiceTest {
 
     private void givenTarget(TravelPlanMember target) {
         when(travelPlanMapper.findMemberByPlanAndId(PLAN_ID, target.getId())).thenReturn(target);
+    }
+
+    /** 방장 이전은 방 row 를 잠그고 시작한다. */
+    private void givenLockedPlan() {
+        TravelPlan plan = new TravelPlan();
+        plan.setId(PLAN_ID);
+        plan.setStatus(TravelPlanStatus.ACTIVE);
+        when(travelPlanMapper.findPlanByIdAndStatusForUpdate(PLAN_ID, "ACTIVE")).thenReturn(plan);
+    }
+
+    private void givenRoleChange(Long memberId, String fromRole, String toRole, int affected) {
+        when(travelPlanMapper.changeMemberRole(memberId, PLAN_ID, "ACTIVE", fromRole, toRole))
+                .thenReturn(affected);
     }
 
     private void givenActivePlan() {

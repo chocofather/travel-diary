@@ -123,6 +123,36 @@ class TravelPlanInvitationServiceTest {
     }
 
     @Test
+    void whoeverHandedTheRoomOverLosesTheInviteControls() {
+        // 방장을 넘기고 나면 role 이 MEMBER 라 기존 OWNER 검증에서 그대로 막힌다.
+        // 초대 Service 는 손대지 않았다.
+        TravelPlanMember formerOwner = new TravelPlanMember();
+        formerOwner.setId(1L);
+        formerOwner.setTravelPlanId(PLAN_ID);
+        formerOwner.setUserId(OWNER_USER_ID);
+        formerOwner.setRole(TravelPlanRole.MEMBER);
+        formerOwner.setStatus(TravelPlanMemberStatus.ACTIVE);
+        when(travelPlanMapper.findMemberByPlanAndUser(PLAN_ID, OWNER_USER_ID, "ACTIVE"))
+                .thenReturn(formerOwner);
+
+        assertThatThrownBy(() ->
+                travelPlanInvitationService.createInvitation(OWNER_USER_ID, PLAN_ID))
+                .isInstanceOf(ResponseStatusException.class);
+        assertThatThrownBy(() ->
+                travelPlanInvitationService.regenerateInvitation(OWNER_USER_ID, PLAN_ID))
+                .isInstanceOf(ResponseStatusException.class);
+        assertThatThrownBy(() ->
+                travelPlanInvitationService.disableInvitation(OWNER_USER_ID, PLAN_ID))
+                .isInstanceOf(ResponseStatusException.class);
+        assertThat(travelPlanInvitationService.hasActiveInvitation(OWNER_USER_ID, PLAN_ID))
+                .isFalse();
+
+        verify(travelPlanInvitationMapper, never()).insertInvitation(any());
+        verify(travelPlanInvitationMapper, never()).invalidateActiveInvitation(
+                anyLong(), anyString(), anyString());
+    }
+
+    @Test
     void anOwnerOfAnotherRoomCannotManageThisRoomsInvitations() {
         // 다른 방의 OWNER 라도 이 방에는 참여 기록이 없다
         when(travelPlanMapper.findMemberByPlanAndUser(PLAN_ID, OUTSIDER_USER_ID, "ACTIVE"))

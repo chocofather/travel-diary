@@ -163,12 +163,47 @@ class TravelPlanMemberListContractTest {
 
         // 이번 단계에 없는 관리 액션
         for (String notYet : new String[]{
-                "방장 넘기기", "재참여 허용", "강퇴", "이름 변경", "과거 참여자"}) {
+                "재참여 허용", "강퇴", "이름 변경", "과거 참여자"}) {
             assertThat(detail).as("아직 없는 기능: %s", notYet).doesNotContain(notYet);
         }
-        // ⋯ 메뉴 안에는 내보내기 하나뿐이다
+        // ⋯ 메뉴 안에는 방장 넘기기와 내보내기 둘뿐이다
         assertThat(countOf(detail, "data-travel-plan-member-menu-list")).isEqualTo(1);
         assertThat(countOf(detail, "class=\"travel-plan-member-remove\"")).isEqualTo(1);
+        assertThat(countOf(detail, "class=\"travel-plan-member-action\"")).isEqualTo(1);
+    }
+
+    @Test
+    void theOwnerCanHandTheRoomOverFromTheSameMenu() throws IOException {
+        String detail = detailHtml();
+
+        // 방장 넘기기도 MEMBER 줄에만 붙는다 (OWNER 자신의 줄에는 메뉴 자체가 없다)
+        int menu = detail.indexOf("th:if=\"${viewerIsOwner and member.role.name() == 'MEMBER'}\"");
+        int transfer = detail.indexOf("/members/${member.memberId}/transfer-owner|}");
+        int remove = detail.indexOf("/members/${member.memberId}/remove|}");
+        assertThat(menu).isGreaterThan(0);
+        assertThat(transfer).isGreaterThan(menu);
+        // 메뉴 안에서 방장 넘기기가 내보내기보다 먼저 온다
+        assertThat(transfer).isLessThan(remove);
+        assertThat(detail).contains("방장 넘기기");
+
+        // 바로 POST 하지 않고 확인을 거친다
+        assertThat(detail)
+                .contains("님에게 방장을 넘길까요?")
+                .contains("초대와 멤버 관리 권한을 갖게 됩니다")
+                .contains("나는 일반 멤버가 됩니다");
+        // 새 UI framework 를 만들지 않는다
+        assertThat(detail).doesNotContain("modal").doesNotContain("dialog");
+    }
+
+    @Test
+    void theOwnerOnlyUiFollowsTheMembershipRoleWithNoSecondSourceOfTruth() throws IOException {
+        String detail = detailHtml();
+
+        // 초대 버튼과 관리 메뉴 모두 membership role 하나만 본다.
+        // 이전이 끝나면 다음 렌더링에서 자연스럽게 뒤바뀐다.
+        assertThat(countOf(detail, "travelPlan.currentMember.role.name() == 'OWNER'"))
+                .isEqualTo(2);
+        assertThat(detail).doesNotContain("createdByUserId").doesNotContain("created_by_user_id");
     }
 
     @Test
@@ -281,16 +316,58 @@ class TravelPlanMemberListContractTest {
     }
 
     @Test
-    void bothMemberPostsAreCsrfProtectedAndAuthenticated() throws IOException {
+    void everyMemberPostIsCsrfProtectedAndAuthenticated() throws IOException {
         String securityConfig = Files.readString(
                 Path.of("src/main/java/com/example/travlediary/config/SecurityConfig.java"),
                 StandardCharsets.UTF_8);
 
         assertThat(securityConfig)
                 .contains("\"^/travel-plans/[0-9]+/members/leave$\", HttpMethod.POST.name()")
-                .contains("\"^/travel-plans/[0-9]+/members/[0-9]+/remove$\"");
+                .contains("\"^/travel-plans/[0-9]+/members/[0-9]+/remove$\"")
+                .contains("\"^/travel-plans/[0-9]+/members/[0-9]+/transfer-owner$\"");
         // 인가는 그대로 anyRequest().authenticated() 를 쓴다
         assertThat(securityConfig).doesNotContain("/travel-plans/**");
+    }
+
+    @Test
+    void theHandoverOnlyEverSwapsTheRoomRole() throws IOException {
+        String update = between(resource("/mapper/TravelPlanMapper.xml"),
+                "<update id=\"changeMemberRole\"", "</update>");
+
+        assertThat(update)
+                .contains("UPDATE travel_plan_members")
+                .contains("SET role = #{toRole}")
+                .contains("WHERE id = #{id}")
+                .contains("AND travel_plan_id = #{travelPlanId}")
+                .contains("AND status = #{memberStatus}")
+                // 이미 바뀐 상태에는 두 번 반영되지 않는다
+                .contains("AND role = #{fromRole}")
+                .doesNotContain("${");
+
+        // 방 안의 역할만 바꾼다. 신분/상태/이름은 그대로다
+        assertThat(between(update, "SET", "WHERE"))
+                .doesNotContain("status")
+                .doesNotContain("user_id")
+                .doesNotContain("display_name");
+
+        // OWNER 유일성을 보장하는 DB 제약은 없으므로 Service 가 지킨다
+        String schema = Files.readString(
+                Path.of("docs/db/travel_diary_schema_reference.md"), StandardCharsets.UTF_8);
+        assertThat(between(schema, "CREATE TABLE `travel_plan_members`", ") ENGINE=InnoDB"))
+                .doesNotContain("UNIQUE KEY `uk_travel_plan_members_plan_role`");
+
+        String service = Files.readString(
+                Path.of("src/main/java/com/example/travlediary/service/travelplan/"
+                        + "TravelPlanMemberService.java"),
+                StandardCharsets.UTF_8);
+        String transfer = between(service, "public void transferOwnership(", "private void requireActivePlan");
+        // 잠금 -> 방장 재확인 -> 내려놓기 -> 넘기기 순서다
+        assertThat(transfer.indexOf("findPlanByIdAndStatusForUpdate"))
+                .isLessThan(transfer.indexOf("requireActiveMember"));
+        assertThat(transfer.indexOf("OWNER.name(), TravelPlanRole.MEMBER.name()"))
+                .isLessThan(transfer.indexOf("MEMBER.name(), TravelPlanRole.OWNER.name()"));
+        // 두 UPDATE 모두 영향 행이 1 인지 본다
+        assertThat(countOf(transfer, "!= 1")).isEqualTo(2);
     }
 
     private int countOf(String source, String needle) {

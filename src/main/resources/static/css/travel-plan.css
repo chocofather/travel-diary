@@ -509,6 +509,24 @@
     display: none;
 }
 
+/* 방장 넘기기는 되돌리기 어렵지만 파괴적이지는 않아 중립 색으로 둔다 */
+.travel-plan-member-action {
+    padding: 6px 12px;
+    border: 0;
+    border-radius: 4px;
+    background: none;
+    color: #4a443c;
+    font-family: inherit;
+    font-size: 12px;
+    text-align: left;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.travel-plan-member-action:hover {
+    background: #f6f3ee;
+}
+
 /* 낮은 위계로 둔다. 큰 빨간 버튼을 만들지 않는다 */
 .travel-plan-member-remove,
 .travel-plan-member-leave {

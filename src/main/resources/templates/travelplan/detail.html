@@ -53,6 +53,13 @@
                   <span class="travel-plan-member-menu-list" hidden
                         data-travel-plan-member-menu-list>
                     <form method="post"
+                          th:action="@{|/travel-plans/${travelPlan.plan.id}/members/${member.memberId}/transfer-owner|}">
+                      <button type="submit" class="travel-plan-member-action"
+                              th:attr="onclick=|return confirm('${member.displayName}님에게 방장을 넘길까요?\n\n방장을 넘기면 ${member.displayName}님이 초대와 멤버 관리 권한을 갖게 됩니다.\n나는 일반 멤버가 됩니다.')|">
+                        방장 넘기기
+                      </button>
+                    </form>
+                    <form method="post"
                           th:action="@{|/travel-plans/${travelPlan.plan.id}/members/${member.memberId}/remove|}">
                       <button type="submit" class="travel-plan-member-remove"
                               th:attr="onclick=|return confirm('${member.displayName}님을 이 여행에서 내보낼까요?\n\n내보낸 뒤에는 현재 초대 링크만으로 다시 참여할 수 없습니다.')|">

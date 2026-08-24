@@ -39,6 +39,18 @@ public class TravelPlanMemberController {
         return "redirect:/travel-plans";
     }
 
+    // OWNER 가 다른 ACTIVE MEMBER 에게 방장을 넘기기
+    @PostMapping("/{travelPlanId:\\d+}/members/{memberId:\\d+}/transfer-owner")
+    public String transferOwnership(@PathVariable Long travelPlanId,
+                                    @PathVariable Long memberId,
+                                    @AuthenticationPrincipal CustomUserDetails userDetails,
+                                    RedirectAttributes redirectAttributes) {
+        travelPlanMemberService.transferOwnership(userDetails.getId(), travelPlanId, memberId);
+        redirectAttributes.addFlashAttribute("travelPlanMessage", "방장을 넘겼어요.");
+        // 넘긴 사람도 방에 그대로 남으므로 같은 플래너로 돌아간다.
+        return "redirect:/travel-plans/" + travelPlanId;
+    }
+
     // OWNER 가 MEMBER 를 내보내기
     @PostMapping("/{travelPlanId:\\d+}/members/{memberId:\\d+}/remove")
     public String remove(@PathVariable Long travelPlanId,

@@ -204,6 +204,22 @@
           AND rejoin_allowed = 1
     </update>
 
+    <!--
+      방 안에서의 역할 변경. 방장 이전에서 넘기는 쪽과 받는 쪽 모두 이 문장을 쓴다.
+      row 를 만들거나 지우지 않으므로 id / user_id / display_name / status 가 그대로 남고,
+      그 사람이 쓴 일정·대안의 created_by_member_id 연결도 유지된다.
+      fromRole 조건이 있어 이미 바뀐 상태에는 두 번 반영되지 않는다.
+    -->
+    <update id="changeMemberRole">
+        UPDATE travel_plan_members
+        SET role = #{toRole},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND travel_plan_id = #{travelPlanId}
+          AND status = #{memberStatus}
+          AND role = #{fromRole}
+    </update>
+
     <!-- 방의 참여자 수. 초대 미리보기의 "N/8" 과 정원 검사에 쓴다 -->
     <select id="countMembersByPlanAndStatus" resultType="int">
         SELECT COUNT(*)

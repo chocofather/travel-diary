@@ -120,6 +120,20 @@ public interface TravelPlanMapper {
                              @Param("fromStatus") String fromStatus,
                              @Param("toStatus") String toStatus);
 
+    /**
+     * 방 안에서의 역할만 바꾼다. 방장 이전에서 양쪽 모두 이 문장을 쓴다.
+     * 지금 역할이 fromRole 인 ACTIVE 참여자일 때만 반영되므로,
+     * 상태가 그 사이 바뀌었으면 영향 행이 0 이 되어 호출자가 되돌릴 수 있다.
+     * 사이트 전체 권한이 아니라 travel_plan_members.role 만 건드린다.
+     *
+     * @return 1 이면 반영, 0 이면 이미 바뀌었거나 조건이 맞지 않는다.
+     */
+    int changeMemberRole(@Param("id") Long id,
+                         @Param("travelPlanId") Long travelPlanId,
+                         @Param("memberStatus") String memberStatus,
+                         @Param("fromRole") String fromRole,
+                         @Param("toRole") String toRole);
+
     /** 방의 참여자 수. 초대 미리보기의 "N/8" 과 정원 검사에 쓴다. */
     int countMembersByPlanAndStatus(@Param("travelPlanId") Long travelPlanId,
                                     @Param("memberStatus") String memberStatus);

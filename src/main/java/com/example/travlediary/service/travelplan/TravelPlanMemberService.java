@@ -80,6 +80,57 @@ public class TravelPlanMemberService {
         travelPlanMapper.touchLastActivity(travelPlanId);
     }
 
+    /**
+     * 방장을 같은 방의 다른 ACTIVE MEMBER 에게 넘긴다.
+     * 방 row 를 잠근 뒤 양쪽 상태를 다시 확인하므로 동시에 두 번 넘겨도
+     * 방장이 둘이 되거나 없어지지 않는다.
+     *
+     * <p>두 row 모두 지우거나 새로 만들지 않고 role 만 바꾸므로
+     * member.id / user_id / display_name / status 와 작성 기록이 그대로 남는다.
+     * 넘긴 사람은 방에서 빠지지 않고 ACTIVE MEMBER 로 남는다.
+     */
+    @Transactional
+    public void transferOwnership(Long userId, Long travelPlanId, Long targetMemberId) {
+        if (userId == null) {
+            throw new TravelPlanValidationException("userId", "로그인이 필요합니다.");
+        }
+        // 권한의 기준 자체를 바꾸는 작업이라 방 row 를 잠그고 시작한다.
+        if (travelPlanId == null || travelPlanMapper.findPlanByIdAndStatusForUpdate(
+                travelPlanId, TravelPlanStatus.ACTIVE.name()) == null) {
+            throw planNotFound();
+        }
+
+        // 잠근 뒤 현재 방장이 맞는지 다시 본다.
+        TravelPlanMember owner = requireActiveMember(travelPlanId, userId);
+        if (owner.getRole() != TravelPlanRole.OWNER) {
+            throw planNotFound();
+        }
+
+        TravelPlanMember target = targetMemberId == null
+                ? null : travelPlanMapper.findMemberByPlanAndId(travelPlanId, targetMemberId);
+        // 다른 방의 memberId, 나갔거나 내보내진 사람, 자기 자신은 대상이 될 수 없다.
+        if (target == null
+                || target.getStatus() != TravelPlanMemberStatus.ACTIVE
+                || target.getRole() != TravelPlanRole.MEMBER
+                || target.getId().equals(owner.getId())) {
+            throw planNotFound();
+        }
+
+        // 먼저 내려놓고 넘긴다. 중간에도 방장이 둘인 순간이 없다.
+        if (travelPlanMapper.changeMemberRole(owner.getId(), travelPlanId,
+                TravelPlanMemberStatus.ACTIVE.name(),
+                TravelPlanRole.OWNER.name(), TravelPlanRole.MEMBER.name()) != 1) {
+            throw planNotFound();
+        }
+        // 여기서 실패하면 위의 변경까지 함께 되돌아간다(방장 0명 상태로 남지 않는다).
+        if (travelPlanMapper.changeMemberRole(target.getId(), travelPlanId,
+                TravelPlanMemberStatus.ACTIVE.name(),
+                TravelPlanRole.MEMBER.name(), TravelPlanRole.OWNER.name()) != 1) {
+            throw planNotFound();
+        }
+        travelPlanMapper.touchLastActivity(travelPlanId);
+    }
+
     private void requireActivePlan(Long travelPlanId) {
         if (travelPlanId == null || travelPlanMapper.findPlanByIdAndStatus(
                 travelPlanId, TravelPlanStatus.ACTIVE.name()) == null) {

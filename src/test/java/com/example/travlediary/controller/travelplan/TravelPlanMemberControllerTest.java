@@ -98,14 +98,38 @@ class TravelPlanMemberControllerTest {
     }
 
     @Test
-    void bothActionsAreCsrfProtected() throws Exception {
+    void handingOverKeepsTheFormerOwnerOnTheSamePlanner() throws Exception {
+        mockMvc.perform(post("/travel-plans/42/members/13/transfer-owner")
+                        .with(user(member())).with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                // 넘긴 사람도 방에 그대로 남는다
+                .andExpect(redirectedUrl("/travel-plans/42"))
+                .andExpect(flash().attribute("travelPlanMessage", "방장을 넘겼어요."));
+
+        // 요청자는 로그인 정보에서, 대상은 URL 의 memberId 에서 온다
+        verify(travelPlanMemberService).transferOwnership(7L, 42L, 13L);
+    }
+
+    @Test
+    void aRefusedHandoverLooksLikeTheRoomDoesNotExist() throws Exception {
+        doThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "여행계획을 찾을 수 없습니다."))
+                .when(travelPlanMemberService).transferOwnership(anyLong(), anyLong(), anyLong());
+
+        mockMvc.perform(post("/travel-plans/42/members/13/transfer-owner")
+                        .with(user(member())).with(csrf()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void everyMemberActionIsCsrfProtected() throws Exception {
         mockMvc.perform(post("/travel-plans/42/members/leave").with(user(member())))
                 .andExpect(status().isForbidden());
         mockMvc.perform(post("/travel-plans/42/members/13/remove").with(user(member())))
                 .andExpect(status().isForbidden());
+        mockMvc.perform(post("/travel-plans/42/members/13/transfer-owner").with(user(member())))
+                .andExpect(status().isForbidden());
 
-        verify(travelPlanMemberService, never()).leave(anyLong(), anyLong());
-        verify(travelPlanMemberService, never()).removeMember(anyLong(), anyLong(), anyLong());
+        verifyNothingHappened();
     }
 
     @Test
@@ -114,9 +138,17 @@ class TravelPlanMemberControllerTest {
                 .andExpect(status().is3xxRedirection());
         mockMvc.perform(post("/travel-plans/42/members/13/remove").with(csrf()))
                 .andExpect(status().is3xxRedirection());
+        mockMvc.perform(post("/travel-plans/42/members/13/transfer-owner").with(csrf()))
+                .andExpect(status().is3xxRedirection());
 
+        verifyNothingHappened();
+    }
+
+    private void verifyNothingHappened() {
         verify(travelPlanMemberService, never()).leave(anyLong(), anyLong());
         verify(travelPlanMemberService, never()).removeMember(anyLong(), anyLong(), anyLong());
+        verify(travelPlanMemberService, never())
+                .transferOwnership(anyLong(), anyLong(), anyLong());
     }
 
     private CustomUserDetails member() {
