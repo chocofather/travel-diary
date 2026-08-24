@@ -35,6 +35,8 @@ public class TravelPlanInvitationController {
     private static final String ISSUED_URL_ATTRIBUTE = "travelPlanInviteUrl";
     /** 이 이름이 모델에 있으면 미리보기 대신 이름 입력 상태로 그린다 */
     private static final String JOIN_FORM_ATTRIBUTE = "travelPlanJoinForm";
+    /** 공개 미리보기가 아니라 참여 화면임을 알린다 */
+    private static final String JOIN_SCREEN_ATTRIBUTE = "travelPlanJoinScreen";
 
     private final TravelPlanInvitationService travelPlanInvitationService;
 
@@ -131,8 +133,12 @@ public class TravelPlanInvitationController {
 
         model.addAttribute("travelPlanInvitePreview", invitePreview);
         model.addAttribute("travelPlanInviteToken", rawToken);
+        // 공개 미리보기와 달리 여기서는 실제 참여 자리를 보여 준다.
+        model.addAttribute(JOIN_SCREEN_ATTRIBUTE, true);
         // 정원이 찼거나 다시 들어올 수 없는 사람에게는 폼 대신 안내만 보여 준다.
+        // 나갔던 사람은 쓰던 이름으로 돌아오므로 이름 입력을 받지 않는다.
         if (!invitePreview.isFull() && !invitePreview.isJoinBlocked()
+                && !invitePreview.isRejoinAvailable()
                 && !model.containsAttribute(JOIN_FORM_ATTRIBUTE)) {
             model.addAttribute(JOIN_FORM_ATTRIBUTE, new TravelPlanJoinForm());
         }

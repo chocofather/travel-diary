@@ -31,10 +31,14 @@ public class TravelPlanInvitePreviewDto {
      */
     private boolean alreadyMember;
     /**
-     * 나갔거나 내보내진 기록이 있어 이 링크로는 다시 들어올 수 없는지.
-     * 재참여 정책은 다음 단계에서 다룬다.
+     * 내보내졌거나 재참여가 막혀 이 링크로는 다시 들어올 수 없는지.
+     * 스스로 나간 사람은 여기 해당하지 않는다.
      */
     private boolean joinBlocked;
+    /** 스스로 나갔던 사람이라 쓰던 자리로 돌아올 수 있는지. 이름을 다시 받지 않는다. */
+    private boolean rejoinAvailable;
+    /** 돌아올 때 그대로 쓸 이름. 재참여가 아니면 null. */
+    private String rejoinDisplayName;
 
     /** 정원이 찼는지. 화면이 참여 버튼 대신 안내를 보여 줄 때 쓴다. */
     public boolean isFull() {

@@ -66,6 +66,60 @@ public interface TravelPlanMapper {
     int countMembersByPlanAndDisplayName(@Param("travelPlanId") Long travelPlanId,
                                          @Param("displayName") String displayName);
 
+    /**
+     * 방에 지금 참여 중인 사람들. OWNER 가 먼저 오고 그 뒤는 참여한 순서다.
+     * 화면에 필요한 컬럼만 읽고 users 는 건드리지 않는다.
+     */
+    List<TravelPlanMember> findActiveMembersByPlanId(@Param("travelPlanId") Long travelPlanId,
+                                                     @Param("memberStatus") String memberStatus);
+
+    /**
+     * 방 소속 참여자 1건. 다른 방의 memberId 를 섞어 넣어도 통과하지 못하게
+     * 방 조건을 함께 건다. 상태는 가리지 않는다(이미 나간 사람도 읽힌다).
+     */
+    TravelPlanMember findMemberByPlanAndId(@Param("travelPlanId") Long travelPlanId,
+                                           @Param("memberId") Long memberId);
+
+    /**
+     * 스스로 나가기. row 를 지우지 않고 상태만 바꾼다.
+     * 나간 시각을 남기고 재참여 여지는 열어 둔다(rejoin_allowed = 1).
+     * ACTIVE 인 MEMBER 일 때만 반영되므로 두 번 눌러도 한 번만 처리된다.
+     *
+     * @return 1 이면 반영, 0 이면 이미 나갔거나 조건이 맞지 않는다.
+     */
+    int markMemberLeft(@Param("id") Long id,
+                       @Param("travelPlanId") Long travelPlanId,
+                       @Param("fromStatus") String fromStatus,
+                       @Param("toStatus") String toStatus,
+                       @Param("role") String role);
+
+    /**
+     * OWNER 가 내보내기. 역시 row 를 지우지 않고 상태만 바꾼다.
+     * 지금 가진 초대 링크만으로 되돌아오지 못하게 rejoin_allowed = 0 으로 둔다.
+     * 재참여 허용은 다음 단계의 기능이다.
+     *
+     * @return 1 이면 반영, 0 이면 이미 빠졌거나 조건이 맞지 않는다.
+     */
+    int markMemberRemoved(@Param("id") Long id,
+                          @Param("travelPlanId") Long travelPlanId,
+                          @Param("fromStatus") String fromStatus,
+                          @Param("toStatus") String toStatus,
+                          @Param("role") String role);
+
+    /**
+     * 스스로 나갔던 사람을 원래 자리로 되돌린다.
+     * row 를 새로 만들지 않으므로 id / display_name / role 이 그대로 유지되고,
+     * 그 사람이 쓴 일정·대안의 created_by_member_id 연결도 끊기지 않는다.
+     * rejoin_allowed 가 내려간 사람(내보내진 사람)은 조건에서 걸린다.
+     *
+     * @return 1 이면 반영, 0 이면 이미 돌아왔거나 재참여가 막힌 사람이다.
+     */
+    int reactivateLeftMember(@Param("id") Long id,
+                             @Param("travelPlanId") Long travelPlanId,
+                             @Param("userId") Long userId,
+                             @Param("fromStatus") String fromStatus,
+                             @Param("toStatus") String toStatus);
+
     /** 방의 참여자 수. 초대 미리보기의 "N/8" 과 정원 검사에 쓴다. */
     int countMembersByPlanAndStatus(@Param("travelPlanId") Long travelPlanId,
                                     @Param("memberStatus") String memberStatus);

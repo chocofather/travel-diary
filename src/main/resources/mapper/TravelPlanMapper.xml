@@ -129,6 +129,81 @@
           AND display_name = #{displayName}
     </select>
 
+    <!--
+      플래너의 참여자 목록.
+      화면에 쓰는 것은 표시 이름과 역할뿐이라 그 밖의 컬럼은 읽지 않고,
+      users 를 JOIN 하지 않으므로 계정 정보가 따라올 수 없다.
+      OWNER 를 맨 앞에 두고 그 뒤는 참여한 순서(joined_at)로 정렬한다.
+    -->
+    <select id="findActiveMembersByPlanId" resultType="com.example.travlediary.model.TravelPlanMember">
+        SELECT id, display_name, role
+        FROM travel_plan_members
+        WHERE travel_plan_id = #{travelPlanId}
+          AND status = #{memberStatus}
+        ORDER BY CASE WHEN role = 'OWNER' THEN 0 ELSE 1 END,
+                 joined_at ASC,
+                 id ASC
+    </select>
+
+    <!-- 참여자 1건. 방 소속까지 함께 확인해 다른 방의 memberId 를 막는다 -->
+    <select id="findMemberByPlanAndId" resultType="com.example.travlediary.model.TravelPlanMember">
+        SELECT id, travel_plan_id, user_id, display_name, role, status,
+               rejoin_allowed, joined_at, left_at, removed_at, created_at, updated_at
+        FROM travel_plan_members
+        WHERE travel_plan_id = #{travelPlanId}
+          AND id = #{memberId}
+    </select>
+
+    <!--
+      스스로 나가기. row 를 지우지 않으므로 과거 참여 기록과
+      일정/대안의 created_by_member_id 가 그대로 남는다.
+      status / role 조건을 함께 걸어 이미 나간 사람이나 OWNER 가 이 문장으로 바뀌지 않게 한다.
+    -->
+    <update id="markMemberLeft">
+        UPDATE travel_plan_members
+        SET status = #{toStatus},
+            left_at = CURRENT_TIMESTAMP,
+            rejoin_allowed = 1,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND travel_plan_id = #{travelPlanId}
+          AND status = #{fromStatus}
+          AND role = #{role}
+    </update>
+
+    <!--
+      OWNER 가 내보내기. 마찬가지로 상태만 바꾼다.
+      지금 가진 초대 링크만으로 되돌아오지 못하게 rejoin_allowed 를 내린다.
+    -->
+    <update id="markMemberRemoved">
+        UPDATE travel_plan_members
+        SET status = #{toStatus},
+            removed_at = CURRENT_TIMESTAMP,
+            rejoin_allowed = 0,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND travel_plan_id = #{travelPlanId}
+          AND status = #{fromStatus}
+          AND role = #{role}
+    </update>
+
+    <!--
+      스스로 나갔던 사람의 재참여. 기존 row 를 되살리는 것이라
+      id / user_id / display_name / role 을 건드리지 않는다.
+      나간 흔적(left_at)만 지우고, rejoin_allowed 가 내려간 사람은 조건에서 걸린다.
+    -->
+    <update id="reactivateLeftMember">
+        UPDATE travel_plan_members
+        SET status = #{toStatus},
+            left_at = NULL,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND travel_plan_id = #{travelPlanId}
+          AND user_id = #{userId}
+          AND status = #{fromStatus}
+          AND rejoin_allowed = 1
+    </update>
+
     <!-- 방의 참여자 수. 초대 미리보기의 "N/8" 과 정원 검사에 쓴다 -->
     <select id="countMembersByPlanAndStatus" resultType="int">
         SELECT COUNT(*)

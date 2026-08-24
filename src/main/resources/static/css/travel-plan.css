@@ -362,7 +362,7 @@
     color: #6b6259;
 }
 
-/* ── 초대: OWNER 에게만 보이는 상단 보조 액션 ── */
+/* ── 상단 보조 액션: 참여자(모두) / 초대(OWNER 전용) ── */
 
 .travel-plan-page-top-row {
     display: flex;
@@ -371,9 +371,173 @@
     gap: 12px;
 }
 
+.travel-plan-top-actions {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.travel-plan-members,
 .travel-plan-invite {
     position: relative;
     flex: 0 0 auto;
+}
+
+/* 참여자 진입점도 초대와 같은 크기·위계로 둔다 */
+.travel-plan-members-toggle {
+    padding: 4px 10px;
+    border: 1px solid #e2dbcd;
+    border-radius: 4px;
+    background: #fffdf8;
+    color: #8b8378;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.travel-plan-members-toggle:hover,
+.travel-plan-members-toggle[aria-expanded="true"] {
+    color: #6b6259;
+    border-color: #d5cbb8;
+}
+
+.travel-plan-members-panel {
+    position: absolute;
+    top: 32px;
+    right: 0;
+    z-index: 3;
+    width: 260px;
+    max-width: 80vw;
+    padding: 12px;
+    background: #fff;
+    border: 1px solid #e8e1d5;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(78, 66, 48, 0.1);
+    text-align: left;
+}
+
+.travel-plan-members-heading {
+    margin: 0 0 8px;
+    color: #8b8378;
+    font-size: 12px;
+}
+
+.travel-plan-members-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.travel-plan-member {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 5px 0;
+}
+
+.travel-plan-member-name {
+    min-width: 0;
+    color: #3f3426;
+    font-size: 14px;
+    overflow-wrap: break-word;
+}
+
+.travel-plan-member-me {
+    color: #a09585;
+    font-size: 12px;
+}
+
+/* 역할은 작은 글자로만 구분한다. 색 있는 배지를 만들지 않는다 */
+.travel-plan-member-role {
+    flex: 0 0 auto;
+    color: #b0a493;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+}
+
+.travel-plan-member-role.is-owner {
+    color: #8a7f6d;
+    font-weight: 700;
+}
+
+.travel-plan-members-count {
+    margin: 10px 0 0;
+    padding-top: 8px;
+    border-top: 1px solid #f0ebe2;
+    color: #a09585;
+    font-size: 12px;
+}
+
+/* 참여자 줄의 ⋯ 는 OWNER 에게만, 그것도 MEMBER 줄에만 붙는다 */
+.travel-plan-member-menu {
+    position: relative;
+    flex: 0 0 auto;
+}
+
+.travel-plan-member-menu-button {
+    padding: 0 2px;
+    border: 0;
+    background: none;
+    color: #cfc4b2;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.12s ease;
+}
+
+.travel-plan-member:hover .travel-plan-member-menu-button,
+.travel-plan-member-menu-button:focus-visible,
+.travel-plan-member-menu-button[aria-expanded="true"] {
+    color: #a89e91;
+}
+
+.travel-plan-member-menu-list {
+    position: absolute;
+    top: 20px;
+    right: 0;
+    z-index: 4;
+    display: block;
+    padding: 4px;
+    background: #fff;
+    border: 1px solid #e8e1d5;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(78, 66, 48, 0.1);
+}
+
+.travel-plan-member-menu-list[hidden] {
+    display: none;
+}
+
+/* 낮은 위계로 둔다. 큰 빨간 버튼을 만들지 않는다 */
+.travel-plan-member-remove,
+.travel-plan-member-leave {
+    padding: 6px 12px;
+    border: 0;
+    border-radius: 4px;
+    background: none;
+    color: #9a7d78;
+    font-family: inherit;
+    font-size: 12px;
+    text-align: left;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.travel-plan-member-remove:hover,
+.travel-plan-member-leave:hover {
+    background: #fdf4f3;
+    color: #b42318;
+}
+
+.travel-plan-member-leave-form {
+    margin-top: 6px;
+}
+
+.travel-plan-member-leave {
+    display: block;
+    width: 100%;
+    padding-left: 0;
 }
 
 /* 플래너 본문을 방해하지 않게 작고 낮은 위계로 둔다 */

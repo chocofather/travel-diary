@@ -6,6 +6,7 @@ import com.example.travlediary.config.SecurityConfig;
 import com.example.travlediary.dto.TravelPlanDayDetailDto;
 import com.example.travlediary.dto.TravelPlanDetailDto;
 import com.example.travlediary.dto.TravelPlanListItemDto;
+import com.example.travlediary.dto.TravelPlanMemberDto;
 import com.example.travlediary.model.TravelPlan;
 import com.example.travlediary.model.TravelPlanDay;
 import com.example.travlediary.model.TravelPlanMember;
@@ -233,7 +234,7 @@ class TravelPlanControllerTest {
         plan.setStartDate(LocalDate.parse(START));
         plan.setEndDate(LocalDate.parse(END));
         TravelPlanDetailDto detail = new TravelPlanDetailDto(
-                plan, new TravelPlanMember(), List.of(), Map.of(), Map.of());
+                plan, new TravelPlanMember(), List.of(), Map.of(), Map.of(), List.of(), 8);
         when(travelPlanService.getActivePlanDetail(7L, 42L)).thenReturn(detail);
 
         mockMvc.perform(get("/travel-plans/42").with(user(member())))
@@ -611,7 +612,8 @@ class TravelPlanControllerTest {
         day.setDayNumber(1);
         day.setPlanDate(LocalDate.parse(START));
         return new TravelPlanDetailDto(
-                plan, new TravelPlanMember(), List.of(day), Map.of(), Map.of());
+                plan, new TravelPlanMember(), List.of(day), Map.of(), Map.of(),
+                List.of(new TravelPlanMemberDto(11L, "민준", TravelPlanRole.OWNER, true)), 8);
     }
 
     private TravelPlanDayDetailDto dayDetail() {

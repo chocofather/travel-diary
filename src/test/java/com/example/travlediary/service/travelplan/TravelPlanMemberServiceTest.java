@@ -1,0 +1,300 @@
+package com.example.travlediary.service.travelplan;
+
+import com.example.travlediary.model.TravelPlan;
+import com.example.travlediary.model.TravelPlanMember;
+import com.example.travlediary.model.TravelPlanMemberStatus;
+import com.example.travlediary.model.TravelPlanRole;
+import com.example.travlediary.model.TravelPlanStatus;
+import com.example.travlediary.repository.travelplan.TravelPlanMapper;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.lang.reflect.Method;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+/**
+ * 참여자 상태 변경.
+ * 어느 쪽도 row 를 지우지 않고 status 만 바꾼다.
+ */
+@ExtendWith(MockitoExtension.class)
+class TravelPlanMemberServiceTest {
+
+    private static final Long PLAN_ID = 42L;
+    private static final Long OTHER_PLAN_ID = 43L;
+    private static final Long OWNER_USER_ID = 7L;
+    private static final Long MEMBER_USER_ID = 8L;
+    private static final Long OWNER_MEMBER_ID = 11L;
+    private static final Long MEMBER_A_ID = 12L;
+    private static final Long MEMBER_B_ID = 13L;
+
+    @Mock
+    private TravelPlanMapper travelPlanMapper;
+    @InjectMocks
+    private TravelPlanMemberService travelPlanMemberService;
+
+    // ── 스스로 나가기 ────────────────────────────────────────
+
+    @Test
+    void aMemberLeavingOnlyChangesTheStatusOfTheirOwnRow() {
+        givenActivePlan();
+        givenCurrentMember(member(MEMBER_A_ID, MEMBER_USER_ID, TravelPlanRole.MEMBER,
+                TravelPlanMemberStatus.ACTIVE));
+        when(travelPlanMapper.markMemberLeft(MEMBER_A_ID, PLAN_ID, "ACTIVE", "LEFT", "MEMBER"))
+                .thenReturn(1);
+
+        travelPlanMemberService.leave(MEMBER_USER_ID, PLAN_ID);
+
+        // 상태 변경과 활동 시각 갱신이 한 덩어리다
+        InOrder order = inOrder(travelPlanMapper);
+        order.verify(travelPlanMapper)
+                .markMemberLeft(MEMBER_A_ID, PLAN_ID, "ACTIVE", "LEFT", "MEMBER");
+        order.verify(travelPlanMapper).touchLastActivity(PLAN_ID);
+    }
+
+    @Test
+    void leavingNeverDeletesTheMemberRowOrRewritesAuthorship() {
+        givenActivePlan();
+        givenCurrentMember(member(MEMBER_A_ID, MEMBER_USER_ID, TravelPlanRole.MEMBER,
+                TravelPlanMemberStatus.ACTIVE));
+        when(travelPlanMapper.markMemberLeft(anyLong(), anyLong(), anyString(), anyString(),
+                anyString())).thenReturn(1);
+
+        travelPlanMemberService.leave(MEMBER_USER_ID, PLAN_ID);
+
+        // 과거 참여 기록과 일정/대안의 created_by_member_id 가 남아야 한다
+        verify(travelPlanMapper, never()).insertMember(any());
+        verify(travelPlanMapper).markMemberLeft(MEMBER_A_ID, PLAN_ID, "ACTIVE", "LEFT", "MEMBER");
+    }
+
+    @Test
+    void theOwnerCannotSimplyWalkOut() {
+        givenActivePlan();
+        givenCurrentMember(member(OWNER_MEMBER_ID, OWNER_USER_ID, TravelPlanRole.OWNER,
+                TravelPlanMemberStatus.ACTIVE));
+
+        assertThatThrownBy(() -> travelPlanMemberService.leave(OWNER_USER_ID, PLAN_ID))
+                .isInstanceOf(TravelPlanValidationException.class)
+                .hasMessageContaining("방장은 바로 나갈 수 없습니다.")
+                .extracting("field").isEqualTo("role");
+
+        // 방장이 실수로 LEFT 가 되면 안 된다
+        verify(travelPlanMapper, never()).markMemberLeft(
+                anyLong(), anyLong(), anyString(), anyString(), anyString());
+        verify(travelPlanMapper, never()).touchLastActivity(anyLong());
+    }
+
+    @Test
+    void leavingTwiceDoesNotChangeAnythingASecondTime() {
+        givenActivePlan();
+        givenCurrentMember(member(MEMBER_A_ID, MEMBER_USER_ID, TravelPlanRole.MEMBER,
+                TravelPlanMemberStatus.ACTIVE));
+        // 조건부 UPDATE 라 이미 나갔으면 영향 행이 0 이다
+        when(travelPlanMapper.markMemberLeft(anyLong(), anyLong(), anyString(), anyString(),
+                anyString())).thenReturn(0);
+
+        assertThatThrownBy(() -> travelPlanMemberService.leave(MEMBER_USER_ID, PLAN_ID))
+                .isInstanceOf(ResponseStatusException.class);
+
+        verify(travelPlanMapper, never()).touchLastActivity(anyLong());
+    }
+
+    @Test
+    void someoneWhoIsNotAnActiveMemberCannotLeave() {
+        givenActivePlan();
+        when(travelPlanMapper.findMemberByPlanAndUser(PLAN_ID, MEMBER_USER_ID, "ACTIVE"))
+                .thenReturn(null);
+
+        assertThatThrownBy(() -> travelPlanMemberService.leave(MEMBER_USER_ID, PLAN_ID))
+                .isInstanceOf(ResponseStatusException.class);
+
+        verify(travelPlanMapper, never()).markMemberLeft(
+                anyLong(), anyLong(), anyString(), anyString(), anyString());
+    }
+
+    // ── 내보내기 ────────────────────────────────────────────
+
+    @Test
+    void theOwnerCanRemoveAPlainMember() {
+        givenActivePlan();
+        givenCurrentMember(member(OWNER_MEMBER_ID, OWNER_USER_ID, TravelPlanRole.OWNER,
+                TravelPlanMemberStatus.ACTIVE));
+        givenTarget(member(MEMBER_B_ID, MEMBER_USER_ID, TravelPlanRole.MEMBER,
+                TravelPlanMemberStatus.ACTIVE));
+        when(travelPlanMapper.markMemberRemoved(
+                MEMBER_B_ID, PLAN_ID, "ACTIVE", "REMOVED", "MEMBER")).thenReturn(1);
+
+        travelPlanMemberService.removeMember(OWNER_USER_ID, PLAN_ID, MEMBER_B_ID);
+
+        InOrder order = inOrder(travelPlanMapper);
+        order.verify(travelPlanMapper)
+                .markMemberRemoved(MEMBER_B_ID, PLAN_ID, "ACTIVE", "REMOVED", "MEMBER");
+        order.verify(travelPlanMapper).touchLastActivity(PLAN_ID);
+    }
+
+    @Test
+    void aPlainMemberCannotRemoveAnyone() {
+        givenActivePlan();
+        givenCurrentMember(member(MEMBER_A_ID, MEMBER_USER_ID, TravelPlanRole.MEMBER,
+                TravelPlanMemberStatus.ACTIVE));
+
+        assertThatThrownBy(() ->
+                travelPlanMemberService.removeMember(MEMBER_USER_ID, PLAN_ID, MEMBER_B_ID))
+                .isInstanceOf(ResponseStatusException.class);
+
+        // 권한이 없으면 대상 조회까지 가지 않는다 (존재 여부도 알리지 않는다)
+        verify(travelPlanMapper, never()).findMemberByPlanAndId(anyLong(), anyLong());
+        verify(travelPlanMapper, never()).markMemberRemoved(
+                anyLong(), anyLong(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void theOwnerCannotBeRemovedByAnyone() {
+        givenActivePlan();
+        givenCurrentMember(member(OWNER_MEMBER_ID, OWNER_USER_ID, TravelPlanRole.OWNER,
+                TravelPlanMemberStatus.ACTIVE));
+        // 자기 자신이자 OWNER 인 대상
+        givenTarget(member(OWNER_MEMBER_ID, OWNER_USER_ID, TravelPlanRole.OWNER,
+                TravelPlanMemberStatus.ACTIVE));
+
+        assertThatThrownBy(() ->
+                travelPlanMemberService.removeMember(OWNER_USER_ID, PLAN_ID, OWNER_MEMBER_ID))
+                .isInstanceOf(ResponseStatusException.class);
+
+        verify(travelPlanMapper, never()).markMemberRemoved(
+                anyLong(), anyLong(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void aTargetThatAlreadyLeftOrWasRemovedIsNotChangedAgain() {
+        givenActivePlan();
+        givenCurrentMember(member(OWNER_MEMBER_ID, OWNER_USER_ID, TravelPlanRole.OWNER,
+                TravelPlanMemberStatus.ACTIVE));
+
+        for (TravelPlanMemberStatus status : new TravelPlanMemberStatus[]{
+                TravelPlanMemberStatus.LEFT, TravelPlanMemberStatus.REMOVED}) {
+            givenTarget(member(MEMBER_B_ID, MEMBER_USER_ID, TravelPlanRole.MEMBER, status));
+
+            assertThatThrownBy(() ->
+                    travelPlanMemberService.removeMember(OWNER_USER_ID, PLAN_ID, MEMBER_B_ID))
+                    .as("status=%s", status)
+                    .isInstanceOf(ResponseStatusException.class);
+        }
+        verify(travelPlanMapper, never()).markMemberRemoved(
+                anyLong(), anyLong(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void aMemberIdFromAnotherRoomNeverMatches() {
+        givenActivePlan();
+        givenCurrentMember(member(OWNER_MEMBER_ID, OWNER_USER_ID, TravelPlanRole.OWNER,
+                TravelPlanMemberStatus.ACTIVE));
+        // 방 조건이 걸려 있어 다른 방의 memberId 는 조회되지 않는다
+        when(travelPlanMapper.findMemberByPlanAndId(PLAN_ID, MEMBER_B_ID)).thenReturn(null);
+
+        assertThatThrownBy(() ->
+                travelPlanMemberService.removeMember(OWNER_USER_ID, PLAN_ID, MEMBER_B_ID))
+                .isInstanceOf(ResponseStatusException.class);
+
+        verify(travelPlanMapper, never()).findMemberByPlanAndId(OTHER_PLAN_ID, MEMBER_B_ID);
+        verify(travelPlanMapper, never()).markMemberRemoved(
+                anyLong(), anyLong(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void aMissingTargetIdIsRefusedWithoutALookup() {
+        givenActivePlan();
+        givenCurrentMember(member(OWNER_MEMBER_ID, OWNER_USER_ID, TravelPlanRole.OWNER,
+                TravelPlanMemberStatus.ACTIVE));
+
+        assertThatThrownBy(() ->
+                travelPlanMemberService.removeMember(OWNER_USER_ID, PLAN_ID, null))
+                .isInstanceOf(ResponseStatusException.class);
+
+        verify(travelPlanMapper, never()).findMemberByPlanAndId(anyLong(), anyLong());
+    }
+
+    // ── 공통 ────────────────────────────────────────────────
+
+    @Test
+    void neitherActionWorksOnARoomThatIsNoLongerActive() {
+        when(travelPlanMapper.findPlanByIdAndStatus(PLAN_ID, "ACTIVE")).thenReturn(null);
+
+        assertThatThrownBy(() -> travelPlanMemberService.leave(MEMBER_USER_ID, PLAN_ID))
+                .isInstanceOf(ResponseStatusException.class);
+        assertThatThrownBy(() ->
+                travelPlanMemberService.removeMember(OWNER_USER_ID, PLAN_ID, MEMBER_B_ID))
+                .isInstanceOf(ResponseStatusException.class);
+
+        verify(travelPlanMapper, never()).findMemberByPlanAndUser(
+                anyLong(), anyLong(), anyString());
+    }
+
+    @Test
+    void aMissingLoginCannotChangeAnyone() {
+        givenActivePlan();
+
+        assertThatThrownBy(() -> travelPlanMemberService.leave(null, PLAN_ID))
+                .isInstanceOf(TravelPlanValidationException.class)
+                .extracting("field").isEqualTo("userId");
+    }
+
+    @Test
+    void bothActionsRunInsideATransaction() throws NoSuchMethodException {
+        Method leave = TravelPlanMemberService.class.getMethod(
+                "leave", Long.class, Long.class);
+        Method remove = TravelPlanMemberService.class.getMethod(
+                "removeMember", Long.class, Long.class, Long.class);
+
+        // 상태 변경과 last_activity_at 갱신이 함께 반영되어야 한다
+        for (Method method : new Method[]{leave, remove}) {
+            assertThat(method.isAnnotationPresent(Transactional.class))
+                    .as("%s", method.getName()).isTrue();
+        }
+    }
+
+    private static <T> T any() {
+        return org.mockito.ArgumentMatchers.any();
+    }
+
+    private TravelPlanMember member(Long id, Long userId, TravelPlanRole role,
+                                    TravelPlanMemberStatus status) {
+        TravelPlanMember member = new TravelPlanMember();
+        member.setId(id);
+        member.setTravelPlanId(PLAN_ID);
+        member.setUserId(userId);
+        member.setDisplayName("쭈니");
+        member.setRole(role);
+        member.setStatus(status);
+        return member;
+    }
+
+    private void givenCurrentMember(TravelPlanMember member) {
+        when(travelPlanMapper.findMemberByPlanAndUser(PLAN_ID, member.getUserId(), "ACTIVE"))
+                .thenReturn(member);
+    }
+
+    private void givenTarget(TravelPlanMember target) {
+        when(travelPlanMapper.findMemberByPlanAndId(PLAN_ID, target.getId())).thenReturn(target);
+    }
+
+    private void givenActivePlan() {
+        TravelPlan plan = new TravelPlan();
+        plan.setId(PLAN_ID);
+        plan.setStatus(TravelPlanStatus.ACTIVE);
+        when(travelPlanMapper.findPlanByIdAndStatus(PLAN_ID, "ACTIVE")).thenReturn(plan);
+    }
+}

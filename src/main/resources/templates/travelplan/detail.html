@@ -14,6 +14,71 @@
       <div class="travel-plan-page-top-row">
         <a class="travel-plan-back-link" th:href="@{/travel-plans}">← 함께 계획하기</a>
 
+        <div class="travel-plan-top-actions">
+        <!--
+          참여자 목록은 방의 ACTIVE 멤버라면 누구나 본다. 이번 단계는 조회 전용이다.
+        -->
+        <div class="travel-plan-members" data-travel-plan-members>
+          <button type="button" class="travel-plan-members-toggle"
+                  aria-haspopup="true" aria-expanded="false"
+                  data-travel-plan-members-toggle
+                  th:text="'참여자 ' + ${travelPlan.memberCount} + '/'
+                           + ${travelPlan.memberLimit}">참여자 3/8</button>
+
+          <div class="travel-plan-members-panel" hidden data-travel-plan-members-panel
+               th:with="viewerIsOwner=${travelPlan.currentMember != null
+                        and travelPlan.currentMember.role != null
+                        and travelPlan.currentMember.role.name() == 'OWNER'}">
+            <p class="travel-plan-members-heading">함께 계획하는 사람들</p>
+            <ul class="travel-plan-members-list">
+              <li class="travel-plan-member" th:each="member : ${travelPlan.members}">
+                <span class="travel-plan-member-name">
+                  <span th:text="${member.displayName}">민준</span>
+                  <span class="travel-plan-member-me" th:if="${member.currentUser}">(나)</span>
+                </span>
+                <span class="travel-plan-member-role"
+                      th:classappend="${member.role.name() == 'OWNER'} ? 'is-owner'"
+                      th:text="${member.role.name() == 'OWNER'} ? '방장' : '멤버'">방장</span>
+
+                <!--
+                  관리 진입점은 OWNER 에게만, 그리고 MEMBER 줄에만 붙는다.
+                  OWNER 자신의 줄은 role 이 OWNER 라 여기서 걸러진다.
+                -->
+                <span class="travel-plan-member-menu"
+                      th:if="${viewerIsOwner and member.role.name() == 'MEMBER'}"
+                      data-travel-plan-member-menu>
+                  <button type="button" class="travel-plan-member-menu-button"
+                          aria-haspopup="true" aria-expanded="false"
+                          aria-label="참여자 메뉴" data-travel-plan-member-menu-button>⋯</button>
+                  <span class="travel-plan-member-menu-list" hidden
+                        data-travel-plan-member-menu-list>
+                    <form method="post"
+                          th:action="@{|/travel-plans/${travelPlan.plan.id}/members/${member.memberId}/remove|}">
+                      <button type="submit" class="travel-plan-member-remove"
+                              th:attr="onclick=|return confirm('${member.displayName}님을 이 여행에서 내보낼까요?\n\n내보낸 뒤에는 현재 초대 링크만으로 다시 참여할 수 없습니다.')|">
+                        내보내기
+                      </button>
+                    </form>
+                  </span>
+                </span>
+              </li>
+            </ul>
+            <p class="travel-plan-members-count"
+               th:text="${travelPlan.memberCount} + ' / ' + ${travelPlan.memberLimit}
+                        + '명 참여 중'">3 / 8명 참여 중</p>
+
+            <!-- 나가기는 MEMBER 본인에게만 보인다. 방장은 먼저 방장을 넘겨야 한다 -->
+            <form class="travel-plan-member-leave-form" method="post"
+                  th:unless="${viewerIsOwner}"
+                  th:action="@{|/travel-plans/${travelPlan.plan.id}/members/leave|}">
+              <button type="submit" class="travel-plan-member-leave"
+                      onclick="return confirm('이 여행 계획에서 나갈까요?\n\n작성했던 일정은 여행 계획에 그대로 남습니다.')">
+                여행에서 나가기
+              </button>
+            </form>
+          </div>
+        </div>
+
         <!--
           초대는 OWNER 에게만 보이는 상단 보조 액션이다.
           발급된 링크는 이 응답에서만 볼 수 있고 DB 에서 되살릴 수 없다.
@@ -69,6 +134,7 @@
               </form>
             </div>
           </div>
+        </div>
         </div>
       </div>
 

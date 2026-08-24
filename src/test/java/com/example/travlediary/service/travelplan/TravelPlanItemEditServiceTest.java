@@ -204,6 +204,50 @@ class TravelPlanItemEditServiceTest {
     }
 
     @Test
+    void whoeverLeftOrWasRemovedCanNoLongerWriteAnything() {
+        // ACTIVE 조건이 걸린 참여 조회라 LEFT / REMOVED 가 되면 여기서 null 이 된다.
+        // 쓰기 Service 전체가 이 확인을 지나므로 따로 막을 곳이 없다.
+        when(travelPlanMapper.findMemberByPlanAndUser(PLAN_ID, USER_ID, "ACTIVE")).thenReturn(null);
+
+        assertThatThrownBy(() -> travelPlanService.addItem(USER_ID, PLAN_ID, DAY_ID, "새 일정"))
+                .isInstanceOf(ResponseStatusException.class);
+        assertThatThrownBy(() -> travelPlanService.updateItem(
+                USER_ID, PLAN_ID, DAY_ID, ITEM_ID, "고친 일정", 3))
+                .isInstanceOf(ResponseStatusException.class);
+        assertThatThrownBy(() -> travelPlanService.deleteItem(USER_ID, PLAN_ID, DAY_ID, ITEM_ID))
+                .isInstanceOf(ResponseStatusException.class);
+        assertThatThrownBy(() ->
+                travelPlanService.deleteItemGroup(USER_ID, PLAN_ID, DAY_ID, ITEM_ID))
+                .isInstanceOf(ResponseStatusException.class);
+        assertThatThrownBy(() -> travelPlanService.moveItemUp(
+                USER_ID, PLAN_ID, DAY_ID, ITEM_ID, 3))
+                .isInstanceOf(ResponseStatusException.class);
+        assertThatThrownBy(() -> travelPlanService.moveItemDown(
+                USER_ID, PLAN_ID, DAY_ID, ITEM_ID, 3))
+                .isInstanceOf(ResponseStatusException.class);
+        assertThatThrownBy(() -> travelPlanService.moveItemToDay(
+                USER_ID, PLAN_ID, DAY_ID, ITEM_ID, OTHER_DAY_ID, 3))
+                .isInstanceOf(ResponseStatusException.class);
+        assertThatThrownBy(() -> travelPlanService.addAlternative(
+                USER_ID, PLAN_ID, DAY_ID, ITEM_ID, null, "대안"))
+                .isInstanceOf(ResponseStatusException.class);
+        assertThatThrownBy(() -> travelPlanService.updateAlternative(
+                USER_ID, PLAN_ID, DAY_ID, ITEM_ID, 900L, null, "대안", 1))
+                .isInstanceOf(ResponseStatusException.class);
+        assertThatThrownBy(() -> travelPlanService.deleteAlternative(
+                USER_ID, PLAN_ID, DAY_ID, ITEM_ID, 900L))
+                .isInstanceOf(ResponseStatusException.class);
+        // 방 화면 자체도 열리지 않는다
+        assertThatThrownBy(() -> travelPlanService.getActivePlanDetail(USER_ID, PLAN_ID))
+                .isInstanceOf(ResponseStatusException.class);
+
+        // 남아 있는 일정과 대안은 아무것도 건드리지 않는다
+        verify(travelPlanItemMapper, never()).insertItem(any());
+        verify(travelPlanItemMapper, never()).deleteByIdAndDayId(anyLong(), anyLong());
+        verify(travelPlanAlternativeMapper, never()).deleteByIdAndItemId(anyLong(), anyLong());
+    }
+
+    @Test
     void editAndDeleteEachRunInsideATransaction() throws NoSuchMethodException {
         Method update = TravelPlanService.class.getMethod("updateItem",
                 Long.class, Long.class, Long.class, Long.class, String.class, Integer.class);

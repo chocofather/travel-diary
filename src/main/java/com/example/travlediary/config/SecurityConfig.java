@@ -110,6 +110,11 @@ public class SecurityConfig {
                                 "^/travel-plans/invitations/[A-Za-z0-9_-]+/join$",
                                 HttpMethod.POST.name()),
                         new RegexRequestMatcher(
+                                "^/travel-plans/[0-9]+/members/leave$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/travel-plans/[0-9]+/members/[0-9]+/remove$",
+                                HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
                                 "^/travel-plans/[0-9]+/invitations$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(
                                 "^/travel-plans/[0-9]+/invitations/regenerate$",

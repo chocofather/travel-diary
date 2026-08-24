@@ -260,10 +260,75 @@ class TravelPlanInvitationContractTest {
                 .contains("참여 인원이 모두 찼어요.")
                 .contains("현재 이 여행에 다시 참여할 수 없습니다.")
                 // 참여 링크와 폼 모두 정원/차단 상태에서는 나오지 않는다
-                .contains("th:if=\"${travelPlanJoinForm == null} and not *{full} and not *{joinBlocked}\"")
+                .contains("th:if=\"${travelPlanJoinScreen == null} and not *{full} and not *{joinBlocked}\"")
                 .contains("th:if=\"${travelPlanJoinForm != null} and not *{full} and not *{joinBlocked}\"");
         // 거절 사유는 같은 화면에서 알려 준다
         assertThat(preview).contains("th:if=\"${travelPlanError}\"");
+    }
+
+    @Test
+    void aReturningMemberConfirmsWithTheirOldNameInsteadOfTypingANewOne() throws IOException {
+        String preview = resource("/templates/travelplan/invitation-preview.html");
+
+        assertThat(preview)
+                .contains("th:if=\"${travelPlanJoinScreen != null} and *{rejoinAvailable}")
+                .contains("이 여행에 다시 참여할까요?")
+                .contains("${travelPlanInvitePreview.rejoinDisplayName}")
+                .contains(">다시 참여하기</button>");
+
+        // 재참여 자리에는 이름 입력이 없다 (템플릿에서 먼저 나오는 join-form 이 재참여다)
+        String rejoinForm = between(preview,
+                "class=\"travel-plan-join-form\" method=\"post\"", ">다시 참여하기</button>");
+        assertThat(rejoinForm)
+                .contains("*{rejoinAvailable}")
+                .doesNotContain("<input")
+                .doesNotContain("displayName\"");
+    }
+
+    @Test
+    void theRejoinRevivesTheOldRowInsteadOfCreatingANewOne() throws IOException {
+        String update = between(resource("/mapper/TravelPlanMapper.xml"),
+                "<update id=\"reactivateLeftMember\"", "</update>");
+
+        assertThat(update)
+                .contains("UPDATE travel_plan_members")
+                .contains("SET status = #{toStatus}")
+                // 나간 흔적만 지운다
+                .contains("left_at = NULL")
+                .contains("WHERE id = #{id}")
+                .contains("AND travel_plan_id = #{travelPlanId}")
+                .contains("AND user_id = #{userId}")
+                .contains("AND status = #{fromStatus}")
+                // 내보내진 사람은 여기서 걸린다
+                .contains("AND rejoin_allowed = 1")
+                .doesNotContain("${");
+
+        // id / display_name / role 을 건드리지 않아야 작성 기록 연결이 유지된다
+        assertThat(between(update, "SET", "WHERE"))
+                .doesNotContain("display_name")
+                .doesNotContain("role")
+                .doesNotContain("user_id")
+                .doesNotContain("rejoin_allowed");
+    }
+
+    @Test
+    void theJoinFlowNeverInsertsForSomeoneWhoAlreadyHasARow() throws IOException {
+        String service = Files.readString(
+                Path.of("src/main/java/com/example/travlediary/service/travelplan/"
+                        + "TravelPlanInvitationService.java"),
+                StandardCharsets.UTF_8);
+        String join = between(service, "public Long join(", "private void reactivate");
+
+        // 기존 row 가 있으면 되살리고 끝난다. INSERT 로 빠지는 경로가 없다
+        assertThat(join.indexOf("if (existing != null)"))
+                .isLessThan(join.indexOf("insertMember("));
+        assertThat(join).contains("reactivate(existing, travelPlanId, userId)");
+        // 정원은 신규/재참여 갈리기 전에 본다
+        assertThat(join.indexOf("countMembersByPlanAndStatus"))
+                .isLessThan(join.indexOf("if (existing != null)"));
+        // 이름은 신규 참여 쪽에서만 검사한다
+        assertThat(join.indexOf("if (existing != null)"))
+                .isLessThan(join.indexOf("TravelPlanDisplayName.normalize"));
     }
 
     @Test
@@ -355,8 +420,8 @@ class TravelPlanInvitationContractTest {
     void theJoinScreenStopsAtJoiningAndAddsNoMemberManagement() throws IOException {
         String preview = resource("/templates/travelplan/invitation-preview.html");
 
-        // 참여 폼 하나뿐이다. 멤버 관리 계열은 다음 단계다
-        assertThat(countOf(preview, "<form")).isEqualTo(1);
+        // 신규 참여 폼과 재참여 확인 폼 둘뿐이다. 멤버 관리 계열은 다음 단계다
+        assertThat(countOf(preview, "<form")).isEqualTo(2);
         for (String notYet : new String[]{
                 "나가기", "내보내기", "강퇴", "멤버 목록", "이름 변경", "권한"}) {
             assertThat(preview).as("아직 없는 기능: %s", notYet).doesNotContain(notYet);

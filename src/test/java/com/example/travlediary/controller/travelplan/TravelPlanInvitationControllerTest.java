@@ -264,6 +264,35 @@ class TravelPlanInvitationControllerTest {
     }
 
     @Test
+    void aReturningMemberIsNotAskedForANameAgain() throws Exception {
+        when(travelPlanInvitationService.resolvePreview(7L, RAW_TOKEN))
+                .thenReturn(Optional.of(rejoinPreview()));
+
+        mockMvc.perform(get("/travel-plans/invitations/" + RAW_TOKEN + "/join")
+                        .with(user(member())))
+                .andExpect(status().isOk())
+                .andExpect(view().name("travelplan/invitation-preview"))
+                // 이름 입력 폼 대신 재참여 확인만 보여 준다
+                .andExpect(model().attributeDoesNotExist("travelPlanJoinForm"))
+                .andExpect(model().attribute("travelPlanJoinScreen", true))
+                .andExpect(model().attributeExists("travelPlanInvitePreview"));
+    }
+
+    @Test
+    void aReturningMemberRejoinsThroughThePostWithoutSendingAName() throws Exception {
+        when(travelPlanInvitationService.join(7L, RAW_TOKEN, null)).thenReturn(42L);
+
+        // 상태 변경은 GET 이 아니라 POST 에서만 일어난다
+        mockMvc.perform(post("/travel-plans/invitations/" + RAW_TOKEN + "/join")
+                        .with(user(member())).with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/travel-plans/42"))
+                .andExpect(flash().attribute("travelPlanMessage", "여행 계획에 참여했어요."));
+
+        verify(travelPlanInvitationService).join(7L, RAW_TOKEN, null);
+    }
+
+    @Test
     void someoneAlreadyInTheRoomSkipsTheNameForm() throws Exception {
         when(travelPlanInvitationService.resolvePreview(7L, RAW_TOKEN))
                 .thenReturn(Optional.of(preview(true)));
@@ -359,7 +388,14 @@ class TravelPlanInvitationControllerTest {
                                                boolean joinBlocked) {
         return new TravelPlanInvitePreviewDto(42L, "제주도 여행",
                 LocalDate.of(2026, 9, 13), LocalDate.of(2026, 9, 15),
-                null, memberCount, 8, "민준", alreadyMember, joinBlocked);
+                null, memberCount, 8, "민준", alreadyMember, joinBlocked, false, null);
+    }
+
+    /** 스스로 나갔던 사람이 다시 들어올 수 있는 상태. */
+    private TravelPlanInvitePreviewDto rejoinPreview() {
+        return new TravelPlanInvitePreviewDto(42L, "제주도 여행",
+                LocalDate.of(2026, 9, 13), LocalDate.of(2026, 9, 15),
+                null, 2, 8, "민준", false, false, true, "쭈니");
     }
 
     private CustomUserDetails member() {

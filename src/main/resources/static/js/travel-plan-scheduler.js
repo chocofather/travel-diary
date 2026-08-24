@@ -259,28 +259,98 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.addEventListener("click", () => closeMenus(null));
 
-    // ── 초대 (OWNER 상단 보조 액션) ──────────────────────────────
+    // ── 상단 보조 popover (참여자 / 초대) ───────────────────────
     // 플래너 종이 바깥의 상단 줄에 있으므로 document 에서 찾는다.
-    const invite = document.querySelector("[data-travel-plan-invite]");
-    if (invite) {
-        const toggle = invite.querySelector("[data-travel-plan-invite-toggle]");
-        const panel = invite.querySelector("[data-travel-plan-invite-panel]");
-        const url = invite.querySelector("[data-travel-plan-invite-url]");
-        const copy = invite.querySelector("[data-travel-plan-invite-copy]");
+    const popovers = [];
 
-        function openPanel(shouldOpen) {
-            if (!panel) return;
-            panel.hidden = !shouldOpen;
-            toggle?.setAttribute("aria-expanded", String(shouldOpen));
-        }
+    function closePopovers(except) {
+        popovers.forEach(popover => {
+            if (popover !== except) popover.open(false);
+        });
+    }
 
+    // 클릭으로 열고, 바깥 클릭과 Esc 로 닫는다. 한 번에 하나만 열어 둔다.
+    function registerPopover(rootName, toggleName, panelName) {
+        const root = document.querySelector(`[${rootName}]`);
+        if (!root) return null;
+        const toggle = root.querySelector(`[${toggleName}]`);
+        const panel = root.querySelector(`[${panelName}]`);
+        if (!panel) return null;
+
+        const popover = {
+            root,
+            panel,
+            open(shouldOpen) {
+                panel.hidden = !shouldOpen;
+                toggle?.setAttribute("aria-expanded", String(shouldOpen));
+            }
+        };
         toggle?.addEventListener("click", event => {
             event.stopPropagation();
-            openPanel(panel ? panel.hidden : false);
+            const willOpen = panel.hidden;
+            closePopovers(popover);
+            popover.open(willOpen);
         });
         // 패널 안을 눌렀다고 닫히지 않게 한다.
-        panel?.addEventListener("click", event => event.stopPropagation());
-        document.addEventListener("click", () => openPanel(false));
+        panel.addEventListener("click", event => event.stopPropagation());
+        popovers.push(popover);
+        return popover;
+    }
+
+    registerPopover(
+        "data-travel-plan-members",
+        "data-travel-plan-members-toggle",
+        "data-travel-plan-members-panel");
+    const invite = registerPopover(
+        "data-travel-plan-invite",
+        "data-travel-plan-invite-toggle",
+        "data-travel-plan-invite-panel");
+
+    // 참여자 줄의 ⋯ (OWNER 에게만 렌더링된다). 한 번에 하나만 열어 둔다.
+    const memberMenus = document.querySelectorAll("[data-travel-plan-member-menu]");
+
+    function closeMemberMenus(except) {
+        memberMenus.forEach(menu => {
+            if (menu === except) return;
+            const list = menu.querySelector("[data-travel-plan-member-menu-list]");
+            if (list) list.hidden = true;
+            menu.querySelector("[data-travel-plan-member-menu-button]")
+                ?.setAttribute("aria-expanded", "false");
+        });
+    }
+
+    memberMenus.forEach(menu => {
+        const button = menu.querySelector("[data-travel-plan-member-menu-button]");
+        const list = menu.querySelector("[data-travel-plan-member-menu-list]");
+        if (!button || !list) return;
+
+        button.addEventListener("click", event => {
+            // 참여자 popover 자체가 닫히지 않게 여기서 멈춘다.
+            event.stopPropagation();
+            const willOpen = list.hidden;
+            closeMemberMenus(menu);
+            list.hidden = !willOpen;
+            button.setAttribute("aria-expanded", String(willOpen));
+        });
+    });
+
+    // 참여자 popover 는 안쪽 클릭을 막아 두므로 패널 안에서도 따로 닫아 준다.
+    document.querySelector("[data-travel-plan-members-panel]")
+        ?.addEventListener("click", () => closeMemberMenus(null));
+
+    document.addEventListener("click", () => {
+        closeMemberMenus(null);
+        closePopovers(null);
+    });
+    document.addEventListener("keydown", event => {
+        if (event.key !== "Escape") return;
+        closeMemberMenus(null);
+        closePopovers(null);
+    });
+
+    if (invite) {
+        const url = invite.root.querySelector("[data-travel-plan-invite-url]");
+        const copy = invite.root.querySelector("[data-travel-plan-invite-copy]");
 
         copy?.addEventListener("click", () => {
             if (!url) return;
@@ -293,7 +363,10 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         // 방금 발급한 링크는 이 화면에서만 볼 수 있으므로 바로 펼쳐 준다.
-        if (url) openPanel(true);
+        if (url) {
+            closePopovers(invite);
+            invite.open(true);
+        }
     }
 
     // 저장에 실패해 서버가 열어 둔 슬롯이 있으면 그 자리에서 이어 쓴다.

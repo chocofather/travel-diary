@@ -2,6 +2,7 @@ package com.example.travlediary.service.travelplan;
 
 import com.example.travlediary.dto.TravelPlanDetailDto;
 import com.example.travlediary.dto.TravelPlanListItemDto;
+import com.example.travlediary.dto.TravelPlanMemberDto;
 import com.example.travlediary.model.TravelPlan;
 import com.example.travlediary.model.TravelPlanDay;
 import com.example.travlediary.model.TravelPlanItem;
@@ -224,6 +225,100 @@ class TravelPlanReadServiceTest {
 
         verify(travelPlanMapper, never()).findActivePlansByUserId(anyLong(), anyString(), anyString());
         verify(travelPlanMapper, never()).findMemberByPlanAndUser(anyLong(), anyLong(), anyString());
+    }
+
+    @Test
+    void detailCarriesTheActiveMembersInTheOrderTheMapperReturnsThem() {
+        givenActiveMembership();
+        when(travelPlanMapper.findPlanByIdAndStatus(PLAN_ID, "ACTIVE")).thenReturn(plan());
+        // OWNER 우선 + 참여 순서는 SQL 이 정한다. Service 는 그 순서를 흐트러뜨리지 않는다
+        when(travelPlanMapper.findActiveMembersByPlanId(PLAN_ID, "ACTIVE")).thenReturn(List.of(
+                memberRow(11L, "민준", TravelPlanRole.OWNER),
+                memberRow(12L, "예진", TravelPlanRole.MEMBER),
+                memberRow(13L, "준희", TravelPlanRole.MEMBER)));
+
+        TravelPlanDetailDto detail = travelPlanService.getActivePlanDetail(USER_ID, PLAN_ID);
+
+        assertThat(detail.getMembers())
+                .extracting(TravelPlanMemberDto::getDisplayName)
+                .containsExactly("민준", "예진", "준희");
+        assertThat(detail.getMembers())
+                .extracting(TravelPlanMemberDto::getRole)
+                .containsExactly(TravelPlanRole.OWNER, TravelPlanRole.MEMBER,
+                        TravelPlanRole.MEMBER);
+        // 목록을 이미 읽었으므로 COUNT 를 따로 내지 않는다
+        assertThat(detail.getMemberCount()).isEqualTo(3);
+        assertThat(detail.getMembers()).hasSize(detail.getMemberCount());
+        verify(travelPlanMapper, never()).countMembersByPlanAndStatus(anyLong(), anyString());
+    }
+
+    @Test
+    void onlyActiveMembersAreEverAskedFor() {
+        givenActiveMembership();
+        when(travelPlanMapper.findPlanByIdAndStatus(PLAN_ID, "ACTIVE")).thenReturn(plan());
+        when(travelPlanMapper.findActiveMembersByPlanId(PLAN_ID, "ACTIVE"))
+                .thenReturn(List.of(memberRow(11L, "민준", TravelPlanRole.OWNER)));
+
+        travelPlanService.getActivePlanDetail(USER_ID, PLAN_ID);
+
+        // LEFT / REMOVED 는 조회 조건에서 걸러지므로 화면까지 오지 않는다
+        verify(travelPlanMapper).findActiveMembersByPlanId(PLAN_ID, "ACTIVE");
+        verify(travelPlanMapper, never()).findActiveMembersByPlanId(PLAN_ID, "LEFT");
+        verify(travelPlanMapper, never()).findActiveMembersByPlanId(PLAN_ID, "REMOVED");
+    }
+
+    @Test
+    void theCurrentUserIsFlaggedWithoutSendingAnyAccountDataToTheView() {
+        givenActiveMembership();
+        when(travelPlanMapper.findPlanByIdAndStatus(PLAN_ID, "ACTIVE")).thenReturn(plan());
+        // 11L 이 현재 사용자의 참여 id 다 (givenActiveMembership)
+        when(travelPlanMapper.findActiveMembersByPlanId(PLAN_ID, "ACTIVE")).thenReturn(List.of(
+                memberRow(11L, "민준", TravelPlanRole.OWNER),
+                memberRow(12L, "예진", TravelPlanRole.MEMBER)));
+
+        TravelPlanDetailDto detail = travelPlanService.getActivePlanDetail(USER_ID, PLAN_ID);
+
+        assertThat(detail.getMembers())
+                .extracting(TravelPlanMemberDto::isCurrentUser)
+                .containsExactly(true, false);
+        // DTO 에는 표시 이름 / 역할 / 내보내기 대상 id 만 있다 (user_id 는 없다)
+        assertThat(TravelPlanMemberDto.class.getDeclaredFields())
+                .extracting(java.lang.reflect.Field::getName)
+                .containsExactlyInAnyOrder("memberId", "displayName", "role", "currentUser");
+        assertThat(detail.getMembers().toString())
+                .doesNotContain("userId")
+                .doesNotContain("@");
+    }
+
+    @Test
+    void aRoomWithoutAMemberListStillLoads() {
+        givenActiveMembership();
+        when(travelPlanMapper.findPlanByIdAndStatus(PLAN_ID, "ACTIVE")).thenReturn(plan());
+        when(travelPlanMapper.findActiveMembersByPlanId(PLAN_ID, "ACTIVE")).thenReturn(null);
+
+        TravelPlanDetailDto detail = travelPlanService.getActivePlanDetail(USER_ID, PLAN_ID);
+
+        assertThat(detail.getMembers()).isEmpty();
+        assertThat(detail.getMemberCount()).isZero();
+    }
+
+    @Test
+    void thePlannerAndTheInvitePreviewShareTheSameRoomLimit() {
+        givenActiveMembership();
+        when(travelPlanMapper.findPlanByIdAndStatus(PLAN_ID, "ACTIVE")).thenReturn(plan());
+
+        assertThat(travelPlanService.getActivePlanDetail(USER_ID, PLAN_ID).getMemberLimit())
+                .isEqualTo(TravelPlanInvitationService.MAX_MEMBERS)
+                .isEqualTo(8);
+    }
+
+    /** 목록 조회는 화면에 쓰는 컬럼만 읽으므로 user_id 는 채워지지 않는다. */
+    private TravelPlanMember memberRow(Long id, String displayName, TravelPlanRole role) {
+        TravelPlanMember member = new TravelPlanMember();
+        member.setId(id);
+        member.setDisplayName(displayName);
+        member.setRole(role);
+        return member;
     }
 
     private void givenActiveMembership() {

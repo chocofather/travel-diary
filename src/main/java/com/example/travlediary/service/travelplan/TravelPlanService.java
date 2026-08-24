@@ -3,6 +3,7 @@ package com.example.travlediary.service.travelplan;
 import com.example.travlediary.dto.TravelPlanDayDetailDto;
 import com.example.travlediary.dto.TravelPlanDetailDto;
 import com.example.travlediary.dto.TravelPlanListItemDto;
+import com.example.travlediary.dto.TravelPlanMemberDto;
 import com.example.travlediary.model.TravelPlan;
 import com.example.travlediary.model.TravelPlanDay;
 import com.example.travlediary.model.TravelPlanItem;
@@ -88,7 +89,32 @@ public class TravelPlanService {
 
         return new TravelPlanDetailDto(
                 access.plan(), access.member(), days == null ? List.of() : days,
-                itemsByDayId, alternativesByItemId);
+                itemsByDayId, alternativesByItemId,
+                activeMembers(travelPlanId, access.member()),
+                TravelPlanInvitationService.MAX_MEMBERS);
+    }
+
+    /**
+     * 화면에 내보낼 참여자 목록.
+     * 모델을 그대로 넘기지 않고 표시 이름과 역할만 옮겨 담아
+     * user_id 나 계정 정보가 view 까지 가지 않게 한다.
+     */
+    private List<TravelPlanMemberDto> activeMembers(Long travelPlanId,
+                                                    TravelPlanMember currentMember) {
+        List<TravelPlanMember> members = travelPlanMapper.findActiveMembersByPlanId(
+                travelPlanId, TravelPlanMemberStatus.ACTIVE.name());
+        if (members == null) {
+            return List.of();
+        }
+        Long currentMemberId = currentMember == null ? null : currentMember.getId();
+        return members.stream()
+                .map(member -> new TravelPlanMemberDto(
+                        member.getId(),
+                        member.getDisplayName(),
+                        member.getRole(),
+                        // 사용자 식별은 방 참여 id 로만 한다. user_id 는 읽지도 않는다.
+                        member.getId() != null && member.getId().equals(currentMemberId)))
+                .toList();
     }
 
     /**

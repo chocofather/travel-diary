@@ -24,4 +24,13 @@ public class TravelPlanDetailDto {
     private Map<Long, List<TravelPlanItem>> itemsByDayId;
     /** A 일정 id -> 그 일정의 대안(alternative_order 오름차순). 대안이 없는 일정은 키가 없다. */
     private Map<Long, List<TravelPlanItemAlternative>> alternativesByItemId;
+    /** 지금 참여 중인 사람들. OWNER 가 먼저, 그 뒤는 참여한 순서. */
+    private List<TravelPlanMemberDto> members;
+    /** 방 정원. 초대 미리보기와 같은 값을 쓴다. */
+    private int memberLimit;
+
+    /** "참여자 N/8" 의 N. 목록을 이미 읽었으므로 COUNT 를 따로 내지 않는다. */
+    public int getMemberCount() {
+        return members == null ? 0 : members.size();
+    }
 }

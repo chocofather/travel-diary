@@ -137,7 +137,9 @@ public class TravelPlanInvitationService {
                 MAX_MEMBERS,
                 owner == null ? null : owner.getDisplayName(),
                 isActive(existing),
-                isRejoinBlocked(existing)));
+                isRejoinBlocked(existing),
+                canRejoin(existing),
+                canRejoin(existing) ? existing.getDisplayName() : null));
     }
 
     /**
@@ -153,8 +155,9 @@ public class TravelPlanInvitationService {
             throw new TravelPlanValidationException("userId", "로그인이 필요합니다.");
         }
         // 잠그기 전에 끝낼 수 있는 확인은 먼저 한다.
+        // 이름은 신규 참여에서만 받으므로(재참여는 쓰던 이름을 그대로 쓴다)
+        // 어느 쪽인지 가려진 뒤에 검사한다.
         TravelPlanInvitation invitation = requireActiveInvitation(rawToken);
-        String normalizedDisplayName = TravelPlanDisplayName.normalize(displayName);
 
         // 여기서부터 이 방의 참여는 한 줄로 세워진다.
         TravelPlan plan = travelPlanMapper.findPlanByIdAndStatusForUpdate(
@@ -168,18 +171,25 @@ public class TravelPlanInvitationService {
 
         TravelPlanMember existing = travelPlanMapper.findAnyMemberByPlanAndUser(
                 travelPlanId, userId);
-        if (existing != null) {
-            // 더블클릭이나 탭 두 개로 두 번 들어와도 row 를 하나 더 만들지 않는다.
-            if (isActive(existing)) {
-                return travelPlanId;
-            }
-            throw rejoinBlocked();
+        // 더블클릭이나 탭 두 개로 두 번 들어와도 row 를 하나 더 만들지 않는다.
+        if (isActive(existing)) {
+            return travelPlanId;
         }
 
+        // 다시 들어오는 사람도 자리를 하나 차지하므로 정원은 똑같이 본다.
         if (travelPlanMapper.countMembersByPlanAndStatus(
                 travelPlanId, TravelPlanMemberStatus.ACTIVE.name()) >= MAX_MEMBERS) {
             throw new TravelPlanValidationException("capacity", "참여 인원이 모두 찼어요.");
         }
+
+        if (existing != null) {
+            // 나갔던 사람은 쓰던 자리로 돌아온다. 새 row 를 만들지 않는다.
+            reactivate(existing, travelPlanId, userId);
+            travelPlanMapper.touchLastActivity(travelPlanId);
+            return travelPlanId;
+        }
+
+        String normalizedDisplayName = TravelPlanDisplayName.normalize(displayName);
         if (travelPlanMapper.countMembersByPlanAndDisplayName(
                 travelPlanId, normalizedDisplayName) > 0) {
             throw duplicateDisplayName();
@@ -189,6 +199,34 @@ public class TravelPlanInvitationService {
             travelPlanMapper.touchLastActivity(travelPlanId);
         }
         return travelPlanId;
+    }
+
+    /**
+     * 스스로 나갔던 사람을 원래 자리로 되돌린다.
+     * id / display_name / role 을 그대로 두므로 그 사람이 쓴 일정·대안의
+     * created_by_member_id 연결이 끊기지 않는다.
+     * 내보내진 사람(rejoin_allowed = 0)은 여기서 걸린다.
+     */
+    private void reactivate(TravelPlanMember existing, Long travelPlanId, Long userId) {
+        if (!canRejoin(existing)) {
+            throw rejoinBlocked();
+        }
+        if (travelPlanMapper.reactivateLeftMember(existing.getId(), travelPlanId, userId,
+                TravelPlanMemberStatus.LEFT.name(),
+                TravelPlanMemberStatus.ACTIVE.name()) != 1) {
+            throw rejoinBlocked();
+        }
+    }
+
+    /**
+     * 유효한 초대 링크만으로 다시 들어올 수 있는 사람인지.
+     * 스스로 나갔고(LEFT) 재참여가 막히지 않은 경우만 참이다.
+     * 내보내진 사람(REMOVED)은 OWNER 가 따로 풀어 주기 전까지 돌아올 수 없다.
+     */
+    private boolean canRejoin(TravelPlanMember member) {
+        return member != null
+                && member.getStatus() == TravelPlanMemberStatus.LEFT
+                && Boolean.TRUE.equals(member.getRejoinAllowed());
     }
 
     /**
@@ -258,9 +296,15 @@ public class TravelPlanInvitationService {
         return member != null && member.getStatus() == TravelPlanMemberStatus.ACTIVE;
     }
 
-    /** 나갔거나 내보내진 기록. 재참여는 다음 단계의 기능이라 지금은 막는다. */
+    /**
+     * 이 링크만으로는 돌아올 수 없는 기록.
+     * 내보내진 사람(REMOVED)과 재참여가 막힌 사람이 여기 해당한다.
+     * 스스로 나간 사람은 canRejoin 으로 빠지므로 막히지 않는다.
+     */
     private boolean isRejoinBlocked(TravelPlanMember member) {
-        return member != null && member.getStatus() != TravelPlanMemberStatus.ACTIVE;
+        return member != null
+                && member.getStatus() != TravelPlanMemberStatus.ACTIVE
+                && !canRejoin(member);
     }
 
     /** 새 토큰을 만들어 해시만 저장하고, raw token 을 호출자에게 한 번 돌려준다. */
