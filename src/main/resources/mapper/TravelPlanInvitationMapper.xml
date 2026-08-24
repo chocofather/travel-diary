@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.travelplan.TravelPlanInvitationMapper">
+
+    <!--
+      방에 살아 있는 초대 링크.
+      방마다 ACTIVE 는 1건이라는 규칙은 Service 가 지키므로 여기서는 최신 1건만 읽는다.
+    -->
+    <select id="findActiveByPlanId" resultType="com.example.travlediary.model.TravelPlanInvitation">
+        SELECT id, travel_plan_id, created_by_user_id, token_hash, status,
+               invalidated_at, created_at, updated_at
+        FROM travel_plan_invitations
+        WHERE travel_plan_id = #{travelPlanId}
+          AND status = #{status}
+        ORDER BY id DESC
+        LIMIT 1
+    </select>
+
+    <!--
+      초대 링크 1건 등록.
+      token_hash 에는 SHA-256 hex 만 들어간다. raw token 을 저장하는 컬럼은 없다.
+      invalidated_at / created_at / updated_at 은 DB DEFAULT 를 쓴다.
+    -->
+    <insert id="insertInvitation" parameterType="com.example.travlediary.model.TravelPlanInvitation"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO travel_plan_invitations (
+            travel_plan_id, created_by_user_id, token_hash, status
+        ) VALUES (
+            #{travelPlanId}, #{createdByUserId}, #{tokenHash}, #{status}
+        )
+    </insert>
+
+    <!--
+      살아 있는 링크를 끈다. 재발급이면 REPLACED, 비활성화면 DISABLED 가 들어온다.
+      status 조건을 함께 걸어 이미 꺼진 링크의 invalidated_at 을 덮어쓰지 않는다.
+    -->
+    <update id="invalidateActiveInvitation">
+        UPDATE travel_plan_invitations
+        SET status = #{toStatus},
+            invalidated_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE travel_plan_id = #{travelPlanId}
+          AND status = #{fromStatus}
+    </update>
+
+    <!-- 초대 링크 해석. 상태 조건에서 REPLACED / DISABLED 가 걸러진다 -->
+    <select id="findActiveByTokenHash"
+            resultType="com.example.travlediary.model.TravelPlanInvitation">
+        SELECT id, travel_plan_id, created_by_user_id, token_hash, status,
+               invalidated_at, created_at, updated_at
+        FROM travel_plan_invitations
+        WHERE token_hash = #{tokenHash}
+          AND status = #{status}
+    </select>
+</mapper>

@@ -90,6 +90,29 @@
           AND status = #{memberStatus}
     </select>
 
+    <!-- 방의 참여자 수. 초대 미리보기의 "N/8" 에 쓴다 -->
+    <select id="countMembersByPlanAndStatus" resultType="int">
+        SELECT COUNT(*)
+        FROM travel_plan_members
+        WHERE travel_plan_id = #{travelPlanId}
+          AND status = #{memberStatus}
+    </select>
+
+    <!--
+      역할로 참여자를 찾는다. 초대 미리보기의 OWNER 표시 이름에 쓴다.
+      users 를 JOIN 하지 않으므로 이메일/아이디/닉네임이 함께 새어 나갈 수 없다.
+    -->
+    <select id="findMemberByPlanAndRole" resultType="com.example.travlediary.model.TravelPlanMember">
+        SELECT id, travel_plan_id, user_id, display_name, role, status,
+               rejoin_allowed, joined_at, left_at, removed_at, created_at, updated_at
+        FROM travel_plan_members
+        WHERE travel_plan_id = #{travelPlanId}
+          AND role = #{role}
+          AND status = #{memberStatus}
+        ORDER BY id ASC
+        LIMIT 1
+    </select>
+
     <!-- 방의 DAY 목록 -->
     <select id="findDaysByPlanId" resultType="com.example.travlediary.model.TravelPlanDay">
         SELECT id, travel_plan_id, day_number, plan_date, created_at, updated_at

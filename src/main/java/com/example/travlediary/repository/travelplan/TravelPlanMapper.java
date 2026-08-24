@@ -43,6 +43,18 @@ public interface TravelPlanMapper {
                                              @Param("userId") Long userId,
                                              @Param("memberStatus") String memberStatus);
 
+    /** 방의 참여자 수. 초대 미리보기의 "N/8" 에 쓴다. */
+    int countMembersByPlanAndStatus(@Param("travelPlanId") Long travelPlanId,
+                                    @Param("memberStatus") String memberStatus);
+
+    /**
+     * 방에서 그 역할을 맡고 있는 참여자 1건.
+     * 초대 미리보기에서 OWNER 의 방 표시 이름을 읽을 때 쓴다(회원 개인정보는 읽지 않는다).
+     */
+    TravelPlanMember findMemberByPlanAndRole(@Param("travelPlanId") Long travelPlanId,
+                                             @Param("role") String role,
+                                             @Param("memberStatus") String memberStatus);
+
     /** 방의 DAY 목록. day_number 오름차순. */
     List<TravelPlanDay> findDaysByPlanId(@Param("travelPlanId") Long travelPlanId);
 

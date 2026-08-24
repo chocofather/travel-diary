@@ -107,6 +107,14 @@ public class SecurityConfig {
                         new RegexRequestMatcher(
                                 "^/travel-plans$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(
+                                "^/travel-plans/[0-9]+/invitations$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/travel-plans/[0-9]+/invitations/regenerate$",
+                                HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/travel-plans/[0-9]+/invitations/disable$",
+                                HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
                                 "^/travel-plans/[0-9]+/days/[0-9]+/items$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(
                                 "^/travel-plans/[0-9]+/days/[0-9]+/items/[0-9]+/update$",
@@ -265,6 +273,12 @@ public class SecurityConfig {
 
                         // 숫자 ID 공개 회원 프로필 GET만 공개 (계정 관련 /users/** 전체는 공개하지 않음)
                         .requestMatchers(new RegexRequestMatcher("^/users/[0-9]+$", "GET")).permitAll()
+
+                        // 초대 링크 미리보기 GET만 공개 (URL-safe Base64 토큰 한 조각)
+                        // 방 관리 경로 /travel-plans/{id}/** 는 그대로 인증이 필요하다
+                        .requestMatchers(new RegexRequestMatcher(
+                                "^/travel-plans/invitations/[A-Za-z0-9_-]+$",
+                                HttpMethod.GET.name())).permitAll()
 
                         /* === 관리자만 접근 가능한 영역 === */
                         .requestMatchers("/admin/**").hasRole("ADMIN")

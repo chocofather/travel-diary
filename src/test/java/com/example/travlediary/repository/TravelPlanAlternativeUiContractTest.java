@@ -304,7 +304,7 @@ class TravelPlanAlternativeUiContractTest {
     void thisStageStillHasNoTagOrLiveEditingUi() throws IOException {
         String detail = detailHtml();
 
-        for (String notYet : new String[]{"태그", "투표", "채팅", "초대", "최종 확정"}) {
+        for (String notYet : new String[]{"태그", "투표", "채팅", "최종 확정"}) {
             assertThat(detail).as("아직 없는 기능: %s", notYet).doesNotContain(notYet);
         }
     }

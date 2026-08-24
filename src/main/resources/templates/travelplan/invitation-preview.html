@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
+
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/travel-plan.css">
+</th:block>
+
+<th:block th:fragment="body">
+  <div class="travel-plan-page">
+    <div class="travel-plan-page-top">
+      <a class="travel-plan-back-link" th:href="@{/}">← 홈으로</a>
+    </div>
+
+    <!-- 끊긴 링크. 어디서 걸렸는지는 구분해서 알리지 않는다 -->
+    <article class="travel-plan-paper travel-plan-invite-paper"
+             th:if="${travelPlanInviteInvalid}">
+      <h1 class="travel-plan-invite-title">유효하지 않거나 만료된 초대 링크입니다.</h1>
+      <p class="travel-plan-invite-hint">
+        링크가 다시 발급되었거나 초대가 꺼졌을 수 있어요. 방을 만든 사람에게 새 링크를 받아 주세요.
+      </p>
+    </article>
+
+    <!-- 방 미리보기. 회원 개인정보는 담지 않는다 -->
+    <article class="travel-plan-paper travel-plan-invite-paper"
+             th:unless="${travelPlanInviteInvalid}"
+             th:object="${travelPlanInvitePreview}">
+      <p class="travel-plan-invite-eyebrow">함께 계획하기 초대</p>
+      <h1 class="travel-plan-invite-title" th:text="*{title}">제주도 여행</h1>
+
+      <div class="travel-plan-invite-thumb"
+           th:if="${#strings.isEmpty(travelPlanInvitePreview.representativeImageUrl)}"
+           aria-hidden="true"></div>
+      <img class="travel-plan-invite-thumb"
+           th:unless="${#strings.isEmpty(travelPlanInvitePreview.representativeImageUrl)}"
+           th:src="*{representativeImageUrl}" alt="">
+
+      <dl class="travel-plan-invite-meta">
+        <dt>여행 기간</dt>
+        <dd th:text="${#temporals.format(travelPlanInvitePreview.startDate, 'yyyy.MM.dd')} + ' ~ '
+                     + ${#temporals.format(travelPlanInvitePreview.endDate, 'yyyy.MM.dd')}">
+          2026.09.13 ~ 2026.09.15
+        </dd>
+
+        <dt>참여 인원</dt>
+        <dd th:text="*{memberCount} + '/8'">3/8</dd>
+
+        <dt>만든 사람</dt>
+        <dd th:text="*{ownerDisplayName}">민준</dd>
+      </dl>
+
+      <!-- 참여는 다음 단계에서 붙인다. 지금은 안내만 한다 -->
+      <p class="travel-plan-invite-hint">참여하기는 준비 중이에요.</p>
+    </article>
+  </div>
+</th:block>
+</html>

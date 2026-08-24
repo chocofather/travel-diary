@@ -259,6 +259,43 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.addEventListener("click", () => closeMenus(null));
 
+    // ── 초대 (OWNER 상단 보조 액션) ──────────────────────────────
+    // 플래너 종이 바깥의 상단 줄에 있으므로 document 에서 찾는다.
+    const invite = document.querySelector("[data-travel-plan-invite]");
+    if (invite) {
+        const toggle = invite.querySelector("[data-travel-plan-invite-toggle]");
+        const panel = invite.querySelector("[data-travel-plan-invite-panel]");
+        const url = invite.querySelector("[data-travel-plan-invite-url]");
+        const copy = invite.querySelector("[data-travel-plan-invite-copy]");
+
+        function openPanel(shouldOpen) {
+            if (!panel) return;
+            panel.hidden = !shouldOpen;
+            toggle?.setAttribute("aria-expanded", String(shouldOpen));
+        }
+
+        toggle?.addEventListener("click", event => {
+            event.stopPropagation();
+            openPanel(panel ? panel.hidden : false);
+        });
+        // 패널 안을 눌렀다고 닫히지 않게 한다.
+        panel?.addEventListener("click", event => event.stopPropagation());
+        document.addEventListener("click", () => openPanel(false));
+
+        copy?.addEventListener("click", () => {
+            if (!url) return;
+            // 복사가 막혀 있어도 사용자가 직접 고를 수 있게 먼저 선택해 둔다.
+            url.select();
+            url.setSelectionRange(0, url.value.length);
+            navigator.clipboard?.writeText(url.value)
+                .then(() => { copy.textContent = "복사됨"; })
+                .catch(() => { copy.textContent = "직접 복사해 주세요"; });
+        });
+
+        // 방금 발급한 링크는 이 화면에서만 볼 수 있으므로 바로 펼쳐 준다.
+        if (url) openPanel(true);
+    }
+
     // 저장에 실패해 서버가 열어 둔 슬롯이 있으면 그 자리에서 이어 쓴다.
     const reopened = planner.querySelector(
         "[data-travel-plan-slot]:has([data-travel-plan-slot-form]:not([hidden]))");

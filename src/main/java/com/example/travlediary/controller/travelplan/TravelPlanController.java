@@ -6,6 +6,7 @@ import com.example.travlediary.dto.TravelPlanItemCreateForm;
 import com.example.travlediary.dto.TravelPlanItemUpdateForm;
 import com.example.travlediary.service.travelplan.TravelPlanConflictException;
 import com.example.travlediary.security.CustomUserDetails;
+import com.example.travlediary.service.travelplan.TravelPlanInvitationService;
 import com.example.travlediary.service.travelplan.TravelPlanService;
 import com.example.travlediary.service.travelplan.TravelPlanValidationException;
 import lombok.RequiredArgsConstructor;
@@ -40,6 +41,7 @@ public class TravelPlanController {
             Set.of("title", "startDate", "endDate", "displayName");
 
     private final TravelPlanService travelPlanService;
+    private final TravelPlanInvitationService travelPlanInvitationService;
 
     // 함께 계획하기 목록
     @GetMapping
@@ -95,6 +97,9 @@ public class TravelPlanController {
         }
         model.addAttribute("travelPlan",
                 travelPlanService.getActivePlanDetail(userDetails.getId(), travelPlanId));
+        // 링크 문자열이 아니라 "지금 켜져 있는지" 만 알려 준다. raw token 은 복원할 수 없다.
+        model.addAttribute("travelPlanInviteActive",
+                travelPlanInvitationService.hasActiveInvitation(userDetails.getId(), travelPlanId));
         return DETAIL_VIEW;
     }
 
@@ -270,6 +275,9 @@ public class TravelPlanController {
             // 편집 화면을 그대로 다시 그리고, 문제가 난 DAY 의 입력칸만 열어 둔다.
             model.addAttribute("travelPlan",
                     travelPlanService.getActivePlanDetail(userDetails.getId(), travelPlanId));
+            model.addAttribute("travelPlanInviteActive",
+                    travelPlanInvitationService.hasActiveInvitation(
+                            userDetails.getId(), travelPlanId));
             model.addAttribute("openDayId", dayId);
             return DETAIL_VIEW;
         }

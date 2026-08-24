@@ -379,8 +379,9 @@ class TravelPlanCreateFormUiContractTest {
     void thePlannerHasNoActionsFromLaterStages() throws IOException {
         String detail = resource("/templates/travelplan/detail.html");
 
+        // 초대 링크 관리는 이번 단계에서 들어왔지만 참여/멤버 관리는 아직이다
         for (String notYet : new String[]{
-                "초대", "멤버 관리", "방 설정", "최종 확정", "채팅", "투표", "태그"}) {
+                "멤버 관리", "방 설정", "최종 확정", "채팅", "투표", "태그", "참여하기", "내보내기"}) {
             assertThat(detail).as("아직 없는 기능: %s", notYet).doesNotContain(notYet);
         }
     }

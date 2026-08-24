@@ -15,6 +15,7 @@ import com.example.travlediary.model.UserRole;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.travelplan.TravelPlanConflictException;
+import com.example.travlediary.service.travelplan.TravelPlanInvitationService;
 import com.example.travlediary.service.travelplan.TravelPlanService;
 import com.example.travlediary.service.travelplan.TravelPlanValidationException;
 import org.junit.jupiter.api.Test;
@@ -63,6 +64,8 @@ class TravelPlanControllerTest {
 
     @MockitoBean
     private TravelPlanService travelPlanService;
+    @MockitoBean
+    private TravelPlanInvitationService travelPlanInvitationService;
     @MockitoBean
     private CustomLoginSuccessHandler customLoginSuccessHandler;
     @MockitoBean
@@ -240,6 +243,20 @@ class TravelPlanControllerTest {
 
         // planId 만으로 조회하지 않고 항상 로그인 사용자와 함께 넘긴다
         verify(travelPlanService).getActivePlanDetail(7L, 42L);
+    }
+
+    @Test
+    void thePlannerOnlyLearnsWhetherAnInviteLinkIsOnNotItsUrl() throws Exception {
+        when(travelPlanService.getActivePlanDetail(7L, 42L)).thenReturn(planDetail());
+        when(travelPlanInvitationService.hasActiveInvitation(7L, 42L)).thenReturn(true);
+
+        mockMvc.perform(get("/travel-plans/42").with(user(member())))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("travelPlanInviteActive", true))
+                // raw token 은 DB 에서 되살릴 수 없으므로 링크 문자열은 실리지 않는다
+                .andExpect(model().attributeDoesNotExist("travelPlanInviteUrl"));
+
+        verify(travelPlanInvitationService).hasActiveInvitation(7L, 42L);
     }
 
     @Test

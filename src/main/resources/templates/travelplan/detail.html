@@ -11,7 +11,67 @@
   <!-- 바깥은 연한 바탕, 그 위에 플래너 종이 한 장이 놓인 구조 -->
   <div class="travel-plan-page">
     <div class="travel-plan-page-top">
-      <a class="travel-plan-back-link" th:href="@{/travel-plans}">← 함께 계획하기</a>
+      <div class="travel-plan-page-top-row">
+        <a class="travel-plan-back-link" th:href="@{/travel-plans}">← 함께 계획하기</a>
+
+        <!--
+          초대는 OWNER 에게만 보이는 상단 보조 액션이다.
+          발급된 링크는 이 응답에서만 볼 수 있고 DB 에서 되살릴 수 없다.
+        -->
+        <div class="travel-plan-invite" th:if="${travelPlan.currentMember != null
+                    and travelPlan.currentMember.role != null
+                    and travelPlan.currentMember.role.name() == 'OWNER'}"
+             data-travel-plan-invite>
+          <button type="button" class="travel-plan-invite-toggle"
+                  aria-haspopup="true" aria-expanded="false"
+                  data-travel-plan-invite-toggle>초대</button>
+
+          <div class="travel-plan-invite-panel" hidden data-travel-plan-invite-panel>
+            <!-- 방금 발급한 링크. 새로고침하면 사라진다 -->
+            <div class="travel-plan-invite-issued" th:if="${travelPlanInviteUrl}">
+              <p class="travel-plan-invite-issued-label">
+                초대 링크가 만들어졌어요. 이 화면에서만 볼 수 있어요.
+              </p>
+              <div class="travel-plan-invite-copy-row">
+                <input type="text" class="travel-plan-invite-url" readonly
+                       th:value="${travelPlanInviteUrl}"
+                       aria-label="초대 링크" data-travel-plan-invite-url>
+                <button type="button" class="travel-plan-invite-copy"
+                        data-travel-plan-invite-copy>복사</button>
+              </div>
+            </div>
+
+            <!-- 링크가 켜져 있을 때: 재발급 / 끄기 -->
+            <div th:if="${travelPlanInviteActive}">
+              <p class="travel-plan-invite-state" th:unless="${travelPlanInviteUrl}">
+                초대 링크가 활성화되어 있습니다. 이전 링크 주소는 다시 볼 수 없어요.
+              </p>
+              <form method="post"
+                    th:action="@{|/travel-plans/${travelPlan.plan.id}/invitations/regenerate|}">
+                <button type="submit" class="travel-plan-invite-action"
+                        onclick="return confirm('새 링크를 발급하면 기존 초대 링크는 더 이상 사용할 수 없습니다.')">
+                  새 링크 재발급
+                </button>
+              </form>
+              <form method="post"
+                    th:action="@{|/travel-plans/${travelPlan.plan.id}/invitations/disable|}">
+                <button type="submit" class="travel-plan-invite-off"
+                        onclick="return confirm('초대 링크를 끌까요?')">초대 링크 비활성화</button>
+              </form>
+            </div>
+
+            <!-- 링크가 없을 때: 첫 발급만 -->
+            <div th:unless="${travelPlanInviteActive}">
+              <p class="travel-plan-invite-state">아직 초대 링크가 없어요.</p>
+              <form method="post"
+                    th:action="@{|/travel-plans/${travelPlan.plan.id}/invitations|}">
+                <button type="submit" class="travel-plan-invite-action">초대 링크 만들기</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <p class="travel-plan-notice" th:if="${travelPlanMessage}"
          th:text="${travelPlanMessage}" role="status">공동 여행계획이 만들어졌어요.</p>
       <p class="travel-plan-alert" th:if="${travelPlanError}"
