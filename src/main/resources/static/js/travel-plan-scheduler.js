@@ -8,12 +8,17 @@ document.addEventListener("DOMContentLoaded", () => {
     // 저장 중에는 focus-out 이 한 번 더 저장하지 않도록 잠근다.
     let submitting = false;
 
+    // 대안 편집기도 같은 규칙을 따른다. 열려 있는 것은 A 쪽이든 대안 쪽이든 하나뿐이다.
+    let activeAlt = null;
+
     function formOf(line) {
         return line.querySelector("[data-travel-plan-slot-form], [data-travel-plan-item-form]");
     }
 
     function textareaOf(line) {
-        return line.querySelector("textarea");
+        // 대안 편집기의 textarea 까지 집히지 않게 A 일정 폼 안에서만 찾는다.
+        const form = formOf(line);
+        return form ? form.querySelector("textarea") : null;
     }
 
     function isItem(line) {
@@ -47,6 +52,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function open(line) {
         if (activeLine === line) return;
         closeActive();
+        closeAlt();
         const form = formOf(line);
         if (!form) return;
         if (isItem(line)) {
@@ -123,6 +129,108 @@ document.addEventListener("DOMContentLoaded", () => {
         line.querySelector("[data-travel-plan-item-content]")
             ?.addEventListener("click", () => open(line));
         bind(line);
+    });
+
+    // ── 대안(B/C) ───────────────────────────────────────────────
+    // A 아래에 접힌 목록이 하나 있고, 그 안에서 각 대안이 그 자리에서 편집기가 된다.
+
+    function altFormOf(node) {
+        return node.querySelector(
+            "[data-travel-plan-alt-form], [data-travel-plan-alt-new-form]");
+    }
+
+    function altViewOf(node) {
+        return node.querySelector("[data-travel-plan-alt-view]");
+    }
+
+    // 편집기를 닫는다. 저장된 대안은 원래 값으로 되돌리고, 새 대안은 비운다.
+    function closeAlt() {
+        if (!activeAlt) return;
+        const form = altFormOf(activeAlt);
+        const view = altViewOf(activeAlt);
+        if (form) {
+            // 저장된 대안은 원래 값으로, 새 대안은 빈 칸으로 돌아간다.
+            form.reset();
+            form.hidden = true;
+        }
+        if (view) view.hidden = false;
+        activeAlt.classList.remove("is-editing");
+        activeAlt = null;
+    }
+
+    function openAlt(node) {
+        if (activeAlt === node) return;
+        closeActive();
+        closeAlt();
+        const form = altFormOf(node);
+        if (!form) return;
+        const view = altViewOf(node);
+        if (view) view.hidden = true;
+        form.hidden = false;
+        node.classList.add("is-editing");
+        activeAlt = node;
+        const textarea = form.querySelector("textarea");
+        autoResize(textarea);
+        const first = form.querySelector("input[type=\"text\"]") || textarea;
+        first?.focus();
+    }
+
+    function listOf(line) {
+        return line.querySelector("[data-travel-plan-alt-list]");
+    }
+
+    function toggleOf(line) {
+        return line.querySelector("[data-travel-plan-alt-toggle]");
+    }
+
+    function expand(line, shouldOpen) {
+        const list = listOf(line);
+        if (!list) return;
+        list.hidden = !shouldOpen;
+        toggleOf(line)?.setAttribute("aria-expanded", String(shouldOpen));
+        // 접으면 그 안에서 열려 있던 편집기도 함께 닫는다.
+        if (!shouldOpen) closeAlt();
+    }
+
+    planner.querySelectorAll("[data-travel-plan-item]").forEach(line => {
+        toggleOf(line)?.addEventListener("click", () => {
+            const list = listOf(line);
+            expand(line, list ? list.hidden : false);
+        });
+
+        // ⋯ 메뉴의 "대안 추가" 는 목록을 펼치고 새 입력만 열어 준다.
+        line.querySelector("[data-travel-plan-alt-add]")?.addEventListener("click", () => {
+            closeMenus(null);
+            expand(line, true);
+            const slot = line.querySelector("[data-travel-plan-alt-new]");
+            if (slot) openAlt(slot);
+        });
+
+        // 저장된 B/C 와 아직 비어 있는 새 대안 칸이 같은 규칙을 쓴다.
+        const slots = "[data-travel-plan-alt], [data-travel-plan-alt-new]";
+        line.querySelectorAll(slots).forEach(node => {
+            altViewOf(node)?.addEventListener("click", () => openAlt(node));
+            node.querySelector("[data-travel-plan-alt-cancel]")
+                ?.addEventListener("click", () => closeAlt());
+
+            const textarea = altFormOf(node)?.querySelector("textarea");
+            if (!textarea) return;
+            textarea.addEventListener("input", () => autoResize(textarea));
+            textarea.addEventListener("keydown", event => {
+                if (event.key === "Escape") {
+                    event.preventDefault();
+                    closeAlt();
+                    return;
+                }
+                // A 일정과 같다. Enter 는 저장, Shift+Enter 는 줄바꿈.
+                if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault();
+                    if (textarea.value.trim() === "") return;
+                    submitting = true;
+                    altFormOf(node).requestSubmit();
+                }
+            });
+        });
     });
 
     // ⋯ 메뉴는 한 번에 하나만 열어 둔다.

@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.travelplan.TravelPlanAlternativeMapper">
+
+    <!-- 한 A 일정의 대안 목록. 1 = B, 2 = C -->
+    <select id="findByItemId"
+            resultType="com.example.travlediary.model.TravelPlanItemAlternative">
+        SELECT id, travel_plan_item_id, alternative_order, condition_label, content, tag,
+               created_by_member_id, version, created_at, updated_at
+        FROM travel_plan_item_alternatives
+        WHERE travel_plan_item_id = #{travelPlanItemId}
+        ORDER BY alternative_order ASC
+    </select>
+
+    <!-- 방 전체의 대안. 일정 수만큼 조회가 나가지 않도록 한 문장으로 읽는다 -->
+    <select id="findByPlanId"
+            resultType="com.example.travlediary.model.TravelPlanItemAlternative">
+        SELECT a.id, a.travel_plan_item_id, a.alternative_order, a.condition_label, a.content,
+               a.tag, a.created_by_member_id, a.version, a.created_at, a.updated_at
+        FROM travel_plan_item_alternatives a
+                 JOIN travel_plan_items i ON i.id = a.travel_plan_item_id
+                 JOIN travel_plan_days d ON d.id = i.travel_plan_day_id
+        WHERE d.travel_plan_id = #{travelPlanId}
+        ORDER BY a.travel_plan_item_id ASC, a.alternative_order ASC
+    </select>
+
+    <!-- 최대 2건 정책을 서버에서 확인할 때 쓴다 -->
+    <select id="countByItemId" resultType="int">
+        SELECT COUNT(*)
+        FROM travel_plan_item_alternatives
+        WHERE travel_plan_item_id = #{travelPlanItemId}
+    </select>
+
+    <!-- 대안 1건. A 일정 소속까지 함께 확인한다 -->
+    <select id="findByIdAndItemId"
+            resultType="com.example.travlediary.model.TravelPlanItemAlternative">
+        SELECT id, travel_plan_item_id, alternative_order, condition_label, content, tag,
+               created_by_member_id, version, created_at, updated_at
+        FROM travel_plan_item_alternatives
+        WHERE id = #{id}
+          AND travel_plan_item_id = #{travelPlanItemId}
+    </select>
+
+    <!-- 자리(B/C)로 찾는다. 승격 대상 대안을 집을 때 쓴다 -->
+    <select id="findByItemIdAndOrder"
+            resultType="com.example.travlediary.model.TravelPlanItemAlternative">
+        SELECT id, travel_plan_item_id, alternative_order, condition_label, content, tag,
+               created_by_member_id, version, created_at, updated_at
+        FROM travel_plan_item_alternatives
+        WHERE travel_plan_item_id = #{travelPlanItemId}
+          AND alternative_order = #{alternativeOrder}
+    </select>
+
+    <!--
+      대안 1건 등록.
+      tag 는 아직 화면이 없어 항상 NULL 이고, version / created_at / updated_at 은 DB DEFAULT 를 쓴다.
+    -->
+    <insert id="insertAlternative"
+            parameterType="com.example.travlediary.model.TravelPlanItemAlternative"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO travel_plan_item_alternatives (
+            travel_plan_item_id, alternative_order, condition_label, content, tag,
+            created_by_member_id
+        ) VALUES (
+            #{travelPlanItemId}, #{alternativeOrder}, #{conditionLabel}, #{content}, #{tag},
+            #{createdByMemberId}
+        )
+    </insert>
+
+    <!--
+      조건/내용 수정. version 이 그대로일 때만 반영되는 낙관적 잠금이다.
+      그 사이 다른 사람이 고쳤다면 영향 행이 0 이 된다.
+    -->
+    <update id="updateWithVersion">
+        UPDATE travel_plan_item_alternatives
+        SET condition_label = #{conditionLabel},
+            content = #{content},
+            version = version + 1,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND travel_plan_item_id = #{travelPlanItemId}
+          AND version = #{version}
+    </update>
+
+    <delete id="deleteByIdAndItemId">
+        DELETE FROM travel_plan_item_alternatives
+        WHERE id = #{id}
+          AND travel_plan_item_id = #{travelPlanItemId}
+    </delete>
+
+    <!-- 남은 대안의 자리만 옮긴다(C 2 -> B 1). 내용/조건/작성자는 그대로 둔다 -->
+    <update id="updateOrderByIdAndItemId">
+        UPDATE travel_plan_item_alternatives
+        SET alternative_order = #{alternativeOrder},
+            version = version + 1,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND travel_plan_item_id = #{travelPlanItemId}
+    </update>
+</mapper>

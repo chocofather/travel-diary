@@ -8,6 +8,7 @@ import com.example.travlediary.model.TravelPlanMember;
 import com.example.travlediary.model.TravelPlanMemberStatus;
 import com.example.travlediary.model.TravelPlanRole;
 import com.example.travlediary.model.TravelPlanStatus;
+import com.example.travlediary.repository.travelplan.TravelPlanAlternativeMapper;
 import com.example.travlediary.repository.travelplan.TravelPlanItemMapper;
 import com.example.travlediary.repository.travelplan.TravelPlanMapper;
 import org.junit.jupiter.api.Test;
@@ -47,6 +48,8 @@ class TravelPlanDayServiceTest {
     private TravelPlanMapper travelPlanMapper;
     @Mock
     private TravelPlanItemMapper travelPlanItemMapper;
+    @Mock
+    private TravelPlanAlternativeMapper travelPlanAlternativeMapper;
     @InjectMocks
     private TravelPlanService travelPlanService;
 

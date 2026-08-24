@@ -54,8 +54,10 @@
         <ol class="travel-plan-lines">
           <!-- 저장된 일정만 번호가 붙은 줄이 된다. 줄 자체가 편집기가 된다 -->
           <li class="travel-plan-line is-item" th:each="item, status : ${dayItems}"
+              th:with="alternatives=${travelPlan.alternativesByItemId.get(item.id)},
+                       altCount=${alternatives == null ? 0 : alternatives.size()}"
               th:attr="data-item-id=${item.id},data-display-order=${item.displayOrder},
-                       data-version=${item.version}"
+                       data-version=${item.version},data-alt-count=${altCount}"
               data-travel-plan-item>
             <span class="travel-plan-line-order"
                   th:text="${#numbers.formatInteger(status.count, 2)}">01</span>
@@ -78,6 +80,87 @@
                           th:id="'item-content-' + ${item.id}"
                           th:text="${item.content}"></textarea>
               </form>
+
+              <!--
+                대안(B/C). 카드가 아니라 A 아래에 들여쓰기된 메모처럼 붙는다.
+                접힌 상태가 기본이고, "대안 N개" 를 눌러야 상세가 열린다.
+              -->
+              <div class="travel-plan-alt-block" data-travel-plan-alt-block>
+                <button type="button" class="travel-plan-alt-toggle" th:if="${altCount > 0}"
+                        aria-expanded="false" data-travel-plan-alt-toggle
+                        th:text="'대안 ' + ${altCount} + '개'">대안 2개</button>
+
+                <div class="travel-plan-alt-list" hidden data-travel-plan-alt-list>
+                  <div class="travel-plan-alt" th:each="alt : ${alternatives}"
+                       th:attr="data-alternative-id=${alt.id},
+                                data-alternative-order=${alt.alternativeOrder},
+                                data-version=${alt.version}"
+                       data-travel-plan-alt>
+                    <span class="travel-plan-alt-mark"
+                          th:text="${alt.alternativeOrder == 1 ? 'B' : 'C'}">B</span>
+
+                    <div class="travel-plan-alt-body">
+                      <p class="travel-plan-alt-view" data-travel-plan-alt-view>
+                        <span class="travel-plan-alt-condition"
+                              th:unless="${#strings.isEmpty(alt.conditionLabel)}"
+                              th:text="${alt.conditionLabel}">비가 많이 올 때</span>
+                        <span class="travel-plan-alt-content"
+                              th:text="${alt.content}">아쿠아플라넷 방문</span>
+                      </p>
+
+                      <!-- 조건과 내용 두 칸이라 A 와 달리 작은 저장/취소 버튼을 함께 둔다 -->
+                      <form class="travel-plan-alt-editor" method="post" hidden
+                            th:action="@{|/travel-plans/${travelPlan.plan.id}/days/${day.id}/items/${item.id}/alternatives/${alt.id}/update|}"
+                            data-travel-plan-alt-form>
+                        <input type="hidden" name="version" th:value="${alt.version}">
+                        <input type="text" name="conditionLabel" maxlength="100"
+                               autocomplete="off" placeholder="조건 (선택)"
+                               th:value="${alt.conditionLabel}">
+                        <textarea name="content" rows="1" autocomplete="off"
+                                  th:text="${alt.content}"></textarea>
+                        <div class="travel-plan-alt-editor-actions">
+                          <button type="submit" class="travel-plan-alt-save">저장</button>
+                          <button type="button" class="travel-plan-alt-cancel"
+                                  data-travel-plan-alt-cancel>취소</button>
+                        </div>
+                      </form>
+                    </div>
+
+                    <form method="post" class="travel-plan-alt-remove-form"
+                          th:action="@{|/travel-plans/${travelPlan.plan.id}/days/${day.id}/items/${item.id}/alternatives/${alt.id}/delete|}">
+                      <button type="submit" class="travel-plan-alt-remove"
+                              onclick="return confirm('이 대안을 삭제할까요?')">대안 삭제</button>
+                    </form>
+                  </div>
+
+                  <!-- 새 대안. 다음 자리는 남은 개수로 정해진다 (0개면 B, 1개면 C) -->
+                  <div class="travel-plan-alt is-new" th:if="${altCount lt 2}"
+                       data-travel-plan-alt-new>
+                    <span class="travel-plan-alt-mark"
+                          th:text="${altCount == 0 ? 'B' : 'C'}">B</span>
+                    <!--
+                      저장된 B/C 와 같은 본문 칸을 쓴다.
+                      폼을 flex 자식으로 그대로 두면 입력칸의 기본 폭(cols=20)이
+                      그 칸의 폭이 되어 문장이 20자쯤에서 끊긴다.
+                    -->
+                    <div class="travel-plan-alt-body">
+                      <form class="travel-plan-alt-editor" method="post" hidden
+                            th:action="@{|/travel-plans/${travelPlan.plan.id}/days/${day.id}/items/${item.id}/alternatives|}"
+                            data-travel-plan-alt-new-form>
+                        <input type="text" name="conditionLabel" maxlength="100"
+                               autocomplete="off" placeholder="조건 (선택)">
+                        <textarea name="content" rows="1" autocomplete="off"
+                                  placeholder="대안 일정 입력..."></textarea>
+                        <div class="travel-plan-alt-editor-actions">
+                          <button type="submit" class="travel-plan-alt-save">저장</button>
+                          <button type="button" class="travel-plan-alt-cancel"
+                                  data-travel-plan-alt-cancel>취소</button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <!-- hover/focus 전에는 거의 보이지 않는다 -->
@@ -86,6 +169,10 @@
                       aria-haspopup="true" aria-expanded="false"
                       aria-label="일정 메뉴" data-travel-plan-menu-button>⋯</button>
               <div class="travel-plan-item-menu-list" hidden data-travel-plan-menu-list>
+                <!-- 대안은 여기서만 시작한다. 줄 아래에 항상 떠 있는 버튼은 두지 않는다 -->
+                <button type="button" class="travel-plan-item-action" th:if="${altCount lt 2}"
+                        data-travel-plan-alt-add>대안 추가</button>
+
                 <!-- 첫/마지막 일정에서는 갈 곳이 없는 방향을 막아 둔다 -->
                 <form method="post"
                       th:action="@{|/travel-plans/${travelPlan.plan.id}/days/${day.id}/items/${item.id}/move-up|}">
@@ -117,11 +204,30 @@
                   </form>
                 </div>
 
-                <form method="post"
+                <!-- 대안이 없으면 지울 것이 하나뿐이라 그냥 "삭제" 다 -->
+                <form method="post" th:if="${altCount == 0}"
                       th:action="@{|/travel-plans/${travelPlan.plan.id}/days/${day.id}/items/${item.id}/delete|}">
                   <button type="submit" class="travel-plan-item-delete"
                           onclick="return confirm('이 일정을 삭제할까요?')">삭제</button>
                 </form>
+
+                <!--
+                  대안이 있으면 뜻이 갈린다.
+                  "일정만 삭제" 는 이 줄만 지우고 B 를 그 자리로 올린다.
+                  "전체 일정 삭제" 는 A 와 대안을 통째로 지운다.
+                -->
+                <th:block th:if="${altCount > 0}">
+                  <form method="post"
+                        th:action="@{|/travel-plans/${travelPlan.plan.id}/days/${day.id}/items/${item.id}/delete|}">
+                    <button type="submit" class="travel-plan-item-delete"
+                            onclick="return confirm('이 일정을 지우고 대안을 위로 올릴까요?')">일정만 삭제</button>
+                  </form>
+                  <form method="post"
+                        th:action="@{|/travel-plans/${travelPlan.plan.id}/days/${day.id}/items/${item.id}/delete-group|}">
+                    <button type="submit" class="travel-plan-item-delete"
+                            onclick="return confirm('대안까지 모두 삭제할까요?')">전체 일정 삭제</button>
+                  </form>
+                </th:block>
               </div>
             </div>
           </li>

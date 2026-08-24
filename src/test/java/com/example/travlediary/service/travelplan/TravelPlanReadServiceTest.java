@@ -5,10 +5,12 @@ import com.example.travlediary.dto.TravelPlanListItemDto;
 import com.example.travlediary.model.TravelPlan;
 import com.example.travlediary.model.TravelPlanDay;
 import com.example.travlediary.model.TravelPlanItem;
+import com.example.travlediary.model.TravelPlanItemAlternative;
 import com.example.travlediary.model.TravelPlanMember;
 import com.example.travlediary.model.TravelPlanMemberStatus;
 import com.example.travlediary.model.TravelPlanRole;
 import com.example.travlediary.model.TravelPlanStatus;
+import com.example.travlediary.repository.travelplan.TravelPlanAlternativeMapper;
 import com.example.travlediary.repository.travelplan.TravelPlanItemMapper;
 import com.example.travlediary.repository.travelplan.TravelPlanMapper;
 import org.junit.jupiter.api.Test;
@@ -45,6 +47,8 @@ class TravelPlanReadServiceTest {
     private TravelPlanMapper travelPlanMapper;
     @Mock
     private TravelPlanItemMapper travelPlanItemMapper;
+    @Mock
+    private TravelPlanAlternativeMapper travelPlanAlternativeMapper;
     @InjectMocks
     private TravelPlanService travelPlanService;
 
@@ -121,6 +125,39 @@ class TravelPlanReadServiceTest {
 
         assertThat(travelPlanService.getActivePlanDetail(USER_ID, PLAN_ID).getItemsByDayId())
                 .doesNotContainKey(100L);
+    }
+
+    @Test
+    void detailGroupsAlternativesByTheirItemInOneQuery() {
+        givenActiveMembership();
+        when(travelPlanMapper.findPlanByIdAndStatus(PLAN_ID, "ACTIVE")).thenReturn(plan());
+        when(travelPlanMapper.findDaysByPlanId(PLAN_ID)).thenReturn(List.of(day(100L, 1, START)));
+        // 방 전체 대안을 한 번에 읽는다 (일정 수만큼 조회하지 않는다)
+        when(travelPlanAlternativeMapper.findByPlanId(PLAN_ID)).thenReturn(List.of(
+                alternative(500L, 1, "실내 박물관"),
+                alternative(500L, 2, "카페 투어"),
+                alternative(600L, 1, "숙소에서 쉬기")));
+
+        TravelPlanDetailDto detail = travelPlanService.getActivePlanDetail(USER_ID, PLAN_ID);
+
+        assertThat(detail.getAlternativesByItemId().get(500L))
+                .extracting(TravelPlanItemAlternative::getContent)
+                .containsExactly("실내 박물관", "카페 투어");
+        assertThat(detail.getAlternativesByItemId().get(600L))
+                .extracting(TravelPlanItemAlternative::getContent)
+                .containsExactly("숙소에서 쉬기");
+        verify(travelPlanAlternativeMapper).findByPlanId(PLAN_ID);
+    }
+
+    @Test
+    void anItemWithoutAlternativesSimplyHasNoEntry() {
+        givenActiveMembership();
+        when(travelPlanMapper.findPlanByIdAndStatus(PLAN_ID, "ACTIVE")).thenReturn(plan());
+        when(travelPlanMapper.findDaysByPlanId(PLAN_ID)).thenReturn(List.of(day(100L, 1, START)));
+        when(travelPlanAlternativeMapper.findByPlanId(PLAN_ID)).thenReturn(null);
+
+        assertThat(travelPlanService.getActivePlanDetail(USER_ID, PLAN_ID)
+                .getAlternativesByItemId()).doesNotContainKey(500L);
     }
 
     @Test
@@ -229,5 +266,13 @@ class TravelPlanReadServiceTest {
         item.setDisplayOrder(displayOrder);
         item.setContent(content);
         return item;
+    }
+
+    private TravelPlanItemAlternative alternative(Long itemId, int order, String content) {
+        TravelPlanItemAlternative alternative = new TravelPlanItemAlternative();
+        alternative.setTravelPlanItemId(itemId);
+        alternative.setAlternativeOrder(order);
+        alternative.setContent(content);
+        return alternative;
     }
 }

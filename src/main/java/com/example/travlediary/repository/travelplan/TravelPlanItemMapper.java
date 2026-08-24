@@ -69,6 +69,19 @@ public interface TravelPlanItemMapper {
                                @Param("displayOrder") Integer displayOrder);
 
     /**
+     * 대안(B)을 A 자리로 끌어올린다.
+     * row 를 새로 만들지 않고 기존 A 행의 내용만 바꾸므로 id 와 display_order 는 그대로다.
+     * 작성자도 승격된 대안의 작성자로 함께 바뀐다.
+     *
+     * @return 1 이면 반영, 0 이면 그 사이 일정이 사라졌거나 소속이 맞지 않는다.
+     */
+    int promoteAlternativeContent(@Param("id") Long id,
+                                  @Param("travelPlanDayId") Long travelPlanDayId,
+                                  @Param("content") String content,
+                                  @Param("tag") String tag,
+                                  @Param("createdByMemberId") Long createdByMemberId);
+
+    /**
      * 다른 DAY 로 옮긴다. content / tag / created_by_member_id 는 건드리지 않는다.
      *
      * @return 1 이면 반영, 0 이면 그 사이 다른 변경이 있었다.

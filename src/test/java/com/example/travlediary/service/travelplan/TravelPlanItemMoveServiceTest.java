@@ -7,6 +7,7 @@ import com.example.travlediary.model.TravelPlanMember;
 import com.example.travlediary.model.TravelPlanMemberStatus;
 import com.example.travlediary.model.TravelPlanRole;
 import com.example.travlediary.model.TravelPlanStatus;
+import com.example.travlediary.repository.travelplan.TravelPlanAlternativeMapper;
 import com.example.travlediary.repository.travelplan.TravelPlanItemMapper;
 import com.example.travlediary.repository.travelplan.TravelPlanMapper;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,7 @@ import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -51,6 +53,8 @@ class TravelPlanItemMoveServiceTest {
     private TravelPlanMapper travelPlanMapper;
     @Mock
     private TravelPlanItemMapper travelPlanItemMapper;
+    @Mock
+    private TravelPlanAlternativeMapper travelPlanAlternativeMapper;
     @InjectMocks
     private TravelPlanService travelPlanService;
 
@@ -284,6 +288,29 @@ class TravelPlanItemMoveServiceTest {
         assertThatThrownBy(() -> travelPlanService.moveItemToDay(
                 USER_ID, PLAN_ID, DAY_ID, ITEM_ID, TARGET_DAY_ID, VERSION))
                 .isInstanceOf(ResponseStatusException.class);
+    }
+
+    @Test
+    void alternativesTravelWithTheirItemWithoutAnyExtraWrite() {
+        // B/C 는 parent item 에 걸려 있으므로 이동은 대안 테이블을 건드릴 일이 없다.
+        givenMovableItem(2);
+        givenDayEndsAt(3);
+        when(travelPlanItemMapper.findPreviousItem(DAY_ID, 2)).thenReturn(neighbour(1));
+        when(travelPlanItemMapper.updateDisplayOrderWithVersion(ITEM_ID, DAY_ID, 1, VERSION))
+                .thenReturn(1);
+        when(travelPlanItemMapper.findNextItem(DAY_ID, 2)).thenReturn(neighbour(3));
+        when(travelPlanItemMapper.updateDisplayOrderWithVersion(ITEM_ID, DAY_ID, 3, VERSION))
+                .thenReturn(1);
+        givenDay(TARGET_DAY_ID);
+        when(travelPlanItemMapper.moveToDayWithVersion(
+                ITEM_ID, DAY_ID, TARGET_DAY_ID, 1, VERSION)).thenReturn(1);
+
+        travelPlanService.moveItemUp(USER_ID, PLAN_ID, DAY_ID, ITEM_ID, VERSION);
+        travelPlanService.moveItemDown(USER_ID, PLAN_ID, DAY_ID, ITEM_ID, VERSION);
+        travelPlanService.moveItemToDay(USER_ID, PLAN_ID, DAY_ID, ITEM_ID, TARGET_DAY_ID, VERSION);
+
+        // 대안에 별도 day_id 를 두지 않으므로 옮겨 다녀도 연결이 그대로다
+        verifyNoInteractions(travelPlanAlternativeMapper);
     }
 
     @Test

@@ -1,5 +1,6 @@
 package com.example.travlediary.controller.travelplan;
 
+import com.example.travlediary.dto.TravelPlanAlternativeForm;
 import com.example.travlediary.dto.TravelPlanCreateForm;
 import com.example.travlediary.dto.TravelPlanItemCreateForm;
 import com.example.travlediary.dto.TravelPlanItemUpdateForm;
@@ -121,6 +122,65 @@ public class TravelPlanController {
                              @PathVariable Long itemId,
                              @AuthenticationPrincipal CustomUserDetails userDetails) {
         travelPlanService.deleteItem(userDetails.getId(), travelPlanId, dayId, itemId);
+        return redirectToDay(travelPlanId, dayId);
+    }
+
+    // A + 대안 전체 삭제 (방의 ACTIVE 멤버면 누구나)
+    @PostMapping("/{travelPlanId:\\d+}/days/{dayId:\\d+}/items/{itemId:\\d+}/delete-group")
+    public String deleteItemGroup(@PathVariable Long travelPlanId,
+                                  @PathVariable Long dayId,
+                                  @PathVariable Long itemId,
+                                  @AuthenticationPrincipal CustomUserDetails userDetails) {
+        travelPlanService.deleteItemGroup(userDetails.getId(), travelPlanId, dayId, itemId);
+        return redirectToDay(travelPlanId, dayId);
+    }
+
+    // 대안(B/C) 추가
+    @PostMapping("/{travelPlanId:\\d+}/days/{dayId:\\d+}/items/{itemId:\\d+}/alternatives")
+    public String addAlternative(@PathVariable Long travelPlanId,
+                                 @PathVariable Long dayId,
+                                 @PathVariable Long itemId,
+                                 @ModelAttribute TravelPlanAlternativeForm form,
+                                 @AuthenticationPrincipal CustomUserDetails userDetails,
+                                 RedirectAttributes redirectAttributes) {
+        try {
+            travelPlanService.addAlternative(userDetails.getId(), travelPlanId, dayId, itemId,
+                    form.getConditionLabel(), form.getContent());
+        } catch (TravelPlanValidationException exception) {
+            redirectAttributes.addFlashAttribute("travelPlanError", exception.getMessage());
+        }
+        return redirectToDay(travelPlanId, dayId);
+    }
+
+    // 대안(B/C) 수정
+    @PostMapping("/{travelPlanId:\\d+}/days/{dayId:\\d+}/items/{itemId:\\d+}"
+            + "/alternatives/{alternativeId:\\d+}/update")
+    public String updateAlternative(@PathVariable Long travelPlanId,
+                                    @PathVariable Long dayId,
+                                    @PathVariable Long itemId,
+                                    @PathVariable Long alternativeId,
+                                    @ModelAttribute TravelPlanAlternativeForm form,
+                                    @AuthenticationPrincipal CustomUserDetails userDetails,
+                                    RedirectAttributes redirectAttributes) {
+        try {
+            travelPlanService.updateAlternative(userDetails.getId(), travelPlanId, dayId, itemId,
+                    alternativeId, form.getConditionLabel(), form.getContent(), form.getVersion());
+        } catch (TravelPlanValidationException | TravelPlanConflictException exception) {
+            redirectAttributes.addFlashAttribute("travelPlanError", exception.getMessage());
+        }
+        return redirectToDay(travelPlanId, dayId);
+    }
+
+    // 대안(B/C) 삭제
+    @PostMapping("/{travelPlanId:\\d+}/days/{dayId:\\d+}/items/{itemId:\\d+}"
+            + "/alternatives/{alternativeId:\\d+}/delete")
+    public String deleteAlternative(@PathVariable Long travelPlanId,
+                                    @PathVariable Long dayId,
+                                    @PathVariable Long itemId,
+                                    @PathVariable Long alternativeId,
+                                    @AuthenticationPrincipal CustomUserDetails userDetails) {
+        travelPlanService.deleteAlternative(
+                userDetails.getId(), travelPlanId, dayId, itemId, alternativeId);
         return redirectToDay(travelPlanId, dayId);
     }
 

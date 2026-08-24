@@ -229,8 +229,8 @@ class TravelPlanControllerTest {
         plan.setTitle("제주 여행");
         plan.setStartDate(LocalDate.parse(START));
         plan.setEndDate(LocalDate.parse(END));
-        TravelPlanDetailDto detail =
-                new TravelPlanDetailDto(plan, new TravelPlanMember(), List.of(), Map.of());
+        TravelPlanDetailDto detail = new TravelPlanDetailDto(
+                plan, new TravelPlanMember(), List.of(), Map.of(), Map.of());
         when(travelPlanService.getActivePlanDetail(7L, 42L)).thenReturn(detail);
 
         mockMvc.perform(get("/travel-plans/42").with(user(member())))
@@ -402,6 +402,108 @@ class TravelPlanControllerTest {
     }
 
     @Test
+    void addingAnAlternativePassesBothFieldsAndComesBackToThatDay() throws Exception {
+        mockMvc.perform(post("/travel-plans/42/days/100/items/500/alternatives")
+                        .with(user(member())).with(csrf())
+                        .param("conditionLabel", "비가 많이 올 때")
+                        .param("content", "아쿠아플라넷 방문"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/travel-plans/42#day-100"));
+
+        verify(travelPlanService).addAlternative(
+                7L, 42L, 100L, 500L, "비가 많이 올 때", "아쿠아플라넷 방문");
+    }
+
+    @Test
+    void aRejectedAlternativeIsShownAsAMessageInsteadOfAnErrorPage() throws Exception {
+        doThrow(new TravelPlanValidationException("content", "대안은 일정마다 2개까지 추가할 수 있습니다."))
+                .when(travelPlanService).addAlternative(
+                        anyLong(), anyLong(), anyLong(), anyLong(), any(), any());
+
+        mockMvc.perform(post("/travel-plans/42/days/100/items/500/alternatives")
+                        .with(user(member())).with(csrf())
+                        .param("content", "세 번째"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/travel-plans/42#day-100"))
+                .andExpect(flash().attribute("travelPlanError",
+                        "대안은 일정마다 2개까지 추가할 수 있습니다."));
+    }
+
+    @Test
+    void editingAnAlternativePassesItsOwnVersion() throws Exception {
+        mockMvc.perform(post("/travel-plans/42/days/100/items/500/alternatives/900/update")
+                        .with(user(member())).with(csrf())
+                        .param("conditionLabel", "눈 올 때")
+                        .param("content", "실내 박물관")
+                        .param("version", "4"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/travel-plans/42#day-100"));
+
+        verify(travelPlanService).updateAlternative(
+                7L, 42L, 100L, 500L, 900L, "눈 올 때", "실내 박물관", 4);
+    }
+
+    @Test
+    void aConflictOnAnAlternativeEditIsShownAsAMessage() throws Exception {
+        doThrow(new TravelPlanConflictException())
+                .when(travelPlanService).updateAlternative(anyLong(), anyLong(), anyLong(),
+                        anyLong(), anyLong(), any(), any(), any());
+
+        mockMvc.perform(post("/travel-plans/42/days/100/items/500/alternatives/900/update")
+                        .with(user(member())).with(csrf())
+                        .param("content", "실내 박물관").param("version", "4"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attributeExists("travelPlanError"));
+    }
+
+    @Test
+    void deletingAnAlternativeComesBackToThatDay() throws Exception {
+        mockMvc.perform(post("/travel-plans/42/days/100/items/500/alternatives/900/delete")
+                        .with(user(member())).with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/travel-plans/42#day-100"));
+
+        verify(travelPlanService).deleteAlternative(7L, 42L, 100L, 500L, 900L);
+    }
+
+    @Test
+    void theGroupDeleteIsItsOwnEndpoint() throws Exception {
+        mockMvc.perform(post("/travel-plans/42/days/100/items/500/delete-group")
+                        .with(user(member())).with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/travel-plans/42#day-100"));
+
+        // "일정만 삭제" 와 뜻이 갈리므로 서로 다른 서비스 호출이다
+        verify(travelPlanService).deleteItemGroup(7L, 42L, 100L, 500L);
+        verify(travelPlanService, never()).deleteItem(anyLong(), anyLong(), anyLong(), anyLong());
+    }
+
+    @Test
+    void theAlternativeEndpointsAreRejectedWithoutCsrf() throws Exception {
+        mockMvc.perform(post("/travel-plans/42/days/100/items/500/alternatives")
+                        .with(user(member())).param("content", "아쿠아플라넷 방문"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/travel-plans/42/days/100/items/500/alternatives/900/update")
+                        .with(user(member())).param("content", "실내 박물관").param("version", "4"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/travel-plans/42/days/100/items/500/alternatives/900/delete")
+                        .with(user(member())))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/travel-plans/42/days/100/items/500/delete-group")
+                        .with(user(member())))
+                .andExpect(status().isForbidden());
+
+        verify(travelPlanService, never()).addAlternative(
+                anyLong(), anyLong(), anyLong(), anyLong(), any(), any());
+        verify(travelPlanService, never()).updateAlternative(
+                anyLong(), anyLong(), anyLong(), anyLong(), anyLong(), any(), any(), any());
+        verify(travelPlanService, never()).deleteAlternative(
+                anyLong(), anyLong(), anyLong(), anyLong(), anyLong());
+        verify(travelPlanService, never()).deleteItemGroup(
+                anyLong(), anyLong(), anyLong(), anyLong());
+    }
+
+    @Test
     void anItemFromAnotherRoomComesBackAsNotFound() throws Exception {
         doThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "여행계획을 찾을 수 없습니다."))
                 .when(travelPlanService).deleteItem(anyLong(), anyLong(), anyLong(), anyLong());
@@ -491,7 +593,8 @@ class TravelPlanControllerTest {
         day.setTravelPlanId(42L);
         day.setDayNumber(1);
         day.setPlanDate(LocalDate.parse(START));
-        return new TravelPlanDetailDto(plan, new TravelPlanMember(), List.of(day), Map.of());
+        return new TravelPlanDetailDto(
+                plan, new TravelPlanMember(), List.of(day), Map.of(), Map.of());
     }
 
     private TravelPlanDayDetailDto dayDetail() {

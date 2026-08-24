@@ -6,10 +6,12 @@ import com.example.travlediary.dto.TravelPlanListItemDto;
 import com.example.travlediary.model.TravelPlan;
 import com.example.travlediary.model.TravelPlanDay;
 import com.example.travlediary.model.TravelPlanItem;
+import com.example.travlediary.model.TravelPlanItemAlternative;
 import com.example.travlediary.model.TravelPlanMember;
 import com.example.travlediary.model.TravelPlanMemberStatus;
 import com.example.travlediary.model.TravelPlanRole;
 import com.example.travlediary.model.TravelPlanStatus;
+import com.example.travlediary.repository.travelplan.TravelPlanAlternativeMapper;
 import com.example.travlediary.repository.travelplan.TravelPlanItemMapper;
 import com.example.travlediary.repository.travelplan.TravelPlanMapper;
 import lombok.RequiredArgsConstructor;
@@ -36,9 +38,17 @@ public class TravelPlanService {
     private static final int MAX_DISPLAY_NAME_LENGTH = 50;
     /** 시작일과 종료일을 포함한 최대 여행 일수. DB 제약이 아니라 서비스 정책이다. */
     private static final int MAX_PLAN_DAYS = 90;
+    /** travel_plan_item_alternatives.condition_label 은 varchar(100) */
+    private static final int MAX_CONDITION_LABEL_LENGTH = 100;
+    /** A 일정 하나가 가질 수 있는 대안 수. chk_travel_plan_item_alternatives_order 와 같은 값이다. */
+    private static final int MAX_ALTERNATIVES = 2;
+    /** 대안 중 A 자리로 올라가는 것은 항상 B(1번)다. */
+    private static final int FIRST_ALTERNATIVE_ORDER = 1;
+    private static final int SECOND_ALTERNATIVE_ORDER = 2;
 
     private final TravelPlanMapper travelPlanMapper;
     private final TravelPlanItemMapper travelPlanItemMapper;
+    private final TravelPlanAlternativeMapper travelPlanAlternativeMapper;
 
     /**
      * 현재 사용자가 ACTIVE 멤버로 참여 중인 ACTIVE 방 목록.
@@ -69,8 +79,18 @@ public class TravelPlanService {
                 : items.stream().collect(Collectors.groupingBy(
                         TravelPlanItem::getTravelPlanDayId, LinkedHashMap::new, Collectors.toList()));
 
+        // 대안도 같은 이유로 일정 수만큼 조회하지 않고 방 단위로 한 번에 읽는다.
+        List<TravelPlanItemAlternative> alternatives =
+                travelPlanAlternativeMapper.findByPlanId(travelPlanId);
+        Map<Long, List<TravelPlanItemAlternative>> alternativesByItemId = alternatives == null
+                ? Map.of()
+                : alternatives.stream().collect(Collectors.groupingBy(
+                        TravelPlanItemAlternative::getTravelPlanItemId,
+                        LinkedHashMap::new, Collectors.toList()));
+
         return new TravelPlanDetailDto(
-                access.plan(), access.member(), days == null ? List.of() : days, itemsByDayId);
+                access.plan(), access.member(), days == null ? List.of() : days,
+                itemsByDayId, alternativesByItemId);
     }
 
     /**
@@ -138,11 +158,36 @@ public class TravelPlanService {
     }
 
     /**
-     * A 일정 삭제.
-     * 지운 뒤 그 DAY 의 순서만 1..N 으로 다시 매긴다. 다른 DAY 는 건드리지 않는다.
+     * A 일정만 삭제한다.
+     * 대안이 없으면 그 줄을 지우고 그 DAY 의 순서만 1..N 으로 다시 매긴다.
+     * 대안이 있으면 줄을 없애지 않고 B 를 A 자리로 끌어올린다(C 가 있으면 C 가 B 가 된다).
      */
     @Transactional
     public void deleteItem(Long userId, Long travelPlanId, Long dayId, Long itemId) {
+        requireActiveAccess(userId, travelPlanId);
+        requireDayOfPlan(travelPlanId, dayId);
+        requireItemOfDay(dayId, itemId);
+
+        TravelPlanItemAlternative promoted = travelPlanAlternativeMapper.findByItemIdAndOrder(
+                itemId, FIRST_ALTERNATIVE_ORDER);
+        if (promoted != null) {
+            promoteAlternativeToItem(travelPlanId, dayId, itemId, promoted);
+            return;
+        }
+
+        if (travelPlanItemMapper.deleteByIdAndDayId(itemId, dayId) != 1) {
+            throw planNotFound();
+        }
+        travelPlanItemMapper.resequenceDisplayOrder(dayId);
+        travelPlanMapper.touchLastActivity(travelPlanId);
+    }
+
+    /**
+     * A 일정과 거기 붙은 대안을 통째로 지운다.
+     * 대안은 FK CASCADE 로 함께 사라지므로 여기서 따로 지우지 않는다.
+     */
+    @Transactional
+    public void deleteItemGroup(Long userId, Long travelPlanId, Long dayId, Long itemId) {
         requireActiveAccess(userId, travelPlanId);
         requireDayOfPlan(travelPlanId, dayId);
         requireItemOfDay(dayId, itemId);
@@ -152,6 +197,145 @@ public class TravelPlanService {
         }
         travelPlanItemMapper.resequenceDisplayOrder(dayId);
         travelPlanMapper.touchLastActivity(travelPlanId);
+    }
+
+    /**
+     * B 를 A 자리로 올린다.
+     * parent row 를 지우지 않고 내용만 갈아 끼우므로 item id 와 display_order 는 그대로다.
+     * condition_label 은 A 에 없는 개념이라 버리고, 작성자는 대안 작성자로 바뀐다.
+     */
+    private void promoteAlternativeToItem(Long travelPlanId, Long dayId, Long itemId,
+                                          TravelPlanItemAlternative promoted) {
+        if (travelPlanItemMapper.promoteAlternativeContent(itemId, dayId, promoted.getContent(),
+                promoted.getTag(), promoted.getCreatedByMemberId()) != 1) {
+            throw planNotFound();
+        }
+        if (travelPlanAlternativeMapper.deleteByIdAndItemId(promoted.getId(), itemId) != 1) {
+            throw planNotFound();
+        }
+        // 비어 버린 B 자리로 C 를 당겨 온다.
+        shiftSecondAlternativeUp(itemId);
+        travelPlanMapper.touchLastActivity(travelPlanId);
+    }
+
+    /**
+     * DAY 안의 A 일정에 대안을 붙인다.
+     * 첫 대안은 B(1번), 두 번째는 C(2번)이고 세 번째는 받지 않는다.
+     * 작성자는 요청 값을 믿지 않고 현재 사용자의 방 참여 정보에서 가져온다.
+     */
+    @Transactional
+    public void addAlternative(Long userId, Long travelPlanId, Long dayId, Long itemId,
+                               String conditionLabel, String content) {
+        PlanAccess access = requireActiveAccess(userId, travelPlanId);
+        requireDayOfPlan(travelPlanId, dayId);
+        requireItemOfDay(dayId, itemId);
+
+        String normalizedContent = requiredContent(content);
+        String normalizedCondition = optionalConditionLabel(conditionLabel);
+
+        // 화면에서 버튼을 숨기는 것과 별개로 서버에서도 개수를 확인한다.
+        int existing = travelPlanAlternativeMapper.countByItemId(itemId);
+        if (existing >= MAX_ALTERNATIVES) {
+            throw new TravelPlanValidationException("content",
+                    "대안은 일정마다 " + MAX_ALTERNATIVES + "개까지 추가할 수 있습니다.");
+        }
+
+        TravelPlanItemAlternative alternative = new TravelPlanItemAlternative();
+        alternative.setTravelPlanItemId(itemId);
+        alternative.setAlternativeOrder(existing + 1);
+        alternative.setConditionLabel(normalizedCondition);
+        alternative.setContent(normalizedContent);
+        // 태그 UI 는 아직 없다.
+        alternative.setTag(null);
+        alternative.setCreatedByMemberId(access.member().getId());
+
+        if (travelPlanAlternativeMapper.insertAlternative(alternative) != 1) {
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, "대안을 저장하지 못했습니다.");
+        }
+        travelPlanMapper.touchLastActivity(travelPlanId);
+    }
+
+    /**
+     * 대안 내용 수정.
+     * A 일정과 마찬가지로 방의 ACTIVE 멤버라면 자기가 쓰지 않은 대안도 고칠 수 있다.
+     * version 이 그 사이 바뀌었으면 덮어쓰지 않고 충돌로 알린다.
+     */
+    @Transactional
+    public void updateAlternative(Long userId, Long travelPlanId, Long dayId, Long itemId,
+                                  Long alternativeId, String conditionLabel, String content,
+                                  Integer version) {
+        requireActiveAccess(userId, travelPlanId);
+        requireDayOfPlan(travelPlanId, dayId);
+        requireItemOfDay(dayId, itemId);
+        requireAlternativeOfItem(itemId, alternativeId);
+
+        String normalizedContent = requiredContent(content);
+        String normalizedCondition = optionalConditionLabel(conditionLabel);
+        if (version == null) {
+            throw new TravelPlanConflictException();
+        }
+
+        if (travelPlanAlternativeMapper.updateWithVersion(
+                alternativeId, itemId, normalizedCondition, normalizedContent, version) != 1) {
+            throw new TravelPlanConflictException();
+        }
+        travelPlanMapper.touchLastActivity(travelPlanId);
+    }
+
+    /**
+     * 대안 삭제.
+     * C 를 지우면 그냥 사라지고, B 를 지우면 남아 있던 C 가 B 자리로 올라온다.
+     */
+    @Transactional
+    public void deleteAlternative(Long userId, Long travelPlanId, Long dayId, Long itemId,
+                                  Long alternativeId) {
+        requireActiveAccess(userId, travelPlanId);
+        requireDayOfPlan(travelPlanId, dayId);
+        requireItemOfDay(dayId, itemId);
+        TravelPlanItemAlternative alternative = requireAlternativeOfItem(itemId, alternativeId);
+
+        if (travelPlanAlternativeMapper.deleteByIdAndItemId(alternativeId, itemId) != 1) {
+            throw planNotFound();
+        }
+        if (Integer.valueOf(FIRST_ALTERNATIVE_ORDER).equals(alternative.getAlternativeOrder())) {
+            shiftSecondAlternativeUp(itemId);
+        }
+        travelPlanMapper.touchLastActivity(travelPlanId);
+    }
+
+    /** B 자리가 비었을 때 C 를 그 자리로 당긴다. 내용/조건/작성자는 그대로 둔다. */
+    private void shiftSecondAlternativeUp(Long itemId) {
+        TravelPlanItemAlternative second = travelPlanAlternativeMapper.findByItemIdAndOrder(
+                itemId, SECOND_ALTERNATIVE_ORDER);
+        if (second == null) {
+            return;
+        }
+        travelPlanAlternativeMapper.updateOrderByIdAndItemId(
+                second.getId(), itemId, FIRST_ALTERNATIVE_ORDER);
+    }
+
+    /** 다른 일정의 alternativeId 를 섞어 넣어도 통과하지 못하게 한다. */
+    private TravelPlanItemAlternative requireAlternativeOfItem(Long itemId, Long alternativeId) {
+        TravelPlanItemAlternative alternative = alternativeId == null
+                ? null : travelPlanAlternativeMapper.findByIdAndItemId(alternativeId, itemId);
+        if (alternative == null) {
+            throw planNotFound();
+        }
+        return alternative;
+    }
+
+    /** 조건은 선택 입력이다. 빈 문자열은 NULL 로 저장한다. */
+    private String optionalConditionLabel(String value) {
+        String label = value == null ? "" : value.trim();
+        if (label.isEmpty()) {
+            return null;
+        }
+        if (label.length() > MAX_CONDITION_LABEL_LENGTH) {
+            throw new TravelPlanValidationException("conditionLabel",
+                    "조건은 " + MAX_CONDITION_LABEL_LENGTH + "자 이하로 입력해 주세요.");
+        }
+        return label;
     }
 
     /** 같은 DAY 안에서 바로 위 일정과 자리를 바꾼다. */

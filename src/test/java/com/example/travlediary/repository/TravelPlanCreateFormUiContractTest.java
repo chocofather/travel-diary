@@ -149,13 +149,14 @@ class TravelPlanCreateFormUiContractTest {
         assertThat(detail)
                 .contains("th:hidden=\"${!dayOpen}\"")
                 .contains("dayOpen=${openDayId != null and openDayId == day.id}");
-        // 항상 떠 있는 추가/취소 버튼은 없다
+        // A 줄에는 항상 떠 있는 추가/취소 버튼이 없다
         assertThat(detail)
                 .doesNotContain(">추가</button>")
-                .doesNotContain(">취소</button>")
                 .doesNotContain("data-travel-plan-add-toggle");
-        // 모든 textarea 는 닫힌 폼 안에 있다 (추가 슬롯 1 + 일정 수정 1)
-        assertThat(countOf(detail, "<textarea")).isEqualTo(2);
+        // 취소는 닫혀 있는 대안 편집기(기존 B/C 1 + 새 대안 1) 안에만 있다
+        assertThat(countOf(detail, ">취소</button>")).isEqualTo(2);
+        // 모든 textarea 는 닫힌 폼 안에 있다 (추가 슬롯 1 + 일정 수정 1 + 대안 2)
+        assertThat(countOf(detail, "<textarea")).isEqualTo(4);
         assertThat(countOf(detail, "th:hidden=\"${!dayOpen}\"")).isEqualTo(1);
         assertThat(countOf(detail, "class=\"travel-plan-item-editor\" method=\"post\" hidden"))
                 .isEqualTo(1);
@@ -325,10 +326,8 @@ class TravelPlanCreateFormUiContractTest {
                 .contains("color: transparent");
         assertThat(css).contains(".travel-plan-line.is-item:hover .travel-plan-item-menu-button");
 
-        // Plan B/C 는 아직 없다
-        for (String notYet : new String[]{"Plan B", "Plan C", "태그"}) {
-            assertThat(detail).as("아직 없는 메뉴: %s", notYet).doesNotContain(notYet);
-        }
+        // 태그 UI 는 아직 없다
+        assertThat(detail).doesNotContain("태그");
     }
 
     @Test
