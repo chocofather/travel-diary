@@ -17,6 +17,7 @@ import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -303,11 +304,55 @@ class TravelPlanInvitationServiceTest {
         when(travelPlanInvitationMapper.findActiveByTokenHash(anyString(), eqActive()))
                 .thenReturn(invitation());
         givenPreviewLookups();
-        when(travelPlanMapper.findMemberByPlanAndUser(PLAN_ID, MEMBER_USER_ID, "ACTIVE"))
-                .thenReturn(new TravelPlanMember());
+        when(travelPlanMapper.findAnyMemberByPlanAndUser(PLAN_ID, MEMBER_USER_ID))
+                .thenReturn(member(TravelPlanMemberStatus.ACTIVE));
 
-        assertThat(travelPlanInvitationService.resolvePreview(MEMBER_USER_ID, "raw-token")
-                .orElseThrow().isAlreadyMember()).isTrue();
+        TravelPlanInvitePreviewDto preview = travelPlanInvitationService
+                .resolvePreview(MEMBER_USER_ID, "raw-token").orElseThrow();
+        assertThat(preview.isAlreadyMember()).isTrue();
+        assertThat(preview.isJoinBlocked()).isFalse();
+    }
+
+    @Test
+    void someoneWhoLeftOrWasRemovedSeesTheBlockedStateInsteadOfAJoinForm() {
+        when(travelPlanInvitationMapper.findActiveByTokenHash(anyString(), eqActive()))
+                .thenReturn(invitation());
+        givenPreviewLookups();
+
+        for (TravelPlanMemberStatus status : new TravelPlanMemberStatus[]{
+                TravelPlanMemberStatus.LEFT, TravelPlanMemberStatus.REMOVED}) {
+            when(travelPlanMapper.findAnyMemberByPlanAndUser(PLAN_ID, MEMBER_USER_ID))
+                    .thenReturn(member(status));
+
+            TravelPlanInvitePreviewDto preview = travelPlanInvitationService
+                    .resolvePreview(MEMBER_USER_ID, "raw-token").orElseThrow();
+            assertThat(preview.isJoinBlocked()).as("status=%s", status).isTrue();
+            assertThat(preview.isAlreadyMember()).isFalse();
+        }
+    }
+
+    @Test
+    void thePreviewCarriesTheRoomLimitSoTheScreenAndTheServerAgree() {
+        when(travelPlanInvitationMapper.findActiveByTokenHash(anyString(), eqActive()))
+                .thenReturn(invitation());
+        givenPreviewLookups();
+
+        TravelPlanInvitePreviewDto preview = travelPlanInvitationService
+                .resolvePreview(null, "raw-token").orElseThrow();
+
+        assertThat(preview.getMemberLimit()).isEqualTo(TravelPlanInvitationService.MAX_MEMBERS);
+        assertThat(preview.isFull()).isFalse();
+    }
+
+    @Test
+    void aFullRoomIsMarkedFullInThePreview() {
+        when(travelPlanInvitationMapper.findActiveByTokenHash(anyString(), eqActive()))
+                .thenReturn(invitation());
+        givenPreviewLookups();
+        when(travelPlanMapper.countMembersByPlanAndStatus(PLAN_ID, "ACTIVE")).thenReturn(8);
+
+        assertThat(travelPlanInvitationService.resolvePreview(null, "raw-token")
+                .orElseThrow().isFull()).isTrue();
     }
 
     @Test
@@ -364,6 +409,233 @@ class TravelPlanInvitationServiceTest {
         verify(travelPlanMapper, never()).findPlanByIdAndStatus(PLAN_ID, "ACTIVE");
     }
 
+    // ── 참여 ────────────────────────────────────────────────
+
+    @Test
+    void aNewUserJoinsAsAnActiveMemberNeverAsAnOwner() {
+        givenJoinableRoom(1);
+        when(travelPlanMapper.insertMember(any())).thenReturn(1);
+
+        Long travelPlanId = travelPlanInvitationService.join(
+                MEMBER_USER_ID, "raw-token", "  예진  ");
+
+        assertThat(travelPlanId).isEqualTo(PLAN_ID);
+        TravelPlanMember saved = captureMemberInsert();
+        assertThat(saved.getTravelPlanId()).isEqualTo(PLAN_ID);
+        // 사용자는 로그인 정보에서 온다
+        assertThat(saved.getUserId()).isEqualTo(MEMBER_USER_ID);
+        assertThat(saved.getRole()).isEqualTo(TravelPlanRole.MEMBER);
+        assertThat(saved.getStatus()).isEqualTo(TravelPlanMemberStatus.ACTIVE);
+        // 양끝 공백만 정리해 저장한다
+        assertThat(saved.getDisplayName()).isEqualTo("예진");
+        // 참여도 방의 활동이다
+        verify(travelPlanMapper).touchLastActivity(PLAN_ID);
+        // raw token 은 어디에도 저장되지 않는다
+        assertThat(saved.toString()).doesNotContain("raw-token");
+    }
+
+    @Test
+    void theCapacityIsCountedInsideTheLockOnThatRoomsRow() {
+        givenJoinableRoom(1);
+        when(travelPlanMapper.insertMember(any())).thenReturn(1);
+
+        travelPlanInvitationService.join(MEMBER_USER_ID, "raw-token", "예진");
+
+        // 방 row 를 잠근 뒤에 인원을 세고 넣어야 동시 참여가 8명을 넘길 수 없다
+        InOrder order = inOrder(travelPlanMapper);
+        order.verify(travelPlanMapper).findPlanByIdAndStatusForUpdate(PLAN_ID, "ACTIVE");
+        order.verify(travelPlanMapper).countMembersByPlanAndStatus(PLAN_ID, "ACTIVE");
+        order.verify(travelPlanMapper).insertMember(any());
+        // 잠금 없는 조회로 정원을 판단하지 않는다
+        verify(travelPlanMapper, never()).findPlanByIdAndStatus(PLAN_ID, "ACTIVE");
+    }
+
+    @Test
+    void theLastSeatCanBeTakenButTheNinthPersonCannot() {
+        givenJoinableRoom(7);
+        when(travelPlanMapper.insertMember(any())).thenReturn(1);
+
+        assertThat(travelPlanInvitationService.join(MEMBER_USER_ID, "raw-token", "예진"))
+                .isEqualTo(PLAN_ID);
+        verify(travelPlanMapper).insertMember(any());
+    }
+
+    @Test
+    void aFullRoomRefusesTheJoinOnTheServerToo() {
+        givenJoinableRoom(8);
+
+        assertThatThrownBy(() ->
+                travelPlanInvitationService.join(MEMBER_USER_ID, "raw-token", "예진"))
+                .isInstanceOf(TravelPlanValidationException.class)
+                .hasMessageContaining("참여 인원이 모두 찼어요.");
+
+        verify(travelPlanMapper, never()).insertMember(any());
+        verify(travelPlanMapper, never()).touchLastActivity(anyLong());
+    }
+
+    @Test
+    void onlyActiveMembersCountTowardsTheLimit() {
+        // LEFT / REMOVED row 는 세지 않으므로 상태 조건을 건 count 만 쓴다
+        givenJoinableRoom(7);
+        when(travelPlanMapper.insertMember(any())).thenReturn(1);
+
+        travelPlanInvitationService.join(MEMBER_USER_ID, "raw-token", "예진");
+
+        verify(travelPlanMapper).countMembersByPlanAndStatus(PLAN_ID, "ACTIVE");
+        verify(travelPlanMapper, never()).countMembersByPlanAndStatus(PLAN_ID, "LEFT");
+        verify(travelPlanMapper, never()).countMembersByPlanAndStatus(PLAN_ID, "REMOVED");
+    }
+
+    @Test
+    void aBlankOrOverlongNameIsRejectedBeforeAnyoneJoins() {
+        // 이름 형식은 방 row 를 잠그기 전에 걸러진다
+        when(travelPlanInvitationMapper.findActiveByTokenHash(anyString(), eqActive()))
+                .thenReturn(invitation());
+
+        for (String displayName : new String[]{null, "", "   ", "가".repeat(51)}) {
+            assertThatThrownBy(() ->
+                    travelPlanInvitationService.join(MEMBER_USER_ID, "raw-token", displayName))
+                    .as("displayName=%s", displayName)
+                    .isInstanceOf(TravelPlanValidationException.class)
+                    .extracting("field").isEqualTo("displayName");
+        }
+        verify(travelPlanMapper, never()).findPlanByIdAndStatusForUpdate(anyLong(), anyString());
+        verify(travelPlanMapper, never()).insertMember(any());
+    }
+
+    @Test
+    void aNameAlreadyTakenInThatRoomIsRefusedWithAReadableMessage() {
+        givenJoinableRoom(1);
+        when(travelPlanMapper.countMembersByPlanAndDisplayName(PLAN_ID, "민준")).thenReturn(1);
+
+        assertThatThrownBy(() ->
+                travelPlanInvitationService.join(MEMBER_USER_ID, "raw-token", "민준"))
+                .isInstanceOf(TravelPlanValidationException.class)
+                .hasMessageContaining("이미 사용 중인 이름입니다.")
+                .extracting("field").isEqualTo("displayName");
+
+        verify(travelPlanMapper, never()).insertMember(any());
+    }
+
+    @Test
+    void anExistingActiveMemberJustGoesBackToTheRoomWithoutASecondRow() {
+        givenLockedRoom();
+        when(travelPlanMapper.findAnyMemberByPlanAndUser(PLAN_ID, MEMBER_USER_ID))
+                .thenReturn(member(TravelPlanMemberStatus.ACTIVE));
+
+        assertThat(travelPlanInvitationService.join(MEMBER_USER_ID, "raw-token", "예진"))
+                .isEqualTo(PLAN_ID);
+
+        // 더블클릭이나 탭 두 개로 들어와도 row 가 하나 더 생기지 않는다
+        verify(travelPlanMapper, never()).insertMember(any());
+        verify(travelPlanMapper, never()).touchLastActivity(anyLong());
+    }
+
+    @Test
+    void someoneWhoLeftOrWasRemovedCannotSlipBackInThroughTheLink() {
+        givenLockedRoom();
+
+        for (TravelPlanMemberStatus status : new TravelPlanMemberStatus[]{
+                TravelPlanMemberStatus.LEFT, TravelPlanMemberStatus.REMOVED}) {
+            when(travelPlanMapper.findAnyMemberByPlanAndUser(PLAN_ID, MEMBER_USER_ID))
+                    .thenReturn(member(status));
+
+            assertThatThrownBy(() ->
+                    travelPlanInvitationService.join(MEMBER_USER_ID, "raw-token", "예진"))
+                    .as("status=%s", status)
+                    .isInstanceOf(TravelPlanValidationException.class)
+                    .hasMessageContaining("현재 이 여행에 다시 참여할 수 없습니다.");
+        }
+        // 기존 row 를 두고 새 row 를 만들지 않는다
+        verify(travelPlanMapper, never()).insertMember(any());
+    }
+
+    @Test
+    void aLinkTurnedOffWhileTheFormWasOpenDoesNotLetAnyoneIn() {
+        // 화면을 열 때는 살아 있었지만 잠금 뒤 재확인에서 꺼져 있다
+        when(travelPlanInvitationMapper.findActiveByTokenHash(anyString(), eqActive()))
+                .thenReturn(invitation())
+                .thenReturn(null);
+        when(travelPlanMapper.findPlanByIdAndStatusForUpdate(PLAN_ID, "ACTIVE"))
+                .thenReturn(activePlan());
+
+        assertThatThrownBy(() ->
+                travelPlanInvitationService.join(MEMBER_USER_ID, "raw-token", "예진"))
+                .isInstanceOf(TravelPlanValidationException.class)
+                .hasMessageContaining("유효하지 않거나 만료된 초대 링크입니다.");
+
+        verify(travelPlanMapper, never()).insertMember(any());
+    }
+
+    @Test
+    void aDeadOrMalformedTokenNeverReachesTheRoom() {
+        when(travelPlanInvitationMapper.findActiveByTokenHash(anyString(), eqActive()))
+                .thenReturn(null);
+
+        for (String token : new String[]{"replaced", "disabled", "unknown", "not.a.token"}) {
+            assertThatThrownBy(() ->
+                    travelPlanInvitationService.join(MEMBER_USER_ID, token, "예진"))
+                    .as("token=%s", token)
+                    .isInstanceOf(TravelPlanValidationException.class)
+                    .hasMessageContaining("유효하지 않거나 만료된 초대 링크입니다.");
+        }
+        assertThatThrownBy(() -> travelPlanInvitationService.join(MEMBER_USER_ID, null, "예진"))
+                .isInstanceOf(TravelPlanValidationException.class);
+
+        verify(travelPlanMapper, never()).findPlanByIdAndStatusForUpdate(anyLong(), anyString());
+    }
+
+    @Test
+    void aRoomThatEndedWhileTheFormWasOpenRefusesTheJoin() {
+        when(travelPlanInvitationMapper.findActiveByTokenHash(anyString(), eqActive()))
+                .thenReturn(invitation());
+        when(travelPlanMapper.findPlanByIdAndStatusForUpdate(PLAN_ID, "ACTIVE")).thenReturn(null);
+
+        assertThatThrownBy(() ->
+                travelPlanInvitationService.join(MEMBER_USER_ID, "raw-token", "예진"))
+                .isInstanceOf(TravelPlanValidationException.class)
+                .hasMessageContaining("유효하지 않거나 만료된 초대 링크입니다.");
+
+        verify(travelPlanMapper, never()).insertMember(any());
+    }
+
+    @Test
+    void aUniqueKeyRaceIsTurnedIntoAnAnswerRatherThanA500() {
+        givenJoinableRoom(1);
+        when(travelPlanMapper.insertMember(any()))
+                .thenThrow(new DuplicateKeyException("uk_travel_plan_members_plan_user"));
+        // 같은 사람의 다른 요청이 먼저 끝났다
+        when(travelPlanMapper.findAnyMemberByPlanAndUser(PLAN_ID, MEMBER_USER_ID))
+                .thenReturn(null)
+                .thenReturn(member(TravelPlanMemberStatus.ACTIVE));
+
+        assertThat(travelPlanInvitationService.join(MEMBER_USER_ID, "raw-token", "예진"))
+                .isEqualTo(PLAN_ID);
+    }
+
+    @Test
+    void aNameRaceComesBackAsANameMessageRatherThanA500() {
+        givenJoinableRoom(1);
+        when(travelPlanMapper.insertMember(any()))
+                .thenThrow(new DuplicateKeyException("uk_travel_plan_members_plan_display_name"));
+        // 이 사람의 참여 기록은 여전히 없다 -> 이름이 겹친 것이다
+        when(travelPlanMapper.findAnyMemberByPlanAndUser(PLAN_ID, MEMBER_USER_ID)).thenReturn(null);
+
+        assertThatThrownBy(() ->
+                travelPlanInvitationService.join(MEMBER_USER_ID, "raw-token", "민준"))
+                .isInstanceOf(TravelPlanValidationException.class)
+                .hasMessageContaining("이미 사용 중인 이름입니다.");
+    }
+
+    @Test
+    void aMissingLoginCannotJoin() {
+        assertThatThrownBy(() -> travelPlanInvitationService.join(null, "raw-token", "예진"))
+                .isInstanceOf(TravelPlanValidationException.class)
+                .extracting("field").isEqualTo("userId");
+
+        verify(travelPlanInvitationMapper, never()).findActiveByTokenHash(anyString(), anyString());
+    }
+
     @Test
     void everyInvitationWriteRunsInsideATransaction() throws NoSuchMethodException {
         Method create = TravelPlanInvitationService.class.getMethod(
@@ -373,11 +645,43 @@ class TravelPlanInvitationServiceTest {
         Method disable = TravelPlanInvitationService.class.getMethod(
                 "disableInvitation", Long.class, Long.class);
 
-        // 재발급은 "끄기 + 새로 넣기" 가 한 덩어리여야 한다
-        for (Method method : new Method[]{create, regenerate, disable}) {
+        Method join = TravelPlanInvitationService.class.getMethod(
+                "join", Long.class, String.class, String.class);
+
+        // 재발급은 "끄기 + 새로 넣기", 참여는 "잠금 + 세기 + 넣기" 가 한 덩어리여야 한다
+        for (Method method : new Method[]{create, regenerate, disable, join}) {
             assertThat(method.isAnnotationPresent(Transactional.class))
                     .as("%s", method.getName()).isTrue();
         }
+    }
+
+    /** 방 row 를 잠근 상태까지만 준비한다(참여 기록 없음). */
+    private void givenLockedRoom() {
+        when(travelPlanInvitationMapper.findActiveByTokenHash(anyString(), eqActive()))
+                .thenReturn(invitation());
+        when(travelPlanMapper.findPlanByIdAndStatusForUpdate(PLAN_ID, "ACTIVE"))
+                .thenReturn(activePlan());
+    }
+
+    /** 잠금까지 마치고 현재 ACTIVE 인원이 {@code memberCount} 명인 방. */
+    private void givenJoinableRoom(int memberCount) {
+        givenLockedRoom();
+        when(travelPlanMapper.countMembersByPlanAndStatus(PLAN_ID, "ACTIVE"))
+                .thenReturn(memberCount);
+    }
+
+    private TravelPlan activePlan() {
+        TravelPlan plan = new TravelPlan();
+        plan.setId(PLAN_ID);
+        plan.setTitle("제주도 여행");
+        plan.setStatus(TravelPlanStatus.ACTIVE);
+        return plan;
+    }
+
+    private TravelPlanMember captureMemberInsert() {
+        ArgumentCaptor<TravelPlanMember> captor = ArgumentCaptor.forClass(TravelPlanMember.class);
+        verify(travelPlanMapper, atLeastOnce()).insertMember(captor.capture());
+        return captor.getValue();
     }
 
     private String eqActive() {
@@ -389,6 +693,17 @@ class TravelPlanInvitationServiceTest {
                 ArgumentCaptor.forClass(TravelPlanInvitation.class);
         verify(travelPlanInvitationMapper, atLeastOnce()).insertInvitation(captor.capture());
         return captor.getValue();
+    }
+
+    private TravelPlanMember member(TravelPlanMemberStatus status) {
+        TravelPlanMember member = new TravelPlanMember();
+        member.setId(2L);
+        member.setTravelPlanId(PLAN_ID);
+        member.setUserId(MEMBER_USER_ID);
+        member.setDisplayName("예진");
+        member.setRole(TravelPlanRole.MEMBER);
+        member.setStatus(status);
+        return member;
     }
 
     private TravelPlanInvitation invitation() {

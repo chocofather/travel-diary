@@ -90,7 +90,46 @@
           AND status = #{memberStatus}
     </select>
 
-    <!-- 방의 참여자 수. 초대 미리보기의 "N/8" 에 쓴다 -->
+    <!--
+      참여 처리용 방 조회.
+      FOR UPDATE 로 그 방 row 를 잠가 같은 방으로 동시에 들어오는 참여를 한 줄로 세운다.
+      뒤따르는 정원 계산과 INSERT 가 같은 트랜잭션 안에 있어야 8명을 넘길 수 없다.
+    -->
+    <select id="findPlanByIdAndStatusForUpdate" resultType="com.example.travlediary.model.TravelPlan">
+        SELECT id, created_by_user_id, title, start_date, end_date,
+               representative_image_url, status, last_activity_at, finalized_at,
+               created_at, updated_at
+        FROM travel_plans
+        WHERE id = #{travelPlanId}
+          AND status = #{planStatus}
+        FOR UPDATE
+    </select>
+
+    <!--
+      상태를 가리지 않는 참여 기록.
+      LEFT / REMOVED row 가 있는 사람이 초대로 새 참여자가 되어 버리지 않게 확인한다.
+    -->
+    <select id="findAnyMemberByPlanAndUser" resultType="com.example.travlediary.model.TravelPlanMember">
+        SELECT id, travel_plan_id, user_id, display_name, role, status,
+               rejoin_allowed, joined_at, left_at, removed_at, created_at, updated_at
+        FROM travel_plan_members
+        WHERE travel_plan_id = #{travelPlanId}
+          AND user_id = #{userId}
+    </select>
+
+    <!--
+      방 안에서 이미 쓰이고 있는 표시 이름인지.
+      status 를 가리지 않아 나갔던 사람의 이름도 새 참여자가 가져가지 못한다
+      (uk_travel_plan_members_plan_display_name 과 같은 기준).
+    -->
+    <select id="countMembersByPlanAndDisplayName" resultType="int">
+        SELECT COUNT(*)
+        FROM travel_plan_members
+        WHERE travel_plan_id = #{travelPlanId}
+          AND display_name = #{displayName}
+    </select>
+
+    <!-- 방의 참여자 수. 초대 미리보기의 "N/8" 과 정원 검사에 쓴다 -->
     <select id="countMembersByPlanAndStatus" resultType="int">
         SELECT COUNT(*)
         FROM travel_plan_members

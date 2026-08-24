@@ -1,6 +1,7 @@
 package com.example.travlediary.controller.travelplan;
 
 import com.example.travlediary.dto.TravelPlanInvitePreviewDto;
+import com.example.travlediary.dto.TravelPlanJoinForm;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.travelplan.TravelPlanInvitationService;
 import com.example.travlediary.service.travelplan.TravelPlanValidationException;
@@ -10,6 +11,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -31,6 +33,8 @@ public class TravelPlanInvitationController {
     private static final String PREVIEW_VIEW = "travelplan/invitation-preview";
     /** 발급 직후 한 번만 화면에 실어 보내는 raw 링크 */
     private static final String ISSUED_URL_ATTRIBUTE = "travelPlanInviteUrl";
+    /** 이 이름이 모델에 있으면 미리보기 대신 이름 입력 상태로 그린다 */
+    private static final String JOIN_FORM_ATTRIBUTE = "travelPlanJoinForm";
 
     private final TravelPlanInvitationService travelPlanInvitationService;
 
@@ -100,7 +104,63 @@ public class TravelPlanInvitationController {
             return redirectToPlan(invitePreview.getTravelPlanId());
         }
         model.addAttribute("travelPlanInvitePreview", invitePreview);
+        model.addAttribute("travelPlanInviteToken", rawToken);
         return PREVIEW_VIEW;
+    }
+
+    /**
+     * 이름 입력 화면. 로그인이 필요한 GET 이라
+     * 비로그인 사용자는 Spring Security 가 로그인으로 보냈다가 이 주소로 되돌려 준다.
+     */
+    @GetMapping("/invitations/{rawToken}/join")
+    public String joinForm(@PathVariable String rawToken,
+                           @AuthenticationPrincipal CustomUserDetails userDetails,
+                           Model model) {
+        Optional<TravelPlanInvitePreviewDto> preview =
+                travelPlanInvitationService.resolvePreview(userDetails.getId(), rawToken);
+
+        if (preview.isEmpty()) {
+            model.addAttribute("travelPlanInviteInvalid", true);
+            return PREVIEW_VIEW;
+        }
+
+        TravelPlanInvitePreviewDto invitePreview = preview.get();
+        if (invitePreview.isAlreadyMember()) {
+            return redirectToPlan(invitePreview.getTravelPlanId());
+        }
+
+        model.addAttribute("travelPlanInvitePreview", invitePreview);
+        model.addAttribute("travelPlanInviteToken", rawToken);
+        // 정원이 찼거나 다시 들어올 수 없는 사람에게는 폼 대신 안내만 보여 준다.
+        if (!invitePreview.isFull() && !invitePreview.isJoinBlocked()
+                && !model.containsAttribute(JOIN_FORM_ATTRIBUTE)) {
+            model.addAttribute(JOIN_FORM_ATTRIBUTE, new TravelPlanJoinForm());
+        }
+        return PREVIEW_VIEW;
+    }
+
+    /**
+     * 참여 처리. 방과 초대는 URL 의 raw token 으로 찾고 사용자는 로그인 정보에서 얻는다.
+     * 폼에서 넘어오는 값은 이 방에서 쓸 이름 하나뿐이다.
+     */
+    @PostMapping("/invitations/{rawToken}/join")
+    public String join(@PathVariable String rawToken,
+                       @ModelAttribute(JOIN_FORM_ATTRIBUTE) TravelPlanJoinForm form,
+                       @AuthenticationPrincipal CustomUserDetails userDetails,
+                       Model model,
+                       RedirectAttributes redirectAttributes) {
+        Long travelPlanId;
+        try {
+            travelPlanId = travelPlanInvitationService.join(
+                    userDetails.getId(), rawToken, form.getDisplayName());
+        } catch (TravelPlanValidationException exception) {
+            model.addAttribute("travelPlanError", exception.getMessage());
+            // 입력하던 이름을 그대로 둔 채 같은 화면을 다시 그린다.
+            return joinForm(rawToken, userDetails, model);
+        }
+
+        redirectAttributes.addFlashAttribute("travelPlanMessage", "여행 계획에 참여했어요.");
+        return redirectToPlan(travelPlanId);
     }
 
     /**

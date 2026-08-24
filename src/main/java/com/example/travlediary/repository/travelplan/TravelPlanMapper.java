@@ -43,7 +43,30 @@ public interface TravelPlanMapper {
                                              @Param("userId") Long userId,
                                              @Param("memberStatus") String memberStatus);
 
-    /** 방의 참여자 수. 초대 미리보기의 "N/8" 에 쓴다. */
+    /**
+     * 참여 처리용 방 조회. 그 방 row 에 잠금을 걸어 동시 참여를 한 줄로 세운다.
+     * 정원 계산과 INSERT 가 이 잠금 안에서 일어나야 8명을 넘길 수 없다.
+     * 반드시 트랜잭션 안에서만 부른다.
+     */
+    TravelPlan findPlanByIdAndStatusForUpdate(@Param("travelPlanId") Long travelPlanId,
+                                              @Param("planStatus") String planStatus);
+
+    /**
+     * 상태를 가리지 않는 참여 기록 1건.
+     * LEFT / REMOVED 로 남아 있는 사람이 초대로 새 row 를 만들지 못하게 확인할 때 쓴다.
+     */
+    TravelPlanMember findAnyMemberByPlanAndUser(@Param("travelPlanId") Long travelPlanId,
+                                                @Param("userId") Long userId);
+
+    /**
+     * 방 안에서 그 표시 이름을 이미 쓰고 있는 참여 기록 수.
+     * 나갔던 사람이 쓰던 이름도 예약된 것으로 보아 새 참여자가 가져가지 못하게 한다
+     * (uk_travel_plan_members_plan_display_name 과 같은 기준).
+     */
+    int countMembersByPlanAndDisplayName(@Param("travelPlanId") Long travelPlanId,
+                                         @Param("displayName") String displayName);
+
+    /** 방의 참여자 수. 초대 미리보기의 "N/8" 과 정원 검사에 쓴다. */
     int countMembersByPlanAndStatus(@Param("travelPlanId") Long travelPlanId,
                                     @Param("memberStatus") String memberStatus);
 

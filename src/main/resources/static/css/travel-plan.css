@@ -541,6 +541,73 @@
     line-height: 1.7;
 }
 
+/* ── 초대 참여: 미리보기와 같은 종이 위에 이어진다 ── */
+
+.travel-plan-invite-join-link {
+    display: inline-block;
+    padding: 9px 20px;
+    border: 1px solid #d5cbb8;
+    border-radius: 4px;
+    background: #fffdf8;
+    color: #4a443c;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.travel-plan-invite-join-link:hover {
+    border-color: #c4b8a5;
+    background: #f6f3ee;
+}
+
+.travel-plan-join-form {
+    margin-top: 4px;
+}
+
+.travel-plan-join-label {
+    display: block;
+    margin-bottom: 6px;
+    color: #6b6259;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.travel-plan-join-form input[type="text"] {
+    box-sizing: border-box;
+    display: block;
+    width: 100%;
+    margin-bottom: 8px;
+    padding: 9px 12px;
+    border: 1px solid #e2dbcd;
+    border-radius: 4px;
+    background: #fffdf8;
+    color: #3f3426;
+    font-family: inherit;
+    font-size: 15px;
+}
+
+.travel-plan-join-form input[type="text"]:focus {
+    outline: none;
+    border-color: #c4b8a5;
+}
+
+.travel-plan-join-submit {
+    margin-top: 14px;
+    padding: 10px 22px;
+    border: 1px solid #d5cbb8;
+    border-radius: 4px;
+    background: #f3ede2;
+    color: #4a443c;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.travel-plan-join-submit:hover {
+    background: #ece4d6;
+}
+
 .travel-plan-detail-header {
     margin-bottom: 46px;
 }

@@ -219,10 +219,147 @@ class TravelPlanInvitationControllerTest {
         }
     }
 
+    // ── 참여 ────────────────────────────────────────────────
+
+    @Test
+    void anAnonymousVisitorClickingJoinIsSentToLoginAndKeepsTheInviteUrl() throws Exception {
+        // /join 은 인증이 필요한 GET 이라 로그인으로 보내지는데,
+        // 토큰이 그대로 실려 로그인 성공 후 이 참여 흐름으로 되돌아온다.
+        mockMvc.perform(get("/travel-plans/invitations/" + RAW_TOKEN + "/join"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login?redirect=/travel-plans/invitations/"
+                        + RAW_TOKEN + "/join"));
+
+        verify(travelPlanInvitationService, never())
+                .resolvePreview(nullable(Long.class), anyString());
+    }
+
+    @Test
+    void aLoggedInVisitorGetsTheNameFormWithTheRoomStillOnScreen() throws Exception {
+        when(travelPlanInvitationService.resolvePreview(7L, RAW_TOKEN))
+                .thenReturn(Optional.of(preview(false)));
+
+        mockMvc.perform(get("/travel-plans/invitations/" + RAW_TOKEN + "/join")
+                        .with(user(member())))
+                .andExpect(status().isOk())
+                .andExpect(view().name("travelplan/invitation-preview"))
+                .andExpect(model().attributeExists("travelPlanJoinForm"))
+                .andExpect(model().attribute("travelPlanInviteToken", RAW_TOKEN))
+                .andExpect(model().attributeExists("travelPlanInvitePreview"));
+    }
+
+    @Test
+    void aFullRoomOrABlockedVisitorGetsNoNameForm() throws Exception {
+        when(travelPlanInvitationService.resolvePreview(7L, RAW_TOKEN))
+                .thenReturn(Optional.of(preview(false, 8, false)))
+                .thenReturn(Optional.of(preview(false, 3, true)));
+
+        for (int attempt = 0; attempt < 2; attempt++) {
+            mockMvc.perform(get("/travel-plans/invitations/" + RAW_TOKEN + "/join")
+                            .with(user(member())))
+                    .andExpect(status().isOk())
+                    .andExpect(model().attributeDoesNotExist("travelPlanJoinForm"))
+                    .andExpect(model().attributeExists("travelPlanInvitePreview"));
+        }
+    }
+
+    @Test
+    void someoneAlreadyInTheRoomSkipsTheNameForm() throws Exception {
+        when(travelPlanInvitationService.resolvePreview(7L, RAW_TOKEN))
+                .thenReturn(Optional.of(preview(true)));
+
+        mockMvc.perform(get("/travel-plans/invitations/" + RAW_TOKEN + "/join")
+                        .with(user(member())))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/travel-plans/42"));
+    }
+
+    @Test
+    void aDeadLinkOnTheJoinScreenGetsTheSameNotice() throws Exception {
+        when(travelPlanInvitationService.resolvePreview(7L, RAW_TOKEN))
+                .thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/travel-plans/invitations/" + RAW_TOKEN + "/join")
+                        .with(user(member())))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("travelPlanInviteInvalid", true))
+                .andExpect(model().attributeDoesNotExist("travelPlanJoinForm"));
+    }
+
+    @Test
+    void joiningPassesOnlyTheNameAndSendsTheUserIntoTheRoom() throws Exception {
+        when(travelPlanInvitationService.join(7L, RAW_TOKEN, "예진")).thenReturn(42L);
+
+        mockMvc.perform(post("/travel-plans/invitations/" + RAW_TOKEN + "/join")
+                        .with(user(member())).with(csrf())
+                        .param("displayName", "예진"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/travel-plans/42"))
+                .andExpect(flash().attribute("travelPlanMessage", "여행 계획에 참여했어요."));
+
+        // 사용자는 로그인 정보에서, 방과 초대는 URL 토큰에서 온다
+        verify(travelPlanInvitationService).join(7L, RAW_TOKEN, "예진");
+    }
+
+    @Test
+    void aRefusedJoinRedrawsTheFormWithTheReasonInsteadOfAnErrorPage() throws Exception {
+        when(travelPlanInvitationService.resolvePreview(7L, RAW_TOKEN))
+                .thenReturn(Optional.of(preview(false)));
+        when(travelPlanInvitationService.join(anyLong(), anyString(), anyString()))
+                .thenThrow(new TravelPlanValidationException("displayName", "이미 사용 중인 이름입니다."));
+
+        mockMvc.perform(post("/travel-plans/invitations/" + RAW_TOKEN + "/join")
+                        .with(user(member())).with(csrf())
+                        .param("displayName", "민준"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("travelplan/invitation-preview"))
+                .andExpect(model().attribute("travelPlanError", "이미 사용 중인 이름입니다."))
+                .andExpect(model().attributeExists("travelPlanJoinForm"));
+    }
+
+    @Test
+    void aFullRoomRefusalIsShownOnTheSameScreen() throws Exception {
+        when(travelPlanInvitationService.resolvePreview(7L, RAW_TOKEN))
+                .thenReturn(Optional.of(preview(false, 8, false)));
+        when(travelPlanInvitationService.join(anyLong(), anyString(), anyString()))
+                .thenThrow(new TravelPlanValidationException("capacity", "참여 인원이 모두 찼어요."));
+
+        mockMvc.perform(post("/travel-plans/invitations/" + RAW_TOKEN + "/join")
+                        .with(user(member())).with(csrf())
+                        .param("displayName", "예진"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("travelPlanError", "참여 인원이 모두 찼어요."));
+    }
+
+    @Test
+    void joiningWithoutCsrfIsRejected() throws Exception {
+        mockMvc.perform(post("/travel-plans/invitations/" + RAW_TOKEN + "/join")
+                        .with(user(member())).param("displayName", "예진"))
+                .andExpect(status().isForbidden());
+
+        verify(travelPlanInvitationService, never())
+                .join(anyLong(), anyString(), anyString());
+    }
+
+    @Test
+    void anAnonymousJoinPostNeverReachesTheService() throws Exception {
+        mockMvc.perform(post("/travel-plans/invitations/" + RAW_TOKEN + "/join")
+                        .with(csrf()).param("displayName", "예진"))
+                .andExpect(status().is3xxRedirection());
+
+        verify(travelPlanInvitationService, never())
+                .join(anyLong(), anyString(), anyString());
+    }
+
     private TravelPlanInvitePreviewDto preview(boolean alreadyMember) {
+        return preview(alreadyMember, 3, false);
+    }
+
+    private TravelPlanInvitePreviewDto preview(boolean alreadyMember, int memberCount,
+                                               boolean joinBlocked) {
         return new TravelPlanInvitePreviewDto(42L, "제주도 여행",
                 LocalDate.of(2026, 9, 13), LocalDate.of(2026, 9, 15),
-                null, 3, "민준", alreadyMember);
+                null, memberCount, 8, "민준", alreadyMember, joinBlocked);
     }
 
     private CustomUserDetails member() {

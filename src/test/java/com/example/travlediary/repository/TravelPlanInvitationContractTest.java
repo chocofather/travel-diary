@@ -213,7 +213,8 @@ class TravelPlanInvitationContractTest {
                 .contains("*{title}")
                 .contains("${#temporals.format(travelPlanInvitePreview.startDate, 'yyyy.MM.dd')}")
                 .contains("${#temporals.format(travelPlanInvitePreview.endDate, 'yyyy.MM.dd')}")
-                .contains("*{memberCount} + '/8'")
+                // 정원은 서버가 내려 준 값을 쓴다 (화면에 8을 박지 않는다)
+                .contains("*{memberCount} + '/' + *{memberLimit}")
                 .contains("*{ownerDisplayName}")
                 // 대표 이미지가 없으면 깨진 img 대신 단색 자리를 쓴다 (목록과 같은 관례)
                 .contains("${#strings.isEmpty(travelPlanInvitePreview.representativeImageUrl)}");
@@ -222,6 +223,123 @@ class TravelPlanInvitationContractTest {
         for (String personal : new String[]{"email", "username", "nickname", "이메일", "아이디"}) {
             assertThat(preview).as("개인정보 노출: %s", personal).doesNotContain(personal);
         }
+    }
+
+    @Test
+    void thePreviewOffersJoinAndTheJoinScreenOnlyAsksForARoomName() throws IOException {
+        String preview = resource("/templates/travelplan/invitation-preview.html");
+
+        // 공개 미리보기의 참여 진입점. 이 GET 은 로그인이 필요해 로그인 복귀 흐름을 탄다
+        assertThat(preview)
+                .contains(">참여하기</a>")
+                .contains("/travel-plans/invitations/${travelPlanInviteToken}/join|}");
+
+        // 이름 입력은 이 여행에서 쓸 이름 하나뿐이다
+        assertThat(preview)
+                .contains("th:object=\"${travelPlanJoinForm}\"")
+                .contains("이 여행에서 사용할 이름")
+                .contains("th:field=\"*{displayName}\"")
+                .contains("maxlength=\"50\"")
+                .contains("이 이름은 이 여행 안에서 다른 사람에게 보여집니다.")
+                .contains(">여행에 참여하기</button>");
+
+        // 서버가 정하는 값을 화면에서 받지 않는다
+        for (String trusted : new String[]{
+                "name=\"userId\"", "name=\"planId\"", "name=\"travelPlanId\"",
+                "name=\"role\"", "name=\"memberId\"", "type=\"hidden\""}) {
+            assertThat(preview).as("클라이언트가 정하면 안 되는 값: %s", trusted)
+                    .doesNotContain(trusted);
+        }
+    }
+
+    @Test
+    void aFullOrBlockedVisitorSeesAnExplanationInsteadOfTheJoinControls() throws IOException {
+        String preview = resource("/templates/travelplan/invitation-preview.html");
+
+        assertThat(preview)
+                .contains("참여 인원이 모두 찼어요.")
+                .contains("현재 이 여행에 다시 참여할 수 없습니다.")
+                // 참여 링크와 폼 모두 정원/차단 상태에서는 나오지 않는다
+                .contains("th:if=\"${travelPlanJoinForm == null} and not *{full} and not *{joinBlocked}\"")
+                .contains("th:if=\"${travelPlanJoinForm != null} and not *{full} and not *{joinBlocked}\"");
+        // 거절 사유는 같은 화면에서 알려 준다
+        assertThat(preview).contains("th:if=\"${travelPlanError}\"");
+    }
+
+    @Test
+    void theJoinPostIsCsrfProtectedWhileTheOpenPreviewStaysPublic() throws IOException {
+        String securityConfig = securityConfig();
+
+        assertThat(securityConfig)
+                .contains("\"^/travel-plans/invitations/[A-Za-z0-9_-]+/join$\"");
+
+        // 공개 미리보기 matcher 는 토큰 끝에 $ 가 있어 /join 까지 열어 주지 않는다
+        assertThat(securityConfig).contains("\"^/travel-plans/invitations/[A-Za-z0-9_-]+$\"");
+        assertThat(securityConfig)
+                .doesNotContain("\"^/travel-plans/invitations/[A-Za-z0-9_-]+/join$\", "
+                        + "HttpMethod.GET.name())).permitAll()");
+    }
+
+    @Test
+    void joiningIsSerialisedByLockingThatRoomsRowBeforeCounting() throws IOException {
+        String select = between(resource("/mapper/TravelPlanMapper.xml"),
+                "<select id=\"findPlanByIdAndStatusForUpdate\"", "</select>");
+
+        // 잠금 없이 세고 넣으면 동시에 들어온 두 사람이 9번째 자리를 만들 수 있다
+        assertThat(select)
+                .contains("FROM travel_plans")
+                .contains("WHERE id = #{travelPlanId}")
+                .contains("AND status = #{planStatus}")
+                .contains("FOR UPDATE")
+                .doesNotContain("${");
+
+        String service = Files.readString(
+                Path.of("src/main/java/com/example/travlediary/service/travelplan/"
+                        + "TravelPlanInvitationService.java"),
+                StandardCharsets.UTF_8);
+        String join = between(service, "public Long join(", "private boolean insertMember");
+        // 잠금 -> 초대 재확인 -> 참여 기록 재확인 -> 정원 -> 이름 -> INSERT
+        assertThat(join.indexOf("findPlanByIdAndStatusForUpdate"))
+                .isLessThan(join.indexOf("countMembersByPlanAndStatus"));
+        assertThat(join.indexOf("countMembersByPlanAndStatus"))
+                .isLessThan(join.indexOf("insertMember("));
+        assertThat(join).contains("MAX_MEMBERS = 8".substring(0, 11));
+    }
+
+    @Test
+    void theActiveCountIgnoresPeopleWhoLeftOrWereRemoved() throws IOException {
+        // 정원은 ACTIVE 만 센다. 상태 조건이 없는 count 는 쓰지 않는다
+        assertThat(between(resource("/mapper/TravelPlanMapper.xml"),
+                "<select id=\"countMembersByPlanAndStatus\"", "</select>"))
+                .contains("AND status = #{memberStatus}");
+
+        String statuses = Files.readString(
+                Path.of("src/main/java/com/example/travlediary/model/"
+                        + "TravelPlanMemberStatus.java"),
+                StandardCharsets.UTF_8);
+        // LEFT / REMOVED row 를 읽을 수 있어야 새 참여로 덮어쓰지 않는다
+        assertThat(statuses).contains("ACTIVE, LEFT, REMOVED");
+    }
+
+    @Test
+    void aRoomNameIsReservedByEveryPastMemberRowNotJustActiveOnes() throws IOException {
+        String select = between(resource("/mapper/TravelPlanMapper.xml"),
+                "<select id=\"countMembersByPlanAndDisplayName\"", "</select>");
+
+        assertThat(select)
+                .contains("FROM travel_plan_members")
+                .contains("WHERE travel_plan_id = #{travelPlanId}")
+                .contains("AND display_name = #{displayName}")
+                // status 조건을 걸면 나갔던 사람의 이름을 새 사람이 가져가 버린다
+                .doesNotContain("status")
+                .doesNotContain("${");
+
+        // DB UNIQUE 가 최종 방어선이다
+        String schema = Files.readString(
+                Path.of("docs/db/travel_diary_schema_reference.md"), StandardCharsets.UTF_8);
+        assertThat(between(schema, "CREATE TABLE `travel_plan_members`", ") ENGINE=InnoDB"))
+                .contains("uk_travel_plan_members_plan_display_name")
+                .contains("uk_travel_plan_members_plan_user");
     }
 
     @Test
@@ -234,15 +352,15 @@ class TravelPlanInvitationContractTest {
     }
 
     @Test
-    void thePreviewHasNoJoinActionYet() throws IOException {
+    void theJoinScreenStopsAtJoiningAndAddsNoMemberManagement() throws IOException {
         String preview = resource("/templates/travelplan/invitation-preview.html");
 
-        // 참여는 다음 단계다. 지금은 폼도 POST 도 없다
-        assertThat(preview)
-                .doesNotContain("method=\"post\"")
-                .doesNotContain("<form")
-                .doesNotContain("displayName");
-        assertThat(preview).contains("참여하기는 준비 중이에요.");
+        // 참여 폼 하나뿐이다. 멤버 관리 계열은 다음 단계다
+        assertThat(countOf(preview, "<form")).isEqualTo(1);
+        for (String notYet : new String[]{
+                "나가기", "내보내기", "강퇴", "멤버 목록", "이름 변경", "권한"}) {
+            assertThat(preview).as("아직 없는 기능: %s", notYet).doesNotContain(notYet);
+        }
     }
 
     private String mapperXml() throws IOException {

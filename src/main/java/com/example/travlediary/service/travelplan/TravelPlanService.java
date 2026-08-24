@@ -34,8 +34,6 @@ public class TravelPlanService {
 
     /** travel_plans.title 은 varchar(150) */
     private static final int MAX_TITLE_LENGTH = 150;
-    /** travel_plan_members.display_name 은 varchar(50) */
-    private static final int MAX_DISPLAY_NAME_LENGTH = 50;
     /** 시작일과 종료일을 포함한 최대 여행 일수. DB 제약이 아니라 서비스 정책이다. */
     private static final int MAX_PLAN_DAYS = 90;
     /** travel_plan_item_alternatives.condition_label 은 varchar(100) */
@@ -502,9 +500,8 @@ public class TravelPlanService {
         requireUser(userId);
         String normalizedTitle = requiredText(
                 "title", title, MAX_TITLE_LENGTH, "여행계획 이름", "여행계획 이름을 입력해 주세요.");
-        String normalizedDisplayName = requiredText(
-                "displayName", displayName, MAX_DISPLAY_NAME_LENGTH,
-                "표시 이름", "이 방에서 사용할 표시 이름을 입력해 주세요.");
+        // 초대로 들어오는 MEMBER 와 같은 규칙을 쓴다.
+        String normalizedDisplayName = TravelPlanDisplayName.normalize(displayName);
         int dayCount = requiredPeriod(startDate, endDate);
 
         TravelPlan plan = new TravelPlan();
