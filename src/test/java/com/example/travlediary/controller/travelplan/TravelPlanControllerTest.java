@@ -14,6 +14,7 @@ import com.example.travlediary.model.User;
 import com.example.travlediary.model.UserRole;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
+import com.example.travlediary.service.travelplan.TravelPlanConflictException;
 import com.example.travlediary.service.travelplan.TravelPlanService;
 import com.example.travlediary.service.travelplan.TravelPlanValidationException;
 import org.junit.jupiter.api.Test;
@@ -330,6 +331,153 @@ class TravelPlanControllerTest {
                 .andExpect(status().isForbidden());
 
         verify(travelPlanService, never()).addItem(anyLong(), anyLong(), anyLong(), any());
+    }
+
+    @Test
+    void editingAnItemPassesTheVersionAndComesBackToThatDay() throws Exception {
+        mockMvc.perform(post("/travel-plans/42/days/100/items/500/update")
+                        .with(user(member())).with(csrf())
+                        .param("content", "고친 일정")
+                        .param("version", "3"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/travel-plans/42#day-100"))
+                .andExpect(flash().attributeCount(0));
+
+        verify(travelPlanService).updateItem(7L, 42L, 100L, 500L, "고친 일정", 3);
+    }
+
+    @Test
+    void aConflictOnEditIsShownAsAMessageInsteadOfAnErrorPage() throws Exception {
+        doThrow(new TravelPlanConflictException())
+                .when(travelPlanService).updateItem(anyLong(), anyLong(), anyLong(), anyLong(),
+                        any(), any());
+
+        mockMvc.perform(post("/travel-plans/42/days/100/items/500/update")
+                        .with(user(member())).with(csrf())
+                        .param("content", "고친 일정")
+                        .param("version", "3"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/travel-plans/42#day-100"))
+                .andExpect(flash().attribute("travelPlanError",
+                        org.hamcrest.Matchers.containsString("다른 변경이 먼저 반영")));
+    }
+
+    @Test
+    void aBlankEditIsShownAsAMessageInsteadOfAnErrorPage() throws Exception {
+        doThrow(new TravelPlanValidationException("content", "일정 내용을 입력해 주세요."))
+                .when(travelPlanService).updateItem(anyLong(), anyLong(), anyLong(), anyLong(),
+                        any(), any());
+
+        mockMvc.perform(post("/travel-plans/42/days/100/items/500/update")
+                        .with(user(member())).with(csrf())
+                        .param("content", "   ")
+                        .param("version", "3"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attribute("travelPlanError", "일정 내용을 입력해 주세요."));
+    }
+
+    @Test
+    void deletingAnItemComesBackToThatDay() throws Exception {
+        mockMvc.perform(post("/travel-plans/42/days/100/items/500/delete")
+                        .with(user(member())).with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/travel-plans/42#day-100"));
+
+        verify(travelPlanService).deleteItem(7L, 42L, 100L, 500L);
+    }
+
+    @Test
+    void editingOrDeletingWithoutCsrfIsRejected() throws Exception {
+        mockMvc.perform(post("/travel-plans/42/days/100/items/500/update")
+                        .with(user(member()))
+                        .param("content", "고친 일정").param("version", "3"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/travel-plans/42/days/100/items/500/delete")
+                        .with(user(member())))
+                .andExpect(status().isForbidden());
+
+        verify(travelPlanService, never())
+                .updateItem(anyLong(), anyLong(), anyLong(), anyLong(), any(), any());
+        verify(travelPlanService, never()).deleteItem(anyLong(), anyLong(), anyLong(), anyLong());
+    }
+
+    @Test
+    void anItemFromAnotherRoomComesBackAsNotFound() throws Exception {
+        doThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "여행계획을 찾을 수 없습니다."))
+                .when(travelPlanService).deleteItem(anyLong(), anyLong(), anyLong(), anyLong());
+
+        mockMvc.perform(post("/travel-plans/42/days/100/items/999/delete")
+                        .with(user(member())).with(csrf()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void movingAnItemUpOrDownComesBackToTheSameDay() throws Exception {
+        mockMvc.perform(post("/travel-plans/42/days/100/items/500/move-up")
+                        .with(user(member())).with(csrf()).param("version", "3"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/travel-plans/42#day-100"));
+        mockMvc.perform(post("/travel-plans/42/days/100/items/500/move-down")
+                        .with(user(member())).with(csrf()).param("version", "3"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/travel-plans/42#day-100"));
+
+        verify(travelPlanService).moveItemUp(7L, 42L, 100L, 500L, 3);
+        verify(travelPlanService).moveItemDown(7L, 42L, 100L, 500L, 3);
+    }
+
+    @Test
+    void movingToAnotherDayFollowsTheItemToItsNewDay() throws Exception {
+        mockMvc.perform(post("/travel-plans/42/days/100/items/500/move")
+                        .with(user(member())).with(csrf())
+                        .param("targetDayId", "200").param("version", "3"))
+                .andExpect(status().is3xxRedirection())
+                // 옮긴 일정이 보이도록 대상 DAY 로 돌아간다
+                .andExpect(redirectedUrl("/travel-plans/42#day-200"));
+
+        verify(travelPlanService).moveItemToDay(7L, 42L, 100L, 500L, 200L, 3);
+    }
+
+    @Test
+    void aRejectedMoveStaysOnTheOriginalDayWithAMessage() throws Exception {
+        doThrow(new TravelPlanValidationException("itemId", "이미 첫 번째 일정입니다."))
+                .when(travelPlanService).moveItemUp(anyLong(), anyLong(), anyLong(), anyLong(), any());
+        doThrow(new TravelPlanConflictException())
+                .when(travelPlanService).moveItemToDay(anyLong(), anyLong(), anyLong(), anyLong(),
+                        anyLong(), any());
+
+        mockMvc.perform(post("/travel-plans/42/days/100/items/500/move-up")
+                        .with(user(member())).with(csrf()).param("version", "3"))
+                .andExpect(redirectedUrl("/travel-plans/42#day-100"))
+                .andExpect(flash().attribute("travelPlanError", "이미 첫 번째 일정입니다."));
+
+        mockMvc.perform(post("/travel-plans/42/days/100/items/500/move")
+                        .with(user(member())).with(csrf())
+                        .param("targetDayId", "200").param("version", "3"))
+                // 이동이 실패했으니 원래 DAY 에 남는다
+                .andExpect(redirectedUrl("/travel-plans/42#day-100"))
+                .andExpect(flash().attributeExists("travelPlanError"));
+    }
+
+    @Test
+    void movingWithoutCsrfIsRejected() throws Exception {
+        mockMvc.perform(post("/travel-plans/42/days/100/items/500/move-up")
+                        .with(user(member())).param("version", "3"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/travel-plans/42/days/100/items/500/move-down")
+                        .with(user(member())).param("version", "3"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/travel-plans/42/days/100/items/500/move")
+                        .with(user(member()))
+                        .param("targetDayId", "200").param("version", "3"))
+                .andExpect(status().isForbidden());
+
+        verify(travelPlanService, never())
+                .moveItemUp(anyLong(), anyLong(), anyLong(), anyLong(), any());
+        verify(travelPlanService, never())
+                .moveItemDown(anyLong(), anyLong(), anyLong(), anyLong(), any());
+        verify(travelPlanService, never())
+                .moveItemToDay(anyLong(), anyLong(), anyLong(), anyLong(), anyLong(), any());
     }
 
     private TravelPlanDetailDto planDetail() {

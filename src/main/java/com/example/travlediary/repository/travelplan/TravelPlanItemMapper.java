@@ -23,4 +23,59 @@ public interface TravelPlanItemMapper {
 
     /** A 일정 1건 등록. version 등 DB DEFAULT 는 그대로 둔다. */
     int insertItem(TravelPlanItem item);
+
+    /** 일정 1건. DAY 소속 조건을 함께 걸어 다른 DAY 의 itemId 를 섞을 수 없게 한다. */
+    TravelPlanItem findByIdAndDayId(@Param("id") Long id,
+                                    @Param("travelPlanDayId") Long travelPlanDayId);
+
+    /**
+     * 내용 수정. 낙관적 잠금이라 넘겨받은 version 이 그대로일 때만 반영된다.
+     *
+     * @return 1 이면 반영, 0 이면 그 사이 다른 변경이 있었거나 소속이 맞지 않는다.
+     */
+    int updateContent(@Param("id") Long id,
+                      @Param("travelPlanDayId") Long travelPlanDayId,
+                      @Param("content") String content,
+                      @Param("version") Integer version);
+
+    /** 일정 1건 삭제. DAY 소속까지 조건으로 건다. */
+    int deleteByIdAndDayId(@Param("id") Long id,
+                           @Param("travelPlanDayId") Long travelPlanDayId);
+
+    /** 한 DAY 의 display_order 를 1..N 으로 다시 매긴다. 다른 DAY 는 건드리지 않는다. */
+    int resequenceDisplayOrder(@Param("travelPlanDayId") Long travelPlanDayId);
+
+    /** 같은 DAY 에서 바로 위 일정. 첫 일정이면 null. */
+    TravelPlanItem findPreviousItem(@Param("travelPlanDayId") Long travelPlanDayId,
+                                    @Param("displayOrder") Integer displayOrder);
+
+    /** 같은 DAY 에서 바로 아래 일정. 마지막 일정이면 null. */
+    TravelPlanItem findNextItem(@Param("travelPlanDayId") Long travelPlanDayId,
+                                @Param("displayOrder") Integer displayOrder);
+
+    /**
+     * 순서만 바꾼다. 넘겨받은 version 이 그대로일 때만 반영되고 성공하면 version 이 1 오른다.
+     *
+     * @return 1 이면 반영, 0 이면 그 사이 다른 변경이 있었다.
+     */
+    int updateDisplayOrderWithVersion(@Param("id") Long id,
+                                      @Param("travelPlanDayId") Long travelPlanDayId,
+                                      @Param("displayOrder") Integer displayOrder,
+                                      @Param("version") Integer version);
+
+    /** 자리를 비켜 주는 이웃 일정의 순서 변경. 사용자가 들고 있던 version 이 없으므로 조건을 걸지 않는다. */
+    int updateDisplayOrderById(@Param("id") Long id,
+                               @Param("travelPlanDayId") Long travelPlanDayId,
+                               @Param("displayOrder") Integer displayOrder);
+
+    /**
+     * 다른 DAY 로 옮긴다. content / tag / created_by_member_id 는 건드리지 않는다.
+     *
+     * @return 1 이면 반영, 0 이면 그 사이 다른 변경이 있었다.
+     */
+    int moveToDayWithVersion(@Param("id") Long id,
+                             @Param("sourceDayId") Long sourceDayId,
+                             @Param("targetDayId") Long targetDayId,
+                             @Param("displayOrder") Integer displayOrder,
+                             @Param("version") Integer version);
 }

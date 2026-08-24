@@ -105,4 +105,11 @@
         WHERE id = #{dayId}
           AND travel_plan_id = #{travelPlanId}
     </select>
+
+    <!-- 일정 생성/수정/삭제처럼 실제 변경이 있을 때만 부른다 -->
+    <update id="touchLastActivity">
+        UPDATE travel_plans
+        SET last_activity_at = CURRENT_TIMESTAMP
+        WHERE id = #{travelPlanId}
+    </update>
 </mapper>

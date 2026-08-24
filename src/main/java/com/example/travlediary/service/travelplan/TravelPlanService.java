@@ -111,6 +111,145 @@ public class TravelPlanService {
             throw new ResponseStatusException(
                     HttpStatus.INTERNAL_SERVER_ERROR, "일정을 저장하지 못했습니다.");
         }
+        travelPlanMapper.touchLastActivity(travelPlanId);
+    }
+
+    /**
+     * A 일정 내용 수정.
+     * 방의 ACTIVE 멤버라면 자기가 쓰지 않은 일정도 고칠 수 있다(공동 편집).
+     * version 이 그 사이 바뀌었으면 덮어쓰지 않고 충돌로 알린다.
+     */
+    @Transactional
+    public void updateItem(Long userId, Long travelPlanId, Long dayId, Long itemId,
+                           String content, Integer version) {
+        requireActiveAccess(userId, travelPlanId);
+        requireDayOfPlan(travelPlanId, dayId);
+        requireItemOfDay(dayId, itemId);
+
+        String normalizedContent = requiredContent(content);
+        if (version == null) {
+            throw new TravelPlanConflictException();
+        }
+
+        if (travelPlanItemMapper.updateContent(itemId, dayId, normalizedContent, version) != 1) {
+            throw new TravelPlanConflictException();
+        }
+        travelPlanMapper.touchLastActivity(travelPlanId);
+    }
+
+    /**
+     * A 일정 삭제.
+     * 지운 뒤 그 DAY 의 순서만 1..N 으로 다시 매긴다. 다른 DAY 는 건드리지 않는다.
+     */
+    @Transactional
+    public void deleteItem(Long userId, Long travelPlanId, Long dayId, Long itemId) {
+        requireActiveAccess(userId, travelPlanId);
+        requireDayOfPlan(travelPlanId, dayId);
+        requireItemOfDay(dayId, itemId);
+
+        if (travelPlanItemMapper.deleteByIdAndDayId(itemId, dayId) != 1) {
+            throw planNotFound();
+        }
+        travelPlanItemMapper.resequenceDisplayOrder(dayId);
+        travelPlanMapper.touchLastActivity(travelPlanId);
+    }
+
+    /** 같은 DAY 안에서 바로 위 일정과 자리를 바꾼다. */
+    @Transactional
+    public void moveItemUp(Long userId, Long travelPlanId, Long dayId, Long itemId,
+                           Integer version) {
+        TravelPlanItem item = requireMovableItem(userId, travelPlanId, dayId, itemId, version);
+        TravelPlanItem neighbour =
+                travelPlanItemMapper.findPreviousItem(dayId, item.getDisplayOrder());
+        if (neighbour == null) {
+            throw new TravelPlanValidationException("itemId", "이미 첫 번째 일정입니다.");
+        }
+        swap(travelPlanId, dayId, item, neighbour, version);
+    }
+
+    /** 같은 DAY 안에서 바로 아래 일정과 자리를 바꾼다. */
+    @Transactional
+    public void moveItemDown(Long userId, Long travelPlanId, Long dayId, Long itemId,
+                             Integer version) {
+        TravelPlanItem item = requireMovableItem(userId, travelPlanId, dayId, itemId, version);
+        TravelPlanItem neighbour =
+                travelPlanItemMapper.findNextItem(dayId, item.getDisplayOrder());
+        if (neighbour == null) {
+            throw new TravelPlanValidationException("itemId", "이미 마지막 일정입니다.");
+        }
+        swap(travelPlanId, dayId, item, neighbour, version);
+    }
+
+    /**
+     * 일정을 다른 DAY 의 마지막으로 옮긴다.
+     * content / tag / created_by_member_id 는 그대로 두고 소속 DAY 와 순서만 바꾼다.
+     */
+    @Transactional
+    public void moveItemToDay(Long userId, Long travelPlanId, Long sourceDayId, Long itemId,
+                              Long targetDayId, Integer version) {
+        requireMovableItem(userId, travelPlanId, sourceDayId, itemId, version);
+        if (targetDayId == null || targetDayId.equals(sourceDayId)) {
+            throw new TravelPlanValidationException("targetDayId", "옮길 DAY 를 선택해 주세요.");
+        }
+        // 같은 방의 DAY 인지 확인한다. 다른 방의 dayId 는 여기서 걸린다.
+        requireDayOfPlan(travelPlanId, targetDayId);
+
+        int lastOrder = travelPlanItemMapper.findMaxDisplayOrder(targetDayId);
+        if (travelPlanItemMapper.moveToDayWithVersion(
+                itemId, sourceDayId, targetDayId, lastOrder + 1, version) != 1) {
+            throw new TravelPlanConflictException();
+        }
+        // 빠져나온 DAY 의 번호를 다시 이어 준다.
+        travelPlanItemMapper.resequenceDisplayOrder(sourceDayId);
+        travelPlanItemMapper.resequenceDisplayOrder(targetDayId);
+        travelPlanMapper.touchLastActivity(travelPlanId);
+    }
+
+    /**
+     * 두 일정의 순서를 맞바꾼다.
+     * 지금은 (day, order) UNIQUE 가 없지만, 나중에 생겨도 안전하도록
+     * 이웃을 임시 자리로 잠깐 비켜 둔 뒤 교환한다.
+     * 임시 자리는 DAY 의 마지막 순서 다음 칸이다.
+     * display_order 는 중간 상태에서도 1 이상이어야 한다(chk_travel_plan_items_display_order).
+     */
+    private void swap(Long travelPlanId, Long dayId, TravelPlanItem item,
+                      TravelPlanItem neighbour, Integer version) {
+        int itemOrder = item.getDisplayOrder();
+        int neighbourOrder = neighbour.getDisplayOrder();
+        int temporaryOrder = travelPlanItemMapper.findMaxDisplayOrder(dayId) + 1;
+
+        travelPlanItemMapper.updateDisplayOrderById(neighbour.getId(), dayId, temporaryOrder);
+        if (travelPlanItemMapper.updateDisplayOrderWithVersion(
+                item.getId(), dayId, neighbourOrder, version) != 1) {
+            throw new TravelPlanConflictException();
+        }
+        travelPlanItemMapper.updateDisplayOrderById(neighbour.getId(), dayId, itemOrder);
+
+        // 임시 자리를 쓴 뒤라도 1..N 으로 이어지게 맞춘다.
+        travelPlanItemMapper.resequenceDisplayOrder(dayId);
+        travelPlanMapper.touchLastActivity(travelPlanId);
+    }
+
+    /** 이동 계열이 공통으로 하는 확인. 방 -> DAY -> 일정 -> version 순으로 본다. */
+    private TravelPlanItem requireMovableItem(Long userId, Long travelPlanId, Long dayId,
+                                              Long itemId, Integer version) {
+        requireActiveAccess(userId, travelPlanId);
+        requireDayOfPlan(travelPlanId, dayId);
+        TravelPlanItem item = requireItemOfDay(dayId, itemId);
+        if (version == null) {
+            throw new TravelPlanConflictException();
+        }
+        return item;
+    }
+
+    /** 다른 DAY 의 itemId 를 섞어 넣어도 통과하지 못하게 한다. */
+    private TravelPlanItem requireItemOfDay(Long dayId, Long itemId) {
+        TravelPlanItem item = itemId == null
+                ? null : travelPlanItemMapper.findByIdAndDayId(itemId, dayId);
+        if (item == null) {
+            throw planNotFound();
+        }
+        return item;
     }
 
     /** 방이 ACTIVE 이고 현재 사용자가 그 방의 ACTIVE 멤버인지 확인한다. */

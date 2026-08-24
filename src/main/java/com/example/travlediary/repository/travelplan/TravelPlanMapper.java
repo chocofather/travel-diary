@@ -51,4 +51,10 @@ public interface TravelPlanMapper {
      */
     TravelPlanDay findDayByPlanAndId(@Param("travelPlanId") Long travelPlanId,
                                      @Param("dayId") Long dayId);
+
+    /**
+     * 마지막 활동 시각 갱신. 목록 정렬 기준이라 실제 변경이 있을 때만 부른다.
+     * (조회에서는 부르지 않는다)
+     */
+    int touchLastActivity(@Param("travelPlanId") Long travelPlanId);
 }

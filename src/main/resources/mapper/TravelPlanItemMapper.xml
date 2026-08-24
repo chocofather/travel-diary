@@ -43,4 +43,100 @@
             #{travelPlanDayId}, #{content}, #{tag}, #{displayOrder}, #{createdByMemberId}
         )
     </insert>
+
+    <!-- 일정 1건. DAY 소속까지 함께 확인한다 -->
+    <select id="findByIdAndDayId" resultType="com.example.travlediary.model.TravelPlanItem">
+        SELECT id, travel_plan_day_id, content, tag, display_order,
+               created_by_member_id, version, created_at, updated_at
+        FROM travel_plan_items
+        WHERE id = #{id}
+          AND travel_plan_day_id = #{travelPlanDayId}
+    </select>
+
+    <!--
+      내용 수정. version 이 그대로일 때만 반영되는 낙관적 잠금이다.
+      그 사이 다른 사람이 고쳤다면 영향 행이 0 이 된다.
+    -->
+    <update id="updateContent">
+        UPDATE travel_plan_items
+        SET content = #{content},
+            version = version + 1,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND travel_plan_day_id = #{travelPlanDayId}
+          AND version = #{version}
+    </update>
+
+    <delete id="deleteByIdAndDayId">
+        DELETE FROM travel_plan_items
+        WHERE id = #{id}
+          AND travel_plan_day_id = #{travelPlanDayId}
+    </delete>
+
+    <!-- 한 DAY 의 순서를 1..N 으로 다시 매긴다. WHERE 로 그 DAY 만 건드린다 -->
+    <update id="resequenceDisplayOrder">
+        UPDATE travel_plan_items item
+            JOIN (SELECT id,
+                         ROW_NUMBER() OVER (ORDER BY display_order ASC, id ASC) AS new_order
+                    FROM travel_plan_items
+                   WHERE travel_plan_day_id = #{travelPlanDayId}) ordered
+                 ON ordered.id = item.id
+        SET item.display_order = ordered.new_order
+        WHERE item.travel_plan_day_id = #{travelPlanDayId}
+    </update>
+
+    <!-- 바로 위 일정 -->
+    <select id="findPreviousItem" resultType="com.example.travlediary.model.TravelPlanItem">
+        SELECT id, travel_plan_day_id, content, tag, display_order,
+               created_by_member_id, version, created_at, updated_at
+        FROM travel_plan_items
+        WHERE travel_plan_day_id = #{travelPlanDayId}
+          AND display_order &lt; #{displayOrder}
+        ORDER BY display_order DESC, id DESC
+        LIMIT 1
+    </select>
+
+    <!-- 바로 아래 일정 -->
+    <select id="findNextItem" resultType="com.example.travlediary.model.TravelPlanItem">
+        SELECT id, travel_plan_day_id, content, tag, display_order,
+               created_by_member_id, version, created_at, updated_at
+        FROM travel_plan_items
+        WHERE travel_plan_day_id = #{travelPlanDayId}
+          AND display_order &gt; #{displayOrder}
+        ORDER BY display_order ASC, id ASC
+        LIMIT 1
+    </select>
+
+    <!-- 순서만 변경. 인라인 수정과 같은 낙관적 잠금을 쓴다 -->
+    <update id="updateDisplayOrderWithVersion">
+        UPDATE travel_plan_items
+        SET display_order = #{displayOrder},
+            version = version + 1,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND travel_plan_day_id = #{travelPlanDayId}
+          AND version = #{version}
+    </update>
+
+    <!-- 자리를 비켜 주는 이웃 일정 -->
+    <update id="updateDisplayOrderById">
+        UPDATE travel_plan_items
+        SET display_order = #{displayOrder},
+            version = version + 1,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND travel_plan_day_id = #{travelPlanDayId}
+    </update>
+
+    <!-- 다른 DAY 로 이동. content / tag / created_by_member_id 는 그대로 둔다 -->
+    <update id="moveToDayWithVersion">
+        UPDATE travel_plan_items
+        SET travel_plan_day_id = #{targetDayId},
+            display_order = #{displayOrder},
+            version = version + 1,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND travel_plan_day_id = #{sourceDayId}
+          AND version = #{version}
+    </update>
 </mapper>

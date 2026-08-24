@@ -2,6 +2,8 @@ package com.example.travlediary.controller.travelplan;
 
 import com.example.travlediary.dto.TravelPlanCreateForm;
 import com.example.travlediary.dto.TravelPlanItemCreateForm;
+import com.example.travlediary.dto.TravelPlanItemUpdateForm;
+import com.example.travlediary.service.travelplan.TravelPlanConflictException;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.travelplan.TravelPlanService;
 import com.example.travlediary.service.travelplan.TravelPlanValidationException;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.Set;
@@ -94,6 +97,90 @@ public class TravelPlanController {
         return DETAIL_VIEW;
     }
 
+    // A 일정 수정 (방의 ACTIVE 멤버면 누구나)
+    @PostMapping("/{travelPlanId:\\d+}/days/{dayId:\\d+}/items/{itemId:\\d+}/update")
+    public String updateItem(@PathVariable Long travelPlanId,
+                             @PathVariable Long dayId,
+                             @PathVariable Long itemId,
+                             @ModelAttribute TravelPlanItemUpdateForm form,
+                             @AuthenticationPrincipal CustomUserDetails userDetails,
+                             RedirectAttributes redirectAttributes) {
+        try {
+            travelPlanService.updateItem(userDetails.getId(), travelPlanId, dayId, itemId,
+                    form.getContent(), form.getVersion());
+        } catch (TravelPlanValidationException | TravelPlanConflictException exception) {
+            redirectAttributes.addFlashAttribute("travelPlanError", exception.getMessage());
+        }
+        return redirectToDay(travelPlanId, dayId);
+    }
+
+    // A 일정 삭제 (방의 ACTIVE 멤버면 누구나)
+    @PostMapping("/{travelPlanId:\\d+}/days/{dayId:\\d+}/items/{itemId:\\d+}/delete")
+    public String deleteItem(@PathVariable Long travelPlanId,
+                             @PathVariable Long dayId,
+                             @PathVariable Long itemId,
+                             @AuthenticationPrincipal CustomUserDetails userDetails) {
+        travelPlanService.deleteItem(userDetails.getId(), travelPlanId, dayId, itemId);
+        return redirectToDay(travelPlanId, dayId);
+    }
+
+    // 같은 DAY 안에서 한 칸 위로
+    @PostMapping("/{travelPlanId:\\d+}/days/{dayId:\\d+}/items/{itemId:\\d+}/move-up")
+    public String moveItemUp(@PathVariable Long travelPlanId,
+                             @PathVariable Long dayId,
+                             @PathVariable Long itemId,
+                             @RequestParam Integer version,
+                             @AuthenticationPrincipal CustomUserDetails userDetails,
+                             RedirectAttributes redirectAttributes) {
+        try {
+            travelPlanService.moveItemUp(userDetails.getId(), travelPlanId, dayId, itemId, version);
+        } catch (TravelPlanValidationException | TravelPlanConflictException exception) {
+            redirectAttributes.addFlashAttribute("travelPlanError", exception.getMessage());
+        }
+        return redirectToDay(travelPlanId, dayId);
+    }
+
+    // 같은 DAY 안에서 한 칸 아래로
+    @PostMapping("/{travelPlanId:\\d+}/days/{dayId:\\d+}/items/{itemId:\\d+}/move-down")
+    public String moveItemDown(@PathVariable Long travelPlanId,
+                               @PathVariable Long dayId,
+                               @PathVariable Long itemId,
+                               @RequestParam Integer version,
+                               @AuthenticationPrincipal CustomUserDetails userDetails,
+                               RedirectAttributes redirectAttributes) {
+        try {
+            travelPlanService.moveItemDown(
+                    userDetails.getId(), travelPlanId, dayId, itemId, version);
+        } catch (TravelPlanValidationException | TravelPlanConflictException exception) {
+            redirectAttributes.addFlashAttribute("travelPlanError", exception.getMessage());
+        }
+        return redirectToDay(travelPlanId, dayId);
+    }
+
+    // 다른 DAY 의 마지막으로 이동
+    @PostMapping("/{travelPlanId:\\d+}/days/{dayId:\\d+}/items/{itemId:\\d+}/move")
+    public String moveItemToDay(@PathVariable Long travelPlanId,
+                                @PathVariable Long dayId,
+                                @PathVariable Long itemId,
+                                @RequestParam Long targetDayId,
+                                @RequestParam Integer version,
+                                @AuthenticationPrincipal CustomUserDetails userDetails,
+                                RedirectAttributes redirectAttributes) {
+        try {
+            travelPlanService.moveItemToDay(
+                    userDetails.getId(), travelPlanId, dayId, itemId, targetDayId, version);
+        } catch (TravelPlanValidationException | TravelPlanConflictException exception) {
+            redirectAttributes.addFlashAttribute("travelPlanError", exception.getMessage());
+            return redirectToDay(travelPlanId, dayId);
+        }
+        // 옮겨 간 DAY 자리에서 결과를 보여 준다.
+        return redirectToDay(travelPlanId, targetDayId);
+    }
+
+    private String redirectToDay(Long travelPlanId, Long dayId) {
+        return "redirect:/travel-plans/" + travelPlanId + "#day-" + dayId;
+    }
+
     // DAY 편집 화면
     @GetMapping("/{travelPlanId:\\d+}/days/{dayId:\\d+}")
     public String dayDetail(@PathVariable Long travelPlanId,
@@ -127,7 +214,7 @@ public class TravelPlanController {
             return DETAIL_VIEW;
         }
         // 메인 편집 화면의 해당 DAY 자리로 돌아온다.
-        return "redirect:/travel-plans/" + travelPlanId + "#day-" + dayId;
+        return redirectToDay(travelPlanId, dayId);
     }
 
     private void rejectValidation(BindingResult bindingResult,

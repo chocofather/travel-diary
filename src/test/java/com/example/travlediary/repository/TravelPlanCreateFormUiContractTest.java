@@ -154,9 +154,11 @@ class TravelPlanCreateFormUiContractTest {
                 .doesNotContain(">추가</button>")
                 .doesNotContain(">취소</button>")
                 .doesNotContain("data-travel-plan-add-toggle");
-        // 화면에 남는 유일한 폼은 슬롯 인라인 입력뿐이다
-        assertThat(countOf(detail, "<form")).isEqualTo(1);
-        assertThat(countOf(detail, "<textarea")).isEqualTo(1);
+        // 모든 textarea 는 닫힌 폼 안에 있다 (추가 슬롯 1 + 일정 수정 1)
+        assertThat(countOf(detail, "<textarea")).isEqualTo(2);
+        assertThat(countOf(detail, "th:hidden=\"${!dayOpen}\"")).isEqualTo(1);
+        assertThat(countOf(detail, "class=\"travel-plan-item-editor\" method=\"post\" hidden"))
+                .isEqualTo(1);
         assertThat(detail).doesNotContain("modal").doesNotContain("dialog");
     }
 
@@ -237,16 +239,17 @@ class TravelPlanCreateFormUiContractTest {
 
         // 동시에 열리는 입력칸은 하나뿐이다
         assertThat(script)
-                .contains("let activeSlot = null")
+                .contains("let activeLine = null")
                 .contains("closeActive()")
-                .contains("if (activeSlot === slot) return");
+                .contains("if (activeLine === line) return");
         // Enter 저장 / Shift+Enter 줄바꿈 / Esc 취소 / focus-out 저장
         assertThat(script)
                 .contains("event.key === \"Enter\" && !event.shiftKey")
                 .contains("event.key === \"Escape\"")
                 .contains("\"blur\"")
                 // 공백만 있으면 저장하지 않는다
-                .contains("textarea.value.trim() === \"\"")
+                .contains("const value = textarea.value.trim()")
+                .contains("if (value === \"\")")
                 .contains("form.requestSubmit()");
         // 아직 실시간 통신은 없다
         assertThat(script)
@@ -258,14 +261,166 @@ class TravelPlanCreateFormUiContractTest {
     }
 
     @Test
+    void savedItemsCanBeEditedInPlaceAndCarryTheirVersion() throws IOException {
+        String detail = resource("/templates/travelplan/detail.html");
+
+        assertThat(detail)
+                // 줄 자체가 편집기가 된다 (별도 페이지도 모달도 아니다)
+                .contains("data-travel-plan-item")
+                .contains("data-travel-plan-item-content")
+                .contains("data-travel-plan-item-form")
+                .contains("data-version=${item.version}")
+                .contains("<input type=\"hidden\" name=\"version\" th:value=\"${item.version}\">")
+                .contains("/items/${item.id}/update|}");
+        // 기본 상태에서는 편집기가 닫혀 있다
+        assertThat(detail).contains("class=\"travel-plan-item-editor\" method=\"post\" hidden");
+        assertThat(detail).doesNotContain("modal").doesNotContain("dialog");
+    }
+
+    @Test
+    void theEditorReplacesTheTextInPlaceInsteadOfSittingBesideIt() throws IOException {
+        String detail = resource("/templates/travelplan/detail.html");
+        String css = resource("/static/css/travel-plan.css");
+
+        // 보기와 편집기가 같은 칸(line-body) 안에 함께 들어 있다
+        int body = detail.indexOf("class=\"travel-plan-line-body\"");
+        int view = detail.indexOf("data-travel-plan-item-content");
+        int editor = detail.indexOf("data-travel-plan-item-form");
+        int menu = detail.indexOf("data-travel-plan-item-menu");
+        assertThat(body).isGreaterThan(0);
+        assertThat(view).isGreaterThan(body);
+        assertThat(editor).isGreaterThan(view);
+        // 편집기는 ⋯ 메뉴보다 앞, 즉 오른쪽 별도 column 이 아니다
+        assertThat(editor).isLessThan(menu);
+
+        // 줄 안에서 자리를 차지하는 것은 래퍼 하나뿐이다
+        assertThat(between(css, ".travel-plan-line-body {", "}")).contains("flex: 1");
+
+        // DAY 상세 화면의 .travel-plan-item-form 과 이름이 겹치면
+        // 그쪽 display:flex 가 [hidden] 을 덮어써 편집기가 항상 보인다 (회귀 방지)
+        assertThat(detail).doesNotContain("class=\"travel-plan-item-form\"");
+        assertThat(between(css, ".travel-plan-item-editor textarea {", "}"))
+                .contains("border: 0")
+                .contains("background: none")
+                .contains("resize: none")
+                .contains("font-size: 15px")
+                .contains("line-height: 1.75");
+    }
+
+    @Test
+    void eachItemHasAQuietMenu() throws IOException {
+        String detail = resource("/templates/travelplan/detail.html");
+        String css = resource("/static/css/travel-plan.css");
+
+        assertThat(detail)
+                .contains("data-travel-plan-menu-button")
+                .contains(">⋯</button>")
+                .contains("data-travel-plan-menu-list")
+                .contains("/items/${item.id}/delete|}")
+                .contains(">삭제</button>")
+                .contains("confirm('이 일정을 삭제할까요?')");
+
+        // 평소에는 거의 보이지 않고 hover/focus 에서 드러난다
+        assertThat(between(css, ".travel-plan-item-menu-button {", "}"))
+                .contains("color: transparent");
+        assertThat(css).contains(".travel-plan-line.is-item:hover .travel-plan-item-menu-button");
+
+        // Plan B/C 는 아직 없다
+        for (String notYet : new String[]{"Plan B", "Plan C", "태그"}) {
+            assertThat(detail).as("아직 없는 메뉴: %s", notYet).doesNotContain(notYet);
+        }
+    }
+
+    @Test
+    void theMenuOffersMoveUpMoveDownAndAnotherDay() throws IOException {
+        String detail = resource("/templates/travelplan/detail.html");
+
+        assertThat(detail)
+                .contains(">위로 이동</button>")
+                .contains(">아래로 이동</button>")
+                .contains("/items/${item.id}/move-up|}")
+                .contains("/items/${item.id}/move-down|}")
+                .contains("/items/${item.id}/move|}")
+                // 이동도 낙관적 잠금을 쓴다
+                .contains("<input type=\"hidden\" name=\"version\" th:value=\"${item.version}\">")
+                .contains("<input type=\"hidden\" name=\"targetDayId\" th:value=\"${target.id}\">");
+
+        // 첫 일정은 위로, 마지막 일정은 아래로가 막힌다
+        assertThat(detail)
+                .contains("th:disabled=\"${status.first}\"")
+                .contains("th:disabled=\"${status.last}\"");
+
+        // DAY 가 하나뿐이면 목록 자체가 없고, 현재 DAY 는 목록에서 빠진다
+        assertThat(detail)
+                .contains("${#lists.size(travelPlan.days) > 1}")
+                .contains("th:each=\"target : ${travelPlan.days}\"")
+                .contains("th:if=\"${target.id != day.id}\"")
+                .contains("'DAY ' + ${target.dayNumber}");
+
+        // 드래그 앤 드롭은 만들지 않는다
+        assertThat(detail)
+                .doesNotContain("draggable")
+                .doesNotContain("dragstart")
+                .doesNotContain("drop");
+    }
+
+    @Test
+    void theMoveEndpointsAreCsrfProtected() throws IOException {
+        String securityConfig = Files.readString(
+                Path.of("src/main/java/com/example/travlediary/config/SecurityConfig.java"),
+                StandardCharsets.UTF_8);
+
+        assertThat(securityConfig)
+                .contains("\"^/travel-plans/[0-9]+/days/[0-9]+/items/[0-9]+/move-up$\"")
+                .contains("\"^/travel-plans/[0-9]+/days/[0-9]+/items/[0-9]+/move-down$\"")
+                .contains("\"^/travel-plans/[0-9]+/days/[0-9]+/items/[0-9]+/move$\"");
+    }
+
+    @Test
     void thePlannerHasNoActionsFromLaterStages() throws IOException {
         String detail = resource("/templates/travelplan/detail.html");
 
         for (String notYet : new String[]{
-                "수정", "삭제", "초대", "멤버 관리", "방 설정", "최종 확정", "채팅", "투표",
-                "Plan B", "Plan C", "태그"}) {
+                "초대", "멤버 관리", "방 설정", "최종 확정", "채팅", "투표", "태그"}) {
             assertThat(detail).as("아직 없는 기능: %s", notYet).doesNotContain(notYet);
         }
+    }
+
+    @Test
+    void theScriptKeepsOneEditorAcrossAddAndEdit() throws IOException {
+        String script = resource("/static/js/travel-plan-scheduler.js");
+
+        // 추가 슬롯과 기존 일정 수정이 동시에 열리지 않는다
+        assertThat(script)
+                .contains("let activeLine = null")
+                .contains("if (activeLine === line) return")
+                .contains("[data-travel-plan-slot-form], [data-travel-plan-item-form]")
+                // Esc 는 원래 내용을 되살린다
+                .contains("content.textContent.trim()")
+                // 바뀐 게 없으면 UPDATE 를 보내지 않는다
+                .contains("value === originalContentOf(line)")
+                // 편집 중 보기 텍스트는 숨기고, 취소하면 되돌린다
+                .contains("content.hidden = true")
+                .contains("content.hidden = false")
+                // 줄 높이는 내용에 맞춰 늘어난다
+                .contains("function autoResize")
+                .contains("textarea.scrollHeight");
+        assertThat(script)
+                .doesNotContain("WebSocket")
+                .doesNotContain("SockJS")
+                .doesNotContain("setInterval")
+                .doesNotContain("fetch(");
+    }
+
+    @Test
+    void theItemEndpointsAreCsrfProtected() throws IOException {
+        String securityConfig = Files.readString(
+                Path.of("src/main/java/com/example/travlediary/config/SecurityConfig.java"),
+                StandardCharsets.UTF_8);
+
+        assertThat(securityConfig)
+                .contains("\"^/travel-plans/[0-9]+/days/[0-9]+/items/[0-9]+/update$\"")
+                .contains("\"^/travel-plans/[0-9]+/days/[0-9]+/items/[0-9]+/delete$\"");
     }
 
     @Test
