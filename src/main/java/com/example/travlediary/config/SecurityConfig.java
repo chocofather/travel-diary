@@ -229,6 +229,7 @@ public class SecurityConfig {
                                 "/users/verification/resend",
                                 "/users/find-username", "/users/find-password", "/users/reset-password/**",
                                 "/css/**", "/js/**", "/images/**", "/fonts/**", "/uploads/**",
+                                "/webjars/**",   // STOMP 클라이언트 등 정적 라이브러리
                                 "/api/**",     "/api/destinations/**",
                                 "/search", "/search.html",
                                 "/destinations/**",

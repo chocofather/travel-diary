@@ -66,6 +66,11 @@ dependencies {
     // 페이징
     implementation 'com.github.pagehelper:pagehelper-spring-boot-starter:1.4.6'
 
+    // 공동 여행계획 실시간 접속 표시 (WebSocket + STOMP)
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+    // 브라우저 STOMP 클라이언트. CDN 대신 WebJar 로 함께 배포한다
+    implementation 'org.webjars.npm:stomp__stompjs:7.0.0'
+
 }
 
 tasks.named('test') {
