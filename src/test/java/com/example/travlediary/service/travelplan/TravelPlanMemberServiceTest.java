@@ -227,6 +227,160 @@ class TravelPlanMemberServiceTest {
         verify(travelPlanMapper, never()).findMemberByPlanAndId(anyLong(), anyLong());
     }
 
+    // ── 재참여 허용 ─────────────────────────────────────────
+
+    @Test
+    void allowingRejoinOnlyLiftsTheFlagAndLeavesThemRemoved() {
+        givenActivePlan();
+        givenCurrentMember(member(OWNER_MEMBER_ID, OWNER_USER_ID, TravelPlanRole.OWNER,
+                TravelPlanMemberStatus.ACTIVE));
+        givenTarget(removedMember(MEMBER_B_ID, false));
+        when(travelPlanMapper.allowMemberRejoin(MEMBER_B_ID, PLAN_ID, "REMOVED", "MEMBER"))
+                .thenReturn(1);
+
+        travelPlanMemberService.allowRejoin(OWNER_USER_ID, PLAN_ID, MEMBER_B_ID);
+
+        InOrder order = inOrder(travelPlanMapper);
+        order.verify(travelPlanMapper).allowMemberRejoin(MEMBER_B_ID, PLAN_ID, "REMOVED", "MEMBER");
+        order.verify(travelPlanMapper).touchLastActivity(PLAN_ID);
+
+        // 바로 복귀시키지 않는다. 상태는 REMOVED 그대로다
+        verify(travelPlanMapper, never()).reactivateMember(
+                anyLong(), anyLong(), anyLong(), anyString(), anyString());
+        verify(travelPlanMapper, never()).insertMember(any());
+        verify(travelPlanMapper, never()).changeMemberRole(
+                anyLong(), anyLong(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void aPlainMemberCannotHandOutRejoinPermission() {
+        givenActivePlan();
+        givenCurrentMember(member(MEMBER_A_ID, MEMBER_USER_ID, TravelPlanRole.MEMBER,
+                TravelPlanMemberStatus.ACTIVE));
+
+        assertThatThrownBy(() ->
+                travelPlanMemberService.allowRejoin(MEMBER_USER_ID, PLAN_ID, MEMBER_B_ID))
+                .isInstanceOf(ResponseStatusException.class);
+
+        // 권한이 없으면 대상 조회까지 가지 않는다
+        verify(travelPlanMapper, never()).findMemberByPlanAndId(anyLong(), anyLong());
+        verify(travelPlanMapper, never()).allowMemberRejoin(
+                anyLong(), anyLong(), anyString(), anyString());
+    }
+
+    @Test
+    void onlyARemovedMemberCanBeLetBackIn() {
+        givenActivePlan();
+        givenCurrentMember(member(OWNER_MEMBER_ID, OWNER_USER_ID, TravelPlanRole.OWNER,
+                TravelPlanMemberStatus.ACTIVE));
+
+        // ACTIVE 나 LEFT 는 이 기능의 대상이 아니다
+        for (TravelPlanMemberStatus status : new TravelPlanMemberStatus[]{
+                TravelPlanMemberStatus.ACTIVE, TravelPlanMemberStatus.LEFT}) {
+            givenTarget(member(MEMBER_B_ID, MEMBER_USER_ID, TravelPlanRole.MEMBER, status));
+
+            assertThatThrownBy(() ->
+                    travelPlanMemberService.allowRejoin(OWNER_USER_ID, PLAN_ID, MEMBER_B_ID))
+                    .as("status=%s", status)
+                    .isInstanceOf(ResponseStatusException.class);
+        }
+        verify(travelPlanMapper, never()).allowMemberRejoin(
+                anyLong(), anyLong(), anyString(), anyString());
+    }
+
+    @Test
+    void alreadyAllowedIsNotUpdatedTwice() {
+        givenActivePlan();
+        givenCurrentMember(member(OWNER_MEMBER_ID, OWNER_USER_ID, TravelPlanRole.OWNER,
+                TravelPlanMemberStatus.ACTIVE));
+        givenTarget(removedMember(MEMBER_B_ID, true));
+
+        assertThatThrownBy(() ->
+                travelPlanMemberService.allowRejoin(OWNER_USER_ID, PLAN_ID, MEMBER_B_ID))
+                .isInstanceOf(ResponseStatusException.class);
+
+        verify(travelPlanMapper, never()).allowMemberRejoin(
+                anyLong(), anyLong(), anyString(), anyString());
+        verify(travelPlanMapper, never()).touchLastActivity(anyLong());
+    }
+
+    @Test
+    void aStaleAllowIsRefusedRatherThanReported500() {
+        givenActivePlan();
+        givenCurrentMember(member(OWNER_MEMBER_ID, OWNER_USER_ID, TravelPlanRole.OWNER,
+                TravelPlanMemberStatus.ACTIVE));
+        givenTarget(removedMember(MEMBER_B_ID, false));
+        // 그 사이 다른 요청이 먼저 허용했다 -> 영향 행 0
+        when(travelPlanMapper.allowMemberRejoin(anyLong(), anyLong(), anyString(), anyString()))
+                .thenReturn(0);
+
+        assertThatThrownBy(() ->
+                travelPlanMemberService.allowRejoin(OWNER_USER_ID, PLAN_ID, MEMBER_B_ID))
+                .isInstanceOf(ResponseStatusException.class);
+
+        verify(travelPlanMapper, never()).touchLastActivity(anyLong());
+    }
+
+    @Test
+    void aMemberIdFromAnotherRoomCannotBeLetBackIn() {
+        givenActivePlan();
+        givenCurrentMember(member(OWNER_MEMBER_ID, OWNER_USER_ID, TravelPlanRole.OWNER,
+                TravelPlanMemberStatus.ACTIVE));
+        when(travelPlanMapper.findMemberByPlanAndId(PLAN_ID, MEMBER_B_ID)).thenReturn(null);
+
+        assertThatThrownBy(() ->
+                travelPlanMemberService.allowRejoin(OWNER_USER_ID, PLAN_ID, MEMBER_B_ID))
+                .isInstanceOf(ResponseStatusException.class);
+        assertThatThrownBy(() ->
+                travelPlanMemberService.allowRejoin(OWNER_USER_ID, PLAN_ID, null))
+                .isInstanceOf(ResponseStatusException.class);
+
+        verify(travelPlanMapper, never()).findMemberByPlanAndId(OTHER_PLAN_ID, MEMBER_B_ID);
+        verify(travelPlanMapper, never()).allowMemberRejoin(
+                anyLong(), anyLong(), anyString(), anyString());
+    }
+
+    @Test
+    void theFormerOwnerCannotHandOutRejoinPermissionAfterTheHandover() {
+        // 허용 권한은 언제나 현재 ACTIVE OWNER 의 것이다
+        givenActivePlan();
+        givenCurrentMember(member(OWNER_MEMBER_ID, OWNER_USER_ID, TravelPlanRole.MEMBER,
+                TravelPlanMemberStatus.ACTIVE));
+
+        assertThatThrownBy(() ->
+                travelPlanMemberService.allowRejoin(OWNER_USER_ID, PLAN_ID, MEMBER_B_ID))
+                .isInstanceOf(ResponseStatusException.class);
+
+        verify(travelPlanMapper, never()).allowMemberRejoin(
+                anyLong(), anyLong(), anyString(), anyString());
+    }
+
+    @Test
+    void removingSomeoneAgainAlwaysShutsTheDoorBehindThem() {
+        // 한 번 허용해 준 적이 있어도 다시 내보내면 rejoin_allowed 가 다시 내려간다.
+        // markMemberRemoved 가 rejoin_allowed = 0 을 항상 쓰기 때문이다.
+        givenActivePlan();
+        givenCurrentMember(member(OWNER_MEMBER_ID, OWNER_USER_ID, TravelPlanRole.OWNER,
+                TravelPlanMemberStatus.ACTIVE));
+        givenTarget(member(MEMBER_B_ID, MEMBER_USER_ID, TravelPlanRole.MEMBER,
+                TravelPlanMemberStatus.ACTIVE));
+        when(travelPlanMapper.markMemberRemoved(
+                MEMBER_B_ID, PLAN_ID, "ACTIVE", "REMOVED", "MEMBER")).thenReturn(1);
+
+        travelPlanMemberService.removeMember(OWNER_USER_ID, PLAN_ID, MEMBER_B_ID);
+
+        verify(travelPlanMapper)
+                .markMemberRemoved(MEMBER_B_ID, PLAN_ID, "ACTIVE", "REMOVED", "MEMBER");
+    }
+
+    @Test
+    void allowingRejoinRunsInsideATransaction() throws NoSuchMethodException {
+        Method allow = TravelPlanMemberService.class.getMethod(
+                "allowRejoin", Long.class, Long.class, Long.class);
+
+        assertThat(allow.isAnnotationPresent(Transactional.class)).isTrue();
+    }
+
     // ── 방장 넘기기 ─────────────────────────────────────────
 
     @Test
@@ -526,6 +680,14 @@ class TravelPlanMemberServiceTest {
         member.setDisplayName("쭈니");
         member.setRole(role);
         member.setStatus(status);
+        return member;
+    }
+
+    /** 내보내진 기록. rejoinAllowed 로 아직 막혀 있는지 이미 풀렸는지를 나눈다. */
+    private TravelPlanMember removedMember(Long id, boolean rejoinAllowed) {
+        TravelPlanMember member = member(id, MEMBER_USER_ID, TravelPlanRole.MEMBER,
+                TravelPlanMemberStatus.REMOVED);
+        member.setRejoinAllowed(rejoinAllowed);
         return member;
     }
 

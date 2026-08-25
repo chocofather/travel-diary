@@ -107,18 +107,38 @@ public interface TravelPlanMapper {
                           @Param("role") String role);
 
     /**
-     * 스스로 나갔던 사람을 원래 자리로 되돌린다.
+     * 방을 떠났던 사람을 원래 자리로 되돌린다.
+     * 스스로 나간 사람(LEFT)과 OWNER 가 다시 받아 준 사람(REMOVED)이 같은 문장을 쓰며,
+     * 어느 쪽이든 rejoin_allowed 가 살아 있어야 반영된다.
      * row 를 새로 만들지 않으므로 id / display_name / role 이 그대로 유지되고,
      * 그 사람이 쓴 일정·대안의 created_by_member_id 연결도 끊기지 않는다.
-     * rejoin_allowed 가 내려간 사람(내보내진 사람)은 조건에서 걸린다.
      *
      * @return 1 이면 반영, 0 이면 이미 돌아왔거나 재참여가 막힌 사람이다.
      */
-    int reactivateLeftMember(@Param("id") Long id,
-                             @Param("travelPlanId") Long travelPlanId,
-                             @Param("userId") Long userId,
-                             @Param("fromStatus") String fromStatus,
-                             @Param("toStatus") String toStatus);
+    int reactivateMember(@Param("id") Long id,
+                         @Param("travelPlanId") Long travelPlanId,
+                         @Param("userId") Long userId,
+                         @Param("fromStatus") String fromStatus,
+                         @Param("toStatus") String toStatus);
+
+    /**
+     * OWNER 가 내보낸 사람의 재참여를 다시 허용한다.
+     * 상태는 REMOVED 그대로 두고 rejoin_allowed 만 올린다.
+     * 실제 복귀는 본인이 유효한 초대 링크로 들어올 때 일어난다.
+     *
+     * @return 1 이면 반영, 0 이면 이미 허용됐거나 대상이 아니다.
+     */
+    int allowMemberRejoin(@Param("id") Long id,
+                          @Param("travelPlanId") Long travelPlanId,
+                          @Param("memberStatus") String memberStatus,
+                          @Param("role") String role);
+
+    /**
+     * 방을 떠난 사람들의 기록. OWNER 의 "이전 참여자" 목록에 쓴다.
+     * 화면에 필요한 컬럼만 읽고 users 는 건드리지 않는다.
+     */
+    List<TravelPlanMember> findMembersByPlanAndStatus(@Param("travelPlanId") Long travelPlanId,
+                                                      @Param("memberStatus") String memberStatus);
 
     /**
      * 방 안에서의 역할만 바꾼다. 방장 이전에서 양쪽 모두 이 문장을 쓴다.

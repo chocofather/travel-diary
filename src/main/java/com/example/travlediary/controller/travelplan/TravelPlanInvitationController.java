@@ -5,7 +5,6 @@ import com.example.travlediary.dto.TravelPlanJoinForm;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.travelplan.TravelPlanInvitationService;
 import com.example.travlediary.service.travelplan.TravelPlanValidationException;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
@@ -16,7 +15,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.util.Optional;
 
@@ -31,8 +29,8 @@ import java.util.Optional;
 public class TravelPlanInvitationController {
 
     private static final String PREVIEW_VIEW = "travelplan/invitation-preview";
-    /** 발급 직후 한 번만 화면에 실어 보내는 raw 링크 */
-    private static final String ISSUED_URL_ATTRIBUTE = "travelPlanInviteUrl";
+    /** 방금 발급했다는 표시. 링크 자체는 돌아간 화면이 DB 에서 다시 푼다 */
+    private static final String ISSUED_ATTRIBUTE = "travelPlanInviteIssued";
     /** 이 이름이 모델에 있으면 미리보기 대신 이름 입력 상태로 그린다 */
     private static final String JOIN_FORM_ATTRIBUTE = "travelPlanJoinForm";
     /** 공개 미리보기가 아니라 참여 화면임을 알린다 */
@@ -44,12 +42,10 @@ public class TravelPlanInvitationController {
     @PostMapping("/{travelPlanId:\\d+}/invitations")
     public String createInvitation(@PathVariable Long travelPlanId,
                                    @AuthenticationPrincipal CustomUserDetails userDetails,
-                                   HttpServletRequest request,
                                    RedirectAttributes redirectAttributes) {
         try {
-            String rawToken = travelPlanInvitationService.createInvitation(
-                    userDetails.getId(), travelPlanId);
-            issued(redirectAttributes, request, rawToken);
+            travelPlanInvitationService.createInvitation(userDetails.getId(), travelPlanId);
+            issued(redirectAttributes);
         } catch (TravelPlanValidationException exception) {
             redirectAttributes.addFlashAttribute("travelPlanError", exception.getMessage());
         }
@@ -60,12 +56,10 @@ public class TravelPlanInvitationController {
     @PostMapping("/{travelPlanId:\\d+}/invitations/regenerate")
     public String regenerateInvitation(@PathVariable Long travelPlanId,
                                        @AuthenticationPrincipal CustomUserDetails userDetails,
-                                       HttpServletRequest request,
                                        RedirectAttributes redirectAttributes) {
         try {
-            String rawToken = travelPlanInvitationService.regenerateInvitation(
-                    userDetails.getId(), travelPlanId);
-            issued(redirectAttributes, request, rawToken);
+            travelPlanInvitationService.regenerateInvitation(userDetails.getId(), travelPlanId);
+            issued(redirectAttributes);
         } catch (TravelPlanValidationException exception) {
             redirectAttributes.addFlashAttribute("travelPlanError", exception.getMessage());
         }
@@ -173,13 +167,12 @@ public class TravelPlanInvitationController {
      * 발급된 링크는 이 응답에서만 볼 수 있다.
      * 운영 도메인을 코드에 박지 않고 지금 요청 기준으로 절대 URL 을 만든다.
      */
-    private void issued(RedirectAttributes redirectAttributes, HttpServletRequest request,
-                        String rawToken) {
-        String inviteUrl = ServletUriComponentsBuilder.fromContextPath(request)
-                .path("/travel-plans/invitations/")
-                .path(rawToken)
-                .toUriString();
-        redirectAttributes.addFlashAttribute(ISSUED_URL_ATTRIBUTE, inviteUrl);
+    /**
+     * 링크 자체는 돌아간 화면이 DB 에서 다시 풀어 보여 준다.
+     * 여기서는 방금 만들었다는 사실만 알려 그 자리에서 패널이 열리게 한다.
+     */
+    private void issued(RedirectAttributes redirectAttributes) {
+        redirectAttributes.addFlashAttribute(ISSUED_ATTRIBUTE, true);
         redirectAttributes.addFlashAttribute("travelPlanMessage", "초대 링크가 만들어졌어요.");
     }
 

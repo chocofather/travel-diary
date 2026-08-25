@@ -62,17 +62,17 @@ class TravelPlanInvitationControllerTest {
     private UserMapper userMapper;
 
     @Test
-    void issuingALinkShowsTheRawUrlExactlyOnce() throws Exception {
+    void issuingALinkOnlyFlagsThatItWasJustMade() throws Exception {
         when(travelPlanInvitationService.createInvitation(7L, 42L)).thenReturn(RAW_TOKEN);
 
         mockMvc.perform(post("/travel-plans/42/invitations")
                         .with(user(member())).with(csrf()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/travel-plans/42"))
-                // 발급 응답에서만 볼 수 있다 (flash 라 새로고침하면 사라진다)
-                .andExpect(flash().attribute("travelPlanInviteUrl",
-                        "http://localhost/travel-plans/invitations/" + RAW_TOKEN))
-                .andExpect(flash().attributeExists("travelPlanMessage"));
+                // 주소는 돌아간 화면이 DB 에서 다시 푼다. flash 로 실어 보내지 않는다
+                .andExpect(flash().attribute("travelPlanInviteIssued", true))
+                .andExpect(flash().attributeExists("travelPlanMessage"))
+                .andExpect(flash().attributeCount(2));
 
         verify(travelPlanInvitationService).createInvitation(7L, 42L);
     }
@@ -92,14 +92,15 @@ class TravelPlanInvitationControllerTest {
     }
 
     @Test
-    void regeneratingHandsBackTheNewUrl() throws Exception {
+    void regeneratingAlsoJustFlagsTheFreshLink() throws Exception {
         when(travelPlanInvitationService.regenerateInvitation(7L, 42L)).thenReturn(RAW_TOKEN);
 
         mockMvc.perform(post("/travel-plans/42/invitations/regenerate")
                         .with(user(member())).with(csrf()))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(flash().attribute("travelPlanInviteUrl",
-                        "http://localhost/travel-plans/invitations/" + RAW_TOKEN));
+                .andExpect(flash().attribute("travelPlanInviteIssued", true))
+                // raw token 이 flash 에 실려 나가지 않는다
+                .andExpect(flash().attributeCount(2));
 
         verify(travelPlanInvitationService).regenerateInvitation(7L, 42L);
     }

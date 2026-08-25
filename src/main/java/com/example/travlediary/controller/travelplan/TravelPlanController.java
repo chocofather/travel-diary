@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.util.Set;
 
@@ -97,10 +98,24 @@ public class TravelPlanController {
         }
         model.addAttribute("travelPlan",
                 travelPlanService.getActivePlanDetail(userDetails.getId(), travelPlanId));
-        // 링크 문자열이 아니라 "지금 켜져 있는지" 만 알려 준다. raw token 은 복원할 수 없다.
-        model.addAttribute("travelPlanInviteActive",
-                travelPlanInvitationService.hasActiveInvitation(userDetails.getId(), travelPlanId));
+        addInviteState(model, userDetails.getId(), travelPlanId);
         return DETAIL_VIEW;
+    }
+
+    /**
+     * OWNER 의 초대 영역 상태.
+     * 살아 있는 링크는 저장된 암호문을 풀어 지금 요청 기준 주소로 다시 만들어 준다.
+     * 예전 방식으로 만들어져 풀 수 없는 링크는 주소 없이 "켜져 있음" 만 알린다.
+     */
+    private void addInviteState(Model model, Long userId, Long travelPlanId) {
+        model.addAttribute("travelPlanInviteActive",
+                travelPlanInvitationService.hasActiveInvitation(userId, travelPlanId));
+        travelPlanInvitationService.findActiveInviteToken(userId, travelPlanId)
+                .ifPresent(rawToken -> model.addAttribute("travelPlanInviteUrl",
+                        ServletUriComponentsBuilder.fromCurrentContextPath()
+                                .path("/travel-plans/invitations/")
+                                .path(rawToken)
+                                .toUriString()));
     }
 
     // A 일정 수정 (방의 ACTIVE 멤버면 누구나)
@@ -275,9 +290,7 @@ public class TravelPlanController {
             // 편집 화면을 그대로 다시 그리고, 문제가 난 DAY 의 입력칸만 열어 둔다.
             model.addAttribute("travelPlan",
                     travelPlanService.getActivePlanDetail(userDetails.getId(), travelPlanId));
-            model.addAttribute("travelPlanInviteActive",
-                    travelPlanInvitationService.hasActiveInvitation(
-                            userDetails.getId(), travelPlanId));
+            addInviteState(model, userDetails.getId(), travelPlanId);
             model.addAttribute("openDayId", dayId);
             return DETAIL_VIEW;
         }

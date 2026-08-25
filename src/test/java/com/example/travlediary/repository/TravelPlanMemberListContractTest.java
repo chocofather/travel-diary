@@ -127,6 +127,19 @@ class TravelPlanMemberListContractTest {
 
         // 역할은 작은 글자로만 구분한다
         assertThat(between(css, ".travel-plan-member-role {", "}")).contains("font-size: 11px");
+        // 이름 / 역할 / 메뉴 세 칸을 모든 행이 똑같이 쓴다.
+        // 자식 수에 따라 자리가 달라지는 space-between 은 쓰지 않는다
+        String row = between(css, "\n.travel-plan-member {", "}");
+        assertThat(row)
+                .contains("display: grid")
+                .contains("grid-template-columns: minmax(0, 1fr) auto 20px")
+                .doesNotContain("space-between");
+        // 메뉴가 없는 행도 세 번째 칸을 비워 둔다
+        assertThat(between(css, ".travel-plan-member-menu {", "}")).contains("justify-self");
+        // 이름이 길어져도 역할 칸이 밀리지 않는다
+        assertThat(between(css, ".travel-plan-member-role {", "}"))
+                .contains("justify-self: end")
+                .contains("white-space: nowrap");
         assertThat(between(css, ".travel-plan-member-role.is-owner {", "}"))
                 .contains("font-weight: 700")
                 .doesNotContain("background");
@@ -162,14 +175,14 @@ class TravelPlanMemberListContractTest {
                 .contains("내보낸 뒤에는 현재 초대 링크만으로 다시 참여할 수 없습니다.");
 
         // 이번 단계에 없는 관리 액션
-        for (String notYet : new String[]{
-                "재참여 허용", "강퇴", "이름 변경", "과거 참여자"}) {
+        for (String notYet : new String[]{"강퇴", "이름 변경", "기록 삭제"}) {
             assertThat(detail).as("아직 없는 기능: %s", notYet).doesNotContain(notYet);
         }
         // ⋯ 메뉴 안에는 방장 넘기기와 내보내기 둘뿐이다
         assertThat(countOf(detail, "data-travel-plan-member-menu-list")).isEqualTo(1);
         assertThat(countOf(detail, "class=\"travel-plan-member-remove\"")).isEqualTo(1);
-        assertThat(countOf(detail, "class=\"travel-plan-member-action\"")).isEqualTo(1);
+        // 방장 넘기기 + 이전 참여자의 다시 참여 허용
+        assertThat(countOf(detail, "class=\"travel-plan-member-action\"")).isEqualTo(2);
     }
 
     @Test
@@ -324,9 +337,96 @@ class TravelPlanMemberListContractTest {
         assertThat(securityConfig)
                 .contains("\"^/travel-plans/[0-9]+/members/leave$\", HttpMethod.POST.name()")
                 .contains("\"^/travel-plans/[0-9]+/members/[0-9]+/remove$\"")
-                .contains("\"^/travel-plans/[0-9]+/members/[0-9]+/transfer-owner$\"");
+                .contains("\"^/travel-plans/[0-9]+/members/[0-9]+/transfer-owner$\"")
+                .contains("\"^/travel-plans/[0-9]+/members/[0-9]+/allow-rejoin$\"");
         // 인가는 그대로 anyRequest().authenticated() 를 쓴다
         assertThat(securityConfig).doesNotContain("/travel-plans/**");
+    }
+
+    @Test
+    void thePastMemberSectionIsOwnerOnlyAndOffersNothingButLettingThemBackIn()
+            throws IOException {
+        String detail = detailHtml();
+
+        assertThat(detail)
+                .contains("th:if=\"${viewerIsOwner and !#lists.isEmpty(travelPlan.pastMembers)}\"")
+                .contains(">이전 참여자</p>")
+                .contains("th:each=\"past : ${travelPlan.pastMembers}\"")
+                .contains("th:text=\"${past.displayName}\"")
+                .contains("/members/${past.memberId}/allow-rejoin|}")
+                .contains("다시 참여 허용")
+                // 이미 허용한 사람에게는 버튼 대신 상태만 보여 준다
+                .contains("th:if=\"${past.rejoinAllowed}\"")
+                .contains("재참여 허용됨")
+                .contains("th:unless=\"${past.rejoinAllowed}\"")
+                .contains("내보낸 멤버");
+
+        // 바로 복귀하는 것이 아니라는 점을 확인 문구에서 알린다
+        assertThat(detail)
+                .contains("님이 다시 초대 링크로 참여할 수 있게 할까요?")
+                .contains("참여자로 바로 복귀하는 것은 아니며");
+
+        // 이전 참여자 영역에는 개인정보가 없다
+        String past = between(detail, "class=\"travel-plan-past-members\"",
+                "<!-- 나가기는 MEMBER 본인에게만");
+        for (String personal : new String[]{
+                "userId", "user_id", "username", "email", "nickname"}) {
+            assertThat(past).as("개인정보 노출: %s", personal).doesNotContain(personal);
+        }
+    }
+
+    @Test
+    void theRemovedListIsOnlyEverReadForTheOwner() throws IOException {
+        String select = between(resource("/mapper/TravelPlanMapper.xml"),
+                "<select id=\"findMembersByPlanAndStatus\"", "</select>");
+
+        assertThat(select)
+                .contains("SELECT id, display_name, role, rejoin_allowed")
+                .contains("FROM travel_plan_members")
+                .contains("WHERE travel_plan_id = #{travelPlanId}")
+                .contains("AND status = #{memberStatus}")
+                .doesNotContain("user_id")
+                .doesNotContain("JOIN users")
+                .doesNotContain("${");
+
+        String service = Files.readString(
+                Path.of("src/main/java/com/example/travlediary/service/travelplan/"
+                        + "TravelPlanService.java"),
+                StandardCharsets.UTF_8);
+        String pastMembers = between(service, "private List<TravelPlanPastMemberDto> pastMembers(",
+                "private void requireUser");
+        // OWNER 가 아니면 조회조차 하지 않는다
+        assertThat(pastMembers.indexOf("!= TravelPlanRole.OWNER"))
+                .isLessThan(pastMembers.indexOf("findMembersByPlanAndStatus"));
+        assertThat(pastMembers).contains("TravelPlanMemberStatus.REMOVED.name()");
+    }
+
+    @Test
+    void lettingSomeoneBackInOnlyLiftsTheFlag() throws IOException {
+        String update = between(resource("/mapper/TravelPlanMapper.xml"),
+                "<update id=\"allowMemberRejoin\"", "</update>");
+
+        assertThat(update)
+                .contains("UPDATE travel_plan_members")
+                .contains("SET rejoin_allowed = 1")
+                .contains("WHERE id = #{id}")
+                .contains("AND travel_plan_id = #{travelPlanId}")
+                .contains("AND status = #{memberStatus}")
+                .contains("AND role = #{role}")
+                // 이미 허용된 사람에게 두 번 반영되지 않는다
+                .contains("AND rejoin_allowed = 0")
+                .doesNotContain("${");
+
+        // 상태는 REMOVED 그대로 둔다. 바로 복귀시키지 않는다
+        assertThat(between(update, "SET", "WHERE"))
+                .doesNotContain("status")
+                .doesNotContain("removed_at")
+                .doesNotContain("display_name");
+
+        // 다시 내보내면 언제나 rejoin_allowed 가 내려간다
+        assertThat(between(resource("/mapper/TravelPlanMapper.xml"),
+                "<update id=\"markMemberRemoved\"", "</update>"))
+                .contains("rejoin_allowed = 0");
     }
 
     @Test

@@ -39,6 +39,18 @@ public class TravelPlanMemberController {
         return "redirect:/travel-plans";
     }
 
+    // OWNER 가 내보낸 사람의 재참여를 다시 허용하기 (바로 복귀시키지는 않는다)
+    @PostMapping("/{travelPlanId:\\d+}/members/{memberId:\\d+}/allow-rejoin")
+    public String allowRejoin(@PathVariable Long travelPlanId,
+                              @PathVariable Long memberId,
+                              @AuthenticationPrincipal CustomUserDetails userDetails,
+                              RedirectAttributes redirectAttributes) {
+        travelPlanMemberService.allowRejoin(userDetails.getId(), travelPlanId, memberId);
+        redirectAttributes.addFlashAttribute("travelPlanMessage",
+                "다시 참여할 수 있게 했어요. 본인이 초대 링크로 들어오면 참여자가 됩니다.");
+        return "redirect:/travel-plans/" + travelPlanId;
+    }
+
     // OWNER 가 다른 ACTIVE MEMBER 에게 방장을 넘기기
     @PostMapping("/{travelPlanId:\\d+}/members/{memberId:\\d+}/transfer-owner")
     public String transferOwnership(@PathVariable Long travelPlanId,

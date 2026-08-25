@@ -33,6 +33,7 @@ public class TravelPlanInvitationService {
 
     private final TravelPlanMapper travelPlanMapper;
     private final TravelPlanInvitationMapper travelPlanInvitationMapper;
+    private final TravelPlanInviteTokenCipher travelPlanInviteTokenCipher;
 
     /**
      * 첫 초대 링크 발급.
@@ -92,6 +93,26 @@ public class TravelPlanInvitationService {
             return false;
         }
         return findActiveInvitation(travelPlanId) != null;
+    }
+
+    /**
+     * 살아 있는 초대 링크의 raw token.
+     * OWNER 가 화면을 다시 열어도 같은 링크를 복사할 수 있게 여기서 복호화한다.
+     *
+     * <p>OWNER 가 아니면 언제나 비어 있다.
+     * 예전 방식으로 만들어져 암호문이 없는 행이나 값이 깨진 행도 비어 있게 돌려주어,
+     * 화면이 오류 대신 "재발급이 필요하다"는 안내로 넘어가게 한다.
+     */
+    @Transactional(readOnly = true)
+    public Optional<String> findActiveInviteToken(Long userId, Long travelPlanId) {
+        if (userId == null || travelPlanId == null || !isActiveOwner(userId, travelPlanId)) {
+            return Optional.empty();
+        }
+        TravelPlanInvitation invitation = findActiveInvitation(travelPlanId);
+        if (invitation == null) {
+            return Optional.empty();
+        }
+        return travelPlanInviteTokenCipher.decrypt(invitation.getTokenEncrypted());
     }
 
     /**
@@ -211,8 +232,9 @@ public class TravelPlanInvitationService {
         if (!canRejoin(existing)) {
             throw rejoinBlocked();
         }
-        if (travelPlanMapper.reactivateLeftMember(existing.getId(), travelPlanId, userId,
-                TravelPlanMemberStatus.LEFT.name(),
+        // 나갔던 사람이든 OWNER 가 다시 받아 준 사람이든 같은 문장으로 되살린다.
+        if (travelPlanMapper.reactivateMember(existing.getId(), travelPlanId, userId,
+                existing.getStatus().name(),
                 TravelPlanMemberStatus.ACTIVE.name()) != 1) {
             throw rejoinBlocked();
         }
@@ -220,13 +242,17 @@ public class TravelPlanInvitationService {
 
     /**
      * 유효한 초대 링크만으로 다시 들어올 수 있는 사람인지.
-     * 스스로 나갔고(LEFT) 재참여가 막히지 않은 경우만 참이다.
-     * 내보내진 사람(REMOVED)은 OWNER 가 따로 풀어 주기 전까지 돌아올 수 없다.
+     * rejoin_allowed 가 살아 있는 LEFT / REMOVED 기록이 여기 해당한다.
+     * 내보내진 사람은 기본이 rejoin_allowed = 0 이라,
+     * OWNER 가 재참여를 허용해 준 뒤에야 이 조건을 만족한다.
      */
     private boolean canRejoin(TravelPlanMember member) {
-        return member != null
-                && member.getStatus() == TravelPlanMemberStatus.LEFT
-                && Boolean.TRUE.equals(member.getRejoinAllowed());
+        if (member == null || !Boolean.TRUE.equals(member.getRejoinAllowed())) {
+            return false;
+        }
+        // 스스로 나간 사람은 언제든, 내보내진 사람은 OWNER 가 다시 받아 준 뒤에만 돌아온다.
+        return member.getStatus() == TravelPlanMemberStatus.LEFT
+                || member.getStatus() == TravelPlanMemberStatus.REMOVED;
     }
 
     /**
@@ -314,8 +340,10 @@ public class TravelPlanInvitationService {
         TravelPlanInvitation invitation = new TravelPlanInvitation();
         invitation.setTravelPlanId(travelPlanId);
         invitation.setCreatedByUserId(userId);
-        // 저장하는 것은 해시뿐이다. raw token 은 이 메서드 밖으로만 나간다.
+        // 평문은 어디에도 저장하지 않는다.
+        // 검증에 쓰는 해시와, OWNER 에게 다시 보여 주기 위한 암호문을 따로 넣는다.
         invitation.setTokenHash(TravelPlanInviteToken.hash(rawToken));
+        invitation.setTokenEncrypted(travelPlanInviteTokenCipher.encrypt(rawToken));
         invitation.setStatus(TravelPlanInvitationStatus.ACTIVE);
 
         if (travelPlanInvitationMapper.insertInvitation(invitation) != 1) {

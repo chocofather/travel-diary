@@ -1351,6 +1351,7 @@ CREATE TABLE `travel_plan_invitations` (
   `travel_plan_id` bigint NOT NULL,
   `created_by_user_id` bigint NOT NULL,
   `token_hash` char(64) NOT NULL,
+  `token_encrypted` varchar(512) DEFAULT NULL COMMENT 'AES-256/GCM(raw token). IV+ciphertext+tag 를 Base64url 로 저장, 평문 미보관. ACTIVE 링크 재표시 전용이며 REPLACED/DISABLED 시 NULL',
   `status` varchar(20) NOT NULL DEFAULT 'ACTIVE',
   `invalidated_at` timestamp NULL DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,

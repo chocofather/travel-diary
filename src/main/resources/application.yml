@@ -32,6 +32,8 @@ custom:
   server-url: ${APP_BASE_URL:http://localhost:8080}
   # 재가입 차단용 이메일 해시 secret. 값은 환경변수로만 주입한다.
   email-hash-secret: ${EMAIL_HASH_SECRET:}
+  # 살아 있는 초대 링크 재표시용 AES-256 키(Base64 32바이트). 값은 환경변수로만 주입한다.
+  invite-token-encryption-key: ${TRAVEL_PLAN_INVITE_ENCRYPTION_KEY:}
   upload-path: /Users/minjun/travlediary-uploads/ # ✅ 이 줄 추가
 
 server:

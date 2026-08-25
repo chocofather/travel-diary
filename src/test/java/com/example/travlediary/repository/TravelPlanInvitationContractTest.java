@@ -52,26 +52,95 @@ class TravelPlanInvitationContractTest {
     }
 
     @Test
-    void onlyTheHashIsWrittenAndNeverTheRawToken() throws IOException {
+    void onlyTheHashAndCiphertextAreWrittenNeverTheRawToken() throws IOException {
         String insert = between(mapperXml(), "<insert id=\"insertInvitation\"", "</insert>");
 
         assertThat(insert)
                 .contains("INSERT INTO travel_plan_invitations")
-                .contains("travel_plan_id, created_by_user_id, token_hash, status")
-                .contains("#{travelPlanId}, #{createdByUserId}, #{tokenHash}, #{status}")
+                .contains("travel_plan_id, created_by_user_id, token_hash, token_encrypted, status")
+                .contains("#{travelPlanId}, #{createdByUserId}, #{tokenHash}, "
+                        + "#{tokenEncrypted}, #{status}")
                 // invalidated_at / created_at / updated_at 은 DB DEFAULT 에 맡긴다
                 .contains("useGeneratedKeys=\"true\"")
                 .doesNotContain("invalidated_at")
                 .doesNotContain("${");
         assertThat(insert).doesNotContain("rawToken");
 
-        // Service 도 해시만 넣는다
+        // Service 는 검증용 해시와 재표시용 암호문만 넣는다. 평문은 넣지 않는다
         String service = Files.readString(
                 Path.of("src/main/java/com/example/travlediary/service/travelplan/"
                         + "TravelPlanInvitationService.java"),
                 StandardCharsets.UTF_8);
-        assertThat(service).contains("invitation.setTokenHash(TravelPlanInviteToken.hash(rawToken))");
-        assertThat(service).doesNotContain("setToken(rawToken)");
+        assertThat(service)
+                .contains("invitation.setTokenHash(TravelPlanInviteToken.hash(rawToken))")
+                .contains("invitation.setTokenEncrypted("
+                        + "travelPlanInviteTokenCipher.encrypt(rawToken))")
+                .doesNotContain("setTokenEncrypted(rawToken)")
+                .doesNotContain("setToken(rawToken)");
+
+        // 검증은 계속 해시로만 한다. 복호화 기반으로 바뀌지 않았다
+        assertThat(between(mapperXml(), "<select id=\"findActiveByTokenHash\"", "</select>"))
+                .contains("WHERE token_hash = #{tokenHash}")
+                .doesNotContain("token_encrypted");
+    }
+
+    @Test
+    void turningALinkOffAlsoRemovesTheWayToShowItAgain() throws IOException {
+        String update = between(mapperXml(),
+                "<update id=\"invalidateActiveInvitation\"", "</update>");
+
+        // REPLACED / DISABLED 가 되면 다시 보여 줄 이유가 없다
+        assertThat(update).contains("token_encrypted = NULL");
+        // 무효 판정에 계속 쓰이는 해시는 남긴다
+        assertThat(between(update, "SET", "WHERE")).doesNotContain("token_hash");
+    }
+
+    @Test
+    void theStoredCiphertextIsAesGcmAndTheKeyComesFromTheEnvironment() throws IOException {
+        String cipher = Files.readString(
+                Path.of("src/main/java/com/example/travlediary/service/travelplan/"
+                        + "TravelPlanInviteTokenCipher.java"),
+                StandardCharsets.UTF_8);
+
+        assertThat(cipher)
+                .contains("AES/GCM/NoPadding")
+                .contains("IV_BYTES = 12")
+                .contains("TAG_BITS = 128")
+                .contains("KEY_BYTES = 32")
+                .contains("RANDOM.nextBytes(iv)")
+                // 키는 환경변수에서만 온다
+                .contains("@Value(\"${custom.invite-token-encryption-key:}\")");
+        // 약한 방식은 쓰지 않는다
+        assertThat(cipher)
+                .doesNotContain("AES/ECB")
+                .doesNotContain("AES/CBC");
+
+        String applicationYml = Files.readString(
+                Path.of("src/main/resources/application.yml"), StandardCharsets.UTF_8);
+        // yml 에는 환경변수 참조만 있고 값이 없다
+        assertThat(applicationYml).contains(
+                "invite-token-encryption-key: ${TRAVEL_PLAN_INVITE_ENCRYPTION_KEY:}");
+    }
+
+    @Test
+    void theCiphertextNeverRidesAlongInLogsOrDtos() throws IOException {
+        String model = Files.readString(
+                Path.of("src/main/java/com/example/travlediary/model/TravelPlanInvitation.java"),
+                StandardCharsets.UTF_8);
+
+        // toString 으로 새어 나가지 않게 뺀다
+        assertThat(model)
+                .contains("@ToString.Exclude")
+                .contains("private String tokenEncrypted");
+
+        // 미리보기 DTO 에는 토큰 계열 필드가 없다
+        String previewDto = Files.readString(
+                Path.of("src/main/java/com/example/travlediary/dto/"
+                        + "TravelPlanInvitePreviewDto.java"),
+                StandardCharsets.UTF_8);
+        assertThat(previewDto)
+                .doesNotContain("token")
+                .doesNotContain("Token");
     }
 
     @Test
@@ -199,9 +268,46 @@ class TravelPlanInvitationContractTest {
                 .contains("새 링크 재발급")
                 .contains(">초대 링크 비활성화</button>")
                 .contains(">초대 링크 만들기</button>")
-                // 이전 링크 주소는 되살릴 수 없다는 점을 화면에서 알린다
-                .contains("이전 링크 주소는 다시 볼 수 없어요")
                 .contains("새 링크를 발급하면 기존 초대 링크는 더 이상 사용할 수 없습니다.");
+
+        // 예전 방식으로 만들어져 주소를 풀 수 없는 링크만 재발급 안내를 받는다
+        assertThat(detail)
+                .contains("th:unless=\"${travelPlanInviteUrl}\"")
+                .contains("이전 저장 방식으로 만들어져 주소를 다시 표시할 수 없습니다")
+                .contains("새 링크를 한 번 재발급하면 이후부터는 언제든 다시 복사할 수 있습니다");
+    }
+
+    @Test
+    void theLivingLinkComesBackAfterARefreshAndStaysCopyable() throws IOException {
+        String detail = detailHtml();
+        String script = resource("/static/js/travel-plan-scheduler.js");
+
+        // 발급 직후든 새로고침 뒤든 같은 자리에서 같은 주소를 보여 준다
+        assertThat(detail)
+                .contains("th:if=\"${travelPlanInviteUrl}\"")
+                .contains("th:value=\"${travelPlanInviteUrl}\"")
+                .contains("class=\"travel-plan-invite-url\" readonly")
+                .contains(">복사</button>")
+                .contains("data-travel-plan-invite-copy");
+
+        // 방금 만들었을 때만 패널이 저절로 열린다
+        assertThat(detail).contains("data-travel-plan-invite-issued=${travelPlanInviteIssued}");
+        assertThat(script)
+                .contains("[data-travel-plan-invite-issued]")
+                // 복사 실패 시 값을 직접 고를 수 있게 남긴다
+                .contains("url.select()")
+                .contains("navigator.clipboard");
+    }
+
+    @Test
+    void theInviteAreaStaysOwnerOnly() throws IOException {
+        String detail = detailHtml();
+
+        // 주소와 관리 버튼이 모두 OWNER 조건 안에 들어 있다
+        int ownerGate = detail.indexOf("travelPlan.currentMember.role.name() == 'OWNER'");
+        assertThat(ownerGate).isGreaterThan(0);
+        assertThat(detail.indexOf("data-travel-plan-invite-url")).isGreaterThan(ownerGate);
+        assertThat(detail.indexOf("/invitations/regenerate|}")).isGreaterThan(ownerGate);
     }
 
     @Test
@@ -288,13 +394,14 @@ class TravelPlanInvitationContractTest {
     @Test
     void theRejoinRevivesTheOldRowInsteadOfCreatingANewOne() throws IOException {
         String update = between(resource("/mapper/TravelPlanMapper.xml"),
-                "<update id=\"reactivateLeftMember\"", "</update>");
+                "<update id=\"reactivateMember\"", "</update>");
 
         assertThat(update)
                 .contains("UPDATE travel_plan_members")
                 .contains("SET status = #{toStatus}")
-                // 나간 흔적만 지운다
+                // 떠난 흔적만 지운다 (ACTIVE row 에는 남지 않는다)
                 .contains("left_at = NULL")
+                .contains("removed_at = NULL")
                 .contains("WHERE id = #{id}")
                 .contains("AND travel_plan_id = #{travelPlanId}")
                 .contains("AND user_id = #{userId}")

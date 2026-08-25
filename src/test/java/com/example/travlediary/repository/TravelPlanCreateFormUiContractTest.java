@@ -379,9 +379,9 @@ class TravelPlanCreateFormUiContractTest {
     void thePlannerHasNoActionsFromLaterStages() throws IOException {
         String detail = resource("/templates/travelplan/detail.html");
 
-        // 초대 / 참여자 목록 / 나가기 / 내보내기 / 방장 넘기기까지 들어왔고, 그 다음은 아직이다
+        // 멤버 관리는 재참여 허용까지 들어왔고, 그 다음 단계는 아직이다
         for (String notYet : new String[]{
-                "방 설정", "최종 확정", "채팅", "투표", "태그", "재참여 허용"}) {
+                "방 설정", "최종 확정", "채팅", "투표", "태그"}) {
             assertThat(detail).as("아직 없는 기능: %s", notYet).doesNotContain(notYet);
         }
     }

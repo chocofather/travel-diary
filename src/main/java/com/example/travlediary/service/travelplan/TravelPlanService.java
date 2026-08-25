@@ -4,6 +4,7 @@ import com.example.travlediary.dto.TravelPlanDayDetailDto;
 import com.example.travlediary.dto.TravelPlanDetailDto;
 import com.example.travlediary.dto.TravelPlanListItemDto;
 import com.example.travlediary.dto.TravelPlanMemberDto;
+import com.example.travlediary.dto.TravelPlanPastMemberDto;
 import com.example.travlediary.model.TravelPlan;
 import com.example.travlediary.model.TravelPlanDay;
 import com.example.travlediary.model.TravelPlanItem;
@@ -91,7 +92,30 @@ public class TravelPlanService {
                 access.plan(), access.member(), days == null ? List.of() : days,
                 itemsByDayId, alternativesByItemId,
                 activeMembers(travelPlanId, access.member()),
+                pastMembers(travelPlanId, access.member()),
                 TravelPlanInvitationService.MAX_MEMBERS);
+    }
+
+    /**
+     * 내보내진 사람들. OWNER 만 관리할 수 있으므로 OWNER 가 아니면 조회조차 하지 않는다.
+     * 스스로 나간 사람은 본인이 초대 링크로 돌아올 수 있어 여기 담지 않는다.
+     */
+    private List<TravelPlanPastMemberDto> pastMembers(Long travelPlanId,
+                                                      TravelPlanMember currentMember) {
+        if (currentMember == null || currentMember.getRole() != TravelPlanRole.OWNER) {
+            return List.of();
+        }
+        List<TravelPlanMember> removed = travelPlanMapper.findMembersByPlanAndStatus(
+                travelPlanId, TravelPlanMemberStatus.REMOVED.name());
+        if (removed == null) {
+            return List.of();
+        }
+        return removed.stream()
+                .map(member -> new TravelPlanPastMemberDto(
+                        member.getId(),
+                        member.getDisplayName(),
+                        Boolean.TRUE.equals(member.getRejoinAllowed())))
+                .toList();
     }
 
     /**

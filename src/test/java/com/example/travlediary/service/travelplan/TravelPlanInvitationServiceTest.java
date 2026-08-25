@@ -56,15 +56,24 @@ class TravelPlanInvitationServiceTest {
     private TravelPlanMapper travelPlanMapper;
     @Mock
     private TravelPlanInvitationMapper travelPlanInvitationMapper;
+    @Mock
+    private TravelPlanInviteTokenCipher travelPlanInviteTokenCipher;
     @InjectMocks
     private TravelPlanInvitationService travelPlanInvitationService;
+
+    /** 실제 AES 동작은 TravelPlanInviteTokenCipherTest 가 본다. 여기서는 자리만 표시한다. */
+    private void givenCipher() {
+        when(travelPlanInviteTokenCipher.encrypt(anyString()))
+                .thenAnswer(invocation -> "encrypted:" + invocation.getArgument(0));
+    }
 
     // ── 발급 ────────────────────────────────────────────────
 
     @Test
-    void theOwnerGetsARawTokenBackWhileOnlyTheHashIsStored() {
+    void theOwnerGetsARawTokenBackWhileOnlyTheHashAndCiphertextAreStored() {
         givenActiveOwner();
         givenNoActiveInvitation();
+        givenCipher();
         when(travelPlanInvitationMapper.insertInvitation(any())).thenReturn(1);
 
         String rawToken = travelPlanInvitationService.createInvitation(OWNER_USER_ID, PLAN_ID);
@@ -74,12 +83,18 @@ class TravelPlanInvitationServiceTest {
         assertThat(saved.getTravelPlanId()).isEqualTo(PLAN_ID);
         assertThat(saved.getCreatedByUserId()).isEqualTo(OWNER_USER_ID);
         assertThat(saved.getStatus()).isEqualTo(TravelPlanInvitationStatus.ACTIVE);
-        // 저장되는 것은 해시뿐이다
+        // 검증용 해시
         assertThat(saved.getTokenHash())
                 .isEqualTo(TravelPlanInviteToken.hash(rawToken))
                 .hasSize(64)
                 .isNotEqualTo(rawToken);
-        assertThat(saved.toString()).doesNotContain(rawToken);
+        // 재표시용 암호문. 평문 그대로 저장되지 않는다
+        verify(travelPlanInviteTokenCipher).encrypt(rawToken);
+        assertThat(saved.getTokenEncrypted()).isNotEqualTo(rawToken);
+        // 로그에 암호문이 딸려 나가지 않는다
+        assertThat(saved.toString())
+                .doesNotContain(rawToken)
+                .doesNotContain(saved.getTokenEncrypted());
     }
 
     @Test
@@ -193,6 +208,7 @@ class TravelPlanInvitationServiceTest {
     void aFailedInsertIsNotReportedAsASuccessfulLink() {
         givenActiveOwner();
         givenNoActiveInvitation();
+        givenCipher();
         when(travelPlanInvitationMapper.insertInvitation(any())).thenReturn(0);
 
         assertThatThrownBy(() ->
@@ -205,11 +221,13 @@ class TravelPlanInvitationServiceTest {
     @Test
     void regeneratingReplacesTheOldLinkBeforeIssuingANewOne() {
         givenActiveOwner();
+        givenCipher();
         when(travelPlanInvitationMapper.insertInvitation(any())).thenReturn(1);
 
         String rawToken = travelPlanInvitationService.regenerateInvitation(OWNER_USER_ID, PLAN_ID);
 
-        // 기존 ACTIVE 를 REPLACED 로 끄고(그 시점에 invalidated_at 이 찍힌다) 새로 넣는다
+        // 기존 ACTIVE 를 REPLACED 로 끄고(그 시점에 invalidated_at 과
+        // token_encrypted 정리가 함께 일어난다) 새로 넣는다
         InOrder order = inOrder(travelPlanInvitationMapper);
         order.verify(travelPlanInvitationMapper).invalidateActiveInvitation(
                 PLAN_ID, "ACTIVE", "REPLACED");
@@ -218,11 +236,14 @@ class TravelPlanInvitationServiceTest {
         TravelPlanInvitation saved = captureInsert();
         assertThat(saved.getStatus()).isEqualTo(TravelPlanInvitationStatus.ACTIVE);
         assertThat(saved.getTokenHash()).isEqualTo(TravelPlanInviteToken.hash(rawToken));
+        // 새 링크도 다시 볼 수 있도록 암호문을 함께 저장한다
+        assertThat(saved.getTokenEncrypted()).isNotBlank().isNotEqualTo(rawToken);
     }
 
     @Test
     void theNewLinkNeverMatchesThePreviousOne() {
         givenActiveOwner();
+        givenCipher();
         when(travelPlanInvitationMapper.insertInvitation(any())).thenReturn(1);
 
         String first = travelPlanInvitationService.regenerateInvitation(OWNER_USER_ID, PLAN_ID);
@@ -236,6 +257,7 @@ class TravelPlanInvitationServiceTest {
     @Test
     void theOldLinkStopsResolvingWhileTheNewOneWorks() {
         givenActiveOwner();
+        givenCipher();
         when(travelPlanInvitationMapper.insertInvitation(any())).thenReturn(1);
         String oldToken = travelPlanInvitationService.regenerateInvitation(OWNER_USER_ID, PLAN_ID);
         String newToken = travelPlanInvitationService.regenerateInvitation(OWNER_USER_ID, PLAN_ID);
@@ -290,6 +312,87 @@ class TravelPlanInvitationServiceTest {
                 .thenReturn(invitation());
 
         assertThat(travelPlanInvitationService.hasActiveInvitation(OWNER_USER_ID, PLAN_ID)).isTrue();
+    }
+
+    @Test
+    void theOwnerCanReadTheLivingLinkBackAfterARefresh() {
+        givenOwnerMembership();
+        TravelPlanInvitation active = invitation();
+        active.setTokenEncrypted("encrypted-value");
+        when(travelPlanInvitationMapper.findActiveByPlanId(PLAN_ID, "ACTIVE")).thenReturn(active);
+        when(travelPlanInviteTokenCipher.decrypt("encrypted-value"))
+                .thenReturn(Optional.of("raw-token"));
+
+        assertThat(travelPlanInvitationService.findActiveInviteToken(OWNER_USER_ID, PLAN_ID))
+                .contains("raw-token");
+    }
+
+    @Test
+    void aLinkStoredTheOldWayIsReportedAsUnreadableRatherThanFailing() {
+        givenOwnerMembership();
+        // 예전 방식으로 만들어져 암호문이 없다
+        TravelPlanInvitation legacy = invitation();
+        legacy.setTokenEncrypted(null);
+        when(travelPlanInvitationMapper.findActiveByPlanId(PLAN_ID, "ACTIVE")).thenReturn(legacy);
+        when(travelPlanInviteTokenCipher.decrypt(null)).thenReturn(Optional.empty());
+
+        // 켜져 있다는 사실은 알리되 주소는 주지 않는다 -> 화면은 재발급 안내로 넘어간다
+        assertThat(travelPlanInvitationService.hasActiveInvitation(OWNER_USER_ID, PLAN_ID)).isTrue();
+        assertThat(travelPlanInvitationService.findActiveInviteToken(OWNER_USER_ID, PLAN_ID))
+                .isEmpty();
+    }
+
+    @Test
+    void aBrokenCiphertextAlsoJustMeansNoLinkToShow() {
+        givenOwnerMembership();
+        TravelPlanInvitation active = invitation();
+        active.setTokenEncrypted("tampered");
+        when(travelPlanInvitationMapper.findActiveByPlanId(PLAN_ID, "ACTIVE")).thenReturn(active);
+        when(travelPlanInviteTokenCipher.decrypt("tampered")).thenReturn(Optional.empty());
+
+        assertThat(travelPlanInvitationService.findActiveInviteToken(OWNER_USER_ID, PLAN_ID))
+                .isEmpty();
+    }
+
+    @Test
+    void nobodyButTheOwnerCanReadTheLivingLink() {
+        when(travelPlanMapper.findMemberByPlanAndUser(PLAN_ID, MEMBER_USER_ID, "ACTIVE"))
+                .thenReturn(null);
+
+        assertThat(travelPlanInvitationService.findActiveInviteToken(MEMBER_USER_ID, PLAN_ID))
+                .isEmpty();
+        assertThat(travelPlanInvitationService.findActiveInviteToken(null, PLAN_ID)).isEmpty();
+
+        // 권한이 없으면 초대 행을 읽지도, 복호화하지도 않는다
+        verify(travelPlanInvitationMapper, never()).findActiveByPlanId(anyLong(), anyString());
+        verify(travelPlanInviteTokenCipher, never()).decrypt(anyString());
+    }
+
+    @Test
+    void thereIsNothingToShowWhenNoLinkIsOn() {
+        givenOwnerMembership();
+        givenNoActiveInvitation();
+
+        assertThat(travelPlanInvitationService.findActiveInviteToken(OWNER_USER_ID, PLAN_ID))
+                .isEmpty();
+        verify(travelPlanInviteTokenCipher, never()).decrypt(anyString());
+    }
+
+    @Test
+    void thePublicPreviewNeverCarriesAnyTokenMaterial() {
+        when(travelPlanInvitationMapper.findActiveByTokenHash(anyString(), eqActive()))
+                .thenReturn(invitation());
+        givenPreviewLookups();
+
+        TravelPlanInvitePreviewDto preview = travelPlanInvitationService
+                .resolvePreview(null, "raw-token").orElseThrow();
+
+        // 링크를 연 사람에게 나가는 값에는 raw/encrypted 어느 쪽도 없다
+        assertThat(preview.toString())
+                .doesNotContain("raw-token")
+                .doesNotContain("encrypted")
+                .doesNotContain("token");
+        verify(travelPlanInviteTokenCipher, never()).decrypt(anyString());
     }
 
     @Test
@@ -575,7 +678,7 @@ class TravelPlanInvitationServiceTest {
         left.setRejoinAllowed(true);
         when(travelPlanMapper.findAnyMemberByPlanAndUser(PLAN_ID, MEMBER_USER_ID))
                 .thenReturn(left);
-        when(travelPlanMapper.reactivateLeftMember(
+        when(travelPlanMapper.reactivateMember(
                 left.getId(), PLAN_ID, MEMBER_USER_ID, "LEFT", "ACTIVE")).thenReturn(1);
 
         // 재참여에서는 이름을 다시 받지 않는다
@@ -584,11 +687,84 @@ class TravelPlanInvitationServiceTest {
 
         // 새 row 를 만들지 않고 기존 row 를 되살린다 (member.id 가 유지되어야
         // 기존 일정/대안의 created_by_member_id 연결이 그대로 남는다)
-        verify(travelPlanMapper).reactivateLeftMember(
+        verify(travelPlanMapper).reactivateMember(
                 left.getId(), PLAN_ID, MEMBER_USER_ID, "LEFT", "ACTIVE");
         verify(travelPlanMapper, never()).insertMember(any());
         verify(travelPlanMapper, never()).countMembersByPlanAndDisplayName(anyLong(), anyString());
         verify(travelPlanMapper).touchLastActivity(PLAN_ID);
+    }
+
+    @Test
+    void someoneTheOwnerLetBackInReturnsOnTheirOldRow() {
+        givenJoinableRoom(2);
+        TravelPlanMember allowed = member(TravelPlanMemberStatus.REMOVED);
+        allowed.setRejoinAllowed(true);
+        when(travelPlanMapper.findAnyMemberByPlanAndUser(PLAN_ID, MEMBER_USER_ID))
+                .thenReturn(allowed);
+        when(travelPlanMapper.reactivateMember(
+                allowed.getId(), PLAN_ID, MEMBER_USER_ID, "REMOVED", "ACTIVE")).thenReturn(1);
+
+        // 이름을 다시 받지 않는다
+        assertThat(travelPlanInvitationService.join(MEMBER_USER_ID, "raw-token", null))
+                .isEqualTo(PLAN_ID);
+
+        // 기존 row 를 되살린다. member.id 가 유지되어야 작성 기록 연결이 남는다
+        verify(travelPlanMapper).reactivateMember(
+                allowed.getId(), PLAN_ID, MEMBER_USER_ID, "REMOVED", "ACTIVE");
+        verify(travelPlanMapper, never()).insertMember(any());
+        verify(travelPlanMapper, never()).countMembersByPlanAndDisplayName(anyLong(), anyString());
+        verify(travelPlanMapper).touchLastActivity(PLAN_ID);
+    }
+
+    @Test
+    void theOwnersPermissionAloneDoesNotOpenAFullRoom() {
+        givenJoinableRoom(8);
+        TravelPlanMember allowed = member(TravelPlanMemberStatus.REMOVED);
+        allowed.setRejoinAllowed(true);
+        when(travelPlanMapper.findAnyMemberByPlanAndUser(PLAN_ID, MEMBER_USER_ID))
+                .thenReturn(allowed);
+
+        assertThatThrownBy(() ->
+                travelPlanInvitationService.join(MEMBER_USER_ID, "raw-token", null))
+                .isInstanceOf(TravelPlanValidationException.class)
+                .hasMessageContaining("참여 인원이 모두 찼어요.");
+
+        verify(travelPlanMapper, never()).reactivateMember(
+                anyLong(), anyLong(), anyLong(), anyString(), anyString());
+    }
+
+    @Test
+    void aLetBackInMemberStillNeedsALiveLink() {
+        // 허용해 줬다고 새 초대 링크가 생기지는 않는다.
+        // 링크가 꺼졌거나 재발급되었으면 들어올 수 없다.
+        when(travelPlanInvitationMapper.findActiveByTokenHash(anyString(), eqActive()))
+                .thenReturn(null);
+
+        assertThatThrownBy(() ->
+                travelPlanInvitationService.join(MEMBER_USER_ID, "raw-token", null))
+                .isInstanceOf(TravelPlanValidationException.class)
+                .hasMessageContaining("유효하지 않거나 만료된 초대 링크입니다.");
+
+        verify(travelPlanMapper, never()).reactivateMember(
+                anyLong(), anyLong(), anyLong(), anyString(), anyString());
+    }
+
+    @Test
+    void aLetBackInMemberSeesTheirOldNameOnTheInvitePreview() {
+        when(travelPlanInvitationMapper.findActiveByTokenHash(anyString(), eqActive()))
+                .thenReturn(invitation());
+        givenPreviewLookups();
+        TravelPlanMember allowed = member(TravelPlanMemberStatus.REMOVED);
+        allowed.setRejoinAllowed(true);
+        when(travelPlanMapper.findAnyMemberByPlanAndUser(PLAN_ID, MEMBER_USER_ID))
+                .thenReturn(allowed);
+
+        TravelPlanInvitePreviewDto preview = travelPlanInvitationService
+                .resolvePreview(MEMBER_USER_ID, "raw-token").orElseThrow();
+
+        assertThat(preview.isRejoinAvailable()).isTrue();
+        assertThat(preview.getRejoinDisplayName()).isEqualTo("예진");
+        assertThat(preview.isJoinBlocked()).isFalse();
     }
 
     @Test
@@ -606,7 +782,7 @@ class TravelPlanInvitationServiceTest {
 
         // 기존 row 를 두고 새 row 를 만들지도, 되살리지도 않는다
         verify(travelPlanMapper, never()).insertMember(any());
-        verify(travelPlanMapper, never()).reactivateLeftMember(
+        verify(travelPlanMapper, never()).reactivateMember(
                 anyLong(), anyLong(), anyLong(), anyString(), anyString());
     }
 
@@ -623,7 +799,7 @@ class TravelPlanInvitationServiceTest {
                 .isInstanceOf(TravelPlanValidationException.class)
                 .hasMessageContaining("현재 이 여행에 다시 참여할 수 없습니다.");
 
-        verify(travelPlanMapper, never()).reactivateLeftMember(
+        verify(travelPlanMapper, never()).reactivateMember(
                 anyLong(), anyLong(), anyLong(), anyString(), anyString());
     }
 
@@ -635,7 +811,7 @@ class TravelPlanInvitationServiceTest {
         when(travelPlanMapper.findAnyMemberByPlanAndUser(PLAN_ID, MEMBER_USER_ID))
                 .thenReturn(left);
         // 그 사이 OWNER 가 내보내 rejoin_allowed 가 내려갔다 -> 영향 행 0
-        when(travelPlanMapper.reactivateLeftMember(
+        when(travelPlanMapper.reactivateMember(
                 anyLong(), anyLong(), anyLong(), anyString(), anyString())).thenReturn(0);
 
         assertThatThrownBy(() ->
@@ -653,13 +829,13 @@ class TravelPlanInvitationServiceTest {
         left.setRejoinAllowed(true);
         when(travelPlanMapper.findAnyMemberByPlanAndUser(PLAN_ID, MEMBER_USER_ID))
                 .thenReturn(left);
-        when(travelPlanMapper.reactivateLeftMember(
+        when(travelPlanMapper.reactivateMember(
                 anyLong(), anyLong(), anyLong(), anyString(), anyString())).thenReturn(1);
 
         // 7명 + 돌아오는 1명 = 8명
         assertThat(travelPlanInvitationService.join(MEMBER_USER_ID, "raw-token", null))
                 .isEqualTo(PLAN_ID);
-        verify(travelPlanMapper).reactivateLeftMember(
+        verify(travelPlanMapper).reactivateMember(
                 left.getId(), PLAN_ID, MEMBER_USER_ID, "LEFT", "ACTIVE");
     }
 
@@ -678,7 +854,7 @@ class TravelPlanInvitationServiceTest {
 
         // 정원은 잠금 안에서 신규/재참여 모두 같은 기준으로 본다
         verify(travelPlanMapper).countMembersByPlanAndStatus(PLAN_ID, "ACTIVE");
-        verify(travelPlanMapper, never()).reactivateLeftMember(
+        verify(travelPlanMapper, never()).reactivateMember(
                 anyLong(), anyLong(), anyLong(), anyString(), anyString());
     }
 
@@ -696,7 +872,7 @@ class TravelPlanInvitationServiceTest {
                 .isInstanceOf(TravelPlanValidationException.class)
                 .hasMessageContaining("유효하지 않거나 만료된 초대 링크입니다.");
 
-        verify(travelPlanMapper, never()).reactivateLeftMember(
+        verify(travelPlanMapper, never()).reactivateMember(
                 anyLong(), anyLong(), anyLong(), anyString(), anyString());
     }
 
@@ -707,7 +883,7 @@ class TravelPlanInvitationServiceTest {
         left.setRejoinAllowed(true);
         when(travelPlanMapper.findAnyMemberByPlanAndUser(PLAN_ID, MEMBER_USER_ID))
                 .thenReturn(left);
-        when(travelPlanMapper.reactivateLeftMember(
+        when(travelPlanMapper.reactivateMember(
                 anyLong(), anyLong(), anyLong(), anyString(), anyString())).thenReturn(1);
 
         travelPlanInvitationService.join(MEMBER_USER_ID, "raw-token", null);
@@ -715,7 +891,7 @@ class TravelPlanInvitationServiceTest {
         InOrder order = inOrder(travelPlanMapper);
         order.verify(travelPlanMapper).findPlanByIdAndStatusForUpdate(PLAN_ID, "ACTIVE");
         order.verify(travelPlanMapper).countMembersByPlanAndStatus(PLAN_ID, "ACTIVE");
-        order.verify(travelPlanMapper).reactivateLeftMember(
+        order.verify(travelPlanMapper).reactivateMember(
                 anyLong(), anyLong(), anyLong(), anyString(), anyString());
         order.verify(travelPlanMapper).touchLastActivity(PLAN_ID);
     }

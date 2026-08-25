@@ -10,7 +10,7 @@
       방마다 ACTIVE 는 1건이라는 규칙은 Service 가 지키므로 여기서는 최신 1건만 읽는다.
     -->
     <select id="findActiveByPlanId" resultType="com.example.travlediary.model.TravelPlanInvitation">
-        SELECT id, travel_plan_id, created_by_user_id, token_hash, status,
+        SELECT id, travel_plan_id, created_by_user_id, token_hash, token_encrypted, status,
                invalidated_at, created_at, updated_at
         FROM travel_plan_invitations
         WHERE travel_plan_id = #{travelPlanId}
@@ -21,25 +21,29 @@
 
     <!--
       초대 링크 1건 등록.
-      token_hash 에는 SHA-256 hex 만 들어간다. raw token 을 저장하는 컬럼은 없다.
+      token_hash 에는 SHA-256 hex 가, token_encrypted 에는 AES-GCM 으로 감싼 값이 들어간다.
+      평문 raw token 을 담는 컬럼은 없다.
       invalidated_at / created_at / updated_at 은 DB DEFAULT 를 쓴다.
     -->
     <insert id="insertInvitation" parameterType="com.example.travlediary.model.TravelPlanInvitation"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO travel_plan_invitations (
-            travel_plan_id, created_by_user_id, token_hash, status
+            travel_plan_id, created_by_user_id, token_hash, token_encrypted, status
         ) VALUES (
-            #{travelPlanId}, #{createdByUserId}, #{tokenHash}, #{status}
+            #{travelPlanId}, #{createdByUserId}, #{tokenHash}, #{tokenEncrypted}, #{status}
         )
     </insert>
 
     <!--
       살아 있는 링크를 끈다. 재발급이면 REPLACED, 비활성화면 DISABLED 가 들어온다.
+      끊긴 링크는 다시 보여 줄 이유가 없으므로 token_encrypted 를 함께 지운다.
+      token_hash 는 남겨 두어 그 주소가 더 이상 쓸 수 없다는 판정에 계속 쓰인다.
       status 조건을 함께 걸어 이미 꺼진 링크의 invalidated_at 을 덮어쓰지 않는다.
     -->
     <update id="invalidateActiveInvitation">
         UPDATE travel_plan_invitations
         SET status = #{toStatus},
+            token_encrypted = NULL,
             invalidated_at = CURRENT_TIMESTAMP,
             updated_at = CURRENT_TIMESTAMP
         WHERE travel_plan_id = #{travelPlanId}

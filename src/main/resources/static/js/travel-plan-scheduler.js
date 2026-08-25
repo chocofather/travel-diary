@@ -362,8 +362,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 .catch(() => { copy.textContent = "직접 복사해 주세요"; });
         });
 
-        // 방금 발급한 링크는 이 화면에서만 볼 수 있으므로 바로 펼쳐 준다.
-        if (url) {
+        // 방금 발급했을 때만 저절로 펼친다.
+        // 링크는 새로고침해도 계속 볼 수 있으므로 그 뒤에는 열어 두지 않는다.
+        if (invite.root.querySelector("[data-travel-plan-invite-issued]")) {
             closePopovers(invite);
             invite.open(true);
         }

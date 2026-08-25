@@ -3,6 +3,7 @@ package com.example.travlediary.service.travelplan;
 import com.example.travlediary.dto.TravelPlanDetailDto;
 import com.example.travlediary.dto.TravelPlanListItemDto;
 import com.example.travlediary.dto.TravelPlanMemberDto;
+import com.example.travlediary.dto.TravelPlanPastMemberDto;
 import com.example.travlediary.model.TravelPlan;
 import com.example.travlediary.model.TravelPlanDay;
 import com.example.travlediary.model.TravelPlanItem;
@@ -310,6 +311,53 @@ class TravelPlanReadServiceTest {
         assertThat(travelPlanService.getActivePlanDetail(USER_ID, PLAN_ID).getMemberLimit())
                 .isEqualTo(TravelPlanInvitationService.MAX_MEMBERS)
                 .isEqualTo(8);
+    }
+
+    @Test
+    void theOwnerAlsoSeesWhoWasRemovedAndWhetherTheyMayComeBack() {
+        givenActiveMembership();   // 현재 사용자는 OWNER 다
+        when(travelPlanMapper.findPlanByIdAndStatus(PLAN_ID, "ACTIVE")).thenReturn(plan());
+        TravelPlanMember blocked = memberRow(20L, "테스트3", TravelPlanRole.MEMBER);
+        blocked.setRejoinAllowed(false);
+        TravelPlanMember allowed = memberRow(21L, "쭈니", TravelPlanRole.MEMBER);
+        allowed.setRejoinAllowed(true);
+        when(travelPlanMapper.findMembersByPlanAndStatus(PLAN_ID, "REMOVED"))
+                .thenReturn(List.of(blocked, allowed));
+
+        TravelPlanDetailDto detail = travelPlanService.getActivePlanDetail(USER_ID, PLAN_ID);
+
+        assertThat(detail.getPastMembers())
+                .extracting(TravelPlanPastMemberDto::getDisplayName)
+                .containsExactly("테스트3", "쭈니");
+        assertThat(detail.getPastMembers())
+                .extracting(TravelPlanPastMemberDto::isRejoinAllowed)
+                .containsExactly(false, true);
+        // 내보내진 사람은 현재 참여자 수에 들어가지 않는다
+        assertThat(detail.getMemberCount()).isZero();
+    }
+
+    @Test
+    void aPlainMemberIsNeverEvenSentThePastMemberList() {
+        givenPlainActiveMembership();
+        when(travelPlanMapper.findPlanByIdAndStatus(PLAN_ID, "ACTIVE")).thenReturn(plan());
+
+        assertThat(travelPlanService.getActivePlanDetail(USER_ID, PLAN_ID).getPastMembers())
+                .isEmpty();
+
+        // OWNER 가 아니면 조회조차 하지 않는다
+        verify(travelPlanMapper, never()).findMembersByPlanAndStatus(anyLong(), anyString());
+    }
+
+    private void givenPlainActiveMembership() {
+        TravelPlanMember member = new TravelPlanMember();
+        member.setId(12L);
+        member.setTravelPlanId(PLAN_ID);
+        member.setUserId(USER_ID);
+        member.setDisplayName("쭈니");
+        member.setRole(TravelPlanRole.MEMBER);
+        member.setStatus(TravelPlanMemberStatus.ACTIVE);
+        when(travelPlanMapper.findMemberByPlanAndUser(PLAN_ID, USER_ID, "ACTIVE"))
+                .thenReturn(member);
     }
 
     /** 목록 조회는 화면에 쓰는 컬럼만 읽으므로 user_id 는 채워지지 않는다. */

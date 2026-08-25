@@ -234,7 +234,8 @@ class TravelPlanControllerTest {
         plan.setStartDate(LocalDate.parse(START));
         plan.setEndDate(LocalDate.parse(END));
         TravelPlanDetailDto detail = new TravelPlanDetailDto(
-                plan, new TravelPlanMember(), List.of(), Map.of(), Map.of(), List.of(), 8);
+                plan, new TravelPlanMember(), List.of(), Map.of(), Map.of(),
+                List.of(), List.of(), 8);
         when(travelPlanService.getActivePlanDetail(7L, 42L)).thenReturn(detail);
 
         mockMvc.perform(get("/travel-plans/42").with(user(member())))
@@ -613,7 +614,8 @@ class TravelPlanControllerTest {
         day.setPlanDate(LocalDate.parse(START));
         return new TravelPlanDetailDto(
                 plan, new TravelPlanMember(), List.of(day), Map.of(), Map.of(),
-                List.of(new TravelPlanMemberDto(11L, "민준", TravelPlanRole.OWNER, true)), 8);
+                List.of(new TravelPlanMemberDto(11L, "민준", TravelPlanRole.OWNER, true)),
+                List.of(), 8);
     }
 
     private TravelPlanDayDetailDto dayDetail() {

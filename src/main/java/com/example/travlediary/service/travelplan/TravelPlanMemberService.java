@@ -81,6 +81,38 @@ public class TravelPlanMemberService {
     }
 
     /**
+     * OWNER 가 내보낸 사람의 재참여를 다시 허용한다.
+     * 여기서는 rejoin_allowed 만 올리고 상태는 REMOVED 그대로 둔다.
+     * 실제 복귀는 본인이 유효한 초대 링크로 들어올 때 일어나므로,
+     * 이 시점에는 자리를 차지하지 않아 정원도 건드리지 않는다.
+     */
+    @Transactional
+    public void allowRejoin(Long userId, Long travelPlanId, Long targetMemberId) {
+        requireActivePlan(travelPlanId);
+        TravelPlanMember owner = requireActiveMember(travelPlanId, userId);
+        if (owner.getRole() != TravelPlanRole.OWNER) {
+            // 권한이 없는 사람에게는 대상의 존재 자체를 알리지 않는다.
+            throw planNotFound();
+        }
+
+        TravelPlanMember target = targetMemberId == null
+                ? null : travelPlanMapper.findMemberByPlanAndId(travelPlanId, targetMemberId);
+        // 내보내진 MEMBER 만 대상이다. 다른 방의 memberId 는 방 조건에서 걸린다.
+        if (target == null
+                || target.getStatus() != TravelPlanMemberStatus.REMOVED
+                || target.getRole() != TravelPlanRole.MEMBER
+                || Boolean.TRUE.equals(target.getRejoinAllowed())) {
+            throw planNotFound();
+        }
+
+        if (travelPlanMapper.allowMemberRejoin(target.getId(), travelPlanId,
+                TravelPlanMemberStatus.REMOVED.name(), TravelPlanRole.MEMBER.name()) != 1) {
+            throw planNotFound();
+        }
+        travelPlanMapper.touchLastActivity(travelPlanId);
+    }
+
+    /**
      * 방장을 같은 방의 다른 ACTIVE MEMBER 에게 넘긴다.
      * 방 row 를 잠근 뒤 양쪽 상태를 다시 확인하므로 동시에 두 번 넘겨도
      * 방장이 둘이 되거나 없어지지 않는다.

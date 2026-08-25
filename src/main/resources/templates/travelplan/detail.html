@@ -74,6 +74,37 @@
                th:text="${travelPlan.memberCount} + ' / ' + ${travelPlan.memberLimit}
                         + '명 참여 중'">3 / 8명 참여 중</p>
 
+            <!--
+              이전 참여자. OWNER 에게만, 그것도 내보낸 사람이 있을 때만 나온다.
+              허용은 rejoin_allowed 만 올릴 뿐 바로 복귀시키지 않는다.
+            -->
+            <div class="travel-plan-past-members"
+                 th:if="${viewerIsOwner and !#lists.isEmpty(travelPlan.pastMembers)}">
+              <p class="travel-plan-members-heading">이전 참여자</p>
+              <ul class="travel-plan-members-list">
+                <li class="travel-plan-member"
+                    th:each="past : ${travelPlan.pastMembers}">
+                  <span class="travel-plan-member-name" th:text="${past.displayName}">테스트3</span>
+
+                  <!-- 이미 받아 준 사람에게는 버튼을 또 보여 주지 않는다 -->
+                  <span class="travel-plan-member-role" th:if="${past.rejoinAllowed}">
+                    재참여 허용됨
+                  </span>
+
+                  <span class="travel-plan-past-member-actions" th:unless="${past.rejoinAllowed}">
+                    <span class="travel-plan-member-role">내보낸 멤버</span>
+                    <form method="post"
+                          th:action="@{|/travel-plans/${travelPlan.plan.id}/members/${past.memberId}/allow-rejoin|}">
+                      <button type="submit" class="travel-plan-member-action"
+                              th:attr="onclick=|return confirm('${past.displayName}님이 다시 초대 링크로 참여할 수 있게 할까요?\n\n참여자로 바로 복귀하는 것은 아니며, 본인이 초대 링크를 통해 다시 참여해야 합니다.')|">
+                        다시 참여 허용
+                      </button>
+                    </form>
+                  </span>
+                </li>
+              </ul>
+            </div>
+
             <!-- 나가기는 MEMBER 본인에게만 보인다. 방장은 먼저 방장을 넘겨야 한다 -->
             <form class="travel-plan-member-leave-form" method="post"
                   th:unless="${viewerIsOwner}"
@@ -88,7 +119,7 @@
 
         <!--
           초대는 OWNER 에게만 보이는 상단 보조 액션이다.
-          발급된 링크는 이 응답에서만 볼 수 있고 DB 에서 되살릴 수 없다.
+          살아 있는 링크는 저장된 암호문을 풀어 언제든 다시 보여 준다.
         -->
         <div class="travel-plan-invite" th:if="${travelPlan.currentMember != null
                     and travelPlan.currentMember.role != null
@@ -99,11 +130,13 @@
                   data-travel-plan-invite-toggle>초대</button>
 
           <div class="travel-plan-invite-panel" hidden data-travel-plan-invite-panel>
-            <!-- 방금 발급한 링크. 새로고침하면 사라진다 -->
-            <div class="travel-plan-invite-issued" th:if="${travelPlanInviteUrl}">
-              <p class="travel-plan-invite-issued-label">
-                초대 링크가 만들어졌어요. 이 화면에서만 볼 수 있어요.
-              </p>
+            <!--
+              지금 살아 있는 링크. 새로고침해도 같은 주소가 다시 나온다.
+              방금 만든 경우에만 표시를 하나 더 달아 패널이 저절로 열리게 한다.
+            -->
+            <div class="travel-plan-invite-issued" th:if="${travelPlanInviteUrl}"
+                 th:attr="data-travel-plan-invite-issued=${travelPlanInviteIssued} ? '' : null">
+              <p class="travel-plan-invite-issued-label">초대 링크</p>
               <div class="travel-plan-invite-copy-row">
                 <input type="text" class="travel-plan-invite-url" readonly
                        th:value="${travelPlanInviteUrl}"
@@ -115,8 +148,10 @@
 
             <!-- 링크가 켜져 있을 때: 재발급 / 끄기 -->
             <div th:if="${travelPlanInviteActive}">
+              <!-- 예전 방식으로 만들어져 주소를 되살릴 수 없는 링크 -->
               <p class="travel-plan-invite-state" th:unless="${travelPlanInviteUrl}">
-                초대 링크가 활성화되어 있습니다. 이전 링크 주소는 다시 볼 수 없어요.
+                현재 초대 링크는 이전 저장 방식으로 만들어져 주소를 다시 표시할 수 없습니다.
+                새 링크를 한 번 재발급하면 이후부터는 언제든 다시 복사할 수 있습니다.
               </p>
               <form method="post"
                     th:action="@{|/travel-plans/${travelPlan.plan.id}/invitations/regenerate|}">

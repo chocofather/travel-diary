@@ -121,12 +121,37 @@ class TravelPlanMemberControllerTest {
     }
 
     @Test
+    void allowingRejoinSaysItIsNotAnImmediateReturn() throws Exception {
+        mockMvc.perform(post("/travel-plans/42/members/13/allow-rejoin")
+                        .with(user(member())).with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/travel-plans/42"))
+                .andExpect(flash().attribute("travelPlanMessage",
+                        "다시 참여할 수 있게 했어요. 본인이 초대 링크로 들어오면 참여자가 됩니다."));
+
+        // 대상은 URL 의 memberId 뿐이고 요청자는 로그인 정보에서 온다
+        verify(travelPlanMemberService).allowRejoin(7L, 42L, 13L);
+    }
+
+    @Test
+    void aRefusedAllowLooksLikeTheRoomDoesNotExist() throws Exception {
+        doThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "여행계획을 찾을 수 없습니다."))
+                .when(travelPlanMemberService).allowRejoin(anyLong(), anyLong(), anyLong());
+
+        mockMvc.perform(post("/travel-plans/42/members/13/allow-rejoin")
+                        .with(user(member())).with(csrf()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void everyMemberActionIsCsrfProtected() throws Exception {
         mockMvc.perform(post("/travel-plans/42/members/leave").with(user(member())))
                 .andExpect(status().isForbidden());
         mockMvc.perform(post("/travel-plans/42/members/13/remove").with(user(member())))
                 .andExpect(status().isForbidden());
         mockMvc.perform(post("/travel-plans/42/members/13/transfer-owner").with(user(member())))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/travel-plans/42/members/13/allow-rejoin").with(user(member())))
                 .andExpect(status().isForbidden());
 
         verifyNothingHappened();
@@ -140,6 +165,8 @@ class TravelPlanMemberControllerTest {
                 .andExpect(status().is3xxRedirection());
         mockMvc.perform(post("/travel-plans/42/members/13/transfer-owner").with(csrf()))
                 .andExpect(status().is3xxRedirection());
+        mockMvc.perform(post("/travel-plans/42/members/13/allow-rejoin").with(csrf()))
+                .andExpect(status().is3xxRedirection());
 
         verifyNothingHappened();
     }
@@ -149,6 +176,7 @@ class TravelPlanMemberControllerTest {
         verify(travelPlanMemberService, never()).removeMember(anyLong(), anyLong(), anyLong());
         verify(travelPlanMemberService, never())
                 .transferOwnership(anyLong(), anyLong(), anyLong());
+        verify(travelPlanMemberService, never()).allowRejoin(anyLong(), anyLong(), anyLong());
     }
 
     private CustomUserDetails member() {
