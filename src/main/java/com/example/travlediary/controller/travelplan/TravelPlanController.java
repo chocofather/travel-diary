@@ -3,13 +3,16 @@ package com.example.travlediary.controller.travelplan;
 import com.example.travlediary.dto.TravelPlanAlternativeForm;
 import com.example.travlediary.dto.TravelPlanCreateForm;
 import com.example.travlediary.dto.TravelPlanItemCreateForm;
+import com.example.travlediary.dto.TravelPlanDetailDto;
 import com.example.travlediary.dto.TravelPlanItemUpdateForm;
+import com.example.travlediary.model.TravelPlanDay;
 import com.example.travlediary.service.travelplan.TravelPlanConflictException;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.travelplan.TravelPlanInvitationService;
 import com.example.travlediary.service.travelplan.TravelPlanService;
 import com.example.travlediary.service.travelplan.TravelPlanValidationException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -22,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Set;
 
@@ -35,6 +39,16 @@ public class TravelPlanController {
     private static final String CREATE_VIEW = "travelplan/create";
     private static final String DETAIL_VIEW = "travelplan/detail";
     private static final String DAY_DETAIL_VIEW = "travelplan/day-detail";
+    /** 실시간 갱신이 가져가는 DAY 한 구역. 처음 그릴 때와 같은 fragment 다. */
+    private static final String DAY_FRAGMENT_VIEW =
+            "travelplan/fragments/schedule-day :: scheduleDay(plan=${plan}, days=${days},"
+                    + " day=${day}, dayItems=${dayItems},"
+                    + " alternativesByItemId=${alternativesByItemId}, dayOpen=${dayOpen})";
+    /** 재연결 뒤 한 번에 따라잡을 때 쓰는 DAY 전체 묶음. */
+    private static final String SCHEDULE_FRAGMENT_VIEW =
+            "travelplan/fragments/schedule-day :: scheduleDays(plan=${plan}, days=${days},"
+                    + " itemsByDayId=${itemsByDayId},"
+                    + " alternativesByItemId=${alternativesByItemId})";
     private static final String ITEM_FORM_ATTRIBUTE = "travelPlanItemCreateForm";
 
     /** 폼에 실제로 있는 필드만 필드 오류로 남길 수 있다. */
@@ -116,6 +130,54 @@ public class TravelPlanController {
                                 .path("/travel-plans/invitations/")
                                 .path(rawToken)
                                 .toUriString()));
+    }
+
+    /**
+     * DAY 한 구역만 다시 그려 준다. 실시간 알림을 받은 화면이 이 조각만 갈아 끼운다.
+     * 처음 그릴 때와 같은 fragment 를 쓰므로 화면이 갈라지지 않는다.
+     * 접근 권한은 상세 화면과 똑같이 Service 가 확인한다(비참여자는 404).
+     */
+    @GetMapping("/{travelPlanId:\\d+}/days/{dayId:\\d+}/fragment")
+    public String dayFragment(@PathVariable Long travelPlanId,
+                              @PathVariable Long dayId,
+                              @AuthenticationPrincipal CustomUserDetails userDetails,
+                              Model model) {
+        TravelPlanDetailDto detail =
+                travelPlanService.getActivePlanDetail(userDetails.getId(), travelPlanId);
+        TravelPlanDay day = detail.getDays().stream()
+                .filter(candidate -> candidate.getId().equals(dayId))
+                .findFirst()
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "여행계획을 찾을 수 없습니다."));
+
+        model.addAttribute("plan", detail.getPlan());
+        model.addAttribute("days", detail.getDays());
+        model.addAttribute("day", day);
+        model.addAttribute("dayItems", detail.getItemsByDayId().get(dayId));
+        model.addAttribute("alternativesByItemId", detail.getAlternativesByItemId());
+        // 실시간 갱신에서는 입력칸을 열어 두지 않는다.
+        model.addAttribute("dayOpen", false);
+        model.addAttribute(ITEM_FORM_ATTRIBUTE, new TravelPlanItemCreateForm());
+        return DAY_FRAGMENT_VIEW;
+    }
+
+    /**
+     * DAY 전체를 한 번에 다시 그려 준다. 끊겼다 다시 붙은 화면이 밀린 변경을 한 번에 따라잡는다.
+     * DAY 수만큼 요청이 나가지 않도록 평소 갱신과 달리 통째로 준다.
+     */
+    @GetMapping("/{travelPlanId:\\d+}/schedule/fragment")
+    public String scheduleFragment(@PathVariable Long travelPlanId,
+                                   @AuthenticationPrincipal CustomUserDetails userDetails,
+                                   Model model) {
+        TravelPlanDetailDto detail =
+                travelPlanService.getActivePlanDetail(userDetails.getId(), travelPlanId);
+
+        model.addAttribute("plan", detail.getPlan());
+        model.addAttribute("days", detail.getDays());
+        model.addAttribute("itemsByDayId", detail.getItemsByDayId());
+        model.addAttribute("alternativesByItemId", detail.getAlternativesByItemId());
+        model.addAttribute(ITEM_FORM_ATTRIBUTE, new TravelPlanItemCreateForm());
+        return SCHEDULE_FRAGMENT_VIEW;
     }
 
     // A 일정 수정 (방의 ACTIVE 멤버면 누구나)

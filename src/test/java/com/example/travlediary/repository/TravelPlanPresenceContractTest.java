@@ -124,12 +124,12 @@ class TravelPlanPresenceContractTest {
     @Test
     void presenceIsItsOwnScriptAndNeverSendsWhoYouAre() throws IOException {
         String detail = detailHtml();
-        String presence = resource("/static/js/travel-plan-presence.js");
+        String presence = resource("/static/js/travel-plan-realtime.js");
         String scheduler = resource("/static/js/travel-plan-scheduler.js");
 
         assertThat(detail)
                 .contains("/webjars/stomp__stompjs/7.0.0/bundles/stomp.umd.min.js")
-                .contains("/js/travel-plan-presence.js");
+                .contains("/js/travel-plan-realtime.js");
 
         // 방 번호는 화면의 data 속성에서 읽는다
         assertThat(presence)
@@ -150,7 +150,7 @@ class TravelPlanPresenceContractTest {
 
     @Test
     void theClientReconnectsWithTheLibraryRatherThanItsOwnLoop() throws IOException {
-        String presence = resource("/static/js/travel-plan-presence.js");
+        String presence = resource("/static/js/travel-plan-realtime.js");
 
         assertThat(presence)
                 .contains("new StompJs.Client")
@@ -165,14 +165,17 @@ class TravelPlanPresenceContractTest {
     }
 
     @Test
-    void thisStageStopsAtPresence() throws IOException {
-        String presence = resource("/static/js/travel-plan-presence.js");
+    void realtimeStopsAtPresenceAndScheduleRefresh() throws IOException {
+        String realtime = resource("/static/js/travel-plan-realtime.js");
 
-        // 일정 실시간 동기화는 다음 단계다
-        for (String notYet : new String[]{
-                "items", "alternatives", "draft", "lock", "typing", "chat", "poll"}) {
-            assertThat(presence).as("아직 없는 기능: %s", notYet).doesNotContain(notYet);
+        // 입력 중 내용 전달이나 편집 잠금은 아직 없다
+        for (String notYet : new String[]{"draft", "lock", "typing", "chat", "poll"}) {
+            assertThat(realtime).as("아직 없는 기능: %s", notYet).doesNotContain(notYet);
         }
+        // WebSocket 으로 저장하지 않는다. 받는 것은 "다시 읽어라" 는 신호뿐이다
+        assertThat(realtime)
+                .doesNotContain("client.publish({ destination: `/app/travel-plans/${planId}/items")
+                .doesNotContain("method: \"POST\"");
     }
 
     private String detailHtml() throws IOException {

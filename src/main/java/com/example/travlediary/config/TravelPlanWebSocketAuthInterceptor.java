@@ -2,6 +2,7 @@ package com.example.travlediary.config;
 
 import com.example.travlediary.service.travelplan.TravelPlanPresenceDestinations;
 import com.example.travlediary.service.travelplan.TravelPlanRoomAccess;
+import com.example.travlediary.service.travelplan.TravelPlanScheduleDestinations;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
@@ -41,9 +42,8 @@ public class TravelPlanWebSocketAuthInterceptor implements ChannelInterceptor {
 
         if (command == StompCommand.SUBSCRIBE) {
             Principal principal = requirePrincipal(accessor.getUser());
-            Long travelPlanId =
-                    TravelPlanPresenceDestinations.travelPlanIdOf(accessor.getDestination());
-            // 지금 쓰는 topic 은 방별 접속 표시 하나뿐이다. 그 밖은 열어 주지 않는다.
+            Long travelPlanId = subscribableTravelPlanId(accessor.getDestination());
+            // 지금 쓰는 topic 은 방별 접속 표시와 일정 변경 둘뿐이다. 그 밖은 열어 주지 않는다.
             if (travelPlanId == null) {
                 throw new AccessDeniedException("구독할 수 없는 대상입니다.");
             }
@@ -52,6 +52,19 @@ public class TravelPlanWebSocketAuthInterceptor implements ChannelInterceptor {
             }
         }
         return message;
+    }
+
+    /**
+     * 구독을 허용하는 목적지에서 방 번호를 꺼낸다.
+     * 어느 쪽이든 그 방의 ACTIVE 참여자인지는 똑같이 확인한다.
+     *
+     * @return 허용하지 않는 목적지면 null
+     */
+    private Long subscribableTravelPlanId(String destination) {
+        Long presencePlanId = TravelPlanPresenceDestinations.travelPlanIdOf(destination);
+        return presencePlanId != null
+                ? presencePlanId
+                : TravelPlanScheduleDestinations.travelPlanIdOf(destination);
     }
 
     private Principal requirePrincipal(Principal principal) {

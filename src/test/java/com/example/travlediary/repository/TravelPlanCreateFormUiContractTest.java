@@ -117,7 +117,7 @@ class TravelPlanCreateFormUiContractTest {
 
     @Test
     void thePlannerShowsThePlanHeaderAndEveryDay() throws IOException {
-        String detail = resource("/templates/travelplan/detail.html");
+        String detail = plannerHtml();
 
         assertThat(detail)
                 .contains("~{layout/main :: layout(~{::body}, ~{::headFragment})}")
@@ -132,7 +132,7 @@ class TravelPlanCreateFormUiContractTest {
 
     @Test
     void thePlannerDoesNotSendTheUserToTheDayScreen() throws IOException {
-        String detail = resource("/templates/travelplan/detail.html");
+        String detail = plannerHtml();
 
         // PC 메인 화면에서는 DAY 상세로 넘어가는 기본 동선을 두지 않는다
         assertThat(detail).doesNotContain("/days/${day.id}|}\"")
@@ -143,12 +143,12 @@ class TravelPlanCreateFormUiContractTest {
 
     @Test
     void nothingIsOpenForTypingUntilASlotIsClicked() throws IOException {
-        String detail = resource("/templates/travelplan/detail.html");
+        String detail = plannerHtml();
 
         // 슬롯 폼은 기본적으로 hidden 이고, 저장에 실패한 자리에서만 열려 온다
         assertThat(detail)
                 .contains("th:hidden=\"${!dayOpen}\"")
-                .contains("dayOpen=${openDayId != null and openDayId == day.id}");
+                .contains("${openDayId != null and openDayId == day.id}");
         // A 줄에는 항상 떠 있는 추가/취소 버튼이 없다
         assertThat(detail)
                 .doesNotContain(">추가</button>")
@@ -165,7 +165,7 @@ class TravelPlanCreateFormUiContractTest {
 
     @Test
     void onlySavedItemsBecomeNumberedLinesAndEachDayHasOneAddSlot() throws IOException {
-        String detail = resource("/templates/travelplan/detail.html");
+        String detail = plannerHtml();
 
         // 번호가 붙은 줄은 저장된 일정에서만 만들어진다
         assertThat(detail)
@@ -187,7 +187,7 @@ class TravelPlanCreateFormUiContractTest {
 
     @Test
     void theAddSlotIsQuietAndSharpensOnHover() throws IOException {
-        String detail = resource("/templates/travelplan/detail.html");
+        String detail = plannerHtml();
         String css = resource("/static/css/travel-plan.css");
 
         assertThat(detail)
@@ -201,7 +201,7 @@ class TravelPlanCreateFormUiContractTest {
 
     @Test
     void thePlannerSitsOnItsOwnPaperAboveATintedSurface() throws IOException {
-        String detail = resource("/templates/travelplan/detail.html");
+        String detail = plannerHtml();
         String css = resource("/static/css/travel-plan.css");
 
         assertThat(detail)
@@ -223,7 +223,7 @@ class TravelPlanCreateFormUiContractTest {
 
     @Test
     void eachDayItemAndSlotCarriesAnIdentifierForLaterLiveEditing() throws IOException {
-        String detail = resource("/templates/travelplan/detail.html");
+        String detail = plannerHtml();
 
         assertThat(detail)
                 .contains("data-plan-id=${travelPlan.plan.id}")
@@ -263,7 +263,7 @@ class TravelPlanCreateFormUiContractTest {
 
     @Test
     void savedItemsCanBeEditedInPlaceAndCarryTheirVersion() throws IOException {
-        String detail = resource("/templates/travelplan/detail.html");
+        String detail = plannerHtml();
 
         assertThat(detail)
                 // 줄 자체가 편집기가 된다 (별도 페이지도 모달도 아니다)
@@ -280,7 +280,7 @@ class TravelPlanCreateFormUiContractTest {
 
     @Test
     void theEditorReplacesTheTextInPlaceInsteadOfSittingBesideIt() throws IOException {
-        String detail = resource("/templates/travelplan/detail.html");
+        String detail = plannerHtml();
         String css = resource("/static/css/travel-plan.css");
 
         // 보기와 편집기가 같은 칸(line-body) 안에 함께 들어 있다
@@ -310,7 +310,7 @@ class TravelPlanCreateFormUiContractTest {
 
     @Test
     void eachItemHasAQuietMenu() throws IOException {
-        String detail = resource("/templates/travelplan/detail.html");
+        String detail = plannerHtml();
         String css = resource("/static/css/travel-plan.css");
 
         assertThat(detail)
@@ -332,7 +332,7 @@ class TravelPlanCreateFormUiContractTest {
 
     @Test
     void theMenuOffersMoveUpMoveDownAndAnotherDay() throws IOException {
-        String detail = resource("/templates/travelplan/detail.html");
+        String detail = plannerHtml();
 
         assertThat(detail)
                 .contains(">위로 이동</button>")
@@ -351,8 +351,9 @@ class TravelPlanCreateFormUiContractTest {
 
         // DAY 가 하나뿐이면 목록 자체가 없고, 현재 DAY 는 목록에서 빠진다
         assertThat(detail)
-                .contains("${#lists.size(travelPlan.days) > 1}")
-                .contains("th:each=\"target : ${travelPlan.days}\"")
+                // fragment 안에서는 방의 DAY 목록이 days 인자로 넘어온다
+                .contains("${#lists.size(days) > 1}")
+                .contains("th:each=\"target : ${days}\"")
                 .contains("th:if=\"${target.id != day.id}\"")
                 .contains("'DAY ' + ${target.dayNumber}");
 
@@ -377,7 +378,7 @@ class TravelPlanCreateFormUiContractTest {
 
     @Test
     void thePlannerHasNoActionsFromLaterStages() throws IOException {
-        String detail = resource("/templates/travelplan/detail.html");
+        String detail = plannerHtml();
 
         // 멤버 관리는 재참여 허용까지 들어왔고, 그 다음 단계는 아직이다
         for (String notYet : new String[]{
@@ -425,11 +426,12 @@ class TravelPlanCreateFormUiContractTest {
 
     @Test
     void eachDayShowsItsOwnItemsInOrder() throws IOException {
-        String detail = resource("/templates/travelplan/detail.html");
+        String detail = plannerHtml();
 
         // DAY 별 목록을 그 DAY 의 id 로만 꺼내 서로 섞이지 않는다
         assertThat(detail)
-                .contains("dayItems=${travelPlan.itemsByDayId.get(day.id)}")
+                // DAY 별 목록은 fragment 인자로 그 DAY 것만 넘어간다
+                .contains("${travelPlan.itemsByDayId.get(day.id)}")
                 .contains("th:each=\"item, status : ${dayItems}\"")
                 .contains("th:text=\"${item.content}\"")
                 .contains("${#numbers.formatInteger(status.count, 2)}");
@@ -555,6 +557,15 @@ class TravelPlanCreateFormUiContractTest {
             index = source.indexOf(token, index + token.length());
         }
         return count;
+    }
+
+    /**
+     * 플래너가 실제로 그려 내는 markup 전부.
+     * DAY 한 구역은 fragment 로 빠져 있고 처음 그릴 때와 실시간 갱신이 같은 파일을 쓴다.
+     */
+    private String plannerHtml() throws IOException {
+        return resource("/templates/travelplan/detail.html")
+                + resource("/templates/travelplan/fragments/schedule-day.html");
     }
 
     private String resource(String path) throws IOException {

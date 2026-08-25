@@ -55,6 +55,8 @@ class TravelPlanItemMoveServiceTest {
     private TravelPlanItemMapper travelPlanItemMapper;
     @Mock
     private TravelPlanAlternativeMapper travelPlanAlternativeMapper;
+    @Mock
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
     @InjectMocks
     private TravelPlanService travelPlanService;
 

@@ -11,6 +11,19 @@ document.addEventListener("DOMContentLoaded", () => {
     // 대안 편집기도 같은 규칙을 따른다. 열려 있는 것은 A 쪽이든 대안 쪽이든 하나뿐이다.
     let activeAlt = null;
 
+    /*
+      편집기가 모두 닫혔다고 알린다.
+      실시간 갱신 쪽이 이 신호를 듣고 미뤄 둔 DAY 를 그때 새로 고친다.
+      (내부 변수를 밖에서 들여다보지 않도록 DOM 이벤트로만 알린다)
+      다음 편집기를 곧바로 여는 중일 수 있어 한 박자 뒤에 상태를 다시 본다.
+    */
+    function notifyEditorIdle() {
+        queueMicrotask(() => {
+            if (activeLine || activeAlt) return;
+            document.dispatchEvent(new CustomEvent("travelplan:editor-idle"));
+        });
+    }
+
     function formOf(line) {
         return line.querySelector("[data-travel-plan-slot-form], [data-travel-plan-item-form]");
     }
@@ -47,6 +60,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (form) form.hidden = true;
         activeLine.classList.remove("is-editing");
         activeLine = null;
+        notifyEditorIdle();
     }
 
     function open(line) {
@@ -118,18 +132,20 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 빈 슬롯: 줄을 누르면 그 자리가 입력 상태가 된다.
-    planner.querySelectorAll("[data-travel-plan-slot]").forEach(line => {
-        line.addEventListener("click", () => open(line));
-        bind(line);
-    });
+    function bindLines(root) {
+        // 빈 슬롯: 줄을 누르면 그 자리가 입력 상태가 된다.
+        root.querySelectorAll("[data-travel-plan-slot]").forEach(line => {
+            line.addEventListener("click", () => open(line));
+            bind(line);
+        });
 
-    // 기존 일정: 내용을 누르면 그 줄이 편집 상태가 된다.
-    planner.querySelectorAll("[data-travel-plan-item]").forEach(line => {
-        line.querySelector("[data-travel-plan-item-content]")
-            ?.addEventListener("click", () => open(line));
-        bind(line);
-    });
+        // 기존 일정: 내용을 누르면 그 줄이 편집 상태가 된다.
+        root.querySelectorAll("[data-travel-plan-item]").forEach(line => {
+            line.querySelector("[data-travel-plan-item-content]")
+                ?.addEventListener("click", () => open(line));
+            bind(line);
+        });
+    }
 
     // ── 대안(B/C) ───────────────────────────────────────────────
     // A 아래에 접힌 목록이 하나 있고, 그 안에서 각 대안이 그 자리에서 편집기가 된다.
@@ -156,6 +172,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (view) view.hidden = false;
         activeAlt.classList.remove("is-editing");
         activeAlt = null;
+        notifyEditorIdle();
     }
 
     function openAlt(node) {
@@ -192,7 +209,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!shouldOpen) closeAlt();
     }
 
-    planner.querySelectorAll("[data-travel-plan-item]").forEach(line => {
+    function bindAlternatives(root) {
+    root.querySelectorAll("[data-travel-plan-item]").forEach(line => {
         toggleOf(line)?.addEventListener("click", () => {
             const list = listOf(line);
             expand(line, list ? list.hidden : false);
@@ -232,6 +250,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         });
     });
+    }
 
     // ⋯ 메뉴는 한 번에 하나만 열어 둔다.
     function closeMenus(except) {
@@ -243,18 +262,37 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    planner.querySelectorAll("[data-travel-plan-menu-button]").forEach(button => {
-        button.addEventListener("click", event => {
-            event.stopPropagation();
-            const list = button.parentElement?.querySelector("[data-travel-plan-menu-list]");
-            if (!list) return;
-            const willOpen = list.hidden;
-            // 편집 중이던 입력칸과 메뉴가 함께 열려 있지 않게 한다.
-            if (willOpen) closeActive();
-            closeMenus(list);
-            list.hidden = !willOpen;
-            button.setAttribute("aria-expanded", String(willOpen));
+    function bindItemMenus(root) {
+        root.querySelectorAll("[data-travel-plan-menu-button]").forEach(button => {
+            button.addEventListener("click", event => {
+                event.stopPropagation();
+                const list = button.parentElement?.querySelector("[data-travel-plan-menu-list]");
+                if (!list) return;
+                const willOpen = list.hidden;
+                // 편집 중이던 입력칸과 메뉴가 함께 열려 있지 않게 한다.
+                if (willOpen) closeActive();
+                closeMenus(list);
+                list.hidden = !willOpen;
+                button.setAttribute("aria-expanded", String(willOpen));
+            });
         });
+    }
+
+    /*
+      DAY 구역 안의 동작을 한 번에 붙인다.
+      실시간 갱신으로 DAY markup 이 통째로 바뀌면 그 자리의 요소는 전부 새것이라
+      갈아 끼운 부분에만 다시 붙여 준다(이미 붙어 있는 다른 DAY 는 건드리지 않는다).
+    */
+    function bindScheduleRoot(root) {
+        bindLines(root);
+        bindAlternatives(root);
+        bindItemMenus(root);
+    }
+
+    bindScheduleRoot(planner);
+    document.addEventListener("travelplan:schedule-updated", event => {
+        const root = event.detail?.root;
+        if (root) bindScheduleRoot(root);
     });
 
     document.addEventListener("click", () => closeMenus(null));

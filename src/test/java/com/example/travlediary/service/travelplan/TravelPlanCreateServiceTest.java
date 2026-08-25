@@ -41,6 +41,8 @@ class TravelPlanCreateServiceTest {
 
     @Mock
     private TravelPlanMapper travelPlanMapper;
+    @Mock
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
     @InjectMocks
     private TravelPlanService travelPlanService;
 

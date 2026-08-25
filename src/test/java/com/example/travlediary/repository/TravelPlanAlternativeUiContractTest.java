@@ -309,8 +309,13 @@ class TravelPlanAlternativeUiContractTest {
         }
     }
 
+    /**
+     * 플래너가 실제로 그려 내는 markup 전부.
+     * DAY 한 구역은 fragment 로 빠져 있고 처음 그릴 때와 실시간 갱신이 같은 파일을 쓴다.
+     */
     private String detailHtml() throws IOException {
-        return resource("/templates/travelplan/detail.html");
+        return resource("/templates/travelplan/detail.html")
+                + resource("/templates/travelplan/fragments/schedule-day.html");
     }
 
     private String cssFile() throws IOException {

@@ -262,6 +262,69 @@ class TravelPlanControllerTest {
     }
 
     @Test
+    void theDayFragmentGivesBackJustThatDayForAnActiveMember() throws Exception {
+        when(travelPlanService.getActivePlanDetail(7L, 42L)).thenReturn(planDetail());
+
+        mockMvc.perform(get("/travel-plans/42/days/100/fragment").with(user(member())))
+                .andExpect(status().isOk())
+                // 처음 그릴 때와 같은 fragment 를 쓴다
+                .andExpect(view().name("travelplan/fragments/schedule-day :: scheduleDay("
+                        + "plan=${plan}, days=${days}, day=${day}, dayItems=${dayItems},"
+                        + " alternativesByItemId=${alternativesByItemId}, dayOpen=${dayOpen})"))
+                .andExpect(model().attributeExists("plan", "days", "day", "alternativesByItemId"))
+                // 실시간 갱신에서는 입력칸을 열어 두지 않는다
+                .andExpect(model().attribute("dayOpen", false));
+
+        // 접근 권한은 상세 화면과 똑같이 Service 가 확인한다
+        verify(travelPlanService).getActivePlanDetail(7L, 42L);
+    }
+
+    @Test
+    void aDayFragmentFromAnotherRoomComesBackAsNotFound() throws Exception {
+        // 그 방의 DAY 목록에 없는 dayId 는 통과하지 못한다
+        when(travelPlanService.getActivePlanDetail(7L, 42L)).thenReturn(planDetail());
+
+        mockMvc.perform(get("/travel-plans/42/days/999/fragment").with(user(member())))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void aDayFragmentOfARoomTheUserCannotSeeComesBackAsNotFound() throws Exception {
+        // 비참여자 / LEFT / REMOVED 는 상세 조회에서 이미 막힌다
+        when(travelPlanService.getActivePlanDetail(anyLong(), anyLong()))
+                .thenThrow(new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "여행계획을 찾을 수 없습니다."));
+
+        mockMvc.perform(get("/travel-plans/42/days/100/fragment").with(user(member())))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void theFragmentEndpointsAreNotPublic() throws Exception {
+        mockMvc.perform(get("/travel-plans/42/days/100/fragment"))
+                .andExpect(status().is3xxRedirection());
+        mockMvc.perform(get("/travel-plans/42/schedule/fragment"))
+                .andExpect(status().is3xxRedirection());
+
+        verify(travelPlanService, never()).getActivePlanDetail(anyLong(), anyLong());
+    }
+
+    @Test
+    void theWholeScheduleFragmentIsOneRequestForReconnects() throws Exception {
+        when(travelPlanService.getActivePlanDetail(7L, 42L)).thenReturn(planDetail());
+
+        mockMvc.perform(get("/travel-plans/42/schedule/fragment").with(user(member())))
+                .andExpect(status().isOk())
+                // DAY 수만큼 요청이 나가지 않도록 통째로 준다
+                .andExpect(view().name("travelplan/fragments/schedule-day :: scheduleDays("
+                        + "plan=${plan}, days=${days}, itemsByDayId=${itemsByDayId},"
+                        + " alternativesByItemId=${alternativesByItemId})"))
+                .andExpect(model().attributeExists("plan", "days", "itemsByDayId"));
+
+        verify(travelPlanService).getActivePlanDetail(7L, 42L);
+    }
+
+    @Test
     void aRoomTheUserCannotSeeComesBackAsNotFound() throws Exception {
         when(travelPlanService.getActivePlanDetail(anyLong(), anyLong()))
                 .thenThrow(new ResponseStatusException(

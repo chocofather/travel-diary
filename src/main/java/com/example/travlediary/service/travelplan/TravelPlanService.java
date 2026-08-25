@@ -17,6 +17,7 @@ import com.example.travlediary.repository.travelplan.TravelPlanAlternativeMapper
 import com.example.travlediary.repository.travelplan.TravelPlanItemMapper;
 import com.example.travlediary.repository.travelplan.TravelPlanMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,6 +50,8 @@ public class TravelPlanService {
     private final TravelPlanMapper travelPlanMapper;
     private final TravelPlanItemMapper travelPlanItemMapper;
     private final TravelPlanAlternativeMapper travelPlanAlternativeMapper;
+    /** 실시간 알림은 커밋 뒤에 나가야 해서 여기서는 이벤트만 남긴다. */
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 현재 사용자가 ACTIVE 멤버로 참여 중인 ACTIVE 방 목록.
@@ -180,6 +183,7 @@ public class TravelPlanService {
                     HttpStatus.INTERNAL_SERVER_ERROR, "일정을 저장하지 못했습니다.");
         }
         travelPlanMapper.touchLastActivity(travelPlanId);
+        publishScheduleChange(travelPlanId, dayId, TravelPlanScheduleChangeType.ITEM_ADDED);
     }
 
     /**
@@ -203,6 +207,7 @@ public class TravelPlanService {
             throw new TravelPlanConflictException();
         }
         travelPlanMapper.touchLastActivity(travelPlanId);
+        publishScheduleChange(travelPlanId, dayId, TravelPlanScheduleChangeType.ITEM_UPDATED);
     }
 
     /**
@@ -228,6 +233,7 @@ public class TravelPlanService {
         }
         travelPlanItemMapper.resequenceDisplayOrder(dayId);
         travelPlanMapper.touchLastActivity(travelPlanId);
+        publishScheduleChange(travelPlanId, dayId, TravelPlanScheduleChangeType.ITEM_DELETED);
     }
 
     /**
@@ -245,6 +251,8 @@ public class TravelPlanService {
         }
         travelPlanItemMapper.resequenceDisplayOrder(dayId);
         travelPlanMapper.touchLastActivity(travelPlanId);
+        // 화면에서는 줄 하나가 사라진 것이라 일반 삭제와 같은 뜻이다.
+        publishScheduleChange(travelPlanId, dayId, TravelPlanScheduleChangeType.ITEM_DELETED);
     }
 
     /**
@@ -264,6 +272,8 @@ public class TravelPlanService {
         // 비어 버린 B 자리로 C 를 당겨 온다.
         shiftSecondAlternativeUp(itemId);
         travelPlanMapper.touchLastActivity(travelPlanId);
+        // 승격까지 끝난 DAY 를 통째로 다시 읽게 하면 B->A / C->B 결과가 그대로 보인다.
+        publishScheduleChange(travelPlanId, dayId, TravelPlanScheduleChangeType.ITEM_DELETED);
     }
 
     /**
@@ -435,6 +445,9 @@ public class TravelPlanService {
         travelPlanItemMapper.resequenceDisplayOrder(sourceDayId);
         travelPlanItemMapper.resequenceDisplayOrder(targetDayId);
         travelPlanMapper.touchLastActivity(travelPlanId);
+        // 두 DAY 가 함께 바뀌므로 한 이벤트에 담아 보낸다.
+        eventPublisher.publishEvent(TravelPlanScheduleChangedEvent.ofMove(
+                travelPlanId, sourceDayId, targetDayId));
     }
 
     /**
@@ -460,6 +473,18 @@ public class TravelPlanService {
         // 임시 자리를 쓴 뒤라도 1..N 으로 이어지게 맞춘다.
         travelPlanItemMapper.resequenceDisplayOrder(dayId);
         travelPlanMapper.touchLastActivity(travelPlanId);
+        // 안에서 순서 UPDATE 가 여러 번 일어나도 알림은 한 번이다.
+        publishScheduleChange(travelPlanId, dayId, TravelPlanScheduleChangeType.ITEM_REORDERED);
+    }
+
+    /**
+     * 커밋된 뒤에 같은 방의 다른 화면으로 나갈 알림을 예약한다.
+     * 여기서 직접 WebSocket 으로 보내지 않는다. 롤백되면 알림도 함께 사라져야 하기 때문이다.
+     */
+    private void publishScheduleChange(Long travelPlanId, Long dayId,
+                                       TravelPlanScheduleChangeType changeType) {
+        eventPublisher.publishEvent(
+                TravelPlanScheduleChangedEvent.ofDay(travelPlanId, dayId, changeType));
     }
 
     /** 이동 계열이 공통으로 하는 확인. 방 -> DAY -> 일정 -> version 순으로 본다. */

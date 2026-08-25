@@ -145,6 +145,54 @@ class TravelPlanPresenceSecurityTest {
     }
 
     @Test
+    void anActiveMemberMayAlsoWatchTheirOwnRoomsSchedule() {
+        givenActivePlan();
+        givenMembership(TravelPlanRole.MEMBER, TravelPlanMemberStatus.ACTIVE);
+
+        assertThatCode(() -> interceptor.preSend(
+                subscribe("/topic/travel-plans/42/schedule", principal()), null))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void theScheduleTopicIsCheckedJustLikePresence() {
+        givenActivePlan();
+        // LEFT / REMOVED / 비참여자는 ACTIVE 조회에서 비어 온다
+        when(travelPlanMapper.findMemberByPlanAndUser(PLAN_ID, USER_ID, "ACTIVE")).thenReturn(null);
+
+        assertThatThrownBy(() -> interceptor.preSend(
+                subscribe("/topic/travel-plans/42/schedule", principal()), null))
+                .isInstanceOf(AccessDeniedException.class);
+        // 비로그인도 마찬가지다
+        assertThatThrownBy(() -> interceptor.preSend(
+                subscribe("/topic/travel-plans/42/schedule", null), null))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    void aScheduleTopicOfAnotherRoomIsCheckedAgainstThatRoom() {
+        givenActivePlan();
+        givenMembership(TravelPlanRole.MEMBER, TravelPlanMemberStatus.ACTIVE);
+        when(travelPlanMapper.findPlanByIdAndStatus(OTHER_PLAN_ID, "ACTIVE"))
+                .thenReturn(activePlan(OTHER_PLAN_ID));
+        when(travelPlanMapper.findMemberByPlanAndUser(OTHER_PLAN_ID, USER_ID, "ACTIVE"))
+                .thenReturn(null);
+
+        assertThatThrownBy(() -> interceptor.preSend(
+                subscribe("/topic/travel-plans/43/schedule", principal()), null))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    void aRoomThatEndedCannotHaveItsScheduleWatched() {
+        when(travelPlanMapper.findPlanByIdAndStatus(PLAN_ID, "ACTIVE")).thenReturn(null);
+
+        assertThatThrownBy(() -> interceptor.preSend(
+                subscribe("/topic/travel-plans/42/schedule", principal()), null))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
     void nothingButTheRoomPresenceTopicCanBeSubscribed() {
         givenActivePlan();
         givenMembership(TravelPlanRole.MEMBER, TravelPlanMemberStatus.ACTIVE);
@@ -155,6 +203,9 @@ class TravelPlanPresenceSecurityTest {
                 "/topic/travel-plans/42",
                 "/topic/travel-plans/42/presence/extra",
                 "/topic/travel-plans/abc/presence",
+                "/topic/travel-plans/42/schedule/extra",
+                "/topic/travel-plans/abc/schedule",
+                "/topic/travel-plans/**",
                 "/topic/**",
                 null}) {
             assertThatThrownBy(() -> interceptor.preSend(subscribe(destination, principal()), null))
