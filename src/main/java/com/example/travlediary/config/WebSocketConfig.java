@@ -34,8 +34,9 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
-        // 서버 -> 클라이언트 브로드캐스트는 /topic 아래로만 나간다.
-        registry.enableSimpleBroker("/topic");
+        // 방 전체 알림은 /topic, 요청한 사람에게만 가는 답은 /queue 로 나간다.
+        // /user/queue/... 는 브로커가 /queue 를 맡고 있을 때만 전달되므로 둘 다 등록한다.
+        registry.enableSimpleBroker("/topic", "/queue");
         // 클라이언트 -> 서버 메시지는 /app 으로 들어와 @MessageMapping 이 받는다.
         registry.setApplicationDestinationPrefixes("/app");
     }

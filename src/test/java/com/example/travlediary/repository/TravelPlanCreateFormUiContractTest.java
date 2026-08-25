@@ -252,13 +252,12 @@ class TravelPlanCreateFormUiContractTest {
                 .contains("const value = textarea.value.trim()")
                 .contains("if (value === \"\")")
                 .contains("form.requestSubmit()");
-        // 아직 실시간 통신은 없다
+        // 연결은 실시간 쪽이 들고 있다. 편집 스크립트는 소켓을 직접 열지 않는다
         assertThat(script)
                 .doesNotContain("WebSocket")
                 .doesNotContain("SockJS")
-                .doesNotContain("setInterval")
-                .doesNotContain("fetch(")
-                .doesNotContain("XMLHttpRequest");
+                .doesNotContain("StompJs")
+                .doesNotContain("setInterval");
     }
 
     @Test
@@ -409,8 +408,8 @@ class TravelPlanCreateFormUiContractTest {
         assertThat(script)
                 .doesNotContain("WebSocket")
                 .doesNotContain("SockJS")
-                .doesNotContain("setInterval")
-                .doesNotContain("fetch(");
+                .doesNotContain("StompJs")
+                .doesNotContain("setInterval");
     }
 
     @Test

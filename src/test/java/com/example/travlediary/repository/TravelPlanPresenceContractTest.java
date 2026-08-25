@@ -40,7 +40,8 @@ class TravelPlanPresenceContractTest {
                 .contains("@EnableWebSocketMessageBroker")
                 .contains("ENDPOINT = \"/ws\"")
                 .contains("registry.addEndpoint(ENDPOINT)")
-                .contains("enableSimpleBroker(\"/topic\")")
+                // 방 전체 알림(/topic)과 요청자에게만 가는 답(/user/queue) 둘 다 필요하다
+                .contains("enableSimpleBroker(\"/topic\", \"/queue\")")
                 .contains("setApplicationDestinationPrefixes(\"/app\")")
                 // 구독 검사를 붙여 둔다
                 .contains("registration.interceptors(travelPlanWebSocketAuthInterceptor)");
@@ -161,18 +162,19 @@ class TravelPlanPresenceContractTest {
                 .contains("client.subscribe(")
                 .contains("client.publish(");
         // 직접 만든 재시도 루프는 두지 않는다
-        assertThat(presence).doesNotContain("setInterval").doesNotContain("setTimeout");
+        // (잠금 응답을 기다리는 한 번짜리 timeout 은 재시도가 아니다)
+        assertThat(presence).doesNotContain("setInterval");
     }
 
     @Test
-    void realtimeStopsAtPresenceAndScheduleRefresh() throws IOException {
+    void realtimeStopsAtPresenceScheduleAndTheEditingSpot() throws IOException {
         String realtime = resource("/static/js/travel-plan-realtime.js");
 
-        // 입력 중 내용 전달이나 편집 잠금은 아직 없다
-        for (String notYet : new String[]{"draft", "lock", "typing", "chat", "poll"}) {
+        // 채팅·투표·커서 공유 같은 것은 아직 없다
+        for (String notYet : new String[]{"typing", "chat", "poll", "cursor", "selection"}) {
             assertThat(realtime).as("아직 없는 기능: %s", notYet).doesNotContain(notYet);
         }
-        // WebSocket 으로 저장하지 않는다. 받는 것은 "다시 읽어라" 는 신호뿐이다
+        // WebSocket 으로 저장하지 않는다. 저장은 기존 HTTP 경로 그대로다
         assertThat(realtime)
                 .doesNotContain("client.publish({ destination: `/app/travel-plans/${planId}/items")
                 .doesNotContain("method: \"POST\"");

@@ -3,6 +3,7 @@ package com.example.travlediary.service.travelplan;
 import com.example.travlediary.model.TravelPlanMember;
 import com.example.travlediary.model.TravelPlanMemberStatus;
 import com.example.travlediary.model.TravelPlanStatus;
+import com.example.travlediary.repository.travelplan.TravelPlanItemMapper;
 import com.example.travlediary.repository.travelplan.TravelPlanMapper;
 import com.example.travlediary.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ import java.util.Optional;
 public class TravelPlanRoomAccess {
 
     private final TravelPlanMapper travelPlanMapper;
+    private final TravelPlanItemMapper travelPlanItemMapper;
 
     /**
      * 지금 연결한 사람이 그 방의 ACTIVE 참여자인지 보고 방 안에서의 id 를 돌려준다.
@@ -33,6 +35,15 @@ public class TravelPlanRoomAccess {
      */
     @Transactional(readOnly = true)
     public Optional<Long> findActiveMemberId(Principal principal, Long travelPlanId) {
+        return findActiveMember(principal, travelPlanId).map(TravelPlanMember::getId);
+    }
+
+    /**
+     * 방 안에서의 참여 정보 전체.
+     * 편집 표시에 쓸 이름도 여기서 나온다. 클라이언트가 보낸 이름은 쓰지 않는다.
+     */
+    @Transactional(readOnly = true)
+    public Optional<TravelPlanMember> findActiveMember(Principal principal, Long travelPlanId) {
         Long userId = userIdOf(principal);
         if (userId == null || travelPlanId == null) {
             return Optional.empty();
@@ -41,9 +52,26 @@ public class TravelPlanRoomAccess {
                 travelPlanId, TravelPlanStatus.ACTIVE.name()) == null) {
             return Optional.empty();
         }
-        TravelPlanMember member = travelPlanMapper.findMemberByPlanAndUser(
-                travelPlanId, userId, TravelPlanMemberStatus.ACTIVE.name());
-        return member == null ? Optional.empty() : Optional.ofNullable(member.getId());
+        return Optional.ofNullable(travelPlanMapper.findMemberByPlanAndUser(
+                travelPlanId, userId, TravelPlanMemberStatus.ACTIVE.name()));
+    }
+
+    /**
+     * 편집하려는 자리가 정말 그 방의 것인지.
+     * 다른 방의 dayId / itemId 를 섞어 보내도 잠글 수 없어야 한다.
+     *
+     * @param itemId 새 일정 자리면 null
+     */
+    @Transactional(readOnly = true)
+    public boolean isEditableSpot(Long travelPlanId, Long dayId, Long itemId) {
+        if (travelPlanId == null || dayId == null) {
+            return false;
+        }
+        if (travelPlanMapper.findDayByPlanAndId(travelPlanId, dayId) == null) {
+            return false;
+        }
+        // 새 일정 자리는 DAY 까지만 확인하면 된다.
+        return itemId == null || travelPlanItemMapper.findByIdAndDayId(itemId, dayId) != null;
     }
 
     /**

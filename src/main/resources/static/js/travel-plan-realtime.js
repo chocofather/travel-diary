@@ -137,6 +137,167 @@ document.addEventListener("DOMContentLoaded", () => {
         days.forEach(refreshDay);
     });
 
+    // ── 작성 중 상태 ────────────────────────────────────────
+    // 서버가 붙잡아 준 자리만 편집기를 열 수 있다. 화면이 혼자 판단하지 않는다.
+    const pendingLocks = new Map();
+    // lockKey -> 원격에서 작성 중인 사람. 내 자리는 여기 넣지 않는다.
+    const remoteLocks = new Map();
+    /** 내가 지금 붙잡고 있는 자리. 한 번에 하나뿐이다. */
+    let heldLock = null;
+    let requestSeq = 0;
+
+    function addKey(dayId) {
+        return `ADD:${dayId}`;
+    }
+
+    function itemKey(itemId) {
+        return `ITEM:${itemId}`;
+    }
+
+    function lineOf(lock) {
+        if (!lock) return null;
+        return lock.mode === "ADD"
+            ? document.querySelector(
+                `[data-travel-plan-day-id="${lock.dayId}"] [data-travel-plan-slot]`)
+            : document.querySelector(`[data-item-id="${lock.itemId}"]`);
+    }
+
+    /** 다른 사람이 쓰고 있다는 표시와 작성 중 글자를 그 자리에 보여 준다. */
+    function renderRemote(lock) {
+        const line = lineOf(lock);
+        if (!line) return;
+        // 내 편집기와 구분되는 class 를 쓴다.
+        // (.is-editing 으로 표시하면 정식 갱신이 영원히 미뤄진다)
+        line.classList.add("is-remote-editing");
+
+        let note = line.querySelector("[data-travel-plan-remote-note]");
+        if (!note) {
+            note = document.createElement("p");
+            note.className = "travel-plan-remote-note";
+            note.setAttribute("data-travel-plan-remote-note", "");
+            const body = line.querySelector(".travel-plan-line-body") || line;
+            body.prepend(note);
+        }
+        const label = lock.mode === "ADD" ? "일정 작성 중" : "편집 중";
+        const draft = (lock.content || "").trim();
+        note.textContent = draft
+            ? `${lock.displayName}님이 ${label}\n${draft}`
+            : `${lock.displayName}님이 ${label}`;
+    }
+
+    function clearRemote(lock) {
+        const line = lineOf(lock);
+        if (!line) return;
+        line.classList.remove("is-remote-editing");
+        line.querySelector("[data-travel-plan-remote-note]")?.remove();
+    }
+
+    function applyLock(lock) {
+        if (!lock || !lock.lockKey) return;
+        // 내가 붙잡고 있는 자리는 내 입력칸이 이미 있으므로 덮어 그리지 않는다.
+        if (heldLock === lock.lockKey) return;
+        remoteLocks.set(lock.lockKey, lock);
+        renderRemote(lock);
+    }
+
+    function dropLock(lock) {
+        if (!lock || !lock.lockKey) return;
+        remoteLocks.delete(lock.lockKey);
+        clearRemote(lock);
+    }
+
+    function clearAllRemote() {
+        Array.from(remoteLocks.values()).forEach(clearRemote);
+        remoteLocks.clear();
+    }
+
+    function handleEditorEvent(payload) {
+        if (payload.type === "SNAPSHOT") {
+            // 끊겨 있던 사이의 옛 표시가 남지 않게 통째로 다시 그린다.
+            clearAllRemote();
+            (payload.locks || []).forEach(applyLock);
+            return;
+        }
+        if (payload.type === "LOCKED" || payload.type === "DRAFT") {
+            applyLock(payload.lock);
+            return;
+        }
+        if (payload.type === "UNLOCKED") {
+            dropLock(payload.lock);
+            // 취소였다면 원본이 다시 보여야 하므로 그 DAY 를 서버에서 다시 읽는다.
+            if (payload.lock?.dayId) refreshDay(payload.lock.dayId);
+        }
+    }
+
+    function handleLockReply(payload) {
+        if (payload.type === "SNAPSHOT") {
+            handleEditorEvent(payload);
+            return;
+        }
+        const waiting = pendingLocks.get(payload.requestId);
+        if (!waiting) return;
+        pendingLocks.delete(payload.requestId);
+        if (payload.granted) {
+            heldLock = payload.lock?.lockKey || null;
+            remoteLocks.delete(heldLock);
+            // 방 전체 알림이 이 답보다 먼저 도착했을 수 있다.
+            // 그때 내 화면에 붙은 "편집 중" 표시를 내 자리로 확정되는 지금 걷어낸다.
+            clearRemote(payload.lock);
+        }
+        waiting(payload);
+    }
+
+    /*
+      편집 쪽(travel-plan-scheduler.js)이 쓰는 창구.
+      연결은 이 파일 하나가 들고 있으므로 여기로만 오간다.
+    */
+    window.travelPlanRealtime = {
+        /** 서버가 자리를 내줄 때까지 기다린다. 내주지 않으면 편집기를 열지 않는다. */
+        requestLock(dayId, itemId) {
+            if (!client.connected) return Promise.resolve({ granted: false });
+            const requestId = `lock-${++requestSeq}`;
+            return new Promise(resolve => {
+                pendingLocks.set(requestId, resolve);
+                client.publish({
+                    destination: `/app/travel-plans/${planId}/editor/lock`,
+                    body: JSON.stringify({ requestId, dayId, itemId: itemId ?? null })
+                });
+                // 답이 오지 않으면 열지 않는다.
+                window.setTimeout(() => {
+                    if (!pendingLocks.has(requestId)) return;
+                    pendingLocks.delete(requestId);
+                    resolve({ granted: false });
+                }, 3000);
+            });
+        },
+
+        sendDraft(content) {
+            if (!heldLock || !client.connected) return;
+            client.publish({
+                destination: `/app/travel-plans/${planId}/editor/draft`,
+                body: JSON.stringify({ lockKey: heldLock, content })
+            });
+        },
+
+        releaseLock() {
+            const lockKey = heldLock;
+            heldLock = null;
+            if (!lockKey || !client.connected) return;
+            client.publish({
+                destination: `/app/travel-plans/${planId}/editor/unlock`,
+                body: JSON.stringify({ lockKey })
+            });
+        },
+
+        /** 다른 사람이 붙잡고 있는 자리인지. 열기 전에 화면이 먼저 확인한다. */
+        isLockedByOther(dayId, itemId) {
+            const key = itemId ? itemKey(itemId) : addKey(dayId);
+            return key !== heldLock && remoteLocks.has(key);
+        },
+
+        refreshDay
+    };
+
     // ── 연결 ────────────────────────────────────────────────
     const client = new StompJs.Client({
         brokerURL: `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`,
@@ -171,9 +332,31 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
 
+        // 작성 중 상태. 방 전체 알림과, 내 잠금 요청의 답이 오는 개인 큐 두 갈래다.
+        client.subscribe(`/topic/travel-plans/${planId}/editor`, message => {
+            try {
+                handleEditorEvent(JSON.parse(message.body));
+            } catch (error) {
+                // 알 수 없는 형식이면 화면을 건드리지 않는다.
+            }
+        });
+        client.subscribe("/user/queue/travel-plan-editor", message => {
+            try {
+                handleLockReply(JSON.parse(message.body));
+            } catch (error) {
+                // 알 수 없는 형식이면 화면을 건드리지 않는다.
+            }
+        });
+
         client.publish({ destination: `/app/travel-plans/${planId}/presence/join` });
 
-        if (connectedBefore) resyncSchedule();
+        if (connectedBefore) {
+            resyncSchedule();
+            // 끊겨 있던 사이에 사라진 옛 "편집 중" 표시가 남지 않게 지금 상태를 다시 받는다.
+            heldLock = null;
+            clearAllRemote();
+            client.publish({ destination: `/app/travel-plans/${planId}/editor/sync` });
+        }
         connectedBefore = true;
     };
 

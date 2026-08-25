@@ -11,6 +11,8 @@ import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.travelplan.TravelPlanInvitationService;
 import com.example.travlediary.service.travelplan.TravelPlanService;
 import com.example.travlediary.service.travelplan.TravelPlanValidationException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -27,6 +29,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
 import java.util.Set;
 
 @Controller
@@ -187,14 +190,22 @@ public class TravelPlanController {
                              @PathVariable Long itemId,
                              @ModelAttribute TravelPlanItemUpdateForm form,
                              @AuthenticationPrincipal CustomUserDetails userDetails,
-                             RedirectAttributes redirectAttributes) {
+                             HttpServletRequest request,
+                             HttpServletResponse response,
+                             RedirectAttributes redirectAttributes) throws IOException {
         try {
             travelPlanService.updateItem(userDetails.getId(), travelPlanId, dayId, itemId,
                     form.getContent(), form.getVersion());
         } catch (TravelPlanValidationException | TravelPlanConflictException exception) {
+            if (isAjax(request)) {
+                // 입력을 날리지 않도록 화면이 그대로 이어 가고 사유만 알린다.
+                return writeError(response, exception.getMessage());
+            }
             redirectAttributes.addFlashAttribute("travelPlanError", exception.getMessage());
+            return redirectToDay(travelPlanId, dayId);
         }
-        return redirectToDay(travelPlanId, dayId);
+        // 화면이 스스로 갱신하므로 새로고침 없이 끝난다.
+        return isAjax(request) ? noContent(response) : redirectToDay(travelPlanId, dayId);
     }
 
     // A 일정 삭제 (방의 ACTIVE 멤버면 누구나)
@@ -344,10 +355,15 @@ public class TravelPlanController {
                           @ModelAttribute(ITEM_FORM_ATTRIBUTE) TravelPlanItemCreateForm form,
                           BindingResult bindingResult,
                           @AuthenticationPrincipal CustomUserDetails userDetails,
-                          Model model) {
+                          HttpServletRequest request,
+                          HttpServletResponse response,
+                          Model model) throws IOException {
         try {
             travelPlanService.addItem(userDetails.getId(), travelPlanId, dayId, form.getContent());
         } catch (TravelPlanValidationException exception) {
+            if (isAjax(request)) {
+                return writeError(response, exception.getMessage());
+            }
             bindingResult.rejectValue("content", "travelPlan.invalid", exception.getMessage());
             // 편집 화면을 그대로 다시 그리고, 문제가 난 DAY 의 입력칸만 열어 둔다.
             model.addAttribute("travelPlan",
@@ -356,8 +372,27 @@ public class TravelPlanController {
             model.addAttribute("openDayId", dayId);
             return DETAIL_VIEW;
         }
-        // 메인 편집 화면의 해당 DAY 자리로 돌아온다.
-        return redirectToDay(travelPlanId, dayId);
+        // 화면이 스스로 갱신하므로 새로고침 없이 끝난다.
+        // 스크립트가 없는 경우에는 지금까지처럼 그 DAY 자리로 돌아온다.
+        return isAjax(request) ? noContent(response) : redirectToDay(travelPlanId, dayId);
+    }
+
+    /** 화면이 직접 보낸 저장인지. 그렇다면 redirect 대신 결과만 돌려준다. */
+    private boolean isAjax(HttpServletRequest request) {
+        return "XMLHttpRequest".equals(request.getHeader("X-Requested-With"));
+    }
+
+    private String noContent(HttpServletResponse response) {
+        response.setStatus(HttpStatus.NO_CONTENT.value());
+        return null;
+    }
+
+    /** 500 HTML 이 화면에 그대로 박히지 않도록 사유만 짧게 돌려준다. */
+    private String writeError(HttpServletResponse response, String message) throws IOException {
+        response.setStatus(HttpStatus.CONFLICT.value());
+        response.setContentType("text/plain;charset=UTF-8");
+        response.getWriter().write(message == null ? "" : message);
+        return null;
     }
 
     private void rejectValidation(BindingResult bindingResult,

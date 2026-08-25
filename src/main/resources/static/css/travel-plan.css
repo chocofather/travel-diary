@@ -1035,6 +1035,36 @@
     outline: none;
 }
 
+/*
+  다른 사람이 지금 쓰고 있는 줄.
+  내 편집기(.is-editing)와 다른 class 라 정식 갱신이 미뤄지지 않는다.
+  종이 위의 옅은 메모처럼만 보이게 한다.
+*/
+.travel-plan-remote-note {
+    margin: 0 0 2px;
+    color: #9a8f7d;
+    font-size: 12px;
+    line-height: 1.6;
+    /* 작성 중 줄바꿈을 그대로 보여 준다 */
+    white-space: pre-line;
+    overflow-wrap: break-word;
+}
+
+.travel-plan-line.is-remote-editing {
+    background: #fbf8f1;
+}
+
+/* 남이 쓰는 동안에는 그 줄의 관리 메뉴를 잠시 내려 둔다 */
+.travel-plan-line.is-remote-editing .travel-plan-item-menu {
+    visibility: hidden;
+}
+
+.travel-plan-line.is-remote-editing .travel-plan-line-content,
+.travel-plan-line.is-remote-editing .travel-plan-slot-hint {
+    cursor: default;
+    color: #b0a493;
+}
+
 /* ── 대안(B/C): A 아래에 들여쓰기된 메모처럼 붙는다. 카드가 아니다 ── */
 
 .travel-plan-alt-block {

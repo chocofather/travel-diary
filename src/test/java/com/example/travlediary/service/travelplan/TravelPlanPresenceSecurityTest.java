@@ -56,6 +56,8 @@ class TravelPlanPresenceSecurityTest {
     @Mock
     private TravelPlanMapper travelPlanMapper;
     @Mock
+    private com.example.travlediary.repository.travelplan.TravelPlanItemMapper travelPlanItemMapper;
+    @Mock
     private SimpMessagingTemplate simpMessagingTemplate;
 
     private TravelPlanRoomAccess roomAccess;
@@ -65,7 +67,7 @@ class TravelPlanPresenceSecurityTest {
 
     @BeforeEach
     void setUp() {
-        roomAccess = new TravelPlanRoomAccess(travelPlanMapper);
+        roomAccess = new TravelPlanRoomAccess(travelPlanMapper, travelPlanItemMapper);
         presence = new TravelPlanPresenceService();
         interceptor = new TravelPlanWebSocketAuthInterceptor(roomAccess);
         controller = new TravelPlanPresenceController(roomAccess, presence, simpMessagingTemplate);
@@ -192,6 +194,89 @@ class TravelPlanPresenceSecurityTest {
                 .isInstanceOf(AccessDeniedException.class);
     }
 
+    // ── 작성 중 상태 채널 ───────────────────────────────────
+
+    @Test
+    void anActiveMemberMayWatchAndSendOnTheEditorChannel() {
+        givenActivePlan();
+        givenMembership(TravelPlanRole.MEMBER, TravelPlanMemberStatus.ACTIVE);
+
+        assertThatCode(() -> interceptor.preSend(
+                subscribe("/topic/travel-plans/42/editor", principal()), null))
+                .doesNotThrowAnyException();
+        for (String destination : new String[]{
+                "/app/travel-plans/42/editor/lock",
+                "/app/travel-plans/42/editor/draft",
+                "/app/travel-plans/42/editor/unlock",
+                "/app/travel-plans/42/editor/sync",
+                "/app/travel-plans/42/presence/join"}) {
+            assertThatCode(() -> interceptor.preSend(send(destination, principal()), null))
+                    .as("destination=%s", destination)
+                    .doesNotThrowAnyException();
+        }
+    }
+
+    @Test
+    void whoeverIsNotAnActiveMemberCannotSendOnTheEditorChannel() {
+        givenActivePlan();
+        // LEFT / REMOVED / 비참여자는 ACTIVE 조회에서 비어 온다
+        when(travelPlanMapper.findMemberByPlanAndUser(PLAN_ID, USER_ID, "ACTIVE")).thenReturn(null);
+
+        for (String destination : new String[]{
+                "/app/travel-plans/42/editor/lock",
+                "/app/travel-plans/42/editor/draft",
+                "/app/travel-plans/42/editor/unlock"}) {
+            assertThatThrownBy(() -> interceptor.preSend(send(destination, principal()), null))
+                    .as("destination=%s", destination)
+                    .isInstanceOf(AccessDeniedException.class);
+        }
+        // 비로그인도 마찬가지다
+        assertThatThrownBy(() -> interceptor.preSend(
+                send("/app/travel-plans/42/editor/lock", null), null))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    void anEditorSendForAnotherRoomIsCheckedAgainstThatRoom() {
+        givenActivePlan();
+        givenMembership(TravelPlanRole.MEMBER, TravelPlanMemberStatus.ACTIVE);
+        when(travelPlanMapper.findPlanByIdAndStatus(OTHER_PLAN_ID, "ACTIVE"))
+                .thenReturn(activePlan(OTHER_PLAN_ID));
+        when(travelPlanMapper.findMemberByPlanAndUser(OTHER_PLAN_ID, USER_ID, "ACTIVE"))
+                .thenReturn(null);
+
+        assertThatThrownBy(() -> interceptor.preSend(
+                send("/app/travel-plans/43/editor/lock", principal()), null))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    void aRoomThatEndedAcceptsNoEditorTraffic() {
+        when(travelPlanMapper.findPlanByIdAndStatus(PLAN_ID, "ACTIVE")).thenReturn(null);
+
+        assertThatThrownBy(() -> interceptor.preSend(
+                send("/app/travel-plans/42/editor/lock", principal()), null))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    void nothingButTheKnownSendDestinationsIsAccepted() {
+        givenActivePlan();
+        givenMembership(TravelPlanRole.MEMBER, TravelPlanMemberStatus.ACTIVE);
+
+        for (String destination : new String[]{
+                "/app/travel-plans/42/editor",
+                "/app/travel-plans/42/editor/save",
+                "/app/travel-plans/42/items",
+                "/app/travel-plans/abc/editor/lock",
+                "/app/anything",
+                null}) {
+            assertThatThrownBy(() -> interceptor.preSend(send(destination, principal()), null))
+                    .as("destination=%s", destination)
+                    .isInstanceOf(AccessDeniedException.class);
+        }
+    }
+
     @Test
     void nothingButTheRoomPresenceTopicCanBeSubscribed() {
         givenActivePlan();
@@ -298,6 +383,14 @@ class TravelPlanPresenceSecurityTest {
 
     private Message<byte[]> subscribe(String destination, Principal principal) {
         StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.SUBSCRIBE);
+        accessor.setDestination(destination);
+        accessor.setUser(principal);
+        accessor.setLeaveMutable(true);
+        return MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders());
+    }
+
+    private Message<byte[]> send(String destination, Principal principal) {
+        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.SEND);
         accessor.setDestination(destination);
         accessor.setUser(principal);
         accessor.setLeaveMutable(true);

@@ -60,15 +60,47 @@ document.addEventListener("DOMContentLoaded", () => {
         if (form) form.hidden = true;
         activeLine.classList.remove("is-editing");
         activeLine = null;
+        // 자리를 놓아 다른 사람이 곧바로 편집할 수 있게 한다.
+        realtime()?.releaseLock();
         notifyEditorIdle();
     }
 
-    function open(line) {
+    /** 이 줄이 가리키는 자리. 새 일정이면 DAY, 기존 일정이면 그 일정이다. */
+    function spotOf(line) {
+        const day = line.closest("[data-travel-plan-day-id]");
+        return {
+            dayId: day ? day.getAttribute("data-travel-plan-day-id") : null,
+            itemId: isItem(line) ? line.getAttribute("data-item-id") : null
+        };
+    }
+
+    function realtime() {
+        return window.travelPlanRealtime;
+    }
+
+    /**
+     * 편집기를 열기 전에 서버에서 그 자리를 받아 온다.
+     * 받지 못하면 열지 않는다. "아마 됐겠지" 로 두 사람이 같은 줄을 고치지 않게 한다.
+     */
+    async function open(line) {
         if (activeLine === line) return;
-        closeActive();
-        closeAlt();
         const form = formOf(line);
         if (!form) return;
+
+        const spot = spotOf(line);
+        const live = realtime();
+        if (live) {
+            if (live.isLockedByOther(spot.dayId, spot.itemId)) return;
+            closeActive();
+            closeAlt();
+            const result = await live.requestLock(spot.dayId, spot.itemId);
+            // 그 사이 다른 곳을 열었거나 자리를 못 받았으면 그만둔다.
+            if (!result.granted || activeLine) return;
+        } else {
+            closeActive();
+            closeAlt();
+        }
+
         if (isItem(line)) {
             const content = line.querySelector("[data-travel-plan-item-content]");
             if (content) content.hidden = true;
@@ -80,6 +112,8 @@ document.addEventListener("DOMContentLoaded", () => {
         autoResize(textarea);
         textarea?.focus();
         textarea?.setSelectionRange(textarea.value.length, textarea.value.length);
+        // 열자마자 지금 값을 한 번 알려 다른 화면이 자리를 비워 두게 한다.
+        live?.sendDraft(textarea ? textarea.value : "");
     }
 
     function originalContentOf(line) {
@@ -87,7 +121,27 @@ document.addEventListener("DOMContentLoaded", () => {
         return content ? content.textContent.trim() : "";
     }
 
-    function save(line) {
+    /** 저장 실패 사유를 그 줄 안에 짧게 보여 준다. 입력은 그대로 둔다. */
+    function showSaveError(line, message) {
+        let notice = line.querySelector("[data-travel-plan-save-error]");
+        if (!notice) {
+            notice = document.createElement("p");
+            notice.className = "travel-plan-slot-error";
+            notice.setAttribute("data-travel-plan-save-error", "");
+            (formOf(line) || line).append(notice);
+        }
+        notice.textContent = message || "저장하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+    }
+
+    function clearSaveError(line) {
+        line.querySelector("[data-travel-plan-save-error]")?.remove();
+    }
+
+    /**
+     * 기존 POST endpoint 로 그대로 저장한다. 저장 경로는 바뀌지 않는다.
+     * 다만 화면이 통째로 새로 뜨지 않도록 form submit 대신 직접 보낸다.
+     */
+    async function save(line) {
         const textarea = textareaOf(line);
         const form = formOf(line);
         if (!textarea || !form) return;
@@ -103,15 +157,97 @@ document.addEventListener("DOMContentLoaded", () => {
             closeActive();
             return;
         }
+
         submitting = true;
-        form.requestSubmit();
+        clearSaveError(line);
+        const live = realtime();
+        if (!live) {
+            // 스크립트로 보낼 수 없으면 지금까지처럼 폼을 그대로 보낸다.
+            form.requestSubmit();
+            return;
+        }
+
+        const { dayId } = spotOf(line);
+        try {
+            const body = new FormData(form);
+            body.set("content", textarea.value);
+            const response = await fetch(form.action, {
+                method: "POST",
+                headers: { "X-Requested-With": "XMLHttpRequest" },
+                body
+            });
+            if (!response.ok) {
+                // 입력을 날리지 않는다. 사유만 알리고 그 자리에서 다시 시도할 수 있게 둔다.
+                submitting = false;
+                showSaveError(line, (await response.text()).trim());
+                textarea.focus();
+                return;
+            }
+        } catch (error) {
+            submitting = false;
+            showSaveError(line, null);
+            textarea.focus();
+            return;
+        }
+
+        submitting = false;
+        // 저장된 뒤에는 DB 내용이 기준이다. 그 DAY 를 서버에서 다시 읽어 온다.
+        closeActive();
+        if (dayId) live.refreshDay(dayId);
     }
 
     function bind(line) {
         const textarea = textareaOf(line);
         if (!textarea) return;
 
-        textarea.addEventListener("input", () => autoResize(textarea));
+        /*
+          한글은 여러 번의 키 입력이 모여 한 글자가 된다(ㄱ → 겨 → 경).
+          조합이 끝나기 전의 Enter 는 글자를 확정하려는 것이지 저장이 아니다.
+          그래서 조합 중에는 저장하지 않고, 조합이 끝난 순간의 완성된 값을 바로 알린다.
+        */
+        let composing = false;
+        let draftTimer = null;
+
+        // 기다리던 것을 취소하고 지금 값을 곧바로 보낸다.
+        function sendDraftNow() {
+            window.clearTimeout(draftTimer);
+            draftTimer = null;
+            realtime()?.sendDraft(textarea.value);
+        }
+
+        /*
+          글자마다 보내지 않고 잠깐 모아 보낸다. 입력이 느껴질 만큼 길게 두지 않는다.
+          값을 미리 잡아 두지 않고 보내는 순간에 읽으므로,
+          늦게 발화하더라도 예전 글자로 되돌아가지 않는다.
+        */
+        function sendDraftSoon() {
+            if (draftTimer) return;
+            draftTimer = window.setTimeout(() => {
+                draftTimer = null;
+                realtime()?.sendDraft(textarea.value);
+            }, 120);
+        }
+
+        textarea.addEventListener("compositionstart", () => {
+            composing = true;
+        });
+        textarea.addEventListener("compositionend", () => {
+            composing = false;
+            // 조합이 끝나 글자가 완성됐다. 지금 값을 곧바로 보낸다.
+            sendDraftNow();
+        });
+
+        textarea.addEventListener("input", () => {
+            autoResize(textarea);
+            /*
+              조합 중에도 보낸다.
+              한글은 마지막 글자가 한동안 조합 상태로 남아 있어서,
+              조합이 끝날 때까지 참으면 상대 화면이 "경복" 에서 멈춰 보인다.
+              브라우저가 지금 보여 주는 값을 그대로 보내고, 글자 조합은 브라우저에 맡긴다.
+              (저장 여부는 아래 keydown 에서 따로 막으므로 여기서는 상관없다)
+            */
+            sendDraftSoon();
+        });
 
         textarea.addEventListener("keydown", event => {
             if (event.key === "Escape") {
@@ -119,15 +255,18 @@ document.addEventListener("DOMContentLoaded", () => {
                 closeActive();
                 return;
             }
+            // 조합 중의 Enter 는 글자를 확정하는 것이라 저장으로 보지 않는다.
+            if (composing || event.isComposing || event.keyCode === 229) return;
             // Enter 는 저장, Shift+Enter 는 줄바꿈.
             if (event.key === "Enter" && !event.shiftKey) {
                 event.preventDefault();
+                sendDraftNow();
                 save(line);
             }
         });
 
         textarea.addEventListener("blur", () => {
-            if (submitting) return;
+            if (submitting || composing) return;
             save(line);
         });
     }

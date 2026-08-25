@@ -13,6 +13,9 @@ public final class TravelPlanPresenceDestinations {
     private static final String TOPIC_FORMAT = "/topic/travel-plans/%d/presence";
     private static final Pattern TOPIC_PATTERN =
             Pattern.compile("^/topic/travel-plans/(\\d+)/presence$");
+    /** 클라이언트 -> 서버. 접속했다고 알리는 하나뿐이다. */
+    private static final Pattern JOIN_PATTERN =
+            Pattern.compile("^/app/travel-plans/(\\d+)/presence/join$");
 
     private TravelPlanPresenceDestinations() {
     }
@@ -27,10 +30,23 @@ public final class TravelPlanPresenceDestinations {
      * @return 접속 표시 topic 이 아니면 null
      */
     public static Long travelPlanIdOf(String destination) {
+        return travelPlanIdOf(destination, TOPIC_PATTERN);
+    }
+
+    /**
+     * 접속했다고 알리는 SEND 목적지에서 방 번호를 꺼낸다.
+     *
+     * @return 그 목적지가 아니면 null
+     */
+    public static Long joinTravelPlanIdOf(String destination) {
+        return travelPlanIdOf(destination, JOIN_PATTERN);
+    }
+
+    private static Long travelPlanIdOf(String destination, Pattern pattern) {
         if (destination == null) {
             return null;
         }
-        Matcher matcher = TOPIC_PATTERN.matcher(destination);
+        Matcher matcher = pattern.matcher(destination);
         if (!matcher.matches()) {
             return null;
         }

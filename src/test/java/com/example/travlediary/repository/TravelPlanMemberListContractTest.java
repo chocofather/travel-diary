@@ -270,8 +270,8 @@ class TravelPlanMemberListContractTest {
                 .contains("closeMemberMenus(null)");
         assertThat(script)
                 .doesNotContain("WebSocket")
-                .doesNotContain("setInterval")
-                .doesNotContain("fetch(");
+                .doesNotContain("StompJs")
+                .doesNotContain("setInterval");
     }
 
     @Test

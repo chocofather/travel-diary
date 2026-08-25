@@ -172,6 +172,191 @@ body {
     }
 }
 
+/* ---------- 헤더 좁은 화면 대응 ---------- */
+
+/*
+  메뉴 글자가 중간에서 끊기지 않게 한다.
+  자리가 모자라면 글자를 자르는 대신 아래 breakpoint 에서 메뉴 판으로 바꾼다.
+*/
+.menu-item a,
+.site-menu a {
+    white-space: nowrap;
+}
+
+/* ☰ 는 좁은 화면에서만 쓴다 */
+.site-menu-toggle {
+    display: none;
+    padding: 6px;
+    border: none;
+    background: none;
+    border-radius: 4px;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+}
+
+/* 가로줄 세 개를 그려 햄버거 모양을 만든다 */
+.site-menu-toggle-bars,
+.site-menu-toggle-bars::before,
+.site-menu-toggle-bars::after {
+    display: block;
+    width: 20px;
+    height: 2px;
+    background: #333;
+    border-radius: 2px;
+}
+
+.site-menu-toggle-bars {
+    position: relative;
+}
+
+.site-menu-toggle-bars::before,
+.site-menu-toggle-bars::after {
+    content: "";
+    position: absolute;
+    left: 0;
+}
+
+.site-menu-toggle-bars::before {
+    top: -6px;
+}
+
+.site-menu-toggle-bars::after {
+    top: 6px;
+}
+
+.site-menu-toggle:focus-visible {
+    outline: 3px solid rgba(0, 102, 204, 0.28);
+    outline-offset: 2px;
+}
+
+/* 메뉴 판은 헤더 아래로 펼쳐진다. 헤더 자체는 계속 한 줄이다 */
+.site-menu {
+    position: absolute;
+    top: 100px;
+    left: 0;
+    width: 100%;
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+    padding: 12px 20px 20px;
+    background: #ffffff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+    box-sizing: border-box;
+    z-index: 30;
+}
+
+.site-menu[hidden] {
+    display: none;
+}
+
+/*
+  위에서 아래로 한 줄씩 읽히는 세로 메뉴.
+  1차 메뉴가 가로로 늘어서면 좁은 폭에서 다시 줄이 접히고,
+  그 아래 같은 이름이 또 나와 두 번 읽게 된다.
+*/
+.site-menu-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.site-menu-entry + .site-menu-entry {
+    border-top: 1px solid #f0f0f0;
+}
+
+/* 1차 메뉴. 하위 링크보다 분명히 굵고 크다 */
+.site-menu-entry > a {
+    display: block;
+    padding: 12px 0 6px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    text-decoration: none;
+}
+
+/* 하위 링크가 없는 항목은 아래 여백까지 스스로 갖는다 */
+.site-menu-entry > a:only-child {
+    padding-bottom: 12px;
+}
+
+/* 하위 링크. 들여쓰기와 크기로 위계를 낮춘다 */
+.site-menu-entry ul {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 10px 12px;
+    text-align: left;
+}
+
+.site-menu-entry ul li {
+    display: block;
+}
+
+.site-menu-entry ul li a {
+    display: block;
+    width: auto;
+    height: auto;
+    padding: 5px 0;
+    font-size: 14px;
+    font-weight: 400;
+    color: #666;
+    text-decoration: none;
+}
+
+.site-menu-entry a:hover,
+.site-menu-entry a:focus-visible {
+    color: #0066cc;
+}
+
+/*
+  펼쳐 둔 메뉴가 헤더 폭에 들어가지 않는 구간.
+  기존 .nav-grid 는 820px 고정 폭 7열 그리드라 여기서부터 로고·검색과 겹치고,
+  좁아지면 열 수가 줄면서 메뉴가 여러 줄로 쌓인다. 그래서 통째로 감추고 ☰ 로 바꾼다.
+*/
+@media (max-width: 1199px) {
+    .nav-grid,
+    .global-submenu {
+        display: none !important;
+    }
+
+    .site-menu-toggle {
+        display: flex;
+    }
+
+    /* 로고가 눌리거나 메뉴와 겹치지 않게 폭만 자연스럽게 줄인다 */
+    .logo img {
+        height: 140px;
+    }
+}
+
+/*
+  모바일도 같은 세로 메뉴를 쓴다. 구조는 그대로 두고 여백과 글자만 조금 줄인다.
+*/
+@media (max-width: 767px) {
+    .logo img {
+        height: 110px;
+    }
+
+    .site-menu {
+        padding: 8px 16px 16px;
+    }
+
+    .site-menu-entry > a {
+        padding: 11px 0 5px;
+        font-size: 15px;
+    }
+
+    .site-menu-entry ul {
+        padding-bottom: 8px;
+    }
+
+    .site-menu-entry ul li a {
+        font-size: 13px;
+    }
+}
+
 /* ---------- 검색창 (헤더 오른쪽) ---------- */
 .search-box .sr-only {
     position:absolute;

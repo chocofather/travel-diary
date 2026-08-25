@@ -66,7 +66,8 @@ class TravelPlanScheduleSyncContractTest {
         // 브라우저 하나가 /ws 에 두 번 붙지 않는다
         assertThat(countOf(realtime, "new StompJs.Client")).isEqualTo(1);
         assertThat(countOf(realtime, "client.activate()")).isEqualTo(1);
-        assertThat(countOf(realtime, "client.subscribe(")).isEqualTo(2);
+        // presence / schedule / editor / 내 잠금 응답 네 갈래가 한 연결 위에 있다
+        assertThat(countOf(realtime, "client.subscribe(")).isEqualTo(4);
     }
 
     @Test
@@ -145,7 +146,8 @@ class TravelPlanScheduleSyncContractTest {
                 .contains("/travel-plans/${planId}/schedule/fragment")
                 .contains("connectedBefore")
                 // 처음 그린 화면은 이미 최신이라 따라잡을 것이 없다
-                .contains("if (connectedBefore) resyncSchedule()");
+                .contains("if (connectedBefore) {")
+                .contains("resyncSchedule()");
     }
 
     @Test
@@ -153,9 +155,15 @@ class TravelPlanScheduleSyncContractTest {
         String realtime = realtimeJs();
         String fragment = fragmentHtml();
 
-        // WebSocket 으로 저장하지 않는다. 보내는 것은 접속 인사 하나뿐이다
-        assertThat(countOf(realtime, "client.publish(")).isEqualTo(1);
-        assertThat(realtime).contains("/app/travel-plans/${planId}/presence/join");
+        // WebSocket 으로 보내는 것은 접속 인사와 작성 중 상태(잠금/임시내용/해제/동기화)뿐이다.
+        // 저장 계열 destination 은 없다
+        assertThat(countOf(realtime, "client.publish(")).isEqualTo(5);
+        assertThat(realtime)
+                .contains("/app/travel-plans/${planId}/presence/join")
+                .contains("/app/travel-plans/${planId}/editor/lock")
+                .contains("/app/travel-plans/${planId}/editor/draft")
+                .contains("/app/travel-plans/${planId}/editor/unlock")
+                .contains("/app/travel-plans/${planId}/editor/sync");
         // 기존 POST 폼은 그대로다
         assertThat(fragment)
                 .contains("/items/${item.id}/update|}")
