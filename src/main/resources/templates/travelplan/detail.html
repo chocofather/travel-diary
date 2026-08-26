@@ -10,6 +10,8 @@
   <script src="/js/travel-plan-realtime.js" defer></script>
   <!-- 채팅 UI. STOMP 연결은 위 realtime 이 들고 있는 것을 그대로 쓴다 -->
   <script src="/js/travel-plan-chat.js" defer></script>
+  <!-- 투표 만들기. 채팅창 안에서 열리지만 저장은 기존 HTTP 경로다 -->
+  <script src="/js/travel-plan-poll.js" defer></script>
 </th:block>
 
 <th:block th:fragment="body">
@@ -276,6 +278,16 @@
       <header class="travel-plan-chat-header">
         <h2 class="travel-plan-chat-panel-title">여행 채팅</h2>
         <div class="travel-plan-chat-header-actions">
+          <!--
+            투표는 채팅창 위를 차지하지 않는다.
+            여기서 투표 센터를 열어 진행 중·지난 투표를 한곳에서 본다.
+          -->
+          <button type="button" class="travel-plan-poll-entry"
+                  data-travel-plan-poll-entry>
+            투표
+            <span class="travel-plan-poll-entry-count" hidden
+                  data-travel-plan-poll-count>0</span>
+          </button>
           <button type="button" class="travel-plan-chat-header-button"
                   aria-label="채팅 접기" data-travel-plan-chat-minimize>─</button>
           <button type="button" class="travel-plan-chat-header-button"
@@ -309,14 +321,15 @@
          data-travel-plan-chat-error></p>
 
       <form class="travel-plan-chat-form" data-travel-plan-chat-form>
-        <!--
-          입력창 왼쪽 도구 자리.
-          다음 단계에서 여기에 [투표 만들기] 가 붙는다.
-          지금은 아직 만들 수 있는 것이 없어 눌리지 않게 둔다.
-        -->
+        <!-- 입력창 왼쪽 도구 자리. 지금은 투표 만들기 하나뿐이다 -->
         <div class="travel-plan-chat-tools" data-travel-plan-chat-tools>
-          <button type="button" class="travel-plan-chat-tool" disabled
-                  title="투표 기능 준비 중" aria-label="투표 만들기 (준비 중)">+</button>
+          <button type="button" class="travel-plan-chat-tool"
+                  aria-haspopup="true" aria-expanded="false"
+                  aria-label="도구 열기" data-travel-plan-chat-tool>+</button>
+          <div class="travel-plan-chat-tool-menu" hidden data-travel-plan-chat-tool-menu>
+            <button type="button" class="travel-plan-chat-tool-action"
+                    data-travel-plan-poll-open>📊 투표 만들기</button>
+          </div>
         </div>
         <textarea class="travel-plan-chat-input" rows="1" autocomplete="off"
                   maxlength="2000" placeholder="메시지 입력..."
@@ -325,6 +338,122 @@
                 data-travel-plan-chat-send>전송</button>
       </form>
     </section>
+
+    <!--
+      투표 센터. 진행 중·지난 투표를 보는 곳과 새로 만드는 곳이 이 창 하나 안에 있다.
+      창 위에 창을 겹치지 않는다. 두 화면이 같은 자리에서 서로 바뀐다.
+      선택지 줄은 스크립트가 넣고 지우므로 여기에는 만들 때 쓸 틀만 둔다.
+    -->
+    <div class="travel-plan-poll-modal" hidden role="dialog" aria-modal="true"
+         aria-labelledby="travel-plan-poll-modal-title"
+         th:if="${travelPlan.currentMember != null}"
+         data-travel-plan-poll-modal>
+      <div class="travel-plan-poll-modal-panel">
+        <header class="travel-plan-poll-modal-header">
+          <h2 id="travel-plan-poll-modal-title"
+              class="travel-plan-poll-modal-title"
+              data-travel-plan-poll-modal-title>투표</h2>
+          <button type="button" class="travel-plan-chat-header-button"
+                  aria-label="투표 닫기" data-travel-plan-poll-close>×</button>
+        </header>
+
+        <!-- ① 목록 화면 -->
+        <div class="travel-plan-poll-view" data-travel-plan-poll-list-view>
+          <div class="travel-plan-poll-tabs" role="tablist">
+            <button type="button" class="travel-plan-poll-tab is-active" role="tab"
+                    aria-selected="true" data-travel-plan-poll-tab="OPEN">
+              진행 중
+              <span class="travel-plan-poll-tab-count"
+                    data-travel-plan-poll-tab-count="OPEN">0</span>
+            </button>
+            <button type="button" class="travel-plan-poll-tab" role="tab"
+                    aria-selected="false" data-travel-plan-poll-tab="CLOSED">
+              지난 투표
+              <span class="travel-plan-poll-tab-count"
+                    data-travel-plan-poll-tab-count="CLOSED">0</span>
+            </button>
+          </div>
+
+          <div class="travel-plan-poll-body" data-travel-plan-poll-body>
+            <p class="travel-plan-poll-empty" hidden data-travel-plan-poll-empty></p>
+            <!-- 카드는 전부 스크립트가 글자로만 넣는다 -->
+            <ol class="travel-plan-poll-list" data-travel-plan-poll-list></ol>
+          </div>
+
+          <footer class="travel-plan-poll-footer">
+            <button type="button" class="travel-plan-poll-submit"
+                    data-travel-plan-poll-create-open>+ 새 투표 만들기</button>
+          </footer>
+        </div>
+
+        <!-- ② 상세 화면. 카드를 누르면 목록과 자리를 바꾼다 -->
+        <div class="travel-plan-poll-view" hidden data-travel-plan-poll-detail-view>
+          <button type="button" class="travel-plan-poll-back"
+                  data-travel-plan-poll-back>← 투표 목록</button>
+          <!-- 질문·선택지·표는 전부 스크립트가 글자로만 넣는다 -->
+          <div class="travel-plan-poll-detail" data-travel-plan-poll-detail></div>
+        </div>
+
+        <!-- ③ 만들기 화면. 같은 창 안에서 목록과 자리를 바꾼다 -->
+        <div class="travel-plan-poll-view" hidden data-travel-plan-poll-create-view>
+          <button type="button" class="travel-plan-poll-back"
+                  data-travel-plan-poll-back>← 투표 목록</button>
+
+          <form class="travel-plan-poll-form" data-travel-plan-poll-form>
+            <div class="travel-plan-poll-field">
+              <label class="travel-plan-poll-lead"
+                     for="travel-plan-poll-question">어떤 걸 정해볼까요?</label>
+              <input type="text" id="travel-plan-poll-question"
+                     class="travel-plan-poll-question" autocomplete="off" maxlength="200"
+                     placeholder="질문을 입력해 주세요"
+                     data-travel-plan-poll-question>
+            </div>
+
+            <div class="travel-plan-poll-field">
+              <span class="travel-plan-poll-label">선택지</span>
+              <!-- 열 때 빈 줄 두 개로 시작한다 -->
+              <ol class="travel-plan-poll-options" data-travel-plan-poll-options></ol>
+              <button type="button" class="travel-plan-poll-add"
+                      data-travel-plan-poll-add>+ 선택지 추가</button>
+            </div>
+
+            <fieldset class="travel-plan-poll-field travel-plan-poll-choice">
+              <legend class="travel-plan-poll-label">선택 방식</legend>
+              <label class="travel-plan-poll-radio">
+                <input type="radio" name="travelPlanPollSelectionType" value="SINGLE" checked
+                       data-travel-plan-poll-selection>
+                <span class="travel-plan-poll-radio-body">
+                  <span class="travel-plan-poll-radio-title">하나만 선택</span>
+                  <span class="travel-plan-poll-radio-hint">
+                    한 가지 선택지만 고를 수 있어요.
+                  </span>
+                </span>
+              </label>
+              <label class="travel-plan-poll-radio">
+                <input type="radio" name="travelPlanPollSelectionType" value="MULTIPLE"
+                       data-travel-plan-poll-selection>
+                <span class="travel-plan-poll-radio-body">
+                  <span class="travel-plan-poll-radio-title">여러 개 선택</span>
+                  <span class="travel-plan-poll-radio-hint">
+                    여러 선택지를 동시에 고를 수 있어요.
+                  </span>
+                </span>
+              </label>
+            </fieldset>
+
+            <p class="travel-plan-poll-error" hidden role="alert"
+               data-travel-plan-poll-error></p>
+
+            <div class="travel-plan-poll-actions">
+              <button type="button" class="travel-plan-poll-cancel"
+                      data-travel-plan-poll-back>취소</button>
+              <button type="submit" class="travel-plan-poll-submit"
+                      data-travel-plan-poll-submit>투표 만들기</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
   </div>
 </th:block>
 </html>

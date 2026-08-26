@@ -1,6 +1,6 @@
 package com.example.travlediary.controller.travelplan;
 
-import com.example.travlediary.dto.TravelPlanChatMessageDto;
+import com.example.travlediary.dto.TravelPlanChatTimelineDto;
 import com.example.travlediary.service.travelplan.TravelPlanChatService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.security.Principal;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -29,22 +28,20 @@ public class TravelPlanChatController {
     private final TravelPlanChatService travelPlanChatService;
 
     /**
-     * 최근 대화. 오래된 것이 앞에 온다.
+     * 채팅창에 그릴 한 페이지. 오래된 것이 앞에 온다.
+     * 대화와 "새 투표를 만들었어요" 알림이 시간 순서로 섞여 온다.
      *
-     * @param before 있으면 그 메시지보다 앞선 것들을 가져온다([이전 메시지 보기])
+     * <p>두 기준을 함께 받는다. 표가 달라 번호 하나로는 자를 수 없다.
+     * 둘 다 없으면 가장 최근 페이지다.
      */
-    @GetMapping("/messages")
-    public Map<String, Object> messages(@PathVariable Long travelPlanId,
-                                        @RequestParam(required = false) Long before,
-                                        Principal principal) {
-        List<TravelPlanChatMessageDto> messages = before == null
-                ? travelPlanChatService.recentMessages(principal, travelPlanId)
-                : travelPlanChatService.messagesBefore(principal, travelPlanId, before);
-
-        return Map.of(
-                "messages", messages,
-                // 한 페이지를 꽉 채워 왔다면 그 앞에 더 있을 수 있다.
-                "hasMore", messages.size() >= TravelPlanChatService.PAGE_SIZE);
+    @GetMapping("/timeline")
+    public TravelPlanChatTimelineDto timeline(
+            @PathVariable Long travelPlanId,
+            @RequestParam(required = false) Long beforeMessageId,
+            @RequestParam(required = false) Long beforePollId,
+            Principal principal) {
+        return travelPlanChatService.timeline(
+                principal, travelPlanId, beforeMessageId, beforePollId);
     }
 
     /** 상단 채팅 버튼의 안 읽은 개수. 다시 연결됐을 때도 이 값을 다시 읽는다. */

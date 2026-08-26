@@ -143,7 +143,8 @@ class TravelPlanMemberListContractTest {
         assertThat(between(css, ".travel-plan-member-role.is-owner {", "}"))
                 .contains("font-weight: 700")
                 .doesNotContain("background");
-        assertThat(detail).doesNotContain("modal").doesNotContain("dialog");
+        assertThat(outsideThePollModal(detail))
+                .doesNotContain("modal").doesNotContain("dialog");
     }
 
     @Test
@@ -205,7 +206,8 @@ class TravelPlanMemberListContractTest {
                 .contains("초대와 멤버 관리 권한을 갖게 됩니다")
                 .contains("나는 일반 멤버가 됩니다");
         // 새 UI framework 를 만들지 않는다
-        assertThat(detail).doesNotContain("modal").doesNotContain("dialog");
+        assertThat(outsideThePollModal(detail))
+                .doesNotContain("modal").doesNotContain("dialog");
     }
 
     @Test
@@ -233,7 +235,8 @@ class TravelPlanMemberListContractTest {
                 .contains("이 여행 계획에서 나갈까요?")
                 .contains("작성했던 일정은 여행 계획에 그대로 남습니다.");
         // 새 modal framework 를 만들지 않는다
-        assertThat(detail).doesNotContain("modal").doesNotContain("dialog");
+        assertThat(outsideThePollModal(detail))
+                .doesNotContain("modal").doesNotContain("dialog");
     }
 
     @Test
@@ -481,6 +484,17 @@ class TravelPlanMemberListContractTest {
 
     private String detailHtml() throws IOException {
         return resource("/templates/travelplan/detail.html");
+    }
+
+    /**
+     * 투표 만들기 창을 뺀 나머지 화면.
+     * 별도 창을 띄우는 것은 투표 만들기 하나뿐이고,
+     * 참여자·초대·일정은 지금도 그 자리에서 다룬다.
+     */
+    private String outsideThePollModal(String detail) {
+        int modalStart = detail.indexOf("class=\"travel-plan-poll-modal\"");
+        assertThat(modalStart).as("투표 만들기 창").isGreaterThanOrEqualTo(0);
+        return detail.substring(0, modalStart);
     }
 
     private String resource(String path) throws IOException {

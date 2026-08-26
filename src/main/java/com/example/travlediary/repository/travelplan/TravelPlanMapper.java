@@ -67,6 +67,12 @@ public interface TravelPlanMapper {
                                          @Param("displayName") String displayName);
 
     /**
+     * 방에 지금 참여 중인 사람 수.
+     * 투표의 "2 / 3명 투표" 에서 뒤의 숫자가 이 값이다. 나갔거나 내보내진 사람은 빠진다.
+     */
+    int countActiveMembers(@Param("travelPlanId") Long travelPlanId);
+
+    /**
      * 방에 지금 참여 중인 사람들. OWNER 가 먼저 오고 그 뒤는 참여한 순서다.
      * 화면에 필요한 컬럼만 읽고 users 는 건드리지 않는다.
      */

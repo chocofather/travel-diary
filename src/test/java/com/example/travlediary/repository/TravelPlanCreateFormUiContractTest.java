@@ -153,15 +153,18 @@ class TravelPlanCreateFormUiContractTest {
         assertThat(detail)
                 .doesNotContain(">추가</button>")
                 .doesNotContain("data-travel-plan-add-toggle");
-        // 취소는 닫혀 있는 대안 편집기(기존 B/C 1 + 새 대안 1) 안에만 있다
-        assertThat(countOf(detail, ">취소</button>")).isEqualTo(2);
+        // 취소는 닫혀 있는 대안 편집기(기존 B/C 1 + 새 대안 1)와
+        // 닫혀 있는 투표 만들기 창 안에만 있다
+        assertThat(countOf(detail, ">취소</button>")).isEqualTo(3);
         // 모든 textarea 는 닫힌 폼·패널 안에 있다
         // (추가 슬롯 1 + 일정 수정 1 + 대안 2 + 닫혀 있는 채팅 입력 1)
         assertThat(countOf(detail, "<textarea")).isEqualTo(5);
         assertThat(countOf(detail, "th:hidden=\"${!dayOpen}\"")).isEqualTo(1);
         assertThat(countOf(detail, "class=\"travel-plan-item-editor\" method=\"post\" hidden"))
                 .isEqualTo(1);
-        assertThat(detail).doesNotContain("modal").doesNotContain("dialog");
+        // 별도 창은 투표 만들기 하나뿐이고, 그것도 닫힌 채로 시작한다
+        assertThat(countOf(detail, "role=\"dialog\"")).isEqualTo(1);
+        assertThat(detail).contains("class=\"travel-plan-poll-modal\" hidden role=\"dialog\"");
     }
 
     @Test
@@ -275,7 +278,9 @@ class TravelPlanCreateFormUiContractTest {
                 .contains("/items/${item.id}/update|}");
         // 기본 상태에서는 편집기가 닫혀 있다
         assertThat(detail).contains("class=\"travel-plan-item-editor\" method=\"post\" hidden");
-        assertThat(detail).doesNotContain("modal").doesNotContain("dialog");
+        // 일정 편집기는 전부 DAY fragment 안에 있다. 그 안에는 별도 창이 없다
+        assertThat(resource("/templates/travelplan/fragments/schedule-day.html"))
+                .doesNotContain("modal").doesNotContain("dialog");
     }
 
     @Test
@@ -380,12 +385,16 @@ class TravelPlanCreateFormUiContractTest {
     void thePlannerHasNoActionsFromLaterStages() throws IOException {
         String detail = plannerHtml();
 
-        // 멤버 관리와 채팅까지 들어왔고, 그 다음 단계는 아직이다
+        // 멤버 관리·채팅·투표 만들기까지 들어왔고, 그 다음 단계는 아직이다
         for (String notYet : new String[]{"방 설정", "최종 확정", "태그"}) {
             assertThat(detail).as("아직 없는 기능: %s", notYet).doesNotContain(notYet);
         }
-        // 투표는 채팅 입력창 왼쪽에 자리만 잡아 두었다. 흉내 내는 동작도 두지 않는다
-        assertThat(detail).contains("투표 기능 준비 중").doesNotContain("투표 만들기</");
+        // 투표는 만드는 것까지다. 참여·결과·마감은 아직 없다
+        assertThat(detail)
+                .contains("투표 만들기")
+                .doesNotContain("투표하기")
+                .doesNotContain("투표 결과")
+                .doesNotContain("투표 마감");
     }
 
     @Test

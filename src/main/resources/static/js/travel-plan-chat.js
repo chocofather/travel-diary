@@ -38,6 +38,9 @@ document.addEventListener("DOMContentLoaded", () => {
     // 이전 대화는 한 번에 한 페이지만 가져온다. 위에서 스크롤이 여러 번 튀어도 겹치지 않는다.
     let loadingOlder = false;
     let hasMoreOlder = false;
+    // 앞 페이지를 물어볼 기준. 대화와 투표가 표가 달라 각자 하나씩 든다.
+    let beforeMessageId = null;
+    let beforePollId = null;
     let sending = false;
     let unreadCount = 0;
     // 아래를 보고 있지 않을 때 도착한 메시지 수. [새 메시지 N개] 에 쓴다.
@@ -151,7 +154,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function messageNode(message) {
         const item = document.createElement("li");
         item.className = "travel-plan-chat-message";
-        item.setAttribute("data-message-id", message.id);
+        item.setAttribute("data-message-id", message.messageId);
         if (isMine(message)) item.classList.add("is-mine");
         if (message.deleted) item.classList.add("is-deleted");
 
@@ -184,8 +187,73 @@ document.addEventListener("DOMContentLoaded", () => {
         return item;
     }
 
+    /*
+      "OO님이 새 투표를 만들었어요".
+
+      대화가 아니라 그 사이에 있었던 일이라, 말풍선이 아니라 차분한 알림 줄로 둔다.
+      투표 자체는 travel_plan_polls 에 있고 여기에는 옮겨 적지 않는다.
+      누르면 투표 센터가 열린다(여는 것은 투표 쪽이 맡는다).
+    */
+    function pollNoticeNode(item) {
+        const node = document.createElement("li");
+        node.className = "travel-plan-chat-notice";
+        node.setAttribute("data-poll-notice-id", item.pollId);
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "travel-plan-chat-notice-body";
+
+        const head = document.createElement("span");
+        head.className = "travel-plan-chat-notice-head";
+        // 이름도 사용자가 정한 값이라 그대로 글자로만 넣는다.
+        head.textContent = `📊 ${item.creatorDisplayName}님이 새 투표를 만들었어요.`;
+
+        const pollTitle = document.createElement("span");
+        pollTitle.className = "travel-plan-chat-notice-title";
+        pollTitle.textContent = item.pollTitle;
+
+        const time = document.createElement("time");
+        time.className = "travel-plan-chat-time";
+        if (item.createdAt) {
+            time.dateTime = new Date(item.createdAt).toISOString();
+        }
+        time.textContent = timeTextOf(item.createdAt);
+
+        button.append(head, pollTitle);
+        button.addEventListener("click", () => {
+            document.dispatchEvent(new CustomEvent("travelplan:poll-center-open", {
+                detail: { pollId: item.pollId }
+            }));
+        });
+
+        node.append(button, time);
+        return node;
+    }
+
+    /** 대화와 투표 알림이 한 줄기로 온다. 종류에 맞는 줄을 만든다. */
+    function itemNode(item) {
+        return item.type === "POLL_CREATED" ? pollNoticeNode(item) : messageNode(item);
+    }
+
+    /** WebSocket 으로 온 메시지를 타임라인 한 줄과 같은 모양으로 맞춘다. */
+    function messageItem(message) {
+        return {
+            type: "MESSAGE",
+            createdAt: message.createdAt,
+            messageId: message.id,
+            memberId: message.memberId,
+            displayName: message.displayName,
+            content: message.content,
+            deleted: message.deleted
+        };
+    }
+
     function nodeOf(messageId) {
         return list.querySelector(`[data-message-id="${messageId}"]`);
+    }
+
+    function noticeNodeOf(pollId) {
+        return list.querySelector(`[data-poll-notice-id="${pollId}"]`);
     }
 
     function renderEmptyState() {
@@ -227,15 +295,29 @@ document.addEventListener("DOMContentLoaded", () => {
         notice.textContent = "";
     }
 
-    async function fetchMessages(before) {
-        const url = before
-            ? `/travel-plans/${planId}/chat/messages?before=${before}`
-            : `/travel-plans/${planId}/chat/messages`;
-        const response = await fetch(url, {
+    /**
+     * 대화와 투표 알림을 시간 순서로 함께 받아 온다.
+     * 표가 둘이라 기준도 둘이다. 대화 번호만 보내면 그 사이의 투표 알림이 빠진다.
+     */
+    async function fetchTimeline(beforeMessageId, beforePollId) {
+        const query = new URLSearchParams();
+        if (beforeMessageId != null) query.set("beforeMessageId", beforeMessageId);
+        if (beforePollId != null) query.set("beforePollId", beforePollId);
+        const suffix = query.toString() ? `?${query}` : "";
+
+        const response = await fetch(`/travel-plans/${planId}/chat/timeline${suffix}`, {
             headers: { "X-Requested-With": "XMLHttpRequest" }
         });
-        if (!response.ok) throw new Error("chat history unavailable");
+        if (!response.ok) throw new Error("chat timeline unavailable");
         return response.json();
+    }
+
+    /** 다음 앞 페이지를 물어볼 기준. 서버가 알려 준 것을 그대로 들고 있는다. */
+    function rememberCursor(payload) {
+        hasMoreOlder = !!payload.hasMore;
+        // 그 쪽이 끝났으면 null 이 온다. 그때는 다시 묻지 않는다.
+        beforeMessageId = payload.nextBeforeMessageId ?? null;
+        beforePollId = payload.nextBeforePollId ?? null;
     }
 
     /** 처음 열 때. 이미 그려 둔 것이 있으면 지우고 서버 내용으로 다시 맞춘다. */
@@ -243,9 +325,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (loading) return;
         loading = true;
         try {
-            const payload = await fetchMessages(null);
-            list.replaceChildren(...payload.messages.map(messageNode));
-            hasMoreOlder = !!payload.hasMore;
+            const payload = await fetchTimeline(null, null);
+            list.replaceChildren(...payload.items.map(itemNode));
+            rememberCursor(payload);
             loaded = true;
             renderEmptyState();
             scrollToBottom();
@@ -265,16 +347,15 @@ document.addEventListener("DOMContentLoaded", () => {
      * 늘어난 높이만큼 스크롤을 내려 같은 메시지가 같은 자리에 남게 한다.
      */
     async function loadOlder() {
-        const oldest = list.firstElementChild;
         // 한 번에 한 페이지만. 더 없으면 다시 묻지 않는다.
-        if (loadingOlder || !hasMoreOlder || !oldest) return;
+        if (loadingOlder || !hasMoreOlder) return;
         loadingOlder = true;
         try {
-            const payload = await fetchMessages(oldest.getAttribute("data-message-id"));
+            const payload = await fetchTimeline(beforeMessageId, beforePollId);
             const before = body.scrollHeight;
-            list.prepend(...payload.messages.map(messageNode));
+            list.prepend(...payload.items.map(itemNode));
             body.scrollTop += body.scrollHeight - before;
-            hasMoreOlder = !!payload.hasMore;
+            rememberCursor(payload);
             renderEmptyState();
         } catch (error) {
             showError("이전 대화를 불러오지 못했습니다.");
@@ -285,19 +366,42 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // ── 실시간 수신 ─────────────────────────────────────────
 
+    /** 새 줄 하나를 지금 보고 있는 자리에 맞춰 붙인다. */
+    function appendItem(node, countsAsNew) {
+        const stick = isAtBottom();
+        list.append(node);
+        renderEmptyState();
+        if (stick) {
+            scrollToBottom();
+        } else if (countsAsNew) {
+            pendingNew += 1;
+            renderJump();
+        }
+    }
+
+    /**
+     * 투표가 만들어졌다.
+     * 기록을 다시 읽어도 서버가 같은 알림을 같은 자리에 돌려주므로,
+     * 여기서는 지금 화면에 한 줄 붙이기만 한다.
+     */
+    function onPollCreated(poll) {
+        if (!poll || poll.id == null) return;
+        // 저장 응답과 방 알림이 겹쳐도 알림 줄은 하나다.
+        if (!loaded || noticeNodeOf(poll.id)) return;
+        appendItem(pollNoticeNode({
+            type: "POLL_CREATED",
+            createdAt: poll.createdAt,
+            pollId: poll.id,
+            creatorDisplayName: poll.createdByDisplayName,
+            pollTitle: poll.title
+        }), true);
+    }
+
     function onMessageCreated(message) {
         if (!message) return;
         // 아직 기록을 읽지 않았다면 그릴 자리가 없다. 열 때 서버에서 통째로 받는다.
         if (loaded && !nodeOf(message.id)) {
-            const stick = isAtBottom();
-            list.append(messageNode(message));
-            renderEmptyState();
-            if (stick) {
-                scrollToBottom();
-            } else if (!isMine(message)) {
-                pendingNew += 1;
-                renderJump();
-            }
+            appendItem(messageNode(messageItem(message)), !isMine(message));
         }
 
         if (isMine(message)) return;
@@ -372,6 +476,12 @@ document.addEventListener("DOMContentLoaded", () => {
             markRead();
         }
         input?.focus();
+        /*
+          채팅창이 열렸다고 알린다.
+          투표 쪽(travel-plan-poll.js)이 이 신호를 듣고 진행 중인 투표를 그때 읽어 온다.
+          (내부 변수를 밖에서 들여다보지 않도록 DOM 이벤트로만 알린다)
+        */
+        document.dispatchEvent(new CustomEvent("travelplan:chat-opened"));
     }
 
     function closePanel() {
@@ -464,6 +574,14 @@ document.addEventListener("DOMContentLoaded", () => {
         // 보내기/지우기 실패는 나에게만 온다. 입력한 내용은 그대로 남아 있다.
         sending = false;
         showError(payload.message);
+    });
+
+    /*
+      투표가 만들어졌다는 것은 대화 사이에 있었던 일이라 채팅 흐름에도 한 줄 남는다.
+      투표 자체를 여기서 다루지는 않는다. 그것은 투표 센터가 맡는다.
+    */
+    realtime()?.subscribePolls(payload => {
+        if (payload.type === "POLL_CREATED") onPollCreated(payload.poll);
     });
 
     /*

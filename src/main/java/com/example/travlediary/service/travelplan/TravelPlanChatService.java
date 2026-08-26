@@ -2,10 +2,14 @@ package com.example.travlediary.service.travelplan;
 
 import com.example.travlediary.dto.TravelPlanChatEventDto;
 import com.example.travlediary.dto.TravelPlanChatMessageDto;
+import com.example.travlediary.dto.TravelPlanChatTimelineDto;
+import com.example.travlediary.dto.TravelPlanChatTimelineItemDto;
 import com.example.travlediary.model.TravelPlanChatMessage;
 import com.example.travlediary.model.TravelPlanChatMessageType;
 import com.example.travlediary.model.TravelPlanMember;
+import com.example.travlediary.model.TravelPlanPoll;
 import com.example.travlediary.repository.travelplan.TravelPlanChatMapper;
+import com.example.travlediary.repository.travelplan.TravelPlanPollMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
@@ -14,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.Principal;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -40,30 +44,57 @@ public class TravelPlanChatService {
     public static final int MAX_CONTENT_LENGTH = 2000;
 
     private final TravelPlanChatMapper travelPlanChatMapper;
+    /** 채팅창에 끼워 넣을 "새 투표" 기록만 읽는다. 투표를 만들거나 고치지 않는다. */
+    private final TravelPlanPollMapper travelPlanPollMapper;
     private final TravelPlanRoomAccess travelPlanRoomAccess;
     private final ApplicationEventPublisher eventPublisher;
 
     /**
-     * 채팅 패널을 처음 열 때 보여 줄 최근 대화.
-     * DB 에서는 최신순으로 가져오고, 화면에 그릴 오래된 -> 최신 순으로 뒤집어 돌려준다.
+     * 채팅창에 그릴 한 페이지.
+     *
+     * <p>대화와 "새 투표를 만들었어요" 알림을 시간 순서로 합쳐 돌려준다.
+     * 합치는 것은 여기 읽기 모델에서만이고, DB 에서는 두 표가 계속 따로다.
+     * 투표를 채팅 행으로 옮겨 적거나 표시용 문자열을 남기지 않는다.
+     *
+     * <p>표가 둘이라 번호 하나로는 자를 수 없다.
+     * 각자의 번호로 따로 끊어 와서 합치고, 다음 기준도 각자 돌려준다.
+     * 대화 번호만 보고 자르면 그 사이의 투표 알림이 영영 빠진다.
+     *
+     * @param beforeMessageId 둘 다 null 이면 가장 최근 페이지
+     * @param beforePollId    둘 다 null 이면 가장 최근 페이지
      */
     @Transactional(readOnly = true)
-    public List<TravelPlanChatMessageDto> recentMessages(Principal principal, Long travelPlanId) {
+    public TravelPlanChatTimelineDto timeline(Principal principal, Long travelPlanId,
+                                              Long beforeMessageId, Long beforePollId) {
         requireActiveMember(principal, travelPlanId);
-        return toDisplayOrder(
-                travelPlanChatMapper.findRecentMessages(travelPlanId, PAGE_SIZE));
-    }
+        boolean firstPage = beforeMessageId == null && beforePollId == null;
 
-    /** [이전 메시지 보기]. 화면 맨 위 메시지보다 앞선 것들을 같은 개수만큼 가져온다. */
-    @Transactional(readOnly = true)
-    public List<TravelPlanChatMessageDto> messagesBefore(Principal principal, Long travelPlanId,
-                                                         Long beforeMessageId) {
-        requireActiveMember(principal, travelPlanId);
-        // 기준이 없으면 가져올 앞 페이지도 없다. 최근 대화와 같은 결과를 준다.
-        return toDisplayOrder(beforeMessageId == null
+        List<TravelPlanChatMessage> messages = firstPage
                 ? travelPlanChatMapper.findRecentMessages(travelPlanId, PAGE_SIZE)
-                : travelPlanChatMapper.findMessagesBefore(
-                        travelPlanId, beforeMessageId, PAGE_SIZE));
+                : beforeOrEmpty(beforeMessageId, before ->
+                        travelPlanChatMapper.findMessagesBefore(travelPlanId, before, PAGE_SIZE));
+        List<TravelPlanPoll> polls = firstPage
+                ? travelPlanPollMapper.findRecentPolls(travelPlanId, PAGE_SIZE)
+                : beforeOrEmpty(beforePollId, before ->
+                        travelPlanPollMapper.findPollsBefore(travelPlanId, before, PAGE_SIZE));
+
+        List<TravelPlanChatTimelineItemDto> items = new ArrayList<>();
+        messages.stream().map(TravelPlanChatTimelineItemDto::ofMessage).forEach(items::add);
+        polls.stream().map(TravelPlanChatTimelineItemDto::ofPollCreated).forEach(items::add);
+        // 화면은 오래된 것이 위에 온다.
+        items.sort(Comparator.comparing(
+                TravelPlanChatTimelineItemDto::createdAt,
+                Comparator.nullsFirst(Comparator.naturalOrder())));
+
+        // 각자 한 페이지를 꽉 채워 왔다면 그 앞에 더 있을 수 있다.
+        boolean moreMessages = messages.size() >= PAGE_SIZE;
+        boolean morePolls = polls.size() >= PAGE_SIZE;
+        return new TravelPlanChatTimelineDto(
+                items,
+                moreMessages || morePolls,
+                // 가져온 것이 없으면 그 쪽은 여기서 끝이다. 기준을 되돌려 같은 자리를 맴돌지 않는다.
+                lastIdOf(messages, TravelPlanChatMessage::getId),
+                lastIdOf(polls, TravelPlanPoll::getId));
     }
 
     /**
@@ -160,11 +191,17 @@ public class TravelPlanChatService {
         return travelPlanChatMapper.countUnread(travelPlanId, member.getId(), current);
     }
 
-    /** DB 는 최신순으로 읽고, 화면은 오래된 것이 위에 오도록 뒤집는다. */
-    private List<TravelPlanChatMessageDto> toDisplayOrder(List<TravelPlanChatMessage> newestFirst) {
-        List<TravelPlanChatMessage> ordered = new ArrayList<>(newestFirst);
-        Collections.reverse(ordered);
-        return ordered.stream().map(TravelPlanChatMessageDto::of).toList();
+    /** 기준이 없는 쪽은 이미 끝까지 본 것이다. 다시 읽지 않는다. */
+    private <T> List<T> beforeOrEmpty(Long before, java.util.function.LongFunction<List<T>> read) {
+        return before == null ? List.of() : read.apply(before);
+    }
+
+    /**
+     * 이번에 읽어 온 것 중 가장 앞선 번호. 다음 페이지의 기준이 된다.
+     * 최신순으로 오므로 마지막 것이 가장 오래된 것이다.
+     */
+    private <T> Long lastIdOf(List<T> newestFirst, java.util.function.Function<T, Long> idOf) {
+        return newestFirst.isEmpty() ? null : idOf.apply(newestFirst.get(newestFirst.size() - 1));
     }
 
     /**

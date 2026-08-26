@@ -234,7 +234,8 @@ class TravelPlanInvitationContractTest {
                 .contains("class=\"travel-plan-page-top-row\"");
         // 큰 관리 화면을 만들지 않는다 (플래너 안의 작은 패널 하나뿐)
         assertThat(countOf(detail, "data-travel-plan-invite-panel")).isEqualTo(1);
-        assertThat(detail).doesNotContain("modal").doesNotContain("dialog");
+        assertThat(outsideThePollModal(detail))
+                .doesNotContain("modal").doesNotContain("dialog");
     }
 
     @Test
@@ -541,6 +542,16 @@ class TravelPlanInvitationContractTest {
 
     private String detailHtml() throws IOException {
         return resource("/templates/travelplan/detail.html");
+    }
+
+    /**
+     * 투표 만들기 창을 뺀 나머지 화면.
+     * 별도 창을 띄우는 것은 투표 만들기 하나뿐이고, 초대는 지금도 작은 패널 하나다.
+     */
+    private String outsideThePollModal(String detail) {
+        int modalStart = detail.indexOf("class=\"travel-plan-poll-modal\"");
+        assertThat(modalStart).as("투표 만들기 창").isGreaterThanOrEqualTo(0);
+        return detail.substring(0, modalStart);
     }
 
     private String securityConfig() throws IOException {

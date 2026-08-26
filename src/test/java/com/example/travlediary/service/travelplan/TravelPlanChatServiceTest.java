@@ -2,6 +2,9 @@ package com.example.travlediary.service.travelplan;
 
 import com.example.travlediary.dto.TravelPlanChatEventDto;
 import com.example.travlediary.dto.TravelPlanChatMessageDto;
+import com.example.travlediary.dto.TravelPlanChatTimelineDto;
+import com.example.travlediary.dto.TravelPlanChatTimelineItemDto;
+import com.example.travlediary.model.TravelPlanPoll;
 import com.example.travlediary.model.TravelPlan;
 import com.example.travlediary.model.TravelPlanChatMessage;
 import com.example.travlediary.model.TravelPlanChatMessageType;
@@ -35,8 +38,10 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -60,6 +65,8 @@ class TravelPlanChatServiceTest {
     @Mock
     private TravelPlanChatMapper travelPlanChatMapper;
     @Mock
+    private com.example.travlediary.repository.travelplan.TravelPlanPollMapper travelPlanPollMapper;
+    @Mock
     private TravelPlanMapper travelPlanMapper;
     @Mock
     private TravelPlanItemMapper travelPlanItemMapper;
@@ -75,7 +82,7 @@ class TravelPlanChatServiceTest {
         TravelPlanRoomAccess roomAccess = new TravelPlanRoomAccess(
                 travelPlanMapper, travelPlanItemMapper, travelPlanAlternativeMapper);
         chatService = new TravelPlanChatService(
-                travelPlanChatMapper, roomAccess, eventPublisher);
+                travelPlanChatMapper, travelPlanPollMapper, roomAccess, eventPublisher);
     }
 
     // ── 보내기 ──────────────────────────────────────────────
@@ -328,30 +335,100 @@ class TravelPlanChatServiceTest {
         verify(travelPlanChatMapper, never()).markMessageDeleted(anyLong(), anyLong(), anyLong());
     }
 
-    // ── 기록 ────────────────────────────────────────────────
+    // ── 기록(대화 + 투표 알림) ──────────────────────────────
 
     @Test
-    void theOldestMessageComesFirstOnScreen() {
+    void theOldestThingComesFirstOnScreen() {
         givenRoom(TravelPlanRole.MEMBER);
         // DB 는 최신순으로 읽는다
         when(travelPlanChatMapper.findRecentMessages(PLAN_ID, TravelPlanChatService.PAGE_SIZE))
-                .thenReturn(List.of(message(3L, "셋째"), message(2L, "둘째"), message(1L, "첫째")));
+                .thenReturn(List.of(messageAt(3L, "셋째", 30), messageAt(2L, "둘째", 20),
+                        messageAt(1L, "첫째", 10)));
 
-        assertThat(chatService.recentMessages(principal(), PLAN_ID))
-                .extracting(TravelPlanChatMessageDto::content)
+        assertThat(chatService.timeline(principal(), PLAN_ID, null, null).items())
+                .extracting(TravelPlanChatTimelineItemDto::content)
                 .containsExactly("첫째", "둘째", "셋째");
     }
 
     @Test
-    void olderMessagesAreCutByIdNotByCountingFromTheStart() {
+    void aCreatedPollSitsInTheConversationWhereItHappened() {
+        // 대화 사이에 있었던 일이라 그 시각 자리에 놓인다
+        givenRoom(TravelPlanRole.MEMBER);
+        when(travelPlanChatMapper.findRecentMessages(PLAN_ID, TravelPlanChatService.PAGE_SIZE))
+                .thenReturn(List.of(messageAt(2L, "나중 얘기", 30), messageAt(1L, "먼저 얘기", 10)));
+        when(travelPlanPollMapper.findRecentPolls(PLAN_ID, TravelPlanChatService.PAGE_SIZE))
+                .thenReturn(List.of(pollAt(900L, "숙소 위치는?", 20)));
+
+        List<TravelPlanChatTimelineItemDto> items =
+                chatService.timeline(principal(), PLAN_ID, null, null).items();
+
+        assertThat(items)
+                .extracting(TravelPlanChatTimelineItemDto::type)
+                .containsExactly("MESSAGE", "POLL_CREATED", "MESSAGE");
+        assertThat(items.get(1).pollId()).isEqualTo(900L);
+        assertThat(items.get(1).pollTitle()).isEqualTo("숙소 위치는?");
+        assertThat(items.get(1).creatorDisplayName()).isEqualTo("민준");
+        // 투표의 선택지까지 채팅에 옮겨 적지 않는다
+        assertThat(items.get(1).content()).isNull();
+    }
+
+    @Test
+    void bothKindsAreCutByTheirOwnIdSoNeitherIsEverLost() {
+        // 대화 번호만 보고 자르면 그 사이의 투표 알림이 영영 빠진다
         givenRoom(TravelPlanRole.MEMBER);
         when(travelPlanChatMapper.findMessagesBefore(
                 PLAN_ID, 10L, TravelPlanChatService.PAGE_SIZE))
-                .thenReturn(List.of(message(9L, "아홉"), message(8L, "여덟")));
+                .thenReturn(List.of(messageAt(9L, "아홉", 90), messageAt(8L, "여덟", 80)));
+        when(travelPlanPollMapper.findPollsBefore(
+                PLAN_ID, 5L, TravelPlanChatService.PAGE_SIZE))
+                .thenReturn(List.of(pollAt(4L, "지난 투표", 85)));
 
-        assertThat(chatService.messagesBefore(principal(), PLAN_ID, 10L))
-                .extracting(TravelPlanChatMessageDto::content)
-                .containsExactly("여덟", "아홉");
+        TravelPlanChatTimelineDto page = chatService.timeline(principal(), PLAN_ID, 10L, 5L);
+
+        assertThat(page.items())
+                .extracting(TravelPlanChatTimelineItemDto::type)
+                .containsExactly("MESSAGE", "POLL_CREATED", "MESSAGE");
+        // 다음 페이지 기준도 각자 돌려준다
+        assertThat(page.nextBeforeMessageId()).isEqualTo(8L);
+        assertThat(page.nextBeforePollId()).isEqualTo(4L);
+    }
+
+    @Test
+    void aSideThatRanOutIsNotAskedAgain() {
+        givenRoom(TravelPlanRole.MEMBER);
+        when(travelPlanChatMapper.findMessagesBefore(
+                PLAN_ID, 10L, TravelPlanChatService.PAGE_SIZE))
+                .thenReturn(List.of(messageAt(9L, "아홉", 90)));
+        // 투표는 더 없다
+        when(travelPlanPollMapper.findPollsBefore(
+                PLAN_ID, 5L, TravelPlanChatService.PAGE_SIZE))
+                .thenReturn(List.of());
+
+        TravelPlanChatTimelineDto page = chatService.timeline(principal(), PLAN_ID, 10L, 5L);
+
+        assertThat(page.nextBeforeMessageId()).isEqualTo(9L);
+        // 기준이 사라지면 다음부터는 그 쪽을 읽지 않는다
+        assertThat(page.nextBeforePollId()).isNull();
+
+        chatService.timeline(principal(), PLAN_ID, 9L, null);
+        // 두 번째 요청은 투표 쪽을 아예 읽지 않는다(위의 한 번이 전부다)
+        verify(travelPlanPollMapper, times(1))
+                .findPollsBefore(anyLong(), anyLong(), anyInt());
+    }
+
+    @Test
+    void aFullPageOnEitherSideMeansThereIsMore() {
+        givenRoom(TravelPlanRole.MEMBER);
+        List<TravelPlanPoll> fullPage = new java.util.ArrayList<>();
+        for (int index = 0; index < TravelPlanChatService.PAGE_SIZE; index++) {
+            fullPage.add(pollAt(900L + index, "투표 " + index, 100 + index));
+        }
+        when(travelPlanChatMapper.findRecentMessages(PLAN_ID, TravelPlanChatService.PAGE_SIZE))
+                .thenReturn(List.of());
+        when(travelPlanPollMapper.findRecentPolls(PLAN_ID, TravelPlanChatService.PAGE_SIZE))
+                .thenReturn(fullPage);
+
+        assertThat(chatService.timeline(principal(), PLAN_ID, null, null).hasMore()).isTrue();
     }
 
     @Test
@@ -359,10 +436,22 @@ class TravelPlanChatServiceTest {
         givenActivePlan();
         when(travelPlanMapper.findMemberByPlanAndUser(PLAN_ID, USER_ID, "ACTIVE")).thenReturn(null);
 
-        assertThatThrownBy(() -> chatService.recentMessages(principal(), PLAN_ID))
+        assertThatThrownBy(() -> chatService.timeline(principal(), PLAN_ID, null, null))
                 .isInstanceOf(AccessDeniedException.class);
         assertThatThrownBy(() -> chatService.unreadCount(principal(), PLAN_ID))
                 .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    void nothingAboutThePollIsWrittenIntoTheChatTable() {
+        // 알림은 읽을 때 합칠 뿐이다. 투표를 채팅 행으로 옮겨 적지 않는다
+        givenRoom(TravelPlanRole.MEMBER);
+        when(travelPlanPollMapper.findRecentPolls(PLAN_ID, TravelPlanChatService.PAGE_SIZE))
+                .thenReturn(List.of(pollAt(900L, "숙소 위치는?", 20)));
+
+        chatService.timeline(principal(), PLAN_ID, null, null);
+
+        verify(travelPlanChatMapper, never()).insertMessage(any());
     }
 
     @Test
@@ -454,6 +543,26 @@ class TravelPlanChatServiceTest {
                 ArgumentCaptor.forClass(TravelPlanChatChangedEvent.class);
         verify(eventPublisher).publishEvent(captor.capture());
         return captor.getValue();
+    }
+
+    /** @param second 순서를 눈에 보이게 하려고 초만 다르게 둔다 */
+    private TravelPlanChatMessage messageAt(Long id, String content, int second) {
+        TravelPlanChatMessage message = message(id, content);
+        message.setCreatedAt(Timestamp.valueOf("2026-08-26 17:10:00"));
+        message.setCreatedAt(new Timestamp(message.getCreatedAt().getTime() + second * 1000L));
+        return message;
+    }
+
+    private TravelPlanPoll pollAt(Long id, String title, int second) {
+        TravelPlanPoll poll = new TravelPlanPoll();
+        poll.setId(id);
+        poll.setTravelPlanId(PLAN_ID);
+        poll.setCreatedByMemberId(MEMBER_ID);
+        poll.setTitle(title);
+        poll.setCreatedByDisplayName("민준");
+        poll.setCreatedAt(new Timestamp(
+                Timestamp.valueOf("2026-08-26 17:10:00").getTime() + second * 1000L));
+        return poll;
     }
 
     private TravelPlanChatMessage message(Long id, String content) {

@@ -276,7 +276,7 @@ class TravelPlanChatUiContractTest {
         assertThat(chat)
                 .contains("MESSAGE_CREATED")
                 .contains("MESSAGE_DELETED")
-                .contains("list.append(messageNode(message))")
+                .contains("appendItem(messageNode(messageItem(message))")
                 // 새로고침으로 따라잡지 않는다
                 .doesNotContain("location.reload")
                 .doesNotContain("location.href =");
@@ -288,10 +288,10 @@ class TravelPlanChatUiContractTest {
         String created = between(chat, "function onMessageCreated(message)", "\n    }");
 
         // 받은 그 자리에서 목록에 붙인다. 다시 열거나 기록을 다시 읽지 않는다
-        assertThat(created).contains("list.append(messageNode(message))");
+        assertThat(created).contains("appendItem(messageNode(messageItem(message))");
         assertThat(created)
                 .doesNotContain("loadRecent()")
-                .doesNotContain("fetchMessages(");
+                .doesNotContain("fetchTimeline(");
 
         // 상단 버튼을 다시 눌러야만 보이던 길로 되돌아가지 않는다
         assertThat(between(chat, "toggle?.addEventListener(\"click\"", "});"))
@@ -338,7 +338,7 @@ class TravelPlanChatUiContractTest {
         // 카드로 만들지 않고 아주 연한 선과 여백으로만 나눈다
         assertThat(message)
                 .contains("padding: 10px 2px")
-                .contains("border-bottom: 1px solid #f2ece0");
+                .contains("border-bottom: 1px solid var(--tp-chat-line)");
         assertThat(css).contains(".travel-plan-chat-message:last-child {");
         // 이름 / 본문 / 시간이 각각 떨어져 보인다
         assertThat(between(css, ".travel-plan-chat-sender {", "}")).contains("margin: 0 0 4px");
@@ -365,9 +365,10 @@ class TravelPlanChatUiContractTest {
         // 위쪽에 가까워지면 알아서 이어 온다
         assertThat(between(chat, "body.addEventListener(\"scroll\"", "});"))
                 .contains("if (body.scrollTop <= OLDER_TRIGGER_PX) loadOlder()");
-        // 이미 있는 cursor 조회를 그대로 쓴다
+        // 이미 있는 cursor 조회를 그대로 쓴다.
+        // 대화와 투표 알림은 표가 달라 기준을 각자 들고 간다
         assertThat(between(chat, "async function loadOlder()", "\n    }"))
-                .contains("fetchMessages(oldest.getAttribute(\"data-message-id\"))")
+                .contains("fetchTimeline(beforeMessageId, beforePollId)")
                 .contains("list.prepend(");
     }
 
@@ -390,10 +391,14 @@ class TravelPlanChatUiContractTest {
 
         // 위에서 스크롤이 여러 번 튀어도 요청은 한 번뿐이고, 더 없으면 묻지 않는다
         assertThat(between(chat, "async function loadOlder()", "\n    }"))
-                .contains("if (loadingOlder || !hasMoreOlder || !oldest) return")
+                .contains("if (loadingOlder || !hasMoreOlder) return")
                 .contains("loadingOlder = true")
                 .contains("loadingOlder = false");
-        assertThat(chat).contains("hasMoreOlder = !!payload.hasMore");
+        // 다음 기준은 서버가 알려 준 것을 그대로 쓴다
+        assertThat(between(chat, "function rememberCursor(payload)", "\n    }"))
+                .contains("hasMoreOlder = !!payload.hasMore")
+                .contains("beforeMessageId = payload.nextBeforeMessageId")
+                .contains("beforePollId = payload.nextBeforePollId");
     }
 
     @Test
@@ -452,10 +457,9 @@ class TravelPlanChatUiContractTest {
     @Test
     void readingOldMessagesIsNotInterrupted() throws IOException {
         String chat = chatJs();
-        String created = between(chat, "function onMessageCreated(message)", "\n    }");
 
         // 위에서 옛 대화를 읽는 중이면 끌어내리지 않고 알림만 띄운다
-        assertThat(created)
+        assertThat(between(chat, "function appendItem(node, countsAsNew)", "\n    }"))
                 .contains("const stick = isAtBottom()")
                 .contains("pendingNew += 1");
         assertThat(chat).contains("jump.textContent = `새 메시지 ${pendingNew}개`");
@@ -495,20 +499,36 @@ class TravelPlanChatUiContractTest {
     // ── 다음 단계 자리 ──────────────────────────────────────
 
     @Test
-    void thereIsARoomForTheVoteButtonWithoutAnyFakeBehaviour() throws IOException {
+    void theVoteEntryPointSitsLeftOfTheChatInput() throws IOException {
         String detail = detailHtml();
         String tools = between(detail, "class=\"travel-plan-chat-tools\"", "</div>");
 
-        // 입력창 왼쪽에 자리만 잡아 둔다
+        // 입력창 왼쪽 도구 자리에서 투표 만들기를 연다
         assertThat(tools)
                 .contains("class=\"travel-plan-chat-tool\"")
-                .contains("disabled")
-                .contains("투표 기능 준비 중");
-        // 아직 만들 수 있는 것이 없다. 흉내 내는 동작도 두지 않는다
-        assertThat(detail).doesNotContain("투표 만들기</");
-        assertThat(chatJs())
-                .doesNotContain("vote")
-                .doesNotContain("poll");
+                .contains("data-travel-plan-chat-tool")
+                .doesNotContain("disabled");
+        assertThat(detail).contains("data-travel-plan-poll-open");
+    }
+
+    @Test
+    void theChatOnlyShowsThatAPollHappenedAndLeavesTheRestToThePollCentre() throws IOException {
+        String chat = chatJs();
+
+        /*
+          투표가 만들어졌다는 것은 대화 사이에 있었던 일이라 채팅 흐름에 한 줄 남는다.
+          하지만 투표를 다루지는 않는다. 목록·만들기·마감은 투표 센터가 맡는다.
+        */
+        assertThat(chat)
+                .contains("travelplan:chat-opened")
+                .contains("POLL_CREATED")
+                // 누르면 투표 센터가 열린다. 여는 것도 저쪽이 맡는다
+                .contains("travelplan:poll-center-open");
+        assertThat(chat)
+                .doesNotContain("/polls")
+                .doesNotContain("selectionType")
+                .doesNotContain("options")
+                .doesNotContain("vote");
     }
 
     private String detailHtml() throws IOException {

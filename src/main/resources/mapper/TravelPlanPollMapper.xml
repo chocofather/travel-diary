@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.travelplan.TravelPlanPollMapper">
+
+    <!--
+      만든 사람 이름은 그 방의 travel_plan_members 에서 가져온다.
+      나갔거나 내보내진 사람이 만든 투표도 그대로 보여야 하므로 status 를 걸지 않는다.
+      LEFT JOIN 인 것은 created_by_member_id 가 NULL 일 수 있기 때문이다.
+    -->
+    <sql id="pollColumns">
+        p.id, p.travel_plan_id, p.created_by_member_id, p.title, p.selection_type,
+        p.result_visibility, p.close_type, p.deadline_at, p.status, p.close_reason,
+        p.closed_at, p.created_at, p.updated_at,
+        m.display_name AS created_by_display_name
+    </sql>
+
+    <insert id="insertPoll" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO travel_plan_polls
+            (travel_plan_id, created_by_member_id, title, selection_type,
+             result_visibility, close_type, deadline_at, status)
+        VALUES (#{travelPlanId}, #{createdByMemberId}, #{title}, #{selectionType},
+                #{resultVisibility}, #{closeType}, #{deadlineAt}, #{status})
+    </insert>
+
+    <insert id="insertOption" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO travel_plan_poll_options
+            (poll_id, content, display_order)
+        VALUES (#{pollId}, #{content}, #{displayOrder})
+    </insert>
+
+    <!-- 진행 중인 투표. (travel_plan_id, status, created_at) 인덱스를 그대로 탄다 -->
+    <select id="findOpenPolls" resultType="com.example.travlediary.model.TravelPlanPoll">
+        SELECT
+        <include refid="pollColumns"/>
+        FROM travel_plan_polls p
+                 LEFT JOIN travel_plan_members m ON m.id = p.created_by_member_id
+        WHERE p.travel_plan_id = #{travelPlanId}
+          AND p.status = 'OPEN'
+        ORDER BY p.created_at ASC, p.id ASC
+    </select>
+
+    <!-- 끝난 투표. 마감 기능이 아직 없어 지금은 대개 비어 있다 -->
+    <select id="findClosedPolls" resultType="com.example.travlediary.model.TravelPlanPoll">
+        SELECT
+        <include refid="pollColumns"/>
+        FROM travel_plan_polls p
+                 LEFT JOIN travel_plan_members m ON m.id = p.created_by_member_id
+        WHERE p.travel_plan_id = #{travelPlanId}
+          AND p.status = 'CLOSED'
+        ORDER BY p.closed_at DESC, p.id DESC
+    </select>
+
+    <!--
+      채팅 타임라인에 끼워 넣을 "새 투표" 기록.
+      만들어졌다는 사실이 기준이라 지금 진행 중인지 끝났는지는 보지 않는다.
+    -->
+    <select id="findRecentPolls" resultType="com.example.travlediary.model.TravelPlanPoll">
+        SELECT
+        <include refid="pollColumns"/>
+        FROM travel_plan_polls p
+                 LEFT JOIN travel_plan_members m ON m.id = p.created_by_member_id
+        WHERE p.travel_plan_id = #{travelPlanId}
+        ORDER BY p.id DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 타임라인의 앞 페이지. 채팅과 마찬가지로 id 로 끊는다 -->
+    <select id="findPollsBefore" resultType="com.example.travlediary.model.TravelPlanPoll">
+        SELECT
+        <include refid="pollColumns"/>
+        FROM travel_plan_polls p
+                 LEFT JOIN travel_plan_members m ON m.id = p.created_by_member_id
+        WHERE p.travel_plan_id = #{travelPlanId}
+          AND p.id &lt; #{beforePollId}
+        ORDER BY p.id DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 투표 1건. 방 소속까지 함께 확인한다 -->
+    <select id="findByIdAndPlanId" resultType="com.example.travlediary.model.TravelPlanPoll">
+        SELECT
+        <include refid="pollColumns"/>
+        FROM travel_plan_polls p
+                 LEFT JOIN travel_plan_members m ON m.id = p.created_by_member_id
+        WHERE p.id = #{id}
+          AND p.travel_plan_id = #{travelPlanId}
+    </select>
+
+    <!-- 여러 투표의 선택지를 한 문장으로 읽는다. 보여 줄 순서대로 온다 -->
+    <select id="findOptionsByPollIds"
+            resultType="com.example.travlediary.model.TravelPlanPollOption">
+        SELECT id, poll_id, content, display_order, created_at, updated_at
+        FROM travel_plan_poll_options
+        WHERE poll_id IN
+        <foreach item="pollId" collection="pollIds" open="(" separator="," close=")">
+            #{pollId}
+        </foreach>
+        ORDER BY poll_id ASC, display_order ASC, id ASC
+    </select>
+
+    <select id="countOptionsByPollId" resultType="int">
+        SELECT COUNT(*)
+        FROM travel_plan_poll_options
+        WHERE poll_id = #{pollId}
+    </select>
+
+    <!--
+      넘어온 선택지 중 정말 이 투표의 것인 개수.
+      보낸 개수와 다르면 다른 투표의 선택지가 섞인 것이라 호출한 쪽이 통째로 거부한다.
+    -->
+    <select id="countOwnedOptions" resultType="int">
+        SELECT COUNT(*)
+        FROM travel_plan_poll_options
+        WHERE poll_id = #{pollId}
+          AND id IN
+        <foreach item="optionId" collection="optionIds" open="(" separator="," close=")">
+            #{optionId}
+        </foreach>
+    </select>
+
+    <!-- ── 투표하기 ── -->
+
+    <select id="findVoteByPollAndMember"
+            resultType="com.example.travlediary.model.TravelPlanPollVote">
+        SELECT id, poll_id, member_id, created_at, updated_at
+        FROM travel_plan_poll_votes
+        WHERE poll_id = #{pollId}
+          AND member_id = #{memberId}
+    </select>
+
+    <insert id="insertVote" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO travel_plan_poll_votes (poll_id, member_id)
+        VALUES (#{pollId}, #{memberId})
+    </insert>
+
+    <!-- 선택을 바꿀 때 이전 선택만 걷어 낸다. 투표 줄은 그대로 남아 참여 인원이 변하지 않는다 -->
+    <delete id="deleteSelectionsByVoteId">
+        DELETE FROM travel_plan_poll_vote_selections
+        WHERE vote_id = #{voteId}
+    </delete>
+
+    <insert id="insertSelection">
+        INSERT INTO travel_plan_poll_vote_selections (vote_id, option_id)
+        VALUES (#{voteId}, #{optionId})
+    </insert>
+
+    <select id="findSelectedOptionIds" resultType="java.lang.Long">
+        SELECT option_id
+        FROM travel_plan_poll_vote_selections
+        WHERE vote_id = #{voteId}
+        ORDER BY option_id ASC
+    </select>
+
+    <!-- ── 집계 ── -->
+
+    <!--
+      참여 인원과 선택지별 표 수는 같은 기준으로 센다.
+      지금 방에 남아 있는(ACTIVE) 사람만 세어, 표 수가 참여 인원을 넘지 않게 한다.
+    -->
+    <select id="countVotedMembers" resultType="int">
+        SELECT COUNT(*)
+        FROM travel_plan_poll_votes v
+                 JOIN travel_plan_members m ON m.id = v.member_id
+        WHERE v.poll_id = #{pollId}
+          AND m.status = 'ACTIVE'
+    </select>
+
+    <select id="countVotedMembersByPollIds"
+            resultType="com.example.travlediary.model.TravelPlanPollVotedCount">
+        SELECT v.poll_id AS poll_id, COUNT(*) AS voted_member_count
+        FROM travel_plan_poll_votes v
+                 JOIN travel_plan_members m ON m.id = v.member_id
+        WHERE v.poll_id IN
+        <foreach item="pollId" collection="pollIds" open="(" separator="," close=")">
+            #{pollId}
+        </foreach>
+          AND m.status = 'ACTIVE'
+        GROUP BY v.poll_id
+    </select>
+
+    <!-- 표를 하나도 못 받은 선택지는 여기 나오지 않는다. 호출한 쪽이 0 으로 채운다 -->
+    <select id="countSelectionsByPollIds"
+            resultType="com.example.travlediary.model.TravelPlanPollOptionVoteCount">
+        SELECT v.poll_id AS poll_id, s.option_id AS option_id, COUNT(*) AS vote_count
+        FROM travel_plan_poll_vote_selections s
+                 JOIN travel_plan_poll_votes v ON v.id = s.vote_id
+                 JOIN travel_plan_members m ON m.id = v.member_id
+        WHERE v.poll_id IN
+        <foreach item="pollId" collection="pollIds" open="(" separator="," close=")">
+            #{pollId}
+        </foreach>
+          AND m.status = 'ACTIVE'
+        GROUP BY v.poll_id, s.option_id
+    </select>
+
+    <select id="hasAnyVote" resultType="boolean">
+        SELECT EXISTS (SELECT 1
+                       FROM travel_plan_poll_votes
+                       WHERE poll_id = #{pollId})
+    </select>
+</mapper>

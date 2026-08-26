@@ -129,6 +129,11 @@ public class SecurityConfig {
                                 "^/travel-plans/[0-9]+/invitations/disable$",
                                 HttpMethod.POST.name()),
                         new RegexRequestMatcher(
+                                "^/travel-plans/[0-9]+/polls$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/travel-plans/[0-9]+/polls/[0-9]+/vote$",
+                                HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
                                 "^/travel-plans/[0-9]+/days/[0-9]+/items$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(
                                 "^/travel-plans/[0-9]+/days/[0-9]+/items/[0-9]+/update$",

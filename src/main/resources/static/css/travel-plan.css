@@ -1,3 +1,38 @@
+/*
+  기능별 바탕 톤.
+
+  전부 같은 베이지로 두면 페이지·플래너·채팅·투표가 한 덩어리로 보인다.
+  사이트 색을 바꾸는 것이 아니라, 온도만 아주 조금 달리해 층을 구분한다.
+
+    페이지   따뜻한 베이지 (그대로)
+    종이     거의 흰색      (그대로)
+    채팅     조금 더 중립적인 아이보리
+    투표     아주 옅은 blue-gray
+
+  투표 accent 는 강조가 필요한 곳에만 쓴다.
+  (배지 / 선택지 번호 / 탭 밑줄 / 카드 테두리)
+*/
+:root {
+    --tp-page: #f5f2ec;
+    --tp-paper: #fffdf8;
+    --tp-line: #e8e1d5;
+    --tp-ink: #3f3426;
+    --tp-ink-soft: #6b6259;
+    --tp-ink-faint: #a1968a;
+
+    /* 채팅: 베이지보다 조금 중립적인 아이보리 */
+    --tp-chat-surface: #fcfbf8;
+    --tp-chat-composer: #f3f2ed;
+    --tp-chat-line: #ece8de;
+
+    /* 투표: 아주 옅은 blue-gray. 강한 파랑이 아니다 */
+    --tp-poll-surface: #f7f8fa;
+    --tp-poll-soft: #e9edf1;
+    --tp-poll-line: #dbe1e8;
+    --tp-poll-accent: #6f7d8c;
+    --tp-poll-accent-strong: #57616d;
+}
+
 /* 공동 여행계획 생성 폼. 여행일기 작성 화면의 디자인 언어를 따른다. */
 
 .travel-plan-form-page {
@@ -1538,7 +1573,8 @@
     max-height: min(560px, calc(100vh - 48px));
     border: 1px solid #e2dbcd;
     border-radius: 8px;
-    background: #fffdf8;
+    /* 종이(거의 흰색)와 살짝 다른 아이보리라 채팅이 한 겹 위에 있는 것이 보인다 */
+    background: var(--tp-chat-surface);
     box-shadow: 0 12px 32px rgba(63, 52, 38, 0.16);
     overflow: hidden;
 }
@@ -1558,8 +1594,8 @@
     justify-content: space-between;
     gap: 8px;
     padding: 10px 12px;
-    border-bottom: 1px solid #efe9dc;
-    background: #faf6ec;
+    border-bottom: 1px solid var(--tp-chat-line);
+    background: var(--tp-chat-composer);
 }
 
 .travel-plan-chat-panel-title {
@@ -1640,7 +1676,7 @@
 .travel-plan-chat-message {
     position: relative;
     padding: 10px 2px;
-    border-bottom: 1px solid #f2ece0;
+    border-bottom: 1px solid var(--tp-chat-line);
 }
 
 /* 마지막 메시지 아래에는 선을 두지 않는다 */
@@ -1763,13 +1799,9 @@
     align-items: flex-end;
     gap: 6px;
     padding: 8px 10px;
-    border-top: 1px solid #efe9dc;
-    background: #faf6ec;
-}
-
-/* 다음 단계에서 [투표 만들기] 가 붙는 자리 */
-.travel-plan-chat-tools {
-    flex: 0 0 auto;
+    /* 입력줄은 대화보다 아주 조금 짙어 서로 구분된다 */
+    border-top: 1px solid var(--tp-chat-line);
+    background: var(--tp-chat-composer);
 }
 
 .travel-plan-chat-tool {
@@ -1840,5 +1872,705 @@
         bottom: 8px;
         width: auto;
         max-height: min(70vh, calc(100vh - 16px));
+    }
+}
+
+/* 대화 사이에 있었던 일. 말풍선이 아니라 차분한 알림 줄이다 */
+.travel-plan-chat-notice {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 10px 2px;
+    border-top: 1px solid var(--tp-poll-line);
+    border-bottom: 1px solid var(--tp-poll-line);
+    margin: 4px 0;
+}
+
+.travel-plan-chat-notice-body {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    padding: 0;
+    border: none;
+    background: none;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.travel-plan-chat-notice-head {
+    color: var(--tp-poll-accent);
+    font-size: 12px;
+}
+
+.travel-plan-chat-notice-title {
+    color: var(--tp-ink-soft);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.5;
+    overflow-wrap: break-word;
+}
+
+.travel-plan-chat-notice-body:hover .travel-plan-chat-notice-title {
+    text-decoration: underline;
+}
+
+/* ───── 투표 센터 ───── */
+/*
+  채팅 위를 차지하던 고정 카드 영역을 없애고,
+  진행 중·지난 투표와 새로 만들기를 이 창 하나에 모았다.
+*/
+
+/* ── 채팅 머리글의 작은 진입점 ── */
+
+.travel-plan-poll-entry {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border: 1px solid var(--tp-poll-line);
+    border-radius: 4px;
+    background: var(--tp-poll-surface);
+    color: var(--tp-poll-accent-strong);
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.travel-plan-poll-entry:hover {
+    background: var(--tp-poll-soft);
+}
+
+.travel-plan-poll-entry-count {
+    min-width: 16px;
+    padding: 0 4px;
+    border-radius: 8px;
+    background: var(--tp-poll-accent);
+    color: #fff;
+    font-size: 11px;
+    line-height: 16px;
+    text-align: center;
+}
+
+.travel-plan-poll-entry-count[hidden] {
+    display: none;
+}
+
+/* ── 입력창 왼쪽 도구 메뉴 ── */
+
+.travel-plan-chat-tools {
+    position: relative;
+    flex: 0 0 auto;
+}
+
+.travel-plan-chat-tool-menu {
+    position: absolute;
+    bottom: 34px;
+    left: 0;
+    z-index: 1;
+    min-width: 128px;
+    padding: 4px;
+    border: 1px solid #e2dbcd;
+    border-radius: 6px;
+    background: var(--tp-paper);
+    box-shadow: 0 6px 16px rgba(63, 52, 38, 0.12);
+}
+
+.travel-plan-chat-tool-menu[hidden] {
+    display: none;
+}
+
+.travel-plan-chat-tool-action {
+    width: 100%;
+    padding: 6px 8px;
+    border: none;
+    border-radius: 4px;
+    background: none;
+    color: var(--tp-ink-soft);
+    font-family: inherit;
+    font-size: 13px;
+    text-align: left;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.travel-plan-chat-tool-action:hover {
+    background: var(--tp-poll-soft);
+}
+
+/* ── 창 ── */
+
+.travel-plan-poll-modal {
+    position: fixed;
+    inset: 0;
+    /* 채팅 패널(40)보다 위. 뒤의 페이지와 채팅을 함께 덮는다 */
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(63, 52, 38, 0.32);
+}
+
+/*
+  여기 display 를 정해 두면 브라우저 기본 [hidden] 규칙을 덮어써
+  hidden 을 걸어도 창이 계속 보인다. 그래서 hidden 일 때를 따로 적어 준다.
+*/
+.travel-plan-poll-modal[hidden] {
+    display: none;
+}
+
+.travel-plan-poll-modal-panel {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    /* 좁은 화면·분할 화면에서도 밖으로 넘치지 않는다 */
+    width: min(420px, 100%);
+    max-height: min(600px, calc(100vh - 40px));
+    border: 1px solid var(--tp-poll-line);
+    border-radius: 8px;
+    background: var(--tp-poll-surface);
+    box-shadow: 0 16px 40px rgba(63, 52, 38, 0.24);
+    overflow: hidden;
+}
+
+.travel-plan-poll-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--tp-poll-line);
+    background: var(--tp-poll-soft);
+}
+
+.travel-plan-poll-modal-title {
+    margin: 0;
+    color: var(--tp-poll-accent-strong);
+    font-size: 16px;
+    font-weight: 700;
+}
+
+/* 목록 화면과 만들기 화면이 같은 자리에서 서로 바뀐다 */
+.travel-plan-poll-view {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.travel-plan-poll-view[hidden] {
+    display: none;
+}
+
+/* ── 탭 ── */
+
+.travel-plan-poll-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--tp-poll-line);
+    background: var(--tp-poll-soft);
+}
+
+.travel-plan-poll-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 9px 4px;
+    border: none;
+    /* 고른 탭만 accent 밑줄로 알린다 */
+    border-bottom: 2px solid transparent;
+    background: none;
+    color: var(--tp-ink-faint);
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.travel-plan-poll-tab + .travel-plan-poll-tab {
+    margin-left: 12px;
+}
+
+.travel-plan-poll-tab.is-active {
+    border-bottom-color: var(--tp-poll-accent);
+    color: var(--tp-poll-accent-strong);
+    font-weight: 600;
+}
+
+.travel-plan-poll-tab-count {
+    color: var(--tp-ink-faint);
+    font-size: 12px;
+}
+
+.travel-plan-poll-tab.is-active .travel-plan-poll-tab-count {
+    color: var(--tp-poll-accent);
+}
+
+/* ── 목록 ── */
+
+.travel-plan-poll-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 14px 16px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.travel-plan-poll-empty {
+    margin: 28px 0;
+    color: var(--tp-ink-faint);
+    font-size: 13px;
+    text-align: center;
+}
+
+.travel-plan-poll-empty[hidden] {
+    display: none;
+}
+
+.travel-plan-poll-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+/*
+  목록 한 줄. 눌러서 상세로 들어가는 곳이라 통째로 버튼이다.
+  선택지는 여기 펼치지 않는다. 질문·작성자·참여 현황까지다.
+*/
+.travel-plan-poll-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--tp-poll-line);
+    border-radius: 6px;
+    background: #fff;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.travel-plan-poll-card:hover {
+    border-color: var(--tp-poll-accent);
+}
+
+.travel-plan-poll-list li + li {
+    margin-top: 8px;
+}
+
+.travel-plan-poll-card-body {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.travel-plan-poll-card-title {
+    color: var(--tp-ink);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.5;
+    overflow-wrap: break-word;
+}
+
+.travel-plan-poll-card-author {
+    color: var(--tp-ink-faint);
+    font-size: 12px;
+}
+
+.travel-plan-poll-card-meta {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-top: 4px;
+    color: var(--tp-poll-accent-strong);
+    font-size: 12px;
+    overflow-wrap: break-word;
+}
+
+/* "결과" 라는 말머리에만 accent 를 쓴다 */
+.travel-plan-poll-card-result-label {
+    flex: 0 0 auto;
+    color: var(--tp-poll-accent);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.travel-plan-poll-card-chevron {
+    flex: 0 0 auto;
+    color: var(--tp-ink-faint);
+    font-size: 16px;
+    line-height: 1;
+}
+
+/* ── 상세 ── */
+
+.travel-plan-poll-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 4px 16px 16px;
+    overflow-y: auto;
+}
+
+.travel-plan-poll-detail-head {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.travel-plan-poll-detail-title {
+    margin: 0;
+    color: var(--tp-ink);
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.5;
+    overflow-wrap: break-word;
+}
+
+.travel-plan-poll-detail-meta {
+    margin: 0;
+    color: var(--tp-ink-faint);
+    font-size: 12px;
+}
+
+.travel-plan-poll-detail-joined {
+    margin: 6px 0 0;
+    color: var(--tp-poll-accent-strong);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.travel-plan-poll-choices,
+.travel-plan-poll-results {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.travel-plan-poll-choice-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 12px;
+    border: 1px solid var(--tp-poll-line);
+    border-radius: 5px;
+    background: #fff;
+    cursor: pointer;
+}
+
+.travel-plan-poll-choice-row:has(input:checked) {
+    border-color: var(--tp-poll-accent);
+    background: var(--tp-poll-soft);
+}
+
+.travel-plan-poll-choice-row input {
+    flex: 0 0 auto;
+    accent-color: var(--tp-poll-accent);
+}
+
+.travel-plan-poll-choice-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    color: var(--tp-ink);
+    font-size: 14px;
+    overflow-wrap: break-word;
+}
+
+/* 표 수는 사람 수와 다른 값이라 조금 물러나 보이게 둔다 */
+.travel-plan-poll-choice-count {
+    flex: 0 0 auto;
+    color: var(--tp-poll-accent);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+/* 끝난 투표는 읽기 전용이라 고르는 칸이 없다 */
+.travel-plan-poll-result-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--tp-poll-line);
+    color: var(--tp-ink);
+    font-size: 14px;
+}
+
+.travel-plan-poll-winner {
+    margin: 0;
+    padding: 10px 12px;
+    border: 1px solid var(--tp-poll-accent);
+    border-radius: 5px;
+    background: var(--tp-poll-soft);
+    color: var(--tp-poll-accent-strong);
+    font-size: 14px;
+    font-weight: 700;
+    overflow-wrap: break-word;
+}
+
+.travel-plan-poll-footer {
+    flex: 0 0 auto;
+    display: flex;
+    justify-content: flex-end;
+    padding: 12px 16px;
+    border-top: 1px solid var(--tp-poll-line);
+    background: var(--tp-poll-soft);
+}
+
+/* ── 만들기 화면 ── */
+
+.travel-plan-poll-back {
+    align-self: flex-start;
+    padding: 12px 16px 0;
+    border: none;
+    background: none;
+    color: var(--tp-ink-faint);
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.travel-plan-poll-back:hover {
+    color: var(--tp-poll-accent-strong);
+}
+
+.travel-plan-poll-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 14px 16px 16px;
+    overflow-y: auto;
+}
+
+.travel-plan-poll-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+/* 질문이 이 화면에서 가장 중요한 것이라 크게 묻는다 */
+.travel-plan-poll-lead {
+    color: var(--tp-ink);
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.travel-plan-poll-label {
+    padding: 0;
+    color: var(--tp-ink-soft);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.travel-plan-poll-question,
+.travel-plan-poll-option {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    border: 1px solid var(--tp-poll-line);
+    border-radius: 5px;
+    background: #fff;
+    color: var(--tp-ink);
+    font-family: inherit;
+}
+
+.travel-plan-poll-question {
+    padding: 11px 12px;
+    font-size: 15px;
+}
+
+.travel-plan-poll-option {
+    padding: 8px 10px;
+    font-size: 14px;
+}
+
+.travel-plan-poll-question:focus,
+.travel-plan-poll-option:focus {
+    border-color: var(--tp-poll-accent);
+    outline: 3px solid rgba(111, 125, 140, 0.16);
+}
+
+.travel-plan-poll-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.travel-plan-poll-option-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+/* 01, 02 ... 저장되는 순서가 화면에서도 보인다 */
+.travel-plan-poll-option-number {
+    flex: 0 0 auto;
+    width: 18px;
+    color: var(--tp-poll-accent);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.travel-plan-poll-option-remove {
+    flex: 0 0 auto;
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: 4px;
+    background: none;
+    color: #c0b6a6;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.travel-plan-poll-option-remove:hover:not(:disabled) {
+    background: var(--tp-poll-soft);
+    color: #b98c86;
+}
+
+.travel-plan-poll-option-remove:disabled {
+    color: #e5ded1;
+    cursor: not-allowed;
+}
+
+.travel-plan-poll-add {
+    align-self: flex-start;
+    margin-left: 26px;
+    padding: 2px 0;
+    border: none;
+    background: none;
+    color: var(--tp-poll-accent);
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.travel-plan-poll-add:hover {
+    color: var(--tp-poll-accent-strong);
+}
+
+.travel-plan-poll-add[hidden] {
+    display: none;
+}
+
+.travel-plan-poll-choice {
+    gap: 6px;
+}
+
+/* 방식마다 한 줄 설명을 붙여 무엇이 다른지 바로 보이게 한다 */
+.travel-plan-poll-radio {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 9px 10px;
+    border: 1px solid var(--tp-poll-line);
+    border-radius: 5px;
+    background: #fff;
+    cursor: pointer;
+}
+
+.travel-plan-poll-radio:has(input:checked) {
+    border-color: var(--tp-poll-accent);
+    background: var(--tp-poll-soft);
+}
+
+.travel-plan-poll-radio input {
+    margin-top: 2px;
+    accent-color: var(--tp-poll-accent);
+}
+
+.travel-plan-poll-radio-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+
+.travel-plan-poll-radio-title {
+    color: var(--tp-ink);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.travel-plan-poll-radio-hint {
+    color: var(--tp-ink-faint);
+    font-size: 12px;
+}
+
+.travel-plan-poll-error {
+    margin: 0;
+    color: #b98c86;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.travel-plan-poll-error[hidden] {
+    display: none;
+}
+
+.travel-plan-poll-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+/* 크기·모서리·굵기는 사이트의 기존 기본 버튼과 같게 둔다 */
+.travel-plan-poll-cancel,
+.travel-plan-poll-submit {
+    padding: 8px 16px;
+    border: 1px solid #d6cdb9;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.travel-plan-poll-cancel {
+    background: #fff;
+    color: var(--tp-ink-soft);
+}
+
+.travel-plan-poll-submit {
+    border-color: #6f6350;
+    background: #6f6350;
+    color: #fff;
+    font-weight: 700;
+}
+
+.travel-plan-poll-submit:hover:not(:disabled) {
+    background: #5d5344;
+}
+
+.travel-plan-poll-submit:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+@media (max-width: 480px) {
+    .travel-plan-poll-modal {
+        padding: 10px;
+    }
+
+    .travel-plan-poll-modal-panel {
+        max-height: calc(100vh - 20px);
     }
 }

@@ -129,7 +129,9 @@ class TravelPlanAlternativeUiContractTest {
                 .contains("maxlength=\"100\"");
         // 기본 상태에서는 편집기가 닫혀 있고, 별도 페이지나 modal 로 가지 않는다
         assertThat(detail).contains("class=\"travel-plan-alt-editor\" method=\"post\" hidden");
-        assertThat(detail).doesNotContain("modal").doesNotContain("dialog");
+        // 대안 편집기는 전부 DAY fragment 안에 있다. 그 안에는 별도 창이 없다
+        assertThat(resource("/templates/travelplan/fragments/schedule-day.html"))
+                .doesNotContain("modal").doesNotContain("dialog");
     }
 
     @Test
@@ -308,8 +310,11 @@ class TravelPlanAlternativeUiContractTest {
         for (String notYet : new String[]{"태그", "최종 확정"}) {
             assertThat(detail).as("아직 없는 기능: %s", notYet).doesNotContain(notYet);
         }
-        // 투표는 채팅 입력창 왼쪽에 자리만 잡아 두었고 아직 만들 수 있는 것이 없다
-        assertThat(detail).contains("투표 기능 준비 중").doesNotContain("투표 만들기</");
+        // 투표는 만들기까지 들어왔다. 참여·결과는 아직이다
+        assertThat(detail)
+                .contains("투표 만들기")
+                .doesNotContain("투표하기")
+                .doesNotContain("투표 결과");
     }
 
     /**

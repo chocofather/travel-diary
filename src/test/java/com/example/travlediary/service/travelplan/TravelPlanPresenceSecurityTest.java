@@ -282,6 +282,70 @@ class TravelPlanPresenceSecurityTest {
                 .isInstanceOf(AccessDeniedException.class);
     }
 
+    // ── 투표 ────────────────────────────────────────────────
+
+    @Test
+    void anActiveMemberMayWatchTheirOwnRoomsPolls() {
+        givenActivePlan();
+        givenMembership(TravelPlanRole.MEMBER, TravelPlanMemberStatus.ACTIVE);
+
+        assertThatCode(() -> interceptor.preSend(
+                subscribe("/topic/travel-plans/42/polls", principal()), null))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void whoeverLeftOrWasRemovedCannotWatchThePolls() {
+        givenActivePlan();
+        // ACTIVE 조건이 걸린 조회라 LEFT / REMOVED / 비참여자는 여기서 비어 온다
+        when(travelPlanMapper.findMemberByPlanAndUser(PLAN_ID, USER_ID, "ACTIVE")).thenReturn(null);
+
+        assertThatThrownBy(() -> interceptor.preSend(
+                subscribe("/topic/travel-plans/42/polls", principal()), null))
+                .isInstanceOf(AccessDeniedException.class);
+        // 비로그인도 마찬가지다
+        assertThatThrownBy(() -> interceptor.preSend(
+                subscribe("/topic/travel-plans/42/polls", null), null))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    void aPollTopicOfAnotherRoomIsCheckedAgainstThatRoom() {
+        givenActivePlan();
+        givenMembership(TravelPlanRole.MEMBER, TravelPlanMemberStatus.ACTIVE);
+        when(travelPlanMapper.findPlanByIdAndStatus(OTHER_PLAN_ID, "ACTIVE"))
+                .thenReturn(activePlan(OTHER_PLAN_ID));
+        when(travelPlanMapper.findMemberByPlanAndUser(OTHER_PLAN_ID, USER_ID, "ACTIVE"))
+                .thenReturn(null);
+
+        assertThatThrownBy(() -> interceptor.preSend(
+                subscribe("/topic/travel-plans/43/polls", principal()), null))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    void aRoomThatEndedCannotHaveItsPollsWatched() {
+        when(travelPlanMapper.findPlanByIdAndStatus(PLAN_ID, "ACTIVE")).thenReturn(null);
+
+        assertThatThrownBy(() -> interceptor.preSend(
+                subscribe("/topic/travel-plans/42/polls", principal()), null))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    void nobodySendsToThePollTopic() {
+        // 투표 만들기는 기존 HTTP 경로다. 보내는 목적지를 두지 않는다
+        givenActivePlan();
+        givenMembership(TravelPlanRole.MEMBER, TravelPlanMemberStatus.ACTIVE);
+
+        assertThatThrownBy(() -> interceptor.preSend(
+                send("/app/travel-plans/42/polls", principal()), null))
+                .isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> interceptor.preSend(
+                send("/app/travel-plans/42/polls/create", principal()), null))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
     @Test
     void aRoomThatEndedCannotHaveItsScheduleWatched() {
         when(travelPlanMapper.findPlanByIdAndStatus(PLAN_ID, "ACTIVE")).thenReturn(null);

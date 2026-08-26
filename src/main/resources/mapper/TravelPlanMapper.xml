@@ -129,6 +129,14 @@
           AND display_name = #{displayName}
     </select>
 
+    <!-- 지금 방에 남아 있는 사람 수. 투표 참여 인원의 분모다 -->
+    <select id="countActiveMembers" resultType="int">
+        SELECT COUNT(*)
+        FROM travel_plan_members
+        WHERE travel_plan_id = #{travelPlanId}
+          AND status = 'ACTIVE'
+    </select>
+
     <!--
       플래너의 참여자 목록.
       화면에 쓰는 것은 표시 이름과 역할뿐이라 그 밖의 컬럼은 읽지 않고,

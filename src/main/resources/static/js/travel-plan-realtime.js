@@ -6,6 +6,7 @@
     schedule : 어떤 DAY 가 바뀌었는지
     editor   : 누가 어디를 쓰고 있는지
     chat     : 방 채팅
+    polls    : 방 투표
 
   브라우저 하나가 /ws 에 두 번 붙지 않도록 client 는 하나만 만든다.
   일정 편집(travel-plan-scheduler.js)과는 DOM 이벤트로만 이야기하고,
@@ -299,6 +300,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // 구독은 이 파일이 하고, 받은 것을 채팅 화면에 그대로 넘긴다.
     const chatListeners = [];
     const chatReplyListeners = [];
+    const pollListeners = [];
     const reconnectListeners = [];
 
     function notify(listeners, payload) {
@@ -410,6 +412,14 @@ document.addEventListener("DOMContentLoaded", () => {
             if (onReply) chatReplyListeners.push(onReply);
         },
 
+        /**
+         * 투표 알림을 받는다.
+         * 만들기는 기존 HTTP POST 로 저장하므로 보내는 쪽은 없다.
+         */
+        subscribePolls(onEvent) {
+            if (onEvent) pollListeners.push(onEvent);
+        },
+
         /** 끊겼다 다시 붙었을 때. 놓친 채팅을 그때 다시 맞춘다. */
         onReconnected(handler) {
             if (handler) reconnectListeners.push(handler);
@@ -496,6 +506,15 @@ document.addEventListener("DOMContentLoaded", () => {
         client.subscribe("/user/queue/travel-plan-chat", message => {
             try {
                 notify(chatReplyListeners, JSON.parse(message.body));
+            } catch (error) {
+                // 알 수 없는 형식이면 화면을 건드리지 않는다.
+            }
+        });
+
+        // 투표. 만들기는 HTTP 로 저장하고, 저장된 뒤의 알림만 여기로 온다.
+        client.subscribe(`/topic/travel-plans/${planId}/polls`, message => {
+            try {
+                notify(pollListeners, JSON.parse(message.body));
             } catch (error) {
                 // 알 수 없는 형식이면 화면을 건드리지 않는다.
             }
