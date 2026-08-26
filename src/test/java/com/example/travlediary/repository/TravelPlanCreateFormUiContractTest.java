@@ -154,17 +154,19 @@ class TravelPlanCreateFormUiContractTest {
                 .doesNotContain(">추가</button>")
                 .doesNotContain("data-travel-plan-add-toggle");
         // 취소는 닫혀 있는 대안 편집기(기존 B/C 1 + 새 대안 1)와
-        // 닫혀 있는 투표 만들기 창 안에만 있다
-        assertThat(countOf(detail, ">취소</button>")).isEqualTo(3);
+        // 닫혀 있는 두 창(투표 만들기 / 확정 확인) 안에만 있다
+        assertThat(countOf(detail, ">취소</button>")).isEqualTo(4);
         // 모든 textarea 는 닫힌 폼·패널 안에 있다
         // (추가 슬롯 1 + 일정 수정 1 + 대안 2 + 닫혀 있는 채팅 입력 1)
         assertThat(countOf(detail, "<textarea")).isEqualTo(5);
         assertThat(countOf(detail, "th:hidden=\"${!dayOpen}\"")).isEqualTo(1);
         assertThat(countOf(detail, "class=\"travel-plan-item-editor\" method=\"post\" hidden"))
                 .isEqualTo(1);
-        // 별도 창은 투표 만들기 하나뿐이고, 그것도 닫힌 채로 시작한다
-        assertThat(countOf(detail, "role=\"dialog\"")).isEqualTo(1);
-        assertThat(detail).contains("class=\"travel-plan-poll-modal\" hidden role=\"dialog\"");
+        // 따로 뜨는 창은 투표 센터와 확정 확인 둘뿐이고, 둘 다 닫힌 채로 시작한다
+        assertThat(countOf(detail, "role=\"dialog\"")).isEqualTo(2);
+        assertThat(detail)
+                .contains("class=\"travel-plan-poll-modal\" hidden role=\"dialog\"")
+                .contains("class=\"travel-plan-finalize-modal\" hidden role=\"dialog\"");
     }
 
     @Test

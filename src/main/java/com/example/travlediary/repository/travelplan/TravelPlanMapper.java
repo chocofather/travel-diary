@@ -73,11 +73,35 @@ public interface TravelPlanMapper {
     int countActiveMembers(@Param("travelPlanId") Long travelPlanId);
 
     /**
+     * 방의 진행 상태를 옮긴다.
+     *
+     * <p>지금 상태가 기대한 그대로일 때만 반영된다.
+     * 같은 방을 두 사람이 동시에 완료하려 해도 한 번만 성공한다.
+     *
+     * @param completed true 면 완료 시각(finalized_at)도 함께 남긴다
+     * @return 1 이면 방금 이 호출이 옮겼고, 0 이면 그 사이 다른 변화가 있었다.
+     */
+    int updatePlanStatus(@Param("travelPlanId") Long travelPlanId,
+                         @Param("fromStatus") String fromStatus,
+                         @Param("toStatus") String toStatus,
+                         @Param("completed") boolean completed);
+
+    /**
      * 방에 지금 참여 중인 사람들. OWNER 가 먼저 오고 그 뒤는 참여한 순서다.
      * 화면에 필요한 컬럼만 읽고 users 는 건드리지 않는다.
      */
     List<TravelPlanMember> findActiveMembersByPlanId(@Param("travelPlanId") Long travelPlanId,
                                                      @Param("memberStatus") String memberStatus);
+
+    /**
+     * 최종본에 옮겨 적을 참여자. 화면용 조회와 달리 계정 번호까지 읽는다.
+     *
+     * <p>최종 명단의 user_id 로 "내 완료된 여행" 을 찾는다.
+     * 여기서 읽지 않으면 NULL 로 저장되어 그 여행이 누구의 목록에도 나오지 않는다.
+     */
+    List<TravelPlanMember> findActiveMembersForSnapshot(
+            @Param("travelPlanId") Long travelPlanId,
+            @Param("memberStatus") String memberStatus);
 
     /**
      * 방 소속 참여자 1건. 다른 방의 memberId 를 섞어 넣어도 통과하지 못하게

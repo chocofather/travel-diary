@@ -4,6 +4,7 @@ import com.example.travlediary.dto.TravelPlanDayDetailDto;
 import com.example.travlediary.dto.TravelPlanDetailDto;
 import com.example.travlediary.dto.TravelPlanListItemDto;
 import com.example.travlediary.dto.TravelPlanMemberDto;
+import com.example.travlediary.dto.TravelPlanMembersDto;
 import com.example.travlediary.dto.TravelPlanPastMemberDto;
 import com.example.travlediary.model.TravelPlan;
 import com.example.travlediary.model.TravelPlanDay;
@@ -14,6 +15,7 @@ import com.example.travlediary.model.TravelPlanMemberStatus;
 import com.example.travlediary.model.TravelPlanRole;
 import com.example.travlediary.model.TravelPlanStatus;
 import com.example.travlediary.repository.travelplan.TravelPlanAlternativeMapper;
+import com.example.travlediary.repository.travelplan.TravelPlanFinalMapper;
 import com.example.travlediary.repository.travelplan.TravelPlanItemMapper;
 import com.example.travlediary.repository.travelplan.TravelPlanMapper;
 import lombok.RequiredArgsConstructor;
@@ -50,6 +52,8 @@ public class TravelPlanService {
     private final TravelPlanMapper travelPlanMapper;
     private final TravelPlanItemMapper travelPlanItemMapper;
     private final TravelPlanAlternativeMapper travelPlanAlternativeMapper;
+    /** 완료된 방으로 들어왔을 때 무엇을 안내할지 가르는 데만 쓴다. */
+    private final TravelPlanFinalMapper travelPlanFinalMapper;
     /** 실시간 알림은 커밋 뒤에 나가야 해서 여기서는 이벤트만 남긴다. */
     private final ApplicationEventPublisher eventPublisher;
 
@@ -97,6 +101,52 @@ public class TravelPlanService {
                 activeMembers(travelPlanId, access.member()),
                 pastMembers(travelPlanId, access.member()),
                 TravelPlanInvitationService.MAX_MEMBERS);
+    }
+
+    /**
+     * 참여자 명단만 다시 읽는다.
+     *
+     * <p>명단이 바뀌었다는 실시간 알림을 받은 화면이 쓰는 길이다.
+     * 사람 하나가 들어오고 나갔다고 방의 일정 전체를 다시 읽지 않는다.
+     *
+     * <p>사람 수를 화면에서 더하거나 빼지 않고 여기서 다시 세므로,
+     * 같은 알림을 두 번 받아도 숫자가 두 번 늘지 않는다.
+     * 접근 권한은 상세와 같다(비참여자는 404).
+     */
+    @Transactional(readOnly = true)
+    public TravelPlanMembersDto getActivePlanMembers(Long userId, Long travelPlanId) {
+        PlanAccess access = requireActiveAccess(userId, travelPlanId);
+        return new TravelPlanMembersDto(
+                access.plan(), access.member(),
+                activeMembers(travelPlanId, access.member()),
+                pastMembers(travelPlanId, access.member()),
+                TravelPlanInvitationService.MAX_MEMBERS);
+    }
+
+    /**
+     * 공동 편집방을 열지 못했을 때 무엇을 안내할지 정한다.
+     *
+     * <p>흰 오류 화면을 보여 주지 않기 위한 것이지, 접근을 허락하는 것이 아니다.
+     * 완료된 여행에 함께했던 사람에게만 완료됐다고 알려 주고,
+     * 그 밖에는 방이 있는지조차 알리지 않는 한 가지 말로만 답한다.
+     */
+    @Transactional(readOnly = true)
+    public TravelPlanAccessNotice explainInaccessiblePlan(Long userId, Long travelPlanId) {
+        if (userId == null || travelPlanId == null) {
+            return TravelPlanAccessNotice.NO_ACCESS;
+        }
+        if (travelPlanMapper.findPlanByIdAndStatus(
+                travelPlanId, TravelPlanStatus.COMPLETED.name()) == null) {
+            // 완료된 방이 아니면 더 알아보지 않는다.
+            return TravelPlanAccessNotice.NO_ACCESS;
+        }
+        if (travelPlanFinalMapper.existsMemberByPlanAndUser(travelPlanId, userId)) {
+            return TravelPlanAccessNotice.COMPLETED_PARTICIPANT;
+        }
+        // 완료 명단에는 없지만 그 방에 있었던 적은 있는 사람.
+        return travelPlanMapper.findAnyMemberByPlanAndUser(travelPlanId, userId) == null
+                ? TravelPlanAccessNotice.NO_ACCESS
+                : TravelPlanAccessNotice.COMPLETED_PAST;
     }
 
     /**
@@ -164,7 +214,7 @@ public class TravelPlanService {
      */
     @Transactional
     public void addItem(Long userId, Long travelPlanId, Long dayId, String content) {
-        PlanAccess access = requireActiveAccess(userId, travelPlanId);
+        PlanAccess access = requireActiveAccessForWrite(userId, travelPlanId);
         requireDayOfPlan(travelPlanId, dayId);
 
         String normalizedContent = requiredContent(content);
@@ -194,7 +244,7 @@ public class TravelPlanService {
     @Transactional
     public void updateItem(Long userId, Long travelPlanId, Long dayId, Long itemId,
                            String content, Integer version) {
-        requireActiveAccess(userId, travelPlanId);
+        requireActiveAccessForWrite(userId, travelPlanId);
         requireDayOfPlan(travelPlanId, dayId);
         requireItemOfDay(dayId, itemId);
 
@@ -217,7 +267,7 @@ public class TravelPlanService {
      */
     @Transactional
     public void deleteItem(Long userId, Long travelPlanId, Long dayId, Long itemId) {
-        requireActiveAccess(userId, travelPlanId);
+        requireActiveAccessForWrite(userId, travelPlanId);
         requireDayOfPlan(travelPlanId, dayId);
         requireItemOfDay(dayId, itemId);
 
@@ -242,7 +292,7 @@ public class TravelPlanService {
      */
     @Transactional
     public void deleteItemGroup(Long userId, Long travelPlanId, Long dayId, Long itemId) {
-        requireActiveAccess(userId, travelPlanId);
+        requireActiveAccessForWrite(userId, travelPlanId);
         requireDayOfPlan(travelPlanId, dayId);
         requireItemOfDay(dayId, itemId);
 
@@ -284,7 +334,7 @@ public class TravelPlanService {
     @Transactional
     public void addAlternative(Long userId, Long travelPlanId, Long dayId, Long itemId,
                                String conditionLabel, String content) {
-        PlanAccess access = requireActiveAccess(userId, travelPlanId);
+        PlanAccess access = requireActiveAccessForWrite(userId, travelPlanId);
         requireDayOfPlan(travelPlanId, dayId);
         requireItemOfDay(dayId, itemId);
 
@@ -325,7 +375,7 @@ public class TravelPlanService {
     public void updateAlternative(Long userId, Long travelPlanId, Long dayId, Long itemId,
                                   Long alternativeId, String conditionLabel, String content,
                                   Integer version) {
-        requireActiveAccess(userId, travelPlanId);
+        requireActiveAccessForWrite(userId, travelPlanId);
         requireDayOfPlan(travelPlanId, dayId);
         requireItemOfDay(dayId, itemId);
         requireAlternativeOfItem(itemId, alternativeId);
@@ -352,7 +402,7 @@ public class TravelPlanService {
     @Transactional
     public void deleteAlternative(Long userId, Long travelPlanId, Long dayId, Long itemId,
                                   Long alternativeId) {
-        requireActiveAccess(userId, travelPlanId);
+        requireActiveAccessForWrite(userId, travelPlanId);
         requireDayOfPlan(travelPlanId, dayId);
         requireItemOfDay(dayId, itemId);
         TravelPlanItemAlternative alternative = requireAlternativeOfItem(itemId, alternativeId);
@@ -497,7 +547,7 @@ public class TravelPlanService {
     /** 이동 계열이 공통으로 하는 확인. 방 -> DAY -> 일정 -> version 순으로 본다. */
     private TravelPlanItem requireMovableItem(Long userId, Long travelPlanId, Long dayId,
                                               Long itemId, Integer version) {
-        requireActiveAccess(userId, travelPlanId);
+        requireActiveAccessForWrite(userId, travelPlanId);
         requireDayOfPlan(travelPlanId, dayId);
         TravelPlanItem item = requireItemOfDay(dayId, itemId);
         if (version == null) {
@@ -518,6 +568,22 @@ public class TravelPlanService {
 
     /** 방이 ACTIVE 이고 현재 사용자가 그 방의 ACTIVE 멤버인지 확인한다. */
     private PlanAccess requireActiveAccess(Long userId, Long travelPlanId) {
+        return requireActiveAccess(userId, travelPlanId, false);
+    }
+
+    /**
+     * 일정을 고치기 전에 방을 잠그고 확인한다.
+     *
+     * <p>완료 처리도 같은 방 row 를 잠그므로 둘이 한 줄로 선다.
+     * 일정 저장이 먼저 끝나면 그 변경까지 최종본에 담기고,
+     * 완료가 먼저 시작되면 이 조회가 ACTIVE 를 찾지 못해 저장이 거부된다.
+     * (최종본을 뜨는 동안은 FINALIZING 이라 여기 걸리지 않는다)
+     */
+    private PlanAccess requireActiveAccessForWrite(Long userId, Long travelPlanId) {
+        return requireActiveAccess(userId, travelPlanId, true);
+    }
+
+    private PlanAccess requireActiveAccess(Long userId, Long travelPlanId, boolean forWrite) {
         requireUser(userId);
         if (travelPlanId == null) {
             throw planNotFound();
@@ -528,8 +594,12 @@ public class TravelPlanService {
         if (currentMember == null) {
             throw planNotFound();
         }
-        TravelPlan plan = travelPlanMapper.findPlanByIdAndStatus(
-                travelPlanId, TravelPlanStatus.ACTIVE.name());
+        // 읽기만 할 때는 잠그지 않는다. 남의 저장을 기다리게 할 이유가 없다.
+        TravelPlan plan = forWrite
+                ? travelPlanMapper.findPlanByIdAndStatusForUpdate(
+                        travelPlanId, TravelPlanStatus.ACTIVE.name())
+                : travelPlanMapper.findPlanByIdAndStatus(
+                        travelPlanId, TravelPlanStatus.ACTIVE.name());
         if (plan == null) {
             throw planNotFound();
         }

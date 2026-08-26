@@ -545,13 +545,15 @@ class TravelPlanInvitationContractTest {
     }
 
     /**
-     * 투표 만들기 창을 뺀 나머지 화면.
-     * 별도 창을 띄우는 것은 투표 만들기 하나뿐이고, 초대는 지금도 작은 패널 하나다.
+     * 따로 뜨는 창들을 뺀 나머지 화면.
+     * 창을 띄우는 것은 투표 센터와 확정 확인뿐이고, 초대는 지금도 작은 패널 하나다.
      */
     private String outsideThePollModal(String detail) {
-        int modalStart = detail.indexOf("class=\"travel-plan-poll-modal\"");
-        assertThat(modalStart).as("투표 만들기 창").isGreaterThanOrEqualTo(0);
-        return detail.substring(0, modalStart);
+        int finalizeStart = detail.indexOf("class=\"travel-plan-finalize-modal\"");
+        int pollStart = detail.indexOf("class=\"travel-plan-poll-modal\"");
+        assertThat(finalizeStart).as("확정 확인 창").isGreaterThanOrEqualTo(0);
+        assertThat(pollStart).as("투표 센터 창").isGreaterThanOrEqualTo(0);
+        return detail.substring(0, Math.min(finalizeStart, pollStart));
     }
 
     private String securityConfig() throws IOException {

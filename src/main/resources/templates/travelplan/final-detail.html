@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
+
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/travel-plan.css">
+  <!--
+    완료된 여행은 읽기만 한다.
+    실시간 연결도, 편집 스크립트도 싣지 않는다.
+  -->
+</th:block>
+
+<th:block th:fragment="body">
+  <div class="travel-plan-page">
+    <div class="travel-plan-page-top">
+      <div class="travel-plan-page-top-row">
+        <a class="travel-plan-back-link" th:href="@{/travel-plans}">← 함께 계획하기</a>
+      </div>
+    </div>
+
+    <!--
+      같은 종이 위에 놓이지만 이제 고칠 수 없는 한 장이다.
+      줄을 눌러도 아무 일이 없고, 추가 슬롯과 ⋯ 메뉴도 없다.
+    -->
+    <article class="travel-plan-paper travel-plan-final-paper"
+             aria-labelledby="travel-plan-final-title">
+
+      <header class="travel-plan-detail-header">
+        <p class="travel-plan-final-badge">완성된 여행계획</p>
+        <h1 id="travel-plan-final-title"
+            th:text="${finalPlan.snapshot.title}">제주도 여행</h1>
+        <p class="travel-plan-detail-period"
+           th:text="${#temporals.format(finalPlan.snapshot.startDate, 'yyyy.MM.dd')} + ' ~ '
+                    + ${#temporals.format(finalPlan.snapshot.endDate, 'yyyy.MM.dd')}">
+          2026.09.13 ~ 2026.09.15
+        </p>
+      </header>
+
+      <!-- 완료 시점에 함께한 사람들. 그때의 이름 그대로다 -->
+      <section class="travel-plan-final-members" aria-label="함께한 사람">
+        <p class="travel-plan-final-section-label">함께한 사람</p>
+        <ul class="travel-plan-final-member-list">
+          <li class="travel-plan-final-member" th:each="member : ${finalPlan.members}">
+            <span th:text="${member.displayName}">민준</span>
+            <span class="travel-plan-final-member-role"
+                  th:if="${member.role != null and member.role.name() == 'OWNER'}">방장</span>
+          </li>
+        </ul>
+      </section>
+
+      <div class="travel-plan-days">
+        <section class="travel-plan-day" th:each="day : ${finalPlan.days}"
+                 th:with="dayItems=${finalPlan.itemsByDayId.get(day.id)}">
+          <header class="travel-plan-day-header">
+            <h2 class="travel-plan-day-title" th:text="'DAY ' + ${day.dayNumber}">DAY 1</h2>
+            <p class="travel-plan-day-date"
+               th:text="${#temporals.format(day.planDate, 'M월 d일 (E)')}">9월 13일 (일)</p>
+          </header>
+
+          <ol class="travel-plan-lines">
+            <!-- 완료 시점의 순서 그대로다 -->
+            <li class="travel-plan-line is-item" th:each="item, status : ${dayItems}"
+                th:with="alternatives=${finalPlan.alternativesByItemId.get(item.id)}">
+              <span class="travel-plan-line-order"
+                    th:text="${#numbers.formatInteger(status.count, 2)}">01</span>
+
+              <div class="travel-plan-line-body">
+                <p class="travel-plan-line-content" th:text="${item.content}">
+                  오전 10시 경복궁 도착
+                </p>
+
+                <!-- 그때 함께 적어 둔 대안이 있으면 그대로 보여 준다 -->
+                <div class="travel-plan-final-alts"
+                     th:unless="${#lists.isEmpty(alternatives)}">
+                  <div class="travel-plan-alt" th:each="alt : ${alternatives}">
+                    <span class="travel-plan-alt-mark"
+                          th:text="${alt.alternativeOrder == 1 ? 'B' : 'C'}">B</span>
+                    <div class="travel-plan-alt-body">
+                      <p class="travel-plan-alt-view">
+                        <span class="travel-plan-alt-condition"
+                              th:unless="${#strings.isEmpty(alt.conditionLabel)}"
+                              th:text="${alt.conditionLabel}">비가 많이 올 때</span>
+                        <span class="travel-plan-alt-content"
+                              th:text="${alt.content}">아쿠아플라넷 방문</span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </li>
+          </ol>
+
+          <p class="travel-plan-final-empty-day" th:if="${#lists.isEmpty(dayItems)}">
+            이 날에는 정해 둔 일정이 없어요.
+          </p>
+        </section>
+      </div>
+    </article>
+  </div>
+</th:block>
+</html>

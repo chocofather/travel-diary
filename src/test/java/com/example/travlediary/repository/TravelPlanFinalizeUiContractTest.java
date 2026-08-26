@@ -1,0 +1,369 @@
+package com.example.travlediary.repository;
+
+import org.junit.jupiter.api.Test;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+/**
+ * 여행 계획 확정으로 들어가는 자리.
+ *
+ * <p>이번 단계는 확정할 수 있는지 묻는 것까지다.
+ * 실제로 확정하거나 최종본을 만드는 길은 아직 없다.
+ */
+class TravelPlanFinalizeUiContractTest {
+
+    // ── 진입점 ──────────────────────────────────────────────
+
+    @Test
+    void onlyTheOwnerSeesTheWayIn() throws IOException {
+        String detail = detailHtml();
+
+        assertThat(between(detail, "class=\"travel-plan-finalize\"",
+                "data-travel-plan-finalize-open"))
+                .contains("travelPlan.currentMember.role.name() == 'OWNER'");
+        assertThat(detail).contains(">여행 계획 확정</button>");
+    }
+
+    @Test
+    void itSitsAmongTheOtherSmallTopActions() throws IOException {
+        String detail = detailHtml();
+        String topActions = between(detail, "class=\"travel-plan-top-actions\"",
+                "class=\"travel-plan-notice\"");
+
+        // 참여자 / 채팅 / 초대와 같은 줄에 있다
+        assertThat(topActions).contains("data-travel-plan-finalize");
+        // 크게 튀는 위험 버튼으로 두지 않는다. 다른 보조 액션과 같은 크기다
+        String toggle = between(cssFile(), ".travel-plan-finalize-toggle {", "}");
+        assertThat(toggle)
+                .contains("padding: 4px 10px")
+                .contains("font-size: 13px");
+        assertThat(between(cssFile(), ".travel-plan-members-toggle {", "}"))
+                .contains("padding: 4px 10px")
+                .contains("font-size: 13px");
+    }
+
+    // ── 확인 창 ─────────────────────────────────────────────
+
+    @Test
+    void pressingItAsksBeforeAnythingHappens() throws IOException {
+        String detail = detailHtml();
+        String finalizeJs = finalizeJs();
+
+        assertThat(detail)
+                .contains("data-travel-plan-finalize-modal")
+                .contains("여행 계획을 확정할까요?")
+                .contains("확정하면 이후 일정은 수정할 수 없습니다.")
+                .contains("현재 작성된 일정이 최종 여행 계획으로 저장됩니다.")
+                .contains("data-travel-plan-finalize-cancel")
+                .contains("data-travel-plan-finalize-confirm");
+        // 열기 전까지 떠 있지 않다
+        assertThat(between(detail, "class=\"travel-plan-finalize-modal\"", ">"))
+                .contains("hidden");
+        // 누르자마자 확정하지 않는다. 창을 먼저 연다
+        assertThat(between(finalizeJs, "openButton?.addEventListener", ";"))
+                .contains("openModal()");
+    }
+
+    @Test
+    void hidingTheConfirmationActuallyHidesIt() throws IOException {
+        String css = cssFile();
+
+        // display 를 정해 두면 브라우저 기본 [hidden] 규칙을 덮어써 계속 보인다
+        assertThat(between(css, ".travel-plan-finalize-modal {", "}")).contains("display: flex");
+        assertThat(css).contains(".travel-plan-finalize-modal[hidden] {\n    display: none;\n}");
+    }
+
+    @Test
+    void theConfirmationCanBeBackedOutOf() throws IOException {
+        String finalizeJs = finalizeJs();
+
+        assertThat(finalizeJs).contains("data-travel-plan-finalize-cancel");
+        assertThat(between(finalizeJs, "document.addEventListener(\"keydown\"", "});"))
+                .contains("event.key !== \"Escape\" || modal.hidden")
+                .contains("closeModal()");
+        assertThat(between(finalizeJs, "modal.addEventListener(\"click\"", "});"))
+                .contains("if (event.target === modal) closeModal()");
+    }
+
+    @Test
+    void aRunningPollIsNeverMentionedAsAProblem() throws IOException {
+        String detail = detailHtml();
+        String finalizeJs = finalizeJs();
+
+        // 투표는 계획을 정하는 데 도우려는 것이지 확정의 조건이 아니다
+        assertThat(between(detail, "class=\"travel-plan-finalize-modal\"",
+                "data-travel-plan-finalize-confirm"))
+                .doesNotContain("투표");
+        assertThat(finalizeJs)
+                .doesNotContain("poll")
+                .doesNotContain("투표");
+    }
+
+    // ── 확정할 수 있는지는 서버가 본다 ──────────────────────
+
+    @Test
+    void theScreenAsksTheServerInsteadOfDecidingForItself() throws IOException {
+        String finalizeJs = finalizeJs();
+
+        assertThat(between(finalizeJs, "async function check()", "\n    }"))
+                .contains("/finalize/check")
+                .contains("method: \"POST\"")
+                .contains("csrfHeaders()")
+                .contains("payload.activeEditorExists")
+                .contains("renderWarning(payload.activeEditorDisplayNames || [])");
+        // 누가 편집 중인지 화면이 스스로 판단하지 않는다
+        assertThat(finalizeJs)
+                .doesNotContain("is-editing")
+                .doesNotContain("is-remote-editing")
+                .doesNotContain("travelPlanRealtime");
+    }
+
+    @Test
+    void theRouteIsProtectedLikeTheOtherWritingOnes() throws IOException {
+        String security = Files.readString(
+                Path.of("src/main/java/com/example/travlediary/config/SecurityConfig.java"),
+                StandardCharsets.UTF_8);
+
+        assertThat(security)
+                .contains("\"^/travel-plans/[0-9]+/finalize/check$\"");
+    }
+
+    @Test
+    void beingWarnedLeavesTheConfirmationOpenToDecide() throws IOException {
+        String check = between(finalizeJs(), "async function check()", "\n    }");
+
+        // 알려 주기만 하고 창을 닫지 않는다. 판단은 방장이 한다
+        assertThat(check).doesNotContain("closeModal()");
+        assertThat(check).contains("if (confirmButton) confirmButton.disabled = false");
+    }
+
+    // ── 편집 중인 사람이 있을 때 ────────────────────────────
+
+    @Test
+    void whoIsWritingIsNamedRatherThanTheDoorBeingShut() throws IOException {
+        String detail = detailHtml();
+        String finalizeJs = finalizeJs();
+
+        assertThat(detail).contains("data-travel-plan-finalize-warning");
+        assertThat(between(finalizeJs, "function editingSentence(names)", "\n    }"))
+                // 이름 뒤의 "님" 은 한 명일 때와 여럿일 때가 달라 따로 붙인다
+                .contains("${first}님")
+                .contains("이 현재 일정을 편집 중입니다.")
+                .contains("지금 완료하면 저장하지 않은 편집 내용은 사라질 수 있습니다.");
+        // 이름도 사용자가 정한 값이라 글자로만 넣는다
+        assertThat(finalizeJs)
+                .contains("warning.textContent = editingSentence(names)")
+                .doesNotContain("innerHTML");
+    }
+
+    @Test
+    void severalWritersAreSaidShortly() throws IOException {
+        // 한 명이면 그 이름, 여럿이면 첫 사람과 나머지 수로 줄여 쓴다
+        assertThat(between(finalizeJs(), "function editingSentence(names)", "\n    }"))
+                .contains("rest.length === 0 ? `${first}님` : `${first}님 외 ${rest.length}명`");
+    }
+
+    @Test
+    void theOwnerCanGoAheadAnywayOrBackOut() throws IOException {
+        String finalizeJs = finalizeJs();
+
+        // 경고가 뜨면 버튼이 "그래도 완료" 가 된다
+        assertThat(between(finalizeJs, "function renderWarning(names)", "\n    }"))
+                .contains("force = true")
+                .contains("confirmButton.textContent = \"그래도 완료\"");
+        // 취소는 그대로 남아 있다
+        assertThat(detailHtml()).contains("data-travel-plan-finalize-cancel");
+        // 아무도 쓰고 있지 않으면 원래 문구로 돌아간다
+        assertThat(between(finalizeJs, "function renderReady()", "\n    }"))
+                .contains("force = false")
+                .contains("confirmButton.textContent = \"여행 계획 확정\"");
+    }
+
+    @Test
+    void whatTheOwnerDecidedIsCarriedAsItsOwnFlag() throws IOException {
+        String service = Files.readString(
+                Path.of("src/main/java/com/example/travlediary/service/travelplan/"
+                        + "TravelPlanFinalizeService.java"),
+                StandardCharsets.UTF_8);
+
+        /*
+          그냥 완료와 알고도 하는 완료를 서버가 구분할 수 있어야 한다.
+          다음 단계의 실제 완료가 이 자리를 그대로 쓴다.
+        */
+        assertThat(service)
+                .contains("requireFinalizable(Principal principal, Long travelPlanId,")
+                .contains("boolean force")
+                .contains("if (!force &&");
+    }
+
+    // ── 이번 단계에서 하지 않는 것 ──────────────────────────
+
+    @Test
+    void pressingItActuallyFinalisesAndCarriesWhatWasDecided() throws IOException {
+        String finalizeJs = finalizeJs();
+
+        assertThat(between(finalizeJs, "async function finalizePlan()", "\n    }"))
+                .contains("/travel-plans/${planId}/finalize?force=${force}")
+                .contains("method: \"POST\"")
+                .contains("csrfHeaders()")
+                .contains("markCompleted()");
+        // 실패하면 창을 열어 둔 채 사유만 알린다
+        assertThat(between(finalizeJs, "async function finalizePlan()", "\n    }"))
+                .contains("showError(payload?.message)");
+    }
+
+    @Test
+    void theRoomStopsBeingEditableWithoutAReload() throws IOException {
+        String finalizeJs = finalizeJs();
+        String css = cssFile();
+
+        assertThat(between(finalizeJs, "function markCompleted()", "\n    }"))
+                .contains("planner.classList.add(\"is-completed\")")
+                .contains("여행 계획이 완료되었어요.");
+        // 새로고침하지 않는다
+        assertThat(finalizeJs)
+                .doesNotContain("location.reload")
+                .doesNotContain("location.href =");
+        // 다른 사람도 같은 처리를 받는다
+        assertThat(finalizeJs).contains("travelplan:plan-completed");
+        assertThat(resource("/static/js/travel-plan-realtime.js"))
+                .contains("payload.type === \"PLAN_COMPLETED\"");
+        // 완료된 뒤에는 줄을 눌러도 편집기가 열리지 않는다
+        assertThat(css).contains(".travel-plan-paper.is-completed");
+    }
+
+    // ── 완료와 일정 저장이 겹칠 때 ─────────────────────────
+
+    @Test
+    void finalisingAndSavingAScheduleStandInOneLine() throws IOException {
+        String planService = source("service/travelplan/TravelPlanService.java");
+        String finalizeService = source("service/travelplan/TravelPlanFinalizeService.java");
+
+        /*
+          둘 다 같은 방 row 를 잠그고 시작한다.
+          저장이 먼저 끝나면 그 변경까지 최종본에 담기고,
+          완료가 먼저면 저장은 상태가 바뀐 뒤라 거부된다.
+        */
+        assertThat(planService)
+                .contains("private PlanAccess requireActiveAccessForWrite(")
+                .contains("findPlanByIdAndStatusForUpdate(");
+        assertThat(finalizeService).contains("findPlanByIdAndStatusForUpdate(");
+
+        // 고치는 길은 모두 잠그고 읽는 쪽을 쓴다. 읽기만 하는 세 곳은 그대로 둔다
+        // (방 상세 / DAY 상세 / 참여자 명단)
+        assertThat(countOf(planService, "requireActiveAccessForWrite(userId, travelPlanId)"))
+                .isEqualTo(8);
+        assertThat(countOf(planService, "requireActiveAccess(userId, travelPlanId)"))
+                .isEqualTo(3);
+    }
+
+    @Test
+    void aCompletedRoomTurnsEveryWritingPathAway() throws IOException {
+        String roomAccess = source("service/travelplan/TravelPlanRoomAccess.java");
+        String planService = source("service/travelplan/TravelPlanService.java");
+
+        /*
+          완료된 방은 더 이상 ACTIVE 가 아니다.
+          일정·채팅·투표·실시간 편집이 모두 같은 조건을 지나므로 한 번에 막힌다.
+        */
+        assertThat(roomAccess).contains("TravelPlanStatus.ACTIVE.name()");
+        assertThat(planService).contains("TravelPlanStatus.ACTIVE.name()");
+    }
+
+    @Test
+    void theFinalCopyIsWrittenOnceAndOnlyOnce() throws IOException {
+        String schema = Files.readString(
+                Path.of("docs/db/travel_diary_schema_reference.md"), StandardCharsets.UTF_8);
+        String finalizeService = source("service/travelplan/TravelPlanFinalizeService.java");
+
+        // 마지막 방어는 DB 다. 한 방에 최종본은 하나뿐이다
+        assertThat(schema).contains("UNIQUE KEY `uk_travel_plan_final_snapshots_plan`"
+                + " (`travel_plan_id`)");
+        // 그 전에 알아보기 쉽게 한 번 끊는다
+        assertThat(finalizeService).contains("existsByPlanId(travelPlanId)");
+        // 상태도 지금 상태가 기대한 그대로일 때만 옮긴다
+        assertThat(source("repository/travelplan/TravelPlanMapper.java"))
+                .contains("updatePlanStatus(");
+    }
+
+    @Test
+    void nothingIsSweptAwayUntilTheFinalisingSticks() throws IOException {
+        String finalizeService = source("service/travelplan/TravelPlanFinalizeService.java");
+        String listener = source("service/travelplan/TravelPlanCompletedListener.java");
+
+        // 완료 안에서는 알림만 남긴다
+        assertThat(finalizeService).contains("new TravelPlanCompletedEvent(travelPlanId)");
+        assertThat(finalizeService).doesNotContain("releaseAllByPlan");
+        // 실제로 걷어 내는 것은 커밋이 끝난 뒤다
+        assertThat(listener)
+                .contains("TransactionPhase.AFTER_COMMIT")
+                .contains("releaseAllByPlan(travelPlanId)")
+                .contains("PLAN_COMPLETED");
+    }
+
+    @Test
+    void thePollsAndTalkAreNotCopiedIntoTheFinalCopy() throws IOException {
+        String finalizeService = source("service/travelplan/TravelPlanFinalizeService.java");
+
+        // 투표 결과를 최종 일정에 옮겨 적지 않는다
+        assertThat(finalizeService)
+                .doesNotContain("Poll")
+                .doesNotContain("Chat");
+    }
+
+    @Test
+    void aCompletedRoomScreenIsStillNotPartOfThis() throws IOException {
+        // 완료된 여행 전용 화면과 숨김/삭제는 다음 단계다
+        assertThat(detailHtml())
+                .doesNotContain("완료된 여행")
+                .doesNotContain("숨기기");
+    }
+
+    private String detailHtml() throws IOException {
+        return resource("/templates/travelplan/detail.html");
+    }
+
+    private String finalizeJs() throws IOException {
+        return resource("/static/js/travel-plan-finalize.js");
+    }
+
+    private String cssFile() throws IOException {
+        return resource("/static/css/travel-plan.css");
+    }
+
+    private String source(String relativePath) throws IOException {
+        return Files.readString(
+                Path.of("src/main/java/com/example/travlediary/" + relativePath),
+                StandardCharsets.UTF_8);
+    }
+
+    private int countOf(String source, String needle) {
+        int count = 0;
+        for (int index = source.indexOf(needle); index >= 0;
+             index = source.indexOf(needle, index + needle.length())) {
+            count++;
+        }
+        return count;
+    }
+
+    private String resource(String path) throws IOException {
+        try (InputStream input = getClass().getResourceAsStream(path)) {
+            assertThat(input).as("resource %s", path).isNotNull();
+            return new String(input.readAllBytes(), StandardCharsets.UTF_8);
+        }
+    }
+
+    private String between(String source, String start, String end) {
+        int startIndex = source.indexOf(start);
+        int endIndex = source.indexOf(end, startIndex + start.length());
+        assertThat(startIndex).as("start %s", start).isGreaterThanOrEqualTo(0);
+        assertThat(endIndex).as("end %s", end).isGreaterThan(startIndex);
+        return source.substring(startIndex, endIndex);
+    }
+}

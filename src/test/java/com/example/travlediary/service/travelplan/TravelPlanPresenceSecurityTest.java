@@ -189,6 +189,58 @@ class TravelPlanPresenceSecurityTest {
                 .isInstanceOf(AccessDeniedException.class);
     }
 
+    // ── 참여자 명단 ─────────────────────────────────────────
+
+    @Test
+    void anActiveMemberMayWatchTheirOwnRoomsMemberList() {
+        givenActivePlan();
+        givenMembership(TravelPlanRole.MEMBER, TravelPlanMemberStatus.ACTIVE);
+
+        assertThatCode(() -> interceptor.preSend(
+                subscribe("/topic/travel-plans/42/members", principal()), null))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void theMemberListTopicIsCheckedJustLikePresence() {
+        givenActivePlan();
+        // LEFT / REMOVED / 비참여자는 ACTIVE 조회에서 비어 온다
+        when(travelPlanMapper.findMemberByPlanAndUser(PLAN_ID, USER_ID, "ACTIVE")).thenReturn(null);
+
+        assertThatThrownBy(() -> interceptor.preSend(
+                subscribe("/topic/travel-plans/42/members", principal()), null))
+                .isInstanceOf(AccessDeniedException.class);
+        // 비로그인도 마찬가지다
+        assertThatThrownBy(() -> interceptor.preSend(
+                subscribe("/topic/travel-plans/42/members", null), null))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    void aMemberListOfAnotherRoomIsCheckedAgainstThatRoom() {
+        givenActivePlan();
+        givenMembership(TravelPlanRole.MEMBER, TravelPlanMemberStatus.ACTIVE);
+        when(travelPlanMapper.findPlanByIdAndStatus(OTHER_PLAN_ID, "ACTIVE"))
+                .thenReturn(activePlan(OTHER_PLAN_ID));
+        when(travelPlanMapper.findMemberByPlanAndUser(OTHER_PLAN_ID, USER_ID, "ACTIVE"))
+                .thenReturn(null);
+
+        assertThatThrownBy(() -> interceptor.preSend(
+                subscribe("/topic/travel-plans/43/members", principal()), null))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    void noOneCanPushAMemberListOfTheirOwn() {
+        // 명단 알림은 서버만 보낸다. 보내는 목적지가 아니다
+        givenActivePlan();
+        givenMembership(TravelPlanRole.OWNER, TravelPlanMemberStatus.ACTIVE);
+
+        assertThatThrownBy(() -> interceptor.preSend(
+                send("/app/travel-plans/42/members", principal()), null))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
     // ── 채팅 ────────────────────────────────────────────────
 
     @Test

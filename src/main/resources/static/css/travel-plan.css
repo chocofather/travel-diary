@@ -2619,3 +2619,263 @@
         max-height: calc(100vh - 20px);
     }
 }
+
+/* ───── 여행 계획 확정 ───── */
+/*
+  되돌리기 어려운 일이지만 눈에 띄게 떠 있는 위험한 버튼으로 두지 않는다.
+  참여자 / 초대 / 채팅과 같은 크기·위계의 상단 보조 액션이다.
+*/
+
+.travel-plan-finalize {
+    position: relative;
+    flex: 0 0 auto;
+}
+
+.travel-plan-finalize-toggle {
+    padding: 4px 10px;
+    border: 1px solid #e2dbcd;
+    border-radius: 4px;
+    background: var(--tp-paper);
+    color: #8b8378;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.travel-plan-finalize-toggle:hover {
+    color: var(--tp-ink-soft);
+    border-color: #d6cdb9;
+}
+
+.travel-plan-finalize-modal {
+    position: fixed;
+    inset: 0;
+    /* 투표 센터와 같은 층. 페이지와 채팅을 함께 덮는다 */
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(63, 52, 38, 0.32);
+}
+
+/*
+  여기 display 를 정해 두면 브라우저 기본 [hidden] 규칙을 덮어써
+  hidden 을 걸어도 창이 계속 보인다. 그래서 hidden 일 때를 따로 적어 준다.
+*/
+.travel-plan-finalize-modal[hidden] {
+    display: none;
+}
+
+.travel-plan-finalize-panel {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    /* 좁은 화면·분할 화면에서도 밖으로 넘치지 않는다 */
+    width: min(380px, 100%);
+    max-height: calc(100vh - 40px);
+    padding: 22px;
+    border: 1px solid var(--tp-line);
+    border-radius: 8px;
+    background: var(--tp-paper);
+    box-shadow: 0 16px 40px rgba(63, 52, 38, 0.24);
+    overflow-y: auto;
+}
+
+.travel-plan-finalize-title {
+    margin: 0;
+    color: var(--tp-ink);
+    font-size: 17px;
+    font-weight: 700;
+}
+
+.travel-plan-finalize-text {
+    margin: 0;
+    color: var(--tp-ink-soft);
+    font-size: 14px;
+    line-height: 1.8;
+}
+
+/*
+  지금 쓰고 있는 사람이 있다는 알림.
+  막는 것이 아니라 알려 주는 것이라 오류보다 부드러운 색을 쓴다.
+*/
+.travel-plan-finalize-warning {
+    margin: 0;
+    padding: 10px 12px;
+    border: 1px solid #e6d9b8;
+    border-radius: 5px;
+    background: #fdf8ec;
+    color: #8a6d3b;
+    font-size: 13px;
+    line-height: 1.7;
+    /* 두 줄로 넣은 그대로 보여 준다 */
+    white-space: pre-line;
+}
+
+.travel-plan-finalize-warning[hidden] {
+    display: none;
+}
+
+.travel-plan-finalize-error {
+    margin: 0;
+    padding: 10px 12px;
+    border: 1px solid #e8c4c0;
+    border-radius: 5px;
+    background: #fdf4f3;
+    color: #b42318;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.travel-plan-finalize-error[hidden] {
+    display: none;
+}
+
+.travel-plan-finalize-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+/* ── 완료된 여행 계획 ── */
+/*
+  완료 화면 자체는 다음 단계다.
+  여기서는 더 이상 고칠 수 없다는 것만 분명히 한다.
+*/
+.travel-plan-completed-notice {
+    margin: 0 0 20px;
+    padding: 12px 16px;
+    border: 1px solid var(--tp-poll-line);
+    border-radius: 6px;
+    background: var(--tp-poll-soft);
+    color: var(--tp-poll-accent-strong);
+    font-size: 14px;
+}
+
+/* 완료된 뒤에는 일정 줄을 눌러도 편집기가 열리지 않는다 */
+.travel-plan-paper.is-completed .travel-plan-line,
+.travel-plan-paper.is-completed .travel-plan-alt,
+.travel-plan-paper.is-completed .travel-plan-item-menu {
+    pointer-events: none;
+}
+
+.travel-plan-paper.is-completed .travel-plan-line-content,
+.travel-plan-paper.is-completed .travel-plan-slot-hint {
+    cursor: default;
+}
+
+/* 아직 열려 있던 편집기와 추가 슬롯은 완료와 함께 사라진다 */
+.travel-plan-paper.is-completed .travel-plan-item-editor,
+.travel-plan-paper.is-completed .travel-plan-alt-editor,
+.travel-plan-paper.is-completed .travel-plan-line.is-slot,
+.travel-plan-paper.is-completed .travel-plan-item-menu {
+    display: none;
+}
+
+/* ───── 완료된 여행 (읽기 전용) ───── */
+
+.travel-plan-completed-section {
+    margin-top: 36px;
+    padding-top: 24px;
+    border-top: 1px solid #e3dcd1;
+}
+
+.travel-plan-completed-title {
+    margin: 0 0 14px;
+    color: var(--tp-ink-soft);
+    font-size: 16px;
+    font-weight: 700;
+}
+
+/* 끝난 여행이라 진행 중인 것보다 한 걸음 물러나 보이게 둔다 */
+.travel-plan-card-link.is-completed {
+    background: #faf8f3;
+}
+
+.travel-plan-card-completed {
+    flex: 0 0 auto;
+    padding: 1px 7px;
+    border: 1px solid var(--tp-poll-line);
+    border-radius: 999px;
+    background: var(--tp-poll-soft);
+    color: var(--tp-poll-accent-strong);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+/* ── 완료된 여행 상세 ── */
+
+.travel-plan-final-badge {
+    margin: 0 0 8px;
+    color: var(--tp-poll-accent);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+}
+
+.travel-plan-final-members {
+    margin: 22px 0 8px;
+    padding: 14px 16px;
+    border: 1px solid var(--tp-line);
+    border-radius: 6px;
+    background: #fbf9f4;
+}
+
+.travel-plan-final-section-label {
+    margin: 0 0 8px;
+    color: var(--tp-ink-faint);
+    font-size: 12px;
+}
+
+.travel-plan-final-member-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.travel-plan-final-member {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 5px;
+    color: var(--tp-ink);
+    font-size: 14px;
+}
+
+.travel-plan-final-member-role {
+    color: var(--tp-ink-faint);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+/*
+  완료된 계획의 대안. 편집 상태가 없으므로 늘 펼쳐 둔다.
+  (진행 중 화면과 달리 접었다 펴는 버튼이 없다)
+*/
+.travel-plan-final-alts {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.travel-plan-final-paper .travel-plan-alt {
+    display: flex;
+}
+
+.travel-plan-final-empty-day {
+    margin: 8px 0 0;
+    color: var(--tp-ink-faint);
+    font-size: 13px;
+}
+
+/* 눌러도 아무 일이 없다. 손가락 모양으로 기대를 주지 않는다 */
+.travel-plan-final-paper .travel-plan-line-content,
+.travel-plan-final-paper .travel-plan-alt-view {
+    cursor: default;
+}

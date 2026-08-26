@@ -1,8 +1,9 @@
 /*
   공동 여행계획의 실시간 연결.
-  STOMP 연결은 이 파일 하나가 들고 있고, 그 위에서 네 가지를 구독한다.
+  STOMP 연결은 이 파일 하나가 들고 있고, 그 위에서 아래를 구독한다.
 
     presence : 누가 접속해 있는지
+    members  : 방에 누가 속해 있는지 ("참여자 N/8" — 접속 표시와 다른 숫자다)
     schedule : 어떤 DAY 가 바뀌었는지
     editor   : 누가 어디를 쓰고 있는지
     chat     : 방 채팅
@@ -21,13 +22,22 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!planId) return;
 
     // ── 접속 표시 ───────────────────────────────────────────
-    const rows = document.querySelectorAll("[data-travel-plan-member-row]");
-    const countLabel = document.querySelector("[data-travel-plan-online-count]");
+    /*
+      참여자 줄은 명단이 바뀔 때 통째로 새로 그려진다.
+      그래서 처음의 목록을 들고 있지 않고 그릴 때마다 다시 찾는다.
+      (한 번 담아 두면 새로 그린 뒤 화면에 없는 옛 줄에만 표시하게 된다)
+    */
+    /** 마지막으로 받은 접속 상황. 명단을 새로 그린 뒤 그대로 다시 입힌다. */
+    let lastPresence = { onlineMemberIds: [], onlineCount: 0 };
 
     // 연결되기 전에는 누가 붙어 있는지 알 수 없다. 아무도 온라인이라고 추측하지 않는다.
     function renderPresence(onlineMemberIds, onlineCount) {
-        const online = new Set((onlineMemberIds || []).map(String));
-        rows.forEach(row => {
+        lastPresence = {
+            onlineMemberIds: onlineMemberIds || [],
+            onlineCount: onlineCount || 0
+        };
+        const online = new Set(lastPresence.onlineMemberIds.map(String));
+        document.querySelectorAll("[data-travel-plan-member-row]").forEach(row => {
             const isOnline = online.has(row.getAttribute("data-member-id"));
             row.classList.toggle("is-online", isOnline);
             const dot = row.querySelector("[data-travel-plan-presence-dot]");
@@ -36,10 +46,52 @@ document.addEventListener("DOMContentLoaded", () => {
             dot.setAttribute("title", label);
             dot.setAttribute("aria-label", label);
         });
+        const countLabel = document.querySelector("[data-travel-plan-online-count]");
         if (countLabel) {
-            countLabel.textContent = `${onlineCount || 0}명 접속 중`;
+            countLabel.textContent = `${lastPresence.onlineCount}명 접속 중`;
             countLabel.hidden = false;
         }
+    }
+
+    // ── 참여자 명단 ─────────────────────────────────────────
+    /*
+      "참여자 N/8" 과 팝오버 목록.
+      "접속 중 N명" 과는 다른 숫자다. 저쪽은 지금 창을 열어 둔 사람 수고
+      이쪽은 방에 속한 사람 수라 서로 섞지 않는다.
+
+      알림은 "명단이 바뀌었다" 는 신호일 뿐이라 사람 수는 서버에서 다시 받는다.
+      화면에서 +1/-1 하지 않으므로 같은 알림을 두 번 받아도 숫자가 두 번 늘지 않는다.
+    */
+    let membersRequest = 0;
+
+    async function refreshMembers() {
+        const panel = document.querySelector("[data-travel-plan-members-panel]");
+        if (!panel) return;
+
+        const sequence = ++membersRequest;
+        const response = await fetch(`/travel-plans/${planId}/members/fragment`, {
+            headers: { "X-Requested-With": "XMLHttpRequest" }
+        });
+        if (!response.ok) return;
+        const html = await response.text();
+
+        // 늦게 도착한 예전 응답이 최신 명단을 덮지 않게 한다.
+        if (membersRequest !== sequence) return;
+
+        /*
+          패널 자체는 그대로 두고 속만 갈아 끼운다.
+          팝오버를 열어 둔 채였다면 열린 그대로 내용만 바뀐다.
+        */
+        panel.innerHTML = html;
+
+        // 토글 글자는 서버가 만들어 보낸 값을 그대로 쓴다.
+        const label = panel.querySelector("[data-members-label]")
+            ?.getAttribute("data-members-label");
+        const toggle = document.querySelector("[data-travel-plan-members-toggle]");
+        if (label && toggle) toggle.textContent = label;
+
+        // 새로 그린 줄에는 접속 표시가 없다. 지금 알고 있는 상황을 다시 입힌다.
+        renderPresence(lastPresence.onlineMemberIds, lastPresence.onlineCount);
     }
 
     // ── 일정 갱신 ───────────────────────────────────────────
@@ -472,11 +524,19 @@ document.addEventListener("DOMContentLoaded", () => {
         client.subscribe(`/topic/travel-plans/${planId}/schedule`, message => {
             try {
                 const payload = JSON.parse(message.body);
+                if (payload.type === "PLAN_COMPLETED") {
+                    // 이 방은 더 이상 고칠 수 없다. 완료 쪽이 화면을 바꾼다.
+                    document.dispatchEvent(new CustomEvent("travelplan:plan-completed"));
+                    return;
+                }
                 (payload.affectedDayIds || []).forEach(refreshDay);
             } catch (error) {
                 // 알 수 없는 형식이면 화면을 건드리지 않는다.
             }
         });
+
+        // 참여자 명단. 누가 들어오고 나갔는지는 싣지 않고 "다시 읽어라" 만 온다.
+        client.subscribe(`/topic/travel-plans/${planId}/members`, () => refreshMembers());
 
         // 작성 중 상태. 방 전체 알림과, 내 잠금 요청의 답이 오는 개인 큐 두 갈래다.
         client.subscribe(`/topic/travel-plans/${planId}/editor`, message => {
@@ -524,6 +584,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (connectedBefore) {
             resyncSchedule();
+            // 끊겨 있던 사이의 명단 변경은 다시 받을 수 없다. 지금 명단을 다시 읽는다.
+            refreshMembers();
             // 끊겨 있던 사이의 채팅은 다시 받을 수 없다. 채팅 쪽이 그때 다시 읽는다.
             notify(reconnectListeners, null);
             // 끊겨 있던 사이에 사라진 옛 "편집 중" 표시가 남지 않게 지금 상태를 다시 받는다.

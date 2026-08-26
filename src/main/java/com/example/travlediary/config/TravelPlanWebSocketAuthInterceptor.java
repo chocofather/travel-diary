@@ -2,6 +2,7 @@ package com.example.travlediary.config;
 
 import com.example.travlediary.service.travelplan.TravelPlanChatDestinations;
 import com.example.travlediary.service.travelplan.TravelPlanEditorDestinations;
+import com.example.travlediary.service.travelplan.TravelPlanMemberDestinations;
 import com.example.travlediary.service.travelplan.TravelPlanPollDestinations;
 import com.example.travlediary.service.travelplan.TravelPlanPresenceDestinations;
 import com.example.travlediary.service.travelplan.TravelPlanRoomAccess;
@@ -51,7 +52,8 @@ public class TravelPlanWebSocketAuthInterceptor implements ChannelInterceptor {
                 return message;
             }
             Long travelPlanId = subscribableTravelPlanId(destination);
-            // 지금 쓰는 topic 은 방별 접속 표시 / 일정 변경 / 작성 중 상태 / 채팅 / 투표뿐이다.
+            // 지금 쓰는 topic 은 방별 접속 표시 / 일정 변경 / 작성 중 상태 /
+            // 참여자 명단 / 채팅 / 투표뿐이다.
             if (travelPlanId == null) {
                 throw new AccessDeniedException("구독할 수 없는 대상입니다.");
             }
@@ -121,6 +123,11 @@ public class TravelPlanWebSocketAuthInterceptor implements ChannelInterceptor {
         Long editorPlanId = TravelPlanEditorDestinations.travelPlanIdOf(destination);
         if (editorPlanId != null) {
             return editorPlanId;
+        }
+        // 참여자 명단. 접속 표시와 다른 topic 이라 따로 확인한다.
+        Long memberPlanId = TravelPlanMemberDestinations.travelPlanIdOf(destination);
+        if (memberPlanId != null) {
+            return memberPlanId;
         }
         Long chatPlanId = TravelPlanChatDestinations.travelPlanIdOf(destination);
         return chatPlanId != null

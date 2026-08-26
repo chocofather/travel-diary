@@ -92,9 +92,9 @@ class TravelPlanPresenceContractTest {
 
     @Test
     void everyMemberRowCarriesAPresenceMarker() throws IOException {
-        String detail = detailHtml();
+        String members = membersHtml();
 
-        assertThat(detail)
+        assertThat(members)
                 .contains("data-travel-plan-member-row")
                 .contains("data-member-id=${member.memberId}")
                 .contains("class=\"travel-plan-presence-dot\"")
@@ -105,21 +105,24 @@ class TravelPlanPresenceContractTest {
 
         // 계정 정보는 화면에 오르지 않는다
         for (String personal : new String[]{"userId", "user_id", "username", "email", "nickname"}) {
-            assertThat(detail).as("개인정보 노출: %s", personal).doesNotContain(personal);
+            assertThat(members).as("개인정보 노출: %s", personal).doesNotContain(personal);
+            assertThat(detailHtml()).as("개인정보 노출: %s", personal).doesNotContain(personal);
         }
     }
 
     @Test
     void theHeadcountAndTheOnlineCountStaySeparate() throws IOException {
-        String detail = detailHtml();
+        String members = membersHtml();
 
         // 참여자 총원은 그대로 둔다
-        assertThat(detail).contains("${travelPlan.memberCount} + ' / ' + ${travelPlan.memberLimit}");
+        assertThat(members).contains("${memberCount} + ' / ' + ${memberLimit}");
         // 접속 인원은 따로 표시하고, 연결되기 전에는 숨겨 둔다
-        assertThat(detail)
+        assertThat(members)
                 .contains("class=\"travel-plan-online-count\" hidden")
                 .contains("data-travel-plan-online-count");
-        assertThat(detail).contains("'참여자 ' + ${travelPlan.memberCount} + '/'");
+        // 팝오버를 열지 않아도 보이는 총원. 접속 인원과 다른 숫자다
+        assertThat(detailHtml()).contains("'참여자 ' + ${travelPlan.memberCount} + '/'");
+        assertThat(detailHtml()).doesNotContain("data-travel-plan-online-count");
     }
 
     @Test
@@ -187,6 +190,11 @@ class TravelPlanPresenceContractTest {
 
     private String detailHtml() throws IOException {
         return resource("/templates/travelplan/detail.html");
+    }
+
+    /** 참여자 줄은 명단이 바뀔 때 통째로 새로 그려지므로 조각 쪽에 있다. */
+    private String membersHtml() throws IOException {
+        return resource("/templates/travelplan/fragments/members.html");
     }
 
     private String source(String relativePath) throws IOException {

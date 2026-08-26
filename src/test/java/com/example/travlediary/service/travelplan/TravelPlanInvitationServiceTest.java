@@ -17,6 +17,7 @@ import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -58,6 +59,9 @@ class TravelPlanInvitationServiceTest {
     private TravelPlanInvitationMapper travelPlanInvitationMapper;
     @Mock
     private TravelPlanInviteTokenCipher travelPlanInviteTokenCipher;
+    /** 명단이 바뀐 사실을 방에 알리는 일만 맡긴다. */
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
     @InjectMocks
     private TravelPlanInvitationService travelPlanInvitationService;
 
@@ -714,6 +718,66 @@ class TravelPlanInvitationServiceTest {
         verify(travelPlanMapper, never()).insertMember(any());
         verify(travelPlanMapper, never()).countMembersByPlanAndDisplayName(anyLong(), anyString());
         verify(travelPlanMapper).touchLastActivity(PLAN_ID);
+    }
+
+    // ── 새로 들어오면 방에 알린다 ─────────────────────────────
+
+    @Test
+    void aNewArrivalIsAnnouncedToTheRoom() {
+        /*
+          이미 방을 보고 있는 사람들의 "참여자 N/8" 과 목록이
+          새로고침 없이 맞춰지려면 이 알림이 있어야 한다.
+        */
+        givenJoinableRoom(1);
+        when(travelPlanMapper.insertMember(any())).thenReturn(1);
+
+        travelPlanInvitationService.join(MEMBER_USER_ID, "raw-token", "예진");
+
+        verify(eventPublisher).publishEvent(new TravelPlanMembershipChangedEvent(PLAN_ID));
+    }
+
+    @Test
+    void someoneComingBackIsAnnouncedTheSameWay() {
+        givenJoinableRoom(2);
+        TravelPlanMember left = member(TravelPlanMemberStatus.LEFT);
+        left.setRejoinAllowed(true);
+        when(travelPlanMapper.findAnyMemberByPlanAndUser(PLAN_ID, MEMBER_USER_ID))
+                .thenReturn(left);
+        when(travelPlanMapper.reactivateMember(
+                left.getId(), PLAN_ID, MEMBER_USER_ID, "LEFT", "ACTIVE")).thenReturn(1);
+
+        travelPlanInvitationService.join(MEMBER_USER_ID, "raw-token", null);
+
+        // 새로 들어오는 것과 같은 알림 하나를 쓴다
+        verify(eventPublisher).publishEvent(new TravelPlanMembershipChangedEvent(PLAN_ID));
+    }
+
+    @Test
+    void openingTheLinkTwiceDoesNotAnnounceTwice() {
+        /*
+          이미 들어와 있는 사람은 명단이 그대로다.
+          여기서 알리면 다른 화면이 까닭 없이 명단을 다시 읽는다.
+        */
+        givenLockedRoom();
+        when(travelPlanMapper.findAnyMemberByPlanAndUser(PLAN_ID, MEMBER_USER_ID))
+                .thenReturn(member(TravelPlanMemberStatus.ACTIVE));
+
+        assertThat(travelPlanInvitationService.join(MEMBER_USER_ID, "raw-token", "예진"))
+                .isEqualTo(PLAN_ID);
+
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    void aRefusedJoinIsNotAnnounced() {
+        // 되돌아간 참여를 다른 화면이 먼저 보는 일이 없어야 한다
+        givenJoinableRoom(8);
+
+        assertThatThrownBy(() ->
+                travelPlanInvitationService.join(MEMBER_USER_ID, "raw-token", "예진"))
+                .isInstanceOf(TravelPlanValidationException.class);
+
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test

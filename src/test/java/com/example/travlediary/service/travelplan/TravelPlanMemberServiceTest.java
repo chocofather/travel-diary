@@ -12,6 +12,7 @@ import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -46,6 +47,9 @@ class TravelPlanMemberServiceTest {
     /** 떠난 사람이 진행 중인 투표에 남겨 둔 표를 정리하는 일만 맡긴다. */
     @Mock
     private TravelPlanPollService travelPlanPollService;
+    /** 명단이 바뀐 사실을 방에 알리는 일만 맡긴다. */
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
     @InjectMocks
     private TravelPlanMemberService travelPlanMemberService;
 
@@ -668,6 +672,89 @@ class TravelPlanMemberServiceTest {
             assertThat(method.isAnnotationPresent(Transactional.class))
                     .as("%s", method.getName()).isTrue();
         }
+    }
+
+    // ── 명단이 바뀌면 방에 알린다 ─────────────────────────────
+
+    @Test
+    void whenSomeoneLeavesTheRoomIsTold() {
+        givenActivePlan();
+        givenCurrentMember(member(MEMBER_A_ID, MEMBER_USER_ID, TravelPlanRole.MEMBER,
+                TravelPlanMemberStatus.ACTIVE));
+        when(travelPlanMapper.markMemberLeft(MEMBER_A_ID, PLAN_ID, "ACTIVE", "LEFT", "MEMBER"))
+                .thenReturn(1);
+
+        travelPlanMemberService.leave(MEMBER_USER_ID, PLAN_ID);
+
+        verify(eventPublisher).publishEvent(new TravelPlanMembershipChangedEvent(PLAN_ID));
+    }
+
+    @Test
+    void whenSomeoneIsPutOutTheRoomIsTold() {
+        givenActivePlan();
+        givenCurrentMember(member(OWNER_MEMBER_ID, OWNER_USER_ID, TravelPlanRole.OWNER,
+                TravelPlanMemberStatus.ACTIVE));
+        givenTarget(member(MEMBER_B_ID, MEMBER_USER_ID, TravelPlanRole.MEMBER,
+                TravelPlanMemberStatus.ACTIVE));
+        when(travelPlanMapper.markMemberRemoved(MEMBER_B_ID, PLAN_ID,
+                "ACTIVE", "REMOVED", "MEMBER")).thenReturn(1);
+
+        travelPlanMemberService.removeMember(OWNER_USER_ID, PLAN_ID, MEMBER_B_ID);
+
+        // 나가기와 같은 알림 하나를 쓴다
+        verify(eventPublisher).publishEvent(new TravelPlanMembershipChangedEvent(PLAN_ID));
+    }
+
+    @Test
+    void handingOverTheRoomTellsTheRoomToo() {
+        /*
+          사람 수는 그대로지만 누가 방장인지가 바뀐다.
+          받은 화면이 명단을 다시 읽으므로 역할 표시도 함께 맞춰진다.
+        */
+        givenLockedPlan();
+        givenCurrentMember(member(OWNER_MEMBER_ID, OWNER_USER_ID, TravelPlanRole.OWNER,
+                TravelPlanMemberStatus.ACTIVE));
+        givenTarget(member(MEMBER_A_ID, MEMBER_USER_ID, TravelPlanRole.MEMBER,
+                TravelPlanMemberStatus.ACTIVE));
+        givenRoleChange(OWNER_MEMBER_ID, "OWNER", "MEMBER", 1);
+        givenRoleChange(MEMBER_A_ID, "MEMBER", "OWNER", 1);
+
+        travelPlanMemberService.transferOwnership(OWNER_USER_ID, PLAN_ID, MEMBER_A_ID);
+
+        verify(eventPublisher).publishEvent(new TravelPlanMembershipChangedEvent(PLAN_ID));
+    }
+
+    @Test
+    void lettingSomeoneComeBackDoesNotChangeTheHeadcount() {
+        /*
+          재참여 허용은 rejoin_allowed 만 올린다. 아직 방에 들어온 것이 아니라
+          ACTIVE 인원이 그대로다. 그래서 명단 알림도 보내지 않는다.
+        */
+        givenActivePlan();
+        givenCurrentMember(member(OWNER_MEMBER_ID, OWNER_USER_ID, TravelPlanRole.OWNER,
+                TravelPlanMemberStatus.ACTIVE));
+        givenTarget(removedMember(MEMBER_B_ID, false));
+        when(travelPlanMapper.allowMemberRejoin(MEMBER_B_ID, PLAN_ID, "REMOVED", "MEMBER"))
+                .thenReturn(1);
+
+        travelPlanMemberService.allowRejoin(OWNER_USER_ID, PLAN_ID, MEMBER_B_ID);
+
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    void aChangeThatDidNotHappenIsNotAnnounced() {
+        // 되돌아간 변경을 다른 화면이 먼저 보는 일이 없어야 한다
+        givenActivePlan();
+        givenCurrentMember(member(MEMBER_A_ID, MEMBER_USER_ID, TravelPlanRole.MEMBER,
+                TravelPlanMemberStatus.ACTIVE));
+        when(travelPlanMapper.markMemberLeft(MEMBER_A_ID, PLAN_ID, "ACTIVE", "LEFT", "MEMBER"))
+                .thenReturn(0);
+
+        assertThatThrownBy(() -> travelPlanMemberService.leave(MEMBER_USER_ID, PLAN_ID))
+                .isInstanceOf(ResponseStatusException.class);
+
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     private static <T> T any() {

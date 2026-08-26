@@ -114,6 +114,7 @@ class TravelPlanDayServiceTest {
     void aRoomThatIsNoLongerActiveIsNotEditable() {
         givenActiveMembership();
         when(travelPlanMapper.findPlanByIdAndStatus(PLAN_ID, "ACTIVE")).thenReturn(null);
+        when(travelPlanMapper.findPlanByIdAndStatusForUpdate(PLAN_ID, "ACTIVE")).thenReturn(null);
 
         assertThatThrownBy(() -> travelPlanService.getActiveDayDetail(USER_ID, PLAN_ID, DAY_ID))
                 .isInstanceOf(ResponseStatusException.class);
@@ -262,7 +263,17 @@ class TravelPlanDayServiceTest {
         plan.setId(PLAN_ID);
         plan.setTitle("제주 여행");
         plan.setStatus(TravelPlanStatus.ACTIVE);
-        when(travelPlanMapper.findPlanByIdAndStatus(PLAN_ID, "ACTIVE")).thenReturn(plan);
+        /*
+          읽는 길과 고치는 길이 방을 다르게 읽는다.
+          고치는 쪽은 방 row 를 잠그고 읽어 완료 처리와 한 줄로 선다.
+          이 준비는 두 종류의 시험이 함께 쓰므로 한쪽만 쓰이는 것을 탓하지 않는다.
+        */
+        org.mockito.Mockito.lenient()
+                .when(travelPlanMapper.findPlanByIdAndStatus(PLAN_ID, "ACTIVE"))
+                .thenReturn(plan);
+        org.mockito.Mockito.lenient()
+                .when(travelPlanMapper.findPlanByIdAndStatusForUpdate(PLAN_ID, "ACTIVE"))
+                .thenReturn(plan);
     }
 
     private TravelPlanItem capturedItem() {

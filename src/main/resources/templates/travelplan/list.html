@@ -17,6 +17,15 @@
       <a class="travel-plan-new-link" th:href="@{/travel-plans/new}">새 공동 여행계획</a>
     </header>
 
+    <!--
+      열지 못한 방에서 넘어왔을 때의 안내.
+      흰 오류 화면 대신 왜 못 열었는지를 여기서 알린다.
+    -->
+    <p class="travel-plan-notice" th:if="${travelPlanNotice}"
+       th:text="${travelPlanNotice}" role="status">
+      여행 계획이 완료되었습니다.
+    </p>
+
     <ul class="travel-plan-card-list" th:if="${!#lists.isEmpty(travelPlans)}">
       <li class="travel-plan-card" th:each="plan : ${travelPlans}">
         <a class="travel-plan-card-link" th:href="@{|/travel-plans/${plan.travelPlanId}|}">
@@ -51,6 +60,46 @@
       <p>아직 함께 계획 중인 여행이 없어요.</p>
       <p>새로운 여행계획을 만들어 보세요.</p>
     </div>
+
+    <!--
+      완료된 여행. 최종본에서만 읽는다.
+      끝난 여행이라 목록에서 많이 보여 주지 않는다.
+      한 건도 없으면 이 구역 자체를 두지 않는다.
+    -->
+    <section class="travel-plan-completed-section"
+             th:if="${!#lists.isEmpty(completedTravelPlans)}"
+             aria-labelledby="travel-plan-completed-title">
+      <h2 id="travel-plan-completed-title" class="travel-plan-completed-title">완료된 여행</h2>
+
+      <ul class="travel-plan-card-list">
+        <li class="travel-plan-card" th:each="plan : ${completedTravelPlans}">
+          <a class="travel-plan-card-link is-completed"
+             th:href="@{|/travel-plans/${plan.travelPlanId}/final|}">
+            <span class="travel-plan-card-thumb"
+                  th:if="${#strings.isEmpty(plan.representativeImageUrl)}" aria-hidden="true"></span>
+            <img class="travel-plan-card-thumb"
+                 th:unless="${#strings.isEmpty(plan.representativeImageUrl)}"
+                 th:src="@{${plan.representativeImageUrl}}" alt="">
+
+            <span class="travel-plan-card-body">
+              <span class="travel-plan-card-title-row">
+                <span class="travel-plan-card-title" th:text="${plan.title}">제주도 여행</span>
+                <!-- 끝난 여행이라는 것을 한눈에 알 수 있게 -->
+                <span class="travel-plan-card-completed">완료</span>
+              </span>
+              <span class="travel-plan-card-period"
+                    th:text="${#temporals.format(plan.startDate, 'yyyy.MM.dd')} + ' ~ '
+                             + ${#temporals.format(plan.endDate, 'yyyy.MM.dd')}">
+                2026.09.01 ~ 2026.09.03
+              </span>
+              <span class="travel-plan-card-meta">
+                <span th:text="${plan.memberCount} + '명과 함께'">3명과 함께</span>
+              </span>
+            </span>
+          </a>
+        </li>
+      </ul>
+    </section>
   </section>
 </th:block>
 </html>

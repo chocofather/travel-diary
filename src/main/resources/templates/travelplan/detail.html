@@ -12,6 +12,8 @@
   <script src="/js/travel-plan-chat.js" defer></script>
   <!-- 투표 만들기. 채팅창 안에서 열리지만 저장은 기존 HTTP 경로다 -->
   <script src="/js/travel-plan-poll.js" defer></script>
+  <!-- 여행 계획 확정. 이번 단계는 확정할 수 있는지 묻는 것까지다 -->
+  <script src="/js/travel-plan-finalize.js" defer></script>
 </th:block>
 
 <th:block th:fragment="body">
@@ -32,108 +34,19 @@
                   th:text="'참여자 ' + ${travelPlan.memberCount} + '/'
                            + ${travelPlan.memberLimit}">참여자 3/8</button>
 
-          <div class="travel-plan-members-panel" hidden data-travel-plan-members-panel
-               th:with="viewerIsOwner=${travelPlan.currentMember != null
-                        and travelPlan.currentMember.role != null
-                        and travelPlan.currentMember.role.name() == 'OWNER'}">
-            <p class="travel-plan-members-heading">함께 계획하는 사람들</p>
-            <ul class="travel-plan-members-list">
-              <!--
-                data-member-id 는 방 안에서만 뜻이 있는 값이라 화면에 두어도 된다.
-                접속 표시는 이 값만 주고받고 계정 정보는 오가지 않는다.
-              -->
-              <li class="travel-plan-member" th:each="member : ${travelPlan.members}"
-                  th:attr="data-member-id=${member.memberId}"
-                  data-travel-plan-member-row>
-                <span class="travel-plan-member-name">
-                  <!-- 연결되기 전에는 아무도 온라인으로 두지 않는다 -->
-                  <span class="travel-plan-presence-dot" aria-label="오프라인" title="오프라인"
-                        data-travel-plan-presence-dot></span>
-                  <span th:text="${member.displayName}">민준</span>
-                  <span class="travel-plan-member-me" th:if="${member.currentUser}">(나)</span>
-                </span>
-                <span class="travel-plan-member-role"
-                      th:classappend="${member.role.name() == 'OWNER'} ? 'is-owner'"
-                      th:text="${member.role.name() == 'OWNER'} ? '방장' : '멤버'">방장</span>
-
-                <!--
-                  관리 진입점은 OWNER 에게만, 그리고 MEMBER 줄에만 붙는다.
-                  OWNER 자신의 줄은 role 이 OWNER 라 여기서 걸러진다.
-                -->
-                <span class="travel-plan-member-menu"
-                      th:if="${viewerIsOwner and member.role.name() == 'MEMBER'}"
-                      data-travel-plan-member-menu>
-                  <button type="button" class="travel-plan-member-menu-button"
-                          aria-haspopup="true" aria-expanded="false"
-                          aria-label="참여자 메뉴" data-travel-plan-member-menu-button>⋯</button>
-                  <span class="travel-plan-member-menu-list" hidden
-                        data-travel-plan-member-menu-list>
-                    <form method="post"
-                          th:action="@{|/travel-plans/${travelPlan.plan.id}/members/${member.memberId}/transfer-owner|}">
-                      <button type="submit" class="travel-plan-member-action"
-                              th:attr="onclick=|return confirm('${member.displayName}님에게 방장을 넘길까요?\n\n방장을 넘기면 ${member.displayName}님이 초대와 멤버 관리 권한을 갖게 됩니다.\n나는 일반 멤버가 됩니다.')|">
-                        방장 넘기기
-                      </button>
-                    </form>
-                    <form method="post"
-                          th:action="@{|/travel-plans/${travelPlan.plan.id}/members/${member.memberId}/remove|}">
-                      <button type="submit" class="travel-plan-member-remove"
-                              th:attr="onclick=|return confirm('${member.displayName}님을 이 여행에서 내보낼까요?\n\n내보낸 뒤에는 현재 초대 링크만으로 다시 참여할 수 없습니다.')|">
-                        내보내기
-                      </button>
-                    </form>
-                  </span>
-                </span>
-              </li>
-            </ul>
-            <!-- 참여자 총원. 접속 중 인원과는 다른 숫자다 -->
-            <p class="travel-plan-members-count"
-               th:text="${travelPlan.memberCount} + ' / ' + ${travelPlan.memberLimit}
-                        + '명 참여 중'">3 / 8명 참여 중</p>
-            <!-- 접속 현황은 연결된 뒤에만 채워진다 -->
-            <p class="travel-plan-online-count" hidden
-               data-travel-plan-online-count>0명 접속 중</p>
-
-            <!--
-              이전 참여자. OWNER 에게만, 그것도 내보낸 사람이 있을 때만 나온다.
-              허용은 rejoin_allowed 만 올릴 뿐 바로 복귀시키지 않는다.
-            -->
-            <div class="travel-plan-past-members"
-                 th:if="${viewerIsOwner and !#lists.isEmpty(travelPlan.pastMembers)}">
-              <p class="travel-plan-members-heading">이전 참여자</p>
-              <ul class="travel-plan-members-list">
-                <li class="travel-plan-member"
-                    th:each="past : ${travelPlan.pastMembers}">
-                  <span class="travel-plan-member-name" th:text="${past.displayName}">테스트3</span>
-
-                  <!-- 이미 받아 준 사람에게는 버튼을 또 보여 주지 않는다 -->
-                  <span class="travel-plan-member-role" th:if="${past.rejoinAllowed}">
-                    재참여 허용됨
-                  </span>
-
-                  <span class="travel-plan-past-member-actions" th:unless="${past.rejoinAllowed}">
-                    <span class="travel-plan-member-role">내보낸 멤버</span>
-                    <form method="post"
-                          th:action="@{|/travel-plans/${travelPlan.plan.id}/members/${past.memberId}/allow-rejoin|}">
-                      <button type="submit" class="travel-plan-member-action"
-                              th:attr="onclick=|return confirm('${past.displayName}님이 다시 초대 링크로 참여할 수 있게 할까요?\n\n참여자로 바로 복귀하는 것은 아니며, 본인이 초대 링크를 통해 다시 참여해야 합니다.')|">
-                        다시 참여 허용
-                      </button>
-                    </form>
-                  </span>
-                </li>
-              </ul>
-            </div>
-
-            <!-- 나가기는 MEMBER 본인에게만 보인다. 방장은 먼저 방장을 넘겨야 한다 -->
-            <form class="travel-plan-member-leave-form" method="post"
-                  th:unless="${viewerIsOwner}"
-                  th:action="@{|/travel-plans/${travelPlan.plan.id}/members/leave|}">
-              <button type="submit" class="travel-plan-member-leave"
-                      onclick="return confirm('이 여행 계획에서 나갈까요?\n\n작성했던 일정은 여행 계획에 그대로 남습니다.')">
-                여행에서 나가기
-              </button>
-            </form>
+          <!--
+            속은 fragment 하나로 두고 실시간 갱신도 같은 조각을 쓴다.
+            이 패널 자체는 갈아 끼우지 않아, 열어 둔 채로 명단이 바뀌어도 닫히지 않는다.
+          -->
+          <div class="travel-plan-members-panel" hidden data-travel-plan-members-panel>
+            <th:block
+                th:replace="~{travelplan/fragments/members :: membersBody(
+                    planId=${travelPlan.plan.id},
+                    currentMember=${travelPlan.currentMember},
+                    members=${travelPlan.members},
+                    pastMembers=${travelPlan.pastMembers},
+                    memberCount=${travelPlan.memberCount},
+                    memberLimit=${travelPlan.memberLimit})}"></th:block>
           </div>
         </div>
 
@@ -158,6 +71,20 @@
             <span class="travel-plan-chat-badge" hidden
                   data-travel-plan-chat-badge aria-label="안 읽은 메시지">0</span>
           </button>
+        </div>
+
+        <!--
+          확정도 OWNER 에게만 보이는 상단 보조 액션이다.
+          되돌리기 어려운 일이지만 눈에 띄게 떠 있는 위험한 버튼으로 두지 않는다.
+          (여기 보이는 것과 별개로 확정할 수 있는지는 서버가 다시 본다)
+        -->
+        <div class="travel-plan-finalize" th:if="${travelPlan.currentMember != null
+                    and travelPlan.currentMember.role != null
+                    and travelPlan.currentMember.role.name() == 'OWNER'}"
+             data-travel-plan-finalize
+             th:attr="data-finalize-plan-id=${travelPlan.plan.id}">
+          <button type="button" class="travel-plan-finalize-toggle"
+                  data-travel-plan-finalize-open>여행 계획 확정</button>
         </div>
 
         <!--
@@ -338,6 +265,47 @@
                 data-travel-plan-chat-send>전송</button>
       </form>
     </section>
+
+    <!--
+      확정 확인. 누르자마자 확정하지 않고 한 번 물어본다.
+      진행 중인 투표가 있어도 경고하거나 막지 않는다.
+      투표는 계획을 정하는 데 도우려는 것이지 확정의 조건이 아니다.
+    -->
+    <div class="travel-plan-finalize-modal" hidden role="dialog" aria-modal="true"
+         aria-labelledby="travel-plan-finalize-title"
+         th:if="${travelPlan.currentMember != null
+                 and travelPlan.currentMember.role != null
+                 and travelPlan.currentMember.role.name() == 'OWNER'}"
+         data-travel-plan-finalize-modal>
+      <div class="travel-plan-finalize-panel">
+        <h2 id="travel-plan-finalize-title" class="travel-plan-finalize-title">
+          여행 계획을 확정할까요?
+        </h2>
+        <p class="travel-plan-finalize-text">
+          확정하면 이후 일정은 수정할 수 없습니다.<br>
+          현재 작성된 일정이 최종 여행 계획으로 저장됩니다.
+        </p>
+
+        <!--
+          지금 일정을 쓰고 있는 사람이 있으면 여기에 알린다.
+          막지는 않는다. 알고도 할지는 방장이 정한다.
+        -->
+        <p class="travel-plan-finalize-warning" hidden role="alert"
+           data-travel-plan-finalize-warning></p>
+
+        <!-- 물어보는 것 자체가 실패했을 때만 나온다 -->
+        <p class="travel-plan-finalize-error" hidden role="alert"
+           data-travel-plan-finalize-error></p>
+
+        <div class="travel-plan-finalize-actions">
+          <button type="button" class="travel-plan-poll-cancel"
+                  data-travel-plan-finalize-cancel>취소</button>
+          <!-- 쓰고 있는 사람이 있으면 "그래도 완료" 로 바뀐다 -->
+          <button type="button" class="travel-plan-poll-submit"
+                  data-travel-plan-finalize-confirm>여행 계획 확정</button>
+        </div>
+      </div>
+    </div>
 
     <!--
       투표 센터. 진행 중·지난 투표를 보는 곳과 새로 만드는 곳이 이 창 하나 안에 있다.

@@ -496,7 +496,8 @@ class TravelPlanAlternativeServiceTest {
         TravelPlan plan = new TravelPlan();
         plan.setId(PLAN_ID);
         plan.setStatus(TravelPlanStatus.ACTIVE);
-        when(travelPlanMapper.findPlanByIdAndStatus(PLAN_ID, "ACTIVE")).thenReturn(plan);
+        // 일정을 고치는 길은 방 row 를 잠그고 읽는다(완료 처리와 한 줄로 서기 위해)
+        when(travelPlanMapper.findPlanByIdAndStatusForUpdate(PLAN_ID, "ACTIVE")).thenReturn(plan);
     }
 
     private void givenDay() {

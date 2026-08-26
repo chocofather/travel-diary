@@ -114,11 +114,12 @@ class TravelPlanMemberListContractTest {
     @Test
     void thePanelSeparatesTheOwnerWithSmallTextRatherThanAColouredCard() throws IOException {
         String detail = detailHtml();
+        String members = membersHtml();
         String css = resource("/static/css/travel-plan.css");
 
-        assertThat(detail)
+        assertThat(members)
                 .contains("함께 계획하는 사람들")
-                .contains("th:each=\"member : ${travelPlan.members}\"")
+                .contains("th:each=\"member : ${members}\"")
                 .contains("th:text=\"${member.displayName}\"")
                 .contains("${member.role.name() == 'OWNER'} ? '방장' : '멤버'")
                 .contains("th:if=\"${member.currentUser}\"")
@@ -149,64 +150,68 @@ class TravelPlanMemberListContractTest {
 
     @Test
     void thePanelNeverPutsAUserIdOnThePage() throws IOException {
-        String detail = detailHtml();
-        String panel = between(detail,
-                "data-travel-plan-members-panel", "</div>\n        </div>");
+        // 팝오버의 속이 통째로 옮겨 다니므로 조각 전체를 본다
+        String panel = membersHtml();
 
         for (String personal : new String[]{
                 "userId", "user_id", "username", "email", "nickname"}) {
             assertThat(panel).as("개인정보 노출: %s", personal).doesNotContain(personal);
         }
+        // 사용자 식별은 방 참여 id 로만 한다
+        assertThat(panel).contains("data-member-id=${member.memberId}");
     }
 
     @Test
     void theOwnerGetsARemoveActionOnMemberRowsOnly() throws IOException {
-        String detail = detailHtml();
+        String members = membersHtml();
 
         // ⋯ 는 OWNER 가 볼 때, MEMBER 줄에만 붙는다 (OWNER 자신의 줄은 role 로 걸러진다)
-        assertThat(detail)
+        assertThat(members)
                 .contains("th:if=\"${viewerIsOwner and member.role.name() == 'MEMBER'}\"")
                 .contains("data-travel-plan-member-menu")
                 .contains(">⋯</button>")
                 .contains("/members/${member.memberId}/remove|}")
                 .contains("내보내기");
         // 확인 문구를 거쳐야 POST 된다
-        assertThat(detail)
+        assertThat(members)
                 .contains("님을 이 여행에서 내보낼까요?")
                 .contains("내보낸 뒤에는 현재 초대 링크만으로 다시 참여할 수 없습니다.");
 
         // 이번 단계에 없는 관리 액션
         for (String notYet : new String[]{"강퇴", "이름 변경", "기록 삭제"}) {
-            assertThat(detail).as("아직 없는 기능: %s", notYet).doesNotContain(notYet);
+            assertThat(members).as("아직 없는 기능: %s", notYet).doesNotContain(notYet);
         }
         // ⋯ 메뉴 안에는 방장 넘기기와 내보내기 둘뿐이다
-        assertThat(countOf(detail, "data-travel-plan-member-menu-list")).isEqualTo(1);
-        assertThat(countOf(detail, "class=\"travel-plan-member-remove\"")).isEqualTo(1);
+        assertThat(countOf(members, "data-travel-plan-member-menu-list")).isEqualTo(1);
+        assertThat(countOf(members, "class=\"travel-plan-member-remove\"")).isEqualTo(1);
         // 방장 넘기기 + 이전 참여자의 다시 참여 허용
-        assertThat(countOf(detail, "class=\"travel-plan-member-action\"")).isEqualTo(2);
+        assertThat(countOf(members, "class=\"travel-plan-member-action\"")).isEqualTo(2);
+        // 관리 항목이 상세 화면에 따로 남아 있지 않다 (조각 하나가 유일한 출처다)
+        assertThat(detailHtml()).doesNotContain("data-travel-plan-member-menu");
     }
 
     @Test
     void theOwnerCanHandTheRoomOverFromTheSameMenu() throws IOException {
-        String detail = detailHtml();
+        String members = membersHtml();
 
         // 방장 넘기기도 MEMBER 줄에만 붙는다 (OWNER 자신의 줄에는 메뉴 자체가 없다)
-        int menu = detail.indexOf("th:if=\"${viewerIsOwner and member.role.name() == 'MEMBER'}\"");
-        int transfer = detail.indexOf("/members/${member.memberId}/transfer-owner|}");
-        int remove = detail.indexOf("/members/${member.memberId}/remove|}");
+        int menu = members.indexOf("th:if=\"${viewerIsOwner and member.role.name() == 'MEMBER'}\"");
+        int transfer = members.indexOf("/members/${member.memberId}/transfer-owner|}");
+        int remove = members.indexOf("/members/${member.memberId}/remove|}");
         assertThat(menu).isGreaterThan(0);
         assertThat(transfer).isGreaterThan(menu);
         // 메뉴 안에서 방장 넘기기가 내보내기보다 먼저 온다
         assertThat(transfer).isLessThan(remove);
-        assertThat(detail).contains("방장 넘기기");
+        assertThat(members).contains("방장 넘기기");
 
         // 바로 POST 하지 않고 확인을 거친다
-        assertThat(detail)
+        assertThat(members)
                 .contains("님에게 방장을 넘길까요?")
                 .contains("초대와 멤버 관리 권한을 갖게 됩니다")
                 .contains("나는 일반 멤버가 됩니다");
         // 새 UI framework 를 만들지 않는다
-        assertThat(outsideThePollModal(detail))
+        assertThat(members).doesNotContain("modal").doesNotContain("dialog");
+        assertThat(outsideThePollModal(detailHtml()))
                 .doesNotContain("modal").doesNotContain("dialog");
     }
 
@@ -214,28 +219,35 @@ class TravelPlanMemberListContractTest {
     void theOwnerOnlyUiFollowsTheMembershipRoleWithNoSecondSourceOfTruth() throws IOException {
         String detail = detailHtml();
 
-        // 초대 버튼과 관리 메뉴 모두 membership role 하나만 본다.
-        // 이전이 끝나면 다음 렌더링에서 자연스럽게 뒤바뀐다.
+        /*
+          방장에게만 보이는 것들이 모두 membership role 하나만 본다.
+          (초대 / 확정 버튼 / 확정 확인 창, 그리고 조각 안의 관리 메뉴)
+          이전이 끝나면 다음 렌더링에서 자연스럽게 뒤바뀐다.
+        */
         assertThat(countOf(detail, "travelPlan.currentMember.role.name() == 'OWNER'"))
-                .isEqualTo(2);
+                .isEqualTo(3);
+        assertThat(countOf(membersHtml(), "currentMember.role.name() == 'OWNER'")).isEqualTo(1);
         assertThat(detail).doesNotContain("createdByUserId").doesNotContain("created_by_user_id");
+        assertThat(membersHtml())
+                .doesNotContain("createdByUserId").doesNotContain("created_by_user_id");
     }
 
     @Test
     void onlyAPlainMemberSeesTheLeaveAction() throws IOException {
-        String detail = detailHtml();
+        String members = membersHtml();
 
         // 방장에게는 나가기를 노출하지 않는다
-        assertThat(detail)
+        assertThat(members)
                 .contains("th:unless=\"${viewerIsOwner}\"")
                 .contains("/members/leave|}")
-                .contains(">\n                여행에서 나가기\n              </button>");
+                .contains(">\n      여행에서 나가기\n    </button>");
         // 최소한의 확인을 거친다
-        assertThat(detail)
+        assertThat(members)
                 .contains("이 여행 계획에서 나갈까요?")
                 .contains("작성했던 일정은 여행 계획에 그대로 남습니다.");
         // 새 modal framework 를 만들지 않는다
-        assertThat(outsideThePollModal(detail))
+        assertThat(members).doesNotContain("modal").doesNotContain("dialog");
+        assertThat(outsideThePollModal(detailHtml()))
                 .doesNotContain("modal").doesNotContain("dialog");
     }
 
@@ -349,12 +361,12 @@ class TravelPlanMemberListContractTest {
     @Test
     void thePastMemberSectionIsOwnerOnlyAndOffersNothingButLettingThemBackIn()
             throws IOException {
-        String detail = detailHtml();
+        String members = membersHtml();
 
-        assertThat(detail)
-                .contains("th:if=\"${viewerIsOwner and !#lists.isEmpty(travelPlan.pastMembers)}\"")
+        assertThat(members)
+                .contains("th:if=\"${viewerIsOwner and !#lists.isEmpty(pastMembers)}\"")
                 .contains(">이전 참여자</p>")
-                .contains("th:each=\"past : ${travelPlan.pastMembers}\"")
+                .contains("th:each=\"past : ${pastMembers}\"")
                 .contains("th:text=\"${past.displayName}\"")
                 .contains("/members/${past.memberId}/allow-rejoin|}")
                 .contains("다시 참여 허용")
@@ -365,12 +377,12 @@ class TravelPlanMemberListContractTest {
                 .contains("내보낸 멤버");
 
         // 바로 복귀하는 것이 아니라는 점을 확인 문구에서 알린다
-        assertThat(detail)
+        assertThat(members)
                 .contains("님이 다시 초대 링크로 참여할 수 있게 할까요?")
                 .contains("참여자로 바로 복귀하는 것은 아니며");
 
         // 이전 참여자 영역에는 개인정보가 없다
-        String past = between(detail, "class=\"travel-plan-past-members\"",
+        String past = between(members, "class=\"travel-plan-past-members\"",
                 "<!-- 나가기는 MEMBER 본인에게만");
         for (String personal : new String[]{
                 "userId", "user_id", "username", "email", "nickname"}) {
@@ -487,14 +499,24 @@ class TravelPlanMemberListContractTest {
     }
 
     /**
-     * 투표 만들기 창을 뺀 나머지 화면.
-     * 별도 창을 띄우는 것은 투표 만들기 하나뿐이고,
+     * 참여자 팝오버의 속.
+     * 처음 그릴 때와 실시간 갱신이 같은 조각을 쓰므로 화면이 갈라지지 않는다.
+     */
+    private String membersHtml() throws IOException {
+        return resource("/templates/travelplan/fragments/members.html");
+    }
+
+    /**
+     * 따로 뜨는 창들을 뺀 나머지 화면.
+     * 창을 띄우는 것은 투표 센터와 확정 확인뿐이고,
      * 참여자·초대·일정은 지금도 그 자리에서 다룬다.
      */
     private String outsideThePollModal(String detail) {
-        int modalStart = detail.indexOf("class=\"travel-plan-poll-modal\"");
-        assertThat(modalStart).as("투표 만들기 창").isGreaterThanOrEqualTo(0);
-        return detail.substring(0, modalStart);
+        int finalizeStart = detail.indexOf("class=\"travel-plan-finalize-modal\"");
+        int pollStart = detail.indexOf("class=\"travel-plan-poll-modal\"");
+        assertThat(finalizeStart).as("확정 확인 창").isGreaterThanOrEqualTo(0);
+        assertThat(pollStart).as("투표 센터 창").isGreaterThanOrEqualTo(0);
+        return detail.substring(0, Math.min(finalizeStart, pollStart));
     }
 
     private String resource(String path) throws IOException {

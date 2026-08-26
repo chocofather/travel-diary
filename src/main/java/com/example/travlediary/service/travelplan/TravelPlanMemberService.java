@@ -6,6 +6,7 @@ import com.example.travlediary.model.TravelPlanRole;
 import com.example.travlediary.model.TravelPlanStatus;
 import com.example.travlediary.repository.travelplan.TravelPlanMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +26,8 @@ public class TravelPlanMemberService {
     private final TravelPlanMapper travelPlanMapper;
     /** 떠난 사람이 진행 중인 투표에 남겨 둔 표를 정리하는 일만 맡긴다. */
     private final TravelPlanPollService travelPlanPollService;
+    /** 명단이 바뀐 사실을 방에 알리는 일만 맡긴다. 실제 전송은 커밋 뒤에 일어난다. */
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 스스로 여행에서 나간다. ACTIVE 였던 MEMBER 만 가능하다.
@@ -50,6 +53,8 @@ public class TravelPlanMemberService {
         travelPlanMapper.touchLastActivity(travelPlanId);
         // 진행 중인 투표에 남겨 둔 표를 걷어 내고, 남은 사람 기준으로 다시 센다.
         travelPlanPollService.onMemberLeft(travelPlanId, member.getId());
+        // 방을 보고 있는 사람들의 "참여자 N/8" 과 목록이 새로고침 없이 줄어든다.
+        eventPublisher.publishEvent(new TravelPlanMembershipChangedEvent(travelPlanId));
     }
 
     /**
@@ -84,6 +89,8 @@ public class TravelPlanMemberService {
         travelPlanMapper.touchLastActivity(travelPlanId);
         // 나가기와 같다. 진행 중인 투표에서 그 사람의 표를 걷어 낸다.
         travelPlanPollService.onMemberLeft(travelPlanId, target.getId());
+        // 나가기와 같은 알림을 쓴다. 내보낸 사람도 방에서 곧바로 사라진다.
+        eventPublisher.publishEvent(new TravelPlanMembershipChangedEvent(travelPlanId));
     }
 
     /**
@@ -167,6 +174,11 @@ public class TravelPlanMemberService {
             throw planNotFound();
         }
         travelPlanMapper.touchLastActivity(travelPlanId);
+        /*
+          인원은 그대로지만 역할이 바뀌었다. 명단을 다시 읽게 해
+          누가 방장인지와 OWNER 에게만 보이는 관리 항목이 곧바로 맞춰지게 한다.
+        */
+        eventPublisher.publishEvent(new TravelPlanMembershipChangedEvent(travelPlanId));
     }
 
     private void requireActivePlan(Long travelPlanId) {

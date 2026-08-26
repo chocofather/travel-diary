@@ -138,6 +138,21 @@
     </select>
 
     <!--
+      진행 상태 옮기기.
+      지금 상태가 기대한 그대로일 때만 반영되어, 같은 방을 두 사람이 동시에
+      완료하려 해도 한 번만 성공한다.
+    -->
+    <update id="updatePlanStatus">
+        UPDATE travel_plans
+        SET status = #{toStatus}
+        <if test="completed">
+            , finalized_at = CURRENT_TIMESTAMP
+        </if>
+        WHERE id = #{travelPlanId}
+          AND status = #{fromStatus}
+    </update>
+
+    <!--
       플래너의 참여자 목록.
       화면에 쓰는 것은 표시 이름과 역할뿐이라 그 밖의 컬럼은 읽지 않고,
       users 를 JOIN 하지 않으므로 계정 정보가 따라올 수 없다.
@@ -145,6 +160,23 @@
     -->
     <select id="findActiveMembersByPlanId" resultType="com.example.travlediary.model.TravelPlanMember">
         SELECT id, display_name, role
+        FROM travel_plan_members
+        WHERE travel_plan_id = #{travelPlanId}
+          AND status = #{memberStatus}
+        ORDER BY CASE WHEN role = 'OWNER' THEN 0 ELSE 1 END,
+                 joined_at ASC,
+                 id ASC
+    </select>
+
+    <!--
+      최종본에 옮겨 적을 참여자.
+      화면용 조회와 달리 계정 번호까지 읽는다.
+      최종 명단의 user_id 로 "내 완료된 여행" 을 찾기 때문에,
+      여기서 읽지 않으면 NULL 로 저장되어 그 여행이 누구의 목록에도 나오지 않는다.
+    -->
+    <select id="findActiveMembersForSnapshot"
+            resultType="com.example.travlediary.model.TravelPlanMember">
+        SELECT id, user_id, display_name, role
         FROM travel_plan_members
         WHERE travel_plan_id = #{travelPlanId}
           AND status = #{memberStatus}

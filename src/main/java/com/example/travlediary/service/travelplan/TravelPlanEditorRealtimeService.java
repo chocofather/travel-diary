@@ -191,6 +191,37 @@ public class TravelPlanEditorRealtimeService {
     }
 
     /**
+     * 그 방에서 붙잡혀 있던 자리를 전부 놓는다.
+     *
+     * <p>여행 계획이 완료돼 더 이상 고칠 수 없게 됐을 때 쓴다.
+     * 완료가 커밋된 뒤에만 부른다. 그래야 되돌아간 완료 때문에
+     * 남의 작성 중 내용이 사라지는 일이 없다.
+     *
+     * @return 놓인 자리들. 각각 그 방에 알려야 다른 화면의 표시가 사라진다.
+     */
+    public List<EditorLock> releaseAllByPlan(Long travelPlanId) {
+        Map<String, EditorLock> locks = travelPlanId == null
+                ? null : roomLocks.remove(travelPlanId);
+        if (locks == null) {
+            return List.of();
+        }
+
+        List<EditorLock> released = List.copyOf(locks.values());
+        // 그 연결들이 이 방에서 들고 있던 기억도 함께 지운다.
+        released.forEach(lock -> {
+            Set<RoomKey> keys = sessionLocks.get(lock.sessionId());
+            if (keys == null) {
+                return;
+            }
+            keys.remove(new RoomKey(travelPlanId, lock.lockKey()));
+            if (keys.isEmpty()) {
+                sessionLocks.remove(lock.sessionId(), keys);
+            }
+        });
+        return released;
+    }
+
+    /**
      * 같은 연결이 그 방에서 붙잡고 있던 다른 자리를 놓는다.
      * 새 자리를 잡을 때 먼저 불러 한 연결이 여러 자리를 들고 있지 않게 한다.
      *

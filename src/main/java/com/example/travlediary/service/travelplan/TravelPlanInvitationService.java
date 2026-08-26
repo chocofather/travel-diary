@@ -11,6 +11,7 @@ import com.example.travlediary.model.TravelPlanStatus;
 import com.example.travlediary.repository.travelplan.TravelPlanInvitationMapper;
 import com.example.travlediary.repository.travelplan.TravelPlanMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -34,6 +35,8 @@ public class TravelPlanInvitationService {
     private final TravelPlanMapper travelPlanMapper;
     private final TravelPlanInvitationMapper travelPlanInvitationMapper;
     private final TravelPlanInviteTokenCipher travelPlanInviteTokenCipher;
+    /** 명단이 바뀐 사실을 방에 알리는 일만 맡긴다. 실제 전송은 커밋 뒤에 일어난다. */
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 첫 초대 링크 발급.
@@ -207,6 +210,8 @@ public class TravelPlanInvitationService {
             // 나갔던 사람은 쓰던 자리로 돌아온다. 새 row 를 만들지 않는다.
             reactivate(existing, travelPlanId, userId);
             travelPlanMapper.touchLastActivity(travelPlanId);
+            // 이미 방을 보고 있는 사람들에게도 돌아온 사람이 곧바로 보인다.
+            eventPublisher.publishEvent(new TravelPlanMembershipChangedEvent(travelPlanId));
             return travelPlanId;
         }
 
@@ -218,6 +223,8 @@ public class TravelPlanInvitationService {
 
         if (insertMember(userId, travelPlanId, normalizedDisplayName)) {
             travelPlanMapper.touchLastActivity(travelPlanId);
+            // 새로 들어온 사람이 이미 방을 보고 있는 화면에도 곧바로 나타난다.
+            eventPublisher.publishEvent(new TravelPlanMembershipChangedEvent(travelPlanId));
         }
         return travelPlanId;
     }

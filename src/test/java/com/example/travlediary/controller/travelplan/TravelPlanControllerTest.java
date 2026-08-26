@@ -15,6 +15,7 @@ import com.example.travlediary.model.User;
 import com.example.travlediary.model.UserRole;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
+import com.example.travlediary.service.travelplan.TravelPlanAccessNotice;
 import com.example.travlediary.service.travelplan.TravelPlanConflictException;
 import com.example.travlediary.service.travelplan.TravelPlanInvitationService;
 import com.example.travlediary.service.travelplan.TravelPlanService;
@@ -44,6 +45,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
@@ -67,6 +69,10 @@ class TravelPlanControllerTest {
     private TravelPlanService travelPlanService;
     @MockitoBean
     private TravelPlanInvitationService travelPlanInvitationService;
+    /** 완료된 여행은 최종본에서만 읽는다. */
+    @MockitoBean
+    private com.example.travlediary.service.travelplan.TravelPlanFinalReadService
+            travelPlanFinalReadService;
     @MockitoBean
     private CustomLoginSuccessHandler customLoginSuccessHandler;
     @MockitoBean
@@ -325,13 +331,46 @@ class TravelPlanControllerTest {
     }
 
     @Test
-    void aRoomTheUserCannotSeeComesBackAsNotFound() throws Exception {
+    void theOldEditingUrlLeadsStraightToTheFinishedTrip() throws Exception {
+        /*
+          완료된 여행에 함께했던 사람이라면 볼 것이 있다.
+          목록에서 다시 찾게 하지 않고 최종본으로 바로 보낸다.
+        */
         when(travelPlanService.getActivePlanDetail(anyLong(), anyLong()))
                 .thenThrow(new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "여행계획을 찾을 수 없습니다."));
+        when(travelPlanService.explainInaccessiblePlan(anyLong(), anyLong()))
+                .thenReturn(TravelPlanAccessNotice.COMPLETED_PARTICIPANT);
 
         mockMvc.perform(get("/travel-plans/999").with(user(member())))
-                .andExpect(status().isNotFound());
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/travel-plans/999/final"));
+    }
+
+    @Test
+    void someoneWhoLeftBeforeTheEndOnlyHearsThatItIsOver() throws Exception {
+        when(travelPlanService.getActivePlanDetail(anyLong(), anyLong()))
+                .thenThrow(new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "여행계획을 찾을 수 없습니다."));
+        when(travelPlanService.explainInaccessiblePlan(anyLong(), anyLong()))
+                .thenReturn(TravelPlanAccessNotice.COMPLETED_PAST);
+
+        mockMvc.perform(get("/travel-plans/999").with(user(member())))
+                .andExpect(redirectedUrl("/travel-plans"))
+                .andExpect(flash().attribute("travelPlanNotice", "이미 종료된 여행 계획입니다."));
+    }
+
+    @Test
+    void aStrangerIsNotToldWhetherTheRoomEvenExists() throws Exception {
+        when(travelPlanService.getActivePlanDetail(anyLong(), anyLong()))
+                .thenThrow(new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "여행계획을 찾을 수 없습니다."));
+        when(travelPlanService.explainInaccessiblePlan(anyLong(), anyLong()))
+                .thenReturn(TravelPlanAccessNotice.NO_ACCESS);
+
+        mockMvc.perform(get("/travel-plans/999").with(user(member())))
+                .andExpect(redirectedUrl("/travel-plans"))
+                .andExpect(flash().attribute("travelPlanNotice", "접근할 수 없는 여행 계획입니다."));
     }
 
     @Test
@@ -355,13 +394,97 @@ class TravelPlanControllerTest {
     }
 
     @Test
-    void aDayTheUserCannotSeeComesBackAsNotFound() throws Exception {
+    void aDayTheUserCannotOpenSendsThemBackTheSameWay() throws Exception {
         when(travelPlanService.getActiveDayDetail(anyLong(), anyLong(), anyLong()))
                 .thenThrow(new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "여행계획을 찾을 수 없습니다."));
+        when(travelPlanService.explainInaccessiblePlan(anyLong(), anyLong()))
+                .thenReturn(TravelPlanAccessNotice.COMPLETED_PAST);
 
         mockMvc.perform(get("/travel-plans/42/days/999").with(user(member())))
-                .andExpect(status().isNotFound());
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/travel-plans"))
+                .andExpect(flash().attribute("travelPlanNotice", "이미 종료된 여행 계획입니다."));
+    }
+
+    // ── 완료된 여행 ─────────────────────────────────────────
+
+    @Test
+    void theFinishedTripIsShownReadOnly() throws Exception {
+        when(travelPlanFinalReadService.getCompletedPlanDetail(7L, 42L))
+                .thenReturn(finalDetail());
+
+        mockMvc.perform(get("/travel-plans/42/final").with(user(member())))
+                .andExpect(status().isOk())
+                .andExpect(view().name("travelplan/final-detail"))
+                .andExpect(model().attributeExists("finalPlan"));
+    }
+
+    @Test
+    void someoneWhoWasNotOnTheTripIsSentAwayWithoutDetail() throws Exception {
+        when(travelPlanFinalReadService.getCompletedPlanDetail(anyLong(), anyLong()))
+                .thenThrow(new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "완료된 여행을 찾을 수 없습니다."));
+
+        mockMvc.perform(get("/travel-plans/42/final").with(user(member())))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/travel-plans"))
+                .andExpect(flash().attribute("travelPlanNotice", "접근할 수 없는 여행 계획입니다."));
+    }
+
+    @Test
+    void anonymousFinalAccessIsSentToLogin() throws Exception {
+        mockMvc.perform(get("/travel-plans/42/final"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login?redirect=/travel-plans/42/final"));
+    }
+
+    @Test
+    void theListShowsFinishedTripsAlongsideTheRunningOnes() throws Exception {
+        mockMvc.perform(get("/travel-plans").with(user(member())))
+                .andExpect(status().isOk())
+                .andExpect(model().attributeExists("travelPlans"))
+                .andExpect(model().attributeExists("completedTravelPlans"));
+    }
+
+    @Test
+    void finishedTripsShowEvenWhenNothingIsRunning() throws Exception {
+        // 진행 중인 방이 하나도 없어도 완료된 여행은 따로 나온다
+        when(travelPlanService.getActivePlans(7L)).thenReturn(List.of());
+        com.example.travlediary.dto.TravelPlanFinalListItemDto finished =
+                new com.example.travlediary.dto.TravelPlanFinalListItemDto();
+        finished.setTravelPlanId(42L);
+        finished.setSnapshotId(900L);
+        finished.setTitle("제주도 여행");
+        when(travelPlanFinalReadService.getCompletedPlans(7L)).thenReturn(List.of(finished));
+
+        mockMvc.perform(get("/travel-plans").with(user(member())))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("travelPlans", org.hamcrest.Matchers.hasSize(0)))
+                .andExpect(model().attribute("completedTravelPlans",
+                        org.hamcrest.Matchers.hasSize(1)));
+    }
+
+    @Test
+    void theListAsksForTheFinishedTripsOfWhoeverIsLookingAtIt() throws Exception {
+        // 로그인한 사람의 계정으로 찾는다. 이 번호가 최종 명단의 user_id 와 맞아야 목록이 나온다
+        mockMvc.perform(get("/travel-plans").with(user(member())))
+                .andExpect(status().isOk());
+
+        verify(travelPlanFinalReadService).getCompletedPlans(7L);
+    }
+
+    private com.example.travlediary.dto.TravelPlanFinalDetailDto finalDetail() {
+        com.example.travlediary.model.TravelPlanFinalSnapshot snapshot =
+                new com.example.travlediary.model.TravelPlanFinalSnapshot();
+        snapshot.setId(900L);
+        snapshot.setTravelPlanId(42L);
+        snapshot.setTitle("제주도 여행");
+        snapshot.setStartDate(java.time.LocalDate.of(2026, 9, 13));
+        snapshot.setEndDate(java.time.LocalDate.of(2026, 9, 15));
+        return new com.example.travlediary.dto.TravelPlanFinalDetailDto(
+                snapshot, java.util.List.of(), java.util.List.of(),
+                java.util.Map.of(), java.util.Map.of());
     }
 
     @Test
@@ -691,6 +814,70 @@ class TravelPlanControllerTest {
         day.setDayNumber(1);
         day.setPlanDate(LocalDate.parse(START));
         return new TravelPlanDayDetailDto(plan, new TravelPlanMember(), day, List.of());
+    }
+
+    // ── 참여자 명단 조각 ─────────────────────────────────────
+
+    @Test
+    void theHeadcountComesFromTheServerNotFromTheScreen() throws Exception {
+        when(travelPlanService.getActivePlanMembers(7L, 42L)).thenReturn(membersOf(
+                new com.example.travlediary.dto.TravelPlanMemberDto(
+                        11L, "민준", com.example.travlediary.model.TravelPlanRole.OWNER, true),
+                new com.example.travlediary.dto.TravelPlanMemberDto(
+                        12L, "쭈니", com.example.travlediary.model.TravelPlanRole.MEMBER, false)));
+
+        mockMvc.perform(get("/travel-plans/42/members/fragment").with(user(member())))
+                .andExpect(status().isOk())
+                // 화면이 더하거나 빼지 않도록 토글 글자까지 서버가 만들어 보낸다
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "data-members-label=\"참여자 2/8\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("민준")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("쭈니")));
+    }
+
+    @Test
+    void theMemberListFragmentIsNotAWholePage() throws Exception {
+        // 패널 속만 갈아 끼우므로 껍데기가 딸려 오면 안 된다
+        when(travelPlanService.getActivePlanMembers(7L, 42L)).thenReturn(membersOf(
+                new com.example.travlediary.dto.TravelPlanMemberDto(
+                        11L, "민준", com.example.travlediary.model.TravelPlanRole.OWNER, true)));
+
+        mockMvc.perform(get("/travel-plans/42/members/fragment").with(user(member())))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("<html"))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("travel-plan-members-panel"))));
+    }
+
+    @Test
+    void someoneWhoIsNotInTheRoomCannotReadItsMemberList() throws Exception {
+        when(travelPlanService.getActivePlanMembers(anyLong(), anyLong()))
+                .thenThrow(new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "여행계획을 찾을 수 없습니다."));
+
+        mockMvc.perform(get("/travel-plans/42/members/fragment").with(user(member())))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void anonymousMemberListAccessIsSentToLogin() throws Exception {
+        mockMvc.perform(get("/travel-plans/42/members/fragment"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login?redirect=/travel-plans/42/members/fragment"));
+    }
+
+    private com.example.travlediary.dto.TravelPlanMembersDto membersOf(
+            com.example.travlediary.dto.TravelPlanMemberDto... members) {
+        com.example.travlediary.model.TravelPlan plan =
+                new com.example.travlediary.model.TravelPlan();
+        plan.setId(42L);
+        com.example.travlediary.model.TravelPlanMember current =
+                new com.example.travlediary.model.TravelPlanMember();
+        current.setId(11L);
+        current.setRole(com.example.travlediary.model.TravelPlanRole.OWNER);
+        return new com.example.travlediary.dto.TravelPlanMembersDto(
+                plan, current, List.of(members), List.of(), 8);
     }
 
     private CustomUserDetails member() {

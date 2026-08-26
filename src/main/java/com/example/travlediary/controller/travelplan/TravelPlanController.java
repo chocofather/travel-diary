@@ -5,8 +5,11 @@ import com.example.travlediary.dto.TravelPlanCreateForm;
 import com.example.travlediary.dto.TravelPlanItemCreateForm;
 import com.example.travlediary.dto.TravelPlanDetailDto;
 import com.example.travlediary.dto.TravelPlanItemUpdateForm;
+import com.example.travlediary.dto.TravelPlanMembersDto;
 import com.example.travlediary.model.TravelPlanDay;
+import com.example.travlediary.service.travelplan.TravelPlanAccessNotice;
 import com.example.travlediary.service.travelplan.TravelPlanConflictException;
+import com.example.travlediary.service.travelplan.TravelPlanFinalReadService;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.travelplan.TravelPlanInvitationService;
 import com.example.travlediary.service.travelplan.TravelPlanService;
@@ -42,6 +45,8 @@ public class TravelPlanController {
     private static final String CREATE_VIEW = "travelplan/create";
     private static final String DETAIL_VIEW = "travelplan/detail";
     private static final String DAY_DETAIL_VIEW = "travelplan/day-detail";
+    /** 완료된 여행. 읽기 전용이라 편집 화면과 다른 템플릿을 쓴다. */
+    private static final String FINAL_DETAIL_VIEW = "travelplan/final-detail";
     /** 실시간 갱신이 가져가는 DAY 한 구역. 처음 그릴 때와 같은 fragment 다. */
     private static final String DAY_FRAGMENT_VIEW =
             "travelplan/fragments/schedule-day :: scheduleDay(plan=${plan}, days=${days},"
@@ -52,6 +57,12 @@ public class TravelPlanController {
             "travelplan/fragments/schedule-day :: scheduleDays(plan=${plan}, days=${days},"
                     + " itemsByDayId=${itemsByDayId},"
                     + " alternativesByItemId=${alternativesByItemId})";
+    /** 참여자 팝오버의 속. 처음 그릴 때와 실시간 갱신이 같은 fragment 를 쓴다. */
+    private static final String MEMBERS_FRAGMENT_VIEW =
+            "travelplan/fragments/members :: membersBody(planId=${planId},"
+                    + " currentMember=${currentMember}, members=${members},"
+                    + " pastMembers=${pastMembers}, memberCount=${memberCount},"
+                    + " memberLimit=${memberLimit})";
     private static final String ITEM_FORM_ATTRIBUTE = "travelPlanItemCreateForm";
 
     /** 폼에 실제로 있는 필드만 필드 오류로 남길 수 있다. */
@@ -60,12 +71,41 @@ public class TravelPlanController {
 
     private final TravelPlanService travelPlanService;
     private final TravelPlanInvitationService travelPlanInvitationService;
+    /** 완료된 여행은 최종본에서만 읽는다. */
+    private final TravelPlanFinalReadService travelPlanFinalReadService;
 
     // 함께 계획하기 목록
     @GetMapping
     public String list(@AuthenticationPrincipal CustomUserDetails userDetails, Model model) {
         model.addAttribute("travelPlans", travelPlanService.getActivePlans(userDetails.getId()));
+        // 완료된 여행은 최종본에서만 읽는다. 원본 방을 다시 들여다보지 않는다.
+        model.addAttribute("completedTravelPlans",
+                travelPlanFinalReadService.getCompletedPlans(userDetails.getId()));
         return LIST_VIEW;
+    }
+
+    /**
+     * 완료된 여행 상세. 읽기 전용이다.
+     *
+     * <p>완료 시점에 함께했던 사람만 볼 수 있고, 방장이든 아니든 같은 최종본을 본다.
+     * 그 외에는 최종본의 존재 자체를 알리지 않는다.
+     */
+    @GetMapping("/{travelPlanId:\\d+}/final")
+    public String finalDetail(@PathVariable Long travelPlanId,
+                              @AuthenticationPrincipal CustomUserDetails userDetails,
+                              Model model,
+                              RedirectAttributes redirectAttributes) {
+        try {
+            model.addAttribute("finalPlan",
+                    travelPlanFinalReadService.getCompletedPlanDetail(
+                            userDetails.getId(), travelPlanId));
+        } catch (ResponseStatusException exception) {
+            // 여기서도 흰 오류 화면을 보여 주지 않는다.
+            redirectAttributes.addFlashAttribute("travelPlanNotice",
+                    TravelPlanAccessNotice.NO_ACCESS.message());
+            return "redirect:/travel-plans";
+        }
+        return FINAL_DETAIL_VIEW;
     }
 
     // 방 생성 폼
@@ -109,14 +149,43 @@ public class TravelPlanController {
     @GetMapping("/{travelPlanId:\\d+}")
     public String detail(@PathVariable Long travelPlanId,
                          @AuthenticationPrincipal CustomUserDetails userDetails,
-                         Model model) {
+                         Model model,
+                         RedirectAttributes redirectAttributes) {
         if (!model.containsAttribute(ITEM_FORM_ATTRIBUTE)) {
             model.addAttribute(ITEM_FORM_ATTRIBUTE, new TravelPlanItemCreateForm());
         }
-        model.addAttribute("travelPlan",
-                travelPlanService.getActivePlanDetail(userDetails.getId(), travelPlanId));
+        try {
+            model.addAttribute("travelPlan",
+                    travelPlanService.getActivePlanDetail(userDetails.getId(), travelPlanId));
+        } catch (ResponseStatusException exception) {
+            return redirectWithNotice(userDetails.getId(), travelPlanId, redirectAttributes);
+        }
         addInviteState(model, userDetails.getId(), travelPlanId);
         return DETAIL_VIEW;
+    }
+
+    /**
+     * 공동 편집방을 열지 못했다. 흰 오류 화면 대신 왜 못 여는지를 알리고 목록으로 보낸다.
+     *
+     * <p>무엇을 알릴지는 Service 가 정한다. 완료된 여행에 함께했던 사람에게만
+     * 완료됐다고 알려 주고, 그 밖에는 방이 있는지조차 알리지 않는다.
+     *
+     * <p>완료된 여행 전용 화면이 생기면 여기 보낼 곳만 바꾸면 된다.
+     */
+    private String redirectWithNotice(Long userId, Long travelPlanId,
+                                      RedirectAttributes redirectAttributes) {
+        TravelPlanAccessNotice notice =
+                travelPlanService.explainInaccessiblePlan(userId, travelPlanId);
+
+        /*
+          완료된 여행에 함께했던 사람이라면 볼 것이 있다.
+          예전 편집방 주소로 들어와도 목록에서 다시 찾게 하지 않고 최종본으로 보낸다.
+        */
+        if (notice == TravelPlanAccessNotice.COMPLETED_PARTICIPANT) {
+            return "redirect:/travel-plans/" + travelPlanId + "/final";
+        }
+        redirectAttributes.addFlashAttribute("travelPlanNotice", notice.message());
+        return "redirect:/travel-plans";
     }
 
     /**
@@ -181,6 +250,29 @@ public class TravelPlanController {
         model.addAttribute("alternativesByItemId", detail.getAlternativesByItemId());
         model.addAttribute(ITEM_FORM_ATTRIBUTE, new TravelPlanItemCreateForm());
         return SCHEDULE_FRAGMENT_VIEW;
+    }
+
+    /**
+     * 참여자 명단만 다시 그려 준다. 명단이 바뀌었다는 실시간 알림을 받은 화면이 이 조각을 갈아 끼운다.
+     *
+     * <p>"참여자 N/8" 의 N 도 여기서 센 값이 함께 나간다.
+     * 화면이 사람 수를 더하거나 빼지 않으므로 같은 알림을 두 번 받아도 숫자가 어긋나지 않는다.
+     * 접근 권한은 상세 화면과 똑같이 Service 가 확인한다(비참여자는 404).
+     */
+    @GetMapping("/{travelPlanId:\\d+}/members/fragment")
+    public String membersFragment(@PathVariable Long travelPlanId,
+                                  @AuthenticationPrincipal CustomUserDetails userDetails,
+                                  Model model) {
+        TravelPlanMembersDto members =
+                travelPlanService.getActivePlanMembers(userDetails.getId(), travelPlanId);
+
+        model.addAttribute("planId", members.getPlan().getId());
+        model.addAttribute("currentMember", members.getCurrentMember());
+        model.addAttribute("members", members.getMembers());
+        model.addAttribute("pastMembers", members.getPastMembers());
+        model.addAttribute("memberCount", members.getMemberCount());
+        model.addAttribute("memberLimit", members.getMemberLimit());
+        return MEMBERS_FRAGMENT_VIEW;
     }
 
     // A 일정 수정 (방의 ACTIVE 멤버면 누구나)
@@ -351,12 +443,18 @@ public class TravelPlanController {
     public String dayDetail(@PathVariable Long travelPlanId,
                             @PathVariable Long dayId,
                             @AuthenticationPrincipal CustomUserDetails userDetails,
-                            Model model) {
+                            Model model,
+                            RedirectAttributes redirectAttributes) {
         if (!model.containsAttribute(ITEM_FORM_ATTRIBUTE)) {
             model.addAttribute(ITEM_FORM_ATTRIBUTE, new TravelPlanItemCreateForm());
         }
-        model.addAttribute("travelPlanDay",
-                travelPlanService.getActiveDayDetail(userDetails.getId(), travelPlanId, dayId));
+        try {
+            model.addAttribute("travelPlanDay",
+                    travelPlanService.getActiveDayDetail(userDetails.getId(), travelPlanId, dayId));
+        } catch (ResponseStatusException exception) {
+            // DAY 화면도 같은 안내를 거쳐 목록으로 보낸다.
+            return redirectWithNotice(userDetails.getId(), travelPlanId, redirectAttributes);
+        }
         return DAY_DETAIL_VIEW;
     }
 

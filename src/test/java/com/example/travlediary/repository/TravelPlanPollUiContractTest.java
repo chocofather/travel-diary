@@ -286,8 +286,7 @@ class TravelPlanPollUiContractTest {
         assertThat(detail)
                 .contains("data-travel-plan-poll-list-view")
                 .contains("data-travel-plan-poll-create-view");
-        // 창은 하나뿐이다. 창 위에 창을 겹치지 않는다
-        assertThat(countOf(detail, "role=\"dialog\"")).isEqualTo(1);
+        // 투표 쪽 창은 하나뿐이다. 창 위에 창을 겹치지 않는다
         assertThat(countOf(detail, "class=\"travel-plan-poll-modal\"")).isEqualTo(1);
         // 두 화면이 같은 자리에서 서로 바뀐다
         assertThat(between(poll, "function showCreateView()", "\n    }"))
@@ -377,7 +376,7 @@ class TravelPlanPollUiContractTest {
                 .contains("card.addEventListener(\"click\", () => openDetail(poll.id))");
         // 창을 하나 더 띄우지 않는다. 같은 창 안에서 화면만 바뀐다
         assertThat(detail).contains("data-travel-plan-poll-detail-view");
-        assertThat(countOf(detail, "role=\"dialog\"")).isEqualTo(1);
+        assertThat(countOf(detail, "class=\"travel-plan-poll-modal\"")).isEqualTo(1);
         assertThat(between(poll, "function showDetailView()", "\n    }"))
                 .contains("listView.hidden = true")
                 .contains("detailView.hidden = false");

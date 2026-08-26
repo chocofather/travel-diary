@@ -51,10 +51,73 @@ class TravelPlanReadServiceTest {
     private TravelPlanItemMapper travelPlanItemMapper;
     @Mock
     private TravelPlanAlternativeMapper travelPlanAlternativeMapper;
+    /** 완료된 방으로 들어왔을 때 무엇을 안내할지 가르는 데만 쓴다. */
+    @Mock
+    private com.example.travlediary.repository.travelplan.TravelPlanFinalMapper
+            travelPlanFinalMapper;
     @Mock
     private org.springframework.context.ApplicationEventPublisher eventPublisher;
     @InjectMocks
     private TravelPlanService travelPlanService;
+
+    // ── 열 수 없는 방을 열려고 했을 때 ──────────────────────
+
+    @Test
+    void aFinishedTripTellsThePeopleWhoWereOnIt() {
+        givenCompletedPlan();
+        when(travelPlanFinalMapper.existsMemberByPlanAndUser(PLAN_ID, USER_ID)).thenReturn(true);
+
+        assertThat(travelPlanService.explainInaccessiblePlan(USER_ID, PLAN_ID))
+                .isEqualTo(TravelPlanAccessNotice.COMPLETED_PARTICIPANT);
+        assertThat(TravelPlanAccessNotice.COMPLETED_PARTICIPANT.message())
+                .isEqualTo("여행 계획이 완료되었습니다."
+                        + " 최종 일정은 완료된 여행 목록에서 확인할 수 있습니다.");
+    }
+
+    @Test
+    void someoneWhoLeftBeforeTheEndOnlyHearsThatItIsOver() {
+        // 최종 명단에는 없지만 그 방에 있었던 적은 있다
+        givenCompletedPlan();
+        when(travelPlanFinalMapper.existsMemberByPlanAndUser(PLAN_ID, USER_ID)).thenReturn(false);
+        when(travelPlanMapper.findAnyMemberByPlanAndUser(PLAN_ID, USER_ID))
+                .thenReturn(new TravelPlanMember());
+
+        assertThat(travelPlanService.explainInaccessiblePlan(USER_ID, PLAN_ID))
+                .isEqualTo(TravelPlanAccessNotice.COMPLETED_PAST);
+        assertThat(TravelPlanAccessNotice.COMPLETED_PAST.message())
+                .isEqualTo("이미 종료된 여행 계획입니다.");
+    }
+
+    @Test
+    void aStrangerIsNotToldWhetherTheRoomEvenExists() {
+        givenCompletedPlan();
+        when(travelPlanFinalMapper.existsMemberByPlanAndUser(PLAN_ID, USER_ID)).thenReturn(false);
+        when(travelPlanMapper.findAnyMemberByPlanAndUser(PLAN_ID, USER_ID)).thenReturn(null);
+
+        assertThat(travelPlanService.explainInaccessiblePlan(USER_ID, PLAN_ID))
+                .isEqualTo(TravelPlanAccessNotice.NO_ACCESS);
+        assertThat(TravelPlanAccessNotice.NO_ACCESS.message())
+                .isEqualTo("접근할 수 없는 여행 계획입니다.");
+    }
+
+    @Test
+    void aRoomThatIsNotFinishedGivesNothingAway() {
+        // 완료된 방이 아니면 더 알아보지 않는다. 있는지조차 알리지 않는다
+        when(travelPlanMapper.findPlanByIdAndStatus(PLAN_ID, "COMPLETED")).thenReturn(null);
+
+        assertThat(travelPlanService.explainInaccessiblePlan(USER_ID, PLAN_ID))
+                .isEqualTo(TravelPlanAccessNotice.NO_ACCESS);
+        verify(travelPlanFinalMapper, never())
+                .existsMemberByPlanAndUser(anyLong(), anyLong());
+        verify(travelPlanMapper, never()).findAnyMemberByPlanAndUser(anyLong(), anyLong());
+    }
+
+    private void givenCompletedPlan() {
+        TravelPlan plan = new TravelPlan();
+        plan.setId(PLAN_ID);
+        plan.setStatus(TravelPlanStatus.COMPLETED);
+        when(travelPlanMapper.findPlanByIdAndStatus(PLAN_ID, "COMPLETED")).thenReturn(plan);
+    }
 
     @Test
     void listReadsOnlyTheCurrentUsersActiveRooms() {

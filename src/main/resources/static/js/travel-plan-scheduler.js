@@ -704,11 +704,15 @@ document.addEventListener("DOMContentLoaded", () => {
         "data-travel-plan-invite-toggle",
         "data-travel-plan-invite-panel");
 
-    // 참여자 줄의 ⋯ (OWNER 에게만 렌더링된다). 한 번에 하나만 열어 둔다.
-    const memberMenus = document.querySelectorAll("[data-travel-plan-member-menu]");
+    /*
+      참여자 줄의 ⋯ (OWNER 에게만 렌더링된다). 한 번에 하나만 열어 둔다.
 
+      참여자 목록은 명단이 바뀔 때 통째로 새로 그려지므로 줄마다 동작을 붙이지 않는다.
+      (붙여 두면 새로 그린 뒤 ⋯ 가 눌리지 않는다)
+      패널에 한 번만 붙여 두고 눌린 곳을 그때 찾는다.
+    */
     function closeMemberMenus(except) {
-        memberMenus.forEach(menu => {
+        document.querySelectorAll("[data-travel-plan-member-menu]").forEach(menu => {
             if (menu === except) return;
             const list = menu.querySelector("[data-travel-plan-member-menu-list]");
             if (list) list.hidden = true;
@@ -717,12 +721,18 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    memberMenus.forEach(menu => {
-        const button = menu.querySelector("[data-travel-plan-member-menu-button]");
-        const list = menu.querySelector("[data-travel-plan-member-menu-list]");
-        if (!button || !list) return;
+    // 참여자 popover 는 안쪽 클릭을 막아 두므로 패널 안에서도 따로 닫아 준다.
+    document.querySelector("[data-travel-plan-members-panel]")
+        ?.addEventListener("click", event => {
+            const button = event.target.closest("[data-travel-plan-member-menu-button]");
+            if (!button) {
+                closeMemberMenus(null);
+                return;
+            }
+            const menu = button.closest("[data-travel-plan-member-menu]");
+            const list = menu?.querySelector("[data-travel-plan-member-menu-list]");
+            if (!list) return;
 
-        button.addEventListener("click", event => {
             // 참여자 popover 자체가 닫히지 않게 여기서 멈춘다.
             event.stopPropagation();
             const willOpen = list.hidden;
@@ -730,11 +740,6 @@ document.addEventListener("DOMContentLoaded", () => {
             list.hidden = !willOpen;
             button.setAttribute("aria-expanded", String(willOpen));
         });
-    });
-
-    // 참여자 popover 는 안쪽 클릭을 막아 두므로 패널 안에서도 따로 닫아 준다.
-    document.querySelector("[data-travel-plan-members-panel]")
-        ?.addEventListener("click", () => closeMemberMenus(null));
 
     document.addEventListener("click", () => {
         closeMemberMenus(null);
