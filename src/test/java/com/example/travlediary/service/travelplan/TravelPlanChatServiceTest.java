@@ -443,6 +443,24 @@ class TravelPlanChatServiceTest {
     }
 
     @Test
+    void aDeletedPollLeavesNoNoticeBehind() {
+        /*
+          "새 투표를 만들었어요" 는 채팅 행이 아니라 투표 자체를 읽어 만든다.
+          그래서 투표가 지워지면 다시 읽을 때 알림도 함께 사라진다. 남는 알림이 없다.
+        */
+        givenRoom(TravelPlanRole.MEMBER);
+        when(travelPlanChatMapper.findRecentMessages(PLAN_ID, TravelPlanChatService.PAGE_SIZE))
+                .thenReturn(List.of(messageAt(1L, "먼저 얘기", 10)));
+        // 투표가 지워졌다
+        when(travelPlanPollMapper.findRecentPolls(PLAN_ID, TravelPlanChatService.PAGE_SIZE))
+                .thenReturn(List.of());
+
+        assertThat(chatService.timeline(principal(), PLAN_ID, null, null).items())
+                .extracting(TravelPlanChatTimelineItemDto::type)
+                .containsExactly("MESSAGE");
+    }
+
+    @Test
     void nothingAboutThePollIsWrittenIntoTheChatTable() {
         // 알림은 읽을 때 합칠 뿐이다. 투표를 채팅 행으로 옮겨 적지 않는다
         givenRoom(TravelPlanRole.MEMBER);

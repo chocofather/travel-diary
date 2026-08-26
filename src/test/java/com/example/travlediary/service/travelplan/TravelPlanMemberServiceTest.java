@@ -43,6 +43,9 @@ class TravelPlanMemberServiceTest {
 
     @Mock
     private TravelPlanMapper travelPlanMapper;
+    /** 떠난 사람이 진행 중인 투표에 남겨 둔 표를 정리하는 일만 맡긴다. */
+    @Mock
+    private TravelPlanPollService travelPlanPollService;
     @InjectMocks
     private TravelPlanMemberService travelPlanMemberService;
 

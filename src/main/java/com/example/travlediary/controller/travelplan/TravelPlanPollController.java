@@ -125,4 +125,16 @@ public class TravelPlanPollController {
         return ResponseEntity.ok(
                 travelPlanPollService.pollDetail(principal, travelPlanId, pollId));
     }
+
+    /**
+     * 투표 삭제. 만든 사람만 할 수 있고, 그 확인은 Service 가 한다.
+     * 지워진 뒤에는 돌려줄 상세가 없다.
+     */
+    @PostMapping("/{pollId:\\d+}/delete")
+    public ResponseEntity<Void> delete(@PathVariable Long travelPlanId,
+                                       @PathVariable Long pollId,
+                                       Principal principal) {
+        travelPlanPollService.deletePoll(principal, travelPlanId, pollId);
+        return ResponseEntity.noContent().build();
+    }
 }

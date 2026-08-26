@@ -14,6 +14,7 @@ import java.util.List;
  * @param selectedOptionIds 지금 보고 있는 사람이 고른 선택지. 아직 투표하지 않았으면 빈 목록
  * @param resultsVisible    지금 표를 보여 줄 때인지. 아니면 각 선택지의 표와 결과가 비어 있다
  * @param closable          지금 보고 있는 사람이 이 투표를 직접 마감할 수 있는지
+ * @param deletable         지금 보고 있는 사람이 이 투표를 지울 수 있는지(만든 사람만)
  */
 public record TravelPlanPollDetailDto(
         Long id,
@@ -27,6 +28,7 @@ public record TravelPlanPollDetailDto(
         int activeMemberCount,
         boolean resultsVisible,
         boolean closable,
+        boolean deletable,
         String winnerSummary,
         List<TravelPlanPollOptionResultDto> options,
         List<Long> selectedOptionIds) {

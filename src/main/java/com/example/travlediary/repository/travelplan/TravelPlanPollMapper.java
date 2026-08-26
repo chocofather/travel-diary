@@ -131,4 +131,29 @@ public interface TravelPlanPollMapper {
      */
     int closePoll(@Param("id") Long id,
                   @Param("closeReason") TravelPlanPollCloseReason closeReason);
+
+    // ── 지우기 ──────────────────────────────────────────────
+
+    /**
+     * 투표를 지운다. 방 소속 조건을 함께 걸어 다른 방의 투표를 지울 수 없게 한다.
+     *
+     * <p>선택지·투표·고른 선택은 FK 의 ON DELETE CASCADE 로 함께 사라진다.
+     * (options.poll_id / votes.poll_id / selections.vote_id / selections.option_id)
+     * 그래서 남는 것 없이 이 한 문장으로 끝난다.
+     */
+    int deletePoll(@Param("id") Long id, @Param("travelPlanId") Long travelPlanId);
+
+    /**
+     * 방을 떠난 사람이 진행 중인 투표에 넣어 둔 표를 걷어 낸다.
+     * 고른 선택은 selections.vote_id CASCADE 로 함께 사라진다.
+     *
+     * <p>이미 끝난 투표는 건드리지 않는다. 그때의 결과는 그대로 남아야 한다.
+     *
+     * @return 걷어 낸 표 수
+     */
+    int deleteVotesOfMemberInOpenPolls(@Param("travelPlanId") Long travelPlanId,
+                                       @Param("memberId") Long memberId);
+
+    /** 이 방에서 진행 중인 투표의 번호. 사람이 빠진 뒤 전원 투표 여부를 다시 볼 때 쓴다. */
+    List<Long> findOpenPollIds(@Param("travelPlanId") Long travelPlanId);
 }

@@ -30,6 +30,7 @@ class TravelPlanPollMapperContractTest {
         for (String id : new String[]{
                 "insertPoll", "insertOption", "findOpenPolls", "findClosedPolls",
                 "findRecentPolls", "findPollsBefore", "closePoll", "countPollsByStatus",
+                "deletePoll", "deleteVotesOfMemberInOpenPolls", "findOpenPollIds",
                 "findByIdAndPlanId", "findOptionsByPollIds"}) {
             assertThat(mapperInterface).as("interface declares %s", id).contains(id);
             assertThat(mapper).as("xml defines %s", id).contains("id=\"" + id + "\"");
@@ -202,6 +203,55 @@ class TravelPlanPollMapperContractTest {
         // 새 투표는 마감 시각을 아예 채우지 않는다
         assertThat(between(mapper, "<insert id=\"insertPoll\"", "</insert>"))
                 .contains("deadline_at");
+    }
+
+    @Test
+    void deletingAPollLeavesNothingBehind() throws IOException {
+        String mapper = mapperXml();
+        String schema = schemaReference();
+
+        // 방 소속까지 걸어 다른 방의 투표를 지울 수 없게 한다
+        assertThat(between(mapper, "<delete id=\"deletePoll\"", "</delete>"))
+                .contains("DELETE FROM travel_plan_polls")
+                .contains("WHERE id = #{id}")
+                .contains("AND travel_plan_id = #{travelPlanId}");
+
+        /*
+          선택지·표·고른 선택은 FK 의 CASCADE 로 함께 사라진다.
+          그래서 지우는 문장이 하나여도 남는 행이 없다.
+        */
+        assertThat(between(schema,
+                "CREATE TABLE `travel_plan_poll_options`", ") ENGINE=InnoDB"))
+                .contains("FOREIGN KEY (`poll_id`) REFERENCES `travel_plan_polls` (`id`)"
+                        + " ON DELETE CASCADE");
+        assertThat(between(schema,
+                "CREATE TABLE `travel_plan_poll_votes`", ") ENGINE=InnoDB"))
+                .contains("FOREIGN KEY (`poll_id`) REFERENCES `travel_plan_polls` (`id`)"
+                        + " ON DELETE CASCADE");
+        String selections = between(schema,
+                "CREATE TABLE `travel_plan_poll_vote_selections`", ") ENGINE=InnoDB");
+        assertThat(selections)
+                .contains("FOREIGN KEY (`vote_id`) REFERENCES `travel_plan_poll_votes` (`id`)"
+                        + " ON DELETE CASCADE")
+                .contains("FOREIGN KEY (`option_id`)"
+                        + " REFERENCES `travel_plan_poll_options` (`id`) ON DELETE CASCADE");
+    }
+
+    @Test
+    void aDepartingMemberOnlyLosesVotesInRunningPolls() throws IOException {
+        String delete = between(mapperXml(),
+                "<delete id=\"deleteVotesOfMemberInOpenPolls\"", "</delete>");
+
+        assertThat(delete)
+                .contains("FROM travel_plan_poll_votes v")
+                .contains("p.travel_plan_id = #{travelPlanId}")
+                .contains("v.member_id = #{memberId}")
+                // 이미 끝난 투표의 결과는 그대로 남아야 한다
+                .contains("p.status = 'OPEN'");
+        // 고른 선택은 selections.vote_id CASCADE 로 함께 사라진다
+        assertThat(mapperXml())
+                .doesNotContain("DELETE FROM travel_plan_poll_vote_selections\n        WHERE"
+                        + " vote_id IN");
     }
 
     @Test

@@ -23,6 +23,8 @@ import org.springframework.web.server.ResponseStatusException;
 public class TravelPlanMemberService {
 
     private final TravelPlanMapper travelPlanMapper;
+    /** 떠난 사람이 진행 중인 투표에 남겨 둔 표를 정리하는 일만 맡긴다. */
+    private final TravelPlanPollService travelPlanPollService;
 
     /**
      * 스스로 여행에서 나간다. ACTIVE 였던 MEMBER 만 가능하다.
@@ -46,6 +48,8 @@ public class TravelPlanMemberService {
             throw planNotFound();
         }
         travelPlanMapper.touchLastActivity(travelPlanId);
+        // 진행 중인 투표에 남겨 둔 표를 걷어 내고, 남은 사람 기준으로 다시 센다.
+        travelPlanPollService.onMemberLeft(travelPlanId, member.getId());
     }
 
     /**
@@ -78,6 +82,8 @@ public class TravelPlanMemberService {
             throw planNotFound();
         }
         travelPlanMapper.touchLastActivity(travelPlanId);
+        // 나가기와 같다. 진행 중인 투표에서 그 사람의 표를 걷어 낸다.
+        travelPlanPollService.onMemberLeft(travelPlanId, target.getId());
     }
 
     /**

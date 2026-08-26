@@ -2323,6 +2323,32 @@
     font-size: 14px;
 }
 
+/*
+  지우기는 상세 맨 아래에 조용히 둔다.
+  목록 카드에 바로 두면 실수로 누르기 쉽고, 되돌릴 수 없는 동작이다.
+*/
+.travel-plan-poll-detail-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 4px;
+    border-top: 1px solid var(--tp-poll-line);
+}
+
+.travel-plan-poll-delete {
+    padding: 6px 4px;
+    border: none;
+    background: none;
+    color: var(--tp-ink-faint);
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.travel-plan-poll-delete:hover {
+    color: #b98c86;
+    text-decoration: underline;
+}
+
 .travel-plan-poll-winner {
     margin: 0;
     padding: 10px 12px;

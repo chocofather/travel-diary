@@ -483,9 +483,25 @@ document.addEventListener("DOMContentLoaded", () => {
         return row;
     }
 
+    /**
+     * 지우기.
+     * 만든 사람에게만 보인다. 되돌릴 수 없으므로 한 번 물어본다.
+     */
+    function deleteActionOf(poll) {
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "travel-plan-poll-delete";
+        remove.setAttribute("data-travel-plan-poll-delete", "");
+        remove.textContent = "투표 삭제";
+        remove.addEventListener("click", () => deletePoll(poll.id));
+        return remove;
+    }
+
     function renderDetail(poll) {
         openedPollId = poll.id;
         const parts = [detailHeadOf(poll)];
+        // 진행 중인 투표에만 있는 버튼 줄. 오류 문구 아래에 붙인다.
+        let openActions = null;
 
         if (poll.status === "CLOSED") {
             const heading = document.createElement("p");
@@ -504,18 +520,14 @@ document.addEventListener("DOMContentLoaded", () => {
             winner.className = "travel-plan-poll-winner";
             winner.textContent = poll.winnerSummary || "투표 결과 없음";
 
-            parts.push(heading, results, finalHeading, winner);
+            parts.push(heading, results, finalHeading);
+            parts.push(winner);
         } else {
             const choices = document.createElement("div");
             choices.className = "travel-plan-poll-choices";
             choices.setAttribute("data-travel-plan-poll-choices", "");
             (poll.options || []).forEach(option =>
                 choices.append(optionChoiceOf(poll, option)));
-
-            const error = document.createElement("p");
-            error.className = "travel-plan-poll-error";
-            error.hidden = true;
-            error.setAttribute("data-travel-plan-poll-vote-error", "");
 
             const actions = document.createElement("div");
             actions.className = "travel-plan-poll-actions";
@@ -539,7 +551,27 @@ document.addEventListener("DOMContentLoaded", () => {
             submitVote.addEventListener("click", () => vote(poll.id));
             actions.append(submitVote);
 
-            parts.push(choices, error, actions);
+            openActions = actions;
+            parts.push(choices);
+        }
+
+        // 끝난 투표에서도 지울 수 있으므로 사유를 알릴 자리는 양쪽 모두에 둔다.
+        const error = document.createElement("p");
+        error.className = "travel-plan-poll-error";
+        error.hidden = true;
+        error.setAttribute("data-travel-plan-poll-vote-error", "");
+        parts.push(error);
+        if (openActions) parts.push(openActions);
+
+        /*
+          지우기는 목록 카드가 아니라 여기에만 둔다.
+          목록에서 바로 누를 수 있으면 실수로 지우기 쉽다.
+        */
+        if (poll.deletable) {
+            const footer = document.createElement("div");
+            footer.className = "travel-plan-poll-detail-footer";
+            footer.append(deleteActionOf(poll));
+            parts.push(footer);
         }
 
         detailBody.replaceChildren(...parts);
@@ -621,6 +653,44 @@ document.addEventListener("DOMContentLoaded", () => {
         loadTab("OPEN", true);
         loadTab("CLOSED", true);
         loadCounts();
+    }
+
+    /**
+     * 투표 지우기.
+     * 되돌릴 수 없으므로 한 번 물어보고, 지운 뒤에는 볼 상세가 없어 목록으로 돌아간다.
+     */
+    async function deletePoll(pollId) {
+        if (voting) return;
+        if (!window.confirm(
+                "이 투표를 삭제할까요?\n\n삭제하면 지금까지의 투표 내용도 함께 사라집니다.")) {
+            return;
+        }
+        voting = true;
+        try {
+            const response = await fetch(`/travel-plans/${planId}/polls/${pollId}/delete`, {
+                method: "POST",
+                headers: csrfHeaders()
+            });
+            if (!response.ok) {
+                showVoteError("투표를 삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+                return;
+            }
+            removePoll(pollId);
+        } catch (error) {
+            showVoteError("투표를 삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+        } finally {
+            voting = false;
+        }
+    }
+
+    /**
+     * 지워진 투표를 화면에서 걷어 낸다.
+     * 같은 번호로 두 번 와도 이미 없는 것을 지우려 할 뿐이라 그대로 두어도 안전하다.
+     */
+    function removePoll(pollId) {
+        // 그 투표를 보고 있었다면 볼 것이 없다. 목록으로 돌아간다.
+        if (String(openedPollId) === String(pollId)) showListView();
+        refreshLists();
     }
 
     async function vote(pollId) {
@@ -750,6 +820,10 @@ document.addEventListener("DOMContentLoaded", () => {
     realtime()?.subscribePolls(payload => {
         if (payload.type === "POLL_CREATED") {
             onPollCreated();
+            return;
+        }
+        if (payload.type === "POLL_DELETED") {
+            removePoll(payload.pollId);
             return;
         }
         if (payload.type === "POLL_CLOSED") {

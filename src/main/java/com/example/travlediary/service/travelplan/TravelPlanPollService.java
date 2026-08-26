@@ -222,6 +222,8 @@ public class TravelPlanPollService {
                 resultsVisible,
                 // 직접 마감은 만든 사람에게만 보인다. 전원이 투표하기를 기다릴 필요는 없다.
                 !closed && member.getId().equals(poll.getCreatedByMemberId()),
+                // 지우는 것도 만든 사람만. 끝난 투표도 지울 수 있다.
+                member.getId().equals(poll.getCreatedByMemberId()),
                 closed ? winnerSummaryOf(results) : null,
                 results,
                 selected);
@@ -319,6 +321,63 @@ public class TravelPlanPollService {
             return;
         }
         close(travelPlanId, poll.getId(), TravelPlanPollCloseReason.ALL_VOTED);
+    }
+
+    /**
+     * 투표 지우기.
+     *
+     * <p>만든 사람만 할 수 있다. 방장이라도 남의 투표를 대신 지우지 않는다.
+     * 이미 표가 있어도, 이미 끝난 투표여도 지울 수 있다.
+     *
+     * <p>선택지·표·고른 선택은 FK 의 CASCADE 로 함께 사라져 남는 것이 없다.
+     * 채팅에 남아 있던 "새 투표를 만들었어요" 알림도 투표 자체를 읽어 만들던 것이라
+     * 다음에 다시 읽을 때 함께 사라진다.
+     */
+    @Transactional
+    public void deletePoll(Principal principal, Long travelPlanId, Long pollId) {
+        TravelPlanMember member = requireActiveMember(principal, travelPlanId);
+        TravelPlanPoll poll = requirePollOfPlan(travelPlanId, pollId);
+
+        if (!member.getId().equals(poll.getCreatedByMemberId())) {
+            throw new AccessDeniedException("투표를 만든 사람만 삭제할 수 있습니다.");
+        }
+        if (travelPlanPollMapper.deletePoll(pollId, travelPlanId) != 1) {
+            // 그 사이 누가 먼저 지웠다. 같은 알림을 두 번 보내지 않는다.
+            return;
+        }
+
+        travelPlanMapper.touchLastActivity(travelPlanId);
+        eventPublisher.publishEvent(new TravelPlanPollChangedEvent(
+                travelPlanId, TravelPlanPollEventDto.deleted(pollId)));
+    }
+
+    /**
+     * 누군가 방을 떠났다(나가기 / 내보내기).
+     *
+     * <p>진행 중인 투표에 넣어 두었던 그 사람의 표를 걷어 낸다.
+     * 남은 사람 기준으로 다시 세어야 "몇 명 중 몇 명" 이 맞고,
+     * 떠난 사람을 기다리느라 끝나지 못하는 투표도 생기지 않는다.
+     *
+     * <p>이미 끝난 투표는 건드리지 않는다. 그때의 결과는 그대로 남는다.
+     * 나중에 다시 들어와도 걷어 낸 선택을 되살리지 않는다.
+     */
+    @Transactional
+    public void onMemberLeft(Long travelPlanId, Long memberId) {
+        if (travelPlanId == null || memberId == null) {
+            return;
+        }
+        travelPlanPollMapper.deleteVotesOfMemberInOpenPolls(travelPlanId, memberId);
+
+        // 사람이 줄어 남은 전원이 이미 투표한 상태가 됐을 수 있다.
+        int activeMembers = travelPlanMapper.countActiveMembers(travelPlanId);
+        if (activeMembers <= 0) {
+            return;
+        }
+        for (Long pollId : travelPlanPollMapper.findOpenPollIds(travelPlanId)) {
+            if (travelPlanPollMapper.countVotedMembers(pollId) >= activeMembers) {
+                close(travelPlanId, pollId, TravelPlanPollCloseReason.ALL_VOTED);
+            }
+        }
     }
 
     /**

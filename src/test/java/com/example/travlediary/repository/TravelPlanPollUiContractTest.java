@@ -649,17 +649,56 @@ class TravelPlanPollUiContractTest {
     }
 
     @Test
-    void editingOrDeletingAPollIsStillNotPartOfThis() throws IOException {
-        String poll = pollJs();
-        String detail = detailHtml();
+    void editingAPollIsStillNotPartOfThis() throws IOException {
+        // 수정·최종 일정 연동은 다음 단계다
+        assertThat(pollJs()).doesNotContain("투표 수정");
+        assertThat(detailHtml()).doesNotContain("투표 수정");
+    }
 
-        // 수정·삭제·최종 일정 연동은 다음 단계다
-        assertThat(poll)
-                .doesNotContain("/delete")
-                .doesNotContain("투표 수정");
-        assertThat(detail)
-                .doesNotContain("투표 삭제")
-                .doesNotContain("투표 수정");
+    // ── 지우기 ──────────────────────────────────────────────
+
+    @Test
+    void onlyTheCreatorSeesTheDeleteAction() throws IOException {
+        String poll = pollJs();
+
+        // 보일지 말지는 서버가 정해 준다. 화면이 스스로 판단하지 않는다
+        assertThat(between(poll, "function renderDetail(poll)", "detailBody.replaceChildren"))
+                .contains("if (poll.deletable)");
+        assertThat(between(poll, "function deleteActionOf(poll)", "return remove;"))
+                .contains("remove.textContent = \"투표 삭제\"")
+                .contains("deletePoll(poll.id)");
+    }
+
+    @Test
+    void deletingIsAskedAboutFirstAndOnlyLivesInTheDetail() throws IOException {
+        String poll = pollJs();
+
+        // 되돌릴 수 없으므로 한 번 물어본다
+        assertThat(between(poll, "async function deletePoll(pollId)", "\n    }"))
+                .contains("window.confirm(")
+                .contains("/polls/${pollId}/delete")
+                .contains("method: \"POST\"")
+                .contains("csrfHeaders()");
+        // 목록 카드에는 지우기를 두지 않는다
+        assertThat(between(poll, "function pollNode(poll)", "return item;"))
+                .doesNotContain("delete")
+                .doesNotContain("삭제");
+    }
+
+    @Test
+    void aDeletedPollLeavesEveryScreenAtOnce() throws IOException {
+        String poll = pollJs();
+
+        assertThat(between(poll, "if (payload.type === \"POLL_DELETED\") {", "return;"))
+                .contains("removePoll(payload.pollId)");
+        /*
+          같은 번호로 두 번 와도 이미 없는 것을 지우려 할 뿐이라 안전하다.
+          숫자와 목록은 서버에서 다시 읽어 맞춘다.
+        */
+        assertThat(between(poll, "function removePoll(pollId)", "\n    }"))
+                .contains("String(openedPollId) === String(pollId)")
+                .contains("showListView()")
+                .contains("refreshLists()");
     }
 
     @Test

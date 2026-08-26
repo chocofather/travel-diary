@@ -876,6 +876,170 @@ class TravelPlanPollServiceTest {
         verify(eventPublisher, never()).publishEvent(any(Object.class));
     }
 
+    // ── 지우기 ──────────────────────────────────────────────
+
+    @Test
+    void theCreatorCanDeleteTheirRunningPoll() {
+        givenRoom(TravelPlanRole.MEMBER);
+        givenPoll(poll -> { });
+        when(travelPlanPollMapper.deletePoll(POLL_ID, PLAN_ID)).thenReturn(1);
+
+        pollService.deletePoll(principal(), PLAN_ID, POLL_ID);
+
+        verify(travelPlanPollMapper).deletePoll(POLL_ID, PLAN_ID);
+        assertThat(captureEvent().payload().type())
+                .isEqualTo(TravelPlanPollEventDto.POLL_DELETED);
+    }
+
+    @Test
+    void theCreatorCanDeleteAFinishedPollToo() {
+        givenRoom(TravelPlanRole.MEMBER);
+        givenPoll(poll -> poll.setStatus(TravelPlanPollStatus.CLOSED));
+        when(travelPlanPollMapper.deletePoll(POLL_ID, PLAN_ID)).thenReturn(1);
+
+        pollService.deletePoll(principal(), PLAN_ID, POLL_ID);
+
+        verify(travelPlanPollMapper).deletePoll(POLL_ID, PLAN_ID);
+    }
+
+    @Test
+    void aPollWithVotesCanStillBeDeleted() {
+        // 표가 이미 있어도 지울 수 있다. 표가 있는지 묻지 않는다
+        givenRoom(TravelPlanRole.MEMBER);
+        givenPoll(poll -> { });
+        when(travelPlanPollMapper.deletePoll(POLL_ID, PLAN_ID)).thenReturn(1);
+
+        pollService.deletePoll(principal(), PLAN_ID, POLL_ID);
+
+        verify(travelPlanPollMapper, never()).hasAnyVote(anyLong());
+    }
+
+    @Test
+    void anotherMemberCannotDeleteSomeoneElsesPoll() {
+        givenRoom(TravelPlanRole.MEMBER);
+        givenPoll(poll -> poll.setCreatedByMemberId(OTHER_MEMBER_ID));
+
+        assertThatThrownBy(() -> pollService.deletePoll(principal(), PLAN_ID, POLL_ID))
+                .isInstanceOf(AccessDeniedException.class);
+        verify(travelPlanPollMapper, never()).deletePoll(anyLong(), anyLong());
+        verify(eventPublisher, never()).publishEvent(any(Object.class));
+    }
+
+    @Test
+    void beingTheOwnerDoesNotAllowDeletingSomeoneElsesPoll() {
+        givenRoom(TravelPlanRole.OWNER);
+        givenPoll(poll -> poll.setCreatedByMemberId(OTHER_MEMBER_ID));
+
+        assertThatThrownBy(() -> pollService.deletePoll(principal(), PLAN_ID, POLL_ID))
+                .isInstanceOf(AccessDeniedException.class);
+        verify(travelPlanPollMapper, never()).deletePoll(anyLong(), anyLong());
+    }
+
+    @Test
+    void aPollFromAnotherRoomCannotBeDeleted() {
+        givenRoom(TravelPlanRole.MEMBER);
+        when(travelPlanPollMapper.findByIdAndPlanId(POLL_ID, PLAN_ID)).thenReturn(null);
+
+        assertThatThrownBy(() -> pollService.deletePoll(principal(), PLAN_ID, POLL_ID))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    void deletingSomethingAlreadyGoneSaysNothingTwice() {
+        givenRoom(TravelPlanRole.MEMBER);
+        givenPoll(poll -> { });
+        // 그 사이 누가 먼저 지웠다
+        when(travelPlanPollMapper.deletePoll(POLL_ID, PLAN_ID)).thenReturn(0);
+
+        pollService.deletePoll(principal(), PLAN_ID, POLL_ID);
+
+        verify(eventPublisher, never()).publishEvent(any(Object.class));
+    }
+
+    @Test
+    void theDeleteActionIsOfferedToTheCreatorOfAnyPoll() {
+        givenRoom(TravelPlanRole.MEMBER);
+        givenPoll(poll -> { });
+        assertThat(pollService.pollDetail(principal(), PLAN_ID, POLL_ID).deletable()).isTrue();
+
+        // 끝난 투표도 지울 수 있다
+        givenPoll(poll -> poll.setStatus(TravelPlanPollStatus.CLOSED));
+        assertThat(pollService.pollDetail(principal(), PLAN_ID, POLL_ID).deletable()).isTrue();
+
+        // 남의 투표에는 나오지 않는다
+        givenPoll(poll -> poll.setCreatedByMemberId(OTHER_MEMBER_ID));
+        assertThat(pollService.pollDetail(principal(), PLAN_ID, POLL_ID).deletable()).isFalse();
+    }
+
+    // ── 참여자가 떠났을 때 ──────────────────────────────────
+
+    @Test
+    void aDepartingMemberTakesTheirVoteOutOfRunningPolls() {
+        when(travelPlanMapper.countActiveMembers(PLAN_ID)).thenReturn(3);
+        when(travelPlanPollMapper.findOpenPollIds(PLAN_ID)).thenReturn(List.of());
+
+        pollService.onMemberLeft(PLAN_ID, MEMBER_ID);
+
+        verify(travelPlanPollMapper).deleteVotesOfMemberInOpenPolls(PLAN_ID, MEMBER_ID);
+    }
+
+    @Test
+    void losingTheLastNonVoterEndsThePoll() {
+        /*
+          4명 중 3명만 투표해 열려 있었다.
+          투표하지 않은 한 사람이 나가면 남은 3명이 모두 투표한 상태가 된다.
+        */
+        when(travelPlanMapper.countActiveMembers(PLAN_ID)).thenReturn(3);
+        when(travelPlanPollMapper.findOpenPollIds(PLAN_ID)).thenReturn(List.of(POLL_ID));
+        when(travelPlanPollMapper.countVotedMembers(POLL_ID)).thenReturn(3);
+        when(travelPlanPollMapper.closePoll(POLL_ID, TravelPlanPollCloseReason.ALL_VOTED))
+                .thenReturn(1);
+
+        pollService.onMemberLeft(PLAN_ID, OTHER_MEMBER_ID);
+
+        verify(travelPlanPollMapper).closePoll(POLL_ID, TravelPlanPollCloseReason.ALL_VOTED);
+        assertThat(captureEvent().payload().type())
+                .isEqualTo(TravelPlanPollEventDto.POLL_CLOSED);
+    }
+
+    @Test
+    void aPollStillWaitingOnSomeoneStaysOpenWhenAnotherLeaves() {
+        when(travelPlanMapper.countActiveMembers(PLAN_ID)).thenReturn(3);
+        when(travelPlanPollMapper.findOpenPollIds(PLAN_ID)).thenReturn(List.of(POLL_ID));
+        when(travelPlanPollMapper.countVotedMembers(POLL_ID)).thenReturn(2);
+
+        pollService.onMemberLeft(PLAN_ID, OTHER_MEMBER_ID);
+
+        verify(travelPlanPollMapper, never()).closePoll(anyLong(), any());
+        verify(eventPublisher, never()).publishEvent(any(Object.class));
+    }
+
+    @Test
+    void anEmptyRoomEndsNothing() {
+        // 마지막 사람까지 나갔다면 전원이 투표했다고 볼 것도 없다
+        when(travelPlanMapper.countActiveMembers(PLAN_ID)).thenReturn(0);
+
+        pollService.onMemberLeft(PLAN_ID, MEMBER_ID);
+
+        verify(travelPlanPollMapper, never()).closePoll(anyLong(), any());
+    }
+
+    @Test
+    void finishedPollsAreLeftExactlyAsTheyWere() {
+        /*
+          이미 끝난 투표의 결과는 사람이 떠났다고 달라지지 않는다.
+          표를 걷어 내는 것도 진행 중인 투표에서만이고, 마감 여부도 다시 보지 않는다.
+        */
+        when(travelPlanMapper.countActiveMembers(PLAN_ID)).thenReturn(3);
+        when(travelPlanPollMapper.findOpenPollIds(PLAN_ID)).thenReturn(List.of());
+
+        pollService.onMemberLeft(PLAN_ID, MEMBER_ID);
+
+        verify(travelPlanPollMapper).deleteVotesOfMemberInOpenPolls(PLAN_ID, MEMBER_ID);
+        verify(travelPlanPollMapper, never()).findClosedPolls(anyLong());
+        verify(travelPlanPollMapper, never()).closePoll(anyLong(), any());
+    }
+
     // ── 마감: 전원 투표 ─────────────────────────────────────
 
     @Test
