@@ -170,8 +170,9 @@ class TravelPlanPresenceContractTest {
     void realtimeStopsAtPresenceScheduleAndTheEditingSpot() throws IOException {
         String realtime = resource("/static/js/travel-plan-realtime.js");
 
-        // 채팅·투표·커서 공유 같은 것은 아직 없다
-        for (String notYet : new String[]{"typing", "chat", "poll", "cursor", "selection"}) {
+        // 투표·커서 공유·입력 중 표시 같은 것은 아직 없다
+        // (채팅은 들어왔지만 이 파일은 연결만 맡고 화면은 travel-plan-chat.js 가 맡는다)
+        for (String notYet : new String[]{"typing", "poll", "cursor", "selection"}) {
             assertThat(realtime).as("아직 없는 기능: %s", notYet).doesNotContain(notYet);
         }
         // WebSocket 으로 저장하지 않는다. 저장은 기존 HTTP 경로 그대로다

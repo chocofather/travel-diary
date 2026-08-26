@@ -14,5 +14,9 @@ public enum TravelPlanScheduleChangeType {
     /** 같은 DAY 안에서 위/아래로 자리를 바꿨다. */
     ITEM_REORDERED,
     /** 다른 DAY 로 옮겼다. 두 DAY 가 함께 바뀐다. */
-    ITEM_MOVED
+    ITEM_MOVED,
+    ALTERNATIVE_ADDED,
+    ALTERNATIVE_UPDATED,
+    /** B 를 지워 C 가 B 자리로 올라온 경우도 화면에서는 같은 뜻이다. */
+    ALTERNATIVE_DELETED
 }

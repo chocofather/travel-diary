@@ -1,12 +1,16 @@
 /*
   공동 여행계획의 실시간 연결.
-  STOMP 연결은 이 파일 하나가 들고 있고, 그 위에서 두 가지를 구독한다.
+  STOMP 연결은 이 파일 하나가 들고 있고, 그 위에서 네 가지를 구독한다.
 
     presence : 누가 접속해 있는지
     schedule : 어떤 DAY 가 바뀌었는지
+    editor   : 누가 어디를 쓰고 있는지
+    chat     : 방 채팅
 
   브라우저 하나가 /ws 에 두 번 붙지 않도록 client 는 하나만 만든다.
-  일정 편집(travel-plan-scheduler.js)과는 DOM 이벤트로만 이야기한다.
+  일정 편집(travel-plan-scheduler.js)과는 DOM 이벤트로만 이야기하고,
+  채팅 화면(travel-plan-chat.js)에는 아래의 작은 연결 API 만 내어 준다.
+  이 파일은 연결만 맡고, 채팅 UI/기록/안 읽은 개수는 채팅 쪽이 맡는다.
 */
 document.addEventListener("DOMContentLoaded", () => {
     const planner = document.querySelector("[data-plan-id]");
@@ -63,6 +67,9 @@ document.addEventListener("DOMContentLoaded", () => {
         document.dispatchEvent(new CustomEvent("travelplan:schedule-updated", {
             detail: { root: fresh }
         }));
+        // 갈아 끼운 markup 에는 "편집 중" 표시가 없다.
+        // 아직 붙잡혀 있는 자리는 다시 표시해 준다.
+        remoteLocks.forEach(renderRemote);
     }
 
     /** 그 DAY 안에서 지금 무언가 편집 중인지. 편집 중이면 덮어쓰지 않는다. */
@@ -144,23 +151,40 @@ document.addEventListener("DOMContentLoaded", () => {
     const remoteLocks = new Map();
     /** 내가 지금 붙잡고 있는 자리. 한 번에 하나뿐이다. */
     let heldLock = null;
+    /** 그 자리의 자세한 정보. 어떤 A 밑의 대안인지 알아야 할 때 쓴다. */
+    let heldLockDetail = null;
     let requestSeq = 0;
 
-    function addKey(dayId) {
-        return `ADD:${dayId}`;
+    /** 자리 이름. 서버가 쓰는 규칙과 같아야 한다. */
+    function lockKeyOf(spot) {
+        if (spot.mode === "ALT_EDIT") return `ALT:${spot.alternativeId}`;
+        if (spot.mode === "ALT_ADD") return `ALT_ADD:${spot.itemId}`;
+        return spot.itemId ? `ITEM:${spot.itemId}` : `ADD:${spot.dayId}`;
     }
 
-    function itemKey(itemId) {
-        return `ITEM:${itemId}`;
-    }
-
+    /** 그 자리에 해당하는 화면 줄. */
     function lineOf(lock) {
         if (!lock) return null;
-        return lock.mode === "ADD"
-            ? document.querySelector(
-                `[data-travel-plan-day-id="${lock.dayId}"] [data-travel-plan-slot]`)
-            : document.querySelector(`[data-item-id="${lock.itemId}"]`);
+        if (lock.mode === "ALT_EDIT") {
+            return document.querySelector(`[data-alternative-id="${lock.alternativeId}"]`);
+        }
+        if (lock.mode === "ALT_ADD") {
+            return document.querySelector(
+                `[data-item-id="${lock.itemId}"] [data-travel-plan-alt-new]`);
+        }
+        if (lock.mode === "ADD") {
+            return document.querySelector(
+                `[data-travel-plan-day-id="${lock.dayId}"] [data-travel-plan-slot]`);
+        }
+        return document.querySelector(`[data-item-id="${lock.itemId}"]`);
     }
+
+    const REMOTE_LABELS = {
+        ADD: "일정 작성 중",
+        EDIT: "편집 중",
+        ALT_ADD: "대안 작성 중",
+        ALT_EDIT: "편집 중"
+    };
 
     /** 다른 사람이 쓰고 있다는 표시와 작성 중 글자를 그 자리에 보여 준다. */
     function renderRemote(lock) {
@@ -175,21 +199,44 @@ document.addEventListener("DOMContentLoaded", () => {
             note = document.createElement("p");
             note.className = "travel-plan-remote-note";
             note.setAttribute("data-travel-plan-remote-note", "");
-            const body = line.querySelector(".travel-plan-line-body") || line;
+            const body = line.querySelector(".travel-plan-line-body")
+                || line.querySelector(".travel-plan-alt-body")
+                || line;
             body.prepend(note);
         }
-        const label = lock.mode === "ADD" ? "일정 작성 중" : "편집 중";
+
+        // 대안은 조건과 내용 두 줄을 함께 보여 준다. 서버가 준 값을 그대로 쓴다.
+        const lines = [`${lock.displayName}님이 ${REMOTE_LABELS[lock.mode] || "편집 중"}`];
+        const condition = (lock.conditionLabel || "").trim();
         const draft = (lock.content || "").trim();
-        note.textContent = draft
-            ? `${lock.displayName}님이 ${label}\n${draft}`
-            : `${lock.displayName}님이 ${label}`;
+        if (condition) lines.push(`조건: ${condition}`);
+        if (draft) lines.push(draft);
+        note.textContent = lines.join("\n");
+
+        // 대안을 쓰는 동안에는 그 A 줄을 없애는 동작을 잠시 막는다.
+        if (lock.mode === "ALT_ADD" || lock.mode === "ALT_EDIT") {
+            const item = document.querySelector(`[data-item-id="${lock.itemId}"]`);
+            item?.classList.add("is-alt-editing");
+            // 대안 목록은 접혀 있는 것이 기본이라, 펴 두지 않으면 작성 중 글자가 보이지 않는다.
+            const list = item?.querySelector("[data-travel-plan-alt-list]");
+            if (list) {
+                list.hidden = false;
+                item.querySelector("[data-travel-plan-alt-toggle]")
+                    ?.setAttribute("aria-expanded", "true");
+            }
+        }
     }
 
     function clearRemote(lock) {
         const line = lineOf(lock);
-        if (!line) return;
-        line.classList.remove("is-remote-editing");
-        line.querySelector("[data-travel-plan-remote-note]")?.remove();
+        if (line) {
+            line.classList.remove("is-remote-editing");
+            line.querySelector("[data-travel-plan-remote-note]")?.remove();
+        }
+        if (lock && (lock.mode === "ALT_ADD" || lock.mode === "ALT_EDIT")) {
+            document.querySelector(`[data-item-id="${lock.itemId}"]`)
+                ?.classList.remove("is-alt-editing");
+        }
     }
 
     function applyLock(lock) {
@@ -239,6 +286,7 @@ document.addEventListener("DOMContentLoaded", () => {
         pendingLocks.delete(payload.requestId);
         if (payload.granted) {
             heldLock = payload.lock?.lockKey || null;
+            heldLockDetail = payload.lock || null;
             remoteLocks.delete(heldLock);
             // 방 전체 알림이 이 답보다 먼저 도착했을 수 있다.
             // 그때 내 화면에 붙은 "편집 중" 표시를 내 자리로 확정되는 지금 걷어낸다.
@@ -247,20 +295,53 @@ document.addEventListener("DOMContentLoaded", () => {
         waiting(payload);
     }
 
+    // ── 채팅 연결 ───────────────────────────────────────────
+    // 구독은 이 파일이 하고, 받은 것을 채팅 화면에 그대로 넘긴다.
+    const chatListeners = [];
+    const chatReplyListeners = [];
+    const reconnectListeners = [];
+
+    function notify(listeners, payload) {
+        listeners.forEach(listener => {
+            try {
+                listener(payload);
+            } catch (error) {
+                // 한 화면의 처리 실패가 다른 구독까지 끊지 않게 한다.
+            }
+        });
+    }
+
+    /** 연결돼 있을 때만 보낸다. 끊겨 있으면 보낸 척하지 않는다. */
+    function publishChat(action, body) {
+        if (!client.connected) return false;
+        client.publish({
+            destination: `/app/travel-plans/${planId}/chat/${action}`,
+            body: JSON.stringify(body)
+        });
+        return true;
+    }
+
     /*
-      편집 쪽(travel-plan-scheduler.js)이 쓰는 창구.
+      편집 쪽(travel-plan-scheduler.js)과 채팅 쪽(travel-plan-chat.js)이 쓰는 창구.
       연결은 이 파일 하나가 들고 있으므로 여기로만 오간다.
     */
     window.travelPlanRealtime = {
         /** 서버가 자리를 내줄 때까지 기다린다. 내주지 않으면 편집기를 열지 않는다. */
-        requestLock(dayId, itemId) {
+        requestLock(spot) {
             if (!client.connected) return Promise.resolve({ granted: false });
             const requestId = `lock-${++requestSeq}`;
             return new Promise(resolve => {
                 pendingLocks.set(requestId, resolve);
                 client.publish({
                     destination: `/app/travel-plans/${planId}/editor/lock`,
-                    body: JSON.stringify({ requestId, dayId, itemId: itemId ?? null })
+                    body: JSON.stringify({
+                        requestId,
+                        // 어떤 종류의 자리인지만 알린다. B 인지 C 인지는 서버가 정한다.
+                        mode: spot.mode || null,
+                        dayId: spot.dayId ?? null,
+                        itemId: spot.itemId ?? null,
+                        alternativeId: spot.alternativeId ?? null
+                    })
                 });
                 // 답이 오지 않으면 열지 않는다.
                 window.setTimeout(() => {
@@ -271,17 +352,27 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         },
 
-        sendDraft(content) {
+        /**
+         * 작성 중 값을 보낸다.
+         * 대안은 조건과 내용이 함께 오므로 상대 화면이 두 칸을 같은 시점 값으로 본다.
+         */
+        sendDraft(draft) {
             if (!heldLock || !client.connected) return;
+            const payload = typeof draft === "string" ? { content: draft } : (draft || {});
             client.publish({
                 destination: `/app/travel-plans/${planId}/editor/draft`,
-                body: JSON.stringify({ lockKey: heldLock, content })
+                body: JSON.stringify({
+                    lockKey: heldLock,
+                    conditionLabel: payload.conditionLabel || "",
+                    content: payload.content || ""
+                })
             });
         },
 
         releaseLock() {
             const lockKey = heldLock;
             heldLock = null;
+            heldLockDetail = null;
             if (!lockKey || !client.connected) return;
             client.publish({
                 destination: `/app/travel-plans/${planId}/editor/unlock`,
@@ -290,12 +381,57 @@ document.addEventListener("DOMContentLoaded", () => {
         },
 
         /** 다른 사람이 붙잡고 있는 자리인지. 열기 전에 화면이 먼저 확인한다. */
-        isLockedByOther(dayId, itemId) {
-            const key = itemId ? itemKey(itemId) : addKey(dayId);
+        isLockedByOther(spot) {
+            const key = lockKeyOf(spot);
             return key !== heldLock && remoteLocks.has(key);
         },
 
-        refreshDay
+        /** 이 A 일정 밑에서 누군가 대안을 쓰고 있는지. 그 줄을 없애는 동작을 잠시 막는다. */
+        hasAlternativeEditing(itemId) {
+            const prefix = [`ALT_ADD:${itemId}`];
+            if (remoteLocks.has(prefix[0]) || heldLock === prefix[0]) return true;
+            return Array.from(remoteLocks.values())
+                    .concat(heldLockDetail ? [heldLockDetail] : [])
+                    .some(lock => lock.mode === "ALT_EDIT"
+                            && String(lock.itemId) === String(itemId));
+        },
+
+        refreshDay,
+
+        /*
+          채팅 화면이 쓰는 연결 API.
+          새 StompJs.Client 를 만들지 않고 이 연결 위에 얹는다.
+
+          @param onEvent 방 전체로 오는 채팅 알림(MESSAGE_CREATED / MESSAGE_DELETED)
+          @param onReply 나에게만 오는 처리 결과(실패 사유, 안 읽은 개수)
+        */
+        subscribeChat(onEvent, onReply) {
+            if (onEvent) chatListeners.push(onEvent);
+            if (onReply) chatReplyListeners.push(onReply);
+        },
+
+        /** 끊겼다 다시 붙었을 때. 놓친 채팅을 그때 다시 맞춘다. */
+        onReconnected(handler) {
+            if (handler) reconnectListeners.push(handler);
+        },
+
+        /** 보낸 사람은 서버가 정한다. 여기서는 내용만 보낸다. */
+        sendChat(content) {
+            return publishChat("send", { content });
+        },
+
+        deleteChatMessage(messageId) {
+            return publishChat("delete", { messageId });
+        },
+
+        /** @param lastReadMessageId 없으면 서버가 이 방의 마지막 메시지로 본다 */
+        markChatRead(lastReadMessageId) {
+            return publishChat("read", { lastReadMessageId: lastReadMessageId ?? null });
+        },
+
+        isConnected() {
+            return client.connected;
+        }
     };
 
     // ── 연결 ────────────────────────────────────────────────
@@ -348,12 +484,32 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
 
+        // 채팅. 방 전체 알림과, 나에게만 오는 처리 결과 두 갈래다.
+        // 패널이 닫혀 있어도 구독은 유지한다. 그래야 안 읽은 개수가 쌓인다.
+        client.subscribe(`/topic/travel-plans/${planId}/chat`, message => {
+            try {
+                notify(chatListeners, JSON.parse(message.body));
+            } catch (error) {
+                // 알 수 없는 형식이면 화면을 건드리지 않는다.
+            }
+        });
+        client.subscribe("/user/queue/travel-plan-chat", message => {
+            try {
+                notify(chatReplyListeners, JSON.parse(message.body));
+            } catch (error) {
+                // 알 수 없는 형식이면 화면을 건드리지 않는다.
+            }
+        });
+
         client.publish({ destination: `/app/travel-plans/${planId}/presence/join` });
 
         if (connectedBefore) {
             resyncSchedule();
+            // 끊겨 있던 사이의 채팅은 다시 받을 수 없다. 채팅 쪽이 그때 다시 읽는다.
+            notify(reconnectListeners, null);
             // 끊겨 있던 사이에 사라진 옛 "편집 중" 표시가 남지 않게 지금 상태를 다시 받는다.
             heldLock = null;
+            heldLockDetail = null;
             clearAllRemote();
             client.publish({ destination: `/app/travel-plans/${planId}/editor/sync` });
         }

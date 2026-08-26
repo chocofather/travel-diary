@@ -3,6 +3,7 @@ package com.example.travlediary.service.travelplan;
 import com.example.travlediary.model.TravelPlanMember;
 import com.example.travlediary.model.TravelPlanMemberStatus;
 import com.example.travlediary.model.TravelPlanStatus;
+import com.example.travlediary.repository.travelplan.TravelPlanAlternativeMapper;
 import com.example.travlediary.repository.travelplan.TravelPlanItemMapper;
 import com.example.travlediary.repository.travelplan.TravelPlanMapper;
 import com.example.travlediary.security.CustomUserDetails;
@@ -27,6 +28,7 @@ public class TravelPlanRoomAccess {
 
     private final TravelPlanMapper travelPlanMapper;
     private final TravelPlanItemMapper travelPlanItemMapper;
+    private final TravelPlanAlternativeMapper travelPlanAlternativeMapper;
 
     /**
      * 지금 연결한 사람이 그 방의 ACTIVE 참여자인지 보고 방 안에서의 id 를 돌려준다.
@@ -72,6 +74,26 @@ public class TravelPlanRoomAccess {
         }
         // 새 일정 자리는 DAY 까지만 확인하면 된다.
         return itemId == null || travelPlanItemMapper.findByIdAndDayId(itemId, dayId) != null;
+    }
+
+    /**
+     * 대안을 편집하려는 자리가 정말 그 방의 것인지.
+     * 다른 방·다른 일정의 id 를 섞어 보내도 잠글 수 없어야 한다.
+     *
+     * @param alternativeId 새 대안 자리면 null. 이때는 아직 두 개가 차지 않았는지도 본다.
+     */
+    @Transactional(readOnly = true)
+    public boolean isEditableAlternativeSpot(Long travelPlanId, Long dayId, Long itemId,
+                                             Long alternativeId) {
+        if (itemId == null || !isEditableSpot(travelPlanId, dayId, itemId)) {
+            return false;
+        }
+        if (alternativeId != null) {
+            return travelPlanAlternativeMapper.findByIdAndItemId(alternativeId, itemId) != null;
+        }
+        // 이미 B/C 가 다 찼으면 새로 쓸 자리가 없다.
+        return travelPlanAlternativeMapper.countByItemId(itemId)
+                < TravelPlanService.MAX_ALTERNATIVES;
     }
 
     /**

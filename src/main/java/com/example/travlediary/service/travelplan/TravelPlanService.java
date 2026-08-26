@@ -42,7 +42,7 @@ public class TravelPlanService {
     /** travel_plan_item_alternatives.condition_label 은 varchar(100) */
     private static final int MAX_CONDITION_LABEL_LENGTH = 100;
     /** A 일정 하나가 가질 수 있는 대안 수. chk_travel_plan_item_alternatives_order 와 같은 값이다. */
-    private static final int MAX_ALTERNATIVES = 2;
+    static final int MAX_ALTERNATIVES = 2;
     /** 대안 중 A 자리로 올라가는 것은 항상 B(1번)다. */
     private static final int FIRST_ALTERNATIVE_ORDER = 1;
     private static final int SECOND_ALTERNATIVE_ORDER = 2;
@@ -312,6 +312,8 @@ public class TravelPlanService {
                     HttpStatus.INTERNAL_SERVER_ERROR, "대안을 저장하지 못했습니다.");
         }
         travelPlanMapper.touchLastActivity(travelPlanId);
+        publishScheduleChange(travelPlanId, dayId,
+                TravelPlanScheduleChangeType.ALTERNATIVE_ADDED);
     }
 
     /**
@@ -339,6 +341,8 @@ public class TravelPlanService {
             throw new TravelPlanConflictException();
         }
         travelPlanMapper.touchLastActivity(travelPlanId);
+        publishScheduleChange(travelPlanId, dayId,
+                TravelPlanScheduleChangeType.ALTERNATIVE_UPDATED);
     }
 
     /**
@@ -360,6 +364,9 @@ public class TravelPlanService {
             shiftSecondAlternativeUp(itemId);
         }
         travelPlanMapper.touchLastActivity(travelPlanId);
+        // C 가 B 자리로 올라온 결과까지 DAY 를 다시 읽어 그대로 보여 준다.
+        publishScheduleChange(travelPlanId, dayId,
+                TravelPlanScheduleChangeType.ALTERNATIVE_DELETED);
     }
 
     /** B 자리가 비었을 때 C 를 그 자리로 당긴다. 내용/조건/작성자는 그대로 둔다. */

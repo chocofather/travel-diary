@@ -51,6 +51,7 @@ class TravelPlanScheduleBroadcastTest {
     private static final Long DAY_ID = 100L;
     private static final Long TARGET_DAY_ID = 200L;
     private static final Long ITEM_ID = 500L;
+    private static final Long ALTERNATIVE_ID = 900L;
     private static final Long MEMBER_ID = 11L;
     private static final Integer VERSION = 3;
 
@@ -200,13 +201,56 @@ class TravelPlanScheduleBroadcastTest {
     }
 
     @Test
-    void alternativeChangesAreNotAnnouncedYet() {
-        // B/C 자체의 변경은 다음 단계다
+    void aNewAlternativeIsAnnouncedOnItsOwnDay() {
         givenItem();
         when(travelPlanAlternativeMapper.countByItemId(ITEM_ID)).thenReturn(0);
         when(travelPlanAlternativeMapper.insertAlternative(any())).thenReturn(1);
 
         travelPlanService.addAlternative(USER_ID, PLAN_ID, DAY_ID, ITEM_ID, null, "카페 투어");
+
+        assertThat(captureEvent()).isEqualTo(TravelPlanScheduleChangedEvent.ofDay(
+                PLAN_ID, DAY_ID, TravelPlanScheduleChangeType.ALTERNATIVE_ADDED));
+    }
+
+    @Test
+    void anEditedAlternativeIsAnnounced() {
+        givenItem();
+        givenAlternative(1);
+        when(travelPlanAlternativeMapper.updateWithVersion(
+                ALTERNATIVE_ID, ITEM_ID, null, "아쿠아플라넷", VERSION)).thenReturn(1);
+
+        travelPlanService.updateAlternative(USER_ID, PLAN_ID, DAY_ID, ITEM_ID,
+                ALTERNATIVE_ID, null, "아쿠아플라넷", VERSION);
+
+        assertThat(captureEvent()).isEqualTo(TravelPlanScheduleChangedEvent.ofDay(
+                PLAN_ID, DAY_ID, TravelPlanScheduleChangeType.ALTERNATIVE_UPDATED));
+    }
+
+    @Test
+    void aDeletedAlternativeIsAnnouncedOnceEvenWhenCMovesUp() {
+        // C 가 B 자리로 올라온 결과까지 한 번의 알림으로 그 DAY 를 다시 읽게 한다
+        givenItem();
+        givenAlternative(1);
+        when(travelPlanAlternativeMapper.deleteByIdAndItemId(ALTERNATIVE_ID, ITEM_ID))
+                .thenReturn(1);
+        when(travelPlanAlternativeMapper.findByItemIdAndOrder(ITEM_ID, 2)).thenReturn(null);
+
+        travelPlanService.deleteAlternative(USER_ID, PLAN_ID, DAY_ID, ITEM_ID, ALTERNATIVE_ID);
+
+        verify(eventPublisher, times(1)).publishEvent(any(Object.class));
+        assertThat(captureEvent()).isEqualTo(TravelPlanScheduleChangedEvent.ofDay(
+                PLAN_ID, DAY_ID, TravelPlanScheduleChangeType.ALTERNATIVE_DELETED));
+    }
+
+    @Test
+    void aRejectedAlternativeIsNotAnnounced() {
+        // 이미 B/C 가 다 찼으면 저장되지 않으므로 알릴 것도 없다
+        givenItem();
+        when(travelPlanAlternativeMapper.countByItemId(ITEM_ID)).thenReturn(2);
+
+        assertThatThrownBy(() -> travelPlanService.addAlternative(
+                USER_ID, PLAN_ID, DAY_ID, ITEM_ID, null, "카페 투어"))
+                .isInstanceOf(RuntimeException.class);
 
         verify(eventPublisher, never()).publishEvent(any(Object.class));
     }
@@ -280,6 +324,17 @@ class TravelPlanScheduleBroadcastTest {
         item.setDisplayOrder(displayOrder);
         item.setVersion(1);
         return item;
+    }
+
+    private void givenAlternative(int alternativeOrder) {
+        TravelPlanItemAlternative alternative = new TravelPlanItemAlternative();
+        alternative.setId(ALTERNATIVE_ID);
+        alternative.setTravelPlanItemId(ITEM_ID);
+        alternative.setAlternativeOrder(alternativeOrder);
+        alternative.setContent("아쿠아플라넷");
+        alternative.setVersion(VERSION);
+        when(travelPlanAlternativeMapper.findByIdAndItemId(ALTERNATIVE_ID, ITEM_ID))
+                .thenReturn(alternative);
     }
 
     private void givenItem() {

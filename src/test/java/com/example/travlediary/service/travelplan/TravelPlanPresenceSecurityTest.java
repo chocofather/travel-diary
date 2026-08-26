@@ -58,6 +58,9 @@ class TravelPlanPresenceSecurityTest {
     @Mock
     private com.example.travlediary.repository.travelplan.TravelPlanItemMapper travelPlanItemMapper;
     @Mock
+    private com.example.travlediary.repository.travelplan.TravelPlanAlternativeMapper
+            travelPlanAlternativeMapper;
+    @Mock
     private SimpMessagingTemplate simpMessagingTemplate;
 
     private TravelPlanRoomAccess roomAccess;
@@ -67,7 +70,8 @@ class TravelPlanPresenceSecurityTest {
 
     @BeforeEach
     void setUp() {
-        roomAccess = new TravelPlanRoomAccess(travelPlanMapper, travelPlanItemMapper);
+        roomAccess = new TravelPlanRoomAccess(
+                travelPlanMapper, travelPlanItemMapper, travelPlanAlternativeMapper);
         presence = new TravelPlanPresenceService();
         interceptor = new TravelPlanWebSocketAuthInterceptor(roomAccess);
         controller = new TravelPlanPresenceController(roomAccess, presence, simpMessagingTemplate);
@@ -182,6 +186,99 @@ class TravelPlanPresenceSecurityTest {
 
         assertThatThrownBy(() -> interceptor.preSend(
                 subscribe("/topic/travel-plans/43/schedule", principal()), null))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    // ── 채팅 ────────────────────────────────────────────────
+
+    @Test
+    void anActiveMemberMayWatchAndUseTheirOwnRoomsChat() {
+        givenActivePlan();
+        givenMembership(TravelPlanRole.MEMBER, TravelPlanMemberStatus.ACTIVE);
+
+        assertThatCode(() -> interceptor.preSend(
+                subscribe("/topic/travel-plans/42/chat", principal()), null))
+                .doesNotThrowAnyException();
+        for (String action : new String[]{"send", "delete", "read"}) {
+            assertThatCode(() -> interceptor.preSend(
+                    send("/app/travel-plans/42/chat/" + action, principal()), null))
+                    .doesNotThrowAnyException();
+        }
+    }
+
+    @Test
+    void whoeverLeftOrWasRemovedCannotWatchOrUseTheChat() {
+        givenActivePlan();
+        // ACTIVE 조건이 걸린 조회라 LEFT / REMOVED / 비참여자는 여기서 비어 온다
+        when(travelPlanMapper.findMemberByPlanAndUser(PLAN_ID, USER_ID, "ACTIVE")).thenReturn(null);
+
+        assertThatThrownBy(() -> interceptor.preSend(
+                subscribe("/topic/travel-plans/42/chat", principal()), null))
+                .isInstanceOf(AccessDeniedException.class);
+        // 이미 붙어 있던 연결이라도 보낼 때마다 다시 확인한다
+        assertThatThrownBy(() -> interceptor.preSend(
+                send("/app/travel-plans/42/chat/send", principal()), null))
+                .isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> interceptor.preSend(
+                send("/app/travel-plans/42/chat/delete", principal()), null))
+                .isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> interceptor.preSend(
+                send("/app/travel-plans/42/chat/read", principal()), null))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    void aChatOfAnotherRoomIsCheckedAgainstThatRoom() {
+        givenActivePlan();
+        givenMembership(TravelPlanRole.MEMBER, TravelPlanMemberStatus.ACTIVE);
+        when(travelPlanMapper.findPlanByIdAndStatus(OTHER_PLAN_ID, "ACTIVE"))
+                .thenReturn(activePlan(OTHER_PLAN_ID));
+        when(travelPlanMapper.findMemberByPlanAndUser(OTHER_PLAN_ID, USER_ID, "ACTIVE"))
+                .thenReturn(null);
+
+        assertThatThrownBy(() -> interceptor.preSend(
+                subscribe("/topic/travel-plans/43/chat", principal()), null))
+                .isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> interceptor.preSend(
+                send("/app/travel-plans/43/chat/send", principal()), null))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    void aRoomThatEndedIsClosedForChatting() {
+        when(travelPlanMapper.findPlanByIdAndStatus(PLAN_ID, "ACTIVE")).thenReturn(null);
+
+        assertThatThrownBy(() -> interceptor.preSend(
+                subscribe("/topic/travel-plans/42/chat", principal()), null))
+                .isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> interceptor.preSend(
+                send("/app/travel-plans/42/chat/send", principal()), null))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    void anUnknownChatDestinationIsRefused() {
+        givenActivePlan();
+        givenMembership(TravelPlanRole.MEMBER, TravelPlanMemberStatus.ACTIVE);
+
+        // 목적지에 방 번호가 적혀 있어도 정해 둔 것이 아니면 받지 않는다
+        assertThatThrownBy(() -> interceptor.preSend(
+                send("/app/travel-plans/42/chat/purge", principal()), null))
+                .isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> interceptor.preSend(
+                subscribe("/topic/travel-plans/42/chat/all", principal()), null))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    void theChatReplyQueueIsMineAlone() {
+        // 나에게만 오는 개인 큐라 방 검사를 따로 하지 않는다
+        assertThatCode(() -> interceptor.preSend(
+                subscribe("/user/queue/travel-plan-chat", principal()), null))
+                .doesNotThrowAnyException();
+        // 로그인은 여전히 필요하다
+        assertThatThrownBy(() -> interceptor.preSend(
+                subscribe("/user/queue/travel-plan-chat", null), null))
                 .isInstanceOf(AccessDeniedException.class);
     }
 

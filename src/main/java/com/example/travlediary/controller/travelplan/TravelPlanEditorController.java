@@ -49,23 +49,26 @@ public class TravelPlanEditorController {
         String requestId = text(payload.get("requestId"));
         Long dayId = number(payload.get("dayId"));
         Long itemId = number(payload.get("itemId"));
+        Long alternativeId = number(payload.get("alternativeId"));
+        boolean alternative = isAlternativeMode(text(payload.get("mode")));
 
-        // 다른 방의 dayId / itemId 를 섞어 보내도 여기서 걸린다.
-        if (!travelPlanRoomAccess.isEditableSpot(travelPlanId, dayId, itemId)) {
+        // 다른 방의 dayId / itemId / alternativeId 를 섞어 보내도 여기서 걸린다.
+        // 새 대안 자리는 이미 B/C 가 다 찼는지도 서버가 본다.
+        boolean allowed = alternative
+                ? travelPlanRoomAccess.isEditableAlternativeSpot(
+                        travelPlanId, dayId, itemId, alternativeId)
+                : travelPlanRoomAccess.isEditableSpot(travelPlanId, dayId, itemId);
+        if (!allowed) {
             throw new AccessDeniedException("편집할 수 없는 자리입니다.");
         }
 
-        boolean editing = itemId != null;
         EditorLock request = new EditorLock(
                 travelPlanId,
-                editing
-                        ? TravelPlanEditorRealtimeService.editLockKey(itemId)
-                        : TravelPlanEditorRealtimeService.addLockKey(dayId),
+                lockKeyOf(alternative, dayId, itemId, alternativeId),
                 headerAccessor.getSessionId(),
-                editing
-                        ? TravelPlanEditorRealtimeService.EDIT_MODE
-                        : TravelPlanEditorRealtimeService.ADD_MODE,
-                dayId, itemId, member.getId(), member.getDisplayName(), "");
+                modeOf(alternative, itemId, alternativeId),
+                dayId, itemId, alternative ? alternativeId : null,
+                member.getId(), member.getDisplayName(), "", "");
 
         // 이 연결이 쓰던 다른 자리는 새 자리를 잡을 때 함께 놓인다.
         // 놓인 자리도 알려야 다른 화면의 "편집 중" 표시가 사라진다.
@@ -97,10 +100,12 @@ public class TravelPlanEditorController {
                       SimpMessageHeaderAccessor headerAccessor) {
         requireMember(principal, travelPlanId);
 
+        // 대안은 조건과 내용이 늘 함께 온다. 상대 화면이 두 칸을 같은 시점 값으로 본다.
         travelPlanEditorRealtimeService.updateDraft(
                         travelPlanId,
                         text(payload.get("lockKey")),
                         headerAccessor.getSessionId(),
+                        text(payload.get("conditionLabel")),
                         text(payload.get("content")))
                 .ifPresent(lock -> broadcast(travelPlanId,
                         TravelPlanEditorEventDto.draft(lock.toDto())));
@@ -144,6 +149,38 @@ public class TravelPlanEditorController {
         travelPlanEditorRealtimeService.releaseAllBySession(event.getSessionId())
                 .forEach(lock -> broadcast(lock.travelPlanId(),
                         TravelPlanEditorEventDto.unlocked(lock.toDto())));
+    }
+
+    /** 대안 자리인지. 클라이언트가 알려 주는 것은 "어떤 종류의 자리인가" 까지다. */
+    private boolean isAlternativeMode(String mode) {
+        return TravelPlanEditorRealtimeService.ALT_ADD_MODE.equals(mode)
+                || TravelPlanEditorRealtimeService.ALT_EDIT_MODE.equals(mode);
+    }
+
+    /**
+     * 자리 이름. A 일정과 대안이 섞이지 않게 종류마다 다른 이름을 쓴다.
+     * B 인지 C 인지는 저장할 때 서버가 정하므로 새 대안 자리는 A 일정 하나당 하나다.
+     */
+    private String lockKeyOf(boolean alternative, Long dayId, Long itemId, Long alternativeId) {
+        if (alternative) {
+            return alternativeId != null
+                    ? TravelPlanEditorRealtimeService.alternativeEditLockKey(alternativeId)
+                    : TravelPlanEditorRealtimeService.alternativeAddLockKey(itemId);
+        }
+        return itemId != null
+                ? TravelPlanEditorRealtimeService.editLockKey(itemId)
+                : TravelPlanEditorRealtimeService.addLockKey(dayId);
+    }
+
+    private String modeOf(boolean alternative, Long itemId, Long alternativeId) {
+        if (alternative) {
+            return alternativeId != null
+                    ? TravelPlanEditorRealtimeService.ALT_EDIT_MODE
+                    : TravelPlanEditorRealtimeService.ALT_ADD_MODE;
+        }
+        return itemId != null
+                ? TravelPlanEditorRealtimeService.EDIT_MODE
+                : TravelPlanEditorRealtimeService.ADD_MODE;
     }
 
     private TravelPlanMember requireMember(Principal principal, Long travelPlanId) {

@@ -190,10 +190,11 @@ class TravelPlanAlternativeUiContractTest {
                 .contains("textarea.style.height = \"auto\"")
                 .contains("textarea.scrollHeight")
                 .doesNotContain("width");
-        // 편집을 열 때와 입력할 때 모두 높이를 맞춘다
-        assertThat(script)
-                .contains("textarea.addEventListener(\"input\", () => autoResize(textarea))")
-                .contains("form.hidden = false");
+        // 편집을 열 때와 입력할 때 모두 높이를 맞춘다.
+        // 입력 처리는 A 일정과 같은 공통 helper 한 곳에 있다
+        assertThat(between(script, "function bindEditableField", "field.addEventListener(\"keydown\""))
+                .contains("if (field.tagName === \"TEXTAREA\") autoResize(field);");
+        assertThat(script).contains("form.hidden = false");
     }
 
     @Test
@@ -304,9 +305,11 @@ class TravelPlanAlternativeUiContractTest {
     void thisStageStillHasNoTagOrLiveEditingUi() throws IOException {
         String detail = detailHtml();
 
-        for (String notYet : new String[]{"태그", "투표", "채팅", "최종 확정"}) {
+        for (String notYet : new String[]{"태그", "최종 확정"}) {
             assertThat(detail).as("아직 없는 기능: %s", notYet).doesNotContain(notYet);
         }
+        // 투표는 채팅 입력창 왼쪽에 자리만 잡아 두었고 아직 만들 수 있는 것이 없다
+        assertThat(detail).contains("투표 기능 준비 중").doesNotContain("투표 만들기</");
     }
 
     /**

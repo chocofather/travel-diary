@@ -1,5 +1,6 @@
 package com.example.travlediary.config;
 
+import com.example.travlediary.service.travelplan.TravelPlanChatDestinations;
 import com.example.travlediary.service.travelplan.TravelPlanEditorDestinations;
 import com.example.travlediary.service.travelplan.TravelPlanPresenceDestinations;
 import com.example.travlediary.service.travelplan.TravelPlanRoomAccess;
@@ -49,7 +50,7 @@ public class TravelPlanWebSocketAuthInterceptor implements ChannelInterceptor {
                 return message;
             }
             Long travelPlanId = subscribableTravelPlanId(destination);
-            // 지금 쓰는 topic 은 방별 접속 표시 / 일정 변경 / 작성 중 상태뿐이다.
+            // 지금 쓰는 topic 은 방별 접속 표시 / 일정 변경 / 작성 중 상태 / 채팅뿐이다.
             if (travelPlanId == null) {
                 throw new AccessDeniedException("구독할 수 없는 대상입니다.");
             }
@@ -59,23 +60,40 @@ public class TravelPlanWebSocketAuthInterceptor implements ChannelInterceptor {
         // 보내는 쪽도 막아야 한다. 목적지에 적힌 방 번호를 믿지 않는다.
         if (command == StompCommand.SEND) {
             Principal principal = requirePrincipal(accessor.getUser());
-            Long travelPlanId = TravelPlanEditorDestinations
-                    .sendTravelPlanIdOf(accessor.getDestination());
-            Long presencePlanId = TravelPlanPresenceDestinations
-                    .joinTravelPlanIdOf(accessor.getDestination());
-            if (travelPlanId == null && presencePlanId == null) {
+            Long travelPlanId = sendableTravelPlanId(accessor.getDestination());
+            if (travelPlanId == null) {
                 throw new AccessDeniedException("보낼 수 없는 대상입니다.");
             }
-            requireActiveMember(principal,
-                    travelPlanId != null ? travelPlanId : presencePlanId);
+            // 나갔거나 내보내진 뒤에도 연결이 남아 있을 수 있다. 보낼 때마다 다시 본다.
+            requireActiveMember(principal, travelPlanId);
         }
         return message;
     }
 
     /** 자기 앞으로만 오는 개인 큐. Spring 이 사용자별로 갈라 준다. */
     private boolean isOwnReplyQueue(String destination) {
-        return destination != null
-                && destination.startsWith("/user" + TravelPlanEditorDestinations.LOCK_REPLY_QUEUE);
+        if (destination == null) {
+            return false;
+        }
+        return destination.startsWith("/user" + TravelPlanEditorDestinations.LOCK_REPLY_QUEUE)
+                || destination.startsWith("/user" + TravelPlanChatDestinations.REPLY_QUEUE);
+    }
+
+    /**
+     * 보내도 되는 목적지에서 방 번호를 꺼낸다.
+     * 어느 쪽이든 그 방의 ACTIVE 참여자인지는 똑같이 확인한다.
+     *
+     * @return 허용하지 않는 목적지면 null
+     */
+    private Long sendableTravelPlanId(String destination) {
+        Long editorPlanId = TravelPlanEditorDestinations.sendTravelPlanIdOf(destination);
+        if (editorPlanId != null) {
+            return editorPlanId;
+        }
+        Long presencePlanId = TravelPlanPresenceDestinations.joinTravelPlanIdOf(destination);
+        return presencePlanId != null
+                ? presencePlanId
+                : TravelPlanChatDestinations.sendTravelPlanIdOf(destination);
     }
 
     private void requireActiveMember(Principal principal, Long travelPlanId) {
@@ -96,9 +114,13 @@ public class TravelPlanWebSocketAuthInterceptor implements ChannelInterceptor {
             return presencePlanId;
         }
         Long schedulePlanId = TravelPlanScheduleDestinations.travelPlanIdOf(destination);
-        return schedulePlanId != null
-                ? schedulePlanId
-                : TravelPlanEditorDestinations.travelPlanIdOf(destination);
+        if (schedulePlanId != null) {
+            return schedulePlanId;
+        }
+        Long editorPlanId = TravelPlanEditorDestinations.travelPlanIdOf(destination);
+        return editorPlanId != null
+                ? editorPlanId
+                : TravelPlanChatDestinations.travelPlanIdOf(destination);
     }
 
     private Principal requirePrincipal(Principal principal) {

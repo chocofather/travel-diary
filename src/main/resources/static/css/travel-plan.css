@@ -1065,6 +1065,15 @@
     color: #b0a493;
 }
 
+/*
+  남이 이 A 밑의 대안을 쓰는 중.
+  A 줄 자체는 그대로 읽고 고칠 수 있고, 그 줄을 없애거나 옮기는 것만 막는다.
+*/
+.travel-plan-line.is-alt-editing .travel-plan-item-menu-list form {
+    opacity: 0.45;
+    pointer-events: none;
+}
+
 /* ── 대안(B/C): A 아래에 들여쓰기된 메모처럼 붙는다. 카드가 아니다 ── */
 
 .travel-plan-alt-block {
@@ -1248,8 +1257,20 @@
     display: none;
 }
 
-.travel-plan-alt.is-new.is-editing {
+.travel-plan-alt.is-new.is-editing,
+/* 남이 새 대안을 쓰는 중이면 그 자리를 보여 주어야 작성 중 글자가 보인다 */
+.travel-plan-alt.is-new.is-remote-editing {
     display: flex;
+}
+
+/* 대안 칸도 A 줄과 같은 옅은 바탕으로 지금 누가 쓰는지 알린다 */
+.travel-plan-alt.is-remote-editing {
+    background: #fbf8f1;
+}
+
+.travel-plan-alt.is-remote-editing [data-travel-plan-alt-view] {
+    cursor: default;
+    color: #b0a493;
 }
 
 /* 편집 중에는 ⋯ 를 비워 둔다 */
@@ -1459,4 +1480,365 @@
 .travel-plan-item-form-actions {
     display: flex;
     justify-content: flex-end;
+}
+
+/* ───── 방 채팅 ───── */
+/*
+  종이 위가 아니라 화면 오른쪽 아래에 따로 떠 있는 패널이다.
+  말풍선을 강한 색으로 갈라 두지 않고, 플래너와 같은 종이 톤을 유지한다.
+*/
+
+.travel-plan-chat {
+    position: relative;
+    flex: 0 0 auto;
+}
+
+/* 참여자 / 초대와 같은 크기·위계로 둔다 */
+.travel-plan-chat-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border: 1px solid #e2dbcd;
+    border-radius: 4px;
+    background: #fffdf8;
+    color: #8b8378;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.travel-plan-chat-toggle:hover,
+.travel-plan-chat-toggle[aria-expanded="true"] {
+    color: #6b6259;
+    border-color: #d6cdb9;
+}
+
+/* 안 읽은 개수. 숫자가 있을 때만 보인다 */
+.travel-plan-chat-badge {
+    min-width: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: #b98c86;
+    color: #fffdf8;
+    font-size: 11px;
+    line-height: 18px;
+    text-align: center;
+}
+
+.travel-plan-chat-panel {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 40;
+    display: flex;
+    flex-direction: column;
+    /* 좁은 화면에서도 밖으로 넘치지 않게 남은 폭 안에서만 커진다 */
+    width: min(360px, calc(100vw - 32px));
+    max-height: min(560px, calc(100vh - 48px));
+    border: 1px solid #e2dbcd;
+    border-radius: 8px;
+    background: #fffdf8;
+    box-shadow: 0 12px 32px rgba(63, 52, 38, 0.16);
+    overflow: hidden;
+}
+
+/*
+  여기 display 를 정해 두면 브라우저 기본 [hidden] 규칙을 덮어써
+  hidden 을 걸어도 패널이 계속 보인다(닫기가 듣지 않는다).
+  그래서 hidden 일 때를 따로 적어 준다.
+*/
+.travel-plan-chat-panel[hidden] {
+    display: none;
+}
+
+.travel-plan-chat-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 1px solid #efe9dc;
+    background: #faf6ec;
+}
+
+.travel-plan-chat-panel-title {
+    margin: 0;
+    color: #6b6259;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.travel-plan-chat-header-actions {
+    display: flex;
+    gap: 2px;
+}
+
+.travel-plan-chat-header-button {
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: 4px;
+    background: none;
+    color: #a1968a;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.travel-plan-chat-header-button:hover {
+    background: #f2ece0;
+    color: #6b6259;
+}
+
+/* 접으면 머리글만 남는다 */
+.travel-plan-chat-panel.is-minimized .travel-plan-chat-body,
+.travel-plan-chat-panel.is-minimized .travel-plan-chat-form,
+.travel-plan-chat-panel.is-minimized .travel-plan-chat-jump,
+.travel-plan-chat-panel.is-minimized .travel-plan-chat-error {
+    display: none;
+}
+
+.travel-plan-chat-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 12px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* 더 가져올 이전 대화가 없을 때만 위에 조용히 놓인다 */
+.travel-plan-chat-start {
+    margin: 0 0 12px;
+    color: #c0b6a6;
+    font-size: 12px;
+    text-align: center;
+}
+
+.travel-plan-chat-empty {
+    margin: 24px 0;
+    color: #b0a493;
+    font-size: 13px;
+    line-height: 1.8;
+    text-align: center;
+}
+
+.travel-plan-chat-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+/*
+  이름 + 본문 + 작은 시간.
+  내 메시지와 남의 메시지가 같은 모양이다.
+  누가 썼는지는 이름 옆의 "(나)" 로만 구분하고,
+  바탕색이나 좌우 정렬로 가르지 않는다.
+  덩어리로 뭉쳐 보이지 않게 아주 연한 선으로만 사이를 나눈다.
+*/
+.travel-plan-chat-message {
+    position: relative;
+    padding: 10px 2px;
+    border-bottom: 1px solid #f2ece0;
+}
+
+/* 마지막 메시지 아래에는 선을 두지 않는다 */
+.travel-plan-chat-message:last-child {
+    border-bottom: none;
+}
+
+/* 이름 / 본문 / 시간 세 줄이 각각 구분되어 보이게 사이를 조금 띄운다 */
+.travel-plan-chat-sender {
+    margin: 0 0 4px;
+    color: #a1968a;
+    font-size: 12px;
+}
+
+.travel-plan-chat-content {
+    margin: 0;
+    color: #3f3426;
+    font-size: 14px;
+    line-height: 1.7;
+    /* 보낸 사람이 넣은 줄바꿈을 그대로 보여 준다 */
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+}
+
+.travel-plan-chat-message.is-deleted .travel-plan-chat-content {
+    color: #b0a493;
+    font-style: italic;
+}
+
+.travel-plan-chat-time {
+    display: block;
+    margin-top: 4px;
+    color: #c0b6a6;
+    font-size: 11px;
+    text-align: right;
+}
+
+/* 내 메시지에만 붙는다. 평소에는 거의 보이지 않는다 */
+.travel-plan-chat-menu {
+    position: absolute;
+    top: 8px;
+    right: 0;
+}
+
+.travel-plan-chat-menu-button {
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: none;
+    color: #cec5b6;
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+}
+
+.travel-plan-chat-message:hover .travel-plan-chat-menu-button,
+.travel-plan-chat-menu-button:focus-visible,
+.travel-plan-chat-menu-button[aria-expanded="true"] {
+    opacity: 1;
+    color: #8b8378;
+}
+
+.travel-plan-chat-menu-list {
+    position: absolute;
+    top: 22px;
+    right: 0;
+    z-index: 1;
+    min-width: 76px;
+    padding: 4px;
+    border: 1px solid #e2dbcd;
+    border-radius: 6px;
+    background: #fffdf8;
+    box-shadow: 0 6px 16px rgba(63, 52, 38, 0.12);
+}
+
+.travel-plan-chat-menu-action {
+    width: 100%;
+    padding: 5px 8px;
+    border: none;
+    border-radius: 4px;
+    background: none;
+    color: #8b8378;
+    font-family: inherit;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.travel-plan-chat-menu-action:hover {
+    background: #f7f2e7;
+    color: #b98c86;
+}
+
+/* 위에서 옛 대화를 읽는 중일 때만 나온다 */
+.travel-plan-chat-jump {
+    margin: 0 12px 8px;
+    padding: 5px 0;
+    border: 1px solid #e2dbcd;
+    border-radius: 4px;
+    background: #faf6ec;
+    color: #8b8378;
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.travel-plan-chat-error {
+    margin: 0 12px 8px;
+    color: #b98c86;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.travel-plan-chat-form {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    padding: 8px 10px;
+    border-top: 1px solid #efe9dc;
+    background: #faf6ec;
+}
+
+/* 다음 단계에서 [투표 만들기] 가 붙는 자리 */
+.travel-plan-chat-tools {
+    flex: 0 0 auto;
+}
+
+.travel-plan-chat-tool {
+    width: 28px;
+    height: 28px;
+    border: 1px solid #e2dbcd;
+    border-radius: 4px;
+    background: #fffdf8;
+    color: #a1968a;
+    font-family: inherit;
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.travel-plan-chat-tool:disabled {
+    color: #cec5b6;
+    cursor: not-allowed;
+}
+
+.travel-plan-chat-input {
+    flex: 1 1 auto;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    max-height: 120px;
+    padding: 6px 8px;
+    border: 1px solid #e2dbcd;
+    border-radius: 4px;
+    background: #fffdf8;
+    color: #3f3426;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.6;
+    /* 높이는 입력에 맞춰 스크립트가 늘린다 */
+    resize: none;
+    overflow-y: auto;
+}
+
+.travel-plan-chat-input:focus {
+    border-color: #b9a98f;
+    outline: 3px solid rgba(185, 169, 143, 0.18);
+}
+
+.travel-plan-chat-send {
+    flex: 0 0 auto;
+    padding: 6px 12px;
+    height: 28px;
+    border: 1px solid #d6cdb9;
+    border-radius: 4px;
+    background: #fffdf8;
+    color: #6b6259;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.travel-plan-chat-send:hover {
+    border-color: #b9a98f;
+}
+
+/* 좁은 화면에서는 아래에 붙여 양옆 여백만 남긴다 */
+@media (max-width: 480px) {
+    .travel-plan-chat-panel {
+        right: 8px;
+        left: 8px;
+        bottom: 8px;
+        width: auto;
+        max-height: min(70vh, calc(100vh - 16px));
+    }
 }

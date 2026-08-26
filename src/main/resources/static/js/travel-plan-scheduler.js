@@ -1,3 +1,17 @@
+/*
+  한글은 여러 번의 키 입력이 모여 한 글자가 된다(ㄱ -> 겨 -> 경).
+  조합이 끝나기 전의 Enter 는 글자를 확정하려는 것이지 확인/전송이 아니다.
+
+  일정 편집기와 채팅 입력이 같은 규칙을 써야 해서 판단을 한 곳에만 둔다.
+  브라우저마다 알려 주는 방법이 달라 세 가지를 모두 본다.
+  (조합 알고리즘을 직접 만들지 않는다. 글자 조합은 브라우저에 맡긴다)
+*/
+window.travelPlanIme = {
+    isComposing(event, composing) {
+        return composing || event.isComposing || event.keyCode === 229;
+    }
+};
+
 document.addEventListener("DOMContentLoaded", () => {
     const planner = document.querySelector("[data-plan-id]");
     if (!planner) return;
@@ -68,9 +82,27 @@ document.addEventListener("DOMContentLoaded", () => {
     /** 이 줄이 가리키는 자리. 새 일정이면 DAY, 기존 일정이면 그 일정이다. */
     function spotOf(line) {
         const day = line.closest("[data-travel-plan-day-id]");
+        const itemId = isItem(line) ? line.getAttribute("data-item-id") : null;
         return {
+            mode: itemId ? "EDIT" : "ADD",
             dayId: day ? day.getAttribute("data-travel-plan-day-id") : null,
-            itemId: isItem(line) ? line.getAttribute("data-item-id") : null
+            itemId
+        };
+    }
+
+    /**
+     * 대안 칸이 가리키는 자리.
+     * 새 대안이면 그 A 일정 하나에 자리가 하나뿐이다(B 인지 C 인지는 서버가 정한다).
+     */
+    function altSpotOf(node) {
+        const day = node.closest("[data-travel-plan-day-id]");
+        const item = node.closest("[data-travel-plan-item]");
+        const alternativeId = node.getAttribute("data-alternative-id");
+        return {
+            mode: alternativeId ? "ALT_EDIT" : "ALT_ADD",
+            dayId: day ? day.getAttribute("data-travel-plan-day-id") : null,
+            itemId: item ? item.getAttribute("data-item-id") : null,
+            alternativeId
         };
     }
 
@@ -90,10 +122,10 @@ document.addEventListener("DOMContentLoaded", () => {
         const spot = spotOf(line);
         const live = realtime();
         if (live) {
-            if (live.isLockedByOther(spot.dayId, spot.itemId)) return;
+            if (live.isLockedByOther(spot)) return;
             closeActive();
             closeAlt();
-            const result = await live.requestLock(spot.dayId, spot.itemId);
+            const result = await live.requestLock(spot);
             // 그 사이 다른 곳을 열었거나 자리를 못 받았으면 그만둔다.
             if (!result.granted || activeLine) return;
         } else {
@@ -113,7 +145,7 @@ document.addEventListener("DOMContentLoaded", () => {
         textarea?.focus();
         textarea?.setSelectionRange(textarea.value.length, textarea.value.length);
         // 열자마자 지금 값을 한 번 알려 다른 화면이 자리를 비워 두게 한다.
-        live?.sendDraft(textarea ? textarea.value : "");
+        live?.sendDraft({ content: textarea ? textarea.value : "" });
     }
 
     function originalContentOf(line) {
@@ -128,7 +160,12 @@ document.addEventListener("DOMContentLoaded", () => {
             notice = document.createElement("p");
             notice.className = "travel-plan-slot-error";
             notice.setAttribute("data-travel-plan-save-error", "");
-            (formOf(line) || line).append(notice);
+            // 편집기가 닫혀 있을 때 알리는 경우도 있어, 숨겨진 폼 안에 넣지 않는다.
+            const form = formOf(line);
+            const host = form && !form.hidden
+                ? form
+                : line.querySelector(".travel-plan-line-body") || line;
+            host.append(notice);
         }
         notice.textContent = message || "저장하지 못했습니다. 잠시 후 다시 시도해 주세요.";
     }
@@ -196,15 +233,20 @@ document.addEventListener("DOMContentLoaded", () => {
         if (dayId) live.refreshDay(dayId);
     }
 
-    function bind(line) {
-        const textarea = textareaOf(line);
-        if (!textarea) return;
+    /*
+      입력칸 하나에 붙는 공통 규칙. A 일정과 대안(B/C)이 똑같이 쓴다.
 
-        /*
-          한글은 여러 번의 키 입력이 모여 한 글자가 된다(ㄱ → 겨 → 경).
-          조합이 끝나기 전의 Enter 는 글자를 확정하려는 것이지 저장이 아니다.
-          그래서 조합 중에는 저장하지 않고, 조합이 끝난 순간의 완성된 값을 바로 알린다.
-        */
+      한글은 여러 번의 키 입력이 모여 한 글자가 된다(ㄱ → 겨 → 경).
+      조합이 끝나기 전의 Enter 는 글자를 확정하려는 것이지 저장이 아니다.
+      다만 화면에 이미 보이는 글자는 조합 중이라도 상대에게 그대로 보낸다.
+
+      @param readDraft 지금 보낼 값을 만들어 준다(대안은 조건과 내용 두 칸을 함께 싣는다)
+      @param onEnter   조합이 아닌 진짜 Enter 일 때 할 일. 없으면 Enter 를 흘려보낸다
+      @param onEscape  Esc 로 취소할 때 할 일
+      @param onBlur    같은 페이지 안에서 편집을 끝냈을 때 할 일. 없으면 아무것도 하지 않는다
+                       (창 전체가 비활성화된 것은 편집을 끝낸 것으로 보지 않는다)
+    */
+    function bindEditableField(field, { readDraft, onEnter, onEscape, onBlur }) {
         let composing = false;
         let draftTimer = null;
 
@@ -212,7 +254,7 @@ document.addEventListener("DOMContentLoaded", () => {
         function sendDraftNow() {
             window.clearTimeout(draftTimer);
             draftTimer = null;
-            realtime()?.sendDraft(textarea.value);
+            realtime()?.sendDraft(readDraft());
         }
 
         /*
@@ -224,21 +266,21 @@ document.addEventListener("DOMContentLoaded", () => {
             if (draftTimer) return;
             draftTimer = window.setTimeout(() => {
                 draftTimer = null;
-                realtime()?.sendDraft(textarea.value);
+                realtime()?.sendDraft(readDraft());
             }, 120);
         }
 
-        textarea.addEventListener("compositionstart", () => {
+        field.addEventListener("compositionstart", () => {
             composing = true;
         });
-        textarea.addEventListener("compositionend", () => {
+        field.addEventListener("compositionend", () => {
             composing = false;
             // 조합이 끝나 글자가 완성됐다. 지금 값을 곧바로 보낸다.
             sendDraftNow();
         });
 
-        textarea.addEventListener("input", () => {
-            autoResize(textarea);
+        field.addEventListener("input", () => {
+            if (field.tagName === "TEXTAREA") autoResize(field);
             /*
               조합 중에도 보낸다.
               한글은 마지막 글자가 한동안 조합 상태로 남아 있어서,
@@ -249,25 +291,46 @@ document.addEventListener("DOMContentLoaded", () => {
             sendDraftSoon();
         });
 
-        textarea.addEventListener("keydown", event => {
+        field.addEventListener("keydown", event => {
             if (event.key === "Escape") {
                 event.preventDefault();
-                closeActive();
+                onEscape();
                 return;
             }
             // 조합 중의 Enter 는 글자를 확정하는 것이라 저장으로 보지 않는다.
-            if (composing || event.isComposing || event.keyCode === 229) return;
+            if (window.travelPlanIme.isComposing(event, composing)) return;
             // Enter 는 저장, Shift+Enter 는 줄바꿈.
-            if (event.key === "Enter" && !event.shiftKey) {
+            if (event.key === "Enter" && !event.shiftKey && onEnter) {
                 event.preventDefault();
                 sendDraftNow();
-                save(line);
+                onEnter();
             }
         });
 
-        textarea.addEventListener("blur", () => {
-            if (submitting || composing) return;
-            save(line);
+        if (onBlur) {
+            field.addEventListener("blur", () => {
+                if (submitting || composing) return;
+                /*
+                  창 전체가 비활성화된 것뿐이라면 편집을 끝낸 것이 아니다.
+                  다른 창·다른 탭·다른 앱으로 옮겼다고 저장하거나 자리를 놓으면
+                  옆 창에서 이어 쓰려던 사람이 편집기와 작성 중 내용을 잃는다.
+                  같은 페이지 안에서 다른 곳을 눌렀을 때만 편집을 끝낸 것으로 본다.
+                */
+                if (!document.hasFocus()) return;
+                onBlur();
+            });
+        }
+    }
+
+    function bind(line) {
+        const textarea = textareaOf(line);
+        if (!textarea) return;
+
+        bindEditableField(textarea, {
+            readDraft: () => ({ content: textarea.value }),
+            onEnter: () => save(line),
+            onEscape: () => closeActive(),
+            onBlur: () => save(line)
         });
     }
 
@@ -298,6 +361,32 @@ document.addEventListener("DOMContentLoaded", () => {
         return node.querySelector("[data-travel-plan-alt-view]");
     }
 
+    function altConditionOf(node) {
+        return altFormOf(node)?.querySelector("input[name=\"conditionLabel\"]") || null;
+    }
+
+    function altTextareaOf(node) {
+        return altFormOf(node)?.querySelector("textarea") || null;
+    }
+
+    /** 지금 두 칸에 들어 있는 값. 조건과 내용은 늘 함께 보낸다. */
+    function altDraftOf(node) {
+        return {
+            conditionLabel: altConditionOf(node)?.value || "",
+            content: altTextareaOf(node)?.value || ""
+        };
+    }
+
+    /** 저장돼 있던 값. 바뀐 것이 없으면 굳이 UPDATE 를 보내지 않기 위한 것이다. */
+    function originalAltOf(node) {
+        const view = altViewOf(node);
+        return {
+            conditionLabel:
+                view?.querySelector(".travel-plan-alt-condition")?.textContent.trim() || "",
+            content: view?.querySelector(".travel-plan-alt-content")?.textContent.trim() || ""
+        };
+    }
+
     // 편집기를 닫는다. 저장된 대안은 원래 값으로 되돌리고, 새 대안은 비운다.
     function closeAlt() {
         if (!activeAlt) return;
@@ -309,26 +398,127 @@ document.addEventListener("DOMContentLoaded", () => {
             form.hidden = true;
         }
         if (view) view.hidden = false;
+        clearAltError(activeAlt);
         activeAlt.classList.remove("is-editing");
         activeAlt = null;
+        // A 일정과 같은 자리를 쓴다. 놓아야 다른 사람이 그 대안을 열 수 있다.
+        realtime()?.releaseLock();
         notifyEditorIdle();
     }
 
-    function openAlt(node) {
+    /**
+     * A 일정과 똑같이, 열기 전에 서버에서 그 자리를 받아 온다.
+     * 새 대안 자리는 그 A 일정마다 하나뿐이다(B 인지 C 인지는 저장할 때 서버가 정한다).
+     */
+    async function openAlt(node) {
         if (activeAlt === node) return;
-        closeActive();
-        closeAlt();
         const form = altFormOf(node);
         if (!form) return;
+
+        const spot = altSpotOf(node);
+        const live = realtime();
+        if (live) {
+            if (live.isLockedByOther(spot)) return;
+            closeActive();
+            closeAlt();
+            const result = await live.requestLock(spot);
+            // 그 사이 다른 곳을 열었거나 자리를 못 받았으면 그만둔다.
+            if (!result.granted || activeAlt || activeLine) return;
+        } else {
+            closeActive();
+            closeAlt();
+        }
+
         const view = altViewOf(node);
         if (view) view.hidden = true;
         form.hidden = false;
         node.classList.add("is-editing");
         activeAlt = node;
-        const textarea = form.querySelector("textarea");
+        const textarea = altTextareaOf(node);
         autoResize(textarea);
-        const first = form.querySelector("input[type=\"text\"]") || textarea;
+        const first = altConditionOf(node) || textarea;
         first?.focus();
+        // 열자마자 지금 값을 한 번 알려 다른 화면이 그 자리를 비워 두게 한다.
+        live?.sendDraft(altDraftOf(node));
+    }
+
+    function showAltError(node, message) {
+        let notice = node.querySelector("[data-travel-plan-alt-error]");
+        if (!notice) {
+            notice = document.createElement("p");
+            notice.className = "travel-plan-slot-error";
+            notice.setAttribute("data-travel-plan-alt-error", "");
+            (altFormOf(node) || node).append(notice);
+        }
+        notice.textContent = message || "저장하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+    }
+
+    function clearAltError(node) {
+        node.querySelector("[data-travel-plan-alt-error]")?.remove();
+    }
+
+    /**
+     * 기존 대안 POST endpoint 로 그대로 저장한다. 저장 경로는 바뀌지 않는다.
+     * A 일정과 같이 화면이 통째로 새로 뜨지 않도록 form submit 대신 직접 보낸다.
+     */
+    async function saveAlt(node) {
+        const form = altFormOf(node);
+        const textarea = altTextareaOf(node);
+        if (!form || !textarea) return;
+
+        const draft = altDraftOf(node);
+        // 내용이 비어 있으면 저장하지 않는다. 조건만 적힌 대안은 두지 않는다.
+        if (draft.content.trim() === "") {
+            closeAlt();
+            return;
+        }
+        const isExisting = node.hasAttribute("data-alternative-id");
+        if (isExisting) {
+            const original = originalAltOf(node);
+            if (draft.content.trim() === original.content
+                    && draft.conditionLabel.trim() === original.conditionLabel) {
+                closeAlt();
+                return;
+            }
+        }
+
+        submitting = true;
+        clearAltError(node);
+        const live = realtime();
+        if (!live) {
+            // 스크립트로 보낼 수 없으면 지금까지처럼 폼을 그대로 보낸다.
+            form.requestSubmit();
+            return;
+        }
+
+        const { dayId } = altSpotOf(node);
+        try {
+            const body = new FormData(form);
+            body.set("conditionLabel", draft.conditionLabel);
+            body.set("content", draft.content);
+            const response = await fetch(form.action, {
+                method: "POST",
+                headers: { "X-Requested-With": "XMLHttpRequest" },
+                body
+            });
+            if (!response.ok) {
+                // 입력을 날리지 않는다. 사유만 알리고 그 자리에서 다시 시도할 수 있게 둔다.
+                submitting = false;
+                showAltError(node, (await response.text()).trim());
+                textarea.focus();
+                return;
+            }
+        } catch (error) {
+            submitting = false;
+            showAltError(node, null);
+            textarea.focus();
+            return;
+        }
+
+        submitting = false;
+        // 저장된 뒤에는 DB 내용이 기준이다. 그 DAY 를 서버에서 다시 읽어 온다.
+        closeAlt();
+        if (dayId) live.refreshDay(dayId);
     }
 
     function listOf(line) {
@@ -370,25 +560,50 @@ document.addEventListener("DOMContentLoaded", () => {
             node.querySelector("[data-travel-plan-alt-cancel]")
                 ?.addEventListener("click", () => closeAlt());
 
-            const textarea = altFormOf(node)?.querySelector("textarea");
-            if (!textarea) return;
-            textarea.addEventListener("input", () => autoResize(textarea));
-            textarea.addEventListener("keydown", event => {
-                if (event.key === "Escape") {
-                    event.preventDefault();
-                    closeAlt();
-                    return;
-                }
-                // A 일정과 같다. Enter 는 저장, Shift+Enter 는 줄바꿈.
-                if (event.key === "Enter" && !event.shiftKey) {
-                    event.preventDefault();
-                    if (textarea.value.trim() === "") return;
-                    submitting = true;
-                    altFormOf(node).requestSubmit();
-                }
+            const form = altFormOf(node);
+            if (!form) return;
+            // 저장 버튼도 화면을 새로 띄우지 않고 같은 경로로 보낸다.
+            form.addEventListener("submit", event => {
+                event.preventDefault();
+                saveAlt(node);
+            });
+
+            /*
+              조건 칸과 내용 칸이 A 일정과 똑같은 입력 규칙을 쓴다.
+              (한글 조합 처리도 여기 한 곳에만 있다)
+              어느 칸을 치든 두 칸의 지금 값을 함께 보내,
+              상대 화면이 조건과 내용을 같은 시점 값으로 본다.
+            */
+            [altConditionOf(node), altTextareaOf(node)].forEach(field => {
+                if (!field) return;
+                bindEditableField(field, {
+                    readDraft: () => altDraftOf(node),
+                    onEnter: () => saveAlt(node),
+                    onEscape: () => closeAlt()
+                });
             });
         });
     });
+    }
+
+    /*
+      누군가 그 A 밑의 대안을 편집하는 중이면 A 를 지우거나 옮기지 않는다.
+      지우면 상대가 쓰던 대안이 통째로 사라지고, 옮기면 그 줄이 다른 DAY 로 가 버린다.
+      (표시는 실시간 쪽이 붙여 준다)
+    */
+    function blockWhileAlternativeEditing(root) {
+        root.querySelectorAll("[data-travel-plan-menu-list] form").forEach(form => {
+            form.addEventListener("submit", event => {
+                const line = form.closest("[data-travel-plan-item]");
+                if (!line) return;
+                const itemId = line.getAttribute("data-item-id");
+                const editing = line.classList.contains("is-alt-editing")
+                    || realtime()?.hasAlternativeEditing(itemId);
+                if (!editing) return;
+                event.preventDefault();
+                showSaveError(line, "다른 참여자가 이 일정의 대안을 편집 중입니다.");
+            });
+        });
     }
 
     // ⋯ 메뉴는 한 번에 하나만 열어 둔다.
@@ -409,7 +624,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (!list) return;
                 const willOpen = list.hidden;
                 // 편집 중이던 입력칸과 메뉴가 함께 열려 있지 않게 한다.
-                if (willOpen) closeActive();
+                if (willOpen) {
+                    closeActive();
+                    closeAlt();
+                    const line = button.closest("[data-travel-plan-item]");
+                    if (line) clearSaveError(line);
+                }
                 closeMenus(list);
                 list.hidden = !willOpen;
                 button.setAttribute("aria-expanded", String(willOpen));
@@ -426,6 +646,7 @@ document.addEventListener("DOMContentLoaded", () => {
         bindLines(root);
         bindAlternatives(root);
         bindItemMenus(root);
+        blockWhileAlternativeEditing(root);
     }
 
     bindScheduleRoot(planner);

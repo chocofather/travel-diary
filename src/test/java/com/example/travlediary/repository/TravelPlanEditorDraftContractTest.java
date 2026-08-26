@@ -29,10 +29,12 @@ class TravelPlanEditorDraftContractTest {
                 .contains("event.isComposing")
                 // 브라우저에 따라 조합 중 keyCode 가 229 로 온다
                 .contains("event.keyCode === 229")
-                .contains("if (composing || event.isComposing || event.keyCode === 229) return");
+                // 판단은 한 곳에만 두어 채팅 입력과 규칙이 달라지지 않게 한다
+                .contains("return composing || event.isComposing || event.keyCode === 229;")
+                .contains("if (window.travelPlanIme.isComposing(event, composing)) return");
 
         // 조합 검사가 Enter 저장보다 먼저 온다
-        int guard = scheduler.indexOf("if (composing || event.isComposing");
+        int guard = scheduler.indexOf("if (window.travelPlanIme.isComposing(event, composing))");
         int enterSave = scheduler.indexOf("event.key === \"Enter\" && !event.shiftKey");
         assertThat(guard).isGreaterThan(0);
         assertThat(guard).isLessThan(enterSave);
@@ -44,7 +46,7 @@ class TravelPlanEditorDraftContractTest {
 
         // 조합이 끝난 순간의 완성된 값은 모아 두지 않고 곧바로 보낸다
         String compositionEnd = between(scheduler,
-                "textarea.addEventListener(\"compositionend\"", "});");
+                "field.addEventListener(\"compositionend\"", "});");
         assertThat(compositionEnd)
                 .contains("composing = false")
                 .contains("sendDraftNow()");
@@ -57,7 +59,7 @@ class TravelPlanEditorDraftContractTest {
         // 조합 중이라고 보내지 않으면 마지막 글자가 상대 화면에 늦게 나타난다.
         // 브라우저가 주는 지금 값을 그대로 보낸다.
         String input = between(scheduler,
-                "textarea.addEventListener(\"input\"", "});");
+                "field.addEventListener(\"input\"", "});");
         assertThat(input)
                 .contains("sendDraftSoon()")
                 .doesNotContain("if (composing) return")
@@ -65,7 +67,7 @@ class TravelPlanEditorDraftContractTest {
 
         // 한글을 직접 조합하지 않는다
         assertThat(scheduler)
-                .contains("realtime()?.sendDraft(textarea.value)")
+                .contains("realtime()?.sendDraft(readDraft())")
                 .doesNotContain("charCodeAt")
                 .doesNotContain("0xAC00");
     }
@@ -78,7 +80,7 @@ class TravelPlanEditorDraftContractTest {
         // 그래서 늦게 발화해도 예전 글자로 되돌아갈 수 없다.
         String soon = between(scheduler, "function sendDraftSoon()", "\n        }");
         assertThat(soon)
-                .contains("realtime()?.sendDraft(textarea.value)")
+                .contains("realtime()?.sendDraft(readDraft())")
                 .doesNotContain("const value");
 
         // 조합이 끝나면 기다리던 것을 취소하고 최신 값을 곧바로 보낸다
@@ -86,7 +88,7 @@ class TravelPlanEditorDraftContractTest {
         assertThat(now)
                 .contains("window.clearTimeout(draftTimer)")
                 .contains("draftTimer = null")
-                .contains("realtime()?.sendDraft(textarea.value)");
+                .contains("realtime()?.sendDraft(readDraft())");
     }
 
     @Test
@@ -110,6 +112,78 @@ class TravelPlanEditorDraftContractTest {
         assertThat(scheduler).contains("if (submitting || composing) return");
     }
 
+    // ── 편집기가 언제 끝나는가 ──────────────────────────────
+
+    @Test
+    void movingToAnotherWindowDoesNotEndTheEditing() throws IOException {
+        String scheduler = schedulerJs();
+
+        /*
+          창을 옮기면 브라우저가 입력칸에 blur 를 준다.
+          그것을 "편집을 끝냈다" 로 보면 옆 창에서 이어 쓰려던 사람이
+          편집기와 작성 중 내용을 잃고, 자리까지 놓여 차단이 풀린다.
+          같은 페이지 안에서 다른 곳을 눌렀을 때만 끝난 것으로 본다.
+        */
+        String blur = between(scheduler, "field.addEventListener(\"blur\"", "});");
+        assertThat(blur).contains("if (!document.hasFocus()) return");
+        // 그 확인이 onBlur 보다 먼저다
+        assertThat(blur.indexOf("document.hasFocus()"))
+                .isLessThan(blur.indexOf("onBlur()"));
+    }
+
+    @Test
+    void losingFocusNeverCancelsOrLetsGoOfTheSpotByItself() throws IOException {
+        String scheduler = schedulerJs();
+        String realtime = realtimeJs();
+
+        // blur 자체가 취소나 unlock 을 직접 부르지 않는다
+        String blur = between(scheduler, "field.addEventListener(\"blur\"", "});");
+        assertThat(blur)
+                .doesNotContain("closeActive()")
+                .doesNotContain("closeAlt()")
+                .doesNotContain("releaseLock()");
+
+        // focusout / 창 blur / 화면 전환은 편집기 수명에 아예 관여하지 않는다
+        for (String source : new String[]{scheduler, realtime}) {
+            assertThat(source)
+                    .doesNotContain("focusout")
+                    .doesNotContain("visibilitychange")
+                    .doesNotContain("window.addEventListener(\"blur\"");
+        }
+    }
+
+    @Test
+    void theAlternativeEditorHasNoFocusOutSavingAtAll() throws IOException {
+        String scheduler = schedulerJs();
+
+        // 조건/내용 두 칸을 오갈 때 저장되면 안 되므로 대안은 onBlur 를 아예 주지 않는다
+        String bindAlt = between(scheduler, "function bindAlternatives(root)",
+                "function blockWhileAlternativeEditing");
+        assertThat(bindAlt).doesNotContain("onBlur");
+    }
+
+    @Test
+    void escapeAndTheCancelButtonAreWhatEndTheEditing() throws IOException {
+        String scheduler = schedulerJs();
+
+        // Esc 는 두 편집기 모두에서 취소로 이어진다
+        String keydown = between(scheduler, "field.addEventListener(\"keydown\"", "});");
+        assertThat(keydown)
+                .contains("event.key === \"Escape\"")
+                .contains("onEscape()");
+        assertThat(scheduler)
+                .contains("onEscape: () => closeActive()")
+                .contains("onEscape: () => closeAlt()")
+                // 취소 버튼도 같은 곳으로 간다
+                .contains("[data-travel-plan-alt-cancel]");
+
+        // 취소는 자리를 놓는다
+        assertThat(between(scheduler, "function closeActive()", "\n    }"))
+                .contains("realtime()?.releaseLock()");
+        assertThat(between(scheduler, "function closeAlt()", "\n    }"))
+                .contains("realtime()?.releaseLock()");
+    }
+
     @Test
     void typingIsSentInSmallBatchesNotPerKeystroke() throws IOException {
         String scheduler = schedulerJs();
@@ -117,7 +191,7 @@ class TravelPlanEditorDraftContractTest {
         String soon = between(scheduler, "function sendDraftSoon()", "}");
         assertThat(soon).contains("if (draftTimer) return");
         // 입력이 느껴질 만큼 길게 두지 않는다
-        int delay = Integer.parseInt(between(scheduler, "draftTimer = null;\n                realtime()?.sendDraft(textarea.value);\n            }, ", ")").replaceAll("\\D", ""));
+        int delay = Integer.parseInt(between(scheduler, "draftTimer = null;\n                realtime()?.sendDraft(readDraft());\n            }, ", ")").replaceAll("\\D", ""));
         assertThat(delay).isBetween(80, 150);
     }
 
@@ -128,11 +202,11 @@ class TravelPlanEditorDraftContractTest {
         String scheduler = schedulerJs();
 
         assertThat(scheduler)
-                .contains("await live.requestLock(spot.dayId, spot.itemId)")
+                .contains("await live.requestLock(spot)")
                 // 받지 못하면 열지 않는다
                 .contains("if (!result.granted || activeLine) return")
                 // 남이 쓰고 있으면 아예 시도하지 않는다
-                .contains("if (live.isLockedByOther(spot.dayId, spot.itemId)) return");
+                .contains("if (live.isLockedByOther(spot)) return");
 
         // 자리를 받는 것이 편집기를 여는 것보다 먼저다
         assertThat(scheduler.indexOf("requestLock("))
@@ -330,17 +404,104 @@ class TravelPlanEditorDraftContractTest {
         assertThat(service).contains("updateContent(itemId, dayId, normalizedContent, version)");
     }
 
-    // ── 이번 단계 범위 ──────────────────────────────────────
+    // ── 대안(B/C)도 같은 구조를 쓴다 ────────────────────────
 
     @Test
-    void onlyTheMainScheduleLineGetsThisTreatment() throws IOException {
+    void theAlternativeEditorAlsoOpensOnlyAfterTheServerHandsOverTheSpot() throws IOException {
         String scheduler = schedulerJs();
 
-        // B/C 편집기는 아직 자리를 잡지 않는다
-        String altOpen = between(scheduler, "function openAlt(node)", "function listOf(line)");
+        String altOpen = between(scheduler, "async function openAlt(node)", "function showAltError");
         assertThat(altOpen)
-                .doesNotContain("requestLock")
-                .doesNotContain("sendDraft");
+                .contains("live.isLockedByOther(spot)")
+                .contains("await live.requestLock(spot)")
+                .contains("if (!result.granted || activeAlt || activeLine) return")
+                .contains("live?.sendDraft(altDraftOf(node))");
+
+        // 자리를 받는 것이 편집기를 여는 것보다 먼저다
+        assertThat(altOpen.indexOf("requestLock("))
+                .isLessThan(altOpen.indexOf("node.classList.add(\"is-editing\")"));
+    }
+
+    @Test
+    void theAlternativeSpotNameSaysWhichKindOfSpotItIs() throws IOException {
+        String scheduler = schedulerJs();
+        String realtime = realtimeJs();
+
+        // 새 대안은 A 일정마다 하나, 저장된 B/C 는 각각 따로다
+        assertThat(between(scheduler, "function altSpotOf(node)", "\n    }"))
+                .contains("alternativeId ? \"ALT_EDIT\" : \"ALT_ADD\"");
+        assertThat(between(realtime, "function lockKeyOf(spot)", "\n    }"))
+                .contains("`ALT:${spot.alternativeId}`")
+                .contains("`ALT_ADD:${spot.itemId}`");
+    }
+
+    @Test
+    void theConditionAndTheContentTravelTogether() throws IOException {
+        String scheduler = schedulerJs();
+        String realtime = realtimeJs();
+        String controller = source("controller/travelplan/TravelPlanEditorController.java");
+
+        // 어느 칸을 치든 두 칸의 지금 값을 함께 보내, 상대가 같은 시점 값을 본다
+        assertThat(between(scheduler, "function altDraftOf(node)", "\n    }"))
+                .contains("conditionLabel")
+                .contains("content");
+        assertThat(between(realtime, "sendDraft(draft)", "\n        }"))
+                .contains("conditionLabel: payload.conditionLabel || \"\"")
+                .contains("content: payload.content || \"\"");
+        assertThat(controller)
+                .contains("text(payload.get(\"conditionLabel\"))")
+                .contains("text(payload.get(\"content\"))");
+    }
+
+    @Test
+    void theAlternativeUsesTheSameImeHelperAsTheMainLine() throws IOException {
+        String scheduler = schedulerJs();
+
+        // 한글 조합 처리가 두 벌 생기지 않게 공통 helper 하나만 둔다
+        assertThat(countOf(scheduler, "function bindEditableField")).isEqualTo(1);
+        assertThat(countOf(scheduler, "compositionstart")).isEqualTo(1);
+        String bindAlt = between(scheduler, "function bindAlternatives(root)",
+                "function blockWhileAlternativeEditing");
+        assertThat(bindAlt)
+                .contains("bindEditableField(field, {")
+                .contains("readDraft: () => altDraftOf(node)")
+                .contains("onEnter: () => saveAlt(node)")
+                .contains("onEscape: () => closeAlt()");
+    }
+
+    @Test
+    void savingAnAlternativeDoesNotReloadThePage() throws IOException {
+        String scheduler = schedulerJs();
+
+        // 기존 POST endpoint 그대로 보내고, 그 DAY 만 다시 읽는다
+        String save = between(scheduler, "async function saveAlt(node)", "\n    }");
+        assertThat(save)
+                .contains("fetch(form.action")
+                .contains("\"X-Requested-With\": \"XMLHttpRequest\"")
+                .contains("live.refreshDay(dayId)")
+                // 실패해도 입력을 날리지 않는다
+                .contains("showAltError(node,");
+    }
+
+    @Test
+    void closingTheAlternativeEditorLetsGoOfTheSpot() throws IOException {
+        String scheduler = schedulerJs();
+
+        assertThat(between(scheduler, "function closeAlt()", "\n    }"))
+                .contains("realtime()?.releaseLock()")
+                .contains("notifyEditorIdle()");
+    }
+
+    @Test
+    void theItemIsNotDeletedOrMovedWhileSomeoneEditsItsAlternative() throws IOException {
+        String scheduler = schedulerJs();
+        String css = css();
+
+        assertThat(between(scheduler, "function blockWhileAlternativeEditing(root)", "\n    }"))
+                .contains("is-alt-editing")
+                .contains("hasAlternativeEditing(itemId)")
+                .contains("event.preventDefault()");
+        assertThat(css).contains(".travel-plan-line.is-alt-editing .travel-plan-item-menu-list form");
     }
 
     private String schedulerJs() throws IOException {

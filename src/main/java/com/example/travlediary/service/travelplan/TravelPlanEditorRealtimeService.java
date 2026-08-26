@@ -26,6 +26,10 @@ public class TravelPlanEditorRealtimeService {
     public static final String ADD_MODE = "ADD";
     /** 기존 일정은 줄마다 따로 잡는다. */
     public static final String EDIT_MODE = "EDIT";
+    /** 새 대안 자리는 A 일정마다 하나뿐이다(B 인지 C 인지는 서버가 정한다). */
+    public static final String ALT_ADD_MODE = "ALT_ADD";
+    /** 기존 대안은 B/C 마다 따로 잡는다. */
+    public static final String ALT_EDIT_MODE = "ALT_EDIT";
 
     /** 방 -> 자리 -> 붙잡고 있는 연결 */
     private final Map<Long, Map<String, EditorLock>> roomLocks = new ConcurrentHashMap<>();
@@ -36,7 +40,10 @@ public class TravelPlanEditorRealtimeService {
     public record RoomKey(Long travelPlanId, String lockKey) {
     }
 
-    /** 붙잡고 있는 연결과 그 자리에서 쓰고 있는 내용. */
+    /**
+     * 붙잡고 있는 연결과 그 자리에서 쓰고 있는 내용.
+     * 대안은 조건과 내용 두 칸이라 조건도 함께 들고 다닌다(A 일정에서는 null).
+     */
     public record EditorLock(
             Long travelPlanId,
             String lockKey,
@@ -44,18 +51,20 @@ public class TravelPlanEditorRealtimeService {
             String mode,
             Long dayId,
             Long itemId,
+            Long alternativeId,
             Long memberId,
             String displayName,
+            String conditionLabel,
             String content) {
 
         public TravelPlanEditorLockDto toDto() {
-            return new TravelPlanEditorLockDto(
-                    lockKey, mode, dayId, itemId, content, memberId, displayName);
+            return new TravelPlanEditorLockDto(lockKey, mode, dayId, itemId, alternativeId,
+                    conditionLabel, content, memberId, displayName);
         }
 
-        EditorLock withContent(String newContent) {
-            return new EditorLock(travelPlanId, lockKey, sessionId, mode,
-                    dayId, itemId, memberId, displayName, newContent);
+        EditorLock withDraft(String newConditionLabel, String newContent) {
+            return new EditorLock(travelPlanId, lockKey, sessionId, mode, dayId, itemId,
+                    alternativeId, memberId, displayName, newConditionLabel, newContent);
         }
     }
 
@@ -67,6 +76,16 @@ public class TravelPlanEditorRealtimeService {
     /** 기존 일정 자리의 이름. */
     public static String editLockKey(Long itemId) {
         return "ITEM:" + itemId;
+    }
+
+    /** 새 대안 자리의 이름. A 일정마다 하나다. */
+    public static String alternativeAddLockKey(Long itemId) {
+        return ALT_ADD_MODE + ":" + itemId;
+    }
+
+    /** 기존 대안 자리의 이름. */
+    public static String alternativeEditLockKey(Long alternativeId) {
+        return "ALT:" + alternativeId;
     }
 
     /**
@@ -104,8 +123,8 @@ public class TravelPlanEditorRealtimeService {
      *
      * @return 반영된 상태, 자리를 붙잡고 있지 않으면 빈 결과
      */
-    public Optional<EditorLock> updateDraft(Long travelPlanId, String lockKey,
-                                            String sessionId, String content) {
+    public Optional<EditorLock> updateDraft(Long travelPlanId, String lockKey, String sessionId,
+                                            String conditionLabel, String content) {
         Map<String, EditorLock> locks = travelPlanId == null ? null : roomLocks.get(travelPlanId);
         if (locks == null || lockKey == null || sessionId == null) {
             return Optional.empty();
@@ -114,7 +133,8 @@ public class TravelPlanEditorRealtimeService {
         if (current == null || !current.sessionId().equals(sessionId)) {
             return Optional.empty();
         }
-        EditorLock updated = current.withContent(content);
+        // 조건과 내용은 늘 함께 온다. 상대 화면이 두 칸을 같은 시점의 값으로 본다.
+        EditorLock updated = current.withDraft(conditionLabel, content);
         // 그 사이 자리가 바뀌지 않았을 때만 반영한다.
         return locks.replace(lockKey, current, updated) ? Optional.of(updated) : Optional.empty();
     }

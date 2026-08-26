@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.travelplan.TravelPlanChatMapper">
+
+    <!--
+      보낸 사람 이름은 그 방의 travel_plan_members 에서 가져온다.
+      나갔거나 내보내진 사람이 남긴 메시지도 그대로 보여야 하므로 status 를 걸지 않는다.
+      LEFT JOIN 인 것은 sender_member_id 가 NULL 일 수 있기 때문이다.
+    -->
+    <sql id="messageColumns">
+        c.id, c.travel_plan_id, c.sender_member_id, c.message_type, c.content,
+        c.system_event_type, c.deleted_at, c.created_at,
+        m.display_name AS sender_display_name
+    </sql>
+
+    <!-- 최근 것부터 limit 건. (travel_plan_id, id) 인덱스를 그대로 탄다 -->
+    <select id="findRecentMessages"
+            resultType="com.example.travlediary.model.TravelPlanChatMessage">
+        SELECT
+        <include refid="messageColumns"/>
+        FROM travel_plan_chat_messages c
+                 LEFT JOIN travel_plan_members m ON m.id = c.sender_member_id
+        WHERE c.travel_plan_id = #{travelPlanId}
+        ORDER BY c.id DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- [이전 메시지 보기]. OFFSET 으로 앞을 세지 않고 id 로 끊는다 -->
+    <select id="findMessagesBefore"
+            resultType="com.example.travlediary.model.TravelPlanChatMessage">
+        SELECT
+        <include refid="messageColumns"/>
+        FROM travel_plan_chat_messages c
+                 LEFT JOIN travel_plan_members m ON m.id = c.sender_member_id
+        WHERE c.travel_plan_id = #{travelPlanId}
+          AND c.id &lt; #{beforeMessageId}
+        ORDER BY c.id DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 메시지 1건. 방 소속까지 함께 확인한다 -->
+    <select id="findByIdAndPlanId"
+            resultType="com.example.travlediary.model.TravelPlanChatMessage">
+        SELECT
+        <include refid="messageColumns"/>
+        FROM travel_plan_chat_messages c
+                 LEFT JOIN travel_plan_members m ON m.id = c.sender_member_id
+        WHERE c.id = #{id}
+          AND c.travel_plan_id = #{travelPlanId}
+    </select>
+
+    <!-- 이 방의 마지막 메시지. 읽음 위치를 최신으로 옮길 때 쓴다 -->
+    <select id="findLatestMessageId" resultType="java.lang.Long">
+        SELECT MAX(id)
+        FROM travel_plan_chat_messages
+        WHERE travel_plan_id = #{travelPlanId}
+    </select>
+
+    <insert id="insertMessage" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO travel_plan_chat_messages
+            (travel_plan_id, sender_member_id, message_type, content)
+        VALUES (#{travelPlanId}, #{senderMemberId}, #{messageType}, #{content})
+    </insert>
+
+    <!--
+      지움 표시. 행은 그대로 두고 deleted_at 만 채운다.
+      보낸 사람 조건이 SQL 안에 있어 남의 메시지는 여기서 0 건이 된다.
+      이미 지워진 것도 deleted_at IS NULL 에서 걸러져 두 번 지워지지 않는다.
+    -->
+    <update id="markMessageDeleted">
+        UPDATE travel_plan_chat_messages
+        SET deleted_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND travel_plan_id = #{travelPlanId}
+          AND sender_member_id = #{senderMemberId}
+          AND deleted_at IS NULL
+    </update>
+
+    <select id="findLastReadMessageId" resultType="java.lang.Long">
+        SELECT last_read_message_id
+        FROM travel_plan_chat_read_positions
+        WHERE travel_plan_id = #{travelPlanId}
+          AND member_id = #{memberId}
+    </select>
+
+    <!--
+      (travel_plan_id, member_id) UNIQUE 가 있어 한 문장으로 넣고 고칠 수 있다.
+      GREATEST 로 두어 늦게 도착한 옛 위치가 읽음을 뒤로 되돌리지 못하게 한다.
+    -->
+    <insert id="upsertReadPosition">
+        INSERT INTO travel_plan_chat_read_positions
+            (travel_plan_id, member_id, last_read_message_id, last_read_at)
+        VALUES (#{travelPlanId}, #{memberId}, #{lastReadMessageId}, CURRENT_TIMESTAMP)
+        ON DUPLICATE KEY UPDATE
+            last_read_message_id = GREATEST(
+                    COALESCE(last_read_message_id, 0), #{lastReadMessageId}),
+            last_read_at = CURRENT_TIMESTAMP
+    </insert>
+
+    <!--
+      안 읽은 개수.
+      내가 보낸 것은 세지 않고, 지워진 것과 시스템 알림도 세지 않는다.
+      한 번도 읽지 않았으면 이 방의 남의 메시지 전부가 안 읽은 것이다.
+    -->
+    <select id="countUnread" resultType="int">
+        SELECT COUNT(*)
+        FROM travel_plan_chat_messages
+        WHERE travel_plan_id = #{travelPlanId}
+          AND message_type = 'USER'
+          AND deleted_at IS NULL
+          AND (sender_member_id IS NULL OR sender_member_id &lt;&gt; #{memberId})
+        <if test="lastReadMessageId != null">
+            AND id &gt; #{lastReadMessageId}
+        </if>
+    </select>
+</mapper>

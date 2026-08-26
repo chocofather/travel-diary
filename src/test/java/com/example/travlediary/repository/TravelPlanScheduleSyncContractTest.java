@@ -66,8 +66,9 @@ class TravelPlanScheduleSyncContractTest {
         // 브라우저 하나가 /ws 에 두 번 붙지 않는다
         assertThat(countOf(realtime, "new StompJs.Client")).isEqualTo(1);
         assertThat(countOf(realtime, "client.activate()")).isEqualTo(1);
-        // presence / schedule / editor / 내 잠금 응답 네 갈래가 한 연결 위에 있다
-        assertThat(countOf(realtime, "client.subscribe(")).isEqualTo(4);
+        // presence / schedule / editor / 내 잠금 응답 / 채팅 / 내 채팅 응답이
+        // 모두 한 연결 위에 있다
+        assertThat(countOf(realtime, "client.subscribe(")).isEqualTo(6);
     }
 
     @Test
@@ -155,15 +156,24 @@ class TravelPlanScheduleSyncContractTest {
         String realtime = realtimeJs();
         String fragment = fragmentHtml();
 
-        // WebSocket 으로 보내는 것은 접속 인사와 작성 중 상태(잠금/임시내용/해제/동기화)뿐이다.
-        // 저장 계열 destination 은 없다
-        assertThat(countOf(realtime, "client.publish(")).isEqualTo(5);
+        /*
+          WebSocket 으로 보내는 것은 접속 인사, 작성 중 상태(잠금/임시내용/해제/동기화),
+          그리고 채팅뿐이다. 일정 저장 계열 destination 은 없다.
+          (채팅은 대화 자체가 DB 에 남아야 하는 것이라 WebSocket 으로 보낸다.
+           일정은 지금까지처럼 기존 HTTP POST 폼 그대로다)
+        */
+        assertThat(countOf(realtime, "client.publish(")).isEqualTo(6);
         assertThat(realtime)
                 .contains("/app/travel-plans/${planId}/presence/join")
                 .contains("/app/travel-plans/${planId}/editor/lock")
                 .contains("/app/travel-plans/${planId}/editor/draft")
                 .contains("/app/travel-plans/${planId}/editor/unlock")
-                .contains("/app/travel-plans/${planId}/editor/sync");
+                .contains("/app/travel-plans/${planId}/editor/sync")
+                .contains("/app/travel-plans/${planId}/chat/${action}");
+        // 일정을 WebSocket 으로 저장하지 않는다
+        assertThat(realtime)
+                .doesNotContain("/app/travel-plans/${planId}/items")
+                .doesNotContain("/app/travel-plans/${planId}/days");
         // 기존 POST 폼은 그대로다
         assertThat(fragment)
                 .contains("/items/${item.id}/update|}")
@@ -173,14 +183,19 @@ class TravelPlanScheduleSyncContractTest {
     }
 
     @Test
-    void alternativeChangesAreNotBroadcastYet() throws IOException {
+    void alternativeChangesAreBroadcastOnTheirOwnDay() throws IOException {
         String service = source("service/travelplan/TravelPlanService.java");
 
-        // B/C 자체 변경은 다음 단계다. A 동작에서만 알린다
-        String addAlternative = between(service, "public void addAlternative(", "public void updateAlternative(");
-        assertThat(addAlternative).doesNotContain("publishScheduleChange");
-        String updateAlternative = between(service, "public void updateAlternative(", "public void deleteAlternative(");
-        assertThat(updateAlternative).doesNotContain("publishScheduleChange");
+        // A 와 같은 경로로 알린다. 대안 전용 알림 통로를 따로 만들지 않는다
+        assertThat(between(service, "public void addAlternative(", "public void updateAlternative("))
+                .contains("publishScheduleChange(travelPlanId, dayId")
+                .contains("ALTERNATIVE_ADDED");
+        assertThat(between(service, "public void updateAlternative(", "public void deleteAlternative("))
+                .contains("publishScheduleChange(travelPlanId, dayId")
+                .contains("ALTERNATIVE_UPDATED");
+        assertThat(between(service, "public void deleteAlternative(", "private void shiftSecondAlternativeUp("))
+                .contains("publishScheduleChange(travelPlanId, dayId")
+                .contains("ALTERNATIVE_DELETED");
     }
 
     private String detailHtml() throws IOException {

@@ -8,6 +8,8 @@
   <!-- 접속 표시. STOMP 클라이언트는 CDN 이 아니라 WebJar 로 함께 배포한다 -->
   <script src="/webjars/stomp__stompjs/7.0.0/bundles/stomp.umd.min.js" defer></script>
   <script src="/js/travel-plan-realtime.js" defer></script>
+  <!-- 채팅 UI. STOMP 연결은 위 realtime 이 들고 있는 것을 그대로 쓴다 -->
+  <script src="/js/travel-plan-chat.js" defer></script>
 </th:block>
 
 <th:block th:fragment="body">
@@ -134,6 +136,29 @@
         </div>
 
         <!--
+          채팅. 방의 ACTIVE 멤버라면 OWNER / MEMBER 모두 같다.
+          data-current-member-id 는 방 안에서만 뜻이 있는 값이라 화면에 두어도 된다.
+          내 메시지인지 가리는 데만 쓰고 계정 정보는 오가지 않는다.
+        -->
+        <!--
+          방 번호는 data-chat-plan-id 로 둔다.
+          data-plan-id 를 쓰면 스케줄러/실시간이 찾는 첫 [data-plan-id] 가
+          종이(.travel-plan-paper)가 아니라 이 버튼이 되어 일정 동작이 붙지 않는다.
+        -->
+        <div class="travel-plan-chat" th:if="${travelPlan.currentMember != null}"
+             data-travel-plan-chat
+             th:attr="data-chat-plan-id=${travelPlan.plan.id},
+                      data-current-member-id=${travelPlan.currentMember.id}">
+          <button type="button" class="travel-plan-chat-toggle"
+                  aria-expanded="false" data-travel-plan-chat-toggle>
+            채팅
+            <!-- 안 읽은 개수. 서버에서 받은 값만 넣는다 -->
+            <span class="travel-plan-chat-badge" hidden
+                  data-travel-plan-chat-badge aria-label="안 읽은 메시지">0</span>
+          </button>
+        </div>
+
+        <!--
           초대는 OWNER 에게만 보이는 상단 보조 액션이다.
           살아 있는 링크는 저장된 암호문을 풀어 언제든 다시 보여 준다.
         -->
@@ -239,6 +264,67 @@
       </div>
 
     </article>
+
+    <!--
+      채팅 패널. 종이 위가 아니라 화면 오른쪽 아래에 따로 떠 있다.
+      대화는 여기서 그리지 않는다. 패널을 처음 열 때 서버에서 받아 온다.
+      (상세 화면을 열었다고 대화 전체를 함께 내려보내지 않는다)
+    -->
+    <section class="travel-plan-chat-panel" hidden aria-label="여행 채팅"
+             th:if="${travelPlan.currentMember != null}"
+             data-travel-plan-chat-panel>
+      <header class="travel-plan-chat-header">
+        <h2 class="travel-plan-chat-panel-title">여행 채팅</h2>
+        <div class="travel-plan-chat-header-actions">
+          <button type="button" class="travel-plan-chat-header-button"
+                  aria-label="채팅 접기" data-travel-plan-chat-minimize>─</button>
+          <button type="button" class="travel-plan-chat-header-button"
+                  aria-label="채팅 닫기" data-travel-plan-chat-close>×</button>
+        </div>
+      </header>
+
+      <div class="travel-plan-chat-body" data-travel-plan-chat-body>
+        <!--
+          위로 올리면 이전 대화를 알아서 가져온다. 누를 버튼은 두지 않는다.
+          더 가져올 것이 없을 때만 여기가 보인다.
+        -->
+        <p class="travel-plan-chat-start" hidden data-travel-plan-chat-start>
+          대화의 시작이에요.
+        </p>
+
+        <p class="travel-plan-chat-empty" hidden data-travel-plan-chat-empty>
+          아직 대화가 없어요.<br>
+          여행 계획에 대해 이야기를 시작해보세요.
+        </p>
+
+        <!-- 메시지는 전부 스크립트가 글자로만 넣는다 -->
+        <ol class="travel-plan-chat-list" data-travel-plan-chat-list></ol>
+      </div>
+
+      <!-- 위에서 옛 대화를 읽는 중일 때만 나온다 -->
+      <button type="button" class="travel-plan-chat-jump" hidden
+              data-travel-plan-chat-jump>새 메시지</button>
+
+      <p class="travel-plan-chat-error" hidden role="alert"
+         data-travel-plan-chat-error></p>
+
+      <form class="travel-plan-chat-form" data-travel-plan-chat-form>
+        <!--
+          입력창 왼쪽 도구 자리.
+          다음 단계에서 여기에 [투표 만들기] 가 붙는다.
+          지금은 아직 만들 수 있는 것이 없어 눌리지 않게 둔다.
+        -->
+        <div class="travel-plan-chat-tools" data-travel-plan-chat-tools>
+          <button type="button" class="travel-plan-chat-tool" disabled
+                  title="투표 기능 준비 중" aria-label="투표 만들기 (준비 중)">+</button>
+        </div>
+        <textarea class="travel-plan-chat-input" rows="1" autocomplete="off"
+                  maxlength="2000" placeholder="메시지 입력..."
+                  aria-label="메시지 입력" data-travel-plan-chat-input></textarea>
+        <button type="submit" class="travel-plan-chat-send"
+                data-travel-plan-chat-send>전송</button>
+      </form>
+    </section>
   </div>
 </th:block>
 </html>

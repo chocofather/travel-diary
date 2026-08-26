@@ -235,14 +235,20 @@ public class TravelPlanController {
                                  @PathVariable Long itemId,
                                  @ModelAttribute TravelPlanAlternativeForm form,
                                  @AuthenticationPrincipal CustomUserDetails userDetails,
-                                 RedirectAttributes redirectAttributes) {
+                                 HttpServletRequest request,
+                                 HttpServletResponse response,
+                                 RedirectAttributes redirectAttributes) throws IOException {
         try {
             travelPlanService.addAlternative(userDetails.getId(), travelPlanId, dayId, itemId,
                     form.getConditionLabel(), form.getContent());
         } catch (TravelPlanValidationException exception) {
+            if (isAjax(request)) {
+                return writeError(response, exception.getMessage());
+            }
             redirectAttributes.addFlashAttribute("travelPlanError", exception.getMessage());
+            return redirectToDay(travelPlanId, dayId);
         }
-        return redirectToDay(travelPlanId, dayId);
+        return isAjax(request) ? noContent(response) : redirectToDay(travelPlanId, dayId);
     }
 
     // 대안(B/C) 수정
@@ -254,14 +260,20 @@ public class TravelPlanController {
                                     @PathVariable Long alternativeId,
                                     @ModelAttribute TravelPlanAlternativeForm form,
                                     @AuthenticationPrincipal CustomUserDetails userDetails,
-                                    RedirectAttributes redirectAttributes) {
+                                    HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    RedirectAttributes redirectAttributes) throws IOException {
         try {
             travelPlanService.updateAlternative(userDetails.getId(), travelPlanId, dayId, itemId,
                     alternativeId, form.getConditionLabel(), form.getContent(), form.getVersion());
         } catch (TravelPlanValidationException | TravelPlanConflictException exception) {
+            if (isAjax(request)) {
+                return writeError(response, exception.getMessage());
+            }
             redirectAttributes.addFlashAttribute("travelPlanError", exception.getMessage());
+            return redirectToDay(travelPlanId, dayId);
         }
-        return redirectToDay(travelPlanId, dayId);
+        return isAjax(request) ? noContent(response) : redirectToDay(travelPlanId, dayId);
     }
 
     // 대안(B/C) 삭제
