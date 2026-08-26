@@ -29,7 +29,7 @@ class TravelPlanPollMapperContractTest {
                 + "TravelPlanPollMapper\"");
         for (String id : new String[]{
                 "insertPoll", "insertOption", "findOpenPolls", "findClosedPolls",
-                "findRecentPolls", "findPollsBefore",
+                "findRecentPolls", "findPollsBefore", "closePoll", "countPollsByStatus",
                 "findByIdAndPlanId", "findOptionsByPollIds"}) {
             assertThat(mapperInterface).as("interface declares %s", id).contains(id);
             assertThat(mapper).as("xml defines %s", id).contains("id=\"" + id + "\"");
@@ -173,6 +173,35 @@ class TravelPlanPollMapperContractTest {
                 .contains("DELETE FROM travel_plan_poll_vote_selections")
                 .contains("WHERE vote_id = #{voteId}");
         assertThat(mapper).doesNotContain("DELETE FROM travel_plan_poll_votes");
+    }
+
+    @Test
+    void aPollCanOnlyBeClosedOnce() throws IOException {
+        String update = between(mapperXml(), "<update id=\"closePoll\"", "</update>");
+
+        /*
+          직접 마감·전원 투표·시간 만료가 동시에 닿을 수 있다.
+          아직 열려 있을 때만 반영되게 해 한 번만 성공하고, 알림도 한 번만 나가게 한다.
+        */
+        assertThat(update)
+                .contains("UPDATE travel_plan_polls")
+                .contains("status = 'CLOSED'")
+                .contains("close_reason = #{closeReason}")
+                .contains("closed_at = CURRENT_TIMESTAMP")
+                .contains("AND status = 'OPEN'");
+    }
+
+    @Test
+    void nothingClosesAPollByTheClockAnyMore() throws IOException {
+        String mapper = mapperXml();
+
+        // 시각으로 끝나는 투표는 없앴다. 마감 시각을 보는 조회도 남기지 않는다
+        assertThat(mapper)
+                .doesNotContain("deadline_at &lt;=")
+                .doesNotContain("close_type = 'DEADLINE'");
+        // 새 투표는 마감 시각을 아예 채우지 않는다
+        assertThat(between(mapper, "<insert id=\"insertPoll\"", "</insert>"))
+                .contains("deadline_at");
     }
 
     @Test

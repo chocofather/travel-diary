@@ -13,6 +13,7 @@ public record TravelPlanPollEventDto(String type, TravelPlanPollDto poll, Long p
 
     public static final String POLL_CREATED = "POLL_CREATED";
     public static final String POLL_VOTED = "POLL_VOTED";
+    public static final String POLL_CLOSED = "POLL_CLOSED";
 
     public static TravelPlanPollEventDto created(TravelPlanPollDto poll) {
         return new TravelPlanPollEventDto(POLL_CREATED, poll, poll.id());
@@ -20,5 +21,10 @@ public record TravelPlanPollEventDto(String type, TravelPlanPollDto poll, Long p
 
     public static TravelPlanPollEventDto voted(Long pollId) {
         return new TravelPlanPollEventDto(POLL_VOTED, null, pollId);
+    }
+
+    /** 실제로 마감된 그 한 번만 나간다. 이미 마감돼 있었다면 나가지 않는다. */
+    public static TravelPlanPollEventDto closed(Long pollId) {
+        return new TravelPlanPollEventDto(POLL_CLOSED, null, pollId);
     }
 }

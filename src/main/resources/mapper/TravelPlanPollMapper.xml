@@ -79,6 +79,18 @@
         LIMIT #{limit}
     </select>
 
+    <!--
+      탭에 붙는 숫자만 센다. 숫자를 알려고 목록 전체를 읽지 않는다.
+      (travel_plan_id, status, created_at) 인덱스를 그대로 탄다.
+    -->
+    <select id="countPollsByStatus"
+            resultType="com.example.travlediary.model.TravelPlanPollStatusCount">
+        SELECT status, COUNT(*) AS poll_count
+        FROM travel_plan_polls
+        WHERE travel_plan_id = #{travelPlanId}
+        GROUP BY status
+    </select>
+
     <!-- 투표 1건. 방 소속까지 함께 확인한다 -->
     <select id="findByIdAndPlanId" resultType="com.example.travlediary.model.TravelPlanPoll">
         SELECT
@@ -201,4 +213,20 @@
                        FROM travel_plan_poll_votes
                        WHERE poll_id = #{pollId})
     </select>
+
+    <!-- ── 마감 ── -->
+
+    <!--
+      아직 열려 있을 때만 반영된다.
+      직접 마감과 전원 투표가 동시에 닿아도 이 조건 때문에 한 번만 성공하고,
+      알림도 성공한 쪽에서만 나간다.
+    -->
+    <update id="closePoll">
+        UPDATE travel_plan_polls
+        SET status = 'CLOSED',
+            close_reason = #{closeReason},
+            closed_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND status = 'OPEN'
+    </update>
 </mapper>

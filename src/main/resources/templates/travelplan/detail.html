@@ -441,6 +441,40 @@
               </label>
             </fieldset>
 
+            <!--
+              마감 방식은 고르게 하지 않는다. 모든 투표가 같은 규칙으로 끝난다.
+              지금 방에 있는 사람이 모두 투표하면 그때 끝나고,
+              그 전이라도 만든 사람은 언제든 직접 마감할 수 있다.
+            -->
+            <p class="travel-plan-poll-note">
+              참여자가 모두 투표하면 자동으로 마감돼요.<br>
+              만든 사람은 그 전에도 직접 마감할 수 있어요.
+            </p>
+
+            <fieldset class="travel-plan-poll-field travel-plan-poll-choice">
+              <legend class="travel-plan-poll-label">결과 공개</legend>
+              <label class="travel-plan-poll-radio">
+                <input type="radio" name="travelPlanPollResultVisibility" value="REALTIME"
+                       checked data-travel-plan-poll-visibility>
+                <span class="travel-plan-poll-radio-body">
+                  <span class="travel-plan-poll-radio-title">실시간</span>
+                  <span class="travel-plan-poll-radio-hint">
+                    투표하는 동안에도 표를 볼 수 있어요.
+                  </span>
+                </span>
+              </label>
+              <label class="travel-plan-poll-radio">
+                <input type="radio" name="travelPlanPollResultVisibility" value="AFTER_CLOSE"
+                       data-travel-plan-poll-visibility>
+                <span class="travel-plan-poll-radio-body">
+                  <span class="travel-plan-poll-radio-title">투표 종료 후 공개</span>
+                  <span class="travel-plan-poll-radio-hint">
+                    마감되기 전에는 표가 보이지 않아요.
+                  </span>
+                </span>
+              </label>
+            </fieldset>
+
             <p class="travel-plan-poll-error" hidden role="alert"
                data-travel-plan-poll-error></p>
 

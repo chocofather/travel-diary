@@ -184,10 +184,12 @@ class TravelPlanPollUiContractTest {
                 .doesNotContain("memberId")
                 .doesNotContain("creator")
                 .doesNotContain("status");
-        // 폼이 받을 수 있는 것도 그 셋뿐이다. 작성자나 방·상태를 실을 자리가 없다
+        // 폼이 받을 수 있는 것은 만들 때 정하는 값뿐이다.
+        // 작성자·방·진행 상태를 실을 자리가 없다
         assertThat(com.example.travlediary.dto.TravelPlanPollCreateForm.class.getDeclaredFields())
                 .extracting(java.lang.reflect.Field::getName)
-                .containsExactlyInAnyOrder("question", "selectionType", "options");
+                .containsExactlyInAnyOrder(
+                        "question", "selectionType", "options", "resultVisibility");
     }
 
     @Test
@@ -461,18 +463,203 @@ class TravelPlanPollUiContractTest {
                 .doesNotContain("voterNames");
     }
 
+    // ── 마감 ────────────────────────────────────────────────
+
     @Test
-    void closingAPollIsStillNotPartOfThis() throws IOException {
+    void theCreateFormNoLongerAsksHowThePollShouldEnd() throws IOException {
+        String detail = detailHtml();
+        String poll = pollJs();
+
+        // 마감 방식은 고르는 것이 아니라 정해진 규칙이라 안내 한 줄만 둔다
+        assertThat(detail)
+                .doesNotContain("data-travel-plan-poll-close-type")
+                .doesNotContain("data-travel-plan-poll-deadline")
+                .doesNotContain("마감 시간 지정")
+                .contains("참여자가 모두 투표하면 자동으로 마감돼요.");
+        assertThat(poll)
+                .doesNotContain("renderDeadlineField")
+                .doesNotContain("closeType")
+                .doesNotContain("deadlineAt");
+        assertThat(cssFile()).doesNotContain(".travel-plan-poll-deadline");
+    }
+
+    @Test
+    void howResultsAreSharedIsStillAsked() throws IOException {
+        String detail = detailHtml();
+
+        assertThat(detail)
+                .contains("data-travel-plan-poll-visibility")
+                .contains("value=\"REALTIME\"")
+                .contains("value=\"AFTER_CLOSE\"");
+        // 기본은 실시간 공개다
+        assertThat(between(detail, "value=\"REALTIME\"", ">")).contains("checked");
+    }
+
+    @Test
+    void whatIsSentWhenCreatingIsOnlyWhatTheAuthorChose() throws IOException {
+        String readForm = between(pollJs(), "function readForm()", "\n    }");
+
+        assertThat(readForm)
+                .contains("question")
+                .contains("selectionType")
+                .contains("options")
+                .contains("resultVisibility");
+        // 마감 방식이 오가지 않으니 앞뒤가 어긋날 자리도 없다
+        assertThat(readForm)
+                .doesNotContain("closeType")
+                .doesNotContain("deadlineAt");
+    }
+
+    @Test
+    void onlyTheCreatorSeesTheCloseAction() throws IOException {
+        String poll = pollJs();
+
+        // 보일지 말지는 서버가 정해 준다. 화면이 스스로 판단하지 않는다
+        assertThat(between(poll, "function renderDetail(poll)", "detailBody.replaceChildren"))
+                .contains("if (poll.closable)")
+                .contains("closeButton.textContent = \"투표 마감\"");
+        assertThat(between(poll, "async function closePoll(pollId)", "\n    }"))
+                .contains("/polls/${pollId}/close")
+                .contains("method: \"POST\"")
+                .contains("csrfHeaders()");
+    }
+
+    @Test
+    void aHiddenResultIsNotEvenSentUntilThePollEnds() throws IOException {
+        String poll = pollJs();
+        String dto = Files.readString(
+                Path.of("src/main/java/com/example/travlediary/dto/"
+                        + "TravelPlanPollOptionResultDto.java"),
+                StandardCharsets.UTF_8);
+
+        // 0 으로 내리면 "아무도 안 골랐다" 로 읽힌다. 아예 담지 않는다
+        assertThat(dto).contains("Integer voteCount").contains("hidden(");
+        assertThat(between(poll, "function optionChoiceOf(poll, option)", "return row;"))
+                .contains("if (option.voteCount != null)");
+        // 표는 가려도 참여 인원은 보여 준다
+        assertThat(between(poll, "function detailHeadOf(poll)", "return head;"))
+                .contains("명 참여")
+                .contains("if (!poll.resultsVisible)");
+    }
+
+    @Test
+    void everyoneSeesThePollMoveWhenItCloses() throws IOException {
+        String poll = pollJs();
+
+        assertThat(between(poll, "if (payload.type === \"POLL_CLOSED\") {", "return;"))
+                .contains("refreshLists()")
+                .contains("refreshDetail()");
+    }
+
+    @Test
+    void bothCountsChangeWithoutOpeningTheOtherTab() throws IOException {
+        String poll = pollJs();
+        String refresh = between(poll, "function refreshLists()", "\n    }");
+
+        /*
+          마감되면 진행 중이 하나 줄고 지난 투표가 하나 는다.
+          보고 있는 탭만 읽으면 반대쪽 숫자가 그 탭을 열어 볼 때까지 옛 값으로 남는다.
+        */
+        assertThat(refresh)
+                .contains("loadTab(\"OPEN\", true)")
+                .contains("loadTab(\"CLOSED\", true)");
+        // 어느 탭을 보고 있는지에 따라 한쪽만 읽지 않는다
+        assertThat(refresh)
+                .doesNotContain("activeTab")
+                .doesNotContain("loadedTabs.delete");
+    }
+
+    @Test
+    void theCountsComeFromTheServerAndNeverFromCounting() throws IOException {
+        String poll = pollJs();
+
+        // 탭 숫자는 서버가 준 값을 그대로 넣은 것이다
+        assertThat(between(poll, "function renderTabs()", "\n    }"))
+                .contains("String(pollCounts[name])")
+                .contains("String(pollCounts.OPEN)");
+        assertThat(between(poll, "async function loadCounts()", "\n    }"))
+                .contains("pollCounts.OPEN = payload.open || 0")
+                .contains("pollCounts.CLOSED = payload.closed || 0");
+        /*
+          그래서 같은 POLL_CLOSED 를 두 번 받아도, 탭을 여러 번 오가도
+          숫자가 두 번 오르지 않는다.
+        */
+        assertThat(poll)
+                .doesNotContain("length + 1")
+                .doesNotContain("Count + 1")
+                .doesNotContain("Count - 1")
+                .doesNotContain("Count++")
+                .doesNotContain("Count--")
+                .doesNotContain("pollCounts[name] +=")
+                .doesNotContain("pollCounts.OPEN +=")
+                .doesNotContain("pollCounts.CLOSED +=");
+    }
+
+    @Test
+    void bothCountsAreRightFromTheMomentTheCentreOpens() throws IOException {
+        String poll = pollJs();
+
+        /*
+          숫자를 목록에서만 얻으면 열어 보지 않은 탭이 0 으로 남는다.
+          그래서 열 때 보고 있는 탭의 목록과 두 탭의 숫자를 함께 읽는다.
+        */
+        String open = between(poll, "function openModal(createFirst)", "\n    }");
+        assertThat(open)
+                .contains("loadTab(activeTab, true)")
+                .contains("loadCounts()");
+        // 기본 탭은 그대로 진행 중이다
+        assertThat(poll).contains("let activeTab = \"OPEN\"");
+    }
+
+    @Test
+    void theNumbersDoNotWaitForATabToBeClicked() throws IOException {
+        String poll = pollJs();
+
+        // 숫자는 탭 클릭과 상관없는 자기 상태로 관리된다
+        assertThat(poll).contains("const pollCounts = { OPEN: 0, CLOSED: 0 }");
+        // 탭을 누를 때 하는 일은 목록을 읽는 것뿐이다
+        assertThat(between(poll, "tab.addEventListener(\"click\"", "});"))
+                .contains("loadTab(activeTab, false)")
+                .doesNotContain("pollCounts");
+    }
+
+    @Test
+    void countingDoesNotDragTheWholeFinishedListAlong() throws IOException {
+        String poll = pollJs();
+        String mapper = resource("/mapper/TravelPlanPollMapper.xml");
+
+        // 숫자만 필요할 때는 숫자만 센다
+        assertThat(between(poll, "async function loadCounts()", "\n    }"))
+                .contains("/polls/counts")
+                .doesNotContain("polls || []");
+        assertThat(between(mapper, "<select id=\"countPollsByStatus\"", "</select>"))
+                .contains("COUNT(*)")
+                .contains("GROUP BY status");
+    }
+
+    @Test
+    void closingAPollMovesBothNumbersAtOnce() throws IOException {
+        String poll = pollJs();
+
+        // 마감되면 진행 중이 하나 줄고 지난 투표가 하나 는다. 둘 다 서버에서 다시 읽는다
+        assertThat(between(poll, "function refreshLists()", "\n    }"))
+                .contains("loadCounts()");
+        assertThat(between(poll, "function onPollCreated()", "\n    }"))
+                .contains("loadCounts()");
+    }
+
+    @Test
+    void editingOrDeletingAPollIsStillNotPartOfThis() throws IOException {
         String poll = pollJs();
         String detail = detailHtml();
 
-        // 마감·삭제·수정은 다음 단계다
+        // 수정·삭제·최종 일정 연동은 다음 단계다
         assertThat(poll)
-                .doesNotContain("/close")
-                .doesNotContain("deadline");
+                .doesNotContain("/delete")
+                .doesNotContain("투표 수정");
         assertThat(detail)
-                .doesNotContain("투표 마감")
-                .doesNotContain("투표 삭제");
+                .doesNotContain("투표 삭제")
+                .doesNotContain("투표 수정");
     }
 
     @Test
@@ -572,10 +759,10 @@ class TravelPlanPollUiContractTest {
                 .contains("/polls/${path}");
         // 상세 화면에 투표를 미리 싣지 않는다
         assertThat(detail).doesNotContain("th:each=\"poll");
-        // 채팅창을 열 때 머리글 숫자를 한 번 맞춘다
-        assertThat(between(poll, "document.addEventListener(\"travelplan:chat-opened\"", "});"))
-                .contains("if (!loadedTabs.has(\"OPEN\")) loadTab(\"OPEN\", true)");
-        // 탭은 한 번 읽어 두고 다시 묻지 않는다
+        // 채팅창을 열 때 머리글 숫자를 한 번 맞춘다. 숫자만 있으면 되므로 목록은 읽지 않는다
+        assertThat(poll).contains(
+                "document.addEventListener(\"travelplan:chat-opened\", () => loadCounts());");
+        // 탭 목록은 한 번 읽어 두고 다시 묻지 않는다
         assertThat(between(poll, "async function loadTab(name, force)", "\n    }"))
                 .contains("if (loadedTabs.has(name) && !force)");
     }

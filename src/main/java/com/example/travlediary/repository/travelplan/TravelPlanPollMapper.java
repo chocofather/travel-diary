@@ -1,8 +1,10 @@
 package com.example.travlediary.repository.travelplan;
 
 import com.example.travlediary.model.TravelPlanPoll;
+import com.example.travlediary.model.TravelPlanPollCloseReason;
 import com.example.travlediary.model.TravelPlanPollOption;
 import com.example.travlediary.model.TravelPlanPollOptionVoteCount;
+import com.example.travlediary.model.TravelPlanPollStatusCount;
 import com.example.travlediary.model.TravelPlanPollVote;
 import com.example.travlediary.model.TravelPlanPollVotedCount;
 import org.apache.ibatis.annotations.Mapper;
@@ -46,6 +48,13 @@ public interface TravelPlanPollMapper {
     List<TravelPlanPoll> findPollsBefore(@Param("travelPlanId") Long travelPlanId,
                                          @Param("beforePollId") Long beforePollId,
                                          @Param("limit") int limit);
+
+    /**
+     * 진행 상태별 투표 수.
+     * 탭에 붙는 숫자만 필요할 때 쓴다. 숫자를 알려고 목록 전체를 읽지 않는다.
+     * 한 번도 나오지 않은 상태는 결과에 없으므로 호출한 쪽이 0 으로 채운다.
+     */
+    List<TravelPlanPollStatusCount> countPollsByStatus(@Param("travelPlanId") Long travelPlanId);
 
     /** 투표 1건. 방 소속 조건을 함께 걸어 다른 방의 투표를 집을 수 없게 한다. */
     TravelPlanPoll findByIdAndPlanId(@Param("id") Long id,
@@ -109,4 +118,17 @@ public interface TravelPlanPollMapper {
      * 첫 표가 나온 뒤에는 투표의 핵심 설정을 바꿀 수 없다는 정책에서 쓰게 된다.
      */
     boolean hasAnyVote(@Param("pollId") Long pollId);
+
+    // ── 마감 ────────────────────────────────────────────────
+
+    /**
+     * 투표를 마감한다.
+     *
+     * <p>아직 진행 중일 때만 반영된다(status = 'OPEN' 조건).
+     * 직접 마감과 전원 투표가 동시에 닿아도 한 번만 성공한다.
+     *
+     * @return 1 이면 방금 이 호출이 마감했고, 0 이면 이미 마감돼 있었다.
+     */
+    int closePoll(@Param("id") Long id,
+                  @Param("closeReason") TravelPlanPollCloseReason closeReason);
 }

@@ -1,5 +1,6 @@
 package com.example.travlediary.service.travelplan;
 
+import com.example.travlediary.dto.TravelPlanPollCountsDto;
 import com.example.travlediary.dto.TravelPlanPollCreateForm;
 import com.example.travlediary.dto.TravelPlanPollDetailDto;
 import com.example.travlediary.dto.TravelPlanPollDto;
@@ -12,11 +13,13 @@ import com.example.travlediary.model.TravelPlan;
 import com.example.travlediary.model.TravelPlanMember;
 import com.example.travlediary.model.TravelPlanMemberStatus;
 import com.example.travlediary.model.TravelPlanPoll;
+import com.example.travlediary.model.TravelPlanPollCloseReason;
 import com.example.travlediary.model.TravelPlanPollCloseType;
 import com.example.travlediary.model.TravelPlanPollOption;
 import com.example.travlediary.model.TravelPlanPollResultVisibility;
 import com.example.travlediary.model.TravelPlanPollSelectionType;
 import com.example.travlediary.model.TravelPlanPollStatus;
+import com.example.travlediary.model.TravelPlanPollStatusCount;
 import com.example.travlediary.model.TravelPlanRole;
 import com.example.travlediary.model.TravelPlanStatus;
 import com.example.travlediary.model.User;
@@ -42,6 +45,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.lang.reflect.Method;
 import java.security.Principal;
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -68,6 +72,7 @@ class TravelPlanPollServiceTest {
     private static final Long USER_ID = 7L;
     private static final Long MEMBER_ID = 11L;
     private static final Long POLL_ID = 900L;
+    private static final Long OTHER_MEMBER_ID = 12L;
     private static final Long VOTE_ID = 700L;
     private static final Long OPTION_A = 1L;
     private static final Long OPTION_B = 2L;
@@ -326,11 +331,11 @@ class TravelPlanPollServiceTest {
         TravelPlanPoll saved = capturePoll();
         assertThat(saved.getTravelPlanId()).isEqualTo(PLAN_ID);
         assertThat(saved.getCreatedByMemberId()).isEqualTo(MEMBER_ID);
-        // 이번 단계의 만들기 화면에 없는 값은 기본값으로만 들어간다
+        // 고르게 하지 않는 값은 정해진 대로만 들어간다
         assertThat(saved.getStatus()).isEqualTo(TravelPlanPollStatus.OPEN);
         assertThat(saved.getResultVisibility())
                 .isEqualTo(TravelPlanPollResultVisibility.REALTIME);
-        assertThat(saved.getCloseType()).isEqualTo(TravelPlanPollCloseType.MANUAL);
+        assertThat(saved.getCloseType()).isEqualTo(TravelPlanPollCloseType.ALL_VOTED);
         assertThat(saved.getDeadlineAt()).isNull();
         // 이름도 방 안의 표시 이름에서만 나온다
         assertThat(created.createdByDisplayName()).isEqualTo("민준");
@@ -498,6 +503,59 @@ class TravelPlanPollServiceTest {
 
         assertThat(pollService.openPolls(principal(), PLAN_ID)).isEmpty();
         verify(travelPlanPollMapper, never()).findOptionsByPollIds(any());
+    }
+
+    // ── 탭 숫자 ─────────────────────────────────────────────
+
+    @Test
+    void bothNumbersAreKnownWithoutReadingEitherList() {
+        // 지난 투표가 둘 있고 진행 중인 것은 없다
+        givenRoom(TravelPlanRole.MEMBER);
+        when(travelPlanPollMapper.countPollsByStatus(PLAN_ID))
+                .thenReturn(List.of(statusCount(TravelPlanPollStatus.CLOSED, 2)));
+
+        TravelPlanPollCountsDto counts = pollService.pollCounts(principal(), PLAN_ID);
+
+        assertThat(counts.open()).isZero();
+        assertThat(counts.closed()).isEqualTo(2);
+        // 숫자를 얻자고 목록을 통째로 읽지 않는다
+        verify(travelPlanPollMapper, never()).findClosedPolls(anyLong());
+        verify(travelPlanPollMapper, never()).findOpenPolls(anyLong());
+    }
+
+    @Test
+    void bothNumbersComeBackTogether() {
+        givenRoom(TravelPlanRole.MEMBER);
+        when(travelPlanPollMapper.countPollsByStatus(PLAN_ID))
+                .thenReturn(List.of(statusCount(TravelPlanPollStatus.OPEN, 1),
+                        statusCount(TravelPlanPollStatus.CLOSED, 2)));
+
+        TravelPlanPollCountsDto counts = pollService.pollCounts(principal(), PLAN_ID);
+
+        assertThat(counts.open()).isEqualTo(1);
+        assertThat(counts.closed()).isEqualTo(2);
+    }
+
+    @Test
+    void aStateThatNeverHappenedCountsAsZero() {
+        // 한 번도 나오지 않은 상태는 집계에 아예 없다
+        givenRoom(TravelPlanRole.MEMBER);
+        when(travelPlanPollMapper.countPollsByStatus(PLAN_ID)).thenReturn(List.of());
+
+        TravelPlanPollCountsDto counts = pollService.pollCounts(principal(), PLAN_ID);
+
+        assertThat(counts.open()).isZero();
+        assertThat(counts.closed()).isZero();
+    }
+
+    @Test
+    void whoeverLeftCannotSeeTheNumbersEither() {
+        givenActivePlan();
+        when(travelPlanMapper.findMemberByPlanAndUser(PLAN_ID, USER_ID, "ACTIVE")).thenReturn(null);
+
+        assertThatThrownBy(() -> pollService.pollCounts(principal(), PLAN_ID))
+                .isInstanceOf(AccessDeniedException.class);
+        verify(travelPlanPollMapper, never()).countPollsByStatus(anyLong());
     }
 
     @Test
@@ -749,12 +807,302 @@ class TravelPlanPollServiceTest {
                 .doesNotContain("서귀포시");
     }
 
+    // ── 마감: 직접 ──────────────────────────────────────────
+
+    @Test
+    void theCreatorCanCloseTheirOwnPoll() {
+        givenRoom(TravelPlanRole.MEMBER);
+        givenPoll(poll -> poll.setCloseType(TravelPlanPollCloseType.MANUAL));
+        when(travelPlanPollMapper.closePoll(POLL_ID, TravelPlanPollCloseReason.MANUAL))
+                .thenReturn(1);
+
+        pollService.closePoll(principal(), PLAN_ID, POLL_ID);
+
+        verify(travelPlanPollMapper).closePoll(POLL_ID, TravelPlanPollCloseReason.MANUAL);
+        assertThat(captureEvent().payload().type())
+                .isEqualTo(TravelPlanPollEventDto.POLL_CLOSED);
+    }
+
+    @Test
+    void anotherMemberCannotCloseSomeoneElsesPoll() {
+        givenRoom(TravelPlanRole.MEMBER);
+        givenPoll(poll -> poll.setCreatedByMemberId(OTHER_MEMBER_ID));
+
+        assertThatThrownBy(() -> pollService.closePoll(principal(), PLAN_ID, POLL_ID))
+                .isInstanceOf(AccessDeniedException.class);
+        verify(travelPlanPollMapper, never()).closePoll(anyLong(), any());
+        verify(eventPublisher, never()).publishEvent(any(Object.class));
+    }
+
+    @Test
+    void beingTheOwnerDoesNotAllowClosingSomeoneElsesPoll() {
+        givenRoom(TravelPlanRole.OWNER);
+        givenPoll(poll -> poll.setCreatedByMemberId(OTHER_MEMBER_ID));
+
+        assertThatThrownBy(() -> pollService.closePoll(principal(), PLAN_ID, POLL_ID))
+                .isInstanceOf(AccessDeniedException.class);
+        verify(travelPlanPollMapper, never()).closePoll(anyLong(), any());
+    }
+
+    @Test
+    void anAlreadyFinishedPollIsNotClosedAgain() {
+        givenRoom(TravelPlanRole.MEMBER);
+        givenPoll(poll -> poll.setStatus(TravelPlanPollStatus.CLOSED));
+
+        assertThatThrownBy(() -> pollService.closePoll(principal(), PLAN_ID, POLL_ID))
+                .isInstanceOf(TravelPlanValidationException.class);
+        verify(travelPlanPollMapper, never()).closePoll(anyLong(), any());
+    }
+
+    @Test
+    void whoeverLeftCannotCloseAPoll() {
+        givenActivePlan();
+        when(travelPlanMapper.findMemberByPlanAndUser(PLAN_ID, USER_ID, "ACTIVE")).thenReturn(null);
+
+        assertThatThrownBy(() -> pollService.closePoll(principal(), PLAN_ID, POLL_ID))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    void losingTheRaceMeansNoSecondAnnouncement() {
+        // 다른 쪽이 먼저 마감했다. 조건부 UPDATE 가 0 을 돌려준다
+        givenRoom(TravelPlanRole.MEMBER);
+        givenPoll(poll -> poll.setCloseType(TravelPlanPollCloseType.MANUAL));
+        when(travelPlanPollMapper.closePoll(POLL_ID, TravelPlanPollCloseReason.MANUAL))
+                .thenReturn(0);
+
+        pollService.closePoll(principal(), PLAN_ID, POLL_ID);
+
+        verify(eventPublisher, never()).publishEvent(any(Object.class));
+    }
+
+    // ── 마감: 전원 투표 ─────────────────────────────────────
+
+    @Test
+    void aPollStaysOpenUntilEveryoneHasVoted() {
+        // 참여자 4명 중 3명만 투표한 상태
+        givenOpenPollToVoteOn(TravelPlanPollSelectionType.SINGLE);
+        givenNoVoteYet();
+        when(travelPlanMapper.countActiveMembers(PLAN_ID)).thenReturn(4);
+        when(travelPlanPollMapper.countVotedMembers(POLL_ID)).thenReturn(3);
+
+        pollService.submitVote(principal(), PLAN_ID, POLL_ID, List.of(OPTION_A));
+
+        verify(travelPlanPollMapper, never()).closePoll(anyLong(), any());
+    }
+
+    @Test
+    void theLastVoteEndsThePoll() {
+        // 참여자 4명이 모두 투표했다
+        givenOpenPollToVoteOn(TravelPlanPollSelectionType.SINGLE);
+        givenNoVoteYet();
+        when(travelPlanMapper.countActiveMembers(PLAN_ID)).thenReturn(4);
+        when(travelPlanPollMapper.countVotedMembers(POLL_ID)).thenReturn(4);
+        when(travelPlanPollMapper.closePoll(POLL_ID, TravelPlanPollCloseReason.ALL_VOTED))
+                .thenReturn(1);
+
+        pollService.submitVote(principal(), PLAN_ID, POLL_ID, List.of(OPTION_A));
+
+        verify(travelPlanPollMapper).closePoll(POLL_ID, TravelPlanPollCloseReason.ALL_VOTED);
+        // 투표했다는 알림과 끝났다는 알림이 함께 나간다
+        assertThat(captureEvents())
+                .extracting(event -> event.payload().type())
+                .containsExactly(TravelPlanPollEventDto.POLL_VOTED,
+                        TravelPlanPollEventDto.POLL_CLOSED);
+    }
+
+    @Test
+    void theCountThatMattersIsWhoIsInTheRoomNow() {
+        /*
+          초대 정원(8명)이 아니라 지금 남아 있는 사람이 기준이다.
+          누가 나가서 남은 사람이 모두 투표한 상태가 되면 그때 끝난다.
+        */
+        givenOpenPollToVoteOn(TravelPlanPollSelectionType.SINGLE);
+        givenNoVoteYet();
+        when(travelPlanMapper.countActiveMembers(PLAN_ID)).thenReturn(2);
+        when(travelPlanPollMapper.countVotedMembers(POLL_ID)).thenReturn(2);
+        when(travelPlanPollMapper.closePoll(POLL_ID, TravelPlanPollCloseReason.ALL_VOTED))
+                .thenReturn(1);
+
+        pollService.submitVote(principal(), PLAN_ID, POLL_ID, List.of(OPTION_A));
+
+        verify(travelPlanPollMapper).closePoll(POLL_ID, TravelPlanPollCloseReason.ALL_VOTED);
+    }
+
+    @Test
+    void anAlreadyFinishedPollIsNotClosedAgainByTheLastVote() {
+        givenOpenPollToVoteOn(TravelPlanPollSelectionType.SINGLE);
+        givenNoVoteYet();
+        when(travelPlanMapper.countActiveMembers(PLAN_ID)).thenReturn(4);
+        when(travelPlanPollMapper.countVotedMembers(POLL_ID)).thenReturn(4);
+        // 그 사이 만든 사람이 먼저 마감했다
+        when(travelPlanPollMapper.closePoll(POLL_ID, TravelPlanPollCloseReason.ALL_VOTED))
+                .thenReturn(0);
+
+        pollService.submitVote(principal(), PLAN_ID, POLL_ID, List.of(OPTION_A));
+
+        // 끝났다는 알림은 나가지 않는다. 투표했다는 알림 하나뿐이다
+        assertThat(captureEvents())
+                .extracting(event -> event.payload().type())
+                .containsExactly(TravelPlanPollEventDto.POLL_VOTED);
+    }
+
+    // ── 만들 때 정해지는 마감 규칙 ──────────────────────────
+
+    @Test
+    void everyNewPollEndsTheSameWay() {
+        // 마감 방식을 고르게 하지 않는다. 화면이 무엇을 보내든 규칙은 하나다
+        givenRoom(TravelPlanRole.MEMBER);
+        givenInsertsSucceed();
+
+        pollService.createPoll(principal(), PLAN_ID,
+                form("숙소 위치는?", "SINGLE", "제주시", "서귀포시"));
+
+        TravelPlanPoll saved = capturePoll();
+        assertThat(saved.getCloseType()).isEqualTo(TravelPlanPollCloseType.ALL_VOTED);
+        // 시각으로 끝나는 투표는 없다
+        assertThat(saved.getDeadlineAt()).isNull();
+        assertThat(saved.getStatus()).isEqualTo(TravelPlanPollStatus.OPEN);
+    }
+
+    @Test
+    void theFormNoLongerCarriesAWayToEndThePoll() {
+        // 프론트와 주고받는 값에서 마감 방식이 아예 빠졌다
+        assertThat(TravelPlanPollCreateForm.class.getDeclaredFields())
+                .extracting(java.lang.reflect.Field::getName)
+                .containsExactlyInAnyOrder(
+                        "question", "selectionType", "options", "resultVisibility");
+    }
+
+    @Test
+    void howResultsAreSharedIsStillUpToTheAuthor() {
+        givenRoom(TravelPlanRole.MEMBER);
+        givenInsertsSucceed();
+        TravelPlanPollCreateForm form = form("숙소 위치는?", "SINGLE", "제주시", "서귀포시");
+        form.setResultVisibility("AFTER_CLOSE");
+
+        pollService.createPoll(principal(), PLAN_ID, form);
+
+        assertThat(capturePoll().getResultVisibility())
+                .isEqualTo(TravelPlanPollResultVisibility.AFTER_CLOSE);
+    }
+
+    @Test
+    void anUnknownVisibilityIsRefused() {
+        givenRoom(TravelPlanRole.MEMBER);
+        TravelPlanPollCreateForm badVisibility = form("질문", "SINGLE", "가", "나");
+        badVisibility.setResultVisibility("SOMETIMES");
+
+        assertThatThrownBy(() -> pollService.createPoll(principal(), PLAN_ID, badVisibility))
+                .isInstanceOf(TravelPlanValidationException.class);
+        verify(travelPlanPollMapper, never()).insertPoll(any());
+    }
+
+    // ── 결과 공개 시점 ──────────────────────────────────────
+
+    @Test
+    void aRealtimePollShowsItsVotesWhileItRuns() {
+        givenDetailOf(TravelPlanPollResultVisibility.REALTIME, TravelPlanPollStatus.OPEN);
+
+        TravelPlanPollDetailDto detail = pollService.pollDetail(principal(), PLAN_ID, POLL_ID);
+
+        assertThat(detail.resultsVisible()).isTrue();
+        assertThat(detail.options()).extracting(option -> option.voteCount())
+                .containsExactly(2, 0);
+    }
+
+    @Test
+    void aPollThatWaitsKeepsItsVotesOffTheWireUntilItEnds() {
+        givenDetailOf(TravelPlanPollResultVisibility.AFTER_CLOSE, TravelPlanPollStatus.OPEN);
+
+        TravelPlanPollDetailDto detail = pollService.pollDetail(principal(), PLAN_ID, POLL_ID);
+
+        assertThat(detail.resultsVisible()).isFalse();
+        // 0 으로 내리면 "아무도 안 골랐다" 로 읽힌다. 아예 담지 않는다
+        assertThat(detail.options()).extracting(option -> option.voteCount())
+                .containsOnlyNulls();
+        assertThat(detail.winnerSummary()).isNull();
+        // 표는 가려도 참여 인원과 내 선택은 보인다
+        assertThat(detail.votedMemberCount()).isEqualTo(2);
+        assertThat(detail.selectedOptionIds()).containsExactly(1L);
+        // 가릴 것이라면 세지도 않는다
+        verify(travelPlanPollMapper, never()).countSelectionsByPollIds(any());
+    }
+
+    @Test
+    void onceItEndsTheWaitingPollShowsEverything() {
+        givenDetailOf(TravelPlanPollResultVisibility.AFTER_CLOSE, TravelPlanPollStatus.CLOSED);
+
+        TravelPlanPollDetailDto detail = pollService.pollDetail(principal(), PLAN_ID, POLL_ID);
+
+        assertThat(detail.resultsVisible()).isTrue();
+        assertThat(detail.options()).extracting(option -> option.voteCount())
+                .containsExactly(2, 0);
+        assertThat(detail.winnerSummary()).isEqualTo("제주시");
+    }
+
+    @Test
+    void theCloseActionIsOfferedToTheCreatorOfAnyRunningPoll() {
+        // 전원이 투표하기를 기다릴 필요 없이 언제든 끝낼 수 있다
+        givenRoom(TravelPlanRole.MEMBER);
+        givenPoll(poll -> { });
+
+        assertThat(pollService.pollDetail(principal(), PLAN_ID, POLL_ID).closable()).isTrue();
+
+        // 남의 투표에는 나오지 않는다
+        givenPoll(poll -> poll.setCreatedByMemberId(OTHER_MEMBER_ID));
+        assertThat(pollService.pollDetail(principal(), PLAN_ID, POLL_ID).closable()).isFalse();
+
+        // 이미 끝난 투표에도 나오지 않는다
+        givenPoll(poll -> poll.setStatus(TravelPlanPollStatus.CLOSED));
+        assertThat(pollService.pollDetail(principal(), PLAN_ID, POLL_ID).closable()).isFalse();
+    }
+
     // ── 준비 ────────────────────────────────────────────────
 
+    private void givenPoll(java.util.function.Consumer<TravelPlanPoll> customise) {
+        TravelPlanPoll poll = openPoll();
+        customise.accept(poll);
+        when(travelPlanPollMapper.findByIdAndPlanId(POLL_ID, PLAN_ID)).thenReturn(poll);
+    }
+
+    private void givenDetailOf(TravelPlanPollResultVisibility visibility,
+                               TravelPlanPollStatus status) {
+        givenRoom(TravelPlanRole.MEMBER);
+        givenPoll(poll -> {
+            poll.setResultVisibility(visibility);
+            poll.setStatus(status);
+        });
+        when(travelPlanPollMapper.findOptionsByPollIds(List.of(POLL_ID)))
+                .thenReturn(List.of(option("제주시", 1), option("서귀포시", 2)));
+        when(travelPlanPollMapper.countSelectionsByPollIds(List.of(POLL_ID)))
+                .thenReturn(List.of(optionCount(1L, 2)));
+        when(travelPlanPollMapper.countVotedMembers(POLL_ID)).thenReturn(2);
+        when(travelPlanMapper.countActiveMembers(PLAN_ID)).thenReturn(3);
+        TravelPlanPollVote mine = new TravelPlanPollVote();
+        mine.setId(VOTE_ID);
+        when(travelPlanPollMapper.findVoteByPollAndMember(POLL_ID, MEMBER_ID)).thenReturn(mine);
+        when(travelPlanPollMapper.findSelectedOptionIds(VOTE_ID)).thenReturn(List.of(1L));
+    }
+
+    private List<TravelPlanPollChangedEvent> captureEvents() {
+        ArgumentCaptor<TravelPlanPollChangedEvent> captor =
+                ArgumentCaptor.forClass(TravelPlanPollChangedEvent.class);
+        verify(eventPublisher, org.mockito.Mockito.atLeastOnce())
+                .publishEvent(captor.capture());
+        return captor.getAllValues();
+    }
+
     private void givenOpenPollToVoteOn(TravelPlanPollSelectionType selectionType) {
+        givenOpenPollToVoteOn(selectionType, TravelPlanPollCloseType.MANUAL);
+    }
+
+    private void givenOpenPollToVoteOn(TravelPlanPollSelectionType selectionType,
+                                       TravelPlanPollCloseType closeType) {
         givenRoom(TravelPlanRole.MEMBER);
         TravelPlanPoll poll = openPoll();
         poll.setSelectionType(selectionType);
+        poll.setCloseType(closeType);
         when(travelPlanPollMapper.findByIdAndPlanId(POLL_ID, PLAN_ID)).thenReturn(poll);
         when(travelPlanPollMapper.countOptionsByPollId(POLL_ID)).thenReturn(2);
         when(travelPlanPollMapper.countOwnedOptions(anyLong(), any()))
@@ -789,6 +1137,13 @@ class TravelPlanPollServiceTest {
         voted.setPollId(pollId);
         voted.setVotedMemberCount(count);
         return voted;
+    }
+
+    private TravelPlanPollStatusCount statusCount(TravelPlanPollStatus status, int count) {
+        TravelPlanPollStatusCount statusCount = new TravelPlanPollStatusCount();
+        statusCount.setStatus(status);
+        statusCount.setPollCount(count);
+        return statusCount;
     }
 
     private TravelPlanPollOptionVoteCount optionCount(Long optionId, int count) {

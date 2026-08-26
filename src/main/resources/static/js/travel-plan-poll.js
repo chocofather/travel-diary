@@ -55,6 +55,12 @@ document.addEventListener("DOMContentLoaded", () => {
     // 탭마다 한 번 읽어 두고, 새 투표가 생기면 그때 고쳐 그린다.
     const loadedTabs = new Set();
     const pollsByTab = { OPEN: [], CLOSED: [] };
+    /*
+      탭에 붙는 숫자. 목록과 따로 둔다.
+      목록은 그 탭을 열어 볼 때 읽지만, 숫자는 열지 않아도 맞아야 한다.
+      언제나 서버가 준 값을 그대로 넣고 여기서 더하거나 빼지 않는다.
+    */
+    const pollCounts = { OPEN: 0, CLOSED: 0 };
 
     function realtime() {
         return window.travelPlanRealtime;
@@ -168,6 +174,9 @@ document.addEventListener("DOMContentLoaded", () => {
         modal.querySelectorAll("[data-travel-plan-poll-selection]").forEach(radio => {
             radio.checked = radio.value === "SINGLE";
         });
+        modal.querySelectorAll("[data-travel-plan-poll-visibility]").forEach(radio => {
+            radio.checked = radio.value === "REALTIME";
+        });
         clearError();
     }
 
@@ -204,8 +213,13 @@ document.addEventListener("DOMContentLoaded", () => {
         } else {
             showListView();
         }
-        // 열 때 지금 상태를 한 번 맞춘다.
+        /*
+          열 때 지금 상태를 한 번 맞춘다.
+          보고 있는 탭의 목록과, 두 탭의 숫자를 함께 읽는다.
+          숫자를 목록에서만 얻으면 열어 보지 않은 탭이 0 으로 남는다.
+        */
         loadTab(activeTab, true);
+        loadCounts();
     }
 
     function closeModal() {
@@ -304,13 +318,12 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         modal.querySelectorAll("[data-travel-plan-poll-tab-count]").forEach(node => {
             const name = node.getAttribute("data-travel-plan-poll-tab-count");
-            node.textContent = String(pollsByTab[name].length);
+            node.textContent = String(pollCounts[name]);
         });
         // 채팅 머리글의 작은 숫자는 진행 중인 투표 개수다.
         if (entryCount) {
-            const open = pollsByTab.OPEN.length;
-            entryCount.textContent = String(open);
-            entryCount.hidden = open === 0;
+            entryCount.textContent = String(pollCounts.OPEN);
+            entryCount.hidden = pollCounts.OPEN === 0;
         }
     }
 
@@ -320,6 +333,25 @@ document.addEventListener("DOMContentLoaded", () => {
         if (empty) {
             empty.textContent = EMPTY_TEXT[activeTab];
             empty.hidden = polls.length > 0;
+        }
+        renderTabs();
+    }
+
+    /**
+     * 두 탭의 숫자만 읽는다.
+     * 목록을 열지 않아도 숫자는 맞아야 하고, 숫자 때문에 목록 전체를 가져오지도 않는다.
+     */
+    async function loadCounts() {
+        try {
+            const response = await fetch(`/travel-plans/${planId}/polls/counts`, {
+                headers: { "X-Requested-With": "XMLHttpRequest" }
+            });
+            if (!response.ok) return;
+            const payload = await response.json();
+            pollCounts.OPEN = payload.open || 0;
+            pollCounts.CLOSED = payload.closed || 0;
+        } catch (error) {
+            // 못 읽어도 채팅 자체는 그대로 쓸 수 있어야 한다.
         }
         renderTabs();
     }
@@ -336,6 +368,8 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             if (!response.ok) return;
             pollsByTab[name] = (await response.json()).polls || [];
+            // 목록을 읽었으면 그 길이가 곧 그 탭의 숫자다. 둘이 어긋나지 않게 함께 맞춘다.
+            pollCounts[name] = pollsByTab[name].length;
             loadedTabs.add(name);
         } catch (error) {
             // 못 읽어도 채팅 자체는 그대로 쓸 수 있어야 한다.
@@ -361,6 +395,7 @@ document.addEventListener("DOMContentLoaded", () => {
      */
     function onPollCreated() {
         loadTab("OPEN", true);
+        loadCounts();
     }
 
     // ── 상세 ────────────────────────────────────────────────
@@ -385,9 +420,17 @@ document.addEventListener("DOMContentLoaded", () => {
         if (poll.status !== "CLOSED") {
             const joined = document.createElement("p");
             joined.className = "travel-plan-poll-detail-joined";
+            // 표를 가리는 투표에서도 참여 인원은 보여 준다.
             joined.textContent =
                 `현재 ${poll.votedMemberCount} / ${poll.activeMemberCount}명 참여`;
             head.append(joined);
+
+            if (!poll.resultsVisible) {
+                const hint = document.createElement("p");
+                hint.className = "travel-plan-poll-detail-hint";
+                hint.textContent = "투표가 끝나면 결과가 공개돼요.";
+                head.append(hint);
+            }
         }
         return head;
     }
@@ -412,12 +455,15 @@ document.addEventListener("DOMContentLoaded", () => {
         text.className = "travel-plan-poll-choice-text";
         text.textContent = option.content;
 
-        const count = document.createElement("span");
-        count.className = "travel-plan-poll-choice-count";
-        // 결과를 바로 볼 수 있는 투표라 지금까지의 표를 함께 보여 준다.
-        count.textContent = `${option.voteCount}표`;
+        row.append(input, text);
 
-        row.append(input, text, count);
+        // 마감 뒤에 공개하는 투표라면 진행 중에는 서버가 표를 아예 주지 않는다.
+        if (option.voteCount != null) {
+            const count = document.createElement("span");
+            count.className = "travel-plan-poll-choice-count";
+            count.textContent = `${option.voteCount}표`;
+            row.append(count);
+        }
         return row;
     }
 
@@ -473,6 +519,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const actions = document.createElement("div");
             actions.className = "travel-plan-poll-actions";
+
+            // 직접 마감은 만든 사람에게만 보인다. 그 확인은 서버가 한다.
+            if (poll.closable) {
+                const closeButton = document.createElement("button");
+                closeButton.type = "button";
+                closeButton.className = "travel-plan-poll-cancel";
+                closeButton.setAttribute("data-travel-plan-poll-close-action", "");
+                closeButton.textContent = "투표 마감";
+                closeButton.addEventListener("click", () => closePoll(poll.id));
+                actions.append(closeButton);
+            }
+
             const submitVote = document.createElement("button");
             submitVote.type = "button";
             submitVote.className = "travel-plan-poll-submit";
@@ -522,6 +580,49 @@ document.addEventListener("DOMContentLoaded", () => {
         error.hidden = false;
     }
 
+    /**
+     * 직접 마감.
+     * 끝내고 나면 그 자리에서 결과 화면으로 바뀌고, 목록의 두 탭도 함께 맞춘다.
+     */
+    async function closePoll(pollId) {
+        if (voting) return;
+        if (!window.confirm("이 투표를 마감할까요?\n\n마감하면 더 이상 투표할 수 없습니다.")) {
+            return;
+        }
+        voting = true;
+        try {
+            const response = await fetch(`/travel-plans/${planId}/polls/${pollId}/close`, {
+                method: "POST",
+                headers: csrfHeaders()
+            });
+            if (!response.ok) {
+                const payload = await response.json().catch(() => null);
+                showVoteError(payload?.message);
+                return;
+            }
+            renderDetail(await response.json());
+            refreshLists();
+        } catch (error) {
+            showVoteError(null);
+        } finally {
+            voting = false;
+        }
+    }
+
+    /*
+      마감된 투표는 진행 중에서 빠지고 지난 투표로 옮겨 간다.
+      두 숫자가 함께 바뀌어야 하므로 지금 보고 있지 않은 탭도 이때 다시 읽는다.
+      보고 있는 탭만 읽으면 반대쪽 숫자가 그 탭을 열어 볼 때까지 옛 값으로 남는다.
+
+      숫자는 여기서 더하거나 빼지 않고 서버가 준 목록의 길이로만 정한다.
+      그래서 같은 알림을 두 번 받아도 숫자가 두 번 오르지 않는다.
+    */
+    function refreshLists() {
+        loadTab("OPEN", true);
+        loadTab("CLOSED", true);
+        loadCounts();
+    }
+
     async function vote(pollId) {
         if (voting) return;
         const chosen = Array.from(
@@ -567,7 +668,11 @@ document.addEventListener("DOMContentLoaded", () => {
             selectionType:
                 modal.querySelector("[data-travel-plan-poll-selection]:checked")?.value || "SINGLE",
             options: rows().map(row =>
-                row.querySelector("[data-travel-plan-poll-option]")?.value || "")
+                row.querySelector("[data-travel-plan-poll-option]")?.value || ""),
+            // 마감 방식은 보내지 않는다. 모든 투표가 같은 규칙으로 끝난다.
+            resultVisibility:
+                modal.querySelector("[data-travel-plan-poll-visibility]:checked")?.value
+                    || "REALTIME"
         };
     }
 
@@ -647,6 +752,13 @@ document.addEventListener("DOMContentLoaded", () => {
             onPollCreated();
             return;
         }
+        if (payload.type === "POLL_CLOSED") {
+            // 진행 중에서 빠지고 지난 투표로 옮겨 간다.
+            refreshLists();
+            // 그 투표를 보고 있었다면 결과 화면으로 바뀐다.
+            if (String(openedPollId) === String(payload.pollId)) refreshDetail();
+            return;
+        }
         if (payload.type !== "POLL_VOTED") return;
         // 목록을 보고 있으면 참여 인원이, 상세를 보고 있으면 표가 바뀐다.
         if (loadedTabs.has("OPEN")) loadTab("OPEN", true);
@@ -661,14 +773,16 @@ document.addEventListener("DOMContentLoaded", () => {
         if (pollId != null) openDetail(pollId);
     });
 
-    // 끊겨 있던 사이에 만들어진 투표는 다시 받을 수 없다. 그때 서버에서 다시 읽는다.
+    // 끊겨 있던 사이에 만들어지거나 끝난 투표는 다시 받을 수 없다. 그때 서버에서 다시 읽는다.
     realtime()?.onReconnected(() => {
         loadedTabs.clear();
         loadTab(activeTab, true);
+        loadCounts();
     });
 
-    // 머리글의 숫자는 채팅창을 열 때 한 번 맞춘다.
-    document.addEventListener("travelplan:chat-opened", () => {
-        if (!loadedTabs.has("OPEN")) loadTab("OPEN", true);
-    });
+    /*
+      머리글의 숫자는 채팅창을 열 때 한 번 맞춘다.
+      숫자만 있으면 되므로 목록까지 가져오지 않는다.
+    */
+    document.addEventListener("travelplan:chat-opened", () => loadCounts());
 });

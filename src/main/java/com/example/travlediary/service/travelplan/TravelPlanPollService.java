@@ -1,5 +1,6 @@
 package com.example.travlediary.service.travelplan;
 
+import com.example.travlediary.dto.TravelPlanPollCountsDto;
 import com.example.travlediary.dto.TravelPlanPollCreateForm;
 import com.example.travlediary.dto.TravelPlanPollDetailDto;
 import com.example.travlediary.dto.TravelPlanPollDto;
@@ -8,12 +9,14 @@ import com.example.travlediary.dto.TravelPlanPollOptionResultDto;
 import com.example.travlediary.dto.TravelPlanPollSummaryDto;
 import com.example.travlediary.model.TravelPlanMember;
 import com.example.travlediary.model.TravelPlanPoll;
+import com.example.travlediary.model.TravelPlanPollCloseReason;
 import com.example.travlediary.model.TravelPlanPollCloseType;
 import com.example.travlediary.model.TravelPlanPollOption;
 import com.example.travlediary.model.TravelPlanPollOptionVoteCount;
 import com.example.travlediary.model.TravelPlanPollResultVisibility;
 import com.example.travlediary.model.TravelPlanPollSelectionType;
 import com.example.travlediary.model.TravelPlanPollStatus;
+import com.example.travlediary.model.TravelPlanPollStatusCount;
 import com.example.travlediary.model.TravelPlanPollVote;
 import com.example.travlediary.model.TravelPlanPollVotedCount;
 import com.example.travlediary.repository.travelplan.TravelPlanMapper;
@@ -91,10 +94,16 @@ public class TravelPlanPollService {
         poll.setCreatedByMemberId(member.getId());
         poll.setTitle(question);
         poll.setSelectionType(selectionType);
-        // 아래 세 가지는 이번 단계의 만들기 화면에 없다. 기본값으로만 저장한다.
-        poll.setResultVisibility(TravelPlanPollResultVisibility.REALTIME);
-        poll.setCloseType(TravelPlanPollCloseType.MANUAL);
+        /*
+          마감 방식은 고르게 하지 않는다. 모든 투표가 같은 규칙으로 끝난다.
+          지금 방에 있는 사람이 모두 투표하면 그때 끝나므로 close_type 은 ALL_VOTED 다.
+          그 전이라도 만든 사람은 직접 마감할 수 있고, 그때는 close_reason 만 MANUAL 이 된다.
+          시각으로 끝나는 투표는 없으므로 마감 시각도 두지 않는다.
+        */
+        poll.setCloseType(TravelPlanPollCloseType.ALL_VOTED);
         poll.setDeadlineAt(null);
+        poll.setResultVisibility(requireResultVisibility(
+                form == null ? null : form.getResultVisibility()));
         poll.setStatus(TravelPlanPollStatus.OPEN);
 
         if (travelPlanPollMapper.insertPoll(poll) != 1 || poll.getId() == null) {
@@ -149,6 +158,28 @@ public class TravelPlanPollService {
     }
 
     /**
+     * 투표 센터 탭에 붙는 숫자.
+     *
+     * <p>목록을 열지 않아도 두 숫자가 맞아야 해서 따로 센다.
+     * 숫자를 알려고 지난 투표 목록 전체를 가져오지 않는다.
+     */
+    @Transactional(readOnly = true)
+    public TravelPlanPollCountsDto pollCounts(Principal principal, Long travelPlanId) {
+        requireActiveMember(principal, travelPlanId);
+
+        Map<TravelPlanPollStatus, Integer> counts =
+                travelPlanPollMapper.countPollsByStatus(travelPlanId).stream()
+                        .filter(count -> count.getStatus() != null)
+                        .collect(Collectors.toMap(TravelPlanPollStatusCount::getStatus,
+                                TravelPlanPollStatusCount::getPollCount));
+
+        // 한 번도 나오지 않은 상태는 집계에 없다. 0 으로 채운다.
+        return new TravelPlanPollCountsDto(
+                counts.getOrDefault(TravelPlanPollStatus.OPEN, 0),
+                counts.getOrDefault(TravelPlanPollStatus.CLOSED, 0));
+    }
+
+    /**
      * 투표 상세. 선택지와 지금까지의 표, 그리고 내가 고른 것이 함께 온다.
      * 누가 무엇을 골랐는지는 담지 않는다.
      */
@@ -158,16 +189,19 @@ public class TravelPlanPollService {
         TravelPlanMember member = requireActiveMember(principal, travelPlanId);
         TravelPlanPoll poll = requirePollOfPlan(travelPlanId, pollId);
 
+        boolean closed = TravelPlanPollStatus.CLOSED.equals(poll.getStatus());
+        boolean resultsVisible = isResultVisible(poll);
+
         List<TravelPlanPollOption> options = travelPlanPollMapper.findOptionsByPollIds(
                 List.of(pollId));
-        Map<Long, Integer> voteCounts = voteCountsOf(List.of(pollId)).getOrDefault(
-                pollId, Map.of());
-
-        List<TravelPlanPollOptionResultDto> results = options.stream()
-                // 표를 하나도 못 받은 선택지는 집계에 없다. 0 으로 채운다.
-                .map(option -> new TravelPlanPollOptionResultDto(option.getId(),
-                        option.getContent(), voteCounts.getOrDefault(option.getId(), 0)))
-                .toList();
+        // 아직 공개할 때가 아니면 표를 아예 읽지 않는다.
+        List<TravelPlanPollOptionResultDto> results = resultsVisible
+                ? resultsOf(options, voteCountsOf(List.of(pollId))
+                        .getOrDefault(pollId, Map.of()))
+                : options.stream()
+                        .map(option -> TravelPlanPollOptionResultDto.hidden(
+                                option.getId(), option.getContent()))
+                        .toList();
 
         TravelPlanPollVote myVote = travelPlanPollMapper.findVoteByPollAndMember(
                 pollId, member.getId());
@@ -181,13 +215,26 @@ public class TravelPlanPollService {
                 displayNameOf(poll),
                 poll.getSelectionType() == null ? null : poll.getSelectionType().name(),
                 poll.getStatus() == null ? null : poll.getStatus().name(),
+                poll.getCloseType() == null ? null : poll.getCloseType().name(),
+                poll.getDeadlineAt() == null ? null : poll.getDeadlineAt().getTime(),
                 travelPlanPollMapper.countVotedMembers(pollId),
                 travelPlanMapper.countActiveMembers(travelPlanId),
-                TravelPlanPollStatus.CLOSED.equals(poll.getStatus())
-                        ? winnerSummaryOf(results)
-                        : null,
+                resultsVisible,
+                // 직접 마감은 만든 사람에게만 보인다. 전원이 투표하기를 기다릴 필요는 없다.
+                !closed && member.getId().equals(poll.getCreatedByMemberId()),
+                closed ? winnerSummaryOf(results) : null,
                 results,
                 selected);
+    }
+
+    /**
+     * 지금 표를 보여 줄 때인지.
+     * 마감 뒤에 공개하기로 한 투표는 진행 중에 표를 내보내지 않는다.
+     */
+    private boolean isResultVisible(TravelPlanPoll poll) {
+        return TravelPlanPollStatus.CLOSED.equals(poll.getStatus())
+                || !TravelPlanPollResultVisibility.AFTER_CLOSE.equals(
+                        poll.getResultVisibility());
     }
 
     /**
@@ -234,6 +281,64 @@ public class TravelPlanPollService {
         travelPlanMapper.touchLastActivity(travelPlanId);
         eventPublisher.publishEvent(new TravelPlanPollChangedEvent(
                 travelPlanId, TravelPlanPollEventDto.voted(pollId)));
+
+        // 전원이 투표하면 그 자리에서 끝나는 투표라면 지금이 그때인지 본다.
+        closeIfEveryoneVoted(travelPlanId, poll);
+    }
+
+    /**
+     * 직접 마감.
+     *
+     * <p>만든 사람만 할 수 있다. 방장이라도 남의 투표를 대신 마감하지 않는다.
+     * 전원이 투표하기를 기다리지 않고 언제든 끝낼 수 있다.
+     */
+    @Transactional
+    public void closePoll(Principal principal, Long travelPlanId, Long pollId) {
+        TravelPlanMember member = requireActiveMember(principal, travelPlanId);
+        TravelPlanPoll poll = requirePollOfPlan(travelPlanId, pollId);
+
+        if (!member.getId().equals(poll.getCreatedByMemberId())) {
+            throw new AccessDeniedException("투표를 만든 사람만 마감할 수 있습니다.");
+        }
+        if (!TravelPlanPollStatus.OPEN.equals(poll.getStatus())) {
+            throw new TravelPlanValidationException("poll", "이미 끝난 투표입니다.");
+        }
+        close(travelPlanId, pollId, TravelPlanPollCloseReason.MANUAL);
+    }
+
+    /**
+     * 지금 방에 있는 사람이 모두 투표했으면 마감한다.
+     *
+     * <p>기준은 초대 정원이 아니라 지금 방에 남아 있는 사람 수다.
+     * 나가거나 내보내진 사람은 세지 않으므로, 사람이 줄어 전원이 된 경우에도 다음 투표에서 끝난다.
+     */
+    private void closeIfEveryoneVoted(Long travelPlanId, TravelPlanPoll poll) {
+        int activeMembers = travelPlanMapper.countActiveMembers(travelPlanId);
+        if (activeMembers <= 0
+                || travelPlanPollMapper.countVotedMembers(poll.getId()) < activeMembers) {
+            return;
+        }
+        close(travelPlanId, poll.getId(), TravelPlanPollCloseReason.ALL_VOTED);
+    }
+
+    /**
+     * 실제로 마감하는 곳은 여기 하나뿐이다.
+     *
+     * <p>아직 열려 있을 때만 반영되는 UPDATE 라, 직접 마감과 전원 투표가
+     * 동시에 닿아도 한 번만 성공한다. 알림도 성공한 그 한 번만 나간다.
+     *
+     * @return 이번 호출이 마감했으면 true
+     */
+    private boolean close(Long travelPlanId, Long pollId,
+                          TravelPlanPollCloseReason closeReason) {
+        if (travelPlanPollMapper.closePoll(pollId, closeReason) != 1) {
+            // 다른 쪽이 먼저 마감했다. 같은 알림을 두 번 보내지 않는다.
+            return false;
+        }
+        travelPlanMapper.touchLastActivity(travelPlanId);
+        eventPublisher.publishEvent(new TravelPlanPollChangedEvent(
+                travelPlanId, TravelPlanPollEventDto.closed(pollId)));
+        return true;
     }
 
     /** 목록 한 줄들. 투표 수만큼 조회가 나가지 않도록 집계를 한 번에 읽는다. */
@@ -278,6 +383,7 @@ public class TravelPlanPollService {
     private List<TravelPlanPollOptionResultDto> resultsOf(
             List<TravelPlanPollOption> options, Map<Long, Integer> voteCounts) {
         return options.stream()
+                // 표를 하나도 못 받은 선택지는 집계에 없다. 0 으로 채운다.
                 .map(option -> new TravelPlanPollOptionResultDto(option.getId(),
                         option.getContent(), voteCounts.getOrDefault(option.getId(), 0)))
                 .toList();
@@ -298,14 +404,16 @@ public class TravelPlanPollService {
      */
     private String winnerSummaryOf(List<TravelPlanPollOptionResultDto> results) {
         int best = results.stream()
-                .mapToInt(TravelPlanPollOptionResultDto::voteCount)
+                .map(TravelPlanPollOptionResultDto::voteCount)
+                .filter(java.util.Objects::nonNull)
+                .mapToInt(Integer::intValue)
                 .max()
                 .orElse(0);
         if (best == 0) {
             return NO_RESULT;
         }
         List<String> winners = results.stream()
-                .filter(result -> result.voteCount() == best)
+                .filter(result -> result.voteCount() != null && result.voteCount() == best)
                 .map(TravelPlanPollOptionResultDto::content)
                 .toList();
         return winners.size() == 1
@@ -378,6 +486,21 @@ public class TravelPlanPollService {
             return TravelPlanPollSelectionType.valueOf(normalized);
         } catch (IllegalArgumentException exception) {
             throw new TravelPlanValidationException("selectionType", "선택 방식을 확인해 주세요.");
+        }
+    }
+
+    /** 비어 있으면 실시간 공개로 본다. */
+    private TravelPlanPollResultVisibility requireResultVisibility(String resultVisibility) {
+        String normalized = resultVisibility == null
+                ? "" : resultVisibility.strip().toUpperCase(Locale.ROOT);
+        if (normalized.isEmpty()) {
+            return TravelPlanPollResultVisibility.REALTIME;
+        }
+        try {
+            return TravelPlanPollResultVisibility.valueOf(normalized);
+        } catch (IllegalArgumentException exception) {
+            throw new TravelPlanValidationException(
+                    "resultVisibility", "결과 공개 방식을 확인해 주세요.");
         }
     }
 

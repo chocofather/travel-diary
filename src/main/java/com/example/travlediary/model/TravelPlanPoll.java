@@ -26,7 +26,8 @@ public class TravelPlanPoll {
     private TravelPlanPollCloseType closeType;
     private Timestamp deadlineAt;
     private TravelPlanPollStatus status;
-    private String closeReason;
+    /** 마감되기 전에는 비어 있다. */
+    private TravelPlanPollCloseReason closeReason;
     private Timestamp closedAt;
     private Timestamp createdAt;
     private Timestamp updatedAt;

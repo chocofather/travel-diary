@@ -1,5 +1,6 @@
 package com.example.travlediary.controller.travelplan;
 
+import com.example.travlediary.dto.TravelPlanPollCountsDto;
 import com.example.travlediary.dto.TravelPlanPollCreateForm;
 import com.example.travlediary.dto.TravelPlanPollDetailDto;
 import com.example.travlediary.dto.TravelPlanPollDto;
@@ -72,6 +73,15 @@ public class TravelPlanPollController {
         return Map.of("polls", travelPlanPollService.closedPolls(principal, travelPlanId));
     }
 
+    /**
+     * 투표 센터 탭에 붙는 숫자.
+     * 목록을 열지 않아도 두 숫자가 맞아야 해서 따로 둔다.
+     */
+    @GetMapping("/counts")
+    public TravelPlanPollCountsDto counts(@PathVariable Long travelPlanId, Principal principal) {
+        return travelPlanPollService.pollCounts(principal, travelPlanId);
+    }
+
     /** 카드를 눌러 들어간 상세. 선택지와 지금까지의 표, 내가 고른 것이 함께 온다. */
     @GetMapping("/{pollId:\\d+}")
     public TravelPlanPollDetailDto poll(@PathVariable Long travelPlanId,
@@ -97,6 +107,21 @@ public class TravelPlanPollController {
                     .body(Map.of("message", exception.getMessage()));
         }
         // 저장된 뒤의 값은 상세를 다시 읽어 그대로 돌려준다. 화면이 숫자를 짐작하지 않는다.
+        return ResponseEntity.ok(
+                travelPlanPollService.pollDetail(principal, travelPlanId, pollId));
+    }
+
+    /** 직접 마감. 만든 사람만 할 수 있고, 그 확인은 Service 가 한다. */
+    @PostMapping("/{pollId:\\d+}/close")
+    public ResponseEntity<?> close(@PathVariable Long travelPlanId,
+                                   @PathVariable Long pollId,
+                                   Principal principal) {
+        try {
+            travelPlanPollService.closePoll(principal, travelPlanId, pollId);
+        } catch (TravelPlanValidationException exception) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", exception.getMessage()));
+        }
         return ResponseEntity.ok(
                 travelPlanPollService.pollDetail(principal, travelPlanId, pollId));
     }

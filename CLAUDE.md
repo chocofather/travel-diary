@@ -69,6 +69,7 @@ Standard layered flow per feature: `Controller -> Service -> Mapper interface ->
 - Reuse information already established in the current session instead of repeatedly re-reading unchanged files.
 - Avoid long reports of files inspected or unchanged code.
 - Keep implementation summaries concise: changed files, key behavior, verification result, and remaining issues only.
+- Task prompts may omit repository-wide conventions already defined in this file. Do not require repeated reminders about Git restrictions, DB restrictions, verification commands, or workflow unless the current task needs an exception.
 
 ## Verification order
 
@@ -81,6 +82,14 @@ Use this order unless the user explicitly requests otherwise:
 5. Let the user perform browser/manual verification when UI or runtime behavior is involved.
 6. Do not commit or push unless explicitly requested by the user.
 7. When the user asks to commit or push, do not perform Git write operations automatically; provide the commands unless the user explicitly asks Claude Code to execute them.
+
+## Browser/manual verification
+
+- For UI, JavaScript, WebSocket, realtime, authentication/session, and other browser-dependent behavior, do not claim that the feature is fully verified only from automated tests.
+- After automated verification succeeds, give the user a short list of only the important browser behaviors that still need manual confirmation.
+- Do not repeat obvious or exhaustive browser test checklists. Limit manual verification guidance to behaviors that automated tests cannot reliably prove.
+- If the user reports that browser verification succeeded, treat that stage as complete unless there is a specific unresolved issue.
+- Do not proactively continue to the next feature after browser verification; wait for the user's instruction.
 
 ## Secrets and credentials
 

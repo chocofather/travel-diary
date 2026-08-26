@@ -2245,6 +2245,25 @@
     font-weight: 600;
 }
 
+/* 마감 뒤에 결과를 여는 투표에서만 나온다 */
+.travel-plan-poll-detail-hint {
+    margin: 2px 0 0;
+    color: var(--tp-ink-faint);
+    font-size: 12px;
+}
+
+/* 마감 규칙은 고르는 것이 아니라 알려 주는 것이라 조용한 안내 한 줄로 둔다 */
+.travel-plan-poll-note {
+    margin: 0;
+    padding: 10px 12px;
+    border: 1px solid var(--tp-poll-line);
+    border-radius: 5px;
+    background: var(--tp-poll-soft);
+    color: var(--tp-poll-accent-strong);
+    font-size: 12px;
+    line-height: 1.7;
+}
+
 .travel-plan-poll-choices,
 .travel-plan-poll-results {
     display: flex;

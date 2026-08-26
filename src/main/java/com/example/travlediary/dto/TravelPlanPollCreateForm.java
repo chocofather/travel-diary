@@ -21,4 +21,10 @@ public class TravelPlanPollCreateForm {
     /** SINGLE / MULTIPLE. 서버가 허용값인지 다시 본다. */
     private String selectionType;
     private List<String> options = new ArrayList<>();
+    /** REALTIME / AFTER_CLOSE. 비어 있으면 실시간 공개로 본다. */
+    private String resultVisibility;
+    /*
+      마감 방식은 받지 않는다. 모든 투표가 같은 규칙으로 끝난다.
+      (참여자 전원 투표 시 자동 마감 + 만든 사람의 직접 마감)
+    */
 }
