@@ -30,11 +30,15 @@
         <span class="travel-plan-presence-dot" aria-label="오프라인" title="오프라인"
               data-travel-plan-presence-dot></span>
         <span th:text="${member.displayName}">민준</span>
-        <span class="travel-plan-member-me" th:if="${member.currentUser}">(나)</span>
+        <!-- 이름에 괄호로 붙이지 않고 작은 글자 하나로 떼어 둔다 -->
+        <span class="travel-plan-member-me" th:if="${member.currentUser}">나</span>
       </span>
-      <span class="travel-plan-member-role"
-            th:classappend="${member.role.name() == 'OWNER'} ? 'is-owner'"
-            th:text="${member.role.name() == 'OWNER'} ? '방장' : '멤버'">방장</span>
+      <!--
+        방장일 때만 적는다.
+        나머지가 모두 멤버라는 것은 굳이 줄마다 되풀이할 말이 아니다.
+      -->
+      <span class="travel-plan-member-role is-owner"
+            th:if="${member.role.name() == 'OWNER'}">방장</span>
 
       <!--
         관리 진입점은 OWNER 에게만, 그리고 MEMBER 줄에만 붙는다.
@@ -66,13 +70,16 @@
       </span>
     </li>
   </ul>
-  <!-- 참여자 총원. 접속 중 인원과는 다른 숫자다 -->
+  <!--
+    참여자 총원과 접속 인원을 한 줄에 둔다. 서로 다른 숫자라 가운뎃점으로 나눈다.
+    접속 현황은 연결된 뒤에만 채워지므로, 그 전에는 앞쪽 한 조각만 보인다.
+  -->
   <p class="travel-plan-members-count"
-     th:attr="data-members-label=|참여자 ${memberCount}/${memberLimit}|"
-     th:text="${memberCount} + ' / ' + ${memberLimit} + '명 참여 중'">3 / 8명 참여 중</p>
-  <!-- 접속 현황은 연결된 뒤에만 채워진다 -->
-  <p class="travel-plan-online-count" hidden
-     data-travel-plan-online-count>0명 접속 중</p>
+     th:attr="data-members-label=|참여자 ${memberCount}/${memberLimit}|">
+    <span th:text="${memberCount} + '/' + ${memberLimit} + '명 참여'">3/8명 참여</span>
+    <span class="travel-plan-online-count" hidden
+          data-travel-plan-online-count>0명 접속 중</span>
+  </p>
 
   <!--
     이전 참여자. OWNER 에게만, 그것도 내보낸 사람이 있을 때만 나온다.

@@ -1264,6 +1264,32 @@ class TravelPlanControllerTest {
     }
 
     @Test
+    void theRowsSayOnlyWhatIsWorthSaying() throws Exception {
+        when(travelPlanService.getActivePlanMembers(7L, 42L)).thenReturn(membersOf(
+                new com.example.travlediary.dto.TravelPlanMemberDto(
+                        11L, "민준", com.example.travlediary.model.TravelPlanRole.OWNER, true),
+                new com.example.travlediary.dto.TravelPlanMemberDto(
+                        12L, "쭈니", com.example.travlediary.model.TravelPlanRole.MEMBER, false)));
+
+        String body = mockMvc.perform(
+                        get("/travel-plans/42/members/fragment").with(user(member())))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body)
+                // 방장에게만 적는다. 나머지가 멤버라는 것은 되풀이하지 않는다
+                .contains("방장")
+                .doesNotContain("멤버</span>")
+                // 나라는 표시는 이름에 괄호로 붙이지 않는다
+                .contains(">나</span>")
+                .doesNotContain("(나)")
+                // 참여 인원과 접속 인원이 한 줄에 온다
+                .contains("2/8명 참여")
+                // 접속 인원 자리는 연결되기 전까지 숨어 있다
+                .contains("class=\"travel-plan-online-count\" hidden");
+    }
+
+    @Test
     void theMemberListFragmentIsNotAWholePage() throws Exception {
         // 패널 속만 갈아 끼우므로 껍데기가 딸려 오면 안 된다
         when(travelPlanService.getActivePlanMembers(7L, 42L)).thenReturn(membersOf(

@@ -123,10 +123,14 @@ class TravelPlanMemberListContractTest {
                 .contains("함께 계획하는 사람들")
                 .contains("th:each=\"member : ${members}\"")
                 .contains("th:text=\"${member.displayName}\"")
-                .contains("${member.role.name() == 'OWNER'} ? '방장' : '멤버'")
+                // 방장일 때만 적는다. 나머지가 멤버라는 것은 되풀이할 말이 아니다
+                .contains("th:if=\"${member.role.name() == 'OWNER'}\">방장</span>")
+                .doesNotContain("'멤버'")
+                // 나라는 표시는 이름에 괄호로 붙이지 않고 따로 떼어 둔다
                 .contains("th:if=\"${member.currentUser}\"")
-                .contains(">(나)</span>")
-                .contains("'명 참여 중'");
+                .contains(">나</span>")
+                .doesNotContain("(나)")
+                .contains("'명 참여'");
 
         // 역할은 작은 글자로만 구분한다
         assertThat(between(css, ".travel-plan-member-role {", "}")).contains("font-size: 11px");
@@ -135,7 +139,7 @@ class TravelPlanMemberListContractTest {
         String row = between(css, "\n.travel-plan-member {", "}");
         assertThat(row)
                 .contains("display: grid")
-                .contains("grid-template-columns: minmax(0, 1fr) auto 20px")
+                .contains("grid-template-columns: minmax(0, 1fr) auto 28px")
                 .doesNotContain("space-between");
         // 메뉴가 없는 행도 세 번째 칸을 비워 둔다
         assertThat(between(css, ".travel-plan-member-menu {", "}")).contains("justify-self");
@@ -143,8 +147,10 @@ class TravelPlanMemberListContractTest {
         assertThat(between(css, ".travel-plan-member-role {", "}"))
                 .contains("justify-self: end")
                 .contains("white-space: nowrap");
+        // 방장만 조금 진해진다. 색 있는 배지를 두르지 않는다
         assertThat(between(css, ".travel-plan-member-role.is-owner {", "}"))
-                .contains("font-weight: 700")
+                .contains("font-weight: 600")
+                .contains("color: var(--tp-plan-accent)")
                 .doesNotContain("background");
         assertThat(outsideThePollModal(detail))
                 .doesNotContain("modal").doesNotContain("dialog");
@@ -270,9 +276,18 @@ class TravelPlanMemberListContractTest {
                 .contains("background: none")
                 .contains("font-size: 12px")
                 .contains("border: 0");
-        // ⋯ 는 평소에 거의 보이지 않는다
-        assertThat(between(css, ".travel-plan-member-menu-button {", "}"))
-                .contains("color: #cfc4b2");
+        /*
+          ⋯ 는 조용히 두되 손은 닿아야 한다.
+          글자는 작아도 눌리는 자리는 28px 을 채운다.
+        */
+        String menuButton = between(css, ".travel-plan-member-menu-button {", "}");
+        assertThat(menuButton)
+                .contains("color: var(--tp-plan-ink-faint)")
+                .contains("width: 28px")
+                .contains("height: 28px")
+                // 테두리를 두른 큰 원형 버튼으로 만들지 않는다
+                .contains("border: 0")
+                .contains("background: none");
         assertThat(css).contains(".travel-plan-member:hover .travel-plan-member-menu-button");
     }
 

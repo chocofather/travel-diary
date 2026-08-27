@@ -115,8 +115,11 @@ class TravelPlanPresenceContractTest {
         String members = membersHtml();
 
         // 참여자 총원은 그대로 둔다
-        assertThat(members).contains("${memberCount} + ' / ' + ${memberLimit}");
-        // 접속 인원은 따로 표시하고, 연결되기 전에는 숨겨 둔다
+        assertThat(members).contains("${memberCount} + '/' + ${memberLimit}");
+        /*
+          한 줄에 나란히 두지만 숫자는 여전히 둘이다.
+          접속 인원은 자기 자리에 따로 들어가고, 연결되기 전에는 그 조각만 숨는다.
+        */
         assertThat(members)
                 .contains("class=\"travel-plan-online-count\" hidden")
                 .contains("data-travel-plan-online-count");

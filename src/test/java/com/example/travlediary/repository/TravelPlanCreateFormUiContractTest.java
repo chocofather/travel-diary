@@ -49,6 +49,43 @@ class TravelPlanCreateFormUiContractTest {
     }
 
     @Test
+    void theCreateFormWearsTheSameColoursAsTheRestOfTheFeature() throws IOException {
+        String css = resource("/static/css/travel-plan.css");
+        // 생성 폼 규칙만 본다(그 뒤로는 목록·상세 구역이다)
+        String form = between(css, "/*\n  공동 여행계획 생성 폼.", "/* ───── 함께 계획하기 목록");
+
+        /*
+          새 색을 따로 만들지 않는다.
+          목록·상세가 쓰는 --tp-plan-* 를 그대로 가져다 쓴다.
+        */
+        assertThat(form)
+                .contains("var(--tp-plan-line)")
+                .contains("var(--tp-plan-ink)")
+                .contains("var(--tp-plan-accent)");
+        // 갈색·베이지가 남아 있지 않다
+        assertThat(form)
+                .doesNotContain("#6f6350")
+                .doesNotContain("#fdfbf7")
+                .doesNotContain("#e3dcd1")
+                .doesNotContain("#ded5c8")
+                .doesNotContain("#3f3426")
+                .doesNotContain("#8b8378");
+
+        // 카드는 흰 종이에 얇은 선. 두꺼운 테두리나 진한 그림자를 두지 않는다
+        assertThat(between(css, ".travel-plan-form {", "}"))
+                .contains("background: #fff")
+                .contains("border: 1px solid var(--tp-plan-line)");
+        // 눌러야 할 것 하나만 색을 채운다
+        assertThat(between(css, ".travel-plan-form-submit {", "}"))
+                .contains("background: var(--tp-plan-accent)")
+                .contains("color: #fff");
+        // 지금 쓰고 있는 칸에만 옅은 sage 가 돈다
+        assertThat(css).contains(".travel-plan-form-field input:focus,");
+        assertThat(between(css, ".travel-plan-form-field input:focus,", "}"))
+                .contains("border-color: var(--tp-plan-accent)");
+    }
+
+    @Test
     void bothDatesOnlyTakeAFourDigitYear() throws IOException {
         String create = createHtml();
 
