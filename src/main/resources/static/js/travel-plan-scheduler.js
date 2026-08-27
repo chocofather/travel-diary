@@ -691,6 +691,10 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         // 패널 안을 눌렀다고 닫히지 않게 한다.
         panel.addEventListener("click", event => event.stopPropagation());
+        // 화면에서 사라진 예전 popover 는 들고 있지 않는다(방장이 바뀌면 갈린다).
+        for (let index = popovers.length - 1; index >= 0; index--) {
+            if (!popovers[index].root.isConnected) popovers.splice(index, 1);
+        }
         popovers.push(popover);
         return popover;
     }
@@ -699,10 +703,6 @@ document.addEventListener("DOMContentLoaded", () => {
         "data-travel-plan-members",
         "data-travel-plan-members-toggle",
         "data-travel-plan-members-panel");
-    const invite = registerPopover(
-        "data-travel-plan-invite",
-        "data-travel-plan-invite-toggle",
-        "data-travel-plan-invite-panel");
 
     /*
       참여자 줄의 ⋯ (OWNER 에게만 렌더링된다). 한 번에 하나만 열어 둔다.
@@ -751,7 +751,18 @@ document.addEventListener("DOMContentLoaded", () => {
         closePopovers(null);
     });
 
-    if (invite) {
+    /*
+      초대는 방장에게만 있고, 방장은 바뀔 수 있다.
+      그 자리가 통째로 갈리면 예전 요소에 붙여 둔 동작은 함께 사라지므로
+      새 markup 을 다시 찾아 붙인다. 방장이 아니면 붙일 것이 없다.
+    */
+    function bindInvite() {
+        const invite = registerPopover(
+            "data-travel-plan-invite",
+            "data-travel-plan-invite-toggle",
+            "data-travel-plan-invite-panel");
+        if (!invite) return;
+
         const url = invite.root.querySelector("[data-travel-plan-invite-url]");
         const copy = invite.root.querySelector("[data-travel-plan-invite-copy]");
 
@@ -772,6 +783,10 @@ document.addEventListener("DOMContentLoaded", () => {
             invite.open(true);
         }
     }
+
+    bindInvite();
+    // 방장을 넘겨받았다. 그 자리가 갈렸으니 새 markup 에 다시 붙인다.
+    document.addEventListener("travelplan:owner-actions-updated", () => bindInvite());
 
     // 저장에 실패해 서버가 열어 둔 슬롯이 있으면 그 자리에서 이어 쓴다.
     const reopened = planner.querySelector(

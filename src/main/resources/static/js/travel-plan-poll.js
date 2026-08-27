@@ -485,7 +485,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     /**
      * 지우기.
-     * 만든 사람에게만 보인다. 되돌릴 수 없으므로 한 번 물어본다.
+     * 서버가 지울 수 있다고 한 사람에게만 보인다(만든 사람과 방장).
+     * 되돌릴 수 없으므로 한 번 물어본다.
      */
     function deleteActionOf(poll) {
         const remove = document.createElement("button");
@@ -532,7 +533,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const actions = document.createElement("div");
             actions.className = "travel-plan-poll-actions";
 
-            // 직접 마감은 만든 사람에게만 보인다. 그 확인은 서버가 한다.
+            // 누구에게 보일지는 서버가 정한다(만든 사람과 방장).
+            // 화면은 그 답을 그대로 쓰고, 눌렀을 때 서버가 다시 확인한다.
             if (poll.closable) {
                 const closeButton = document.createElement("button");
                 closeButton.type = "button";
@@ -838,6 +840,13 @@ document.addEventListener("DOMContentLoaded", () => {
         if (loadedTabs.has("OPEN")) loadTab("OPEN", true);
         if (String(openedPollId) === String(payload.pollId)) refreshDetail();
     });
+
+    /*
+      방장이 바뀌었다. 마감·삭제를 누가 할 수 있는지가 함께 바뀐다.
+      보고 있던 상세를 서버에서 다시 읽어 그 답을 새로 받는다.
+      화면이 역할을 짐작해 버튼을 넣고 빼지 않는다.
+    */
+    document.addEventListener("travelplan:owner-actions-updated", () => refreshDetail());
 
     // 채팅의 "새 투표를 만들었어요" 를 누르면 여기가 열린다.
     document.addEventListener("travelplan:poll-center-open", event => {

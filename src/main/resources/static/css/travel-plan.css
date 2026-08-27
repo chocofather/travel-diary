@@ -412,6 +412,15 @@
     gap: 8px;
 }
 
+/*
+  방장이 바뀌면 통째로 갈아 끼우는 자리.
+  상자 자체는 자리를 차지하지 않아, 안의 버튼들이 상단 액션 줄에
+  그대로 놓이고 간격도 지금과 같다.
+*/
+.travel-plan-owner-actions {
+    display: contents;
+}
+
 .travel-plan-members,
 .travel-plan-invite {
     position: relative;

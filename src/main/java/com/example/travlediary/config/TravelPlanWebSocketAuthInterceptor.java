@@ -6,6 +6,7 @@ import com.example.travlediary.service.travelplan.TravelPlanMemberDestinations;
 import com.example.travlediary.service.travelplan.TravelPlanPollDestinations;
 import com.example.travlediary.service.travelplan.TravelPlanPresenceDestinations;
 import com.example.travlediary.service.travelplan.TravelPlanRoomAccess;
+import com.example.travlediary.service.travelplan.TravelPlanRoomSessionRegistry;
 import com.example.travlediary.service.travelplan.TravelPlanScheduleDestinations;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.Message;
@@ -29,6 +30,8 @@ import java.security.Principal;
 public class TravelPlanWebSocketAuthInterceptor implements ChannelInterceptor {
 
     private final TravelPlanRoomAccess travelPlanRoomAccess;
+    /** 자격을 잃었을 때 끊을 수 있도록, 구독이 받아들여진 연결을 적어 둔다. */
+    private final TravelPlanRoomSessionRegistry travelPlanRoomSessionRegistry;
 
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
@@ -57,7 +60,14 @@ public class TravelPlanWebSocketAuthInterceptor implements ChannelInterceptor {
             if (travelPlanId == null) {
                 throw new AccessDeniedException("구독할 수 없는 대상입니다.");
             }
-            requireActiveMember(principal, travelPlanId);
+            Long memberId = requireActiveMember(principal, travelPlanId);
+            /*
+              이 연결이 그 방을 보기 시작했다고 적어 둔다.
+              구독은 여기서 한 번만 검사되므로, 나중에 방에서 빠지면
+              그때는 이 장부를 보고 연결 자체를 끊는다.
+            */
+            travelPlanRoomSessionRegistry.watching(
+                    travelPlanId, memberId, accessor.getSessionId());
         }
 
         // 보내는 쪽도 막아야 한다. 목적지에 적힌 방 번호를 믿지 않는다.
@@ -79,7 +89,8 @@ public class TravelPlanWebSocketAuthInterceptor implements ChannelInterceptor {
             return false;
         }
         return destination.startsWith("/user" + TravelPlanEditorDestinations.LOCK_REPLY_QUEUE)
-                || destination.startsWith("/user" + TravelPlanChatDestinations.REPLY_QUEUE);
+                || destination.startsWith("/user" + TravelPlanChatDestinations.REPLY_QUEUE)
+                || destination.startsWith("/user" + TravelPlanMemberDestinations.ACCESS_QUEUE);
     }
 
     /**
@@ -99,10 +110,10 @@ public class TravelPlanWebSocketAuthInterceptor implements ChannelInterceptor {
                 : TravelPlanChatDestinations.sendTravelPlanIdOf(destination);
     }
 
-    private void requireActiveMember(Principal principal, Long travelPlanId) {
-        if (travelPlanRoomAccess.findActiveMemberId(principal, travelPlanId).isEmpty()) {
-            throw new AccessDeniedException("여행계획에 참여 중이 아닙니다.");
-        }
+    /** @return 그 방 안에서의 참여 id. 방별로 다른 값이라 다른 방과 섞이지 않는다. */
+    private Long requireActiveMember(Principal principal, Long travelPlanId) {
+        return travelPlanRoomAccess.findActiveMemberId(principal, travelPlanId)
+                .orElseThrow(() -> new AccessDeniedException("여행계획에 참여 중이 아닙니다."));
     }
 
     /**

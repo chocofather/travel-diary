@@ -103,10 +103,12 @@ class TravelPlanMemberListContractTest {
 
         // 초대는 그대로 OWNER 전용이고, 참여자와 나란히 놓인다
         int members = detail.indexOf("data-travel-plan-members");
-        int invite = detail.indexOf("class=\"travel-plan-invite\"");
+        // 방장이 바뀔 수 있어 초대는 갈아 끼우는 자리에 있다
+        int ownerActions = detail.indexOf("data-travel-plan-owner-actions");
         assertThat(members).isGreaterThan(0);
-        assertThat(invite).isGreaterThan(members);
-        assertThat(between(detail, "class=\"travel-plan-invite\"", "data-travel-plan-invite>"))
+        assertThat(ownerActions).isGreaterThan(members);
+        assertThat(ownerActionsHtml())
+                .contains("class=\"travel-plan-invite\"")
                 .contains("travelPlan.currentMember.role.name() == 'OWNER'");
         assertThat(detail).contains("class=\"travel-plan-top-actions\"");
     }
@@ -221,15 +223,21 @@ class TravelPlanMemberListContractTest {
 
         /*
           방장에게만 보이는 것들이 모두 membership role 하나만 본다.
-          (초대 / 확정 버튼 / 확정 확인 창, 그리고 조각 안의 관리 메뉴)
-          이전이 끝나면 다음 렌더링에서 자연스럽게 뒤바뀐다.
+          이전이 끝나면 그 조각을 다시 받아 자연스럽게 뒤바뀐다.
+
+          상세 화면에는 방장 조건이 남아 있지 않다.
+          초대·확정·확정 확인 창은 갈아 끼우는 조각으로 옮겼고,
+          참여자 관리 메뉴는 참여자 조각 안에 있다.
         */
-        assertThat(countOf(detail, "travelPlan.currentMember.role.name() == 'OWNER'"))
-                .isEqualTo(3);
+        assertThat(countOf(detail, "currentMember.role.name() == 'OWNER'")).isZero();
+        // 방장 전용 조각은 조건 하나로 통째로 갈린다
+        assertThat(countOf(ownerActionsHtml(), "currentMember.role.name() == 'OWNER'"))
+                .isEqualTo(1);
         assertThat(countOf(membersHtml(), "currentMember.role.name() == 'OWNER'")).isEqualTo(1);
-        assertThat(detail).doesNotContain("createdByUserId").doesNotContain("created_by_user_id");
-        assertThat(membersHtml())
-                .doesNotContain("createdByUserId").doesNotContain("created_by_user_id");
+        for (String source : new String[]{detail, membersHtml(), ownerActionsHtml()}) {
+            assertThat(source)
+                    .doesNotContain("createdByUserId").doesNotContain("created_by_user_id");
+        }
     }
 
     @Test
@@ -508,16 +516,23 @@ class TravelPlanMemberListContractTest {
     }
 
     /**
+     * 방장에게만 있는 상단 액션(확정 / 초대 / 확정 확인 창).
+     * 방장이 바뀌면 통째로 갈리므로 상세 화면이 아니라 이 조각에 있다.
+     */
+    private String ownerActionsHtml() throws IOException {
+        return resource("/templates/travelplan/fragments/owner-actions.html");
+    }
+
+    /**
      * 따로 뜨는 창들을 뺀 나머지 화면.
      * 창을 띄우는 것은 투표 센터와 확정 확인뿐이고,
      * 참여자·초대·일정은 지금도 그 자리에서 다룬다.
      */
     private String outsideThePollModal(String detail) {
-        int finalizeStart = detail.indexOf("class=\"travel-plan-finalize-modal\"");
+        // 확정 확인 창은 방장 전용 조각으로 옮겨 가 여기에는 투표 센터만 남았다
         int pollStart = detail.indexOf("class=\"travel-plan-poll-modal\"");
-        assertThat(finalizeStart).as("확정 확인 창").isGreaterThanOrEqualTo(0);
         assertThat(pollStart).as("투표 센터 창").isGreaterThanOrEqualTo(0);
-        return detail.substring(0, Math.min(finalizeStart, pollStart));
+        return detail.substring(0, pollStart);
     }
 
     private String resource(String path) throws IOException {

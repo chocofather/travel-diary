@@ -733,7 +733,9 @@ class TravelPlanInvitationServiceTest {
 
         travelPlanInvitationService.join(MEMBER_USER_ID, "raw-token", "예진");
 
-        verify(eventPublisher).publishEvent(new TravelPlanMembershipChangedEvent(PLAN_ID));
+        // 아무도 자격을 잃지 않았으므로 끊을 연결도 없다
+        verify(eventPublisher).publishEvent(
+                TravelPlanMembershipChangedEvent.changed(PLAN_ID));
     }
 
     @Test
@@ -748,8 +750,9 @@ class TravelPlanInvitationServiceTest {
 
         travelPlanInvitationService.join(MEMBER_USER_ID, "raw-token", null);
 
-        // 새로 들어오는 것과 같은 알림 하나를 쓴다
-        verify(eventPublisher).publishEvent(new TravelPlanMembershipChangedEvent(PLAN_ID));
+        // 새로 들어오는 것과 같은 알림 하나를 쓰고, 여기서도 끊을 연결은 없다
+        verify(eventPublisher).publishEvent(
+                TravelPlanMembershipChangedEvent.changed(PLAN_ID));
     }
 
     @Test

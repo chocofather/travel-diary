@@ -9,17 +9,80 @@
   누구인지 알려 주고 그래도 할지는 방장이 정한다.
 */
 document.addEventListener("DOMContentLoaded", () => {
-    const root = document.querySelector("[data-travel-plan-finalize]");
-    const modal = document.querySelector("[data-travel-plan-finalize-modal]");
-    if (!root || !modal) return;
+    /*
+      완료된 방으로 화면을 바꾼다.
 
-    const planId = root.getAttribute("data-finalize-plan-id");
-    if (!planId) return;
+      함께 하던 일이 모두 끝났으므로 그 진입점을 화면에서 내린다.
+      서버는 이미 전부 거부하지만, 눌러 보고 오류로 알게 두지 않는다.
+      열어 둔 채팅·투표·초대 창이 있으면 그 창도 함께 닫힌다
+      (진입점 뿌리를 감추면 그 안의 패널도 함께 사라지고,
+       화면 바깥에 따로 뜨는 창은 아래에서 하나씩 닫는다).
 
-    const openButton = root.querySelector("[data-travel-plan-finalize-open]");
-    const confirmButton = modal.querySelector("[data-travel-plan-finalize-confirm]");
-    const warning = modal.querySelector("[data-travel-plan-finalize-warning]");
-    const notice = modal.querySelector("[data-travel-plan-finalize-error]");
+      새로고침하지 않는다. 일정은 읽기 전용으로 바뀌고,
+      완료됐다는 것까지만 알린다.
+    */
+    const COMPLETED_CLOSES = [
+        // 채팅 진입점과 열려 있는 채팅창
+        "[data-travel-plan-chat]",
+        "[data-travel-plan-chat-panel]",
+        // 투표 센터. 채팅창 안의 투표 진입점은 채팅창과 함께 사라진다
+        "[data-travel-plan-poll-modal]",
+        // 초대 버튼과 팝오버
+        "[data-travel-plan-invite]",
+        // 완료 버튼과 확인 창. 더 쓸 일이 없다
+        "[data-travel-plan-finalize]",
+        "[data-travel-plan-finalize-modal]"
+    ];
+
+    function markCompleted() {
+        const planner = document.querySelector("[data-plan-id]");
+        // 일정 A/B/C 는 이 표시 하나로 읽기 전용이 된다(기존 동작 그대로).
+        if (planner) planner.classList.add("is-completed");
+
+        /*
+          hidden 하나로 진입점과 그 안의 패널이 함께 사라진다.
+          .travel-plan-chat / .travel-plan-invite / .travel-plan-finalize 는
+          display 를 정해 두지 않아 [hidden] 이 그대로 먹고,
+          따로 뜨는 창들은 각자 [hidden] 규칙을 이미 갖고 있다.
+        */
+        COMPLETED_CLOSES.forEach(selector =>
+            document.querySelectorAll(selector).forEach(element => {
+                element.hidden = true;
+                // 닫힌 상태와 표시가 어긋나지 않게 한다.
+                element.querySelector("[aria-expanded]")
+                    ?.setAttribute("aria-expanded", "false");
+            }));
+
+        if (document.querySelector("[data-travel-plan-completed-notice]")) return;
+        const notice = document.createElement("p");
+        notice.className = "travel-plan-completed-notice";
+        notice.setAttribute("data-travel-plan-completed-notice", "");
+        notice.setAttribute("role", "status");
+        notice.textContent = "여행 계획이 완료되었어요. 이제 일정은 수정할 수 없습니다.";
+        planner?.prepend(notice);
+    }
+
+    /*
+      완료 알림은 방에 있는 모두가 받는다.
+      확정 버튼은 방장에게만 있으므로, 아래 준비보다 먼저 붙여 두어야
+      멤버 화면도 똑같이 읽기 전용으로 바뀐다.
+    */
+    document.addEventListener("travelplan:plan-completed", () => markCompleted());
+
+    /*
+      여기부터는 확정하는 쪽의 준비다. 방장 화면에만 있다.
+
+      방장은 바뀔 수 있고, 그때 이 markup 은 통째로 새것으로 갈린다.
+      그래서 한 번 찾아 두지 않고 갈릴 때마다 다시 찾는다.
+      (한 번 담아 두면 넘겨받은 사람 화면에서 버튼이 눌리지 않는다)
+    */
+    let root = null;
+    let modal = null;
+    let planId = null;
+    let openButton = null;
+    let confirmButton = null;
+    let warning = null;
+    let notice = null;
 
     let checking = false;
     /** 쓰고 있는 사람이 있는 것을 알고도 하겠다고 한 상태. */
@@ -128,19 +191,50 @@ document.addEventListener("DOMContentLoaded", () => {
         renderReady();
     }
 
-    openButton?.addEventListener("click", () => openModal());
-    modal.querySelector("[data-travel-plan-finalize-cancel]")
-        ?.addEventListener("click", () => closeModal());
+    /*
+      방장 전용 자리를 다시 찾아 동작을 붙인다.
 
-    // 바깥의 어두운 곳을 누르면 닫는다. 창 안쪽 클릭은 그대로 둔다.
-    modal.addEventListener("click", event => {
-        if (event.target === modal) closeModal();
-    });
+      갈아 끼운 markup 은 전부 새 요소라 예전에 붙여 둔 동작이 없다.
+      요소가 새것이므로 예전 동작은 그 요소와 함께 사라진다(두 번 붙지 않는다).
+      방장이 아니면 이 자리가 비어 있어 아무것도 붙일 것이 없다.
+    */
+    function bindOwnerControls() {
+        root = document.querySelector("[data-travel-plan-finalize]");
+        modal = document.querySelector("[data-travel-plan-finalize-modal]");
+        planId = root?.getAttribute("data-finalize-plan-id") || null;
+        openButton = root?.querySelector("[data-travel-plan-finalize-open]") || null;
+        confirmButton = modal?.querySelector("[data-travel-plan-finalize-confirm]") || null;
+        warning = modal?.querySelector("[data-travel-plan-finalize-warning]") || null;
+        notice = modal?.querySelector("[data-travel-plan-finalize-error]") || null;
 
+        // 넘겨준 사람 화면에서는 여기서 끝난다. 남은 상태도 함께 지운다.
+        if (!root || !modal || !planId) {
+            checking = false;
+            force = false;
+            return;
+        }
+
+        openButton?.addEventListener("click", () => openModal());
+        modal.querySelector("[data-travel-plan-finalize-cancel]")
+            ?.addEventListener("click", () => closeModal());
+
+        // 바깥의 어두운 곳을 누르면 닫는다. 창 안쪽 클릭은 그대로 둔다.
+        modal.addEventListener("click", event => {
+            if (event.target === modal) closeModal();
+        });
+
+        confirmButton?.addEventListener("click", () => finalizePlan());
+    }
+
+    // 창 바깥의 Esc 는 한 번만 붙여 둔다. 그때의 창을 그때 본다.
     document.addEventListener("keydown", event => {
-        if (event.key !== "Escape" || modal.hidden) return;
+        if (event.key !== "Escape" || !modal || modal.hidden) return;
         closeModal();
     });
+
+    bindOwnerControls();
+    // 방장이 바뀌어 이 자리가 갈렸다. 새 markup 에 동작을 다시 붙인다.
+    document.addEventListener("travelplan:owner-actions-updated", () => bindOwnerControls());
 
     /*
       방장이 하겠다고 눌렀다.
@@ -176,29 +270,4 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    confirmButton?.addEventListener("click", () => finalizePlan());
-
-    /*
-      완료된 방으로 화면을 바꾼다.
-
-      새로고침하지 않는다. 지금 열려 있던 편집기를 닫고, 더 이상 열리지 않게 한다.
-      완료 화면 자체는 다음 단계라 여기서는 고칠 수 없다는 것까지만 알린다.
-    */
-    function markCompleted() {
-        const planner = document.querySelector("[data-plan-id]");
-        if (planner) planner.classList.add("is-completed");
-        // 상단의 완료 버튼도 더 쓸 일이 없다.
-        root.hidden = true;
-
-        if (document.querySelector("[data-travel-plan-completed-notice]")) return;
-        const notice = document.createElement("p");
-        notice.className = "travel-plan-completed-notice";
-        notice.setAttribute("data-travel-plan-completed-notice", "");
-        notice.setAttribute("role", "status");
-        notice.textContent = "여행 계획이 완료되었어요. 이제 일정은 수정할 수 없습니다.";
-        planner?.prepend(notice);
-    }
-
-    // 다른 사람이 완료했을 때도 같은 처리를 받는다.
-    document.addEventListener("travelplan:plan-completed", () => markCompleted());
 });

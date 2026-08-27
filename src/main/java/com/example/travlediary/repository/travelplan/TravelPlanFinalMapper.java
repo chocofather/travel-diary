@@ -63,14 +63,21 @@ public interface TravelPlanFinalMapper {
                             @Param("userId") Long userId);
 
     /**
-     * 아직 이 완료된 여행을 자기 목록에 두고 있는 사람 수.
+     * 아직 이 완료된 여행을 볼 수 있는 사람 수.
      *
      * <p>지운 사람 수가 아니라 <em>남은</em> 사람 수다.
      * 0 이면 이제 아무도 볼 수 없는 여행이라는 뜻이라 그때 비로소 실제로 지운다.
      * 반드시 방 row 를 잠근 뒤에 센다. 그러지 않으면 마지막 두 사람이
      * 동시에 눌렀을 때 둘 다 "아직 남아 있다" 로 볼 수 있다.
+     *
+     * <p>탈퇴한 계정의 행은 세지 않는다. 그 사람은 다시 들어와 지울 수 없으므로
+     * 함께 세면 아무도 볼 수 없는 여행이 영원히 남는다.
+     * 계정과의 연결이 끊긴 행(user_id 가 비어 있는 행)도 같은 이유로 빠진다.
+     *
+     * @param withdrawnStatus 탈퇴 상태의 enum 이름. SQL 에 문자열을 박지 않는다.
      */
-    int countVisibleMembersByPlanId(@Param("travelPlanId") Long travelPlanId);
+    int countVisibleMembersByPlanId(@Param("travelPlanId") Long travelPlanId,
+                                    @Param("withdrawnStatus") String withdrawnStatus);
 
     // ── 완료된 여행 읽기 ────────────────────────────────────
     // 최종본은 한번 만들어지면 바뀌지 않는다. 여기서는 읽기만 한다.

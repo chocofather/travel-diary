@@ -65,6 +65,7 @@ class TravelPlanPresenceSecurityTest {
 
     private TravelPlanRoomAccess roomAccess;
     private TravelPlanPresenceService presence;
+    private TravelPlanRoomSessionRegistry sessions;
     private TravelPlanWebSocketAuthInterceptor interceptor;
     private TravelPlanPresenceController controller;
 
@@ -73,7 +74,8 @@ class TravelPlanPresenceSecurityTest {
         roomAccess = new TravelPlanRoomAccess(
                 travelPlanMapper, travelPlanItemMapper, travelPlanAlternativeMapper);
         presence = new TravelPlanPresenceService();
-        interceptor = new TravelPlanWebSocketAuthInterceptor(roomAccess);
+        sessions = new TravelPlanRoomSessionRegistry();
+        interceptor = new TravelPlanWebSocketAuthInterceptor(roomAccess, sessions);
         controller = new TravelPlanPresenceController(roomAccess, presence, simpMessagingTemplate);
     }
 
@@ -187,6 +189,47 @@ class TravelPlanPresenceSecurityTest {
         assertThatThrownBy(() -> interceptor.preSend(
                 subscribe("/topic/travel-plans/43/schedule", principal()), null))
                 .isInstanceOf(AccessDeniedException.class);
+    }
+
+    // ── 구독한 연결을 적어 둔다 ──────────────────────────────
+
+    @Test
+    void anAcceptedSubscriptionIsRememberedSoItCanBeCutLater() {
+        /*
+          구독은 여기서 한 번만 검사된다.
+          나중에 방에서 빠졌을 때 끊을 연결을 알아야 하므로 지금 적어 둔다.
+          접속 인사(presence/join)보다 구독이 먼저라, 그 사이에 자격을 잃어도 빠뜨리지 않는다.
+        */
+        givenActivePlan();
+        givenMembership(TravelPlanRole.MEMBER, TravelPlanMemberStatus.ACTIVE);
+
+        interceptor.preSend(subscribe(TOPIC, principal(), "ws-1"), null);
+
+        assertThat(sessions.isWatching(PLAN_ID, MEMBER_ID, "ws-1")).isTrue();
+    }
+
+    @Test
+    void arefusedSubscriptionIsNotRemembered() {
+        givenActivePlan();
+        when(travelPlanMapper.findMemberByPlanAndUser(PLAN_ID, USER_ID, "ACTIVE")).thenReturn(null);
+
+        assertThatThrownBy(() ->
+                interceptor.preSend(subscribe(TOPIC, principal(), "ws-1"), null))
+                .isInstanceOf(AccessDeniedException.class);
+
+        assertThat(sessions.isWatching(PLAN_ID, MEMBER_ID, "ws-1")).isFalse();
+    }
+
+    @Test
+    void theConnectionIsFiledUnderTheRoomItActuallySubscribedTo() {
+        // 방 안에서의 참여 id 로 적는다. 다른 방의 같은 사람과 섞이지 않는다
+        givenActivePlan();
+        givenMembership(TravelPlanRole.MEMBER, TravelPlanMemberStatus.ACTIVE);
+
+        interceptor.preSend(subscribe(TOPIC, principal(), "ws-1"), null);
+
+        assertThat(sessions.isWatching(OTHER_PLAN_ID, MEMBER_ID, "ws-1")).isFalse();
+        assertThat(sessions.sessionsOf(PLAN_ID, MEMBER_ID)).containsExactly("ws-1");
     }
 
     // ── 참여자 명단 ─────────────────────────────────────────
@@ -595,9 +638,14 @@ class TravelPlanPresenceSecurityTest {
     // ── 도우미 ──────────────────────────────────────────────
 
     private Message<byte[]> subscribe(String destination, Principal principal) {
+        return subscribe(destination, principal, null);
+    }
+
+    private Message<byte[]> subscribe(String destination, Principal principal, String sessionId) {
         StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.SUBSCRIBE);
         accessor.setDestination(destination);
         accessor.setUser(principal);
+        if (sessionId != null) accessor.setSessionId(sessionId);
         accessor.setLeaveMutable(true);
         return MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders());
     }

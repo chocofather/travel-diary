@@ -64,25 +64,36 @@
     </select>
 
     <!--
+      아직 이 여행을 볼 수 있는 사람 수.
+      0 이면 이제 아무도 볼 수 없는 여행이라는 뜻이다.
+      지운 사람 수가 아니라 남은 사람 수를 센다.
+
+      "볼 수 있는" 은 세 가지를 함께 뜻한다.
+      아직 자기 목록에서 지우지 않았고(hidden_at), 계정이 이어져 있고(user_id),
+      그 계정이 아직 살아 있어야 한다.
+
+      탈퇴한 계정의 행은 세지 않는다. 그 사람은 다시 들어와 지울 수 없으므로
+      함께 세면 아무도 볼 수 없는 여행이 영원히 남는다.
+      휴면·이용정지·인증대기는 돌아올 수 있는 자리라 그대로 센다
+      (되돌릴 수 없는 삭제라 여기서는 넉넉하게 본다).
+    -->
+    <select id="countVisibleMembersByPlanId" resultType="int">
+        SELECT COUNT(*)
+        FROM travel_plan_final_members m
+                 JOIN travel_plan_final_snapshots s ON s.id = m.snapshot_id
+                 JOIN users u ON u.id = m.user_id
+        WHERE s.travel_plan_id = #{travelPlanId}
+          AND m.hidden_at IS NULL
+          AND u.status != #{withdrawnStatus}
+    </select>
+
+    <!--
       내 목록에서만 지운다.
       최종본도, 다른 사람의 명단 행도 건드리지 않는다.
       hidden_at 이 아직 비어 있을 때만 반영되므로 두 번 눌러도 한 번만 처리된다.
 
       @return 1 이면 방금 지웠고, 0 이면 그 사람의 완료본이 아니거나 이미 지운 뒤다.
     -->
-    <!--
-      아직 이 여행을 자기 목록에 두고 있는 사람 수.
-      0 이면 이제 아무도 볼 수 없는 여행이라는 뜻이다.
-      지운 사람 수가 아니라 남은 사람 수를 센다.
-    -->
-    <select id="countVisibleMembersByPlanId" resultType="int">
-        SELECT COUNT(*)
-        FROM travel_plan_final_members m
-                 JOIN travel_plan_final_snapshots s ON s.id = m.snapshot_id
-        WHERE s.travel_plan_id = #{travelPlanId}
-          AND m.hidden_at IS NULL
-    </select>
-
     <update id="hideSnapshotForUser">
         UPDATE travel_plan_final_members m
             JOIN travel_plan_final_snapshots s ON s.id = m.snapshot_id

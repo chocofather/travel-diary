@@ -835,13 +835,79 @@ class TravelPlanPollServiceTest {
     }
 
     @Test
-    void beingTheOwnerDoesNotAllowClosingSomeoneElsesPoll() {
+    void theOwnerCanCloseSomeoneElsesPoll() {
+        /*
+          방 관리 차원이다. 만든 사람이 나가면 그 투표를 아무도 끝낼 수 없어
+          전원이 투표하지 않는 한 OPEN 인 채로 영영 남는다.
+        */
         givenRoom(TravelPlanRole.OWNER);
+        givenPoll(poll -> {
+            poll.setCreatedByMemberId(OTHER_MEMBER_ID);
+            poll.setCloseType(TravelPlanPollCloseType.MANUAL);
+        });
+        when(travelPlanPollMapper.closePoll(POLL_ID, TravelPlanPollCloseReason.MANUAL))
+                .thenReturn(1);
+
+        pollService.closePoll(principal(), PLAN_ID, POLL_ID);
+
+        // 마감 사유도 알림도 만든 사람이 눌렀을 때와 같다
+        verify(travelPlanPollMapper).closePoll(POLL_ID, TravelPlanPollCloseReason.MANUAL);
+        assertThat(captureEvent().payload().type())
+                .isEqualTo(TravelPlanPollEventDto.POLL_CLOSED);
+    }
+
+    @Test
+    void theOwnerCanTidyUpAfterWhoeverMadeItHasGone() {
+        /*
+          만든 사람은 이미 방을 떠났다(LEFT / REMOVED).
+          그 사람의 member 행은 남아 있어 created_by_member_id 는 그대로지만,
+          본인은 다시 마감할 수 없다. 방장이 정리한다.
+        */
+        givenRoom(TravelPlanRole.OWNER);
+        givenPoll(poll -> {
+            poll.setCreatedByMemberId(OTHER_MEMBER_ID);
+            poll.setCloseType(TravelPlanPollCloseType.MANUAL);
+        });
+        when(travelPlanPollMapper.closePoll(POLL_ID, TravelPlanPollCloseReason.MANUAL))
+                .thenReturn(1);
+
+        pollService.closePoll(principal(), PLAN_ID, POLL_ID);
+
+        verify(travelPlanPollMapper).closePoll(POLL_ID, TravelPlanPollCloseReason.MANUAL);
+    }
+
+    @Test
+    void theRightToTidyUpFollowsWhoeverIsOwnerNow() {
+        /*
+          방장 자리는 언제나 한 사람이다.
+          넘겨받은 사람이 정리할 수 있고, 넘긴 사람은 일반 참여자로 돌아간다.
+          권한을 role 하나로만 보므로 다음 조회에서 자연히 뒤바뀐다.
+        */
+        givenRoom(TravelPlanRole.OWNER);
+        givenPoll(poll -> {
+            poll.setCreatedByMemberId(OTHER_MEMBER_ID);
+            poll.setCloseType(TravelPlanPollCloseType.MANUAL);
+        });
+        when(travelPlanPollMapper.closePoll(POLL_ID, TravelPlanPollCloseReason.MANUAL))
+                .thenReturn(1);
+
+        // 지금 방장이므로 정리할 수 있고
+        pollService.closePoll(principal(), PLAN_ID, POLL_ID);
+        verify(travelPlanPollMapper).closePoll(POLL_ID, TravelPlanPollCloseReason.MANUAL);
+    }
+
+    @Test
+    void whoeverHandedTheRoomOverLosesThatRight() {
+        // 방장을 넘긴 사람은 MEMBER 다. 남의 투표는 더 이상 다룰 수 없다
+        givenRoom(TravelPlanRole.MEMBER);
         givenPoll(poll -> poll.setCreatedByMemberId(OTHER_MEMBER_ID));
 
         assertThatThrownBy(() -> pollService.closePoll(principal(), PLAN_ID, POLL_ID))
                 .isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> pollService.deletePoll(principal(), PLAN_ID, POLL_ID))
+                .isInstanceOf(AccessDeniedException.class);
         verify(travelPlanPollMapper, never()).closePoll(anyLong(), any());
+        verify(travelPlanPollMapper, never()).deletePoll(anyLong(), anyLong());
     }
 
     @Test
@@ -926,13 +992,41 @@ class TravelPlanPollServiceTest {
     }
 
     @Test
-    void beingTheOwnerDoesNotAllowDeletingSomeoneElsesPoll() {
+    void theOwnerCanDeleteSomeoneElsesPoll() {
         givenRoom(TravelPlanRole.OWNER);
         givenPoll(poll -> poll.setCreatedByMemberId(OTHER_MEMBER_ID));
+        when(travelPlanPollMapper.deletePoll(POLL_ID, PLAN_ID)).thenReturn(1);
 
-        assertThatThrownBy(() -> pollService.deletePoll(principal(), PLAN_ID, POLL_ID))
-                .isInstanceOf(AccessDeniedException.class);
-        verify(travelPlanPollMapper, never()).deletePoll(anyLong(), anyLong());
+        pollService.deletePoll(principal(), PLAN_ID, POLL_ID);
+
+        verify(travelPlanPollMapper).deletePoll(POLL_ID, PLAN_ID);
+        assertThat(captureEvent().payload().type())
+                .isEqualTo(TravelPlanPollEventDto.POLL_DELETED);
+    }
+
+    @Test
+    void theOwnerCanDeleteAFinishedPollOfSomeoneWhoLeft() {
+        givenRoom(TravelPlanRole.OWNER);
+        givenPoll(poll -> {
+            poll.setCreatedByMemberId(OTHER_MEMBER_ID);
+            poll.setStatus(TravelPlanPollStatus.CLOSED);
+        });
+        when(travelPlanPollMapper.deletePoll(POLL_ID, PLAN_ID)).thenReturn(1);
+
+        pollService.deletePoll(principal(), PLAN_ID, POLL_ID);
+
+        verify(travelPlanPollMapper).deletePoll(POLL_ID, PLAN_ID);
+    }
+
+    @Test
+    void theRoomOwnerNeverGetsToRewriteSomeoneElsesPoll() {
+        /*
+          방장이 할 수 있는 것은 정리(마감·삭제)까지다.
+          남의 투표 내용을 고치는 길은 어디에도 없다.
+        */
+        assertThat(TravelPlanPollService.class.getDeclaredMethods())
+                .extracting(java.lang.reflect.Method::getName)
+                .noneMatch(name -> name.startsWith("update") || name.startsWith("edit"));
     }
 
     @Test
@@ -966,9 +1060,27 @@ class TravelPlanPollServiceTest {
         givenPoll(poll -> poll.setStatus(TravelPlanPollStatus.CLOSED));
         assertThat(pollService.pollDetail(principal(), PLAN_ID, POLL_ID).deletable()).isTrue();
 
-        // 남의 투표에는 나오지 않는다
+        // 일반 참여자에게는 남의 투표에 나오지 않는다
         givenPoll(poll -> poll.setCreatedByMemberId(OTHER_MEMBER_ID));
         assertThat(pollService.pollDetail(principal(), PLAN_ID, POLL_ID).deletable()).isFalse();
+    }
+
+    @Test
+    void theOwnerIsOfferedTheSameActionsOnAnyonesPoll() {
+        // 화면은 서버가 준 이 값만 보고 그린다. 프론트가 따로 판단하지 않는다
+        givenRoom(TravelPlanRole.OWNER);
+
+        givenPoll(poll -> poll.setCreatedByMemberId(OTHER_MEMBER_ID));
+        assertThat(pollService.pollDetail(principal(), PLAN_ID, POLL_ID).deletable()).isTrue();
+        assertThat(pollService.pollDetail(principal(), PLAN_ID, POLL_ID).closable()).isTrue();
+
+        // 끝난 투표는 지울 수만 있다. 두 번 마감하지 않는다
+        givenPoll(poll -> {
+            poll.setCreatedByMemberId(OTHER_MEMBER_ID);
+            poll.setStatus(TravelPlanPollStatus.CLOSED);
+        });
+        assertThat(pollService.pollDetail(principal(), PLAN_ID, POLL_ID).deletable()).isTrue();
+        assertThat(pollService.pollDetail(principal(), PLAN_ID, POLL_ID).closable()).isFalse();
     }
 
     // ── 참여자가 떠났을 때 ──────────────────────────────────
@@ -1213,7 +1325,7 @@ class TravelPlanPollServiceTest {
 
         assertThat(pollService.pollDetail(principal(), PLAN_ID, POLL_ID).closable()).isTrue();
 
-        // 남의 투표에는 나오지 않는다
+        // 일반 참여자에게는 남의 투표에 나오지 않는다
         givenPoll(poll -> poll.setCreatedByMemberId(OTHER_MEMBER_ID));
         assertThat(pollService.pollDetail(principal(), PLAN_ID, POLL_ID).closable()).isFalse();
 

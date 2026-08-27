@@ -14,6 +14,15 @@ import java.util.regex.Pattern;
  */
 public final class TravelPlanMemberDestinations {
 
+    /**
+     * 방에서 빠진 사람에게만 가는 개인 큐.
+     *
+     * <p>연결을 끊기 직전에 한 줄 알려 주기 위한 것이다.
+     * 이것이 접근을 막는 수단은 아니다 — 막는 것은 연결을 끊는 쪽이고,
+     * 이 알림은 그 사람 화면이 멈춘 채로 남지 않게 하는 안내일 뿐이다.
+     */
+    public static final String ACCESS_QUEUE = "/queue/travel-plan-access";
+
     /** 서버 -> 클라이언트. 방 하나당 하나씩이다. */
     private static final String TOPIC_FORMAT = "/topic/travel-plans/%d/members";
     private static final Pattern TOPIC_PATTERN =

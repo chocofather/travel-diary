@@ -2,6 +2,7 @@ package com.example.travlediary.service.travelplan;
 
 import com.example.travlediary.model.TravelPlan;
 import com.example.travlediary.model.TravelPlanStatus;
+import com.example.travlediary.model.UserStatus;
 import com.example.travlediary.repository.travelplan.TravelPlanFinalMapper;
 import com.example.travlediary.repository.travelplan.TravelPlanMapper;
 import org.junit.jupiter.api.Test;
@@ -19,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -55,7 +57,7 @@ class TravelPlanFinalDeleteServiceTest {
         // A 가 지워도 B 가 남아 있다
         givenCompletedRoom();
         givenMyRowCleared(USER_A);
-        when(travelPlanFinalMapper.countVisibleMembersByPlanId(PLAN_ID)).thenReturn(1);
+        when(travelPlanFinalMapper.countVisibleMembersByPlanId(PLAN_ID, "DEACTIVATED")).thenReturn(1);
 
         assertThat(deleteService.deleteForMe(USER_A, PLAN_ID)).isFalse();
 
@@ -69,7 +71,7 @@ class TravelPlanFinalDeleteServiceTest {
         givenCompletedRoom();
         givenMyRowCleared(USER_A);
         givenMyRowCleared(USER_B);
-        when(travelPlanFinalMapper.countVisibleMembersByPlanId(PLAN_ID)).thenReturn(2, 1);
+        when(travelPlanFinalMapper.countVisibleMembersByPlanId(PLAN_ID, "DEACTIVATED")).thenReturn(2, 1);
 
         assertThat(deleteService.deleteForMe(USER_A, PLAN_ID)).isFalse();
         assertThat(deleteService.deleteForMe(USER_B, PLAN_ID)).isFalse();
@@ -85,7 +87,7 @@ class TravelPlanFinalDeleteServiceTest {
         givenCompletedRoom();
         givenMyRowCleared(USER_C);
         // 이제 아무도 보관하고 있지 않다
-        when(travelPlanFinalMapper.countVisibleMembersByPlanId(PLAN_ID)).thenReturn(0);
+        when(travelPlanFinalMapper.countVisibleMembersByPlanId(PLAN_ID, "DEACTIVATED")).thenReturn(0);
         when(travelPlanMapper.deletePlanByIdAndStatus(PLAN_ID, "COMPLETED")).thenReturn(1);
 
         assertThat(deleteService.deleteForMe(USER_C, PLAN_ID)).isTrue();
@@ -102,7 +104,7 @@ class TravelPlanFinalDeleteServiceTest {
         */
         givenCompletedRoom();
         givenMyRowCleared(USER_C);
-        when(travelPlanFinalMapper.countVisibleMembersByPlanId(PLAN_ID)).thenReturn(0);
+        when(travelPlanFinalMapper.countVisibleMembersByPlanId(PLAN_ID, "DEACTIVATED")).thenReturn(0);
         when(travelPlanMapper.deletePlanByIdAndStatus(PLAN_ID, "COMPLETED")).thenReturn(1);
 
         deleteService.deleteForMe(USER_C, PLAN_ID);
@@ -119,11 +121,62 @@ class TravelPlanFinalDeleteServiceTest {
         // 지운 사람이 둘이어도 남은 사람이 있으면 아무것도 사라지지 않는다
         givenCompletedRoom();
         givenMyRowCleared(USER_B);
-        when(travelPlanFinalMapper.countVisibleMembersByPlanId(PLAN_ID)).thenReturn(1);
+        when(travelPlanFinalMapper.countVisibleMembersByPlanId(PLAN_ID, "DEACTIVATED")).thenReturn(1);
 
         deleteService.deleteForMe(USER_B, PLAN_ID);
 
-        verify(travelPlanFinalMapper).countVisibleMembersByPlanId(PLAN_ID);
+        verify(travelPlanFinalMapper).countVisibleMembersByPlanId(PLAN_ID, "DEACTIVATED");
+        verify(travelPlanMapper, never()).deletePlanByIdAndStatus(anyLong(), anyString());
+    }
+
+    // ── 돌아올 수 없는 계정은 남은 사람이 아니다 ─────────────
+
+    @Test
+    void someoneWhoWithdrewDoesNotKeepTheTripAlive() {
+        /*
+          A 와 B 가 완료한 뒤 B 가 탈퇴했다.
+          B 는 다시 들어와 지울 수 없으므로 A 가 마지막 한 사람이다.
+          함께 세면 아무도 볼 수 없는 여행이 영원히 남는다.
+        */
+        givenCompletedRoom();
+        givenMyRowCleared(USER_A);
+        // 탈퇴한 B 의 행은 hidden_at 이 비어 있어도 세지 않는다
+        when(travelPlanFinalMapper.countVisibleMembersByPlanId(PLAN_ID, "DEACTIVATED"))
+                .thenReturn(0);
+        when(travelPlanMapper.deletePlanByIdAndStatus(PLAN_ID, "COMPLETED")).thenReturn(1);
+
+        assertThat(deleteService.deleteForMe(USER_A, PLAN_ID)).isTrue();
+
+        verify(travelPlanMapper).deletePlanByIdAndStatus(PLAN_ID, "COMPLETED");
+    }
+
+    @Test
+    void itIsTheWithdrawnStatusThatIsLeftOutAndNothingElse() {
+        // 어떤 상태를 빼는지는 enum 에서 가져온다. 문자열을 지어내지 않는다
+        givenCompletedRoom();
+        givenMyRowCleared(USER_A);
+        when(travelPlanFinalMapper.countVisibleMembersByPlanId(PLAN_ID, "DEACTIVATED"))
+                .thenReturn(1);
+
+        deleteService.deleteForMe(USER_A, PLAN_ID);
+
+        verify(travelPlanFinalMapper).countVisibleMembersByPlanId(
+                PLAN_ID, UserStatus.DEACTIVATED.name());
+    }
+
+    @Test
+    void oneLivingAccountIsEnoughToKeepEverything() {
+        /*
+          탈퇴한 사람이 섞여 있어도 살아 있는 계정이 하나라도 남으면
+          최종본도 원본 방도 채팅도 투표도 그대로 둔다.
+        */
+        givenCompletedRoom();
+        givenMyRowCleared(USER_A);
+        when(travelPlanFinalMapper.countVisibleMembersByPlanId(PLAN_ID, "DEACTIVATED"))
+                .thenReturn(1);
+
+        assertThat(deleteService.deleteForMe(USER_A, PLAN_ID)).isFalse();
+
         verify(travelPlanMapper, never()).deletePlanByIdAndStatus(anyLong(), anyString());
     }
 
@@ -137,7 +190,7 @@ class TravelPlanFinalDeleteServiceTest {
         */
         givenCompletedRoom();
         givenMyRowCleared(USER_C);
-        when(travelPlanFinalMapper.countVisibleMembersByPlanId(PLAN_ID)).thenReturn(0);
+        when(travelPlanFinalMapper.countVisibleMembersByPlanId(PLAN_ID, "DEACTIVATED")).thenReturn(0);
         when(travelPlanMapper.deletePlanByIdAndStatus(PLAN_ID, "COMPLETED")).thenReturn(1);
 
         deleteService.deleteForMe(USER_C, PLAN_ID);
@@ -145,7 +198,7 @@ class TravelPlanFinalDeleteServiceTest {
         InOrder order = inOrder(travelPlanMapper, travelPlanFinalMapper);
         order.verify(travelPlanMapper).findPlanByIdAndStatusForUpdate(PLAN_ID, "COMPLETED");
         order.verify(travelPlanFinalMapper).hideSnapshotForUser(PLAN_ID, USER_C);
-        order.verify(travelPlanFinalMapper).countVisibleMembersByPlanId(PLAN_ID);
+        order.verify(travelPlanFinalMapper).countVisibleMembersByPlanId(PLAN_ID, "DEACTIVATED");
         order.verify(travelPlanMapper).deletePlanByIdAndStatus(PLAN_ID, "COMPLETED");
         // 잠금 없는 조회로 판단하지 않는다
         verify(travelPlanMapper, never()).findPlanByIdAndStatus(anyLong(), anyString());
@@ -175,7 +228,8 @@ class TravelPlanFinalDeleteServiceTest {
                 .isInstanceOf(ResponseStatusException.class);
 
         // 세지도, 지우지도 않는다
-        verify(travelPlanFinalMapper, never()).countVisibleMembersByPlanId(anyLong());
+        verify(travelPlanFinalMapper, never())
+                .countVisibleMembersByPlanId(anyLong(), anyString());
         verify(travelPlanMapper, never()).deletePlanByIdAndStatus(anyLong(), anyString());
     }
 
@@ -214,13 +268,14 @@ class TravelPlanFinalDeleteServiceTest {
     void onlyTheTripThatWasAskedForIsEverTouched() {
         givenCompletedRoom();
         givenMyRowCleared(USER_C);
-        when(travelPlanFinalMapper.countVisibleMembersByPlanId(PLAN_ID)).thenReturn(0);
+        when(travelPlanFinalMapper.countVisibleMembersByPlanId(PLAN_ID, "DEACTIVATED")).thenReturn(0);
         when(travelPlanMapper.deletePlanByIdAndStatus(PLAN_ID, "COMPLETED")).thenReturn(1);
 
         deleteService.deleteForMe(USER_C, PLAN_ID);
 
         // 다른 여행은 세지도 지우지도 않는다
-        verify(travelPlanFinalMapper, never()).countVisibleMembersByPlanId(OTHER_PLAN_ID);
+        verify(travelPlanFinalMapper, never())
+                .countVisibleMembersByPlanId(eq(OTHER_PLAN_ID), anyString());
         verify(travelPlanMapper, never()).deletePlanByIdAndStatus(OTHER_PLAN_ID, "COMPLETED");
     }
 

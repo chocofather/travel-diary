@@ -64,6 +64,12 @@ public class TravelPlanController {
                     + " currentMember=${currentMember}, members=${members},"
                     + " pastMembers=${pastMembers}, memberCount=${memberCount},"
                     + " memberLimit=${memberLimit})";
+    /** 방장에게만 있는 상단 액션. 방장이 바뀌면 이 조각만 다시 받아 간다. */
+    private static final String OWNER_ACTIONS_FRAGMENT_VIEW =
+            "travelplan/fragments/owner-actions :: ownerActions(travelPlan=${travelPlan},"
+                    + " travelPlanInviteUrl=${travelPlanInviteUrl},"
+                    + " travelPlanInviteActive=${travelPlanInviteActive},"
+                    + " travelPlanInviteIssued=${travelPlanInviteIssued})";
     private static final String ITEM_FORM_ATTRIBUTE = "travelPlanItemCreateForm";
 
     /** 폼에 실제로 있는 필드만 필드 오류로 남길 수 있다. */
@@ -301,6 +307,27 @@ public class TravelPlanController {
         model.addAttribute("memberCount", members.getMemberCount());
         model.addAttribute("memberLimit", members.getMemberLimit());
         return MEMBERS_FRAGMENT_VIEW;
+    }
+
+    /**
+     * 방장에게만 있는 상단 액션을 다시 그려 준다.
+     * 방장이 바뀌었다는 실시간 알림을 받은 화면이 이 조각을 갈아 끼운다.
+     *
+     * <p>지금 누가 방장인지는 언제나 여기서 다시 읽는다. 화면이 짐작하지 않는다.
+     * 방장이 아닌 사람에게는 빈 조각이 나가므로 그 화면에서 액션이 사라진다.
+     * 접근 권한은 상세 화면과 똑같이 Service 가 확인한다(비참여자는 404).
+     */
+    @GetMapping("/{travelPlanId:\\d+}/owner-actions/fragment")
+    public String ownerActionsFragment(@PathVariable Long travelPlanId,
+                                       @AuthenticationPrincipal CustomUserDetails userDetails,
+                                       Model model) {
+        Long userId = userDetails.getId();
+        // 참여자 명단만 읽는 가벼운 조회로 충분하다. 일정까지 다시 읽지 않는다.
+        model.addAttribute("travelPlan",
+                travelPlanService.getActivePlanMembers(userId, travelPlanId));
+        // 초대 영역은 방장일 때만 채워진다(그 안에서 OWNER 를 다시 확인한다).
+        addInviteState(model, userId, travelPlanId);
+        return OWNER_ACTIONS_FRAGMENT_VIEW;
     }
 
     // A 일정 수정 (방의 ACTIVE 멤버면 누구나)

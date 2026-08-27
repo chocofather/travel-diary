@@ -1,6 +1,7 @@
 package com.example.travlediary.service.travelplan;
 
 import com.example.travlediary.model.TravelPlanStatus;
+import com.example.travlediary.model.UserStatus;
 import com.example.travlediary.repository.travelplan.TravelPlanFinalMapper;
 import com.example.travlediary.repository.travelplan.TravelPlanMapper;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ import org.springframework.web.server.ResponseStatusException;
  *
  * <p>기준은 지운 사람 수가 아니라 <em>남은</em> 사람 수다.
  * 한 명이라도 아직 보관 중이면 아무것도 사라지지 않는다.
+ * 다만 탈퇴한 계정은 다시 들어와 지울 수 없으므로 남은 사람으로 세지 않는다.
  */
 @Service
 @RequiredArgsConstructor
@@ -72,8 +74,13 @@ public class TravelPlanFinalDeleteService {
             throw finalPlanNotFound();
         }
 
-        // 지운 사람 수가 아니라 남은 사람 수를 본다.
-        if (travelPlanFinalMapper.countVisibleMembersByPlanId(travelPlanId) > 0) {
+        /*
+          지운 사람 수가 아니라 남은 사람 수를 본다.
+          탈퇴한 계정은 다시 들어와 지울 수 없으므로 남은 사람으로 세지 않는다.
+          그러지 않으면 아무도 볼 수 없는 여행이 영원히 남는다.
+        */
+        if (travelPlanFinalMapper.countVisibleMembersByPlanId(
+                travelPlanId, UserStatus.DEACTIVATED.name()) > 0) {
             // 한 명이라도 보관 중이면 최종본도 원본 방도 그대로 둔다.
             return false;
         }

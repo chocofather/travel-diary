@@ -53,8 +53,12 @@ public class TravelPlanMemberService {
         travelPlanMapper.touchLastActivity(travelPlanId);
         // 진행 중인 투표에 남겨 둔 표를 걷어 내고, 남은 사람 기준으로 다시 센다.
         travelPlanPollService.onMemberLeft(travelPlanId, member.getId());
-        // 방을 보고 있는 사람들의 "참여자 N/8" 과 목록이 새로고침 없이 줄어든다.
-        eventPublisher.publishEvent(new TravelPlanMembershipChangedEvent(travelPlanId));
+        /*
+          방을 보고 있는 사람들의 "참여자 N/8" 과 목록이 새로고침 없이 줄어들고,
+          나간 본인이 열어 둔 연결은 끊긴다(다른 탭이 남아 방을 계속 보지 않게).
+        */
+        eventPublisher.publishEvent(
+                TravelPlanMembershipChangedEvent.revoked(travelPlanId, member.getId()));
     }
 
     /**
@@ -89,8 +93,13 @@ public class TravelPlanMemberService {
         travelPlanMapper.touchLastActivity(travelPlanId);
         // 나가기와 같다. 진행 중인 투표에서 그 사람의 표를 걷어 낸다.
         travelPlanPollService.onMemberLeft(travelPlanId, target.getId());
-        // 나가기와 같은 알림을 쓴다. 내보낸 사람도 방에서 곧바로 사라진다.
-        eventPublisher.publishEvent(new TravelPlanMembershipChangedEvent(travelPlanId));
+        /*
+          나가기와 같은 알림을 쓴다. 내보낸 사람은 방에서 곧바로 사라지고,
+          그 사람이 열어 둔 연결도 끊긴다.
+          연결을 끊지 않으면 화면을 열어 둔 채로 이후의 채팅·일정·투표를 계속 받는다.
+        */
+        eventPublisher.publishEvent(
+                TravelPlanMembershipChangedEvent.revoked(travelPlanId, target.getId()));
     }
 
     /**
@@ -177,8 +186,11 @@ public class TravelPlanMemberService {
         /*
           인원은 그대로지만 역할이 바뀌었다. 명단을 다시 읽게 해
           누가 방장인지와 OWNER 에게만 보이는 관리 항목이 곧바로 맞춰지게 한다.
+
+          양쪽 모두 여전히 ACTIVE 참여자라 연결은 그대로 둔다.
+          방장을 넘겼다고 보고 있던 화면이 끊길 이유가 없다.
         */
-        eventPublisher.publishEvent(new TravelPlanMembershipChangedEvent(travelPlanId));
+        eventPublisher.publishEvent(TravelPlanMembershipChangedEvent.changed(travelPlanId));
     }
 
     private void requireActivePlan(Long travelPlanId) {

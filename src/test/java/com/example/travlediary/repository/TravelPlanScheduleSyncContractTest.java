@@ -66,9 +66,9 @@ class TravelPlanScheduleSyncContractTest {
         // 브라우저 하나가 /ws 에 두 번 붙지 않는다
         assertThat(countOf(realtime, "new StompJs.Client")).isEqualTo(1);
         assertThat(countOf(realtime, "client.activate()")).isEqualTo(1);
-        // presence / 참여자 명단 / schedule / editor / 내 잠금 응답 /
+        // presence / 참여자 명단 / 내 접근 회수 / schedule / editor / 내 잠금 응답 /
         // 채팅 / 내 채팅 응답 / 투표가 모두 한 연결 위에 있다
-        assertThat(countOf(realtime, "client.subscribe(")).isEqualTo(8);
+        assertThat(countOf(realtime, "client.subscribe(")).isEqualTo(9);
     }
 
     @Test

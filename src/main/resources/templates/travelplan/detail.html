@@ -74,78 +74,20 @@
         </div>
 
         <!--
-          확정도 OWNER 에게만 보이는 상단 보조 액션이다.
-          되돌리기 어려운 일이지만 눈에 띄게 떠 있는 위험한 버튼으로 두지 않는다.
-          (여기 보이는 것과 별개로 확정할 수 있는지는 서버가 다시 본다)
+          방장에게만 있는 것들(확정 / 초대 / 확정 확인 창).
+          방장은 바뀔 수 있으므로 이 자리는 늘 비워 두고 속만 갈아 끼운다.
+          멤버로 그려진 화면에는 안이 비어 있고, 방장을 넘겨받으면 그때 채워진다.
+
+          display: contents 라 이 상자는 자리를 차지하지 않는다.
+          상단 액션 줄의 간격이 지금과 그대로다.
         -->
-        <div class="travel-plan-finalize" th:if="${travelPlan.currentMember != null
-                    and travelPlan.currentMember.role != null
-                    and travelPlan.currentMember.role.name() == 'OWNER'}"
-             data-travel-plan-finalize
-             th:attr="data-finalize-plan-id=${travelPlan.plan.id}">
-          <button type="button" class="travel-plan-finalize-toggle"
-                  data-travel-plan-finalize-open>여행 계획 확정</button>
-        </div>
-
-        <!--
-          초대는 OWNER 에게만 보이는 상단 보조 액션이다.
-          살아 있는 링크는 저장된 암호문을 풀어 언제든 다시 보여 준다.
-        -->
-        <div class="travel-plan-invite" th:if="${travelPlan.currentMember != null
-                    and travelPlan.currentMember.role != null
-                    and travelPlan.currentMember.role.name() == 'OWNER'}"
-             data-travel-plan-invite>
-          <button type="button" class="travel-plan-invite-toggle"
-                  aria-haspopup="true" aria-expanded="false"
-                  data-travel-plan-invite-toggle>초대</button>
-
-          <div class="travel-plan-invite-panel" hidden data-travel-plan-invite-panel>
-            <!--
-              지금 살아 있는 링크. 새로고침해도 같은 주소가 다시 나온다.
-              방금 만든 경우에만 표시를 하나 더 달아 패널이 저절로 열리게 한다.
-            -->
-            <div class="travel-plan-invite-issued" th:if="${travelPlanInviteUrl}"
-                 th:attr="data-travel-plan-invite-issued=${travelPlanInviteIssued} ? '' : null">
-              <p class="travel-plan-invite-issued-label">초대 링크</p>
-              <div class="travel-plan-invite-copy-row">
-                <input type="text" class="travel-plan-invite-url" readonly
-                       th:value="${travelPlanInviteUrl}"
-                       aria-label="초대 링크" data-travel-plan-invite-url>
-                <button type="button" class="travel-plan-invite-copy"
-                        data-travel-plan-invite-copy>복사</button>
-              </div>
-            </div>
-
-            <!-- 링크가 켜져 있을 때: 재발급 / 끄기 -->
-            <div th:if="${travelPlanInviteActive}">
-              <!-- 예전 방식으로 만들어져 주소를 되살릴 수 없는 링크 -->
-              <p class="travel-plan-invite-state" th:unless="${travelPlanInviteUrl}">
-                현재 초대 링크는 이전 저장 방식으로 만들어져 주소를 다시 표시할 수 없습니다.
-                새 링크를 한 번 재발급하면 이후부터는 언제든 다시 복사할 수 있습니다.
-              </p>
-              <form method="post"
-                    th:action="@{|/travel-plans/${travelPlan.plan.id}/invitations/regenerate|}">
-                <button type="submit" class="travel-plan-invite-action"
-                        onclick="return confirm('새 링크를 발급하면 기존 초대 링크는 더 이상 사용할 수 없습니다.')">
-                  새 링크 재발급
-                </button>
-              </form>
-              <form method="post"
-                    th:action="@{|/travel-plans/${travelPlan.plan.id}/invitations/disable|}">
-                <button type="submit" class="travel-plan-invite-off"
-                        onclick="return confirm('초대 링크를 끌까요?')">초대 링크 비활성화</button>
-              </form>
-            </div>
-
-            <!-- 링크가 없을 때: 첫 발급만 -->
-            <div th:unless="${travelPlanInviteActive}">
-              <p class="travel-plan-invite-state">아직 초대 링크가 없어요.</p>
-              <form method="post"
-                    th:action="@{|/travel-plans/${travelPlan.plan.id}/invitations|}">
-                <button type="submit" class="travel-plan-invite-action">초대 링크 만들기</button>
-              </form>
-            </div>
-          </div>
+        <div class="travel-plan-owner-actions" data-travel-plan-owner-actions>
+          <th:block
+              th:replace="~{travelplan/fragments/owner-actions :: ownerActions(
+                  travelPlan=${travelPlan},
+                  travelPlanInviteUrl=${travelPlanInviteUrl},
+                  travelPlanInviteActive=${travelPlanInviteActive},
+                  travelPlanInviteIssued=${travelPlanInviteIssued})}"></th:block>
         </div>
         </div>
       </div>
@@ -267,45 +209,10 @@
     </section>
 
     <!--
-      확정 확인. 누르자마자 확정하지 않고 한 번 물어본다.
-      진행 중인 투표가 있어도 경고하거나 막지 않는다.
-      투표는 계획을 정하는 데 도우려는 것이지 확정의 조건이 아니다.
+      확정 확인 창은 방장에게만 있는 것이라
+      상단의 방장 전용 자리(travelplan/fragments/owner-actions)에 함께 둔다.
+      position: fixed 라 어디에 있든 같은 자리에 뜬다.
     -->
-    <div class="travel-plan-finalize-modal" hidden role="dialog" aria-modal="true"
-         aria-labelledby="travel-plan-finalize-title"
-         th:if="${travelPlan.currentMember != null
-                 and travelPlan.currentMember.role != null
-                 and travelPlan.currentMember.role.name() == 'OWNER'}"
-         data-travel-plan-finalize-modal>
-      <div class="travel-plan-finalize-panel">
-        <h2 id="travel-plan-finalize-title" class="travel-plan-finalize-title">
-          여행 계획을 확정할까요?
-        </h2>
-        <p class="travel-plan-finalize-text">
-          확정하면 이후 일정은 수정할 수 없습니다.<br>
-          현재 작성된 일정이 최종 여행 계획으로 저장됩니다.
-        </p>
-
-        <!--
-          지금 일정을 쓰고 있는 사람이 있으면 여기에 알린다.
-          막지는 않는다. 알고도 할지는 방장이 정한다.
-        -->
-        <p class="travel-plan-finalize-warning" hidden role="alert"
-           data-travel-plan-finalize-warning></p>
-
-        <!-- 물어보는 것 자체가 실패했을 때만 나온다 -->
-        <p class="travel-plan-finalize-error" hidden role="alert"
-           data-travel-plan-finalize-error></p>
-
-        <div class="travel-plan-finalize-actions">
-          <button type="button" class="travel-plan-poll-cancel"
-                  data-travel-plan-finalize-cancel>취소</button>
-          <!-- 쓰고 있는 사람이 있으면 "그래도 완료" 로 바뀐다 -->
-          <button type="button" class="travel-plan-poll-submit"
-                  data-travel-plan-finalize-confirm>여행 계획 확정</button>
-        </div>
-      </div>
-    </div>
 
     <!--
       투표 센터. 진행 중·지난 투표를 보는 곳과 새로 만드는 곳이 이 창 하나 안에 있다.

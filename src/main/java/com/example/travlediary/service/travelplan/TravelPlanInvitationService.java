@@ -211,7 +211,8 @@ public class TravelPlanInvitationService {
             reactivate(existing, travelPlanId, userId);
             travelPlanMapper.touchLastActivity(travelPlanId);
             // 이미 방을 보고 있는 사람들에게도 돌아온 사람이 곧바로 보인다.
-            eventPublisher.publishEvent(new TravelPlanMembershipChangedEvent(travelPlanId));
+            eventPublisher.publishEvent(
+                    TravelPlanMembershipChangedEvent.changed(travelPlanId));
             return travelPlanId;
         }
 
@@ -224,7 +225,8 @@ public class TravelPlanInvitationService {
         if (insertMember(userId, travelPlanId, normalizedDisplayName)) {
             travelPlanMapper.touchLastActivity(travelPlanId);
             // 새로 들어온 사람이 이미 방을 보고 있는 화면에도 곧바로 나타난다.
-            eventPublisher.publishEvent(new TravelPlanMembershipChangedEvent(travelPlanId));
+            eventPublisher.publishEvent(
+                    TravelPlanMembershipChangedEvent.changed(travelPlanId));
         }
         return travelPlanId;
     }

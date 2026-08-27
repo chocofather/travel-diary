@@ -934,6 +934,79 @@ class TravelPlanControllerTest {
                 .andExpect(redirectedUrl("/login?redirect=/travel-plans/42/members/fragment"));
     }
 
+    // ── 방장 전용 자리 ──────────────────────────────────────
+
+    @Test
+    void whoeverIsOwnerNowGetsTheOwnerActionsBack() throws Exception {
+        when(travelPlanService.getActivePlanMembers(7L, 42L)).thenReturn(ownerViewer());
+
+        mockMvc.perform(get("/travel-plans/42/owner-actions/fragment").with(user(member())))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "data-travel-plan-finalize")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "data-travel-plan-invite")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "data-travel-plan-finalize-modal")));
+    }
+
+    @Test
+    void whoeverIsNoLongerOwnerGetsAnEmptyPlace() throws Exception {
+        /*
+          넘겨준 쪽에서는 이 조각이 비어서 오고, 화면은 그것으로 그 자리를 비운다.
+          방장이 누구인지는 언제나 여기서 다시 읽는다.
+        */
+        when(travelPlanService.getActivePlanMembers(7L, 42L)).thenReturn(plainViewer());
+
+        mockMvc.perform(get("/travel-plans/42/owner-actions/fragment").with(user(member())))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("data-travel-plan-finalize"))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("data-travel-plan-invite"))));
+    }
+
+    @Test
+    void someoneWhoIsNotInTheRoomCannotReadTheOwnerActions() throws Exception {
+        when(travelPlanService.getActivePlanMembers(anyLong(), anyLong()))
+                .thenThrow(new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "여행계획을 찾을 수 없습니다."));
+
+        mockMvc.perform(get("/travel-plans/42/owner-actions/fragment").with(user(member())))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void anonymousOwnerActionsAccessIsSentToLogin() throws Exception {
+        mockMvc.perform(get("/travel-plans/42/owner-actions/fragment"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl(
+                        "/login?redirect=/travel-plans/42/owner-actions/fragment"));
+    }
+
+    /** 지금 이 방의 방장으로 보고 있는 사람. */
+    private com.example.travlediary.dto.TravelPlanMembersDto ownerViewer() {
+        return viewerWithRole(com.example.travlediary.model.TravelPlanRole.OWNER);
+    }
+
+    /** 방장이 아닌 참여자로 보고 있는 사람. */
+    private com.example.travlediary.dto.TravelPlanMembersDto plainViewer() {
+        return viewerWithRole(com.example.travlediary.model.TravelPlanRole.MEMBER);
+    }
+
+    private com.example.travlediary.dto.TravelPlanMembersDto viewerWithRole(
+            com.example.travlediary.model.TravelPlanRole role) {
+        com.example.travlediary.model.TravelPlan plan =
+                new com.example.travlediary.model.TravelPlan();
+        plan.setId(42L);
+        com.example.travlediary.model.TravelPlanMember current =
+                new com.example.travlediary.model.TravelPlanMember();
+        current.setId(11L);
+        current.setRole(role);
+        return new com.example.travlediary.dto.TravelPlanMembersDto(
+                plan, current, List.of(), List.of(), 8);
+    }
+
     private com.example.travlediary.dto.TravelPlanMembersDto membersOf(
             com.example.travlediary.dto.TravelPlanMemberDto... members) {
         com.example.travlediary.model.TravelPlan plan =

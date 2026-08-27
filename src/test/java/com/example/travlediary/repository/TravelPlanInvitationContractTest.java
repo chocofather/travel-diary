@@ -225,22 +225,29 @@ class TravelPlanInvitationContractTest {
     @Test
     void theInviteEntryPointIsOwnerOnlyAndStaysASmallTopAction() throws IOException {
         String detail = detailHtml();
+        String ownerActions = ownerActionsHtml();
 
-        // OWNER 만 본다
-        assertThat(detail)
+        // OWNER 만 본다 (조각 전체가 방장일 때만 나온다)
+        assertThat(ownerActions)
                 .contains("travelPlan.currentMember.role.name() == 'OWNER'")
+                .contains("th:if=\"${viewerIsOwner}\"")
                 .contains("data-travel-plan-invite")
-                .contains(">초대</button>")
-                .contains("class=\"travel-plan-page-top-row\"");
+                .contains(">초대</button>");
+        // 상단 액션 줄 안의 방장 자리에 놓인다
+        assertThat(detail)
+                .contains("class=\"travel-plan-page-top-row\"")
+                .contains("data-travel-plan-owner-actions");
         // 큰 관리 화면을 만들지 않는다 (플래너 안의 작은 패널 하나뿐)
-        assertThat(countOf(detail, "data-travel-plan-invite-panel")).isEqualTo(1);
-        assertThat(outsideThePollModal(detail))
+        assertThat(countOf(ownerActions, "data-travel-plan-invite-panel")).isEqualTo(1);
+        // 초대 영역은 창을 띄우지 않는다 (같은 조각의 확정 확인 창과는 별개다)
+        assertThat(between(ownerActions, "class=\"travel-plan-invite\"",
+                "class=\"travel-plan-finalize-modal\""))
                 .doesNotContain("modal").doesNotContain("dialog");
     }
 
     @Test
     void theIssuedLinkIsShownWithACopyControlAndOnlyRightAfterIssuing() throws IOException {
-        String detail = detailHtml();
+        String detail = ownerActionsHtml();
         String script = resource("/static/js/travel-plan-scheduler.js");
 
         // flash 로 온 값이라 새로고침하면 사라진다
@@ -259,7 +266,7 @@ class TravelPlanInvitationContractTest {
     @Test
     void anActiveLinkOffersRegenerateAndDisableWhileAnEmptyOneOnlyOffersCreate()
             throws IOException {
-        String detail = detailHtml();
+        String detail = ownerActionsHtml();
 
         assertThat(detail)
                 .contains("th:if=\"${travelPlanInviteActive}\"")
@@ -280,7 +287,7 @@ class TravelPlanInvitationContractTest {
 
     @Test
     void theLivingLinkComesBackAfterARefreshAndStaysCopyable() throws IOException {
-        String detail = detailHtml();
+        String detail = ownerActionsHtml();
         String script = resource("/static/js/travel-plan-scheduler.js");
 
         // 발급 직후든 새로고침 뒤든 같은 자리에서 같은 주소를 보여 준다
@@ -302,13 +309,19 @@ class TravelPlanInvitationContractTest {
 
     @Test
     void theInviteAreaStaysOwnerOnly() throws IOException {
-        String detail = detailHtml();
+        String ownerActions = ownerActionsHtml();
 
         // 주소와 관리 버튼이 모두 OWNER 조건 안에 들어 있다
-        int ownerGate = detail.indexOf("travelPlan.currentMember.role.name() == 'OWNER'");
+        int ownerGate = ownerActions.indexOf("travelPlan.currentMember.role.name() == 'OWNER'");
         assertThat(ownerGate).isGreaterThan(0);
-        assertThat(detail.indexOf("data-travel-plan-invite-url")).isGreaterThan(ownerGate);
-        assertThat(detail.indexOf("/invitations/regenerate|}")).isGreaterThan(ownerGate);
+        assertThat(ownerActions.indexOf("th:if=\"${viewerIsOwner}\"")).isGreaterThan(ownerGate);
+        assertThat(ownerActions.indexOf("data-travel-plan-invite-url")).isGreaterThan(ownerGate);
+        assertThat(ownerActions.indexOf("/invitations/regenerate|}")).isGreaterThan(ownerGate);
+
+        // 상세 화면에는 초대 markup 이 남아 있지 않다(출처가 하나다)
+        assertThat(detailHtml())
+                .doesNotContain("data-travel-plan-invite-url")
+                .doesNotContain("/invitations/regenerate|}");
     }
 
     @Test
@@ -538,6 +551,14 @@ class TravelPlanInvitationContractTest {
 
     private String mapperXml() throws IOException {
         return resource("/mapper/TravelPlanInvitationMapper.xml");
+    }
+
+    /**
+     * 방장에게만 있는 상단 액션(확정 / 초대 / 확정 확인 창).
+     * 방장이 바뀌면 통째로 갈리므로 상세 화면이 아니라 이 조각에 있다.
+     */
+    private String ownerActionsHtml() throws IOException {
+        return resource("/templates/travelplan/fragments/owner-actions.html");
     }
 
     private String detailHtml() throws IOException {

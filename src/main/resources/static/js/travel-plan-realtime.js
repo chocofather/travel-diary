@@ -72,6 +72,11 @@ document.addEventListener("DOMContentLoaded", () => {
         const response = await fetch(`/travel-plans/${planId}/members/fragment`, {
             headers: { "X-Requested-With": "XMLHttpRequest" }
         });
+        // 명단을 읽을 자격조차 없다는 것은 이 방에서 빠졌다는 뜻이다.
+        if (response.status === 403 || response.status === 404) {
+            revokeAccess();
+            return;
+        }
         if (!response.ok) return;
         const html = await response.text();
 
@@ -92,6 +97,65 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // 새로 그린 줄에는 접속 표시가 없다. 지금 알고 있는 상황을 다시 입힌다.
         renderPresence(lastPresence.onlineMemberIds, lastPresence.onlineCount);
+    }
+
+    // ── 방장 전용 자리 ──────────────────────────────────────
+    /*
+      방장은 바뀐다. 멤버로 그려진 화면에는 방장 전용 markup 이 아예 없으므로
+      감추고 보이는 것만으로는 넘겨받은 사람 화면에 나타나게 할 수 없다.
+      그래서 지금 누가 방장인지를 서버에 다시 물어 그 자리를 통째로 갈아 끼운다.
+      화면은 역할을 짐작하지 않는다.
+    */
+    let ownerActionsRequest = 0;
+
+    async function refreshOwnerActions() {
+        const slot = document.querySelector("[data-travel-plan-owner-actions]");
+        if (!slot) return;
+
+        const sequence = ++ownerActionsRequest;
+        const response = await fetch(`/travel-plans/${planId}/owner-actions/fragment`, {
+            headers: { "X-Requested-With": "XMLHttpRequest" }
+        });
+        if (!response.ok) return;
+        const html = await response.text();
+
+        // 늦게 도착한 예전 응답이 최신 상태를 덮지 않게 한다.
+        if (ownerActionsRequest !== sequence) return;
+
+        /*
+          방장이면 markup 이 오고, 아니면 빈 조각이 와서 그 자리가 비워진다.
+          넘겨준 쪽에서는 이것만으로 버튼이 사라진다.
+        */
+        slot.innerHTML = html;
+        // 갈아 끼운 markup 에는 동작이 붙어 있지 않다. 붙이는 쪽에 알린다.
+        document.dispatchEvent(new CustomEvent("travelplan:owner-actions-updated"));
+    }
+
+    // ── 방에서 빠졌을 때 ────────────────────────────────────
+    /*
+      접근을 막는 것은 서버다. 서버가 이 연결을 끊으므로
+      여기서 아무것도 하지 않아도 이후 내용은 더 오지 않는다.
+
+      이 처리는 그 화면이 멈춘 채로 남지 않게 하는 안내일 뿐이다.
+      다시 붙으려 하지 않고(구독이 다시 거절될 뿐이다) 목록으로 돌아간다.
+    */
+    let revoked = false;
+
+    function revokeAccess(message) {
+        if (revoked) return;
+        revoked = true;
+
+        // 라이브러리가 5초마다 다시 붙으려 하는 것을 멈춘다.
+        client.deactivate();
+
+        const notice = document.createElement("p");
+        notice.className = "travel-plan-completed-notice";
+        notice.setAttribute("role", "status");
+        notice.textContent = message || "더 이상 이 여행 계획에 참여하고 있지 않습니다.";
+        (document.querySelector(".travel-plan-page") || document.body).prepend(notice);
+
+        // 읽을 틈은 주되 그 자리에 머무르게 두지 않는다.
+        window.setTimeout(() => { window.location.href = "/travel-plans"; }, 1500);
     }
 
     // ── 일정 갱신 ───────────────────────────────────────────
@@ -535,8 +599,25 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
 
-        // 참여자 명단. 누가 들어오고 나갔는지는 싣지 않고 "다시 읽어라" 만 온다.
-        client.subscribe(`/topic/travel-plans/${planId}/members`, () => refreshMembers());
+        /*
+          참여자 명단. 누가 들어오고 나갔는지는 싣지 않고 "다시 읽어라" 만 온다.
+          방장이 바뀌었을 수도 있으므로 방장 전용 자리도 함께 다시 읽는다.
+          (누가 방장인지는 서버가 답한다. 알림에는 들어 있지 않다)
+        */
+        client.subscribe(`/topic/travel-plans/${planId}/members`, () => {
+            refreshMembers();
+            refreshOwnerActions();
+        });
+
+        // 내가 이 방에서 빠졌다. 곧 서버가 이 연결을 끊는다.
+        client.subscribe("/user/queue/travel-plan-access", message => {
+            try {
+                const payload = JSON.parse(message.body);
+                if (payload.type === "ACCESS_REVOKED") revokeAccess(payload.message);
+            } catch (error) {
+                // 알 수 없는 형식이면 화면을 건드리지 않는다. 연결은 서버가 끊는다.
+            }
+        });
 
         // 작성 중 상태. 방 전체 알림과, 내 잠금 요청의 답이 오는 개인 큐 두 갈래다.
         client.subscribe(`/topic/travel-plans/${planId}/editor`, message => {
@@ -586,6 +667,8 @@ document.addEventListener("DOMContentLoaded", () => {
             resyncSchedule();
             // 끊겨 있던 사이의 명단 변경은 다시 받을 수 없다. 지금 명단을 다시 읽는다.
             refreshMembers();
+            // 그사이 방장이 바뀌었을 수도 있다.
+            refreshOwnerActions();
             // 끊겨 있던 사이의 채팅은 다시 받을 수 없다. 채팅 쪽이 그때 다시 읽는다.
             notify(reconnectListeners, null);
             // 끊겨 있던 사이에 사라진 옛 "편집 중" 표시가 남지 않게 지금 상태를 다시 받는다.
@@ -600,6 +683,16 @@ document.addEventListener("DOMContentLoaded", () => {
     client.onWebSocketClose = () => {
         // 끊긴 동안에는 아무도 온라인으로 두지 않는다.
         renderPresence([], 0);
+    };
+
+    /*
+      서버가 구독을 거절했다. 방에서 빠진 뒤 다시 붙으려 할 때 여기로 온다.
+      (개인 알림을 놓쳤더라도 이 길로 정리된다)
+      다시 붙기를 되풀이하지 않고 목록으로 돌아간다.
+    */
+    client.onStompError = frame => {
+        const reason = frame?.headers?.message || "";
+        if (reason.includes("참여")) revokeAccess();
     };
 
     client.activate();

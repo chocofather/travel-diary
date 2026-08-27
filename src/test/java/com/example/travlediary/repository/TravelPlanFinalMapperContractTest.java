@@ -295,6 +295,68 @@ class TravelPlanFinalMapperContractTest {
     }
 
     @Test
+    void anAccountThatCanNeverComeBackDoesNotCountAsSomeoneWhoIsStillThere() throws IOException {
+        String select = between(mapperXml(),
+                "<select id=\"countVisibleMembersByPlanId\"", "</select>");
+
+        /*
+          탈퇴한 사람은 다시 들어와 자기 것을 지울 수 없다.
+          남은 사람으로 세면 아무도 볼 수 없는 여행이 영원히 남는다.
+        */
+        assertThat(select)
+                .contains("JOIN users u ON u.id = m.user_id")
+                .contains("AND u.status != #{withdrawnStatus}")
+                // 어떤 상태를 빼는지는 부르는 쪽이 enum 에서 가져온다
+                .doesNotContain("'DEACTIVATED'");
+
+        // 계정과 연결이 끊긴 행도 INNER JOIN 에서 함께 빠진다
+        assertThat(select).doesNotContain("LEFT JOIN");
+
+        // 부르는 쪽은 문자열을 지어내지 않는다
+        String service = Files.readString(
+                Path.of("src/main/java/com/example/travlediary/service/travelplan/"
+                        + "TravelPlanFinalDeleteService.java"),
+                StandardCharsets.UTF_8);
+        assertThat(service).contains("UserStatus.DEACTIVATED.name()");
+
+        // 그 이름이 실제 컬럼에 있는 값인지 스키마에서 확인한다
+        assertThat(between(schemaReference(), "CREATE TABLE `users`", ") ENGINE=InnoDB"))
+                .contains("`status` enum(")
+                .contains("'DEACTIVATED'");
+    }
+
+    @Test
+    void whoCanStillComeBackIsCountedAsBefore() throws IOException {
+        String select = between(mapperXml(),
+                "<select id=\"countVisibleMembersByPlanId\"", "</select>");
+
+        /*
+          되돌릴 수 없는 삭제라 넉넉하게 본다.
+          휴면·이용정지·인증대기는 돌아올 수 있는 자리이므로 그대로 센다.
+        */
+        for (String comingBack : new String[]{"SUSPENDED", "RESTRICTED", "INACTIVE"}) {
+            assertThat(select).as("돌아올 수 있는 상태를 뺐다: %s", comingBack)
+                    .doesNotContain(comingBack);
+        }
+    }
+
+    @Test
+    void theEverydayReadingOfAFinishedTripIsLeftAlone() throws IOException {
+        /*
+          바뀐 것은 "마지막 한 사람인가" 를 가리는 셈뿐이다.
+          목록과 상세는 그 사람 자신의 hidden_at 만 보고 그대로 판단한다.
+        */
+        for (String id : new String[]{
+                "findSnapshotsByUserId", "findSnapshotByPlanAndUser",
+                "existsMemberByPlanAndUser"}) {
+            assertThat(between(mapperXml(), "<select id=\"" + id + "\"", "</select>"))
+                    .as("%s", id)
+                    .doesNotContain("JOIN users")
+                    .doesNotContain("withdrawnStatus");
+        }
+    }
+
+    @Test
     void theWholeTripGoesWithOneStatementBecauseEverythingCascades() throws IOException {
         String delete = between(resource("/mapper/TravelPlanMapper.xml"),
                 "<delete id=\"deletePlanByIdAndStatus\"", "</delete>");

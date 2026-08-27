@@ -686,7 +686,9 @@ class TravelPlanMemberServiceTest {
 
         travelPlanMemberService.leave(MEMBER_USER_ID, PLAN_ID);
 
-        verify(eventPublisher).publishEvent(new TravelPlanMembershipChangedEvent(PLAN_ID));
+        // 나간 본인이 지목된다. 열어 둔 연결을 끊어야 하기 때문이다
+        verify(eventPublisher).publishEvent(
+                TravelPlanMembershipChangedEvent.revoked(PLAN_ID, MEMBER_A_ID));
     }
 
     @Test
@@ -701,8 +703,9 @@ class TravelPlanMemberServiceTest {
 
         travelPlanMemberService.removeMember(OWNER_USER_ID, PLAN_ID, MEMBER_B_ID);
 
-        // 나가기와 같은 알림 하나를 쓴다
-        verify(eventPublisher).publishEvent(new TravelPlanMembershipChangedEvent(PLAN_ID));
+        // 나가기와 같은 알림 하나를 쓰고, 내보내진 사람이 지목된다
+        verify(eventPublisher).publishEvent(
+                TravelPlanMembershipChangedEvent.revoked(PLAN_ID, MEMBER_B_ID));
     }
 
     @Test
@@ -721,7 +724,40 @@ class TravelPlanMemberServiceTest {
 
         travelPlanMemberService.transferOwnership(OWNER_USER_ID, PLAN_ID, MEMBER_A_ID);
 
-        verify(eventPublisher).publishEvent(new TravelPlanMembershipChangedEvent(PLAN_ID));
+        /*
+          아무도 지목하지 않는다.
+          양쪽 다 여전히 ACTIVE 참여자라 보고 있던 화면이 끊길 이유가 없다.
+        */
+        verify(eventPublisher).publishEvent(
+                TravelPlanMembershipChangedEvent.changed(PLAN_ID));
+        assertThat(capturedEvent().revokedMemberId()).isNull();
+    }
+
+    @Test
+    void handingOverTheRoomNeverCutsAnyonesConnection() {
+        givenLockedPlan();
+        givenCurrentMember(member(OWNER_MEMBER_ID, OWNER_USER_ID, TravelPlanRole.OWNER,
+                TravelPlanMemberStatus.ACTIVE));
+        givenTarget(member(MEMBER_A_ID, MEMBER_USER_ID, TravelPlanRole.MEMBER,
+                TravelPlanMemberStatus.ACTIVE));
+        givenRoleChange(OWNER_MEMBER_ID, "OWNER", "MEMBER", 1);
+        givenRoleChange(MEMBER_A_ID, "MEMBER", "OWNER", 1);
+
+        travelPlanMemberService.transferOwnership(OWNER_USER_ID, PLAN_ID, MEMBER_A_ID);
+
+        // 넘긴 사람도 받은 사람도 지목되지 않는다
+        for (Long memberId : new Long[]{OWNER_MEMBER_ID, MEMBER_A_ID}) {
+            verify(eventPublisher, never()).publishEvent(
+                    TravelPlanMembershipChangedEvent.revoked(PLAN_ID, memberId));
+        }
+    }
+
+    /** 방금 발행된 명단 변경 알림. */
+    private TravelPlanMembershipChangedEvent capturedEvent() {
+        org.mockito.ArgumentCaptor<TravelPlanMembershipChangedEvent> captor =
+                org.mockito.ArgumentCaptor.forClass(TravelPlanMembershipChangedEvent.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        return captor.getValue();
     }
 
     @Test

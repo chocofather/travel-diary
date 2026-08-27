@@ -22,12 +22,15 @@ class TravelPlanFinalizeUiContractTest {
 
     @Test
     void onlyTheOwnerSeesTheWayIn() throws IOException {
-        String detail = detailHtml();
+        String ownerActions = ownerActionsHtml();
 
-        assertThat(between(detail, "class=\"travel-plan-finalize\"",
-                "data-travel-plan-finalize-open"))
+        // 조각 전체가 방장일 때만 나온다. 멤버에게는 통째로 비어서 온다
+        assertThat(between(ownerActions, "th:with=\"viewerIsOwner=", "<th:block th:if="))
                 .contains("travelPlan.currentMember.role.name() == 'OWNER'");
-        assertThat(detail).contains(">여행 계획 확정</button>");
+        assertThat(ownerActions).contains("th:if=\"${viewerIsOwner}\"");
+        assertThat(ownerActions).contains(">여행 계획 확정</button>");
+        // 상세 화면에는 방장 전용 markup 이 남아 있지 않다(출처가 하나다)
+        assertThat(detailHtml()).doesNotContain("data-travel-plan-finalize-open");
     }
 
     @Test
@@ -36,8 +39,12 @@ class TravelPlanFinalizeUiContractTest {
         String topActions = between(detail, "class=\"travel-plan-top-actions\"",
                 "class=\"travel-plan-notice\"");
 
-        // 참여자 / 채팅 / 초대와 같은 줄에 있다
-        assertThat(topActions).contains("data-travel-plan-finalize");
+        // 참여자 / 채팅 / 초대와 같은 줄에 있다(방장 자리가 그 줄 안에 놓인다)
+        assertThat(topActions).contains("data-travel-plan-owner-actions");
+        assertThat(ownerActionsHtml()).contains("data-travel-plan-finalize");
+        // 그 자리 자체는 칸을 차지하지 않아 줄 간격이 지금과 같다
+        assertThat(between(cssFile(), ".travel-plan-owner-actions {", "}"))
+                .contains("display: contents");
         // 크게 튀는 위험 버튼으로 두지 않는다. 다른 보조 액션과 같은 크기다
         String toggle = between(cssFile(), ".travel-plan-finalize-toggle {", "}");
         assertThat(toggle)
@@ -52,10 +59,10 @@ class TravelPlanFinalizeUiContractTest {
 
     @Test
     void pressingItAsksBeforeAnythingHappens() throws IOException {
-        String detail = detailHtml();
+        String ownerActions = ownerActionsHtml();
         String finalizeJs = finalizeJs();
 
-        assertThat(detail)
+        assertThat(ownerActions)
                 .contains("data-travel-plan-finalize-modal")
                 .contains("여행 계획을 확정할까요?")
                 .contains("확정하면 이후 일정은 수정할 수 없습니다.")
@@ -63,7 +70,7 @@ class TravelPlanFinalizeUiContractTest {
                 .contains("data-travel-plan-finalize-cancel")
                 .contains("data-travel-plan-finalize-confirm");
         // 열기 전까지 떠 있지 않다
-        assertThat(between(detail, "class=\"travel-plan-finalize-modal\"", ">"))
+        assertThat(between(ownerActions, "class=\"travel-plan-finalize-modal\"", ">"))
                 .contains("hidden");
         // 누르자마자 확정하지 않는다. 창을 먼저 연다
         assertThat(between(finalizeJs, "openButton?.addEventListener", ";"))
@@ -85,7 +92,8 @@ class TravelPlanFinalizeUiContractTest {
 
         assertThat(finalizeJs).contains("data-travel-plan-finalize-cancel");
         assertThat(between(finalizeJs, "document.addEventListener(\"keydown\"", "});"))
-                .contains("event.key !== \"Escape\" || modal.hidden")
+                // 방장이 바뀌면 창도 갈리므로 그때의 창을 그때 본다
+                .contains("event.key !== \"Escape\" || !modal || modal.hidden")
                 .contains("closeModal()");
         assertThat(between(finalizeJs, "modal.addEventListener(\"click\"", "});"))
                 .contains("if (event.target === modal) closeModal()");
@@ -97,12 +105,20 @@ class TravelPlanFinalizeUiContractTest {
         String finalizeJs = finalizeJs();
 
         // 투표는 계획을 정하는 데 도우려는 것이지 확정의 조건이 아니다
-        assertThat(between(detail, "class=\"travel-plan-finalize-modal\"",
+        assertThat(between(ownerActionsHtml(), "class=\"travel-plan-finalize-modal\"",
                 "data-travel-plan-finalize-confirm"))
                 .doesNotContain("투표");
-        assertThat(finalizeJs)
-                .doesNotContain("poll")
-                .doesNotContain("투표");
+        /*
+          물어보고 경고하는 대목에 투표가 끼어들지 않는다.
+          (완료된 뒤 투표 센터를 화면에서 내리는 것은 확정 조건과 다른 이야기다)
+        */
+        for (String decides : new String[]{"async function check()", "function renderWarning(",
+                "function renderReady()", "async function finalizePlan()"}) {
+            assertThat(between(finalizeJs, decides, "\n    }"))
+                    .as("%s", decides)
+                    .doesNotContain("poll")
+                    .doesNotContain("투표");
+        }
     }
 
     // ── 확정할 수 있는지는 서버가 본다 ──────────────────────
@@ -150,7 +166,7 @@ class TravelPlanFinalizeUiContractTest {
         String detail = detailHtml();
         String finalizeJs = finalizeJs();
 
-        assertThat(detail).contains("data-travel-plan-finalize-warning");
+        assertThat(ownerActionsHtml()).contains("data-travel-plan-finalize-warning");
         assertThat(between(finalizeJs, "function editingSentence(names)", "\n    }"))
                 // 이름 뒤의 "님" 은 한 명일 때와 여럿일 때가 달라 따로 붙인다
                 .contains("${first}님")
@@ -178,7 +194,7 @@ class TravelPlanFinalizeUiContractTest {
                 .contains("force = true")
                 .contains("confirmButton.textContent = \"그래도 완료\"");
         // 취소는 그대로 남아 있다
-        assertThat(detailHtml()).contains("data-travel-plan-finalize-cancel");
+        assertThat(ownerActionsHtml()).contains("data-travel-plan-finalize-cancel");
         // 아무도 쓰고 있지 않으면 원래 문구로 돌아간다
         assertThat(between(finalizeJs, "function renderReady()", "\n    }"))
                 .contains("force = false")
@@ -236,6 +252,80 @@ class TravelPlanFinalizeUiContractTest {
                 .contains("payload.type === \"PLAN_COMPLETED\"");
         // 완료된 뒤에는 줄을 눌러도 편집기가 열리지 않는다
         assertThat(css).contains(".travel-plan-paper.is-completed");
+    }
+
+    @Test
+    void whatWeWereDoingTogetherLeavesTheScreenTheSameMoment() throws IOException {
+        String finalizeJs = finalizeJs();
+
+        /*
+          서버는 이미 전부 거부한다. 여기서 하는 일은
+          눌러 보고 오류로 알게 두지 않는 것이다.
+        */
+        String closes = between(finalizeJs, "const COMPLETED_CLOSES = [", "];");
+        for (String gone : new String[]{
+                // 채팅 진입점과 열려 있는 채팅창
+                "[data-travel-plan-chat]", "[data-travel-plan-chat-panel]",
+                // 투표 센터
+                "[data-travel-plan-poll-modal]",
+                // 초대 버튼과 팝오버
+                "[data-travel-plan-invite]",
+                // 완료 버튼과 확인 창
+                "[data-travel-plan-finalize]", "[data-travel-plan-finalize-modal]"}) {
+            assertThat(closes).as("완료 뒤에도 남는 협업 진입점: %s", gone).contains(gone);
+        }
+
+        // 열려 있던 것도 함께 닫힌다
+        String body = between(finalizeJs, "function markCompleted()", "\n    }");
+        assertThat(body)
+                .contains("COMPLETED_CLOSES.forEach")
+                .contains("element.hidden = true")
+                .contains("aria-expanded");
+    }
+
+    @Test
+    void theClosingReusesTheHiddenRuleAlreadyInPlace() throws IOException {
+        String css = cssFile();
+
+        /*
+          [hidden] 이 실제로 먹는지 확인한다.
+          진입점 셋은 display 를 정해 두지 않아 브라우저 기본 규칙이 그대로 통하고,
+          따로 뜨는 창들은 각자 [hidden] 규칙을 이미 갖고 있다.
+          (display 를 정해 둔 요소는 [hidden] 만으로 감춰지지 않는다)
+        */
+        for (String entry : new String[]{
+                ".travel-plan-chat", ".travel-plan-invite", ".travel-plan-finalize"}) {
+            assertThat(between(css, "\n" + entry + " {", "}"))
+                    .as("%s", entry).doesNotContain("display:");
+        }
+        for (String floating : new String[]{
+                ".travel-plan-chat-panel", ".travel-plan-poll-modal",
+                ".travel-plan-finalize-modal"}) {
+            assertThat(css).as("%s", floating).contains(floating + "[hidden]");
+        }
+    }
+
+    @Test
+    void everyoneInTheRoomGetsTheSameReadOnlyScreen() throws IOException {
+        String finalizeJs = finalizeJs();
+
+        /*
+          확정 버튼은 방장에게만 있다.
+          읽기 전용 전환이 그 버튼을 찾는 자리보다 뒤에 있으면
+          멤버 화면에서는 아무 일도 일어나지 않는다.
+        */
+        assertThat(between(ownerActionsHtml(), "th:with=\"viewerIsOwner=", "<th:block th:if="))
+                .contains("role.name() == 'OWNER'");
+
+        int listener = finalizeJs.indexOf("travelplan:plan-completed");
+        int ownerOnly = finalizeJs.indexOf("function bindOwnerControls()");
+        assertThat(listener).isGreaterThan(0);
+        assertThat(ownerOnly).as("방장 화면에만 있는 준비").isGreaterThan(0);
+        assertThat(listener).as("읽기 전용 전환은 방장 여부를 가리기 전에 붙는다")
+                .isLessThan(ownerOnly);
+        // 그 준비 안에서만 방장 여부로 갈라진다
+        assertThat(between(finalizeJs, "function bindOwnerControls()", "\n    }"))
+                .contains("if (!root || !modal || !planId)");
     }
 
     // ── 완료와 일정 저장이 겹칠 때 ─────────────────────────
@@ -327,6 +417,14 @@ class TravelPlanFinalizeUiContractTest {
 
     private String detailHtml() throws IOException {
         return resource("/templates/travelplan/detail.html");
+    }
+
+    /**
+     * 방장에게만 있는 상단 액션(확정 / 초대 / 확정 확인 창).
+     * 방장이 바뀌면 통째로 갈리므로 상세 화면이 아니라 이 조각에 있다.
+     */
+    private String ownerActionsHtml() throws IOException {
+        return resource("/templates/travelplan/fragments/owner-actions.html");
     }
 
     private String finalizeJs() throws IOException {

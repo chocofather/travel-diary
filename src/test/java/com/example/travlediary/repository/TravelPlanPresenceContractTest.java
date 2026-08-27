@@ -141,10 +141,12 @@ class TravelPlanPresenceContractTest {
                 .contains("/topic/travel-plans/${planId}/presence")
                 .contains("/app/travel-plans/${planId}/presence/join");
         // 신분은 서버가 세션에서 정한다. 클라이언트가 보내지 않는다
+        // (보내는 값은 객체 필드 꼴로 나타난다. 화면의 aria 속성과는 다르다)
         assertThat(presence)
                 .doesNotContain("userId")
                 .doesNotContain("memberId:")
-                .doesNotContain("role");
+                .doesNotContain("role:")
+                .doesNotContain("displayName:");
 
         // 일정 편집 스크립트는 실시간 연결을 모른다
         assertThat(scheduler)

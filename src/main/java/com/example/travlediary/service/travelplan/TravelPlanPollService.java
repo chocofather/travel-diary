@@ -16,6 +16,7 @@ import com.example.travlediary.model.TravelPlanPollOptionVoteCount;
 import com.example.travlediary.model.TravelPlanPollResultVisibility;
 import com.example.travlediary.model.TravelPlanPollSelectionType;
 import com.example.travlediary.model.TravelPlanPollStatus;
+import com.example.travlediary.model.TravelPlanRole;
 import com.example.travlediary.model.TravelPlanPollStatusCount;
 import com.example.travlediary.model.TravelPlanPollVote;
 import com.example.travlediary.model.TravelPlanPollVotedCount;
@@ -220,13 +221,36 @@ public class TravelPlanPollService {
                 travelPlanPollMapper.countVotedMembers(pollId),
                 travelPlanMapper.countActiveMembers(travelPlanId),
                 resultsVisible,
-                // 직접 마감은 만든 사람에게만 보인다. 전원이 투표하기를 기다릴 필요는 없다.
-                !closed && member.getId().equals(poll.getCreatedByMemberId()),
-                // 지우는 것도 만든 사람만. 끝난 투표도 지울 수 있다.
-                member.getId().equals(poll.getCreatedByMemberId()),
+                // 직접 마감은 만든 사람과 방장에게 보인다. 전원이 투표하기를 기다릴 필요는 없다.
+                !closed && canManage(member, poll),
+                // 지우는 것도 같은 기준이다. 끝난 투표도 지울 수 있다.
+                canManage(member, poll),
                 closed ? winnerSummaryOf(results) : null,
                 results,
                 selected);
+    }
+
+    /**
+     * 이 사람이 그 투표를 정리할 수 있는지(마감·삭제).
+     *
+     * <p>둘 중 하나면 된다.
+     *
+     * <ul>
+     *   <li>자기가 만든 투표다.</li>
+     *   <li>지금 이 방의 방장이다.</li>
+     * </ul>
+     *
+     * <p>방장을 넣는 것은 방 관리를 위해서다.
+     * 만든 사람이 나가거나 내보내진 뒤에는 그 투표를 아무도 끝낼 수 없어,
+     * 전원이 투표하지 않는 한 OPEN 인 채로 영영 남는다.
+     * 방장 자리는 언제나 한 사람이므로, 방장을 넘기면 권한도 함께 넘어가고
+     * 넘긴 사람은 일반 참여자로서 자기 투표만 다룰 수 있게 된다.
+     *
+     * <p>정리까지다. 남의 투표 내용을 고치는 길은 방장에게도 없다.
+     */
+    private boolean canManage(TravelPlanMember member, TravelPlanPoll poll) {
+        return member.getId().equals(poll.getCreatedByMemberId())
+                || member.getRole() == TravelPlanRole.OWNER;
     }
 
     /**
@@ -291,16 +315,17 @@ public class TravelPlanPollService {
     /**
      * 직접 마감.
      *
-     * <p>만든 사람만 할 수 있다. 방장이라도 남의 투표를 대신 마감하지 않는다.
+     * <p>만든 사람과 지금 방장이 할 수 있다.
      * 전원이 투표하기를 기다리지 않고 언제든 끝낼 수 있다.
+     * 만든 사람이 방을 떠나도 방장이 정리할 수 있어 OPEN 인 채로 남지 않는다.
      */
     @Transactional
     public void closePoll(Principal principal, Long travelPlanId, Long pollId) {
         TravelPlanMember member = requireActiveMember(principal, travelPlanId);
         TravelPlanPoll poll = requirePollOfPlan(travelPlanId, pollId);
 
-        if (!member.getId().equals(poll.getCreatedByMemberId())) {
-            throw new AccessDeniedException("투표를 만든 사람만 마감할 수 있습니다.");
+        if (!canManage(member, poll)) {
+            throw new AccessDeniedException("투표를 만든 사람과 방장만 마감할 수 있습니다.");
         }
         if (!TravelPlanPollStatus.OPEN.equals(poll.getStatus())) {
             throw new TravelPlanValidationException("poll", "이미 끝난 투표입니다.");
@@ -326,8 +351,9 @@ public class TravelPlanPollService {
     /**
      * 투표 지우기.
      *
-     * <p>만든 사람만 할 수 있다. 방장이라도 남의 투표를 대신 지우지 않는다.
+     * <p>만든 사람과 지금 방장이 할 수 있다.
      * 이미 표가 있어도, 이미 끝난 투표여도 지울 수 있다.
+     * 정리까지다. 남의 투표 내용을 고치는 길은 방장에게도 없다.
      *
      * <p>선택지·표·고른 선택은 FK 의 CASCADE 로 함께 사라져 남는 것이 없다.
      * 채팅에 남아 있던 "새 투표를 만들었어요" 알림도 투표 자체를 읽어 만들던 것이라
@@ -338,8 +364,8 @@ public class TravelPlanPollService {
         TravelPlanMember member = requireActiveMember(principal, travelPlanId);
         TravelPlanPoll poll = requirePollOfPlan(travelPlanId, pollId);
 
-        if (!member.getId().equals(poll.getCreatedByMemberId())) {
-            throw new AccessDeniedException("투표를 만든 사람만 삭제할 수 있습니다.");
+        if (!canManage(member, poll)) {
+            throw new AccessDeniedException("투표를 만든 사람과 방장만 삭제할 수 있습니다.");
         }
         if (travelPlanPollMapper.deletePoll(pollId, travelPlanId) != 1) {
             // 그 사이 누가 먼저 지웠다. 같은 알림을 두 번 보내지 않는다.
