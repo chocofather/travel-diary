@@ -49,14 +49,48 @@
                        WHERE travel_plan_id = #{travelPlanId})
     </select>
 
-    <!-- 완료 시점에 그 여행에 있었던 사람인지. 무엇을 안내할지 가르는 데 쓴다 -->
+    <!--
+      완료 시점에 그 여행에 있었고 아직 내 목록에 두고 있는 사람인지.
+      무엇을 안내할지 가르는 데 쓴다.
+      내 목록에서 지운 사람에게 "완료된 여행 목록에서 보라" 고 할 수는 없다.
+    -->
     <select id="existsMemberByPlanAndUser" resultType="boolean">
         SELECT EXISTS (SELECT 1
                        FROM travel_plan_final_members m
                                 JOIN travel_plan_final_snapshots s ON s.id = m.snapshot_id
                        WHERE s.travel_plan_id = #{travelPlanId}
-                         AND m.user_id = #{userId})
+                         AND m.user_id = #{userId}
+                         AND m.hidden_at IS NULL)
     </select>
+
+    <!--
+      내 목록에서만 지운다.
+      최종본도, 다른 사람의 명단 행도 건드리지 않는다.
+      hidden_at 이 아직 비어 있을 때만 반영되므로 두 번 눌러도 한 번만 처리된다.
+
+      @return 1 이면 방금 지웠고, 0 이면 그 사람의 완료본이 아니거나 이미 지운 뒤다.
+    -->
+    <!--
+      아직 이 여행을 자기 목록에 두고 있는 사람 수.
+      0 이면 이제 아무도 볼 수 없는 여행이라는 뜻이다.
+      지운 사람 수가 아니라 남은 사람 수를 센다.
+    -->
+    <select id="countVisibleMembersByPlanId" resultType="int">
+        SELECT COUNT(*)
+        FROM travel_plan_final_members m
+                 JOIN travel_plan_final_snapshots s ON s.id = m.snapshot_id
+        WHERE s.travel_plan_id = #{travelPlanId}
+          AND m.hidden_at IS NULL
+    </select>
+
+    <update id="hideSnapshotForUser">
+        UPDATE travel_plan_final_members m
+            JOIN travel_plan_final_snapshots s ON s.id = m.snapshot_id
+        SET m.hidden_at = CURRENT_TIMESTAMP
+        WHERE s.travel_plan_id = #{travelPlanId}
+          AND m.user_id = #{userId}
+          AND m.hidden_at IS NULL
+    </update>
 
     <!-- ── 완료된 여행 읽기 ── -->
     <!--
@@ -65,8 +99,11 @@
     -->
 
     <!--
-      이 사람이 함께했던 완료된 여행.
+      이 사람이 함께했던, 그리고 아직 자기 목록에 두고 있는 완료된 여행.
       참여 인원까지 한 번에 세어 목록에서 다시 조회하지 않게 한다.
+
+      인원은 hidden_at 을 가리지 않고 센다.
+      지우기는 내 목록에서만 치우는 것이라, 남의 화면에서 사람이 줄면 안 된다.
     -->
     <select id="findSnapshotsByUserId"
             resultType="com.example.travlediary.dto.TravelPlanFinalListItemDto">
@@ -83,10 +120,15 @@
         FROM travel_plan_final_snapshots s
                  JOIN travel_plan_final_members m ON m.snapshot_id = s.id
         WHERE m.user_id = #{userId}
+          AND m.hidden_at IS NULL
         ORDER BY s.finalized_at DESC, s.id DESC
     </select>
 
-    <!-- 그 여행에 함께했던 사람만 볼 수 있어 user_id 조건을 함께 건다 -->
+    <!--
+      그 여행에 함께했던 사람만 볼 수 있어 user_id 조건을 함께 건다.
+      내 목록에서 지운 뒤에는 주소를 직접 쳐도 열리지 않아야 하므로
+      목록과 같은 조건을 여기에도 건다.
+    -->
     <select id="findSnapshotByPlanAndUser"
             resultType="com.example.travlediary.model.TravelPlanFinalSnapshot">
         SELECT s.id, s.travel_plan_id, s.title, s.start_date, s.end_date,
@@ -95,9 +137,14 @@
                  JOIN travel_plan_final_members m ON m.snapshot_id = s.id
         WHERE s.travel_plan_id = #{travelPlanId}
           AND m.user_id = #{userId}
+          AND m.hidden_at IS NULL
     </select>
 
-    <!-- 방장이 먼저, 그 뒤는 이름순 -->
+    <!--
+      방장이 먼저, 그 뒤는 이름순.
+      hidden_at 을 가리지 않는다. 누군가 자기 목록에서 지웠다고 해서
+      남의 화면에 적힌 "함께한 사람" 에서 사라지면 안 된다.
+    -->
     <select id="findMembersBySnapshotId"
             resultType="com.example.travlediary.model.TravelPlanFinalMember">
         SELECT id, snapshot_id, user_id, display_name, role, hidden_at, created_at

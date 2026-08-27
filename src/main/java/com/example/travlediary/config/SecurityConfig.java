@@ -144,6 +144,9 @@ public class SecurityConfig {
                                 HttpMethod.POST.name()),
                         new RegexRequestMatcher(
                                 "^/travel-plans/[0-9]+/finalize$", HttpMethod.POST.name()),
+                        // 완료된 여행을 내 목록에서만 지우기
+                        new RegexRequestMatcher(
+                                "^/travel-plans/[0-9]+/final/delete$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(
                                 "^/travel-plans/[0-9]+/days/[0-9]+/items$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(

@@ -15,6 +15,18 @@
     <div class="travel-plan-page-top">
       <div class="travel-plan-page-top-row">
         <a class="travel-plan-back-link" th:href="@{/travel-plans}">← 함께 계획하기</a>
+
+        <!--
+          내 목록에서만 치우는 것이라 낮은 위계로 둔다.
+          목록 카드에는 내지 않고 이 화면까지 들어와야 보인다.
+        -->
+        <form method="post"
+              th:action="@{|/travel-plans/${finalPlan.snapshot.travelPlanId}/final/delete|}">
+          <button type="submit" class="travel-plan-final-delete"
+                  onclick="return confirm('이 완료된 여행을 내 목록에서 삭제할까요?\n\n다른 참여자의 기록에는 영향을 주지 않습니다.')">
+            삭제
+          </button>
+        </form>
       </div>
     </div>
 

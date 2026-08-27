@@ -43,11 +43,34 @@ public interface TravelPlanFinalMapper {
     boolean existsByPlanId(@Param("travelPlanId") Long travelPlanId);
 
     /**
-     * 완료 시점에 이 사람이 그 여행에 있었는지.
+     * 완료 시점에 이 사람이 그 여행에 있었고, 아직 자기 목록에 두고 있는지.
      * 완료된 방으로 들어왔을 때 무엇을 안내할지 가르는 데 쓴다.
+     * 내 목록에서 지운 사람에게 완료된 여행 목록을 가리킬 수는 없다.
      */
     boolean existsMemberByPlanAndUser(@Param("travelPlanId") Long travelPlanId,
                                       @Param("userId") Long userId);
+
+    /**
+     * 완료된 여행을 그 사람의 목록에서만 치운다.
+     *
+     * <p>최종본(스냅숏·날짜·일정·대안)도, 다른 사람의 명단 행도 건드리지 않는다.
+     * 자기 행의 hidden_at 만 채우므로 함께한 다른 사람은 그대로 본다.
+     * 이미 지운 뒤에는 반영되지 않아 두 번 눌러도 한 번만 처리된다.
+     *
+     * @return 1 이면 방금 지웠고, 0 이면 그 사람의 완료본이 아니거나 이미 지운 뒤다.
+     */
+    int hideSnapshotForUser(@Param("travelPlanId") Long travelPlanId,
+                            @Param("userId") Long userId);
+
+    /**
+     * 아직 이 완료된 여행을 자기 목록에 두고 있는 사람 수.
+     *
+     * <p>지운 사람 수가 아니라 <em>남은</em> 사람 수다.
+     * 0 이면 이제 아무도 볼 수 없는 여행이라는 뜻이라 그때 비로소 실제로 지운다.
+     * 반드시 방 row 를 잠근 뒤에 센다. 그러지 않으면 마지막 두 사람이
+     * 동시에 눌렀을 때 둘 다 "아직 남아 있다" 로 볼 수 있다.
+     */
+    int countVisibleMembersByPlanId(@Param("travelPlanId") Long travelPlanId);
 
     // ── 완료된 여행 읽기 ────────────────────────────────────
     // 최종본은 한번 만들어지면 바뀌지 않는다. 여기서는 읽기만 한다.

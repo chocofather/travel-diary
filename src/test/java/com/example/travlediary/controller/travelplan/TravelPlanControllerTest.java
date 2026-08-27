@@ -73,6 +73,10 @@ class TravelPlanControllerTest {
     @MockitoBean
     private com.example.travlediary.service.travelplan.TravelPlanFinalReadService
             travelPlanFinalReadService;
+    /** 완료된 여행 지우기. 마지막 한 사람이 지우면 그 여행 자체가 사라진다. */
+    @MockitoBean
+    private com.example.travlediary.service.travelplan.TravelPlanFinalDeleteService
+            travelPlanFinalDeleteService;
     @MockitoBean
     private CustomLoginSuccessHandler customLoginSuccessHandler;
     @MockitoBean
@@ -437,6 +441,69 @@ class TravelPlanControllerTest {
         mockMvc.perform(get("/travel-plans/42/final"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/login?redirect=/travel-plans/42/final"));
+    }
+
+    // ── 완료된 여행 개인 삭제 ────────────────────────────────
+
+    @Test
+    void clearingAFinishedTripSendsMeBackToTheList() throws Exception {
+        mockMvc.perform(post("/travel-plans/42/final/delete")
+                        .with(user(member())).with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/travel-plans"))
+                .andExpect(flash().attribute("travelPlanNotice",
+                        "완료된 여행을 내 목록에서 삭제했습니다."));
+
+        // 지우는 것은 언제나 부른 사람 자신의 것이다
+        verify(travelPlanFinalDeleteService).deleteForMe(7L, 42L);
+    }
+
+    @Test
+    void theScreenSaysTheSameThingWhetherOrNotItWasTheLastCopy() throws Exception {
+        // 마지막 한 사람이어서 여행 자체가 사라져도 하는 말은 같다.
+        // 남이 아직 보관 중인지는 알릴 일이 아니다
+        when(travelPlanFinalDeleteService.deleteForMe(7L, 42L)).thenReturn(true);
+
+        mockMvc.perform(post("/travel-plans/42/final/delete")
+                        .with(user(member())).with(csrf()))
+                .andExpect(redirectedUrl("/travel-plans"))
+                .andExpect(flash().attribute("travelPlanNotice",
+                        "완료된 여행을 내 목록에서 삭제했습니다."));
+    }
+
+    @Test
+    void clearingSomeoneElsesFinishedTripIsRefusedWithoutRevealingIt() throws Exception {
+        doThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "완료된 여행을 찾을 수 없습니다."))
+                .when(travelPlanFinalDeleteService).deleteForMe(anyLong(), anyLong());
+
+        mockMvc.perform(post("/travel-plans/42/final/delete")
+                        .with(user(member())).with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/travel-plans"))
+                // 그 최종본이 있는지조차 알리지 않는다
+                .andExpect(flash().attribute("travelPlanNotice", "접근할 수 없는 여행 계획입니다."));
+    }
+
+    @Test
+    void clearingIsNeverDoneByFollowingALink() throws Exception {
+        // GET 으로는 지워지지 않는다 (주소를 눌러 보거나 미리 읽는 것만으로 사라지면 안 된다)
+        mockMvc.perform(get("/travel-plans/42/final/delete").with(user(member())))
+                .andExpect(status().isMethodNotAllowed());
+        verify(travelPlanFinalDeleteService, never()).deleteForMe(anyLong(), anyLong());
+    }
+
+    @Test
+    void clearingWithoutATokenIsRefused() throws Exception {
+        mockMvc.perform(post("/travel-plans/42/final/delete").with(user(member())))
+                .andExpect(status().isForbidden());
+        verify(travelPlanFinalDeleteService, never()).deleteForMe(anyLong(), anyLong());
+    }
+
+    @Test
+    void anonymousClearingIsSentToLogin() throws Exception {
+        mockMvc.perform(post("/travel-plans/42/final/delete").with(csrf()))
+                .andExpect(status().is3xxRedirection());
+        verify(travelPlanFinalDeleteService, never()).deleteForMe(anyLong(), anyLong());
     }
 
     @Test

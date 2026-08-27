@@ -87,6 +87,20 @@ public interface TravelPlanMapper {
                          @Param("completed") boolean completed);
 
     /**
+     * 방 하나를 실제로 지운다. 아무도 그 여행을 더 보지 않게 되었을 때만 부른다.
+     *
+     * <p>딸린 데이터(참여자·설정·초대·일정·대안·채팅·투표·최종본)는
+     * 모두 travel_plans 를 향한 ON DELETE CASCADE 로 함께 사라진다.
+     * 작성자 표시(created_by_member_id)처럼 SET NULL 인 자리도 참여자와 함께 정리된다.
+     *
+     * <p>상태 조건이 안전장치다. 진행 중인 방(ACTIVE)에는 어떤 경우에도 닿지 않는다.
+     *
+     * @return 1 이면 방금 이 호출이 지웠고, 0 이면 그 사이 이미 사라졌거나 상태가 다르다.
+     */
+    int deletePlanByIdAndStatus(@Param("travelPlanId") Long travelPlanId,
+                                @Param("planStatus") String planStatus);
+
+    /**
      * 방에 지금 참여 중인 사람들. OWNER 가 먼저 오고 그 뒤는 참여한 순서다.
      * 화면에 필요한 컬럼만 읽고 users 는 건드리지 않는다.
      */

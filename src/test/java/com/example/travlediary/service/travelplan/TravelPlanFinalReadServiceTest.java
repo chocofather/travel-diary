@@ -26,6 +26,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -187,6 +188,28 @@ class TravelPlanFinalReadServiceTest {
                 .extracting(java.lang.reflect.Field::getType)
                 .extracting(Class::getSimpleName)
                 .containsExactly("TravelPlanFinalMapper");
+    }
+
+    @Test
+    void whatSomeoneClearedStopsComingBackForThem() {
+        /*
+          지우기 자체는 TravelPlanFinalDeleteService 가 맡는다.
+          여기서 보는 것은 지워진 뒤의 읽기다 — 조회가 비어 오면 그대로 막힌다.
+        */
+        when(travelPlanFinalMapper.findSnapshotByPlanAndUser(PLAN_ID, USER_ID)).thenReturn(null);
+        when(travelPlanFinalMapper.findSnapshotsByUserId(USER_ID)).thenReturn(List.of());
+
+        assertThatThrownBy(() -> readService.getCompletedPlanDetail(USER_ID, PLAN_ID))
+                .isInstanceOf(ResponseStatusException.class);
+        assertThat(readService.getCompletedPlans(USER_ID)).isEmpty();
+
+        // 함께한 사람은 그대로 본다
+        givenSnapshotFor(OTHER_USER_ID);
+        when(travelPlanFinalMapper.findSnapshotsByUserId(OTHER_USER_ID))
+                .thenReturn(List.of(listItem("제주도 여행", 2)));
+        assertThat(readService.getCompletedPlanDetail(OTHER_USER_ID, PLAN_ID)
+                .getSnapshot().getId()).isEqualTo(SNAPSHOT_ID);
+        assertThat(readService.getCompletedPlans(OTHER_USER_ID)).hasSize(1);
     }
 
     // ── 준비 ────────────────────────────────────────────────

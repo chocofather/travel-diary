@@ -90,17 +90,23 @@ class TravelPlanFinalUiContractTest {
         String detail = finalDetailHtml();
 
         /*
-          고칠 수 있는 것이 하나도 없어야 한다.
-          폼도, 입력칸도, 추가 슬롯도, ⋯ 메뉴도 두지 않는다.
+          적힌 내용은 하나도 고칠 수 없어야 한다.
+          입력칸도, 추가 슬롯도, ⋯ 메뉴도 두지 않는다.
         */
         assertThat(detail)
-                .doesNotContain("<form")
                 .doesNotContain("<textarea")
                 .doesNotContain("<input")
-                .doesNotContain("<button")
                 .doesNotContain("data-travel-plan-slot")
                 .doesNotContain("data-travel-plan-item-form")
                 .doesNotContain("data-travel-plan-menu-button");
+
+        /*
+          보내는 곳은 하나뿐이고, 그것도 내용을 고치는 것이 아니라
+          이 여행을 내 목록에서 치우는 길이다.
+        */
+        assertThat(countOf(detail, "<form")).isEqualTo(1);
+        assertThat(countOf(detail, "<button")).isEqualTo(1);
+        assertThat(between(detail, "<form", "</form>")).contains("/final/delete|}");
     }
 
     @Test
@@ -169,11 +175,58 @@ class TravelPlanFinalUiContractTest {
     }
 
     @Test
-    void hidingOrDeletingAFinishedTripIsStillNotPartOfThis() throws IOException {
-        assertThat(finalDetailHtml())
+    void clearingAFinishedTripAsksFirstAndSaysItIsMineAlone() throws IOException {
+        String detail = finalDetailHtml();
+
+        assertThat(detail)
+                .contains("/final/delete|}")
+                .contains("class=\"travel-plan-final-delete\"")
+                .contains(">\n            삭제\n          </button>");
+        // 바로 POST 하지 않고, 남에게는 영향이 없다는 것까지 알린 뒤에 보낸다
+        assertThat(detail)
+                .contains("이 완료된 여행을 내 목록에서 삭제할까요?")
+                .contains("다른 참여자의 기록에는 영향을 주지 않습니다.");
+    }
+
+    @Test
+    void theListDoesNotPutADeleteButtonOnEveryCard() throws IOException {
+        // 지우기는 상세까지 들어와야 보인다
+        assertThat(listHtml())
                 .doesNotContain("숨기기")
-                .doesNotContain("삭제");
-        assertThat(listHtml()).doesNotContain("숨기기");
+                .doesNotContain("삭제")
+                .doesNotContain("/final/delete");
+    }
+
+    @Test
+    void theDeleteActionStaysLowKeyRatherThanABigRedButton() throws IOException {
+        String css = resource("/static/css/travel-plan.css");
+
+        // 참여자 쪽 낮은 위계 규칙을 그대로 함께 쓴다. 새 버튼 모양을 만들지 않는다
+        assertThat(between(css, "/* 낮은 위계로 둔다", "}"))
+                .contains(".travel-plan-final-delete")
+                .contains("background: none")
+                .contains("font-size: 12px")
+                .contains("border: 0");
+    }
+
+    @Test
+    void theRecycleBinIsStillNotPartOfThis() throws IOException {
+        // 되돌리는 길은 이번 단계에 없다
+        assertThat(finalDetailHtml())
+                .doesNotContain("복구")
+                .doesNotContain("휴지통");
+        assertThat(listHtml())
+                .doesNotContain("복구")
+                .doesNotContain("휴지통");
+    }
+
+    private int countOf(String source, String needle) {
+        int count = 0;
+        for (int index = source.indexOf(needle); index >= 0;
+             index = source.indexOf(needle, index + needle.length())) {
+            count++;
+        }
+        return count;
     }
 
     private String listHtml() throws IOException {

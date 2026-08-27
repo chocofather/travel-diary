@@ -9,6 +9,7 @@ import com.example.travlediary.dto.TravelPlanMembersDto;
 import com.example.travlediary.model.TravelPlanDay;
 import com.example.travlediary.service.travelplan.TravelPlanAccessNotice;
 import com.example.travlediary.service.travelplan.TravelPlanConflictException;
+import com.example.travlediary.service.travelplan.TravelPlanFinalDeleteService;
 import com.example.travlediary.service.travelplan.TravelPlanFinalReadService;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.travelplan.TravelPlanInvitationService;
@@ -73,6 +74,8 @@ public class TravelPlanController {
     private final TravelPlanInvitationService travelPlanInvitationService;
     /** 완료된 여행은 최종본에서만 읽는다. */
     private final TravelPlanFinalReadService travelPlanFinalReadService;
+    /** 완료된 여행 지우기. 마지막 한 사람이 지우면 그 여행 자체가 사라진다. */
+    private final TravelPlanFinalDeleteService travelPlanFinalDeleteService;
 
     // 함께 계획하기 목록
     @GetMapping
@@ -106,6 +109,31 @@ public class TravelPlanController {
             return "redirect:/travel-plans";
         }
         return FINAL_DETAIL_VIEW;
+    }
+
+    /**
+     * 완료된 여행을 지운다.
+     *
+     * <p>함께한 사람이 아직 보관 중이면 내 목록에서만 치우고 최종본과 원본 방은 그대로 둔다.
+     * 내가 마지막 한 사람이었으면 이제 아무도 볼 수 없는 여행이라 실제로 사라진다.
+     * 어느 쪽이든 화면에 하는 말은 같다 — 남이 아직 보관 중인지는 알릴 일이 아니다.
+     *
+     * <p>지울 수 있는 것은 자기 것뿐이라 방장이라도 남의 완료본은 지울 수 없다.
+     */
+    @PostMapping("/{travelPlanId:\\d+}/final/delete")
+    public String deleteFinalForMe(@PathVariable Long travelPlanId,
+                                   @AuthenticationPrincipal CustomUserDetails userDetails,
+                                   RedirectAttributes redirectAttributes) {
+        try {
+            travelPlanFinalDeleteService.deleteForMe(userDetails.getId(), travelPlanId);
+            redirectAttributes.addFlashAttribute("travelPlanNotice",
+                    "완료된 여행을 내 목록에서 삭제했습니다.");
+        } catch (ResponseStatusException exception) {
+            // 자기 것이 아니면 그 최종본이 있는지조차 알리지 않는다.
+            redirectAttributes.addFlashAttribute("travelPlanNotice",
+                    TravelPlanAccessNotice.NO_ACCESS.message());
+        }
+        return "redirect:/travel-plans";
     }
 
     // 방 생성 폼

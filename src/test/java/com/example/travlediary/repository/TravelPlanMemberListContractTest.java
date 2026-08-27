@@ -255,8 +255,9 @@ class TravelPlanMemberListContractTest {
     void theMemberActionsStayLowKeyRatherThanBigRedButtons() throws IOException {
         String css = resource("/static/css/travel-plan.css");
 
+        // 완료된 여행의 삭제도 같은 규칙을 함께 쓴다
         String actions = between(css,
-                ".travel-plan-member-remove,\n.travel-plan-member-leave {", "}");
+                ".travel-plan-member-remove,\n.travel-plan-member-leave,", "}");
         assertThat(actions)
                 .contains("background: none")
                 .contains("font-size: 12px")
