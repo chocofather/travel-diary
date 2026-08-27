@@ -236,7 +236,9 @@ class TravelPlanCreateFormUiContractTest {
 
         assertThat(detail)
                 .contains("class=\"travel-plan-slot-hint\"")
-                .contains(">+ 일정 추가</span>");
+                // + 는 눌리는 자리라는 표시라 글자와 따로 둔다
+                .contains("class=\"travel-plan-slot-plus\"")
+                .contains("일정 추가");
         assertThat(css)
                 .contains(".travel-plan-line.is-slot:hover .travel-plan-slot-hint")
                 // 슬롯 번호 자리는 비워 둔다
@@ -252,17 +254,83 @@ class TravelPlanCreateFormUiContractTest {
                 .contains("class=\"travel-plan-page\"")
                 .contains("class=\"travel-plan-paper\"");
 
-        // 바깥 바탕과 종이 색이 서로 다르다
+        // 흰 책상 위에 종이 한 장이 놓인 구조다
         String page = between(css, ".travel-plan-page {", "}");
         String paper = between(css, ".travel-plan-paper {", "}");
-        assertThat(page).contains("background: #f5f2ec");
+        assertThat(page).contains("background: var(--tp-plan-page)");
         assertThat(paper)
-                .contains("background: #fffdf8")
+                .contains("var(--tp-plan-paper)")
                 .contains("border: 1px solid")
                 .contains("box-shadow")
                 .contains("max-width: 900px");
         // 둥근 카드처럼 보이지 않게 한다
-        assertThat(paper).contains("border-radius: 3px");
+        assertThat(paper).contains("border-radius: 4px");
+    }
+
+    @Test
+    void thePageIsNoLongerOneYellowBlock() throws IOException {
+        String root = between(resource("/static/css/travel-plan.css"), ":root {", "}");
+
+        // 바깥은 그냥 흰 책상이다
+        assertThat(between(root, "--tp-plan-page:", ";")).contains("#ffffff");
+        // 종이만 아주 미세하게 따뜻하다 (여행일기의 종이 기본색과 같은 값)
+        assertThat(between(root, "--tp-plan-paper:", ";")).contains("#fdfdfa");
+        assertThat(resource("/static/css/diary.css")).contains("--diary-paper-color: #fdfdfa");
+        // 선은 전부 중립이다
+        assertThat(between(root, "--tp-plan-line:", ";")).contains("#eceef0");
+    }
+
+    @Test
+    void thePaperFeelsLikePaperWithoutShowingAPattern() throws IOException {
+        String paper = between(resource("/static/css/travel-plan.css"),
+                ".travel-plan-paper {", "\n}");
+
+        // 종이 느낌이 아주 사라지지는 않는다
+        assertThat(paper)
+                .contains("--tp-sheet-grain:")
+                .contains("--tp-sheet-edge:")
+                .contains("background: var(--tp-sheet-edge), var(--tp-sheet-grain),"
+                        + " var(--tp-plan-paper)");
+
+        /*
+          다만 되풀이되는 무늬는 두지 않는다.
+          몇 px 주기의 결은 화면 픽셀 격자와 어긋나 지글거리거나 모아레로 보인다.
+          남은 층은 전부 종이 한 장 크기의 완만한 그라데이션이다.
+        */
+        assertThat(paper)
+                .doesNotContain("repeating-linear-gradient")
+                .doesNotContain("repeating-radial-gradient")
+                .doesNotContain("background-size")
+                .doesNotContain("background-repeat: repeat");
+        assertThat(resource("/static/css/travel-plan.css"))
+                .as("여행계획 화면 어디에도 촘촘한 반복 무늬를 두지 않는다")
+                .doesNotContain("repeating-linear-gradient");
+    }
+
+    @Test
+    void theInviteCardIsEvenCleanerThanTheSchedulerSheet() throws IOException {
+        String css = resource("/static/css/travel-plan.css");
+        String invite = between(css, ".travel-plan-invite-paper {", "}");
+
+        // 같은 종이 언어(가장자리 깊이감 + 같은 선/그림자)를 쓰되 결은 얹지 않는다
+        assertThat(invite).contains("background: var(--tp-sheet-edge), #fff");
+        assertThat(invite).doesNotContain("--tp-sheet-grain");
+        // 선과 그림자는 스케줄러 종이에서 그대로 물려받는다
+        assertThat(between(css, ".travel-plan-paper {", "\n}"))
+                .contains("border: 1px solid var(--tp-plan-line)")
+                .contains("box-shadow");
+    }
+
+    @Test
+    void theActionRowAndTheSheetShareOneGrid() throws IOException {
+        String css = resource("/static/css/travel-plan.css");
+
+        // 바깥 선이 같은 자리에서 시작하고 끝난다
+        assertThat(between(css, ".travel-plan-page-top {", "}")).contains("max-width: 900px");
+        String paper = between(css, ".travel-plan-paper {", "\n}");
+        assertThat(paper).contains("max-width: 900px");
+        // 안쪽 여백과 테두리가 그 폭 안에 들어간다 (없으면 종이만 더 넓어진다)
+        assertThat(paper).contains("box-sizing: border-box");
     }
 
     @Test

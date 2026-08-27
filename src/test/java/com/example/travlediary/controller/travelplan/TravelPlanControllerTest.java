@@ -34,6 +34,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -330,6 +331,70 @@ class TravelPlanControllerTest {
 
         // planId 만으로 조회하지 않고 항상 로그인 사용자와 함께 넘긴다
         verify(travelPlanService).getActivePlanDetail(7L, 42L);
+    }
+
+    @Test
+    void theHeaderShowsHowLongTheTripIsBesideItsTitle() throws Exception {
+        when(travelPlanService.getActivePlanDetail(7L, 42L)).thenReturn(planDetailWithDays(3));
+
+        mockMvc.perform(get("/travel-plans/42").with(user(member())))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.allOf(
+                        org.hamcrest.Matchers.containsString("제주 여행"),
+                        org.hamcrest.Matchers.containsString(
+                                "<span class=\"travel-plan-detail-length\">2박 3일</span>"))));
+    }
+
+    @Test
+    void aOneDayTripIsNotCalledZeroNights() throws Exception {
+        when(travelPlanService.getActivePlanDetail(7L, 42L)).thenReturn(planDetailWithDays(1));
+
+        mockMvc.perform(get("/travel-plans/42").with(user(member())))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "<span class=\"travel-plan-detail-length\">당일</span>")));
+    }
+
+    @Test
+    void aMemberSeesTheCommonActionsButNoManagementArea() throws Exception {
+        // planDetail 의 currentMember 는 역할이 없어 방장이 아니다
+        when(travelPlanService.getActivePlanDetail(7L, 42L)).thenReturn(planDetail());
+
+        mockMvc.perform(get("/travel-plans/42").with(user(member())))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.allOf(
+                        // 참여자 / 채팅은 누구나 쓴다
+                        org.hamcrest.Matchers.containsString("data-travel-plan-members-toggle"),
+                        org.hamcrest.Matchers.containsString("data-travel-plan-chat-toggle"),
+                        // 방장 자리는 남아 있지만 안이 비어 있다
+                        org.hamcrest.Matchers.containsString("data-travel-plan-owner-actions"),
+                        org.hamcrest.Matchers.not(
+                                org.hamcrest.Matchers.containsString(
+                                        "travel-plan-finalize-toggle")),
+                        org.hamcrest.Matchers.not(
+                                org.hamcrest.Matchers.containsString(
+                                        "data-travel-plan-invite-toggle")))));
+    }
+
+    @Test
+    void theOwnersActionsAreDrawnAheadOfTheCommonOnes() throws Exception {
+        when(travelPlanService.getActivePlanDetail(7L, 42L)).thenReturn(ownerPlanDetail());
+
+        String body = mockMvc.perform(get("/travel-plans/42").with(user(member())))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        // [확정][초대] | [참여자][채팅]
+        int finalize = body.indexOf("data-travel-plan-finalize-open");
+        int invite = body.indexOf("data-travel-plan-invite-toggle");
+        int divider = body.indexOf("travel-plan-action-divider");
+        int members = body.indexOf("data-travel-plan-members-toggle");
+        int chat = body.indexOf("data-travel-plan-chat-toggle");
+        assertThat(finalize).isGreaterThan(0);
+        assertThat(invite).isGreaterThan(finalize);
+        assertThat(divider).isGreaterThan(invite);
+        assertThat(members).isGreaterThan(divider);
+        assertThat(chat).isGreaterThan(members);
     }
 
     @Test
@@ -1064,6 +1129,47 @@ class TravelPlanControllerTest {
         day.setPlanDate(LocalDate.parse(START));
         return new TravelPlanDetailDto(
                 plan, new TravelPlanMember(), List.of(day), Map.of(), Map.of(),
+                List.of(new TravelPlanMemberDto(11L, "민준", TravelPlanRole.OWNER, true)),
+                List.of(), 8);
+    }
+
+    /** 보고 있는 사람이 방장인 상세. 방장 전용 액션이 그려지는지 보는 데 쓴다. */
+    private TravelPlanDetailDto ownerPlanDetail() {
+        TravelPlan plan = new TravelPlan();
+        plan.setId(42L);
+        plan.setTitle("제주 여행");
+        plan.setStartDate(LocalDate.parse(START));
+        plan.setEndDate(LocalDate.parse(END));
+        TravelPlanMember owner = new TravelPlanMember();
+        owner.setId(11L);
+        owner.setTravelPlanId(42L);
+        owner.setUserId(7L);
+        owner.setDisplayName("민준");
+        owner.setRole(TravelPlanRole.OWNER);
+        return new TravelPlanDetailDto(
+                plan, owner, List.of(), Map.of(), Map.of(),
+                List.of(new TravelPlanMemberDto(11L, "민준", TravelPlanRole.OWNER, true)),
+                List.of(), 8);
+    }
+
+    /** DAY 수만 다른 상세. 머리글이 여행 길이를 어떻게 적는지 보는 데 쓴다. */
+    private TravelPlanDetailDto planDetailWithDays(int dayCount) {
+        TravelPlan plan = new TravelPlan();
+        plan.setId(42L);
+        plan.setTitle("제주 여행");
+        plan.setStartDate(LocalDate.parse(START));
+        plan.setEndDate(LocalDate.parse(START).plusDays(dayCount - 1L));
+        java.util.List<TravelPlanDay> days = new java.util.ArrayList<>();
+        for (int number = 1; number <= dayCount; number++) {
+            TravelPlanDay day = new TravelPlanDay();
+            day.setId(100L + number);
+            day.setTravelPlanId(42L);
+            day.setDayNumber(number);
+            day.setPlanDate(LocalDate.parse(START).plusDays(number - 1L));
+            days.add(day);
+        }
+        return new TravelPlanDetailDto(
+                plan, new TravelPlanMember(), days, Map.of(), Map.of(),
                 List.of(new TravelPlanMemberDto(11L, "민준", TravelPlanRole.OWNER, true)),
                 List.of(), 8);
     }

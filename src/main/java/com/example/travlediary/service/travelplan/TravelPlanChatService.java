@@ -2,13 +2,17 @@ package com.example.travlediary.service.travelplan;
 
 import com.example.travlediary.dto.TravelPlanChatEventDto;
 import com.example.travlediary.dto.TravelPlanChatMessageDto;
+import com.example.travlediary.dto.TravelPlanChatReactionDto;
+import com.example.travlediary.dto.TravelPlanChatReactionRow;
 import com.example.travlediary.dto.TravelPlanChatTimelineDto;
 import com.example.travlediary.dto.TravelPlanChatTimelineItemDto;
 import com.example.travlediary.model.TravelPlanChatMessage;
 import com.example.travlediary.model.TravelPlanChatMessageType;
+import com.example.travlediary.model.TravelPlanChatReactionType;
 import com.example.travlediary.model.TravelPlanMember;
 import com.example.travlediary.model.TravelPlanPoll;
 import com.example.travlediary.repository.travelplan.TravelPlanChatMapper;
+import com.example.travlediary.repository.travelplan.TravelPlanChatReactionMapper;
 import com.example.travlediary.repository.travelplan.TravelPlanPollMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -17,9 +21,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.Principal;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 방 채팅.
@@ -44,6 +51,8 @@ public class TravelPlanChatService {
     public static final int MAX_CONTENT_LENGTH = 2000;
 
     private final TravelPlanChatMapper travelPlanChatMapper;
+    /** 메시지에 달린 반응. 개수도 "내가 눌렀는지" 도 전부 여기서 센 값이다. */
+    private final TravelPlanChatReactionMapper travelPlanChatReactionMapper;
     /** 채팅창에 끼워 넣을 "새 투표" 기록만 읽는다. 투표를 만들거나 고치지 않는다. */
     private final TravelPlanPollMapper travelPlanPollMapper;
     private final TravelPlanRoomAccess travelPlanRoomAccess;
@@ -66,20 +75,30 @@ public class TravelPlanChatService {
     @Transactional(readOnly = true)
     public TravelPlanChatTimelineDto timeline(Principal principal, Long travelPlanId,
                                               Long beforeMessageId, Long beforePollId) {
-        requireActiveMember(principal, travelPlanId);
+        TravelPlanMember member = requireActiveMember(principal, travelPlanId);
+        Timestamp visibleSince = visibleSince(member);
         boolean firstPage = beforeMessageId == null && beforePollId == null;
 
         List<TravelPlanChatMessage> messages = firstPage
-                ? travelPlanChatMapper.findRecentMessages(travelPlanId, PAGE_SIZE)
+                ? travelPlanChatMapper.findRecentMessages(travelPlanId, visibleSince, PAGE_SIZE)
                 : beforeOrEmpty(beforeMessageId, before ->
-                        travelPlanChatMapper.findMessagesBefore(travelPlanId, before, PAGE_SIZE));
+                        travelPlanChatMapper.findMessagesBefore(
+                                travelPlanId, before, visibleSince, PAGE_SIZE));
         List<TravelPlanPoll> polls = firstPage
-                ? travelPlanPollMapper.findRecentPolls(travelPlanId, PAGE_SIZE)
+                ? travelPlanPollMapper.findRecentPolls(travelPlanId, visibleSince, PAGE_SIZE)
                 : beforeOrEmpty(beforePollId, before ->
-                        travelPlanPollMapper.findPollsBefore(travelPlanId, before, PAGE_SIZE));
+                        travelPlanPollMapper.findPollsBefore(
+                                travelPlanId, before, visibleSince, PAGE_SIZE));
+
+        // 메시지마다 묻지 않는다. 이 쪽에 실린 것들의 반응을 한 번에 읽어 온다.
+        Map<Long, List<TravelPlanChatReactionDto>> reactions =
+                reactionsByMessageId(messages, member.getId());
 
         List<TravelPlanChatTimelineItemDto> items = new ArrayList<>();
-        messages.stream().map(TravelPlanChatTimelineItemDto::ofMessage).forEach(items::add);
+        messages.stream()
+                .map(message -> TravelPlanChatTimelineItemDto.ofMessage(
+                        message, reactions.get(message.getId())))
+                .forEach(items::add);
         polls.stream().map(TravelPlanChatTimelineItemDto::ofPollCreated).forEach(items::add);
         // 화면은 오래된 것이 위에 온다.
         items.sort(Comparator.comparing(
@@ -154,11 +173,15 @@ public class TravelPlanChatService {
                 travelPlanId, TravelPlanChatEventDto.deleted(messageId)));
     }
 
-    /** 아직 읽지 않은 메시지 수. 내가 보낸 것과 지워진 것은 세지 않는다. */
+    /**
+     * 아직 읽지 않은 메시지 수. 내가 보낸 것과 지워진 것은 세지 않는다.
+     * 볼 수 없는 대화도 세지 않는다. 목록과 같은 기준을 쓴다.
+     */
     @Transactional(readOnly = true)
     public int unreadCount(Principal principal, Long travelPlanId) {
         TravelPlanMember member = requireActiveMember(principal, travelPlanId);
         return travelPlanChatMapper.countUnread(travelPlanId, member.getId(),
+                visibleSince(member),
                 travelPlanChatMapper.findLastReadMessageId(travelPlanId, member.getId()));
     }
 
@@ -188,7 +211,138 @@ public class TravelPlanChatService {
             travelPlanChatMapper.upsertReadPosition(travelPlanId, member.getId(), target);
             current = target;
         }
-        return travelPlanChatMapper.countUnread(travelPlanId, member.getId(), current);
+        return travelPlanChatMapper.countUnread(
+                travelPlanId, member.getId(), visibleSince(member), current);
+    }
+
+    // ── 반응 ────────────────────────────────────────────────
+
+    /**
+     * 반응을 남기거나, 거두거나, 다른 종류로 바꾼다.
+     *
+     * <p>한 사람이 한 메시지에 남길 수 있는 반응은 하나뿐이다. 그래서 세 갈래다.
+     * <ul>
+     *   <li>아무 것도 없을 때 누르면 → 남긴다</li>
+     *   <li>같은 것을 다시 누르면 → 거둔다</li>
+     *   <li>다른 것을 누르면 → 더하지 않고 눌러 둔 것을 그 종류로 바꾼다</li>
+     * </ul>
+     *
+     * <p>먼저 같은 종류를 지워 본다. 지워졌다면 "다시 누른 것" 이라 거기서 끝이고,
+     * 아니면 남기거나 바꾼다. 지운 행 수가 곧 답이라 "있는지 물어보고 정하기" 와 달리
+     * 두 번 누른 사이에 다른 요청이 끼어들 틈이 없다.
+     * 남기고 바꾸는 것은 한 문장(upsert)이라 행이 없는 순간도 생기지 않고,
+     * 한 사람의 행이 둘이 되지 않는 것은 (message_id, member_id) UNIQUE 가 막는다.
+     *
+     * <p>누가 눌렀는지는 언제나 서버가 정한다. 화면이 memberId 를 보내지 않는다.
+     * 자기 메시지에도 반응할 수 있다.
+     */
+    @Transactional
+    public void toggleReaction(Principal principal, Long travelPlanId,
+                               Long messageId, String reactionType) {
+        TravelPlanMember member = requireActiveMember(principal, travelPlanId);
+        TravelPlanChatReactionType type = TravelPlanChatReactionType.from(reactionType);
+        if (type == null) {
+            throw new TravelPlanValidationException("reactionType", "지원하지 않는 반응입니다.");
+        }
+        if (messageId == null) {
+            throw new AccessDeniedException("반응할 수 없는 메시지입니다.");
+        }
+
+        // 방 조건을 함께 걸어 읽는다. 다른 방 메시지 번호를 보내면 여기서 비어 온다.
+        TravelPlanChatMessage message =
+                travelPlanChatMapper.findByIdAndPlanId(messageId, travelPlanId);
+        if (message == null || !canSee(member, message)) {
+            throw new AccessDeniedException("반응할 수 없는 메시지입니다.");
+        }
+        if (message.getDeletedAt() != null) {
+            throw new TravelPlanValidationException(
+                    "messageId", "삭제된 메시지에는 반응할 수 없습니다.");
+        }
+
+        // 지워졌다면 같은 것을 다시 누른 것이라 거기서 끝이다.
+        if (travelPlanChatReactionMapper.deleteReaction(
+                messageId, member.getId(), type.name()) == 0) {
+            // 아무 것도 없었으면 남기고, 다른 것을 눌러 두었으면 그 행을 이 종류로 바꾼다.
+            travelPlanChatReactionMapper.upsertReaction(messageId, member.getId(), type.name());
+        }
+
+        eventPublisher.publishEvent(new TravelPlanChatChangedEvent(
+                travelPlanId, TravelPlanChatEventDto.reactionChanged(messageId)));
+    }
+
+    /**
+     * 한 메시지의 반응 요약.
+     * 실시간 알림을 받은 화면이 개수를 더하는 대신 이 값을 다시 읽어 간다.
+     * 그래서 같은 알림이 두 번 와도 결과가 같다.
+     */
+    @Transactional(readOnly = true)
+    public List<TravelPlanChatReactionDto> reactionsOf(Principal principal, Long travelPlanId,
+                                                       Long messageId) {
+        TravelPlanMember member = requireActiveMember(principal, travelPlanId);
+        if (messageId == null) {
+            return List.of();
+        }
+        TravelPlanChatMessage message =
+                travelPlanChatMapper.findByIdAndPlanId(messageId, travelPlanId);
+        // 볼 수 없는 메시지의 반응도 알려 주지 않는다.
+        if (message == null || !canSee(member, message) || message.getDeletedAt() != null) {
+            return List.of();
+        }
+        return reactionsByMessageId(List.of(message), member.getId())
+                .getOrDefault(messageId, List.of());
+    }
+
+    /**
+     * 여러 메시지의 반응을 한 번에 읽어 메시지별로 묶는다.
+     * 지워진 메시지는 아예 묻지 않는다(화면에도 내보내지 않는다).
+     */
+    private Map<Long, List<TravelPlanChatReactionDto>> reactionsByMessageId(
+            List<TravelPlanChatMessage> messages, Long memberId) {
+        List<Long> ids = messages.stream()
+                .filter(message -> message.getDeletedAt() == null)
+                .map(TravelPlanChatMessage::getId)
+                .filter(java.util.Objects::nonNull)
+                .toList();
+        // IN () 은 SQL 오류다. 물을 것이 없으면 조회 자체를 보내지 않는다.
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<Long, List<TravelPlanChatReactionDto>> grouped = new LinkedHashMap<>();
+        for (TravelPlanChatReactionRow row
+                : travelPlanChatReactionMapper.findSummaries(ids, memberId)) {
+            TravelPlanChatReactionType type =
+                    TravelPlanChatReactionType.from(row.getReactionType());
+            // 아는 종류만 내보낸다. DB 에 남은 옛 값이 화면으로 새어 나가지 않는다.
+            if (type == null || row.getCount() <= 0) {
+                continue;
+            }
+            grouped.computeIfAbsent(row.getMessageId(), key -> new ArrayList<>())
+                    .add(TravelPlanChatReactionDto.of(type, row.getCount(), row.isReacted()));
+        }
+        return grouped;
+    }
+
+    /** 그 사람이 볼 수 있는 대화인지. 들어오기 전의 메시지에는 반응도 할 수 없다. */
+    private boolean canSee(TravelPlanMember member, TravelPlanChatMessage message) {
+        Timestamp since = visibleSince(member);
+        return since == null || message.getCreatedAt() == null
+                || !message.getCreatedAt().before(since);
+    }
+
+    /**
+     * 이 사람이 볼 수 있는 대화의 시작점.
+     *
+     * <p>그 방에 <em>참여한 시각</em>이다. 접속한 시각이 아니므로,
+     * 참여한 뒤 한동안 꺼 두었다가 들어와도 그 사이 대화는 그대로 보인다.
+     * 방을 만든 사람은 OWNER 행이 방과 함께 생기므로 처음부터 다 보인다.
+     *
+     * <p>joined_at 은 DB DEFAULT 로 채워지지만 만에 하나 비어 있으면
+     * 같은 시각에 채워지는 created_at 을 대신 쓴다. 둘 다 없으면 자를 곳을
+     * 알 수 없어 지금까지처럼 전부 보인다(대화를 통째로 막지는 않는다).
+     */
+    private Timestamp visibleSince(TravelPlanMember member) {
+        return member.getJoinedAt() != null ? member.getJoinedAt() : member.getCreatedAt();
     }
 
     /** 기준이 없는 쪽은 이미 끝까지 본 것이다. 다시 읽지 않는다. */

@@ -253,6 +253,42 @@ class TravelPlanEditorDraftContractTest {
     }
 
     @Test
+    void addingIsNotOfferedWhileSomeoneElseIsAlreadyWritingThere() throws IOException {
+        String realtime = realtimeJs();
+        String css = css();
+
+        /*
+          "쭈니님이 일정 작성 중" 과 "+ 일정 추가" 가 한자리에 함께 있으면 뜻이 어긋난다.
+          표시는 ADD 잠금이 살아 있는 동안에만 붙고, 풀리면 함께 걷힌다.
+        */
+        assertThat(realtime)
+                .contains("lock.mode === \"ADD\"")
+                .contains("classList.add(\"is-remote-adding\")")
+                .contains("classList.remove(\"is-remote-adding\")");
+        assertThat(css).contains(
+                ".travel-plan-line.is-slot.is-remote-adding .travel-plan-slot-hint");
+        // 그 DAY 의 자리 하나만 가린다. 다른 DAY 는 그대로다
+        assertThat(realtime).contains(
+                "[data-travel-plan-day-id=\"${lock.dayId}\"] [data-travel-plan-slot]");
+    }
+
+    @Test
+    void theTypingNoteSitsWhereTheAddActionWas() throws IOException {
+        String realtime = realtimeJs();
+
+        // 슬롯에는 본문 칸이 없어 "+ 일정 추가" 자리에 넣어야 글자가 같은 줄에 선다
+        assertThat(realtime)
+                .contains(".travel-plan-slot-hint")
+                .contains("insertAdjacentElement(\"afterend\", note)");
+        // 지금 붙어 있는 사람이라는 뜻이라 참여자 목록의 접속 점과 같은 초록을 쓴다
+        String css = css();
+        assertThat(between(css, ".travel-plan-remote-note::before {", "}"))
+                .contains("background: #8a9a7b");
+        assertThat(between(css, ".travel-plan-member.is-online .travel-plan-presence-dot {", "}"))
+                .contains("#8a9a7b");
+    }
+
+    @Test
     void remoteTypingUsesItsOwnClassSoRefreshesAreNotBlockedForever() throws IOException {
         String realtime = realtimeJs();
 

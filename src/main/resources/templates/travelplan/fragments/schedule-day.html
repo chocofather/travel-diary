@@ -222,7 +222,10 @@
         data-travel-plan-slot>
       <span class="travel-plan-line-order" aria-hidden="true"></span>
 
-      <span class="travel-plan-slot-hint">+ 일정 추가</span>
+      <!-- + 는 눌리는 자리라는 표시라 글자와 따로 둔다 -->
+      <span class="travel-plan-slot-hint">
+        <span class="travel-plan-slot-plus" aria-hidden="true">+</span>일정 추가
+      </span>
 
       <form class="travel-plan-slot-form" method="post"
             th:hidden="${!dayOpen}"

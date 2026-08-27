@@ -1577,6 +1577,27 @@ CREATE TABLE `travel_plan_chat_read_positions` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `travel_plan_chat_message_reactions`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `travel_plan_chat_message_reactions` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `message_id` bigint NOT NULL,
+  `member_id` bigint NOT NULL,
+  `reaction_type` varchar(20) NOT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_travel_plan_chat_message_reactions_message_member` (`message_id`,`member_id`),
+  KEY `idx_travel_plan_chat_message_reactions_member` (`member_id`),
+  CONSTRAINT `fk_travel_plan_chat_message_reactions_member` FOREIGN KEY (`member_id`) REFERENCES `travel_plan_members` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_travel_plan_chat_message_reactions_message` FOREIGN KEY (`message_id`) REFERENCES `travel_plan_chat_messages` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `chk_travel_plan_chat_message_reactions_type` CHECK ((`reaction_type` in (_utf8mb4'LIKE',_utf8mb4'HEART',_utf8mb4'LAUGH',_utf8mb4'WOW',_utf8mb4'SAD',_utf8mb4'PARTY')))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `travel_plan_member_settings`
 --
 

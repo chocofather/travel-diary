@@ -14,9 +14,9 @@ public final class TravelPlanChatDestinations {
     private static final Pattern TOPIC_PATTERN =
             Pattern.compile("^/topic/travel-plans/(\\d+)/chat$");
 
-    /** 클라이언트 -> 서버. 보내기 / 지우기 / 읽음 세 가지뿐이다. */
+    /** 클라이언트 -> 서버. 보내기 / 지우기 / 읽음 / 반응 네 가지뿐이다. */
     private static final Pattern SEND_PATTERN =
-            Pattern.compile("^/app/travel-plans/(\\d+)/chat/(send|delete|read)$");
+            Pattern.compile("^/app/travel-plans/(\\d+)/chat/(send|delete|read|react)$");
 
     /** 보낸 사람에게만 돌아가는 처리 결과. 실패 사유가 방 전체로 나가지 않게 한다. */
     public static final String REPLY_QUEUE = "/queue/travel-plan-chat";

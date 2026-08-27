@@ -27,7 +27,7 @@ class TravelPlanChatUiContractTest {
         assertThat(detail)
                 .contains("data-travel-plan-chat-toggle")
                 .contains("data-travel-plan-chat-badge")
-                // 참여자 / 초대와 같은 상단 보조 액션 줄에 있다
+                // 화면 오른쪽 아래에 떠 있는 진입점 하나다
                 .contains("class=\"travel-plan-chat\"");
         // 안 읽은 개수는 서버에서 받기 전까지 보이지 않는다
         assertThat(between(detail, "data-travel-plan-chat-badge", "</span>"))
@@ -54,7 +54,7 @@ class TravelPlanChatUiContractTest {
 
         for (String hook : new String[]{
                 "data-travel-plan-chat-panel", "data-travel-plan-chat-close",
-                "data-travel-plan-chat-minimize", "data-travel-plan-chat-body",
+                "data-travel-plan-chat-body",
                 "data-travel-plan-chat-list", "data-travel-plan-chat-empty",
                 "data-travel-plan-chat-jump", "data-travel-plan-chat-form",
                 "data-travel-plan-chat-input", "data-travel-plan-chat-send",
@@ -63,6 +63,26 @@ class TravelPlanChatUiContractTest {
         }
         // 패널은 눌러서 열기 전까지 떠 있지 않다
         assertThat(between(detail, "class=\"travel-plan-chat-panel\"", ">")).contains("hidden");
+    }
+
+    @Test
+    void thereIsOneWayInAndOneWayOut() throws IOException {
+        String detail = detailHtml();
+        String chat = chatJs();
+        String css = cssFile();
+
+        /*
+          떠 있는 버튼으로 열고 × 로 닫는다.
+          접기라는 중간 상태를 두지 않는다 — 그 상태에서는 떠 있는 버튼도
+          감춰져 있어 여닫는 길이 둘로 갈린다.
+        */
+        assertThat(detail)
+                .contains("data-travel-plan-chat-close")
+                .doesNotContain("data-travel-plan-chat-minimize");
+        for (String source : new String[]{chat, css}) {
+            assertThat(source).doesNotContain("is-minimized");
+        }
+        assertThat(between(chat, "function isOpen()", "}")).contains("!panel.hidden");
     }
 
     @Test
@@ -118,14 +138,98 @@ class TravelPlanChatUiContractTest {
 
         assertThat(panel)
                 .contains("position: fixed")
-                .contains("right: 24px")
-                .contains("bottom: 24px")
-                // 좁은 화면에서도 남은 폭 안에서만 커진다
-                .contains("width: min(360px, calc(100vw - 32px))");
+                // 떠 있는 채팅 버튼과 같은 모서리에서 펼쳐진다
+                .contains("right: 28px")
+                .contains("bottom: 28px")
+                // PC 에서는 대화를 읽을 만큼 넓게, 좁은 화면에서는 남은 폭 안에서만
+                .contains("width: min(420px, calc(100vw - 56px))");
+        assertThat(between(css, ".travel-plan-chat {", "}"))
+                .contains("right: 28px")
+                .contains("bottom: 28px");
         // 옆으로 넘치는 대신 안에서 스크롤한다
         assertThat(between(css, ".travel-plan-chat-body {", "}"))
                 .contains("overflow-y: auto")
                 .contains("overflow-x: hidden");
+    }
+
+    @Test
+    void chatIsEnteredFromAFloatingBubbleRatherThanTheTopRow() throws IOException {
+        String detail = detailHtml();
+        String css = cssFile();
+
+        // 상단 줄에는 채팅 글자 버튼이 남아 있지 않다
+        assertThat(between(detail, "class=\"travel-plan-top-actions\"",
+                "class=\"travel-plan-notice\""))
+                .doesNotContain("data-travel-plan-chat-toggle");
+        // 말풍선 하나뿐인 둥근 버튼이다
+        assertThat(detail)
+                .contains("class=\"travel-plan-chat-icon\"")
+                .contains("aria-label=\"채팅 열기\"");
+        assertThat(between(detail, "data-travel-plan-chat-toggle", "</button>"))
+                .as("글자 '채팅' 은 버튼 안에 두지 않는다")
+                .doesNotContain("채팅");
+        assertThat(between(css, ".travel-plan-chat {", "}")).contains("position: fixed");
+        assertThat(between(css, ".travel-plan-chat-toggle {", "}"))
+                .contains("border-radius: 50%")
+                .contains("background: #fff")
+                .contains("color: var(--tp-plan-accent)");
+        // 키보드로 왔을 때도 지금 어디에 있는지 보인다
+        assertThat(css).contains(".travel-plan-chat-toggle:focus-visible");
+    }
+
+    @Test
+    void theBubbleStepsAsideWhileTheChatIsOpenAndComesBackWhenItCloses() throws IOException {
+        String css = cssFile();
+        String chat = chatJs();
+
+        /*
+          숨기고 보이는 기준은 채팅 스크립트가 이미 맞춰 두는 aria-expanded 다.
+          여닫는 데 쓰는 상태를 새로 만들지 않는다.
+        */
+        assertThat(css).contains(".travel-plan-chat-toggle[aria-expanded=\"true\"]");
+        assertThat(between(css, ".travel-plan-chat-toggle[aria-expanded=\"true\"] {", "}"))
+                .contains("display: none");
+        assertThat(chat)
+                .contains("toggle?.setAttribute(\"aria-expanded\", \"true\")")
+                .contains("toggle?.setAttribute(\"aria-expanded\", \"false\")");
+        // 버튼이 패널에 가리지 않도록 한 층 아래에 둔다
+        assertThat(between(css, ".travel-plan-chat {", "}")).contains("z-index: 39");
+        assertThat(between(css, ".travel-plan-chat-panel {", "}")).contains("z-index: 40");
+    }
+
+    @Test
+    void theUnreadBadgeStillComesFromTheServersCount() throws IOException {
+        String chat = chatJs();
+
+        // 개수를 화면에서 따로 세지 않는다. 서버가 준 값과 실시간 알림만 쓴다
+        assertThat(chat)
+                .contains("/chat/unread")
+                .contains("unreadCount > 99 ? \"99+\"")
+                .contains("badge.hidden = unreadCount <= 0");
+        // 숫자만으로 뜻이 전해지지 않게 이름표를 함께 둔다
+        assertThat(between(detailHtml(), "class=\"travel-plan-chat-badge\"", "</span>"))
+                .contains("aria-label=\"안 읽은 메시지\"");
+        // 강한 원색 빨강 대신 가라앉은 코럴이고, 숫자는 흰색이다
+        assertThat(between(cssFile(), ".travel-plan-chat-badge {", "}"))
+                .contains("background: #d96a6a")
+                .contains("color: #fff")
+                .contains("position: absolute");
+    }
+
+    @Test
+    void thePanelIsNotTheSameBeigeBlockAsTheScheduler() throws IOException {
+        String css = cssFile();
+        String root = between(css, ":root {", "}");
+
+        // 스케줄러(미세한 warm-white)와 달리 채팅은 아주 옅은 cool gray 다
+        assertThat(between(root, "--tp-chat-surface:", ";")).contains("#f8fafb");
+        assertThat(between(css, ".travel-plan-chat-panel {", "}"))
+                .contains("background: var(--tp-chat-surface)");
+        // 머리글은 몸통과 한 톤 차이를 둔다
+        assertThat(between(css, ".travel-plan-chat-header {", "}"))
+                .contains("background: var(--tp-chat-composer)")
+                .contains("border-bottom: 1px solid var(--tp-chat-line)");
+        assertThat(between(root, "--tp-chat-composer:", ";")).contains("#eef2f5");
     }
 
     @Test
@@ -315,36 +419,411 @@ class TravelPlanChatUiContractTest {
     // ── 메시지 생김새 ───────────────────────────────────────
 
     @Test
-    void myMessagesLookLikeEveryoneElsesExceptForTheLabel() throws IOException {
+    void myMessagesStandOnTheRightAndEveryoneElsesOnTheLeft() throws IOException {
         String chat = chatJs();
         String css = cssFile();
 
-        // 내 메시지만 진한 바탕을 쓰지 않는다
-        assertThat(css).doesNotContain(".travel-plan-chat-message.is-mine {");
-        // 카카오톡식 좌우 말풍선으로 가르지도 않는다
+        // 자리를 가르는 것은 class 하나뿐이다
+        assertThat(chat).contains("if (isMine(message)) item.classList.add(\"is-mine\")");
         assertThat(between(css, ".travel-plan-chat-message {", "}"))
-                .doesNotContain("background")
-                .doesNotContain("margin-left: auto")
-                .doesNotContain("align-self");
-        // 누가 썼는지는 이름 옆 "(나)" 로만 구분한다
-        assertThat(chat).contains("`${message.displayName} (나)`");
+                .contains("align-items: flex-start");
+        assertThat(between(css, ".travel-plan-chat-message.is-mine {", "}"))
+                .contains("align-items: flex-end");
+        // 오른쪽에 서는 것으로 내 말인 줄 알 수 있어 "나" 를 매번 적지 않는다
+        assertThat(chat).doesNotContain("(나)");
+        assertThat(css).contains(
+                ".travel-plan-chat-message.is-mine .travel-plan-chat-sender");
     }
 
     @Test
-    void messagesAreSeparatedInsteadOfRunningTogether() throws IOException {
+    void theTalkIsInBubblesRatherThanFullWidthRows() throws IOException {
         String css = cssFile();
-        String message = between(css, ".travel-plan-chat-message {", "}");
 
-        // 카드로 만들지 않고 아주 연한 선과 여백으로만 나눈다
-        assertThat(message)
-                .contains("padding: 10px 2px")
-                .contains("border-bottom: 1px solid var(--tp-chat-line)");
-        assertThat(css).contains(".travel-plan-chat-message:last-child {");
-        // 이름 / 본문 / 시간이 각각 떨어져 보인다
-        assertThat(between(css, ".travel-plan-chat-sender {", "}")).contains("margin: 0 0 4px");
-        assertThat(between(css, ".travel-plan-chat-time {", "}"))
-                .contains("margin-top: 4px")
-                .contains("text-align: right");
+        // 패널 폭을 꽉 채우는 긴 행이 아니다
+        assertThat(between(css, ".travel-plan-chat-row {", "}")).contains("max-width: 78%");
+        assertThat(between(css, ".travel-plan-chat-message {", "}"))
+                .doesNotContain("border-bottom");
+        // 남의 말은 흰 종이, 내 말은 같은 accent 계열을 아주 옅게
+        assertThat(between(css, ".travel-plan-chat-bubble {", "}"))
+                .contains("background: #fff")
+                .contains("border-radius: 12px");
+        assertThat(between(css, ".travel-plan-chat-message.is-mine .travel-plan-chat-bubble {",
+                "}")).contains("background: var(--tp-plan-accent-soft)");
+        // 긴 말도 옆으로 넘치지 않고 접힌다
+        assertThat(between(css, ".travel-plan-chat-content {", "}"))
+                .contains("overflow-wrap: break-word");
+    }
+
+    @Test
+    void theSameVoiceInARowReadsAsOneBlock() throws IOException {
+        String chat = chatJs();
+        String css = cssFile();
+
+        /*
+          묶는 것은 그리는 단계에서만이다.
+          DB 의 메시지를 합치거나 고쳐 쓰지 않는다.
+        */
+        assertThat(chat)
+                .contains("const GROUP_WINDOW_MS = 3 * 60 * 1000")
+                .contains("function regroup()")
+                .contains("node.classList.toggle(\"is-continued\", continued)");
+        // 이름은 묶음의 첫 줄에만, 시각은 마지막 줄에만 남는다
+        assertThat(css).contains(
+                ".travel-plan-chat-message.is-continued .travel-plan-chat-sender");
+        assertThat(css).contains(
+                ".travel-plan-chat-message:not(.is-group-end) .travel-plan-chat-time");
+        // 이어지는 줄은 바짝 붙고, 사람이 바뀌면 한 번 쉰다
+        assertThat(between(css, ".travel-plan-chat-message {", "}"))
+                .contains("margin-top: 14px");
+        assertThat(between(css, ".travel-plan-chat-message.is-continued {", "}"))
+                .contains("margin-top: 3px");
+    }
+
+    @Test
+    void aDayThatChangesGetsOneSmallLine() throws IOException {
+        String chat = chatJs();
+
+        assertThat(chat)
+                .contains("function dateDividerNode(")
+                .contains("data-travel-plan-chat-date");
+        // 다시 셀 때마다 처음부터 놓는다. 같은 줄이 두 번 생기지 않는다
+        assertThat(between(chat, "function regroup()", "let previous = null;"))
+                .contains("[data-travel-plan-chat-date]")
+                .contains(".remove()");
+        assertThat(between(cssFile(), ".travel-plan-chat-date {", "}"))
+                .contains("justify-content: center");
+    }
+
+    @Test
+    void aNoticeIsNotDressedUpAsSomeonesLine() throws IOException {
+        String css = cssFile();
+
+        // 가운데 놓인 차분한 알림 하나다. 말풍선이 아니다
+        assertThat(between(css, ".travel-plan-chat-notice {", "}"))
+                .contains("justify-content: center");
+        assertThat(between(css, ".travel-plan-chat-notice-body {", "}"))
+                .contains("text-align: center")
+                .contains("background: var(--tp-poll-surface)");
+    }
+
+    @Test
+    void regroupingRunsBeforeTheScrollIsPutBack() throws IOException {
+        String older = between(chatJs(), "async function loadOlder()", "loadingOlder = false;");
+
+        /*
+          묶음을 다시 세면 이름·시각·날짜 줄이 생기거나 사라져 높이가 달라진다.
+          자리를 맞추기 전에 끝내야 보고 있던 메시지가 제자리에 남는다.
+        */
+        assertThat(older).contains("regroup()");
+        assertThat(older.indexOf("regroup()"))
+                .isLessThan(older.indexOf("body.scrollTop += body.scrollHeight - before"));
+        // 앞에 끼워 넣는 방식 자체는 그대로다
+        assertThat(older).contains("const before = body.scrollHeight");
+    }
+
+    // ── 이모지 ──────────────────────────────────────────────
+
+    @Test
+    void theComposerHasASmallEmojiButtonBesideTheOthers() throws IOException {
+        String detail = detailHtml();
+        String composer = between(detail, "class=\"travel-plan-chat-form\"", "</form>");
+
+        // [+] [😊] [입력칸] [전송] 이 한 줄에 같은 크기로 선다
+        assertThat(composer)
+                .contains("data-travel-plan-chat-emoji-toggle")
+                .contains("aria-label=\"이모지 선택\"")
+                .contains("aria-haspopup=\"true\"");
+        assertThat(composer.indexOf("data-travel-plan-chat-tool\""))
+                .isLessThan(composer.indexOf("data-travel-plan-chat-emoji-toggle"));
+        assertThat(composer.indexOf("data-travel-plan-chat-emoji-toggle"))
+                .isLessThan(composer.indexOf("data-travel-plan-chat-input"));
+        // 기존 + 의 투표 진입은 그대로다
+        assertThat(composer).contains("data-travel-plan-poll-open");
+        // 같은 control 크기를 쓴다(전용 큰 버튼을 만들지 않는다)
+        assertThat(composer).contains("class=\"travel-plan-chat-tool\"");
+    }
+
+    @Test
+    void thePickerOpensBesideTheComposerAndClosesEveryUsualWay() throws IOException {
+        String chat = chatJs();
+        String css = cssFile();
+
+        assertThat(chat)
+                .contains("function openEmoji()")
+                .contains("function closeEmoji()")
+                .contains("emojiPanel.hidden = false")
+                .contains("aria-expanded");
+        // 바깥 클릭과 Esc 로 닫힌다
+        assertThat(chat)
+                .contains("closeEmoji();")
+                .contains("event.key !== \"Escape\"");
+        // 입력줄 위에 붙어 열려 입력칸을 밀지 않고, 왼쪽 끝이라 오른쪽으로 잘리지 않는다
+        assertThat(between(css, ".travel-plan-chat-emoji-panel {", "}"))
+                .contains("position: absolute")
+                .contains("bottom: 38px")
+                .contains("left: 0")
+                .contains("background: #fff");
+        // 손가락으로도 누를 수 있는 크기를 남긴다
+        assertThat(between(css, ".travel-plan-chat-emoji-item {", "}"))
+                .contains("height: 34px");
+        assertThat(css).contains(".travel-plan-chat-emoji-item:focus-visible");
+    }
+
+    @Test
+    void theEmojiAreLaidOutInFiveColumnsRatherThanOneLongList() throws IOException {
+        String css = cssFile();
+        String panel = between(css, ".travel-plan-chat-emoji-panel {", "}");
+
+        // 칸 나누기는 격자가 맡고, 최근 사용과 전체 목록이 그것을 함께 쓴다
+        assertThat(between(css, ".travel-plan-chat-emoji-grid {", "}"))
+                .contains("display: grid")
+                .contains("grid-template-columns: repeat(5, 1fr)");
+        /*
+          떠 있는 상자는 폭을 정해 주지 않으면 담긴 32px 짜리 버튼 자리만큼만
+          잡아, 이모지가 한 줄에 하나씩 세로로 늘어선다.
+        */
+        assertThat(panel)
+                .contains("width: 220px")
+                .contains("max-width: calc(100vw - 48px)");
+        // 많아지면 채팅 패널을 밀지 않고 이 안에서만 넘긴다
+        assertThat(panel)
+                .contains("max-height: 232px")
+                .contains("overflow-y: auto");
+        assertThat(css).contains(".travel-plan-chat-emoji-panel::-webkit-scrollbar");
+    }
+
+    @Test
+    void theEmojiButtonsGoStraightIntoTheGrid() throws IOException {
+        String build = between(chatJs(), "function buildEmojiPanel()", "\n    }");
+
+        // 줄마다 상자를 만들면 그 상자가 각자 폭을 잡아 격자가 되지 않는다
+        assertThat(build)
+                .contains("EMOJI_ROWS.flat()")
+                .contains("allGrid.append(")
+                .doesNotContain("travel-plan-chat-emoji-row");
+        assertThat(cssFile()).doesNotContain(".travel-plan-chat-emoji-row");
+        // 전체 목록은 한 번만 만든다
+        assertThat(build).contains("allGrid.childElementCount > 0");
+    }
+
+    @Test
+    void pickingAnEmojiTypesItWhereTheCursorIs() throws IOException {
+        String insert = between(chatJs(), "function insertEmoji(emoji)", "\n    }");
+
+        /*
+          고른 것을 바로 보내지 않는다. 쓰던 글은 그대로 두고
+          커서 자리에만 끼워 넣은 뒤 입력칸으로 돌아간다.
+        */
+        assertThat(insert)
+                .contains("input.selectionStart")
+                .contains("input.selectionEnd")
+                .contains("input.value.slice(0, start) + emoji + input.value.slice(end)")
+                .contains("input.focus()")
+                .contains("input.setSelectionRange(caret, caret)")
+                // 넣은 만큼 입력칸 높이도 다시 맞춘다
+                .contains("autoResize()");
+        // 고르는 것만으로 전송되지 않는다
+        assertThat(insert).doesNotContain("send()");
+    }
+
+    @Test
+    void anEmojiIsJustTextOnItsWayToTheDatabase() throws IOException {
+        String chat = chatJs();
+
+        // 그림 파일도, 새 메시지 종류도, 새 라이브러리도 쓰지 않는다
+        assertThat(chat)
+                .contains("button.textContent = emoji")
+                .doesNotContain("<img")
+                .doesNotContain("emoji-mart")
+                .doesNotContain("EMOJI\"");
+        // 보내는 길은 지금 쓰던 그대로다
+        assertThat(between(chat, "function send()", "\n    }"))
+                .contains("realtime().sendChat(content)");
+        // 받아 그릴 때도 글자로만 넣는다(이모지만 있는 메시지도 같은 말풍선이다)
+        assertThat(chat).contains("content.textContent = message.deleted");
+    }
+
+    @Test
+    void theEmojiListIsSmallAndFitsATravelApp() throws IOException {
+        String rows = between(chatJs(), "const EMOJI_ROWS = [", "];");
+
+        for (String emoji : new String[]{"😊", "👍", "❤️", "🎉", "✈️", "🏨", "📸"}) {
+            assertThat(rows).as("자주 쓰는 %s", emoji).contains(emoji);
+        }
+        // 이번 단계는 고르기까지다. 스티커나 GIF 는 만들지 않는다
+        assertThat(chatJs())
+                .doesNotContain("sticker")
+                .doesNotContain("giphy");
+    }
+
+    @Test
+    void whatWasPickedLatelyComesBackToTheTop() throws IOException {
+        String chat = chatJs();
+
+        assertThat(chat)
+                .contains("const RECENT_EMOJI_LIMIT = 10")
+                .contains("function rememberRecentEmoji(emoji)");
+        // 같은 것을 다시 골라도 두 번 쌓이지 않고 맨 앞으로 올라간다
+        assertThat(between(chat, "function rememberRecentEmoji(emoji)", "\n    }"))
+                .contains("[emoji, ...readRecentEmoji().filter(saved => saved !== emoji)]")
+                .contains(".slice(0, RECENT_EMOJI_LIMIT)");
+        // 고르면 넣는 것과 기억하는 것이 함께 일어난다
+        assertThat(between(chat, "function emojiButton(emoji)", "return button;"))
+                .contains("insertEmoji(emoji)")
+                .contains("rememberRecentEmoji(emoji)");
+    }
+
+    @Test
+    void theRecentListLivesInThisBrowserAlone() throws IOException {
+        String chat = chatJs();
+
+        // 서버로 보내지 않고 DB 에도 두지 않는다
+        assertThat(chat).contains("window.localStorage.getItem(RECENT_EMOJI_KEY)");
+        assertThat(between(chat, "function rememberRecentEmoji(emoji)", "\n    }"))
+                .doesNotContain("fetch(")
+                .doesNotContain("realtime()");
+        /*
+          저장을 막아 둔 브라우저에서도 고르는 것 자체는 되어야 한다.
+          읽고 쓰는 곳이 모두 막힌 경우를 견딘다.
+        */
+        assertThat(between(chat, "function readRecentEmoji()", "\n    }"))
+                .contains("catch (error)")
+                .contains("Array.isArray(saved)")
+                // 저장된 값도 남이 고쳐 넣을 수 있다
+                .contains("typeof emoji === \"string\"");
+    }
+
+    @Test
+    void anEmptyRecentListTakesNoRoomAtAll() throws IOException {
+        String chat = chatJs();
+        String detail = detailHtml();
+
+        // 한 번도 고른 적이 없으면 그 구역째 나오지 않는다
+        assertThat(between(chat, "function renderRecentEmoji()", "\n    }"))
+                .contains("recentSection.hidden = recent.length === 0")
+                .contains("recentGrid.replaceChildren(");
+        assertThat(detail)
+                .contains("data-travel-plan-chat-emoji-recent")
+                .contains(">최근 사용</p>");
+        assertThat(between(detail, "data-travel-plan-chat-emoji-recent>", "</section>"))
+                .contains("travel-plan-chat-emoji-grid");
+        assertThat(cssFile()).contains(".travel-plan-chat-emoji-section[hidden]");
+        // 카테고리 탭은 만들지 않는다
+        assertThat(chat).doesNotContain("category");
+    }
+
+    // ── 메시지 반응 ─────────────────────────────────────────
+
+    @Test
+    void reactingIsOfferedOnHoverAndStaysReachableByTouch() throws IOException {
+        String chat = chatJs();
+        String css = cssFile();
+
+        assertThat(chat)
+                .contains("function reactionPickerOf(message)")
+                .contains("aria-label\", \"반응 남기기\"");
+        // 여섯 가지뿐이고, 전체 이모지 목록과 다른 자리다
+        assertThat(between(chat, "const REACTION_TYPES = [", "];"))
+                .contains("\"LIKE\"").contains("\"HEART\"").contains("\"LAUGH\"")
+                .contains("\"WOW\"").contains("\"SAD\"").contains("\"PARTY\"");
+        // 평소에는 드러나지 않는다
+        assertThat(between(css, ".travel-plan-chat-react-button {", "}")).contains("opacity: 0");
+        assertThat(css).contains(
+                ".travel-plan-chat-message:hover .travel-plan-chat-react-button");
+        // hover 가 없는 화면에서는 늘 보인다
+        assertThat(css).contains("@media (hover: none) {\n"
+                + "    .travel-plan-chat-react-button {\n"
+                + "        opacity: 1;\n"
+                + "    }\n"
+                + "}");
+    }
+
+    @Test
+    void theReactionButtonIsQuietButLegibleOnceItShows() throws IOException {
+        String css = cssFile();
+        String button = between(css, ".travel-plan-chat-react-button {", "}");
+
+        // 나왔을 때는 눌러도 되는 것인지 알아볼 수 있어야 한다
+        assertThat(button)
+                .contains("width: 24px")
+                .contains("height: 24px")
+                .contains("font-size: 15px");
+        // 큰 원형 버튼이나 테두리·그림자를 두지 않는다
+        assertThat(button)
+                .contains("border: none")
+                .doesNotContain("box-shadow")
+                .doesNotContain("border-radius: 50%");
+        // 줄에 손을 얹으면 옅은 바탕과 또렷한 회색 글자가 함께 나온다
+        assertThat(between(css,
+                ".travel-plan-chat-message:hover .travel-plan-chat-react-button,", "}"))
+                .contains("background: var(--tp-chat-composer)")
+                .contains("color: var(--tp-plan-ink-soft)");
+        // 버튼 자체에 손을 얹으면 한 단계 더 또렷해진다
+        assertThat(between(css, ".travel-plan-chat-react-button:hover,", "}"))
+                .contains("background: var(--tp-chat-line)")
+                .contains("color: var(--tp-plan-ink)");
+        // 시각과 붙지 않게 한 칸 띄운다
+        assertThat(between(css, ".travel-plan-chat-react {", "}")).contains("margin-left: 2px");
+    }
+
+    @Test
+    void onlyRealReactionsGetAPillUnderTheBubble() throws IOException {
+        String chat = chatJs();
+        String css = cssFile();
+
+        // 0 이면 그리지 않는다
+        assertThat(between(chat, "function renderReactions(item, reactions)", "\n    }"))
+                .contains("reaction.count > 0")
+                .contains("pill.textContent = `${reaction.emoji} ${reaction.count}`")
+                // 알약을 눌러도 같은 반응을 남기거나 거둘 수 있다
+                .contains("toggleReaction(Number(messageId), reaction.type)")
+                // 내가 누른 것만 약하게 표시된다
+                .contains("if (reaction.reacted) pill.classList.add(\"is-mine\")");
+        assertThat(between(css, ".travel-plan-chat-reaction.is-mine {", "}"))
+                .contains("background: var(--tp-plan-accent-soft)");
+        // 하나도 없으면 자리째 비어 높이를 차지하지 않는다
+        assertThat(css).contains(".travel-plan-chat-reactions:not(:empty)");
+    }
+
+    @Test
+    void theCountAlwaysComesFromTheServerNotFromCounting() throws IOException {
+        String chat = chatJs();
+
+        /*
+          알림을 받으면 개수를 더하는 대신 그 메시지의 요약을 다시 읽는다.
+          그래서 같은 알림이 두 번 와도 숫자가 어긋나지 않는다.
+        */
+        assertThat(chat).contains("MESSAGE_REACTION_CHANGED");
+        assertThat(between(chat, "async function refreshReactions(messageId)", "\n    }"))
+                .contains("/chat/messages/${messageId}/reactions")
+                .contains("renderReactions(item,");
+        // 화면이 개수를 더하거나 빼지 않는다
+        assertThat(chat)
+                .doesNotContain("count + 1")
+                .doesNotContain("count - 1");
+        // 보내는 것은 메시지 번호와 반응 종류까지다. 누가 눌렀는지는 서버가 정한다
+        assertThat(between(chat, "function toggleReaction(messageId, reactionType)", "\n    }"))
+                .contains("reactChatMessage(messageId, reactionType)");
+        assertThat(between(realtimeJs(), "reactChatMessage(messageId, reactionType)", "},"))
+                .contains("publishChat(\"react\", { messageId, reactionType })")
+                .doesNotContain("memberId");
+    }
+
+    @Test
+    void aDeletedMessageLosesBothThePickerAndThePills() throws IOException {
+        String chat = chatJs();
+
+        // 처음 그릴 때부터 지워진 메시지에는 붙이지 않는다
+        assertThat(between(chat, "const reactions = document.createElement(\"div\");",
+                "return item;"))
+                .contains("if (!message.deleted)")
+                .contains("reactionPickerOf(message)");
+        // 보고 있는 중에 지워져도 함께 걷힌다
+        assertThat(between(chat, "function onMessageDeleted(messageId)", "\n    }"))
+                .contains("[data-travel-plan-chat-react]")
+                .contains("[data-travel-plan-chat-reactions]");
+        // DB 의 반응 행을 지우지는 않는다(지움은 tombstone 이다)
+        assertThat(chat).doesNotContain("deleteReactions");
     }
 
     // ── 이전 대화 ───────────────────────────────────────────
@@ -473,7 +952,7 @@ class TravelPlanChatUiContractTest {
     void onlyMyOwnMessageGetsAMenu() throws IOException {
         String chat = chatJs();
 
-        assertThat(between(chat, "item.append(sender, content, time);", "return item;"))
+        assertThat(between(chat, "item.append(sender, row, reactions);", "return item;"))
                 .contains("if (isMine(message) && !message.deleted)")
                 .contains("deleteMenuOf(message)");
         // 상시 보이는 빨간 휴지통을 두지 않는다

@@ -16,6 +16,22 @@
         m.display_name AS sender_display_name
     </sql>
 
+    <!--
+      볼 수 있는 범위.
+
+      그 방에 들어오기 전의 대화는 읽지 않는다. 화면에서 가리는 것이 아니라
+      여기서 잘라 내므로, 주소를 직접 부르거나 위로 계속 올려도 나오지 않는다.
+
+      기준은 접속한 시각이 아니라 참여한 시각(travel_plan_members.joined_at)이다.
+      그래서 참여한 뒤 한동안 꺼 두었다가 들어와도 그 사이 대화는 그대로 보인다.
+      방을 만든 사람은 OWNER 행이 방과 함께 생기므로 처음부터 다 보인다.
+    -->
+    <sql id="visibleSince">
+        <if test="joinedAt != null">
+            AND c.created_at &gt;= #{joinedAt}
+        </if>
+    </sql>
+
     <!-- 최근 것부터 limit 건. (travel_plan_id, id) 인덱스를 그대로 탄다 -->
     <select id="findRecentMessages"
             resultType="com.example.travlediary.model.TravelPlanChatMessage">
@@ -24,6 +40,7 @@
         FROM travel_plan_chat_messages c
                  LEFT JOIN travel_plan_members m ON m.id = c.sender_member_id
         WHERE c.travel_plan_id = #{travelPlanId}
+        <include refid="visibleSince"/>
         ORDER BY c.id DESC
         LIMIT #{limit}
     </select>
@@ -37,6 +54,7 @@
                  LEFT JOIN travel_plan_members m ON m.id = c.sender_member_id
         WHERE c.travel_plan_id = #{travelPlanId}
           AND c.id &lt; #{beforeMessageId}
+        <include refid="visibleSince"/>
         ORDER BY c.id DESC
         LIMIT #{limit}
     </select>
@@ -103,17 +121,19 @@
     <!--
       안 읽은 개수.
       내가 보낸 것은 세지 않고, 지워진 것과 시스템 알림도 세지 않는다.
-      한 번도 읽지 않았으면 이 방의 남의 메시지 전부가 안 읽은 것이다.
+      한 번도 읽지 않았어도 들어오기 전의 대화는 세지 않는다.
+      (목록에 나오지 않는 것이 개수에만 잡히면 영영 지워지지 않는 숫자가 된다)
     -->
     <select id="countUnread" resultType="int">
         SELECT COUNT(*)
-        FROM travel_plan_chat_messages
-        WHERE travel_plan_id = #{travelPlanId}
-          AND message_type = 'USER'
-          AND deleted_at IS NULL
-          AND (sender_member_id IS NULL OR sender_member_id &lt;&gt; #{memberId})
+        FROM travel_plan_chat_messages c
+        WHERE c.travel_plan_id = #{travelPlanId}
+          AND c.message_type = 'USER'
+          AND c.deleted_at IS NULL
+          AND (c.sender_member_id IS NULL OR c.sender_member_id &lt;&gt; #{memberId})
+        <include refid="visibleSince"/>
         <if test="lastReadMessageId != null">
-            AND id &gt; #{lastReadMessageId}
+            AND c.id &gt; #{lastReadMessageId}
         </if>
     </select>
 </mapper>

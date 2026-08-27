@@ -101,12 +101,12 @@ class TravelPlanMemberListContractTest {
     void onlyTheOwnerKeepsTheInviteEntryPointBesideIt() throws IOException {
         String detail = detailHtml();
 
-        // 초대는 그대로 OWNER 전용이고, 참여자와 나란히 놓인다
+        // 초대는 그대로 OWNER 전용이고, 같은 줄에서 참여자보다 앞에 온다
         int members = detail.indexOf("data-travel-plan-members");
         // 방장이 바뀔 수 있어 초대는 갈아 끼우는 자리에 있다
         int ownerActions = detail.indexOf("data-travel-plan-owner-actions");
-        assertThat(members).isGreaterThan(0);
-        assertThat(ownerActions).isGreaterThan(members);
+        assertThat(ownerActions).isGreaterThan(0);
+        assertThat(members).isGreaterThan(ownerActions);
         assertThat(ownerActionsHtml())
                 .contains("class=\"travel-plan-invite\"")
                 .contains("travelPlan.currentMember.role.name() == 'OWNER'");

@@ -3,6 +3,8 @@ package com.example.travlediary.dto;
 import com.example.travlediary.model.TravelPlanChatMessage;
 import com.example.travlediary.model.TravelPlanPoll;
 
+import java.util.List;
+
 /**
  * 채팅창에 시간 순서대로 놓이는 한 줄.
  *
@@ -24,6 +26,8 @@ public record TravelPlanChatTimelineItemDto(
         String displayName,
         String content,
         boolean deleted,
+        /** 이 메시지에 달린 반응. 없으면 빈 목록이고 지워진 메시지에는 늘 비어 있다. */
+        List<TravelPlanChatReactionDto> reactions,
 
         // type = POLL_CREATED
         Long pollId,
@@ -37,6 +41,17 @@ public record TravelPlanChatTimelineItemDto(
     private static final String UNKNOWN = "알 수 없음";
 
     public static TravelPlanChatTimelineItemDto ofMessage(TravelPlanChatMessage message) {
+        return ofMessage(message, List.of());
+    }
+
+    /**
+     * 대화 한 줄과 거기 달린 반응.
+     *
+     * <p>지워진 메시지에는 반응을 싣지 않는다. 남아 있는 행을 지우지는 않지만
+     * (지움은 tombstone 이라 내용도 행도 그대로 둔다) 밖으로 내보내지 않는다.
+     */
+    public static TravelPlanChatTimelineItemDto ofMessage(
+            TravelPlanChatMessage message, List<TravelPlanChatReactionDto> reactions) {
         boolean deleted = message.getDeletedAt() != null;
         return new TravelPlanChatTimelineItemDto(
                 MESSAGE,
@@ -47,6 +62,7 @@ public record TravelPlanChatTimelineItemDto(
                 // 지워진 메시지의 원문은 여기서 끊는다.
                 deleted ? null : message.getContent(),
                 deleted,
+                deleted || reactions == null ? List.of() : reactions,
                 null, null, null);
     }
 
@@ -58,7 +74,7 @@ public record TravelPlanChatTimelineItemDto(
         return new TravelPlanChatTimelineItemDto(
                 POLL_CREATED,
                 poll.getCreatedAt() == null ? null : poll.getCreatedAt().getTime(),
-                null, null, null, null, false,
+                null, null, null, null, false, List.of(),
                 poll.getId(),
                 nameOr(poll.getCreatedByDisplayName()),
                 poll.getTitle());

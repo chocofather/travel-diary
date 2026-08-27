@@ -10,6 +10,7 @@ import com.example.travlediary.model.TravelPlanPollVotedCount;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.sql.Timestamp;
 import java.util.List;
 
 /**
@@ -40,13 +41,17 @@ public interface TravelPlanPollMapper {
      * 가장 최근에 만들어진 투표부터 limit 건.
      * 채팅 타임라인에 "새 투표를 만들었어요" 를 끼워 넣을 때 쓴다.
      * 만들어졌다는 사실이 기준이라 지금 진행 중인지 끝났는지는 보지 않는다.
+     *
+     * @param joinedAt 보는 사람이 이 방에 들어온 시각. 대화와 같은 범위로 자른다.
      */
     List<TravelPlanPoll> findRecentPolls(@Param("travelPlanId") Long travelPlanId,
+                                         @Param("joinedAt") Timestamp joinedAt,
                                          @Param("limit") int limit);
 
     /** 어떤 투표보다 앞서 만들어진 것들 중 최근 limit 건. 타임라인의 앞 페이지가 쓴다. */
     List<TravelPlanPoll> findPollsBefore(@Param("travelPlanId") Long travelPlanId,
                                          @Param("beforePollId") Long beforePollId,
+                                         @Param("joinedAt") Timestamp joinedAt,
                                          @Param("limit") int limit);
 
     /**

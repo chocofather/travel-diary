@@ -42,6 +42,11 @@
               data-travel-plan-invite-toggle>초대</button>
 
       <div class="travel-plan-invite-panel" hidden data-travel-plan-invite-panel>
+        <!-- 이 패널이 무엇을 하는 곳인지 먼저 한 줄로 말한다 -->
+        <p class="travel-plan-invite-intro">
+          친구에게 링크를 보내 여행계획에 초대하세요.
+        </p>
+
         <!--
           지금 살아 있는 링크. 새로고침해도 같은 주소가 다시 나온다.
           방금 만든 경우에만 표시를 하나 더 달아 패널이 저절로 열리게 한다.
@@ -69,7 +74,7 @@
                 th:action="@{|/travel-plans/${travelPlan.plan.id}/invitations/regenerate|}">
             <button type="submit" class="travel-plan-invite-action"
                     onclick="return confirm('새 링크를 발급하면 기존 초대 링크는 더 이상 사용할 수 없습니다.')">
-              새 링크 재발급
+              새 링크 만들기
             </button>
           </form>
           <form method="post"
@@ -89,6 +94,12 @@
         </div>
       </div>
     </div>
+
+    <!--
+      여기까지가 방장만 할 수 있는 것이고, 오른쪽은 누구나 쓰는 참여자/채팅이다.
+      구분선을 이 조각 안에 두어 멤버 화면에서는 선까지 함께 사라진다.
+    -->
+    <span class="travel-plan-action-divider" aria-hidden="true"></span>
 
     <!--
       확정 확인. 누르자마자 확정하지 않고 한 번 물어본다.

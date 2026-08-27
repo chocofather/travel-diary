@@ -57,12 +57,24 @@
       채팅 타임라인에 끼워 넣을 "새 투표" 기록.
       만들어졌다는 사실이 기준이라 지금 진행 중인지 끝났는지는 보지 않는다.
     -->
+    <!--
+      타임라인에 끼워 넣는 "새 투표를 만들었어요" 도 대화와 같은 범위를 쓴다.
+      들어오기 전에 만들어진 투표 알림이 대화 사이에 남으면
+      대화만 자른 뜻이 없어진다. (투표 센터의 목록은 이 조회를 쓰지 않는다)
+    -->
+    <sql id="pollVisibleSince">
+        <if test="joinedAt != null">
+            AND p.created_at &gt;= #{joinedAt}
+        </if>
+    </sql>
+
     <select id="findRecentPolls" resultType="com.example.travlediary.model.TravelPlanPoll">
         SELECT
         <include refid="pollColumns"/>
         FROM travel_plan_polls p
                  LEFT JOIN travel_plan_members m ON m.id = p.created_by_member_id
         WHERE p.travel_plan_id = #{travelPlanId}
+        <include refid="pollVisibleSince"/>
         ORDER BY p.id DESC
         LIMIT #{limit}
     </select>
@@ -75,6 +87,7 @@
                  LEFT JOIN travel_plan_members m ON m.id = p.created_by_member_id
         WHERE p.travel_plan_id = #{travelPlanId}
           AND p.id &lt; #{beforePollId}
+        <include refid="pollVisibleSince"/>
         ORDER BY p.id DESC
         LIMIT #{limit}
     </select>

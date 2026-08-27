@@ -59,6 +59,25 @@ public class TravelPlanChatWebSocketController {
     }
 
     /**
+     * 메시지에 반응 남기기 / 거두기.
+     *
+     * <p>화면이 보내는 것은 메시지 번호와 반응 종류까지다.
+     * 누가 눌렀는지도, 지금 개수가 몇인지도 서버가 정한다.
+     * 바뀐 뒤의 알림은 Service 가 커밋 뒤에 방으로 내보낸다.
+     */
+    @MessageMapping("/travel-plans/{travelPlanId}/chat/react")
+    public void react(@DestinationVariable Long travelPlanId,
+                      @Payload Map<String, Object> payload,
+                      Principal principal) {
+        try {
+            travelPlanChatService.toggleReaction(principal, travelPlanId,
+                    number(payload.get("messageId")), text(payload.get("reactionType")));
+        } catch (TravelPlanValidationException | AccessDeniedException exception) {
+            replyError(principal, "REACT_FAILED", exception.getMessage());
+        }
+    }
+
+    /**
      * 여기까지 읽었다.
      * 갱신된 안 읽은 개수를 그 사람에게만 돌려주어 상단 배지를 맞춘다.
      */

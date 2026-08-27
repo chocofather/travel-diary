@@ -4,6 +4,7 @@ import com.example.travlediary.model.TravelPlanChatMessage;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.sql.Timestamp;
 import java.util.List;
 
 /**
@@ -12,17 +13,29 @@ import java.util.List;
  *
  * <p>목록 조회는 (travel_plan_id, id) 인덱스를 그대로 타도록 id 기준으로만 자른다.
  * OFFSET 으로 뒤 페이지를 세지 않는다.
+ *
+ * <p>보는 사람이 그 방에 들어오기 전의 대화는 여기서 아예 읽지 않는다.
+ * 읽어 온 뒤 화면에서 가리는 것이 아니라 SQL 조건으로 자른다.
  */
 @Mapper
 public interface TravelPlanChatMapper {
 
-    /** 가장 최근 메시지부터 limit 건. 화면에 그릴 때는 호출한 쪽에서 순서를 뒤집는다. */
+    /**
+     * 가장 최근 메시지부터 limit 건. 화면에 그릴 때는 호출한 쪽에서 순서를 뒤집는다.
+     *
+     * @param joinedAt 보는 사람이 이 방에 들어온 시각. 그 앞의 대화는 오지 않는다.
+     */
     List<TravelPlanChatMessage> findRecentMessages(@Param("travelPlanId") Long travelPlanId,
+                                                   @Param("joinedAt") Timestamp joinedAt,
                                                    @Param("limit") int limit);
 
-    /** 어떤 메시지보다 앞선 것들 중 최근 limit 건. [이전 메시지 보기] 가 쓴다. */
+    /**
+     * 어떤 메시지보다 앞선 것들 중 최근 limit 건. [이전 메시지 보기] 가 쓴다.
+     * 위로 아무리 올려도 들어오기 전의 대화까지는 올라가지 않는다.
+     */
     List<TravelPlanChatMessage> findMessagesBefore(@Param("travelPlanId") Long travelPlanId,
                                                    @Param("beforeMessageId") Long beforeMessageId,
+                                                   @Param("joinedAt") Timestamp joinedAt,
                                                    @Param("limit") int limit);
 
     /** 메시지 1건. 방 소속 조건을 함께 걸어 다른 방의 메시지를 집을 수 없게 한다. */
@@ -61,10 +74,13 @@ public interface TravelPlanChatMapper {
     /**
      * 아직 읽지 않은 메시지 수.
      * 내가 보낸 것과 지워진 것은 세지 않는다.
+     * 볼 수 없는 대화는 세지도 않으므로 목록과 같은 기준으로 자른다.
      *
+     * @param joinedAt          보는 사람이 이 방에 들어온 시각
      * @param lastReadMessageId 읽은 적이 없으면 null
      */
     int countUnread(@Param("travelPlanId") Long travelPlanId,
                     @Param("memberId") Long memberId,
+                    @Param("joinedAt") Timestamp joinedAt,
                     @Param("lastReadMessageId") Long lastReadMessageId);
 }

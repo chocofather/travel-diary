@@ -13,6 +13,7 @@ public record TravelPlanChatEventDto(
 
     public static final String MESSAGE_CREATED = "MESSAGE_CREATED";
     public static final String MESSAGE_DELETED = "MESSAGE_DELETED";
+    public static final String MESSAGE_REACTION_CHANGED = "MESSAGE_REACTION_CHANGED";
 
     public static TravelPlanChatEventDto created(TravelPlanChatMessageDto message) {
         return new TravelPlanChatEventDto(MESSAGE_CREATED, message, message.id());
@@ -20,5 +21,15 @@ public record TravelPlanChatEventDto(
 
     public static TravelPlanChatEventDto deleted(Long messageId) {
         return new TravelPlanChatEventDto(MESSAGE_DELETED, null, messageId);
+    }
+
+    /**
+     * 어느 메시지의 반응이 달라졌다는 것만 알린다.
+     *
+     * <p>개수를 싣지 않는다. 받은 쪽은 그 메시지의 요약을 서버에서 다시 읽는다.
+     * 개수를 실어 보내면 같은 알림이 두 번 왔을 때 화면이 그것을 더해 어긋난다.
+     */
+    public static TravelPlanChatEventDto reactionChanged(Long messageId) {
+        return new TravelPlanChatEventDto(MESSAGE_REACTION_CHANGED, null, messageId);
     }
 }

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.travelplan.TravelPlanChatReactionMapper">
+
+    <!--
+      반응 남기기. 한 사람이 한 메시지에 남길 수 있는 것은 하나뿐이다.
+
+      (message_id, member_id) UNIQUE 라, 이미 다른 것을 눌러 둔 사람이 새로 누르면
+      여기서 걸려 그 행의 종류만 바뀐다. 지우고 넣는 두 문장으로 나누지 않아
+      그 사이에 행이 사라진 순간이 생기지 않고, 두 번 눌러도 행은 늘 하나다.
+      created_at 은 지금 눌린 반응의 시각이므로 함께 새로 쓴다.
+    -->
+    <insert id="upsertReaction">
+        INSERT INTO travel_plan_chat_message_reactions
+            (message_id, member_id, reaction_type)
+        VALUES (#{messageId}, #{memberId}, #{reactionType})
+        ON DUPLICATE KEY UPDATE
+            reaction_type = #{reactionType},
+            created_at = CURRENT_TIMESTAMP
+    </insert>
+
+    <!--
+      남긴 반응 거두기.
+      영향 행 수가 곧 "눌러 둔 것이 있었는가" 라, 따로 물어보지 않고 이 값으로 가른다.
+    -->
+    <delete id="deleteReaction">
+        DELETE FROM travel_plan_chat_message_reactions
+        WHERE message_id = #{messageId}
+          AND member_id = #{memberId}
+          AND reaction_type = #{reactionType}
+    </delete>
+
+    <!--
+      여러 메시지의 요약을 한 문장으로.
+
+      개수와 "내가 눌렀는지" 를 함께 구한다. 내가 누른 행이 하나라도 있으면
+      MAX(...) 가 1 이 되므로 같은 묶음에서 그대로 나온다.
+      메시지마다 묻지 않아 기록 한 쪽을 읽어도 조회는 이 한 번뿐이다.
+
+      한 사람은 한 메시지에 하나만 남기므로, 한 메시지 안에서 reacted 가 1 인 줄은
+      많아야 하나다. 그것이 지금 보는 사람이 누른 반응이다.
+    -->
+    <select id="findSummaries" resultType="com.example.travlediary.dto.TravelPlanChatReactionRow">
+        SELECT r.message_id                              AS message_id,
+               r.reaction_type                           AS reaction_type,
+               COUNT(*)                                  AS count,
+               MAX(r.member_id = #{memberId})            AS reacted
+        FROM travel_plan_chat_message_reactions r
+        WHERE r.message_id IN
+        <foreach collection="messageIds" item="messageId" open="(" separator="," close=")">
+            #{messageId}
+        </foreach>
+        GROUP BY r.message_id, r.reaction_type
+        <!-- 화면에 늘 같은 차례로 놓이도록 종류 순서를 고정한다 -->
+        ORDER BY r.message_id ASC, r.reaction_type ASC
+    </select>
+</mapper>

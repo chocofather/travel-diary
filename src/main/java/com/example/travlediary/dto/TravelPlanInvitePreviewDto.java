@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 
 /**
  * 초대 링크를 연 사람에게 보여 주는 방 미리보기.
@@ -43,5 +44,13 @@ public class TravelPlanInvitePreviewDto {
     /** 정원이 찼는지. 화면이 참여 버튼 대신 안내를 보여 줄 때 쓴다. */
     public boolean isFull() {
         return memberCount >= memberLimit;
+    }
+
+    /** 시작일과 종료일을 포함한 여행 일수. 화면 표시용 파생값이다. */
+    public int getDayCount() {
+        if (startDate == null || endDate == null) {
+            return 0;
+        }
+        return (int) ChronoUnit.DAYS.between(startDate, endDate) + 1;
     }
 }

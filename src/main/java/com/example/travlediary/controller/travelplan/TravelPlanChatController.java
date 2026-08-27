@@ -49,4 +49,18 @@ public class TravelPlanChatController {
     public Map<String, Object> unread(@PathVariable Long travelPlanId, Principal principal) {
         return Map.of("unreadCount", travelPlanChatService.unreadCount(principal, travelPlanId));
     }
+
+    /**
+     * 한 메시지의 반응 요약.
+     *
+     * <p>반응이 달라졌다는 알림을 받은 화면이 이 값을 다시 읽어 그 줄만 고쳐 그린다.
+     * 개수를 화면에서 더하거나 빼지 않으므로 같은 알림이 두 번 와도 결과가 같다.
+     */
+    @GetMapping("/messages/{messageId:\\d+}/reactions")
+    public Map<String, Object> reactions(@PathVariable Long travelPlanId,
+                                         @PathVariable Long messageId,
+                                         Principal principal) {
+        return Map.of("reactions",
+                travelPlanChatService.reactionsOf(principal, travelPlanId, messageId));
+    }
 }

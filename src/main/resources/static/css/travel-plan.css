@@ -20,10 +20,34 @@
     --tp-ink-soft: #6b6259;
     --tp-ink-faint: #a1968a;
 
-    /* 채팅: 베이지보다 조금 중립적인 아이보리 */
-    --tp-chat-surface: #fcfbf8;
-    --tp-chat-composer: #f3f2ed;
-    --tp-chat-line: #ece8de;
+    /*
+      스케줄러 화면.
+
+      바깥은 그냥 흰 책상이고, 그 위에 종이 한 장이 놓인다.
+      종이의 질감과 톤은 개인 여행일기와 같은 것을 쓴다
+      (아래 .travel-plan-paper 참고). 선은 전부 중립이다.
+    */
+    --tp-plan-page: #ffffff;
+    --tp-plan-paper: #fdfdfa;
+    --tp-plan-line: #eceef0;
+    --tp-plan-line-strong: #dde1e5;
+    --tp-plan-ink: #2f3438;
+    --tp-plan-ink-soft: #5f6871;
+    --tp-plan-ink-faint: #8d959d;
+
+    /*
+      일정표의 약한 accent. 갈색 하나로 통일하지 않기 위한 색이다.
+      "+ 일정 추가" 와 대안(B/C)이 이 계열을 나눠 쓴다.
+    */
+    --tp-plan-accent: #6d8579;
+    --tp-plan-accent-strong: #55695f;
+    --tp-plan-accent-soft: #f0f4f2;
+    --tp-plan-accent-line: #d6e0da;
+
+    /* 채팅: 스케줄러와 덩어리로 보이지 않게 아주 옅은 cool gray */
+    --tp-chat-surface: #f8fafb;
+    --tp-chat-composer: #eef2f5;
+    --tp-chat-line: #e2e8ec;
 
     /* 투표: 아주 옅은 blue-gray. 강한 파랑이 아니다 */
     --tp-poll-surface: #f7f8fa;
@@ -510,28 +534,82 @@
 /* ───── 메인 협업 플래너 (종이 스케줄러) ───── */
 
 /*
-  바깥은 아주 연한 바탕, 그 위에 종이 한 장.
+  바깥은 흰색에 가까운 중립 바탕, 그 위에 종이 한 장.
   header/footer 는 건드리지 않고 본문 영역에서만 배경을 나눈다.
 */
 .travel-plan-page {
-    padding: 36px 20px 88px;
-    background: #f5f2ec;
+    padding: 32px 20px 88px;
+    background: var(--tp-plan-page);
 }
 
 .travel-plan-page-top {
     max-width: 900px;
-    margin: 0 auto 14px;
+    margin: 0 auto 10px;
 }
 
-/* 스케줄러가 주 콘텐츠라 본문만 넓게 쓴다 */
+/*
+  스케줄러가 주 콘텐츠라 본문만 넓게 쓴다.
+
+  목표는 "종이 무늬가 보이는 화면" 이 아니라
+  "깨끗한 흰 종이인데 자세히 보면 아주 미세한 질감이 있는" 정도다.
+
+  그래서 촘촘히 되풀이되는 결은 두지 않는다.
+  몇 px 주기로 되풀이되는 무늬는 화면 픽셀 격자와 어긋나면서 지글거리거나
+  모아레로 보이고, 900px 짜리 넓은 면에서는 특히 눈에 띈다.
+  남은 층은 전부 종이 한 장 크기의 완만한 그라데이션이라 되풀이가 없다.
+
+  질감은 전부 background 층이라 일정 클릭을 가로막지 않는다.
+
+  padding 과 테두리를 폭 안에 넣어(border-box) 위의 상단 액션 줄과
+  바깥 선이 정확히 같은 자리에서 시작하고 끝난다.
+*/
 .travel-plan-paper {
+    box-sizing: border-box;
     max-width: 900px;
     margin: 0 auto;
-    padding: 52px 56px 60px;
-    background: #fffdf8;
-    border: 1px solid #e8e1d5;
-    border-radius: 3px;
-    box-shadow: 0 1px 3px rgba(78, 66, 48, 0.06);
+    padding: 34px 56px 44px;
+
+    /* 빛과 그늘. 색을 더하는 것이 아니라 밝기만 아주 조금 바꾼다 */
+    --tp-sheet-light: rgba(255, 255, 255, 0.5);
+    --tp-sheet-shade: rgba(92, 76, 54, 0.035);
+
+    /*
+      종이 한 장 크기의 완만한 명암. 되풀이되는 무늬가 아니라
+      "고르지 않게 빛을 받은 종이" 정도로만 읽힌다.
+    */
+    --tp-sheet-grain:
+        radial-gradient(
+            140% 110% at 18% 12%,
+            var(--tp-sheet-light) 0%,
+            rgba(255, 255, 255, 0) 62%
+        ),
+        radial-gradient(
+            120% 95% at 86% 80%,
+            var(--tp-sheet-light) 0%,
+            rgba(255, 255, 255, 0) 66%
+        ),
+        radial-gradient(
+            90% 70% at 60% 38%,
+            var(--tp-sheet-shade) 0%,
+            rgba(255, 255, 255, 0) 78%
+        );
+
+    /* 종이 가장자리의 미세한 깊이감 (위는 빛, 아래/옆은 그늘) */
+    --tp-sheet-edge:
+        linear-gradient(180deg, var(--tp-sheet-light), rgba(255, 255, 255, 0))
+            0 0 / 100% 16px no-repeat,
+        linear-gradient(0deg, var(--tp-sheet-shade), rgba(255, 255, 255, 0))
+            0 100% / 100% 18px no-repeat,
+        linear-gradient(90deg, var(--tp-sheet-light), rgba(255, 255, 255, 0))
+            0 0 / 14px 100% no-repeat,
+        linear-gradient(270deg, var(--tp-sheet-shade), rgba(255, 255, 255, 0))
+            100% 0 / 16px 100% no-repeat;
+
+    background: var(--tp-sheet-edge), var(--tp-sheet-grain), var(--tp-plan-paper);
+    border: 1px solid var(--tp-plan-line);
+    border-radius: 4px;
+    /* 흰 책상 위에 종이 한 장이 놓인 정도의 깊이만 준다 */
+    box-shadow: 0 1px 2px rgba(47, 52, 56, 0.05), 0 6px 18px rgba(47, 52, 56, 0.04);
 }
 
 @media (max-width: 720px) {
@@ -540,23 +618,56 @@
     }
 
     .travel-plan-paper {
-        padding: 32px 22px 40px;
+        padding: 24px 22px 32px;
+    }
+}
+
+/*
+  좁은 화면(좌우 분할 포함).
+  상단 utility 와 방장 관리 액션이 한 줄에서 눌리지 않도록
+  줄바꿈을 허용하고, 내려온 줄은 왼쪽에 맞춘다.
+*/
+@media (max-width: 560px) {
+    .travel-plan-page-top-row {
+        flex-wrap: wrap;
+    }
+
+    .travel-plan-top-actions {
+        justify-content: flex-start;
+    }
+
+    .travel-plan-detail-header h1 {
+        font-size: 21px;
+    }
+
+    /* 패널이 화면 밖으로 나가지 않게 여는 자리에 맞춰 붙는다 */
+    .travel-plan-invite-panel,
+    .travel-plan-members-panel {
+        right: auto;
+        left: 0;
+        max-width: calc(100vw - 48px);
     }
 }
 
 .travel-plan-back-link {
     display: inline-block;
-    margin-bottom: 14px;
-    color: #8b8378;
+    margin-bottom: 12px;
+    color: var(--tp-plan-ink-faint);
     font-size: 14px;
     text-decoration: none;
 }
 
 .travel-plan-back-link:hover {
-    color: #6b6259;
+    color: var(--tp-plan-ink-soft);
 }
 
-/* ── 상단 보조 액션: 참여자(모두) / 초대(OWNER 전용) ── */
+/*
+  ── 상단 액션 줄 ──
+
+  왼쪽에 방장만 할 수 있는 것(확정 / 초대), 구분선 하나를 사이에 두고
+  오른쪽에 누구나 쓰는 것(참여자 / 채팅)이 온다.
+  멤버 화면에서는 왼쪽 묶음이 구분선까지 통째로 비어 공통 액션만 남는다.
+*/
 
 .travel-plan-page-top-row {
     display: flex;
@@ -567,17 +678,36 @@
 
 .travel-plan-top-actions {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
     gap: 8px;
 }
 
 /*
   방장이 바뀌면 통째로 갈아 끼우는 자리.
-  상자 자체는 자리를 차지하지 않아, 안의 버튼들이 상단 액션 줄에
-  그대로 놓이고 간격도 지금과 같다.
+  멤버에게는 조각이 비어서 오므로 이 자리도 그대로 비어 있고,
+  gap 만 가진 flex 라 비어 있을 때 자리를 차지하지 않는다.
 */
 .travel-plan-owner-actions {
-    display: contents;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.travel-plan-common-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+/* 방장 액션과 공통 액션 사이의 얇은 선 하나 */
+.travel-plan-action-divider {
+    width: 1px;
+    height: 16px;
+    background: var(--tp-plan-line-strong);
 }
 
 .travel-plan-members,
@@ -586,13 +716,13 @@
     flex: 0 0 auto;
 }
 
-/* 참여자 진입점도 초대와 같은 크기·위계로 둔다 */
+/* 참여자 진입점도 채팅과 같은 크기·위계로 둔다 */
 .travel-plan-members-toggle {
     padding: 4px 10px;
-    border: 1px solid #e2dbcd;
+    border: 1px solid var(--tp-plan-line);
     border-radius: 4px;
-    background: #fffdf8;
-    color: #8b8378;
+    background: #fff;
+    color: var(--tp-plan-ink-faint);
     font-family: inherit;
     font-size: 13px;
     cursor: pointer;
@@ -600,8 +730,8 @@
 
 .travel-plan-members-toggle:hover,
 .travel-plan-members-toggle[aria-expanded="true"] {
-    color: #6b6259;
-    border-color: #d5cbb8;
+    color: var(--tp-plan-ink-soft);
+    border-color: var(--tp-plan-line-strong);
 }
 
 .travel-plan-members-panel {
@@ -613,9 +743,9 @@
     max-width: 80vw;
     padding: 12px;
     background: #fff;
-    border: 1px solid #e8e1d5;
+    border: 1px solid var(--tp-plan-line);
     border-radius: 6px;
-    box-shadow: 0 2px 8px rgba(78, 66, 48, 0.1);
+    box-shadow: 0 2px 8px rgba(47, 52, 56, 0.1);
     text-align: left;
 }
 
@@ -816,12 +946,17 @@
 }
 
 /* 플래너 본문을 방해하지 않게 작고 낮은 위계로 둔다 */
+/*
+  초대는 참여자·채팅과 같은 무게의 보조 액션이다.
+  상단 네 개 중 눈에 먼저 들어와야 하는 것은 "여행 계획 확정" 하나뿐이라
+  나머지는 모두 같은 중립 ghost 로 둔다.
+*/
 .travel-plan-invite-toggle {
     padding: 4px 10px;
-    border: 1px solid #e2dbcd;
+    border: 1px solid var(--tp-plan-line);
     border-radius: 4px;
-    background: #fffdf8;
-    color: #8b8378;
+    background: #fff;
+    color: var(--tp-plan-ink-faint);
     font-family: inherit;
     font-size: 13px;
     cursor: pointer;
@@ -829,35 +964,47 @@
 
 .travel-plan-invite-toggle:hover,
 .travel-plan-invite-toggle[aria-expanded="true"] {
-    color: #6b6259;
-    border-color: #d5cbb8;
+    border-color: var(--tp-plan-line-strong);
+    color: var(--tp-plan-ink-soft);
 }
 
+/*
+  초대 패널. 관리자 도구가 아니라 친구를 부르는 자리다.
+  흰 바탕에 중립 선 하나로 두고, 주소가 답답하지 않을 만큼 폭을 준다.
+*/
 .travel-plan-invite-panel {
     position: absolute;
     top: 32px;
     right: 0;
     z-index: 3;
-    width: 320px;
+    width: 380px;
     max-width: 80vw;
-    padding: 12px;
+    padding: 14px;
     background: #fff;
-    border: 1px solid #e8e1d5;
-    border-radius: 6px;
-    box-shadow: 0 2px 8px rgba(78, 66, 48, 0.1);
+    border: 1px solid var(--tp-plan-line);
+    border-radius: 8px;
+    box-shadow: 0 6px 20px rgba(47, 52, 56, 0.12);
     text-align: left;
 }
 
+/* 이 패널이 무엇을 하는 곳인지 먼저 말한다 */
+.travel-plan-invite-intro {
+    margin: 0 0 10px;
+    color: var(--tp-plan-ink-soft);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
 .travel-plan-invite-issued {
-    padding-bottom: 10px;
+    padding-bottom: 12px;
     margin-bottom: 10px;
-    border-bottom: 1px solid #f0ebe2;
+    border-bottom: 1px solid var(--tp-plan-line);
 }
 
 .travel-plan-invite-issued-label,
 .travel-plan-invite-state {
     margin: 0 0 8px;
-    color: #8b8378;
+    color: var(--tp-plan-ink-faint);
     font-size: 12px;
     line-height: 1.6;
 }
@@ -873,25 +1020,34 @@
     box-sizing: border-box;
     flex: 1;
     min-width: 0;
-    padding: 5px 8px;
-    border: 1px solid #e2dbcd;
-    border-radius: 4px;
-    background: #fbf8f1;
-    color: #4a443c;
+    padding: 6px 9px;
+    border: 1px solid #dfe5ea;
+    border-radius: 5px;
+    /* 옅은 gray-blue. 주소를 읽는 칸이라는 것만 표시한다 */
+    background: #f5f8fa;
+    color: var(--tp-plan-ink-soft);
     font-family: inherit;
     font-size: 12px;
 }
 
+/* 작은 secondary. 이 패널에서 가장 강한 요소가 되지 않게 둔다 */
 .travel-plan-invite-copy {
     flex: 0 0 auto;
-    padding: 5px 10px;
-    border: 1px solid #e2dbcd;
-    border-radius: 4px;
-    background: #fffdf8;
-    color: #6b6259;
+    padding: 6px 11px;
+    border: 1px solid var(--tp-plan-line-strong);
+    border-radius: 5px;
+    background: #fff;
+    color: var(--tp-plan-ink-soft);
     font-family: inherit;
     font-size: 12px;
+    font-weight: 600;
     cursor: pointer;
+}
+
+.travel-plan-invite-copy:hover {
+    border-color: var(--tp-plan-accent);
+    background: var(--tp-plan-accent-soft);
+    color: var(--tp-plan-accent-strong);
 }
 
 .travel-plan-invite-action,
@@ -900,7 +1056,7 @@
     width: 100%;
     padding: 6px 8px;
     border: 0;
-    border-radius: 4px;
+    border-radius: 5px;
     background: none;
     font-family: inherit;
     font-size: 13px;
@@ -909,73 +1065,105 @@
     cursor: pointer;
 }
 
+/* 새 링크 만들기 / 초대 링크 만들기 — 그냥 보조 액션이다 */
 .travel-plan-invite-action {
-    color: #4a443c;
+    color: var(--tp-plan-ink-soft);
 }
 
 .travel-plan-invite-action:hover {
-    background: #f6f3ee;
+    background: #f4f6f7;
+    color: var(--tp-plan-ink);
 }
 
+/* 되돌리기 어려운 것 하나만 붉게 두되, 그것도 가라앉은 색이다 */
 .travel-plan-invite-off {
-    color: #b42318;
+    color: #9a6b66;
 }
 
 .travel-plan-invite-off:hover {
-    background: #fdf4f3;
+    background: #fbf4f3;
+    color: #b42318;
 }
 
 /* ── 초대 링크 미리보기 화면 ── */
 
+/*
+  초대를 받은 사람이 참여를 정하는 화면.
+  흰 바탕에 중립 선 하나, 포인트는 아주 약한 accent 뿐이다.
+  (대표 이미지 데이터가 없으므로 큰 빈 자리를 만들어 두지 않는다)
+
+  스케줄러와 같은 종이 언어를 쓰되, 초대장은 읽고 정하는 정보 카드에
+  가까우므로 결을 얹지 않는다. 가장자리의 옅은 깊이감만 남기고
+  바탕은 그냥 흰 종이다. 선과 그림자는 스케줄러와 같은 것을 쓴다.
+*/
 .travel-plan-invite-paper {
     max-width: 520px;
+    padding: 32px 34px 36px;
+    background: var(--tp-sheet-edge), #fff;
 }
 
 .travel-plan-invite-eyebrow {
-    margin: 0 0 6px;
-    color: #a89e91;
+    margin: 0 0 8px;
+    color: var(--tp-plan-accent);
     font-size: 12px;
+    font-weight: 600;
     letter-spacing: 0.08em;
 }
 
 .travel-plan-invite-title {
-    margin: 0 0 16px;
-    color: #3f3426;
+    margin: 0 0 6px;
+    color: var(--tp-plan-ink);
     font-size: 22px;
     line-height: 1.5;
 }
 
-.travel-plan-invite-thumb {
-    display: block;
-    width: 100%;
-    height: 160px;
-    margin-bottom: 18px;
-    border-radius: 4px;
-    background: #efe9de;
-    object-fit: cover;
+.travel-plan-invite-period {
+    margin: 0 0 18px;
+    color: var(--tp-plan-ink-soft);
+    font-size: 14px;
 }
 
-.travel-plan-invite-meta {
-    display: grid;
-    grid-template-columns: 88px 1fr;
-    gap: 8px 12px;
+/* 누가 불렀는지. 이 화면에서 가장 먼저 읽히는 한 줄이다 */
+.travel-plan-invite-from {
     margin: 0 0 18px;
+    padding: 11px 14px;
+    border: 1px solid var(--tp-plan-accent-line);
+    border-radius: 6px;
+    background: var(--tp-plan-accent-soft);
+    color: var(--tp-plan-accent-strong);
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+/* 라벨과 값이 한 줄씩. 표가 아니라 읽는 줄이다 */
+.travel-plan-invite-meta {
+    margin: 0 0 22px;
+    border-top: 1px solid var(--tp-plan-line);
+}
+
+.travel-plan-invite-meta-row {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 9px 2px;
+    border-bottom: 1px solid var(--tp-plan-line);
 }
 
 .travel-plan-invite-meta dt {
-    color: #a09585;
+    flex: 0 0 88px;
+    color: var(--tp-plan-ink-faint);
     font-size: 13px;
 }
 
 .travel-plan-invite-meta dd {
     margin: 0;
-    color: #4a443c;
+    color: var(--tp-plan-ink);
     font-size: 14px;
 }
 
 .travel-plan-invite-hint {
     margin: 0;
-    color: #8b8378;
+    color: var(--tp-plan-ink-faint);
     font-size: 13px;
     line-height: 1.7;
 }
@@ -985,18 +1173,18 @@
 .travel-plan-invite-join-link {
     display: inline-block;
     padding: 9px 20px;
-    border: 1px solid #d5cbb8;
-    border-radius: 4px;
-    background: #fffdf8;
-    color: #4a443c;
+    border: 1px solid var(--tp-plan-accent-line);
+    border-radius: 6px;
+    background: var(--tp-plan-accent-soft);
+    color: var(--tp-plan-accent-strong);
     font-size: 14px;
     font-weight: 600;
     text-decoration: none;
 }
 
 .travel-plan-invite-join-link:hover {
-    border-color: #c4b8a5;
-    background: #f6f3ee;
+    border-color: var(--tp-plan-accent);
+    background: #e7eeea;
 }
 
 .travel-plan-join-form {
@@ -1006,7 +1194,7 @@
 .travel-plan-join-label {
     display: block;
     margin-bottom: 6px;
-    color: #6b6259;
+    color: var(--tp-plan-ink-soft);
     font-size: 13px;
     font-weight: 600;
 }
@@ -1017,26 +1205,27 @@
     width: 100%;
     margin-bottom: 8px;
     padding: 9px 12px;
-    border: 1px solid #e2dbcd;
-    border-radius: 4px;
-    background: #fffdf8;
-    color: #3f3426;
+    border: 1px solid var(--tp-plan-line-strong);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--tp-plan-ink);
     font-family: inherit;
     font-size: 15px;
 }
 
 .travel-plan-join-form input[type="text"]:focus {
     outline: none;
-    border-color: #c4b8a5;
+    border-color: var(--tp-plan-accent);
 }
 
+/* 이 화면에서 할 일은 하나뿐이라 여기만 채워 둔다 */
 .travel-plan-join-submit {
     margin-top: 14px;
     padding: 10px 22px;
-    border: 1px solid #d5cbb8;
-    border-radius: 4px;
-    background: #f3ede2;
-    color: #4a443c;
+    border: 1px solid var(--tp-plan-accent);
+    border-radius: 6px;
+    background: var(--tp-plan-accent);
+    color: #fff;
     font-family: inherit;
     font-size: 14px;
     font-weight: 700;
@@ -1044,54 +1233,116 @@
 }
 
 .travel-plan-join-submit:hover {
-    background: #ece4d6;
+    border-color: var(--tp-plan-accent-strong);
+    background: var(--tp-plan-accent-strong);
 }
 
+/* 여행 제목과 기간. 관리 액션은 종이 위의 상단 액션 줄에 있다 */
 .travel-plan-detail-header {
-    margin-bottom: 46px;
+    margin-bottom: 26px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--tp-plan-line);
+}
+
+/* 지금 작업 중인 여행이라는 것이 왼쪽의 얇은 선 하나로 드러난다 */
+.travel-plan-detail-heading {
+    min-width: 0;
+    padding-left: 14px;
+    border-left: 3px solid var(--tp-plan-accent-line);
+}
+
+/* 아직 채워 가는 중이라는 표시. 큰 색 덩어리로 두지 않는다 */
+.travel-plan-detail-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin: 0 0 7px;
+    padding: 2px 9px;
+    border: 1px solid var(--tp-plan-accent-line);
+    border-radius: 999px;
+    background: var(--tp-plan-accent-soft);
+    color: var(--tp-plan-accent-strong);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.travel-plan-status-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--tp-plan-accent);
 }
 
 .travel-plan-detail-header h1 {
-    margin: 0 0 8px;
-    color: #3f3426;
-    font-size: 26px;
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 5px;
+    color: var(--tp-plan-ink);
+    font-size: 24px;
     font-weight: 700;
 }
 
-.travel-plan-detail-period {
-    margin: 0;
-    color: #8b8378;
-    font-size: 15px;
+/* 며칠짜리 여행인지. 제목을 밀어내지 않게 작게 붙는다 */
+.travel-plan-detail-length {
+    color: var(--tp-plan-ink-faint);
+    font-size: 14px;
+    font-weight: 500;
 }
 
-/* DAY 는 카드가 아니라 플래너의 한 구획이다 */
+/* 날짜는 제목을 읽은 다음에 확인하는 값이라 한 단계 낮춘다 */
+.travel-plan-detail-period {
+    margin: 0;
+    color: var(--tp-plan-ink-faint);
+    font-size: 13px;
+}
+
+/*
+  DAY 는 카드가 아니라 플래너의 한 구획이다.
+  일정이 없는 DAY 가 화면을 길게 차지하지 않도록 사이를 좁혔다.
+  (일정이 있으면 줄 수만큼 자연스럽게 늘어난다)
+*/
 .travel-plan-day {
-    margin-bottom: 56px;
+    margin-bottom: 32px;
 }
 
 .travel-plan-day:last-child {
     margin-bottom: 0;
 }
 
-/* DAY 번호는 왼쪽, 날짜는 같은 줄 오른쪽 끝 */
+/*
+  DAY 번호는 왼쪽, 날짜는 같은 줄 오른쪽 끝.
+  아주 옅은 바탕 한 겹으로 둘을 한 묶음으로 만든다.
+  아래 줄(.travel-plan-lines 의 윗선)에 그대로 얹히므로
+  카드로 떠 보이지 않고 구역 머리글로 읽힌다.
+*/
 .travel-plan-day-heading {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     justify-content: space-between;
     gap: 12px;
-    margin: 0 0 8px;
-    font-size: 16px;
+    margin: 0;
+    padding: 7px 10px;
+    border-radius: 4px 4px 0 0;
+    background: var(--tp-plan-accent-soft);
+    font-size: 15px;
     font-weight: 700;
 }
 
 .travel-plan-day-number {
-    color: #3f3426;
+    color: var(--tp-plan-accent-strong);
     letter-spacing: 0.05em;
 }
 
+/* 날짜는 읽고 지나가는 값이라 작은 알약 하나로 둔다 */
 .travel-plan-day-date {
-    color: #a09585;
-    font-size: 14px;
+    padding: 2px 9px;
+    border: 1px solid var(--tp-plan-line);
+    border-radius: 999px;
+    background: #fff;
+    color: var(--tp-plan-ink-faint);
+    font-size: 12px;
     font-weight: 500;
 }
 
@@ -1099,7 +1350,7 @@
 .travel-plan-lines {
     margin: 0;
     padding: 0;
-    border-top: 1px solid #ece6dc;
+    border-top: 1px solid var(--tp-plan-line);
     list-style: none;
 }
 
@@ -1107,15 +1358,27 @@
     display: flex;
     align-items: flex-start;
     gap: 14px;
-    padding: 14px 2px;
-    border-bottom: 1px solid #ece6dc;
+    padding: 14px 8px;
+    border-bottom: 1px solid var(--tp-plan-line);
+    transition: background-color 0.12s ease;
+}
+
+/*
+  일정 줄에 손을 얹으면 아주 옅게 밝아진다.
+  마우스가 있는 화면에서만 건다. 손가락으로 쓰는 화면에서는
+  hover 가 걸린 채로 남아 엉뚱한 줄이 켜져 보인다.
+*/
+@media (hover: hover) {
+    .travel-plan-line.is-item:hover {
+        background: #f7f9f8;
+    }
 }
 
 .travel-plan-line-order {
     flex: 0 0 auto;
     min-width: 20px;
     padding-top: 1px;
-    color: #c4b8a5;
+    color: var(--tp-plan-ink-faint);
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.06em;
@@ -1123,7 +1386,7 @@
 
 .travel-plan-line-content {
     margin: 0;
-    color: #3f3426;
+    color: var(--tp-plan-ink);
     font-size: 15px;
     line-height: 1.75;
     /* 자유 텍스트의 줄바꿈을 그대로 보여 준다 */
@@ -1132,10 +1395,11 @@
 }
 
 /*
-  빈 줄. 평소에는 그냥 줄이고, hover 했을 때만 안내가 옅게 뜬다.
-  DB row 가 아니라 화면에만 있는 슬롯이다.
+  일정 추가 슬롯. DB row 가 아니라 화면에만 있는 줄이다.
+  일정이 없는 DAY 가 길어지지 않게 일정 줄보다 낮게 둔다.
 */
 .travel-plan-line.is-slot {
+    padding: 7px 8px;
     border-bottom: 0;
     cursor: text;
 }
@@ -1145,16 +1409,46 @@
     color: transparent;
 }
 
+/*
+  placeholder 가 아니라 누를 수 있는 글자 액션이다.
+  큰 버튼 박스를 만들지는 않되, 눌리는 것인지는 분명히 보이게 한다.
+*/
 .travel-plan-slot-hint {
-    flex: 1;
-    padding-top: 1px;
-    color: #cdc3b2;
-    font-size: 14px;
-    transition: color 0.12s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 3px 8px 3px 4px;
+    border-radius: 999px;
+    color: var(--tp-plan-accent);
+    font-size: 13px;
+    font-weight: 600;
+    transition: background-color 0.12s ease, color 0.12s ease;
 }
 
-.travel-plan-line.is-slot:hover .travel-plan-slot-hint {
-    color: #9a8f7d;
+/* 눌리는 자리라는 표시. 글자보다 조금 더 또렷하게 둔다 */
+.travel-plan-slot-plus {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 17px;
+    height: 17px;
+    border-radius: 50%;
+    background: var(--tp-plan-accent-soft);
+    color: var(--tp-plan-accent-strong);
+    font-size: 13px;
+    line-height: 1;
+}
+
+.travel-plan-line.is-slot:hover .travel-plan-slot-hint,
+.travel-plan-line.is-slot:focus-within .travel-plan-slot-hint {
+    background: var(--tp-plan-accent-soft);
+    color: var(--tp-plan-accent-strong);
+}
+
+.travel-plan-line.is-slot:hover .travel-plan-slot-plus,
+.travel-plan-line.is-slot:focus-within .travel-plan-slot-plus {
+    background: var(--tp-plan-accent);
+    color: #fff;
 }
 
 .travel-plan-line.is-slot.is-editing .travel-plan-slot-hint {
@@ -1247,7 +1541,7 @@
 */
 .travel-plan-remote-note {
     margin: 0 0 2px;
-    color: #9a8f7d;
+    color: var(--tp-plan-ink-faint);
     font-size: 12px;
     line-height: 1.6;
     /* 작성 중 줄바꿈을 그대로 보여 준다 */
@@ -1255,8 +1549,29 @@
     overflow-wrap: break-word;
 }
 
+/* 지금 붙어 있는 사람이라는 뜻이라 참여자 목록의 접속 점과 같은 초록을 쓴다 */
+.travel-plan-remote-note::before {
+    content: "";
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin-right: 5px;
+    border-radius: 50%;
+    background: #8a9a7b;
+    vertical-align: middle;
+}
+
 .travel-plan-line.is-remote-editing {
-    background: #fbf8f1;
+    background: #f6f8f6;
+}
+
+/*
+  남이 이 자리에 새 일정을 쓰는 중.
+  작성 중이라는 말과 "+ 일정 추가" 가 함께 보이면 뜻이 어긋난다.
+  이 class 는 realtime 이 ADD 잠금이 살아 있는 동안에만 붙인다.
+*/
+.travel-plan-line.is-slot.is-remote-adding .travel-plan-slot-hint {
+    display: none;
 }
 
 /* 남이 쓰는 동안에는 그 줄의 관리 메뉴를 잠시 내려 둔다 */
@@ -1285,12 +1600,15 @@
     margin-top: 2px;
 }
 
-/* "대안 2개". 평소에는 옅은 글자 한 줄이고 눌러야 펼쳐진다 */
+/*
+  "대안 2개". 평소에는 옅은 글자 한 줄이고 눌러야 펼쳐진다.
+  A(중립)와 구분되도록 B/C 는 같은 accent 계열을 아주 연하게 쓴다.
+*/
 .travel-plan-alt-toggle {
     padding: 0;
     border: 0;
     background: none;
-    color: #b0a493;
+    color: var(--tp-plan-accent);
     font-family: inherit;
     font-size: 12px;
     letter-spacing: 0.02em;
@@ -1299,14 +1617,14 @@
 
 .travel-plan-alt-toggle:hover,
 .travel-plan-alt-toggle[aria-expanded="true"] {
-    color: #8a7f6d;
+    color: var(--tp-plan-accent-strong);
 }
 
 /* 세로선 하나로 A 와의 위계를 만든다 */
 .travel-plan-alt-list {
     margin: 4px 0 2px;
     padding-left: 12px;
-    border-left: 1px solid #e6dfd3;
+    border-left: 1px solid var(--tp-plan-accent-line);
 }
 
 .travel-plan-alt {
@@ -1320,7 +1638,7 @@
     flex: 0 0 auto;
     min-width: 10px;
     padding-top: 2px;
-    color: #bfb4a1;
+    color: var(--tp-plan-accent);
     font-size: 11px;
     font-weight: 700;
 }
@@ -1355,14 +1673,14 @@
 /* 조건은 내용 위에 한 줄 더 작게 */
 .travel-plan-alt-condition {
     display: block;
-    color: #a5998a;
+    color: var(--tp-plan-accent);
     font-size: 12px;
     line-height: 1.6;
 }
 
 .travel-plan-alt-content {
     display: block;
-    color: #5b5245;
+    color: var(--tp-plan-ink-soft);
     font-size: 14px;
     line-height: 1.7;
     /* 자유 텍스트의 줄바꿈을 그대로 보여 준다 */
@@ -1503,7 +1821,18 @@
 .travel-plan-line.is-item:hover .travel-plan-item-menu-button,
 .travel-plan-item-menu-button:focus-visible,
 .travel-plan-item-menu-button[aria-expanded="true"] {
-    color: #a89e91;
+    color: var(--tp-plan-ink-faint);
+}
+
+/*
+  ⋯ 는 hover 에서 드러난다.
+  손가락으로 쓰는 화면에는 hover 가 없으므로 거기서는 늘 보이게 둔다.
+  (그러지 않으면 그 화면에서는 일정을 옮기거나 지울 길이 사라진다)
+*/
+@media (hover: none) {
+    .travel-plan-item-menu-button {
+        color: var(--tp-plan-ink-faint);
+    }
 }
 
 .travel-plan-item-menu-list {
@@ -1693,59 +2022,95 @@
   말풍선을 강한 색으로 갈라 두지 않고, 플래너와 같은 종이 톤을 유지한다.
 */
 
+/*
+  채팅 진입점. 상단 줄이 아니라 화면 오른쪽 아래에 떠 있다.
+  아래 채팅 패널과 같은 모서리를 기준으로 놓여, 눌렀을 때
+  그 자리에서 패널이 펼쳐지는 것처럼 보인다.
+*/
 .travel-plan-chat {
-    position: relative;
-    flex: 0 0 auto;
+    position: fixed;
+    right: 28px;
+    bottom: 28px;
+    /* 패널(40) 바로 아래 층. 패널이 열리면 이 버튼은 가려진다 */
+    z-index: 39;
 }
 
-/* 참여자 / 초대와 같은 크기·위계로 둔다 */
+/* 말풍선 하나뿐인 둥근 버튼. 진한 색 덩어리로 두지 않는다 */
 .travel-plan-chat-toggle {
+    position: relative;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 4px 10px;
-    border: 1px solid #e2dbcd;
-    border-radius: 4px;
-    background: #fffdf8;
-    color: #8b8378;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    padding: 0;
+    border: 1px solid var(--tp-plan-accent-line);
+    border-radius: 50%;
+    background: #fff;
+    color: var(--tp-plan-accent);
     font-family: inherit;
-    font-size: 13px;
     cursor: pointer;
+    box-shadow: 0 2px 8px rgba(47, 52, 56, 0.1);
+    transition: background-color 0.12s ease, border-color 0.12s ease;
 }
 
-.travel-plan-chat-toggle:hover,
+.travel-plan-chat-toggle:hover {
+    border-color: var(--tp-plan-accent);
+    background: var(--tp-plan-accent-soft);
+}
+
+.travel-plan-chat-toggle:focus-visible {
+    outline: 2px solid var(--tp-plan-accent);
+    outline-offset: 2px;
+}
+
+/*
+  패널이 열려 있는 동안에는 같은 자리에 겹치므로 내려 둔다.
+  aria-expanded 는 채팅 스크립트가 열고 닫을 때 이미 맞춰 두는 값이라
+  숨기고 보이는 데 따로 상태를 만들지 않는다. 닫으면 그대로 돌아온다.
+*/
 .travel-plan-chat-toggle[aria-expanded="true"] {
-    color: #6b6259;
-    border-color: #d6cdb9;
+    display: none;
 }
 
-/* 안 읽은 개수. 숫자가 있을 때만 보인다 */
+.travel-plan-chat-icon {
+    width: 24px;
+    height: 24px;
+}
+
+/* 안 읽은 개수. 숫자가 있을 때만 보인다 (0 이면 스크립트가 hidden 을 건다) */
 .travel-plan-chat-badge {
+    position: absolute;
+    top: -3px;
+    right: -3px;
     min-width: 18px;
     padding: 0 5px;
     border-radius: 9px;
-    background: #b98c86;
-    color: #fffdf8;
+    /* 알림이라는 것만 알면 되므로 강한 원색 빨강 대신 가라앉은 코럴 */
+    background: #d96a6a;
+    color: #fff;
     font-size: 11px;
+    font-weight: 600;
     line-height: 18px;
     text-align: center;
 }
 
+/* 떠 있는 채팅 버튼과 같은 모서리를 기준으로 그 자리에서 펼쳐진다 */
 .travel-plan-chat-panel {
     position: fixed;
-    right: 24px;
-    bottom: 24px;
+    right: 28px;
+    bottom: 28px;
     z-index: 40;
     display: flex;
     flex-direction: column;
     /* 좁은 화면에서도 밖으로 넘치지 않게 남은 폭 안에서만 커진다 */
-    width: min(360px, calc(100vw - 32px));
-    max-height: min(560px, calc(100vh - 48px));
-    border: 1px solid #e2dbcd;
+    width: min(420px, calc(100vw - 56px));
+    max-height: min(560px, calc(100vh - 56px));
+    border: 1px solid var(--tp-chat-line);
     border-radius: 8px;
-    /* 종이(거의 흰색)와 살짝 다른 아이보리라 채팅이 한 겹 위에 있는 것이 보인다 */
+    /* 종이(미세한 warm-white)와 다른 cool gray 라 한 겹 위에 있는 것이 보인다 */
     background: var(--tp-chat-surface);
-    box-shadow: 0 12px 32px rgba(63, 52, 38, 0.16);
+    box-shadow: 0 12px 32px rgba(47, 52, 56, 0.16);
     overflow: hidden;
 }
 
@@ -1756,6 +2121,35 @@
 */
 .travel-plan-chat-panel[hidden] {
     display: none;
+}
+
+/*
+  좁은 화면(좌우 분할 포함).
+  떠 있는 버튼도 패널도 화면 밖으로 나가지 않게 안쪽으로 당기고,
+  버튼은 내용을 덜 가리도록 조금 작아진다.
+*/
+@media (max-width: 560px) {
+    .travel-plan-chat {
+        right: 16px;
+        bottom: 16px;
+    }
+
+    .travel-plan-chat-toggle {
+        width: 46px;
+        height: 46px;
+    }
+
+    .travel-plan-chat-icon {
+        width: 21px;
+        height: 21px;
+    }
+
+    .travel-plan-chat-panel {
+        right: 16px;
+        bottom: 16px;
+        width: calc(100vw - 32px);
+        max-height: calc(100vh - 32px);
+    }
 }
 
 .travel-plan-chat-header {
@@ -1770,7 +2164,7 @@
 
 .travel-plan-chat-panel-title {
     margin: 0;
-    color: #6b6259;
+    color: var(--tp-plan-ink-soft);
     font-size: 14px;
     font-weight: 600;
 }
@@ -1794,16 +2188,8 @@
 }
 
 .travel-plan-chat-header-button:hover {
-    background: #f2ece0;
-    color: #6b6259;
-}
-
-/* 접으면 머리글만 남는다 */
-.travel-plan-chat-panel.is-minimized .travel-plan-chat-body,
-.travel-plan-chat-panel.is-minimized .travel-plan-chat-form,
-.travel-plan-chat-panel.is-minimized .travel-plan-chat-jump,
-.travel-plan-chat-panel.is-minimized .travel-plan-chat-error {
-    display: none;
+    background: var(--tp-chat-line);
+    color: var(--tp-plan-ink-soft);
 }
 
 .travel-plan-chat-body {
@@ -1817,14 +2203,14 @@
 /* 더 가져올 이전 대화가 없을 때만 위에 조용히 놓인다 */
 .travel-plan-chat-start {
     margin: 0 0 12px;
-    color: #c0b6a6;
+    color: var(--tp-plan-ink-faint);
     font-size: 12px;
     text-align: center;
 }
 
 .travel-plan-chat-empty {
     margin: 24px 0;
-    color: #b0a493;
+    color: var(--tp-plan-ink-faint);
     font-size: 13px;
     line-height: 1.8;
     text-align: center;
@@ -1843,52 +2229,283 @@
   바탕색이나 좌우 정렬로 가르지 않는다.
   덩어리로 뭉쳐 보이지 않게 아주 연한 선으로만 사이를 나눈다.
 */
+/*
+  메신저 한 줄.
+
+  남의 말은 왼쪽, 내 말은 오른쪽에 선다. 자리를 가르는 것은 class 하나뿐이고
+  누가 썼는지는 그 자리로 읽힌다(내 말에 "나" 를 매번 적지 않는다).
+  줄마다 가로선을 긋지 않는다. 사이는 여백으로만 나눈다.
+*/
 .travel-plan-chat-message {
-    position: relative;
-    padding: 10px 2px;
-    border-bottom: 1px solid var(--tp-chat-line);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    /* 보낸 사람이 바뀌면 여기서 한 번 쉰다 */
+    margin-top: 14px;
 }
 
-/* 마지막 메시지 아래에는 선을 두지 않는다 */
-.travel-plan-chat-message:last-child {
-    border-bottom: none;
+.travel-plan-chat-message:first-child {
+    margin-top: 0;
 }
 
-/* 이름 / 본문 / 시간 세 줄이 각각 구분되어 보이게 사이를 조금 띄운다 */
+/* 같은 사람이 이어서 보낸 줄. 바짝 붙어 한 덩어리로 읽힌다 */
+.travel-plan-chat-message.is-continued {
+    margin-top: 3px;
+}
+
+.travel-plan-chat-message.is-mine {
+    align-items: flex-end;
+}
+
+/* 이름은 묶음의 첫 줄에만. 이어지는 줄에서는 자리째 사라진다 */
 .travel-plan-chat-sender {
     margin: 0 0 4px;
-    color: #a1968a;
+    padding: 0 2px;
+    color: var(--tp-plan-ink-faint);
     font-size: 12px;
+}
+
+.travel-plan-chat-message.is-continued .travel-plan-chat-sender,
+.travel-plan-chat-message.is-mine .travel-plan-chat-sender {
+    display: none;
+}
+
+/* 말풍선 + 시각(+ 내 메시지의 ⋯). 시각은 말풍선 아래쪽 끝에 선다 */
+.travel-plan-chat-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    /* 패널 폭을 꽉 채우지 않는다 */
+    max-width: 78%;
+    min-width: 0;
+}
+
+.travel-plan-chat-message.is-mine .travel-plan-chat-row {
+    flex-direction: row-reverse;
+}
+
+.travel-plan-chat-bubble {
+    min-width: 0;
+    padding: 8px 12px;
+    border: 1px solid var(--tp-chat-line);
+    border-radius: 12px;
+    /* 남의 말: 흰 종이 한 장 */
+    background: #fff;
+}
+
+/* 내 말: 같은 accent 계열을 아주 옅게. 진한 색 덩어리로 두지 않는다 */
+.travel-plan-chat-message.is-mine .travel-plan-chat-bubble {
+    border-color: var(--tp-plan-accent-line);
+    background: var(--tp-plan-accent-soft);
+}
+
+/* 묶음 안쪽 모서리를 죽여 이어진 줄로 보이게 한다 */
+.travel-plan-chat-message.is-continued .travel-plan-chat-bubble {
+    border-top-left-radius: 5px;
+}
+
+.travel-plan-chat-message.is-mine.is-continued .travel-plan-chat-bubble {
+    border-top-left-radius: 12px;
+    border-top-right-radius: 5px;
 }
 
 .travel-plan-chat-content {
     margin: 0;
-    color: #3f3426;
+    color: var(--tp-plan-ink);
     font-size: 14px;
-    line-height: 1.7;
+    line-height: 1.6;
     /* 보낸 사람이 넣은 줄바꿈을 그대로 보여 준다 */
     white-space: pre-wrap;
     overflow-wrap: break-word;
 }
 
+.travel-plan-chat-message.is-deleted .travel-plan-chat-bubble {
+    background: var(--tp-chat-composer);
+    border-color: var(--tp-chat-line);
+}
+
 .travel-plan-chat-message.is-deleted .travel-plan-chat-content {
-    color: #b0a493;
+    color: var(--tp-plan-ink-faint);
     font-style: italic;
 }
 
+/* 시각은 묶음의 마지막 줄에만 남긴다. 같은 시각을 줄마다 되풀이하지 않는다 */
 .travel-plan-chat-time {
-    display: block;
-    margin-top: 4px;
-    color: #c0b6a6;
+    flex: 0 0 auto;
+    color: var(--tp-plan-ink-faint);
     font-size: 11px;
-    text-align: right;
+    white-space: nowrap;
+}
+
+.travel-plan-chat-message:not(.is-group-end) .travel-plan-chat-time {
+    display: none;
+}
+
+/* 날짜가 바뀌는 자리에만. 큰 머리글로 만들지 않는다 */
+.travel-plan-chat-date {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 16px 0 12px;
+}
+
+.travel-plan-chat-date span {
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: var(--tp-chat-composer);
+    color: var(--tp-plan-ink-faint);
+    font-size: 11px;
+}
+
+/* ── 메시지 반응 ── */
+
+/*
+  말풍선 옆의 작은 진입점.
+
+  평소에는 없는 듯이 두고, 그 줄에 손을 얹었을 때만 나온다.
+  다만 나왔을 때는 눌러도 되는 것인지 알아볼 수 있어야 해서
+  옅은 바탕과 또렷한 회색 글자를 함께 준다.
+  큰 원형 버튼이나 테두리·그림자는 두지 않는다.
+*/
+.travel-plan-chat-react {
+    position: relative;
+    flex: 0 0 auto;
+    /* 시각과 붙지 않게 한 칸 띄운다 */
+    margin-left: 2px;
+}
+
+.travel-plan-chat-react-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    border-radius: 6px;
+    background: none;
+    color: var(--tp-plan-ink-faint);
+    font-family: inherit;
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.12s ease, background-color 0.12s ease, color 0.12s ease;
+}
+
+.travel-plan-chat-message:hover .travel-plan-chat-react-button,
+.travel-plan-chat-message:focus-within .travel-plan-chat-react-button,
+.travel-plan-chat-react-button:focus-visible,
+.travel-plan-chat-react-button[aria-expanded="true"] {
+    opacity: 1;
+    background: var(--tp-chat-composer);
+    color: var(--tp-plan-ink-soft);
+}
+
+/* 버튼 자체에 손을 얹으면 한 단계 더 또렷해진다 */
+.travel-plan-chat-react-button:hover,
+.travel-plan-chat-react-button[aria-expanded="true"] {
+    background: var(--tp-chat-line);
+    color: var(--tp-plan-ink);
+}
+
+/* 여섯 가지만 있는 작은 줄. 전체 이모지 목록과 다른 자리다 */
+.travel-plan-chat-react-menu {
+    position: absolute;
+    bottom: 24px;
+    left: 0;
+    z-index: 2;
+    display: flex;
+    gap: 2px;
+    padding: 4px;
+    border: 1px solid var(--tp-chat-line);
+    border-radius: 999px;
+    background: #fff;
+    box-shadow: 0 4px 14px rgba(47, 52, 56, 0.14);
+}
+
+/* 오른쪽에 선 내 메시지에서는 창도 오른쪽 끝을 기준으로 연다 */
+.travel-plan-chat-message.is-mine .travel-plan-chat-react-menu {
+    left: auto;
+    right: 0;
+}
+
+.travel-plan-chat-react-menu[hidden] {
+    display: none;
+}
+
+.travel-plan-chat-react-choice {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    font-family: inherit;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.travel-plan-chat-react-choice:hover {
+    background: var(--tp-chat-composer);
+}
+
+.travel-plan-chat-react-choice:focus-visible {
+    outline: 2px solid var(--tp-plan-accent);
+    outline-offset: -2px;
+}
+
+/* 실제로 달린 반응만. 하나도 없으면 자리째 비어 높이를 차지하지 않는다 */
+.travel-plan-chat-reactions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    max-width: 78%;
+}
+
+.travel-plan-chat-reactions:not(:empty) {
+    margin-top: 4px;
+}
+
+/* 작은 알약 하나. 눌러서 같은 반응을 남기거나 거둘 수 있다 */
+.travel-plan-chat-reaction {
+    padding: 1px 8px;
+    border: 1px solid var(--tp-chat-line);
+    border-radius: 999px;
+    background: #fff;
+    color: var(--tp-plan-ink-soft);
+    font-family: inherit;
+    font-size: 12px;
+    line-height: 1.6;
+    cursor: pointer;
+}
+
+.travel-plan-chat-reaction:hover {
+    border-color: var(--tp-plan-line-strong);
+}
+
+/* 내가 누른 것. 색을 크게 바꾸지 않고 옅게만 표시한다 */
+.travel-plan-chat-reaction.is-mine {
+    border-color: var(--tp-plan-accent-line);
+    background: var(--tp-plan-accent-soft);
+    color: var(--tp-plan-accent-strong);
+}
+
+/*
+  손가락으로 쓰는 화면에는 hover 가 없다.
+  거기서는 반응 진입점을 늘 보이게 두어야 누를 길이 남는다.
+*/
+@media (hover: none) {
+    .travel-plan-chat-react-button {
+        opacity: 1;
+    }
 }
 
 /* 내 메시지에만 붙는다. 평소에는 거의 보이지 않는다 */
 .travel-plan-chat-menu {
-    position: absolute;
-    top: 8px;
-    right: 0;
+    position: relative;
+    flex: 0 0 auto;
 }
 
 .travel-plan-chat-menu-button {
@@ -1898,7 +2515,7 @@
     border: none;
     border-radius: 4px;
     background: none;
-    color: #cec5b6;
+    color: var(--tp-plan-ink-faint);
     font-family: inherit;
     font-size: 13px;
     line-height: 1;
@@ -1910,7 +2527,16 @@
 .travel-plan-chat-menu-button:focus-visible,
 .travel-plan-chat-menu-button[aria-expanded="true"] {
     opacity: 1;
-    color: #8b8378;
+}
+
+/*
+  손가락으로 쓰는 화면에는 hover 가 없다.
+  거기서는 늘 보이게 두어야 자기 메시지를 지울 길이 남는다.
+*/
+@media (hover: none) {
+    .travel-plan-chat-menu-button {
+        opacity: 1;
+    }
 }
 
 .travel-plan-chat-menu-list {
@@ -1974,22 +2600,133 @@
     background: var(--tp-chat-composer);
 }
 
+/* + / 입력칸 / 전송이 같은 줄에서 같은 높이로 선다 */
 .travel-plan-chat-tool {
-    width: 28px;
-    height: 28px;
-    border: 1px solid #e2dbcd;
-    border-radius: 4px;
-    background: #fffdf8;
-    color: #a1968a;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--tp-chat-line);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--tp-plan-ink-faint);
     font-family: inherit;
     font-size: 15px;
     line-height: 1;
     cursor: pointer;
 }
 
+.travel-plan-chat-tool:hover:enabled {
+    border-color: var(--tp-plan-accent-line);
+    color: var(--tp-plan-accent);
+}
+
 .travel-plan-chat-tool:disabled {
-    color: #cec5b6;
+    color: #c2c7cc;
     cursor: not-allowed;
+}
+
+/*
+  이모지 고르기.
+
+  입력줄 바로 위에서 열린다. 아래(bottom)를 기준으로 붙여 두어
+  입력칸이 여러 줄로 늘어나도 창이 입력줄을 밀거나 덮지 않는다.
+  왼쪽 끝에 붙여 열리므로 좁은 화면에서도 오른쪽으로 잘리지 않는다.
+*/
+.travel-plan-chat-emoji {
+    position: relative;
+    flex: 0 0 auto;
+}
+
+/*
+  5칸 격자.
+
+  폭을 반드시 정해 둔다. 떠 있는 상자(absolute)는 폭을 정해 주지 않으면
+  담긴 상자(32px 짜리 버튼 자리)만큼만 잡아, 이모지가 한 줄에 하나씩
+  세로로 길게 늘어선다.
+
+  더 많아지면 이 안에서만 세로로 넘긴다. 채팅 패널보다 길게 내려오지 않는다.
+*/
+.travel-plan-chat-emoji-panel {
+    box-sizing: border-box;
+    position: absolute;
+    bottom: 38px;
+    left: 0;
+    z-index: 2;
+    /* 최근 사용 구역과 전체 목록이 위아래로 놓인다. 칸 나누기는 각 격자가 한다 */
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 220px;
+    /* 아주 좁은 화면에서도 밖으로 나가지 않는다 */
+    max-width: calc(100vw - 48px);
+    /* 6행 남짓까지 보이고 그 뒤로는 안에서 넘긴다 */
+    max-height: 232px;
+    padding: 8px;
+    border: 1px solid var(--tp-chat-line);
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 6px 18px rgba(47, 52, 56, 0.14);
+    overflow-y: auto;
+    /* 끝까지 넘긴 뒤 대화까지 따라 움직이지 않게 한다 */
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+}
+
+.travel-plan-chat-emoji-panel[hidden] {
+    display: none;
+}
+
+/* 최근 사용 / 전체 목록 모두 같은 5칸 격자를 쓴다 */
+.travel-plan-chat-emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 2px;
+}
+
+.travel-plan-chat-emoji-section[hidden] {
+    display: none;
+}
+
+/* 무엇을 모아 둔 자리인지만 알리는 작은 글자 */
+.travel-plan-chat-emoji-label {
+    margin: 0 0 4px;
+    padding: 0 2px;
+    color: var(--tp-plan-ink-faint);
+    font-size: 11px;
+}
+
+/* 스크롤 막대가 격자를 가리지 않게 얇게 둔다 */
+.travel-plan-chat-emoji-panel::-webkit-scrollbar {
+    width: 6px;
+}
+
+.travel-plan-chat-emoji-panel::-webkit-scrollbar-thumb {
+    border-radius: 3px;
+    background: var(--tp-chat-line);
+}
+
+/* 칸 폭은 격자가 정한다. 손가락으로도 누를 수 있는 높이만 남긴다 */
+.travel-plan-chat-emoji-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 34px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    font-family: inherit;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.travel-plan-chat-emoji-item:hover {
+    background: var(--tp-chat-composer);
+}
+
+.travel-plan-chat-emoji-item:focus-visible {
+    outline: 2px solid var(--tp-plan-accent);
+    outline-offset: -2px;
 }
 
 .travel-plan-chat-input {
@@ -1998,40 +2735,44 @@
     width: 100%;
     min-width: 0;
     max-width: 100%;
+    /* 한 줄일 때 + / 전송과 높이가 맞는다 */
+    min-height: 32px;
     max-height: 120px;
-    padding: 6px 8px;
-    border: 1px solid #e2dbcd;
-    border-radius: 4px;
-    background: #fffdf8;
-    color: #3f3426;
+    padding: 6px 10px;
+    border: 1px solid var(--tp-chat-line);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--tp-plan-ink);
     font-family: inherit;
     font-size: 14px;
-    line-height: 1.6;
+    line-height: 1.4;
     /* 높이는 입력에 맞춰 스크립트가 늘린다 */
     resize: none;
     overflow-y: auto;
 }
 
 .travel-plan-chat-input:focus {
-    border-color: #b9a98f;
-    outline: 3px solid rgba(185, 169, 143, 0.18);
+    border-color: var(--tp-plan-accent);
+    outline: 3px solid rgba(109, 133, 121, 0.16);
 }
 
 .travel-plan-chat-send {
     flex: 0 0 auto;
-    padding: 6px 12px;
-    height: 28px;
-    border: 1px solid #d6cdb9;
-    border-radius: 4px;
-    background: #fffdf8;
-    color: #6b6259;
+    height: 32px;
+    padding: 0 14px;
+    border: 1px solid var(--tp-plan-accent-line);
+    border-radius: 8px;
+    background: var(--tp-plan-accent-soft);
+    color: var(--tp-plan-accent-strong);
     font-family: inherit;
     font-size: 13px;
+    font-weight: 600;
     cursor: pointer;
 }
 
 .travel-plan-chat-send:hover {
-    border-color: #b9a98f;
+    border-color: var(--tp-plan-accent);
+    background: #e7eeea;
 }
 
 /* 좁은 화면에서는 아래에 붙여 양옆 여백만 남긴다 */
@@ -2046,28 +2787,36 @@
 }
 
 /* 대화 사이에 있었던 일. 말풍선이 아니라 차분한 알림 줄이다 */
+/*
+  대화가 아니라 그 사이에 있었던 일이다.
+  말풍선으로 만들지 않고 가운데에 차분한 알림 하나로 둔다.
+*/
 .travel-plan-chat-notice {
     display: flex;
-    align-items: baseline;
+    align-items: center;
+    justify-content: center;
     gap: 8px;
-    padding: 10px 2px;
-    border-top: 1px solid var(--tp-poll-line);
-    border-bottom: 1px solid var(--tp-poll-line);
-    margin: 4px 0;
+    margin: 14px 0;
 }
 
 .travel-plan-chat-notice-body {
-    flex: 1 1 auto;
     display: flex;
     flex-direction: column;
+    align-items: center;
     gap: 2px;
+    max-width: 84%;
     min-width: 0;
-    padding: 0;
-    border: none;
-    background: none;
+    padding: 7px 14px;
+    border: 1px solid var(--tp-poll-line);
+    border-radius: 10px;
+    background: var(--tp-poll-surface);
     font-family: inherit;
-    text-align: left;
+    text-align: center;
     cursor: pointer;
+}
+
+.travel-plan-chat-notice-body:hover {
+    border-color: var(--tp-poll-accent);
 }
 
 .travel-plan-chat-notice-head {
@@ -2801,20 +3550,26 @@
     flex: 0 0 auto;
 }
 
+/*
+  이 줄에서 유일하게 색을 띠는 버튼.
+  이 여행을 끝맺는 일이라 나머지 보조 액션과 위계를 나눈다.
+  다만 크게 튀는 위험 버튼은 아니라 크기는 다른 것과 같고 색만 옅게 채운다.
+*/
 .travel-plan-finalize-toggle {
     padding: 4px 10px;
-    border: 1px solid #e2dbcd;
+    border: 1px solid var(--tp-plan-accent-line);
     border-radius: 4px;
-    background: var(--tp-paper);
-    color: #8b8378;
+    background: var(--tp-plan-accent-soft);
+    color: var(--tp-plan-accent-strong);
     font-family: inherit;
     font-size: 13px;
+    font-weight: 600;
     cursor: pointer;
 }
 
 .travel-plan-finalize-toggle:hover {
-    color: var(--tp-ink-soft);
-    border-color: #d6cdb9;
+    border-color: var(--tp-plan-accent);
+    background: #e7eeea;
 }
 
 .travel-plan-finalize-modal {

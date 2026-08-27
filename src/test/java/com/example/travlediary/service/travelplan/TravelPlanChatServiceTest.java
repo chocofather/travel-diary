@@ -2,6 +2,8 @@ package com.example.travlediary.service.travelplan;
 
 import com.example.travlediary.dto.TravelPlanChatEventDto;
 import com.example.travlediary.dto.TravelPlanChatMessageDto;
+import com.example.travlediary.dto.TravelPlanChatReactionDto;
+import com.example.travlediary.dto.TravelPlanChatReactionRow;
 import com.example.travlediary.dto.TravelPlanChatTimelineDto;
 import com.example.travlediary.dto.TravelPlanChatTimelineItemDto;
 import com.example.travlediary.model.TravelPlanPoll;
@@ -37,12 +39,17 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -59,11 +66,16 @@ class TravelPlanChatServiceTest {
     private static final Long PLAN_ID = 42L;
     private static final Long USER_ID = 7L;
     private static final Long MEMBER_ID = 11L;
+    /** 이 사람이 방에 들어온 시각. 이 앞의 대화는 조회 자체에서 빠진다. */
+    private static final Timestamp JOINED_AT = Timestamp.valueOf("2026-09-01 10:00:00");
     private static final Long OTHER_MEMBER_ID = 12L;
     private static final Long MESSAGE_ID = 500L;
 
     @Mock
     private TravelPlanChatMapper travelPlanChatMapper;
+    @Mock
+    private com.example.travlediary.repository.travelplan.TravelPlanChatReactionMapper
+            travelPlanChatReactionMapper;
     @Mock
     private com.example.travlediary.repository.travelplan.TravelPlanPollMapper travelPlanPollMapper;
     @Mock
@@ -82,7 +94,8 @@ class TravelPlanChatServiceTest {
         TravelPlanRoomAccess roomAccess = new TravelPlanRoomAccess(
                 travelPlanMapper, travelPlanItemMapper, travelPlanAlternativeMapper);
         chatService = new TravelPlanChatService(
-                travelPlanChatMapper, travelPlanPollMapper, roomAccess, eventPublisher);
+                travelPlanChatMapper, travelPlanChatReactionMapper, travelPlanPollMapper,
+                roomAccess, eventPublisher);
     }
 
     // ── 보내기 ──────────────────────────────────────────────
@@ -341,7 +354,7 @@ class TravelPlanChatServiceTest {
     void theOldestThingComesFirstOnScreen() {
         givenRoom(TravelPlanRole.MEMBER);
         // DB 는 최신순으로 읽는다
-        when(travelPlanChatMapper.findRecentMessages(PLAN_ID, TravelPlanChatService.PAGE_SIZE))
+        when(travelPlanChatMapper.findRecentMessages(PLAN_ID, JOINED_AT, TravelPlanChatService.PAGE_SIZE))
                 .thenReturn(List.of(messageAt(3L, "셋째", 30), messageAt(2L, "둘째", 20),
                         messageAt(1L, "첫째", 10)));
 
@@ -354,9 +367,9 @@ class TravelPlanChatServiceTest {
     void aCreatedPollSitsInTheConversationWhereItHappened() {
         // 대화 사이에 있었던 일이라 그 시각 자리에 놓인다
         givenRoom(TravelPlanRole.MEMBER);
-        when(travelPlanChatMapper.findRecentMessages(PLAN_ID, TravelPlanChatService.PAGE_SIZE))
+        when(travelPlanChatMapper.findRecentMessages(PLAN_ID, JOINED_AT, TravelPlanChatService.PAGE_SIZE))
                 .thenReturn(List.of(messageAt(2L, "나중 얘기", 30), messageAt(1L, "먼저 얘기", 10)));
-        when(travelPlanPollMapper.findRecentPolls(PLAN_ID, TravelPlanChatService.PAGE_SIZE))
+        when(travelPlanPollMapper.findRecentPolls(PLAN_ID, JOINED_AT, TravelPlanChatService.PAGE_SIZE))
                 .thenReturn(List.of(pollAt(900L, "숙소 위치는?", 20)));
 
         List<TravelPlanChatTimelineItemDto> items =
@@ -377,10 +390,10 @@ class TravelPlanChatServiceTest {
         // 대화 번호만 보고 자르면 그 사이의 투표 알림이 영영 빠진다
         givenRoom(TravelPlanRole.MEMBER);
         when(travelPlanChatMapper.findMessagesBefore(
-                PLAN_ID, 10L, TravelPlanChatService.PAGE_SIZE))
+                PLAN_ID, 10L, JOINED_AT, TravelPlanChatService.PAGE_SIZE))
                 .thenReturn(List.of(messageAt(9L, "아홉", 90), messageAt(8L, "여덟", 80)));
         when(travelPlanPollMapper.findPollsBefore(
-                PLAN_ID, 5L, TravelPlanChatService.PAGE_SIZE))
+                PLAN_ID, 5L, JOINED_AT, TravelPlanChatService.PAGE_SIZE))
                 .thenReturn(List.of(pollAt(4L, "지난 투표", 85)));
 
         TravelPlanChatTimelineDto page = chatService.timeline(principal(), PLAN_ID, 10L, 5L);
@@ -397,11 +410,11 @@ class TravelPlanChatServiceTest {
     void aSideThatRanOutIsNotAskedAgain() {
         givenRoom(TravelPlanRole.MEMBER);
         when(travelPlanChatMapper.findMessagesBefore(
-                PLAN_ID, 10L, TravelPlanChatService.PAGE_SIZE))
+                PLAN_ID, 10L, JOINED_AT, TravelPlanChatService.PAGE_SIZE))
                 .thenReturn(List.of(messageAt(9L, "아홉", 90)));
         // 투표는 더 없다
         when(travelPlanPollMapper.findPollsBefore(
-                PLAN_ID, 5L, TravelPlanChatService.PAGE_SIZE))
+                PLAN_ID, 5L, JOINED_AT, TravelPlanChatService.PAGE_SIZE))
                 .thenReturn(List.of());
 
         TravelPlanChatTimelineDto page = chatService.timeline(principal(), PLAN_ID, 10L, 5L);
@@ -413,7 +426,7 @@ class TravelPlanChatServiceTest {
         chatService.timeline(principal(), PLAN_ID, 9L, null);
         // 두 번째 요청은 투표 쪽을 아예 읽지 않는다(위의 한 번이 전부다)
         verify(travelPlanPollMapper, times(1))
-                .findPollsBefore(anyLong(), anyLong(), anyInt());
+                .findPollsBefore(anyLong(), anyLong(), any(), anyInt());
     }
 
     @Test
@@ -423,9 +436,9 @@ class TravelPlanChatServiceTest {
         for (int index = 0; index < TravelPlanChatService.PAGE_SIZE; index++) {
             fullPage.add(pollAt(900L + index, "투표 " + index, 100 + index));
         }
-        when(travelPlanChatMapper.findRecentMessages(PLAN_ID, TravelPlanChatService.PAGE_SIZE))
+        when(travelPlanChatMapper.findRecentMessages(PLAN_ID, JOINED_AT, TravelPlanChatService.PAGE_SIZE))
                 .thenReturn(List.of());
-        when(travelPlanPollMapper.findRecentPolls(PLAN_ID, TravelPlanChatService.PAGE_SIZE))
+        when(travelPlanPollMapper.findRecentPolls(PLAN_ID, JOINED_AT, TravelPlanChatService.PAGE_SIZE))
                 .thenReturn(fullPage);
 
         assertThat(chatService.timeline(principal(), PLAN_ID, null, null).hasMore()).isTrue();
@@ -449,10 +462,10 @@ class TravelPlanChatServiceTest {
           그래서 투표가 지워지면 다시 읽을 때 알림도 함께 사라진다. 남는 알림이 없다.
         */
         givenRoom(TravelPlanRole.MEMBER);
-        when(travelPlanChatMapper.findRecentMessages(PLAN_ID, TravelPlanChatService.PAGE_SIZE))
+        when(travelPlanChatMapper.findRecentMessages(PLAN_ID, JOINED_AT, TravelPlanChatService.PAGE_SIZE))
                 .thenReturn(List.of(messageAt(1L, "먼저 얘기", 10)));
         // 투표가 지워졌다
-        when(travelPlanPollMapper.findRecentPolls(PLAN_ID, TravelPlanChatService.PAGE_SIZE))
+        when(travelPlanPollMapper.findRecentPolls(PLAN_ID, JOINED_AT, TravelPlanChatService.PAGE_SIZE))
                 .thenReturn(List.of());
 
         assertThat(chatService.timeline(principal(), PLAN_ID, null, null).items())
@@ -464,7 +477,7 @@ class TravelPlanChatServiceTest {
     void nothingAboutThePollIsWrittenIntoTheChatTable() {
         // 알림은 읽을 때 합칠 뿐이다. 투표를 채팅 행으로 옮겨 적지 않는다
         givenRoom(TravelPlanRole.MEMBER);
-        when(travelPlanPollMapper.findRecentPolls(PLAN_ID, TravelPlanChatService.PAGE_SIZE))
+        when(travelPlanPollMapper.findRecentPolls(PLAN_ID, JOINED_AT, TravelPlanChatService.PAGE_SIZE))
                 .thenReturn(List.of(pollAt(900L, "숙소 위치는?", 20)));
 
         chatService.timeline(principal(), PLAN_ID, null, null);
@@ -481,13 +494,340 @@ class TravelPlanChatServiceTest {
         assertThat(TravelPlanChatMessageDto.of(past).displayName()).isEqualTo("쭈니");
     }
 
+    // ── 볼 수 있는 범위 ─────────────────────────────────────
+
+    @Test
+    void newcomersOnlyEverAskForTheTalkSinceTheyJoined() {
+        // 나중에 들어온 사람. 들어온 시각이 조회 기준으로 그대로 내려간다
+        givenRoom(TravelPlanRole.MEMBER);
+
+        chatService.timeline(principal(), PLAN_ID, null, null);
+
+        verify(travelPlanChatMapper).findRecentMessages(
+                PLAN_ID, JOINED_AT, TravelPlanChatService.PAGE_SIZE);
+        verify(travelPlanPollMapper).findRecentPolls(
+                PLAN_ID, JOINED_AT, TravelPlanChatService.PAGE_SIZE);
+        // 기준 없이 방 전체를 읽어 오는 길은 없다
+        verify(travelPlanChatMapper, never()).findRecentMessages(anyLong(), isNull(), anyInt());
+    }
+
+    @Test
+    void scrollingUpNeverReachesBackBeforeTheyJoined() {
+        givenRoom(TravelPlanRole.MEMBER);
+
+        chatService.timeline(principal(), PLAN_ID, 10L, 5L);
+
+        // 앞 페이지도 같은 기준을 함께 건다. 위로 계속 올려도 그 앞은 없다
+        verify(travelPlanChatMapper).findMessagesBefore(
+                PLAN_ID, 10L, JOINED_AT, TravelPlanChatService.PAGE_SIZE);
+        verify(travelPlanPollMapper).findPollsBefore(
+                PLAN_ID, 5L, JOINED_AT, TravelPlanChatService.PAGE_SIZE);
+    }
+
+    @Test
+    void theCountLeavesOutWhatTheyCannotOpen() {
+        // 목록에 나오지 않는 것이 개수에만 잡히면 영영 지워지지 않는 숫자가 된다
+        givenRoom(TravelPlanRole.MEMBER);
+        when(travelPlanChatMapper.findLastReadMessageId(PLAN_ID, MEMBER_ID)).thenReturn(null);
+
+        chatService.unreadCount(principal(), PLAN_ID);
+
+        verify(travelPlanChatMapper).countUnread(PLAN_ID, MEMBER_ID, JOINED_AT, null);
+    }
+
+    @Test
+    void beingOfflineForAWhileLosesNothing() {
+        /*
+          기준은 접속한 시각이 아니라 참여한 시각이다.
+          그래서 참여한 뒤 꺼 두었던 동안의 대화도 다시 들어오면 그대로 온다.
+          (조회 기준이 언제 부르든 늘 같은 JOINED_AT 이라는 것으로 확인한다)
+        */
+        givenRoom(TravelPlanRole.MEMBER);
+
+        chatService.timeline(principal(), PLAN_ID, null, null);
+        chatService.timeline(principal(), PLAN_ID, null, null);
+
+        verify(travelPlanChatMapper, times(2)).findRecentMessages(
+                PLAN_ID, JOINED_AT, TravelPlanChatService.PAGE_SIZE);
+    }
+
+    @Test
+    void theOwnerOfANewRoomSeesItFromTheStart() {
+        /*
+          방을 만든 사람의 OWNER 행은 방과 함께 생기므로 joined_at 이
+          어떤 대화보다 앞선다. 따로 예외를 두지 않아도 처음부터 다 보인다.
+        */
+        givenRoom(TravelPlanRole.OWNER);
+
+        chatService.timeline(principal(), PLAN_ID, null, null);
+
+        verify(travelPlanChatMapper).findRecentMessages(
+                PLAN_ID, JOINED_AT, TravelPlanChatService.PAGE_SIZE);
+    }
+
+    // ── 반응 ────────────────────────────────────────────────
+
+    @Test
+    void aFirstPressLeavesAReaction() {
+        givenRoom(TravelPlanRole.MEMBER);
+        givenReactableMessage();
+        // 지운 것이 없으면 아직 누른 적이 없다는 뜻이다
+        when(travelPlanChatReactionMapper.deleteReaction(MESSAGE_ID, MEMBER_ID, "LIKE"))
+                .thenReturn(0);
+
+        chatService.toggleReaction(principal(), PLAN_ID, MESSAGE_ID, "LIKE");
+
+        verify(travelPlanChatReactionMapper).upsertReaction(MESSAGE_ID, MEMBER_ID, "LIKE");
+    }
+
+    @Test
+    void pressingTheSameOneAgainTakesItBack() {
+        givenRoom(TravelPlanRole.MEMBER);
+        givenReactableMessage();
+        when(travelPlanChatReactionMapper.deleteReaction(MESSAGE_ID, MEMBER_ID, "LIKE"))
+                .thenReturn(1);
+
+        chatService.toggleReaction(principal(), PLAN_ID, MESSAGE_ID, "LIKE");
+
+        // 이미 지웠으므로 다시 넣지 않는다
+        verify(travelPlanChatReactionMapper, never())
+                .upsertReaction(anyLong(), anyLong(), anyString());
+    }
+
+    @Test
+    void pressingAnotherKindReplacesTheOneAlreadyThere() {
+        /*
+          한 사람이 한 메시지에 남길 수 있는 것은 하나뿐이다.
+          HEART 를 눌러 둔 사람이 LAUGH 를 누르면 더하지 않고 그 행을 바꾼다.
+        */
+        givenRoom(TravelPlanRole.MEMBER);
+        givenReactableMessage();
+        // 눌러 둔 것이 HEART 라 LAUGH 로는 지워지지 않는다
+        when(travelPlanChatReactionMapper.deleteReaction(MESSAGE_ID, MEMBER_ID, "LAUGH"))
+                .thenReturn(0);
+
+        chatService.toggleReaction(principal(), PLAN_ID, MESSAGE_ID, "LAUGH");
+
+        // 한 문장으로 바꾼다. 지우고 넣지 않는다
+        verify(travelPlanChatReactionMapper).upsertReaction(MESSAGE_ID, MEMBER_ID, "LAUGH");
+        verify(travelPlanChatReactionMapper, never())
+                .deleteReaction(MESSAGE_ID, MEMBER_ID, "HEART");
+    }
+
+    @Test
+    void changingTheKindNeverLeavesTwoRowsBehind() {
+        givenRoom(TravelPlanRole.MEMBER);
+        givenReactableMessage();
+        when(travelPlanChatReactionMapper.deleteReaction(anyLong(), anyLong(), anyString()))
+                .thenReturn(0);
+
+        chatService.toggleReaction(principal(), PLAN_ID, MESSAGE_ID, "HEART");
+        chatService.toggleReaction(principal(), PLAN_ID, MESSAGE_ID, "LAUGH");
+
+        /*
+          두 번 눌렀어도 남는 행은 하나다.
+          두 번째는 (message_id, member_id) UNIQUE 에 걸려 종류만 바뀐다.
+        */
+        verify(travelPlanChatReactionMapper).upsertReaction(MESSAGE_ID, MEMBER_ID, "HEART");
+        verify(travelPlanChatReactionMapper).upsertReaction(MESSAGE_ID, MEMBER_ID, "LAUGH");
+        // 종류마다 행을 따로 넣는 길은 없다
+        verify(travelPlanChatReactionMapper, times(2))
+                .upsertReaction(anyLong(), anyLong(), anyString());
+    }
+
+    @Test
+    void aReactionNobodyKnowsIsRefused() {
+        givenRoom(TravelPlanRole.MEMBER);
+
+        for (String unknown : new String[]{"THUMBS", "👍", "", "DROP TABLE"}) {
+            assertThatThrownBy(() ->
+                    chatService.toggleReaction(principal(), PLAN_ID, MESSAGE_ID, unknown))
+                    .as("%s", unknown)
+                    .isInstanceOf(TravelPlanValidationException.class);
+        }
+        // 아는 이름이 아니면 메시지를 읽어 보지도 않는다
+        verifyNoInteractions(travelPlanChatReactionMapper);
+    }
+
+    @Test
+    void aMessageFromAnotherRoomIsRefused() {
+        givenRoom(TravelPlanRole.MEMBER);
+        // 방 조건을 함께 걸어 읽으므로 다른 방 번호를 보내면 비어 온다
+        when(travelPlanChatMapper.findByIdAndPlanId(MESSAGE_ID, PLAN_ID)).thenReturn(null);
+
+        assertThatThrownBy(() ->
+                chatService.toggleReaction(principal(), PLAN_ID, MESSAGE_ID, "LIKE"))
+                .isInstanceOf(AccessDeniedException.class);
+
+        verifyNoInteractions(travelPlanChatReactionMapper);
+    }
+
+    @Test
+    void someoneWhoLeftOrWasRemovedCannotReact() {
+        givenActivePlan();
+        // ACTIVE 참여자 조회가 비어 온다(LEFT / REMOVED 는 여기 걸리지 않는다)
+        when(travelPlanMapper.findMemberByPlanAndUser(PLAN_ID, USER_ID, "ACTIVE"))
+                .thenReturn(null);
+
+        assertThatThrownBy(() ->
+                chatService.toggleReaction(principal(), PLAN_ID, MESSAGE_ID, "LIKE"))
+                .isInstanceOf(AccessDeniedException.class);
+
+        verifyNoInteractions(travelPlanChatReactionMapper);
+    }
+
+    @Test
+    void aDeletedMessageTakesNoNewReaction() {
+        givenRoom(TravelPlanRole.MEMBER);
+        TravelPlanChatMessage deleted = reactableMessage();
+        deleted.setDeletedAt(Timestamp.valueOf("2026-09-02 12:00:00"));
+        when(travelPlanChatMapper.findByIdAndPlanId(MESSAGE_ID, PLAN_ID)).thenReturn(deleted);
+
+        assertThatThrownBy(() ->
+                chatService.toggleReaction(principal(), PLAN_ID, MESSAGE_ID, "LIKE"))
+                .isInstanceOf(TravelPlanValidationException.class)
+                .hasMessageContaining("삭제된 메시지");
+
+        // 남아 있는 반응 행도 건드리지 않는다(지움은 tombstone 이다)
+        verifyNoInteractions(travelPlanChatReactionMapper);
+    }
+
+    @Test
+    void talkFromBeforeSomeoneJoinedTakesNoReactionEither() {
+        givenRoom(TravelPlanRole.MEMBER);
+        // 볼 수 없는 대화에는 반응도 할 수 없다
+        TravelPlanChatMessage older = reactableMessage();
+        older.setCreatedAt(Timestamp.valueOf("2026-08-24 17:10:00"));
+        when(travelPlanChatMapper.findByIdAndPlanId(MESSAGE_ID, PLAN_ID)).thenReturn(older);
+
+        assertThatThrownBy(() ->
+                chatService.toggleReaction(principal(), PLAN_ID, MESSAGE_ID, "LIKE"))
+                .isInstanceOf(AccessDeniedException.class);
+
+        verifyNoInteractions(travelPlanChatReactionMapper);
+    }
+
+    @Test
+    void theRoomIsToldWhichMessageChangedButNotHowMany() {
+        givenRoom(TravelPlanRole.MEMBER);
+        givenReactableMessage();
+        when(travelPlanChatReactionMapper.deleteReaction(MESSAGE_ID, MEMBER_ID, "LIKE"))
+                .thenReturn(0);
+
+        chatService.toggleReaction(principal(), PLAN_ID, MESSAGE_ID, "LIKE");
+
+        ArgumentCaptor<TravelPlanChatChangedEvent> captured =
+                ArgumentCaptor.forClass(TravelPlanChatChangedEvent.class);
+        verify(eventPublisher).publishEvent(captured.capture());
+        TravelPlanChatEventDto payload = captured.getValue().payload();
+        assertThat(payload.type()).isEqualTo("MESSAGE_REACTION_CHANGED");
+        assertThat(payload.messageId()).isEqualTo(MESSAGE_ID);
+        /*
+          개수를 싣지 않는다. 받은 쪽이 그것을 더하면 같은 알림이 두 번 왔을 때
+          숫자가 어긋난다. 받은 쪽은 서버에서 요약을 다시 읽는다.
+        */
+        assertThat(payload.message()).isNull();
+    }
+
+    @Test
+    void theSummaryCountsEveryoneAndMarksWhatIPressed() {
+        givenRoom(TravelPlanRole.MEMBER);
+        givenReactableMessage();
+        // 여러 사람이 서로 다른 것을 눌렀고, 내가 누른 것은 그중 하나뿐이다
+        when(travelPlanChatReactionMapper.findSummaries(List.of(MESSAGE_ID), MEMBER_ID))
+                .thenReturn(List.of(
+                        reactionRow(MESSAGE_ID, "HEART", 3, true),
+                        reactionRow(MESSAGE_ID, "LAUGH", 2, false)));
+
+        List<TravelPlanChatReactionDto> reactions =
+                chatService.reactionsOf(principal(), PLAN_ID, MESSAGE_ID);
+
+        assertThat(reactions)
+                .extracting(TravelPlanChatReactionDto::type,
+                        TravelPlanChatReactionDto::emoji,
+                        TravelPlanChatReactionDto::count,
+                        TravelPlanChatReactionDto::reacted)
+                .containsExactly(
+                        tuple("HEART", "❤️", 3, true),
+                        tuple("LAUGH", "😂", 2, false));
+        // 내가 누른 것으로 표시되는 종류는 많아야 하나다
+        assertThat(reactions).filteredOn(TravelPlanChatReactionDto::reacted).hasSize(1);
+    }
+
+    @Test
+    void aWholePageOfTalkAsksForItsReactionsOnlyOnce() {
+        givenRoom(TravelPlanRole.MEMBER);
+        when(travelPlanChatMapper.findRecentMessages(PLAN_ID, JOINED_AT,
+                TravelPlanChatService.PAGE_SIZE))
+                .thenReturn(List.of(messageAt(3L, "셋째", 30), messageAt(2L, "둘째", 20),
+                        messageAt(1L, "첫째", 10)));
+        when(travelPlanChatReactionMapper.findSummaries(anyList(), anyLong()))
+                .thenReturn(List.of(reactionRow(2L, "HEART", 1, true)));
+
+        List<TravelPlanChatTimelineItemDto> items =
+                chatService.timeline(principal(), PLAN_ID, null, null).items();
+
+        // 메시지 수만큼 조회가 나가지 않는다
+        verify(travelPlanChatReactionMapper, times(1))
+                .findSummaries(List.of(3L, 2L, 1L), MEMBER_ID);
+        // 기록을 다시 읽어도 반응이 함께 온다
+        assertThat(items).filteredOn(item -> item.messageId() != null && item.messageId() == 2L)
+                .flatExtracting(TravelPlanChatTimelineItemDto::reactions)
+                .extracting(TravelPlanChatReactionDto::type, TravelPlanChatReactionDto::count)
+                .containsExactly(tuple("HEART", 1));
+        // 아무도 누르지 않은 줄은 빈 목록이다
+        assertThat(items).filteredOn(item -> item.messageId() != null && item.messageId() == 1L)
+                .allSatisfy(item -> assertThat(item.reactions()).isEmpty());
+    }
+
+    @Test
+    void aDeletedMessageShowsNoReactionsEvenIfRowsRemain() {
+        givenRoom(TravelPlanRole.MEMBER);
+        TravelPlanChatMessage deleted = messageAt(4L, "지워진 말", 40);
+        deleted.setDeletedAt(Timestamp.valueOf("2026-09-02 12:00:00"));
+        when(travelPlanChatMapper.findRecentMessages(PLAN_ID, JOINED_AT,
+                TravelPlanChatService.PAGE_SIZE))
+                .thenReturn(List.of(deleted));
+
+        List<TravelPlanChatTimelineItemDto> items =
+                chatService.timeline(principal(), PLAN_ID, null, null).items();
+
+        assertThat(items).singleElement()
+                .satisfies(item -> assertThat(item.reactions()).isEmpty());
+        // 지워진 메시지는 묻지도 않는다
+        verifyNoInteractions(travelPlanChatReactionMapper);
+    }
+
+    private void givenReactableMessage() {
+        when(travelPlanChatMapper.findByIdAndPlanId(MESSAGE_ID, PLAN_ID))
+                .thenReturn(reactableMessage());
+    }
+
+    /** 들어온 뒤에 오간 대화. 반응을 남길 수 있는 상태다. */
+    private TravelPlanChatMessage reactableMessage() {
+        TravelPlanChatMessage message = message(MESSAGE_ID, "숙소 어디가 좋을까?");
+        message.setSenderMemberId(OTHER_MEMBER_ID);
+        message.setCreatedAt(Timestamp.valueOf("2026-09-02 11:00:00"));
+        return message;
+    }
+
+    private TravelPlanChatReactionRow reactionRow(Long messageId, String type,
+                                                  int count, boolean reacted) {
+        TravelPlanChatReactionRow row = new TravelPlanChatReactionRow();
+        row.setMessageId(messageId);
+        row.setReactionType(type);
+        row.setCount(count);
+        row.setReacted(reacted);
+        return row;
+    }
+
     // ── 안 읽은 개수 ────────────────────────────────────────
 
     @Test
     void unreadCountsOnlyWhatCameAfterTheReadMark() {
         givenRoom(TravelPlanRole.MEMBER);
         when(travelPlanChatMapper.findLastReadMessageId(PLAN_ID, MEMBER_ID)).thenReturn(1L);
-        when(travelPlanChatMapper.countUnread(PLAN_ID, MEMBER_ID, 1L)).thenReturn(2);
+        when(travelPlanChatMapper.countUnread(PLAN_ID, MEMBER_ID, JOINED_AT, 1L)).thenReturn(2);
 
         assertThat(chatService.unreadCount(principal(), PLAN_ID)).isEqualTo(2);
     }
@@ -496,7 +836,7 @@ class TravelPlanChatServiceTest {
     void readingUpToTheLatestClearsTheCount() {
         givenRoom(TravelPlanRole.MEMBER);
         when(travelPlanChatMapper.findLastReadMessageId(PLAN_ID, MEMBER_ID)).thenReturn(1L);
-        when(travelPlanChatMapper.countUnread(PLAN_ID, MEMBER_ID, 3L)).thenReturn(0);
+        when(travelPlanChatMapper.countUnread(PLAN_ID, MEMBER_ID, JOINED_AT, 3L)).thenReturn(0);
 
         assertThat(chatService.markRead(principal(), PLAN_ID, 3L)).isZero();
         verify(travelPlanChatMapper).upsertReadPosition(PLAN_ID, MEMBER_ID, 3L);
@@ -618,6 +958,7 @@ class TravelPlanChatServiceTest {
         member.setDisplayName("민준");
         member.setRole(role);
         member.setStatus(TravelPlanMemberStatus.ACTIVE);
+        member.setJoinedAt(JOINED_AT);
         when(travelPlanMapper.findMemberByPlanAndUser(PLAN_ID, USER_ID, "ACTIVE"))
                 .thenReturn(member);
     }

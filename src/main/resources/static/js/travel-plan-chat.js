@@ -50,8 +50,9 @@ document.addEventListener("DOMContentLoaded", () => {
         return window.travelPlanRealtime;
     }
 
+    /* 여닫는 상태는 하나뿐이다. 떠 있는 버튼으로 열고 × 로 닫는다. */
     function isOpen() {
-        return !panel.hidden && !panel.classList.contains("is-minimized");
+        return !panel.hidden;
     }
 
     /** 지금 이 화면이 대화를 실제로 읽고 있는 상태인지. 닫혀 있으면 읽음 처리하지 않는다. */
@@ -151,19 +152,34 @@ document.addEventListener("DOMContentLoaded", () => {
         return menu;
     }
 
+    /**
+     * 대화 한 줄.
+     *
+     * <p>내 것은 오른쪽, 남의 것은 왼쪽에 놓인다. 가르는 것은 class 하나뿐이고
+     * 자리는 CSS 가 잡는다. 보낸 사람 이름과 시각은 늘 만들어 두고,
+     * 어느 것을 보여 줄지는 아래 regroup() 이 이웃한 줄을 보고 정한다.
+     */
     function messageNode(message) {
         const item = document.createElement("li");
         item.className = "travel-plan-chat-message";
         item.setAttribute("data-message-id", message.messageId);
+        // 묶음을 다시 셀 때 쓰는 값. 화면에 글자로 나가지 않는다.
+        item.setAttribute("data-member-id", message.memberId ?? "");
+        if (message.createdAt) item.setAttribute("data-created-at", message.createdAt);
         if (isMine(message)) item.classList.add("is-mine");
         if (message.deleted) item.classList.add("is-deleted");
 
         const sender = document.createElement("p");
         sender.className = "travel-plan-chat-sender";
         // 이름도 사용자가 정한 값이라 그대로 글자로만 넣는다.
-        sender.textContent = isMine(message)
-            ? `${message.displayName} (나)`
-            : message.displayName;
+        // 내 메시지는 오른쪽에 서는 것으로 이미 구분되므로 이름을 적지 않는다.
+        sender.textContent = isMine(message) ? "" : message.displayName;
+
+        const row = document.createElement("div");
+        row.className = "travel-plan-chat-row";
+
+        const bubble = document.createElement("div");
+        bubble.className = "travel-plan-chat-bubble";
 
         const content = document.createElement("p");
         content.className = "travel-plan-chat-content";
@@ -180,11 +196,236 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         time.textContent = timeTextOf(message.createdAt);
 
-        item.append(sender, content, time);
+        const reactions = document.createElement("div");
+        reactions.className = "travel-plan-chat-reactions";
+        reactions.setAttribute("data-travel-plan-chat-reactions", "");
+
+        bubble.append(content);
+        row.append(bubble, time);
+        item.append(sender, row, reactions);
+        if (!message.deleted) {
+            // 지워진 메시지에는 반응을 달 수도, 이미 달린 것을 볼 수도 없다.
+            row.append(reactionPickerOf(message));
+            renderReactions(item, message.reactions);
+        }
         if (isMine(message) && !message.deleted) {
-            item.append(deleteMenuOf(message));
+            row.append(deleteMenuOf(message));
         }
         return item;
+    }
+
+    // ── 반응 ────────────────────────────────────────────────
+
+    /*
+      쓸 수 있는 반응. 서버의 TravelPlanChatReactionType 과 같은 이름을 쓴다.
+      보내는 것은 이름뿐이고, 무엇이 허용되는지는 서버가 다시 본다.
+      전체 이모지 목록(EMOJI_ROWS)과는 다른 자리다.
+    */
+    const REACTION_TYPES = [
+        { type: "LIKE", emoji: "👍" },
+        { type: "HEART", emoji: "❤️" },
+        { type: "LAUGH", emoji: "😂" },
+        { type: "WOW", emoji: "😮" },
+        { type: "SAD", emoji: "😢" },
+        { type: "PARTY", emoji: "🎉" }
+    ];
+
+    function toggleReaction(messageId, reactionType) {
+        realtime()?.reactChatMessage(messageId, reactionType);
+    }
+
+    /** 말풍선 옆의 작은 진입점. 눌러야 여섯 가지가 펼쳐진다 */
+    function reactionPickerOf(message) {
+        const holder = document.createElement("div");
+        holder.className = "travel-plan-chat-react";
+        holder.setAttribute("data-travel-plan-chat-react", "");
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "travel-plan-chat-react-button";
+        button.setAttribute("aria-haspopup", "true");
+        button.setAttribute("aria-expanded", "false");
+        button.setAttribute("aria-label", "반응 남기기");
+        button.textContent = "☺";
+
+        const menu = document.createElement("div");
+        menu.className = "travel-plan-chat-react-menu";
+        menu.hidden = true;
+
+        REACTION_TYPES.forEach(({ type, emoji }) => {
+            const choice = document.createElement("button");
+            choice.type = "button";
+            choice.className = "travel-plan-chat-react-choice";
+            choice.setAttribute("aria-label", type);
+            choice.textContent = emoji;
+            choice.addEventListener("click", event => {
+                event.stopPropagation();
+                menu.hidden = true;
+                button.setAttribute("aria-expanded", "false");
+                toggleReaction(message.messageId, type);
+            });
+            menu.append(choice);
+        });
+
+        button.addEventListener("click", event => {
+            event.stopPropagation();
+            const willOpen = menu.hidden;
+            closeMenus(null);
+            closeReactionMenus(null);
+            menu.hidden = !willOpen;
+            button.setAttribute("aria-expanded", String(willOpen));
+        });
+
+        holder.append(button, menu);
+        return holder;
+    }
+
+    function closeReactionMenus(except) {
+        list.querySelectorAll("[data-travel-plan-chat-react]").forEach(holder => {
+            const menu = holder.querySelector(".travel-plan-chat-react-menu");
+            if (!menu || menu === except) return;
+            menu.hidden = true;
+            holder.querySelector(".travel-plan-chat-react-button")
+                ?.setAttribute("aria-expanded", "false");
+        });
+    }
+
+    /**
+     * 말풍선 아래의 반응 알약.
+     *
+     * <p>서버가 준 요약을 그대로 그린다. 개수를 화면에서 더하거나 빼지 않는다.
+     * 하나도 없으면 그 자리째 비워 둔다.
+     */
+    function renderReactions(item, reactions) {
+        const holder = item.querySelector("[data-travel-plan-chat-reactions]");
+        if (!holder) return;
+        const messageId = item.getAttribute("data-message-id");
+        const summary = Array.isArray(reactions) ? reactions : [];
+
+        holder.replaceChildren(...summary
+            .filter(reaction => reaction && reaction.count > 0)
+            .map(reaction => {
+                const pill = document.createElement("button");
+                pill.type = "button";
+                pill.className = "travel-plan-chat-reaction";
+                if (reaction.reacted) pill.classList.add("is-mine");
+                pill.setAttribute("data-reaction-type", reaction.type);
+                pill.setAttribute("aria-pressed", String(Boolean(reaction.reacted)));
+                pill.setAttribute("aria-label", `${reaction.type} ${reaction.count}`);
+                // 이모지도 개수도 사용자에게 보이는 값이라 글자로만 넣는다.
+                pill.textContent = `${reaction.emoji} ${reaction.count}`;
+                // 알약을 눌러도 같은 반응을 남기거나 거둘 수 있다.
+                pill.addEventListener("click", event => {
+                    event.stopPropagation();
+                    toggleReaction(Number(messageId), reaction.type);
+                });
+                return pill;
+            }));
+    }
+
+    /**
+     * 반응이 달라졌다는 알림을 받았다.
+     *
+     * <p>개수를 더하지 않고 그 메시지의 요약을 서버에서 다시 읽는다.
+     * 그래서 같은 알림이 두 번 와도 숫자가 어긋나지 않는다.
+     */
+    async function refreshReactions(messageId) {
+        const item = nodeOf(messageId);
+        if (!item || item.classList.contains("is-deleted")) return;
+        try {
+            const response = await fetch(
+                `/travel-plans/${planId}/chat/messages/${messageId}/reactions`,
+                { headers: { "X-Requested-With": "XMLHttpRequest" } });
+            if (!response.ok) return;
+            renderReactions(item, (await response.json()).reactions);
+        } catch (error) {
+            // 못 읽어도 대화 자체는 그대로 쓸 수 있어야 한다.
+        }
+    }
+
+    // ── 연속 메시지 묶기 ────────────────────────────────────
+
+    /** 같은 사람이 이만큼 안에 이어서 보내면 한 덩어리로 본다. */
+    const GROUP_WINDOW_MS = 3 * 60 * 1000;
+
+    function timeValueOf(node) {
+        const raw = node.getAttribute("data-created-at");
+        if (!raw) return null;
+        const value = new Date(raw).getTime();
+        return Number.isNaN(value) ? null : value;
+    }
+
+    /** 그 줄이 속한 날. 날짜가 바뀌는 자리에만 구분선을 넣는 데 쓴다. */
+    function dayKeyOf(node) {
+        const value = timeValueOf(node);
+        return value == null ? null : new Date(value).toDateString();
+    }
+
+    function isMessageNode(node) {
+        return node.classList.contains("travel-plan-chat-message");
+    }
+
+    /** 같은 사람이 짧은 사이에 이어서 보낸 줄인지. */
+    function continues(previous, node) {
+        const sender = previous.getAttribute("data-member-id");
+        if (!sender || sender !== node.getAttribute("data-member-id")) return false;
+        const before = timeValueOf(previous);
+        const now = timeValueOf(node);
+        if (before == null || now == null) return false;
+        return now - before <= GROUP_WINDOW_MS;
+    }
+
+    function dateDividerNode(node) {
+        const divider = document.createElement("li");
+        divider.className = "travel-plan-chat-date";
+        divider.setAttribute("data-travel-plan-chat-date", "");
+        const label = document.createElement("span");
+        label.textContent = new Date(timeValueOf(node)).toLocaleDateString("ko-KR", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+            weekday: "short"
+        });
+        divider.append(label);
+        return divider;
+    }
+
+    /**
+     * 이웃한 줄을 보고 묶음을 다시 센다.
+     *
+     * <p>DB 의 메시지를 합치거나 고쳐 쓰지 않는다. 여기서 정하는 것은
+     * 이름을 어느 줄에 보일지, 시각을 어느 줄에 보일지, 날짜 구분선을
+     * 어디에 둘지뿐이다. 그래서 언제 다시 불러도 결과가 같다.
+     *
+     * <p>앞에 끼워 넣은 뒤에도 반드시 다시 부른다. 이어 붙인 자리의
+     * 묶음은 새로 온 줄과 원래 있던 줄을 함께 봐야 정해진다.
+     */
+    function regroup() {
+        list.querySelectorAll("[data-travel-plan-chat-date]").forEach(node => node.remove());
+
+        let previous = null;
+        let previousDay = null;
+        Array.from(list.children).forEach(node => {
+            const day = dayKeyOf(node);
+            if (day && day !== previousDay) {
+                if (previousDay !== null) list.insertBefore(dateDividerNode(node), node);
+                previousDay = day;
+                // 날짜가 바뀌면 묶음도 거기서 끊는다.
+                previous = null;
+            }
+            if (!isMessageNode(node)) {
+                // 투표 알림이 끼면 대화의 묶음도 끊긴다.
+                previous = null;
+                return;
+            }
+
+            const continued = previous !== null && continues(previous, node);
+            node.classList.toggle("is-continued", continued);
+            // 시각은 묶음의 마지막 줄에만 남긴다.
+            if (previous) previous.classList.toggle("is-group-end", !continued);
+            previous = node;
+        });
+        if (previous) previous.classList.add("is-group-end");
     }
 
     /*
@@ -198,6 +439,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const node = document.createElement("li");
         node.className = "travel-plan-chat-notice";
         node.setAttribute("data-poll-notice-id", item.pollId);
+        // 날짜 구분선이 알림 줄도 함께 보고 자리를 잡는다.
+        if (item.createdAt) node.setAttribute("data-created-at", item.createdAt);
 
         const button = document.createElement("button");
         button.type = "button";
@@ -244,7 +487,9 @@ document.addEventListener("DOMContentLoaded", () => {
             memberId: message.memberId,
             displayName: message.displayName,
             content: message.content,
-            deleted: message.deleted
+            deleted: message.deleted,
+            // 갓 도착한 메시지에는 아직 아무 반응도 없다.
+            reactions: []
         };
     }
 
@@ -327,6 +572,7 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             const payload = await fetchTimeline(null, null);
             list.replaceChildren(...payload.items.map(itemNode));
+            regroup();
             rememberCursor(payload);
             loaded = true;
             renderEmptyState();
@@ -354,6 +600,11 @@ document.addEventListener("DOMContentLoaded", () => {
             const payload = await fetchTimeline(beforeMessageId, beforePollId);
             const before = body.scrollHeight;
             list.prepend(...payload.items.map(itemNode));
+            /*
+              묶음을 다시 세면 이름·시각·날짜 줄이 생기거나 사라져 높이가 달라진다.
+              자리를 맞추기 전에 끝내야 보고 있던 메시지가 제자리에 남는다.
+            */
+            regroup();
             body.scrollTop += body.scrollHeight - before;
             rememberCursor(payload);
             renderEmptyState();
@@ -370,6 +621,8 @@ document.addEventListener("DOMContentLoaded", () => {
     function appendItem(node, countsAsNew) {
         const stick = isAtBottom();
         list.append(node);
+        // 앞 줄과 이어지는지는 붙여 놓고 봐야 안다.
+        regroup();
         renderEmptyState();
         if (stick) {
             scrollToBottom();
@@ -421,6 +674,12 @@ document.addEventListener("DOMContentLoaded", () => {
         if (content) content.textContent = "삭제된 메시지입니다.";
         // 지운 뒤에는 메뉴가 필요 없다.
         node.querySelector("[data-travel-plan-chat-menu]")?.remove();
+        /*
+          지워진 메시지에는 반응을 달 수도, 이미 달린 것을 볼 수도 없다.
+          DB 의 반응 행을 지우지는 않는다(지움은 tombstone 이라 그대로 둔다).
+        */
+        node.querySelector("[data-travel-plan-chat-react]")?.remove();
+        node.querySelector("[data-travel-plan-chat-reactions]")?.replaceChildren();
     }
 
     // ── 보내기 ──────────────────────────────────────────────
@@ -453,6 +712,139 @@ document.addEventListener("DOMContentLoaded", () => {
         input.style.height = `${Math.min(input.scrollHeight, 120)}px`;
     }
 
+    // ── 이모지 고르기 ───────────────────────────────────────
+
+    /*
+      자주 쓰는 것과 여행에서 자주 나오는 것만 줄별로 모아 둔다.
+      그림 파일이 아니라 그냥 글자다. 저장·전송·그리기가 지금과 똑같이 흘러간다.
+      (message_type 을 새로 만들지도, 계약을 바꾸지도 않는다)
+    */
+    const EMOJI_ROWS = [
+        ["😀", "😄", "😂", "🥹", "😊", "😍", "😎"],
+        ["👍", "👎", "👏", "🙌", "👌"],
+        ["❤️", "💕", "🔥", "🎉", "✨"],
+        ["😮", "😢", "😭", "😡", "🤔"],
+        ["🍽️", "☕", "🍺", "🏨", "✈️", "🚗", "🚌", "🚆"],
+        ["🌊", "🌸", "⛰️", "🌙", "📸"]
+    ];
+
+    const emojiToggle = panel.querySelector("[data-travel-plan-chat-emoji-toggle]");
+    const emojiPanel = panel.querySelector("[data-travel-plan-chat-emoji-panel]");
+    const recentSection = panel.querySelector("[data-travel-plan-chat-emoji-recent]");
+    const recentGrid = panel.querySelector("[data-travel-plan-chat-emoji-recent-grid]");
+    const allGrid = panel.querySelector("[data-travel-plan-chat-emoji-all]");
+
+    /**
+     * 고른 이모지를 커서 자리에 끼워 넣는다. 보내지는 않는다.
+     *
+     * <p>고르고 있던 구간이 있으면 그 자리를 대신한다.
+     * 넣은 뒤에는 입력칸으로 돌아가고 커서는 넣은 글자 뒤에 선다.
+     */
+    function insertEmoji(emoji) {
+        if (!input) return;
+        const start = input.selectionStart ?? input.value.length;
+        const end = input.selectionEnd ?? start;
+        input.value = input.value.slice(0, start) + emoji + input.value.slice(end);
+        const caret = start + emoji.length;
+        input.focus();
+        input.setSelectionRange(caret, caret);
+        autoResize();
+    }
+
+    /*
+      최근 고른 이모지.
+
+      이 브라우저에만 남는 편의값이다. 서버로 보내지 않고 DB 에도 두지 않는다.
+      (사생활 보호 창이나 저장을 막아 둔 브라우저에서는 읽고 쓰기가 막힌다.
+       그래도 고르는 것 자체는 되어야 하므로 실패는 조용히 넘긴다)
+    */
+    const RECENT_EMOJI_KEY = "travelPlan.chat.recentEmoji";
+    const RECENT_EMOJI_LIMIT = 10;
+
+    function readRecentEmoji() {
+        try {
+            const saved = JSON.parse(window.localStorage.getItem(RECENT_EMOJI_KEY) || "[]");
+            if (!Array.isArray(saved)) return [];
+            // 저장된 값도 남이 고쳐 넣을 수 있다. 글자만 남기고 개수도 다시 자른다.
+            return saved
+                .filter(emoji => typeof emoji === "string" && emoji !== "")
+                .slice(0, RECENT_EMOJI_LIMIT);
+        } catch (error) {
+            return [];
+        }
+    }
+
+    function rememberRecentEmoji(emoji) {
+        // 같은 것을 다시 고르면 두 번 쌓지 않고 맨 앞으로 올린다.
+        const next = [emoji, ...readRecentEmoji().filter(saved => saved !== emoji)]
+            .slice(0, RECENT_EMOJI_LIMIT);
+        try {
+            window.localStorage.setItem(RECENT_EMOJI_KEY, JSON.stringify(next));
+        } catch (error) {
+            // 저장하지 못해도 이번에 고른 것은 그대로 들어간다.
+        }
+        renderRecentEmoji();
+    }
+
+    /** 격자에 놓이는 이모지 한 칸. 어느 격자에 있든 하는 일이 같다. */
+    function emojiButton(emoji) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "travel-plan-chat-emoji-item";
+        button.setAttribute("aria-label", emoji);
+        button.textContent = emoji;
+        button.addEventListener("click", () => {
+            insertEmoji(emoji);
+            rememberRecentEmoji(emoji);
+            closeEmoji();
+        });
+        return button;
+    }
+
+    /** 최근 목록만 다시 그린다. 하나도 없으면 그 구역째 사라진다. */
+    function renderRecentEmoji() {
+        if (!recentGrid || !recentSection) return;
+        const recent = readRecentEmoji();
+        recentSection.hidden = recent.length === 0;
+        recentGrid.replaceChildren(...recent.map(emojiButton));
+    }
+
+    /**
+     * 전체 목록은 한 번만 만든다. 여는 때마다 다시 그리지 않는다.
+     *
+     * <p>위에 줄로 묶어 적어 둔 것은 고르기 쉬우라고 한 것이고,
+     * 화면에서는 한 칸씩 이어 붙여 5칸 격자로 흐른다(칸 나누기는 CSS 가 한다).
+     * 줄마다 상자를 만들면 그 상자가 각자 폭을 잡아 격자가 되지 않는다.
+     */
+    function buildEmojiPanel() {
+        if (!allGrid || allGrid.childElementCount > 0) return;
+        allGrid.append(...EMOJI_ROWS.flat().map(emojiButton));
+    }
+
+    function closeEmoji() {
+        if (!emojiPanel) return;
+        emojiPanel.hidden = true;
+        emojiToggle?.setAttribute("aria-expanded", "false");
+    }
+
+    function openEmoji() {
+        if (!emojiPanel) return;
+        buildEmojiPanel();
+        // 다른 탭에서 고른 것이 있을 수 있어 열 때마다 최근 목록은 다시 읽는다.
+        renderRecentEmoji();
+        emojiPanel.hidden = false;
+        emojiToggle?.setAttribute("aria-expanded", "true");
+    }
+
+    emojiToggle?.addEventListener("click", event => {
+        event.stopPropagation();
+        if (emojiPanel?.hidden) openEmoji();
+        else closeEmoji();
+    });
+
+    // 고르는 중에 바깥을 눌러 닫히지 않도록 창 안의 클릭은 여기서 멈춘다.
+    emojiPanel?.addEventListener("click", event => event.stopPropagation());
+
     // ── 패널 열고 닫기 ──────────────────────────────────────
 
     function closeMenus(except) {
@@ -467,7 +859,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function openPanel() {
         panel.hidden = false;
-        panel.classList.remove("is-minimized");
         toggle?.setAttribute("aria-expanded", "true");
         if (!loaded) {
             loadRecent();
@@ -486,7 +877,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function closePanel() {
         panel.hidden = true;
-        panel.classList.remove("is-minimized");
         toggle?.setAttribute("aria-expanded", "false");
         closeMenus(null);
     }
@@ -501,11 +891,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     panel.querySelector("[data-travel-plan-chat-close]")
         ?.addEventListener("click", () => closePanel());
-
-    panel.querySelector("[data-travel-plan-chat-minimize]")?.addEventListener("click", () => {
-        panel.classList.toggle("is-minimized");
-        if (isReading()) markRead();
-    });
 
     jump?.addEventListener("click", () => {
         scrollToBottom();
@@ -528,7 +913,19 @@ document.addEventListener("DOMContentLoaded", () => {
         if (isReading()) markRead();
     });
 
-    document.addEventListener("click", () => closeMenus(null));
+    document.addEventListener("click", () => {
+        closeMenus(null);
+        closeReactionMenus(null);
+        // 바깥을 누르면 이모지 창도 함께 닫는다.
+        closeEmoji();
+    });
+
+    // Esc 로도 닫힌다. 닫은 뒤에는 쓰던 자리로 돌아간다.
+    document.addEventListener("keydown", event => {
+        if (event.key !== "Escape" || emojiPanel?.hidden !== false) return;
+        closeEmoji();
+        input?.focus();
+    });
 
     // ── 입력 ────────────────────────────────────────────────
 
@@ -565,6 +962,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         if (payload.type === "MESSAGE_DELETED") {
             onMessageDeleted(payload.messageId);
+            return;
+        }
+        if (payload.type === "MESSAGE_REACTION_CHANGED") {
+            refreshReactions(payload.messageId);
         }
     }, payload => {
         if (payload.type === "UNREAD") {

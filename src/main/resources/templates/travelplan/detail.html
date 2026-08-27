@@ -25,6 +25,23 @@
 
         <div class="travel-plan-top-actions">
         <!--
+          방장에게만 있는 관리 액션(확정 / 초대 / 확정 확인 창).
+          방장은 바뀔 수 있으므로 이 자리는 늘 비워 두고 속만 갈아 끼운다.
+          멤버로 그려진 화면에는 안이 비어 있어(구분선까지 함께 비어 온다)
+          공통 액션만 남고, 방장을 넘겨받으면 그때 채워진다.
+        -->
+        <div class="travel-plan-owner-actions" data-travel-plan-owner-actions>
+          <th:block
+              th:replace="~{travelplan/fragments/owner-actions :: ownerActions(
+                  travelPlan=${travelPlan},
+                  travelPlanInviteUrl=${travelPlanInviteUrl},
+                  travelPlanInviteActive=${travelPlanInviteActive},
+                  travelPlanInviteIssued=${travelPlanInviteIssued})}"></th:block>
+        </div>
+
+        <!-- 누구나 쓰는 공통 액션. 방장이든 아니든 늘 같은 자리에 있다 -->
+        <div class="travel-plan-common-actions">
+        <!--
           참여자 목록은 방의 ACTIVE 멤버라면 누구나 본다. 이번 단계는 조회 전용이다.
         -->
         <div class="travel-plan-members" data-travel-plan-members>
@@ -50,45 +67,8 @@
           </div>
         </div>
 
-        <!--
-          채팅. 방의 ACTIVE 멤버라면 OWNER / MEMBER 모두 같다.
-          data-current-member-id 는 방 안에서만 뜻이 있는 값이라 화면에 두어도 된다.
-          내 메시지인지 가리는 데만 쓰고 계정 정보는 오가지 않는다.
-        -->
-        <!--
-          방 번호는 data-chat-plan-id 로 둔다.
-          data-plan-id 를 쓰면 스케줄러/실시간이 찾는 첫 [data-plan-id] 가
-          종이(.travel-plan-paper)가 아니라 이 버튼이 되어 일정 동작이 붙지 않는다.
-        -->
-        <div class="travel-plan-chat" th:if="${travelPlan.currentMember != null}"
-             data-travel-plan-chat
-             th:attr="data-chat-plan-id=${travelPlan.plan.id},
-                      data-current-member-id=${travelPlan.currentMember.id}">
-          <button type="button" class="travel-plan-chat-toggle"
-                  aria-expanded="false" data-travel-plan-chat-toggle>
-            채팅
-            <!-- 안 읽은 개수. 서버에서 받은 값만 넣는다 -->
-            <span class="travel-plan-chat-badge" hidden
-                  data-travel-plan-chat-badge aria-label="안 읽은 메시지">0</span>
-          </button>
         </div>
 
-        <!--
-          방장에게만 있는 것들(확정 / 초대 / 확정 확인 창).
-          방장은 바뀔 수 있으므로 이 자리는 늘 비워 두고 속만 갈아 끼운다.
-          멤버로 그려진 화면에는 안이 비어 있고, 방장을 넘겨받으면 그때 채워진다.
-
-          display: contents 라 이 상자는 자리를 차지하지 않는다.
-          상단 액션 줄의 간격이 지금과 그대로다.
-        -->
-        <div class="travel-plan-owner-actions" data-travel-plan-owner-actions>
-          <th:block
-              th:replace="~{travelplan/fragments/owner-actions :: ownerActions(
-                  travelPlan=${travelPlan},
-                  travelPlanInviteUrl=${travelPlanInviteUrl},
-                  travelPlanInviteActive=${travelPlanInviteActive},
-                  travelPlanInviteIssued=${travelPlanInviteIssued})}"></th:block>
-        </div>
         </div>
       </div>
 
@@ -109,13 +89,31 @@
     <article class="travel-plan-paper" aria-labelledby="travel-plan-detail-title"
              th:attr="data-plan-id=${travelPlan.plan.id}">
 
+      <!-- 여행 제목 / 기간. 관리 액션은 위의 상단 액션 줄에 있다 -->
       <header class="travel-plan-detail-header">
-        <h1 id="travel-plan-detail-title" th:text="${travelPlan.plan.title}">제주도 여행</h1>
-        <p class="travel-plan-detail-period"
-           th:text="${#temporals.format(travelPlan.plan.startDate, 'yyyy.MM.dd')} + ' ~ '
-                    + ${#temporals.format(travelPlan.plan.endDate, 'yyyy.MM.dd')}">
-          2026.09.13 ~ 2026.09.15
-        </p>
+        <div class="travel-plan-detail-heading"
+             th:with="dayCount=${#lists.size(travelPlan.days)}">
+          <!--
+            이 화면은 아직 채워 가는 중인 방에만 열린다.
+            끝난 방은 읽기 전용 최종본(/final)으로 보내므로 여기 오지 않는다.
+          -->
+          <p class="travel-plan-detail-status">
+            <span class="travel-plan-status-dot" aria-hidden="true"></span>계획 중
+          </p>
+          <h1 id="travel-plan-detail-title">
+            <span th:text="${travelPlan.plan.title}">제주도 여행</span>
+            <!-- 하루짜리 여행에 "0박 1일" 이라고 적지 않는다 -->
+            <span class="travel-plan-detail-length" th:if="${dayCount > 0}"
+                  th:text="${dayCount > 1} ? |${dayCount - 1}박 ${dayCount}일| : '당일'">
+              2박 3일
+            </span>
+          </h1>
+          <p class="travel-plan-detail-period"
+             th:text="${#temporals.format(travelPlan.plan.startDate, 'yyyy.MM.dd')} + ' ~ '
+                      + ${#temporals.format(travelPlan.plan.endDate, 'yyyy.MM.dd')}">
+            2026.09.13 ~ 2026.09.15
+          </p>
+        </div>
       </header>
 
       <!--
@@ -135,6 +133,39 @@
       </div>
 
     </article>
+
+    <!--
+      채팅 진입점. 화면 오른쪽 아래에 떠 있는 말풍선 버튼 하나다.
+      방의 ACTIVE 멤버라면 OWNER / MEMBER 모두 같다.
+
+      아래 채팅 패널과 같은 모서리에 놓여 눌렀을 때 그 자리에서 펼쳐진다.
+      패널이 열려 있는 동안에는 겹치지 않게 이 버튼이 내려간다
+      (aria-expanded 를 보고 CSS 가 가린다. 여는/닫는 흐름은 그대로다).
+
+      data-current-member-id 는 방 안에서만 뜻이 있는 값이라 화면에 두어도 된다.
+      내 메시지인지 가리는 데만 쓰고 계정 정보는 오가지 않는다.
+
+      방 번호는 data-chat-plan-id 로 둔다.
+      data-plan-id 를 쓰면 스케줄러/실시간이 찾는 첫 [data-plan-id] 가
+      종이(.travel-plan-paper)가 아니라 이 버튼이 되어 일정 동작이 붙지 않는다.
+    -->
+    <div class="travel-plan-chat" th:if="${travelPlan.currentMember != null}"
+         data-travel-plan-chat
+         th:attr="data-chat-plan-id=${travelPlan.plan.id},
+                  data-current-member-id=${travelPlan.currentMember.id}">
+      <button type="button" class="travel-plan-chat-toggle"
+              aria-expanded="false" aria-label="채팅 열기"
+              data-travel-plan-chat-toggle>
+        <svg class="travel-plan-chat-icon" viewBox="0 0 24 24" aria-hidden="true"
+             fill="none" stroke="currentColor" stroke-width="1.6"
+             stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 11.5a7.5 7.5 0 0 1-10.9 6.7L4.5 19.5l1.3-4A7.5 7.5 0 1 1 20 11.5z"></path>
+        </svg>
+        <!-- 안 읽은 개수. 서버에서 받은 값만 넣는다 -->
+        <span class="travel-plan-chat-badge" hidden
+              data-travel-plan-chat-badge aria-label="안 읽은 메시지">0</span>
+      </button>
+    </div>
 
     <!--
       채팅 패널. 종이 위가 아니라 화면 오른쪽 아래에 따로 떠 있다.
@@ -157,8 +188,7 @@
             <span class="travel-plan-poll-entry-count" hidden
                   data-travel-plan-poll-count>0</span>
           </button>
-          <button type="button" class="travel-plan-chat-header-button"
-                  aria-label="채팅 접기" data-travel-plan-chat-minimize>─</button>
+          <!-- 여닫는 길은 하나뿐이다. 떠 있는 버튼으로 열고 여기서 닫는다 -->
           <button type="button" class="travel-plan-chat-header-button"
                   aria-label="채팅 닫기" data-travel-plan-chat-close>×</button>
         </div>
@@ -198,6 +228,34 @@
           <div class="travel-plan-chat-tool-menu" hidden data-travel-plan-chat-tool-menu>
             <button type="button" class="travel-plan-chat-tool-action"
                     data-travel-plan-poll-open>📊 투표 만들기</button>
+          </div>
+        </div>
+
+        <!--
+          이모지 고르기. 고른 것은 바로 보내지 않고 입력칸 커서 자리에 끼워 넣는다.
+          목록은 스크립트가 글자로만 넣는다(그림 파일도, 새 라이브러리도 쓰지 않는다).
+        -->
+        <div class="travel-plan-chat-emoji" data-travel-plan-chat-emoji>
+          <button type="button" class="travel-plan-chat-tool"
+                  aria-haspopup="true" aria-expanded="false"
+                  title="이모지 선택" aria-label="이모지 선택"
+                  data-travel-plan-chat-emoji-toggle>😊</button>
+          <div class="travel-plan-chat-emoji-panel" hidden
+               role="group" aria-label="이모지 목록"
+               data-travel-plan-chat-emoji-panel>
+            <!--
+              최근에 고른 것. 이 브라우저에만 남는 편의값이라
+              한 번도 고른 적이 없으면 이 구역째 나오지 않는다.
+            -->
+            <section class="travel-plan-chat-emoji-section" hidden
+                     data-travel-plan-chat-emoji-recent>
+              <p class="travel-plan-chat-emoji-label">최근 사용</p>
+              <div class="travel-plan-chat-emoji-grid"
+                   data-travel-plan-chat-emoji-recent-grid></div>
+            </section>
+
+            <div class="travel-plan-chat-emoji-grid"
+                 data-travel-plan-chat-emoji-all></div>
           </div>
         </div>
         <textarea class="travel-plan-chat-input" rows="1" autocomplete="off"

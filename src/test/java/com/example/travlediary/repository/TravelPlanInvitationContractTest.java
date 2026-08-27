@@ -233,7 +233,7 @@ class TravelPlanInvitationContractTest {
                 .contains("th:if=\"${viewerIsOwner}\"")
                 .contains("data-travel-plan-invite")
                 .contains(">초대</button>");
-        // 상단 액션 줄 안의 방장 자리에 놓인다
+        // 여행 제목 옆의 방장 관리 자리에 놓인다
         assertThat(detail)
                 .contains("class=\"travel-plan-page-top-row\"")
                 .contains("data-travel-plan-owner-actions");
@@ -273,7 +273,7 @@ class TravelPlanInvitationContractTest {
                 .contains("th:unless=\"${travelPlanInviteActive}\"")
                 .contains("/invitations/regenerate|}")
                 .contains("/invitations/disable|}")
-                .contains("새 링크 재발급")
+                .contains("새 링크 만들기")
                 .contains(">초대 링크 비활성화</button>")
                 .contains(">초대 링크 만들기</button>")
                 .contains("새 링크를 발급하면 기존 초대 링크는 더 이상 사용할 수 없습니다.");
@@ -335,14 +335,77 @@ class TravelPlanInvitationContractTest {
                 .contains("${#temporals.format(travelPlanInvitePreview.endDate, 'yyyy.MM.dd')}")
                 // 정원은 서버가 내려 준 값을 쓴다 (화면에 8을 박지 않는다)
                 .contains("*{memberCount} + '/' + *{memberLimit}")
-                .contains("*{ownerDisplayName}")
-                // 대표 이미지가 없으면 깨진 img 대신 단색 자리를 쓴다 (목록과 같은 관례)
-                .contains("${#strings.isEmpty(travelPlanInvitePreview.representativeImageUrl)}");
+                // 누가 불렀는지는 방에서 쓰는 이름으로만 알린다
+                .contains("travelPlanInvitePreview.ownerDisplayName")
+                .contains("님이 여행계획에 초대했어요.");
+
+        // 대표 이미지 데이터가 없다. 큰 빈 사각형을 만들어 두지 않는다
+        assertThat(preview)
+                .doesNotContain("representativeImageUrl")
+                .doesNotContain("travel-plan-invite-thumb")
+                .doesNotContain("<img");
+        assertThat(resource("/static/css/travel-plan.css"))
+                .doesNotContain(".travel-plan-invite-thumb");
 
         // 회원 개인정보는 화면에 없다
         for (String personal : new String[]{"email", "username", "nickname", "이메일", "아이디"}) {
             assertThat(preview).as("개인정보 노출: %s", personal).doesNotContain(personal);
         }
+    }
+
+    @Test
+    void theInvitePanelReadsLikeAskingAFriendNotAnAdminTool() throws IOException {
+        String panel = ownerActionsHtml();
+        String css = resource("/static/css/travel-plan.css");
+
+        // 무엇을 하는 곳인지 먼저 한 줄로 말한다
+        assertThat(panel).contains("친구에게 링크를 보내 여행계획에 초대하세요.");
+        // 흰 바탕에 중립 선. 주소가 답답하지 않을 만큼 넓다
+        String panelCss = between(css, ".travel-plan-invite-panel {", "}");
+        assertThat(panelCss)
+                .contains("background: #fff")
+                .contains("border: 1px solid var(--tp-plan-line)")
+                .contains("width: 380px");
+        // 주소 칸은 옅은 gray-blue
+        assertThat(between(css, ".travel-plan-invite-url {", "}"))
+                .contains("background: #f5f8fa");
+    }
+
+    @Test
+    void onlyTurningTheLinkOffIsColouredAsAWarning() throws IOException {
+        String css = resource("/static/css/travel-plan.css");
+
+        // 새 링크 만들기는 그냥 보조 액션이다
+        assertThat(css).contains(
+                ".travel-plan-invite-action {\n    color: var(--tp-plan-ink-soft);\n}");
+        // 되돌리기 어려운 것 하나만 가라앉은 붉은색이다
+        assertThat(css).contains(".travel-plan-invite-off {\n    color: #9a6b66;\n}");
+        // 복사는 작은 secondary 다
+        assertThat(between(css, ".travel-plan-invite-copy {", "}"))
+                .contains("background: #fff")
+                .contains("font-size: 12px");
+    }
+
+    @Test
+    void theJoinScreenLeadsWithWhoInvitedYou() throws IOException {
+        String preview = resource("/templates/travelplan/invitation-preview.html");
+        String css = resource("/static/css/travel-plan.css");
+
+        assertThat(preview)
+                .contains("함께 계획하기 초대")
+                .contains("travel-plan-invite-period")
+                .contains("travel-plan-invite-from")
+                // 참여 인원 / 기간은 읽기 쉬운 줄로만 둔다
+                .contains("travel-plan-invite-meta-row")
+                .contains(">참여 인원</dt>")
+                .contains(">기간</dt>")
+                .contains("|${dayCount - 1}박 ${dayCount}일|");
+        // 흰 종이 + 연한 중립 선, 포인트는 아주 약한 accent 뿐이다
+        assertThat(between(css, ".travel-plan-invite-from {", "}"))
+                .contains("background: var(--tp-plan-accent-soft)")
+                .contains("border: 1px solid var(--tp-plan-accent-line)");
+        assertThat(between(css, ".travel-plan-invite-meta-row {", "}"))
+                .contains("border-bottom: 1px solid var(--tp-plan-line)");
     }
 
     @Test

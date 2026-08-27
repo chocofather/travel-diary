@@ -27,26 +27,28 @@
              th:object="${travelPlanInvitePreview}">
       <p class="travel-plan-invite-eyebrow">함께 계획하기 초대</p>
       <h1 class="travel-plan-invite-title" th:text="*{title}">제주도 여행</h1>
+      <p class="travel-plan-invite-period"
+         th:text="${#temporals.format(travelPlanInvitePreview.startDate, 'yyyy.MM.dd')} + ' ~ '
+                  + ${#temporals.format(travelPlanInvitePreview.endDate, 'yyyy.MM.dd')}">
+        2026.09.13 ~ 2026.09.15
+      </p>
 
-      <div class="travel-plan-invite-thumb"
-           th:if="${#strings.isEmpty(travelPlanInvitePreview.representativeImageUrl)}"
-           aria-hidden="true"></div>
-      <img class="travel-plan-invite-thumb"
-           th:unless="${#strings.isEmpty(travelPlanInvitePreview.representativeImageUrl)}"
-           th:src="*{representativeImageUrl}" alt="">
+      <!-- 누가 불렀는지가 이 화면에서 가장 먼저 읽혀야 한다 -->
+      <p class="travel-plan-invite-from"
+         th:text="|${travelPlanInvitePreview.ownerDisplayName}님이 여행계획에 초대했어요.|">
+        민준님이 여행계획에 초대했어요.
+      </p>
 
-      <dl class="travel-plan-invite-meta">
-        <dt>여행 기간</dt>
-        <dd th:text="${#temporals.format(travelPlanInvitePreview.startDate, 'yyyy.MM.dd')} + ' ~ '
-                     + ${#temporals.format(travelPlanInvitePreview.endDate, 'yyyy.MM.dd')}">
-          2026.09.13 ~ 2026.09.15
-        </dd>
-
-        <dt>참여 인원</dt>
-        <dd th:text="*{memberCount} + '/' + *{memberLimit}">3/8</dd>
-
-        <dt>만든 사람</dt>
-        <dd th:text="*{ownerDisplayName}">민준</dd>
+      <dl class="travel-plan-invite-meta" th:with="dayCount=*{dayCount}">
+        <div class="travel-plan-invite-meta-row">
+          <dt>참여 인원</dt>
+          <dd th:text="*{memberCount} + '/' + *{memberLimit}">3/8</dd>
+        </div>
+        <div class="travel-plan-invite-meta-row">
+          <dt>기간</dt>
+          <!-- 하루짜리 여행에 "0박 1일" 이라고 적지 않는다 -->
+          <dd th:text="${dayCount > 1} ? |${dayCount - 1}박 ${dayCount}일| : '당일'">2박 3일</dd>
+        </div>
       </dl>
 
       <p class="travel-plan-alert" th:if="${travelPlanError}"

@@ -311,15 +311,33 @@ document.addEventListener("DOMContentLoaded", () => {
         // (.is-editing 으로 표시하면 정식 갱신이 영원히 미뤄진다)
         line.classList.add("is-remote-editing");
 
+        /*
+          남이 이 자리에 새 일정을 쓰는 중이면 "+ 일정 추가" 는 내려 둔다.
+          작성 중이라는 말과 추가하라는 말이 한자리에 함께 있으면 뜻이 어긋난다.
+          이 표시는 lock 이 살아 있는 동안에만 붙고 clearRemote 가 걷어 낸다.
+        */
+        if (lock.mode === "ADD") {
+            line.classList.add("is-remote-adding");
+        }
+
         let note = line.querySelector("[data-travel-plan-remote-note]");
         if (!note) {
             note = document.createElement("p");
             note.className = "travel-plan-remote-note";
             note.setAttribute("data-travel-plan-remote-note", "");
             const body = line.querySelector(".travel-plan-line-body")
-                || line.querySelector(".travel-plan-alt-body")
-                || line;
-            body.prepend(note);
+                || line.querySelector(".travel-plan-alt-body");
+            if (body) {
+                body.prepend(note);
+            } else {
+                /*
+                  추가 슬롯에는 본문 칸이 따로 없다.
+                  내려 둔 "+ 일정 추가" 자리에 그대로 넣어야 글자가 같은 줄에 선다.
+                */
+                const hint = line.querySelector(".travel-plan-slot-hint");
+                if (hint) hint.insertAdjacentElement("afterend", note);
+                else line.prepend(note);
+            }
         }
 
         // 대안은 조건과 내용 두 줄을 함께 보여 준다. 서버가 준 값을 그대로 쓴다.
@@ -348,6 +366,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const line = lineOf(lock);
         if (line) {
             line.classList.remove("is-remote-editing");
+            // 자리가 풀렸으니 "+ 일정 추가" 가 다시 나온다.
+            line.classList.remove("is-remote-adding");
             line.querySelector("[data-travel-plan-remote-note]")?.remove();
         }
         if (lock && (lock.mode === "ALT_ADD" || lock.mode === "ALT_EDIT")) {
@@ -548,6 +568,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
         deleteChatMessage(messageId) {
             return publishChat("delete", { messageId });
+        },
+
+        /**
+         * 반응 남기기 / 거두기. 같은 것을 다시 보내면 거둔다(가르는 것은 서버다).
+         * 누가 눌렀는지도 지금 개수도 보내지 않는다.
+         */
+        reactChatMessage(messageId, reactionType) {
+            return publishChat("react", { messageId, reactionType });
         },
 
         /** @param lastReadMessageId 없으면 서버가 이 방의 마지막 메시지로 본다 */

@@ -34,17 +34,19 @@ class TravelPlanFinalizeUiContractTest {
     }
 
     @Test
-    void itSitsAmongTheOtherSmallTopActions() throws IOException {
+    void itLeadsTheTopActionRowAheadOfTheCommonOnes() throws IOException {
         String detail = detailHtml();
         String topActions = between(detail, "class=\"travel-plan-top-actions\"",
                 "class=\"travel-plan-notice\"");
 
-        // 참여자 / 채팅 / 초대와 같은 줄에 있다(방장 자리가 그 줄 안에 놓인다)
-        assertThat(topActions).contains("data-travel-plan-owner-actions");
+        // 한 줄 안에서 방장 액션이 먼저, 그 다음이 참여자/채팅이다
+        assertThat(topActions)
+                .contains("data-travel-plan-owner-actions")
+                .contains("travel-plan-common-actions");
+        assertThat(topActions.indexOf("data-travel-plan-owner-actions"))
+                .as("방장 액션이 공통 액션보다 앞에 온다")
+                .isLessThan(topActions.indexOf("travel-plan-common-actions"));
         assertThat(ownerActionsHtml()).contains("data-travel-plan-finalize");
-        // 그 자리 자체는 칸을 차지하지 않아 줄 간격이 지금과 같다
-        assertThat(between(cssFile(), ".travel-plan-owner-actions {", "}"))
-                .contains("display: contents");
         // 크게 튀는 위험 버튼으로 두지 않는다. 다른 보조 액션과 같은 크기다
         String toggle = between(cssFile(), ".travel-plan-finalize-toggle {", "}");
         assertThat(toggle)
@@ -53,6 +55,32 @@ class TravelPlanFinalizeUiContractTest {
         assertThat(between(cssFile(), ".travel-plan-members-toggle {", "}"))
                 .contains("padding: 4px 10px")
                 .contains("font-size: 13px");
+    }
+
+    @Test
+    void aLineSeparatesWhatOnlyTheOwnerCanDo() throws IOException {
+        // 구분선이 방장 조각 안에 있어 멤버 화면에서는 선까지 함께 사라진다
+        assertThat(ownerActionsHtml()).contains("class=\"travel-plan-action-divider\"");
+        assertThat(detailHtml()).doesNotContain("travel-plan-action-divider");
+        assertThat(between(cssFile(), ".travel-plan-action-divider {", "}"))
+                .contains("width: 1px")
+                .contains("background: var(--tp-plan-line-strong)");
+    }
+
+    @Test
+    void aMemberSeesNoManagementAreaAtAll() throws IOException {
+        // 조각이 통째로 비어서 오므로 그 자리에 아무 것도 남지 않는다
+        assertThat(between(ownerActionsHtml(), "th:fragment=\"ownerActions", "</th:block>"))
+                .contains("th:if=\"${viewerIsOwner}\"");
+        // 빈 자리가 칸을 차지하지 않게 gap 만 가진 flex 다
+        assertThat(between(cssFile(), ".travel-plan-owner-actions {", "}"))
+                .contains("display: flex")
+                .doesNotContain("padding")
+                .doesNotContain("border");
+        // 상세 화면에는 방장 전용 markup 이 남아 있지 않다
+        assertThat(detailHtml())
+                .doesNotContain("data-travel-plan-invite-toggle")
+                .doesNotContain("data-travel-plan-finalize-open");
     }
 
     // ── 확인 창 ─────────────────────────────────────────────
