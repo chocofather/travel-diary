@@ -63,11 +63,33 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     /*
+      완료된 방에서 목록으로 돌아간다.
+
+      확정한 방장도, 그 방을 열어 두고 있던 다른 참여자도 같은 곳으로 간다.
+      다 끝난 방에 남아 있을 이유가 없고, 완료된 여행은 목록에서 눌러
+      최종본으로 들어간다(여기서 최종본으로 바로 보내지 않는다).
+
+      옮겨 가는 사이에도 고칠 수 없도록 먼저 읽기 전용으로 바꾼다.
+      같은 알림이 두 번 와도 한 번만 움직인다.
+    */
+    let leaving = false;
+
+    function leaveToList() {
+        if (leaving) return;
+        leaving = true;
+        markCompleted();
+        window.location.href = "/travel-plans";
+    }
+
+    /*
       완료 알림은 방에 있는 모두가 받는다.
       확정 버튼은 방장에게만 있으므로, 아래 준비보다 먼저 붙여 두어야
-      멤버 화면도 똑같이 읽기 전용으로 바뀐다.
+      멤버 화면도 방장과 똑같이 목록으로 돌아간다.
+
+      이 스크립트는 방 화면에만 실린다. 다른 곳을 보고 있는 사람은
+      이 알림을 받지 않으므로 보던 화면에서 끌려 나가지 않는다.
     */
-    document.addEventListener("travelplan:plan-completed", () => markCompleted());
+    document.addEventListener("travelplan:plan-completed", () => leaveToList());
 
     /*
       여기부터는 확정하는 쪽의 준비다. 방장 화면에만 있다.
@@ -257,11 +279,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
             /*
-              완료됐다. 이 화면도 더 이상 고칠 수 없는 상태가 된다.
-              같은 방의 다른 사람은 방 알림으로 같은 처리를 받는다.
+              완료됐다. 이 화면은 목록으로 돌아간다.
+              같은 방을 열어 두고 있던 다른 사람은 방 알림으로 같은 곳으로 간다.
             */
             closeModal();
-            markCompleted();
+            leaveToList();
         } catch (error) {
             showError(null);
         } finally {

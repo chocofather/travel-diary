@@ -20,11 +20,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const MIN_OPTIONS = 2;
     const MAX_OPTIONS = 10;
 
+    /* 들어오는 길은 채팅 머리글의 [투표] 하나뿐이다. */
     const entry = document.querySelector("[data-travel-plan-poll-entry]");
     const entryCount = document.querySelector("[data-travel-plan-poll-count]");
-    const tool = document.querySelector("[data-travel-plan-chat-tool]");
-    const toolMenu = document.querySelector("[data-travel-plan-chat-tool-menu]");
-    const createFromTool = document.querySelector("[data-travel-plan-poll-open]");
 
     const title = modal.querySelector("[data-travel-plan-poll-modal-title]");
     const listView = modal.querySelector("[data-travel-plan-poll-list-view]");
@@ -65,24 +63,6 @@ document.addEventListener("DOMContentLoaded", () => {
     function realtime() {
         return window.travelPlanRealtime;
     }
-
-    // ── 도구 메뉴 ───────────────────────────────────────────
-
-    function closeToolMenu() {
-        if (!toolMenu) return;
-        toolMenu.hidden = true;
-        tool?.setAttribute("aria-expanded", "false");
-    }
-
-    tool?.addEventListener("click", event => {
-        event.stopPropagation();
-        if (!toolMenu) return;
-        const willOpen = toolMenu.hidden;
-        toolMenu.hidden = !willOpen;
-        tool.setAttribute("aria-expanded", String(willOpen));
-    });
-
-    document.addEventListener("click", () => closeToolMenu());
 
     // ── 선택지 줄 ───────────────────────────────────────────
 
@@ -205,14 +185,14 @@ document.addEventListener("DOMContentLoaded", () => {
         question?.focus();
     }
 
-    function openModal(createFirst) {
-        closeToolMenu();
+    /*
+      창은 언제나 목록에서 시작한다.
+      만들기 화면으로 바로 여는 길은 두지 않는다.
+      새 투표는 이 창 안의 [투표 만들기] 에서 이어 간다.
+    */
+    function openModal() {
         modal.hidden = false;
-        if (createFirst) {
-            showCreateView();
-        } else {
-            showListView();
-        }
+        showListView();
         /*
           열 때 지금 상태를 한 번 맞춘다.
           보고 있는 탭의 목록과, 두 탭의 숫자를 함께 읽는다.
@@ -228,8 +208,7 @@ document.addEventListener("DOMContentLoaded", () => {
         resetForm();
     }
 
-    entry?.addEventListener("click", () => openModal(false));
-    createFromTool?.addEventListener("click", () => openModal(true));
+    entry?.addEventListener("click", () => openModal());
     modal.querySelector("[data-travel-plan-poll-close]")
         ?.addEventListener("click", () => closeModal());
     modal.querySelector("[data-travel-plan-poll-create-open]")
@@ -851,7 +830,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // 채팅의 "새 투표를 만들었어요" 를 누르면 여기가 열린다.
     document.addEventListener("travelplan:poll-center-open", event => {
         const pollId = event.detail?.pollId;
-        openModal(false);
+        openModal();
         // 어떤 투표인지 알면 그 상세로 바로 들어간다.
         if (pollId != null) openDetail(pollId);
     });

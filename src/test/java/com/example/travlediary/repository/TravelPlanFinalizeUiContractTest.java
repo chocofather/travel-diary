@@ -256,10 +256,34 @@ class TravelPlanFinalizeUiContractTest {
                 .contains("/travel-plans/${planId}/finalize?force=${force}")
                 .contains("method: \"POST\"")
                 .contains("csrfHeaders()")
-                .contains("markCompleted()");
+                // 성공하면 이 화면은 목록으로 돌아간다
+                .contains("leaveToList()");
         // 실패하면 창을 열어 둔 채 사유만 알린다
         assertThat(between(finalizeJs, "async function finalizePlan()", "\n    }"))
                 .contains("showError(payload?.message)");
+    }
+
+    @Test
+    void everyoneInTheRoomGoesBackToTheListTheSameMoment() throws IOException {
+        String finalizeJs = finalizeJs();
+
+        /*
+          확정한 방장도, 그 방을 열어 두고 있던 다른 참여자도 목록으로 돌아간다.
+          최종본으로 바로 보내지 않는다. 완료된 여행은 목록에서 눌러 들어간다.
+        */
+        String leave = between(finalizeJs, "function leaveToList()", "\n    }");
+        assertThat(leave)
+                .contains("window.location.href = \"/travel-plans\"")
+                .doesNotContain("/final");
+        // 같은 알림이 두 번 와도 한 번만 움직인다
+        assertThat(leave).contains("if (leaving) return");
+        // 옮겨 가는 사이에도 고칠 수 없다
+        assertThat(leave).contains("markCompleted()");
+        assertThat(finalizeJs)
+                .contains("document.addEventListener(\"travelplan:plan-completed\","
+                        + " () => leaveToList())");
+        assertThat(resource("/static/js/travel-plan-realtime.js"))
+                .contains("payload.type === \"PLAN_COMPLETED\"");
     }
 
     @Test
@@ -270,14 +294,10 @@ class TravelPlanFinalizeUiContractTest {
         assertThat(between(finalizeJs, "function markCompleted()", "\n    }"))
                 .contains("planner.classList.add(\"is-completed\")")
                 .contains("여행 계획이 완료되었어요.");
-        // 새로고침하지 않는다
-        assertThat(finalizeJs)
-                .doesNotContain("location.reload")
-                .doesNotContain("location.href =");
+        // 다시 읽어 오지 않는다. 이 화면은 그대로 잠기고 목록으로 넘어간다
+        assertThat(finalizeJs).doesNotContain("location.reload");
         // 다른 사람도 같은 처리를 받는다
         assertThat(finalizeJs).contains("travelplan:plan-completed");
-        assertThat(resource("/static/js/travel-plan-realtime.js"))
-                .contains("payload.type === \"PLAN_COMPLETED\"");
         // 완료된 뒤에는 줄을 눌러도 편집기가 열리지 않는다
         assertThat(css).contains(".travel-plan-paper.is-completed");
     }

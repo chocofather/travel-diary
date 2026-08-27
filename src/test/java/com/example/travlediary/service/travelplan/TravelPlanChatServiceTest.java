@@ -312,6 +312,37 @@ class TravelPlanChatServiceTest {
     }
 
     @Test
+    void aDeleteWithoutAMessageNumberSaysSoInItsOwnWords() {
+        /*
+          화면이 어느 메시지인지 못 보낸 경우와, 남의 메시지를 지우려는 경우는
+          원인이 전혀 다르다. 두 문구가 같으면 화면 오류를 권한 문제로 잘못 읽는다.
+          (실제로 삭제가 번호를 못 넘기던 때 "권한" 쪽을 먼저 뒤지게 만들었다)
+        */
+        givenRoom(TravelPlanRole.MEMBER);
+
+        assertThatThrownBy(() -> chatService.deleteMessage(principal(), PLAN_ID, null))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessage("지울 수 없는 메시지입니다.");
+
+        // 번호가 없으면 지우려는 시도조차 하지 않는다
+        verify(travelPlanChatMapper, never())
+                .markMessageDeleted(anyLong(), anyLong(), anyLong());
+        verify(eventPublisher, never()).publishEvent(any(Object.class));
+    }
+
+    @Test
+    void beingRefusedAsSomeoneElsesMessageSaysSomethingDifferent() {
+        givenRoom(TravelPlanRole.MEMBER);
+        when(travelPlanChatMapper.markMessageDeleted(MESSAGE_ID, PLAN_ID, MEMBER_ID)).thenReturn(0);
+        when(travelPlanChatMapper.findByIdAndPlanId(MESSAGE_ID, PLAN_ID))
+                .thenReturn(messageOf(OTHER_MEMBER_ID, null));
+
+        assertThatThrownBy(() -> chatService.deleteMessage(principal(), PLAN_ID, MESSAGE_ID))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessage("내가 보낸 메시지만 지울 수 있습니다.");
+    }
+
+    @Test
     void deletingTwiceIsQuietlyAccepted() {
         // 이미 지워져 있으면 화면도 이미 지움으로 보이고 있다. 두 번째 알림은 내보내지 않는다
         givenRoom(TravelPlanRole.MEMBER);

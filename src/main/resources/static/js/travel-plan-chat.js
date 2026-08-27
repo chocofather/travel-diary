@@ -110,8 +110,17 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    /** 지운 메시지에는 메뉴를 달지 않는다. 남의 메시지에도 달지 않는다. */
-    function deleteMenuOf(message) {
+    /**
+     * 지운 메시지에는 메뉴를 달지 않는다. 남의 메시지에도 달지 않는다.
+     *
+     * <p>메시지 객체가 아니라 번호만 받는다. 기록에서 온 줄과 실시간으로 온 줄은
+     * 담긴 필드 이름이 서로 달라(messageId / id), 여기서 객체를 다시 뒤지면
+     * 한쪽에서 undefined 가 나가 서버가 어느 메시지인지 알 수 없게 된다.
+     * 어느 번호를 지울지는 부르는 쪽에서 정해 넘긴다.
+     *
+     * @param messageId 지울 메시지 번호
+     */
+    function deleteMenuOf(messageId) {
         const menu = document.createElement("div");
         menu.className = "travel-plan-chat-menu";
         menu.setAttribute("data-travel-plan-chat-menu", "");
@@ -136,7 +145,7 @@ document.addEventListener("DOMContentLoaded", () => {
             panelEl.hidden = true;
             button.setAttribute("aria-expanded", "false");
             if (!window.confirm("이 메시지를 삭제할까요?")) return;
-            realtime()?.deleteChatMessage(message.id);
+            realtime()?.deleteChatMessage(messageId);
         });
 
         button.addEventListener("click", event => {
@@ -209,7 +218,8 @@ document.addEventListener("DOMContentLoaded", () => {
             renderReactions(item, message.reactions);
         }
         if (isMine(message) && !message.deleted) {
-            row.append(deleteMenuOf(message));
+            // 줄에 적어 둔 것과 같은 번호를 넘긴다.
+            row.append(deleteMenuOf(message.messageId));
         }
         return item;
     }
@@ -650,6 +660,13 @@ document.addEventListener("DOMContentLoaded", () => {
         }), true);
     }
 
+    /**
+     * 방으로 온 새 메시지.
+     *
+     * <p>여기 오는 것은 서버가 보낸 원본(TravelPlanChatMessageDto)이라 번호가 id 다.
+     * 기록에서 오는 줄은 messageId 라 이름이 다르므로, 화면에 넣기 전에
+     * messageItem() 이 둘을 같은 모양으로 맞춘다. 그 뒤로는 messageId 하나만 쓴다.
+     */
     function onMessageCreated(message) {
         if (!message) return;
         // 아직 기록을 읽지 않았다면 그릴 자리가 없다. 열 때 서버에서 통째로 받는다.

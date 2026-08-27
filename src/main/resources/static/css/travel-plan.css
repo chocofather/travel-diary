@@ -2105,7 +2105,15 @@
     flex-direction: column;
     /* 좁은 화면에서도 밖으로 넘치지 않게 남은 폭 안에서만 커진다 */
     width: min(420px, calc(100vw - 56px));
-    max-height: min(560px, calc(100vh - 56px));
+    /*
+      대화가 하나도 없어도 같은 크기로 열린다.
+      높이를 정해 두지 않으면 내용만큼만 자라서, 첫 메시지를 보내기 전에는
+      작은 말풍선 하나짜리 팝업처럼 보인다.
+      메시지가 많아져도 패널은 그대로고 가운데 칸만 넘긴다.
+    */
+    height: 500px;
+    /* 화면이 낮으면 그 안으로 줄어든다. 잘려서 밖으로 나가지 않는다 */
+    max-height: calc(100vh - 56px);
     border: 1px solid var(--tp-chat-line);
     border-radius: 8px;
     /* 종이(미세한 warm-white)와 다른 cool gray 라 한 겹 위에 있는 것이 보인다 */
@@ -2152,7 +2160,9 @@
     }
 }
 
+/* 머리글과 입력줄은 제자리에 남고, 넘기는 것은 가운데 대화 칸뿐이다 */
 .travel-plan-chat-header {
+    flex: 0 0 auto;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -2192,8 +2202,17 @@
     color: var(--tp-plan-ink-soft);
 }
 
+/*
+  넘기는 것은 이 칸뿐이다. 남는 높이를 전부 가져간다.
+
+  세로 flex 라 대화가 없을 때 안내 글이 auto 여백으로 가운데에 선다.
+  대화가 있으면 그 안내는 [hidden] 이라 자리를 차지하지 않고,
+  줄 목록이 위에서부터 쌓이는 것도 지금과 같다.
+*/
 .travel-plan-chat-body {
     flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
     min-height: 0;
     padding: 12px;
     overflow-y: auto;
@@ -2201,22 +2220,32 @@
 }
 
 /* 더 가져올 이전 대화가 없을 때만 위에 조용히 놓인다 */
+/* 기록의 맨 앞이라는 표시라 대화 위에 그대로 남는다. 가운데로 내리지 않는다 */
 .travel-plan-chat-start {
+    flex: 0 0 auto;
     margin: 0 0 12px;
     color: var(--tp-plan-ink-faint);
     font-size: 12px;
     text-align: center;
 }
 
+/*
+  대화가 하나도 없을 때만 나온다.
+  위아래 auto 여백으로 빈 칸 가운데에 서서, 맨 위에 붙어 보이지 않는다.
+  아래쪽을 조금 더 크게 두어 눈높이보다 살짝 위에 놓인다.
+*/
 .travel-plan-chat-empty {
-    margin: 24px 0;
+    margin: auto 0;
+    padding-bottom: 32px;
     color: var(--tp-plan-ink-faint);
     font-size: 13px;
     line-height: 1.8;
     text-align: center;
 }
 
+/* 줄 목록은 내용만큼의 높이를 그대로 지킨다. 눌려서 접히지 않고 칸이 넘긴다 */
 .travel-plan-chat-list {
+    flex: 0 0 auto;
     margin: 0;
     padding: 0;
     list-style: none;
@@ -2571,7 +2600,9 @@
 }
 
 /* 위에서 옛 대화를 읽는 중일 때만 나온다 */
+/* 대화 칸과 입력줄 사이에 잠깐 끼는 줄들. 눌려 사라지지 않게 제 높이를 지킨다 */
 .travel-plan-chat-jump {
+    flex: 0 0 auto;
     margin: 0 12px 8px;
     padding: 5px 0;
     border: 1px solid #e2dbcd;
@@ -2584,6 +2615,7 @@
 }
 
 .travel-plan-chat-error {
+    flex: 0 0 auto;
     margin: 0 12px 8px;
     color: #b98c86;
     font-size: 12px;
@@ -2591,6 +2623,7 @@
 }
 
 .travel-plan-chat-form {
+    flex: 0 0 auto;
     display: flex;
     align-items: flex-end;
     gap: 6px;
@@ -2875,48 +2908,6 @@
 
 .travel-plan-poll-entry-count[hidden] {
     display: none;
-}
-
-/* ── 입력창 왼쪽 도구 메뉴 ── */
-
-.travel-plan-chat-tools {
-    position: relative;
-    flex: 0 0 auto;
-}
-
-.travel-plan-chat-tool-menu {
-    position: absolute;
-    bottom: 34px;
-    left: 0;
-    z-index: 1;
-    min-width: 128px;
-    padding: 4px;
-    border: 1px solid #e2dbcd;
-    border-radius: 6px;
-    background: var(--tp-paper);
-    box-shadow: 0 6px 16px rgba(63, 52, 38, 0.12);
-}
-
-.travel-plan-chat-tool-menu[hidden] {
-    display: none;
-}
-
-.travel-plan-chat-tool-action {
-    width: 100%;
-    padding: 6px 8px;
-    border: none;
-    border-radius: 4px;
-    background: none;
-    color: var(--tp-ink-soft);
-    font-family: inherit;
-    font-size: 13px;
-    text-align: left;
-    white-space: nowrap;
-    cursor: pointer;
-}
-
-.travel-plan-chat-tool-action:hover {
-    background: var(--tp-poll-soft);
 }
 
 /* ── 창 ── */
@@ -3770,82 +3761,65 @@
 /* ───── 완료된 여행 (읽기 전용) ───── */
 
 /*
-  끝난 여행이라 진행 중인 것보다 한 걸음 물러나 보이게 둔다.
-  색을 바꾸는 것이 아니라 채도를 낮춰 물러나게 한다.
+  끝난 여행도 사용자가 만들어 낸 결과물이다.
+  흐리게 덮어 "지난 데이터" 로 보이게 하지 않는다.
+
+  종이도 글자도 진행 중인 것과 같고, 다른 것은 왼쪽 선의 색과
+  "완료" 표시뿐이다. 그것만으로 어느 쪽인지 충분히 읽힌다.
 */
 .travel-plan-card-link.is-completed {
-    border-color: var(--tp-done-line);
-    border-left-color: var(--tp-done-line);
-    background: var(--tp-done-surface);
+    border-left-color: var(--tp-card-line-strong);
 }
 
 .travel-plan-card-link.is-completed:hover {
     border-color: var(--tp-card-line-strong);
-    border-left-color: #c2c7cc;
-    background: #fbfbfc;
+    border-left-color: var(--tp-card-ink-faint);
+    background: #fff;
 }
 
-.travel-plan-card-link.is-completed .travel-plan-card-title {
-    color: var(--tp-done-ink);
-    font-weight: 600;
-}
-
+/* 끝났다는 표시. 작은 알약 하나면 된다 */
 .travel-plan-card-completed {
     flex: 0 0 auto;
     padding: 1px 6px;
-    border: 1px solid var(--tp-done-line);
+    border: 1px solid var(--tp-card-line);
     border-radius: 4px;
     background: var(--tp-done-soft);
-    color: var(--tp-done-ink);
+    color: var(--tp-card-ink-soft);
     font-size: 11px;
     font-weight: 600;
 }
 
 /* ── 완료된 여행 상세 ── */
 
+/*
+  "계획 중" 이 있던 자리에 놓인다. 모양은 그대로 두고 색만 가라앉힌다.
+  다 끝난 일이라 진행 중을 가리키는 sage 를 그대로 쓰지 않는다.
+  큰 완료 배너를 만들지 않는다.
+*/
 .travel-plan-final-badge {
-    margin: 0 0 8px;
-    color: var(--tp-poll-accent);
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
+    border-color: var(--tp-plan-line);
+    background: var(--tp-done-soft);
+    color: var(--tp-plan-ink-soft);
 }
 
+/* 작성 화면에서 지금 작업 중임을 알리던 왼쪽 선. 최종본에서는 중립이다 */
+.travel-plan-final-paper .travel-plan-detail-heading {
+    border-left-color: var(--tp-plan-line-strong);
+}
+
+/* 따로 뜬 상자가 아니라 기간 아래에 이어지는 한 줄이다 */
 .travel-plan-final-members {
-    margin: 22px 0 8px;
-    padding: 14px 16px;
-    border: 1px solid var(--tp-line);
-    border-radius: 6px;
-    background: #fbf9f4;
+    margin: 8px 0 0;
+    color: var(--tp-plan-ink-soft);
+    font-size: 13px;
+    line-height: 1.7;
+    overflow-wrap: break-word;
 }
 
-.travel-plan-final-section-label {
-    margin: 0 0 8px;
-    color: var(--tp-ink-faint);
+.travel-plan-final-members-label {
+    margin-right: 8px;
+    color: var(--tp-plan-ink-faint);
     font-size: 12px;
-}
-
-.travel-plan-final-member-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px 14px;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-}
-
-.travel-plan-final-member {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 5px;
-    color: var(--tp-ink);
-    font-size: 14px;
-}
-
-.travel-plan-final-member-role {
-    color: var(--tp-ink-faint);
-    font-size: 11px;
-    font-weight: 700;
 }
 
 /*
@@ -3863,9 +3837,11 @@
     display: flex;
 }
 
+/* 일정이 없던 날. 작성 화면의 추가 슬롯이 있던 자리를 그대로 쓴다 */
 .travel-plan-final-empty-day {
-    margin: 8px 0 0;
-    color: var(--tp-ink-faint);
+    margin: 0;
+    padding: 9px 8px;
+    color: var(--tp-plan-ink-faint);
     font-size: 13px;
 }
 

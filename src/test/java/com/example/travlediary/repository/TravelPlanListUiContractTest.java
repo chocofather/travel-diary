@@ -172,17 +172,25 @@ class TravelPlanListUiContractTest {
     }
 
     @Test
-    void runningAndFinishedTripsAreToldApartByToneNotJustPosition() throws IOException {
+    void aFinishedTripIsAResultNotGreyedOutData() throws IOException {
         String css = resource("/static/css/travel-plan.css");
+        String completed = between(css, ".travel-plan-card-link.is-completed {", "}");
 
-        // 진행 중은 sage 한 줄, 완료는 채도를 낮춘 neutral
+        /*
+          끝난 여행도 사용자가 만들어 낸 결과물이다.
+          흐리게 덮어 "지난 데이터" 로 보이게 하지 않는다.
+          다른 것은 왼쪽 선의 색과 "완료" 표시뿐이다.
+        */
         assertThat(between(css, ".travel-plan-card-link {", "}"))
-                .contains("border-left: 3px solid var(--tp-live-line)");
-        assertThat(between(css, ".travel-plan-card-link.is-completed {", "}"))
-                .contains("border-left-color: var(--tp-done-line)")
-                .contains("background: var(--tp-done-surface)");
-        assertThat(between(css, ".travel-plan-card-link.is-completed .travel-plan-card-title {",
-                "}")).contains("color: var(--tp-done-ink)");
+                .contains("border-left: 3px solid var(--tp-live-line)")
+                .contains("background: var(--tp-card-surface)");
+        assertThat(completed).contains("border-left-color: var(--tp-card-line-strong)");
+        // 종이도 글자도 진행 중인 것과 같다
+        assertThat(completed)
+                .doesNotContain("background:")
+                .doesNotContain("opacity");
+        assertThat(css).doesNotContain(
+                ".travel-plan-card-link.is-completed .travel-plan-card-title");
     }
 
     @Test
@@ -194,9 +202,9 @@ class TravelPlanListUiContractTest {
                 .contains("color: var(--tp-card-ink-faint)");
         assertThat(between(css, ".travel-plan-card-role.is-owner {", "}"))
                 .contains("color: var(--tp-live-accent)");
-        // 완료 배지는 갈색도 파랑도 아닌 회색이다
+        // 완료 배지는 갈색도 파랑도 아닌 회색이고, 읽을 만큼의 대비는 있다
         assertThat(between(css, ".travel-plan-card-completed {", "}"))
-                .contains("color: var(--tp-done-ink)")
+                .contains("color: var(--tp-card-ink-soft)")
                 .doesNotContain("--tp-poll-");
         assertThat(listHtml()).contains("? ' is-owner' : ''");
     }

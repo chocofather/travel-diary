@@ -217,6 +217,60 @@ class TravelPlanChatUiContractTest {
     }
 
     @Test
+    void thePanelKeepsItsSizeEvenWithNothingInIt() throws IOException {
+        String css = cssFile();
+        String panel = between(css, ".travel-plan-chat-panel {", "}");
+
+        /*
+          높이를 정해 두지 않으면 내용만큼만 자라서, 첫 메시지를 보내기 전에는
+          작은 말풍선 하나짜리 팝업처럼 보인다.
+        */
+        assertThat(panel)
+                .contains("height: 500px")
+                // 화면이 낮으면 그 안으로 줄어든다
+                .contains("max-height: calc(100vh - 56px)")
+                .contains("flex-direction: column");
+    }
+
+    @Test
+    void onlyTheMessageAreaScrolls() throws IOException {
+        String css = cssFile();
+
+        // 가운데 칸이 남는 높이를 전부 가져가고, 넘기는 것도 여기뿐이다
+        assertThat(between(css, ".travel-plan-chat-body {", "}"))
+                .contains("flex: 1 1 auto")
+                .contains("min-height: 0")
+                .contains("overflow-y: auto");
+        // 머리글과 입력줄은 제자리에 남는다
+        for (String fixed : new String[]{
+                ".travel-plan-chat-header {", ".travel-plan-chat-form {"}) {
+            assertThat(between(css, fixed, "}")).as("%s", fixed).contains("flex: 0 0 auto");
+        }
+        // 줄 목록은 눌려 접히지 않고 제 높이를 지킨다
+        assertThat(between(css, ".travel-plan-chat-list {", "}")).contains("flex: 0 0 auto");
+    }
+
+    @Test
+    void anEmptyChatPutsItsWordsAroundTheMiddle() throws IOException {
+        String css = cssFile();
+
+        // 빈 칸 가운데에 선다. 맨 위에 붙지 않는다
+        assertThat(between(css, ".travel-plan-chat-empty {", "}"))
+                .contains("margin: auto 0")
+                .contains("text-align: center");
+        assertThat(between(css, ".travel-plan-chat-body {", "}"))
+                .contains("display: flex");
+        // 기록의 맨 앞 표시는 대화 위에 그대로 남는다
+        assertThat(between(css, ".travel-plan-chat-start {", "}"))
+                .contains("flex: 0 0 auto")
+                .doesNotContain("margin: auto");
+        // 아이콘이나 일러스트를 새로 두지 않는다
+        assertThat(between(detailHtml(), "data-travel-plan-chat-empty", "</p>"))
+                .doesNotContain("<svg")
+                .doesNotContain("<img");
+    }
+
+    @Test
     void thePanelIsNotTheSameBeigeBlockAsTheScheduler() throws IOException {
         String css = cssFile();
         String root = between(css, ":root {", "}");
@@ -528,17 +582,15 @@ class TravelPlanChatUiContractTest {
         String detail = detailHtml();
         String composer = between(detail, "class=\"travel-plan-chat-form\"", "</form>");
 
-        // [+] [😊] [입력칸] [전송] 이 한 줄에 같은 크기로 선다
+        // [😊] [입력칸] [전송] 이 한 줄에 같은 크기로 선다
         assertThat(composer)
                 .contains("data-travel-plan-chat-emoji-toggle")
                 .contains("aria-label=\"이모지 선택\"")
                 .contains("aria-haspopup=\"true\"");
-        assertThat(composer.indexOf("data-travel-plan-chat-tool\""))
-                .isLessThan(composer.indexOf("data-travel-plan-chat-emoji-toggle"));
         assertThat(composer.indexOf("data-travel-plan-chat-emoji-toggle"))
                 .isLessThan(composer.indexOf("data-travel-plan-chat-input"));
-        // 기존 + 의 투표 진입은 그대로다
-        assertThat(composer).contains("data-travel-plan-poll-open");
+        assertThat(composer.indexOf("data-travel-plan-chat-input"))
+                .isLessThan(composer.indexOf("data-travel-plan-chat-send"));
         // 같은 control 크기를 쓴다(전용 큰 버튼을 만들지 않는다)
         assertThat(composer).contains("class=\"travel-plan-chat-tool\"");
     }
@@ -954,13 +1006,51 @@ class TravelPlanChatUiContractTest {
 
         assertThat(between(chat, "item.append(sender, row, reactions);", "return item;"))
                 .contains("if (isMine(message) && !message.deleted)")
-                .contains("deleteMenuOf(message)");
+                .contains("deleteMenuOf(message.messageId)");
         // 상시 보이는 빨간 휴지통을 두지 않는다
-        assertThat(between(chat, "function deleteMenuOf(message)", "return menu;"))
+        assertThat(between(chat, "function deleteMenuOf(messageId)", "return menu;"))
                 .contains("button.textContent = \"⋯\"")
                 .contains("remove.textContent = \"삭제\"");
         assertThat(between(cssFile(), ".travel-plan-chat-menu-button {", "}"))
                 .contains("opacity: 0");
+    }
+
+    @Test
+    void theDeleteActionCarriesTheNumberItWasGivenNotAFieldItGuesses() throws IOException {
+        String chat = chatJs();
+
+        /*
+          기록에서 온 줄과 실시간으로 온 줄은 번호가 담긴 필드 이름이 서로 다르다
+          (messageId / id). 삭제 자리에서 객체를 다시 뒤지면 한쪽에서 undefined 가
+          나가고, 서버는 어느 메시지인지 알 수 없어 그대로 거절한다.
+          그래서 여기서는 번호만 받아 그대로 쓴다.
+        */
+        assertThat(chat).contains("function deleteMenuOf(messageId)");
+        assertThat(between(chat, "function deleteMenuOf(messageId)", "return menu;"))
+                .contains("realtime()?.deleteChatMessage(messageId)")
+                // 넘겨받은 번호 말고 객체에서 다시 꺼내 쓰지 않는다
+                .doesNotContain("message.");
+        // 줄에 적어 둔 번호와 삭제가 보내는 번호가 같은 값에서 나온다
+        assertThat(chat)
+                .contains("item.setAttribute(\"data-message-id\", message.messageId)")
+                .contains("deleteMenuOf(message.messageId)")
+                .doesNotContain("deleteChatMessage(message.id)");
+    }
+
+    @Test
+    void theTwoWaysAMessageArrivesAgreeOnItsNumber() throws IOException {
+        String chat = chatJs();
+
+        // 실시간으로 온 원본은 번호가 id 다. 화면에 넣기 전에 messageId 로 맞춘다
+        assertThat(between(chat, "function messageItem(message)", "\n    }"))
+                .contains("messageId: message.id");
+        /*
+          맞추기 전의 원본을 다루는 자리에서는 id 가 맞다.
+          이 두 곳까지 messageId 로 바꾸면 실시간 메시지가 매번 새로 그려진다.
+        */
+        assertThat(between(chat, "function onMessageCreated(message)", "\n    }"))
+                .contains("nodeOf(message.id)")
+                .contains("messageNode(messageItem(message))");
     }
 
     @Test
@@ -978,16 +1068,16 @@ class TravelPlanChatUiContractTest {
     // ── 다음 단계 자리 ──────────────────────────────────────
 
     @Test
-    void theVoteEntryPointSitsLeftOfTheChatInput() throws IOException {
+    void theVoteEntryPointSitsInTheChatHeader() throws IOException {
         String detail = detailHtml();
-        String tools = between(detail, "class=\"travel-plan-chat-tools\"", "</div>");
 
-        // 입력창 왼쪽 도구 자리에서 투표 만들기를 연다
-        assertThat(tools)
-                .contains("class=\"travel-plan-chat-tool\"")
-                .contains("data-travel-plan-chat-tool")
-                .doesNotContain("disabled");
-        assertThat(detail).contains("data-travel-plan-poll-open");
+        // 투표로 들어가는 길은 채팅 머리글의 [투표 N] 하나뿐이다
+        assertThat(between(detail, "class=\"travel-plan-chat-header-actions\"", "</div>"))
+                .contains("data-travel-plan-poll-entry");
+        // 입력줄에는 같은 곳으로 가는 길을 하나 더 두지 않는다
+        assertThat(between(detail, "class=\"travel-plan-chat-form\"", "</form>"))
+                .doesNotContain("data-travel-plan-poll-open")
+                .doesNotContain("data-travel-plan-chat-tool-menu");
     }
 
     @Test

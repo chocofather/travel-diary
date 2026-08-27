@@ -21,18 +21,31 @@ class TravelPlanPollUiContractTest {
     // ── 진입점 ──────────────────────────────────────────────
 
     @Test
-    void thePlusButtonOpensASmallToolMenuWithOneItem() throws IOException {
+    void thereIsOnlyOneWayIntoTheVoteCentre() throws IOException {
         String detail = detailHtml();
-        String tools = between(detail, "class=\"travel-plan-chat-tools\"", "</form>");
+        String composer = between(detail, "class=\"travel-plan-chat-form\"", "</form>");
 
-        assertThat(tools)
-                .contains("data-travel-plan-chat-tool")
-                .contains("data-travel-plan-chat-tool-menu")
-                .contains("투표 만들기");
-        // 지금은 도구가 하나뿐이다. 큰 기능 메뉴를 미리 만들지 않는다
-        assertThat(countOf(tools, "travel-plan-chat-tool-action")).isEqualTo(1);
-        // 메뉴는 눌러야 열린다
-        assertThat(between(tools, "travel-plan-chat-tool-menu\"", ">")).contains("hidden");
+        /*
+          들어가는 길은 채팅 머리글의 [투표 N] 하나뿐이다.
+          도구가 하나뿐인 [+] 는 같은 곳으로 가는 길을 하나 더 만들고
+          누르는 단계만 늘려서 두지 않는다.
+        */
+        assertThat(detail).contains("data-travel-plan-poll-entry");
+        assertThat(composer)
+                .doesNotContain("data-travel-plan-chat-tool")
+                .doesNotContain("data-travel-plan-poll-open")
+                .doesNotContain("투표 만들기");
+        // 입력줄에는 이모지 / 입력칸 / 전송만 남는다
+        assertThat(composer)
+                .contains("data-travel-plan-chat-emoji-toggle")
+                .contains("data-travel-plan-chat-input")
+                .contains("data-travel-plan-chat-send");
+        assertThat(cssFile())
+                .doesNotContain(".travel-plan-chat-tools")
+                .doesNotContain(".travel-plan-chat-tool-menu")
+                .doesNotContain(".travel-plan-chat-tool-action");
+        // 이모지 버튼이 쓰는 크기는 그대로 남는다
+        assertThat(cssFile()).contains(".travel-plan-chat-tool {");
     }
 
     @Test
@@ -40,7 +53,8 @@ class TravelPlanPollUiContractTest {
         String detail = detailHtml();
 
         // 방장 전용 조건이 붙지 않는다. 참여자면 누구나 만든다
-        assertThat(between(detail, "class=\"travel-plan-chat-tools\"", "</form>"))
+        assertThat(between(detail, "class=\"travel-plan-poll-entry\"",
+                "data-travel-plan-poll-entry"))
                 .doesNotContain("OWNER");
         assertThat(between(detail, "class=\"travel-plan-poll-modal\"",
                 "data-travel-plan-poll-modal"))
@@ -298,16 +312,17 @@ class TravelPlanPollUiContractTest {
     }
 
     @Test
-    void theTwoEntryPointsLandOnTheRightView() throws IOException {
+    void theCentreAlwaysOpensOnTheList() throws IOException {
         String poll = pollJs();
 
-        // 머리글의 [투표 N] 은 목록으로, 입력창의 [+ -> 투표 만들기] 는 만들기로
-        assertThat(poll)
-                .contains("entry?.addEventListener(\"click\", () => openModal(false))")
-                .contains("createFromTool?.addEventListener(\"click\", () => openModal(true))");
-        assertThat(between(poll, "function openModal(createFirst)", "\n    }"))
-                .contains("showCreateView()")
-                .contains("showListView()");
+        // 머리글의 [투표 N] 이 여는 곳은 언제나 목록이다
+        assertThat(poll).contains("entry?.addEventListener(\"click\", () => openModal())");
+        assertThat(between(poll, "function openModal()", "\n    }"))
+                .contains("showListView()")
+                .doesNotContain("showCreateView()");
+        // 새 투표는 그 창 안의 [투표 만들기] 에서 이어 간다
+        assertThat(poll).contains("data-travel-plan-poll-create-open")
+                .contains("showCreateView()");
     }
 
     @Test
@@ -609,7 +624,7 @@ class TravelPlanPollUiContractTest {
           숫자를 목록에서만 얻으면 열어 보지 않은 탭이 0 으로 남는다.
           그래서 열 때 보고 있는 탭의 목록과 두 탭의 숫자를 함께 읽는다.
         */
-        String open = between(poll, "function openModal(createFirst)", "\n    }");
+        String open = between(poll, "function openModal()", "\n    }");
         assertThat(open)
                 .contains("loadTab(activeTab, true)")
                 .contains("loadCounts()");

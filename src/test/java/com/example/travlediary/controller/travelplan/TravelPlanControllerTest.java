@@ -565,6 +565,33 @@ class TravelPlanControllerTest {
     }
 
     @Test
+    void theFinishedTripReadsLikeTheSamePaperItWasWrittenOn() throws Exception {
+        when(travelPlanFinalReadService.getCompletedPlanDetail(7L, 42L))
+                .thenReturn(finalDetailWithMembers("민준", "소희", "초코"));
+
+        String body = mockMvc.perform(get("/travel-plans/42/final").with(user(member())))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        // 작성 화면과 같은 종이·머리글·DAY 머리글을 그대로 쓴다
+        assertThat(body)
+                .contains("travel-plan-paper")
+                .contains("travel-plan-detail-heading")
+                .contains("travel-plan-day-heading")
+                .contains("travel-plan-day-number")
+                // 읽기 전용이라는 것은 작은 표시 하나로만 알린다
+                .contains("완성된 여행계획")
+                // 함께한 사람은 큰 상자가 아니라 한 줄이다
+                .contains("민준 · 소희 · 초코");
+        // 고칠 수 있는 것은 하나도 없다
+        assertThat(body)
+                .doesNotContain("data-travel-plan-slot")
+                .doesNotContain("data-travel-plan-item-form")
+                .doesNotContain("data-travel-plan-chat")
+                .doesNotContain("data-travel-plan-poll-modal");
+    }
+
+    @Test
     void someoneWhoWasNotOnTheTripIsSentAwayWithoutDetail() throws Exception {
         when(travelPlanFinalReadService.getCompletedPlanDetail(anyLong(), anyLong()))
                 .thenThrow(new ResponseStatusException(
@@ -813,6 +840,37 @@ class TravelPlanControllerTest {
         snapshot.setEndDate(java.time.LocalDate.of(2026, 9, 15));
         return new com.example.travlediary.dto.TravelPlanFinalDetailDto(
                 snapshot, java.util.List.of(), java.util.List.of(),
+                java.util.Map.of(), java.util.Map.of());
+    }
+
+    /** 함께한 사람과 하루치 일정이 들어 있는 최종본. 화면이 실제로 그려지는지 본다. */
+    private com.example.travlediary.dto.TravelPlanFinalDetailDto finalDetailWithMembers(
+            String... displayNames) {
+        com.example.travlediary.model.TravelPlanFinalSnapshot snapshot =
+                new com.example.travlediary.model.TravelPlanFinalSnapshot();
+        snapshot.setId(900L);
+        snapshot.setTravelPlanId(42L);
+        snapshot.setTitle("제주도 여행");
+        snapshot.setStartDate(java.time.LocalDate.of(2026, 9, 13));
+        snapshot.setEndDate(java.time.LocalDate.of(2026, 9, 15));
+
+        java.util.List<com.example.travlediary.model.TravelPlanFinalMember> members =
+                new java.util.ArrayList<>();
+        for (String displayName : displayNames) {
+            com.example.travlediary.model.TravelPlanFinalMember member =
+                    new com.example.travlediary.model.TravelPlanFinalMember();
+            member.setDisplayName(displayName);
+            members.add(member);
+        }
+
+        com.example.travlediary.model.TravelPlanFinalDay day =
+                new com.example.travlediary.model.TravelPlanFinalDay();
+        day.setId(910L);
+        day.setDayNumber(1);
+        day.setPlanDate(java.time.LocalDate.of(2026, 9, 13));
+
+        return new com.example.travlediary.dto.TravelPlanFinalDetailDto(
+                snapshot, members, java.util.List.of(day),
                 java.util.Map.of(), java.util.Map.of());
     }
 
