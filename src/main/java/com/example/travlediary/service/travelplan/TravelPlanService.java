@@ -41,6 +41,12 @@ public class TravelPlanService {
     private static final int MAX_TITLE_LENGTH = 150;
     /** 시작일과 종료일을 포함한 최대 여행 일수. DB 제약이 아니라 서비스 정책이다. */
     private static final int MAX_PLAN_DAYS = 90;
+    /**
+     * 날짜 칸이 받는 연도. 4자리만 받는다.
+     * 화면의 min/max 와 같은 범위이고, 다이어리와도 같은 정책이다.
+     */
+    private static final int MIN_PLAN_YEAR = 1000;
+    private static final int MAX_PLAN_YEAR = 9999;
     /** travel_plan_item_alternatives.condition_label 은 varchar(100) */
     private static final int MAX_CONDITION_LABEL_LENGTH = 100;
     /** A 일정 하나가 가질 수 있는 대안 수. chk_travel_plan_item_alternatives_order 와 같은 값이다. */
@@ -60,6 +66,8 @@ public class TravelPlanService {
     /**
      * 현재 사용자가 ACTIVE 멤버로 참여 중인 ACTIVE 방 목록.
      * 호출자가 다른 사용자의 목록을 볼 수 없도록 항상 userId 기준으로만 읽는다.
+     *
+     * <p>진행 중인 방은 보통 몇 건뿐이라 쪽을 나누지 않고 전부 돌려준다.
      */
     @Transactional(readOnly = true)
     public List<TravelPlanListItemDto> getActivePlans(Long userId) {
@@ -720,6 +728,9 @@ public class TravelPlanService {
         if (endDate == null) {
             throw new TravelPlanValidationException("endDate", "여행 종료일을 선택해 주세요.");
         }
+        // 화면의 min/max 는 보조다. 연도 범위는 여기서도 반드시 확인한다.
+        requireFourDigitYear("startDate", startDate, "여행 시작일");
+        requireFourDigitYear("endDate", endDate, "여행 종료일");
         if (endDate.isBefore(startDate)) {
             throw new TravelPlanValidationException("endDate", "여행 종료일은 시작일 이후여야 합니다.");
         }
@@ -730,6 +741,15 @@ public class TravelPlanService {
                     "여행 기간은 최대 " + MAX_PLAN_DAYS + "일까지 설정할 수 있습니다.");
         }
         return (int) dayCount;
+    }
+
+    /** 연도 4자리만 받는다. 화면이 막지 못한 값이 그대로 저장되지 않게 여기서 다시 본다. */
+    private void requireFourDigitYear(String field, LocalDate date, String label) {
+        if (date.getYear() < MIN_PLAN_YEAR || date.getYear() > MAX_PLAN_YEAR) {
+            throw new TravelPlanValidationException(field,
+                    label + "의 연도는 4자리(" + MIN_PLAN_YEAR + " ~ " + MAX_PLAN_YEAR
+                            + ")로 입력해 주세요.");
+        }
     }
 
     private ResponseStatusException saveFailed() {

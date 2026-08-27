@@ -5,6 +5,8 @@ import com.example.travlediary.dto.TravelPlanCreateForm;
 import com.example.travlediary.dto.TravelPlanItemCreateForm;
 import com.example.travlediary.dto.TravelPlanDetailDto;
 import com.example.travlediary.dto.TravelPlanItemUpdateForm;
+import com.example.travlediary.dto.TravelPlanListItemDto;
+import com.example.travlediary.dto.TravelPlanListPageDto;
 import com.example.travlediary.dto.TravelPlanMembersDto;
 import com.example.travlediary.model.TravelPlanDay;
 import com.example.travlediary.service.travelplan.TravelPlanAccessNotice;
@@ -18,12 +20,17 @@ import com.example.travlediary.service.travelplan.TravelPlanValidationException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.PropertyAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
+import org.springframework.validation.DefaultBindingErrorProcessor;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -34,6 +41,8 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Controller
@@ -72,9 +81,17 @@ public class TravelPlanController {
                     + " travelPlanInviteIssued=${travelPlanInviteIssued})";
     private static final String ITEM_FORM_ATTRIBUTE = "travelPlanItemCreateForm";
 
+    /** 완료된 여행 한 쪽에 담는 수. 진행 중인 여행은 쪽을 나누지 않는다. */
+    private static final int LIST_PAGE_SIZE = 8;
+
     /** 폼에 실제로 있는 필드만 필드 오류로 남길 수 있다. */
     private static final Set<String> FORM_FIELDS =
             Set.of("title", "startDate", "endDate", "displayName");
+
+    /** 날짜로 읽을 수 없는 값이 왔을 때 그 칸에 내보낼 말. */
+    private static final Map<String, String> DATE_BIND_MESSAGES = Map.of(
+            "startDate", "여행 시작일을 올바른 날짜로 선택해 주세요.",
+            "endDate", "여행 종료일을 올바른 날짜로 선택해 주세요.");
 
     private final TravelPlanService travelPlanService;
     private final TravelPlanInvitationService travelPlanInvitationService;
@@ -83,14 +100,48 @@ public class TravelPlanController {
     /** 완료된 여행 지우기. 마지막 한 사람이 지우면 그 여행 자체가 사라진다. */
     private final TravelPlanFinalDeleteService travelPlanFinalDeleteService;
 
-    // 함께 계획하기 목록
+    /**
+     * 함께 계획하기 목록.
+     *
+     * <p>진행 중인 여행과 완료된 여행을 한 화면에 위아래로 함께 보여 준다.
+     * 한쪽이 비어 있어도 구역은 그대로 두고 비었다는 말만 적는다.
+     *
+     * <p>쪽을 나누는 것은 계속 쌓이는 완료된 여행뿐이다. 진행 중인 여행은
+     * 보통 몇 건뿐이라 전부 보여 준다. 그래서 주소에 남는 것도 완료된 여행의
+     * 쪽 번호 하나뿐이고, 그 값은 여기서 안전한 값으로 다듬는다.
+     */
     @GetMapping
-    public String list(@AuthenticationPrincipal CustomUserDetails userDetails, Model model) {
-        model.addAttribute("travelPlans", travelPlanService.getActivePlans(userDetails.getId()));
+    public String list(@RequestParam(name = "completedPage", required = false) String completedPage,
+                       @AuthenticationPrincipal CustomUserDetails userDetails,
+                       Model model) {
+        Long userId = userDetails.getId();
+
+        List<TravelPlanListItemDto> activePlans = travelPlanService.getActivePlans(userId);
+
         // 완료된 여행은 최종본에서만 읽는다. 원본 방을 다시 들여다보지 않는다.
-        model.addAttribute("completedTravelPlans",
-                travelPlanFinalReadService.getCompletedPlans(userDetails.getId()));
+        int completedCount = travelPlanFinalReadService.countCompletedPlans(userId);
+        // 한 건도 없어도 1쪽은 있는 것으로 본다. (쪽 번호는 1부터)
+        int totalPages = Math.max(1, (completedCount + LIST_PAGE_SIZE - 1) / LIST_PAGE_SIZE);
+        int currentPage = Math.min(Math.max(parsePage(completedPage), 1), totalPages);
+
+        model.addAttribute("travelPlans", activePlans);
+        model.addAttribute("completedTravelPlans", travelPlanFinalReadService.getCompletedPlans(
+                userId, (currentPage - 1) * LIST_PAGE_SIZE, LIST_PAGE_SIZE));
+        model.addAttribute("travelPlanPage", new TravelPlanListPageDto(
+                activePlans.size(), completedCount, currentPage, totalPages, LIST_PAGE_SIZE));
         return LIST_VIEW;
+    }
+
+    /** 주소에서 받은 쪽 번호. 숫자가 아니면 첫 쪽으로 본다(범위는 부른 쪽에서 맞춘다). */
+    private int parsePage(String page) {
+        if (page == null) {
+            return 1;
+        }
+        try {
+            return Integer.parseInt(page.strip());
+        } catch (NumberFormatException exception) {
+            return 1;
+        }
     }
 
     /**
@@ -140,6 +191,33 @@ public class TravelPlanController {
                     TravelPlanAccessNotice.NO_ACCESS.message());
         }
         return "redirect:/travel-plans";
+    }
+
+    /**
+     * 날짜 칸의 변환 오류를 이 화면의 말로 바꾼다.
+     *
+     * <p>연도를 5자리로 적는 것처럼 날짜로 읽을 수조차 없는 값은 Service 까지 오지 못하고
+     * 바인딩 단계에서 걸린다. 기본 문구는 사람이 읽을 것이 못 되므로,
+     * 다른 검증 오류와 같은 자리에 같은 말투로 나가게 한다.
+     */
+    @InitBinder(FORM_ATTRIBUTE)
+    void useReadableDateErrors(WebDataBinder binder) {
+        binder.setBindingErrorProcessor(new DefaultBindingErrorProcessor() {
+            @Override
+            public void processPropertyAccessException(PropertyAccessException exception,
+                                                       BindingResult bindingResult) {
+                String field = exception.getPropertyName();
+                String message = field == null ? null : DATE_BIND_MESSAGES.get(field);
+                if (message == null) {
+                    super.processPropertyAccessException(exception, bindingResult);
+                    return;
+                }
+                // 적었던 값은 그대로 두고 문구만 바꾼다.
+                bindingResult.addError(new FieldError(bindingResult.getObjectName(), field,
+                        exception.getValue(), true,
+                        new String[]{"travelPlan.invalid"}, null, message));
+            }
+        });
     }
 
     // 방 생성 폼

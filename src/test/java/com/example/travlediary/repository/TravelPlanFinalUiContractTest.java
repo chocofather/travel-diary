@@ -29,9 +29,20 @@ class TravelPlanFinalUiContractTest {
                 .contains("completedTravelPlans")
                 // 끝난 여행이라는 것을 한눈에 알 수 있게
                 .contains("travel-plan-card-completed");
-        // 한 건도 없으면 그 구역 자체를 두지 않는다
-        assertThat(between(list, "class=\"travel-plan-completed-section\"", ">"))
-                .contains("!#lists.isEmpty(completedTravelPlans)");
+        // 진행 중 아래 자기 구역에 놓인다. 한 목록에 섞이지 않는다
+        assertThat(list.indexOf("id=\"travel-plan-active-title\""))
+                .as("진행 중이 먼저다")
+                .isLessThan(list.indexOf("id=\"travel-plan-completed-title\""));
+    }
+
+    @Test
+    void anEmptyFinishedSectionSaysSoWithoutTakingOverTheScreen() throws IOException {
+        String list = listHtml();
+
+        // 한 건도 없어도 구역은 남고 짧은 한 줄만 적힌다
+        assertThat(list)
+                .contains("th:if=\"${#lists.isEmpty(completedTravelPlans)}\"")
+                .contains("완료된 여행이 아직 없어요.");
     }
 
     @Test

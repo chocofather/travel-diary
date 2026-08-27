@@ -144,6 +144,20 @@ class TravelPlanReadServiceTest {
     }
 
     @Test
+    void theRunningListIsNeverCutIntoPages() {
+        // 진행 중인 방은 보통 몇 건뿐이라 전부 그대로 온다
+        TravelPlanListItemDto[] rows = new TravelPlanListItemDto[12];
+        for (int index = 0; index < rows.length; index++) {
+            rows[index] = new TravelPlanListItemDto();
+            rows[index].setTravelPlanId((long) index);
+        }
+        when(travelPlanMapper.findActivePlansByUserId(USER_ID, "ACTIVE", "ACTIVE"))
+                .thenReturn(List.of(rows));
+
+        assertThat(travelPlanService.getActivePlans(USER_ID)).hasSize(12);
+    }
+
+    @Test
     void detailReturnsThePlanTheCurrentMemberAndTheDaysInOrder() {
         givenActiveMembership();
         when(travelPlanMapper.findPlanByIdAndStatus(PLAN_ID, "ACTIVE")).thenReturn(plan());
@@ -289,7 +303,8 @@ class TravelPlanReadServiceTest {
         assertThatThrownBy(() -> travelPlanService.getActivePlanDetail(null, PLAN_ID))
                 .isInstanceOf(TravelPlanValidationException.class);
 
-        verify(travelPlanMapper, never()).findActivePlansByUserId(anyLong(), anyString(), anyString());
+        verify(travelPlanMapper, never()).findActivePlansByUserId(
+                anyLong(), anyString(), anyString());
         verify(travelPlanMapper, never()).findMemberByPlanAndUser(anyLong(), anyLong(), anyString());
     }
 

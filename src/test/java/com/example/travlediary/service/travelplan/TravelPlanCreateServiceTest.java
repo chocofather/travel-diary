@@ -174,6 +174,40 @@ class TravelPlanCreateServiceTest {
     }
 
     @Test
+    void rejectsAYearThatIsNotFourDigits() {
+        // 화면의 min/max 를 지나쳐 온 값도 여기서 걸린다
+        LocalDate tooFar = LocalDate.of(12026, 9, 1);
+        LocalDate tooEarly = LocalDate.of(999, 9, 1);
+
+        assertThatThrownBy(() -> travelPlanService.createPlan(
+                7L, "제주 여행", tooFar, tooFar.plusDays(2), "민준"))
+                .isInstanceOf(TravelPlanValidationException.class)
+                .hasMessageContaining("4자리")
+                .extracting("field").isEqualTo("startDate");
+        assertThatThrownBy(() -> travelPlanService.createPlan(
+                7L, "제주 여행", START, LocalDate.of(12026, 9, 3), "민준"))
+                .isInstanceOf(TravelPlanValidationException.class)
+                .extracting("field").isEqualTo("endDate");
+        assertThatThrownBy(() -> travelPlanService.createPlan(
+                7L, "제주 여행", tooEarly, tooEarly.plusDays(2), "민준"))
+                .isInstanceOf(TravelPlanValidationException.class)
+                .extracting("field").isEqualTo("startDate");
+
+        verifyNoInteractions(travelPlanMapper);
+    }
+
+    @Test
+    void theEdgesOfTheFourDigitRangeAreStillAllowed() {
+        givenSavedPlan(42L);
+
+        // 1000 ~ 9999 는 그대로 통과한다
+        travelPlanService.createPlan(
+                7L, "먼 여행", LocalDate.of(9999, 12, 30), LocalDate.of(9999, 12, 31), "민준");
+
+        verify(travelPlanMapper).insertPlan(any());
+    }
+
+    @Test
     void rejectsAMissingUserBeforeAnyInsert() {
         assertThatThrownBy(() -> travelPlanService.createPlan(null, "제주 여행", START, START, "민준"))
                 .isInstanceOf(TravelPlanValidationException.class)

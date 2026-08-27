@@ -45,9 +45,10 @@
     </insert>
 
     <!--
-      "함께 계획하기" 목록.
+      "함께 계획하기" 의 진행 중 목록.
       내가 ACTIVE 멤버인 ACTIVE 방만 읽고, 참여자 수는 서브쿼리로 한 번에 가져와
       목록 크기만큼 추가 조회가 나가지 않게 한다.
+      진행 중인 방은 보통 몇 건뿐이라 쪽으로 끊지 않고 전부 읽는다.
     -->
     <select id="findActivePlansByUserId"
             resultType="com.example.travlediary.dto.TravelPlanListItemDto">

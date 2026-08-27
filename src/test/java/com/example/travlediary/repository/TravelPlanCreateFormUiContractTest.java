@@ -49,6 +49,42 @@ class TravelPlanCreateFormUiContractTest {
     }
 
     @Test
+    void bothDatesOnlyTakeAFourDigitYear() throws IOException {
+        String create = createHtml();
+
+        // 시작일과 종료일 둘 다. 서버도 같은 범위를 검증한다
+        assertThat(countOf(create, "min=\"1000-01-01\" max=\"9999-12-31\"")).isEqualTo(2);
+        assertThat(Files.readString(
+                Path.of("src/main/java/com/example/travlediary/service/travelplan/"
+                        + "TravelPlanService.java"), StandardCharsets.UTF_8))
+                .contains("MIN_PLAN_YEAR = 1000")
+                .contains("MAX_PLAN_YEAR = 9999");
+        // 고르는 방식은 그대로 둔다. 직접 만든 달력을 쓰지 않는다
+        assertThat(create).doesNotContain("datepicker");
+    }
+
+    @Test
+    void thePeriodLabelsAreNotSaidTwice() throws IOException {
+        String period = between(createHtml(),
+                "class=\"travel-plan-period-inputs\"", "travel-plan-form-hint");
+
+        // 위의 '여행 기간' 아래에서는 짧게만 적는다
+        assertThat(period)
+                .contains(">시작일<")
+                .contains(">종료일<")
+                .doesNotContain("여행 시작일")
+                .doesNotContain("여행 종료일");
+        // 묶는 이름은 그대로 남는다
+        assertThat(createHtml()).contains("여행 기간");
+    }
+
+    @Test
+    void theNinetyDayLimitIsStillSpelledOut() throws IOException {
+        assertThat(createHtml())
+                .contains("시작일과 종료일을 포함해 최대 90일까지 만들 수 있어요.");
+    }
+
+    @Test
     void everyValidatedFieldCanShowItsOwnErrorNextToTheInput() throws IOException {
         String create = createHtml();
 
@@ -103,14 +139,12 @@ class TravelPlanCreateFormUiContractTest {
                 .contains("th:href=\"@{|/travel-plans/${plan.travelPlanId}|}\"")
                 .contains("th:href=\"@{/travel-plans/new}\"");
 
-        // 대표 이미지가 없으면 깨진 img 대신 단색 자리를 쓴다
-        assertThat(list)
-                .contains("th:if=\"${#strings.isEmpty(plan.representativeImageUrl)}\"")
-                .contains("th:unless=\"${#strings.isEmpty(plan.representativeImageUrl)}\"");
+        // 대표 이미지 데이터가 없다. 빈 자리를 만들어 두지 않는다
+        assertThat(list).doesNotContain("representativeImageUrl");
 
         // 빈 상태
         assertThat(list)
-                .contains("${#lists.isEmpty(travelPlans)}")
+                .contains("th:if=\"${#lists.isEmpty(travelPlans)}\"")
                 .contains("아직 함께 계획 중인 여행이 없어요.")
                 .contains("새로운 여행계획을 만들어 보세요.");
     }

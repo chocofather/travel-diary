@@ -133,6 +133,19 @@
         WHERE m.user_id = #{userId}
           AND m.hidden_at IS NULL
         ORDER BY s.finalized_at DESC, s.id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!--
+      완료 탭의 숫자와 쪽수. 목록과 같은 조건으로 센다.
+      내 목록에서 지운 것은 목록에 나오지 않으므로 여기서도 세지 않는다.
+    -->
+    <select id="countSnapshotsByUserId" resultType="int">
+        SELECT COUNT(*)
+        FROM travel_plan_final_snapshots s
+                 JOIN travel_plan_final_members m ON m.snapshot_id = s.id
+        WHERE m.user_id = #{userId}
+          AND m.hidden_at IS NULL
     </select>
 
     <!--

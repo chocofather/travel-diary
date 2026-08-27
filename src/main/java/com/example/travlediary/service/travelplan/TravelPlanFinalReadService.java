@@ -34,15 +34,31 @@ public class TravelPlanFinalReadService {
 
     private final TravelPlanFinalMapper travelPlanFinalMapper;
 
-    /** 내가 함께했던 완료된 여행 목록. 최근에 끝난 것부터 온다. */
+    /**
+     * 내가 함께했던 완료된 여행 목록 한 쪽. 최근에 끝난 것부터 온다.
+     *
+     * <p>쪽 크기만큼만 DB 에서 끊어 온다. 전부 읽어 온 뒤 자르지 않는다.
+     */
     @Transactional(readOnly = true)
-    public List<TravelPlanFinalListItemDto> getCompletedPlans(Long userId) {
-        if (userId == null) {
+    public List<TravelPlanFinalListItemDto> getCompletedPlans(Long userId, int offset, int limit) {
+        if (userId == null || limit <= 0) {
             return List.of();
         }
         List<TravelPlanFinalListItemDto> plans =
-                travelPlanFinalMapper.findSnapshotsByUserId(userId);
+                travelPlanFinalMapper.findSnapshotsByUserId(userId, Math.max(offset, 0), limit);
         return plans == null ? List.of() : plans;
+    }
+
+    /**
+     * 내가 함께했던 완료된 여행 수. 목록 탭 숫자와 쪽수 계산에 쓴다.
+     * 내 목록에서 지운 것은 목록에 나오지 않으므로 여기서도 세지 않는다.
+     */
+    @Transactional(readOnly = true)
+    public int countCompletedPlans(Long userId) {
+        if (userId == null) {
+            return 0;
+        }
+        return travelPlanFinalMapper.countSnapshotsByUserId(userId);
     }
 
     /**

@@ -112,6 +112,15 @@ class TravelPlanMapperContractTest {
     }
 
     @Test
+    void theRunningListIsNeverCutIntoPages() throws IOException {
+        String select = between(mapperXml(),
+                "<select id=\"findActivePlansByUserId\"", "</select>");
+
+        // 진행 중인 방은 보통 몇 건뿐이라 전부 읽는다. 쪽으로 끊는 것은 완료된 여행뿐이다
+        assertThat(select).doesNotContain("LIMIT").doesNotContain("OFFSET");
+    }
+
+    @Test
     void detailQueriesAreScopedByStatusAndSortDaysByNumber() throws IOException {
         String mapper = mapperXml();
 

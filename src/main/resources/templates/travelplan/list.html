@@ -9,12 +9,13 @@
 <th:block th:fragment="body">
   <section class="travel-plan-list-page" aria-labelledby="travel-plan-list-title">
     <header class="travel-plan-list-header">
-      <div>
+      <div class="travel-plan-list-heading">
         <p class="travel-plan-eyebrow">TRAVEL PLAN</p>
         <h1 id="travel-plan-list-title">함께 계획하기</h1>
-        <p class="travel-plan-subtitle">지금 함께 채워 가고 있는 여행계획이에요.</p>
+        <p class="travel-plan-subtitle">친구들과 여행 일정을 함께 만들어 보세요.</p>
       </div>
-      <a class="travel-plan-new-link" th:href="@{/travel-plans/new}">새 공동 여행계획</a>
+      <!-- 늘 있는 길이라 작게 둔다. 화면에서 가장 강한 요소가 되지 않게 -->
+      <a class="travel-plan-new-link" th:href="@{/travel-plans/new}">+ 새 여행계획</a>
     </header>
 
     <!--
@@ -26,79 +27,123 @@
       여행 계획이 완료되었습니다.
     </p>
 
-    <ul class="travel-plan-card-list" th:if="${!#lists.isEmpty(travelPlans)}">
-      <li class="travel-plan-card" th:each="plan : ${travelPlans}">
-        <a class="travel-plan-card-link" th:href="@{|/travel-plans/${plan.travelPlanId}|}">
-          <!-- 대표 이미지가 없으면 빈 img 대신 단색 자리를 둔다 -->
-          <span class="travel-plan-card-thumb"
-                th:if="${#strings.isEmpty(plan.representativeImageUrl)}" aria-hidden="true"></span>
-          <img class="travel-plan-card-thumb" th:unless="${#strings.isEmpty(plan.representativeImageUrl)}"
-               th:src="@{${plan.representativeImageUrl}}" alt="">
+    <!--
+      지금 함께 채워 가는 중인 여행.
+      보통 몇 건뿐이라 쪽을 나누지 않고 전부 보여 준다.
+    -->
+    <section class="travel-plan-section" aria-labelledby="travel-plan-active-title">
+      <h2 class="travel-plan-section-title" id="travel-plan-active-title">
+        진행 중인 여행
+        <span class="travel-plan-section-count"
+              th:text="${travelPlanPage.activeCount}">1</span>
+      </h2>
 
-          <span class="travel-plan-card-body">
+      <ul class="travel-plan-card-list" th:if="${!#lists.isEmpty(travelPlans)}">
+        <li class="travel-plan-card" th:each="plan : ${travelPlans}">
+          <a class="travel-plan-card-link" th:href="@{|/travel-plans/${plan.travelPlanId}|}">
             <span class="travel-plan-card-title-row">
               <span class="travel-plan-card-title" th:text="${plan.title}">제주도 여행</span>
+              <!-- 내 자리. 알아볼 수만 있으면 되므로 약하게 두고, 방장일 때만 색이 배게 한다 -->
               <span class="travel-plan-card-role"
-                    th:if="${plan.role != null and plan.role.name() == 'OWNER'}">OWNER</span>
-            </span>
-            <span class="travel-plan-card-period"
-                  th:text="${#temporals.format(plan.startDate, 'yyyy.MM.dd')} + ' ~ '
-                           + ${#temporals.format(plan.endDate, 'yyyy.MM.dd')}">
-              2026.09.01 ~ 2026.09.03
+                    th:classappend="${plan.role != null and plan.role.name() == 'OWNER'}
+                                    ? ' is-owner' : ''"
+                    th:text="${plan.role != null and plan.role.name() == 'OWNER'}
+                             ? 'OWNER' : 'MEMBER'">OWNER</span>
             </span>
             <span class="travel-plan-card-meta">
-              <span th:text="${plan.dayCount} + '일'">3일</span>
-              <span aria-hidden="true">·</span>
-              <span th:text="'참여 ' + ${plan.memberCount} + '/8'">참여 1/8</span>
-            </span>
-          </span>
-        </a>
-      </li>
-    </ul>
-
-    <div class="travel-plan-empty" th:if="${#lists.isEmpty(travelPlans)}">
-      <p>아직 함께 계획 중인 여행이 없어요.</p>
-      <p>새로운 여행계획을 만들어 보세요.</p>
-    </div>
-
-    <!--
-      완료된 여행. 최종본에서만 읽는다.
-      끝난 여행이라 목록에서 많이 보여 주지 않는다.
-      한 건도 없으면 이 구역 자체를 두지 않는다.
-    -->
-    <section class="travel-plan-completed-section"
-             th:if="${!#lists.isEmpty(completedTravelPlans)}"
-             aria-labelledby="travel-plan-completed-title">
-      <h2 id="travel-plan-completed-title" class="travel-plan-completed-title">완료된 여행</h2>
-
-      <ul class="travel-plan-card-list">
-        <li class="travel-plan-card" th:each="plan : ${completedTravelPlans}">
-          <a class="travel-plan-card-link is-completed"
-             th:href="@{|/travel-plans/${plan.travelPlanId}/final|}">
-            <span class="travel-plan-card-thumb"
-                  th:if="${#strings.isEmpty(plan.representativeImageUrl)}" aria-hidden="true"></span>
-            <img class="travel-plan-card-thumb"
-                 th:unless="${#strings.isEmpty(plan.representativeImageUrl)}"
-                 th:src="@{${plan.representativeImageUrl}}" alt="">
-
-            <span class="travel-plan-card-body">
-              <span class="travel-plan-card-title-row">
-                <span class="travel-plan-card-title" th:text="${plan.title}">제주도 여행</span>
-                <!-- 끝난 여행이라는 것을 한눈에 알 수 있게 -->
-                <span class="travel-plan-card-completed">완료</span>
-              </span>
               <span class="travel-plan-card-period"
                     th:text="${#temporals.format(plan.startDate, 'yyyy.MM.dd')} + ' ~ '
                              + ${#temporals.format(plan.endDate, 'yyyy.MM.dd')}">
                 2026.09.01 ~ 2026.09.03
               </span>
-              <span class="travel-plan-card-meta">
-                <span th:text="${plan.memberCount} + '명과 함께'">3명과 함께</span>
-              </span>
+              <span aria-hidden="true">·</span>
+              <span th:text="${plan.dayCount} + '일'">3일</span>
+              <span aria-hidden="true">·</span>
+              <span th:text="'참여 ' + ${plan.memberCount} + '/8'">참여 1/8</span>
+              <!-- 최근 활동은 있을 때만. 아직 아무 일도 없었던 방에는 빈 자리를 두지 않는다 -->
+              <th:block th:if="${plan.lastActivityAt != null}">
+                <span aria-hidden="true">·</span>
+                <span th:text="'최근 활동 '
+                               + ${#dates.format(plan.lastActivityAt, 'yyyy.MM.dd')}">
+                  최근 활동 2026.09.01
+                </span>
+              </th:block>
             </span>
           </a>
         </li>
       </ul>
+
+      <p class="travel-plan-empty" th:if="${#lists.isEmpty(travelPlans)}">
+        아직 함께 계획 중인 여행이 없어요. 새로운 여행계획을 만들어 보세요.
+      </p>
+    </section>
+
+    <!--
+      완료된 여행. 최종본에서만 읽는다.
+      끝난 여행이라 진행 중인 것보다 한 톤 차분하게 두고,
+      계속 쌓이는 쪽이라 여기만 쪽으로 끊는다.
+    -->
+    <section class="travel-plan-section is-completed" id="travel-plan-completed"
+             aria-labelledby="travel-plan-completed-title">
+      <h2 class="travel-plan-section-title" id="travel-plan-completed-title">
+        완료된 여행
+        <span class="travel-plan-section-count"
+              th:text="${travelPlanPage.completedCount}">12</span>
+      </h2>
+
+      <ul class="travel-plan-card-list" th:if="${!#lists.isEmpty(completedTravelPlans)}">
+        <li class="travel-plan-card" th:each="plan : ${completedTravelPlans}">
+          <a class="travel-plan-card-link is-completed"
+             th:href="@{|/travel-plans/${plan.travelPlanId}/final|}">
+            <span class="travel-plan-card-title-row">
+              <span class="travel-plan-card-title" th:text="${plan.title}">제주도 여행</span>
+              <!-- 끝난 여행이라는 것을 한눈에 알 수 있게 -->
+              <span class="travel-plan-card-completed">완료</span>
+            </span>
+            <span class="travel-plan-card-meta">
+              <span class="travel-plan-card-period"
+                    th:text="${#temporals.format(plan.startDate, 'yyyy.MM.dd')} + ' ~ '
+                             + ${#temporals.format(plan.endDate, 'yyyy.MM.dd')}">
+                2026.09.01 ~ 2026.09.03
+              </span>
+              <span aria-hidden="true">·</span>
+              <span th:text="${plan.memberCount} + '명과 함께'">3명과 함께</span>
+            </span>
+          </a>
+        </li>
+      </ul>
+
+      <p class="travel-plan-empty" th:if="${#lists.isEmpty(completedTravelPlans)}">
+        완료된 여행이 아직 없어요.
+      </p>
+
+      <!--
+        완료된 여행의 쪽 이동. 한 쪽뿐이면 두지 않는다.
+        쪽을 옮겨도 진행 중 목록은 그대로라 완료 구역으로 바로 돌아온다.
+      -->
+      <nav class="travel-plan-pagination" th:if="${travelPlanPage.completedTotalPages > 1}"
+           aria-label="완료된 여행 목록 페이지">
+        <a th:if="${travelPlanPage.completedPage > 1}" class="page-nav" aria-label="이전 페이지"
+           th:href="@{/travel-plans(completedPage=${travelPlanPage.completedPage - 1})}
+                    + '#travel-plan-completed'">&#8249;</a>
+        <span th:unless="${travelPlanPage.completedPage > 1}" class="page-nav is-disabled"
+              aria-disabled="true">&#8249;</span>
+
+        <th:block th:each="i : ${#numbers.sequence(1, travelPlanPage.completedTotalPages)}">
+          <a th:if="${i != travelPlanPage.completedPage}" class="page-number"
+             th:href="@{/travel-plans(completedPage=${i})} + '#travel-plan-completed'"
+             th:text="${i}">1</a>
+          <span th:if="${i == travelPlanPage.completedPage}" class="page-number is-current"
+                aria-current="page" th:text="${i}">1</span>
+        </th:block>
+
+        <a th:if="${travelPlanPage.completedPage < travelPlanPage.completedTotalPages}"
+           class="page-nav" aria-label="다음 페이지"
+           th:href="@{/travel-plans(completedPage=${travelPlanPage.completedPage + 1})}
+                    + '#travel-plan-completed'">&#8250;</a>
+        <span th:unless="${travelPlanPage.completedPage < travelPlanPage.completedTotalPages}"
+              class="page-nav is-disabled" aria-disabled="true">&#8250;</span>
+      </nav>
     </section>
   </section>
 </th:block>

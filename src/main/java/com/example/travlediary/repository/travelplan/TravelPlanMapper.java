@@ -29,6 +29,9 @@ public interface TravelPlanMapper {
     /**
      * 현재 사용자가 참여 중인 방 목록. 정렬은 최근 활동 순.
      * 상태 값은 SQL 에 박지 않고 enum 이름을 그대로 넘긴다.
+     *
+     * <p>진행 중인 방은 보통 몇 건뿐이라 쪽을 나누지 않고 전부 읽는다.
+     * (계속 쌓이는 완료된 여행만 {@link TravelPlanFinalMapper} 에서 쪽으로 끊는다)
      */
     List<TravelPlanListItemDto> findActivePlansByUserId(@Param("userId") Long userId,
                                                         @Param("planStatus") String planStatus,

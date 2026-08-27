@@ -84,10 +84,20 @@ public interface TravelPlanFinalMapper {
     // 원본 일정(travel_plan_items 등)을 다시 조합하지 않는다.
 
     /**
-     * 이 사람이 함께했던 완료된 여행 목록. 최근에 끝난 것부터 온다.
+     * 이 사람이 함께했던 완료된 여행 목록 한 쪽. 최근에 끝난 것부터 온다.
      * 참여 인원까지 한 번에 세어 목록에서 다시 조회하지 않게 한다.
+     *
+     * <p>전부 읽어 온 뒤 Java 에서 자르지 않는다. 쪽 크기만큼만 DB 에서 끊어 온다.
      */
-    List<TravelPlanFinalListItemDto> findSnapshotsByUserId(@Param("userId") Long userId);
+    List<TravelPlanFinalListItemDto> findSnapshotsByUserId(@Param("userId") Long userId,
+                                                           @Param("offset") int offset,
+                                                           @Param("limit") int limit);
+
+    /**
+     * 이 사람이 함께했던 완료된 여행 수. 완료 탭 숫자와 쪽수 계산에 쓴다.
+     * 자기 목록에서 지운 것은 목록과 마찬가지로 세지 않는다.
+     */
+    int countSnapshotsByUserId(@Param("userId") Long userId);
 
     /**
      * 최종본 1건. 방 번호로 찾는다((travel_plan_id) 가 UNIQUE 라 하나뿐이다).

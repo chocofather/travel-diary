@@ -23,7 +23,9 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -56,10 +58,10 @@ class TravelPlanFinalReadServiceTest {
 
     @Test
     void theListOnlyHasTripsIWasOn() {
-        when(travelPlanFinalMapper.findSnapshotsByUserId(USER_ID))
+        when(travelPlanFinalMapper.findSnapshotsByUserId(USER_ID, 0, 8))
                 .thenReturn(List.of(listItem("제주도 여행", 3)));
 
-        List<TravelPlanFinalListItemDto> plans = readService.getCompletedPlans(USER_ID);
+        List<TravelPlanFinalListItemDto> plans = readService.getCompletedPlans(USER_ID, 0, 8);
 
         assertThat(plans).hasSize(1);
         assertThat(plans.get(0).getTitle()).isEqualTo("제주도 여행");
@@ -70,15 +72,15 @@ class TravelPlanFinalReadServiceTest {
     @Test
     void everyoneWhoWasOnTheTripSeesItInTheirOwnList() {
         // 방장이든 아니든 각자 자기 계정에서 같은 완료 여행이 보인다
-        when(travelPlanFinalMapper.findSnapshotsByUserId(USER_ID))
+        when(travelPlanFinalMapper.findSnapshotsByUserId(USER_ID, 0, 8))
                 .thenReturn(List.of(listItem("제주도 여행", 2)));
-        when(travelPlanFinalMapper.findSnapshotsByUserId(OTHER_USER_ID))
+        when(travelPlanFinalMapper.findSnapshotsByUserId(OTHER_USER_ID, 0, 8))
                 .thenReturn(List.of(listItem("제주도 여행", 2)));
 
-        assertThat(readService.getCompletedPlans(USER_ID)).hasSize(1);
-        assertThat(readService.getCompletedPlans(OTHER_USER_ID)).hasSize(1);
-        assertThat(readService.getCompletedPlans(OTHER_USER_ID).get(0).getSnapshotId())
-                .isEqualTo(readService.getCompletedPlans(USER_ID).get(0).getSnapshotId());
+        assertThat(readService.getCompletedPlans(USER_ID, 0, 8)).hasSize(1);
+        assertThat(readService.getCompletedPlans(OTHER_USER_ID, 0, 8)).hasSize(1);
+        assertThat(readService.getCompletedPlans(OTHER_USER_ID, 0, 8).get(0).getSnapshotId())
+                .isEqualTo(readService.getCompletedPlans(USER_ID, 0, 8).get(0).getSnapshotId());
     }
 
     @Test
@@ -87,17 +89,47 @@ class TravelPlanFinalReadServiceTest {
           최종 명단에 없으면 조회가 비어 온다.
           최종본이 있다는 것 자체가 목록에 나오는 이유가 되지는 않는다.
         */
-        when(travelPlanFinalMapper.findSnapshotsByUserId(OTHER_USER_ID)).thenReturn(List.of());
+        when(travelPlanFinalMapper.findSnapshotsByUserId(OTHER_USER_ID, 0, 8)).thenReturn(List.of());
 
-        assertThat(readService.getCompletedPlans(OTHER_USER_ID)).isEmpty();
+        assertThat(readService.getCompletedPlans(OTHER_USER_ID, 0, 8)).isEmpty();
     }
 
     @Test
     void someoneWithNoFinishedTripsSeesAnEmptyList() {
-        when(travelPlanFinalMapper.findSnapshotsByUserId(USER_ID)).thenReturn(List.of());
+        when(travelPlanFinalMapper.findSnapshotsByUserId(USER_ID, 0, 8)).thenReturn(List.of());
 
-        assertThat(readService.getCompletedPlans(USER_ID)).isEmpty();
-        assertThat(readService.getCompletedPlans(null)).isEmpty();
+        assertThat(readService.getCompletedPlans(USER_ID, 0, 8)).isEmpty();
+        assertThat(readService.getCompletedPlans(null, 0, 8)).isEmpty();
+        assertThat(readService.countCompletedPlans(null)).isZero();
+    }
+
+    @Test
+    void theFinishedListIsCutInTheDatabaseRatherThanAfterReadingEverything() {
+        // 두 번째 쪽을 달라고 하면 그만큼 건너뛰고 쪽 크기만큼만 읽는다
+        readService.getCompletedPlans(USER_ID, 8, 8);
+
+        verify(travelPlanFinalMapper).findSnapshotsByUserId(USER_ID, 8, 8);
+    }
+
+    @Test
+    void aBrokenPageRequestNeverReachesTheDatabase() {
+        // 음수 offset 은 0 으로 다듬고, 읽을 것이 없는 요청은 아예 묻지 않는다
+        readService.getCompletedPlans(USER_ID, -5, 8);
+        assertThat(readService.getCompletedPlans(USER_ID, 0, 0)).isEmpty();
+
+        verify(travelPlanFinalMapper).findSnapshotsByUserId(USER_ID, 0, 8);
+        verify(travelPlanFinalMapper, never())
+                .findSnapshotsByUserId(anyLong(), anyInt(), eq(0));
+    }
+
+    @Test
+    void theTabCountLeavesOutWhatSomeoneClearedFromTheirOwnList() {
+        // 세는 조건은 목록과 같다. 숫자만 남고 목록이 비어 보이는 일이 없어야 한다
+        when(travelPlanFinalMapper.countSnapshotsByUserId(USER_ID)).thenReturn(11);
+
+        assertThat(readService.countCompletedPlans(USER_ID)).isEqualTo(11);
+
+        verify(travelPlanFinalMapper).countSnapshotsByUserId(USER_ID);
     }
 
     // ── 상세 ────────────────────────────────────────────────
@@ -197,19 +229,19 @@ class TravelPlanFinalReadServiceTest {
           여기서 보는 것은 지워진 뒤의 읽기다 — 조회가 비어 오면 그대로 막힌다.
         */
         when(travelPlanFinalMapper.findSnapshotByPlanAndUser(PLAN_ID, USER_ID)).thenReturn(null);
-        when(travelPlanFinalMapper.findSnapshotsByUserId(USER_ID)).thenReturn(List.of());
+        when(travelPlanFinalMapper.findSnapshotsByUserId(USER_ID, 0, 8)).thenReturn(List.of());
 
         assertThatThrownBy(() -> readService.getCompletedPlanDetail(USER_ID, PLAN_ID))
                 .isInstanceOf(ResponseStatusException.class);
-        assertThat(readService.getCompletedPlans(USER_ID)).isEmpty();
+        assertThat(readService.getCompletedPlans(USER_ID, 0, 8)).isEmpty();
 
         // 함께한 사람은 그대로 본다
         givenSnapshotFor(OTHER_USER_ID);
-        when(travelPlanFinalMapper.findSnapshotsByUserId(OTHER_USER_ID))
+        when(travelPlanFinalMapper.findSnapshotsByUserId(OTHER_USER_ID, 0, 8))
                 .thenReturn(List.of(listItem("제주도 여행", 2)));
         assertThat(readService.getCompletedPlanDetail(OTHER_USER_ID, PLAN_ID)
                 .getSnapshot().getId()).isEqualTo(SNAPSHOT_ID);
-        assertThat(readService.getCompletedPlans(OTHER_USER_ID)).hasSize(1);
+        assertThat(readService.getCompletedPlans(OTHER_USER_ID, 0, 8)).hasSize(1);
     }
 
     // ── 준비 ────────────────────────────────────────────────

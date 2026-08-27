@@ -6,6 +6,7 @@ import com.example.travlediary.config.SecurityConfig;
 import com.example.travlediary.dto.TravelPlanDayDetailDto;
 import com.example.travlediary.dto.TravelPlanDetailDto;
 import com.example.travlediary.dto.TravelPlanListItemDto;
+import com.example.travlediary.dto.TravelPlanListPageDto;
 import com.example.travlediary.dto.TravelPlanMemberDto;
 import com.example.travlediary.model.TravelPlan;
 import com.example.travlediary.model.TravelPlanDay;
@@ -34,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -150,6 +152,77 @@ class TravelPlanControllerTest {
     }
 
     @Test
+    void aYearLongerThanFourDigitsNeverReachesTheService() throws Exception {
+        mockMvc.perform(post("/travel-plans")
+                        .with(user(member())).with(csrf())
+                        .param("title", "제주 여행")
+                        .param("startDate", "12026-09-01")
+                        .param("endDate", "12026-09-03")
+                        .param("displayName", "민준"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("travelplan/create"))
+                .andExpect(model().attributeHasFieldErrors(
+                        "travelPlanCreateForm", "startDate", "endDate"));
+
+        verify(travelPlanService, never()).createPlan(anyLong(), any(), any(), any(), any());
+    }
+
+    @Test
+    void anUnreadableDateIsExplainedInThisScreensOwnWords() throws Exception {
+        // 기본 변환 오류 문구가 화면에 그대로 나가지 않는다
+        mockMvc.perform(post("/travel-plans")
+                        .with(user(member())).with(csrf())
+                        .param("title", "제주 여행")
+                        .param("startDate", "12026-09-01")
+                        .param("endDate", END)
+                        .param("displayName", "민준"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.allOf(
+                        org.hamcrest.Matchers.containsString(
+                                "여행 시작일을 올바른 날짜로 선택해 주세요."),
+                        org.hamcrest.Matchers.not(
+                                org.hamcrest.Matchers.containsString("Failed to convert")))));
+    }
+
+    @Test
+    void anOrdinaryFourDigitYearGoesStraightThrough() throws Exception {
+        when(travelPlanService.createPlan(anyLong(), anyString(), any(), any(), anyString()))
+                .thenReturn(42L);
+
+        mockMvc.perform(post("/travel-plans")
+                        .with(user(member())).with(csrf())
+                        .param("title", "제주 여행")
+                        .param("startDate", START)
+                        .param("endDate", END)
+                        .param("displayName", "민준"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/travel-plans/42"));
+
+        verify(travelPlanService).createPlan(
+                7L, "제주 여행", LocalDate.parse(START), LocalDate.parse(END), "민준");
+    }
+
+    @Test
+    void aYearOutOfRangeIsShownOnTheDateFieldLikeAnyOtherRule() throws Exception {
+        // Service 가 막은 것도 같은 자리에 같은 모양으로 나온다
+        doThrow(new TravelPlanValidationException(
+                "startDate", "여행 시작일의 연도는 4자리(1000 ~ 9999)로 입력해 주세요."))
+                .when(travelPlanService).createPlan(anyLong(), any(), any(), any(), any());
+
+        mockMvc.perform(post("/travel-plans")
+                        .with(user(member())).with(csrf())
+                        .param("title", "제주 여행")
+                        .param("startDate", START)
+                        .param("endDate", END)
+                        .param("displayName", "민준"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("travelplan/create"))
+                .andExpect(model().attributeHasFieldErrors("travelPlanCreateForm", "startDate"))
+                .andExpect(content().string(
+                        org.hamcrest.Matchers.containsString("연도는 4자리")));
+    }
+
+    @Test
     void aDisplayNameValidationFailureIsShownOnItsOwnField() throws Exception {
         doThrow(new TravelPlanValidationException(
                 "displayName", "이 방에서 사용할 표시 이름을 입력해 주세요."))
@@ -219,6 +292,8 @@ class TravelPlanControllerTest {
         row.setEndDate(LocalDate.parse(END));
         row.setRole(TravelPlanRole.OWNER);
         row.setMemberCount(1);
+        // 최근 활동까지 그대로 그려진다
+        row.setLastActivityAt(java.sql.Timestamp.valueOf("2026-09-01 10:00:00"));
         when(travelPlanService.getActivePlans(7L)).thenReturn(List.of(row));
 
         mockMvc.perform(get("/travel-plans").with(user(member())))
@@ -515,30 +590,152 @@ class TravelPlanControllerTest {
     }
 
     @Test
-    void finishedTripsShowEvenWhenNothingIsRunning() throws Exception {
-        // 진행 중인 방이 하나도 없어도 완료된 여행은 따로 나온다
-        when(travelPlanService.getActivePlans(7L)).thenReturn(List.of());
-        com.example.travlediary.dto.TravelPlanFinalListItemDto finished =
-                new com.example.travlediary.dto.TravelPlanFinalListItemDto();
-        finished.setTravelPlanId(42L);
-        finished.setSnapshotId(900L);
-        finished.setTitle("제주도 여행");
-        when(travelPlanFinalReadService.getCompletedPlans(7L)).thenReturn(List.of(finished));
-
-        mockMvc.perform(get("/travel-plans").with(user(member())))
-                .andExpect(status().isOk())
-                .andExpect(model().attribute("travelPlans", org.hamcrest.Matchers.hasSize(0)))
-                .andExpect(model().attribute("completedTravelPlans",
-                        org.hamcrest.Matchers.hasSize(1)));
-    }
-
-    @Test
     void theListAsksForTheFinishedTripsOfWhoeverIsLookingAtIt() throws Exception {
         // 로그인한 사람의 계정으로 찾는다. 이 번호가 최종 명단의 user_id 와 맞아야 목록이 나온다
         mockMvc.perform(get("/travel-plans").with(user(member())))
                 .andExpect(status().isOk());
 
-        verify(travelPlanFinalReadService).getCompletedPlans(7L);
+        verify(travelPlanFinalReadService).getCompletedPlans(7L, 0, 8);
+    }
+
+    // ── 한 화면에 놓인 두 구역 ──────────────────────────────
+
+    @Test
+    void bothListsAreOnTheScreenAtOnceWithoutTabs() throws Exception {
+        TravelPlanListItemDto running = new TravelPlanListItemDto();
+        running.setTravelPlanId(42L);
+        running.setTitle("제주 여행");
+        running.setStartDate(LocalDate.parse(START));
+        running.setEndDate(LocalDate.parse(END));
+        running.setRole(TravelPlanRole.OWNER);
+        running.setMemberCount(2);
+        com.example.travlediary.dto.TravelPlanFinalListItemDto finished =
+                new com.example.travlediary.dto.TravelPlanFinalListItemDto();
+        finished.setTravelPlanId(21L);
+        finished.setSnapshotId(900L);
+        finished.setTitle("부산 여행");
+        finished.setStartDate(LocalDate.parse(START));
+        finished.setEndDate(LocalDate.parse(END));
+        when(travelPlanService.getActivePlans(7L)).thenReturn(List.of(running));
+        when(travelPlanFinalReadService.countCompletedPlans(7L)).thenReturn(1);
+        when(travelPlanFinalReadService.getCompletedPlans(7L, 0, 8)).thenReturn(List.of(finished));
+
+        mockMvc.perform(get("/travel-plans").with(user(member())))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("travelPlans", List.of(running)))
+                .andExpect(model().attribute("completedTravelPlans", List.of(finished)))
+                // 둘 다 한 화면에 그려지고, 탭으로 가려지지 않는다
+                .andExpect(content().string(org.hamcrest.Matchers.allOf(
+                        org.hamcrest.Matchers.containsString("제주 여행"),
+                        org.hamcrest.Matchers.containsString("부산 여행"),
+                        org.hamcrest.Matchers.containsString("진행 중인 여행"),
+                        org.hamcrest.Matchers.not(
+                                org.hamcrest.Matchers.containsString("travel-plan-tabs")))));
+    }
+
+    @Test
+    void eachSectionCarriesItsOwnTotal() throws Exception {
+        TravelPlanListItemDto running = new TravelPlanListItemDto();
+        running.setTravelPlanId(42L);
+        running.setStartDate(LocalDate.parse(START));
+        running.setEndDate(LocalDate.parse(END));
+        when(travelPlanService.getActivePlans(7L)).thenReturn(List.of(running));
+        when(travelPlanFinalReadService.countCompletedPlans(7L)).thenReturn(12);
+
+        // 진행 중은 전부 보여 주므로 화면에 그려진 수가 곧 전체 수다
+        mockMvc.perform(get("/travel-plans").with(user(member())))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("travelPlanPage", listPage(1, 12, 1, 2)));
+    }
+
+    @Test
+    void theRunningSectionIsNeverCutIntoPages() throws Exception {
+        // 진행 중이 몇 건이든 한 번에 다 보여 준다
+        java.util.List<TravelPlanListItemDto> many = new java.util.ArrayList<>();
+        for (int index = 0; index < 12; index++) {
+            TravelPlanListItemDto row = new TravelPlanListItemDto();
+            row.setTravelPlanId((long) index);
+            row.setStartDate(LocalDate.parse(START));
+            row.setEndDate(LocalDate.parse(END));
+            many.add(row);
+        }
+        when(travelPlanService.getActivePlans(7L)).thenReturn(many);
+
+        mockMvc.perform(get("/travel-plans").with(user(member())))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("travelPlans", org.hamcrest.Matchers.hasSize(12)))
+                // 쪽수는 완료된 여행만 보고 정해진다
+                .andExpect(model().attribute("travelPlanPage", listPage(12, 0, 1, 1)));
+    }
+
+    // ── 완료된 여행 쪽 나누기 ───────────────────────────────
+
+    @Test
+    void onlyTheFinishedListIsPaged() throws Exception {
+        when(travelPlanFinalReadService.countCompletedPlans(7L)).thenReturn(20);
+
+        mockMvc.perform(get("/travel-plans").with(user(member())))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("travelPlanPage", listPage(0, 20, 1, 3)));
+
+        verify(travelPlanFinalReadService).getCompletedPlans(7L, 0, 8);
+    }
+
+    @Test
+    void aSecondPageSkipsTheFirstPageWorthOfFinishedTrips() throws Exception {
+        when(travelPlanFinalReadService.countCompletedPlans(7L)).thenReturn(20);
+
+        mockMvc.perform(get("/travel-plans?completedPage=2").with(user(member())))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("travelPlanPage", listPage(0, 20, 2, 3)))
+                // 쪽 이동 주소에는 완료된 여행의 쪽 번호만 붙는다
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "/travel-plans?completedPage=3#travel-plan-completed")));
+
+        // 전부 읽어 와서 자르지 않는다. 건너뛸 만큼을 DB 에 알려 준다
+        verify(travelPlanFinalReadService).getCompletedPlans(7L, 8, 8);
+        // 진행 중 목록은 쪽과 상관없이 그대로다
+        verify(travelPlanService).getActivePlans(7L);
+    }
+
+    @Test
+    void aBrokenCompletedPageComesBackAsASafeOne() throws Exception {
+        when(travelPlanFinalReadService.countCompletedPlans(7L)).thenReturn(9);
+
+        // 숫자가 아니거나 0 이하이면 첫 쪽으로 본다
+        for (String page : new String[]{"abc", "0", "-3", ""}) {
+            mockMvc.perform(get("/travel-plans?completedPage=" + page).with(user(member())))
+                    .andExpect(status().isOk())
+                    .andExpect(model().attribute("travelPlanPage", listPage(0, 9, 1, 2)));
+        }
+        // 있지도 않은 쪽을 달라고 하면 마지막 쪽을 준다
+        mockMvc.perform(get("/travel-plans?completedPage=99").with(user(member())))
+                .andExpect(model().attribute("travelPlanPage", listPage(0, 9, 2, 2)));
+    }
+
+    @Test
+    void theOldTabAddressStillOpensTheList() throws Exception {
+        // 탭이 있던 시절의 주소가 들어와도 오류 없이 그냥 목록이 나온다
+        for (String query : new String[]{"?status=completed", "?status=active&page=2"}) {
+            mockMvc.perform(get("/travel-plans" + query).with(user(member())))
+                    .andExpect(status().isOk())
+                    .andExpect(view().name("travelplan/list"))
+                    .andExpect(model().attribute("travelPlanPage", listPage(0, 0, 1, 1)));
+        }
+    }
+
+    @Test
+    void anEmptyFinishedListStillHasOnePage() throws Exception {
+        // 쪽이 하나뿐이면 화면이 쪽 이동을 감춘다
+        mockMvc.perform(get("/travel-plans").with(user(member())))
+                .andExpect(model().attribute("travelPlanPage", listPage(0, 0, 1, 1)));
+    }
+
+    /** 목록 상태. 완료된 여행의 쪽 크기는 화면과 같은 8건이다. */
+    private TravelPlanListPageDto listPage(int activeCount, int completedCount,
+                                           int completedPage, int completedTotalPages) {
+        return new TravelPlanListPageDto(
+                activeCount, completedCount, completedPage, completedTotalPages, 8);
     }
 
     private com.example.travlediary.dto.TravelPlanFinalDetailDto finalDetail() {

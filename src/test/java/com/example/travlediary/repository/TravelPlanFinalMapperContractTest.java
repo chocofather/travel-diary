@@ -197,6 +197,30 @@ class TravelPlanFinalMapperContractTest {
                 .contains("ORDER BY s.finalized_at DESC");
     }
 
+    @Test
+    void theFinishedListIsCutInTheDatabaseNotAfterReadingEverything() throws IOException {
+        String select = between(mapperXml(), "<select id=\"findSnapshotsByUserId\"", "</select>");
+
+        // 최근에 끝난 것부터 정렬한 뒤 쪽 크기만큼만 끊어 온다
+        assertThat(select).contains("LIMIT #{limit} OFFSET #{offset}");
+        assertThat(select.indexOf("ORDER BY"))
+                .as("정렬이 먼저다").isLessThan(select.indexOf("LIMIT"));
+    }
+
+    @Test
+    void theFinishedTabNumberLeavesOutWhatSomeoneCleared() throws IOException {
+        String count = between(mapperXml(), "<select id=\"countSnapshotsByUserId\"", "</select>");
+
+        // 목록과 같은 조건으로 센다. 숫자만 남고 목록이 비어 보이는 일이 없어야 한다
+        assertThat(count)
+                .contains("SELECT COUNT(*)")
+                .contains("FROM travel_plan_final_snapshots s")
+                .contains("JOIN travel_plan_final_members m ON m.snapshot_id = s.id")
+                .contains("WHERE m.user_id = #{userId}")
+                .contains("AND m.hidden_at IS NULL");
+        assertThat(count).doesNotContain("LIMIT").doesNotContain("${");
+    }
+
     // ── 내 목록에서만 지우기 ─────────────────────────────────
 
     @Test

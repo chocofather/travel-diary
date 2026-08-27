@@ -38,18 +38,22 @@
 
       <div class="travel-plan-form-field">
         <span class="travel-plan-form-label">여행 기간</span>
+        <!-- 위에 '여행 기간'이 있으므로 아래는 짧게만 적는다 -->
         <div class="travel-plan-period-inputs">
           <div class="travel-plan-period-item">
-            <label for="travel-plan-start-date">여행 시작일</label>
+            <label for="travel-plan-start-date">시작일</label>
+            <!-- 연도 4자리(1000~9999)만 고르도록 min/max 를 두고, 서버에서도 같은 범위를 검증한다. -->
             <input type="date" id="travel-plan-start-date" th:field="*{startDate}" required
+                   min="1000-01-01" max="9999-12-31"
                    th:classappend="${#fields.hasErrors('startDate')} ? 'is-invalid'">
             <p class="travel-plan-field-error" th:if="${#fields.hasErrors('startDate')}"
                th:errors="*{startDate}"></p>
           </div>
           <span class="travel-plan-period-separator" aria-hidden="true">~</span>
           <div class="travel-plan-period-item">
-            <label for="travel-plan-end-date">여행 종료일</label>
+            <label for="travel-plan-end-date">종료일</label>
             <input type="date" id="travel-plan-end-date" th:field="*{endDate}" required
+                   min="1000-01-01" max="9999-12-31"
                    th:classappend="${#fields.hasErrors('endDate')} ? 'is-invalid'">
             <p class="travel-plan-field-error" th:if="${#fields.hasErrors('endDate')}"
                th:errors="*{endDate}"></p>
