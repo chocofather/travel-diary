@@ -469,17 +469,24 @@ class TravelPlanPollUiContractTest {
         String detail = detailHtml();
         String poll = pollJs();
 
-        // 마감 방식은 고르는 것이 아니라 정해진 규칙이라 안내 한 줄만 둔다
+        /*
+          마감 방식은 고르는 것이 아니라 정해진 규칙이다.
+          고르는 것이 아니므로 만들기 폼에서 자리를 차지하지 않는다
+          (규칙 자체는 그대로다 — 모두 투표하면 자동 마감, 그 전에도 직접 마감).
+        */
         assertThat(detail)
                 .doesNotContain("data-travel-plan-poll-close-type")
                 .doesNotContain("data-travel-plan-poll-deadline")
                 .doesNotContain("마감 시간 지정")
-                .contains("참여자가 모두 투표하면 자동으로 마감돼요.");
+                .doesNotContain("참여자가 모두 투표하면 자동으로 마감돼요.")
+                .doesNotContain("travel-plan-poll-note");
         assertThat(poll)
                 .doesNotContain("renderDeadlineField")
                 .doesNotContain("closeType")
                 .doesNotContain("deadlineAt");
-        assertThat(cssFile()).doesNotContain(".travel-plan-poll-deadline");
+        assertThat(cssFile())
+                .doesNotContain(".travel-plan-poll-deadline")
+                .doesNotContain(".travel-plan-poll-note");
     }
 
     @Test
@@ -852,18 +859,136 @@ class TravelPlanPollUiContractTest {
     }
 
     @Test
-    void theShapeOfTheMainButtonStillMatchesTheRestOfTheSite() throws IOException {
+    void theMainButtonUsesTheSameAccentAsTheRestOfThePlanner() throws IOException {
         String css = cssFile();
-        String submit = between(css, ".travel-plan-poll-cancel,\n.travel-plan-poll-submit {", "}");
+        String buttons = between(css, ".travel-plan-poll-cancel,\n.travel-plan-poll-submit {", "}");
 
-        // 투표만 다른 브랜드 색을 새로 만들지 않는다. 기존 기본 버튼과 같은 갈색이다
+        // 투표만 다른 색을 새로 만들지 않는다. 여행계획 화면의 accent 를 그대로 쓴다
         assertThat(css).contains(
                 ".travel-plan-poll-submit {\n"
-                        + "    border-color: #6f6350;\n"
-                        + "    background: #6f6350;");
-        assertThat(between(css, ".travel-plan-form-submit {", "}")).contains("#6f6350");
-        // 크기·모서리도 사이트 기본과 같은 값이다
-        assertThat(submit).contains("border-radius: 8px").contains("font-size: 14px");
+                        + "    border-color: var(--tp-plan-accent);\n"
+                        + "    background: var(--tp-plan-accent);\n"
+                        + "    color: #fff;\n"
+                        + "}");
+        // 투표 창에는 갈색 버튼을 남기지 않는다
+        assertThat(between(css, "/* ───── 투표 센터 ───── */", "/* ───── 여행 계획 확정 ───── */"))
+                .doesNotContain("#6f6350");
+        // 물러나는 쪽은 흰 바탕에 옅은 선뿐이다
+        assertThat(between(css, ".travel-plan-poll-cancel {", "}"))
+                .contains("background: #fff")
+                .contains("color: var(--tp-plan-ink-soft)");
+        // 크기는 과하지 않게 둔다
+        assertThat(buttons)
+                .contains("padding: 7px 14px")
+                .contains("border-radius: 8px")
+                .contains("font-size: 13px");
+    }
+
+    @Test
+    void theCreateFormReadsLikeAQuickFormNotASettingsPage() throws IOException {
+        String detail = detailHtml();
+        String css = cssFile();
+
+        // 질문 칸은 그냥 "질문" 이다. 큰 문구를 따로 두지 않는다
+        assertThat(detail).contains(">질문</label>").doesNotContain("어떤 걸 정해볼까요?");
+        assertThat(css).doesNotContain(".travel-plan-poll-lead");
+
+        // 고르는 것은 한 줄짜리 두 칸뿐이다. 큰 카드가 아니다
+        assertThat(detail)
+                .contains("travel-plan-poll-radio-row")
+                .doesNotContain("travel-plan-poll-radio-body")
+                .doesNotContain("travel-plan-poll-radio-hint");
+        assertThat(between(css, ".travel-plan-poll-radio {", "}"))
+                .contains("border: 0")
+                .contains("min-height: 36px");
+        // 선택 상태를 진한 테두리로 알리지 않는다
+        assertThat(between(css, ".travel-plan-poll-radio:has(input:checked) {", "}"))
+                .contains("background: var(--tp-plan-accent-soft)")
+                .doesNotContain("border");
+    }
+
+    @Test
+    void theTwoChoicesAreOneSegmentedControlNotBareRadios() throws IOException {
+        String css = cssFile();
+        String detail = detailHtml();
+
+        // 두 칸이 한 덩어리로 붙는다
+        assertThat(between(css, ".travel-plan-poll-radio-row {", "}"))
+                .contains("display: flex")
+                .contains("border: 1px solid var(--tp-plan-line)")
+                .contains("border-radius: 8px")
+                .contains("overflow: hidden");
+        assertThat(css).contains(
+                ".travel-plan-poll-radio + .travel-plan-poll-radio {\n"
+                        + "    border-left: 1px solid var(--tp-plan-line);\n"
+                        + "}");
+        /*
+          라디오 동그라미는 눈에서만 감춘다. 지우거나 display:none 으로 두면
+          키보드로 옮겨 다닐 수 없고 폼이 값을 읽는 방법도 달라진다.
+        */
+        assertThat(between(css, ".travel-plan-poll-radio input {", "}"))
+                .contains("position: absolute")
+                .contains("clip-path: inset(50%)")
+                .doesNotContain("display: none");
+        assertThat(detail)
+                .contains("type=\"radio\"")
+                .contains("value=\"SINGLE\"")
+                .contains("value=\"MULTIPLE\"")
+                .contains("value=\"REALTIME\"")
+                .contains("value=\"AFTER_CLOSE\"");
+        // 키보드로 왔을 때 지금 어디에 있는지 보인다
+        assertThat(css).contains(".travel-plan-poll-radio:has(input:focus-visible)");
+        // 결과 공개 문구
+        assertThat(detail).contains(">실시간 공개</span>").contains(">종료 후 공개</span>");
+    }
+
+    @Test
+    void theModalIsOnlyAsTallAsWhatIsInIt() throws IOException {
+        String css = cssFile();
+
+        /*
+          목록 칸이 늘어나면 투표가 하나도 없을 때도 큰 빈 상자가 남는다.
+          내용만큼만 자라고, 화면이 모자랄 때만 그 안에서 넘긴다.
+        */
+        assertThat(between(css, ".travel-plan-poll-body {", "}"))
+                .contains("flex: 0 1 auto")
+                .contains("overflow-y: auto");
+        assertThat(between(css, ".travel-plan-poll-modal-panel {", "}"))
+                .contains("max-height: min(600px, calc(100vh - 40px))")
+                .doesNotContain("height: 600px");
+        // 빈 상태도 한 줄이면 된다
+        assertThat(between(css, ".travel-plan-poll-empty {", "}")).contains("margin: 18px 0");
+    }
+
+    @Test
+    void theModalChromeIsWhiteRatherThanTinted() throws IOException {
+        String css = cssFile();
+
+        // 머리글과 탭 줄에 색을 깔지 않는다
+        assertThat(between(css, ".travel-plan-poll-modal-header {", "}"))
+                .contains("background: #fff")
+                .contains("border-bottom: 1px solid var(--tp-plan-line)");
+        assertThat(between(css, ".travel-plan-poll-tabs {", "}")).contains("background: #fff");
+        assertThat(between(css, ".travel-plan-poll-footer {", "}")).contains("background: #fff");
+        // 탭은 상자가 아니라 글자다. 고른 것만 밑줄로 알린다
+        assertThat(between(css, ".travel-plan-poll-tab {", "}"))
+                .contains("border: none")
+                .contains("background: none");
+    }
+
+    @Test
+    void makingAPollIsOfferedAsAPlainAction() throws IOException {
+        String detail = detailHtml();
+
+        // 목록 아래의 진입점. 큰 갈색 덩어리 버튼을 두지 않는다
+        assertThat(between(detail, "class=\"travel-plan-poll-footer\"", "</footer>"))
+                .contains(">투표 만들기</button>")
+                .doesNotContain("+ 새 투표 만들기");
+        // 선택지 추가는 작은 글자 액션이다
+        assertThat(between(cssFile(), ".travel-plan-poll-add {", "}"))
+                .contains("border: none")
+                .contains("background: none")
+                .contains("color: var(--tp-plan-accent)");
     }
 
     @Test
@@ -877,7 +1002,7 @@ class TravelPlanPollUiContractTest {
                 .contains("position: fixed")
                 .contains("inset: 0")
                 // 뒤의 페이지와 채팅을 함께 덮어 그동안 눌리지 않게 한다
-                .contains("background: rgba(63, 52, 38, 0.32)");
+                .contains("background: rgba(47, 52, 56, 0.32)");
     }
 
     private String detailHtml() throws IOException {

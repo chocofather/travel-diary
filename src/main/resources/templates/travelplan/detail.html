@@ -315,7 +315,7 @@
 
           <footer class="travel-plan-poll-footer">
             <button type="button" class="travel-plan-poll-submit"
-                    data-travel-plan-poll-create-open>+ 새 투표 만들기</button>
+                    data-travel-plan-poll-create-open>투표 만들기</button>
           </footer>
         </div>
 
@@ -334,8 +334,8 @@
 
           <form class="travel-plan-poll-form" data-travel-plan-poll-form>
             <div class="travel-plan-poll-field">
-              <label class="travel-plan-poll-lead"
-                     for="travel-plan-poll-question">어떤 걸 정해볼까요?</label>
+              <label class="travel-plan-poll-label"
+                     for="travel-plan-poll-question">질문</label>
               <input type="text" id="travel-plan-poll-question"
                      class="travel-plan-poll-question" autocomplete="off" maxlength="200"
                      placeholder="질문을 입력해 주세요"
@@ -350,62 +350,45 @@
                       data-travel-plan-poll-add>+ 선택지 추가</button>
             </div>
 
+            <!--
+              고르는 것은 두 가지뿐이라 큰 카드 대신 나란한 라디오로 둔다.
+              무엇이 다른지는 글자만으로 읽히므로 설명을 따로 붙이지 않는다.
+            -->
             <fieldset class="travel-plan-poll-field travel-plan-poll-choice">
               <legend class="travel-plan-poll-label">선택 방식</legend>
-              <label class="travel-plan-poll-radio">
-                <input type="radio" name="travelPlanPollSelectionType" value="SINGLE" checked
-                       data-travel-plan-poll-selection>
-                <span class="travel-plan-poll-radio-body">
+              <div class="travel-plan-poll-radio-row">
+                <label class="travel-plan-poll-radio">
+                  <input type="radio" name="travelPlanPollSelectionType" value="SINGLE" checked
+                         data-travel-plan-poll-selection>
                   <span class="travel-plan-poll-radio-title">하나만 선택</span>
-                  <span class="travel-plan-poll-radio-hint">
-                    한 가지 선택지만 고를 수 있어요.
-                  </span>
-                </span>
-              </label>
-              <label class="travel-plan-poll-radio">
-                <input type="radio" name="travelPlanPollSelectionType" value="MULTIPLE"
-                       data-travel-plan-poll-selection>
-                <span class="travel-plan-poll-radio-body">
+                </label>
+                <label class="travel-plan-poll-radio">
+                  <input type="radio" name="travelPlanPollSelectionType" value="MULTIPLE"
+                         data-travel-plan-poll-selection>
                   <span class="travel-plan-poll-radio-title">여러 개 선택</span>
-                  <span class="travel-plan-poll-radio-hint">
-                    여러 선택지를 동시에 고를 수 있어요.
-                  </span>
-                </span>
-              </label>
+                </label>
+              </div>
             </fieldset>
 
             <!--
-              마감 방식은 고르게 하지 않는다. 모든 투표가 같은 규칙으로 끝난다.
-              지금 방에 있는 사람이 모두 투표하면 그때 끝나고,
-              그 전이라도 만든 사람은 언제든 직접 마감할 수 있다.
+              마감 방식은 고르게 하지 않는다. 모든 투표가 같은 규칙으로 끝난다
+              (모두 투표하면 자동 마감, 그 전에도 만든 사람이 직접 마감).
+              고르는 것이 아니라 만들 때 자리를 차지하지 않는다.
             -->
-            <p class="travel-plan-poll-note">
-              참여자가 모두 투표하면 자동으로 마감돼요.<br>
-              만든 사람은 그 전에도 직접 마감할 수 있어요.
-            </p>
-
             <fieldset class="travel-plan-poll-field travel-plan-poll-choice">
               <legend class="travel-plan-poll-label">결과 공개</legend>
-              <label class="travel-plan-poll-radio">
-                <input type="radio" name="travelPlanPollResultVisibility" value="REALTIME"
-                       checked data-travel-plan-poll-visibility>
-                <span class="travel-plan-poll-radio-body">
-                  <span class="travel-plan-poll-radio-title">실시간</span>
-                  <span class="travel-plan-poll-radio-hint">
-                    투표하는 동안에도 표를 볼 수 있어요.
-                  </span>
-                </span>
-              </label>
-              <label class="travel-plan-poll-radio">
-                <input type="radio" name="travelPlanPollResultVisibility" value="AFTER_CLOSE"
-                       data-travel-plan-poll-visibility>
-                <span class="travel-plan-poll-radio-body">
-                  <span class="travel-plan-poll-radio-title">투표 종료 후 공개</span>
-                  <span class="travel-plan-poll-radio-hint">
-                    마감되기 전에는 표가 보이지 않아요.
-                  </span>
-                </span>
-              </label>
+              <div class="travel-plan-poll-radio-row">
+                <label class="travel-plan-poll-radio">
+                  <input type="radio" name="travelPlanPollResultVisibility" value="REALTIME"
+                         checked data-travel-plan-poll-visibility>
+                  <span class="travel-plan-poll-radio-title">실시간 공개</span>
+                </label>
+                <label class="travel-plan-poll-radio">
+                  <input type="radio" name="travelPlanPollResultVisibility" value="AFTER_CLOSE"
+                         data-travel-plan-poll-visibility>
+                  <span class="travel-plan-poll-radio-title">종료 후 공개</span>
+                </label>
+              </div>
             </fieldset>
 
             <p class="travel-plan-poll-error" hidden role="alert"

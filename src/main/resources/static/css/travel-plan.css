@@ -2930,7 +2930,7 @@
     align-items: center;
     justify-content: center;
     padding: 20px;
-    background: rgba(63, 52, 38, 0.32);
+    background: rgba(47, 52, 56, 0.32);
 }
 
 /*
@@ -2941,6 +2941,11 @@
     display: none;
 }
 
+/*
+  창은 내용만큼만 자란다.
+  높이를 정해 두면 투표가 하나도 없을 때도 큰 빈 상자가 남는다.
+  화면이 모자랄 때만 max-height 가 걸리고 그때 안에서만 넘긴다.
+*/
 .travel-plan-poll-modal-panel {
     box-sizing: border-box;
     display: flex;
@@ -2948,27 +2953,29 @@
     /* 좁은 화면·분할 화면에서도 밖으로 넘치지 않는다 */
     width: min(420px, 100%);
     max-height: min(600px, calc(100vh - 40px));
-    border: 1px solid var(--tp-poll-line);
-    border-radius: 8px;
+    border: 1px solid var(--tp-plan-line);
+    border-radius: 10px;
     background: var(--tp-poll-surface);
-    box-shadow: 0 16px 40px rgba(63, 52, 38, 0.24);
+    box-shadow: 0 12px 32px rgba(47, 52, 56, 0.18);
     overflow: hidden;
 }
 
+/* 머리글에 색을 깔지 않는다. 제목과 닫기뿐이다 */
 .travel-plan-poll-modal-header {
+    flex: 0 0 auto;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    padding: 14px 16px;
-    border-bottom: 1px solid var(--tp-poll-line);
-    background: var(--tp-poll-soft);
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--tp-plan-line);
+    background: #fff;
 }
 
 .travel-plan-poll-modal-title {
     margin: 0;
-    color: var(--tp-poll-accent-strong);
-    font-size: 16px;
+    color: var(--tp-plan-ink);
+    font-size: 15px;
     font-weight: 700;
 }
 
@@ -2985,41 +2992,47 @@
 
 /* ── 탭 ── */
 
+/* 글자 탭 두 개. 상자를 두르지 않고 고른 것만 밑줄로 알린다 */
 .travel-plan-poll-tabs {
+    flex: 0 0 auto;
     display: flex;
     gap: 4px;
     padding: 0 16px;
-    border-bottom: 1px solid var(--tp-poll-line);
-    background: var(--tp-poll-soft);
+    border-bottom: 1px solid var(--tp-plan-line);
+    background: #fff;
 }
 
 .travel-plan-poll-tab {
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    padding: 9px 4px;
+    padding: 9px 2px;
     border: none;
     /* 고른 탭만 accent 밑줄로 알린다 */
     border-bottom: 2px solid transparent;
     background: none;
-    color: var(--tp-ink-faint);
+    color: var(--tp-plan-ink-faint);
     font-family: inherit;
     font-size: 13px;
     cursor: pointer;
 }
 
+.travel-plan-poll-tab:hover {
+    color: var(--tp-plan-ink-soft);
+}
+
 .travel-plan-poll-tab + .travel-plan-poll-tab {
-    margin-left: 12px;
+    margin-left: 14px;
 }
 
 .travel-plan-poll-tab.is-active {
     border-bottom-color: var(--tp-poll-accent);
-    color: var(--tp-poll-accent-strong);
+    color: var(--tp-plan-ink);
     font-weight: 600;
 }
 
 .travel-plan-poll-tab-count {
-    color: var(--tp-ink-faint);
+    color: var(--tp-plan-ink-faint);
     font-size: 12px;
 }
 
@@ -3029,17 +3042,22 @@
 
 /* ── 목록 ── */
 
+/*
+  flex-grow 를 두지 않는다. 그러면 투표가 없을 때도 이 칸이 늘어나
+  창이 큰 빈 상자가 된다. 넘칠 때만 안에서 스크롤한다.
+*/
 .travel-plan-poll-body {
-    flex: 1 1 auto;
+    flex: 0 1 auto;
     min-height: 0;
-    padding: 14px 16px;
+    padding: 12px 16px;
     overflow-y: auto;
     overflow-x: hidden;
 }
 
+/* 비었다는 말 한 줄이면 된다. 창 높이를 차지하지 않는다 */
 .travel-plan-poll-empty {
-    margin: 28px 0;
-    color: var(--tp-ink-faint);
+    margin: 18px 0;
+    color: var(--tp-plan-ink-faint);
     font-size: 13px;
     text-align: center;
 }
@@ -3171,18 +3189,6 @@
     font-size: 12px;
 }
 
-/* 마감 규칙은 고르는 것이 아니라 알려 주는 것이라 조용한 안내 한 줄로 둔다 */
-.travel-plan-poll-note {
-    margin: 0;
-    padding: 10px 12px;
-    border: 1px solid var(--tp-poll-line);
-    border-radius: 5px;
-    background: var(--tp-poll-soft);
-    color: var(--tp-poll-accent-strong);
-    font-size: 12px;
-    line-height: 1.7;
-}
-
 .travel-plan-poll-choices,
 .travel-plan-poll-results {
     display: flex;
@@ -3284,9 +3290,9 @@
     flex: 0 0 auto;
     display: flex;
     justify-content: flex-end;
-    padding: 12px 16px;
-    border-top: 1px solid var(--tp-poll-line);
-    background: var(--tp-poll-soft);
+    padding: 10px 16px;
+    border-top: 1px solid var(--tp-plan-line);
+    background: #fff;
 }
 
 /* ── 만들기 화면 ── */
@@ -3296,81 +3302,69 @@
     padding: 12px 16px 0;
     border: none;
     background: none;
-    color: var(--tp-ink-faint);
+    color: var(--tp-plan-ink-faint);
     font-family: inherit;
     font-size: 13px;
     cursor: pointer;
 }
 
 .travel-plan-poll-back:hover {
-    color: var(--tp-poll-accent-strong);
+    color: var(--tp-plan-ink-soft);
 }
 
 .travel-plan-poll-form {
     display: flex;
     flex-direction: column;
-    gap: 20px;
-    padding: 14px 16px 16px;
+    gap: 16px;
+    padding: 12px 16px 16px;
     overflow-y: auto;
 }
 
 .travel-plan-poll-field {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
     min-width: 0;
     margin: 0;
     padding: 0;
     border: none;
 }
 
-/* 질문이 이 화면에서 가장 중요한 것이라 크게 묻는다 */
-.travel-plan-poll-lead {
-    color: var(--tp-ink);
-    font-size: 15px;
-    font-weight: 700;
-}
-
+/* 어느 칸인지만 알리는 작은 글자. 큰 문구를 따로 두지 않는다 */
 .travel-plan-poll-label {
     padding: 0;
-    color: var(--tp-ink-soft);
+    color: var(--tp-plan-ink-soft);
     font-size: 13px;
     font-weight: 600;
 }
 
+/* 채팅 입력칸과 같은 높이·모서리를 쓴다 */
 .travel-plan-poll-question,
 .travel-plan-poll-option {
     box-sizing: border-box;
     width: 100%;
     min-width: 0;
     max-width: 100%;
-    border: 1px solid var(--tp-poll-line);
-    border-radius: 5px;
+    min-height: 34px;
+    padding: 7px 10px;
+    border: 1px solid var(--tp-plan-line);
+    border-radius: 8px;
     background: #fff;
-    color: var(--tp-ink);
+    color: var(--tp-plan-ink);
     font-family: inherit;
-}
-
-.travel-plan-poll-question {
-    padding: 11px 12px;
-    font-size: 15px;
-}
-
-.travel-plan-poll-option {
-    padding: 8px 10px;
     font-size: 14px;
 }
 
 .travel-plan-poll-question:focus,
 .travel-plan-poll-option:focus {
-    border-color: var(--tp-poll-accent);
-    outline: 3px solid rgba(111, 125, 140, 0.16);
+    border-color: var(--tp-plan-accent);
+    outline: 3px solid rgba(109, 133, 121, 0.16);
 }
 
 .travel-plan-poll-options {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
     margin: 0;
     padding: 0;
     list-style: none;
@@ -3383,23 +3377,24 @@
     min-width: 0;
 }
 
-/* 01, 02 ... 저장되는 순서가 화면에서도 보인다 */
+/* 01, 02 ... 저장되는 순서가 화면에서도 보인다. 작고 연하게 둔다 */
 .travel-plan-poll-option-number {
     flex: 0 0 auto;
     width: 18px;
-    color: var(--tp-poll-accent);
+    color: var(--tp-plan-ink-faint);
     font-size: 11px;
-    font-weight: 700;
+    font-weight: 600;
 }
 
+/* 지우는 자리라는 것은 보이되 강조하지는 않는다 */
 .travel-plan-poll-option-remove {
     flex: 0 0 auto;
-    width: 24px;
-    height: 24px;
+    width: 26px;
+    height: 26px;
     border: none;
-    border-radius: 4px;
+    border-radius: 6px;
     background: none;
-    color: #c0b6a6;
+    color: var(--tp-plan-ink-faint);
     font-family: inherit;
     font-size: 14px;
     line-height: 1;
@@ -3407,29 +3402,33 @@
 }
 
 .travel-plan-poll-option-remove:hover:not(:disabled) {
-    background: var(--tp-poll-soft);
-    color: #b98c86;
+    background: #f4f6f7;
+    color: var(--tp-plan-ink);
 }
 
 .travel-plan-poll-option-remove:disabled {
-    color: #e5ded1;
+    color: #dfe3e6;
     cursor: not-allowed;
 }
 
+/* 버튼이 아니라 작은 글자 액션이다 */
 .travel-plan-poll-add {
     align-self: flex-start;
     margin-left: 26px;
     padding: 2px 0;
     border: none;
     background: none;
-    color: var(--tp-poll-accent);
+    color: var(--tp-plan-accent);
     font-family: inherit;
     font-size: 13px;
+    font-weight: 600;
     cursor: pointer;
 }
 
 .travel-plan-poll-add:hover {
-    color: var(--tp-poll-accent-strong);
+    color: var(--tp-plan-accent-strong);
+    text-decoration: underline;
+    text-underline-offset: 3px;
 }
 
 .travel-plan-poll-add[hidden] {
@@ -3440,44 +3439,104 @@
     gap: 6px;
 }
 
-/* 방식마다 한 줄 설명을 붙여 무엇이 다른지 바로 보이게 한다 */
-.travel-plan-poll-radio {
+/*
+  고르는 것은 두 가지뿐이라 한 덩어리(segmented)로 둔다.
+
+  라디오 동그라미를 그대로 내보이지 않고, 두 칸을 붙여 놓고
+  고른 쪽만 아주 옅은 sage 로 채운다. 큰 카드가 아니라 한 줄짜리 컨트롤이다.
+*/
+.travel-plan-poll-radio-row {
     display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    padding: 9px 10px;
-    border: 1px solid var(--tp-poll-line);
-    border-radius: 5px;
+    box-sizing: border-box;
+    width: 100%;
+    border: 1px solid var(--tp-plan-line);
+    border-radius: 8px;
+    background: #fff;
+    /* 칸의 모서리가 바깥 모서리를 넘지 않게 한다 */
+    overflow: hidden;
+}
+
+.travel-plan-poll-radio {
+    position: relative;
+    flex: 1 1 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-width: 0;
+    min-height: 36px;
+    padding: 6px 10px;
+    border: 0;
     background: #fff;
     cursor: pointer;
+    transition: background-color 0.12s ease, color 0.12s ease;
 }
 
-.travel-plan-poll-radio:has(input:checked) {
-    border-color: var(--tp-poll-accent);
-    background: var(--tp-poll-soft);
+/* 두 칸 사이의 얇은 선 하나 */
+.travel-plan-poll-radio + .travel-plan-poll-radio {
+    border-left: 1px solid var(--tp-plan-line);
 }
 
+/*
+  라디오는 눈에서만 감춘다.
+  지우거나 display:none 으로 두면 키보드로 옮겨 다닐 수 없고,
+  폼이 값을 읽는 방법(:checked)도 지금과 달라진다.
+*/
 .travel-plan-poll-radio input {
-    margin-top: 2px;
-    accent-color: var(--tp-poll-accent);
-}
-
-.travel-plan-poll-radio-body {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-    min-width: 0;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    clip-path: inset(50%);
+    overflow: hidden;
+    white-space: nowrap;
 }
 
 .travel-plan-poll-radio-title {
-    color: var(--tp-ink);
+    color: var(--tp-plan-ink-faint);
     font-size: 13px;
+}
+
+.travel-plan-poll-radio:hover .travel-plan-poll-radio-title {
+    color: var(--tp-plan-ink-soft);
+}
+
+/* 고른 쪽. 진하게 칠하지 않고 옅은 바탕과 글자색으로만 알린다 */
+.travel-plan-poll-radio:has(input:checked) {
+    background: var(--tp-plan-accent-soft);
+}
+
+.travel-plan-poll-radio:has(input:checked) .travel-plan-poll-radio-title {
+    color: var(--tp-plan-accent-strong);
     font-weight: 600;
 }
 
-.travel-plan-poll-radio-hint {
-    color: var(--tp-ink-faint);
-    font-size: 12px;
+/* 고른 쪽에만 붙는 작은 표시 */
+.travel-plan-poll-radio:has(input:checked) .travel-plan-poll-radio-title::before {
+    content: "✓";
+    margin-right: 4px;
+    color: var(--tp-plan-accent);
+    font-size: 11px;
+}
+
+/* 키보드로 옮겨 왔을 때 지금 어디에 있는지 보인다 */
+.travel-plan-poll-radio:has(input:focus-visible) {
+    outline: 2px solid var(--tp-plan-accent);
+    outline-offset: -2px;
+}
+
+/* 아주 좁을 때만 위아래로 놓는다 */
+@media (max-width: 360px) {
+    .travel-plan-poll-radio-row {
+        flex-direction: column;
+    }
+
+    .travel-plan-poll-radio + .travel-plan-poll-radio {
+        border-left: 0;
+        border-top: 1px solid var(--tp-plan-line);
+    }
 }
 
 .travel-plan-poll-error {
@@ -3497,31 +3556,39 @@
     gap: 8px;
 }
 
-/* 크기·모서리·굵기는 사이트의 기존 기본 버튼과 같게 둔다 */
+/* 여행계획 화면의 다른 액션과 같은 크기·모서리를 쓴다 */
 .travel-plan-poll-cancel,
 .travel-plan-poll-submit {
-    padding: 8px 16px;
-    border: 1px solid #d6cdb9;
+    padding: 7px 14px;
+    border: 1px solid var(--tp-plan-line);
     border-radius: 8px;
     font-family: inherit;
-    font-size: 14px;
+    font-size: 13px;
+    font-weight: 600;
     cursor: pointer;
 }
 
+/* 물러나는 쪽. 흰 바탕에 옅은 선뿐이다 */
 .travel-plan-poll-cancel {
     background: #fff;
-    color: var(--tp-ink-soft);
+    color: var(--tp-plan-ink-soft);
 }
 
+.travel-plan-poll-cancel:hover {
+    border-color: var(--tp-plan-line-strong);
+    color: var(--tp-plan-ink);
+}
+
+/* 이 화면에서 할 일 하나. 여행계획의 accent 를 그대로 쓴다 */
 .travel-plan-poll-submit {
-    border-color: #6f6350;
-    background: #6f6350;
+    border-color: var(--tp-plan-accent);
+    background: var(--tp-plan-accent);
     color: #fff;
-    font-weight: 700;
 }
 
 .travel-plan-poll-submit:hover:not(:disabled) {
-    background: #5d5344;
+    border-color: var(--tp-plan-accent-strong);
+    background: var(--tp-plan-accent-strong);
 }
 
 .travel-plan-poll-submit:disabled {
