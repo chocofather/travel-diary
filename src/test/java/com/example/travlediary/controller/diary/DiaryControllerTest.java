@@ -15,6 +15,7 @@ import com.example.travlediary.dto.DiarySort;
 import com.example.travlediary.service.diary.DiaryElementService;
 import com.example.travlediary.service.diary.DiaryPageService;
 import com.example.travlediary.service.diary.DiaryService;
+import com.example.travlediary.service.diary.DiaryNoteCatalog;
 import com.example.travlediary.service.diary.DiaryStickerCatalog;
 import com.example.travlediary.service.file.FileUploadService;
 import com.example.travlediary.service.holiday.HolidayService;
@@ -33,6 +34,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
@@ -42,7 +45,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
@@ -58,7 +64,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 @WebMvcTest(DiaryController.class)
-@Import({SecurityConfig.class, DiaryStickerCatalog.class})
+@Import({SecurityConfig.class, DiaryStickerCatalog.class, DiaryNoteCatalog.class})
 class DiaryControllerTest {
 
     @Autowired
@@ -2489,6 +2495,763 @@ class DiaryControllerTest {
     }
 
     /** 스티커는 사진과 같은 자유배치 이미지 요소다. (공용 asset 경로만 다르다) */
+    // ── 꾸미기 picker ────────────────────────────────────────
+
+    @Test
+    void theDecorPickerOffersStickersLabelsAndMemosUnderOneButton() throws Exception {
+        String body = editPageBody();
+
+        // 툴바에는 꾸미기 버튼 하나뿐이다. 종류는 팝오버 안에서 고른다
+        assertThat(countOf(body, "class=\"diary-toolbar-button\" id=\"diary-sticker-button\""))
+                .isEqualTo(1);
+        assertThat(body).contains("title=\"꾸미기\"");
+        assertThat(body)
+                .contains("data-decor-tab=\"sticker\"")
+                .contains("data-decor-tab=\"label\"")
+                .contains("data-decor-tab=\"memo\"");
+        // 처음 열면 스티커부터 보인다
+        assertThat(between(body, "data-decor-tab=\"sticker\"", "</button>"))
+                .doesNotContain("hidden");
+        assertThat(between(body, "class=\"diary-decor-tab is-active\"", "</button>"))
+                .contains("data-decor-tab=\"sticker\"");
+    }
+
+    @Test
+    void theStickerPickerKeepsEverythingItAlreadyHad() throws Exception {
+        String body = editPageBody();
+        String stickerPanel = between(body, "data-decor-panel=\"sticker\"",
+                "data-decor-panel=\"label\"");
+
+        // 분류 탭·최근·마스킹테이프 갈래가 예전 자리 그대로 스티커 묶음 안에 있다
+        assertThat(stickerPanel)
+                .contains("data-sticker-category=\"recent\"")
+                .contains("diary-sticker-tab")
+                .contains("diary-sticker-subtab")
+                .contains("data-tape-type=\"TRANSLUCENT\"")
+                .contains("data-sticker-id=");
+        // 스티커 붙이기 주소도 그대로다
+        assertThat(body).contains("data-create-url");
+    }
+
+    @Test
+    void theLabelAndMemoListsComeFromTheManifest() throws Exception {
+        String body = editPageBody();
+        String labelPanel = between(body, "data-decor-panel=\"label\"",
+                "data-decor-panel=\"memo\"");
+        String memoPanel = between(body, "data-decor-panel=\"memo\"", "diary-sticker-status");
+
+        assertThat(labelPanel)
+                .contains("data-note-style=\"DATE_LABEL\"")
+                .contains("data-note-style=\"TITLE_LABEL\"")
+                .contains("날짜 라벨")
+                .contains("제목 라벨");
+        assertThat(memoPanel)
+                .contains("data-note-style=\"MEMO_SQUARE\"")
+                .contains("data-note-style=\"MEMO_ROUND\"")
+                .contains("사각 메모지")
+                .contains("둥근 메모지");
+        // 라벨 목록에 메모지가, 메모지 목록에 라벨이 섞이지 않는다
+        assertThat(labelPanel).doesNotContain("MEMO_");
+        assertThat(memoPanel).doesNotContain("_LABEL");
+    }
+
+    @Test
+    void thePreviewUsesTheRealNoteLookNotAPicture() throws Exception {
+        String body = editPageBody();
+        String labelPanel = between(body, "data-decor-panel=\"label\"",
+                "data-decor-panel=\"memo\"");
+
+        // 종이 위의 NOTE 와 같은 class 로 그린다. 그림 파일을 따로 두지 않는다
+        assertThat(labelPanel)
+                .contains("diary-note-preview")
+                .contains("diary-note-date-label")
+                .contains("diary-note-surface")
+                .contains("diary-note-text")
+                .doesNotContain("<img");
+        assertThat(between(body, "data-decor-panel=\"memo\"", "diary-sticker-status"))
+                .contains("diary-note-memo-square")
+                .contains("diary-note-memo-round");
+    }
+
+    @Test
+    void thePreviewWordsAreOnlyForShowing() throws Exception {
+        String body = editPageBody();
+
+        // 보기 글은 고르는 자리에만 있다
+        assertThat(body).contains("2026.08.28").contains("JEJU DAY 1").contains("오늘의 기록");
+        // 붙이는 요청에는 글이 실리지 않는다. 서버가 빈 글로 만든다
+        String noteJs = Files.readString(
+                Path.of("src/main/resources/static/js/diary-note-picker.js"));
+        assertThat(between(noteJs, "new URLSearchParams(", ")"))
+                .contains("style: styleType")
+                .doesNotContain("text");
+    }
+
+    @Test
+    void theNoteIsDrawnTheSameWayWhetherTheServerOrTheScreenMadeIt() throws Exception {
+        String noteJs = Files.readString(
+                Path.of("src/main/resources/static/js/diary-note-picker.js"));
+
+        // 모양 class 는 서버가 준 것을 그대로 쓴다. 화면이 표를 다시 만들지 않는다
+        assertThat(noteJs).contains("note.styleClass");
+        assertThat(noteJs)
+                .doesNotContain("DATE_LABEL")
+                .doesNotContain("MEMO_SQUARE");
+        // 서버가 그린 figure 와 같은 구조·같은 값을 쓴다
+        assertThat(noteJs)
+                .contains("diary-canvas-item diary-note")
+                .contains("diary-note-surface")
+                .contains("diary-note-text")
+                .contains("note.positionX")
+                .contains("note.width")
+                .contains("note.rotation")
+                .contains("note.zIndex")
+                .contains("note.urls.position")
+                .contains("note.urls.size")
+                .contains("note.urls.rotation")
+                .contains("note.urls.layer")
+                .contains("note.urls.delete");
+        // 붙인 직후 바로 옮기고 지울 수 있어야 한다. 새로고침을 기다리지 않는다
+        assertThat(noteJs).contains("window.diaryCanvas?.register(item)");
+        // 글은 서버가 준 값(빈 문자열) 그대로다
+        assertThat(noteJs).contains("text.textContent = note.textContent");
+        // 아직 글을 고치는 길은 없다
+        assertThat(noteJs)
+                .doesNotContain("contenteditable")
+                .doesNotContain("prompt(");
+    }
+
+    @Test
+    void aNoteCanBeTakenOffTheSameWayAStickerCan() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-01")));
+        when(diaryElementService.getElements(10L, 1L, 7L))
+                .thenReturn(List.of(noteElement(300L, "MEMO_SQUARE")));
+
+        String body = mockMvc.perform(get("/diaries/10").param("edit", "true")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String noteJs = Files.readString(
+                Path.of("src/main/resources/static/js/diary-note-picker.js"));
+
+        // 서버가 그린 NOTE 에도 사진·스티커와 같은 액션 줄이 붙는다
+        assertThat(body)
+                .contains("diary-canvas-item diary-note diary-note-memo-square")
+                .contains("/elements/300/note/delete")
+                .contains("data-layer-direction=\"BACKWARD\"");
+        // 화면이 만든 NOTE 도 같은 방식이다 (실제 요청은 공통 canvas JS 가 보낸다)
+        assertThat(noteJs)
+                .contains("diary-layer-action is-danger")
+                .contains("dataset.deleteUrl")
+                .contains("dataset.deleteConfirm");
+    }
+
+    @Test
+    void theStickerScriptIsLeftAloneByTheNewOne() throws Exception {
+        String stickerJs = Files.readString(
+                Path.of("src/main/resources/static/js/diary-sticker-picker.js"));
+        String noteJs = Files.readString(
+                Path.of("src/main/resources/static/js/diary-note-picker.js"));
+
+        // 스티커 쪽은 라벨을 모른다. 예전 그대로다
+        assertThat(stickerJs)
+                .doesNotContain("note")
+                .doesNotContain("decor");
+        // 라벨 쪽도 스티커의 최근 목록·테이프 처리를 건드리지 않는다
+        assertThat(noteJs)
+                .doesNotContain("RecentStickers")
+                .doesNotContain("diaryTape")
+                .doesNotContain("maskingTape");
+        // 팝오버 열고 닫기는 스티커 쪽 하나만 갖는다 (두 번 붙지 않는다)
+        assertThat(noteJs).doesNotContain("popover.hidden =");
+    }
+
+    /** 편집 화면 HTML 한 벌. picker 마크업을 보는 테스트가 함께 쓴다. */
+    private String editPageBody() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-01")));
+        when(diaryElementService.getElements(10L, 1L, 7L)).thenReturn(List.of());
+
+        return mockMvc.perform(get("/diaries/10").param("edit", "true")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+    }
+
+    private int countOf(String source, String needle) {
+        int count = 0;
+        for (int index = source.indexOf(needle); index >= 0;
+             index = source.indexOf(needle, index + needle.length())) {
+            count++;
+        }
+        return count;
+    }
+
+    private String between(String source, String start, String end) {
+        int startIndex = source.indexOf(start);
+        int endIndex = source.indexOf(end, startIndex + start.length());
+        assertThat(startIndex).as("start %s", start).isGreaterThanOrEqualTo(0);
+        assertThat(endIndex).as("end %s", end).isGreaterThan(startIndex);
+        return source.substring(startIndex, endIndex);
+    }
+
+    // ── 라벨 / 떡메모지 (NOTE) ───────────────────────────────
+
+    @Test
+    void aNoteIsCreatedFromTheServerSideCatalogOnly() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryElementService.getElements(10L, 3L, 7L)).thenReturn(List.of());
+        when(diaryElementService.create(eq(10L), eq(3L), eq(7L), any()))
+                .thenReturn(noteElement(300L, "MEMO_SQUARE"));
+
+        String body = mockMvc.perform(post("/diaries/10/pages/3/elements/note")
+                        .param("style", "MEMO_SQUARE")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        ArgumentCaptor<DiaryElement> captor = ArgumentCaptor.forClass(DiaryElement.class);
+        verify(diaryElementService).create(eq(10L), eq(3L), eq(7L), captor.capture());
+        DiaryElement saved = captor.getValue();
+        // 유형은 화면이 정하지 않는다
+        assertThat(saved.getElementType()).isEqualTo("NOTE");
+        assertThat(saved.getStyleType()).isEqualTo("MEMO_SQUARE");
+        // 붙이기 전에 무슨 말을 쓸지 정하게 하지 않는다
+        assertThat(saved.getTextContent()).isEmpty();
+        // 라벨/메모지는 그림을 갖지 않는다
+        assertThat(saved.getImageUrl()).isNull();
+
+        // 화면이 바로 그릴 수 있는 값이 함께 온다
+        assertThat(body)
+                .contains("\"elementType\":\"NOTE\"")
+                .contains("\"styleType\":\"MEMO_SQUARE\"")
+                .contains("\"styleClass\":\"diary-note-memo-square\"")
+                .contains("\"textContent\":\"\"")
+                .contains("/note/delete");
+    }
+
+    @Test
+    void everyDesignOnTheListCanBePlaced() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryElementService.getElements(10L, 3L, 7L)).thenReturn(List.of());
+
+        for (String style : new String[]{
+                "DATE_LABEL", "TITLE_LABEL", "MEMO_SQUARE", "MEMO_ROUND"}) {
+            when(diaryElementService.create(eq(10L), eq(3L), eq(7L), any()))
+                    .thenReturn(noteElement(300L, style));
+
+            mockMvc.perform(post("/diaries/10/pages/3/elements/note")
+                            .param("style", style)
+                            .with(csrf())
+                            .with(authentication(new UsernamePasswordAuthenticationToken(
+                                    userDetails, null, List.of()))))
+                    .andExpect(status().isOk());
+        }
+    }
+
+    @Test
+    void aLabelIsPlacedAsAWideStripAndAMemoAsASquare() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryElementService.getElements(10L, 3L, 7L)).thenReturn(List.of());
+        when(diaryElementService.create(eq(10L), eq(3L), eq(7L), any()))
+                .thenReturn(noteElement(301L, "DATE_LABEL"));
+
+        mockMvc.perform(post("/diaries/10/pages/3/elements/note")
+                        .param("style", "DATE_LABEL")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk());
+
+        ArgumentCaptor<DiaryElement> captor = ArgumentCaptor.forClass(DiaryElement.class);
+        verify(diaryElementService).create(eq(10L), eq(3L), eq(7L), captor.capture());
+        DiaryElement label = captor.getValue();
+        // 라벨은 납작한 가로 딱지다
+        assertThat(label.getWidth()).isEqualByComparingTo("0.30000");
+        assertThat(label.getHeight()).isEqualByComparingTo("0.08000");
+        // 자리와 회전·겹침 순서는 스티커와 같은 규칙을 그대로 쓴다
+        assertThat(label.getPositionX()).isEqualByComparingTo("0.41000");
+        assertThat(label.getPositionY()).isEqualByComparingTo("0.41000");
+        assertThat(label.getRotation()).isNull();
+        assertThat(label.getZIndex()).isNull();
+
+        org.mockito.Mockito.reset(diaryElementService);
+        when(diaryElementService.getElements(10L, 3L, 7L)).thenReturn(List.of());
+        when(diaryElementService.create(eq(10L), eq(3L), eq(7L), any()))
+                .thenReturn(noteElement(302L, "MEMO_ROUND"));
+
+        mockMvc.perform(post("/diaries/10/pages/3/elements/note")
+                        .param("style", "MEMO_ROUND")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk());
+
+        verify(diaryElementService).create(eq(10L), eq(3L), eq(7L), captor.capture());
+        DiaryElement memo = captor.getValue();
+        /*
+          종이가 41:38 이라 화면에서 정사각형으로 보이려면 세로를 그만큼 더 준다.
+          (0.26 * 41 ≈ 0.28 * 38) 페이지 절반을 넘지 않는다.
+        */
+        assertThat(memo.getWidth()).isEqualByComparingTo("0.26000");
+        assertThat(memo.getHeight()).isEqualByComparingTo("0.28000");
+    }
+
+    @Test
+    void notesAreNudgedApartLikeStickers() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        // 이미 두 개가 놓여 있으면 세 번째는 그만큼 어긋나게 놓인다
+        when(diaryElementService.getElements(10L, 3L, 7L))
+                .thenReturn(List.of(element(1L, "NOTE"), element(2L, "NOTE")));
+        when(diaryElementService.create(eq(10L), eq(3L), eq(7L), any()))
+                .thenReturn(noteElement(303L, "MEMO_SQUARE"));
+
+        mockMvc.perform(post("/diaries/10/pages/3/elements/note")
+                        .param("style", "MEMO_SQUARE")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk());
+
+        ArgumentCaptor<DiaryElement> captor = ArgumentCaptor.forClass(DiaryElement.class);
+        verify(diaryElementService).create(eq(10L), eq(3L), eq(7L), captor.capture());
+        // 0.41 + 0.04 * 2 (스티커와 같은 계단)
+        assertThat(captor.getValue().getPositionX()).isEqualByComparingTo("0.49000");
+        assertThat(captor.getValue().getPositionY()).isEqualByComparingTo("0.49000");
+    }
+
+    @Test
+    void aDesignThatIsNotOnTheListIsRejected() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+
+        mockMvc.perform(post("/diaries/10/pages/3/elements/note")
+                        .param("style", "MEMO_TRIANGLE")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(containsString("알 수 없는 디자인입니다.")));
+
+        verify(diaryElementService, org.mockito.Mockito.never())
+                .create(any(), any(), any(), any());
+    }
+
+    @Test
+    void someoneElsesPageCannotBeGivenANote() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        // 소유권·페이지 소속은 서비스가 본다. 주소의 번호만 믿지 않는다
+        when(diaryElementService.getElements(99L, 3L, 7L))
+                .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "여행일기를 찾을 수 없습니다."));
+
+        mockMvc.perform(post("/diaries/99/pages/3/elements/note")
+                        .param("style", "MEMO_SQUARE")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isNotFound());
+
+        verify(diaryElementService, org.mockito.Mockito.never())
+                .create(any(), any(), any(), any());
+    }
+
+    @Test
+    void aPageFromAnotherDiaryCannotBeGivenANote() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryElementService.getElements(10L, 999L, 7L))
+                .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "페이지를 찾을 수 없습니다."));
+
+        mockMvc.perform(post("/diaries/10/pages/999/elements/note")
+                        .param("style", "MEMO_SQUARE")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void placingANoteWithoutATokenIsRefused() throws Exception {
+        mockMvc.perform(post("/diaries/10/pages/3/elements/note")
+                        .param("style", "MEMO_SQUARE")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isForbidden());
+
+        verify(diaryElementService, org.mockito.Mockito.never())
+                .create(any(), any(), any(), any());
+    }
+
+    @Test
+    void aNoteIsRemovedWithoutTouchingAnyFile() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryElementService.getElement(10L, 3L, 300L, 7L))
+                .thenReturn(noteElement(300L, "MEMO_SQUARE"));
+
+        mockMvc.perform(post("/diaries/10/pages/3/elements/300/note/delete")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isNoContent());
+
+        verify(diaryElementService).delete(10L, 3L, 300L, 7L);
+        // 라벨은 파일을 갖지 않는다. 파일을 다루는 쪽은 아예 부르지 않는다
+        org.mockito.Mockito.verifyNoInteractions(fileUploadService);
+    }
+
+    @Test
+    void aStickerCannotBeRemovedThroughTheNoteDoor() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryElementService.getElement(10L, 3L, 200L, 7L))
+                .thenReturn(stickerElement(200L, "/images/diary/stickers/travel/airplane.svg"));
+
+        mockMvc.perform(post("/diaries/10/pages/3/elements/200/note/delete")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(containsString("라벨/메모지 요소가 아닙니다.")));
+
+        verify(diaryElementService, org.mockito.Mockito.never())
+                .delete(any(), any(), any(), any());
+    }
+
+    @Test
+    void someoneElsesNoteCannotBeRemoved() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        // 남의 것도, 다른 페이지의 것도 여기서 같은 답을 받는다
+        when(diaryElementService.getElement(10L, 3L, 300L, 7L))
+                .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "요소를 찾을 수 없습니다."));
+
+        mockMvc.perform(post("/diaries/10/pages/3/elements/300/note/delete")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isNotFound());
+
+        verify(diaryElementService, org.mockito.Mockito.never())
+                .delete(any(), any(), any(), any());
+    }
+
+    @Test
+    void removingANoteWithoutATokenIsRefused() throws Exception {
+        mockMvc.perform(post("/diaries/10/pages/3/elements/300/note/delete")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isForbidden());
+
+        verify(diaryElementService, org.mockito.Mockito.never())
+                .delete(any(), any(), any(), any());
+    }
+
+    // ── 라벨 / 떡메모지에 글쓰기 ──────────────────────────────
+
+    @Test
+    void theWordsWrittenOnANoteAreSavedAndSentBack() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        DiaryElement saved = noteElement(300L, "MEMO_SQUARE");
+        saved.setTextContent("제주 카페 투어");
+        when(diaryElementService.updateNoteText(10L, 3L, 300L, 7L, "제주 카페 투어"))
+                .thenReturn(saved);
+
+        mockMvc.perform(post("/diaries/10/pages/3/elements/300/text")
+                        .param("text", "제주 카페 투어")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                // 화면은 서버가 다듬어 저장한 글로 다시 그린다
+                .andExpect(content().string(containsString("\"textContent\":\"제주 카페 투어\"")));
+    }
+
+    @Test
+    void aNoteCanBeLeftEmpty() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryElementService.updateNoteText(10L, 3L, 300L, 7L, ""))
+                .thenReturn(noteElement(300L, "DATE_LABEL"));
+
+        mockMvc.perform(post("/diaries/10/pages/3/elements/300/text")
+                        .param("text", "")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("\"textContent\":\"\"")));
+    }
+
+    @Test
+    void tooLongIsRefusedWithSomethingReadable() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        doThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "100자까지 입력할 수 있습니다."))
+                .when(diaryElementService).updateNoteText(anyLong(), anyLong(), anyLong(),
+                        anyLong(), anyString());
+
+        mockMvc.perform(post("/diaries/10/pages/3/elements/300/text")
+                        .param("text", "가".repeat(101))
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(containsString("100자까지 입력할 수 있습니다.")));
+    }
+
+    @Test
+    void someoneElsesNoteCannotBeWrittenOn() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        doThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "요소를 찾을 수 없습니다."))
+                .when(diaryElementService).updateNoteText(anyLong(), anyLong(), anyLong(),
+                        anyLong(), anyString());
+
+        mockMvc.perform(post("/diaries/10/pages/3/elements/300/text")
+                        .param("text", "몰래")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void writingWithoutATokenIsRefused() throws Exception {
+        mockMvc.perform(post("/diaries/10/pages/3/elements/300/text")
+                        .param("text", "토큰 없음")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isForbidden());
+
+        verify(diaryElementService, org.mockito.Mockito.never())
+                .updateNoteText(anyLong(), anyLong(), anyLong(), anyLong(), anyString());
+    }
+
+    @Test
+    void aNoteCanOnlyBeTypedIntoWhileEditing() throws Exception {
+        // 편집 화면에서만 글쓰기 주소가 실린다. 읽기 화면에는 글자만 남는다
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-01")));
+        when(diaryElementService.getElements(10L, 1L, 7L))
+                .thenReturn(List.of(noteElement(300L, "MEMO_SQUARE")));
+
+        String editBody = mockMvc.perform(get("/diaries/10").param("edit", "true")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andReturn().getResponse().getContentAsString();
+        String readBody = mockMvc.perform(get("/diaries/10")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(editBody).contains("/elements/300/text");
+        assertThat(readBody).doesNotContain("/elements/300/text");
+        /*
+          어느 쪽도 처음부터 고쳐 쓸 수 있는 상태로 그려지지 않는다.
+          contenteditable 은 두 번 눌러 열었을 때만 붙는다.
+        */
+        assertThat(between(editBody, "diary-canvas-item diary-note", "</figure>"))
+                .doesNotContain("contenteditable=");
+        assertThat(between(readBody, "diary-canvas-item diary-note", "</figure>"))
+                .doesNotContain("contenteditable=");
+    }
+
+    @Test
+    void typingOnANoteFollowsTheRulesOfItsKind() throws Exception {
+        String textJs = Files.readString(
+                Path.of("src/main/resources/static/js/diary-note-text.js"));
+
+        // 한글을 조합하는 동안의 Enter 는 글자를 확정하는 Enter 다
+        assertThat(textJs).contains("event.isComposing || event.keyCode === 229");
+        // 라벨은 한 줄이라 Enter 로 끝내고, 떡메모지는 Ctrl/Cmd 를 함께 눌러야 끝난다
+        assertThat(between(textJs, "if (isLabel(item)) {", "commit(item);"))
+                .contains("event.preventDefault()");
+        assertThat(textJs).contains("event.ctrlKey || event.metaKey");
+        // Esc 는 쓰던 것을 버리고, 밖을 누르면 그대로 저장한다
+        assertThat(textJs).contains("event.key === 'Escape'").contains("cancel(item)");
+        assertThat(between(textJs, "document.addEventListener('focusout'", "});"))
+                .contains("commit(item)");
+    }
+
+    @Test
+    void aNoteIsOnlyTypeableWhileItIsBeingEdited() throws Exception {
+        String textJs = Files.readString(
+                Path.of("src/main/resources/static/js/diary-note-text.js"));
+        String dragJs = Files.readString(
+                Path.of("src/main/resources/static/js/diary-canvas-drag.js"));
+
+        // 쓰는 동안에만 붙고, 끝나면 떼어 낸다
+        assertThat(textJs)
+                .contains("setAttribute('contenteditable', 'plaintext-only')")
+                .contains("removeAttribute('contenteditable')");
+        // 글자만 들어온다. 붙여넣기로 HTML 이 섞이지 않는다
+        assertThat(between(textJs, "document.addEventListener('paste'", "});"))
+                .contains("getData('text/plain')")
+                .contains("insertText");
+        // 글자를 고르려고 끌었을 뿐인데 종이가 따라 움직이면 안 된다
+        assertThat(dragJs).contains("item.classList.contains('is-editing')");
+    }
+
+    @Test
+    void aFailedSaveFallsBackToWhatTheServerLastKnew() throws Exception {
+        String textJs = Files.readString(
+                Path.of("src/main/resources/static/js/diary-note-text.js"));
+
+        // 화면만 앞서가지 않게 한다
+        assertThat(between(textJs, "function restore(", "\n    }"))
+                .contains("item.dataset.savedText");
+        assertThat(between(textJs, "} catch (error) {", "\n    }"))
+                .contains("restore(item, text, previous)");
+        // 서버가 다듬어 돌려준 글을 화면에도 그대로 반영한다
+        assertThat(textJs).contains("text.textContent = payload.textContent");
+    }
+
+    @Test
+    void pressingEnterSavesOnceAndKeepsWhatWasTyped() throws Exception {
+        String textJs = Files.readString(
+                Path.of("src/main/resources/static/js/diary-note-text.js"));
+
+        /*
+          편집이 풀리는 순간 브라우저가 focusout 을 그 자리에서 띄운다.
+          editing 을 먼저 내려놓아야 그 focusout 이 저장을 한 번 더 시작하지 않는다.
+        */
+        String close = between(textJs, "function close(item, text)", "\n    }");
+        assertThat(close.indexOf("editing = null"))
+                .as("editing 을 contenteditable 보다 먼저 내려놓는다")
+                .isLessThan(close.indexOf("removeAttribute"));
+
+        /*
+          보낼 글을 곧바로 "마지막으로 아는 글" 로 옮긴다.
+          늦게 도착한 blur 가 다시 들어와도 바뀐 것이 없어 같은 요청을 두 번 보내지 않는다.
+        */
+        String commit = between(textJs, "function commit(item)", "\n    }");
+        assertThat(commit)
+                .contains("if (next === previous) return;")
+                .contains("item.dataset.savedText = next;");
+        assertThat(commit.indexOf("item.dataset.savedText = next"))
+                .isLessThan(commit.indexOf("save(item, text, next, previous)"));
+    }
+
+    @Test
+    void aFailedSaveGoesBackToTheWordsBeforeThisEditNotToNothing() throws Exception {
+        String textJs = Files.readString(
+                Path.of("src/main/resources/static/js/diary-note-text.js"));
+
+        // 되돌릴 곳은 이번 편집 직전의 글이다. 빈 값으로 덮어쓰지 않는다
+        assertThat(between(textJs, "function restore(item, text, previous)", "\n    }"))
+                .contains("const last = previous || '';")
+                .contains("text.textContent = last")
+                .contains("item.dataset.savedText = last");
+    }
+
+    @Test
+    void openingTheEditorDoesNotCloseItselfAgain() throws Exception {
+        String textJs = Files.readString(
+                Path.of("src/main/resources/static/js/diary-note-text.js"));
+
+        /*
+          같은 라벨 안의 "글 편집" 을 누르면 그 버튼이 focus 를 잃는다.
+          그것까지 편집을 끝낸 것으로 보면 방금 연 편집이 바로 닫힌다.
+          글자 칸이 focus 를 잃었을 때만 끝낸다.
+        */
+        assertThat(between(textJs, "document.addEventListener('focusout'", "});"))
+                .contains("event.target !== item.querySelector('.diary-note-text')");
+    }
+
+    @Test
+    void theWayToWriteOnANoteIsVisibleNotOnlyADoubleClick() throws Exception {
+        String body = editPageBodyWithNote();
+        String pickerJs = Files.readString(
+                Path.of("src/main/resources/static/js/diary-note-picker.js"));
+        String textJs = Files.readString(
+                Path.of("src/main/resources/static/js/diary-note-text.js"));
+
+        // 고른 라벨 아래 줄에 붙는다. 사진·스티커의 줄과 같은 모양이다
+        String actions = between(body, "class=\"diary-layer-actions\"", "</div>");
+        assertThat(actions)
+                .contains("data-note-edit")
+                .contains("글 편집")
+                .contains("뒤로")
+                .contains("떼기");
+        // 화면이 만든 라벨에도 같은 버튼이 붙는다
+        assertThat(pickerJs).contains("edit.dataset.noteEdit").contains("'글 편집'");
+        // 눌리면 두 번 누른 것과 같은 일을 한다
+        assertThat(between(textJs, "document.addEventListener('click'", "});"))
+                .contains("closest('[data-note-edit]')")
+                .contains("begin(item)");
+        // 두 번 누르기도 그대로 남는다
+        assertThat(textJs).contains("document.addEventListener('dblclick'");
+    }
+
+    @Test
+    void readingAPageOffersNoWayToWriteOnANote() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-01")));
+        when(diaryElementService.getElements(10L, 1L, 7L))
+                .thenReturn(List.of(noteElement(300L, "MEMO_SQUARE")));
+
+        String readBody = mockMvc.perform(get("/diaries/10")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andReturn().getResponse().getContentAsString();
+
+        // 읽는 화면에는 조작 줄 자체가 없다
+        assertThat(between(readBody, "diary-canvas-item diary-note", "</figure>"))
+                .doesNotContain("data-note-edit")
+                .doesNotContain("diary-layer-actions");
+    }
+
+    @Test
+    void thePhotoAndStickerActionRowsAreUntouched() throws Exception {
+        String template = Files.readString(
+                Path.of("src/main/resources/templates/diary/detail.html"));
+        String stickerJs = Files.readString(
+                Path.of("src/main/resources/static/js/diary-sticker-picker.js"));
+
+        // 글 편집은 라벨/메모지 줄에만 있다
+        assertThat(countOf(template, "data-note-edit")).isEqualTo(1);
+        assertThat(between(template, "diary-canvas-photo", "</figure>"))
+                .doesNotContain("data-note-edit");
+        assertThat(between(template, "diary-canvas-sticker", "</figure>"))
+                .doesNotContain("data-note-edit");
+        assertThat(stickerJs).doesNotContain("noteEdit");
+    }
+
+    /** 라벨 한 장이 놓인 편집 화면. */
+    private String editPageBodyWithNote() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-01")));
+        when(diaryElementService.getElements(10L, 1L, 7L))
+                .thenReturn(List.of(noteElement(300L, "DATE_LABEL")));
+
+        return mockMvc.perform(get("/diaries/10").param("edit", "true")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+    }
+
+    @Test
+    void aFreshNoteOpensReadyToBeTypedInto() throws Exception {
+        String pickerJs = Files.readString(
+                Path.of("src/main/resources/static/js/diary-note-picker.js"));
+
+        // 붙이자마자 쓸 수 있다. 빈 라벨을 다시 두 번 누르게 하지 않는다
+        assertThat(pickerJs).contains("window.diaryNoteText?.begin(item)");
+        assertThat(pickerJs).contains("item.dataset.textUrl = note.urls.text");
+    }
+
+    /** 좌표/크기는 저장된 뒤의 값이다. (응답을 그리는 데 쓰인다) */
+    private DiaryElement noteElement(Long id, String styleType) {
+        DiaryElement element = element(id, "NOTE");
+        element.setStyleType(styleType);
+        element.setTextContent("");
+        return element;
+    }
+
     private DiaryElement stickerElement(Long id, String imageUrl) {
         DiaryElement element = element(id, "STICKER");
         element.setImageUrl(imageUrl);

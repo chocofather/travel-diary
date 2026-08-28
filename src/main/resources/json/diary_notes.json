@@ -1,0 +1,24 @@
+{
+  "_comment": [
+    "다이어리에 붙일 수 있는 라벨 / 떡메모지 디자인 목록.",
+    "이 파일이 곧 서버가 허용하는 style_type 목록이다. 여기에 없는 값은 저장되지 않는다.",
+    "code 가 diary_elements.style_type 에 그대로 들어간다. 한 번 쓴 code 는 바꾸지 않는다",
+    "(이미 저장된 요소가 그 값을 들고 있어, 이름을 바꾸면 화면에서 모양을 잃는다).",
+    "category 는 고르는 자리를 나누는 값이고 LABEL / MEMO 둘뿐이다.",
+    "LABEL 은 한 줄로 적는 작은 딱지, MEMO 는 여러 줄을 적는 메모지다.",
+    "sample 은 고르는 자리에서 모양을 알아보게 하는 보기 글이다. 화면에만 쓰고 저장하지 않는다",
+    "(붙인 라벨/메모지의 글은 언제나 빈 채로 시작한다).",
+    "색·너비·글자 크기 같은 표시 값은 여기 두지 않는다. 모양은 화면(CSS)이 code 로 정한다.",
+    "디자인을 늘리려면 아래 배열에 한 줄만 더하면 된다. (코드 수정 불필요)"
+  ],
+  "styles": [
+    {"code": "DATE_LABEL", "category": "LABEL", "label": "날짜 라벨",
+     "sample": "2026.08.28"},
+    {"code": "TITLE_LABEL", "category": "LABEL", "label": "제목 라벨",
+     "sample": "JEJU DAY 1"},
+    {"code": "MEMO_SQUARE", "category": "MEMO", "label": "사각 메모지",
+     "sample": "오늘의 기록"},
+    {"code": "MEMO_ROUND", "category": "MEMO", "label": "둥근 메모지",
+     "sample": "오늘의 기록"}
+  ]
+}

@@ -223,6 +223,16 @@ public class SecurityConfig {
                         new RegexRequestMatcher(
                                 "^/diaries/[0-9]+/pages/[0-9]+/elements/[0-9]+/sticker/delete$",
                                 HttpMethod.POST.name()),
+                        // 라벨 / 떡메모지. 스티커와 같은 정책을 쓴다
+                        new RegexRequestMatcher(
+                                "^/diaries/[0-9]+/pages/[0-9]+/elements/note$",
+                                HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/diaries/[0-9]+/pages/[0-9]+/elements/[0-9]+/note/delete$",
+                                HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/diaries/[0-9]+/pages/[0-9]+/elements/[0-9]+/text$",
+                                HttpMethod.POST.name()),
                         new RegexRequestMatcher(
                                 "^/mypage/profile$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(

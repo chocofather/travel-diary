@@ -16,8 +16,15 @@ public interface DiaryElementService {
     /** 요소 생성. 대상 페이지는 요청 값이 아니라 검증된 pageId 로 설정한다. */
     DiaryElement create(Long diaryId, Long pageId, Long userId, DiaryElement element);
 
-    /** 요소 수정. 유형(TEXT/PHOTO/STICKER)은 등록 시 값을 유지한다. */
+    /** 요소 수정. 유형(TEXT/PHOTO/STICKER/NOTE)은 등록 시 값을 유지한다. */
     DiaryElement update(Long diaryId, Long pageId, Long elementId, Long userId, DiaryElement element);
+
+    /**
+     * 라벨/떡메모지의 글만 바꾼다. 디자인·위치·크기·회전·겹침 순서는 기존 값을 그대로 둔다.
+     * 빈 글도 그대로 저장된다. (아직 아무것도 쓰지 않은 라벨이 남을 수 있다)
+     */
+    DiaryElement updateNoteText(Long diaryId, Long pageId, Long elementId, Long userId,
+                                String textContent);
 
     /** 위치만 옮긴다. 내용·크기·회전·겹침 순서는 기존 값을 그대로 둔다. */
     DiaryElement move(Long diaryId, Long pageId, Long elementId, Long userId,

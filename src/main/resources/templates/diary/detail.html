@@ -20,6 +20,10 @@
   <script src="/js/diary-page-flip.js" defer></script>
   <script src="/js/diary-photo-picker.js" defer></script>
   <script src="/js/diary-sticker-picker.js" defer></script>
+  <!-- 꾸미기 팝오버의 라벨/메모지 갈래. 스티커 쪽과 같은 팝오버를 함께 쓴다 -->
+  <script src="/js/diary-note-picker.js" defer></script>
+  <!-- 라벨/메모지에 글쓰기. 두 번 눌렀을 때와 갓 붙였을 때만 열린다 -->
+  <script src="/js/diary-note-text.js" defer></script>
   <script src="/js/diary-paper-color.js" defer></script>
 </th:block>
 
@@ -155,10 +159,29 @@
         <button type="button" class="diary-toolbar-button" id="diary-sticker-button"
                 aria-haspopup="dialog" aria-expanded="false" aria-controls="diary-sticker-popover"
                 th:attr="data-create-url=@{/diaries/{diaryId}/pages/{pageId}/elements/sticker
-                                          (diaryId=${diary.id},pageId=${editPage.id})}"
-                title="스티커" aria-label="스티커 붙이기">✦</button>
+                                          (diaryId=${diary.id},pageId=${editPage.id})},
+                         data-note-create-url=@{/diaries/{diaryId}/pages/{pageId}/elements/note
+                                                (diaryId=${diary.id},pageId=${editPage.id})}"
+                title="꾸미기" aria-label="스티커·라벨·메모지 붙이기">✦</button>
         <div class="diary-sticker-popover" id="diary-sticker-popover" role="dialog"
-             aria-label="스티커 고르기" hidden>
+             aria-label="꾸미기 고르기" hidden>
+          <!--
+            무엇을 붙일지 먼저 고른다. 스티커 / 라벨 / 메모지.
+            아래 스티커 묶음은 예전 그대로이고, 이 줄만 그 위에 얹혔다.
+            (id 는 스티커 시절 이름을 그대로 둔다. 화면에 보이는 말과 달리
+             diary-sticker-picker.js 가 붙잡고 있는 손잡이라 바꾸지 않는다)
+          -->
+          <div class="diary-decor-tabs" role="tablist" aria-label="꾸미기 종류">
+            <button type="button" class="diary-decor-tab is-active" role="tab"
+                    aria-selected="true" data-decor-tab="sticker">스티커</button>
+            <button type="button" class="diary-decor-tab" role="tab"
+                    aria-selected="false" data-decor-tab="label">라벨</button>
+            <button type="button" class="diary-decor-tab" role="tab"
+                    aria-selected="false" data-decor-tab="memo">메모지</button>
+          </div>
+
+          <!-- 스티커 묶음. 여기 안쪽은 예전 구조 그대로다 -->
+          <div class="diary-decor-panel" data-decor-panel="sticker">
           <!-- 분류 탭. 목록이 늘어나면 가로로만 조금 넘겨 본다.
                '최근' 은 manifest 의 분류가 아니라 이 브라우저에만 남는 화면용 탭이다. -->
           <div class="diary-sticker-tabs" role="tablist" aria-label="스티커 분류">
@@ -213,6 +236,49 @@
                       th:title="${sticker.name}"
                       th:attr="aria-label=|${sticker.name} 스티커 붙이기|">
                 <img th:src="${sticker.imageUrl}" alt="" aria-hidden="true" loading="lazy" />
+              </button>
+            </div>
+          </div>
+          </div>
+
+          <!--
+            라벨 / 떡메모지. 그림 파일이 없으므로 실제로 붙었을 때와 같은 class 로 미리 보여 준다.
+            (diary-note-* 는 종이 위의 NOTE 가 쓰는 바로 그 규칙이다)
+            안에 적힌 글은 모양을 알아보기 위한 보기 글일 뿐 저장되지 않는다.
+            붙이면 글이 빈 채로 만들어지고, 글을 쓰는 길은 다음 단계에서 붙는다.
+          -->
+          <div class="diary-decor-panel" data-decor-panel="label" hidden>
+            <div class="diary-note-grid" role="group" aria-label="라벨">
+              <button type="button" class="diary-note-option"
+                      th:each="style : ${diaryLabelStyles}"
+                      th:data-note-style="${style.code}"
+                      th:title="${style.label}"
+                      th:attr="aria-label=|${style.label} 붙이기|">
+                <span class="diary-note-preview" th:classappend="${style.styleClass}"
+                      aria-hidden="true">
+                  <span class="diary-note-surface">
+                    <span class="diary-note-text" th:text="${style.sample}">2026.08.28</span>
+                  </span>
+                </span>
+                <span class="diary-note-option-label" th:text="${style.label}">날짜 라벨</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="diary-decor-panel" data-decor-panel="memo" hidden>
+            <div class="diary-note-grid is-memo" role="group" aria-label="메모지">
+              <button type="button" class="diary-note-option"
+                      th:each="style : ${diaryMemoStyles}"
+                      th:data-note-style="${style.code}"
+                      th:title="${style.label}"
+                      th:attr="aria-label=|${style.label} 붙이기|">
+                <span class="diary-note-preview is-memo"
+                      th:classappend="${style.styleClass}" aria-hidden="true">
+                  <span class="diary-note-surface">
+                    <span class="diary-note-text" th:text="${style.sample}">오늘의 기록</span>
+                  </span>
+                </span>
+                <span class="diary-note-option-label" th:text="${style.label}">사각 메모지</span>
               </button>
             </div>
           </div>
@@ -706,6 +772,66 @@
             <button type="button" class="diary-layer-action is-danger"
                     data-delete-confirm="이 스티커를 떼시겠습니까?"
                     th:data-delete-url="@{/diaries/{diaryId}/pages/{pageId}/elements/{elementId}/sticker/delete
+                                          (diaryId=${diary.id},pageId=${page.id},elementId=${element.id})}">떼기</button>
+          </div>
+        </th:block>
+      </figure>
+      <!-- 라벨 / 떡메모지. 배경과 글자가 한 요소로 함께 움직인다.
+           (배경 스티커 + 글 요소를 따로 두고 겹치는 방식이 아니다)
+           자리·크기·회전·겹침 순서는 사진·스티커와 똑같은 상대좌표를 쓴다.
+           모양은 저장된 style_type 하나로 정해진다 (element.noteStyleClass). -->
+      <figure class="diary-canvas-item diary-note"
+              th:if="${element.elementType == 'NOTE'}"
+              th:classappend="${element.noteStyleClass}"
+              th:data-element-id="${element.id}"
+              th:data-element-type="${element.elementType}"
+              th:data-note-style="${element.styleType}"
+              th:data-position-x="${element.positionX}"
+              th:data-position-y="${element.positionY}"
+              th:data-width="${element.width}"
+              th:data-height="${element.height}"
+              th:data-rotation="${element.rotation}"
+              th:data-position-url="@{/diaries/{diaryId}/pages/{pageId}/elements/{elementId}/position
+                                      (diaryId=${diary.id},pageId=${page.id},elementId=${element.id})}"
+              th:data-size-url="@{/diaries/{diaryId}/pages/{pageId}/elements/{elementId}/size
+                                  (diaryId=${diary.id},pageId=${page.id},elementId=${element.id})}"
+              th:data-rotation-url="@{/diaries/{diaryId}/pages/{pageId}/elements/{elementId}/rotation
+                                      (diaryId=${diary.id},pageId=${page.id},elementId=${element.id})}"
+              th:data-layer-url="@{/diaries/{diaryId}/pages/{pageId}/elements/{elementId}/layer
+                                   (diaryId=${diary.id},pageId=${page.id},elementId=${element.id})}"
+              th:data-text-url="${editMode}
+                  ? @{/diaries/{diaryId}/pages/{pageId}/elements/{elementId}/text
+                      (diaryId=${diary.id},pageId=${page.id},elementId=${element.id})} : null"
+              th:style="|left:${element.positionX * 100}%;
+                         top:${element.positionY * 100}%;
+                         width:${element.width * 100}%;
+                         height:${element.height * 100}%;
+                         transform:rotate(${element.rotation}deg);
+                         --diary-item-rotation:${element.rotation}deg;
+                         z-index:${element.zIndex};|">
+        <!-- 종이 한 장과 그 위의 글. 사용자가 쓴 값이라 글자로만 넣는다.
+             고쳐 쓸 수 있게 되는 것은 편집 모드에서 두 번 눌렀을 때뿐이다
+             (contenteditable 은 그때 붙는다 — diary-note-text.js). -->
+        <div class="diary-note-surface">
+          <div class="diary-note-text" th:text="${element.textContent}">제주 카페 투어</div>
+        </div>
+
+        <!-- 조작 UI 는 편집 모드에서만 만든다. 읽기 모드에는 종이와 글만 남는다. -->
+        <th:block th:if="${editMode}">
+          <div th:replace="~{diary/detail :: canvasHandles}"></div>
+
+          <!-- 사진·스티커와 같은 액션 줄 구조. 공용 asset 이 아니라 요소 행만 지운다.
+               라벨/메모지에만 글 편집이 하나 더 붙는다. (두 번 누르기와 같은 일을 한다) -->
+          <div class="diary-layer-actions">
+            <button type="button" class="diary-layer-action"
+                    data-note-edit>글 편집</button>
+            <button type="button" class="diary-layer-action"
+                    data-layer-direction="BACKWARD">뒤로</button>
+            <button type="button" class="diary-layer-action"
+                    data-layer-direction="FORWARD">앞으로</button>
+            <button type="button" class="diary-layer-action is-danger"
+                    data-delete-confirm="이 라벨을 떼시겠습니까?"
+                    th:data-delete-url="@{/diaries/{diaryId}/pages/{pageId}/elements/{elementId}/note/delete
                                           (diaryId=${diary.id},pageId=${page.id},elementId=${element.id})}">떼기</button>
           </div>
         </th:block>

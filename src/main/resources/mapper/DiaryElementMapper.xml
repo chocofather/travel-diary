@@ -11,6 +11,7 @@
         <result property="elementType" column="element_type"/>
         <result property="textContent" column="text_content"/>
         <result property="imageUrl"    column="image_url"/>
+        <result property="styleType"   column="style_type"/>
         <result property="positionX"   column="position_x"/>
         <result property="positionY"   column="position_y"/>
         <result property="width"       column="width"/>
@@ -22,7 +23,7 @@
     </resultMap>
 
     <sql id="DiaryElementColumns">
-        id, page_id, element_type, text_content, image_url,
+        id, page_id, element_type, text_content, image_url, style_type,
         position_x, position_y, width, height, rotation, z_index,
         created_at, updated_at
     </sql>
@@ -43,25 +44,30 @@
           AND page_id = #{pageId}
     </select>
 
-    <!-- TEXT 는 text_content, PHOTO/STICKER 는 image_url 만 채운다 (DB CHECK 와 동일) -->
+    <!--
+      TEXT 는 text_content, PHOTO/STICKER 는 image_url 만 채운다 (DB CHECK 와 동일).
+      NOTE 는 text_content 와 style_type 을 함께 채우고 image_url 은 비운다.
+      그 밖의 유형은 style_type 이 늘 NULL 이다. (어느 값을 채울지는 Service 가 정한다)
+    -->
     <insert id="insert" parameterType="com.example.travlediary.model.DiaryElement"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO diary_elements (
-            page_id, element_type, text_content, image_url,
+            page_id, element_type, text_content, image_url, style_type,
             position_x, position_y, width, height, rotation, z_index,
             created_at, updated_at
         ) VALUES (
-            #{pageId}, #{elementType}, #{textContent}, #{imageUrl},
+            #{pageId}, #{elementType}, #{textContent}, #{imageUrl}, #{styleType},
             #{positionX}, #{positionY}, #{width}, #{height}, #{rotation}, #{zIndex},
             NOW(), NOW()
         )
     </insert>
 
-    <!-- element_type 은 등록 시 값을 유지한다. (TEXT ↔ PHOTO ↔ STICKER 전환은 하지 않는다) -->
+    <!-- element_type 은 등록 시 값을 유지한다. (TEXT ↔ PHOTO ↔ STICKER ↔ NOTE 전환은 하지 않는다) -->
     <update id="update" parameterType="com.example.travlediary.model.DiaryElement">
         UPDATE diary_elements
         SET text_content = #{textContent},
             image_url = #{imageUrl},
+            style_type = #{styleType},
             position_x = #{positionX},
             position_y = #{positionY},
             width = #{width},

@@ -71,6 +71,84 @@ class DiaryPageCoordinateAssetTest {
         assertThat(template.split("diary/detail :: sheetCanvas", -1)).hasSize(4);
     }
 
+    /**
+     * 액션 줄은 기울어진 요소가 실제로 차지하는 네모 아래에 놓인다.
+     *
+     * <p>요소의 아래 모서리에 붙여 두면 각도에 따라 그 모서리가 위로 올라와 본문을 가린다.
+     * 사진·스티커·라벨이 모두 같은 줄을 쓰므로 규칙도 한 곳에만 둔다.
+     */
+    @Test
+    void theActionRowSitsUnderWhateverSpaceATiltedElementTakesUp() throws IOException {
+        String rule = rule(Files.readString(DIARY_CSS), ".diary-layer-actions");
+
+        // 기준점은 요소의 한가운데다. 아래 모서리가 아니다
+        assertThat(rule).contains("top: 50%;").contains("left: 50%;");
+        assertThat(rule).doesNotContain("top: 100%;");
+        /*
+          부모의 기울기를 먼저 되돌린다. 그래야 뒤따르는 이동이 화면 축을 따라가
+          줄이 늘 수평이고, 내리는 거리도 px 로만 정하면 된다.
+        */
+        assertThat(rule)
+                .contains("rotate(calc(-1 * var(--diary-item-rotation, 0deg)))")
+                .contains("translate(var(--diary-actions-shift, 0px), var(--diary-actions-drop, 0px))")
+                .contains("translateX(-50%)");
+        assertThat(rule.indexOf("rotate(calc(-1"))
+                .as("기울기를 되돌리는 것이 이동보다 먼저다")
+                .isLessThan(rule.indexOf("translate(var(--diary-actions-shift"));
+    }
+
+    @Test
+    void howFarTheRowDropsComesFromTheAngleAndTheSize() throws IOException {
+        String js = Files.readString(
+                Path.of("src/main/resources/static/js/diary-canvas-drag.js"));
+        String layout = js.substring(js.indexOf("function layoutActions(item)"));
+        layout = layout.substring(0, layout.indexOf("\n    function select("));
+
+        // 기울어진 네모의 높이(|w·sinθ| + |h·cosθ|) 절반만큼 내리고 사이 간격을 더한다
+        assertThat(layout)
+                .contains("Math.abs(Math.sin(radians))")
+                .contains("Math.abs(Math.cos(radians))")
+                .contains("(width * sin + height * cos) / 2 + ACTIONS_GAP");
+        // 종이 밖으로 나가려 하면 그만큼만 밀어 넣는다
+        assertThat(layout)
+                .contains("canvas.clientWidth")
+                .contains("--diary-actions-shift");
+        // 각도는 지금 화면에 걸린 값을 읽는다. (회전하는 도중에도 맞다)
+        assertThat(layout).contains("--diary-item-rotation");
+    }
+
+    @Test
+    void theRowFollowsWhileMovingResizingAndTurning() throws IOException {
+        String js = Files.readString(
+                Path.of("src/main/resources/static/js/diary-canvas-drag.js"));
+
+        for (String applier : new String[]{
+                "function apply(x, y)", "function applySize(width, height)",
+                "function applyRotation(degrees)"}) {
+            String body = js.substring(js.indexOf(applier));
+            body = body.substring(0, body.indexOf("\n        }"));
+            assertThat(body).as("%s", applier).contains("layoutActions(item)");
+        }
+        // 고른 다음에야 줄의 폭을 잴 수 있다
+        String select = js.substring(js.indexOf("function select(item)"));
+        assertThat(select.substring(0, select.indexOf("\n    }")))
+                .contains("layoutActions(item)");
+        // 종이 크기가 달라지면 px 로 잡아 둔 값도 다시 구한다
+        assertThat(js).contains("window.addEventListener('resize'");
+    }
+
+    @Test
+    void turningAnElementItselfWorksTheSameAsBefore() throws IOException {
+        String js = Files.readString(
+                Path.of("src/main/resources/static/js/diary-canvas-drag.js"));
+        String rotation = js.substring(js.indexOf("function applyRotation(degrees)"));
+        rotation = rotation.substring(0, rotation.indexOf("\n        }"));
+
+        // 요소에는 여전히 회전만 들어간다. 저장하는 값도 그대로다
+        assertThat(rotation).contains("item.style.transform = `rotate(${degrees.toFixed(2)}deg)`");
+        assertThat(js).contains("saveRotation");
+    }
+
     /** 여는 중괄호까지 포함해 그 규칙 한 덩어리만 잘라 본다. */
     private String rule(String css, String selector) {
         int start = css.indexOf("\n" + selector + " {");

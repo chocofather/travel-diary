@@ -610,9 +610,15 @@ CREATE TABLE `destinations` (
 -- 개인 여행일기 구조: users -> diaries -> diary_pages -> diary_elements
 --   * 한 회원이 여러 여행 다이어리를 가질 수 있다.
 --   * 한 다이어리가 여러 페이지를 가질 수 있고, 같은 날짜에 여러 페이지를 만들 수 있다.
---   * 한 페이지가 여러 TEXT/PHOTO/STICKER 요소를 가질 수 있으며, PHOTO 한 장은 diary_elements 한 행이다.
+--   * 한 페이지가 여러 TEXT/PHOTO/STICKER/NOTE 요소를 가질 수 있으며, PHOTO 한 장은 diary_elements 한 행이다.
 --   * STICKER 는 PHOTO 와 같은 자유배치 이미지 요소다. image_url 과
 --     position/size/rotation/z_index 컬럼을 PHOTO 와 똑같이 사용한다. (text_content 는 쓰지 않는다)
+--   * NOTE 는 라벨/떡메모지용 자유배치 텍스트 요소다. 배경과 글자가 한 행으로 함께 움직인다.
+--     디자인은 style_type 으로 구분한다 (DATE_LABEL / TITLE_LABEL / MEMO_SQUARE / MEMO_ROUND 등).
+--     허용 목록은 resources/json/diary_notes.json 이 관리하며, 그 밖의 값은 저장되지 않는다.
+--     position/size/rotation/z_index 는 PHOTO/STICKER 와 똑같이 쓰고, image_url 은 쓰지 않는다.
+--     (붙인 직후에는 아직 적은 글이 없으므로 text_content 는 빈 문자열일 수 있다. NULL 만 막는다)
+--   * style_type 은 NOTE 전용이다. TEXT/PHOTO/STICKER 행에서는 항상 NULL 이다.
 --   * 각 페이지는 paper_color(#RRGGBB)로 독립적인 종이 바탕색을 가질 수 있고,
 --     background_type(PLAIN/LINED/GRID/DOT) 무늬와 조합해서 쓴다.
 --     NULL 이면 기본 종이색을 쓰며, 펼침의 좌/우 페이지 색을 같게 맞추지 않는다.
@@ -658,6 +664,7 @@ CREATE TABLE `diary_elements` (
   `element_type` varchar(10) NOT NULL,
   `text_content` text,
   `image_url` varchar(255) DEFAULT NULL,
+  `style_type` varchar(30) DEFAULT NULL,
   `position_x` decimal(6,5) NOT NULL DEFAULT '0.00000',
   `position_y` decimal(6,5) NOT NULL DEFAULT '0.00000',
   `width` decimal(6,5) NOT NULL DEFAULT '0.30000',
@@ -669,8 +676,8 @@ CREATE TABLE `diary_elements` (
   PRIMARY KEY (`id`),
   KEY `idx_diary_elements_page` (`page_id`,`z_index`,`id`),
   CONSTRAINT `fk_diary_elements_page` FOREIGN KEY (`page_id`) REFERENCES `diary_pages` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `chk_diary_elements_type` CHECK ((`element_type` in (_utf8mb4'TEXT',_utf8mb4'PHOTO',_utf8mb4'STICKER'))),
-  CONSTRAINT `chk_diary_elements_payload` CHECK ((((`element_type` = _utf8mb4'TEXT') and (`text_content` is not null) and (`image_url` is null)) or ((`element_type` in (_utf8mb4'PHOTO',_utf8mb4'STICKER')) and (`image_url` is not null) and (`text_content` is null)))),
+  CONSTRAINT `chk_diary_elements_type` CHECK ((`element_type` in (_utf8mb4'TEXT',_utf8mb4'PHOTO',_utf8mb4'STICKER',_utf8mb4'NOTE'))),
+  CONSTRAINT `chk_diary_elements_payload` CHECK ((((`element_type` = _utf8mb4'TEXT') and (`text_content` is not null) and (`image_url` is null) and (`style_type` is null)) or ((`element_type` in (_utf8mb4'PHOTO',_utf8mb4'STICKER')) and (`image_url` is not null) and (`text_content` is null) and (`style_type` is null)) or ((`element_type` = _utf8mb4'NOTE') and (`text_content` is not null) and (`image_url` is null) and (`style_type` is not null)))),
   CONSTRAINT `chk_diary_elements_position` CHECK (((`position_x` between -(0.5) and 1.5) and (`position_y` between -(0.5) and 1.5))),
   CONSTRAINT `chk_diary_elements_size` CHECK (((`width` > 0) and (`width` <= 1) and (`height` > 0) and (`height` <= 1))),
   CONSTRAINT `chk_diary_elements_rotation` CHECK ((`rotation` between -(360) and 360)),

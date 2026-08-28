@@ -2718,6 +2718,112 @@
     display: none;
 }
 
+/* ── 꾸미기 갈래 (스티커 / 라벨 / 메모지) ──
+   아래 스티커 분류 탭보다 한 단계 위다. 고른 갈래의 묶음 하나만 남는다. */
+.diary-decor-tabs {
+    display: flex;
+    gap: 4px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #ece2d3;
+}
+
+.diary-decor-tab {
+    padding: 4px 12px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    background: none;
+    color: #8b8378;
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1.5;
+    cursor: pointer;
+}
+
+.diary-decor-tab:hover {
+    background: #f6efe3;
+    color: #6f5a3c;
+}
+
+.diary-decor-tab.is-active {
+    border-color: #ded2be;
+    background: #f2e8d8;
+    color: #4a3d2b;
+}
+
+.diary-decor-tab:focus-visible {
+    outline: 2px solid #b39a75;
+    outline-offset: -2px;
+}
+
+.diary-decor-panel[hidden] {
+    display: none;
+}
+
+/* ── 라벨 / 떡메모지 고르는 칸 ── */
+.diary-note-grid {
+    display: grid;
+    /* 라벨은 가로로 길어 한 줄에 둘이면 모양이 그대로 읽힌다 */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+/* 메모지는 정사각형이라 둘씩 놓으면 창을 다 차지한다. 한 칸을 작게 잡는다 */
+.diary-note-grid.is-memo {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.diary-note-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    padding: 6px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: none;
+    cursor: pointer;
+}
+
+/* 고를 수 있는 자리라는 정도만 알린다. 커지거나 움직이지 않는다 */
+.diary-note-option:hover {
+    border-color: #e0d6c6;
+    background: #f6efe3;
+}
+
+.diary-note-option:focus-visible {
+    outline: 2px solid #b39a75;
+    outline-offset: -2px;
+}
+
+.diary-note-option-label {
+    color: #8b8378;
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+/*
+  미리보기. 종이 위에 붙었을 때와 같은 규칙(.diary-note-*)을 그대로 쓴다.
+  다만 여기는 종이 밖이라 --diary-page-unit 이 없다. 그 값을 이 자리에서 작게 정해
+  같은 디자인이 축소판으로 그려지게 한다. (그림 파일을 따로 두지 않는 이유이기도 하다)
+  비율은 실제로 붙는 크기와 같게 잡는다 — 라벨은 납작하게, 메모지는 정사각형으로.
+*/
+.diary-note-preview {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 1;
+    --diary-page-unit: 0.8px;
+    /* 눌리는 것은 언제나 바깥 버튼이다 */
+    pointer-events: none;
+}
+
+.diary-note-preview.is-memo {
+    aspect-ratio: 1 / 1;
+    --diary-page-unit: 0.75px;
+}
+
 /* 분류 탭. 묶음이 늘어나면 가로로만 조금 넘겨 본다. */
 .diary-sticker-tabs {
     display: flex;
@@ -3166,6 +3272,132 @@
     filter: drop-shadow(0 6px 12px rgba(63, 52, 38, 0.22));
 }
 
+/* ===== 라벨 / 떡메모지 (NOTE) =====
+ *
+ * 종이 한 장과 그 위의 글이 한 요소다. 자리·크기·회전은 사진·스티커와 같은 길을 쓰고,
+ * 여기서는 그 상자 안의 모양만 정한다. 규칙은 모두 .diary-note 아래로만 둔다.
+ *
+ * 글자 크기는 종이 너비에 비례한 단위(--diary-page-unit)로 쓴다.
+ * 읽기(2면 펼침)와 편집(1면 크게)은 종이 크기만 다르고 이 단위가 그 차이를 흡수하므로,
+ * 두 화면에서 같은 크기로 읽힌다. (px 로 적으면 작은 종이에서만 글자가 커 보인다)
+ * 화면에서 글자를 재서 저장하거나 계산하지 않는다.
+ */
+.diary-note-surface {
+    box-sizing: border-box;
+    display: flex;
+    width: 100%;
+    height: 100%;
+    /* 글이 길어도 종이 밖으로 흘러나오지 않는다. 조절점은 이 상자 바깥이라 잘리지 않는다 */
+    overflow: hidden;
+}
+
+.diary-note-text {
+    /* 줄 안의 칸이 제 내용만큼 넓어지려 하지 않게 바닥을 푼다 */
+    min-width: 0;
+    width: 100%;
+    /* 띄어쓰기 없는 긴 글도 상자 안에서 접힌다 */
+    overflow-wrap: break-word;
+}
+
+/*
+  글을 쓰는 중.
+  이때만 글자를 고를 수 있고, 그 사이에는 종이를 옮기거나 크기를 바꾸지 않는다.
+  (조절점을 내려 두면 잘못 잡히는 일이 없고, 옮기기는 diary-canvas-drag.js 가 막는다)
+*/
+.diary-canvas-item.diary-note.is-editing {
+    cursor: text;
+}
+
+.diary-canvas-item.diary-note.is-editing .diary-resize-handle,
+.diary-canvas-item.diary-note.is-editing .diary-rotate-handle,
+.diary-canvas-item.diary-note.is-editing .diary-layer-actions {
+    display: none;
+}
+
+/* 글을 쓰는 칸이라는 것만 아주 옅게 알린다. 입력칸처럼 보이게 두르지 않는다 */
+.diary-note-text[contenteditable] {
+    outline: none;
+    cursor: text;
+}
+
+.diary-note.is-editing .diary-note-surface {
+    box-shadow: 0 0 0 1px var(--diary-note-editing-ring, #c9b892);
+}
+
+/* ── 라벨: 짧은 한 줄. 가운데에 놓인다 ── */
+.diary-note-date-label .diary-note-surface,
+.diary-note-title-label .diary-note-surface {
+    align-items: center;
+    justify-content: center;
+    padding: calc(4 * var(--diary-page-unit)) calc(9 * var(--diary-page-unit));
+    /* 알약이 아니라 네모난 종이 딱지다 */
+    border-radius: calc(3 * var(--diary-page-unit));
+}
+
+.diary-note-date-label .diary-note-text,
+.diary-note-title-label .diary-note-text {
+    text-align: center;
+}
+
+/* 날짜 라벨: 붙여 둔 작은 문구 스티커 하나 */
+.diary-note-date-label .diary-note-surface {
+    border: 1px solid #e3d9c6;
+    background: #fdfaf2;
+}
+
+.diary-note-date-label .diary-note-text {
+    color: #6b5f4b;
+    font-size: calc(11 * var(--diary-page-unit));
+    line-height: 1.45;
+    letter-spacing: 0.04em;
+}
+
+/* 제목 라벨: 날짜보다 조금 더 또렷한 종이 제목표 */
+.diary-note-title-label .diary-note-surface {
+    border: 1px solid #ddd2bd;
+    background: #fbf7ef;
+}
+
+.diary-note-title-label .diary-note-text {
+    color: #4a3d2b;
+    font-size: calc(13 * var(--diary-page-unit));
+    font-weight: 600;
+    line-height: 1.45;
+    letter-spacing: 0.02em;
+}
+
+/* ── 떡메모지: 여러 줄을 적는 종이. 글은 왼쪽 위부터 쌓인다 ── */
+.diary-note-memo-square .diary-note-surface,
+.diary-note-memo-round .diary-note-surface {
+    align-items: flex-start;
+    padding: calc(10 * var(--diary-page-unit)) calc(11 * var(--diary-page-unit));
+    /* 종이 한 장이 놓인 정도의 아주 옅은 그늘만 준다 */
+    box-shadow: 0 1px 2px rgba(63, 52, 38, 0.06);
+}
+
+.diary-note-memo-square .diary-note-text,
+.diary-note-memo-round .diary-note-text {
+    /* 사용자가 넣은 줄바꿈을 그대로 보여 준다 */
+    white-space: pre-wrap;
+    color: #4a4136;
+    font-size: calc(12 * var(--diary-page-unit));
+    line-height: 1.7;
+}
+
+/* 사각 떡메: 모서리를 거의 세우고 차분한 종이색 */
+.diary-note-memo-square .diary-note-surface {
+    border: 1px solid #e0d8c8;
+    border-radius: calc(3 * var(--diary-page-unit));
+    background: #f8f4ea;
+}
+
+/* 둥근 떡메: 같은 계열이지만 모서리를 조금 더 둥글게, 색은 한 톤 부드럽게 */
+.diary-note-memo-round .diary-note-surface {
+    border: 1px solid #e2dad4;
+    border-radius: calc(10 * var(--diary-page-unit));
+    background: #f8f2ee;
+}
+
 /* 선택했을 때만 보이는 작은 조절점 (편집기 느낌이 나지 않게 최소한으로) */
 .diary-resize-handle {
     position: absolute;
@@ -3252,18 +3484,32 @@
 /* 겹침 순서 액션: 선택된 요소 아래쪽의 작은 텍스트 액션 */
 /* 선택했을 때만 보이는 액션 줄 (뒤로 / 앞으로 / 삭제).
    요소 바깥 아래에 두어 이미지와 조절점을 가리지 않는다. */
+/*
+  액션 줄(글 편집 / 뒤로 / 앞으로 / 떼기).
+
+  요소가 기울어도 이 줄은 늘 수평이고, 기울어진 요소가 화면에서 실제로 차지하는
+  네모(bounding box) 바로 아래에 놓인다.
+  요소의 아래 모서리에 붙여 두면 각도에 따라 그 모서리가 위로 올라와 본문을 가린다.
+
+  기준점은 요소의 한가운데(top/left 50%)다.
+  먼저 부모의 기울기를 되돌리면 뒤따르는 이동이 화면 축을 따라가므로,
+  아래로 얼마나 내릴지(--diary-actions-drop)와 가장자리에서 얼마나 밀지
+  (--diary-actions-shift)를 px 로만 정하면 된다. 두 값은 diary-canvas-drag.js 가
+  요소 크기와 각도로 그때그때 구한다.
+*/
 .diary-layer-actions {
     position: absolute;
-    top: 100%;
-    left: 0;
+    top: 50%;
+    left: 50%;
     display: none;
     width: max-content;
     align-items: center;
     gap: 6px;
-    margin-top: 10px;
     z-index: 3;
-    /* 요소가 기울어도 액션 글자는 똑바로 읽히게 반대로 돌린다 */
-    transform: rotate(calc(-1 * var(--diary-item-rotation, 0deg)));
+    transform:
+        rotate(calc(-1 * var(--diary-item-rotation, 0deg)))
+        translate(var(--diary-actions-shift, 0px), var(--diary-actions-drop, 0px))
+        translateX(-50%);
     transform-origin: left top;
     white-space: nowrap;
 }

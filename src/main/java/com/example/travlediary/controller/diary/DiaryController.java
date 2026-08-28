@@ -5,11 +5,13 @@ import com.example.travlediary.dto.DiarySort;
 import com.example.travlediary.model.Diary;
 import com.example.travlediary.model.DiaryCoverStyle;
 import com.example.travlediary.model.DiaryElement;
+import com.example.travlediary.model.DiaryNoteStyle;
 import com.example.travlediary.model.DiarySticker;
 import com.example.travlediary.model.DiaryStickerKind;
 import com.example.travlediary.model.DiaryPage;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.diary.DiaryElementService;
+import com.example.travlediary.service.diary.DiaryNoteCatalog;
 import com.example.travlediary.service.diary.DiaryPageService;
 import com.example.travlediary.service.diary.DiaryService;
 import com.example.travlediary.service.diary.DiaryStickerCatalog;
@@ -66,12 +68,26 @@ public class DiaryController {
     private static final BigDecimal STICKER_CENTER = new BigDecimal("0.41000");
     private static final BigDecimal STICKER_OFFSET_STEP = new BigDecimal("0.04000");
     private static final int STICKER_OFFSET_CYCLE = 5;
+    private static final String NOTE_ELEMENT_TYPE = "NOTE";
+    /*
+      라벨/떡메모지를 처음 놓는 크기. 자리는 스티커와 같은 규칙을 그대로 쓴다.
+
+      종이 한 장은 가로:세로가 41:38 이라 가로 쪽이 조금 넓다.
+      그래서 화면에서 정사각형으로 보이려면 세로 비율을 그만큼 더 줘야 한다
+      (0.26 * 41 ≈ 0.28 * 38). 라벨은 반대로 납작한 가로 딱지 모양이다.
+    */
+    private static final BigDecimal LABEL_WIDTH = new BigDecimal("0.30000");
+    private static final BigDecimal LABEL_HEIGHT = new BigDecimal("0.08000");
+    private static final BigDecimal MEMO_WIDTH = new BigDecimal("0.26000");
+    private static final BigDecimal MEMO_HEIGHT = new BigDecimal("0.28000");
 
     private final DiaryService diaryService;
     private final DiaryPageService diaryPageService;
     private final DiaryElementService diaryElementService;
     private final FileUploadService fileUploadService;
     private final DiaryStickerCatalog diaryStickerCatalog;
+    /** 라벨/떡메모지 디자인 허용 목록. 화면이 보낸 값이 아는 것인지 여기서만 확인한다. */
+    private final DiaryNoteCatalog diaryNoteCatalog;
     private final HolidayService holidayService;
 
     @Value("${custom.upload-path}")
@@ -235,6 +251,11 @@ public class DiaryController {
             addEditPageAttributes(diaryId, userId, pages, leftPage, rightPage, page, model);
             // 스티커 picker 목록(분류별). 저장 가능한 스티커는 이 목록이 그대로 허용 목록이다.
             model.addAttribute("diaryStickerCategories", diaryStickerCatalog.getCategories());
+            // 라벨 / 떡메모지 목록. 스티커와 같이 manifest 가 곧 허용 목록이다.
+            model.addAttribute("diaryLabelStyles",
+                    diaryNoteCatalog.getStyles(DiaryNoteStyle.CATEGORY_LABEL));
+            model.addAttribute("diaryMemoStyles",
+                    diaryNoteCatalog.getStyles(DiaryNoteStyle.CATEGORY_MEMO));
         }
         model.addAttribute("pageTitle", diary.getTitle() + " | 나의 여행일기");
     }
@@ -640,6 +661,140 @@ public class DiaryController {
             return elementErrorResponse(exception, "스티커를 떼지 못했습니다.");
         }
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * 페이지에 라벨/떡메모지를 한 장 놓는다.
+     *
+     * <p>화면은 디자인 code 하나만 보낸다. 유형(NOTE)·자리·크기·겹침 순서는 서버가 정하고,
+     * 아는 디자인인지도 서버가 목록(DiaryNoteCatalog)에서 다시 본다.
+     * 소유권 확인은 기존 요소 생성 흐름(diaryElementService)이 그대로 맡는다.
+     *
+     * <p>글은 빈 채로 만든다. 붙이기 전에 무슨 말을 쓸지 정하게 하지 않는다.
+     * (글을 채우는 길은 다음 단계에서 붙인다)
+     */
+    @PostMapping("/{diaryId:\\d+}/pages/{pageId:\\d+}/elements/note")
+    @ResponseBody
+    public ResponseEntity<?> createNoteElement(@PathVariable Long diaryId,
+                                               @PathVariable Long pageId,
+                                               @RequestParam("style") String styleType,
+                                               @AuthenticationPrincipal CustomUserDetails userDetails) {
+        DiaryNoteStyle style = diaryNoteCatalog.find(styleType).orElse(null);
+        if (style == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "알 수 없는 디자인입니다."));
+        }
+
+        Long userId = userDetails.getId();
+        DiaryElement created;
+        try {
+            // 스티커와 같은 규칙으로 조금씩 어긋나게 놓는다. (새 좌표 계산을 만들지 않는다)
+            int placed = diaryElementService.getElements(diaryId, pageId, userId).size();
+            BigDecimal offset = STICKER_OFFSET_STEP
+                    .multiply(BigDecimal.valueOf(placed % STICKER_OFFSET_CYCLE));
+
+            boolean label = DiaryNoteStyle.CATEGORY_LABEL.equals(style.category());
+            DiaryElement element = new DiaryElement();
+            element.setElementType(NOTE_ELEMENT_TYPE);
+            element.setStyleType(style.code());
+            // 붙인 직후에는 아직 적은 글이 없다. NULL 만 막히므로 빈 글로 둔다.
+            element.setTextContent("");
+            element.setPositionX(STICKER_CENTER.add(offset));
+            element.setPositionY(STICKER_CENTER.add(offset));
+            element.setWidth(label ? LABEL_WIDTH : MEMO_WIDTH);
+            element.setHeight(label ? LABEL_HEIGHT : MEMO_HEIGHT);
+            // 회전 0 / 겹침 순서는 사진·스티커와 같은 기본값을 쓴다.
+            created = diaryElementService.create(diaryId, pageId, userId, element);
+        } catch (ResponseStatusException exception) {
+            if (exception.getStatusCode().is4xxClientError()) {
+                return ResponseEntity.status(exception.getStatusCode())
+                        .body(Map.of("message", exception.getReason() == null
+                                ? "라벨을 붙이지 못했습니다." : exception.getReason()));
+            }
+            throw exception;
+        }
+        return ResponseEntity.ok(notePayload(diaryId, pageId, created, style));
+    }
+
+    /**
+     * 라벨/떡메모지에 적은 글 저장.
+     *
+     * <p>바뀌는 것은 글 하나뿐이다. 디자인·자리·크기·회전·겹침 순서는 저장된 값 그대로다.
+     * 빈 글도 저장된다 — 다 지우고 나가는 것도 사용자의 선택이다.
+     *
+     * <p>돌려주는 것은 서버가 다듬어 저장한 글이다.
+     * 화면은 그 값으로 다시 그려, 길이를 넘겨 잘렸거나 줄이 합쳐진 경우에도
+     * 새로고침 전후가 같아진다.
+     */
+    @PostMapping("/{diaryId:\\d+}/pages/{pageId:\\d+}/elements/{elementId:\\d+}/text")
+    @ResponseBody
+    public ResponseEntity<?> updateNoteText(@PathVariable Long diaryId,
+                                            @PathVariable Long pageId,
+                                            @PathVariable Long elementId,
+                                            @RequestParam(name = "text", required = false)
+                                            String text,
+                                            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        DiaryElement saved;
+        try {
+            saved = diaryElementService.updateNoteText(
+                    diaryId, pageId, elementId, userDetails.getId(), text);
+        } catch (ResponseStatusException exception) {
+            return elementErrorResponse(exception, "글을 저장하지 못했습니다.");
+        }
+        return ResponseEntity.ok(Map.of("textContent", saved.getTextContent()));
+    }
+
+    /**
+     * 라벨/떡메모지 삭제.
+     * 스티커와 마찬가지로 파일을 갖지 않으므로 DB 행만 지운다. (사진 삭제와 다른 점)
+     * 다른 유형의 요소 번호를 보내도 여기서 걸린다.
+     */
+    @PostMapping("/{diaryId:\\d+}/pages/{pageId:\\d+}/elements/{elementId:\\d+}/note/delete")
+    @ResponseBody
+    public ResponseEntity<?> deleteNoteElement(@PathVariable Long diaryId,
+                                               @PathVariable Long pageId,
+                                               @PathVariable Long elementId,
+                                               @AuthenticationPrincipal CustomUserDetails userDetails) {
+        Long userId = userDetails.getId();
+        try {
+            // 소유권·페이지·요소 소속은 서비스가 확인한다.
+            DiaryElement existing = diaryElementService.getElement(diaryId, pageId, elementId, userId);
+            if (!NOTE_ELEMENT_TYPE.equals(existing.getElementType())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "라벨/메모지 요소가 아닙니다.");
+            }
+            diaryElementService.delete(diaryId, pageId, elementId, userId);
+        } catch (ResponseStatusException exception) {
+            return elementErrorResponse(exception, "라벨을 떼지 못했습니다.");
+        }
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * 방금 놓은 라벨/떡메모지를 화면이 바로 그릴 수 있도록 좌표/크기와 저장 주소를 함께 돌려준다.
+     * 모양 class 도 함께 준다 — 화면이 code 를 다시 class 로 바꾸는 규칙을 갖지 않게 한다.
+     */
+    private Map<String, Object> notePayload(Long diaryId, Long pageId,
+                                            DiaryElement element, DiaryNoteStyle style) {
+        String base = "/diaries/" + diaryId + "/pages/" + pageId + "/elements/" + element.getId();
+        return Map.ofEntries(
+                Map.entry("id", element.getId()),
+                Map.entry("elementType", element.getElementType()),
+                Map.entry("styleType", element.getStyleType()),
+                Map.entry("styleClass", element.getNoteStyleClass()),
+                Map.entry("label", style.label()),
+                Map.entry("textContent", element.getTextContent()),
+                Map.entry("positionX", element.getPositionX()),
+                Map.entry("positionY", element.getPositionY()),
+                Map.entry("width", element.getWidth()),
+                Map.entry("height", element.getHeight()),
+                Map.entry("rotation", element.getRotation()),
+                Map.entry("zIndex", element.getZIndex()),
+                Map.entry("urls", Map.of(
+                        "position", base + "/position",
+                        "size", base + "/size",
+                        "rotation", base + "/rotation",
+                        "layer", base + "/layer",
+                        "text", base + "/text",
+                        "delete", base + "/note/delete")));
     }
 
     /**

@@ -22,8 +22,54 @@ document.addEventListener('DOMContentLoaded', () => {
     const isActionTarget = target =>
         !!target.closest('button, a, summary, details, form, textarea, input, select');
 
+    /** 요소와 액션 줄 사이 간격 */
+    const ACTIONS_GAP = 10;
+    /** 액션 줄이 종이 가장자리에 딱 붙지 않게 남기는 여백 */
+    const ACTIONS_EDGE = 4;
+
+    /**
+     * 액션 줄을 기울어진 요소 "아래" 에 놓는다.
+     *
+     * 요소의 아래 모서리에 붙여 두면 각도에 따라 그 모서리가 위로 올라와 본문을 가린다.
+     * 그래서 요소가 화면에서 실제로 차지하는 네모의 높이를 각도에서 구해,
+     * 그 네모 아래에 늘 같은 간격으로 둔다. (자리는 CSS 가 두 값으로만 잡는다)
+     *
+     * 좌우로는 요소 한가운데에 맞추되, 종이 밖으로 나가려 하면 그만큼만 밀어 넣는다.
+     */
+    function layoutActions(item) {
+        const actions = item.querySelector('.diary-layer-actions');
+        const canvas = item.closest('.diary-canvas');
+        // 고르지 않은 요소의 줄은 화면에 없어 폭을 잴 수 없다. 보일 때만 맞춘다.
+        if (!actions || !canvas || actions.offsetWidth === 0) return;
+
+        const width = item.offsetWidth;
+        const height = item.offsetHeight;
+        const degrees = Number.parseFloat(
+            getComputedStyle(item).getPropertyValue('--diary-item-rotation')) || 0;
+        const radians = degrees * Math.PI / 180;
+        const sin = Math.abs(Math.sin(radians));
+        const cos = Math.abs(Math.cos(radians));
+
+        // 기울어진 네모의 높이 절반. 기준점이 요소 한가운데라 여기서부터 내려가면 된다.
+        const drop = (width * sin + height * cos) / 2 + ACTIONS_GAP;
+
+        const centerX = item.offsetLeft + width / 2;
+        const half = actions.offsetWidth / 2;
+        let shift = 0;
+        if (centerX - half < ACTIONS_EDGE) {
+            shift = ACTIONS_EDGE - (centerX - half);
+        } else if (centerX + half > canvas.clientWidth - ACTIONS_EDGE) {
+            shift = canvas.clientWidth - ACTIONS_EDGE - (centerX + half);
+        }
+
+        item.style.setProperty('--diary-actions-drop', `${drop.toFixed(1)}px`);
+        item.style.setProperty('--diary-actions-shift', `${shift.toFixed(1)}px`);
+    }
+
     function select(item) {
         items.forEach(other => other.classList.toggle('is-selected', other === item));
+        // 줄이 보이게 된 다음에야 폭을 잴 수 있다.
+        layoutActions(item);
     }
 
     function clearSelection() {
@@ -49,6 +95,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     items.forEach(setupItem);
 
+    /*
+      종이 크기가 달라지면 요소의 실제 픽셀 크기도 달라진다.
+      액션 줄을 내리는 거리와 가장자리에서 미는 정도는 픽셀이라 다시 구한다.
+      (지금 보이는 줄은 고른 요소의 것 하나뿐이다)
+    */
+    window.addEventListener('resize', () => {
+        items.forEach((item) => {
+            if (item.classList.contains('is-selected')) layoutActions(item);
+        });
+    });
+
     // 스티커처럼 화면을 새로 고치지 않고 붙는 요소도 같은 조작을 쓸 수 있게 열어 둔다.
     window.diaryCanvas = {
         register(item) {
@@ -65,6 +122,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // 같은 요소에 조작을 두 번 붙이면 한 번의 움직임이 두 번 반영돼 크기가 튄다.
         if (item.dataset.canvasReady) return;
         item.dataset.canvasReady = 'true';
+
+        // 키보드로 들어와 줄이 보이게 된 경우에도 자리를 맞춰 둔다.
+        item.addEventListener('focusin', () => layoutActions(item));
 
         let dragging = false;
         let startPointerX = 0;
@@ -86,10 +146,18 @@ document.addEventListener('DOMContentLoaded', () => {
         function apply(x, y) {
             item.style.left = `${(x * 100).toFixed(5)}%`;
             item.style.top = `${(y * 100).toFixed(5)}%`;
+            // 줄은 요소를 따라 움직이지만, 가장자리에 닿으면 미는 정도가 달라진다.
+            layoutActions(item);
         }
 
         item.addEventListener('pointerdown', (event) => {
             if (event.button !== 0 && event.pointerType === 'mouse') return;
+            /*
+              라벨/메모지에 글을 쓰는 중이면 옮기지 않는다.
+              글자를 고르려고 끌었을 뿐인데 종이가 따라 움직이면 쓸 수가 없다.
+              (조절점은 글 쓰는 동안 화면에서 내려가므로 여기서만 막으면 된다)
+            */
+            if (item.classList.contains('is-editing')) return;
             // 요소를 누르면 선택되고, 조절점(크기/회전)은 아래 각 로직이 담당한다.
             select(item);
             if (isActionTarget(event.target)) return;
@@ -193,6 +261,8 @@ document.addEventListener('DOMContentLoaded', () => {
         function applySize(width, height) {
             item.style.width = `${(width * 100).toFixed(5)}%`;
             item.style.height = `${(height * 100).toFixed(5)}%`;
+            // 요소가 커지면 그만큼 줄도 아래로 내려간다.
+            layoutActions(item);
         }
 
         function limit(value, min) {
@@ -315,6 +385,8 @@ document.addEventListener('DOMContentLoaded', () => {
             item.style.transform = `rotate(${degrees.toFixed(2)}deg)`;
             // 액션 줄이 같이 기울어 읽기 어려워지지 않도록 반대로 돌릴 각도를 알려 준다.
             item.style.setProperty('--diary-item-rotation', `${degrees.toFixed(2)}deg`);
+            // 각도가 바뀌면 요소가 차지하는 네모도 달라진다. 줄을 그 아래로 다시 내린다.
+            layoutActions(item);
         }
 
         rotateHandle.addEventListener('pointerdown', (event) => {

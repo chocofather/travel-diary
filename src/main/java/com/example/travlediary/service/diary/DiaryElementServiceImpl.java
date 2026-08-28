@@ -1,6 +1,7 @@
 package com.example.travlediary.service.diary;
 
 import com.example.travlediary.model.DiaryElement;
+import com.example.travlediary.model.DiaryNoteStyle;
 import com.example.travlediary.model.DiaryPage;
 import com.example.travlediary.repository.diary.DiaryElementMapper;
 import lombok.RequiredArgsConstructor;
@@ -28,8 +29,15 @@ public class DiaryElementServiceImpl implements DiaryElementService {
      * (image_url 만 쓰고 text_content 는 비운다 — DB payload CHECK 와 같은 규칙)
      */
     private static final Set<String> IMAGE_TYPES = Set.of(TYPE_PHOTO, TYPE_STICKER);
+    /** 라벨·떡메모지. 글과 디자인을 함께 들고 다니는 한 덩어리 요소다. */
+    private static final String TYPE_NOTE = "NOTE";
     /** 저장할 수 있는 요소 유형. (DB chk_diary_elements_type 과 같은 값) */
-    private static final Set<String> ALLOWED_TYPES = Set.of(TYPE_TEXT, TYPE_PHOTO, TYPE_STICKER);
+    private static final Set<String> ALLOWED_TYPES =
+            Set.of(TYPE_TEXT, TYPE_PHOTO, TYPE_STICKER, TYPE_NOTE);
+    /** 라벨은 한 줄짜리 작은 딱지다. 길게 적을 자리가 아니다. */
+    private static final int LABEL_TEXT_MAX = 100;
+    /** 떡메모지는 여러 줄을 적는 자리라 넉넉히 둔다. */
+    private static final int MEMO_TEXT_MAX = 1000;
 
     /** 좌표/크기 기본값과 허용 범위 (DB 기본값·CHECK 제약과 같은 값) */
     private static final BigDecimal DEFAULT_POSITION = new BigDecimal("0.00000");
@@ -44,6 +52,8 @@ public class DiaryElementServiceImpl implements DiaryElementService {
 
     private final DiaryPageService diaryPageService;
     private final DiaryElementMapper diaryElementMapper;
+    /** 라벨·떡메모지 디자인 허용 목록. 아는 값인지 확인하는 데만 쓴다. */
+    private final DiaryNoteCatalog diaryNoteCatalog;
 
     @Override
     @Transactional(readOnly = true)
@@ -79,7 +89,7 @@ public class DiaryElementServiceImpl implements DiaryElementService {
                                DiaryElement element) {
         DiaryPage page = requireOwnedPage(diaryId, pageId, userId);
         DiaryElement existing = requireElementOfPage(elementId, page.getId());
-        // 유형은 기존 요소의 값을 유지한다. (TEXT ↔ PHOTO ↔ STICKER 전환 없음)
+        // 유형은 기존 요소의 값을 유지한다. (TEXT ↔ PHOTO ↔ STICKER ↔ NOTE 전환 없음)
         DiaryElement prepared = validated(element, existing.getElementType());
         // 대상 요소/페이지는 요청 값이 아니라 검증된 값으로 고정한다. (페이지 이동 없음)
         prepared.setId(existing.getId());
@@ -91,6 +101,58 @@ public class DiaryElementServiceImpl implements DiaryElementService {
         return requireElementOfPage(existing.getId(), page.getId());
     }
 
+    /**
+     * 라벨/떡메모지의 글만 바꾼다.
+     *
+     * <p>화면은 글 하나만 보낸다. 디자인·자리·크기·회전·겹침 순서는 저장된 값에서 그대로 온다.
+     * 다른 유형의 요소는 이 문으로 들어올 수 없다 — 사진에 글을 붙이거나
+     * 스티커의 그림을 지우는 길이 생기지 않게 한다.
+     */
+    @Override
+    @Transactional
+    public DiaryElement updateNoteText(Long diaryId, Long pageId, Long elementId, Long userId,
+                                       String textContent) {
+        DiaryPage page = requireOwnedPage(diaryId, pageId, userId);
+        DiaryElement existing = requireElementOfPage(elementId, page.getId());
+        if (!TYPE_NOTE.equals(existing.getElementType())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "라벨/메모지 요소가 아닙니다.");
+        }
+
+        // 글만 바꾸고 나머지 값은 기존 요소에서 그대로 가져간다.
+        DiaryElement retyped = copyOf(existing);
+        retyped.setTextContent(noteText(existing, textContent));
+        return update(diaryId, pageId, elementId, userId, retyped);
+    }
+
+    /**
+     * 라벨/떡메모지에 적을 수 있는 글로 다듬는다.
+     *
+     * <p>길이는 갈래에 따라 다르다. 라벨은 한 줄짜리 작은 딱지라 짧고,
+     * 떡메모지는 여러 줄을 적는 자리라 길다. 어느 쪽도 빈 글은 그대로 둔다.
+     *
+     * <p>라벨에 줄바꿈이 들어오면(붙여넣기 등) 막지 않고 한 칸으로 바꾼다.
+     * 붙여넣기가 통째로 거절되는 것보다 한 줄로 들어오는 편이 덜 놀랍다.
+     */
+    private String noteText(DiaryElement existing, String textContent) {
+        boolean label = DiaryNoteStyle.CATEGORY_LABEL.equals(
+                diaryNoteCatalog.find(existing.getStyleType())
+                        .map(DiaryNoteStyle::category)
+                        .orElse(DiaryNoteStyle.CATEGORY_MEMO));
+
+        String text = textContent == null ? "" : textContent.replace("\r\n", "\n");
+        if (label) {
+            text = text.replace('\n', ' ');
+        }
+        text = text.strip();
+
+        int limit = label ? LABEL_TEXT_MAX : MEMO_TEXT_MAX;
+        if (text.length() > limit) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    limit + "자까지 입력할 수 있습니다.");
+        }
+        return text;
+    }
+
     @Override
     @Transactional
     public DiaryElement move(Long diaryId, Long pageId, Long elementId, Long userId,
@@ -98,7 +160,6 @@ public class DiaryElementServiceImpl implements DiaryElementService {
         DiaryPage page = requireOwnedPage(diaryId, pageId, userId);
         DiaryElement existing = requireElementOfPage(elementId, page.getId());
 
-        // 위치만 바꾸고 나머지 값은 기존 요소에서 그대로 가져간다.
         DiaryElement moved = copyOf(existing);
         moved.setPositionX(positionX);
         moved.setPositionY(positionY);
@@ -185,12 +246,20 @@ public class DiaryElementServiceImpl implements DiaryElementService {
         }
     }
 
-    /** 일부 값만 바꿔 저장할 때 쓰는 복사본. (내용·좌표·크기·회전·겹침 순서를 그대로 옮긴다) */
+    /**
+     * 일부 값만 바꿔 저장할 때 쓰는 복사본.
+     * (유형·내용·그림·디자인·좌표·크기·회전·겹침 순서를 그대로 옮긴다)
+     *
+     * <p>저장할 때 쓰는 칸을 하나라도 빠뜨리면 그 값이 조용히 비워진 채로 검사를 지나간다.
+     * 옮기기·크기·회전·겹침 순서가 모두 이 복사본을 거치므로,
+     * diary_elements 에 칸이 늘면 여기도 함께 늘려야 한다.
+     */
     private DiaryElement copyOf(DiaryElement existing) {
         DiaryElement copy = new DiaryElement();
         copy.setElementType(existing.getElementType());
         copy.setTextContent(existing.getTextContent());
         copy.setImageUrl(existing.getImageUrl());
+        copy.setStyleType(existing.getStyleType());
         copy.setPositionX(existing.getPositionX());
         copy.setPositionY(existing.getPositionY());
         copy.setWidth(existing.getWidth());
@@ -216,7 +285,7 @@ public class DiaryElementServiceImpl implements DiaryElementService {
         return element;
     }
 
-    /** 생성 시 요청한 유형. TEXT/PHOTO/STICKER 만 허용한다. */
+    /** 생성 시 요청한 유형. TEXT/PHOTO/STICKER/NOTE 만 허용한다. */
     private String requireElementType(DiaryElement element) {
         if (element == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "요소 정보를 입력해 주세요.");
@@ -252,8 +321,11 @@ public class DiaryElementServiceImpl implements DiaryElementService {
     }
 
     /**
-     * TEXT 는 본문만, PHOTO/STICKER 는 이미지 경로만 남긴다. (DB payload CHECK 와 같은 규칙)
-     * 사진과 스티커는 같은 이미지 요소라 검증도 한 곳에서 공유한다.
+     * TEXT 는 본문만, PHOTO/STICKER 는 이미지 경로만, NOTE 는 본문과 디자인을 남긴다.
+     * (DB payload CHECK 와 같은 규칙) 사진과 스티커는 같은 이미지 요소라 검증도 한 곳에서 공유한다.
+     *
+     * <p>{@code prepared} 는 갓 만든 빈 요소다. 여기서 채운 값만 저장되므로,
+     * 유형에 맞지 않는 칸(예: 사진의 style_type)은 손대지 않는 것만으로 NULL 이 된다.
      */
     private void applyPayload(DiaryElement prepared, DiaryElement element, String elementType) {
         String textContent = element.getTextContent() == null
@@ -269,6 +341,18 @@ public class DiaryElementServiceImpl implements DiaryElementService {
             return;
         }
 
+        if (TYPE_NOTE.equals(elementType)) {
+            /*
+              붙인 직후에는 아직 적은 글이 없다.
+              여기서 글을 강요하면 라벨을 붙이기도 전에 무슨 말을 쓸지 정해야 한다.
+              그래서 빈 글은 그대로 두고, DB 가 막는 NULL 만 빈 문자열로 맞춘다.
+            */
+            prepared.setTextContent(textContent);
+            prepared.setStyleType(requireNoteStyle(element.getStyleType()));
+            prepared.setImageUrl(null);
+            return;
+        }
+
         if (!IMAGE_TYPES.contains(elementType)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "지원하지 않는 요소 유형입니다.");
         }
@@ -278,6 +362,17 @@ public class DiaryElementServiceImpl implements DiaryElementService {
         }
         prepared.setImageUrl(imageUrl);
         prepared.setTextContent(null);
+    }
+
+    /**
+     * 라벨/떡메모지 디자인. 목록(diary_notes.json)에 있는 값만 저장된다.
+     * 화면이 보낸 값을 그대로 믿지 않는다. 모르는 값이 들어오면 화면이 그릴 모양이 없다.
+     */
+    private String requireNoteStyle(String styleType) {
+        return diaryNoteCatalog.find(styleType)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "라벨/메모지 디자인을 선택해 주세요."))
+                .code();
     }
 
     private BigDecimal position(BigDecimal value, String label) {
