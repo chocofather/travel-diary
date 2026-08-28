@@ -1092,10 +1092,20 @@ class DiaryControllerTest {
         assertThat(body).doesNotContain("diary-page-action");
         assertThat(body).doesNotContain("/diaries/10/pages/1/update");
         assertThat(body).doesNotContain("/diaries/10/pages/1/delete");
+        // 제목 아래 한 줄에 기간과 장수를 함께 둔다
+        assertThat(body).contains("diary-detail-headline");
+        assertThat(body).contains("diary-detail-meta");
+        assertThat(body.indexOf("diary-detail-title"))
+                .isLessThan(body.indexOf("diary-detail-meta"));
+        assertThat(body).contains("전체 1장");
         // 새 페이지 추가는 읽기 상단 액션에 있다 (편집 캔버스가 아니라 책 관리 쪽)
+        assertThat(body).contains("diary-detail-actions");
         assertThat(body).contains("diary-page-add");
         assertThat(body).contains("새 페이지 추가");
         assertThat(body).contains("action=\"/diaries/10/pages\"");
+        // 펼침이 바뀌면 통째로 갈리는 판 바깥에 있어야 버튼이 사라지지 않는다
+        assertThat(body.indexOf("diary-page-add"))
+                .isLessThan(body.indexOf("diary-read-board"));
         assertThat(body).doesNotContain("diary-resize-handle");
         assertThat(body).doesNotContain("diary-rotate-handle");
         assertThat(body).doesNotContain("diary-layer-action");

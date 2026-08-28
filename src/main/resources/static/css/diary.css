@@ -1718,8 +1718,34 @@
     --diary-paper-texture: var(--diary-paper-edge), var(--diary-paper-grain);
 }
 
+/*
+  상단 정보 줄.
+  제목·기간·장수를 한 덩어리로 두고 다이어리 단위 액션만 오른쪽 끝에 세운다.
+  카드나 그림자를 두르지 않는다. 아래 종이와 자연스럽게 이어지도록 여백만 정리한다.
+*/
 .diary-detail-header {
-    margin-bottom: 26px;
+    margin-bottom: 16px;
+}
+
+.diary-detail-headline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px 20px;
+    padding-bottom: 12px;
+    /* 정보와 종이 사이를 가르는 아주 옅은 선 하나 */
+    border-bottom: 1px solid #efe8dc;
+}
+
+.diary-detail-heading {
+    min-width: 0;
+}
+
+.diary-detail-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .diary-detail-back {
@@ -1740,6 +1766,8 @@
     margin: 0;
     font-size: 27px;
     letter-spacing: -0.02em;
+    /* 띄어쓰기 없는 긴 제목도 줄을 넓히지 않는다 */
+    overflow-wrap: break-word;
 }
 
 .diary-detail-meta {
@@ -1747,9 +1775,14 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 8px;
-    margin: 10px 0 0;
+    /* 제목 바로 아래에 붙어 한 덩어리로 읽힌다 */
+    margin: 6px 0 0;
     color: #8b8378;
     font-size: 14px;
+}
+
+.diary-detail-meta-dot {
+    color: #cdc3b4;
 }
 
 /* 다이어리 설정/삭제는 낮은 위계의 작은 액션. 두 액션을 같은 줄에 정확히 맞춘다. */
@@ -3224,10 +3257,29 @@
     height: 15px;
 }
 
-/* + 가 오른쪽 끝에 있으므로 추가 폼도 오른쪽에 맞춰 편다 */
-.diary-read-tools .diary-page-add form {
+/* 상단 줄 오른쪽 끝에서 펼치므로 패널도 오른쪽에 맞춰 연다 */
+.diary-detail-actions .diary-page-add form {
     right: 0;
     left: auto;
+}
+
+/*
+  상단 줄의 페이지 추가는 글자를 함께 둔다.
+  종이 위의 작은 원형 버튼과 달리 여기서는 무엇을 하는 곳인지 바로 읽혀야 한다.
+*/
+.diary-page-add-button.is-labelled {
+    width: auto;
+    height: 30px;
+    gap: 5px;
+    padding: 0 12px;
+    border-radius: 8px;
+    color: #6b6259;
+    font-size: 13px;
+}
+
+.diary-page-add-button.is-labelled svg {
+    width: 13px;
+    height: 13px;
 }
 
 /* ===== 편집 모드: 종이 바깥의 페이지 정보/관리 줄 ===== */
@@ -3282,8 +3334,35 @@
  * 종이 안쪽은 종이 너비에 비례해 그려지므로 책이 커져도 본문/사진/스티커의
  * 상대 위치와 겹침은 그대로다. (요소별 보정값 없음)
  */
+/*
+  읽는 화면은 펼친 책 자체를 크게 본다. 넓히는 것은 바깥 폭뿐이라,
+  종이에 붙여 둔 사진·스티커·라벨은 제자리·같은 비율로 함께 커진다.
+  (종이 비율 41:38 과 --diary-page-unit 셈은 그대로 둔다)
+*/
 .diary-detail-page.is-read-mode {
-    width: min(1300px, calc(100% - 40px));
+    width: min(1660px, calc(100% - 40px));
+}
+
+/*
+  폭만 키우면 세로가 화면을 넘어가므로, 두 장을 나란히 펼치는 폭에서는 높이도 함께 본다.
+  한 면 높이 = (펼침폭 - 제본선 26px) / 2 * 38/41 이므로,
+  쓸 수 있는 높이에서 거꾸로 계산한 폭(높이 * 2.158 + 26px)을 넘지 않게 한다.
+
+  좁은 화면(860px 이하)은 한 장씩 넘겨 보는 구조라 화면 폭이 그대로 기준이다.
+  (거기서 높이로 폭을 줄이면 가로로 누운 화면에서 책만 작아진다)
+  dvh 를 모르는 브라우저는 앞줄(vh)을 그대로 쓴다.
+*/
+@media (min-width: 861px) {
+    .diary-detail-page.is-read-mode {
+        width: min(
+            1660px,
+            calc(100% - 40px),
+            calc(max(420px, 100vh - 200px) * 2.158 + 26px));
+        width: min(
+            1660px,
+            calc(100% - 40px),
+            calc(max(420px, 100dvh - 200px) * 2.158 + 26px));
+    }
 }
 
 /* 읽기 모드에서는 본문/사진 모두 조작 대상이 아니다 */

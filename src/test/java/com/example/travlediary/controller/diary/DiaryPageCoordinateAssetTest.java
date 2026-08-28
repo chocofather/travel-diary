@@ -72,6 +72,33 @@ class DiaryPageCoordinateAssetTest {
     }
 
     /**
+     * 읽는 화면의 펼침은 바깥 폭만 넓힌다.
+     *
+     * <p>종이 비율과 안쪽 단위는 손대지 않으므로, 붙여 둔 사진·스티커·라벨은
+     * 제자리·같은 비율로 함께 커진다. 세로가 화면을 넘지 않도록 높이도 함께 본다.
+     */
+    @Test
+    void theReadingSpreadOnlyGrowsItsOuterWidth() throws IOException {
+        String css = Files.readString(DIARY_CSS);
+        String read = rule(css, ".diary-detail-page.is-read-mode");
+
+        // 넓히는 것은 바깥 폭뿐이다. 종이 자체의 크기를 따로 정하지 않는다
+        assertThat(read).contains("width: min(1660px, calc(100% - 40px));");
+        assertThat(read).doesNotContain("aspect-ratio").doesNotContain("--diary-page-unit");
+
+        // 두 장을 나란히 펼치는 폭에서만 높이로도 한 번 더 줄인다
+        int wide = css.indexOf("@media (min-width: 861px) {");
+        assertThat(wide).as("넓은 화면 규칙을 찾지 못했습니다").isNotNegative();
+        String tall = css.substring(wide, css.indexOf("\n}", wide));
+        assertThat(tall).contains(".diary-detail-page.is-read-mode");
+        assertThat(tall).contains("100vh - 200px").contains("100dvh - 200px");
+        // dvh 를 모르는 브라우저가 앞줄(vh)을 쓰도록 순서를 지킨다
+        assertThat(tall.indexOf("100vh")).isLessThan(tall.indexOf("100dvh"));
+        // 좁은 화면(한 장씩 넘겨 보는 쪽)은 화면 폭 그대로다
+        assertThat(rule(css, ".diary-detail-page.is-read-mode")).doesNotContain("vh");
+    }
+
+    /**
      * 액션 줄은 기울어진 요소가 실제로 차지하는 네모 아래에 놓인다.
      *
      * <p>요소의 아래 모서리에 붙여 두면 각도에 따라 그 모서리가 위로 올라와 본문을 가린다.
