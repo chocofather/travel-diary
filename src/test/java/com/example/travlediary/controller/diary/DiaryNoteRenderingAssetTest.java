@@ -93,7 +93,7 @@ class DiaryNoteRenderingAssetTest {
                 .contains("background: var(--diary-note-paper)")
                 .contains("border: 1px solid var(--diary-note-line)");
         // 떡메지들이 나눠 쓰는 글자 규칙. 묶음의 마지막 줄로 찾는다
-        assertThat(rule(css, ".diary-note-memo-todo .diary-note-text"))
+        assertThat(design(css, "/* 떡메지의 글."))
                 .contains("color: var(--diary-note-ink)");
 
         for (String color : new String[]{"ivory", "pink", "sage", "sky"}) {
@@ -152,11 +152,194 @@ class DiaryNoteRenderingAssetTest {
     }
 
     @Test
-    void noNewDesignNeedsAPictureFile() throws IOException {
+    void theTornEdgeIsTheOnlyPictureUsedAsAMask() throws IOException {
         String notes = noteStyles(Files.readString(DIARY_CSS));
 
-        // 이번에 더한 것은 모두 CSS 로만 그린다. 그림 파일을 들이지 않았다
-        assertThat(notes).doesNotContain("url(");
+        /*
+          찢긴 가장자리는 종이 모양 자체를 잘라 내는 것이라 mask 여야 한다.
+          그 밖의 장식(꽃·하트·리본)은 그림을 그대로 얹는다 —
+          mask 는 브라우저마다 크기 계산이 달라 장식이 통째로 사라진 적이 있다.
+        */
+        int from = 0;
+        while (true) {
+            int at = notes.indexOf("mask-image: url('/images/diary/notes/", from);
+            if (at < 0) break;
+            assertThat(notes.substring(at, notes.indexOf(')', at)))
+                    .as("mask 로 쓰는 그림은 찢긴 가장자리뿐이다").contains("torn-edge");
+            from = at + 1;
+        }
+        // 실제로 쓰는 그림은 이것뿐이고 파일이 있어야 한다
+        for (String asset : new String[]{
+                "torn-edge.svg", "torn-edge-top.svg", "flower.svg",
+                "heart.svg", "ribbon.svg"}) {
+            assertThat(Files.exists(
+                    Path.of("src/main/resources/static/images/diary/notes/" + asset)))
+                    .as("%s", asset).isTrue();
+        }
+    }
+
+    @Test
+    void everyDecorationPictureIsReadableXml() throws Exception {
+        /*
+          깨진 SVG 는 브라우저가 아무 말 없이 버린다. 배경으로도 mask 로도 그려지지 않는다.
+          실제로 XML 주석 안에 붙임표 두 개(장식 색 이름을 적다가 들어갔다)가 들어가
+          꽃과 하트가 통째로 보이지 않은 적이 있다. 파일을 열어 실제로 읽어 본다.
+        */
+        for (Path asset : assets()) {
+            try {
+                javax.xml.parsers.DocumentBuilderFactory factory =
+                        javax.xml.parsers.DocumentBuilderFactory.newInstance();
+                factory.setNamespaceAware(true);
+                org.w3c.dom.Document document =
+                        factory.newDocumentBuilder().parse(asset.toFile());
+                assertThat(document.getDocumentElement().getTagName())
+                        .as("%s", asset.getFileName()).isEqualTo("svg");
+            } catch (org.xml.sax.SAXException exception) {
+                throw new AssertionError(
+                        asset.getFileName() + " 를 XML 로 읽지 못했습니다: "
+                                + exception.getMessage(), exception);
+            }
+        }
+    }
+
+    @Test
+    void theDecorationPicturesCarryTheirOwnColour() throws IOException {
+        /*
+          꽃·하트·리본은 그림이 색을 들고 있다. 화면은 배경으로 얹기만 한다.
+          mask 로 색을 입히던 방식은 브라우저마다 크기 계산이 달라 장식이 사라졌다.
+          (종이색은 그대로 color_type 이 정한다)
+        */
+        for (String asset : new String[]{"flower.svg", "heart.svg", "ribbon.svg"}) {
+            String svg = Files.readString(
+                    Path.of("src/main/resources/static/images/diary/notes/" + asset));
+            assertThat(svg).as("%s", asset).contains("fill=\"#");
+        }
+        String notes = noteStyles(Files.readString(DIARY_CSS));
+        for (String asset : new String[]{"flower.svg", "heart.svg", "ribbon.svg"}) {
+            assertThat(notes).as("%s 는 배경 그림으로 얹는다", asset)
+                    .contains("background-image: url('/images/diary/notes/" + asset + "')");
+        }
+        // 이 셋에는 더 이상 mask 를 쓰지 않는다
+        assertThat(notes)
+                .doesNotContain("mask-image: url('/images/diary/notes/flower.svg')")
+                .doesNotContain("mask-image: url('/images/diary/notes/heart.svg')")
+                .doesNotContain("mask-image: url('/images/diary/notes/ribbon.svg')");
+    }
+
+    /** 라벨/떡메모지 장식에 쓰는 그림 전부. */
+    private java.util.List<Path> assets() throws IOException {
+        try (var files = Files.list(Path.of("src/main/resources/static/images/diary/notes"))) {
+            return files.filter(path -> path.toString().endsWith(".svg")).sorted().toList();
+        }
+    }
+
+    @Test
+    void everyDecorationPictureHasARealSizeOfItsOwn() throws IOException {
+        /*
+          viewBox 만 있고 width/height 가 없는 그림에는 "본래 크기" 가 없다.
+          그러면 mask-size 의 auto 나 % 가 풀리지 않아 마스크 폭이 0 으로 접히고,
+          장식이 통째로 사라진다(꽃·하트가 안 보이던 원인이 이것이었다).
+        */
+        for (String asset : new String[]{
+                "torn-edge.svg", "torn-edge-top.svg", "flower.svg",
+                "heart.svg", "ribbon.svg"}) {
+            String svg = Files.readString(
+                    Path.of("src/main/resources/static/images/diary/notes/" + asset));
+            String root = svg.substring(svg.indexOf("<svg"), svg.indexOf('>', svg.indexOf("<svg")));
+            assertThat(root).as("%s", asset)
+                    .contains("width=")
+                    .contains("height=")
+                    .contains("viewBox=");
+        }
+    }
+
+    @Test
+    void aDecorationIsNeverSizedByAutoAlone() throws IOException {
+        String notes = noteStyles(Files.readString(DIARY_CSS));
+
+        // 그림의 본래 크기에 기대지 않고 두 축을 모두 정해 준다
+        assertThat(notes).doesNotContain("mask-size: auto 100%");
+        assertThat(notes).contains("background-size: 100% 100%");
+    }
+
+    @Test
+    void everyDecorationSitsOnItsOwnNoteAndAboveThePaper() throws IOException {
+        String css = Files.readString(DIARY_CSS);
+
+        /*
+          장식은 그 종이를 기준으로 자리를 잡아야 한다.
+          position 이 없으면 바깥 요소를 기준으로 잡혀 엉뚱한 곳에 놓인다.
+          그리고 종이 바탕에 묻히지 않게 한 층 위에 둔다.
+        */
+        for (String shape : new String[]{
+                "floral-label", "heart-label", "ribbon-label", "memo-floral", "memo-heart"}) {
+            String block = css.substring(css.indexOf(".diary-note-" + shape + " .diary-note-surface"));
+            block = block.substring(0, block.indexOf("::before"));
+            assertThat(block).as("%s 는 제 종이를 기준으로 잡는다", shape).contains("position: relative");
+        }
+        String notes = noteStyles(css);
+        assertThat(notes).contains("z-index: 1").contains("display: block");
+    }
+
+    @Test
+    void theDecoratedDesignsAlsoTakeAnyColour() throws IOException {
+        String notes = noteStyles(Files.readString(DIARY_CSS));
+
+        // 장식이 있는 것들도 색 값을 직접 쓰지 않는다
+        for (String shape : new String[]{
+                "vintage-label", "torn-label", "floral-label",
+                "heart-label", "ribbon-label",
+                "memo-torn", "memo-taped", "memo-vintage",
+                "memo-planner", "memo-floral", "memo-heart"}) {
+            String block = notes.substring(
+                    notes.indexOf(".diary-note-" + shape + " .diary-note-surface"));
+            block = block.substring(0, block.indexOf('}'));
+            assertThat(block).as("%s", shape).doesNotContain("#");
+        }
+        // 꽃도 테이프도 선 색으로 칠해진다
+        assertThat(notes)
+                .contains("background: var(--diary-note-line);");
+    }
+
+    @Test
+    void theDecorationsKeepTheirSizeWhenTheNoteIsStretched() throws IOException {
+        String notes = noteStyles(Files.readString(DIARY_CSS));
+
+        /*
+          찢긴 톱니는 가로로 되풀이해 붙인다. 늘려서 찌그러뜨리지 않는다.
+          (mask-size 를 100% 100% 로 두면 톱니가 함께 늘어난다)
+        */
+        assertThat(notes)
+                .contains("mask-repeat: no-repeat, repeat-x, repeat-x")
+                .contains("auto var(--diary-note-tear)");
+        // 위아래를 모두 뜯는다. 한쪽만 뜯으면 그냥 네모로 보인다
+        assertThat(notes)
+                .contains("torn-edge.svg")
+                .contains("torn-edge-top.svg");
+        /*
+          꽃 띠는 높이만 정하고 가로로 되풀이한다 (늘리면 개수가 늘지 꽃이 커지지 않는다).
+          하트·리본·테이프는 종이 단위로 크기를 못 박아 둔다.
+        */
+        /*
+          꽃·하트는 오른쪽 위에 한 개만 놓는다. 되풀이하지 않으므로 늘려도 개수가 변하지 않고,
+          크기도 종이 단위로 못 박혀 있어 함께 늘어나지 않는다.
+        */
+        assertThat(notes)
+                .contains("background-repeat: no-repeat")
+                .doesNotContain("background-repeat: repeat-x")
+                .contains("width: calc(16 * var(--diary-page-unit))")
+                .contains("width: calc(26 * var(--diary-page-unit))")
+                .contains("width: calc(72 * var(--diary-page-unit))");
+    }
+
+    @Test
+    void theTapeIsPartOfTheNoteNotASeparateSticker() throws IOException {
+        String notes = noteStyles(Files.readString(DIARY_CSS));
+        String taped = design(notes, "  테이프 메모지:");
+
+        // 마스킹테이프 요소를 따로 만들어 묶지 않는다. 이 종이 한 장의 디자인이다
+        assertThat(taped).contains("::before").contains("content: ''");
+        assertThat(notes).doesNotContain("masking-tape");
     }
 
     @Test
@@ -204,7 +387,7 @@ class DiaryNoteRenderingAssetTest {
         assertThat(design(css, "/* 제목 라벨:"))
                 .contains("font-size: calc(13 * var(--diary-page-unit));");
         // 떡메지들이 나눠 쓰는 글자 규칙. 묶음의 마지막 줄로 찾는다
-        assertThat(rule(css, ".diary-note-memo-todo .diary-note-text"))
+        assertThat(design(css, "/* 떡메지의 글."))
                 .contains("font-size: calc(12 * var(--diary-page-unit));");
         // NOTE 규칙 어디에도 px 글자 크기를 못 박아 두지 않는다
         assertThat(noteStyles(css)).doesNotContain("font-size: 1").doesNotContain("px;");
@@ -224,8 +407,7 @@ class DiaryNoteRenderingAssetTest {
 
     @Test
     void aMemoKeepsTheLineBreaksThatWereTyped() throws IOException {
-        assertThat(rule(Files.readString(DIARY_CSS),
-                ".diary-note-memo-todo .diary-note-text"))
+        assertThat(design(Files.readString(DIARY_CSS), "/* 떡메지의 글."))
                 .contains("white-space: pre-wrap;");
     }
 
@@ -276,7 +458,7 @@ class DiaryNoteRenderingAssetTest {
                 .doesNotContain("transparent 1px 4px")
                 .doesNotContain("transparent 1px 6px");
         // 그늘도 종이 한 장이 놓인 정도로만 둔다
-        assertThat(rule(css, ".diary-note-memo-todo .diary-note-surface"))
+        assertThat(design(css, "/* ── 떡메모지:"))
                 .contains("box-shadow: 0 1px 2px rgba(63, 52, 38, 0.06);");
     }
 

@@ -3397,7 +3397,12 @@
 .diary-note-border-label .diary-note-surface,
 .diary-note-dashed-label .diary-note-surface,
 .diary-note-tag-label .diary-note-surface,
-.diary-note-check-label .diary-note-surface {
+.diary-note-check-label .diary-note-surface,
+.diary-note-vintage-label .diary-note-surface,
+.diary-note-torn-label .diary-note-surface,
+.diary-note-floral-label .diary-note-surface,
+.diary-note-heart-label .diary-note-surface,
+.diary-note-ribbon-label .diary-note-surface {
     align-items: center;
     justify-content: center;
     padding: calc(4 * var(--diary-page-unit)) calc(9 * var(--diary-page-unit));
@@ -3411,7 +3416,12 @@
 .diary-note-border-label .diary-note-text,
 .diary-note-dashed-label .diary-note-text,
 .diary-note-tag-label .diary-note-text,
-.diary-note-check-label .diary-note-text {
+.diary-note-check-label .diary-note-text,
+.diary-note-vintage-label .diary-note-text,
+.diary-note-torn-label .diary-note-text,
+.diary-note-floral-label .diary-note-text,
+.diary-note-heart-label .diary-note-text,
+.diary-note-ribbon-label .diary-note-text {
     text-align: center;
 }
 
@@ -3423,7 +3433,12 @@
 .diary-note-border-label .diary-note-text,
 .diary-note-dashed-label .diary-note-text,
 .diary-note-tag-label .diary-note-text,
-.diary-note-check-label .diary-note-text {
+.diary-note-check-label .diary-note-text,
+.diary-note-vintage-label .diary-note-text,
+.diary-note-torn-label .diary-note-text,
+.diary-note-floral-label .diary-note-text,
+.diary-note-heart-label .diary-note-text,
+.diary-note-ribbon-label .diary-note-text {
     color: var(--diary-note-ink);
     font-size: calc(12 * var(--diary-page-unit));
     line-height: 1.45;
@@ -3549,7 +3564,13 @@
 .diary-note-memo-grid .diary-note-surface,
 .diary-note-memo-dot .diary-note-surface,
 .diary-note-memo-checklist .diary-note-surface,
-.diary-note-memo-todo .diary-note-surface {
+.diary-note-memo-todo .diary-note-surface,
+.diary-note-memo-torn .diary-note-surface,
+.diary-note-memo-taped .diary-note-surface,
+.diary-note-memo-vintage .diary-note-surface,
+.diary-note-memo-planner .diary-note-surface,
+.diary-note-memo-floral .diary-note-surface,
+.diary-note-memo-heart .diary-note-surface {
     align-items: flex-start;
     padding: calc(10 * var(--diary-page-unit)) calc(11 * var(--diary-page-unit));
     /* 종이 한 장이 놓인 정도의 아주 옅은 그늘만 준다 */
@@ -3559,13 +3580,20 @@
     background: var(--diary-note-paper);
 }
 
+/* 떡메지의 글. 어느 무늬 위에서도 같은 크기·색으로 읽힌다 */
 .diary-note-memo-square .diary-note-text,
 .diary-note-memo-round .diary-note-text,
 .diary-note-memo-lined .diary-note-text,
 .diary-note-memo-grid .diary-note-text,
 .diary-note-memo-dot .diary-note-text,
 .diary-note-memo-checklist .diary-note-text,
-.diary-note-memo-todo .diary-note-text {
+.diary-note-memo-todo .diary-note-text,
+.diary-note-memo-torn .diary-note-text,
+.diary-note-memo-taped .diary-note-text,
+.diary-note-memo-vintage .diary-note-text,
+.diary-note-memo-planner .diary-note-text,
+.diary-note-memo-floral .diary-note-text,
+.diary-note-memo-heart .diary-note-text {
     /* 사용자가 넣은 줄바꿈을 그대로 보여 준다 */
     white-space: pre-wrap;
     color: var(--diary-note-ink);
@@ -3694,6 +3722,330 @@
     letter-spacing: 0.12em;
     /* 디자인의 일부다. 사용자가 쓴 글이 아니다 */
     content: 'TODO';
+}
+
+/*
+  ── 장식이 있는 라벨 / 떡메모지 ──
+
+  꾸밈에 색을 담지 않는다. 그림 파일은 mask 로만 쓰고 색은 늘 --diary-note-* 가 칠하므로,
+  네 가지 색과 그대로 어울린다.
+  장식 크기는 종이 단위로 고정해, 요소를 늘려도 톱니나 꽃이 함께 커지지 않는다.
+*/
+
+/*
+  빈티지 프레임: 바깥 선 안쪽에 한 겹을 더 두르고, 그 안쪽 선의 각 변 가운데를
+  종이색으로 덮어 모서리에만 남긴다. (ㄱ자 네 개가 남는다)
+  그림 파일 없이 선과 종이색만으로 만든다.
+*/
+.diary-note-vintage-label .diary-note-surface,
+.diary-note-memo-vintage .diary-note-surface {
+    position: relative;
+    /* 굵은 바깥 테두리 + 안쪽 가는 선 두 겹. 모서리는 각지게 둔다 */
+    border: calc(2 * var(--diary-page-unit)) solid var(--diary-note-ink);
+    border-radius: 0;
+    background: var(--diary-note-paper);
+    /* 테두리와 안쪽 액자 사이를 벌려 액자처럼 보이게 한다 */
+    padding: calc(9 * var(--diary-page-unit)) calc(14 * var(--diary-page-unit));
+}
+
+.diary-note-vintage-label .diary-note-surface::before,
+.diary-note-memo-vintage .diary-note-surface::before {
+    position: absolute;
+    inset: calc(5 * var(--diary-page-unit));
+    border: 1px solid var(--diary-note-ink);
+    /*
+      각 변 가운데를 종이색으로 덮어 모서리 ㄱ자 네 개만 남긴다.
+      덮개를 넉넉히 잡아야 액자 장식이라는 것이 한눈에 읽힌다.
+    */
+    background:
+        linear-gradient(var(--diary-note-paper), var(--diary-note-paper))
+            no-repeat 50% 0 / 72% calc(4 * var(--diary-page-unit)),
+        linear-gradient(var(--diary-note-paper), var(--diary-note-paper))
+            no-repeat 50% 100% / 72% calc(4 * var(--diary-page-unit)),
+        linear-gradient(var(--diary-note-paper), var(--diary-note-paper))
+            no-repeat 0 50% / calc(4 * var(--diary-page-unit)) 58%,
+        linear-gradient(var(--diary-note-paper), var(--diary-note-paper))
+            no-repeat 100% 50% / calc(4 * var(--diary-page-unit)) 58%;
+    opacity: 0.75;
+    pointer-events: none;
+    content: '';
+}
+
+.diary-note-vintage-label .diary-note-text,
+.diary-note-memo-vintage .diary-note-text {
+    /* 안쪽 액자를 피해 글을 놓는다 */
+    position: relative;
+    /* 오래된 표찰처럼 자간을 조금 벌린다 */
+    letter-spacing: 0.16em;
+}
+
+/*
+  찢어진 종이: 아래 끝만 톱니로 잘라 낸다.
+  mask 두 겹을 겹쳐(본문 네모 + 아래 톱니 띠) 종이 모양을 만든다.
+  톱니 조각은 가로로 되풀이하므로 넓게 늘려도 톱니 하나의 크기는 그대로다.
+  (늘려서 찌그러뜨리지 않는다 — 마스킹테이프를 조각으로 잇는 것과 같은 생각)
+*/
+.diary-note-torn-label,
+.diary-note-memo-torn {
+    /* 톱니가 눈에 보일 만큼은 깊어야 "찢은 종이" 로 읽힌다 */
+    --diary-note-tear: calc(12 * var(--diary-page-unit));
+}
+
+.diary-note-torn-label .diary-note-surface,
+.diary-note-memo-torn .diary-note-surface {
+    /* 잘려 나갈 자리라 테두리를 두르지 않는다 */
+    border: 0;
+    border-radius: 0;
+    background: var(--diary-note-paper);
+    /*
+      위아래를 모두 뜯어 낸다. 한쪽만 뜯으면 그냥 네모로 보인다.
+      가운데 네모 한 겹 + 위 톱니 + 아래 톱니를 겹쳐 종이 모양을 만든다.
+      (위쪽 조각은 뒤집어 붙인다)
+    */
+    -webkit-mask-image:
+        linear-gradient(#000, #000),
+        url('/images/diary/notes/torn-edge.svg'),
+        url('/images/diary/notes/torn-edge-top.svg');
+    mask-image:
+        linear-gradient(#000, #000),
+        url('/images/diary/notes/torn-edge.svg'),
+        url('/images/diary/notes/torn-edge-top.svg');
+    -webkit-mask-size:
+        100% calc(100% - var(--diary-note-tear) * 2),
+        auto var(--diary-note-tear),
+        auto var(--diary-note-tear);
+    mask-size:
+        100% calc(100% - var(--diary-note-tear) * 2),
+        auto var(--diary-note-tear),
+        auto var(--diary-note-tear);
+    -webkit-mask-position: left var(--diary-note-tear), bottom left, top left;
+    mask-position: left var(--diary-note-tear), bottom left, top left;
+    -webkit-mask-repeat: no-repeat, repeat-x, repeat-x;
+    mask-repeat: no-repeat, repeat-x, repeat-x;
+    padding-top: calc(var(--diary-note-tear) + 4 * var(--diary-page-unit));
+    padding-bottom: calc(var(--diary-note-tear) + 4 * var(--diary-page-unit));
+}
+
+/*
+  뜯어 낸 자리에 남는 옅은 그늘.
+  종이가 한 겹 들려 있는 느낌이라 네모 종이와 더 뚜렷이 갈린다.
+*/
+.diary-note-torn-label .diary-note-text,
+.diary-note-memo-torn .diary-note-text {
+    text-shadow: 0 1px 0 var(--diary-note-paper);
+}
+
+/*
+  꽃 라벨: 모서리에 작은 꽃 하나.
+  그림은 mask 라 색이 없다. 칠하는 것은 늘 선 색이고, 크기는 종이 단위로 고정한다.
+*/
+.diary-note-floral-label .diary-note-surface {
+    position: relative;
+    border: 1px solid var(--diary-note-line);
+    background: var(--diary-note-paper);
+}
+
+/*
+  꽃 프레임: 위아래 가장자리를 따라 작은 꽃이 줄지어 놓인다.
+
+  한 송이만 두면 점처럼 보여 "꽃" 인 줄 알 수 없다. 띠로 두르면 한눈에 읽힌다.
+  꽃 한 송이의 크기는 띠 높이(종이 단위)가 정하고 가로로만 되풀이하므로,
+  라벨을 넓게 늘려도 꽃이 늘어나지 않고 개수만 늘어난다.
+*/
+/*
+  포인트 장식: 오른쪽 위에 그림 하나.
+
+  꽃과 하트가 같은 자리·같은 크기를 쓴다. 다른 것은 얹는 그림뿐이다.
+  작은 장식을 가장자리를 따라 되풀이하면 무늬처럼 보여 무엇인지 알아보기 어렵다.
+  한 개만 두면 무슨 장식인지 한눈에 읽히고 글자리도 그대로 남는다.
+*/
+.diary-note-floral-label .diary-note-surface,
+.diary-note-memo-floral .diary-note-surface,
+.diary-note-heart-label .diary-note-surface,
+.diary-note-memo-heart .diary-note-surface {
+    /* 장식이 이 종이를 기준으로 자리를 잡게 한다 */
+    position: relative;
+    border: 1px solid var(--diary-note-line);
+    background: var(--diary-note-paper);
+}
+
+.diary-note-floral-label .diary-note-surface::before,
+.diary-note-memo-floral .diary-note-surface::before,
+.diary-note-heart-label .diary-note-surface::before,
+.diary-note-memo-heart .diary-note-surface::before {
+    position: absolute;
+    top: calc(4 * var(--diary-page-unit));
+    right: calc(5 * var(--diary-page-unit));
+    /* 종이 바탕 위에 놓인다. 깔려서 묻히지 않게 층을 하나 올린다 */
+    z-index: 1;
+    display: block;
+    width: calc(16 * var(--diary-page-unit));
+    height: calc(16 * var(--diary-page-unit));
+    /*
+      그림을 그대로 얹는다. mask 로 색을 입히지 않는다.
+      (mask 는 브라우저마다 크기 계산이 달라 장식이 통째로 사라진 적이 있다)
+      크기를 가로세로 모두 종이 단위로 못 박아 두므로 요소를 늘려도 장식은 그대로다.
+    */
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    pointer-events: none;
+    content: '';
+}
+
+/* 자리와 크기는 같고 얹는 그림만 다르다 */
+.diary-note-floral-label .diary-note-surface::before,
+.diary-note-memo-floral .diary-note-surface::before {
+    background-image: url('/images/diary/notes/flower.svg');
+}
+
+.diary-note-heart-label .diary-note-surface::before,
+.diary-note-memo-heart .diary-note-surface::before {
+    background-image: url('/images/diary/notes/heart.svg');
+}
+
+/* 라벨은 좁아서 장식만큼 오른쪽을 비워 둔다 */
+.diary-note-floral-label .diary-note-text,
+.diary-note-heart-label .diary-note-text {
+    padding-right: calc(16 * var(--diary-page-unit));
+}
+
+/* 떡메는 장식 아래부터 글이 시작된다 */
+.diary-note-memo-floral .diary-note-surface,
+.diary-note-memo-heart .diary-note-surface {
+    padding-top: calc(20 * var(--diary-page-unit));
+}
+
+/*
+  리본 포인트: 왼쪽 끝에 리본을 하나 묶어 둔 이름표.
+  리본이 라벨 밖으로 조금 나와 매달린 느낌을 준다.
+*/
+.diary-note-ribbon-label .diary-note-surface {
+    position: relative;
+    border: 1px solid var(--diary-note-line);
+    background: var(--diary-note-paper);
+    /* 리본이 밖으로 나오므로 잘라 내지 않는다 */
+    overflow: visible;
+}
+
+.diary-note-ribbon-label .diary-note-surface::before {
+    position: absolute;
+    top: 50%;
+    left: calc(-9 * var(--diary-page-unit));
+    z-index: 1;
+    display: block;
+    width: calc(26 * var(--diary-page-unit));
+    height: calc(19 * var(--diary-page-unit));
+    background-image: url('/images/diary/notes/ribbon.svg');
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    transform: translateY(-50%) rotate(-8deg);
+    pointer-events: none;
+    content: '';
+}
+
+/* 리본이 놓인 왼쪽을 비워 글이 겹치지 않게 한다 */
+.diary-note-ribbon-label .diary-note-text {
+    padding-left: calc(20 * var(--diary-page-unit));
+}
+
+/*
+  플래너 떡메: 머리 띠 아래로 왼쪽에 좁은 칸이 하나 서 있고 줄이 이어진다.
+  (요일/시간을 적는 칸처럼 보이게) 무늬는 모두 종이 단위라 늘려도 촘촘해지지 않는다.
+*/
+.diary-note-memo-planner {
+    --diary-note-rule: calc(20 * var(--diary-page-unit));
+}
+
+.diary-note-memo-planner .diary-note-surface {
+    position: relative;
+    background:
+        /* 왼쪽 칸을 가르는 세로선 */
+        linear-gradient(var(--diary-note-line), var(--diary-note-line))
+            no-repeat calc(30 * var(--diary-page-unit)) 0 / 1px 100%,
+        /* 줄. 머리 띠 아래에서 시작한다 */
+        repeating-linear-gradient(
+            to bottom,
+            transparent 0 calc(var(--diary-note-rule) - 1px),
+            var(--diary-note-line) calc(var(--diary-note-rule) - 1px) var(--diary-note-rule))
+            0 calc(24 * var(--diary-page-unit)),
+        var(--diary-note-paper);
+    padding: calc(26 * var(--diary-page-unit)) calc(10 * var(--diary-page-unit))
+             calc(10 * var(--diary-page-unit)) calc(36 * var(--diary-page-unit));
+}
+
+/* 머리 띠. 옅게 깔고 아래에 선 하나로 마무리한다 */
+.diary-note-memo-planner .diary-note-surface::before {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: calc(20 * var(--diary-page-unit));
+    border-bottom: 1px solid var(--diary-note-line);
+    background: var(--diary-note-line);
+    opacity: 0.35;
+    pointer-events: none;
+    content: '';
+}
+
+.diary-note-memo-planner .diary-note-text {
+    position: relative;
+    line-height: var(--diary-note-rule);
+}
+
+/*
+  테이프 메모지: 위쪽에 테이프 한 조각이 붙어 있는 모습.
+  스티커(마스킹테이프) 요소를 따로 만들어 묶지 않는다. 이 종이 한 장의 디자인이다.
+  조각 크기는 종이 단위로 고정해 메모를 늘려도 테이프가 함께 늘어나지 않는다.
+*/
+.diary-note-memo-taped .diary-note-surface {
+    position: relative;
+    /* 테이프가 종이 위로 조금 올라오도록 위를 비운다 */
+    padding-top: calc(18 * var(--diary-page-unit));
+    overflow: visible;
+}
+
+.diary-note-memo-taped .diary-note-surface::before {
+    position: absolute;
+    /* 종이 위로 확실히 올라타야 "붙여 둔 테이프" 로 읽힌다 */
+    top: calc(-9 * var(--diary-page-unit));
+    left: 50%;
+    width: calc(72 * var(--diary-page-unit));
+    height: calc(20 * var(--diary-page-unit));
+    /* 종이보다 진한 색이라야 그 위에 얹힌 것으로 보인다 */
+    background: var(--diary-note-ink);
+    /* 손으로 붙인 것처럼 조금 비뚤다 */
+    transform: translateX(-50%) rotate(-3.5deg);
+    opacity: 0.24;
+    /* 양 끝을 뜯어 낸 자리처럼 톱니로 남긴다 */
+    -webkit-mask-image: repeating-linear-gradient(
+        to right,
+        #000 0 calc(3 * var(--diary-page-unit)),
+        transparent calc(3 * var(--diary-page-unit)) calc(4 * var(--diary-page-unit)));
+    mask-image: repeating-linear-gradient(
+        to right,
+        #000 0 calc(3 * var(--diary-page-unit)),
+        transparent calc(3 * var(--diary-page-unit)) calc(4 * var(--diary-page-unit)));
+    pointer-events: none;
+    content: '';
+}
+
+/* 테이프 아래로 살짝 비치는 그늘. 종이에 얹혀 있다는 것이 한 겹 더 읽힌다 */
+.diary-note-memo-taped .diary-note-surface::after {
+    position: absolute;
+    top: calc(11 * var(--diary-page-unit));
+    left: 50%;
+    width: calc(72 * var(--diary-page-unit));
+    height: calc(2 * var(--diary-page-unit));
+    background: var(--diary-note-ink);
+    transform: translateX(-50%) rotate(-3.5deg);
+    opacity: 0.08;
+    pointer-events: none;
+    content: '';
+}
+
+/* 테이프가 종이 밖으로 조금 나오므로 글은 안쪽에서만 잘린다 */
+.diary-note-memo-taped .diary-note-text {
+    overflow: hidden;
 }
 
 /*

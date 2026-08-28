@@ -28,8 +28,12 @@ class DiaryNoteCatalogTest {
                 .containsExactly(
                         "DATE_LABEL", "TITLE_LABEL", "TICKET_LABEL", "BORDER_LABEL",
                         "DASHED_LABEL", "TAG_LABEL", "CHECK_LABEL",
+                        "VINTAGE_LABEL", "TORN_LABEL", "FLORAL_LABEL",
+                        "HEART_LABEL", "RIBBON_LABEL",
                         "MEMO_SQUARE", "MEMO_ROUND", "MEMO_LINED", "MEMO_GRID",
-                        "MEMO_DOT", "MEMO_CHECKLIST", "MEMO_TODO");
+                        "MEMO_DOT", "MEMO_CHECKLIST", "MEMO_TODO",
+                        "MEMO_TORN", "MEMO_TAPED", "MEMO_VINTAGE",
+                        "MEMO_PLANNER", "MEMO_FLORAL", "MEMO_HEART");
     }
 
     @Test
@@ -58,11 +62,15 @@ class DiaryNoteCatalogTest {
         assertThat(catalog.getStyles(DiaryNoteStyle.CATEGORY_LABEL))
                 .extracting(DiaryNoteStyle::code)
                 .containsExactly("DATE_LABEL", "TITLE_LABEL", "TICKET_LABEL",
-                        "BORDER_LABEL", "DASHED_LABEL", "TAG_LABEL", "CHECK_LABEL");
+                        "BORDER_LABEL", "DASHED_LABEL", "TAG_LABEL", "CHECK_LABEL",
+                        "VINTAGE_LABEL", "TORN_LABEL", "FLORAL_LABEL",
+                        "HEART_LABEL", "RIBBON_LABEL");
         assertThat(catalog.getStyles(DiaryNoteStyle.CATEGORY_MEMO))
                 .extracting(DiaryNoteStyle::code)
                 .containsExactly("MEMO_SQUARE", "MEMO_ROUND", "MEMO_LINED",
-                        "MEMO_GRID", "MEMO_DOT", "MEMO_CHECKLIST", "MEMO_TODO");
+                        "MEMO_GRID", "MEMO_DOT", "MEMO_CHECKLIST", "MEMO_TODO",
+                        "MEMO_TORN", "MEMO_TAPED", "MEMO_VINTAGE",
+                        "MEMO_PLANNER", "MEMO_FLORAL", "MEMO_HEART");
         // 둘로 나누면 전체가 된다. 어느 쪽에도 없는 디자인은 없다
         assertThat(catalog.getStyles(DiaryNoteStyle.CATEGORY_LABEL).size()
                 + catalog.getStyles(DiaryNoteStyle.CATEGORY_MEMO).size())

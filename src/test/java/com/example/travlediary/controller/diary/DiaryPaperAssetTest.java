@@ -36,8 +36,13 @@ class DiaryPaperAssetTest {
                 css.indexOf("--diary-paper-texture:"));
 
         assertThat(texture).contains("repeating-linear-gradient").contains("radial-gradient");
-        // texture 용 외부 이미지를 요청하지 않는다
-        assertThat(css).doesNotContain("url(");
+        /*
+          종이 질감에 외부 이미지를 쓰지 않는다.
+          (라벨/메모지의 장식은 mask 로 그림을 쓰지만 종이 자체는 그리기만으로 만든다)
+        */
+        assertThat(texture).doesNotContain("url(");
+        assertThat(css.substring(0, css.indexOf("===== 라벨 / 떡메모지 (NOTE)")))
+                .doesNotContain("url(");
     }
 
     @Test
