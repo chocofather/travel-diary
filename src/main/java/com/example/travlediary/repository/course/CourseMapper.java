@@ -50,6 +50,26 @@ public interface CourseMapper {
 
     int deleteCourseDestinations(@Param("courseId") Long courseId);
 
+    /**
+     * 그 여행지를 담고 있는 코스 번호들.
+     *
+     * <p>여행지가 사라지면 연결 행도 FK CASCADE 로 함께 사라져 어느 코스였는지 알 수 없다.
+     * 그래서 지우기 전에 여기서 미리 받아 둔다. 같은 코스에 두 번 담겨 있어도 한 번만 온다.
+     */
+    List<Long> findCourseIdsByDestinationId(@Param("destinationId") Long destinationId);
+
+    /**
+     * 그 코스에 남아 있는 STOP 들. 지금 화면에 보이는 순서 그대로 온다.
+     *
+     * <p>다시 번호를 매기는 데 필요한 것은 행 번호와 지금 방문 순서뿐이라
+     * 그 둘만 읽는다(나머지 칸은 비어서 온다).
+     */
+    List<CourseDestination> findCourseStopOrders(@Param("courseId") Long courseId);
+
+    /** STOP 하나의 방문 순서를 옮긴다. */
+    int updateCourseDestinationVisitOrder(@Param("id") Long id,
+                                          @Param("visitOrder") int visitOrder);
+
     int softDeleteCourse(@Param("courseId") Long courseId,
                          @Param("userId") Long userId);
 }

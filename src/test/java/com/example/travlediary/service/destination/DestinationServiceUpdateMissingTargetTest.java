@@ -7,6 +7,7 @@ import com.example.travlediary.repository.bookmark.BookmarkMapper;
 import com.example.travlediary.repository.destination.DestinationMapper;
 import com.example.travlediary.service.amenity.AmenityService;
 import com.example.travlediary.service.comment.DestinationCommentService;
+import com.example.travlediary.service.course.CourseService;
 import com.example.travlediary.service.info.AccommodationInfoService;
 import com.example.travlediary.service.info.ActivityInfoService;
 import com.example.travlediary.service.info.AttractionInfoService;
@@ -54,6 +55,8 @@ class DestinationServiceUpdateMissingTargetTest {
     private ActivityInfoService activityInfoService;
     @Mock
     private ShopInfoService shopInfoService;
+    @Mock
+    private CourseService courseService;
 
     private DestinationService destinationService;
 
@@ -65,6 +68,7 @@ class DestinationServiceUpdateMissingTargetTest {
                 bookmarkMapper,
                 amenityService,
                 destinationCommentService,
+                courseService,
                 accommodationInfoService,
                 attractionInfoService,
                 restaurantInfoService,

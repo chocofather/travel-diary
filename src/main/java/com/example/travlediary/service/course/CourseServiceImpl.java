@@ -22,6 +22,7 @@ import org.jsoup.Jsoup;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -155,6 +156,67 @@ public class CourseServiceImpl implements CourseService {
         requireOwnedActiveCourse(courseMapper.findActiveCourseForUpdate(courseId), userId);
         if (courseMapper.softDeleteCourse(courseId, userId) != 1) {
             throw new IllegalStateException("여행 코스 삭제에 실패했습니다.");
+        }
+    }
+
+    /**
+     * 그 여행지를 담고 있는 코스 번호들.
+     *
+     * <p>부르는 쪽(여행지 삭제)의 트랜잭션에 그대로 참여한다. 읽기 전용을 적어 두지만,
+     * 이미 열려 있는 쓰기 트랜잭션에 합류할 때는 그 성질이 따로 적용되지 않는다.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<Long> getCourseIdsContainingDestination(Long destinationId) {
+        if (destinationId == null) {
+            return List.of();
+        }
+        List<Long> courseIds = courseMapper.findCourseIdsByDestinationId(destinationId);
+        return courseIds == null ? List.of() : courseIds;
+    }
+
+    /**
+     * STOP 번호를 1부터 빈칸 없이 다시 매긴다.
+     *
+     * <p>지금 보이는 차례(visit_order → 같으면 id)를 그대로 두고 번호만 메꾼다.
+     * 그 차례는 화면이 STOP 목록을 읽는 기준과 같아서, 다시 매겨도 순서가 뒤바뀌지 않는다.
+     *
+     * <p>번호가 이미 맞는 STOP 은 건드리지 않는다. 여행지 하나가 지워졌을 때
+     * 그 앞쪽 STOP 들은 대개 그대로라, 코스 전체를 다시 쓰지 않아도 된다.
+     *
+     * <p>부를 곳이 없으면 조용히 끝난다. 여기서 막을 잘못은 없다.
+     */
+    @Override
+    @Transactional
+    public void resequenceStops(List<Long> courseIds) {
+        if (courseIds == null || courseIds.isEmpty()) {
+            return;
+        }
+        // 같은 코스가 두 번 들어와도 한 번만 손본다.
+        for (Long courseId : new LinkedHashSet<>(courseIds)) {
+            if (courseId == null) {
+                continue;
+            }
+            resequenceOneCourse(courseId);
+        }
+    }
+
+    private void resequenceOneCourse(Long courseId) {
+        List<CourseDestination> stops = courseMapper.findCourseStopOrders(courseId);
+        if (stops == null || stops.isEmpty()) {
+            // 남은 STOP 이 없는 코스. 매길 번호도 없다.
+            return;
+        }
+
+        int visitOrder = 1;
+        for (CourseDestination stop : stops) {
+            if (!Objects.equals(stop.getVisitOrder(), visitOrder)
+                    && courseMapper.updateCourseDestinationVisitOrder(
+                            stop.getId(), visitOrder) != 1) {
+                // 방금 읽은 줄이 사라졌다. 번호가 어긋난 채로 두지 않고 전부 되돌린다.
+                throw new IllegalStateException("코스 여행지 순서 정리에 실패했습니다.");
+            }
+            visitOrder++;
         }
     }
 

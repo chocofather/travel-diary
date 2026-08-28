@@ -13,6 +13,7 @@ import com.example.travlediary.repository.bookmark.BookmarkMapper;
 import com.example.travlediary.repository.destination.DestinationMapper;
 import com.example.travlediary.service.amenity.AmenityService;
 import com.example.travlediary.service.comment.DestinationCommentService;
+import com.example.travlediary.service.course.CourseService;
 import com.example.travlediary.service.info.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -31,6 +32,8 @@ public class DestinationService {
     private final BookmarkMapper bookmarkMapper;
     private final AmenityService amenityService;
     private final DestinationCommentService destinationCommentService;
+    /** 여행지가 빠진 코스의 STOP 번호를 다시 매기는 일만 맡긴다. */
+    private final CourseService courseService;
 
 
     // 추가 정보
@@ -248,6 +251,12 @@ public class DestinationService {
                 .toList();
         // 댓글 row 가 지워지기 전에 정리 대상 사진 URL 을 모아 둔다
         List<String> commentImageUrls = destinationCommentService.findAllCommentImageUrls(id);
+        /*
+          이 여행지를 담고 있는 코스도 지우기 전에 받아 둔다.
+          여행지가 사라지면 연결 행이 FK CASCADE 로 함께 없어져,
+          그다음에는 어느 코스가 영향을 받았는지 알아낼 방법이 없다.
+        */
+        List<Long> affectedCourseIds = courseService.getCourseIdsContainingDestination(id);
 
         // 연관 테이블 먼저 삭제
         // 북마크는 target_type/target_id 구조라 FK cascade 대상이 아니므로 직접 지운다
@@ -259,6 +268,16 @@ public class DestinationService {
 
         // 마지막으로 본체 삭제
         destinationMapper.deleteById(id);
+
+        /*
+          방금 CASCADE 로 STOP 하나가 빠진 코스들의 번호를 메꾼다.
+          그대로 두면 남은 STOP 이 예전 번호를 들고 있어 "STOP 2" 하나만 남는다.
+
+          같은 트랜잭션 안이라 여기서 실패하면 여행지 삭제까지 함께 되돌아간다.
+          여행지만 지워지고 번호는 깨진 채로 남는 절반의 성공을 만들지 않는다.
+        */
+        courseService.resequenceStops(affectedCourseIds);
+
         destinationImageService.deleteFilesAfterCommit(imageUrls);
         destinationCommentService.deleteImageFilesAfterCommit(commentImageUrls);
     }

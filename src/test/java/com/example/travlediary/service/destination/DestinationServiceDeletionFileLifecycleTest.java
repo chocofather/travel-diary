@@ -9,6 +9,7 @@ import com.example.travlediary.repository.destination.DestinationMapper;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.service.amenity.AmenityService;
 import com.example.travlediary.service.comment.DestinationCommentService;
+import com.example.travlediary.service.course.CourseService;
 import com.example.travlediary.service.file.FileUploadService;
 import com.example.travlediary.service.info.AccommodationInfoService;
 import com.example.travlediary.service.info.ActivityInfoService;
@@ -65,6 +66,9 @@ class DestinationServiceDeletionFileLifecycleTest {
     private ActivityInfoService activityInfoService;
     @Mock
     private ShopInfoService shopInfoService;
+    /** 여행지가 빠진 코스의 STOP 번호를 다시 매기는 일만 맡긴다. */
+    @Mock
+    private CourseService courseService;
 
     @TempDir
     Path uploadRoot;
@@ -90,6 +94,7 @@ class DestinationServiceDeletionFileLifecycleTest {
                 bookmarkMapper,
                 amenityService,
                 destinationCommentService,
+                courseService,
                 accommodationInfoService,
                 attractionInfoService,
                 restaurantInfoService,

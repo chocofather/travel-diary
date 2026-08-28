@@ -262,6 +262,45 @@
         WHERE course_id = #{courseId}
     </delete>
 
+    <!--
+      그 여행지를 담고 있는 코스 번호.
+      여행지를 지우면 연결 행이 FK CASCADE 로 함께 사라지므로 지우기 전에 받아 둔다.
+      한 코스에 같은 여행지가 두 번 담겨 있어도 코스는 한 번만 나온다.
+    -->
+    <select id="findCourseIdsByDestinationId" resultType="long">
+        SELECT DISTINCT course_id
+        FROM course_destinations
+        WHERE destination_id = #{destinationId}
+    </select>
+
+    <!--
+      다시 번호를 매길 때 읽는 STOP 목록.
+
+      순서는 화면(findCourseStops)과 같은 기준을 쓴다. 그래야 다시 매긴 번호가
+      사람들이 보고 있던 차례를 그대로 지킨다.
+      visit_order 가 겹쳐 있는 어긋난 데이터에서도 id 로 한 줄이 갈려 결과가 늘 같다.
+
+      필요한 것은 행 번호와 지금 방문 순서뿐이라 그 둘만 읽는다.
+    -->
+    <select id="findCourseStopOrders" resultType="com.example.travlediary.model.CourseDestination">
+        SELECT id, visit_order AS visitOrder
+        FROM course_destinations
+        WHERE course_id = #{courseId}
+        ORDER BY visit_order ASC, id ASC
+    </select>
+
+    <!--
+      STOP 하나의 방문 순서를 옮긴다.
+
+      (course_id, visit_order) UNIQUE 가 없어 옮기는 도중 같은 번호가 잠깐 겹쳐도
+      막히지 않는다. 그래서 임시 번호로 밀어 두었다가 되돌리는 절차가 필요 없다.
+    -->
+    <update id="updateCourseDestinationVisitOrder">
+        UPDATE course_destinations
+        SET visit_order = #{visitOrder}
+        WHERE id = #{id}
+    </update>
+
     <update id="softDeleteCourse">
         UPDATE courses
         SET deleted = 1,

@@ -10,6 +10,7 @@ import com.example.travlediary.repository.bookmark.BookmarkMapper;
 import com.example.travlediary.repository.destination.DestinationMapper;
 import com.example.travlediary.service.amenity.AmenityService;
 import com.example.travlediary.service.comment.DestinationCommentService;
+import com.example.travlediary.service.course.CourseService;
 import com.example.travlediary.service.info.AccommodationInfoService;
 import com.example.travlediary.service.info.ActivityInfoService;
 import com.example.travlediary.service.info.AttractionInfoService;
@@ -58,6 +59,7 @@ class DestinationPlaceIdBindingTest {
     @Mock private RestaurantInfoService restaurantInfoService;
     @Mock private ActivityInfoService activityInfoService;
     @Mock private ShopInfoService shopInfoService;
+    @Mock private CourseService courseService;
 
     private DestinationService service;
 
@@ -71,7 +73,8 @@ class DestinationPlaceIdBindingTest {
         ReflectionTestUtils.setField(destinationImageService, "uploadDir", uploadDir.toString());
         service = new DestinationService(destinationMapper, destinationImageService,
                 bookmarkMapper, amenityService,
-                destinationCommentService, accommodationInfoService, attractionInfoService,
+                destinationCommentService, courseService,
+                accommodationInfoService, attractionInfoService,
                 restaurantInfoService, activityInfoService, shopInfoService);
         ReflectionTestUtils.setField(service, "uploadPath", uploadDir.toString());
     }
