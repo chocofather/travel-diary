@@ -350,6 +350,69 @@ class DiaryElementServiceImplTest {
         }
     }
 
+    // ── 라벨 / 떡메모지의 색 ─────────────────────────────────
+
+    @Test
+    void aChosenColourIsStoredBesideTheShape() {
+        givenPageAndInsert(600L);
+
+        DiaryElement note = noteElement("MEMO_SQUARE", "");
+        note.setColorType("SAGE");
+        diaryElementService.create(10L, 3L, 7L, note);
+
+        DiaryElement saved = savedElement();
+        // 모양과 색은 서로 다른 칸이다
+        assertThat(saved.getStyleType()).isEqualTo("MEMO_SQUARE");
+        assertThat(saved.getColorType()).isEqualTo("SAGE");
+    }
+
+    @Test
+    void withoutAChoiceTheShapesOwnColourIsUsed() {
+        givenPageAndInsert(601L);
+
+        // 색을 고르지 않고 붙였다. manifest 의 defaultColor 가 대신 들어간다
+        diaryElementService.create(10L, 3L, 7L, noteElement("MEMO_ROUND", ""));
+
+        assertThat(savedElement().getColorType()).isEqualTo("PINK");
+    }
+
+    @Test
+    void aColourThatIsNotOnTheListIsRefused() {
+        when(diaryPageService.getPage(10L, 3L, 7L)).thenReturn(page());
+
+        DiaryElement note = noteElement("MEMO_SQUARE", "");
+        note.setColorType("NEON");
+
+        assertThatThrownBy(() -> diaryElementService.create(10L, 3L, 7L, note))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("라벨/메모지 색을 선택해 주세요.");
+
+        verify(diaryElementMapper, never()).insert(any());
+    }
+
+    @Test
+    void theOtherKindsNeverPickUpAColourEither() {
+        givenPageAndInsert(602L);
+
+        DiaryElement sticker =
+                imageElement("STICKER", "/images/diary/stickers/emotion/heart.svg");
+        sticker.setColorType("SAGE");
+        diaryElementService.create(10L, 3L, 7L, sticker);
+
+        // 색은 라벨/메모지만 쓰는 칸이다
+        assertThat(savedElement().getColorType()).isNull();
+    }
+
+    @Test
+    void movingANoteKeepsItsColour() {
+        givenStoredNote(603L, "MEMO_SQUARE", "메모");
+        // 옮기기·크기·회전은 모두 같은 복사본을 지난다
+        diaryElementService.move(10L, 3L, 603L, 7L,
+                new BigDecimal("0.50000"), new BigDecimal("0.50000"));
+
+        assertThat(updatedElement().getColorType()).isEqualTo("SKY");
+    }
+
     // ── 라벨 / 떡메모지에 글쓰기 ──────────────────────────────
 
     @Test
@@ -448,6 +511,7 @@ class DiaryElementServiceImplTest {
         DiaryElement stored = noteElement(styleType, textContent);
         stored.setId(elementId);
         stored.setPageId(3L);
+        stored.setColorType("SKY");
         stored.setPositionX(new BigDecimal("0.41000"));
         stored.setPositionY(new BigDecimal("0.41000"));
         stored.setWidth(new BigDecimal("0.26000"));

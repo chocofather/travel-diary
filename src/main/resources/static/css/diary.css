@@ -2760,6 +2760,59 @@
     display: none;
 }
 
+/* ── 라벨 / 떡메모지 색 고르기 ──
+   종이색 스와치와 같은 언어를 쓴다. 다만 색은 그 색 class 가 정하는 종이색으로 칠해져,
+   실제로 붙었을 때와 같은 색이 그대로 보인다. */
+.diary-note-swatches {
+    display: flex;
+    /* 좁은 화면에서도 창을 넓히지 않고 다음 줄로 넘어간다 */
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 7px;
+    padding-bottom: 7px;
+    border-bottom: 1px solid #f0e8db;
+}
+
+.diary-note-swatch {
+    box-sizing: border-box;
+    width: 20px;
+    height: 20px;
+    flex: 0 0 auto;
+    padding: 0;
+    border: 1px solid var(--diary-note-line, #ded5c8);
+    border-radius: 50%;
+    background: var(--diary-note-paper, #fffdf8);
+    cursor: pointer;
+}
+
+/* 기본(=색을 고르지 않음)은 그 모양이 원래 쓰는 색으로 붙는다는 표시만 둔다 */
+.diary-note-swatch.is-default {
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0) 44%,
+            rgba(150, 128, 96, 0.5) 44%,
+            rgba(150, 128, 96, 0.5) 56%,
+            rgba(255, 255, 255, 0) 56%
+        ),
+        #fffdf8;
+}
+
+.diary-note-swatch:hover {
+    border-color: #b39a75;
+}
+
+/* 고른 색. 또렷하되 크기가 변하지는 않는다 */
+.diary-note-swatch.is-active {
+    border-color: #6f5a3c;
+    box-shadow: 0 0 0 2px rgba(179, 154, 117, 0.35);
+}
+
+.diary-note-swatch:focus-visible {
+    outline: 2px solid #b39a75;
+    outline-offset: 1px;
+}
+
 /* ── 라벨 / 떡메모지 고르는 칸 ── */
 .diary-note-grid {
     display: grid;
@@ -3282,6 +3335,19 @@
  * 두 화면에서 같은 크기로 읽힌다. (px 로 적으면 작은 종이에서만 글자가 커 보인다)
  * 화면에서 글자를 재서 저장하거나 계산하지 않는다.
  */
+/*
+  모든 라벨/메모지가 읽는 세 칸.
+  모양이 제 값을 정해 두면 그것이, 색을 골랐으면 그 색이 이 자리를 덮는다.
+  (셋 다 같은 우선순위라 아래로 갈수록 이긴다: 기본 → 모양 → 색)
+  고르는 자리의 미리보기도 같은 규칙을 쓰므로 함께 적어 둔다.
+*/
+.diary-note,
+.diary-note-preview {
+    --diary-note-paper: #fbf8f1;
+    --diary-note-line: #e2d9c9;
+    --diary-note-ink: #4a4136;
+}
+
 .diary-note-surface {
     box-sizing: border-box;
     display: flex;
@@ -3326,7 +3392,12 @@
 
 /* ── 라벨: 짧은 한 줄. 가운데에 놓인다 ── */
 .diary-note-date-label .diary-note-surface,
-.diary-note-title-label .diary-note-surface {
+.diary-note-title-label .diary-note-surface,
+.diary-note-ticket-label .diary-note-surface,
+.diary-note-border-label .diary-note-surface,
+.diary-note-dashed-label .diary-note-surface,
+.diary-note-tag-label .diary-note-surface,
+.diary-note-check-label .diary-note-surface {
     align-items: center;
     justify-content: center;
     padding: calc(4 * var(--diary-page-unit)) calc(9 * var(--diary-page-unit));
@@ -3335,67 +3406,328 @@
 }
 
 .diary-note-date-label .diary-note-text,
-.diary-note-title-label .diary-note-text {
+.diary-note-title-label .diary-note-text,
+.diary-note-ticket-label .diary-note-text,
+.diary-note-border-label .diary-note-text,
+.diary-note-dashed-label .diary-note-text,
+.diary-note-tag-label .diary-note-text,
+.diary-note-check-label .diary-note-text {
     text-align: center;
 }
 
+/*
+  새로 더한 라벨들은 글자 크기·색을 제목 라벨과 같이 쓴다.
+  (모양만 다르고 성격은 같은 딱지다)
+*/
+.diary-note-ticket-label .diary-note-text,
+.diary-note-border-label .diary-note-text,
+.diary-note-dashed-label .diary-note-text,
+.diary-note-tag-label .diary-note-text,
+.diary-note-check-label .diary-note-text {
+    color: var(--diary-note-ink);
+    font-size: calc(12 * var(--diary-page-unit));
+    line-height: 1.45;
+    letter-spacing: 0.02em;
+}
+
 /* 날짜 라벨: 붙여 둔 작은 문구 스티커 하나 */
+.diary-note-date-label {
+    --diary-note-paper: #fdfaf2;
+    --diary-note-line: #e3d9c6;
+    --diary-note-ink: #6b5f4b;
+}
+
 .diary-note-date-label .diary-note-surface {
-    border: 1px solid #e3d9c6;
-    background: #fdfaf2;
+    border: 1px solid var(--diary-note-line);
+    background: var(--diary-note-paper);
 }
 
 .diary-note-date-label .diary-note-text {
-    color: #6b5f4b;
+    color: var(--diary-note-ink);
     font-size: calc(11 * var(--diary-page-unit));
     line-height: 1.45;
     letter-spacing: 0.04em;
 }
 
 /* 제목 라벨: 날짜보다 조금 더 또렷한 종이 제목표 */
+.diary-note-title-label {
+    --diary-note-paper: #fbf7ef;
+    --diary-note-line: #ddd2bd;
+    --diary-note-ink: #4a3d2b;
+}
+
 .diary-note-title-label .diary-note-surface {
-    border: 1px solid #ddd2bd;
-    background: #fbf7ef;
+    border: 1px solid var(--diary-note-line);
+    background: var(--diary-note-paper);
 }
 
 .diary-note-title-label .diary-note-text {
-    color: #4a3d2b;
+    color: var(--diary-note-ink);
     font-size: calc(13 * var(--diary-page-unit));
     font-weight: 600;
     line-height: 1.45;
     letter-spacing: 0.02em;
 }
 
+/*
+  티켓 라벨: 좌우 가운데가 파인 표 한 장.
+  자른 자리에는 테두리가 남지 않으므로 종이 하나로 두고,
+  왼쪽에 점선 절취선을 하나 넣어 표처럼 읽히게 한다.
+*/
+.diary-note-ticket-label {
+    --diary-note-paper: #fdfaf2;
+    --diary-note-line: #e0d5bf;
+    --diary-note-ink: #5f5445;
+}
+
+.diary-note-ticket-label .diary-note-surface {
+    border: 0;
+    background:
+        repeating-linear-gradient(
+            to bottom,
+            var(--diary-note-line) 0 calc(2 * var(--diary-page-unit)),
+            transparent calc(2 * var(--diary-page-unit)) calc(5 * var(--diary-page-unit)))
+            no-repeat
+            calc(22 * var(--diary-page-unit)) 0 / 1px 100%,
+        var(--diary-note-paper);
+    /* 좌우 가운데를 작게 파낸다. 노치는 %로 두어 크기가 바뀌어도 비율이 같다 */
+    clip-path: polygon(
+        0 0, 100% 0,
+        100% 38%, calc(100% - 4px) 50%, 100% 62%,
+        100% 100%, 0 100%,
+        0 62%, 4px 50%, 0 38%);
+    padding-left: calc(30 * var(--diary-page-unit));
+}
+
+/* 이중 테두리 라벨: 바깥 선 안쪽에 한 겹을 더 둔 고전적인 딱지 */
+.diary-note-border-label .diary-note-surface {
+    border: 1px solid var(--diary-note-line);
+    background: var(--diary-note-paper);
+    /* 안쪽 한 겹. 그림자가 아니라 선으로만 쓴다 */
+    box-shadow:
+        inset 0 0 0 calc(2 * var(--diary-page-unit)) var(--diary-note-paper),
+        inset 0 0 0 calc(3 * var(--diary-page-unit)) var(--diary-note-line);
+    padding: calc(6 * var(--diary-page-unit)) calc(11 * var(--diary-page-unit));
+}
+
+/* 점선 라벨: 오려 붙인 듯한 점선 테두리 */
+.diary-note-dashed-label .diary-note-surface {
+    border: 1px dashed var(--diary-note-line);
+    background: var(--diary-note-paper);
+}
+
+/* 태그 라벨: 오른쪽 끝이 뾰족하게 잘린 이름표 */
+.diary-note-tag-label .diary-note-surface {
+    border: 0;
+    background: var(--diary-note-paper);
+    clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%);
+    padding-right: calc(20 * var(--diary-page-unit));
+}
+
+/*
+  체크무늬 라벨: 가로세로 옅은 선이 만나는 무늬.
+  칸을 넉넉히 잡아(15) 글자 위에서 지글거리지 않게 한다.
+*/
+.diary-note-check-label .diary-note-surface {
+    border: 1px solid var(--diary-note-line);
+    background:
+        repeating-linear-gradient(
+            to right,
+            var(--diary-note-line) 0 1px,
+            transparent 1px calc(15 * var(--diary-page-unit))),
+        repeating-linear-gradient(
+            to bottom,
+            var(--diary-note-line) 0 1px,
+            transparent 1px calc(15 * var(--diary-page-unit))),
+        var(--diary-note-paper);
+}
+
 /* ── 떡메모지: 여러 줄을 적는 종이. 글은 왼쪽 위부터 쌓인다 ── */
 .diary-note-memo-square .diary-note-surface,
-.diary-note-memo-round .diary-note-surface {
+.diary-note-memo-round .diary-note-surface,
+.diary-note-memo-lined .diary-note-surface,
+.diary-note-memo-grid .diary-note-surface,
+.diary-note-memo-dot .diary-note-surface,
+.diary-note-memo-checklist .diary-note-surface,
+.diary-note-memo-todo .diary-note-surface {
     align-items: flex-start;
     padding: calc(10 * var(--diary-page-unit)) calc(11 * var(--diary-page-unit));
     /* 종이 한 장이 놓인 정도의 아주 옅은 그늘만 준다 */
     box-shadow: 0 1px 2px rgba(63, 52, 38, 0.06);
+    border: 1px solid var(--diary-note-line);
+    border-radius: calc(3 * var(--diary-page-unit));
+    background: var(--diary-note-paper);
 }
 
 .diary-note-memo-square .diary-note-text,
-.diary-note-memo-round .diary-note-text {
+.diary-note-memo-round .diary-note-text,
+.diary-note-memo-lined .diary-note-text,
+.diary-note-memo-grid .diary-note-text,
+.diary-note-memo-dot .diary-note-text,
+.diary-note-memo-checklist .diary-note-text,
+.diary-note-memo-todo .diary-note-text {
     /* 사용자가 넣은 줄바꿈을 그대로 보여 준다 */
     white-space: pre-wrap;
-    color: #4a4136;
+    color: var(--diary-note-ink);
     font-size: calc(12 * var(--diary-page-unit));
     line-height: 1.7;
 }
 
+/*
+  무늬가 있는 떡메지의 줄 간격.
+
+  글줄과 무늬가 같은 자로 그려져야 글이 줄 위에 얹힌다.
+  간격을 종이 단위로 두었으므로 요소를 크게 늘려도 무늬가 촘촘해지지 않는다
+  (요소 크기가 아니라 종이 크기를 따라간다).
+*/
+.diary-note-memo-lined,
+.diary-note-memo-checklist {
+    --diary-note-rule: calc(20 * var(--diary-page-unit));
+}
+
+.diary-note-memo-lined .diary-note-text,
+.diary-note-memo-checklist .diary-note-text {
+    line-height: var(--diary-note-rule);
+}
+
 /* 사각 떡메: 모서리를 거의 세우고 차분한 종이색 */
+.diary-note-memo-square {
+    --diary-note-paper: #f8f4ea;
+    --diary-note-line: #e0d8c8;
+    --diary-note-ink: #4a4136;
+}
+
 .diary-note-memo-square .diary-note-surface {
-    border: 1px solid #e0d8c8;
+    border: 1px solid var(--diary-note-line);
     border-radius: calc(3 * var(--diary-page-unit));
-    background: #f8f4ea;
+    background: var(--diary-note-paper);
 }
 
 /* 둥근 떡메: 같은 계열이지만 모서리를 조금 더 둥글게, 색은 한 톤 부드럽게 */
+.diary-note-memo-round {
+    --diary-note-paper: #f8f2ee;
+    --diary-note-line: #e2dad4;
+    --diary-note-ink: #4a4136;
+}
+
 .diary-note-memo-round .diary-note-surface {
-    border: 1px solid #e2dad4;
+    border: 1px solid var(--diary-note-line);
     border-radius: calc(10 * var(--diary-page-unit));
-    background: #f8f2ee;
+    background: var(--diary-note-paper);
+}
+
+/*
+  줄 메모지: 글줄과 같은 간격의 옅은 가로줄.
+  줄은 글 아래에 깔리도록 글줄 아래쪽에 맞춰 그린다.
+*/
+.diary-note-memo-lined .diary-note-surface {
+    background:
+        repeating-linear-gradient(
+            to bottom,
+            transparent 0 calc(var(--diary-note-rule) - 1px),
+            var(--diary-note-line) calc(var(--diary-note-rule) - 1px) var(--diary-note-rule))
+            calc(10 * var(--diary-page-unit)) calc(10 * var(--diary-page-unit)),
+        var(--diary-note-paper);
+}
+
+/* 모눈 메모지: 가로세로 같은 간격의 옅은 격자 */
+.diary-note-memo-grid .diary-note-surface {
+    background:
+        repeating-linear-gradient(
+            to right,
+            var(--diary-note-line) 0 1px,
+            transparent 1px calc(14 * var(--diary-page-unit))),
+        repeating-linear-gradient(
+            to bottom,
+            var(--diary-note-line) 0 1px,
+            transparent 1px calc(14 * var(--diary-page-unit))),
+        var(--diary-note-paper);
+}
+
+/* 도트 메모지: 격자 자리에 아주 작은 점만 찍는다 */
+.diary-note-memo-dot .diary-note-surface {
+    background:
+        radial-gradient(
+            circle at center,
+            var(--diary-note-line) 0 1px,
+            transparent 1px)
+            0 0 / calc(16 * var(--diary-page-unit)) calc(16 * var(--diary-page-unit)),
+        var(--diary-note-paper);
+}
+
+/*
+  체크 메모지: 줄마다 왼쪽에 작은 빈 칸이 하나씩 놓인다.
+  칸은 색 사각형 위에 종이색 사각형을 겹쳐 테두리만 남긴다.
+*/
+.diary-note-memo-checklist .diary-note-surface {
+    background:
+        /* 안쪽을 도로 종이색으로 덮어 테두리만 남긴다 */
+        linear-gradient(var(--diary-note-paper), var(--diary-note-paper))
+            no-repeat
+            calc(11 * var(--diary-page-unit)) calc(17 * var(--diary-page-unit))
+            / calc(6 * var(--diary-page-unit)) calc(6 * var(--diary-page-unit)),
+        linear-gradient(var(--diary-note-line), var(--diary-note-line))
+            repeat-y
+            calc(10 * var(--diary-page-unit)) calc(16 * var(--diary-page-unit))
+            / calc(8 * var(--diary-page-unit)) var(--diary-note-rule),
+        var(--diary-note-paper);
+    /* 글이 칸 위로 올라가지 않게 왼쪽을 비워 둔다 */
+    padding-left: calc(24 * var(--diary-page-unit));
+}
+
+/* 일정 메모지: 맨 위에 작은 머리 띠가 하나 있다 */
+.diary-note-memo-todo .diary-note-surface {
+    position: relative;
+    padding-top: calc(22 * var(--diary-page-unit));
+}
+
+.diary-note-memo-todo .diary-note-surface::before {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: calc(2 * var(--diary-page-unit)) calc(9 * var(--diary-page-unit));
+    border-bottom: 1px solid var(--diary-note-line);
+    color: var(--diary-note-ink);
+    font-size: calc(9 * var(--diary-page-unit));
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    /* 디자인의 일부다. 사용자가 쓴 글이 아니다 */
+    content: 'TODO';
+}
+
+/*
+  ── 색 ──
+
+  모양과 다른 축이다. 모양 규칙은 위에서 색 값을 직접 쓰지 않고 이 세 칸만 읽으므로,
+  모양이 20종이 되고 색이 10종이 되어도 규칙은 20 + 10 이지 200 이 아니다.
+
+  모양 규칙과 우선순위가 같아서 반드시 그 뒤에 와야 색이 이긴다.
+  (앞에 두면 모양의 기본색에 그대로 덮인다)
+  색이 없는 요소에는 이 class 가 붙지 않아 위의 기본색이 그대로 쓰인다.
+*/
+.diary-note-color-ivory {
+    --diary-note-paper: #fdfaf2;
+    --diary-note-line: #e3d9c6;
+    --diary-note-ink: #5f5548;
+}
+
+.diary-note-color-pink {
+    --diary-note-paper: #fbf1f0;
+    --diary-note-line: #ecd7d4;
+    --diary-note-ink: #6b5350;
+}
+
+.diary-note-color-sage {
+    --diary-note-paper: #f1f5f0;
+    --diary-note-line: #d8e2d6;
+    --diary-note-ink: #4d5a4c;
+}
+
+.diary-note-color-sky {
+    --diary-note-paper: #eef3f8;
+    --diary-note-line: #d5e0ea;
+    --diary-note-ink: #4b5765;
 }
 
 /* 선택했을 때만 보이는 작은 조절점 (편집기 느낌이 나지 않게 최소한으로) */

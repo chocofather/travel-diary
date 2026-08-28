@@ -256,6 +256,8 @@ public class DiaryController {
                     diaryNoteCatalog.getStyles(DiaryNoteStyle.CATEGORY_LABEL));
             model.addAttribute("diaryMemoStyles",
                     diaryNoteCatalog.getStyles(DiaryNoteStyle.CATEGORY_MEMO));
+            // 색 팔레트. 모양과 다른 축이라 라벨/메모지가 같은 목록을 함께 쓴다.
+            model.addAttribute("diaryNoteColors", diaryNoteCatalog.getColors());
         }
         model.addAttribute("pageTitle", diary.getTitle() + " | 나의 여행일기");
     }
@@ -678,6 +680,8 @@ public class DiaryController {
     public ResponseEntity<?> createNoteElement(@PathVariable Long diaryId,
                                                @PathVariable Long pageId,
                                                @RequestParam("style") String styleType,
+                                               @RequestParam(name = "color", required = false)
+                                               String colorType,
                                                @AuthenticationPrincipal CustomUserDetails userDetails) {
         DiaryNoteStyle style = diaryNoteCatalog.find(styleType).orElse(null);
         if (style == null) {
@@ -696,6 +700,8 @@ public class DiaryController {
             DiaryElement element = new DiaryElement();
             element.setElementType(NOTE_ELEMENT_TYPE);
             element.setStyleType(style.code());
+            // 색을 고르지 않았으면 그 모양의 기본색을 쓴다. (판단은 Service 한 곳에서)
+            element.setColorType(colorType);
             // 붙인 직후에는 아직 적은 글이 없다. NULL 만 막히므로 빈 글로 둔다.
             element.setTextContent("");
             element.setPositionX(STICKER_CENTER.add(offset));
@@ -780,6 +786,11 @@ public class DiaryController {
                 Map.entry("elementType", element.getElementType()),
                 Map.entry("styleType", element.getStyleType()),
                 Map.entry("styleClass", element.getNoteStyleClass()),
+                // 색을 쓰지 않는 요소도 있어 빈 문자열로 내려 준다. (화면은 그대로 붙이기만 한다)
+                Map.entry("colorType", element.getColorType() == null
+                        ? "" : element.getColorType()),
+                Map.entry("colorClass", element.getNoteColorClass() == null
+                        ? "" : element.getNoteColorClass()),
                 Map.entry("label", style.label()),
                 Map.entry("textContent", element.getTextContent()),
                 Map.entry("positionX", element.getPositionX()),

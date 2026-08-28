@@ -2556,6 +2556,71 @@ class DiaryControllerTest {
     }
 
     @Test
+    void bothNoteTabsOfferTheSamePaletteFromTheManifest() throws Exception {
+        String body = editPageBody();
+        String labelPanel = between(body, "data-decor-panel=\"label\"",
+                "data-decor-panel=\"memo\"");
+        String memoPanel = between(body, "data-decor-panel=\"memo\"", "diary-sticker-status");
+
+        for (String panel : new String[]{labelPanel, memoPanel}) {
+            // 색 목록은 서버가 그린다. 템플릿에 색을 적어 두지 않는다
+            assertThat(panel)
+                    .contains("data-note-color=\"IVORY\"")
+                    .contains("data-note-color=\"PINK\"")
+                    .contains("data-note-color=\"SAGE\"")
+                    .contains("data-note-color=\"SKY\"")
+                    .contains("아이보리").contains("세이지");
+            // 스와치도 실제로 붙었을 때와 같은 색 class 로 칠해진다
+            assertThat(panel).contains("diary-note-color-sage");
+            // 처음에는 "기본"(=고르지 않음)이 골라져 있다
+            assertThat(panel).contains("class=\"diary-note-swatch is-default is-active\"");
+            assertThat(panel).contains("data-note-color=\"\"");
+        }
+    }
+
+    @Test
+    void theStickerTabHasNoColourRow() throws Exception {
+        String body = editPageBody();
+
+        // 색은 라벨/메모지의 축이다. 스티커·마스킹테이프에는 없다
+        assertThat(between(body, "data-decor-panel=\"sticker\"", "data-decor-panel=\"label\""))
+                .doesNotContain("diary-note-swatch")
+                .doesNotContain("data-note-color");
+    }
+
+    @Test
+    void aChosenColourIsRememberedPerTabAndShownOnThePreviews() throws Exception {
+        String pickerJs = Files.readString(
+                Path.of("src/main/resources/static/js/diary-note-picker.js"));
+
+        // 갈래마다 따로 기억한다. 탭을 오갔다고 고른 색이 사라지지 않는다
+        assertThat(pickerJs)
+                .contains("chosenColors.set(panel.dataset.decorPanel")
+                .contains("chosenColors.get(");
+        // 고르면 그 갈래의 미리보기 색이 곧바로 바뀐다 (모양 class 는 그대로)
+        assertThat(between(pickerJs, "function paintPreviews(panel, colorClass)", "\n    }"))
+                .contains(".diary-note-preview")
+                .contains("classList.remove(previous)")
+                .contains("classList.add(colorClass)");
+        // 색 class 는 스와치가 이미 달고 있는 것을 그대로 쓴다 (매핑표를 만들지 않는다)
+        assertThat(pickerJs).contains("startsWith('diary-note-color-')");
+        assertThat(pickerJs)
+                .doesNotContain("IVORY").doesNotContain("SAGE").doesNotContain("#f1f5f0");
+    }
+
+    @Test
+    void theChosenColourIsSentAlongWhenTheNoteIsPlaced() throws Exception {
+        String pickerJs = Files.readString(
+                Path.of("src/main/resources/static/js/diary-note-picker.js"));
+
+        assertThat(pickerJs).contains("body.append('color', colorType)");
+        // 고르지 않았으면 아예 보내지 않는다. 서버가 그 모양의 기본색을 쓴다
+        assertThat(pickerJs).contains("if (colorType) body.append");
+        // 붙은 뒤 화면에 칠하는 색도 서버가 준 class 다
+        assertThat(pickerJs).contains("note.colorClass");
+    }
+
+    @Test
     void thePreviewUsesTheRealNoteLookNotAPicture() throws Exception {
         String body = editPageBody();
         String labelPanel = between(body, "data-decor-panel=\"label\"",
@@ -2735,6 +2800,109 @@ class DiaryControllerTest {
                 .contains("\"styleClass\":\"diary-note-memo-square\"")
                 .contains("\"textContent\":\"\"")
                 .contains("/note/delete");
+    }
+
+    @Test
+    void aColourCanBeChosenWhenPlacingANote() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryElementService.getElements(10L, 3L, 7L)).thenReturn(List.of());
+        DiaryElement created = noteElement(310L, "MEMO_SQUARE");
+        created.setColorType("SAGE");
+        when(diaryElementService.create(eq(10L), eq(3L), eq(7L), any())).thenReturn(created);
+
+        String body = mockMvc.perform(post("/diaries/10/pages/3/elements/note")
+                        .param("style", "MEMO_SQUARE")
+                        .param("color", "SAGE")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        ArgumentCaptor<DiaryElement> captor = ArgumentCaptor.forClass(DiaryElement.class);
+        verify(diaryElementService).create(eq(10L), eq(3L), eq(7L), captor.capture());
+        assertThat(captor.getValue().getColorType()).isEqualTo("SAGE");
+        // 화면이 그대로 붙일 수 있게 class 도 함께 온다
+        assertThat(body)
+                .contains("\"colorType\":\"SAGE\"")
+                .contains("\"colorClass\":\"diary-note-color-sage\"");
+    }
+
+    @Test
+    void aNoteCanBePlacedWithoutChoosingAColour() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryElementService.getElements(10L, 3L, 7L)).thenReturn(List.of());
+        when(diaryElementService.create(eq(10L), eq(3L), eq(7L), any()))
+                .thenReturn(noteElement(311L, "MEMO_SQUARE"));
+
+        // color 는 선택이다. 무엇을 쓸지는 Service 가 정한다
+        String body = mockMvc.perform(post("/diaries/10/pages/3/elements/note")
+                        .param("style", "MEMO_SQUARE")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        ArgumentCaptor<DiaryElement> captor = ArgumentCaptor.forClass(DiaryElement.class);
+        verify(diaryElementService).create(eq(10L), eq(3L), eq(7L), captor.capture());
+        assertThat(captor.getValue().getColorType()).isNull();
+        // 색이 없는 요소는 빈 값으로 와서 그 모양의 기본색으로 그려진다
+        assertThat(body).contains("\"colorClass\":\"\"");
+    }
+
+    @Test
+    void aColourThatIsNotOnTheListIsRefusedByTheServer() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryElementService.getElements(10L, 3L, 7L)).thenReturn(List.of());
+        doThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "라벨/메모지 색을 선택해 주세요."))
+                .when(diaryElementService).create(anyLong(), anyLong(), anyLong(), any());
+
+        mockMvc.perform(post("/diaries/10/pages/3/elements/note")
+                        .param("style", "MEMO_SQUARE")
+                        .param("color", "NEON")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(containsString("라벨/메모지 색을 선택해 주세요.")));
+    }
+
+    @Test
+    void aNoteCarriesBothItsShapeAndColourOntoThePaper() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-01")));
+        DiaryElement stored = noteElement(300L, "MEMO_ROUND");
+        stored.setColorType("SKY");
+        when(diaryElementService.getElements(10L, 1L, 7L)).thenReturn(List.of(stored));
+
+        String body = mockMvc.perform(get("/diaries/10").param("edit", "true")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).contains("diary-note-memo-round").contains("diary-note-color-sky");
+    }
+
+    @Test
+    void anOlderNoteWithNoColourStillDraws() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-01")));
+        // 색 칸이 생기기 전에 만든 요소. color_type 이 비어 있다
+        when(diaryElementService.getElements(10L, 1L, 7L))
+                .thenReturn(List.of(noteElement(300L, "MEMO_SQUARE")));
+
+        String body = mockMvc.perform(get("/diaries/10").param("edit", "true")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andReturn().getResponse().getContentAsString();
+
+        String figure = between(body, "diary-canvas-item diary-note", "</figure>");
+        assertThat(figure).contains("diary-note-memo-square");
+        // 색 class 는 붙지 않는다. 그 모양의 기본색으로 그려진다
+        assertThat(figure).doesNotContain("diary-note-color-");
     }
 
     @Test

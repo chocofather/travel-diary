@@ -22,7 +22,8 @@ public class DiaryElement {
     private String elementType; // 요소 유형 (TEXT | PHOTO | STICKER)
     private String textContent; // 본문 (TEXT / NOTE 전용)
     private String imageUrl; // 이미지 경로 (PHOTO/STICKER 전용)
-    private String styleType; // 라벨/메모지 디자인 (NOTE 전용, 그 밖의 유형은 null)
+    private String styleType; // 라벨/메모지 모양 (NOTE 전용, 그 밖의 유형은 null)
+    private String colorType; // 라벨/메모지 색 (NOTE 전용, 없으면 그 모양의 기본색)
     private BigDecimal positionX; // 가로 위치 (페이지 기준 상대값)
     private BigDecimal positionY; // 세로 위치 (페이지 기준 상대값)
     private BigDecimal width; // 너비 (페이지 기준 상대값)
@@ -46,5 +47,13 @@ public class DiaryElement {
      */
     public String getNoteStyleClass() {
         return DiaryNoteStyle.cssClassOf(styleType);
+    }
+
+    /**
+     * 라벨/떡메모지의 색 class. (SAGE → diary-note-color-sage)
+     * 색이 없으면 class 도 없다 — 그때는 그 모양의 기본색으로 그려진다.
+     */
+    public String getNoteColorClass() {
+        return DiaryNoteColor.cssClassOf(colorType);
     }
 }

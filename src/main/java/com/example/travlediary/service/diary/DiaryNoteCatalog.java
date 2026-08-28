@@ -1,5 +1,6 @@
 package com.example.travlediary.service.diary;
 
+import com.example.travlediary.model.DiaryNoteColor;
 import com.example.travlediary.model.DiaryNoteStyle;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -30,6 +31,9 @@ public class DiaryNoteCatalog {
     private Map<String, DiaryNoteStyle> byCode = Map.of();
     /** 목록 순서는 manifest 를 그대로 따른다. */
     private List<DiaryNoteStyle> styles = List.of();
+    /** code → 색. 모양과 다른 축이라 따로 관리한다. */
+    private Map<String, DiaryNoteColor> colorsByCode = Map.of();
+    private List<DiaryNoteColor> colors = List.of();
 
     @PostConstruct
     public void load() {
@@ -37,7 +41,20 @@ public class DiaryNoteCatalog {
             if (manifest == null) {
                 throw new IllegalStateException("라벨/메모지 목록 파일을 찾을 수 없습니다: " + MANIFEST_PATH);
             }
-            List<DiaryNoteStyle> read = readStyles(new ObjectMapper().readTree(manifest));
+            JsonNode root = new ObjectMapper().readTree(manifest);
+
+            // 색을 먼저 읽는다. 모양의 defaultColor 가 아는 색인지 여기서 바로 확인한다.
+            List<DiaryNoteColor> readColors = readColors(root);
+            Map<String, DiaryNoteColor> indexedColors = new LinkedHashMap<>();
+            for (DiaryNoteColor color : readColors) {
+                if (indexedColors.putIfAbsent(color.code(), color) != null) {
+                    throw new IllegalStateException("라벨/메모지 색 code 가 겹칩니다: " + color.code());
+                }
+            }
+            this.colors = List.copyOf(readColors);
+            this.colorsByCode = Map.copyOf(indexedColors);
+
+            List<DiaryNoteStyle> read = readStyles(root);
             Map<String, DiaryNoteStyle> indexed = new LinkedHashMap<>();
             for (DiaryNoteStyle style : read) {
                 if (indexed.putIfAbsent(style.code(), style) != null) {
@@ -68,6 +85,32 @@ public class DiaryNoteCatalog {
                 .toList();
     }
 
+    /** 아는 색일 때만 돌려준다. 그 밖의 값은 저장 단계에서 막힌다. */
+    public Optional<DiaryNoteColor> findColor(String code) {
+        return code == null ? Optional.empty() : Optional.ofNullable(colorsByCode.get(code.strip()));
+    }
+
+    /** 고를 수 있는 색 전부. manifest 순서 그대로다. */
+    public List<DiaryNoteColor> getColors() {
+        return colors;
+    }
+
+    private List<DiaryNoteColor> readColors(JsonNode root) {
+        List<DiaryNoteColor> result = new ArrayList<>();
+        for (JsonNode node : root.path("colors")) {
+            String code = node.path("code").asText("").strip();
+            String label = node.path("label").asText("").strip();
+            if (code.isEmpty() || label.isEmpty()) {
+                throw new IllegalStateException("라벨/메모지 색 정보가 비어 있습니다: " + node);
+            }
+            result.add(new DiaryNoteColor(code, label));
+        }
+        if (result.isEmpty()) {
+            throw new IllegalStateException("라벨/메모지 색 목록이 비어 있습니다: " + MANIFEST_PATH);
+        }
+        return result;
+    }
+
     private List<DiaryNoteStyle> readStyles(JsonNode root) {
         List<DiaryNoteStyle> result = new ArrayList<>();
         for (JsonNode node : root.path("styles")) {
@@ -88,8 +131,20 @@ public class DiaryNoteCatalog {
                     && !DiaryNoteStyle.CATEGORY_MEMO.equals(category)) {
                 throw new IllegalStateException("라벨/메모지 갈래가 LABEL / MEMO 가 아닙니다: " + node);
             }
+            /*
+              색을 고르지 않고 붙였을 때 쓰는 색.
+              모르는 색을 적어 두면 그 모양은 붙일 때마다 색이 없는 채로 저장된다.
+              읽는 자리에서 끊어 목록끼리 어긋나지 않게 한다.
+            */
+            String defaultColor = node.path("defaultColor").asText("").strip();
+            if (!defaultColor.isEmpty() && !colorsByCode.containsKey(defaultColor)) {
+                throw new IllegalStateException(
+                        "라벨/메모지 기본색이 색 목록에 없습니다: " + node);
+            }
+
             result.add(new DiaryNoteStyle(code, category, label,
-                    sample.isEmpty() ? label : sample));
+                    sample.isEmpty() ? label : sample,
+                    defaultColor.isEmpty() ? null : defaultColor));
         }
         if (result.isEmpty()) {
             throw new IllegalStateException("라벨/메모지 목록이 비어 있습니다: " + MANIFEST_PATH);

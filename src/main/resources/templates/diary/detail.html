@@ -248,6 +248,13 @@
             붙이면 글이 빈 채로 만들어지고, 글을 쓰는 길은 다음 단계에서 붙는다.
           -->
           <div class="diary-decor-panel" data-decor-panel="label" hidden>
+            <!--
+              색 고르기. 목록은 서버가 manifest 대로 그려 주므로 여기 색을 적지 않는다.
+              고른 색은 아래 미리보기에 곧바로 반영되고, 붙일 때 함께 보내진다.
+              "기본" 은 색을 고르지 않은 상태다 — 그 모양이 원래 쓰는 색으로 붙는다.
+            -->
+            <div th:replace="~{diary/detail :: noteSwatches('라벨')}"></div>
+
             <div class="diary-note-grid" role="group" aria-label="라벨">
               <button type="button" class="diary-note-option"
                       th:each="style : ${diaryLabelStyles}"
@@ -266,6 +273,9 @@
           </div>
 
           <div class="diary-decor-panel" data-decor-panel="memo" hidden>
+            <!-- 라벨과 같은 팔레트를 쓰지만 고른 색은 갈래마다 따로 기억한다 -->
+            <div th:replace="~{diary/detail :: noteSwatches('메모지')}"></div>
+
             <div class="diary-note-grid is-memo" role="group" aria-label="메모지">
               <button type="button" class="diary-note-option"
                       th:each="style : ${diaryMemoStyles}"
@@ -504,6 +514,28 @@
     </div>
   </section>
 </th:block>
+
+<!--
+  라벨/메모지 색 고르기 한 줄.
+
+  라벨과 메모지가 같은 팔레트를 쓰므로 조각 하나를 나눠 쓴다.
+  색 목록은 서버(diary_notes.json)가 그려 주고, 스와치의 색도 실제로 붙었을 때와
+  같은 class(diary-note-color-*)로 칠해진다. 여기에 색 값을 적지 않는다.
+  data-note-color 가 빈 값인 첫 칸이 "기본"(=고르지 않음)이다.
+-->
+<div th:fragment="noteSwatches(kind)" class="diary-note-swatches"
+     role="group" th:attr="aria-label=|${kind} 색|">
+  <button type="button" class="diary-note-swatch is-default is-active"
+          data-note-color="" aria-pressed="true"
+          title="기본" aria-label="기본 색"></button>
+  <button type="button" class="diary-note-swatch"
+          th:each="color : ${diaryNoteColors}"
+          th:classappend="${color.cssClass}"
+          th:data-note-color="${color.code}"
+          aria-pressed="false"
+          th:title="${color.label}"
+          th:attr="aria-label=|${color.label} 색|"></button>
+</div>
 
 <!-- 한 장의 머리말: 종이 안에는 날짜/한 줄 메모 같은 내용만 두고,
      사진 등 관리 액션은 종이 밖(상단 편집 툴바 / pageMeta)에 있다 -->
@@ -782,7 +814,9 @@
            모양은 저장된 style_type 하나로 정해진다 (element.noteStyleClass). -->
       <figure class="diary-canvas-item diary-note"
               th:if="${element.elementType == 'NOTE'}"
-              th:classappend="${element.noteStyleClass}"
+              th:classappend="${element.noteStyleClass}
+                              + (${element.noteColorClass} != null
+                                 ? ' ' + ${element.noteColorClass} : '')"
               th:data-element-id="${element.id}"
               th:data-element-type="${element.elementType}"
               th:data-note-style="${element.styleType}"

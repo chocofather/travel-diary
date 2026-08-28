@@ -26,8 +26,52 @@ document.addEventListener('DOMContentLoaded', () => {
         tab.addEventListener('click', () => showPanel(tab.dataset.decorTab));
     });
     popover.querySelectorAll('.diary-note-option').forEach((option) => {
-        option.addEventListener('click', () => attach(option.dataset.noteStyle));
+        option.addEventListener('click', () => attach(option));
     });
+
+    /*
+      갈래(라벨 / 메모지)마다 고른 색을 따로 기억한다.
+      라벨은 아이보리로, 메모지는 하늘로 쓰던 사람이 갈래를 오갈 때마다
+      다시 고르지 않아도 되게 한다. 비어 있으면 "기본"(=모양이 원래 쓰는 색)이다.
+    */
+    const chosenColors = new Map();
+
+    popover.querySelectorAll('.diary-note-swatch').forEach((swatch) => {
+        swatch.addEventListener('click', () => chooseColor(swatch));
+    });
+
+    /** 고른 색을 그 갈래에 새겨 두고, 그 갈래의 미리보기에 곧바로 입힌다. */
+    function chooseColor(swatch) {
+        const panel = swatch.closest('.diary-decor-panel');
+        if (!panel) return;
+
+        chosenColors.set(panel.dataset.decorPanel, swatch.dataset.noteColor || '');
+        panel.querySelectorAll('.diary-note-swatch').forEach((other) => {
+            const active = other === swatch;
+            other.classList.toggle('is-active', active);
+            other.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+        paintPreviews(panel, colorClassOf(swatch));
+        showStatus('');
+    }
+
+    /*
+      스와치가 이미 달고 있는 색 class 를 그대로 가져다 쓴다.
+      code 를 class 로 바꾸는 표를 화면에 따로 두지 않는다(서버가 정한 이름 하나뿐이다).
+    */
+    function colorClassOf(element) {
+        return Array.from(element.classList)
+            .find((name) => name.startsWith('diary-note-color-')) || '';
+    }
+
+    /** 미리보기의 색만 갈아 끼운다. 모양 class 는 건드리지 않는다. */
+    function paintPreviews(panel, colorClass) {
+        panel.querySelectorAll('.diary-note-preview').forEach((preview) => {
+            const previous = colorClassOf(preview);
+            if (previous) preview.classList.remove(previous);
+            if (colorClass) preview.classList.add(colorClass);
+        });
+    }
 
     /**
      * 고른 갈래의 묶음만 남긴다.
@@ -52,8 +96,12 @@ document.addEventListener('DOMContentLoaded', () => {
         status.classList.toggle('is-error', isError);
     }
 
-    async function attach(styleType) {
+    async function attach(option) {
+        const styleType = option?.dataset.noteStyle;
         if (!styleType || busy) return;
+        // 그 갈래에서 고른 색으로 붙인다. 고르지 않았으면 서버가 모양의 기본색을 쓴다.
+        const colorType = chosenColors.get(
+            option.closest('.diary-decor-panel')?.dataset.decorPanel) || '';
         busy = true;
         showStatus('붙이는 중…');
 
@@ -64,7 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!saved) throw new Error('본문을 저장하지 못해 라벨을 붙이지 못했습니다.');
             }
 
-            const created = await createNote(styleType);
+            const created = await createNote(styleType, colorType);
             const item = renderNote(created);
             canvas.append(item);
             // 새로 붙은 라벨도 기존 드래그/크기/회전/겹침/떼기 조작을 그대로 쓴다.
@@ -81,12 +129,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /** CSRF 토큰은 layout 의 meta 값을 그대로 쓴다. (스티커 붙이기와 같은 방식) */
-    async function createNote(styleType) {
+    async function createNote(styleType, colorType) {
         const csrfToken = document.querySelector('meta[name="_csrf"]')?.content;
         const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.content;
         if (!csrfToken || !csrfHeader) {
             throw new Error('보안 토큰을 확인할 수 없어 라벨을 붙이지 못했습니다');
         }
+
+        // 보내는 것은 고른 모양과 색뿐이다. 나머지는 모두 서버가 정한다.
+        const body = new URLSearchParams({style: styleType});
+        // 색을 고르지 않았으면 아예 보내지 않는다. 서버가 그 모양의 기본색을 쓴다.
+        if (colorType) body.append('color', colorType);
 
         const response = await fetch(createUrl, {
             method: 'POST',
@@ -96,8 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
                 [csrfHeader]: csrfToken
             },
-            // 보내는 것은 고른 디자인 하나뿐이다. 나머지는 모두 서버가 정한다.
-            body: new URLSearchParams({style: styleType})
+            body
         });
 
         if (response.status === 401) {
@@ -119,11 +171,17 @@ document.addEventListener('DOMContentLoaded', () => {
     /** 서버 렌더링 결과와 같은 마크업을 만든다. (detail.html 의 NOTE figure 와 동일) */
     function renderNote(note) {
         const item = document.createElement('figure');
-        // 모양 class 는 서버가 준 것을 그대로 쓴다. 여기서 code 를 다시 바꾸지 않는다.
-        item.className = `diary-canvas-item diary-note ${note.styleClass}`;
+        /*
+          모양과 색 class 는 서버가 준 것을 그대로 쓴다.
+          여기서 code 를 다시 class 로 바꾸는 표를 두지 않는다.
+          색이 없는 요소는 빈 문자열이 와서 그 모양의 기본색으로 그려진다.
+        */
+        item.className = `diary-canvas-item diary-note ${note.styleClass} ${note.colorClass}`
+            .trim();
         item.dataset.elementId = String(note.id);
         item.dataset.elementType = note.elementType;
         item.dataset.noteStyle = note.styleType;
+        if (note.colorType) item.dataset.noteColor = note.colorType;
         item.dataset.positionX = String(note.positionX);
         item.dataset.positionY = String(note.positionY);
         item.dataset.width = String(note.width);

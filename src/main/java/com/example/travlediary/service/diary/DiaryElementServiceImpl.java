@@ -260,6 +260,7 @@ public class DiaryElementServiceImpl implements DiaryElementService {
         copy.setTextContent(existing.getTextContent());
         copy.setImageUrl(existing.getImageUrl());
         copy.setStyleType(existing.getStyleType());
+        copy.setColorType(existing.getColorType());
         copy.setPositionX(existing.getPositionX());
         copy.setPositionY(existing.getPositionY());
         copy.setWidth(existing.getWidth());
@@ -348,7 +349,9 @@ public class DiaryElementServiceImpl implements DiaryElementService {
               그래서 빈 글은 그대로 두고, DB 가 막는 NULL 만 빈 문자열로 맞춘다.
             */
             prepared.setTextContent(textContent);
-            prepared.setStyleType(requireNoteStyle(element.getStyleType()));
+            String styleType = requireNoteStyle(element.getStyleType());
+            prepared.setStyleType(styleType);
+            prepared.setColorType(noteColor(styleType, element.getColorType()));
             prepared.setImageUrl(null);
             return;
         }
@@ -372,6 +375,25 @@ public class DiaryElementServiceImpl implements DiaryElementService {
         return diaryNoteCatalog.find(styleType)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.BAD_REQUEST, "라벨/메모지 디자인을 선택해 주세요."))
+                .code();
+    }
+
+    /**
+     * 라벨/떡메모지의 색. 모양과 다른 축이라 따로 확인한다.
+     *
+     * <p>고르지 않았으면 그 모양의 기본색을 쓴다. 기본색조차 없으면 색 없이 저장되고,
+     * 화면은 그 모양이 원래 쓰던 색으로 그린다. (예전에 만든 요소가 그대로 보인다)
+     */
+    private String noteColor(String styleType, String colorType) {
+        String requested = colorType == null ? "" : colorType.strip();
+        if (requested.isEmpty()) {
+            return diaryNoteCatalog.find(styleType)
+                    .map(DiaryNoteStyle::defaultColor)
+                    .orElse(null);
+        }
+        return diaryNoteCatalog.findColor(requested)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "라벨/메모지 색을 선택해 주세요."))
                 .code();
     }
 

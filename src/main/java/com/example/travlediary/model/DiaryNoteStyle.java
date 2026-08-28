@@ -11,8 +11,12 @@ package com.example.travlediary.model;
  *
  * <p>{@code sample} 은 고르는 자리에서 모양을 알아보게 하는 보기 글이다.
  * 화면에만 쓰고 저장하지 않는다 — 붙인 NOTE 의 글은 언제나 빈 채로 시작한다.
+ *
+ * <p>{@code defaultColor} 는 색을 고르지 않고 붙였을 때 쓰는 색이다.
+ * 색은 모양과 다른 축이라 {@link DiaryNoteColor} 가 따로 관리한다.
  */
-public record DiaryNoteStyle(String code, String category, String label, String sample) {
+public record DiaryNoteStyle(String code, String category, String label, String sample,
+                             String defaultColor) {
 
     /** 날짜·제목처럼 한 줄로 적는 작은 딱지. */
     public static final String CATEGORY_LABEL = "LABEL";

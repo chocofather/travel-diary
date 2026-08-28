@@ -12,6 +12,7 @@
         <result property="textContent" column="text_content"/>
         <result property="imageUrl"    column="image_url"/>
         <result property="styleType"   column="style_type"/>
+        <result property="colorType"   column="color_type"/>
         <result property="positionX"   column="position_x"/>
         <result property="positionY"   column="position_y"/>
         <result property="width"       column="width"/>
@@ -23,7 +24,7 @@
     </resultMap>
 
     <sql id="DiaryElementColumns">
-        id, page_id, element_type, text_content, image_url, style_type,
+        id, page_id, element_type, text_content, image_url, style_type, color_type,
         position_x, position_y, width, height, rotation, z_index,
         created_at, updated_at
     </sql>
@@ -52,11 +53,12 @@
     <insert id="insert" parameterType="com.example.travlediary.model.DiaryElement"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO diary_elements (
-            page_id, element_type, text_content, image_url, style_type,
+            page_id, element_type, text_content, image_url, style_type, color_type,
             position_x, position_y, width, height, rotation, z_index,
             created_at, updated_at
         ) VALUES (
-            #{pageId}, #{elementType}, #{textContent}, #{imageUrl}, #{styleType},
+            #{pageId}, #{elementType}, #{textContent}, #{imageUrl},
+            #{styleType}, #{colorType},
             #{positionX}, #{positionY}, #{width}, #{height}, #{rotation}, #{zIndex},
             NOW(), NOW()
         )
@@ -68,6 +70,7 @@
         SET text_content = #{textContent},
             image_url = #{imageUrl},
             style_type = #{styleType},
+            color_type = #{colorType},
             position_x = #{positionX},
             position_y = #{positionY},
             width = #{width},

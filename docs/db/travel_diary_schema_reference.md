@@ -619,6 +619,12 @@ CREATE TABLE `destinations` (
 --     position/size/rotation/z_index 는 PHOTO/STICKER 와 똑같이 쓰고, image_url 은 쓰지 않는다.
 --     (붙인 직후에는 아직 적은 글이 없으므로 text_content 는 빈 문자열일 수 있다. NULL 만 막는다)
 --   * style_type 은 NOTE 전용이다. TEXT/PHOTO/STICKER 행에서는 항상 NULL 이다.
+--   * color_type 도 NOTE 전용 색상 코드다 (현재 IVORY / PINK / SAGE / SKY).
+--     모양(style_type)과 색을 다른 축으로 두어, 같은 모양의 색만 다른 값을
+--     style_type 으로 따로 만들지 않는다. 허용 목록은 style_type 과 같은
+--     resources/json/diary_notes.json 이 관리한다.
+--     NULL 이면 그 style 의 기본색으로 그린다 (색 컬럼이 생기기 전에 만든 행도 그대로 보인다).
+--     payload CHECK 는 color_type 을 보지 않는다.
 --   * 각 페이지는 paper_color(#RRGGBB)로 독립적인 종이 바탕색을 가질 수 있고,
 --     background_type(PLAIN/LINED/GRID/DOT) 무늬와 조합해서 쓴다.
 --     NULL 이면 기본 종이색을 쓰며, 펼침의 좌/우 페이지 색을 같게 맞추지 않는다.
@@ -665,6 +671,7 @@ CREATE TABLE `diary_elements` (
   `text_content` text,
   `image_url` varchar(255) DEFAULT NULL,
   `style_type` varchar(30) DEFAULT NULL,
+  `color_type` varchar(20) DEFAULT NULL,
   `position_x` decimal(6,5) NOT NULL DEFAULT '0.00000',
   `position_y` decimal(6,5) NOT NULL DEFAULT '0.00000',
   `width` decimal(6,5) NOT NULL DEFAULT '0.30000',

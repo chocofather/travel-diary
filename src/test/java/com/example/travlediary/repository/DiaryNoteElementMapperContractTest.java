@@ -44,6 +44,23 @@ class DiaryNoteElementMapperContractTest {
     }
 
     @Test
+    void theColourTravelsWithTheElementJustLikeTheShape() throws IOException {
+        String mapper = elementMapper();
+
+        // 모양과 색은 서로 다른 칸이라 각각 실린다
+        assertThat(between(mapper, "<resultMap id=\"DiaryElementMap\"", "</resultMap>"))
+                .contains("property=\"colorType\"")
+                .contains("column=\"color_type\"");
+        assertThat(between(mapper, "<sql id=\"DiaryElementColumns\">", "</sql>"))
+                .contains("color_type");
+        assertThat(between(mapper, "<insert id=\"insert\"", "</insert>"))
+                .contains("color_type")
+                .contains("#{colorType}");
+        assertThat(between(mapper, "<update id=\"update\"", "</update>"))
+                .contains("color_type = #{colorType}");
+    }
+
+    @Test
     void theKindOfElementIsStillFixedWhenItIsFirstCreated() throws IOException {
         String update = between(elementMapper(), "<update id=\"update\"", "</update>");
 
@@ -73,6 +90,62 @@ class DiaryNoteElementMapperContractTest {
                 .contains("_utf8mb4'TEXT'")
                 .contains("_utf8mb4'PHOTO'")
                 .contains("_utf8mb4'STICKER'");
+    }
+
+    @Test
+    void theDatabaseKeepsTheColourInItsOwnColumn() throws IOException {
+        String table = diaryElementsTable();
+
+        assertThat(table).contains("`color_type` varchar(20) DEFAULT NULL");
+        // 모양 바로 다음 자리다 (같은 NOTE 의 두 축이 붙어 있다)
+        assertThat(table.indexOf("`color_type`"))
+                .isGreaterThan(table.indexOf("`style_type`"))
+                .isLessThan(table.indexOf("`position_x`"));
+    }
+
+    @Test
+    void aNoteWithoutAColourIsStillAllowed() throws IOException {
+        String table = diaryElementsTable();
+
+        /*
+          색은 없어도 된다. 그때는 그 모양의 기본색으로 그린다.
+          payload CHECK 가 색을 보기 시작하면 색 칸이 생기기 전에 만든 행이 모두 걸린다.
+        */
+        assertThat(between(table, "`chk_diary_elements_payload`", "),\n"))
+                .doesNotContain("color_type");
+    }
+
+    @Test
+    void addingTheColourChangedNothingElseAboutTheTable() throws IOException {
+        String table = diaryElementsTable();
+
+        // 컬럼 하나만 늘었다. 제약·인덱스·FK 는 그대로다
+        assertThat(table)
+                .contains("`chk_diary_elements_type`")
+                .contains("`chk_diary_elements_payload`")
+                .contains("`chk_diary_elements_position`")
+                .contains("`chk_diary_elements_size`")
+                .contains("`chk_diary_elements_rotation`")
+                .contains("`chk_diary_elements_z_index`")
+                .contains("KEY `idx_diary_elements_page` (`page_id`,`z_index`,`id`)")
+                .contains("`fk_diary_elements_page` FOREIGN KEY (`page_id`)"
+                        + " REFERENCES `diary_pages` (`id`) ON DELETE CASCADE");
+    }
+
+    @Test
+    void theColoursTheCodeAllowsAreTheOnesTheSchemaDescribes() throws IOException {
+        String schema = Files.readString(
+                Path.of("docs/db/travel_diary_schema_reference.md"), StandardCharsets.UTF_8);
+        String manifest = Files.readString(
+                Path.of("src/main/resources/json/diary_notes.json"), StandardCharsets.UTF_8);
+
+        // 문서에 적어 둔 색과 실제 허용 목록이 어긋나지 않게 한다
+        for (String color : new String[]{"IVORY", "PINK", "SAGE", "SKY"}) {
+            assertThat(manifest).as("%s", color).contains("\"" + color + "\"");
+        }
+        assertThat(schema).contains("현재 IVORY / PINK / SAGE / SKY");
+        // NULL 의 뜻도 코드와 같은 말로 적어 둔다
+        assertThat(schema).contains("NULL 이면 그 style 의 기본색으로 그린다");
     }
 
     @Test
