@@ -176,11 +176,19 @@
     font-weight: 600;
 }
 
+/*
+  min-width 를 0 으로 내려 둔다.
+
+  날짜 칸은 브라우저가 안쪽에 연·월·일 칸을 따로 그려서 제 나름의 최소 폭을 갖는다.
+  그대로 두면 좁은 화면에서 그 폭만큼 칸을 밀어내 두 칸이 부모 밖으로 나간다.
+  (Safari 와 Chrome 이 그 폭을 다르게 잡아 한쪽에서만 어긋나기도 한다)
+*/
 .travel-plan-form-field input[type="text"],
 .travel-plan-form-field input[type="date"],
 .travel-plan-period-item input[type="date"] {
     box-sizing: border-box;
     width: 100%;
+    min-width: 0;
     min-height: 40px;
     padding: 9px 12px;
     border: 1px solid var(--tp-plan-line-strong);
@@ -212,10 +220,16 @@
     border-color: #d9a6a0;
 }
 
-/* 시작일 ~ 종료일. 좁아지면 아래 미디어 규칙이 위아래로 세운다 */
+/*
+  시작일 ~ 종료일. 좁아지면 아래 미디어 규칙이 위아래로 세운다.
+
+  위를 기준으로 맞춘다. 아래로 맞추면 한쪽에만 오류 문구가 붙었을 때
+  그 문구 높이만큼 반대쪽 칸이 통째로 내려가, 두 라벨과 두 입력칸의
+  줄이 서로 어긋난다.
+*/
 .travel-plan-period-inputs {
     display: flex;
-    align-items: flex-end;
+    align-items: flex-start;
     gap: 12px;
 }
 
@@ -227,16 +241,26 @@
     min-width: 0;
 }
 
-/* 두 날짜 칸의 라벨은 묶는 이름(여행 기간)보다 한 단계 낮다 */
+/*
+  두 날짜 칸의 라벨은 묶는 이름(여행 기간)보다 한 단계 낮다.
+  줄 높이를 정해 두어야 아래 ~ 표시가 설 자리를 계산할 수 있다.
+*/
 .travel-plan-period-item label {
     font-size: 13px;
     font-weight: 500;
+    line-height: 20px;
     color: var(--tp-plan-ink-soft);
 }
 
-/* 입력칸 높이의 가운데에 선다 */
+/*
+  두 입력칸 사이의 ~.
+  위를 기준으로 맞춘 줄이라 라벨(20) + 사이(7) + 입력칸 절반(20) 만큼
+  내려와야 입력칸 한가운데에 선다. 오류 문구가 붙어도 그 자리 그대로다.
+*/
 .travel-plan-period-separator {
-    padding-bottom: 11px;
+    align-self: flex-start;
+    padding-top: 37px;
+    line-height: 1;
     color: var(--tp-plan-ink-faint);
 }
 
@@ -314,11 +338,6 @@
     .travel-plan-period-separator {
         display: none;
     }
-
-    /* 좁을수록 손이 닿는 자리가 넓어야 한다 */
-    .travel-plan-form-actions .travel-plan-form-submit {
-        width: 100%;
-    }
 }
 
 /* ───── 함께 계획하기 목록 ───── */
@@ -346,7 +365,8 @@
 
 .travel-plan-list-header h1 {
     margin: 0 0 6px;
-    color: #3f3426;
+    /* 목록 줄의 제목과 같은 잉크를 쓴다 */
+    color: var(--tp-card-ink);
     font-size: 24px;
     font-weight: 700;
 }
@@ -385,7 +405,8 @@
 .travel-plan-section + .travel-plan-section {
     margin-top: 34px;
     padding-top: 20px;
-    border-top: 1px solid #e8e1d5;
+    /* 목록 줄의 테두리와 같은 선이다 */
+    border-top: 1px solid var(--tp-card-line);
 }
 
 .travel-plan-section-title {
@@ -393,20 +414,24 @@
     align-items: baseline;
     gap: 7px;
     margin: 0 0 10px;
-    color: #3f3426;
+    color: var(--tp-card-ink);
     font-size: 15px;
     font-weight: 700;
 }
 
+/* 숫자는 제목을 읽은 다음에 오는 값이라 한 단계 연하다 */
 .travel-plan-section-count {
-    color: #a1968a;
+    color: var(--tp-card-ink-faint);
     font-size: 13px;
     font-weight: 600;
 }
 
-/* 끝난 여행 쪽은 제목부터 한 톤 차분하게 */
+/*
+  끝난 여행 쪽은 제목부터 한 톤 차분하게.
+  다만 읽기 어려울 만큼 흐리게 두지 않는다. 그 아래 목록은 진행 중과 같다.
+*/
 .travel-plan-section.is-completed .travel-plan-section-title {
-    color: #6b6259;
+    color: var(--tp-card-ink-soft);
 }
 
 .travel-plan-card-list {
@@ -450,7 +475,16 @@
     min-width: 0;
 }
 
+/*
+  긴 제목은 한 줄에서 말줄임으로 끝난다.
+
+  min-width 를 0 으로 내려 두어야 한다. flex 칸의 기본 최소 폭은 내용 크기라,
+  줄바꿈을 막아 둔 글자는 그 폭이 곧 제목 전체 길이가 된다.
+  그러면 칸이 줄지 못해 제목이 카드 밖으로 삐져나가고,
+  좁은 화면에서는 그만큼 페이지에 가로 스크롤이 생긴다.
+*/
 .travel-plan-card-title {
+    min-width: 0;
     overflow: hidden;
     color: var(--tp-card-ink);
     font-size: 15px;
@@ -581,12 +615,22 @@
         font-size: 21px;
     }
 
+    /* 화면이 좁을수록 구역 사이가 멀면 목록이 끊겨 보인다 */
+    .travel-plan-section + .travel-plan-section {
+        margin-top: 24px;
+        padding-top: 16px;
+    }
+
     .travel-plan-card-title {
         font-size: 14px;
     }
 
     .travel-plan-card-meta {
         font-size: 12px;
+    }
+
+    .travel-plan-pagination {
+        margin-top: 16px;
     }
 }
 
@@ -672,8 +716,13 @@
 }
 
 @media (max-width: 720px) {
+    /*
+      아래쪽은 좁혀도 88px 을 남긴다.
+      떠 있는 채팅 버튼이 그 자리를 차지하고 있어, 여기를 줄이면
+      마지막 DAY 의 "일정 추가" 가 버튼 밑에 깔려 누를 수 없게 된다.
+    */
     .travel-plan-page {
-        padding: 20px 12px 56px;
+        padding: 20px 12px 88px;
     }
 
     .travel-plan-paper {
@@ -697,14 +746,6 @@
 
     .travel-plan-detail-header h1 {
         font-size: 21px;
-    }
-
-    /* 패널이 화면 밖으로 나가지 않게 여는 자리에 맞춰 붙는다 */
-    .travel-plan-invite-panel,
-    .travel-plan-members-panel {
-        right: auto;
-        left: 0;
-        max-width: calc(100vw - 48px);
     }
 }
 
@@ -1070,6 +1111,38 @@
     text-align: left;
 }
 
+/*
+  좁은 화면에서는 팝오버를 "누른 버튼" 이 아니라 "버튼 줄 전체" 에 맞춘다.
+
+  버튼이 줄 가운데에 있으면 그 버튼을 기준으로는 어느 쪽으로 펴도 한쪽이
+  화면 밖으로 나간다(초대는 오른쪽이, 참여자는 왼쪽이 잘린다).
+  줄을 기준으로 삼으면 양끝이 화면 안에 들어오고 폭도 저절로 맞는다.
+
+  두 패널의 기본 규칙보다 뒤에 두어야 한다. 미디어 쿼리는 우선순위를 더해 주지
+  않아서, 앞에 두면 뒤의 기본 규칙(right/max-width)에 그대로 덮인다.
+*/
+@media (max-width: 560px) {
+    .travel-plan-top-actions {
+        position: relative;
+        width: 100%;
+    }
+
+    /* 기준을 줄로 넘긴다 */
+    .travel-plan-members,
+    .travel-plan-invite {
+        position: static;
+    }
+
+    .travel-plan-members-panel,
+    .travel-plan-invite-panel {
+        top: calc(100% + 6px);
+        right: 0;
+        left: 0;
+        width: auto;
+        max-width: none;
+    }
+}
+
 /* 이 패널이 무엇을 하는 곳인지 먼저 말한다 */
 .travel-plan-invite-intro {
     margin: 0 0 10px;
@@ -1365,6 +1438,16 @@
     color: var(--tp-plan-ink);
     font-size: 24px;
     font-weight: 700;
+    overflow-wrap: break-word;
+}
+
+/*
+  긴 제목이 화면을 넓히지 않게 한다.
+  flex 칸의 기본 최소 폭은 내용 크기라, 띄어쓰기 없는 긴 제목은
+  그 길이가 곧 최소 폭이 되어 종이 밖으로 밀려 나간다.
+*/
+.travel-plan-detail-header h1 > span {
+    min-width: 0;
 }
 
 /* 며칠짜리 여행인지. 제목을 밀어내지 않게 작게 붙는다 */
@@ -1548,10 +1631,13 @@
     box-sizing: border-box;
     display: block;
     width: 100%;
+    /* 입력칸 기본 폭(cols)이 줄의 최소 폭이 되지 않게 한다 */
+    min-width: 0;
     padding: 0;
     border: 0;
     background: none;
-    color: #3f3426;
+    /* 적어 둔 일정과 같은 잉크. 눌렀다고 글자색이 달라지지 않는다 */
+    color: var(--tp-plan-ink);
     font-family: inherit;
     font-size: 15px;
     line-height: 1.75;
@@ -1600,11 +1686,13 @@
     box-sizing: border-box;
     display: block;
     width: 100%;
+    /* 입력칸 기본 폭(cols)이 줄의 최소 폭이 되지 않게 한다 */
+    min-width: 0;
     margin: 0;
     padding: 0;
     border: 0;
     background: none;
-    color: #3f3426;
+    color: var(--tp-plan-ink);
     /* 보기 상태와 같은 글자 리듬을 유지해 클릭해도 글자가 움직이지 않는다 */
     font-family: inherit;
     font-size: 15px;
@@ -1623,6 +1711,8 @@
   종이 위의 옅은 메모처럼만 보이게 한다.
 */
 .travel-plan-remote-note {
+    /* 이름이 길어도 이 글자가 줄을 넓히지 않는다 */
+    min-width: 0;
     margin: 0 0 2px;
     color: var(--tp-plan-ink-faint);
     font-size: 12px;
@@ -1665,7 +1755,7 @@
 .travel-plan-line.is-remote-editing .travel-plan-line-content,
 .travel-plan-line.is-remote-editing .travel-plan-slot-hint {
     cursor: default;
-    color: #b0a493;
+    color: var(--tp-plan-ink-faint);
 }
 
 /*
@@ -1759,6 +1849,8 @@
     color: var(--tp-plan-accent);
     font-size: 12px;
     line-height: 1.6;
+    /* 아래 본문과 같다. 띄어쓰기 없는 긴 조건도 종이 밖으로 나가지 않는다 */
+    overflow-wrap: break-word;
 }
 
 .travel-plan-alt-content {
@@ -2195,8 +2287,20 @@
       메시지가 많아져도 패널은 그대로고 가운데 칸만 넘긴다.
     */
     height: 500px;
-    /* 화면이 낮으면 그 안으로 줄어든다. 잘려서 밖으로 나가지 않는다 */
-    max-height: calc(100vh - 56px);
+    /*
+      화면이 낮으면 그 안으로 줄어든다. 잘려서 밖으로 나가지 않는다.
+
+      위를 조금 비워 두는 것은 페이지 헤더(.main-nav, 높이 100px, z-index 1000)
+      때문이다. 낮은 화면에서 패널이 끝까지 올라오면 채팅 머리글과 닫기 버튼이
+      헤더 밑에 깔려 눌리지 않는다. 화면 비율로 비워 두면 헤더 높이를
+      여기에 옮겨 적지 않아도 되고, 헤더가 바뀌어도 따라 틀어지지 않는다.
+      화면이 넉넉하면 70% 가 500px 보다 커서 늘 하던 대로 500px 로 열린다.
+
+      dvh 는 주소창이 접혔다 펴지는 모바일에서 실제로 보이는 높이를 따른다.
+      vh 줄을 먼저 두어, dvh 를 모르는 브라우저는 그대로 vh 로 읽는다.
+    */
+    max-height: min(70vh, calc(100vh - 56px));
+    max-height: min(70dvh, calc(100dvh - 56px));
     border: 1px solid var(--tp-chat-line);
     border-radius: 8px;
     /* 종이(미세한 warm-white)와 다른 cool gray 라 한 겹 위에 있는 것이 보인다 */
@@ -2239,7 +2343,8 @@
         right: 16px;
         bottom: 16px;
         width: calc(100vw - 32px);
-        max-height: calc(100vh - 32px);
+        max-height: min(70vh, calc(100vh - 32px));
+        max-height: min(70dvh, calc(100dvh - 32px));
     }
 }
 
@@ -2373,8 +2478,12 @@
 .travel-plan-chat-sender {
     margin: 0 0 4px;
     padding: 0 2px;
+    /* 말풍선과 같은 폭 안에 선다. 긴 이름이 혼자 더 넓게 뻗지 않는다 */
+    max-width: 78%;
     color: var(--tp-plan-ink-faint);
     font-size: 12px;
+    /* 띄어쓰기 없는 긴 이름도 잘리지 않고 접힌다 */
+    overflow-wrap: break-word;
 }
 
 .travel-plan-chat-message.is-continued .travel-plan-chat-sender,
@@ -2384,6 +2493,13 @@
 
 /* 말풍선 + 시각(+ 내 메시지의 ⋯). 시각은 말풍선 아래쪽 끝에 선다 */
 .travel-plan-chat-row {
+    /*
+      반응 고르는 창이 이 줄을 기준으로 열린다.
+      ☺ 버튼(24px)을 기준으로 삼으면, 말풍선이 길어져 버튼이 패널 가장자리로
+      밀렸을 때 창이 갈 자리가 없어 밖으로 나간다. 줄을 기준으로 삼으면
+      말풍선 길이와 상관없이 늘 패널 안쪽으로 펴진다.
+    */
+    position: relative;
     display: flex;
     align-items: flex-end;
     gap: 6px;
@@ -2480,7 +2596,6 @@
   큰 원형 버튼이나 테두리·그림자는 두지 않는다.
 */
 .travel-plan-chat-react {
-    position: relative;
     flex: 0 0 auto;
     /* 시각과 붙지 않게 한 칸 띄운다 */
     margin-left: 2px;
@@ -2521,7 +2636,15 @@
     color: var(--tp-plan-ink);
 }
 
-/* 여섯 가지만 있는 작은 줄. 전체 이모지 목록과 다른 자리다 */
+/*
+  여섯 가지만 있는 작은 줄. 전체 이모지 목록과 다른 자리다.
+
+  기준은 ☺ 버튼이 아니라 말풍선 줄이다(위 .travel-plan-chat-row).
+  남의 말은 줄 왼쪽 끝, 내 말은 줄 오른쪽 끝에 맞춰 안쪽으로 펴진다.
+  줄은 패널 폭의 78% 를 넘지 않으므로 188px 짜리 이 줄은 늘 안에 들어온다.
+  세로 위치는 예전과 같다. ☺ 버튼이 줄 아래끝에 서 있어 두 기준의
+  아래끝이 같은 자리이기 때문이다.
+*/
 .travel-plan-chat-react-menu {
     position: absolute;
     bottom: 24px;
@@ -2774,8 +2897,20 @@
     width: 220px;
     /* 아주 좁은 화면에서도 밖으로 나가지 않는다 */
     max-width: calc(100vw - 48px);
-    /* 6행 남짓까지 보이고 그 뒤로는 안에서 넘긴다 */
-    max-height: 232px;
+    /*
+      6행 남짓까지 보이고 그 뒤로는 안에서 넘긴다.
+
+      낮은 화면에서는 그만큼도 둘 수 없다. 채팅 패널이 화면 높이의 70% 로
+      줄어드는데(위 .travel-plan-chat-panel), 이 상자는 패널 안에서 열리고
+      패널은 모서리를 다듬느라 overflow 를 잘라 두어서, 232px 를 고집하면
+      위쪽이 패널 밖으로 나가 잘린다.
+      빼는 96px 은 패널에서 이 상자가 쓸 수 없는 자리다(머리글 + 입력줄 위 여백).
+
+      dvh 는 주소창이 접혔다 펴지는 모바일에서 실제로 보이는 높이를 따른다.
+      vh 줄을 먼저 두어, dvh 를 모르는 브라우저는 그대로 vh 로 읽는다.
+    */
+    max-height: min(232px, calc(70vh - 96px));
+    max-height: min(232px, calc(70dvh - 96px));
     padding: 8px;
     border: 1px solid var(--tp-chat-line);
     border-radius: 10px;
@@ -2899,6 +3034,7 @@
         bottom: 8px;
         width: auto;
         max-height: min(70vh, calc(100vh - 16px));
+        max-height: min(70dvh, calc(100dvh - 16px));
     }
 }
 
@@ -3026,7 +3162,14 @@
     flex-direction: column;
     /* 좁은 화면·분할 화면에서도 밖으로 넘치지 않는다 */
     width: min(420px, 100%);
+    /*
+      dvh 는 주소창이 접혔다 펴지는 모바일에서 실제로 보이는 높이를 따른다.
+      창은 화면 가운데에 서므로, vh 로만 재면 낮은 화면에서 머리글과
+      아래 액션이 보이는 자리 밖으로 조금씩 밀려난다.
+      vh 줄을 먼저 두어, dvh 를 모르는 브라우저는 그대로 vh 로 읽는다.
+    */
     max-height: min(600px, calc(100vh - 40px));
+    max-height: min(600px, calc(100dvh - 40px));
     border: 1px solid var(--tp-plan-line);
     border-radius: 10px;
     background: var(--tp-poll-surface);
@@ -3178,6 +3321,8 @@
     flex-direction: column;
     gap: 2px;
     min-width: 0;
+    /* 질문·이름·결과 모두 여기서 접힌다. 띄어쓰기 없는 긴 글도 잘리지 않는다 */
+    overflow-wrap: break-word;
 }
 
 .travel-plan-poll-card-title {
@@ -3203,6 +3348,15 @@
     overflow-wrap: break-word;
 }
 
+/*
+  끝난 투표의 "결과 ○○○" 는 사용자가 쓴 선택지 이름을 그대로 담는다.
+  줄 안의 칸이라 그대로 두면 접히기 전 제 너비를 먼저 요구해서
+  카드가 창보다 넓어진다. 접힐 수 있게 바닥을 풀어 준다.
+*/
+.travel-plan-poll-card-meta > span {
+    min-width: 0;
+}
+
 /* "결과" 라는 말머리에만 accent 를 쓴다 */
 .travel-plan-poll-card-result-label {
     flex: 0 0 auto;
@@ -3225,6 +3379,8 @@
     flex-direction: column;
     gap: 14px;
     padding: 4px 16px 16px;
+    /* 제목·만든 사람·선택지 모두 사용자가 쓴 글이라 여기서 한 번에 접는다 */
+    overflow-wrap: break-word;
     overflow-y: auto;
 }
 
@@ -3320,6 +3476,15 @@
     border-bottom: 1px solid var(--tp-poll-line);
     color: var(--tp-ink);
     font-size: 14px;
+}
+
+/*
+  선택지 이름 칸. 표 수는 줄어들지 않게 두었으니(choice-count 는 flex 0 0 auto)
+  긴 이름은 이쪽이 접혀야 한다. 바닥을 풀지 않으면 이름이 제 너비를 먼저
+  요구해서 "12표" 를 창 밖으로 밀어낸다.
+*/
+.travel-plan-poll-result-row > span:first-child {
+    min-width: 0;
 }
 
 /*
@@ -3601,17 +3766,14 @@
     outline-offset: -2px;
 }
 
-/* 아주 좁을 때만 위아래로 놓는다 */
-@media (max-width: 360px) {
-    .travel-plan-poll-radio-row {
-        flex-direction: column;
-    }
+/*
+  좁은 화면에서도 두 칸을 위아래로 나누지 않는다.
 
-    .travel-plan-poll-radio + .travel-plan-poll-radio {
-        border-left: 0;
-        border-top: 1px solid var(--tp-plan-line);
-    }
-}
+  360px 화면에서 창은 320px, 이 줄은 286px 이라 한 칸이 143px 이다.
+  가장 긴 "여러 개 선택" 은 ✓ 와 좌우 여백까지 더해도 110px 안쪽이라
+  한 줄에 넉넉히 들어간다. 세로로 쌓으면 한 덩어리로 고르는 컨트롤이
+  다시 라디오 목록처럼 보인다.
+*/
 
 .travel-plan-poll-error {
     margin: 0;

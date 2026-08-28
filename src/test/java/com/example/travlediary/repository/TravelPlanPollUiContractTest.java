@@ -1020,6 +1020,66 @@ class TravelPlanPollUiContractTest {
                 .contains("background: rgba(47, 52, 56, 0.32)");
     }
 
+    @Test
+    void theSegmentedControlStaysOneRowOnTheNarrowestPhone() throws IOException {
+        String css = cssFile();
+
+        /*
+          360px 화면에서도 한 칸이 143px 이고 가장 긴 "여러 개 선택" 은
+          ✓ 와 여백까지 110px 안쪽이다. 위아래로 쌓으면 한 덩어리로 고르는
+          컨트롤이 다시 라디오 목록처럼 보인다.
+        */
+        assertThat(css).as("세로로 쌓던 360px 규칙은 두지 않는다")
+                .doesNotContain("@media (max-width: 360px)");
+        assertThat(between(css, ".travel-plan-poll-radio-row {", "\n}"))
+                .doesNotContain("flex-direction: column");
+        assertThat(between(css, ".travel-plan-poll-radio {", "\n}"))
+                // 두 칸이 남는 폭을 똑같이 나눠 갖는다
+                .contains("flex: 1 1 0")
+                .contains("min-width: 0");
+    }
+
+    @Test
+    void aLongOptionNameDoesNotPushTheVoteCountOut() throws IOException {
+        String css = cssFile();
+
+        /*
+          줄 안의 칸은 접히기 전 제 너비를 먼저 요구한다. 바닥을 풀어 두지
+          않으면 긴 선택지 이름이 "12표" 를 창 밖으로 밀어낸다.
+        */
+        assertThat(between(css, ".travel-plan-poll-result-row > span:first-child {", "\n}"))
+                .contains("min-width: 0");
+        assertThat(between(css, ".travel-plan-poll-choice-count {", "\n}"))
+                .as("표 수는 줄어들지 않는 쪽이다")
+                .contains("flex: 0 0 auto");
+        // 끝난 투표 카드의 "결과 ○○○" 도 같은 자리다
+        assertThat(between(css, ".travel-plan-poll-card-meta > span {", "\n}"))
+                .contains("min-width: 0");
+    }
+
+    @Test
+    void whatUsersTypedFoldsInsteadOfWideningTheModal() throws IOException {
+        String css = cssFile();
+
+        // 질문·이름·결과가 모두 한자리에서 접힌다
+        assertThat(between(css, ".travel-plan-poll-card-body {", "\n}"))
+                .contains("min-width: 0")
+                .contains("overflow-wrap: break-word");
+        assertThat(between(css, ".travel-plan-poll-detail {", "\n}"))
+                .contains("overflow-wrap: break-word")
+                .contains("overflow-y: auto");
+    }
+
+    @Test
+    void theModalFitsTheVisibleHeightOnAPhone() throws IOException {
+        String panel = between(cssFile(), ".travel-plan-poll-modal-panel {", "\n}");
+
+        // 창은 화면 가운데에 선다. vh 로만 재면 낮은 화면에서 위아래가 밀려난다
+        assertThat(panel).contains("max-height: min(600px, calc(100dvh - 40px))");
+        assertThat(panel.indexOf("100dvh")).as("dvh 가 vh 뒤에 온다")
+                .isGreaterThan(panel.indexOf("100vh"));
+    }
+
     private String detailHtml() throws IOException {
         return resource("/templates/travelplan/detail.html");
     }

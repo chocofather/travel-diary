@@ -218,6 +218,61 @@ class TravelPlanSchedulerUiContractTest {
         assertThat(detailHtml()).contains("data-travel-plan-owner-actions");
     }
 
+    // ── 좁은 화면 ───────────────────────────────────────────
+
+    @Test
+    void nothingInTheSheetCanPushTheScreenWider() throws IOException {
+        String css = cssFile();
+
+        /*
+          flex 칸의 기본 최소 폭은 내용 크기다.
+          띄어쓰기 없는 긴 글이나 입력칸 기본 폭이 그대로 줄의 최소 폭이 되면
+          종이 밖으로 밀려 나가 페이지에 가로 스크롤이 생긴다.
+        */
+        assertThat(between(css, ".travel-plan-line-body {", "}")).contains("min-width: 0");
+        assertThat(between(css, ".travel-plan-slot-form {", "}")).contains("min-width: 0");
+        assertThat(between(css, ".travel-plan-alt-body {", "}")).contains("min-width: 0");
+        // 편집기의 입력칸도 마찬가지다
+        assertThat(between(css, ".travel-plan-item-editor textarea {", "}"))
+                .contains("min-width: 0")
+                .contains("box-sizing: border-box")
+                .contains("width: 100%");
+        assertThat(between(css, ".travel-plan-slot-form textarea {", "}"))
+                .contains("min-width: 0");
+        // 긴 여행 제목과 남이 작성 중이라는 글자도 줄어들 수 있다
+        assertThat(between(css, ".travel-plan-detail-header h1 > span {", "}"))
+                .contains("min-width: 0");
+        assertThat(between(css, ".travel-plan-remote-note {", "}")).contains("min-width: 0");
+        // 넘치는 것을 가리는 것이 아니라 줄어들게 둔다
+        assertThat(between(css, ".travel-plan-page {", "}")).doesNotContain("overflow-x: hidden");
+    }
+
+    @Test
+    void theFloatingChatButtonNeverSitsOnTheLastSchedule() throws IOException {
+        String css = cssFile();
+
+        /*
+          떠 있는 채팅 버튼은 오른쪽 아래를 늘 차지한다.
+          아래 여백이 그보다 얕으면 마지막 DAY 의 "일정 추가" 가 그 밑에 깔린다.
+        */
+        assertThat(between(css, ".travel-plan-page {", "}")).contains("padding: 32px 20px 88px");
+        assertThat(between(css, "@media (max-width: 720px) {", "\n}"))
+                .contains("padding: 20px 12px 88px");
+    }
+
+    @Test
+    void theEditorKeepsTheSameInkAsTheLineItReplaces() throws IOException {
+        String css = cssFile();
+
+        // 눌러서 편집기가 열려도 글자색이 달라지지 않는다
+        assertThat(between(css, ".travel-plan-line-content {", "}"))
+                .contains("color: var(--tp-plan-ink)");
+        assertThat(between(css, ".travel-plan-item-editor textarea {", "}"))
+                .contains("color: var(--tp-plan-ink)");
+        assertThat(between(css, ".travel-plan-slot-form textarea {", "}"))
+                .contains("color: var(--tp-plan-ink)");
+    }
+
     private String detailHtml() throws IOException {
         return resource("/templates/travelplan/detail.html");
     }

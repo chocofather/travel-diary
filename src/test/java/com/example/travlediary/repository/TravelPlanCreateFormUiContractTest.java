@@ -86,6 +86,53 @@ class TravelPlanCreateFormUiContractTest {
     }
 
     @Test
+    void noInputCanPushTheFormWiderThanTheScreen() throws IOException {
+        String css = resource("/static/css/travel-plan.css");
+
+        /*
+          날짜 칸은 브라우저가 안쪽에 연·월·일 칸을 따로 그려 제 나름의 최소 폭을 갖는다.
+          내려 두지 않으면 좁은 화면에서 그 폭만큼 부모를 밀어낸다.
+        */
+        assertThat(between(css, ".travel-plan-form-field input[type=\"text\"],", "}"))
+                .contains("box-sizing: border-box")
+                .contains("width: 100%")
+                .contains("min-width: 0");
+        // 두 날짜 칸도 자기 폭을 고집하지 않는다
+        assertThat(between(css, ".travel-plan-period-item {", "}"))
+                .contains("flex: 1 1 0")
+                .contains("min-width: 0");
+        // 좁아지면 위아래로 선다 (기존 breakpoint 를 그대로 쓴다)
+        assertThat(between(css, "@media (max-width: 560px) {", "\n}"))
+                .contains(".travel-plan-period-inputs")
+                .contains("flex-direction: column");
+    }
+
+    @Test
+    void oneFieldsErrorDoesNotShoveTheOtherDateOutOfLine() throws IOException {
+        String css = resource("/static/css/travel-plan.css");
+
+        /*
+          아래를 기준으로 맞추면 한쪽에만 오류 문구가 붙었을 때
+          그 높이만큼 반대쪽 칸이 통째로 내려가 두 줄이 어긋난다.
+        */
+        assertThat(between(css, ".travel-plan-period-inputs {", "}"))
+                .contains("align-items: flex-start")
+                .doesNotContain("align-items: flex-end");
+        // ~ 는 오류 문구가 붙어도 입력칸 가운데 그 자리에 남는다
+        assertThat(between(css, ".travel-plan-period-separator {", "}"))
+                .contains("align-self: flex-start");
+    }
+
+    @Test
+    void theSubmitButtonStaysItsOwnSizeOnSmallScreens() throws IOException {
+        String narrow = between(resource("/static/css/travel-plan.css"),
+                "@media (max-width: 560px) {", "\n}");
+
+        // 좁다고 화면을 가로지르는 큰 덩어리 버튼으로 바꾸지 않는다
+        assertThat(narrow).doesNotContain("travel-plan-form-submit");
+    }
+
+    @Test
     void bothDatesOnlyTakeAFourDigitYear() throws IOException {
         String create = createHtml();
 

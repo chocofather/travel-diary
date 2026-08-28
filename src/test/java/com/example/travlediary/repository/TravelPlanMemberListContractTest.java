@@ -157,6 +157,55 @@ class TravelPlanMemberListContractTest {
     }
 
     @Test
+    void bothPopoversFitTheScreenOnNarrowWidths() throws IOException {
+        String css = resource("/static/css/travel-plan.css");
+
+        /*
+          좁은 화면에서는 누른 버튼이 아니라 버튼 줄 전체를 기준으로 편다.
+          버튼이 줄 가운데에 있으면 그 버튼 기준으로는 어느 쪽으로 펴도
+          한쪽이 화면 밖으로 나간다.
+        */
+        String narrow = between(css, ".travel-plan-top-actions {\n        position: relative;",
+                "\n}");
+        assertThat(narrow)
+                .contains("position: static")
+                .contains("left: 0")
+                .contains("right: 0")
+                .contains("max-width: none");
+
+        /*
+          이 규칙은 두 패널의 기본 규칙보다 뒤에 있어야 한다.
+          미디어 쿼리는 우선순위를 더해 주지 않아, 앞에 두면 그대로 덮인다.
+        */
+        int membersBase = css.indexOf(".travel-plan-members-panel {");
+        int inviteBase = css.indexOf(".travel-plan-invite-panel {");
+        int override = css.indexOf(".travel-plan-top-actions {\n        position: relative;");
+        assertThat(override).as("좁은 화면 규칙이 기본 규칙보다 뒤에 온다")
+                .isGreaterThan(membersBase)
+                .isGreaterThan(inviteBase);
+    }
+
+    @Test
+    void aLongNameYieldsInsteadOfCoveringTheBadges() throws IOException {
+        String css = resource("/static/css/travel-plan.css");
+
+        // 이름 칸이 줄어들고 긴 이름은 줄바꿈된다. "나" / "방장" / ⋯ 는 제자리다
+        assertThat(between(css, ".travel-plan-member-name {", "}"))
+                .contains("min-width: 0")
+                .contains("overflow-wrap: break-word");
+        assertThat(between(css, ".travel-plan-member {", "}"))
+                .contains("grid-template-columns: minmax(0, 1fr) auto 28px");
+        // 접속 점은 찌그러지지 않는다
+        assertThat(between(css, ".travel-plan-presence-dot {", "}"))
+                .contains("width: 6px")
+                .contains("height: 6px");
+        // 초대 링크 칸도 복사 버튼을 밀어내지 않는다
+        assertThat(between(css, ".travel-plan-invite-url {", "}"))
+                .contains("min-width: 0");
+        assertThat(between(css, ".travel-plan-invite-copy {", "}")).contains("flex: 0 0 auto");
+    }
+
+    @Test
     void thePanelNeverPutsAUserIdOnThePage() throws IOException {
         // 팝오버의 속이 통째로 옮겨 다니므로 조각 전체를 본다
         String panel = membersHtml();

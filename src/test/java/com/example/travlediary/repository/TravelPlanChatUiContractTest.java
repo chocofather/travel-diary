@@ -228,7 +228,7 @@ class TravelPlanChatUiContractTest {
         assertThat(panel)
                 .contains("height: 500px")
                 // 화면이 낮으면 그 안으로 줄어든다
-                .contains("max-height: calc(100vh - 56px)")
+                .contains("max-height: min(70vh, calc(100vh - 56px))")
                 .contains("flex-direction: column");
     }
 
@@ -639,7 +639,7 @@ class TravelPlanChatUiContractTest {
                 .contains("max-width: calc(100vw - 48px)");
         // 많아지면 채팅 패널을 밀지 않고 이 안에서만 넘긴다
         assertThat(panel)
-                .contains("max-height: 232px")
+                .contains("max-height: min(232px, calc(70vh - 96px))")
                 .contains("overflow-y: auto");
         assertThat(css).contains(".travel-plan-chat-emoji-panel::-webkit-scrollbar");
     }
@@ -1098,6 +1098,85 @@ class TravelPlanChatUiContractTest {
                 .doesNotContain("selectionType")
                 .doesNotContain("options")
                 .doesNotContain("vote");
+    }
+
+    @Test
+    void aLowScreenKeepsTheChatHeaderOutFromUnderThePageHeader() throws IOException {
+        String css = cssFile();
+        String panel = between(css, ".travel-plan-chat-panel {", "\n}");
+
+        // 대화가 없어도 같은 크기로 열린다는 것은 그대로다
+        assertThat(panel).contains("height: 500px");
+
+        /*
+          낮은 화면에서는 위를 비워 둔다. 끝까지 올라오면 채팅 머리글과 닫기 버튼이
+          페이지 헤더(z-index 1000) 밑에 깔려 닫을 길이 없어진다.
+        */
+        assertThat(panel).contains("max-height: min(70vh, calc(100vh - 56px))");
+
+        /*
+          주소창이 접혔다 펴지는 모바일에서는 vh 가 실제로 보이는 높이보다 크다.
+          dvh 로 한 번 더 적어 두되, 모르는 브라우저가 vh 로 읽도록 뒤에 둔다.
+        */
+        assertThat(panel).contains("max-height: min(70dvh, calc(100dvh - 56px))");
+        assertThat(panel.indexOf("100dvh")).as("dvh 가 vh 뒤에 온다")
+                .isGreaterThan(panel.indexOf("100vh"));
+
+        // 좁은 화면 두 곳도 같은 짝을 갖춘다
+        assertThat(countOf(css, "max-height: min(70dvh")).isEqualTo(3);
+    }
+
+    @Test
+    void theReactionChoicesOpenFromTheMessageLineNotTheTinyButton() throws IOException {
+        String css = cssFile();
+
+        /*
+          ☺ 버튼은 24px 이라 말풍선이 길어지면 패널 가장자리까지 밀린다.
+          거기서 펴면 188px 짜리 반응 줄이 패널 밖으로 나간다.
+          기준은 말풍선 줄이어야 한다. 줄은 패널의 78% 를 넘지 않는다.
+        */
+        assertThat(between(css, ".travel-plan-chat-row {", "\n}"))
+                .contains("position: relative")
+                .contains("max-width: 78%");
+        assertThat(between(css, ".travel-plan-chat-react {", "\n}"))
+                .as("버튼이 다시 기준이 되면 긴 말풍선에서 잘린다")
+                .doesNotContain("position: relative");
+
+        // 남의 말은 줄 왼쪽 끝, 내 말은 줄 오른쪽 끝에서 안쪽으로 편다
+        assertThat(between(css, ".travel-plan-chat-react-menu {", "\n}"))
+                .contains("position: absolute")
+                .contains("left: 0");
+        assertThat(between(css,
+                ".travel-plan-chat-message.is-mine .travel-plan-chat-react-menu {", "\n}"))
+                .contains("left: auto")
+                .contains("right: 0");
+    }
+
+    @Test
+    void theEmojiPanelShrinksWithTheChatPanelOnALowScreen() throws IOException {
+        String panel = between(cssFile(), ".travel-plan-chat-emoji-panel {", "\n}");
+
+        /*
+          채팅 패널이 화면의 70% 로 줄면 이 상자도 같이 줄어야 한다.
+          패널이 모서리를 다듬느라 overflow 를 잘라 두어서, 높이를 고집하면
+          위쪽이 잘려 나간다.
+        */
+        assertThat(panel).contains("max-height: min(232px, calc(70dvh - 96px))");
+        assertThat(panel.indexOf("70dvh")).as("dvh 가 vh 뒤에 온다")
+                .isGreaterThan(panel.indexOf("70vh"));
+        // 줄어든 만큼은 안에서 넘겨 본다. 격자는 옆으로 밀리지 않는다
+        assertThat(panel).contains("overflow-y: auto");
+    }
+
+    @Test
+    void aLongSenderNameFoldsInsteadOfBeingCutOff() throws IOException {
+        String sender = between(cssFile(), ".travel-plan-chat-sender {", "\n}");
+
+        assertThat(sender)
+                // 말풍선과 같은 폭 안에 선다
+                .contains("max-width: 78%")
+                // 띄어쓰기 없는 긴 이름도 패널 밖으로 잘려 나가지 않는다
+                .contains("overflow-wrap: break-word");
     }
 
     private String detailHtml() throws IOException {

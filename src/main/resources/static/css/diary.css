@@ -401,27 +401,44 @@
     min-width: 0;
 }
 
-/* 새 여행일기 만들기: 컴팩트한 primary 버튼 */
+/*
+  새 여행일기: 툴바에 함께 서는 작은 primary 버튼.
+
+  검색칸과 정렬이 36px 이라 이 버튼만 크면 툴바에서 혼자 튄다.
+  높이는 그 둘보다 2px 만 높여 주된 액션이라는 것만 알리고,
+  굵기와 글자 수를 줄여 진한 갈색 덩어리로 보이지 않게 한다.
+  위아래 padding 은 두지 않는다. 높이는 min-height 하나가 정한다.
+*/
 .diary-new-button {
     display: inline-flex;
     flex: 0 0 auto;
     align-items: center;
     justify-content: center;
+    gap: 5px;
     min-height: 38px;
-    padding: 8px 16px;
+    padding: 0 16px;
     border: 1px solid #6f5a3c;
-    border-radius: 8px;
+    border-radius: 9px;
     background: #6f5a3c;
     color: #fff;
     font-size: 14px;
-    font-weight: 700;
+    font-weight: 600;
+    white-space: nowrap;
     text-decoration: none;
-    transition: background-color 160ms ease, border-color 160ms ease;
+    transition: background-color 140ms ease, border-color 140ms ease;
 }
 
+/* 아이콘을 따로 들이지 않는다. 더하기 하나면 무엇을 하는 곳인지 읽힌다 */
+.diary-new-button-plus {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1;
+}
+
+/* 눌러도 되는 곳이라는 것만 알린다. 색이 크게 바뀌지 않는다 */
 .diary-new-button:hover {
-    background: #5c4a31;
-    border-color: #5c4a31;
+    background: #655237;
+    border-color: #655237;
 }
 
 .diary-new-button:focus-visible {
@@ -1278,8 +1295,14 @@
     color: #c9c1b4;
 }
 
+/*
+  빈 화면에서는 이 버튼이 유일하게 할 일이라 조금만 더 여유를 준다.
+  모양·글꼴·hover 는 툴바 버튼 그대로다. 폭을 꽉 채우지 않는다.
+*/
 .diary-empty .diary-new-button {
     margin-top: 18px;
+    min-height: 42px;
+    padding: 0 20px;
 }
 
 /* ===== 새 여행일기 작성 ===== */

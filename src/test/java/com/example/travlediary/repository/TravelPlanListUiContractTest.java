@@ -210,10 +210,75 @@ class TravelPlanListUiContractTest {
     }
 
     @Test
+    void theSectionHeadingsUseTheSameInkAsTheRowsBelowThem() throws IOException {
+        String css = resource("/static/css/travel-plan.css");
+
+        // 제목·숫자·구분선이 목록 줄과 같은 계열을 쓴다
+        assertThat(between(css, ".travel-plan-list-header h1 {", "}"))
+                .contains("color: var(--tp-card-ink)");
+        assertThat(between(css, ".travel-plan-section-title {", "}"))
+                .contains("color: var(--tp-card-ink)");
+        assertThat(between(css, ".travel-plan-section-count {", "}"))
+                .contains("color: var(--tp-card-ink-faint)");
+        assertThat(between(css, ".travel-plan-section + .travel-plan-section {", "}"))
+                .contains("border-top: 1px solid var(--tp-card-line)");
+        /*
+          끝난 여행 제목은 한 톤 차분하되 읽기 어려울 만큼 흐리지 않다.
+          가장 연한 잉크(--tp-card-ink-faint)까지 내리지 않는다.
+        */
+        assertThat(between(css,
+                ".travel-plan-section.is-completed .travel-plan-section-title {", "}"))
+                .contains("color: var(--tp-card-ink-soft)");
+
+        // 목록 화면 규칙에는 갈색·베이지가 남아 있지 않다
+        String list = between(css, "/* ───── 함께 계획하기 목록 ───── */",
+                "/* ───── 메인 협업 플래너");
+        assertThat(list)
+                .doesNotContain("#3f3426")
+                .doesNotContain("#e8e1d5")
+                .doesNotContain("#a1968a")
+                .doesNotContain("#6b6259");
+    }
+
+    @Test
     void theWarmPageBackgroundIsLeftAlone() throws IOException {
         // 사이트 색을 바꾸는 것이 아니다. 바탕은 그대로 따뜻하다
         assertThat(between(resource("/static/css/travel-plan.css"), ":root {", "}"))
                 .contains("--tp-page: #f5f2ec");
+    }
+
+    @Test
+    void aLongTitleEndsInAnEllipsisInsteadOfPushingThePageWider() throws IOException {
+        String css = resource("/static/css/travel-plan.css");
+
+        /*
+          flex 칸의 기본 최소 폭은 내용 크기다. 줄바꿈을 막아 둔 글자는
+          그 폭이 곧 제목 전체 길이라, min-width 를 0 으로 내려 두지 않으면
+          칸이 줄지 못해 제목이 카드 밖으로 나가고 가로 스크롤이 생긴다.
+        */
+        assertThat(between(css, ".travel-plan-card-title {", "}"))
+                .contains("min-width: 0")
+                .contains("overflow: hidden")
+                .contains("text-overflow: ellipsis")
+                .contains("white-space: nowrap");
+        // 제목을 담은 줄도 줄어들 수 있어야 한다
+        assertThat(between(css, ".travel-plan-card-title-row {", "}")).contains("min-width: 0");
+        // 상태 표시는 줄어들지 않고 제 크기를 지킨다
+        assertThat(between(css, ".travel-plan-card-role {", "}")).contains("flex: 0 0 auto");
+        assertThat(between(css, ".travel-plan-card-completed {", "}")).contains("flex: 0 0 auto");
+    }
+
+    @Test
+    void nothingInTheListForcesTheScreenWider() throws IOException {
+        String css = resource("/static/css/travel-plan.css");
+
+        // 기간·일수·인원은 좁으면 다음 줄로 접힌다
+        assertThat(between(css, ".travel-plan-card-meta {", "}")).contains("flex-wrap: wrap");
+        // 제목과 만들기 버튼도 한 줄에서 눌리지 않고 접힌다
+        assertThat(between(css, ".travel-plan-list-header {", "}")).contains("flex-wrap: wrap");
+        assertThat(between(css, ".travel-plan-list-heading {", "}")).contains("min-width: 0");
+        // 쪽 이동도 한 줄을 넘기면 접힌다
+        assertThat(between(css, ".travel-plan-pagination {", "}")).contains("flex-wrap: wrap");
     }
 
     @Test

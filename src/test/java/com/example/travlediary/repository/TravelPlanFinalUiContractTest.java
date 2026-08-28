@@ -231,6 +231,43 @@ class TravelPlanFinalUiContractTest {
                 .doesNotContain("휴지통");
     }
 
+    @Test
+    void everythingPeopleTypedFoldsInsteadOfWideningThePaper() throws IOException {
+        String css = resource("/static/css/travel-plan.css");
+
+        /*
+          최종본은 작성 화면과 같은 줄·대안 규칙을 그대로 쓴다.
+          한쪽만 고치면 다른 쪽에서 같은 문제가 되살아나므로 함께 묶어 둔다.
+        */
+        for (String rule : new String[]{
+                ".travel-plan-line-content {",
+                ".travel-plan-alt-content {",
+                ".travel-plan-alt-condition {"}) {
+            assertThat(between(css, rule, "\n}")).as("%s", rule)
+                    .contains("overflow-wrap: break-word");
+        }
+        // 줄 안의 본문 칸은 최소 폭 바닥이 풀려 있어야 접힌다
+        for (String rule : new String[]{
+                ".travel-plan-line-body {", ".travel-plan-alt-body {"}) {
+            assertThat(between(css, rule, "\n}")).as("%s", rule).contains("min-width: 0");
+        }
+        // 완료 시점의 참여자 줄도 마찬가지다
+        assertThat(between(css, ".travel-plan-final-members {", "\n}"))
+                .contains("overflow-wrap: break-word");
+    }
+
+    @Test
+    void theFinalPaperGrowsDownwardsWithoutAScrollBoxOfItsOwn() throws IOException {
+        String paper = between(resource("/static/css/travel-plan.css"),
+                ".travel-plan-paper {", "\n}");
+
+        // 90일짜리 여행도 문서가 그대로 길어진다. 안에서 따로 넘기지 않는다
+        assertThat(paper)
+                .contains("max-width: 900px")
+                .doesNotContain("height:")
+                .doesNotContain("overflow");
+    }
+
     private int countOf(String source, String needle) {
         int count = 0;
         for (int index = source.indexOf(needle); index >= 0;
