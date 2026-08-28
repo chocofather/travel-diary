@@ -275,20 +275,22 @@ class TravelPlanCreateFormUiContractTest {
         // 닫혀 있는 투표 만들기 창 안에만 있다
         // (확정 확인 창은 방장 전용 조각으로 옮겨 갔다)
         assertThat(countOf(detail, ">취소</button>")).isEqualTo(3);
-        assertThat(countOf(ownerActionsHtml(), ">취소</button>")).isEqualTo(1);
+        // 방장 전용 조각의 확인 창 둘(확정 / 방 삭제)에 하나씩 있다
+        assertThat(countOf(ownerActionsHtml(), ">취소</button>")).isEqualTo(2);
         // 모든 textarea 는 닫힌 폼·패널 안에 있다
         // (추가 슬롯 1 + 일정 수정 1 + 대안 2 + 닫혀 있는 채팅 입력 1)
         assertThat(countOf(detail, "<textarea")).isEqualTo(5);
         assertThat(countOf(detail, "th:hidden=\"${!dayOpen}\"")).isEqualTo(1);
         assertThat(countOf(detail, "class=\"travel-plan-item-editor\" method=\"post\" hidden"))
                 .isEqualTo(1);
-        // 따로 뜨는 창은 투표 센터와 확정 확인 둘뿐이고, 둘 다 닫힌 채로 시작한다
-        // (확정 확인은 방장 전용 조각에 있다)
+        // 따로 뜨는 창은 투표 센터와 방장 전용 확인 창 둘이고, 모두 닫힌 채로 시작한다
         assertThat(countOf(detail, "role=\"dialog\"")).isEqualTo(1);
         assertThat(detail).contains("class=\"travel-plan-poll-modal\" hidden role=\"dialog\"");
-        assertThat(countOf(ownerActionsHtml(), "role=\"dialog\"")).isEqualTo(1);
+        // 방장 전용 조각의 확인 창: 확정과 방 삭제
+        assertThat(countOf(ownerActionsHtml(), "role=\"dialog\"")).isEqualTo(2);
         assertThat(ownerActionsHtml())
-                .contains("class=\"travel-plan-finalize-modal\" hidden role=\"dialog\"");
+                .contains("class=\"travel-plan-finalize-modal\" hidden role=\"dialog\"")
+                .contains("class=\"travel-plan-plan-delete-modal\" hidden role=\"dialog\"");
     }
 
     @Test

@@ -80,6 +80,10 @@ class TravelPlanControllerTest {
     @MockitoBean
     private com.example.travlediary.service.travelplan.TravelPlanFinalDeleteService
             travelPlanFinalDeleteService;
+    /** 진행 중인 방 통째로 지우기. 방장만 할 수 있다. */
+    @MockitoBean
+    private com.example.travlediary.service.travelplan.TravelPlanDeleteService
+            travelPlanDeleteService;
     @MockitoBean
     private CustomLoginSuccessHandler customLoginSuccessHandler;
     @MockitoBean
@@ -671,6 +675,53 @@ class TravelPlanControllerTest {
         mockMvc.perform(post("/travel-plans/42/final/delete").with(csrf()))
                 .andExpect(status().is3xxRedirection());
         verify(travelPlanFinalDeleteService, never()).deleteForMe(anyLong(), anyLong());
+    }
+
+    // ── 진행 중인 방 통째로 지우기 ──────────────────────────
+
+    @Test
+    void closingTheRoomSendsTheOwnerBackToTheList() throws Exception {
+        mockMvc.perform(post("/travel-plans/42/delete")
+                        .with(user(member())).with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/travel-plans"))
+                .andExpect(flash().attribute("travelPlanMessage", "여행 계획을 삭제했습니다."));
+
+        // 지울 수 있는지는 Service 가 본다. 화면은 부탁만 한다
+        verify(travelPlanDeleteService).deletePlan(7L, 42L);
+    }
+
+    @Test
+    void closingSomeoneElsesRoomIsRefusedWithoutRevealingIt() throws Exception {
+        // 방장이 아닌 사람의 직접 요청. 그 방이 있는지조차 알리지 않는다
+        doThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "여행계획을 찾을 수 없습니다."))
+                .when(travelPlanDeleteService).deletePlan(anyLong(), anyLong());
+
+        mockMvc.perform(post("/travel-plans/42/delete")
+                        .with(user(member())).with(csrf()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void aRoomIsNeverClosedByFollowingALink() throws Exception {
+        // GET 으로는 지워지지 않는다
+        mockMvc.perform(get("/travel-plans/42/delete").with(user(member())))
+                .andExpect(status().isMethodNotAllowed());
+        verify(travelPlanDeleteService, never()).deletePlan(anyLong(), anyLong());
+    }
+
+    @Test
+    void closingARoomWithoutATokenIsRefused() throws Exception {
+        mockMvc.perform(post("/travel-plans/42/delete").with(user(member())))
+                .andExpect(status().isForbidden());
+        verify(travelPlanDeleteService, never()).deletePlan(anyLong(), anyLong());
+    }
+
+    @Test
+    void anonymousRoomClosingIsSentToLogin() throws Exception {
+        mockMvc.perform(post("/travel-plans/42/delete").with(csrf()))
+                .andExpect(status().is3xxRedirection());
+        verify(travelPlanDeleteService, never()).deletePlan(anyLong(), anyLong());
     }
 
     @Test
@@ -1290,6 +1341,45 @@ class TravelPlanControllerTest {
     }
 
     @Test
+    void theParticipantListSaysNothingAboutClosingTheRoom() throws Exception {
+        when(travelPlanService.getActivePlanMembers(7L, 42L)).thenReturn(membersOf(
+                new com.example.travlediary.dto.TravelPlanMemberDto(
+                        11L, "민준", com.example.travlediary.model.TravelPlanRole.OWNER, true),
+                new com.example.travlediary.dto.TravelPlanMemberDto(
+                        12L, "쭈니", com.example.travlediary.model.TravelPlanRole.MEMBER, false)));
+
+        String body = mockMvc.perform(
+                        get("/travel-plans/42/members/fragment").with(user(member())))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        // 방을 지우는 것은 참여자 관리가 아니라 방 관리다. 여기에는 오지 않는다
+        assertThat(body)
+                .doesNotContain("data-travel-plan-plan-delete-open")
+                .doesNotContain("여행 계획 삭제")
+                // 방장은 먼저 방장을 넘겨야 나갈 수 있다. 나가기도 여기 없다
+                .doesNotContain("여행에서 나가기");
+    }
+
+    @Test
+    void aPlainMemberStillOnlyGetsTheWayOut() throws Exception {
+        when(travelPlanService.getActivePlanMembers(8L, 42L)).thenReturn(membersSeenByMember(
+                new com.example.travlediary.dto.TravelPlanMemberDto(
+                        11L, "민준", com.example.travlediary.model.TravelPlanRole.OWNER, false),
+                new com.example.travlediary.dto.TravelPlanMemberDto(
+                        12L, "쭈니", com.example.travlediary.model.TravelPlanRole.MEMBER, true)));
+
+        String body = mockMvc.perform(
+                        get("/travel-plans/42/members/fragment").with(user(plainMember())))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body)
+                .doesNotContain("여행 계획 삭제")
+                .contains("여행에서 나가기");
+    }
+
+    @Test
     void theMemberListFragmentIsNotAWholePage() throws Exception {
         // 패널 속만 갈아 끼우므로 껍데기가 딸려 오면 안 된다
         when(travelPlanService.getActivePlanMembers(7L, 42L)).thenReturn(membersOf(
@@ -1334,7 +1424,15 @@ class TravelPlanControllerTest {
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "data-travel-plan-invite")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "data-travel-plan-finalize-modal")));
+                        "data-travel-plan-finalize-modal")))
+                /*
+                  방 삭제도 방장의 방 관리다. 넘겨받은 사람에게 진입점과 확인 창이
+                  함께 따라와야 그 자리에서 바로 눌린다.
+                */
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "data-travel-plan-plan-delete-open")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "data-travel-plan-plan-delete-modal")));
     }
 
     @Test
@@ -1350,7 +1448,10 @@ class TravelPlanControllerTest {
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("data-travel-plan-finalize"))))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
-                        org.hamcrest.Matchers.containsString("data-travel-plan-invite"))));
+                        org.hamcrest.Matchers.containsString("data-travel-plan-invite"))))
+                // 넘겨준 사람에게는 방 삭제도 진입점과 창이 함께 사라진다
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("travel-plan-plan-delete"))));
     }
 
     @Test
@@ -1405,6 +1506,30 @@ class TravelPlanControllerTest {
         current.setRole(com.example.travlediary.model.TravelPlanRole.OWNER);
         return new com.example.travlediary.dto.TravelPlanMembersDto(
                 plan, current, List.of(members), List.of(), 8);
+    }
+
+    /** 같은 명단을 방장이 아닌 사람이 볼 때. 보는 사람의 역할만 다르다. */
+    private com.example.travlediary.dto.TravelPlanMembersDto membersSeenByMember(
+            com.example.travlediary.dto.TravelPlanMemberDto... members) {
+        com.example.travlediary.model.TravelPlan plan =
+                new com.example.travlediary.model.TravelPlan();
+        plan.setId(42L);
+        com.example.travlediary.model.TravelPlanMember current =
+                new com.example.travlediary.model.TravelPlanMember();
+        current.setId(12L);
+        current.setRole(com.example.travlediary.model.TravelPlanRole.MEMBER);
+        return new com.example.travlediary.dto.TravelPlanMembersDto(
+                plan, current, List.of(members), List.of(), 8);
+    }
+
+    /** 방장이 아닌 로그인 사용자. */
+    private CustomUserDetails plainMember() {
+        User user = new User();
+        user.setId(8L);
+        user.setUsername("junnie");
+        user.setUserPassword("password");
+        user.setUserRole(UserRole.USER);
+        return new CustomUserDetails(user);
     }
 
     private CustomUserDetails member() {

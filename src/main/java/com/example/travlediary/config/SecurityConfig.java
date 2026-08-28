@@ -147,6 +147,9 @@ public class SecurityConfig {
                         // 완료된 여행을 내 목록에서만 지우기
                         new RegexRequestMatcher(
                                 "^/travel-plans/[0-9]+/final/delete$", HttpMethod.POST.name()),
+                        // 진행 중인 방을 방장이 통째로 지우기 (위의 개인 삭제와 다른 일이다)
+                        new RegexRequestMatcher(
+                                "^/travel-plans/[0-9]+/delete$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(
                                 "^/travel-plans/[0-9]+/days/[0-9]+/items$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(

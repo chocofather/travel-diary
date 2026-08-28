@@ -96,7 +96,9 @@ public interface TravelPlanMapper {
      * 모두 travel_plans 를 향한 ON DELETE CASCADE 로 함께 사라진다.
      * 작성자 표시(created_by_member_id)처럼 SET NULL 인 자리도 참여자와 함께 정리된다.
      *
-     * <p>상태 조건이 안전장치다. 진행 중인 방(ACTIVE)에는 어떤 경우에도 닿지 않는다.
+     * <p>상태 조건이 안전장치다. 부르는 쪽이 어느 상태의 방을 지우려는지 분명히 적어야 하고,
+     * 그 사이 상태가 달라졌으면 0 이 돌아온다. 지금 이 문을 지나는 길은 둘이다 —
+     * 아무도 보관하지 않게 된 완료본(COMPLETED)과, 방장이 접는 진행 중인 방(ACTIVE).
      *
      * @return 1 이면 방금 이 호출이 지웠고, 0 이면 그 사이 이미 사라졌거나 상태가 다르다.
      */

@@ -1086,6 +1086,42 @@
     cursor: pointer;
 }
 
+/*
+  방 삭제. 상단 줄에서 가장 낮은 위계다.
+
+  옆의 초대와 크기·모서리는 같지만 테두리를 두르지 않는다.
+  되돌릴 수 없는 일이라 눈에 먼저 들어와서는 안 되고,
+  그렇다고 무엇을 하는 버튼인지 모르게 두어서도 안 되어
+  평소에는 옅은 rose 글자 하나로만 서 있는다.
+  손을 얹었을 때만 바탕이 아주 옅게 깔리며 뜻이 분명해진다.
+*/
+.travel-plan-plan-delete-entry {
+    flex: 0 0 auto;
+}
+
+.travel-plan-plan-delete {
+    padding: 4px 10px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: none;
+    color: #9a7d78;
+    font-family: inherit;
+    font-size: 13px;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.travel-plan-plan-delete:hover {
+    border-color: #f0dbd8;
+    background: #fdf4f3;
+    color: #b42318;
+}
+
+.travel-plan-plan-delete:focus-visible {
+    outline: 2px solid #b42318;
+    outline-offset: 1px;
+}
+
 .travel-plan-invite-toggle:hover,
 .travel-plan-invite-toggle[aria-expanded="true"] {
     border-color: var(--tp-plan-line-strong);
@@ -3875,7 +3911,13 @@
     background: #e7eeea;
 }
 
-.travel-plan-finalize-modal {
+/*
+  방장이 되돌릴 수 없는 일을 하기 전에 뜨는 창은 확정과 삭제 둘이다.
+  같은 자리에 같은 모양으로 떠야 해서 규칙을 나눠 갖는다.
+  다른 것은 마지막 버튼의 색뿐이다.
+*/
+.travel-plan-finalize-modal,
+.travel-plan-plan-delete-modal {
     position: fixed;
     inset: 0;
     /* 투표 센터와 같은 층. 페이지와 채팅을 함께 덮는다 */
@@ -3891,11 +3933,13 @@
   여기 display 를 정해 두면 브라우저 기본 [hidden] 규칙을 덮어써
   hidden 을 걸어도 창이 계속 보인다. 그래서 hidden 일 때를 따로 적어 준다.
 */
-.travel-plan-finalize-modal[hidden] {
+.travel-plan-finalize-modal[hidden],
+.travel-plan-plan-delete-modal[hidden] {
     display: none;
 }
 
-.travel-plan-finalize-panel {
+.travel-plan-finalize-panel,
+.travel-plan-plan-delete-panel {
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -3911,14 +3955,16 @@
     overflow-y: auto;
 }
 
-.travel-plan-finalize-title {
+.travel-plan-finalize-title,
+.travel-plan-plan-delete-title {
     margin: 0;
     color: var(--tp-ink);
     font-size: 17px;
     font-weight: 700;
 }
 
-.travel-plan-finalize-text {
+.travel-plan-finalize-text,
+.travel-plan-plan-delete-text {
     margin: 0;
     color: var(--tp-ink-soft);
     font-size: 14px;
@@ -3961,11 +4007,41 @@
     display: none;
 }
 
-.travel-plan-finalize-actions {
+.travel-plan-finalize-actions,
+.travel-plan-plan-delete-actions {
     display: flex;
+    align-items: center;
     justify-content: flex-end;
     gap: 8px;
     margin-top: 4px;
+}
+
+/*
+  지우는 쪽에만 위계를 준다.
+  큰 빨간 덩어리로 두지 않는다. 옅은 바탕과 또렷한 글자면 무슨 버튼인지 읽히고,
+  손을 얹었을 때만 한 단계 더 분명해진다.
+  크기와 모서리는 옆의 "취소"(.travel-plan-poll-cancel)와 같다.
+*/
+.travel-plan-plan-delete-confirm {
+    padding: 7px 14px;
+    border: 1px solid #e8c4c0;
+    border-radius: 8px;
+    background: #fdf4f3;
+    color: #b42318;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.travel-plan-plan-delete-confirm:hover {
+    border-color: #d99b95;
+    background: #fbe9e7;
+}
+
+.travel-plan-plan-delete-confirm:focus-visible {
+    outline: 2px solid #b42318;
+    outline-offset: 2px;
 }
 
 /* ── 완료된 여행 계획 ── */

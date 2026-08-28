@@ -109,9 +109,15 @@ class TravelPlanFinalizeUiContractTest {
     void hidingTheConfirmationActuallyHidesIt() throws IOException {
         String css = cssFile();
 
-        // display 를 정해 두면 브라우저 기본 [hidden] 규칙을 덮어써 계속 보인다
-        assertThat(between(css, ".travel-plan-finalize-modal {", "}")).contains("display: flex");
-        assertThat(css).contains(".travel-plan-finalize-modal[hidden] {\n    display: none;\n}");
+        /*
+          display 를 정해 두면 브라우저 기본 [hidden] 규칙을 덮어써 계속 보인다.
+          확정 창과 삭제 창이 같은 모양이라 규칙을 나눠 갖는다.
+        */
+        assertThat(between(css,
+                ".travel-plan-finalize-modal,\n.travel-plan-plan-delete-modal {", "\n}"))
+                .contains("display: flex");
+        assertThat(css).contains(".travel-plan-finalize-modal[hidden],\n"
+                + ".travel-plan-plan-delete-modal[hidden] {\n    display: none;\n}");
     }
 
     @Test

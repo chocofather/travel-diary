@@ -96,6 +96,19 @@
     </div>
 
     <!--
+      방을 통째로 접는 것도 방장의 방 관리다. 참여자 관리가 아니라서
+      참여자 팝오버가 아니라 이 줄에 선다.
+
+      되돌릴 수 없는 일이지만 확정처럼 색을 채우지 않는다.
+      평소에는 옅은 글자 하나로만 있고, 손을 얹었을 때 뜻이 분명해진다.
+      누르자마자 지우지 않는다. 아래 확인 창이 먼저 뜬다.
+    -->
+    <div class="travel-plan-plan-delete-entry">
+      <button type="button" class="travel-plan-plan-delete"
+              data-travel-plan-plan-delete-open>여행 계획 삭제</button>
+    </div>
+
+    <!--
       여기까지가 방장만 할 수 있는 것이고, 오른쪽은 누구나 쓰는 참여자/채팅이다.
       구분선을 이 조각 안에 두어 멤버 화면에서는 선까지 함께 사라진다.
     -->
@@ -135,6 +148,41 @@
           <!-- 쓰고 있는 사람이 있으면 "그래도 완료" 로 바뀐다 -->
           <button type="button" class="travel-plan-poll-submit"
                   data-travel-plan-finalize-confirm>여행 계획 확정</button>
+        </div>
+      </div>
+    </div>
+
+    <!--
+      삭제 확인. 위의 진입점과 같은 조각에 둔다.
+
+      방장이 바뀌면 이 조각이 통째로 갈리는데, 그때 진입점만 옮겨 가고 창이
+      다른 곳에 남으면 넘겨받은 사람에게는 열 창이 없고 넘겨준 사람 화면에는
+      쓸 일 없는 창이 남는다. 둘은 함께 나타나고 함께 사라져야 한다.
+
+      확정과 달리 물어볼 것이 없어 서버에 미리 확인하지 않는다.
+      누르면 그대로 form 이 넘어가고, 지울 수 있는지는 서버가 그때 본다.
+    -->
+    <div class="travel-plan-plan-delete-modal" hidden role="dialog" aria-modal="true"
+         aria-labelledby="travel-plan-plan-delete-title"
+         data-travel-plan-plan-delete-modal>
+      <div class="travel-plan-plan-delete-panel">
+        <h2 id="travel-plan-plan-delete-title" class="travel-plan-plan-delete-title">
+          여행 계획을 삭제할까요?
+        </h2>
+        <p class="travel-plan-plan-delete-text">
+          함께 작성한 일정, 채팅, 투표 등 모든 내용이 삭제되며 참여자들도 더 이상
+          이 계획을 이용할 수 없습니다. 삭제한 계획은 복구할 수 없습니다.
+        </p>
+
+        <div class="travel-plan-plan-delete-actions">
+          <button type="button" class="travel-plan-poll-cancel"
+                  data-travel-plan-plan-delete-cancel>취소</button>
+          <!-- 되돌릴 수 없는 쪽에만 위계를 준다 -->
+          <form method="post"
+                th:action="@{|/travel-plans/${travelPlan.plan.id}/delete|}">
+            <button type="submit" class="travel-plan-plan-delete-confirm"
+                    data-travel-plan-plan-delete-confirm>여행 계획 삭제</button>
+          </form>
         </div>
       </div>
     </div>

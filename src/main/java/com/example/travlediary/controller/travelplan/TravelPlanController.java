@@ -11,6 +11,7 @@ import com.example.travlediary.dto.TravelPlanMembersDto;
 import com.example.travlediary.model.TravelPlanDay;
 import com.example.travlediary.service.travelplan.TravelPlanAccessNotice;
 import com.example.travlediary.service.travelplan.TravelPlanConflictException;
+import com.example.travlediary.service.travelplan.TravelPlanDeleteService;
 import com.example.travlediary.service.travelplan.TravelPlanFinalDeleteService;
 import com.example.travlediary.service.travelplan.TravelPlanFinalReadService;
 import com.example.travlediary.security.CustomUserDetails;
@@ -99,6 +100,8 @@ public class TravelPlanController {
     private final TravelPlanFinalReadService travelPlanFinalReadService;
     /** 완료된 여행 지우기. 마지막 한 사람이 지우면 그 여행 자체가 사라진다. */
     private final TravelPlanFinalDeleteService travelPlanFinalDeleteService;
+    /** 진행 중인 방 통째로 지우기. 방장만 할 수 있고 되돌릴 수 없다. */
+    private final TravelPlanDeleteService travelPlanDeleteService;
 
     /**
      * 함께 계획하기 목록.
@@ -142,6 +145,25 @@ public class TravelPlanController {
         } catch (NumberFormatException exception) {
             return 1;
         }
+    }
+
+    /**
+     * 진행 중인 여행 계획을 통째로 지운다. 방장만 할 수 있다.
+     *
+     * <p>화면에 버튼이 보였는지는 여기서 보지 않는다. 방장인지도, 아직 진행 중인 방인지도
+     * Service 가 다시 확인한다. 방장이 아니면 그 방이 있는지조차 알리지 않는다(404).
+     *
+     * <p>참여자를 한 명씩 내보내는 것이 아니라 방이 사라진다. 같은 방을 열어 두고 있던
+     * 사람들은 실시간 알림을 받고 각자 목록으로 나온다.
+     */
+    @PostMapping("/{travelPlanId:\\d+}/delete")
+    public String deletePlan(@PathVariable Long travelPlanId,
+                             @AuthenticationPrincipal CustomUserDetails userDetails,
+                             RedirectAttributes redirectAttributes) {
+        travelPlanDeleteService.deletePlan(userDetails.getId(), travelPlanId);
+        redirectAttributes.addFlashAttribute("travelPlanMessage", "여행 계획을 삭제했습니다.");
+        // 방이 없어졌으므로 돌아갈 곳은 목록뿐이다.
+        return "redirect:/travel-plans";
     }
 
     /**

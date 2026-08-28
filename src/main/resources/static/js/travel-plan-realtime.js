@@ -621,6 +621,11 @@ document.addEventListener("DOMContentLoaded", () => {
                     document.dispatchEvent(new CustomEvent("travelplan:plan-completed"));
                     return;
                 }
+                if (payload.type === "PLAN_DELETED") {
+                    // 방장이 방을 접었다. 완료와 달리 남는 것이 없어 그대로 목록으로 나간다.
+                    document.dispatchEvent(new CustomEvent("travelplan:plan-deleted"));
+                    return;
+                }
                 (payload.affectedDayIds || []).forEach(refreshDay);
             } catch (error) {
                 // 알 수 없는 형식이면 화면을 건드리지 않는다.
