@@ -6,6 +6,8 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -65,6 +67,27 @@ class DiaryNotebookTypeMapperContractTest {
         // DB 기본값과 같은 값이 코드의 기본값이다
         assertThat(DiaryNotebookType.CLASSIC.getCssClass()).isEqualTo("diary-book-classic");
         assertThat(DiaryNotebookType.SPIRAL.getCssClass()).isEqualTo("diary-book-spiral");
+    }
+
+    /** 문서에 옮겨 적어 둔 실제 DB 구조가 지금 쓰는 칸과 어긋나지 않게 한다. */
+    @Test
+    void theSchemaDocumentDescribesTheColumnTheCodeUses() throws IOException {
+        String schema = Files.readString(
+                Path.of("docs/db/travel_diary_schema_reference.md"), StandardCharsets.UTF_8);
+        String table = between(schema, "CREATE TABLE `diaries`", "ENGINE=");
+
+        assertThat(table).contains("`notebook_type` varchar(20) NOT NULL DEFAULT 'CLASSIC'");
+        // 표지 바로 다음 자리다 (한 권의 생김새를 이루는 두 축이 붙어 있다)
+        assertThat(table.indexOf("`notebook_type`"))
+                .isGreaterThan(table.indexOf("`cover_style`"))
+                .isLessThan(table.indexOf("`created_at`"));
+
+        // 두 축의 뜻과 허용 값도 코드와 같은 말로 적어 둔다
+        assertThat(schema).contains("CLASSIC = 일반 노트, SPIRAL = 스프링 노트");
+        assertThat(schema).contains("기본값은 CLASSIC");
+        for (DiaryNotebookType type : DiaryNotebookType.values()) {
+            assertThat(schema).as("%s", type).contains(type.getCode());
+        }
     }
 
     private String diaryMapper() throws IOException {

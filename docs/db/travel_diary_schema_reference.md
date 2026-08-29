@@ -631,6 +631,12 @@ CREATE TABLE `destinations` (
 --   * 페이지 본문은 diary_pages.content 를, 페이지 상단(page_date 오른쪽)의 짧은 한 줄 메모는
 --     diary_pages.page_header 를 사용한다. (예: '제주 여행 첫째 날', 'Day 1 ✈️')
 --   * 그 한 줄 메모의 꾸밈은 page_header_font(글꼴)와 page_header_bold(0 보통 / 1 굵게)로 함께 저장한다.
+--   * 다이어리 한 권의 생김새는 서로 다른 두 축으로 나눠 저장한다.
+--     - cover_style : 표지 디자인. 목록에서 보이는 책 겉모습이다.
+--     - notebook_type : 속지(제본) 타입. 펼쳤을 때의 공책 모양이다.
+--       CLASSIC = 일반 노트, SPIRAL = 스프링 노트. 기본값은 CLASSIC 이다.
+--       한 권에 하나뿐이라 diary_pages 가 아니라 여기에 둔다. (새 장을 더해도 같은 공책이다)
+--       허용 값은 코드의 DiaryNotebookType 이 관리하며, 그 밖의 값은 저장되지 않는다.
 --   * 별도 diary_images 테이블은 없고, 대표 이미지만 diaries.cover_image_url 을 사용한다.
 --   * 요소의 위치/크기는 페이지 크기 기준 0~1 상대값으로 저장한다.
 --
@@ -649,6 +655,7 @@ CREATE TABLE `diaries` (
   `end_date` date NOT NULL,
   `cover_image_url` varchar(255) DEFAULT NULL,
   `cover_style` varchar(30) NOT NULL DEFAULT 'DEFAULT',
+  `notebook_type` varchar(20) NOT NULL DEFAULT 'CLASSIC',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),

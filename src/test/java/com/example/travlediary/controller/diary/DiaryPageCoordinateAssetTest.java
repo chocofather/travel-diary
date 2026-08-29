@@ -34,6 +34,79 @@ class DiaryPageCoordinateAssetTest {
     }
 
     /**
+     * 본문 한 줄의 높이와 줄노트 줄 간격은 실제 길이가 같아야 한다.
+     *
+     * <p>두 값은 재는 자가 다르다. 배경은 종이 높이의 % 이고, 본문은 --diary-page-unit
+     * (= 100cqw / 576) 인데 cqw 는 종이의 안쪽 폭(좌우 여백을 뺀 폭)을 잰다.
+     * 그 환산을 빼먹으면 줄마다 조금씩 밀려, 열 줄쯤마다 어긋났다 되맞았다를 되풀이한다.
+     * 여기서는 선언된 값들만 가지고 두 길이가 실제로 같은지 계산해 본다.
+     */
+    @Test
+    void oneTextLineIsExactlyAsTallAsTheGapBetweenTwoRuledLines() throws IOException {
+        String css = Files.readString(DIARY_CSS);
+
+        double sidePadding = 0.052;                    // .diary-sheet padding 좌우
+        double contentRatio = 1 - 2 * sidePadding;     // cqw 가 재는 폭 / 종이 폭
+        double heightRatio = 38.0 / 41;                // aspect-ratio 41 / 38
+        double backgroundPitch = 0.0562;               // .diary-sheet-bg-lined 의 줄 간격 (종이 높이의 %)
+
+        // 선언된 값이 위 셈과 어긋나면 이 테스트가 먼저 알려 준다
+        assertThat(rule(css, ".diary-sheet")).contains("padding: 5.2% 5.2% 6.95%;");
+        assertThat(rule(css, ".diary-sheet-bg-lined")).contains("rgba(150, 128, 96, 0.17) 5.62%");
+
+        // 종이 폭 = 100cqw / 0.896 이므로 배경 줄 간격을 cqw 로 옮기면
+        double pitchInCqw = backgroundPitch * (100 / contentRatio) * heightRatio;
+        String body = bodyTextRule(css);
+        java.util.regex.Matcher declared = java.util.regex.Pattern
+                .compile("line-height: ([0-9.]+)cqw;").matcher(body);
+        assertThat(declared.find()).as("본문 줄 높이를 cqw 로 적어 두었다").isTrue();
+
+        assertThat(Double.parseDouble(declared.group(1)))
+                .as("본문 한 줄 높이(cqw)").isCloseTo(pitchInCqw, within(0.01));
+
+        /*
+          --diary-page-unit 에는 글자가 작아지지 않게 막는 최소값이 들어 있다.
+          줄 높이가 그 값을 쓰면 좁은 화면에서 줄 높이만 멈추고 배경은 계속 줄어 다시 어긋난다.
+          그래서 줄 높이만 최소값이 없는 cqw 로 직접 잰다. (글자 크기는 최소값을 그대로 쓴다)
+        */
+        assertThat(body).contains("font-size: calc(15 * var(--diary-page-unit));");
+        assertThat(rule(css, ".diary-sheet")).contains("--diary-page-unit: max(0.87px, 100cqw / 576);");
+    }
+
+    /** 본문 글자를 그리는 규칙 한 덩어리. (읽기/편집이 함께 쓴다) */
+    private String bodyTextRule(String css) {
+        int start = css.indexOf("\n.diary-editor .ql-editor,");
+        assertThat(start).as("본문 규칙을 찾지 못했습니다").isNotNegative();
+        return css.substring(start, css.indexOf('}', start));
+    }
+
+    /**
+     * 줄노트의 줄은 종이 자신의 % 로만 그린다.
+     *
+     * <p>--diary-page-unit 은 100cqw 로 만들어지는데, cqw 는 자기 자신이 아니라 바깥
+     * 컨테이너를 잰다. 종이가 곧 컨테이너라, 종이 자신의 배경에서 그 값을 쓰면
+     * 화면 폭이 기준이 되어 줄 간격이 크게 벌어지고 굵은 줄 몇 개만 남는다.
+     * (본문처럼 종이 안쪽 요소에서 쓰는 것은 종이를 재므로 정상이다)
+     */
+    @Test
+    void theRuledLinesAreDrawnFromThePaperOwnPercentagesOnly() throws IOException {
+        String css = Files.readString(DIARY_CSS);
+        String lined = rule(css, ".diary-sheet-bg-lined");
+
+        assertThat(lined).contains("rgba(255, 255, 255, 0) 5.43%")
+                .contains("rgba(150, 128, 96, 0.17) 5.62%");
+        // 종이 자신의 배경에서는 종이 안쪽 단위를 쓰지 않는다
+        assertThat(lined).doesNotContain("--diary-page-unit")
+                .doesNotContain("--diary-line-height");
+        /*
+          종이 전체에 한 번에 그리는 되풀이 그라데이션이어야 줄이 또렷하게 남는다.
+          타일(background-size)로 잘라 붙이면 이음매에서 얇은 줄이 뭉개져 사라진다.
+        */
+        assertThat(lined).contains("repeating-linear-gradient(");
+        assertThat(lined).doesNotContain("background-size").doesNotContain("repeat,");
+    }
+
+    /**
      * 머리말 아래 구분선은 줄노트의 가로줄 하나 위에 앉는다.
      *
      * <p>줄은 종이 아래에서부터 30u 간격이라 위에서 보면 23.81u, 53.81u, 83.81u 자리다.
@@ -164,7 +237,7 @@ class DiaryPageCoordinateAssetTest {
         String css = Files.readString(DIARY_CSS);
 
         assertThat(css).contains("font-size: calc(15 * var(--diary-page-unit));");
-        assertThat(css).contains("line-height: calc(30 * var(--diary-page-unit));");
+        assertThat(css).contains("line-height: 5.8134cqw;");
         assertThat(rule(css, ".diary-sheet-date"))
                 .contains("font-size: calc(13 * var(--diary-page-unit));");
         assertThat(rule(css, ".diary-sheet-number"))
