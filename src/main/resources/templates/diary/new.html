@@ -5,6 +5,9 @@
 <th:block th:fragment="headFragment">
   <link rel="stylesheet" href="/css/diary.css">
   <script src="/js/diary-cover-picker.js" defer></script>
+  <script src="/js/diary-cover-choice.js" defer></script>
+  <!-- 내 디자인 미리보기의 마스킹테이프도 책장과 같은 모습으로 이어 그린다 -->
+  <script src="/js/diary-tape-repeat.js" defer></script>
 </th:block>
 
 <th:block th:fragment="body">
@@ -48,7 +51,8 @@
         </div>
       </div>
 
-      <div class="diary-form-field">
+      <!-- 내 디자인을 고르면 이 자리는 접어 둔다. 표지에 들어갈 사진은 디자인이 들고 있다. -->
+      <div class="diary-form-field" data-cover-image-field>
         <span class="diary-form-label">대표 이미지</span>
         <!-- 기본 파일 선택 버튼은 감추고 아래 picker 로 열되, 제출 시 함께 올라가는 구조는 그대로 둔다. -->
         <input type="file" id="diary-cover-image" name="coverImage" accept="image/*"
@@ -66,8 +70,53 @@
         <span class="diary-form-hint">한 장만 등록할 수 있어요. 선택하지 않으면 기본 표지가 사용됩니다.</span>
       </div>
 
-      <!-- 표지 스타일: 값은 diaries.cover_style 그대로이고, 허용 값 확인은 서버에서 한다 -->
-      <div class="diary-form-field" th:replace="~{diary/cover-style :: picker(${coverStyles}, *{coverStyle})}"></div>
+      <!--
+        표지 고르기. 기본 디자인과 내 디자인 중 하나만 고른다.
+        어느 쪽을 골랐는지는 coverSelectionType 하나로만 전한다. (기본이면 디자인 번호를 비운다)
+      -->
+      <div class="diary-form-field diary-cover-choice" data-cover-choice>
+        <span class="diary-form-label">표지</span>
+        <input type="hidden" name="coverSelectionType" value="PRESET" data-cover-selection />
+        <input type="hidden" name="customCoverDesignId" value="" data-cover-design-id />
+
+        <div class="diary-cover-tabs" role="tablist" aria-label="표지 종류">
+          <button type="button" class="diary-cover-tab is-active" role="tab"
+                  aria-selected="true" data-cover-tab="PRESET">기본 디자인</button>
+          <button type="button" class="diary-cover-tab" role="tab"
+                  aria-selected="false" data-cover-tab="CUSTOM">내 디자인</button>
+        </div>
+
+        <!-- 기본 표지 8종. 예전 그대로다. -->
+        <div data-cover-panel="PRESET">
+          <div th:replace="~{diary/cover-style :: picker(${coverStyles}, *{coverStyle})}"></div>
+        </div>
+
+        <!-- 내 디자인. 보관함과 같은 조각으로 완성된 표지를 그대로 줄여 보여 준다. -->
+        <div data-cover-panel="CUSTOM" hidden>
+          <div class="diary-cover-design-choices" th:unless="${#lists.isEmpty(coverDesigns)}"
+               role="radiogroup" aria-label="내 표지 디자인">
+            <label class="diary-cover-design-choice" th:each="design : ${coverDesigns}">
+              <input type="radio" name="coverDesignChoice" class="diary-cover-option-input"
+                     th:value="${design.id}" data-cover-design-option />
+              <span class="diary-cover-design-choice-canvas">
+                <span th:replace="~{diary/cover-preview :: canvas(${design},
+                                    ${coverElementsByDesign.getOrDefault(design.id,
+                                                                        #lists.toList({}))})}"></span>
+              </span>
+              <span class="diary-cover-design-choice-name" th:text="${design.name}">제주 여행</span>
+            </label>
+          </div>
+
+          <p class="diary-cover-design-empty" th:if="${#lists.isEmpty(coverDesigns)}">
+            아직 만든 표지 디자인이 없습니다.
+            <a class="diary-cover-designs-link" th:href="@{/diaries/cover-designs}">내 표지 디자인 만들기</a>
+          </p>
+        </div>
+
+        <span class="diary-form-hint" data-cover-custom-hint hidden>
+          내 디자인의 사진과 꾸미기가 표지에 사용됩니다.
+        </span>
+      </div>
 
       <!-- 노트 종류: 값은 diaries.notebook_type 그대로이고, 허용 값 확인은 서버에서 한다 -->
       <div class="diary-form-field"

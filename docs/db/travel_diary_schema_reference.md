@@ -640,6 +640,41 @@ CREATE TABLE `destinations` (
 --   * 별도 diary_images 테이블은 없고, 대표 이미지만 diaries.cover_image_url 을 사용한다.
 --   * 요소의 위치/크기는 페이지 크기 기준 0~1 상대값으로 저장한다.
 --
+-- 사용자 커스텀 표지 구조:
+--   users -> diary_cover_designs -> diary_cover_design_elements   (내 표지 디자인 보관함, 원본)
+--   diaries -> diary_covers -> diary_cover_elements               (실제 다이어리에 적용된 표지, 복사본)
+--   * 한 사용자는 diary_cover_designs 를 여러 개 가질 수 있다. 이름은 중복을 허용한다.
+--   * diary_cover_designs 는 사용자가 꾸며 저장해 둔 "내 표지 디자인 보관함"의 원본이고,
+--     diary_covers 는 그 디자인을 특정 다이어리에 적용한 복사본이다.
+--   * 두 갈래는 FK 로 연결하지 않는다. 적용할 때 값을 복사하므로 원본 디자인을 수정하거나
+--     삭제해도 이미 적용된 다이어리 표지는 그대로 남는다. 같은 디자인을 여러 다이어리에
+--     반복해서 적용할 수도 있다. (그래서 source_design_id 도 두지 않는다)
+--   * 표지 종류는 diary_covers 행의 유무로만 판단한다. 행이 있으면 커스텀 표지이고,
+--     없으면 예전 그대로 diaries.cover_style + cover_image_url 로 그리는 기본 표지다.
+--     따로 cover_kind 같은 컬럼을 두지 않는다. (진실이 두 곳으로 갈라지지 않게 한다)
+--   * base_cover_style 은 그 표지를 꾸밀 때 바탕으로 삼은 기본 표지 스타일이다.
+--     "가죽 딥그린 위에 사진과 스티커"처럼 바탕까지 디자인의 일부이므로 함께 보존한다.
+--     허용 값은 diaries.cover_style 과 같은 목록(코드의 DiaryCoverStyle)이 관리한다.
+--   * notebook_type(CLASSIC/SPIRAL)은 속지 제본 방식이라 커스텀 표지와 완전히 독립이다.
+--   * 표지 요소의 위치/크기/회전/겹침 순서는 diary_elements 와 같은 0~1 상대좌표 체계를 쓴다.
+--     컬럼 구성도 같지만 페이지 요소와는 별개의 테이블이다. (페이지 다꾸 쪽을 건드리지 않는다)
+--   * PHOTO 는 사용자가 올린 파일이고, STICKER(마스킹테이프 포함)는 static 공용 asset 을 가리킨다.
+--     그래서 디자인을 다이어리에 적용할 때 PHOTO 는 파일을 따로 복사해 새 image_url 을 갖고,
+--     STICKER 는 image_url 값만 복사한다. (원본과 적용본이 같은 업로드 파일을 공유하지 않는다)
+--   * PHOTO 요소를 지울 때는 그 업로드 파일만 지운다. static sticker asset 은 어떤 경우에도
+--     지우지 않는다. (element_type 으로 걸러서 지운다)
+--   * photo_style 은 표지 PHOTO 전용 칸이다. FULL / POLAROID 두 가지를 쓴다.
+--     FULL 은 흰 프레임 없이 요소 자리를 사진이 꽉 채우는 일반 사진이고,
+--     POLAROID 는 지금 쓰고 있는 흰색 폴라로이드 프레임이다.
+--     STICKER / NOTE / TEXT 는 이 칸을 쓰지 않는다. 늘 NULL 이다.
+--     NULL 은 POLAROID 로 읽는다. 이 칸이 생기기 전에 붙여 둔 사진이 예전 모습 그대로
+--     보이게 하려는 것이다. 새로 붙이는 사진은 FULL 로 저장한다.
+--     허용 값은 코드가 확인하고, payload CHECK 는 이 칸을 보지 않는다. (color_type 과 같은 방식)
+--     사진 스타일만 바꾸는 것이라 position_x/y, width/height, rotation, z_index 는 그대로다.
+--     NOTE 의 style_type 과는 별개의 칸이다. style_type 을 사진 용도로 돌려쓰지 않는다.
+--   * TEXT 는 DB 에서는 허용하지만 화면은 후속 단계다. 나중에 글꼴/색/정렬 같은 값이 필요해지면
+--     NULL 허용 컬럼을 더하는 방식으로 넓힌다. (color_type 처럼 payload CHECK 대상에서 제외한다)
+--
 
 --
 -- Table structure for table `diaries`
@@ -662,6 +697,115 @@ CREATE TABLE `diaries` (
   KEY `idx_diaries_user` (`user_id`,`start_date`,`id`),
   CONSTRAINT `fk_diaries_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   CONSTRAINT `chk_diaries_period` CHECK ((`end_date` >= `start_date`))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `diary_cover_design_elements`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `diary_cover_design_elements` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `design_id` bigint NOT NULL,
+  `element_type` varchar(10) NOT NULL,
+  `text_content` text,
+  `image_url` varchar(255) DEFAULT NULL,
+  `style_type` varchar(30) DEFAULT NULL,
+  `color_type` varchar(20) DEFAULT NULL,
+  `photo_style` varchar(20) DEFAULT NULL,
+  `position_x` decimal(6,5) NOT NULL DEFAULT '0.00000',
+  `position_y` decimal(6,5) NOT NULL DEFAULT '0.00000',
+  `width` decimal(6,5) NOT NULL DEFAULT '0.30000',
+  `height` decimal(6,5) NOT NULL DEFAULT '0.30000',
+  `rotation` decimal(6,2) NOT NULL DEFAULT '0.00',
+  `z_index` int NOT NULL DEFAULT '0',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_diary_cover_design_elements_design` (`design_id`,`z_index`,`id`),
+  CONSTRAINT `fk_diary_cover_design_elements_design` FOREIGN KEY (`design_id`) REFERENCES `diary_cover_designs` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `chk_diary_cover_design_elements_type` CHECK ((`element_type` in (_utf8mb4'PHOTO',_utf8mb4'STICKER',_utf8mb4'NOTE',_utf8mb4'TEXT'))),
+  CONSTRAINT `chk_diary_cover_design_elements_payload` CHECK ((((`element_type` in (_utf8mb4'PHOTO',_utf8mb4'STICKER')) and (`image_url` is not null) and (`text_content` is null) and (`style_type` is null)) or ((`element_type` = _utf8mb4'NOTE') and (`text_content` is not null) and (`image_url` is null) and (`style_type` is not null)) or ((`element_type` = _utf8mb4'TEXT') and (`text_content` is not null) and (`image_url` is null) and (`style_type` is null)))),
+  CONSTRAINT `chk_diary_cover_design_elements_position` CHECK (((`position_x` between -(0.5) and 1.5) and (`position_y` between -(0.5) and 1.5))),
+  CONSTRAINT `chk_diary_cover_design_elements_size` CHECK (((`width` > 0) and (`width` <= 1) and (`height` > 0) and (`height` <= 1))),
+  CONSTRAINT `chk_diary_cover_design_elements_rotation` CHECK ((`rotation` between -(360) and 360)),
+  CONSTRAINT `chk_diary_cover_design_elements_z_index` CHECK ((`z_index` >= 0))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `diary_cover_designs`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `diary_cover_designs` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `user_id` bigint NOT NULL,
+  `name` varchar(50) NOT NULL,
+  `base_cover_style` varchar(30) NOT NULL DEFAULT 'DEFAULT',
+  `background_color` varchar(7) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_diary_cover_designs_user` (`user_id`,`updated_at`,`id`),
+  CONSTRAINT `fk_diary_cover_designs_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `diary_cover_elements`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `diary_cover_elements` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `cover_id` bigint NOT NULL,
+  `element_type` varchar(10) NOT NULL,
+  `text_content` text,
+  `image_url` varchar(255) DEFAULT NULL,
+  `style_type` varchar(30) DEFAULT NULL,
+  `color_type` varchar(20) DEFAULT NULL,
+  `photo_style` varchar(20) DEFAULT NULL,
+  `position_x` decimal(6,5) NOT NULL DEFAULT '0.00000',
+  `position_y` decimal(6,5) NOT NULL DEFAULT '0.00000',
+  `width` decimal(6,5) NOT NULL DEFAULT '0.30000',
+  `height` decimal(6,5) NOT NULL DEFAULT '0.30000',
+  `rotation` decimal(6,2) NOT NULL DEFAULT '0.00',
+  `z_index` int NOT NULL DEFAULT '0',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_diary_cover_elements_cover` (`cover_id`,`z_index`,`id`),
+  CONSTRAINT `fk_diary_cover_elements_cover` FOREIGN KEY (`cover_id`) REFERENCES `diary_covers` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `chk_diary_cover_elements_type` CHECK ((`element_type` in (_utf8mb4'PHOTO',_utf8mb4'STICKER',_utf8mb4'NOTE',_utf8mb4'TEXT'))),
+  CONSTRAINT `chk_diary_cover_elements_payload` CHECK ((((`element_type` in (_utf8mb4'PHOTO',_utf8mb4'STICKER')) and (`image_url` is not null) and (`text_content` is null) and (`style_type` is null)) or ((`element_type` = _utf8mb4'NOTE') and (`text_content` is not null) and (`image_url` is null) and (`style_type` is not null)) or ((`element_type` = _utf8mb4'TEXT') and (`text_content` is not null) and (`image_url` is null) and (`style_type` is null)))),
+  CONSTRAINT `chk_diary_cover_elements_position` CHECK (((`position_x` between -(0.5) and 1.5) and (`position_y` between -(0.5) and 1.5))),
+  CONSTRAINT `chk_diary_cover_elements_size` CHECK (((`width` > 0) and (`width` <= 1) and (`height` > 0) and (`height` <= 1))),
+  CONSTRAINT `chk_diary_cover_elements_rotation` CHECK ((`rotation` between -(360) and 360)),
+  CONSTRAINT `chk_diary_cover_elements_z_index` CHECK ((`z_index` >= 0))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `diary_covers`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `diary_covers` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `diary_id` bigint NOT NULL,
+  `base_cover_style` varchar(30) NOT NULL DEFAULT 'DEFAULT',
+  `background_color` varchar(7) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_diary_covers_diary` (`diary_id`),
+  CONSTRAINT `fk_diary_covers_diary` FOREIGN KEY (`diary_id`) REFERENCES `diaries` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 

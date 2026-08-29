@@ -70,6 +70,9 @@ public class FileUploadService {
     private static final List<String> FORBIDDEN_SVG_URI_SCHEMES =
             List.of("javascript:", "http://", "https://", "file:");
 
+    /** 업로드한 파일을 가리키는 웹 경로의 앞머리. 이 밖의 경로는 다루지 않는다. */
+    private static final String UPLOAD_URL_PREFIX = "/uploads/";
+
     private final String uploadDir;
 
     public FileUploadService(@Value("${custom.upload-path}") String uploadDir) {
@@ -122,6 +125,49 @@ public class FileUploadService {
         return subDir.isEmpty()
                 ? "/uploads/" + savedName
                 : "/uploads/" + subDir + "/" + savedName;
+    }
+
+    /**
+     * 이미 올라와 있는 파일을 다른 업로드 폴더로 복사한다.
+     *
+     * <p>표지 디자인을 여행일기에 적용할 때처럼, 원본과 적용본이 같은 파일을 나눠 쓰면
+     * 한쪽을 지웠을 때 다른 쪽이 깨진다. 그래서 값만 옮기지 않고 파일도 새로 만든다.
+     * 원본은 건드리지 않는다.
+     *
+     * @param sourceUrl 업로드 폴더 안의 웹 경로 (/uploads/... 로 시작해야 한다)
+     * @param subDir    복사해 둘 하위 폴더
+     * @return 복사본의 웹 경로. 원본이 없거나 업로드 폴더 밖을 가리키면 null.
+     */
+    public String copyStoredFile(String sourceUrl, String subDir) {
+        if (sourceUrl == null || !sourceUrl.startsWith(UPLOAD_URL_PREFIX)) {
+            // 업로드한 파일이 아니면 복사할 것이 없다. (공용 asset 은 경로만 나눠 쓴다)
+            return null;
+        }
+
+        Path uploadRoot = Paths.get(uploadDir).toAbsolutePath().normalize();
+        Path source = uploadRoot.resolve(sourceUrl.substring(UPLOAD_URL_PREFIX.length()))
+                .normalize();
+        // '..' 같은 조각으로 업로드 폴더 밖을 가리키지 못하게 한다.
+        if (!source.startsWith(uploadRoot) || !Files.isRegularFile(source)) {
+            return null;
+        }
+
+        String name = source.getFileName().toString();
+        int dotIndex = name.lastIndexOf('.');
+        String ext = dotIndex == -1 ? "" : name.substring(dotIndex);
+        String savedName = UUID.randomUUID() + ext;
+
+        try {
+            Path targetDir = uploadRoot.resolve(subDir).normalize();
+            if (!targetDir.startsWith(uploadRoot)) {
+                return null;
+            }
+            Files.createDirectories(targetDir);
+            Files.copy(source, targetDir.resolve(savedName));
+        } catch (IOException exception) {
+            throw new RuntimeException("파일 복사 실패", exception);
+        }
+        return UPLOAD_URL_PREFIX + subDir + "/" + savedName;
     }
 
     /**

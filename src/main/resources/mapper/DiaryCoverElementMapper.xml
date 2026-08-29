@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.diary.DiaryCoverElementMapper">
+
+    <resultMap id="DiaryCoverElementMap" type="com.example.travlediary.model.DiaryCoverElement">
+        <id     property="id"          column="id"/>
+        <result property="coverId"     column="cover_id"/>
+        <result property="elementType" column="element_type"/>
+        <result property="textContent" column="text_content"/>
+        <result property="imageUrl"    column="image_url"/>
+        <result property="styleType"   column="style_type"/>
+        <result property="colorType"   column="color_type"/>
+        <result property="photoStyle"  column="photo_style"/>
+        <result property="positionX"   column="position_x"/>
+        <result property="positionY"   column="position_y"/>
+        <result property="width"       column="width"/>
+        <result property="height"      column="height"/>
+        <result property="rotation"    column="rotation"/>
+        <result property="zIndex"      column="z_index"/>
+        <result property="createdAt"   column="created_at"/>
+        <result property="updatedAt"   column="updated_at"/>
+    </resultMap>
+
+    <sql id="DiaryCoverElementColumns">
+        id, cover_id, element_type, text_content, image_url, style_type, color_type,
+        photo_style, position_x, position_y, width, height, rotation, z_index,
+        created_at, updated_at
+    </sql>
+
+    <!--
+      PHOTO/STICKER 는 image_url 만, NOTE 는 text_content 와 style_type 을 함께 채운다.
+      TEXT 는 text_content 만 쓴다. (DB payload CHECK 와 같은 규칙)
+      디자인을 적용할 때는 원본 요소의 값을 그대로 옮겨 담는다.
+    -->
+    <insert id="insert" parameterType="com.example.travlediary.model.DiaryCoverElement"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO diary_cover_elements (
+            cover_id, element_type, text_content, image_url, style_type, color_type,
+            photo_style, position_x, position_y, width, height, rotation, z_index,
+            created_at, updated_at
+        ) VALUES (
+            #{coverId}, #{elementType}, #{textContent}, #{imageUrl},
+            #{styleType}, #{colorType}, #{photoStyle},
+            #{positionX}, #{positionY}, #{width}, #{height}, #{rotation}, #{zIndex},
+            NOW(), NOW()
+        )
+    </insert>
+
+    <!-- 다른 표지의 요소를 다루지 못하도록 cover_id 로 함께 확인한다. -->
+    <select id="findById" resultMap="DiaryCoverElementMap">
+        SELECT <include refid="DiaryCoverElementColumns"/>
+        FROM diary_cover_elements
+        WHERE id = #{elementId}
+          AND cover_id = #{coverId}
+    </select>
+
+    <!-- 화면 겹침 순서를 그대로 복원하도록 z_index, id 순으로 조회한다. -->
+    <select id="findAllByCoverId" resultMap="DiaryCoverElementMap">
+        SELECT <include refid="DiaryCoverElementColumns"/>
+        FROM diary_cover_elements
+        WHERE cover_id = #{coverId}
+        ORDER BY z_index ASC, id ASC
+    </select>
+
+    <!--
+      목록 화면용. 표지마다 따로 묻지 않고 한 번에 읽는다.
+      표지별 겹침 순서를 그대로 복원할 수 있게 함께 정렬한다.
+      (소유권은 표지를 고를 때 이미 확인했으므로 여기서는 표지 번호만 본다)
+    -->
+    <select id="findAllByCoverIds" resultMap="DiaryCoverElementMap">
+        SELECT <include refid="DiaryCoverElementColumns"/>
+        FROM diary_cover_elements
+        WHERE cover_id IN
+        <foreach collection="coverIds" item="coverId" open="(" separator="," close=")">
+            #{coverId}
+        </foreach>
+        ORDER BY cover_id, z_index ASC, id ASC
+    </select>
+
+    <update id="updatePosition">
+        UPDATE diary_cover_elements
+        SET position_x = #{positionX},
+            position_y = #{positionY},
+            updated_at = NOW()
+        WHERE id = #{elementId}
+          AND cover_id = #{coverId}
+    </update>
+
+    <update id="updateSize">
+        UPDATE diary_cover_elements
+        SET width = #{width},
+            height = #{height},
+            updated_at = NOW()
+        WHERE id = #{elementId}
+          AND cover_id = #{coverId}
+    </update>
+
+    <update id="updateRotation">
+        UPDATE diary_cover_elements
+        SET rotation = #{rotation},
+            updated_at = NOW()
+        WHERE id = #{elementId}
+          AND cover_id = #{coverId}
+    </update>
+
+    <update id="updateLayer">
+        UPDATE diary_cover_elements
+        SET z_index = #{zIndex},
+            updated_at = NOW()
+        WHERE id = #{elementId}
+          AND cover_id = #{coverId}
+    </update>
+
+    <!-- 사진의 모습만 고친다. 자리/크기/각도/겹침 순서는 건드리지 않는다.
+         (지금 화면은 원본 디자인만 고치지만, 적용본도 같은 자리를 갖춰 둔다) -->
+    <update id="updatePhotoStyle">
+        UPDATE diary_cover_elements
+        SET photo_style = #{photoStyle},
+            updated_at = NOW()
+        WHERE id = #{elementId}
+          AND cover_id = #{coverId}
+    </update>
+
+    <!-- 글만 고친다. 유형(element_type)은 등록 시 값을 그대로 유지한다. -->
+    <update id="updateText">
+        UPDATE diary_cover_elements
+        SET text_content = #{textContent},
+            updated_at = NOW()
+        WHERE id = #{elementId}
+          AND cover_id = #{coverId}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM diary_cover_elements
+        WHERE id = #{elementId}
+          AND cover_id = #{coverId}
+    </delete>
+
+    <delete id="deleteAllByCoverId">
+        DELETE FROM diary_cover_elements
+        WHERE cover_id = #{coverId}
+    </delete>
+
+</mapper>

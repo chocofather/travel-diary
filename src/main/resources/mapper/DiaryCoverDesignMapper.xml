@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.diary.DiaryCoverDesignMapper">
+
+    <resultMap id="DiaryCoverDesignMap" type="com.example.travlediary.model.DiaryCoverDesign">
+        <id     property="id"              column="id"/>
+        <result property="userId"          column="user_id"/>
+        <result property="name"            column="name"/>
+        <result property="baseCoverStyle"  column="base_cover_style"/>
+        <result property="backgroundColor" column="background_color"/>
+        <result property="createdAt"       column="created_at"/>
+        <result property="updatedAt"       column="updated_at"/>
+    </resultMap>
+
+    <sql id="DiaryCoverDesignColumns">
+        id, user_id, name, base_cover_style, background_color, created_at, updated_at
+    </sql>
+
+    <insert id="insert" parameterType="com.example.travlediary.model.DiaryCoverDesign"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO diary_cover_designs (
+            user_id, name, base_cover_style, background_color, created_at, updated_at
+        ) VALUES (
+            #{userId}, #{name}, #{baseCoverStyle}, #{backgroundColor}, NOW(), NOW()
+        )
+    </insert>
+
+    <!-- 소유권을 보지 않는 조회. 서비스가 소유권을 확인한 뒤에만 쓴다. -->
+    <select id="findById" resultMap="DiaryCoverDesignMap">
+        SELECT <include refid="DiaryCoverDesignColumns"/>
+        FROM diary_cover_designs
+        WHERE id = #{designId}
+    </select>
+
+    <select id="findByIdAndUserId" resultMap="DiaryCoverDesignMap">
+        SELECT <include refid="DiaryCoverDesignColumns"/>
+        FROM diary_cover_designs
+        WHERE id = #{designId}
+          AND user_id = #{userId}
+    </select>
+
+    <!-- 보관함은 최근 손댄 디자인부터 보여준다. (값이 같아도 순서가 흔들리지 않게 id 로 묶는다) -->
+    <select id="findAllByUserId" resultMap="DiaryCoverDesignMap">
+        SELECT <include refid="DiaryCoverDesignColumns"/>
+        FROM diary_cover_designs
+        WHERE user_id = #{userId}
+        ORDER BY updated_at DESC, id DESC
+    </select>
+
+    <!-- 소유자는 바뀌지 않는다. 여기서도 user_id 로 한 번 더 막는다. -->
+    <update id="update" parameterType="com.example.travlediary.model.DiaryCoverDesign">
+        UPDATE diary_cover_designs
+        SET name = #{name},
+            base_cover_style = #{baseCoverStyle},
+            background_color = #{backgroundColor},
+            updated_at = NOW()
+        WHERE id = #{id}
+          AND user_id = #{userId}
+    </update>
+
+    <!-- 요소는 FK ON DELETE CASCADE 로 함께 삭제된다. -->
+    <delete id="deleteByIdAndUserId">
+        DELETE FROM diary_cover_designs
+        WHERE id = #{designId}
+          AND user_id = #{userId}
+    </delete>
+
+</mapper>

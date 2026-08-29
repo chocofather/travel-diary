@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.diary.DiaryCoverMapper">
+
+    <resultMap id="DiaryCoverMap" type="com.example.travlediary.model.DiaryCover">
+        <id     property="id"              column="id"/>
+        <result property="diaryId"         column="diary_id"/>
+        <result property="baseCoverStyle"  column="base_cover_style"/>
+        <result property="backgroundColor" column="background_color"/>
+        <result property="createdAt"       column="created_at"/>
+        <result property="updatedAt"       column="updated_at"/>
+    </resultMap>
+
+    <sql id="DiaryCoverColumns">
+        id, diary_id, base_cover_style, background_color, created_at, updated_at
+    </sql>
+
+    <!-- 한 다이어리에 표지 하나다. (uq_diary_covers_diary 가 두 번째 행을 막는다) -->
+    <insert id="insert" parameterType="com.example.travlediary.model.DiaryCover"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO diary_covers (
+            diary_id, base_cover_style, background_color, created_at, updated_at
+        ) VALUES (
+            #{diaryId}, #{baseCoverStyle}, #{backgroundColor}, NOW(), NOW()
+        )
+    </insert>
+
+    <!-- 소유권을 보지 않는 조회. 서비스가 소유권을 확인한 뒤에만 쓴다. -->
+    <select id="findById" resultMap="DiaryCoverMap">
+        SELECT <include refid="DiaryCoverColumns"/>
+        FROM diary_covers
+        WHERE id = #{coverId}
+    </select>
+
+    <!-- 표지가 없으면 그 다이어리는 기본 표지(cover_style + cover_image_url)를 쓴다. -->
+    <select id="findByDiaryId" resultMap="DiaryCoverMap">
+        SELECT <include refid="DiaryCoverColumns"/>
+        FROM diary_covers
+        WHERE diary_id = #{diaryId}
+    </select>
+
+    <!--
+      표지 자체는 소유자를 들고 있지 않다. 그래서 소유권을 봐야 하는 자리에서는
+      다이어리와 이어 붙여 diaries.user_id 로 확인한다.
+    -->
+    <select id="findByDiaryIdAndUserId" resultMap="DiaryCoverMap">
+        SELECT
+            c.id, c.diary_id, c.base_cover_style, c.background_color,
+            c.created_at, c.updated_at
+        FROM diary_covers c
+        JOIN diaries d ON d.id = c.diary_id
+        WHERE c.diary_id = #{diaryId}
+          AND d.user_id = #{userId}
+    </select>
+
+    <!--
+      목록 화면용. 다이어리마다 따로 묻지 않고 한 번에 읽는다.
+      커스텀 표지를 쓰지 않는 다이어리는 아예 결과에 나오지 않는다. (그때는 기본 표지)
+      (빈 목록으로 부르면 IN () 이 되므로 서비스가 먼저 걸러 낸다)
+    -->
+    <select id="findAllByDiaryIds" resultMap="DiaryCoverMap">
+        SELECT
+            c.id, c.diary_id, c.base_cover_style, c.background_color,
+            c.created_at, c.updated_at
+        FROM diary_covers c
+        JOIN diaries d ON d.id = c.diary_id
+        WHERE d.user_id = #{userId}
+          AND c.diary_id IN
+        <foreach collection="diaryIds" item="diaryId" open="(" separator="," close=")">
+            #{diaryId}
+        </foreach>
+    </select>
+
+    <!-- 대상 다이어리는 바뀌지 않는다. 소유권도 JOIN 으로 한 번 더 막는다. -->
+    <update id="update">
+        UPDATE diary_covers c
+        JOIN diaries d ON d.id = c.diary_id
+        SET c.base_cover_style = #{cover.baseCoverStyle},
+            c.background_color = #{cover.backgroundColor},
+            c.updated_at = NOW()
+        WHERE c.id = #{cover.id}
+          AND c.diary_id = #{cover.diaryId}
+          AND d.user_id = #{userId}
+    </update>
+
+    <!-- 이 행이 사라지면 다시 기본 표지로 돌아간다. (요소는 FK ON DELETE CASCADE) -->
+    <delete id="deleteByDiaryIdAndUserId">
+        DELETE c FROM diary_covers c
+        JOIN diaries d ON d.id = c.diary_id
+        WHERE c.diary_id = #{diaryId}
+          AND d.user_id = #{userId}
+    </delete>
+
+</mapper>

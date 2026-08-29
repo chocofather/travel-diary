@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
+
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/diary.css">
+  <!-- 자유배치 조작은 페이지 다꾸와 같은 엔진을 그대로 쓴다. (표지용 사본을 따로 두지 않는다) -->
+  <script src="/js/diary-canvas-drag.js" defer></script>
+  <script src="/js/diary-tape-repeat.js" defer></script>
+  <script src="/js/diary-sticker-picker.js" defer></script>
+  <script src="/js/diary-cover-photo.js" defer></script>
+  <script src="/js/diary-cover-design.js" defer></script>
+</th:block>
+
+<th:block th:fragment="body">
+  <section class="diary-cover-design-page" aria-labelledby="cover-design-edit-title">
+    <header class="diary-form-header">
+      <a class="diary-detail-back" th:href="@{/diaries/cover-designs}">← 내 표지 디자인으로</a>
+      <h1 id="cover-design-edit-title">표지 디자인 편집</h1>
+      <p class="diary-list-subtitle">표지 위에 사진과 스티커를 올려 나만의 표지를 만들어 보세요.</p>
+    </header>
+
+    <p class="diary-flash-message" th:if="${coverDesignMessage}" th:text="${coverDesignMessage}"
+       role="status">표지 디자인을 저장했습니다.</p>
+    <p class="diary-form-error" th:if="${coverDesignError}" th:text="${coverDesignError}"
+       role="alert">디자인 이름을 입력해 주세요.</p>
+
+    <!-- 왼쪽은 실제 표지(=꾸미는 자리), 오른쪽은 이름/바탕/도구를 모아 둔 자리 -->
+    <div class="diary-cover-design-editor">
+      <div class="diary-cover-preview" data-cover-preview>
+        <!--
+          표지 한 장. 여기가 좌표계의 기준이다.
+          바탕(재질 + 색) 위에 자유배치 층이 얹히고, 책등은 그 위에 남는다.
+          is-editable 이 붙어 있을 때만 드래그 엔진과 붙이기 도구가 동작한다.
+        -->
+        <div class="diary-cover-canvas is-editable"
+             th:classappend="${coverDesign.baseCoverStyleClass}"
+             th:style="${coverDesign.backgroundColor != null
+                          and !#strings.isEmpty(coverDesign.backgroundColor)}
+                       ? '--diary-cover-color:' + ${coverDesign.backgroundColor} : null">
+          <!--
+            자유배치 층. 엔진은 요소의 기준 상자를 item.closest('.diary-canvas') 로 찾으므로
+            표지의 이 자리도 같은 이름을 함께 단다. (이름이 다르면 조작이 아예 붙지 않는다)
+          -->
+          <div class="diary-canvas diary-cover-surface">
+            <!-- 겹침 순서(z_index, id) 그대로 그린다. 저장 주소는 요소마다 실어 둔다. -->
+            <figure class="diary-canvas-item diary-canvas-photo diary-photo"
+                    th:each="element : ${coverElements}"
+                    th:if="${element.elementType == 'PHOTO'}"
+                    th:classappend="${element.photoStyleClass}"
+                    th:data-element-id="${element.id}"
+                    th:data-element-type="${element.elementType}"
+                    th:data-position-x="${element.positionX}"
+                    th:data-position-y="${element.positionY}"
+                    th:data-width="${element.width}"
+                    th:data-height="${element.height}"
+                    th:data-rotation="${element.rotation}"
+                    th:data-z-index="${element.zIndex}"
+                    th:data-position-url="@{/diaries/cover-designs/{designId}/elements/{elementId}/position
+                                            (designId=${designId},elementId=${element.id})}"
+                    th:data-size-url="@{/diaries/cover-designs/{designId}/elements/{elementId}/size
+                                        (designId=${designId},elementId=${element.id})}"
+                    th:data-rotation-url="@{/diaries/cover-designs/{designId}/elements/{elementId}/rotation
+                                            (designId=${designId},elementId=${element.id})}"
+                    th:data-layer-url="@{/diaries/cover-designs/{designId}/elements/{elementId}/layer
+                                         (designId=${designId},elementId=${element.id})}"
+                    th:style="|left:${element.positionX * 100}%;
+                               top:${element.positionY * 100}%;
+                               width:${element.width * 100}%;
+                               height:${element.height * 100}%;
+                               transform:rotate(${element.rotation}deg);
+                               --diary-item-rotation:${element.rotation}deg;
+                               z-index:${element.zIndex};|">
+              <img th:src="${element.imageUrl}" alt="표지 사진" loading="lazy" />
+
+              <button type="button" class="diary-rotate-handle" aria-label="회전"></button>
+              <button type="button" class="diary-resize-handle" aria-label="크기 조절"></button>
+              <!-- 사진의 모습은 등록할 때 정해지므로 여기서는 고르지 않는다. -->
+              <div class="diary-layer-actions">
+                <button type="button" class="diary-layer-action"
+                        data-layer-direction="BACKWARD">뒤로</button>
+                <button type="button" class="diary-layer-action"
+                        data-layer-direction="FORWARD">앞으로</button>
+                <!-- 올린 파일이라 요소 행과 함께 파일도 정리된다. (스티커와 다른 점) -->
+                <button type="button" class="diary-layer-action is-danger"
+                        data-delete-confirm="이 사진을 삭제하시겠습니까?"
+                        th:data-delete-url="@{/diaries/cover-designs/{designId}/elements/{elementId}/photo/delete
+                                              (designId=${designId},elementId=${element.id})}">삭제</button>
+              </div>
+            </figure>
+
+            <figure class="diary-canvas-item diary-canvas-sticker diary-sticker"
+                    th:each="element : ${coverElements}"
+                    th:if="${element.elementType == 'STICKER'}"
+                    th:with="tape=${stickerRepeats.get(element.imageUrl)}"
+                    th:data-element-id="${element.id}"
+                    th:data-element-type="${element.elementType}"
+                    th:data-sticker-kind="${element.stickerKind}"
+                    th:data-tape-left="${tape?.leftUrl}"
+                    th:data-tape-center="${tape?.centerUrl}"
+                    th:data-tape-right="${tape?.rightUrl}"
+                    th:data-position-x="${element.positionX}"
+                    th:data-position-y="${element.positionY}"
+                    th:data-width="${element.width}"
+                    th:data-height="${element.height}"
+                    th:data-rotation="${element.rotation}"
+                    th:data-z-index="${element.zIndex}"
+                    th:data-position-url="@{/diaries/cover-designs/{designId}/elements/{elementId}/position
+                                            (designId=${designId},elementId=${element.id})}"
+                    th:data-size-url="@{/diaries/cover-designs/{designId}/elements/{elementId}/size
+                                        (designId=${designId},elementId=${element.id})}"
+                    th:data-rotation-url="@{/diaries/cover-designs/{designId}/elements/{elementId}/rotation
+                                            (designId=${designId},elementId=${element.id})}"
+                    th:data-layer-url="@{/diaries/cover-designs/{designId}/elements/{elementId}/layer
+                                         (designId=${designId},elementId=${element.id})}"
+                    th:style="|left:${element.positionX * 100}%;
+                               top:${element.positionY * 100}%;
+                               width:${element.width * 100}%;
+                               height:${element.height * 100}%;
+                               transform:rotate(${element.rotation}deg);
+                               --diary-item-rotation:${element.rotation}deg;
+                               z-index:${element.zIndex};|">
+              <img th:src="${element.imageUrl}" alt="표지 스티커" loading="lazy" />
+
+              <!-- 조작 손잡이와 액션 줄은 페이지 다꾸와 같은 구조/같은 클래스를 쓴다 -->
+              <button type="button" class="diary-rotate-handle" aria-label="회전"></button>
+              <button type="button" class="diary-resize-handle" aria-label="크기 조절"></button>
+              <div class="diary-layer-actions">
+                <button type="button" class="diary-layer-action"
+                        data-layer-direction="BACKWARD">뒤로</button>
+                <button type="button" class="diary-layer-action"
+                        data-layer-direction="FORWARD">앞으로</button>
+                <!-- 공용 asset 이라 요소 행만 지운다. (그림 파일은 그대로 둔다) -->
+                <button type="button" class="diary-layer-action is-danger"
+                        data-delete-confirm="이 스티커를 떼시겠습니까?"
+                        th:data-delete-url="@{/diaries/cover-designs/{designId}/elements/{elementId}/sticker/delete
+                                              (designId=${designId},elementId=${element.id})}">떼기</button>
+              </div>
+            </figure>
+          </div>
+          <span class="diary-cover-canvas-spine" aria-hidden="true"></span>
+        </div>
+      </div>
+
+      <div class="diary-cover-design-panel">
+        <form class="diary-form diary-cover-design-form"
+              th:action="@{/diaries/cover-designs/{id}/update(id=${designId})}" method="post"
+              th:object="${coverDesign}">
+          <div class="diary-form-field">
+            <label for="cover-design-name">디자인 이름</label>
+            <input type="text" id="cover-design-name" name="name" maxlength="50" required
+                   autocomplete="off" th:value="*{name}" />
+          </div>
+
+          <!-- 재질만 고르고 색은 아래에서 따로 고른다. 저장되는 값은 그 재질의 대표 표지다. -->
+          <div class="diary-form-field">
+            <span class="diary-form-label">표지 재질</span>
+            <div class="diary-cover-material-picker" role="radiogroup" aria-label="표지 재질">
+              <label th:each="material : ${coverMaterials}"
+                     class="diary-cover-material" th:classappend="${material.cssClass}">
+                <input type="radio" name="baseCoverStyle" class="diary-cover-option-input"
+                       th:value="${material.code}"
+                       th:checked="${coverDesign.coverMaterialCode == material.code}"
+                       th:attr="data-cover-style-class=${material.cssClass}" />
+                <span class="diary-cover-material-swatch" aria-hidden="true"></span>
+                <span class="diary-cover-material-name" th:text="${material.label}">기본</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="diary-form-field">
+            <span class="diary-form-label">표지 색상</span>
+            <div class="diary-cover-color-field" data-cover-color-field>
+              <input type="hidden" name="backgroundColor" th:value="*{backgroundColor}"
+                     data-cover-color-value />
+              <input type="color" class="diary-cover-color-input" aria-label="표지 색 고르기"
+                     th:value="*{backgroundColor} ?: '#fdfdfa'" data-cover-color-input />
+              <button type="button" class="diary-cover-color-reset" data-cover-color-clear>기본색으로</button>
+            </div>
+            <span class="diary-form-hint">고르지 않으면 재질의 원래 색을 그대로 씁니다.</span>
+          </div>
+
+          <div class="diary-form-actions">
+            <a class="diary-form-cancel" th:href="@{/diaries/cover-designs}">목록으로</a>
+            <button type="submit" class="diary-form-submit">디자인 저장</button>
+          </div>
+        </form>
+
+        <!--
+          꾸미기 도구. 표지 위에 띄우지 않고 설정과 같은 자리에 둔다.
+          붙인 것의 자리/크기/각도는 손을 뗄 때 바로 저장되므로 저장 버튼과 상관이 없다.
+        -->
+        <section class="diary-cover-tools" aria-label="꾸미기">
+          <h2 class="diary-form-label">꾸미기</h2>
+          <div class="diary-cover-tool-row">
+            <button type="button" class="diary-cover-tool" id="diary-sticker-button"
+                    aria-haspopup="dialog" aria-expanded="false"
+                    aria-controls="diary-sticker-popover"
+                    th:attr="data-create-url=@{/diaries/cover-designs/{id}/elements/sticker
+                                               (id=${designId})}">
+              <svg class="diary-cover-tool-icon" viewBox="0 0 16 16" aria-hidden="true"
+                   fill="none" stroke="currentColor" stroke-width="1.3"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9.6 2.2H4.2A1.6 1.6 0 0 0 2.6 3.8v8.4a1.6 1.6 0 0 0 1.6 1.6h3.6" />
+                <path d="M9.6 2.2 13.4 6v1.4H10a.4.4 0 0 1-.4-.4z" />
+                <path d="M7.8 13.8 13.4 8.2" />
+              </svg>
+              <span>스티커</span>
+            </button>
+
+            <!--
+              사진은 어떤 모습으로 붙일지가 등록하는 자리로 정해진다.
+              (일반 사진 / 폴라로이드가 각자 파일 고르개를 따로 갖는다)
+            -->
+            <label class="diary-cover-tool" th:each="style : ${coverPhotoStyles}">
+              <input type="file" class="diary-cover-photo-input" accept="image/*" multiple
+                     th:data-photo-style="${style.code}"
+                     th:attr="data-create-url=@{/diaries/cover-designs/{id}/elements/photo
+                                                (id=${designId})},
+                              aria-label=|${style.label} 사진 추가|" />
+              <svg class="diary-cover-tool-icon" viewBox="0 0 16 16" aria-hidden="true"
+                   fill="none" stroke="currentColor" stroke-width="1.3"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2.2" y="3.4" width="11.6" height="9.2" rx="1.4" />
+                <circle cx="5.8" cy="6.6" r="1" />
+                <path d="M2.6 11.2 6.2 8l2.4 2.2 2.2-1.8 2.6 2.4" />
+              </svg>
+              <span th:text="${style.label}">일반</span>
+            </label>
+
+            <!-- 고르는 판은 도구 줄 바로 위로 열린다. (자리를 차지하지 않는 층이다) -->
+            <div th:replace="~{diary/cover-sticker-picker :: picker}"></div>
+          </div>
+          <p class="diary-sticker-status" id="diary-sticker-status" role="status"></p>
+        </section>
+
+        <!-- 삭제는 낮은 위계의 보조 동작이라 맨 아래에 따로 둔다. -->
+        <form class="diary-cover-design-danger"
+              th:action="@{/diaries/cover-designs/{id}/delete(id=${designId})}" method="post"
+              th:attr="onsubmit=|return confirm('${coverDesign.name} 디자인을 삭제할까요? 이미 여행일기에 적용한 표지는 그대로 남습니다.')|">
+          <button type="submit" class="diary-cover-design-delete-button">이 디자인 삭제</button>
+        </form>
+      </div>
+    </div>
+  </section>
+</th:block>
+</html>

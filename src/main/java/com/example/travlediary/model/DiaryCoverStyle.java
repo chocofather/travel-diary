@@ -42,6 +42,16 @@ public enum DiaryCoverStyle {
         return "diary-cover-" + code.toLowerCase(Locale.ROOT).replace('_', '-');
     }
 
+    /** 저장된 문자열의 화면 이름. 아는 값이 아니면 기본 표지 이름으로 본다. */
+    public static String labelOf(String code) {
+        for (DiaryCoverStyle style : values()) {
+            if (style.name().equals(code)) {
+                return style.label;
+            }
+        }
+        return DEFAULT.label;
+    }
+
     /** 허용 값인지 확인한다. (그 밖의 값은 저장 단계에서 막는다) */
     public static boolean isSupported(String code) {
         if (code == null) {

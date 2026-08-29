@@ -9,7 +9,9 @@
    구조 CSS 는 한 벌만 두고, 표지 스타일 클래스는 아래 변수(색/결/각인)만 덮어쓴다.
    목록의 책(.diary-book)과 폼의 견본(.diary-cover-option)이 같은 값을 쓴다. */
 .diary-book,
-.diary-cover-option {
+.diary-cover-option,
+.diary-cover-material,
+.diary-cover-canvas {
     /* 가죽: 되풀이되는 무늬 없이, 크기와 자리가 제각각인 옅은 얼룩만 겹쳐
        멀리서는 단색이고 가까이서만 표면이 고르지 않게 보이도록 한다. */
     --diary-cover-grain-leather:
@@ -551,6 +553,16 @@
         3px 3px 0 -1px rgba(233, 224, 209, 0.92),
         4px 4px 0 -1px rgba(211, 199, 180, 0.8),
         0 14px 24px rgba(63, 52, 38, 0.2);
+}
+
+/* 커스텀 표지를 입힌 책. 표지 자체를 보관함과 같은 조각으로 그리므로
+   책 상자가 이미 맡고 있는 테두리/모서리/그림자는 안쪽에서 한 번 더 주지 않는다.
+   (책등도 그 조각이 함께 그린다) */
+.diary-book-cover > .diary-cover-canvas {
+    height: 100%;
+    border: 0;
+    border-radius: inherit;
+    box-shadow: none;
 }
 
 /* 대표 이미지는 잘리지 않게 전체를 보여준다. (표지 비율은 그대로 유지)
@@ -1653,6 +1665,529 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* ===== 내 표지 디자인 =====
+   표지는 속지와 다른 물건이다. 종이의 단위(--diary-page-unit / --diary-line)나
+   41:38 비율을 쓰지 않고, 세로형 표지 하나로만 크기를 잡는다. */
+
+/* 목록에서 표지 보관함으로 가는 낮은 위계의 링크 (새 여행일기보다 약하게) */
+/* 목록 상단의 "표지 디자인 관리".
+   검색·정렬과 같은 높이의 작은 외곽선 버튼이라 한 줄에 자연스럽게 놓이고,
+   바탕이 흰색이라 바로 옆 primary(새 여행일기)와 위계가 뚜렷하게 갈린다. */
+.diary-cover-designs-button {
+    display: inline-flex;
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    height: 36px;
+    align-items: center;
+    gap: 6px;
+    padding: 0 12px;
+    border: 1px solid #ded5c8;
+    border-radius: 9px;
+    background: #fff;
+    color: #7a6a52;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    text-decoration: none;
+    transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+/* 눌러도 되는 곳이라는 것만 알린다. 그림자는 두지 않는다 */
+.diary-cover-designs-button:hover {
+    border-color: #cbbba0;
+    background: #faf6ef;
+    color: #6f5a3c;
+}
+
+.diary-cover-designs-button:focus-visible {
+    outline: 3px solid rgba(111, 90, 60, 0.24);
+    outline-offset: 2px;
+}
+
+.diary-cover-designs-icon {
+    flex: 0 0 auto;
+    width: 14px;
+    height: 14px;
+    color: #a3937c;
+}
+
+/* 관리 버튼과 새 여행일기 사이만 조금 더 벌려 두 갈래를 나눈다 */
+.diary-list-tools .diary-new-button {
+    margin-left: 6px;
+}
+
+.diary-cover-designs-link {
+    flex: 0 0 auto;
+    padding: 5px 12px;
+    border-radius: 999px;
+    color: #8b8378;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    text-decoration: none;
+}
+
+.diary-cover-designs-link:hover {
+    background: #f3ede3;
+    color: #6f5a3c;
+}
+
+/*
+  표지 한 장. 여기가 곧 표지의 좌표계다.
+  세로형 비율과 재질만 정하고, 안쪽(.diary-cover-surface)은 비워 둔다.
+  다음 단계에서 그 안쪽이 사진/스티커가 놓이는 자유배치 캔버스가 된다.
+  (재질 변수는 목록의 책 표지와 같은 diary-cover-* 클래스에서 물려받는다)
+*/
+.diary-cover-canvas {
+    position: relative;
+    container-type: inline-size;
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    overflow: hidden;
+    border: 1px solid var(--diary-cover-edge);
+    border-radius: 4px 13px 13px 4px;
+    background:
+        linear-gradient(180deg, var(--diary-cover-light), rgba(255, 255, 255, 0))
+            0 0 / 100% 8px no-repeat,
+        linear-gradient(0deg, var(--diary-cover-shade), rgba(255, 255, 255, 0))
+            0 100% / 100% 11px no-repeat,
+        var(--diary-cover-grain),
+        var(--diary-cover-color);
+    box-shadow:
+        inset 0 0 14px rgba(0, 0, 0, 0.07),
+        inset 0 1px 0 rgba(255, 255, 255, 0.18),
+        0 4px 12px rgba(63, 52, 38, 0.12);
+}
+
+/*
+  꾸미기가 놓이는 자리. 표지 전체를 덮는다.
+  붙인 것들의 좌표는 이 상자 기준 0~1 상대값이라, 표지가 커지거나 작아져도 같은 자리다.
+
+  자리를 잡는 값(위치/겹침/입력 통과)은 .diary-canvas 가 이미 정한다.
+  종이 다꾸와 같은 상자이고 조작 엔진도 그 이름으로 기준 상자를 찾으므로,
+  여기서는 같은 값을 다시 적지 않는다. 이 클래스는 표지 쪽 이름표로만 남는다.
+*/
+
+/* 꾸미기 도구. 표지 위에 띄우지 않고 오른쪽 설정과 같은 자리에 둔다.
+   (고르는 판이 여기서 열리므로 자리 기준이 된다) */
+.diary-cover-tools {
+    position: relative;
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid #efe8dc;
+}
+
+.diary-cover-tools .diary-form-label {
+    margin: 0 0 8px;
+    font-size: 13px;
+}
+
+.diary-cover-tool-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+}
+
+/* 세 도구는 같은 크기·같은 글자로 둔다. 눌러야 할 곳으로만 보이면 된다. */
+.diary-cover-tool {
+    display: flex;
+    min-width: 0;
+    height: 60px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 0 4px;
+    border: 1px solid #e3dcd1;
+    border-radius: 9px;
+    background: #fffdf8;
+    color: #6b6259;
+    font: inherit;
+    font-size: 12px;
+    text-align: center;
+    cursor: pointer;
+}
+
+.diary-cover-tool:hover {
+    border-color: #cbbba0;
+    background: #f7f3ec;
+}
+
+.diary-cover-tool-icon {
+    width: 17px;
+    height: 17px;
+    color: #a89a83;
+}
+
+.diary-cover-tool:hover .diary-cover-tool-icon {
+    color: #6f5a3c;
+}
+
+/*
+  표지 사진의 모습.
+
+  폴라로이드(.diary-photo)는 페이지 다꾸와 같은 규칙을 그대로 쓴다. 여기서 손대지 않는다.
+  일반 사진은 그 위에 덮어써서 흰 프레임만 걷어낸다. 규칙을 표지 안쪽으로 한정했으므로
+  페이지 다꾸의 사진에는 닿지 않는다.
+*/
+/*
+  표지의 폴라로이드는 실제 폴라로이드처럼 테두리를 얇게 둔다.
+  페이지 다꾸 사진(.diary-photo)의 값은 그대로 두고 표지 안에서만 줄인다.
+  아래쪽만 조금 넓게 남겨 폴라로이드다운 비대칭을 지킨다.
+*/
+.diary-cover-surface .diary-photo.is-photo-polaroid {
+    padding: 3px 3px 7px;
+}
+
+.diary-cover-surface .diary-photo.is-photo-full {
+    padding: 0;
+    background: none;
+    /* 종이에 붙인 느낌은 남기되 프레임의 두께감은 뺀다 */
+    box-shadow: 0 2px 6px rgba(63, 52, 38, 0.16);
+}
+
+/* 프레임이 없으므로 사진이 요소 자리를 그대로 채운다.
+   (상자 비율을 지키는 것은 조작 엔진이 맡고 여기서는 그리기만 한다) */
+.diary-cover-surface .diary-photo.is-photo-full img {
+    object-fit: cover;
+}
+
+/* 사진 고르개는 감추고 도구 버튼 모양만 남긴다.
+   일반 사진과 폴라로이드가 각자 하나씩 갖는다. (등록하는 자리가 곧 사진의 모습이다) */
+.diary-cover-photo-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+/* 키보드로 들어왔을 때도 어디에 있는지 보이게 한다 */
+.diary-cover-tool:has(.diary-cover-photo-input:focus-visible),
+.diary-cover-tool:focus-visible {
+    outline: 2px solid #b39a75;
+    outline-offset: 1px;
+}
+
+/* 표지 재질 고르기. 세 갈래만 보여 주고 색은 아래에서 따로 고른다. */
+.diary-cover-material-picker {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.diary-cover-material {
+    position: relative;
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 6px;
+    border: 1px solid #ded5c8;
+    border-radius: 8px;
+    background: #fff;
+    color: #6b6259;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.diary-cover-material:hover {
+    border-color: #cbbba0;
+    background: #fdfaf4;
+}
+
+.diary-cover-material:has(.diary-cover-option-input:checked) {
+    border-color: #b39a75;
+    background: #f6efe3;
+    color: #4a3d2b;
+    font-weight: 700;
+}
+
+.diary-cover-material:has(.diary-cover-option-input:focus-visible) {
+    outline: 2px solid #b39a75;
+    outline-offset: 1px;
+}
+
+/* 견본은 실제 표지와 같은 재질/색을 그대로 보여 준다 */
+.diary-cover-material-swatch {
+    flex: 0 0 auto;
+    width: 14px;
+    height: 18px;
+    border: 1px solid var(--diary-cover-edge);
+    border-radius: 2px 4px 4px 2px;
+    background: var(--diary-cover-grain), var(--diary-cover-color);
+}
+
+.diary-cover-material-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/*
+  표지 편집에서는 고르는 판이 도구 줄의 '위쪽'으로 열린다.
+
+  도구가 설정 카드 아래쪽에 있어서 아래로 열면 화면 밖으로 내려간다.
+  오른쪽 끝을 도구 줄에 맞추고 왼쪽(표지 쪽 여백)으로 펴서 설정 카드를 덮지 않게 한다.
+  화면이 낮을 때는 판이 위로 넘치지 않도록 높이만 화면 안으로 접어 둔다.
+  (판 크기와 스티커 미리보기 값은 페이지 다꾸와 같다. 펼치는 방향만 다르다)
+*/
+.diary-cover-tool-row .diary-sticker-popover {
+    top: auto;
+    right: 0;
+    bottom: calc(100% + 8px);
+    left: auto;
+    max-height: calc(100vh - 180px);
+}
+
+/* 판이 접히면 스티커 목록 쪽에서 스크롤한다. (판 자체가 잘리지 않게) */
+.diary-cover-tool-row .diary-sticker-panels {
+    max-height: min(300px, calc(100vh - 300px));
+}
+
+/* 책등. 어떤 표지 색에서도 같은 두께로 읽히도록 명암만 겹친다. */
+.diary-cover-canvas-spine {
+    position: absolute;
+    z-index: 3;
+    top: 0;
+    left: 0;
+    width: 4.5%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        rgba(0, 0, 0, 0.3) 0%,
+        rgba(0, 0, 0, 0.13) 30%,
+        rgba(255, 255, 255, 0.16) 58%,
+        rgba(0, 0, 0, 0.1) 84%,
+        rgba(0, 0, 0, 0.16) 100%
+    );
+    pointer-events: none;
+}
+
+/* 보관함 목록 */
+.diary-cover-design-shelf {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 22px 18px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.diary-cover-design-card {
+    position: relative;
+    min-width: 0;
+}
+
+.diary-cover-design-link {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+}
+
+.diary-cover-design-info {
+    margin-top: 10px;
+}
+
+.diary-cover-design-name {
+    margin: 0;
+    overflow: hidden;
+    color: #3f3a33;
+    font-size: 14px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.diary-cover-design-style {
+    margin: 3px 0 0;
+    color: #8b8378;
+    font-size: 12px;
+}
+
+/* 삭제는 카드 위에 얹지 않고 정보 아래에 작게 둔다 */
+.diary-cover-design-delete {
+    margin-top: 6px;
+}
+
+.diary-cover-design-delete-button {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: #a89a83;
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.diary-cover-design-delete-button:hover {
+    color: #a3512f;
+    text-decoration: underline;
+}
+
+/* 새 여행일기 폼의 표지 고르기: 기본 디자인 / 내 디자인 두 갈래 */
+.diary-cover-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 10px;
+}
+
+.diary-cover-tab {
+    padding: 5px 12px;
+    border: 1px solid #e3dcd0;
+    border-radius: 999px;
+    background: none;
+    color: #8b8378;
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.diary-cover-tab.is-active {
+    border-color: #b39a75;
+    background: #f6efe3;
+    color: #4a3d2b;
+    font-weight: 700;
+}
+
+/* 내 디자인 목록. 보관함보다 작게 두어 폼 안에서 자리를 덜 차지한다. */
+.diary-cover-design-choices {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+    gap: 14px 12px;
+}
+
+.diary-cover-design-choice {
+    display: block;
+    min-width: 0;
+    cursor: pointer;
+}
+
+/* 고른 표시는 얇은 테두리 하나로만 준다 (표지 그림을 가리지 않게) */
+.diary-cover-design-choice-canvas {
+    display: block;
+    padding: 3px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+}
+
+.diary-cover-design-choice:has(.diary-cover-option-input:checked)
+    .diary-cover-design-choice-canvas {
+    border-color: #b39a75;
+    background: #f6efe3;
+}
+
+.diary-cover-design-choice:has(.diary-cover-option-input:focus-visible)
+    .diary-cover-design-choice-canvas {
+    outline: 2px solid #b39a75;
+    outline-offset: 1px;
+}
+
+.diary-cover-design-choice-name {
+    display: block;
+    margin-top: 6px;
+    overflow: hidden;
+    color: #3f3a33;
+    font-size: 13px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.diary-cover-design-empty {
+    margin: 0;
+    color: #8b8378;
+    font-size: 13px;
+}
+
+/* 편집 화면: 왼쪽이 표지(꾸미는 자리), 오른쪽이 설정과 도구.
+   꾸미는 자리가 주인공이므로 폭을 그쪽에 더 준다. */
+.diary-cover-design-page {
+    width: min(1080px, calc(100% - 40px));
+    margin: 44px auto 90px;
+    color: #2b2b2b;
+}
+
+/*
+  두 칸 모두 줄 높이만큼 늘어난다. (align-items 를 start 로 두지 않는다)
+  왼쪽 칸이 줄 높이를 가져야 그 안의 표지가 스크롤을 따라 움직일 자리가 생긴다.
+*/
+.diary-cover-design-editor {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 300px);
+    gap: 32px;
+    margin-top: 20px;
+}
+
+/*
+  왼쪽 칸의 표지. 오른쪽 설정과 같은 문서 흐름에 있고 스크롤을 따라다니지 않는다.
+  (화면을 내리면 둘이 함께 올라간다)
+*/
+.diary-cover-preview {
+    width: min(420px, 100%);
+    min-width: 0;
+    margin-inline: auto;
+}
+
+.diary-cover-design-panel {
+    min-width: 0;
+}
+
+.diary-cover-design-form {
+    margin: 0;
+}
+
+.diary-cover-design-danger {
+    margin-top: 26px;
+    padding-top: 16px;
+    border-top: 1px solid #efe8dc;
+    text-align: right;
+}
+
+/* 배경색 고르기: 실제로 저장되는 값은 hidden 이고 여기는 고르는 자리다 */
+.diary-cover-color-field {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.diary-cover-color-input {
+    width: 44px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid #ded5c8;
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+}
+
+.diary-cover-color-reset {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: #8b8378;
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.diary-cover-color-reset:hover {
+    color: #6f5a3c;
+    text-decoration: underline;
+}
+
+/* 아직 색을 고르지 않았으면 지우는 버튼을 보여줄 이유가 없다 */
+.diary-cover-color-field:not(.has-color) .diary-cover-color-reset {
+    visibility: hidden;
 }
 
 /* ===== 노트 종류 고르기 (새/수정 폼) =====
@@ -3629,7 +4164,9 @@
   (종이 비율 41:38 과 --diary-page-unit 셈은 그대로 둔다)
 */
 .diary-detail-page.is-read-mode {
-    width: min(1660px, calc(100% - 40px));
+    /* 큰 모니터에서는 여기서 멈춘다. 화면이 넓어져도 책이 계속 커지면
+       한 줄이 너무 길어져 읽기 어렵다. (노트북에서는 화면 폭을 그대로 쓴다) */
+    width: min(1140px, calc(100% - 40px));
 }
 
 /*
@@ -3644,11 +4181,11 @@
 @media (min-width: 861px) {
     .diary-detail-page.is-read-mode {
         width: min(
-            1660px,
+            1140px,
             calc(100% - 40px),
             calc(max(420px, 100vh - 200px) * 2.158 + 26px));
         width: min(
-            1660px,
+            1140px,
             calc(100% - 40px),
             calc(max(420px, 100dvh - 200px) * 2.158 + 26px));
     }
@@ -5116,6 +5653,16 @@
         width: 100%;
     }
 
+    /* 줄이 바뀌면 왼쪽 끝에 맞아야 하므로 갈래를 나누던 여백은 걷는다 */
+    .diary-cover-designs-button {
+        padding: 0 10px;
+        font-size: 12.5px;
+    }
+
+    .diary-list-tools .diary-new-button {
+        margin-left: 0;
+    }
+
     /* 상단 컨트롤이 겹치지 않게 줄바꿈을 허용하고 크기만 줄인다 */
     .diary-calendar-head {
         gap: 6px;
@@ -5181,6 +5728,23 @@
 
     .diary-cover-style-picker {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    /* 좁은 화면에서는 표지를 위에, 설정과 도구를 아래에 둔다 */
+    .diary-cover-design-editor {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    /* 표지 칸이 화면 가운데로 오므로, 고르는 판도 가운데를 기준으로 편다.
+       (그대로 오른쪽에 맞추면 판이 화면 왼쪽 밖으로 나간다) */
+    .diary-cover-tool-row .diary-sticker-popover {
+        right: auto;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+
+    .diary-cover-preview {
+        width: min(320px, 100%);
     }
 
     /* 카드 두 장이 나란히 서기에는 좁아지므로 견본을 조금 줄인다 */

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!--
+  완성된 표지 한 장을 그대로 줄여 보여 준다. (보관함 카드용, 보기 전용)
+
+  바깥(.diary-cover-canvas)이 표지 자체다. 세로형 비율과 재질을 여기서 정하고,
+  안쪽(.diary-cover-surface)에 저장된 요소가 편집 화면과 같은 상대좌표로 놓인다.
+  캔버스 크기만 다를 뿐 좌표·크기·각도·겹침 순서는 편집 화면과 같은 값을 쓰므로,
+  카드가 작아져도 꾸민 모습 그대로 줄어든다.
+
+  보기 전용이라 조작 손잡이와 액션 줄, 저장 주소(data-*-url)는 넣지 않는다.
+  요소 번호도 싣지 않아 조작 엔진이 잡을 것이 아예 없다.
+  (엔진은 .diary-cover-canvas.is-editable 이 있을 때만 붙는데 여기에는 그 표시가 없다)
+-->
+<div th:fragment="canvas(design, elements)" class="diary-cover-canvas"
+     th:classappend="${design.baseCoverStyleClass}"
+     th:style="${design.backgroundColor != null and !#strings.isEmpty(design.backgroundColor)}
+               ? '--diary-cover-color:' + ${design.backgroundColor} : null">
+  <!-- 요소가 없는 디자인은 이 안이 비어 있고 재질과 색만 보인다 -->
+  <div class="diary-canvas diary-cover-surface">
+    <figure class="diary-canvas-item diary-canvas-photo diary-photo"
+            th:each="element : ${elements}"
+            th:if="${element.elementType == 'PHOTO'}"
+            th:classappend="${element.photoStyleClass}"
+            th:style="|left:${element.positionX * 100}%;
+                       top:${element.positionY * 100}%;
+                       width:${element.width * 100}%;
+                       height:${element.height * 100}%;
+                       transform:rotate(${element.rotation}deg);
+                       z-index:${element.zIndex};|">
+      <img th:src="${element.imageUrl}" alt="" aria-hidden="true" loading="lazy" />
+    </figure>
+
+    <!-- 마스킹테이프는 조각 경로를 함께 실어 두면 diary-tape-repeat.js 가 같은 모습으로 그린다 -->
+    <figure class="diary-canvas-item diary-canvas-sticker diary-sticker"
+            th:each="element : ${elements}"
+            th:if="${element.elementType == 'STICKER'}"
+            th:with="tape=${stickerRepeats.get(element.imageUrl)}"
+            th:data-sticker-kind="${element.stickerKind}"
+            th:data-tape-left="${tape?.leftUrl}"
+            th:data-tape-center="${tape?.centerUrl}"
+            th:data-tape-right="${tape?.rightUrl}"
+            th:style="|left:${element.positionX * 100}%;
+                       top:${element.positionY * 100}%;
+                       width:${element.width * 100}%;
+                       height:${element.height * 100}%;
+                       transform:rotate(${element.rotation}deg);
+                       z-index:${element.zIndex};|">
+      <img th:src="${element.imageUrl}" alt="" aria-hidden="true" loading="lazy" />
+    </figure>
+  </div>
+  <span class="diary-cover-canvas-spine" aria-hidden="true"></span>
+</div>
+
+</body>
+</html>

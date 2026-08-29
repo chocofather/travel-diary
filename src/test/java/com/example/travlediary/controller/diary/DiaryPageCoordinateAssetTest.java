@@ -286,7 +286,8 @@ class DiaryPageCoordinateAssetTest {
         String read = rule(css, ".diary-detail-page.is-read-mode");
 
         // 넓히는 것은 바깥 폭뿐이다. 종이 자체의 크기를 따로 정하지 않는다
-        assertThat(read).contains("width: min(1660px, calc(100% - 40px));");
+        // 큰 모니터에서는 더 커지지 않는다 (노트북에서는 화면 폭을 그대로 쓴다)
+        assertThat(read).contains("width: min(1140px, calc(100% - 40px));");
         assertThat(read).doesNotContain("aspect-ratio").doesNotContain("--diary-page-unit");
 
         // 두 장을 나란히 펼치는 폭에서만 높이로도 한 번 더 줄인다

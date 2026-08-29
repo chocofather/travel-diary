@@ -1,8 +1,11 @@
 package com.example.travlediary.controller.diary;
 
+import com.example.travlediary.dto.DiaryListItemDto;
 import com.example.travlediary.dto.DiaryListPageDto;
 import com.example.travlediary.dto.DiarySort;
 import com.example.travlediary.model.Diary;
+import com.example.travlediary.model.DiaryCover;
+import com.example.travlediary.model.DiaryCoverDesign;
 import com.example.travlediary.model.DiaryCoverStyle;
 import com.example.travlediary.model.DiaryNotebookType;
 import com.example.travlediary.model.DiaryElement;
@@ -11,6 +14,9 @@ import com.example.travlediary.model.DiarySticker;
 import com.example.travlediary.model.DiaryStickerKind;
 import com.example.travlediary.model.DiaryPage;
 import com.example.travlediary.security.CustomUserDetails;
+import com.example.travlediary.service.diary.DiaryCoverDesignElementService;
+import com.example.travlediary.service.diary.DiaryCoverDesignService;
+import com.example.travlediary.service.diary.DiaryCoverService;
 import com.example.travlediary.service.diary.DiaryElementService;
 import com.example.travlediary.service.diary.DiaryNoteCatalog;
 import com.example.travlediary.service.diary.DiaryPageService;
@@ -23,6 +29,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -82,7 +89,15 @@ public class DiaryController {
     private static final BigDecimal MEMO_WIDTH = new BigDecimal("0.26000");
     private static final BigDecimal MEMO_HEIGHT = new BigDecimal("0.28000");
 
+    /** 표지를 "내 디자인"으로 고른 요청. (그 밖의 값은 기본 표지로 본다) */
+    private static final String CUSTOM_COVER_SELECTION = "CUSTOM";
+
     private final DiaryService diaryService;
+    /** 내 표지 디자인 보관함. 목록/미리보기와 소유권 확인에 쓴다. */
+    private final DiaryCoverDesignService diaryCoverDesignService;
+    private final DiaryCoverDesignElementService diaryCoverDesignElementService;
+    /** 다이어리에 입힌 커스텀 표지. 적용과 목록 렌더링에 쓴다. */
+    private final DiaryCoverService diaryCoverService;
     private final DiaryPageService diaryPageService;
     private final DiaryElementService diaryElementService;
     private final FileUploadService fileUploadService;
@@ -107,7 +122,7 @@ public class DiaryController {
         DiaryListPageDto diaryPage = diaryService.getMyDiaryPage(
                 userDetails.getId(), keyword, DiarySort.of(sort), pageNumber(page));
 
-        addDiaryListAttributes(model, diaryPage);
+        addDiaryListAttributes(model, diaryPage, userDetails.getId());
         model.addAttribute("pageTitle", "나의 여행일기");
         return "diary/list";
     }
@@ -123,7 +138,8 @@ public class DiaryController {
                                     @AuthenticationPrincipal CustomUserDetails userDetails,
                                     Model model) {
         addDiaryListAttributes(model, diaryService.getMyDiaryPage(
-                userDetails.getId(), keyword, DiarySort.of(sort), pageNumber(page)));
+                        userDetails.getId(), keyword, DiarySort.of(sort), pageNumber(page)),
+                userDetails.getId());
         return "diary/list :: results";
     }
 
@@ -172,9 +188,23 @@ public class DiaryController {
         }
     }
 
-    private void addDiaryListAttributes(Model model, DiaryListPageDto diaryPage) {
+    /**
+     * 목록 카드가 필요한 것들.
+     *
+     * <p>커스텀 표지를 쓰는 다이어리는 꾸민 그대로 보여 준다. 카드마다 따로 묻지 않도록
+     * 이 쪽의 다이어리 번호를 모아 표지를 한 번에 읽고, 그 표지 번호로 요소를 한 번에 읽는다.
+     * (표지가 없는 다이어리는 결과에 없고 예전처럼 cover_style + cover_image_url 로 그린다)
+     */
+    private void addDiaryListAttributes(Model model, DiaryListPageDto diaryPage, Long userId) {
         model.addAttribute("diaryList", diaryPage.items());
         model.addAttribute("diaryPage", diaryPage);
+
+        List<Long> diaryIds = diaryPage.items().stream().map(DiaryListItemDto::getId).toList();
+        Map<Long, DiaryCover> covers = diaryCoverService.findCoversByDiary(diaryIds, userId);
+        model.addAttribute("coversByDiary", covers);
+        model.addAttribute("coverElementsByCover",
+                diaryCoverService.findElementsByCover(covers.values()));
+        model.addAttribute("stickerRepeats", diaryStickerCatalog.getRepeatsByImageUrl());
     }
 
     /** 쪽 번호는 1부터. 비어 있거나 숫자가 아니거나 1보다 작으면 첫 쪽으로 본다. */
@@ -1043,10 +1073,10 @@ public class DiaryController {
 
     /** 새 여행일기 작성 화면 */
     @GetMapping("/new")
-    public String newDiaryForm(Model model) {
+    public String newDiaryForm(@AuthenticationPrincipal CustomUserDetails userDetails,
+                               Model model) {
         model.addAttribute("diaryForm", new Diary());
-        model.addAttribute("coverStyles", DiaryCoverStyle.values());
-        model.addAttribute("notebookTypes", DiaryNotebookType.values());
+        addNewFormAttributes(model, userDetails.getId());
         model.addAttribute("pageTitle", "새 여행일기");
         return "diary/new";
     }
@@ -1057,6 +1087,8 @@ public class DiaryController {
                               BindingResult bindingResult,
                               @RequestParam(value = "coverImage", required = false)
                               MultipartFile coverImage,
+                              @RequestParam(required = false) String coverSelectionType,
+                              @RequestParam(required = false) Long customCoverDesignId,
                               @AuthenticationPrincipal CustomUserDetails userDetails,
                               Model model,
                               RedirectAttributes redirectAttributes) {
@@ -1064,10 +1096,18 @@ public class DiaryController {
             return renderNewForm(model, "여행 기간을 올바르게 입력해 주세요.");
         }
 
+        /*
+          내 디자인을 고른 경우다.
+          그때는 대표 이미지를 쓰지 않는다 — 표지에 들어갈 사진은 디자인이 들고 있다.
+          디자인이 내 것인지는 표지 서비스가 확인한다. (요청 값을 그대로 믿지 않는다)
+        */
+        boolean custom = CUSTOM_COVER_SELECTION.equals(coverSelectionType)
+                && customCoverDesignId != null;
+
         // 이번 요청에서 저장한 대표 이미지만 추적해 실패 시 정리한다.
         String savedCoverImageUrl = null;
         try {
-            if (coverImage != null && !coverImage.isEmpty()) {
+            if (!custom && coverImage != null && !coverImage.isEmpty()) {
                 savedCoverImageUrl = fileUploadService.saveFile(coverImage, COVER_IMAGE_DIRECTORY);
             }
 
@@ -1081,7 +1121,21 @@ public class DiaryController {
             diary.setCoverStyle(diaryForm.getCoverStyle());
             // 노트 종류. 고르지 않고 들어온 요청은 서비스가 기본값(CLASSIC)으로 채운다.
             diary.setNotebookType(diaryForm.getNotebookType());
-            diaryService.create(userDetails.getId(), diary);
+
+            if (custom) {
+                /*
+                  커스텀 표지를 지웠을 때 돌아갈 자리를 남겨 둔다.
+                  디자인이 쓰던 재질을 cover_style 에 적어 두면 적어도 그 재질의 기본 표지가 된다.
+                  대표 이미지는 쓰지 않으므로 비워 둔다.
+                */
+                diary.setCoverStyle(diaryCoverDesignService
+                        .getMyDesign(customCoverDesignId, userDetails.getId()).getBaseCoverStyle());
+                diary.setCoverImageUrl(null);
+                // 다이어리와 표지를 한 트랜잭션으로 묶는다. (표지가 실패하면 다이어리도 남지 않는다)
+                diaryCoverService.createWithDesign(userDetails.getId(), diary, customCoverDesignId);
+            } else {
+                diaryService.create(userDetails.getId(), diary);
+            }
         } catch (ResponseStatusException exception) {
             deleteStoredFile(savedCoverImageUrl);
             if (exception.getStatusCode().is4xxClientError()) {
@@ -1100,10 +1154,31 @@ public class DiaryController {
     /** 입력값을 그대로 둔 채 오류 메시지와 함께 작성 화면을 다시 보여준다. */
     private String renderNewForm(Model model, String errorMessage) {
         model.addAttribute("diaryError", errorMessage);
-        model.addAttribute("coverStyles", DiaryCoverStyle.values());
-        model.addAttribute("notebookTypes", DiaryNotebookType.values());
+        addNewFormAttributes(model, currentUserId());
         model.addAttribute("pageTitle", "새 여행일기");
         return "diary/new";
+    }
+
+    /**
+     * 작성 화면이 표지를 고르는 데 필요한 것들.
+     * 기본 표지 8종과 함께, 내가 저장해 둔 표지 디자인을 완성된 모습으로 보여 준다.
+     * 요소는 디자인마다 따로 묻지 않고 한 번에 읽는다. (보관함 목록과 같은 길)
+     */
+    private void addNewFormAttributes(Model model, Long userId) {
+        model.addAttribute("coverStyles", DiaryCoverStyle.values());
+        model.addAttribute("notebookTypes", DiaryNotebookType.values());
+
+        List<DiaryCoverDesign> designs = diaryCoverDesignService.getMyDesigns(userId);
+        model.addAttribute("coverDesigns", designs);
+        model.addAttribute("coverElementsByDesign", diaryCoverDesignElementService
+                .getElementsByDesign(designs.stream().map(DiaryCoverDesign::getId).toList(), userId));
+        model.addAttribute("stickerRepeats", diaryStickerCatalog.getRepeatsByImageUrl());
+    }
+
+    /** 오류로 화면을 다시 그릴 때 쓰는 현재 사용자. (요청 값이 아니라 인증 정보에서 읽는다) */
+    private Long currentUserId() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        return ((CustomUserDetails) principal).getId();
     }
 
     /** 저장에 실패했을 때 이번 요청에서 올라간 대표 이미지만 정리한다. */

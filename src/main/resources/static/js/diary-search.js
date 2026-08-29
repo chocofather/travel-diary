@@ -169,6 +169,9 @@ document.addEventListener('DOMContentLoaded', () => {
         results = fresh;
         // 새로 그려진 카드의 ⋯ 메뉴를 다시 연결한다.
         window.diaryBookMenu?.refresh();
+        // 커스텀 표지의 마스킹테이프도 새 카드 기준으로 다시 그린다.
+        fresh.querySelectorAll('.diary-sticker[data-tape-center]')
+            .forEach((item) => window.diaryTape?.render(item));
     }
 
     /** 기본 정렬은 주소를 깔끔하게 두려고 붙이지 않는다. (서버도 없으면 기본으로 본다) */

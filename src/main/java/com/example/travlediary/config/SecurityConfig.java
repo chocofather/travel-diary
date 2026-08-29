@@ -183,6 +183,41 @@ public class SecurityConfig {
                                 HttpMethod.POST.name()),
                         new RegexRequestMatcher(
                                 "^/diaries$", HttpMethod.POST.name()),
+                        // 내 표지 디자인 보관함 (Thymeleaf 폼 전송)
+                        new RegexRequestMatcher(
+                                "^/diaries/cover-designs$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/diaries/cover-designs/[0-9]+/update$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/diaries/cover-designs/[0-9]+/delete$", HttpMethod.POST.name()),
+                        // 표지 위 자유배치 요소 (fetch 요청, 토큰은 meta 값을 그대로 쓴다)
+                        new RegexRequestMatcher(
+                                "^/diaries/cover-designs/[0-9]+/elements/sticker$",
+                                HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/diaries/cover-designs/[0-9]+/elements/photo$",
+                                HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/diaries/cover-designs/[0-9]+/elements/[0-9]+/photo/delete$",
+                                HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/diaries/cover-designs/[0-9]+/elements/[0-9]+/photo-style$",
+                                HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/diaries/cover-designs/[0-9]+/elements/[0-9]+/position$",
+                                HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/diaries/cover-designs/[0-9]+/elements/[0-9]+/size$",
+                                HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/diaries/cover-designs/[0-9]+/elements/[0-9]+/rotation$",
+                                HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/diaries/cover-designs/[0-9]+/elements/[0-9]+/layer$",
+                                HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/diaries/cover-designs/[0-9]+/elements/[0-9]+/sticker/delete$",
+                                HttpMethod.POST.name()),
                         new RegexRequestMatcher(
                                 "^/diaries/[0-9]+/update$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(

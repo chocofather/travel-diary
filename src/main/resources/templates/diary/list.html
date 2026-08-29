@@ -6,6 +6,8 @@
   <link rel="stylesheet" href="/css/diary.css">
   <script src="/js/diary-book-menu.js" defer></script>
   <script src="/js/diary-search.js" defer></script>
+  <!-- 커스텀 표지의 마스킹테이프를 폭에 맞춰 이어 그린다 (보기 전용에서도 같은 모습) -->
+  <script src="/js/diary-tape-repeat.js" defer></script>
 </th:block>
 
 <th:block th:fragment="body">
@@ -64,6 +66,19 @@
           </div>
         </div>
 
+        <!-- 표지 디자인 보관함으로 가는 관리 진입점.
+             새 여행일기(primary)보다 한 단계 낮은 외곽선 버튼으로 둔다. -->
+        <a class="diary-cover-designs-button" th:href="@{/diaries/cover-designs}">
+          <!-- 표지 한 장(책등 + 앞면)만 그린 선 아이콘 -->
+          <svg class="diary-cover-designs-icon" viewBox="0 0 16 16" aria-hidden="true"
+               fill="none" stroke="currentColor" stroke-width="1.3"
+               stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2.6" y="2.2" width="10.8" height="11.6" rx="1.6" />
+            <path d="M5.6 2.2v11.6" />
+          </svg>
+          표지 디자인 관리
+        </a>
+
         <a class="diary-new-button" th:href="@{/diaries/new}"><span
                 class="diary-new-button-plus" aria-hidden="true">+</span>새 여행일기</a>
       </div>
@@ -89,16 +104,28 @@
                             + ${#strings.replace(#strings.toLowerCase(diary.coverStyle), '_', '-')} : ''">
         <a class="diary-book-inner" th:href="@{/diaries/{id}(id=${diary.id})}">
           <!-- 표지에는 대표 이미지와 책 재질/책등만 남긴다 (제목은 표지 아래 정보로) -->
-          <div class="diary-book-cover">
-            <img th:if="${diary.coverImageUrl != null and !#strings.isEmpty(diary.coverImageUrl)}"
-                 class="diary-book-image"
-                 th:src="${diary.coverImageUrl}"
-                 th:alt="|${diary.title} 표지|"
-                 loading="lazy" />
-            <!-- 대표 이미지가 없으면 깨진 이미지 대신 표지 소재만 보이는 무지 표지를 쓴다 -->
-            <div th:unless="${diary.coverImageUrl != null and !#strings.isEmpty(diary.coverImageUrl)}"
-                 class="diary-book-placeholder" aria-hidden="true"></div>
-            <span class="diary-book-spine" aria-hidden="true"></span>
+          <div class="diary-book-cover" th:with="cover=${coversByDiary.get(diary.id)}">
+            <!--
+              커스텀 표지를 입힌 책은 보관함과 같은 조각으로 그린다. (보기 전용)
+              이때는 다이어리의 cover_style/대표 이미지 대신 표지가 가진 값만 쓴다.
+            -->
+            <th:block th:if="${cover != null}">
+              <div th:replace="~{diary/cover-preview :: canvas(${cover},
+                                 ${coverElementsByCover.getOrDefault(cover.id,
+                                                                    #lists.toList({}))})}"></div>
+            </th:block>
+
+            <th:block th:if="${cover == null}">
+              <img th:if="${diary.coverImageUrl != null and !#strings.isEmpty(diary.coverImageUrl)}"
+                   class="diary-book-image"
+                   th:src="${diary.coverImageUrl}"
+                   th:alt="|${diary.title} 표지|"
+                   loading="lazy" />
+              <!-- 대표 이미지가 없으면 깨진 이미지 대신 표지 소재만 보이는 무지 표지를 쓴다 -->
+              <div th:unless="${diary.coverImageUrl != null and !#strings.isEmpty(diary.coverImageUrl)}"
+                   class="diary-book-placeholder" aria-hidden="true"></div>
+              <span class="diary-book-spine" aria-hidden="true"></span>
+            </th:block>
           </div>
 
           <!-- 책 아래 목록 정보: 1줄 제목 / 2줄 기간 + 페이지 수 -->

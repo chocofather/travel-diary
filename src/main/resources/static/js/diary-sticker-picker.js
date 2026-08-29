@@ -13,7 +13,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const status = document.getElementById('diary-sticker-status');
     const createUrl = button.dataset.createUrl;
-    const canvas = document.querySelector('.diary-book-single .diary-canvas');
+    // 붙일 자리는 두 곳이다 — 페이지 편집의 종이, 그리고 표지 디자인 편집의 표지.
+    // 붙이는 절차와 만드는 마크업은 같고, 보낼 주소만 버튼이 알려 준다.
+    const canvas = document.querySelector('.diary-book-single .diary-canvas')
+        || document.querySelector('.diary-cover-canvas.is-editable .diary-cover-surface');
     if (!createUrl || !canvas) return;
 
     /** 최근 쓴 스티커는 이 브라우저에만 남긴다. (이모지 최근 목록과 같은 방식, 서버 저장 없음) */

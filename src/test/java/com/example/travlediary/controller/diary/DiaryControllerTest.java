@@ -12,6 +12,12 @@ import com.example.travlediary.model.DiaryPage;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.dto.DiarySort;
+import com.example.travlediary.model.DiaryCover;
+import com.example.travlediary.model.DiaryCoverDesign;
+import com.example.travlediary.model.DiaryCoverElement;
+import com.example.travlediary.service.diary.DiaryCoverDesignElementService;
+import com.example.travlediary.service.diary.DiaryCoverDesignService;
+import com.example.travlediary.service.diary.DiaryCoverService;
 import com.example.travlediary.service.diary.DiaryElementService;
 import com.example.travlediary.service.diary.DiaryPageService;
 import com.example.travlediary.service.diary.DiaryService;
@@ -78,6 +84,12 @@ class DiaryControllerTest {
     private DiaryElementService diaryElementService;
     @MockitoBean
     private FileUploadService fileUploadService;
+    @MockitoBean
+    private DiaryCoverService diaryCoverService;
+    @MockitoBean
+    private DiaryCoverDesignService diaryCoverDesignService;
+    @MockitoBean
+    private DiaryCoverDesignElementService diaryCoverDesignElementService;
     @MockitoBean
     private HolidayService holidayService;
     @MockitoBean
@@ -2462,6 +2474,177 @@ class DiaryControllerTest {
         assertThat(captor.getValue().getCoverImageUrl()).isNull();
         // 소유자는 요청 값이 아니라 로그인 사용자로 정해진다
         assertThat(captor.getValue().getUserId()).isNull();
+    }
+
+    /** 새 여행일기 폼에서 기본 표지와 내가 저장해 둔 디자인 중 하나를 고른다. */
+    @Test
+    void newFormOffersMySavedCoverDesignsBesideTheDefaultOnes() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        DiaryCoverDesign design = coverDesign(5L, "제주 표지");
+        when(diaryCoverDesignService.getMyDesigns(7L)).thenReturn(List.of(design));
+        when(diaryCoverDesignElementService.getElementsByDesign(List.of(5L), 7L))
+                .thenReturn(Map.of(5L, List.of()));
+
+        mockMvc.perform(get("/diaries/new")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("기본 디자인")))
+                .andExpect(content().string(containsString("내 디자인")))
+                .andExpect(content().string(containsString("제주 표지")))
+                .andExpect(content().string(containsString("name=\"coverSelectionType\"")))
+                .andExpect(content().string(containsString("name=\"customCoverDesignId\"")));
+
+        // 요소는 디자인마다 따로 묻지 않고 한 번에 읽는다
+        verify(diaryCoverDesignElementService).getElementsByDesign(List.of(5L), 7L);
+    }
+
+    /** 저장해 둔 디자인이 없으면 만들러 가는 길만 조용히 안내한다. */
+    @Test
+    void newFormWithoutAnyDesignPointsToTheCoverDesignShelf() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryCoverDesignService.getMyDesigns(7L)).thenReturn(List.of());
+
+        mockMvc.perform(get("/diaries/new")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("아직 만든 표지 디자인이 없습니다.")))
+                .andExpect(content().string(containsString("/diaries/cover-designs")));
+    }
+
+    /**
+     * 내 디자인을 고르면 다이어리와 표지가 한 번에 만들어진다.
+     * 이때 대표 이미지는 저장하지 않고, cover_style 만 디자인의 재질로 남겨 둔다.
+     */
+    @Test
+    void creatingWithMyDesignAppliesTheCoverAndSkipsTheCoverImage() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryCoverDesignService.getMyDesign(5L, 7L))
+                .thenReturn(coverDesign(5L, "제주 표지"));
+        when(diaryCoverService.createWithDesign(eq(7L), any(Diary.class), eq(5L)))
+                .thenReturn(new Diary());
+
+        mockMvc.perform(multipart("/diaries")
+                        .file(new MockMultipartFile("coverImage", "cover.jpg",
+                                "image/jpeg", "x".getBytes()))
+                        .param("title", "여름 제주 여행")
+                        .param("startDate", "2026-08-01")
+                        .param("endDate", "2026-08-05")
+                        .param("coverSelectionType", "CUSTOM")
+                        .param("customCoverDesignId", "5")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/diaries"));
+
+        ArgumentCaptor<Diary> captor = ArgumentCaptor.forClass(Diary.class);
+        verify(diaryCoverService).createWithDesign(eq(7L), captor.capture(), eq(5L));
+        // 표지에 들어갈 사진은 디자인이 들고 있으므로 대표 이미지는 저장조차 하지 않는다
+        verify(fileUploadService, org.mockito.Mockito.never()).saveFile(any(), anyString());
+        assertThat(captor.getValue().getCoverImageUrl()).isNull();
+        // 커스텀 표지를 지웠을 때 돌아갈 자리
+        assertThat(captor.getValue().getCoverStyle()).isEqualTo("LEATHER_DEEP_GREEN");
+        // 커스텀 표지를 고른 요청은 기본 생성 길을 타지 않는다
+        verify(diaryService, org.mockito.Mockito.never()).create(anyLong(), any(Diary.class));
+    }
+
+    /** 남의 디자인 번호를 보내면 다이어리도 표지도 만들어지지 않는다. */
+    @Test
+    void creatingWithSomeoneElsesDesignCreatesNothing() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryCoverDesignService.getMyDesign(5L, 7L)).thenThrow(
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "표지 디자인을 찾을 수 없습니다."));
+
+        mockMvc.perform(multipart("/diaries")
+                        .param("title", "여름 제주 여행")
+                        .param("startDate", "2026-08-01")
+                        .param("endDate", "2026-08-05")
+                        .param("coverSelectionType", "CUSTOM")
+                        .param("customCoverDesignId", "5")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                // 다른 입력 오류와 같은 길로, 작성 화면에 이유를 보여 준다
+                .andExpect(view().name("diary/new"))
+                .andExpect(content().string(containsString("표지 디자인을 찾을 수 없습니다.")));
+
+        verify(diaryCoverService, org.mockito.Mockito.never())
+                .createWithDesign(anyLong(), any(Diary.class), anyLong());
+        verify(diaryService, org.mockito.Mockito.never()).create(anyLong(), any(Diary.class));
+    }
+
+    /** 기본 디자인으로 만들면 예전 길 그대로다. */
+    @Test
+    void creatingWithADefaultCoverStillTakesTheOldPath() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.create(eq(7L), any(Diary.class))).thenReturn(new Diary());
+
+        mockMvc.perform(multipart("/diaries")
+                        .param("title", "여름 제주 여행")
+                        .param("startDate", "2026-08-01")
+                        .param("endDate", "2026-08-05")
+                        .param("coverSelectionType", "PRESET")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().is3xxRedirection());
+
+        verify(diaryService).create(eq(7L), any(Diary.class));
+        verify(diaryCoverService, org.mockito.Mockito.never())
+                .createWithDesign(anyLong(), any(Diary.class), anyLong());
+    }
+
+    /** 책장 목록도 커스텀 표지를 꾸민 그대로 보여 준다. (카드마다 묻지 않는다) */
+    @Test
+    void theShelfDrawsCustomCoversWithoutAskingPerCard() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiaryPage(7L, null, DiarySort.UPDATED_DESC, 1))
+                .thenReturn(listPage(List.of(item())));
+        DiaryCover cover = new DiaryCover();
+        cover.setId(3L);
+        cover.setDiaryId(10L);
+        cover.setBaseCoverStyle("LEATHER_DEEP_GREEN");
+        when(diaryCoverService.findCoversByDiary(List.of(10L), 7L))
+                .thenReturn(Map.of(10L, cover));
+        DiaryCoverElement element = new DiaryCoverElement();
+        element.setCoverId(3L);
+        element.setElementType("PHOTO");
+        element.setImageUrl("/uploads/diary-cover-elements/a.jpg");
+        element.setPhotoStyle("POLAROID");
+        element.setPositionX(new java.math.BigDecimal("0.2000"));
+        element.setPositionY(new java.math.BigDecimal("0.3000"));
+        element.setWidth(new java.math.BigDecimal("0.4000"));
+        element.setHeight(new java.math.BigDecimal("0.3000"));
+        element.setRotation(new java.math.BigDecimal("0.00"));
+        element.setZIndex(1);
+        when(diaryCoverService.findElementsByCover(any()))
+                .thenReturn(Map.of(3L, List.of(element)));
+
+        mockMvc.perform(get("/diaries")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("diary-cover-canvas")))
+                .andExpect(content().string(
+                        containsString("/uploads/diary-cover-elements/a.jpg")))
+                // 보기 전용이라 조작 손잡이나 저장 주소는 실리지 않는다
+                .andExpect(content().string(
+                        org.hamcrest.Matchers.not(containsString("data-position-url"))));
+
+        // 표지와 요소를 각각 한 번씩만 읽는다 (카드 수와 상관없이)
+        verify(diaryCoverService).findCoversByDiary(List.of(10L), 7L);
+        verify(diaryCoverService).findElementsByCover(any());
+    }
+
+    private DiaryCoverDesign coverDesign(Long id, String name) {
+        DiaryCoverDesign design = new DiaryCoverDesign();
+        design.setId(id);
+        design.setUserId(7L);
+        design.setName(name);
+        design.setBaseCoverStyle("LEATHER_DEEP_GREEN");
+        return design;
     }
 
     @Test

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
+
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/diary.css">
+  <!-- 마스킹테이프를 편집 화면과 같은 모습으로 그린다. (조작 스크립트는 싣지 않는다) -->
+  <script src="/js/diary-tape-repeat.js" defer></script>
+</th:block>
+
+<th:block th:fragment="body">
+  <section class="diary-list-page" aria-labelledby="cover-designs-title">
+    <header class="diary-list-header">
+      <div class="diary-list-heading">
+        <a class="diary-detail-back" th:href="@{/diaries}">← 나의 여행일기로</a>
+        <h1 id="cover-designs-title">내 표지 디자인</h1>
+        <p class="diary-list-subtitle">직접 꾸민 표지를 저장해 두고 여행일기에 사용할 수 있어요.</p>
+      </div>
+      <div class="diary-list-tools">
+        <!-- 이름과 바탕은 편집 화면에서 정한다. 여기서는 빈 디자인 하나를 만들고 바로 넘어간다. -->
+        <form th:action="@{/diaries/cover-designs}" method="post">
+          <button type="submit" class="diary-new-button"><span
+                  class="diary-new-button-plus" aria-hidden="true">+</span>새 디자인 만들기</button>
+        </form>
+      </div>
+    </header>
+
+    <p class="diary-flash-message" th:if="${coverDesignMessage}" th:text="${coverDesignMessage}"
+       role="status">새 표지 디자인이 만들어졌습니다.</p>
+
+    <ul class="diary-cover-design-shelf" th:unless="${#lists.isEmpty(coverDesigns)}">
+      <li class="diary-cover-design-card" th:each="design : ${coverDesigns}">
+        <a class="diary-cover-design-link"
+           th:href="@{/diaries/cover-designs/{id}/edit(id=${design.id})}"
+           th:attr="aria-label=|${design.name} 디자인 편집|">
+          <!-- 꾸민 그대로 줄여 보여 준다. 요소는 위에서 한 번에 읽어 둔 것을 나눠 쓴다. -->
+          <div th:replace="~{diary/cover-preview :: canvas(${design},
+                             ${coverElementsByDesign.getOrDefault(design.id, #lists.toList({}))})}"></div>
+          <div class="diary-cover-design-info">
+            <h2 class="diary-cover-design-name" th:text="${design.name}">제주 여행</h2>
+            <p class="diary-cover-design-style"
+               th:text="${design.baseCoverStyleLabel}">가죽 딥그린</p>
+          </div>
+        </a>
+
+        <!-- 삭제는 낮은 위계의 보조 동작이다. 확인을 한 번 거친다. -->
+        <form class="diary-cover-design-delete"
+              th:action="@{/diaries/cover-designs/{id}/delete(id=${design.id})}" method="post"
+              th:attr="onsubmit=|return confirm('${design.name} 디자인을 삭제할까요? 이미 여행일기에 적용한 표지는 그대로 남습니다.')|">
+          <button type="submit" class="diary-cover-design-delete-button"
+                  th:attr="aria-label=|${design.name} 디자인 삭제|">삭제</button>
+        </form>
+      </li>
+    </ul>
+
+    <div class="diary-empty" th:if="${#lists.isEmpty(coverDesigns)}" role="status">
+      <span class="diary-empty-mark" aria-hidden="true">✎</span>
+      <p class="diary-empty-title">아직 저장한 표지 디자인이 없습니다.</p>
+      <p class="diary-empty-text">나만의 표지를 만들어 두면 여행일기를 만들 때 골라 쓸 수 있어요.</p>
+      <form th:action="@{/diaries/cover-designs}" method="post">
+        <button type="submit" class="diary-new-button"><span
+                class="diary-new-button-plus" aria-hidden="true">+</span>새 디자인 만들기</button>
+      </form>
+    </div>
+  </section>
+</th:block>
+</html>

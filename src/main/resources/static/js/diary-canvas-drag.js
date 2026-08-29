@@ -4,8 +4,15 @@
  * Pointer Events 만 사용하고 별도 드래그/리사이즈 라이브러리는 쓰지 않는다.
  */
 document.addEventListener('DOMContentLoaded', () => {
-    // 읽기 모드에서는 어떤 조작도 시작되지 않도록 아예 붙이지 않는다.
-    if (!document.querySelector('.diary-detail-page.is-edit-mode')) return;
+    /*
+      읽기 모드에서는 어떤 조작도 시작되지 않도록 아예 붙이지 않는다.
+      꾸밀 수 있는 자리는 두 곳이다 — 페이지 편집 화면과 표지 디자인 편집 화면.
+      둘 중 하나라도 열려 있으면 같은 엔진이 그대로 움직인다.
+      (저장 주소는 요소마다 data-*-url 로 실려 오므로 엔진은 어느 화면인지 몰라도 된다)
+    */
+    if (!document.querySelector('.diary-detail-page.is-edit-mode, .diary-cover-canvas.is-editable')) {
+        return;
+    }
 
     // 나중에 붙는 요소(스티커)도 같은 조작을 쓰도록 목록에 더해 나간다.
     const items = Array.from(document.querySelectorAll('.diary-canvas-item[data-element-id]'));
