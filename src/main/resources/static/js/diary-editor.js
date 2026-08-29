@@ -120,6 +120,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         quill.on('text-change', (delta, oldDelta, source) => {
             if (source !== 'user') return;
+            // 종이 밖으로 넘치는 입력은 되돌린다. (스크롤 대신 페이지를 한 장 더 쓴다)
+            if (rejectOverflow(page, oldDelta)) return;
             scheduleSave(page);
             // 입력으로 커서가 옮겨질 때는 selection-change 가 따로 오지 않는다.
             // Quill 이 선택 영역을 갱신한 다음에 읽도록 마이크로태스크로 한 번 미룬다.
@@ -200,6 +202,28 @@ document.addEventListener('DOMContentLoaded', () => {
     /** 한 줄 메모가 있는 쪽. 편집 모드는 한 장만 펼치므로 사실상 그 장이다. */
     function headerPage() {
         return pages.find(page => page.headerInput != null) || null;
+    }
+
+    /**
+     * 한 장에 담기는 줄 수는 종이가 정한다. 그 밖으로 넘치는 입력은 받지 않는다.
+     *
+     * 종이 안에서 스크롤하지 않기로 했으므로, 넘치는 글은 보이지 않을 뿐 사라지지 않는다.
+     * 그래서 넘치게 만든 입력만 직전 상태로 되돌리고 커서를 그 자리에 남긴다.
+     * 지우는 쪽은 막지 않는다. (이미 넘쳐 있는 글을 정리할 수 있어야 한다)
+     */
+    function rejectOverflow(page, previousContents) {
+        const root = page.quill.root;
+        if (root.scrollHeight <= root.clientHeight + 1) return false;
+        // 글자 수가 줄어드는 변경(지우기)은 그대로 둔다
+        if (page.quill.getLength() <= previousContents.length()) return false;
+
+        const range = page.quill.getSelection();
+        page.quill.setContents(previousContents, 'silent');
+        if (range) {
+            page.quill.setSelection(Math.min(range.index, page.quill.getLength() - 1), 0, 'silent');
+        }
+        showStatus('이 페이지가 가득 찼습니다. 새 페이지를 추가해 주세요.', true);
+        return true;
     }
 
     function scheduleSave(page) {
