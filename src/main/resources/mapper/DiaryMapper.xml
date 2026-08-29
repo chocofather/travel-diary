@@ -13,6 +13,7 @@
         <result property="endDate"       column="end_date"/>
         <result property="coverImageUrl" column="cover_image_url"/>
         <result property="coverStyle"    column="cover_style"/>
+        <result property="notebookType"  column="notebook_type"/>
         <result property="createdAt"     column="created_at"/>
         <result property="updatedAt"     column="updated_at"/>
     </resultMap>
@@ -29,7 +30,7 @@
 
     <sql id="DiaryColumns">
         id, user_id, title, start_date, end_date,
-        cover_image_url, cover_style, created_at, updated_at
+        cover_image_url, cover_style, notebook_type, created_at, updated_at
     </sql>
 
     <!-- 회원 본인의 다이어리 목록. 최근 여행부터 보여준다. -->
@@ -117,10 +118,10 @@
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO diaries (
             user_id, title, start_date, end_date,
-            cover_image_url, cover_style, created_at, updated_at
+            cover_image_url, cover_style, notebook_type, created_at, updated_at
         ) VALUES (
             #{userId}, #{title}, #{startDate}, #{endDate},
-            #{coverImageUrl}, #{coverStyle}, NOW(), NOW()
+            #{coverImageUrl}, #{coverStyle}, #{notebookType}, NOW(), NOW()
         )
     </insert>
 
@@ -132,6 +133,7 @@
             end_date = #{endDate},
             cover_image_url = #{coverImageUrl},
             cover_style = #{coverStyle},
+            notebook_type = #{notebookType},
             updated_at = NOW()
         WHERE id = #{id}
           AND user_id = #{userId}

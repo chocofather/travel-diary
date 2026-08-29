@@ -38,10 +38,12 @@ class DiaryPaperAssetTest {
         assertThat(texture).contains("repeating-linear-gradient").contains("radial-gradient");
         /*
           종이 질감에 외부 이미지를 쓰지 않는다.
-          (라벨/메모지의 장식은 mask 로 그림을 쓰지만 종이 자체는 그리기만으로 만든다)
+          (라벨/메모지의 장식이나 스프링 코일은 그림을 쓰지만, 그것들은 종이 위에 얹는
+           별개의 층이다. 종이 자체와 그 무늬는 그리기만으로 만든다)
         */
         assertThat(texture).doesNotContain("url(");
-        assertThat(css.substring(0, css.indexOf("===== 라벨 / 떡메모지 (NOTE)")))
+        assertThat(css.substring(css.indexOf("--diary-paper-grain:"),
+                        css.indexOf(".diary-sheet-left {")))
                 .doesNotContain("url(");
     }
 
@@ -75,18 +77,26 @@ class DiaryPaperAssetTest {
         assertThat(canvas).doesNotContain("top:").doesNotContain("margin");
     }
 
+    /**
+     * 일반 노트의 펼침 한가운데에는 아무 장식도 없다.
+     *
+     * <p>예전에는 책등 그늘과 실크 리본, 두 장의 접힘 그림자가 겹쳐 펼침 가운데에
+     * 세로 줄 하나가 그어진 것처럼 보였다. 지금은 칸 자체를 0 으로 줄여 두 장이 이어진다.
+     */
     @Test
-    void ribbonIsDecorationOnlyAndCannotBlockThePaper() throws IOException {
+    void theClassicSpreadHasNothingDownItsMiddle() throws IOException {
         String css = Files.readString(DIARY_CSS);
-        String ribbon = rule(css, ".diary-book-ribbon");
 
-        assertThat(ribbon).contains("pointer-events: none;");
-        // 책 높이의 절반보다 길고 전체보다는 짧다
-        assertThat(ribbon).containsPattern("height: (5[5-9]|6[0-9]|7[0-5])%;");
-        // 실크 줄처럼 아주 얇다 (막대기로 보이면 안 된다)
-        assertThat(ribbon).containsPattern("width: [3-7]px;");
-        // 읽기 펼침의 제본선 장식일 뿐이라 편집 한 장용 변형은 두지 않는다
-        assertThat(css).doesNotContain(".diary-book-ribbon.is-single");
+        assertThat(css).doesNotContain(".diary-book-ribbon");
+        assertThat(rule(css, ".diary-book-spread.diary-book-classic"))
+                .contains("grid-template-columns: minmax(0, 1fr) 0 minmax(0, 1fr);");
+        // 접힘 그림자도 두지 않는다. (종이 모서리 둥글기는 그대로)
+        assertThat(rule(css, ".diary-sheet-left"))
+                .contains("border-radius: 12px 0 0 12px;")
+                .doesNotContain("box-shadow");
+        assertThat(rule(css, ".diary-sheet-right")).doesNotContain("box-shadow");
+        // 제본을 보여야 하는 스프링 노트만 그 칸에 그늘을 남긴다
+        assertThat(rule(css, ".diary-book-spiral .diary-book-gutter")).contains("linear-gradient");
     }
 
     @Test

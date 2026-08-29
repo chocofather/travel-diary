@@ -4,6 +4,7 @@ import com.example.travlediary.dto.DiaryListPageDto;
 import com.example.travlediary.dto.DiarySort;
 import com.example.travlediary.model.Diary;
 import com.example.travlediary.model.DiaryCoverStyle;
+import com.example.travlediary.model.DiaryNotebookType;
 import com.example.travlediary.model.DiaryElement;
 import com.example.travlediary.model.DiaryNoteStyle;
 import com.example.travlediary.model.DiarySticker;
@@ -232,6 +233,12 @@ public class DiaryController {
 
         model.addAttribute("diary", diary);
         model.addAttribute("diaryPages", pages);
+        // 공책 모양은 한 권에 하나다. 읽기/편집/펼침 조각이 모두 같은 값을 쓴다.
+        // (컬럼이 생기기 전의 다이어리는 toCssClass 가 일반 노트로 본다)
+        model.addAttribute("notebookClass",
+                DiaryNotebookType.toCssClass(diary.getNotebookType()));
+        model.addAttribute("spiralNotebook",
+                DiaryNotebookType.SPIRAL.getCode().equals(diary.getNotebookType()));
         model.addAttribute("leftPage", leftPage);
         model.addAttribute("rightPage", rightPage);
         // 펼쳐 놓은 두 장만 요소를 읽는다. 순서(z_index, id)는 조회 결과를 그대로 쓴다.
@@ -313,6 +320,7 @@ public class DiaryController {
         model.addAttribute("diaryId", diaryId);
         model.addAttribute("currentCoverImageUrl", diary.getCoverImageUrl());
         model.addAttribute("coverStyles", DiaryCoverStyle.values());
+        model.addAttribute("notebookTypes", DiaryNotebookType.values());
         model.addAttribute("pageTitle", "여행일기 수정");
         return "diary/edit";
     }
@@ -350,6 +358,9 @@ public class DiaryController {
             // 표지 스타일은 고른 값을 쓰고, 값이 없으면 지금 쓰던 스타일을 유지한다.
             diary.setCoverStyle(diaryForm.getCoverStyle() != null && !diaryForm.getCoverStyle().isBlank()
                     ? diaryForm.getCoverStyle() : existing.getCoverStyle());
+            // 노트 종류도 같은 방식이다. 값이 오지 않으면 지금 쓰던 종류를 그대로 둔다.
+            diary.setNotebookType(diaryForm.getNotebookType() != null && !diaryForm.getNotebookType().isBlank()
+                    ? diaryForm.getNotebookType() : existing.getNotebookType());
             diaryService.update(diaryId, userId, diary);
         } catch (ResponseStatusException exception) {
             deleteStoredFile(savedCoverImageUrl);
@@ -420,6 +431,7 @@ public class DiaryController {
         model.addAttribute("diaryId", diaryId);
         model.addAttribute("diaryError", errorMessage);
         model.addAttribute("coverStyles", DiaryCoverStyle.values());
+        model.addAttribute("notebookTypes", DiaryNotebookType.values());
         model.addAttribute("pageTitle", "여행일기 수정");
         return "diary/edit";
     }
@@ -1034,6 +1046,7 @@ public class DiaryController {
     public String newDiaryForm(Model model) {
         model.addAttribute("diaryForm", new Diary());
         model.addAttribute("coverStyles", DiaryCoverStyle.values());
+        model.addAttribute("notebookTypes", DiaryNotebookType.values());
         model.addAttribute("pageTitle", "새 여행일기");
         return "diary/new";
     }
@@ -1066,6 +1079,8 @@ public class DiaryController {
             diary.setEndDate(diaryForm.getEndDate());
             diary.setCoverImageUrl(savedCoverImageUrl);
             diary.setCoverStyle(diaryForm.getCoverStyle());
+            // 노트 종류. 고르지 않고 들어온 요청은 서비스가 기본값(CLASSIC)으로 채운다.
+            diary.setNotebookType(diaryForm.getNotebookType());
             diaryService.create(userDetails.getId(), diary);
         } catch (ResponseStatusException exception) {
             deleteStoredFile(savedCoverImageUrl);
@@ -1086,6 +1101,7 @@ public class DiaryController {
     private String renderNewForm(Model model, String errorMessage) {
         model.addAttribute("diaryError", errorMessage);
         model.addAttribute("coverStyles", DiaryCoverStyle.values());
+        model.addAttribute("notebookTypes", DiaryNotebookType.values());
         model.addAttribute("pageTitle", "새 여행일기");
         return "diary/new";
     }

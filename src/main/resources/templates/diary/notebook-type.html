@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- 노트 종류 고르기. 새 여행일기/수정 화면이 같은 조각을 쓴다.
+     표지(cover_style)와는 다른 축이라 서로 영향 없이 따로 고른다.
+     견본은 실제 펼침을 옮겨 그리지 않고, 두 장과 그 사이 제본만 있는 작은 그림이다. -->
+<div th:fragment="picker(types, selected)" class="diary-form-field">
+  <span class="diary-form-label">노트 종류</span>
+  <div class="diary-notebook-picker" role="radiogroup" aria-label="노트 종류">
+    <label th:each="type, stat : ${types}"
+           class="diary-notebook-option"
+           th:classappend="'is-' + ${#strings.toLowerCase(type.code)}">
+      <input type="radio" name="notebookType" class="diary-notebook-option-input"
+             th:value="${type.code}"
+             th:checked="${selected != null and !#strings.isEmpty(selected)}
+                         ? ${selected == type.code} : ${stat.first}" />
+      <span class="diary-notebook-preview" aria-hidden="true">
+        <span class="diary-notebook-preview-page"></span>
+        <span class="diary-notebook-preview-bind"></span>
+        <span class="diary-notebook-preview-page"></span>
+      </span>
+      <span class="diary-notebook-option-name" th:text="${type.label}">일반 노트</span>
+    </label>
+  </div>
+  <span class="diary-form-hint">펼쳤을 때 보이는 공책 모양입니다. 표지와 따로 고를 수 있어요.</span>
+</div>
+
+</body>
+</html>

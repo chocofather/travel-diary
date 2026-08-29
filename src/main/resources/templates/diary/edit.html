@@ -79,6 +79,10 @@
       <!-- 표지 스타일: 값은 diaries.cover_style 그대로이고, 허용 값 확인은 서버에서 한다 -->
       <div class="diary-form-field" th:replace="~{diary/cover-style :: picker(${coverStyles}, *{coverStyle})}"></div>
 
+      <!-- 노트 종류: 지금 쓰는 종류가 골라진 채로 열린다 -->
+      <div class="diary-form-field"
+           th:replace="~{diary/notebook-type :: picker(${notebookTypes}, *{notebookType})}"></div>
+
       <div class="diary-form-actions">
         <a class="diary-form-cancel" th:href="@{/diaries}">취소</a>
         <button type="submit" class="diary-form-submit">수정 완료</button>

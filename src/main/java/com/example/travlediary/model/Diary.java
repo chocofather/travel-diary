@@ -20,6 +20,7 @@ public class Diary {
     private LocalDate endDate; // 여행 종료일
     private String coverImageUrl; // 표지 이미지 경로
     private String coverStyle; // 표지 스타일
+    private String notebookType; // 다이어리 내부(속지) 타입 - CLASSIC / SPIRAL
     private Timestamp createdAt; // 생성일
     private Timestamp updatedAt; // 수정일
 }

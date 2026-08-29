@@ -5,6 +5,7 @@ import com.example.travlediary.dto.DiaryListPageDto;
 import com.example.travlediary.dto.DiarySort;
 import com.example.travlediary.model.Diary;
 import com.example.travlediary.model.DiaryCoverStyle;
+import com.example.travlediary.model.DiaryNotebookType;
 import com.example.travlediary.repository.diary.DiaryMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -234,6 +235,83 @@ class DiaryServiceImplTest {
         assertThat(DiaryCoverStyle.isSupported(null)).isFalse();
         assertThat(DiaryCoverStyle.LEATHER_DARK_BROWN.getCssClass())
                 .isEqualTo("diary-cover-leather-dark-brown");
+    }
+
+    /** 노트 종류를 고르지 않은 예전 흐름(과 폼이 생기기 전)은 일반 노트로 남는다. */
+    @Test
+    void createWithoutANotebookTypeFallsBackToClassic() {
+        Diary diary = diary(LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 5));
+        when(diaryMapper.insert(any())).thenAnswer(invocation -> {
+            invocation.getArgument(0, Diary.class).setId(5L);
+            return 1;
+        });
+        when(diaryMapper.findByIdAndUserId(5L, 1L)).thenReturn(new Diary());
+
+        diaryService.create(1L, diary);
+
+        ArgumentCaptor<Diary> captor = ArgumentCaptor.forClass(Diary.class);
+        verify(diaryMapper).insert(captor.capture());
+        assertThat(captor.getValue().getNotebookType()).isEqualTo("CLASSIC");
+    }
+
+    @Test
+    void createKeepsTheChosenNotebookType() {
+        Diary diary = diary(LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 5));
+        diary.setNotebookType("SPIRAL");
+        when(diaryMapper.insert(any())).thenAnswer(invocation -> {
+            invocation.getArgument(0, Diary.class).setId(5L);
+            return 1;
+        });
+        when(diaryMapper.findByIdAndUserId(5L, 1L)).thenReturn(new Diary());
+
+        diaryService.create(1L, diary);
+
+        ArgumentCaptor<Diary> captor = ArgumentCaptor.forClass(Diary.class);
+        verify(diaryMapper).insert(captor.capture());
+        assertThat(captor.getValue().getNotebookType()).isEqualTo("SPIRAL");
+    }
+
+    @Test
+    void createRejectsAnUnknownNotebookType() {
+        Diary diary = diary(LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 5));
+        diary.setNotebookType("RING_BOUND");
+
+        assertThatThrownBy(() -> diaryService.create(1L, diary))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("노트 종류를 다시 선택해 주세요.");
+        verify(diaryMapper, never()).insert(any());
+    }
+
+    /** 수정에서도 고른 종류가 그대로 저장된다. (표지와 같은 축이 아니라 따로 저장된다) */
+    @Test
+    void updateStoresTheNotebookType() {
+        Diary existing = diary(LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 5));
+        existing.setId(5L);
+        existing.setUserId(1L);
+        when(diaryMapper.findByIdAndUserId(5L, 1L)).thenReturn(existing);
+        when(diaryMapper.update(any())).thenReturn(1);
+
+        Diary form = diary(LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 5));
+        form.setNotebookType("SPIRAL");
+        diaryService.update(5L, 1L, form);
+
+        ArgumentCaptor<Diary> captor = ArgumentCaptor.forClass(Diary.class);
+        verify(diaryMapper).update(captor.capture());
+        assertThat(captor.getValue().getNotebookType()).isEqualTo("SPIRAL");
+    }
+
+    @Test
+    void theNotebookTypeCatalogKnowsOnlyTwoShapes() {
+        for (DiaryNotebookType type : DiaryNotebookType.values()) {
+            assertThat(DiaryNotebookType.isSupported(type.getCode())).isTrue();
+        }
+        assertThat(DiaryNotebookType.values()).hasSize(2);
+        assertThat(DiaryNotebookType.isSupported("RING_BOUND")).isFalse();
+        assertThat(DiaryNotebookType.isSupported(null)).isFalse();
+        assertThat(DiaryNotebookType.SPIRAL.getCssClass()).isEqualTo("diary-book-spiral");
+        // 컬럼이 비어 있던 예전 행도 일반 노트로 그린다
+        assertThat(DiaryNotebookType.toCssClass(null)).isEqualTo("diary-book-classic");
+        assertThat(DiaryNotebookType.toCssClass("")).isEqualTo("diary-book-classic");
     }
 
     private Diary diary(LocalDate startDate, LocalDate endDate) {

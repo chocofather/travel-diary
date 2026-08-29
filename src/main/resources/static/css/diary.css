@@ -1655,6 +1655,120 @@
     white-space: nowrap;
 }
 
+/* ===== 노트 종류 고르기 (새/수정 폼) =====
+   표지와 다른 축이라 따로 고른다. 고르는 자리의 언어(테두리/배경/굵기)는 표지와 같게 둔다.
+   견본은 실제 펼침을 옮겨 그리지 않는다. 종이 두 장과 그 사이 제본만 있는 작은 그림이다. */
+.diary-notebook-picker {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.diary-notebook-option {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    min-width: 0;
+    padding: 10px 12px;
+    border: 1px solid #ded5c8;
+    border-radius: 8px;
+    background: #fff;
+    color: #6b6259;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.diary-notebook-option:hover {
+    border-color: #cbbba0;
+    background: #fdfaf4;
+}
+
+/* radio 는 화면에서만 감추고 키보드 조작은 그대로 둔다 */
+.diary-notebook-option-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.diary-notebook-option:has(.diary-notebook-option-input:checked) {
+    border-color: #b39a75;
+    background: #f6efe3;
+    color: #4a3d2b;
+    font-weight: 700;
+}
+
+.diary-notebook-option:has(.diary-notebook-option-input:focus-visible) {
+    outline: 2px solid #b39a75;
+    outline-offset: 1px;
+}
+
+/* 펼친 공책 축소판: 종이 - 제본 - 종이 */
+.diary-notebook-preview {
+    display: flex;
+    flex: 0 0 auto;
+    width: 52px;
+    height: 36px;
+    border: 1px solid #ded5c8;
+    border-radius: 3px;
+    background: #fffdf7;
+    overflow: hidden;
+}
+
+/* 줄 몇 개만 그어 공책이라는 것만 알린다 */
+.diary-notebook-preview-page {
+    flex: 1 1 0;
+    min-width: 0;
+    background: repeating-linear-gradient(
+        180deg,
+        rgba(0, 0, 0, 0) 0 7px,
+        rgba(150, 128, 96, 0.22) 7px 8px
+    );
+}
+
+/* 일반 노트: 가운데가 접힌 책등 한 줄 */
+.diary-notebook-preview-bind {
+    flex: 0 0 4px;
+    background: linear-gradient(
+        90deg,
+        rgba(63, 52, 38, 0.18) 0%,
+        rgba(63, 52, 38, 0.05) 50%,
+        rgba(63, 52, 38, 0.18) 100%
+    );
+}
+
+/* 스프링 노트: 같은 자리에 링이 줄지어 지나간다 */
+.diary-notebook-option.is-spiral .diary-notebook-preview-bind {
+    flex-basis: 10px;
+    background:
+        radial-gradient(circle at 50% 50%,
+            #8d7f68 0 1.7px, rgba(0, 0, 0, 0) 2.1px) 0 2px / 100% 7px,
+        linear-gradient(90deg,
+            rgba(63, 52, 38, 0.1) 0%,
+            rgba(63, 52, 38, 0.03) 50%,
+            rgba(63, 52, 38, 0.1) 100%);
+}
+
+/* :has() 를 못 쓰는 환경에서도 고른 종류가 보이도록 견본에도 표시를 남긴다 */
+.diary-notebook-option-input:checked ~ .diary-notebook-preview {
+    border-color: #b39a75;
+    box-shadow: 0 0 0 1px #b39a75;
+}
+
+.diary-notebook-option-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 /* ===== 다이어리 펼쳐보기 ===== */
 /* 종이 색과 종이 질감을 따로 둔다.
    질감은 흰빛/그림자만 겹치므로, 나중에 페이지별 종이 색(--diary-paper-color)을
@@ -1935,69 +2049,167 @@
 
 .diary-sheet-left {
     border-radius: 12px 0 0 12px;
-    /* 제본 쪽(오른쪽) 안쪽 그림자 */
-    box-shadow: inset -14px 0 18px -16px rgba(63, 52, 38, 0.45);
 }
 
 .diary-sheet-right {
     border-radius: 0 12px 12px 0;
-    box-shadow: inset 14px 0 18px -16px rgba(63, 52, 38, 0.45);
 }
 
-/* 중앙 제본선 */
-.diary-book-gutter {
+/*
+  두 장 사이의 칸. 기본은 빈 칸이다.
+
+  예전에는 여기에 책등 그늘과 실크 리본을 그리고 두 장에도 접힘 그림자를 넣었는데,
+  펼침 한가운데에 세로 줄 하나가 그어진 것처럼 보여 모두 걷어냈다.
+  일반 노트는 아래에서 칸 자체를 0 으로 줄여 두 장이 이어진 한 면으로 읽히게 하고,
+  제본을 보여야 하는 스프링 노트만 이 칸에 옅은 그늘을 따로 넣는다.
+*/
+
+/* 일반 노트: 가운데를 비워 두 장이 그대로 이어진다.
+   (칸 나눔은 이 규칙 하나로만 갈리고, 종이 비율과 안쪽 단위는 그대로다) */
+.diary-book-spread.diary-book-classic {
+    grid-template-columns: minmax(0, 1fr) 0 minmax(0, 1fr);
+}
+
+/* ===== 스프링 노트 (notebook_type = SPIRAL) =====
+ *
+ * 일반 노트(CLASSIC)의 규칙은 하나도 건드리지 않는다. 여기 있는 것은 모두
+ * .diary-book-spiral 안에서만 걸리고, 코일 자체도 스프링일 때만 그려진다.
+ *
+ * 코일은 종이 상자 밖에 얹는 장식이다. 그래서
+ * - .diary-sheet 의 비율/여백/컨테이너 단위(--diary-page-unit)를 바꾸지 않고,
+ * - 자유배치 층(.diary-canvas)도 예전처럼 종이를 inset:0 으로 덮는다.
+ * 사진/스티커/라벨의 상대좌표·크기·회전은 그대로다.
+ *
+ * 크기는 모두 %다. 링 간격은 코일 높이의 %, 폭은 펼침(또는 종이) 너비의 %라
+ * 종이 비율이 고정인 한 확대/축소해도 링 모양과 개수가 그대로 유지된다.
+ */
+.diary-book-spread.diary-book-spiral {
     position: relative;
+}
+
+/* 스프링 노트에는 접히는 책등이 없다. 두 장이 코일로만 묶여 있다.
+   대신 두 장 사이의 틈이 눈에 남도록 아주 옅은 그늘만 남긴다. */
+.diary-book-spiral .diary-book-gutter {
     background: linear-gradient(
         90deg,
-        rgba(63, 52, 38, 0.16) 0%,
-        rgba(63, 52, 38, 0.05) 32%,
-        rgba(63, 52, 38, 0.18) 50%,
-        rgba(63, 52, 38, 0.05) 68%,
-        rgba(63, 52, 38, 0.16) 100%
+        rgba(63, 52, 38, 0.07) 0%,
+        rgba(63, 52, 38, 0.02) 30%,
+        rgba(63, 52, 38, 0.02) 70%,
+        rgba(63, 52, 38, 0.07) 100%
     );
 }
 
-/* 제본에서 내려오는 실크 리본 책갈피.
-   폭이 아주 얇고 결/그림자만 있는 장식이라 클릭/드래그/저장 기능은 없다. */
-.diary-book-ribbon {
+/* 접힘이 아니라 잘린 종이 끝이므로 그늘을 책등의 1/3 정도로만 남긴다 */
+.diary-book-spiral .diary-sheet-left {
+    box-shadow: inset -5px 0 8px -8px rgba(63, 52, 38, 0.28);
+}
+
+.diary-book-spiral .diary-sheet-right {
+    box-shadow: inset 5px 0 8px -8px rgba(63, 52, 38, 0.28);
+}
+
+/*
+  종이에 뚫린 바인딩 구멍 한 줄.
+
+  구멍은 종이의 것이라 종이가 그린다. 코일과 같은 간격(한 장 높이의 7%)을 쓰고
+  둘 다 종이 위쪽 끝에서 시작하므로, 고리마다 구멍 하나가 정확히 맞물린다.
+  자유배치 층(z-index 2)보다 아래에 두어 사진/스티커에 가려지는 종이의 일부로 남는다.
+*/
+.diary-book-spiral .diary-sheet::after {
+    content: "";
     position: absolute;
-    z-index: 3;
-    top: -6px;
-    left: 50%;
-    width: 5px;
-    height: 62%;
-    margin-left: -3px;
-    /* 아래로 갈수록 아주 살짝 기울어 떨어지게 둔다 */
-    transform: rotate(0.7deg);
-    transform-origin: top center;
-    /* 끝은 리본처럼 v 자로 잘린다 */
-    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 6px), 50% 100%, 0 calc(100% - 6px));
-    /* 와인빛 실크. 가운데 한 줄만 밝게 두어 천이 접힌 결처럼 보이게 한다. */
-    background: linear-gradient(
-        90deg,
-        rgba(72, 28, 32, 0.9) 0%,
-        rgba(104, 42, 48, 0.92) 32%,
-        rgba(146, 76, 80, 0.9) 52%,
-        rgba(98, 39, 45, 0.92) 74%,
-        rgba(66, 25, 30, 0.9) 100%
-    );
-    filter: drop-shadow(1px 1px 2px rgba(46, 20, 22, 0.22));
+    z-index: 1;
+    top: 0;
+    bottom: 0;
+    width: 9.82%;
+    /*
+      종이에 뚫린 구멍. 두 층을 겹쳐 파인 깊이를 낸다.
+      아래층이 구멍 자체(가운데는 또렷하고 가장자리로 갈수록 흐려진다),
+      위층은 구멍 아래쪽에만 걸치는 옅은 빛이라 종이가 안으로 꺼져 보인다.
+      (한 장 폭 637px 기준 진한 부분이 8 x 6.5px. 검은 점이 아니라 종이색이 파인 정도다)
+    */
+    background-image:
+        radial-gradient(
+            ellipse 10.3% 12.7% at 50% 58%,
+            rgba(255, 255, 255, 0.7) 0 62%,
+            rgba(255, 255, 255, 0) 100%
+        ),
+        radial-gradient(
+            ellipse 10.3% 12.7% at 50% 50%,
+            rgba(103, 88, 68, 0.55) 0 62%,
+            rgba(103, 88, 68, 0.26) 84%,
+            rgba(103, 88, 68, 0) 100%
+        );
+    background-repeat: repeat-y;
+    background-size: 100% 7%;
     pointer-events: none;
 }
 
-/* 제본에서 빠져나오는 부분만 살짝 어둡게 해 리본이 책에 물려 있게 보이도록 한다 */
-.diary-book-ribbon::before {
-    content: "";
+/*
+  구멍 자리는 어느 화면에서든 "그 장 안쪽 끝에서 종이 폭의 2.07%".
+  구멍 줄은 가운데가 구멍이라 폭의 절반(4.91%)에서 그만큼을 뺀 값으로 넘겨 놓는다.
+  기준을 종이 폭 하나로만 잡았으므로 화면이 넓어져도 구멍과 철사가 함께 움직인다.
+*/
+.diary-book-spread.diary-book-spiral .diary-sheet-left::after {
+    right: -2.84%;
+}
+
+.diary-book-spread.diary-book-spiral .diary-sheet-right::after {
+    left: -2.84%;
+}
+
+/* 한 장만 보는 화면은 코일이 왼쪽에 있으므로 구멍도 왼쪽 가장자리에 */
+.diary-book-single.diary-book-spiral .diary-sheet::after {
+    left: -2.84%;
+}
+
+/* 제본 자리를 지나는 코일. 고리 하나짜리 그림을 세로로 되풀이한다.
+   고리는 양쪽 종이의 구멍을 잇는 정도로만 작고, 종이 여백(5.2%) 안에 머물러
+   본문을 가리지 않는다. */
+.diary-book-spring {
     position: absolute;
+    z-index: 3;
     top: 0;
-    right: 0;
-    left: 0;
-    height: 14px;
-    background: linear-gradient(
-        180deg,
-        rgba(38, 14, 16, 0.4) 0%,
-        rgba(38, 14, 16, 0) 100%
-    );
+    bottom: 0;
+    left: 50%;
+    /*
+      코일 폭도 펼침이 아니라 "한 장"을 기준으로 잡는다.
+      제본선(26px)은 고정이고 구멍은 종이 폭의 %라, 펼침 %로 재면 화면이 넓어질수록
+      둘이 벌어진다. 여기서 한 장 폭 = 50% - 13px 로 되돌려 같은 자를 쓴다.
+      철사 끝은 그림에서 폭의 45.65% 지점이므로,
+      끝이 늘 종이 안쪽 1.5% 자리에 오도록 (13px + 1.5%) / 0.4565 로 폭을 정한다.
+    */
+    width: calc(28.5px + (50% - 13px) * 0.0329);
+    transform: translateX(-50%);
+    background-image: url('/images/diary/notebook/spring-ring.svg');
+    background-repeat: repeat-y;
+    /* 고리 간격 = 한 장 높이의 7%. 한 장에 열네 개쯤 지나간다 */
+    background-size: 100% 7%;
+    /* 철사가 종이에서 살짝 떠 있는 정도의 그림자만 */
+    filter: drop-shadow(0 1px 1px rgba(63, 52, 38, 0.12));
+    pointer-events: none;
+}
+
+/* 한 장만 보는 화면(편집 / 좁은 화면)의 코일. 종이 왼쪽 가장자리에 걸친다.
+   여기는 제본선이 없어 처음부터 종이 폭이 기준이다. 철사 오른쪽 끝이 펼침과 같은
+   자리(종이 안쪽 1.5%)에 오도록 폭의 95.65%만큼 왼쪽으로 물려 놓는다. */
+.diary-sheet-spring {
+    position: absolute;
+    z-index: 3;
+    top: 0;
+    bottom: 0;
+    left: -5.9%;
+    width: 7.74%;
+    background-image: url('/images/diary/notebook/spring-ring.svg');
+    background-repeat: repeat-y;
+    background-size: 100% 7%;
+    filter: drop-shadow(0 1px 1px rgba(63, 52, 38, 0.12));
+    pointer-events: none;
+}
+
+/* 넓은 화면의 펼침에서는 가운데 코일 하나만 쓴다. (장마다 붙는 코일은 좁은 화면용) */
+.diary-book-spread .diary-sheet-spring {
+    display: none;
 }
 
 /* 날짜 + 한 줄 메모 한 줄 바로 아래에 구분선이 붙는다. (사진 버튼은 상단 툴바로 옮겼다) */
@@ -3218,7 +3430,10 @@
     gap: 4px;
 }
 
+/* 오른쪽 연필은 오른쪽 종이 위에 있어야 한다.
+   이 줄에는 칸이 둘뿐이라 자리를 정해 주지 않으면 가운데 칸에 놓인다. */
 .diary-read-tools-page.is-right {
+    grid-column: 3;
     justify-content: flex-end;
 }
 
@@ -4726,19 +4941,26 @@
         scroll-snap-align: start;
     }
 
-    .diary-sheet-left {
-        border-radius: 12px 0 0 12px;
-        box-shadow: inset -12px 0 16px -16px rgba(63, 52, 38, 0.4);
-    }
-
-    .diary-sheet-right {
-        border-radius: 0 12px 12px 0;
-        box-shadow: inset 12px 0 16px -16px rgba(63, 52, 38, 0.4);
-    }
-
-    /* 한 장씩 보이므로 중앙 제본선(과 그 안의 리본)은 감춘다 */
+    /* 한 장씩 보이므로 중앙 제본선 칸은 감춘다 */
     .diary-book-gutter {
         display: none;
+    }
+
+    /* 가운데 제본이 없어졌으므로 코일도 장마다 왼쪽 가장자리로 옮겨 간다.
+       본문 영역과 좌표는 그대로다. 장식이 붙는 자리만 달라진다. */
+    .diary-book-spring {
+        display: none;
+    }
+
+    .diary-book-spread .diary-sheet-spring {
+        display: block;
+    }
+
+    /* 코일이 장 왼쪽으로 갔으므로 구멍도 같은 쪽으로 따라간다 (넘김 값은 그대로) */
+    .diary-book-spread.diary-book-spiral .diary-sheet-left::after,
+    .diary-book-spread.diary-book-spiral .diary-sheet-right::after {
+        right: auto;
+        left: -2.84%;
     }
 
     .diary-spread-nav {
@@ -4887,6 +5109,17 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
+    /* 카드 두 장이 나란히 서기에는 좁아지므로 견본을 조금 줄인다 */
+    .diary-notebook-option {
+        gap: 9px;
+        padding: 9px 10px;
+    }
+
+    .diary-notebook-preview {
+        width: 44px;
+        height: 32px;
+    }
+
     /* 좁은 화면에서는 시작일/종료일을 세로로 쌓는다 */
     .diary-period-inputs {
         flex-direction: column;
@@ -4914,6 +5147,11 @@
     .diary-book-meta {
         gap: 6px;
         font-size: 11px;
+    }
+
+    /* 견본과 이름이 한 줄에 다 들어가지 않는 폭. 두 장을 위아래로 쌓는다 */
+    .diary-notebook-picker {
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 

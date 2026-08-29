@@ -6,6 +6,7 @@ import com.example.travlediary.dto.DiaryListPageDto;
 import com.example.travlediary.dto.DiarySort;
 import com.example.travlediary.model.Diary;
 import com.example.travlediary.model.DiaryCoverStyle;
+import com.example.travlediary.model.DiaryNotebookType;
 import com.example.travlediary.repository.diary.DiaryMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -28,6 +29,8 @@ public class DiaryServiceImpl implements DiaryService {
     private static final int MAX_YEAR = 9999;
     /** 표지 스타일 기본값 (DB 기본값과 같은 값) */
     private static final String DEFAULT_COVER_STYLE = DiaryCoverStyle.DEFAULT.getCode();
+    /** 다이어리 내부 타입 기본값 (DB 기본값과 같은 값). 이 컬럼이 생기기 전의 다이어리도 여기로 온다. */
+    private static final String DEFAULT_NOTEBOOK_TYPE = DiaryNotebookType.CLASSIC.getCode();
     /** 목록 한 쪽에 보여주는 다이어리 수 */
     private static final int PAGE_SIZE = 12;
     /** 월간 달력은 어느 달이든 같은 높이가 되도록 6주로 그린다. */
@@ -234,12 +237,21 @@ public class DiaryServiceImpl implements DiaryService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "표지 스타일을 다시 선택해 주세요.");
         }
 
+        // 내부 타입도 표지와 같은 방식이다. 고르지 않았으면 일반 노트로 둔다.
+        String notebookType = diary.getNotebookType() == null ? "" : diary.getNotebookType().strip();
+        if (notebookType.isEmpty()) {
+            notebookType = DEFAULT_NOTEBOOK_TYPE;
+        } else if (!DiaryNotebookType.isSupported(notebookType)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "노트 종류를 다시 선택해 주세요.");
+        }
+
         Diary prepared = new Diary();
         prepared.setTitle(title);
         prepared.setStartDate(startDate);
         prepared.setEndDate(endDate);
         prepared.setCoverImageUrl(coverImageUrl == null || coverImageUrl.isEmpty() ? null : coverImageUrl);
         prepared.setCoverStyle(coverStyle);
+        prepared.setNotebookType(notebookType);
         return prepared;
     }
 }

@@ -1371,6 +1371,230 @@ class DiaryControllerTest {
         assertThat(body).doesNotContain("diary-cover-preview\"");
     }
 
+    /** 일반 노트는 예전 화면 그대로다. 코일은 어디에도 나오지 않는다. */
+    @Test
+    void aClassicDiaryKeepsTheBookSpineAndShowsNoCoil() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-01")));
+
+        String body = mockMvc.perform(get("/diaries/10")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).contains("diary-book-classic");
+        assertThat(body).doesNotContain("diary-book-spiral");
+        assertThat(body).doesNotContain("diary-book-spring");
+        assertThat(body).doesNotContain("diary-sheet-spring");
+        // 두 장 사이 칸은 남지만 그 안에 장식은 없다 (CSS 가 이 칸을 0 으로 줄인다)
+        assertThat(body).contains("diary-book-gutter");
+        assertThat(body).doesNotContain("diary-book-ribbon");
+    }
+
+    @Test
+    void aSpiralDiaryShowsTheCoilDownTheMiddleWhileReading() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(spiralDiary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-01")));
+
+        String body = mockMvc.perform(get("/diaries/10")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).contains("diary-book-spiral");
+        assertThat(body).doesNotContain("diary-book-classic");
+        assertThat(body).contains("diary-book-spring");
+        // 좁은 화면에서 쓰는 장 가장자리 코일도 함께 그려 둔다
+        assertThat(body).contains("diary-sheet-spring");
+        // 코일이 지날 자리는 남는다 (일반 노트는 이 칸을 0 으로 줄인다)
+        assertThat(body).contains("diary-book-gutter");
+    }
+
+    @Test
+    void aSpiralDiaryKeepsItsCoilWhileEditingOnePage() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(spiralDiary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-01")));
+
+        String body = mockMvc.perform(get("/diaries/10").param("edit", "true")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).contains("diary-book-single");
+        assertThat(body).contains("diary-book-spiral");
+        // 한 장 화면에는 가운데 제본이 없으므로 장 가장자리 코일만 쓴다
+        assertThat(body).contains("diary-sheet-spring");
+        assertThat(body).doesNotContain("diary-book-spring");
+    }
+
+    /** 페이지를 넘겨 판을 갈아 끼워도 공책 모양은 그대로다. */
+    @Test
+    void theCoilSurvivesAPageTurn() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(spiralDiary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(
+                page(1, "2026-08-01"), page(2, "2026-08-02"),
+                page(3, "2026-08-03"), page(4, "2026-08-04")));
+
+        String board = mockMvc.perform(get("/diaries/10/spread").param("spread", "1")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(board).contains("diary-book-spiral");
+        assertThat(board).contains("diary-book-spring");
+    }
+
+    /** 컬럼이 생기기 전의 다이어리(값 없음)는 일반 노트로 그린다. */
+    @Test
+    void aDiarySavedBeforeTheColumnExistedIsDrawnAsAClassicNotebook() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        Diary old = diary();
+        old.setNotebookType(null);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(old);
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-01")));
+
+        String body = mockMvc.perform(get("/diaries/10")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).contains("diary-book-classic");
+        assertThat(body).doesNotContain("diary-book-spring");
+    }
+
+    private Diary spiralDiary() {
+        Diary diary = diary();
+        diary.setNotebookType("SPIRAL");
+        return diary;
+    }
+
+    /** 표지 아래에 노트 종류 한 줄. 고르지 않으면 일반 노트다. */
+    @Test
+    void newFormOffersBothNotebookTypesWithTheClassicOneChosen() throws Exception {
+        String body = mockMvc.perform(get("/diaries/new")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).contains("노트 종류");
+        assertThat(body).contains("name=\"notebookType\"");
+        assertThat(body).contains("value=\"CLASSIC\"").contains("value=\"SPIRAL\"");
+        assertThat(body).contains("일반 노트").contains("스프링 노트");
+        // 표지 고르는 자리 아래에 둔다
+        assertThat(body.indexOf("diary-cover-style-picker"))
+                .isLessThan(body.indexOf("diary-notebook-picker"));
+        // 표지와 노트는 서로 다른 이름의 값이라 따로 고른다
+        assertThat(body).contains("name=\"coverStyle\"");
+        assertThat(checkedNotebookType(body)).isEqualTo("CLASSIC");
+    }
+
+    @Test
+    void editFormOpensWithTheStoredNotebookTypeChosen() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        Diary existing = diary();
+        existing.setNotebookType("SPIRAL");
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(existing);
+
+        String body = mockMvc.perform(get("/diaries/10/edit")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(checkedNotebookType(body)).isEqualTo("SPIRAL");
+    }
+
+    @Test
+    void creatingADiaryStoresTheChosenNotebookTypeAlongsideTheCover() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+
+        mockMvc.perform(multipart("/diaries")
+                        .param("title", "여름 제주 여행")
+                        .param("startDate", "2026-08-01")
+                        .param("endDate", "2026-08-05")
+                        .param("coverStyle", "LEATHER_BLACK")
+                        .param("notebookType", "SPIRAL")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().is3xxRedirection());
+
+        ArgumentCaptor<Diary> captor = ArgumentCaptor.forClass(Diary.class);
+        verify(diaryService).create(eq(7L), captor.capture());
+        // 두 값은 서로를 덮지 않는다
+        assertThat(captor.getValue().getCoverStyle()).isEqualTo("LEATHER_BLACK");
+        assertThat(captor.getValue().getNotebookType()).isEqualTo("SPIRAL");
+    }
+
+    @Test
+    void updatingADiaryStoresTheChosenNotebookType() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        Diary existing = diary();
+        existing.setNotebookType("CLASSIC");
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(existing);
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-02")));
+
+        mockMvc.perform(multipart("/diaries/10/update")
+                        .param("title", "여름 제주 여행")
+                        .param("startDate", "2026-08-01")
+                        .param("endDate", "2026-08-05")
+                        .param("notebookType", "SPIRAL")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().is3xxRedirection());
+
+        ArgumentCaptor<Diary> captor = ArgumentCaptor.forClass(Diary.class);
+        verify(diaryService).update(eq(10L), eq(7L), captor.capture());
+        assertThat(captor.getValue().getNotebookType()).isEqualTo("SPIRAL");
+    }
+
+    /** 기간을 잘못 넣어 폼이 다시 열려도 고른 종류는 그대로 있어야 한다. */
+    @Test
+    void aRejectedFormComesBackWithTheChosenNotebookTypeStillSelected() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.create(eq(7L), any(Diary.class)))
+                .thenThrow(new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "여행 종료일은 시작일 이후여야 합니다."));
+
+        String body = mockMvc.perform(multipart("/diaries")
+                        .param("title", "여름 제주 여행")
+                        .param("startDate", "2026-08-05")
+                        .param("endDate", "2026-08-01")
+                        .param("notebookType", "SPIRAL")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andExpect(view().name("diary/new"))
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(checkedNotebookType(body)).isEqualTo("SPIRAL");
+    }
+
+    /** 노트 종류 고르는 자리 안에서 실제로 체크된 값 하나를 읽는다. */
+    private String checkedNotebookType(String body) {
+        int start = body.indexOf("diary-notebook-picker");
+        assertThat(start).as("노트 종류 고르는 자리").isNotNegative();
+        String picker = body.substring(start);
+        for (String code : new String[]{"CLASSIC", "SPIRAL"}) {
+            if (picker.contains("value=\"" + code + "\" checked")) {
+                return code;
+            }
+        }
+        return null;
+    }
+
     @Test
     void readModeMovesBySpreadAndEditModeMovesByOnePage() throws Exception {
         when(userDetails.getId()).thenReturn(7L);
@@ -2260,7 +2484,7 @@ class DiaryControllerTest {
     }
 
     @Test
-    void onlyTheReadSpreadHangsTheSilkRibbonFromItsSpine() throws Exception {
+    void onlyTheReadSpreadKeepsTheGutterColumn() throws Exception {
         when(userDetails.getId()).thenReturn(7L);
         when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
         when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-01")));
@@ -2271,10 +2495,9 @@ class DiaryControllerTest {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
-        // 리본은 제본선(gutter) 안에 있는 장식이라 읽는 데 걸리지 않는다
-        assertThat(readBody).contains("diary-book-ribbon");
-        assertThat(readBody.indexOf("diary-book-gutter"))
-                .isLessThan(readBody.indexOf("diary-book-ribbon"));
+        // 두 장 사이의 칸은 읽기 펼침에만 있다. 안에 든 장식은 없다
+        assertThat(readBody).contains("diary-book-gutter");
+        assertThat(readBody).doesNotContain("diary-book-ribbon");
         assertThat(readBody).contains("aria-hidden=\"true\"");
 
         String editBody = mockMvc.perform(get("/diaries/10").param("edit", "true")
