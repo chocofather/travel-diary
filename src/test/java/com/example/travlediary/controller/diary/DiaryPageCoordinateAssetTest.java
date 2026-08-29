@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
 /**
  * 읽기(2면 펼침)와 편집(1면)은 종이 크기만 다르고 좌표계는 같아야 한다.
@@ -30,6 +31,118 @@ class DiaryPageCoordinateAssetTest {
         assertThat(sheet).contains("--diary-page-unit:");
         // 종이 자신의 여백은 %(자기 너비 기준)라 어느 화면에서도 같은 비율이다
         assertThat(sheet).contains("padding: 5.2% 5.2% 6.95%;");
+    }
+
+    /**
+     * 머리말 아래 구분선은 줄노트의 가로줄 하나 위에 앉는다.
+     *
+     * <p>줄은 종이 아래에서부터 30u 간격이라 위에서 보면 23.81u, 53.81u, 83.81u 자리다.
+     * 그 자리에서 아래로 1u 남짓 흐려지는 띠로 그려지므로, 구분선은 그 띠 안에 들어야 한다.
+     * 선 아래끝 = 종이 위 여백(5.2% = 29.95u) + 날짜 줄(13u) + 아래 여백 + 선 1px 이고,
+     * 늘린 만큼 본문 위 여백에서 빼야 본문 첫 줄이 제자리에 남는다. 두 값은 늘 함께 움직인다.
+     */
+    @Test
+    void theHeaderRuleSitsOnOneOfTheNotebookLines() throws IOException {
+        String css = Files.readString(DIARY_CSS);
+
+        double sheetHeight = 576 * 38.0 / 41;          // aspect-ratio 41 / 38 (단위: u)
+        double pitch = 0.0562 * sheetHeight;           // 줄 간격 (= 30u)
+        double band = (0.0562 - 0.0543) * sheetHeight; // 줄이 실제로 그려지는 띠 두께 (약 1u)
+        double headTop = 0.052 * 576;                  // 종이 위 여백
+        double row = unitsIn(rule(css, ".diary-sheet-head-row"), "height");
+        double headBottomPadding = unitsIn(rule(css, ".diary-sheet-head"), "padding-bottom");
+        double bodyTopPadding = unitsIn(rule(css, ".diary-sheet-body"), "padding-top");
+        double border = 1 / (820.0 / 576);             // 선 1px 을 u 로 (편집 한 장 기준)
+
+        double ruleLine = headTop + row + headBottomPadding + border;
+        double lineTop = sheetHeight - pitch * Math.floor((sheetHeight - ruleLine) / pitch + 0.5);
+        /*
+          지켜야 하는 것은 두 가지다.
+          줄보다 위로 떠 있지 않을 것(예전 증상), 그리고 그 줄에 붙어 있을 것.
+          띠(약 1u) 안 어디에 앉힐지는 화면을 보고 정하므로 줄 간격의 1/4 까지 열어 둔다.
+        */
+        assertThat(band).as("줄이 그려지는 띠 두께").isCloseTo(1.0, within(0.1));
+        assertThat(ruleLine - lineTop).as("구분선이 줄 아래로 붙어 있다")
+                .isBetween(0.0, pitch / 4);
+
+        // 머리말에서 늘린 만큼 본문에서 빼 두어 본문 첫 줄은 예전 자리 그대로다
+        assertThat(row + headBottomPadding + bodyTopPadding)
+                .as("머리말 + 본문 위 여백의 합")
+                .isCloseTo(12.97 + 7 + 10, within(0.1));
+    }
+
+    /** 규칙 한 덩어리에서 그 속성의 page-unit 배수를 읽는다. */
+    private double unitsIn(String rule, String property) {
+        java.util.regex.Matcher matcher = java.util.regex.Pattern
+                .compile(property + ": calc\\(([0-9.]+) \\* var\\(--diary-page-unit\\)\\);")
+                .matcher(rule);
+        assertThat(matcher.find()).as("%s 를 찾지 못했습니다", property).isTrue();
+        return Double.parseDouble(matcher.group(1));
+    }
+
+    /**
+     * 종이를 담는 상자는 종이와 같은 폭이어야 한다.
+     *
+     * <p>종이 자신의 여백은 % 라, 자기 폭이 아니라 담고 있는 상자의 폭으로 계산된다.
+     * 읽기 모드의 종이는 펼침 그리드의 한 칸에 들어 있어 그 칸의 폭이 곧 종이 폭이지만,
+     * 편집 모드의 상자를 넓게 두면 화면 폭이 기준이 되어 여백만 커지고 본문이 아래로 밀린다.
+     * (한 장 820px, 상자 1121px 이면 위 여백이 29.95u 가 아니라 40.95u 가 된다)
+     */
+    @Test
+    void thePaperSizesItsOwnMarginsFromItsOwnWidthInBothModes() throws IOException {
+        String css = Files.readString(DIARY_CSS);
+        String single = rule(css, ".diary-book-single");
+
+        // 상자와 종이가 같은 폭이라 % 여백이 종이 폭 기준이 된다
+        assertThat(single).contains("width: min(820px, 100%);");
+        assertThat(rule(css, ".diary-book-single .diary-sheet-single"))
+                .contains("width: min(820px, 100%);");
+        // 읽기 쪽은 그리드 칸이 그 일을 한다. 칸 나눔은 그대로다
+        assertThat(rule(css, ".diary-book-spread"))
+                .contains("grid-template-columns: minmax(0, 1fr) 26px minmax(0, 1fr);");
+        // 종이 자신의 여백 값은 두 화면이 나눠 쓰는 한 벌 그대로다
+        assertThat(rule(css, ".diary-sheet")).contains("padding: 5.2% 5.2% 6.95%;");
+    }
+
+    /**
+     * 본문이 시작하는 자리가 두 화면에서 같아야 첫 글자가 같은 줄 위에 앉는다.
+     *
+     * <p>그 자리를 정하는 것은 날짜 한 줄의 높이다. 읽기 모드는 거기에 글자(span)만 두는데,
+     * 편집 모드의 입력칸이 날짜보다 조금이라도 높으면 그만큼 본문 첫 줄이 아래로 밀린다.
+     * 그래서 입력칸의 높이를 맞추려 하지 않고, 아예 줄 높이를 정하지 못하게 못 박는다.
+     */
+    @Test
+    void theHeaderInputNeverDecidesTheHeightOfTheHeaderLine() throws IOException {
+        String css = Files.readString(DIARY_CSS);
+        String input = rule(css, ".diary-sheet-header-input");
+        String header = rule(css, ".diary-sheet-header");
+
+        // 글자 크기만큼만 차지한다. 날짜의 줄 높이(normal)는 늘 이보다 크다
+        assertThat(input).contains("height: 1em;").contains("line-height: 1em;");
+        // 세로 여백과 테두리는 두지 않는다. 밑줄은 자리를 차지하지 않는 box-shadow 로 그린다
+        assertThat(input).contains("padding: 0 calc(4 * var(--diary-page-unit));");
+        assertThat(input).contains("border: 0;").doesNotContain("border-bottom:");
+        assertThat(rule(css, ".diary-sheet-header-input:hover")).contains("box-shadow: inset 0 -1px 0");
+        assertThat(rule(css, ".diary-sheet-header-input:focus")).contains("box-shadow: inset 0 -1px 0");
+        // 글자 크기는 읽기 쪽과 같고, 읽기 쪽 줄 높이는 건드리지 않는다
+        assertThat(input).contains("font-size: calc(13 * var(--diary-page-unit));");
+        assertThat(header).contains("font-size: calc(13 * var(--diary-page-unit));");
+        assertThat(header).doesNotContain("line-height");
+    }
+
+    /**
+     * 문단 여백은 두 화면 모두 우리 파일이 지운다.
+     *
+     * <p>읽기 쪽만 지워 두면 편집 쪽은 외부 Quill 스타일시트에만 기대게 되고,
+     * 그것이 늦거나 막히면 첫 문단이 1em(= 줄 간격의 절반) 내려가 줄과 어긋난다.
+     */
+    @Test
+    void paragraphSpacingIsRemovedOnBothPathsNotJustTheReadingOne() throws IOException {
+        String css = Files.readString(DIARY_CSS);
+
+        assertThat(rule(css, ".diary-editor p")).contains("margin: 0;");
+        // 읽기 전용으로만 좁혀 두지 않는다
+        assertThat(css).doesNotContain(".diary-editor.is-read-only p {");
     }
 
     /** 편집/읽기 어느 쪽도 종이 안쪽 크기를 px 로 따로 정하지 않는다. */
@@ -57,7 +170,7 @@ class DiaryPageCoordinateAssetTest {
         assertThat(rule(css, ".diary-sheet-number"))
                 .contains("font-size: calc(12 * var(--diary-page-unit));");
         assertThat(rule(css, ".diary-sheet-body"))
-                .contains("padding-top: calc(10 * var(--diary-page-unit));");
+                .contains("padding-top: calc(4.61 * var(--diary-page-unit));");
     }
 
     /** 자유배치 층은 두 화면 모두 종이 전체를 덮는 같은 조각을 쓴다. */

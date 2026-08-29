@@ -220,7 +220,7 @@ class DiarySpiralNotebookUiContractTest {
         assertThat(rule(css, ".diary-canvas")).contains("inset: 0;");
         // 스프링이라고 해서 종이 안쪽 여백이나 칸 나눔을 새로 정하지 않는다
         String spiral = between(css, ".diary-book-spread.diary-book-spiral {",
-                "/* 날짜 + 한 줄 메모");
+                "\n.diary-sheet-head {");
         assertThat(spiral)
                 .doesNotContain("padding")
                 .doesNotContain("grid-template-columns")
