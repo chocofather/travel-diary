@@ -13,6 +13,9 @@
         <result property="imageUrl"    column="image_url"/>
         <result property="styleType"   column="style_type"/>
         <result property="colorType"   column="color_type"/>
+        <result property="photoStyle"  column="photo_style"/>
+        <result property="textFont"    column="text_font"/>
+        <result property="textColor"   column="text_color"/>
         <result property="positionX"   column="position_x"/>
         <result property="positionY"   column="position_y"/>
         <result property="width"       column="width"/>
@@ -25,6 +28,7 @@
 
     <sql id="DiaryElementColumns">
         id, page_id, element_type, text_content, image_url, style_type, color_type,
+        photo_style, text_font, text_color,
         position_x, position_y, width, height, rotation, z_index,
         created_at, updated_at
     </sql>
@@ -46,19 +50,22 @@
     </select>
 
     <!--
-      TEXT 는 text_content, PHOTO/STICKER 는 image_url 만 채운다 (DB CHECK 와 동일).
-      NOTE 는 text_content 와 style_type 을 함께 채우고 image_url 은 비운다.
+      TEXT 는 text_content 와 text_font/text_color, PHOTO/STICKER 는 image_url 만 채운다
+      (DB CHECK 와 동일). NOTE 는 text_content 와 style_type 을 함께 채우고 image_url 은 비운다.
       그 밖의 유형은 style_type 이 늘 NULL 이다. (어느 값을 채울지는 Service 가 정한다)
+      photo_style 은 PHOTO 전용, text_font/text_color 는 TEXT 전용이라 다른 유형에서는 늘 NULL 이고
+      payload CHECK 도 이 칸들을 보지 않는다.
     -->
     <insert id="insert" parameterType="com.example.travlediary.model.DiaryElement"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO diary_elements (
             page_id, element_type, text_content, image_url, style_type, color_type,
+            photo_style, text_font, text_color,
             position_x, position_y, width, height, rotation, z_index,
             created_at, updated_at
         ) VALUES (
             #{pageId}, #{elementType}, #{textContent}, #{imageUrl},
-            #{styleType}, #{colorType},
+            #{styleType}, #{colorType}, #{photoStyle}, #{textFont}, #{textColor},
             #{positionX}, #{positionY}, #{width}, #{height}, #{rotation}, #{zIndex},
             NOW(), NOW()
         )
@@ -71,6 +78,9 @@
             image_url = #{imageUrl},
             style_type = #{styleType},
             color_type = #{colorType},
+            photo_style = #{photoStyle},
+            text_font = #{textFont},
+            text_color = #{textColor},
             position_x = #{positionX},
             position_y = #{positionY},
             width = #{width},

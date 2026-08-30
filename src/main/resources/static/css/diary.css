@@ -1834,15 +1834,10 @@
   페이지 다꾸의 사진에는 닿지 않는다.
 */
 /*
-  표지의 폴라로이드는 실제 폴라로이드처럼 테두리를 얇게 둔다.
-  페이지 다꾸 사진(.diary-photo)의 값은 그대로 두고 표지 안에서만 줄인다.
-  아래쪽만 조금 넓게 남겨 폴라로이드다운 비대칭을 지킨다.
+  일반 사진은 흰 프레임을 걷어낸 모습이다. 표지와 페이지 다꾸가 같은 모습을 쓰므로
+  규칙을 한 곳에만 두고 양쪽이 함께 쓴다. (폴라로이드는 예전 규칙 그대로다)
 */
-.diary-cover-surface .diary-photo.is-photo-polaroid {
-    padding: 3px 3px 7px;
-}
-
-.diary-cover-surface .diary-photo.is-photo-full {
+.diary-photo.is-photo-full {
     padding: 0;
     background: none;
     /* 종이에 붙인 느낌은 남기되 프레임의 두께감은 뺀다 */
@@ -1851,7 +1846,7 @@
 
 /* 프레임이 없으므로 사진이 요소 자리를 그대로 채운다.
    (상자 비율을 지키는 것은 조작 엔진이 맡고 여기서는 그리기만 한다) */
-.diary-cover-surface .diary-photo.is-photo-full img {
+.diary-photo.is-photo-full img {
     object-fit: cover;
 }
 
@@ -3603,6 +3598,175 @@
     display: none;
 }
 
+/* ── 라벨기: 문구를 적고 글씨체를 골라 붙인다 ──
+   고르는 칸도 실제로 붙었을 때와 같은 diary-font-* 로 보여 준다.
+   (그림 파일이 없는 갈래라 미리보기가 곧 결과다) */
+.diary-label-maker {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.diary-label-input-row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.diary-label-field-name {
+    flex: 0 0 auto;
+    color: #8b8378;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.diary-label-input {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    height: 30px;
+    padding: 0 9px;
+    border: 1px solid #ded5c8;
+    border-radius: 7px;
+    background: #fff;
+    color: #4a443c;
+    font: inherit;
+    font-size: 13px;
+}
+
+.diary-label-input:focus {
+    outline: none;
+    border-color: #b39a75;
+}
+
+/* 글꼴이 열다섯이라 목록 안에서만 넘겨 본다. (팝오버가 길어지지 않게) */
+.diary-label-fonts {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 172px;
+    padding: 3px;
+    border-radius: 8px;
+    overflow-y: auto;
+}
+
+/*
+  밝은 글자색을 골랐을 때만 고르는 자리의 바탕을 어둡게 바꾼다.
+  흰 글씨가 흰 바탕에 묻히지 않게 하려는 것뿐이고, 실제로 붙는 글씨는 늘 바탕이 없다.
+  (어느 색에서 바뀌는지는 diary-label-picker.js 가 휘도로 정한다)
+*/
+.diary-label-fonts.is-light-ink {
+    background: #3b3a38;
+}
+
+.diary-label-fonts.is-light-ink .diary-label-font:hover {
+    border-color: #6b6660;
+    background: #454340;
+}
+
+.diary-label-fonts.is-light-ink .diary-label-font.is-active {
+    border-color: #a89a83;
+    background: #4a4744;
+}
+
+/* 글꼴 이름도 어두운 바탕에서 읽히게 한다 (보기 글은 고른 색 그대로다) */
+.diary-label-fonts.is-light-ink .diary-label-font-name {
+    color: #cfc6b8;
+}
+
+/* 고를 수 있는 자리라는 정도만 알린다. 커지거나 움직이지 않는다 */
+.diary-label-font {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 6px 9px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: none;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.diary-label-font:hover {
+    border-color: #e0d6c6;
+    background: #fdfaf4;
+}
+
+.diary-label-font.is-active {
+    border-color: #b39a75;
+    background: #f6efe3;
+}
+
+.diary-label-font:focus-visible {
+    outline: 2px solid #b39a75;
+    outline-offset: 1px;
+}
+
+/* 보기 글은 그 글꼴 그대로 보여 준다. (입력한 문구가 있으면 그 문구가 들어온다) */
+.diary-label-font-sample {
+    flex: 1 1 auto;
+    overflow: hidden;
+    color: #3f3427;
+    font-size: 15px;
+    line-height: 1.4;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.diary-label-font-name {
+    flex: 0 0 auto;
+    color: #a89a83;
+    font-size: 11px;
+}
+
+/* 글자색은 색 하나만 고른다. 별도의 색 판을 만들지 않는다 */
+.diary-label-color-row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    cursor: pointer;
+}
+
+.diary-label-color {
+    box-sizing: border-box;
+    width: 28px;
+    height: 24px;
+    flex: 0 0 auto;
+    padding: 0;
+    border: 1px solid #ded5c8;
+    border-radius: 6px;
+    background: none;
+    cursor: pointer;
+}
+
+.diary-label-color-value {
+    color: #a89a83;
+    font-size: 11px;
+    letter-spacing: 0.02em;
+}
+
+.diary-label-attach {
+    height: 32px;
+    border: 1px solid #6f5a3c;
+    border-radius: 8px;
+    background: #6f5a3c;
+    color: #fff;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.diary-label-attach:hover {
+    background: #655237;
+}
+
+.diary-label-attach:focus-visible {
+    outline: 3px solid rgba(111, 90, 60, 0.28);
+    outline-offset: 2px;
+}
+
 /* ── 라벨 / 떡메모지 색 고르기 ──
    종이색 스와치와 같은 언어를 쓴다. 다만 색은 그 색 class 가 정하는 종이색으로 칠해져,
    실제로 붙었을 때와 같은 색이 그대로 보인다. */
@@ -3626,19 +3790,6 @@
     border-radius: 50%;
     background: var(--diary-note-paper, #fffdf8);
     cursor: pointer;
-}
-
-/* 기본(=색을 고르지 않음)은 그 모양이 원래 쓰는 색으로 붙는다는 표시만 둔다 */
-.diary-note-swatch.is-default {
-    background:
-        linear-gradient(
-            135deg,
-            rgba(255, 255, 255, 0) 44%,
-            rgba(150, 128, 96, 0.5) 44%,
-            rgba(150, 128, 96, 0.5) 56%,
-            rgba(255, 255, 255, 0) 56%
-        ),
-        #fffdf8;
 }
 
 .diary-note-swatch:hover {
@@ -4987,6 +5138,46 @@
     --diary-note-ink: #4b5765;
 }
 
+/*
+  라벨기로 붙인 글씨(TEXT).
+  종이도 테두리도 그림자도 없다 — 투명한 자리에 글자만 놓인 스티커다.
+  (NOTE 라벨/떡메모지의 종이 배경 규칙과 섞이지 않게 이름을 따로 둔다)
+
+  요소 자체를 container 로 두어 크기를 바꾸면 글자도 함께 커지고 작아진다.
+  페이지 전용 --diary-page-unit 을 쓰지 않으므로 표지처럼 다른 캔버스에 올려도 같은 셈이 된다.
+*/
+.diary-label {
+    /* 가로·세로를 모두 재야 글자 크기를 상자에 맞출 수 있다. (크기는 인라인 %로 이미 정해져 있다) */
+    container-type: size;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: 0;
+    box-shadow: none;
+    padding: 0;
+}
+
+.diary-label-text {
+    /*
+      글자 크기는 상자에서 나온다.
+      - 세로: 한 줄이 상자 높이를 거의 채우는 정도(74cqh)
+      - 가로: 글자 수로 상자 폭을 나눠 긴 문구가 상자를 크게 벗어나지 않게 한다
+        (0.85 는 한글·영문이 섞였을 때의 평균 글자 폭. --diary-label-chars 는 붙일 때 정해진다)
+      둘 중 작은 쪽을 쓰고, 아주 작게 줄여도 읽을 수 있게 바닥을 둔다.
+    */
+    font-size: max(
+        9px,
+        min(74cqh, calc(100cqw / (var(--diary-label-chars, 8) * 0.85)))
+    );
+    /* 한 줄짜리 라벨이다. 접히지 않는다 */
+    white-space: nowrap;
+    line-height: 1.15;
+    /* 본문과 어울리는 진한 먹색 (색 고르기는 아직 없다) */
+    color: #2b2b2b;
+    text-align: center;
+}
+
 /* 선택했을 때만 보이는 작은 조절점 (편집기 느낌이 나지 않게 최소한으로) */
 .diary-resize-handle {
     position: absolute;
@@ -5199,25 +5390,47 @@
     box-shadow: 0 0 0 3px rgba(179, 154, 117, 0.18);
 }
 
+/* 사진 버튼만 아이콘 옆에 이름을 함께 둔다.
+   (등록하는 자리가 곧 사진의 모습이라 무엇을 붙이는지 읽혀야 한다) */
+.diary-toolbar-button.diary-photo-button {
+    width: auto;
+    gap: 5px;
+    padding: 0 9px;
+    font-size: 12px;
+}
+
 .diary-photo-status {
     color: #9a8f7f;
     font-size: 12px;
 }
 
-/* 종이에 붙인 사진 */
+/*
+  종이에 붙인 사진. 기본 모습은 폴라로이드다. (photo_style 이 비어 있는 예전 사진도 이 모습이다)
+
+  흰 프레임은 요소 크기에 따라 함께 줄고 늘도록 % 로 둔다. (% padding 은 네 방향 모두 폭 기준이다)
+  좌·우·위는 얇고 아래만 두 배쯤 넓은 것이 폴라로이드다운 비대칭이다.
+  값을 바꿀 때는 DiaryPhotoFrame 의 SIDE / BOTTOM 도 함께 바꿔야 한다 —
+  그 셈이 이 두께를 빼고 사진 자리를 원본 비율에 맞춰 요소 높이를 정한다.
+
+  표지와 페이지가 이 한 규칙을 함께 쓴다. 같은 사진이면 두 화면에서 같은 모습이 된다.
+*/
 .diary-photo {
     box-sizing: border-box;
-    padding: 6px 6px 8px;
+    padding: 3.5% 3.5% 8%;
     background: #fff;
     box-shadow: 0 3px 9px rgba(63, 52, 38, 0.18);
 }
 
-/* 영역 안에서 비율이 왜곡되지 않게 맞춘다 */
+/*
+  사진은 자기 자리를 꽉 채운다.
+  상자 비율을 사진 원본에 맞춰 만들기 때문에(DiaryPhotoFrame) 이때 잘려 나가는 부분이 거의 없다.
+  흰 부분은 오직 위의 프레임뿐이고, 사진 때문에 생기는 빈 자리는 두지 않는다.
+*/
 .diary-photo img {
     display: block;
     width: 100%;
     height: 100%;
-    object-fit: contain;
+    object-fit: cover;
 }
 
 /* 종이에 붙인 스티커. 사진과 달리 액자/그림자 없이 그림만 놓인다. */

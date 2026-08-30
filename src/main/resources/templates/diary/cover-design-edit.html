@@ -4,10 +4,14 @@
 
 <th:block th:fragment="headFragment">
   <link rel="stylesheet" href="/css/diary.css">
+  <!-- 라벨기 글꼴. 페이지 다꾸와 같은 파일을 그대로 불러온다 (정의를 옮겨 적지 않는다) -->
+  <link rel="stylesheet" href="/css/diary-fonts.css">
   <!-- 자유배치 조작은 페이지 다꾸와 같은 엔진을 그대로 쓴다. (표지용 사본을 따로 두지 않는다) -->
   <script src="/js/diary-canvas-drag.js" defer></script>
   <script src="/js/diary-tape-repeat.js" defer></script>
   <script src="/js/diary-sticker-picker.js" defer></script>
+  <!-- 라벨기도 페이지 다꾸와 같은 스크립트를 함께 쓴다 -->
+  <script src="/js/diary-label-picker.js" defer></script>
   <script src="/js/diary-cover-photo.js" defer></script>
   <script src="/js/diary-cover-design.js" defer></script>
 </th:block>
@@ -137,6 +141,57 @@
                                               (designId=${designId},elementId=${element.id})}">떼기</button>
               </div>
             </figure>
+
+            <!-- 라벨기로 붙인 글씨. 종이도 테두리도 없이 글자만 놓인다.
+                 글꼴은 저장된 값 하나로 정해지고(element.textFontClass), 없으면 기본 글꼴이다.
+                 모양 규칙(.diary-label)은 페이지 다꾸와 같은 것을 그대로 쓴다. -->
+            <figure class="diary-canvas-item diary-label"
+                    th:each="element : ${coverElements}"
+                    th:if="${element.elementType == 'TEXT'}"
+                    th:data-element-id="${element.id}"
+                    th:data-element-type="${element.elementType}"
+                    th:data-position-x="${element.positionX}"
+                    th:data-position-y="${element.positionY}"
+                    th:data-width="${element.width}"
+                    th:data-height="${element.height}"
+                    th:data-rotation="${element.rotation}"
+                    th:data-z-index="${element.zIndex}"
+                    th:data-position-url="@{/diaries/cover-designs/{designId}/elements/{elementId}/position
+                                            (designId=${designId},elementId=${element.id})}"
+                    th:data-size-url="@{/diaries/cover-designs/{designId}/elements/{elementId}/size
+                                        (designId=${designId},elementId=${element.id})}"
+                    th:data-rotation-url="@{/diaries/cover-designs/{designId}/elements/{elementId}/rotation
+                                            (designId=${designId},elementId=${element.id})}"
+                    th:data-layer-url="@{/diaries/cover-designs/{designId}/elements/{elementId}/layer
+                                         (designId=${designId},elementId=${element.id})}"
+                    th:style="|left:${element.positionX * 100}%;
+                               top:${element.positionY * 100}%;
+                               width:${element.width * 100}%;
+                               height:${element.height * 100}%;
+                               transform:rotate(${element.rotation}deg);
+                               --diary-item-rotation:${element.rotation}deg;
+                               --diary-label-chars:${#strings.length(element.textContent)};
+                               z-index:${element.zIndex};|">
+              <!-- 사용자가 쓴 값이라 글자로만 넣는다. 색을 고른 글씨만 색을 입힌다 -->
+              <span class="diary-label-text" th:classappend="${element.textFontClass}"
+                    th:style="${element.textColor != null and !#strings.isEmpty(element.textColor)}
+                              ? 'color:' + ${element.textColor} : null"
+                    th:text="${element.textContent}">JEJU 2026</span>
+
+              <button type="button" class="diary-rotate-handle" aria-label="회전"></button>
+              <button type="button" class="diary-resize-handle" aria-label="크기 조절"></button>
+              <div class="diary-layer-actions">
+                <button type="button" class="diary-layer-action"
+                        data-layer-direction="BACKWARD">뒤로</button>
+                <button type="button" class="diary-layer-action"
+                        data-layer-direction="FORWARD">앞으로</button>
+                <!-- 글씨는 파일을 갖지 않아 요소 행만 지운다 -->
+                <button type="button" class="diary-layer-action is-danger"
+                        data-delete-confirm="이 글씨를 떼시겠습니까?"
+                        th:data-delete-url="@{/diaries/cover-designs/{designId}/elements/{elementId}/label/delete
+                                              (designId=${designId},elementId=${element.id})}">떼기</button>
+              </div>
+            </figure>
           </div>
           <span class="diary-cover-canvas-spine" aria-hidden="true"></span>
         </div>
@@ -208,6 +263,20 @@
               <span>스티커</span>
             </button>
 
+            <!-- 라벨기. 종이 배경 없이 글씨만 붙인다. (페이지 다꾸와 같은 기능·같은 조각) -->
+            <button type="button" class="diary-cover-tool" id="diary-label-button"
+                    aria-haspopup="dialog" aria-expanded="false"
+                    aria-controls="diary-label-popover">
+              <svg class="diary-cover-tool-icon" viewBox="0 0 16 16" aria-hidden="true"
+                   fill="none" stroke="currentColor" stroke-width="1.3"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4.4 4.2h7.2" />
+                <path d="M8 4.2v7.6" />
+                <path d="M6.4 11.8h3.2" />
+              </svg>
+              <span>라벨기</span>
+            </button>
+
             <!--
               사진은 어떤 모습으로 붙일지가 등록하는 자리로 정해진다.
               (일반 사진 / 폴라로이드가 각자 파일 고르개를 따로 갖는다)
@@ -230,6 +299,14 @@
 
             <!-- 고르는 판은 도구 줄 바로 위로 열린다. (자리를 차지하지 않는 층이다) -->
             <div th:replace="~{diary/cover-sticker-picker :: picker}"></div>
+
+            <!-- 라벨기도 같은 자리 규칙으로 도구 줄 위에 열린다. (스티커 판과 같은 class) -->
+            <div class="diary-sticker-popover diary-label-popover" id="diary-label-popover"
+                 role="dialog" aria-label="라벨기" hidden>
+              <div th:replace="~{diary/label-maker :: picker(${diaryLabelFonts},
+                                 @{/diaries/cover-designs/{id}/elements/label
+                                   (id=${designId})})}"></div>
+            </div>
           </div>
           <p class="diary-sticker-status" id="diary-sticker-status" role="status"></p>
         </section>

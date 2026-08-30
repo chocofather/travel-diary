@@ -10,6 +10,8 @@ import com.example.travlediary.model.DiaryStickerKind;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.diary.DiaryCoverDesignElementService;
 import com.example.travlediary.service.diary.DiaryCoverDesignService;
+import com.example.travlediary.service.diary.DiaryLabelFontCatalog;
+import com.example.travlediary.service.diary.DiaryPhotoFrame;
 import com.example.travlediary.service.diary.DiaryStickerCatalog;
 import com.example.travlediary.service.file.FileUploadService;
 import lombok.RequiredArgsConstructor;
@@ -64,6 +66,8 @@ public class DiaryCoverDesignController {
     private final DiaryCoverDesignElementService diaryCoverDesignElementService;
     /** 붙일 수 있는 스티커 목록. 페이지 다꾸와 같은 manifest 를 함께 쓴다. */
     private final DiaryStickerCatalog diaryStickerCatalog;
+    /** 라벨기 글꼴 목록. 이것도 페이지 다꾸와 같은 manifest 를 함께 쓴다. */
+    private final DiaryLabelFontCatalog diaryLabelFontCatalog;
     private final FileUploadService fileUploadService;
 
     /** 업로드 폴더의 실제 경로. (application.yml 의 custom.upload-path) */
@@ -174,8 +178,10 @@ public class DiaryCoverDesignController {
             String savedImageUrl = null;
             try {
                 savedImageUrl = fileUploadService.saveFile(image, COVER_DESIGN_IMAGE_DIRECTORY);
+                // 폴라로이드의 처음 상자 비율은 사진 원본 비율에서 나온다. (가로 사진 → 가로 폴라로이드)
                 DiaryCoverDesignElement element = diaryCoverDesignElementService
-                        .createPhoto(designId, userId, savedImageUrl, created.size(), photoStyle);
+                        .createPhoto(designId, userId, savedImageUrl, created.size(), photoStyle,
+                                DiaryPhotoFrame.ratioOf(image));
                 created.add(photoPayload(designId, element));
             } catch (ResponseStatusException exception) {
                 deleteUploadedFile(savedImageUrl);
@@ -325,6 +331,78 @@ public class DiaryCoverDesignController {
         }
     }
 
+    /**
+     * 라벨기로 표지에 글씨를 붙인다.
+     * 페이지 다꾸의 라벨기와 같은 규칙이고, 화면 이동 없이 값만 돌려준다.
+     * (문구 다듬기·글꼴 허용 검사·자리/크기는 모두 서비스가 정한다)
+     */
+    @PostMapping("/{designId:\\d+}/elements/label")
+    @ResponseBody
+    public ResponseEntity<?> createLabelElement(@PathVariable Long designId,
+                                                @RequestParam("text") String text,
+                                                @RequestParam(name = "textFont", required = false)
+                                                String textFont,
+                                                @RequestParam(name = "textColor", required = false)
+                                                String textColor,
+                                                @AuthenticationPrincipal CustomUserDetails userDetails) {
+        try {
+            DiaryCoverDesignElement created = diaryCoverDesignElementService
+                    .createLabel(designId, userDetails.getId(), text, textFont, textColor);
+            return ResponseEntity.ok(labelPayload(designId, created));
+        } catch (ResponseStatusException exception) {
+            return elementErrorResponse(exception, "글씨를 붙이지 못했습니다.");
+        }
+    }
+
+    /**
+     * 글씨 떼기.
+     * 파일을 갖지 않으므로 DB 행만 지운다. (사진 삭제와 다른 점)
+     */
+    @PostMapping("/{designId:\\d+}/elements/{elementId:\\d+}/label/delete")
+    @ResponseBody
+    public ResponseEntity<?> deleteLabelElement(@PathVariable Long designId,
+                                                @PathVariable Long elementId,
+                                                @AuthenticationPrincipal CustomUserDetails userDetails) {
+        try {
+            diaryCoverDesignElementService.deleteLabel(designId, elementId, userDetails.getId());
+            return ResponseEntity.noContent().build();
+        } catch (ResponseStatusException exception) {
+            return elementErrorResponse(exception, "글씨를 떼지 못했습니다.");
+        }
+    }
+
+    /**
+     * 방금 붙인 글씨를 화면이 그대로 그릴 수 있도록 값과 저장 주소를 함께 돌려준다.
+     * 글꼴 class 도 함께 준다 — 화면이 code 를 다시 class 로 바꾸는 규칙을 갖지 않게 한다.
+     */
+    private Map<String, Object> labelPayload(Long designId, DiaryCoverDesignElement element) {
+        String base = "/diaries/cover-designs/" + designId + "/elements/" + element.getId();
+        return Map.ofEntries(
+                Map.entry("id", element.getId()),
+                Map.entry("elementType", element.getElementType()),
+                Map.entry("textContent", element.getTextContent()),
+                // 글꼴을 고르지 않은 글씨도 있어 빈 문자열로 내려 준다.
+                Map.entry("textFont", element.getTextFont() == null
+                        ? "" : element.getTextFont()),
+                Map.entry("fontClass", element.getTextFontClass() == null
+                        ? "" : element.getTextFontClass()),
+                // 글자색을 고르지 않은 글씨도 있어 빈 문자열로 내려 준다.
+                Map.entry("textColor", element.getTextColor() == null
+                        ? "" : element.getTextColor()),
+                Map.entry("positionX", element.getPositionX()),
+                Map.entry("positionY", element.getPositionY()),
+                Map.entry("width", element.getWidth()),
+                Map.entry("height", element.getHeight()),
+                Map.entry("rotation", element.getRotation()),
+                Map.entry("zIndex", element.getZIndex()),
+                Map.entry("urls", Map.of(
+                        "position", base + "/position",
+                        "size", base + "/size",
+                        "rotation", base + "/rotation",
+                        "layer", base + "/layer",
+                        "delete", base + "/label/delete")));
+    }
+
     /** 방금 붙인 스티커를 화면이 그대로 그릴 수 있도록 값과 저장 주소를 함께 돌려준다. */
     private Map<String, Object> stickerPayload(Long designId, DiaryCoverDesignElement element,
                                                DiarySticker sticker) {
@@ -463,6 +541,8 @@ public class DiaryCoverDesignController {
         model.addAttribute("stickerRepeats", diaryStickerCatalog.getRepeatsByImageUrl());
         // 사진 모양 고르기(일반/폴라로이드). 목록을 화면에 적지 않고 여기서 넘긴다.
         model.addAttribute("coverPhotoStyles", DiaryCoverPhotoStyle.values());
+        // 라벨기 글꼴. 페이지 다꾸와 같은 manifest 를 그대로 내려 준다.
+        model.addAttribute("diaryLabelFonts", diaryLabelFontCatalog.getFonts());
         model.addAttribute("coverDesignError", errorMessage);
         model.addAttribute("pageTitle", "표지 디자인 편집");
         return "diary/cover-design-edit";

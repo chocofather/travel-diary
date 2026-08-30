@@ -14,6 +14,8 @@
         <result property="styleType"   column="style_type"/>
         <result property="colorType"   column="color_type"/>
         <result property="photoStyle"  column="photo_style"/>
+        <result property="textFont"    column="text_font"/>
+        <result property="textColor"   column="text_color"/>
         <result property="positionX"   column="position_x"/>
         <result property="positionY"   column="position_y"/>
         <result property="width"       column="width"/>
@@ -26,24 +28,27 @@
 
     <sql id="DiaryCoverElementColumns">
         id, cover_id, element_type, text_content, image_url, style_type, color_type,
-        photo_style, position_x, position_y, width, height, rotation, z_index,
+        photo_style, text_font, text_color,
+        position_x, position_y, width, height, rotation, z_index,
         created_at, updated_at
     </sql>
 
     <!--
       PHOTO/STICKER 는 image_url 만, NOTE 는 text_content 와 style_type 을 함께 채운다.
-      TEXT 는 text_content 만 쓴다. (DB payload CHECK 와 같은 규칙)
+      TEXT 는 text_content 와 text_font 를 쓴다. (DB payload CHECK 와 같은 규칙)
       디자인을 적용할 때는 원본 요소의 값을 그대로 옮겨 담는다.
+      (TEXT 는 파일이 없으므로 글과 글꼴까지 값만 그대로 복사된다)
     -->
     <insert id="insert" parameterType="com.example.travlediary.model.DiaryCoverElement"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO diary_cover_elements (
             cover_id, element_type, text_content, image_url, style_type, color_type,
-            photo_style, position_x, position_y, width, height, rotation, z_index,
+            photo_style, text_font, text_color,
+            position_x, position_y, width, height, rotation, z_index,
             created_at, updated_at
         ) VALUES (
             #{coverId}, #{elementType}, #{textContent}, #{imageUrl},
-            #{styleType}, #{colorType}, #{photoStyle},
+            #{styleType}, #{colorType}, #{photoStyle}, #{textFont}, #{textColor},
             #{positionX}, #{positionY}, #{width}, #{height}, #{rotation}, #{zIndex},
             NOW(), NOW()
         )

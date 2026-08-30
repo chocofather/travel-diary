@@ -24,6 +24,8 @@
   <script src="/js/diary-note-picker.js" defer></script>
   <!-- 라벨/메모지에 글쓰기. 두 번 눌렀을 때와 갓 붙였을 때만 열린다 -->
   <script src="/js/diary-note-text.js" defer></script>
+  <!-- 꾸미기 팝오버의 라벨기 갈래. 글씨만 붙인다 (NOTE 라벨과 다른 기능) -->
+  <script src="/js/diary-label-picker.js" defer></script>
   <script src="/js/diary-paper-color.js" defer></script>
 </th:block>
 
@@ -171,7 +173,12 @@
         </div>
       </div>
 
-      <!-- 사진: 종이 안이 아니라 여기서 고른다. 생성 경로/폼은 기존 PHOTO 흐름 그대로다. -->
+      <!--
+        사진: 종이 안이 아니라 여기서 고른다. 생성 경로/폼은 기존 PHOTO 흐름 그대로다.
+        어떤 모습으로 붙을지는 등록하는 자리가 정한다 — 일반 사진과 폴라로이드가
+        각자 파일 고르개를 따로 갖고, 고른 자리의 값이 photoStyle 로 함께 전송된다.
+        (표지 디자인 편집과 같은 UX 다. 붙인 뒤에 모습을 바꾸는 길은 두지 않는다)
+      -->
       <div class="diary-toolbar-group" th:if="${editPage != null}">
         <form class="diary-photo-add"
               th:action="@{/diaries/{diaryId}/pages/{pageId}/elements/photo
@@ -179,19 +186,29 @@
               method="post" enctype="multipart/form-data">
           <input type="hidden" name="spread" th:value="${currentSpread}" />
           <input type="hidden" name="page" th:value="${editPage.pageOrder}" />
-          <input type="file" class="diary-photo-input" name="image" accept="image/*" required
-                 th:id="|diary-photo-input-${editPage.id}|" />
-          <!-- 사진임을 바로 알 수 있는 outline 아이콘 (이모지 문자 대신 inline SVG) -->
-          <label class="diary-toolbar-button" th:for="|diary-photo-input-${editPage.id}|"
-                 title="사진 추가" aria-label="사진 추가">
-            <svg class="diary-toolbar-icon" viewBox="0 0 20 20" aria-hidden="true"
-                 fill="none" stroke="currentColor" stroke-width="1.5"
-                 stroke-linecap="round" stroke-linejoin="round">
-              <rect x="2.5" y="4" width="15" height="12" rx="2" />
-              <circle cx="7" cy="8" r="1.4" />
-              <path d="M3 13.5l3.6-3.2a1.4 1.4 0 0 1 1.9 0l2.7 2.5 1.8-1.5a1.4 1.4 0 0 1 1.8 0L17 13.2" />
-            </svg>
-          </label>
+          <!-- 고른 자리의 모습을 담아 함께 보낸다. (허용 값 확인은 서버가 한다) -->
+          <input type="hidden" name="photoStyle" value="" data-photo-style-value />
+
+          <th:block th:each="style : ${diaryPhotoStyles}">
+            <input type="file" class="diary-photo-input" name="image" accept="image/*" multiple
+                   th:id="|diary-photo-input-${editPage.id}-${style.code}|"
+                   th:data-photo-style="${style.code}"
+                   th:attr="aria-label=|${style.label} 사진 추가|" />
+            <!-- 사진임을 바로 알 수 있는 outline 아이콘 (이모지 문자 대신 inline SVG) -->
+            <label class="diary-toolbar-button diary-photo-button"
+                   th:for="|diary-photo-input-${editPage.id}-${style.code}|"
+                   th:title="|${style.label} 사진 추가|">
+              <svg class="diary-toolbar-icon" viewBox="0 0 20 20" aria-hidden="true"
+                   fill="none" stroke="currentColor" stroke-width="1.5"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2.5" y="4" width="15" height="12" rx="2" />
+                <circle cx="7" cy="8" r="1.4" />
+                <path d="M3 13.5l3.6-3.2a1.4 1.4 0 0 1 1.9 0l2.7 2.5 1.8-1.5a1.4 1.4 0 0 1 1.8 0L17 13.2" />
+              </svg>
+              <span th:text="${style.label}">일반</span>
+            </label>
+          </th:block>
+
           <span class="diary-photo-status" role="status" hidden>올리는 중…</span>
         </form>
       </div>
@@ -206,7 +223,7 @@
                                           (diaryId=${diary.id},pageId=${editPage.id})},
                          data-note-create-url=@{/diaries/{diaryId}/pages/{pageId}/elements/note
                                                 (diaryId=${diary.id},pageId=${editPage.id})}"
-                title="꾸미기" aria-label="스티커·라벨·메모지 붙이기">✦</button>
+                title="꾸미기" aria-label="스티커·라벨·메모지·글씨 붙이기">✦</button>
         <div class="diary-sticker-popover" id="diary-sticker-popover" role="dialog"
              aria-label="꾸미기 고르기" hidden>
           <!--
@@ -222,6 +239,9 @@
                     aria-selected="false" data-decor-tab="label">라벨</button>
             <button type="button" class="diary-decor-tab" role="tab"
                     aria-selected="false" data-decor-tab="memo">메모지</button>
+            <!-- 종이 배경 없이 글씨만 붙이는 갈래. 위 '라벨'(NOTE)과 다른 기능이라 이름을 나눈다 -->
+            <button type="button" class="diary-decor-tab" role="tab"
+                    aria-selected="false" data-decor-tab="text">라벨기</button>
           </div>
 
           <!-- 스티커 묶음. 여기 안쪽은 예전 구조 그대로다 -->
@@ -335,6 +355,16 @@
                 <span class="diary-note-option-label" th:text="${style.label}">사각 메모지</span>
               </button>
             </div>
+          </div>
+
+          <!--
+            라벨기. 종이 배경 없이 글씨만 붙인다. (위 '라벨'(NOTE)과 다른 갈래다)
+            고르는 칸은 표지 디자인 편집과 같은 조각을 함께 쓴다 — 붙일 자리만 다르다.
+          -->
+          <div class="diary-decor-panel" data-decor-panel="text" hidden>
+            <div th:replace="~{diary/label-maker :: picker(${diaryLabelFonts},
+                               @{/diaries/{diaryId}/pages/{pageId}/elements/label
+                                 (diaryId=${diary.id},pageId=${editPage.id})})}"></div>
           </div>
 
           <p class="diary-sticker-status" id="diary-sticker-status" role="status"></p>
@@ -551,18 +581,17 @@
   같은 class(diary-note-color-*)로 칠해진다. 여기에 색 값을 적지 않는다.
   data-note-color 가 빈 값인 첫 칸이 "기본"(=고르지 않음)이다.
 -->
+<!-- 고를 수 있는 색만 둔다. "색 없음" 자리는 두지 않는다 —
+     고르지 않고 붙이면 맨 앞 색(기본색)으로 붙으므로 처음부터 그 색이 눌려 있다. -->
 <div th:fragment="noteSwatches(kind)" class="diary-note-swatches"
      role="group" th:attr="aria-label=|${kind} 색|">
-  <button type="button" class="diary-note-swatch is-default is-active"
-          data-note-color="" aria-pressed="true"
-          title="기본" aria-label="기본 색"></button>
   <button type="button" class="diary-note-swatch"
-          th:each="color : ${diaryNoteColors}"
-          th:classappend="${color.cssClass}"
+          th:each="color, stat : ${diaryNoteColors}"
+          th:classappend="${color.cssClass} + (${stat.first} ? ' is-active' : '')"
           th:data-note-color="${color.code}"
-          aria-pressed="false"
-          th:title="${color.label}"
-          th:attr="aria-label=|${color.label} 색|"></button>
+          th:attr="aria-pressed=${stat.first} ? 'true' : 'false',
+                   aria-label=|${color.label} 색|"
+          th:title="${color.label}"></button>
 </div>
 
 <!-- 한 장의 머리말: 종이 안에는 날짜/한 줄 메모 같은 내용만 두고,
@@ -738,9 +767,11 @@
      날짜/한 줄 메모/본문 영역과 무관하게 종이 어디에나 놓을 수 있다. -->
 <div th:fragment="sheetCanvas(page, elements)" class="diary-canvas">
     <th:block th:each="element : ${elements}">
-      <!-- 사진 -->
+      <!-- 사진. 모습(일반/폴라로이드)은 붙일 때 정해져 저장된 값 하나로 결정된다.
+           값이 없는 예전 사진은 폴라로이드로 그린다. (element.photoStyleClass) -->
       <figure class="diary-canvas-item diary-canvas-photo diary-photo"
               th:if="${element.elementType == 'PHOTO'}"
+              th:classappend="${element.photoStyleClass}"
               th:data-element-id="${element.id}"
               th:data-element-type="${element.elementType}"
               th:data-position-x="${element.positionX}"
@@ -894,6 +925,60 @@
             <button type="button" class="diary-layer-action is-danger"
                     data-delete-confirm="이 라벨을 떼시겠습니까?"
                     th:data-delete-url="@{/diaries/{diaryId}/pages/{pageId}/elements/{elementId}/note/delete
+                                          (diaryId=${diary.id},pageId=${page.id},elementId=${element.id})}">떼기</button>
+          </div>
+        </th:block>
+      </figure>
+
+      <!-- 라벨기로 붙인 글씨. 종이 배경도 테두리도 없이 글자만 놓인다.
+           글꼴은 저장된 값 하나로 정해지고(element.textFontClass), 값이 없으면 기본 글꼴이다.
+           자리·크기·회전·겹침 순서는 사진·스티커와 똑같은 상대좌표를 쓴다. -->
+      <figure class="diary-canvas-item diary-label"
+              th:if="${element.elementType == 'TEXT'}"
+              th:data-element-id="${element.id}"
+              th:data-element-type="${element.elementType}"
+              th:data-position-x="${element.positionX}"
+              th:data-position-y="${element.positionY}"
+              th:data-width="${element.width}"
+              th:data-height="${element.height}"
+              th:data-rotation="${element.rotation}"
+              th:data-position-url="@{/diaries/{diaryId}/pages/{pageId}/elements/{elementId}/position
+                                      (diaryId=${diary.id},pageId=${page.id},elementId=${element.id})}"
+              th:data-size-url="@{/diaries/{diaryId}/pages/{pageId}/elements/{elementId}/size
+                                  (diaryId=${diary.id},pageId=${page.id},elementId=${element.id})}"
+              th:data-rotation-url="@{/diaries/{diaryId}/pages/{pageId}/elements/{elementId}/rotation
+                                      (diaryId=${diary.id},pageId=${page.id},elementId=${element.id})}"
+              th:data-layer-url="@{/diaries/{diaryId}/pages/{pageId}/elements/{elementId}/layer
+                                   (diaryId=${diary.id},pageId=${page.id},elementId=${element.id})}"
+              th:style="|left:${element.positionX * 100}%;
+                         top:${element.positionY * 100}%;
+                         width:${element.width * 100}%;
+                         height:${element.height * 100}%;
+                         transform:rotate(${element.rotation}deg);
+                         --diary-item-rotation:${element.rotation}deg;
+                         --diary-label-chars:${#strings.length(element.textContent)};
+                         z-index:${element.zIndex};|">
+        <!-- 사용자가 쓴 값이라 글자로만 넣는다.
+             색을 고른 글씨만 색을 입힌다 (서버가 #RRGGBB 만 저장한다).
+             비어 있으면 규칙의 기본 먹색으로 그려진다. -->
+        <span class="diary-label-text" th:classappend="${element.textFontClass}"
+              th:style="${element.textColor != null and !#strings.isEmpty(element.textColor)}
+                        ? 'color:' + ${element.textColor} : null"
+              th:text="${element.textContent}">JEJU 2026</span>
+
+        <!-- 조작 UI 는 편집 모드에서만 만든다. 읽기 모드에는 글씨만 남는다. -->
+        <th:block th:if="${editMode}">
+          <div th:replace="~{diary/detail :: canvasHandles}"></div>
+
+          <!-- 스티커와 같은 액션 줄 구조. 글씨는 파일을 갖지 않아 요소 행만 지운다. -->
+          <div class="diary-layer-actions">
+            <button type="button" class="diary-layer-action"
+                    data-layer-direction="BACKWARD">뒤로</button>
+            <button type="button" class="diary-layer-action"
+                    data-layer-direction="FORWARD">앞으로</button>
+            <button type="button" class="diary-layer-action is-danger"
+                    data-delete-confirm="이 글씨를 떼시겠습니까?"
+                    th:data-delete-url="@{/diaries/{diaryId}/pages/{pageId}/elements/{elementId}/label/delete
                                           (diaryId=${diary.id},pageId=${page.id},elementId=${element.id})}">떼기</button>
           </div>
         </th:block>

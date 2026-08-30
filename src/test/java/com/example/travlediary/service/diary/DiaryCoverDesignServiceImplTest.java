@@ -166,7 +166,7 @@ class DiaryCoverDesignServiceImplTest {
     @Test
     void anEmptyShelfDoesNotAskForElements() {
         DiaryCoverDesignElementService elementService = new DiaryCoverDesignElementServiceImpl(
-                service, diaryCoverDesignElementMapper, null);
+                service, diaryCoverDesignElementMapper, null, null);
 
         assertThat(elementService.getElementsByDesign(java.util.List.of(), 7L)).isEmpty();
         verify(diaryCoverDesignElementMapper, never()).findAllByDesignIds(any(), any());

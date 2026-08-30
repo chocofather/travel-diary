@@ -14,11 +14,13 @@ import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.dto.DiarySort;
 import com.example.travlediary.model.DiaryCover;
 import com.example.travlediary.model.DiaryCoverDesign;
+import com.example.travlediary.model.DiaryCoverDesignElement;
 import com.example.travlediary.model.DiaryCoverElement;
 import com.example.travlediary.service.diary.DiaryCoverDesignElementService;
 import com.example.travlediary.service.diary.DiaryCoverDesignService;
 import com.example.travlediary.service.diary.DiaryCoverService;
 import com.example.travlediary.service.diary.DiaryElementService;
+import com.example.travlediary.service.diary.DiaryLabelFontCatalog;
 import com.example.travlediary.service.diary.DiaryPageService;
 import com.example.travlediary.service.diary.DiaryService;
 import com.example.travlediary.service.diary.DiaryNoteCatalog;
@@ -70,7 +72,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 @WebMvcTest(DiaryController.class)
-@Import({SecurityConfig.class, DiaryStickerCatalog.class, DiaryNoteCatalog.class})
+@Import({SecurityConfig.class, DiaryStickerCatalog.class, DiaryNoteCatalog.class,
+        DiaryLabelFontCatalog.class})
 class DiaryControllerTest {
 
     @Autowired
@@ -2097,7 +2100,7 @@ class DiaryControllerTest {
         assertThat(body).contains("diary-photo-add");
         // 아이콘은 이모지 문자가 아니라 inline SVG 이고 의미는 라벨로 남긴다
         assertThat(body).contains("diary-toolbar-icon");
-        assertThat(body).contains("aria-label=\"사진 추가\"");
+        assertThat(body).contains("aria-label=\"일반 사진 추가\"");
         assertThat(body).contains("/diaries/10/pages/1/elements/photo");
         assertThat(body).contains("diary-photo-input");
         assertThat(body.indexOf("diary-photo-add"))
@@ -2476,6 +2479,370 @@ class DiaryControllerTest {
         assertThat(captor.getValue().getUserId()).isNull();
     }
 
+    /**
+     * 라벨기로 붙인 글씨. 화면이 곧바로 그릴 수 있도록 글·글꼴·자리와 저장 주소를 함께 준다.
+     * 자리와 크기는 요청 값이 아니라 서비스가 정한다.
+     */
+    @Test
+    void attachingALabelComesBackWithItsTextFontAndAddresses() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        DiaryElement created = new DiaryElement();
+        created.setId(100L);
+        created.setElementType("TEXT");
+        created.setTextContent("JEJU 2026");
+        created.setTextFont("nanum-square");
+        created.setPositionX(new java.math.BigDecimal("0.34000"));
+        created.setPositionY(new java.math.BigDecimal("0.34000"));
+        created.setWidth(new java.math.BigDecimal("0.32000"));
+        created.setHeight(new java.math.BigDecimal("0.07000"));
+        created.setRotation(new java.math.BigDecimal("0.00"));
+        created.setZIndex(0);
+        created.setTextColor("#C86B7C");
+        when(diaryElementService.createLabel(10L, 3L, 7L, "JEJU 2026", "nanum-square", "#C86B7C"))
+                .thenReturn(created);
+
+        String body = mockMvc.perform(post("/diaries/10/pages/3/elements/label")
+                        .param("text", "JEJU 2026")
+                        .param("textFont", "nanum-square")
+                        .param("textColor", "#C86B7C")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).contains("\"textContent\":\"JEJU 2026\"");
+        assertThat(body).contains("\"textFont\":\"nanum-square\"");
+        assertThat(body).contains("\"fontClass\":\"diary-font-nanum-square\"");
+        // 다음 UI 단계가 곧바로 색을 입힐 수 있도록 글자색도 함께 준다
+        assertThat(body).contains("\"textColor\":\"#C86B7C\"");
+        assertThat(body).contains("/diaries/10/pages/3/elements/100/label/delete");
+        assertThat(body).contains("/diaries/10/pages/3/elements/100/position");
+    }
+
+    /** 문구·글꼴 검증은 서비스 한 곳에서 한다. 그 이유가 그대로 화면에 전해진다. */
+    @Test
+    void aRejectedLabelTellsWhy() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryElementService.createLabel(anyLong(), anyLong(), anyLong(), any(), any(), any()))
+                .thenThrow(new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "내용을 입력해 주세요."));
+
+        mockMvc.perform(post("/diaries/10/pages/3/elements/label")
+                        .param("text", "   ")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(containsString("내용을 입력해 주세요.")));
+    }
+
+    /** 글씨는 파일을 갖지 않는다. 떼는 것은 DB 행뿐이다. */
+    @Test
+    void removingALabelNeverTouchesAnyFile() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+
+        mockMvc.perform(post("/diaries/10/pages/3/elements/100/label/delete")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isNoContent());
+
+        verify(diaryElementService).deleteLabel(10L, 3L, 100L, 7L);
+        // 사진 삭제와 달리 파일 저장소는 아예 부르지 않는다
+        org.mockito.Mockito.verifyNoInteractions(fileUploadService);
+    }
+
+    /** 수정 화면도 작성 화면과 같은 표지 고르기를 쓴다. 기본 표지를 쓰는 다이어리다. */
+    @Test
+    void theEditFormOffersBothCoverKindsAndOpensOnThePresetOne() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryCoverService.findMyCover(10L, 7L)).thenReturn(java.util.Optional.empty());
+        when(diaryCoverDesignService.getMyDesigns(7L))
+                .thenReturn(List.of(coverDesign(5L, "제주 표지")));
+        when(diaryCoverDesignElementService.getElementsByDesign(List.of(5L), 7L))
+                .thenReturn(Map.of(5L, List.of()));
+
+        String body = mockMvc.perform(get("/diaries/10/edit")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).contains("기본 디자인").contains("내 디자인").contains("제주 표지");
+        assertThat(between(body, "name=\"coverSelectionType\"", "data-cover-selection"))
+                .contains("value=\"PRESET\"");
+        // 커스텀 표지를 쓰지 않으므로 '현재 표지' 자리는 없다
+        assertThat(body).doesNotContain("diary-cover-current");
+        // 요소는 디자인마다 따로 묻지 않고 한 번에 읽는다
+        verify(diaryCoverDesignElementService).getElementsByDesign(List.of(5L), 7L);
+    }
+
+    /**
+     * 커스텀 표지를 쓰는 다이어리는 '내 디자인' 쪽이 열린 채로 시작한다.
+     * 지금 표지가 어느 저장 디자인에서 왔는지는 역추적하지 않으므로
+     * 저장 디자인 어느 것도 골라 두지 않는다. (고르지 않고 저장하면 지금 표지가 그대로다)
+     */
+    @Test
+    void theEditFormOpensOnMyDesignsWithoutMarkingAnyOfThem() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        DiaryCover cover = new DiaryCover();
+        cover.setId(3L);
+        cover.setDiaryId(10L);
+        cover.setBaseCoverStyle("LEATHER_DEEP_GREEN");
+        when(diaryCoverService.findMyCover(10L, 7L)).thenReturn(java.util.Optional.of(cover));
+        when(diaryCoverDesignService.getMyDesigns(7L))
+                .thenReturn(List.of(coverDesign(5L, "제주 표지")));
+        when(diaryCoverDesignElementService.getElementsByDesign(List.of(5L), 7L))
+                .thenReturn(Map.of(5L, List.of()));
+
+        String body = mockMvc.perform(get("/diaries/10/edit")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(between(body, "name=\"coverSelectionType\"", "data-cover-selection"))
+                .contains("value=\"CUSTOM\"");
+        // 내 디자인 쪽에는 저장 디자인 목록만 있다. 지금 표지를 따로 그리지 않는다
+        assertThat(body).doesNotContain("diary-cover-current");
+        assertThat(body).contains("제주 표지");
+        // 고른 디자인이 없으므로 저장 디자인 어느 것도 골라져 있지 않다
+        assertThat(body).contains("name=\"customCoverDesignId\" value=\"\"");
+        assertThat(between(body, "data-cover-panel=\"CUSTOM\"", "data-cover-custom-hint"))
+                .doesNotContain("checked");
+        // 지금 표지의 요소는 그리지 않으므로 읽지도 않는다
+        verify(diaryCoverService, org.mockito.Mockito.never()).getElements(anyLong(), anyLong());
+    }
+
+    /** PRESET → CUSTOM. 대표 이미지는 저장하지 않고 표지 교체만 한다. */
+    @Test
+    void updatingToACustomCoverAppliesTheDesignAndSkipsTheCoverImage() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryCoverService.findMyCover(10L, 7L)).thenReturn(java.util.Optional.empty());
+        when(diaryCoverDesignService.getMyDesign(5L, 7L)).thenReturn(coverDesign(5L, "제주 표지"));
+        when(diaryCoverService.updateWithDesign(eq(10L), eq(7L), any(Diary.class), eq(5L)))
+                .thenReturn(List.of());
+
+        mockMvc.perform(multipart("/diaries/10/update")
+                        .file(new MockMultipartFile("coverImage", "cover.jpg",
+                                "image/jpeg", "x".getBytes()))
+                        .param("title", "여름 제주 여행")
+                        .param("startDate", "2026-08-01")
+                        .param("endDate", "2026-08-05")
+                        .param("coverSelectionType", "CUSTOM")
+                        .param("customCoverDesignId", "5")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/diaries"));
+
+        ArgumentCaptor<Diary> captor = ArgumentCaptor.forClass(Diary.class);
+        verify(diaryCoverService).updateWithDesign(eq(10L), eq(7L), captor.capture(), eq(5L));
+        assertThat(captor.getValue().getCoverImageUrl()).isNull();
+        assertThat(captor.getValue().getCoverStyle()).isEqualTo("LEATHER_DEEP_GREEN");
+        verify(fileUploadService, org.mockito.Mockito.never()).saveFile(any(), anyString());
+        verify(diaryService, org.mockito.Mockito.never()).update(anyLong(), anyLong(), any());
+    }
+
+    /** CUSTOM → 다른 CUSTOM. 쓰던 표지를 떼고 고른 디자인으로 갈아 끼운다. */
+    @Test
+    void swappingToAnotherCustomCoverReplacesTheOneInUse() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        DiaryCover cover = new DiaryCover();
+        cover.setId(3L);
+        when(diaryCoverService.findMyCover(10L, 7L)).thenReturn(java.util.Optional.of(cover));
+        when(diaryCoverDesignService.getMyDesign(6L, 7L)).thenReturn(coverDesign(6L, "새 표지"));
+        // 떼어 낸 표지에 공용 스티커만 있으면 지울 파일이 없다
+        DiaryCoverElement sticker = new DiaryCoverElement();
+        sticker.setElementType("STICKER");
+        sticker.setImageUrl("/images/diary/stickers/travel/plane.svg");
+        when(diaryCoverService.updateWithDesign(eq(10L), eq(7L), any(Diary.class), eq(6L)))
+                .thenReturn(List.of(sticker));
+
+        mockMvc.perform(multipart("/diaries/10/update")
+                        .param("title", "여름 제주 여행")
+                        .param("startDate", "2026-08-01")
+                        .param("endDate", "2026-08-05")
+                        .param("coverSelectionType", "CUSTOM")
+                        .param("customCoverDesignId", "6")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().is3xxRedirection());
+
+        // 교체는 한 번의 서비스 호출로 끝난다. (지우고 다시 입히는 순서는 서비스가 지킨다)
+        verify(diaryCoverService).updateWithDesign(eq(10L), eq(7L), any(Diary.class), eq(6L));
+        verify(diaryCoverService, org.mockito.Mockito.never())
+                .updateWithPreset(anyLong(), anyLong(), any());
+    }
+
+    /** CUSTOM → PRESET. 표지를 떼고 고른 기본 표지를 저장한다. */
+    @Test
+    void goingBackToAPresetCoverRemovesTheCustomOne() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        DiaryCover cover = new DiaryCover();
+        cover.setId(3L);
+        when(diaryCoverService.findMyCover(10L, 7L)).thenReturn(java.util.Optional.of(cover));
+        when(diaryCoverService.updateWithPreset(eq(10L), eq(7L), any(Diary.class)))
+                .thenReturn(List.of());
+
+        mockMvc.perform(multipart("/diaries/10/update")
+                        .param("title", "여름 제주 여행")
+                        .param("startDate", "2026-08-01")
+                        .param("endDate", "2026-08-05")
+                        .param("coverStyle", "HARDCOVER_NAVY")
+                        .param("coverSelectionType", "PRESET")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().is3xxRedirection());
+
+        ArgumentCaptor<Diary> captor = ArgumentCaptor.forClass(Diary.class);
+        verify(diaryCoverService).updateWithPreset(eq(10L), eq(7L), captor.capture());
+        assertThat(captor.getValue().getCoverStyle()).isEqualTo("HARDCOVER_NAVY");
+        verify(diaryCoverService, org.mockito.Mockito.never())
+                .updateWithDesign(anyLong(), anyLong(), any(), anyLong());
+    }
+
+    /** 내 디자인 쪽에서 아무것도 고르지 않고 저장하면 지금 표지가 그대로 남는다. */
+    @Test
+    void savingWithoutChoosingADesignKeepsTheCoverInUse() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        DiaryCover cover = new DiaryCover();
+        cover.setId(3L);
+        when(diaryCoverService.findMyCover(10L, 7L)).thenReturn(java.util.Optional.of(cover));
+
+        mockMvc.perform(multipart("/diaries/10/update")
+                        .param("title", "여름 제주 여행 2")
+                        .param("startDate", "2026-08-01")
+                        .param("endDate", "2026-08-05")
+                        .param("coverSelectionType", "CUSTOM")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().is3xxRedirection());
+
+        // 제목만 바뀌고 표지는 어느 쪽으로도 손대지 않는다
+        verify(diaryService).update(eq(10L), eq(7L), any(Diary.class));
+        verify(diaryCoverService, org.mockito.Mockito.never())
+                .updateWithDesign(anyLong(), anyLong(), any(), anyLong());
+        verify(diaryCoverService, org.mockito.Mockito.never())
+                .updateWithPreset(anyLong(), anyLong(), any());
+    }
+
+    /**
+     * 사진은 등록하는 자리가 모습을 정한다. 일반 사진과 폴라로이드가 고르개를 따로 갖는다.
+     * (붙인 뒤에 모습을 바꾸는 길은 두지 않는다)
+     */
+    @Test
+    void photosAreAddedFromTwoEntryPointsThatDecideTheirLook() throws Exception {
+        String body = editPageBody();
+
+        assertThat(body).contains("aria-label=\"일반 사진 추가\"")
+                .contains("aria-label=\"폴라로이드 사진 추가\"");
+        assertThat(body).contains("data-photo-style=\"FULL\"")
+                .contains("data-photo-style=\"POLAROID\"");
+        // 고른 자리의 값이 폼에 담겨 함께 전송된다
+        assertThat(body).contains("name=\"photoStyle\"");
+        // 두 자리 모두 여러 장을 고를 수 있다
+        assertThat(countOf(body, "class=\"diary-photo-input\" name=\"image\" accept=\"image/*\""
+                + " multiple")).isEqualTo(2);
+        // 붙이는 주소는 예전 그대로다
+        assertThat(countOf(body, "action=\"/diaries/10/pages/1/elements/photo\"")).isEqualTo(1);
+    }
+
+    /** 여러 장을 한 번에 붙일 수 있고, 모습은 고른 자리의 값으로 정해진다. */
+    @Test
+    void severalPhotosBecomeSeveralElementsWithTheLookOfTheirEntryPoint() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(fileUploadService.saveFile(any(), anyString()))
+                .thenReturn("/uploads/diary-pages/a.jpg", "/uploads/diary-pages/b.jpg");
+        when(diaryElementService.create(anyLong(), anyLong(), anyLong(), any()))
+                .thenReturn(new DiaryElement());
+
+        mockMvc.perform(multipart("/diaries/10/pages/1/elements/photo")
+                        .file(new MockMultipartFile("image", "a.jpg", "image/jpeg", "a".getBytes()))
+                        .file(new MockMultipartFile("image", "b.jpg", "image/jpeg", "b".getBytes()))
+                        .param("photoStyle", "FULL")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().is3xxRedirection());
+
+        ArgumentCaptor<DiaryElement> captor = ArgumentCaptor.forClass(DiaryElement.class);
+        verify(diaryElementService, org.mockito.Mockito.times(2))
+                .create(anyLong(), anyLong(), anyLong(), captor.capture());
+        assertThat(captor.getAllValues()).extracting(DiaryElement::getPhotoStyle)
+                .containsExactly("FULL", "FULL");
+        // 첫 장은 예전처럼 기본 자리에 놓고, 함께 고른 나머지만 조금씩 어긋나게 둔다
+        assertThat(captor.getAllValues().get(0).getPositionX()).isNull();
+        assertThat(captor.getAllValues().get(1).getPositionX()).isNotNull();
+    }
+
+    /** 붙여 둔 사진은 저장된 모습 그대로 그려진다. 값이 없는 예전 사진은 폴라로이드다. */
+    @Test
+    void savedPhotosKeepTheLookTheyWereAddedWith() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-01")));
+        DiaryElement full = photoElement(100L, "/uploads/diary-pages/a.jpg");
+        full.setPhotoStyle("FULL");
+        DiaryElement old = photoElement(101L, "/uploads/diary-pages/b.jpg");
+        when(diaryElementService.getElements(10L, 1L, 7L)).thenReturn(List.of(full, old));
+
+        String body = mockMvc.perform(get("/diaries/10").param("edit", "true")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).contains("is-photo-full").contains("is-photo-polaroid");
+    }
+
+    /** 라벨기는 작성 폼에서 쓰는 글꼴 전부를 고를 수 있고, 글자색도 함께 고른다. */
+    @Test
+    void theLabelMakerOffersEveryDiaryFontAndAColour() throws Exception {
+        String body = editPageBody();
+        String panel = between(body, "data-decor-panel=\"text\"", "diary-sticker-status");
+
+        // 목록은 서버(카탈로그)가 그린다. 화면에 글꼴을 적어 두지 않는다
+        assertThat(countOf(panel, "data-label-font=")).isEqualTo(15);
+        assertThat(panel).contains("diary-font-fromsol").contains("diary-font-chosun-gungsuh");
+        // 글자색은 색 하나만 고른다
+        assertThat(panel).contains("type=\"color\"").contains("data-label-color");
+    }
+
+    /** 저장된 글씨는 고른 색으로 그려지고, 색이 없으면 규칙의 기본 먹색으로 그려진다. */
+    @Test
+    void savedLabelsKeepTheirColourAndFallBackWhenThereIsNone() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-01")));
+        DiaryElement coloured = labelElement();
+        coloured.setTextColor("#C86B7C");
+        DiaryElement plain = labelElement();
+        plain.setId(101L);
+        when(diaryElementService.getElements(10L, 1L, 7L)).thenReturn(List.of(coloured, plain));
+
+        String body = mockMvc.perform(get("/diaries/10")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).contains("color:#C86B7C");
+        // 색이 없는 글씨에는 색을 입히지 않는다 (한 번만 나온다)
+        assertThat(countOf(body, "color:#")).isEqualTo(1);
+    }
+
     /** 새 여행일기 폼에서 기본 표지와 내가 저장해 둔 디자인 중 하나를 고른다. */
     @Test
     void newFormOffersMySavedCoverDesignsBesideTheDefaultOnes() throws Exception {
@@ -2636,6 +3003,79 @@ class DiaryControllerTest {
         // 표지와 요소를 각각 한 번씩만 읽는다 (카드 수와 상관없이)
         verify(diaryCoverService).findCoversByDiary(List.of(10L), 7L);
         verify(diaryCoverService).findElementsByCover(any());
+    }
+
+    /**
+     * 디자인에 붙인 글씨는 적용된 표지로 복사되어 책장 목록에서도 보인다.
+     * (diary_cover_design_elements TEXT → diary_cover_elements TEXT → 책 표지)
+     */
+    @Test
+    void theShelfDrawsTheLabelsOnAppliedCovers() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiaryPage(7L, null, DiarySort.UPDATED_DESC, 1))
+                .thenReturn(listPage(List.of(item())));
+        DiaryCover cover = new DiaryCover();
+        cover.setId(3L);
+        cover.setDiaryId(10L);
+        cover.setBaseCoverStyle("LEATHER_DEEP_GREEN");
+        when(diaryCoverService.findCoversByDiary(List.of(10L), 7L))
+                .thenReturn(Map.of(10L, cover));
+        DiaryCoverElement label = new DiaryCoverElement();
+        label.setCoverId(3L);
+        label.setElementType("TEXT");
+        label.setTextContent("JEJU 2026");
+        label.setTextFont("park-dahyun");
+        label.setPositionX(new java.math.BigDecimal("0.38000"));
+        label.setPositionY(new java.math.BigDecimal("0.38000"));
+        label.setWidth(new java.math.BigDecimal("0.44000"));
+        label.setHeight(new java.math.BigDecimal("0.09000"));
+        label.setRotation(new java.math.BigDecimal("0.00"));
+        label.setZIndex(1);
+        when(diaryCoverService.findElementsByCover(any())).thenReturn(Map.of(3L, List.of(label)));
+
+        String body = mockMvc.perform(get("/diaries")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        String item = between(body, "class=\"diary-canvas-item diary-label\"", "</figure>");
+        assertThat(item).contains("JEJU 2026").contains("diary-font-park-dahyun");
+        assertThat(item).contains("left:38.00000%").contains("width:44.00000%");
+        // 보기 전용이라 조작 UI 는 없다
+        assertThat(item).doesNotContain("diary-resize-handle").doesNotContain("data-position-url");
+        // 글꼴 정의는 편집 화면과 같은 파일에서 온다
+        assertThat(body).contains("/css/diary-fonts.css");
+    }
+
+    /** 새 여행일기의 '내 디자인' 미리보기에서도 같은 조각이 글씨를 그린다. */
+    @Test
+    void theNewDiaryFormPreviewAlsoShowsTheLabels() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        DiaryCoverDesign design = coverDesign(5L, "제주 표지");
+        when(diaryCoverDesignService.getMyDesigns(7L)).thenReturn(List.of(design));
+        DiaryCoverDesignElement label = new DiaryCoverDesignElement();
+        label.setElementType("TEXT");
+        label.setTextContent("SUMMER TRIP");
+        label.setTextFont("bookk-myeongjo");
+        label.setPositionX(new java.math.BigDecimal("0.30000"));
+        label.setPositionY(new java.math.BigDecimal("0.40000"));
+        label.setWidth(new java.math.BigDecimal("0.44000"));
+        label.setHeight(new java.math.BigDecimal("0.09000"));
+        label.setRotation(new java.math.BigDecimal("0.00"));
+        label.setZIndex(1);
+        when(diaryCoverDesignElementService.getElementsByDesign(List.of(5L), 7L))
+                .thenReturn(Map.of(5L, List.of(label)));
+
+        String body = mockMvc.perform(get("/diaries/new")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        String item = between(body, "class=\"diary-canvas-item diary-label\"", "</figure>");
+        assertThat(item).contains("SUMMER TRIP").contains("diary-font-bookk-myeongjo");
+        assertThat(body).contains("/css/diary-fonts.css");
     }
 
     private DiaryCoverDesign coverDesign(Long id, String name) {
@@ -2932,6 +3372,110 @@ class DiaryControllerTest {
                 .contains("data-decor-tab=\"sticker\"");
     }
 
+    /**
+     * 라벨기는 꾸미기 팝오버의 네 번째 갈래다.
+     * 글꼴 목록은 서버가 manifest 대로 그려 준다 — 화면이 목록을 따로 들지 않는다.
+     */
+    @Test
+    void theLabelMakerIsAFourthDecorTabWithFontsFromTheManifest() throws Exception {
+        String body = editPageBody();
+
+        assertThat(body).contains("data-decor-tab=\"text\"");
+        // 기존 NOTE '라벨'과 이름이 겹치지 않게 나눈다
+        assertThat(between(body, "data-decor-tab=\"text\"", "</button>")).contains("라벨기");
+
+        String panel = between(body, "data-decor-panel=\"text\"", "diary-sticker-status");
+        // 붙일 자리는 고르는 칸이 들고 있다. (표지 편집과 같은 조각을 쓰는 자리다)
+        assertThat(panel)
+                .contains("data-label-maker")
+                .contains("data-create-url=\"/diaries/10/pages/1/elements/label\"");
+        assertThat(panel)
+                .contains("id=\"diary-label-text\"")
+                .contains("id=\"diary-label-attach\"")
+                // 서버 상한과 같은 50자
+                .contains("maxlength=\"50\"");
+        // 세 글꼴이 실제 그 글꼴로 미리 보인다
+        assertThat(panel)
+                .contains("data-label-font=\"nanum-square\"")
+                .contains("data-label-font=\"bookk-myeongjo\"")
+                .contains("data-label-font=\"park-dahyun\"")
+                .contains("diary-font-nanum-square")
+                .contains("diary-font-bookk-myeongjo")
+                .contains("diary-font-park-dahyun");
+        // 처음에는 첫 글꼴이 눌려 있다
+        assertThat(between(panel, "class=\"diary-label-font is-active\"", "</button>"))
+                .contains("data-label-font=\"nanum-square\"");
+    }
+
+    /** 붙여 둔 글씨는 배경 없이 글자만, 조작 주소와 함께 그려진다. */
+    @Test
+    void savedLabelsComeBackWithTheirFontAndTheAddressesTheEngineReads() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-01")));
+        when(diaryElementService.getElements(10L, 1L, 7L)).thenReturn(List.of(labelElement()));
+
+        String body = mockMvc.perform(get("/diaries/10").param("edit", "true")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        String label = between(body, "class=\"diary-canvas-item diary-label\"", "</figure>");
+        assertThat(label).contains("JEJU 2026").contains("diary-font-park-dahyun");
+        // 글자 크기를 상자에 맞추는 데 쓰는 값도 함께 실린다
+        assertThat(label).contains("--diary-label-chars:9");
+        assertThat(label)
+                .contains("/diaries/10/pages/1/elements/100/position")
+                .contains("/diaries/10/pages/1/elements/100/size")
+                .contains("/diaries/10/pages/1/elements/100/rotation")
+                .contains("/diaries/10/pages/1/elements/100/layer")
+                .contains("/diaries/10/pages/1/elements/100/label/delete");
+        // 종이 배경은 쓰지 않는다 (NOTE 와 다른 갈래다)
+        assertThat(label).doesNotContain("diary-note-surface");
+    }
+
+    /** 읽기 모드는 같은 자리에 글씨만 남긴다. 조작 UI 는 만들지 않는다. */
+    @Test
+    void theReadingViewShowsTheLabelWithoutAnyEditingUi() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-01")));
+        when(diaryElementService.getElements(10L, 1L, 7L)).thenReturn(List.of(labelElement()));
+
+        String body = mockMvc.perform(get("/diaries/10")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        String label = between(body, "class=\"diary-canvas-item diary-label\"", "</figure>");
+        // 자리·크기·회전은 편집 모드와 같은 값이다
+        assertThat(label).contains("left:20.00000%").contains("width:32.00000%");
+        assertThat(label).contains("JEJU 2026").contains("diary-font-park-dahyun");
+        // 조작 UI 는 만들지 않는다 (사진·스티커와 같은 규칙)
+        assertThat(label)
+                .doesNotContain("diary-resize-handle")
+                .doesNotContain("diary-rotate-handle")
+                .doesNotContain("diary-layer-actions");
+    }
+
+    private DiaryElement labelElement() {
+        DiaryElement element = new DiaryElement();
+        element.setId(100L);
+        element.setPageId(1L);
+        element.setElementType("TEXT");
+        element.setTextContent("JEJU 2026");
+        element.setTextFont("park-dahyun");
+        element.setPositionX(new java.math.BigDecimal("0.20000"));
+        element.setPositionY(new java.math.BigDecimal("0.30000"));
+        element.setWidth(new java.math.BigDecimal("0.32000"));
+        element.setHeight(new java.math.BigDecimal("0.07000"));
+        element.setRotation(new java.math.BigDecimal("0.00"));
+        element.setZIndex(1);
+        return element;
+    }
+
     @Test
     void theStickerPickerKeepsEverythingItAlreadyHad() throws Exception {
         String body = editPageBody();
@@ -2988,9 +3532,10 @@ class DiaryControllerTest {
                     .contains("아이보리").contains("세이지");
             // 스와치도 실제로 붙었을 때와 같은 색 class 로 칠해진다
             assertThat(panel).contains("diary-note-color-sage");
-            // 처음에는 "기본"(=고르지 않음)이 골라져 있다
-            assertThat(panel).contains("class=\"diary-note-swatch is-default is-active\"");
-            assertThat(panel).contains("data-note-color=\"\"");
+            // 색 없음 자리는 두지 않는다. 처음에는 맨 앞의 기본색(IVORY)이 골라져 있다
+            assertThat(panel).doesNotContain("data-note-color=\"\"");
+            assertThat(between(panel, "class=\"diary-note-swatch diary-note-color-ivory is-active\"",
+                    "</button>")).contains("data-note-color=\"IVORY\"");
         }
     }
 
@@ -3263,8 +3808,8 @@ class DiaryControllerTest {
         ArgumentCaptor<DiaryElement> captor = ArgumentCaptor.forClass(DiaryElement.class);
         verify(diaryElementService).create(eq(10L), eq(3L), eq(7L), captor.capture());
         assertThat(captor.getValue().getColorType()).isNull();
-        // 색이 없는 요소는 빈 값으로 와서 그 모양의 기본색으로 그려진다
-        assertThat(body).contains("\"colorClass\":\"\"");
+        // 고르지 않은 색은 기본색(IVORY)으로 정해져 화면에도 그 색으로 내려온다
+        assertThat(body).contains("\"colorClass\":\"diary-note-color-ivory\"");
     }
 
     @Test
@@ -3317,8 +3862,8 @@ class DiaryControllerTest {
 
         String figure = between(body, "diary-canvas-item diary-note", "</figure>");
         assertThat(figure).contains("diary-note-memo-square");
-        // 색 class 는 붙지 않는다. 그 모양의 기본색으로 그려진다
-        assertThat(figure).doesNotContain("diary-note-color-");
+        // 색 칸이 비어 있는 예전 행은 기본색(IVORY)으로 읽는다. (DB 값은 그대로 둔다)
+        assertThat(figure).contains("diary-note-color-ivory");
     }
 
     @Test

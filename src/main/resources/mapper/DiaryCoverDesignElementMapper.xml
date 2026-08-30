@@ -15,6 +15,8 @@
         <result property="styleType"   column="style_type"/>
         <result property="colorType"   column="color_type"/>
         <result property="photoStyle"  column="photo_style"/>
+        <result property="textFont"    column="text_font"/>
+        <result property="textColor"   column="text_color"/>
         <result property="positionX"   column="position_x"/>
         <result property="positionY"   column="position_y"/>
         <result property="width"       column="width"/>
@@ -27,23 +29,27 @@
 
     <sql id="DiaryCoverDesignElementColumns">
         id, design_id, element_type, text_content, image_url, style_type, color_type,
-        photo_style, position_x, position_y, width, height, rotation, z_index,
+        photo_style, text_font, text_color,
+        position_x, position_y, width, height, rotation, z_index,
         created_at, updated_at
     </sql>
 
     <!--
       PHOTO/STICKER 는 image_url 만, NOTE 는 text_content 와 style_type 을 함께 채운다.
-      TEXT 는 text_content 만 쓴다. (DB payload CHECK 와 같은 규칙, 어느 값을 채울지는 Service 가 정한다)
+      TEXT 는 text_content 와 text_font 를 쓴다.
+      (DB payload CHECK 와 같은 규칙, 어느 값을 채울지는 Service 가 정한다.
+       text_font 는 TEXT 전용이라 다른 유형에서는 늘 NULL 이고 payload CHECK 대상도 아니다)
     -->
     <insert id="insert" parameterType="com.example.travlediary.model.DiaryCoverDesignElement"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO diary_cover_design_elements (
             design_id, element_type, text_content, image_url, style_type, color_type,
-            photo_style, position_x, position_y, width, height, rotation, z_index,
+            photo_style, text_font, text_color,
+            position_x, position_y, width, height, rotation, z_index,
             created_at, updated_at
         ) VALUES (
             #{designId}, #{elementType}, #{textContent}, #{imageUrl},
-            #{styleType}, #{colorType}, #{photoStyle},
+            #{styleType}, #{colorType}, #{photoStyle}, #{textFont}, #{textColor},
             #{positionX}, #{positionY}, #{width}, #{height}, #{rotation}, #{zIndex},
             NOW(), NOW()
         )
@@ -73,7 +79,7 @@
     <select id="findAllByDesignIds" resultMap="DiaryCoverDesignElementMap">
         SELECT
             e.id, e.design_id, e.element_type, e.text_content, e.image_url,
-            e.style_type, e.color_type, e.photo_style,
+            e.style_type, e.color_type, e.photo_style, e.text_font, e.text_color,
             e.position_x, e.position_y, e.width, e.height, e.rotation, e.z_index,
             e.created_at, e.updated_at
         FROM diary_cover_design_elements e

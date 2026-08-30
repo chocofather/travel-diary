@@ -1,0 +1,41 @@
+{
+  "_comment": [
+    "라벨기로 붙이는 TEXT 요소의 글꼴 목록.",
+    "",
+    "fonts[].code 가 diary_elements.text_font / diary_cover_design_elements.text_font /",
+    "diary_cover_elements.text_font 에 그대로 들어간다.",
+    "이 파일이 곧 서버가 허용하는 목록이다. 여기에 없는 값은 저장되지 않는다.",
+    "한 번 쓴 code 는 바꾸지 않는다 (이미 저장된 요소가 그 값을 들고 있다).",
+    "",
+    "code 는 diary-fonts.css 의 글꼴 key 를 그대로 쓴다 (소문자-하이픈).",
+    "화면에서는 그 값이 그대로 .diary-font-{code} class 가 되므로",
+    "code 를 class 로 바꾸는 변환 표를 따로 두지 않는다.",
+    "diary_pages.page_header_font 와도 같은 key 체계다.",
+    "",
+    "목록은 일기 본문에서 고를 수 있는 글꼴 전부와 같다.",
+    "(서버 기준은 DiaryContentSanitizer.DIARY_FONT_KEYS 이고,",
+    " 두 목록이 어긋나지 않는지는 DiaryLabelFontCatalogTest 가 확인한다)",
+    "본문에 글꼴을 더하면 여기에도 한 줄을 더해야 한다.",
+    "",
+    "맨 앞 글꼴이 고르는 자리의 처음 값이 되므로 깔끔한 고딕을 앞에 둔다.",
+    "그 밖의 순서는 본문 글꼴 목록(diary-editor.js FONTS)을 그대로 따른다.",
+    "label 은 고르는 자리에 보여 줄 이름이고 저장되지 않는다."
+  ],
+  "fonts": [
+    {"code": "nanum-square", "label": "나눔스퀘어"},
+    {"code": "fromsol", "label": "그리운 프롬솔"},
+    {"code": "bookk-myeongjo", "label": "부크크 명조"},
+    {"code": "hiker", "label": "하이커체"},
+    {"code": "cafe24-surround", "label": "카페24 써라운드"},
+    {"code": "lee-seoyun", "label": "이서윤체"},
+    {"code": "ggubulim", "label": "꾸불림체"},
+    {"code": "ohchungi", "label": "그리운 국한박 오춘기 김작가"},
+    {"code": "chosun-gungsuh", "label": "조선궁서체"},
+    {"code": "gunham", "label": "군함이말문트였체"},
+    {"code": "dunggeunmo", "label": "둥근모꼴+ Fixedsys"},
+    {"code": "mitmi", "label": "밑미 폰트"},
+    {"code": "green-umbrella", "label": "윤초록우산어린이 만세"},
+    {"code": "incheon-jaram", "label": "인천교육자람체"},
+    {"code": "park-dahyun", "label": "온글잎 박다현체"}
+  ]
+}

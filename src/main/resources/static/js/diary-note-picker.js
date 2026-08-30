@@ -32,12 +32,20 @@ document.addEventListener('DOMContentLoaded', () => {
     /*
       갈래(라벨 / 메모지)마다 고른 색을 따로 기억한다.
       라벨은 아이보리로, 메모지는 하늘로 쓰던 사람이 갈래를 오갈 때마다
-      다시 고르지 않아도 되게 한다. 비어 있으면 "기본"(=모양이 원래 쓰는 색)이다.
+      다시 고르지 않아도 되게 한다.
+      처음에는 눌려 있는 색(맨 앞의 기본색)을 그대로 새겨 둔다 — "색 없음" 자리는 없다.
     */
     const chosenColors = new Map();
 
     popover.querySelectorAll('.diary-note-swatch').forEach((swatch) => {
         swatch.addEventListener('click', () => chooseColor(swatch));
+    });
+    popover.querySelectorAll('.diary-decor-panel').forEach((panel) => {
+        const active = panel.querySelector('.diary-note-swatch.is-active');
+        if (!active) return;
+        chosenColors.set(panel.dataset.decorPanel, active.dataset.noteColor || '');
+        // 미리보기도 처음부터 그 색으로 보여 준다.
+        paintPreviews(panel, colorClassOf(active));
     });
 
     /** 고른 색을 그 갈래에 새겨 두고, 그 갈래의 미리보기에 곧바로 입힌다. */

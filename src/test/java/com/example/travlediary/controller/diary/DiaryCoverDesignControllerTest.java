@@ -9,6 +9,7 @@ import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.diary.DiaryCoverDesignElementService;
 import com.example.travlediary.service.diary.DiaryCoverDesignService;
+import com.example.travlediary.service.diary.DiaryLabelFontCatalog;
 import com.example.travlediary.service.diary.DiaryStickerCatalog;
 import com.example.travlediary.service.file.FileUploadService;
 import org.junit.jupiter.api.Test;
@@ -32,6 +33,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -47,7 +49,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 @WebMvcTest(DiaryCoverDesignController.class)
-@Import({SecurityConfig.class, DiaryStickerCatalog.class})
+@Import({SecurityConfig.class, DiaryStickerCatalog.class, DiaryLabelFontCatalog.class})
 class DiaryCoverDesignControllerTest {
 
     @Autowired
@@ -140,6 +142,57 @@ class DiaryCoverDesignControllerTest {
         // 한 번만 묻는다 (카드 수만큼 부르지 않는다)
         verify(diaryCoverDesignElementService).getElementsByDesign(List.of(5L, 6L), 7L);
         verify(diaryCoverDesignElementService, never()).getElements(any(), any());
+    }
+
+    /**
+     * 보관함 미리보기에도 라벨기로 붙인 글씨가 그대로 보인다.
+     * 편집 화면과 같은 모양 규칙·같은 글꼴 class·같은 상대좌표를 쓰고, 조작 UI 만 없다.
+     */
+    @Test
+    void theShelfAlsoShowsTheLabelsWithTheirFont() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryCoverDesignService.getMyDesigns(7L)).thenReturn(List.of(design(5L, "제주 여행")));
+        when(diaryCoverDesignElementService.getElementsByDesign(List.of(5L), 7L))
+                .thenReturn(Map.of(5L, List.of(label(100L, "JEJU 2026", "park-dahyun"))));
+
+        String body = mockMvc.perform(get("/diaries/cover-designs")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        String item = between(body, "class=\"diary-canvas-item diary-label\"", "</figure>");
+        assertThat(item).contains("JEJU 2026").contains("diary-font-park-dahyun");
+        // 자리·크기·회전은 편집 화면과 같은 값이다
+        assertThat(item).contains("left:38.00000%").contains("width:44.00000%");
+        assertThat(item).contains("--diary-label-chars:9");
+        // 보기 전용이다. 조작 손잡이도 저장 주소도 없다
+        assertThat(item)
+                .doesNotContain("diary-resize-handle")
+                .doesNotContain("diary-layer-action")
+                .doesNotContain("data-position-url")
+                .doesNotContain("data-element-id");
+        // 글꼴 정의는 편집 화면과 같은 파일에서 온다
+        assertThat(body).contains("/css/diary-fonts.css");
+    }
+
+    /** 글꼴을 고르지 않고 붙인 글씨는 class 없이 기본 글꼴로 그려진다. */
+    @Test
+    void aLabelWithoutAFontFallsBackToTheDefaultOne() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryCoverDesignService.getMyDesigns(7L)).thenReturn(List.of(design(5L, "제주 여행")));
+        when(diaryCoverDesignElementService.getElementsByDesign(List.of(5L), 7L))
+                .thenReturn(Map.of(5L, List.of(label(100L, "여행의 순간", null))));
+
+        String body = mockMvc.perform(get("/diaries/cover-designs")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        String item = between(body, "class=\"diary-canvas-item diary-label\"", "</figure>");
+        assertThat(item).contains("여행의 순간");
+        assertThat(item).doesNotContain("diary-font-");
     }
 
     @Test
@@ -319,7 +372,7 @@ class DiaryCoverDesignControllerTest {
         when(fileUploadService.saveFile(any(), eq("diary-cover-designs")))
                 .thenReturn("/uploads/diary-cover-designs/a.jpg",
                         "/uploads/diary-cover-designs/b.jpg");
-        when(diaryCoverDesignElementService.createPhoto(eq(5L), eq(7L), any(), anyInt(), any()))
+        when(diaryCoverDesignElementService.createPhoto(eq(5L), eq(7L), any(), anyInt(), any(), anyDouble()))
                 .thenReturn(photo(101L, "/uploads/diary-cover-designs/a.jpg"),
                         photo(102L, "/uploads/diary-cover-designs/b.jpg"));
 
@@ -337,9 +390,11 @@ class DiaryCoverDesignControllerTest {
                 .saveFile(any(), eq("diary-cover-designs"));
         // 두 번째 장은 첫 장과 겹치지 않게 한 칸 밀려 놓이고, 두 장 모두 고른 자리의 모습이다
         verify(diaryCoverDesignElementService)
-                .createPhoto(5L, 7L, "/uploads/diary-cover-designs/a.jpg", 0, "POLAROID");
+                .createPhoto(eq(5L), eq(7L), eq("/uploads/diary-cover-designs/a.jpg"),
+                        eq(0), eq("POLAROID"), anyDouble());
         verify(diaryCoverDesignElementService)
-                .createPhoto(5L, 7L, "/uploads/diary-cover-designs/b.jpg", 1, "POLAROID");
+                .createPhoto(eq(5L), eq(7L), eq("/uploads/diary-cover-designs/b.jpg"),
+                        eq(1), eq("POLAROID"), anyDouble());
     }
 
     /** 일반 사진 자리에서 올리면 프레임 없는 사진으로 붙는다. */
@@ -348,7 +403,7 @@ class DiaryCoverDesignControllerTest {
         when(userDetails.getId()).thenReturn(7L);
         when(fileUploadService.saveFile(any(), eq("diary-cover-designs")))
                 .thenReturn("/uploads/diary-cover-designs/a.jpg");
-        when(diaryCoverDesignElementService.createPhoto(eq(5L), eq(7L), any(), anyInt(), any()))
+        when(diaryCoverDesignElementService.createPhoto(eq(5L), eq(7L), any(), anyInt(), any(), anyDouble()))
                 .thenReturn(photo(101L, "/uploads/diary-cover-designs/a.jpg"));
 
         mockMvc.perform(multipart("/diaries/cover-designs/5/elements/photo")
@@ -360,7 +415,8 @@ class DiaryCoverDesignControllerTest {
                 .andExpect(status().isOk());
 
         verify(diaryCoverDesignElementService)
-                .createPhoto(5L, 7L, "/uploads/diary-cover-designs/a.jpg", 0, "FULL");
+                .createPhoto(eq(5L), eq(7L), eq("/uploads/diary-cover-designs/a.jpg"),
+                        eq(0), eq("FULL"), anyDouble());
     }
 
     /** DB 저장이 실패하면 방금 올린 파일을 남기지 않는다. */
@@ -372,7 +428,7 @@ class DiaryCoverDesignControllerTest {
         Files.writeString(saved, "x");
         when(fileUploadService.saveFile(any(), eq("diary-cover-designs")))
                 .thenReturn("/uploads/diary-cover-designs/a.jpg");
-        when(diaryCoverDesignElementService.createPhoto(eq(5L), eq(7L), any(), anyInt(), any()))
+        when(diaryCoverDesignElementService.createPhoto(eq(5L), eq(7L), any(), anyInt(), any(), anyDouble()))
                 .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "표지 디자인을 찾을 수 없습니다."));
         ReflectionTestUtils.setField(controller, "uploadPath", uploadRoot.toString());
@@ -550,6 +606,160 @@ class DiaryCoverDesignControllerTest {
     /** manifest 의 첫 스티커 id. (목록은 서버가 들고 있으므로 테스트가 값을 적지 않는다) */
     private String firstStickerId() {
         return diaryStickerCatalog.getCategories().get(0).stickers().get(0).id();
+    }
+
+    /**
+     * 라벨기는 스티커·사진과 같은 줄의 도구 하나다.
+     * 고르는 칸은 페이지 다꾸와 같은 조각을 쓰고, 글꼴 목록도 같은 manifest 에서 온다.
+     */
+    @Test
+    void theEditorOffersTheLabelMakerWithTheSameFontsAsThePages() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryCoverDesignService.getMyDesign(5L, 7L)).thenReturn(design(5L, "제주 여행"));
+        when(diaryCoverDesignElementService.getElements(5L, 7L)).thenReturn(List.of());
+
+        String body = mockMvc.perform(get("/diaries/cover-designs/5/edit")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).contains("id=\"diary-label-button\"").contains("라벨기");
+        // 붙일 자리는 고르는 칸이 들고 있다 (페이지 다꾸와 같은 조각)
+        assertThat(body)
+                .contains("data-label-maker")
+                .contains("data-create-url=\"/diaries/cover-designs/5/elements/label\"");
+        // 글꼴은 세 가지 모두 실제 그 글꼴로 미리 보인다
+        assertThat(body)
+                .contains("data-label-font=\"nanum-square\"")
+                .contains("data-label-font=\"bookk-myeongjo\"")
+                .contains("data-label-font=\"park-dahyun\"")
+                .contains("diary-font-park-dahyun");
+        // 글꼴 정의는 페이지 다꾸와 같은 파일에서 온다 (옮겨 적지 않는다)
+        assertThat(body).contains("/css/diary-fonts.css");
+        assertThat(body).contains("/js/diary-label-picker.js");
+        // 고르는 판은 스티커와 같은 자리 규칙(도구 줄 위)을 쓴다
+        assertThat(body).contains("class=\"diary-sticker-popover diary-label-popover\"");
+    }
+
+    /** 붙여 둔 글씨는 배경 없이 글자만, 조작 주소와 함께 그려진다. */
+    @Test
+    void savedLabelsComeBackWithTheirFontAndTheAddressesTheEngineReads() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryCoverDesignService.getMyDesign(5L, 7L)).thenReturn(design(5L, "제주 여행"));
+        when(diaryCoverDesignElementService.getElements(5L, 7L))
+                .thenReturn(List.of(label(100L, "JEJU 2026", "park-dahyun")));
+
+        String body = mockMvc.perform(get("/diaries/cover-designs/5/edit")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        String item = between(body, "class=\"diary-canvas-item diary-label\"", "</figure>");
+        assertThat(item).contains("JEJU 2026").contains("diary-font-park-dahyun");
+        // 글자 크기를 상자에 맞추는 데 쓰는 값도 함께 실린다
+        assertThat(item).contains("--diary-label-chars:9");
+        for (String url : new String[]{"position", "size", "rotation", "layer"}) {
+            assertThat(item).as("%s", url)
+                    .contains("/diaries/cover-designs/5/elements/100/" + url + "\"");
+        }
+        assertThat(item).contains("/diaries/cover-designs/5/elements/100/label/delete");
+        // 편집 요소라 손잡이와 액션 줄이 함께 그려진다
+        assertThat(item)
+                .contains("diary-resize-handle")
+                .contains("diary-rotate-handle")
+                .contains("diary-layer-actions");
+        // 종이 배경은 쓰지 않는다
+        assertThat(item).doesNotContain("diary-note-surface");
+    }
+
+    private String between(String source, String start, String end) {
+        int startIndex = source.indexOf(start);
+        int endIndex = source.indexOf(end, startIndex + start.length());
+        assertThat(startIndex).as("start %s", start).isGreaterThanOrEqualTo(0);
+        assertThat(endIndex).as("end %s", end).isGreaterThan(startIndex);
+        return source.substring(startIndex, endIndex);
+    }
+
+    /**
+     * 라벨기로 붙인 글씨. 화면이 곧바로 그릴 수 있도록 글·글꼴·자리와 저장 주소를 함께 준다.
+     * 글꼴 class 도 서버가 줘서 화면이 code 를 class 로 바꾸는 규칙을 갖지 않는다.
+     */
+    @Test
+    void attachingALabelComesBackWithItsTextFontAndAddresses() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryCoverDesignElementService
+                .createLabel(5L, 7L, "JEJU 2026", "park-dahyun", "#C86B7C"))
+                .thenReturn(label(100L, "JEJU 2026", "park-dahyun"));
+
+        String body = mockMvc.perform(post("/diaries/cover-designs/5/elements/label")
+                        .param("text", "JEJU 2026")
+                        .param("textFont", "park-dahyun")
+                        .param("textColor", "#C86B7C")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).contains("\"textContent\":\"JEJU 2026\"");
+        assertThat(body).contains("\"textFont\":\"park-dahyun\"");
+        assertThat(body).contains("\"fontClass\":\"diary-font-park-dahyun\"");
+        assertThat(body).contains("/diaries/cover-designs/5/elements/100/label/delete");
+        assertThat(body).contains("/diaries/cover-designs/5/elements/100/position");
+    }
+
+    /** 문구·글꼴 검증은 서비스 한 곳에서 한다. 그 이유가 그대로 화면에 전해진다. */
+    @Test
+    void aRejectedLabelTellsWhy() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryCoverDesignElementService.createLabel(any(), any(), any(), any(), any()))
+                .thenThrow(new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "지원하지 않는 글꼴입니다."));
+
+        mockMvc.perform(post("/diaries/cover-designs/5/elements/label")
+                        .param("text", "JEJU")
+                        .param("textFont", "comic-sans")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isBadRequest())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+                        .content().string(org.hamcrest.Matchers
+                                .containsString("지원하지 않는 글꼴입니다.")));
+    }
+
+    /** 글씨는 파일을 갖지 않는다. DB 행만 지우고 파일 정리는 부르지 않는다. */
+    @Test
+    void removingALabelNeverTouchesAnyFile() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryCoverDesignElementService.deleteLabel(5L, 100L, 7L))
+                .thenReturn(label(100L, "JEJU 2026", "park-dahyun"));
+
+        mockMvc.perform(post("/diaries/cover-designs/5/elements/100/label/delete")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isNoContent());
+
+        verify(diaryCoverDesignElementService).deleteLabel(5L, 100L, 7L);
+    }
+
+    private DiaryCoverDesignElement label(Long id, String text, String textFont) {
+        DiaryCoverDesignElement element = new DiaryCoverDesignElement();
+        element.setId(id);
+        element.setDesignId(5L);
+        element.setElementType("TEXT");
+        element.setTextContent(text);
+        element.setTextFont(textFont);
+        element.setPositionX(new java.math.BigDecimal("0.38000"));
+        element.setPositionY(new java.math.BigDecimal("0.38000"));
+        element.setWidth(new java.math.BigDecimal("0.44000"));
+        element.setHeight(new java.math.BigDecimal("0.09000"));
+        element.setRotation(new java.math.BigDecimal("0.00"));
+        element.setZIndex(0);
+        return element;
     }
 
     private DiaryCoverDesignElement sticker(Long id, String imageUrl) {

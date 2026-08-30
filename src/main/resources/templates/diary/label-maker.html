@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!--
+  라벨기. 문구를 적고 글씨체를 골라 붙인다. (종이 배경 없이 글자만 놓이는 TEXT 요소)
+
+  페이지 다꾸와 표지 디자인 편집이 이 한 벌을 함께 쓴다.
+  다른 것은 붙일 자리(createUrl)뿐이고, 고르는 칸도 만드는 요소도 같다.
+  글꼴 목록은 서버가 manifest(json/diary_label_fonts.json)대로 그려 주므로
+  화면도 스크립트도 목록을 따로 들지 않는다.
+
+  고르는 칸의 미리보기는 실제로 붙었을 때와 같은 diary-font-* class 를 그대로 쓴다.
+  (그림 파일이 없는 갈래라 미리보기가 곧 결과다)
+
+  여닫이는 이 조각의 몫이 아니다 — 페이지에서는 꾸미기 팝오버의 한 갈래로 들어가고,
+  표지에서는 자기 팝오버 안에 들어간다. diary-label-picker.js 가 두 자리를 함께 맡는다.
+-->
+<div th:fragment="picker(fonts, createUrl)" class="diary-label-maker" data-label-maker
+     th:attr="data-create-url=${createUrl}">
+  <label class="diary-label-input-row">
+    <span class="diary-label-field-name">문구</span>
+    <!-- 서버 상한과 같은 50자. 한 줄짜리 짧은 문구다 -->
+    <input type="text" class="diary-label-input" id="diary-label-text" data-label-input
+           maxlength="50" autocomplete="off" placeholder="예: JEJU 2026" />
+  </label>
+
+  <!-- 글꼴이 많으므로 목록 안에서만 넘겨 본다. (팝오버 자체가 길어지지 않게) -->
+  <div class="diary-label-field-name">글씨체</div>
+  <div class="diary-label-fonts" role="radiogroup" aria-label="글씨체">
+    <button type="button" class="diary-label-font"
+            th:each="font, stat : ${fonts}"
+            th:data-label-font="${font.code}"
+            th:classappend="${stat.first} ? 'is-active' : ''"
+            th:attr="aria-pressed=${stat.first} ? 'true' : 'false',
+                     aria-label=|${font.label}로 붙이기|">
+      <!-- 실제 그 글꼴로 보여 준다. 입력한 문구가 있으면 그 문구로 바뀐다 -->
+      <span class="diary-label-font-sample" th:classappend="${font.fontClass}"
+            data-label-sample>여행의 순간</span>
+      <span class="diary-label-font-name" th:text="${font.label}">나눔스퀘어</span>
+    </button>
+  </div>
+
+  <!--
+    글자색. 목록으로 묶지 않고 원하는 색을 그대로 고른다. (#RRGGBB 로 저장한다)
+    처음 값은 본문과 어울리는 먹색이고, 이 값을 그대로 보내면 화면에도 같은 색으로 붙는다.
+  -->
+  <label class="diary-label-color-row">
+    <span class="diary-label-field-name">글자색</span>
+    <input type="color" class="diary-label-color" id="diary-label-color" data-label-color
+           value="#2b2b2b" aria-label="글자색" />
+    <span class="diary-label-color-value" data-label-color-value>#2B2B2B</span>
+  </label>
+
+  <button type="button" class="diary-label-attach" id="diary-label-attach"
+          data-label-attach>붙이기</button>
+</div>
+
+</body>
+</html>

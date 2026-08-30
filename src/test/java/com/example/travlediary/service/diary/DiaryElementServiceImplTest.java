@@ -39,8 +39,11 @@ class DiaryElementServiceImplTest {
         // 라벨/메모지 목록은 실제 manifest 를 그대로 읽는다. (허용 목록이 두 벌이 되지 않게)
         DiaryNoteCatalog diaryNoteCatalog = new DiaryNoteCatalog();
         diaryNoteCatalog.load();
+        // 라벨기 글꼴 목록도 실제 manifest 를 그대로 읽는다.
+        DiaryLabelFontCatalog diaryLabelFontCatalog = new DiaryLabelFontCatalog();
+        diaryLabelFontCatalog.load();
         diaryElementService = new DiaryElementServiceImpl(
-                diaryPageService, diaryElementMapper, diaryNoteCatalog);
+                diaryPageService, diaryElementMapper, diaryNoteCatalog, diaryLabelFontCatalog);
     }
 
     @Test
@@ -367,13 +370,13 @@ class DiaryElementServiceImplTest {
     }
 
     @Test
-    void withoutAChoiceTheShapesOwnColourIsUsed() {
+    void withoutAChoiceTheDefaultIvoryIsStored() {
         givenPageAndInsert(601L);
 
-        // 색을 고르지 않고 붙였다. manifest 의 defaultColor 가 대신 들어간다
+        // 색을 고르지 않고 붙였다. 라벨·메모지 모두 기본색(IVORY)이 실제로 저장된다
         diaryElementService.create(10L, 3L, 7L, noteElement("MEMO_ROUND", ""));
 
-        assertThat(savedElement().getColorType()).isEqualTo("PINK");
+        assertThat(savedElement().getColorType()).isEqualTo("IVORY");
     }
 
     @Test
@@ -547,6 +550,149 @@ class DiaryElementServiceImplTest {
         ArgumentCaptor<DiaryElement> captor = ArgumentCaptor.forClass(DiaryElement.class);
         verify(diaryElementMapper).insert(captor.capture());
         return captor.getValue();
+    }
+
+    /**
+     * 라벨기 글씨는 글과 글꼴만 남긴다.
+     * (그림 경로·라벨 모양·색은 TEXT 가 쓰지 않는 칸이라 DB CHECK 가 NULL 을 요구한다)
+     */
+    @Test
+    void aLabelKeepsOnlyItsTextAndFont() {
+        givenPageAndInsert(101L);
+        when(diaryElementMapper.findByPageId(3L)).thenReturn(java.util.List.of());
+
+        diaryElementService.createLabel(10L, 3L, 7L, "  JEJU 2026  ", "nanum-square", "#C86B7C");
+
+        DiaryElement saved = savedElement();
+        assertThat(saved.getElementType()).isEqualTo("TEXT");
+        // 앞뒤 공백은 다듬어 저장한다
+        assertThat(saved.getTextContent()).isEqualTo("JEJU 2026");
+        // 글꼴과 글자색은 서로 독립이다
+        assertThat(saved.getTextFont()).isEqualTo("nanum-square");
+        assertThat(saved.getTextColor()).isEqualTo("#C86B7C");
+        assertThat(saved.getImageUrl()).isNull();
+        assertThat(saved.getStyleType()).isNull();
+        assertThat(saved.getColorType()).isNull();
+        // 자리·크기는 요청 값이 아니라 서버가 정한다
+        assertThat(saved.getWidth()).isEqualByComparingTo("0.32");
+        // 화면에서 조절할 수 있는 가장 짧은 길이와 같아 크기를 잡아도 튀지 않는다
+        assertThat(saved.getHeight()).isEqualByComparingTo("0.08");
+        assertThat(saved.getZIndex()).isZero();
+    }
+
+    /**
+     * 사진의 모습(일반/폴라로이드)은 PHOTO 만 쓴다.
+     * 고르지 않고 붙인 사진은 비워 두고 읽을 때 폴라로이드로 본다 — 예전 사진과 같은 모습이다.
+     */
+    @Test
+    void aPhotoKeepsTheLookItWasAddedWithAndAStickerNeverHasOne() {
+        givenPageAndInsert(201L);
+
+        DiaryElement photo = imageElement("PHOTO", "/uploads/diary-pages/a.jpg");
+        photo.setPhotoStyle("FULL");
+        diaryElementService.create(10L, 3L, 7L, photo);
+        assertThat(savedElement().getPhotoStyle()).isEqualTo("FULL");
+
+        // 고르지 않으면 비워 둔다. 읽을 때 폴라로이드로 본다
+        DiaryElement stored = new DiaryElement();
+        assertThat(stored.getPhotoStyleCode()).isEqualTo("POLAROID");
+        assertThat(stored.getPhotoStyleClass()).isEqualTo("is-photo-polaroid");
+    }
+
+    @Test
+    void aPhotoLookThatIsNotOnTheListIsRefused() {
+        when(diaryPageService.getPage(10L, 3L, 7L)).thenReturn(page());
+
+        DiaryElement photo = imageElement("PHOTO", "/uploads/diary-pages/a.jpg");
+        photo.setPhotoStyle("SQUARE");
+
+        assertThatThrownBy(() -> diaryElementService.create(10L, 3L, 7L, photo))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("사진 모양을 다시 선택해 주세요.");
+        verify(diaryElementMapper, never()).insert(any());
+    }
+
+    /** 옮기기·크기·회전·겹침 순서를 바꿔도 유형별 값이 지워지지 않는다. */
+    @Test
+    void movingAPhotoKeepsItsLook() {
+        when(diaryPageService.getPage(10L, 3L, 7L)).thenReturn(page());
+        DiaryElement stored = imageElement("PHOTO", "/uploads/diary-pages/a.jpg");
+        stored.setId(201L);
+        stored.setPhotoStyle("FULL");
+        when(diaryElementMapper.findByIdAndPageId(201L, 3L)).thenReturn(stored);
+        when(diaryElementMapper.update(any())).thenReturn(1);
+
+        diaryElementService.move(10L, 3L, 201L, 7L,
+                new BigDecimal("0.10000"), new BigDecimal("0.20000"));
+
+        assertThat(updatedElement().getPhotoStyle()).isEqualTo("FULL");
+    }
+
+    /** 한 줄짜리 문구다. 붙여넣기로 들어온 줄바꿈은 막지 않고 한 칸으로 바꾼다. */
+    @Test
+    void aPastedLineBreakBecomesASpaceInsteadOfBeingRejected() {
+        givenPageAndInsert(101L);
+        when(diaryElementMapper.findByPageId(3L)).thenReturn(java.util.List.of());
+
+        diaryElementService.createLabel(10L, 3L, 7L, "SUMMER\nTRIP", null, null);
+
+        assertThat(savedElement().getTextContent()).isEqualTo("SUMMER TRIP");
+        // 글꼴·글자색을 고르지 않으면 비워 둔다 (화면이 기본값으로 그린다)
+        assertThat(savedElement().getTextFont()).isNull();
+        assertThat(savedElement().getTextColor()).isNull();
+    }
+
+    @Test
+    void anEmptyLabelAndAnUnknownFontOrColorAreAllRejected() {
+        when(diaryPageService.getPage(10L, 3L, 7L)).thenReturn(page());
+        when(diaryElementMapper.findByPageId(3L)).thenReturn(java.util.List.of());
+
+        assertThatThrownBy(() -> diaryElementService.createLabel(10L, 3L, 7L, "   ", null, null))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("내용을 입력해 주세요.");
+        assertThatThrownBy(() ->
+                diaryElementService.createLabel(10L, 3L, 7L, "JEJU", "comic-sans", null))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("지원하지 않는 글꼴입니다.");
+        // 글자색은 #RRGGBB 만 저장한다
+        assertThatThrownBy(() ->
+                diaryElementService.createLabel(10L, 3L, 7L, "JEJU", null, "red"))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("글자색을 다시 선택해 주세요.");
+        verify(diaryElementMapper, never()).insert(any());
+    }
+
+    /** 다른 유형의 요소 번호로는 이 문을 지날 수 없다. (사진을 글씨 삭제로 지우지 못한다) */
+    @Test
+    void deletingALabelRejectsElementsOfOtherTypes() {
+        when(diaryPageService.getPage(10L, 3L, 7L)).thenReturn(page());
+        when(diaryElementMapper.findByIdAndPageId(101L, 3L))
+                .thenReturn(imageElement("PHOTO", "/uploads/diary-pages/a.jpg"));
+
+        assertThatThrownBy(() -> diaryElementService.deleteLabel(10L, 3L, 101L, 7L))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("글씨 요소가 아닙니다.");
+        verify(diaryElementMapper, never()).delete(any(), any());
+    }
+
+    /** 옮기기·크기·회전·겹침 순서를 바꿔도 글꼴이 지워지지 않는다. */
+    @Test
+    void movingALabelKeepsItsFont() {
+        when(diaryPageService.getPage(10L, 3L, 7L)).thenReturn(page());
+        DiaryElement stored = new DiaryElement();
+        stored.setId(101L);
+        stored.setElementType("TEXT");
+        stored.setTextContent("JEJU 2026");
+        stored.setTextFont("park-dahyun");
+        when(diaryElementMapper.findByIdAndPageId(101L, 3L)).thenReturn(stored);
+        when(diaryElementMapper.update(any())).thenReturn(1);
+
+        stored.setTextColor("#C86B7C");
+        diaryElementService.move(10L, 3L, 101L, 7L,
+                new BigDecimal("0.10000"), new BigDecimal("0.20000"));
+
+        assertThat(updatedElement().getTextFont()).isEqualTo("park-dahyun");
+        assertThat(updatedElement().getTextColor()).isEqualTo("#C86B7C");
     }
 
     private DiaryElement noteElement(String styleType, String textContent) {

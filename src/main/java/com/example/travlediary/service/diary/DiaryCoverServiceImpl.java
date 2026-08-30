@@ -135,6 +135,43 @@ public class DiaryCoverServiceImpl implements DiaryCoverService {
 
     @Override
     @Transactional
+    public List<DiaryCoverElement> updateWithDesign(Long diaryId, Long userId,
+                                                    Diary diary, Long designId) {
+        // 정보 수정과 표지 교체가 한 트랜잭션 안에 있다. 표지가 실패하면 정보도 되돌아간다.
+        diaryService.update(diaryId, userId, diary);
+        List<DiaryCoverElement> previous = removeCover(diaryId, userId);
+        applyDesign(diaryId, designId, userId);
+        return previous;
+    }
+
+    @Override
+    @Transactional
+    public List<DiaryCoverElement> updateWithPreset(Long diaryId, Long userId, Diary diary) {
+        diaryService.update(diaryId, userId, diary);
+        // 커스텀 표지를 쓰고 있었다면 뗀다. 행이 사라지면 다시 기본 표지로 돌아간다.
+        return removeCover(diaryId, userId);
+    }
+
+    /**
+     * 지금 쓰는 커스텀 표지를 뗀다. 쓰고 있지 않으면 아무것도 하지 않는다.
+     * 지우고 나면 못 읽으므로 사진 파일 정리에 쓸 목록을 먼저 확보해 돌려준다.
+     * (실제 파일은 DB 변경이 끝난 뒤 호출한 쪽이 지운다 — 되돌아갈 수 있는 동안은 남겨 둔다)
+     */
+    private List<DiaryCoverElement> removeCover(Long diaryId, Long userId) {
+        DiaryCover existing = diaryCoverMapper.findByDiaryIdAndUserId(diaryId, userId);
+        if (existing == null) {
+            return List.of();
+        }
+        List<DiaryCoverElement> elements =
+                diaryCoverElementMapper.findAllByCoverId(existing.getId());
+        if (diaryCoverMapper.deleteByDiaryIdAndUserId(diaryId, userId) != 1) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "커스텀 표지를 찾을 수 없습니다.");
+        }
+        return elements;
+    }
+
+    @Override
+    @Transactional
     public DiaryCover applyDesign(Long diaryId, Long designId, Long userId) {
         requireOwnedDiary(diaryId, userId);
         // 남의 디자인은 여기서 막힌다. (보관함 서비스가 본인 것만 찾아 준다)
@@ -176,6 +213,9 @@ public class DiaryCoverServiceImpl implements DiaryCoverService {
         copied.setStyleType(source.getStyleType());
         copied.setColorType(source.getColorType());
         copied.setPhotoStyle(source.getPhotoStyle());
+        // 라벨기 글씨는 파일이 없다. 글과 글꼴·글자색까지 값만 그대로 옮긴다.
+        copied.setTextFont(source.getTextFont());
+        copied.setTextColor(source.getTextColor());
         copied.setPositionX(source.getPositionX());
         copied.setPositionY(source.getPositionY());
         copied.setWidth(source.getWidth());

@@ -623,8 +623,47 @@ CREATE TABLE `destinations` (
 --     모양(style_type)과 색을 다른 축으로 두어, 같은 모양의 색만 다른 값을
 --     style_type 으로 따로 만들지 않는다. 허용 목록은 style_type 과 같은
 --     resources/json/diary_notes.json 이 관리한다.
---     NULL 이면 그 style 의 기본색으로 그린다 (색 컬럼이 생기기 전에 만든 행도 그대로 보인다).
 --     payload CHECK 는 color_type 을 보지 않는다.
+--     지원 색상은 IVORY / PINK / SAGE / SKY 네 가지이고, 라벨과 떡메모지가 같은 정책을 쓴다.
+--     화면에는 "기본색 없음" 같은 선택지를 두지 않는다 — 새로 붙이는 NOTE 의 기본 색상은
+--     IVORY 다. 이미 저장된 color_type = NULL 행은 하위 호환을 위해 IVORY 로 읽는다
+--     (색 컬럼이 생기기 전에 만든 행도 그대로 보인다).
+--     style_type 은 모양, color_type 은 색이라는 축 분리는 그대로 유지한다.
+--   * photo_style 은 페이지 PHOTO 전용 칸이다. FULL / POLAROID 두 가지를 쓰며,
+--     커스텀 표지의 photo_style 과 뜻도 값도 같다.
+--     FULL 은 흰 프레임 없이 요소 자리를 사진이 꽉 채우는 일반 사진이고,
+--     POLAROID 는 흰색 폴라로이드 프레임을 가진 사진이다.
+--     NULL 은 POLAROID 로 읽는다. 이 칸이 생기기 전에 붙여 둔 사진이 예전 모습 그대로
+--     보이게 하려는 하위 호환 정책이다.
+--     새로 붙이는 사진은 "일반 사진"으로 등록하면 FULL, "폴라로이드"로 등록하면
+--     POLAROID 로 저장한다.
+--     STICKER / NOTE / TEXT 는 이 칸을 쓰지 않는다. 늘 NULL 이다.
+--     허용 값은 애플리케이션 코드가 확인하고, payload CHECK 는 이 칸을 보지 않는다.
+--     사진의 모습만 바꾸는 것이라 position_x/y, width/height, rotation, z_index 체계는
+--     그대로다.
+--   * TEXT 는 배경이 없는 자유배치 글씨 요소다. 이번 기능에서 TEXT 는 "라벨기"로 붙이는
+--     투명 텍스트 스티커 용도로 쓴다. NOTE 처럼 종이 배경이나 테두리를 갖지 않고 글자만 그린다.
+--     실제 문구는 text_content 에 저장하고, image_url / style_type / color_type 은
+--     TEXT 에서 쓰지 않는다 (항상 NULL).
+--     position_x/y, width/height, rotation, z_index 는 PHOTO/STICKER/NOTE 와 같은
+--     0~1 상대좌표 체계를 쓴다. TEXT 도 이동 / 크기 조절 / 회전 / 겹침 순서 변경이 되는
+--     자유배치 요소다.
+--   * text_font 는 TEXT 전용 글꼴 값이다. PHOTO / STICKER / NOTE 행에서는 항상 NULL 이다.
+--     저장하는 값은 diary-fonts.css 및 diary_pages.page_header_font 와 같은
+--     lowercase-hyphen 글꼴 key 체계를 그대로 쓴다.
+--     초기 라벨기 글꼴은 nanum-square / bookk-myeongjo / park-dahyun 세 가지다.
+--     NULL 이면 기본 글꼴로 그린다 (글꼴 칸이 생기기 전에 만든 TEXT 행도 그대로 보인다).
+--     허용 글꼴 목록은 애플리케이션 코드/카탈로그가 검증하며,
+--     기존 payload CHECK 는 text_font 를 보지 않는다. (color_type 과 같은 방식)
+--   * text_color 는 TEXT 라벨기 전용 글자색이다. #RRGGBB 형식으로 저장한다.
+--     라벨기로 붙일 때 원하는 색을 자유롭게 고를 수 있고, 목록으로 묶어 두지 않는다.
+--     NULL 이면 기본 먹색/검정 계열로 그린다.
+--     PHOTO / STICKER / NOTE 행에서는 쓰지 않는다. 늘 NULL 이다.
+--     NOTE 전용 color_type 을 TEXT 글자색으로 돌려쓰지 않는다 — 서로 다른 칸이다.
+--     text_font 와 text_color 는 서로 독립이다.
+--     (예: text_font = park-dahyun, text_color = #C86B7C)
+--     허용 형식은 애플리케이션 코드가 확인하고,
+--     기존 payload CHECK 는 text_color 를 보지 않는다.
 --   * 각 페이지는 paper_color(#RRGGBB)로 독립적인 종이 바탕색을 가질 수 있고,
 --     background_type(PLAIN/LINED/GRID/DOT) 무늬와 조합해서 쓴다.
 --     NULL 이면 기본 종이색을 쓰며, 펼침의 좌/우 페이지 색을 같게 맞추지 않는다.
@@ -672,8 +711,20 @@ CREATE TABLE `destinations` (
 --     허용 값은 코드가 확인하고, payload CHECK 는 이 칸을 보지 않는다. (color_type 과 같은 방식)
 --     사진 스타일만 바꾸는 것이라 position_x/y, width/height, rotation, z_index 는 그대로다.
 --     NOTE 의 style_type 과는 별개의 칸이다. style_type 을 사진 용도로 돌려쓰지 않는다.
---   * TEXT 는 DB 에서는 허용하지만 화면은 후속 단계다. 나중에 글꼴/색/정렬 같은 값이 필요해지면
---     NULL 허용 컬럼을 더하는 방식으로 넓힌다. (color_type 처럼 payload CHECK 대상에서 제외한다)
+--   * diary_cover_design_elements.text_font 와 diary_cover_elements.text_font 는
+--     표지 TEXT 전용 글꼴 칸이고, diary_elements.text_font 와 같은 값 체계를 쓴다.
+--     (lowercase-hyphen 글꼴 key. NULL 이면 기본 글꼴, 허용 목록은 애플리케이션이 검증한다)
+--     커스텀 표지에서도 페이지 다꾸와 같은 라벨기 TEXT 를 붙일 수 있다.
+--   * 두 표지 요소 테이블의 text_color 도 표지 TEXT 전용 글자색이고,
+--     diary_elements.text_color 와 같은 값 체계를 쓴다.
+--     (#RRGGBB. NULL 이면 기본 먹색/검정 계열, 허용 형식은 애플리케이션이 검증한다)
+--     PHOTO / STICKER / NOTE 는 이 칸을 쓰지 않는다. 늘 NULL 이다.
+--   * 저장 디자인을 실제 다이어리 표지로 적용할 때 TEXT 는 파일이 없으므로
+--     text_content / text_font / text_color /
+--     position_x/y / width/height / rotation / z_index 값을
+--     그대로 복사한다. PHOTO 처럼 파일을 새로 복사하는 일은 하지 않는다.
+--   * NOTE 는 커스텀 표지 UI 에서는 쓰지 않기로 했지만, 기존 DB 허용 구조는 그대로 둔다.
+--     (chk_..._type 과 payload CHECK 의 NOTE 분기를 그대로 유지한다)
 --
 
 --
@@ -715,6 +766,8 @@ CREATE TABLE `diary_cover_design_elements` (
   `style_type` varchar(30) DEFAULT NULL,
   `color_type` varchar(20) DEFAULT NULL,
   `photo_style` varchar(20) DEFAULT NULL,
+  `text_font` varchar(30) DEFAULT NULL,
+  `text_color` varchar(7) DEFAULT NULL,
   `position_x` decimal(6,5) NOT NULL DEFAULT '0.00000',
   `position_y` decimal(6,5) NOT NULL DEFAULT '0.00000',
   `width` decimal(6,5) NOT NULL DEFAULT '0.30000',
@@ -770,6 +823,8 @@ CREATE TABLE `diary_cover_elements` (
   `style_type` varchar(30) DEFAULT NULL,
   `color_type` varchar(20) DEFAULT NULL,
   `photo_style` varchar(20) DEFAULT NULL,
+  `text_font` varchar(30) DEFAULT NULL,
+  `text_color` varchar(7) DEFAULT NULL,
   `position_x` decimal(6,5) NOT NULL DEFAULT '0.00000',
   `position_y` decimal(6,5) NOT NULL DEFAULT '0.00000',
   `width` decimal(6,5) NOT NULL DEFAULT '0.30000',
@@ -823,6 +878,9 @@ CREATE TABLE `diary_elements` (
   `image_url` varchar(255) DEFAULT NULL,
   `style_type` varchar(30) DEFAULT NULL,
   `color_type` varchar(20) DEFAULT NULL,
+  `photo_style` varchar(20) DEFAULT NULL,
+  `text_font` varchar(30) DEFAULT NULL,
+  `text_color` varchar(7) DEFAULT NULL,
   `position_x` decimal(6,5) NOT NULL DEFAULT '0.00000',
   `position_y` decimal(6,5) NOT NULL DEFAULT '0.00000',
   `width` decimal(6,5) NOT NULL DEFAULT '0.30000',

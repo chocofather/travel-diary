@@ -174,9 +174,10 @@ class DiaryCoverEditorAssetTest {
         String template = read(COVER_EDIT);
         String css = read(Path.of("src/main/resources/static/css/diary.css"));
 
-        // 도구 세 칸(스티커 / 사진 두 갈래)이 한 줄에 같은 모양으로 놓인다
+        // 도구가 한 줄에 같은 모양으로 놓인다
+        // (스티커 / 라벨기 / 사진 — 사진 칸은 th:each 로 일반·폴라로이드 두 개가 된다)
         assertThat(template).contains("diary-cover-tool-row");
-        assertThat(template.split("class=\"diary-cover-tool\"", -1)).hasSize(3);
+        assertThat(template.split("class=\"diary-cover-tool\"", -1)).hasSize(4);
         // 도구 묶음이 설정 카드 안에 있다 (표지 위에 떠 있지 않다)
         assertThat(template.indexOf("diary-cover-design-panel"))
                 .isLessThan(template.indexOf("diary-cover-tools"));
@@ -195,15 +196,21 @@ class DiaryCoverEditorAssetTest {
         assertThat(rule(css, ".diary-cover-preview")).contains("width: min(420px, 100%);");
     }
 
-    /** 표지의 폴라로이드는 페이지 다꾸 사진의 값을 건드리지 않고 안쪽에서만 얇게 둔다. */
+    /**
+     * 폴라로이드 프레임은 표지와 페이지가 한 규칙을 함께 쓴다.
+     * (같은 사진이면 두 화면에서 같은 모습이어야 한다)
+     */
     @Test
-    void theCoverPolaroidHasAThinnerFrameThanThePageOne() throws IOException {
+    void thePolaroidFrameIsOneRuleSharedByTheCoverAndThePages() throws IOException {
         String css = read(Path.of("src/main/resources/static/css/diary.css"));
 
-        assertThat(rule(css, ".diary-cover-surface .diary-photo.is-photo-polaroid"))
-                .contains("padding: 3px 3px 7px;");
-        // 페이지 다꾸 사진의 값은 그대로다
-        assertThat(rule(css, ".diary-photo")).contains("padding: 6px 6px 8px;");
+        // 요소 크기에 따라 함께 줄고 늘도록 % 로 두고, 아래만 두 배쯤 넓다
+        // (DiaryPhotoFrame 의 SIDE / BOTTOM 과 같은 값이어야 사진 자리가 프레임과 맞는다)
+        assertThat(rule(css, ".diary-photo")).contains("padding: 3.5% 3.5% 8%;");
+        // 표지 전용 프레임 값을 따로 두지 않는다
+        assertThat(css).doesNotContain(".diary-cover-surface .diary-photo.is-photo-polaroid");
+        // 사진은 자기 자리를 꽉 채운다. 사진 때문에 생기는 흰 자리는 없다
+        assertThat(rule(css, ".diary-photo img")).contains("object-fit: cover;");
     }
 
     /** 표지는 속지의 계산을 물려받지 않는다. */

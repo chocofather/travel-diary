@@ -26,6 +26,8 @@ public class DiaryCoverDesignElement {
     private String styleType; // 라벨/메모지 모양 (NOTE 전용)
     private String colorType; // 라벨/메모지 색 (NOTE 전용, 없으면 그 모양의 기본색)
     private String photoStyle; // 사진의 모습 (PHOTO 전용, 없으면 폴라로이드로 본다)
+    private String textFont; // 글씨 글꼴 (TEXT 전용, 없으면 기본 글꼴)
+    private String textColor; // 글씨 색 #RRGGBB (TEXT 전용, 없으면 기본 먹색)
     private BigDecimal positionX; // 가로 위치 (표지 기준 상대값)
     private BigDecimal positionY; // 세로 위치 (표지 기준 상대값)
     private BigDecimal width; // 너비 (표지 기준 상대값)
@@ -45,9 +47,9 @@ public class DiaryCoverDesignElement {
         return DiaryNoteStyle.cssClassOf(styleType);
     }
 
-    /** 라벨/떡메모지의 색 class. 색이 없으면 class 도 없다. */
+    /** 라벨/떡메모지의 색 class. 색이 없는 행은 기본색(IVORY)으로 본다. */
     public String getNoteColorClass() {
-        return DiaryNoteColor.cssClassOf(colorType);
+        return DiaryNoteColor.cssClassOf(DiaryNoteColor.resolve(colorType));
     }
 
     /**
@@ -61,5 +63,13 @@ public class DiaryCoverDesignElement {
     /** 지금 고른 모습. 버튼의 눌림 상태를 그릴 때 쓴다. */
     public String getPhotoStyleCode() {
         return DiaryCoverPhotoStyle.of(photoStyle).getCode();
+    }
+
+    /**
+     * 라벨기로 붙인 글씨의 글꼴 class. (nanum-square → diary-font-nanum-square)
+     * 글꼴이 없으면 class 도 없다 — 그때는 기본 글꼴로 그려진다.
+     */
+    public String getTextFontClass() {
+        return DiaryLabelFont.cssClassOf(textFont);
     }
 }

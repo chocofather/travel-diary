@@ -46,6 +46,24 @@ public interface DiaryCoverService {
     Diary createWithDesign(Long userId, Diary diary, Long designId);
 
     /**
+     * 여행일기 정보를 고치면서 표지를 저장 디자인으로 갈아 끼운다.
+     *
+     * <p>정보 수정과 표지 교체를 한 트랜잭션으로 묶는다. 표지가 실패하면 정보도 되돌아간다.
+     * 원본 디자인을 가리키지 않는 독립본을 새로 만드는 것은 새 여행일기 때와 같다.
+     *
+     * @return 갈아 끼우기 전에 쓰던 표지의 요소. 사진 파일을 정리하는 데 쓴다.
+     *         (없던 다이어리면 비어 있다. 파일은 DB 변경이 끝난 뒤 호출한 쪽이 지운다)
+     */
+    List<DiaryCoverElement> updateWithDesign(Long diaryId, Long userId, Diary diary, Long designId);
+
+    /**
+     * 여행일기 정보를 고치면서 기본 표지로 되돌린다. (커스텀 표지를 쓰고 있었다면 뗀다)
+     *
+     * @return 떼어 낸 표지의 요소. 없으면 비어 있다. (사진 파일 정리는 호출한 쪽의 몫)
+     */
+    List<DiaryCoverElement> updateWithPreset(Long diaryId, Long userId, Diary diary);
+
+    /**
      * 저장해 둔 디자인을 다이어리에 입힌다. (값을 복사한다)
      * 사진은 파일까지 새로 복사하고, 스티커는 공용 asset 이라 경로만 옮긴다.
      */

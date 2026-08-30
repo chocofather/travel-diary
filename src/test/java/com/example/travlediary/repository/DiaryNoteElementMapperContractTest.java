@@ -144,8 +144,9 @@ class DiaryNoteElementMapperContractTest {
             assertThat(manifest).as("%s", color).contains("\"" + color + "\"");
         }
         assertThat(schema).contains("현재 IVORY / PINK / SAGE / SKY");
-        // NULL 의 뜻도 코드와 같은 말로 적어 둔다
-        assertThat(schema).contains("NULL 이면 그 style 의 기본색으로 그린다");
+        // 기본색과 NULL 의 뜻도 코드와 같은 말로 적어 둔다
+        assertThat(schema).contains("새로 붙이는 NOTE 의 기본 색상은");
+        assertThat(schema).contains("color_type = NULL 행은 하위 호환을 위해 IVORY 로 읽는다");
     }
 
     @Test

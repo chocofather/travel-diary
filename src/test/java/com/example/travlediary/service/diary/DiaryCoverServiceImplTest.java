@@ -154,6 +154,34 @@ class DiaryCoverServiceImplTest {
         assertThat(saved.getAllValues().get(0).getPhotoStyle()).isEqualTo("POLAROID");
     }
 
+    /**
+     * 라벨기로 붙인 글씨는 파일이 없다. 글과 글꼴까지 값만 그대로 적용본으로 옮겨진다.
+     * (원본 디자인을 고치거나 지워도 이미 적용된 표지의 글씨는 그대로 남는다)
+     */
+    @Test
+    void applyingADesignCopiesTheLabelTextAndFontWithoutAnyFile() {
+        givenOwnedDesign(5L, 7L, "LEATHER_DEEP_GREEN", null);
+        DiaryCoverDesignElement source = designElement("TEXT", null);
+        source.setTextContent("JEJU 2026");
+        source.setTextFont("park-dahyun");
+        source.setTextColor("#C86B7C");
+        source.setPhotoStyle(null);
+        when(diaryCoverDesignElementService.getElements(5L, 7L)).thenReturn(List.of(source));
+        givenInsertedCover(3L);
+        when(diaryCoverElementMapper.insert(any())).thenReturn(1);
+
+        service.applyDesign(10L, 5L, 7L);
+
+        ArgumentCaptor<DiaryCoverElement> saved = ArgumentCaptor.forClass(DiaryCoverElement.class);
+        verify(diaryCoverElementMapper).insert(saved.capture());
+        assertThat(saved.getValue().getElementType()).isEqualTo("TEXT");
+        assertThat(saved.getValue().getTextContent()).isEqualTo("JEJU 2026");
+        assertThat(saved.getValue().getTextFont()).isEqualTo("park-dahyun");
+        assertThat(saved.getValue().getTextColor()).isEqualTo("#C86B7C");
+        // 글씨는 복사할 파일이 없다
+        verify(fileUploadService, never()).copyStoredFile(any(), any());
+    }
+
     /** 남의 디자인은 표지가 만들어지기 전에 막힌다. */
     @Test
     void aDesignThatIsNotMineIsRejectedBeforeAnyCoverRowIsCreated() {
@@ -215,6 +243,47 @@ class DiaryCoverServiceImplTest {
         var order = org.mockito.Mockito.inOrder(diaryService, diaryCoverMapper);
         order.verify(diaryService).create(7L, created);
         order.verify(diaryCoverMapper).insert(any());
+    }
+
+    /**
+     * 표지를 갈아 끼울 때는 쓰던 표지를 먼저 떼고 새 디자인을 입힌다.
+     * 떼어 낸 요소는 돌려준다 — 사진 파일은 DB 가 바뀐 뒤에 호출한 쪽이 지운다.
+     */
+    @Test
+    void swappingACoverRemovesTheOldOneFirstAndReportsItsElements() {
+        Diary diary = new Diary();
+        DiaryCover existing = new DiaryCover();
+        existing.setId(2L);
+        existing.setDiaryId(10L);
+        when(diaryCoverMapper.findByDiaryIdAndUserId(10L, 7L)).thenReturn(existing);
+        DiaryCoverElement photo = new DiaryCoverElement();
+        photo.setElementType("PHOTO");
+        photo.setImageUrl("/uploads/diary-cover-elements/old.jpg");
+        when(diaryCoverElementMapper.findAllByCoverId(2L)).thenReturn(List.of(photo));
+        when(diaryCoverMapper.deleteByDiaryIdAndUserId(10L, 7L)).thenReturn(1);
+        givenOwnedDesign(5L, 7L, "LEATHER_DEEP_GREEN", null);
+        when(diaryCoverDesignElementService.getElements(5L, 7L)).thenReturn(List.of());
+        givenInsertedCover(3L);
+
+        assertThat(service.updateWithDesign(10L, 7L, diary, 5L)).containsExactly(photo);
+
+        // 정보 수정 → 예전 표지 떼기 → 새 표지 입히기 순서로 한 트랜잭션 안에서 끝난다
+        var order = org.mockito.Mockito.inOrder(diaryService, diaryCoverMapper);
+        order.verify(diaryService).update(10L, 7L, diary);
+        order.verify(diaryCoverMapper).deleteByDiaryIdAndUserId(10L, 7L);
+        order.verify(diaryCoverMapper).insert(any());
+    }
+
+    /** 기본 표지로 돌아갈 때도 떼어 낸 요소를 돌려준다. 쓰지 않던 다이어리면 비어 있다. */
+    @Test
+    void goingBackToAPresetRemovesTheCoverOnlyWhenThereIsOne() {
+        Diary diary = new Diary();
+        when(diaryCoverMapper.findByDiaryIdAndUserId(10L, 7L)).thenReturn(null);
+
+        assertThat(service.updateWithPreset(10L, 7L, diary)).isEmpty();
+
+        verify(diaryService).update(10L, 7L, diary);
+        verify(diaryCoverMapper, never()).deleteByDiaryIdAndUserId(any(), any());
     }
 
     /** 목록은 카드마다 묻지 않는다. 표지도 요소도 각각 한 번씩만 읽는다. */

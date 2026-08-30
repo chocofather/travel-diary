@@ -19,15 +19,25 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class DiaryCoverDesignElementServiceImpl implements DiaryCoverDesignElementService {
 
-    /** 표지에 붙일 수 있는 유형. (NOTE/TEXT 는 다음 단계) */
+    /** 표지에 붙일 수 있는 유형. (NOTE 는 표지 화면에서 쓰지 않는다) */
     private static final String TYPE_STICKER = "STICKER";
     private static final String TYPE_PHOTO = "PHOTO";
+    /** 라벨기로 붙이는 글씨. 배경 없이 글자만 놓인다. */
+    private static final String TYPE_TEXT = "TEXT";
+    /** 표지의 글씨도 한 줄짜리 짧은 문구다. (페이지 다꾸와 같은 상한) */
+    private static final int TEXT_LABEL_MAX = 50;
+    /** 라벨기 글자색은 #RRGGBB 만 저장한다. (text_color VARCHAR(7)) */
+    private static final Pattern LABEL_COLOR = Pattern.compile("^#[0-9a-fA-F]{6}$");
+    /** 표지는 세로형이라 페이지보다 한 줄이 상대적으로 넓다. */
+    private static final BigDecimal TEXT_LABEL_WIDTH = new BigDecimal("0.44000");
+    private static final BigDecimal TEXT_LABEL_HEIGHT = new BigDecimal("0.09000");
 
     /*
       처음 붙일 때의 자리와 크기. 표지는 세로형이라 페이지보다 조금 작게 둔다.
@@ -56,6 +66,8 @@ public class DiaryCoverDesignElementServiceImpl implements DiaryCoverDesignEleme
     private final DiaryCoverDesignElementMapper diaryCoverDesignElementMapper;
     /** 붙일 수 있는 스티커 목록. 페이지 다꾸와 같은 manifest 를 함께 쓴다. */
     private final DiaryStickerCatalog diaryStickerCatalog;
+    /** 라벨기 글꼴 목록. 이것도 페이지 다꾸와 같은 manifest 를 함께 쓴다. */
+    private final DiaryLabelFontCatalog diaryLabelFontCatalog;
 
     @Override
     @Transactional(readOnly = true)
@@ -114,7 +126,7 @@ public class DiaryCoverDesignElementServiceImpl implements DiaryCoverDesignEleme
     @Transactional
     public DiaryCoverDesignElement createPhoto(Long designId, Long userId,
                                                String imageUrl, int placedBefore,
-                                               String photoStyle) {
+                                               String photoStyle, double photoRatio) {
         Long ownedDesignId = requireDesignId(designId, userId);
         if (imageUrl == null || imageUrl.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "사진을 선택해 주세요.");
@@ -142,8 +154,20 @@ public class DiaryCoverDesignElementServiceImpl implements DiaryCoverDesignEleme
         element.setPhotoStyle(photoStyle);
         element.setPositionX(STICKER_CENTER.add(offset));
         element.setPositionY(STICKER_CENTER.add(offset));
-        element.setWidth(PHOTO_SIZE);
-        element.setHeight(PHOTO_SIZE);
+        /*
+          폴라로이드는 흰 프레임 안에 사진이 꽉 차는 모습이라 상자 비율이 사진과 맞아야 한다.
+          가로 사진에는 가로 폴라로이드가 되도록 원본 비율에서 높이를 구한다.
+          (페이지 다꾸와 같은 셈을 쓰고, 다른 것은 캔버스 비율뿐이다)
+        */
+        if (DiaryCoverPhotoStyle.FULL.getCode().equals(photoStyle)) {
+            element.setWidth(PHOTO_SIZE);
+            element.setHeight(PHOTO_SIZE);
+        } else {
+            BigDecimal[] size = DiaryPhotoFrame.polaroidSize(
+                    photoRatio, DiaryPhotoFrame.COVER_CANVAS_ASPECT, PHOTO_SIZE);
+            element.setWidth(size[0]);
+            element.setHeight(size[1]);
+        }
         element.setRotation(DEFAULT_ROTATION);
         // 새로 올린 것은 늘 맨 위에, 고른 순서대로 쌓인다.
         element.setZIndex(nextZIndex(placed) + placedBefore);
@@ -153,6 +177,95 @@ public class DiaryCoverDesignElementServiceImpl implements DiaryCoverDesignEleme
                     "사진을 붙이지 못했습니다.");
         }
         return requireElement(element.getId(), ownedDesignId);
+    }
+
+    @Override
+    @Transactional
+    public DiaryCoverDesignElement createLabel(Long designId, Long userId,
+                                               String text, String textFont, String textColor) {
+        Long ownedDesignId = requireDesignId(designId, userId);
+
+        List<DiaryCoverDesignElement> placed =
+                diaryCoverDesignElementMapper.findAllByDesignId(ownedDesignId);
+        BigDecimal offset = OFFSET_STEP.multiply(
+                BigDecimal.valueOf(placed.size() % OFFSET_CYCLE));
+
+        DiaryCoverDesignElement element = new DiaryCoverDesignElement();
+        element.setDesignId(ownedDesignId);
+        element.setElementType(TYPE_TEXT);
+        element.setTextContent(labelText(text));
+        // 글꼴·글자색은 아는 값일 때만 남긴다. 비어 있으면 화면이 기본값으로 그린다.
+        element.setTextFont(labelFont(textFont));
+        element.setTextColor(labelColor(textColor));
+        element.setPositionX(STICKER_CENTER.add(offset));
+        element.setPositionY(STICKER_CENTER.add(offset));
+        element.setWidth(TEXT_LABEL_WIDTH);
+        element.setHeight(TEXT_LABEL_HEIGHT);
+        element.setRotation(DEFAULT_ROTATION);
+        // 새로 붙인 것은 늘 맨 위에 올라온다.
+        element.setZIndex(nextZIndex(placed));
+
+        if (diaryCoverDesignElementMapper.insert(element) != 1 || element.getId() == null) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "글씨를 붙이지 못했습니다.");
+        }
+        return requireElement(element.getId(), ownedDesignId);
+    }
+
+    @Override
+    @Transactional
+    public DiaryCoverDesignElement deleteLabel(Long designId, Long elementId, Long userId) {
+        Long ownedDesignId = requireDesignId(designId, userId);
+        DiaryCoverDesignElement existing = requireElement(elementId, ownedDesignId);
+        // 다른 유형의 요소 번호를 보내도 여기서 걸린다. (사진을 이 문으로 지우지 못한다)
+        if (!TYPE_TEXT.equals(existing.getElementType())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "글씨 요소가 아닙니다.");
+        }
+        // 글씨는 파일을 갖지 않으므로 DB 행만 지운다.
+        return delete(designId, elementId, userId);
+    }
+
+    /**
+     * 표지에 붙일 문구를 다듬는다. 페이지 다꾸의 라벨기와 같은 규칙이다.
+     * (한 줄로 만들고, 빈 문구는 막고, 길이를 제한한다)
+     */
+    private String labelText(String text) {
+        String trimmed = (text == null ? "" : text)
+                .replace("\r\n", "\n").replace('\n', ' ').strip();
+        if (trimmed.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "내용을 입력해 주세요.");
+        }
+        if (trimmed.length() > TEXT_LABEL_MAX) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    TEXT_LABEL_MAX + "자까지 입력할 수 있습니다.");
+        }
+        return trimmed;
+    }
+
+    /** 라벨기 글꼴. 목록에 있는 값만 저장한다. 고르지 않았으면 비워 둔다. */
+    private String labelFont(String textFont) {
+        if (textFont == null || textFont.isBlank()) {
+            return null;
+        }
+        return diaryLabelFontCatalog.find(textFont)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "지원하지 않는 글꼴입니다."))
+                .code();
+    }
+
+    /**
+     * 라벨기 글자색. 페이지 다꾸와 같은 규칙으로 #RRGGBB 만 저장한다.
+     * 고르지 않았으면 비워 두고 화면이 기본 먹색으로 그린다. (글꼴과는 서로 독립이다)
+     */
+    private String labelColor(String textColor) {
+        if (textColor == null || textColor.isBlank()) {
+            return null;
+        }
+        String color = textColor.strip();
+        if (!LABEL_COLOR.matcher(color).matches()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "글자색을 다시 선택해 주세요.");
+        }
+        return color;
     }
 
     @Override

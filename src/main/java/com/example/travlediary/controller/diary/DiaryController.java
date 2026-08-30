@@ -6,6 +6,8 @@ import com.example.travlediary.dto.DiarySort;
 import com.example.travlediary.model.Diary;
 import com.example.travlediary.model.DiaryCover;
 import com.example.travlediary.model.DiaryCoverDesign;
+import com.example.travlediary.model.DiaryCoverElement;
+import com.example.travlediary.model.DiaryCoverPhotoStyle;
 import com.example.travlediary.model.DiaryCoverStyle;
 import com.example.travlediary.model.DiaryNotebookType;
 import com.example.travlediary.model.DiaryElement;
@@ -18,8 +20,10 @@ import com.example.travlediary.service.diary.DiaryCoverDesignElementService;
 import com.example.travlediary.service.diary.DiaryCoverDesignService;
 import com.example.travlediary.service.diary.DiaryCoverService;
 import com.example.travlediary.service.diary.DiaryElementService;
+import com.example.travlediary.service.diary.DiaryLabelFontCatalog;
 import com.example.travlediary.service.diary.DiaryNoteCatalog;
 import com.example.travlediary.service.diary.DiaryPageService;
+import com.example.travlediary.service.diary.DiaryPhotoFrame;
 import com.example.travlediary.service.diary.DiaryService;
 import com.example.travlediary.service.diary.DiaryStickerCatalog;
 import com.example.travlediary.service.file.FileUploadService;
@@ -73,6 +77,8 @@ public class DiaryController {
     /** 마스킹테이프는 처음부터 띠 모양으로 놓는다. (길이 ↔ 두께를 따로 조절한다) */
     private static final BigDecimal TAPE_WIDTH = new BigDecimal("0.46000");
     private static final BigDecimal TAPE_HEIGHT = new BigDecimal("0.09000");
+    /** 폴라로이드를 처음 놓는 너비. 높이는 사진 원본 비율에서 구한다. */
+    private static final BigDecimal PHOTO_WIDTH = new BigDecimal("0.34000");
     private static final BigDecimal STICKER_CENTER = new BigDecimal("0.41000");
     private static final BigDecimal STICKER_OFFSET_STEP = new BigDecimal("0.04000");
     private static final int STICKER_OFFSET_CYCLE = 5;
@@ -104,6 +110,8 @@ public class DiaryController {
     private final DiaryStickerCatalog diaryStickerCatalog;
     /** 라벨/떡메모지 디자인 허용 목록. 화면이 보낸 값이 아는 것인지 여기서만 확인한다. */
     private final DiaryNoteCatalog diaryNoteCatalog;
+    /** 라벨기 글꼴 허용 목록. picker 가 그릴 목록도 여기서 그대로 가져간다. */
+    private final DiaryLabelFontCatalog diaryLabelFontCatalog;
     private final HolidayService holidayService;
 
     @Value("${custom.upload-path}")
@@ -295,6 +303,11 @@ public class DiaryController {
                     diaryNoteCatalog.getStyles(DiaryNoteStyle.CATEGORY_MEMO));
             // 색 팔레트. 모양과 다른 축이라 라벨/메모지가 같은 목록을 함께 쓴다.
             model.addAttribute("diaryNoteColors", diaryNoteCatalog.getColors());
+            // 라벨기 글꼴 목록. 여기서도 manifest 가 곧 허용 목록이다.
+            // (화면이 글꼴 목록을 따로 들지 않도록 서버가 그대로 내려 준다)
+            model.addAttribute("diaryLabelFonts", diaryLabelFontCatalog.getFonts());
+            // 사진 등록 자리(일반 / 폴라로이드). 목록을 화면에 적지 않고 여기서 넘긴다.
+            model.addAttribute("diaryPhotoStyles", DiaryCoverPhotoStyle.values());
         }
         model.addAttribute("pageTitle", diary.getTitle() + " | 나의 여행일기");
     }
@@ -345,12 +358,12 @@ public class DiaryController {
     public String editDiaryForm(@PathVariable Long diaryId,
                                 @AuthenticationPrincipal CustomUserDetails userDetails,
                                 Model model) {
-        Diary diary = diaryService.getMyDiary(diaryId, userDetails.getId());
+        Long userId = userDetails.getId();
+        Diary diary = diaryService.getMyDiary(diaryId, userId);
         model.addAttribute("diaryForm", diary);
         model.addAttribute("diaryId", diaryId);
         model.addAttribute("currentCoverImageUrl", diary.getCoverImageUrl());
-        model.addAttribute("coverStyles", DiaryCoverStyle.values());
-        model.addAttribute("notebookTypes", DiaryNotebookType.values());
+        addEditFormCoverAttributes(model, diaryId, userId);
         model.addAttribute("pageTitle", "여행일기 수정");
         return "diary/edit";
     }
@@ -362,6 +375,8 @@ public class DiaryController {
                               BindingResult bindingResult,
                               @RequestParam(value = "coverImage", required = false)
                               MultipartFile coverImage,
+                              @RequestParam(required = false) String coverSelectionType,
+                              @RequestParam(required = false) Long customCoverDesignId,
                               @AuthenticationPrincipal CustomUserDetails userDetails,
                               Model model) {
         Long userId = userDetails.getId();
@@ -370,11 +385,27 @@ public class DiaryController {
             return renderEditForm(model, diaryId, existing, "여행 기간을 올바르게 입력해 주세요.");
         }
 
+        /*
+          표지를 어떻게 할지는 세 갈래다.
+            - 내 디자인을 골랐다        : 그 디자인으로 갈아 끼운다 (없던 다이어리면 새로 입힌다)
+            - 내 디자인 쪽이지만 안 골랐다 : 지금 쓰는 커스텀 표지를 그대로 둔다
+            - 기본 디자인이다           : 커스텀 표지를 쓰고 있었다면 떼고 기본 표지로 돌아간다
+        */
+        boolean hasCustomCover = diaryCoverService.findMyCover(diaryId, userId).isPresent();
+        boolean customChosen = CUSTOM_COVER_SELECTION.equals(coverSelectionType)
+                && customCoverDesignId != null;
+        boolean keepCustom = CUSTOM_COVER_SELECTION.equals(coverSelectionType)
+                && customCoverDesignId == null && hasCustomCover;
+        boolean custom = customChosen || keepCustom;
+
         // 이번 요청에서 새로 저장한 표지만 추적한다.
         String savedCoverImageUrl = null;
+        // 갈아 끼우기 전에 쓰던 커스텀 표지의 요소. DB 가 바뀐 뒤에 사진 파일을 정리한다.
+        List<DiaryCoverElement> removedElements = List.of();
         try {
             requirePagesInsidePeriod(diaryId, userId, diaryForm.getStartDate(), diaryForm.getEndDate());
-            if (coverImage != null && !coverImage.isEmpty()) {
+            // 커스텀 표지를 쓰는 동안에는 대표 이미지를 쓰지 않으므로 저장조차 하지 않는다.
+            if (!custom && coverImage != null && !coverImage.isEmpty()) {
                 savedCoverImageUrl = fileUploadService.saveFile(coverImage, COVER_IMAGE_DIRECTORY);
             }
 
@@ -391,7 +422,29 @@ public class DiaryController {
             // 노트 종류도 같은 방식이다. 값이 오지 않으면 지금 쓰던 종류를 그대로 둔다.
             diary.setNotebookType(diaryForm.getNotebookType() != null && !diaryForm.getNotebookType().isBlank()
                     ? diaryForm.getNotebookType() : existing.getNotebookType());
-            diaryService.update(diaryId, userId, diary);
+
+            if (customChosen) {
+                /*
+                  커스텀 표지를 지웠을 때 돌아갈 자리를 남겨 둔다. (새 여행일기 때와 같은 규칙)
+                  대표 이미지는 쓰지 않으므로 비워 두고, 쓰던 파일은 아래에서 정리한다.
+                */
+                diary.setCoverStyle(diaryCoverDesignService
+                        .getMyDesign(customCoverDesignId, userId).getBaseCoverStyle());
+                diary.setCoverImageUrl(null);
+                removedElements = diaryCoverService.updateWithDesign(
+                        diaryId, userId, diary, customCoverDesignId);
+            } else if (hasCustomCover && !keepCustom) {
+                // 기본 표지로 돌아간다. 쓰고 있던 커스텀 표지를 함께 떼어 낸다.
+                removedElements = diaryCoverService.updateWithPreset(diaryId, userId, diary);
+            } else {
+                if (keepCustom) {
+                    // 표지는 손대지 않는다. 제목·기간·노트 종류만 고친다.
+                    diary.setCoverImageUrl(existing.getCoverImageUrl());
+                    diary.setCoverStyle(existing.getCoverStyle());
+                }
+                // 커스텀 표지를 쓰지 않는 다이어리는 예전 그대로 정보만 고친다.
+                diaryService.update(diaryId, userId, diary);
+            }
         } catch (ResponseStatusException exception) {
             deleteStoredFile(savedCoverImageUrl);
             if (exception.getStatusCode().is4xxClientError()
@@ -408,6 +461,14 @@ public class DiaryController {
         if (savedCoverImageUrl != null) {
             deleteStoredFile(existing.getCoverImageUrl());
         }
+        // 커스텀 표지로 바꾸면서 쓰지 않게 된 대표 이미지도 함께 정리한다.
+        if (customChosen) {
+            deleteStoredFile(existing.getCoverImageUrl());
+        }
+        // 떼어 낸 표지의 사진만 지운다. 스티커는 공용 asset 이라 어떤 경우에도 지우지 않는다.
+        removedElements.stream()
+                .filter(element -> PHOTO_ELEMENT_TYPE.equals(element.getElementType()))
+                .forEach(element -> deleteStoredFile(element.getImageUrl()));
         // 다이어리 설정은 목록의 ⋯ 메뉴에서 들어오므로 저장 뒤에도 목록으로 돌아간다.
         return "redirect:/diaries";
     }
@@ -460,10 +521,34 @@ public class DiaryController {
         model.addAttribute("diaryForm", diaryForm);
         model.addAttribute("diaryId", diaryId);
         model.addAttribute("diaryError", errorMessage);
-        model.addAttribute("coverStyles", DiaryCoverStyle.values());
-        model.addAttribute("notebookTypes", DiaryNotebookType.values());
+        addEditFormCoverAttributes(model, diaryId, currentUserId());
         model.addAttribute("pageTitle", "여행일기 수정");
         return "diary/edit";
+    }
+
+    /**
+     * 수정 화면이 표지를 고르는 데 필요한 것들.
+     *
+     * <p>기본 표지 8종과 함께, 내가 저장해 둔 표지 디자인을 완성된 모습으로 보여 준다.
+     * (작성 화면과 같은 조회 경로를 쓴다 — 요소는 디자인마다 따로 묻지 않고 한 번에 읽는다)
+     *
+     * <p>지금 커스텀 표지를 쓰고 있는지만 함께 내려 준다. 그 값으로 화면이 '내 디자인' 쪽을
+     * 열어 두고, 대표 이미지 자리를 접는다. 어느 저장 디자인에서 왔는지는 남겨 두지 않으므로
+     * (독립 복사본이다) 저장 디자인 하나를 골라 둔 것처럼 보이게 하지 않는다.
+     * 그래서 아무것도 고르지 않고 저장하면 지금 표지가 그대로 남는다.
+     */
+    private void addEditFormCoverAttributes(Model model, Long diaryId, Long userId) {
+        model.addAttribute("coverStyles", DiaryCoverStyle.values());
+        model.addAttribute("notebookTypes", DiaryNotebookType.values());
+
+        List<DiaryCoverDesign> designs = diaryCoverDesignService.getMyDesigns(userId);
+        model.addAttribute("coverDesigns", designs);
+        model.addAttribute("coverElementsByDesign", diaryCoverDesignElementService
+                .getElementsByDesign(designs.stream().map(DiaryCoverDesign::getId).toList(), userId));
+
+        model.addAttribute("currentCover",
+                diaryCoverService.findMyCover(diaryId, userId).orElse(null));
+        model.addAttribute("stickerRepeats", diaryStickerCatalog.getRepeatsByImageUrl());
     }
 
     /** 페이지 날짜/배경 수정. 순서(pageOrder)는 기존 값을 그대로 유지한다. */
@@ -574,36 +659,82 @@ public class DiaryController {
         return ResponseEntity.noContent().build();
     }
 
-    /** 페이지에 사진(PHOTO)을 한 장 추가한다. 사진 한 장이 요소 한 행이다. */
+    /**
+     * 페이지에 사진(PHOTO)을 한 장 추가한다. 사진 한 장이 요소 한 행이다.
+     *
+     * <p>사진의 모습(photoStyle)은 어느 자리에서 올렸는지에 따라 정해진다.
+     * 값을 보내지 않으면 비운 채로 저장하고 읽을 때 폴라로이드로 본다 —
+     * 이 칸이 생기기 전에 붙여 둔 사진과 같은 모습이다.
+     * (일반/폴라로이드 두 진입점은 다음 UI 단계에서 붙는다)
+     */
     @PostMapping("/{diaryId:\\d+}/pages/{pageId:\\d+}/elements/photo")
     public String createPhotoElement(@PathVariable Long diaryId,
                                      @PathVariable Long pageId,
                                      @RequestParam(value = "image", required = false)
-                                     MultipartFile image,
+                                     List<MultipartFile> images,
+                                     @RequestParam(name = "photoStyle", required = false)
+                                     String photoStyle,
                                      @RequestParam(defaultValue = "0") int spread,
                                      @RequestParam(required = false) Integer page,
                                      @AuthenticationPrincipal CustomUserDetails userDetails,
                                      RedirectAttributes redirectAttributes) {
-        if (image == null || image.isEmpty()) {
+        List<MultipartFile> chosen = images == null ? List.of() : images.stream()
+                .filter(file -> file != null && !file.isEmpty())
+                .toList();
+        if (chosen.isEmpty()) {
             redirectAttributes.addFlashAttribute("diaryPageError", "사진을 선택해 주세요.");
             return redirectToEditPage(diaryId, spread, page);
         }
 
-        // 이번 요청에서 저장한 파일만 추적해 실패 시 정리한다.
-        String savedImageUrl = null;
-        try {
-            savedImageUrl = fileUploadService.saveFile(image, PAGE_IMAGE_DIRECTORY);
+        /*
+          한 번에 여러 장을 고를 수 있다. 사진 한 장이 요소 한 행이다.
+          한 장이라도 실패하면 그 장에서 방금 저장한 파일만 지우고, 앞서 성공한 장은 그대로 둔다.
+          (표지 사진 등록과 같은 정책이다)
+        */
+        int placed = 0;
+        for (MultipartFile image : chosen) {
+            // 이번 장에서 저장한 파일만 추적해 실패 시 정리한다.
+            String savedImageUrl = null;
+            try {
+                savedImageUrl = fileUploadService.saveFile(image, PAGE_IMAGE_DIRECTORY);
 
-            DiaryElement element = new DiaryElement();
-            element.setElementType(PHOTO_ELEMENT_TYPE);
-            element.setImageUrl(savedImageUrl);
-            diaryElementService.create(diaryId, pageId, userDetails.getId(), element);
-        } catch (ResponseStatusException exception) {
-            deleteStoredFile(savedImageUrl);
-            return redirectWithElementError(exception, diaryId, spread, page, redirectAttributes);
-        } catch (RuntimeException exception) {
-            deleteStoredFile(savedImageUrl);
-            throw exception;
+                DiaryElement element = new DiaryElement();
+                element.setElementType(PHOTO_ELEMENT_TYPE);
+                element.setImageUrl(savedImageUrl);
+                // 아는 값인지는 서비스가 확인한다. (비어 있으면 그대로 비워 둔다)
+                element.setPhotoStyle(photoStyle);
+                /*
+                  폴라로이드는 흰 프레임 안에 사진이 꽉 차는 모습이라 상자 비율이 사진과 맞아야 한다.
+                  가로 사진에는 가로 폴라로이드가 되도록 원본 비율에서 높이를 구한다.
+                  (일반 사진은 예전 기본 크기 그대로다)
+                */
+                if (!DiaryCoverPhotoStyle.FULL.getCode().equals(photoStyle)) {
+                    BigDecimal[] size = DiaryPhotoFrame.polaroidSize(
+                            DiaryPhotoFrame.ratioOf(image),
+                            DiaryPhotoFrame.PAGE_CANVAS_ASPECT, PHOTO_WIDTH);
+                    element.setWidth(size[0]);
+                    element.setHeight(size[1]);
+                }
+                /*
+                  첫 장은 예전처럼 기본 자리에 놓고, 함께 고른 나머지만 조금씩 어긋나게 둔다.
+                  (여러 장이 정확히 겹쳐 한 장처럼 보이지 않게 하려는 것뿐이다)
+                */
+                if (placed > 0) {
+                    BigDecimal offset = STICKER_OFFSET_STEP
+                            .multiply(BigDecimal.valueOf(placed % STICKER_OFFSET_CYCLE));
+                    element.setPositionX(offset);
+                    element.setPositionY(offset);
+                }
+                diaryElementService.create(diaryId, pageId, userDetails.getId(), element);
+                placed++;
+            } catch (ResponseStatusException exception) {
+                deleteStoredFile(savedImageUrl);
+                return redirectWithElementError(
+                        exception, diaryId, spread, page, redirectAttributes);
+            } catch (RuntimeException exception) {
+                deleteStoredFile(savedImageUrl);
+                throw exception;
+            }
         }
         return redirectToEditPage(diaryId, spread, page);
     }
@@ -761,6 +892,85 @@ public class DiaryController {
             throw exception;
         }
         return ResponseEntity.ok(notePayload(diaryId, pageId, created, style));
+    }
+
+    /**
+     * 라벨기로 페이지에 글씨를 붙인다.
+     *
+     * <p>종이 배경 없이 글자만 놓이는 요소라 그림 파일을 만들지 않는다.
+     * 문구 다듬기·길이 제한·글꼴 허용 검사와 자리/크기는 모두 서비스가 정한다.
+     * (화면은 무엇을 적을지와 어떤 글꼴로 쓸지만 보낸다)
+     */
+    @PostMapping("/{diaryId:\\d+}/pages/{pageId:\\d+}/elements/label")
+    @ResponseBody
+    public ResponseEntity<?> createLabelElement(@PathVariable Long diaryId,
+                                                @PathVariable Long pageId,
+                                                @RequestParam("text") String text,
+                                                @RequestParam(name = "textFont", required = false)
+                                                String textFont,
+                                                @RequestParam(name = "textColor", required = false)
+                                                String textColor,
+                                                @AuthenticationPrincipal CustomUserDetails userDetails) {
+        DiaryElement created;
+        try {
+            created = diaryElementService.createLabel(
+                    diaryId, pageId, userDetails.getId(), text, textFont, textColor);
+        } catch (ResponseStatusException exception) {
+            return elementErrorResponse(exception, "글씨를 붙이지 못했습니다.");
+        }
+        return ResponseEntity.ok(labelPayload(diaryId, pageId, created));
+    }
+
+    /**
+     * 라벨기로 붙인 글씨 떼기.
+     * 스티커와 마찬가지로 파일을 갖지 않으므로 DB 행만 지운다.
+     * 다른 유형의 요소 번호를 보내도 서비스에서 걸린다.
+     */
+    @PostMapping("/{diaryId:\\d+}/pages/{pageId:\\d+}/elements/{elementId:\\d+}/label/delete")
+    @ResponseBody
+    public ResponseEntity<?> deleteLabelElement(@PathVariable Long diaryId,
+                                                @PathVariable Long pageId,
+                                                @PathVariable Long elementId,
+                                                @AuthenticationPrincipal CustomUserDetails userDetails) {
+        try {
+            diaryElementService.deleteLabel(diaryId, pageId, elementId, userDetails.getId());
+        } catch (ResponseStatusException exception) {
+            return elementErrorResponse(exception, "글씨를 떼지 못했습니다.");
+        }
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * 방금 붙인 글씨를 화면이 바로 그릴 수 있도록 값과 저장 주소를 함께 돌려준다.
+     * 글꼴 class 도 함께 준다 — 화면이 code 를 다시 class 로 바꾸는 규칙을 갖지 않게 한다.
+     */
+    private Map<String, Object> labelPayload(Long diaryId, Long pageId, DiaryElement element) {
+        String base = "/diaries/" + diaryId + "/pages/" + pageId + "/elements/" + element.getId();
+        return Map.ofEntries(
+                Map.entry("id", element.getId()),
+                Map.entry("elementType", element.getElementType()),
+                Map.entry("textContent", element.getTextContent()),
+                // 글꼴을 고르지 않은 글씨도 있어 빈 문자열로 내려 준다. (화면은 그대로 붙이기만 한다)
+                Map.entry("textFont", element.getTextFont() == null
+                        ? "" : element.getTextFont()),
+                Map.entry("fontClass", element.getTextFontClass() == null
+                        ? "" : element.getTextFontClass()),
+                // 글자색도 고르지 않은 글씨가 있어 빈 문자열로 내려 준다.
+                // (그때는 화면이 색을 따로 입히지 않고 기본 먹색으로 그린다)
+                Map.entry("textColor", element.getTextColor() == null
+                        ? "" : element.getTextColor()),
+                Map.entry("positionX", element.getPositionX()),
+                Map.entry("positionY", element.getPositionY()),
+                Map.entry("width", element.getWidth()),
+                Map.entry("height", element.getHeight()),
+                Map.entry("rotation", element.getRotation()),
+                Map.entry("zIndex", element.getZIndex()),
+                Map.entry("urls", Map.of(
+                        "position", base + "/position",
+                        "size", base + "/size",
+                        "rotation", base + "/rotation",
+                        "layer", base + "/layer",
+                        "delete", base + "/label/delete")));
     }
 
     /**

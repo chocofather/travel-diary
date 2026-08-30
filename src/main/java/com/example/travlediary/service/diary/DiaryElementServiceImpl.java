@@ -1,6 +1,8 @@
 package com.example.travlediary.service.diary;
 
+import com.example.travlediary.model.DiaryCoverPhotoStyle;
 import com.example.travlediary.model.DiaryElement;
+import com.example.travlediary.model.DiaryNoteColor;
 import com.example.travlediary.model.DiaryNoteStyle;
 import com.example.travlediary.model.DiaryPage;
 import com.example.travlediary.repository.diary.DiaryElementMapper;
@@ -16,6 +18,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -36,6 +39,24 @@ public class DiaryElementServiceImpl implements DiaryElementService {
             Set.of(TYPE_TEXT, TYPE_PHOTO, TYPE_STICKER, TYPE_NOTE);
     /** 라벨은 한 줄짜리 작은 딱지다. 길게 적을 자리가 아니다. */
     private static final int LABEL_TEXT_MAX = 100;
+    /**
+     * 라벨기로 붙이는 글씨. 종이 배경 없이 글자만 놓는 짧은 문구라 NOTE 라벨보다 더 짧게 둔다.
+     * (긴 글은 페이지 본문이나 떡메모지가 맡는다)
+     */
+    private static final int TEXT_LABEL_MAX = 50;
+    /** 라벨기 글자색은 #RRGGBB 만 저장한다. (text_color VARCHAR(7)) */
+    private static final Pattern LABEL_COLOR = Pattern.compile("^#[0-9a-fA-F]{6}$");
+    /**
+     * 라벨기 글씨의 처음 크기. 한 줄짜리 문구라 낮고 넓다.
+     * 높이는 화면에서 조절할 수 있는 가장 짧은 길이(0.08)에 맞춰 둔다 —
+     * 그보다 낮게 두면 크기를 잡는 순간 높이가 튄다.
+     */
+    private static final BigDecimal TEXT_LABEL_WIDTH = new BigDecimal("0.32000");
+    private static final BigDecimal TEXT_LABEL_HEIGHT = new BigDecimal("0.08000");
+    /** 처음 놓는 자리. 스티커·라벨과 같은 규칙으로 조금씩 어긋나게 쌓는다. */
+    private static final BigDecimal TEXT_LABEL_CENTER = new BigDecimal("0.34000");
+    private static final BigDecimal TEXT_LABEL_OFFSET_STEP = new BigDecimal("0.04000");
+    private static final int TEXT_LABEL_OFFSET_CYCLE = 5;
     /** 떡메모지는 여러 줄을 적는 자리라 넉넉히 둔다. */
     private static final int MEMO_TEXT_MAX = 1000;
 
@@ -54,6 +75,8 @@ public class DiaryElementServiceImpl implements DiaryElementService {
     private final DiaryElementMapper diaryElementMapper;
     /** 라벨·떡메모지 디자인 허용 목록. 아는 값인지 확인하는 데만 쓴다. */
     private final DiaryNoteCatalog diaryNoteCatalog;
+    /** 라벨기 글꼴 허용 목록. 표지 편집과 같은 목록을 함께 쓴다. */
+    private final DiaryLabelFontCatalog diaryLabelFontCatalog;
 
     @Override
     @Transactional(readOnly = true)
@@ -81,6 +104,44 @@ public class DiaryElementServiceImpl implements DiaryElementService {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "요소를 저장하지 못했습니다.");
         }
         return requireElementOfPage(prepared.getId(), page.getId());
+    }
+
+    @Override
+    @Transactional
+    public DiaryElement createLabel(Long diaryId, Long pageId, Long userId,
+                                    String text, String textFont, String textColor) {
+        DiaryPage page = requireOwnedPage(diaryId, pageId, userId);
+
+        // 스티커·떡메모지와 같은 규칙으로 조금씩 어긋나게 놓는다. (새 좌표 계산을 만들지 않는다)
+        int placed = diaryElementMapper.findByPageId(page.getId()).size();
+        BigDecimal offset = TEXT_LABEL_OFFSET_STEP
+                .multiply(BigDecimal.valueOf(placed % TEXT_LABEL_OFFSET_CYCLE));
+
+        DiaryElement element = new DiaryElement();
+        element.setElementType(TYPE_TEXT);
+        // 글·글꼴·글자색 검증은 create 가 타는 validated() 한 곳에서 한다.
+        element.setTextContent(text);
+        element.setTextFont(textFont);
+        element.setTextColor(textColor);
+        element.setPositionX(TEXT_LABEL_CENTER.add(offset));
+        element.setPositionY(TEXT_LABEL_CENTER.add(offset));
+        element.setWidth(TEXT_LABEL_WIDTH);
+        element.setHeight(TEXT_LABEL_HEIGHT);
+        // 회전 0 / 겹침 순서는 사진·스티커와 같은 기본값을 쓴다.
+        return create(diaryId, pageId, userId, element);
+    }
+
+    @Override
+    @Transactional
+    public void deleteLabel(Long diaryId, Long pageId, Long elementId, Long userId) {
+        DiaryPage page = requireOwnedPage(diaryId, pageId, userId);
+        DiaryElement existing = requireElementOfPage(elementId, page.getId());
+        // 다른 유형의 요소 번호를 보내도 여기서 걸린다. (사진을 이 문으로 지우지 못한다)
+        if (!TYPE_TEXT.equals(existing.getElementType())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "글씨 요소가 아닙니다.");
+        }
+        // 글씨는 파일을 갖지 않으므로 DB 행만 지운다.
+        delete(diaryId, pageId, elementId, userId);
     }
 
     @Override
@@ -151,6 +212,55 @@ public class DiaryElementServiceImpl implements DiaryElementService {
                     limit + "자까지 입력할 수 있습니다.");
         }
         return text;
+    }
+
+    /**
+     * 라벨기로 붙일 문구를 다듬는다.
+     *
+     * <p>한 줄짜리 짧은 문구다. 줄바꿈이 들어오면(붙여넣기 등) 막지 않고 한 칸으로 바꾼다 —
+     * 붙여넣기가 통째로 거절되는 것보다 한 줄로 들어오는 편이 덜 놀랍다.
+     * 빈 문구는 붙일 것이 없다는 뜻이라 막는다. (NOTE 와 다른 점이다)
+     */
+    private String labelText(String textContent) {
+        String text = (textContent == null ? "" : textContent)
+                .replace("\r\n", "\n").replace('\n', ' ').strip();
+        if (text.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "내용을 입력해 주세요.");
+        }
+        if (text.length() > TEXT_LABEL_MAX) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    TEXT_LABEL_MAX + "자까지 입력할 수 있습니다.");
+        }
+        return text;
+    }
+
+    /**
+     * 라벨기 글꼴. 목록에 있는 값만 저장한다. (그대로 화면의 class 가 되는 값이다)
+     * 고르지 않은 채로 오면 NULL 로 두고 화면이 기본 글꼴로 그린다.
+     */
+    private String labelFont(String textFont) {
+        if (textFont == null || textFont.isBlank()) {
+            return null;
+        }
+        return diaryLabelFontCatalog.find(textFont)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "지원하지 않는 글꼴입니다."))
+                .code();
+    }
+
+    /**
+     * 라벨기 글자색. #RRGGBB 만 저장한다. (그대로 화면의 색이 되는 값이라 형식을 가린다)
+     * 고르지 않은 채로 오면 NULL 로 두고 화면이 기본 먹색으로 그린다.
+     */
+    private String labelColor(String textColor) {
+        if (textColor == null || textColor.isBlank()) {
+            return null;
+        }
+        String color = textColor.strip();
+        if (!LABEL_COLOR.matcher(color).matches()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "글자색을 다시 선택해 주세요.");
+        }
+        return color;
     }
 
     @Override
@@ -261,6 +371,9 @@ public class DiaryElementServiceImpl implements DiaryElementService {
         copy.setImageUrl(existing.getImageUrl());
         copy.setStyleType(existing.getStyleType());
         copy.setColorType(existing.getColorType());
+        copy.setPhotoStyle(existing.getPhotoStyle());
+        copy.setTextFont(existing.getTextFont());
+        copy.setTextColor(existing.getTextColor());
         copy.setPositionX(existing.getPositionX());
         copy.setPositionY(existing.getPositionY());
         copy.setWidth(existing.getWidth());
@@ -337,7 +450,10 @@ public class DiaryElementServiceImpl implements DiaryElementService {
             if (textContent.isEmpty()) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "내용을 입력해 주세요.");
             }
-            prepared.setTextContent(textContent);
+            prepared.setTextContent(labelText(textContent));
+            // 글꼴·글자색은 아는 값일 때만 남긴다. 비어 있으면 화면이 기본값으로 그린다.
+            prepared.setTextFont(labelFont(element.getTextFont()));
+            prepared.setTextColor(labelColor(element.getTextColor()));
             prepared.setImageUrl(null);
             return;
         }
@@ -351,7 +467,7 @@ public class DiaryElementServiceImpl implements DiaryElementService {
             prepared.setTextContent(textContent);
             String styleType = requireNoteStyle(element.getStyleType());
             prepared.setStyleType(styleType);
-            prepared.setColorType(noteColor(styleType, element.getColorType()));
+            prepared.setColorType(noteColor(element.getColorType()));
             prepared.setImageUrl(null);
             return;
         }
@@ -365,6 +481,25 @@ public class DiaryElementServiceImpl implements DiaryElementService {
         }
         prepared.setImageUrl(imageUrl);
         prepared.setTextContent(null);
+        /*
+          사진의 모습(일반/폴라로이드)은 PHOTO 만 쓴다. 스티커는 늘 비운다.
+          고르지 않고 들어온 사진은 비워 두고 읽을 때 폴라로이드로 본다 —
+          이 칸이 생기기 전에 붙여 둔 사진과 같은 모습이 된다. (표지 사진과 같은 규칙)
+        */
+        if (TYPE_PHOTO.equals(elementType)) {
+            prepared.setPhotoStyle(photoStyle(element.getPhotoStyle()));
+        }
+    }
+
+    /** 사진의 모습. 아는 값(FULL / POLAROID)만 저장한다. 고르지 않았으면 비워 둔다. */
+    private String photoStyle(String photoStyle) {
+        if (photoStyle == null || photoStyle.isBlank()) {
+            return null;
+        }
+        if (!DiaryCoverPhotoStyle.isSupported(photoStyle)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "사진 모양을 다시 선택해 주세요.");
+        }
+        return DiaryCoverPhotoStyle.of(photoStyle).getCode();
     }
 
     /**
@@ -381,15 +516,13 @@ public class DiaryElementServiceImpl implements DiaryElementService {
     /**
      * 라벨/떡메모지의 색. 모양과 다른 축이라 따로 확인한다.
      *
-     * <p>고르지 않았으면 그 모양의 기본색을 쓴다. 기본색조차 없으면 색 없이 저장되고,
-     * 화면은 그 모양이 원래 쓰던 색으로 그린다. (예전에 만든 요소가 그대로 보인다)
+     * <p>고르지 않았으면 기본색(IVORY)을 실제로 저장한다. 라벨과 떡메모지가 같은 규칙을 쓴다.
+     * 색 칸이 생기기 전에 만든 행(NULL)은 고쳐 쓰지 않고 읽을 때만 같은 기본색으로 본다.
      */
-    private String noteColor(String styleType, String colorType) {
+    private String noteColor(String colorType) {
         String requested = colorType == null ? "" : colorType.strip();
         if (requested.isEmpty()) {
-            return diaryNoteCatalog.find(styleType)
-                    .map(DiaryNoteStyle::defaultColor)
-                    .orElse(null);
+            return DiaryNoteColor.DEFAULT_CODE;
         }
         return diaryNoteCatalog.findColor(requested)
                 .orElseThrow(() -> new ResponseStatusException(

@@ -50,6 +50,24 @@
                        z-index:${element.zIndex};|">
       <img th:src="${element.imageUrl}" alt="" aria-hidden="true" loading="lazy" />
     </figure>
+
+    <!-- 라벨기로 붙인 글씨. 편집 화면과 같은 모양 규칙(.diary-label)을 그대로 쓴다.
+         글자 크기는 요소 자신의 크기에서 나오므로 표지가 작아지면 글씨도 함께 작아진다. -->
+    <figure class="diary-canvas-item diary-label"
+            th:each="element : ${elements}"
+            th:if="${element.elementType == 'TEXT'}"
+            th:style="|left:${element.positionX * 100}%;
+                       top:${element.positionY * 100}%;
+                       width:${element.width * 100}%;
+                       height:${element.height * 100}%;
+                       transform:rotate(${element.rotation}deg);
+                       --diary-label-chars:${#strings.length(element.textContent)};
+                       z-index:${element.zIndex};|">
+      <span class="diary-label-text" th:classappend="${element.textFontClass}"
+            th:style="${element.textColor != null and !#strings.isEmpty(element.textColor)}
+                      ? 'color:' + ${element.textColor} : null"
+            th:text="${element.textContent}">JEJU 2026</span>
+    </figure>
   </div>
   <span class="diary-cover-canvas-spine" aria-hidden="true"></span>
 </div>
