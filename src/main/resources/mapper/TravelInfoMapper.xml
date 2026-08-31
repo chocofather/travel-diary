@@ -27,6 +27,8 @@
         <result property="categoryName" column="category_name"/>
         <result property="views" column="views"/>
         <result property="createdAt" column="created_at"/>
+        <result property="startDate" column="start_date"/>
+        <result property="endDate" column="end_date"/>
     </resultMap>
 
     <resultMap id="PublicListResultMap" type="com.example.travlediary.dto.TravelInfoListItemDto">
@@ -65,6 +67,13 @@
     <resultMap id="InfoImageResultMap" type="com.example.travlediary.model.InfoImage">
         <id property="id" column="id"/>
         <result property="imageUrl" column="image_url"/>
+        <result property="sourceType" column="source_type"/>
+        <result property="sourceName" column="source_name"/>
+        <result property="externalContentId" column="external_content_id"/>
+        <result property="sourceTitle" column="source_title"/>
+        <result property="licenseType" column="license_type"/>
+        <result property="sourceImageUrl" column="source_image_url"/>
+        <result property="licenseCheckedAt" column="license_checked_at"/>
         <result property="isMain" column="is_main"/>
         <result property="orderIndex" column="order_index"/>
         <result property="createdAt" column="created_at"/>
@@ -79,9 +88,21 @@
                ti.category_id,
                ic.name AS category_name,
                ti.views,
-               ti.created_at
+               ti.created_at,
+               festival_period.start_date,
+               festival_period.end_date
         FROM travel_info ti
         JOIN info_categories ic ON ic.id = ti.category_id
+        LEFT JOIN info_periods festival_period
+          ON festival_period.id = (
+              SELECT period_candidate.id
+              FROM info_periods period_candidate
+              WHERE period_candidate.info_id = ti.id
+                AND ti.content_type = 'FESTIVAL'
+              ORDER BY period_candidate.start_date ASC, period_candidate.end_date ASC, period_candidate.id ASC
+              LIMIT 1
+          )
+         AND festival_period.info_id = ti.id
         <where>
             <if test="scope != null">
                 ti.scope = #{scope}
@@ -286,12 +307,23 @@
     </delete>
 
     <select id="findMainImageByInfoId" parameterType="long" resultMap="InfoImageResultMap">
-        SELECT id, image_url, is_main, order_index, created_at, info_id
+        SELECT id, image_url, source_type, source_name, external_content_id, source_title,
+               license_type, source_image_url, license_checked_at,
+               is_main, order_index, created_at, info_id
         FROM info_images
         WHERE info_id = #{infoId}
           AND is_main = 1
         ORDER BY order_index ASC, id ASC
         LIMIT 1
+    </select>
+
+    <select id="findImagesByInfoId" parameterType="long" resultMap="InfoImageResultMap">
+        SELECT id, image_url, source_type, source_name, external_content_id, source_title,
+               license_type, source_image_url, license_checked_at,
+               is_main, order_index, created_at, info_id
+        FROM info_images
+        WHERE info_id = #{infoId}
+        ORDER BY order_index ASC, id ASC
     </select>
 
     <select id="findMainImageUrlsByInfoId" parameterType="long" resultType="string">
@@ -304,8 +336,16 @@
 
     <insert id="insertInfoImage" parameterType="com.example.travlediary.model.InfoImage"
             useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO info_images (image_url, is_main, order_index, info_id, created_at)
-        VALUES (#{imageUrl}, #{isMain}, #{orderIndex}, #{infoId}, NOW())
+        INSERT INTO info_images (
+            image_url, source_type, source_name, external_content_id, source_title,
+            license_type, source_image_url, license_checked_at,
+            is_main, order_index, info_id, created_at
+        )
+        VALUES (
+            #{imageUrl}, COALESCE(#{sourceType}, 'ADMIN_UPLOAD'), #{sourceName},
+            #{externalContentId}, #{sourceTitle}, #{licenseType}, #{sourceImageUrl}, #{licenseCheckedAt},
+            #{isMain}, #{orderIndex}, #{infoId}, NOW()
+        )
     </insert>
 
     <delete id="deleteMainImagesByInfoId" parameterType="long">

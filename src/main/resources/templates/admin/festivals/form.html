@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'festivals')}">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill-resize-module@2.1.3/dist/resize.css">
+  <link rel="stylesheet" crossorigin
+        href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.min.css">
+  <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-kr@5.3.0/400.css">
+  <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-kr@5.3.0/400.css">
+  <link rel="stylesheet" href="/css/quill-content.css">
+  <link rel="stylesheet" href="/css/admin-travel-info.css">
+  <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/quill-resize-module@2.1.3/dist/resize.js"></script>
+  <script src="/js/quill-editor-init.js"></script>
+  <script src="/js/admin-festival-autofill.js" defer></script>
+</th:block>
+<th:block th:fragment="body">
+  <section class="admin-page-section admin-travel-info-form-page">
+    <header class="admin-page-header">
+      <div class="admin-page-heading">
+        <h1 class="admin-page-title">축제·행사 등록</h1>
+        <p class="admin-page-description">축제·행사 정보를 입력하고 TourAPI 후보를 자동입력할 수 있습니다.</p>
+      </div>
+      <div class="admin-page-actions">
+        <a th:href="@{/admin/festivals}" class="admin-btn">축제·행사 목록</a>
+      </div>
+    </header>
+
+    <form id="festival-create-form" class="admin-travel-info-form"
+          th:action="@{/admin/festivals/create}" method="post" th:object="${festivalForm}">
+      <div class="admin-alert" th:if="${#fields.hasAnyErrors()}" role="alert">
+        <p th:each="error : ${#fields.allErrors()}" th:text="${error}">입력값을 확인해 주세요.</p>
+      </div>
+      <input id="kto-festival-content-id" type="hidden" th:field="*{ktoFestivalContentId}">
+      <section class="admin-form-card is-wide admin-travel-info-section admin-kto-festival-section"
+               data-admin-festival-autofill>
+        <div class="admin-travel-info-section-header">
+          <h2>TourAPI에서 축제·행사 불러오기</h2>
+          <p>이름 또는 행사 기간으로 검색한 뒤 후보를 선택하면 비어 있는 항목과 직전 자동입력 값을 채웁니다.</p>
+        </div>
+        <div class="admin-filter-tabs admin-kto-festival-search-modes" role="tablist" aria-label="축제·행사 검색 방식">
+          <button type="button" class="admin-filter-tab active" aria-selected="true"
+                  data-festival-search-mode="keyword">이름으로 검색</button>
+          <button type="button" class="admin-filter-tab" aria-selected="false"
+                  data-festival-search-mode="period">기간으로 찾기</button>
+        </div>
+        <div data-festival-search-panel="keyword">
+          <div class="admin-kto-festival-search-controls admin-kto-festival-keyword-controls">
+            <div class="admin-form-field">
+              <label for="festival-search-keyword">축제·행사명 <span aria-hidden="true">*</span></label>
+              <input id="festival-search-keyword" type="search" data-festival-search-keyword
+                     placeholder="축제·행사명을 입력하세요" aria-required="true">
+            </div>
+            <button type="button" class="admin-btn is-primary" data-festival-keyword-search-button>축제·행사 검색</button>
+          </div>
+        </div>
+        <div data-festival-search-panel="period" hidden>
+          <div class="admin-kto-festival-month-search">
+            <div class="admin-form-field">
+              <label for="festival-period-year">연도</label>
+              <select id="festival-period-year" data-festival-period-year aria-label="축제·행사 검색 연도"></select>
+            </div>
+            <div class="admin-kto-festival-month-grid" data-festival-month-grid aria-label="축제·행사 검색 월">
+              <button type="button" data-festival-month="1">1월</button>
+              <button type="button" data-festival-month="2">2월</button>
+              <button type="button" data-festival-month="3">3월</button>
+              <button type="button" data-festival-month="4">4월</button>
+              <button type="button" data-festival-month="5">5월</button>
+              <button type="button" data-festival-month="6">6월</button>
+              <button type="button" data-festival-month="7">7월</button>
+              <button type="button" data-festival-month="8">8월</button>
+              <button type="button" data-festival-month="9">9월</button>
+              <button type="button" data-festival-month="10">10월</button>
+              <button type="button" data-festival-month="11">11월</button>
+              <button type="button" data-festival-month="12">12월</button>
+            </div>
+          </div>
+          <button type="button" class="admin-kto-festival-direct-period-toggle"
+                  data-festival-direct-period-toggle aria-expanded="false">직접 기간 지정</button>
+          <div class="admin-kto-festival-direct-period" data-festival-direct-period-panel hidden>
+            <div class="admin-kto-festival-search-controls">
+              <div class="admin-form-field">
+                <label for="festival-search-start-date">검색 시작일 <span aria-hidden="true">*</span></label>
+                <input id="festival-search-start-date" type="date" data-festival-search-start-date aria-required="true">
+              </div>
+              <div class="admin-form-field">
+                <label for="festival-search-end-date">검색 종료일</label>
+                <input id="festival-search-end-date" type="date" data-festival-search-end-date>
+              </div>
+              <button type="button" class="admin-btn is-primary" data-festival-period-search-button>기간 검색</button>
+            </div>
+          </div>
+        </div>
+        <p class="admin-kto-festival-status" data-festival-status role="status" aria-live="polite">축제·행사명을 입력한 뒤 검색해 주세요.</p>
+        <div class="admin-kto-festival-results" data-festival-results></div>
+      </section>
+
+      <section class="admin-form-card is-wide admin-travel-info-section">
+        <div class="admin-travel-info-section-header">
+          <h2>기본 정보</h2>
+          <p>축제·행사의 제목, 분류, 범위와 기간을 입력합니다.</p>
+        </div>
+        <div class="admin-form-fields">
+          <div class="admin-form-field">
+            <label for="festival-title">제목</label>
+            <input id="festival-title" type="text" maxlength="255" placeholder="축제·행사 제목을 입력하세요"
+                   th:field="*{title}">
+          </div>
+          <div class="admin-travel-info-basic-grid">
+            <div class="admin-form-field">
+              <label for="festival-category">축제 분류</label>
+              <select id="festival-category" th:field="*{categoryId}">
+                <option value="">-- 축제 분류 선택 --</option>
+                <option th:each="category : ${categories}" th:value="${category.id}"
+                        th:text="${category.name} + (${category.isVisible} ? '' : ' (숨김)')">축제</option>
+              </select>
+            </div>
+            <div class="admin-form-field">
+              <label for="festival-scope">여행 범위</label>
+              <select id="festival-scope" th:field="*{scope}">
+                <option value="DOMESTIC">국내</option>
+                <option value="INTERNATIONAL">해외</option>
+              </select>
+            </div>
+            <div class="admin-form-field">
+              <label for="festival-start-date">행사 시작일</label>
+              <input id="festival-start-date" type="date" th:field="*{startDate}">
+            </div>
+            <div class="admin-form-field">
+              <label for="festival-end-date">행사 종료일</label>
+              <input id="festival-end-date" type="date" th:field="*{endDate}">
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="admin-form-card is-wide admin-travel-info-section">
+        <div class="admin-travel-info-section-header">
+          <h2>행사 소개</h2>
+          <p>TourAPI 행사 소개는 이 본문에만 자동입력됩니다.</p>
+        </div>
+        <div class="admin-travel-info-editor-shell quill-editor-shell">
+          <div id="festival-editor" class="admin-travel-info-editor quill-editor"></div>
+        </div>
+        <input type="hidden" id="festival-content" th:field="*{content}">
+        <textarea id="festival-initial-content" hidden th:text="*{content}"></textarea>
+      </section>
+
+      <section class="admin-form-card is-wide admin-travel-info-section">
+        <div class="admin-travel-info-section-header">
+          <h2>행사 상세정보</h2>
+          <p>행사 운영 정보를 각각 입력합니다.</p>
+        </div>
+        <div class="admin-travel-info-basic-grid">
+          <div class="admin-form-field"><label for="festival-event-place">행사장소</label><input id="festival-event-place" type="text" maxlength="255" th:field="*{eventPlace}"></div>
+          <div class="admin-form-field"><label for="festival-address">주소</label><input id="festival-address" type="text" maxlength="500" th:field="*{address}"></div>
+          <div class="admin-form-field"><label for="festival-play-time">행사시간</label><input id="festival-play-time" type="text" maxlength="500" th:field="*{playTime}"></div>
+          <div class="admin-form-field"><label for="festival-use-time">이용요금</label><textarea id="festival-use-time" th:field="*{useTime}"></textarea></div>
+          <div class="admin-form-field"><label for="festival-sponsor1">주최</label><input id="festival-sponsor1" type="text" maxlength="255" th:field="*{sponsor1}"></div>
+          <div class="admin-form-field"><label for="festival-sponsor1-tel">주최 연락처</label><input id="festival-sponsor1-tel" type="text" maxlength="100" th:field="*{sponsor1Tel}"></div>
+          <div class="admin-form-field"><label for="festival-sponsor2">주관</label><input id="festival-sponsor2" type="text" maxlength="255" th:field="*{sponsor2}"></div>
+          <div class="admin-form-field"><label for="festival-sponsor2-tel">주관 연락처</label><input id="festival-sponsor2-tel" type="text" maxlength="100" th:field="*{sponsor2Tel}"></div>
+          <div class="admin-form-field"><label for="festival-contact-tel">대표 문의</label><input id="festival-contact-tel" type="text" maxlength="100" th:field="*{contactTel}"></div>
+          <div class="admin-form-field"><label for="festival-homepage-url">홈페이지</label><input id="festival-homepage-url" type="url" maxlength="1000" th:field="*{homepageUrl}"></div>
+        </div>
+      </section>
+
+      <div class="admin-travel-info-submit-actions">
+        <a th:href="@{/admin/festivals}" class="admin-btn">목록으로</a>
+        <button type="submit" class="admin-btn is-primary">축제·행사 등록</button>
+      </div>
+    </form>
+  </section>
+</th:block>
+</html>

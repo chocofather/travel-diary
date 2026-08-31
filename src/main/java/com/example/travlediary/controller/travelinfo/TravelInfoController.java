@@ -1,12 +1,14 @@
 package com.example.travlediary.controller.travelinfo;
 
 import com.example.travlediary.dto.TravelInfoDetailDto;
+import com.example.travlediary.dto.FestivalDetailDto;
 import com.example.travlediary.dto.TravelInfoListItemDto;
 import com.example.travlediary.model.TravelInfoContentType;
 import com.example.travlediary.model.TravelInfoScope;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.category.InfoCategoryService;
 import com.example.travlediary.service.travelinfo.TravelInfoSearchKeyword;
+import com.example.travlediary.service.travelinfo.FestivalDetailService;
 import com.example.travlediary.service.travelinfo.TravelInfoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
@@ -22,6 +24,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.web.util.UriUtils;
 
 import java.nio.charset.StandardCharsets;
+import java.net.URLEncoder;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -41,6 +44,7 @@ public class TravelInfoController {
             "keyword", "scope", "contentType", "categoryId", "sort", "page", "size");
 
     private final TravelInfoService travelInfoService;
+    private final FestivalDetailService festivalDetailService;
     private final InfoCategoryService infoCategoryService;
 
     @GetMapping("/travel-info")
@@ -108,6 +112,9 @@ public class TravelInfoController {
                          @RequestParam(required = false) String returnUrl,
                          @AuthenticationPrincipal CustomUserDetails userDetails,
                          Model model) {
+        if (festivalDetailService.isPublicFestival(id)) {
+            return festivalRedirect(id, returnUrl);
+        }
         TravelInfoDetailDto travelInfo = travelInfoService.getPublicDetail(id);
         Long currentUserId = userDetails == null ? null : userDetails.getId();
         travelInfoService.populatePublicDetailBookmark(travelInfo, currentUserId);
@@ -115,6 +122,30 @@ public class TravelInfoController {
         model.addAttribute("listUrl", validateReturnUrl(returnUrl));
         model.addAttribute("pageTitle", travelInfo.getTitle() + " | 여행정보");
         return "travel-info/detail";
+    }
+
+    @GetMapping("/festivals/{id:\\d+}")
+    public String festivalDetail(@PathVariable Long id,
+                                 @RequestParam(required = false) String returnUrl,
+                                 @AuthenticationPrincipal CustomUserDetails userDetails,
+                                 Model model) {
+        FestivalDetailDto festival = festivalDetailService.getPublicDetail(id);
+        Long currentUserId = userDetails == null ? null : userDetails.getId();
+        travelInfoService.populatePublicDetailBookmark(festival.getTravelInfo(), currentUserId);
+        model.addAttribute("festival", festival);
+        model.addAttribute("listUrl", validateReturnUrl(returnUrl));
+        model.addAttribute("pageTitle", festival.getTravelInfo().getTitle() + " | 축제·행사");
+        return "festivals/detail";
+    }
+
+    private String festivalRedirect(Long id, String returnUrl) {
+        String festivalPath = "/festivals/" + id;
+        if (returnUrl == null || returnUrl.isBlank()) {
+            return "redirect:" + festivalPath;
+        }
+        String safeReturnUrl = URLEncoder.encode(
+                validateReturnUrl(returnUrl), StandardCharsets.UTF_8);
+        return "redirect:" + festivalPath + "?returnUrl=" + safeReturnUrl;
     }
 
     private int normalizeSize(int size) {

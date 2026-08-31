@@ -68,6 +68,13 @@
     margin: 0;
 }
 
+.admin-travel-info-actions .admin-btn.is-disabled {
+    color: #98a1b2;
+    background: #f3f5f8;
+    border-color: #e2e6ec;
+    cursor: default;
+}
+
 .admin-travel-info-form {
     display: grid;
     gap: 20px;
@@ -117,6 +124,181 @@
     grid-template-columns: minmax(240px, 360px) minmax(0, 1fr);
     align-items: start;
     gap: 24px;
+}
+
+.admin-kto-festival-section[hidden] {
+    display: none;
+}
+
+.admin-kto-festival-search-controls {
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) auto;
+    align-items: end;
+    gap: 14px;
+}
+
+.admin-kto-festival-search-controls > .admin-btn {
+    margin-bottom: 1px;
+}
+
+.admin-kto-festival-search-modes {
+    display: inline-flex;
+    gap: 4px;
+    margin: 0 0 16px;
+    padding: 3px;
+    background: #f4f6fa;
+    border: 1px solid #e0e6ef;
+    border-radius: 9px;
+}
+
+.admin-kto-festival-search-modes .admin-filter-tab {
+    min-height: 30px;
+    padding: 5px 10px;
+    border: 0;
+    border-radius: 6px;
+    font-size: 0.78rem;
+}
+
+.admin-kto-festival-keyword-controls {
+    grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.admin-kto-festival-keyword-controls > .admin-btn {
+    padding-inline: 14px;
+}
+
+.admin-kto-festival-month-search {
+    display: grid;
+    grid-template-columns: 150px minmax(0, 1fr);
+    align-items: end;
+    gap: 16px;
+}
+
+.admin-kto-festival-month-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 7px;
+}
+
+.admin-kto-festival-month-grid button,
+.admin-kto-festival-direct-period-toggle {
+    min-height: 34px;
+    color: #53617c;
+    background: #f8faff;
+    border: 1px solid #dfe5f0;
+    border-radius: 7px;
+    font: inherit;
+    font-size: 0.81rem;
+    font-weight: 650;
+    cursor: pointer;
+}
+
+.admin-kto-festival-month-grid button:hover,
+.admin-kto-festival-direct-period-toggle:hover {
+    color: #3558c6;
+    background: #eef3ff;
+    border-color: #cbd7f8;
+}
+
+.admin-kto-festival-month-grid button.active {
+    color: #3558c6;
+    background: #eef3ff;
+    border-color: #adc0f7;
+}
+
+.admin-kto-festival-direct-period-toggle {
+    min-height: auto;
+    margin-top: 14px;
+    padding: 0;
+    color: #66728a;
+    background: transparent;
+    border: 0;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.admin-kto-festival-direct-period {
+    margin-top: 12px;
+    padding-top: 14px;
+    border-top: 1px solid #edf0f5;
+}
+
+.admin-kto-festival-status {
+    min-height: 1.4em;
+    margin: 16px 0 0;
+    color: #66728a;
+    font-size: 0.86rem;
+    font-weight: 650;
+}
+
+.admin-kto-festival-status.is-error {
+    color: #bd4040;
+}
+
+.admin-kto-festival-results {
+    display: grid;
+    gap: 12px;
+    margin-top: 14px;
+}
+
+.admin-kto-festival-candidate {
+    display: grid;
+    grid-template-columns: 132px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 16px;
+    padding: 12px;
+    background: #f8faff;
+    border: 1px solid #e0e7f4;
+    border-radius: 12px;
+}
+
+.admin-kto-festival-candidate-media {
+    display: grid;
+    place-items: center;
+    width: 132px;
+    height: 86px;
+    overflow: hidden;
+    color: #8a94a8;
+    background: #eef2f8;
+    border-radius: 9px;
+    font-size: 0.76rem;
+}
+
+.admin-kto-festival-candidate-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.admin-kto-festival-candidate-body {
+    display: grid;
+    justify-items: start;
+    gap: 6px;
+    min-width: 0;
+}
+
+.admin-kto-festival-candidate-body strong {
+    color: #34415e;
+    font-size: 0.96rem;
+    overflow-wrap: anywhere;
+}
+
+.admin-kto-festival-candidate-meta {
+    color: #707b90;
+    font-size: 0.8rem;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
+.admin-kto-festival-category-badge {
+    display: inline-flex;
+    padding: 3px 8px;
+    color: #8a4b16;
+    background: #fff3df;
+    border: 1px solid #f2d5aa;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 750;
 }
 
 .admin-thumbnail-preview {
@@ -220,6 +402,18 @@
 
 .admin-travel-info-form .admin-alert p {
     margin: 0;
+}
+
+.admin-travel-info-page > .admin-alert.is-success {
+    color: #1f6b45;
+    background: #f0faf5;
+    border-color: #cde9da;
+}
+
+.admin-travel-info-page > .admin-alert.is-warning {
+    color: #8a4b16;
+    background: #fff8e9;
+    border-color: #f0ddb1;
 }
 
 .admin-travel-info-detail-card {
@@ -329,6 +523,33 @@
         grid-template-columns: 1fr;
     }
 
+    .admin-kto-festival-search-controls {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .admin-kto-festival-month-search {
+        grid-template-columns: 140px minmax(0, 1fr);
+    }
+
+    .admin-kto-festival-search-controls > .admin-btn {
+        grid-column: 1 / -1;
+        justify-self: start;
+    }
+
+    .admin-kto-festival-candidate {
+        grid-template-columns: 112px minmax(0, 1fr);
+    }
+
+    .admin-kto-festival-candidate-media {
+        width: 112px;
+        height: 78px;
+    }
+
+    .admin-kto-festival-candidate > .admin-btn {
+        grid-column: 1 / -1;
+        justify-self: end;
+    }
+
     .admin-travel-info-detail-meta {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -352,6 +573,31 @@
 
     .admin-period-row {
         grid-template-columns: 1fr;
+    }
+
+    .admin-kto-festival-search-controls,
+    .admin-kto-festival-candidate {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-kto-festival-keyword-controls,
+    .admin-kto-festival-month-search {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-kto-festival-month-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .admin-kto-festival-search-controls > .admin-btn,
+    .admin-kto-festival-candidate > .admin-btn {
+        grid-column: auto;
+        justify-self: stretch;
+    }
+
+    .admin-kto-festival-candidate-media {
+        width: 100%;
+        height: 160px;
     }
 
     .admin-travel-info-detail-meta {

@@ -9,7 +9,7 @@
     <header class="admin-page-header">
       <div class="admin-page-heading">
         <h1 class="admin-page-title">여행정보 관리</h1>
-        <p class="admin-page-description">국내·해외 여행정보와 축제 콘텐츠를 조회하고 관리합니다.</p>
+        <p class="admin-page-description">국내·해외 일반 여행정보를 조회하고 관리합니다.</p>
       </div>
       <div class="admin-page-actions">
         <a th:href="@{/admin/travel-info/create}" class="admin-btn is-primary">+ 여행정보 등록</a>
@@ -24,15 +24,6 @@
             <option value="">전체</option>
             <option value="DOMESTIC" th:selected="${scope != null and scope.name() == 'DOMESTIC'}">국내</option>
             <option value="INTERNATIONAL" th:selected="${scope != null and scope.name() == 'INTERNATIONAL'}">해외</option>
-          </select>
-        </label>
-
-        <label class="admin-filter-field">
-          <span>유형</span>
-          <select name="contentType" class="admin-select">
-            <option value="">전체</option>
-            <option value="GENERAL" th:selected="${contentType != null and contentType.name() == 'GENERAL'}">일반</option>
-            <option value="FESTIVAL" th:selected="${contentType != null and contentType.name() == 'FESTIVAL'}">축제</option>
           </select>
         </label>
 
@@ -61,7 +52,6 @@
           <tr>
             <th>제목</th>
             <th>범위</th>
-            <th>유형</th>
             <th>카테고리</th>
             <th>조회수</th>
             <th>작성일</th>
@@ -74,10 +64,6 @@
             <td>
               <span class="admin-travel-info-badge"
                     th:text="${info.scope.name() == 'DOMESTIC'} ? '국내' : '해외'">국내</span>
-            </td>
-            <td>
-              <span class="admin-travel-info-badge is-type"
-                    th:text="${info.contentType.name() == 'GENERAL'} ? '일반' : '축제'">일반</span>
             </td>
             <td th:text="${info.categoryName}">계절여행</td>
             <td th:text="${info.views}">0</td>
@@ -96,7 +82,7 @@
             </td>
           </tr>
           <tr th:if="${#lists.isEmpty(travelInfoList)}">
-            <td colspan="7" class="admin-table-empty">조건에 맞는 여행정보가 없습니다.</td>
+            <td colspan="6" class="admin-table-empty">조건에 맞는 여행정보가 없습니다.</td>
           </tr>
           </tbody>
         </table>

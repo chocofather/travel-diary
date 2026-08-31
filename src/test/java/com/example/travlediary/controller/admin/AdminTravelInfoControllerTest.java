@@ -68,18 +68,20 @@ class AdminTravelInfoControllerTest {
     private UserMapper userMapper;
 
     @Test
-    void adminCanOpenFilteredList() throws Exception {
+    void adminListAlwaysQueriesGeneralTravelInfo() throws Exception {
         AdminTravelInfoListItemDto item = new AdminTravelInfoListItemDto();
         item.setId(10L);
-        item.setTitle("벚꽃 여행");
+        item.setTitle("벚꽃 여행 가이드");
         item.setScope(TravelInfoScope.DOMESTIC);
-        item.setContentType(TravelInfoContentType.FESTIVAL);
+        item.setContentType(TravelInfoContentType.GENERAL);
         item.setCategoryName("계절여행");
         item.setViews(12);
         item.setCreatedAt(Timestamp.valueOf("2026-04-01 10:00:00"));
         when(travelInfoService.getAdminList(TravelInfoScope.DOMESTIC,
-                TravelInfoContentType.FESTIVAL, 3L)).thenReturn(List.of(item));
-        when(infoCategoryService.getAll()).thenReturn(List.of(category(3L, "계절여행", true)));
+                TravelInfoContentType.GENERAL, 3L)).thenReturn(List.of(item));
+        when(infoCategoryService.getAll()).thenReturn(List.of(
+                category(3L, "계절여행", true, TravelInfoContentType.GENERAL),
+                category(4L, "축제", true, TravelInfoContentType.FESTIVAL)));
 
         mockMvc.perform(get("/admin/travel-info")
                         .param("scope", "DOMESTIC")
@@ -89,10 +91,12 @@ class AdminTravelInfoControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/travel-info/list"))
                 .andExpect(model().attribute("scope", TravelInfoScope.DOMESTIC))
-                .andExpect(model().attribute("contentType", TravelInfoContentType.FESTIVAL))
                 .andExpect(model().attribute("categoryId", 3L))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("벚꽃 여행")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("벚꽃 여행 가이드")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("12")));
+
+        verify(travelInfoService).getAdminList(
+                TravelInfoScope.DOMESTIC, TravelInfoContentType.GENERAL, 3L);
     }
 
     @Test
@@ -158,6 +162,10 @@ class AdminTravelInfoControllerTest {
                 .andExpect(view().name("admin/travel-info/form"))
                 .andExpect(model().attribute("editMode", false))
                 .andExpect(model().attribute("formAction", "/admin/travel-info"))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "data-kto-festival-autofill")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "/js/admin-travel-info-festival-autofill.js")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("계절여행")))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("숨김 분류"))))
@@ -216,6 +224,11 @@ class AdminTravelInfoControllerTest {
                         "/uploads/travel-info/thumbnails/current.jpg"))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "src=\"/uploads/travel-info/thumbnails/current.jpg\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("data-kto-festival-autofill"))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString(
+                                "/js/admin-travel-info-festival-autofill.js"))))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("기존 숨김 분류 (숨김)")))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("다른 숨김 분류"))));

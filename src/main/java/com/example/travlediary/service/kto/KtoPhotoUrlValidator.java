@@ -10,7 +10,8 @@ import java.util.Locale;
 public class KtoPhotoUrlValidator {
 
     private static final String ALLOWED_HOST = "tong.visitkorea.or.kr";
-    private static final String ALLOWED_PATH_PREFIX = "/cms2/website/";
+    private static final String WEBSITE_PATH_PREFIX = "/cms2/website/";
+    private static final String FESTIVAL_RESOURCE_PATH_PREFIX = "/cms/resource/";
 
     private final HostResolver hostResolver;
 
@@ -64,7 +65,7 @@ public class KtoPhotoUrlValidator {
 
     private boolean hasAllowedPath(URI uri) {
         String path = uri.getPath();
-        if (path == null || !path.startsWith(ALLOWED_PATH_PREFIX)) {
+        if (!hasAllowedPathPrefix(path) || !hasAllowedPathPrefix(uri.getRawPath())) {
             return false;
         }
         for (String segment : path.split("/")) {
@@ -73,6 +74,11 @@ public class KtoPhotoUrlValidator {
             }
         }
         return uri.normalize().getPath().equals(path);
+    }
+
+    private boolean hasAllowedPathPrefix(String path) {
+        return path != null && (path.startsWith(WEBSITE_PATH_PREFIX)
+                || path.startsWith(FESTIVAL_RESOURCE_PATH_PREFIX));
     }
 
     private void verifyPublicAddresses(String host) {

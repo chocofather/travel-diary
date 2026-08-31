@@ -1014,6 +1014,34 @@ CREATE TABLE `faqs` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `festival_info`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `festival_info` (
+  `info_id` bigint NOT NULL,
+  `event_place` varchar(255) DEFAULT NULL,
+  `address` varchar(500) DEFAULT NULL,
+  `play_time` varchar(500) DEFAULT NULL,
+  `use_time` text,
+  `sponsor1` varchar(255) DEFAULT NULL,
+  `sponsor1_tel` varchar(100) DEFAULT NULL,
+  `sponsor2` varchar(255) DEFAULT NULL,
+  `sponsor2_tel` varchar(100) DEFAULT NULL,
+  `contact_tel` varchar(100) DEFAULT NULL,
+  `homepage_url` varchar(1000) DEFAULT NULL,
+  `source_type` varchar(30) NOT NULL DEFAULT 'ADMIN',
+  `external_content_id` varchar(100) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`info_id`),
+  UNIQUE KEY `uq_festival_info_source_external_content` (`source_type`,`external_content_id`),
+  CONSTRAINT `fk_festival_info_travel_info` FOREIGN KEY (`info_id`) REFERENCES `travel_info` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `info_periods`
 --
 
@@ -1056,6 +1084,13 @@ CREATE TABLE `info_categories` (
 CREATE TABLE `info_images` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `image_url` varchar(255) NOT NULL,
+  `source_type` varchar(30) NOT NULL DEFAULT 'ADMIN_UPLOAD',
+  `source_name` varchar(100) DEFAULT NULL,
+  `external_content_id` varchar(100) DEFAULT NULL,
+  `source_title` varchar(255) DEFAULT NULL,
+  `license_type` varchar(50) DEFAULT NULL,
+  `source_image_url` varchar(1000) DEFAULT NULL,
+  `license_checked_at` datetime DEFAULT NULL,
   `is_main` tinyint NOT NULL DEFAULT '0',
   `order_index` int NOT NULL DEFAULT '1',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,

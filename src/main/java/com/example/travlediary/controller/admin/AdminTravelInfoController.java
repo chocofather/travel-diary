@@ -38,13 +38,12 @@ public class AdminTravelInfoController {
 
     @GetMapping
     public String list(@RequestParam(required = false) TravelInfoScope scope,
-                       @RequestParam(required = false) TravelInfoContentType contentType,
                        @RequestParam(required = false) Long categoryId,
                        Model model) {
-        model.addAttribute("travelInfoList", travelInfoService.getAdminList(scope, contentType, categoryId));
-        model.addAttribute("categories", infoCategoryService.getAll());
+        model.addAttribute("travelInfoList", travelInfoService.getAdminList(
+                scope, TravelInfoContentType.GENERAL, categoryId));
+        model.addAttribute("categories", categoriesByContentType(TravelInfoContentType.GENERAL));
         model.addAttribute("scope", scope);
-        model.addAttribute("contentType", contentType);
         model.addAttribute("categoryId", categoryId);
         return LIST_VIEW;
     }
@@ -145,6 +144,12 @@ public class AdminTravelInfoController {
         return infoCategoryService.getAll().stream()
                 .filter(category -> Boolean.TRUE.equals(category.getIsVisible())
                         || Objects.equals(category.getId(), selectedCategoryId))
+                .toList();
+    }
+
+    private List<InfoCategory> categoriesByContentType(TravelInfoContentType contentType) {
+        return infoCategoryService.getAll().stream()
+                .filter(category -> category.getContentType() == contentType)
                 .toList();
     }
 }

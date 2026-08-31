@@ -62,6 +62,8 @@ public interface TravelInfoMapper {
 
     InfoImage findMainImageByInfoId(Long infoId);
 
+    List<InfoImage> findImagesByInfoId(Long infoId);
+
     List<String> findMainImageUrlsByInfoId(Long infoId);
 
     int insertInfoImage(InfoImage infoImage);

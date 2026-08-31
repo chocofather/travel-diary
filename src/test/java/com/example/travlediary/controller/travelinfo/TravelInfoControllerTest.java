@@ -4,9 +4,12 @@ import com.example.travlediary.config.CustomLoginSuccessHandler;
 import com.example.travlediary.config.CustomLogoutSuccessHandler;
 import com.example.travlediary.config.SecurityConfig;
 import com.example.travlediary.dto.TravelInfoDetailDto;
+import com.example.travlediary.dto.FestivalDetailDto;
 import com.example.travlediary.dto.TravelInfoListItemDto;
 import com.example.travlediary.dto.TravelInfoPeriodDto;
+import com.example.travlediary.model.FestivalInfo;
 import com.example.travlediary.model.InfoCategory;
+import com.example.travlediary.model.InfoImage;
 import com.example.travlediary.model.TravelInfoContentType;
 import com.example.travlediary.model.TravelInfoScope;
 import com.example.travlediary.model.User;
@@ -14,6 +17,7 @@ import com.example.travlediary.model.UserRole;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.category.InfoCategoryService;
+import com.example.travlediary.service.travelinfo.FestivalDetailService;
 import com.example.travlediary.service.travelinfo.TravelInfoService;
 import org.junit.jupiter.api.Test;
 import org.jsoup.Jsoup;
@@ -44,6 +48,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
@@ -56,6 +61,8 @@ class TravelInfoControllerTest {
 
     @MockitoBean
     private TravelInfoService travelInfoService;
+    @MockitoBean
+    private FestivalDetailService festivalDetailService;
     @MockitoBean
     private InfoCategoryService infoCategoryService;
     @MockitoBean
@@ -105,6 +112,33 @@ class TravelInfoControllerTest {
                 });
 
         verify(infoCategoryService).getVisibleByContentType(TravelInfoContentType.GENERAL);
+    }
+
+    @Test
+    void listLinksGeneralAndFestivalCardsToTheirDedicatedDetails() throws Exception {
+        TravelInfoListItemDto general = item(11L, "일반 여행정보",
+                TravelInfoScope.DOMESTIC, TravelInfoContentType.GENERAL, null);
+        TravelInfoListItemDto festival = item(12L, "가을 축제",
+                TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL, null);
+        when(travelInfoService.getPublicList(null, null, List.of(), null, "latest", 0L, 12))
+                .thenReturn(List.of(general, festival));
+        when(travelInfoService.countPublicList(null, null, List.of(), null)).thenReturn(2L);
+        when(infoCategoryService.getVisibleByContentType(TravelInfoContentType.GENERAL))
+                .thenReturn(List.of(category()));
+
+        mockMvc.perform(get("/travel-info"))
+                .andExpect(status().isOk())
+                .andExpect(result -> {
+                    var document = Jsoup.parse(result.getResponse().getContentAsString());
+                    var linksByTitle = document.select("a.travel-info-card-link").stream()
+                            .collect(java.util.stream.Collectors.toMap(
+                                    element -> element.text(),
+                                    element -> element.attr("href")));
+                    assertThat(linksByTitle.get("일반 여행정보"))
+                            .startsWith("/travel-info/11?returnUrl=");
+                    assertThat(linksByTitle.get("가을 축제"))
+                            .startsWith("/festivals/12?returnUrl=");
+                });
     }
 
     @Test
@@ -450,39 +484,180 @@ class TravelInfoControllerTest {
     }
 
     @Test
-    void guestCanOpenFestivalDetailWithAllPeriodsRichTextAndValidatedListUrl() throws Exception {
+    void legacyTravelInfoFestivalDetailRedirectsToDedicatedFestivalUrl() throws Exception {
+        when(festivalDetailService.isPublicFestival(10L)).thenReturn(true);
+
+        mockMvc.perform(get("/travel-info/10"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/festivals/10"));
+
+        verify(travelInfoService, never()).getPublicDetail(10L);
+    }
+
+    @Test
+    void legacyFestivalRedirectPreservesOnlyValidatedTravelInfoReturnUrl() throws Exception {
+        when(festivalDetailService.isPublicFestival(10L)).thenReturn(true);
+
+        mockMvc.perform(get("/travel-info/10")
+                        .param("returnUrl", "/travel-info?contentType=FESTIVAL&page=2"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl(
+                        "/festivals/10?returnUrl=%2Ftravel-info%3FcontentType%3DFESTIVAL%26page%3D2"));
+
+        mockMvc.perform(get("/travel-info/10")
+                        .param("returnUrl", "https://evil.example/travel-info"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/festivals/10?returnUrl=%2Ftravel-info"));
+    }
+
+    @Test
+    void guestCanOpenFestivalDetailWithStructuredDataLocalImageAndType3Attribution() throws Exception {
         TravelInfoDetailDto detail = detail(TravelInfoContentType.FESTIVAL);
         detail.setContent("<p><span class=\"ql-font-noto-serif-kr\">축제 본문</span></p>"
                 + "<img src=\"/uploads/editor/festival.png\" width=\"600\" alt=\"축제\">");
         detail.setPeriods(List.of(
-                new TravelInfoPeriodDto(LocalDate.parse("2026-08-10"), LocalDate.parse("2026-08-15")),
-                new TravelInfoPeriodDto(LocalDate.parse("2026-08-20"), LocalDate.parse("2026-08-25"))));
-        when(travelInfoService.getPublicDetail(10L)).thenReturn(detail);
+                new TravelInfoPeriodDto(LocalDate.parse("2026-09-02"), LocalDate.parse("2026-10-24"))));
+        FestivalInfo festivalInfo = festivalInfo();
+        InfoImage mainImage = mainImage("KOGL_TYPE_3");
+        FestivalDetailDto festival = new FestivalDetailDto(detail, festivalInfo, mainImage);
+        when(festivalDetailService.getPublicDetail(10L)).thenReturn(festival);
 
         mockMvc.perform(get(URI.create(
-                "/travel-info/10?returnUrl=%2Ftravel-info%3Fkeyword%3D"
+                "/festivals/10?returnUrl=%2Ftravel-info%3Fkeyword%3D"
                         + "%25ED%258C%258C%25EB%25A6%25AC%26scope%3Ddomestic"
                         + "%26contentType%3Dfestival%26categoryId%3D1%26categoryId%3D3"
                         + "%26categoryId%3D1%26sort%3Dviews%26page%3D2%26size%3D24")))
                 .andExpect(status().isOk())
-                .andExpect(view().name("travel-info/detail"))
-                .andExpect(model().attribute("travelInfo", detail))
-                .andExpect(model().attribute("pageTitle", "공개 여행정보 | 여행정보"))
+                .andExpect(view().name("festivals/detail"))
+                .andExpect(model().attribute("festival", festival))
+                .andExpect(model().attribute("pageTitle", "공개 여행정보 | 축제·행사"))
                 .andExpect(model().attribute("listUrl",
                         "/travel-info?keyword=%ED%8C%8C%EB%A6%AC"
                                 + "&scope=DOMESTIC&contentType=FESTIVAL"
                                 + "&categoryId=1&categoryId=3&sort=views&page=2&size=24"))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("공개 여행정보")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("행사 기간")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("2026-08-10")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("2026-08-25")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("2026.09.02")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("2026.10.24")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("경복궁")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("서울특별시 종로구 사직로 161")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("1부 18:20~20:10")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("1인 60,000원")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("국가유산청 궁능유적본부")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("국가유산진흥원")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("1522-2295")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("공식 홈페이지")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("target=\"_blank\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("rel=\"noopener noreferrer\"")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "class=\"travel-info-detail-content rich-text-content\"")))
+                        "src=\"/uploads/travel-info/festivals/local.jpg\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("https://tong.visitkorea.or.kr/source.jpg"))))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("한국관광공사")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("공공누리 제3유형")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "class=\"festival-detail-content rich-text-content\"")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "<span class=\"ql-font-noto-serif-kr\">축제 본문</span>")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("최종 수정")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("행사 정보")));
+    }
+
+    @Test
+    void festivalDetailWithoutImageOrOptionalValuesRendersWithoutEmptyRows() throws Exception {
+        TravelInfoDetailDto detail = detail(TravelInfoContentType.FESTIVAL);
+        detail.setPeriods(List.of());
+        FestivalInfo festivalInfo = new FestivalInfo();
+        festivalInfo.setInfoId(10L);
+        festivalInfo.setEventPlace("   ");
+        festivalInfo.setAddress(null);
+        festivalInfo.setSponsor1Tel("02-1111-2222");
+        festivalInfo.setHomepageUrl("javascript:alert(1)");
+        when(festivalDetailService.getPublicDetail(10L))
+                .thenReturn(new FestivalDetailDto(detail, festivalInfo, (InfoImage) null));
+
+        mockMvc.perform(get("/festivals/10"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("대표이미지가 없습니다")))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
-                        org.hamcrest.Matchers.containsString("travel-info-thumbnail"))));
+                        org.hamcrest.Matchers.containsString("사진 출처:"))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString(">장소<"))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString(">주소<"))))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(">주최<")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("02-1111-2222")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("javascript:alert"))));
+    }
+
+    @Test
+    void festivalDetailDisplaysType1AttributionFromStoredLicense() throws Exception {
+        TravelInfoDetailDto detail = detail(TravelInfoContentType.FESTIVAL);
+        when(festivalDetailService.getPublicDetail(10L)).thenReturn(
+                new FestivalDetailDto(detail, festivalInfo(), mainImage("KOGL_TYPE_1")));
+
+        mockMvc.perform(get("/festivals/10"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("공공누리 제1유형")));
+    }
+
+    @Test
+    void singleFestivalImageHidesGalleryNavigationAndDuplicateFestivalKicker() throws Exception {
+        TravelInfoDetailDto detail = detail(TravelInfoContentType.FESTIVAL);
+        detail.setCategoryName("축제");
+        when(festivalDetailService.getPublicDetail(10L)).thenReturn(
+                new FestivalDetailDto(detail, festivalInfo(), mainImage("KOGL_TYPE_1")));
+
+        mockMvc.perform(get("/festivals/10"))
+                .andExpect(status().isOk())
+                .andExpect(result -> {
+                    var document = Jsoup.parse(result.getResponse().getContentAsString());
+                    assertThat(document.select(".festival-detail-category")).singleElement()
+                            .extracting(org.jsoup.nodes.Element::text)
+                            .isEqualTo("축제");
+                    assertThat(document.select(".festival-detail-kicker")).isEmpty();
+                    assertThat(document.select("[data-festival-gallery-slide]")).hasSize(1);
+                    assertThat(document.select("[data-festival-gallery-prev],"
+                            + "[data-festival-gallery-next],.festival-detail-gallery-counter"))
+                            .isEmpty();
+                });
+    }
+
+    @Test
+    void multipleFestivalImagesRenderInOrderWithPerImageAttributionAndGalleryControls() throws Exception {
+        TravelInfoDetailDto detail = detail(TravelInfoContentType.FESTIVAL);
+        InfoImage main = mainImage("KOGL_TYPE_1");
+        main.setOrderIndex(1);
+        InfoImage additional = new InfoImage();
+        additional.setImageUrl("/uploads/travel-info/festivals/additional.jpg");
+        additional.setSourceType("KTO_TOURAPI");
+        additional.setSourceName("한국관광공사");
+        additional.setSourceTitle("야간 공연");
+        additional.setLicenseType("KOGL_TYPE_3");
+        additional.setSourceImageUrl("https://tong.visitkorea.or.kr/cms/resource/35/source.jpg");
+        additional.setIsMain(false);
+        additional.setOrderIndex(2);
+        when(festivalDetailService.getPublicDetail(10L)).thenReturn(
+                new FestivalDetailDto(detail, festivalInfo(), List.of(main, additional)));
+
+        mockMvc.perform(get("/festivals/10"))
+                .andExpect(status().isOk())
+                .andExpect(result -> {
+                    var document = Jsoup.parse(result.getResponse().getContentAsString());
+                    assertThat(document.select("[data-festival-gallery-slide] img").eachAttr("src"))
+                            .containsExactly(
+                                    "/uploads/travel-info/festivals/local.jpg",
+                                    "/uploads/travel-info/festivals/additional.jpg");
+                    assertThat(document.select("[data-festival-gallery-prev]")).hasSize(1);
+                    assertThat(document.select("[data-festival-gallery-next]")).hasSize(1);
+                    assertThat(document.selectFirst(".festival-detail-gallery-counter").text())
+                            .isEqualTo("1 / 2");
+                    assertThat(document.select("[data-festival-gallery-slide]").get(0)
+                            .attr("data-license-label")).isEqualTo("공공누리 제1유형");
+                    assertThat(document.select("[data-festival-gallery-slide]").get(1)
+                            .attr("data-license-label")).isEqualTo("공공누리 제3유형");
+                    assertThat(result.getResponse().getContentAsString())
+                            .doesNotContain("https://tong.visitkorea.or.kr/cms/resource/35/source.jpg");
+                });
     }
 
     @Test
@@ -625,6 +800,38 @@ class TravelInfoControllerTest {
         detail.setCreatedAt(Timestamp.valueOf("2026-08-01 10:00:00"));
         detail.setUpdatedAt(Timestamp.valueOf("2026-08-02 11:00:00"));
         return detail;
+    }
+
+    private FestivalInfo festivalInfo() {
+        FestivalInfo info = new FestivalInfo();
+        info.setInfoId(10L);
+        info.setEventPlace("경복궁");
+        info.setAddress("서울특별시 종로구 사직로 161");
+        info.setPlayTime("1부 18:20~20:10 / 2부 19:30~21:20");
+        info.setUseTime("1인 60,000원");
+        info.setSponsor1("국가유산청 궁능유적본부");
+        info.setSponsor1Tel("02-1234-5678");
+        info.setSponsor2("국가유산진흥원");
+        info.setSponsor2Tel("02-9876-5432");
+        info.setContactTel("1522-2295");
+        info.setHomepageUrl("https://www.example.com/festival");
+        info.setSourceType("KTO_TOURAPI");
+        info.setExternalContentId("2648460");
+        return info;
+    }
+
+    private InfoImage mainImage(String licenseType) {
+        InfoImage image = new InfoImage();
+        image.setImageUrl("/uploads/travel-info/festivals/local.jpg");
+        image.setSourceType("KTO_TOURAPI");
+        image.setSourceName("한국관광공사");
+        image.setSourceTitle("경복궁 별빛야행");
+        image.setLicenseType(licenseType);
+        image.setSourceImageUrl("https://tong.visitkorea.or.kr/source.jpg");
+        image.setIsMain(true);
+        image.setOrderIndex(1);
+        image.setInfoId(10L);
+        return image;
     }
 
     private CustomUserDetails principal(Long id) {

@@ -1,0 +1,372 @@
+document.addEventListener('DOMContentLoaded', () => {
+    const panel = document.querySelector('[data-admin-festival-autofill]');
+    const form = document.getElementById('festival-create-form');
+    if (!panel || !form) return;
+
+    window.initQuillEditor('#festival-editor', 'festival-content', 'festival-create-form', 'festival-initial-content');
+
+    const scope = document.getElementById('festival-scope');
+    const title = document.getElementById('festival-title');
+    const category = document.getElementById('festival-category');
+    const eventStartDate = document.getElementById('festival-start-date');
+    const eventEndDate = document.getElementById('festival-end-date');
+    const eventPlace = document.getElementById('festival-event-place');
+    const address = document.getElementById('festival-address');
+    const playTime = document.getElementById('festival-play-time');
+    const useTime = document.getElementById('festival-use-time');
+    const sponsor1 = document.getElementById('festival-sponsor1');
+    const sponsor1Tel = document.getElementById('festival-sponsor1-tel');
+    const sponsor2 = document.getElementById('festival-sponsor2');
+    const sponsor2Tel = document.getElementById('festival-sponsor2-tel');
+    const contactTel = document.getElementById('festival-contact-tel');
+    const homepageUrl = document.getElementById('festival-homepage-url');
+    const ktoFestivalContentId = document.getElementById('kto-festival-content-id');
+    const searchModeButtons = panel.querySelectorAll('[data-festival-search-mode]');
+    const searchPanels = panel.querySelectorAll('[data-festival-search-panel]');
+    const keyword = panel.querySelector('[data-festival-search-keyword]');
+    const startDate = panel.querySelector('[data-festival-search-start-date]');
+    const endDate = panel.querySelector('[data-festival-search-end-date]');
+    const keywordSearchButton = panel.querySelector('[data-festival-keyword-search-button]');
+    const periodSearchButton = panel.querySelector('[data-festival-period-search-button]');
+    const periodYear = panel.querySelector('[data-festival-period-year]');
+    const monthButtons = panel.querySelectorAll('[data-festival-month]');
+    const directPeriodToggle = panel.querySelector('[data-festival-direct-period-toggle]');
+    const directPeriodPanel = panel.querySelector('[data-festival-direct-period-panel]');
+    const status = panel.querySelector('[data-festival-status]');
+    const results = panel.querySelector('[data-festival-results]');
+    const editorElement = document.getElementById('festival-editor');
+
+    if (!scope || !title || !category || !eventStartDate || !eventEndDate || !eventPlace || !address
+        || !playTime || !useTime || !sponsor1 || !sponsor1Tel || !sponsor2 || !sponsor2Tel || !contactTel
+        || !homepageUrl || !ktoFestivalContentId || !keyword || !startDate || !endDate || !keywordSearchButton || !periodSearchButton
+        || !periodYear || !directPeriodToggle || !directPeriodPanel || !status || !results || !editorElement) return;
+
+    const managedValues = new Map();
+    let lastSelectedContentId = null;
+    let searchRequestGeneration = 0;
+    let detailRequestGeneration = 0;
+
+    searchModeButtons.forEach(button => button.addEventListener('click', () => {
+        setSearchMode(button.dataset.festivalSearchMode);
+    }));
+    keywordSearchButton.addEventListener('click', searchByKeyword);
+    periodSearchButton.addEventListener('click', searchByPeriod);
+    monthButtons.forEach(button => button.addEventListener('click', () => {
+        searchByMonth(Number(button.dataset.festivalMonth), button);
+    }));
+    directPeriodToggle.addEventListener('click', toggleDirectPeriod);
+    keyword.addEventListener('keydown', event => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            searchByKeyword();
+        }
+    });
+    populatePeriodYears(new Date().getFullYear());
+    setSearchMode('keyword');
+
+    function setSearchMode(mode) {
+        if (mode !== 'keyword' && mode !== 'period') return;
+        searchRequestGeneration += 1;
+        detailRequestGeneration += 1;
+        searchModeButtons.forEach(button => {
+            const active = button.dataset.festivalSearchMode === mode;
+            button.classList.toggle('active', active);
+            button.setAttribute('aria-selected', String(active));
+        });
+        searchPanels.forEach(searchPanel => {
+            searchPanel.hidden = searchPanel.dataset.festivalSearchPanel !== mode;
+        });
+        keywordSearchButton.disabled = false;
+        periodSearchButton.disabled = false;
+        monthButtons.forEach(button => button.disabled = false);
+        results.replaceChildren();
+        setStatus(mode === 'keyword'
+            ? '축제·행사명을 입력한 뒤 검색해 주세요.'
+            : '검색 시작일을 선택한 뒤 검색해 주세요.');
+    }
+
+    async function searchByKeyword() {
+        const normalizedKeyword = keyword.value.trim();
+        results.replaceChildren();
+        if (!normalizedKeyword) {
+            setStatus('축제·행사명을 입력해 주세요.', true);
+            keyword.focus();
+            return;
+        }
+
+        const params = new URLSearchParams({keyword: normalizedKeyword, pageNo: '1', numOfRows: '10'});
+        await requestCandidates(
+            `/admin/api/kto/festivals/search-by-keyword?${params.toString()}`,
+            keywordSearchButton,
+            'TourAPI에서 축제·행사를 검색하고 있습니다.'
+        );
+    }
+
+    async function searchByPeriod() {
+        const normalizedStartDate = startDate.value.trim();
+        const normalizedEndDate = endDate.value.trim();
+        results.replaceChildren();
+        if (!normalizedStartDate) {
+            setStatus('검색 시작일을 선택해 주세요.', true);
+            startDate.focus();
+            return;
+        }
+        if (normalizedEndDate && normalizedEndDate < normalizedStartDate) {
+            setStatus('검색 종료일은 시작일보다 빠를 수 없습니다.', true);
+            endDate.focus();
+            return;
+        }
+
+        await searchByPeriodRange(normalizedStartDate, normalizedEndDate, periodSearchButton);
+    }
+
+    async function searchByMonth(month, button) {
+        const year = Number(periodYear.value);
+        if (!Number.isInteger(year) || month < 1 || month > 12) return;
+
+        const range = monthDateRange(year, month);
+        startDate.value = range.startDate;
+        endDate.value = range.endDate;
+        monthButtons.forEach(monthButton => {
+            monthButton.classList.toggle('active', monthButton === button);
+        });
+        results.replaceChildren();
+        await searchByPeriodRange(range.startDate, range.endDate, button);
+    }
+
+    async function searchByPeriodRange(eventStartDate, eventEndDate, button) {
+        const params = new URLSearchParams({eventStartDate, pageNo: '1', numOfRows: '10'});
+        if (eventEndDate) params.set('eventEndDate', eventEndDate);
+        await requestCandidates(
+            `/admin/api/kto/festivals/search?${params.toString()}`,
+            button,
+            'TourAPI에서 축제·행사를 검색하고 있습니다.'
+        );
+    }
+
+    function populatePeriodYears(currentYear) {
+        for (let year = currentYear - 5; year <= currentYear + 5; year += 1) {
+            const option = document.createElement('option');
+            option.value = String(year);
+            option.textContent = `${year}년`;
+            option.selected = year === currentYear;
+            periodYear.append(option);
+        }
+    }
+
+    function toggleDirectPeriod() {
+        const expanded = directPeriodToggle.getAttribute('aria-expanded') !== 'true';
+        directPeriodToggle.setAttribute('aria-expanded', String(expanded));
+        directPeriodPanel.hidden = !expanded;
+    }
+
+    function monthDateRange(year, month) {
+        const start = new Date(year, month - 1, 1);
+        const end = new Date(year, month, 0);
+        return {
+            startDate: formatDate(start),
+            endDate: formatDate(end)
+        };
+    }
+
+    function formatDate(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    async function requestCandidates(url, button, loadingMessage) {
+        const requestGeneration = ++searchRequestGeneration;
+        setSearchLoading(button, true, loadingMessage);
+        try {
+            const response = await fetch(url, {headers: {Accept: 'application/json'}});
+            const payload = await response.json();
+            if (requestGeneration !== searchRequestGeneration) return;
+            if (!response.ok) throw new Error(payload.message || '축제·행사를 검색하지 못했습니다.');
+            renderCandidates(Array.isArray(payload.items) ? payload.items : []);
+        } catch (error) {
+            if (requestGeneration === searchRequestGeneration) setStatus(error.message || '축제·행사를 검색하지 못했습니다.', true);
+        } finally {
+            if (requestGeneration === searchRequestGeneration) button.disabled = false;
+        }
+    }
+
+    function renderCandidates(items) {
+        results.replaceChildren();
+        if (!items.length) {
+            setStatus('검색 결과가 없습니다.');
+            return;
+        }
+        setStatus(`${items.length}개의 축제·행사 후보를 찾았습니다.`);
+        items.forEach(item => results.append(createCandidate(item)));
+    }
+
+    function createCandidate(item) {
+        const card = document.createElement('article');
+        card.className = 'admin-kto-festival-candidate';
+        const media = document.createElement('div');
+        media.className = 'admin-kto-festival-candidate-media';
+        const thumbnailUrl = safeHttpUrl(item.firstImage || item.firstImage2);
+        if (thumbnailUrl) {
+            const image = document.createElement('img');
+            image.src = thumbnailUrl;
+            image.alt = '';
+            image.loading = 'lazy';
+            media.append(image);
+        } else {
+            const placeholder = document.createElement('span');
+            placeholder.textContent = '이미지 없음';
+            media.append(placeholder);
+        }
+        const body = document.createElement('div');
+        body.className = 'admin-kto-festival-candidate-body';
+        const candidateTitle = document.createElement('strong');
+        candidateTitle.textContent = hasText(item.title) ? item.title : '제목 없음';
+        body.append(candidateTitle);
+        const period = formatPeriod(item.eventStartDate, item.eventEndDate);
+        if (period) body.append(createMetaText(period));
+        if (hasText(item.address)) body.append(createMetaText(item.address));
+        if (hasText(item.categoryName)) {
+            const categoryBadge = document.createElement('span');
+            categoryBadge.className = 'admin-kto-festival-category-badge';
+            categoryBadge.textContent = item.categoryName;
+            body.append(categoryBadge);
+        }
+        const selectButton = document.createElement('button');
+        selectButton.type = 'button';
+        selectButton.className = 'admin-btn is-small is-primary';
+        selectButton.textContent = '선택';
+        selectButton.disabled = !hasText(item.contentId);
+        selectButton.addEventListener('click', () => loadDetail(item));
+        card.append(media, body, selectButton);
+        return card;
+    }
+
+    async function loadDetail(item) {
+        if (!hasText(item.contentId)) return;
+        const requestGeneration = ++detailRequestGeneration;
+        setStatus(`${item.title || '선택한 행사'} 상세 정보를 불러오고 있습니다.`);
+        try {
+            const params = new URLSearchParams({contentId: item.contentId});
+            const response = await fetch(`/admin/api/kto/festivals/detail?${params.toString()}`, {headers: {Accept: 'application/json'}});
+            const detail = await response.json();
+            if (requestGeneration !== detailRequestGeneration) return;
+            if (!response.ok) throw new Error(detail.message || '축제·행사 상세 정보를 불러오지 못했습니다.');
+            const categoryResolved = applyAutofill(detail);
+            const replacingPrevious = lastSelectedContentId !== null && lastSelectedContentId !== item.contentId;
+            lastSelectedContentId = item.contentId;
+            if (!categoryResolved && hasText(detail.categoryName)) {
+                setStatus(`${detail.categoryName} 카테고리를 찾지 못했습니다. 카테고리를 직접 선택해 주세요.`, true);
+                return;
+            }
+            setStatus(`${detail.title || item.title || '선택한 행사'} 정보를 ${replacingPrevious ? '새 후보 기준으로 갱신했습니다.' : '빈 항목에 입력했습니다.'}`);
+        } catch (error) {
+            if (requestGeneration === detailRequestGeneration) setStatus(error.message || '축제·행사 상세 정보를 불러오지 못했습니다.', true);
+        }
+    }
+
+    function applyAutofill(detail) {
+        ktoFestivalContentId.value = hasText(detail.contentId) ? String(detail.contentId).trim() : '';
+        setManagedField('scope', scope, 'DOMESTIC');
+        setManagedField('title', title, detail.title);
+        setManagedField('eventStartDate', eventStartDate, detail.eventStartDate);
+        setManagedField('eventEndDate', eventEndDate, detail.eventEndDate);
+        const categoryOption = findFestivalCategory(detail.categoryName);
+        if (categoryOption) setManagedField('categoryId', category, categoryOption.value);
+        setManagedEditor(detail.overview);
+        setManagedField('eventPlace', eventPlace, detail.eventPlace);
+        setManagedField('address', address, detail.address);
+        setManagedField('playTime', playTime, detail.playTime);
+        setManagedField('useTime', useTime, detail.useTimeFestival);
+        setManagedField('sponsor1', sponsor1, detail.sponsor1);
+        setManagedField('sponsor1Tel', sponsor1Tel, detail.sponsor1Tel);
+        setManagedField('sponsor2', sponsor2, detail.sponsor2);
+        setManagedField('sponsor2Tel', sponsor2Tel, detail.sponsor2Tel);
+        setManagedField('contactTel', contactTel, detail.tel);
+        setManagedField('homepageUrl', homepageUrl, detail.eventHomepage || detail.homepage);
+        return Boolean(categoryOption);
+    }
+
+    function findFestivalCategory(categoryName) {
+        if (!hasText(categoryName)) return null;
+        const expectedName = normalizeCategoryName(categoryName);
+        return Array.from(category.options).find(option => normalizeCategoryName(option.textContent) === expectedName) || null;
+    }
+
+    function setManagedField(fieldKey, element, nextValue) {
+        if (!element || !hasText(nextValue)) return false;
+        const normalizedValue = String(nextValue).trim();
+        const currentValue = element.value.trim();
+        const mayReplace = !currentValue || (managedValues.has(fieldKey) && currentValue === managedValues.get(fieldKey));
+        if (!mayReplace) return false;
+        element.value = normalizedValue;
+        managedValues.set(fieldKey, element.value.trim());
+        element.dispatchEvent(new Event('input', {bubbles: true}));
+        element.dispatchEvent(new Event('change', {bubbles: true}));
+        return true;
+    }
+
+    function setManagedEditor(value) {
+        if (!hasText(value)) return false;
+        const quill = editorElement.quillEditorInstance;
+        if (!quill) return false;
+        const currentHtml = quill.getSemanticHTML();
+        const editorIsEmpty = !quill.getText().trim() && !quill.root.querySelector('img[src]');
+        const mayReplace = editorIsEmpty || (managedValues.has('content') && currentHtml === managedValues.get('content'));
+        if (!mayReplace) return false;
+        const container = document.createElement('div');
+        String(value).split(/\r?\n/).forEach(line => {
+            if (!line.trim()) return;
+            const paragraph = document.createElement('p');
+            paragraph.textContent = line.trim();
+            container.append(paragraph);
+        });
+        const delta = quill.clipboard.convert({html: container.innerHTML, text: ''});
+        quill.setContents(delta, 'silent');
+        managedValues.set('content', quill.getSemanticHTML());
+        return true;
+    }
+
+    function normalizeCategoryName(value) {
+        return String(value || '').trim().replace(/\s+\(숨김\)$/, '');
+    }
+
+    function formatPeriod(first, second) {
+        if (!hasText(first)) return hasText(second) ? second : '';
+        if (!hasText(second) || first === second) return first;
+        return `${first} ~ ${second}`;
+    }
+
+    function createMetaText(value) {
+        const element = document.createElement('span');
+        element.className = 'admin-kto-festival-candidate-meta';
+        element.textContent = value;
+        return element;
+    }
+
+    function safeHttpUrl(value) {
+        if (!hasText(value)) return null;
+        try {
+            const url = new URL(String(value).trim());
+            if ((url.protocol !== 'http:' && url.protocol !== 'https:') || url.username || url.password) return null;
+            return url.toString();
+        } catch {
+            return null;
+        }
+    }
+
+    function hasText(value) {
+        return value !== null && value !== undefined && String(value).trim() !== '';
+    }
+
+    function setSearchLoading(button, loading, message) {
+        button.disabled = loading;
+        setStatus(message);
+    }
+
+    function setStatus(message, isError = false) {
+        status.textContent = message;
+        status.classList.toggle('is-error', isError);
+    }
+});

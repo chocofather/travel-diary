@@ -11,13 +11,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 class AdminTravelInfoUiContractTest {
 
     @Test
-    void menuAndDashboardLinkToTravelInfo() throws IOException {
+    void menuAndDashboardSeparateTravelInfoAndFestivals() throws IOException {
         assertThat(resource("/templates/fragments/admin/sidebar.html"))
                 .contains("th:href=\"@{/admin/travel-info}\">여행정보</a>")
                 .contains("activeMenu == 'travel-info'")
+                .contains("th:href=\"@{/admin/festivals}\">축제·행사</a>")
+                .contains("activeMenu == 'festivals'")
                 .doesNotContain("여행정보</span>\n        <span class=\"admin-nav-badge\">준비 중");
         assertThat(resource("/templates/admin/index.html"))
-                .contains("th:href=\"@{/admin/travel-info}\">여행정보</a>");
+                .contains("th:href=\"@{/admin/travel-info}\">여행정보</a>")
+                .contains("th:href=\"@{/admin/festivals}\">축제·행사</a>");
     }
 
     @Test
@@ -27,10 +30,10 @@ class AdminTravelInfoUiContractTest {
         assertThat(list)
                 .contains("th:action=\"@{/admin/travel-info}\" method=\"get\"")
                 .contains("name=\"scope\"")
-                .contains("name=\"contentType\"")
                 .contains("name=\"categoryId\"")
                 .contains("th:action=\"@{/admin/travel-info/{id}/delete(id=${info.id})}\"")
                 .contains("method=\"post\"")
+                .doesNotContain("name=\"contentType\"", "value=\"FESTIVAL\"")
                 .doesNotContain("info_images", "image-upload", "대표 이미지");
     }
 

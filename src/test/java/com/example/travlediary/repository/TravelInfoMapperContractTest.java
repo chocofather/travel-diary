@@ -28,6 +28,23 @@ class TravelInfoMapperContractTest {
     }
 
     @Test
+    void adminListIncludesOneStableFestivalPeriodForFestivalManagement() throws IOException {
+        String mapper = mapper();
+        String resultMap = between(mapper, "<resultMap id=\"AdminListResultMap\"", "</resultMap>");
+        String query = between(mapper, "<select id=\"findAdminList\"", "</select>");
+
+        assertThat(resultMap)
+                .contains("property=\"startDate\" column=\"start_date\"")
+                .contains("property=\"endDate\" column=\"end_date\"");
+        assertThat(query)
+                .contains("LEFT JOIN info_periods festival_period")
+                .contains("festival_period.info_id = ti.id")
+                .contains("ti.content_type = 'FESTIVAL'")
+                .contains("ORDER BY period_candidate.start_date ASC, period_candidate.end_date ASC, period_candidate.id ASC")
+                .contains("festival_period.start_date", "festival_period.end_date");
+    }
+
+    @Test
     void publicListAndCountShareVisibleCategoryAndOptionalFilters() throws IOException {
         String mapper = mapper();
         String filters = between(mapper, "<sql id=\"PublicListFilters\"", "</sql>");
@@ -176,8 +193,10 @@ class TravelInfoMapperContractTest {
     void mainThumbnailQueriesUseOnlyMainInfoImagesAndStableOrdering() throws IOException {
         String mapper = mapper();
         String findOne = between(mapper, "<select id=\"findMainImageByInfoId\"", "</select>");
+        String findGallery = between(mapper, "<select id=\"findImagesByInfoId\"", "</select>");
         String findAllUrls = between(mapper, "<select id=\"findMainImageUrlsByInfoId\"", "</select>");
         String insert = between(mapper, "<insert id=\"insertInfoImage\"", "</insert>");
+        String resultMap = between(mapper, "<resultMap id=\"InfoImageResultMap\"", "</resultMap>");
         String delete = between(mapper, "<delete id=\"deleteMainImagesByInfoId\"", "</delete>");
 
         assertThat(findOne)
@@ -192,10 +211,28 @@ class TravelInfoMapperContractTest {
                 .contains("is_main = 1")
                 .contains("ORDER BY order_index ASC, id ASC")
                 .doesNotContain("LIMIT 1");
+        assertThat(findGallery)
+                .contains("FROM info_images")
+                .contains("WHERE info_id = #{infoId}")
+                .contains("ORDER BY order_index ASC, id ASC")
+                .doesNotContain("is_main = 1", "source_image_url AS image_url");
         assertThat(insert)
-                .contains("INSERT INTO info_images (image_url, is_main, order_index, info_id, created_at)")
-                .contains("#{imageUrl}, #{isMain}, #{orderIndex}, #{infoId}, NOW()")
+                .contains("INSERT INTO info_images")
+                .contains("image_url, source_type, source_name, external_content_id, source_title")
+                .contains("license_type, source_image_url, license_checked_at")
+                .contains("COALESCE(#{sourceType}, 'ADMIN_UPLOAD')")
+                .contains("#{imageUrl}", "#{sourceName}", "#{externalContentId}", "#{sourceTitle}")
+                .contains("#{licenseType}", "#{sourceImageUrl}", "#{licenseCheckedAt}")
+                .contains("#{isMain}", "#{orderIndex}", "#{infoId}", "NOW()")
                 .contains("useGeneratedKeys=\"true\"");
+        assertThat(resultMap)
+                .contains("property=\"sourceType\" column=\"source_type\"")
+                .contains("property=\"sourceName\" column=\"source_name\"")
+                .contains("property=\"externalContentId\" column=\"external_content_id\"")
+                .contains("property=\"sourceTitle\" column=\"source_title\"")
+                .contains("property=\"licenseType\" column=\"license_type\"")
+                .contains("property=\"sourceImageUrl\" column=\"source_image_url\"")
+                .contains("property=\"licenseCheckedAt\" column=\"license_checked_at\"");
         assertThat(delete)
                 .contains("DELETE FROM info_images")
                 .contains("info_id = #{infoId}")

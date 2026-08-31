@@ -16,6 +16,8 @@ class KtoPhotoUrlValidatorTest {
             "http://tong.visitkorea.or.kr/cms2/website/75/1002175.jpg";
     private static final String HTTPS_PHOTO_URL =
             "https://tong.visitkorea.or.kr/cms2/website/75/1002175.jpg";
+    private static final String FESTIVAL_RESOURCE_URL =
+            "https://tong.visitkorea.or.kr/cms/resource/35/4100435_image2_1.jpg";
 
     @Test
     void acceptsHttpAndHttpsKtoWebsiteImagesResolvedToPublicAddresses() throws Exception {
@@ -23,6 +25,13 @@ class KtoPhotoUrlValidatorTest {
 
         assertThat(validator.validate(HTTP_PHOTO_URL)).isEqualTo(URI.create(HTTP_PHOTO_URL));
         assertThat(validator.validate(HTTPS_PHOTO_URL)).isEqualTo(URI.create(HTTPS_PHOTO_URL));
+    }
+
+    @Test
+    void acceptsTourApiFestivalResourceImagesResolvedToPublicAddresses() throws Exception {
+        KtoPhotoUrlValidator validator = publicAddressValidator();
+
+        assertThat(validator.validate(FESTIVAL_RESOURCE_URL)).isEqualTo(URI.create(FESTIVAL_RESOURCE_URL));
     }
 
     @ParameterizedTest
@@ -37,6 +46,11 @@ class KtoPhotoUrlValidatorTest {
             "http://user@tong.visitkorea.or.kr/cms2/website/75/1002175.jpg",
             "http://tong.visitkorea.or.kr:8080/cms2/website/75/1002175.jpg",
             "http://tong.visitkorea.or.kr/not-website/1002175.jpg",
+            "https://example.com/cms/resource/35/4100435_image2_1.jpg",
+            "https://tong.visitkorea.or.kr/cms/resourceful/35/4100435_image2_1.jpg",
+            "https://tong.visitkorea.or.kr/cms/resource%2f35/4100435_image2_1.jpg",
+            "https://tong.visitkorea.or.kr/cms/resource/../cms2/website/75/1002175.jpg",
+            "https://tong.visitkorea.or.kr/cms/resource/%2e%2e/cms2/website/75/1002175.jpg",
             "http://[broken"
     })
     void rejectsUntrustedOrMalformedUrls(String imageUrl) throws Exception {

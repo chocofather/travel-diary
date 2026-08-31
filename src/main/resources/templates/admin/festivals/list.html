@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'festivals')}">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/admin-travel-info.css">
+</th:block>
+<th:block th:fragment="body">
+  <section class="admin-page-section admin-travel-info-page">
+    <header class="admin-page-header">
+      <div class="admin-page-heading">
+        <h1 class="admin-page-title">축제·행사 관리</h1>
+        <p class="admin-page-description">축제·공연·행사 정보를 조회하고 관리합니다.</p>
+      </div>
+      <div class="admin-page-actions">
+        <a th:href="@{/admin/festivals/create}" class="admin-btn is-primary">+ 축제·행사 등록</a>
+      </div>
+    </header>
+
+    <div class="admin-alert is-success" th:if="${festivalMessage}" role="status"
+         th:text="${festivalMessage}">축제·행사가 등록되었습니다.</div>
+    <div class="admin-alert is-warning" th:if="${festivalImageWarning}" role="status"
+         th:text="${festivalImageWarning}">대표이미지 없이 등록되었습니다.</div>
+
+    <div class="admin-filter-card">
+      <form th:action="@{/admin/festivals}" method="get" class="admin-filter-form">
+        <label class="admin-filter-field">
+          <span>범위</span>
+          <select name="scope" class="admin-select">
+            <option value="">전체</option>
+            <option value="DOMESTIC" th:selected="${scope != null and scope.name() == 'DOMESTIC'}">국내</option>
+            <option value="INTERNATIONAL" th:selected="${scope != null and scope.name() == 'INTERNATIONAL'}">해외</option>
+          </select>
+        </label>
+
+        <label class="admin-filter-field">
+          <span>축제 분류</span>
+          <select name="categoryId" class="admin-select">
+            <option value="">전체</option>
+            <option th:each="category : ${categories}"
+                    th:value="${category.id}"
+                    th:selected="${category.id == categoryId}"
+                    th:text="${category.name} + (${category.isVisible} ? '' : ' (숨김)')">축제</option>
+          </select>
+        </label>
+
+        <div class="admin-filter-actions">
+          <button type="submit" class="admin-btn is-primary">조회</button>
+          <a th:href="@{/admin/festivals}" class="admin-btn">초기화</a>
+        </div>
+      </form>
+    </div>
+
+    <div class="admin-card is-table-card">
+      <div class="admin-table-wrapper">
+        <table class="admin-table admin-travel-info-table">
+          <thead>
+          <tr>
+            <th>제목</th>
+            <th>범위</th>
+            <th>축제 분류</th>
+            <th>행사기간</th>
+            <th>조회수</th>
+            <th>작성일</th>
+            <th>관리</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr th:each="festival : ${festivalList}">
+            <td class="admin-travel-info-title" th:text="${festival.title}">축제 제목</td>
+            <td>
+              <span class="admin-travel-info-badge"
+                    th:text="${festival.scope.name() == 'DOMESTIC'} ? '국내' : '해외'">국내</span>
+            </td>
+            <td th:text="${festival.categoryName}">축제</td>
+            <td>
+              <span th:if="${festival.startDate != null and festival.endDate != null}"
+                    th:text="${#temporals.format(festival.startDate, 'yyyy-MM-dd') + ' ~ ' + #temporals.format(festival.endDate, 'yyyy-MM-dd')}">2026-05-01 ~ 2026-05-03</span>
+              <span th:unless="${festival.startDate != null and festival.endDate != null}">기간 미입력</span>
+            </td>
+            <td th:text="${festival.views}">0</td>
+            <td th:text="${#dates.format(festival.createdAt, 'yyyy-MM-dd')}">2026-08-09</td>
+            <td class="admin-table-actions">
+              <div class="admin-action-group admin-travel-info-actions">
+                <a th:href="@{/admin/festivals/{id}(id=${festival.id})}"
+                   class="admin-btn is-small">상세</a>
+                <a th:href="@{/admin/festivals/edit/{id}(id=${festival.id})}"
+                   class="admin-btn is-small">수정</a>
+                <span class="admin-btn is-small is-disabled" aria-disabled="true">삭제</span>
+              </div>
+            </td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(festivalList)}">
+            <td colspan="7" class="admin-table-empty">조건에 맞는 축제·행사가 없습니다.</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</th:block>
+</html>

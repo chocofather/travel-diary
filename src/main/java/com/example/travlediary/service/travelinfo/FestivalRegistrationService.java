@@ -1,0 +1,370 @@
+package com.example.travlediary.service.travelinfo;
+
+import com.example.travlediary.dto.FestivalCreateForm;
+import com.example.travlediary.model.FestivalInfo;
+import com.example.travlediary.model.InfoCategory;
+import com.example.travlediary.model.InfoImage;
+import com.example.travlediary.model.InfoPeriod;
+import com.example.travlediary.model.TravelInfo;
+import com.example.travlediary.model.TravelInfoContentType;
+import com.example.travlediary.repository.category.InfoCategoryMapper;
+import com.example.travlediary.repository.travelinfo.FestivalInfoMapper;
+import com.example.travlediary.repository.travelinfo.TravelInfoMapper;
+import com.example.travlediary.dto.kto.KtoFestivalAdditionalImage;
+import com.example.travlediary.dto.kto.KtoFestivalImageDetail;
+import com.example.travlediary.service.kto.InvalidKtoPhotoUrlException;
+import com.example.travlediary.service.kto.KtoDownloadedFestivalImage;
+import com.example.travlediary.service.kto.KtoFestivalImageDownloadService;
+import com.example.travlediary.service.kto.KtoFestivalImageLicense;
+import com.example.travlediary.service.kto.KtoFestivalService;
+import com.example.travlediary.service.kto.KtoPhotoDownloadException;
+import com.example.travlediary.service.kto.KtoTourApiException;
+import com.example.travlediary.service.post.PostContentSanitizer;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+
+@Service
+@Slf4j
+public class FestivalRegistrationService {
+
+    private static final String ADMIN_SOURCE_TYPE = "ADMIN";
+    private static final String KTO_SOURCE_TYPE = "KTO_TOURAPI";
+    private static final String KTO_SOURCE_NAME = "한국관광공사";
+    private static final String UNSUPPORTED_LICENSE_WARNING =
+            "TourAPI 대표이미지의 저작권 유형을 확인할 수 없어 이미지는 저장하지 않았습니다.";
+    private static final String IMAGE_DOWNLOAD_WARNING =
+            "TourAPI 대표이미지를 저장하지 못해 이미지 없이 등록했습니다.";
+    private static final String ADDITIONAL_IMAGE_WARNING =
+            "일부 TourAPI 추가이미지는 저작권을 확인할 수 없거나 다운로드하지 못해 건너뛰었습니다.";
+
+    private final TravelInfoMapper travelInfoMapper;
+    private final FestivalInfoMapper festivalInfoMapper;
+    private final InfoCategoryMapper infoCategoryMapper;
+    private final PostContentSanitizer postContentSanitizer;
+    private final KtoFestivalService ktoFestivalService;
+    private final KtoFestivalImageDownloadService festivalImageDownloadService;
+
+    public FestivalRegistrationService(TravelInfoMapper travelInfoMapper,
+                                       FestivalInfoMapper festivalInfoMapper,
+                                       InfoCategoryMapper infoCategoryMapper,
+                                       PostContentSanitizer postContentSanitizer,
+                                       KtoFestivalService ktoFestivalService,
+                                       KtoFestivalImageDownloadService festivalImageDownloadService) {
+        this.travelInfoMapper = travelInfoMapper;
+        this.festivalInfoMapper = festivalInfoMapper;
+        this.infoCategoryMapper = infoCategoryMapper;
+        this.postContentSanitizer = postContentSanitizer;
+        this.ktoFestivalService = ktoFestivalService;
+        this.festivalImageDownloadService = festivalImageDownloadService;
+    }
+
+    @Transactional
+    public FestivalRegistrationResult create(FestivalCreateForm form, Long userId) {
+        if (form == null) {
+            throw new FestivalValidationException(null, "축제·행사 정보를 입력해 주세요.");
+        }
+        if (userId == null) {
+            throw new FestivalValidationException(null, "작성자 정보를 확인할 수 없습니다.");
+        }
+
+        String title = requiredText(form.getTitle(), "title", "제목을 입력해 주세요.", 255);
+        if (form.getScope() == null) {
+            throw new FestivalValidationException("scope", "여행 범위를 선택해 주세요.");
+        }
+        if (form.getStartDate() == null) {
+            throw new FestivalValidationException("startDate", "행사 시작일을 입력해 주세요.");
+        }
+        if (form.getEndDate() == null) {
+            throw new FestivalValidationException("endDate", "행사 종료일을 입력해 주세요.");
+        }
+        if (form.getEndDate().isBefore(form.getStartDate())) {
+            throw new FestivalValidationException("endDate", "행사 종료일은 시작일보다 빠를 수 없습니다.");
+        }
+        InfoCategory category = validateFestivalCategory(form.getCategoryId());
+
+        String externalContentId = optionalText(form.getKtoFestivalContentId(), "ktoFestivalContentId", 100);
+        String sourceType = externalContentId == null ? ADMIN_SOURCE_TYPE : KTO_SOURCE_TYPE;
+        if (externalContentId != null
+                && festivalInfoMapper.countBySourceTypeAndExternalContentId(sourceType, externalContentId) > 0) {
+            throw duplicateTourApiFestival();
+        }
+
+        PreparedFestivalImages preparedImages = prepareTourApiImages(externalContentId, title);
+        boolean lifecycleRegistered = registerRollbackCleanup(preparedImages.downloadedImages());
+
+        try {
+            TravelInfo travelInfo = new TravelInfo();
+            travelInfo.setTitle(title);
+            travelInfo.setContent(postContentSanitizer.sanitize(form.getContent()));
+            travelInfo.setScope(form.getScope());
+            travelInfo.setContentType(TravelInfoContentType.FESTIVAL);
+            travelInfo.setCategoryId(category.getId());
+            travelInfo.setViews(0);
+            travelInfo.setUserId(userId);
+            requireSingleRow(travelInfoMapper.insertTravelInfo(travelInfo), "축제·행사 기본정보를 저장하지 못했습니다.");
+            if (travelInfo.getId() == null) {
+                throw new IllegalStateException("생성된 축제·행사 ID를 확인할 수 없습니다.");
+            }
+
+            InfoPeriod period = new InfoPeriod();
+            period.setInfoId(travelInfo.getId());
+            period.setStartDate(form.getStartDate());
+            period.setEndDate(form.getEndDate());
+            requireSingleRow(travelInfoMapper.insertPeriod(period), "축제·행사 기간을 저장하지 못했습니다.");
+
+            FestivalInfo festivalInfo = new FestivalInfo();
+            festivalInfo.setInfoId(travelInfo.getId());
+            festivalInfo.setEventPlace(optionalText(form.getEventPlace(), "eventPlace", 255));
+            festivalInfo.setAddress(optionalText(form.getAddress(), "address", 500));
+            festivalInfo.setPlayTime(optionalText(form.getPlayTime(), "playTime", 500));
+            festivalInfo.setUseTime(optionalText(form.getUseTime()));
+            festivalInfo.setSponsor1(optionalText(form.getSponsor1(), "sponsor1", 255));
+            festivalInfo.setSponsor1Tel(optionalText(form.getSponsor1Tel(), "sponsor1Tel", 100));
+            festivalInfo.setSponsor2(optionalText(form.getSponsor2(), "sponsor2", 255));
+            festivalInfo.setSponsor2Tel(optionalText(form.getSponsor2Tel(), "sponsor2Tel", 100));
+            festivalInfo.setContactTel(optionalText(form.getContactTel(), "contactTel", 100));
+            festivalInfo.setHomepageUrl(optionalText(form.getHomepageUrl(), "homepageUrl", 1000));
+            festivalInfo.setSourceType(sourceType);
+            festivalInfo.setExternalContentId(externalContentId);
+            try {
+                requireSingleRow(festivalInfoMapper.insert(festivalInfo), "축제·행사 상세정보를 저장하지 못했습니다.");
+            } catch (DuplicateKeyException exception) {
+                if (externalContentId != null) {
+                    throw duplicateTourApiFestival();
+                }
+                throw exception;
+            }
+
+            for (PreparedFestivalImage preparedImage : preparedImages.images()) {
+                insertTourApiImage(travelInfo.getId(), externalContentId, preparedImage);
+            }
+            return new FestivalRegistrationResult(travelInfo.getId(), preparedImages.warning());
+        } catch (RuntimeException exception) {
+            if (!lifecycleRegistered) {
+                deleteDownloadedImagesSafely(preparedImages.downloadedImages());
+            }
+            throw exception;
+        }
+    }
+
+    private PreparedFestivalImages prepareTourApiImages(String externalContentId, String fallbackTitle) {
+        if (externalContentId == null) {
+            return PreparedFestivalImages.none();
+        }
+
+        KtoFestivalImageDetail detail;
+        try {
+            detail = ktoFestivalService.getImageDetail(externalContentId);
+        } catch (KtoTourApiException exception) {
+            throw new FestivalValidationException("ktoFestivalContentId", "TourAPI 축제 정보를 다시 확인하지 못했습니다.");
+        }
+        if (detail == null || !externalContentId.equals(optionalText(detail.contentId()))) {
+            throw new FestivalValidationException("ktoFestivalContentId", "TourAPI 축제 정보를 다시 확인하지 못했습니다.");
+        }
+        String copyrightDivisionCode = optionalText(detail.copyrightDivisionCode());
+        log.info("TourAPI 축제 대표이미지 저작권 코드 확인: contentId={}, cpyrhtDivCd={}",
+                externalContentId, copyrightDivisionCode);
+        List<PreparedFestivalImage> images = new ArrayList<>();
+        Set<String> sourceImageUrls = new LinkedHashSet<>();
+        List<String> warnings = new ArrayList<>();
+        String sourceTitle = firstNonBlank(optionalText(detail.title()), fallbackTitle);
+
+        String mainImageUrl = optionalText(detail.firstImage());
+        if (mainImageUrl != null) {
+            KtoFestivalImageLicense license = KtoFestivalImageLicense
+                    .fromCopyrightDivisionCode(copyrightDivisionCode)
+                    .orElse(null);
+            if (license == null) {
+                warnings.add(UNSUPPORTED_LICENSE_WARNING);
+            } else {
+                try {
+                    KtoDownloadedFestivalImage downloaded = festivalImageDownloadService.download(mainImageUrl);
+                    images.add(new PreparedFestivalImage(downloaded, license, sourceTitle, true, 1));
+                    sourceImageUrls.add(mainImageUrl);
+                } catch (InvalidKtoPhotoUrlException | KtoPhotoDownloadException exception) {
+                    warnings.add(IMAGE_DOWNLOAD_WARNING);
+                }
+            }
+        }
+
+        List<KtoFestivalAdditionalImage> additionalImages;
+        try {
+            additionalImages = ktoFestivalService.getAdditionalImages(externalContentId);
+        } catch (KtoTourApiException exception) {
+            warnings.add(ADDITIONAL_IMAGE_WARNING);
+            return new PreparedFestivalImages(images, warningText(warnings));
+        }
+
+        int orderIndex = 2;
+        if (additionalImages != null) {
+            for (KtoFestivalAdditionalImage additionalImage : additionalImages) {
+                if (additionalImage == null
+                        || !externalContentId.equals(optionalText(additionalImage.contentId()))) {
+                    warnings.add(ADDITIONAL_IMAGE_WARNING);
+                    continue;
+                }
+                String sourceImageUrl = optionalText(additionalImage.originalImageUrl());
+                if (sourceImageUrl == null || sourceImageUrls.contains(sourceImageUrl)) {
+                    continue;
+                }
+                KtoFestivalImageLicense license = KtoFestivalImageLicense
+                        .fromCopyrightDivisionCode(additionalImage.copyrightDivisionCode())
+                        .orElse(null);
+                if (license == null) {
+                    warnings.add(ADDITIONAL_IMAGE_WARNING);
+                    continue;
+                }
+                try {
+                    KtoDownloadedFestivalImage downloaded = festivalImageDownloadService.download(sourceImageUrl);
+                    sourceImageUrls.add(sourceImageUrl);
+                    images.add(new PreparedFestivalImage(
+                            downloaded,
+                            license,
+                            firstNonBlank(optionalText(additionalImage.imageName()), sourceTitle),
+                            false,
+                            orderIndex++));
+                } catch (InvalidKtoPhotoUrlException | KtoPhotoDownloadException exception) {
+                    warnings.add(ADDITIONAL_IMAGE_WARNING);
+                }
+            }
+        }
+        return new PreparedFestivalImages(images, warningText(warnings));
+    }
+
+    private void insertTourApiImage(Long infoId, String externalContentId, PreparedFestivalImage preparedImage) {
+        KtoDownloadedFestivalImage downloaded = preparedImage.downloadedImage();
+        InfoImage image = new InfoImage();
+        image.setImageUrl(downloaded.localImageUrl());
+        image.setIsMain(preparedImage.main());
+        image.setOrderIndex(preparedImage.orderIndex());
+        image.setSourceType(KTO_SOURCE_TYPE);
+        image.setSourceName(KTO_SOURCE_NAME);
+        image.setExternalContentId(externalContentId);
+        image.setSourceTitle(preparedImage.sourceTitle());
+        image.setSourceImageUrl(downloaded.sourceImageUrl());
+        image.setLicenseType(preparedImage.license().name());
+        image.setLicenseCheckedAt(new Timestamp(System.currentTimeMillis()));
+        image.setInfoId(infoId);
+        requireSingleRow(travelInfoMapper.insertInfoImage(image), "축제·행사 이미지를 저장하지 못했습니다.");
+    }
+
+    private boolean registerRollbackCleanup(List<KtoDownloadedFestivalImage> downloadedImages) {
+        if (downloadedImages.isEmpty() || !TransactionSynchronizationManager.isSynchronizationActive()) {
+            return false;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                if (status != STATUS_COMMITTED) {
+                    deleteDownloadedImagesSafely(downloadedImages);
+                }
+            }
+        });
+        return true;
+    }
+
+    private void deleteDownloadedImagesSafely(List<KtoDownloadedFestivalImage> downloadedImages) {
+        for (KtoDownloadedFestivalImage downloadedImage : downloadedImages) {
+            deleteDownloadedImageSafely(downloadedImage);
+        }
+    }
+
+    private void deleteDownloadedImageSafely(KtoDownloadedFestivalImage downloadedImage) {
+        if (downloadedImage == null) {
+            return;
+        }
+        try {
+            festivalImageDownloadService.deleteDownloadedFestivalImage(downloadedImage);
+        } catch (RuntimeException exception) {
+            log.warn("축제 TourAPI 이미지 파일을 정리하지 못했습니다.");
+        }
+    }
+
+    private String warningText(List<String> warnings) {
+        return warnings.stream().distinct().reduce((first, second) -> first + " " + second).orElse(null);
+    }
+
+    private InfoCategory validateFestivalCategory(Long categoryId) {
+        if (categoryId == null) {
+            throw new FestivalValidationException("categoryId", "축제 분류를 선택해 주세요.");
+        }
+        InfoCategory category = infoCategoryMapper.findById(categoryId);
+        if (category == null || category.getContentType() != TravelInfoContentType.FESTIVAL) {
+            throw new FestivalValidationException("categoryId", "축제·행사 분류만 선택할 수 있습니다.");
+        }
+        return category;
+    }
+
+    private String requiredText(String value, String field, String message, int maxLength) {
+        String normalized = optionalText(value);
+        if (normalized == null) {
+            throw new FestivalValidationException(field, message);
+        }
+        if (normalized.length() > maxLength) {
+            throw new FestivalValidationException(field, maxLength + "자 이내로 입력해 주세요.");
+        }
+        return normalized;
+    }
+
+    private String optionalText(String value, String field, int maxLength) {
+        String normalized = optionalText(value);
+        if (normalized != null && normalized.length() > maxLength) {
+            throw new FestivalValidationException(field, maxLength + "자 이내로 입력해 주세요.");
+        }
+        return normalized;
+    }
+
+    private String optionalText(String value) {
+        return value == null || value.isBlank() ? null : value.strip();
+    }
+
+    private void requireSingleRow(int affectedRows, String message) {
+        if (affectedRows != 1) {
+            throw new IllegalStateException(message);
+        }
+    }
+
+    private FestivalValidationException duplicateTourApiFestival() {
+        return new FestivalValidationException("ktoFestivalContentId", "이미 등록된 TourAPI 축제·행사입니다.");
+    }
+
+    private String firstNonBlank(String first, String second) {
+        return first != null && !first.isBlank() ? first : second;
+    }
+
+    private record PreparedFestivalImage(
+            KtoDownloadedFestivalImage downloadedImage,
+            KtoFestivalImageLicense license,
+            String sourceTitle,
+            boolean main,
+            int orderIndex
+    ) {
+    }
+
+    private record PreparedFestivalImages(
+            List<PreparedFestivalImage> images,
+            String warning
+    ) {
+        private PreparedFestivalImages {
+            images = List.copyOf(images);
+        }
+
+        private static PreparedFestivalImages none() {
+            return new PreparedFestivalImages(List.of(), null);
+        }
+
+        private List<KtoDownloadedFestivalImage> downloadedImages() {
+            return images.stream().map(PreparedFestivalImage::downloadedImage).toList();
+        }
+    }
+}

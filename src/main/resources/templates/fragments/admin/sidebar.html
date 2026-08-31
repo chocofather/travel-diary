@@ -37,6 +37,9 @@
          th:classappend="${activeMenu == 'travel-info'} ? ' is-active' : ''"
          th:href="@{/admin/travel-info}">여행정보</a>
       <a class="admin-nav-link"
+         th:classappend="${activeMenu == 'festivals'} ? ' is-active' : ''"
+         th:href="@{/admin/festivals}">축제·행사</a>
+      <a class="admin-nav-link"
          th:classappend="${activeMenu == 'info-categories'} ? ' is-active' : ''"
          th:href="@{/admin/info-categories}">정보 카테고리</a>
     </section>

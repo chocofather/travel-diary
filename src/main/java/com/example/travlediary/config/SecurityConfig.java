@@ -343,6 +343,10 @@ public class SecurityConfig {
                         .requestMatchers(new RegexRequestMatcher(
                                 "^/travel-info/[0-9]+(?:\\?.*)?$", "GET")).permitAll()
 
+                        // 숫자 ID 축제·행사 전용 상세 GET만 공개
+                        .requestMatchers(new RegexRequestMatcher(
+                                "^/festivals/[0-9]+(?:\\?.*)?$", "GET")).permitAll()
+
                         // 고객센터 공지사항 목록과 숫자 ID 상세 GET만 공개
                         .requestMatchers(HttpMethod.GET, "/support/notices").permitAll()
                         .requestMatchers(new RegexRequestMatcher(

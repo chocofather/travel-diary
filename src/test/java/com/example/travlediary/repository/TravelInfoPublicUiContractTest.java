@@ -79,6 +79,8 @@ class TravelInfoPublicUiContractTest {
                 .contains("data-bookmark-url", "info.bookmarked")
                 .contains("aria-pressed", "여행정보 저장 취소")
                 .contains("travel-info-bookmark-icon")
+                .contains("${info.contentType.name() == 'FESTIVAL'}")
+                .contains("@{/festivals/{id}(id=${info.id},returnUrl=${listUrl})}")
                 .contains("@{/travel-info/{id}(id=${info.id},returnUrl=${listUrl})}")
                 .doesNotContain("♡", "♥", "<select", "travel-info-sort-select");
         assertThat(asyncFragment)

@@ -48,7 +48,9 @@
         <span class="travel-info-category" th:text="${info.categoryName}">계절여행</span>
         <h2 th:title="${info.title}">
           <a class="travel-info-card-link"
-             th:href="@{/travel-info/{id}(id=${info.id},returnUrl=${listUrl})}"
+             th:href="${info.contentType.name() == 'FESTIVAL'}
+                     ? @{/festivals/{id}(id=${info.id},returnUrl=${listUrl})}
+                     : @{/travel-info/{id}(id=${info.id},returnUrl=${listUrl})}"
              th:text="${info.title}">여행정보 제목</a>
         </h2>
         <p class="travel-info-type-meta">
