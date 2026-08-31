@@ -275,6 +275,15 @@ public class SecurityConfig {
                         new RegexRequestMatcher(
                                 "^/diaries/[0-9]+/pages/[0-9]+/elements/[0-9]+/text$",
                                 HttpMethod.POST.name()),
+                        // 4자리 PIN 잠금. 걸고 풀고 바꾸고 없애는 길 모두 토큰을 요구한다
+                        new RegexRequestMatcher(
+                                "^/diaries/[0-9]+/pin$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/diaries/[0-9]+/pin/unlock$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/diaries/[0-9]+/pin/change$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/diaries/[0-9]+/pin/remove$", HttpMethod.POST.name()),
                         // 라벨기로 붙이는 글씨. 라벨/떡메모지와 같은 정책을 쓴다
                         new RegexRequestMatcher(
                                 "^/diaries/[0-9]+/pages/[0-9]+/elements/label$",

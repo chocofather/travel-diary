@@ -72,6 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const contentType = document.getElementById('travel-info-content-type');
+    const categorySelect = document.getElementById('travel-info-category');
     const periodSection = document.getElementById('travel-info-period-section');
     const periodList = document.getElementById('travel-info-period-list');
     const addPeriodButton = document.getElementById('add-travel-info-period');
@@ -134,6 +135,23 @@ document.addEventListener('DOMContentLoaded', () => {
         reindexPeriods();
     }
 
+    function syncCategoryOptions() {
+        if (!categorySelect) return;
+
+        const selectedContentType = contentType.value;
+        categorySelect.querySelectorAll('option[data-content-type]').forEach(option => {
+            const matchesContentType = option.dataset.contentType === selectedContentType;
+            option.hidden = !matchesContentType;
+            option.disabled = !matchesContentType;
+        });
+
+        const selectedOption = categorySelect.selectedOptions[0];
+        if (selectedOption?.dataset.contentType
+            && selectedOption.dataset.contentType !== selectedContentType) {
+            categorySelect.value = '';
+        }
+    }
+
     function updatePeriodVisibility() {
         const festival = contentType.value === 'FESTIVAL';
         periodSection.hidden = !festival;
@@ -152,8 +170,12 @@ document.addEventListener('DOMContentLoaded', () => {
         removeButton.closest('[data-period-row]')?.remove();
         reindexPeriods();
     });
-    contentType.addEventListener('change', updatePeriodVisibility);
+    contentType.addEventListener('change', () => {
+        syncCategoryOptions();
+        updatePeriodVisibility();
+    });
 
     reindexPeriods();
+    syncCategoryOptions();
     updatePeriodVisibility();
 });

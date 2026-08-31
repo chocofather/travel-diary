@@ -8,6 +8,9 @@
   <link rel="stylesheet" href="/css/diary-fonts.css">
   <script src="/js/diary-book-menu.js" defer></script>
   <script src="/js/diary-search.js" defer></script>
+  <!-- 잠긴 책을 누르면 여기서 PIN 을 묻는다 -->
+  <script src="/js/diary-pin.js" defer></script>
+  <script src="/js/diary-pin-shelf.js" defer></script>
   <!-- 커스텀 표지의 마스킹테이프를 폭에 맞춰 이어 그린다 (보기 전용에서도 같은 모습) -->
   <script src="/js/diary-tape-repeat.js" defer></script>
 </th:block>
@@ -92,6 +95,16 @@
     <!-- 검색 결과는 이 자리만 비동기로 갈아 끼운다. (아래 results 조각과 같은 HTML) -->
     <div th:replace="~{diary/list :: results}"></div>
   </section>
+
+  <!--
+    PIN 입력 판. 잠긴 책을 누르거나, 주소창으로 잠긴 다이어리를 열다 여기로 온 경우에 열린다.
+    돌아갈 자리는 주소가 아니라 서버가 세션에 담아 둔 값이라 바깥 주소로 튈 수 없다.
+  -->
+  <div th:replace="~{diary/pin-modal :: modal}"></div>
+  <!-- 잠금이 걸린 책의 ⋯ 메뉴에서 여는 관리 판 -->
+  <div th:replace="~{diary/pin-modal :: manage}"></div>
+  <span id="diary-pin-pending" hidden
+        th:attr="data-diary-id=${lockedDiaryId}, data-target=${pinPendingTarget}"></span>
 </th:block>
 
 <!-- 목록 결과: 카드 / 쪽 이동 / 빈 상태.
@@ -104,7 +117,14 @@
           th:classappend="${diary.coverStyle != null and !#strings.isEmpty(diary.coverStyle)}
                           ? ' diary-cover-'
                             + ${#strings.replace(#strings.toLowerCase(diary.coverStyle), '_', '-')} : ''">
-        <a class="diary-book-inner" th:href="@{/diaries/{id}(id=${diary.id})}">
+        <!--
+          잠긴 다이어리는 표지를 가리지 않고 살짝 어둡게만 둔다. 자물쇠는 작은 표시 하나다.
+          이 세션에서 이미 풀었으면 누를 때 다시 묻지 않는다 —
+          자물쇠는 "잠금이 걸려 있다"는 표시라 그대로 남는다.
+        -->
+        <a class="diary-book-inner" th:href="@{/diaries/{id}(id=${diary.id})}"
+           th:attr="data-pin-diary-id=${diary.pinEnabled
+                        and !unlockedDiaryIds.contains(diary.id)} ? ${diary.id} : null">
           <!-- 표지에는 대표 이미지와 책 재질/책등만 남긴다 (제목은 표지 아래 정보로) -->
           <div class="diary-book-cover" th:with="cover=${coversByDiary.get(diary.id)}">
             <!--
@@ -128,6 +148,17 @@
                    class="diary-book-placeholder" aria-hidden="true"></div>
               <span class="diary-book-spine" aria-hidden="true"></span>
             </th:block>
+
+            <!-- 잠금 표시. 표지 위에 아주 옅은 그늘과 작은 자물쇠만 얹는다 -->
+            <span class="diary-book-lock" th:if="${diary.pinEnabled}"
+                  th:attr="aria-label=|${diary.title} 잠김|">
+              <svg viewBox="0 0 16 16" aria-hidden="true"
+                   fill="none" stroke="currentColor" stroke-width="1.4"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3.4" y="7" width="9.2" height="6.4" rx="1.4" />
+                <path d="M5.8 7V5.2a2.2 2.2 0 0 1 4.4 0V7" />
+              </svg>
+            </span>
           </div>
 
           <!-- 책 아래 목록 정보: 1줄 제목 / 2줄 기간 + 페이지 수 -->
@@ -153,6 +184,15 @@
                th:attr="aria-label=|${diary.title} 관리|" hidden>
             <a class="diary-book-menu-item" role="menuitem"
                th:href="@{/diaries/{id}/edit(id=${diary.id})}">다이어리 설정</a>
+
+            <!-- 잠금은 제목·기간 같은 일반 설정과 성격이 다르므로 이 메뉴에서 따로 다룬다.
+                 (수정 화면으로 보내지 않고 그 자리에서 PIN 판을 연다) -->
+            <button type="button" class="diary-book-menu-item" role="menuitem"
+                    th:unless="${diary.pinEnabled}"
+                    th:data-pin-set="${diary.id}">PIN 잠금 설정</button>
+            <button type="button" class="diary-book-menu-item" role="menuitem"
+                    th:if="${diary.pinEnabled}"
+                    th:data-pin-manage="${diary.id}">PIN 잠금 관리</button>
             <form th:action="@{/diaries/{id}/delete(id=${diary.id})}" method="post"
                   onsubmit="return confirm('이 여행일기를 삭제하면 모든 페이지와 사진이 함께 삭제됩니다. 삭제하시겠습니까?');">
               <button type="submit" class="diary-book-menu-item is-danger"

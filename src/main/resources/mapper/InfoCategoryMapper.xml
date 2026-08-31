@@ -8,38 +8,48 @@
     <resultMap id="InfoCategoryResultMap" type="com.example.travlediary.model.InfoCategory">
         <id property="id" column="id"/>
         <result property="name" column="name"/>
+        <result property="contentType" column="content_type"/>
         <result property="displayOrder" column="display_order"/>
         <result property="isVisible" column="is_visible" javaType="java.lang.Boolean"/>
     </resultMap>
 
     <select id="findAll" resultMap="InfoCategoryResultMap">
-        SELECT id, name, display_order, is_visible
+        SELECT id, name, content_type, display_order, is_visible
         FROM info_categories
         ORDER BY display_order ASC, id ASC
     </select>
 
     <select id="findVisible" resultMap="InfoCategoryResultMap">
-        SELECT id, name, display_order, is_visible
+        SELECT id, name, content_type, display_order, is_visible
         FROM info_categories
         WHERE is_visible = 1
         ORDER BY display_order ASC, id ASC
     </select>
 
+    <select id="findVisibleByContentType" resultMap="InfoCategoryResultMap">
+        SELECT id, name, content_type, display_order, is_visible
+        FROM info_categories
+        WHERE is_visible = 1
+          AND content_type = #{contentType}
+        ORDER BY display_order ASC, id ASC
+    </select>
+
     <select id="findById" parameterType="long" resultMap="InfoCategoryResultMap">
-        SELECT id, name, display_order, is_visible
+        SELECT id, name, content_type, display_order, is_visible
         FROM info_categories
         WHERE id = #{id}
     </select>
 
     <insert id="insert" parameterType="com.example.travlediary.model.InfoCategory"
             useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO info_categories (name, display_order, is_visible)
-        VALUES (#{name}, #{displayOrder}, #{isVisible})
+        INSERT INTO info_categories (name, content_type, display_order, is_visible)
+        VALUES (#{name}, #{contentType}, #{displayOrder}, #{isVisible})
     </insert>
 
     <update id="update" parameterType="com.example.travlediary.model.InfoCategory">
         UPDATE info_categories
         SET name = #{name},
+            content_type = #{contentType},
             display_order = #{displayOrder},
             is_visible = #{isVisible}
         WHERE id = #{id}

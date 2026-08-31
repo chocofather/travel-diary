@@ -17,6 +17,7 @@ class InfoCategoryMapperContractTest {
 
         assertThat(query)
                 .contains("FROM info_categories")
+                .contains("content_type")
                 .contains("ORDER BY display_order ASC, id ASC");
     }
 
@@ -27,7 +28,20 @@ class InfoCategoryMapperContractTest {
 
         assertThat(query)
                 .contains("FROM info_categories")
+                .contains("content_type")
                 .contains("WHERE is_visible = 1")
+                .contains("ORDER BY display_order ASC, id ASC");
+    }
+
+    @Test
+    void visibleCategoriesCanBeFilteredByTravelInfoContentType() throws IOException {
+        String mapper = resource("/mapper/InfoCategoryMapper.xml");
+        String query = between(mapper, "<select id=\"findVisibleByContentType\"", "</select>");
+
+        assertThat(query)
+                .contains("FROM info_categories")
+                .contains("WHERE is_visible = 1")
+                .contains("AND content_type = #{contentType}")
                 .contains("ORDER BY display_order ASC, id ASC");
     }
 
@@ -38,11 +52,12 @@ class InfoCategoryMapperContractTest {
         String update = between(mapper, "<update id=\"update\"", "</update>");
 
         assertThat(insert)
-                .contains("INSERT INTO info_categories (name, display_order, is_visible)")
-                .contains("#{name}", "#{displayOrder}", "#{isVisible}");
+                .contains("INSERT INTO info_categories (name, content_type, display_order, is_visible)")
+                .contains("#{name}", "#{contentType}", "#{displayOrder}", "#{isVisible}");
         assertThat(update)
                 .contains("UPDATE info_categories")
                 .contains("name = #{name}")
+                .contains("content_type = #{contentType}")
                 .contains("display_order = #{displayOrder}")
                 .contains("is_visible = #{isVisible}")
                 .contains("WHERE id = #{id}");

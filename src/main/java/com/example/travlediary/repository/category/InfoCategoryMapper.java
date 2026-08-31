@@ -1,6 +1,7 @@
 package com.example.travlediary.repository.category;
 
 import com.example.travlediary.model.InfoCategory;
+import com.example.travlediary.model.TravelInfoContentType;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -12,6 +13,8 @@ public interface InfoCategoryMapper {
     List<InfoCategory> findAll();
 
     List<InfoCategory> findVisible();
+
+    List<InfoCategory> findVisibleByContentType(@Param("contentType") TravelInfoContentType contentType);
 
     InfoCategory findById(Long id);
 

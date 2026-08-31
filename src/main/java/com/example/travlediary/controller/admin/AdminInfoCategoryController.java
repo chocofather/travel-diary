@@ -107,6 +107,10 @@ public class AdminInfoCategoryController {
             bindingResult.rejectValue("name", "maxLength", "카테고리명은 100자 이하로 입력해 주세요.");
         }
 
+        if (form.getContentType() == null) {
+            bindingResult.rejectValue("contentType", "required", "여행정보 유형을 선택해 주세요.");
+        }
+
         if (form.getDisplayOrder() == null) {
             bindingResult.rejectValue("displayOrder", "required", "표시 순서를 입력해 주세요.");
         } else if (form.getDisplayOrder() < 1) {

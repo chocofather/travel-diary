@@ -2,6 +2,7 @@ package com.example.travlediary.service.category;
 
 import com.example.travlediary.dto.InfoCategoryForm;
 import com.example.travlediary.model.InfoCategory;
+import com.example.travlediary.model.TravelInfoContentType;
 import com.example.travlediary.repository.category.InfoCategoryMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -30,6 +31,11 @@ public class InfoCategoryService {
     }
 
     @Transactional(readOnly = true)
+    public List<InfoCategory> getVisibleByContentType(TravelInfoContentType contentType) {
+        return infoCategoryMapper.findVisibleByContentType(contentType);
+    }
+
+    @Transactional(readOnly = true)
     public InfoCategory getById(Long id) {
         return requireCategory(id);
     }
@@ -41,6 +47,7 @@ public class InfoCategoryService {
 
         InfoCategory category = new InfoCategory();
         category.setName(name);
+        category.setContentType(form.getContentType());
         category.setDisplayOrder(form.getDisplayOrder());
         category.setIsVisible(form.getIsVisible());
 
@@ -58,6 +65,7 @@ public class InfoCategoryService {
         ensureUniqueName(name, id);
 
         category.setName(name);
+        category.setContentType(form.getContentType());
         category.setDisplayOrder(form.getDisplayOrder());
         category.setIsVisible(form.getIsVisible());
 
@@ -109,6 +117,9 @@ public class InfoCategoryService {
         }
         if (name.length() > 100) {
             throw new IllegalArgumentException("카테고리명은 100자 이하로 입력해 주세요.");
+        }
+        if (form.getContentType() == null) {
+            throw new IllegalArgumentException("여행정보 유형을 선택해 주세요.");
         }
         if (form.getDisplayOrder() == null || form.getDisplayOrder() < 1) {
             throw new IllegalArgumentException("표시 순서는 1 이상이어야 합니다.");

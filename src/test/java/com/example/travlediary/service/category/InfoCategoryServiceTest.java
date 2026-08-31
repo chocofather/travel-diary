@@ -2,6 +2,7 @@ package com.example.travlediary.service.category;
 
 import com.example.travlediary.dto.InfoCategoryForm;
 import com.example.travlediary.model.InfoCategory;
+import com.example.travlediary.model.TravelInfoContentType;
 import com.example.travlediary.repository.category.InfoCategoryMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -53,8 +54,19 @@ class InfoCategoryServiceTest {
     }
 
     @Test
+    void getVisibleByContentTypeReturnsMapperResultForRequestedType() {
+        List<InfoCategory> categories = List.of(category(1L, "지역축제", 1, true));
+        when(infoCategoryMapper.findVisibleByContentType(TravelInfoContentType.FESTIVAL))
+                .thenReturn(categories);
+
+        assertThat(infoCategoryService.getVisibleByContentType(TravelInfoContentType.FESTIVAL))
+                .isSameAs(categories);
+        verify(infoCategoryMapper).findVisibleByContentType(TravelInfoContentType.FESTIVAL);
+    }
+
+    @Test
     void createStripsNameAndSavesAllFields() {
-        InfoCategoryForm form = form("  여행준비  ", 3, false);
+        InfoCategoryForm form = form("  여행준비  ", 3, false, TravelInfoContentType.FESTIVAL);
         when(infoCategoryMapper.countByNameExcludingId("여행준비", null)).thenReturn(0);
 
         infoCategoryService.create(form);
@@ -64,6 +76,7 @@ class InfoCategoryServiceTest {
         assertThat(captor.getValue().getName()).isEqualTo("여행준비");
         assertThat(captor.getValue().getDisplayOrder()).isEqualTo(3);
         assertThat(captor.getValue().getIsVisible()).isFalse();
+        assertThat(captor.getValue().getContentType()).isEqualTo(TravelInfoContentType.FESTIVAL);
         assertThat(form.getName()).isEqualTo("여행준비");
     }
 
@@ -191,10 +204,18 @@ class InfoCategoryServiceTest {
     }
 
     private InfoCategoryForm form(String name, Integer displayOrder, Boolean isVisible) {
+        return form(name, displayOrder, isVisible, TravelInfoContentType.GENERAL);
+    }
+
+    private InfoCategoryForm form(String name,
+                                  Integer displayOrder,
+                                  Boolean isVisible,
+                                  TravelInfoContentType contentType) {
         InfoCategoryForm form = new InfoCategoryForm();
         form.setName(name);
         form.setDisplayOrder(displayOrder);
         form.setIsVisible(isVisible);
+        form.setContentType(contentType);
         return form;
     }
 
@@ -204,6 +225,7 @@ class InfoCategoryServiceTest {
         category.setName(name);
         category.setDisplayOrder(displayOrder);
         category.setIsVisible(isVisible);
+        category.setContentType(TravelInfoContentType.GENERAL);
         return category;
     }
 }

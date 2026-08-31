@@ -65,7 +65,7 @@ public class TravelInfoService {
                                                       long offset,
                                                       int limit) {
         return travelInfoMapper.findPublicList(
-                scope, contentType, categoryIds,
+                scope, normalizePublicContentType(contentType), categoryIds,
                 TravelInfoSearchKeyword.toLikeLiteral(keyword),
                 TravelInfoSearchKeyword.toKoreanPrefixRegex(keyword), sort, offset, limit);
     }
@@ -76,7 +76,7 @@ public class TravelInfoService {
                                 List<Long> categoryIds,
                                 String keyword) {
         return travelInfoMapper.countPublicList(
-                scope, contentType, categoryIds,
+                scope, normalizePublicContentType(contentType), categoryIds,
                 TravelInfoSearchKeyword.toLikeLiteral(keyword),
                 TravelInfoSearchKeyword.toKoreanPrefixRegex(keyword));
     }
@@ -310,6 +310,10 @@ public class TravelInfoService {
         }
     }
 
+    private TravelInfoContentType normalizePublicContentType(TravelInfoContentType contentType) {
+        return contentType == null ? TravelInfoContentType.GENERAL : contentType;
+    }
+
     private List<String> mainThumbnailUrls(Long infoId) {
         List<String> urls = travelInfoMapper.findMainImageUrlsByInfoId(infoId);
         return urls == null ? List.of() : urls.stream()
@@ -392,6 +396,10 @@ public class TravelInfoService {
         InfoCategory category = infoCategoryMapper.findById(form.getCategoryId());
         if (category == null) {
             throw new TravelInfoValidationException("categoryId", "존재하지 않는 정보 카테고리입니다.");
+        }
+        if (category.getContentType() != form.getContentType()) {
+            throw new TravelInfoValidationException("categoryId",
+                    "선택한 정보 카테고리의 유형이 여행정보 유형과 일치하지 않습니다.");
         }
 
         List<ValidatedPeriod> periods = validatePeriods(form);

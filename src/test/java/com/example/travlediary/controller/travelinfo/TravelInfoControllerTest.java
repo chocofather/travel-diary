@@ -66,17 +66,14 @@ class TravelInfoControllerTest {
     private UserMapper userMapper;
 
     @Test
-    void guestCanOpenDefaultListWithThumbnailFestivalPeriodAndPlaceholder() throws Exception {
-        TravelInfoListItemDto festival = item(10L, "서울 봄 축제", TravelInfoScope.DOMESTIC,
-                TravelInfoContentType.FESTIVAL, "/uploads/travel-info/thumbnails/festival.jpg");
-        festival.setStartDate(LocalDate.parse("2026-04-01"));
-        festival.setEndDate(LocalDate.parse("2026-04-03"));
+    void guestCanOpenDefaultGeneralListWithPlaceholder() throws Exception {
         TravelInfoListItemDto general = item(11L, "해외여행 준비 체크리스트",
                 TravelInfoScope.INTERNATIONAL, TravelInfoContentType.GENERAL, null);
         when(travelInfoService.getPublicList(null, null, List.of(), null, "latest", 0L, 12))
-                .thenReturn(List.of(festival, general));
-        when(travelInfoService.countPublicList(null, null, List.of(), null)).thenReturn(2L);
-        when(infoCategoryService.getVisible()).thenReturn(List.of(category()));
+                .thenReturn(List.of(general));
+        when(travelInfoService.countPublicList(null, null, List.of(), null)).thenReturn(1L);
+        when(infoCategoryService.getVisibleByContentType(TravelInfoContentType.GENERAL))
+                .thenReturn(List.of(category()));
 
         mockMvc.perform(get("/travel-info"))
                 .andExpect(status().isOk())
@@ -86,13 +83,8 @@ class TravelInfoControllerTest {
                 .andExpect(model().attribute("keyword", org.hamcrest.Matchers.nullValue()))
                 .andExpect(model().attribute("sort", "latest"))
                 .andExpect(model().attribute("totalPages", 1))
-                .andExpect(model().attribute("totalCount", 2L))
+                .andExpect(model().attribute("totalCount", 1L))
                 .andExpect(model().attribute("pageTitle", "여행정보"))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("서울 봄 축제")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "/uploads/travel-info/thumbnails/festival.jpg")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("2026-04-01")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("2026-04-03")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("등록된 이미지가 없습니다")))
                 .andExpect(result -> {
                     var document = Jsoup.parse(result.getResponse().getContentAsString());
@@ -109,8 +101,10 @@ class TravelInfoControllerTest {
                             .isNotNull()
                             .extracting(element -> element.attr("href"))
                             .asString()
-                            .startsWith("/travel-info/10?returnUrl=");
+                            .startsWith("/travel-info/11?returnUrl=");
                 });
+
+        verify(infoCategoryService).getVisibleByContentType(TravelInfoContentType.GENERAL);
     }
 
     @Test
@@ -123,7 +117,8 @@ class TravelInfoControllerTest {
         when(travelInfoService.getPublicList(null, null, List.of(), null, "latest", 0L, 12))
                 .thenReturn(List.of(item));
         when(travelInfoService.countPublicList(null, null, List.of(), null)).thenReturn(1L);
-        when(infoCategoryService.getVisible()).thenReturn(List.of(category()));
+        when(infoCategoryService.getVisibleByContentType(TravelInfoContentType.GENERAL))
+                .thenReturn(List.of(category()));
         when(travelInfoService.getPublicDetail(10L)).thenReturn(detail);
         CustomUserDetails principal = principal(7L);
         var authentication = new UsernamePasswordAuthenticationToken(
@@ -153,7 +148,8 @@ class TravelInfoControllerTest {
                 TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL,
                 List.of(3L), null))
                 .thenReturn(60L);
-        when(infoCategoryService.getVisible()).thenReturn(List.of(category()));
+        when(infoCategoryService.getVisibleByContentType(TravelInfoContentType.FESTIVAL))
+                .thenReturn(List.of(category(3L, "축제·행사", 1, TravelInfoContentType.FESTIVAL)));
 
         mockMvc.perform(get("/travel-info")
                         .param("scope", "domestic")
@@ -170,7 +166,7 @@ class TravelInfoControllerTest {
                 .andExpect(model().attribute("totalPages", 2))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("정보 유형"))))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString(">주제</span>")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("축제·행사 분류")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "조건에 맞는 여행정보가 없습니다.")));
 
@@ -188,10 +184,10 @@ class TravelInfoControllerTest {
         when(travelInfoService.countPublicList(
                 TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL,
                 selectedCategoryIds, null)).thenReturn(0L);
-        when(infoCategoryService.getVisible()).thenReturn(List.of(
-                category(1L, "계절여행", 1),
-                category(3L, "여행추천", 2),
-                category(5L, "교통", 3)));
+        when(infoCategoryService.getVisibleByContentType(TravelInfoContentType.FESTIVAL)).thenReturn(List.of(
+                category(1L, "축제·행사", 1, TravelInfoContentType.FESTIVAL),
+                category(3L, "음악", 2, TravelInfoContentType.FESTIVAL),
+                category(5L, "지역행사", 3, TravelInfoContentType.FESTIVAL)));
 
         mockMvc.perform(get("/travel-info")
                         .param("scope", "DOMESTIC")
@@ -230,7 +226,8 @@ class TravelInfoControllerTest {
                 .thenReturn(List.of(festival));
         when(travelInfoService.countPublicList(
                 null, TravelInfoContentType.FESTIVAL, List.of(), null)).thenReturn(1L);
-        when(infoCategoryService.getVisible()).thenReturn(List.of(category()));
+        when(infoCategoryService.getVisibleByContentType(TravelInfoContentType.FESTIVAL))
+                .thenReturn(List.of(category(3L, "축제·행사", 1, TravelInfoContentType.FESTIVAL)));
 
         mockMvc.perform(get("/travel-info").param("contentType", "FESTIVAL"))
                 .andExpect(status().isOk())
@@ -241,14 +238,25 @@ class TravelInfoControllerTest {
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("여름 축제")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("축제 기간")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("2026-08-01")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("2026-08-03")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("2026-08-03")))
+                .andExpect(result -> {
+                    var document = Jsoup.parse(result.getResponse().getContentAsString());
+                    assertThat(document.selectFirst(
+                            "a[data-filter-name=primary][data-filter-value=FESTIVAL].is-active"))
+                            .isNotNull();
+                    assertThat(document.selectFirst(
+                            "button[data-filter-name=categoryId][data-filter-value='3']"))
+                            .extracting(org.jsoup.nodes.Element::text)
+                            .isEqualTo("축제·행사");
+                });
 
         verify(travelInfoService).getPublicList(
                 null, TravelInfoContentType.FESTIVAL, List.of(), null, "latest", 0L, 12);
+        verify(infoCategoryService).getVisibleByContentType(TravelInfoContentType.FESTIVAL);
     }
 
     @Test
-    void ajaxRequestReturnsOnlyFilteredPaginatedResultsFragment() throws Exception {
+    void ajaxRequestReturnsFilteredPaginatedResultsAndFestivalCategoryFilter() throws Exception {
         TravelInfoListItemDto festival = item(10L, "국내 여름 축제", TravelInfoScope.DOMESTIC,
                 TravelInfoContentType.FESTIVAL, null);
         when(travelInfoService.getPublicList(
@@ -259,13 +267,16 @@ class TravelInfoControllerTest {
                 TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL,
                 List.of(3L, 5L), "축제"))
                 .thenReturn(25L);
+        when(infoCategoryService.getVisibleByContentType(TravelInfoContentType.FESTIVAL)).thenReturn(List.of(
+                category(3L, "축제·행사", 1, TravelInfoContentType.FESTIVAL),
+                category(5L, "음악", 2, TravelInfoContentType.FESTIVAL)));
 
         mockMvc.perform(get(URI.create("/travel-info?keyword=%EC%B6%95%EC%A0%9C"
                         + "&scope=DOMESTIC&contentType=FESTIVAL"
                         + "&categoryId=3&categoryId=5&sort=views&page=2"))
                         .header("X-Requested-With", "XMLHttpRequest"))
                 .andExpect(status().isOk())
-                .andExpect(view().name("travel-info/fragments/list-results :: results"))
+                .andExpect(view().name("travel-info/fragments/list-async :: response"))
                 .andExpect(model().attribute("scope", TravelInfoScope.DOMESTIC))
                 .andExpect(model().attribute("contentType", TravelInfoContentType.FESTIVAL))
                 .andExpect(model().attribute("categoryIds", List.of(3L, 5L)))
@@ -279,6 +290,12 @@ class TravelInfoControllerTest {
                                 + "&categoryId=3&categoryId=5&sort=views&page=2"))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "id=\"travel-info-results\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "id=\"travel-info-category-filter-template\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "id=\"travel-info-category-filter\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("축제·행사 분류")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("축제·행사")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("국내 여름 축제")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "contentType=FESTIVAL")))
@@ -293,7 +310,32 @@ class TravelInfoControllerTest {
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("travel-info-filters"))));
 
-        verify(infoCategoryService, never()).getVisible();
+        verify(infoCategoryService).getVisibleByContentType(TravelInfoContentType.FESTIVAL);
+    }
+
+    @Test
+    void ajaxRequestWithoutContentTypeReturnsGeneralCategoryFilter() throws Exception {
+        when(travelInfoService.getPublicList(
+                TravelInfoScope.DOMESTIC, null, List.of(), null, "latest", 0L, 12))
+                .thenReturn(List.of());
+        when(travelInfoService.countPublicList(
+                TravelInfoScope.DOMESTIC, null, List.of(), null))
+                .thenReturn(0L);
+        when(infoCategoryService.getVisibleByContentType(TravelInfoContentType.GENERAL))
+                .thenReturn(List.of(category(1L, "계절여행", 1, TravelInfoContentType.GENERAL)));
+
+        mockMvc.perform(get("/travel-info")
+                        .param("scope", "DOMESTIC")
+                        .header("X-Requested-With", "XMLHttpRequest"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "id=\"travel-info-category-filter-template\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("주제")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("계절여행")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("축제·행사 분류"))));
+
+        verify(infoCategoryService).getVisibleByContentType(TravelInfoContentType.GENERAL);
     }
 
     @Test
@@ -301,7 +343,7 @@ class TravelInfoControllerTest {
         when(travelInfoService.getPublicList(
                 null, null, List.of(), null, "latest", 0L, 12)).thenReturn(List.of());
         when(travelInfoService.countPublicList(null, null, List.of(), null)).thenReturn(0L);
-        when(infoCategoryService.getVisible()).thenReturn(List.of());
+        when(infoCategoryService.getVisibleByContentType(TravelInfoContentType.GENERAL)).thenReturn(List.of());
 
         for (String sort : List.of("", "latest", "abc")) {
             mockMvc.perform(get("/travel-info").param("sort", sort))
@@ -322,7 +364,8 @@ class TravelInfoControllerTest {
         when(travelInfoService.countPublicList(
                 TravelInfoScope.INTERNATIONAL, null, List.of(2L, 5L), "파리"))
                 .thenReturn(0L);
-        when(infoCategoryService.getVisible()).thenReturn(List.of(category()));
+        when(infoCategoryService.getVisibleByContentType(TravelInfoContentType.GENERAL))
+                .thenReturn(List.of(category()));
 
         mockMvc.perform(get("/travel-info")
                         .param("keyword", "  파리  ")
@@ -354,7 +397,7 @@ class TravelInfoControllerTest {
                 null, null, List.of(), limitedKeyword, "latest", 0L, 12)).thenReturn(List.of());
         when(travelInfoService.countPublicList(
                 null, null, List.of(), limitedKeyword)).thenReturn(0L);
-        when(infoCategoryService.getVisible()).thenReturn(List.of());
+        when(infoCategoryService.getVisibleByContentType(TravelInfoContentType.GENERAL)).thenReturn(List.of());
 
         mockMvc.perform(get("/travel-info").param("keyword", "   \t"))
                 .andExpect(status().isOk())
@@ -373,7 +416,7 @@ class TravelInfoControllerTest {
         when(travelInfoService.getPublicList(null, null, List.of(), null, "latest", 0L, 12))
                 .thenReturn(List.of());
         when(travelInfoService.countPublicList(null, null, List.of(), null)).thenReturn(0L);
-        when(infoCategoryService.getVisible()).thenReturn(List.of());
+        when(infoCategoryService.getVisibleByContentType(TravelInfoContentType.GENERAL)).thenReturn(List.of());
 
         mockMvc.perform(get("/travel-info")
                         .param("scope", "unknown")
@@ -395,7 +438,8 @@ class TravelInfoControllerTest {
         when(travelInfoService.getPublicList(null, null, List.of(999L), null, "latest", 0L, 12))
                 .thenReturn(List.of());
         when(travelInfoService.countPublicList(null, null, List.of(999L), null)).thenReturn(0L);
-        when(infoCategoryService.getVisible()).thenReturn(List.of(category()));
+        when(infoCategoryService.getVisibleByContentType(TravelInfoContentType.GENERAL))
+                .thenReturn(List.of(category()));
 
         mockMvc.perform(get("/travel-info").param("categoryId", "999"))
                 .andExpect(status().isOk())
@@ -506,7 +550,7 @@ class TravelInfoControllerTest {
         when(travelInfoService.getPublicList(null, null, List.of(), null, "latest", 0L, 12))
                 .thenReturn(List.of());
         when(travelInfoService.countPublicList(null, null, List.of(), null)).thenReturn(0L);
-        when(infoCategoryService.getVisible()).thenReturn(List.of());
+        when(infoCategoryService.getVisibleByContentType(TravelInfoContentType.GENERAL)).thenReturn(List.of());
         when(travelInfoService.getPublicDetail(10L))
                 .thenReturn(detail(TravelInfoContentType.GENERAL));
 
@@ -549,13 +593,21 @@ class TravelInfoControllerTest {
     }
 
     private InfoCategory category() {
-        return category(3L, "계절여행", 1);
+        return category(3L, "계절여행", 1, TravelInfoContentType.GENERAL);
     }
 
     private InfoCategory category(Long id, String name, int displayOrder) {
+        return category(id, name, displayOrder, TravelInfoContentType.GENERAL);
+    }
+
+    private InfoCategory category(Long id,
+                                  String name,
+                                  int displayOrder,
+                                  TravelInfoContentType contentType) {
         InfoCategory category = new InfoCategory();
         category.setId(id);
         category.setName(name);
+        category.setContentType(contentType);
         category.setDisplayOrder(displayOrder);
         category.setIsVisible(true);
         return category;

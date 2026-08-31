@@ -14,6 +14,7 @@
         <result property="coverImageUrl" column="cover_image_url"/>
         <result property="coverStyle"    column="cover_style"/>
         <result property="notebookType"  column="notebook_type"/>
+        <result property="pinHash"       column="pin_hash"/>
         <result property="createdAt"     column="created_at"/>
         <result property="updatedAt"     column="updated_at"/>
     </resultMap>
@@ -26,11 +27,12 @@
         <result property="coverImageUrl" column="cover_image_url"/>
         <result property="coverStyle"    column="cover_style"/>
         <result property="pageCount"     column="page_count"/>
+        <result property="pinEnabled"    column="pin_enabled"/>
     </resultMap>
 
     <sql id="DiaryColumns">
         id, user_id, title, start_date, end_date,
-        cover_image_url, cover_style, notebook_type, created_at, updated_at
+        cover_image_url, cover_style, notebook_type, pin_hash, created_at, updated_at
     </sql>
 
     <!-- 회원 본인의 다이어리 목록. 최근 여행부터 보여준다. -->
@@ -71,11 +73,14 @@
             d.end_date,
             d.cover_image_url,
             d.cover_style,
+            <!-- 잠금 여부만 참/거짓으로 넘긴다. 해시 자체는 화면 쪽으로 나가지 않는다 -->
+            (d.pin_hash IS NOT NULL) AS pin_enabled,
             COUNT(p.id) AS page_count
         FROM diaries d
         LEFT JOIN diary_pages p ON p.diary_id = d.id
         WHERE <include refid="DiaryListCondition"/>
-        GROUP BY d.id, d.title, d.start_date, d.end_date, d.cover_image_url, d.cover_style
+        GROUP BY d.id, d.title, d.start_date, d.end_date, d.cover_image_url, d.cover_style,
+                 d.pin_hash
         <!-- 정렬은 허용된 이름으로만 고른다. (SQL 조각을 밖에서 받지 않는다)
              값이 같을 때 쪽마다 순서가 흔들리지 않도록 마지막은 언제나 id DESC 로 묶는다. -->
         ORDER BY
@@ -136,6 +141,19 @@
             notebook_type = #{notebookType},
             updated_at = NOW()
         WHERE id = #{id}
+          AND user_id = #{userId}
+    </update>
+
+    <!--
+      PIN 잠금의 해시만 바꾼다. 제목·기간·표지 같은 값은 건드리지 않는다.
+      (반대로 위의 update 는 pin_hash 를 건드리지 않는다 — 정보를 고쳐도 잠금은 그대로다)
+      NULL 을 넣으면 잠금이 풀린 다이어리가 된다.
+    -->
+    <update id="updatePinHash">
+        UPDATE diaries
+        SET pin_hash = #{pinHash},
+            updated_at = NOW()
+        WHERE id = #{diaryId}
           AND user_id = #{userId}
     </update>
 

@@ -34,7 +34,7 @@ public class TravelInfoController {
     private static final int DEFAULT_PAGE_SIZE = 12;
     private static final int MAX_PAGE_SIZE = 48;
     private static final String LIST_PATH = "/travel-info";
-    private static final String FRAGMENT_VIEW = "travel-info/fragments/list-results :: results";
+    private static final String FRAGMENT_VIEW = "travel-info/fragments/list-async :: response";
     private static final String SORT_LATEST = "latest";
     private static final String SORT_VIEWS = "views";
     private static final Set<String> ALLOWED_RETURN_QUERY_PARAMETERS = Set.of(
@@ -92,12 +92,13 @@ public class TravelInfoController {
         model.addAttribute("listUrl", buildListUrl(
                 safeKeyword, safeScope, safeContentType,
                 safeCategoryIds, safeSort, safePage, safeSize));
+        model.addAttribute("categories", infoCategoryService.getVisibleByContentType(
+                safeContentType == null ? TravelInfoContentType.GENERAL : safeContentType));
 
         if ("XMLHttpRequest".equals(requestedWith)) {
             return FRAGMENT_VIEW;
         }
 
-        model.addAttribute("categories", infoCategoryService.getVisible());
         model.addAttribute("pageTitle", "여행정보");
         return "travel-info/list";
     }

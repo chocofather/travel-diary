@@ -603,6 +603,33 @@
     );
 }
 
+/*
+  잠긴 책. 표지 위에 옅은 그늘 한 겹과 가운데 자물쇠 하나로 "잠겨 있다"를 한눈에 알린다.
+  (커스텀 표지의 사진·스티커·글씨·색은 그대로 비쳐 보인다 — 흐리게 하거나 가리지 않는다)
+
+  잠금 표시는 클릭을 받지 않는다. 표지를 누르면 링크가, ⋯ 을 누르면 메뉴가 그대로 동작한다.
+*/
+.diary-book-lock {
+    position: absolute;
+    z-index: 4;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: inherit;
+    background: rgba(38, 31, 22, 0.3);
+    pointer-events: none;
+}
+
+/* 표지 어느 색 위에서도 읽히도록 흰 선 아이콘에 옅은 그림자만 준다 */
+.diary-book-lock svg {
+    width: 46px;
+    height: 46px;
+    color: #fffdf8;
+    opacity: 0.92;
+    filter: drop-shadow(0 2px 5px rgba(20, 14, 8, 0.5));
+}
+
 /* 책등: 표지 왼쪽의 제본 두께와, 앞표지 사이의 얇은 홈 */
 .diary-book-spine {
     position: absolute;
@@ -5741,6 +5768,194 @@
 .diary-spread-arrow.is-disabled {
     color: #ded7cb;
     pointer-events: none;
+}
+
+/* ===== 다이어리 잠금 (4자리 PIN) ===== */
+/*
+  잠금 관리는 책장의 ⋯ 메뉴에서 연다.
+  제목·기간 같은 일반 설정과 성격이 달라 수정 폼에 두지 않는다.
+*/
+.diary-pin-manage-actions {
+    display: grid;
+    gap: 6px;
+}
+
+.diary-pin-action {
+    height: 32px;
+    padding: 0 12px;
+    border: 1px solid #ded5c8;
+    border-radius: 8px;
+    background: #fff;
+    color: #6f5a3c;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+.diary-pin-action:hover {
+    border-color: #cbbba0;
+    background: #faf6ef;
+}
+
+.diary-pin-action:focus-visible {
+    outline: 3px solid rgba(111, 90, 60, 0.24);
+    outline-offset: 2px;
+}
+
+/* 입력 판. 작고 조용한 창 하나다 (보안앱처럼 무겁게 만들지 않는다) */
+.diary-pin-backdrop {
+    position: fixed;
+    z-index: 120;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(38, 31, 22, 0.32);
+}
+
+.diary-pin-backdrop[hidden] {
+    display: none;
+}
+
+.diary-pin-modal {
+    box-sizing: border-box;
+    width: min(300px, 100%);
+    padding: 20px 22px 16px;
+    border: 1px solid #e3dcd1;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 10px 28px rgba(63, 52, 38, 0.18);
+    text-align: center;
+}
+
+.diary-pin-modal:focus {
+    outline: none;
+}
+
+.diary-pin-mark svg {
+    width: 22px;
+    height: 22px;
+    color: #a89a83;
+}
+
+.diary-pin-title {
+    margin: 6px 0 4px;
+    color: #3f3a33;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.diary-pin-guide {
+    margin: 0 0 14px;
+    color: #8b8378;
+    font-size: 12.5px;
+}
+
+/* 넣은 숫자는 보이지 않는다. 채워진 칸의 개수만 보인다 */
+.diary-pin-slots {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.diary-pin-slot {
+    width: 11px;
+    height: 11px;
+    border: 1px solid #d5cbbb;
+    border-radius: 50%;
+    background: #fff;
+}
+
+.diary-pin-slot.is-filled {
+    border-color: #6f5a3c;
+    background: #6f5a3c;
+}
+
+.diary-pin-error {
+    margin: 0 0 10px;
+    color: #a3512f;
+    font-size: 12px;
+}
+
+.diary-pin-error[hidden] {
+    display: none;
+}
+
+/* 숫자판. 계산기처럼 커지지 않게 칸을 작게 잡는다 */
+.diary-pin-pad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+}
+
+.diary-pin-key {
+    height: 40px;
+    border: 1px solid #e3dcd1;
+    border-radius: 9px;
+    background: #fffdf8;
+    color: #4a443c;
+    font: inherit;
+    font-size: 15px;
+    cursor: pointer;
+    transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.diary-pin-key:hover:not(:disabled) {
+    border-color: #cbbba0;
+    background: #f6efe3;
+}
+
+.diary-pin-key:disabled {
+    color: #bdb4a6;
+    cursor: default;
+}
+
+.diary-pin-key:focus-visible {
+    outline: 2px solid #b39a75;
+    outline-offset: 1px;
+}
+
+/* 지우기는 조용하게, 확인만 또렷하게 */
+.diary-pin-key.is-quiet {
+    color: #8b8378;
+}
+
+.diary-pin-key.is-submit {
+    border-color: #6f5a3c;
+    background: #6f5a3c;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.diary-pin-key.is-submit:hover:not(:disabled) {
+    border-color: #655237;
+    background: #655237;
+}
+
+.diary-pin-cancel {
+    margin-top: 10px;
+    padding: 4px 8px;
+    border: 0;
+    background: none;
+    color: #a89a83;
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.diary-pin-cancel:hover {
+    color: #6f5a3c;
+    text-decoration: underline;
+}
+
+/* 판이 열려 있는 동안에는 뒤 화면이 따라 움직이지 않는다 */
+body.is-pin-open {
+    overflow: hidden;
 }
 
 @media (max-width: 1080px) {

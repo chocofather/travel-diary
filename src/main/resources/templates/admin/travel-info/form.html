@@ -83,6 +83,9 @@
                 <option value="">-- 정보 카테고리 선택 --</option>
                 <option th:each="category : ${categories}"
                         th:value="${category.id}"
+                        th:attr="data-content-type=${category.contentType}"
+                        th:hidden="${category.contentType != travelInfoForm.contentType}"
+                        th:disabled="${category.contentType != travelInfoForm.contentType}"
                         th:text="${category.name} + (${category.isVisible} ? '' : ' (숨김)')">계절여행</option>
               </select>
               <p class="admin-field-error" th:if="${#fields.hasErrors('categoryId')}"

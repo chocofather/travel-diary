@@ -32,6 +32,18 @@
         </div>
 
         <div class="admin-form-field">
+          <label for="info-category-content-type">여행정보 유형</label>
+          <select id="info-category-content-type" th:field="*{contentType}"
+                  th:classappend="${#fields.hasErrors('contentType')} ? ' is-invalid' : ''"
+                  th:attr="aria-invalid=${#fields.hasErrors('contentType')}">
+            <option value="GENERAL">일반</option>
+            <option value="FESTIVAL">축제</option>
+          </select>
+          <p class="admin-field-error" th:if="${#fields.hasErrors('contentType')}"
+             th:errors="*{contentType}">여행정보 유형 오류</p>
+        </div>
+
+        <div class="admin-form-field">
           <label for="info-category-order">표시 순서</label>
           <input id="info-category-order" type="number" th:field="*{displayOrder}"
                  min="1" placeholder="1"

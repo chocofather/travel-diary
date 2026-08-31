@@ -39,6 +39,8 @@ public class DiaryServiceImpl implements DiaryService {
     private static final int MAX_KEYWORD_LENGTH = MAX_TITLE_LENGTH;
 
     private final DiaryMapper diaryMapper;
+    /** PIN 잠금 검사. 소유권을 확인한 뒤 한 번 더 본다. */
+    private final DiaryPinGuard diaryPinGuard;
 
     @Override
     @Transactional(readOnly = true)
@@ -132,10 +134,20 @@ public class DiaryServiceImpl implements DiaryService {
         return "%" + escaped + "%";
     }
 
+    /**
+     * 본인 다이어리 1건.
+     *
+     * <p>다이어리 한 권을 다루는 모든 길(읽기·수정·삭제, 페이지, 꾸미기 요소, 표지)이
+     * 소유권 확인을 위해 이 문을 지난다. 그래서 PIN 잠금도 여기서 함께 본다 —
+     * 주소를 직접 치거나 POST 를 그대로 불러도 잠금을 우회할 수 없다.
+     * 확인 순서는 늘 소유권이 먼저이고 잠금이 그다음이다.
+     */
     @Override
     @Transactional(readOnly = true)
     public Diary getMyDiary(Long diaryId, Long userId) {
-        return requireOwnedDiary(diaryId, userId);
+        Diary diary = requireOwnedDiary(diaryId, userId);
+        diaryPinGuard.requireUnlocked(diary);
+        return diary;
     }
 
     @Override

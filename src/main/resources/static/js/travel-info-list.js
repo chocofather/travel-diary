@@ -2,13 +2,18 @@
     const FILTER_SELECTOR = '.travel-info-filter-pill[data-filter-name]';
     const RESET_SELECTOR = '[data-travel-info-reset]';
     const RESULTS_SELECTOR = '#travel-info-results';
+    const CATEGORY_FILTER_SELECTOR = '#travel-info-category-filter';
+    const CATEGORY_FILTER_TEMPLATE_SELECTOR = '#travel-info-category-filter-template';
     const PAGINATION_LINK_SELECTOR = '#travel-info-results .travel-info-pagination a';
     const SEARCH_FORM_SELECTOR = '[data-travel-info-search]';
     const SEARCH_INPUT_SELECTOR = '[data-travel-info-search-input]';
     const SEARCH_CLEAR_SELECTOR = '[data-travel-info-search-clear]';
     const SORT_SELECTOR = '[data-travel-info-sort]';
-    const SINGLE_FILTER_NAMES = ['scope'];
+    const PRIMARY_FILTER_NAME = 'primary';
     const CATEGORY_FILTER_NAME = 'categoryId';
+    const CONTENT_TYPE_PARAMETER_NAME = 'contentType';
+    const FESTIVAL_CONTENT_TYPE = 'FESTIVAL';
+    const GENERAL_CONTENT_TYPE = 'GENERAL';
     const KEYWORD_PARAMETER_NAME = 'keyword';
     const SORT_PARAMETER_NAME = 'sort';
     const SORT_VIEWS = 'views';
@@ -67,6 +72,9 @@
     }
 
     function filterUrl(control) {
+        if (control.dataset.filterName === PRIMARY_FILTER_NAME) {
+            return primaryFilterUrl(control);
+        }
         const url = new URL(selectedUrl.href);
         const name = control.dataset.filterName;
         const value = control.dataset.filterValue;
@@ -75,6 +83,35 @@
             url.searchParams.set(name, value);
         } else {
             url.searchParams.delete(name);
+        }
+        url.searchParams.delete('page');
+        return cleanUrl(url);
+    }
+
+    function primaryFilterUrl(control, baseUrl = selectedUrl) {
+        const url = new URL(baseUrl.href);
+        const primaryValue = control.dataset.filterValue;
+        const currentContentType = url.searchParams.get(CONTENT_TYPE_PARAMETER_NAME)
+            === FESTIVAL_CONTENT_TYPE
+            ? FESTIVAL_CONTENT_TYPE
+            : GENERAL_CONTENT_TYPE;
+        const nextContentType = primaryValue === FESTIVAL_CONTENT_TYPE
+            ? FESTIVAL_CONTENT_TYPE
+            : GENERAL_CONTENT_TYPE;
+
+        if (nextContentType === FESTIVAL_CONTENT_TYPE) {
+            url.searchParams.delete('scope');
+            url.searchParams.set(CONTENT_TYPE_PARAMETER_NAME, FESTIVAL_CONTENT_TYPE);
+        } else {
+            url.searchParams.set(CONTENT_TYPE_PARAMETER_NAME, GENERAL_CONTENT_TYPE);
+            if (primaryValue) {
+                url.searchParams.set('scope', primaryValue);
+            } else {
+                url.searchParams.delete('scope');
+            }
+        }
+        if (currentContentType !== nextContentType) {
+            url.searchParams.delete(CATEGORY_FILTER_NAME);
         }
         url.searchParams.delete('page');
         return cleanUrl(url);
@@ -120,33 +157,7 @@
 
     function syncFilterUi(url) {
         const pills = Array.from(document.querySelectorAll(FILTER_SELECTOR));
-
-        SINGLE_FILTER_NAMES.forEach((name) => {
-            const group = pills.filter((pill) => pill.dataset.filterName === name);
-            const allowedValues = new Set(group.map((pill) => pill.dataset.filterValue));
-            const requestedValue = url.searchParams.get(name) || '';
-            const activeValue = allowedValues.has(requestedValue) ? requestedValue : '';
-
-            group.forEach((pill) => {
-                const isActive = pill.dataset.filterValue === activeValue;
-                pill.classList.toggle('is-active', isActive);
-                if (isActive) {
-                    pill.setAttribute('aria-current', 'true');
-                } else {
-                    pill.removeAttribute('aria-current');
-                }
-
-                const nextUrl = new URL(url.href);
-                if (pill.dataset.filterValue) {
-                    nextUrl.searchParams.set(name, pill.dataset.filterValue);
-                } else {
-                    nextUrl.searchParams.delete(name);
-                }
-                nextUrl.searchParams.delete('page');
-                cleanUrl(nextUrl);
-                pill.href = nextUrl.pathname + nextUrl.search;
-            });
-        });
+        syncPrimaryFilterUi(pills, url);
 
         const categoryPills = pills.filter(
             (pill) => pill.dataset.filterName === CATEGORY_FILTER_NAME
@@ -161,6 +172,29 @@
                 : selectedCategoryIds.size === 0;
             pill.classList.toggle('is-active', isActive);
             pill.setAttribute('aria-pressed', String(isActive));
+        });
+    }
+
+    function syncPrimaryFilterUi(pills, url) {
+        const primaryPills = pills.filter((pill) => pill.dataset.filterName === PRIMARY_FILTER_NAME);
+        const contentType = url.searchParams.get(CONTENT_TYPE_PARAMETER_NAME) === FESTIVAL_CONTENT_TYPE
+            ? FESTIVAL_CONTENT_TYPE
+            : GENERAL_CONTENT_TYPE;
+        const activeValue = contentType === FESTIVAL_CONTENT_TYPE
+            ? FESTIVAL_CONTENT_TYPE
+            : url.searchParams.get('scope') || '';
+
+        primaryPills.forEach((pill) => {
+            const isActive = pill.dataset.filterValue === activeValue;
+            pill.classList.toggle('is-active', isActive);
+            if (isActive) {
+                pill.setAttribute('aria-current', 'true');
+            } else {
+                pill.removeAttribute('aria-current');
+            }
+
+            const nextUrl = primaryFilterUrl(pill, url);
+            pill.href = nextUrl.pathname + nextUrl.search;
         });
     }
 
@@ -256,13 +290,17 @@
 
     function replaceResults(html) {
         const currentResults = document.querySelector(RESULTS_SELECTOR);
+        const currentCategoryFilter = document.querySelector(CATEGORY_FILTER_SELECTOR);
         const template = document.createElement('template');
         template.innerHTML = html.trim();
         const nextResults = template.content.querySelector(RESULTS_SELECTOR);
+        const categoryFilterTemplate = template.content.querySelector(CATEGORY_FILTER_TEMPLATE_SELECTOR);
+        const nextCategoryFilter = categoryFilterTemplate?.content.querySelector(CATEGORY_FILTER_SELECTOR);
 
-        if (!currentResults || !nextResults) {
+        if (!currentResults || !nextResults || !currentCategoryFilter || !nextCategoryFilter) {
             throw new Error('여행정보 결과 영역을 찾을 수 없습니다.');
         }
+        currentCategoryFilter.replaceWith(nextCategoryFilter);
         currentResults.replaceWith(nextResults);
     }
 

@@ -14,6 +14,7 @@ class TravelInfoPublicUiContractTest {
     void listUsesPublicLayoutAccessibleTitleSearchAndUnifiedPillFilters()
             throws IOException {
         String template = resource("/templates/travel-info/list.html");
+        String categoryFilter = resource("/templates/travel-info/fragments/category-filter.html");
 
         assertThat(template)
                 .contains("layout/main :: layout")
@@ -29,24 +30,30 @@ class TravelInfoPublicUiContractTest {
                 .contains("name=\"scope\"", "name=\"contentType\"", "name=\"categoryId\"")
                 .contains("contentType=${contentType}", "categoryId=${categoryIds}")
                 .contains("scope='DOMESTIC'", "scope='INTERNATIONAL'", "size=${pageSize}")
-                .contains("data-filter-name=\"scope\"")
+                .contains("data-filter-name=\"primary\"")
+                .contains("data-filter-value=\"FESTIVAL\"")
+                .contains("contentType='GENERAL'")
+                .contains("contentType='FESTIVAL'")
+                .contains("travel-info-filter-pill", "aria-current=", "data-travel-info-reset")
+                .contains("travel-info/fragments/list-results :: results")
+                .doesNotContain("정보 유형", "data-filter-name=\"contentType\"")
+                .doesNotContain("<select", ">적용<", ">카테고리<");
+        assertThat(categoryFilter)
+                .contains("id=\"travel-info-category-filter\"")
                 .contains("data-filter-name=\"categoryId\"")
                 .contains("th:each=\"category : ${categories}\"")
                 .contains("travel-info-filter-pill", "travel-info-category-pills")
-                .contains("<span class=\"travel-info-filter-label\">주제</span>")
+                .contains("'축제·행사 분류' : '주제'")
                 .contains("type=\"button\"")
-                .contains("aria-current=", "aria-pressed=", "data-travel-info-reset")
-                .contains("#lists.isEmpty(categoryIds)", "#lists.contains(categoryIds, category.id)")
-                .contains("travel-info/fragments/list-results :: results")
-                .doesNotContain("정보 유형", "data-filter-name=\"contentType\"")
-                .doesNotContain("contentType='GENERAL'", "contentType='FESTIVAL'")
-                .doesNotContain("<select", ">적용<", ">카테고리<");
+                .contains("aria-pressed=")
+                .contains("#lists.isEmpty(categoryIds)", "#lists.contains(categoryIds, category.id)");
     }
 
     @Test
     void resultsFragmentKeepsCardsAndAddsAccessibleDetailLinkWithServerReturnUrl()
             throws IOException {
         String fragment = resource("/templates/travel-info/fragments/list-results.html");
+        String asyncFragment = resource("/templates/travel-info/fragments/list-async.html");
 
         assertThat(fragment)
                 .contains("th:fragment=\"results\"")
@@ -74,6 +81,11 @@ class TravelInfoPublicUiContractTest {
                 .contains("travel-info-bookmark-icon")
                 .contains("@{/travel-info/{id}(id=${info.id},returnUrl=${listUrl})}")
                 .doesNotContain("♡", "♥", "<select", "travel-info-sort-select");
+        assertThat(asyncFragment)
+                .contains("th:fragment=\"response\"")
+                .contains("id=\"travel-info-category-filter-template\"")
+                .contains("travel-info/fragments/category-filter :: filter")
+                .contains("travel-info/fragments/list-results :: results");
     }
 
     @Test
@@ -171,8 +183,9 @@ class TravelInfoPublicUiContractTest {
         String javascript = resource("/static/js/travel-info-list.js");
 
         assertThat(javascript)
-                .contains("const SINGLE_FILTER_NAMES = ['scope']")
+                .contains("const PRIMARY_FILTER_NAME = 'primary'")
                 .contains("const CATEGORY_FILTER_NAME = 'categoryId'")
+                .contains("const CONTENT_TYPE_PARAMETER_NAME = 'contentType'")
                 .contains("const KEYWORD_PARAMETER_NAME = 'keyword'")
                 .contains("const SORT_PARAMETER_NAME = 'sort'")
                 .contains("const SORT_VIEWS = 'views'")
@@ -186,6 +199,9 @@ class TravelInfoPublicUiContractTest {
                 .contains("selectedCategoryIds.has(value)")
                 .contains("selectedCategoryIds.delete(value)")
                 .contains("selectedCategoryIds.clear()")
+                .contains("primaryFilterUrl")
+                .contains("syncPrimaryFilterUi")
+                .contains("url.searchParams.set(CONTENT_TYPE_PARAMETER_NAME, GENERAL_CONTENT_TYPE)")
                 .contains("const sortOption = event.target.closest(SORT_SELECTOR)")
                 .contains("loadResults(sortUrl(sortOption), 'push')")
                 .contains("control.dataset.sortValue")
@@ -215,6 +231,8 @@ class TravelInfoPublicUiContractTest {
                 .contains("searchInput.value = ''")
                 .contains(".travel-info-pagination a")
                 .contains("replaceResults(await response.text())")
+                .contains("CATEGORY_FILTER_TEMPLATE_SELECTOR")
+                .contains("replaceWith(nextCategoryFilter)")
                 .contains("window.location.assign(url.href)");
         assertThat(javascript).doesNotContain("document.addEventListener('change'");
     }

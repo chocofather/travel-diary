@@ -5,6 +5,7 @@ import com.example.travlediary.config.CustomLogoutSuccessHandler;
 import com.example.travlediary.config.SecurityConfig;
 import com.example.travlediary.dto.InfoCategoryForm;
 import com.example.travlediary.model.InfoCategory;
+import com.example.travlediary.model.TravelInfoContentType;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.service.category.DuplicateInfoCategoryNameException;
 import com.example.travlediary.service.category.InfoCategoryInUseException;
@@ -76,6 +77,7 @@ class AdminInfoCategoryControllerTest {
                             .getModel().get("infoCategoryForm");
                     assertThat(form.getDisplayOrder()).isEqualTo(1);
                     assertThat(form.getIsVisible()).isTrue();
+                    assertThat(form.getContentType()).isEqualTo(TravelInfoContentType.GENERAL);
                 });
     }
 
@@ -126,6 +128,7 @@ class AdminInfoCategoryControllerTest {
                         .with(user("admin").roles("ADMIN"))
                         .param("name", "  여행준비  ")
                         .param("displayOrder", "3")
+                        .param("contentType", "FESTIVAL")
                         .param("isVisible", "false"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/info-categories"));
@@ -133,6 +136,7 @@ class AdminInfoCategoryControllerTest {
         verify(infoCategoryService).create(org.mockito.ArgumentMatchers.argThat(form ->
                 form.getName().equals("여행준비")
                         && form.getDisplayOrder() == 3
+                        && form.getContentType() == TravelInfoContentType.FESTIVAL
                         && !form.getIsVisible()));
     }
 

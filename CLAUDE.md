@@ -62,6 +62,13 @@ Standard layered flow per feature: `Controller -> Service -> Mapper interface ->
 - Wait for an explicit implementation request before editing code.
 - Do not treat a proposed plan as permission to implement it.
 
+## Implementation approval
+
+- When the user explicitly asks to implement a defined change, treat that request itself as approval to implement.
+- Do not repeat a brainstorming/design approval gate for an already-defined implementation task.
+- If the requested scope is clear, inspect only the necessary code and proceed directly with implementation.
+- Ask for clarification only when a material requirement is genuinely ambiguous or implementation would require an unapproved architectural/DB change.
+
 ## Context and token efficiency
 
 - Do not scan the entire repository unless necessary.

@@ -52,43 +52,32 @@
       </form>
 
       <div class="travel-info-filter-group">
-        <span class="travel-info-filter-label">여행 범위</span>
+        <span class="travel-info-filter-label">여행정보 구분</span>
         <div class="travel-info-pills">
-          <a th:href="@{/travel-info(keyword=${keyword},contentType=${contentType},categoryId=${categoryIds},sort=${sort == 'views' ? sort : null},size=${pageSize})}"
+          <a th:href="@{/travel-info(keyword=${keyword},contentType='GENERAL',categoryId=${categoryIds},sort=${sort == 'views' ? sort : null},size=${pageSize})}"
              class="travel-info-filter-pill"
-             data-filter-name="scope" data-filter-value=""
-             th:classappend="${scope == null} ? ' is-active'"
-             th:attr="aria-current=${scope == null} ? 'true' : null">전체</a>
-          <a th:href="@{/travel-info(keyword=${keyword},scope='DOMESTIC',contentType=${contentType},categoryId=${categoryIds},sort=${sort == 'views' ? sort : null},size=${pageSize})}"
+             data-filter-name="primary" data-filter-value=""
+             th:classappend="${(contentType == null or contentType.name() == 'GENERAL') and scope == null} ? ' is-active'"
+             th:attr="aria-current=${(contentType == null or contentType.name() == 'GENERAL') and scope == null} ? 'true' : null">전체</a>
+          <a th:href="@{/travel-info(keyword=${keyword},scope='DOMESTIC',contentType='GENERAL',categoryId=${categoryIds},sort=${sort == 'views' ? sort : null},size=${pageSize})}"
              class="travel-info-filter-pill"
-             data-filter-name="scope" data-filter-value="DOMESTIC"
-             th:classappend="${scope != null and scope.name() == 'DOMESTIC'} ? ' is-active'"
-             th:attr="aria-current=${scope != null and scope.name() == 'DOMESTIC'} ? 'true' : null">국내</a>
-          <a th:href="@{/travel-info(keyword=${keyword},scope='INTERNATIONAL',contentType=${contentType},categoryId=${categoryIds},sort=${sort == 'views' ? sort : null},size=${pageSize})}"
+             data-filter-name="primary" data-filter-value="DOMESTIC"
+             th:classappend="${(contentType == null or contentType.name() == 'GENERAL') and scope != null and scope.name() == 'DOMESTIC'} ? ' is-active'"
+             th:attr="aria-current=${(contentType == null or contentType.name() == 'GENERAL') and scope != null and scope.name() == 'DOMESTIC'} ? 'true' : null">국내</a>
+          <a th:href="@{/travel-info(keyword=${keyword},scope='INTERNATIONAL',contentType='GENERAL',categoryId=${categoryIds},sort=${sort == 'views' ? sort : null},size=${pageSize})}"
              class="travel-info-filter-pill"
-             data-filter-name="scope" data-filter-value="INTERNATIONAL"
-             th:classappend="${scope != null and scope.name() == 'INTERNATIONAL'} ? ' is-active'"
-             th:attr="aria-current=${scope != null and scope.name() == 'INTERNATIONAL'} ? 'true' : null">해외</a>
+             data-filter-name="primary" data-filter-value="INTERNATIONAL"
+             th:classappend="${(contentType == null or contentType.name() == 'GENERAL') and scope != null and scope.name() == 'INTERNATIONAL'} ? ' is-active'"
+             th:attr="aria-current=${(contentType == null or contentType.name() == 'GENERAL') and scope != null and scope.name() == 'INTERNATIONAL'} ? 'true' : null">해외</a>
+          <a th:href="@{/travel-info(keyword=${keyword},contentType='FESTIVAL',sort=${sort == 'views' ? sort : null},size=${pageSize})}"
+             class="travel-info-filter-pill"
+             data-filter-name="primary" data-filter-value="FESTIVAL"
+             th:classappend="${contentType != null and contentType.name() == 'FESTIVAL'} ? ' is-active'"
+             th:attr="aria-current=${contentType != null and contentType.name() == 'FESTIVAL'} ? 'true' : null">축제·행사</a>
         </div>
       </div>
 
-      <div class="travel-info-filter-group is-category">
-        <span class="travel-info-filter-label">주제</span>
-        <div class="travel-info-pills travel-info-category-pills">
-          <button type="button"
-                  class="travel-info-filter-pill"
-                  data-filter-name="categoryId" data-filter-value=""
-                  th:classappend="${#lists.isEmpty(categoryIds)} ? ' is-active'"
-                  th:attr="aria-pressed=${#lists.isEmpty(categoryIds)}">전체</button>
-          <button type="button"
-                  th:each="category : ${categories}"
-                  th:text="${category.name}"
-                  class="travel-info-filter-pill"
-                  data-filter-name="categoryId"
-                  th:attr="data-filter-value=${category.id},aria-pressed=${#lists.contains(categoryIds, category.id)}"
-                  th:classappend="${#lists.contains(categoryIds, category.id)} ? ' is-active'">계절여행</button>
-        </div>
-      </div>
+      <div th:replace="~{travel-info/fragments/category-filter :: filter}"></div>
 
       <div class="travel-info-filter-actions">
         <a class="travel-info-filter-reset" th:href="@{/travel-info}" data-travel-info-reset>필터 초기화</a>

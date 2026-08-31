@@ -38,7 +38,8 @@ class DiaryServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        diaryService = new DiaryServiceImpl(diaryMapper);
+        // PIN 잠금 검사는 실제 규칙을 그대로 쓴다. (잠금이 없는 다이어리는 그냥 지나간다)
+        diaryService = new DiaryServiceImpl(diaryMapper, new DiaryPinGuard(new DiaryPinSession()));
     }
 
     /** 검색어가 없으면 조건 없이 첫 12권을 읽는다. */

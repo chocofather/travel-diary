@@ -678,6 +678,28 @@ CREATE TABLE `destinations` (
 --       허용 값은 코드의 DiaryNotebookType 이 관리하며, 그 밖의 값은 저장되지 않는다.
 --   * 별도 diary_images 테이블은 없고, 대표 이미지만 diaries.cover_image_url 을 사용한다.
 --   * 요소의 위치/크기는 페이지 크기 기준 0~1 상대값으로 저장한다.
+--   * diaries.pin_hash 는 개인 여행일기에 따로 거는 4자리 PIN 잠금이다. (화면은 후속 단계)
+--     사용자가 넣는 PIN 은 숫자 네 자리 고정이다 (예: 0427, 1234).
+--     0 으로 시작하는 PIN 도 쓸 수 있으므로 숫자가 아니라 문자열로 다룬다.
+--     PIN 원문은 저장하지 않는다. Spring Security 의 PasswordEncoder 로 해시만 남기므로
+--     칸의 길이는 해시에 맞춰 VARCHAR(255) 로 둔다.
+--     네 자리 숫자인지는 애플리케이션이 확인하고, DB CHECK 는 이번 단계에서 두지 않는다.
+--   * 잠금 여부는 pin_hash 의 유무로만 판단한다. 별도의 pin_enabled 칸은 두지 않는다.
+--     - NULL       : PIN 잠금을 쓰지 않는 다이어리
+--     - 값이 있음   : PIN 잠금이 걸린 다이어리
+--   * (예정) 잠금은 상세 화면만 가리는 것이 아니라, 풀기 전에는 그 다이어리의
+--     읽기 / 편집 / 페이지 수정 / 꾸미기 요소 변경 / 삭제처럼 보호가 필요한 작업 모두에
+--     같은 검사를 적용하는 방향이다.
+--     본인 소유권 확인(diaries.user_id)은 예전처럼 늘 먼저 한다.
+--     PIN 은 로그인이나 소유권을 대신하는 인증 수단이 아니라,
+--     본인 다이어리에 한 겹 더 거는 잠금이다.
+--   * (예정) 올바른 PIN 을 넣으면 그 다이어리 하나만 풀린다.
+--     풀린 상태는 서버 세션 단위로만 들고 있으므로 한 다이어리를 풀었다고
+--     다른 잠긴 다이어리까지 풀리지 않고, 로그아웃하거나 세션이 끝나면 다시 확인해야 한다.
+--     세션에는 PIN 원문도 pin_hash 도 담지 않고 풀린 다이어리 번호 정도만 둔다.
+--   * (예정) PIN 은 없으면 새로 걸 수 있고, 걸려 있으면 바꾸거나 풀 수 있다.
+--     바꾸거나 풀 때는 지금 PIN 을 먼저 확인한다.
+--     저장된 PIN 은 어디에서도 다시 보여 주거나 되돌려 읽지 않는다.
 --
 -- 사용자 커스텀 표지 구조:
 --   users -> diary_cover_designs -> diary_cover_design_elements   (내 표지 디자인 보관함, 원본)
@@ -742,6 +764,7 @@ CREATE TABLE `diaries` (
   `cover_image_url` varchar(255) DEFAULT NULL,
   `cover_style` varchar(30) NOT NULL DEFAULT 'DEFAULT',
   `notebook_type` varchar(20) NOT NULL DEFAULT 'CLASSIC',
+  `pin_hash` varchar(255) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
@@ -1016,6 +1039,7 @@ CREATE TABLE `info_periods` (
 CREATE TABLE `info_categories` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `name` varchar(100) NOT NULL,
+  `content_type` varchar(20) NOT NULL DEFAULT 'GENERAL',
   `display_order` int NOT NULL DEFAULT '1',
   `is_visible` tinyint NOT NULL DEFAULT '1',
   PRIMARY KEY (`id`),

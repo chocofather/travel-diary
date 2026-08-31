@@ -22,8 +22,11 @@ import com.example.travlediary.service.diary.DiaryCoverService;
 import com.example.travlediary.service.diary.DiaryElementService;
 import com.example.travlediary.service.diary.DiaryLabelFontCatalog;
 import com.example.travlediary.service.diary.DiaryNoteCatalog;
+import com.example.travlediary.config.DiaryPinLockedAdvice;
 import com.example.travlediary.service.diary.DiaryPageService;
 import com.example.travlediary.service.diary.DiaryPhotoFrame;
+import com.example.travlediary.service.diary.DiaryPinSession;
+import jakarta.servlet.http.HttpSession;
 import com.example.travlediary.service.diary.DiaryService;
 import com.example.travlediary.service.diary.DiaryStickerCatalog;
 import com.example.travlediary.service.file.FileUploadService;
@@ -58,6 +61,7 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Controller
 @RequiredArgsConstructor
@@ -112,6 +116,8 @@ public class DiaryController {
     private final DiaryNoteCatalog diaryNoteCatalog;
     /** 라벨기 글꼴 허용 목록. picker 가 그릴 목록도 여기서 그대로 가져간다. */
     private final DiaryLabelFontCatalog diaryLabelFontCatalog;
+    /** 이 세션에서 어떤 다이어리를 풀어 두었는지. (목록이 자물쇠 동작을 가르는 데만 쓴다) */
+    private final DiaryPinSession diaryPinSession;
     private final HolidayService holidayService;
 
     @Value("${custom.upload-path}")
@@ -125,12 +131,22 @@ public class DiaryController {
     public String diaryList(@RequestParam(name = "q", required = false) String keyword,
                             @RequestParam(name = "sort", required = false) String sort,
                             @RequestParam(name = "page", required = false) String page,
+                            @RequestParam(name = "locked", required = false) Long lockedDiaryId,
                             @AuthenticationPrincipal CustomUserDetails userDetails,
+                            HttpSession session,
                             Model model) {
         DiaryListPageDto diaryPage = diaryService.getMyDiaryPage(
                 userDetails.getId(), keyword, DiarySort.of(sort), pageNumber(page));
 
-        addDiaryListAttributes(model, diaryPage, userDetails.getId());
+        addDiaryListAttributes(model, diaryPage, userDetails.getId(), session);
+        /*
+          주소창으로 잠긴 다이어리를 열다 온 경우다. 그 다이어리의 PIN 입력을 바로 띄우고,
+          풀고 나면 원래 열려던 자리로 이어서 간다.
+          돌아갈 자리는 주소가 아니라 세션에 한 번만 담아 두었다. (여기서 꺼내 쓰고 지운다)
+        */
+        model.addAttribute("lockedDiaryId", lockedDiaryId);
+        model.addAttribute("pinPendingTarget",
+                DiaryPinLockedAdvice.takePendingTarget(session));
         model.addAttribute("pageTitle", "나의 여행일기");
         return "diary/list";
     }
@@ -144,10 +160,11 @@ public class DiaryController {
                                     @RequestParam(name = "sort", required = false) String sort,
                                     @RequestParam(name = "page", required = false) String page,
                                     @AuthenticationPrincipal CustomUserDetails userDetails,
+                                    HttpSession session,
                                     Model model) {
         addDiaryListAttributes(model, diaryService.getMyDiaryPage(
                         userDetails.getId(), keyword, DiarySort.of(sort), pageNumber(page)),
-                userDetails.getId());
+                userDetails.getId(), session);
         return "diary/list :: results";
     }
 
@@ -203,11 +220,20 @@ public class DiaryController {
      * 이 쪽의 다이어리 번호를 모아 표지를 한 번에 읽고, 그 표지 번호로 요소를 한 번에 읽는다.
      * (표지가 없는 다이어리는 결과에 없고 예전처럼 cover_style + cover_image_url 로 그린다)
      */
-    private void addDiaryListAttributes(Model model, DiaryListPageDto diaryPage, Long userId) {
+    private void addDiaryListAttributes(Model model, DiaryListPageDto diaryPage, Long userId,
+                                        HttpSession session) {
         model.addAttribute("diaryList", diaryPage.items());
         model.addAttribute("diaryPage", diaryPage);
 
         List<Long> diaryIds = diaryPage.items().stream().map(DiaryListItemDto::getId).toList();
+        /*
+          이 세션에서 이미 푼 다이어리. 자물쇠는 잠금이 걸려 있다는 표시라 그대로 두고,
+          누르는 순간 PIN 을 다시 묻지 않을지만 이 값으로 가른다.
+          (PIN 해시는 여기까지 오지 않는다 — 잠금 여부는 목록 SQL 이 참/거짓으로 넘긴다)
+        */
+        model.addAttribute("unlockedDiaryIds", diaryIds.stream()
+                .filter(diaryId -> diaryPinSession.isUnlocked(session, diaryId))
+                .collect(Collectors.toSet()));
         Map<Long, DiaryCover> covers = diaryCoverService.findCoversByDiary(diaryIds, userId);
         model.addAttribute("coversByDiary", covers);
         model.addAttribute("coverElementsByCover",

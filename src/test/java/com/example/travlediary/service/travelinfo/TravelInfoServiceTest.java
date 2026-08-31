@@ -92,7 +92,7 @@ class TravelInfoServiceTest {
                 infoPeriod("2026-05-10", "2026-05-12"));
         when(travelInfoMapper.findById(10L)).thenReturn(existing);
         when(travelInfoMapper.findPeriodsByInfoId(10L)).thenReturn(periods);
-        allowCategory();
+        allowCategory(TravelInfoContentType.FESTIVAL);
 
         AdminTravelInfoDetailDto detail = travelInfoService.getAdminDetail(10L);
 
@@ -170,9 +170,10 @@ class TravelInfoServiceTest {
     @Test
     void blankPublicSearchKeywordDelegatesAsNoKeywordCondition() {
         when(travelInfoMapper.findPublicList(
-                null, null, List.of(), null, null, "latest", 0L, 12))
+                null, TravelInfoContentType.GENERAL, List.of(), null, null, "latest", 0L, 12))
                 .thenReturn(List.of());
-        when(travelInfoMapper.countPublicList(null, null, List.of(), null, null))
+        when(travelInfoMapper.countPublicList(
+                null, TravelInfoContentType.GENERAL, List.of(), null, null))
                 .thenReturn(0L);
 
         assertThat(travelInfoService.getPublicList(
@@ -181,8 +182,9 @@ class TravelInfoServiceTest {
                 null, null, List.of(), null)).isZero();
 
         verify(travelInfoMapper).findPublicList(
-                null, null, List.of(), null, null, "latest", 0L, 12);
-        verify(travelInfoMapper).countPublicList(null, null, List.of(), null, null);
+                null, TravelInfoContentType.GENERAL, List.of(), null, null, "latest", 0L, 12);
+        verify(travelInfoMapper).countPublicList(
+                null, TravelInfoContentType.GENERAL, List.of(), null, null);
     }
 
     @Test
@@ -190,10 +192,10 @@ class TravelInfoServiceTest {
         String keyword = "썸ㄴ";
         String koreanPattern = TravelInfoSearchKeyword.toKoreanPrefixRegex(keyword);
         when(travelInfoMapper.findPublicList(
-                null, null, List.of(), keyword, koreanPattern, "latest", 0L, 12))
+                null, TravelInfoContentType.GENERAL, List.of(), keyword, koreanPattern, "latest", 0L, 12))
                 .thenReturn(List.of());
         when(travelInfoMapper.countPublicList(
-                null, null, List.of(), keyword, koreanPattern))
+                null, TravelInfoContentType.GENERAL, List.of(), keyword, koreanPattern))
                 .thenReturn(0L);
 
         assertThat(travelInfoService.getPublicList(
@@ -202,9 +204,9 @@ class TravelInfoServiceTest {
                 null, null, List.of(), keyword)).isZero();
 
         verify(travelInfoMapper).findPublicList(
-                null, null, List.of(), keyword, koreanPattern, "latest", 0L, 12);
+                null, TravelInfoContentType.GENERAL, List.of(), keyword, koreanPattern, "latest", 0L, 12);
         verify(travelInfoMapper).countPublicList(
-                null, null, List.of(), keyword, koreanPattern);
+                null, TravelInfoContentType.GENERAL, List.of(), keyword, koreanPattern);
     }
 
     @Test
@@ -422,7 +424,7 @@ class TravelInfoServiceTest {
         form.setPeriods(List.of(
                 period("2026-05-10", "2026-05-12"),
                 period("2026-04-01", "2026-04-03")));
-        allowCategory();
+        allowCategory(TravelInfoContentType.FESTIVAL);
         stubTravelInfoInsert(100L);
         when(travelInfoMapper.insertPeriod(any())).thenReturn(1);
 
@@ -438,7 +440,7 @@ class TravelInfoServiceTest {
     @Test
     void festivalRequiresAtLeastOneCompletePeriod() {
         TravelInfoForm empty = form(TravelInfoContentType.FESTIVAL);
-        allowCategory();
+        allowCategory(TravelInfoContentType.FESTIVAL);
 
         assertValidation("축제 여행정보는 기간을 한 개 이상 입력해 주세요.",
                 () -> travelInfoService.create(empty, 7L));
@@ -451,7 +453,7 @@ class TravelInfoServiceTest {
         InfoPeriodForm period = new InfoPeriodForm();
         period.setStartDate(LocalDate.parse("2026-04-01"));
         form.setPeriods(List.of(period));
-        allowCategory();
+        allowCategory(TravelInfoContentType.FESTIVAL);
 
         assertValidation("축제 기간의 시작일과 종료일을 모두 입력해 주세요.",
                 () -> travelInfoService.create(form, 7L));
@@ -461,7 +463,7 @@ class TravelInfoServiceTest {
     void festivalRejectsStartAfterEnd() {
         TravelInfoForm form = form(TravelInfoContentType.FESTIVAL);
         form.setPeriods(List.of(period("2026-04-10", "2026-04-01")));
-        allowCategory();
+        allowCategory(TravelInfoContentType.FESTIVAL);
 
         assertValidation("축제 기간의 시작일은 종료일보다 늦을 수 없습니다.",
                 () -> travelInfoService.create(form, 7L));
@@ -473,7 +475,7 @@ class TravelInfoServiceTest {
         duplicate.setPeriods(List.of(
                 period("2026-04-01", "2026-04-03"),
                 period("2026-04-01", "2026-04-03")));
-        allowCategory();
+        allowCategory(TravelInfoContentType.FESTIVAL);
         assertValidation("동일한 축제 기간을 중복해서 입력할 수 없습니다.",
                 () -> travelInfoService.create(duplicate, 7L));
 
@@ -592,12 +594,34 @@ class TravelInfoServiceTest {
     void generalToFestivalRequiresPeriodBeforeUpdating() {
         when(travelInfoMapper.findByIdForUpdate(10L))
                 .thenReturn(existingInfo(10L, TravelInfoContentType.GENERAL));
-        allowCategory();
+        allowCategory(TravelInfoContentType.FESTIVAL);
 
         assertValidation("축제 여행정보는 기간을 한 개 이상 입력해 주세요.",
                 () -> travelInfoService.update(10L, form(TravelInfoContentType.FESTIVAL)));
         verify(travelInfoMapper, never()).updateTravelInfo(any());
         verify(travelInfoMapper, never()).deletePeriodsByInfoId(any());
+    }
+
+    @Test
+    void rejectsCreateWhenCategoryContentTypeDiffersFromTravelInfo() {
+        allowCategory(TravelInfoContentType.FESTIVAL);
+
+        assertValidation("선택한 정보 카테고리의 유형이 여행정보 유형과 일치하지 않습니다.",
+                () -> travelInfoService.create(form(TravelInfoContentType.GENERAL), 7L));
+
+        verify(travelInfoMapper, never()).insertTravelInfo(any());
+    }
+
+    @Test
+    void rejectsUpdateWhenCategoryContentTypeDiffersFromTravelInfo() {
+        when(travelInfoMapper.findByIdForUpdate(10L))
+                .thenReturn(existingInfo(10L, TravelInfoContentType.GENERAL));
+        allowCategory(TravelInfoContentType.FESTIVAL);
+
+        assertValidation("선택한 정보 카테고리의 유형이 여행정보 유형과 일치하지 않습니다.",
+                () -> travelInfoService.update(10L, form(TravelInfoContentType.GENERAL)));
+
+        verify(travelInfoMapper, never()).updateTravelInfo(any());
     }
 
     @Test
@@ -765,9 +789,14 @@ class TravelInfoServiceTest {
     }
 
     private void allowCategory() {
+        allowCategory(TravelInfoContentType.GENERAL);
+    }
+
+    private void allowCategory(TravelInfoContentType contentType) {
         InfoCategory category = new InfoCategory();
         category.setId(3L);
         category.setName("계절여행");
+        category.setContentType(contentType);
         category.setIsVisible(true);
         when(infoCategoryMapper.findById(3L)).thenReturn(category);
     }

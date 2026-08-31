@@ -59,6 +59,9 @@ class AdminTravelInfoUiContractTest {
                 .contains("hidden th:text=\"*{content}\"")
                 .contains("th:field=\"*{periods[__${periodStat.index}__].startDate}\"")
                 .contains("th:field=\"*{periods[__${periodStat.index}__].endDate}\"")
+                .contains("data-content-type=${category.contentType}")
+                .contains("th:hidden=\"${category.contentType != travelInfoForm.contentType}\"")
+                .contains("th:disabled=\"${category.contentType != travelInfoForm.contentType}\"")
                 .contains("quill@2.0.3/dist/quill.snow.css")
                 .contains("quill@2.0.3/dist/quill.js")
                 .contains("quill-resize-module@2.1.3/dist/resize.css")
@@ -182,6 +185,9 @@ class AdminTravelInfoUiContractTest {
                 .contains("URL.revokeObjectURL(objectUrl)")
                 .contains("removeThumbnail.checked = false")
                 .contains("removeThumbnail.disabled = true")
+                .contains("travel-info-category")
+                .contains("syncCategoryOptions")
+                .contains("option.dataset.contentType")
                 .contains("window.initQuillEditor(");
     }
 

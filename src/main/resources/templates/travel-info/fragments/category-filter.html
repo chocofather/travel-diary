@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div id="travel-info-category-filter"
+     class="travel-info-filter-group is-category"
+     th:fragment="filter">
+  <span class="travel-info-filter-label"
+        th:text="${contentType != null and contentType.name() == 'FESTIVAL'} ? '축제·행사 분류' : '주제'">주제</span>
+  <div class="travel-info-pills travel-info-category-pills">
+    <button type="button"
+            class="travel-info-filter-pill"
+            data-filter-name="categoryId" data-filter-value=""
+            th:classappend="${#lists.isEmpty(categoryIds)} ? ' is-active'"
+            th:attr="aria-pressed=${#lists.isEmpty(categoryIds)}">전체</button>
+    <button type="button"
+            th:each="category : ${categories}"
+            th:text="${category.name}"
+            class="travel-info-filter-pill"
+            data-filter-name="categoryId"
+            th:attr="data-filter-value=${category.id},aria-pressed=${#lists.contains(categoryIds, category.id)}"
+            th:classappend="${#lists.contains(categoryIds, category.id)} ? ' is-active'">계절여행</button>
+  </div>
+</div>
+</body>
+</html>

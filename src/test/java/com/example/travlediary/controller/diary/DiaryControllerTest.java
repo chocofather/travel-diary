@@ -1,6 +1,7 @@
 package com.example.travlediary.controller.diary;
 
 import com.example.travlediary.config.CustomLoginSuccessHandler;
+import com.example.travlediary.config.DiaryPinLockedAdvice;
 import com.example.travlediary.config.CustomLogoutSuccessHandler;
 import com.example.travlediary.config.SecurityConfig;
 import com.example.travlediary.dto.DiaryCalendarDto;
@@ -21,6 +22,7 @@ import com.example.travlediary.service.diary.DiaryCoverDesignService;
 import com.example.travlediary.service.diary.DiaryCoverService;
 import com.example.travlediary.service.diary.DiaryElementService;
 import com.example.travlediary.service.diary.DiaryLabelFontCatalog;
+import com.example.travlediary.service.diary.DiaryPinSession;
 import com.example.travlediary.service.diary.DiaryPageService;
 import com.example.travlediary.service.diary.DiaryService;
 import com.example.travlediary.service.diary.DiaryNoteCatalog;
@@ -36,6 +38,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -73,7 +76,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(DiaryController.class)
 @Import({SecurityConfig.class, DiaryStickerCatalog.class, DiaryNoteCatalog.class,
-        DiaryLabelFontCatalog.class})
+        DiaryLabelFontCatalog.class, DiaryPinSession.class})
 class DiaryControllerTest {
 
     @Autowired
@@ -2551,6 +2554,163 @@ class DiaryControllerTest {
         verify(diaryElementService).deleteLabel(10L, 3L, 100L, 7L);
         // 사진 삭제와 달리 파일 저장소는 아예 부르지 않는다
         org.mockito.Mockito.verifyNoInteractions(fileUploadService);
+    }
+
+    /**
+     * 잠긴 책은 표지를 가리지 않고 자물쇠만 얹는다.
+     * 아직 풀지 않은 책만 눌렀을 때 PIN 을 묻도록 표시가 붙는다.
+     */
+    @Test
+    void aLockedDiaryShowsALockAndAsksForThePinWhenOpened() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        DiaryListItemDto locked = item();
+        locked.setPinEnabled(true);
+        when(diaryService.getMyDiaryPage(7L, null, DiarySort.UPDATED_DESC, 1))
+                .thenReturn(listPage(List.of(locked)));
+
+        String body = mockMvc.perform(get("/diaries")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).contains("diary-book-lock");
+        assertThat(body).contains("data-pin-diary-id=\"10\"");
+        // 표지와 목록 정보는 그대로 보인다
+        assertThat(body).contains("여름 제주 여행").contains("3장");
+        // PIN 판은 책장에 함께 있다
+        assertThat(body).contains("id=\"diary-pin-backdrop\"").contains("/js/diary-pin.js");
+    }
+
+    /** 이 세션에서 이미 푼 책은 자물쇠만 남고 누르면 바로 열린다. */
+    @Test
+    void anAlreadyUnlockedDiaryOpensWithoutAskingAgain() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        DiaryListItemDto locked = item();
+        locked.setPinEnabled(true);
+        when(diaryService.getMyDiaryPage(7L, null, DiarySort.UPDATED_DESC, 1))
+                .thenReturn(listPage(List.of(locked)));
+        MockHttpSession session = new MockHttpSession();
+        new DiaryPinSession().unlock(session, 10L);
+
+        String body = mockMvc.perform(get("/diaries").session(session)
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        // 잠금이 걸려 있다는 표시는 그대로 두고, 다시 묻는 표시만 빠진다
+        assertThat(body).contains("diary-book-lock");
+        assertThat(body).doesNotContain("data-pin-diary-id");
+    }
+
+    /** 잠금이 없는 책은 예전 그대로다. */
+    @Test
+    void aDiaryWithoutAPinLooksExactlyAsBefore() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiaryPage(7L, null, DiarySort.UPDATED_DESC, 1))
+                .thenReturn(listPage(List.of(item())));
+
+        String body = mockMvc.perform(get("/diaries")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).doesNotContain("diary-book-lock").doesNotContain("data-pin-diary-id");
+    }
+
+    /**
+     * 주소창으로 잠긴 다이어리를 열다 책장으로 온 경우.
+     * 어느 책을 풀어야 하는지와 풀고 나서 돌아갈 자리를 화면이 받는다.
+     * 돌아갈 자리는 주소가 아니라 세션에 담겨 온 값이다.
+     */
+    @Test
+    void theShelfOpensThePinPadForTheDiaryTheUserTriedToReach() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiaryPage(7L, null, DiarySort.UPDATED_DESC, 1))
+                .thenReturn(listPage(List.of(item())));
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(DiaryPinLockedAdvice.PENDING_TARGET, "/diaries/10/edit");
+
+        String body = mockMvc.perform(get("/diaries").param("locked", "10").session(session)
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(between(body, "id=\"diary-pin-pending\"", ">"))
+                .contains("data-diary-id=\"10\"")
+                .contains("data-target=\"/diaries/10/edit\"");
+        // 한 번 쓰고 지운다. 다음 요청에는 남지 않는다
+        assertThat(session.getAttribute(DiaryPinLockedAdvice.PENDING_TARGET)).isNull();
+    }
+
+    /**
+     * 잠금은 제목·기간 같은 일반 설정과 성격이 달라 수정 폼에 두지 않는다.
+     * 책장의 ⋯ 메뉴에서 다룬다.
+     */
+    @Test
+    void theEditFormDoesNotCarryTheLockSettings() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryCoverService.findMyCover(10L, 7L)).thenReturn(java.util.Optional.empty());
+        when(diaryCoverDesignService.getMyDesigns(7L)).thenReturn(List.of());
+
+        String body = mockMvc.perform(get("/diaries/10/edit")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).doesNotContain("다이어리 잠금")
+                .doesNotContain("data-pin-set")
+                .doesNotContain("id=\"diary-pin-backdrop\"");
+        // PIN 을 담는 입력 칸도 폼 어디에도 없다
+        assertThat(body).doesNotContain("name=\"newPin\"").doesNotContain("name=\"currentPin\"");
+    }
+
+    /** 잠금 관리는 책장 카드의 ⋯ 메뉴에 있다. 상태에 따라 메뉴 이름이 갈린다. */
+    @Test
+    void theCardMenuOffersTheLockSettingsForEachDiary() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiaryPage(7L, null, DiarySort.UPDATED_DESC, 1))
+                .thenReturn(listPage(List.of(item())));
+
+        String body = mockMvc.perform(get("/diaries")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        // 잠금이 없는 책은 걸 수 있는 자리만 있다
+        String menu = between(body, "diary-book-menu-panel", "</div>");
+        assertThat(menu).contains("PIN 잠금 설정").contains("data-pin-set=\"10\"");
+        assertThat(menu).doesNotContain("PIN 잠금 관리");
+        // 기존 메뉴는 그대로다
+        assertThat(menu).contains("다이어리 설정");
+        // 관리 판도 책장에 함께 있다
+        assertThat(body).contains("id=\"diary-pin-manage-backdrop\"");
+    }
+
+    /** 잠금이 걸린 책은 관리 쪽이 열린다. */
+    @Test
+    void aLockedCardMenuOffersTheLockManagement() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        DiaryListItemDto locked = item();
+        locked.setPinEnabled(true);
+        when(diaryService.getMyDiaryPage(7L, null, DiarySort.UPDATED_DESC, 1))
+                .thenReturn(listPage(List.of(locked)));
+
+        String body = mockMvc.perform(get("/diaries")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        String menu = between(body, "diary-book-menu-panel", "</div>");
+        assertThat(menu).contains("PIN 잠금 관리").contains("data-pin-manage=\"10\"");
+        assertThat(menu).doesNotContain("PIN 잠금 설정");
     }
 
     /** 수정 화면도 작성 화면과 같은 표지 고르기를 쓴다. 기본 표지를 쓰는 다이어리다. */

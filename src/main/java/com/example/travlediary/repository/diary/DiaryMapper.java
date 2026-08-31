@@ -48,6 +48,14 @@ public interface DiaryMapper {
     /** 본인 소유 다이어리 수정 */
     int update(Diary diary);
 
+    /**
+     * PIN 잠금 해시만 바꾼다. (설정 / 변경 / 해제가 모두 이 한 문을 쓴다)
+     * NULL 을 넣으면 잠금이 풀린 다이어리가 된다. 그 밖의 값은 건드리지 않는다.
+     */
+    int updatePinHash(@Param("diaryId") Long diaryId,
+                      @Param("userId") Long userId,
+                      @Param("pinHash") String pinHash);
+
     /** 본인 소유 다이어리 삭제 (페이지/요소는 FK CASCADE 로 함께 지워진다) */
     int delete(@Param("diaryId") Long diaryId,
                @Param("userId") Long userId);

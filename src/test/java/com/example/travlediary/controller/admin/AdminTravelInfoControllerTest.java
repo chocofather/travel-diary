@@ -169,6 +169,29 @@ class AdminTravelInfoControllerTest {
     }
 
     @Test
+    void createFormMarksOnlyMatchingContentTypeCategoriesAsSelectable() throws Exception {
+        when(infoCategoryService.getAll()).thenReturn(List.of(
+                category(1L, "일반 분류", true, TravelInfoContentType.GENERAL),
+                category(2L, "축제 분류", true, TravelInfoContentType.FESTIVAL)));
+
+        mockMvc.perform(get("/admin/travel-info/create").with(user("admin").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(result -> {
+                    var document = org.jsoup.Jsoup.parse(result.getResponse().getContentAsString());
+                    var generalOption = document.selectFirst("#travel-info-category option[value='1']");
+                    var festivalOption = document.selectFirst("#travel-info-category option[value='2']");
+
+                    assertThat(generalOption).isNotNull();
+                    assertThat(generalOption.attr("data-content-type")).isEqualTo("GENERAL");
+                    assertThat(generalOption.hasAttr("disabled")).isFalse();
+                    assertThat(festivalOption).isNotNull();
+                    assertThat(festivalOption.attr("data-content-type")).isEqualTo("FESTIVAL");
+                    assertThat(festivalOption.hasAttr("hidden")).isTrue();
+                    assertThat(festivalOption.hasAttr("disabled")).isTrue();
+                });
+    }
+
+    @Test
     void editFormKeepsCurrentlySelectedHiddenCategory() throws Exception {
         TravelInfoForm form = validForm();
         form.setCategoryId(2L);
@@ -182,7 +205,7 @@ class AdminTravelInfoControllerTest {
                 .thenReturn("/uploads/travel-info/thumbnails/current.jpg");
         when(infoCategoryService.getAll()).thenReturn(List.of(
                 category(1L, "계절여행", true),
-                category(2L, "기존 숨김 분류", false),
+                category(2L, "기존 숨김 분류", false, TravelInfoContentType.FESTIVAL),
                 category(3L, "다른 숨김 분류", false)));
 
         mockMvc.perform(get("/admin/travel-info/edit/10").with(user("admin").roles("ADMIN")))
@@ -390,9 +413,17 @@ class AdminTravelInfoControllerTest {
     }
 
     private InfoCategory category(Long id, String name, boolean visible) {
+        return category(id, name, visible, TravelInfoContentType.GENERAL);
+    }
+
+    private InfoCategory category(Long id,
+                                  String name,
+                                  boolean visible,
+                                  TravelInfoContentType contentType) {
         InfoCategory category = new InfoCategory();
         category.setId(id);
         category.setName(name);
+        category.setContentType(contentType);
         category.setDisplayOrder(id.intValue());
         category.setIsVisible(visible);
         return category;
