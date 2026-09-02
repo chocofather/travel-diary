@@ -6,6 +6,7 @@ import com.example.travlediary.dto.PasswordChangeForm;
 import com.example.travlediary.model.User;
 import com.example.travlediary.model.UserRole;
 import com.example.travlediary.model.UserStatus;
+import com.example.travlediary.repository.user.SocialAccountMapper;
 import com.example.travlediary.repository.user.UserMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -25,6 +26,12 @@ public class MyPageAccountService {
     private final UserMapper userMapper;
     private final AccountAnonymizationService accountAnonymizationService;
     private final PasswordEncoder passwordEncoder;
+    private final SocialAccountMapper socialAccountMapper;
+
+    @Transactional(readOnly = true)
+    public boolean hasLocalPassword(Long userId) {
+        return userMapper.hasLocalPasswordById(userId);
+    }
 
     @Transactional(readOnly = true)
     public AccountDetailsDto getAccountDetails(Long userId) {
@@ -91,6 +98,34 @@ public class MyPageAccountService {
     @Transactional
     public void withdraw(Long userId, String currentPassword) {
         User account = userMapper.findActiveAccountSecurityByIdForUpdate(userId);
+        validateWithdrawableAccount(account);
+        if (currentPassword == null
+                || account.getUserPassword() == null
+                || !passwordEncoder.matches(currentPassword, account.getUserPassword())) {
+            throw new AccountValidationException(
+                    "currentPassword", "비밀번호가 일치하지 않습니다.");
+        }
+
+        deactivate(account);
+    }
+
+    @Transactional
+    public void withdrawAfterSocialReauthentication(Long userId) {
+        User account = userMapper.findActiveAccountSecurityByIdForUpdate(userId);
+        validateWithdrawableAccount(account);
+        if (account.getUserPassword() != null) {
+            throw new AccountValidationException(
+                    null, "소셜 계정 탈퇴를 처리할 수 없습니다.");
+        }
+
+        deactivate(account);
+        if (socialAccountMapper.deleteAllByUserId(userId) < 1) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, "회원 탈퇴를 완료할 수 없습니다.");
+        }
+    }
+
+    private void validateWithdrawableAccount(User account) {
         if (account == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "회원 정보를 찾을 수 없습니다.");
         }
@@ -98,12 +133,10 @@ public class MyPageAccountService {
             throw new AccountValidationException(
                     null, "관리자 계정은 마이페이지에서 탈퇴할 수 없습니다.");
         }
-        if (currentPassword == null
-                || account.getUserPassword() == null
-                || !passwordEncoder.matches(currentPassword, account.getUserPassword())) {
-            throw new AccountValidationException(
-                    "currentPassword", "비밀번호가 일치하지 않습니다.");
-        }
+    }
+
+    private void deactivate(User account) {
+        Long userId = account.getId();
 
         String withdrawnEmail = accountAnonymizationService.anonymizedEmail(userId);
         String withdrawnNickname = accountAnonymizationService.anonymizedNickname();

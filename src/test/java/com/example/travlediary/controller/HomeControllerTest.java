@@ -22,6 +22,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -80,6 +81,37 @@ class HomeControllerTest {
     }
 
     @Test
+    void withdrawalQueryRendersAnAccessibleToastWithoutAddingAHomeLayoutBanner()
+            throws Exception {
+        when(courseService.getPopularCoursesForHome()).thenReturn(List.of());
+
+        mockMvc.perform(get("/").queryParam("withdrawn", "true"))
+                .andExpect(status().isOk())
+                .andExpect(result -> {
+                    var document = Jsoup.parse(result.getResponse().getContentAsString());
+                    assertThat(document.select(
+                            ".home-withdrawal-toast[role=status][aria-live=polite]"))
+                            .hasSize(1);
+                    assertThat(document.select(".home-withdrawal-toast").text())
+                            .isEqualTo("회원 탈퇴가 완료되었습니다.");
+                    assertThat(document.select(".home-account-status")).isEmpty();
+                    assertThat(document.select(
+                            "script[src='/js/home-withdrawal-toast.js']")).hasSize(1);
+                });
+    }
+
+    @Test
+    void regularHomeDoesNotRenderTheWithdrawalToast() throws Exception {
+        when(courseService.getPopularCoursesForHome()).thenReturn(List.of());
+
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(result -> assertThat(Jsoup.parse(
+                        result.getResponse().getContentAsString())
+                        .select(".home-withdrawal-toast")).isEmpty());
+    }
+
+    @Test
     void authenticatedHomeLoadsCurrentUserByPrincipalId() throws Exception {
         User user = user(7L, "member");
         when(userMapper.findById(7L)).thenReturn(user);
@@ -92,6 +124,7 @@ class HomeControllerTest {
                 .andExpect(model().attribute("user", user));
 
         verify(userMapper, atLeastOnce()).findById(7L);
+        verify(userMapper, never()).hasLocalPasswordById(7L);
     }
 
     private UsernamePasswordAuthenticationToken authenticationFor(User user) {

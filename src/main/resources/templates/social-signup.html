@@ -33,12 +33,19 @@
 
       <div class="login-field">
         <label for="nickname">닉네임</label>
-        <input type="text" id="nickname" th:field="*{nickname}"
-               maxlength="12" autocomplete="nickname"
-               placeholder="2~12자 한글, 영문, 숫자"
-               th:attr="aria-invalid=${#fields.hasErrors('nickname')}" required>
+        <div class="social-signup__nickname-row">
+          <input type="text" id="nickname" th:field="*{nickname}"
+                 maxlength="12" autocomplete="nickname"
+                 placeholder="2~12자 한글, 영문, 숫자"
+                 aria-describedby="nicknameMessage nicknameServerError"
+                 th:attr="aria-invalid=${#fields.hasErrors('nickname')}" required>
+          <button type="button" class="social-signup__recommend-button" id="generateNickname">자동 추천</button>
+        </div>
+        <p id="nicknameMessage" class="social-signup__field-feedback" aria-live="polite">
+          2~12자의 한글, 영문, 숫자만 사용할 수 있습니다. 공백·특수문자 및 부적절한 표현은 사용할 수 없습니다.
+        </p>
         <p class="social-signup__field-error" th:if="${#fields.hasErrors('nickname')}"
-           th:errors="*{nickname}" role="alert">닉네임 오류</p>
+           th:errors="*{nickname}" role="alert" id="nicknameServerError">닉네임 오류</p>
       </div>
 
       <div class="social-signup__consents">
@@ -65,5 +72,8 @@
     </form>
   </section>
 </main>
+<script src="/js/jquery-3.6.0.min.js"></script>
+<script src="/js/nickname-availability.js" defer></script>
+<script src="/js/social-signup.js" defer></script>
 </body>
 </html>

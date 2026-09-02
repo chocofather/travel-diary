@@ -11,8 +11,9 @@
 
 <th:block th:fragment="body">
   <div class="home-page">
-    <p class="home-account-status"
-       th:if="${param.withdrawn != null and param.withdrawn[0] == 'true'}" role="status">
+    <p class="home-withdrawal-toast" data-withdrawal-toast
+       th:if="${param.withdrawn != null and param.withdrawn[0] == 'true'}"
+       role="status" aria-live="polite" aria-atomic="true">
       회원 탈퇴가 완료되었습니다.
     </p>
 
@@ -104,5 +105,6 @@
 
   <script src="/js/home.js" defer></script>
   <script src="/js/slider.js" defer></script>
+  <script src="/js/home-withdrawal-toast.js" defer></script>
 </th:block>
 </html>

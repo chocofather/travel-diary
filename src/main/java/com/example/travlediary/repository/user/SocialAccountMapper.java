@@ -20,4 +20,6 @@ public interface SocialAccountMapper {
     List<SocialAccount> findAllByUserId(@Param("userId") Long userId);
 
     int insert(SocialAccount socialAccount);
+
+    int deleteAllByUserId(@Param("userId") Long userId);
 }

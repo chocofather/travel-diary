@@ -171,11 +171,213 @@
     background: #912018;
 }
 
+.mypage-social-withdrawal {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px 20px;
+    padding: 17px 20px;
+    border: 1px solid #eadede;
+    border-radius: 12px;
+    background: #fff;
+}
+
+.mypage-social-withdrawal-summary {
+    min-width: 0;
+}
+
+.mypage-social-withdrawal-summary h2 {
+    margin: 0 0 4px;
+    color: #253044;
+    font-size: 15px;
+}
+
+.mypage-social-withdrawal-summary p {
+    margin: 0;
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.mypage-social-withdrawal .mypage-account-actions {
+    justify-content: flex-end;
+}
+
+.mypage-social-withdrawal .is-compact-danger {
+    min-height: 36px;
+    padding: 7px 13px;
+    border-color: #b42318;
+    background: #fff;
+    color: #b42318;
+    font-size: 13px;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.mypage-social-withdrawal .is-compact-danger:hover {
+    background: #fff5f5;
+}
+
+.mypage-social-withdrawal > .mypage-account-notice {
+    grid-column: 1 / -1;
+}
+
+.mypage-social-withdrawal-confirm {
+    width: 100%;
+    max-width: 760px;
+    gap: 22px;
+    padding: 28px;
+}
+
+.mypage-social-withdrawal-confirm-page > .mypage-page-header {
+    margin-bottom: 2px;
+}
+
+.mypage-social-withdrawal-impact {
+    padding: 16px 18px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #f8fafc;
+}
+
+.mypage-social-withdrawal-impact ul {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding-left: 19px;
+    color: #475569;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.mypage-social-withdrawal-impact li::marker {
+    color: #94a3b8;
+}
+
+.mypage-social-withdrawal-provider {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 15px 16px;
+    border: 1px solid #dbe4ea;
+    border-radius: 10px;
+    background: #fff;
+}
+
+.mypage-social-withdrawal-provider > div {
+    display: grid;
+    flex: 0 0 auto;
+    gap: 4px;
+}
+
+.mypage-social-withdrawal-provider span {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.mypage-social-withdrawal-provider strong {
+    color: #172033;
+    font-size: 16px;
+}
+
+.mypage-social-withdrawal-provider p {
+    max-width: 430px;
+    margin: 0;
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.55;
+    text-align: right;
+}
+
+.mypage-social-withdrawal-confirm .mypage-account-actions {
+    justify-content: flex-end;
+    padding-top: 18px;
+    border-top: 1px solid #e8edf2;
+}
+
+.mypage-social-withdrawal-confirm .mypage-account-actions form {
+    margin: 0;
+}
+
+.mypage-social-withdrawal-confirm .mypage-account-actions .is-danger {
+    border-color: #b42318;
+    background: #b42318;
+    color: #fff;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.mypage-social-withdrawal-confirm .mypage-account-actions .is-danger:hover {
+    border-color: #912018;
+    background: #912018;
+}
+
+.mypage-social-withdrawal-confirm .mypage-account-actions .is-cancel {
+    border-color: #cbd5e1;
+    background: #fff;
+    color: #475569;
+}
+
+.mypage-social-withdrawal-confirm .mypage-account-actions .is-cancel:hover {
+    background: #f8fafc;
+}
+
+.mypage-social-withdrawal .is-danger:focus-visible,
+.mypage-social-withdrawal-confirm .is-danger:focus-visible {
+    outline-color: rgba(180, 35, 24, 0.28);
+}
+
 .mypage-account-admin-warning {
     margin: 0;
     color: #b42318;
     font-size: 14px;
     font-weight: 700;
+}
+
+.mypage-social-account-list {
+    display: grid;
+    gap: 10px;
+}
+
+.mypage-social-account-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 15px 16px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #f8fafc;
+}
+
+.mypage-social-account-provider {
+    color: #172033;
+    font-size: 15px;
+}
+
+.mypage-social-account-email {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+    text-align: right;
+}
+
+.mypage-social-account-email small {
+    color: #64748b;
+    font-size: 12px;
+}
+
+.mypage-social-account-email > span {
+    overflow-wrap: anywhere;
+    color: #253044;
+    font-size: 14px;
+}
+
+.mypage-social-account-empty {
+    margin: 0;
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.6;
 }
 
 @media (max-width: 680px) {
@@ -195,6 +397,68 @@
     .mypage-account-actions,
     .mypage-account-actions a,
     .mypage-account-actions button {
+        width: 100%;
+    }
+
+    .mypage-social-account-row {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .mypage-social-account-email {
+        text-align: left;
+    }
+
+    .mypage-social-withdrawal {
+        grid-template-columns: minmax(0, 1fr) auto;
+        padding: 16px;
+    }
+
+    .mypage-social-withdrawal .mypage-account-actions,
+    .mypage-social-withdrawal .mypage-account-actions button {
+        width: auto;
+    }
+
+    .mypage-social-withdrawal-confirm {
+        padding: 21px 16px;
+    }
+
+    .mypage-social-withdrawal-provider {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 9px;
+    }
+
+    .mypage-social-withdrawal-provider p {
+        text-align: left;
+    }
+
+    .mypage-social-withdrawal-confirm .mypage-account-actions,
+    .mypage-social-withdrawal-confirm .mypage-account-actions a,
+    .mypage-social-withdrawal-confirm .mypage-account-actions button,
+    .mypage-social-withdrawal-confirm .mypage-account-actions form {
+        width: auto;
+    }
+}
+
+@media (max-width: 480px) {
+    .mypage-social-withdrawal {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .mypage-social-withdrawal .mypage-account-actions {
+        justify-self: start;
+    }
+
+    .mypage-social-withdrawal-confirm .mypage-account-actions {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .mypage-social-withdrawal-confirm .mypage-account-actions a,
+    .mypage-social-withdrawal-confirm .mypage-account-actions button,
+    .mypage-social-withdrawal-confirm .mypage-account-actions form {
         width: 100%;
     }
 }

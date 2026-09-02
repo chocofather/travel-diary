@@ -45,14 +45,49 @@ class MyPageNicknameUiContractTest {
     @Test
     void registrationShowsTheSamePolicyAndKeepsItsClientValidationAligned() throws IOException {
         String template = read("templates/register.html");
-        String script = read("static/js/register.js");
+        String sharedScript = read("static/js/nickname-availability.js");
 
-        assertThat(template).contains("maxlength=\"12\"", FORMAT_GUIDANCE, POLICY_GUIDANCE);
-        assertThat(script).contains(
+        assertThat(template).contains(
+                "maxlength=\"12\"", FORMAT_GUIDANCE, POLICY_GUIDANCE,
+                "/js/nickname-availability.js");
+        assertThat(sharedScript).contains(
                 "const nicknamePattern = /^[가-힣A-Za-z0-9]{2,12}$/;",
                 "공백·특수문자 및 부적절한 표현은 사용할 수 없습니다.",
-                "res.status === \"FORBIDDEN\"",
+                "response.status === \"FORBIDDEN\"",
                 "사용할 수 없는 닉네임입니다.");
+    }
+
+    @Test
+    void socialSignupUsesTheRegistrationNicknameAvailabilityAndRecommendationContract()
+            throws IOException {
+        String template = read("templates/social-signup.html");
+        String sharedScript = read("static/js/nickname-availability.js");
+        String stylesheet = read("static/css/login.css");
+
+        assertThat(template).contains(
+                "id=\"nickname\"",
+                "id=\"generateNickname\"",
+                "id=\"nicknameMessage\"",
+                "aria-live=\"polite\"",
+                "/js/nickname-availability.js");
+        assertThat(sharedScript).contains(
+                "/api/users/check-nickname",
+                "/api/users/generate-nickname",
+                "사용 가능한 닉네임입니다.",
+                "이미 사용 중인 닉네임입니다.",
+                "사용할 수 없는 닉네임입니다.");
+        assertThat(stylesheet).contains(
+                ".social-signup__nickname-row",
+                "align-items: center;",
+                "gap: 8px;",
+                ".social-signup__recommend-button",
+                "box-sizing: border-box;",
+                ".social-signup__field-feedback",
+                "text-align: left;",
+                ".social-signup .login-field",
+                "margin-bottom: 12px;",
+                ".social-signup__consents",
+                "margin: 0 0 18px;");
     }
 
     private String read(String relativePath) throws IOException {

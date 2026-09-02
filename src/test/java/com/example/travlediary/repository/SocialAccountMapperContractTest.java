@@ -103,6 +103,21 @@ class SocialAccountMapperContractTest {
                 .containsEntry("updatedAt", "updated_at");
     }
 
+    @Test
+    void voluntaryWithdrawalDeletesEverySocialIdentityByTrustedUserId()
+            throws IOException {
+        Configuration configuration = mapperConfiguration();
+        BoundSql boundSql = configuration.getMappedStatement(
+                        NAMESPACE + ".deleteAllByUserId")
+                .getBoundSql(7L);
+
+        assertThat(normalize(boundSql.getSql())).isEqualTo(
+                "DELETE FROM social_accounts WHERE user_id = ?");
+        assertThat(boundSql.getParameterMappings())
+                .extracting(ParameterMapping::getProperty)
+                .containsExactly("userId");
+    }
+
     private Configuration mapperConfiguration() throws IOException {
         Configuration configuration = new Configuration();
         configuration.setMapUnderscoreToCamelCase(true);

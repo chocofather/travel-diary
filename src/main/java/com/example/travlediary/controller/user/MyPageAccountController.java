@@ -5,10 +5,15 @@ import com.example.travlediary.dto.AccountEditForm;
 import com.example.travlediary.dto.AccountVerifyForm;
 import com.example.travlediary.dto.AccountWithdrawalForm;
 import com.example.travlediary.dto.PasswordChangeForm;
+import com.example.travlediary.model.PendingSocialWithdrawal;
+import com.example.travlediary.model.SocialProvider;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.user.AccountReauthenticationService;
 import com.example.travlediary.service.user.AccountValidationException;
 import com.example.travlediary.service.user.MyPageAccountService;
+import com.example.travlediary.service.user.SocialAccountService;
+import com.example.travlediary.service.user.SocialWithdrawalException;
+import com.example.travlediary.service.user.SocialWithdrawalService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
@@ -33,11 +38,21 @@ public class MyPageAccountController {
 
     private final MyPageAccountService accountService;
     private final AccountReauthenticationService reauthenticationService;
+    private final SocialAccountService socialAccountService;
+    private final SocialWithdrawalService socialWithdrawalService;
 
     @GetMapping
     public String verifyForm(@AuthenticationPrincipal CustomUserDetails userDetails,
                              HttpSession session,
                              Model model) {
+        // 확인 화면을 떠나 계정 관리로 돌아온 경우 탈퇴 intent를 재사용하지 않는다.
+        session.removeAttribute(PendingSocialWithdrawal.SESSION_ATTRIBUTE);
+        if (!accountService.hasLocalPassword(userDetails.getId())) {
+            model.addAttribute("socialAccounts",
+                    socialAccountService.findAllByUserId(userDetails.getId()));
+            model.addAttribute("pageTitle", "계정 관리 | 마이페이지");
+            return "mypage/account-social";
+        }
         if (reauthenticationService.isVerified(session, userDetails.getId())) {
             return "redirect:/mypage/account/edit";
         }
@@ -48,6 +63,60 @@ public class MyPageAccountController {
         return "mypage/account-verify";
     }
 
+    @PostMapping("/social-withdrawal")
+    public String beginSocialWithdrawal(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            HttpSession session,
+            RedirectAttributes redirectAttributes) {
+        if (accountService.hasLocalPassword(userDetails.getId())) {
+            return "redirect:/mypage/account";
+        }
+        session.removeAttribute(PendingSocialWithdrawal.SESSION_ATTRIBUTE);
+        try {
+            PendingSocialWithdrawal pending =
+                    socialWithdrawalService.begin(userDetails.getId());
+            session.setAttribute(PendingSocialWithdrawal.SESSION_ATTRIBUTE, pending);
+            return "redirect:/mypage/account/social-withdrawal/confirm";
+        } catch (SocialWithdrawalException exception) {
+            redirectAttributes.addFlashAttribute(
+                    "socialWithdrawalError", exception.getMessage());
+            return "redirect:/mypage/account";
+        }
+    }
+
+    @GetMapping("/social-withdrawal/confirm")
+    public String socialWithdrawalConfirmation(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            HttpSession session,
+            Model model,
+            RedirectAttributes redirectAttributes) {
+        if (accountService.hasLocalPassword(userDetails.getId())) {
+            session.removeAttribute(PendingSocialWithdrawal.SESSION_ATTRIBUTE);
+            return "redirect:/mypage/account";
+        }
+
+        Object value = session.getAttribute(PendingSocialWithdrawal.SESSION_ATTRIBUTE);
+        if (!(value instanceof PendingSocialWithdrawal pending)
+                || !socialWithdrawalService.isValid(pending, userDetails.getId())) {
+            session.removeAttribute(PendingSocialWithdrawal.SESSION_ATTRIBUTE);
+            redirectAttributes.addFlashAttribute(
+                    "socialWithdrawalError", "본인 확인 정보가 만료되었습니다. 다시 시도해주세요.");
+            return "redirect:/mypage/account";
+        }
+
+        model.addAttribute("providerName", providerName(pending.provider()));
+        model.addAttribute("providerAuthorizationUrl",
+                "/oauth2/authorization/" + pending.provider().name().toLowerCase());
+        model.addAttribute("pageTitle", "회원 탈퇴 | 마이페이지");
+        return "mypage/social-withdrawal-confirm";
+    }
+
+    @PostMapping("/social-withdrawal/cancel")
+    public String cancelSocialWithdrawal(HttpSession session) {
+        session.removeAttribute(PendingSocialWithdrawal.SESSION_ATTRIBUTE);
+        return "redirect:/mypage/account";
+    }
+
     @PostMapping("/verify-password")
     public String verifyPassword(
             @ModelAttribute("verifyForm") AccountVerifyForm form,
@@ -55,6 +124,9 @@ public class MyPageAccountController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             HttpSession session,
             Model model) {
+        if (!accountService.hasLocalPassword(userDetails.getId())) {
+            return "redirect:/mypage/account";
+        }
         if (form.getCurrentPassword() == null || form.getCurrentPassword().isEmpty()) {
             bindingResult.rejectValue(
                     "currentPassword", "required", "현재 비밀번호를 입력해주세요.");
@@ -79,6 +151,9 @@ public class MyPageAccountController {
                            HttpSession session,
                            Model model,
                            RedirectAttributes redirectAttributes) {
+        if (!accountService.hasLocalPassword(userDetails.getId())) {
+            return "redirect:/mypage/account";
+        }
         if (!requireVerification(session, userDetails.getId(), redirectAttributes)) {
             return "redirect:/mypage/account";
         }
@@ -95,6 +170,9 @@ public class MyPageAccountController {
             HttpSession session,
             Model model,
             RedirectAttributes redirectAttributes) {
+        if (!accountService.hasLocalPassword(userDetails.getId())) {
+            return "redirect:/mypage/account";
+        }
         if (!requireVerification(session, userDetails.getId(), redirectAttributes)) {
             return "redirect:/mypage/account";
         }
@@ -126,6 +204,9 @@ public class MyPageAccountController {
             HttpServletResponse response,
             Model model,
             RedirectAttributes redirectAttributes) {
+        if (!accountService.hasLocalPassword(userDetails.getId())) {
+            return "redirect:/mypage/account";
+        }
         if (!requireVerification(session, userDetails.getId(), redirectAttributes)) {
             return "redirect:/mypage/account";
         }
@@ -158,6 +239,9 @@ public class MyPageAccountController {
             HttpServletResponse response,
             Model model,
             RedirectAttributes redirectAttributes) {
+        if (!accountService.hasLocalPassword(userDetails.getId())) {
+            return "redirect:/mypage/account";
+        }
         if (!requireVerification(session, userDetails.getId(), redirectAttributes)) {
             return "redirect:/mypage/account";
         }
@@ -231,5 +315,13 @@ public class MyPageAccountController {
                 .logout(request, response, authentication);
         new SecurityContextLogoutHandler()
                 .logout(request, response, authentication);
+    }
+
+    private String providerName(SocialProvider provider) {
+        return switch (provider) {
+            case GOOGLE -> "Google";
+            case KAKAO -> "카카오";
+            case NAVER -> "네이버";
+        };
     }
 }

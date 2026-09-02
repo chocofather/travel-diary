@@ -32,6 +32,7 @@ class RegistrationUiContractTest {
     @Test
     void availabilityStateIsInvalidatedWhenAnyCheckedIdentityFieldChanges() throws IOException {
         String javascript = resource("static/js/register.js");
+        String nicknameAvailability = resource("static/js/nickname-availability.js");
         String emailSuggestion = resource("static/js/email-domain-suggestion.js");
         String template = resource("templates/register.html");
 
@@ -41,7 +42,7 @@ class RegistrationUiContractTest {
                 .contains("nickname: false")
                 .contains("invalidate(\"username\")")
                 .contains("invalidate(\"email\")")
-                .contains("invalidate(\"nickname\")")
+                .contains("TravelDiaryNicknameAvailability.initialize")
                 .contains("TravelDiaryEmailDomain?.suggest(email)")
                 .contains("TravelDiaryEmailDomain?.autocomplete(email)")
                 .contains("event.key === \"ArrowDown\"")
@@ -56,6 +57,10 @@ class RegistrationUiContractTest {
                 .contains("isSubmitting = true")
                 .contains("!$(serverErrorSelectors[field]).length")
                 .contains("!availability.username || !availability.email || !availability.nickname");
+        assertThat(nicknameAvailability)
+                .contains("$input.on(\"input.nicknameAvailability\"")
+                .contains("requestVersion += 1")
+                .contains("setAvailable(false)");
         assertThat(emailSuggestion)
                 .contains("[\"gamil.com\", \"gmail.com\"]")
                 .contains("\"gmail.com\"")
@@ -63,7 +68,7 @@ class RegistrationUiContractTest {
                 .contains("\"daum.net\"")
                 .contains("\"hanmail.net\"")
                 .contains("\"kakao.com\"");
-        assertThat(template).contains("/js/email-domain-suggestion.js");
+        assertThat(template).contains("/js/email-domain-suggestion.js", "/js/nickname-availability.js");
     }
 
     private String resource(String path) throws IOException {

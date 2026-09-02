@@ -5,7 +5,6 @@ $(function () {
     const availability = {username: false, email: false, nickname: false};
     const requestVersion = {username: 0, email: 0, nickname: 0};
     const usernamePattern = /^(?=.*[a-z])[a-z0-9_-]{3,16}$/;
-    const nicknamePattern = /^[가-힣A-Za-z0-9]{2,12}$/;
     const fullNamePattern = /^[가-힣A-Za-z]+(?: +[가-힣A-Za-z]+)*$/;
     const passwordPattern = /^(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/;
     const emailPattern = /^[A-Z0-9._%+-]+@[A-Z0-9-]+(?:\.[A-Z0-9-]+)+$/i;
@@ -156,27 +155,6 @@ $(function () {
             });
     });
 
-    const checkNicknameAvailability = debounce(function () {
-        const nickname = $("#nickname").val().trim();
-        if (!nicknamePattern.test(nickname)) return;
-        const version = requestVersion.nickname;
-
-        $.get("/api/users/check-nickname", {nickname})
-            .done(function (res) {
-                if (version !== requestVersion.nickname || nickname !== $("#nickname").val().trim()) return;
-                availability.nickname = !res.exists && res.status === "AVAILABLE";
-                const message = res.status === "FORBIDDEN"
-                    ? "사용할 수 없는 닉네임입니다."
-                    : res.exists ? "이미 사용 중인 닉네임입니다." : "사용 가능한 닉네임입니다.";
-                setMessage("#nicknameMessage", message, availability.nickname ? "success" : "error");
-                updateButtons();
-            })
-            .fail(function () {
-                if (version !== requestVersion.nickname) return;
-                setMessage("#nicknameMessage", "닉네임 중복 확인에 실패했습니다.", "error");
-            });
-    });
-
     function updateEmailTypoSuggestion(email) {
         suggestedEmail = window.TravelDiaryEmailDomain?.suggest(email) || "";
         $("#emailSuggestion").prop("hidden", !suggestedEmail);
@@ -299,18 +277,12 @@ $(function () {
         chooseEmailDomain(suggestedEmail);
     });
 
-    $("#nickname").on("input", function () {
-        clearServerError("nickname");
-        invalidate("nickname");
-        const nickname = this.value.trim();
-        if (!nicknamePattern.test(nickname)) {
-            setMessage("#nicknameMessage",
-                "2~12자의 한글, 영문, 숫자만 사용할 수 있습니다. 공백·특수문자 및 부적절한 표현은 사용할 수 없습니다.",
-                "error");
-            return;
+    window.TravelDiaryNicknameAvailability.initialize({
+        onInput: () => clearServerError("nickname"),
+        onAvailabilityChange: isAvailable => {
+            availability.nickname = isAvailable;
+            updateButtons();
         }
-        setMessage("#nicknameMessage", "사용 가능 여부를 확인하고 있습니다.");
-        checkNicknameAvailability();
     });
 
     $("#userPassword, #passwordConfirm").on("input", function () {
@@ -342,13 +314,6 @@ $(function () {
         this.value = digits.length <= 3 ? digits
             : digits.length <= 7 ? digits.slice(0, 3) + "-" + digits.slice(3)
                 : digits.slice(0, 3) + "-" + digits.slice(3, 7) + "-" + digits.slice(7);
-    });
-
-    $("#generateNickname").on("click", function () {
-        invalidate("nickname");
-        $.get("/api/users/generate-nickname")
-            .done(nickname => $("#nickname").val(nickname).trigger("input").focus())
-            .fail(() => setMessage("#nicknameMessage", "닉네임 생성에 실패했습니다.", "error"));
     });
 
     $(".next-step").on("click", function () {

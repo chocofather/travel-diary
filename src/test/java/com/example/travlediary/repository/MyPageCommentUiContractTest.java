@@ -63,11 +63,12 @@ class MyPageCommentUiContractTest {
                 .contains("activeMenu == 'bookmarks'")
                 .contains("th:href=\"@{/mypage/bookmarks}\">북마크</a>")
                 .contains("activeMenu == 'account'")
-                .contains("th:href=\"@{/mypage/account}\">회원정보 수정</a>");
+                .contains("th:href=\"@{/mypage/account}\"")
+                .contains("hasLocalPassword == false ? '계정 관리' : '회원정보 수정'");
         assertThat(index)
                 .contains("<a class=\"mypage-menu-item\" th:href=\"@{/mypage/comments}\">")
                 .contains("<strong>북마크</strong>")
-                .contains("<strong>회원정보 수정</strong>");
+                .contains("hasLocalPassword == false ? '계정 관리' : '회원정보 수정'");
     }
 
     private String resource(String relativePath) throws IOException {

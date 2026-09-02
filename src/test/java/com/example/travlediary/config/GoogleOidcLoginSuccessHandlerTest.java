@@ -1,6 +1,7 @@
 package com.example.travlediary.config;
 
 import com.example.travlediary.model.PendingSocialSignup;
+import com.example.travlediary.model.PendingSocialWithdrawal;
 import com.example.travlediary.model.SocialAccount;
 import com.example.travlediary.model.SocialProvider;
 import com.example.travlediary.model.User;
@@ -9,6 +10,8 @@ import com.example.travlediary.model.UserStatus;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.user.SocialAccountService;
+import com.example.travlediary.service.user.SocialWithdrawalException;
+import com.example.travlediary.service.user.SocialWithdrawalService;
 import com.example.travlediary.service.user.UserSanctionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,6 +28,11 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
+import org.springframework.security.oauth2.client.registration.ClientRegistration;
+import org.springframework.security.oauth2.core.AuthorizationGrantType;
+import org.springframework.security.oauth2.core.OAuth2AccessToken;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.oauth2.core.oidc.OidcIdToken;
@@ -44,6 +52,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -56,6 +66,12 @@ class SocialOAuth2LoginSuccessHandlerTest {
     private UserMapper userMapper;
     @Mock
     private UserSanctionService userSanctionService;
+    @Mock
+    private SocialWithdrawalService socialWithdrawalService;
+    @Mock
+    private OAuth2AuthorizedClientService authorizedClientService;
+    @Mock
+    private TravelDiaryAuthenticationRestorer authenticationRestorer;
 
     private SocialOAuth2LoginSuccessHandler handler;
 
@@ -457,6 +473,120 @@ class SocialOAuth2LoginSuccessHandlerTest {
         assertThat(response.getRedirectedUrl()).isEqualTo("/login?oauthError=true");
         verify(socialAccountService, never())
                 .findByProviderAndProviderUserId(any(), anyString());
+    }
+
+    @Test
+    void validWithdrawalIntentUsesTheFreshTokenAndBypassesNormalLoginBeforeLogout()
+            throws Exception {
+        handler = withdrawalHandler();
+        OAuth2AuthenticationToken authentication = oidcAuthentication(
+                "kakao", "https://kauth.kakao.com", "kakao-sub",
+                "same@example.com", true, "ROLE_ADMIN");
+        PendingSocialWithdrawal pending = withdrawalPending(7L, SocialProvider.KAKAO);
+        when(authorizedClientService.loadAuthorizedClient("kakao", authentication.getName()))
+                .thenReturn(authorizedClient("kakao", authentication.getName(), "fresh-token"));
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.getSession().setAttribute("userId", 7L);
+        request.getSession().setAttribute(
+                PendingSocialWithdrawal.SESSION_ATTRIBUTE, pending);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        verify(socialWithdrawalService).complete(
+                pending, 7L, SocialProvider.KAKAO, "kakao-sub", "fresh-token");
+        verify(authorizedClientService).removeAuthorizedClient(
+                "kakao", authentication.getName());
+        verify(socialAccountService, never())
+                .findByProviderAndProviderUserId(any(), anyString());
+        org.mockito.InOrder order = inOrder(authorizedClientService, socialWithdrawalService);
+        order.verify(authorizedClientService).loadAuthorizedClient(
+                "kakao", authentication.getName());
+        order.verify(authorizedClientService).removeAuthorizedClient(
+                "kakao", authentication.getName());
+        order.verify(socialWithdrawalService).complete(
+                pending, 7L, SocialProvider.KAKAO, "kakao-sub", "fresh-token");
+        assertThat(request.getSession(false)).isNull();
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        assertThat(response.getRedirectedUrl()).isEqualTo("/?withdrawn=true");
+    }
+
+    @Test
+    void withdrawalIdentityMismatchConsumesIntentRestoresSessionAndNeverReportsSuccess()
+            throws Exception {
+        handler = withdrawalHandler();
+        OAuth2AuthenticationToken authentication = naverAuthentication(
+                "00", Map.of("id", "naver-account-b"), "ROLE_ADMIN", true);
+        PendingSocialWithdrawal pending = withdrawalPending(7L, SocialProvider.NAVER);
+        when(authorizedClientService.loadAuthorizedClient("naver", authentication.getName()))
+                .thenReturn(authorizedClient("naver", authentication.getName(), "fresh-token"));
+        doThrow(new SocialWithdrawalException("safe failure"))
+                .when(socialWithdrawalService).complete(
+                        pending, 7L, SocialProvider.NAVER,
+                        "naver-account-b", "fresh-token");
+        when(authenticationRestorer.restore(
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.eq(7L))).thenReturn(true);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.getSession().setAttribute("userId", 7L);
+        request.getSession().setAttribute(
+                PendingSocialWithdrawal.SESSION_ATTRIBUTE, pending);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        assertThat(request.getSession().getAttribute(
+                PendingSocialWithdrawal.SESSION_ATTRIBUTE)).isNull();
+        assertThat(((org.springframework.mock.web.MockHttpSession) request.getSession())
+                .isInvalid()).isFalse();
+        assertThat(response.getRedirectedUrl())
+                .isEqualTo("/mypage/account?socialWithdrawalError=true");
+        verify(authorizedClientService).removeAuthorizedClient(
+                "naver", authentication.getName());
+        verify(authenticationRestorer).restore(request, response, 7L);
+        verify(socialAccountService, never())
+                .findByProviderAndProviderUserId(any(), anyString());
+    }
+
+    private SocialOAuth2LoginSuccessHandler withdrawalHandler() {
+        return new SocialOAuth2LoginSuccessHandler(
+                socialAccountService,
+                userMapper,
+                userSanctionService,
+                new CustomLoginSuccessHandler(userMapper),
+                socialWithdrawalService,
+                authorizedClientService,
+                authenticationRestorer);
+    }
+
+    private PendingSocialWithdrawal withdrawalPending(Long userId, SocialProvider provider) {
+        Instant now = Instant.now();
+        return new PendingSocialWithdrawal(
+                "flow-id", userId, provider, now, now.plusSeconds(600));
+    }
+
+    private OAuth2AuthorizedClient authorizedClient(String registrationId,
+                                                    String principalName,
+                                                    String tokenValue) {
+        ClientRegistration registration = ClientRegistration
+                .withRegistrationId(registrationId)
+                .clientId("client-id")
+                .clientSecret("client-secret")
+                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                .redirectUri("{baseUrl}/login/oauth2/code/{registrationId}")
+                .authorizationUri("https://provider.example/authorize")
+                .tokenUri("https://provider.example/token")
+                .userInfoUri("https://provider.example/me")
+                .userNameAttributeName("sub")
+                .clientName(registrationId)
+                .build();
+        OAuth2AccessToken accessToken = new OAuth2AccessToken(
+                OAuth2AccessToken.TokenType.BEARER,
+                tokenValue,
+                Instant.now(),
+                Instant.now().plusSeconds(300));
+        return new OAuth2AuthorizedClient(registration, principalName, accessToken);
     }
 
     private OAuth2AuthenticationToken googleAuthentication(String sub, String email,

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/mypage-layout.css">
+  <link rel="stylesheet" href="/css/mypage-account.css">
+</th:block>
+<th:block th:fragment="body">
+  <div class="mypage-layout">
+    <nav th:replace="~{fragments/mypage/navigation :: navigation('account')}"></nav>
+
+    <section class="mypage-content mypage-account-page mypage-social-withdrawal-confirm-page"
+             aria-labelledby="social-withdrawal-confirm-title">
+      <header class="mypage-page-header">
+        <p>ACCOUNT</p>
+        <h1 id="social-withdrawal-confirm-title">회원 탈퇴</h1>
+        <span>계정을 삭제하기 전에 본인 확인이 필요합니다.</span>
+      </header>
+
+      <section class="mypage-account-panel mypage-social-withdrawal-confirm">
+        <div class="mypage-account-section-heading">
+          <h2>탈퇴 시 영향</h2>
+          <span>탈퇴 후 계정은 복구할 수 없습니다.</span>
+        </div>
+        <div class="mypage-social-withdrawal-impact">
+          <ul>
+            <li>작성한 게시글, 댓글, 여행 코스와 문의 기록은 유지됩니다.</li>
+            <li>북마크와 좋아요는 삭제됩니다.</li>
+            <li>기존 닉네임은 새 계정에서 다시 사용할 수 있습니다.</li>
+            <li>가입한 소셜 서비스의 Travel Diary 접근 권한이 해제됩니다.</li>
+          </ul>
+        </div>
+        <div class="mypage-social-withdrawal-provider">
+          <div>
+            <span>본인 확인 계정</span>
+            <strong th:text="${providerName}">소셜</strong>
+          </div>
+          <p>가입한 소셜 계정으로 다시 인증합니다. 인증이 완료되면 탈퇴가 진행됩니다.</p>
+        </div>
+        <div class="mypage-account-actions">
+          <form th:action="@{/mypage/account/social-withdrawal/cancel}" method="post">
+            <button type="submit" class="is-cancel">취소</button>
+          </form>
+          <a th:href="${providerAuthorizationUrl}" class="is-danger"
+             th:text="|${providerName}로 본인 확인|">
+            소셜 계정으로 본인 확인
+          </a>
+        </div>
+      </section>
+    </section>
+  </div>
+</th:block>
+</html>

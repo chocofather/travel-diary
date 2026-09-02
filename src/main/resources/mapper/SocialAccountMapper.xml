@@ -49,4 +49,9 @@
             #{userId}, #{provider}, #{providerUserId}, #{providerEmail}, #{providerEmailVerified}
         )
     </insert>
+
+    <delete id="deleteAllByUserId">
+        DELETE FROM social_accounts
+        WHERE user_id = #{userId}
+    </delete>
 </mapper>

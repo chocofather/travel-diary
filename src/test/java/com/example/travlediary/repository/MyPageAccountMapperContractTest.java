@@ -24,6 +24,16 @@ class MyPageAccountMapperContractTest {
     }
 
     @Test
+    void localPasswordCapabilityIsCheckedWithoutSelectingThePasswordHash()
+            throws IOException {
+        String select = statement(userXml(), "select", "hasLocalPasswordById");
+
+        assertThat(select)
+                .contains("EXISTS", "id = #{id}", "user_password IS NOT NULL")
+                .doesNotContain("user_password AS", "SELECT user_password");
+    }
+
+    @Test
     void detailsUpdateUsesAnAllowlistAndPrincipalIdCondition() throws IOException {
         String update = statement(userXml(), "update", "updateAccountDetails");
 

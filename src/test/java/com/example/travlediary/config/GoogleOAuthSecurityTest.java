@@ -3,6 +3,7 @@ package com.example.travlediary.config;
 import com.example.travlediary.controller.user.LoginController;
 import com.example.travlediary.controller.user.SocialSignupController;
 import com.example.travlediary.model.PendingSocialSignup;
+import com.example.travlediary.model.PendingSocialWithdrawal;
 import com.example.travlediary.model.SocialProvider;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.service.user.SocialSignupAuthenticationService;
@@ -22,6 +23,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.InputStream;
 import java.util.Collections;
 import java.time.Instant;
 
@@ -114,6 +118,8 @@ class GoogleOAuthSecurityTest {
                 .isInstanceOf(String.class)
                 .asString()
                 .isNotBlank();
+        assertThat(authorizationRequest.getAdditionalParameters())
+                .doesNotContainKey("prompt");
         assertThat(authorizationRequest.getRedirectUri())
                 .isEqualTo("http://localhost/login/oauth2/code/google");
     }
@@ -143,6 +149,8 @@ class GoogleOAuthSecurityTest {
                 .isInstanceOf(String.class)
                 .asString()
                 .isNotBlank();
+        assertThat(authorizationRequest.getAdditionalParameters())
+                .doesNotContainKey("prompt");
         assertThat(authorizationRequest.getRedirectUri())
                 .isEqualTo("http://localhost/login/oauth2/code/kakao");
         assertThat(clientRegistrationRepository.findByRegistrationId("kakao")
@@ -171,11 +179,24 @@ class GoogleOAuthSecurityTest {
         assertThat(authorizationRequest.getClientId()).isEqualTo("test-naver-client");
         assertThat(authorizationRequest.getState()).isNotBlank();
         assertThat(authorizationRequest.getAdditionalParameters()).doesNotContainKey("nonce");
+        assertThat(authorizationRequest.getAdditionalParameters())
+                .doesNotContainKey("auth_type");
         assertThat(authorizationRequest.getRedirectUri())
                 .isEqualTo("http://localhost/login/oauth2/code/naver");
         assertThat(clientRegistrationRepository.findByRegistrationId("naver")
                 .getClientAuthenticationMethod())
                 .isEqualTo(ClientAuthenticationMethod.CLIENT_SECRET_POST);
+    }
+
+    @Test
+    void socialWithdrawalAddsOnlyOfficialProviderReauthenticationParameters()
+            throws Exception {
+        assertWithdrawalParameter(
+                SocialProvider.GOOGLE, "google", "prompt", "select_account");
+        assertWithdrawalParameter(
+                SocialProvider.KAKAO, "kakao", "prompt", "login");
+        assertWithdrawalParameter(
+                SocialProvider.NAVER, "naver", "auth_type", "reauthenticate");
     }
 
     @Test
@@ -192,6 +213,38 @@ class GoogleOAuthSecurityTest {
                         .param("termsAccepted", "true")
                         .param("privacyAccepted", "true"))
                 .andExpect(status().isForbidden());
+    }
+
+    private void assertWithdrawalParameter(SocialProvider provider,
+                                           String registrationId,
+                                           String parameter,
+                                           String expectedValue) throws Exception {
+        Instant now = Instant.now();
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("userId", 7L);
+        session.setAttribute(PendingSocialWithdrawal.SESSION_ATTRIBUTE,
+                new PendingSocialWithdrawal(
+                        "flow-id", 7L, provider, now, now.plusSeconds(600)));
+
+        MvcResult result = mockMvc.perform(
+                        get("/oauth2/authorization/" + registrationId).session(session))
+                .andExpect(status().is3xxRedirection())
+                .andReturn();
+
+        OAuth2AuthorizationRequest authorizationRequest = Collections.list(
+                        result.getRequest().getSession(false).getAttributeNames()).stream()
+                .map(name -> result.getRequest().getSession(false).getAttribute(name))
+                .filter(OAuth2AuthorizationRequest.class::isInstance)
+                .map(OAuth2AuthorizationRequest.class::cast)
+                .findFirst()
+                .orElseThrow();
+        assertThat(authorizationRequest.getAdditionalParameters())
+                .containsEntry(parameter, expectedValue);
+        assertThat(authorizationRequest.getState()).isNotBlank();
+        if (provider != SocialProvider.NAVER) {
+            assertThat(authorizationRequest.getAdditionalParameters().get("nonce"))
+                    .isInstanceOf(String.class);
+        }
     }
 
     @Test
@@ -263,7 +316,7 @@ class GoogleOAuthSecurityTest {
     }
 
     @Test
-    void loginPageOffersAlignedGoogleKakaoAndNaverEntriesWithLocalIcons()
+    void loginPageOffersCompactThreeColumnSocialEntriesWithAccessibleNames()
             throws Exception {
         mockMvc.perform(get("/login"))
                 .andExpect(status().isOk())
@@ -273,9 +326,16 @@ class GoogleOAuthSecurityTest {
                         "href=\"/oauth2/authorization/kakao\"")))
                 .andExpect(content().string(containsString(
                         "href=\"/oauth2/authorization/naver\"")))
-                .andExpect(content().string(containsString("Google로 계속하기")))
-                .andExpect(content().string(containsString("카카오로 계속하기")))
-                .andExpect(content().string(containsString("네이버로 계속하기")))
+                .andExpect(content().string(containsString("aria-label=\"Google로 로그인\"")))
+                .andExpect(content().string(containsString("aria-label=\"카카오로 로그인\"")))
+                .andExpect(content().string(containsString("aria-label=\"네이버로 로그인\"")))
+                .andExpect(content().string(containsString(
+                        "class=\"social-login-provider__label\">Google")))
+                .andExpect(content().string(containsString(
+                        "class=\"social-login-provider__label\">카카오")))
+                .andExpect(content().string(containsString(
+                        "class=\"social-login-provider__label\">네이버")))
+                .andExpect(content().string(not(containsString("로 계속하기"))))
                 .andExpect(content().string(containsString(
                         "src=\"/images/social/google-g-logo.png\"")))
                 .andExpect(content().string(containsString(
@@ -286,5 +346,29 @@ class GoogleOAuthSecurityTest {
                         "name=\"username\"")))
                 .andExpect(content().string(containsString(
                         "name=\"password\"")));
+    }
+
+    @Test
+    void kakaoLocalIconContainsVisibleOfficialSymbolPixels() throws Exception {
+        try (InputStream inputStream = getClass().getResourceAsStream(
+                "/static/images/social/kakao-symbol.png")) {
+            BufferedImage image = ImageIO.read(inputStream);
+
+            assertThat(image).isNotNull();
+            assertThat(image.getWidth()).isGreaterThan(0);
+            assertThat(image.getHeight()).isGreaterThan(0);
+            assertThat(hasVisiblePixel(image)).isTrue();
+        }
+    }
+
+    private boolean hasVisiblePixel(BufferedImage image) {
+        for (int y = 0; y < image.getHeight(); y++) {
+            for (int x = 0; x < image.getWidth(); x++) {
+                if ((image.getRGB(x, y) >>> 24) != 0) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }

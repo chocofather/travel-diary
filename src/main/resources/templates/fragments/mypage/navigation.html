@@ -38,7 +38,8 @@
       <a class="mypage-navigation-link"
          th:classappend="${activeMenu == 'account'} ? ' is-active' : ''"
          th:attr="aria-current=${activeMenu == 'account'} ? 'page' : null"
-         th:href="@{/mypage/account}">회원정보 수정</a>
+         th:href="@{/mypage/account}"
+         th:text="${hasLocalPassword == false ? '계정 관리' : '회원정보 수정'}">회원정보 수정</a>
     </li>
   </ul>
 </nav>

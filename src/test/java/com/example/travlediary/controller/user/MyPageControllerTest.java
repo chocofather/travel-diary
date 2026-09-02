@@ -104,6 +104,8 @@ class MyPageControllerTest {
                 "/images/default.png");
         when(myPageService.getProfile(7L)).thenReturn(memberProfile);
         when(myPageService.getProfile(99L)).thenReturn(adminProfile);
+        when(userMapper.hasLocalPasswordById(7L)).thenReturn(true);
+        when(userMapper.hasLocalPasswordById(99L)).thenReturn(true);
 
         mockMvc.perform(get("/mypage").with(user(principal(7L, UserRole.USER))))
                 .andExpect(status().isOk())
@@ -124,6 +126,7 @@ class MyPageControllerTest {
     void mainAndNavigationExposeOnlyImplementedLinks() throws Exception {
         when(myPageService.getProfile(7L)).thenReturn(profile(
                 "여행자", "member@example.com", "/images/default.png"));
+        when(userMapper.hasLocalPasswordById(7L)).thenReturn(true);
 
         mockMvc.perform(get("/mypage").with(user(principal(7L, UserRole.USER))))
                 .andExpect(status().isOk())
@@ -142,6 +145,24 @@ class MyPageControllerTest {
                     assertThat(document.select(
                             ".mypage-navigation-title.is-active[aria-current=page]").text())
                             .isEqualTo("마이페이지");
+                });
+    }
+
+    @Test
+    void socialOnlyMemberSeesAccountManagementLabelInNavigationAndMenu() throws Exception {
+        when(myPageService.getProfile(77L)).thenReturn(profile(
+                "소셜여행자", null, "/images/default.png"));
+        when(userMapper.hasLocalPasswordById(77L)).thenReturn(false);
+
+        mockMvc.perform(get("/mypage").with(user(socialPrincipal(77L))))
+                .andExpect(status().isOk())
+                .andExpect(result -> {
+                    var document = Jsoup.parse(result.getResponse().getContentAsString());
+                    assertThat(document.select("a[href=/mypage/account]").text())
+                            .contains("계정 관리")
+                            .doesNotContain("회원정보 수정");
+                    assertThat(document.select(".mypage-menu-item[href=/mypage/account] small")
+                            .text()).isEqualTo("로그인 계정 정보를 확인합니다.");
                 });
     }
 
@@ -577,6 +598,13 @@ class MyPageControllerTest {
         user.setUsername(role == UserRole.ADMIN ? "admin" : "member");
         user.setUserPassword("password");
         user.setUserRole(role);
+        return new CustomUserDetails(user);
+    }
+
+    private CustomUserDetails socialPrincipal(Long id) {
+        User user = new User();
+        user.setId(id);
+        user.setUserRole(UserRole.USER);
         return new CustomUserDetails(user);
     }
 }

@@ -212,6 +212,15 @@
           AND deleted_at IS NULL
     </select>
 
+    <select id="hasLocalPasswordById" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1
+            FROM users
+            WHERE id = #{id}
+              AND user_password IS NOT NULL
+        )
+    </select>
+
     <select id="findActiveAccountSecurityById" resultType="com.example.travlediary.model.User">
         SELECT id,
                username,

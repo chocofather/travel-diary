@@ -11,6 +11,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
@@ -48,7 +49,9 @@ public class SecurityConfig {
             HttpSecurity http,
             RequestCache navigationRequestCache,
             ObjectProvider<RestrictedAccountFilter> restrictedAccountFilter,
-            ObjectProvider<SocialOAuth2LoginSuccessHandler> socialOAuth2LoginSuccessHandler)
+            ObjectProvider<SocialOAuth2LoginSuccessHandler> socialOAuth2LoginSuccessHandler,
+            ObjectProvider<ClientRegistrationRepository> clientRegistrationRepository,
+            ObjectProvider<TravelDiaryAuthenticationRestorer> authenticationRestorer)
             throws Exception {
 
         // 이용제한 회원 접근 통제. 웹 계층 테스트 슬라이스에는 빈이 없으므로 선택 주입한다.
@@ -304,6 +307,11 @@ public class SecurityConfig {
                         new RegexRequestMatcher(
                                 "^/mypage/account/withdraw$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(
+                                "^/mypage/account/social-withdrawal$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/mypage/account/social-withdrawal/cancel$",
+                                HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
                                 "^/users/verification/resend$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(
                                 "^/account/restricted/appeals$", HttpMethod.POST.name()),
@@ -418,8 +426,14 @@ public class SecurityConfig {
                         .permitAll()
                 )
                 .oauth2Login(oauth -> {
+                    clientRegistrationRepository.ifAvailable(registrations ->
+                            oauth.authorizationEndpoint(endpoint ->
+                                    endpoint.authorizationRequestResolver(
+                                            new SocialWithdrawalAuthorizationRequestResolver(
+                                                    registrations))));
                     socialOAuth2LoginSuccessHandler.ifAvailable(oauth::successHandler);
-                    oauth.failureHandler(new OAuth2LoginFailureHandler());
+                    oauth.failureHandler(new OAuth2LoginFailureHandler(
+                            authenticationRestorer.getIfAvailable()));
                 })
                 .logout(logout -> logout
                         .logoutUrl("/logout")

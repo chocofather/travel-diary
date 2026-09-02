@@ -103,26 +103,29 @@
         <span>또는</span>
       </div>
       <div class="social-login__buttons">
-        <a class="social-login-button social-login-button--google"
-           th:href="@{/oauth2/authorization/google}">
-          <span class="social-login-button__icon" aria-hidden="true">
+        <a class="social-login-provider social-login-provider--google"
+           th:href="@{/oauth2/authorization/google}"
+           aria-label="Google로 로그인">
+          <span class="social-login-provider__button" aria-hidden="true">
             <img src="/images/social/google-g-logo.png" alt="">
           </span>
-          <span>Google로 계속하기</span>
+          <span class="social-login-provider__label">Google</span>
         </a>
-        <a class="social-login-button social-login-button--kakao"
-           th:href="@{/oauth2/authorization/kakao}">
-          <span class="social-login-button__icon" aria-hidden="true">
+        <a class="social-login-provider social-login-provider--kakao"
+           th:href="@{/oauth2/authorization/kakao}"
+           aria-label="카카오로 로그인">
+          <span class="social-login-provider__button" aria-hidden="true">
             <img src="/images/social/kakao-symbol.png" alt="">
           </span>
-          <span>카카오로 계속하기</span>
+          <span class="social-login-provider__label">카카오</span>
         </a>
-        <a class="social-login-button social-login-button--naver"
-           th:href="@{/oauth2/authorization/naver}">
-          <span class="social-login-button__icon" aria-hidden="true">
+        <a class="social-login-provider social-login-provider--naver"
+           th:href="@{/oauth2/authorization/naver}"
+           aria-label="네이버로 로그인">
+          <span class="social-login-provider__button" aria-hidden="true">
             <img src="/images/social/naver-symbol.png" alt="">
           </span>
-          <span>네이버로 계속하기</span>
+          <span class="social-login-provider__label">네이버</span>
         </a>
       </div>
     </div>

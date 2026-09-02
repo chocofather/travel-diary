@@ -25,7 +25,8 @@ public class GlobalModelAttributes {
         model.addAttribute("isLoggedIn", isLoggedIn);
 
         if (isLoggedIn) {
-            User user = userMapper.findById(userDetails.getId());
+            Long userId = userDetails.getId();
+            User user = userMapper.findById(userId);
             model.addAttribute("currentUserProfileImage",
                     normalizeProfileImage(user == null ? null : user.getProfileImage()));
         }

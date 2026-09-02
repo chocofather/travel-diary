@@ -37,7 +37,25 @@ class GlobalModelAttributesTest {
 
         assertThat(model.get("isLoggedIn")).isEqualTo(true);
         assertThat(model.get("currentUserProfileImage")).isEqualTo("/uploads/member.png");
+        assertThat(model).doesNotContainKey("hasLocalPassword");
         verify(userMapper).findById(7L);
+        verify(userMapper, never()).hasLocalPasswordById(7L);
+    }
+
+    @Test
+    void socialOnlyMemberDoesNotExposeLocalPasswordCapabilityGlobally() {
+        User authenticatedUser = user(77L, null);
+        User storedUser = user(77L, null);
+        storedUser.setUserPassword(null);
+        when(userMapper.findById(77L)).thenReturn(storedUser);
+        ExtendedModelMap model = new ExtendedModelMap();
+
+        new GlobalModelAttributes(userMapper).addCommonAttributes(
+                model, authentication(authenticatedUser));
+
+        assertThat(model).doesNotContainKey("hasLocalPassword");
+        assertThat(model.asMap()).doesNotContainValue("encoded-password");
+        verify(userMapper, never()).hasLocalPasswordById(77L);
     }
 
     @Test

@@ -9,15 +9,23 @@ import com.example.travlediary.repository.bookmark.BookmarkMapper;
 import com.example.travlediary.repository.comment.CommentLikeMapper;
 import com.example.travlediary.repository.course.CourseCommentMapper;
 import com.example.travlediary.repository.post.PostCommentMapper;
+import com.example.travlediary.repository.user.SocialAccountMapper;
 import com.example.travlediary.repository.user.UserMapper;
+import org.springframework.aop.framework.ProxyFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.annotation.AnnotationTransactionAttributeSource;
+import org.springframework.transaction.interceptor.TransactionInterceptor;
+import org.springframework.transaction.support.AbstractPlatformTransactionManager;
+import org.springframework.transaction.support.DefaultTransactionStatus;
 
 import java.time.LocalDate;
 
@@ -25,6 +33,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -38,6 +47,7 @@ class MyPageAccountServiceTest {
     @Mock private PostCommentMapper postCommentMapper;
     @Mock private CourseCommentMapper courseCommentMapper;
     @Mock private PasswordEncoder passwordEncoder;
+    @Mock private SocialAccountMapper socialAccountMapper;
 
     private MyPageAccountService service;
 
@@ -48,7 +58,18 @@ class MyPageAccountServiceTest {
                 userMapper,
                 new AccountAnonymizationService(bookmarkMapper, commentLikeMapper,
                         postCommentMapper, courseCommentMapper),
-                passwordEncoder);
+                passwordEncoder,
+                socialAccountMapper);
+    }
+
+    @Test
+    void checksLocalPasswordCapabilityByUserIdWithoutLoadingThePasswordHash() {
+        when(userMapper.hasLocalPasswordById(7L)).thenReturn(true);
+
+        assertThat(service.hasLocalPassword(7L)).isTrue();
+
+        verify(userMapper).hasLocalPasswordById(7L);
+        verify(userMapper, never()).findActiveAccountSecurityById(7L);
     }
 
     @Test
@@ -171,6 +192,7 @@ class MyPageAccountServiceTest {
                 .startsWith("탈퇴")
                 .hasSize(12)
                 .matches("[가-힣A-Za-z0-9]+");
+        verify(socialAccountMapper, never()).deleteAllByUserId(7L);
     }
 
     @Test
@@ -181,6 +203,130 @@ class MyPageAccountServiceTest {
 
         assertThat(transactional).isNotNull();
         assertThat(transactional.readOnly()).isFalse();
+    }
+
+    @Test
+    void socialWithdrawalReusesTheSameAnonymizationWithoutAPasswordCheck() {
+        User account = activeAccount(UserRole.USER);
+        account.setUserPassword(null);
+        when(userMapper.findActiveAccountSecurityByIdForUpdate(7L)).thenReturn(account);
+        when(userMapper.deactivateAccount(
+                org.mockito.ArgumentMatchers.eq(7L), anyString(), anyString(),
+                org.mockito.ArgumentMatchers.eq(UserStatus.DEACTIVATED))).thenReturn(1);
+        when(socialAccountMapper.deleteAllByUserId(7L)).thenReturn(1);
+
+        service.withdrawAfterSocialReauthentication(7L);
+
+        verifyNoInteractions(passwordEncoder);
+        verify(bookmarkMapper).deleteAllByUserId(7L);
+        verify(userMapper).deactivateAccount(
+                org.mockito.ArgumentMatchers.eq(7L), anyString(), anyString(),
+                org.mockito.ArgumentMatchers.eq(UserStatus.DEACTIVATED));
+        verify(socialAccountMapper).deleteAllByUserId(7L);
+
+        InOrder order = inOrder(userMapper, socialAccountMapper);
+        order.verify(userMapper).deactivateAccount(
+                org.mockito.ArgumentMatchers.eq(7L), anyString(), anyString(),
+                org.mockito.ArgumentMatchers.eq(UserStatus.DEACTIVATED));
+        order.verify(socialAccountMapper).deleteAllByUserId(7L);
+    }
+
+    @Test
+    void socialWithdrawalRequiresItsSocialIdentityToBeRemoved() {
+        User account = activeAccount(UserRole.USER);
+        account.setUserPassword(null);
+        when(userMapper.findActiveAccountSecurityByIdForUpdate(7L)).thenReturn(account);
+        when(userMapper.deactivateAccount(
+                org.mockito.ArgumentMatchers.eq(7L), anyString(), anyString(),
+                org.mockito.ArgumentMatchers.eq(UserStatus.DEACTIVATED))).thenReturn(1);
+        when(socialAccountMapper.deleteAllByUserId(7L)).thenReturn(0);
+
+        assertThatThrownBy(() -> service.withdrawAfterSocialReauthentication(7L))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+    }
+
+    @Test
+    void socialWithdrawalCannotBypassAStoredLocalPassword() {
+        when(userMapper.findActiveAccountSecurityByIdForUpdate(7L))
+                .thenReturn(activeAccount(UserRole.USER));
+
+        assertThatThrownBy(() -> service.withdrawAfterSocialReauthentication(7L))
+                .isInstanceOf(AccountValidationException.class);
+
+        verify(userMapper, never()).deactivateAccount(
+                org.mockito.ArgumentMatchers.anyLong(), anyString(), anyString(),
+                org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void socialWithdrawalDatabasePolicyRunsInItsOwnWriteTransaction()
+            throws NoSuchMethodException {
+        Transactional transactional = MyPageAccountService.class
+                .getMethod("withdrawAfterSocialReauthentication", Long.class)
+                .getAnnotation(Transactional.class);
+
+        assertThat(transactional).isNotNull();
+        assertThat(transactional.readOnly()).isFalse();
+    }
+
+    @Test
+    void socialIdentityDeleteFailureRollsBackTheWithdrawalTransaction() {
+        User account = activeAccount(UserRole.USER);
+        account.setUserPassword(null);
+        when(userMapper.findActiveAccountSecurityByIdForUpdate(7L)).thenReturn(account);
+        when(userMapper.deactivateAccount(
+                org.mockito.ArgumentMatchers.eq(7L), anyString(), anyString(),
+                org.mockito.ArgumentMatchers.eq(UserStatus.DEACTIVATED))).thenReturn(1);
+        org.mockito.Mockito.doThrow(new IllegalStateException("delete failed"))
+                .when(socialAccountMapper).deleteAllByUserId(7L);
+        RecordingTransactionManager transactionManager = new RecordingTransactionManager();
+        MyPageAccountService transactionalService = transactionalProxy(transactionManager);
+
+        assertThatThrownBy(() ->
+                transactionalService.withdrawAfterSocialReauthentication(7L))
+                .isInstanceOf(IllegalStateException.class);
+
+        verify(userMapper).deactivateAccount(
+                org.mockito.ArgumentMatchers.eq(7L), anyString(), anyString(),
+                org.mockito.ArgumentMatchers.eq(UserStatus.DEACTIVATED));
+        verify(socialAccountMapper).deleteAllByUserId(7L);
+        assertThat(transactionManager.rolledBack).isTrue();
+        assertThat(transactionManager.committed).isFalse();
+    }
+
+    private MyPageAccountService transactionalProxy(
+            RecordingTransactionManager transactionManager) {
+        TransactionInterceptor interceptor = new TransactionInterceptor(
+                transactionManager, new AnnotationTransactionAttributeSource());
+        ProxyFactory proxyFactory = new ProxyFactory(service);
+        proxyFactory.addAdvice(interceptor);
+        return (MyPageAccountService) proxyFactory.getProxy();
+    }
+
+    private static final class RecordingTransactionManager
+            extends AbstractPlatformTransactionManager {
+
+        private boolean committed;
+        private boolean rolledBack;
+
+        @Override
+        protected Object doGetTransaction() {
+            return new Object();
+        }
+
+        @Override
+        protected void doBegin(Object transaction, TransactionDefinition definition) {
+        }
+
+        @Override
+        protected void doCommit(DefaultTransactionStatus status) {
+            committed = true;
+        }
+
+        @Override
+        protected void doRollback(DefaultTransactionStatus status) {
+            rolledBack = true;
+        }
     }
 
     private User activeAccount(UserRole role) {

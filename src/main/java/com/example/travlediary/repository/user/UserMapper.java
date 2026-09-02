@@ -26,6 +26,7 @@ public interface UserMapper {
     MyPageProfileDto findMyPageProfileById(@Param("id") Long id);
     MyPageProfileDto findMyPageProfileByIdForUpdate(@Param("id") Long id);
     AccountDetailsDto findAccountDetailsById(@Param("id") Long id);
+    boolean hasLocalPasswordById(@Param("id") Long id);
     User findActiveAccountSecurityById(@Param("id") Long id);
     User findActiveAccountSecurityByIdForUpdate(@Param("id") Long id);
 
