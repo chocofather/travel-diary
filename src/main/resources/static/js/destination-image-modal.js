@@ -32,7 +32,8 @@
         if (!modalImage || !source) return;
 
         modalImage.src = source.currentSrc || source.src;
-        modalImage.alt = source.alt || '여행지 이미지';
+        const messages = document.getElementById('destination-detail-i18n')?.dataset;
+        modalImage.alt = source.alt || messages?.galleryFallbackAlt || '';
         // 이미지가 한 장뿐이면 좌/우 버튼을 숨긴다.
         modal.classList.toggle('is-single', images.length <= 1);
     }

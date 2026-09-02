@@ -4,6 +4,7 @@ import com.example.travlediary.dto.DestinationDetailDto;
 import com.example.travlediary.dto.DestinationForm;
 import com.example.travlediary.model.Destination;
 import com.example.travlediary.model.DestinationSeason;
+import com.example.travlediary.model.DestinationTranslation;
 import com.example.travlediary.model.DestinationType;
 import com.example.travlediary.repository.bookmark.BookmarkMapper;
 import com.example.travlediary.repository.destination.DestinationMapper;
@@ -60,6 +61,8 @@ class DestinationServiceCategoryEditTest {
     void editFormRestoresExistingCategorySelections() {
         Destination destination = destination(9L);
         when(destinationMapper.findDestinationDetail(9L)).thenReturn(destination);
+        when(destinationMapper.findTranslationsByDestinationId(9L))
+                .thenReturn(List.of(koreanTranslation(9L)));
         when(destinationMapper.findImagesByDestinationId(9L)).thenReturn(List.of());
         when(amenityService.getAttractionAmenities(9L)).thenReturn(List.of());
         when(destinationMapper.findCategoryIdsByDestinationId(9L)).thenReturn(List.of(10L, 20L));
@@ -143,5 +146,15 @@ class DestinationServiceCategoryEditTest {
         destination.setSeason(DestinationSeason.ALL_SEASONS);
         destination.setType(DestinationType.ATTRACTION);
         return destination;
+    }
+
+    private DestinationTranslation koreanTranslation(Long destinationId) {
+        DestinationTranslation translation = new DestinationTranslation();
+        translation.setDestinationId(destinationId);
+        translation.setLanguageCode("ko");
+        translation.setName("여행지");
+        translation.setShortDescription("한줄 소개");
+        translation.setDescription("상세 설명");
+        return translation;
     }
 }

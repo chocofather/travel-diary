@@ -1,5 +1,6 @@
 package com.example.travlediary.controller.destination;
 
+import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.dto.DestinationDetailDto;
 import com.example.travlediary.model.CountryCategory;
 import com.example.travlediary.model.Destination;
@@ -30,6 +31,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
@@ -87,7 +90,8 @@ class DestinationDetailNotFoundTest {
 
     @Test
     void deletedOrUnknownDestinationAnswersNotFound() throws Exception {
-        when(destinationService.getDestinationDetailWithInfo(404L)).thenReturn(null);
+        when(destinationService.getDestinationDetailWithInfo(eq(404L), any(SupportedLanguage.class)))
+                .thenReturn(null);
 
         mockMvc.perform(get("/destinations/404"))
                 .andExpect(status().isNotFound());
@@ -95,7 +99,8 @@ class DestinationDetailNotFoundTest {
 
     @Test
     void unknownDestinationIsNotCountedAsAView() throws Exception {
-        when(destinationService.getDestinationDetailWithInfo(404L)).thenReturn(null);
+        when(destinationService.getDestinationDetailWithInfo(eq(404L), any(SupportedLanguage.class)))
+                .thenReturn(null);
 
         mockMvc.perform(get("/destinations/404"))
                 .andExpect(status().isNotFound());
@@ -105,7 +110,8 @@ class DestinationDetailNotFoundTest {
 
     @Test
     void existingDestinationStillRendersTheDetailPageAndCountsTheView() throws Exception {
-        when(destinationService.getDestinationDetailWithInfo(7L)).thenReturn(detailDto());
+        when(destinationService.getDestinationDetailWithInfo(eq(7L), any(SupportedLanguage.class)))
+                .thenReturn(detailDto());
         when(countryCategoryService.getById(101L)).thenReturn(region(101L, "종로구", 10L));
         when(countryCategoryService.getById(10L)).thenReturn(region(10L, "서울", null));
         when(countryCategoryService.getDomesticRootIds()).thenReturn(List.of(10L));

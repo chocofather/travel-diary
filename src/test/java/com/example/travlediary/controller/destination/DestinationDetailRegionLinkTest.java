@@ -1,5 +1,6 @@
 package com.example.travlediary.controller.destination;
 
+import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.dto.DestinationDetailDto;
 import com.example.travlediary.model.CountryCategory;
 import com.example.travlediary.model.Destination;
@@ -21,6 +22,8 @@ import org.springframework.ui.Model;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 /**
@@ -156,7 +159,8 @@ class DestinationDetailRegionLinkTest {
         DestinationDetailDto dto = new DestinationDetailDto();
         dto.setDestination(destination);
 
-        when(destinationService.getDestinationDetailWithInfo(7L)).thenReturn(dto);
+        when(destinationService.getDestinationDetailWithInfo(eq(7L), any(SupportedLanguage.class)))
+                .thenReturn(dto);
         when(destinationService.getSimilarDestinations(7L, 4)).thenReturn(List.of());
         when(destinationService.convertToDtoWithBookmark(List.of(), null)).thenReturn(List.of());
 

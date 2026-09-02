@@ -12,6 +12,33 @@
 
 <th:block th:fragment="body">
 
+    <div id="destination-detail-i18n" hidden
+         th:data-gallery-fallback-alt="#{destination.detail.gallery.imageFallbackAlt}"
+         th:data-comment-loading="#{destination.detail.comment.loading}"
+         th:data-comment-load-more="#{destination.detail.comment.loadMore}"
+         th:data-comment-moderated="#{destination.detail.comment.moderated}"
+         th:data-comment-unknown-user="#{destination.detail.comment.unknownUser}"
+         th:data-comment-like="#{destination.detail.comment.like}"
+         th:data-comment-profile-alt="#{destination.detail.comment.profileAlt}"
+         th:data-comment-author="#{destination.detail.comment.author}"
+         th:data-comment-edited="#{destination.detail.comment.edited}"
+         th:data-comment-reply="#{destination.detail.comment.reply}"
+         th:data-comment-edit="#{destination.detail.comment.edit}"
+         th:data-comment-delete="#{destination.detail.comment.delete}"
+         th:data-comment-image-alt="#{destination.detail.comment.imageAlt}"
+         th:data-comment-photo-review-alt="#{destination.detail.gallery.photoReviewAlt}"
+         th:data-comment-image-limit="#{destination.detail.comment.imageLimit}"
+         th:data-comment-file-preview="#{destination.detail.comment.filePreview}"
+         th:data-comment-file-remove="#{destination.detail.comment.fileRemove}"
+         th:data-comment-delete-confirm="#{destination.detail.comment.deleteConfirm}"
+         th:data-comment-delete-forbidden="#{destination.detail.comment.deleteForbidden}"
+         th:data-comment-edit-failed="#{destination.detail.comment.editFailed}"
+         th:data-comment-save="#{destination.detail.comment.save}"
+         th:data-comment-cancel="#{destination.detail.comment.cancel}"
+         th:data-comment-reply-placeholder="#{destination.detail.comment.replyPlaceholder}"
+         th:data-comment-photo="#{destination.detail.comment.photo}"
+         th:data-comment-submit="#{destination.detail.comment.submit}"></div>
+
 
     <!-- ────── 여행지 상단 정보 (타이틀 + 메타) ────── -->
     <section class="destination-hero">
@@ -27,16 +54,19 @@
             <span th:text="${categoryName}">카테고리</span>
         </p>
         <h1 class="destination-title" th:text="${destination.name}">여행지 이름</h1> <!-- destination.name으로 수정 -->
+        <p class="destination-short-description"
+           th:if="${destination.shortDescription != null and !destination.shortDescription.isBlank()}"
+           th:text="${destination.shortDescription}">여행지 한줄 소개</p>
         <div class="meta-icons">
   <span>
-    <img src="/uploads/icons/marker.png" alt="위치">
+    <img src="/uploads/icons/marker.png" th:alt="#{destination.detail.meta.location}">
        <!-- 현재 지역(예: 종로구)이 선택된 목록 -->
        <a th:href="@{/destinations(type=${type},region=${regionId})}"
           class="region-path-link"
           th:text="${regionName}"></a>
   </span>
             <span>
-    <img src="/uploads/icons/view.png" alt="조회수" class="meta-icon">
+    <img src="/uploads/icons/view.png" th:alt="#{destination.detail.meta.views}" class="meta-icon">
     <span th:text="${destination.views}">0</span> <!-- destination.views로 수정 -->
   </span>
             <!--  북마크 수 및 버튼 -->
@@ -46,11 +76,12 @@
                   data-type="DESTINATION"
                   th:data-id="${destination.id}">
             <img src="/uploads/icons/bookmark.png"
-                 alt="북마크 아이콘"
+                 th:alt="#{destination.detail.meta.bookmarkIcon}"
                  class="meta-icon"
                  id="bookmark-icon"
                  data-bookmarked="false">
-            여행일기 저장 <span id="bookmark-count">0</span>
+            <span th:text="#{destination.detail.meta.saveToDiary}">여행일기 저장</span>
+            <span id="bookmark-count">0</span>
         </span>
 
         </div>
@@ -59,34 +90,39 @@
     <!-- ────── 이미지 슬라이드 영역 ────── -->
     <div class="carousel-wrapper" th:if="${destination.images != null and !destination.images.isEmpty()}">
         <div class="carousel">
-            <button class="nav prev">&#10094;</button>
+            <button class="nav prev" th:aria-label="#{destination.detail.gallery.previous}">&#10094;</button>
             <div class="track">
                 <div class="slide" th:each="img, idx : ${destination.images}"
                      th:classappend="${idx.index == 0} ? 'active'">
-                    <img th:src="@{${img.imageUrl}}" th:alt="'이미지 ' + ${idx.index + 1}"/>
+                    <img th:src="@{${img.imageUrl}}"
+                         th:alt="#{destination.detail.gallery.imageAlt(${idx.index + 1})}"/>
                 </div>
             </div>
-            <button class="nav next">&#10095;</button>
+            <button class="nav next" th:aria-label="#{destination.detail.gallery.next}">&#10095;</button>
         </div>
     </div>
 
     <div class="carousel no-image" th:if="${destination.images == null or destination.images.isEmpty()}">
         <img th:src="@{${destination.thumbnailPath}}"
-             th:alt="${destination.name + ' 대표 이미지'}"/>
+             th:alt="#{destination.detail.gallery.coverAlt(${destination.name})}"/>
     </div>
 
     <!-- ────── 이미지 확대 모달 ────── -->
-    <dialog id="destination-image-modal" class="image-modal" aria-label="여행지 이미지 확대 보기">
-        <button type="button" class="image-modal-close" aria-label="이미지 닫기">&times;</button>
-        <button type="button" class="image-modal-nav prev" aria-label="이전 이미지">&#10094;</button>
+    <dialog id="destination-image-modal" class="image-modal"
+            th:aria-label="#{destination.detail.gallery.dialogLabel}">
+        <button type="button" class="image-modal-close"
+                th:aria-label="#{destination.detail.gallery.close}">&times;</button>
+        <button type="button" class="image-modal-nav prev"
+                th:aria-label="#{destination.detail.gallery.previous}">&#10094;</button>
         <img class="image-modal-img" src="" alt="" />
-        <button type="button" class="image-modal-nav next" aria-label="다음 이미지">&#10095;</button>
+        <button type="button" class="image-modal-nav next"
+                th:aria-label="#{destination.detail.gallery.next}">&#10095;</button>
     </dialog>
 
     <!-- ────── 본문 소개 영역 ────── -->
     <main class="detail-container">
         <section class="info">
-            <h2>소개</h2>
+            <h2 th:text="#{destination.detail.section.introduction}">소개</h2>
             <div class="destination-description">
                 <p th:each="paragraph : ${descriptionParagraphs}">
                     <span th:text="${paragraph}">설명</span>
@@ -96,7 +132,7 @@
             <!-- 추가 정보 -->
             <!-- 숙소 정보 AccommodationInfo -->
             <div th:if="${accommodationInfo != null}" class="accommodation-info type-info-block">
-                <h2>숙소 정보</h2>
+                <h2 th:text="#{destination.detail.section.accommodation}">숙소 정보</h2>
                 <div class="info-card">
                     <dl class="info-grid">
                         <div class="info-item">
@@ -108,7 +144,8 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">체크인 시간</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.accommodation.checkin}">체크인 시간</dt>
                                 <dd class="info-item-value" th:text="${accommodationInfo.checkinTime ?: '-'}">-</dd>
                             </div>
                         </div>
@@ -121,7 +158,8 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">체크아웃 시간</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.accommodation.checkout}">체크아웃 시간</dt>
                                 <dd class="info-item-value" th:text="${accommodationInfo.checkoutTime ?: '-'}">-</dd>
                             </div>
                         </div>
@@ -134,7 +172,8 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">객실 수</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.accommodation.roomCount}">객실 수</dt>
                                 <dd class="info-item-value"
                                     th:text="${accommodationInfo.roomCount != null ? accommodationInfo.roomCount : '-'}">-</dd>
                             </div>
@@ -148,7 +187,8 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">객실 유형</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.accommodation.roomType}">객실 유형</dt>
                                 <dd class="info-item-value" th:text="${accommodationInfo.roomType ?: '-'}">-</dd>
                             </div>
                         </div>
@@ -160,7 +200,8 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">등급</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.accommodation.rating}">등급</dt>
                                 <dd class="info-item-value info-item-value-inline">
                                     <span th:if="${accommodationInfo.starRating != null}"
                                           th:text="${accommodationInfo.starRating} + '★'">4.5★</span>
@@ -178,7 +219,8 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">조식 포함</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.accommodation.breakfast}">조식 포함</dt>
                                 <dd class="info-item-value info-item-value-inline">
                                     <span th:if="${accommodationInfo.breakfastIncluded != null}"
                                           th:text="${accommodationInfo.breakfastIncluded ? '포함' : '불포함'}">포함</span>
@@ -195,7 +237,8 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">주차 가능</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.info.parking}">주차 가능</dt>
                                 <dd class="info-item-value info-item-value-inline">
                                     <span th:if="${accommodationInfo.parkingAvailable != null}"
                                           th:text="${accommodationInfo.parkingAvailable ? '가능' : '불가'}">가능</span>
@@ -215,7 +258,8 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">반려동물</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.accommodation.pets}">반려동물</dt>
                                 <dd class="info-item-value info-item-value-inline">
                                     <span th:if="${accommodationInfo.petAllowed != null}"
                                           th:text="${accommodationInfo.petAllowed ? '가능' : '불가'}">가능</span>
@@ -231,7 +275,8 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">연락처</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.info.contact}">연락처</dt>
                                 <dd class="info-item-value info-item-tel"
                                     th:text="${accommodationInfo.contactNumber ?: '-'}">-</dd>
                             </div>
@@ -245,13 +290,14 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">홈페이지</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.info.website}">홈페이지</dt>
                                 <dd class="info-item-value info-item-value-inline">
                                     <a th:if="${accommodationInfo.homepageUrl != null}"
                                        class="info-item-link"
                                        th:href="${accommodationInfo.homepageUrl}"
                                        target="_blank" rel="noopener">
-                                        공식 홈페이지
+                                        <span th:text="#{destination.detail.info.officialWebsite}">공식 홈페이지</span>
                                         <span class="info-item-link-arrow" aria-hidden="true">↗</span>
                                     </a>
                                     <span th:if="${accommodationInfo.homepageUrl == null}">-</span>
@@ -262,14 +308,16 @@
 
                     <!-- 긴 안내문은 정보 그리드와 분리해 카드 하단에 둔다 -->
                     <div class="info-note">
-                        <div class="info-note-label">기타 안내사항</div>
+                        <div class="info-note-label"
+                             th:text="#{destination.detail.accommodation.notes}">기타 안내사항</div>
                         <div class="info-note-text" th:text="${accommodationInfo.etc ?: '-'}">-</div>
                     </div>
                 </div>
             </div>
             <!-- 편의시설 -->
             <div th:if="${accommodationAmenities != null and !accommodationAmenities.isEmpty()}" class="amenity-row">
-                <div class="amenities-title">편의시설</div>
+                <div class="amenities-title"
+                     th:text="#{destination.detail.section.amenities}">편의시설</div>
                 <ul class="amenities-list">
                     <li th:each="a : ${accommodationAmenities}"
                         th:attr="data-tooltip=${a.name}">
@@ -285,7 +333,7 @@
 
             <!-- 관광명소 정보 AttractionInfo -->
             <div th:if="${attractionInfo != null}" class="attraction-info type-info-block">
-                <h2>관광명소 정보</h2>
+                <h2 th:text="#{destination.detail.section.attraction}">관광명소 정보</h2>
                 <div class="info-card">
                     <dl class="info-grid">
                         <div class="info-item">
@@ -297,7 +345,8 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">휴관일</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.attraction.closed}">휴관일</dt>
                                 <dd class="info-item-value" th:text="${attractionInfo.closedDays ?: '-'}">-</dd>
                             </div>
                         </div>
@@ -310,7 +359,8 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">운영시간</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.attraction.hours}">운영시간</dt>
                                 <dd class="info-item-value" th:text="${attractionInfo.openingHours ?: '-'}">-</dd>
                             </div>
                         </div>
@@ -323,7 +373,8 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">입장료</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.attraction.admission}">입장료</dt>
                                 <dd class="info-item-value" th:text="${attractionInfo.admissionFee ?: '-'}">-</dd>
                             </div>
                         </div>
@@ -336,7 +387,8 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">주차 가능</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.info.parking}">주차 가능</dt>
                                 <dd class="info-item-value info-item-value-inline">
                                     <span th:if="${attractionInfo.parkingAvailable != null}"
                                           th:text="${attractionInfo.parkingAvailable ? '가능' : '불가'}">가능</span>
@@ -352,7 +404,8 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">전화번호</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.info.phone}">전화번호</dt>
                                 <dd class="info-item-value info-item-tel"
                                     th:text="${attractionInfo.contactNumber ?: '-'}">-</dd>
                             </div>
@@ -366,13 +419,14 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">홈페이지</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.info.website}">홈페이지</dt>
                                 <dd class="info-item-value info-item-value-inline">
                                     <a th:if="${attractionInfo.homepageUrl != null}"
                                        class="info-item-link"
                                        th:href="${attractionInfo.homepageUrl}"
                                        target="_blank" rel="noopener">
-                                        공식 홈페이지
+                                        <span th:text="#{destination.detail.info.officialWebsite}">공식 홈페이지</span>
                                         <span class="info-item-link-arrow" aria-hidden="true">↗</span>
                                     </a>
                                     <span th:if="${attractionInfo.homepageUrl == null}">-</span>
@@ -383,7 +437,8 @@
 
                     <!-- 긴 안내문은 정보 그리드와 분리해 카드 하단에 둔다 -->
                     <div class="info-note">
-                        <div class="info-note-label">관람 안내</div>
+                        <div class="info-note-label"
+                             th:text="#{destination.detail.attraction.visitorGuide}">관람 안내</div>
                         <div class="info-note-text" th:utext="${attractionGuideWithBr}">-</div>
                     </div>
                 </div>
@@ -391,7 +446,8 @@
 
             <!-- 편의시설 -->
             <div th:if="${attractionAmenities != null and !attractionAmenities.isEmpty()}" class="amenity-row">
-                <div class="amenities-title">편의시설</div>
+                <div class="amenities-title"
+                     th:text="#{destination.detail.section.amenities}">편의시설</div>
                 <ul class="amenities-list">
                     <li th:each="a : ${attractionAmenities}"
                         th:attr="data-tooltip=${a.name}">
@@ -406,7 +462,7 @@
 
             <!-- 체험/액티비티 정보 ActivityInfo -->
             <div th:if="${activityInfo != null}" class="activity-info type-info-block">
-                <h2>체험/액티비티 정보</h2>
+                <h2 th:text="#{destination.detail.section.activity}">체험/액티비티 정보</h2>
                 <div class="info-card">
                     <dl class="info-grid">
                         <div class="info-item">
@@ -418,7 +474,8 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">운영 시간</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.activity.hours}">운영 시간</dt>
                                 <dd class="info-item-value" th:text="${activityInfo.openingHours ?: '-'}">-</dd>
                             </div>
                         </div>
@@ -431,7 +488,8 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">소요 시간</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.activity.duration}">소요 시간</dt>
                                 <dd class="info-item-value" th:text="${activityInfo.requiredTime ?: '-'}">-</dd>
                             </div>
                         </div>
@@ -444,7 +502,8 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">참가비/이용요금</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.activity.fee}">참가비/이용요금</dt>
                                 <dd class="info-item-value" th:text="${activityInfo.admissionFee ?: '-'}">-</dd>
                             </div>
                         </div>
@@ -457,7 +516,8 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">연령 제한</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.activity.ageLimit}">연령 제한</dt>
                                 <dd class="info-item-value" th:text="${activityInfo.ageLimit ?: '-'}">-</dd>
                             </div>
                         </div>
@@ -470,7 +530,8 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">사전 예약</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.activity.reservation}">사전 예약</dt>
                                 <dd class="info-item-value info-item-value-inline">
                                     <span th:if="${activityInfo.reservation != null}"
                                           th:text="${activityInfo.reservation ? '필요' : '불필요'}">필요</span>
@@ -487,7 +548,8 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">장비 대여/포함</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.activity.equipment}">장비 대여/포함</dt>
                                 <dd class="info-item-value info-item-value-inline">
                                     <span th:if="${activityInfo.equipmentIncluded != null}"
                                           th:text="${activityInfo.equipmentIncluded ? '포함' : '미포함'}">포함</span>
@@ -504,7 +566,8 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">주차 가능</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.info.parking}">주차 가능</dt>
                                 <dd class="info-item-value info-item-value-inline">
                                     <span th:if="${activityInfo.parkingAvailable != null}"
                                           th:text="${activityInfo.parkingAvailable ? '가능' : '불가'}">가능</span>
@@ -520,7 +583,8 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">연락처</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.info.contact}">연락처</dt>
                                 <dd class="info-item-value info-item-tel"
                                     th:text="${activityInfo.contactNumber ?: '-'}">-</dd>
                             </div>
@@ -534,13 +598,14 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">홈페이지</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.info.website}">홈페이지</dt>
                                 <dd class="info-item-value info-item-value-inline">
                                     <a th:if="${activityInfo.homepageUrl != null}"
                                        class="info-item-link"
                                        th:href="${activityInfo.homepageUrl}"
                                        target="_blank" rel="noopener">
-                                        공식 홈페이지
+                                        <span th:text="#{destination.detail.info.officialWebsite}">공식 홈페이지</span>
                                         <span class="info-item-link-arrow" aria-hidden="true">↗</span>
                                     </a>
                                     <span th:if="${activityInfo.homepageUrl == null}">-</span>
@@ -551,14 +616,16 @@
 
                     <!-- 긴 안내문은 정보 그리드와 분리해 카드 하단에 둔다 -->
                     <div class="info-note">
-                        <div class="info-note-label">이용 안내</div>
+                        <div class="info-note-label"
+                             th:text="#{destination.detail.activity.guide}">이용 안내</div>
                         <div class="info-note-text" th:text="${activityInfo.guide ?: '-'}">-</div>
                     </div>
                 </div>
             </div>
             <!-- 편의시설 -->
             <div th:if="${activityAmenities != null and !activityAmenities.isEmpty()}" class="amenity-row">
-                <div class="amenities-title">편의시설</div>
+                <div class="amenities-title"
+                     th:text="#{destination.detail.section.amenities}">편의시설</div>
                 <ul class="amenities-list">
                     <li th:each="a : ${activityAmenities}"
                         th:attr="data-tooltip=${a.name}">
@@ -573,7 +640,7 @@
 
             <!-- 맛집/음식점 정보 RestaurantInfo -->
             <div th:if="${restaurantInfo != null}" class="restaurant-info type-info-block">
-                <h2>맛집 정보</h2>
+                <h2 th:text="#{destination.detail.section.restaurant}">맛집 정보</h2>
                 <div class="info-card">
                     <dl class="info-grid">
                         <div class="info-item">
@@ -585,7 +652,8 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">대표 메뉴</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.restaurant.signatureMenu}">대표 메뉴</dt>
                                 <dd class="info-item-value" th:text="${restaurantInfo.mainMenu ?: '-'}">-</dd>
                             </div>
                         </div>
@@ -598,7 +666,8 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">가격대</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.restaurant.priceRange}">가격대</dt>
                                 <dd class="info-item-value" th:text="${restaurantInfo.priceRange ?: '-'}">-</dd>
                             </div>
                         </div>
@@ -611,7 +680,8 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">영업시간</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.restaurant.hours}">영업시간</dt>
                                 <dd class="info-item-value" th:text="${restaurantInfo.openingHours ?: '-'}">-</dd>
                             </div>
                         </div>
@@ -624,7 +694,8 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">브레이크 타임</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.restaurant.breakTime}">브레이크 타임</dt>
                                 <dd class="info-item-value" th:text="${restaurantInfo.breakTime ?: '-'}">-</dd>
                             </div>
                         </div>
@@ -637,7 +708,8 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">휴무일</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.restaurant.closed}">휴무일</dt>
                                 <dd class="info-item-value" th:text="${restaurantInfo.closedDays ?: '-'}">-</dd>
                             </div>
                         </div>
@@ -650,7 +722,8 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">주차 가능</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.info.parking}">주차 가능</dt>
                                 <dd class="info-item-value info-item-value-inline">
                                     <span th:if="${restaurantInfo.parkingAvailable != null}"
                                           th:text="${restaurantInfo.parkingAvailable ? '가능' : '불가'}">가능</span>
@@ -670,7 +743,8 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">반려동물 동반</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.restaurant.pets}">반려동물 동반</dt>
                                 <dd class="info-item-value info-item-value-inline">
                                     <span th:if="${restaurantInfo.petAllowed != null}"
                                           th:text="${restaurantInfo.petAllowed ? '가능' : '불가'}">가능</span>
@@ -687,7 +761,8 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">좌석 수</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.restaurant.seats}">좌석 수</dt>
                                 <dd class="info-item-value"
                                     th:text="${restaurantInfo.seatCount != null ? restaurantInfo.seatCount : '-'}">-</dd>
                             </div>
@@ -701,7 +776,8 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">테이크아웃</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.restaurant.takeout}">테이크아웃</dt>
                                 <dd class="info-item-value info-item-value-inline">
                                     <span th:if="${restaurantInfo.takeoutAvailable != null}"
                                           th:text="${restaurantInfo.takeoutAvailable ? '가능' : '불가'}">가능</span>
@@ -719,7 +795,8 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">배달</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.restaurant.delivery}">배달</dt>
                                 <dd class="info-item-value info-item-value-inline">
                                     <span th:if="${restaurantInfo.deliveryAvailable != null}"
                                           th:text="${restaurantInfo.deliveryAvailable ? '가능' : '불가'}">가능</span>
@@ -736,7 +813,8 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">예약</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.restaurant.reservation}">예약</dt>
                                 <dd class="info-item-value info-item-value-inline">
                                     <span th:if="${restaurantInfo.reservation != null}"
                                           th:text="${restaurantInfo.reservation ? '가능' : '불가'}">가능</span>
@@ -752,7 +830,8 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">연락처</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.info.contact}">연락처</dt>
                                 <dd class="info-item-value info-item-tel"
                                     th:text="${restaurantInfo.contactNumber ?: '-'}">-</dd>
                             </div>
@@ -766,13 +845,14 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">홈페이지</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.info.website}">홈페이지</dt>
                                 <dd class="info-item-value info-item-value-inline">
                                     <a th:if="${restaurantInfo.homepageUrl != null}"
                                        class="info-item-link"
                                        th:href="${restaurantInfo.homepageUrl}"
                                        target="_blank" rel="noopener">
-                                        공식 홈페이지
+                                        <span th:text="#{destination.detail.info.officialWebsite}">공식 홈페이지</span>
                                         <span class="info-item-link-arrow" aria-hidden="true">↗</span>
                                     </a>
                                     <span th:if="${restaurantInfo.homepageUrl == null}">-</span>
@@ -783,14 +863,16 @@
 
                     <!-- 긴 안내문은 정보 그리드와 분리해 카드 하단에 둔다 -->
                     <div class="info-note">
-                        <div class="info-note-label">기타 안내</div>
+                        <div class="info-note-label"
+                             th:text="#{destination.detail.restaurant.notes}">기타 안내</div>
                         <div class="info-note-text" th:text="${restaurantInfo.etc ?: '-'}">-</div>
                     </div>
                 </div>
             </div>
             <!-- 편의시설 -->
             <div th:if="${restaurantAmenities != null and !restaurantAmenities.isEmpty()}" class="amenity-row">
-                <div class="amenities-title">편의시설</div>
+                <div class="amenities-title"
+                     th:text="#{destination.detail.section.amenities}">편의시설</div>
                 <ul class="amenities-list">
                     <li th:each="a : ${restaurantAmenities}"
                         th:attr="data-tooltip=${a.name}">
@@ -805,7 +887,7 @@
 
             <!-- 상점/쇼핑 정보 ShopInfo -->
             <div th:if="${shopInfo != null}" class="shop-info type-info-block">
-                <h2>상점 정보</h2>
+                <h2 th:text="#{destination.detail.section.shop}">상점 정보</h2>
                 <div class="info-card">
                     <dl class="info-grid">
                         <div class="info-item">
@@ -817,7 +899,8 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">주요 상품</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.shop.products}">주요 상품</dt>
                                 <dd class="info-item-value" th:text="${shopInfo.mainProducts ?: '-'}">-</dd>
                             </div>
                         </div>
@@ -830,7 +913,8 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">영업시간</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.shop.hours}">영업시간</dt>
                                 <dd class="info-item-value" th:text="${shopInfo.openingHours ?: '-'}">-</dd>
                             </div>
                         </div>
@@ -843,7 +927,8 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">휴점일</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.shop.closed}">휴점일</dt>
                                 <dd class="info-item-value" th:text="${shopInfo.closedDays ?: '-'}">-</dd>
                             </div>
                         </div>
@@ -856,7 +941,8 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">주차 가능</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.info.parking}">주차 가능</dt>
                                 <dd class="info-item-value info-item-value-inline">
                                     <span th:if="${shopInfo.parkingAvailable != null}"
                                           th:text="${shopInfo.parkingAvailable ? '가능' : '불가'}">가능</span>
@@ -872,7 +958,8 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">연락처</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.info.contact}">연락처</dt>
                                 <dd class="info-item-value info-item-tel"
                                     th:text="${shopInfo.contactNumber ?: '-'}">-</dd>
                             </div>
@@ -886,13 +973,14 @@
                                 </svg>
                             </span>
                             <div class="info-item-text">
-                                <dt class="info-item-label">홈페이지</dt>
+                                <dt class="info-item-label"
+                                    th:text="#{destination.detail.info.website}">홈페이지</dt>
                                 <dd class="info-item-value info-item-value-inline">
                                     <a th:if="${shopInfo.homepageUrl != null}"
                                        class="info-item-link"
                                        th:href="${shopInfo.homepageUrl}"
                                        target="_blank" rel="noopener">
-                                        공식 홈페이지
+                                        <span th:text="#{destination.detail.info.officialWebsite}">공식 홈페이지</span>
                                         <span class="info-item-link-arrow" aria-hidden="true">↗</span>
                                     </a>
                                     <span th:if="${shopInfo.homepageUrl == null}">-</span>
@@ -903,14 +991,16 @@
 
                     <!-- 긴 안내문은 정보 그리드와 분리해 카드 하단에 둔다 -->
                     <div class="info-note">
-                        <div class="info-note-label">기타 안내</div>
+                        <div class="info-note-label"
+                             th:text="#{destination.detail.shop.notes}">기타 안내</div>
                         <div class="info-note-text" th:text="${shopInfo.guide ?: '-'}">-</div>
                     </div>
                 </div>
             </div>
             <!-- 편의시설 -->
             <div th:if="${shopAmenities != null and !shopAmenities.isEmpty()}" class="amenity-row">
-                <div class="amenities-title">편의시설</div>
+                <div class="amenities-title"
+                     th:text="#{destination.detail.section.amenities}">편의시설</div>
                 <ul class="amenities-list">
                     <li th:each="a : ${shopAmenities}"
                         th:attr="data-tooltip=${a.name}">
@@ -926,7 +1016,7 @@
 
             <!-- 지도 영역 -->
             <section class="map">
-                <h2>지도</h2>
+                <h2 th:text="#{destination.detail.section.map}">지도</h2>
                 <!-- 국내: Kakao 지도 (기존 그대로) -->
                 <div th:if="${countryCode == 'KR'}"
                      id="map"
@@ -937,18 +1027,18 @@
                 <iframe th:if="${countryCode != 'KR' and overseasMapEmbedUrl != null}"
                         class="map-embed"
                         th:src="${overseasMapEmbedUrl}"
-                        th:title="${destination.name} + ' 위치'"
+                        th:title="#{destination.detail.map.iframeTitle(${destination.name})}"
                         loading="lazy"
                         allowfullscreen
                         referrerpolicy="no-referrer-when-downgrade"></iframe>
                 <p th:if="${countryCode != 'KR' and overseasMapEmbedUrl == null}" class="map-unavailable">
-                    지도 정보를 표시할 수 없습니다.
+                    <span th:text="#{destination.detail.map.unavailable}">지도 정보를 표시할 수 없습니다.</span>
                 </p>
                 <a th:if="${overseasMapLinkUrl != null}"
                    class="map-external-link"
                    th:href="${overseasMapLinkUrl}"
                    target="_blank" rel="noopener">
-                    Google 지도에서 크게 보기
+                    <span th:text="#{destination.detail.map.openGoogleMaps}">Google 지도에서 크게 보기</span>
                     <span class="map-external-link-arrow" aria-hidden="true">↗</span>
                 </a>
             </section>
@@ -958,8 +1048,10 @@
     <!-- 사진 후기 모아보기 -->
     <section class="photo-review-section">
         <div class="photo-review-header">
-            <h2>사진 후기</h2>
-            <a href="#" class="view-all">전체보기 &gt;</a>
+            <h2 th:text="#{destination.detail.section.photoReviews}">사진 후기</h2>
+            <a href="#" class="view-all">
+                <span th:text="#{destination.detail.gallery.viewAll}">전체보기</span> &gt;
+            </a>
         </div>
         <div class="photo-review-list">
             <!-- JS로 썸네일 이미지들이 동적으로 들어옵니다 -->
@@ -968,11 +1060,18 @@
 
     <section class="comment-section content-comments">
         <div class="comment-toolbar content-comment-toolbar">
-            <div class="comment-count"><h2 class="content-comment-heading">댓글 <span id="comment-count">0</span></h2></div>
-            <div class="comment-sort content-comment-sort" role="group" aria-label="댓글 정렬">
-                <button type="button" class="is-active" data-comment-sort="latest" aria-pressed="true">최신순</button>
-                <button type="button" data-comment-sort="oldest" aria-pressed="false">오래된순</button>
-                <button type="button" data-comment-sort="likes" aria-pressed="false">좋아요순</button>
+            <div class="comment-count"><h2 class="content-comment-heading">
+                <span th:text="#{destination.detail.section.comments}">댓글</span>
+                <span id="comment-count">0</span>
+            </h2></div>
+            <div class="comment-sort content-comment-sort" role="group"
+                 th:aria-label="#{destination.detail.comment.sortLabel}">
+                <button type="button" class="is-active" data-comment-sort="latest" aria-pressed="true"
+                        th:text="#{destination.detail.comment.sort.latest}">최신순</button>
+                <button type="button" data-comment-sort="oldest" aria-pressed="false"
+                        th:text="#{destination.detail.comment.sort.oldest}">오래된순</button>
+                <button type="button" data-comment-sort="likes" aria-pressed="false"
+                        th:text="#{destination.detail.comment.sort.likes}">좋아요순</button>
             </div>
         </div>
 
@@ -980,7 +1079,7 @@
         <div th:if="${#authentication.name == 'anonymousUser'}">
             <div class="textarea-wrapper">
             <textarea id="guest-comment-box" readonly
-                      placeholder="댓글을 작성하려면 로그인하세요."></textarea>
+                      th:placeholder="#{destination.detail.comment.loginPrompt}"></textarea>
             </div>
         </div>
 
@@ -990,7 +1089,7 @@
 
             <div class="textarea-wrapper">
                 <textarea name="content" maxlength="2000"
-                          placeholder="댓글을 입력하세요" required></textarea>
+                          th:placeholder="#{destination.detail.comment.placeholder}" required></textarea>
             </div>
 
             <!-- 선택한 사진 미리보기 (등록 전) -->
@@ -1001,11 +1100,12 @@
                 <input type="file" id="comment-image-input" name="images" accept="image/*" multiple hidden>
 
                 <label for="comment-image-input" class="image-upload-label">
-                    <img src="/uploads/icons/camera.png" alt="사진">
-                    사진
+                    <img src="/uploads/icons/camera.png" th:alt="#{destination.detail.comment.photo}">
+                    <span th:text="#{destination.detail.comment.photo}">사진</span>
                 </label>
 
-                <button type="submit" class="submit-btn">등록</button>
+                <button type="submit" class="submit-btn"
+                        th:text="#{destination.detail.comment.submit}">등록</button>
             </div>
         </form>
 
@@ -1016,7 +1116,7 @@
 
         <div class="content-comment-more-row">
             <button id="load-more-comments" type="button" class="comment-more-btn content-comment-more" hidden>
-                댓글 더보기
+                <span th:text="#{destination.detail.comment.loadMore}">댓글 더보기</span>
             </button>
         </div>
     </section>
@@ -1026,8 +1126,10 @@
         <div class="container">
                 <div class="similar-destinations-header">
                     <h2 class="similar-destinations-title">
-                        <span th:if="${regionName != null}" th:text="${regionName} + '의 다른 여행지도 둘러보세요'">추천</span>
-                        <span th:if="${regionName == null}">이런 여행지도 둘러보세요</span>
+                        <span th:if="${regionName != null}"
+                              th:text="#{destination.detail.similar.withRegion(${regionName})}">추천</span>
+                        <span th:if="${regionName == null}"
+                              th:text="#{destination.detail.similar.withoutRegion}">이런 여행지도 둘러보세요</span>
                     </h2>
                     <!-- 목록의 지역 필터 파라미터(type/region)를 그대로 사용.
                          쿼리스트링을 문자열로 이어 붙이면 '&region='이 &reg; 엔티티로 깨지므로
@@ -1035,7 +1137,7 @@
                     <a th:if="${regionName != null}"
                        class="similar-destinations-more"
                        th:href="@{/destinations(type=${type},region=${regionId})}">
-                        <span th:text="${regionName} + ' 여행지 더보기'">여행지 더보기</span>
+                        <span th:text="#{destination.detail.similar.moreWithRegion(${regionName})}">여행지 더보기</span>
                         <span class="similar-destinations-more-arrow" aria-hidden="true">→</span>
                     </a>
                 </div>
@@ -1055,7 +1157,7 @@
                                     th:data-id="${d.id}"
                                     th:data-bookmarked="${d.bookmarked != null ? d.bookmarked : false}">
                                 <img th:src="@{${d.bookmarked != null and d.bookmarked} ? '/uploads/icons/bookmark2.png' : '/uploads/icons/bookmark.png'}"
-                                     alt="북마크"/>
+                                     th:alt="#{destination.detail.meta.bookmarkIcon}"/>
                             </button>
                         </div>
                         <a class="similar-destination-body" th:href="@{'/destinations/' + ${d.id}}">
@@ -1073,24 +1175,33 @@
 
 
     <!-- ✅ 이미지 확대용 모달 -->
-    <div id="image-modal" class="image-modal" style="display:none;">
-        <span class="close-btn">&times;</span>
+    <div id="image-modal" class="image-modal" style="display:none;" role="dialog" aria-modal="true"
+         th:aria-label="#{destination.detail.gallery.dialogLabel}">
+        <button type="button" class="close-btn"
+                th:aria-label="#{destination.detail.gallery.close}">&times;</button>
         <!-- 이동 버튼은 클릭한 댓글에 첨부된 사진들 안에서만 순환한다 -->
-        <button type="button" class="comment-image-nav prev" aria-label="이전 사진">&#10094;</button>
-        <img class="modal-content" id="modal-img" alt="확대 이미지">
-        <button type="button" class="comment-image-nav next" aria-label="다음 사진">&#10095;</button>
+        <button type="button" class="comment-image-nav prev"
+                th:aria-label="#{destination.detail.gallery.previousPhoto}">&#10094;</button>
+        <img class="modal-content" id="modal-img"
+             th:alt="#{destination.detail.gallery.enlargedImageAlt}">
+        <button type="button" class="comment-image-nav next"
+                th:aria-label="#{destination.detail.gallery.nextPhoto}">&#10095;</button>
     </div>
 
     <!-- 전체보기 모달 -->
-    <div id="photo-modal" class="photo-modal" style="display: none;">
+    <div id="photo-modal" class="photo-modal" style="display: none;" role="dialog" aria-modal="true"
+         th:aria-label="#{destination.detail.gallery.dialogLabel}">
         <div class="photo-modal-overlay"></div>
         <div class="photo-modal-container">
-            <span class="photo-close">&times;</span>
+            <button type="button" class="photo-close"
+                    th:aria-label="#{destination.detail.gallery.close}">&times;</button>
             <!-- 좌/우 버튼은 이미지 영역 안에 두어 항상 사진 위에 겹치게 한다 -->
             <div class="photo-main">
-                <button type="button" class="photo-prev" aria-label="이전 사진">&#10094;</button>
-                <img id="main-photo" src="" alt="메인 이미지">
-                <button type="button" class="photo-next" aria-label="다음 사진">&#10095;</button>
+                <button type="button" class="photo-prev"
+                        th:aria-label="#{destination.detail.gallery.previousPhoto}">&#10094;</button>
+                <img id="main-photo" src="" th:alt="#{destination.detail.gallery.mainImageAlt}">
+                <button type="button" class="photo-next"
+                        th:aria-label="#{destination.detail.gallery.nextPhoto}">&#10095;</button>
             </div>
             <div class="photo-sidebar-thumbnails" id="sidebar-thumbnails">
                 <!-- 썸네일 동적 삽입 -->

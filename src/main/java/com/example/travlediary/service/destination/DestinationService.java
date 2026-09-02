@@ -1,5 +1,6 @@
 package com.example.travlediary.service.destination;
 
+import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.dto.DestinationDetailDto;
 import com.example.travlediary.dto.DestinationDto;
 import com.example.travlediary.dto.DestinationForm;
@@ -21,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -153,8 +155,20 @@ public class DestinationService {
     }
 
     public DestinationDetailDto getDestinationDetailWithInfo(Long id) {
+        return getDestinationDetailWithInfo(id, SupportedLanguage.KOREAN);
+    }
+
+    public DestinationDetailDto getDestinationDetailWithInfo(Long id,
+                                                              SupportedLanguage requestedLanguage) {
         Destination destination = destinationMapper.findDestinationDetail(id);
         if (destination == null) return null;
+
+        List<DestinationTranslation> translations =
+                destinationMapper.findTranslationsByDestinationId(id);
+        if (translations == null || translations.isEmpty()) return null;
+
+        applyLocalizedContent(destination, translations,
+                requestedLanguage == null ? SupportedLanguage.KOREAN : requestedLanguage);
 
         DestinationDetailDto dto = new DestinationDetailDto();
         dto.setDestination(destination);
@@ -188,6 +202,54 @@ public class DestinationService {
                 break;
         }
         return dto;
+    }
+
+    private void applyLocalizedContent(Destination destination,
+                                       List<DestinationTranslation> translations,
+                                       SupportedLanguage requestedLanguage) {
+        List<DestinationTranslation> ordered = translations.stream()
+                .sorted(Comparator
+                        .comparing(DestinationTranslation::getLanguageCode,
+                                Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(DestinationTranslation::getId,
+                                Comparator.nullsLast(Comparator.naturalOrder())))
+                .toList();
+        DestinationTranslation requested = translationFor(
+                ordered, requestedLanguage.getLanguageTag());
+        DestinationTranslation korean = translationFor(
+                ordered, SupportedLanguage.KOREAN.getLanguageTag());
+
+        destination.setName(localizedField(
+                DestinationTranslation::getName, requested, korean, ordered));
+        destination.setShortDescription(localizedField(
+                DestinationTranslation::getShortDescription, requested, korean, ordered));
+        destination.setDescription(localizedField(
+                DestinationTranslation::getDescription, requested, korean, ordered));
+    }
+
+    private DestinationTranslation translationFor(List<DestinationTranslation> translations,
+                                                  String languageTag) {
+        return translations.stream()
+                .filter(translation -> languageTag.equals(translation.getLanguageCode()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private String localizedField(Function<DestinationTranslation, String> field,
+                                  DestinationTranslation requested,
+                                  DestinationTranslation korean,
+                                  List<DestinationTranslation> ordered) {
+        for (DestinationTranslation translation : Arrays.asList(requested, korean)) {
+            if (translation != null) {
+                String value = field.apply(translation);
+                if (value != null && !value.isBlank()) return value;
+            }
+        }
+        return ordered.stream()
+                .map(field)
+                .filter(value -> value != null && !value.isBlank())
+                .findFirst()
+                .orElse(null);
     }
 
     // 상세 페이지 여행지 추천

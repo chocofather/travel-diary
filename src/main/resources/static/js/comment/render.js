@@ -1,3 +1,5 @@
+import { detailMessage } from './messages.js';
+
 const defaultProfileImage = '/images/default.png';
 const unlikedIcon = '/uploads/icons/like.png';
 const likedIcon = '/uploads/icons/like2.png';
@@ -67,7 +69,8 @@ function renderCommentImages(comment) {
     if (imageUrls.length === 0) return '';
     const items = imageUrls
         .map((url, index) =>
-            `<img src="${url}" class="comment-image content-comment-image" alt="댓글 이미지 ${index + 1}">`)
+            `<img src="${url}" class="comment-image content-comment-image"
+                  alt="${detailMessage('commentImageAlt', index + 1)}">`)
         .join('');
     return `<div class="comment-images content-comment-images">${items}</div>`;
 }
@@ -103,13 +106,13 @@ export function createCommentItem(comment, depth = 0, parentNickname = '') {
         li.classList.add('content-comment-deleted');
         const moderatedText = document.createElement('p');
         moderatedText.className = 'comment-content content-comment-text content-comment-deleted-text';
-        moderatedText.textContent = '관리자에 의해 조치된 댓글입니다.';
+        moderatedText.textContent = detailMessage('commentModerated');
         li.append(moderatedText);
         return li;
     }
 
     const profileUrl = profileImageUrl(comment.writer?.profileImage);
-    const nickname   = comment.writer?.nickname     || '알 수 없음';
+    const nickname   = comment.writer?.nickname     || detailMessage('commentUnknownUser');
     const isWriter   = comment.writer?.isWriter === true;
     const isLoggedIn = comment.isLoggedIn === true;
     const edited = isEdited(comment);
@@ -118,20 +121,20 @@ export function createCommentItem(comment, depth = 0, parentNickname = '') {
                    data-id="${comment.id}" aria-pressed="${Boolean(comment.likedByMe)}">
                 <img src="${comment.likedByMe ? likedIcon : unlikedIcon}" alt="" aria-hidden="true"
                      class="likeicon content-comment-like-icon">
-                <span class="content-comment-sr-only">좋아요</span>
+                <span class="content-comment-sr-only">${detailMessage('commentLike')}</span>
                 <span class="content-comment-like-count">${comment.likes ?? 0}</span>
             </button>`
         : `<span class="content-comment-like-readonly content-comment-like">
                 <img src="${comment.likedByMe ? likedIcon : unlikedIcon}" alt="" aria-hidden="true"
                      class="likeicon content-comment-like-icon">
-                <span class="content-comment-sr-only">좋아요</span>
+                <span class="content-comment-sr-only">${detailMessage('commentLike')}</span>
                 <span class="content-comment-like-count">${comment.likes ?? 0}</span>
             </span>`;
 
     const profileImage = document.createElement('img');
     profileImage.src = profileUrl;
     profileImage.className = 'comment-profile content-comment-avatar';
-    profileImage.alt = `${nickname} 프로필 이미지`;
+    profileImage.alt = detailMessage('commentProfileAlt', nickname);
     bindProfileFallback(profileImage);
 
     const nicknameElement = document.createElement('span');
@@ -142,20 +145,20 @@ export function createCommentItem(comment, depth = 0, parentNickname = '') {
     body.className = 'content-comment-body';
     body.innerHTML = `
         <div class="comment-header content-comment-header">
-            ${isWriter ? `<span class="comment-author-tag content-comment-author-tag">작성자</span>` : ''}
+            ${isWriter ? `<span class="comment-author-tag content-comment-author-tag">${detailMessage('commentAuthor')}</span>` : ''}
             <span class="content-comment-meta">
                 <time datetime="${comment.createdAt || ''}">${formatDate(comment.createdAt)}</time>
-                ${edited ? '<span class="edited-tag content-comment-edited">· 수정됨</span>' : ''}
+                ${edited ? `<span class="edited-tag content-comment-edited">${detailMessage('commentEdited')}</span>` : ''}
             </span>
         </div>
         <p class="comment-content content-comment-text">${highlightMentions(comment.content)}</p>
         ${renderCommentImages(comment)}
         <div class="comment-actions content-comment-actions">
             ${likeControl}
-            ${isLoggedIn ? '<button type="button" class="reply-btn content-comment-action">답글</button>' : ''}
+            ${isLoggedIn ? `<button type="button" class="reply-btn content-comment-action">${detailMessage('commentReply')}</button>` : ''}
             ${comment.myComment || comment.admin ? `
-                <button type="button" class="edit-btn content-comment-action">수정</button>
-                <button type="button" class="delete-btn content-comment-action">삭제</button>
+                <button type="button" class="edit-btn content-comment-action">${detailMessage('commentEdit')}</button>
+                <button type="button" class="delete-btn content-comment-action">${detailMessage('commentDelete')}</button>
             ` : ''}
         </div>
     `;
@@ -263,7 +266,7 @@ export function renderThumbnails(thumbnails, containerSelector, openModalFn) {
         const img = document.createElement('img');
         img.src = t.imageUrl;
         img.className = 'photo-thumbnail';
-        img.alt = '사진 후기';
+        img.alt = detailMessage('commentPhotoReviewAlt');
         img.addEventListener('click', () => openModalFn(idx, thumbnails));
         container.appendChild(img);
     });

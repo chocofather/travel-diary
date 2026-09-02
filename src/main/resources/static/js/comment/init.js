@@ -28,6 +28,7 @@ import {
     renderComments,
     renderThumbnails
 } from './render.js';
+import { detailMessage } from './messages.js';
 
 export function init() {
     const destinationId = getDestinationId();
@@ -73,7 +74,9 @@ export function init() {
         if (!moreButton) return;
         moreButton.hidden = isLastPage || nextPage === 0;
         moreButton.disabled = isLoading;
-        moreButton.textContent = isLoading ? '불러오는 중…' : '댓글 더보기';
+        moreButton.textContent = isLoading
+            ? detailMessage('commentLoading')
+            : detailMessage('commentLoadMore');
     }
 
     async function loadCommentPage({reset = false, pageOverride = null} = {}) {

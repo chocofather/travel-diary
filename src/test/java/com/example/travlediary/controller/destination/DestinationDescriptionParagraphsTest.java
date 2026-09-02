@@ -1,6 +1,7 @@
 package com.example.travlediary.controller.destination;
 
 import com.example.travlediary.dto.DestinationDetailDto;
+import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.model.CountryCategory;
 import com.example.travlediary.model.Destination;
 import com.example.travlediary.service.category.CategoryService;
@@ -9,6 +10,7 @@ import com.example.travlediary.service.comment.DestinationCommentService;
 import com.example.travlediary.service.destination.DestinationImageService;
 import com.example.travlediary.service.destination.DestinationService;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -17,11 +19,14 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
+import org.springframework.context.i18n.LocaleContextHolder;
 
 import java.util.List;
+import java.util.Locale;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -42,6 +47,7 @@ class DestinationDescriptionParagraphsTest {
 
     @BeforeEach
     void setUp() {
+        LocaleContextHolder.setLocale(SupportedLanguage.KOREAN.getLocale());
         controller = new DestinationController(destinationService, destinationImageService,
                 categoryService, countryCategoryService, destinationCommentService);
 
@@ -53,6 +59,11 @@ class DestinationDescriptionParagraphsTest {
         when(countryCategoryService.getDomesticRootIds()).thenReturn(List.of(10L));
         when(destinationService.getSimilarDestinations(7L, 4)).thenReturn(List.of());
         when(destinationService.convertToDtoWithBookmark(List.of(), null)).thenReturn(List.of());
+    }
+
+    @AfterEach
+    void clearLocale() {
+        LocaleContextHolder.resetLocaleContext();
     }
 
     @Test
@@ -69,6 +80,16 @@ class DestinationDescriptionParagraphsTest {
     void handlesCrLfAndCollapsesMultipleBlankLinesIntoOneBoundary() {
         assertThat(renderDescription("문장1\r\n문장2\r\n\r\n\r\n문장3"))
                 .containsExactly("문장1 문장2", "문장3");
+    }
+
+    @Test
+    void englishCrLfDescriptionUsesTheSameParagraphFormatter() {
+        LocaleContextHolder.setLocale(Locale.forLanguageTag("en"));
+
+        assertThat(renderDescription(
+                "Sentence one.\r\nSentence two.\r\n\r\nSecond paragraph."))
+                .containsExactly("Sentence one. Sentence two.", "Second paragraph.");
+        verify(destinationService).getDestinationDetailWithInfo(7L, SupportedLanguage.ENGLISH);
     }
 
     @Test
@@ -94,7 +115,9 @@ class DestinationDescriptionParagraphsTest {
 
         DestinationDetailDto dto = new DestinationDetailDto();
         dto.setDestination(destination);
-        when(destinationService.getDestinationDetailWithInfo(7L)).thenReturn(dto);
+        SupportedLanguage language = SupportedLanguage.fromLocale(LocaleContextHolder.getLocale())
+                .orElse(SupportedLanguage.KOREAN);
+        when(destinationService.getDestinationDetailWithInfo(7L, language)).thenReturn(dto);
 
         Model model = new ExtendedModelMap();
         controller.destinationDetail(7L, null, model);

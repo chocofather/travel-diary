@@ -35,7 +35,7 @@ class AttractionInfoUiContractTest {
         // 긴 URL 을 그대로 노출하지 않는다
         assertThat(block)
                 .contains("th:href=\"${attractionInfo.homepageUrl}\"")
-                .contains("공식 홈페이지")
+                .contains("#{destination.detail.info.officialWebsite}")
                 .doesNotContain("th:text=\"${attractionInfo.homepageUrl}\"");
         // 긴 안내문은 정보 그리드 밖의 별도 영역에 둔다
         int gridEnd = block.indexOf("</dl>");

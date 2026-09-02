@@ -40,7 +40,7 @@ class DestinationCommentImageUiContractTest {
 
         assertThat(events)
                 .contains("const MAX_COMMENT_IMAGES = 3")
-                .contains("사진은 최대 ${MAX_COMMENT_IMAGES}장까지 첨부할 수 있습니다.")
+                .contains("detailMessage('commentImageLimit', MAX_COMMENT_IMAGES)")
                 .contains("input[type=\"file\"][name=\"images\"]");
         // 댓글/답글 두 경로 모두 전송 전에 확인한다
         assertThat(events.split("if \\(exceedsImageLimit\\(form\\)\\) return;", -1))
@@ -62,7 +62,7 @@ class DestinationCommentImageUiContractTest {
                 .contains("keys.has(fileKey(file))")
                 // 3장까지만 남기고 초과분은 안내 후 버린다
                 .contains("selected = merged.slice(0, MAX_COMMENT_IMAGES)")
-                .contains("alert(IMAGE_LIMIT_MESSAGE)")
+                .contains("alert(detailMessage('commentImageLimit', MAX_COMMENT_IMAGES))")
                 // 개별 삭제 / 등록 후 초기화
                 .contains("selected.splice(index, 1)")
                 .contains("form.addEventListener('reset', () => setTimeout(clearFiles, 0))")
@@ -92,8 +92,8 @@ class DestinationCommentImageUiContractTest {
         assertThat(modal)
                 .contains("class=\"comment-image-nav prev\"")
                 .contains("class=\"comment-image-nav next\"")
-                .contains("aria-label=\"이전 사진\"")
-                .contains("aria-label=\"다음 사진\"")
+                .contains("th:aria-label=\"#{destination.detail.gallery.previousPhoto}\"")
+                .contains("th:aria-label=\"#{destination.detail.gallery.nextPhoto}\"")
                 .doesNotContain("image-modal-nav");
 
         String events = resource("/static/js/comment/events.js");
@@ -130,6 +130,15 @@ class DestinationCommentImageUiContractTest {
                 .contains(".image-modal .comment-image-nav:hover")
                 .contains("background: rgba(0, 0, 0, 0.72)")
                 .contains(".image-modal.is-single .comment-image-nav");
+    }
+
+    @Test
+    void galleryViewAllWorksWhenTheTranslatedLabelInsideTheLinkIsClicked() throws IOException {
+        String events = resource("/static/js/comment/events.js");
+
+        assertThat(events)
+                .contains("e.target.closest?.('.view-all')")
+                .doesNotContain("e.target.matches('.view-all')");
     }
 
     private String resource(String path) throws IOException {

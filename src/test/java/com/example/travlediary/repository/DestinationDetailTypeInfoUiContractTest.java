@@ -59,7 +59,7 @@ class DestinationDetailTypeInfoUiContractTest {
         }
         // 긴 URL 대신 공통 문구를 쓰고, 새 창 + rel 속성은 관광지 구현을 그대로 따른다
         assertThat(countOf(detail, "class=\"info-item-link\"")).isEqualTo(5);
-        assertThat(countOf(detail, "공식 홈페이지")).isEqualTo(5);
+        assertThat(countOf(detail, "#{destination.detail.info.officialWebsite}")).isEqualTo(5);
         assertThat(detail).contains("target=\"_blank\" rel=\"noopener\"");
         assertThat(detail).doesNotContain("th:text=\"${accommodationInfo.homepageUrl}\"");
     }

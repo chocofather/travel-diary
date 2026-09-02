@@ -1,5 +1,6 @@
 package com.example.travlediary.controller.destination;
 
+import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.dto.DestinationDetailDto;
 import com.example.travlediary.model.CountryCategory;
 import com.example.travlediary.model.Destination;
@@ -28,6 +29,8 @@ import java.nio.file.Path;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 /** 해외 상세 지도는 Maps Embed API iframe 으로 표시한다. 키는 환경변수로만 주입한다. */
@@ -165,7 +168,7 @@ class OverseasMapEmbedTest {
                 .contains("overseasMapEmbedUrl == null")
                 // 지도 아래 새 탭 링크
                 .contains("th:href=\"${overseasMapLinkUrl}\"")
-                .contains("Google 지도에서 크게 보기")
+                .contains("#{destination.detail.map.openGoogleMaps}")
                 .contains("target=\"_blank\" rel=\"noopener\"");
 
         // 키 문자열은 소스 어디에도 없어야 한다
@@ -214,7 +217,8 @@ class OverseasMapEmbedTest {
         DestinationDetailDto dto = new DestinationDetailDto();
         dto.setDestination(destination);
 
-        when(destinationService.getDestinationDetailWithInfo(7L)).thenReturn(dto);
+        when(destinationService.getDestinationDetailWithInfo(eq(7L), any(SupportedLanguage.class)))
+                .thenReturn(dto);
         when(destinationService.getSimilarDestinations(7L, 4)).thenReturn(List.of());
         when(destinationService.convertToDtoWithBookmark(List.of(), null)).thenReturn(List.of());
 

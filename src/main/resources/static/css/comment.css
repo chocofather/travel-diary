@@ -338,7 +338,11 @@
     position: absolute;
     top: 30px;
     right: 40px;
+    padding: 0;
+    border: 0;
+    background: none;
     font-size: 30px;
+    line-height: 1;
     color: white;
     cursor: pointer;
 }
@@ -518,7 +522,11 @@
     position: fixed;
     top: 24px;
     right: 32px;
+    padding: 0;
+    border: 0;
+    background: none;
     font-size: 32px;
+    line-height: 1;
     color: white;
     cursor: pointer;
     z-index: 10000;
@@ -704,4 +712,3 @@
     margin-right: 5px;
     vertical-align: middle;
 }
-

@@ -68,9 +68,6 @@
         SELECT
             d.*,                            -- type 컬럼 포함!
             c.region_name,
-            t.name,
-            t.description,
-            t.short_description,
             di.id           AS img_id,
             di.image_url,
             di.source_type,
@@ -88,7 +85,6 @@
             di.created_at
         FROM destinations d
                  JOIN country_categories      c ON d.region_id = c.id
-                 JOIN destination_translations t ON t.destination_id = d.id AND t.language_code = 'ko'
                  LEFT JOIN destination_images di ON di.destination_id = d.id
         WHERE d.id = #{id}
         ORDER BY di.order_index

@@ -9,10 +9,10 @@ import {
 
 import { createCommentItem } from './render.js';
 import { getLoadedComments } from './commentsState.js';
+import { detailMessage } from './messages.js';
 
 /** 댓글 하나에 첨부할 수 있는 사진 수. 서버 DestinationCommentService.MAX_COMMENT_IMAGES 와 같은 값. */
 const MAX_COMMENT_IMAGES = 3;
-const IMAGE_LIMIT_MESSAGE = `사진은 최대 ${MAX_COMMENT_IMAGES}장까지 첨부할 수 있습니다.`;
 
 /**
  * 선택한 사진이 제한을 넘으면 안내하고 전송을 막는다.
@@ -22,7 +22,7 @@ const IMAGE_LIMIT_MESSAGE = `사진은 최대 ${MAX_COMMENT_IMAGES}장까지 첨
 function exceedsImageLimit(form) {
     const input = form.querySelector('input[type="file"][name="images"]');
     if (!input || input.files.length <= MAX_COMMENT_IMAGES) return false;
-    alert(IMAGE_LIMIT_MESSAGE);
+    alert(detailMessage('commentImageLimit', MAX_COMMENT_IMAGES));
     return true;
 }
 
@@ -86,7 +86,7 @@ function initCommentImagePreview(form) {
         });
         const merged = selected.concat(added);
         if (merged.length > MAX_COMMENT_IMAGES) {
-            alert(IMAGE_LIMIT_MESSAGE);
+            alert(detailMessage('commentImageLimit', MAX_COMMENT_IMAGES));
         }
         selected = merged.slice(0, MAX_COMMENT_IMAGES);
         syncInput();
@@ -122,12 +122,12 @@ function initCommentImagePreview(form) {
             const image = document.createElement('img');
             image.src = URL.createObjectURL(file);
             image.dataset.objectUrl = 'true';
-            image.alt = `${file.name} 미리보기`;
+            image.alt = detailMessage('commentFilePreview', file.name);
 
             const remove = document.createElement('button');
             remove.type = 'button';
             remove.className = 'comment-image-remove';
-            remove.setAttribute('aria-label', `${file.name} 선택 취소`);
+            remove.setAttribute('aria-label', detailMessage('commentFileRemove', file.name));
             remove.textContent = '×';
             remove.addEventListener('click', () => removeFileAt(index));
 
@@ -250,14 +250,14 @@ function handleLike(e, id, onCommentsReload) {
 
 function handleDelete(e, id, onCommentsReload, onThumbnailsReload) {
     if (!e.target.matches('.delete-btn')) return false;
-    if (!confirm('댓글을 삭제하시겠습니까?')) return true;
+    if (!confirm(detailMessage('commentDeleteConfirm'))) return true;
     deleteCommentApi(id)
         .then(res => {
             if (res.ok) {
                 onCommentsReload();
                 onThumbnailsReload();
             } else {
-                alert('삭제 권한 없음');
+                alert(detailMessage('commentDeleteForbidden'));
             }
         })
         .catch(err => console.error('삭제 실패:', err));
@@ -272,7 +272,7 @@ function showEditForm(e, commentDiv) {
     if (!e.target.matches('.edit-btn')) return false;
     commentDiv.querySelector('.reply-form')?.remove();
     const contentEl = commentDiv.querySelector('.comment-content');
-    const original = contentEl.innerText.replace('수정됨', '').trim();
+    const original = contentEl.innerText.replace(detailMessage('commentEdited'), '').trim();
     const form = document.createElement('form');
     form.className = 'edit-comment-form comment-write-form';
     // 수정은 본문만 저장한다. (사진 변경 경로는 사용되지 않아 제거됨)
@@ -281,8 +281,8 @@ function showEditForm(e, commentDiv) {
       <textarea name="content" class="edit-text" required>${original}</textarea>
     </div>
     <div class="comment-controls">
-      <button type="button" class="save-edit-btn submit-btn">저장</button>
-      <button type="button" class="cancel-edit-btn">취소</button>
+      <button type="button" class="save-edit-btn submit-btn">${detailMessage('commentSave')}</button>
+      <button type="button" class="cancel-edit-btn">${detailMessage('commentCancel')}</button>
     </div>
   `;
     contentEl.replaceWith(form);
@@ -298,7 +298,7 @@ function handleSaveEdit(e, commentDiv, id, onCommentsReload) {
             if (res.ok) {
                 onCommentsReload();
             } else {
-                alert('수정 실패');
+                alert(detailMessage('commentEditFailed'));
             }
         })
         .catch(err => console.error('수정 실패:', err));
@@ -336,15 +336,16 @@ function toggleReplyForm(e, commentDiv) {
     container.innerHTML = `
     <form class="nested-reply-form comment-write-form" enctype="multipart/form-data">
       <div class="textarea-wrapper">
-        <textarea name="content" placeholder="답글을 입력하세요" required></textarea>
+        <textarea name="content" placeholder="${detailMessage('commentReplyPlaceholder')}" required></textarea>
       </div>
       <div class="comment-controls">
         <input type="file" id="${uniqueId}" name="images" accept="image/*" multiple hidden>
         <label for="${uniqueId}" class="image-upload-label">
-          <img src="/uploads/icons/camera.png" alt="사진"> 사진
+          <img src="/uploads/icons/camera.png" alt="${detailMessage('commentPhoto')}">
+          ${detailMessage('commentPhoto')}
         </label>
-        <button type="submit" class="submit-btn">등록</button>
-        <button type="button" class="cancel-edit-btn">취소</button>
+        <button type="submit" class="submit-btn">${detailMessage('commentSubmit')}</button>
+        <button type="button" class="cancel-edit-btn">${detailMessage('commentCancel')}</button>
       </div>
     </form>
   `;
@@ -370,7 +371,7 @@ export function setupCommentPagingEvents(onLoadMore) {
 // 썸네일 전체보기(모달) 바인딩 함수
 export function bindGalleryEvents(destinationId, openModalFn) {
     document.addEventListener('click', e => {
-        if (e.target.matches('.view-all')) {
+        if (e.target.closest?.('.view-all')) {
             e.preventDefault();
             fetchThumbnails(destinationId)
                 .then(data => {

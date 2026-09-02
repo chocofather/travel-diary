@@ -1,5 +1,6 @@
 package com.example.travlediary.controller.destination;
 
+import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.dto.DestinationDetailDto;
 import com.example.travlediary.dto.DestinationDto;
 import com.example.travlediary.model.CountryCategory;
@@ -13,6 +14,7 @@ import com.example.travlediary.service.destination.DestinationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -231,7 +233,11 @@ public class DestinationController {
 
         // 1. 여행지 + 타입별 상세 + amenity + 이미지 전부
         // 삭제됐거나 없는 여행지는 정상적인 404 로 응답한다.
-        DestinationDetailDto dto = destinationService.getDestinationDetailWithInfo(id);
+        SupportedLanguage requestedLanguage = SupportedLanguage
+                .fromLocale(LocaleContextHolder.getLocale())
+                .orElse(SupportedLanguage.KOREAN);
+        DestinationDetailDto dto = destinationService.getDestinationDetailWithInfo(
+                id, requestedLanguage);
         if (dto == null || dto.getDestination() == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "여행지를 찾을 수 없습니다.");
         }

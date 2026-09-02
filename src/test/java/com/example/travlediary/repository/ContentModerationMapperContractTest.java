@@ -286,9 +286,12 @@ class ContentModerationMapperContractTest {
     @Test
     void moderatedCommentsKeepTheTreeAndShowThePlaceholder() throws IOException {
         for (String path : new String[]{"/static/js/post-comments.js",
-                "/static/js/course-comments.js", "/static/js/comment/render.js"}) {
+                "/static/js/course-comments.js"}) {
             assertThat(resource(path)).as(path).contains("관리자에 의해 조치된 댓글입니다.");
         }
+        assertThat(resource("/static/js/comment/render.js"))
+                .contains("detailMessage('commentModerated')")
+                .doesNotContain("관리자에 의해 조치된 댓글입니다.");
         // 사용자 직접 삭제 문구는 그대로 남아 있어야 한다
         assertThat(resource("/static/js/post-comments.js")).contains("삭제된 댓글입니다.");
         assertThat(resource("/static/js/course-comments.js")).contains("삭제된 댓글입니다.");
