@@ -29,8 +29,8 @@ class DestinationDescriptionUiContractTest {
         int descriptionCssEnd = css.indexOf("/* 메타 정보 */", descriptionCssStart);
         String descriptionCss = css.substring(descriptionCssStart, descriptionCssEnd);
         assertThat(descriptionCss)
-                .contains("line-height: 1.7;")
-                .contains("margin-top: 0.85em;")
+                .contains("line-height: 1.72;")
+                .contains("margin-top: 0.9em;")
                 .doesNotContain("max-width")
                 .doesNotContain("white-space: pre-line")
                 .doesNotContain("word-break: keep-all");

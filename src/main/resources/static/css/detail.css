@@ -130,11 +130,11 @@ body {
 
 .destination-description p {
     margin: 0;
-    line-height: 1.7;
+    line-height: 1.72;
 }
 
 .destination-description p + p {
-    margin-top: 0.85em;
+    margin-top: 0.9em;
 }
 
 /* 메타 정보 */
