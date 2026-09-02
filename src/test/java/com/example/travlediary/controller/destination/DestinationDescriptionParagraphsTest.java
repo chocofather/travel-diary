@@ -1,0 +1,103 @@
+package com.example.travlediary.controller.destination;
+
+import com.example.travlediary.dto.DestinationDetailDto;
+import com.example.travlediary.model.CountryCategory;
+import com.example.travlediary.model.Destination;
+import com.example.travlediary.service.category.CategoryService;
+import com.example.travlediary.service.category.CountryCategoryService;
+import com.example.travlediary.service.comment.DestinationCommentService;
+import com.example.travlediary.service.destination.DestinationImageService;
+import com.example.travlediary.service.destination.DestinationService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+import org.springframework.ui.ExtendedModelMap;
+import org.springframework.ui.Model;
+
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
+class DestinationDescriptionParagraphsTest {
+
+    @Mock
+    private DestinationService destinationService;
+    @Mock
+    private DestinationImageService destinationImageService;
+    @Mock
+    private CategoryService categoryService;
+    @Mock
+    private CountryCategoryService countryCategoryService;
+    @Mock
+    private DestinationCommentService destinationCommentService;
+
+    private DestinationController controller;
+
+    @BeforeEach
+    void setUp() {
+        controller = new DestinationController(destinationService, destinationImageService,
+                categoryService, countryCategoryService, destinationCommentService);
+
+        CountryCategory region = new CountryCategory();
+        region.setId(10L);
+        region.setRegionName("서울");
+        region.setDepth(3);
+        when(countryCategoryService.getById(10L)).thenReturn(region);
+        when(countryCategoryService.getDomesticRootIds()).thenReturn(List.of(10L));
+        when(destinationService.getSimilarDestinations(7L, 4)).thenReturn(List.of());
+        when(destinationService.convertToDtoWithBookmark(List.of(), null)).thenReturn(List.of());
+    }
+
+    @Test
+    void joinsSingleNewlineIntoOneParagraphForExistingDescriptions() {
+        assertThat(renderDescription("문장1\n문장2")).containsExactly("문장1 문장2");
+    }
+
+    @Test
+    void separatesParagraphsOnlyAtBlankLines() {
+        assertThat(renderDescription("문장1\n\n문장2")).containsExactly("문장1", "문장2");
+    }
+
+    @Test
+    void handlesCrLfAndCollapsesMultipleBlankLinesIntoOneBoundary() {
+        assertThat(renderDescription("문장1\r\n문장2\r\n\r\n\r\n문장3"))
+                .containsExactly("문장1 문장2", "문장3");
+    }
+
+    @Test
+    void usesFallbackForNullBlankAndNewlineOnlyDescriptions() {
+        assertThat(renderDescription(null)).containsExactly("-");
+        assertThat(renderDescription("   ")).containsExactly("-");
+        assertThat(renderDescription("\r\n\n")).containsExactly("-");
+    }
+
+    @Test
+    void keepsHtmlLikeInputAsPlainTextForThymeleafToEscape() {
+        assertThat(renderDescription("<script>alert('x')</script>\n안전한 설명"))
+                .containsExactly("<script>alert('x')</script> 안전한 설명");
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<String> renderDescription(String description) {
+        Destination destination = new Destination();
+        destination.setId(7L);
+        destination.setName("여행지");
+        destination.setRegionId(10L);
+        destination.setDescription(description);
+
+        DestinationDetailDto dto = new DestinationDetailDto();
+        dto.setDestination(destination);
+        when(destinationService.getDestinationDetailWithInfo(7L)).thenReturn(dto);
+
+        Model model = new ExtendedModelMap();
+        controller.destinationDetail(7L, null, model);
+        return (List<String>) model.getAttribute("descriptionParagraphs");
+    }
+}

@@ -26,6 +26,7 @@ import jakarta.servlet.http.HttpServletRequest; // Spring Boot 3.x
 import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 
 @Controller
@@ -241,14 +242,7 @@ public class DestinationController {
         model.addAttribute("destination", dto.getDestination());
         model.addAttribute("images", dto.getImages());
 
-        // 소개글 줄바꿈 처리 (XSS 방지도 함께)
-        String description = dto.getDestination().getDescription();
-        if (description != null && !description.isBlank()) {
-            String sanitized = HtmlUtils.htmlEscape(description).replace("\n", "<br>");
-            model.addAttribute("descriptionWithBr", sanitized);
-        } else {
-            model.addAttribute("descriptionWithBr", "-");
-        }
+        model.addAttribute("descriptionParagraphs", descriptionParagraphs(dto.getDestination().getDescription()));
 
         // 2. 타입별 추가 정보
         if (dto.getAccommodationInfo() != null) {
@@ -318,6 +312,34 @@ public class DestinationController {
         model.addAttribute("similarDestinations", similarDtos);
 
         return "destination/detail";
+    }
+
+    private List<String> descriptionParagraphs(String description) {
+        if (description == null || description.isBlank()) {
+            return List.of("-");
+        }
+
+        List<String> paragraphs = new ArrayList<>();
+        StringBuilder paragraph = new StringBuilder();
+        String normalized = description.replace("\r\n", "\n").replace('\r', '\n');
+        for (String line : normalized.split("\n", -1)) {
+            String text = line.strip();
+            if (text.isEmpty()) {
+                if (!paragraph.isEmpty()) {
+                    paragraphs.add(paragraph.toString());
+                    paragraph.setLength(0);
+                }
+                continue;
+            }
+            if (!paragraph.isEmpty()) {
+                paragraph.append(' ');
+            }
+            paragraph.append(text);
+        }
+        if (!paragraph.isEmpty()) {
+            paragraphs.add(paragraph.toString());
+        }
+        return paragraphs.isEmpty() ? List.of("-") : paragraphs;
     }
 
     /**

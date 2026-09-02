@@ -87,7 +87,11 @@
     <main class="detail-container">
         <section class="info">
             <h2>소개</h2>
-            <p th:utext="${descriptionWithBr}">설명</p>
+            <div class="destination-description">
+                <p th:each="paragraph : ${descriptionParagraphs}">
+                    <span th:text="${paragraph}">설명</span>
+                </p>
+            </div>
 
             <!-- 추가 정보 -->
             <!-- 숙소 정보 AccommodationInfo -->

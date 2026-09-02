@@ -123,10 +123,18 @@ body {
 }
 
 /* 설명 텍스트 */
-.info p {
+.destination-description {
     margin: 0 0 40px;
     font-size: 1rem;
-    line-height: 1.65;
+}
+
+.destination-description p {
+    margin: 0;
+    line-height: 1.7;
+}
+
+.destination-description p + p {
+    margin-top: 0.85em;
 }
 
 /* 메타 정보 */
