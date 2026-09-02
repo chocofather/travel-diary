@@ -71,6 +71,14 @@ class KtoFestivalImageDownloadServiceTest {
         assertThat(service.deleteDownloadedFestivalImage(image)).isTrue();
         assertThat(stored).doesNotExist();
         assertThat(service.deleteDownloadedFestivalImage("/uploads/destinations/not-ours.jpg")).isFalse();
+        assertThat(service.deleteDownloadedFestivalImage("https://example.com/image.jpg")).isFalse();
+        assertThat(service.deleteDownloadedFestivalImage(
+                "/uploads/travel-info/festivals/../../outside.jpg")).isFalse();
+        assertThat(service.deleteDownloadedFestivalImage(
+                "/uploads/travel-info/festivals/not-a-managed-name.jpg")).isFalse();
+        assertThat(service.deleteDownloadedFestivalImage(
+                "/uploads/travel-info/festivals/11111111-1111-4111-8111-111111111111.jpg?download=1"))
+                .isFalse();
     }
 
     private KtoFestivalImageDownloadService service(KtoPhotoHttpResponse response, long maxBytes) {

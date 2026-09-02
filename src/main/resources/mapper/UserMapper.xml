@@ -250,12 +250,6 @@
           AND deleted_at IS NULL
     </select>
 
-    <select id="findProfileImageByUsername" resultType="string">
-        SELECT profile_image
-        FROM users
-        WHERE username = #{username}
-    </select>
-
     <sql id="MyPageProfileColumns">
         nickname,
         user_email AS userEmail,

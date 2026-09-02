@@ -19,7 +19,8 @@
   </div>
 
   <div class="travel-info-grid" th:if="${!#lists.isEmpty(travelInfoList)}">
-    <article class="travel-info-card" th:each="info : ${travelInfoList}">
+    <article class="travel-info-card" th:each="info : ${travelInfoList}"
+             th:classappend="${info.contentType.name() == 'FESTIVAL'} ? ' is-festival'">
       <button type="button"
               class="travel-info-bookmark-button travel-info-card-bookmark"
               th:classappend="${info.bookmarked} ? ' is-bookmarked'"
@@ -32,7 +33,8 @@
               th:text="${info.bookmarked} ? '저장됨' : '저장'">저장</span>
       </button>
 
-      <div class="travel-info-thumbnail">
+      <div class="travel-info-thumbnail"
+           th:classappend="${info.contentType.name() == 'FESTIVAL'} ? ' travel-info-festival-thumbnail'">
         <img th:if="${info.thumbnailUrl != null and !#strings.isEmpty(info.thumbnailUrl)}"
              th:src="@{${info.thumbnailUrl}}"
              th:alt="|${info.title} 썸네일|">
@@ -55,17 +57,20 @@
         </h2>
         <p class="travel-info-type-meta">
           <span th:text="${info.scope.name() == 'DOMESTIC'} ? '국내' : '해외'">국내</span>
-          <span aria-hidden="true">·</span>
-          <span th:text="${info.contentType.name() == 'GENERAL'} ? '일반' : '축제'">일반</span>
+          <th:block th:if="${info.contentType.name() == 'GENERAL'}">
+            <span aria-hidden="true">·</span>
+            <span>일반</span>
+          </th:block>
         </p>
 
-        <div class="travel-info-period"
+        <p class="travel-info-festival-period"
              th:if="${info.contentType.name() == 'FESTIVAL' and info.startDate != null and info.endDate != null}">
-          <span class="travel-info-period-label">축제 기간</span>
-          <time th:text="${info.startDate}">2026-04-01</time>
+          <time th:datetime="${info.startDate}"
+                th:text="${#temporals.format(info.startDate, 'yyyy.MM.dd')}">2026.04.01</time>
           <span aria-hidden="true">~</span>
-          <time th:text="${info.endDate}">2026-04-03</time>
-        </div>
+          <time th:datetime="${info.endDate}"
+                th:text="${#temporals.format(info.endDate, 'yyyy.MM.dd')}">2026.04.03</time>
+        </p>
 
         <div class="travel-info-card-footer">
           <time th:text="${#dates.format(info.createdAt, 'yyyy.MM.dd')}">2026.04.01</time>

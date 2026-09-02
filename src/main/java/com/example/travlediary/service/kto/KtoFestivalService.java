@@ -6,6 +6,7 @@ import com.example.travlediary.dto.kto.KtoFestivalAutofillResponse;
 import com.example.travlediary.dto.kto.KtoFestivalImageDetail;
 import com.example.travlediary.dto.kto.KtoFestivalSearchItemResponse;
 import com.example.travlediary.dto.kto.KtoFestivalSearchResponse;
+import com.example.travlediary.dto.kto.KtoFestivalThumbnailCandidate;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.jsoup.Jsoup;
@@ -25,8 +26,10 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Consumer;
 
 @Service
@@ -164,6 +167,45 @@ public class KtoFestivalService {
         return getAdditionalImages(contentId, DETAIL_IMAGE_PAGE_SIZE);
     }
 
+    public List<KtoFestivalThumbnailCandidate> getThumbnailCandidates(String contentId) {
+        String normalizedContentId = normalize(contentId);
+        if (normalizedContentId == null) {
+            throw KtoTourApiException.upstreamFailure();
+        }
+        KtoFestivalImageDetail imageDetail = getImageDetail(normalizedContentId);
+        List<KtoFestivalAdditionalImage> additionalImages = getAdditionalImages(normalizedContentId);
+        List<KtoFestivalThumbnailCandidate> candidates = new ArrayList<>();
+        Set<String> sourceImageUrls = new LinkedHashSet<>();
+
+        String mainImageUrl = normalize(imageDetail.firstImage());
+        if (mainImageUrl != null) {
+            sourceImageUrls.add(mainImageUrl);
+            candidates.add(toThumbnailCandidate(
+                    "MAIN",
+                    mainImageUrl,
+                    imageDetail.title(),
+                    "대표사진",
+                    imageDetail.copyrightDivisionCode()));
+        }
+        for (KtoFestivalAdditionalImage image : additionalImages) {
+            if (image == null || !normalizedContentId.equals(normalize(image.contentId()))) {
+                continue;
+            }
+            String sourceImageUrl = normalize(image.originalImageUrl());
+            if (sourceImageUrl == null || !sourceImageUrls.add(sourceImageUrl)) {
+                continue;
+            }
+            String serialNumber = normalize(image.serialNumber());
+            candidates.add(toThumbnailCandidate(
+                    serialNumber == null ? null : "DETAIL:" + serialNumber,
+                    sourceImageUrl,
+                    image.imageName(),
+                    "추가사진",
+                    image.copyrightDivisionCode()));
+        }
+        return List.copyOf(candidates);
+    }
+
     List<KtoFestivalAdditionalImage> getAdditionalImages(String contentId, int pageSize) {
         String normalizedContentId = normalize(contentId);
         if (normalizedContentId == null || pageSize <= 0) {
@@ -206,6 +248,28 @@ public class KtoFestivalService {
             }
             pageNo++;
         }
+    }
+
+    private KtoFestivalThumbnailCandidate toThumbnailCandidate(String selectionKey,
+                                                                String imageUrl,
+                                                                String imageName,
+                                                                String imageRole,
+                                                                String copyrightDivisionCode) {
+        KtoFestivalImageLicense license = KtoFestivalImageLicense
+                .fromCopyrightDivisionCode(copyrightDivisionCode)
+                .orElse(null);
+        if (license == null) {
+            return new KtoFestivalThumbnailCandidate(
+                    selectionKey, imageUrl, imageName, imageRole, null, false,
+                    "지원하지 않는 저작권 유형입니다.");
+        }
+        if (selectionKey == null) {
+            return new KtoFestivalThumbnailCandidate(
+                    null, imageUrl, imageName, imageRole, license.name(), false,
+                    "이미지 식별값을 확인할 수 없습니다.");
+        }
+        return new KtoFestivalThumbnailCandidate(
+                selectionKey, imageUrl, imageName, imageRole, license.name(), true, null);
     }
 
     private KtoFestivalApiResponse.Item getFestivalCommon(String contentId) {

@@ -449,6 +449,28 @@
     font-weight: 650;
 }
 
+.travel-info-card.is-festival .travel-info-thumbnail {
+    display: grid;
+    aspect-ratio: 4 / 5;
+    place-items: center;
+    background: #f8fafc;
+}
+
+.travel-info-card.is-festival .travel-info-thumbnail img {
+    object-fit: contain;
+}
+
+.travel-info-card.is-festival .travel-info-thumbnail-placeholder {
+    gap: 6px;
+    background: #f8fafc;
+    font-size: 12px;
+}
+
+.travel-info-card.is-festival .travel-info-placeholder-icon {
+    color: #a8b1bf;
+    font-size: 25px;
+}
+
 .travel-info-placeholder-icon {
     color: #9fb7b4;
     font-size: 30px;
@@ -516,6 +538,49 @@
     color: var(--travel-info-muted);
     font-size: 13px;
     font-weight: 650;
+}
+
+.travel-info-card.is-festival .travel-info-card-body {
+    padding: 13px 14px 14px;
+}
+
+.travel-info-card.is-festival .travel-info-category {
+    padding: 4px 9px;
+}
+
+.travel-info-card.is-festival h2 {
+    min-height: 0;
+    margin: 10px 0 5px;
+    font-size: 16px;
+    line-height: 1.4;
+}
+
+.travel-info-card.is-festival .travel-info-festival-period {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: #4d5b6d;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 750;
+    line-height: 1.5;
+}
+
+.travel-info-card.is-festival .travel-info-type-meta {
+    margin-top: 8px;
+    font-size: 12px;
+}
+
+.travel-info-card.is-festival .travel-info-card-footer {
+    margin-top: 12px;
+    padding-top: 0;
+}
+
+.travel-info-card.is-festival .travel-info-card-bookmark {
+    top: 8px;
+    right: 8px;
 }
 
 .travel-info-period {
@@ -654,6 +719,10 @@
 
     .travel-info-grid {
         grid-template-columns: minmax(0, 1fr);
+    }
+
+    .travel-info-card.is-festival .travel-info-thumbnail {
+        aspect-ratio: 4 / 3;
     }
 }
 

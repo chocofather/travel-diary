@@ -41,6 +41,19 @@ class CustomUserDetailsServiceTest {
     }
 
     @Test
+    void socialUserWithoutUsernameGetsStableInternalPrincipalNameAndDatabaseRole() {
+        User user = user(UserStatus.ACTIVE);
+        user.setUsername(null);
+
+        var details = new com.example.travlediary.security.CustomUserDetails(user);
+
+        assertThat(details.getUsername()).isEqualTo("user:5");
+        assertThat(details.getAuthorities())
+                .extracting(GrantedAuthority::getAuthority)
+                .containsExactly("ROLE_USER");
+    }
+
+    @Test
     void unknownUserIsRejected() {
         when(userMapper.findByUsername("nobody")).thenReturn(null);
 

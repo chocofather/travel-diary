@@ -47,7 +47,9 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             RequestCache navigationRequestCache,
-            ObjectProvider<RestrictedAccountFilter> restrictedAccountFilter) throws Exception {
+            ObjectProvider<RestrictedAccountFilter> restrictedAccountFilter,
+            ObjectProvider<SocialOAuth2LoginSuccessHandler> socialOAuth2LoginSuccessHandler)
+            throws Exception {
 
         // 이용제한 회원 접근 통제. 웹 계층 테스트 슬라이스에는 빈이 없으므로 선택 주입한다.
         restrictedAccountFilter.ifAvailable(
@@ -306,6 +308,8 @@ public class SecurityConfig {
                         new RegexRequestMatcher(
                                 "^/account/restricted/appeals$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(
+                                "^/social-signup$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
                                 "^/logout$", HttpMethod.POST.name())
                 )))
                 .authorizeHttpRequests(auth -> auth
@@ -314,6 +318,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/", "/home", "/random-travel",
                                 "/login", "/logout",
+                                "/oauth2/**", "/login/oauth2/**", "/social-signup",
                                 "/register", "/users/register",
                                 "/users/verify", "/users/register/verify-waiting",
                                 "/users/verification/resend",
@@ -412,6 +417,10 @@ public class SecurityConfig {
                         .failureUrl("/login?error=true")
                         .permitAll()
                 )
+                .oauth2Login(oauth -> {
+                    socialOAuth2LoginSuccessHandler.ifAvailable(oauth::successHandler);
+                    oauth.failureHandler(new OAuth2LoginFailureHandler());
+                })
                 .logout(logout -> logout
                         .logoutUrl("/logout")
                         .logoutSuccessHandler(customLogoutSuccessHandler)

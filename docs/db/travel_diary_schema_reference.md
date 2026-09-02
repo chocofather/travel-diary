@@ -1092,6 +1092,7 @@ CREATE TABLE `info_images` (
   `source_image_url` varchar(1000) DEFAULT NULL,
   `license_checked_at` datetime DEFAULT NULL,
   `is_main` tinyint NOT NULL DEFAULT '0',
+  `is_thumbnail` TINYINT(1) NOT NULL DEFAULT 0,
   `order_index` int NOT NULL DEFAULT '1',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `info_id` bigint NOT NULL,
@@ -1518,12 +1519,12 @@ CREATE TABLE `user_sanctions` (
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `users` (
   `id` bigint NOT NULL AUTO_INCREMENT,
-  `full_name` varchar(50) NOT NULL,
+  `full_name` varchar(50) DEFAULT NULL,
   `user_phone` varchar(20) DEFAULT NULL,
-  `user_birth` date NOT NULL,
-  `user_email` varchar(100) NOT NULL,
-  `username` varchar(50) NOT NULL,
-  `user_password` varchar(255) NOT NULL,
+  `user_birth` date DEFAULT NULL,
+  `user_email` varchar(100) DEFAULT NULL,
+  `username` varchar(50) DEFAULT NULL,
+  `user_password` varchar(255) DEFAULT NULL,
   `nickname` varchar(50) NOT NULL,
   `user_role` varchar(50) NOT NULL,
   `verification_token` varchar(255) DEFAULT NULL,
@@ -1543,6 +1544,29 @@ CREATE TABLE `users` (
   UNIQUE KEY `nickname_UNIQUE` (`nickname`),
   UNIQUE KEY `verification_token_UNIQUE` (`verification_token`)
 ) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb3;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `social_accounts`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `social_accounts` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `user_id` bigint NOT NULL,
+  `provider` varchar(20) NOT NULL,
+  `provider_user_id` varchar(255) NOT NULL,
+  `provider_email` varchar(255) DEFAULT NULL,
+  `provider_email_verified` tinyint(1) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_social_accounts_provider_user` (`provider`,`provider_user_id`),
+  UNIQUE KEY `uq_social_accounts_user_provider` (`user_id`,`provider`),
+  CONSTRAINT `chk_social_accounts_provider` CHECK ((`provider` in ('GOOGLE','KAKAO','NAVER'))),
+  CONSTRAINT `fk_social_accounts_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 

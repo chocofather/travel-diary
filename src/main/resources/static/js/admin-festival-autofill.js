@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const contactTel = document.getElementById('festival-contact-tel');
     const homepageUrl = document.getElementById('festival-homepage-url');
     const ktoFestivalContentId = document.getElementById('kto-festival-content-id');
+    const thumbnailSelection = document.getElementById('kto-festival-thumbnail-selection');
     const searchModeButtons = panel.querySelectorAll('[data-festival-search-mode]');
     const searchPanels = panel.querySelectorAll('[data-festival-search-panel]');
     const keyword = panel.querySelector('[data-festival-search-keyword]');
@@ -34,12 +35,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const directPeriodPanel = panel.querySelector('[data-festival-direct-period-panel]');
     const status = panel.querySelector('[data-festival-status]');
     const results = panel.querySelector('[data-festival-results]');
+    const imagePicker = panel.querySelector('[data-festival-image-picker]');
+    const imagePickerStatus = panel.querySelector('[data-festival-image-picker-status]');
+    const imagePickerItems = panel.querySelector('[data-festival-image-picker-items]');
     const editorElement = document.getElementById('festival-editor');
 
     if (!scope || !title || !category || !eventStartDate || !eventEndDate || !eventPlace || !address
         || !playTime || !useTime || !sponsor1 || !sponsor1Tel || !sponsor2 || !sponsor2Tel || !contactTel
-        || !homepageUrl || !ktoFestivalContentId || !keyword || !startDate || !endDate || !keywordSearchButton || !periodSearchButton
-        || !periodYear || !directPeriodToggle || !directPeriodPanel || !status || !results || !editorElement) return;
+        || !homepageUrl || !ktoFestivalContentId || !thumbnailSelection || !keyword || !startDate || !endDate || !keywordSearchButton || !periodSearchButton
+        || !periodYear || !directPeriodToggle || !directPeriodPanel || !status || !results || !imagePicker
+        || !imagePickerStatus || !imagePickerItems || !editorElement) return;
 
     const managedValues = new Map();
     let lastSelectedContentId = null;
@@ -80,6 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
         periodSearchButton.disabled = false;
         monthButtons.forEach(button => button.disabled = false);
         results.replaceChildren();
+        clearImagePicker();
         setStatus(mode === 'keyword'
             ? '축제·행사명을 입력한 뒤 검색해 주세요.'
             : '검색 시작일을 선택한 뒤 검색해 주세요.');
@@ -246,6 +252,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadDetail(item) {
         if (!hasText(item.contentId)) return;
         const requestGeneration = ++detailRequestGeneration;
+        clearImagePicker();
         setStatus(`${item.title || '선택한 행사'} 상세 정보를 불러오고 있습니다.`);
         try {
             const params = new URLSearchParams({contentId: item.contentId});
@@ -256,6 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const categoryResolved = applyAutofill(detail);
             const replacingPrevious = lastSelectedContentId !== null && lastSelectedContentId !== item.contentId;
             lastSelectedContentId = item.contentId;
+            await loadThumbnailCandidates(item.contentId, requestGeneration);
             if (!categoryResolved && hasText(detail.categoryName)) {
                 setStatus(`${detail.categoryName} 카테고리를 찾지 못했습니다. 카테고리를 직접 선택해 주세요.`, true);
                 return;
@@ -264,6 +272,106 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             if (requestGeneration === detailRequestGeneration) setStatus(error.message || '축제·행사 상세 정보를 불러오지 못했습니다.', true);
         }
+    }
+
+    async function loadThumbnailCandidates(contentId, requestGeneration) {
+        imagePicker.hidden = false;
+        imagePickerStatus.textContent = '선택 가능한 이미지를 불러오고 있습니다.';
+        try {
+            const params = new URLSearchParams({contentId});
+            const response = await fetch(`/admin/api/kto/festivals/images?${params.toString()}`,
+                {headers: {Accept: 'application/json'}});
+            const payload = await response.json();
+            if (requestGeneration !== detailRequestGeneration) return;
+            if (!response.ok) throw new Error(payload.message || '이미지 목록을 불러오지 못했습니다.');
+            renderThumbnailCandidates(Array.isArray(payload.items) ? payload.items : []);
+        } catch (error) {
+            if (requestGeneration !== detailRequestGeneration) return;
+            imagePickerItems.replaceChildren();
+            imagePickerStatus.textContent = error.message || '이미지 목록을 불러오지 못했습니다.';
+            imagePickerStatus.classList.add('is-error');
+        }
+    }
+
+    function renderThumbnailCandidates(items) {
+        imagePickerItems.replaceChildren();
+        imagePickerStatus.classList.remove('is-error');
+        if (!items.length) {
+            imagePickerStatus.textContent = '선택 가능한 TourAPI 이미지가 없습니다.';
+            return;
+        }
+        imagePickerStatus.textContent = '목록 썸네일로 사용할 이미지를 한 장 선택할 수 있습니다.';
+        items.forEach(item => imagePickerItems.append(createThumbnailCandidate(item)));
+    }
+
+    function createThumbnailCandidate(item) {
+        const option = document.createElement('label');
+        option.className = 'admin-kto-festival-image-option';
+        const imageUrl = safeHttpUrl(item.imageUrl);
+        if (imageUrl) {
+            const image = document.createElement('img');
+            image.src = imageUrl;
+            image.alt = hasText(item.imageName) ? item.imageName : `${item.imageRole || '축제'} 이미지`;
+            image.loading = 'lazy';
+            option.append(image);
+        } else {
+            const placeholder = document.createElement('span');
+            placeholder.className = 'admin-kto-festival-image-placeholder';
+            placeholder.textContent = '이미지 없음';
+            option.append(placeholder);
+        }
+
+        const body = document.createElement('span');
+        body.className = 'admin-kto-festival-image-option-body';
+        const role = document.createElement('strong');
+        role.textContent = item.imageRole || 'TourAPI 이미지';
+        body.append(role);
+        if (hasText(item.imageName)) body.append(createThumbnailMeta(item.imageName));
+        if (hasText(item.licenseType)) body.append(createThumbnailMeta(licenseLabel(item.licenseType)));
+
+        const radio = document.createElement('input');
+        radio.type = 'radio';
+        radio.name = 'festival-thumbnail-picker';
+        radio.value = hasText(item.selectionKey) ? item.selectionKey : '';
+        radio.disabled = !item.selectable || !hasText(item.selectionKey);
+        radio.checked = !radio.disabled && thumbnailSelection.value === radio.value;
+        radio.addEventListener('change', () => {
+            if (radio.checked) thumbnailSelection.value = radio.value;
+        });
+        const selectionLabel = document.createElement('span');
+        selectionLabel.className = 'admin-kto-festival-image-option-select';
+        selectionLabel.append(radio, document.createTextNode('목록 썸네일로 사용'));
+        body.append(selectionLabel);
+        if (!item.selectable) {
+            const reason = document.createElement('span');
+            reason.className = 'admin-kto-festival-image-option-reason';
+            reason.textContent = item.unavailableReason || '선택할 수 없는 이미지입니다.';
+            body.append(reason);
+            option.classList.add('is-disabled');
+        }
+        option.append(body);
+        return option;
+    }
+
+    function createThumbnailMeta(value) {
+        const element = document.createElement('span');
+        element.className = 'admin-kto-festival-image-option-meta';
+        element.textContent = value;
+        return element;
+    }
+
+    function licenseLabel(value) {
+        if (value === 'KOGL_TYPE_1') return '공공누리 제1유형';
+        if (value === 'KOGL_TYPE_3') return '공공누리 제3유형';
+        return value;
+    }
+
+    function clearImagePicker() {
+        thumbnailSelection.value = '';
+        imagePicker.hidden = true;
+        imagePickerItems.replaceChildren();
+        imagePickerStatus.textContent = '';
+        imagePickerStatus.classList.remove('is-error');
     }
 
     function applyAutofill(detail) {

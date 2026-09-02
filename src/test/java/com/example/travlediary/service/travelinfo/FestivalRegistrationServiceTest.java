@@ -222,6 +222,179 @@ class FestivalRegistrationServiceTest {
     }
 
     @Test
+    void selectedMainImageIsStoredAsBothMainAndThumbnail() {
+        FestivalCreateForm form = validForm();
+        form.setKtoFestivalContentId("thumbnail-main");
+        form.setKtoThumbnailImageSelection("MAIN");
+        String mainUrl = "https://tong.visitkorea.or.kr/cms/resource/35/main-thumbnail.jpg";
+        String additionalUrl = "https://tong.visitkorea.or.kr/cms/resource/35/additional-thumbnail.jpg";
+        allowFestivalCategory();
+        when(festivalInfoMapper.countBySourceTypeAndExternalContentId("KTO_TOURAPI", "thumbnail-main"))
+                .thenReturn(0);
+        when(ktoFestivalService.getImageDetail("thumbnail-main"))
+                .thenReturn(imageDetail("thumbnail-main", mainUrl, "Type1"));
+        when(ktoFestivalService.getAdditionalImages("thumbnail-main")).thenReturn(List.of(
+                additionalImage("thumbnail-main", additionalUrl, "추가 이미지", "poster-1", "Type3")));
+        when(festivalImageDownloadService.download(mainUrl)).thenReturn(downloaded("main-thumbnail.jpg", mainUrl));
+        when(festivalImageDownloadService.download(additionalUrl)).thenReturn(downloaded("additional-thumbnail.jpg", additionalUrl));
+        generateTravelInfoId(61L);
+        when(travelInfoMapper.insertPeriod(any())).thenReturn(1);
+        when(festivalInfoMapper.insert(any())).thenReturn(1);
+        when(travelInfoMapper.insertInfoImage(any())).thenReturn(1);
+
+        service.create(form, 7L);
+
+        ArgumentCaptor<InfoImage> captor = ArgumentCaptor.forClass(InfoImage.class);
+        verify(travelInfoMapper, org.mockito.Mockito.times(2)).insertInfoImage(captor.capture());
+        assertThat(captor.getAllValues())
+                .extracting(InfoImage::getSourceImageUrl, InfoImage::getIsMain, InfoImage::getIsThumbnail)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple(mainUrl, true, true),
+                        org.assertj.core.groups.Tuple.tuple(additionalUrl, false, false));
+    }
+
+    @Test
+    void selectedDetailImageIsOnlyThumbnailAndKeepsMainImageRole() {
+        FestivalCreateForm form = validForm();
+        form.setKtoFestivalContentId("thumbnail-detail");
+        form.setKtoThumbnailImageSelection("DETAIL:poster-2");
+        String mainUrl = "https://tong.visitkorea.or.kr/cms/resource/35/main-hero.jpg";
+        String posterUrl = "https://tong.visitkorea.or.kr/cms/resource/35/official-poster.jpg";
+        allowFestivalCategory();
+        when(festivalInfoMapper.countBySourceTypeAndExternalContentId("KTO_TOURAPI", "thumbnail-detail"))
+                .thenReturn(0);
+        when(ktoFestivalService.getImageDetail("thumbnail-detail"))
+                .thenReturn(imageDetail("thumbnail-detail", mainUrl, "Type3"));
+        when(ktoFestivalService.getAdditionalImages("thumbnail-detail")).thenReturn(List.of(
+                additionalImage("thumbnail-detail", posterUrl, "공식 포스터", "poster-2", "Type1")));
+        when(festivalImageDownloadService.download(mainUrl)).thenReturn(downloaded("main-hero.jpg", mainUrl));
+        when(festivalImageDownloadService.download(posterUrl)).thenReturn(downloaded("poster.jpg", posterUrl));
+        generateTravelInfoId(62L);
+        when(travelInfoMapper.insertPeriod(any())).thenReturn(1);
+        when(festivalInfoMapper.insert(any())).thenReturn(1);
+        when(travelInfoMapper.insertInfoImage(any())).thenReturn(1);
+
+        service.create(form, 7L);
+
+        ArgumentCaptor<InfoImage> captor = ArgumentCaptor.forClass(InfoImage.class);
+        verify(travelInfoMapper, org.mockito.Mockito.times(2)).insertInfoImage(captor.capture());
+        assertThat(captor.getAllValues())
+                .extracting(InfoImage::getSourceImageUrl, InfoImage::getIsMain, InfoImage::getIsThumbnail)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple(mainUrl, true, false),
+                        org.assertj.core.groups.Tuple.tuple(posterUrl, false, true));
+    }
+
+    @Test
+    void invalidOrUnsupportedThumbnailSelectionIsRejectedBeforeFestivalInsert() {
+        FestivalCreateForm form = validForm();
+        form.setKtoFestivalContentId("thumbnail-validation");
+        form.setKtoThumbnailImageSelection("DETAIL:type2");
+        allowFestivalCategory();
+        when(festivalInfoMapper.countBySourceTypeAndExternalContentId("KTO_TOURAPI", "thumbnail-validation"))
+                .thenReturn(0);
+        when(ktoFestivalService.getImageDetail("thumbnail-validation"))
+                .thenReturn(imageDetail("thumbnail-validation",
+                        "https://tong.visitkorea.or.kr/cms/resource/35/main.jpg", "Type1"));
+        when(ktoFestivalService.getAdditionalImages("thumbnail-validation")).thenReturn(List.of(
+                additionalImage("thumbnail-validation",
+                        "https://tong.visitkorea.or.kr/cms/resource/35/type2.jpg", "미지원", "type2", "Type2")));
+
+        assertThatThrownBy(() -> service.create(form, 7L))
+                .isInstanceOf(FestivalValidationException.class)
+                .hasMessage("선택한 목록 썸네일 이미지를 다시 확인해 주세요.");
+
+        verify(travelInfoMapper, never()).insertTravelInfo(any());
+        verify(festivalImageDownloadService, never()).download(any());
+    }
+
+    @Test
+    void arbitraryThumbnailUrlAndOtherFestivalSerialAreRejectedBeforeFestivalInsert() {
+        FestivalCreateForm arbitraryUrl = validForm();
+        arbitraryUrl.setKtoFestivalContentId("thumbnail-client-input");
+        arbitraryUrl.setKtoThumbnailImageSelection("https://attacker.example/image.jpg");
+        allowFestivalCategory();
+        when(festivalInfoMapper.countBySourceTypeAndExternalContentId(
+                "KTO_TOURAPI", "thumbnail-client-input")).thenReturn(0);
+        when(ktoFestivalService.getImageDetail("thumbnail-client-input"))
+                .thenReturn(imageDetail("thumbnail-client-input",
+                        "https://tong.visitkorea.or.kr/cms/resource/35/main.jpg", "Type1"));
+        when(ktoFestivalService.getAdditionalImages("thumbnail-client-input")).thenReturn(List.of());
+
+        assertThatThrownBy(() -> service.create(arbitraryUrl, 7L))
+                .isInstanceOf(FestivalValidationException.class)
+                .hasMessage("선택한 목록 썸네일 이미지를 다시 확인해 주세요.");
+
+        FestivalCreateForm otherContent = validForm();
+        otherContent.setKtoFestivalContentId("thumbnail-client-input");
+        otherContent.setKtoThumbnailImageSelection("DETAIL:other-festival-image");
+        when(ktoFestivalService.getAdditionalImages("thumbnail-client-input")).thenReturn(List.of(
+                additionalImage("other-content-id",
+                        "https://tong.visitkorea.or.kr/cms/resource/35/other.jpg",
+                        "다른 축제 이미지", "other-festival-image", "Type1")));
+
+        assertThatThrownBy(() -> service.create(otherContent, 7L))
+                .isInstanceOf(FestivalValidationException.class)
+                .hasMessage("선택한 목록 썸네일 이미지를 다시 확인해 주세요.");
+
+        verify(travelInfoMapper, never()).insertTravelInfo(any());
+        verify(festivalImageDownloadService, never()).download(any());
+    }
+
+    @Test
+    void missingThumbnailSerialIsRejectedBeforeFestivalInsert() {
+        FestivalCreateForm form = validForm();
+        form.setKtoFestivalContentId("thumbnail-missing-serial");
+        form.setKtoThumbnailImageSelection("DETAIL:missing");
+        allowFestivalCategory();
+        when(festivalInfoMapper.countBySourceTypeAndExternalContentId(
+                "KTO_TOURAPI", "thumbnail-missing-serial")).thenReturn(0);
+        when(ktoFestivalService.getImageDetail("thumbnail-missing-serial"))
+                .thenReturn(imageDetail("thumbnail-missing-serial",
+                        "https://tong.visitkorea.or.kr/cms/resource/35/main.jpg", "Type1"));
+        when(ktoFestivalService.getAdditionalImages("thumbnail-missing-serial")).thenReturn(List.of());
+
+        assertThatThrownBy(() -> service.create(form, 7L))
+                .isInstanceOf(FestivalValidationException.class)
+                .hasMessage("선택한 목록 썸네일 이미지를 다시 확인해 주세요.");
+
+        verify(travelInfoMapper, never()).insertTravelInfo(any());
+    }
+
+    @Test
+    void failedSelectedThumbnailKeepsFestivalRegistrationAndMainFallback() {
+        FestivalCreateForm form = validForm();
+        form.setKtoFestivalContentId("thumbnail-download-failure");
+        form.setKtoThumbnailImageSelection("DETAIL:poster-failure");
+        String mainUrl = "https://tong.visitkorea.or.kr/cms/resource/35/fallback-main.jpg";
+        String posterUrl = "https://tong.visitkorea.or.kr/cms/resource/35/fallback-poster.jpg";
+        allowFestivalCategory();
+        when(festivalInfoMapper.countBySourceTypeAndExternalContentId(
+                "KTO_TOURAPI", "thumbnail-download-failure")).thenReturn(0);
+        when(ktoFestivalService.getImageDetail("thumbnail-download-failure"))
+                .thenReturn(imageDetail("thumbnail-download-failure", mainUrl, "Type1"));
+        when(ktoFestivalService.getAdditionalImages("thumbnail-download-failure")).thenReturn(List.of(
+                additionalImage("thumbnail-download-failure", posterUrl, "포스터", "poster-failure", "Type3")));
+        when(festivalImageDownloadService.download(mainUrl)).thenReturn(downloaded("fallback-main.jpg", mainUrl));
+        when(festivalImageDownloadService.download(posterUrl)).thenThrow(new KtoPhotoDownloadException());
+        generateTravelInfoId(63L);
+        when(travelInfoMapper.insertPeriod(any())).thenReturn(1);
+        when(festivalInfoMapper.insert(any())).thenReturn(1);
+        when(travelInfoMapper.insertInfoImage(any())).thenReturn(1);
+
+        FestivalRegistrationResult result = service.create(form, 7L);
+
+        assertThat(result.festivalId()).isEqualTo(63L);
+        assertThat(result.imageWarning()).contains("선택한 목록 썸네일");
+        ArgumentCaptor<InfoImage> captor = ArgumentCaptor.forClass(InfoImage.class);
+        verify(travelInfoMapper).insertInfoImage(captor.capture());
+        assertThat(captor.getValue()).satisfies(image -> {
+            assertThat(image.getIsMain()).isTrue();
+            assertThat(image.getIsThumbnail()).isFalse();
+        });
+    }
+
+    @Test
     void storesOnlyLicensedUniqueAdditionalImagesInSuccessfulDownloadOrder() {
         FestivalCreateForm form = validForm();
         form.setKtoFestivalContentId("2648460");
@@ -258,12 +431,12 @@ class FestivalRegistrationServiceTest {
         ArgumentCaptor<InfoImage> captor = ArgumentCaptor.forClass(InfoImage.class);
         verify(travelInfoMapper, org.mockito.Mockito.times(3)).insertInfoImage(captor.capture());
         assertThat(captor.getAllValues())
-                .extracting(InfoImage::getSourceImageUrl, InfoImage::getIsMain,
+                .extracting(InfoImage::getSourceImageUrl, InfoImage::getIsMain, InfoImage::getIsThumbnail,
                         InfoImage::getOrderIndex, InfoImage::getLicenseType, InfoImage::getSourceTitle)
                 .containsExactly(
-                        org.assertj.core.groups.Tuple.tuple(mainUrl, true, 1, "KOGL_TYPE_3", "경복궁 별빛야행"),
-                        org.assertj.core.groups.Tuple.tuple(type1Url, false, 2, "KOGL_TYPE_1", "행사장 전경"),
-                        org.assertj.core.groups.Tuple.tuple(type3Url, false, 3, "KOGL_TYPE_3", "야간 공연"));
+                        org.assertj.core.groups.Tuple.tuple(mainUrl, true, false, 1, "KOGL_TYPE_3", "경복궁 별빛야행"),
+                        org.assertj.core.groups.Tuple.tuple(type1Url, false, false, 2, "KOGL_TYPE_1", "행사장 전경"),
+                        org.assertj.core.groups.Tuple.tuple(type3Url, false, false, 3, "KOGL_TYPE_3", "야간 공연"));
         verify(festivalImageDownloadService, never()).download(unsupportedUrl);
     }
 
@@ -562,6 +735,12 @@ class FestivalRegistrationServiceTest {
     private KtoFestivalAdditionalImage additionalImage(String contentId, String url,
                                                         String name, String copyrightCode) {
         return new KtoFestivalAdditionalImage(contentId, name, url, "serial", copyrightCode);
+    }
+
+    private KtoFestivalAdditionalImage additionalImage(String contentId, String url,
+                                                        String name, String serialNumber,
+                                                        String copyrightCode) {
+        return new KtoFestivalAdditionalImage(contentId, name, url, serialNumber, copyrightCode);
     }
 
     private KtoDownloadedFestivalImage downloaded(String fileName, String sourceUrl) {

@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -43,8 +44,29 @@ public class FestivalDetailService {
             throw notFound();
         }
         FestivalInfo festivalInfo = festivalInfoMapper.findByInfoId(id);
-        List<InfoImage> images = travelInfoMapper.findImagesByInfoId(id);
+        List<InfoImage> images = prioritizeGalleryImages(travelInfoMapper.findImagesByInfoId(id));
         return new FestivalDetailDto(travelInfo, festivalInfo, images);
+    }
+
+    private List<InfoImage> prioritizeGalleryImages(List<InfoImage> images) {
+        if (images == null || images.isEmpty()) {
+            return List.of();
+        }
+        return images.stream()
+                .sorted(Comparator.comparingInt(this::galleryPriority)
+                        .thenComparing(InfoImage::getOrderIndex,
+                                Comparator.nullsLast(Comparator.naturalOrder())))
+                .toList();
+    }
+
+    private int galleryPriority(InfoImage image) {
+        if (Boolean.TRUE.equals(image.getIsThumbnail())) {
+            return 0;
+        }
+        if (Boolean.TRUE.equals(image.getIsMain())) {
+            return 1;
+        }
+        return 2;
     }
 
     private ResponseStatusException notFound() {

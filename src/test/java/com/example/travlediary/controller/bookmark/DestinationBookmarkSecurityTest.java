@@ -7,7 +7,6 @@ import com.example.travlediary.controller.destination.DestinationBookmarkControl
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.destination.DestinationBookmarkService;
-import com.example.travlediary.model.User;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -25,7 +24,9 @@ import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(DestinationBookmarkController.class)
@@ -71,10 +72,7 @@ class DestinationBookmarkSecurityTest {
     void existingDestinationToggleAlsoRequiresCsrfAndStillUsesTheAuthenticatedUser() throws Exception {
         var authentication = new UsernamePasswordAuthenticationToken(
                 userDetails, null, List.of());
-        when(userDetails.getUsername()).thenReturn("member");
-        User user = new User();
-        user.setId(7L);
-        when(userMapper.findByUsername("member")).thenReturn(user);
+        when(userDetails.getId()).thenReturn(7L);
         when(service.toggleBookmark(7L, 10L)).thenReturn(true);
 
         mockMvc.perform(post("/bookmarks")
@@ -88,5 +86,30 @@ class DestinationBookmarkSecurityTest {
                         .with(authentication(authentication)).with(csrf()))
                 .andExpect(status().isOk());
         verify(service).toggleBookmark(7L, 10L);
+    }
+
+    @Test
+    void destinationBookmarkCheckUsesAuthenticatedPrincipalId() throws Exception {
+        var authentication = new UsernamePasswordAuthenticationToken(
+                userDetails, null, List.of());
+        when(userDetails.getId()).thenReturn(7L);
+        when(service.isBookmarked(7L, 10L)).thenReturn(true);
+
+        mockMvc.perform(get("/bookmarks/check")
+                        .param("destinationId", "10")
+                        .with(authentication(authentication)))
+                .andExpect(status().isOk())
+                .andExpect(content().string("true"));
+
+        verify(service).isBookmarked(7L, 10L);
+    }
+
+    @Test
+    void anonymousDestinationBookmarkCheckReturnsFalse() throws Exception {
+        mockMvc.perform(get("/bookmarks/check").param("destinationId", "10"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("false"));
+
+        verify(service, never()).isBookmarked(7L, 10L);
     }
 }

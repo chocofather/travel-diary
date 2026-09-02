@@ -138,6 +138,18 @@ class TravelInfoControllerTest {
                             .startsWith("/travel-info/11?returnUrl=");
                     assertThat(linksByTitle.get("가을 축제"))
                             .startsWith("/festivals/12?returnUrl=");
+                    assertThat(document.select(".travel-info-card:not(.is-festival) "
+                            + ".travel-info-thumbnail"))
+                            .singleElement();
+                    assertThat(document.select(".travel-info-card:not(.is-festival) "
+                            + ".travel-info-type-meta"))
+                            .singleElement()
+                            .extracting(org.jsoup.nodes.Element::text)
+                            .isEqualTo("국내 · 일반");
+                    assertThat(document.select(".travel-info-card.is-festival "
+                            + ".travel-info-festival-thumbnail "
+                            + ".travel-info-thumbnail-placeholder"))
+                            .singleElement();
                 });
     }
 
@@ -250,9 +262,9 @@ class TravelInfoControllerTest {
     }
 
     @Test
-    void directFestivalUrlKeepsBackendFilterAndFestivalCardPresentation() throws Exception {
+    void directFestivalUrlKeepsBackendFilterAndUsesPosterFocusedFestivalCard() throws Exception {
         TravelInfoListItemDto festival = item(10L, "여름 축제", TravelInfoScope.DOMESTIC,
-                TravelInfoContentType.FESTIVAL, null);
+                TravelInfoContentType.FESTIVAL, "/uploads/travel-info/festivals/poster.jpg");
         festival.setStartDate(LocalDate.parse("2026-08-01"));
         festival.setEndDate(LocalDate.parse("2026-08-03"));
         when(travelInfoService.getPublicList(
@@ -270,9 +282,6 @@ class TravelInfoControllerTest {
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("정보 유형"))))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("여름 축제")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("축제 기간")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("2026-08-01")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("2026-08-03")))
                 .andExpect(result -> {
                     var document = Jsoup.parse(result.getResponse().getContentAsString());
                     assertThat(document.selectFirst(
@@ -282,6 +291,28 @@ class TravelInfoControllerTest {
                             "button[data-filter-name=categoryId][data-filter-value='3']"))
                             .extracting(org.jsoup.nodes.Element::text)
                             .isEqualTo("축제·행사");
+                    assertThat(document.select(".travel-info-card.is-festival"))
+                            .singleElement();
+                    assertThat(document.select(".travel-info-card.is-festival "
+                            + ".travel-info-festival-thumbnail"))
+                            .singleElement();
+                    assertThat(document.selectFirst(".travel-info-card.is-festival "
+                            + ".travel-info-festival-thumbnail img"))
+                            .extracting(element -> element.attr("src"))
+                            .isEqualTo("/uploads/travel-info/festivals/poster.jpg");
+                    assertThat(document.select(".travel-info-card.is-festival "
+                            + ".travel-info-festival-period"))
+                            .singleElement()
+                            .extracting(org.jsoup.nodes.Element::text)
+                            .isEqualTo("2026.08.01 ~ 2026.08.03");
+                    assertThat(document.select(".travel-info-card.is-festival "
+                            + ".travel-info-type-meta"))
+                            .singleElement()
+                            .extracting(org.jsoup.nodes.Element::text)
+                            .isEqualTo("국내");
+                    assertThat(document.select(".travel-info-card.is-festival "
+                            + ".travel-info-period"))
+                            .isEmpty();
                 });
 
         verify(travelInfoService).getPublicList(
@@ -559,6 +590,33 @@ class TravelInfoControllerTest {
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "<span class=\"ql-font-noto-serif-kr\">축제 본문</span>")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("행사 정보")));
+    }
+
+    @Test
+    void festivalDetailGroupsRegistrationAndViewsWithTitleAndKeepsFooterSecondary() throws Exception {
+        TravelInfoDetailDto detail = detail(TravelInfoContentType.FESTIVAL);
+        when(festivalDetailService.getPublicDetail(10L)).thenReturn(
+                new FestivalDetailDto(detail, festivalInfo(), mainImage("KOGL_TYPE_3")));
+
+        mockMvc.perform(get("/festivals/10"))
+                .andExpect(status().isOk())
+                .andExpect(result -> {
+                    var document = Jsoup.parse(result.getResponse().getContentAsString());
+                    assertThat(document.select(".festival-detail-heading > .festival-detail-meta"))
+                            .singleElement()
+                            .extracting(org.jsoup.nodes.Element::text)
+                            .isEqualTo("등록 2026.08.01 · 조회 18");
+                    assertThat(document.select(".festival-detail-footer .festival-detail-meta"))
+                            .isEmpty();
+                    assertThat(document.select(".festival-detail-title-row"
+                            + " .festival-detail-bookmark"))
+                            .singleElement();
+                    assertThat(document.select(".festival-detail-bookmark"
+                            + " .travel-info-bookmark-label"))
+                            .singleElement();
+                    assertThat(document.select(".festival-detail-footer .festival-detail-back"))
+                            .singleElement();
+                });
     }
 
     @Test

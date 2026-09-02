@@ -25,4 +25,5 @@ public class FestivalCreateForm {
     private String contactTel;
     private String homepageUrl;
     private String ktoFestivalContentId;
+    private String ktoThumbnailImageSelection;
 }

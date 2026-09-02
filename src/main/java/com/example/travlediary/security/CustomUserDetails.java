@@ -18,7 +18,9 @@ public class CustomUserDetails implements UserDetails {
 
     public CustomUserDetails(User user) {
         this.id        = user.getId();
-        this.username  = user.getUsername();
+        this.username  = user.getUsername() == null
+                ? "user:" + user.getId()
+                : user.getUsername();
         this.password  = user.getUserPassword();
         this.authorities = user.getUserRole().name().equals("ADMIN")
                 ? List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))

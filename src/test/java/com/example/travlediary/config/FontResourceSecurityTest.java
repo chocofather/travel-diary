@@ -3,7 +3,9 @@ package com.example.travlediary.config;
 import com.example.travlediary.controller.user.LoginController;
 import com.example.travlediary.model.User;
 import com.example.travlediary.model.UserRole;
+import com.example.travlediary.model.UserStatus;
 import com.example.travlediary.repository.user.UserMapper;
+import com.example.travlediary.security.CustomUserDetails;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -12,11 +14,8 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-
-import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
@@ -61,16 +60,15 @@ class FontResourceSecurityTest {
         user.setId(7L);
         user.setUsername("member");
         user.setUserRole(UserRole.USER);
-        when(userMapper.findByUsername("member")).thenReturn(user);
+        when(userMapper.findStatusById(7L)).thenReturn(UserStatus.ACTIVE);
 
         MockHttpServletRequest loginRequest = new MockHttpServletRequest();
         loginRequest.setSession(session);
         loginRequest.addParameter("redirect", "/destinations?type=domestic");
         MockHttpServletResponse loginResponse = new MockHttpServletResponse();
+        CustomUserDetails userDetails = new CustomUserDetails(user);
         var authentication = new UsernamePasswordAuthenticationToken(
-                "member",
-                "password",
-                List.of(new SimpleGrantedAuthority("ROLE_USER")));
+                userDetails, userDetails.getPassword(), userDetails.getAuthorities());
 
         loginSuccessHandler.onAuthenticationSuccess(
                 loginRequest, loginResponse, authentication);

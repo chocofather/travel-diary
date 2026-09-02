@@ -37,7 +37,8 @@ class FestivalPublicUiContractTest {
         String css = resource("/static/css/festival-detail.css");
 
         assertThat(css)
-                .contains("object-fit: cover")
+                .contains(".festival-detail-gallery-open img")
+                .contains("object-fit: contain")
                 .contains("overflow-wrap: anywhere")
                 .contains("grid-template-columns: repeat(2, minmax(0, 1fr))")
                 .contains("@media (max-width: 760px)")
@@ -66,6 +67,25 @@ class FestivalPublicUiContractTest {
                 .contains("@media (max-width: 720px)")
                 .contains("grid-template-columns: minmax(0, 1fr)")
                 .contains("overflow-wrap: anywhere");
+    }
+
+    @Test
+    void mobileFestivalHeaderStacksLongTitleAndKeepsControlsTouchFriendly() throws IOException {
+        String css = resource("/static/css/festival-detail.css");
+
+        assertThat(css)
+                .containsPattern("(?s)@media \\(max-width: 520px\\).*"
+                        + "\\.festival-detail-title-row \\{\\s*"
+                        + "grid-template-columns: minmax\\(0, 1fr\\);")
+                .containsPattern("(?s)@media \\(max-width: 520px\\).*"
+                        + "\\.festival-detail-bookmark \\{[^}]*justify-self: start;")
+                .containsPattern("(?s)@media \\(max-width: 520px\\).*"
+                        + "\\.festival-detail-bookmark \\{[^}]*min-height: 44px;")
+                .containsPattern("(?s)@media \\(max-width: 520px\\).*"
+                        + "\\.festival-detail-gallery-nav \\{[^}]*"
+                        + "width: 44px;[^}]*height: 44px;")
+                .containsPattern("(?s)@media \\(max-width: 520px\\).*"
+                        + "\\.festival-detail-back \\{[^}]*min-height: 44px;");
     }
 
     @Test

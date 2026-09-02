@@ -75,6 +75,7 @@
         <result property="sourceImageUrl" column="source_image_url"/>
         <result property="licenseCheckedAt" column="license_checked_at"/>
         <result property="isMain" column="is_main"/>
+        <result property="isThumbnail" column="is_thumbnail"/>
         <result property="orderIndex" column="order_index"/>
         <result property="createdAt" column="created_at"/>
         <result property="infoId" column="info_id"/>
@@ -158,8 +159,15 @@
                    SELECT ii.image_url
                    FROM info_images ii
                    WHERE ii.info_id = ti.id
-                     AND ii.is_main = 1
-                   ORDER BY ii.order_index ASC, ii.id ASC
+                     AND (
+                         (ti.content_type = 'FESTIVAL' AND (ii.is_thumbnail = 1 OR ii.is_main = 1))
+                         OR (ti.content_type != 'FESTIVAL' AND ii.is_main = 1)
+                     )
+                   ORDER BY CASE
+                                WHEN ti.content_type = 'FESTIVAL' AND ii.is_thumbnail = 1 THEN 0
+                                ELSE 1
+                            END ASC,
+                            ii.order_index ASC, ii.id ASC
                    LIMIT 1
                ) AS thumbnail_url,
                ti.views,
@@ -309,7 +317,7 @@
     <select id="findMainImageByInfoId" parameterType="long" resultMap="InfoImageResultMap">
         SELECT id, image_url, source_type, source_name, external_content_id, source_title,
                license_type, source_image_url, license_checked_at,
-               is_main, order_index, created_at, info_id
+               is_main, is_thumbnail, order_index, created_at, info_id
         FROM info_images
         WHERE info_id = #{infoId}
           AND is_main = 1
@@ -320,7 +328,7 @@
     <select id="findImagesByInfoId" parameterType="long" resultMap="InfoImageResultMap">
         SELECT id, image_url, source_type, source_name, external_content_id, source_title,
                license_type, source_image_url, license_checked_at,
-               is_main, order_index, created_at, info_id
+               is_main, is_thumbnail, order_index, created_at, info_id
         FROM info_images
         WHERE info_id = #{infoId}
         ORDER BY order_index ASC, id ASC
@@ -339,14 +347,28 @@
         INSERT INTO info_images (
             image_url, source_type, source_name, external_content_id, source_title,
             license_type, source_image_url, license_checked_at,
-            is_main, order_index, info_id, created_at
+            is_main, is_thumbnail, order_index, info_id, created_at
         )
         VALUES (
             #{imageUrl}, COALESCE(#{sourceType}, 'ADMIN_UPLOAD'), #{sourceName},
             #{externalContentId}, #{sourceTitle}, #{licenseType}, #{sourceImageUrl}, #{licenseCheckedAt},
-            #{isMain}, #{orderIndex}, #{infoId}, NOW()
+            #{isMain}, COALESCE(#{isThumbnail}, 0), #{orderIndex}, #{infoId}, NOW()
         )
     </insert>
+
+    <update id="clearThumbnailsByInfoId" parameterType="long">
+        UPDATE info_images
+        SET is_thumbnail = 0
+        WHERE info_id = #{infoId}
+          AND is_thumbnail = 1
+    </update>
+
+    <update id="setThumbnailByIdAndInfoId">
+        UPDATE info_images
+        SET is_thumbnail = 1
+        WHERE id = #{imageId}
+          AND info_id = #{infoId}
+    </update>
 
     <delete id="deleteMainImagesByInfoId" parameterType="long">
         DELETE FROM info_images

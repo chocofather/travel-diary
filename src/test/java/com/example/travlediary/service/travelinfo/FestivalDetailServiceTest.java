@@ -77,6 +77,61 @@ class FestivalDetailServiceTest {
     }
 
     @Test
+    void thumbnailIsFirstThenMainThenRemainingImagesByOrderIndex() {
+        InfoImage main = image("/uploads/main.jpg", true, 1, "KOGL_TYPE_1");
+        InfoImage second = image("/uploads/second.jpg", false, 2, "KOGL_TYPE_3");
+        InfoImage third = image("/uploads/third.jpg", false, 3, "KOGL_TYPE_1");
+        InfoImage poster = image("/uploads/poster.jpg", false, 5, "KOGL_TYPE_3");
+        poster.setIsThumbnail(true);
+
+        FestivalDetailDto result = publicDetailWithImages(List.of(main, second, third, poster));
+
+        assertThat(result.getImages()).containsExactly(poster, main, second, third);
+        assertThat(result.getGalleryImages())
+                .extracting("imageUrl", "licenseLabel")
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple("/uploads/poster.jpg", "공공누리 제3유형"),
+                        org.assertj.core.groups.Tuple.tuple("/uploads/main.jpg", "공공누리 제1유형"),
+                        org.assertj.core.groups.Tuple.tuple("/uploads/second.jpg", "공공누리 제3유형"),
+                        org.assertj.core.groups.Tuple.tuple("/uploads/third.jpg", "공공누리 제1유형"));
+    }
+
+    @Test
+    void imageMarkedAsThumbnailAndMainIsShownOnlyOnce() {
+        InfoImage additional = image("/uploads/additional.jpg", false, 1, "KOGL_TYPE_1");
+        InfoImage shared = image("/uploads/poster.jpg", true, 5, "KOGL_TYPE_3");
+        shared.setIsThumbnail(true);
+
+        FestivalDetailDto result = publicDetailWithImages(List.of(additional, shared));
+
+        assertThat(result.getImages()).containsExactly(shared, additional);
+        assertThat(result.getGalleryImages()).extracting("imageUrl")
+                .containsExactly("/uploads/poster.jpg", "/uploads/additional.jpg");
+    }
+
+    @Test
+    void mainImageIsFirstWhenNoThumbnailExists() {
+        InfoImage firstAdditional = image("/uploads/additional-1.jpg", false, 1, "KOGL_TYPE_1");
+        InfoImage secondAdditional = image("/uploads/additional-2.jpg", false, 2, "KOGL_TYPE_3");
+        InfoImage main = image("/uploads/main.jpg", true, 5, "KOGL_TYPE_1");
+
+        FestivalDetailDto result = publicDetailWithImages(List.of(firstAdditional, secondAdditional, main));
+
+        assertThat(result.getImages()).containsExactly(main, firstAdditional, secondAdditional);
+    }
+
+    @Test
+    void originalOrderIndexOrderIsKeptWhenNoThumbnailOrMainExists() {
+        InfoImage first = image("/uploads/first.jpg", false, 1, "KOGL_TYPE_1");
+        InfoImage second = image("/uploads/second.jpg", false, 2, "KOGL_TYPE_3");
+        InfoImage third = image("/uploads/third.jpg", false, 3, "KOGL_TYPE_1");
+
+        FestivalDetailDto result = publicDetailWithImages(List.of(first, second, third));
+
+        assertThat(result.getImages()).containsExactly(first, second, third);
+    }
+
+    @Test
     void generalContentIsRejectedBeforeViewsOrFestivalTablesAreTouched() {
         when(travelInfoMapper.findPublicDetailById(10L))
                 .thenReturn(detail(TravelInfoContentType.GENERAL));
@@ -142,6 +197,17 @@ class FestivalDetailServiceTest {
         image.setSourceName("한국관광공사");
         image.setLicenseType(licenseType);
         return image;
+    }
+
+    private FestivalDetailDto publicDetailWithImages(List<InfoImage> images) {
+        TravelInfoDetailDto preview = detail(TravelInfoContentType.FESTIVAL);
+        TravelInfoDetailDto common = detail(TravelInfoContentType.FESTIVAL);
+        when(travelInfoMapper.findPublicDetailById(10L)).thenReturn(preview);
+        when(travelInfoService.getPublicDetail(10L)).thenReturn(common);
+        when(festivalInfoMapper.findByInfoId(10L)).thenReturn(new FestivalInfo());
+        when(travelInfoMapper.findImagesByInfoId(10L)).thenReturn(images);
+
+        return service.getPublicDetail(10L);
     }
 
     private TravelInfoDetailDto detail(TravelInfoContentType contentType) {

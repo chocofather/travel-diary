@@ -6,6 +6,7 @@ import com.example.travlediary.config.SecurityConfig;
 import com.example.travlediary.dto.kto.KtoFestivalAutofillResponse;
 import com.example.travlediary.dto.kto.KtoFestivalSearchItemResponse;
 import com.example.travlediary.dto.kto.KtoFestivalSearchResponse;
+import com.example.travlediary.dto.kto.KtoFestivalThumbnailCandidate;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.service.kto.KtoFestivalService;
 import com.example.travlediary.service.kto.KtoTourApiException;
@@ -114,6 +115,32 @@ class AdminKtoFestivalControllerTest {
     }
 
     @Test
+    void adminCanLoadSelectableAndDisabledFestivalThumbnailCandidates() throws Exception {
+        when(ktoFestivalService.getThumbnailCandidates("12345")).thenReturn(List.of(
+                new KtoFestivalThumbnailCandidate(
+                        "MAIN", "https://tong.visitkorea.or.kr/cms/resource/35/main.jpg",
+                        "서울 축제", "대표사진", "KOGL_TYPE_1", true, null),
+                new KtoFestivalThumbnailCandidate(
+                        "DETAIL:poster-2", "https://tong.visitkorea.or.kr/cms/resource/35/poster.jpg",
+                        "공식 포스터", "추가사진", "KOGL_TYPE_3", true, null),
+                new KtoFestivalThumbnailCandidate(
+                        "DETAIL:type2", "https://tong.visitkorea.or.kr/cms/resource/35/blocked.jpg",
+                        "미지원 이미지", "추가사진", null, false, "지원하지 않는 저작권 유형입니다.")));
+
+        mockMvc.perform(get("/admin/api/kto/festivals/images")
+                        .param("contentId", " 12345 ")
+                        .with(user("admin").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].selectionKey").value("MAIN"))
+                .andExpect(jsonPath("$.items[0].selectable").value(true))
+                .andExpect(jsonPath("$.items[1].selectionKey").value("DETAIL:poster-2"))
+                .andExpect(jsonPath("$.items[2].selectable").value(false))
+                .andExpect(jsonPath("$.items[2].unavailableReason").value("지원하지 않는 저작권 유형입니다."));
+
+        verify(ktoFestivalService).getThumbnailCandidates("12345");
+    }
+
+    @Test
     void invalidFestivalSearchAndDetailInputsReturnBadRequestWithoutCallingTheService() throws Exception {
         mockMvc.perform(get("/admin/api/kto/festivals/search")
                         .with(user("admin").roles("ADMIN")))
@@ -139,6 +166,11 @@ class AdminKtoFestivalControllerTest {
                         .with(user("admin").roles("ADMIN")))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("축제 정보 식별값이 올바르지 않습니다."));
+        mockMvc.perform(get("/admin/api/kto/festivals/images")
+                        .param("contentId", "  ")
+                        .with(user("admin").roles("ADMIN")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("축제 정보 식별값이 올바르지 않습니다."));
         mockMvc.perform(get("/admin/api/kto/festivals/search-by-keyword")
                         .param("keyword", "  ")
                         .with(user("admin").roles("ADMIN")))
@@ -149,6 +181,7 @@ class AdminKtoFestivalControllerTest {
                 org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
                 org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt());
         verify(ktoFestivalService, never()).getDetail(org.mockito.ArgumentMatchers.any());
+        verify(ktoFestivalService, never()).getThumbnailCandidates(org.mockito.ArgumentMatchers.any());
         verify(ktoFestivalService, never()).searchByKeyword(
                 org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyInt(),
                 org.mockito.ArgumentMatchers.anyInt());
@@ -175,8 +208,19 @@ class AdminKtoFestivalControllerTest {
                 .andExpect(jsonPath("$.message").value("관광정보를 불러오지 못했습니다."))
                 .andReturn().getResponse().getContentAsString();
 
+        when(ktoFestivalService.getThumbnailCandidates("12345"))
+                .thenThrow(KtoTourApiException.upstreamFailure());
+        String imageBody = mockMvc.perform(get("/admin/api/kto/festivals/images")
+                        .param("contentId", "12345")
+                        .with(user("admin").roles("ADMIN")))
+                .andExpect(status().isBadGateway())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.message").value("관광정보를 불러오지 못했습니다."))
+                .andReturn().getResponse().getContentAsString();
+
         assertThat(configurationBody).doesNotContain("org.springframework", "com.example.travlediary", "stackTrace");
         assertThat(upstreamBody).doesNotContain("org.springframework", "com.example.travlediary", "stackTrace");
+        assertThat(imageBody).doesNotContain("org.springframework", "com.example.travlediary", "stackTrace");
     }
 
     @Test
@@ -209,6 +253,10 @@ class AdminKtoFestivalControllerTest {
                         .param("contentId", "12345")
                         .with(user("member").roles("USER")))
                 .andExpect(status().isForbidden());
+        mockMvc.perform(get("/admin/api/kto/festivals/images")
+                        .param("contentId", "12345")
+                        .with(user("member").roles("USER")))
+                .andExpect(status().isForbidden());
         mockMvc.perform(get("/admin/api/kto/festivals/search-by-keyword")
                         .param("keyword", "경복궁")
                         .with(user("member").roles("USER")))
@@ -218,6 +266,7 @@ class AdminKtoFestivalControllerTest {
                 org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
                 org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt());
         verify(ktoFestivalService, never()).getDetail(org.mockito.ArgumentMatchers.any());
+        verify(ktoFestivalService, never()).getThumbnailCandidates(org.mockito.ArgumentMatchers.any());
         verify(ktoFestivalService, never()).searchByKeyword(
                 org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyInt(),
                 org.mockito.ArgumentMatchers.anyInt());

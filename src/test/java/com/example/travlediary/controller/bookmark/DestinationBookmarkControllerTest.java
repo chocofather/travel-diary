@@ -1,7 +1,6 @@
 package com.example.travlediary.controller.bookmark;
 
 import com.example.travlediary.controller.destination.DestinationBookmarkController;
-import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.destination.DestinationBookmarkService;
 import org.junit.jupiter.api.Test;
@@ -20,14 +19,12 @@ class DestinationBookmarkControllerTest {
     @Mock
     private DestinationBookmarkService service;
     @Mock
-    private UserMapper userMapper;
-    @Mock
     private CustomUserDetails userDetails;
 
     @Test
     void explicitDeleteUsesPrincipalIdAndReturnsNoContent() {
         DestinationBookmarkController controller =
-                new DestinationBookmarkController(service, userMapper);
+                new DestinationBookmarkController(service);
         when(userDetails.getId()).thenReturn(7L);
 
         var response = controller.removeBookmark(10L, userDetails);

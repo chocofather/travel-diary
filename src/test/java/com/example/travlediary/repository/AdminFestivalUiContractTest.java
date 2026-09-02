@@ -23,9 +23,12 @@ class AdminFestivalUiContractTest {
                 .contains("#temporals.format(festival.endDate, 'yyyy-MM-dd')")
                 .contains("@{/admin/festivals/create}")
                 .contains("@{/admin/festivals/{id}(id=${festival.id})}")
-                .contains("@{/admin/festivals/edit/{id}(id=${festival.id})}")
-                .contains("aria-disabled=\"true\"")
-                .doesNotContain("method=\"post\"", "travel-info/create", "data-kto-festival-autofill");
+                .contains("@{/admin/festivals/{id}/edit(id=${festival.id})}")
+                .contains("@{/admin/festivals/{id}/delete(id=${festival.id})}")
+                .contains("method=\"post\"")
+                .contains("이 축제·행사를 삭제할까요?", "등록된 행사 정보와 이미지가 함께 삭제됩니다.")
+                .contains("admin-btn is-small is-danger")
+                .doesNotContain("aria-disabled=\"true\"", "travel-info/create", "data-kto-festival-autofill");
     }
 
     @Test
@@ -55,7 +58,7 @@ class AdminFestivalUiContractTest {
                         "id=\"festival-sponsor2\"", "id=\"festival-sponsor2-tel\"")
                 .contains("id=\"festival-contact-tel\"", "id=\"festival-homepage-url\"")
                 .contains("th:object=\"${festivalForm}\"", "method=\"post\"",
-                        "th:action=\"@{/admin/festivals/create}\"", "id=\"kto-festival-content-id\"")
+                        "th:action=\"${formAction}\"", "id=\"kto-festival-content-id\"")
                 .doesNotContain("admin-travel-info-festival-autofill.js");
 
         assertThat(autofill)
@@ -94,6 +97,47 @@ class AdminFestivalUiContractTest {
                 .contains("th:field=\"*{scope}\"")
                 .doesNotContain("scope == T(com.example.travlediary.model.TravelInfoScope).DOMESTIC",
                         "T(com.example.travlediary.model.TravelInfoScope).DOMESTIC.equals(scope)");
+    }
+
+    @Test
+    void sharedFestivalFormSeparatesEditFromTourApiAndUsesExistingImageThumbnailPicker()
+            throws IOException {
+        String form = resource("/templates/admin/festivals/form.html");
+        String css = resource("/static/css/admin-travel-info.css");
+
+        assertThat(form)
+                .contains("th:if=\"${!editMode}\" src=\"/js/admin-festival-autofill.js\"")
+                .contains("th:if=\"${editMode and !#lists.isEmpty(festivalImages)}\"")
+                .contains("th:each=\"image : ${festivalImages}\"")
+                .contains("th:field=\"*{thumbnailImageId}\"")
+                .contains("목록 썸네일 선택", "썸네일 해제", "대표이미지가 사용됩니다.")
+                .contains("th:text=\"${editMode} ? '변경사항 저장' : '축제·행사 등록'\"");
+        assertThat(css)
+                .contains(".admin-festival-existing-image-picker")
+                .contains("object-fit: contain");
+    }
+
+    @Test
+    void festivalCreateFormProvidesACompactTourApiThumbnailPickerWithServerVerifiableKeys()
+            throws IOException {
+        String form = resource("/templates/admin/festivals/form.html");
+        String autofill = resource("/static/js/admin-festival-autofill.js");
+        String css = resource("/static/css/admin-travel-info.css");
+
+        assertThat(form)
+                .contains("id=\"kto-festival-thumbnail-selection\"")
+                .contains("data-festival-image-picker", "data-festival-image-picker-items")
+                .contains("목록 썸네일 선택", "목록 썸네일로 사용");
+        assertThat(autofill)
+                .contains("/admin/api/kto/festivals/images?${params.toString()}")
+                .contains("item.selectionKey", "item.selectable", "item.unavailableReason")
+                .contains("thumbnailSelection.value")
+                .contains("radio.disabled")
+                .doesNotContain("sourceImageUrl", "smallimageurl");
+        assertThat(css)
+                .contains(".admin-kto-festival-image-picker-grid")
+                .contains("grid-template-columns: repeat(auto-fill, minmax(150px, 1fr))")
+                .contains("@media (max-width: 560px)");
     }
 
     private String resource(String path) throws IOException {

@@ -86,15 +86,18 @@ class TravelInfoMapperContractTest {
     }
 
     @Test
-    void publicListUsesScalarThumbnailAndOneDeterministicRepresentativePeriod() throws IOException {
+    void publicListUsesFestivalThumbnailBeforeMainAndKeepsGeneralMainPolicy() throws IOException {
         String query = between(mapper(), "<select id=\"findPublicList\"", "</select>");
 
         assertThat(query)
                 .contains("SELECT ii.image_url")
                 .contains("FROM info_images ii")
                 .contains("ii.info_id = ti.id")
+                .contains("ti.content_type = 'FESTIVAL'")
+                .contains("ii.is_thumbnail = 1")
                 .contains("ii.is_main = 1")
-                .contains("ORDER BY ii.order_index ASC, ii.id ASC")
+                .contains("CASE", "THEN 0", "ELSE 1")
+                .contains("ii.order_index ASC, ii.id ASC")
                 .contains("AS thumbnail_url")
                 .doesNotContain("JOIN info_images");
         assertThat(query)
@@ -190,12 +193,14 @@ class TravelInfoMapperContractTest {
     }
 
     @Test
-    void mainThumbnailQueriesUseOnlyMainInfoImagesAndStableOrdering() throws IOException {
+    void imageQueriesMapThumbnailRoleAndKeepMainAndGalleryOrdering() throws IOException {
         String mapper = mapper();
         String findOne = between(mapper, "<select id=\"findMainImageByInfoId\"", "</select>");
         String findGallery = between(mapper, "<select id=\"findImagesByInfoId\"", "</select>");
         String findAllUrls = between(mapper, "<select id=\"findMainImageUrlsByInfoId\"", "</select>");
         String insert = between(mapper, "<insert id=\"insertInfoImage\"", "</insert>");
+        String clearThumbnail = between(mapper, "<update id=\"clearThumbnailsByInfoId\"", "</update>");
+        String setThumbnail = between(mapper, "<update id=\"setThumbnailByIdAndInfoId\"", "</update>");
         String resultMap = between(mapper, "<resultMap id=\"InfoImageResultMap\"", "</resultMap>");
         String delete = between(mapper, "<delete id=\"deleteMainImagesByInfoId\"", "</delete>");
 
@@ -223,7 +228,7 @@ class TravelInfoMapperContractTest {
                 .contains("COALESCE(#{sourceType}, 'ADMIN_UPLOAD')")
                 .contains("#{imageUrl}", "#{sourceName}", "#{externalContentId}", "#{sourceTitle}")
                 .contains("#{licenseType}", "#{sourceImageUrl}", "#{licenseCheckedAt}")
-                .contains("#{isMain}", "#{orderIndex}", "#{infoId}", "NOW()")
+                .contains("#{isMain}", "COALESCE(#{isThumbnail}, 0)", "#{orderIndex}", "#{infoId}", "NOW()")
                 .contains("useGeneratedKeys=\"true\"");
         assertThat(resultMap)
                 .contains("property=\"sourceType\" column=\"source_type\"")
@@ -233,6 +238,16 @@ class TravelInfoMapperContractTest {
                 .contains("property=\"licenseType\" column=\"license_type\"")
                 .contains("property=\"sourceImageUrl\" column=\"source_image_url\"")
                 .contains("property=\"licenseCheckedAt\" column=\"license_checked_at\"");
+        assertThat(resultMap)
+                .contains("property=\"isThumbnail\" column=\"is_thumbnail\"");
+        assertThat(clearThumbnail)
+                .contains("UPDATE info_images", "SET is_thumbnail = 0")
+                .contains("WHERE info_id = #{infoId}")
+                .doesNotContain("is_main");
+        assertThat(setThumbnail)
+                .contains("UPDATE info_images", "SET is_thumbnail = 1")
+                .contains("WHERE id = #{imageId}", "AND info_id = #{infoId}")
+                .doesNotContain("is_main");
         assertThat(delete)
                 .contains("DELETE FROM info_images")
                 .contains("info_id = #{infoId}")
@@ -246,13 +261,29 @@ class TravelInfoMapperContractTest {
     }
 
     @Test
-    void schemaReferenceCascadesInfoImagesWhenTravelInfoIsDeleted() throws IOException {
+    void schemaReferenceDocumentsThumbnailRoleAndInfoImageCascade() throws IOException {
         String schema = Files.readString(
                 Path.of("docs/db/travel_diary_schema_reference.md"), StandardCharsets.UTF_8);
         String infoImages = between(schema, "CREATE TABLE `info_images`", ") ENGINE=InnoDB");
 
         assertThat(infoImages)
+                .contains("`is_main` tinyint NOT NULL DEFAULT '0',\n"
+                        + "  `is_thumbnail` TINYINT(1) NOT NULL DEFAULT 0,\n"
+                        + "  `order_index`")
                 .contains("FOREIGN KEY (`info_id`) REFERENCES `travel_info` (`id`) ON DELETE CASCADE");
+    }
+
+    @Test
+    void schemaReferenceAllowsFestivalRootDeleteToCascadeEveryFestivalChild() throws IOException {
+        String schema = Files.readString(
+                Path.of("docs/db/travel_diary_schema_reference.md"), StandardCharsets.UTF_8);
+
+        for (String table : new String[]{"festival_info", "info_periods", "info_images"}) {
+            String createTable = between(schema, "CREATE TABLE `" + table + "`", ") ENGINE=InnoDB");
+            assertThat(createTable)
+                    .as(table)
+                    .contains("REFERENCES `travel_info` (`id`) ON DELETE CASCADE");
+        }
     }
 
     private String mapper() throws IOException {

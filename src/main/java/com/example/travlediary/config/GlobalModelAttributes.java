@@ -1,7 +1,9 @@
 // src/main/java/com/example/travlediary/config/GlobalModelAttributes.java
 package com.example.travlediary.config;
 
+import com.example.travlediary.model.User;
 import com.example.travlediary.repository.user.UserMapper;
+import com.example.travlediary.security.CustomUserDetails;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -18,13 +20,23 @@ public class GlobalModelAttributes {
 
     @ModelAttribute
     public void addCommonAttributes(Model model, Authentication auth) {
-        boolean isLoggedIn = auth != null && auth.isAuthenticated();
+        CustomUserDetails userDetails = authenticatedUser(auth);
+        boolean isLoggedIn = userDetails != null;
         model.addAttribute("isLoggedIn", isLoggedIn);
 
         if (isLoggedIn) {
+            User user = userMapper.findById(userDetails.getId());
             model.addAttribute("currentUserProfileImage",
-                    normalizeProfileImage(userMapper.findProfileImageByUsername(auth.getName())));
+                    normalizeProfileImage(user == null ? null : user.getProfileImage()));
         }
+    }
+
+    private CustomUserDetails authenticatedUser(Authentication auth) {
+        if (auth == null || !auth.isAuthenticated()
+                || !(auth.getPrincipal() instanceof CustomUserDetails userDetails)) {
+            return null;
+        }
+        return userDetails;
     }
 
     private String normalizeProfileImage(String profileImage) {

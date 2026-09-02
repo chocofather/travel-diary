@@ -4,6 +4,7 @@ import com.example.travlediary.model.User;
 import com.example.travlediary.model.UserRole;
 import com.example.travlediary.model.UserStatus;
 import com.example.travlediary.repository.user.UserMapper;
+import com.example.travlediary.security.CustomUserDetails;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,12 +14,12 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 
-import java.util.List;
-
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -36,38 +37,38 @@ class CustomLoginSuccessHandlerTest {
 
     @Test
     void restrictedMemberGoesToTheRestrictedPageBeforeAnySavedRedirect() throws Exception {
-        User restricted = user(7L, "travler", UserRole.USER);
-        restricted.setStatus(UserStatus.RESTRICTED);
-        when(userMapper.findByUsername("travler")).thenReturn(restricted);
+        when(userMapper.findStatusById(7L)).thenReturn(UserStatus.RESTRICTED);
         MockHttpServletRequest request = requestWithRedirect("/mypage");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        handler.onAuthenticationSuccess(request, response, authentication("travler", "ROLE_USER"));
+        handler.onAuthenticationSuccess(
+                request, response, authentication(7L, "travler", UserRole.USER));
 
         assertThat(response.getRedirectedUrl()).isEqualTo("/account/restricted");
         assertThat(request.getSession().getAttribute("userId")).isEqualTo(7L);
+        verify(userMapper, never()).findByUsername(anyString());
     }
 
     @Test
     void activeMemberKeepsTheExistingRedirectBehaviour() throws Exception {
-        User active = user(7L, "travler", UserRole.USER);
-        active.setStatus(UserStatus.ACTIVE);
-        when(userMapper.findByUsername("travler")).thenReturn(active);
+        when(userMapper.findStatusById(7L)).thenReturn(UserStatus.ACTIVE);
         MockHttpServletRequest request = requestWithRedirect("/mypage");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        handler.onAuthenticationSuccess(request, response, authentication("travler", "ROLE_USER"));
+        handler.onAuthenticationSuccess(
+                request, response, authentication(7L, "travler", UserRole.USER));
 
         assertThat(response.getRedirectedUrl()).isEqualTo("/mypage");
+        assertThat(request.getSession().getAttribute("userId")).isEqualTo(7L);
     }
 
     @Test
     void adminGeneralLoginUsesNormalSiteRedirectInsteadOfForcedAdminHome() throws Exception {
-        when(userMapper.findByUsername("admin")).thenReturn(user(99L, "admin", UserRole.ADMIN));
         MockHttpServletRequest request = requestWithRedirect("/travel-info?sort=views");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        handler.onAuthenticationSuccess(request, response, authentication("admin", "ROLE_ADMIN"));
+        handler.onAuthenticationSuccess(
+                request, response, authentication(99L, "admin", UserRole.ADMIN));
 
         assertThat(response.getRedirectedUrl()).isEqualTo("/travel-info?sort=views");
         assertThat(request.getSession().getAttribute("userId")).isEqualTo(99L);
@@ -75,24 +76,24 @@ class CustomLoginSuccessHandlerTest {
 
     @Test
     void directAdminLoginWithoutOriginalRequestFallsBackToGeneralHome() throws Exception {
-        when(userMapper.findByUsername("admin")).thenReturn(user(99L, "admin", UserRole.ADMIN));
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        handler.onAuthenticationSuccess(request, response, authentication("admin", "ROLE_ADMIN"));
+        handler.onAuthenticationSuccess(
+                request, response, authentication(99L, "admin", UserRole.ADMIN));
 
         assertThat(response.getRedirectedUrl()).isEqualTo("/");
     }
 
     @Test
     void adminReturnsToSameOriginSavedAdminRequestIncludingQuery() throws Exception {
-        when(userMapper.findByUsername("admin")).thenReturn(user(99L, "admin", UserRole.ADMIN));
         MockHttpSession session = saveRequest("/admin/inquiries", "status=PENDING&page=2");
         MockHttpServletRequest request = requestWithRedirect("/");
         request.setSession(session);
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        handler.onAuthenticationSuccess(request, response, authentication("admin", "ROLE_ADMIN"));
+        handler.onAuthenticationSuccess(
+                request, response, authentication(99L, "admin", UserRole.ADMIN));
 
         assertThat(response.getRedirectedUrl())
                 .isEqualTo("/admin/inquiries?status=PENDING&page=2");
@@ -101,13 +102,13 @@ class CustomLoginSuccessHandlerTest {
 
     @Test
     void regularUserCannotFollowSavedAdminRequestAndFallsBackToHome() throws Exception {
-        when(userMapper.findByUsername("member")).thenReturn(user(7L, "member", UserRole.USER));
         MockHttpSession session = saveRequest("/admin", null);
         MockHttpServletRequest request = requestWithRedirect("/admin");
         request.setSession(session);
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        handler.onAuthenticationSuccess(request, response, authentication("member", "ROLE_USER"));
+        handler.onAuthenticationSuccess(
+                request, response, authentication(7L, "member", UserRole.USER));
 
         assertThat(response.getRedirectedUrl()).isEqualTo("/");
         assertThat(new HttpSessionRequestCache().getRequest(request, response)).isNull();
@@ -115,11 +116,11 @@ class CustomLoginSuccessHandlerTest {
 
     @Test
     void regularUserKeepsValidatedInternalRedirect() throws Exception {
-        when(userMapper.findByUsername("member")).thenReturn(user(7L, "member", UserRole.USER));
         MockHttpServletRequest request = requestWithRedirect("/travel-info?sort=views");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        handler.onAuthenticationSuccess(request, response, authentication("member", "ROLE_USER"));
+        handler.onAuthenticationSuccess(
+                request, response, authentication(7L, "member", UserRole.USER));
 
         assertThat(response.getRedirectedUrl()).isEqualTo("/travel-info?sort=views");
         assertThat(request.getSession().getAttribute("userId")).isEqualTo(7L);
@@ -127,8 +128,6 @@ class CustomLoginSuccessHandlerTest {
 
     @Test
     void externalProtocolRelativeAndMalformedRedirectsFallBackToHome() throws Exception {
-        when(userMapper.findByUsername("member")).thenReturn(user(7L, "member", UserRole.USER));
-
         assertRedirectFallsBack("https://evil.example/path");
         assertRedirectFallsBack("//evil.example/path");
         assertRedirectFallsBack("/\\evil.example/path");
@@ -140,11 +139,11 @@ class CustomLoginSuccessHandlerTest {
 
     @Test
     void missingRedirectFallsBackToHome() throws Exception {
-        when(userMapper.findByUsername("member")).thenReturn(user(7L, "member", UserRole.USER));
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        handler.onAuthenticationSuccess(request, response, authentication("member", "ROLE_USER"));
+        handler.onAuthenticationSuccess(
+                request, response, authentication(7L, "member", UserRole.USER));
 
         assertThat(response.getRedirectedUrl()).isEqualTo("/");
     }
@@ -153,7 +152,8 @@ class CustomLoginSuccessHandlerTest {
         MockHttpServletRequest request = requestWithRedirect(redirect);
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        handler.onAuthenticationSuccess(request, response, authentication("member", "ROLE_USER"));
+        handler.onAuthenticationSuccess(
+                request, response, authentication(7L, "member", UserRole.USER));
 
         assertThat(response.getRedirectedUrl()).isEqualTo("/");
     }
@@ -176,9 +176,12 @@ class CustomLoginSuccessHandlerTest {
         return session;
     }
 
-    private UsernamePasswordAuthenticationToken authentication(String username, String authority) {
+    private UsernamePasswordAuthenticationToken authentication(Long id,
+                                                               String username,
+                                                               UserRole role) {
+        CustomUserDetails userDetails = new CustomUserDetails(user(id, username, role));
         return new UsernamePasswordAuthenticationToken(
-                username, "password", List.of(new SimpleGrantedAuthority(authority)));
+                userDetails, "password", userDetails.getAuthorities());
     }
 
     private User user(Long id, String username, UserRole role) {

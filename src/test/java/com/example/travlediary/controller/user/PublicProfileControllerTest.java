@@ -5,7 +5,10 @@ import com.example.travlediary.config.CustomLogoutSuccessHandler;
 import com.example.travlediary.config.SecurityConfig;
 import com.example.travlediary.dto.BoardListDto;
 import com.example.travlediary.dto.PublicUserProfileDto;
+import com.example.travlediary.model.User;
+import com.example.travlediary.model.UserRole;
 import com.example.travlediary.repository.user.UserMapper;
+import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.board.BoardService;
 import com.example.travlediary.service.user.PublicProfileService;
 import org.junit.jupiter.api.Test;
@@ -13,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.server.ResponseStatusException;
@@ -23,7 +27,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -71,7 +75,8 @@ class PublicProfileControllerTest {
 
     @Test
     void authenticatedMemberCanOpenAnotherPublicProfile() throws Exception {
-        when(userMapper.findProfileImageByUsername("member")).thenReturn("/uploads/member.png");
+        User currentUser = user(5L, "member", "/uploads/member.png");
+        when(userMapper.findById(5L)).thenReturn(currentUser);
         when(publicProfileService.getPublicProfile(7L))
                 .thenReturn(profile(7L, "여행자", "/images/default.png"));
         when(boardService.getBoardListByUserId(7L, "tip", 2, 10)).thenReturn(List.of());
@@ -80,7 +85,7 @@ class PublicProfileControllerTest {
         mockMvc.perform(get("/users/7")
                         .param("type", "tip")
                         .param("page", "2")
-                        .with(user("member")))
+                        .with(authentication(authenticationFor(currentUser))))
                 .andExpect(status().isOk())
                 .andExpect(model().attributeDoesNotExist("user"))
                 .andExpect(model().attribute("currentUserProfileImage", "/uploads/member.png"))
@@ -132,6 +137,22 @@ class PublicProfileControllerTest {
         profile.setNickname(nickname);
         profile.setProfileImage(image);
         return profile;
+    }
+
+    private UsernamePasswordAuthenticationToken authenticationFor(User user) {
+        CustomUserDetails userDetails = new CustomUserDetails(user);
+        return new UsernamePasswordAuthenticationToken(
+                userDetails, userDetails.getPassword(), userDetails.getAuthorities());
+    }
+
+    private User user(Long id, String username, String profileImage) {
+        User user = new User();
+        user.setId(id);
+        user.setUsername(username);
+        user.setUserPassword("encoded-password");
+        user.setUserRole(UserRole.USER);
+        user.setProfileImage(profileImage);
+        return user;
     }
 
     private BoardListDto item(Long id, String boardType, String postType, String title, String createdAt) {

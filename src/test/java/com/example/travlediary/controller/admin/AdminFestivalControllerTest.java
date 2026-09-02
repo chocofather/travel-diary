@@ -5,7 +5,10 @@ import com.example.travlediary.config.CustomLogoutSuccessHandler;
 import com.example.travlediary.config.SecurityConfig;
 import com.example.travlediary.dto.AdminTravelInfoListItemDto;
 import com.example.travlediary.dto.FestivalCreateForm;
+import com.example.travlediary.dto.FestivalEditData;
+import com.example.travlediary.dto.FestivalEditForm;
 import com.example.travlediary.model.InfoCategory;
+import com.example.travlediary.model.InfoImage;
 import com.example.travlediary.model.TravelInfoContentType;
 import com.example.travlediary.model.TravelInfoScope;
 import com.example.travlediary.repository.user.UserMapper;
@@ -14,6 +17,7 @@ import com.example.travlediary.service.travelinfo.TravelInfoService;
 import com.example.travlediary.service.travelinfo.FestivalRegistrationService;
 import com.example.travlediary.service.travelinfo.FestivalRegistrationResult;
 import com.example.travlediary.service.travelinfo.FestivalValidationException;
+import com.example.travlediary.service.travelinfo.FestivalAdminService;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +25,8 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
 import java.sql.Timestamp;
 import java.time.LocalDate;
@@ -54,6 +60,8 @@ class AdminFestivalControllerTest {
     private InfoCategoryService infoCategoryService;
     @MockitoBean
     private FestivalRegistrationService festivalRegistrationService;
+    @MockitoBean
+    private FestivalAdminService festivalAdminService;
     @MockitoBean
     private CustomLoginSuccessHandler customLoginSuccessHandler;
     @MockitoBean
@@ -186,6 +194,125 @@ class AdminFestivalControllerTest {
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("축제")))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("여행추천"))));
+    }
+
+    @Test
+    void adminCanOpenFestivalEditFormWithExistingValuesImagesAndFestivalCategories() throws Exception {
+        FestivalEditForm form = editForm();
+        InfoImage image = image(101L, true, false, "/uploads/travel-info/festivals/main.jpg");
+        InfoImage thumbnail = image(105L, false, true, "/uploads/travel-info/festivals/poster.jpg");
+        form.setThumbnailImageId(105L);
+        when(festivalAdminService.getEditData(10L))
+                .thenReturn(new FestivalEditData(form, List.of(image, thumbnail)));
+        when(infoCategoryService.getAll()).thenReturn(List.of(
+                category(5L, "문화축제", TravelInfoContentType.FESTIVAL),
+                category(8L, "여행추천", TravelInfoContentType.GENERAL)));
+
+        mockMvc.perform(get("/admin/festivals/10/edit").with(user("admin").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/festivals/form"))
+                .andExpect(model().attribute("editMode", true))
+                .andExpect(model().attribute("festivalImages", List.of(image, thumbnail)))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("축제·행사 수정")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("경복궁 별빛야행")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("목록 썸네일 선택")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("공식 포스터")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("checked=\"checked\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("TourAPI에서 축제·행사 불러오기"))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("여행추천"))));
+    }
+
+    @Test
+    void generalIdCannotOpenFestivalEditRoute() throws Exception {
+        when(festivalAdminService.getEditData(10L)).thenThrow(
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "축제·행사 정보를 찾을 수 없습니다."));
+
+        mockMvc.perform(get("/admin/festivals/10/edit").with(user("admin").roles("ADMIN")))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void validFestivalEditRedirectsWithFlashMessage() throws Exception {
+        mockMvc.perform(post("/admin/festivals/10/edit")
+                        .with(user("admin").roles("ADMIN"))
+                        .param("title", "수정 축제")
+                        .param("scope", "DOMESTIC")
+                        .param("categoryId", "5")
+                        .param("startDate", "2026-09-02")
+                        .param("endDate", "2026-10-24")
+                        .param("thumbnailImageId", "105"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/festivals"))
+                .andExpect(flash().attribute("festivalMessage", "축제·행사가 수정되었습니다."));
+
+        ArgumentCaptor<FestivalEditForm> captor = ArgumentCaptor.forClass(FestivalEditForm.class);
+        verify(festivalAdminService).update(org.mockito.ArgumentMatchers.eq(10L), captor.capture());
+        assertThat(captor.getValue().getThumbnailImageId()).isEqualTo(105L);
+    }
+
+    @Test
+    void festivalEditValidationFailureRestoresInputCategoriesAndImagePicker() throws Exception {
+        FestivalEditForm persisted = editForm();
+        InfoImage image = image(101L, true, false, "/uploads/travel-info/festivals/main.jpg");
+        when(infoCategoryService.getAll()).thenReturn(List.of(
+                category(5L, "문화축제", TravelInfoContentType.FESTIVAL),
+                category(8L, "여행추천", TravelInfoContentType.GENERAL)));
+        when(festivalAdminService.getEditData(10L))
+                .thenReturn(new FestivalEditData(persisted, List.of(image)));
+        doThrow(new FestivalValidationException("endDate", "행사 종료일은 시작일보다 빠를 수 없습니다."))
+                .when(festivalAdminService).update(
+                        org.mockito.ArgumentMatchers.eq(10L), org.mockito.ArgumentMatchers.any());
+
+        mockMvc.perform(post("/admin/festivals/10/edit")
+                        .with(user("admin").roles("ADMIN"))
+                        .param("title", "입력 유지 수정 축제")
+                        .param("scope", "DOMESTIC")
+                        .param("categoryId", "5")
+                        .param("startDate", "2026-10-24")
+                        .param("endDate", "2026-09-02"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/festivals/form"))
+                .andExpect(model().attributeHasFieldErrors("festivalForm", "endDate"))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("입력 유지 수정 축제")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("대표사진")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("여행추천"))));
+    }
+
+    @Test
+    void adminCanDeleteFestivalThroughPostAndReceivesFlashMessage() throws Exception {
+        mockMvc.perform(post("/admin/festivals/10/delete").with(user("admin").roles("ADMIN")))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/festivals"))
+                .andExpect(flash().attribute("festivalMessage", "축제·행사가 삭제되었습니다."));
+
+        verify(festivalAdminService).delete(10L);
+    }
+
+    private FestivalEditForm editForm() {
+        FestivalEditForm form = new FestivalEditForm();
+        form.setTitle("경복궁 별빛야행");
+        form.setContent("<p>행사 소개</p>");
+        form.setScope(TravelInfoScope.DOMESTIC);
+        form.setCategoryId(5L);
+        form.setStartDate(LocalDate.parse("2026-09-02"));
+        form.setEndDate(LocalDate.parse("2026-10-24"));
+        form.setEventPlace("경복궁");
+        return form;
+    }
+
+    private InfoImage image(Long id, boolean main, boolean thumbnail, String url) {
+        InfoImage image = new InfoImage();
+        image.setId(id);
+        image.setInfoId(10L);
+        image.setImageUrl(url);
+        image.setIsMain(main);
+        image.setIsThumbnail(thumbnail);
+        image.setSourceTitle(main ? "대표사진" : "공식 포스터");
+        image.setLicenseType("KOGL_TYPE_1");
+        return image;
     }
 
     private InfoCategory category(Long id, String name, TravelInfoContentType contentType) {

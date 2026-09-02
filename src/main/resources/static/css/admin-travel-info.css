@@ -301,6 +301,119 @@
     font-weight: 750;
 }
 
+.admin-kto-festival-image-picker {
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid #e5eaf2;
+}
+
+.admin-kto-festival-image-picker-header h3 {
+    margin: 0;
+    color: #3b4861;
+    font-size: 0.94rem;
+    font-weight: 750;
+}
+
+.admin-kto-festival-image-picker-header p,
+.admin-kto-festival-image-picker-status {
+    margin: 5px 0 0;
+    color: #737f94;
+    font-size: 0.79rem;
+    line-height: 1.5;
+}
+
+.admin-kto-festival-image-picker-status.is-error {
+    color: #bd4040;
+}
+
+.admin-kto-festival-image-picker-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+    margin-top: 11px;
+}
+
+.admin-kto-festival-image-option {
+    display: grid;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid #dfe5ee;
+    border-radius: 9px;
+    background: #fff;
+    cursor: pointer;
+}
+
+.admin-kto-festival-image-option > img,
+.admin-kto-festival-image-placeholder {
+    display: block;
+    width: 100%;
+    height: 104px;
+    object-fit: cover;
+    background: #f1f4f8;
+}
+
+.admin-kto-festival-image-placeholder {
+    display: grid;
+    place-items: center;
+    color: #8b95a7;
+    font-size: 0.76rem;
+}
+
+.admin-kto-festival-image-option-body {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+    padding: 9px;
+}
+
+.admin-kto-festival-image-option-body > strong {
+    color: #46536a;
+    font-size: 0.78rem;
+}
+
+.admin-kto-festival-image-option-meta,
+.admin-kto-festival-image-option-reason {
+    overflow-wrap: anywhere;
+    color: #788398;
+    font-size: 0.72rem;
+    line-height: 1.35;
+}
+
+.admin-kto-festival-image-option-select {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 3px;
+    color: #536078;
+    font-size: 0.75rem;
+    font-weight: 650;
+}
+
+.admin-kto-festival-image-option-select input {
+    margin: 0;
+}
+
+.admin-kto-festival-image-option.is-disabled {
+    background: #fafbfc;
+    cursor: not-allowed;
+    opacity: 0.68;
+}
+
+.admin-festival-existing-image-picker .admin-kto-festival-image-option > img,
+.admin-festival-existing-image-picker .admin-kto-festival-image-placeholder {
+    height: 150px;
+    object-fit: contain;
+    background: #f7f8fa;
+}
+
+.admin-festival-existing-image-picker .admin-kto-festival-image-option.is-none {
+    border-style: dashed;
+}
+
+.admin-kto-festival-image-option-reason {
+    color: #a2573f;
+}
+
 .admin-thumbnail-preview {
     display: grid;
     place-items: center;

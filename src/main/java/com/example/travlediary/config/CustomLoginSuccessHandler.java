@@ -1,8 +1,8 @@
 package com.example.travlediary.config;
 
-import com.example.travlediary.model.User;
 import com.example.travlediary.model.UserStatus;
 import com.example.travlediary.repository.user.UserMapper;
+import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.security.RestrictedAccountFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -31,12 +31,14 @@ public class CustomLoginSuccessHandler implements AuthenticationSuccessHandler {
             HttpServletResponse response,
             Authentication authentication
     ) throws IOException {
-        // 1) 세션에 userId 저장
-        User user = userMapper.findByUsername(authentication.getName());
-        request.getSession().setAttribute("userId", user.getId());
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        Long userId = userDetails.getId();
+
+        // 1) 인증 완료 후에는 username 이 아니라 DB 회원 ID를 세션 식별값으로 사용한다.
+        request.getSession().setAttribute("userId", userId);
 
         // 2) 이용제한 회원은 저장된 요청보다 제한 안내 화면을 우선한다.
-        if (user.getStatus() == UserStatus.RESTRICTED) {
+        if (userMapper.findStatusById(userId) == UserStatus.RESTRICTED) {
             requestCache.removeRequest(request, response);
             response.sendRedirect(RestrictedAccountFilter.RESTRICTED_PATH);
             return;

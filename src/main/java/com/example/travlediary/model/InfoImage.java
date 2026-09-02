@@ -18,6 +18,7 @@ public class InfoImage {
     private String sourceImageUrl; // 외부 원본 이미지 URL
     private Timestamp licenseCheckedAt; // 라이선스 확인 시각
     private Boolean isMain; // 대표 이미지 여부
+    private Boolean isThumbnail; // 목록 썸네일 여부
     private Integer orderIndex; // 정렬 순서
     private Timestamp createdAt; // 생성일
     private Long infoId; // 정보번호

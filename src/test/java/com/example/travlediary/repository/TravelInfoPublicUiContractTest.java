@@ -60,7 +60,7 @@ class TravelInfoPublicUiContractTest {
                 .contains("id=\"travel-info-results\"")
                 .contains("travel-info-grid", "travel-info-card", "travel-info-thumbnail")
                 .contains("travel-info-thumbnail-placeholder", "등록된 이미지가 없습니다")
-                .contains("travel-info-period", "info.startDate", "info.endDate")
+                .contains("travel-info-festival-period", "info.startDate", "info.endDate")
                 .contains("travel-info-pagination", "keyword=${keyword}", "page=${pageNumber}")
                 .contains("class=\"travel-info-sort\"", "data-travel-info-sort")
                 .contains("aria-label=\"여행정보 정렬\"")
@@ -119,6 +119,30 @@ class TravelInfoPublicUiContractTest {
                 .contains("position: absolute", "inset: 0")
                 .contains(".travel-info-card:focus-within")
                 .doesNotContain("/images/default.png");
+    }
+
+    @Test
+    void festivalCardsUseASeparateContainedPosterLayoutWithoutChangingGeneralCards()
+            throws IOException {
+        String fragment = resource("/templates/travel-info/fragments/list-results.html");
+        String css = resource("/static/css/travel-info.css");
+
+        assertThat(fragment)
+                .contains("th:classappend=\"${info.contentType.name() == 'FESTIVAL'} ? ' is-festival'\"")
+                .contains("travel-info-festival-thumbnail")
+                .contains("travel-info-festival-period")
+                .contains("#temporals.format(info.startDate, 'yyyy.MM.dd')")
+                .contains("#temporals.format(info.endDate, 'yyyy.MM.dd')")
+                .doesNotContain("travel-info-period-label");
+        assertThat(css)
+                .contains(".travel-info-card.is-festival .travel-info-thumbnail")
+                .contains("aspect-ratio: 4 / 5")
+                .contains(".travel-info-card.is-festival .travel-info-thumbnail img")
+                .contains("object-fit: contain")
+                .contains(".travel-info-card.is-festival .travel-info-thumbnail-placeholder")
+                .contains(".travel-info-card.is-festival .travel-info-type-meta")
+                .contains(".travel-info-card.is-festival .travel-info-card-bookmark")
+                .contains("@media (max-width: 620px)");
     }
 
     @Test

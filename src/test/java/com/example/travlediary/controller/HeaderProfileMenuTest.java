@@ -4,12 +4,16 @@ import com.example.travlediary.config.CustomLoginSuccessHandler;
 import com.example.travlediary.config.CustomLogoutSuccessHandler;
 import com.example.travlediary.config.SecurityConfig;
 import com.example.travlediary.controller.recommend.RandomTravelController;
+import com.example.travlediary.model.User;
+import com.example.travlediary.model.UserRole;
 import com.example.travlediary.repository.user.UserMapper;
+import com.example.travlediary.security.CustomUserDetails;
 import org.jsoup.Jsoup;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -19,7 +23,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -281,8 +286,19 @@ class HeaderProfileMenuTest {
     }
 
     private org.jsoup.nodes.Document page(String username, String role) throws Exception {
+        User user = new User();
+        user.setId("ADMIN".equals(role) ? 2L : 1L);
+        user.setUsername(username);
+        user.setUserPassword("password");
+        user.setUserRole(UserRole.valueOf(role));
+        when(userMapper.findById(user.getId())).thenReturn(user);
+
+        CustomUserDetails userDetails = new CustomUserDetails(user);
+        var authentication = new UsernamePasswordAuthenticationToken(
+                userDetails, userDetails.getPassword(), userDetails.getAuthorities());
+
         return Jsoup.parse(mockMvc.perform(get("/random-travel")
-                        .with(user(username).roles(role)))
+                        .with(authentication(authentication)))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString());
     }

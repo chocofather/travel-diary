@@ -4,22 +4,28 @@ import com.example.travlediary.config.CustomLoginSuccessHandler;
 import com.example.travlediary.config.CustomLogoutSuccessHandler;
 import com.example.travlediary.config.SecurityConfig;
 import com.example.travlediary.dto.HomePopularCourseDto;
+import com.example.travlediary.model.User;
+import com.example.travlediary.model.UserRole;
 import com.example.travlediary.repository.user.UserMapper;
+import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.course.CourseService;
 import org.junit.jupiter.api.Test;
 import org.jsoup.Jsoup;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
@@ -54,6 +60,7 @@ class HomeControllerTest {
         mockMvc.perform(get("/"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("home"))
+                .andExpect(model().attribute("isLoggedIn", false))
                 .andExpect(model().attribute("popularCourses", List.of(course)))
                 .andExpect(result -> {
                     var document = Jsoup.parse(result.getResponse().getContentAsString());
@@ -70,5 +77,35 @@ class HomeControllerTest {
                 });
 
         verify(courseService).getPopularCoursesForHome();
+    }
+
+    @Test
+    void authenticatedHomeLoadsCurrentUserByPrincipalId() throws Exception {
+        User user = user(7L, "member");
+        when(userMapper.findById(7L)).thenReturn(user);
+        when(courseService.getPopularCoursesForHome()).thenReturn(List.of());
+
+        mockMvc.perform(get("/").with(authentication(authenticationFor(user))))
+                .andExpect(status().isOk())
+                .andExpect(view().name("home"))
+                .andExpect(model().attribute("isLoggedIn", true))
+                .andExpect(model().attribute("user", user));
+
+        verify(userMapper, atLeastOnce()).findById(7L);
+    }
+
+    private UsernamePasswordAuthenticationToken authenticationFor(User user) {
+        CustomUserDetails userDetails = new CustomUserDetails(user);
+        return new UsernamePasswordAuthenticationToken(
+                userDetails, userDetails.getPassword(), userDetails.getAuthorities());
+    }
+
+    private User user(Long id, String username) {
+        User user = new User();
+        user.setId(id);
+        user.setUsername(username);
+        user.setUserPassword("encoded-password");
+        user.setUserRole(UserRole.USER);
+        return user;
     }
 }

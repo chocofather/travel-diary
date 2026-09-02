@@ -256,6 +256,60 @@ class KtoFestivalServiceTest {
     }
 
     @Test
+    void buildsThumbnailCandidatesFromMainAndDetailImagesWithoutSavingThumbnailsOrTrustingUrls() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        KtoFestivalService service = service(builder, "sample-key");
+        String common = detailBody("""
+                "contentid":"2648460","contenttypeid":"15","title":"경복궁 별빛야행",
+                "firstimage":"https://tong.visitkorea.or.kr/cms/resource/35/main.jpg",
+                "firstimage2":"https://tong.visitkorea.or.kr/cms/resource/35/main-small.jpg",
+                "cpyrhtDivCd":"Type1"
+                """);
+        String detailImages = """
+                {"response":{"header":{"resultCode":"0000","resultMsg":"OK"},"body":{
+                  "numOfRows":100,"pageNo":1,"totalCount":4,"items":{"item":[
+                    {"contentid":"2648460","imgname":"대표사진 중복",
+                     "originimgurl":"https://tong.visitkorea.or.kr/cms/resource/35/main.jpg",
+                     "smallimageurl":"https://tong.visitkorea.or.kr/cms/resource/35/main-thumb.jpg",
+                     "serialnum":"1","cpyrhtDivCd":"Type1"},
+                    {"contentid":"2648460","imgname":"공식 포스터",
+                     "originimgurl":"https://tong.visitkorea.or.kr/cms/resource/35/poster.jpg",
+                     "serialnum":"2","cpyrhtDivCd":"Type3"},
+                    {"contentid":"2648460","imgname":"미지원 이미지",
+                     "originimgurl":"https://tong.visitkorea.or.kr/cms/resource/35/blocked.jpg",
+                     "serialnum":"3","cpyrhtDivCd":"Type2"},
+                    {"contentid":"2648460","imgname":"식별값 없는 이미지",
+                     "originimgurl":"https://tong.visitkorea.or.kr/cms/resource/35/no-serial.jpg",
+                     "cpyrhtDivCd":"Type1"}
+                  ]}}}}
+                """;
+
+        server.expect(request -> {
+                    assertThat(request.getURI().getPath()).isEqualTo("/KorService2/detailCommon2");
+                    assertDecodedQuery(request.getURI(), "contentId", "2648460");
+                })
+                .andRespond(withSuccess(common, MediaType.APPLICATION_JSON));
+        server.expect(request -> assertDetailImageRequest(request.getURI(), 1, 100))
+                .andRespond(withSuccess(detailImages, MediaType.APPLICATION_JSON));
+
+        assertThat(service.getThumbnailCandidates("2648460"))
+                .extracting("selectionKey", "imageUrl", "imageName", "imageRole", "licenseType",
+                        "selectable", "unavailableReason")
+                .containsExactly(
+                        tuple("MAIN", "https://tong.visitkorea.or.kr/cms/resource/35/main.jpg",
+                                "경복궁 별빛야행", "대표사진", "KOGL_TYPE_1", true, null),
+                        tuple("DETAIL:2", "https://tong.visitkorea.or.kr/cms/resource/35/poster.jpg",
+                                "공식 포스터", "추가사진", "KOGL_TYPE_3", true, null),
+                        tuple("DETAIL:3", "https://tong.visitkorea.or.kr/cms/resource/35/blocked.jpg",
+                                "미지원 이미지", "추가사진", null, false, "지원하지 않는 저작권 유형입니다."),
+                        tuple(null, "https://tong.visitkorea.or.kr/cms/resource/35/no-serial.jpg",
+                                "식별값 없는 이미지", "추가사진", "KOGL_TYPE_1", false,
+                                "이미지 식별값을 확인할 수 없습니다."));
+        server.verify();
+    }
+
+    @Test
     void rejectsMalformedTourApiDatesAsAnUpstreamFailure() {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();

@@ -1,6 +1,7 @@
 package com.example.travlediary.controller;
 
 import com.example.travlediary.repository.user.UserMapper;
+import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.course.CourseService;
 
 import org.springframework.security.core.Authentication;
@@ -21,14 +22,23 @@ public class HomeController {
 
     @GetMapping("/")
     public String home(Model model, Authentication auth) {
-        boolean isLoggedIn = auth != null && auth.isAuthenticated();
+        CustomUserDetails userDetails = authenticatedUser(auth);
+        boolean isLoggedIn = userDetails != null;
         model.addAttribute("isLoggedIn", isLoggedIn);
         if (isLoggedIn) {
-            model.addAttribute("user", userMapper.findByUsername(auth.getName()));
+            model.addAttribute("user", userMapper.findById(userDetails.getId()));
         }
         model.addAttribute("popularCourses", courseService.getPopularCoursesForHome());
 
         return "home";
+    }
+
+    private CustomUserDetails authenticatedUser(Authentication auth) {
+        if (auth == null || !auth.isAuthenticated()
+                || !(auth.getPrincipal() instanceof CustomUserDetails userDetails)) {
+            return null;
+        }
+        return userDetails;
     }
 
 }

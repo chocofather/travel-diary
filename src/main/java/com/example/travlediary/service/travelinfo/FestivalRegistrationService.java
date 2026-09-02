@@ -46,6 +46,10 @@ public class FestivalRegistrationService {
             "TourAPI 대표이미지를 저장하지 못해 이미지 없이 등록했습니다.";
     private static final String ADDITIONAL_IMAGE_WARNING =
             "일부 TourAPI 추가이미지는 저작권을 확인할 수 없거나 다운로드하지 못해 건너뛰었습니다.";
+    private static final String THUMBNAIL_DOWNLOAD_WARNING =
+            "선택한 목록 썸네일 이미지를 저장하지 못해 대표이미지를 사용합니다.";
+    private static final String INVALID_THUMBNAIL_SELECTION_MESSAGE =
+            "선택한 목록 썸네일 이미지를 다시 확인해 주세요.";
 
     private final TravelInfoMapper travelInfoMapper;
     private final FestivalInfoMapper festivalInfoMapper;
@@ -93,13 +97,20 @@ public class FestivalRegistrationService {
         InfoCategory category = validateFestivalCategory(form.getCategoryId());
 
         String externalContentId = optionalText(form.getKtoFestivalContentId(), "ktoFestivalContentId", 100);
+        String thumbnailSelection = optionalText(form.getKtoThumbnailImageSelection(),
+                "ktoThumbnailImageSelection", 100);
+        if (externalContentId == null && thumbnailSelection != null) {
+            throw new FestivalValidationException("ktoThumbnailImageSelection",
+                    "TourAPI 축제 이미지에서만 목록 썸네일을 선택할 수 있습니다.");
+        }
         String sourceType = externalContentId == null ? ADMIN_SOURCE_TYPE : KTO_SOURCE_TYPE;
         if (externalContentId != null
                 && festivalInfoMapper.countBySourceTypeAndExternalContentId(sourceType, externalContentId) > 0) {
             throw duplicateTourApiFestival();
         }
 
-        PreparedFestivalImages preparedImages = prepareTourApiImages(externalContentId, title);
+        PreparedFestivalImages preparedImages = prepareTourApiImages(
+                externalContentId, title, thumbnailSelection);
         boolean lifecycleRegistered = registerRollbackCleanup(preparedImages.downloadedImages());
 
         try {
@@ -157,7 +168,9 @@ public class FestivalRegistrationService {
         }
     }
 
-    private PreparedFestivalImages prepareTourApiImages(String externalContentId, String fallbackTitle) {
+    private PreparedFestivalImages prepareTourApiImages(String externalContentId,
+                                                         String fallbackTitle,
+                                                         String thumbnailSelection) {
         if (externalContentId == null) {
             return PreparedFestivalImages.none();
         }
@@ -174,10 +187,22 @@ public class FestivalRegistrationService {
         String copyrightDivisionCode = optionalText(detail.copyrightDivisionCode());
         log.info("TourAPI 축제 대표이미지 저작권 코드 확인: contentId={}, cpyrhtDivCd={}",
                 externalContentId, copyrightDivisionCode);
-        List<PreparedFestivalImage> images = new ArrayList<>();
-        Set<String> sourceImageUrls = new LinkedHashSet<>();
         List<String> warnings = new ArrayList<>();
         String sourceTitle = firstNonBlank(optionalText(detail.title()), fallbackTitle);
+        List<KtoFestivalAdditionalImage> additionalImages = null;
+        try {
+            additionalImages = ktoFestivalService.getAdditionalImages(externalContentId);
+        } catch (KtoTourApiException exception) {
+            if (isDetailThumbnailSelection(thumbnailSelection)) {
+                throw invalidThumbnailSelection();
+            }
+            warnings.add(ADDITIONAL_IMAGE_WARNING);
+        }
+
+        SelectedThumbnail selectedThumbnail = resolveThumbnailSelection(
+                externalContentId, thumbnailSelection, detail, additionalImages);
+        List<PreparedFestivalImage> images = new ArrayList<>();
+        Set<String> sourceImageUrls = new LinkedHashSet<>();
 
         String mainImageUrl = optionalText(detail.firstImage());
         if (mainImageUrl != null) {
@@ -189,7 +214,8 @@ public class FestivalRegistrationService {
             } else {
                 try {
                     KtoDownloadedFestivalImage downloaded = festivalImageDownloadService.download(mainImageUrl);
-                    images.add(new PreparedFestivalImage(downloaded, license, sourceTitle, true, 1));
+                    images.add(new PreparedFestivalImage(downloaded, license, sourceTitle, true, 1,
+                            selectedThumbnail != null && selectedThumbnail.sourceImageUrl().equals(mainImageUrl)));
                     sourceImageUrls.add(mainImageUrl);
                 } catch (InvalidKtoPhotoUrlException | KtoPhotoDownloadException exception) {
                     warnings.add(IMAGE_DOWNLOAD_WARNING);
@@ -197,47 +223,44 @@ public class FestivalRegistrationService {
             }
         }
 
-        List<KtoFestivalAdditionalImage> additionalImages;
-        try {
-            additionalImages = ktoFestivalService.getAdditionalImages(externalContentId);
-        } catch (KtoTourApiException exception) {
-            warnings.add(ADDITIONAL_IMAGE_WARNING);
+        if (additionalImages == null) {
+            addThumbnailFallbackWarningIfNeeded(selectedThumbnail, images, warnings);
             return new PreparedFestivalImages(images, warningText(warnings));
         }
 
         int orderIndex = 2;
-        if (additionalImages != null) {
-            for (KtoFestivalAdditionalImage additionalImage : additionalImages) {
-                if (additionalImage == null
-                        || !externalContentId.equals(optionalText(additionalImage.contentId()))) {
-                    warnings.add(ADDITIONAL_IMAGE_WARNING);
-                    continue;
-                }
-                String sourceImageUrl = optionalText(additionalImage.originalImageUrl());
-                if (sourceImageUrl == null || sourceImageUrls.contains(sourceImageUrl)) {
-                    continue;
-                }
-                KtoFestivalImageLicense license = KtoFestivalImageLicense
-                        .fromCopyrightDivisionCode(additionalImage.copyrightDivisionCode())
-                        .orElse(null);
-                if (license == null) {
-                    warnings.add(ADDITIONAL_IMAGE_WARNING);
-                    continue;
-                }
-                try {
-                    KtoDownloadedFestivalImage downloaded = festivalImageDownloadService.download(sourceImageUrl);
-                    sourceImageUrls.add(sourceImageUrl);
-                    images.add(new PreparedFestivalImage(
-                            downloaded,
-                            license,
-                            firstNonBlank(optionalText(additionalImage.imageName()), sourceTitle),
-                            false,
-                            orderIndex++));
-                } catch (InvalidKtoPhotoUrlException | KtoPhotoDownloadException exception) {
-                    warnings.add(ADDITIONAL_IMAGE_WARNING);
-                }
+        for (KtoFestivalAdditionalImage additionalImage : additionalImages) {
+            if (additionalImage == null
+                    || !externalContentId.equals(optionalText(additionalImage.contentId()))) {
+                warnings.add(ADDITIONAL_IMAGE_WARNING);
+                continue;
+            }
+            String sourceImageUrl = optionalText(additionalImage.originalImageUrl());
+            if (sourceImageUrl == null || sourceImageUrls.contains(sourceImageUrl)) {
+                continue;
+            }
+            KtoFestivalImageLicense license = KtoFestivalImageLicense
+                    .fromCopyrightDivisionCode(additionalImage.copyrightDivisionCode())
+                    .orElse(null);
+            if (license == null) {
+                warnings.add(ADDITIONAL_IMAGE_WARNING);
+                continue;
+            }
+            try {
+                KtoDownloadedFestivalImage downloaded = festivalImageDownloadService.download(sourceImageUrl);
+                sourceImageUrls.add(sourceImageUrl);
+                images.add(new PreparedFestivalImage(
+                        downloaded,
+                        license,
+                        firstNonBlank(optionalText(additionalImage.imageName()), sourceTitle),
+                        false,
+                        orderIndex++,
+                        selectedThumbnail != null && selectedThumbnail.sourceImageUrl().equals(sourceImageUrl)));
+            } catch (InvalidKtoPhotoUrlException | KtoPhotoDownloadException exception) {
+                warnings.add(ADDITIONAL_IMAGE_WARNING);
             }
         }
+        addThumbnailFallbackWarningIfNeeded(selectedThumbnail, images, warnings);
         return new PreparedFestivalImages(images, warningText(warnings));
     }
 
@@ -254,6 +277,7 @@ public class FestivalRegistrationService {
         image.setSourceImageUrl(downloaded.sourceImageUrl());
         image.setLicenseType(preparedImage.license().name());
         image.setLicenseCheckedAt(new Timestamp(System.currentTimeMillis()));
+        image.setIsThumbnail(preparedImage.thumbnail());
         image.setInfoId(infoId);
         requireSingleRow(travelInfoMapper.insertInfoImage(image), "축제·행사 이미지를 저장하지 못했습니다.");
     }
@@ -338,6 +362,59 @@ public class FestivalRegistrationService {
         return new FestivalValidationException("ktoFestivalContentId", "이미 등록된 TourAPI 축제·행사입니다.");
     }
 
+    private SelectedThumbnail resolveThumbnailSelection(String externalContentId,
+                                                        String thumbnailSelection,
+                                                        KtoFestivalImageDetail detail,
+                                                        List<KtoFestivalAdditionalImage> additionalImages) {
+        if (thumbnailSelection == null) {
+            return null;
+        }
+        if ("MAIN".equals(thumbnailSelection)) {
+            String mainImageUrl = optionalText(detail.firstImage());
+            if (mainImageUrl == null || KtoFestivalImageLicense
+                    .fromCopyrightDivisionCode(detail.copyrightDivisionCode()).isEmpty()) {
+                throw invalidThumbnailSelection();
+            }
+            return new SelectedThumbnail(mainImageUrl);
+        }
+        if (!isDetailThumbnailSelection(thumbnailSelection) || additionalImages == null) {
+            throw invalidThumbnailSelection();
+        }
+        String serialNumber = thumbnailSelection.substring("DETAIL:".length());
+        for (KtoFestivalAdditionalImage image : additionalImages) {
+            if (image == null
+                    || !externalContentId.equals(optionalText(image.contentId()))
+                    || !serialNumber.equals(optionalText(image.serialNumber()))) {
+                continue;
+            }
+            String sourceImageUrl = optionalText(image.originalImageUrl());
+            if (sourceImageUrl == null || KtoFestivalImageLicense
+                    .fromCopyrightDivisionCode(image.copyrightDivisionCode()).isEmpty()) {
+                break;
+            }
+            return new SelectedThumbnail(sourceImageUrl);
+        }
+        throw invalidThumbnailSelection();
+    }
+
+    private boolean isDetailThumbnailSelection(String thumbnailSelection) {
+        return thumbnailSelection != null
+                && thumbnailSelection.startsWith("DETAIL:")
+                && thumbnailSelection.length() > "DETAIL:".length();
+    }
+
+    private void addThumbnailFallbackWarningIfNeeded(SelectedThumbnail selectedThumbnail,
+                                                      List<PreparedFestivalImage> images,
+                                                      List<String> warnings) {
+        if (selectedThumbnail != null && images.stream().noneMatch(PreparedFestivalImage::thumbnail)) {
+            warnings.add(THUMBNAIL_DOWNLOAD_WARNING);
+        }
+    }
+
+    private FestivalValidationException invalidThumbnailSelection() {
+        return new FestivalValidationException("ktoThumbnailImageSelection", INVALID_THUMBNAIL_SELECTION_MESSAGE);
+    }
+
     private String firstNonBlank(String first, String second) {
         return first != null && !first.isBlank() ? first : second;
     }
@@ -347,8 +424,12 @@ public class FestivalRegistrationService {
             KtoFestivalImageLicense license,
             String sourceTitle,
             boolean main,
-            int orderIndex
+            int orderIndex,
+            boolean thumbnail
     ) {
+    }
+
+    private record SelectedThumbnail(String sourceImageUrl) {
     }
 
     private record PreparedFestivalImages(

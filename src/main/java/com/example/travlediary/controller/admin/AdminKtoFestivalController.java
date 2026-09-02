@@ -2,6 +2,7 @@ package com.example.travlediary.controller.admin;
 
 import com.example.travlediary.service.kto.KtoFestivalService;
 import com.example.travlediary.service.kto.KtoTourApiException;
+import com.example.travlediary.dto.kto.KtoFestivalThumbnailCandidatesResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -65,6 +66,20 @@ public class AdminKtoFestivalController {
         }
         try {
             return ResponseEntity.ok(ktoFestivalService.getDetail(normalizedContentId));
+        } catch (KtoTourApiException exception) {
+            return apiError(exception);
+        }
+    }
+
+    @GetMapping("/images")
+    public ResponseEntity<?> images(@RequestParam(required = false) String contentId) {
+        String normalizedContentId = normalize(contentId);
+        if (normalizedContentId.isEmpty()) {
+            return error(HttpStatus.BAD_REQUEST, "축제 정보 식별값이 올바르지 않습니다.");
+        }
+        try {
+            return ResponseEntity.ok(new KtoFestivalThumbnailCandidatesResponse(
+                    normalizedContentId, ktoFestivalService.getThumbnailCandidates(normalizedContentId)));
         } catch (KtoTourApiException exception) {
             return apiError(exception);
         }

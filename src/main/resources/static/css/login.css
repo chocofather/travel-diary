@@ -233,6 +233,116 @@
     outline-offset: 2px;
 }
 
+.login-page .social-login {
+    margin-top: 20px;
+}
+
+.login-page .social-login__divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+    color: #98a2b3;
+    font-size: 12px;
+    line-height: 1;
+}
+
+.login-page .social-login__divider::before,
+.login-page .social-login__divider::after {
+    flex: 1;
+    height: 1px;
+    background: #eaecf0;
+    content: "";
+}
+
+.login-page .social-login__buttons {
+    display: grid;
+    gap: 10px;
+}
+
+.login-page .social-login-button {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 46px;
+    padding: 0 18px 0 52px;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1;
+    text-decoration: none;
+    box-sizing: border-box;
+    transition: border-color 0.15s ease, background-color 0.15s ease,
+        box-shadow 0.15s ease;
+}
+
+.login-page .social-login-button__icon {
+    position: absolute;
+    left: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+}
+
+.login-page .social-login-button__icon img {
+    display: block;
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+}
+
+.login-page .social-login-button--google {
+    border-color: #c9ccd1;
+    background: #fff;
+    color: #1f1f1f;
+    font-family: Roboto, Arial, sans-serif;
+}
+
+.login-page .social-login-button--google:hover {
+    border-color: #9aa0a6;
+    background: #f8fafd;
+    box-shadow: 0 1px 2px rgba(60, 64, 67, 0.16);
+}
+
+.login-page .social-login-button--kakao {
+    border-color: #fee500;
+    background: #fee500;
+    color: rgba(0, 0, 0, 0.85);
+}
+
+.login-page .social-login-button--kakao:hover {
+    border-color: #f4dc00;
+    background: #f4dc00;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.login-page .social-login-button--naver {
+    border-color: #03a94d;
+    background: #03a94d;
+    color: #fff;
+}
+
+.login-page .social-login-button--naver .social-login-button__icon img {
+    width: 24px;
+    height: 24px;
+}
+
+.login-page .social-login-button--naver:hover {
+    border-color: #03a94d;
+    background: #03a94d;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.login-page .social-login-button:focus-visible {
+    outline: 3px solid rgba(37, 99, 166, 0.28);
+    outline-offset: 2px;
+}
+
 .login-page .account-recovery {
     display: flex;
     align-items: center;
@@ -326,6 +436,69 @@
     font-size: 12px;
     line-height: 1.55;
     text-align: left;
+}
+
+.login-page .social-signup__account {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 20px;
+    padding: 13px 14px;
+    border-radius: 6px;
+    background: #f6f7f8;
+    color: #667085;
+    font-size: 13px;
+}
+
+.login-page .social-signup__account strong {
+    overflow-wrap: anywhere;
+    color: #344054;
+    font-size: 14px;
+}
+
+.login-page .social-signup__consents {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 4px 0 18px;
+}
+
+.login-page .social-signup__consents label {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    color: #475467;
+    font-size: 14px;
+    line-height: 1.5;
+    cursor: pointer;
+}
+
+.login-page .social-signup__consents input[type="checkbox"] {
+    flex: 0 0 auto;
+    width: 17px;
+    height: 17px;
+    margin: 2px 0 0;
+    accent-color: #2563a6;
+}
+
+.login-page .social-signup__consents em {
+    color: #2563a6;
+    font-style: normal;
+    font-weight: 700;
+}
+
+.login-page .social-signup__field-error {
+    margin: 6px 0 0;
+    color: #b42318;
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.login-page .social-signup__notice {
+    margin: 0 0 18px;
+    color: #667085;
+    font-size: 12px;
+    line-height: 1.55;
 }
 
 @media (max-width: 560px) {

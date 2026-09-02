@@ -23,7 +23,6 @@ public interface UserMapper {
     User findByUsername(@Param("username") String username);
     User findById(Long id);
     PublicUserProfileDto findPublicProfileById(@Param("id") Long id);
-    String findProfileImageByUsername(@Param("username") String username);
     MyPageProfileDto findMyPageProfileById(@Param("id") Long id);
     MyPageProfileDto findMyPageProfileByIdForUpdate(@Param("id") Long id);
     AccountDetailsDto findAccountDetailsById(@Param("id") Long id);

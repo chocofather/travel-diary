@@ -83,7 +83,8 @@
                   th:attr="aria-pressed=${festival.travelInfo.bookmarked},aria-label=${festival.travelInfo.bookmarked} ? '여행정보 저장 취소' : '여행정보 저장'"
                   data-travel-info-bookmark>
             <span class="festival-detail-bookmark-icon" aria-hidden="true"></span>
-            <span th:text="${festival.travelInfo.bookmarked} ? '저장됨' : '저장'">저장</span>
+            <span class="travel-info-bookmark-label"
+                  th:text="${festival.travelInfo.bookmarked} ? '저장됨' : '저장'">저장</span>
           </button>
         </div>
 
@@ -100,6 +101,12 @@
             <span th:if="${festival.address != null}" th:text="${festival.address}">서울특별시 종로구 사직로 161</span>
           </p>
         </div>
+
+        <p class="festival-detail-meta">
+          <span>등록 <time th:text="${#dates.format(festival.travelInfo.createdAt, 'yyyy.MM.dd')}">2026.08.01</time></span>
+          <span aria-hidden="true">·</span>
+          <span>조회 <span th:text="${festival.travelInfo.views}">0</span></span>
+        </p>
       </div>
     </header>
 
@@ -173,11 +180,6 @@
     </section>
 
     <footer class="festival-detail-footer">
-      <p class="festival-detail-meta">
-        <time th:text="${#dates.format(festival.travelInfo.createdAt, 'yyyy.MM.dd')}">2026.08.01</time>
-        <span aria-hidden="true">·</span>
-        <span>조회 <span th:text="${festival.travelInfo.views}">0</span></span>
-      </p>
       <a class="festival-detail-back" th:href="${listUrl}">목록으로</a>
     </footer>
   </article>

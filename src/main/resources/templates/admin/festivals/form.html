@@ -13,26 +13,29 @@
   <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/quill-resize-module@2.1.3/dist/resize.js"></script>
   <script src="/js/quill-editor-init.js"></script>
-  <script src="/js/admin-festival-autofill.js" defer></script>
+  <script th:if="${!editMode}" src="/js/admin-festival-autofill.js" defer></script>
 </th:block>
 <th:block th:fragment="body">
   <section class="admin-page-section admin-travel-info-form-page">
     <header class="admin-page-header">
       <div class="admin-page-heading">
-        <h1 class="admin-page-title">축제·행사 등록</h1>
-        <p class="admin-page-description">축제·행사 정보를 입력하고 TourAPI 후보를 자동입력할 수 있습니다.</p>
+        <h1 class="admin-page-title" th:text="${editMode} ? '축제·행사 수정' : '축제·행사 등록'">축제·행사 등록</h1>
+        <p class="admin-page-description"
+           th:text="${editMode} ? '저장된 축제·행사 정보와 목록 썸네일을 수정합니다.' : '축제·행사 정보를 입력하고 TourAPI 후보를 자동입력할 수 있습니다.'">축제·행사 정보를 입력하고 TourAPI 후보를 자동입력할 수 있습니다.</p>
       </div>
       <div class="admin-page-actions">
         <a th:href="@{/admin/festivals}" class="admin-btn">축제·행사 목록</a>
       </div>
     </header>
 
-    <form id="festival-create-form" class="admin-travel-info-form"
-          th:action="@{/admin/festivals/create}" method="post" th:object="${festivalForm}">
+    <form th:id="${editMode} ? 'festival-edit-form' : 'festival-create-form'"
+          class="admin-travel-info-form" th:action="${formAction}" method="post" th:object="${festivalForm}">
       <div class="admin-alert" th:if="${#fields.hasAnyErrors()}" role="alert">
         <p th:each="error : ${#fields.allErrors()}" th:text="${error}">입력값을 확인해 주세요.</p>
       </div>
+      <th:block th:if="${!editMode}">
       <input id="kto-festival-content-id" type="hidden" th:field="*{ktoFestivalContentId}">
+      <input id="kto-festival-thumbnail-selection" type="hidden" th:field="*{ktoThumbnailImageSelection}">
       <section class="admin-form-card is-wide admin-travel-info-section admin-kto-festival-section"
                data-admin-festival-autofill>
         <div class="admin-travel-info-section-header">
@@ -94,6 +97,49 @@
         </div>
         <p class="admin-kto-festival-status" data-festival-status role="status" aria-live="polite">축제·행사명을 입력한 뒤 검색해 주세요.</p>
         <div class="admin-kto-festival-results" data-festival-results></div>
+        <section class="admin-kto-festival-image-picker" data-festival-image-picker hidden
+                 aria-labelledby="festival-thumbnail-picker-title">
+          <div class="admin-kto-festival-image-picker-header">
+            <h3 id="festival-thumbnail-picker-title">목록 썸네일 선택</h3>
+            <p>등록할 이미지 중 여행정보 목록 카드에 사용할 사진을 한 장 선택할 수 있습니다.</p>
+          </div>
+          <p class="admin-kto-festival-image-picker-status" data-festival-image-picker-status
+             role="status" aria-live="polite"></p>
+          <div class="admin-kto-festival-image-picker-grid" data-festival-image-picker-items
+               role="radiogroup" aria-label="목록 썸네일로 사용할 축제 이미지"></div>
+        </section>
+      </section>
+      </th:block>
+
+      <section th:if="${editMode and !#lists.isEmpty(festivalImages)}"
+               class="admin-form-card is-wide admin-travel-info-section">
+        <div class="admin-travel-info-section-header">
+          <h2>목록 썸네일 선택</h2>
+          <p>저장된 이미지 중 목록 카드에 사용할 이미지를 선택합니다. 선택하지 않으면 대표이미지가 사용됩니다.</p>
+        </div>
+        <div class="admin-kto-festival-image-picker-grid admin-festival-existing-image-picker"
+             role="radiogroup" aria-label="목록 썸네일로 사용할 축제 이미지">
+          <label class="admin-kto-festival-image-option is-existing is-none">
+            <span class="admin-kto-festival-image-placeholder">선택 안 함</span>
+            <span class="admin-kto-festival-image-option-body">
+              <strong>대표이미지 fallback</strong>
+              <span class="admin-kto-festival-image-option-select">
+                <input type="radio" th:field="*{thumbnailImageId}" value=""> 썸네일 해제
+              </span>
+            </span>
+          </label>
+          <label class="admin-kto-festival-image-option is-existing" th:each="image : ${festivalImages}">
+            <img th:src="${image.imageUrl}" th:alt="${image.sourceTitle ?: '축제 이미지'}">
+            <span class="admin-kto-festival-image-option-body">
+              <strong th:text="${image.sourceTitle ?: (image.isMain ? '대표사진' : '축제 이미지')}">축제 이미지</strong>
+              <span class="admin-kto-festival-image-option-meta"
+                    th:text="${(image.isMain ? '상세 대표 · ' : '') + (image.licenseType ?: '라이선스 미표기')}">상세 대표</span>
+              <span class="admin-kto-festival-image-option-select">
+                <input type="radio" th:field="*{thumbnailImageId}" th:value="${image.id}"> 목록 썸네일로 사용
+              </span>
+            </span>
+          </label>
+        </div>
       </section>
 
       <section class="admin-form-card is-wide admin-travel-info-section">
@@ -168,7 +214,8 @@
 
       <div class="admin-travel-info-submit-actions">
         <a th:href="@{/admin/festivals}" class="admin-btn">목록으로</a>
-        <button type="submit" class="admin-btn is-primary">축제·행사 등록</button>
+        <button type="submit" class="admin-btn is-primary"
+                th:text="${editMode} ? '변경사항 저장' : '축제·행사 등록'">축제·행사 등록</button>
       </div>
     </form>
   </section>

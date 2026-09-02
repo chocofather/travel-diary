@@ -68,5 +68,10 @@ public interface TravelInfoMapper {
 
     int insertInfoImage(InfoImage infoImage);
 
+    int clearThumbnailsByInfoId(Long infoId);
+
+    int setThumbnailByIdAndInfoId(@Param("imageId") Long imageId,
+                                  @Param("infoId") Long infoId);
+
     int deleteMainImagesByInfoId(Long infoId);
 }
