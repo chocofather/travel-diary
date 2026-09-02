@@ -730,15 +730,16 @@ class TravelPlanCreateFormUiContractTest {
     void headerLinksToTheTravelPlanListNextToTheDiaryMenu() throws IOException {
         String header = resource("/templates/fragments/header.html");
 
-        assertThat(header).contains("<a href=\"/travel-plans\">함께 계획하기</a>");
+        assertThat(header).contains(
+                "href=\"/travel-plans\" th:text=\"#{nav.record.planTogether}\"");
         // 여행기록 메뉴 그룹 안, 나의 여행일기와 랜덤 여행 사이에 둔다
         assertThat(header.indexOf("함께 계획하기"))
                 .isGreaterThan(header.indexOf("나의 여행일기"))
                 .isLessThan(header.indexOf("랜덤 여행"));
         // 기존 항목은 그대로 둔다
         assertThat(header)
-                .contains("<a href=\"/diaries\">나의 여행일기</a>")
-                .contains("<a href=\"/random-travel\">랜덤 여행</a>");
+                .contains("href=\"/diaries\" th:text=\"#{nav.record.diary}\"")
+                .contains("href=\"/random-travel\" th:text=\"#{nav.record.random}\"");
     }
 
     private String createHtml() throws IOException {

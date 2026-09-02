@@ -21,7 +21,8 @@ class TravelPlanHeaderLinkContractTest {
         String header = headerHtml();
 
         // 여행계획 메뉴는 "함께 계획하기" 하나뿐이다. 같은 뜻의 메뉴를 더 만들지 않는다
-        assertThat(header).contains("<li><a href=\"/travel-plans\">함께 계획하기</a></li>");
+        assertThat(header).contains(
+                "href=\"/travel-plans\" th:text=\"#{nav.record.planTogether}\"");
         assertThat(countOf(header, "href=\"/travel-plans\"")).isEqualTo(1);
     }
 

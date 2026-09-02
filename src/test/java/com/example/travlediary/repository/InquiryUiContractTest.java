@@ -106,7 +106,8 @@ class InquiryUiContractTest {
         String adminSidebar = file(
                 "src/main/resources/templates/fragments/admin/sidebar.html");
 
-        assertThat(header).contains("href=\"/support/inquiries\">1:1 문의</a>");
+        assertThat(header).contains(
+                "href=\"/support/inquiries\" th:text=\"#{nav.support.inquiry}\"");
         assertThat(supportNavigation)
                 .contains("@{/support/inquiries}")
                 .contains("activeMenu == 'inquiries'")

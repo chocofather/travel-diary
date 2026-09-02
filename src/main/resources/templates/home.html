@@ -1,7 +1,6 @@
 <!-- templates/home.html -->
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      lang="ko"
       th:replace="layout/main :: layout(~{::body}, ~{::headFragment})">
 
 <th:block th:fragment="headFragment">
@@ -11,22 +10,45 @@
 
 <th:block th:fragment="body">
   <div class="home-page">
+    <div id="home-i18n" hidden
+         th:data-spring-badge="#{home.season.spring.badge}"
+         th:data-spring-title="#{home.season.spring.title}"
+         th:data-spring-description="#{home.season.spring.description}"
+         th:data-spring-tags="#{home.season.spring.tags}"
+         th:data-summer-badge="#{home.season.summer.badge}"
+         th:data-summer-title="#{home.season.summer.title}"
+         th:data-summer-description="#{home.season.summer.description}"
+         th:data-summer-tags="#{home.season.summer.tags}"
+         th:data-fall-badge="#{home.season.fall.badge}"
+         th:data-fall-title="#{home.season.fall.title}"
+         th:data-fall-description="#{home.season.fall.description}"
+         th:data-fall-tags="#{home.season.fall.tags}"
+         th:data-winter-badge="#{home.season.winter.badge}"
+         th:data-winter-title="#{home.season.winter.title}"
+         th:data-winter-description="#{home.season.winter.description}"
+         th:data-winter-tags="#{home.season.winter.tags}"
+         th:data-popular-tags="#{home.popular.tags}"
+         th:data-destination-empty="#{home.destination.empty}"
+         th:data-destination-error="#{home.destination.error}"
+         th:data-event-details="#{home.event.details}"
+         th:data-event-pause="#{home.event.pause}"
+         th:data-event-play="#{home.event.play}"></div>
     <p class="home-withdrawal-toast" data-withdrawal-toast
        th:if="${param.withdrawn != null and param.withdrawn[0] == 'true'}"
        role="status" aria-live="polite" aria-atomic="true">
-      회원 탈퇴가 완료되었습니다.
+      <span th:text="#{home.withdrawal.completed}">회원 탈퇴가 완료되었습니다.</span>
     </p>
 
     <!-- 이벤트 슬라이더 -->
-    <section id="event-slider" aria-label="진행 중인 이벤트">
+    <section id="event-slider" th:aria-label="#{home.event.sectionLabel}">
       <div class="swiper">
         <div class="swiper-wrapper" id="slide-area"></div>
         <div class="slider-ui">
           <span id="slide-index">01</span> /
           <span id="slide-total">--</span>
-          <button type="button" class="nav prev" aria-label="이전 이벤트">❮</button>
-          <button type="button" class="nav pause" aria-label="자동 재생 일시정지">❚❚</button>
-          <button type="button" class="nav next" aria-label="다음 이벤트">❯</button>
+          <button type="button" class="nav prev" th:aria-label="#{home.event.previous}">❮</button>
+          <button type="button" class="nav pause" th:aria-label="#{home.event.pause}">❚❚</button>
+          <button type="button" class="nav next" th:aria-label="#{home.event.next}">❯</button>
           <div class="progress" aria-hidden="true"><span id="progress-bar"></span></div>
         </div>
       </div>
@@ -49,9 +71,9 @@
     <!-- 인기 여행지 -->
     <section class="popular-recommend">
       <div class="recommend-header">
-        <span class="recommend-badge">이런 여행지 어때요?</span>
-        <h2 class="recommend-title">국내·해외 인기 많은 여행지</h2>
-        <p class="recommend-sub">다양한 테마로 인기 많은 여행지를 만나보세요.</p>
+        <span class="recommend-badge" th:text="#{home.popular.badge}">이런 여행지 어때요?</span>
+        <h2 class="recommend-title" th:text="#{home.popular.title}">국내·해외 인기 많은 여행지</h2>
+        <p class="recommend-sub" th:text="#{home.popular.description}">다양한 테마로 인기 많은 여행지를 만나보세요.</p>
       </div>
       <div class="recommend-tag-list" id="popular-tag-list"></div>
       <div class="recommend-card-list" id="recommend-card-list"></div>
@@ -60,9 +82,9 @@
     <!-- 여행자 인기 코스 -->
     <section class="popular-course-section" aria-labelledby="popular-course-title">
       <div class="home-section-header">
-        <span class="home-section-badge">여행자의 기록</span>
-        <h2 id="popular-course-title">여행자들이 많이 본 코스</h2>
-        <p>다른 여행자들이 직접 만든 동선을 참고해 다음 여행을 계획해 보세요.</p>
+        <span class="home-section-badge" th:text="#{home.course.badge}">여행자의 기록</span>
+        <h2 id="popular-course-title" th:text="#{home.course.title}">여행자들이 많이 본 코스</h2>
+        <p th:text="#{home.course.description}">다른 여행자들이 직접 만든 동선을 참고해 다음 여행을 계획해 보세요.</p>
       </div>
 
       <div class="popular-course-list" th:if="${!#lists.isEmpty(popularCourses)}">
@@ -72,10 +94,10 @@
           <p class="popular-course-meta">
             <span th:text="${course.nickname}">minjun</span>
             <span aria-hidden="true">·</span>
-            <span th:text="|조회 ${#numbers.formatInteger(course.views, 1, 'COMMA')}|">조회 1,284</span>
+            <span th:text="#{home.course.views(${#numbers.formatInteger(course.views, 1, 'COMMA')})}">조회 1,284</span>
           </p>
           <div class="popular-course-route">
-            <span class="popular-course-route-label">경로</span>
+            <span class="popular-course-route-label" th:text="#{home.course.route}">경로</span>
             <div class="popular-course-route-track">
               <th:block th:each="destinationName, stopStatus : ${course.previewDestinationNames}">
                 <span class="popular-course-route-stop">
@@ -92,12 +114,13 @@
             </div>
           </div>
           <div class="popular-course-footer">
-            <span th:text="|장소 ${course.totalDestinationCount}곳|">장소 5곳</span>
+            <span th:text="#{home.course.stopCount(${course.totalDestinationCount})}">장소 5곳</span>
             <span class="popular-course-arrow" aria-hidden="true">→</span>
           </div>
         </a>
       </div>
-      <p class="home-empty-state" th:if="${#lists.isEmpty(popularCourses)}">
+      <p class="home-empty-state" th:if="${#lists.isEmpty(popularCourses)}"
+         th:text="#{home.course.empty}">
         아직 소개할 여행 코스가 없습니다.
       </p>
     </section>

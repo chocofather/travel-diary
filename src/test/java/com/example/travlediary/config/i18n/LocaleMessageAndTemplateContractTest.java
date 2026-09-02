@@ -8,10 +8,28 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
+import java.util.Properties;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class LocaleMessageAndTemplateContractTest {
+
+    @Test
+    void everyLocaleBundleDefinesTheSameKeysAsTheKoreanFallbackBundle() throws IOException {
+        Properties fallback = properties("/messages.properties");
+
+        for (String localeBundle : new String[]{
+                "/messages_ko.properties",
+                "/messages_en.properties",
+                "/messages_ja.properties",
+                "/messages_zh_CN.properties",
+                "/messages_zh_TW.properties"
+        }) {
+            assertThat(properties(localeBundle).stringPropertyNames())
+                    .as("message keys in %s", localeBundle)
+                    .containsExactlyInAnyOrderElementsOf(fallback.stringPropertyNames());
+        }
+    }
 
     @Test
     void headerMessagesResolveForAllFiveLanguagesIncludingBothChineseBundles() {
@@ -25,11 +43,44 @@ class LocaleMessageAndTemplateContractTest {
         assertThat(messages.getMessage("nav.community", null, Locale.forLanguageTag("en")))
                 .isEqualTo("Community");
         assertThat(messages.getMessage("nav.community", null, Locale.forLanguageTag("ja")))
-                .isEqualTo("旅行コミュニティ");
+                .isEqualTo("コミュニティ");
         assertThat(messages.getMessage("nav.community", null, Locale.forLanguageTag("zh-CN")))
                 .isEqualTo("旅行社区");
         assertThat(messages.getMessage("nav.community", null, Locale.forLanguageTag("zh-TW")))
                 .isEqualTo("旅遊社群");
+
+        assertThat(messages.getMessage("nav.community.question", null, Locale.forLanguageTag("ko")))
+                .isEqualTo("여행 질문");
+        assertThat(messages.getMessage("nav.community.question", null, Locale.forLanguageTag("en")))
+                .isEqualTo("Travel Q&A");
+        assertThat(messages.getMessage("nav.community.question", null, Locale.forLanguageTag("ja")))
+                .isEqualTo("旅の質問");
+        assertThat(messages.getMessage("nav.community.question", null, Locale.forLanguageTag("zh-CN")))
+                .isEqualTo("旅行问答");
+        assertThat(messages.getMessage("nav.community.question", null, Locale.forLanguageTag("zh-TW")))
+                .isEqualTo("旅遊問答");
+
+        assertThat(messages.getMessage("footer.privacy", null, Locale.forLanguageTag("ko")))
+                .isEqualTo("개인정보처리방침");
+        assertThat(messages.getMessage("footer.privacy", null, Locale.forLanguageTag("en")))
+                .isEqualTo("Privacy Policy");
+        assertThat(messages.getMessage("footer.privacy", null, Locale.forLanguageTag("ja")))
+                .isEqualTo("プライバシーポリシー");
+        assertThat(messages.getMessage("footer.privacy", null, Locale.forLanguageTag("zh-CN")))
+                .isEqualTo("隐私政策");
+        assertThat(messages.getMessage("footer.privacy", null, Locale.forLanguageTag("zh-TW")))
+                .isEqualTo("隱私權政策");
+
+        assertThat(messages.getMessage("home.course.stopCount", new Object[]{5},
+                        Locale.forLanguageTag("ko"))).isEqualTo("장소 5곳");
+        assertThat(messages.getMessage("home.course.stopCount", new Object[]{5},
+                        Locale.forLanguageTag("en"))).isEqualTo("5 places");
+        assertThat(messages.getMessage("home.course.stopCount", new Object[]{5},
+                        Locale.forLanguageTag("ja"))).isEqualTo("5か所");
+        assertThat(messages.getMessage("home.course.stopCount", new Object[]{5},
+                        Locale.forLanguageTag("zh-CN"))).isEqualTo("5个地点");
+        assertThat(messages.getMessage("home.course.stopCount", new Object[]{5},
+                        Locale.forLanguageTag("zh-TW"))).isEqualTo("5個地點");
     }
 
     @Test
@@ -58,5 +109,14 @@ class LocaleMessageAndTemplateContractTest {
             assertThat(input).as("resource %s", path).isNotNull();
             return new String(input.readAllBytes(), StandardCharsets.UTF_8);
         }
+    }
+
+    private Properties properties(String path) throws IOException {
+        Properties properties = new Properties();
+        try (InputStream input = getClass().getResourceAsStream(path)) {
+            assertThat(input).as("resource %s", path).isNotNull();
+            properties.load(new java.io.InputStreamReader(input, StandardCharsets.UTF_8));
+        }
+        return properties;
     }
 }

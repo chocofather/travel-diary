@@ -1,58 +1,42 @@
+const homeI18n = document.getElementById('home-i18n').dataset;
+
+function localizedTags(labels, ids) {
+    return labels.split('|').map((label, index) => ({label, id: ids[index]}));
+}
+
 // 1. 시즌별 메타데이터 (각 태그: label, id)
 const seasonMeta = {
     SPRING: {
-        badge: '따듯한 봄 여행지 여기 어떠세요? 🌸',
-        title: '일기장 속에 저장하고 싶은 봄 여행지',
-        desc: '향긋한 꽃내음과 따스한 햇살이 가득한 곳, 설렘 가득한 봄 여행지를 추천합니다.',
+        badge: homeI18n.springBadge,
+        title: homeI18n.springTitle,
+        desc: homeI18n.springDescription,
         bgClass: 'spring',
         monthRange: [3,     4, 5],
-        tags: [
-            { label: "국내 봄 여행지", id: 89 },
-            { label: "벚꽃 여행", id: 91 },
-            { label: "피크닉 명소", id: 88 },
-            { label: "해외 봄 여행지", id: 90 },
-            { label: "일본 벚꽃 명소", id: 93 }
-        ]
+        tags: localizedTags(homeI18n.springTags, [89, 91, 88, 90, 93])
     },
     SUMMER: {
-        badge: '무더운 여름 지금 휴가 떠나볼까요? ☀️',
-        title: '일기장 속에 저장하고 싶은 여름 여행지',
-        desc: '여름방학·휴가철, 시원한 바다와 푸른 자연이 기다리는 인기 여행지입니다.',
+        badge: homeI18n.summerBadge,
+        title: homeI18n.summerTitle,
+        desc: homeI18n.summerDescription,
         bgClass: 'summer',
         monthRange: [6, 7, 8],
-        tags: [
-            { label: "바다 여행", id: 6 },
-            { label: "계곡 여행", id: 94 },
-            { label: "해외 휴양지", id: 96 },
-            { label: "섬 여행", id: 23 },
-            { label: "여름 축제", id: 97 }
-        ]
+        tags: localizedTags(homeI18n.summerTags, [6, 94, 96, 23, 97])
     },
     FALL: {
-        badge: '선선한 바람, 가을 감성 여행 🍂',
-        title: '일기장 속에 저장하고 싶은 가을 여행지',
-        desc: '형형색색 물든 단풍길과 가을만의 감성이 가득한 여행지로 떠나보세요.',
+        badge: homeI18n.fallBadge,
+        title: homeI18n.fallTitle,
+        desc: homeI18n.fallDescription,
         bgClass: 'fall',
         monthRange: [9, 10, 11],
-        tags: [
-            { label: "단풍 여행", id: 46 },
-            { label: "가을 풍경 여행", id: 98 },
-            { label: "가을 축제", id: 99 }
-        ]
+        tags: localizedTags(homeI18n.fallTags, [46, 98, 99])
     },
     WINTER: {
-        badge: '눈꽃처럼 반짝이는 겨울 여행지 ❄️',
-        title: '일기장 속에 저장하고 싶은 겨울 여행지',
-        desc: '따뜻한 온천, 눈 내리는 설경 속에서 즐기는 특별한 겨울 여행을 소개합니다.',
+        badge: homeI18n.winterBadge,
+        title: homeI18n.winterTitle,
+        desc: homeI18n.winterDescription,
         bgClass: 'winter',
         monthRange: [12, 1, 2],
-        tags: [
-            { label: "눈꽃 여행", id: 100 },
-            { label: "온천 여행", id: 30 },
-            { label: "겨울 스포츠", id: 101 },
-            { label: "따뜻한 여행지", id: 102 },
-            { label: "겨울 축제", id: 103 }
-        ]
+        tags: localizedTags(homeI18n.winterTags, [100, 30, 101, 102, 103])
     }
 };
 
@@ -134,14 +118,14 @@ if (meta.tags.length > 0) {
 }
 
 // =========== 7. 인기 많은 여행지 추천 (하단 인기 태그/카드) ===========
-const popularTags = [
-    { label: "국내 인기", api: "/api/popular-destinations/domestic" },
-    { label: "해외 인기", api: "/api/popular-destinations/overseas" },
-    { label: "역사 여행", api: "/api/popular-destinations/history" },
-    { label: "인생샷 여행", api: "/api/popular-destinations/photo" },
-    { label: "박물관·미술관", api: "/api/popular-destinations/artmuseum" },
-    { label: "수족관·동물원", api: "/api/popular-destinations/zoo" }
-];
+const popularTags = localizedTags(homeI18n.popularTags, [
+    "/api/popular-destinations/domestic",
+    "/api/popular-destinations/overseas",
+    "/api/popular-destinations/history",
+    "/api/popular-destinations/photo",
+    "/api/popular-destinations/artmuseum",
+    "/api/popular-destinations/zoo"
+]).map(tag => ({label: tag.label, api: tag.id}));
 
 const popularTagList = document.getElementById('popular-tag-list');
 const recommendCardList = document.getElementById('recommend-card-list');
@@ -170,14 +154,20 @@ async function renderPopularRecommend(api, limit = 5) {
         const res = await fetch(`${api}?limit=${limit}`);
         const data = await res.json();
         if (!Array.isArray(data) || data.length === 0) {
-            recommendCardList.innerHTML = '<div class="home-empty-state">데이터가 없습니다.</div>';
+            const emptyState = document.createElement('div');
+            emptyState.className = 'home-empty-state';
+            emptyState.textContent = homeI18n.destinationEmpty;
+            recommendCardList.appendChild(emptyState);
             return;
         }
         data.forEach(dest => {
             recommendCardList.appendChild(createDestinationCard(dest));
         });
     } catch (e) {
-        recommendCardList.innerHTML = '<div class="home-empty-state">불러오기에 실패했습니다.</div>';
+        const errorState = document.createElement('div');
+        errorState.className = 'home-empty-state';
+        errorState.textContent = homeI18n.destinationError;
+        recommendCardList.appendChild(errorState);
     }
 }
 

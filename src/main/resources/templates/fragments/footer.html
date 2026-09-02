@@ -11,14 +11,14 @@
       <div class="footer-logo">여행일기 Travel Diary</div>
 
       <ul class="footer-links">
-        <li><a href="#">이용약관</a></li>
-        <li><a href="#">개인정보처리방침</a></li>
-        <li><a href="#">고객센터</a></li>
+        <li><a href="#" th:text="#{footer.terms}">이용약관</a></li>
+        <li><a href="#" th:text="#{footer.privacy}">개인정보처리방침</a></li>
+        <li><a href="#" th:text="#{footer.support}">고객센터</a></li>
       </ul>
 
       <div class="footer-info">
-        <p>© 2025 여행일기. All rights reserved.</p>
-        <p>Contact: travel@diary.com</p>
+        <p th:text="#{footer.copyright}">© 2025 여행일기 Travel Diary. 모든 권리 보유.</p>
+        <p><span th:text="#{footer.contact}">문의</span>: travel@diary.com</p>
       </div>
     </div>
   </div>

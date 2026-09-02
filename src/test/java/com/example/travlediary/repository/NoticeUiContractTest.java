@@ -63,10 +63,10 @@ class NoticeUiContractTest {
         String sidebar = file("src/main/resources/templates/fragments/admin/sidebar.html");
 
         assertThat(header)
-                .contains(">고객센터</a>")
-                .contains("href=\"/support/notices\">공지사항</a>")
-                .contains("href=\"/support/faq\">자주 묻는 질문</a>")
-                .contains("href=\"/support/inquiries\">1:1 문의</a>")
+                .contains("th:text=\"#{nav.support}\"")
+                .contains("href=\"/support/notices\" th:text=\"#{nav.support.notices}\"")
+                .contains("href=\"/support/faq\" th:text=\"#{nav.support.faq}\"")
+                .contains("href=\"/support/inquiries\" th:text=\"#{nav.support.inquiry}\"")
                 .contains("hasRole(''ADMIN'')")
                 .contains("href=\"/admin\" class=\"profile-menu-item profile-menu-admin\"")
                 .doesNotContain("class=\"admin-link\"");

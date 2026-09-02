@@ -63,9 +63,9 @@ class FaqUiContractTest {
         String sidebar = file("src/main/resources/templates/fragments/admin/sidebar.html");
 
         assertThat(header)
-                .contains("href=\"/support/notices\">공지사항</a>")
-                .contains("href=\"/support/faq\">자주 묻는 질문</a>")
-                .contains("href=\"/support/inquiries\">1:1 문의</a>");
+                .contains("href=\"/support/notices\" th:text=\"#{nav.support.notices}\"")
+                .contains("href=\"/support/faq\" th:text=\"#{nav.support.faq}\"")
+                .contains("href=\"/support/inquiries\" th:text=\"#{nav.support.inquiry}\"");
         assertThat(sidebar)
                 .contains("@{/admin/notices}", "@{/admin/faqs}")
                 .contains("activeMenu == 'faqs'")

@@ -88,6 +88,29 @@ class HomePageContractTest {
                 .contains("text-overflow: ellipsis");
     }
 
+    @Test
+    void mainScriptsReadLocalizedUiFromTheRenderedPageWithoutChangingApiContentBindings()
+            throws IOException {
+        String template = resource("/templates/home.html");
+        String homeScript = resource("/static/js/home.js");
+        String sliderScript = resource("/static/js/slider.js");
+
+        assertThat(template)
+                .contains("id=\"home-i18n\"")
+                .contains("#{home.season.spring.title}")
+                .contains("#{home.event.details}")
+                .contains("th:text=\"${course.title}\"")
+                .contains("th:text=\"${destinationName}\"");
+        assertThat(homeScript)
+                .contains("home-i18n", ".dataset", "homeI18n.springTitle", "homeI18n.popularTags")
+                .contains("${dest.name}", "${dest.regionName}")
+                .doesNotContain("데이터가 없습니다.", "불러오기에 실패했습니다.");
+        assertThat(sliderScript)
+                .contains("home-i18n", ".dataset", "homeI18n.eventDetails")
+                .contains("${ev.title}", "${ev.description}")
+                .doesNotContain(">자세히 보기<");
+    }
+
     private String resource(String path) throws IOException {
         try (InputStream input = getClass().getResourceAsStream(path)) {
             assertThat(input).as("resource %s", path).isNotNull();

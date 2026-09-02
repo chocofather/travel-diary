@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', async () => {
+    const homeI18n = document.getElementById('home-i18n').dataset;
     // 0. 변수 최상단에 선언
     let progress = 0;
     let startTime = null;
@@ -37,7 +38,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           <span class="badge">${ev.title}</span>
           <h2 class="title">${ev.title}</h2>
           <p class="description">${ev.description}</p>
-          <a href="/events/${ev.id}" class="more">자세히 보기</a>
+          <a href="/events/${ev.id}" class="more">${homeI18n.eventDetails}</a>
         </div>
         <div class="slide-img">
           <img src="${ev.eventImg}" alt="${ev.title}" data-id="${ev.id}">
@@ -151,11 +152,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 startTime = null;
             }
             pauseBtn.textContent = '▶';
+            pauseBtn.setAttribute('aria-label', homeI18n.eventPlay);
         } else {
             swiper.autoplay.start();
             startTime = performance.now() - elapsedTime;
             startProgress();
             pauseBtn.textContent = '❚❚';
+            pauseBtn.setAttribute('aria-label', homeI18n.eventPause);
         }
     };
 

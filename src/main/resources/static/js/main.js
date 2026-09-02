@@ -44,7 +44,9 @@ document.addEventListener('DOMContentLoaded', () => {
             siteMenu.hidden = !isOpen;
             siteMenuToggle.setAttribute('aria-expanded', String(isOpen));
             siteMenuToggle.setAttribute(
-                    'aria-label', isOpen ? '전체 메뉴 닫기' : '전체 메뉴 열기');
+                    'aria-label', isOpen
+                            ? siteMenuToggle.dataset.closeLabel
+                            : siteMenuToggle.dataset.openLabel);
             if (!isOpen && restoreFocus) {
                 siteMenuToggle.focus();
             }
@@ -85,7 +87,9 @@ document.addEventListener('DOMContentLoaded', () => {
             profileMenu.hidden = !isOpen;
             profileToggle.setAttribute('aria-expanded', String(isOpen));
             profileToggle.setAttribute(
-                    'aria-label', isOpen ? '프로필 메뉴 닫기' : '프로필 메뉴 열기');
+                    'aria-label', isOpen
+                            ? profileToggle.dataset.closeLabel
+                            : profileToggle.dataset.openLabel);
             if (!isOpen && restoreFocus) {
                 profileToggle.focus();
             }

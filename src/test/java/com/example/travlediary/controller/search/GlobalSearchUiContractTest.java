@@ -21,8 +21,10 @@ class GlobalSearchUiContractTest {
         assertThat(form.attr("action")).isEqualTo("/search");
         assertThat(form.attr("method")).isEqualToIgnoringCase("get");
         assertThat(form.select("input[name=q]#header-search-input")).hasSize(1);
-        assertThat(form.select("button[type=submit][aria-label='검색 실행'] img[src='/images/magnify.svg']"))
-                .hasSize(1);
+        var submit = form.selectFirst("button[type=submit]");
+        assertThat(submit).isNotNull();
+        assertThat(submit.attr("th:aria-label")).isEqualTo("#{header.search.submit}");
+        assertThat(submit.select("img[src='/images/magnify.svg']")).hasSize(1);
         assertThat(form.select("button[type=submit]").text()).isBlank();
         assertThat(document.select("#login-btn[onclick*='/login?redirect=']")).hasSize(1);
     }

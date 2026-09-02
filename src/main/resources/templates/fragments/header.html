@@ -9,24 +9,24 @@
   <nav class="main-nav">
     <!-- 로고 -->
     <h1 class="logo">
-      <a href="/"><img src="/images/logo7.png" alt="여행일기 로고" /></a>
+      <a href="/"><img src="/images/logo7.png" th:alt="#{header.brand.logoAlt}" alt="여행일기 Travel Diary 로고" /></a>
     </h1>
 
     <!-- 검색 + 로그인/프로필 -->
     <div class="search-box">
       <!-- 검색 버튼 -->
-      <button type="button" id="search-toggle" aria-label="검색 열기"
+      <button type="button" id="search-toggle" th:aria-label="#{header.search.open}"
               aria-controls="search-form" aria-expanded="false">
         <img src="/images/magnify.svg" alt="" aria-hidden="true" />
       </button>
 
       <!-- 숨겨진 검색창 -->
       <form id="search-form" class="hidden" action="/search" method="get" role="search">
-        <label class="sr-only" for="header-search-input">통합검색</label>
+        <label class="sr-only" for="header-search-input" th:text="#{header.search.label}">통합검색</label>
         <input id="header-search-input" type="search" name="q"
-               placeholder="어디로 떠나 볼까요?" autocomplete="off"
+               th:placeholder="#{header.search.placeholder}" placeholder="어디로 떠나 볼까요?" autocomplete="off"
                th:value="${param.q != null ? param.q[0] : ''}" />
-        <button class="search-submit" type="submit" aria-label="검색 실행">
+        <button class="search-submit" type="submit" th:aria-label="#{header.search.submit}">
           <img src="/images/magnify.svg" alt="" aria-hidden="true" />
         </button>
       </form>
@@ -36,7 +36,10 @@
         넓은 화면에서는 CSS 로 감추고, 메뉴는 지금처럼 헤더에 펼쳐 둔다.
       -->
       <button type="button" id="site-menu-toggle" class="site-menu-toggle"
-              aria-label="전체 메뉴 열기" aria-controls="site-menu" aria-expanded="false">
+              th:aria-label="#{header.menu.open}"
+              th:data-open-label="#{header.menu.open}"
+              th:data-close-label="#{header.menu.close}"
+              aria-controls="site-menu" aria-expanded="false">
         <span class="site-menu-toggle-bars" aria-hidden="true"></span>
       </button>
 
@@ -78,7 +81,10 @@
         </button>
         <div th:if="${isLoggedIn}" class="profile-menu-container">
           <button type="button" id="profile-menu-toggle" class="profile-menu-toggle"
-                  aria-label="프로필 메뉴 열기" aria-haspopup="menu"
+                  th:aria-label="#{header.profile.open}"
+                  th:data-open-label="#{header.profile.open}"
+                  th:data-close-label="#{header.profile.close}"
+                  aria-haspopup="menu"
                   aria-controls="profile-menu" aria-expanded="false">
             <img id="profile-img"
                  th:src="${currentUserProfileImage}"
@@ -87,12 +93,12 @@
           </button>
 
           <div id="profile-menu" class="profile-menu" role="menu" hidden>
-            <p class="profile-menu-title">프로필</p>
+            <p class="profile-menu-title" th:text="#{header.profile.title}">프로필</p>
             <a href="/mypage" class="profile-menu-item" role="menuitem"
                th:text="#{auth.mypage}">마이페이지</a>
             <a th:if="${#authorization.expression('hasRole(''ADMIN'')')}"
                href="/admin" class="profile-menu-item profile-menu-admin"
-               role="menuitem">관리자 페이지</a>
+               role="menuitem" th:text="#{auth.admin}">관리자 페이지</a>
             <form th:action="@{/logout}" method="post" class="profile-menu-logout-form">
               <input type="hidden" name="redirect" th:value="${currentUri}">
               <button type="submit" class="profile-menu-item profile-menu-logout"
@@ -138,7 +144,7 @@
       링크는 넓은 화면과 같은 fragment 를 다시 쓰므로 주소가 갈라지지 않는다.
     -->
     <div id="site-menu" class="site-menu" hidden>
-      <nav class="site-menu-nav" aria-label="전체 메뉴">
+      <nav class="site-menu-nav" th:aria-label="#{header.menu.label}">
         <!--
           위에서 아래로 한 방향으로만 읽히게 둔다.
           1차 메뉴가 가로로 한 줄 나오고 그 아래 같은 이름이 다시 나오면 두 번 읽게 된다.
@@ -211,34 +217,34 @@
    th:text="#{nav.events}">이벤트</a>
 
 <ul th:fragment="communityLinks">
-  <li><a href="/board/list?boardType=post&amp;postType=question">여행 질문</a></li>
-  <li><a href="/board/list?boardType=post&amp;postType=tip">여행 팁</a></li>
-  <li><a href="/board/list?boardType=course">나의 여행코스</a></li>
+  <li><a href="/board/list?boardType=post&amp;postType=question" th:text="#{nav.community.question}">여행 질문</a></li>
+  <li><a href="/board/list?boardType=post&amp;postType=tip" th:text="#{nav.community.tips}">여행 팁</a></li>
+  <li><a href="/board/list?boardType=course" th:text="#{nav.community.myCourses}">나의 여행코스</a></li>
 </ul>
 
 <ul th:fragment="infoLinks">
-  <li><a href="/travel-info">전체</a></li>
-  <li><a href="/travel-info?scope=DOMESTIC">국내정보</a></li>
-  <li><a href="/travel-info?scope=INTERNATIONAL">해외정보</a></li>
-  <li><a href="/travel-info?contentType=FESTIVAL">축제 정보</a></li>
+  <li><a href="/travel-info" th:text="#{nav.info.all}">전체</a></li>
+  <li><a href="/travel-info?scope=DOMESTIC" th:text="#{nav.info.domestic}">국내정보</a></li>
+  <li><a href="/travel-info?scope=INTERNATIONAL" th:text="#{nav.info.international}">해외정보</a></li>
+  <li><a href="/travel-info?contentType=FESTIVAL" th:text="#{nav.info.festivals}">축제 정보</a></li>
 </ul>
 
 <ul th:fragment="recordLinks">
-  <li><a href="/diaries">나의 여행일기</a></li>
-  <li><a href="/travel-plans">함께 계획하기</a></li>
-  <li><a href="/random-travel">랜덤 여행</a></li>
+  <li><a href="/diaries" th:text="#{nav.record.diary}">나의 여행일기</a></li>
+  <li><a href="/travel-plans" th:text="#{nav.record.planTogether}">함께 계획하기</a></li>
+  <li><a href="/random-travel" th:text="#{nav.record.random}">랜덤 여행</a></li>
 </ul>
 
 <ul th:fragment="supportLinks">
-  <li><a href="/support/notices">공지사항</a></li>
-  <li><a href="/support/faq">자주 묻는 질문</a></li>
-  <li><a href="/support/inquiries">1:1 문의</a></li>
+  <li><a href="/support/notices" th:text="#{nav.support.notices}">공지사항</a></li>
+  <li><a href="/support/faq" th:text="#{nav.support.faq}">자주 묻는 질문</a></li>
+  <li><a href="/support/inquiries" th:text="#{nav.support.inquiry}">1:1 문의</a></li>
 </ul>
 
 <ul th:fragment="eventLinks">
-  <li class="menu-item"><a th:href="@{/events(status='ongoing')}">진행 이벤트</a></li>
-  <li class="menu-item"><a th:href="@{/events(status='upcoming')}">예정 이벤트</a></li>
-  <li class="menu-item"><a th:href="@{/events(status='ended')}">종료된 이벤트</a></li>
+  <li class="menu-item"><a th:href="@{/events(status='ongoing')}" th:text="#{nav.event.ongoing}">진행 이벤트</a></li>
+  <li class="menu-item"><a th:href="@{/events(status='upcoming')}" th:text="#{nav.event.upcoming}">예정 이벤트</a></li>
+  <li class="menu-item"><a th:href="@{/events(status='ended')}" th:text="#{nav.event.ended}">종료된 이벤트</a></li>
 </ul>
 </body>
 </html>

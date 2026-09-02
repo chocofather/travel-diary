@@ -105,6 +105,25 @@ class HeaderProfileMenuTest {
                 .contains("繁體中文");
         assertThat(document.select(
                 ".locale-option-form input[name=_csrf]")).hasSize(5);
+        assertThat(document.select(".global-submenu a").eachText())
+                .containsExactly(
+                        "旅遊問答", "旅遊攻略", "我的旅遊路線",
+                        "全部", "國內資訊", "海外資訊", "節慶資訊",
+                        "我的旅遊日記", "一起規劃", "隨機旅行",
+                        "公告", "常見問題", "1:1 諮詢",
+                        "進行中活動", "即將開始", "已結束活動");
+        assertThat(document.selectFirst("#header-search-input").attr("placeholder"))
+                .isEqualTo("想去哪裡旅行？");
+        assertThat(document.selectFirst("#search-toggle").attr("aria-label"))
+                .isEqualTo("開啟搜尋");
+        assertThat(document.selectFirst("#site-menu-toggle").attr("data-open-label"))
+                .isEqualTo("開啟主選單");
+        assertThat(document.selectFirst("#site-menu-toggle").attr("data-close-label"))
+                .isEqualTo("關閉主選單");
+        assertThat(document.select(".footer-links a").eachText())
+                .containsExactly("使用條款", "隱私權政策", "客服中心");
+        assertThat(document.select(".footer-links a").eachAttr("href"))
+                .containsExactly("#", "#", "#");
     }
 
     @Test

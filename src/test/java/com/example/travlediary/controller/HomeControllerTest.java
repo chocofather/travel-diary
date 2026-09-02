@@ -3,6 +3,8 @@ package com.example.travlediary.controller;
 import com.example.travlediary.config.CustomLoginSuccessHandler;
 import com.example.travlediary.config.CustomLogoutSuccessHandler;
 import com.example.travlediary.config.SecurityConfig;
+import com.example.travlediary.config.i18n.I18nConfig;
+import com.example.travlediary.config.i18n.TravelDiaryLocaleResolver;
 import com.example.travlediary.dto.HomePopularCourseDto;
 import com.example.travlediary.model.User;
 import com.example.travlediary.model.UserRole;
@@ -18,6 +20,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import jakarta.servlet.http.Cookie;
+
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -32,7 +36,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 @WebMvcTest(HomeController.class)
-@Import(SecurityConfig.class)
+@Import({SecurityConfig.class, I18nConfig.class})
 class HomeControllerTest {
 
     @Autowired
@@ -125,6 +129,39 @@ class HomeControllerTest {
 
         verify(userMapper, atLeastOnce()).findById(7L);
         verify(userMapper, never()).hasLocalPasswordById(7L);
+    }
+
+    @Test
+    void englishHomeTranslatesFixedUiWhileKeepingDatabaseContentUnchanged() throws Exception {
+        HomePopularCourseDto course = new HomePopularCourseDto();
+        course.setCourseId(12L);
+        course.setTitle("서울 하루 고궁 산책");
+        course.setNickname("여행자민준");
+        course.setViews(1284);
+        course.setTotalDestinationCount(5);
+        course.setPreviewDestinationNames(List.of("경복궁", "북촌한옥마을"));
+        when(courseService.getPopularCoursesForHome()).thenReturn(List.of(course));
+
+        mockMvc.perform(get("/")
+                        .cookie(new Cookie(TravelDiaryLocaleResolver.COOKIE_NAME, "en")))
+                .andExpect(status().isOk())
+                .andExpect(result -> {
+                    var document = Jsoup.parse(result.getResponse().getContentAsString());
+                    assertThat(document.select(".recommend-header").text())
+                            .contains("Popular Picks", "Top Destinations at Home and Abroad");
+                    assertThat(document.select(".home-section-header").text())
+                            .contains("Traveler Stories", "Popular Travel Routes");
+                    assertThat(document.select(".popular-course-card").text())
+                            .contains("서울 하루 고궁 산책")
+                            .contains("여행자민준")
+                            .contains("경복궁")
+                            .contains("1,284 views")
+                            .contains("5 places");
+                    assertThat(document.selectFirst("#home-i18n").attr("data-spring-title"))
+                            .isEqualTo("Spring Destinations Worth Remembering");
+                    assertThat(document.selectFirst("#home-i18n").attr("data-event-details"))
+                            .isEqualTo("View details");
+                });
     }
 
     private UsernamePasswordAuthenticationToken authenticationFor(User user) {
