@@ -62,6 +62,8 @@ public class SecurityConfig {
 
         http.csrf(csrf -> csrf.requireCsrfProtectionMatcher(new OrRequestMatcher(
                         new RegexRequestMatcher(
+                                "^/locale$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
                                 "^/bookmarks$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(
                                 "^/bookmarks/destinations/[0-9]+$", HttpMethod.DELETE.name()),
@@ -324,7 +326,7 @@ public class SecurityConfig {
 
                         /* === 비회원도 접근 가능한 공개 영역 === */
                         .requestMatchers(
-                                "/", "/home", "/random-travel",
+                                "/", "/home", "/random-travel", "/locale",
                                 "/login", "/logout",
                                 "/oauth2/**", "/login/oauth2/**", "/social-signup",
                                 "/register", "/users/register",

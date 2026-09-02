@@ -3,6 +3,8 @@ package com.example.travlediary.controller;
 import com.example.travlediary.config.CustomLoginSuccessHandler;
 import com.example.travlediary.config.CustomLogoutSuccessHandler;
 import com.example.travlediary.config.SecurityConfig;
+import com.example.travlediary.config.i18n.I18nConfig;
+import com.example.travlediary.config.i18n.TravelDiaryLocaleResolver;
 import com.example.travlediary.controller.recommend.RandomTravelController;
 import com.example.travlediary.model.User;
 import com.example.travlediary.model.UserRole;
@@ -17,6 +19,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import jakarta.servlet.http.Cookie;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -29,7 +33,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(RandomTravelController.class)
-@Import(SecurityConfig.class)
+@Import({SecurityConfig.class, I18nConfig.class})
 class HeaderProfileMenuTest {
 
     @Autowired
@@ -84,6 +88,23 @@ class HeaderProfileMenuTest {
                 .containsExactlyElementsOf(List.of(
                         "국내", "해외", "여행 커뮤니티", "여행정보",
                         "여행기록", "고객센터", "이벤트"));
+    }
+
+    @Test
+    void selectedLocaleChangesThePublicLangHeaderAndFiveOptionSelector() throws Exception {
+        var document = pageWithLocale("zh-TW");
+
+        assertThat(document.selectFirst("html").attr("lang")).isEqualTo("zh-TW");
+        assertThat(document.select(".main-menu > .menu-item > a").eachText())
+                .containsExactly("國內", "海外", "旅遊社群", "旅遊資訊",
+                        "旅遊記錄", "客服中心", "活動");
+        assertThat(document.select(
+                ".locale-option-form input[name=languageTag]").eachAttr("value"))
+                .containsExactly("ko", "en", "ja", "zh-CN", "zh-TW");
+        assertThat(document.select(".language-menu-option[aria-current=true]").text())
+                .contains("繁體中文");
+        assertThat(document.select(
+                ".locale-option-form input[name=_csrf]")).hasSize(5);
     }
 
     @Test
@@ -299,6 +320,13 @@ class HeaderProfileMenuTest {
 
         return Jsoup.parse(mockMvc.perform(get("/random-travel")
                         .with(authentication(authentication)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString());
+    }
+
+    private org.jsoup.nodes.Document pageWithLocale(String languageTag) throws Exception {
+        return Jsoup.parse(mockMvc.perform(get("/random-travel")
+                        .cookie(new Cookie(TravelDiaryLocaleResolver.COOKIE_NAME, languageTag)))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString());
     }

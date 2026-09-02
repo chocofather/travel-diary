@@ -40,11 +40,41 @@
         <span class="site-menu-toggle-bars" aria-hidden="true"></span>
       </button>
 
+      <!-- 선택 언어는 쿠키로 저장하며, 언어명은 서버의 지원 언어 정의에서 가져온다. -->
+      <details class="language-menu">
+        <summary class="language-menu-toggle"
+                 th:aria-label="#{header.language.selector}"
+                 th:title="#{header.language.current(${currentLanguage.displayName})}">
+          <svg class="language-menu-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="9"></circle>
+            <path d="M3 12h18M12 3c2.3 2.5 3.5 5.5 3.5 9S14.3 18.5 12 21M12 3C9.7 5.5 8.5 8.5 8.5 12S9.7 18.5 12 21"></path>
+          </svg>
+          <span class="language-menu-current" th:text="${currentLanguage.displayName}">한국어</span>
+          <span class="language-menu-chevron" aria-hidden="true"></span>
+        </summary>
+
+        <div class="language-menu-popover" role="menu">
+          <form class="locale-option-form" method="post" th:action="@{/locale}"
+                th:each="language : ${supportedLanguages}">
+            <input type="hidden" name="languageTag" th:value="${language.languageTag}" />
+            <input type="hidden" name="returnTo" th:value="${currentUri}" />
+            <button type="submit" class="language-menu-option" role="menuitem"
+                    th:classappend="${language == currentLanguage} ? ' is-active'"
+                    th:aria-current="${language == currentLanguage} ? 'true' : null"
+                    th:aria-label="#{header.language.change(${language.displayName})}">
+              <span th:text="${language.displayName}">한국어</span>
+              <span class="language-menu-check" th:if="${language == currentLanguage}"
+                    aria-hidden="true">✓</span>
+            </button>
+          </form>
+        </div>
+      </details>
+
       <!-- 로그인 / 프로필 -->
       <div id="auth-area">
         <button th:if="${!isLoggedIn}" id="login-btn"
                 onclick="location.href='/login?redirect=' + encodeURIComponent(location.pathname + location.search)">
-          로그인
+          <span th:text="#{auth.login}">로그인</span>
         </button>
         <div th:if="${isLoggedIn}" class="profile-menu-container">
           <button type="button" id="profile-menu-toggle" class="profile-menu-toggle"
@@ -58,14 +88,15 @@
 
           <div id="profile-menu" class="profile-menu" role="menu" hidden>
             <p class="profile-menu-title">프로필</p>
-            <a href="/mypage" class="profile-menu-item" role="menuitem">마이페이지</a>
+            <a href="/mypage" class="profile-menu-item" role="menuitem"
+               th:text="#{auth.mypage}">마이페이지</a>
             <a th:if="${#authorization.expression('hasRole(''ADMIN'')')}"
                href="/admin" class="profile-menu-item profile-menu-admin"
                role="menuitem">관리자 페이지</a>
             <form th:action="@{/logout}" method="post" class="profile-menu-logout-form">
               <input type="hidden" name="redirect" th:value="${currentUri}">
               <button type="submit" class="profile-menu-item profile-menu-logout"
-                      role="menuitem">로그아웃</button>
+                      role="menuitem" th:text="#{auth.logout}">로그아웃</button>
             </form>
           </div>
         </div>
@@ -164,13 +195,20 @@
   1차 메뉴 링크. 넓은 화면 메뉴줄과 좁은 화면 메뉴 판이 같은 조각을 가져다 쓴다.
   생김새는 감싸는 쪽 CSS 가 정하므로 여기에는 주소와 글자만 둔다.
 -->
-<a th:fragment="linkDomestic" href="/destinations?type=domestic">국내</a>
-<a th:fragment="linkOverseas" href="/destinations?type=overseas">해외</a>
-<a th:fragment="linkCommunity" href="/board/list">여행 커뮤니티</a>
-<a th:fragment="linkTravelInfo" href="/travel-info">여행정보</a>
-<a th:fragment="linkDiaries" href="/diaries">여행기록</a>
-<a th:fragment="linkSupport" href="/support/notices">고객센터</a>
-<a th:fragment="linkEvents" th:href="@{/events}">이벤트</a>
+<a th:fragment="linkDomestic" href="/destinations?type=domestic"
+   th:text="#{nav.domestic}">국내</a>
+<a th:fragment="linkOverseas" href="/destinations?type=overseas"
+   th:text="#{nav.overseas}">해외</a>
+<a th:fragment="linkCommunity" href="/board/list"
+   th:text="#{nav.community}">여행 커뮤니티</a>
+<a th:fragment="linkTravelInfo" href="/travel-info"
+   th:text="#{nav.travelInfo}">여행정보</a>
+<a th:fragment="linkDiaries" href="/diaries"
+   th:text="#{nav.travelRecords}">여행기록</a>
+<a th:fragment="linkSupport" href="/support/notices"
+   th:text="#{nav.support}">고객센터</a>
+<a th:fragment="linkEvents" th:href="@{/events}"
+   th:text="#{nav.events}">이벤트</a>
 
 <ul th:fragment="communityLinks">
   <li><a href="/board/list?boardType=post&amp;postType=question">여행 질문</a></li>

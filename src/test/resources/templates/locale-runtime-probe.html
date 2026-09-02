@@ -1,0 +1,8 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
+<th:block th:fragment="headFragment"></th:block>
+<body>
+<p id="locale-runtime-render-complete">render complete</p>
+</body>
+</html>

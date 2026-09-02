@@ -1,5 +1,6 @@
 package com.example.travlediary.repository;
 
+import org.jsoup.Jsoup;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -282,13 +283,14 @@ class TravelInfoPublicUiContractTest {
     @Test
     void headerLinksTravelInfoMainAndPublicFilterShortcuts() throws IOException {
         String header = resource("/templates/fragments/header.html");
+        var document = Jsoup.parse(header);
 
-        assertThat(header)
-                .contains("href=\"/travel-info\">여행정보</a>")
-                .contains("href=\"/travel-info\">전체</a>")
-                .contains("href=\"/travel-info?scope=DOMESTIC\"")
-                .contains("href=\"/travel-info?scope=INTERNATIONAL\"")
-                .contains("href=\"/travel-info?contentType=FESTIVAL\"");
+        assertThat(document.select("a[href='/travel-info']").stream())
+                .anyMatch(link -> "#{nav.travelInfo}".equals(link.attr("th:text")));
+        assertThat(document.select("a[href='/travel-info']").eachText()).contains("전체");
+        assertThat(document.select("a[href='/travel-info?scope=DOMESTIC']")).hasSize(1);
+        assertThat(document.select("a[href='/travel-info?scope=INTERNATIONAL']")).hasSize(1);
+        assertThat(document.select("a[href='/travel-info?contentType=FESTIVAL']")).hasSize(1);
     }
 
     private String resource(String path) throws IOException {

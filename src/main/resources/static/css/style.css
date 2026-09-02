@@ -479,6 +479,130 @@ body {
     cursor:pointer;
 }
 
+.language-menu {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.language-menu-toggle {
+    display: flex;
+    align-items: center;
+    min-height: 36px;
+    box-sizing: border-box;
+    padding: 7px 9px;
+    gap: 6px;
+    border: 1px solid #d7dee7;
+    border-radius: 6px;
+    background: #fff;
+    color: #344054;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1;
+    list-style: none;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.language-menu-toggle::-webkit-details-marker {
+    display: none;
+}
+
+.language-menu-toggle:hover {
+    border-color: #aebdce;
+}
+
+.language-menu-toggle:focus-visible,
+.language-menu-option:focus-visible {
+    outline: 3px solid rgba(0, 102, 204, 0.28);
+    outline-offset: 2px;
+}
+
+.language-menu-icon {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex-shrink: 0;
+}
+
+.language-menu-chevron {
+    width: 6px;
+    height: 6px;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: translateY(-2px) rotate(45deg);
+}
+
+.language-menu[open] .language-menu-chevron {
+    transform: translateY(2px) rotate(225deg);
+}
+
+.language-menu-popover {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 1100;
+    width: 156px;
+    max-width: calc(100vw - 24px);
+    padding: 6px;
+    border: 1px solid #dfe5ec;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 6px 16px rgba(31, 48, 70, 0.1);
+}
+
+.locale-option-form {
+    margin: 0;
+}
+
+.language-menu-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 36px;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    color: #344054;
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.language-menu-option:hover,
+.language-menu-option.is-active {
+    background: #f3f6fa;
+    color: #1f5f8b;
+}
+
+.language-menu-check {
+    color: #1f5f8b;
+    font-weight: 700;
+}
+
+@media (max-width: 1399px) {
+    .language-menu-current {
+        display: none;
+    }
+
+    .language-menu-toggle {
+        width: 36px;
+        justify-content: center;
+        padding: 7px;
+    }
+
+    .language-menu-chevron {
+        display: none;
+    }
+}
+
 .profile-menu-container {
     position: relative;
 }
