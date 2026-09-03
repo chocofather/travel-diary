@@ -9,6 +9,7 @@
         <id     property="id"           column="destination_id"/>
         <result property="name"         column="name"/>
         <result property="imageUrl"     column="image_url"/>
+        <result property="regionId"     column="region_id"/>
         <result property="regionName"   column="region_name"/>
         <result property="season"       column="season"/>
         <result property="categoryId"   column="category_id"/>
@@ -19,6 +20,7 @@
     <select id="findBySeasonAndCategory" resultMap="SeasonDestinationDtoMap">
         SELECT
         d.id AS destination_id,
+        d.region_id AS region_id,
         dt.name,
         di.image_url,
         cc.region_name AS region_name,
@@ -44,6 +46,7 @@
     <select id="findBySeason" resultMap="SeasonDestinationDtoMap">
         SELECT
             d.id AS destination_id,
+            d.region_id AS region_id,
             dt.name,
             di.image_url,
             cc.region_name AS region_name,

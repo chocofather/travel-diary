@@ -45,6 +45,9 @@ public class DestinationService {
     private final ActivityInfoService activityInfoService;
     private final ShopInfoService shopInfoService;
 
+    /** 여행지 번역 일괄 조회와 언어 대체 규칙은 코스 STOP 과 함께 쓰도록 떼어 두었다. */
+    private final DestinationLocalizationService destinationLocalizationService;
+
     @Value("${custom.upload-path}")
     private String uploadPath;
 
@@ -155,11 +158,17 @@ public class DestinationService {
     }
 
     public DestinationDetailDto getDestinationDetailWithInfo(Long id) {
-        return getDestinationDetailWithInfo(id, SupportedLanguage.KOREAN);
+        return getDestinationDetailWithInfo(id, SupportedLanguage.KOREAN, false);
     }
 
     public DestinationDetailDto getDestinationDetailWithInfo(Long id,
                                                               SupportedLanguage requestedLanguage) {
+        return getDestinationDetailWithInfo(id, requestedLanguage, true);
+    }
+
+    private DestinationDetailDto getDestinationDetailWithInfo(Long id,
+                                                               SupportedLanguage requestedLanguage,
+                                                               boolean localizeAttractionInfo) {
         Destination destination = destinationMapper.findDestinationDetail(id);
         if (destination == null) return null;
 
@@ -180,7 +189,9 @@ public class DestinationService {
         // 타입별 상세정보 및 amenity 리스트 셋팅
         switch (destination.getType()) {
             case ATTRACTION:
-                dto.setAttractionInfo(attractionInfoService.findByDestinationId(id));
+                dto.setAttractionInfo(localizeAttractionInfo
+                        ? attractionInfoService.findLocalizedByDestinationId(id, requestedLanguage)
+                        : attractionInfoService.findByDestinationId(id));
                 dto.setAttractionAmenities(amenityService.getAttractionAmenities(id));
                 break;
             case ACCOMMODATION:
@@ -207,13 +218,7 @@ public class DestinationService {
     private void applyLocalizedContent(Destination destination,
                                        List<DestinationTranslation> translations,
                                        SupportedLanguage requestedLanguage) {
-        List<DestinationTranslation> ordered = translations.stream()
-                .sorted(Comparator
-                        .comparing(DestinationTranslation::getLanguageCode,
-                                Comparator.nullsLast(Comparator.naturalOrder()))
-                        .thenComparing(DestinationTranslation::getId,
-                                Comparator.nullsLast(Comparator.naturalOrder())))
-                .toList();
+        List<DestinationTranslation> ordered = orderedTranslations(translations);
         DestinationTranslation requested = translationFor(
                 ordered, requestedLanguage.getLanguageTag());
         DestinationTranslation korean = translationFor(
@@ -227,29 +232,21 @@ public class DestinationService {
                 DestinationTranslation::getDescription, requested, korean, ordered));
     }
 
+    private List<DestinationTranslation> orderedTranslations(
+            Collection<DestinationTranslation> translations) {
+        return destinationLocalizationService.orderedTranslations(translations);
+    }
+
     private DestinationTranslation translationFor(List<DestinationTranslation> translations,
                                                   String languageTag) {
-        return translations.stream()
-                .filter(translation -> languageTag.equals(translation.getLanguageCode()))
-                .findFirst()
-                .orElse(null);
+        return destinationLocalizationService.translationFor(translations, languageTag);
     }
 
     private String localizedField(Function<DestinationTranslation, String> field,
                                   DestinationTranslation requested,
                                   DestinationTranslation korean,
                                   List<DestinationTranslation> ordered) {
-        for (DestinationTranslation translation : Arrays.asList(requested, korean)) {
-            if (translation != null) {
-                String value = field.apply(translation);
-                if (value != null && !value.isBlank()) return value;
-            }
-        }
-        return ordered.stream()
-                .map(field)
-                .filter(value -> value != null && !value.isBlank())
-                .findFirst()
-                .orElse(null);
+        return destinationLocalizationService.localizedField(field, requested, korean, ordered);
     }
 
     // 상세 페이지 여행지 추천
@@ -345,29 +342,108 @@ public class DestinationService {
     }
 
     public List<DestinationDto> convertToDtoWithBookmark(List<Destination> destinations, Long userId) {
+        return convertToDtoWithBookmark(destinations, userId, null, Map.of());
+    }
+
+    public List<DestinationDto> convertToLocalizedDtoWithBookmark(
+            List<Destination> destinations,
+            Long userId,
+            SupportedLanguage requestedLanguage,
+            Map<Long, String> localizedRegionNames) {
+        List<Destination> available = destinations == null ? List.of() : destinations;
+        List<Long> destinationIds = available.stream()
+                .map(Destination::getId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        List<DestinationTranslation> translations = destinationIds.isEmpty()
+                ? List.of()
+                : destinationMapper.findTranslationsByDestinationIds(destinationIds);
+        Map<Long, List<DestinationTranslation>> translationsByDestinationId =
+                orderedTranslations(translations).stream()
+                        .filter(translation -> translation.getDestinationId() != null)
+                        .collect(Collectors.groupingBy(
+                                DestinationTranslation::getDestinationId,
+                                LinkedHashMap::new,
+                                Collectors.toList()));
+
+        return convertToDtoWithBookmark(available, userId,
+                requestedLanguage == null ? SupportedLanguage.KOREAN : requestedLanguage,
+                localizedRegionNames == null ? Map.of() : localizedRegionNames,
+                translationsByDestinationId);
+    }
+
+    public Map<Long, DestinationTranslation> resolveLocalizedContentByDestinationIds(
+            Collection<Long> destinationIds,
+            SupportedLanguage requestedLanguage) {
+        return destinationLocalizationService.resolveLocalizedContentByDestinationIds(
+                destinationIds, requestedLanguage);
+    }
+
+    private List<DestinationDto> convertToDtoWithBookmark(
+            List<Destination> destinations,
+            Long userId,
+            SupportedLanguage requestedLanguage,
+            Map<Long, String> localizedRegionNames) {
+        return convertToDtoWithBookmark(destinations, userId, requestedLanguage,
+                localizedRegionNames, Map.of());
+    }
+
+    private List<DestinationDto> convertToDtoWithBookmark(
+            List<Destination> destinations,
+            Long userId,
+            SupportedLanguage requestedLanguage,
+            Map<Long, String> localizedRegionNames,
+            Map<Long, List<DestinationTranslation>> translationsByDestinationId) {
+        List<Destination> available = destinations == null ? List.of() : destinations;
         Set<Long> bookmarkedIds = (userId != null)
                 ? bookmarkMapper.findBookmarkedTargetIdsByUserId(userId, "DESTINATION")
                 : Collections.emptySet();
 
         //  여행지 ID 목록 뽑기
-        List<Long> ids = destinations.stream().map(Destination::getId).toList();
+        List<Long> ids = available.stream().map(Destination::getId).toList();
         // 여행지별 댓글 수를 한 번에 조회
         Map<Long, Integer> commentCountMap = destinationCommentService.countCommentsByDestinationIds(ids);
 
-        return destinations.stream()
+        return available.stream()
                 .map(dest -> {
+                    List<DestinationTranslation> translations =
+                            translationsByDestinationId.getOrDefault(dest.getId(), List.of());
+                    DestinationTranslation requested = requestedLanguage == null
+                            ? null
+                            : translationFor(translations, requestedLanguage.getLanguageTag());
+                    DestinationTranslation korean = requestedLanguage == null
+                            ? null
+                            : translationFor(translations,
+                            SupportedLanguage.KOREAN.getLanguageTag());
                     DestinationDto dto = new DestinationDto();
                     dto.setId(dest.getId());
-                    dto.setName(dest.getName());
+                    dto.setName(requestedLanguage == null
+                            ? dest.getName()
+                            : localizedField(DestinationTranslation::getName,
+                            requested, korean, translations, dest.getName()));
                     dto.setThumbnailPath(dest.getThumbnailPath());
-                    dto.setRegionName(dest.getRegionName());
-                    dto.setShortDescription(dest.getShortDescription());
+                    dto.setRegionName(localizedRegionNames.getOrDefault(
+                            dest.getRegionId(), dest.getRegionName()));
+                    dto.setShortDescription(requestedLanguage == null
+                            ? dest.getShortDescription()
+                            : localizedField(DestinationTranslation::getShortDescription,
+                            requested, korean, translations, dest.getShortDescription()));
                     dto.setBookmarked(bookmarkedIds.contains(dest.getId()));
 
                     dto.setCommentCount(commentCountMap.getOrDefault(dest.getId(), 0));
                     return dto;
                 })
                 .collect(Collectors.toList());
+    }
+
+    private String localizedField(Function<DestinationTranslation, String> field,
+                                  DestinationTranslation requested,
+                                  DestinationTranslation korean,
+                                  List<DestinationTranslation> ordered,
+                                  String baseValue) {
+        String localized = localizedField(field, requested, korean, ordered);
+        return localized == null ? baseValue : localized;
     }
 
     @Transactional

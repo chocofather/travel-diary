@@ -1,9 +1,12 @@
 (() => {
+    const randomI18n = document.getElementById('random-travel-i18n')?.dataset;
+    if (!randomI18n) return;
+
     const defaultImageUrl = '/images/default.png';
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const previewNames = {
-        domestic: ['서울', '부산', '제주', '강원', '인천'],
-        overseas: ['오사카', '파리', '방콕', '로마', '뉴욕']
+        domestic: randomI18n.previewDomestic.split('|'),
+        overseas: randomI18n.previewOverseas.split('|')
     };
 
     /** 뽑기 연출 길이와 단계별 문구. 빠르게 시작해 점점 느려진다. */
@@ -12,10 +15,10 @@
     const maxTickInterval = 430;
     const suspenseDelay = 520;
     const drawPhases = [
-        {until: 0.30, label: '여행 지역을 고르는 중...'},
-        {until: 0.60, label: '어디가 좋을까요?'},
-        {until: 0.85, label: '거의 다 골랐어요...'},
-        {until: 1, label: '이번 여행지는...'}
+        {until: 0.30, label: randomI18n.phaseSelecting},
+        {until: 0.60, label: randomI18n.phaseConsidering},
+        {until: 0.85, label: randomI18n.phaseAlmost},
+        {until: 1, label: randomI18n.phaseReveal}
     ];
 
     const scopeButtons = Array.from(document.querySelectorAll('[data-random-scope]'));
@@ -100,7 +103,7 @@
     }
 
     function prepareLoadingState() {
-        status.textContent = '여행 지역을 고르고 있어요.';
+        status.textContent = randomI18n.statusLoading;
         resultContainer.hidden = true;
         stage.hidden = true;
         stage.setAttribute('aria-hidden', 'true');
@@ -193,8 +196,10 @@
         const heading = document.createElement('div');
         heading.className = 'random-destinations-heading';
         heading.append(
-                createTextElement('h3', '', `${result.regionName}에서 둘러볼 여행지`),
-                createTextElement('p', '', `${destinations.length}곳을 골라봤어요.`)
+                createTextElement('h3', '', formatMessage(
+                        randomI18n.resultsHeading, result.regionName)),
+                createTextElement('p', '', formatMessage(
+                        randomI18n.resultsCount, destinations.length))
         );
 
         const grid = document.createElement('div');
@@ -211,7 +216,8 @@
         allDestinationsLink.className = 'random-all-destinations-link';
         allDestinationsLink.href = buildRegionListUrl(result);
         allDestinationsLink.append(
-                createTextElement('span', '', `${result.regionName} 전체 여행지 보기`),
+                createTextElement('span', '', formatMessage(
+                        randomI18n.resultsAll, result.regionName)),
                 createTextElement('span', 'random-all-destinations-arrow', '→')
         );
         allDestinationsLink.lastElementChild.setAttribute('aria-hidden', 'true');
@@ -219,7 +225,7 @@
         const redrawButton = document.createElement('button');
         redrawButton.type = 'button';
         redrawButton.className = 'random-redraw-button';
-        redrawButton.textContent = '다시 뽑기 ↻';
+        redrawButton.textContent = `${randomI18n.redraw} ↻`;
         redrawButton.addEventListener('click', drawTravelRegion);
 
         actions.append(allDestinationsLink, redrawButton);
@@ -228,7 +234,8 @@
         resultContainer.replaceChildren(fragment);
         resultContainer.classList.remove('is-revealed');
         resultContainer.hidden = false;
-        status.textContent = `${result.countryName} · ${result.regionName} 지역을 골랐어요.`;
+        status.textContent = formatMessage(
+                randomI18n.statusSelected, result.countryName, result.regionName);
 
         // 결과 카드가 갑자기 나타나지 않도록 다음 프레임에 등장 효과를 켠다.
         window.requestAnimationFrame(() => {
@@ -251,13 +258,13 @@
         const hero = document.createElement('section');
         hero.className = 'random-region-result';
         hero.append(
-                createTextElement('p', 'random-region-kicker', '이번에 떠날 곳은'),
+                createTextElement('p', 'random-region-kicker', randomI18n.heroKicker),
                 createTextElement('p', 'random-region-country', result.countryName),
                 createTextElement('h2', 'random-region-name', result.regionName),
                 createTextElement(
                         'p',
                         'random-region-summary',
-                        `Travel Diary가 ${result.regionName}에서 가볼 만한 여행지를 골랐어요.`
+                        formatMessage(randomI18n.heroSummary, result.regionName)
                 )
         );
         return hero;
@@ -273,7 +280,8 @@
         const image = document.createElement('img');
         image.className = 'random-destination-image';
         image.src = normalizedText(destination.imageUrl) || defaultImageUrl;
-        image.alt = `${destination.destinationName} 대표 이미지`;
+        image.alt = formatMessage(
+                randomI18n.cardImageAlt, destination.destinationName);
         image.addEventListener('error', () => {
             image.src = defaultImageUrl;
         }, {once: true});
@@ -293,7 +301,8 @@
             content.append(createTextElement(
                     'p', 'random-destination-description', description));
         }
-        content.append(createTextElement('span', 'random-destination-cta', '자세히 보기'));
+        content.append(createTextElement(
+                'span', 'random-destination-cta', randomI18n.cardDetails));
 
         card.append(imageWrap, content);
         return card;
@@ -322,16 +331,16 @@
     function showEmptyState() {
         hideStage();
         renderMessageState(
-                '조건에 맞는 여행지를 찾지 못했어요.',
-                '다른 범위로 다시 시도해 주세요.',
+                randomI18n.emptyTitle,
+                randomI18n.emptyMessage,
                 'is-empty'
         );
     }
 
     function showErrorState() {
         renderMessageState(
-                '여행지를 불러오지 못했어요.',
-                '잠시 후 다시 시도해 주세요.',
+                randomI18n.errorTitle,
+                randomI18n.errorMessage,
                 'is-error'
         );
     }
@@ -352,7 +361,9 @@
     function setControlsDisabled(disabled) {
         drawButton.disabled = disabled;
         drawButton.setAttribute('aria-busy', String(disabled));
-        drawButton.textContent = disabled ? '여행 지역을 고르는 중…' : '✈ 여행지 뽑기';
+        drawButton.textContent = disabled
+                ? randomI18n.drawLoading
+                : `✈ ${randomI18n.drawButton}`;
         scopeButtons.forEach((button) => {
             button.disabled = disabled;
         });
@@ -384,5 +395,11 @@
 
     function normalizedText(value) {
         return typeof value === 'string' ? value.trim() : '';
+    }
+
+    function formatMessage(pattern, ...values) {
+        return values.reduce(
+                (message, value, index) => message.replaceAll(`{${index}}`, String(value)),
+                normalizedText(pattern));
     }
 })();

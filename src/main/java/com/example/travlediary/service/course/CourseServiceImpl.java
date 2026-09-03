@@ -1,15 +1,20 @@
 package com.example.travlediary.service.course;
 
+import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.dto.CourseCreateRequest;
 import com.example.travlediary.dto.CourseDetailDto;
 import com.example.travlediary.dto.CourseDestinationCountryDto;
 import com.example.travlediary.dto.CourseEditDto;
+import com.example.travlediary.dto.CourseStopDto;
 import com.example.travlediary.dto.CourseUpdateRequest;
 import com.example.travlediary.dto.HomePopularCourseDto;
 import com.example.travlediary.dto.HomePopularCourseStopDto;
 import com.example.travlediary.model.Course;
 import com.example.travlediary.model.CourseDestination;
+import com.example.travlediary.model.DestinationTranslation;
 import com.example.travlediary.repository.course.CourseMapper;
+import com.example.travlediary.service.category.ReferenceNameLocalizationService;
+import com.example.travlediary.service.destination.DestinationLocalizationService;
 import com.example.travlediary.service.post.PostContentSanitizer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -26,6 +31,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -36,10 +42,15 @@ public class CourseServiceImpl implements CourseService {
 
     private final CourseMapper courseMapper;
     private final PostContentSanitizer postContentSanitizer;
+    /** STOP 이름만 여행지 번역에서 가져온다. 코스 글은 작성자가 쓴 그대로 둔다. */
+    private final DestinationLocalizationService destinationLocalizationService;
+    /** STOP 지역명은 지역 번역에서 가져온다. */
+    private final ReferenceNameLocalizationService referenceNameLocalizationService;
 
     @Override
     @Transactional
-    public CourseDetailDto getCourseDetail(Long courseId, Long currentUserId) {
+    public CourseDetailDto getCourseDetail(Long courseId, Long currentUserId,
+                                           SupportedLanguage requestedLanguage) {
         if (courseMapper.incrementViews(courseId) != 1) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "여행 코스를 찾을 수 없습니다.");
         }
@@ -50,14 +61,15 @@ public class CourseServiceImpl implements CourseService {
         }
 
         course.setContent(postContentSanitizer.sanitize(course.getContent()));
-        course.setStops(courseMapper.findCourseStops(courseId));
+        course.setStops(localizeStopNames(courseMapper.findCourseStops(courseId), requestedLanguage));
         course.setMyCourse(currentUserId != null && Objects.equals(course.getUserId(), currentUserId));
         return course;
     }
 
     @Override
     @Transactional(readOnly = true)
-    public CourseEditDto getCourseForEdit(Long courseId, Long userId) {
+    public CourseEditDto getCourseForEdit(Long courseId, Long userId,
+                                          SupportedLanguage requestedLanguage) {
         Course course = requireOwnedActiveCourse(courseMapper.findActiveCourse(courseId), userId);
 
         CourseEditDto edit = new CourseEditDto();
@@ -66,13 +78,13 @@ public class CourseServiceImpl implements CourseService {
         edit.setCountryName(course.getCountryName());
         edit.setTitle(course.getTitle());
         edit.setContent(postContentSanitizer.sanitize(course.getContent()));
-        edit.setStops(courseMapper.findCourseStops(courseId));
+        edit.setStops(localizeStopNames(courseMapper.findCourseStops(courseId), requestedLanguage));
         return edit;
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<HomePopularCourseDto> getPopularCoursesForHome() {
+    public List<HomePopularCourseDto> getPopularCoursesForHome(SupportedLanguage requestedLanguage) {
         List<HomePopularCourseDto> courses = courseMapper
                 .findPopularCourses(HOME_POPULAR_COURSE_LIMIT)
                 .stream()
@@ -82,19 +94,92 @@ public class CourseServiceImpl implements CourseService {
             return courses;
         }
 
-        Map<Long, List<String>> previewNamesByCourseId = new LinkedHashMap<>();
+        // 화면에 실제로 나가는 STOP 만 모아 둔다. 이름 번역도 이 만큼만 읽는다.
+        Map<Long, List<HomePopularCourseStopDto>> previewStopsByCourseId = new LinkedHashMap<>();
         for (HomePopularCourseStopDto stop : courseMapper.findPopularCourseStops(
                 courses.stream().map(HomePopularCourseDto::getCourseId).toList())) {
-            List<String> names = previewNamesByCourseId.computeIfAbsent(
+            List<HomePopularCourseStopDto> preview = previewStopsByCourseId.computeIfAbsent(
                     stop.getCourseId(), ignored -> new ArrayList<>());
-            if (names.size() < HOME_COURSE_PREVIEW_STOP_LIMIT) {
-                names.add(stop.getDestinationName());
+            if (preview.size() < HOME_COURSE_PREVIEW_STOP_LIMIT) {
+                preview.add(stop);
             }
         }
 
+        Map<Long, DestinationTranslation> localizedContent = resolveLocalizedContent(
+                previewStopsByCourseId.values().stream()
+                        .flatMap(List::stream)
+                        .map(HomePopularCourseStopDto::getDestinationId),
+                requestedLanguage);
+
         courses.forEach(course -> course.setPreviewDestinationNames(
-                List.copyOf(previewNamesByCourseId.getOrDefault(course.getCourseId(), List.of()))));
+                previewStopsByCourseId.getOrDefault(course.getCourseId(), List.of()).stream()
+                        .map(stop -> localizedName(stop.getDestinationId(),
+                                stop.getDestinationName(), localizedContent))
+                        .toList()));
         return courses;
+    }
+
+    /**
+     * STOP 의 여행지 이름과 지역명을 요청 언어로 바꾼다.
+     * 여행지와 이어지지 않은 STOP 은 적힌 이름을 그대로 둔다.
+     *
+     * <p>번역은 STOP 마다 읽지 않는다. 여행지 번호와 지역 번호를 각각 모아 한 번씩만 읽는다.
+     * 차례(visit_order)와 나머지 값은 손대지 않는다.
+     */
+    private List<CourseStopDto> localizeStopNames(List<CourseStopDto> stops,
+                                                  SupportedLanguage requestedLanguage) {
+        List<CourseStopDto> available = stops == null ? List.of() : stops;
+        Map<Long, DestinationTranslation> localizedContent = resolveLocalizedContent(
+                available.stream()
+                        .filter(Objects::nonNull)
+                        .map(CourseStopDto::getDestinationId),
+                requestedLanguage);
+        Map<Long, String> localizedRegionNames = resolveLocalizedRegionNames(
+                available, requestedLanguage);
+        for (CourseStopDto stop : available) {
+            if (stop == null) {
+                continue;
+            }
+            stop.setName(localizedName(stop.getDestinationId(), stop.getName(), localizedContent));
+            if (stop.getRegionId() != null) {
+                stop.setRegionName(localizedRegionNames.getOrDefault(
+                        stop.getRegionId(), stop.getRegionName()));
+            }
+        }
+        return available;
+    }
+
+    /** 코스에 나온 지역 번호를 모아 한 번에 번역한다. 번역이 없으면 원래 이름이 남는다. */
+    private Map<Long, String> resolveLocalizedRegionNames(List<CourseStopDto> stops,
+                                                          SupportedLanguage requestedLanguage) {
+        Map<Long, String> baseRegionNames = new LinkedHashMap<>();
+        for (CourseStopDto stop : stops) {
+            if (stop != null && stop.getRegionId() != null) {
+                baseRegionNames.putIfAbsent(stop.getRegionId(), stop.getRegionName());
+            }
+        }
+        return referenceNameLocalizationService.localizeCountryCategoryNames(
+                baseRegionNames, requestedLanguage);
+    }
+
+    private Map<Long, DestinationTranslation> resolveLocalizedContent(
+            Stream<Long> destinationIds, SupportedLanguage requestedLanguage) {
+        return destinationLocalizationService.resolveLocalizedContentByDestinationIds(
+                destinationIds.filter(Objects::nonNull).distinct().toList(),
+                requestedLanguage);
+    }
+
+    private String localizedName(Long destinationId,
+                                 String baseName,
+                                 Map<Long, DestinationTranslation> localizedContent) {
+        if (destinationId == null) {
+            return baseName;
+        }
+        DestinationTranslation content = localizedContent.get(destinationId);
+        if (content == null || content.getName() == null || content.getName().isBlank()) {
+            return baseName;
+        }
+        return content.getName();
     }
 
     @Override

@@ -323,6 +323,29 @@
         WHERE destination_id = #{destinationId}
     </select>
 
+    <select id="findTranslationsByDestinationIds"
+            resultType="com.example.travlediary.model.DestinationTranslation">
+        SELECT id,
+               destination_id AS destinationId,
+               language_code AS languageCode,
+               name,
+               short_description AS shortDescription
+        FROM destination_translations
+        <choose>
+            <when test="destinationIds != null and !destinationIds.isEmpty()">
+                WHERE destination_id IN
+                <foreach collection="destinationIds" item="destinationId"
+                         open="(" separator="," close=")">
+                    #{destinationId}
+                </foreach>
+            </when>
+            <otherwise>
+                WHERE 1 = 0
+            </otherwise>
+        </choose>
+        ORDER BY destination_id, language_code, id
+    </select>
+
     <!-- 삭제 쿼리 -->
     <delete id="deleteById" parameterType="long">
         DELETE FROM destinations WHERE id = #{id}

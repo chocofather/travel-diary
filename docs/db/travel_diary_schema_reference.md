@@ -186,6 +186,27 @@ CREATE TABLE `attraction_info` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `attraction_info_translations`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `attraction_info_translations` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `destination_id` bigint NOT NULL,
+  `language_code` varchar(10) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `closed_days` varchar(500) DEFAULT NULL,
+  `opening_hours` varchar(1000) DEFAULT NULL,
+  `admission_fee` text DEFAULT NULL,
+  `guide` text DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_attraction_info_translations_destination_language` (`destination_id`,`language_code`),
+  KEY `idx_attraction_info_translations_language_destination` (`language_code`,`destination_id`),
+  CONSTRAINT `fk_attraction_info_translations_attraction` FOREIGN KEY (`destination_id`) REFERENCES `attraction_info` (`destination_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `blocked_emails`
 --
 

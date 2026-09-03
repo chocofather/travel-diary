@@ -99,7 +99,8 @@ class DestinationServiceDeletionFileLifecycleTest {
                 attractionInfoService,
                 restaurantInfoService,
                 activityInfoService,
-                shopInfoService
+                shopInfoService,
+                new DestinationLocalizationService(destinationMapper)
         );
         ReflectionTestUtils.setField(destinationService, "uploadPath", uploadRoot.toString());
     }

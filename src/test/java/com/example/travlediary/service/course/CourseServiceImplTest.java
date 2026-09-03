@@ -9,7 +9,14 @@ import com.example.travlediary.dto.HomePopularCourseDto;
 import com.example.travlediary.dto.HomePopularCourseStopDto;
 import com.example.travlediary.model.Course;
 import com.example.travlediary.model.CourseDestination;
+import com.example.travlediary.config.i18n.SupportedLanguage;
+import com.example.travlediary.repository.category.CategoryMapper;
+import com.example.travlediary.repository.category.CountryCategoryMapper;
 import com.example.travlediary.repository.course.CourseMapper;
+import com.example.travlediary.repository.destination.DestinationMapper;
+import com.example.travlediary.service.category.LocalizedReferenceNameResolver;
+import com.example.travlediary.service.category.ReferenceNameLocalizationService;
+import com.example.travlediary.service.destination.DestinationLocalizationService;
 import com.example.travlediary.service.post.PostContentSanitizer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,12 +41,21 @@ class CourseServiceImplTest {
 
     @Mock
     private CourseMapper courseMapper;
+    @Mock
+    private DestinationMapper destinationMapper;
+    @Mock
+    private CountryCategoryMapper countryCategoryMapper;
+    @Mock
+    private CategoryMapper categoryMapper;
 
     private CourseServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        service = new CourseServiceImpl(courseMapper, new PostContentSanitizer());
+        service = new CourseServiceImpl(courseMapper, new PostContentSanitizer(),
+                new DestinationLocalizationService(destinationMapper),
+                new ReferenceNameLocalizationService(countryCategoryMapper, categoryMapper,
+                        new LocalizedReferenceNameResolver()));
     }
 
     @Test
@@ -56,7 +72,7 @@ class CourseServiceImplTest {
         when(courseMapper.findCourseStops(10L)).thenReturn(List.of(stop));
 
         detail.setUserId(5L);
-        CourseDetailDto result = service.getCourseDetail(10L, 5L);
+        CourseDetailDto result = service.getCourseDetail(10L, 5L, SupportedLanguage.KOREAN);
 
         assertThat(result.getContent())
                 .isEqualTo("<p>코스 소개</p>")
@@ -76,14 +92,15 @@ class CourseServiceImplTest {
         when(courseMapper.findCourseDetail(10L, null)).thenReturn(detail);
         when(courseMapper.findCourseStops(10L)).thenReturn(List.of());
 
-        assertThat(service.getCourseDetail(10L, null).getStops()).isEmpty();
+        assertThat(service.getCourseDetail(10L, null, SupportedLanguage.KOREAN).getStops())
+                .isEmpty();
     }
 
     @Test
     void missingOrDeletedCourseReturnsNotFound() {
         when(courseMapper.incrementViews(10L)).thenReturn(0);
 
-        assertThatThrownBy(() -> service.getCourseDetail(10L, null))
+        assertThatThrownBy(() -> service.getCourseDetail(10L, null, SupportedLanguage.KOREAN))
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(error -> assertThat(((ResponseStatusException) error).getStatusCode())
                         .isEqualTo(HttpStatus.NOT_FOUND));
@@ -97,7 +114,7 @@ class CourseServiceImplTest {
         when(courseMapper.incrementViews(10L)).thenReturn(1);
         when(courseMapper.findCourseDetail(10L, null)).thenReturn(null);
 
-        assertThatThrownBy(() -> service.getCourseDetail(10L, null))
+        assertThatThrownBy(() -> service.getCourseDetail(10L, null, SupportedLanguage.KOREAN))
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(error -> assertThat(((ResponseStatusException) error).getStatusCode())
                         .isEqualTo(HttpStatus.NOT_FOUND));
@@ -336,7 +353,7 @@ class CourseServiceImplTest {
         when(courseMapper.findActiveCourse(10L)).thenReturn(course);
         when(courseMapper.findCourseStops(10L)).thenReturn(List.of(first, second));
 
-        var edit = service.getCourseForEdit(10L, 5L);
+        var edit = service.getCourseForEdit(10L, 5L, SupportedLanguage.KOREAN);
 
         assertThat(edit.getCountryId()).isEqualTo(7L);
         assertThat(edit.getCountryName()).isEqualTo("대한민국");
@@ -347,13 +364,13 @@ class CourseServiceImplTest {
 
     @Test
     void editReadReturnsNotFoundOrForbidden() {
-        assertThatThrownBy(() -> service.getCourseForEdit(10L, 5L))
+        assertThatThrownBy(() -> service.getCourseForEdit(10L, 5L, SupportedLanguage.KOREAN))
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(error -> assertThat(((ResponseStatusException) error).getStatusCode())
                         .isEqualTo(HttpStatus.NOT_FOUND));
 
         when(courseMapper.findActiveCourse(11L)).thenReturn(activeCourse(11L, 9L));
-        assertThatThrownBy(() -> service.getCourseForEdit(11L, 5L))
+        assertThatThrownBy(() -> service.getCourseForEdit(11L, 5L, SupportedLanguage.KOREAN))
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(error -> assertThat(((ResponseStatusException) error).getStatusCode())
                         .isEqualTo(HttpStatus.FORBIDDEN));
@@ -534,7 +551,8 @@ class CourseServiceImplTest {
                 homeStop(20L, 1, "해운대")
         ));
 
-        List<HomePopularCourseDto> result = service.getPopularCoursesForHome();
+        List<HomePopularCourseDto> result =
+                service.getPopularCoursesForHome(SupportedLanguage.KOREAN);
 
         assertThat(result).containsExactly(first, second, third);
         assertThat(first.getPreviewDestinationNames())
@@ -550,7 +568,7 @@ class CourseServiceImplTest {
     void emptyHomePopularCoursesDoNotRunStopQuery() {
         when(courseMapper.findPopularCourses(3)).thenReturn(List.of());
 
-        assertThat(service.getPopularCoursesForHome()).isEmpty();
+        assertThat(service.getPopularCoursesForHome(SupportedLanguage.KOREAN)).isEmpty();
 
         verify(courseMapper, never()).findPopularCourseStops(any());
     }

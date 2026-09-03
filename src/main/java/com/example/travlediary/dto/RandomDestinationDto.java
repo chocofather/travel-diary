@@ -8,7 +8,9 @@ public class RandomDestinationDto {
     private String destinationName;
     private String shortDescription;
     private String imageUrl;
+    private Long countryId;
     private String countryName;
+    private Long regionId;
     private String regionName;
 
     public String getDetailUrl() {

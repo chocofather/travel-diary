@@ -7,6 +7,7 @@
     import org.apache.ibatis.annotations.Mapper;
     import org.apache.ibatis.annotations.Param;
 
+    import java.util.Collection;
     import java.util.List;
 
     @Mapper
@@ -53,6 +54,9 @@
         void incrementViewCount(Long id);
 
         List<DestinationTranslation> findTranslationsByDestinationId(Long destinationId);
+
+        List<DestinationTranslation> findTranslationsByDestinationIds(
+                @Param("destinationIds") Collection<Long> destinationIds);
 
 
         void deleteById(Long id); // destinations

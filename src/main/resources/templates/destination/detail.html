@@ -387,8 +387,10 @@
                                 <dt class="info-item-label"
                                     th:text="#{destination.detail.info.parking}">주차 가능</dt>
                                 <dd class="info-item-value info-item-value-inline">
-                                    <span th:if="${attractionInfo.parkingAvailable != null}"
-                                          th:text="${attractionInfo.parkingAvailable ? '가능' : '불가'}">가능</span>
+                                    <span th:if="${attractionInfo.parkingAvailable == true}"
+                                          th:text="#{destination.detail.value.available}">가능</span>
+                                    <span th:if="${attractionInfo.parkingAvailable == false}"
+                                          th:text="#{destination.detail.value.unavailable}">불가</span>
                                     <span th:if="${attractionInfo.parkingAvailable == null}">-</span>
                                 </dd>
                             </div>

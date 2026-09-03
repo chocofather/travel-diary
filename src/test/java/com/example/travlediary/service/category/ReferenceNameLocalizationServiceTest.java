@@ -10,13 +10,17 @@ import com.example.travlediary.repository.category.CountryCategoryMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.never;
@@ -57,6 +61,52 @@ class ReferenceNameLocalizationServiceTest {
         verify(countryCategoryMapper).findTranslationsByCountryCategoryIds(List.of(38L, 235L));
     }
 
+    @Test
+    void localizesRegionBaseNamesCollectedFromAListWithoutReloadingBaseRows() {
+        when(countryCategoryMapper.findTranslationsByCountryCategoryIds(List.of(38L, 235L)))
+                .thenReturn(List.of(
+                        countryTranslation(1L, 38L, "ko", "서울"),
+                        countryTranslation(2L, 38L, "ja", "ソウル"),
+                        countryTranslation(3L, 235L, "ko", "종로구"),
+                        countryTranslation(4L, 235L, "ja", "鐘路区")));
+
+        Map<Long, String> baseNames = new LinkedHashMap<>();
+        baseNames.put(38L, "서울");
+        baseNames.put(235L, "종로구");
+
+        Map<Long, String> names = service.localizeCountryCategoryNames(
+                baseNames, SupportedLanguage.JAPANESE);
+
+        assertThat(names).containsEntry(38L, "ソウル").containsEntry(235L, "鐘路区");
+        verify(countryCategoryMapper).findTranslationsByCountryCategoryIds(List.of(38L, 235L));
+    }
+
+    @ParameterizedTest
+    @MethodSource("seoulNames")
+    void regionSelectorUsesEachSupportedLocale(
+            SupportedLanguage language, String expectedSeoul, String expectedJongno) {
+        when(countryCategoryMapper.findTranslationsByCountryCategoryIds(List.of(38L, 235L)))
+                .thenReturn(List.of(
+                        countryTranslation(1L, 38L, "ko", "서울"),
+                        countryTranslation(2L, 38L, "en", "Seoul"),
+                        countryTranslation(3L, 38L, "ja", "ソウル"),
+                        countryTranslation(4L, 38L, "zh-CN", "首尔"),
+                        countryTranslation(5L, 38L, "zh-TW", "首爾"),
+                        countryTranslation(6L, 235L, "ko", "종로구"),
+                        countryTranslation(7L, 235L, "en", "Jongno-gu"),
+                        countryTranslation(8L, 235L, "ja", "鐘路区"),
+                        countryTranslation(9L, 235L, "zh-CN", "钟路区"),
+                        countryTranslation(10L, 235L, "zh-TW", "鐘路區")));
+
+        Map<Long, String> baseNames = new LinkedHashMap<>();
+        baseNames.put(38L, "서울");
+        baseNames.put(235L, "종로구");
+
+        assertThat(service.localizeCountryCategoryNames(baseNames, language))
+                .containsEntry(38L, expectedSeoul)
+                .containsEntry(235L, expectedJongno);
+    }
+
     @ParameterizedTest
     @EnumSource(value = SupportedLanguage.class, names = {
             "JAPANESE", "CHINESE_SIMPLIFIED", "CHINESE_TRADITIONAL"
@@ -81,6 +131,24 @@ class ReferenceNameLocalizationServiceTest {
 
         assertThat(service.localizeCategories(List.of(7L), SupportedLanguage.ENGLISH))
                 .containsEntry(7L, "Landmark");
+    }
+
+    @ParameterizedTest
+    @MethodSource("landmarkNames")
+    void categoryDisplaySupportsEveryConfiguredLocale(
+            SupportedLanguage language, String expectedName) {
+        when(categoryMapper.findByIds(List.of(7L)))
+                .thenReturn(List.of(category(7L, "랜드마크")));
+        when(categoryMapper.findTranslationsByCategoryIds(List.of(7L)))
+                .thenReturn(List.of(
+                        categoryTranslation(1L, 7L, "ko", "랜드마크"),
+                        categoryTranslation(2L, 7L, "en", "Landmark"),
+                        categoryTranslation(3L, 7L, "ja", "ランドマーク"),
+                        categoryTranslation(4L, 7L, "zh-CN", "地标"),
+                        categoryTranslation(5L, 7L, "zh-TW", "地標")));
+
+        assertThat(service.localizeCategories(List.of(7L), language))
+                .containsEntry(7L, expectedName);
     }
 
     @Test
@@ -139,6 +207,24 @@ class ReferenceNameLocalizationServiceTest {
         category.setId(id);
         category.setRegionName(name);
         return category;
+    }
+
+    private static Stream<Arguments> seoulNames() {
+        return Stream.of(
+                Arguments.of(SupportedLanguage.KOREAN, "서울", "종로구"),
+                Arguments.of(SupportedLanguage.ENGLISH, "Seoul", "Jongno-gu"),
+                Arguments.of(SupportedLanguage.JAPANESE, "ソウル", "鐘路区"),
+                Arguments.of(SupportedLanguage.CHINESE_SIMPLIFIED, "首尔", "钟路区"),
+                Arguments.of(SupportedLanguage.CHINESE_TRADITIONAL, "首爾", "鐘路區"));
+    }
+
+    private static Stream<Arguments> landmarkNames() {
+        return Stream.of(
+                Arguments.of(SupportedLanguage.KOREAN, "랜드마크"),
+                Arguments.of(SupportedLanguage.ENGLISH, "Landmark"),
+                Arguments.of(SupportedLanguage.JAPANESE, "ランドマーク"),
+                Arguments.of(SupportedLanguage.CHINESE_SIMPLIFIED, "地标"),
+                Arguments.of(SupportedLanguage.CHINESE_TRADITIONAL, "地標"));
     }
 
     private Category category(Long id, String name) {

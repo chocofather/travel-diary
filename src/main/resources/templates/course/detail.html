@@ -16,16 +16,47 @@
   <link rel="stylesheet" href="/css/content-bookmark.css" />
   <link rel="stylesheet" href="/css/content-comment.css" />
   <script src="/js/comment-deep-link.js" defer></script>
+  <script src="/js/confirm-submit.js" defer></script>
   <script src="/js/course-comments.js" defer></script>
   <script src="/js/content-bookmarks.js" defer></script>
   <script src="/js/course-hide-modal.js" defer></script>
 </th:block>
 
 <th:block th:fragment="body">
+  <!-- 코스 댓글 스크립트가 쓰는 고정 문구. 화면에는 보이지 않는다. -->
+  <div id="course-detail-i18n" hidden
+       th:data-comment-loading="#{course.detail.comment.loading}"
+       th:data-comment-load-more="#{course.detail.comment.loadMore}"
+       th:data-comment-empty="#{course.detail.comment.empty}"
+       th:data-comment-moderated="#{course.detail.comment.moderated}"
+       th:data-comment-deleted="#{course.detail.comment.deleted}"
+       th:data-comment-unknown-user="#{course.detail.comment.unknownUser}"
+       th:data-comment-like="#{course.detail.comment.like}"
+       th:data-comment-profile-alt="#{course.detail.comment.profileAlt}"
+       th:data-comment-edited="#{course.detail.comment.edited}"
+       th:data-comment-reply-to-deleted="#{course.detail.comment.replyToDeleted}"
+       th:data-comment-reply="#{course.detail.comment.reply}"
+       th:data-comment-edit="#{course.detail.comment.edit}"
+       th:data-comment-delete="#{course.detail.comment.delete}"
+       th:data-comment-save="#{course.detail.comment.save}"
+       th:data-comment-cancel="#{course.detail.comment.cancel}"
+       th:data-comment-submit="#{course.detail.comment.submit}"
+       th:data-comment-photo="#{course.detail.comment.photo}"
+       th:data-comment-reply-placeholder="#{course.detail.comment.replyPlaceholder}"
+       th:data-comment-delete-confirm="#{course.detail.comment.deleteConfirm}"
+       th:data-comment-image-alt="#{course.detail.comment.imageAlt}"
+       th:data-comment-image-limit="#{course.detail.comment.imageLimit}"
+       th:data-comment-file-preview="#{course.detail.comment.filePreview}"
+       th:data-comment-file-remove="#{course.detail.comment.fileRemove}"
+       th:data-comment-login-required="#{course.detail.comment.loginRequired}"
+       th:data-comment-request-failed="#{course.detail.comment.requestFailed}"
+       th:data-comment-invalid-response="#{course.detail.comment.invalidResponse}"
+       th:data-comment-invalid-location-response="#{course.detail.comment.invalidLocationResponse}"></div>
+
   <main class="course-detail-container">
     <article class="course-summary">
       <header class="course-summary-header">
-        <p class="course-summary-label">나만의 여행 코스</p>
+        <p class="course-summary-label" th:text="#{course.detail.label}">나만의 여행 코스</p>
         <div class="content-detail-title-row course-title-row">
           <h1 th:text="${course.title}">코스 제목</h1>
           <button type="button"
@@ -40,23 +71,24 @@
           </button>
         </div>
         <dl class="course-meta">
-          <div><dt>작성자</dt><dd><a class="content-writer-link"
+          <div><dt th:text="#{course.detail.meta.writer}">작성자</dt><dd><a class="content-writer-link"
                                        th:href="@{/users/{id}(id=${course.userId})}"
                                        th:text="${course.nickname}">작성자</a></dd></div>
-          <div><dt>작성일</dt><dd th:text="${#dates.format(course.createdAt, 'yyyy-MM-dd HH:mm')}">작성일</dd></div>
-          <div><dt>수정일</dt><dd th:text="${#dates.format(course.updatedAt, 'yyyy-MM-dd HH:mm')}">수정일</dd></div>
-          <div><dt>조회수</dt><dd th:text="${course.views}">0</dd></div>
+          <div><dt th:text="#{course.detail.meta.createdAt}">작성일</dt><dd th:text="${#dates.format(course.createdAt, 'yyyy-MM-dd HH:mm')}">작성일</dd></div>
+          <div><dt th:text="#{course.detail.meta.updatedAt}">수정일</dt><dd th:text="${#dates.format(course.updatedAt, 'yyyy-MM-dd HH:mm')}">수정일</dd></div>
+          <div><dt th:text="#{course.detail.meta.views}">조회수</dt><dd th:text="${course.views}">0</dd></div>
         </dl>
       </header>
 
       <section class="course-introduction">
-        <h2>코스 소개</h2>
+        <h2 th:text="#{course.detail.section.introduction}">코스 소개</h2>
         <div class="course-introduction-content rich-text-content"
              th:utext="${course.content}"></div>
         <!-- 이미 화면에 내려온 stops 목록 크기만 사용한다. (추가 조회 없음) -->
         <p class="course-introduction-meta"
-           th:if="${course.stops != null and !course.stops.isEmpty()}">
-          총 <span th:text="${course.stops.size()}">0</span>개의 여행지
+           th:if="${course.stops != null and !course.stops.isEmpty()}"
+           th:text="#{course.detail.stopCount(${course.stops.size()})}">
+          총 0개의 여행지
         </p>
       </section>
     </article>
@@ -64,7 +96,7 @@
     <section class="course-route" aria-labelledby="course-route-title">
       <div class="course-route-heading">
         <p>TRAVEL ROUTE</p>
-        <h2 id="course-route-title">여행 동선</h2>
+        <h2 id="course-route-title" th:text="#{course.detail.route.title}">여행 동선</h2>
       </div>
 
       <div class="course-timeline" th:if="${course.stops != null and !course.stops.isEmpty()}">
@@ -77,9 +109,10 @@
             <div class="course-stop-image-wrap">
               <img class="course-stop-image"
                    th:src="${stop.imageUrl != null and !#strings.isEmpty(stop.imageUrl) ? stop.imageUrl : '/images/default.png'}"
-                   th:alt="|${stop.name} 대표 이미지|"
+                   th:alt="#{course.detail.stop.imageAlt(${stop.name})}"
                    loading="lazy" />
-              <span class="course-stop-order" th:text="|STOP ${stop.visitOrder}|">STOP 1</span>
+              <span class="course-stop-order"
+                    th:text="#{course.detail.stop.order(${stop.visitOrder})}">STOP 1</span>
             </div>
 
             <div class="course-stop-body">
@@ -88,7 +121,7 @@
                  th:if="${stop.shortDescription != null and !#strings.isEmpty(#strings.trim(stop.shortDescription))}"
                  th:text="${stop.shortDescription}">간단 설명</p>
               <p class="course-stop-region">
-                <span>지역</span>
+                <span th:text="#{course.detail.stop.region}">지역</span>
                 <strong th:text="${stop.regionName}">지역명</strong>
               </p>
             </div>
@@ -97,23 +130,28 @@
       </div>
 
       <p class="course-route-empty"
-         th:if="${course.stops == null or course.stops.isEmpty()}">등록된 여행지가 없습니다.</p>
+         th:if="${course.stops == null or course.stops.isEmpty()}"
+         th:text="#{course.detail.route.empty}">등록된 여행지가 없습니다.</p>
     </section>
 
     <footer class="course-detail-footer">
       <!-- 한 줄 액션: 왼쪽은 목록 이동, 오른쪽은 작성자/관리자 액션 -->
       <div class="course-detail-footer-row">
         <a th:href="@{/board/list(boardType='course')}" class="course-back-to-list">
-          <span class="course-back-to-list-arrow" aria-hidden="true">←</span>코스 목록으로
+          <span class="course-back-to-list-arrow" aria-hidden="true">←</span><span
+              th:text="#{course.detail.backToList}">코스 목록으로</span>
         </a>
         <div class="course-detail-actions">
           <th:block th:if="${course.myCourse}">
-            <a th:href="@{/course/{id}/edit(id=${course.id})}" class="course-edit-button">수정</a>
+            <a th:href="@{/course/{id}/edit(id=${course.id})}" class="course-edit-button"
+               th:text="#{course.detail.edit}">수정</a>
+            <!-- 삭제 확인 문구는 confirm-submit.js 가 data-confirm 으로 읽는다. -->
             <form th:action="@{/course/{id}/delete(id=${course.id})}"
                   method="post"
                   class="course-delete-form"
-                  onsubmit="return confirm('이 여행 코스를 삭제하시겠습니까?');">
-              <button type="submit" class="course-delete-button">삭제</button>
+                  th:data-confirm="#{course.detail.deleteConfirm}">
+              <button type="submit" class="course-delete-button"
+                      th:text="#{course.detail.delete}">삭제</button>
             </form>
           </th:block>
           <!-- 관리자 숨김. 사유는 상시 노출하지 않고 모달에서 받는다.
@@ -148,18 +186,27 @@
 
     <section id="course-comments" class="course-comments content-comments" th:attr="data-course-id=${course.id}">
       <div class="content-comment-toolbar">
-        <h2 class="content-comment-heading">댓글 <span id="course-comment-count">0</span></h2>
-        <div class="content-comment-sort" role="group" aria-label="댓글 정렬">
-          <button type="button" class="is-active" data-comment-sort="latest" aria-pressed="true">최신순</button>
-          <button type="button" data-comment-sort="oldest" aria-pressed="false">오래된순</button>
-          <button type="button" data-comment-sort="likes" aria-pressed="false">좋아요순</button>
+        <h2 class="content-comment-heading">
+          <span th:text="#{course.detail.comment.heading}">댓글</span>
+          <span id="course-comment-count">0</span>
+        </h2>
+        <div class="content-comment-sort" role="group"
+             th:aria-label="#{course.detail.comment.sortLabel}" aria-label="댓글 정렬">
+          <button type="button" class="is-active" data-comment-sort="latest" aria-pressed="true"
+                  th:text="#{course.detail.comment.sort.latest}">최신순</button>
+          <button type="button" data-comment-sort="oldest" aria-pressed="false"
+                  th:text="#{course.detail.comment.sort.oldest}">오래된순</button>
+          <button type="button" data-comment-sort="likes" aria-pressed="false"
+                  th:text="#{course.detail.comment.sort.likes}">좋아요순</button>
         </div>
       </div>
 
       <form id="course-comment-form" class="course-comment-form" enctype="multipart/form-data"
             th:if="${#authorization.expression('isAuthenticated()')}">
-        <label for="course-comment-content" class="sr-only">댓글 내용</label>
+        <label for="course-comment-content" class="sr-only"
+               th:text="#{course.detail.comment.contentLabel}">댓글 내용</label>
         <textarea id="course-comment-content" name="content" maxlength="2000"
+                  th:placeholder="#{course.detail.comment.placeholder}"
                   placeholder="댓글을 입력해 주세요." required></textarea>
 
         <!-- 선택한 사진 미리보기 (등록 전) -->
@@ -169,14 +216,17 @@
           <span class="course-comment-length"><span id="course-comment-length">0</span>/2000</span>
           <input type="file" id="course-comment-image-input" name="images" accept="image/*" multiple hidden>
           <label for="course-comment-image-input" class="image-upload-label">
-            <img src="/uploads/icons/camera.png" alt="" aria-hidden="true"> 사진
+            <img src="/uploads/icons/camera.png" alt="" aria-hidden="true">
+            <span th:text="#{course.detail.comment.photo}">사진</span>
           </label>
-          <button type="submit">등록</button>
+          <button type="submit" th:text="#{course.detail.comment.submit}">등록</button>
         </div>
       </form>
 
       <p class="course-comment-login"
-         th:unless="${#authorization.expression('isAuthenticated()')}">
+         th:unless="${#authorization.expression('isAuthenticated()')}"
+         th:with="loginUrl=@{/login(redirect=${'/course/' + course.id})}"
+         th:utext="#{course.detail.comment.loginPrompt(${loginUrl})}">
         댓글을 작성하려면
         <a th:href="@{/login(redirect=${'/course/' + course.id})}">로그인</a>해 주세요.
       </p>
@@ -184,15 +234,22 @@
       <p id="course-comment-message" class="course-comment-message" role="alert" hidden></p>
       <ul id="course-comment-list" class="course-comment-list content-comment-list" aria-live="polite"></ul>
       <div class="content-comment-more-row">
-        <button id="course-comment-more" type="button" class="content-comment-more" hidden>댓글 더보기</button>
+        <button id="course-comment-more" type="button" class="content-comment-more" hidden
+                th:text="#{course.detail.comment.loadMore}">댓글 더보기</button>
       </div>
 
       <!-- 댓글 사진 확대 모달. 이동은 클릭한 댓글에 첨부된 사진 안에서만 순환한다 -->
       <div id="course-comment-image-modal" class="image-modal" style="display:none;">
-        <span class="close-btn" role="button" aria-label="닫기">&times;</span>
-        <button type="button" class="comment-image-nav prev" aria-label="이전 사진">&#10094;</button>
-        <img class="modal-content" id="course-comment-modal-img" alt="확대 이미지">
-        <button type="button" class="comment-image-nav next" aria-label="다음 사진">&#10095;</button>
+        <span class="close-btn" role="button"
+              th:aria-label="#{course.detail.comment.image.close}" aria-label="닫기">&times;</span>
+        <button type="button" class="comment-image-nav prev"
+                th:aria-label="#{course.detail.comment.image.previous}"
+                aria-label="이전 사진">&#10094;</button>
+        <img class="modal-content" id="course-comment-modal-img"
+             th:alt="#{course.detail.comment.image.enlargedAlt}" alt="확대 이미지">
+        <button type="button" class="comment-image-nav next"
+                th:aria-label="#{course.detail.comment.image.next}"
+                aria-label="다음 사진">&#10095;</button>
       </div>
     </section>
   </main>

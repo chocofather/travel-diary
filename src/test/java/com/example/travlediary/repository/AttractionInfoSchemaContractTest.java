@@ -48,6 +48,28 @@ class AttractionInfoSchemaContractTest {
                 .contains("`guide` text DEFAULT NULL");
     }
 
+    @Test
+    void attractionTranslationsMatchTheLiveDatabaseContract() throws IOException {
+        String schema = schema();
+        String translations = between(schema,
+                "CREATE TABLE `attraction_info_translations`",
+                "/*!40101 SET character_set_client = @saved_cs_client */;");
+
+        assertThat(translations)
+                .contains("`id` bigint NOT NULL AUTO_INCREMENT")
+                .contains("`destination_id` bigint NOT NULL")
+                .contains("`language_code` varchar(10) CHARACTER SET ascii COLLATE ascii_bin NOT NULL")
+                .contains("`closed_days` varchar(500) DEFAULT NULL")
+                .contains("`opening_hours` varchar(1000) DEFAULT NULL")
+                .contains("`admission_fee` text DEFAULT NULL")
+                .contains("`guide` text DEFAULT NULL")
+                .contains("UNIQUE KEY `uq_attraction_info_translations_destination_language` (`destination_id`,`language_code`)")
+                .contains("KEY `idx_attraction_info_translations_language_destination` (`language_code`,`destination_id`)")
+                .contains("FOREIGN KEY (`destination_id`) REFERENCES `attraction_info` (`destination_id`) ON DELETE CASCADE")
+                .contains(
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+    }
+
     private String schema() throws IOException {
         return Files.readString(
                 Path.of("docs/db/travel_diary_schema_reference.md"), StandardCharsets.UTF_8);

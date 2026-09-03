@@ -16,6 +16,20 @@
         SELECT * FROM attraction_info WHERE destination_id = #{destinationId}
     </select>
 
+    <select id="findTranslationsByDestinationId"
+            resultType="com.example.travlediary.model.AttractionInfoTranslation">
+        SELECT id,
+               destination_id,
+               language_code,
+               closed_days,
+               opening_hours,
+               admission_fee,
+               guide
+        FROM attraction_info_translations
+        WHERE destination_id = #{destinationId}
+        ORDER BY language_code ASC, id ASC
+    </select>
+
     <update id="update" parameterType="com.example.travlediary.model.AttractionInfo">
         UPDATE attraction_info
         SET

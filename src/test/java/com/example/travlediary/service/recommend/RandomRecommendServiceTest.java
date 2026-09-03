@@ -1,16 +1,21 @@
 package com.example.travlediary.service.recommend;
 
+import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.dto.RandomDestinationDto;
 import com.example.travlediary.dto.RandomTravelRegionDto;
+import com.example.travlediary.model.DestinationTranslation;
 import com.example.travlediary.model.CountryCategory;
 import com.example.travlediary.repository.recommend.RandomRecommendMapper;
 import com.example.travlediary.service.category.CountryCategoryService;
+import com.example.travlediary.service.category.ReferenceNameLocalizationService;
+import com.example.travlediary.service.destination.DestinationService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -25,6 +30,10 @@ class RandomRecommendServiceTest {
     private RandomRecommendMapper mapper;
     @Mock
     private CountryCategoryService countryCategoryService;
+    @Mock
+    private DestinationService destinationService;
+    @Mock
+    private ReferenceNameLocalizationService referenceNameLocalizationService;
 
     @Test
     void existingRegionRecommendationKeepsItsListContract() {
@@ -147,8 +156,77 @@ class RandomRecommendServiceTest {
         verifyNoInteractions(mapper, countryCategoryService);
     }
 
+    @Test
+    void localizesAllRandomCardsAndSelectedRegionsInBatchesWithoutChangingOrder() {
+        CountryCategory korea = country(909L, "대한민국", null);
+        RandomTravelRegionDto seoul = region(909L, "대한민국", 910L, "서울");
+        List<RandomDestinationDto> cards = List.of(
+                destination(7L, "경복궁", 910L, "서울"),
+                destination(3L, "창덕궁", 910L, "서울"),
+                destination(9L, "서울숲", 910L, "서울"),
+                destination(2L, "남산", 910L, "서울"));
+        when(countryCategoryService.getCourseCountries()).thenReturn(List.of(korea));
+        when(mapper.findRandomEligibleChildRegion(909L, null)).thenReturn(seoul);
+        when(mapper.findAllVisibleRegionIdsUnder(910L)).thenReturn(List.of(910L));
+        when(mapper.findRandomByRegionIds(List.of(910L), 8)).thenReturn(cards);
+        when(destinationService.resolveLocalizedContentByDestinationIds(
+                List.of(7L, 3L, 9L, 2L), SupportedLanguage.ENGLISH))
+                .thenReturn(Map.of(
+                        7L, translation(7L, "Gyeongbokgung Palace", "Korean summary fallback"),
+                        3L, translation(3L, "Changdeokgung Palace", "Changdeokgung summary"),
+                        9L, translation(9L, "Seoul Forest", "Seoul Forest summary"),
+                        2L, translation(2L, "Namsan", "Namsan summary")));
+        when(referenceNameLocalizationService.localizeCountryCategoryNames(
+                Map.of(909L, "대한민국", 910L, "서울"), SupportedLanguage.ENGLISH))
+                .thenReturn(Map.of(909L, "South Korea", 910L, "Seoul"));
+
+        var result = service().getRandomTravelByScope(
+                "domestic", null, SupportedLanguage.ENGLISH).orElseThrow();
+
+        assertThat(result.getCountryName()).isEqualTo("South Korea");
+        assertThat(result.getRegionName()).isEqualTo("Seoul");
+        assertThat(result.getRecommendedDestinations())
+                .extracting(RandomDestinationDto::getDestinationId)
+                .containsExactly(7L, 3L, 9L, 2L);
+        assertThat(result.getRecommendedDestinations())
+                .extracting(RandomDestinationDto::getDestinationName)
+                .containsExactly("Gyeongbokgung Palace", "Changdeokgung Palace",
+                        "Seoul Forest", "Namsan");
+        assertThat(result.getRecommendedDestinations().get(0).getShortDescription())
+                .isEqualTo("Korean summary fallback");
+        assertThat(result.getRecommendedDestinations())
+                .extracting(RandomDestinationDto::getRegionName)
+                .containsOnly("Seoul");
+        verify(destinationService).resolveLocalizedContentByDestinationIds(
+                List.of(7L, 3L, 9L, 2L), SupportedLanguage.ENGLISH);
+        verify(referenceNameLocalizationService).localizeCountryCategoryNames(
+                Map.of(909L, "대한민국", 910L, "서울"), SupportedLanguage.ENGLISH);
+    }
+
+    @Test
+    void missingTranslationsKeepEveryRandomCardAndItsBaseValues() {
+        when(countryCategoryService.getAllRegionIdsUnder(31L)).thenReturn(List.of(31L));
+        RandomDestinationDto palace = destination(41L, "경복궁", 31L, "서울");
+        when(mapper.findRandomByRegionIds(List.of(31L), 5)).thenReturn(List.of(palace));
+        when(destinationService.resolveLocalizedContentByDestinationIds(
+                List.of(41L), SupportedLanguage.JAPANESE))
+                .thenReturn(Map.of(41L, translation(41L, null, null)));
+        when(referenceNameLocalizationService.localizeCountryCategoryNames(
+                Map.of(909L, "대한민국", 31L, "서울"), SupportedLanguage.JAPANESE))
+                .thenReturn(Map.of(909L, "대한민국", 31L, "서울"));
+
+        List<RandomDestinationDto> result = service().getRandomDestinationsByRegion(
+                31L, 5, SupportedLanguage.JAPANESE);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getDestinationName()).isEqualTo("경복궁");
+        assertThat(result.get(0).getShortDescription()).isEqualTo("경복궁 설명");
+        assertThat(result.get(0).getRegionName()).isEqualTo("서울");
+    }
+
     private RandomRecommendService service() {
-        return new RandomRecommendService(mapper, countryCategoryService);
+        return new RandomRecommendService(mapper, countryCategoryService,
+                destinationService, referenceNameLocalizationService);
     }
 
     private CountryCategory country(Long id, String name, Long parentId) {
@@ -176,5 +254,24 @@ class RandomRecommendServiceTest {
         destination.setShortDescription(name + " 설명");
         destination.setImageUrl("/uploads/" + id + ".jpg");
         return destination;
+    }
+
+    private RandomDestinationDto destination(
+            Long id, String name, Long regionId, String regionName) {
+        RandomDestinationDto destination = destination(id, name);
+        destination.setCountryId(909L);
+        destination.setCountryName("대한민국");
+        destination.setRegionId(regionId);
+        destination.setRegionName(regionName);
+        return destination;
+    }
+
+    private DestinationTranslation translation(
+            Long destinationId, String name, String shortDescription) {
+        DestinationTranslation translation = new DestinationTranslation();
+        translation.setDestinationId(destinationId);
+        translation.setName(name);
+        translation.setShortDescription(shortDescription);
+        return translation;
     }
 }

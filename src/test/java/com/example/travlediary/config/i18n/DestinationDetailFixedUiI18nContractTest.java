@@ -141,6 +141,16 @@ class DestinationDetailFixedUiI18nContractTest {
                 .isEqualTo("開放時間");
         assertThat(message(messages, "destination.detail.info.officialWebsite", "en"))
                 .isEqualTo("Official Website");
+        assertThat(message(messages, "destination.detail.value.available", "ko"))
+                .isEqualTo("가능");
+        assertThat(message(messages, "destination.detail.value.unavailable", "en"))
+                .isEqualTo("Unavailable");
+        assertThat(message(messages, "destination.detail.value.available", "ja"))
+                .isEqualTo("利用可");
+        assertThat(message(messages, "destination.detail.value.unavailable", "zh-CN"))
+                .isEqualTo("不可用");
+        assertThat(message(messages, "destination.detail.value.available", "zh-TW"))
+                .isEqualTo("可使用");
     }
 
     private String localizedAttribute(Element element) {

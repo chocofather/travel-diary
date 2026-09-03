@@ -10,7 +10,9 @@
         <result property="destinationName" column="name"/>
         <result property="shortDescription" column="short_description"/>
         <result property="imageUrl" column="image_url"/>
+        <result property="countryId" column="country_id"/>
         <result property="countryName" column="country_name"/>
+        <result property="regionId" column="region_id"/>
         <result property="regionName" column="region_name"/>
     </resultMap>
 
@@ -70,6 +72,7 @@
         destination_countries AS (
             SELECT
                 destination_regions.destination_id,
+                destination_regions.region_id AS country_id,
                 destination_regions.region_name AS country_name
             FROM destination_regions
             WHERE destination_regions.code = destination_regions.country_code
@@ -88,7 +91,9 @@
             dt.name,
             dt.short_description,
             di.image_url,
+            destination_countries.country_id,
             destination_countries.country_name,
+            d.region_id AS region_id,
             region.region_name
         FROM destinations d
         JOIN destination_translations dt ON dt.destination_id = d.id AND dt.language_code = 'ko'

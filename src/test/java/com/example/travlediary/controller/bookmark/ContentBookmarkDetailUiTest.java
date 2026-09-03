@@ -27,6 +27,9 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -79,7 +82,8 @@ class ContentBookmarkDetailUiTest {
     @ParameterizedTest
     @MethodSource("courseBookmarkStates")
     void courseBookmarkRendersInTitleRow(boolean bookmarked, String expectedLabel, long id) throws Exception {
-        when(courseService.getCourseDetail(id, null)).thenReturn(course(id, bookmarked));
+        when(courseService.getCourseDetail(eq(id), isNull(), any()))
+                .thenReturn(course(id, bookmarked));
 
         String body = mockMvc.perform(get("/course/{id}", id))
                 .andExpect(status().isOk())

@@ -8,25 +8,50 @@
 </th:block>
 
 <th:block th:fragment="body">
+  <div id="random-travel-i18n" hidden
+       th:data-preview-domestic="#{random.travel.preview.domestic}"
+       th:data-preview-overseas="#{random.travel.preview.overseas}"
+       th:data-phase-selecting="#{random.travel.phase.selecting}"
+       th:data-phase-considering="#{random.travel.phase.considering}"
+       th:data-phase-almost="#{random.travel.phase.almost}"
+       th:data-phase-reveal="#{random.travel.phase.reveal}"
+       th:data-status-loading="#{random.travel.status.loading}"
+       th:data-results-heading="#{random.travel.results.heading}"
+       th:data-results-count="#{random.travel.results.count}"
+       th:data-results-all="#{random.travel.results.all}"
+       th:data-redraw="#{random.travel.redraw}"
+       th:data-status-selected="#{random.travel.status.selected}"
+       th:data-hero-kicker="#{random.travel.hero.kicker}"
+       th:data-hero-summary="#{random.travel.hero.summary}"
+       th:data-card-image-alt="#{random.travel.card.imageAlt}"
+       th:data-card-details="#{random.travel.card.details}"
+       th:data-empty-title="#{random.travel.empty.title}"
+       th:data-empty-message="#{random.travel.empty.message}"
+       th:data-error-title="#{random.travel.error.title}"
+       th:data-error-message="#{random.travel.error.message}"
+       th:data-draw-loading="#{random.travel.draw.loading}"
+       th:data-draw-button="#{random.travel.draw.button}"></div>
   <section class="random-travel-page" aria-labelledby="random-travel-title">
     <div class="random-travel-shell">
       <header class="random-travel-hero">
         <div class="random-travel-copy">
           <span class="random-travel-eyebrow">RANDOM TRAVEL</span>
-          <h1 id="random-travel-title">어디로 떠나볼까요?</h1>
-          <p class="random-travel-subtitle">고민은 잠깐 내려놓고, Travel Diary가 여행지를 골라드릴게요.</p>
+          <h1 id="random-travel-title" th:text="#{random.travel.title}">어디로 떠나볼까요?</h1>
+          <p class="random-travel-subtitle" th:text="#{random.travel.subtitle}">고민은 잠깐 내려놓고, Travel Diary가 여행지를 골라드릴게요.</p>
 
           <div id="random-scope-group" class="random-scope-group"
-               role="group" aria-label="여행 범위 선택">
+               role="group" th:aria-label="#{random.travel.scope.label}">
             <button type="button" class="random-scope-button is-active"
-                    data-random-scope="domestic" aria-pressed="true">국내</button>
+                    data-random-scope="domestic" aria-pressed="true"
+                    th:text="#{random.travel.scope.domestic}">국내</button>
             <button type="button" class="random-scope-button"
-                    data-random-scope="overseas" aria-pressed="false">해외</button>
+                    data-random-scope="overseas" aria-pressed="false"
+                    th:text="#{random.travel.scope.international}">해외</button>
           </div>
 
           <button type="button" id="random-draw-button" class="random-draw-button">
             <span aria-hidden="true">✈</span>
-            여행지 뽑기
+            <span th:text="#{random.travel.draw.button}">여행지 뽑기</span>
           </button>
         </div>
 
@@ -38,7 +63,8 @@
       <p id="random-status" class="random-status" aria-live="polite"></p>
 
       <div id="random-stage" class="random-stage" hidden aria-hidden="true">
-        <span id="random-stage-label">여행 지역을 고르는 중...</span>
+        <span id="random-stage-label"
+              th:text="#{random.travel.phase.selecting}">여행 지역을 고르는 중...</span>
         <strong id="random-stage-name"></strong>
       </div>
 

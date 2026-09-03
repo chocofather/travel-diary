@@ -1,7 +1,13 @@
 package com.example.travlediary.service.course;
 
 import com.example.travlediary.model.CourseDestination;
+import com.example.travlediary.repository.category.CategoryMapper;
+import com.example.travlediary.repository.category.CountryCategoryMapper;
 import com.example.travlediary.repository.course.CourseMapper;
+import com.example.travlediary.repository.destination.DestinationMapper;
+import com.example.travlediary.service.category.LocalizedReferenceNameResolver;
+import com.example.travlediary.service.category.ReferenceNameLocalizationService;
+import com.example.travlediary.service.destination.DestinationLocalizationService;
 import com.example.travlediary.service.post.PostContentSanitizer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,12 +46,21 @@ class CourseStopResequenceTest {
 
     @Mock
     private CourseMapper courseMapper;
+    @Mock
+    private DestinationMapper destinationMapper;
+    @Mock
+    private CountryCategoryMapper countryCategoryMapper;
+    @Mock
+    private CategoryMapper categoryMapper;
 
     private CourseServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        service = new CourseServiceImpl(courseMapper, new PostContentSanitizer());
+        service = new CourseServiceImpl(courseMapper, new PostContentSanitizer(),
+                new DestinationLocalizationService(destinationMapper),
+                new ReferenceNameLocalizationService(countryCategoryMapper, categoryMapper,
+                        new LocalizedReferenceNameResolver()));
     }
 
     @Test

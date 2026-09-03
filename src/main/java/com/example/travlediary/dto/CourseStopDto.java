@@ -9,6 +9,7 @@ public class CourseStopDto {
     private Integer visitOrder;
     private String name;
     private String shortDescription;
+    private Long regionId;
     private String regionName;
     private Long countryId;
     private String countryName;

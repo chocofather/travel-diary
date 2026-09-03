@@ -23,9 +23,9 @@ class RandomTravelPageContractTest {
                 .contains("isDrawing")
                 .contains("response.status === 204")
                 .contains("setControlsDisabled")
-                .contains("조건에 맞는 여행지를 찾지 못했어요.")
-                .contains("여행지를 불러오지 못했어요.")
-                .contains("다시 뽑기");
+                .contains("randomI18n.emptyTitle")
+                .contains("randomI18n.errorTitle")
+                .contains("randomI18n.redraw");
         assertThat(count(script, "fetch(")).isEqualTo(1);
     }
 
@@ -44,8 +44,8 @@ class RandomTravelPageContractTest {
                 .contains("destination.imageUrl")
                 .contains("destination.regionName")
                 .contains("destination.detailUrl")
-                .contains("이번에 떠날 곳은")
-                .contains("에서 둘러볼 여행지")
+                .contains("randomI18n.heroKicker")
+                .contains("randomI18n.resultsHeading")
                 .contains("/images/default.png")
                 .contains("document.createElement")
                 .contains("textContent")
@@ -78,10 +78,10 @@ class RandomTravelPageContractTest {
                 .contains("stage.classList.add('is-locked')");
         // 단계별 진행 문구
         assertThat(script)
-                .contains("여행 지역을 고르는 중...")
-                .contains("어디가 좋을까요?")
-                .contains("거의 다 골랐어요...")
-                .contains("이번 여행지는...");
+                .contains("randomI18n.phaseSelecting")
+                .contains("randomI18n.phaseConsidering")
+                .contains("randomI18n.phaseAlmost")
+                .contains("randomI18n.phaseReveal");
         // 결과 등장 효과와 작은 축하 효과 (모션 최소화 설정에서는 끈다)
         assertThat(script)
                 .contains("resultContainer.classList.add('is-revealed')")
@@ -101,7 +101,7 @@ class RandomTravelPageContractTest {
                 .contains("scope === 'overseas' ? 'overseas' : 'domestic'")
                 .contains("region: String(result.regionId)")
                 .contains("`/destinations?${params.toString()}`")
-                .contains("전체 여행지 보기");
+                .contains("randomI18n.resultsAll");
         assertThat(css)
                 .contains(".random-all-destinations-link")
                 .contains(".random-destinations-actions");

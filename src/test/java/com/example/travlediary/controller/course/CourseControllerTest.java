@@ -16,6 +16,8 @@ import org.springframework.ui.ExtendedModelMap;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -90,7 +92,7 @@ class CourseControllerTest {
         CountryCategory korea = country(7L, "대한민국", null);
         CountryCategory japan = country(8L, "일본", 1L);
         when(userDetails.getId()).thenReturn(5L);
-        when(courseService.getCourseForEdit(100L, 5L)).thenReturn(course);
+        when(courseService.getCourseForEdit(eq(100L), eq(5L), any())).thenReturn(course);
         when(countryCategoryService.getCourseCountries()).thenReturn(List.of(korea, japan));
         ExtendedModelMap model = new ExtendedModelMap();
 

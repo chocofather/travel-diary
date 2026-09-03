@@ -19,6 +19,8 @@ class RandomRecommendMapperContractTest {
                 .contains("WITH RECURSIVE destination_regions")
                 .contains("SUBSTRING_INDEX(region.code, '-', 1) AS country_code")
                 .contains("JOIN country_categories parent ON parent.id = destination_regions.parent_id")
+                .contains("destination_countries.country_id")
+                .contains("d.region_id AS region_id")
                 .contains("country_name")
                 .contains("region_name")
                 .contains("is_visible")
@@ -37,7 +39,9 @@ class RandomRecommendMapperContractTest {
                 .contains("property=\"destinationName\"")
                 .contains("property=\"shortDescription\"")
                 .contains("property=\"imageUrl\"")
+                .contains("property=\"countryId\"")
                 .contains("property=\"countryName\"")
+                .contains("property=\"regionId\"")
                 .contains("property=\"regionName\"");
     }
 

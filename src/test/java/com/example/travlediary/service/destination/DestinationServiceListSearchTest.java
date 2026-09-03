@@ -62,7 +62,8 @@ class DestinationServiceListSearchTest {
                 destinationMapper, destinationImageService, bookmarkMapper, amenityService,
                 destinationCommentService, courseService,
                 accommodationInfoService, attractionInfoService,
-                restaurantInfoService, activityInfoService, shopInfoService);
+                restaurantInfoService, activityInfoService, shopInfoService,
+                new DestinationLocalizationService(destinationMapper));
     }
 
     @Test

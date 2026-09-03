@@ -5,6 +5,7 @@ import com.example.travlediary.dto.DestinationDetailDto;
 import com.example.travlediary.model.Destination;
 import com.example.travlediary.model.DestinationTranslation;
 import com.example.travlediary.model.DestinationType;
+import com.example.travlediary.model.AttractionInfo;
 import com.example.travlediary.repository.bookmark.BookmarkMapper;
 import com.example.travlediary.repository.destination.DestinationMapper;
 import com.example.travlediary.service.amenity.AmenityService;
@@ -20,7 +21,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -46,10 +46,16 @@ class DestinationServiceLocalizedDetailTest {
     @Mock private ActivityInfoService activityInfoService;
     @Mock private ShopInfoService shopInfoService;
 
-    @InjectMocks private DestinationService destinationService;
+    private DestinationService destinationService;
 
     @BeforeEach
     void setUpBaseDetail() {
+        destinationService = new DestinationService(destinationMapper, destinationImageService,
+                bookmarkMapper, amenityService, destinationCommentService, courseService,
+                accommodationInfoService, attractionInfoService, restaurantInfoService,
+                activityInfoService, shopInfoService,
+                new DestinationLocalizationService(destinationMapper));
+
         Destination destination = new Destination();
         destination.setId(15L);
         destination.setType(DestinationType.ATTRACTION);
@@ -144,6 +150,45 @@ class DestinationServiceLocalizedDetailTest {
         assertThat(destinationService.getDestinationDetailWithInfo(
                 15L, SupportedLanguage.ENGLISH)).isNull();
         verify(destinationMapper, never()).findImagesByDestinationId(15L);
+    }
+
+    @Test
+    void publicLocalizedDetailPassesRequestedLanguageToAttractionInfoService() {
+        when(destinationMapper.findTranslationsByDestinationId(15L)).thenReturn(List.of(
+                translation(1L, "ko", "경복궁", "한국어 요약", "한국어 설명")));
+        when(destinationMapper.findImagesByDestinationId(15L)).thenReturn(List.of());
+        when(destinationMapper.findCategoryIdsByDestinationId(15L)).thenReturn(List.of());
+        when(amenityService.getAttractionAmenities(15L)).thenReturn(List.of());
+        AttractionInfo localized = new AttractionInfo();
+        localized.setDestinationId(15L);
+        localized.setClosedDays("Tuesday");
+        when(attractionInfoService.findLocalizedByDestinationId(15L, SupportedLanguage.ENGLISH))
+                .thenReturn(localized);
+
+        DestinationDetailDto detail = destinationService.getDestinationDetailWithInfo(
+                15L, SupportedLanguage.ENGLISH);
+
+        assertThat(detail.getAttractionInfo()).isSameAs(localized);
+        verify(attractionInfoService).findLocalizedByDestinationId(15L, SupportedLanguage.ENGLISH);
+    }
+
+    @Test
+    void baseDetailUsedByAdminKeepsBaseAttractionRead() {
+        when(destinationMapper.findTranslationsByDestinationId(15L)).thenReturn(List.of(
+                translation(1L, "ko", "경복궁", "한국어 요약", "한국어 설명")));
+        when(destinationMapper.findImagesByDestinationId(15L)).thenReturn(List.of());
+        when(destinationMapper.findCategoryIdsByDestinationId(15L)).thenReturn(List.of());
+        when(amenityService.getAttractionAmenities(15L)).thenReturn(List.of());
+        AttractionInfo baseInfo = new AttractionInfo();
+        baseInfo.setDestinationId(15L);
+        when(attractionInfoService.findByDestinationId(15L)).thenReturn(baseInfo);
+
+        DestinationDetailDto detail = destinationService.getDestinationDetailWithInfo(15L);
+
+        assertThat(detail.getAttractionInfo()).isSameAs(baseInfo);
+        verify(attractionInfoService).findByDestinationId(15L);
+        verify(attractionInfoService, never()).findLocalizedByDestinationId(
+                15L, SupportedLanguage.KOREAN);
     }
 
     private Destination detail(SupportedLanguage language) {

@@ -10,14 +10,15 @@ import com.example.travlediary.repository.bookmark.BookmarkMapper;
 import com.example.travlediary.repository.destination.DestinationMapper;
 import com.example.travlediary.service.amenity.AmenityService;
 import com.example.travlediary.service.comment.DestinationCommentService;
+import com.example.travlediary.service.course.CourseService;
 import com.example.travlediary.service.info.AccommodationInfoService;
 import com.example.travlediary.service.info.ActivityInfoService;
 import com.example.travlediary.service.info.AttractionInfoService;
 import com.example.travlediary.service.info.RestaurantInfoService;
 import com.example.travlediary.service.info.ShopInfoService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -53,9 +54,19 @@ class DestinationServiceCategoryEditTest {
     private ActivityInfoService activityInfoService;
     @Mock
     private ShopInfoService shopInfoService;
+    @Mock
+    private CourseService courseService;
 
-    @InjectMocks
     private DestinationService destinationService;
+
+    @BeforeEach
+    void setUp() {
+        destinationService = new DestinationService(destinationMapper, destinationImageService,
+                bookmarkMapper, amenityService, destinationCommentService, courseService,
+                accommodationInfoService, attractionInfoService, restaurantInfoService,
+                activityInfoService, shopInfoService,
+                new DestinationLocalizationService(destinationMapper));
+    }
 
     @Test
     void editFormRestoresExistingCategorySelections() {

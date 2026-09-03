@@ -1,5 +1,6 @@
 package com.example.travlediary.service.course;
 
+import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.dto.CourseDetailDto;
 import com.example.travlediary.dto.CourseCreateRequest;
 import com.example.travlediary.dto.CourseEditDto;
@@ -10,11 +11,14 @@ import java.util.List;
 
 public interface CourseService {
 
-    CourseDetailDto getCourseDetail(Long courseId, Long currentUserId);
+    /** STOP 이름은 요청 언어로 바꿔 담는다. 코스 제목·소개·작성자는 원문 그대로 둔다. */
+    CourseDetailDto getCourseDetail(Long courseId, Long currentUserId,
+                                    SupportedLanguage requestedLanguage);
 
-    CourseEditDto getCourseForEdit(Long courseId, Long userId);
+    CourseEditDto getCourseForEdit(Long courseId, Long userId,
+                                   SupportedLanguage requestedLanguage);
 
-    List<HomePopularCourseDto> getPopularCoursesForHome();
+    List<HomePopularCourseDto> getPopularCoursesForHome(SupportedLanguage requestedLanguage);
 
     Long createCourse(CourseCreateRequest request, Long userId);
 

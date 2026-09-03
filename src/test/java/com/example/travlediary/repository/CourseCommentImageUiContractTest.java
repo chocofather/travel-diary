@@ -49,7 +49,8 @@ class CourseCommentImageUiContractTest {
 
         assertThat(script)
                 .contains("const MAX_COMMENT_IMAGES = 3")
-                .contains("사진은 최대 ${MAX_COMMENT_IMAGES}장까지 첨부할 수 있습니다.");
+                // 안내 문구는 화면이 내려준 현재 언어 문구를 쓴다. 장수는 그대로 채워 넣는다.
+                .contains("detailMessage('commentImageLimit', MAX_COMMENT_IMAGES)");
         // 댓글/답글 두 경로 모두 전송 전에 확인한다
         assertThat(script.split("picker\\?\\.exceedsLimit\\(\\)\\) return;", -1)).hasSize(3);
     }
@@ -160,8 +161,8 @@ class CourseCommentImageUiContractTest {
 
         // 삭제·조치 댓글은 플레이스홀더만 남기고 끝난다 (기존 정책 유지)
         assertThat(deletedBranch)
-                .contains("관리자에 의해 조치된 댓글입니다.")
-                .contains("삭제된 댓글입니다.")
+                .contains("detailMessage('commentModerated')")
+                .contains("detailMessage('commentDeleted')")
                 .doesNotContain("makeCommentImages");
     }
 

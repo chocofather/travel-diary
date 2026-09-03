@@ -36,6 +36,20 @@ public class ReferenceNameLocalizationService {
                 }
             }
         }
+        return localizeCountryCategoryNames(baseNames, requestedLanguage);
+    }
+
+    public Map<Long, String> localizeCountryCategoryNames(
+            Map<Long, String> countryCategoryBaseNames,
+            SupportedLanguage requestedLanguage) {
+        Map<Long, String> baseNames = new LinkedHashMap<>();
+        if (countryCategoryBaseNames != null) {
+            countryCategoryBaseNames.forEach((id, name) -> {
+                if (id != null) {
+                    baseNames.putIfAbsent(id, name);
+                }
+            });
+        }
         if (baseNames.isEmpty()) {
             return Map.of();
         }

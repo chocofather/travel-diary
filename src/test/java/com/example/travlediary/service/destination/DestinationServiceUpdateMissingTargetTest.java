@@ -73,7 +73,8 @@ class DestinationServiceUpdateMissingTargetTest {
                 attractionInfoService,
                 restaurantInfoService,
                 activityInfoService,
-                shopInfoService
+                shopInfoService,
+                new DestinationLocalizationService(destinationMapper)
         );
     }
 

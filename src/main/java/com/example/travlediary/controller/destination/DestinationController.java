@@ -29,6 +29,7 @@ import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -208,10 +209,15 @@ public class DestinationController {
             model.addAttribute("selectedCityName", null);
         }
 
-        List<DestinationDto> destinations = destinationService.convertToDtoWithBookmark(rawList, userId);
+        DestinationListLocalization localization = localizeDestinationList(
+                cities, subregions, rawList, regionId, selectedCityName, userId);
+        List<DestinationDto> destinations = localization.destinations();
+        selectedCityName = localization.selectedRegionName();
         int totalPages = (int) Math.ceil((double) totalCount / size);
 
         model.addAttribute("destinations", destinations);
+        model.addAttribute("regionDisplayNames", localization.regionDisplayNames());
+        model.addAttribute("selectedCityName", selectedCityName);
         model.addAttribute("currentPage", page);
         model.addAttribute("pageSize", size);
         model.addAttribute("totalPages", totalPages);
@@ -265,7 +271,8 @@ public class DestinationController {
             model.addAttribute("attractionAmenities", dto.getAttractionAmenities());
             String guide = dto.getAttractionInfo().getGuide();
             if (guide != null && !guide.isBlank()) {
-                String sanitized = HtmlUtils.htmlEscape(guide).replace("\n", "<br>");
+                String normalizedGuide = guide.replace("\r\n", "\n").replace('\r', '\n');
+                String sanitized = HtmlUtils.htmlEscape(normalizedGuide).replace("\n", "<br>");
                 model.addAttribute("attractionGuideWithBr", sanitized);
             } else {
                 model.addAttribute("attractionGuideWithBr", "-");
@@ -566,11 +573,15 @@ public class DestinationController {
         rawList = destinationService.getDestinationsByRegionIdsPaged(regionIds, offset, size, sort);
         totalCount = destinationService.countDestinationsByRegionIds(regionIds);
 
-        List<DestinationDto> destinations = destinationService.convertToDtoWithBookmark(rawList, userId);
+        DestinationListLocalization localization = localizeDestinationList(
+                cities, subregions, rawList, regionId, selectedCityName, userId);
+        List<DestinationDto> destinations = localization.destinations();
+        selectedCityName = localization.selectedRegionName();
         int totalPages = (int) Math.ceil((double) totalCount / size);
 
         model.addAttribute("cities", cities);
         model.addAttribute("destinations", destinations);
+        model.addAttribute("regionDisplayNames", localization.regionDisplayNames());
         model.addAttribute("subregions", subregions);
         model.addAttribute("selectedSubregionId", selectedSubregionId);
         model.addAttribute("selectedCityId", selectedCityId);
@@ -655,11 +666,15 @@ public class DestinationController {
         rawList = destinationService.getDestinationsByRegionIdsPaged(regionIds, offset, size, sort);
         totalCount = destinationService.countDestinationsByRegionIds(regionIds);
 
-        List<DestinationDto> destinations = destinationService.convertToDtoWithBookmark(rawList, userId);
+        DestinationListLocalization localization = localizeDestinationList(
+                null, subregions, rawList, regionId, selectedCityName, userId);
+        List<DestinationDto> destinations = localization.destinations();
+        selectedCityName = localization.selectedRegionName();
         int totalPages = (int) Math.ceil((double) totalCount / size);
 
         // cities 필요 없음!
         model.addAttribute("destinations", destinations);
+        model.addAttribute("regionDisplayNames", localization.regionDisplayNames());
         model.addAttribute("subregions", subregions);
         model.addAttribute("selectedSubregionId", selectedSubregionId);
         model.addAttribute("selectedCityId", selectedCityId);
@@ -672,5 +687,61 @@ public class DestinationController {
 
         // ★ destinationList만 리턴 (region-bar 없음)
         return "destination/fragment :: destinationList";
+    }
+
+    private DestinationListLocalization localizeDestinationList(
+            List<CountryCategory> cities,
+            List<CountryCategory> subregions,
+            List<Destination> destinations,
+            Long selectedRegionId,
+            String selectedRegionBaseName,
+            Long userId) {
+        SupportedLanguage requestedLanguage = SupportedLanguage
+                .fromLocale(LocaleContextHolder.getLocale())
+                .orElse(SupportedLanguage.KOREAN);
+        Map<Long, String> baseNames = new LinkedHashMap<>();
+        collectRegionBaseNames(baseNames, cities);
+        collectRegionBaseNames(baseNames, subregions);
+        if (destinations != null) {
+            for (Destination destination : destinations) {
+                if (destination != null && destination.getRegionId() != null) {
+                    baseNames.putIfAbsent(destination.getRegionId(), destination.getRegionName());
+                }
+            }
+        }
+        if (selectedRegionId != null) {
+            baseNames.putIfAbsent(selectedRegionId, selectedRegionBaseName);
+        }
+
+        Map<Long, String> localizedRegionNames =
+                referenceNameLocalizationService.localizeCountryCategoryNames(
+                        baseNames, requestedLanguage);
+        String selectedRegionName = selectedRegionId == null
+                ? null
+                : localizedDisplayName(localizedRegionNames,
+                selectedRegionId, selectedRegionBaseName);
+        List<DestinationDto> localizedDestinations =
+                destinationService.convertToLocalizedDtoWithBookmark(
+                        destinations, userId, requestedLanguage, localizedRegionNames);
+        return new DestinationListLocalization(
+                localizedDestinations, localizedRegionNames, selectedRegionName);
+    }
+
+    private void collectRegionBaseNames(Map<Long, String> baseNames,
+                                        List<CountryCategory> regions) {
+        if (regions == null) {
+            return;
+        }
+        for (CountryCategory region : regions) {
+            if (region != null && region.getId() != null) {
+                baseNames.putIfAbsent(region.getId(), region.getRegionName());
+            }
+        }
+    }
+
+    private record DestinationListLocalization(
+            List<DestinationDto> destinations,
+            Map<Long, String> regionDisplayNames,
+            String selectedRegionName) {
     }
 }

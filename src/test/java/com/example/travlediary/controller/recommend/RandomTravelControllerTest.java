@@ -3,6 +3,8 @@ package com.example.travlediary.controller.recommend;
 import com.example.travlediary.config.CustomLoginSuccessHandler;
 import com.example.travlediary.config.CustomLogoutSuccessHandler;
 import com.example.travlediary.config.SecurityConfig;
+import com.example.travlediary.config.i18n.I18nConfig;
+import com.example.travlediary.config.i18n.TravelDiaryLocaleResolver;
 import com.example.travlediary.repository.user.UserMapper;
 import org.jsoup.Jsoup;
 import org.junit.jupiter.api.Test;
@@ -11,6 +13,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import jakarta.servlet.http.Cookie;
 
 import java.util.List;
 
@@ -21,7 +24,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 @WebMvcTest(RandomTravelController.class)
-@Import(SecurityConfig.class)
+@Import({SecurityConfig.class, I18nConfig.class})
 class RandomTravelControllerTest {
 
     @Autowired
@@ -75,6 +78,30 @@ class RandomTravelControllerTest {
                             ".submenu-grid > .submenu-col:nth-child(1) a[href='/random-travel'], "
                                     + ".submenu-grid > .submenu-col:nth-child(2) a[href='/random-travel']"))
                             .isEmpty();
+                });
+    }
+
+    @Test
+    void englishRandomTravelRendersFixedUiAndJavascriptMessagesWithoutKoreanFallback()
+            throws Exception {
+        mockMvc.perform(get("/random-travel")
+                        .cookie(new Cookie(TravelDiaryLocaleResolver.COOKIE_NAME, "en")))
+                .andExpect(status().isOk())
+                .andExpect(result -> {
+                    var document = Jsoup.parse(result.getResponse().getContentAsString());
+                    assertThat(document.select(".random-travel-page h1").text())
+                            .isEqualTo("Where should we go?");
+                    assertThat(document.select("[data-random-scope]").eachText())
+                            .containsExactly("Domestic", "International");
+                    assertThat(document.select("#random-draw-button").text())
+                            .contains("Pick a destination");
+                    assertThat(document.selectFirst("#random-travel-i18n")
+                            .attr("data-card-details")).isEqualTo("View details");
+                    assertThat(document.selectFirst("#random-travel-i18n")
+                            .attr("data-error-title"))
+                            .isEqualTo("We couldn't load destinations.");
+                    assertThat(result.getResponse().getContentAsString())
+                            .doesNotContain("??random.travel.");
                 });
     }
 }

@@ -47,7 +47,23 @@ class ContentCommentUiContractTest {
 
     @Test
     void postAndCourseRenderersKeepApisAndAddUnifiedCommentContract() throws IOException {
-        for (String scriptPath : new String[]{"static/js/post-comments.js", "static/js/course-comments.js"}) {
+        // 코스 댓글은 화면이 내려준 현재 언어 문구를 쓰고, 게시글 댓글은 아직 원문을 들고 있다.
+        // 확인하는 것은 문구 자체가 아니라 같은 자리에 같은 순서로 놓이는지다.
+        var labelsByScript = new java.util.LinkedHashMap<String, String[]>();
+        labelsByScript.put("static/js/post-comments.js", new String[]{
+                "삭제된 댓글입니다.",
+                "actions.append(makeButton('답글'",
+                "makeButton('수정'",
+                "makeButton('삭제'"});
+        labelsByScript.put("static/js/course-comments.js", new String[]{
+                "detailMessage('commentDeleted')",
+                "actions.append(makeButton(detailMessage('commentReply')",
+                "makeButton(detailMessage('commentEdit')",
+                "makeButton(detailMessage('commentDelete')"});
+
+        for (var entry : labelsByScript.entrySet()) {
+            String scriptPath = entry.getKey();
+            String[] labels = entry.getValue();
             String script = resource(scriptPath);
             assertThat(script)
                     .contains("writerUserId")
@@ -69,14 +85,12 @@ class ContentCommentUiContractTest {
                     .contains("replyToCommentId")
                     .contains("replyToNickname")
                     .contains("replyToDeleted")
-                    .contains("삭제된 댓글입니다.")
+                    .contains(labels[0])
                     .doesNotContain("comment.updatedAt || comment.createdAt")
                     .doesNotContain("comment.updatedAt !== comment.createdAt");
             assertOrdered(script,
                     "actions.append(makeLikeControl(comment, loggedIn))",
-                    "actions.append(makeButton('답글'",
-                    "makeButton('수정'",
-                    "makeButton('삭제'");
+                    labels[1], labels[2], labels[3]);
         }
 
         assertThat(resource("static/js/post-comments.js"))

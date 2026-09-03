@@ -13,6 +13,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const moreButton = document.getElementById('course-comment-more');
     const deepLink = window.TravelDiaryCommentDeepLink;
     const targetCommentId = deepLink?.readTargetCommentId() ?? null;
+    const i18nSource = document.getElementById('course-detail-i18n');
+
+    /**
+     * 화면이 현재 언어로 내려준 고정 문구를 읽는다.
+     * {0}, {1} … 자리에 값을 채운다. (여행지 상세 댓글과 같은 방식)
+     */
+    function detailMessage(name, ...values) {
+        const template = i18nSource?.dataset[name] || '';
+        return template.replace(/\{(\d+)\}/g, (match, index) =>
+            index < values.length ? String(values[index]) : match);
+    }
 
     const pageSize = 5;
     let currentSort = 'latest';
@@ -30,7 +41,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const likedIcon = '/uploads/icons/like2.png';
     /** 댓글 하나에 첨부할 수 있는 사진 수. 서버 CourseCommentServiceImpl.MAX_COMMENT_IMAGES 와 같은 값. */
     const MAX_COMMENT_IMAGES = 3;
-    const IMAGE_LIMIT_MESSAGE = `사진은 최대 ${MAX_COMMENT_IMAGES}장까지 첨부할 수 있습니다.`;
     /** 폼(댓글/답글)별 사진 선택 상태 */
     const imagePickers = new WeakMap();
 
@@ -46,11 +56,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (response.status === 401) {
             window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
-            throw new Error('로그인이 필요합니다.');
+            throw new Error(detailMessage('commentLoginRequired'));
         }
 
         if (!response.ok) {
-            let errorMessage = `요청에 실패했습니다. (HTTP ${response.status})`;
+            let errorMessage = detailMessage('commentRequestFailed', response.status);
             const contentType = response.headers.get('Content-Type') || '';
             if (contentType.includes('application/json')) {
                 const body = await response.json();
@@ -98,11 +108,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function makeProfileImage(comment) {
-        const nickname = comment.writerNickname || '알 수 없는 사용자';
+        const nickname = comment.writerNickname || detailMessage('commentUnknownUser');
         const image = document.createElement('img');
         image.className = 'content-comment-avatar';
         image.src = profileImageUrl(comment.writerProfileImage);
-        image.alt = `${nickname} 프로필 이미지`;
+        image.alt = detailMessage('commentProfileAlt', nickname);
         image.addEventListener('error', () => {
             if (image.dataset.fallbackApplied === 'true') return;
             image.dataset.fallbackApplied = 'true';
@@ -161,7 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const merged = selected.concat(added);
             if (merged.length > MAX_COMMENT_IMAGES) {
-                window.alert(IMAGE_LIMIT_MESSAGE);
+                window.alert(detailMessage('commentImageLimit', MAX_COMMENT_IMAGES));
             }
             selected = merged.slice(0, MAX_COMMENT_IMAGES);
             syncInput();
@@ -191,12 +201,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const image = document.createElement('img');
                 image.src = URL.createObjectURL(file);
                 image.dataset.objectUrl = 'true';
-                image.alt = `${file.name} 미리보기`;
+                image.alt = detailMessage('commentFilePreview', file.name);
 
                 const remove = document.createElement('button');
                 remove.type = 'button';
                 remove.className = 'comment-image-remove';
-                remove.setAttribute('aria-label', `${file.name} 선택 취소`);
+                remove.setAttribute('aria-label', detailMessage('commentFileRemove', file.name));
                 remove.textContent = '×';
                 remove.addEventListener('click', () => removeFileAt(index));
 
@@ -212,7 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
             /** 제한을 넘어 전송하면 안 되는 경우 true */
             exceedsLimit() {
                 if (selected.length <= MAX_COMMENT_IMAGES) return false;
-                window.alert(IMAGE_LIMIT_MESSAGE);
+                window.alert(detailMessage('commentImageLimit', MAX_COMMENT_IMAGES));
                 return true;
             },
             clear() {
@@ -258,7 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const label = document.createElement('span');
         label.className = 'content-comment-sr-only';
-        label.textContent = '좋아요';
+        label.textContent = detailMessage('commentLike');
 
         if (!loggedIn) {
             const readonly = document.createElement('span');
@@ -289,7 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const image = document.createElement('img');
             image.className = 'comment-image content-comment-image';
             image.src = url;
-            image.alt = `댓글 이미지 ${index + 1}`;
+            image.alt = detailMessage('commentImageAlt', index + 1);
             group.append(image);
         });
         return group;
@@ -309,8 +319,8 @@ document.addEventListener('DOMContentLoaded', () => {
             item.classList.add('course-comment-deleted', 'content-comment-deleted');
             content.classList.add('content-comment-deleted-text');
             content.textContent = comment.moderated
-                ? '관리자에 의해 조치된 댓글입니다.'
-                : '삭제된 댓글입니다.';
+                ? detailMessage('commentModerated')
+                : detailMessage('commentDeleted');
             item.append(content);
             return item;
         }
@@ -319,7 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
         meta.className = 'course-comment-meta content-comment-header';
         const writer = document.createElement('strong');
         writer.className = 'content-comment-nickname';
-        writer.textContent = comment.writerNickname || '알 수 없는 사용자';
+        writer.textContent = comment.writerNickname || detailMessage('commentUnknownUser');
         const timeMeta = document.createElement('span');
         timeMeta.className = 'content-comment-meta';
         const date = document.createElement('time');
@@ -330,7 +340,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isEdited(comment)) {
             const edited = document.createElement('span');
             edited.className = 'content-comment-edited';
-            edited.textContent = '· 수정됨';
+            edited.textContent = detailMessage('commentEdited');
             timeMeta.append(edited);
         }
         meta.append(makeProfileLink(comment, writer, 'content-comment-writer-link'), timeMeta);
@@ -339,8 +349,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const replyTarget = document.createElement('span');
             replyTarget.className = 'course-comment-reply-target content-comment-mention';
             replyTarget.textContent = comment.replyToDeleted
-                ? '삭제된 댓글에 대한 답글'
-                : `@${comment.replyToNickname || '알 수 없는 사용자'}`;
+                ? detailMessage('commentReplyToDeleted')
+                : `@${comment.replyToNickname || detailMessage('commentUnknownUser')}`;
             content.append(replyTarget);
         }
         content.append(document.createTextNode(comment.content || ''));
@@ -350,12 +360,13 @@ document.addEventListener('DOMContentLoaded', () => {
         actions.className = 'course-comment-actions content-comment-actions';
         actions.append(makeLikeControl(comment, loggedIn));
         if (loggedIn) {
-            actions.append(makeButton('답글', 'course-comment-reply-button content-comment-action'));
+            actions.append(makeButton(detailMessage('commentReply'),
+                'course-comment-reply-button content-comment-action'));
         }
         if (comment.myComment) {
             actions.append(
-                makeButton('수정', 'course-comment-edit content-comment-action'),
-                makeButton('삭제', 'course-comment-delete content-comment-action')
+                makeButton(detailMessage('commentEdit'), 'course-comment-edit content-comment-action'),
+                makeButton(detailMessage('commentDelete'), 'course-comment-delete content-comment-action')
             );
         }
         // 관리자 조치 버튼은 ADMIN 에게만 노출한다. 권한은 서버에서 다시 확인한다.
@@ -428,13 +439,15 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateMoreButton() {
         moreButton.hidden = isLastPage || nextPage === 0;
         moreButton.disabled = isLoading;
-        moreButton.textContent = isLoading ? '불러오는 중…' : '댓글 더보기';
+        moreButton.textContent = isLoading
+            ? detailMessage('commentLoading')
+            : detailMessage('commentLoadMore');
     }
 
     function emptyCommentItem() {
         const empty = document.createElement('li');
         empty.className = 'course-comment-empty';
-        empty.textContent = '첫 댓글을 작성해 보세요.';
+        empty.textContent = detailMessage('commentEmpty');
         return empty;
     }
 
@@ -460,7 +473,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 + `&page=${page}&size=${pageSize}&sort=${encodeURIComponent(currentSort)}`
             );
             if (generation !== requestGeneration) return;
-            if (!Array.isArray(data.content)) throw new Error('댓글 응답 형식이 올바르지 않습니다.');
+            if (!Array.isArray(data.content)) {
+                throw new Error(detailMessage('commentInvalidResponse'));
+            }
 
             count.textContent = String(data.totalCommentCount ?? 0);
             if (reset && data.totalElements === 0) {
@@ -501,7 +516,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (locationGeneration !== requestGeneration) return;
             const targetPage = Number(location.page) - 1;
             if (!Number.isInteger(targetPage) || targetPage < 0) {
-                throw new Error('댓글 위치 응답이 올바르지 않습니다.');
+                throw new Error(detailMessage('commentInvalidLocationResponse'));
             }
 
             await loadCommentPage({reset: true, pageOverride: targetPage});
@@ -585,7 +600,7 @@ document.addEventListener('DOMContentLoaded', () => {
             textarea.name = 'content';
             textarea.maxLength = 2000;
             textarea.required = true;
-            textarea.placeholder = '답글을 입력해 주세요.';
+            textarea.placeholder = detailMessage('commentReplyPlaceholder');
 
             // 선택한 사진 미리보기 (등록 전)
             const preview = document.createElement('div');
@@ -612,14 +627,15 @@ document.addEventListener('DOMContentLoaded', () => {
             cameraIcon.src = '/uploads/icons/camera.png';
             cameraIcon.alt = '';
             cameraIcon.setAttribute('aria-hidden', 'true');
-            uploadLabel.append(cameraIcon, document.createTextNode(' 사진'));
+            uploadLabel.append(cameraIcon,
+                document.createTextNode(` ${detailMessage('commentPhoto')}`));
 
             const submit = document.createElement('button');
             submit.type = 'submit';
             submit.className = 'course-comment-reply-submit';
-            submit.textContent = '등록';
+            submit.textContent = detailMessage('commentSubmit');
             actions.append(imageInput, uploadLabel, submit,
-                makeButton('취소', 'course-comment-reply-cancel'));
+                makeButton(detailMessage('commentCancel'), 'course-comment-reply-cancel'));
             replyForm.append(textarea, preview, actions);
             createImagePicker(replyForm);
 
@@ -636,7 +652,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (event.target.matches('.course-comment-delete')) {
-            if (!window.confirm('댓글을 삭제하시겠습니까?')) return;
+            if (!window.confirm(detailMessage('commentDeleteConfirm'))) return;
             try {
                 await requestJson(`/course-comments/${commentId}`, {method: 'DELETE'});
                 await resetComments();
@@ -657,8 +673,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const editActions = document.createElement('div');
             editActions.className = 'course-comment-edit-actions course-comment-actions';
             editActions.append(
-                makeButton('저장', 'course-comment-save'),
-                makeButton('취소', 'course-comment-cancel')
+                makeButton(detailMessage('commentSave'), 'course-comment-save'),
+                makeButton(detailMessage('commentCancel'), 'course-comment-cancel')
             );
             content.replaceWith(textarea);
             actions.replaceWith(editActions);

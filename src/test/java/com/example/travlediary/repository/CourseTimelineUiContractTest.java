@@ -21,7 +21,7 @@ class CourseTimelineUiContractTest {
                 .contains("th:each=\"stop : ${course.stops}\"")
                 .contains("class=\"course-stop\"")
                 .contains("th:text=\"${stop.visitOrder}\"")
-                .contains("th:text=\"|STOP ${stop.visitOrder}|\"")
+                .contains("#{course.detail.stop.order(${stop.visitOrder})}")
                 .contains("@{/destinations/{id}(id=${stop.destinationId})}")
                 .contains("stop.imageUrl")
                 .contains("'/images/default.png'")

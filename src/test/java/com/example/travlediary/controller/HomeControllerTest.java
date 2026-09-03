@@ -4,6 +4,7 @@ import com.example.travlediary.config.CustomLoginSuccessHandler;
 import com.example.travlediary.config.CustomLogoutSuccessHandler;
 import com.example.travlediary.config.SecurityConfig;
 import com.example.travlediary.config.i18n.I18nConfig;
+import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.config.i18n.TravelDiaryLocaleResolver;
 import com.example.travlediary.dto.HomePopularCourseDto;
 import com.example.travlediary.model.User;
@@ -60,7 +61,8 @@ class HomeControllerTest {
         course.setViews(1284);
         course.setTotalDestinationCount(5);
         course.setPreviewDestinationNames(List.of("경복궁", "북촌한옥마을", "창덕궁"));
-        when(courseService.getPopularCoursesForHome()).thenReturn(List.of(course));
+        when(courseService.getPopularCoursesForHome(SupportedLanguage.KOREAN))
+                .thenReturn(List.of(course));
 
         mockMvc.perform(get("/"))
                 .andExpect(status().isOk())
@@ -81,13 +83,14 @@ class HomeControllerTest {
                     assertThat(document.select(".instant-trip, #roulette-canvas")).isEmpty();
                 });
 
-        verify(courseService).getPopularCoursesForHome();
+        verify(courseService).getPopularCoursesForHome(SupportedLanguage.KOREAN);
     }
 
     @Test
     void withdrawalQueryRendersAnAccessibleToastWithoutAddingAHomeLayoutBanner()
             throws Exception {
-        when(courseService.getPopularCoursesForHome()).thenReturn(List.of());
+        when(courseService.getPopularCoursesForHome(SupportedLanguage.KOREAN))
+                .thenReturn(List.of());
 
         mockMvc.perform(get("/").queryParam("withdrawn", "true"))
                 .andExpect(status().isOk())
@@ -106,7 +109,8 @@ class HomeControllerTest {
 
     @Test
     void regularHomeDoesNotRenderTheWithdrawalToast() throws Exception {
-        when(courseService.getPopularCoursesForHome()).thenReturn(List.of());
+        when(courseService.getPopularCoursesForHome(SupportedLanguage.KOREAN))
+                .thenReturn(List.of());
 
         mockMvc.perform(get("/"))
                 .andExpect(status().isOk())
@@ -119,7 +123,8 @@ class HomeControllerTest {
     void authenticatedHomeLoadsCurrentUserByPrincipalId() throws Exception {
         User user = user(7L, "member");
         when(userMapper.findById(7L)).thenReturn(user);
-        when(courseService.getPopularCoursesForHome()).thenReturn(List.of());
+        when(courseService.getPopularCoursesForHome(SupportedLanguage.KOREAN))
+                .thenReturn(List.of());
 
         mockMvc.perform(get("/").with(authentication(authenticationFor(user))))
                 .andExpect(status().isOk())
@@ -140,7 +145,9 @@ class HomeControllerTest {
         course.setViews(1284);
         course.setTotalDestinationCount(5);
         course.setPreviewDestinationNames(List.of("경복궁", "북촌한옥마을"));
-        when(courseService.getPopularCoursesForHome()).thenReturn(List.of(course));
+        // 쿠키로 고른 언어가 코스 STOP 이름 조회까지 그대로 전달된다.
+        when(courseService.getPopularCoursesForHome(SupportedLanguage.ENGLISH))
+                .thenReturn(List.of(course));
 
         mockMvc.perform(get("/")
                         .cookie(new Cookie(TravelDiaryLocaleResolver.COOKIE_NAME, "en")))

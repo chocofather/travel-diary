@@ -1,9 +1,11 @@
 package com.example.travlediary.controller;
 
+import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.course.CourseService;
 
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -28,7 +30,9 @@ public class HomeController {
         if (isLoggedIn) {
             model.addAttribute("user", userMapper.findById(userDetails.getId()));
         }
-        model.addAttribute("popularCourses", courseService.getPopularCoursesForHome());
+        model.addAttribute("popularCourses", courseService.getPopularCoursesForHome(
+                SupportedLanguage.fromLocale(LocaleContextHolder.getLocale())
+                        .orElse(SupportedLanguage.KOREAN)));
 
         return "home";
     }

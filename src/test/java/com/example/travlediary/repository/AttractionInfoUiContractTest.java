@@ -24,7 +24,11 @@ class AttractionInfoUiContractTest {
                 .contains("${attractionInfo.openingHours ?: '-'}")
                 .contains("${attractionInfo.admissionFee ?: '-'}")
                 .contains("${attractionInfo.contactNumber ?: '-'}")
-                .contains("${attractionInfo.parkingAvailable ? '가능' : '불가'}")
+                .contains("${attractionInfo.parkingAvailable == true}")
+                .contains("${attractionInfo.parkingAvailable == false}")
+                .contains("#{destination.detail.value.available}")
+                .contains("#{destination.detail.value.unavailable}")
+                .doesNotContain("${attractionInfo.parkingAvailable ? '가능' : '불가'}")
                 .contains("${attractionGuideWithBr}");
     }
 

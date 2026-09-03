@@ -7,6 +7,7 @@ public class SeasonDestinationDto {
     private Long id;
     private String name;
     private String imageUrl;
+    private Long regionId;
     private String regionName;
     private String season;
 

@@ -23,6 +23,7 @@
         <result property="visitOrder" column="visit_order"/>
         <result property="name" column="destination_name"/>
         <result property="shortDescription" column="short_description"/>
+        <result property="regionId" column="region_id"/>
         <result property="regionName" column="region_name"/>
         <result property="countryId" column="country_id"/>
         <result property="countryName" column="country_name"/>
@@ -39,6 +40,7 @@
 
     <resultMap id="HomePopularCourseStopMap" type="com.example.travlediary.dto.HomePopularCourseStopDto">
         <result property="courseId" column="course_id"/>
+        <result property="destinationId" column="destination_id"/>
         <result property="visitOrder" column="visit_order"/>
         <result property="destinationName" column="destination_name"/>
     </resultMap>
@@ -107,6 +109,7 @@
             cd.visit_order AS visit_order,
             COALESCE(dt.name, '이름 없는 여행지') AS destination_name,
             dt.short_description AS short_description,
+            cc.id AS region_id,
             cc.region_name AS region_name,
             course.country_id AS country_id,
             country.region_name AS country_name,
@@ -159,6 +162,7 @@
     <select id="findPopularCourseStops" resultMap="HomePopularCourseStopMap">
         SELECT
             cd.course_id,
+            cd.destination_id,
             cd.visit_order,
             COALESCE(dt.name, '이름 없는 여행지') AS destination_name
         FROM course_destinations cd

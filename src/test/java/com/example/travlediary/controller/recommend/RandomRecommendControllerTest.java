@@ -1,5 +1,7 @@
 package com.example.travlediary.controller.recommend;
 
+import com.example.travlediary.config.i18n.SupportedLanguage;
+import com.example.travlediary.config.i18n.TravelDiaryLocaleResolver;
 import com.example.travlediary.dto.RandomDestinationDto;
 import com.example.travlediary.dto.RandomTravelResultDto;
 import com.example.travlediary.service.recommend.RandomRecommendService;
@@ -7,6 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import jakarta.servlet.http.Cookie;
 
 import java.util.List;
 import java.util.Optional;
@@ -26,13 +29,16 @@ class RandomRecommendControllerTest {
     @BeforeEach
     void setUp() {
         service = mock(RandomRecommendService.class);
-        mockMvc = MockMvcBuilders.standaloneSetup(new RandomRecommendController(service)).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(new RandomRecommendController(service))
+                .setLocaleResolver(new TravelDiaryLocaleResolver())
+                .build();
     }
 
     @Test
     void existingRegionEndpointKeepsItsArrayResponseAndSizeParameter() throws Exception {
         RandomDestinationDto destination = destination(41L, "경복궁");
-        when(service.getRandomDestinationsByRegion(909L, 5))
+        when(service.getRandomDestinationsByRegion(
+                909L, 5, SupportedLanguage.KOREAN))
                 .thenReturn(List.of(destination));
 
         mockMvc.perform(get("/api/random-recommend/909").param("size", "5"))
@@ -41,14 +47,16 @@ class RandomRecommendControllerTest {
                 .andExpect(jsonPath("$[0].destinationId").value(41))
                 .andExpect(jsonPath("$[0].destinationName").value("경복궁"));
 
-        verify(service).getRandomDestinationsByRegion(909L, 5);
+        verify(service).getRandomDestinationsByRegion(
+                909L, 5, SupportedLanguage.KOREAN);
     }
 
     @Test
     void scopeEndpointReturnsTheSelectedRegionAndDestinationCards() throws Exception {
         RandomTravelResultDto result = result("domestic", 909L, "대한민국", 910L, "서울",
                 List.of(destination(41L, "경복궁"), destination(42L, "서울숲")));
-        when(service.getRandomTravelByScope("domestic", 777L))
+        when(service.getRandomTravelByScope(
+                "domestic", 777L, SupportedLanguage.KOREAN))
                 .thenReturn(Optional.of(result));
 
         mockMvc.perform(get("/api/random-recommend")
@@ -65,12 +73,14 @@ class RandomRecommendControllerTest {
                 .andExpect(jsonPath("$.recommendedDestinations[0].detailUrl")
                         .value("/destinations/41"));
 
-        verify(service).getRandomTravelByScope("domestic", 777L);
+        verify(service).getRandomTravelByScope(
+                "domestic", 777L, SupportedLanguage.KOREAN);
     }
 
     @Test
     void scopeEndpointReturnsNoContentWhenNoRegionExists() throws Exception {
-        when(service.getRandomTravelByScope("overseas", null))
+        when(service.getRandomTravelByScope(
+                "overseas", null, SupportedLanguage.KOREAN))
                 .thenReturn(Optional.empty());
 
         mockMvc.perform(get("/api/random-recommend").param("scope", "overseas"))
@@ -79,11 +89,31 @@ class RandomRecommendControllerTest {
 
     @Test
     void scopeEndpointRejectsUnsupportedScope() throws Exception {
-        when(service.getRandomTravelByScope("all", null))
+        when(service.getRandomTravelByScope(
+                "all", null, SupportedLanguage.KOREAN))
                 .thenThrow(new IllegalArgumentException("지원하지 않는 여행 범위입니다."));
 
         mockMvc.perform(get("/api/random-recommend").param("scope", "all"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void localeCookieSelectsTheLocalizedRandomResponse() throws Exception {
+        RandomTravelResultDto result = result(
+                "domestic", 909L, "South Korea", 910L, "Seoul",
+                List.of(destination(41L, "Gyeongbokgung Palace")));
+        when(service.getRandomTravelByScope(
+                "domestic", null, SupportedLanguage.ENGLISH))
+                .thenReturn(Optional.of(result));
+
+        mockMvc.perform(get("/api/random-recommend")
+                        .param("scope", "domestic")
+                        .cookie(new Cookie(TravelDiaryLocaleResolver.COOKIE_NAME, "en")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.countryName").value("South Korea"))
+                .andExpect(jsonPath("$.regionName").value("Seoul"))
+                .andExpect(jsonPath("$.recommendedDestinations[0].destinationName")
+                        .value("Gyeongbokgung Palace"));
     }
 
     private RandomTravelResultDto result(

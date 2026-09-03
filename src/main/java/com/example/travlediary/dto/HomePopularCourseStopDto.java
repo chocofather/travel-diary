@@ -6,6 +6,7 @@ import lombok.Data;
 public class HomePopularCourseStopDto {
 
     private Long courseId;
+    private Long destinationId;
     private Integer visitOrder;
     private String destinationName;
 }

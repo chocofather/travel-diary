@@ -83,7 +83,7 @@ class CourseStopOrderMapperContractTest {
 
         // index + 1 로 가리지 않는다. 고치는 것은 저장된 값 쪽이다
         assertThat(detail)
-                .contains("th:text=\"|STOP ${stop.visitOrder}|\"")
+                .contains("#{course.detail.stop.order(${stop.visitOrder})}")
                 .contains("th:text=\"${stop.visitOrder}\"");
         // STOP 이라는 말은 그대로 둔다
         assertThat(detail)

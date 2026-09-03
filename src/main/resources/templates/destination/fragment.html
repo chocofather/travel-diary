@@ -12,24 +12,29 @@
     currentPage,
     pageSize,
     sort,
-    type
+    type,
+    regionDisplayNames
 )">
     <div id="region-fragment-container">
         <!-- ─── 상단 region-bar ─── -->
         <div class="region-bar-wrapper" th:attr="data-type=${type}">
             <section class="region-selector">
-                <button class="arrow prev" th:if="${cities.size()} >= 12">‹</button>
+                <button class="arrow prev" th:if="${cities.size()} >= 12"
+                        th:aria-label="#{destination.list.region.previous}">‹</button>
                 <div th:class="'region-buttons ' +
                        (${cities.size()} <= 3 ? 'few' :
                         (${cities.size()} >= 7 ? 'scrollable' : 'normal'))">
                     <div th:each="c : ${cities}"
                          th:class="'circle-btn region-btn' + (${selectedCityId} == ${c.id} ? ' selected' : '')"
                          th:attr="data-region-id=${c.id},data-depth=${c.depth}">
-                        <img th:src="@{${c.iconPath}}" th:alt="${c.regionName}" class="circle-icon"/>
-                        <span th:text="${c.regionName}">도시명</span>
+                        <img th:src="@{${c.iconPath}}"
+                             th:alt="#{destination.list.region.iconAlt(${regionDisplayNames[c.id]})}"
+                             class="circle-icon"/>
+                        <span th:text="${regionDisplayNames[c.id]}">도시명</span>
                     </div>
                 </div>
-                <button class="arrow next" th:if="${cities.size()} >= 12">›</button>
+                <button class="arrow next" th:if="${cities.size()} >= 12"
+                        th:aria-label="#{destination.list.region.next}">›</button>
             </section>
         </div>
 
@@ -44,7 +49,8 @@
          ${currentPage},
          ${pageSize},
          ${sort},
-         ${type}
+         ${type},
+         ${regionDisplayNames}
        )}">
         </div>
     </div>
@@ -61,49 +67,59 @@
     currentPage,
     pageSize,
     sort,
-    type
+    type,
+    regionDisplayNames
 )">
     <div id="destination-list">
 
         <div class="destination-list-wrapper">
-            <h2 id="page-title"
-                th:text="${selectedCityName != null
-               ? selectedCityName + ' 여행지'
-               : (type == 'overseas' ? '해외 여행지' : '국내 여행지')}">
+            <h2 id="page-title">
+                <span th:if="${selectedCityName != null}"
+                      th:text="#{destination.list.title.region(${selectedCityName})}">서울 여행지</span>
+                <span th:if="${selectedCityName == null and type == 'overseas'}"
+                      th:text="#{destination.list.title.international}">해외 여행지</span>
+                <span th:if="${selectedCityName == null and type != 'overseas'}"
+                      th:text="#{destination.list.title.domestic}">국내 여행지</span>
             </h2>
             <!-- 하위 지역(구/군) -->
             <section class="subregion-selector"
                      th:if="${subregions != null and #lists.size(subregions) > 0}">
-                <button class="arrow prev subregion-arrow" th:if="${subregions.size()} >= 12">‹</button>
+                <button class="arrow prev subregion-arrow" th:if="${subregions.size()} >= 12"
+                        th:aria-label="#{destination.list.subregion.previous}">‹</button>
                 <div class="subregion-scroll-container">
                     <div class="subregion-list">
                         <button class="subregion-btn"
                                 th:each="r : ${subregions}"
                                 th:classappend="${selectedSubregionId} == ${r.id} ? ' selected' : ''"
                                 th:attr="data-city-id=${r.id}"
-                                th:text="${r.regionName}">
+                                th:text="${regionDisplayNames[r.id]}">
                             하위 지역
                         </button>
                     </div>
                 </div>
-                <button class="arrow next subregion-arrow" th:if="${subregions.size()} >= 12">›</button>
+                <button class="arrow next subregion-arrow" th:if="${subregions.size()} >= 12"
+                        th:aria-label="#{destination.list.subregion.next}">›</button>
             </section>
 
             <!-- 정렬 (세그먼트 컨트롤) -->
-            <div class="list-sort-buttons" role="group" aria-label="여행지 정렬 기준">
+            <div class="list-sort-buttons" role="group"
+                 th:aria-label="#{destination.list.sort.label}">
                 <!-- 최초 진입에는 sort 가 비어 있으므로 기본순을 선택 상태로 본다 -->
                 <button type="button" class="sort-btn"
                         th:classappend="${sort == null or sort == 'default'} ? ' active' : ''"
                         th:attr="aria-pressed=${sort == null or sort == 'default'} ? 'true' : 'false'"
-                        data-sort="default">기본순</button>
+                        data-sort="default"
+                        th:text="#{destination.list.sort.default}">기본순</button>
                 <button type="button" class="sort-btn"
                         th:classappend="${sort} == 'views' ? ' active' : ''"
                         th:attr="aria-pressed=${sort} == 'views' ? 'true' : 'false'"
-                        data-sort="views">조회수순</button>
+                        data-sort="views"
+                        th:text="#{destination.list.sort.views}">조회수순</button>
                 <button type="button" class="sort-btn"
                         th:classappend="${sort} == 'bookmarks' ? ' active' : ''"
                         th:attr="aria-pressed=${sort} == 'bookmarks' ? 'true' : 'false'"
-                        data-sort="bookmarks">북마크순</button>
+                        data-sort="bookmarks"
+                        th:text="#{destination.list.sort.bookmarks}">북마크순</button>
             </div>
 
             <!-- 카드 리스트 -->
@@ -113,7 +129,7 @@
                        th:attr="data-destination-id=${d.id}">
                         <div class="destination-card-media">
                             <img th:if="${d.thumbnailPath != null}" th:src="@{${d.thumbnailPath}}"
-                                 th:alt="|${d.name} 사진|" loading="lazy"/>
+                                 th:alt="#{destination.list.card.imageAlt(${d.name})}" loading="lazy"/>
                         </div>
                         <div class="card-text-wrapper">
                             <h3 th:text="${d.name}">여행지명</h3>
@@ -121,30 +137,34 @@
                                th:if="${d.shortDescription != null}"
                                th:text="${d.shortDescription}">간단 설명</p>
                             <div class="card-meta">
-                                <p class="region">지역: <span th:text="${d.regionName}">지역명</span></p>
+                                <p class="region"><span th:text="#{destination.list.card.region}">지역:</span>
+                                    <span th:text="${d.regionName}">지역명</span></p>
                                 <span class="card-comment-count">
-                                    <img src="/uploads/icons/comment.png" alt="댓글" />
+                                    <img src="/uploads/icons/comment.png"
+                                         th:alt="#{destination.list.card.comments}" />
                                     <span th:text="${d.commentCount}">0</span>
                                 </span>
                             </div>
                         </div>
                     </a>
                     <button type="button" class="bookmark-icon"
+                            th:aria-label="${d.bookmarked} ? #{destination.list.card.bookmark.remove} : #{destination.list.card.bookmark.add}"
                             th:attr="
                             data-bookmarked=${d.bookmarked},
                             data-target-type='DESTINATION',
                             data-target-id=${d.id}
                         ">
                         <img th:src="@{'/uploads/icons/' + (${d.bookmarked} ? 'bookmark2' : 'bookmark') + '.png'}"
-                             th:alt="${d.bookmarked} ? '북마크 해제' : '북마크 추가'" />
+                             th:alt="${d.bookmarked} ? #{destination.list.card.bookmark.remove} : #{destination.list.card.bookmark.add}" />
                     </button>
                 </div>
             </div>
 
             <!-- 페이징 -->
             <div class="pagination-wrapper" th:if="${totalPages > 1}">
-                <nav class="pagination" aria-label="여행지 목록 페이지">
-                    <a th:if="${currentPage > 1}" class="page-nav" aria-label="이전 페이지"
+                <nav class="pagination" th:aria-label="#{destination.list.pagination.label}">
+                    <a th:if="${currentPage > 1}" class="page-nav"
+                       th:aria-label="#{destination.list.pagination.previous}"
                        th:href="@{/destinations/fragment(type=${type},
                                               region=${selectedSubregionId != null ? selectedSubregionId : selectedCityId},
                                               page=${currentPage - 1},
@@ -165,7 +185,8 @@
                               aria-current="page" th:text="${i}">1</span>
                     </th:block>
 
-                    <a th:if="${currentPage < totalPages}" class="page-nav" aria-label="다음 페이지"
+                    <a th:if="${currentPage < totalPages}" class="page-nav"
+                       th:aria-label="#{destination.list.pagination.next}"
                        th:href="@{/destinations/fragment(type=${type},
                                               region=${selectedSubregionId != null ? selectedSubregionId : selectedCityId},
                                               page=${currentPage + 1},
