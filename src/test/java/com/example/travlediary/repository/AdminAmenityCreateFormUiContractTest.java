@@ -27,7 +27,9 @@ class AdminAmenityCreateFormUiContractTest {
                 .contains("th:field=\"*{nameKo}\"")
                 .contains("th:field=\"*{nameEn}\"")
                 .contains("th:field=\"*{nameJa}\"")
-                .contains("th:field=\"*{nameZh}\"")
+                // 중국어는 간체/번체 두 칸이다
+                .contains("th:field=\"*{nameZhCn}\"")
+                .contains("th:field=\"*{nameZhTw}\"")
                 .contains("th:field=\"*{destinationTypes}\"");
     }
 
@@ -132,7 +134,8 @@ class AdminAmenityCreateFormUiContractTest {
         String create = resource("/templates/admin/amenities/create.html");
 
         for (String field : new String[]{
-                "code", "nameKo", "nameEn", "nameJa", "nameZh", "destinationTypes", "icon"}) {
+                "code", "nameKo", "nameEn", "nameJa", "nameZhCn", "nameZhTw",
+                "destinationTypes", "icon"}) {
             assertThat(create).as("error slot for %s", field)
                     .contains("#fields.hasErrors('" + field + "')");
         }
@@ -187,12 +190,14 @@ class AdminAmenityCreateFormUiContractTest {
                 .contains("th:field=\"*{nameKo}\"")
                 .contains("th:field=\"*{nameEn}\"")
                 .contains("th:field=\"*{nameJa}\"")
-                .contains("th:field=\"*{nameZh}\"")
+                // 중국어는 간체/번체 두 칸이다
+                .contains("th:field=\"*{nameZhCn}\"")
+                .contains("th:field=\"*{nameZhTw}\"")
                 // 체크 상태는 폼의 destinationTypes 바인딩으로 복원된다
                 .contains("th:each=\"type : ${destinationTypes}\"")
                 .contains("th:field=\"*{destinationTypes}\" th:value=\"${type}\"");
         for (String field : new String[]{
-                "nameKo", "nameEn", "nameJa", "nameZh", "destinationTypes", "icon"}) {
+                "nameKo", "nameEn", "nameJa", "nameZhCn", "nameZhTw", "destinationTypes", "icon"}) {
             assertThat(edit).as("error slot for %s", field)
                     .contains("#fields.hasErrors('" + field + "')");
         }

@@ -89,26 +89,24 @@ public interface AmenityMapper {
     int insertActivityAmenity(@Param("activityId") Long activityId, @Param("amenityId") Integer amenityId);
     int insertShopAmenity(@Param("shopId") Long shopId, @Param("amenityId") Integer amenityId);
 
-    // ========== 상세페이지용: destinationId 기준으로 번역 amenity 리스트 반환 ==========
+    // ========== 상세페이지용: destinationId 기준으로 편의시설 번역 전체를 한 번에 반환 ==========
+    // 언어를 SQL 에서 고르지 않는다. 이 여행지가 쓰는 편의시설의 번역을 모두 읽어 와서
+    // 화면 언어에 맞는 이름은 서비스가 고른다. (요청 언어 → 한국어 → 남은 언어 → code)
+    // 번역이 하나도 없는 편의시설도 목록에서 빠지지 않도록 LEFT JOIN 으로 읽는다.
     List<AmenityTranslation> findAttractionAmenityTranslationsByDestinationId(
-            @Param("destinationId") Long destinationId,
-            @Param("lang") String lang
+            @Param("destinationId") Long destinationId
     );
     List<AmenityTranslation> findAccommodationAmenityTranslationsByDestinationId(
-            @Param("destinationId") Long destinationId,
-            @Param("lang") String lang
+            @Param("destinationId") Long destinationId
     );
     List<AmenityTranslation> findRestaurantAmenityTranslationsByDestinationId(
-            @Param("destinationId") Long destinationId,
-            @Param("lang") String lang
+            @Param("destinationId") Long destinationId
     );
     List<AmenityTranslation> findActivityAmenityTranslationsByDestinationId(
-            @Param("destinationId") Long destinationId,
-            @Param("lang") String lang
+            @Param("destinationId") Long destinationId
     );
     List<AmenityTranslation> findShopAmenityTranslationsByDestinationId(
-            @Param("destinationId") Long destinationId,
-            @Param("lang") String lang
+            @Param("destinationId") Long destinationId
     );
 
     void deleteAttractionAmenities(Long attractionId);

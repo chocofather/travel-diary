@@ -75,11 +75,18 @@
              th:errors="*{nameJa}"></p>
         </div>
         <div class="admin-form-field">
-          <label for="amenity-name-zh">중국어</label>
-          <input id="amenity-name-zh" type="text" th:field="*{nameZh}"
+          <label for="amenity-name-zh-cn">중국어(간체)</label>
+          <input id="amenity-name-zh-cn" type="text" th:field="*{nameZhCn}"
                  maxlength="100" placeholder="예: 免费Wi-Fi">
-          <p class="admin-field-error admin-alert" th:if="${#fields.hasErrors('nameZh')}"
-             th:errors="*{nameZh}"></p>
+          <p class="admin-field-error admin-alert" th:if="${#fields.hasErrors('nameZhCn')}"
+             th:errors="*{nameZhCn}"></p>
+        </div>
+        <div class="admin-form-field">
+          <label for="amenity-name-zh-tw">중국어(번체)</label>
+          <input id="amenity-name-zh-tw" type="text" th:field="*{nameZhTw}"
+                 maxlength="100" placeholder="예: 免費Wi-Fi">
+          <p class="admin-field-error admin-alert" th:if="${#fields.hasErrors('nameZhTw')}"
+             th:errors="*{nameZhTw}"></p>
         </div>
       </div>
 

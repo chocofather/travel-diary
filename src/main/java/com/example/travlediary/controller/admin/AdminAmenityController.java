@@ -29,7 +29,8 @@ public class AdminAmenityController {
     private static final String REDIRECT_LIST = "redirect:/admin/amenities/list";
 
     private static final Set<String> FORM_FIELDS = Set.of(
-            "code", "nameKo", "nameEn", "nameJa", "nameZh", "destinationTypes", "icon");
+            "code", "nameKo", "nameEn", "nameJa", "nameZhCn", "nameZhTw",
+            "destinationTypes", "icon");
 
     /** 체크박스 표시용 라벨. 값 자체는 DestinationType enum 에서 온다. */
     private static final Map<DestinationType, String> DESTINATION_TYPE_LABELS = Map.of(

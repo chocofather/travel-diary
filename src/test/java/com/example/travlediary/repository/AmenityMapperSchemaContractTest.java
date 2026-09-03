@@ -111,6 +111,11 @@ class AmenityMapperSchemaContractTest {
         assertThat(between(schema, "CREATE TABLE `amenities`", ") ENGINE=InnoDB"))
                 .contains("`icon_url` varchar(255) DEFAULT NULL");
 
+        // 다섯 조회가 함께 쓰는 컬럼 묶음에 icon_url 과 code 가 들어 있다
+        assertThat(between(mapper, "<sql id=\"AmenityTranslationColumns\">", "</sql>"))
+                .contains("a.code AS code")
+                .contains("a.icon_url AS icon_url");
+
         // 상세 페이지가 쓰는 5개 조회는 amenities.icon_url 을 함께 읽는다
         for (String select : new String[]{
                 "findAttractionAmenityTranslationsByDestinationId",
@@ -120,7 +125,7 @@ class AmenityMapperSchemaContractTest {
                 "findShopAmenityTranslationsByDestinationId"}) {
             assertThat(between(mapper, "<select id=\"" + select + "\"", "</select>"))
                     .as("icon_url in %s", select)
-                    .contains("SELECT t.*, a.code, a.icon_url");
+                    .contains("<include refid=\"AmenityTranslationColumns\"/>");
         }
         assertThat(between(mapper, "<select id=\"selectAmenityById\"", "</select>"))
                 .contains("SELECT id, code, icon_url FROM amenities WHERE id = #{id}");

@@ -50,7 +50,8 @@ class AmenityUpdateServiceTest {
     void editFormRestoresCodeEveryLanguageAndCheckedTypes() {
         givenStoredAmenity("/uploads/icons/amenities/slippers.png");
         when(amenityMapper.findTranslationsByAmenityId(3)).thenReturn(List.of(
-                translation("ko", "슬리퍼"), translation("en", "Slippers"), translation("ja", "スリッパ")));
+                translation("ko", "슬리퍼"), translation("en", "Slippers"), translation("ja", "スリッパ"),
+                translation("zh-CN", "拖鞋"), translation("zh-TW", "拖鞋（繁體）")));
         when(amenityMapper.findAmenityDestinationTypesByAmenityId(3)).thenReturn(List.of(
                 mapping("ACCOMMODATION"), mapping("CAFE")));
 
@@ -61,7 +62,9 @@ class AmenityUpdateServiceTest {
         assertThat(form.getNameKo()).isEqualTo("슬리퍼");
         assertThat(form.getNameEn()).isEqualTo("Slippers");
         assertThat(form.getNameJa()).isEqualTo("スリッパ");
-        assertThat(form.getNameZh()).isNull();
+        // 간체와 번체는 각각 자기 칸으로 들어온다
+        assertThat(form.getNameZhCn()).isEqualTo("拖鞋");
+        assertThat(form.getNameZhTw()).isEqualTo("拖鞋（繁體）");
         assertThat(form.getDestinationTypes())
                 .containsExactly(DestinationType.ACCOMMODATION, DestinationType.CAFE);
     }
@@ -87,24 +90,30 @@ class AmenityUpdateServiceTest {
         when(amenityMapper.findTranslation(3, "ko")).thenReturn(translation("ko", "슬리퍼"));
         when(amenityMapper.findTranslation(3, "en")).thenReturn(null);
         when(amenityMapper.findTranslation(3, "ja")).thenReturn(translation("ja", "スリッパ"));
-        when(amenityMapper.findTranslation(3, "zh")).thenReturn(null);
+        when(amenityMapper.findTranslation(3, "zh-CN")).thenReturn(translation("zh-CN", "拖鞋"));
+        when(amenityMapper.findTranslation(3, "zh-TW")).thenReturn(null);
 
         AmenityForm form = form(null, List.of(DestinationType.ACCOMMODATION, DestinationType.CAFE));
         form.setCode("HACKED_CODE");
         form.setNameKo("실내 슬리퍼");
         form.setNameEn("Indoor Slippers");
         form.setNameJa("   ");   // 값을 비우면 기존 번역을 지운다
-        form.setNameZh(null);
+        form.setNameZhCn("室内拖鞋");
+        form.setNameZhTw(null);
 
         amenityService.updateAmenity(form);
 
-        // 값 있음 + 기존 행 있음 -> UPDATE
-        assertThat(updatedTranslations()).containsExactly(tuple(3, "ko", "실내 슬리퍼"));
+        // 값 있음 + 기존 행 있음 -> UPDATE (간체도 자기 행만 고친다)
+        assertThat(updatedTranslations())
+                .containsExactly(tuple(3, "ko", "실내 슬리퍼"), tuple(3, "zh-CN", "室内拖鞋"));
         // 값 있음 + 기존 행 없음 -> INSERT
         assertThat(insertedTranslations()).containsExactly(tuple(3, "en", "Indoor Slippers"));
         // 값 없음 + 기존 행 있음 -> DELETE
         verify(amenityMapper).deleteAmenityTranslation(3, "ja");
-        // 값 없음 + 기존 행 없음 -> 아무것도 하지 않는다
+        // 값 없음 + 기존 행 없음 -> 아무것도 하지 않는다 (번체는 그대로 없음)
+        verify(amenityMapper, never()).deleteAmenityTranslation(3, "zh-TW");
+        // legacy 'zh' 는 어디에서도 쓰지 않는다
+        verify(amenityMapper, never()).findTranslation(3, "zh");
         verify(amenityMapper, never()).deleteAmenityTranslation(3, "zh");
 
         // 적용 대상은 전체 삭제 후 재삽입

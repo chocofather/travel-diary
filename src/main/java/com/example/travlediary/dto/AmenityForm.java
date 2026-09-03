@@ -19,11 +19,15 @@ public class AmenityForm {
     private Integer id;      // 수정 시에만 사용. 신규 등록에서는 null
     private String code;     // amenities.code
 
-    /** amenity_translations. ko 는 필수, 나머지는 선택이며 비우면 저장하지 않는다. */
+    /**
+     * amenity_translations. ko 는 필수, 나머지는 선택이며 비우면 저장하지 않는다.
+     * 중국어는 간체(zh-CN)와 번체(zh-TW)를 각각 따로 받는다.
+     */
     private String nameKo;
     private String nameEn;
     private String nameJa;
-    private String nameZh;
+    private String nameZhCn;
+    private String nameZhTw;
 
     /** amenity_destination_types. DestinationForm.type 과 같이 enum 을 그대로 바인딩한다. */
     private List<DestinationType> destinationTypes = new ArrayList<>();

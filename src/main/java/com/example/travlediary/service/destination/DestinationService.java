@@ -192,24 +192,28 @@ public class DestinationService {
                 dto.setAttractionInfo(localizeAttractionInfo
                         ? attractionInfoService.findLocalizedByDestinationId(id, requestedLanguage)
                         : attractionInfoService.findByDestinationId(id));
-                dto.setAttractionAmenities(amenityService.getAttractionAmenities(id));
+                dto.setAttractionAmenities(
+                        amenityService.getAttractionAmenities(id, requestedLanguage));
                 break;
             case ACCOMMODATION:
                 dto.setAccommodationInfo(accommodationInfoService.findByDestinationId(id));
-                dto.setAccommodationAmenities(amenityService.getAccommodationAmenities(id));
+                dto.setAccommodationAmenities(
+                        amenityService.getAccommodationAmenities(id, requestedLanguage));
                 break;
             case RESTAURANTS:
             case CAFE:
                 dto.setRestaurantInfo(restaurantInfoService.findByDestinationId(id));
-                dto.setRestaurantAmenities(amenityService.getRestaurantAmenities(id));
+                dto.setRestaurantAmenities(
+                        amenityService.getRestaurantAmenities(id, requestedLanguage));
                 break;
             case ACTIVITY:
                 dto.setActivityInfo(activityInfoService.findByDestinationId(id));
-                dto.setActivityAmenities(amenityService.getActivityAmenities(id));
+                dto.setActivityAmenities(
+                        amenityService.getActivityAmenities(id, requestedLanguage));
                 break;
             case SHOP:
                 dto.setShopInfo(shopInfoService.findByDestinationId(id));
-                dto.setShopAmenities(amenityService.getShopAmenities(id));
+                dto.setShopAmenities(amenityService.getShopAmenities(id, requestedLanguage));
                 break;
         }
         return dto;

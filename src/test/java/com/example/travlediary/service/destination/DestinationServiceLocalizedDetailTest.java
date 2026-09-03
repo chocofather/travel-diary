@@ -27,6 +27,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -158,7 +160,7 @@ class DestinationServiceLocalizedDetailTest {
                 translation(1L, "ko", "경복궁", "한국어 요약", "한국어 설명")));
         when(destinationMapper.findImagesByDestinationId(15L)).thenReturn(List.of());
         when(destinationMapper.findCategoryIdsByDestinationId(15L)).thenReturn(List.of());
-        when(amenityService.getAttractionAmenities(15L)).thenReturn(List.of());
+        when(amenityService.getAttractionAmenities(eq(15L), any())).thenReturn(List.of());
         AttractionInfo localized = new AttractionInfo();
         localized.setDestinationId(15L);
         localized.setClosedDays("Tuesday");
@@ -178,7 +180,7 @@ class DestinationServiceLocalizedDetailTest {
                 translation(1L, "ko", "경복궁", "한국어 요약", "한국어 설명")));
         when(destinationMapper.findImagesByDestinationId(15L)).thenReturn(List.of());
         when(destinationMapper.findCategoryIdsByDestinationId(15L)).thenReturn(List.of());
-        when(amenityService.getAttractionAmenities(15L)).thenReturn(List.of());
+        when(amenityService.getAttractionAmenities(eq(15L), any())).thenReturn(List.of());
         AttractionInfo baseInfo = new AttractionInfo();
         baseInfo.setDestinationId(15L);
         when(attractionInfoService.findByDestinationId(15L)).thenReturn(baseInfo);
@@ -194,7 +196,7 @@ class DestinationServiceLocalizedDetailTest {
     private Destination detail(SupportedLanguage language) {
         when(destinationMapper.findImagesByDestinationId(15L)).thenReturn(List.of());
         when(destinationMapper.findCategoryIdsByDestinationId(15L)).thenReturn(List.of());
-        when(amenityService.getAttractionAmenities(15L)).thenReturn(List.of());
+        when(amenityService.getAttractionAmenities(eq(15L), any())).thenReturn(List.of());
         DestinationDetailDto detail = destinationService.getDestinationDetailWithInfo(15L, language);
         assertThat(detail).isNotNull();
         return detail.getDestination();

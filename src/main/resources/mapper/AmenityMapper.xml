@@ -85,59 +85,77 @@
         ORDER BY amenity_id, destination_type
     </select>
 
+    <!--
+      상세 화면 편의시설. 언어를 SQL 에서 고르지 않고 이 여행지가 쓰는 편의시설의
+      번역을 한 번에 모두 읽는다. 화면에 쓸 이름은 서비스가 고른다.
+      번역이 하나도 없는 편의시설도 빠지지 않도록 LEFT JOIN 이다.
+    -->
+    <sql id="AmenityTranslationColumns">
+        SELECT a.id AS amenity_id,
+               a.code AS code,
+               a.icon_url AS icon_url,
+               t.id AS id,
+               t.language_code AS language_code,
+               t.name AS name
+    </sql>
+
+    <sql id="AmenityTranslationOrder">
+        ORDER BY a.id ASC, t.language_code ASC, t.id ASC
+    </sql>
+
     <!-- 관광지 -->
     <select id="findAttractionAmenityTranslationsByDestinationId"
             resultType="com.example.travlediary.model.AmenityTranslation">
-        SELECT t.*, a.code, a.icon_url
+        <include refid="AmenityTranslationColumns"/>
         FROM attraction_amenities aa
                  JOIN amenities a ON a.id = aa.amenity_id
-                 JOIN amenity_translations t ON t.amenity_id = a.id
+                 LEFT JOIN amenity_translations t ON t.amenity_id = a.id
         WHERE aa.attraction_id = #{destinationId}
-          AND t.language_code = #{lang}
+        <include refid="AmenityTranslationOrder"/>
     </select>
 
     <!-- 숙소  -->
     <select id="findAccommodationAmenityTranslationsByDestinationId"
             resultType="com.example.travlediary.model.AmenityTranslation">
-        SELECT t.*, a.code, a.icon_url
+        <include refid="AmenityTranslationColumns"/>
         FROM accommodation_amenities aa
                  JOIN amenities a ON a.id = aa.amenity_id
-                 JOIN amenity_translations t ON t.amenity_id = a.id
+                 LEFT JOIN amenity_translations t ON t.amenity_id = a.id
         WHERE aa.accommodation_id = #{destinationId}
-          AND t.language_code = #{lang}
+        <include refid="AmenityTranslationOrder"/>
     </select>
 
     <!-- 음식점 / 카페 -->
     <select id="findRestaurantAmenityTranslationsByDestinationId"
             resultType="com.example.travlediary.model.AmenityTranslation">
-        SELECT t.*, a.code, a.icon_url
+        <include refid="AmenityTranslationColumns"/>
         FROM restaurant_amenities ra
                  JOIN amenities a ON a.id = ra.amenity_id
-                 JOIN amenity_translations t ON t.amenity_id = a.id
+                 LEFT JOIN amenity_translations t ON t.amenity_id = a.id
         WHERE ra.restaurant_id = #{destinationId}
-          AND t.language_code = #{lang}
+        <include refid="AmenityTranslationOrder"/>
     </select>
 
     <!-- 엑티비티 -->
     <select id="findActivityAmenityTranslationsByDestinationId"
             resultType="com.example.travlediary.model.AmenityTranslation">
-        SELECT t.*, a.code, a.icon_url
+        <include refid="AmenityTranslationColumns"/>
         FROM activity_amenities aa
                  JOIN amenities a ON a.id = aa.amenity_id
-                 JOIN amenity_translations t ON t.amenity_id = a.id
+                 LEFT JOIN amenity_translations t ON t.amenity_id = a.id
         WHERE aa.activity_id = #{destinationId}
-          AND t.language_code = #{lang}
+        <include refid="AmenityTranslationOrder"/>
     </select>
 
     <!-- 쇼핑 -->
     <select id="findShopAmenityTranslationsByDestinationId"
             resultType="com.example.travlediary.model.AmenityTranslation">
-        SELECT t.*, a.code, a.icon_url
+        <include refid="AmenityTranslationColumns"/>
         FROM shop_amenities sa
                  JOIN amenities a ON a.id = sa.amenity_id
-                 JOIN amenity_translations t ON t.amenity_id = a.id
+                 LEFT JOIN amenity_translations t ON t.amenity_id = a.id
         WHERE sa.shop_id = #{destinationId}
-          AND t.language_code = #{lang}
+        <include refid="AmenityTranslationOrder"/>
     </select>
 
     <!-- 관광지 편의시설 전체 삭제 -->

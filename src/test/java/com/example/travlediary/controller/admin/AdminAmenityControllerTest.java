@@ -78,7 +78,8 @@ class AdminAmenityControllerTest {
                         .param("nameKo", "무료 와이파이")
                         .param("nameEn", "Free Wi-Fi")
                         .param("nameJa", "無料Wi-Fi")
-                        .param("nameZh", "免费Wi-Fi")
+                        .param("nameZhCn", "免费Wi-Fi")
+                        .param("nameZhTw", "免費Wi-Fi")
                         .param("destinationTypes", "CAFE", "ACCOMMODATION"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/amenities/list"));
@@ -90,7 +91,8 @@ class AdminAmenityControllerTest {
         assertThat(submitted.getNameKo()).isEqualTo("무료 와이파이");
         assertThat(submitted.getNameEn()).isEqualTo("Free Wi-Fi");
         assertThat(submitted.getNameJa()).isEqualTo("無料Wi-Fi");
-        assertThat(submitted.getNameZh()).isEqualTo("免费Wi-Fi");
+        assertThat(submitted.getNameZhCn()).isEqualTo("免费Wi-Fi");
+        assertThat(submitted.getNameZhTw()).isEqualTo("免費Wi-Fi");
         assertThat(submitted.getDestinationTypes())
                 .containsExactly(DestinationType.CAFE, DestinationType.ACCOMMODATION);
         assertThat(submitted.getIcon()).isNotNull();

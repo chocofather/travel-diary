@@ -68,12 +68,14 @@ class AmenityRegistrationServiceTest {
         verify(amenityMapper).insertAmenity(amenity.capture());
         assertThat(amenity.getValue().getCode()).isEqualTo("FREE_WIFI");
 
+        // 화면이 읽는 다섯 언어 코드 그대로 저장한다. legacy 'zh' 는 만들지 않는다.
         assertThat(insertedTranslations())
                 .containsExactly(
                         tuple(7, "ko", "무료 와이파이"),
                         tuple(7, "en", "Free Wi-Fi"),
                         tuple(7, "ja", "無料Wi-Fi"),
-                        tuple(7, "zh", "免费Wi-Fi"));
+                        tuple(7, "zh-CN", "免费Wi-Fi"),
+                        tuple(7, "zh-TW", "免費Wi-Fi"));
 
         verify(amenityMapper).insertAmenityDestinationType(7, "CAFE");
         verify(amenityMapper).insertAmenityDestinationType(7, "ACCOMMODATION");
@@ -114,7 +116,8 @@ class AmenityRegistrationServiceTest {
         form.setNameKo("  무료 와이파이  ");
         form.setNameEn("   ");
         form.setNameJa("");
-        form.setNameZh(null);
+        form.setNameZhCn(null);
+        form.setNameZhTw("   ");
 
         amenityService.registerAmenity(form);
 
@@ -307,7 +310,8 @@ class AmenityRegistrationServiceTest {
         form.setNameKo("무료 와이파이");
         form.setNameEn("Free Wi-Fi");
         form.setNameJa("無料Wi-Fi");
-        form.setNameZh("免费Wi-Fi");
+        form.setNameZhCn("免费Wi-Fi");
+        form.setNameZhTw("免費Wi-Fi");
         form.setDestinationTypes(types);
         form.setIcon(icon);
         return form;

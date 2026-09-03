@@ -1,5 +1,6 @@
 package com.example.travlediary.service.amenity;
 
+import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.dto.AmenityDto;
 import com.example.travlediary.dto.AmenityForm;
 import com.example.travlediary.model.Amenity;
@@ -7,6 +8,7 @@ import com.example.travlediary.model.AmenityDestinationType;
 import com.example.travlediary.model.AmenityTranslation;
 import com.example.travlediary.model.DestinationType;
 import com.example.travlediary.repository.amenity.AmenityMapper;
+import com.example.travlediary.service.category.LocalizedReferenceNameResolver;
 import com.example.travlediary.service.file.FileUploadService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,9 +34,23 @@ import java.util.stream.Collectors;
 public class AmenityService {
     private final AmenityMapper amenityMapper;
     private final FileUploadService fileUploadService;
+    /** 편의시설 이름도 지역·카테고리와 같은 언어 대체 규칙을 쓴다. */
+    private final LocalizedReferenceNameResolver amenityNameResolver;
 
     // --- 공통: lang 없으면 "ko" (한국어) 기본 ---
     private static final String DEFAULT_LANG = "ko";
+
+    /**
+     * 관리자 입력 슬롯이 쓰는 언어 코드. 화면이 읽는 코드와 같아야 하므로
+     * {@link SupportedLanguage} 의 canonical 값을 그대로 쓴다. (legacy 'zh' 는 쓰지 않는다)
+     */
+    private static final String KOREAN_CODE = SupportedLanguage.KOREAN.getLanguageTag();
+    private static final String ENGLISH_CODE = SupportedLanguage.ENGLISH.getLanguageTag();
+    private static final String JAPANESE_CODE = SupportedLanguage.JAPANESE.getLanguageTag();
+    private static final String CHINESE_SIMPLIFIED_CODE =
+            SupportedLanguage.CHINESE_SIMPLIFIED.getLanguageTag();
+    private static final String CHINESE_TRADITIONAL_CODE =
+            SupportedLanguage.CHINESE_TRADITIONAL.getLanguageTag();
 
     /** 아이콘 파일명이 code 에서 만들어지므로 경로 문자가 섞일 수 없는 형식만 허용한다. */
     private static final Pattern AMENITY_CODE = Pattern.compile("^[A-Z0-9_]{2,50}$");
@@ -45,78 +61,95 @@ public class AmenityService {
 
     // 관광지용 Amenity DTO 반환
     public List<AmenityDto> getAttractionAmenities(Long destinationId) {
-        return getAttractionAmenities(destinationId, DEFAULT_LANG);
+        return getAttractionAmenities(destinationId, SupportedLanguage.KOREAN);
     }
-    public List<AmenityDto> getAttractionAmenities(Long destinationId, String lang) {
-        List<AmenityTranslation> list = amenityMapper.findAttractionAmenityTranslationsByDestinationId(destinationId, lang);
-        return list.stream().map(tr -> {
-            AmenityDto dto = new AmenityDto();
-            dto.setId(tr.getAmenityId());
-            dto.setCode(tr.getCode());
-            dto.setName(tr.getName());
-            dto.setIconUrl(tr.getIconUrl());
-            return dto;
-        }).collect(Collectors.toList());
+    public List<AmenityDto> getAttractionAmenities(Long destinationId, SupportedLanguage language) {
+        return toLocalizedAmenities(
+                amenityMapper.findAttractionAmenityTranslationsByDestinationId(destinationId),
+                language);
     }
 
     public List<AmenityDto> getAccommodationAmenities(Long destinationId) {
-        return getAccommodationAmenities(destinationId, DEFAULT_LANG);
+        return getAccommodationAmenities(destinationId, SupportedLanguage.KOREAN);
     }
-    public List<AmenityDto> getAccommodationAmenities(Long destinationId, String lang) {
-        List<AmenityTranslation> list = amenityMapper.findAccommodationAmenityTranslationsByDestinationId(destinationId, lang);
-        return list.stream().map(tr -> {
-            AmenityDto dto = new AmenityDto();
-            dto.setId(tr.getAmenityId());
-            dto.setCode(tr.getCode());
-            dto.setName(tr.getName());
-            dto.setIconUrl(tr.getIconUrl());
-            return dto;
-        }).collect(Collectors.toList());
+    public List<AmenityDto> getAccommodationAmenities(Long destinationId, SupportedLanguage language) {
+        return toLocalizedAmenities(
+                amenityMapper.findAccommodationAmenityTranslationsByDestinationId(destinationId),
+                language);
     }
 
     public List<AmenityDto> getRestaurantAmenities(Long destinationId) {
-        return getRestaurantAmenities(destinationId, DEFAULT_LANG);
+        return getRestaurantAmenities(destinationId, SupportedLanguage.KOREAN);
     }
-    public List<AmenityDto> getRestaurantAmenities(Long destinationId, String lang) {
-        List<AmenityTranslation> list = amenityMapper.findRestaurantAmenityTranslationsByDestinationId(destinationId, lang);
-        return list.stream().map(tr -> {
-            AmenityDto dto = new AmenityDto();
-            dto.setId(tr.getAmenityId());
-            dto.setCode(tr.getCode());
-            dto.setName(tr.getName());
-            dto.setIconUrl(tr.getIconUrl());
-            return dto;
-        }).collect(Collectors.toList());
+    public List<AmenityDto> getRestaurantAmenities(Long destinationId, SupportedLanguage language) {
+        return toLocalizedAmenities(
+                amenityMapper.findRestaurantAmenityTranslationsByDestinationId(destinationId),
+                language);
     }
 
     public List<AmenityDto> getActivityAmenities(Long destinationId) {
-        return getActivityAmenities(destinationId, DEFAULT_LANG);
+        return getActivityAmenities(destinationId, SupportedLanguage.KOREAN);
     }
-    public List<AmenityDto> getActivityAmenities(Long destinationId, String lang) {
-        List<AmenityTranslation> list = amenityMapper.findActivityAmenityTranslationsByDestinationId(destinationId, lang);
-        return list.stream().map(tr -> {
-            AmenityDto dto = new AmenityDto();
-            dto.setId(tr.getAmenityId());
-            dto.setCode(tr.getCode());
-            dto.setName(tr.getName());
-            dto.setIconUrl(tr.getIconUrl());
-            return dto;
-        }).collect(Collectors.toList());
+    public List<AmenityDto> getActivityAmenities(Long destinationId, SupportedLanguage language) {
+        return toLocalizedAmenities(
+                amenityMapper.findActivityAmenityTranslationsByDestinationId(destinationId),
+                language);
     }
 
     public List<AmenityDto> getShopAmenities(Long destinationId) {
-        return getShopAmenities(destinationId, DEFAULT_LANG);
+        return getShopAmenities(destinationId, SupportedLanguage.KOREAN);
     }
-    public List<AmenityDto> getShopAmenities(Long destinationId, String lang) {
-        List<AmenityTranslation> list = amenityMapper.findShopAmenityTranslationsByDestinationId(destinationId, lang);
-        return list.stream().map(tr -> {
-            AmenityDto dto = new AmenityDto();
-            dto.setId(tr.getAmenityId());
-            dto.setCode(tr.getCode());
-            dto.setName(tr.getName());
-            dto.setIconUrl(tr.getIconUrl());
-            return dto;
-        }).collect(Collectors.toList());
+    public List<AmenityDto> getShopAmenities(Long destinationId, SupportedLanguage language) {
+        return toLocalizedAmenities(
+                amenityMapper.findShopAmenityTranslationsByDestinationId(destinationId),
+                language);
+    }
+
+    /**
+     * 한 여행지의 편의시설 목록을 화면 언어에 맞춰 만든다.
+     *
+     * <p>편의시설마다 다시 조회하지 않는다. 조회 한 번으로 받은 번역 행을 편의시설별로 모아
+     * 이름만 고른다. 고르는 차례는 요청 언어 → 한국어 → 남은 언어(언어 코드, id 순) → code 이며,
+     * 지역·카테고리 이름과 같은 규칙({@link LocalizedReferenceNameResolver})을 쓴다.
+     *
+     * <p>번호·아이콘·목록 차례는 손대지 않는다.
+     */
+    private List<AmenityDto> toLocalizedAmenities(List<AmenityTranslation> rows,
+                                                  SupportedLanguage requestedLanguage) {
+        if (rows == null || rows.isEmpty()) {
+            return List.of();
+        }
+
+        Map<Integer, AmenityDto> amenities = new LinkedHashMap<>();
+        Map<Integer, List<LocalizedReferenceNameResolver.LocalizedName>> namesByAmenityId =
+                new LinkedHashMap<>();
+        for (AmenityTranslation row : rows) {
+            if (row == null || row.getAmenityId() == null) {
+                continue;
+            }
+            amenities.computeIfAbsent(row.getAmenityId(), id -> {
+                AmenityDto dto = new AmenityDto();
+                dto.setId(id);
+                dto.setCode(row.getCode());
+                dto.setIconUrl(row.getIconUrl());
+                return dto;
+            });
+            if (row.getLanguageCode() != null) {
+                namesByAmenityId.computeIfAbsent(row.getAmenityId(), id -> new ArrayList<>())
+                        .add(new LocalizedReferenceNameResolver.LocalizedName(
+                                row.getId() == null ? null : row.getId().longValue(),
+                                row.getLanguageCode(),
+                                row.getName()));
+            }
+        }
+
+        List<AmenityDto> localized = new ArrayList<>(amenities.size());
+        amenities.forEach((amenityId, dto) -> {
+            dto.setName(amenityNameResolver.resolve(requestedLanguage, dto.getCode(),
+                    namesByAmenityId.getOrDefault(amenityId, List.of())));
+            localized.add(dto);
+        });
+        return localized;
     }
 
     // --- 언어별 전체 (예: "ko", "en") ---
@@ -291,7 +324,8 @@ public class AmenityService {
         String nameKo = requiredName("nameKo", form.getNameKo(), "한국어 이름을 입력해 주세요.");
         String nameEn = optionalName("nameEn", form.getNameEn());
         String nameJa = optionalName("nameJa", form.getNameJa());
-        String nameZh = optionalName("nameZh", form.getNameZh());
+        String nameZhCn = optionalName("nameZhCn", form.getNameZhCn());
+        String nameZhTw = optionalName("nameZhTw", form.getNameZhTw());
         List<DestinationType> types = requiredDestinationTypes(form.getDestinationTypes());
 
         MultipartFile icon = form.getIcon();
@@ -310,11 +344,12 @@ public class AmenityService {
         amenityMapper.insertAmenity(amenity);
         Integer amenityId = amenity.getId();
 
-        // 언어 코드는 사용자가 정하지 않고 폼 슬롯에 고정한다.
-        insertTranslation(amenityId, "ko", nameKo);
-        insertTranslation(amenityId, "en", nameEn);
-        insertTranslation(amenityId, "ja", nameJa);
-        insertTranslation(amenityId, "zh", nameZh);
+        // 언어 코드는 사용자가 정하지 않고 폼 슬롯에 고정한다. 화면이 쓰는 다섯 코드 그대로다.
+        insertTranslation(amenityId, KOREAN_CODE, nameKo);
+        insertTranslation(amenityId, ENGLISH_CODE, nameEn);
+        insertTranslation(amenityId, JAPANESE_CODE, nameJa);
+        insertTranslation(amenityId, CHINESE_SIMPLIFIED_CODE, nameZhCn);
+        insertTranslation(amenityId, CHINESE_TRADITIONAL_CODE, nameZhTw);
 
         for (DestinationType type : types) {
             amenityMapper.insertAmenityDestinationType(amenityId, type.name());
@@ -393,10 +428,11 @@ public class AmenityService {
                 }
             }
         }
-        form.setNameKo(names.get("ko"));
-        form.setNameEn(names.get("en"));
-        form.setNameJa(names.get("ja"));
-        form.setNameZh(names.get("zh"));
+        form.setNameKo(names.get(KOREAN_CODE));
+        form.setNameEn(names.get(ENGLISH_CODE));
+        form.setNameJa(names.get(JAPANESE_CODE));
+        form.setNameZhCn(names.get(CHINESE_SIMPLIFIED_CODE));
+        form.setNameZhTw(names.get(CHINESE_TRADITIONAL_CODE));
 
         List<DestinationType> types = new ArrayList<>();
         List<AmenityDestinationType> mappings =
@@ -440,7 +476,8 @@ public class AmenityService {
         String nameKo = requiredName("nameKo", form.getNameKo(), "한국어 이름을 입력해 주세요.");
         String nameEn = optionalName("nameEn", form.getNameEn());
         String nameJa = optionalName("nameJa", form.getNameJa());
-        String nameZh = optionalName("nameZh", form.getNameZh());
+        String nameZhCn = optionalName("nameZhCn", form.getNameZhCn());
+        String nameZhTw = optionalName("nameZhTw", form.getNameZhTw());
         List<DestinationType> types = requiredDestinationTypes(form.getDestinationTypes());
 
         MultipartFile icon = form.getIcon();
@@ -450,10 +487,12 @@ public class AmenityService {
             fileUploadService.validateAmenityIcon(icon);
         }
 
-        upsertTranslation(amenityId, "ko", nameKo);
-        upsertTranslation(amenityId, "en", nameEn);
-        upsertTranslation(amenityId, "ja", nameJa);
-        upsertTranslation(amenityId, "zh", nameZh);
+        // 언어마다 따로 넣고/고치고/지운다. 간체와 번체도 서로 영향을 주지 않는다.
+        upsertTranslation(amenityId, KOREAN_CODE, nameKo);
+        upsertTranslation(amenityId, ENGLISH_CODE, nameEn);
+        upsertTranslation(amenityId, JAPANESE_CODE, nameJa);
+        upsertTranslation(amenityId, CHINESE_SIMPLIFIED_CODE, nameZhCn);
+        upsertTranslation(amenityId, CHINESE_TRADITIONAL_CODE, nameZhTw);
 
         // 복합 PK 뿐이라 잃을 정보가 없다. 전체 삭제 후 선택값을 다시 넣는다.
         amenityMapper.deleteAmenityDestinationTypesByAmenityId(amenityId);

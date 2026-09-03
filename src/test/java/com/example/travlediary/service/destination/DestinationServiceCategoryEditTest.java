@@ -26,6 +26,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -75,7 +76,7 @@ class DestinationServiceCategoryEditTest {
         when(destinationMapper.findTranslationsByDestinationId(9L))
                 .thenReturn(List.of(koreanTranslation(9L)));
         when(destinationMapper.findImagesByDestinationId(9L)).thenReturn(List.of());
-        when(amenityService.getAttractionAmenities(9L)).thenReturn(List.of());
+        when(amenityService.getAttractionAmenities(eq(9L), any())).thenReturn(List.of());
         when(destinationMapper.findCategoryIdsByDestinationId(9L)).thenReturn(List.of(10L, 20L));
 
         DestinationDetailDto detail = destinationService.getDestinationDetailWithInfo(9L);
