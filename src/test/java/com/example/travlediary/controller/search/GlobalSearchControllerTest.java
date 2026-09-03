@@ -3,6 +3,8 @@ package com.example.travlediary.controller.search;
 import com.example.travlediary.config.CustomLoginSuccessHandler;
 import com.example.travlediary.config.CustomLogoutSuccessHandler;
 import com.example.travlediary.config.SecurityConfig;
+import com.example.travlediary.config.i18n.I18nConfig;
+import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.dto.GlobalSearchPage;
 import com.example.travlediary.dto.GlobalSearchResultDto;
 import com.example.travlediary.repository.user.UserMapper;
@@ -28,7 +30,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 @WebMvcTest(GlobalSearchController.class)
-@Import(SecurityConfig.class)
+@Import({SecurityConfig.class, I18nConfig.class})
 class GlobalSearchControllerTest {
 
     @Autowired
@@ -54,7 +56,8 @@ class GlobalSearchControllerTest {
         item.setDetailUrl("/post/7");
         GlobalSearchPage page = new GlobalSearchPage(
                 "제주", "community", List.of(item), 21, 2, 10, 3, 1, 3);
-        when(globalSearchService.search("제주", "community", 2)).thenReturn(page);
+        when(globalSearchService.search("제주", "community", 2, SupportedLanguage.KOREAN))
+                .thenReturn(page);
 
         mockMvc.perform(get("/search")
                         .param("q", "제주")
@@ -72,19 +75,20 @@ class GlobalSearchControllerTest {
                             .isNotEmpty();
                 });
 
-        verify(globalSearchService).search("제주", "community", 2);
+        verify(globalSearchService).search("제주", "community", 2, SupportedLanguage.KOREAN);
     }
 
     @Test
     void malformedPageIsSafelyNormalized() throws Exception {
         GlobalSearchPage page = new GlobalSearchPage(
                 null, "all", List.of(), 0, 1, 10, 0, 1, 0);
-        when(globalSearchService.search(null, "all", 1)).thenReturn(page);
+        when(globalSearchService.search(null, "all", 1, SupportedLanguage.KOREAN))
+                .thenReturn(page);
 
         mockMvc.perform(get("/search").param("page", "invalid"))
                 .andExpect(status().isOk());
 
-        verify(globalSearchService).search(null, "all", 1);
+        verify(globalSearchService).search(null, "all", 1, SupportedLanguage.KOREAN);
     }
 
     @Test
@@ -104,7 +108,8 @@ class GlobalSearchControllerTest {
         destinationWithoutImage.setDetailUrl("/destinations/4");
         GlobalSearchPage page = new GlobalSearchPage(
                 "제주", "destination", List.of(destination, destinationWithoutImage), 2, 1, 10, 1, 1, 1);
-        when(globalSearchService.search("제주", "destination", 1)).thenReturn(page);
+        when(globalSearchService.search("제주", "destination", 1, SupportedLanguage.KOREAN))
+                .thenReturn(page);
 
         mockMvc.perform(get("/search")
                         .param("q", "제주")
@@ -142,7 +147,8 @@ class GlobalSearchControllerTest {
         eventWithoutImage.setEndDate(LocalDate.of(2026, 9, 30));
         GlobalSearchPage page = new GlobalSearchPage(
                 "이벤트", "event", List.of(event, eventWithoutImage), 2, 1, 10, 1, 1, 1);
-        when(globalSearchService.search("이벤트", "event", 1)).thenReturn(page);
+        when(globalSearchService.search("이벤트", "event", 1, SupportedLanguage.KOREAN))
+                .thenReturn(page);
 
         mockMvc.perform(get("/search")
                         .param("q", "이벤트")

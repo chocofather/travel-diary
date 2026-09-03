@@ -17,6 +17,20 @@
         <result property="endDate" column="end_date"/>
     </resultMap>
 
+    <!--
+      여행지 이름을 요청 언어 번역에서도 찾는다. 제목이 맞으면 기존과 같이 위로 올린다.
+      EXISTS 라 행이 늘지 않아 같은 여행지가 두 번 나오지 않는다.
+    -->
+    <sql id="DestinationTranslatedNameMatch">
+        EXISTS (
+            SELECT 1
+            FROM destination_translations dtr
+            WHERE dtr.destination_id = d.id
+              AND dtr.language_code = #{languageCode}
+              AND dtr.name LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+        )
+    </sql>
+
     <sql id="GlobalSearchUnion">
         SELECT
             'destination' AS search_type,
@@ -35,7 +49,11 @@
             ) AS thumbnail_url,
             NULL AS start_date,
             NULL AS end_date,
-            CASE WHEN dt.name LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!' THEN 2 ELSE 1 END AS relevance
+            CASE WHEN dt.name LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+                <if test="languageCode != null and languageCode != ''">
+                    OR <include refid="DestinationTranslatedNameMatch"/>
+                </if>
+                THEN 2 ELSE 1 END AS relevance
         FROM destinations d
         JOIN destination_translations dt
           ON dt.destination_id = d.id
@@ -49,6 +67,43 @@
               OR dt.description LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
               OR cc.region_name LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
               OR pcc.region_name LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+              OR EXISTS (
+                  SELECT 1
+                  FROM destination_categories dcat
+                  JOIN categories cat ON cat.id = dcat.category_id
+                  WHERE dcat.destination_id = d.id
+                    AND cat.name LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+              )
+              <if test="languageCode != null and languageCode != ''">
+                  <!-- 현재 언어의 여행지 이름·짧은 소개 -->
+                  OR EXISTS (
+                      SELECT 1
+                      FROM destination_translations dtr
+                      WHERE dtr.destination_id = d.id
+                        AND dtr.language_code = #{languageCode}
+                        AND (
+                            dtr.name LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+                            OR dtr.short_description LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+                        )
+                  )
+                  <!-- 현재 언어의 지역명(해당 지역과 상위 지역) -->
+                  OR EXISTS (
+                      SELECT 1
+                      FROM country_category_translations cctr
+                      WHERE cctr.country_category_id IN (cc.id, pcc.id)
+                        AND cctr.language_code = #{languageCode}
+                        AND cctr.name LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+                  )
+                  <!-- 현재 언어의 카테고리명 -->
+                  OR EXISTS (
+                      SELECT 1
+                      FROM destination_categories dcat
+                      JOIN category_translations ctr ON ctr.category_id = dcat.category_id
+                      WHERE dcat.destination_id = d.id
+                        AND ctr.language_code = #{languageCode}
+                        AND ctr.name LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+                  )
+              </if>
           )
 
         UNION ALL

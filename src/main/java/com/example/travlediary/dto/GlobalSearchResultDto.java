@@ -18,15 +18,12 @@ public class GlobalSearchResultDto {
     private LocalDate startDate;
     private LocalDate endDate;
 
-    public String getTypeLabel() {
+    /** 결과 종류 배지는 화면에서 현재 언어로 읽는다. */
+    public String getTypeMessageKey() {
         return switch (type == null ? "" : type) {
-            case "destination" -> "여행지";
-            case "community" -> "커뮤니티";
-            case "course" -> "여행코스";
-            case "travel-info" -> "여행정보";
-            case "event" -> "이벤트";
-            case "notice" -> "공지사항";
-            default -> "검색 결과";
+            case "destination", "community", "course", "travel-info", "event", "notice" ->
+                    "search.type." + type;
+            default -> "search.type.unknown";
         };
     }
 }

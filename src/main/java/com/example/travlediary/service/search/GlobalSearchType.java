@@ -3,28 +3,27 @@ package com.example.travlediary.service.search;
 import java.util.Arrays;
 
 public enum GlobalSearchType {
-    ALL("all", "전체"),
-    DESTINATION("destination", "여행지"),
-    COMMUNITY("community", "커뮤니티"),
-    COURSE("course", "여행코스"),
-    TRAVEL_INFO("travel-info", "여행정보"),
-    EVENT("event", "이벤트"),
-    NOTICE("notice", "공지사항");
+    ALL("all"),
+    DESTINATION("destination"),
+    COMMUNITY("community"),
+    COURSE("course"),
+    TRAVEL_INFO("travel-info"),
+    EVENT("event"),
+    NOTICE("notice");
 
     private final String queryValue;
-    private final String label;
 
-    GlobalSearchType(String queryValue, String label) {
+    GlobalSearchType(String queryValue) {
         this.queryValue = queryValue;
-        this.label = label;
     }
 
     public String getQueryValue() {
         return queryValue;
     }
 
-    public String getLabel() {
-        return label;
+    /** 탭 이름은 화면에서 현재 언어로 읽는다. */
+    public String getMessageKey() {
+        return "search.type." + queryValue;
     }
 
     public static GlobalSearchType from(String value) {

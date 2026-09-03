@@ -1,9 +1,12 @@
 package com.example.travlediary.service.search;
 
+import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.dto.GlobalSearchPage;
 import com.example.travlediary.dto.GlobalSearchResultDto;
 import com.example.travlediary.repository.search.GlobalSearchMapper;
+import com.example.travlediary.service.destination.DestinationLocalizationService;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.MessageSource;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -22,13 +25,18 @@ class GlobalSearchServiceImplTest {
 
     @Mock
     private GlobalSearchMapper globalSearchMapper;
+    @Mock
+    private DestinationLocalizationService destinationLocalizationService;
+    @Mock
+    private MessageSource messageSource;
 
     @InjectMocks
     private GlobalSearchServiceImpl globalSearchService;
 
     @Test
     void blankQueryReturnsEmptyPageWithoutDatabaseSearch() {
-        GlobalSearchPage result = globalSearchService.search("   ", "destination", 1);
+        GlobalSearchPage result = globalSearchService.search(
+                "   ", "destination", 1, SupportedLanguage.KOREAN);
 
         assertThat(result.hasQuery()).isFalse();
         assertThat(result.results()).isEmpty();
@@ -39,14 +47,16 @@ class GlobalSearchServiceImplTest {
 
     @Test
     void invalidTypeFallsBackToAllAndEscapesLikeWildcards() {
-        when(globalSearchMapper.count("제주!%!_!!", "all")).thenReturn(0L);
+        when(globalSearchMapper.count("제주!%!_!!", "all", "ko")).thenReturn(0L);
 
-        GlobalSearchPage result = globalSearchService.search("  제주%_!  ", "unknown", 1);
+        GlobalSearchPage result = globalSearchService.search(
+                "  제주%_!  ", "unknown", 1, SupportedLanguage.KOREAN);
 
         assertThat(result.query()).isEqualTo("제주%_!");
         assertThat(result.type()).isEqualTo("all");
-        verify(globalSearchMapper).count("제주!%!_!!", "all");
+        verify(globalSearchMapper).count("제주!%!_!!", "all", "ko");
         verify(globalSearchMapper, never()).search(
+                org.mockito.ArgumentMatchers.anyString(),
                 org.mockito.ArgumentMatchers.anyString(),
                 org.mockito.ArgumentMatchers.anyString(),
                 org.mockito.ArgumentMatchers.anyLong(),
@@ -58,14 +68,17 @@ class GlobalSearchServiceImplTest {
         GlobalSearchResultDto item = new GlobalSearchResultDto();
         item.setType("community");
         item.setSummary("<p>제주 <strong>여행</strong></p><script>alert(1)</script>");
-        when(globalSearchMapper.count("제주", "community")).thenReturn(25L);
-        when(globalSearchMapper.search("제주", "community", 20L, 10)).thenReturn(List.of(item));
+        when(globalSearchMapper.count("제주", "community", "ko")).thenReturn(25L);
+        when(globalSearchMapper.search("제주", "community", "ko", 20L, 10)).thenReturn(List.of(item));
 
-        GlobalSearchPage result = globalSearchService.search("제주", "community", 99);
+        GlobalSearchPage result = globalSearchService.search(
+                "제주", "community", 99, SupportedLanguage.KOREAN);
 
         assertThat(result.currentPage()).isEqualTo(3);
         assertThat(result.totalPages()).isEqualTo(3);
         assertThat(result.results().get(0).getSummary()).isEqualTo("제주 여행");
-        verify(globalSearchMapper).search("제주", "community", 20L, 10);
+        verify(globalSearchMapper).search("제주", "community", "ko", 20L, 10);
+        // 사용자가 쓴 글은 번역을 찾지 않는다.
+        verifyNoInteractions(destinationLocalizationService);
     }
 }
