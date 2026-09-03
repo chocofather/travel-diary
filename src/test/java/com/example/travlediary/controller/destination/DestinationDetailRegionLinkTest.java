@@ -4,12 +4,13 @@ import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.dto.DestinationDetailDto;
 import com.example.travlediary.model.CountryCategory;
 import com.example.travlediary.model.Destination;
-import com.example.travlediary.service.category.CategoryService;
 import com.example.travlediary.service.comment.DestinationCommentService;
 import com.example.travlediary.service.destination.DestinationImageService;
 import com.example.travlediary.service.destination.DestinationService;
 import com.example.travlediary.service.category.CountryCategoryService;
+import com.example.travlediary.service.category.ReferenceNameLocalizationService;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -18,8 +19,10 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
+import org.springframework.context.i18n.LocaleContextHolder;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -39,9 +42,9 @@ class DestinationDetailRegionLinkTest {
     @Mock
     private DestinationImageService destinationImageService;
     @Mock
-    private CategoryService categoryService;
-    @Mock
     private CountryCategoryService countryCategoryService;
+    @Mock
+    private ReferenceNameLocalizationService referenceNameLocalizationService;
     @Mock
     private DestinationCommentService destinationCommentService;
 
@@ -53,9 +56,15 @@ class DestinationDetailRegionLinkTest {
 
     @BeforeEach
     void setUp() {
+        LocaleContextHolder.setLocale(SupportedLanguage.KOREAN.getLocale());
         controller = new DestinationController(destinationService, destinationImageService,
-                categoryService, countryCategoryService, destinationCommentService);
+                countryCategoryService, destinationCommentService, referenceNameLocalizationService);
         when(countryCategoryService.getDomesticRootIds()).thenReturn(List.of(KOREA_ROOT_ID));
+    }
+
+    @AfterEach
+    void clearLocale() {
+        LocaleContextHolder.resetLocaleContext();
     }
 
     @Test
@@ -89,6 +98,27 @@ class DestinationDetailRegionLinkTest {
         assertThat("/destinations?type=" + model.getAttribute("type")
                 + "&region=" + model.getAttribute("regionPathId"))
                 .isEqualTo("/destinations?type=domestic&region=10");
+    }
+
+    @Test
+    void englishDetailUsesLocalizedRegionAndCategoryDisplayNames() {
+        LocaleContextHolder.setLocale(SupportedLanguage.ENGLISH.getLocale());
+        givenRegionTree(
+                region(101L, "종로구", 4, 10L),
+                region(10L, "서울", 3, KOREA_ROOT_ID),
+                region(KOREA_ROOT_ID, "대한민국", 1, null));
+        when(referenceNameLocalizationService.localizeCountryCategories(
+                any(), eq(SupportedLanguage.ENGLISH)))
+                .thenReturn(Map.of(10L, "Seoul", 101L, "Jongno-gu"));
+        when(referenceNameLocalizationService.localizeCategories(
+                eq(List.of(5L)), eq(SupportedLanguage.ENGLISH)))
+                .thenReturn(Map.of(5L, "랜드마크"));
+
+        Model model = renderDetail(101L);
+
+        assertThat(model.getAttribute("regionPath")).isEqualTo("Seoul");
+        assertThat(model.getAttribute("regionName")).isEqualTo("Jongno-gu");
+        assertThat(model.getAttribute("categoryName")).isEqualTo("랜드마크");
     }
 
     @Test
@@ -158,6 +188,7 @@ class DestinationDetailRegionLinkTest {
 
         DestinationDetailDto dto = new DestinationDetailDto();
         dto.setDestination(destination);
+        dto.setCategoryIds(List.of(5L));
 
         when(destinationService.getDestinationDetailWithInfo(eq(7L), any(SupportedLanguage.class)))
                 .thenReturn(dto);

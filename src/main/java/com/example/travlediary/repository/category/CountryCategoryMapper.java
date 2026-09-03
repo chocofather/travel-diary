@@ -1,9 +1,11 @@
 package com.example.travlediary.repository.category;
 
 import com.example.travlediary.model.CountryCategory;
+import com.example.travlediary.model.CountryCategoryTranslation;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.util.Collection;
 import java.util.List;
 
 @Mapper
@@ -43,6 +45,9 @@ public interface CountryCategoryMapper {
     String getCodeById(@Param("id") Long id);
 
     List<CountryCategory> selectByIds(@org.apache.ibatis.annotations.Param("ids") List<Long> ids);
+
+    List<CountryCategoryTranslation> findTranslationsByCountryCategoryIds(
+            @Param("countryCategoryIds") Collection<Long> countryCategoryIds);
 
     List<CountryCategory> findRandomOverseasCountries(@Param("limit") int limit);
 

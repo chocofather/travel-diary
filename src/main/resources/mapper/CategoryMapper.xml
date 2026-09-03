@@ -5,6 +5,14 @@
 
 <mapper namespace="com.example.travlediary.repository.category.CategoryMapper">
 
+    <resultMap id="CategoryTranslationResultMap"
+               type="com.example.travlediary.model.CategoryTranslation">
+        <id property="id" column="id"/>
+        <result property="categoryId" column="category_id"/>
+        <result property="languageCode" column="language_code"/>
+        <result property="name" column="name"/>
+    </resultMap>
+
     <select id="findAll" resultType="com.example.travlediary.model.Category">
         SELECT id, name FROM categories
         ORDER BY id
@@ -46,6 +54,41 @@
     <!-- 단건 카테고리 조회 (수정 화면 복원 / 삭제 대상 확인용) -->
     <select id="findById" parameterType="long" resultType="com.example.travlediary.model.Category">
         SELECT id, name FROM categories WHERE id = #{id}
+    </select>
+
+    <select id="findByIds" resultType="com.example.travlediary.model.Category">
+        SELECT id, name
+        FROM categories
+        <choose>
+            <when test="categoryIds != null and !categoryIds.isEmpty()">
+                WHERE id IN
+                <foreach collection="categoryIds" item="categoryId" open="(" separator="," close=")">
+                    #{categoryId}
+                </foreach>
+            </when>
+            <otherwise>
+                WHERE 1 = 0
+            </otherwise>
+        </choose>
+        ORDER BY id
+    </select>
+
+    <select id="findTranslationsByCategoryIds"
+            resultMap="CategoryTranslationResultMap">
+        SELECT id, category_id, language_code, name
+        FROM category_translations
+        <choose>
+            <when test="categoryIds != null and !categoryIds.isEmpty()">
+                WHERE category_id IN
+                <foreach collection="categoryIds" item="categoryId" open="(" separator="," close=")">
+                    #{categoryId}
+                </foreach>
+            </when>
+            <otherwise>
+                WHERE 1 = 0
+            </otherwise>
+        </choose>
+        ORDER BY category_id, language_code, id
     </select>
 
     <!-- 카테고리 이름 변경 -->

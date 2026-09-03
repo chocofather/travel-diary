@@ -4,8 +4,8 @@ import com.example.travlediary.dto.DestinationDetailDto;
 import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.model.CountryCategory;
 import com.example.travlediary.model.Destination;
-import com.example.travlediary.service.category.CategoryService;
 import com.example.travlediary.service.category.CountryCategoryService;
+import com.example.travlediary.service.category.ReferenceNameLocalizationService;
 import com.example.travlediary.service.comment.DestinationCommentService;
 import com.example.travlediary.service.destination.DestinationImageService;
 import com.example.travlediary.service.destination.DestinationService;
@@ -37,9 +37,9 @@ class DestinationDescriptionParagraphsTest {
     @Mock
     private DestinationImageService destinationImageService;
     @Mock
-    private CategoryService categoryService;
-    @Mock
     private CountryCategoryService countryCategoryService;
+    @Mock
+    private ReferenceNameLocalizationService referenceNameLocalizationService;
     @Mock
     private DestinationCommentService destinationCommentService;
 
@@ -49,7 +49,7 @@ class DestinationDescriptionParagraphsTest {
     void setUp() {
         LocaleContextHolder.setLocale(SupportedLanguage.KOREAN.getLocale());
         controller = new DestinationController(destinationService, destinationImageService,
-                categoryService, countryCategoryService, destinationCommentService);
+                countryCategoryService, destinationCommentService, referenceNameLocalizationService);
 
         CountryCategory region = new CountryCategory();
         region.setId(10L);

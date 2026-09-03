@@ -249,6 +249,24 @@ CREATE TABLE `categories` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `category_translations`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `category_translations` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `category_id` bigint NOT NULL,
+  `language_code` varchar(10) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `name` varchar(100) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_category_translations_category_language` (`category_id`,`language_code`),
+  KEY `idx_category_translations_language_category` (`language_code`,`category_id`),
+  CONSTRAINT `fk_category_translations_category` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `category_destination_types`
 --
 -- 카테고리가 어떤 여행지 유형에 적용 가능한지 정의하는 마스터 N:M 매핑이다.
@@ -336,6 +354,24 @@ CREATE TABLE `country_categories` (
   `is_visible` tinyint DEFAULT '1',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=495 DEFAULT CHARSET=utf8mb3;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `country_category_translations`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `country_category_translations` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `country_category_id` bigint NOT NULL,
+  `language_code` varchar(10) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `name` varchar(100) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_country_category_translations_category_language` (`country_category_id`,`language_code`),
+  KEY `idx_country_category_translations_language_category` (`language_code`,`country_category_id`),
+  CONSTRAINT `fk_country_category_translations_category` FOREIGN KEY (`country_category_id`) REFERENCES `country_categories` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --

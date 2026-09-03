@@ -24,10 +24,7 @@ class DestinationDescriptionUiContractTest {
         assertThat(description.selectFirst("p").attr("th:each")).isEqualTo("paragraph : ${descriptionParagraphs}");
         assertThat(description.selectFirst("span").attr("th:text")).isEqualTo("${paragraph}");
         assertThat(description.select("[th\\:utext]")).isEmpty();
-        Element shortDescription = detail.selectFirst(".destination-short-description");
-        assertThat(shortDescription).isNotNull();
-        assertThat(shortDescription.attr("th:text"))
-                .isEqualTo("${destination.shortDescription}");
+        assertThat(detail.select(".destination-short-description")).isEmpty();
         assertThat(resource("/templates/destination/detail.html"))
                 .doesNotContain("currentLanguage", "currentLanguageTag", "locale ==");
 

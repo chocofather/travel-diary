@@ -6,8 +6,8 @@ import com.example.travlediary.dto.DestinationDto;
 import com.example.travlediary.model.CountryCategory;
 import com.example.travlediary.model.Destination;
 import com.example.travlediary.security.CustomUserDetails;
-import com.example.travlediary.service.category.CategoryService;
 import com.example.travlediary.service.category.CountryCategoryService;
+import com.example.travlediary.service.category.ReferenceNameLocalizationService;
 import com.example.travlediary.service.comment.DestinationCommentService;
 import com.example.travlediary.service.destination.DestinationImageService;
 import com.example.travlediary.service.destination.DestinationService;
@@ -30,6 +30,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Controller
 @RequiredArgsConstructor
@@ -47,9 +48,9 @@ public class DestinationController {
 
     private final DestinationService destinationService;
     private final DestinationImageService destinationImageService;
-    private final CategoryService categoryService;
     private final CountryCategoryService countryCategoryService;
     private final DestinationCommentService destinationCommentService;
+    private final ReferenceNameLocalizationService referenceNameLocalizationService;
 
     // 공통 리스트: type=domestic or overseas, region(도시, 국가 등) id
     @GetMapping("/destinations")
@@ -281,7 +282,6 @@ public class DestinationController {
 
         // 지역/부모지역/카테고리/댓글/비슷한 여행지 등은 기존대로
         CountryCategory region = countryCategoryService.getById(dto.getDestination().getRegionId());
-        model.addAttribute("regionName", region.getRegionName());
         model.addAttribute("regionId", region.getId());
         // 목록으로 돌아가는 링크(/destinations?type=..&region=..)가 쓰는 값.
         // 비어 있으면 목록이 지역 필터를 적용하지 못한다.
@@ -294,12 +294,23 @@ public class DestinationController {
         CountryCategory parentRegion = null;
         if (region.getParentId() != null) {
             parentRegion = countryCategoryService.getById(region.getParentId());
-            model.addAttribute("regionPath", parentRegion.getRegionName());
             model.addAttribute("regionPathId", parentRegion.getId());
         } else {
-            model.addAttribute("regionPath", null);
             model.addAttribute("regionPathId", null);
         }
+
+        List<CountryCategory> detailRegions = new ArrayList<>();
+        detailRegions.add(region);
+        if (parentRegion != null) {
+            detailRegions.add(parentRegion);
+        }
+        Map<Long, String> localizedRegionNames =
+                referenceNameLocalizationService.localizeCountryCategories(
+                        detailRegions, requestedLanguage);
+        model.addAttribute("regionName", localizedDisplayName(
+                localizedRegionNames, region.getId(), region.getRegionName()));
+        model.addAttribute("regionPath", parentRegion == null ? null : localizedDisplayName(
+                localizedRegionNames, parentRegion.getId(), parentRegion.getRegionName()));
 
         // 해외 지도는 Maps Embed API iframe 으로 표시한다. 만들 수 없으면 null → 지도 영역만 감춘다.
         model.addAttribute("overseasMapEmbedUrl",
@@ -307,7 +318,16 @@ public class DestinationController {
         model.addAttribute("overseasMapLinkUrl",
                 buildOverseasMapLinkUrl(countryCode, dto.getDestination()));
 
-        String categoryName = categoryService.getFirstCategoryNameByDestinationId(id);
+        List<Long> categoryIds = dto.getCategoryIds() == null ? List.of() : dto.getCategoryIds();
+        Map<Long, String> localizedCategoryNames =
+                referenceNameLocalizationService.localizeCategories(categoryIds, requestedLanguage);
+        String categoryName = categoryIds.stream()
+                .filter(java.util.Objects::nonNull)
+                .sorted()
+                .map(categoryId -> localizedDisplayName(localizedCategoryNames, categoryId, null))
+                .filter(java.util.Objects::nonNull)
+                .findFirst()
+                .orElse(null);
         model.addAttribute("categoryName", categoryName);
 
         int commentCount = destinationCommentService.getCommentCountByDestinationId(id);
@@ -318,6 +338,18 @@ public class DestinationController {
         model.addAttribute("similarDestinations", similarDtos);
 
         return "destination/detail";
+    }
+
+    private String localizedDisplayName(Map<Long, String> localizedNames,
+                                        Long id,
+                                        String baseName) {
+        if (localizedNames != null) {
+            String localizedName = localizedNames.get(id);
+            if (localizedName != null && !localizedName.isBlank()) {
+                return localizedName;
+            }
+        }
+        return baseName;
     }
 
     private List<String> descriptionParagraphs(String description) {

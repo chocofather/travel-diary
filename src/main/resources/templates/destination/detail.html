@@ -54,9 +54,6 @@
             <span th:text="${categoryName}">카테고리</span>
         </p>
         <h1 class="destination-title" th:text="${destination.name}">여행지 이름</h1> <!-- destination.name으로 수정 -->
-        <p class="destination-short-description"
-           th:if="${destination.shortDescription != null and !destination.shortDescription.isBlank()}"
-           th:text="${destination.shortDescription}">여행지 한줄 소개</p>
         <div class="meta-icons">
   <span>
     <img src="/uploads/icons/marker.png" th:alt="#{destination.detail.meta.location}">

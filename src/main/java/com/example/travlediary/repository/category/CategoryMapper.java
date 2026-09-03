@@ -2,9 +2,11 @@ package com.example.travlediary.repository.category;
 
 import com.example.travlediary.model.Category;
 import com.example.travlediary.model.CategoryDestinationType;
+import com.example.travlediary.model.CategoryTranslation;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.util.Collection;
 import java.util.List;
 
 @Mapper
@@ -38,6 +40,11 @@ public interface CategoryMapper {
     int deleteCategoryDestinationTypesByCategoryId(@Param("categoryId") Long categoryId);
 
     Category findById(Long id);
+
+    List<Category> findByIds(@Param("categoryIds") Collection<Long> categoryIds);
+
+    List<CategoryTranslation> findTranslationsByCategoryIds(
+            @Param("categoryIds") Collection<Long> categoryIds);
 
     void insert(Category category);
 

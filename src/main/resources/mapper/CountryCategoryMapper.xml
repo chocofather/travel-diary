@@ -18,6 +18,14 @@
         <result property="isVisible" column="is_visible"/>
     </resultMap>
 
+    <resultMap id="CountryCategoryTranslationResultMap"
+               type="com.example.travlediary.model.CountryCategoryTranslation">
+        <id property="id" column="id"/>
+        <result property="countryCategoryId" column="country_category_id"/>
+        <result property="languageCode" column="language_code"/>
+        <result property="name" column="name"/>
+    </resultMap>
+
     <insert id="insert" parameterType="com.example.travlediary.model.CountryCategory">
         INSERT INTO country_categories (
             id, region_name, name_en, icon_path, code,
@@ -151,6 +159,25 @@
         <foreach collection="ids" item="id" open="(" separator="," close=")">
             #{id}
         </foreach>
+    </select>
+
+    <select id="findTranslationsByCountryCategoryIds"
+            resultMap="CountryCategoryTranslationResultMap">
+        SELECT id, country_category_id, language_code, name
+        FROM country_category_translations
+        <choose>
+            <when test="countryCategoryIds != null and !countryCategoryIds.isEmpty()">
+                WHERE country_category_id IN
+                <foreach collection="countryCategoryIds" item="countryCategoryId"
+                         open="(" separator="," close=")">
+                    #{countryCategoryId}
+                </foreach>
+            </when>
+            <otherwise>
+                WHERE 1 = 0
+            </otherwise>
+        </choose>
+        ORDER BY country_category_id, language_code, id
     </select>
 
     <select id="findRandomOverseasCountries" resultType="com.example.travlediary.model.CountryCategory">
