@@ -64,25 +64,30 @@ class RestaurantInfoTranslationContractTest {
                 .doesNotContain("restaurant_info_translations");
     }
 
+    /**
+     * 스키마 기준 문서는 {@code docs/db/travel_diary_schema_reference.md} 하나뿐이다.
+     * 매퍼가 읽고 쓰는 컬럼이 실제 DB 정의(SHOW CREATE TABLE 을 옮긴 것)와 어긋나지 않는지 본다.
+     */
     @Test
-    void theMigrationSqlMatchesTheAgreedTranslationTableShape() throws IOException {
-        String sql = Files.readString(
-                Path.of("docs/db/restaurant_info_translations.sql"), StandardCharsets.UTF_8);
+    void theSchemaReferenceKeepsTheAgreedTranslationTableShape() throws IOException {
+        String definition = createTableBlock("restaurant_info_translations");
 
-        // 이름과 타입은 실제 DB(SHOW CREATE TABLE) 와 같아야 한다
-        assertThat(sql)
-                .contains("CREATE TABLE `restaurant_info_translations`")
+        assertThat(definition)
+                .contains("`id` bigint NOT NULL AUTO_INCREMENT")
                 .contains("`destination_id` bigint NOT NULL")
-                .contains("`language_code` varchar(10)")
+                // 언어 코드는 코드값이라 ascii 로 고정한다
+                .contains("`language_code` varchar(10) CHARACTER SET ascii "
+                        + "COLLATE ascii_bin NOT NULL")
+                // 한 여행지에 언어당 한 줄
                 .contains("UNIQUE KEY `uk_restaurant_info_translation` "
                         + "(`destination_id`,`language_code`)")
                 .contains("KEY `idx_restaurant_info_translation_lang` "
                         + "(`language_code`,`destination_id`)")
+                // 원본이 지워지면 번역도 함께 지워진다
                 .contains("CONSTRAINT `fk_restaurant_info_translation`")
                 .contains("REFERENCES `restaurant_info` (`destination_id`)")
                 .contains("ON DELETE CASCADE")
                 .contains("DEFAULT CHARSET=utf8mb4")
-                .contains("ko / en / ja / zh-CN / zh-TW")
                 // 자유 텍스트 6개만 담는다
                 .contains("`main_menu`")
                 .contains("`price_range`")
@@ -90,14 +95,18 @@ class RestaurantInfoTranslationContractTest {
                 .contains("`break_time`")
                 .contains("`closed_days`")
                 .contains("`etc`")
+                // 언어와 무관한 값은 번역 테이블에 없다
                 .doesNotContain("`contact_number`")
                 .doesNotContain("`homepage_url`")
-                .doesNotContain("`seat_count`");
-        // 번역 데이터는 이번 단계에서 만들지 않는다 (예시는 주석으로만)
-        assertThat(sql.lines()
-                .map(String::strip)
-                .filter(line -> line.toUpperCase().startsWith("INSERT INTO")))
-                .isEmpty();
+                .doesNotContain("`seat_count`")
+                .doesNotContain("`parking_available`");
+    }
+
+    /** 기준 문서에서 해당 테이블의 CREATE TABLE 정의만 떼어 낸다. */
+    private String createTableBlock(String tableName) throws IOException {
+        String reference = Files.readString(
+                Path.of("docs/db/travel_diary_schema_reference.md"), StandardCharsets.UTF_8);
+        return between(reference, "CREATE TABLE `" + tableName + "` (", ";");
     }
 
     private String between(String source, String start, String end) {

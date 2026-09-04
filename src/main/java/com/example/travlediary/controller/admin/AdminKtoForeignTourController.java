@@ -1,7 +1,8 @@
 package com.example.travlediary.controller.admin;
 
+import com.example.travlediary.service.kto.KtoForeignLanguage;
 import com.example.travlediary.service.kto.KtoForeignTourApiException;
-import com.example.travlediary.service.kto.KtoEnglishTourService;
+import com.example.travlediary.service.kto.KtoForeignTourService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -11,18 +12,32 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Optional;
+
+/**
+ * 관리자 외국어 자동입력 API. 언어마다 경로를 따로 두지 않고 language 파라미터로 고른다.
+ *
+ * <p>화면 번역 탭이 쓰는 canonical 코드(en/ja/zh-CN/zh-TW)만 받는다.
+ * 목록에 없는 값은 거부하며 국문이나 비슷한 언어로 대신하지 않는다.
+ */
 @RestController
 @RequestMapping("/admin/api/kto/tour")
 @PreAuthorize("hasRole('ADMIN')")
 @RequiredArgsConstructor
-public class AdminKtoEnglishTourController {
+public class AdminKtoForeignTourController {
 
-    private final KtoEnglishTourService ktoEnglishTourService;
+    private final KtoForeignTourService ktoForeignTourService;
 
-    @GetMapping("/english-match")
-    public ResponseEntity<?> match(@RequestParam(required = false) String title,
+    @GetMapping("/foreign-match")
+    public ResponseEntity<?> match(@RequestParam(required = false) String language,
+                                   @RequestParam(required = false) String title,
                                    @RequestParam(required = false) String mapX,
                                    @RequestParam(required = false) String mapY) {
+        Optional<KtoForeignLanguage> foreignLanguage =
+                KtoForeignLanguage.fromLanguageTag(normalize(language));
+        if (foreignLanguage.isEmpty()) {
+            return error(HttpStatus.BAD_REQUEST, "지원하지 않는 언어입니다.");
+        }
         String koreanTitle = normalize(title);
         String longitude = normalize(mapX);
         String latitude = normalize(mapY);
@@ -33,26 +48,33 @@ public class AdminKtoEnglishTourController {
             return error(HttpStatus.BAD_REQUEST, "좌표가 올바르지 않습니다.");
         }
         try {
-            return ResponseEntity.ok(ktoEnglishTourService.match(koreanTitle, longitude, latitude));
+            return ResponseEntity.ok(ktoForeignTourService.match(
+                    foreignLanguage.get(), koreanTitle, longitude, latitude));
         } catch (KtoForeignTourApiException exception) {
             return apiError(exception);
         }
     }
 
     /**
-     * 영문 상세. contentTypeId 는 매칭 결과로 받은 영문 유형 코드이며,
+     * 외국어 상세. contentTypeId 는 매칭 결과로 받은 외국어 유형 코드이며,
      * 없으면 유형별 상세(detailIntro2) 없이 title/overview 만 돌려준다.
      */
-    @GetMapping("/english-detail")
-    public ResponseEntity<?> detail(@RequestParam(required = false) String contentId,
+    @GetMapping("/foreign-detail")
+    public ResponseEntity<?> detail(@RequestParam(required = false) String language,
+                                    @RequestParam(required = false) String contentId,
                                     @RequestParam(required = false) String contentTypeId) {
+        Optional<KtoForeignLanguage> foreignLanguage =
+                KtoForeignLanguage.fromLanguageTag(normalize(language));
+        if (foreignLanguage.isEmpty()) {
+            return error(HttpStatus.BAD_REQUEST, "지원하지 않는 언어입니다.");
+        }
         String normalizedContentId = normalize(contentId);
         if (normalizedContentId.isEmpty()) {
-            return error(HttpStatus.BAD_REQUEST, "영문 관광정보 식별값이 올바르지 않습니다.");
+            return error(HttpStatus.BAD_REQUEST, "외국어 관광정보 식별값이 올바르지 않습니다.");
         }
         try {
-            return ResponseEntity.ok(ktoEnglishTourService.getDetail(
-                    normalizedContentId, normalize(contentTypeId)));
+            return ResponseEntity.ok(ktoForeignTourService.getDetail(
+                    foreignLanguage.get(), normalizedContentId, normalize(contentTypeId)));
         } catch (KtoForeignTourApiException exception) {
             return apiError(exception);
         }

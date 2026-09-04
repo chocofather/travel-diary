@@ -4,11 +4,20 @@ document.addEventListener("DOMContentLoaded", () => {
     const status = document.querySelector("[data-kto-tour-status]");
     const results = document.querySelector("[data-kto-tour-results]");
     const destinationType = document.querySelector("[data-kto-tour-destination-type]");
-    const englishNameInput = document.querySelector("[data-kto-tour-english-name]");
-    const englishOverviewInput = document.querySelector("[data-kto-tour-english-overview]");
-    const englishStatus = document.querySelector("[data-kto-tour-english-status]");
+    // 번역 탭과 같은 canonical 코드. 서버도 이 값만 받는다.
+    const FOREIGN_LANGUAGES = [
+        {code: "en", label: "영어"},
+        {code: "ja", label: "일본어"},
+        {code: "zh-CN", label: "간체"},
+        {code: "zh-TW", label: "번체"}
+    ];
+    // 유형별 상세에서 번역칸으로 옮기는 값. 어느 유형의 값인지는 서버가 판단한다.
+    const SUBTYPE_FIELDS = [
+        "closedDays", "openingHours", "admissionFee", "mainMenu", "roomType", "mainProducts"
+    ];
+    const foreignStatus = document.querySelector("[data-kto-tour-foreign-status]");
     let lastSelectedContentId = null;
-    let englishRequestGeneration = 0;
+    let foreignRequestGeneration = 0;
     let koreanDetailRequestGeneration = 0;
 
     if (!nameInput || !searchButton || !status || !results) return;
@@ -72,7 +81,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const contentChanged = lastSelectedContentId !== null
             && lastSelectedContentId !== item.contentId;
         const shouldApplyRegion = lastSelectedContentId === null || contentChanged;
-        const requestGeneration = ++englishRequestGeneration;
+        const requestGeneration = ++foreignRequestGeneration;
         const loadingGeneration = ++koreanDetailRequestGeneration;
         if (contentChanged) {
             clearTourApiManagedFields();
@@ -91,20 +100,20 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             const payload = await response.json();
             if (!response.ok) throw new Error(payload.message || "관광정보를 불러오지 못했습니다.");
-            if (requestGeneration !== englishRequestGeneration) return;
+            if (requestGeneration !== foreignRequestGeneration) return;
             applyAutofill(payload);
             setStatus(`${payload.title || item.title || "선택한 장소"} 정보를 빈 항목에 입력했습니다.`);
             if (shouldApplyRegion) {
                 void applyRegionMatch(payload.regionMatch, requestGeneration);
             }
-            void matchEnglishTour(
+            void matchForeignTours(
                 payload.title || item.title,
                 payload.longitude || item.longitude,
                 payload.latitude || item.latitude,
                 requestGeneration
             );
         } catch (error) {
-            if (requestGeneration !== englishRequestGeneration) return;
+            if (requestGeneration !== foreignRequestGeneration) return;
             setStatus(error.message || "관광정보를 불러오지 못했습니다.", true);
         } finally {
             if (loadingGeneration === koreanDetailRequestGeneration) {
@@ -114,7 +123,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function applyRegionMatch(regionMatch, requestGeneration) {
-        if (requestGeneration !== englishRequestGeneration) return;
+        if (requestGeneration !== foreignRequestGeneration) return;
         const regionSelector = window.TravelDiaryRegionSelector;
         if (!regionSelector) return;
         if (!regionMatch?.matched || !Array.isArray(regionMatch.path)) {
@@ -123,7 +132,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         const applied = await regionSelector.applyRegionPath(regionMatch.path);
-        if (requestGeneration !== englishRequestGeneration) return;
+        if (requestGeneration !== foreignRequestGeneration) return;
         if (!applied) {
             setStatus("지역을 자동으로 찾지 못했습니다. 직접 선택해 주세요.");
         }
@@ -153,64 +162,114 @@ document.addEventListener("DOMContentLoaded", () => {
         fillTypeField("reservation", currentType, detail.reservation);
     }
 
-    async function matchEnglishTour(koreanTitle, mapX, mapY, requestGeneration) {
-        if (!englishNameInput || !englishOverviewInput || !englishStatus) return;
+    /**
+     * 네 언어를 각각 찾아 빈 번역칸만 채운다.
+     * 한 언어가 없거나 실패해도 나머지 언어는 그대로 진행한다.
+     */
+    async function matchForeignTours(koreanTitle, mapX, mapY, requestGeneration) {
+        if (!foreignStatus) return;
         if (!hasValue(mapX) || !hasValue(mapY)) {
-            setEnglishStatus("좌표가 없어 영문 관광정보를 자동으로 찾지 않았습니다.");
+            setForeignStatus("좌표가 없어 외국어 관광정보를 자동으로 찾지 않았습니다.");
             return;
         }
 
-        setEnglishStatus("주변 영문 관광정보를 찾고 있습니다.");
-        try {
-            const params = new URLSearchParams({
-                title: koreanTitle,
-                mapX: String(mapX),
-                mapY: String(mapY)
-            });
-            const response = await fetch(`/admin/api/kto/tour/english-match?${params.toString()}`, {
-                headers: {Accept: "application/json"}
-            });
-            const payload = await response.json();
-            if (requestGeneration !== englishRequestGeneration) return;
-            if (!response.ok) throw new Error(payload.message || "영문 관광정보를 불러오지 못했습니다.");
+        setForeignStatus("주변 외국어 관광정보를 찾고 있습니다.");
+        const settled = await Promise.allSettled(FOREIGN_LANGUAGES.map(
+            language => fillForeignLanguage(language, koreanTitle, mapX, mapY, requestGeneration)));
+        if (requestGeneration !== foreignRequestGeneration) return;
 
-            if (payload.status === "MATCHED" && payload.matched) {
-                await loadEnglishDetail(payload.matched, requestGeneration);
-                return;
-            }
-            setEnglishStatus("일치하는 영문 관광정보가 없습니다.");
-        } catch (error) {
-            if (requestGeneration !== englishRequestGeneration) return;
-            setEnglishStatus(error.message || "영문 관광정보를 불러오지 못했습니다.", true);
-        }
+        const filled = [];
+        const missing = [];
+        const failed = [];
+        settled.forEach((result, index) => {
+            const label = FOREIGN_LANGUAGES[index].label;
+            // 한 언어의 예외가 다른 언어 결과를 지우지 않는다.
+            const state = result.status === "fulfilled" ? result.value : "error";
+            if (state === "filled") filled.push(label);
+            else if (state === "none") missing.push(label);
+            else failed.push(label);
+        });
+        setForeignStatus(summarize(filled, missing, failed), filled.length === 0);
     }
 
-    async function loadEnglishDetail(candidate, requestGeneration) {
-        if (!candidate || !candidate.contentId) return;
-        setEnglishStatus(`${candidate.title || "선택한 장소"} 영문 정보를 불러오고 있습니다.`);
-        try {
-            // 영문 유형 코드는 국문과 다르므로 매칭 결과 값을 그대로 넘긴다.
-            const params = new URLSearchParams({contentId: candidate.contentId});
-            if (hasValue(candidate.contentTypeId)) {
-                params.set("contentTypeId", candidate.contentTypeId);
-            }
-            const response = await fetch(`/admin/api/kto/tour/english-detail?${params.toString()}`, {
-                headers: {Accept: "application/json"}
-            });
-            const payload = await response.json();
-            if (requestGeneration !== englishRequestGeneration) return;
-            if (!response.ok) throw new Error(payload.message || "영문 관광정보를 불러오지 못했습니다.");
-            fillIfEmpty(englishNameInput, payload.title);
-            fillIfEmpty(englishOverviewInput, payload.overview);
-            // 식당 영문 번역칸. 값이 없으면 빈 칸을 그대로 둔다.
-            fillEnglishField("mainMenu", payload.mainMenu);
-            fillEnglishField("openingHours", payload.openingHours);
-            fillEnglishField("closedDays", payload.closedDays);
-            setEnglishStatus(`${payload.title || candidate.title || "선택한 장소"} 영문 정보를 빈 항목에 입력했습니다.`);
-        } catch (error) {
-            if (requestGeneration !== englishRequestGeneration) return;
-            setEnglishStatus(error.message || "영문 관광정보를 불러오지 못했습니다.", true);
+    function summarize(filled, missing, failed) {
+        const parts = [];
+        if (filled.length) parts.push(`${filled.join("·")} 정보를 빈 항목에 입력했습니다.`);
+        if (missing.length) parts.push(`${missing.join("·")}는 일치하는 관광정보가 없습니다.`);
+        if (failed.length) parts.push(`${failed.join("·")}는 불러오지 못했습니다.`);
+        return parts.join(" ");
+    }
+
+    /** 한 언어의 매칭 + 상세 조회. 채웠으면 filled, 대응 장소가 없으면 none 을 준다. */
+    async function fillForeignLanguage(language, koreanTitle, mapX, mapY, requestGeneration) {
+        const nameInputForLanguage = foreignInput("name", language.code);
+        const overviewInputForLanguage = foreignInput("overview", language.code);
+        if (!nameInputForLanguage && !overviewInputForLanguage) return "none";
+
+        const matchParams = new URLSearchParams({
+            language: language.code,
+            title: koreanTitle,
+            mapX: String(mapX),
+            mapY: String(mapY)
+        });
+        const matched = await requestJson(`/admin/api/kto/tour/foreign-match?${matchParams}`);
+        if (requestGeneration !== foreignRequestGeneration) return "none";
+        if (matched.status !== "MATCHED" || !matched.matched || !matched.matched.contentId) {
+            return "none";
         }
+
+        // 외국어 유형 코드는 국문과 다르므로 매칭 결과 값을 그대로 넘긴다.
+        const detailParams = new URLSearchParams({
+            language: language.code,
+            contentId: matched.matched.contentId
+        });
+        if (hasValue(matched.matched.contentTypeId)) {
+            detailParams.set("contentTypeId", matched.matched.contentTypeId);
+        }
+        const detail = await requestJson(`/admin/api/kto/tour/foreign-detail?${detailParams}`);
+        if (requestGeneration !== foreignRequestGeneration) return "none";
+
+        // 현지어 제목이 국문 원문과 같으면 번역이 아니므로 넣지 않는다.
+        const localizedTitle = sameAsKoreanTitle(detail.title, koreanTitle) ? null : detail.title;
+        fillIfEmpty(nameInputForLanguage, localizedTitle);
+        fillIfEmpty(overviewInputForLanguage, detail.overview);
+        // 간단 설명은 대응하는 값이 없어 비워 둔다.
+        // 유형별 상세. 서버가 유형에 맞는 값만 채워 주므로 여기서는 유형을 따지지 않는다.
+        // 화면에 없는 칸(다른 유형)이나 값이 없는 칸은 그대로 둔다.
+        const subtypeFilled = SUBTYPE_FIELDS
+            .map(field => fillSubtypeField(field, language.code, detail[field]))
+            .some(Boolean);
+        return hasValue(localizedTitle) || hasValue(detail.overview) || subtypeFilled
+            ? "filled" : "none";
+    }
+
+    /** 해당 언어 탭의 유형별 상세 입력칸. 슬롯 번호가 아니라 언어 코드로 찾는다. */
+    function fillSubtypeField(fieldName, languageCode, value) {
+        const element = document.querySelector(
+            `[data-kto-tour-foreign-field="${fieldName}"]`
+            + `[data-kto-tour-foreign-language="${languageCode}"]`);
+        if (!element || !hasValue(value) || element.value.trim()) return false;
+        fillIfEmpty(element, value);
+        return true;
+    }
+
+    function sameAsKoreanTitle(foreignTitle, koreanTitle) {
+        if (!hasValue(foreignTitle) || !hasValue(koreanTitle)) return false;
+        return String(foreignTitle).trim().replace(/\s+/g, " ")
+            === String(koreanTitle).trim().replace(/\s+/g, " ");
+    }
+
+    function foreignInput(field, languageCode) {
+        return document.querySelector(`[data-kto-tour-foreign-${field}="${languageCode}"]`);
+    }
+
+    async function requestJson(url) {
+        const response = await fetch(url, {headers: {Accept: "application/json"}});
+        const payload = await response.json();
+        if (!response.ok) {
+            throw new Error(payload.message || "외국어 관광정보를 불러오지 못했습니다.");
+        }
+        return payload;
     }
 
     function hasValue(value) {
@@ -237,11 +296,6 @@ document.addEventListener("DOMContentLoaded", () => {
         element.dispatchEvent(new Event("change", {bubbles: true}));
     }
 
-    /** 영문 상세 입력칸. 화면에 없으면(다른 유형) 아무것도 하지 않는다. */
-    function fillEnglishField(fieldName, value) {
-        fillIfEmpty(document.querySelector(`[data-kto-tour-english-field="${fieldName}"]`), value);
-    }
-
     function fillIfEmpty(element, value) {
         if (!element || element.value.trim()) return;
         if (value === null || value === undefined || String(value).trim() === "") return;
@@ -259,8 +313,9 @@ document.addEventListener("DOMContentLoaded", () => {
             document.querySelector("[data-kto-tour-overview]"),
             document.querySelector("[data-kto-tour-longitude]"),
             document.querySelector("[data-kto-tour-latitude]"),
-            englishNameInput,
-            englishOverviewInput,
+            ...document.querySelectorAll("[data-kto-tour-foreign-name]"),
+            ...document.querySelectorAll("[data-kto-tour-foreign-overview]"),
+            ...document.querySelectorAll("[data-kto-tour-foreign-field]"),
             ...document.querySelectorAll("[data-kto-tour-field]")
         ]);
         for (const element of managedFields) {
@@ -276,7 +331,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function clearEnglishAutofill() {
-        setEnglishStatus("새 장소 기준으로 영문 관광정보를 다시 찾습니다.");
+        setForeignStatus("새 장소 기준으로 외국어 관광정보를 다시 찾습니다.");
     }
 
     function setLoading(loading, message) {
@@ -289,9 +344,9 @@ document.addEventListener("DOMContentLoaded", () => {
         status.classList.toggle("is-error", isError);
     }
 
-    function setEnglishStatus(message, isError = false) {
-        if (!englishStatus) return;
-        englishStatus.textContent = message;
-        englishStatus.classList.toggle("is-error", isError);
+    function setForeignStatus(message, isError = false) {
+        if (!foreignStatus) return;
+        foreignStatus.textContent = message;
+        foreignStatus.classList.toggle("is-error", isError);
     }
 });

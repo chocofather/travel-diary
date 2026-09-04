@@ -40,25 +40,27 @@
                     aria-label=${translationLanguageLabels.get(translation.languageCode)}">
         <input type="hidden" th:field="*{translations[__${slot.index}__].languageCode}">
         <label>여행지명
+          <!-- 언어별 TourAPI 자동입력 대상. 값이 있는 칸은 건드리지 않는다. -->
           <input type="text" th:field="*{translations[__${slot.index}__].name}"
-                 th:attr="data-kto-tour-english-name=
-                          ${ktoAutofill and translation.languageCode == 'en'} ? true : null">
+                 th:attr="data-kto-tour-foreign-name=
+                          ${ktoAutofill} ? ${translation.languageCode} : null">
         </label>
         <label>간단 설명
+          <!-- TourAPI 에 대응하는 값이 없어 자동입력하지 않는다. -->
           <textarea th:field="*{translations[__${slot.index}__].shortDescription}"></textarea>
         </label>
         <label>상세 설명
           <textarea class="is-description"
                     th:field="*{translations[__${slot.index}__].description}"
-                    th:attr="data-kto-tour-english-overview=
-                             ${ktoAutofill and translation.languageCode == 'en'} ? true : null"></textarea>
+                    th:attr="data-kto-tour-foreign-overview=
+                             ${ktoAutofill} ? ${translation.languageCode} : null"></textarea>
         </label>
       </div>
     </th:block>
   </div>
 </th:block>
 
-<th:block th:fragment="accommodationTranslations">
+<th:block th:fragment="accommodationTranslations(ktoAutofill)">
   <div class="admin-type-field-wide admin-translation-tabs" data-translation-tabs>
     <h4>숙소 상세 정보 번역</h4>
     <p class="admin-help-text">
@@ -88,7 +90,10 @@
           <label>객실 유형
             <input type="text"
                    th:field="*{accommodationInfoTranslations[__${slot.index}__].roomType}"
-                   maxlength="255">
+                   maxlength="255"
+                   th:attr="data-kto-tour-foreign-field=${ktoAutofill} ? 'roomType' : null,
+                            data-kto-tour-foreign-language=
+                            ${ktoAutofill} ? ${translation.languageCode} : null">
           </label>
         </div>
         <div class="admin-type-field-wide">
@@ -102,7 +107,7 @@
   </div>
 </th:block>
 
-<th:block th:fragment="attractionTranslations">
+<th:block th:fragment="attractionTranslations(ktoAutofill)">
   <div class="admin-type-field-wide admin-translation-tabs" data-translation-tabs>
     <h4>관광지 상세 정보 번역</h4>
     <p class="admin-help-text">
@@ -132,24 +137,34 @@
           <label>휴관일
             <input type="text"
                    th:field="*{attractionInfoTranslations[__${slot.index}__].closedDays}"
-                   maxlength="500">
+                   maxlength="500"
+                   th:attr="data-kto-tour-foreign-field=${ktoAutofill} ? 'closedDays' : null,
+                            data-kto-tour-foreign-language=
+                            ${ktoAutofill} ? ${translation.languageCode} : null">
           </label>
         </div>
         <div>
           <label>운영시간
             <input type="text"
                    th:field="*{attractionInfoTranslations[__${slot.index}__].openingHours}"
-                   maxlength="1000">
+                   maxlength="1000"
+                   th:attr="data-kto-tour-foreign-field=${ktoAutofill} ? 'openingHours' : null,
+                            data-kto-tour-foreign-language=
+                            ${ktoAutofill} ? ${translation.languageCode} : null">
           </label>
         </div>
         <div>
           <label>입장료
             <input type="text"
-                   th:field="*{attractionInfoTranslations[__${slot.index}__].admissionFee}">
+                   th:field="*{attractionInfoTranslations[__${slot.index}__].admissionFee}"
+                   th:attr="data-kto-tour-foreign-field=${ktoAutofill} ? 'admissionFee' : null,
+                            data-kto-tour-foreign-language=
+                            ${ktoAutofill} ? ${translation.languageCode} : null">
           </label>
         </div>
         <div class="admin-type-field-wide">
           <label>관람 안내/기타
+            <!-- 대응하는 TourAPI 필드가 분명하지 않아 자동입력하지 않는다. -->
             <textarea th:field="*{attractionInfoTranslations[__${slot.index}__].guide}"></textarea>
           </label>
         </div>
@@ -158,7 +173,7 @@
   </div>
 </th:block>
 
-<th:block th:fragment="activityTranslations">
+<th:block th:fragment="activityTranslations(ktoAutofill)">
   <div class="admin-type-field-wide admin-translation-tabs" data-translation-tabs>
     <h4>체험/액티비티 상세 정보 번역</h4>
     <p class="admin-help-text">
@@ -188,11 +203,15 @@
           <label>운영 시간
             <input type="text"
                    th:field="*{activityInfoTranslations[__${slot.index}__].openingHours}"
-                   maxlength="1000">
+                   maxlength="1000"
+                   th:attr="data-kto-tour-foreign-field=${ktoAutofill} ? 'openingHours' : null,
+                            data-kto-tour-foreign-language=
+                            ${ktoAutofill} ? ${translation.languageCode} : null">
           </label>
         </div>
         <div>
           <label>소요 시간
+            <!-- TourAPI 에 1:1 로 맞는 값이 없어 자동입력하지 않는다. -->
             <input type="text"
                    th:field="*{activityInfoTranslations[__${slot.index}__].requiredTime}"
                    maxlength="32">
@@ -201,7 +220,10 @@
         <div>
           <label>참가비/이용요금
             <input type="text"
-                   th:field="*{activityInfoTranslations[__${slot.index}__].admissionFee}">
+                   th:field="*{activityInfoTranslations[__${slot.index}__].admissionFee}"
+                   th:attr="data-kto-tour-foreign-field=${ktoAutofill} ? 'admissionFee' : null,
+                            data-kto-tour-foreign-language=
+                            ${ktoAutofill} ? ${translation.languageCode} : null">
           </label>
         </div>
         <div>
@@ -221,7 +243,7 @@
   </div>
 </th:block>
 
-<th:block th:fragment="shopTranslations">
+<th:block th:fragment="shopTranslations(ktoAutofill)">
   <div class="admin-type-field-wide admin-translation-tabs" data-translation-tabs>
     <h4>쇼핑 상세 정보 번역</h4>
     <p class="admin-help-text">
@@ -251,25 +273,35 @@
           <label>휴점일
             <input type="text"
                    th:field="*{shopInfoTranslations[__${slot.index}__].closedDays}"
-                   maxlength="500">
+                   maxlength="500"
+                   th:attr="data-kto-tour-foreign-field=${ktoAutofill} ? 'closedDays' : null,
+                            data-kto-tour-foreign-language=
+                            ${ktoAutofill} ? ${translation.languageCode} : null">
           </label>
         </div>
         <div>
           <label>영업시간
             <input type="text"
                    th:field="*{shopInfoTranslations[__${slot.index}__].openingHours}"
-                   maxlength="1000">
+                   maxlength="1000"
+                   th:attr="data-kto-tour-foreign-field=${ktoAutofill} ? 'openingHours' : null,
+                            data-kto-tour-foreign-language=
+                            ${ktoAutofill} ? ${translation.languageCode} : null">
           </label>
         </div>
         <div>
           <label>주요상품/카테고리
             <input type="text"
                    th:field="*{shopInfoTranslations[__${slot.index}__].mainProducts}"
-                   maxlength="255">
+                   maxlength="255"
+                   th:attr="data-kto-tour-foreign-field=${ktoAutofill} ? 'mainProducts' : null,
+                            data-kto-tour-foreign-language=
+                            ${ktoAutofill} ? ${translation.languageCode} : null">
           </label>
         </div>
         <div class="admin-type-field-wide">
           <label>기타 안내사항
+            <!-- 대응하는 TourAPI 필드가 분명하지 않아 자동입력하지 않는다. -->
             <textarea th:field="*{shopInfoTranslations[__${slot.index}__].guide}"></textarea>
           </label>
         </div>
@@ -306,17 +338,17 @@
       <div class="admin-type-fields-grid">
         <div>
           <label>대표메뉴
-            <!-- 영문 슬롯만 TourAPI 영문 상세 자동입력 대상이다. -->
             <input type="text"
                    th:field="*{restaurantInfoTranslations[__${slot.index}__].mainMenu}"
                    maxlength="64"
-                   th:attr="data-kto-tour-english-field=
-                            ${ktoAutofill and translation.languageCode == 'en'}
-                            ? 'mainMenu' : null">
+                   th:attr="data-kto-tour-foreign-field=${ktoAutofill} ? 'mainMenu' : null,
+                            data-kto-tour-foreign-language=
+                            ${ktoAutofill} ? ${translation.languageCode} : null">
           </label>
         </div>
         <div>
           <label>가격대
+            <!-- 대응하는 TourAPI 필드가 분명하지 않아 자동입력하지 않는다. -->
             <input type="text"
                    th:field="*{restaurantInfoTranslations[__${slot.index}__].priceRange}"
                    maxlength="32">
@@ -327,9 +359,9 @@
             <input type="text"
                    th:field="*{restaurantInfoTranslations[__${slot.index}__].openingHours}"
                    maxlength="64"
-                   th:attr="data-kto-tour-english-field=
-                            ${ktoAutofill and translation.languageCode == 'en'}
-                            ? 'openingHours' : null">
+                   th:attr="data-kto-tour-foreign-field=${ktoAutofill} ? 'openingHours' : null,
+                            data-kto-tour-foreign-language=
+                            ${ktoAutofill} ? ${translation.languageCode} : null">
           </label>
         </div>
         <div>
@@ -344,9 +376,9 @@
             <input type="text"
                    th:field="*{restaurantInfoTranslations[__${slot.index}__].closedDays}"
                    maxlength="32"
-                   th:attr="data-kto-tour-english-field=
-                            ${ktoAutofill and translation.languageCode == 'en'}
-                            ? 'closedDays' : null">
+                   th:attr="data-kto-tour-foreign-field=${ktoAutofill} ? 'closedDays' : null,
+                            data-kto-tour-foreign-language=
+                            ${ktoAutofill} ? ${translation.languageCode} : null">
           </label>
         </div>
         <div class="admin-type-field-wide">

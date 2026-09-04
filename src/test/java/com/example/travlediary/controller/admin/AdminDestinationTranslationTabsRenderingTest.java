@@ -135,11 +135,22 @@ class AdminDestinationTranslationTabsRenderingTest {
                 .isEqualTo("en");
         assertThat(document.select("input[name='translations[4].languageCode']").attr("value"))
                 .isEqualTo("zh-TW");
-        // TourAPI 영문 자동입력은 영어 탭 입력칸에 붙는다
-        assertThat(document.select("[data-kto-tour-english-name]").attr("name"))
-                .isEqualTo("translations[1].name");
-        assertThat(document.select("[data-kto-tour-english-overview]").attr("name"))
-                .isEqualTo("translations[1].description");
+        // TourAPI 자동입력 훅이 언어별 탭 입력칸에 하나씩 붙는다
+        var slotsByLanguage = List.of("en", "ja", "zh-CN", "zh-TW");
+        for (int index = 0; index < slotsByLanguage.size(); index++) {
+            String languageCode = slotsByLanguage.get(index);
+            int slot = index + 1;
+            assertThat(document.select("[data-kto-tour-foreign-name='" + languageCode + "']")
+                    .attr("name")).as(languageCode).isEqualTo("translations[" + slot + "].name");
+            assertThat(document.select("[data-kto-tour-foreign-overview='" + languageCode + "']")
+                    .attr("name")).as(languageCode)
+                    .isEqualTo("translations[" + slot + "].description");
+        }
+        // 간단 설명은 자동입력하지 않는다
+        assertThat(document.select("[data-kto-tour-foreign-name]")).hasSize(4);
+        assertThat(document.select("[data-kto-tour-foreign-overview]")).hasSize(4);
+        assertThat(document.select("[name='translations[1].shortDescription']")
+                .attr("data-kto-tour-foreign-name")).isEmpty();
     }
 
     @Test
@@ -218,12 +229,40 @@ class AdminDestinationTranslationTabsRenderingTest {
         // 한국어 원본 입력은 그대로 남아 있다
         assertThat(document.select("[name='restaurantInfo.mainMenu']")).hasSize(1);
         assertThat(document.select("[name='restaurantInfo.contactNumber']")).hasSize(1);
-        // 영문 자동입력 훅은 영어 슬롯에만 붙는다
-        var hooks = document.select("[data-kto-tour-english-field]");
-        assertThat(hooks).hasSize(3);
-        assertThat(hooks.eachAttr("name"))
-                .containsExactlyInAnyOrder("restaurantInfoTranslations[0].mainMenu",
-                        "restaurantInfoTranslations[0].openingHours",
-                        "restaurantInfoTranslations[0].closedDays");
+        // 유형별 자동입력 훅은 언어 슬롯마다 하나씩 붙는다 (5개 유형 12칸 × 4개 언어)
+        assertThat(document.select("[data-kto-tour-foreign-field]")).hasSize(48);
+        for (String languageCode : List.of("en", "ja", "zh-CN", "zh-TW")) {
+            for (var mapping : List.of(
+                    List.of("restaurantInfoTranslations", "mainMenu"),
+                    List.of("restaurantInfoTranslations", "openingHours"),
+                    List.of("restaurantInfoTranslations", "closedDays"),
+                    List.of("attractionInfoTranslations", "closedDays"),
+                    List.of("attractionInfoTranslations", "openingHours"),
+                    List.of("attractionInfoTranslations", "admissionFee"),
+                    List.of("accommodationInfoTranslations", "roomType"),
+                    List.of("activityInfoTranslations", "openingHours"),
+                    List.of("activityInfoTranslations", "admissionFee"),
+                    List.of("shopInfoTranslations", "closedDays"),
+                    List.of("shopInfoTranslations", "openingHours"),
+                    List.of("shopInfoTranslations", "mainProducts"))) {
+                String selector = "[data-kto-tour-foreign-field='" + mapping.get(1) + "']"
+                        + "[data-kto-tour-foreign-language='" + languageCode + "']"
+                        + "[name^='" + mapping.get(0) + "']";
+                assertThat(document.select(selector)).as("%s %s %s",
+                        languageCode, mapping.get(0), mapping.get(1)).hasSize(1);
+            }
+        }
+        // 대응이 분명하지 않은 칸에는 훅이 없다
+        for (String name : List.of("restaurantInfoTranslations[0].priceRange",
+                "restaurantInfoTranslations[0].breakTime", "restaurantInfoTranslations[0].etc",
+                "attractionInfoTranslations[0].guide", "accommodationInfoTranslations[0].etc",
+                "activityInfoTranslations[0].requiredTime",
+                "activityInfoTranslations[0].ageLimit", "activityInfoTranslations[0].guide",
+                "shopInfoTranslations[0].guide")) {
+            assertThat(document.select("[name='" + name + "']").attr("data-kto-tour-foreign-field"))
+                    .as(name).isEmpty();
+        }
+        // 언어 전용 훅은 더 이상 없다
+        assertThat(document.select("[data-kto-tour-english-field]")).isEmpty();
     }
 }

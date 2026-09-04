@@ -1,6 +1,6 @@
 package com.example.travlediary.dto.kto;
 
-public record KtoEnglishTourCandidateResponse(
+public record KtoForeignTourCandidateResponse(
         String contentId,
         String contentTypeId,
         String title,

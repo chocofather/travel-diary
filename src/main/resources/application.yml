@@ -110,7 +110,10 @@ kto:
     api-key: ${KTO_PHOTO_API_KEY:}
     base-url: https://apis.data.go.kr/B551011/PhotoGalleryService1
   tour:
+    # 국문/영문/일문/중문 다섯 서비스가 같은 공공데이터포털 인증키를 쓴다.
     api-key: ${KTO_TOUR_API_KEY:}
     kor-base-url: https://apis.data.go.kr/B551011/KorService2
-    eng-api-key: ${KTO_ENG_TOUR_API_KEY:}
     eng-base-url: https://apis.data.go.kr/B551011/EngService2
+    jpn-base-url: https://apis.data.go.kr/B551011/JpnService2
+    chs-base-url: https://apis.data.go.kr/B551011/ChsService2
+    cht-base-url: https://apis.data.go.kr/B551011/ChtService2

@@ -58,7 +58,7 @@ CREATE TABLE `accommodation_info` (
 --
 -- Table structure for table `accommodation_info_translations`
 --
--- 숙박 상세정보의 언어별 자유 텍스트. 생성 SQL 은 docs/db/accommodation_info_translations.sql 참고.
+-- 숙박 상세정보의 언어별 자유 텍스트.
 -- 체크인/체크아웃 시각, 객실 수, 등급, 여부 값, 연락처, 홈페이지처럼 언어와 무관한 값은 담지 않는다.
 
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -118,7 +118,7 @@ CREATE TABLE `activity_info` (
 --
 -- Table structure for table `activity_info_translations`
 --
--- 체험/액티비티 상세정보의 언어별 자유 텍스트. 생성 SQL 은 docs/db/activity_info_translations.sql 참고.
+-- 체험/액티비티 상세정보의 언어별 자유 텍스트.
 -- 사전 예약·장비 포함·주차 여부, 연락처, 홈페이지처럼 언어와 무관한 값은 담지 않는다.
 
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -1433,7 +1433,7 @@ CREATE TABLE `restaurant_info` (
 --
 -- Table structure for table `restaurant_info_translations`
 --
--- 식당 상세정보의 언어별 자유 텍스트. 생성 SQL 은 docs/db/restaurant_info_translations.sql 참고.
+-- 식당 상세정보의 언어별 자유 텍스트.
 -- 전화번호·홈페이지·좌석 수·가능 여부처럼 언어와 무관한 값은 담지 않는다.
 
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -1494,7 +1494,7 @@ CREATE TABLE `shop_info` (
 --
 -- Table structure for table `shop_info_translations`
 --
--- 쇼핑 상세정보의 언어별 자유 텍스트. 생성 SQL 은 docs/db/shop_info_translations.sql 참고.
+-- 쇼핑 상세정보의 언어별 자유 텍스트.
 -- 주차 가능 여부(Boolean), 연락처, 홈페이지처럼 언어와 무관한 값은 담지 않는다.
 
 /*!40101 SET @saved_cs_client     = @@character_set_client */;

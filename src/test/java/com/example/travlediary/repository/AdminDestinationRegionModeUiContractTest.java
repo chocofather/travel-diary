@@ -38,8 +38,8 @@ class AdminDestinationRegionModeUiContractTest {
                 .contains("*{translations[__${slot.index}__].name}")
                 .contains("*{translations[__${slot.index}__].shortDescription}")
                 .contains("*{translations[__${slot.index}__].description}")
-                .contains("data-kto-tour-english-name")
-                .contains("data-kto-tour-english-overview");
+                .contains("data-kto-tour-foreign-name")
+                .contains("data-kto-tour-foreign-overview");
     }
 
     @Test

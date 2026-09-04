@@ -3,11 +3,12 @@ package com.example.travlediary.controller.admin;
 import com.example.travlediary.config.CustomLoginSuccessHandler;
 import com.example.travlediary.config.CustomLogoutSuccessHandler;
 import com.example.travlediary.config.SecurityConfig;
-import com.example.travlediary.dto.kto.KtoEnglishTourCandidateResponse;
-import com.example.travlediary.dto.kto.KtoEnglishTourDetailResponse;
-import com.example.travlediary.dto.kto.KtoEnglishTourMatchResponse;
+import com.example.travlediary.dto.kto.KtoForeignTourCandidateResponse;
+import com.example.travlediary.dto.kto.KtoForeignTourDetailResponse;
+import com.example.travlediary.dto.kto.KtoForeignTourMatchResponse;
 import com.example.travlediary.repository.user.UserMapper;
-import com.example.travlediary.service.kto.KtoEnglishTourApiException;
+import com.example.travlediary.service.kto.KtoForeignLanguage;
+import com.example.travlediary.service.kto.KtoForeignTourApiException;
 import com.example.travlediary.service.kto.KtoEnglishTourService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,14 +44,14 @@ class AdminKtoEnglishTourControllerTest {
 
     @Test
     void adminCanMatchByLocationAndLoadEnglishDetail() throws Exception {
-        KtoEnglishTourCandidateResponse candidate = new KtoEnglishTourCandidateResponse(
+        KtoForeignTourCandidateResponse candidate = new KtoForeignTourCandidateResponse(
                 "eng-1", "76", "Changdeokgung Palace", "126.991", "37.579", 0.0);
         when(ktoEnglishTourService.match("창덕궁", "126.991", "37.579")).thenReturn(
-                new KtoEnglishTourMatchResponse(KtoEnglishTourMatchResponse.Status.MATCHED,
+                new KtoForeignTourMatchResponse(KtoForeignTourMatchResponse.Status.MATCHED,
                         candidate, List.of()));
         when(ktoEnglishTourService.getDetail("eng-1", "76")).thenReturn(
-                new KtoEnglishTourDetailResponse("Changdeokgung Palace", "English overview",
-                        null, null, null));
+                new KtoForeignTourDetailResponse("Changdeokgung Palace", "English overview",
+                        null, null, null, null, null, null));
 
         mockMvc.perform(get("/admin/api/kto/tour/english-match")
                         .param("title", "창덕궁")
@@ -101,7 +102,7 @@ class AdminKtoEnglishTourControllerTest {
     @Test
     void englishFailuresUseSafeJsonWithoutAffectingKoreanEndpointContract() throws Exception {
         when(ktoEnglishTourService.match("경복궁", "126.991", "37.579"))
-                .thenThrow(KtoEnglishTourApiException.missingApiKey());
+                .thenThrow(KtoForeignTourApiException.missingApiKey(KtoForeignLanguage.ENGLISH));
         mockMvc.perform(get("/admin/api/kto/tour/english-match")
                         .param("title", "경복궁")
                         .param("mapX", "126.991").param("mapY", "37.579")
@@ -110,7 +111,7 @@ class AdminKtoEnglishTourControllerTest {
                 .andExpect(jsonPath("$.message").value("영문 TourAPI 인증키가 설정되지 않았습니다."));
 
         when(ktoEnglishTourService.getDetail("eng-1", ""))
-                .thenThrow(KtoEnglishTourApiException.upstreamFailure());
+                .thenThrow(KtoForeignTourApiException.upstreamFailure(KtoForeignLanguage.ENGLISH));
         String body = mockMvc.perform(get("/admin/api/kto/tour/english-detail")
                         .param("contentId", "eng-1")
                         .with(user("admin").roles("ADMIN")))

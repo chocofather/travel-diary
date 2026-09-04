@@ -25,16 +25,20 @@ class AdminKtoTourAutofillUiContractTest {
                 .contains("data-kto-tour-overview")
                 .contains("data-kto-tour-latitude")
                 .contains("data-kto-tour-longitude");
-        // 영문 자동입력 훅은 공통 번역 탭 조각의 영어 슬롯에 있고, 등록 화면만 켠다
+        // 외국어 자동입력 훅은 공통 번역 탭 조각의 언어 슬롯마다 있고, 등록 화면만 켠다
         String translationTabs =
                 resource("/templates/admin/destinations/fragments/translation-tabs.html");
         assertThat(create)
                 .contains(":: destinationTranslations(true)")
-                .contains("data-kto-tour-english-status")
+                .contains("data-kto-tour-foreign-status")
                 .doesNotContain("data-kto-tour-english-results");
         assertThat(translationTabs)
-                .contains("data-kto-tour-english-name")
-                .contains("data-kto-tour-english-overview");
+                .contains("data-kto-tour-foreign-name=\n"
+                        + "                          ${ktoAutofill} ? ${translation.languageCode} : null")
+                .contains("data-kto-tour-foreign-overview=\n"
+                        + "                             ${ktoAutofill} ? ${translation.languageCode} : null")
+                // 간단 설명은 자동입력 대상이 아니다
+                .doesNotContain("data-kto-tour-foreign-shortDescription");
         assertThat(edit)
                 .contains(":: destinationTranslations(false)")
                 .doesNotContain(
@@ -51,8 +55,8 @@ class AdminKtoTourAutofillUiContractTest {
         assertThat(script)
                 .contains("/admin/api/kto/tour/search")
                 .contains("/admin/api/kto/tour/detail")
-                .contains("/admin/api/kto/tour/english-match")
-                .contains("/admin/api/kto/tour/english-detail")
+                .contains("/admin/api/kto/tour/foreign-match")
+                .contains("/admin/api/kto/tour/foreign-detail")
                 .contains("URLSearchParams")
                 .contains("contentId")
                 .contains("contentTypeId")
@@ -62,14 +66,26 @@ class AdminKtoTourAutofillUiContractTest {
                 .contains("data-kto-tour-overview")
                 .contains("data-kto-tour-latitude")
                 .contains("data-kto-tour-longitude")
-                .contains("data-kto-tour-english-name")
-                .contains("data-kto-tour-english-overview")
-                .contains("matchEnglishTour")
-                .contains("loadEnglishDetail")
+                .contains("data-kto-tour-foreign-${field}=\"${languageCode}\"")
+                .contains("matchForeignTours")
+                .contains("fillForeignLanguage")
                 .contains("title: koreanTitle")
-                .contains("await loadEnglishDetail(payload.matched, requestGeneration)")
-                .contains("englishRequestGeneration")
-                .contains("requestGeneration !== englishRequestGeneration")
+                // 네 언어를 각각 요청하고, 하나가 실패해도 나머지 결과를 쓴다
+                .contains("{code: \"en\", label: \"영어\"}")
+                .contains("{code: \"ja\", label: \"일본어\"}")
+                .contains("{code: \"zh-CN\", label: \"간체\"}")
+                .contains("{code: \"zh-TW\", label: \"번체\"}")
+                .contains("Promise.allSettled")
+                .contains("language: language.code")
+                // 현지어 제목이 국문과 같으면 번역값으로 넣지 않는다
+                .contains("sameAsKoreanTitle(detail.title, koreanTitle) ? null : detail.title")
+                // 유형별 상세도 같은 언어 루프 안에서 언어 코드로 칸을 찾아 채운다
+                .contains("const SUBTYPE_FIELDS = [")
+                .contains("fillSubtypeField(field, language.code, detail[field])")
+                .contains("data-kto-tour-foreign-field=\"${fieldName}\"")
+                .doesNotContain("data-kto-tour-english-field")
+                .contains("foreignRequestGeneration")
+                .contains("requestGeneration !== foreignRequestGeneration")
                 .contains("textContent")
                 .contains("response.ok")
                 .doesNotContain(
@@ -95,9 +111,11 @@ class AdminKtoTourAutofillUiContractTest {
                 .contains("clearTourApiManagedFields")
                 .contains("clearEnglishAutofill")
                 .contains("document.querySelectorAll(\"[data-kto-tour-field]\")")
+                .contains("document.querySelectorAll(\"[data-kto-tour-foreign-name]\")")
+                .contains("document.querySelectorAll(\"[data-kto-tour-foreign-overview]\")")
                 .contains("element.value = \"\"")
                 .contains("lastSelectedContentId = item.contentId")
-                .contains("++englishRequestGeneration")
+                .contains("++foreignRequestGeneration")
                 .doesNotContain("autoFilledValues")
                 .doesNotContain("ktoSelectedPhotosJson", "data-kto-selected-photos-json");
     }

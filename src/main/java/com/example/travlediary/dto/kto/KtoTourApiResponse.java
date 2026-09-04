@@ -46,6 +46,7 @@ public record KtoTourApiResponse(Response response) {
             String schedule,
             String restdateshopping,
             String opentime,
+            String saleitem,
             String infocentershopping,
             // 음식점(39) detailIntro2 - 실제 응답 필드명 그대로, 값 변환 없이 문자열로 받는다
             String seat,
