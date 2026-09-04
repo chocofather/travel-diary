@@ -67,7 +67,7 @@ public class KtoEnglishTourService {
                 : KtoEnglishTourMatchResponse.matched(matched);
     }
 
-    public KtoEnglishTourDetailResponse getDetail(String contentId) {
+    public KtoEnglishTourDetailResponse getDetail(String contentId, String contentTypeId) {
         KtoTourApiResponse response = request("/detailCommon2",
                 builder -> builder.queryParam("contentId", contentId));
         List<KtoTourApiResponse.Item> items = readItems(response.response().body().items());
@@ -75,10 +75,46 @@ public class KtoEnglishTourService {
             throw KtoEnglishTourApiException.upstreamFailure();
         }
         KtoTourApiResponse.Item item = items.get(0);
+        KtoTourApiResponse.Item intro = introItem(contentId, contentTypeId);
         return new KtoEnglishTourDetailResponse(
                 KtoEnglishTitleMatcher.stripTrailingKoreanAlias(
                         KtoTourTextSanitizer.toPlainText(item.title())),
-                KtoTourTextSanitizer.toPlainText(item.overview()));
+                KtoTourTextSanitizer.toPlainText(item.overview()),
+                // 대표메뉴는 firstmenu 를 쓰고, 비어 있을 때만 treatmenu 로 대신한다.
+                firstNonBlank(plainText(intro, KtoTourApiResponse.Item::firstmenu),
+                        plainText(intro, KtoTourApiResponse.Item::treatmenu)),
+                plainText(intro, KtoTourApiResponse.Item::opentimefood),
+                plainText(intro, KtoTourApiResponse.Item::restdatefood));
+    }
+
+    /**
+     * 유형별 상세(detailIntro2). 있으면 좋은 값이라 실패해도 예외를 올리지 않는다.
+     *
+     * <p>영문 유형 코드는 국문과 다르므로 매칭 결과로 받은 값을 그대로 쓴다. 값이 없으면 부르지 않는다.
+     */
+    private KtoTourApiResponse.Item introItem(String contentId, String contentTypeId) {
+        if (contentTypeId == null || contentTypeId.isBlank()) {
+            return null;
+        }
+        try {
+            KtoTourApiResponse response = request("/detailIntro2", builder -> builder
+                    .queryParam("contentId", contentId)
+                    .queryParam("contentTypeId", contentTypeId));
+            List<KtoTourApiResponse.Item> items = readItems(response.response().body().items());
+            return items.isEmpty() ? null : items.get(0);
+        } catch (RuntimeException exception) {
+            // 상세가 없거나 조회에 실패해도 title/overview 자동입력은 그대로 둔다.
+            return null;
+        }
+    }
+
+    private String plainText(KtoTourApiResponse.Item intro,
+                             java.util.function.Function<KtoTourApiResponse.Item, String> field) {
+        return intro == null ? null : KtoTourTextSanitizer.toPlainText(field.apply(intro));
+    }
+
+    private String firstNonBlank(String first, String second) {
+        return first != null ? first : second;
     }
 
     private KtoEnglishTourCandidateResponse toCandidate(KtoTourApiResponse.Item item,

@@ -39,14 +39,20 @@ public class AdminKtoEnglishTourController {
         }
     }
 
+    /**
+     * 영문 상세. contentTypeId 는 매칭 결과로 받은 영문 유형 코드이며,
+     * 없으면 유형별 상세(detailIntro2) 없이 title/overview 만 돌려준다.
+     */
     @GetMapping("/english-detail")
-    public ResponseEntity<?> detail(@RequestParam(required = false) String contentId) {
+    public ResponseEntity<?> detail(@RequestParam(required = false) String contentId,
+                                    @RequestParam(required = false) String contentTypeId) {
         String normalizedContentId = normalize(contentId);
         if (normalizedContentId.isEmpty()) {
             return error(HttpStatus.BAD_REQUEST, "영문 관광정보 식별값이 올바르지 않습니다.");
         }
         try {
-            return ResponseEntity.ok(ktoEnglishTourService.getDetail(normalizedContentId));
+            return ResponseEntity.ok(ktoEnglishTourService.getDetail(
+                    normalizedContentId, normalize(contentTypeId)));
         } catch (KtoEnglishTourApiException exception) {
             return apiError(exception);
         }

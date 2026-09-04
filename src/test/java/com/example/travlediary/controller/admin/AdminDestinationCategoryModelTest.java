@@ -6,6 +6,8 @@ import com.example.travlediary.service.amenity.AmenityService;
 import com.example.travlediary.service.category.CategoryService;
 import com.example.travlediary.service.category.CountryCategoryService;
 import com.example.travlediary.service.destination.DestinationSaveOrchestrationService;
+import com.example.travlediary.service.info.AttractionInfoService;
+import com.example.travlediary.service.info.RestaurantInfoService;
 import com.example.travlediary.service.destination.DestinationService;
 import com.example.travlediary.service.kto.KtoSelectedPhotoRequestParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -43,6 +45,10 @@ class AdminDestinationCategoryModelTest {
     private CountryCategoryService countryCategoryService;
     @Mock
     private DestinationSaveOrchestrationService destinationSaveOrchestrationService;
+    @Mock
+    private RestaurantInfoService restaurantInfoService;
+    @Mock
+    private AttractionInfoService attractionInfoService;
 
     private AdminDestinationController controller;
 
@@ -56,7 +62,9 @@ class AdminDestinationCategoryModelTest {
                 new KtoSelectedPhotoRequestParser(
                         new ObjectMapper(),
                         Validation.buildDefaultValidatorFactory().getValidator()),
-                destinationSaveOrchestrationService);
+                destinationSaveOrchestrationService,
+                restaurantInfoService,
+                attractionInfoService);
 
         when(categoryService.getAll())
                 .thenReturn(List.of(category(1L, "역사유적"), category(9L, "미분류 카테고리")));

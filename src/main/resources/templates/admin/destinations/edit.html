@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="/css/destination-create.css">
   <script src="/js/admin-destination-category-select.js?v=20260822-2" defer></script>
   <script src="/js/admin-destination-amenity-filter.js?v=20260822-1" defer></script>
+  <script src="/js/admin-translation-tabs.js" defer></script>
 </th:block>
 <th:block th:fragment="body">
 
@@ -223,6 +224,9 @@
           <textarea th:field="*{attractionInfo.guide}" placeholder="기타 안내사항"></textarea>
         </label>
       </div>
+      <!-- 👇 언어별 상세정보(언어 탭). 위 입력값이 한국어(ko)로 함께 저장된다. -->
+      <th:block th:replace="~{admin/destinations/fragments/translation-tabs
+                              :: attractionTranslations}"></th:block>
       <!-- 👇 관광지 편의시설 (amenities) -->
       <div class="admin-type-field-wide admin-amenity-field"
            data-amenity-field data-amenity-default-filter="ATTRACTION">
@@ -393,7 +397,10 @@
           <textarea th:field="*{restaurantInfo.etc}" placeholder="기타 안내"></textarea>
         </label>
       </div>
-      <!-- 👇 음식점/카페 편의시설 (amenities) -->
+      <!-- 👇 언어별 상세정보(언어 탭). 위 입력값이 한국어(ko)로 함께 저장된다. -->
+      <th:block th:replace="~{admin/destinations/fragments/translation-tabs
+                              :: restaurantTranslations(false)}"></th:block>
+<!-- 👇 음식점/카페 편의시설 (amenities) -->
       <div class="admin-type-field-wide admin-amenity-field"
            data-amenity-field data-amenity-default-filter="RESTAURANTS CAFE">
         <h4>음식점/카페 편의시설</h4>

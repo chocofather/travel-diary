@@ -48,8 +48,9 @@ class AdminKtoEnglishTourControllerTest {
         when(ktoEnglishTourService.match("창덕궁", "126.991", "37.579")).thenReturn(
                 new KtoEnglishTourMatchResponse(KtoEnglishTourMatchResponse.Status.MATCHED,
                         candidate, List.of()));
-        when(ktoEnglishTourService.getDetail("eng-1")).thenReturn(
-                new KtoEnglishTourDetailResponse("Changdeokgung Palace", "English overview"));
+        when(ktoEnglishTourService.getDetail("eng-1", "76")).thenReturn(
+                new KtoEnglishTourDetailResponse("Changdeokgung Palace", "English overview",
+                        null, null, null));
 
         mockMvc.perform(get("/admin/api/kto/tour/english-match")
                         .param("title", "창덕궁")
@@ -60,13 +61,15 @@ class AdminKtoEnglishTourControllerTest {
                 .andExpect(jsonPath("$.matched.contentId").value("eng-1"));
         mockMvc.perform(get("/admin/api/kto/tour/english-detail")
                         .param("contentId", "eng-1")
+                        .param("contentTypeId", "76")
                         .with(user("admin").roles("ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("Changdeokgung Palace"))
                 .andExpect(jsonPath("$.overview").value("English overview"));
 
         verify(ktoEnglishTourService).match("창덕궁", "126.991", "37.579");
-        verify(ktoEnglishTourService).getDetail("eng-1");
+        // 매칭으로 받은 영문 유형 코드를 그대로 넘긴다 (국문 코드와 다르다)
+        verify(ktoEnglishTourService).getDetail("eng-1", "76");
     }
 
     @Test
@@ -91,7 +94,8 @@ class AdminKtoEnglishTourControllerTest {
 
         verify(ktoEnglishTourService, never()).match(org.mockito.ArgumentMatchers.any(),
                 org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
-        verify(ktoEnglishTourService, never()).getDetail(org.mockito.ArgumentMatchers.any());
+        verify(ktoEnglishTourService, never()).getDetail(org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any());
     }
 
     @Test
@@ -105,7 +109,7 @@ class AdminKtoEnglishTourControllerTest {
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(jsonPath("$.message").value("영문 TourAPI 인증키가 설정되지 않았습니다."));
 
-        when(ktoEnglishTourService.getDetail("eng-1"))
+        when(ktoEnglishTourService.getDetail("eng-1", ""))
                 .thenThrow(KtoEnglishTourApiException.upstreamFailure());
         String body = mockMvc.perform(get("/admin/api/kto/tour/english-detail")
                         .param("contentId", "eng-1")

@@ -189,7 +189,11 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!candidate || !candidate.contentId) return;
         setEnglishStatus(`${candidate.title || "선택한 장소"} 영문 정보를 불러오고 있습니다.`);
         try {
+            // 영문 유형 코드는 국문과 다르므로 매칭 결과 값을 그대로 넘긴다.
             const params = new URLSearchParams({contentId: candidate.contentId});
+            if (hasValue(candidate.contentTypeId)) {
+                params.set("contentTypeId", candidate.contentTypeId);
+            }
             const response = await fetch(`/admin/api/kto/tour/english-detail?${params.toString()}`, {
                 headers: {Accept: "application/json"}
             });
@@ -198,6 +202,10 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!response.ok) throw new Error(payload.message || "영문 관광정보를 불러오지 못했습니다.");
             fillIfEmpty(englishNameInput, payload.title);
             fillIfEmpty(englishOverviewInput, payload.overview);
+            // 식당 영문 번역칸. 값이 없으면 빈 칸을 그대로 둔다.
+            fillEnglishField("mainMenu", payload.mainMenu);
+            fillEnglishField("openingHours", payload.openingHours);
+            fillEnglishField("closedDays", payload.closedDays);
             setEnglishStatus(`${payload.title || candidate.title || "선택한 장소"} 영문 정보를 빈 항목에 입력했습니다.`);
         } catch (error) {
             if (requestGeneration !== englishRequestGeneration) return;
@@ -227,6 +235,11 @@ document.addEventListener("DOMContentLoaded", () => {
         if (element.checked === value) return;
         element.checked = value;
         element.dispatchEvent(new Event("change", {bubbles: true}));
+    }
+
+    /** 영문 상세 입력칸. 화면에 없으면(다른 유형) 아무것도 하지 않는다. */
+    function fillEnglishField(fieldName, value) {
+        fillIfEmpty(document.querySelector(`[data-kto-tour-english-field="${fieldName}"]`), value);
     }
 
     function fillIfEmpty(element, value) {

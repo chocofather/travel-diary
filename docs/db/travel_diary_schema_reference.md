@@ -1386,6 +1386,31 @@ CREATE TABLE `restaurant_info` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `restaurant_info_translations`
+--
+-- 식당 상세정보의 언어별 자유 텍스트. 생성 SQL 은 docs/db/restaurant_info_translations.sql 참고.
+-- 전화번호·홈페이지·좌석 수·가능 여부처럼 언어와 무관한 값은 담지 않는다.
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `restaurant_info_translations` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `destination_id` bigint NOT NULL,
+  `language_code` varchar(10) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `main_menu` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `price_range` varchar(32) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `opening_hours` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `break_time` varchar(32) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `closed_days` varchar(32) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `etc` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_restaurant_info_translation` (`destination_id`,`language_code`),
+  KEY `idx_restaurant_info_translation_lang` (`language_code`,`destination_id`),
+  CONSTRAINT `fk_restaurant_info_translation` FOREIGN KEY (`destination_id`) REFERENCES `restaurant_info` (`destination_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `shop_amenities`
 --
 

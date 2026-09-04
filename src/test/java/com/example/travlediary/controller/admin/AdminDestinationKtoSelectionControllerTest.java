@@ -7,6 +7,8 @@ import com.example.travlediary.service.category.CategoryService;
 import com.example.travlediary.service.category.CountryCategoryService;
 import com.example.travlediary.service.destination.DestinationService;
 import com.example.travlediary.service.destination.DestinationSaveOrchestrationService;
+import com.example.travlediary.service.info.AttractionInfoService;
+import com.example.travlediary.service.info.RestaurantInfoService;
 import com.example.travlediary.service.kto.InvalidKtoSelectedPhotosException;
 import com.example.travlediary.service.kto.KtoSelectedPhotoRequestParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -50,6 +52,10 @@ class AdminDestinationKtoSelectionControllerTest {
     private CountryCategoryService countryCategoryService;
     @Mock
     private DestinationSaveOrchestrationService destinationSaveOrchestrationService;
+    @Mock
+    private RestaurantInfoService restaurantInfoService;
+    @Mock
+    private AttractionInfoService attractionInfoService;
 
     private AdminDestinationController controller;
     private MockMvc mockMvc;
@@ -67,7 +73,9 @@ class AdminDestinationKtoSelectionControllerTest {
                 amenityService,
                 countryCategoryService,
                 parser,
-                destinationSaveOrchestrationService
+                destinationSaveOrchestrationService,
+                restaurantInfoService,
+                attractionInfoService
         );
         authenticatedAdmin = mock(CustomUserDetails.class);
         lenient().when(authenticatedAdmin.getId()).thenReturn(7L);

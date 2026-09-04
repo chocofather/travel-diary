@@ -186,10 +186,14 @@ class KtoEnglishTourServiceTest {
         server.expect(request -> assertDetailRequest(request.getURI(), "gyeongbokgung"))
                 .andRespond(withSuccess(json, MediaType.APPLICATION_JSON));
 
-        KtoEnglishTourDetailResponse result = service.getDetail("gyeongbokgung");
+        // 유형 코드가 없으면 detailIntro2 는 부르지 않는다
+        KtoEnglishTourDetailResponse result = service.getDetail("gyeongbokgung", null);
 
         assertThat(result.title()).isEqualTo("Gyeongbokgung Palace");
         assertThat(result.overview()).isEqualTo("Royal palace\nSecond & line text");
+        assertThat(result.mainMenu()).isNull();
+        assertThat(result.openingHours()).isNull();
+        assertThat(result.closedDays()).isNull();
         server.verify();
     }
 
@@ -202,7 +206,7 @@ class KtoEnglishTourServiceTest {
                 responseWithItems("{\"contentid\":\"eng-1\",\"title\":\" \",\"overview\":null}"),
                 MediaType.APPLICATION_JSON));
 
-        KtoEnglishTourDetailResponse result = service.getDetail("eng-1");
+        KtoEnglishTourDetailResponse result = service.getDetail("eng-1", "  ");
 
         assertThat(result.title()).isNull();
         assertThat(result.overview()).isNull();
@@ -238,6 +242,90 @@ class KtoEnglishTourServiceTest {
         failingServer.verify();
     }
 
+    @Test
+    void loadsRestaurantIntroFieldsWithTheMatchedEnglishContentTypeId() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        KtoEnglishTourService service = service(builder, "sample-key");
+        server.expect(request -> assertDetailRequest(request.getURI(), "eng-82"))
+                .andRespond(withSuccess(responseWithItems("""
+                        {"contentid":"eng-82","title":"Daepunggwan (대풍관)","overview":"Seafood"}
+                        """), MediaType.APPLICATION_JSON));
+        // 영문 유형 코드(82)를 그대로 쓴다. 국문 39 로 바꾸지 않는다.
+        server.expect(request -> assertIntroRequest(request.getURI(), "eng-82", "82"))
+                .andRespond(withSuccess(responseWithItems("""
+                        {"contentid":"eng-82","contenttypeid":"82","firstmenu":"Oyster",
+                         "treatmenu":"Seokhwajjim","opentimefood":"Weekdays 11:30-18:00 <br> * Last order",
+                         "restdatefood":"Tuesday-Wednesday","infocenterfood":"+82-55-644-4446"}
+                        """), MediaType.APPLICATION_JSON));
+
+        KtoEnglishTourDetailResponse result = service.getDetail("eng-82", "82");
+
+        assertThat(result.title()).isEqualTo("Daepunggwan");
+        assertThat(result.overview()).isEqualTo("Seafood");
+        assertThat(result.mainMenu()).isEqualTo("Oyster");
+        assertThat(result.openingHours()).isEqualTo("Weekdays 11:30-18:00\n* Last order");
+        assertThat(result.closedDays()).isEqualTo("Tuesday-Wednesday");
+        server.verify();
+    }
+
+    @Test
+    void usesTreatmenuOnlyWhenFirstmenuIsBlankAndLeavesMissingFieldsNull() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        KtoEnglishTourService service = service(builder, "sample-key");
+        server.expect(request -> { }).andRespond(withSuccess(responseWithItems("""
+                {"contentid":"eng-82","title":"Haeok (해옥)","overview":null}
+                """), MediaType.APPLICATION_JSON));
+        server.expect(request -> { }).andRespond(withSuccess(responseWithItems("""
+                {"contentid":"eng-82","contenttypeid":"82","firstmenu":"  ",
+                 "treatmenu":"Matcha latte","opentimefood":"","restdatefood":null}
+                """), MediaType.APPLICATION_JSON));
+
+        KtoEnglishTourDetailResponse result = service.getDetail("eng-82", "82");
+
+        assertThat(result.mainMenu()).isEqualTo("Matcha latte");
+        assertThat(result.openingHours()).isNull();
+        assertThat(result.closedDays()).isNull();
+        server.verify();
+    }
+
+    @Test
+    void keepsTitleAndOverviewWhenTheIntroCallFailsOrIsEmpty() {
+        RestClient.Builder failingBuilder = RestClient.builder();
+        MockRestServiceServer failingServer = MockRestServiceServer.bindTo(failingBuilder).build();
+        KtoEnglishTourService failing = service(failingBuilder, "sample-key");
+        failingServer.expect(request -> { }).andRespond(withSuccess(responseWithItems("""
+                {"contentid":"eng-82","title":"Daepunggwan (대풍관)","overview":"Seafood"}
+                """), MediaType.APPLICATION_JSON));
+        failingServer.expect(request -> { }).andRespond(withServerError());
+
+        KtoEnglishTourDetailResponse failed = failing.getDetail("eng-82", "82");
+
+        assertThat(failed.title()).isEqualTo("Daepunggwan");
+        assertThat(failed.overview()).isEqualTo("Seafood");
+        assertThat(failed.mainMenu()).isNull();
+        assertThat(failed.openingHours()).isNull();
+        assertThat(failed.closedDays()).isNull();
+        failingServer.verify();
+
+        // 영문 상세가 아예 없는 경우(가고파식당처럼)도 같은 결과다
+        RestClient.Builder emptyBuilder = RestClient.builder();
+        MockRestServiceServer emptyServer = MockRestServiceServer.bindTo(emptyBuilder).build();
+        KtoEnglishTourService empty = service(emptyBuilder, "sample-key");
+        emptyServer.expect(request -> { }).andRespond(withSuccess(responseWithItems("""
+                {"contentid":"eng-82","title":"Daepunggwan (대풍관)","overview":"Seafood"}
+                """), MediaType.APPLICATION_JSON));
+        emptyServer.expect(request -> { }).andRespond(
+                withSuccess(emptyResponse(), MediaType.APPLICATION_JSON));
+
+        KtoEnglishTourDetailResponse blank = empty.getDetail("eng-82", "82");
+
+        assertThat(blank.title()).isEqualTo("Daepunggwan");
+        assertThat(blank.mainMenu()).isNull();
+        emptyServer.verify();
+    }
+
     private KtoEnglishTourService service(RestClient.Builder builder, String apiKey) {
         return new KtoEnglishTourService(builder, new ObjectMapper(), apiKey,
                 "https://kto.example.test/EngService2");
@@ -260,6 +348,12 @@ class KtoEnglishTourServiceTest {
     private void assertDetailRequest(URI uri, String contentId) {
         assertThat(uri.getPath()).isEqualTo("/EngService2/detailCommon2");
         assertDecodedQuery(uri, "contentId", contentId);
+    }
+
+    private void assertIntroRequest(URI uri, String contentId, String contentTypeId) {
+        assertThat(uri.getPath()).isEqualTo("/EngService2/detailIntro2");
+        assertDecodedQuery(uri, "contentId", contentId);
+        assertDecodedQuery(uri, "contentTypeId", contentTypeId);
     }
 
     private void assertDecodedQuery(URI uri, String name, String expected) {

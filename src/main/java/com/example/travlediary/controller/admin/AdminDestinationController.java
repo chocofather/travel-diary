@@ -12,6 +12,8 @@ import com.example.travlediary.service.destination.DestinationNotFoundException;
 import com.example.travlediary.service.destination.DestinationService;
 import com.example.travlediary.service.destination.DestinationSaveOrchestrationService;
 import com.example.travlediary.service.file.UnsupportedImageFormatException;
+import com.example.travlediary.service.info.AttractionInfoService;
+import com.example.travlediary.service.info.RestaurantInfoService;
 import com.example.travlediary.service.kto.InvalidKtoSelectedPhotosException;
 import com.example.travlediary.service.kto.KtoSelectedPhotoRequestParser;
 import jakarta.servlet.http.HttpServletResponse;
@@ -40,19 +42,26 @@ public class AdminDestinationController {
     private final CountryCategoryService countryCategoryService;
     private final KtoSelectedPhotoRequestParser ktoSelectedPhotoRequestParser;
     private final DestinationSaveOrchestrationService destinationSaveOrchestrationService;
+    /** 유형별 상세정보의 언어별 입력값을 수정 화면에 복원할 때만 쓴다. */
+    private final RestaurantInfoService restaurantInfoService;
+    private final AttractionInfoService attractionInfoService;
 
     public AdminDestinationController(DestinationService destinationService,
                                       CategoryService categoryService,
                                       AmenityService amenityService,
                                       CountryCategoryService countryCategoryService,
                                       KtoSelectedPhotoRequestParser ktoSelectedPhotoRequestParser,
-                                      DestinationSaveOrchestrationService destinationSaveOrchestrationService) {
+                                      DestinationSaveOrchestrationService destinationSaveOrchestrationService,
+                                      RestaurantInfoService restaurantInfoService,
+                                      AttractionInfoService attractionInfoService) {
         this.destinationService = destinationService;
         this.categoryService = categoryService;
         this.amenityService = amenityService;
         this.countryCategoryService = countryCategoryService;
         this.ktoSelectedPhotoRequestParser = ktoSelectedPhotoRequestParser;
         this.destinationSaveOrchestrationService = destinationSaveOrchestrationService;
+        this.restaurantInfoService = restaurantInfoService;
+        this.attractionInfoService = attractionInfoService;
     }
 
     // 여행지 등록
@@ -63,12 +72,35 @@ public class AdminDestinationController {
         return "admin/destinations/create";
     }
 
+    /** 식당 번역 입력 슬롯의 화면 이름. 관리자 화면은 한국어를 그대로 쓴다. */
+    private static final Map<String, String> RESTAURANT_TRANSLATION_LABELS = Map.of(
+            "en", "영어",
+            "ja", "일본어",
+            "zh-CN", "중국어(간체)",
+            "zh-TW", "중국어(번체)"
+    );
+
+    /** 번역 언어 탭에 찍는 이름. 좁은 탭이라 각 언어 표기를 그대로 쓴다. */
+    private static final Map<String, String> TRANSLATION_TAB_LABELS = Map.of(
+            "en", "English",
+            "ja", "日本語",
+            "zh-CN", "简体中文",
+            "zh-TW", "繁體中文"
+    );
+
     private void prepareCreateFormModel(Model model, DestinationForm form, String lang) {
         model.addAttribute("destinationForm", form);
         // 지역 선택 UI 의 국내/해외 구분 기준. 숫자 ID 를 화면에 하드코딩하지 않는다.
         model.addAttribute("domesticRootId", countryCategoryService.getKoreaRootId());
         addCategoryModel(model);
         addAmenityModel(model, lang);
+        addRestaurantTranslationModel(model);
+    }
+
+    /** 식당 상세정보 번역 슬롯 라벨. 언어 코드는 폼 슬롯에 고정돼 있다. */
+    private void addRestaurantTranslationModel(Model model) {
+        model.addAttribute("restaurantTranslationLabels", RESTAURANT_TRANSLATION_LABELS);
+        model.addAttribute("translationTabLabels", TRANSLATION_TAB_LABELS);
     }
 
     /** 전체 카테고리(기존 binding)와 여행지 유형별 카테고리 목록. */
@@ -284,6 +316,13 @@ public class AdminDestinationController {
         var detailDto = destinationService.getDestinationDetailWithInfo(id);
         var translations = destinationService.getTranslationsByDestinationId(id);
         var form = DestinationForm.fromDetailDto(detailDto, translations);
+        // 유형별 상세정보의 언어별 값은 저장된 줄이 있으면 각 슬롯으로 되돌린다.
+        if (detailDto != null && detailDto.getRestaurantInfo() != null) {
+            form.setRestaurantInfoTranslations(restaurantInfoService.getTranslationForms(id));
+        }
+        if (detailDto != null && detailDto.getAttractionInfo() != null) {
+            form.setAttractionInfoTranslations(attractionInfoService.getTranslationForms(id));
+        }
 
         prepareEditFormModel(model, form, lang);
         return "admin/destinations/edit";
@@ -295,6 +334,7 @@ public class AdminDestinationController {
         model.addAttribute("regionPathIds", joinRegionPathIds(form.getRegionId()));
         addCategoryModel(model);
         addAmenityModel(model, lang);
+        addRestaurantTranslationModel(model);
     }
 
     // 지역 select를 기존 저장 값으로 복원하기 위한 최상위 -> 현재 지역 ID 경로

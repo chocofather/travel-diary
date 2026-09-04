@@ -427,6 +427,58 @@
     border-top: 1px solid #dde5f2;
 }
 
+/* ─── 번역 언어 탭 ─── */
+.admin-translation-tabs {
+    margin-top: 3px;
+    padding-top: 13px;
+    border-top: 1px solid #dde5f2;
+}
+
+.admin-translation-tablist {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 8px 0 12px;
+    padding: 3px;
+    border: 1px solid #dde5f2;
+    border-radius: 8px;
+    background-color: #f5f8fd;
+    overflow-x: auto;
+}
+
+.admin-translation-tab {
+    flex: 0 0 auto;
+    padding: 6px 14px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #5b6478;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.admin-translation-tab:hover {
+    color: #2f3b52;
+}
+
+.admin-translation-tab.is-active {
+    background-color: #fff;
+    color: #2b4aa0;
+    box-shadow: 0 1px 2px rgba(43, 74, 160, 0.18);
+}
+
+.admin-translation-tab:focus-visible {
+    outline: 2px solid #4860bd;
+    outline-offset: 1px;
+}
+
+/* 감춘 언어도 입력값은 폼에 그대로 남는다 (hidden 속성만 사용) */
+.admin-translation-panel[hidden] {
+    display: none;
+}
+
 /* 카테고리 목록과 같은 밀도의 체크박스 그리드 */
 .admin-amenity-options {
     display: grid;

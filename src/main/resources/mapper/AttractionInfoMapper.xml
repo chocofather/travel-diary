@@ -30,6 +30,33 @@
         ORDER BY language_code ASC, id ASC
     </select>
 
+    <!-- 관리자 저장. 언어 한 줄이 단위이며 UNIQUE(destination_id, language_code) 를 따른다. -->
+    <insert id="insertTranslation"
+            parameterType="com.example.travlediary.model.AttractionInfoTranslation">
+        INSERT INTO attraction_info_translations
+            (destination_id, language_code, closed_days, opening_hours, admission_fee, guide)
+        VALUES
+            (#{destinationId}, #{languageCode}, #{closedDays}, #{openingHours},
+             #{admissionFee}, #{guide})
+    </insert>
+
+    <update id="updateTranslation"
+            parameterType="com.example.travlediary.model.AttractionInfoTranslation">
+        UPDATE attraction_info_translations
+        SET closed_days = #{closedDays},
+            opening_hours = #{openingHours},
+            admission_fee = #{admissionFee},
+            guide = #{guide}
+        WHERE destination_id = #{destinationId}
+          AND language_code = #{languageCode}
+    </update>
+
+    <delete id="deleteTranslation">
+        DELETE FROM attraction_info_translations
+        WHERE destination_id = #{destinationId}
+          AND language_code = #{languageCode}
+    </delete>
+
     <update id="update" parameterType="com.example.travlediary.model.AttractionInfo">
         UPDATE attraction_info
         SET

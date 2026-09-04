@@ -32,6 +32,41 @@ public class DestinationForm {
             new DestinationTranslationForm(ENGLISH, "", "", "")
     );
 
+    /**
+     * 식당/카페 상세정보의 번역 입력 슬롯.
+     * 한국어는 {@link #restaurantInfo} 입력이 그대로 base 이자 ko 번역이 되므로 여기에는 없다.
+     */
+    private List<RestaurantInfoTranslationForm> restaurantInfoTranslations =
+            newRestaurantInfoTranslationSlots();
+
+    /**
+     * 관광지 상세정보의 번역 입력 슬롯.
+     * 한국어는 {@link #attractionInfo} 입력이 그대로 base 이자 ko 번역이 된다.
+     */
+    private List<AttractionInfoTranslationForm> attractionInfoTranslations =
+            newAttractionInfoTranslationSlots();
+
+    /** 슬롯 순서를 화면과 저장 로직이 함께 쓰는 기준. 언어 코드는 사용자가 정하지 않는다. */
+    public static List<RestaurantInfoTranslationForm> newRestaurantInfoTranslationSlots() {
+        List<RestaurantInfoTranslationForm> slots = new ArrayList<>();
+        for (String languageCode : SUBTYPE_TRANSLATION_LANGUAGES) {
+            slots.add(new RestaurantInfoTranslationForm(languageCode));
+        }
+        return slots;
+    }
+
+    public static List<AttractionInfoTranslationForm> newAttractionInfoTranslationSlots() {
+        List<AttractionInfoTranslationForm> slots = new ArrayList<>();
+        for (String languageCode : SUBTYPE_TRANSLATION_LANGUAGES) {
+            slots.add(new AttractionInfoTranslationForm(languageCode));
+        }
+        return slots;
+    }
+
+    /** 유형별 상세정보 번역 슬롯 언어 (한국어는 base 입력이 대신한다). */
+    public static final List<String> SUBTYPE_TRANSLATION_LANGUAGES =
+            List.of("en", "ja", "zh-CN", "zh-TW");
+
     private List<Long> categoryIds = new ArrayList<>();
 
     private boolean main;

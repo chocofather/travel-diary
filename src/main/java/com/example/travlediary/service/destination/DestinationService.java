@@ -74,6 +74,9 @@ public class DestinationService {
                 if (form.getAttractionInfo() != null) {
                     form.getAttractionInfo().setDestinationId(destinationId);
                     attractionInfoService.save(form.getAttractionInfo());
+                    // 한국어 입력은 원본이자 ko 번역이 되고, 나머지 언어는 슬롯 값으로 저장된다.
+                    attractionInfoService.saveTranslations(destinationId,
+                            form.getAttractionInfo(), form.getAttractionInfoTranslations());
                 }
                 break;
             case ACCOMMODATION:
@@ -87,6 +90,9 @@ public class DestinationService {
                 if (form.getRestaurantInfo() != null) {
                     form.getRestaurantInfo().setDestinationId(destinationId);
                     restaurantInfoService.save(form.getRestaurantInfo());
+                    // 한국어 입력은 원본이자 ko 번역이 되고, 나머지 언어는 슬롯 값으로 저장된다.
+                    restaurantInfoService.saveTranslations(destinationId,
+                            form.getRestaurantInfo(), form.getRestaurantInfoTranslations());
                 }
                 break;
             case ACTIVITY:
@@ -168,7 +174,7 @@ public class DestinationService {
 
     private DestinationDetailDto getDestinationDetailWithInfo(Long id,
                                                                SupportedLanguage requestedLanguage,
-                                                               boolean localizeAttractionInfo) {
+                                                               boolean localizeSubtypeInfo) {
         Destination destination = destinationMapper.findDestinationDetail(id);
         if (destination == null) return null;
 
@@ -189,7 +195,7 @@ public class DestinationService {
         // 타입별 상세정보 및 amenity 리스트 셋팅
         switch (destination.getType()) {
             case ATTRACTION:
-                dto.setAttractionInfo(localizeAttractionInfo
+                dto.setAttractionInfo(localizeSubtypeInfo
                         ? attractionInfoService.findLocalizedByDestinationId(id, requestedLanguage)
                         : attractionInfoService.findByDestinationId(id));
                 dto.setAttractionAmenities(
@@ -202,7 +208,9 @@ public class DestinationService {
                 break;
             case RESTAURANTS:
             case CAFE:
-                dto.setRestaurantInfo(restaurantInfoService.findByDestinationId(id));
+                dto.setRestaurantInfo(localizeSubtypeInfo
+                        ? restaurantInfoService.findLocalizedByDestinationId(id, requestedLanguage)
+                        : restaurantInfoService.findByDestinationId(id));
                 dto.setRestaurantAmenities(
                         amenityService.getRestaurantAmenities(id, requestedLanguage));
                 break;
@@ -472,6 +480,8 @@ public class DestinationService {
                 if (form.getAttractionInfo() != null) {
                     form.getAttractionInfo().setDestinationId(destinationId);
                     attractionInfoService.update(form.getAttractionInfo());
+                    attractionInfoService.saveTranslations(destinationId,
+                            form.getAttractionInfo(), form.getAttractionInfoTranslations());
                 }
                 break;
             case ACCOMMODATION:
@@ -485,6 +495,8 @@ public class DestinationService {
                 if (form.getRestaurantInfo() != null) {
                     form.getRestaurantInfo().setDestinationId(destinationId);
                     restaurantInfoService.update(form.getRestaurantInfo());
+                    restaurantInfoService.saveTranslations(destinationId,
+                            form.getRestaurantInfo(), form.getRestaurantInfoTranslations());
                 }
                 break;
             case ACTIVITY:
