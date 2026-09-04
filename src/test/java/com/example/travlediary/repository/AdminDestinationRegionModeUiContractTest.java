@@ -18,24 +18,26 @@ class AdminDestinationRegionModeUiContractTest {
     @Test
     void englishSectionUsesKoreanAdminLabelsWhileKeepingTheEnglishBinding() throws IOException {
         String create = resource("/templates/admin/destinations/create.html");
+        String translationTabs =
+                resource("/templates/admin/destinations/fragments/translation-tabs.html");
 
-        // 관리자 UI 문구는 한국어
+        // 한국어 원본이 먼저 오고, 번역은 아래 언어 탭에서 한 언어씩 입력한다
         assertThat(create)
-                .contains("영문 정보")
-                .contains("여행지명 (영문)")
-                .contains("간단 설명 (영문)")
-                .contains("상세 설명 (영문)")
-                .doesNotContain(">English<")
-                .doesNotContain(">Destination name")
-                .doesNotContain(">Short description")
-                .doesNotContain(">Description");
+                .contains("<h3>한국어</h3>")
+                .contains(":: destinationTranslations(true)")
+                .doesNotContain("admin-translation-grid")
+                .doesNotContain("영문 정보")
+                .doesNotContain(">English<");
 
-        // 영문 저장 계약(en slot, 바인딩, TourAPI 자동입력 훅)은 그대로
-        assertThat(create)
-                .contains("*{translations[1].languageCode}")
-                .contains("*{translations[1].name}")
-                .contains("*{translations[1].shortDescription}")
-                .contains("*{translations[1].description}")
+        // 관리자 UI 문구는 한국어, 저장 계약(슬롯 바인딩·자동입력 훅)은 그대로
+        assertThat(translationTabs)
+                .contains("여행지명")
+                .contains("간단 설명")
+                .contains("상세 설명")
+                .contains("*{translations[__${slot.index}__].languageCode}")
+                .contains("*{translations[__${slot.index}__].name}")
+                .contains("*{translations[__${slot.index}__].shortDescription}")
+                .contains("*{translations[__${slot.index}__].description}")
                 .contains("data-kto-tour-english-name")
                 .contains("data-kto-tour-english-overview");
     }

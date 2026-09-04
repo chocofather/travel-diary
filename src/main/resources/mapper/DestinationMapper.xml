@@ -355,6 +355,13 @@
         DELETE FROM destination_translations WHERE destination_id = #{destinationId}
     </delete>
 
+    <!-- 그 언어 입력을 모두 비웠을 때 해당 줄만 지운다. 다른 언어는 건드리지 않는다. -->
+    <delete id="deleteTranslation">
+        DELETE FROM destination_translations
+        WHERE destination_id = #{destinationId}
+          AND language_code = #{languageCode}
+    </delete>
+
     <delete id="deleteImagesByDestinationId" parameterType="long">
         DELETE FROM destination_images WHERE destination_id = #{destinationId}
     </delete>

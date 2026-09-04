@@ -51,7 +51,7 @@ class AdminRestaurantTranslationFormUiContractTest {
                 .contains("restaurantInfoTranslations[__${slot.index}__].closedDays")
                 .contains("restaurantInfoTranslations[__${slot.index}__].etc")
                 // 언어 이름은 서버가 준 라벨을 쓴다 (탭은 원어, 보조 설명은 한국어)
-                .contains("${restaurantTranslationLabels.get(translation.languageCode)}")
+                .contains("${translationLanguageLabels.get(translation.languageCode)}")
                 .contains("${translationTabLabels.get(translation.languageCode)}")
                 .contains("음식점/카페 상세 정보 번역")
                 .contains("위에 입력한 값이 한국어로 함께 저장됩니다.");

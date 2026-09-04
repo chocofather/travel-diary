@@ -23,14 +23,22 @@ public class DestinationForm {
 
     private Long destinationId; // 여행지 기본키
 
-    /** 관리자 화면 번역 슬롯 순서: 0 = 한국어, 1 = 영어 */
+    /**
+     * 관리자 화면 번역 슬롯 순서: 0 = 한국어(원본), 1~4 = 번역 탭 언어.
+     * 저장·복원은 이 순서가 아니라 각 슬롯의 languageCode 로만 한다.
+     */
     private static final String KOREAN = "ko";
-    private static final String ENGLISH = "en";
 
-    private List<DestinationTranslationForm> translations = Arrays.asList(
-            new DestinationTranslationForm(KOREAN, "", "", ""),
-            new DestinationTranslationForm(ENGLISH, "", "", "")
-    );
+    private List<DestinationTranslationForm> translations = newTranslationSlots();
+
+    public static List<DestinationTranslationForm> newTranslationSlots() {
+        List<DestinationTranslationForm> slots = new ArrayList<>();
+        slots.add(new DestinationTranslationForm(KOREAN, "", "", ""));
+        for (String languageCode : SUBTYPE_TRANSLATION_LANGUAGES) {
+            slots.add(new DestinationTranslationForm(languageCode, "", "", ""));
+        }
+        return slots;
+    }
 
     /**
      * 식당/카페 상세정보의 번역 입력 슬롯.
@@ -120,10 +128,12 @@ public class DestinationForm {
         form.setType(dto.getDestination().getType());
 
         // --- 번역값 변환 (조회 순서가 아니라 languageCode 기준으로 슬롯을 채운다) ---
-        form.setTranslations(new ArrayList<>(List.of(
-                translationSlot(translations, KOREAN),
-                translationSlot(translations, ENGLISH)
-        )));
+        List<DestinationTranslationForm> slots = new ArrayList<>();
+        slots.add(translationSlot(translations, KOREAN));
+        for (String languageCode : SUBTYPE_TRANSLATION_LANGUAGES) {
+            slots.add(translationSlot(translations, languageCode));
+        }
+        form.setTranslations(slots);
 
         // 2. 상세 정보 복사
         form.setAttractionInfo(dto.getAttractionInfo());

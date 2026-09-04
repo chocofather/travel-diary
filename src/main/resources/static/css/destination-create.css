@@ -89,6 +89,34 @@
     font-size: 0.9rem;
 }
 
+/* 한국어 원본은 번역보다 먼저, 전체 너비로 크게 보인다 */
+.admin-language-card.is-primary {
+    gap: 12px;
+    padding: 16px;
+}
+
+.admin-language-card.is-primary h3 {
+    font-size: 1rem;
+}
+
+/* 기본정보 아래 번역 탭 */
+.admin-destination-section .admin-translation-tabs {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid #dde5f2;
+}
+
+.admin-destination-section .admin-translation-tabs h3 {
+    margin: 0;
+    color: #4860bd;
+    font-size: 0.9rem;
+}
+
+.admin-destination-section .admin-translation-panel {
+    display: grid;
+    gap: 10px;
+}
+
 .admin-kto-tour-name-row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;

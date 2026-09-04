@@ -19,7 +19,9 @@ class AdminKtoEnglishRestaurantAutofillUiContractTest {
 
     @Test
     void onlyTheEnglishSlotCarriesTheThreeAutofillHooks() throws IOException {
-        String fragment = resource("/templates/admin/destinations/fragments/translation-tabs.html");
+        String all = resource("/templates/admin/destinations/fragments/translation-tabs.html");
+        // 식당 조각만 떼어 본다 (여행지 기본정보 조각도 같은 파일에 있다)
+        String fragment = all.substring(all.indexOf("th:fragment=\"restaurantTranslations"));
 
         for (String field : new String[]{"mainMenu", "openingHours", "closedDays"}) {
             assertThat(fragment).as("english hook for %s", field)

@@ -47,11 +47,15 @@ class DestinationDescriptionUiContractTest {
             String form = resource(formPath);
             Document page = Jsoup.parse(form);
 
-            assertThat(page.select("textarea.is-description")).hasSize(2);
+            // 한국어 원본 1개. 번역 쪽 상세 설명은 공통 번역 탭 조각이 언어마다 그린다.
+            assertThat(page.select("textarea.is-description")).hasSize(1);
             assertThat(page.text()).contains("문단을 나누려면 한 줄을 비워주세요.");
             assertThat(page.select("[data-description-preview], [data-description-preview-toggle], [data-description-preview-content]")).isEmpty();
             assertThat(form).doesNotContain("admin-destination-description-preview.js");
         }
+        assertThat(Jsoup.parse(resource(
+                "/templates/admin/destinations/fragments/translation-tabs.html"))
+                .select("textarea.is-description")).hasSize(1);
     }
 
     private String resource(String path) throws IOException {

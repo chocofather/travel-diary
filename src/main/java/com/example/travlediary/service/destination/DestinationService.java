@@ -114,6 +114,10 @@ public class DestinationService {
 
 
         for (DestinationTranslationForm transForm : form.getTranslations()) {
+            // 한국어는 원본이라 늘 남기고, 나머지 언어는 값이 있을 때만 줄을 만든다.
+            if (!keepsTranslation(transForm)) {
+                continue;
+            }
             DestinationTranslation trans = new DestinationTranslation();
             trans.setDestinationId(destinationId);
             trans.setLanguageCode(transForm.getLanguageCode());
@@ -247,6 +251,29 @@ public class DestinationService {
                 DestinationTranslation::getShortDescription, requested, korean, ordered));
         destination.setDescription(localizedField(
                 DestinationTranslation::getDescription, requested, korean, ordered));
+    }
+
+    /**
+     * 그 언어 줄을 남길지 정한다.
+     *
+     * <p>한국어는 원본이라 늘 남기고, 나머지 언어는 이름·간단 설명·상세 설명 중
+     * 하나라도 실제 값이 있어야 남긴다. 공백만 있는 값은 없는 것으로 본다.
+     * (유형별 상세정보 번역과 같은 규칙)
+     */
+    private boolean keepsTranslation(DestinationTranslationForm form) {
+        if (form == null || form.getLanguageCode() == null) {
+            return false;
+        }
+        if (SupportedLanguage.KOREAN.getLanguageTag().equals(form.getLanguageCode())) {
+            return true;
+        }
+        return hasText(form.getName())
+                || hasText(form.getShortDescription())
+                || hasText(form.getDescription());
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 
     private List<DestinationTranslation> orderedTranslations(
@@ -526,6 +553,14 @@ public class DestinationService {
             DestinationTranslation match = existingTranslations.stream()
                     .filter(t -> t.getLanguageCode().equals(transForm.getLanguageCode()))
                     .findFirst().orElse(null);
+
+            // 값이 하나도 없는 번역 언어는 남기지 않는다. 있던 줄이면 그 언어만 지운다.
+            if (!keepsTranslation(transForm)) {
+                if (match != null) {
+                    destinationMapper.deleteTranslation(destinationId, transForm.getLanguageCode());
+                }
+                continue;
+            }
 
             if (match != null) {
                 // UPDATE

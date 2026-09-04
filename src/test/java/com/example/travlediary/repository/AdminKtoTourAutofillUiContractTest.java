@@ -25,16 +25,22 @@ class AdminKtoTourAutofillUiContractTest {
                 .contains("data-kto-tour-overview")
                 .contains("data-kto-tour-latitude")
                 .contains("data-kto-tour-longitude");
+        // 영문 자동입력 훅은 공통 번역 탭 조각의 영어 슬롯에 있고, 등록 화면만 켠다
+        String translationTabs =
+                resource("/templates/admin/destinations/fragments/translation-tabs.html");
         assertThat(create)
-                .contains("data-kto-tour-english-name")
-                .contains("data-kto-tour-english-overview")
+                .contains(":: destinationTranslations(true)")
                 .contains("data-kto-tour-english-status")
                 .doesNotContain("data-kto-tour-english-results");
-        assertThat(edit).doesNotContain(
-                "/js/admin-kto-tour-autofill.js",
-                "data-kto-tour-search-button",
-                "data-kto-tour-results",
-                "data-kto-tour-english-name");
+        assertThat(translationTabs)
+                .contains("data-kto-tour-english-name")
+                .contains("data-kto-tour-english-overview");
+        assertThat(edit)
+                .contains(":: destinationTranslations(false)")
+                .doesNotContain(
+                        "/js/admin-kto-tour-autofill.js",
+                        "data-kto-tour-search-button",
+                        "data-kto-tour-results");
         assertThat(edit).contains("/js/region-selector.js?v=20260822-3");
     }
 

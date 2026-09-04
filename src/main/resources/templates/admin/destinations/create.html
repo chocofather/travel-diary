@@ -66,50 +66,36 @@
       </div>
     </div>
 
-    <!-- 다국어 입력 -->
-    <div class="admin-translation-grid">
-      <section class="admin-language-card">
-        <h3>한국어</h3>
-        <input type="hidden" th:field="*{translations[0].languageCode}" value="ko"/>
-        <label>여행지명
-          <span class="admin-kto-tour-name-row">
-            <input type="text" th:field="*{translations[0].name}" placeholder="이름 (한국어)"
-                   data-destination-korean-name>
-            <button type="button" class="admin-btn" data-kto-tour-search-button>TourAPI 검색</button>
-          </span>
-        </label>
-        <div class="admin-kto-tour-autofill" aria-live="polite">
-          <p class="admin-kto-tour-status" data-kto-tour-status>여행지명을 입력한 뒤 TourAPI에서 후보를 검색할 수 있습니다.</p>
-          <div class="admin-kto-tour-results" data-kto-tour-results></div>
-        </div>
-        <label>간단 설명
-          <textarea th:field="*{translations[0].shortDescription}" placeholder="간단 설명 (한국어)"></textarea>
-        </label>
-        <label>상세 설명
-          <textarea class="is-description" th:field="*{translations[0].description}" placeholder="설명 (한국어)"
-                    data-kto-tour-overview></textarea>
-        </label>
-        <p class="admin-field-help">문단을 나누려면 한 줄을 비워주세요.</p>
-      </section>
+    <!-- 한국어 원본 (전체 너비) -->
+    <section class="admin-language-card is-primary">
+      <h3>한국어</h3>
+      <input type="hidden" th:field="*{translations[0].languageCode}" value="ko"/>
+      <label>여행지명
+        <span class="admin-kto-tour-name-row">
+          <input type="text" th:field="*{translations[0].name}" placeholder="이름 (한국어)"
+                 data-destination-korean-name>
+          <button type="button" class="admin-btn" data-kto-tour-search-button>TourAPI 검색</button>
+        </span>
+      </label>
+      <div class="admin-kto-tour-autofill" aria-live="polite">
+        <p class="admin-kto-tour-status" data-kto-tour-status>여행지명을 입력한 뒤 TourAPI에서 후보를 검색할 수 있습니다.</p>
+        <div class="admin-kto-tour-results" data-kto-tour-results></div>
+      </div>
+      <label>간단 설명
+        <textarea th:field="*{translations[0].shortDescription}" placeholder="간단 설명 (한국어)"></textarea>
+      </label>
+      <label>상세 설명
+        <textarea class="is-description" th:field="*{translations[0].description}" placeholder="설명 (한국어)"
+                  data-kto-tour-overview></textarea>
+      </label>
+      <p class="admin-field-help">문단을 나누려면 한 줄을 비워주세요.</p>
+    </section>
 
-      <section class="admin-language-card">
-        <h3>영문 정보</h3>
-        <input type="hidden" th:field="*{translations[1].languageCode}" value="en"/>
-        <label>여행지명 (영문)
-          <input type="text" th:field="*{translations[1].name}" placeholder="여행지명 (영문)"
-                 data-kto-tour-english-name>
-        </label>
-        <label>간단 설명 (영문)
-          <textarea th:field="*{translations[1].shortDescription}" placeholder="간단 설명 (영문)"></textarea>
-        </label>
-        <label>상세 설명 (영문)
-          <textarea class="is-description" th:field="*{translations[1].description}" placeholder="상세 설명 (영문)"
-                    data-kto-tour-english-overview></textarea>
-        </label>
-        <div class="admin-kto-tour-autofill" aria-live="polite">
-          <p class="admin-kto-tour-status" data-kto-tour-english-status>국문 후보를 선택하면 영문 관광정보를 찾아봅니다.</p>
-        </div>
-      </section>
+    <!-- 번역(언어 탭). 영어 탭은 TourAPI 영문 자동입력 대상이다. -->
+    <th:block th:replace="~{admin/destinations/fragments/translation-tabs
+                            :: destinationTranslations(true)}"></th:block>
+    <div class="admin-kto-tour-autofill" aria-live="polite">
+      <p class="admin-kto-tour-status" data-kto-tour-english-status>국문 후보를 선택하면 영문 관광정보를 찾아봅니다.</p>
     </div>
   </section>
 

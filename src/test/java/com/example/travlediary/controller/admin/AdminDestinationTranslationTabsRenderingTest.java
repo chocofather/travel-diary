@@ -62,18 +62,22 @@ class AdminDestinationTranslationTabsRenderingTest {
                 .andReturn().getResponse().getContentAsString();
         var document = Jsoup.parse(body);
 
-        // 관광지·숙소·음식점/카페가 같은 탭 구조를 하나씩 쓴다
+        // 기본정보(여행지명 등)와 관광지·숙소·음식점/카페가 같은 탭 구조를 하나씩 쓴다
         var groups = document.select("[data-translation-tabs]");
-        assertThat(groups).hasSize(3);
+        assertThat(groups).hasSize(4);
 
         for (Element group : groups) {
-            String label = group.selectFirst("h4").text();
+            Element heading = group.selectFirst("h4") != null
+                    ? group.selectFirst("h4")
+                    : group.selectFirst("h3");
+            String label = heading.text();
             var tabs = group.select("[data-translation-tab]");
             assertThat(tabs).as(label).hasSize(4);
             assertThat(tabs.eachAttr("data-translation-tab")).as(label)
                     .containsExactly("en", "ja", "zh-CN", "zh-TW");
+            // 관리자 화면이므로 탭 이름도 한국어다
             assertThat(tabs.eachText()).as(label)
-                    .containsExactly("English", "日本語", "简体中文", "繁體中文");
+                    .containsExactly("영어", "일본어", "간체", "번체");
             // 처음에는 영어 탭만 활성
             assertThat(tabs.stream().filter(tab -> tab.hasClass("is-active")).toList()).as(label)
                     .singleElement()
@@ -92,9 +96,45 @@ class AdminDestinationTranslationTabsRenderingTest {
                         .as("%s %s", label, hidden.attr("data-translation-panel")).isTrue();
             }
         }
-        assertThat(groups.select("h4").eachText())
-                .containsExactly("관광지 상세 정보 번역", "숙소 상세 정보 번역",
+        assertThat(groups.select("h3, h4").eachText())
+                .containsExactly("번역", "관광지 상세 정보 번역", "숙소 상세 정보 번역",
                         "음식점/카페 상세 정보 번역");
+    }
+
+    @Test
+    void theKoreanBasicInfoStaysAboveTheTranslationTabsAtFullWidth() throws Exception {
+        var document = Jsoup.parse(mockMvc.perform(get("/admin/destinations/create")
+                        .with(user("admin").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString());
+
+        // 좌우 2열 구조는 사라졌다
+        assertThat(document.select(".admin-translation-grid")).isEmpty();
+        var korean = document.selectFirst(".admin-language-card.is-primary");
+        assertThat(korean).isNotNull();
+        assertThat(korean.selectFirst("h3").text()).isEqualTo("한국어");
+        assertThat(korean.select("[name='translations[0].name']")).hasSize(1);
+        assertThat(korean.select("[name='translations[0].shortDescription']")).hasSize(1);
+        assertThat(korean.select("[name='translations[0].description']")).hasSize(1);
+
+        // 번역 탭은 한국어 원본 아래에 온다
+        var basicTabs = document.select("[data-translation-tabs]").first();
+        assertThat(korean.elementSiblingIndex()).isLessThan(basicTabs.elementSiblingIndex());
+        for (int index = 1; index <= 4; index++) {
+            for (String field : List.of("languageCode", "name", "shortDescription", "description")) {
+                String name = "translations[" + index + "]." + field;
+                assertThat(document.select("[name='" + name + "']")).as(name).hasSize(1);
+            }
+        }
+        assertThat(document.select("input[name='translations[1].languageCode']").attr("value"))
+                .isEqualTo("en");
+        assertThat(document.select("input[name='translations[4].languageCode']").attr("value"))
+                .isEqualTo("zh-TW");
+        // TourAPI 영문 자동입력은 영어 탭 입력칸에 붙는다
+        assertThat(document.select("[data-kto-tour-english-name]").attr("name"))
+                .isEqualTo("translations[1].name");
+        assertThat(document.select("[data-kto-tour-english-overview]").attr("name"))
+                .isEqualTo("translations[1].description");
     }
 
     @Test

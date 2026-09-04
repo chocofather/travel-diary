@@ -9,6 +9,55 @@
   ktoAutofill 이 true 인 화면(등록)만 영문 TourAPI 자동입력 훅을 단다.
   숨긴 언어의 입력값도 폼에는 그대로 실려 저장된다. (hidden 만 걸고 지우지 않는다)
 -->
+<!--
+  여행지 기본정보(이름·간단 설명·상세 설명)의 번역 입력.
+  0번 슬롯(한국어)은 위쪽 원본 영역이 담당하므로 여기서는 건너뛴다.
+  ktoAutofill 이 true 인 화면(등록)만 영문 TourAPI 자동입력 훅을 단다.
+-->
+<th:block th:fragment="destinationTranslations(ktoAutofill)">
+  <div class="admin-translation-tabs" data-translation-tabs>
+    <h3>번역</h3>
+    <p class="admin-help-text">비워 둔 언어는 화면에서 한국어로 대신 보여집니다.</p>
+
+    <div class="admin-translation-tablist" role="tablist" aria-label="번역 언어 선택">
+      <th:block th:each="translation, slot : *{translations}">
+        <button type="button" role="tab" class="admin-translation-tab"
+                th:unless="${slot.first}"
+                th:classappend="${slot.index == 1} ? ' is-active'"
+                th:attr="data-translation-tab=${translation.languageCode},
+                         aria-selected=${slot.index == 1},
+                         title=${translationLanguageLabels.get(translation.languageCode)}"
+                th:text="${translationTabLabels.get(translation.languageCode)}
+                         ?: translation.languageCode">영어</button>
+      </th:block>
+    </div>
+
+    <th:block th:each="translation, slot : *{translations}">
+      <div class="admin-translation-panel" role="tabpanel"
+           th:unless="${slot.first}"
+           th:hidden="${slot.index > 1}"
+           th:attr="data-translation-panel=${translation.languageCode},
+                    aria-label=${translationLanguageLabels.get(translation.languageCode)}">
+        <input type="hidden" th:field="*{translations[__${slot.index}__].languageCode}">
+        <label>여행지명
+          <input type="text" th:field="*{translations[__${slot.index}__].name}"
+                 th:attr="data-kto-tour-english-name=
+                          ${ktoAutofill and translation.languageCode == 'en'} ? true : null">
+        </label>
+        <label>간단 설명
+          <textarea th:field="*{translations[__${slot.index}__].shortDescription}"></textarea>
+        </label>
+        <label>상세 설명
+          <textarea class="is-description"
+                    th:field="*{translations[__${slot.index}__].description}"
+                    th:attr="data-kto-tour-english-overview=
+                             ${ktoAutofill and translation.languageCode == 'en'} ? true : null"></textarea>
+        </label>
+      </div>
+    </th:block>
+  </div>
+</th:block>
+
 <th:block th:fragment="accommodationTranslations">
   <div class="admin-type-field-wide admin-translation-tabs" data-translation-tabs>
     <h4>숙소 상세 정보 번역</h4>
@@ -22,7 +71,7 @@
               th:classappend="${slot.first} ? ' is-active'"
               th:attr="data-translation-tab=${translation.languageCode},
                        aria-selected=${slot.first},
-                       title=${restaurantTranslationLabels.get(translation.languageCode)}"
+                       title=${translationLanguageLabels.get(translation.languageCode)}"
               th:text="${translationTabLabels.get(translation.languageCode)}
                        ?: translation.languageCode">English</button>
     </div>
@@ -31,7 +80,7 @@
          th:each="translation, slot : *{accommodationInfoTranslations}"
          th:hidden="${!slot.first}"
          th:attr="data-translation-panel=${translation.languageCode},
-                  aria-label=${restaurantTranslationLabels.get(translation.languageCode)}">
+                  aria-label=${translationLanguageLabels.get(translation.languageCode)}">
       <input type="hidden"
              th:field="*{accommodationInfoTranslations[__${slot.index}__].languageCode}">
       <div class="admin-type-fields-grid">
@@ -66,7 +115,7 @@
               th:classappend="${slot.first} ? ' is-active'"
               th:attr="data-translation-tab=${translation.languageCode},
                        aria-selected=${slot.first},
-                       title=${restaurantTranslationLabels.get(translation.languageCode)}"
+                       title=${translationLanguageLabels.get(translation.languageCode)}"
               th:text="${translationTabLabels.get(translation.languageCode)}
                        ?: translation.languageCode">English</button>
     </div>
@@ -75,7 +124,7 @@
          th:each="translation, slot : *{attractionInfoTranslations}"
          th:hidden="${!slot.first}"
          th:attr="data-translation-panel=${translation.languageCode},
-                  aria-label=${restaurantTranslationLabels.get(translation.languageCode)}">
+                  aria-label=${translationLanguageLabels.get(translation.languageCode)}">
       <input type="hidden"
              th:field="*{attractionInfoTranslations[__${slot.index}__].languageCode}">
       <div class="admin-type-fields-grid">
@@ -122,7 +171,7 @@
               th:classappend="${slot.first} ? ' is-active'"
               th:attr="data-translation-tab=${translation.languageCode},
                        aria-selected=${slot.first},
-                       title=${restaurantTranslationLabels.get(translation.languageCode)}"
+                       title=${translationLanguageLabels.get(translation.languageCode)}"
               th:text="${translationTabLabels.get(translation.languageCode)}
                        ?: translation.languageCode">English</button>
     </div>
@@ -131,7 +180,7 @@
          th:each="translation, slot : *{restaurantInfoTranslations}"
          th:hidden="${!slot.first}"
          th:attr="data-translation-panel=${translation.languageCode},
-                  aria-label=${restaurantTranslationLabels.get(translation.languageCode)}">
+                  aria-label=${translationLanguageLabels.get(translation.languageCode)}">
       <input type="hidden"
              th:field="*{restaurantInfoTranslations[__${slot.index}__].languageCode}">
       <div class="admin-type-fields-grid">

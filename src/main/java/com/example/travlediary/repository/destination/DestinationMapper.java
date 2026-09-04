@@ -63,6 +63,10 @@
 
         void deleteTranslationsByDestinationId(Long destinationId); // destination_translations
 
+        /** 언어 한 줄만 지운다. 그 언어 입력을 모두 비웠을 때 쓴다. */
+        void deleteTranslation(@Param("destinationId") Long destinationId,
+                               @Param("languageCode") String languageCode);
+
         void deleteImagesByDestinationId(Long destinationId); // destination_images
 
         void deleteCommentsByDestinationId(Long destinationId); // destination_comments

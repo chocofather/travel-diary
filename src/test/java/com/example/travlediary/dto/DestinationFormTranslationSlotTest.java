@@ -9,7 +9,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * 관리자 수정 화면은 translations[0]=한국어, translations[1]=영어 슬롯에 바인딩한다.
+ * 관리자 수정 화면은 translations[0]=한국어(원본), 1~4=번역 탭(en/ja/zh-CN/zh-TW) 슬롯에 바인딩한다.
  * 번역 조회 SQL 에는 ORDER BY 가 없으므로 Form 생성 단계에서 languageCode 로 슬롯을 고정한다.
  */
 class DestinationFormTranslationSlotTest {
@@ -47,24 +47,33 @@ class DestinationFormTranslationSlotTest {
     }
 
     @Test
-    void keepsBothSlotsEmptyWhenThereIsNoTranslation() {
+    void keepsEverySlotEmptyWhenThereIsNoTranslation() {
         DestinationForm form = form(List.of());
 
-        assertThat(form.getTranslations()).hasSize(2);
-        assertEmptySlot(form.getTranslations().get(0), "ko");
-        assertEmptySlot(form.getTranslations().get(1), "en");
+        assertThat(form.getTranslations()).hasSize(5);
+        assertThat(form.getTranslations())
+                .extracting(DestinationTranslationForm::getLanguageCode)
+                .containsExactly("ko", "en", "ja", "zh-CN", "zh-TW");
+        for (DestinationTranslationForm slot : form.getTranslations()) {
+            assertEmptySlot(slot, slot.getLanguageCode());
+        }
     }
 
     @Test
-    void ignoresUnsupportedLanguagesWithoutMovingTheKoreanAndEnglishSlots() {
+    void fillsEachLanguageSlotFromItsOwnRowWhateverTheQueryOrderIs() {
         DestinationForm form = form(List.of(
+                translation("zh-TW", "景福宮", "繁體說明", "繁體요약"),
                 translation("ja", "景福宮", "日本語の説明", "日本語の要約"),
                 english(),
                 korean()));
 
-        assertThat(form.getTranslations()).hasSize(2);
+        assertThat(form.getTranslations()).hasSize(5);
         assertKoreanSlot(form);
         assertEnglishSlot(form);
+        assertThat(form.getTranslations().get(2).getDescription()).isEqualTo("日本語の説明");
+        // 저장된 줄이 없는 언어는 빈 슬롯으로 남는다
+        assertEmptySlot(form.getTranslations().get(3), "zh-CN");
+        assertThat(form.getTranslations().get(4).getShortDescription()).isEqualTo("繁體요약");
     }
 
     @Test

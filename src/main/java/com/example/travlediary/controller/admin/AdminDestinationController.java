@@ -76,20 +76,20 @@ public class AdminDestinationController {
         return "admin/destinations/create";
     }
 
-    /** 식당 번역 입력 슬롯의 화면 이름. 관리자 화면은 한국어를 그대로 쓴다. */
-    private static final Map<String, String> RESTAURANT_TRANSLATION_LABELS = Map.of(
+    /** 번역 입력 슬롯의 언어 이름. 탭 title/aria-label 처럼 풀어 쓸 자리에 쓴다. */
+    private static final Map<String, String> TRANSLATION_LANGUAGE_LABELS = Map.of(
             "en", "영어",
             "ja", "일본어",
             "zh-CN", "중국어(간체)",
             "zh-TW", "중국어(번체)"
     );
 
-    /** 번역 언어 탭에 찍는 이름. 좁은 탭이라 각 언어 표기를 그대로 쓴다. */
+    /** 번역 언어 탭 버튼에 찍는 이름. 관리자 화면이므로 한국어로 짧게 쓴다. */
     private static final Map<String, String> TRANSLATION_TAB_LABELS = Map.of(
-            "en", "English",
-            "ja", "日本語",
-            "zh-CN", "简体中文",
-            "zh-TW", "繁體中文"
+            "en", "영어",
+            "ja", "일본어",
+            "zh-CN", "간체",
+            "zh-TW", "번체"
     );
 
     private void prepareCreateFormModel(Model model, DestinationForm form, String lang) {
@@ -101,9 +101,9 @@ public class AdminDestinationController {
         addRestaurantTranslationModel(model);
     }
 
-    /** 식당 상세정보 번역 슬롯 라벨. 언어 코드는 폼 슬롯에 고정돼 있다. */
+    /** 번역 탭 라벨. 언어 코드는 폼 슬롯에 고정돼 있고 화면 이름만 여기서 정한다. */
     private void addRestaurantTranslationModel(Model model) {
-        model.addAttribute("restaurantTranslationLabels", RESTAURANT_TRANSLATION_LABELS);
+        model.addAttribute("translationLanguageLabels", TRANSLATION_LANGUAGE_LABELS);
         model.addAttribute("translationTabLabels", TRANSLATION_TAB_LABELS);
     }
 
