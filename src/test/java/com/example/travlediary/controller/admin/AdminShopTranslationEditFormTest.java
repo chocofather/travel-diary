@@ -1,11 +1,11 @@
 package com.example.travlediary.controller.admin;
 
-import com.example.travlediary.dto.ActivityInfoTranslationForm;
 import com.example.travlediary.dto.DestinationDetailDto;
 import com.example.travlediary.dto.DestinationForm;
-import com.example.travlediary.model.ActivityInfo;
+import com.example.travlediary.dto.ShopInfoTranslationForm;
 import com.example.travlediary.model.Destination;
 import com.example.travlediary.model.DestinationType;
+import com.example.travlediary.model.ShopInfo;
 import com.example.travlediary.service.amenity.AmenityService;
 import com.example.travlediary.service.category.CategoryService;
 import com.example.travlediary.service.category.CountryCategoryService;
@@ -38,14 +38,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * 체험/액티비티 수정 화면의 번역 복원.
+ * 쇼핑 수정 화면의 번역 복원.
  *
  * <p>저장된 언어 값이 각 탭 슬롯으로 돌아와야 관리자가 이어서 고칠 수 있다.
  */
 @ExtendWith(MockitoExtension.class)
-class AdminActivityTranslationEditFormTest {
+class AdminShopTranslationEditFormTest {
 
-    private static final Long DESTINATION_ID = 41L;
+    private static final Long DESTINATION_ID = 51L;
 
     @Mock private DestinationService destinationService;
     @Mock private CategoryService categoryService;
@@ -82,12 +82,12 @@ class AdminActivityTranslationEditFormTest {
     }
 
     @Test
-    void theEditFormRestoresTheStoredActivityTranslationsIntoTheirSlots() throws Exception {
+    void theEditFormRestoresTheStoredShopTranslationsIntoTheirSlots() throws Exception {
         when(destinationService.getDestinationDetailWithInfo(DESTINATION_ID))
                 .thenReturn(detailDto());
         when(destinationService.getTranslationsByDestinationId(DESTINATION_ID))
                 .thenReturn(List.of());
-        when(activityInfoService.getTranslationForms(DESTINATION_ID)).thenReturn(storedSlots());
+        when(shopInfoService.getTranslationForms(DESTINATION_ID)).thenReturn(storedSlots());
 
         var result = mockMvc.perform(get("/admin/destinations/edit/" + DESTINATION_ID))
                 .andExpect(status().isOk())
@@ -95,39 +95,38 @@ class AdminActivityTranslationEditFormTest {
 
         DestinationForm form = (DestinationForm) result.getModelAndView()
                 .getModel().get("destinationForm");
-        assertThat(form.getActivityInfoTranslations())
-                .extracting(ActivityInfoTranslationForm::getLanguageCode)
+        assertThat(form.getShopInfoTranslations())
+                .extracting(ShopInfoTranslationForm::getLanguageCode)
                 .containsExactly("en", "ja", "zh-CN", "zh-TW");
-        assertThat(form.getActivityInfoTranslations().get(0).getRequiredTime())
-                .isEqualTo("About 2 hours");
-        assertThat(form.getActivityInfoTranslations().get(1).getGuide()).isEqualTo("雨天中止");
-        // 한국어 원본 입력은 예전처럼 activityInfo 로 돌아온다
-        assertThat(form.getActivityInfo().getRequiredTime()).isEqualTo("약 2시간");
+        assertThat(form.getShopInfoTranslations().get(0).getMainProducts())
+                .isEqualTo("Clothing, accessories, food");
+        assertThat(form.getShopInfoTranslations().get(1).getGuide()).isEqualTo("団体は要予約");
+        // 한국어 원본 입력은 예전처럼 shopInfo 로 돌아온다
+        assertThat(form.getShopInfo().getMainProducts()).isEqualTo("의류, 소품, 식품");
         // 다른 유형의 번역은 읽지 않는다
+        verify(activityInfoService, never()).getTranslationForms(DESTINATION_ID);
         verify(restaurantInfoService, never()).getTranslationForms(DESTINATION_ID);
-        verify(accommodationInfoService, never()).getTranslationForms(DESTINATION_ID);
     }
 
     private DestinationDetailDto detailDto() {
         Destination destination = new Destination();
         destination.setId(DESTINATION_ID);
-        destination.setType(DestinationType.ACTIVITY);
+        destination.setType(DestinationType.SHOP);
 
-        ActivityInfo info = new ActivityInfo();
+        ShopInfo info = new ShopInfo();
         info.setDestinationId(DESTINATION_ID);
-        info.setRequiredTime("약 2시간");
+        info.setMainProducts("의류, 소품, 식품");
 
         DestinationDetailDto dto = new DestinationDetailDto();
         dto.setDestination(destination);
-        dto.setActivityInfo(info);
+        dto.setShopInfo(info);
         return dto;
     }
 
-    private List<ActivityInfoTranslationForm> storedSlots() {
-        List<ActivityInfoTranslationForm> slots =
-                DestinationForm.newActivityInfoTranslationSlots();
-        slots.get(0).setRequiredTime("About 2 hours");
-        slots.get(1).setGuide("雨天中止");
+    private List<ShopInfoTranslationForm> storedSlots() {
+        List<ShopInfoTranslationForm> slots = DestinationForm.newShopInfoTranslationSlots();
+        slots.get(0).setMainProducts("Clothing, accessories, food");
+        slots.get(1).setGuide("団体は要予約");
         return slots;
     }
 }

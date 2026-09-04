@@ -8,6 +8,7 @@ import com.example.travlediary.service.category.CountryCategoryService;
 import com.example.travlediary.service.destination.DestinationService;
 import com.example.travlediary.service.destination.DestinationSaveOrchestrationService;
 import com.example.travlediary.service.info.AccommodationInfoService;
+import com.example.travlediary.service.info.ShopInfoService;
 import com.example.travlediary.service.info.ActivityInfoService;
 import com.example.travlediary.service.info.AttractionInfoService;
 import com.example.travlediary.service.info.RestaurantInfoService;
@@ -62,6 +63,8 @@ class AdminDestinationKtoSelectionControllerTest {
     private AccommodationInfoService accommodationInfoService;
     @Mock
     private ActivityInfoService activityInfoService;
+    @Mock
+    private ShopInfoService shopInfoService;
 
     private AdminDestinationController controller;
     private MockMvc mockMvc;
@@ -83,7 +86,8 @@ class AdminDestinationKtoSelectionControllerTest {
                 restaurantInfoService,
                 attractionInfoService,
                 accommodationInfoService,
-                activityInfoService
+                activityInfoService,
+                shopInfoService
         );
         authenticatedAdmin = mock(CustomUserDetails.class);
         lenient().when(authenticatedAdmin.getId()).thenReturn(7L);

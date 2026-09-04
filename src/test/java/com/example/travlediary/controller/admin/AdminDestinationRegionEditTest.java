@@ -13,6 +13,7 @@ import com.example.travlediary.service.info.AccommodationInfoService;
 import com.example.travlediary.service.info.ActivityInfoService;
 import com.example.travlediary.service.info.AttractionInfoService;
 import com.example.travlediary.service.info.RestaurantInfoService;
+import com.example.travlediary.service.info.ShopInfoService;
 import com.example.travlediary.service.destination.DestinationService;
 import com.example.travlediary.service.kto.KtoSelectedPhotoRequestParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -70,6 +71,8 @@ class AdminDestinationRegionEditTest {
     private AccommodationInfoService accommodationInfoService;
     @Mock
     private ActivityInfoService activityInfoService;
+    @Mock
+    private ShopInfoService shopInfoService;
 
     private MockMvc mockMvc;
 
@@ -89,7 +92,8 @@ class AdminDestinationRegionEditTest {
                 restaurantInfoService,
                 attractionInfoService,
                 accommodationInfoService,
-                activityInfoService
+                activityInfoService,
+                shopInfoService
         );
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setValidator(new SpringValidatorAdapter(

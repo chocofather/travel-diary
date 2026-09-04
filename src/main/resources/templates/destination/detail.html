@@ -220,7 +220,9 @@
                                     th:text="#{destination.detail.accommodation.breakfast}">조식 포함</dt>
                                 <dd class="info-item-value info-item-value-inline">
                                     <span th:if="${accommodationInfo.breakfastIncluded != null}"
-                                          th:text="${accommodationInfo.breakfastIncluded ? '포함' : '불포함'}">포함</span>
+                                          th:text="${accommodationInfo.breakfastIncluded}
+                                                   ? #{destination.detail.accommodation.breakfast.included}
+                                                   : #{destination.detail.accommodation.breakfast.notIncluded}">포함</span>
                                     <span th:if="${accommodationInfo.breakfastIncluded == null}">-</span>
                                 </dd>
                             </div>
@@ -238,7 +240,9 @@
                                     th:text="#{destination.detail.info.parking}">주차 가능</dt>
                                 <dd class="info-item-value info-item-value-inline">
                                     <span th:if="${accommodationInfo.parkingAvailable != null}"
-                                          th:text="${accommodationInfo.parkingAvailable ? '가능' : '불가'}">가능</span>
+                                          th:text="${accommodationInfo.parkingAvailable}
+                                                   ? #{destination.detail.value.available}
+                                                   : #{destination.detail.value.unavailable}">가능</span>
                                     <span th:if="${accommodationInfo.parkingAvailable == null}">-</span>
                                 </dd>
                             </div>
@@ -259,7 +263,9 @@
                                     th:text="#{destination.detail.accommodation.pets}">반려동물</dt>
                                 <dd class="info-item-value info-item-value-inline">
                                     <span th:if="${accommodationInfo.petAllowed != null}"
-                                          th:text="${accommodationInfo.petAllowed ? '가능' : '불가'}">가능</span>
+                                          th:text="${accommodationInfo.petAllowed}
+                                                   ? #{destination.detail.value.available}
+                                                   : #{destination.detail.value.unavailable}">가능</span>
                                     <span th:if="${accommodationInfo.petAllowed == null}">-</span>
                                 </dd>
                             </div>
@@ -533,7 +539,9 @@
                                     th:text="#{destination.detail.activity.reservation}">사전 예약</dt>
                                 <dd class="info-item-value info-item-value-inline">
                                     <span th:if="${activityInfo.reservation != null}"
-                                          th:text="${activityInfo.reservation ? '필요' : '불필요'}">필요</span>
+                                          th:text="${activityInfo.reservation}
+                                                   ? #{destination.detail.value.required}
+                                                   : #{destination.detail.value.notRequired}">필요</span>
                                     <span th:if="${activityInfo.reservation == null}">-</span>
                                 </dd>
                             </div>
@@ -551,7 +559,9 @@
                                     th:text="#{destination.detail.activity.equipment}">장비 대여/포함</dt>
                                 <dd class="info-item-value info-item-value-inline">
                                     <span th:if="${activityInfo.equipmentIncluded != null}"
-                                          th:text="${activityInfo.equipmentIncluded ? '포함' : '미포함'}">포함</span>
+                                          th:text="${activityInfo.equipmentIncluded}
+                                                   ? #{destination.detail.activity.equipment.included}
+                                                   : #{destination.detail.activity.equipment.notIncluded}">포함</span>
                                     <span th:if="${activityInfo.equipmentIncluded == null}">-</span>
                                 </dd>
                             </div>
@@ -569,7 +579,9 @@
                                     th:text="#{destination.detail.info.parking}">주차 가능</dt>
                                 <dd class="info-item-value info-item-value-inline">
                                     <span th:if="${activityInfo.parkingAvailable != null}"
-                                          th:text="${activityInfo.parkingAvailable ? '가능' : '불가'}">가능</span>
+                                          th:text="${activityInfo.parkingAvailable}
+                                                   ? #{destination.detail.value.available}
+                                                   : #{destination.detail.value.unavailable}">가능</span>
                                     <span th:if="${activityInfo.parkingAvailable == null}">-</span>
                                 </dd>
                             </div>
@@ -725,7 +737,9 @@
                                     th:text="#{destination.detail.info.parking}">주차 가능</dt>
                                 <dd class="info-item-value info-item-value-inline">
                                     <span th:if="${restaurantInfo.parkingAvailable != null}"
-                                          th:text="${restaurantInfo.parkingAvailable ? '가능' : '불가'}">가능</span>
+                                          th:text="${restaurantInfo.parkingAvailable}
+                                                   ? #{destination.detail.value.available}
+                                                   : #{destination.detail.value.unavailable}">가능</span>
                                     <span th:if="${restaurantInfo.parkingAvailable == null}">-</span>
                                 </dd>
                             </div>
@@ -746,7 +760,9 @@
                                     th:text="#{destination.detail.restaurant.pets}">반려동물 동반</dt>
                                 <dd class="info-item-value info-item-value-inline">
                                     <span th:if="${restaurantInfo.petAllowed != null}"
-                                          th:text="${restaurantInfo.petAllowed ? '가능' : '불가'}">가능</span>
+                                          th:text="${restaurantInfo.petAllowed}
+                                                   ? #{destination.detail.value.available}
+                                                   : #{destination.detail.value.unavailable}">가능</span>
                                     <span th:if="${restaurantInfo.petAllowed == null}">-</span>
                                 </dd>
                             </div>
@@ -779,7 +795,9 @@
                                     th:text="#{destination.detail.restaurant.takeout}">테이크아웃</dt>
                                 <dd class="info-item-value info-item-value-inline">
                                     <span th:if="${restaurantInfo.takeoutAvailable != null}"
-                                          th:text="${restaurantInfo.takeoutAvailable ? '가능' : '불가'}">가능</span>
+                                          th:text="${restaurantInfo.takeoutAvailable}
+                                                   ? #{destination.detail.value.available}
+                                                   : #{destination.detail.value.unavailable}">가능</span>
                                     <span th:if="${restaurantInfo.takeoutAvailable == null}">-</span>
                                 </dd>
                             </div>
@@ -798,7 +816,9 @@
                                     th:text="#{destination.detail.restaurant.delivery}">배달</dt>
                                 <dd class="info-item-value info-item-value-inline">
                                     <span th:if="${restaurantInfo.deliveryAvailable != null}"
-                                          th:text="${restaurantInfo.deliveryAvailable ? '가능' : '불가'}">가능</span>
+                                          th:text="${restaurantInfo.deliveryAvailable}
+                                                   ? #{destination.detail.value.available}
+                                                   : #{destination.detail.value.unavailable}">가능</span>
                                     <span th:if="${restaurantInfo.deliveryAvailable == null}">-</span>
                                 </dd>
                             </div>
@@ -816,7 +836,9 @@
                                     th:text="#{destination.detail.restaurant.reservation}">예약</dt>
                                 <dd class="info-item-value info-item-value-inline">
                                     <span th:if="${restaurantInfo.reservation != null}"
-                                          th:text="${restaurantInfo.reservation ? '가능' : '불가'}">가능</span>
+                                          th:text="${restaurantInfo.reservation}
+                                                   ? #{destination.detail.value.available}
+                                                   : #{destination.detail.value.unavailable}">가능</span>
                                     <span th:if="${restaurantInfo.reservation == null}">-</span>
                                 </dd>
                             </div>
@@ -944,7 +966,9 @@
                                     th:text="#{destination.detail.info.parking}">주차 가능</dt>
                                 <dd class="info-item-value info-item-value-inline">
                                     <span th:if="${shopInfo.parkingAvailable != null}"
-                                          th:text="${shopInfo.parkingAvailable ? '가능' : '불가'}">가능</span>
+                                          th:text="${shopInfo.parkingAvailable}
+                                                   ? #{destination.detail.value.available}
+                                                   : #{destination.detail.value.unavailable}">가능</span>
                                     <span th:if="${shopInfo.parkingAvailable == null}">-</span>
                                 </dd>
                             </div>

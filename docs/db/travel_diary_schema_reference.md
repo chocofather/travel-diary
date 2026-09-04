@@ -1492,6 +1492,29 @@ CREATE TABLE `shop_info` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `shop_info_translations`
+--
+-- 쇼핑 상세정보의 언어별 자유 텍스트. 생성 SQL 은 docs/db/shop_info_translations.sql 참고.
+-- 주차 가능 여부(Boolean), 연락처, 홈페이지처럼 언어와 무관한 값은 담지 않는다.
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `shop_info_translations` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `destination_id` bigint NOT NULL,
+  `language_code` varchar(10) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `closed_days` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `opening_hours` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `main_products` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `guide` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_shop_info_translation` (`destination_id`,`language_code`),
+  KEY `idx_shop_info_translation_lang` (`language_code`,`destination_id`),
+  CONSTRAINT `fk_shop_info_translation` FOREIGN KEY (`destination_id`) REFERENCES `shop_info` (`destination_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `travel_info`
 --
 

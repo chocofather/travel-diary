@@ -35,7 +35,8 @@ class AdminTranslationTabsUiContractTest {
                 .contains("th:hidden=\"${!slot.first}\"");
         // 탭과 패널은 같은 슬롯 목록을 돈다 (언어 수를 화면에 박지 않는다)
         for (String slots : new String[]{"restaurantInfoTranslations", "attractionInfoTranslations",
-                "accommodationInfoTranslations", "activityInfoTranslations"}) {
+                "accommodationInfoTranslations", "activityInfoTranslations",
+                "shopInfoTranslations"}) {
             assertThat(count(fragment, "th:each=\"translation, slot : *{" + slots + "}\""))
                     .as(slots).isEqualTo(2);
         }

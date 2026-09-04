@@ -5,6 +5,7 @@ import com.example.travlediary.service.category.CategoryService;
 import com.example.travlediary.service.category.CountryCategoryService;
 import com.example.travlediary.service.destination.DestinationSaveOrchestrationService;
 import com.example.travlediary.service.info.AccommodationInfoService;
+import com.example.travlediary.service.info.ShopInfoService;
 import com.example.travlediary.service.info.ActivityInfoService;
 import com.example.travlediary.service.info.AttractionInfoService;
 import com.example.travlediary.service.info.RestaurantInfoService;
@@ -57,6 +58,8 @@ class AdminDestinationListSearchTest {
     private AccommodationInfoService accommodationInfoService;
     @Mock
     private ActivityInfoService activityInfoService;
+    @Mock
+    private ShopInfoService shopInfoService;
 
     private AdminDestinationController controller;
 
@@ -74,7 +77,8 @@ class AdminDestinationListSearchTest {
                 restaurantInfoService,
                 attractionInfoService,
                 accommodationInfoService,
-                activityInfoService);
+                activityInfoService,
+                shopInfoService);
 
         when(countryCategoryService.getKoreaRootId()).thenReturn(KOREA_ID);
         when(countryCategoryService.getAllRegionIdsUnder(KOREA_ID)).thenReturn(List.of(KOREA_ID, 10L));

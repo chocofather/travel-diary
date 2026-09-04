@@ -16,6 +16,7 @@ import com.example.travlediary.service.info.AccommodationInfoService;
 import com.example.travlediary.service.info.ActivityInfoService;
 import com.example.travlediary.service.info.AttractionInfoService;
 import com.example.travlediary.service.info.RestaurantInfoService;
+import com.example.travlediary.service.info.ShopInfoService;
 import com.example.travlediary.service.kto.InvalidKtoSelectedPhotosException;
 import com.example.travlediary.service.kto.KtoSelectedPhotoRequestParser;
 import jakarta.servlet.http.HttpServletResponse;
@@ -49,6 +50,7 @@ public class AdminDestinationController {
     private final AttractionInfoService attractionInfoService;
     private final AccommodationInfoService accommodationInfoService;
     private final ActivityInfoService activityInfoService;
+    private final ShopInfoService shopInfoService;
 
     public AdminDestinationController(DestinationService destinationService,
                                       CategoryService categoryService,
@@ -59,7 +61,8 @@ public class AdminDestinationController {
                                       RestaurantInfoService restaurantInfoService,
                                       AttractionInfoService attractionInfoService,
                                       AccommodationInfoService accommodationInfoService,
-                                      ActivityInfoService activityInfoService) {
+                                      ActivityInfoService activityInfoService,
+                                      ShopInfoService shopInfoService) {
         this.destinationService = destinationService;
         this.categoryService = categoryService;
         this.amenityService = amenityService;
@@ -70,6 +73,7 @@ public class AdminDestinationController {
         this.attractionInfoService = attractionInfoService;
         this.accommodationInfoService = accommodationInfoService;
         this.activityInfoService = activityInfoService;
+        this.shopInfoService = shopInfoService;
     }
 
     // 여행지 등록
@@ -336,6 +340,9 @@ public class AdminDestinationController {
         }
         if (detailDto != null && detailDto.getActivityInfo() != null) {
             form.setActivityInfoTranslations(activityInfoService.getTranslationForms(id));
+        }
+        if (detailDto != null && detailDto.getShopInfo() != null) {
+            form.setShopInfoTranslations(shopInfoService.getTranslationForms(id));
         }
 
         prepareEditFormModel(model, form, lang);

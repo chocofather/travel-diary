@@ -68,6 +68,13 @@ public class DestinationForm {
     private List<ActivityInfoTranslationForm> activityInfoTranslations =
             newActivityInfoTranslationSlots();
 
+    /**
+     * 쇼핑 상세정보의 번역 입력 슬롯.
+     * 한국어는 {@link #shopInfo} 입력이 그대로 base 이자 ko 번역이 된다.
+     */
+    private List<ShopInfoTranslationForm> shopInfoTranslations =
+            newShopInfoTranslationSlots();
+
     /** 슬롯 순서를 화면과 저장 로직이 함께 쓰는 기준. 언어 코드는 사용자가 정하지 않는다. */
     public static List<RestaurantInfoTranslationForm> newRestaurantInfoTranslationSlots() {
         List<RestaurantInfoTranslationForm> slots = new ArrayList<>();
@@ -97,6 +104,14 @@ public class DestinationForm {
         List<ActivityInfoTranslationForm> slots = new ArrayList<>();
         for (String languageCode : SUBTYPE_TRANSLATION_LANGUAGES) {
             slots.add(new ActivityInfoTranslationForm(languageCode));
+        }
+        return slots;
+    }
+
+    public static List<ShopInfoTranslationForm> newShopInfoTranslationSlots() {
+        List<ShopInfoTranslationForm> slots = new ArrayList<>();
+        for (String languageCode : SUBTYPE_TRANSLATION_LANGUAGES) {
+            slots.add(new ShopInfoTranslationForm(languageCode));
         }
         return slots;
     }

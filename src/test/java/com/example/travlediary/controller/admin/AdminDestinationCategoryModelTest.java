@@ -7,6 +7,7 @@ import com.example.travlediary.service.category.CategoryService;
 import com.example.travlediary.service.category.CountryCategoryService;
 import com.example.travlediary.service.destination.DestinationSaveOrchestrationService;
 import com.example.travlediary.service.info.AccommodationInfoService;
+import com.example.travlediary.service.info.ShopInfoService;
 import com.example.travlediary.service.info.ActivityInfoService;
 import com.example.travlediary.service.info.AttractionInfoService;
 import com.example.travlediary.service.info.RestaurantInfoService;
@@ -55,6 +56,8 @@ class AdminDestinationCategoryModelTest {
     private AccommodationInfoService accommodationInfoService;
     @Mock
     private ActivityInfoService activityInfoService;
+    @Mock
+    private ShopInfoService shopInfoService;
 
     private AdminDestinationController controller;
 
@@ -72,7 +75,8 @@ class AdminDestinationCategoryModelTest {
                 restaurantInfoService,
                 attractionInfoService,
                 accommodationInfoService,
-                activityInfoService);
+                activityInfoService,
+                shopInfoService);
 
         when(categoryService.getAll())
                 .thenReturn(List.of(category(1L, "역사유적"), category(9L, "미분류 카테고리")));

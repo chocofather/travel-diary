@@ -521,6 +521,9 @@
           <textarea th:field="*{shopInfo.guide}" placeholder="기타 안내"></textarea>
         </label>
       </div>
+      <!-- 👇 언어별 상세정보(언어 탭). 위 입력값이 한국어(ko)로 함께 저장된다. -->
+      <th:block th:replace="~{admin/destinations/fragments/translation-tabs
+                              :: shopTranslations}"></th:block>
       <!-- Amenity (쇼핑용) -->
       <div class="admin-type-field-wide admin-amenity-field"
            data-amenity-field data-amenity-default-filter="SHOP">

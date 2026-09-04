@@ -6,6 +6,7 @@ import com.example.travlediary.service.category.CountryCategoryService;
 import com.example.travlediary.service.destination.DestinationNotFoundException;
 import com.example.travlediary.service.destination.DestinationSaveOrchestrationService;
 import com.example.travlediary.service.info.AccommodationInfoService;
+import com.example.travlediary.service.info.ShopInfoService;
 import com.example.travlediary.service.info.ActivityInfoService;
 import com.example.travlediary.service.info.AttractionInfoService;
 import com.example.travlediary.service.info.RestaurantInfoService;
@@ -59,6 +60,8 @@ class AdminDestinationUpdateNotFoundTest {
     private AccommodationInfoService accommodationInfoService;
     @Mock
     private ActivityInfoService activityInfoService;
+    @Mock
+    private ShopInfoService shopInfoService;
 
     private MockMvc mockMvc;
 
@@ -76,7 +79,8 @@ class AdminDestinationUpdateNotFoundTest {
                 restaurantInfoService,
                 attractionInfoService,
                 accommodationInfoService,
-                activityInfoService);
+                activityInfoService,
+                shopInfoService);
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setValidator(new SpringValidatorAdapter(
                         Validation.buildDefaultValidatorFactory().getValidator()))

@@ -13,6 +13,7 @@ import com.example.travlediary.service.info.AccommodationInfoService;
 import com.example.travlediary.service.info.ActivityInfoService;
 import com.example.travlediary.service.info.AttractionInfoService;
 import com.example.travlediary.service.info.RestaurantInfoService;
+import com.example.travlediary.service.info.ShopInfoService;
 import com.example.travlediary.service.kto.KtoSelectedPhotoRequestParser;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
@@ -52,6 +53,7 @@ class AdminDestinationTranslationTabsRenderingTest {
     @MockitoBean private AttractionInfoService attractionInfoService;
     @MockitoBean private AccommodationInfoService accommodationInfoService;
     @MockitoBean private ActivityInfoService activityInfoService;
+    @MockitoBean private ShopInfoService shopInfoService;
     @MockitoBean private CustomLoginSuccessHandler customLoginSuccessHandler;
     @MockitoBean private CustomLogoutSuccessHandler customLogoutSuccessHandler;
     @MockitoBean private UserMapper userMapper;
@@ -64,9 +66,9 @@ class AdminDestinationTranslationTabsRenderingTest {
                 .andReturn().getResponse().getContentAsString();
         var document = Jsoup.parse(body);
 
-        // 기본정보(여행지명 등)와 관광지·숙소·체험/액티비티·음식점/카페가 같은 탭 구조를 하나씩 쓴다
+        // 기본정보(여행지명 등)와 유형별 상세정보 다섯 가지가 같은 탭 구조를 하나씩 쓴다
         var groups = document.select("[data-translation-tabs]");
-        assertThat(groups).hasSize(5);
+        assertThat(groups).hasSize(6);
 
         for (Element group : groups) {
             Element heading = group.selectFirst("h4") != null
@@ -100,7 +102,8 @@ class AdminDestinationTranslationTabsRenderingTest {
         }
         assertThat(groups.select("h3, h4").eachText())
                 .containsExactly("번역", "관광지 상세 정보 번역", "숙소 상세 정보 번역",
-                        "음식점/카페 상세 정보 번역", "체험/액티비티 상세 정보 번역");
+                        "음식점/카페 상세 정보 번역", "체험/액티비티 상세 정보 번역",
+                        "쇼핑 상세 정보 번역");
     }
 
     @Test
@@ -167,7 +170,21 @@ class AdminDestinationTranslationTabsRenderingTest {
                 String name = "activityInfoTranslations[" + index + "]." + field;
                 assertThat(document.select("[name='" + name + "']")).as(name).hasSize(1);
             }
+            for (String field : List.of("languageCode", "closedDays", "openingHours",
+                    "mainProducts", "guide")) {
+                String name = "shopInfoTranslations[" + index + "]." + field;
+                assertThat(document.select("[name='" + name + "']")).as(name).hasSize(1);
+            }
         }
+        assertThat(document.select("input[name='shopInfoTranslations[0].languageCode']")
+                .attr("value")).isEqualTo("en");
+        assertThat(document.select("input[name='shopInfoTranslations[3].languageCode']")
+                .attr("value")).isEqualTo("zh-TW");
+        // 쇼핑 원본(한국어)과 번역하지 않는 값은 그대로다
+        assertThat(document.select("[name='shopInfo.mainProducts']")).hasSize(1);
+        assertThat(document.select("[name='shopInfo.parkingAvailable']")).isNotEmpty();
+        assertThat(document.select("[name='shopInfo.contactNumber']")).hasSize(1);
+        assertThat(document.select("[name='shopInfo.homepageUrl']")).hasSize(1);
         assertThat(document.select("input[name='activityInfoTranslations[0].languageCode']")
                 .attr("value")).isEqualTo("en");
         assertThat(document.select("input[name='activityInfoTranslations[3].languageCode']")
