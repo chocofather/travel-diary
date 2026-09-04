@@ -9,6 +9,7 @@ import com.example.travlediary.service.amenity.AmenityService;
 import com.example.travlediary.service.category.CategoryService;
 import com.example.travlediary.service.category.CountryCategoryService;
 import com.example.travlediary.service.destination.DestinationSaveOrchestrationService;
+import com.example.travlediary.service.info.AccommodationInfoService;
 import com.example.travlediary.service.info.AttractionInfoService;
 import com.example.travlediary.service.info.RestaurantInfoService;
 import com.example.travlediary.service.destination.DestinationService;
@@ -64,6 +65,8 @@ class AdminDestinationRegionEditTest {
     private RestaurantInfoService restaurantInfoService;
     @Mock
     private AttractionInfoService attractionInfoService;
+    @Mock
+    private AccommodationInfoService accommodationInfoService;
 
     private MockMvc mockMvc;
 
@@ -81,7 +84,8 @@ class AdminDestinationRegionEditTest {
                 parser,
                 destinationSaveOrchestrationService,
                 restaurantInfoService,
-                attractionInfoService
+                attractionInfoService,
+                accommodationInfoService
         );
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setValidator(new SpringValidatorAdapter(

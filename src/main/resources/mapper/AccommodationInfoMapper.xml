@@ -16,6 +16,43 @@
         SELECT * FROM accommodation_info WHERE destination_id = #{destinationId}
     </select>
 
+    <!-- 언어별 자유 텍스트. 화면에 쓸 값은 서비스가 고른다. (필드마다 따로 대체) -->
+    <select id="findTranslationsByDestinationId"
+            resultType="com.example.travlediary.model.AccommodationInfoTranslation">
+        SELECT id,
+               destination_id,
+               language_code,
+               room_type,
+               etc
+        FROM accommodation_info_translations
+        WHERE destination_id = #{destinationId}
+        ORDER BY language_code ASC, id ASC
+    </select>
+
+    <!-- 관리자 저장. 언어 한 줄이 단위이며 UNIQUE(destination_id, language_code) 를 따른다. -->
+    <insert id="insertTranslation"
+            parameterType="com.example.travlediary.model.AccommodationInfoTranslation">
+        INSERT INTO accommodation_info_translations
+            (destination_id, language_code, room_type, etc)
+        VALUES
+            (#{destinationId}, #{languageCode}, #{roomType}, #{etc})
+    </insert>
+
+    <update id="updateTranslation"
+            parameterType="com.example.travlediary.model.AccommodationInfoTranslation">
+        UPDATE accommodation_info_translations
+        SET room_type = #{roomType},
+            etc = #{etc}
+        WHERE destination_id = #{destinationId}
+          AND language_code = #{languageCode}
+    </update>
+
+    <delete id="deleteTranslation">
+        DELETE FROM accommodation_info_translations
+        WHERE destination_id = #{destinationId}
+          AND language_code = #{languageCode}
+    </delete>
+
     <update id="update" parameterType="com.example.travlediary.model.AccommodationInfo">
         UPDATE accommodation_info
         SET

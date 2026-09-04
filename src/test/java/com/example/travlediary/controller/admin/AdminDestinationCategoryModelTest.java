@@ -6,6 +6,7 @@ import com.example.travlediary.service.amenity.AmenityService;
 import com.example.travlediary.service.category.CategoryService;
 import com.example.travlediary.service.category.CountryCategoryService;
 import com.example.travlediary.service.destination.DestinationSaveOrchestrationService;
+import com.example.travlediary.service.info.AccommodationInfoService;
 import com.example.travlediary.service.info.AttractionInfoService;
 import com.example.travlediary.service.info.RestaurantInfoService;
 import com.example.travlediary.service.destination.DestinationService;
@@ -49,6 +50,8 @@ class AdminDestinationCategoryModelTest {
     private RestaurantInfoService restaurantInfoService;
     @Mock
     private AttractionInfoService attractionInfoService;
+    @Mock
+    private AccommodationInfoService accommodationInfoService;
 
     private AdminDestinationController controller;
 
@@ -64,7 +67,8 @@ class AdminDestinationCategoryModelTest {
                         Validation.buildDefaultValidatorFactory().getValidator()),
                 destinationSaveOrchestrationService,
                 restaurantInfoService,
-                attractionInfoService);
+                attractionInfoService,
+                accommodationInfoService);
 
         when(categoryService.getAll())
                 .thenReturn(List.of(category(1L, "역사유적"), category(9L, "미분류 카테고리")));

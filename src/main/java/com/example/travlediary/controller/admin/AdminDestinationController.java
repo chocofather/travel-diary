@@ -12,6 +12,7 @@ import com.example.travlediary.service.destination.DestinationNotFoundException;
 import com.example.travlediary.service.destination.DestinationService;
 import com.example.travlediary.service.destination.DestinationSaveOrchestrationService;
 import com.example.travlediary.service.file.UnsupportedImageFormatException;
+import com.example.travlediary.service.info.AccommodationInfoService;
 import com.example.travlediary.service.info.AttractionInfoService;
 import com.example.travlediary.service.info.RestaurantInfoService;
 import com.example.travlediary.service.kto.InvalidKtoSelectedPhotosException;
@@ -45,6 +46,7 @@ public class AdminDestinationController {
     /** 유형별 상세정보의 언어별 입력값을 수정 화면에 복원할 때만 쓴다. */
     private final RestaurantInfoService restaurantInfoService;
     private final AttractionInfoService attractionInfoService;
+    private final AccommodationInfoService accommodationInfoService;
 
     public AdminDestinationController(DestinationService destinationService,
                                       CategoryService categoryService,
@@ -53,7 +55,8 @@ public class AdminDestinationController {
                                       KtoSelectedPhotoRequestParser ktoSelectedPhotoRequestParser,
                                       DestinationSaveOrchestrationService destinationSaveOrchestrationService,
                                       RestaurantInfoService restaurantInfoService,
-                                      AttractionInfoService attractionInfoService) {
+                                      AttractionInfoService attractionInfoService,
+                                      AccommodationInfoService accommodationInfoService) {
         this.destinationService = destinationService;
         this.categoryService = categoryService;
         this.amenityService = amenityService;
@@ -62,6 +65,7 @@ public class AdminDestinationController {
         this.destinationSaveOrchestrationService = destinationSaveOrchestrationService;
         this.restaurantInfoService = restaurantInfoService;
         this.attractionInfoService = attractionInfoService;
+        this.accommodationInfoService = accommodationInfoService;
     }
 
     // 여행지 등록
@@ -322,6 +326,9 @@ public class AdminDestinationController {
         }
         if (detailDto != null && detailDto.getAttractionInfo() != null) {
             form.setAttractionInfoTranslations(attractionInfoService.getTranslationForms(id));
+        }
+        if (detailDto != null && detailDto.getAccommodationInfo() != null) {
+            form.setAccommodationInfoTranslations(accommodationInfoService.getTranslationForms(id));
         }
 
         prepareEditFormModel(model, form, lang);

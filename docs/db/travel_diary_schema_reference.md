@@ -56,6 +56,27 @@ CREATE TABLE `accommodation_info` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `accommodation_info_translations`
+--
+-- 숙박 상세정보의 언어별 자유 텍스트. 생성 SQL 은 docs/db/accommodation_info_translations.sql 참고.
+-- 체크인/체크아웃 시각, 객실 수, 등급, 여부 값, 연락처, 홈페이지처럼 언어와 무관한 값은 담지 않는다.
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `accommodation_info_translations` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `destination_id` bigint NOT NULL,
+  `language_code` varchar(10) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `room_type` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `etc` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_accommodation_info_translation` (`destination_id`,`language_code`),
+  KEY `idx_accommodation_info_translation_lang` (`language_code`,`destination_id`),
+  CONSTRAINT `fk_accommodation_info_translation` FOREIGN KEY (`destination_id`) REFERENCES `accommodation_info` (`destination_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `activity_amenities`
 --
 

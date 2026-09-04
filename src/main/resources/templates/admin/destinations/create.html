@@ -337,6 +337,9 @@
         <textarea th:field="*{accommodationInfo.etc}" placeholder="기타 안내사항"></textarea>
       </label>
     </div>
+    <!-- 👇 언어별 상세정보(언어 탭). 위 입력값이 한국어(ko)로 함께 저장된다. -->
+    <th:block th:replace="~{admin/destinations/fragments/translation-tabs
+                            :: accommodationTranslations}"></th:block>
     <!-- 👇 숙소 편의시설 (amenities) -->
     <div class="admin-type-field-wide admin-amenity-field"
          data-amenity-field data-amenity-default-filter="ACCOMMODATION">

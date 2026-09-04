@@ -9,6 +9,50 @@
   ktoAutofill 이 true 인 화면(등록)만 영문 TourAPI 자동입력 훅을 단다.
   숨긴 언어의 입력값도 폼에는 그대로 실려 저장된다. (hidden 만 걸고 지우지 않는다)
 -->
+<th:block th:fragment="accommodationTranslations">
+  <div class="admin-type-field-wide admin-translation-tabs" data-translation-tabs>
+    <h4>숙소 상세 정보 번역</h4>
+    <p class="admin-help-text">
+      위에 입력한 값이 한국어로 함께 저장됩니다. 비워 둔 언어는 저장하지 않습니다.
+    </p>
+
+    <div class="admin-translation-tablist" role="tablist" aria-label="번역 언어 선택">
+      <button type="button" role="tab" class="admin-translation-tab"
+              th:each="translation, slot : *{accommodationInfoTranslations}"
+              th:classappend="${slot.first} ? ' is-active'"
+              th:attr="data-translation-tab=${translation.languageCode},
+                       aria-selected=${slot.first},
+                       title=${restaurantTranslationLabels.get(translation.languageCode)}"
+              th:text="${translationTabLabels.get(translation.languageCode)}
+                       ?: translation.languageCode">English</button>
+    </div>
+
+    <div class="admin-translation-panel" role="tabpanel"
+         th:each="translation, slot : *{accommodationInfoTranslations}"
+         th:hidden="${!slot.first}"
+         th:attr="data-translation-panel=${translation.languageCode},
+                  aria-label=${restaurantTranslationLabels.get(translation.languageCode)}">
+      <input type="hidden"
+             th:field="*{accommodationInfoTranslations[__${slot.index}__].languageCode}">
+      <div class="admin-type-fields-grid">
+        <div>
+          <label>객실 유형
+            <input type="text"
+                   th:field="*{accommodationInfoTranslations[__${slot.index}__].roomType}"
+                   maxlength="255">
+          </label>
+        </div>
+        <div class="admin-type-field-wide">
+          <label>기타 안내사항
+            <textarea th:field="*{accommodationInfoTranslations[__${slot.index}__].etc}"
+                      maxlength="255"></textarea>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+</th:block>
+
 <th:block th:fragment="attractionTranslations">
   <div class="admin-type-field-wide admin-translation-tabs" data-translation-tabs>
     <h4>관광지 상세 정보 번역</h4>

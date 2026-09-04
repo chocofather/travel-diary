@@ -9,6 +9,7 @@ import com.example.travlediary.service.category.CategoryService;
 import com.example.travlediary.service.category.CountryCategoryService;
 import com.example.travlediary.service.destination.DestinationSaveOrchestrationService;
 import com.example.travlediary.service.destination.DestinationService;
+import com.example.travlediary.service.info.AccommodationInfoService;
 import com.example.travlediary.service.info.AttractionInfoService;
 import com.example.travlediary.service.info.RestaurantInfoService;
 import com.example.travlediary.service.kto.KtoSelectedPhotoRequestParser;
@@ -48,6 +49,7 @@ class AdminDestinationTranslationTabsRenderingTest {
     @MockitoBean private DestinationSaveOrchestrationService destinationSaveOrchestrationService;
     @MockitoBean private RestaurantInfoService restaurantInfoService;
     @MockitoBean private AttractionInfoService attractionInfoService;
+    @MockitoBean private AccommodationInfoService accommodationInfoService;
     @MockitoBean private CustomLoginSuccessHandler customLoginSuccessHandler;
     @MockitoBean private CustomLogoutSuccessHandler customLogoutSuccessHandler;
     @MockitoBean private UserMapper userMapper;
@@ -60,9 +62,9 @@ class AdminDestinationTranslationTabsRenderingTest {
                 .andReturn().getResponse().getContentAsString();
         var document = Jsoup.parse(body);
 
-        // 관광지와 음식점/카페가 같은 탭 구조를 하나씩 쓴다
+        // 관광지·숙소·음식점/카페가 같은 탭 구조를 하나씩 쓴다
         var groups = document.select("[data-translation-tabs]");
-        assertThat(groups).hasSize(2);
+        assertThat(groups).hasSize(3);
 
         for (Element group : groups) {
             String label = group.selectFirst("h4").text();
@@ -91,7 +93,8 @@ class AdminDestinationTranslationTabsRenderingTest {
             }
         }
         assertThat(groups.select("h4").eachText())
-                .containsExactly("관광지 상세 정보 번역", "음식점/카페 상세 정보 번역");
+                .containsExactly("관광지 상세 정보 번역", "숙소 상세 정보 번역",
+                        "음식점/카페 상세 정보 번역");
     }
 
     @Test
@@ -113,7 +116,16 @@ class AdminDestinationTranslationTabsRenderingTest {
                 String name = "attractionInfoTranslations[" + index + "]." + field;
                 assertThat(document.select("[name='" + name + "']")).as(name).hasSize(1);
             }
+            for (String field : List.of("languageCode", "roomType", "etc")) {
+                String name = "accommodationInfoTranslations[" + index + "]." + field;
+                assertThat(document.select("[name='" + name + "']")).as(name).hasSize(1);
+            }
         }
+        // 숙소 원본(한국어)과 번역하지 않는 값은 그대로다
+        assertThat(document.select("[name='accommodationInfo.roomType']")).hasSize(1);
+        assertThat(document.select("[name='accommodationInfo.checkinTime']")).hasSize(1);
+        assertThat(document.select("[name='accommodationInfo.roomCount']")).hasSize(1);
+        assertThat(document.select("[name='accommodationInfo.contactNumber']")).hasSize(1);
         assertThat(document.select("input[name='attractionInfoTranslations[0].languageCode']")
                 .attr("value")).isEqualTo("en");
         assertThat(document.select("input[name='attractionInfoTranslations[3].languageCode']")
