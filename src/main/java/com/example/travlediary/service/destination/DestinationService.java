@@ -102,6 +102,9 @@ public class DestinationService {
                 if (form.getActivityInfo() != null) {
                     form.getActivityInfo().setDestinationId(destinationId);
                     activityInfoService.save(form.getActivityInfo());
+                    // 한국어 입력은 원본이자 ko 번역이 되고, 나머지 언어는 슬롯 값으로 저장된다.
+                    activityInfoService.saveTranslations(destinationId,
+                            form.getActivityInfo(), form.getActivityInfoTranslations());
                 }
                 break;
             case SHOP:
@@ -224,7 +227,9 @@ public class DestinationService {
                         amenityService.getRestaurantAmenities(id, requestedLanguage));
                 break;
             case ACTIVITY:
-                dto.setActivityInfo(activityInfoService.findByDestinationId(id));
+                dto.setActivityInfo(localizeSubtypeInfo
+                        ? activityInfoService.findLocalizedByDestinationId(id, requestedLanguage)
+                        : activityInfoService.findByDestinationId(id));
                 dto.setActivityAmenities(
                         amenityService.getActivityAmenities(id, requestedLanguage));
                 break;
@@ -537,6 +542,8 @@ public class DestinationService {
                 if (form.getActivityInfo() != null) {
                     form.getActivityInfo().setDestinationId(destinationId);
                     activityInfoService.update(form.getActivityInfo());
+                    activityInfoService.saveTranslations(destinationId,
+                            form.getActivityInfo(), form.getActivityInfoTranslations());
                 }
                 break;
             case SHOP:

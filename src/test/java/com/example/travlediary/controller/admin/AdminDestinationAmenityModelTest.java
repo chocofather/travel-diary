@@ -7,6 +7,7 @@ import com.example.travlediary.service.category.CategoryService;
 import com.example.travlediary.service.category.CountryCategoryService;
 import com.example.travlediary.service.destination.DestinationSaveOrchestrationService;
 import com.example.travlediary.service.info.AccommodationInfoService;
+import com.example.travlediary.service.info.ActivityInfoService;
 import com.example.travlediary.service.info.AttractionInfoService;
 import com.example.travlediary.service.info.RestaurantInfoService;
 import com.example.travlediary.service.destination.DestinationService;
@@ -52,6 +53,8 @@ class AdminDestinationAmenityModelTest {
     private AttractionInfoService attractionInfoService;
     @Mock
     private AccommodationInfoService accommodationInfoService;
+    @Mock
+    private ActivityInfoService activityInfoService;
 
     private AdminDestinationController controller;
 
@@ -68,7 +71,8 @@ class AdminDestinationAmenityModelTest {
                 destinationSaveOrchestrationService,
                 restaurantInfoService,
                 attractionInfoService,
-                accommodationInfoService);
+                accommodationInfoService,
+                activityInfoService);
 
         when(amenityService.getAmenityTranslationsByDestinationTypes("ko", DestinationType.ATTRACTION))
                 .thenReturn(List.of(translation(1, "관광지 편의시설")));

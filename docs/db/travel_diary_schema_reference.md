@@ -116,6 +116,30 @@ CREATE TABLE `activity_info` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `activity_info_translations`
+--
+-- 체험/액티비티 상세정보의 언어별 자유 텍스트. 생성 SQL 은 docs/db/activity_info_translations.sql 참고.
+-- 사전 예약·장비 포함·주차 여부, 연락처, 홈페이지처럼 언어와 무관한 값은 담지 않는다.
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `activity_info_translations` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `destination_id` bigint NOT NULL,
+  `language_code` varchar(10) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `opening_hours` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `required_time` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `admission_fee` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  `age_limit` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `guide` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_activity_info_translation` (`destination_id`,`language_code`),
+  KEY `idx_activity_info_translation_lang` (`language_code`,`destination_id`),
+  CONSTRAINT `fk_activity_info_translation` FOREIGN KEY (`destination_id`) REFERENCES `activity_info` (`destination_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `amenities`
 --
 -- `icon_url`은 편의시설 아이콘의 실제 웹 경로다.

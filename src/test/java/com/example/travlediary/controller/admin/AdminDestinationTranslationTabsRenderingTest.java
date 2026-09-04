@@ -10,6 +10,7 @@ import com.example.travlediary.service.category.CountryCategoryService;
 import com.example.travlediary.service.destination.DestinationSaveOrchestrationService;
 import com.example.travlediary.service.destination.DestinationService;
 import com.example.travlediary.service.info.AccommodationInfoService;
+import com.example.travlediary.service.info.ActivityInfoService;
 import com.example.travlediary.service.info.AttractionInfoService;
 import com.example.travlediary.service.info.RestaurantInfoService;
 import com.example.travlediary.service.kto.KtoSelectedPhotoRequestParser;
@@ -50,21 +51,22 @@ class AdminDestinationTranslationTabsRenderingTest {
     @MockitoBean private RestaurantInfoService restaurantInfoService;
     @MockitoBean private AttractionInfoService attractionInfoService;
     @MockitoBean private AccommodationInfoService accommodationInfoService;
+    @MockitoBean private ActivityInfoService activityInfoService;
     @MockitoBean private CustomLoginSuccessHandler customLoginSuccessHandler;
     @MockitoBean private CustomLogoutSuccessHandler customLogoutSuccessHandler;
     @MockitoBean private UserMapper userMapper;
 
     @Test
-    void theCreateFormRendersFourLanguageTabsWithOnlyEnglishOpen() throws Exception {
+    void everyTabGroupRendersFourLanguagesWithOnlyEnglishOpen() throws Exception {
         String body = mockMvc.perform(get("/admin/destinations/create")
                         .with(user("admin").roles("ADMIN")))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
         var document = Jsoup.parse(body);
 
-        // 기본정보(여행지명 등)와 관광지·숙소·음식점/카페가 같은 탭 구조를 하나씩 쓴다
+        // 기본정보(여행지명 등)와 관광지·숙소·체험/액티비티·음식점/카페가 같은 탭 구조를 하나씩 쓴다
         var groups = document.select("[data-translation-tabs]");
-        assertThat(groups).hasSize(4);
+        assertThat(groups).hasSize(5);
 
         for (Element group : groups) {
             Element heading = group.selectFirst("h4") != null
@@ -98,7 +100,7 @@ class AdminDestinationTranslationTabsRenderingTest {
         }
         assertThat(groups.select("h3, h4").eachText())
                 .containsExactly("번역", "관광지 상세 정보 번역", "숙소 상세 정보 번역",
-                        "음식점/카페 상세 정보 번역");
+                        "음식점/카페 상세 정보 번역", "체험/액티비티 상세 정보 번역");
     }
 
     @Test
@@ -160,7 +162,23 @@ class AdminDestinationTranslationTabsRenderingTest {
                 String name = "accommodationInfoTranslations[" + index + "]." + field;
                 assertThat(document.select("[name='" + name + "']")).as(name).hasSize(1);
             }
+            for (String field : List.of("languageCode", "openingHours", "requiredTime",
+                    "admissionFee", "ageLimit", "guide")) {
+                String name = "activityInfoTranslations[" + index + "]." + field;
+                assertThat(document.select("[name='" + name + "']")).as(name).hasSize(1);
+            }
         }
+        assertThat(document.select("input[name='activityInfoTranslations[0].languageCode']")
+                .attr("value")).isEqualTo("en");
+        assertThat(document.select("input[name='activityInfoTranslations[3].languageCode']")
+                .attr("value")).isEqualTo("zh-TW");
+        // 체험/액티비티 원본(한국어)과 번역하지 않는 값은 그대로다
+        assertThat(document.select("[name='activityInfo.openingHours']")).hasSize(1);
+        assertThat(document.select("[name='activityInfo.reservation']")).isNotEmpty();
+        assertThat(document.select("[name='activityInfo.equipmentIncluded']")).isNotEmpty();
+        assertThat(document.select("[name='activityInfo.parkingAvailable']")).isNotEmpty();
+        assertThat(document.select("[name='activityInfo.contactNumber']")).hasSize(1);
+        assertThat(document.select("[name='activityInfo.homepageUrl']")).hasSize(1);
         // 숙소 원본(한국어)과 번역하지 않는 값은 그대로다
         assertThat(document.select("[name='accommodationInfo.roomType']")).hasSize(1);
         assertThat(document.select("[name='accommodationInfo.checkinTime']")).hasSize(1);

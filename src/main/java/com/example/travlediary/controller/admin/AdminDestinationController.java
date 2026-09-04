@@ -13,6 +13,7 @@ import com.example.travlediary.service.destination.DestinationService;
 import com.example.travlediary.service.destination.DestinationSaveOrchestrationService;
 import com.example.travlediary.service.file.UnsupportedImageFormatException;
 import com.example.travlediary.service.info.AccommodationInfoService;
+import com.example.travlediary.service.info.ActivityInfoService;
 import com.example.travlediary.service.info.AttractionInfoService;
 import com.example.travlediary.service.info.RestaurantInfoService;
 import com.example.travlediary.service.kto.InvalidKtoSelectedPhotosException;
@@ -47,6 +48,7 @@ public class AdminDestinationController {
     private final RestaurantInfoService restaurantInfoService;
     private final AttractionInfoService attractionInfoService;
     private final AccommodationInfoService accommodationInfoService;
+    private final ActivityInfoService activityInfoService;
 
     public AdminDestinationController(DestinationService destinationService,
                                       CategoryService categoryService,
@@ -56,7 +58,8 @@ public class AdminDestinationController {
                                       DestinationSaveOrchestrationService destinationSaveOrchestrationService,
                                       RestaurantInfoService restaurantInfoService,
                                       AttractionInfoService attractionInfoService,
-                                      AccommodationInfoService accommodationInfoService) {
+                                      AccommodationInfoService accommodationInfoService,
+                                      ActivityInfoService activityInfoService) {
         this.destinationService = destinationService;
         this.categoryService = categoryService;
         this.amenityService = amenityService;
@@ -66,6 +69,7 @@ public class AdminDestinationController {
         this.restaurantInfoService = restaurantInfoService;
         this.attractionInfoService = attractionInfoService;
         this.accommodationInfoService = accommodationInfoService;
+        this.activityInfoService = activityInfoService;
     }
 
     // 여행지 등록
@@ -329,6 +333,9 @@ public class AdminDestinationController {
         }
         if (detailDto != null && detailDto.getAccommodationInfo() != null) {
             form.setAccommodationInfoTranslations(accommodationInfoService.getTranslationForms(id));
+        }
+        if (detailDto != null && detailDto.getActivityInfo() != null) {
+            form.setActivityInfoTranslations(activityInfoService.getTranslationForms(id));
         }
 
         prepareEditFormModel(model, form, lang);

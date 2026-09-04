@@ -7,6 +7,7 @@ import com.example.travlediary.service.category.CategoryService;
 import com.example.travlediary.service.category.CountryCategoryService;
 import com.example.travlediary.service.destination.DestinationSaveOrchestrationService;
 import com.example.travlediary.service.info.AccommodationInfoService;
+import com.example.travlediary.service.info.ActivityInfoService;
 import com.example.travlediary.service.info.AttractionInfoService;
 import com.example.travlediary.service.info.RestaurantInfoService;
 import com.example.travlediary.service.destination.DestinationService;
@@ -70,6 +71,8 @@ class AdminDestinationInvalidImageUxTest {
     private AttractionInfoService attractionInfoService;
     @Mock
     private AccommodationInfoService accommodationInfoService;
+    @Mock
+    private ActivityInfoService activityInfoService;
 
     private MockMvc mockMvc;
 
@@ -86,7 +89,8 @@ class AdminDestinationInvalidImageUxTest {
                 destinationSaveOrchestrationService,
                 restaurantInfoService,
                 attractionInfoService,
-                accommodationInfoService);
+                accommodationInfoService,
+                activityInfoService);
         CustomUserDetails admin = mock(CustomUserDetails.class);
         lenient().when(admin.getId()).thenReturn(7L);
         when(categoryService.getAll()).thenReturn(List.of());

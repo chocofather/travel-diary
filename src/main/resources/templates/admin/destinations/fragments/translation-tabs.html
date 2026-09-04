@@ -158,6 +158,69 @@
   </div>
 </th:block>
 
+<th:block th:fragment="activityTranslations">
+  <div class="admin-type-field-wide admin-translation-tabs" data-translation-tabs>
+    <h4>체험/액티비티 상세 정보 번역</h4>
+    <p class="admin-help-text">
+      위에 입력한 값이 한국어로 함께 저장됩니다. 비워 둔 언어는 저장하지 않습니다.
+    </p>
+
+    <div class="admin-translation-tablist" role="tablist" aria-label="번역 언어 선택">
+      <button type="button" role="tab" class="admin-translation-tab"
+              th:each="translation, slot : *{activityInfoTranslations}"
+              th:classappend="${slot.first} ? ' is-active'"
+              th:attr="data-translation-tab=${translation.languageCode},
+                       aria-selected=${slot.first},
+                       title=${translationLanguageLabels.get(translation.languageCode)}"
+              th:text="${translationTabLabels.get(translation.languageCode)}
+                       ?: translation.languageCode">English</button>
+    </div>
+
+    <div class="admin-translation-panel" role="tabpanel"
+         th:each="translation, slot : *{activityInfoTranslations}"
+         th:hidden="${!slot.first}"
+         th:attr="data-translation-panel=${translation.languageCode},
+                  aria-label=${translationLanguageLabels.get(translation.languageCode)}">
+      <input type="hidden"
+             th:field="*{activityInfoTranslations[__${slot.index}__].languageCode}">
+      <div class="admin-type-fields-grid">
+        <div>
+          <label>운영 시간
+            <input type="text"
+                   th:field="*{activityInfoTranslations[__${slot.index}__].openingHours}"
+                   maxlength="1000">
+          </label>
+        </div>
+        <div>
+          <label>소요 시간
+            <input type="text"
+                   th:field="*{activityInfoTranslations[__${slot.index}__].requiredTime}"
+                   maxlength="32">
+          </label>
+        </div>
+        <div>
+          <label>참가비/이용요금
+            <input type="text"
+                   th:field="*{activityInfoTranslations[__${slot.index}__].admissionFee}">
+          </label>
+        </div>
+        <div>
+          <label>연령 제한
+            <input type="text"
+                   th:field="*{activityInfoTranslations[__${slot.index}__].ageLimit}"
+                   maxlength="32">
+          </label>
+        </div>
+        <div class="admin-type-field-wide">
+          <label>이용 안내/기타
+            <textarea th:field="*{activityInfoTranslations[__${slot.index}__].guide}"></textarea>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+</th:block>
+
 <th:block th:fragment="restaurantTranslations(ktoAutofill)">
   <div class="admin-type-field-wide admin-translation-tabs" data-translation-tabs>
     <h4>음식점/카페 상세 정보 번역</h4>

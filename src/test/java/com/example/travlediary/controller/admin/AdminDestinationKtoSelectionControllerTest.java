@@ -8,6 +8,7 @@ import com.example.travlediary.service.category.CountryCategoryService;
 import com.example.travlediary.service.destination.DestinationService;
 import com.example.travlediary.service.destination.DestinationSaveOrchestrationService;
 import com.example.travlediary.service.info.AccommodationInfoService;
+import com.example.travlediary.service.info.ActivityInfoService;
 import com.example.travlediary.service.info.AttractionInfoService;
 import com.example.travlediary.service.info.RestaurantInfoService;
 import com.example.travlediary.service.kto.InvalidKtoSelectedPhotosException;
@@ -59,6 +60,8 @@ class AdminDestinationKtoSelectionControllerTest {
     private AttractionInfoService attractionInfoService;
     @Mock
     private AccommodationInfoService accommodationInfoService;
+    @Mock
+    private ActivityInfoService activityInfoService;
 
     private AdminDestinationController controller;
     private MockMvc mockMvc;
@@ -79,7 +82,8 @@ class AdminDestinationKtoSelectionControllerTest {
                 destinationSaveOrchestrationService,
                 restaurantInfoService,
                 attractionInfoService,
-                accommodationInfoService
+                accommodationInfoService,
+                activityInfoService
         );
         authenticatedAdmin = mock(CustomUserDetails.class);
         lenient().when(authenticatedAdmin.getId()).thenReturn(7L);

@@ -34,8 +34,11 @@ class AdminTranslationTabsUiContractTest {
                 .contains("aria-selected=${slot.first}")
                 .contains("th:hidden=\"${!slot.first}\"");
         // 탭과 패널은 같은 슬롯 목록을 돈다 (언어 수를 화면에 박지 않는다)
-        assertThat(count(fragment, "th:each=\"translation, slot : *{restaurantInfoTranslations}\""))
-                .isEqualTo(2);
+        for (String slots : new String[]{"restaurantInfoTranslations", "attractionInfoTranslations",
+                "accommodationInfoTranslations", "activityInfoTranslations"}) {
+            assertThat(count(fragment, "th:each=\"translation, slot : *{" + slots + "}\""))
+                    .as(slots).isEqualTo(2);
+        }
         // 감출 때 입력을 비활성화하지 않는다 (disabled 면 저장에서 빠진다)
         assertThat(fragment).doesNotContain("disabled");
     }

@@ -61,6 +61,13 @@ public class DestinationForm {
     private List<AccommodationInfoTranslationForm> accommodationInfoTranslations =
             newAccommodationInfoTranslationSlots();
 
+    /**
+     * 체험/액티비티 상세정보의 번역 입력 슬롯.
+     * 한국어는 {@link #activityInfo} 입력이 그대로 base 이자 ko 번역이 된다.
+     */
+    private List<ActivityInfoTranslationForm> activityInfoTranslations =
+            newActivityInfoTranslationSlots();
+
     /** 슬롯 순서를 화면과 저장 로직이 함께 쓰는 기준. 언어 코드는 사용자가 정하지 않는다. */
     public static List<RestaurantInfoTranslationForm> newRestaurantInfoTranslationSlots() {
         List<RestaurantInfoTranslationForm> slots = new ArrayList<>();
@@ -82,6 +89,14 @@ public class DestinationForm {
         List<AccommodationInfoTranslationForm> slots = new ArrayList<>();
         for (String languageCode : SUBTYPE_TRANSLATION_LANGUAGES) {
             slots.add(new AccommodationInfoTranslationForm(languageCode));
+        }
+        return slots;
+    }
+
+    public static List<ActivityInfoTranslationForm> newActivityInfoTranslationSlots() {
+        List<ActivityInfoTranslationForm> slots = new ArrayList<>();
+        for (String languageCode : SUBTYPE_TRANSLATION_LANGUAGES) {
+            slots.add(new ActivityInfoTranslationForm(languageCode));
         }
         return slots;
     }
