@@ -184,8 +184,24 @@
 }
 
 .admin-event-section[hidden],
-.admin-event-image-field[hidden] {
+.admin-event-image-field[hidden],
+.admin-event-translation-poster[hidden] {
     display: none;
+}
+
+/* 번역 탭 안의 언어별 인포그래픽 포스터. 한국어 포스터 칸과 같은 구성을 쓴다. */
+.admin-event-translation-poster {
+    display: grid;
+    gap: 12px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.admin-event-translation-poster h4 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
 }
 
 .admin-event-image-field {

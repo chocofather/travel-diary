@@ -1074,7 +1074,48 @@ CREATE TABLE `events` (
   PRIMARY KEY (`id`),
   KEY `fk_event_users1_idx` (`user_id`),
   CONSTRAINT `fk_events_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb3;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `event_translations`
+--
+-- 상단 메뉴 `이벤트`(사이트 프로모션/서비스 이벤트)의 언어별 공개 콘텐츠.
+-- 여행정보의 축제·행사(FESTIVAL)와는 무관한 별도 영역이다.
+-- 번역 대상은 title / description / poster_img 세 개다.
+-- poster_img 는 INFOGRAPHIC 이벤트처럼 안내 문구가 이미지 안에 들어간 경우를 위해
+-- 언어별 포스터를 따로 두려고 담는다.
+-- event_img 는 지금 언어와 무관한 공용 대표 이미지라서 여기에 담지 않는다.
+-- 기간(start_date, end_date), 노출 여부(is_slide), 유형(event_type) 처럼
+-- 언어와 무관한 값도 담지 않는다.
+-- 언어 코드는 ko / en / ja / zh-CN / zh-TW 를 쓴다.
+-- events 가 지워지면 이 줄도 함께 지워진다.
+--
+-- 표시 값 대체(예정 정책, 필드 단위로 따로 적용):
+--   title / description : 요청 언어 → ko → 남은 언어(language_code ASC, id ASC) → events 원문 → null
+--   poster_img          : 요청 언어 → ko → events.poster_img → null
+--     (poster_img 는 아무 언어 이미지나 보여 주면 읽을 수 없는 안내가 되므로
+--      '남은 언어' 단계를 두지 않는다)
+--
+-- 인포그래픽 운영 방향:
+--   기존/디자인 중심 인포그래픽은 지금처럼 언어별 poster_img 로 유지한다.
+--   앞으로 만드는 신규 정보형 인포그래픽은 텍스트를 이미지에 굽지 않고
+--   HTML/CSS 템플릿 + 번역 텍스트 방식으로 넓혀 갈 예정이다.
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `event_translations` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `event_id` bigint NOT NULL,
+  `language_code` varchar(10) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  `poster_img` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_event_translation` (`event_id`,`language_code`),
+  KEY `idx_event_translation_locale` (`language_code`,`event_id`),
+  CONSTRAINT `fk_event_translation` FOREIGN KEY (`event_id`) REFERENCES `events` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --

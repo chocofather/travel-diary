@@ -20,6 +20,17 @@
         <result property="createdAt" column="created_at"/>
     </resultMap>
 
+    <!-- 이벤트 언어별 공개 콘텐츠. 대표 이미지(event_img)는 공용이라 번역 테이블에 없다. -->
+    <resultMap id="EventTranslationResultMap"
+               type="com.example.travlediary.model.EventTranslation">
+        <id     property="id"          column="id"/>
+        <result property="eventId"     column="event_id"/>
+        <result property="languageCode" column="language_code"/>
+        <result property="title"       column="title"/>
+        <result property="description" column="description"/>
+        <result property="posterImg"   column="poster_img"/>
+    </resultMap>
+
     <!-- is_slide = 1 인 슬라이드용 이벤트만 가져오기 -->
     <select id="selectSlideEvents" resultMap="EventMap">
         SELECT
@@ -33,8 +44,10 @@
     </select>
 
 
+    <!-- 새 이벤트 번호는 같은 트랜잭션의 번역 저장에서 쓰므로 돌려받는다. -->
     <insert id="insert"
-            parameterType="com.example.travlediary.model.Event">
+            parameterType="com.example.travlediary.model.Event"
+            useGeneratedKeys="true" keyProperty="id">
         INSERT INTO events(title,description,event_img,poster_img,event_type,is_slide,user_id,
                            start_date,end_date,created_at)
         VALUES (#{title},#{description},#{eventImg},#{posterImg},#{eventType},#{slide},#{userId},
@@ -129,4 +142,54 @@
     <select id="selectEventById" resultMap="EventMap" parameterType="long">
         SELECT * FROM events WHERE id = #{id}
     </select>
+
+    <select id="findTranslationsByEventId" parameterType="long"
+            resultMap="EventTranslationResultMap">
+        SELECT id, event_id, language_code, title, description, poster_img
+        FROM event_translations
+        WHERE event_id = #{eventId}
+        ORDER BY language_code ASC, id ASC
+    </select>
+
+    <select id="findTranslationsByEventIds" resultMap="EventTranslationResultMap">
+        SELECT id, event_id, language_code, title, description, poster_img
+        FROM event_translations
+        <choose>
+            <when test="eventIds != null and !eventIds.isEmpty()">
+                WHERE event_id IN
+                <foreach collection="eventIds" item="eventId"
+                         open="(" separator="," close=")">
+                    #{eventId}
+                </foreach>
+            </when>
+            <otherwise>
+                WHERE 1 = 0
+            </otherwise>
+        </choose>
+        ORDER BY event_id ASC, language_code ASC, id ASC
+    </select>
+
+    <insert id="insertTranslation"
+            parameterType="com.example.travlediary.model.EventTranslation"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO event_translations (event_id, language_code, title, description, poster_img)
+        VALUES (#{eventId}, #{languageCode}, #{title}, #{description}, #{posterImg})
+    </insert>
+
+    <!-- event_id 와 language_code 는 대상 줄을 고르는 조건일 뿐 갱신 대상이 아니다. -->
+    <update id="updateTranslation"
+            parameterType="com.example.travlediary.model.EventTranslation">
+        UPDATE event_translations
+        SET title = #{title},
+            description = #{description},
+            poster_img = #{posterImg}
+        WHERE event_id = #{eventId}
+          AND language_code = #{languageCode}
+    </update>
+
+    <delete id="deleteTranslation">
+        DELETE FROM event_translations
+        WHERE event_id = #{eventId}
+          AND language_code = #{languageCode}
+    </delete>
 </mapper>

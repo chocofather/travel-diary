@@ -1,6 +1,8 @@
 package com.example.travlediary.controller.event;
 
 import com.example.travlediary.model.Event;
+import com.example.travlediary.repository.event.EventMapper;
+import com.example.travlediary.service.event.EventLocalizationService;
 import com.example.travlediary.service.event.EventService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,12 +22,16 @@ class EventControllerTest {
 
     @Mock
     private EventService eventService;
+    /** 번역이 하나도 없는 상태. 표시 값은 base 그대로라 상태·정렬·페이징 계약이 그대로 드러난다. */
+    @Mock
+    private EventMapper eventMapper;
 
     private EventController controller;
 
     @BeforeEach
     void setUp() {
-        controller = new EventController(eventService);
+        controller = new EventController(
+                eventService, new EventLocalizationService(eventMapper));
     }
 
     @Test

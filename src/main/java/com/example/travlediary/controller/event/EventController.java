@@ -1,8 +1,11 @@
 package com.example.travlediary.controller.event;
 
+import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.model.Event;
+import com.example.travlediary.service.event.EventLocalizationService;
 import com.example.travlediary.service.event.EventService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,6 +24,7 @@ public class EventController {
     private static final int MAX_PAGE_SIZE = 48;
 
     private final EventService eventService;
+    private final EventLocalizationService eventLocalizationService;
 
     /** 이벤트 리스트 (진행중/예정/종료 탭 + 페이징 지원) */
     @GetMapping
@@ -40,7 +44,11 @@ public class EventController {
         }
         long offset = (long) (safePage - 1) * safeSize;
 
-        List<Event> events = eventService.getEventsByStatus(selectedStatus, offset, safeSize);
+        // 상태·정렬·페이징은 그대로 두고, 화면에 찍을 값만 요청 언어로 바꾼다.
+        // 번역은 이 한 페이지 분량을 한 번에 읽는다. (카드마다 조회하지 않는다)
+        List<Event> events = eventLocalizationService.localizeAll(
+                eventService.getEventsByStatus(selectedStatus, offset, safeSize),
+                requestedLanguage());
         int pageStart = Math.max(1, safePage - 2);
         int pageEnd = Math.min(totalPages, pageStart + 4);
         pageStart = Math.max(1, pageEnd - 4);
@@ -66,9 +74,17 @@ public class EventController {
     /** 이벤트 상세 */
     @GetMapping("/{id}")
     public String eventDetail(@PathVariable Long id, Model model) {
-        Event event = eventService.getEventDetail(id);
+        // 유형·기간·상태 판정은 원본 값을 그대로 쓰고, 제목·본문·포스터만 요청 언어로 바꾼다.
+        Event event = eventLocalizationService.localize(
+                eventService.getEventDetail(id), requestedLanguage());
         model.addAttribute("event", event);
         return "event/event-detail"; // templates/event/event-detail.html
+    }
+
+    /** 공개 이벤트 화면이 쓸 언어. 지원하지 않는 locale 이면 한국어로 본다. */
+    private SupportedLanguage requestedLanguage() {
+        return SupportedLanguage.fromLocale(LocaleContextHolder.getLocale())
+                .orElse(SupportedLanguage.KOREAN);
     }
 
     private String normalizeStatus(String status) {

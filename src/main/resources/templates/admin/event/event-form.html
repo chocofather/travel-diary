@@ -3,7 +3,9 @@
       th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'events')}">
 <th:block th:fragment="headFragment">
   <link rel="stylesheet" href="/css/admin-event.css">
+  <link rel="stylesheet" href="/css/admin-translation-tabs.css">
   <script src="/js/admin-event-form.js" defer></script>
+  <script src="/js/admin-translation-tabs.js" defer></script>
 </th:block>
 <th:block th:fragment="body">
   <section class="admin-page-section admin-event-form-page">
@@ -195,6 +197,16 @@
           <p class="admin-field-error" th:if="${#fields.hasErrors('description')}"
              th:errors="*{description}">내용 오류</p>
         </div>
+      </section>
+
+      <!-- 외국어 번역. 유형과 무관하게 제목·상세 내용을 언어별로 받는다. -->
+      <section class="admin-form-card is-wide admin-event-section admin-event-translations">
+        <div class="admin-event-section-header">
+          <h2>번역 <span class="admin-optional">선택</span></h2>
+          <p>한국어는 위에서 입력한 제목·상세 내용이 그대로 저장됩니다.</p>
+        </div>
+        <th:block th:replace="~{fragments/admin/event-translation-tabs
+                                :: eventTranslations}"></th:block>
       </section>
 
       <div class="admin-event-form-actions">

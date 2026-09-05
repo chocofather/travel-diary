@@ -24,6 +24,26 @@ document.addEventListener('DOMContentLoaded', () => {
     bindPreview('event-image', 'event-image-preview', 'event-image-empty');
     bindPreview('event-poster', 'event-poster-preview', 'event-poster-empty');
 
+    // 언어별 인포그래픽 포스터도 같은 방식으로 미리보기를 붙인다.
+    document.querySelectorAll('[data-translation-poster-input]').forEach((input) => {
+        const languageCode = input.dataset.translationPosterInput;
+        bindPreview(
+            input.id,
+            `event-translation-poster-preview-${languageCode}`,
+            `event-translation-poster-empty-${languageCode}`);
+
+        // 새 파일을 고르면 삭제 체크를 푼다. 서버도 새 파일을 우선한다.
+        const removeInput =
+            document.getElementById(`event-translation-poster-remove-${languageCode}`);
+        if (removeInput) {
+            input.addEventListener('change', () => {
+                if (input.files && input.files[0]) {
+                    removeInput.checked = false;
+                }
+            });
+        }
+    });
+
     const form = document.getElementById('admin-event-form');
     const typeInputs = Array.from(document.querySelectorAll('input[name="eventType"]'));
     const slideInput = document.getElementById('event-slide');
@@ -40,6 +60,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const showSlideImage = !!slideInput && slideInput.checked;
         const visible = {
             poster: !isStandard,
+            // 언어별 포스터도 인포그래픽 이벤트에서만 쓴다. 값은 지우지 않고 숨기기만 한다.
+            translationPoster: !isStandard,
             mainImage: isStandard || showSlideImage,
             description: isStandard
         };

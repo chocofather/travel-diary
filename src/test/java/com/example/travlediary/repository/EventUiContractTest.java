@@ -31,9 +31,10 @@ class EventUiContractTest {
                 .contains("is-text-only")
                 .contains("/images/default.png")
                 .contains("@{/events/{id}(id=${event.id})}")
-                .contains("현재 진행 중인 이벤트가 없습니다.")
-                .contains("예정된 이벤트가 없습니다.")
-                .contains("종료된 이벤트가 없습니다.");
+                // 상태별 빈 결과 문구는 상태 구조를 그대로 두고 메시지로만 바뀌었다.
+                .contains("#{event.list.empty.ongoing}")
+                .contains("#{event.list.empty.upcoming}")
+                .contains("#{event.list.empty.ended}");
 
         assertThat(css)
                 .contains(".event-tab a")
@@ -145,6 +146,27 @@ class EventUiContractTest {
                 .contains(">수정</a>")
                 .contains("@{/admin/event/{id}/delete(id=${event.id})}")
                 .contains(">삭제</button>");
+    }
+
+    @Test
+    void sliderScriptOnlyRendersWhatTheServerSendsAndDecidesNoLanguageItself() throws IOException {
+        String script = resource("/static/js/slider.js");
+
+        // 서버가 이미 번역된 값을 내려주므로 슬라이더는 받은 값을 그리기만 한다.
+        assertThat(script)
+                .contains("fetch('/api/events/slide')")
+                .contains("${ev.title}")
+                .contains("${ev.description}")
+                .contains("${ev.eventImg}")
+                // 고정 문구는 예전부터 messages 로 내려오고 있다. (home.event.*)
+                .contains("homeI18n.eventDetails");
+        assertThat(script)
+                .doesNotContain("TRAVEL_DIARY_LOCALE")
+                .doesNotContain("navigator.language")
+                .doesNotContain("SupportedLanguage")
+                .doesNotContain("'zh-CN'")
+                .doesNotContain("ev.posterImg")
+                .doesNotContain("translation");
     }
 
     private String resource(String path) throws IOException {

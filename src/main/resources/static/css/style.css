@@ -383,6 +383,20 @@ body {
     z-index:20;
 }
 
+/*
+  검색창은 가운데 메뉴 오른쪽에 남는 자리 안에서만 펼친다.
+  .search-box 는 absolute 라 넓어져도 메뉴를 밀어내지 못하고 그대로 덮는다.
+  그래서 밀림이 아니라 폭 자체를 막는다.
+  .nav-grid 는 --menu-width 를 가운데 정렬하므로 오른쪽에 남는 자리는
+  50vw - (--menu-width / 2) 이고, 여기서 헤더 오른쪽 여백 20px 을 뺀 만큼이다.
+  메뉴를 ☰ 로 접는 1199px 이하에서는 기존 정책 그대로 제한하지 않는다.
+*/
+@media (min-width: 1200px) {
+    .search-box {
+        max-width: calc(50vw - (var(--menu-width) / 2) - 20px);
+    }
+}
+
 .search-box button#search-toggle{
     padding:6px;
     background:none;
@@ -391,6 +405,7 @@ body {
     cursor:pointer;
     display:flex;
     align-items:center;
+    flex-shrink:0;
     transition:opacity .15s ease, width .15s ease, padding .15s ease;
 }
 
@@ -410,6 +425,7 @@ body {
     outline-offset:2px;
 }
 
+/* 자리가 모자라면 언어 선택·프로필이 아니라 검색창만 줄어든다 */
 #search-form{
     display:flex;
     position:relative;
@@ -417,12 +433,15 @@ body {
     visibility:hidden;
     pointer-events:none;
     width:0;
+    flex-shrink:1;
+    min-width:0;
     overflow:hidden;
     transition:width .25s ease, opacity .25s ease, visibility 0s linear .25s;
 }
 
 #search-form.open{
     width:240px;
+    max-width:100%;
     opacity:1;
     visibility:visible;
     pointer-events:auto;
@@ -467,6 +486,7 @@ body {
     display:flex;
     align-items:center;
     position:relative;
+    flex-shrink:0;
 }
 
 #login-btn{

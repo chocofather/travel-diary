@@ -4,6 +4,7 @@ import com.example.travlediary.config.CustomLoginSuccessHandler;
 import com.example.travlediary.config.CustomLogoutSuccessHandler;
 import com.example.travlediary.config.SecurityConfig;
 import com.example.travlediary.dto.EventForm;
+import com.example.travlediary.dto.EventTranslationForm;
 import com.example.travlediary.model.Event;
 import com.example.travlediary.model.EventType;
 import com.example.travlediary.model.User;
@@ -220,6 +221,55 @@ class AdminEventControllerTest {
         assertThat(document.selectFirst("#event-description").hasAttr("required")).isFalse();
         assertThat(document.selectFirst("#event-poster").attr("data-has-existing")).isEqualTo("false");
         assertThat(document.selectFirst("#event-image").attr("data-has-existing")).isEqualTo("false");
+    }
+
+    @Test
+    void infographicEditFormRendersEachLanguagePosterFieldWithItsStoredPreview() throws Exception {
+        Event infographic = existingEvent();
+        infographic.setEventType(EventType.INFOGRAPHIC);
+        when(eventService.getAdminEvent(10L)).thenReturn(infographic);
+        when(eventService.getTranslationForms(10L))
+                .thenReturn(EventTranslationForm.newTranslationSlots());
+        // 저장된 줄 순서와 무관하게 언어 코드로 이어져야 한다.
+        when(eventService.getTranslationPosterImages(10L)).thenReturn(java.util.Map.of(
+                "zh-TW", "/uploads/events/posters/zh-tw.png",
+                "en", "/uploads/events/posters/en.png"));
+
+        org.jsoup.nodes.Document document = renderEditForm(10L);
+
+        assertThat(document.selectFirst("[data-event-panel=translationPoster]").hasAttr("hidden"))
+                .isFalse();
+        assertThat(document.select("input[data-translation-poster-input]"))
+                .extracting(element -> element.attr("name"))
+                .containsExactly(
+                        "translations[1].posterFile",
+                        "translations[2].posterFile",
+                        "translations[3].posterFile",
+                        "translations[4].posterFile");
+        assertThat(document.selectFirst("#event-translation-poster-preview-en").attr("src"))
+                .isEqualTo("/uploads/events/posters/en.png");
+        assertThat(document.selectFirst("#event-translation-poster-preview-zh-TW").attr("src"))
+                .isEqualTo("/uploads/events/posters/zh-tw.png");
+        // 저장된 포스터가 없는 언어는 미리보기를 감추고 삭제 체크도 내주지 않는다.
+        assertThat(document.selectFirst("#event-translation-poster-preview-ja").hasAttr("hidden"))
+                .isTrue();
+        assertThat(document.selectFirst("#event-translation-poster-remove-ja")).isNull();
+        assertThat(document.selectFirst("#event-translation-poster-remove-en").attr("name"))
+                .isEqualTo("translations[1].removePoster");
+    }
+
+    @Test
+    void standardEditFormHidesTheForeignPosterFields() throws Exception {
+        when(eventService.getAdminEvent(10L)).thenReturn(existingEvent());
+        when(eventService.getTranslationForms(10L))
+                .thenReturn(EventTranslationForm.newTranslationSlots());
+
+        org.jsoup.nodes.Document document = renderEditForm(10L);
+
+        // 값은 지우지 않고 보이기만 감춘다. 제목·상세 내용 번역 칸은 그대로 쓸 수 있다.
+        assertThat(document.selectFirst("[data-event-panel=translationPoster]").hasAttr("hidden"))
+                .isTrue();
+        assertThat(document.selectFirst("#event-translation-title-en")).isNotNull();
     }
 
     private org.jsoup.nodes.Document renderEditForm(long id) throws Exception {

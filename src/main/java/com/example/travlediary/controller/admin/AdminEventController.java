@@ -57,7 +57,10 @@ public class AdminEventController {
     @GetMapping("/{id:\\d+}/edit")
     public String editForm(@PathVariable Long id, Model model) {
         Event event = eventService.getAdminEvent(id);
-        prepareFormModel(model, EventForm.from(event), id, event);
+        EventForm form = EventForm.from(event);
+        // 저장된 번역은 언어 코드로 슬롯에 채운다. 없는 언어는 빈 슬롯으로 남는다.
+        form.setTranslations(eventService.getTranslationForms(id));
+        prepareFormModel(model, form, id, event);
         return FORM_VIEW;
     }
 
@@ -117,5 +120,11 @@ public class AdminEventController {
         model.addAttribute("submitLabel", editMode ? "변경사항 저장" : "이벤트 등록");
         model.addAttribute("currentEventImage", current == null ? null : current.getEventImg());
         model.addAttribute("currentPosterImage", current == null ? null : current.getPosterImg());
+        // 언어별 포스터 경로는 폼이 아니라 DB 에서 읽어 내려보낸다. 입력 오류로 다시 그릴 때도 같다.
+        model.addAttribute("translationPosterImages",
+                eventService.getTranslationPosterImages(id));
+        // 관리자 화면은 언제나 한국어로 그린다. 번역 탭 이름도 공용 라벨을 그대로 쓴다.
+        model.addAttribute("translationLanguageLabels", AdminTranslationLabels.LANGUAGE_LABELS);
+        model.addAttribute("translationTabLabels", AdminTranslationLabels.TAB_LABELS);
     }
 }

@@ -10,21 +10,24 @@
 <th:block th:fragment="body">
   <section class="event-list-wrapper" aria-labelledby="event-list-title">
     <header class="event-list-header">
-      <p class="event-list-eyebrow">TRAVEL DIARY EVENT</p>
-      <h1 id="event-list-title">이벤트</h1>
-      <p>Travel Diary에서 준비한 여행 소식과 혜택을 확인해 보세요.</p>
+      <p class="event-list-eyebrow" th:text="#{event.kicker}">TRAVEL DIARY EVENT</p>
+      <h1 id="event-list-title" th:text="#{event.list.title}">이벤트</h1>
+      <p th:text="#{event.list.description}">Travel Diary에서 준비한 여행 소식과 혜택을 확인해 보세요.</p>
     </header>
 
-    <nav class="event-tab" aria-label="이벤트 상태">
+    <nav class="event-tab" th:attr="aria-label=#{event.list.tabs}">
       <a th:href="@{/events(status='ongoing')}"
          th:classappend="${selectedStatus == 'ongoing'} ? 'active'"
-         th:attr="aria-current=${selectedStatus == 'ongoing'} ? 'page'">진행중</a>
+         th:attr="aria-current=${selectedStatus == 'ongoing'} ? 'page'"
+         th:text="#{event.status.ongoing}">진행중</a>
       <a th:href="@{/events(status='upcoming')}"
          th:classappend="${selectedStatus == 'upcoming'} ? 'active'"
-         th:attr="aria-current=${selectedStatus == 'upcoming'} ? 'page'">진행예정</a>
+         th:attr="aria-current=${selectedStatus == 'upcoming'} ? 'page'"
+         th:text="#{event.status.upcoming}">진행예정</a>
       <a th:href="@{/events(status='ended')}"
          th:classappend="${selectedStatus == 'ended'} ? 'active'"
-         th:attr="aria-current=${selectedStatus == 'ended'} ? 'page'">종료</a>
+         th:attr="aria-current=${selectedStatus == 'ended'} ? 'page'"
+         th:text="#{event.status.ended}">종료</a>
     </nav>
 
     <ul class="event-list" th:if="${!#lists.isEmpty(eventList)}">
@@ -42,12 +45,13 @@
             <img class="event-card-image"
                  th:src="${thumbnail}"
                  onerror="this.onerror=null;this.src='/images/default.png';"
-                 th:alt="|${event.title} 대표 이미지|" />
+                 th:alt="#{event.imageAlt(${event.title})}" />
           </div>
           <div class="event-card-content">
+            <!-- 상태 판정은 그대로 두고, 화면 문구만 상태 코드로 고른 메시지를 쓴다. -->
             <span class="event-status-badge"
                   th:classappend="|is-${selectedStatus}|"
-                  th:text="${selectedStatus == 'ongoing' ? '진행중' : (selectedStatus == 'upcoming' ? '진행예정' : '종료')}">진행중</span>
+                  th:text="#{'event.status.' + ${selectedStatus}}">진행중</span>
             <h2 class="event-title" th:text="${event.title}">이벤트 제목</h2>
             <p class="event-date" th:text="|${event.startDate} ~ ${event.endDate}|">2026-08-01 ~ 2026-08-31</p>
             <p class="event-desc" th:if="${event.description != null and !#strings.isEmpty(event.description)}"
@@ -58,15 +62,19 @@
     </ul>
 
     <div class="event-empty-state" th:if="${#lists.isEmpty(eventList)}" role="status">
-      <p th:if="${selectedStatus == 'ongoing'}">현재 진행 중인 이벤트가 없습니다.</p>
-      <p th:if="${selectedStatus == 'upcoming'}">예정된 이벤트가 없습니다.</p>
-      <p th:if="${selectedStatus == 'ended'}">종료된 이벤트가 없습니다.</p>
+      <p th:if="${selectedStatus == 'ongoing'}"
+         th:text="#{event.list.empty.ongoing}">현재 진행 중인 이벤트가 없습니다.</p>
+      <p th:if="${selectedStatus == 'upcoming'}"
+         th:text="#{event.list.empty.upcoming}">예정된 이벤트가 없습니다.</p>
+      <p th:if="${selectedStatus == 'ended'}"
+         th:text="#{event.list.empty.ended}">종료된 이벤트가 없습니다.</p>
     </div>
 
     <!-- 페이지 이동 시에도 선택한 상태 탭을 유지한다 -->
     <div class="pagination-wrapper" th:if="${totalPages > 1}">
-      <nav class="pagination" aria-label="이벤트 목록 페이지">
-        <a th:if="${currentPage > 1}" class="page-nav" aria-label="이전 페이지"
+      <nav class="pagination" th:attr="aria-label=#{event.list.pagination}">
+        <a th:if="${currentPage > 1}" class="page-nav"
+           th:attr="aria-label=#{event.list.pagination.previous}"
            th:href="@{/events(status=${selectedStatus},page=${currentPage - 1},size=${pageSize})}">&#8249;</a>
         <span th:unless="${currentPage > 1}" class="page-nav is-disabled" aria-disabled="true">&#8249;</span>
 
@@ -78,7 +86,8 @@
                 aria-current="page" th:text="${i}">1</span>
         </th:block>
 
-        <a th:if="${currentPage < totalPages}" class="page-nav" aria-label="다음 페이지"
+        <a th:if="${currentPage < totalPages}" class="page-nav"
+           th:attr="aria-label=#{event.list.pagination.next}"
            th:href="@{/events(status=${selectedStatus},page=${currentPage + 1},size=${pageSize})}">&#8250;</a>
         <span th:unless="${currentPage < totalPages}" class="page-nav is-disabled"
               aria-disabled="true">&#8250;</span>

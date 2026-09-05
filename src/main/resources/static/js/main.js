@@ -6,6 +6,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchBox = toggleBtn?.closest('.search-box');
 
     if (toggleBtn && form && searchBox) {
+        const searchInput = form.querySelector('input[name="q"]');
+        /* 공백만 남은 값은 검색어가 없는 것으로 본다 */
+        const hasKeyword = () => (searchInput?.value ?? '').trim() !== '';
+
         const setSearchOpen = (isOpen, restoreFocus = false) => {
             form.classList.toggle('open', isOpen);
             searchBox.classList.toggle('search-open', isOpen);
@@ -20,6 +24,22 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleBtn.addEventListener('click', e => {
             e.preventDefault();
             setSearchOpen(true);
+        });
+
+        /*
+          열린 검색창의 돋보기는 form 의 submit 버튼이다.
+          검색어 없이 눌렀거나 Enter 를 쳤을 때 /search?q= 로 넘어가지 않게 막고,
+          그 자리에서 검색창을 닫는다. 값이 공백뿐이면 지워 다음에 깨끗하게 열리게 한다.
+        */
+        form.addEventListener('submit', e => {
+            if (hasKeyword()) {
+                return;
+            }
+            e.preventDefault();
+            if (searchInput) {
+                searchInput.value = '';
+            }
+            setSearchOpen(false, true);
         });
 
         form.addEventListener('keydown', e => {

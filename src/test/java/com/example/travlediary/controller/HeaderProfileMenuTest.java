@@ -386,6 +386,27 @@ class HeaderProfileMenuTest {
                 .andReturn().getResponse().getContentAsString());
     }
 
+    @ParameterizedTest
+    @CsvSource({"ko", "en", "ja", "zh-CN", "zh-TW"})
+    void everyLanguageKeepsTheSearchFormBesideTheLanguageSelector(String languageTag)
+            throws Exception {
+        var document = pageWithLocale(languageTag);
+        var searchBox = document.selectFirst(".search-box");
+
+        assertThat(searchBox).isNotNull();
+        // 검색 토글·검색 폼·언어 선택·로그인 영역이 모두 오른쪽 묶음 안에 그대로 있다.
+        assertThat(searchBox.selectFirst("#search-toggle")).isNotNull();
+        assertThat(searchBox.selectFirst("form#search-form[action=/search]")).isNotNull();
+        assertThat(searchBox.selectFirst("form#search-form input[name=q]")).isNotNull();
+        assertThat(searchBox.selectFirst(".language-menu")).isNotNull();
+        assertThat(searchBox.selectFirst("#auth-area")).isNotNull();
+        // 언어 선택은 다섯 언어를 그대로 내준다.
+        assertThat(searchBox.select(".language-menu-option")).hasSize(5);
+        // 검색창은 닫힌 상태로 시작한다.
+        assertThat(document.selectFirst("#search-form").hasClass("hidden")).isTrue();
+        assertThat(document.selectFirst("#search-toggle").attr("aria-expanded")).isEqualTo("false");
+    }
+
     private org.jsoup.nodes.Document pageWithLocale(String languageTag) throws Exception {
         return Jsoup.parse(mockMvc.perform(get("/random-travel")
                         .cookie(new Cookie(TravelDiaryLocaleResolver.COOKIE_NAME, languageTag)))

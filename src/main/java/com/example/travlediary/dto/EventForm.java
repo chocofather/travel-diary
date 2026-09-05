@@ -6,6 +6,7 @@ import lombok.Data;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Data
 public class EventForm {
@@ -23,6 +24,13 @@ public class EventForm {
     private String endYear;
     private String endMonth;
     private String endDay;
+
+    /**
+     * 언어별 번역 입력 슬롯. 0번은 한국어 자리이고 화면에 그리지 않는다.
+     * 한국어는 위쪽 제목·상세 내용 입력이 그대로 base 이자 ko 번역이 된다.
+     */
+    private List<EventTranslationForm> translations =
+            EventTranslationForm.newTranslationSlots();
 
     public static EventForm from(Event event) {
         EventForm form = new EventForm();

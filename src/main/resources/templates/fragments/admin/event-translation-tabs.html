@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!--
+  이벤트 제목·상세 내용의 번역 입력.
+  쓰는 쪽 폼 객체에 List<EventTranslationForm> translations 가 있어야 한다.
+  탭 동작은 공통 스크립트(/js/admin-translation-tabs.js)와 공통 클래스를 그대로 쓴다.
+
+  0번 슬롯(한국어)은 위쪽 원본 입력이 담당하므로 여기서는 건너뛴다.
+  숨긴 언어의 입력값도 폼에는 그대로 실려 저장된다. (hidden 만 걸고 지우지 않는다)
+  상세 내용은 한국어 원본과 같은 textarea 로 받는다.
+
+  언어별 인포그래픽 포스터는 파일 선택과 삭제 체크만 받는다.
+  현재 저장된 경로는 폼에 싣지 않고 서버가 내려보낸 translationPosterImages 에서 읽는다.
+  이 영역은 data-event-panel="translationPoster" 로 묶여 있어
+  STANDARD 이벤트를 고르면 한국어 포스터 칸과 함께 숨는다.
+-->
+<th:block th:fragment="eventTranslations">
+  <div class="admin-translation-tabs" data-translation-tabs>
+    <p class="admin-help-text">
+      비워 둔 언어는 공개 화면에서 한국어로 대신 보여집니다. 제목만, 내용만 입력해도 됩니다.
+    </p>
+
+    <div class="admin-translation-tablist" role="tablist" aria-label="번역 언어 선택">
+      <th:block th:each="translation, slot : *{translations}">
+        <button type="button" role="tab" class="admin-translation-tab"
+                th:unless="${slot.first}"
+                th:classappend="${slot.index == 1} ? ' is-active'"
+                th:attr="data-translation-tab=${translation.languageCode},
+                         aria-selected=${slot.index == 1},
+                         title=${translationLanguageLabels.get(translation.languageCode)}"
+                th:text="${translationTabLabels.get(translation.languageCode)}
+                         ?: translation.languageCode">영어</button>
+      </th:block>
+    </div>
+
+    <th:block th:each="translation, slot : *{translations}">
+      <div class="admin-translation-panel" role="tabpanel"
+           th:unless="${slot.first}"
+           th:hidden="${slot.index > 1}"
+           th:attr="data-translation-panel=${translation.languageCode},
+                    aria-label=${translationLanguageLabels.get(translation.languageCode)}">
+        <input type="hidden" th:field="*{translations[__${slot.index}__].languageCode}">
+
+        <div class="admin-form-field">
+          <label th:for="${'event-translation-title-' + translation.languageCode}">제목</label>
+          <input type="text" maxlength="255"
+                 th:id="${'event-translation-title-' + translation.languageCode}"
+                 th:field="*{translations[__${slot.index}__].title}"
+                 th:attr="data-translation-title=${translation.languageCode}">
+        </div>
+
+        <div class="admin-form-field">
+          <label th:for="${'event-translation-description-' + translation.languageCode}">
+            상세 내용
+          </label>
+          <textarea th:id="${'event-translation-description-' + translation.languageCode}"
+                    th:field="*{translations[__${slot.index}__].description}"
+                    th:attr="data-translation-description=${translation.languageCode}"></textarea>
+        </div>
+
+        <!-- 인포그래픽 이벤트 전용. 한국어 포스터 칸과 같은 미리보기 구성을 쓴다. -->
+        <div class="admin-event-translation-poster" data-event-panel="translationPoster"
+             th:hidden="${isStandard}"
+             th:with="storedPoster=${translationPosterImages == null
+                          ? null : translationPosterImages.get(translation.languageCode)},
+                      hasStoredPoster=${translationPosterImages != null
+                          and !#strings.isEmpty(translationPosterImages
+                              .get(translation.languageCode))}"
+             th:attr="data-translation-poster=${translation.languageCode}">
+          <h4>인포그래픽 포스터</h4>
+          <div class="admin-event-image-field">
+            <div class="admin-event-image-preview is-poster">
+              <img th:id="${'event-translation-poster-preview-' + translation.languageCode}"
+                   th:src="${storedPoster}"
+                   th:hidden="${!hasStoredPoster}"
+                   onerror="this.onerror=null;this.src='/images/default.png';"
+                   alt="현재 인포그래픽 이미지">
+              <p th:id="${'event-translation-poster-empty-' + translation.languageCode}"
+                 th:hidden="${hasStoredPoster}">인포그래픽 미리보기</p>
+            </div>
+            <div class="admin-form-field">
+              <label th:for="${'event-translation-poster-' + translation.languageCode}">
+                포스터 이미지 <span class="admin-optional">선택</span>
+              </label>
+              <input type="file" accept="image/*"
+                     th:id="${'event-translation-poster-' + translation.languageCode}"
+                     th:name="${'translations[' + slot.index + '].posterFile'}"
+                     th:attr="data-translation-poster-input=${translation.languageCode}">
+              <span class="admin-help-text">
+                새 파일을 선택하지 않으면 저장된 포스터를 그대로 둡니다.
+                비워 두면 공개 화면에서 한국어 포스터로 대신 보여집니다.
+              </span>
+              <label class="admin-checkbox-field" th:if="${hasStoredPoster}">
+                <input type="checkbox"
+                       th:id="${'event-translation-poster-remove-' + translation.languageCode}"
+                       th:field="*{translations[__${slot.index}__].removePoster}">
+                저장된 포스터 삭제
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </th:block>
+  </div>
+</th:block>
+
+</body>
+</html>

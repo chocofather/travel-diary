@@ -5,7 +5,9 @@ import com.example.travlediary.config.CustomLogoutSuccessHandler;
 import com.example.travlediary.config.SecurityConfig;
 import com.example.travlediary.model.Event;
 import com.example.travlediary.model.EventType;
+import com.example.travlediary.repository.event.EventMapper;
 import com.example.travlediary.repository.user.UserMapper;
+import com.example.travlediary.service.event.EventLocalizationService;
 import com.example.travlediary.service.event.EventService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +30,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 @WebMvcTest(EventController.class)
-@Import(SecurityConfig.class)
+@Import({SecurityConfig.class, EventLocalizationService.class})
 class EventPageControllerTest {
 
     @Autowired
@@ -36,6 +38,9 @@ class EventPageControllerTest {
 
     @MockitoBean
     private EventService eventService;
+    /** 번역이 하나도 없는 상태. 화면 값은 base 그대로라 기존 카드 계약이 그대로 드러난다. */
+    @MockitoBean
+    private EventMapper eventMapper;
     @MockitoBean
     private CustomLoginSuccessHandler customLoginSuccessHandler;
     @MockitoBean
@@ -320,6 +325,223 @@ class EventPageControllerTest {
         assertThat(document.select(".event-detail-media")).isEmpty();
         assertThat(document.selectFirst(".event-detail-title").text()).isEqualTo("진행 중 이벤트");
         assertThat(document.selectFirst(".event-detail-body").text()).isEqualTo("여행 이벤트 설명");
+    }
+
+    @Test
+    void englishListCardRendersTheEnglishTitlePosterAndAltText() throws Exception {
+        Event infographic = event();
+        infographic.setEventType(EventType.INFOGRAPHIC);
+        infographic.setPosterImg("/uploads/events/posters/ko.jpg");
+        when(eventService.getEventsByStatus("ongoing", 0L, 9)).thenReturn(List.of(infographic));
+        when(eventMapper.findTranslationsByEventIds(List.of(10L))).thenReturn(List.of(
+                translation(1L, "ko", "진행 중 이벤트", "여행 이벤트 설명",
+                        "/uploads/events/posters/ko.jpg"),
+                translation(2L, "en", "Summer event", "Summer event body",
+                        "/uploads/events/posters/en.jpg")));
+
+        MvcResult result = mockMvc.perform(get("/events").cookie(localeCookie("en")))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        org.jsoup.nodes.Document document = org.jsoup.Jsoup.parse(
+                result.getResponse().getContentAsString());
+        assertThat(document.selectFirst(".event-title").text()).isEqualTo("Summer event");
+        assertThat(document.selectFirst(".event-desc").text()).isEqualTo("Summer event body");
+        assertThat(document.selectFirst(".event-card-image").attr("src"))
+                .isEqualTo("/uploads/events/posters/en.jpg");
+        // alt 는 번역된 제목을 메시지 파라미터로 받는다.
+        assertThat(document.selectFirst(".event-card-image").attr("alt"))
+                .isEqualTo("Summer event main image");
+    }
+
+    @Test
+    void japaneseDetailUsesTheKoreanPosterWhenJapaneseHasNone() throws Exception {
+        Event infographic = event();
+        infographic.setEventType(EventType.INFOGRAPHIC);
+        infographic.setPosterImg("/uploads/events/posters/base.jpg");
+        when(eventService.getEventDetail(10L)).thenReturn(infographic);
+        when(eventMapper.findTranslationsByEventId(10L)).thenReturn(List.of(
+                translation(1L, "ko", "진행 중 이벤트", null, "/uploads/events/posters/ko.jpg"),
+                translation(2L, "en", "Summer event", null, "/uploads/events/posters/en.jpg"),
+                translation(3L, "ja", "夏のイベント", null, null)));
+
+        MvcResult result = mockMvc.perform(get("/events/10").cookie(localeCookie("ja")))
+                .andExpect(status().isOk())
+                .andExpect(view().name("event/event-detail"))
+                .andReturn();
+
+        org.jsoup.nodes.Document document = org.jsoup.Jsoup.parse(
+                result.getResponse().getContentAsString());
+        assertThat(document.selectFirst(".event-detail-title").text()).isEqualTo("夏のイベント");
+        // 읽을 수 없는 영어 포스터가 아니라 한국어 포스터를 쓴다.
+        assertThat(document.selectFirst(".event-detail-media img").attr("src"))
+                .isEqualTo("/uploads/events/posters/ko.jpg");
+        assertThat(document.selectFirst(".event-detail-media img").attr("alt"))
+                .isEqualTo("夏のイベント のインフォグラフィック");
+        // 인포그래픽은 기존 정책대로 본문 섹션을 그리지 않는다.
+        assertThat(document.select(".event-detail-section")).isEmpty();
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({
+            "ko, 이벤트,   진행중,   이벤트 상태",
+            "en, Events,  Ongoing, Event status",
+            "ja, イベント,  開催中,   イベントの状態",
+            "zh-CN, 活动,  进行中,   活动状态",
+            "zh-TW, 活動,  進行中,   活動狀態"
+    })
+    void listFixedLabelsFollowTheSelectedLanguage(String languageTag, String title,
+                                                  String ongoing, String tabs) throws Exception {
+        when(eventService.getEventsByStatus("ongoing", 0L, 9)).thenReturn(List.of(event()));
+
+        org.jsoup.nodes.Document document = render("/events", languageTag);
+
+        assertThat(document.selectFirst("#event-list-title").text()).isEqualTo(title);
+        assertThat(document.selectFirst(".event-status-badge").text()).isEqualTo(ongoing);
+        assertThat(document.select(".event-tab a").first().text()).isEqualTo(ongoing);
+        assertThat(document.selectFirst(".event-tab").attr("aria-label")).isEqualTo(tabs);
+        assertThat(document.selectFirst(".event-list-eyebrow").text())
+                .isEqualTo("TRAVEL DIARY EVENT");
+        // 동적 콘텐츠는 그대로 event_translations 값을 쓴다. (번역이 없으면 base)
+        assertThat(document.selectFirst(".event-title").text()).isEqualTo("진행 중 이벤트");
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({
+            "ko, 예정된 이벤트가 없습니다.",
+            "en, There are no upcoming events.",
+            "ja, 開催予定のイベントはありません。",
+            "zh-CN, 目前没有即将开始的活动。",
+            "zh-TW, 目前沒有即將開始的活動。"
+    })
+    void emptyResultMessagesFollowTheSelectedLanguage(String languageTag, String message)
+            throws Exception {
+        when(eventService.getEventsByStatus("upcoming", 0L, 9)).thenReturn(List.of());
+
+        MvcResult result = mockMvc.perform(get("/events").param("status", "upcoming")
+                        .cookie(localeCookie(languageTag)))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("selectedStatus", "upcoming"))
+                .andReturn();
+
+        assertThat(org.jsoup.Jsoup.parse(result.getResponse().getContentAsString())
+                .selectFirst(".event-empty-state p").text()).isEqualTo(message);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({
+            "ko, 이벤트 소개,        이벤트 목록",
+            "en, About this event,  Event list",
+            "ja, イベント紹介,        イベント一覧",
+            "zh-CN, 活动介绍,        活动列表",
+            "zh-TW, 活動介紹,        活動列表"
+    })
+    void detailFixedLabelsFollowTheSelectedLanguage(String languageTag, String sectionTitle,
+                                                    String backLink) throws Exception {
+        Event standard = event();
+        standard.setEventType(EventType.STANDARD);
+        standard.setEventImg("/uploads/events/main.jpg");
+        when(eventService.getEventDetail(10L)).thenReturn(standard);
+
+        org.jsoup.nodes.Document document = render("/events/10", languageTag);
+
+        assertThat(document.selectFirst(".event-detail-section-title").text())
+                .isEqualTo(sectionTitle);
+        assertThat(document.selectFirst(".event-detail-back-link").text())
+                .isEqualTo("← " + backLink);
+        // 본문은 event_translations 값을 그대로 쓴다.
+        assertThat(document.selectFirst(".event-detail-body").text())
+                .isEqualTo("여행 이벤트 설명");
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({
+            "ko, 총 31일간,          시작까지 D-7",
+            "en, 31 days in total,  Starts in 7 days",
+            "ja, 全31日間,           開始まであと7日",
+            "zh-CN, 共 31 天,        距开始还有 7 天",
+            "zh-TW, 共 31 天,        距開始還有 7 天"
+    })
+    void dayCountsAreRenderedThroughMessageParameters(String languageTag, String totalDays,
+                                                      String startsIn) throws Exception {
+        Event upcoming = event();
+        upcoming.setEventType(EventType.STANDARD);
+        upcoming.setStartDate(java.time.LocalDate.now().plusDays(7));
+        upcoming.setEndDate(upcoming.getStartDate().plusDays(30));
+        when(eventService.getEventDetail(10L)).thenReturn(upcoming);
+
+        org.jsoup.nodes.Document document = render("/events/10", languageTag);
+
+        assertThat(document.select(".event-detail-meta li").eachText())
+                .contains(totalDays, startsIn);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({
+            "ko, 오늘 마감",
+            "en, Ends today",
+            "ja, 本日終了",
+            "zh-CN, 今天截止",
+            "zh-TW, 今天截止"
+    })
+    void anEventEndingTodayGetsItsOwnMessage(String languageTag, String todayEnds)
+            throws Exception {
+        Event endingToday = event();
+        endingToday.setEventType(EventType.STANDARD);
+        endingToday.setStartDate(java.time.LocalDate.now().minusDays(3));
+        endingToday.setEndDate(java.time.LocalDate.now());
+        when(eventService.getEventDetail(10L)).thenReturn(endingToday);
+
+        org.jsoup.nodes.Document document = render("/events/10", languageTag);
+
+        assertThat(document.select(".event-detail-meta li").eachText()).contains(todayEnds);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({
+            "ko, 진행 중 이벤트 대표 이미지",
+            "en, 진행 중 이벤트 main image",
+            "ja, 진행 중 이벤트 のメイン画像",
+            "zh-CN, 진행 중 이벤트 主图",
+            "zh-TW, 진행 중 이벤트 主圖"
+    })
+    void imageAltCombinesTheLocalizedTitleThroughAMessageParameter(String languageTag,
+                                                                   String alt) throws Exception {
+        Event standard = event();
+        standard.setEventType(EventType.STANDARD);
+        standard.setEventImg("/uploads/events/main.jpg");
+        when(eventService.getEventsByStatus("ongoing", 0L, 9)).thenReturn(List.of(standard));
+
+        org.jsoup.nodes.Document document = render("/events", languageTag);
+
+        assertThat(document.selectFirst(".event-card-image").attr("alt")).isEqualTo(alt);
+    }
+
+    private org.jsoup.nodes.Document render(String path, String languageTag) throws Exception {
+        MvcResult result = mockMvc.perform(get(path).cookie(localeCookie(languageTag)))
+                .andExpect(status().isOk())
+                .andReturn();
+        return org.jsoup.Jsoup.parse(result.getResponse().getContentAsString());
+    }
+
+    /** 공개 화면의 언어는 쿠키로 정해진다. (TravelDiaryLocaleResolver) */
+    private jakarta.servlet.http.Cookie localeCookie(String languageTag) {
+        return new jakarta.servlet.http.Cookie(
+                com.example.travlediary.config.i18n.TravelDiaryLocaleResolver.COOKIE_NAME,
+                languageTag);
+    }
+
+    private com.example.travlediary.model.EventTranslation translation(
+            Long id, String languageCode, String title, String description, String posterImg) {
+        com.example.travlediary.model.EventTranslation translation =
+                new com.example.travlediary.model.EventTranslation();
+        translation.setId(id);
+        translation.setEventId(10L);
+        translation.setLanguageCode(languageCode);
+        translation.setTitle(title);
+        translation.setDescription(description);
+        translation.setPosterImg(posterImg);
+        return translation;
     }
 
     private Event event() {
