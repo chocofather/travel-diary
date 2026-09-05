@@ -56,6 +56,8 @@ class TravelInfoServiceTest {
     @Mock
     private TravelInfoMapper travelInfoMapper;
     @Mock
+    private com.example.travlediary.repository.travelinfo.FestivalInfoMapper festivalInfoMapper;
+    @Mock
     private BookmarkMapper bookmarkMapper;
     @Mock
     private InfoCategoryMapper infoCategoryMapper;
@@ -67,7 +69,7 @@ class TravelInfoServiceTest {
     @BeforeEach
     void setUp() {
         travelInfoService = new TravelInfoService(
-                travelInfoMapper, bookmarkMapper, infoCategoryMapper,
+                travelInfoMapper, festivalInfoMapper, bookmarkMapper, infoCategoryMapper,
                 new PostContentSanitizer(), fileUploadService,
                 new TravelInfoLocalizationService(travelInfoMapper),
                 new ReferenceNameLocalizationService(
@@ -155,20 +157,20 @@ class TravelInfoServiceTest {
         String keywordPattern = "100!%!_!!!!test";
         when(travelInfoMapper.findPublicList(
                 TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL,
-                categoryIds, keywordPattern, null, "views", 12L, 12))
+                categoryIds, keywordPattern, null, null, "views", 12L, 12))
                 .thenReturn(List.of(item));
         when(travelInfoMapper.countPublicList(
                 TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL,
-                categoryIds, keywordPattern, null))
+                categoryIds, keywordPattern, null, null))
                 .thenReturn(25L);
 
         assertThat(travelInfoService.getPublicList(
                 TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL,
-                categoryIds, keyword, "views", 12L, 12))
+                categoryIds, keyword, null, "views", 12L, 12))
                 .containsExactly(item);
         assertThat(travelInfoService.countPublicList(
                 TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL,
-                categoryIds, keyword))
+                categoryIds, keyword, null))
                 .isEqualTo(25L);
 
         verify(travelInfoMapper, never()).findMainImageByInfoId(any());
@@ -179,21 +181,21 @@ class TravelInfoServiceTest {
     @Test
     void blankPublicSearchKeywordDelegatesAsNoKeywordCondition() {
         when(travelInfoMapper.findPublicList(
-                null, TravelInfoContentType.GENERAL, List.of(), null, null, "latest", 0L, 12))
+                null, TravelInfoContentType.GENERAL, List.of(), null, null, null, "latest", 0L, 12))
                 .thenReturn(List.of());
         when(travelInfoMapper.countPublicList(
-                null, TravelInfoContentType.GENERAL, List.of(), null, null))
+                null, TravelInfoContentType.GENERAL, List.of(), null, null, null))
                 .thenReturn(0L);
 
         assertThat(travelInfoService.getPublicList(
-                null, null, List.of(), "   \t", "latest", 0L, 12)).isEmpty();
+                null, null, List.of(), "   \t", null, "latest", 0L, 12)).isEmpty();
         assertThat(travelInfoService.countPublicList(
-                null, null, List.of(), null)).isZero();
+                null, null, List.of(), null, null)).isZero();
 
         verify(travelInfoMapper).findPublicList(
-                null, TravelInfoContentType.GENERAL, List.of(), null, null, "latest", 0L, 12);
+                null, TravelInfoContentType.GENERAL, List.of(), null, null, null, "latest", 0L, 12);
         verify(travelInfoMapper).countPublicList(
-                null, TravelInfoContentType.GENERAL, List.of(), null, null);
+                null, TravelInfoContentType.GENERAL, List.of(), null, null, null);
     }
 
     @Test
@@ -201,21 +203,23 @@ class TravelInfoServiceTest {
         String keyword = "썸ㄴ";
         String koreanPattern = TravelInfoSearchKeyword.toKoreanPrefixRegex(keyword);
         when(travelInfoMapper.findPublicList(
-                null, TravelInfoContentType.GENERAL, List.of(), keyword, koreanPattern, "latest", 0L, 12))
+                null, TravelInfoContentType.GENERAL, List.of(), keyword, koreanPattern,
+                null, "latest", 0L, 12))
                 .thenReturn(List.of());
         when(travelInfoMapper.countPublicList(
-                null, TravelInfoContentType.GENERAL, List.of(), keyword, koreanPattern))
+                null, TravelInfoContentType.GENERAL, List.of(), keyword, koreanPattern, null))
                 .thenReturn(0L);
 
         assertThat(travelInfoService.getPublicList(
-                null, null, List.of(), keyword, "latest", 0L, 12)).isEmpty();
+                null, null, List.of(), keyword, null, "latest", 0L, 12)).isEmpty();
         assertThat(travelInfoService.countPublicList(
-                null, null, List.of(), keyword)).isZero();
+                null, null, List.of(), keyword, null)).isZero();
 
         verify(travelInfoMapper).findPublicList(
-                null, TravelInfoContentType.GENERAL, List.of(), keyword, koreanPattern, "latest", 0L, 12);
+                null, TravelInfoContentType.GENERAL, List.of(), keyword, koreanPattern,
+                null, "latest", 0L, 12);
         verify(travelInfoMapper).countPublicList(
-                null, TravelInfoContentType.GENERAL, List.of(), keyword, koreanPattern);
+                null, TravelInfoContentType.GENERAL, List.of(), keyword, koreanPattern, null);
     }
 
     @Test
@@ -494,6 +498,85 @@ class TravelInfoServiceTest {
                 period("2026-04-05", "2026-04-10")));
         assertValidation("서로 겹치는 축제 기간을 입력할 수 없습니다.",
                 () -> travelInfoService.create(overlap, 7L));
+    }
+
+    /* === 개최연도 우회 방지 === */
+
+    @Test
+    void theGeneralFormCanStillMoveAFestivalPeriodWithinItsOwnYear() {
+        TravelInfo existing = existingInfo(10L, TravelInfoContentType.FESTIVAL);
+        when(travelInfoMapper.findByIdForUpdate(10L)).thenReturn(existing);
+        when(travelInfoMapper.updateTravelInfo(existing)).thenReturn(1);
+        when(travelInfoMapper.insertPeriod(any())).thenReturn(1);
+        when(festivalInfoMapper.findByInfoId(10L)).thenReturn(festivalInfoOfYear(2026));
+        allowCategory(TravelInfoContentType.FESTIVAL);
+
+        TravelInfoForm form = form(TravelInfoContentType.FESTIVAL);
+        form.setPeriods(List.of(period("2026-08-01", "2026-08-10")));
+
+        travelInfoService.update(10L, form);
+
+        verify(travelInfoMapper).insertPeriod(any());
+    }
+
+    @Test
+    void theGeneralFormCannotMoveAFestivalToAnotherYear() {
+        TravelInfo existing = existingInfo(10L, TravelInfoContentType.FESTIVAL);
+        when(travelInfoMapper.findByIdForUpdate(10L)).thenReturn(existing);
+        when(festivalInfoMapper.findByInfoId(10L)).thenReturn(festivalInfoOfYear(2026));
+        allowCategory(TravelInfoContentType.FESTIVAL);
+
+        TravelInfoForm form = form(TravelInfoContentType.FESTIVAL);
+        // 축제 전용 화면에서 막은 덮어쓰기를 이 폼으로 우회할 수 없어야 한다.
+        form.setPeriods(List.of(period("2027-08-01", "2027-08-10")));
+
+        assertValidation("다른 연도 개최분은 새 축제로 등록해야 합니다. 이 글은 2026년 개최분입니다.",
+                () -> travelInfoService.update(10L, form));
+
+        verify(travelInfoMapper, never()).updateTravelInfo(any());
+        verify(travelInfoMapper, never()).deletePeriodsByInfoId(any());
+        verify(travelInfoMapper, never()).insertPeriod(any());
+    }
+
+    @Test
+    void theGuardUsesTheEarliestStartDateWhenAFestivalHasSeveralPeriods() {
+        TravelInfo existing = existingInfo(10L, TravelInfoContentType.FESTIVAL);
+        when(travelInfoMapper.findByIdForUpdate(10L)).thenReturn(existing);
+        when(festivalInfoMapper.findByInfoId(10L)).thenReturn(festivalInfoOfYear(2026));
+        allowCategory(TravelInfoContentType.FESTIVAL);
+
+        TravelInfoForm form = form(TravelInfoContentType.FESTIVAL);
+        // 가장 이른 시작일이 2027 이면 이 개최분이 아니다. 순서를 바꿔 넣어도 같다.
+        form.setPeriods(List.of(period("2027-02-01", "2027-02-05"),
+                period("2027-01-10", "2027-01-20")));
+
+        assertValidation("다른 연도 개최분은 새 축제로 등록해야 합니다. 이 글은 2026년 개최분입니다.",
+                () -> travelInfoService.update(10L, form));
+    }
+
+    @Test
+    void aFestivalWithoutFestivalInfoIsNotBlockedByTheGuard() {
+        TravelInfo existing = existingInfo(10L, TravelInfoContentType.FESTIVAL);
+        when(travelInfoMapper.findByIdForUpdate(10L)).thenReturn(existing);
+        when(travelInfoMapper.updateTravelInfo(existing)).thenReturn(1);
+        when(travelInfoMapper.insertPeriod(any())).thenReturn(1);
+        when(festivalInfoMapper.findByInfoId(10L)).thenReturn(null);
+        allowCategory(TravelInfoContentType.FESTIVAL);
+
+        TravelInfoForm form = form(TravelInfoContentType.FESTIVAL);
+        form.setPeriods(List.of(period("2027-08-01", "2027-08-10")));
+
+        travelInfoService.update(10L, form);
+
+        verify(travelInfoMapper).insertPeriod(any());
+    }
+
+    private com.example.travlediary.model.FestivalInfo festivalInfoOfYear(int eventYear) {
+        com.example.travlediary.model.FestivalInfo festivalInfo =
+                new com.example.travlediary.model.FestivalInfo();
+        festivalInfo.setInfoId(10L);
+        festivalInfo.setEventYear(eventYear);
+        return festivalInfo;
     }
 
     @Test

@@ -77,7 +77,8 @@ class FestivalAdminTranslationWiringTest {
     void setUp() {
         PostContentSanitizer sanitizer = new PostContentSanitizer();
         travelInfoService = new TravelInfoService(
-                travelInfoMapper, bookmarkMapper, infoCategoryMapper, sanitizer, fileUploadService,
+                travelInfoMapper, festivalInfoMapper, bookmarkMapper, infoCategoryMapper,
+                sanitizer, fileUploadService,
                 new TravelInfoLocalizationService(travelInfoMapper),
                 new ReferenceNameLocalizationService(
                         org.mockito.Mockito.mock(CountryCategoryMapper.class),

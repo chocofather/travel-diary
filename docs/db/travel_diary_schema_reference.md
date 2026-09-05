@@ -1164,23 +1164,25 @@ CREATE TABLE `faqs` (
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `festival_info` (
   `info_id` bigint NOT NULL,
-  `event_place` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `address` varchar(500) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `play_time` varchar(500) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `use_time` text COLLATE utf8mb4_general_ci,
-  `sponsor1` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `sponsor1_tel` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `sponsor2` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `sponsor2_tel` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `contact_tel` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `homepage_url` varchar(1000) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `source_type` varchar(30) COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'ADMIN',
-  `external_content_id` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `event_place` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '행사 장소',
+  `address` varchar(500) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '행사 주소',
+  `play_time` varchar(500) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '행사/공연 시간',
+  `use_time` text COLLATE utf8mb4_general_ci COMMENT '이용요금',
+  `sponsor1` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '주최',
+  `sponsor1_tel` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '주최 연락처',
+  `sponsor2` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '주관',
+  `sponsor2_tel` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '주관 연락처',
+  `contact_tel` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '대표 문의 연락처',
+  `homepage_url` varchar(1000) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '행사 공식 홈페이지',
+  `source_type` varchar(30) COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'ADMIN' COMMENT '등록 출처: ADMIN, KTO_TOURAPI',
+  `external_content_id` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT 'TourAPI contentId',
+  `event_year` smallint NOT NULL COMMENT '개최 시작 연도 = YEAR(MIN(info_periods.start_date))',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`info_id`),
-  UNIQUE KEY `uq_festival_info_source_content` (`source_type`,`external_content_id`),
-  CONSTRAINT `fk_festival_info_travel_info` FOREIGN KEY (`info_id`) REFERENCES `travel_info` (`id`) ON DELETE CASCADE
+  UNIQUE KEY `uq_festival_info_source_content_year` (`source_type`,`external_content_id`,`event_year`),
+  CONSTRAINT `fk_festival_info_travel_info` FOREIGN KEY (`info_id`) REFERENCES `travel_info` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `chk_festival_info_event_year` CHECK ((`event_year` between 1900 and 2999))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 

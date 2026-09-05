@@ -163,6 +163,73 @@ class FestivalAdminServiceTest {
         assertThat(poster.getIsMain()).isFalse();
     }
 
+    /* === 개최연도 === */
+
+    @Test
+    void updateKeepsTheOccurrenceYearWhenDatesMoveWithinTheSameYear() {
+        FestivalInfo source = festivalInfo();
+        source.setEventYear(2026);
+        FestivalEditForm form = validForm();
+        // 2026-11-01 → 2026-12-05. 같은 해 안이라 그대로 수정된다.
+        form.setStartDate(LocalDate.parse("2026-12-05"));
+        form.setEndDate(LocalDate.parse("2026-12-20"));
+        when(travelInfoMapper.findByIdForUpdate(10L)).thenReturn(festival(10L));
+        when(infoCategoryMapper.findById(6L)).thenReturn(festivalCategory(6L));
+        when(festivalInfoMapper.findByInfoId(10L)).thenReturn(source);
+        when(travelInfoMapper.updateTravelInfo(any())).thenReturn(1);
+        when(travelInfoMapper.insertPeriod(any())).thenReturn(1);
+        when(festivalInfoMapper.update(any())).thenReturn(1);
+
+        service.update(10L, form);
+
+        ArgumentCaptor<FestivalInfo> captor = ArgumentCaptor.forClass(FestivalInfo.class);
+        verify(festivalInfoMapper).update(captor.capture());
+        assertThat(captor.getValue().getEventYear()).isEqualTo(2026);
+    }
+
+    @Test
+    void updateRejectsMovingTheOccurrenceToAnotherYearBeforeAnyMutation() {
+        FestivalInfo source = festivalInfo();
+        source.setEventYear(2026);
+        FestivalEditForm form = validForm();
+        // 2027 개최분은 이 글을 고치는 게 아니라 새 축제로 등록해야 한다.
+        form.setStartDate(LocalDate.parse("2027-11-01"));
+        form.setEndDate(LocalDate.parse("2027-11-30"));
+        when(travelInfoMapper.findByIdForUpdate(10L)).thenReturn(festival(10L));
+        when(infoCategoryMapper.findById(6L)).thenReturn(festivalCategory(6L));
+        when(festivalInfoMapper.findByInfoId(10L)).thenReturn(source);
+
+        assertThatThrownBy(() -> service.update(10L, form))
+                .isInstanceOfSatisfying(FestivalValidationException.class, exception -> {
+                    assertThat(exception.getField()).isEqualTo("startDate");
+                    assertThat(exception.getMessage()).contains("2026");
+                });
+
+        // 지난 회차의 어떤 값도 건드리지 않는다.
+        verify(travelInfoMapper, never()).updateTravelInfo(any());
+        verify(travelInfoMapper, never()).deletePeriodsByInfoId(any());
+        verify(travelInfoMapper, never()).insertPeriod(any());
+        verify(festivalInfoMapper, never()).update(any());
+    }
+
+    @Test
+    void updateGivesAnEventYearToAFestivalThatDidNotHaveFestivalInfoYet() {
+        FestivalEditForm form = validForm();
+        when(travelInfoMapper.findByIdForUpdate(10L)).thenReturn(festival(10L));
+        when(infoCategoryMapper.findById(6L)).thenReturn(festivalCategory(6L));
+        when(festivalInfoMapper.findByInfoId(10L)).thenReturn(null);
+        when(travelInfoMapper.updateTravelInfo(any())).thenReturn(1);
+        when(travelInfoMapper.insertPeriod(any())).thenReturn(1);
+        when(festivalInfoMapper.insert(any())).thenReturn(1);
+
+        service.update(10L, form);
+
+        ArgumentCaptor<FestivalInfo> captor = ArgumentCaptor.forClass(FestivalInfo.class);
+        verify(festivalInfoMapper).insert(captor.capture());
+        assertThat(captor.getValue().getEventYear()).isEqualTo(2026);
+        assertThat(captor.getValue().getSourceType()).isEqualTo("ADMIN");
+    }
+
     @Test
     void updateRejectsThumbnailOwnedByAnotherFestivalBeforeAnyMutation() {
         FestivalEditForm form = validForm();

@@ -7,19 +7,50 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (toggleBtn && form && searchBox) {
         const searchInput = form.querySelector('input[name="q"]');
+        const clearBtn = form.querySelector('.search-clear');
         /* 공백만 남은 값은 검색어가 없는 것으로 본다 */
         const hasKeyword = () => (searchInput?.value ?? '').trim() !== '';
+        /* 지우기 버튼은 지울 값이 있을 때만 보인다 */
+        const syncClearButton = () => {
+            if (clearBtn) {
+                clearBtn.hidden = (searchInput?.value ?? '') === '';
+            }
+        };
 
         const setSearchOpen = (isOpen, restoreFocus = false) => {
             form.classList.toggle('open', isOpen);
             searchBox.classList.toggle('search-open', isOpen);
             toggleBtn.setAttribute('aria-expanded', String(isOpen));
+            syncClearButton();
             if (isOpen) {
                 form.querySelector('input')?.focus();
             } else if (restoreFocus) {
                 toggleBtn.focus();
             }
         };
+
+        searchInput?.addEventListener('input', syncClearButton);
+
+        clearBtn?.addEventListener('click', e => {
+            /* 폼 안의 버튼이라 검색으로 새지 않게 막는다 (type=button 이지만 확실히 둔다) */
+            e.preventDefault();
+            e.stopPropagation();
+            if (searchInput) {
+                searchInput.value = '';
+                searchInput.focus();
+            }
+            syncClearButton();
+        });
+
+        /*
+          /search 는 가운데 검색창이 검색어를 들고 있는 주 검색 UI다.
+          헤더 검색은 결과 페이지에서 닫힌 채로 시작하고, 브라우저가 값을 되살렸더라도 비운다.
+          다른 페이지는 예전처럼 돋보기를 눌렀을 때만 열린다.
+        */
+        if (window.location.pathname === '/search' && searchInput) {
+            searchInput.value = '';
+        }
+        setSearchOpen(false);
 
         toggleBtn.addEventListener('click', e => {
             e.preventDefault();

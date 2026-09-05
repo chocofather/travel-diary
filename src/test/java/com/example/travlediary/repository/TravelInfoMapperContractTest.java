@@ -87,7 +87,10 @@ class TravelInfoMapperContractTest {
 
     @Test
     void publicListUsesFestivalThumbnailBeforeMainAndKeepsGeneralMainPolicy() throws IOException {
-        String query = between(mapper(), "<select id=\"findPublicList\"", "</select>");
+        String mapper = mapper();
+        // 대표기간은 목록·개수 쿼리가 함께 쓰는 조각으로 빠졌다.
+        String query = between(mapper, "<select id=\"findPublicList\"", "</select>")
+                + between(mapper, "<sql id=\"RepresentativePeriodJoin\">", "</sql>");
 
         assertThat(query)
                 .contains("SELECT ii.image_url")

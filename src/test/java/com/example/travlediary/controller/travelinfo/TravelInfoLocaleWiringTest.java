@@ -61,7 +61,7 @@ class TravelInfoLocaleWiringTest {
         List<TravelInfoListItemDto> list = List.of(listItem(TravelInfoContentType.GENERAL));
         when(travelInfoService.getPublicList(
                 TravelInfoScope.DOMESTIC, TravelInfoContentType.GENERAL,
-                List.of(), null, "latest", 0L, 12)).thenReturn(list);
+                List.of(), null, null, "latest", 0L, 12)).thenReturn(list);
 
         Model model = new ExtendedModelMap();
         assertThat(list(model, null)).isEqualTo("travel-info/list");
@@ -75,7 +75,7 @@ class TravelInfoLocaleWiringTest {
         List<TravelInfoListItemDto> list = List.of(listItem(TravelInfoContentType.FESTIVAL));
         when(travelInfoService.getPublicList(
                 null, TravelInfoContentType.FESTIVAL,
-                List.of(), null, "latest", 0L, 12)).thenReturn(list);
+                List.of(), null, null, "event", 0L, 12)).thenReturn(list);
 
         list(new ExtendedModelMap(), "FESTIVAL");
 
@@ -230,7 +230,8 @@ class TravelInfoLocaleWiringTest {
     }
 
     private String list(Model model, String contentType) {
-        return controller().list(null, null, contentType, null, null, 1, 12, null, null, model);
+        return controller().list(
+                null, null, contentType, null, null, null, 1, 12, null, null, model);
     }
 
     private TravelInfoController controller() {

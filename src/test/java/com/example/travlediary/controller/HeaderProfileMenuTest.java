@@ -402,9 +402,14 @@ class HeaderProfileMenuTest {
         assertThat(searchBox.selectFirst("#auth-area")).isNotNull();
         // 언어 선택은 다섯 언어를 그대로 내준다.
         assertThat(searchBox.select(".language-menu-option")).hasSize(5);
-        // 검색창은 닫힌 상태로 시작한다.
+        // 검색창은 닫힌 상태로 시작하고, 지우기 버튼은 지울 값이 없어 숨어 있다.
         assertThat(document.selectFirst("#search-form").hasClass("hidden")).isTrue();
         assertThat(document.selectFirst("#search-toggle").attr("aria-expanded")).isEqualTo("false");
+        var clear = searchBox.selectFirst("#header-search-clear");
+        assertThat(clear).isNotNull();
+        assertThat(clear.attr("type")).isEqualTo("button");
+        assertThat(clear.hasAttr("hidden")).isTrue();
+        assertThat(clear.attr("aria-label")).isNotBlank();
     }
 
     private org.jsoup.nodes.Document pageWithLocale(String languageTag) throws Exception {

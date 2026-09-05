@@ -55,7 +55,7 @@
 
         <noscript th:if="${keyword != null}">
           <a class="travel-info-search-noscript-clear"
-             th:href="@{/travel-info(scope=${scope},contentType=${contentType},categoryId=${categoryIds},sort=${sort == 'views' ? sort : null},size=${pageSize})}"
+             th:href="@{/travel-info(scope=${scope},contentType=${contentType},categoryId=${categoryIds},sort=${sortParam},size=${pageSize})}"
              th:text="#{travelInfo.list.search.clear}">검색어 지우기</a>
         </noscript>
       </form>
@@ -66,14 +66,14 @@
         <span class="travel-info-filter-label"
               th:text="#{travelInfo.list.filter.scope.general}">여행정보 구분</span>
         <div class="travel-info-pills">
-          <a th:href="@{/travel-info(keyword=${keyword},scope='DOMESTIC',contentType='GENERAL',categoryId=${categoryIds},sort=${sort == 'views' ? sort : null},size=${pageSize})}"
+          <a th:href="@{/travel-info(keyword=${keyword},scope='DOMESTIC',contentType='GENERAL',categoryId=${categoryIds},sort=${sortParam},size=${pageSize})}"
              class="travel-info-filter-pill"
              data-filter-name="primary" data-filter-value="DOMESTIC"
              data-filter-content-type="GENERAL"
              th:classappend="${scope != null and scope.name() == 'DOMESTIC'} ? ' is-active'"
              th:attr="aria-current=${scope != null and scope.name() == 'DOMESTIC'} ? 'true' : null"
              th:text="#{travelInfo.scope.domestic}">국내</a>
-          <a th:href="@{/travel-info(keyword=${keyword},scope='INTERNATIONAL',contentType='GENERAL',categoryId=${categoryIds},sort=${sort == 'views' ? sort : null},size=${pageSize})}"
+          <a th:href="@{/travel-info(keyword=${keyword},scope='INTERNATIONAL',contentType='GENERAL',categoryId=${categoryIds},sort=${sortParam},size=${pageSize})}"
              class="travel-info-filter-pill"
              data-filter-name="primary" data-filter-value="INTERNATIONAL"
              data-filter-content-type="GENERAL"
@@ -89,21 +89,21 @@
         <span class="travel-info-filter-label"
               th:text="#{travelInfo.list.filter.scope.festival}">지역 범위</span>
         <div class="travel-info-pills">
-          <a th:href="@{/travel-info(keyword=${keyword},contentType='FESTIVAL',categoryId=${categoryIds},sort=${sort == 'views' ? sort : null},size=${pageSize})}"
+          <a th:href="@{/travel-info(keyword=${keyword},contentType='FESTIVAL',categoryId=${categoryIds},eventStatus=${eventStatus},sort=${sortParam},size=${pageSize})}"
              class="travel-info-filter-pill"
              data-filter-name="primary" data-filter-value=""
              data-filter-content-type="FESTIVAL"
              th:classappend="${scope == null} ? ' is-active'"
              th:attr="aria-current=${scope == null} ? 'true' : null"
              th:text="#{travelInfo.filter.all}">전체</a>
-          <a th:href="@{/travel-info(keyword=${keyword},scope='DOMESTIC',contentType='FESTIVAL',categoryId=${categoryIds},sort=${sort == 'views' ? sort : null},size=${pageSize})}"
+          <a th:href="@{/travel-info(keyword=${keyword},scope='DOMESTIC',contentType='FESTIVAL',categoryId=${categoryIds},eventStatus=${eventStatus},sort=${sortParam},size=${pageSize})}"
              class="travel-info-filter-pill"
              data-filter-name="primary" data-filter-value="DOMESTIC"
              data-filter-content-type="FESTIVAL"
              th:classappend="${scope != null and scope.name() == 'DOMESTIC'} ? ' is-active'"
              th:attr="aria-current=${scope != null and scope.name() == 'DOMESTIC'} ? 'true' : null"
              th:text="#{travelInfo.scope.domestic}">국내</a>
-          <a th:href="@{/travel-info(keyword=${keyword},scope='INTERNATIONAL',contentType='FESTIVAL',categoryId=${categoryIds},sort=${sort == 'views' ? sort : null},size=${pageSize})}"
+          <a th:href="@{/travel-info(keyword=${keyword},scope='INTERNATIONAL',contentType='FESTIVAL',categoryId=${categoryIds},eventStatus=${eventStatus},sort=${sortParam},size=${pageSize})}"
              class="travel-info-filter-pill"
              data-filter-name="primary" data-filter-value="INTERNATIONAL"
              data-filter-content-type="FESTIVAL"
@@ -114,6 +114,39 @@
       </div>
 
       <div th:replace="~{travel-info/fragments/category-filter :: filter}"></div>
+
+      <!-- 축제·행사 전용: 오늘 기준 개최 상태. 기존 필터와 같은 pill 구성을 그대로 쓴다 -->
+      <div class="travel-info-filter-group"
+           th:if="${contentType != null and contentType.name() == 'FESTIVAL'}">
+        <span class="travel-info-filter-label"
+              th:text="#{travelInfo.list.filter.eventStatus}">행사 상태</span>
+        <div class="travel-info-pills">
+          <a th:href="@{/travel-info(keyword=${keyword},scope=${scope},contentType='FESTIVAL',categoryId=${categoryIds},sort=${sortParam},size=${pageSize})}"
+             class="travel-info-filter-pill"
+             data-filter-name="eventStatus" data-filter-value=""
+             th:classappend="${eventStatus == null} ? ' is-active'"
+             th:attr="aria-current=${eventStatus == null} ? 'true' : null"
+             th:text="#{travelInfo.filter.all}">전체</a>
+          <a th:href="@{/travel-info(keyword=${keyword},scope=${scope},contentType='FESTIVAL',categoryId=${categoryIds},eventStatus='ongoing',sort=${sortParam},size=${pageSize})}"
+             class="travel-info-filter-pill"
+             data-filter-name="eventStatus" data-filter-value="ongoing"
+             th:classappend="${eventStatus == 'ongoing'} ? ' is-active'"
+             th:attr="aria-current=${eventStatus == 'ongoing'} ? 'true' : null"
+             th:text="#{travelInfo.eventStatus.ongoing}">진행중</a>
+          <a th:href="@{/travel-info(keyword=${keyword},scope=${scope},contentType='FESTIVAL',categoryId=${categoryIds},eventStatus='upcoming',sort=${sortParam},size=${pageSize})}"
+             class="travel-info-filter-pill"
+             data-filter-name="eventStatus" data-filter-value="upcoming"
+             th:classappend="${eventStatus == 'upcoming'} ? ' is-active'"
+             th:attr="aria-current=${eventStatus == 'upcoming'} ? 'true' : null"
+             th:text="#{travelInfo.eventStatus.upcoming}">진행예정</a>
+          <a th:href="@{/travel-info(keyword=${keyword},scope=${scope},contentType='FESTIVAL',categoryId=${categoryIds},eventStatus='ended',sort=${sortParam},size=${pageSize})}"
+             class="travel-info-filter-pill"
+             data-filter-name="eventStatus" data-filter-value="ended"
+             th:classappend="${eventStatus == 'ended'} ? ' is-active'"
+             th:attr="aria-current=${eventStatus == 'ended'} ? 'true' : null"
+             th:text="#{travelInfo.eventStatus.ended}">종료</a>
+        </div>
+      </div>
 
       <div class="travel-info-filter-actions">
         <!-- 초기화해도 보고 있던 화면(여행정보/축제·행사)은 그대로 둔다 -->

@@ -448,17 +448,87 @@ body {
     transition:width .25s ease, opacity .25s ease;
 }
 
+/* 오른쪽 안쪽에 지우기(36px) + 검색(38px) 두 버튼이 들어갈 자리를 비워 둔다 */
 #search-form input{
     flex:1;
     width:100%;
     min-width:0;
-    padding:8px 42px 8px 12px;
+    padding:9px 78px 9px 12px;
     font-size:14px;
     border:1px solid #cbd3dc;
     border-radius:6px;
     background:#fff;
     color:#252b33;
     outline:none;
+}
+
+/* 브라우저 기본 X 는 클릭 영역이 너무 좁아 쓰지 않고, 아래 버튼만 남긴다 */
+#search-form input::-webkit-search-cancel-button,
+#search-form input::-webkit-search-decoration{
+    -webkit-appearance:none;
+    appearance:none;
+}
+
+/*
+  지우기 버튼. 보이는 X 는 12px 그대로 두고 투명한 클릭 영역만 36x36 으로 넓힌다.
+  검색 버튼(right:1px, 폭 38px) 바로 왼쪽에 두어 서로 겹치지 않는다.
+  돋보기 토글은 form 바깥에 있고 열린 동안 폭이 0 이라 겹칠 일이 없다.
+*/
+#search-form .search-clear{
+    position:absolute;
+    top:50%;
+    right:39px;
+    transform:translateY(-50%);
+    width:36px;
+    height:36px;
+    padding:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border:0;
+    border-radius:50%;
+    background:transparent;
+    cursor:pointer;
+}
+
+#search-form .search-clear[hidden]{
+    display:none;
+}
+
+#search-form .search-clear:hover{
+    background:#f1f5f9;
+}
+
+#search-form .search-clear:focus-visible{
+    outline:3px solid rgba(0, 102, 204, 0.28);
+    outline-offset:-3px;
+}
+
+.search-clear-icon{
+    position:relative;
+    display:block;
+    width:12px;
+    height:12px;
+}
+
+.search-clear-icon::before,
+.search-clear-icon::after{
+    content:"";
+    position:absolute;
+    top:50%;
+    left:0;
+    width:100%;
+    height:1.6px;
+    border-radius:1px;
+    background:#6b7684;
+}
+
+.search-clear-icon::before{
+    transform:translateY(-50%) rotate(45deg);
+}
+
+.search-clear-icon::after{
+    transform:translateY(-50%) rotate(-45deg);
 }
 
 #search-form .search-submit{

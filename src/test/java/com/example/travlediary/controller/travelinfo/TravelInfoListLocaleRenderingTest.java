@@ -124,9 +124,9 @@ class TravelInfoListLocaleRenderingTest {
     })
     void theEmptyResultNoticeIsTranslated(String tag, String expected) throws Exception {
         when(infoCategoryService.getVisibleByContentType(any())).thenReturn(List.of());
-        when(travelInfoService.getPublicList(any(), any(), any(), any(), any(), anyOffset(), anySize()))
+        when(travelInfoService.getPublicList(any(), any(), any(), any(), any(), any(), anyOffset(), anySize()))
                 .thenReturn(List.of());
-        when(travelInfoService.countPublicList(any(), any(), any(), any())).thenReturn(0L);
+        when(travelInfoService.countPublicList(any(), any(), any(), any(), any())).thenReturn(0L);
 
         Document document = render("/travel-info", tag);
 
@@ -163,10 +163,10 @@ class TravelInfoListLocaleRenderingTest {
                 .thenReturn(List.of(category(3L, "계절여행", TravelInfoContentType.GENERAL)));
         when(referenceNameLocalizationService.localizeInfoCategories(any(), any()))
                 .thenReturn(Map.of(3L, "Seasonal travel"));
-        when(travelInfoService.getPublicList(any(), any(), any(), any(), any(), anyOffset(), anySize()))
+        when(travelInfoService.getPublicList(any(), any(), any(), any(), any(), any(), anyOffset(), anySize()))
                 .thenReturn(List.of(listItem(TravelInfoContentType.GENERAL)));
         // 페이지 이동 문구까지 그려지도록 여러 쪽 분량으로 둔다.
-        when(travelInfoService.countPublicList(any(), any(), any(), any())).thenReturn(30L);
+        when(travelInfoService.countPublicList(any(), any(), any(), any(), any())).thenReturn(30L);
     }
 
     private void givenFestivalList() {
@@ -174,10 +174,10 @@ class TravelInfoListLocaleRenderingTest {
                 .thenReturn(List.of(category(4L, "문화축제", TravelInfoContentType.FESTIVAL)));
         when(referenceNameLocalizationService.localizeInfoCategories(any(), any()))
                 .thenReturn(Map.of(4L, "Culture festival"));
-        when(travelInfoService.getPublicList(any(), any(), any(), any(), any(), anyOffset(), anySize()))
+        when(travelInfoService.getPublicList(any(), any(), any(), any(), any(), any(), anyOffset(), anySize()))
                 .thenReturn(List.of(listItem(TravelInfoContentType.FESTIVAL)));
         // 페이지 이동 문구까지 그려지도록 여러 쪽 분량으로 둔다.
-        when(travelInfoService.countPublicList(any(), any(), any(), any())).thenReturn(30L);
+        when(travelInfoService.countPublicList(any(), any(), any(), any(), any())).thenReturn(30L);
     }
 
     /** 실제 화면과 같은 방식으로 언어를 고른다 (언어 선택 쿠키). */
@@ -197,6 +197,46 @@ class TravelInfoListLocaleRenderingTest {
         category.setDisplayOrder(1);
         category.setIsVisible(true);
         return category;
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({
+            // 오늘을 감싸는 기간 / 앞으로 시작 / 이미 끝남
+            "-3, 3,  is-ongoing,  진행중",
+            "5,  9,  is-upcoming, 진행예정",
+            "-9, -5, is-ended,    종료"
+    })
+    void aFestivalCardShowsTheSameStatusAsTheFilterDoes(int startOffset, int endOffset,
+                                                        String expectedClass,
+                                                        String expectedText) throws Exception {
+        TravelInfoListItemDto festival = listItem(TravelInfoContentType.FESTIVAL);
+        festival.setStartDate(java.time.LocalDate.now().plusDays(startOffset));
+        festival.setEndDate(java.time.LocalDate.now().plusDays(endOffset));
+        when(travelInfoService.getPublicList(
+                any(), any(), any(), any(), any(), any(), anyOffset(), anySize()))
+                .thenReturn(List.of(festival));
+        when(travelInfoService.countPublicList(any(), any(), any(), any(), any())).thenReturn(1L);
+        when(infoCategoryService.getVisibleByContentType(TravelInfoContentType.FESTIVAL))
+                .thenReturn(List.of(category(4L, "축제", TravelInfoContentType.FESTIVAL)));
+
+        Document document = render("/travel-info?contentType=FESTIVAL", "ko");
+        var badge = document.selectFirst(".travel-info-event-status");
+
+        assertThat(badge).isNotNull();
+        assertThat(badge.hasClass(expectedClass)).isTrue();
+        assertThat(badge.text()).isEqualTo(expectedText);
+        // 카테고리 배지와 나란히 놓인다.
+        assertThat(document.select(".travel-info-card-badges .travel-info-category")).hasSize(1);
+    }
+
+    @Test
+    void aGeneralTravelInfoCardNeverShowsAnEventStatusBadge() throws Exception {
+        givenGeneralList();
+
+        Document document = render("/travel-info", "ko");
+
+        assertThat(document.select(".travel-info-event-status")).isEmpty();
+        assertThat(document.select(".travel-info-category")).isNotEmpty();
     }
 
     private TravelInfoListItemDto listItem(TravelInfoContentType contentType) {

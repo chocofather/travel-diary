@@ -10,6 +10,7 @@ import com.example.travlediary.dto.TravelInfoPeriodDto;
 import com.example.travlediary.dto.TravelInfoTranslationForm;
 import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.model.BookmarkTargetType;
+import com.example.travlediary.model.FestivalInfo;
 import com.example.travlediary.model.InfoCategory;
 import com.example.travlediary.model.InfoImage;
 import com.example.travlediary.model.InfoPeriod;
@@ -19,6 +20,7 @@ import com.example.travlediary.model.TravelInfoScope;
 import com.example.travlediary.model.TravelInfoTranslation;
 import com.example.travlediary.repository.bookmark.BookmarkMapper;
 import com.example.travlediary.repository.category.InfoCategoryMapper;
+import com.example.travlediary.repository.travelinfo.FestivalInfoMapper;
 import com.example.travlediary.repository.travelinfo.TravelInfoMapper;
 import com.example.travlediary.service.category.ReferenceNameLocalizationService;
 import com.example.travlediary.service.file.FileUploadService;
@@ -58,6 +60,8 @@ public class TravelInfoService {
             .collect(Collectors.toUnmodifiableSet());
 
     private final TravelInfoMapper travelInfoMapper;
+    /** 축제 글의 개최연도를 이 경로에서 바꾸지 못하게 확인할 때만 쓴다. */
+    private final FestivalInfoMapper festivalInfoMapper;
     private final BookmarkMapper bookmarkMapper;
     private final InfoCategoryMapper infoCategoryMapper;
     private final PostContentSanitizer postContentSanitizer;
@@ -77,24 +81,43 @@ public class TravelInfoService {
                                                       TravelInfoContentType contentType,
                                                       List<Long> categoryIds,
                                                       String keyword,
+                                                      String eventStatus,
                                                       String sort,
                                                       long offset,
                                                       int limit) {
         return travelInfoMapper.findPublicList(
                 scope, normalizePublicContentType(contentType), categoryIds,
                 TravelInfoSearchKeyword.toLikeLiteral(keyword),
-                TravelInfoSearchKeyword.toKoreanPrefixRegex(keyword), sort, offset, limit);
+                TravelInfoSearchKeyword.toKoreanPrefixRegex(keyword),
+                normalizeEventStatus(eventStatus), sort, offset, limit);
     }
 
     @Transactional(readOnly = true)
     public long countPublicList(TravelInfoScope scope,
                                 TravelInfoContentType contentType,
                                 List<Long> categoryIds,
-                                String keyword) {
+                                String keyword,
+                                String eventStatus) {
         return travelInfoMapper.countPublicList(
                 scope, normalizePublicContentType(contentType), categoryIds,
                 TravelInfoSearchKeyword.toLikeLiteral(keyword),
-                TravelInfoSearchKeyword.toKoreanPrefixRegex(keyword));
+                TravelInfoSearchKeyword.toKoreanPrefixRegex(keyword),
+                normalizeEventStatus(eventStatus));
+    }
+
+    /**
+     * 정해 둔 행사 상태만 SQL 로 넘긴다. 그 밖의 값은 '전체' 와 같이 조건 없음으로 본다.
+     *
+     * <p>값을 SQL 문자열로 이어 붙이지 않고 정해진 분기에만 쓰므로 임의 값이 들어와도 안전하다.
+     */
+    private String normalizeEventStatus(String eventStatus) {
+        if (eventStatus == null) {
+            return null;
+        }
+        return switch (eventStatus) {
+            case "ongoing", "upcoming", "ended" -> eventStatus;
+            default -> null;
+        };
     }
 
     /**
@@ -382,6 +405,8 @@ public class TravelInfoService {
     public void update(Long id, TravelInfoForm form) {
         TravelInfo travelInfo = requireTravelInfo(travelInfoMapper.findByIdForUpdate(id));
         ValidatedTravelInfo validated = validate(form);
+        // 이 폼으로도 축제 기간을 고칠 수 있다. 축제 전용 화면과 같은 규칙을 여기서도 지킨다.
+        requireSameFestivalEventYear(id, validated.periods());
 
         boolean replaceThumbnail = hasNewThumbnail(form.getThumbnailFile());
         boolean deleteThumbnail = !replaceThumbnail && form.isRemoveThumbnail();
@@ -667,6 +692,33 @@ public class TravelInfoService {
 
         List<ValidatedPeriod> periods = validatePeriods(form);
         return new ValidatedTravelInfo(title, content, periods);
+    }
+
+    /**
+     * 이미 개최연도를 가진 축제 글이면 그 연도를 벗어나는 기간 수정을 막는다.
+     *
+     * <p>festival_info.event_year 는 언제나 그 개최분 시작일의 연도다.
+     * 이 폼으로 기간만 다음 해로 옮기면 지난 회차가 덮어써지고 두 값이 어긋난다.
+     * 기간을 여러 개 넣는 경우에도 가장 이른 시작일이 그 개최분의 시작이다.
+     */
+    private void requireSameFestivalEventYear(Long id, List<ValidatedPeriod> periods) {
+        if (periods == null || periods.isEmpty()) {
+            return;
+        }
+        FestivalInfo festivalInfo = festivalInfoMapper.findByInfoId(id);
+        if (festivalInfo == null || festivalInfo.getEventYear() == null) {
+            return;
+        }
+        int newEventYear = periods.stream()
+                .map(ValidatedPeriod::startDate)
+                .min(LocalDate::compareTo)
+                .orElseThrow()
+                .getYear();
+        if (festivalInfo.getEventYear() != newEventYear) {
+            throw new TravelInfoValidationException("periods",
+                    "다른 연도 개최분은 새 축제로 등록해야 합니다. "
+                            + "이 글은 " + festivalInfo.getEventYear() + "년 개최분입니다.");
+        }
     }
 
     private List<ValidatedPeriod> validatePeriods(TravelInfoForm form) {

@@ -44,7 +44,9 @@ class FestivalPublicUiContractTest {
                 .contains("object-fit: contain")
                 .contains("overflow-wrap: anywhere")
                 .contains("grid-template-columns: repeat(2, minmax(0, 1fr))")
-                .contains("@media (max-width: 760px)")
+                // 데스크톱 / 태블릿 / 모바일 세 구간을 모두 잡는다.
+                .contains("@media (max-width: 1023px)")
+                .contains("@media (max-width: 767px)")
                 .contains("@media (max-width: 520px)")
                 .contains("grid-template-columns: minmax(0, 1fr)")
                 .contains(".festival-detail-content pre")
@@ -52,7 +54,50 @@ class FestivalPublicUiContractTest {
                 .contains(".festival-detail-content [class*=\"ql-indent-\"]")
                 .contains("padding-left: min(3em, 12vw)")
                 .contains("max-width: 100%")
-                .doesNotContain("linear-gradient", "animation:", "box-shadow:");
+                .doesNotContain("linear-gradient", "animation:", "transition:", "box-shadow:");
+    }
+
+    @Test
+    void festivalSectionsShareOneCentredColumnAndAreSeparatedByRhythmNotBoxes()
+            throws IOException {
+        String template = resource("/templates/festivals/detail.html");
+        String css = resource("/static/css/festival-detail.css");
+
+        // 히어로·소개·행사정보가 같은 가운데 열을 쓴다. 안쪽에 좁은 열을 또 두지 않는다.
+        assertThat(template).doesNotContain("festival-detail-body");
+        assertThat(css)
+                .contains("width: min(1080px, calc(100% - 40px))")
+                .doesNotContain(".festival-detail-body")
+                // 소개 본문은 섹션 폭을 그대로 쓴다.
+                .contains(".festival-detail-content {")
+                .contains("line-height: 1.8")
+                .contains(".festival-detail-content p + p")
+                .doesNotContain("max-width: 74ch", "max-width: 760px");
+        // 섹션 구분은 여백과 얇은 선이 맡고, 카드로 감싸지 않는다.
+        assertThat(css)
+                .contains(".festival-detail-section {")
+                .contains(".festival-detail-section h2")
+                .contains("border-bottom: 2px solid var(--festival-border)")
+                .doesNotContain(".festival-detail-section h2::after")
+                .doesNotContain("--festival-card-shadow", "--festival-radius");
+    }
+
+    @Test
+    void festivalInformationStaysOneGridInsteadOfPerItemCards() throws IOException {
+        String template = resource("/templates/festivals/detail.html");
+        String css = resource("/static/css/festival-detail.css");
+
+        // 강조 카드를 따로 만들지 않는다. 홈페이지도 같은 흐름 안의 링크다.
+        assertThat(template).doesNotContain("is-highlight");
+        assertThat(css)
+                .contains(".festival-detail-info-row {")
+                // 항목 구분은 얇은 divider 하나뿐이다.
+                .contains("border-top: 1px solid var(--festival-border-soft)")
+                .doesNotContain(".festival-detail-info-row.is-highlight")
+                .doesNotContain(".festival-detail-info-row dt::before")
+                // 홈페이지는 버튼이 아니라 텍스트 링크다.
+                .contains(".festival-detail-homepage")
+                .doesNotContain("border-radius: 999px;\n    background: #fff;");
     }
 
     @Test
@@ -67,8 +112,9 @@ class FestivalPublicUiContractTest {
                 .contains("grid-template-columns: repeat(2, minmax(0, 1fr))")
                 .contains(".festival-detail-info-row.is-wide")
                 .contains("grid-column: 1 / -1")
-                .contains("@media (max-width: 720px)")
+                .contains("@media (max-width: 767px)")
                 .contains("grid-template-columns: minmax(0, 1fr)")
+                .contains("grid-column: auto")
                 .contains("overflow-wrap: anywhere");
     }
 

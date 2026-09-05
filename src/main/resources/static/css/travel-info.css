@@ -484,6 +484,14 @@
     padding: 18px;
 }
 
+/* 카테고리와 개최 상태를 한 줄에 두고, 자리가 좁으면 다음 줄로 접는다 */
+.travel-info-card-badges {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
 .travel-info-category {
     align-self: flex-start;
     padding: 5px 10px;
@@ -492,6 +500,37 @@
     color: var(--travel-info-accent-dark);
     font-size: 11px;
     font-weight: 800;
+}
+
+/*
+  개최 상태. 카테고리보다 조금 작게 두어 보조 정보로 읽히게 한다.
+  진행중만 채운 배지로 눈에 들어오게 하고, 예정은 차분하게, 종료는 회색으로 물러난다.
+  카드 자체를 흐리게 하거나 크기를 바꾸지 않는다.
+*/
+.travel-info-event-status {
+    align-self: flex-start;
+    padding: 4px 9px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    font-size: 10.5px;
+    font-weight: 750;
+    white-space: nowrap;
+}
+
+.travel-info-event-status.is-ongoing {
+    background: var(--travel-info-accent);
+    color: #ffffff;
+}
+
+.travel-info-event-status.is-upcoming {
+    border-color: #cbd5e1;
+    background: #ffffff;
+    color: #475569;
+}
+
+.travel-info-event-status.is-ended {
+    background: #f1f5f9;
+    color: var(--travel-info-muted);
 }
 
 .travel-info-card h2 {

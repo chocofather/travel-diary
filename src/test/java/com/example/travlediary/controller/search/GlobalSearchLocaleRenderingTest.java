@@ -131,6 +131,31 @@ class GlobalSearchLocaleRenderingTest {
         assertThat(expectedTexts).isNotEmpty();
     }
 
+    @org.junit.jupiter.api.Test
+    void theResultPageLeavesTheHeaderSearchClosedAndKeepsTheQueryInItsOwnInput()
+            throws Exception {
+        when(globalSearchService.search("아", "all", 1, SupportedLanguage.KOREAN))
+                .thenReturn(new GlobalSearchPage("아", "all", List.of(), 0, 1, 10, 0, 1, 0));
+
+        var document = Jsoup.parse(
+                renderSearch(SupportedLanguage.KOREAN, "아", null, null));
+
+        // 헤더 검색은 닫힌 채로 시작하고 지난 검색어를 들고 있지 않다.
+        var headerForm = document.selectFirst("form#search-form");
+        assertThat(headerForm).isNotNull();
+        assertThat(headerForm.hasClass("open")).isFalse();
+        assertThat(document.selectFirst(".search-box").hasClass("search-open")).isFalse();
+        assertThat(document.selectFirst("#search-toggle").attr("aria-expanded")).isEqualTo("false");
+        assertThat(headerForm.selectFirst("input[name=q]").attr("value")).isEmpty();
+        // 지우기 버튼은 지울 값이 없으니 숨어 있다.
+        assertThat(headerForm.selectFirst("#header-search-clear").hasAttr("hidden")).isTrue();
+
+        // 가운데 검색창은 검색어를 그대로 들고 재검색을 받는다.
+        assertThat(document.selectFirst("#global-search-input").attr("value")).isEqualTo("아");
+        assertThat(document.selectFirst("form.global-search-form").attr("action"))
+                .isEqualTo("/search");
+    }
+
     private String renderSearch(SupportedLanguage language, String query, String type, String page)
             throws Exception {
         var request = get("/search")

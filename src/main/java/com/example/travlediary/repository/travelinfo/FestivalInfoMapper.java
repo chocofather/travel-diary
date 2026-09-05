@@ -12,8 +12,16 @@ public interface FestivalInfoMapper {
 
     FestivalInfo findByInfoId(Long infoId);
 
-    int countBySourceTypeAndExternalContentId(@Param("sourceType") String sourceType,
-                                              @Param("externalContentId") String externalContentId);
+    /**
+     * 같은 개최분이 이미 있는지 본다.
+     *
+     * <p>개최분 하나는 출처 + TourAPI contentId + 개최연도로 정해진다.
+     * DB 의 UNIQUE(source_type, external_content_id, event_year) 와 같은 기준이라
+     * 같은 축제라도 연도가 다르면 별개로 등록된다.
+     */
+    int countOccurrence(@Param("sourceType") String sourceType,
+                        @Param("externalContentId") String externalContentId,
+                        @Param("eventYear") Integer eventYear);
 
     int insert(FestivalInfo festivalInfo);
 

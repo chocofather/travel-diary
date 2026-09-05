@@ -123,16 +123,60 @@ class FestivalRegistrationServiceTest {
         FestivalCreateForm form = validForm();
         form.setKtoFestivalContentId(" 12345 ");
         allowFestivalCategory();
-        when(festivalInfoMapper.countBySourceTypeAndExternalContentId("KTO_TOURAPI", "12345"))
+        when(festivalInfoMapper.countOccurrence("KTO_TOURAPI", "12345", 2026))
                 .thenReturn(1);
 
         assertThatThrownBy(() -> service.create(form, 7L))
                 .isInstanceOf(FestivalValidationException.class)
-                .hasMessage("이미 등록된 TourAPI 축제·행사입니다.");
+                .hasMessage("이미 등록된 해당 연도의 TourAPI 축제·행사입니다.");
 
-        verify(festivalInfoMapper).countBySourceTypeAndExternalContentId("KTO_TOURAPI", "12345");
+        verify(festivalInfoMapper).countOccurrence("KTO_TOURAPI", "12345", 2026);
         verify(travelInfoMapper, never()).insertTravelInfo(any());
         verify(festivalInfoMapper, never()).insert(any());
+    }
+
+    @Test
+    void theSameTourApiFestivalCanBeRegisteredAgainForAnotherYear() {
+        FestivalCreateForm form = validForm();
+        form.setKtoFestivalContentId(" 506534 ");
+        // 2027 개최분. 2026 개최분이 남아 있어도 다른 개최분이라 등록된다.
+        form.setStartDate(LocalDate.of(2027, 7, 24));
+        form.setEndDate(LocalDate.of(2027, 8, 9));
+        allowFestivalCategory();
+        when(festivalInfoMapper.countOccurrence("KTO_TOURAPI", "506534", 2027)).thenReturn(0);
+        when(ktoFestivalService.getImageDetail("506534"))
+                .thenReturn(imageDetail("506534", null, "Type1"));
+        generateTravelInfoId(43L);
+        when(travelInfoMapper.insertPeriod(any())).thenReturn(1);
+        when(festivalInfoMapper.insert(any())).thenReturn(1);
+
+        assertThat(service.create(form, 7L).festivalId()).isEqualTo(43L);
+
+        ArgumentCaptor<FestivalInfo> captor = ArgumentCaptor.forClass(FestivalInfo.class);
+        verify(festivalInfoMapper).insert(captor.capture());
+        assertThat(captor.getValue().getExternalContentId()).isEqualTo("506534");
+        assertThat(captor.getValue().getEventYear()).isEqualTo(2027);
+        // 2026 개최분을 찾아보지 않는다. 연도가 다르면 애초에 다른 개최분이다.
+        verify(festivalInfoMapper, never()).countOccurrence("KTO_TOURAPI", "506534", 2026);
+    }
+
+    @Test
+    void everyRegistrationStoresTheEventYearTakenFromTheStartDate() {
+        FestivalCreateForm form = validForm();
+        allowFestivalCategory();
+        generateTravelInfoId(44L);
+        when(travelInfoMapper.insertPeriod(any())).thenReturn(1);
+        when(festivalInfoMapper.insert(any())).thenReturn(1);
+
+        service.create(form, 7L);
+
+        ArgumentCaptor<FestivalInfo> captor = ArgumentCaptor.forClass(FestivalInfo.class);
+        verify(festivalInfoMapper).insert(captor.capture());
+        // ADMIN 등록도 개최연도를 갖는다. contentId 가 없으니 중복 조회는 하지 않는다.
+        assertThat(captor.getValue().getEventYear()).isEqualTo(2026);
+        assertThat(captor.getValue().getSourceType()).isEqualTo("ADMIN");
+        assertThat(captor.getValue().getExternalContentId()).isNull();
+        verify(festivalInfoMapper, never()).countOccurrence(any(), any(), any());
     }
 
     @Test
@@ -140,7 +184,7 @@ class FestivalRegistrationServiceTest {
         FestivalCreateForm form = validForm();
         form.setKtoFestivalContentId(" 12345 ");
         allowFestivalCategory();
-        when(festivalInfoMapper.countBySourceTypeAndExternalContentId("KTO_TOURAPI", "12345"))
+        when(festivalInfoMapper.countOccurrence("KTO_TOURAPI", "12345", 2026))
                 .thenReturn(0);
         when(ktoFestivalService.getImageDetail("12345")).thenReturn(imageDetail("12345", null, "Type1"));
         generateTravelInfoId(42L);
@@ -160,7 +204,7 @@ class FestivalRegistrationServiceTest {
         FestivalCreateForm form = validForm();
         form.setKtoFestivalContentId("2648460");
         allowFestivalCategory();
-        when(festivalInfoMapper.countBySourceTypeAndExternalContentId("KTO_TOURAPI", "2648460"))
+        when(festivalInfoMapper.countOccurrence("KTO_TOURAPI", "2648460", 2026))
                 .thenReturn(0);
         when(ktoFestivalService.getImageDetail("2648460"))
                 .thenReturn(imageDetail("2648460", null, "Type3"));
@@ -193,7 +237,7 @@ class FestivalRegistrationServiceTest {
         form.setKtoFestivalContentId("2648460");
         String serverVerifiedUrl = "https://tong.visitkorea.or.kr/cms2/website/75/gyeongbokgung.jpg";
         allowFestivalCategory();
-        when(festivalInfoMapper.countBySourceTypeAndExternalContentId("KTO_TOURAPI", "2648460"))
+        when(festivalInfoMapper.countOccurrence("KTO_TOURAPI", "2648460", 2026))
                 .thenReturn(0);
         when(ktoFestivalService.getImageDetail("2648460"))
                 .thenReturn(imageDetail("2648460", serverVerifiedUrl, "Type3"));
@@ -234,7 +278,7 @@ class FestivalRegistrationServiceTest {
         String mainUrl = "https://tong.visitkorea.or.kr/cms/resource/35/main-thumbnail.jpg";
         String additionalUrl = "https://tong.visitkorea.or.kr/cms/resource/35/additional-thumbnail.jpg";
         allowFestivalCategory();
-        when(festivalInfoMapper.countBySourceTypeAndExternalContentId("KTO_TOURAPI", "thumbnail-main"))
+        when(festivalInfoMapper.countOccurrence("KTO_TOURAPI", "thumbnail-main", 2026))
                 .thenReturn(0);
         when(ktoFestivalService.getImageDetail("thumbnail-main"))
                 .thenReturn(imageDetail("thumbnail-main", mainUrl, "Type1"));
@@ -266,7 +310,7 @@ class FestivalRegistrationServiceTest {
         String mainUrl = "https://tong.visitkorea.or.kr/cms/resource/35/main-hero.jpg";
         String posterUrl = "https://tong.visitkorea.or.kr/cms/resource/35/official-poster.jpg";
         allowFestivalCategory();
-        when(festivalInfoMapper.countBySourceTypeAndExternalContentId("KTO_TOURAPI", "thumbnail-detail"))
+        when(festivalInfoMapper.countOccurrence("KTO_TOURAPI", "thumbnail-detail", 2026))
                 .thenReturn(0);
         when(ktoFestivalService.getImageDetail("thumbnail-detail"))
                 .thenReturn(imageDetail("thumbnail-detail", mainUrl, "Type3"));
@@ -296,7 +340,7 @@ class FestivalRegistrationServiceTest {
         form.setKtoFestivalContentId("thumbnail-validation");
         form.setKtoThumbnailImageSelection("DETAIL:type2");
         allowFestivalCategory();
-        when(festivalInfoMapper.countBySourceTypeAndExternalContentId("KTO_TOURAPI", "thumbnail-validation"))
+        when(festivalInfoMapper.countOccurrence("KTO_TOURAPI", "thumbnail-validation", 2026))
                 .thenReturn(0);
         when(ktoFestivalService.getImageDetail("thumbnail-validation"))
                 .thenReturn(imageDetail("thumbnail-validation",
@@ -319,8 +363,8 @@ class FestivalRegistrationServiceTest {
         arbitraryUrl.setKtoFestivalContentId("thumbnail-client-input");
         arbitraryUrl.setKtoThumbnailImageSelection("https://attacker.example/image.jpg");
         allowFestivalCategory();
-        when(festivalInfoMapper.countBySourceTypeAndExternalContentId(
-                "KTO_TOURAPI", "thumbnail-client-input")).thenReturn(0);
+        when(festivalInfoMapper.countOccurrence(
+                "KTO_TOURAPI", "thumbnail-client-input", 2026)).thenReturn(0);
         when(ktoFestivalService.getImageDetail("thumbnail-client-input"))
                 .thenReturn(imageDetail("thumbnail-client-input",
                         "https://tong.visitkorea.or.kr/cms/resource/35/main.jpg", "Type1"));
@@ -352,8 +396,8 @@ class FestivalRegistrationServiceTest {
         form.setKtoFestivalContentId("thumbnail-missing-serial");
         form.setKtoThumbnailImageSelection("DETAIL:missing");
         allowFestivalCategory();
-        when(festivalInfoMapper.countBySourceTypeAndExternalContentId(
-                "KTO_TOURAPI", "thumbnail-missing-serial")).thenReturn(0);
+        when(festivalInfoMapper.countOccurrence(
+                "KTO_TOURAPI", "thumbnail-missing-serial", 2026)).thenReturn(0);
         when(ktoFestivalService.getImageDetail("thumbnail-missing-serial"))
                 .thenReturn(imageDetail("thumbnail-missing-serial",
                         "https://tong.visitkorea.or.kr/cms/resource/35/main.jpg", "Type1"));
@@ -374,8 +418,8 @@ class FestivalRegistrationServiceTest {
         String mainUrl = "https://tong.visitkorea.or.kr/cms/resource/35/fallback-main.jpg";
         String posterUrl = "https://tong.visitkorea.or.kr/cms/resource/35/fallback-poster.jpg";
         allowFestivalCategory();
-        when(festivalInfoMapper.countBySourceTypeAndExternalContentId(
-                "KTO_TOURAPI", "thumbnail-download-failure")).thenReturn(0);
+        when(festivalInfoMapper.countOccurrence(
+                "KTO_TOURAPI", "thumbnail-download-failure", 2026)).thenReturn(0);
         when(ktoFestivalService.getImageDetail("thumbnail-download-failure"))
                 .thenReturn(imageDetail("thumbnail-download-failure", mainUrl, "Type1"));
         when(ktoFestivalService.getAdditionalImages("thumbnail-download-failure")).thenReturn(List.of(
@@ -409,7 +453,7 @@ class FestivalRegistrationServiceTest {
         String failedUrl = "https://tong.visitkorea.or.kr/cms/resource/35/additional-3.jpg";
         String type3Url = "https://tong.visitkorea.or.kr/cms/resource/35/additional-4.png";
         allowFestivalCategory();
-        when(festivalInfoMapper.countBySourceTypeAndExternalContentId("KTO_TOURAPI", "2648460"))
+        when(festivalInfoMapper.countOccurrence("KTO_TOURAPI", "2648460", 2026))
                 .thenReturn(0);
         when(ktoFestivalService.getImageDetail("2648460"))
                 .thenReturn(imageDetail("2648460", mainUrl, "Type3"));
@@ -451,8 +495,8 @@ class FestivalRegistrationServiceTest {
         form.setKtoFestivalContentId("same-url-fallback");
         String sameUrl = "https://tong.visitkorea.or.kr/cms/resource/35/same.jpg";
         allowFestivalCategory();
-        when(festivalInfoMapper.countBySourceTypeAndExternalContentId(
-                "KTO_TOURAPI", "same-url-fallback")).thenReturn(0);
+        when(festivalInfoMapper.countOccurrence(
+                "KTO_TOURAPI", "same-url-fallback", 2026)).thenReturn(0);
         when(ktoFestivalService.getImageDetail("same-url-fallback"))
                 .thenReturn(imageDetail("same-url-fallback", sameUrl, "Type2"));
         when(ktoFestivalService.getAdditionalImages("same-url-fallback"))
@@ -483,8 +527,8 @@ class FestivalRegistrationServiceTest {
         String unsupportedFirstUrl = "https://tong.visitkorea.or.kr/cms/resource/35/license-retry.jpg";
         String failedFirstUrl = "https://tong.visitkorea.or.kr/cms/resource/35/download-retry.jpg";
         allowFestivalCategory();
-        when(festivalInfoMapper.countBySourceTypeAndExternalContentId(
-                "KTO_TOURAPI", "duplicate-retry")).thenReturn(0);
+        when(festivalInfoMapper.countOccurrence(
+                "KTO_TOURAPI", "duplicate-retry", 2026)).thenReturn(0);
         when(ktoFestivalService.getImageDetail("duplicate-retry"))
                 .thenReturn(imageDetail("duplicate-retry", null, null));
         when(ktoFestivalService.getAdditionalImages("duplicate-retry")).thenReturn(List.of(
@@ -522,7 +566,7 @@ class FestivalRegistrationServiceTest {
         FestivalCreateForm unsupported = validForm();
         unsupported.setKtoFestivalContentId("unsupported");
         allowFestivalCategory();
-        when(festivalInfoMapper.countBySourceTypeAndExternalContentId("KTO_TOURAPI", "unsupported"))
+        when(festivalInfoMapper.countOccurrence("KTO_TOURAPI", "unsupported", 2026))
                 .thenReturn(0);
         when(ktoFestivalService.getImageDetail("unsupported"))
                 .thenReturn(imageDetail("unsupported", "https://tong.visitkorea.or.kr/cms2/website/75/image.jpg", "Type2"));
@@ -538,7 +582,7 @@ class FestivalRegistrationServiceTest {
 
         FestivalCreateForm noImage = validForm();
         noImage.setKtoFestivalContentId("no-image");
-        when(festivalInfoMapper.countBySourceTypeAndExternalContentId("KTO_TOURAPI", "no-image"))
+        when(festivalInfoMapper.countOccurrence("KTO_TOURAPI", "no-image", 2026))
                 .thenReturn(0);
         when(ktoFestivalService.getImageDetail("no-image"))
                 .thenReturn(imageDetail("no-image", null, "Type1"));
@@ -556,7 +600,7 @@ class FestivalRegistrationServiceTest {
         form.setKtoFestivalContentId("image-failure");
         String url = "https://tong.visitkorea.or.kr/cms2/website/75/image.jpg";
         allowFestivalCategory();
-        when(festivalInfoMapper.countBySourceTypeAndExternalContentId("KTO_TOURAPI", "image-failure"))
+        when(festivalInfoMapper.countOccurrence("KTO_TOURAPI", "image-failure", 2026))
                 .thenReturn(0);
         when(ktoFestivalService.getImageDetail("image-failure"))
                 .thenReturn(imageDetail("image-failure", url, "Type1"));
@@ -624,7 +668,7 @@ class FestivalRegistrationServiceTest {
         KtoDownloadedFestivalImage downloaded = new KtoDownloadedFestivalImage(
                 "/uploads/travel-info/festivals/rollback.jpg", url, "image/jpeg", 1024);
         allowFestivalCategory();
-        when(festivalInfoMapper.countBySourceTypeAndExternalContentId("KTO_TOURAPI", "rollback-image"))
+        when(festivalInfoMapper.countOccurrence("KTO_TOURAPI", "rollback-image", 2026))
                 .thenReturn(0);
         when(ktoFestivalService.getImageDetail("rollback-image"))
                 .thenReturn(imageDetail("rollback-image", url, "Type1"));
@@ -650,7 +694,7 @@ class FestivalRegistrationServiceTest {
         KtoDownloadedFestivalImage main = downloaded("rollback-main.jpg", mainUrl);
         KtoDownloadedFestivalImage additional = downloaded("rollback-additional.jpg", additionalUrl);
         allowFestivalCategory();
-        when(festivalInfoMapper.countBySourceTypeAndExternalContentId("KTO_TOURAPI", "rollback-gallery"))
+        when(festivalInfoMapper.countOccurrence("KTO_TOURAPI", "rollback-gallery", 2026))
                 .thenReturn(0);
         when(ktoFestivalService.getImageDetail("rollback-gallery"))
                 .thenReturn(imageDetail("rollback-gallery", mainUrl, "Type1"));
@@ -679,7 +723,7 @@ class FestivalRegistrationServiceTest {
         KtoDownloadedFestivalImage main = downloaded("commit-main.jpg", mainUrl);
         KtoDownloadedFestivalImage additional = downloaded("commit-additional.jpg", additionalUrl);
         allowFestivalCategory();
-        when(festivalInfoMapper.countBySourceTypeAndExternalContentId("KTO_TOURAPI", "commit-gallery"))
+        when(festivalInfoMapper.countOccurrence("KTO_TOURAPI", "commit-gallery", 2026))
                 .thenReturn(0);
         when(ktoFestivalService.getImageDetail("commit-gallery"))
                 .thenReturn(imageDetail("commit-gallery", mainUrl, "Type1"));

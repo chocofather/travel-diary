@@ -45,8 +45,12 @@ public class TravelInfoController {
     private static final String FRAGMENT_VIEW = "travel-info/fragments/list-async :: response";
     private static final String SORT_LATEST = "latest";
     private static final String SORT_VIEWS = "views";
+    /** 축제·행사 기본 정렬. 진행중 → 예정 → 종료 차례로 본다. */
+    private static final String SORT_EVENT = "event";
+    private static final Set<String> ALLOWED_EVENT_STATUSES =
+            Set.of("ongoing", "upcoming", "ended");
     private static final Set<String> ALLOWED_RETURN_QUERY_PARAMETERS = Set.of(
-            "keyword", "scope", "contentType", "categoryId", "sort", "page", "size");
+            "keyword", "scope", "contentType", "categoryId", "eventStatus", "sort", "page", "size");
 
     private final TravelInfoService travelInfoService;
     private final FestivalDetailService festivalDetailService;
@@ -60,6 +64,7 @@ public class TravelInfoController {
                        @RequestParam(required = false) String scope,
                        @RequestParam(required = false) String contentType,
                        @RequestParam(name = "categoryId", required = false) List<String> categoryIdValues,
+                       @RequestParam(required = false) String eventStatus,
                        @RequestParam(required = false) String sort,
                        @RequestParam(defaultValue = "1") int page,
                        @RequestParam(defaultValue = "12") int size,
@@ -78,20 +83,24 @@ public class TravelInfoController {
             safeScope = TravelInfoScope.DOMESTIC;
         }
         List<Long> safeCategoryIds = parsePositiveLongs(categoryIdValues);
-        String safeSort = normalizeSort(sort);
+        // 행사 상태는 축제·행사 화면에만 있다. 일반 여행정보에서는 값이 와도 쓰지 않는다.
+        String safeEventStatus = TravelInfoContentType.FESTIVAL == safeContentType
+                ? normalizeEventStatus(eventStatus)
+                : null;
+        String safeSort = normalizeSort(sort, safeContentType);
         int safePage = Math.max(page, 1);
         int safeSize = normalizeSize(size);
         long offset = (long) (safePage - 1) * safeSize;
 
         List<TravelInfoListItemDto> travelInfoList = travelInfoService.getPublicList(
                 safeScope, safeContentType, safeCategoryIds, safeKeyword,
-                safeSort, offset, safeSize);
+                safeEventStatus, safeSort, offset, safeSize);
         // 검색·정렬·페이징은 원문 기준 그대로 두고, 보여 줄 제목만 현재 언어로 바꾼다.
         travelInfoService.localizePublicList(travelInfoList, requestedLanguage());
         Long currentUserId = userDetails == null ? null : userDetails.getId();
         travelInfoService.populatePublicListBookmarks(travelInfoList, currentUserId);
         long totalCount = travelInfoService.countPublicList(
-                safeScope, safeContentType, safeCategoryIds, safeKeyword);
+                safeScope, safeContentType, safeCategoryIds, safeKeyword, safeEventStatus);
         int totalPages = totalCount == 0
                 ? 0
                 : (int) Math.ceil((double) totalCount / safeSize);
@@ -104,7 +113,11 @@ public class TravelInfoController {
         model.addAttribute("scope", safeScope);
         model.addAttribute("contentType", safeContentType);
         model.addAttribute("categoryIds", safeCategoryIds);
+        model.addAttribute("eventStatus", safeEventStatus);
         model.addAttribute("sort", safeSort);
+        // 링크에 실을 정렬값. 그 화면의 기본 정렬이면 주소에 남기지 않는다.
+        model.addAttribute("sortParam",
+                safeSort.equals(defaultSort(safeContentType)) ? null : safeSort);
         model.addAttribute("currentPage", safePage);
         model.addAttribute("pageSize", safeSize);
         model.addAttribute("totalPages", totalPages);
@@ -113,7 +126,7 @@ public class TravelInfoController {
         model.addAttribute("pageEnd", pageEnd);
         model.addAttribute("listUrl", buildListUrl(
                 safeKeyword, safeScope, safeContentType,
-                safeCategoryIds, safeSort, safePage, safeSize));
+                safeCategoryIds, safeEventStatus, safeSort, safePage, safeSize));
         // 카테고리 원본은 그대로 두고, 이번 요청에 보여 줄 이름만 따로 실어 보낸다.
         List<InfoCategory> categories =
                 infoCategoryService.getVisibleByContentType(safeContentType);
@@ -249,13 +262,16 @@ public class TravelInfoController {
                     query, "contentType", TravelInfoContentType.class);
             String safeKeyword = parseReturnKeyword(query);
             List<Long> safeCategoryIds = parseReturnCategoryIds(query.get("categoryId"));
-            String safeSort = parseReturnSort(query);
+            String safeSort = parseReturnSort(query, safeContentType);
+            String safeEventStatus = TravelInfoContentType.FESTIVAL == safeContentType
+                    ? normalizeEventStatus(singleReturnValue(query, "eventStatus"))
+                    : null;
             int safePage = parseReturnPositiveInt(query, "page", 1, Integer.MAX_VALUE);
             int safeSize = parseReturnPositiveInt(
                     query, "size", DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
             return buildListUrl(
                     safeKeyword, safeScope, safeContentType,
-                    safeCategoryIds, safeSort, safePage, safeSize);
+                    safeCategoryIds, safeEventStatus, safeSort, safePage, safeSize);
         } catch (IllegalArgumentException ignored) {
             return LIST_PATH;
         }
@@ -265,6 +281,7 @@ public class TravelInfoController {
                                 TravelInfoScope scope,
                                 TravelInfoContentType contentType,
                                 List<Long> categoryIds,
+                                String eventStatus,
                                 String sort,
                                 int page,
                                 int size) {
@@ -281,6 +298,10 @@ public class TravelInfoController {
         if (categoryIds != null) {
             categoryIds.forEach(categoryId -> builder.queryParam("categoryId", categoryId));
         }
+        if (eventStatus != null) {
+            builder.queryParam("eventStatus", eventStatus);
+        }
+        // 기본 정렬은 주소에 남기지 않는다. 화면마다 기본값이 다르다.
         if (SORT_VIEWS.equals(sort)) {
             builder.queryParam("sort", SORT_VIEWS);
         }
@@ -293,10 +314,12 @@ public class TravelInfoController {
         return builder.build().encode().toUriString();
     }
 
-    private String parseReturnSort(MultiValueMap<String, String> query) {
+    private String parseReturnSort(MultiValueMap<String, String> query,
+                                   TravelInfoContentType contentType) {
+        String defaultSort = defaultSort(contentType);
         String value = singleReturnValue(query, "sort");
-        if (value == null || value.isBlank() || SORT_LATEST.equals(value)) {
-            return SORT_LATEST;
+        if (value == null || value.isBlank() || defaultSort.equals(value)) {
+            return defaultSort;
         }
         if (SORT_VIEWS.equals(value)) {
             return SORT_VIEWS;
@@ -304,11 +327,29 @@ public class TravelInfoController {
         throw new IllegalArgumentException("Invalid return URL sort");
     }
 
-    private String normalizeSort(String sort) {
+    /**
+     * 화면마다 기본 정렬이 다르다. 축제·행사는 행사일순, 일반 여행정보는 최신순이다.
+     * 그 화면에 없는 정렬값이 들어오면 기본값으로 되돌린다.
+     */
+    private String normalizeSort(String sort, TravelInfoContentType contentType) {
+        String defaultSort = defaultSort(contentType);
         if (sort == null) {
-            return SORT_LATEST;
+            return defaultSort;
         }
-        return SORT_VIEWS.equals(sort.strip()) ? SORT_VIEWS : SORT_LATEST;
+        return SORT_VIEWS.equals(sort.strip()) ? SORT_VIEWS : defaultSort;
+    }
+
+    private String defaultSort(TravelInfoContentType contentType) {
+        return TravelInfoContentType.FESTIVAL == contentType ? SORT_EVENT : SORT_LATEST;
+    }
+
+    /** 정해 둔 상태만 받는다. 그 밖의 값은 '전체'(조건 없음)로 본다. */
+    private String normalizeEventStatus(String eventStatus) {
+        if (eventStatus == null) {
+            return null;
+        }
+        String value = eventStatus.strip();
+        return ALLOWED_EVENT_STATUSES.contains(value) ? value : null;
     }
 
     private String parseReturnKeyword(MultiValueMap<String, String> query) {

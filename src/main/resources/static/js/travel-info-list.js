@@ -11,6 +11,7 @@
     const SORT_SELECTOR = '[data-travel-info-sort]';
     const PRIMARY_FILTER_NAME = 'primary';
     const CATEGORY_FILTER_NAME = 'categoryId';
+    const EVENT_STATUS_FILTER_NAME = 'eventStatus';
     const CONTENT_TYPE_PARAMETER_NAME = 'contentType';
     const FESTIVAL_CONTENT_TYPE = 'FESTIVAL';
     const GENERAL_CONTENT_TYPE = 'GENERAL';
@@ -112,6 +113,10 @@
         if (currentContentType !== nextContentType) {
             url.searchParams.delete(CATEGORY_FILTER_NAME);
         }
+        if (nextContentType !== FESTIVAL_CONTENT_TYPE) {
+            // 행사 상태는 축제·행사 화면에만 있는 필터다.
+            url.searchParams.delete(EVENT_STATUS_FILTER_NAME);
+        }
         url.searchParams.delete('page');
         return cleanUrl(url);
     }
@@ -157,6 +162,7 @@
     function syncFilterUi(url) {
         const pills = Array.from(document.querySelectorAll(FILTER_SELECTOR));
         syncPrimaryFilterUi(pills, url);
+        syncEventStatusFilterUi(pills, url);
 
         const categoryPills = pills.filter(
             (pill) => pill.dataset.filterName === CATEGORY_FILTER_NAME
@@ -193,6 +199,35 @@
         });
     }
 
+    /* 행사 상태 pill 은 필터 영역에 남아 있으므로 주소가 바뀌면 여기서 다시 맞춰 준다. */
+    function syncEventStatusFilterUi(pills, url) {
+        const statusPills = pills.filter(
+            (pill) => pill.dataset.filterName === EVENT_STATUS_FILTER_NAME
+        );
+        const activeValue = url.searchParams.get(EVENT_STATUS_FILTER_NAME) || '';
+
+        statusPills.forEach((pill) => {
+            const isActive = pill.dataset.filterValue === activeValue;
+            pill.classList.toggle('is-active', isActive);
+            if (isActive) {
+                pill.setAttribute('aria-current', 'true');
+            } else {
+                pill.removeAttribute('aria-current');
+            }
+
+            const nextUrl = new URL(url.href);
+            if (pill.dataset.filterValue) {
+                nextUrl.searchParams.set(
+                    EVENT_STATUS_FILTER_NAME, pill.dataset.filterValue);
+            } else {
+                nextUrl.searchParams.delete(EVENT_STATUS_FILTER_NAME);
+            }
+            nextUrl.searchParams.delete('page');
+            cleanUrl(nextUrl);
+            pill.href = nextUrl.pathname + nextUrl.search;
+        });
+    }
+
     function syncSearchUi(url) {
         const input = document.querySelector(SEARCH_INPUT_SELECTOR);
         const clearButton = document.querySelector(SEARCH_CLEAR_SELECTOR);
@@ -211,9 +246,13 @@
 
     function syncSortUi(url) {
         const options = Array.from(document.querySelectorAll(SORT_SELECTOR));
+        // 기본 정렬은 화면마다 다르다. 조회순이 아닌 쪽이 그 화면의 기본값이다.
+        const defaultSort = options
+            .map((option) => option.dataset.sortValue)
+            .find((value) => value !== SORT_VIEWS) || 'latest';
         const activeSort = url.searchParams.get(SORT_PARAMETER_NAME) === SORT_VIEWS
             ? SORT_VIEWS
-            : 'latest';
+            : defaultSort;
         options.forEach((option) => {
             const isActive = option.dataset.sortValue === activeSort;
             option.classList.toggle('is-active', isActive);

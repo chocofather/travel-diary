@@ -4,17 +4,24 @@
 <section id="travel-info-results" class="travel-info-results" th:fragment="results">
   <div class="travel-info-results-header" aria-live="polite">
     <p th:text="#{travelInfo.list.total(${totalCount})}">총 0개의 여행정보</p>
-    <nav class="travel-info-sort" th:attr="aria-label=#{travelInfo.list.sort.label}">
+    <!-- 축제·행사는 행사일순, 일반 여행정보는 최신순이 기본이다. -->
+    <nav class="travel-info-sort" th:attr="aria-label=#{travelInfo.list.sort.label}"
+         th:with="isFestival=${contentType != null and contentType.name() == 'FESTIVAL'},
+                  defaultSort=${contentType != null and contentType.name() == 'FESTIVAL'}
+                      ? 'event' : 'latest'">
       <a class="travel-info-sort-option"
-         th:classappend="${sort == 'latest'} ? ' is-active'"
-         th:attr="aria-current=${sort == 'latest'} ? 'true' : null"
-         th:href="@{/travel-info(keyword=${keyword},scope=${scope},contentType=${contentType},categoryId=${categoryIds},size=${pageSize})}"
-         data-travel-info-sort data-sort-value="latest"
-         th:text="#{travelInfo.list.sort.latest}">최신순</a>
+         th:classappend="${sort == defaultSort} ? ' is-active'"
+         th:attr="aria-current=${sort == defaultSort} ? 'true' : null,
+                  data-sort-value=${defaultSort}"
+         th:href="@{/travel-info(keyword=${keyword},scope=${scope},contentType=${contentType},categoryId=${categoryIds},eventStatus=${eventStatus},size=${pageSize})}"
+         data-travel-info-sort
+         th:text="${isFestival}
+                  ? #{travelInfo.list.sort.event}
+                  : #{travelInfo.list.sort.latest}">행사일순</a>
       <a class="travel-info-sort-option"
          th:classappend="${sort == 'views'} ? ' is-active'"
          th:attr="aria-current=${sort == 'views'} ? 'true' : null"
-         th:href="@{/travel-info(keyword=${keyword},scope=${scope},contentType=${contentType},categoryId=${categoryIds},sort='views',size=${pageSize})}"
+         th:href="@{/travel-info(keyword=${keyword},scope=${scope},contentType=${contentType},categoryId=${categoryIds},eventStatus=${eventStatus},sort='views',size=${pageSize})}"
          data-travel-info-sort data-sort-value="views"
          th:text="#{travelInfo.list.sort.views}">조회순</a>
     </nav>
@@ -58,7 +65,13 @@
       </div>
 
       <div class="travel-info-card-body">
-        <span class="travel-info-category" th:text="${info.categoryName}">계절여행</span>
+        <!-- 개최 상태는 축제·행사 카드에만 붙는다. 판정은 목록이 고른 대표 행사기간 그대로다 -->
+        <div class="travel-info-card-badges">
+          <span class="travel-info-category" th:text="${info.categoryName}">계절여행</span>
+          <span class="travel-info-event-status" th:if="${info.eventStatus != null}"
+                th:classappend="|is-${info.eventStatus}|"
+                th:text="#{'travelInfo.eventStatus.' + ${info.eventStatus}}">진행중</span>
+        </div>
         <h2 th:title="${info.title}">
           <a class="travel-info-card-link"
              th:href="${info.contentType.name() == 'FESTIVAL'}
@@ -108,7 +121,7 @@
   <nav class="travel-info-pagination" th:if="${totalPages > 1}"
        th:attr="aria-label=#{travelInfo.list.pagination}">
     <a th:if="${currentPage > 1}"
-       th:href="@{/travel-info(keyword=${keyword},scope=${scope},contentType=${contentType},categoryId=${categoryIds},sort=${sort == 'views' ? sort : null},page=${currentPage - 1},size=${pageSize})}"
+       th:href="@{/travel-info(keyword=${keyword},scope=${scope},contentType=${contentType},categoryId=${categoryIds},eventStatus=${eventStatus},sort=${sortParam},page=${currentPage - 1},size=${pageSize})}"
        class="travel-info-page-direction"
        th:text="#{travelInfo.list.pagination.previous}">이전</a>
     <span th:unless="${currentPage > 1}"
@@ -116,13 +129,13 @@
           th:text="#{travelInfo.list.pagination.previous}">이전</span>
 
     <a th:each="pageNumber : ${#numbers.sequence(pageStart, pageEnd)}"
-       th:href="@{/travel-info(keyword=${keyword},scope=${scope},contentType=${contentType},categoryId=${categoryIds},sort=${sort == 'views' ? sort : null},page=${pageNumber},size=${pageSize})}"
+       th:href="@{/travel-info(keyword=${keyword},scope=${scope},contentType=${contentType},categoryId=${categoryIds},eventStatus=${eventStatus},sort=${sortParam},page=${pageNumber},size=${pageSize})}"
        th:text="${pageNumber}"
        th:classappend="${pageNumber == currentPage} ? ' is-active'"
        th:attr="aria-current=${pageNumber == currentPage} ? 'page' : null">1</a>
 
     <a th:if="${currentPage < totalPages}"
-       th:href="@{/travel-info(keyword=${keyword},scope=${scope},contentType=${contentType},categoryId=${categoryIds},sort=${sort == 'views' ? sort : null},page=${currentPage + 1},size=${pageSize})}"
+       th:href="@{/travel-info(keyword=${keyword},scope=${scope},contentType=${contentType},categoryId=${categoryIds},eventStatus=${eventStatus},sort=${sortParam},page=${currentPage + 1},size=${pageSize})}"
        class="travel-info-page-direction"
        th:text="#{travelInfo.list.pagination.next}">다음</a>
     <span th:unless="${currentPage < totalPages}"

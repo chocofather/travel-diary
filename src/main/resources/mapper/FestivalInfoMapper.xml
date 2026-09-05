@@ -19,6 +19,7 @@
         <result property="homepageUrl" column="homepage_url"/>
         <result property="sourceType" column="source_type"/>
         <result property="externalContentId" column="external_content_id"/>
+        <result property="eventYear" column="event_year"/>
         <result property="createdAt" column="created_at"/>
         <result property="updatedAt" column="updated_at"/>
     </resultMap>
@@ -50,17 +51,20 @@
                homepage_url,
                source_type,
                external_content_id,
+               event_year,
                created_at,
                updated_at
         FROM festival_info
         WHERE info_id = #{infoId}
     </select>
 
-    <select id="countBySourceTypeAndExternalContentId" resultType="int">
+    <!-- 개최분 하나의 기준. UNIQUE(source_type, external_content_id, event_year) 와 같다. -->
+    <select id="countOccurrence" resultType="int">
         SELECT COUNT(*)
         FROM festival_info
         WHERE source_type = #{sourceType}
           AND external_content_id = #{externalContentId}
+          AND event_year = #{eventYear}
     </select>
 
     <insert id="insert" parameterType="com.example.travlediary.model.FestivalInfo">
@@ -77,7 +81,8 @@
             contact_tel,
             homepage_url,
             source_type,
-            external_content_id
+            external_content_id,
+            event_year
         )
         VALUES (
             #{infoId},
@@ -92,7 +97,8 @@
             #{contactTel},
             #{homepageUrl},
             COALESCE(#{sourceType}, 'ADMIN'),
-            #{externalContentId}
+            #{externalContentId},
+            #{eventYear}
         )
     </insert>
 
@@ -109,7 +115,8 @@
             contact_tel = #{contactTel},
             homepage_url = #{homepageUrl},
             source_type = COALESCE(#{sourceType}, 'ADMIN'),
-            external_content_id = #{externalContentId}
+            external_content_id = #{externalContentId},
+            event_year = #{eventYear}
         WHERE info_id = #{infoId}
     </update>
 

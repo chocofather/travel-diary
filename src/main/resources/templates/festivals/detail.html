@@ -146,7 +146,8 @@
       <dl class="festival-detail-info-list">
         <div class="festival-detail-info-row" th:if="${festival.primaryPeriod != null}">
           <dt th:text="#{travelInfo.festival.info.period}">기간</dt>
-          <dd>
+          <!-- 값이 아니라 소스 줄바꿈이므로 여러 줄로 읽히지 않게 둔다 -->
+          <dd class="is-period">
             <time th:text="${#temporals.format(festival.primaryPeriod.startDate, 'yyyy.MM.dd')}">2026.09.02</time>
             <span aria-hidden="true">~</span>
             <time th:text="${#temporals.format(festival.primaryPeriod.endDate, 'yyyy.MM.dd')}">2026.10.24</time>

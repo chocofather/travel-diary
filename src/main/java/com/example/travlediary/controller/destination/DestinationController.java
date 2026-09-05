@@ -551,6 +551,8 @@ public class DestinationController {
                     cities = countryCategoryService.getSubregions(parent.getId(), 3);
                     selectedCityId = region.getId();
                     subregions = countryCategoryService.getSubregions(parent.getId(), 3);
+                    // 해외 도시도 국내 구/군과 같이 고른 도시를 하위 지역 pill 에 표시한다
+                    selectedSubregionId = regionId;
                 }
             }
         }
@@ -644,6 +646,8 @@ public class DestinationController {
                     CountryCategory parent = countryCategoryService.getById(region.getParentId());
                     selectedCityId = region.getId();
                     subregions = countryCategoryService.getSubregions(parent.getId(), 3);
+                    // 정렬·페이지를 바꿔도 고른 해외 도시 pill 표시가 풀리지 않게 한다
+                    selectedSubregionId = regionId;
                 }
             }
         }

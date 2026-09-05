@@ -55,7 +55,10 @@ class TravelInfoAdminTranslationWiringTest {
     @BeforeEach
     void setUp() {
         travelInfoService = new TravelInfoService(
-                travelInfoMapper, bookmarkMapper, infoCategoryMapper,
+                travelInfoMapper,
+                org.mockito.Mockito.mock(
+                        com.example.travlediary.repository.travelinfo.FestivalInfoMapper.class),
+                bookmarkMapper, infoCategoryMapper,
                 new PostContentSanitizer(), fileUploadService,
                 new TravelInfoLocalizationService(travelInfoMapper),
                 new ReferenceNameLocalizationService(

@@ -72,13 +72,15 @@ class TravelInfoPublicUiContractTest {
                 .contains("travel-info-pagination", "keyword=${keyword}", "page=${pageNumber}")
                 .contains("class=\"travel-info-sort\"", "data-travel-info-sort")
                 .contains("aria-label=#{travelInfo.list.sort.label}")
-                .contains("data-sort-value=\"latest\"", "최신순")
+                // 기본 정렬은 화면마다 다르다. 축제·행사는 행사일순, 여행정보는 최신순.
+                .contains("data-sort-value=${defaultSort}", "최신순")
+                .contains("#{travelInfo.list.sort.event}", "행사일순")
                 .contains("data-sort-value=\"views\"", "조회순")
-                .contains("th:classappend=\"${sort == 'latest'} ? ' is-active'\"")
+                .contains("th:classappend=\"${sort == defaultSort} ? ' is-active'\"")
                 .contains("th:classappend=\"${sort == 'views'} ? ' is-active'\"")
-                .contains("aria-current=${sort == 'latest'}")
+                .contains("aria-current=${sort == defaultSort}")
                 .contains("aria-current=${sort == 'views'}")
-                .contains("sort=${sort == 'views' ? sort : null}")
+                .contains("sort=${sortParam}")
                 .contains("th:if=\"${keyword != null}\"")
                 // 검색어는 문자열 조립이 아니라 message parameter 로 들어간다.
                 .contains("#{travelInfo.list.empty.keyword(${keyword})}")
@@ -285,11 +287,11 @@ class TravelInfoPublicUiContractTest {
         String fragment = resource("/templates/travel-info/fragments/list-results.html");
 
         assertThat(template)
-                .contains("sort=${sort == 'views' ? sort : null}")
+                .contains("sort=${sortParam}")
                 .contains("categoryId=${categoryIds}");
         assertThat(fragment)
                 .contains("keyword=${keyword},scope=${scope},contentType=${contentType},categoryId=${categoryIds}")
-                .contains("sort=${sort == 'views' ? sort : null}")
+                .contains("sort=${sortParam}")
                 .contains("page=${currentPage - 1}")
                 .contains("page=${pageNumber}")
                 .contains("page=${currentPage + 1}");

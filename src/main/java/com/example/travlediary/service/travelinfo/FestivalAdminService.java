@@ -81,6 +81,8 @@ public class FestivalAdminService {
         PreparedEdit prepared = prepareEdit(form);
         InfoCategory category = validateFestivalCategory(prepared.categoryId());
         FestivalInfo existingFestivalInfo = festivalInfoMapper.findByInfoId(id);
+        // 개최연도가 바뀌면 다른 해의 개최분을 덮어쓰는 셈이라 아무것도 건드리기 전에 막는다.
+        requireSameEventYear(existingFestivalInfo, prepared.startDate().getYear());
         List<InfoImage> images = safeList(travelInfoMapper.findImagesByInfoId(id));
         validateThumbnailOwnership(prepared.thumbnailImageId(), images);
 
@@ -195,6 +197,23 @@ public class FestivalAdminService {
         }
     }
 
+    /**
+     * 저장된 개최분의 연도를 다른 해로 바꾸지 못하게 한다.
+     *
+     * <p>같은 해 안에서 날짜를 옮기는 것(2026-07-20 → 2026-07-24)은 그대로 허용한다.
+     * 다음 해 개최분은 기존 글을 고치는 대신 새 축제로 등록해야 지난 회차가 남는다.
+     */
+    private void requireSameEventYear(FestivalInfo existing, int newEventYear) {
+        if (existing == null || existing.getEventYear() == null) {
+            return;
+        }
+        if (existing.getEventYear() != newEventYear) {
+            throw new FestivalValidationException("startDate",
+                    "다른 연도 개최분은 새 축제로 등록해야 합니다. "
+                            + "이 글은 " + existing.getEventYear() + "년 개최분입니다.");
+        }
+    }
+
     private FestivalInfo createFestivalInfo(Long id,
                                              PreparedEdit prepared,
                                              FestivalInfo existing) {
@@ -212,6 +231,9 @@ public class FestivalAdminService {
         festivalInfo.setHomepageUrl(prepared.homepageUrl());
         festivalInfo.setSourceType(existing == null ? ADMIN_SOURCE_TYPE : existing.getSourceType());
         festivalInfo.setExternalContentId(existing == null ? null : existing.getExternalContentId());
+        // 위에서 연도 변경을 막았으므로 시작일에서 다시 계산해도 기존 값과 같다.
+        // festival_info 가 아직 없던 글은 여기서 처음 개최연도를 갖는다.
+        festivalInfo.setEventYear(prepared.startDate().getYear());
         return festivalInfo;
     }
 

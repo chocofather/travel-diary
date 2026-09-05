@@ -72,14 +72,32 @@ class FestivalInfoMapperContractTest {
     }
 
     @Test
-    void duplicateTourApiSourceCanBeCheckedBeforeInsert() throws IOException {
-        String select = between(mapper(),
-                "<select id=\"countBySourceTypeAndExternalContentId\"", "</select>");
+    void duplicateOccurrenceCanBeCheckedBeforeInsert() throws IOException {
+        String select = between(mapper(), "<select id=\"countOccurrence\"", "</select>");
 
+        // 개최분 하나는 출처 + contentId + 개최연도로 정해진다.
+        // 같은 축제라도 연도가 다르면 중복이 아니어서 새로 등록된다.
         assertThat(select)
                 .contains("FROM festival_info")
                 .contains("source_type = #{sourceType}")
-                .contains("external_content_id = #{externalContentId}");
+                .contains("external_content_id = #{externalContentId}")
+                .contains("event_year = #{eventYear}");
+    }
+
+    @Test
+    void festivalInfoCarriesTheEventYearOfItsOccurrence() throws IOException {
+        String mapper = mapper();
+
+        // 조회·저장·수정 모두 event_year 를 함께 다뤄야 값이 어긋나지 않는다.
+        assertThat(between(mapper, "<resultMap id=\"FestivalInfoResultMap\"", "</resultMap>"))
+                .contains("property=\"eventYear\" column=\"event_year\"");
+        assertThat(between(mapper, "<select id=\"findByInfoId\"", "</select>"))
+                .contains("event_year");
+        assertThat(between(mapper, "<insert id=\"insert\"", "</insert>"))
+                .contains("event_year")
+                .contains("#{eventYear}");
+        assertThat(between(mapper, "<update id=\"update\"", "</update>"))
+                .contains("event_year = #{eventYear}");
     }
 
     private String mapper() throws IOException {

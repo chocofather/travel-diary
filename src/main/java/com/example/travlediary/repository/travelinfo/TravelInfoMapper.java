@@ -28,6 +28,7 @@ public interface TravelInfoMapper {
             @Param("categoryIds") List<Long> categoryIds,
             @Param("keywordPattern") String keywordPattern,
             @Param("koreanPattern") String koreanPattern,
+            @Param("eventStatus") String eventStatus,
             @Param("sort") String sort,
             @Param("offset") long offset,
             @Param("limit") int limit);
@@ -37,7 +38,8 @@ public interface TravelInfoMapper {
             @Param("contentType") TravelInfoContentType contentType,
             @Param("categoryIds") List<Long> categoryIds,
             @Param("keywordPattern") String keywordPattern,
-            @Param("koreanPattern") String koreanPattern);
+            @Param("koreanPattern") String koreanPattern,
+            @Param("eventStatus") String eventStatus);
 
     int incrementPublicViews(@Param("id") Long id);
 

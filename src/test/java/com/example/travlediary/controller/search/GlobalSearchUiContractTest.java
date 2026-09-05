@@ -100,6 +100,80 @@ class GlobalSearchUiContractTest {
     }
 
     @Test
+    void theHeaderSearchStartsClosedAndEmptyOnTheResultPage() throws IOException {
+        var input = Jsoup.parse(resource("/templates/fragments/header.html"))
+                .selectFirst("form#search-form input[name=q]");
+        String script = resource("/static/js/main.js");
+
+        // 헤더 입력칸은 지난 검색어를 되살리지 않는다. q 는 가운데 검색창이 들고 있다.
+        assertThat(input).isNotNull();
+        assertThat(input.hasAttr("th:value")).isFalse();
+        assertThat(input.attr("value")).isBlank();
+        // 결과 페이지에서는 열림 상태와 값이 남지 않도록 초기화한다.
+        assertThat(script)
+                .contains("window.location.pathname === '/search'")
+                .contains("setSearchOpen(false);");
+    }
+
+    @Test
+    void theResultPageKeepsItsOwnSearchInputPreloadedWithTheQuery() throws IOException {
+        var form = Jsoup.parse(resource("/templates/search.html"))
+                .selectFirst("form.global-search-form");
+
+        assertThat(form).isNotNull();
+        assertThat(form.attr("action")).isEqualTo("/search");
+        var input = form.selectFirst("input[name=q]#global-search-input");
+        assertThat(input).isNotNull();
+        // 가운데 검색창은 계속 q 를 채워 두고 재검색을 받는다.
+        assertThat(input.attr("th:value")).contains("searchPage.query");
+    }
+
+    @Test
+    void theClearButtonHasAWideHitAreaThatDoesNotOverlapTheSubmitButton() throws IOException {
+        var form = Jsoup.parse(resource("/templates/fragments/header.html"))
+                .selectFirst("form#search-form");
+        String style = resource("/static/css/style.css");
+
+        var clear = form.selectFirst("button.search-clear#header-search-clear");
+        assertThat(clear).isNotNull();
+        // 검색을 실행하는 버튼이 아니다. 값이 있을 때만 나타난다.
+        assertThat(clear.attr("type")).isEqualTo("button");
+        assertThat(clear.hasAttr("hidden")).isTrue();
+        assertThat(clear.attr("th:aria-label")).isEqualTo("#{header.search.clear}");
+
+        assertThat(style)
+                // 보이는 X 는 12px 그대로 두고 클릭 영역만 36x36 으로 넓힌다.
+                .contains("#search-form .search-clear{")
+                .contains("width:36px")
+                .contains("height:36px")
+                .contains("cursor:pointer")
+                .contains("align-items:center")
+                .contains("justify-content:center")
+                .contains(".search-clear-icon{")
+                .contains("width:12px")
+                // 검색 버튼(right:1px, 38px) 바로 왼쪽이라 서로 겹치지 않는다.
+                .contains("right:39px")
+                .contains("padding:9px 78px 9px 12px")
+                // 클릭 영역이 좁은 브라우저 기본 X 는 쓰지 않는다.
+                .contains("::-webkit-search-cancel-button");
+    }
+
+    @Test
+    void clearingTheHeaderSearchNeverRunsASearch() throws IOException {
+        String script = resource("/static/js/main.js");
+
+        assertThat(script)
+                .contains("clearBtn?.addEventListener('click'")
+                .contains("e.preventDefault()")
+                .contains("e.stopPropagation()")
+                .contains("searchInput.value = ''")
+                .contains("searchInput.focus()")
+                // 값이 바뀔 때마다 버튼 표시 상태를 즉시 맞춘다.
+                .contains("searchInput?.addEventListener('input', syncClearButton)")
+                .contains("clearBtn.hidden =");
+    }
+
+    @Test
     void theHeaderSearchEndpointAndQueryParameterAreUnchanged() throws IOException {
         var form = Jsoup.parse(resource("/templates/fragments/header.html"))
                 .selectFirst("form#search-form");

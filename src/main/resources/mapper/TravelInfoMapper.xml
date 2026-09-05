@@ -128,9 +128,61 @@
         ORDER BY ti.created_at DESC, ti.id DESC
     </select>
 
+    <!--
+      대표 행사기간. 진행중 → 예정 → 종료 우선으로 한 줄만 고른다.
+      목록에 찍는 기간, 행사 상태 판정, 행사일순 정렬이 모두 이 한 줄을 본다.
+      기간이 여러 건인 기존 데이터도 같은 규칙으로 한 줄만 대표가 된다.
+    -->
+    <sql id="RepresentativePeriodJoin">
+        LEFT JOIN info_periods representative_period
+          ON representative_period.id = (
+              SELECT period_candidate.id
+              FROM info_periods period_candidate
+              WHERE period_candidate.info_id = ti.id
+                AND ti.content_type = 'FESTIVAL'
+              ORDER BY
+                  CASE
+                      WHEN period_candidate.start_date &lt;= CURDATE()
+                           AND period_candidate.end_date >= CURDATE() THEN 0
+                      WHEN period_candidate.start_date > CURDATE() THEN 1
+                      ELSE 2
+                  END ASC,
+                  CASE
+                      WHEN period_candidate.start_date > CURDATE()
+                          THEN period_candidate.start_date
+                  END ASC,
+                  CASE
+                      WHEN period_candidate.end_date &lt; CURDATE()
+                          THEN period_candidate.end_date
+                  END DESC,
+                  period_candidate.start_date ASC,
+                  period_candidate.id ASC
+              LIMIT 1
+          )
+    </sql>
+
+    <!-- 행사 상태는 대표 행사기간과 오늘 날짜로만 정한다. 허용된 값만 서비스에서 넘어온다. -->
+    <sql id="EventStatusFilter">
+        <choose>
+            <when test="eventStatus == 'ongoing'">
+                AND representative_period.start_date &lt;= CURDATE()
+                AND representative_period.end_date >= CURDATE()
+            </when>
+            <when test="eventStatus == 'upcoming'">
+                AND representative_period.start_date > CURDATE()
+            </when>
+            <when test="eventStatus == 'ended'">
+                AND representative_period.end_date &lt; CURDATE()
+            </when>
+        </choose>
+    </sql>
+
     <sql id="PublicListFilters">
         <where>
             ic.is_visible = 1
+            <if test="eventStatus != null">
+                <include refid="EventStatusFilter"/>
+            </if>
             <if test="scope != null">
                 AND ti.scope = #{scope}
             </if>
@@ -186,35 +238,39 @@
                representative_period.end_date
         FROM travel_info ti
         JOIN info_categories ic ON ic.id = ti.category_id
-        LEFT JOIN info_periods representative_period
-          ON representative_period.id = (
-              SELECT period_candidate.id
-              FROM info_periods period_candidate
-              WHERE period_candidate.info_id = ti.id
-                AND ti.content_type = 'FESTIVAL'
-              ORDER BY
-                  CASE
-                      WHEN period_candidate.start_date &lt;= CURDATE()
-                           AND period_candidate.end_date >= CURDATE() THEN 0
-                      WHEN period_candidate.start_date > CURDATE() THEN 1
-                      ELSE 2
-                  END ASC,
-                  CASE
-                      WHEN period_candidate.start_date > CURDATE()
-                          THEN period_candidate.start_date
-                  END ASC,
-                  CASE
-                      WHEN period_candidate.end_date &lt; CURDATE()
-                          THEN period_candidate.end_date
-                  END DESC,
-                  period_candidate.start_date ASC,
-                  period_candidate.id ASC
-              LIMIT 1
-          )
+        <include refid="RepresentativePeriodJoin"/>
         <include refid="PublicListFilters"/>
         <choose>
             <when test="sort == 'views'">
                 ORDER BY ti.views DESC, ti.created_at DESC, ti.id DESC
+            </when>
+            <!--
+              행사일순. 오늘 갈 수 있는 행사 → 곧 시작할 행사 → 끝난 행사 차례로 본다.
+              같은 묶음 안에서는 진행중은 먼저 끝나는 순, 예정은 먼저 시작하는 순,
+              종료는 최근에 끝난 순이다.
+            -->
+            <when test="sort == 'event'">
+                ORDER BY
+                    CASE
+                        WHEN representative_period.start_date &lt;= CURDATE()
+                             AND representative_period.end_date >= CURDATE() THEN 0
+                        WHEN representative_period.start_date > CURDATE() THEN 1
+                        ELSE 2
+                    END ASC,
+                    CASE
+                        WHEN representative_period.start_date &lt;= CURDATE()
+                             AND representative_period.end_date >= CURDATE()
+                            THEN representative_period.end_date
+                    END ASC,
+                    CASE
+                        WHEN representative_period.start_date > CURDATE()
+                            THEN representative_period.start_date
+                    END ASC,
+                    CASE
+                        WHEN representative_period.end_date &lt; CURDATE()
+                            THEN representative_period.end_date
+                    END DESC,
+                    ti.id DESC
             </when>
             <otherwise>
                 ORDER BY ti.created_at DESC, ti.id DESC
@@ -224,10 +280,12 @@
         OFFSET #{offset}
     </select>
 
+    <!-- 목록과 같은 대표기간을 봐야 상태 필터를 건 페이지 수가 맞는다. -->
     <select id="countPublicList" resultType="long">
         SELECT COUNT(*)
         FROM travel_info ti
         JOIN info_categories ic ON ic.id = ti.category_id
+        <include refid="RepresentativePeriodJoin"/>
         <include refid="PublicListFilters"/>
     </select>
 

@@ -84,9 +84,9 @@ class TravelInfoControllerTest {
     void guestCanOpenDefaultGeneralListWithPlaceholder() throws Exception {
         TravelInfoListItemDto general = item(11L, "해외여행 준비 체크리스트",
                 TravelInfoScope.INTERNATIONAL, TravelInfoContentType.GENERAL, null);
-        when(travelInfoService.getPublicList(DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE, List.of(), null, "latest", 0L, 12))
+        when(travelInfoService.getPublicList(DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE, List.of(), null, null, "latest", 0L, 12))
                 .thenReturn(List.of(general));
-        when(travelInfoService.countPublicList(DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE, List.of(), null)).thenReturn(1L);
+        when(travelInfoService.countPublicList(DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE, List.of(), null, null)).thenReturn(1L);
         when(infoCategoryService.getVisibleByContentType(TravelInfoContentType.GENERAL))
                 .thenReturn(List.of(category()));
 
@@ -128,9 +128,9 @@ class TravelInfoControllerTest {
                 TravelInfoScope.DOMESTIC, TravelInfoContentType.GENERAL, null);
         TravelInfoListItemDto festival = item(12L, "가을 축제",
                 TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL, null);
-        when(travelInfoService.getPublicList(DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE, List.of(), null, "latest", 0L, 12))
+        when(travelInfoService.getPublicList(DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE, List.of(), null, null, "latest", 0L, 12))
                 .thenReturn(List.of(general, festival));
-        when(travelInfoService.countPublicList(DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE, List.of(), null)).thenReturn(2L);
+        when(travelInfoService.countPublicList(DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE, List.of(), null, null)).thenReturn(2L);
         when(infoCategoryService.getVisibleByContentType(TravelInfoContentType.GENERAL))
                 .thenReturn(List.of(category()));
 
@@ -168,9 +168,9 @@ class TravelInfoControllerTest {
         item.setBookmarked(true);
         TravelInfoDetailDto detail = detail(TravelInfoContentType.GENERAL);
         detail.setBookmarked(true);
-        when(travelInfoService.getPublicList(DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE, List.of(), null, "latest", 0L, 12))
+        when(travelInfoService.getPublicList(DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE, List.of(), null, null, "latest", 0L, 12))
                 .thenReturn(List.of(item));
-        when(travelInfoService.countPublicList(DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE, List.of(), null)).thenReturn(1L);
+        when(travelInfoService.countPublicList(DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE, List.of(), null, null)).thenReturn(1L);
         when(infoCategoryService.getVisibleByContentType(TravelInfoContentType.GENERAL))
                 .thenReturn(List.of(category()));
         when(travelInfoService.getPublicDetail(10L)).thenReturn(detail);
@@ -196,11 +196,11 @@ class TravelInfoControllerTest {
     void filtersAndPaginationAreNormalizedAndPassedToTheModel() throws Exception {
         when(travelInfoService.getPublicList(
                 TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL,
-                List.of(3L), null, "latest", 48L, 48))
+                List.of(3L), null, null, "event", 48L, 48))
                 .thenReturn(List.of());
         when(travelInfoService.countPublicList(
                 TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL,
-                List.of(3L), null))
+                List.of(3L), null, null))
                 .thenReturn(60L);
         when(infoCategoryService.getVisibleByContentType(TravelInfoContentType.FESTIVAL))
                 .thenReturn(List.of(category(3L, "축제·행사", 1, TravelInfoContentType.FESTIVAL)));
@@ -226,7 +226,113 @@ class TravelInfoControllerTest {
 
         verify(travelInfoService).getPublicList(
                 TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL,
-                List.of(3L), null, "latest", 48L, 48);
+                List.of(3L), null, null, "event", 48L, 48);
+    }
+
+    /* === 행사 상태 필터 / 행사일순 === */
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"ongoing", "upcoming", "ended"})
+    void allowedEventStatusesReachTheServiceAndStayInTheListUrl(String eventStatus)
+            throws Exception {
+        when(travelInfoService.getPublicList(
+                null, TravelInfoContentType.FESTIVAL,
+                List.of(), null, eventStatus, "event", 0L, 12)).thenReturn(List.of());
+        when(travelInfoService.countPublicList(
+                null, TravelInfoContentType.FESTIVAL, List.of(), null, eventStatus))
+                .thenReturn(0L);
+        when(infoCategoryService.getVisibleByContentType(TravelInfoContentType.FESTIVAL))
+                .thenReturn(List.of());
+
+        mockMvc.perform(get("/travel-info")
+                        .param("contentType", "FESTIVAL")
+                        .param("eventStatus", eventStatus))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("eventStatus", eventStatus))
+                .andExpect(model().attribute("sort", "event"))
+                .andExpect(model().attribute("listUrl",
+                        "/travel-info?contentType=FESTIVAL&eventStatus=" + eventStatus));
+
+        verify(travelInfoService).getPublicList(
+                null, TravelInfoContentType.FESTIVAL,
+                List.of(), null, eventStatus, "event", 0L, 12);
+    }
+
+    @Test
+    void unknownEventStatusFallsBackToNoStatusCondition() throws Exception {
+        when(travelInfoService.getPublicList(
+                null, TravelInfoContentType.FESTIVAL,
+                List.of(), null, null, "event", 0L, 12)).thenReturn(List.of());
+        when(travelInfoService.countPublicList(
+                null, TravelInfoContentType.FESTIVAL, List.of(), null, null)).thenReturn(0L);
+        when(infoCategoryService.getVisibleByContentType(TravelInfoContentType.FESTIVAL))
+                .thenReturn(List.of());
+
+        // 값이 SQL 로 그대로 나가지 않고 '전체' 와 같이 처리된다.
+        mockMvc.perform(get("/travel-info")
+                        .param("contentType", "FESTIVAL")
+                        .param("eventStatus", "'; DROP TABLE travel_info; --"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("eventStatus", (Object) null))
+                .andExpect(model().attribute("listUrl", "/travel-info?contentType=FESTIVAL"));
+    }
+
+    @Test
+    void theGeneralListIgnoresTheEventStatusParameterAndKeepsNewestFirst() throws Exception {
+        when(travelInfoService.getPublicList(
+                DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE,
+                List.of(), null, null, "latest", 0L, 12)).thenReturn(List.of());
+        when(travelInfoService.countPublicList(
+                DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE, List.of(), null, null)).thenReturn(0L);
+        when(infoCategoryService.getVisibleByContentType(TravelInfoContentType.GENERAL))
+                .thenReturn(List.of());
+
+        mockMvc.perform(get("/travel-info").param("eventStatus", "ongoing"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("eventStatus", (Object) null))
+                .andExpect(model().attribute("sort", "latest"))
+                .andExpect(model().attribute("listUrl", DEFAULT_LIST_URL));
+    }
+
+    @Test
+    void festivalViewsSortKeepsTheStatusFilterAndCarriesBothInTheListUrl() throws Exception {
+        when(travelInfoService.getPublicList(
+                null, TravelInfoContentType.FESTIVAL,
+                List.of(), null, "ongoing", "views", 0L, 12)).thenReturn(List.of());
+        when(travelInfoService.countPublicList(
+                null, TravelInfoContentType.FESTIVAL, List.of(), null, "ongoing")).thenReturn(0L);
+        when(infoCategoryService.getVisibleByContentType(TravelInfoContentType.FESTIVAL))
+                .thenReturn(List.of());
+
+        mockMvc.perform(get("/travel-info")
+                        .param("contentType", "FESTIVAL")
+                        .param("eventStatus", "ongoing")
+                        .param("sort", "views"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("sort", "views"))
+                .andExpect(model().attribute("sortParam", "views"))
+                .andExpect(model().attribute("listUrl",
+                        "/travel-info?contentType=FESTIVAL&eventStatus=ongoing&sort=views"));
+    }
+
+    @Test
+    void theFestivalDefaultSortIsNotRepeatedInTheListUrl() throws Exception {
+        when(travelInfoService.getPublicList(
+                null, TravelInfoContentType.FESTIVAL,
+                List.of(), null, null, "event", 0L, 12)).thenReturn(List.of());
+        when(travelInfoService.countPublicList(
+                null, TravelInfoContentType.FESTIVAL, List.of(), null, null)).thenReturn(0L);
+        when(infoCategoryService.getVisibleByContentType(TravelInfoContentType.FESTIVAL))
+                .thenReturn(List.of());
+
+        mockMvc.perform(get("/travel-info")
+                        .param("contentType", "FESTIVAL")
+                        .param("sort", "event"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("sort", "event"))
+                // 기본 정렬이라 주소에는 남기지 않는다.
+                .andExpect(model().attribute("sortParam", (Object) null))
+                .andExpect(model().attribute("listUrl", "/travel-info?contentType=FESTIVAL"));
     }
 
     @Test
@@ -234,10 +340,10 @@ class TravelInfoControllerTest {
         List<Long> selectedCategoryIds = List.of(1L, 3L, 5L);
         when(travelInfoService.getPublicList(
                 TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL,
-                selectedCategoryIds, null, "latest", 0L, 12)).thenReturn(List.of());
+                selectedCategoryIds, null, null, "event", 0L, 12)).thenReturn(List.of());
         when(travelInfoService.countPublicList(
                 TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL,
-                selectedCategoryIds, null)).thenReturn(0L);
+                selectedCategoryIds, null, null)).thenReturn(0L);
         when(infoCategoryService.getVisibleByContentType(TravelInfoContentType.FESTIVAL)).thenReturn(List.of(
                 category(1L, "축제·행사", 1, TravelInfoContentType.FESTIVAL),
                 category(3L, "음악", 2, TravelInfoContentType.FESTIVAL),
@@ -263,10 +369,10 @@ class TravelInfoControllerTest {
 
         verify(travelInfoService).getPublicList(
                 TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL,
-                selectedCategoryIds, null, "latest", 0L, 12);
+                selectedCategoryIds, null, null, "event", 0L, 12);
         verify(travelInfoService).countPublicList(
                 TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL,
-                selectedCategoryIds, null);
+                selectedCategoryIds, null, null);
     }
 
     @Test
@@ -276,10 +382,10 @@ class TravelInfoControllerTest {
         festival.setStartDate(LocalDate.parse("2026-08-01"));
         festival.setEndDate(LocalDate.parse("2026-08-03"));
         when(travelInfoService.getPublicList(
-                null, TravelInfoContentType.FESTIVAL, List.of(), null, "latest", 0L, 12))
+                null, TravelInfoContentType.FESTIVAL, List.of(), null, null, "event", 0L, 12))
                 .thenReturn(List.of(festival));
         when(travelInfoService.countPublicList(
-                null, TravelInfoContentType.FESTIVAL, List.of(), null)).thenReturn(1L);
+                null, TravelInfoContentType.FESTIVAL, List.of(), null, null)).thenReturn(1L);
         when(infoCategoryService.getVisibleByContentType(TravelInfoContentType.FESTIVAL))
                 .thenReturn(List.of(category(3L, "축제·행사", 1, TravelInfoContentType.FESTIVAL)));
 
@@ -330,7 +436,7 @@ class TravelInfoControllerTest {
                 });
 
         verify(travelInfoService).getPublicList(
-                null, TravelInfoContentType.FESTIVAL, List.of(), null, "latest", 0L, 12);
+                null, TravelInfoContentType.FESTIVAL, List.of(), null, null, "event", 0L, 12);
         verify(infoCategoryService).getVisibleByContentType(TravelInfoContentType.FESTIVAL);
     }
 
@@ -340,11 +446,11 @@ class TravelInfoControllerTest {
                 TravelInfoContentType.FESTIVAL, null);
         when(travelInfoService.getPublicList(
                 TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL,
-                List.of(3L, 5L), "축제", "views", 12L, 12))
+                List.of(3L, 5L), "축제", null, "views", 12L, 12))
                 .thenReturn(List.of(festival));
         when(travelInfoService.countPublicList(
                 TravelInfoScope.DOMESTIC, TravelInfoContentType.FESTIVAL,
-                List.of(3L, 5L), "축제"))
+                List.of(3L, 5L), "축제", null))
                 .thenReturn(25L);
         when(infoCategoryService.getVisibleByContentType(TravelInfoContentType.FESTIVAL)).thenReturn(List.of(
                 category(3L, "축제·행사", 1, TravelInfoContentType.FESTIVAL),
@@ -395,10 +501,10 @@ class TravelInfoControllerTest {
     @Test
     void ajaxRequestWithoutContentTypeReturnsGeneralCategoryFilter() throws Exception {
         when(travelInfoService.getPublicList(
-                TravelInfoScope.DOMESTIC, null, List.of(), null, "latest", 0L, 12))
+                TravelInfoScope.DOMESTIC, null, List.of(), null, null, "latest", 0L, 12))
                 .thenReturn(List.of());
         when(travelInfoService.countPublicList(
-                TravelInfoScope.DOMESTIC, null, List.of(), null))
+                TravelInfoScope.DOMESTIC, null, List.of(), null, null))
                 .thenReturn(0L);
         when(infoCategoryService.getVisibleByContentType(TravelInfoContentType.GENERAL))
                 .thenReturn(List.of(category(1L, "계절여행", 1, TravelInfoContentType.GENERAL)));
@@ -426,10 +532,10 @@ class TravelInfoControllerTest {
         for (TravelInfoScope scope : List.of(
                 TravelInfoScope.DOMESTIC, TravelInfoScope.INTERNATIONAL)) {
             when(travelInfoService.getPublicList(
-                    scope, DEFAULT_CONTENT_TYPE, List.of(), null, "latest", 0L, 12))
+                    scope, DEFAULT_CONTENT_TYPE, List.of(), null, null, "latest", 0L, 12))
                     .thenReturn(List.of());
             when(travelInfoService.countPublicList(
-                    scope, DEFAULT_CONTENT_TYPE, List.of(), null)).thenReturn(0L);
+                    scope, DEFAULT_CONTENT_TYPE, List.of(), null, null)).thenReturn(0L);
             when(infoCategoryService.getVisibleByContentType(TravelInfoContentType.GENERAL))
                     .thenReturn(List.of(category()));
 
@@ -460,15 +566,15 @@ class TravelInfoControllerTest {
                             "scope=" + other.name() + "&amp;contentType=GENERAL")));
 
             verify(travelInfoService, org.mockito.Mockito.atLeastOnce()).getPublicList(
-                    scope, DEFAULT_CONTENT_TYPE, List.of(), null, "latest", 0L, 12);
+                    scope, DEFAULT_CONTENT_TYPE, List.of(), null, null, "latest", 0L, 12);
         }
     }
 
     @Test
     void blankLatestAndInvalidSortValuesUseCanonicalLatestOrder() throws Exception {
         when(travelInfoService.getPublicList(
-                DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE, List.of(), null, "latest", 0L, 12)).thenReturn(List.of());
-        when(travelInfoService.countPublicList(DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE, List.of(), null)).thenReturn(0L);
+                DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE, List.of(), null, null, "latest", 0L, 12)).thenReturn(List.of());
+        when(travelInfoService.countPublicList(DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE, List.of(), null, null)).thenReturn(0L);
         when(infoCategoryService.getVisibleByContentType(TravelInfoContentType.GENERAL)).thenReturn(List.of());
 
         for (String sort : List.of("", "latest", "abc")) {
@@ -479,16 +585,16 @@ class TravelInfoControllerTest {
         }
 
         verify(travelInfoService, org.mockito.Mockito.times(3)).getPublicList(
-                DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE, List.of(), null, "latest", 0L, 12);
+                DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE, List.of(), null, null, "latest", 0L, 12);
     }
 
     @Test
     void titleKeywordIsNormalizedCombinedWithFiltersAndRenderedSafely() throws Exception {
         when(travelInfoService.getPublicList(
-                TravelInfoScope.INTERNATIONAL, DEFAULT_CONTENT_TYPE, List.of(2L, 5L), "파리", "latest", 0L, 12))
+                TravelInfoScope.INTERNATIONAL, DEFAULT_CONTENT_TYPE, List.of(2L, 5L), "파리", null, "latest", 0L, 12))
                 .thenReturn(List.of());
         when(travelInfoService.countPublicList(
-                TravelInfoScope.INTERNATIONAL, DEFAULT_CONTENT_TYPE, List.of(2L, 5L), "파리"))
+                TravelInfoScope.INTERNATIONAL, DEFAULT_CONTENT_TYPE, List.of(2L, 5L), "파리", null))
                 .thenReturn(0L);
         when(infoCategoryService.getVisibleByContentType(TravelInfoContentType.GENERAL))
                 .thenReturn(List.of(category()));
@@ -510,21 +616,21 @@ class TravelInfoControllerTest {
                         "‘파리’에 해당하는 여행정보를 찾지 못했습니다.")));
 
         verify(travelInfoService).getPublicList(
-                TravelInfoScope.INTERNATIONAL, DEFAULT_CONTENT_TYPE, List.of(2L, 5L), "파리", "latest", 0L, 12);
+                TravelInfoScope.INTERNATIONAL, DEFAULT_CONTENT_TYPE, List.of(2L, 5L), "파리", null, "latest", 0L, 12);
         verify(travelInfoService).countPublicList(
-                TravelInfoScope.INTERNATIONAL, DEFAULT_CONTENT_TYPE, List.of(2L, 5L), "파리");
+                TravelInfoScope.INTERNATIONAL, DEFAULT_CONTENT_TYPE, List.of(2L, 5L), "파리", null);
     }
 
     @Test
     void blankKeywordIsIgnoredAndLongKeywordIsSafelyLimited() throws Exception {
         String limitedKeyword = "가".repeat(100);
-        when(travelInfoService.getPublicList(DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE, List.of(), null, "latest", 0L, 12))
+        when(travelInfoService.getPublicList(DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE, List.of(), null, null, "latest", 0L, 12))
                 .thenReturn(List.of());
-        when(travelInfoService.countPublicList(DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE, List.of(), null)).thenReturn(0L);
+        when(travelInfoService.countPublicList(DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE, List.of(), null, null)).thenReturn(0L);
         when(travelInfoService.getPublicList(
-                DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE, List.of(), limitedKeyword, "latest", 0L, 12)).thenReturn(List.of());
+                DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE, List.of(), limitedKeyword, null, "latest", 0L, 12)).thenReturn(List.of());
         when(travelInfoService.countPublicList(
-                DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE, List.of(), limitedKeyword)).thenReturn(0L);
+                DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE, List.of(), limitedKeyword, null)).thenReturn(0L);
         when(infoCategoryService.getVisibleByContentType(TravelInfoContentType.GENERAL)).thenReturn(List.of());
 
         mockMvc.perform(get("/travel-info").param("keyword", "   \t"))
@@ -534,16 +640,16 @@ class TravelInfoControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(model().attribute("keyword", limitedKeyword));
 
-        verify(travelInfoService).getPublicList(DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE, List.of(), null, "latest", 0L, 12);
+        verify(travelInfoService).getPublicList(DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE, List.of(), null, null, "latest", 0L, 12);
         verify(travelInfoService).getPublicList(
-                DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE, List.of(), limitedKeyword, "latest", 0L, 12);
+                DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE, List.of(), limitedKeyword, null, "latest", 0L, 12);
     }
 
     @Test
     void invalidFiltersAndNonPositivePageSizeFallBackSafely() throws Exception {
-        when(travelInfoService.getPublicList(DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE, List.of(), null, "latest", 0L, 12))
+        when(travelInfoService.getPublicList(DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE, List.of(), null, null, "latest", 0L, 12))
                 .thenReturn(List.of());
-        when(travelInfoService.countPublicList(DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE, List.of(), null)).thenReturn(0L);
+        when(travelInfoService.countPublicList(DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE, List.of(), null, null)).thenReturn(0L);
         when(infoCategoryService.getVisibleByContentType(TravelInfoContentType.GENERAL)).thenReturn(List.of());
 
         mockMvc.perform(get("/travel-info")
@@ -564,9 +670,9 @@ class TravelInfoControllerTest {
 
     @Test
     void unknownPositiveCategoryIdIsHandledAsAnEmptyPublicFilterResult() throws Exception {
-        when(travelInfoService.getPublicList(null, null, List.of(999L), null, "latest", 0L, 12))
+        when(travelInfoService.getPublicList(null, null, List.of(999L), null, null, "latest", 0L, 12))
                 .thenReturn(List.of());
-        when(travelInfoService.countPublicList(null, null, List.of(999L), null)).thenReturn(0L);
+        when(travelInfoService.countPublicList(null, null, List.of(999L), null, null)).thenReturn(0L);
         when(infoCategoryService.getVisibleByContentType(TravelInfoContentType.GENERAL))
                 .thenReturn(List.of(category()));
 
@@ -844,9 +950,9 @@ class TravelInfoControllerTest {
 
     @Test
     void onlyListAndNumericDetailGetsArePublicAndAdminPolicyStillRejectsRegularUsers() throws Exception {
-        when(travelInfoService.getPublicList(DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE, List.of(), null, "latest", 0L, 12))
+        when(travelInfoService.getPublicList(DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE, List.of(), null, null, "latest", 0L, 12))
                 .thenReturn(List.of());
-        when(travelInfoService.countPublicList(DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE, List.of(), null)).thenReturn(0L);
+        when(travelInfoService.countPublicList(DEFAULT_SCOPE, DEFAULT_CONTENT_TYPE, List.of(), null, null)).thenReturn(0L);
         when(infoCategoryService.getVisibleByContentType(TravelInfoContentType.GENERAL)).thenReturn(List.of());
         when(travelInfoService.getPublicDetail(10L))
                 .thenReturn(detail(TravelInfoContentType.GENERAL));

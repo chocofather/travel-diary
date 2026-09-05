@@ -110,8 +110,11 @@ public class FestivalRegistrationService {
                     "TourAPI 축제 이미지에서만 목록 썸네일을 선택할 수 있습니다.");
         }
         String sourceType = externalContentId == null ? ADMIN_SOURCE_TYPE : KTO_SOURCE_TYPE;
+        // 개최연도는 화면 입력이 아니라 언제나 행사 시작일에서 계산한다.
+        int eventYear = form.getStartDate().getYear();
+        // 같은 축제라도 개최연도가 다르면 다른 개최분이라 새로 등록된다.
         if (externalContentId != null
-                && festivalInfoMapper.countBySourceTypeAndExternalContentId(sourceType, externalContentId) > 0) {
+                && festivalInfoMapper.countOccurrence(sourceType, externalContentId, eventYear) > 0) {
             throw duplicateTourApiFestival();
         }
 
@@ -158,6 +161,7 @@ public class FestivalRegistrationService {
             festivalInfo.setHomepageUrl(optionalText(form.getHomepageUrl(), "homepageUrl", 1000));
             festivalInfo.setSourceType(sourceType);
             festivalInfo.setExternalContentId(externalContentId);
+            festivalInfo.setEventYear(eventYear);
             try {
                 requireSingleRow(festivalInfoMapper.insert(festivalInfo), "축제·행사 상세정보를 저장하지 못했습니다.");
             } catch (DuplicateKeyException exception) {
@@ -372,8 +376,10 @@ public class FestivalRegistrationService {
         }
     }
 
+    /** 다른 연도 개최분은 막지 않는다. 같은 축제의 같은 해 개최분만 중복이다. */
     private FestivalValidationException duplicateTourApiFestival() {
-        return new FestivalValidationException("ktoFestivalContentId", "이미 등록된 TourAPI 축제·행사입니다.");
+        return new FestivalValidationException("ktoFestivalContentId",
+                "이미 등록된 해당 연도의 TourAPI 축제·행사입니다.");
     }
 
     private SelectedThumbnail resolveThumbnailSelection(String externalContentId,
