@@ -63,6 +63,10 @@ class FestivalRegistrationServiceTest {
     private KtoFestivalService ktoFestivalService;
     @Mock
     private KtoFestivalImageDownloadService festivalImageDownloadService;
+    @Mock
+    private TravelInfoService travelInfoService;
+    @Mock
+    private FestivalInfoService festivalInfoService;
 
     private FestivalRegistrationService service;
 
@@ -70,7 +74,8 @@ class FestivalRegistrationServiceTest {
     void setUp() {
         service = new FestivalRegistrationService(
                 travelInfoMapper, festivalInfoMapper, infoCategoryMapper, new PostContentSanitizer(),
-                ktoFestivalService, festivalImageDownloadService);
+                ktoFestivalService, festivalImageDownloadService, travelInfoService,
+                festivalInfoService);
     }
 
     @Test

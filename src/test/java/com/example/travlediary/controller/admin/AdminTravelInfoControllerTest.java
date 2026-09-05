@@ -417,6 +417,39 @@ class AdminTravelInfoControllerTest {
         return detail;
     }
 
+    /**
+     * 축제 기간 입력은 {@code input type="date"} 라 ISO(yyyy-MM-dd) 값만 읽는다.
+     * 화면 언어에 맞춘 짧은 날짜로 찍히면 브라우저가 값을 버려 빈 칸으로 보인다.
+     */
+    @Test
+    void festivalPeriodInputsKeepIsoDateValuesOnTheEditScreen() throws Exception {
+        when(infoCategoryService.getAll()).thenReturn(List.of(
+                category(3L, "문화축제", true, TravelInfoContentType.FESTIVAL)));
+
+        TravelInfoForm form = new TravelInfoForm();
+        form.setTitle("벚꽃 축제");
+        form.setContent("<p>본문</p>");
+        form.setScope(TravelInfoScope.DOMESTIC);
+        form.setContentType(TravelInfoContentType.FESTIVAL);
+        form.setCategoryId(3L);
+        InfoPeriodForm period = new InfoPeriodForm();
+        period.setStartDate(LocalDate.parse("2026-09-02"));
+        period.setEndDate(LocalDate.parse("2026-10-24"));
+        form.setPeriods(new java.util.ArrayList<>(List.of(period)));
+        when(travelInfoService.getForm(10L)).thenReturn(form);
+
+        String html = mockMvc.perform(get("/admin/travel-info/edit/10")
+                        .with(user(adminDetails())))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        org.jsoup.nodes.Document document = org.jsoup.Jsoup.parse(html);
+
+        assertThat(document.select("#period-start-0").attr("value")).isEqualTo("2026-09-02");
+        assertThat(document.select("#period-end-0").attr("value")).isEqualTo("2026-10-24");
+    }
+
     private InfoPeriod infoPeriod(String startDate, String endDate) {
         InfoPeriod period = new InfoPeriod();
         period.setInfoId(10L);

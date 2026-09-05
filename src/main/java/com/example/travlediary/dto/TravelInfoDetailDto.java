@@ -14,6 +14,7 @@ public class TravelInfoDetailDto {
     private String title;
     private TravelInfoScope scope;
     private TravelInfoContentType contentType;
+    private Long categoryId; // 카테고리 이름을 언어별로 바꿀 때 쓴다
     private String categoryName;
     private String content;
     private Integer views;

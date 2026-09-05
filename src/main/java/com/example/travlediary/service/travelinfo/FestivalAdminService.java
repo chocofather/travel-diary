@@ -42,6 +42,8 @@ public class FestivalAdminService {
     private final BookmarkMapper bookmarkMapper;
     private final PostContentSanitizer postContentSanitizer;
     private final KtoFestivalImageDownloadService festivalImageDownloadService;
+    private final TravelInfoService travelInfoService;
+    private final FestivalInfoService festivalInfoService;
 
     @Transactional(readOnly = true)
     public FestivalEditData getEditData(Long id) {
@@ -60,12 +62,17 @@ public class FestivalAdminService {
             form.setEndDate(periods.get(0).getEndDate());
         }
         copyFestivalInfoToForm(festivalInfo, form);
+        // 번역 슬롯 구성은 각 서비스가 갖고 있다. 축제 전용으로 다시 만들지 않는다.
+        form.setTranslations(travelInfoService.getTranslationForms(id));
+        form.setFestivalInfoTranslations(festivalInfoService.getTranslationForms(id));
         images.stream()
                 .filter(image -> Boolean.TRUE.equals(image.getIsThumbnail()))
                 .map(InfoImage::getId)
                 .findFirst()
                 .ifPresent(form::setThumbnailImageId);
-        return new FestivalEditData(form, images);
+        // 외국어 자동입력이 좌표를 되찾을 때 쓰는 국문 KTO 식별자. 화면 입력값이 아니다.
+        return new FestivalEditData(form, images,
+                festivalInfo == null ? null : festivalInfo.getExternalContentId());
     }
 
     @Transactional
@@ -84,6 +91,9 @@ public class FestivalAdminService {
         travelInfo.setContentType(TravelInfoContentType.FESTIVAL);
         requireSingleRow(travelInfoMapper.updateTravelInfo(travelInfo),
                 "축제·행사 기본정보를 수정하지 못했습니다.");
+        // base 수정과 같은 트랜잭션에서 번역까지 끝낸다. 비운 언어는 그 줄만 지워진다.
+        travelInfoService.saveTranslations(
+                id, prepared.title(), prepared.content(), form.getTranslations());
 
         travelInfoMapper.deletePeriodsByInfoId(id);
         InfoPeriod period = new InfoPeriod();
@@ -101,6 +111,9 @@ public class FestivalAdminService {
             requireSingleRow(festivalInfoMapper.update(festivalInfo),
                     "축제·행사 상세정보를 수정하지 못했습니다.");
         }
+        // 행사 상세정보 번역도 같은 트랜잭션에서 저장한다. 비운 언어는 그 줄만 지워진다.
+        festivalInfoService.saveTranslations(id, festivalInfo,
+                form.getFestivalInfoTranslations());
 
         travelInfoMapper.clearThumbnailsByInfoId(id);
         if (prepared.thumbnailImageId() != null) {

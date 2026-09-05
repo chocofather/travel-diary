@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!--
+  정보 카테고리 이름의 번역 입력. 여행정보(GENERAL)와 축제·행사(FESTIVAL) 카테고리가 함께 쓴다.
+  탭 동작은 공통 스크립트(/js/admin-translation-tabs.js)와 공통 클래스를 그대로 쓴다.
+
+  0번 슬롯(한국어)은 위쪽 카테고리명 입력이 담당하므로 여기서는 건너뛴다.
+  숨긴 언어의 입력값도 폼에는 그대로 실려 저장된다. (hidden 만 걸고 지우지 않는다)
+-->
+<th:block th:fragment="infoCategoryTranslations">
+  <div class="admin-translation-tabs" data-translation-tabs>
+    <p class="admin-help-text">
+      비워 둔 언어는 공개 화면에서 한국어로 대신 보여집니다.
+    </p>
+
+    <div class="admin-translation-tablist" role="tablist" aria-label="번역 언어 선택">
+      <th:block th:each="translation, slot : *{translations}">
+        <button type="button" role="tab" class="admin-translation-tab"
+                th:unless="${slot.first}"
+                th:classappend="${slot.index == 1} ? ' is-active'"
+                th:attr="data-translation-tab=${translation.languageCode},
+                         aria-selected=${slot.index == 1},
+                         title=${translationLanguageLabels.get(translation.languageCode)}"
+                th:text="${translationTabLabels.get(translation.languageCode)}
+                         ?: translation.languageCode">영어</button>
+      </th:block>
+    </div>
+
+    <th:block th:each="translation, slot : *{translations}">
+      <div class="admin-translation-panel" role="tabpanel"
+           th:unless="${slot.first}"
+           th:hidden="${slot.index > 1}"
+           th:attr="data-translation-panel=${translation.languageCode},
+                    aria-label=${translationLanguageLabels.get(translation.languageCode)}">
+        <input type="hidden" th:field="*{translations[__${slot.index}__].languageCode}">
+
+        <div class="admin-form-field">
+          <label th:for="${'info-category-translation-name-' + translation.languageCode}">
+            카테고리명
+          </label>
+          <input type="text" maxlength="100"
+                 th:id="${'info-category-translation-name-' + translation.languageCode}"
+                 th:field="*{translations[__${slot.index}__].name}"
+                 th:attr="data-translation-name=${translation.languageCode}">
+        </div>
+      </div>
+    </th:block>
+  </div>
+</th:block>
+
+</body>
+</html>

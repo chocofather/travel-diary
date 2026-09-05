@@ -3,18 +3,20 @@
 <body>
 <section id="travel-info-results" class="travel-info-results" th:fragment="results">
   <div class="travel-info-results-header" aria-live="polite">
-    <p>총 <strong th:text="${totalCount}">0</strong>개의 여행정보</p>
-    <nav class="travel-info-sort" aria-label="여행정보 정렬">
+    <p th:text="#{travelInfo.list.total(${totalCount})}">총 0개의 여행정보</p>
+    <nav class="travel-info-sort" th:attr="aria-label=#{travelInfo.list.sort.label}">
       <a class="travel-info-sort-option"
          th:classappend="${sort == 'latest'} ? ' is-active'"
          th:attr="aria-current=${sort == 'latest'} ? 'true' : null"
          th:href="@{/travel-info(keyword=${keyword},scope=${scope},contentType=${contentType},categoryId=${categoryIds},size=${pageSize})}"
-         data-travel-info-sort data-sort-value="latest">최신순</a>
+         data-travel-info-sort data-sort-value="latest"
+         th:text="#{travelInfo.list.sort.latest}">최신순</a>
       <a class="travel-info-sort-option"
          th:classappend="${sort == 'views'} ? ' is-active'"
          th:attr="aria-current=${sort == 'views'} ? 'true' : null"
          th:href="@{/travel-info(keyword=${keyword},scope=${scope},contentType=${contentType},categoryId=${categoryIds},sort='views',size=${pageSize})}"
-         data-travel-info-sort data-sort-value="views">조회순</a>
+         data-travel-info-sort data-sort-value="views"
+         th:text="#{travelInfo.list.sort.views}">조회순</a>
     </nav>
   </div>
 
@@ -26,23 +28,32 @@
               th:classappend="${info.bookmarked} ? ' is-bookmarked'"
               th:data-bookmark-url="@{/bookmarks/travel-info/{id}(id=${info.id})}"
               th:data-bookmarked="${info.bookmarked}"
-              th:attr="aria-pressed=${info.bookmarked},aria-label=${info.bookmarked} ? '여행정보 저장 취소' : '여행정보 저장'"
+              th:attr="aria-pressed=${info.bookmarked},
+                       aria-label=${info.bookmarked}
+                         ? #{travelInfo.bookmark.remove} : #{travelInfo.bookmark.save},
+                       data-label-save=#{travelInfo.bookmark.label.save},
+                       data-label-saved=#{travelInfo.bookmark.label.saved},
+                       data-aria-save=#{travelInfo.bookmark.save},
+                       data-aria-remove=#{travelInfo.bookmark.remove},
+                       data-failed-message=#{travelInfo.bookmark.failed}"
               data-travel-info-bookmark>
         <span class="travel-info-bookmark-icon" aria-hidden="true"></span>
         <span class="travel-info-bookmark-label"
-              th:text="${info.bookmarked} ? '저장됨' : '저장'">저장</span>
+              th:text="${info.bookmarked}
+                       ? #{travelInfo.bookmark.label.saved}
+                       : #{travelInfo.bookmark.label.save}">저장</span>
       </button>
 
       <div class="travel-info-thumbnail"
            th:classappend="${info.contentType.name() == 'FESTIVAL'} ? ' travel-info-festival-thumbnail'">
         <img th:if="${info.thumbnailUrl != null and !#strings.isEmpty(info.thumbnailUrl)}"
              th:src="@{${info.thumbnailUrl}}"
-             th:alt="|${info.title} 썸네일|">
+             th:alt="#{travelInfo.list.card.thumbnailAlt(${info.title})}">
         <div th:unless="${info.thumbnailUrl != null and !#strings.isEmpty(info.thumbnailUrl)}"
              class="travel-info-thumbnail-placeholder"
-             role="img" aria-label="등록된 이미지가 없습니다">
+             role="img" th:attr="aria-label=#{travelInfo.list.card.noImage}">
           <span class="travel-info-placeholder-icon" aria-hidden="true">▧</span>
-          <span>등록된 이미지가 없습니다</span>
+          <span th:text="#{travelInfo.list.card.noImage}">등록된 이미지가 없습니다</span>
         </div>
       </div>
 
@@ -56,10 +67,12 @@
              th:text="${info.title}">여행정보 제목</a>
         </h2>
         <p class="travel-info-type-meta">
-          <span th:text="${info.scope.name() == 'DOMESTIC'} ? '국내' : '해외'">국내</span>
+          <span th:text="${info.scope.name() == 'DOMESTIC'}
+                         ? #{travelInfo.scope.domestic}
+                         : #{travelInfo.scope.international}">국내</span>
           <th:block th:if="${info.contentType.name() == 'GENERAL'}">
             <span aria-hidden="true">·</span>
-            <span>일반</span>
+            <span th:text="#{travelInfo.contentType.general}">일반</span>
           </th:block>
         </p>
 
@@ -75,7 +88,7 @@
         <div class="travel-info-card-footer">
           <time th:text="${#dates.format(info.createdAt, 'yyyy.MM.dd')}">2026.04.01</time>
           <span aria-hidden="true">·</span>
-          <span>조회 <span th:text="${info.views}">0</span></span>
+          <span th:text="#{travelInfo.list.views(${info.views})}">조회 0</span>
         </div>
       </div>
     </article>
@@ -83,21 +96,24 @@
 
   <div class="travel-info-empty" th:if="${#lists.isEmpty(travelInfoList)}">
     <th:block th:if="${keyword != null}">
-      <p><strong th:text="|‘${keyword}’|">‘파리’</strong>에 해당하는 여행정보를 찾지 못했습니다.</p>
-      <span>필터를 변경하거나 다른 검색어를 입력해보세요.</span>
+      <p th:text="#{travelInfo.list.empty.keyword(${keyword})}">‘파리’에 해당하는 여행정보를 찾지 못했습니다.</p>
+      <span th:text="#{travelInfo.list.empty.keyword.hint}">필터를 변경하거나 다른 검색어를 입력해보세요.</span>
     </th:block>
     <th:block th:unless="${keyword != null}">
-      <p>조건에 맞는 여행정보가 없습니다.</p>
-      <span>다른 필터를 선택해 보세요.</span>
+      <p th:text="#{travelInfo.list.empty.filter}">조건에 맞는 여행정보가 없습니다.</p>
+      <span th:text="#{travelInfo.list.empty.filter.hint}">다른 필터를 선택해 보세요.</span>
     </th:block>
   </div>
 
-  <nav class="travel-info-pagination" th:if="${totalPages > 1}" aria-label="여행정보 페이지">
+  <nav class="travel-info-pagination" th:if="${totalPages > 1}"
+       th:attr="aria-label=#{travelInfo.list.pagination}">
     <a th:if="${currentPage > 1}"
        th:href="@{/travel-info(keyword=${keyword},scope=${scope},contentType=${contentType},categoryId=${categoryIds},sort=${sort == 'views' ? sort : null},page=${currentPage - 1},size=${pageSize})}"
-       class="travel-info-page-direction">이전</a>
+       class="travel-info-page-direction"
+       th:text="#{travelInfo.list.pagination.previous}">이전</a>
     <span th:unless="${currentPage > 1}"
-          class="travel-info-page-direction is-disabled" aria-disabled="true">이전</span>
+          class="travel-info-page-direction is-disabled" aria-disabled="true"
+          th:text="#{travelInfo.list.pagination.previous}">이전</span>
 
     <a th:each="pageNumber : ${#numbers.sequence(pageStart, pageEnd)}"
        th:href="@{/travel-info(keyword=${keyword},scope=${scope},contentType=${contentType},categoryId=${categoryIds},sort=${sort == 'views' ? sort : null},page=${pageNumber},size=${pageSize})}"
@@ -107,9 +123,11 @@
 
     <a th:if="${currentPage < totalPages}"
        th:href="@{/travel-info(keyword=${keyword},scope=${scope},contentType=${contentType},categoryId=${categoryIds},sort=${sort == 'views' ? sort : null},page=${currentPage + 1},size=${pageSize})}"
-       class="travel-info-page-direction">다음</a>
+       class="travel-info-page-direction"
+       th:text="#{travelInfo.list.pagination.next}">다음</a>
     <span th:unless="${currentPage < totalPages}"
-          class="travel-info-page-direction is-disabled" aria-disabled="true">다음</span>
+          class="travel-info-page-direction is-disabled" aria-disabled="true"
+          th:text="#{travelInfo.list.pagination.next}">다음</span>
   </nav>
 </section>
 </body>

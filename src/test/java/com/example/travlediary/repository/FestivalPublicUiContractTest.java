@@ -27,8 +27,11 @@ class FestivalPublicUiContractTest {
                 .contains("festival.playTime", "festival.useTime")
                 .contains("festival.sponsor1", "festival.sponsor2", "festival.contactTel")
                 .contains("공식 홈페이지", "target=\"_blank\"", "rel=\"noopener noreferrer\"")
-                .contains("사진 출처:", "festival.galleryImages[0].sourceName",
-                        "festival.galleryImages[0].licenseLabel")
+                // 출처 문구는 messages 로, 라이선스는 코드 → messages 로 바뀐다.
+                .contains("#{travelInfo.festival.image.source}")
+                .contains("${firstImage.sourceName}")
+                .contains("travelInfo.festival.image.license.")
+                .contains("festival.galleryImages[0].licenseCode")
                 .doesNotContain("festival.mainImage.sourceImageUrl", "source_image_url");
     }
 

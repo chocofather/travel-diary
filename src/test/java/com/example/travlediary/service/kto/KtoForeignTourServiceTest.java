@@ -191,6 +191,15 @@ class KtoForeignTourServiceTest {
         assertThat(KtoKoreanAliasMatcher.extractKoreanAlias("国立現代美術館（ソウル館）")).isNull();
         // 반각과 전각을 섞은 짝은 별칭으로 보지 않는다
         assertThat(KtoKoreanAliasMatcher.extractKoreanAlias("景福宮（경복궁)")).isNull();
+        // 국문 이름이 괄호를 품으면 안쪽까지 함께 별칭으로 읽는다
+        assertThat(KtoKoreanAliasMatcher.extractKoreanAlias(
+                "100 Years Night Night Market (백년나이트 야시장 (메기의 귀환))"))
+                .isEqualTo("백년나이트 야시장 (메기의 귀환)");
+        assertThat(KtoKoreanAliasMatcher.stripTrailingKoreanAlias(
+                "100 Years Night Night Market (백년나이트 야시장 (메기의 귀환))"))
+                .isEqualTo("100 Years Night Night Market");
+        // 짝이 맞지 않는 괄호는 별칭이 아니다
+        assertThat(KtoKoreanAliasMatcher.extractKoreanAlias("Market (백년나이트 야시장")).isNull();
 
         assertThat(KtoKoreanAliasMatcher.stripTrailingKoreanAlias("景福宮（경복궁）"))
                 .isEqualTo("景福宮");

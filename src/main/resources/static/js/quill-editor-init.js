@@ -1,6 +1,19 @@
-window.initQuillEditor = function (editorSelector, contentInputId, formId, initialContentId) {
-    const editorElement = document.querySelector(editorSelector);
-    const contentInput = document.getElementById(contentInputId);
+/**
+ * Quill 편집기를 만들어 hidden input 에 붙인다.
+ *
+ * <p>editor/content/initial 자리에는 선택자·id 문자열 대신 element 를 그대로 넘겨도 된다.
+ * 한 폼에 편집기가 여러 개 있을 수 있어(예: 언어별 본문) submit 연결은 편집기마다 따로 건다.
+ * options.required 가 false 면 빈 본문이어도 저장을 막지 않는다. (선택 입력 편집기)
+ */
+window.initQuillEditor = function (editorSelector, contentInputId, formId, initialContentId,
+                                   options = {}) {
+    const required = options.required !== false;
+    const editorElement = typeof editorSelector === 'string'
+        ? document.querySelector(editorSelector)
+        : editorSelector;
+    const contentInput = typeof contentInputId === 'string'
+        ? document.getElementById(contentInputId)
+        : contentInputId;
     const form = document.getElementById(formId);
 
     if (!editorElement) {
@@ -359,7 +372,9 @@ window.initQuillEditor = function (editorSelector, contentInputId, formId, initi
     });
 
     if (initialContentId) {
-        const initialContent = document.getElementById(initialContentId);
+        const initialContent = typeof initialContentId === 'string'
+            ? document.getElementById(initialContentId)
+            : initialContentId;
         if (initialContent?.value) {
             const delta = quill.clipboard.convert({
                 html: initialContent.value,
@@ -381,7 +396,8 @@ window.initQuillEditor = function (editorSelector, contentInputId, formId, initi
             && !lower.startsWith('//');
     }
 
-    if (form.dataset.quillEditorSubmitBound !== 'true') {
+    // 편집기마다 한 번씩만 건다. 같은 폼에 편집기가 여러 개여도 각자 자기 hidden input 을 채운다.
+    if (editorElement.dataset.quillEditorSubmitBound !== 'true') {
         form.addEventListener('submit', event => {
             if (pendingImageUploads > 0) {
                 event.preventDefault();
@@ -394,16 +410,21 @@ window.initQuillEditor = function (editorSelector, contentInputId, formId, initi
                 .some(isPersistableImage);
 
             if (!text && !hasImage) {
-                event.preventDefault();
+                if (required) {
+                    event.preventDefault();
+                    contentInput.value = '';
+                    alert('본문을 입력해 주세요.');
+                    quill.focus();
+                    return;
+                }
+                // 선택 입력 편집기는 비어 있어도 막지 않는다. 서버가 빈 값으로 본다.
                 contentInput.value = '';
-                alert('본문을 입력해 주세요.');
-                quill.focus();
                 return;
             }
 
             contentInput.value = quill.getSemanticHTML();
         });
-        form.dataset.quillEditorSubmitBound = 'true';
+        editorElement.dataset.quillEditorSubmitBound = 'true';
     }
 
     return quill;

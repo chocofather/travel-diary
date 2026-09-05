@@ -37,7 +37,8 @@ class KtoEnglishTourServiceTest {
     @Test
     void detailKeepsTheMatchedContentTypeIdAndAsksForEnglish() {
         KtoForeignTourDetailResponse expected = new KtoForeignTourDetailResponse(
-                "Changdeokgung Palace", "overview", null, null, null, null, null, null);
+                "Changdeokgung Palace", "overview", null, null, null, null, null, null,
+                null, null, null, null, null, null);
         when(ktoForeignTourService.getDetail(KtoForeignLanguage.ENGLISH, "eng-1", "82"))
                 .thenReturn(expected);
 

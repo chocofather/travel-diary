@@ -45,7 +45,8 @@
             const image = slides[currentIndex].querySelector('img');
             if (!image) return;
             modalImage.src = image.currentSrc || image.src;
-            modalImage.alt = image.alt || '축제 이미지';
+            // 대체 문구는 화면이 현재 언어로 실어 준다. 스크립트에 언어별 문자열을 두지 않는다.
+            modalImage.alt = image.alt || modal?.dataset.defaultAlt || '';
         }
 
         function render() {

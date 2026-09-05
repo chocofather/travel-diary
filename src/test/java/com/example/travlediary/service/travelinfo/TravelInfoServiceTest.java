@@ -16,6 +16,10 @@ import com.example.travlediary.repository.bookmark.BookmarkMapper;
 import com.example.travlediary.repository.category.InfoCategoryMapper;
 import com.example.travlediary.repository.travelinfo.TravelInfoMapper;
 import com.example.travlediary.service.file.FileUploadService;
+import com.example.travlediary.repository.category.CategoryMapper;
+import com.example.travlediary.repository.category.CountryCategoryMapper;
+import com.example.travlediary.service.category.LocalizedReferenceNameResolver;
+import com.example.travlediary.service.category.ReferenceNameLocalizationService;
 import com.example.travlediary.service.post.PostContentSanitizer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -64,7 +68,12 @@ class TravelInfoServiceTest {
     void setUp() {
         travelInfoService = new TravelInfoService(
                 travelInfoMapper, bookmarkMapper, infoCategoryMapper,
-                new PostContentSanitizer(), fileUploadService);
+                new PostContentSanitizer(), fileUploadService,
+                new TravelInfoLocalizationService(travelInfoMapper),
+                new ReferenceNameLocalizationService(
+                        org.mockito.Mockito.mock(CountryCategoryMapper.class),
+                        org.mockito.Mockito.mock(CategoryMapper.class),
+                        infoCategoryMapper, new LocalizedReferenceNameResolver()));
     }
 
     @AfterEach

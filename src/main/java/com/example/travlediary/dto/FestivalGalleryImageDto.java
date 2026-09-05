@@ -12,7 +12,8 @@ public final class FestivalGalleryImageDto {
     private final String sourceType;
     private final String sourceName;
     private final String sourceTitle;
-    private final String licenseLabel;
+    /** 화면 문구가 아니라 안정적인 코드다. 표시할 이름은 화면이 messages 에서 고른다. */
+    private final String licenseCode;
 
     public FestivalGalleryImageDto(InfoImage image) {
         this.imageUrl = text(image == null ? null : image.getImageUrl());
@@ -21,7 +22,7 @@ public final class FestivalGalleryImageDto {
         this.sourceType = text(image == null ? null : image.getSourceType());
         this.sourceName = text(image == null ? null : image.getSourceName());
         this.sourceTitle = text(image == null ? null : image.getSourceTitle());
-        this.licenseLabel = licenseLabel(image == null ? null : image.getLicenseType());
+        this.licenseCode = licenseCode(image == null ? null : image.getLicenseType());
     }
 
     public String getImageUrl() {
@@ -48,8 +49,8 @@ public final class FestivalGalleryImageDto {
         return sourceTitle;
     }
 
-    public String getLicenseLabel() {
-        return licenseLabel;
+    public String getLicenseCode() {
+        return licenseCode;
     }
 
     public boolean isTourApiImage() {
@@ -57,18 +58,14 @@ public final class FestivalGalleryImageDto {
     }
 
     public boolean isAttributionPresent() {
-        return sourceName != null || licenseLabel != null;
+        return sourceName != null || licenseCode != null;
     }
 
-    private static String licenseLabel(String licenseType) {
+    /** 화면에 이름을 지어 주는 대신, 아는 라이선스인지만 판별해 코드를 넘긴다. */
+    private static String licenseCode(String licenseType) {
         String normalized = text(licenseType);
-        if ("KOGL_TYPE_1".equals(normalized)) {
-            return "공공누리 제1유형";
-        }
-        if ("KOGL_TYPE_3".equals(normalized)) {
-            return "공공누리 제3유형";
-        }
-        return null;
+        return "KOGL_TYPE_1".equals(normalized) || "KOGL_TYPE_3".equals(normalized)
+                ? normalized : null;
     }
 
     private static String text(String value) {

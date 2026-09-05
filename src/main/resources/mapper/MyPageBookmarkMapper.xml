@@ -168,6 +168,7 @@
             ti.title,
             ti.scope,
             ti.content_type AS contentType,
+            ic.id AS categoryId,
             ic.name AS categoryName,
             (
                 SELECT ii.image_url

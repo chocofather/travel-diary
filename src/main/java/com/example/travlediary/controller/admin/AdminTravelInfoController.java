@@ -138,6 +138,8 @@ public class AdminTravelInfoController {
                 ? "등록된 여행정보의 분류, 본문과 축제 기간을 수정합니다."
                 : "국내·해외 여행정보와 축제 콘텐츠를 등록합니다.");
         model.addAttribute("submitLabel", editMode ? "수정 저장" : "등록");
+        model.addAttribute("translationLanguageLabels", AdminTranslationLabels.LANGUAGE_LABELS);
+        model.addAttribute("translationTabLabels", AdminTranslationLabels.TAB_LABELS);
     }
 
     private List<InfoCategory> selectableCategories(Long selectedCategoryId) {

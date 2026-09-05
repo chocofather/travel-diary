@@ -7,33 +7,41 @@
 <th:block th:fragment="body">
   <section class="travel-info-page" aria-labelledby="travel-info-title">
     <header class="travel-info-heading">
-      <span class="travel-info-kicker">TRAVEL GUIDE</span>
-      <h1 id="travel-info-title">여행정보</h1>
-      <p>여행에 필요한 유용한 정보와 축제 소식을 확인해보세요.</p>
+      <span class="travel-info-kicker" th:text="#{travelInfo.list.kicker}">TRAVEL GUIDE</span>
+      <h1 id="travel-info-title"
+          th:text="${contentType != null and contentType.name() == 'FESTIVAL'}
+                   ? #{travelInfo.list.title.festival}
+                   : #{travelInfo.list.title.general}">여행정보</h1>
+      <p th:if="${contentType == null or contentType.name() != 'FESTIVAL'}"
+         th:text="#{travelInfo.list.description.general}">여행에 필요한 유용한 정보를 확인해보세요.</p>
+      <p th:if="${contentType != null and contentType.name() == 'FESTIVAL'}"
+         th:text="#{travelInfo.list.description.festival}">지금 열리는 축제와 행사 소식을 확인해보세요.</p>
     </header>
 
-    <div class="travel-info-filters" aria-label="여행정보 필터">
+    <div class="travel-info-filters" th:attr="aria-label=#{travelInfo.list.filters}">
       <form class="travel-info-search" method="get" action="/travel-info"
             role="search" data-travel-info-search>
-        <label class="travel-info-search-label" for="travel-info-keyword">여행정보 검색</label>
+        <label class="travel-info-search-label" for="travel-info-keyword"
+               th:text="#{travelInfo.list.search.label}">여행정보 검색</label>
         <div class="travel-info-search-control">
           <input type="search"
                  id="travel-info-keyword"
                  name="keyword"
                  maxlength="100"
                  autocomplete="off"
-                 placeholder="파리, 벚꽃, 전압, 텍스리펀 등을 검색해보세요"
-                 aria-label="여행정보 제목 검색"
+                 th:placeholder="#{travelInfo.list.search.placeholder}"
+                 th:attr="aria-label=#{travelInfo.list.search.inputLabel}"
                  data-travel-info-search-input
                  th:value="${keyword}">
           <button type="button"
                   class="travel-info-search-clear"
-                  aria-label="검색어 지우기"
-                  data-travel-info-search-clear
-                  th:attr="hidden=${keyword == null}">
+                  th:attr="aria-label=#{travelInfo.list.search.clear},
+                           hidden=${keyword == null}"
+                  data-travel-info-search-clear>
             <span aria-hidden="true">×</span>
           </button>
-          <button type="submit" class="travel-info-search-submit" aria-label="여행정보 검색">
+          <button type="submit" class="travel-info-search-submit"
+                  th:attr="aria-label=#{travelInfo.list.search.submit}">
             <span aria-hidden="true">🔍</span>
           </button>
         </div>
@@ -47,44 +55,78 @@
 
         <noscript th:if="${keyword != null}">
           <a class="travel-info-search-noscript-clear"
-             th:href="@{/travel-info(scope=${scope},contentType=${contentType},categoryId=${categoryIds},sort=${sort == 'views' ? sort : null},size=${pageSize})}">검색어 지우기</a>
+             th:href="@{/travel-info(scope=${scope},contentType=${contentType},categoryId=${categoryIds},sort=${sort == 'views' ? sort : null},size=${pageSize})}"
+             th:text="#{travelInfo.list.search.clear}">검색어 지우기</a>
         </noscript>
       </form>
 
-      <div class="travel-info-filter-group">
-        <span class="travel-info-filter-label">여행정보 구분</span>
+      <!-- 일반 여행정보: 국내/해외 전환만 둔다 ('전체'와 축제·행사는 여기 없다) -->
+      <div class="travel-info-filter-group"
+           th:if="${contentType == null or contentType.name() != 'FESTIVAL'}">
+        <span class="travel-info-filter-label"
+              th:text="#{travelInfo.list.filter.scope.general}">여행정보 구분</span>
         <div class="travel-info-pills">
-          <a th:href="@{/travel-info(keyword=${keyword},contentType='GENERAL',categoryId=${categoryIds},sort=${sort == 'views' ? sort : null},size=${pageSize})}"
-             class="travel-info-filter-pill"
-             data-filter-name="primary" data-filter-value=""
-             th:classappend="${(contentType == null or contentType.name() == 'GENERAL') and scope == null} ? ' is-active'"
-             th:attr="aria-current=${(contentType == null or contentType.name() == 'GENERAL') and scope == null} ? 'true' : null">전체</a>
           <a th:href="@{/travel-info(keyword=${keyword},scope='DOMESTIC',contentType='GENERAL',categoryId=${categoryIds},sort=${sort == 'views' ? sort : null},size=${pageSize})}"
              class="travel-info-filter-pill"
              data-filter-name="primary" data-filter-value="DOMESTIC"
-             th:classappend="${(contentType == null or contentType.name() == 'GENERAL') and scope != null and scope.name() == 'DOMESTIC'} ? ' is-active'"
-             th:attr="aria-current=${(contentType == null or contentType.name() == 'GENERAL') and scope != null and scope.name() == 'DOMESTIC'} ? 'true' : null">국내</a>
+             data-filter-content-type="GENERAL"
+             th:classappend="${scope != null and scope.name() == 'DOMESTIC'} ? ' is-active'"
+             th:attr="aria-current=${scope != null and scope.name() == 'DOMESTIC'} ? 'true' : null"
+             th:text="#{travelInfo.scope.domestic}">국내</a>
           <a th:href="@{/travel-info(keyword=${keyword},scope='INTERNATIONAL',contentType='GENERAL',categoryId=${categoryIds},sort=${sort == 'views' ? sort : null},size=${pageSize})}"
              class="travel-info-filter-pill"
              data-filter-name="primary" data-filter-value="INTERNATIONAL"
-             th:classappend="${(contentType == null or contentType.name() == 'GENERAL') and scope != null and scope.name() == 'INTERNATIONAL'} ? ' is-active'"
-             th:attr="aria-current=${(contentType == null or contentType.name() == 'GENERAL') and scope != null and scope.name() == 'INTERNATIONAL'} ? 'true' : null">해외</a>
-          <a th:href="@{/travel-info(keyword=${keyword},contentType='FESTIVAL',sort=${sort == 'views' ? sort : null},size=${pageSize})}"
+             data-filter-content-type="GENERAL"
+             th:classappend="${scope != null and scope.name() == 'INTERNATIONAL'} ? ' is-active'"
+             th:attr="aria-current=${scope != null and scope.name() == 'INTERNATIONAL'} ? 'true' : null"
+             th:text="#{travelInfo.scope.international}">해외</a>
+        </div>
+      </div>
+
+      <!-- 축제·행사: 지역 범위는 전체까지 그대로 둔다 -->
+      <div class="travel-info-filter-group"
+           th:if="${contentType != null and contentType.name() == 'FESTIVAL'}">
+        <span class="travel-info-filter-label"
+              th:text="#{travelInfo.list.filter.scope.festival}">지역 범위</span>
+        <div class="travel-info-pills">
+          <a th:href="@{/travel-info(keyword=${keyword},contentType='FESTIVAL',categoryId=${categoryIds},sort=${sort == 'views' ? sort : null},size=${pageSize})}"
              class="travel-info-filter-pill"
-             data-filter-name="primary" data-filter-value="FESTIVAL"
-             th:classappend="${contentType != null and contentType.name() == 'FESTIVAL'} ? ' is-active'"
-             th:attr="aria-current=${contentType != null and contentType.name() == 'FESTIVAL'} ? 'true' : null">축제·행사</a>
+             data-filter-name="primary" data-filter-value=""
+             data-filter-content-type="FESTIVAL"
+             th:classappend="${scope == null} ? ' is-active'"
+             th:attr="aria-current=${scope == null} ? 'true' : null"
+             th:text="#{travelInfo.filter.all}">전체</a>
+          <a th:href="@{/travel-info(keyword=${keyword},scope='DOMESTIC',contentType='FESTIVAL',categoryId=${categoryIds},sort=${sort == 'views' ? sort : null},size=${pageSize})}"
+             class="travel-info-filter-pill"
+             data-filter-name="primary" data-filter-value="DOMESTIC"
+             data-filter-content-type="FESTIVAL"
+             th:classappend="${scope != null and scope.name() == 'DOMESTIC'} ? ' is-active'"
+             th:attr="aria-current=${scope != null and scope.name() == 'DOMESTIC'} ? 'true' : null"
+             th:text="#{travelInfo.scope.domestic}">국내</a>
+          <a th:href="@{/travel-info(keyword=${keyword},scope='INTERNATIONAL',contentType='FESTIVAL',categoryId=${categoryIds},sort=${sort == 'views' ? sort : null},size=${pageSize})}"
+             class="travel-info-filter-pill"
+             data-filter-name="primary" data-filter-value="INTERNATIONAL"
+             data-filter-content-type="FESTIVAL"
+             th:classappend="${scope != null and scope.name() == 'INTERNATIONAL'} ? ' is-active'"
+             th:attr="aria-current=${scope != null and scope.name() == 'INTERNATIONAL'} ? 'true' : null"
+             th:text="#{travelInfo.scope.international}">해외</a>
         </div>
       </div>
 
       <div th:replace="~{travel-info/fragments/category-filter :: filter}"></div>
 
       <div class="travel-info-filter-actions">
-        <a class="travel-info-filter-reset" th:href="@{/travel-info}" data-travel-info-reset>필터 초기화</a>
+        <!-- 초기화해도 보고 있던 화면(여행정보/축제·행사)은 그대로 둔다 -->
+        <a class="travel-info-filter-reset"
+           th:href="@{/travel-info(contentType=${contentType})}"
+           th:text="#{travelInfo.list.filter.reset}"
+           data-travel-info-reset>필터 초기화</a>
       </div>
     </div>
 
-    <p id="travel-info-async-message" class="travel-info-async-message" role="status" hidden></p>
+    <!-- 목록을 다시 불러오지 못했을 때 쓰는 문구를 서버가 현재 언어로 실어 준다. -->
+    <p id="travel-info-async-message" class="travel-info-async-message" role="status" hidden
+       th:attr="data-load-failed-message=#{travelInfo.list.loadFailed}"></p>
     <div th:replace="~{travel-info/fragments/list-results :: results}"></div>
   </section>
   <script src="/js/travel-info-list.js" defer></script>

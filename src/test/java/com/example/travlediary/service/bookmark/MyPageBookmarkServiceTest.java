@@ -4,6 +4,7 @@ import com.example.travlediary.dto.MyPageBookmarkPageDto;
 import com.example.travlediary.dto.MyPageCommunityBookmarkDto;
 import com.example.travlediary.repository.bookmark.MyPageBookmarkMapper;
 import com.example.travlediary.service.category.CountryCategoryService;
+import com.example.travlediary.service.category.ReferenceNameLocalizationService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -24,6 +25,8 @@ class MyPageBookmarkServiceTest {
     private MyPageBookmarkMapper mapper;
     @Mock
     private CountryCategoryService countryCategoryService;
+    @Mock
+    private ReferenceNameLocalizationService referenceNameLocalizationService;
 
     @Test
     void invalidParametersFallBackToDestinationAllAndFirstPage() {
@@ -116,6 +119,7 @@ class MyPageBookmarkServiceTest {
     }
 
     private MyPageBookmarkService service() {
-        return new MyPageBookmarkService(mapper, countryCategoryService);
+        return new MyPageBookmarkService(mapper, countryCategoryService,
+                referenceNameLocalizationService);
     }
 }

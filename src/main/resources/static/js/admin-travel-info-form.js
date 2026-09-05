@@ -9,6 +9,8 @@ document.addEventListener('DOMContentLoaded', () => {
         'travel-info-initial-content'
     );
 
+    // 언어별 본문 편집기는 공통 스크립트(/js/admin-translation-editors.js)가 맡는다.
+
     const thumbnailPreview = document.getElementById('travel-info-thumbnail-preview');
     const thumbnailPreviewImage = document.getElementById('travel-info-thumbnail-preview-image');
     const thumbnailEmpty = document.getElementById('travel-info-thumbnail-empty');

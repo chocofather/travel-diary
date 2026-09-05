@@ -5,16 +5,21 @@
      class="travel-info-filter-group is-category"
      th:fragment="filter">
   <span class="travel-info-filter-label"
-        th:text="${contentType != null and contentType.name() == 'FESTIVAL'} ? '축제·행사 분류' : '주제'">주제</span>
+        th:text="${contentType != null and contentType.name() == 'FESTIVAL'}
+                 ? #{travelInfo.list.filter.category.festival}
+                 : #{travelInfo.list.filter.category.general}">주제</span>
   <div class="travel-info-pills travel-info-category-pills">
     <button type="button"
             class="travel-info-filter-pill"
             data-filter-name="categoryId" data-filter-value=""
             th:classappend="${#lists.isEmpty(categoryIds)} ? ' is-active'"
-            th:attr="aria-pressed=${#lists.isEmpty(categoryIds)}">전체</button>
+            th:attr="aria-pressed=${#lists.isEmpty(categoryIds)}"
+            th:text="#{travelInfo.filter.all}">전체</button>
+    <!-- 이름만 현재 언어로 바꿔 보여 준다. 필터 값은 그대로 카테고리 번호를 쓴다. -->
     <button type="button"
             th:each="category : ${categories}"
-            th:text="${category.name}"
+            th:text="${categoryNames != null and categoryNames[category.id] != null}
+                     ? ${categoryNames[category.id]} : ${category.name}"
             class="travel-info-filter-pill"
             data-filter-name="categoryId"
             th:attr="data-filter-value=${category.id},aria-pressed=${#lists.contains(categoryIds, category.id)}"

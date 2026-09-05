@@ -13,6 +13,14 @@
         <result property="isVisible" column="is_visible" javaType="java.lang.Boolean"/>
     </resultMap>
 
+    <resultMap id="InfoCategoryTranslationResultMap"
+               type="com.example.travlediary.model.InfoCategoryTranslation">
+        <id property="id" column="id"/>
+        <result property="infoCategoryId" column="info_category_id"/>
+        <result property="languageCode" column="language_code"/>
+        <result property="name" column="name"/>
+    </resultMap>
+
     <select id="findAll" resultMap="InfoCategoryResultMap">
         SELECT id, name, content_type, display_order, is_visible
         FROM info_categories
@@ -73,6 +81,57 @@
     <delete id="deleteById" parameterType="long">
         DELETE FROM info_categories
         WHERE id = #{id}
+    </delete>
+
+    <!--
+      정보 카테고리 이름 번역. GENERAL/FESTIVAL 공용이며 언어 한 줄이 단위다.
+      언어 대체(요청 언어 -> ko -> 남은 언어)가 늘 같은 줄을 고르도록 정렬을 고정한다.
+    -->
+    <select id="findTranslationsByCategoryId" parameterType="long"
+            resultMap="InfoCategoryTranslationResultMap">
+        SELECT id, info_category_id, language_code, name
+        FROM info_category_translations
+        WHERE info_category_id = #{infoCategoryId}
+        ORDER BY language_code ASC, id ASC
+    </select>
+
+    <select id="findTranslationsByCategoryIds" resultMap="InfoCategoryTranslationResultMap">
+        SELECT id, info_category_id, language_code, name
+        FROM info_category_translations
+        <choose>
+            <when test="infoCategoryIds != null and !infoCategoryIds.isEmpty()">
+                WHERE info_category_id IN
+                <foreach collection="infoCategoryIds" item="infoCategoryId"
+                         open="(" separator="," close=")">
+                    #{infoCategoryId}
+                </foreach>
+            </when>
+            <otherwise>
+                WHERE 1 = 0
+            </otherwise>
+        </choose>
+        ORDER BY info_category_id ASC, language_code ASC, id ASC
+    </select>
+
+    <insert id="insertTranslation"
+            parameterType="com.example.travlediary.model.InfoCategoryTranslation"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO info_category_translations (info_category_id, language_code, name)
+        VALUES (#{infoCategoryId}, #{languageCode}, #{name})
+    </insert>
+
+    <update id="updateTranslation"
+            parameterType="com.example.travlediary.model.InfoCategoryTranslation">
+        UPDATE info_category_translations
+        SET name = #{name}
+        WHERE info_category_id = #{infoCategoryId}
+          AND language_code = #{languageCode}
+    </update>
+
+    <delete id="deleteTranslation">
+        DELETE FROM info_category_translations
+        WHERE info_category_id = #{infoCategoryId}
+          AND language_code = #{languageCode}
     </delete>
 
 </mapper>

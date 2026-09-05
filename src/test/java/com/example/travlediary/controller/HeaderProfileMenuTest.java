@@ -12,6 +12,8 @@ import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
 import org.jsoup.Jsoup;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
@@ -82,6 +84,38 @@ class HeaderProfileMenuTest {
         assertThat(document.select("#auth-area > a[href='/admin']")).isEmpty();
     }
 
+    /**
+     * /admin/** 은 한국어 고정 영역이라, 들어가는 문 이름도 언어를 따라가지 않는다.
+     * 같은 메뉴의 다른 항목은 그대로 현재 언어로 보인다.
+     */
+    @ParameterizedTest
+    @CsvSource({
+            "ko, 프로필, 마이페이지, 로그아웃",
+            "en, Profile, My Page, Log out",
+            "ja, プロフィール, マイページ, ログアウト",
+            "zh-CN, 个人资料, 我的页面, 退出登录",
+            "zh-TW, 個人資料, 我的頁面, 登出"
+    })
+    void theAdminEntryStaysKoreanWhileTheRestOfTheProfileMenuFollowsTheLocale(
+            String tag, String profile, String mypage, String logout) throws Exception {
+        var document = page("admin", "ADMIN", tag);
+
+        assertThat(document.select("#profile-menu a.profile-menu-admin[href='/admin']").text())
+                .isEqualTo("관리자 페이지");
+        assertThat(document.select("#profile-menu .profile-menu-title").text()).isEqualTo(profile);
+        assertThat(document.select("#profile-menu a[href='/mypage']").text()).isEqualTo(mypage);
+        assertThat(document.select("#profile-menu .profile-menu-logout").text()).isEqualTo(logout);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"ko", "en", "ja", "zh-CN", "zh-TW"})
+    void aRegularUserNeverSeesTheAdminEntryInAnyLanguage(String tag) throws Exception {
+        var document = page("member", "USER", tag);
+
+        assertThat(document.select("#profile-menu a[href='/admin']")).isEmpty();
+        assertThat(document.select("#profile-menu")).hasSize(1);
+    }
+
     @Test
     void headerNavigationRemainsUnchanged() throws Exception {
         assertThat(page().select(".main-menu > .menu-item > a").eachText())
@@ -108,7 +142,8 @@ class HeaderProfileMenuTest {
         assertThat(document.select(".global-submenu a").eachText())
                 .containsExactly(
                         "旅遊問答", "旅遊攻略", "我的旅遊路線",
-                        "全部", "國內資訊", "海外資訊", "節慶資訊",
+                        // 여행정보 하위는 국내정보 / 해외정보 / 축제·행사 셋뿐이다
+                        "國內資訊", "海外資訊", "節慶資訊",
                         "我的旅遊日記", "一起規劃", "隨機旅行",
                         "公告", "常見問題", "1:1 諮詢",
                         "進行中活動", "即將開始", "已結束活動");
@@ -326,6 +361,11 @@ class HeaderProfileMenuTest {
     }
 
     private org.jsoup.nodes.Document page(String username, String role) throws Exception {
+        return page(username, role, null);
+    }
+
+    private org.jsoup.nodes.Document page(String username, String role, String languageTag)
+            throws Exception {
         User user = new User();
         user.setId("ADMIN".equals(role) ? 2L : 1L);
         user.setUsername(username);
@@ -337,8 +377,11 @@ class HeaderProfileMenuTest {
         var authentication = new UsernamePasswordAuthenticationToken(
                 userDetails, userDetails.getPassword(), userDetails.getAuthorities());
 
-        return Jsoup.parse(mockMvc.perform(get("/random-travel")
-                        .with(authentication(authentication)))
+        var request = get("/random-travel").with(authentication(authentication));
+        if (languageTag != null) {
+            request = request.cookie(new Cookie(TravelDiaryLocaleResolver.COOKIE_NAME, languageTag));
+        }
+        return Jsoup.parse(mockMvc.perform(request)
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString());
     }

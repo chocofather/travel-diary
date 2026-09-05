@@ -27,14 +27,19 @@ class TravelInfoPublicUiContractTest {
                 .contains("type=\"search\"", "name=\"keyword\"", "maxlength=\"100\"")
                 .contains("th:value=\"${keyword}\"")
                 .contains("data-travel-info-search-input", "data-travel-info-search-clear")
-                .contains("aria-label=\"검색어 지우기\"", "type=\"submit\"")
+                // 화면 문구는 messages 로 옮겼고, 접근성 라벨 자리는 그대로다.
+                .contains("aria-label=#{travelInfo.list.search.clear}", "type=\"submit\"")
                 .contains("name=\"scope\"", "name=\"contentType\"", "name=\"categoryId\"")
                 .contains("contentType=${contentType}", "categoryId=${categoryIds}")
                 .contains("scope='DOMESTIC'", "scope='INTERNATIONAL'", "size=${pageSize}")
                 .contains("data-filter-name=\"primary\"")
-                .contains("data-filter-value=\"FESTIVAL\"")
+                // 여행정보와 축제·행사는 각각 독립된 화면이고, 버튼이 화면 종류를 들고 있다
+                .contains("data-filter-content-type=\"GENERAL\"")
+                .contains("data-filter-content-type=\"FESTIVAL\"")
                 .contains("contentType='GENERAL'")
                 .contains("contentType='FESTIVAL'")
+                // 일반 여행정보에는 '전체'도, 축제·행사 버튼도 없다
+                .doesNotContain("data-filter-value=\"FESTIVAL\"")
                 .contains("travel-info-filter-pill", "aria-current=", "data-travel-info-reset")
                 .contains("travel-info/fragments/list-results :: results")
                 .doesNotContain("정보 유형", "data-filter-name=\"contentType\"")
@@ -44,7 +49,9 @@ class TravelInfoPublicUiContractTest {
                 .contains("data-filter-name=\"categoryId\"")
                 .contains("th:each=\"category : ${categories}\"")
                 .contains("travel-info-filter-pill", "travel-info-category-pills")
-                .contains("'축제·행사 분류' : '주제'")
+                // 유형에 따라 라벨이 갈리는 구조는 그대로이고, 문구만 messages 로 옮겼다.
+                .contains("#{travelInfo.list.filter.category.festival}")
+                .contains("#{travelInfo.list.filter.category.general}")
                 .contains("type=\"button\"")
                 .contains("aria-pressed=")
                 .contains("#lists.isEmpty(categoryIds)", "#lists.contains(categoryIds, category.id)");
@@ -64,7 +71,7 @@ class TravelInfoPublicUiContractTest {
                 .contains("travel-info-festival-period", "info.startDate", "info.endDate")
                 .contains("travel-info-pagination", "keyword=${keyword}", "page=${pageNumber}")
                 .contains("class=\"travel-info-sort\"", "data-travel-info-sort")
-                .contains("aria-label=\"여행정보 정렬\"")
+                .contains("aria-label=#{travelInfo.list.sort.label}")
                 .contains("data-sort-value=\"latest\"", "최신순")
                 .contains("data-sort-value=\"views\"", "조회순")
                 .contains("th:classappend=\"${sort == 'latest'} ? ' is-active'\"")
@@ -73,12 +80,16 @@ class TravelInfoPublicUiContractTest {
                 .contains("aria-current=${sort == 'views'}")
                 .contains("sort=${sort == 'views' ? sort : null}")
                 .contains("th:if=\"${keyword != null}\"")
-                .contains("th:text=\"|‘${keyword}’|\"")
+                // 검색어는 문자열 조립이 아니라 message parameter 로 들어간다.
+                .contains("#{travelInfo.list.empty.keyword(${keyword})}")
                 .doesNotContain("th:utext=\"${keyword}\"")
                 .contains("class=\"travel-info-card-link\"")
                 .contains("data-travel-info-bookmark")
                 .contains("data-bookmark-url", "info.bookmarked")
-                .contains("aria-pressed", "여행정보 저장 취소")
+                // 북마크 상태 문구도 messages 로 옮기고, 스크립트가 쓸 값은 data-* 로 실어 준다.
+                .contains("aria-pressed", "#{travelInfo.bookmark.remove}")
+                .contains("data-label-saved=#{travelInfo.bookmark.label.saved}")
+                .contains("data-aria-save=#{travelInfo.bookmark.save}")
                 .contains("travel-info-bookmark-icon")
                 .contains("${info.contentType.name() == 'FESTIVAL'}")
                 .contains("@{/festivals/{id}(id=${info.id},returnUrl=${listUrl})}")
@@ -165,10 +176,11 @@ class TravelInfoPublicUiContractTest {
                 .contains("period.startDate", "period.endDate")
                 .contains("class=\"travel-info-detail-content rich-text-content\"")
                 .contains("th:utext=\"${travelInfo.content}\"")
-                .contains("th:href=\"${listUrl}\"", "목록으로")
+                .contains("th:href=\"${listUrl}\"", "#{travelInfo.detail.backToList}")
                 .contains("/js/travel-info-bookmark.js")
                 .contains("travel-info-detail-bookmark", "travelInfo.bookmarked")
-                .contains("저장됨", "저장")
+                // 저장 상태 문구도 messages 로 옮겼다.
+                .contains("#{travelInfo.bookmark.label.saved}", "#{travelInfo.bookmark.label.save}")
                 .doesNotContain("thumbnail", "info_images", "userId", "categoryId", "♡", "♥");
         assertThat(css)
                 .contains("width: min(960px, calc(100% - 40px))")
@@ -219,7 +231,8 @@ class TravelInfoPublicUiContractTest {
                 .contains("const SEARCH_DEBOUNCE_MS = 200")
                 .contains("const KEYWORD_MAX_LENGTH = 100")
                 .contains("const url = new URL(selectedUrl.href)")
-                .contains("new URL('/travel-info', window.location.origin)")
+                // 필터 초기화는 보고 있던 화면을 유지한다
+                .contains("new URL(reset.getAttribute('href'), window.location.origin)")
                 .contains("searchParams.getAll(CATEGORY_FILTER_NAME)")
                 .contains("searchParams.delete(CATEGORY_FILTER_NAME)")
                 .contains("searchParams.append(CATEGORY_FILTER_NAME, categoryId)")
@@ -228,7 +241,9 @@ class TravelInfoPublicUiContractTest {
                 .contains("selectedCategoryIds.clear()")
                 .contains("primaryFilterUrl")
                 .contains("syncPrimaryFilterUi")
-                .contains("url.searchParams.set(CONTENT_TYPE_PARAMETER_NAME, GENERAL_CONTENT_TYPE)")
+                // 지역 범위를 바꿔도 화면 종류(여행정보/축제·행사)는 그대로 유지한다
+                .contains("url.searchParams.set(CONTENT_TYPE_PARAMETER_NAME, nextContentType)")
+                .contains("control.dataset.filterContentType === FESTIVAL_CONTENT_TYPE")
                 .contains("const sortOption = event.target.closest(SORT_SELECTOR)")
                 .contains("loadResults(sortUrl(sortOption), 'push')")
                 .contains("control.dataset.sortValue")
@@ -287,10 +302,15 @@ class TravelInfoPublicUiContractTest {
 
         assertThat(document.select("a[href='/travel-info']").stream())
                 .anyMatch(link -> "#{nav.travelInfo}".equals(link.attr("th:text")));
-        assertThat(document.select("a[href='/travel-info']").eachText()).contains("전체");
+        // 여행정보 하위 메뉴는 국내정보 / 해외정보 / 축제·행사 셋이다 ('전체'는 없앴다)
         assertThat(document.select("a[href='/travel-info?scope=DOMESTIC']")).hasSize(1);
         assertThat(document.select("a[href='/travel-info?scope=INTERNATIONAL']")).hasSize(1);
         assertThat(document.select("a[href='/travel-info?contentType=FESTIVAL']")).hasSize(1);
+        assertThat(document.select("a[href='/travel-info?contentType=FESTIVAL']").text())
+                .isEqualTo("축제·행사");
+        assertThat(document.select("ul").stream()
+                .filter(list -> "infoLinks".equals(list.attr("th:fragment")))
+                .findFirst().orElseThrow().select("li")).hasSize(3);
     }
 
     private String resource(String path) throws IOException {

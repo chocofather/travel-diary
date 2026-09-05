@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!--
+  travel_info 제목·본문의 번역 입력. 여행정보 폼과 축제·행사 폼이 함께 쓴다.
+  쓰는 쪽 폼 객체에 List<TravelInfoTranslationForm> translations 가 있어야 한다.
+  탭 동작은 공통 스크립트(/js/admin-translation-tabs.js)와 공통 클래스를 그대로 쓴다.
+
+  0번 슬롯(한국어)은 위쪽 원본 입력이 담당하므로 여기서는 건너뛴다.
+  숨긴 언어의 입력값도 폼에는 그대로 실려 저장된다. (hidden 만 걸고 지우지 않는다)
+  본문 편집기는 languageCode 로 hidden input 과 묶으므로 자리 번호에 뜻을 두지 않는다.
+
+  festivalFields 가 true 인 화면(축제·행사)만 같은 언어 패널 안에 행사 상세정보 칸을 더 그린다.
+  일반 여행정보 폼은 false 로 부르므로 festivalInfoTranslations 를 아예 건드리지 않는다.
+-->
+<th:block th:fragment="travelInfoTranslations(festivalFields)">
+  <div class="admin-translation-tabs" data-translation-tabs>
+    <p class="admin-help-text">
+      비워 둔 언어는 공개 화면에서 한국어로 대신 보여집니다. 제목만, 본문만 입력해도 됩니다.
+    </p>
+
+    <div class="admin-translation-tablist" role="tablist" aria-label="번역 언어 선택">
+      <th:block th:each="translation, slot : *{translations}">
+        <button type="button" role="tab" class="admin-translation-tab"
+                th:unless="${slot.first}"
+                th:classappend="${slot.index == 1} ? ' is-active'"
+                th:attr="data-translation-tab=${translation.languageCode},
+                         aria-selected=${slot.index == 1},
+                         title=${translationLanguageLabels.get(translation.languageCode)}"
+                th:text="${translationTabLabels.get(translation.languageCode)}
+                         ?: translation.languageCode">영어</button>
+      </th:block>
+    </div>
+
+    <th:block th:each="translation, slot : *{translations}">
+      <div class="admin-translation-panel" role="tabpanel"
+           th:unless="${slot.first}"
+           th:hidden="${slot.index > 1}"
+           th:attr="data-translation-panel=${translation.languageCode},
+                    aria-label=${translationLanguageLabels.get(translation.languageCode)}">
+        <input type="hidden" th:field="*{translations[__${slot.index}__].languageCode}">
+
+        <div class="admin-form-field">
+          <label th:for="${'travel-info-translation-title-' + translation.languageCode}">제목</label>
+          <input type="text" maxlength="255"
+                 th:id="${'travel-info-translation-title-' + translation.languageCode}"
+                 th:field="*{translations[__${slot.index}__].title}"
+                 th:attr="data-translation-title=${translation.languageCode}">
+        </div>
+
+        <div class="admin-form-field">
+          <label>본문</label>
+          <div class="admin-travel-info-editor-shell quill-editor-shell">
+            <div class="admin-travel-info-editor quill-editor"
+                 th:attr="data-translation-editor=${translation.languageCode}"></div>
+          </div>
+          <input type="hidden" th:field="*{translations[__${slot.index}__].content}"
+                 th:attr="data-translation-content=${translation.languageCode}">
+          <textarea hidden th:text="*{translations[__${slot.index}__].content}"
+                    th:attr="data-translation-initial-content=${translation.languageCode}"></textarea>
+        </div>
+
+        <!-- 축제·행사 화면에서만 같은 언어 패널 안에 행사 상세정보 칸을 이어 그린다. -->
+        <th:block th:if="${festivalFields}">
+          <th:block th:each="festivalTranslation, festivalSlot : *{festivalInfoTranslations}">
+            <!-- 같은 언어 슬롯만 그린다. 두 목록의 자리 번호를 맞춰 두지 않는다. -->
+            <div class="admin-translation-festival-fields"
+                 th:if="${festivalTranslation.languageCode == translation.languageCode}"
+                 th:attr="data-translation-festival-fields=${translation.languageCode}">
+              <h4>행사 상세정보</h4>
+              <input type="hidden"
+                     th:field="*{festivalInfoTranslations[__${festivalSlot.index}__].languageCode}">
+              <div class="admin-travel-info-basic-grid">
+                <div class="admin-form-field">
+                  <label>행사장소</label>
+                  <input type="text" maxlength="255"
+                         th:field="*{festivalInfoTranslations[__${festivalSlot.index}__].eventPlace}"
+                         th:attr="data-translation-event-place=${translation.languageCode}">
+                </div>
+                <div class="admin-form-field">
+                  <label>주소</label>
+                  <input type="text" maxlength="500"
+                         th:field="*{festivalInfoTranslations[__${festivalSlot.index}__].address}"
+                         th:attr="data-translation-address=${translation.languageCode}">
+                </div>
+                <div class="admin-form-field">
+                  <label>행사시간</label>
+                  <input type="text" maxlength="500"
+                         th:field="*{festivalInfoTranslations[__${festivalSlot.index}__].playTime}"
+                         th:attr="data-translation-play-time=${translation.languageCode}">
+                </div>
+                <div class="admin-form-field">
+                  <label>이용요금</label>
+                  <textarea
+                      th:field="*{festivalInfoTranslations[__${festivalSlot.index}__].useTime}"
+                      th:attr="data-translation-use-time=${translation.languageCode}"></textarea>
+                </div>
+                <div class="admin-form-field">
+                  <label>주최</label>
+                  <input type="text" maxlength="255"
+                         th:field="*{festivalInfoTranslations[__${festivalSlot.index}__].sponsor1}"
+                         th:attr="data-translation-sponsor1=${translation.languageCode}">
+                </div>
+                <div class="admin-form-field">
+                  <label>주관</label>
+                  <input type="text" maxlength="255"
+                         th:field="*{festivalInfoTranslations[__${festivalSlot.index}__].sponsor2}"
+                         th:attr="data-translation-sponsor2=${translation.languageCode}">
+                </div>
+              </div>
+            </div>
+          </th:block>
+        </th:block>
+      </div>
+    </th:block>
+  </div>
+</th:block>
+
+</body>
+</html>

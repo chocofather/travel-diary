@@ -1,14 +1,19 @@
 package com.example.travlediary.service.bookmark;
 
+import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.dto.MyPageBookmarkPageDto;
+import com.example.travlediary.dto.MyPageTravelInfoBookmarkDto;
 import com.example.travlediary.repository.bookmark.MyPageBookmarkMapper;
 import com.example.travlediary.service.category.CountryCategoryService;
+import com.example.travlediary.service.category.ReferenceNameLocalizationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 @Service
@@ -27,6 +32,7 @@ public class MyPageBookmarkService {
 
     private final MyPageBookmarkMapper myPageBookmarkMapper;
     private final CountryCategoryService countryCategoryService;
+    private final ReferenceNameLocalizationService referenceNameLocalizationService;
 
     @Transactional(readOnly = true)
     public MyPageBookmarkPageDto getBookmarks(Long userId, String section,
@@ -49,6 +55,48 @@ public class MyPageBookmarkService {
             default -> destinationPage(
                     userId, safeScope, safePage, offset);
         };
+    }
+
+    /**
+     * 여행정보 북마크의 카테고리 이름만 요청 언어로 바꿔 둔다.
+     *
+     * <p>여행지·커뮤니티 북마크는 카테고리 축이 달라 여기서 건드리지 않는다.
+     * 조회 결과 DTO 는 이 요청에서만 쓰는 값이라 표시할 이름을 그대로 담아도 된다.
+     */
+    @Transactional(readOnly = true)
+    public void localizeTravelInfoBookmarks(List<?> bookmarks,
+                                            SupportedLanguage requestedLanguage) {
+        if (bookmarks == null || bookmarks.isEmpty()) {
+            // 볼 북마크가 없으면 번역도 읽지 않는다.
+            return;
+        }
+
+        List<MyPageTravelInfoBookmarkDto> travelInfoBookmarks = bookmarks.stream()
+                .filter(MyPageTravelInfoBookmarkDto.class::isInstance)
+                .map(MyPageTravelInfoBookmarkDto.class::cast)
+                .toList();
+        Map<Long, String> baseCategoryNames = new LinkedHashMap<>();
+        for (MyPageTravelInfoBookmarkDto bookmark : travelInfoBookmarks) {
+            if (bookmark.getCategoryId() != null) {
+                baseCategoryNames.putIfAbsent(
+                        bookmark.getCategoryId(), bookmark.getCategoryName());
+            }
+        }
+        if (baseCategoryNames.isEmpty()) {
+            return;
+        }
+
+        Map<Long, String> localizedNames = referenceNameLocalizationService
+                .localizeInfoCategoryNames(baseCategoryNames, requestedLanguage);
+        for (MyPageTravelInfoBookmarkDto bookmark : travelInfoBookmarks) {
+            if (bookmark.getCategoryId() == null) {
+                continue;
+            }
+            String name = localizedNames.get(bookmark.getCategoryId());
+            if (name != null) {
+                bookmark.setCategoryName(name);
+            }
+        }
     }
 
     private MyPageBookmarkPageDto destinationPage(Long userId, String scope,

@@ -29,6 +29,9 @@ public record KtoFestivalApiResponse(Response response) {
             String firstimage2,
             String addr1,
             String addr2,
+            // 외국어 축제 매칭에 쓰는 좌표. 국문 detailCommon2 가 내려준다.
+            String mapx,
+            String mapy,
             String eventplace,
             String overview,
             String playtime,

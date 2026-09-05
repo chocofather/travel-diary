@@ -1123,24 +1123,53 @@ CREATE TABLE `faqs` (
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `festival_info` (
   `info_id` bigint NOT NULL,
-  `event_place` varchar(255) DEFAULT NULL,
-  `address` varchar(500) DEFAULT NULL,
-  `play_time` varchar(500) DEFAULT NULL,
-  `use_time` text,
-  `sponsor1` varchar(255) DEFAULT NULL,
-  `sponsor1_tel` varchar(100) DEFAULT NULL,
-  `sponsor2` varchar(255) DEFAULT NULL,
-  `sponsor2_tel` varchar(100) DEFAULT NULL,
-  `contact_tel` varchar(100) DEFAULT NULL,
-  `homepage_url` varchar(1000) DEFAULT NULL,
-  `source_type` varchar(30) NOT NULL DEFAULT 'ADMIN',
-  `external_content_id` varchar(100) DEFAULT NULL,
+  `event_place` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `address` varchar(500) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `play_time` varchar(500) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `use_time` text COLLATE utf8mb4_general_ci,
+  `sponsor1` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `sponsor1_tel` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `sponsor2` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `sponsor2_tel` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `contact_tel` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `homepage_url` varchar(1000) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `source_type` varchar(30) COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'ADMIN',
+  `external_content_id` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`info_id`),
-  UNIQUE KEY `uq_festival_info_source_external_content` (`source_type`,`external_content_id`),
+  UNIQUE KEY `uq_festival_info_source_content` (`source_type`,`external_content_id`),
   CONSTRAINT `fk_festival_info_travel_info` FOREIGN KEY (`info_id`) REFERENCES `travel_info` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `festival_info_translations`
+--
+-- 축제·행사 상세정보의 언어별 자유 텍스트.
+-- 번역 대상은 event_place / address / play_time / use_time / sponsor1 / sponsor2 여섯 개다.
+-- 연락처(sponsor1_tel, sponsor2_tel, contact_tel), 홈페이지, TourAPI 식별자처럼
+-- 언어와 무관한 값은 담지 않는다.
+-- 언어 코드는 ko / en / ja / zh-CN / zh-TW 를 쓴다.
+-- travel_info 가 지워지면 festival_info 를 거쳐 이 줄도 함께 지워진다.
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `festival_info_translations` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `info_id` bigint NOT NULL,
+  `language_code` varchar(10) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `event_place` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `address` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `play_time` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `use_time` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  `sponsor1` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `sponsor2` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_festival_info_translation` (`info_id`,`language_code`),
+  KEY `idx_festival_info_translation_locale` (`language_code`,`info_id`),
+  CONSTRAINT `fk_festival_info_translation` FOREIGN KEY (`info_id`) REFERENCES `festival_info` (`info_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1175,6 +1204,28 @@ CREATE TABLE `info_categories` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_info_categories_name` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `info_category_translations`
+--
+-- 정보 카테고리 이름의 언어별 값. 여행정보(GENERAL)와 축제·행사(FESTIVAL) 카테고리가 함께 쓴다.
+-- 번역 대상은 `info_categories`.`name` 하나뿐이다.
+-- `content_type` / `display_order` / `is_visible` 처럼 언어와 무관한 값은 담지 않는다.
+-- 언어 코드는 ko / en / ja / zh-CN / zh-TW 를 쓴다.
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `info_category_translations` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `info_category_id` bigint NOT NULL,
+  `language_code` varchar(10) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_info_category_translation` (`info_category_id`,`language_code`),
+  KEY `idx_info_category_translation_locale` (`language_code`,`info_category_id`),
+  CONSTRAINT `fk_info_category_translation` FOREIGN KEY (`info_category_id`) REFERENCES `info_categories` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1537,6 +1588,29 @@ CREATE TABLE `travel_info` (
   CONSTRAINT `fk_travelinfo_category` FOREIGN KEY (`category_id`) REFERENCES `info_categories` (`id`) ON DELETE RESTRICT,
   CONSTRAINT `fk_travelinfo_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `travel_info_translations`
+--
+-- 여행정보의 언어별 제목·본문. `content_type` 과 무관하게 GENERAL / FESTIVAL 이 함께 쓰는 공용 번역 테이블이다.
+-- `content` 는 base 와 같은 Quill HTML 을 그대로 담는다.
+-- 카테고리명(`info_categories`), 축제 상세정보(`festival_info`), 기간(`info_periods`),
+-- 이미지(`info_images`) 처럼 다른 테이블이 가진 값은 여기에 중복 저장하지 않는다.
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `travel_info_translations` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `travel_info_id` bigint NOT NULL,
+  `language_code` varchar(10) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `content` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_travel_info_translation` (`travel_info_id`,`language_code`),
+  KEY `idx_travel_info_translation_locale` (`language_code`,`travel_info_id`),
+  CONSTRAINT `fk_travel_info_translation` FOREIGN KEY (`travel_info_id`) REFERENCES `travel_info` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --

@@ -5,8 +5,12 @@ import com.example.travlediary.model.Category;
 import com.example.travlediary.model.CategoryTranslation;
 import com.example.travlediary.model.CountryCategory;
 import com.example.travlediary.model.CountryCategoryTranslation;
+import com.example.travlediary.model.InfoCategory;
+import com.example.travlediary.model.InfoCategoryTranslation;
+import com.example.travlediary.model.TravelInfoContentType;
 import com.example.travlediary.repository.category.CategoryMapper;
 import com.example.travlediary.repository.category.CountryCategoryMapper;
+import com.example.travlediary.repository.category.InfoCategoryMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -23,7 +27,10 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -34,13 +41,16 @@ class ReferenceNameLocalizationServiceTest {
     private CountryCategoryMapper countryCategoryMapper;
     @Mock
     private CategoryMapper categoryMapper;
+    @Mock
+    private InfoCategoryMapper infoCategoryMapper;
 
     private ReferenceNameLocalizationService service;
 
     @BeforeEach
     void setUp() {
         service = new ReferenceNameLocalizationService(
-                countryCategoryMapper, categoryMapper, new LocalizedReferenceNameResolver());
+                countryCategoryMapper, categoryMapper, infoCategoryMapper,
+                new LocalizedReferenceNameResolver());
     }
 
     @Test
@@ -225,6 +235,150 @@ class ReferenceNameLocalizationServiceTest {
                 Arguments.of(SupportedLanguage.JAPANESE, "ランドマーク"),
                 Arguments.of(SupportedLanguage.CHINESE_SIMPLIFIED, "地标"),
                 Arguments.of(SupportedLanguage.CHINESE_TRADITIONAL, "地標"));
+    }
+
+    // ─── 정보 카테고리 (여행정보 GENERAL / 축제·행사 FESTIVAL 공용) ───
+
+    @Test
+    void infoCategoryUsesTheRequestedLanguageName() {
+        when(infoCategoryMapper.findTranslationsByCategoryIds(List.of(3L))).thenReturn(List.of(
+                infoCategoryTranslation(1L, 3L, "ko", "계절여행"),
+                infoCategoryTranslation(2L, 3L, "en", "Seasonal travel")));
+
+        assertThat(service.localizeInfoCategories(
+                List.of(infoCategory(3L, "계절여행")), SupportedLanguage.ENGLISH))
+                .containsEntry(3L, "Seasonal travel");
+    }
+
+    @Test
+    void infoCategoryFallsBackToKoreanWhenTheRequestedLanguageIsMissing() {
+        when(infoCategoryMapper.findTranslationsByCategoryIds(List.of(3L))).thenReturn(List.of(
+                infoCategoryTranslation(1L, 3L, "ko", "계절여행")));
+
+        assertThat(service.localizeInfoCategories(
+                List.of(infoCategory(3L, "계절여행")), SupportedLanguage.JAPANESE))
+                .containsEntry(3L, "계절여행");
+    }
+
+    @Test
+    void infoCategoryFallsBackToTheDeterministicRemainingLanguage() {
+        // language_code ASC 로 en 이 ja 보다 앞이므로 언제 불러도 en 이 나와야 한다.
+        when(infoCategoryMapper.findTranslationsByCategoryIds(List.of(3L))).thenReturn(List.of(
+                infoCategoryTranslation(9L, 3L, "ja", "季節の旅"),
+                infoCategoryTranslation(3L, 3L, "en", "Seasonal travel")));
+
+        assertThat(service.localizeInfoCategories(
+                List.of(infoCategory(3L, "계절여행")), SupportedLanguage.CHINESE_SIMPLIFIED))
+                .containsEntry(3L, "Seasonal travel");
+    }
+
+    @Test
+    void infoCategoryFallsBackToTheBaseNameWhenNoTranslationExists() {
+        when(infoCategoryMapper.findTranslationsByCategoryIds(List.of(3L))).thenReturn(List.of());
+
+        assertThat(service.localizeInfoCategories(
+                List.of(infoCategory(3L, "계절여행")), SupportedLanguage.ENGLISH))
+                .containsEntry(3L, "계절여행");
+    }
+
+    @Test
+    void infoCategoryFallsBackToTheEmptyDisplayNameWhenNothingIsAvailable() {
+        when(infoCategoryMapper.findTranslationsByCategoryIds(List.of(3L))).thenReturn(List.of());
+
+        assertThat(service.localizeInfoCategories(
+                List.of(infoCategory(3L, "   ")), SupportedLanguage.ENGLISH))
+                .containsEntry(3L, "-");
+    }
+
+    @Test
+    void traditionalChineseInfoCategoryDoesNotPreferSimplifiedChineseOverKorean() {
+        when(infoCategoryMapper.findTranslationsByCategoryIds(List.of(3L))).thenReturn(List.of(
+                infoCategoryTranslation(4L, 3L, "zh-CN", "季节旅行"),
+                infoCategoryTranslation(1L, 3L, "ko", "계절여행")));
+
+        assertThat(service.localizeInfoCategories(
+                List.of(infoCategory(3L, "계절여행")), SupportedLanguage.CHINESE_TRADITIONAL))
+                .containsEntry(3L, "계절여행");
+    }
+
+    @Test
+    void simplifiedChineseInfoCategoryDoesNotPreferTraditionalChineseOverKorean() {
+        when(infoCategoryMapper.findTranslationsByCategoryIds(List.of(3L))).thenReturn(List.of(
+                infoCategoryTranslation(5L, 3L, "zh-TW", "季節旅行"),
+                infoCategoryTranslation(1L, 3L, "ko", "계절여행")));
+
+        assertThat(service.localizeInfoCategories(
+                List.of(infoCategory(3L, "계절여행")), SupportedLanguage.CHINESE_SIMPLIFIED))
+                .containsEntry(3L, "계절여행");
+    }
+
+    @Test
+    void manyInfoCategoriesAreReadInASingleQuery() {
+        when(infoCategoryMapper.findTranslationsByCategoryIds(List.of(3L, 4L, 5L)))
+                .thenReturn(List.of(
+                        infoCategoryTranslation(2L, 3L, "en", "Seasonal travel"),
+                        infoCategoryTranslation(3L, 4L, "en", "Culture festival")));
+
+        Map<Long, String> localized = service.localizeInfoCategories(
+                List.of(infoCategory(3L, "계절여행"),
+                        infoCategory(4L, "문화축제"),
+                        infoCategory(5L, "환전·전압")),
+                SupportedLanguage.ENGLISH);
+
+        assertThat(localized)
+                .containsEntry(3L, "Seasonal travel")
+                .containsEntry(4L, "Culture festival")
+                .containsEntry(5L, "환전·전압");
+        verify(infoCategoryMapper, times(1)).findTranslationsByCategoryIds(List.of(3L, 4L, 5L));
+    }
+
+    @Test
+    void emptyInfoCategoryInputNeverReadsTranslations() {
+        assertThat(service.localizeInfoCategories(List.of(), SupportedLanguage.ENGLISH)).isEmpty();
+        assertThat(service.localizeInfoCategoryNames(Map.of(), SupportedLanguage.ENGLISH)).isEmpty();
+
+        verify(infoCategoryMapper, never()).findTranslationsByCategoryIds(anyList());
+        verify(infoCategoryMapper, never()).findTranslationsByCategoryId(anyLong());
+    }
+
+    @Test
+    void baseNameMapEntryPointResolvesTheSameWayAsTheCategoryListEntryPoint() {
+        when(infoCategoryMapper.findTranslationsByCategoryIds(List.of(3L))).thenReturn(List.of(
+                infoCategoryTranslation(2L, 3L, "en", "Seasonal travel")));
+
+        assertThat(service.localizeInfoCategoryNames(
+                Map.of(3L, "계절여행"), SupportedLanguage.ENGLISH))
+                .containsEntry(3L, "Seasonal travel");
+    }
+
+    @Test
+    void singleInfoCategoryHelperResolvesOneName() {
+        when(infoCategoryMapper.findTranslationsByCategoryIds(List.of(3L))).thenReturn(List.of(
+                infoCategoryTranslation(2L, 3L, "en", "Seasonal travel")));
+
+        assertThat(service.localizeInfoCategoryName(3L, "계절여행", SupportedLanguage.ENGLISH))
+                .isEqualTo("Seasonal travel");
+        assertThat(service.localizeInfoCategoryName(null, "계절여행", SupportedLanguage.ENGLISH))
+                .isEqualTo("계절여행");
+    }
+
+    private InfoCategory infoCategory(Long id, String name) {
+        InfoCategory category = new InfoCategory();
+        category.setId(id);
+        category.setName(name);
+        category.setContentType(TravelInfoContentType.GENERAL);
+        category.setIsVisible(true);
+        return category;
+    }
+
+    private InfoCategoryTranslation infoCategoryTranslation(
+            Long id, Long infoCategoryId, String languageCode, String name) {
+        InfoCategoryTranslation translation = new InfoCategoryTranslation();
+        translation.setId(id);
+        translation.setInfoCategoryId(infoCategoryId);
+        translation.setLanguageCode(languageCode);
+        translation.setName(name);
+        return translation;
     }
 
     private Category category(Long id, String name) {

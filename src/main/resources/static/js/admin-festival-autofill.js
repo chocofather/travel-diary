@@ -3,8 +3,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('festival-create-form');
     if (!panel || !form) return;
 
-    window.initQuillEditor('#festival-editor', 'festival-content', 'festival-create-form', 'festival-initial-content');
-
+    // 한국어 원본 편집기 초기화는 /js/admin-festival-form.js 가 등록·수정 양쪽에서 맡는다.
+    // 여기서는 TourAPI 자동입력만 다룬다. (등록 화면 전용)
     const scope = document.getElementById('festival-scope');
     const title = document.getElementById('festival-title');
     const category = document.getElementById('festival-category');
@@ -393,7 +393,20 @@ document.addEventListener('DOMContentLoaded', () => {
         setManagedField('sponsor2Tel', sponsor2Tel, detail.sponsor2Tel);
         setManagedField('contactTel', contactTel, detail.tel);
         setManagedField('homepageUrl', homepageUrl, detail.eventHomepage || detail.homepage);
+        announceKoreanAutofill(detail);
         return Boolean(categoryOption);
+    }
+
+    /**
+     * 국문 자동입력이 끝났음을 알린다. 외국어 자동입력이 이 신호를 받아 이어서 돈다.
+     * 국문 저장 흐름은 그대로이며, 여기서는 알리기만 한다.
+     */
+    function announceKoreanAutofill(detail) {
+        const contentId = ktoFestivalContentId.value.trim();
+        if (!contentId) return;
+        document.dispatchEvent(new CustomEvent('festival:korean-autofill-applied', {
+            detail: {contentId, title: title.value.trim(), koreanTitle: detail.title}
+        }));
     }
 
     function findFestivalCategory(categoryName) {

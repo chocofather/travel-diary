@@ -22,6 +22,13 @@ public class TravelInfoForm {
     private MultipartFile thumbnailFile;
     private boolean removeThumbnail;
 
+    /**
+     * 언어별 번역 입력 슬롯. 0번은 한국어 자리이고 화면에 그리지 않는다.
+     * 한국어는 위쪽 제목·본문 입력이 그대로 base 이자 ko 번역이 된다.
+     */
+    private List<TravelInfoTranslationForm> translations =
+            TravelInfoTranslationForm.newTranslationSlots();
+
     public static TravelInfoForm from(TravelInfo travelInfo, List<InfoPeriod> periods) {
         TravelInfoForm form = new TravelInfoForm();
         form.setTitle(travelInfo.getTitle());

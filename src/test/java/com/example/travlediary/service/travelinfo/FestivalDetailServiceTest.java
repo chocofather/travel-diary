@@ -39,7 +39,8 @@ class FestivalDetailServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new FestivalDetailService(travelInfoService, travelInfoMapper, festivalInfoMapper);
+        service = new FestivalDetailService(travelInfoService, travelInfoMapper, festivalInfoMapper,
+                new FestivalInfoLocalizationService(festivalInfoMapper));
     }
 
     @Test
@@ -88,12 +89,12 @@ class FestivalDetailServiceTest {
 
         assertThat(result.getImages()).containsExactly(poster, main, second, third);
         assertThat(result.getGalleryImages())
-                .extracting("imageUrl", "licenseLabel")
+                .extracting("imageUrl", "licenseCode")
                 .containsExactly(
-                        org.assertj.core.groups.Tuple.tuple("/uploads/poster.jpg", "공공누리 제3유형"),
-                        org.assertj.core.groups.Tuple.tuple("/uploads/main.jpg", "공공누리 제1유형"),
-                        org.assertj.core.groups.Tuple.tuple("/uploads/second.jpg", "공공누리 제3유형"),
-                        org.assertj.core.groups.Tuple.tuple("/uploads/third.jpg", "공공누리 제1유형"));
+                        org.assertj.core.groups.Tuple.tuple("/uploads/poster.jpg", "KOGL_TYPE_3"),
+                        org.assertj.core.groups.Tuple.tuple("/uploads/main.jpg", "KOGL_TYPE_1"),
+                        org.assertj.core.groups.Tuple.tuple("/uploads/second.jpg", "KOGL_TYPE_3"),
+                        org.assertj.core.groups.Tuple.tuple("/uploads/third.jpg", "KOGL_TYPE_1"));
     }
 
     @Test
@@ -164,10 +165,11 @@ class FestivalDetailServiceTest {
         festivalInfo.setAddress(null);
         assertThat(detail.isEventInfoPresent()).isTrue();
         assertThat(detail.getHomepageUrl()).isNull();
-        assertThat(detail.getLicenseLabel()).isEqualTo("공공누리 제1유형");
+        // 화면 문구가 아니라 코드를 넘긴다. 이름은 화면이 messages 에서 고른다.
+        assertThat(detail.getLicenseCode()).isEqualTo("KOGL_TYPE_1");
 
         type1.setLicenseType("KOGL_TYPE_3");
-        assertThat(detail.getLicenseLabel()).isEqualTo("공공누리 제3유형");
+        assertThat(detail.getLicenseCode()).isEqualTo("KOGL_TYPE_3");
     }
 
     @Test
@@ -178,12 +180,12 @@ class FestivalDetailServiceTest {
                 detail(TravelInfoContentType.FESTIVAL), new FestivalInfo(), List.of(main, additional));
 
         assertThat(detail.getGalleryImages())
-                .extracting("imageUrl", "main", "orderIndex", "sourceName", "licenseLabel")
+                .extracting("imageUrl", "main", "orderIndex", "sourceName", "licenseCode")
                 .containsExactly(
                         org.assertj.core.groups.Tuple.tuple(
-                                "/uploads/main.jpg", true, 1, "한국관광공사", "공공누리 제1유형"),
+                                "/uploads/main.jpg", true, 1, "한국관광공사", "KOGL_TYPE_1"),
                         org.assertj.core.groups.Tuple.tuple(
-                                "/uploads/additional.jpg", false, 2, "한국관광공사", "공공누리 제3유형"));
+                                "/uploads/additional.jpg", false, 2, "한국관광공사", "KOGL_TYPE_3"));
         assertThat(detail.isGallery()).isTrue();
         assertThat(detail.isGalleryAttributionPresent()).isTrue();
     }

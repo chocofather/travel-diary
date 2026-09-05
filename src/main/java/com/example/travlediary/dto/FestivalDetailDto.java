@@ -142,16 +142,12 @@ public class FestivalDetailDto {
         return text(mainImage == null ? null : mainImage.getSourceTitle());
     }
 
-    public String getLicenseLabel() {
+    /** 화면 문구가 아니라 안정적인 코드다. 표시할 이름은 화면이 messages 에서 고른다. */
+    public String getLicenseCode() {
         InfoImage mainImage = getMainImage();
         String licenseType = text(mainImage == null ? null : mainImage.getLicenseType());
-        if ("KOGL_TYPE_1".equals(licenseType)) {
-            return "공공누리 제1유형";
-        }
-        if ("KOGL_TYPE_3".equals(licenseType)) {
-            return "공공누리 제3유형";
-        }
-        return null;
+        return "KOGL_TYPE_1".equals(licenseType) || "KOGL_TYPE_3".equals(licenseType)
+                ? licenseType : null;
     }
 
     public boolean isTourApiImage() {

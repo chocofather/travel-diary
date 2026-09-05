@@ -3,6 +3,8 @@
       th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'info-categories')}">
 <th:block th:fragment="headFragment">
   <link rel="stylesheet" href="/css/admin-compact-lists.css">
+  <link rel="stylesheet" href="/css/admin-translation-tabs.css">
+  <script src="/js/admin-translation-tabs.js" defer></script>
 </th:block>
 <th:block th:fragment="body">
   <section class="admin-page-section admin-info-category-page">
@@ -62,6 +64,15 @@
           </label>
           <p class="admin-field-error" th:if="${#fields.hasErrors('isVisible')}"
              th:errors="*{isVisible}">노출 여부 오류</p>
+        </div>
+
+        <div class="admin-form-field admin-info-category-translations">
+          <span class="admin-field-label">번역</span>
+          <span class="admin-help-text">
+            한국어는 위에서 입력한 카테고리명이 그대로 저장됩니다. 나머지 언어는 선택 입력입니다.
+          </span>
+          <th:block th:replace="~{fragments/admin/info-category-translation-tabs
+                                  :: infoCategoryTranslations}"></th:block>
         </div>
       </div>
 

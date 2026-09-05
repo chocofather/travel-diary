@@ -88,6 +88,10 @@
         return cleanUrl(url);
     }
 
+    /**
+     * 지역 범위(국내/해외/전체) 전환. 여행정보와 축제·행사는 각각 독립된 화면이라
+     * 화면 종류는 버튼이 들고 있는 값을 그대로 쓰고, 여기서 바꾸지 않는다.
+     */
     function primaryFilterUrl(control, baseUrl = selectedUrl) {
         const url = new URL(baseUrl.href);
         const primaryValue = control.dataset.filterValue;
@@ -95,20 +99,15 @@
             === FESTIVAL_CONTENT_TYPE
             ? FESTIVAL_CONTENT_TYPE
             : GENERAL_CONTENT_TYPE;
-        const nextContentType = primaryValue === FESTIVAL_CONTENT_TYPE
+        const nextContentType = control.dataset.filterContentType === FESTIVAL_CONTENT_TYPE
             ? FESTIVAL_CONTENT_TYPE
             : GENERAL_CONTENT_TYPE;
 
-        if (nextContentType === FESTIVAL_CONTENT_TYPE) {
-            url.searchParams.delete('scope');
-            url.searchParams.set(CONTENT_TYPE_PARAMETER_NAME, FESTIVAL_CONTENT_TYPE);
+        url.searchParams.set(CONTENT_TYPE_PARAMETER_NAME, nextContentType);
+        if (primaryValue) {
+            url.searchParams.set('scope', primaryValue);
         } else {
-            url.searchParams.set(CONTENT_TYPE_PARAMETER_NAME, GENERAL_CONTENT_TYPE);
-            if (primaryValue) {
-                url.searchParams.set('scope', primaryValue);
-            } else {
-                url.searchParams.delete('scope');
-            }
+            url.searchParams.delete('scope');
         }
         if (currentContentType !== nextContentType) {
             url.searchParams.delete(CATEGORY_FILTER_NAME);
@@ -177,12 +176,8 @@
 
     function syncPrimaryFilterUi(pills, url) {
         const primaryPills = pills.filter((pill) => pill.dataset.filterName === PRIMARY_FILTER_NAME);
-        const contentType = url.searchParams.get(CONTENT_TYPE_PARAMETER_NAME) === FESTIVAL_CONTENT_TYPE
-            ? FESTIVAL_CONTENT_TYPE
-            : GENERAL_CONTENT_TYPE;
-        const activeValue = contentType === FESTIVAL_CONTENT_TYPE
-            ? FESTIVAL_CONTENT_TYPE
-            : url.searchParams.get('scope') || '';
+        // 한 화면에는 그 화면의 지역 범위 버튼만 있으므로 scope 로만 활성 상태를 정한다.
+        const activeValue = url.searchParams.get('scope') || '';
 
         primaryPills.forEach((pill) => {
             const isActive = pill.dataset.filterValue === activeValue;
@@ -288,6 +283,12 @@
         messageElement.hidden = !message;
     }
 
+    /** 화면 문구는 서버가 현재 언어로 실어 준다. 스크립트에 언어별 문자열을 두지 않는다. */
+    function loadFailedMessage() {
+        const messageElement = document.getElementById('travel-info-async-message');
+        return messageElement?.dataset.loadFailedMessage || '';
+    }
+
     function replaceResults(html) {
         const currentResults = document.querySelector(RESULTS_SELECTOR);
         const currentCategoryFilter = document.querySelector(CATEGORY_FILTER_SELECTOR);
@@ -338,7 +339,7 @@
             if (error.name === 'AbortError') {
                 return;
             }
-            showMessage('목록을 불러오지 못했습니다. 페이지를 다시 불러옵니다.');
+            showMessage(loadFailedMessage());
             window.setTimeout(() => window.location.assign(url.href), 250);
         } finally {
             if (activeController === controller) {
@@ -365,7 +366,8 @@
 
         if (reset) {
             clearSearchTimer();
-            loadResults(new URL('/travel-info', window.location.origin), 'push');
+            // 초기화해도 보고 있던 화면(여행정보/축제·행사)은 그대로 둔다.
+            loadResults(new URL(reset.getAttribute('href'), window.location.origin), 'push');
             return;
         }
         if (filter) {

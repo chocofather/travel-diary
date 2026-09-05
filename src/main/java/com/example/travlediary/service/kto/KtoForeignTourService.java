@@ -43,6 +43,11 @@ public class KtoForeignTourService {
     private static final String SHOPPING = "79";
     private static final String LODGING = "80";
     private static final String RESTAURANT = "82";
+    /**
+     * 축제·행사. 외국어 locationBasedList2 는 이 유형을 돌려주지 않는다(실측 확인).
+     * 그래서 축제만 국문 제목 키워드 검색으로 따로 찾는다.
+     */
+    private static final String FESTIVAL = "85";
 
     private static final int SEARCH_RADIUS_METERS = 500;
     private static final int SEARCH_LIMIT = 20;
@@ -81,6 +86,19 @@ public class KtoForeignTourService {
      */
     public KtoForeignTourMatchResponse match(KtoForeignLanguage language,
                                              String koreanTitle, String mapX, String mapY) {
+        return match(language, koreanTitle, mapX, mapY, false);
+    }
+
+    /**
+     * 좌표 주변에서 같은 장소를 찾는다.
+     *
+     * <p>{@code includeFestival} 은 축제·행사 화면에서만 켠다. 외국어 locationBasedList2 가
+     * 축제(85)를 돌려주지 않아, 켠 경우에만 국문 제목 키워드 검색을 한 번 더 한다.
+     * 여행지 화면은 꺼진 채로 부르므로 호출 수와 결과가 예전과 같다.
+     */
+    public KtoForeignTourMatchResponse match(KtoForeignLanguage language,
+                                             String koreanTitle, String mapX, String mapY,
+                                             boolean includeFestival) {
         String normalizedKoreanTitle = KtoKoreanAliasMatcher.normalizeName(koreanTitle);
         double sourceLongitude = parseCoordinate(mapX);
         double sourceLatitude = parseCoordinate(mapY);
@@ -92,12 +110,13 @@ public class KtoForeignTourService {
                 .queryParam("pageNo", 1)
                 .queryParam("numOfRows", SEARCH_LIMIT));
 
-        List<KtoTourApiResponse.Item> exactAliasItems =
-                readItems(language, response.response().body().items()).stream()
-                        .filter(item -> normalizedKoreanTitle != null
-                                && normalizedKoreanTitle.equals(KtoKoreanAliasMatcher.extractKoreanAlias(
-                                KtoTourTextSanitizer.toPlainText(item.title()))))
-                        .toList();
+        List<KtoTourApiResponse.Item> exactAliasItems = exactAliasItems(
+                readItems(language, response.response().body().items()), normalizedKoreanTitle);
+        if (includeFestival && exactAliasItems.isEmpty()) {
+            // 좌표 목록에 없는 유형(축제·행사)만 국문 제목으로 한 번 더 찾는다.
+            exactAliasItems = festivalItems(language, koreanTitle, normalizedKoreanTitle,
+                    sourceLongitude, sourceLatitude);
+        }
         if (exactAliasItems.size() != 1) {
             return KtoForeignTourMatchResponse.noMatch();
         }
@@ -106,6 +125,55 @@ public class KtoForeignTourService {
         return matched == null
                 ? KtoForeignTourMatchResponse.noMatch()
                 : KtoForeignTourMatchResponse.matched(matched);
+    }
+
+    /** 제목 끝 한글 별칭이 국문 이름과 정확히 같은 항목만 남긴다. */
+    private List<KtoTourApiResponse.Item> exactAliasItems(List<KtoTourApiResponse.Item> items,
+                                                          String normalizedKoreanTitle) {
+        return items.stream()
+                .filter(item -> normalizedKoreanTitle != null
+                        && normalizedKoreanTitle.equals(KtoKoreanAliasMatcher.extractKoreanAlias(
+                        KtoTourTextSanitizer.toPlainText(item.title()))))
+                .toList();
+    }
+
+    /**
+     * 축제·행사 후보. 외국어 locationBasedList2 가 85 를 돌려주지 않아 좌표로는 찾을 수 없다.
+     *
+     * <p>외국어 제목이 끝에 국문 이름을 그대로 달고 있어 국문 제목으로 키워드 검색을 하면 걸린다.
+     * 판단 기준은 다른 유형과 같다 — 한글 별칭 정확 일치, 후보 하나, 좌표 반경 안.
+     * 조회가 실패하면 매칭 없음으로 두고 기존 결과를 막지 않는다.
+     */
+    private List<KtoTourApiResponse.Item> festivalItems(KtoForeignLanguage language,
+                                                        String koreanTitle,
+                                                        String normalizedKoreanTitle,
+                                                        double sourceLongitude,
+                                                        double sourceLatitude) {
+        try {
+            KtoTourApiResponse response = request(language, "/searchKeyword2", builder -> builder
+                    .queryParam("keyword", koreanTitle)
+                    .queryParam("arrange", "A")
+                    .queryParam("pageNo", 1)
+                    .queryParam("numOfRows", SEARCH_LIMIT));
+            return exactAliasItems(
+                    readItems(language, response.response().body().items()), normalizedKoreanTitle)
+                    .stream()
+                    .filter(item -> FESTIVAL.equals(normalize(item.contenttypeid())))
+                    .filter(item -> withinSearchRadius(item, sourceLongitude, sourceLatitude))
+                    .toList();
+        } catch (RuntimeException exception) {
+            return List.of();
+        }
+    }
+
+    /** 키워드 검색은 전국을 훑으므로 좌표 반경으로 한 번 더 거른다. */
+    private boolean withinSearchRadius(KtoTourApiResponse.Item item,
+                                       double sourceLongitude, double sourceLatitude) {
+        Double longitude = parseCandidateCoordinate(item.mapx());
+        Double latitude = parseCandidateCoordinate(item.mapy());
+        return longitude != null && latitude != null
+                && distanceMeters(sourceLongitude, sourceLatitude, longitude, latitude)
+                <= SEARCH_RADIUS_METERS;
     }
 
     /**
@@ -133,7 +201,41 @@ public class KtoForeignTourService {
                 admissionFeeOf(intro, foreignTypeId),
                 mainMenuOf(intro, foreignTypeId),
                 roomTypeOf(intro, foreignTypeId),
-                mainProductsOf(intro, foreignTypeId));
+                mainProductsOf(intro, foreignTypeId),
+                festivalText(intro, foreignTypeId, KtoTourApiResponse.Item::eventplace),
+                festivalAddressOf(item, foreignTypeId),
+                festivalText(intro, foreignTypeId, KtoTourApiResponse.Item::playtime),
+                festivalText(intro, foreignTypeId, KtoTourApiResponse.Item::usetimefestival),
+                festivalText(intro, foreignTypeId, KtoTourApiResponse.Item::sponsor1),
+                festivalText(intro, foreignTypeId, KtoTourApiResponse.Item::sponsor2));
+    }
+
+    /**
+     * 축제·행사(85) detailIntro2 값. 네 언어가 모두 같은 필드 이름을 쓴다(실측 확인).
+     *
+     * <p>eventplace / playtime / usetimefestival / sponsor1 / sponsor2 만 옮긴다.
+     * 연락처(sponsor1tel·sponsor2tel)·홈페이지는 언어와 무관해 번역 대상이 아니고,
+     * placeinfo·program·subevent 처럼 대응하는 칸이 없는 값은 가져오지 않는다.
+     */
+    private String festivalText(KtoTourApiResponse.Item intro, String foreignTypeId,
+                                Function<KtoTourApiResponse.Item, String> field) {
+        return FESTIVAL.equals(foreignTypeId) ? plainText(intro, field) : null;
+    }
+
+    /**
+     * 축제·행사 주소. detailIntro2 에는 주소 필드가 없어 detailCommon2 의 addr1/addr2 를 쓴다.
+     * 두 값 모두 요청한 언어로 내려온다.
+     */
+    private String festivalAddressOf(KtoTourApiResponse.Item common, String foreignTypeId) {
+        if (!FESTIVAL.equals(foreignTypeId)) {
+            return null;
+        }
+        String primary = KtoTourTextSanitizer.toPlainText(common.addr1());
+        String secondary = KtoTourTextSanitizer.toPlainText(common.addr2());
+        if (primary == null) {
+            return secondary;
+        }
+        return secondary == null ? primary : primary + " " + secondary;
     }
 
     /*

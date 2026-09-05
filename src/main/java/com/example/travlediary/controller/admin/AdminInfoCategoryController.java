@@ -61,7 +61,10 @@ public class AdminInfoCategoryController {
     @GetMapping("/edit/{id}")
     public String editForm(@PathVariable Long id, Model model) {
         InfoCategory category = infoCategoryService.getById(id);
-        prepareFormModel(model, InfoCategoryForm.from(category), id);
+        InfoCategoryForm form = InfoCategoryForm.from(category);
+        // 번역 슬롯 구성은 서비스가 갖고 있다. 화면에서 자리 번호를 세지 않는다.
+        form.setTranslations(infoCategoryService.getTranslationForms(id));
+        prepareFormModel(model, form, id);
         return FORM_VIEW;
     }
 
@@ -135,5 +138,7 @@ public class AdminInfoCategoryController {
                 ? "여행정보 주제 카테고리의 이름과 노출 설정을 수정합니다."
                 : "여행정보에서 사용할 새 주제 카테고리를 등록합니다.");
         model.addAttribute("submitLabel", editMode ? "수정" : "등록");
+        model.addAttribute("translationLanguageLabels", AdminTranslationLabels.LANGUAGE_LABELS);
+        model.addAttribute("translationTabLabels", AdminTranslationLabels.TAB_LABELS);
     }
 }

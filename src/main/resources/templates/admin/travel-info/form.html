@@ -12,10 +12,13 @@
         href="https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-kr@5.3.0/400.css">
   <link rel="stylesheet" href="/css/quill-content.css">
   <link rel="stylesheet" href="/css/admin-travel-info.css">
+  <link rel="stylesheet" href="/css/admin-translation-tabs.css">
   <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/quill-resize-module@2.1.3/dist/resize.js"></script>
   <script src="/js/quill-editor-init.js"></script>
+  <script src="/js/admin-translation-tabs.js" defer></script>
   <script src="/js/admin-travel-info-form.js" defer></script>
+  <script src="/js/admin-translation-editors.js" defer></script>
   <script th:if="${!editMode}" src="/js/admin-travel-info-festival-autofill.js" defer></script>
 </th:block>
 <th:block th:fragment="body">
@@ -176,6 +179,16 @@
         <textarea id="travel-info-initial-content" hidden th:text="*{content}"></textarea>
         <p class="admin-field-error" th:if="${#fields.hasErrors('content')}"
            th:errors="*{content}">본문 오류</p>
+      </section>
+
+      <section class="admin-form-card is-wide admin-travel-info-section">
+        <div class="admin-travel-info-section-header">
+          <h2>번역</h2>
+          <p>한국어는 위에서 입력한 제목·본문이 그대로 저장됩니다. 나머지 언어는 선택 입력입니다.</p>
+        </div>
+        <!-- 일반 여행정보에는 축제 전용 입력 칸을 그리지 않는다. -->
+        <th:block th:replace="~{fragments/admin/travel-info-translation-tabs
+                                :: travelInfoTranslations(false)}"></th:block>
       </section>
 
       <section id="travel-info-period-section"

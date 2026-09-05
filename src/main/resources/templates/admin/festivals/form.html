@@ -10,10 +10,15 @@
   <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-kr@5.3.0/400.css">
   <link rel="stylesheet" href="/css/quill-content.css">
   <link rel="stylesheet" href="/css/admin-travel-info.css">
+  <link rel="stylesheet" href="/css/admin-translation-tabs.css">
   <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/quill-resize-module@2.1.3/dist/resize.js"></script>
   <script src="/js/quill-editor-init.js"></script>
+  <script src="/js/admin-festival-form.js" defer></script>
   <script th:if="${!editMode}" src="/js/admin-festival-autofill.js" defer></script>
+  <script src="/js/admin-translation-tabs.js" defer></script>
+  <script src="/js/admin-translation-editors.js" defer></script>
+  <script src="/js/admin-festival-foreign-autofill.js" defer></script>
 </th:block>
 <th:block th:fragment="body">
   <section class="admin-page-section admin-travel-info-form-page">
@@ -191,6 +196,32 @@
         </div>
         <input type="hidden" id="festival-content" th:field="*{content}">
         <textarea id="festival-initial-content" hidden th:text="*{content}"></textarea>
+      </section>
+
+      <section class="admin-form-card is-wide admin-travel-info-section">
+        <div class="admin-travel-info-section-header">
+          <h2>번역</h2>
+          <p>한국어는 위에서 입력한 제목·행사 소개·행사 상세정보가 그대로 저장됩니다.
+             나머지 언어는 선택 입력입니다.</p>
+        </div>
+
+        <!--
+          외국어 TourAPI 자동입력 상태. 국문 TourAPI 축제를 고르면 바로 이어서 돌고,
+          빈 번역칸만 채운다. 따로 누를 버튼은 두지 않는다.
+          contentId 는 좌표를 되찾기 위한 읽기 전용 값이며 폼 입력값이 아니다.
+        -->
+        <div class="admin-festival-foreign-autofill"
+             data-festival-foreign-autofill
+             th:attr="data-festival-kto-content-id=${editMode}
+                      ? ${festivalKtoContentId} : null">
+          <p class="admin-kto-festival-status" data-festival-foreign-status
+             role="status" aria-live="polite">
+            국문 TourAPI 축제를 고르면 외국어 제목·소개와 행사 상세정보를 빈 칸에 채웁니다.
+          </p>
+        </div>
+        <!-- 언어 탭 하나 안에서 제목·본문과 행사 상세정보를 함께 편집한다. -->
+        <th:block th:replace="~{fragments/admin/travel-info-translation-tabs
+                                :: travelInfoTranslations(true)}"></th:block>
       </section>
 
       <section class="admin-form-card is-wide admin-travel-info-section">

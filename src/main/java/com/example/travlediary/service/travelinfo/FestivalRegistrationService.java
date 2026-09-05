@@ -57,19 +57,25 @@ public class FestivalRegistrationService {
     private final PostContentSanitizer postContentSanitizer;
     private final KtoFestivalService ktoFestivalService;
     private final KtoFestivalImageDownloadService festivalImageDownloadService;
+    private final TravelInfoService travelInfoService;
+    private final FestivalInfoService festivalInfoService;
 
     public FestivalRegistrationService(TravelInfoMapper travelInfoMapper,
                                        FestivalInfoMapper festivalInfoMapper,
                                        InfoCategoryMapper infoCategoryMapper,
                                        PostContentSanitizer postContentSanitizer,
                                        KtoFestivalService ktoFestivalService,
-                                       KtoFestivalImageDownloadService festivalImageDownloadService) {
+                                       KtoFestivalImageDownloadService festivalImageDownloadService,
+                                       TravelInfoService travelInfoService,
+                                       FestivalInfoService festivalInfoService) {
         this.travelInfoMapper = travelInfoMapper;
         this.festivalInfoMapper = festivalInfoMapper;
         this.infoCategoryMapper = infoCategoryMapper;
         this.postContentSanitizer = postContentSanitizer;
         this.ktoFestivalService = ktoFestivalService;
         this.festivalImageDownloadService = festivalImageDownloadService;
+        this.travelInfoService = travelInfoService;
+        this.festivalInfoService = festivalInfoService;
     }
 
     @Transactional
@@ -116,7 +122,8 @@ public class FestivalRegistrationService {
         try {
             TravelInfo travelInfo = new TravelInfo();
             travelInfo.setTitle(title);
-            travelInfo.setContent(postContentSanitizer.sanitize(form.getContent()));
+            String baseContent = postContentSanitizer.sanitize(form.getContent());
+            travelInfo.setContent(baseContent);
             travelInfo.setScope(form.getScope());
             travelInfo.setContentType(TravelInfoContentType.FESTIVAL);
             travelInfo.setCategoryId(category.getId());
@@ -126,6 +133,10 @@ public class FestivalRegistrationService {
             if (travelInfo.getId() == null) {
                 throw new IllegalStateException("생성된 축제·행사 ID를 확인할 수 없습니다.");
             }
+            // base 저장과 같은 트랜잭션에서 번역까지 끝낸다.
+            // 저장 규칙(ko 동기화 / 외국어 insert·update·delete)은 여행정보 서비스가 갖고 있다.
+            travelInfoService.saveTranslations(
+                    travelInfo.getId(), title, baseContent, form.getTranslations());
 
             InfoPeriod period = new InfoPeriod();
             period.setInfoId(travelInfo.getId());
@@ -155,6 +166,9 @@ public class FestivalRegistrationService {
                 }
                 throw exception;
             }
+            // 행사 상세정보 번역도 같은 트랜잭션에서 저장한다. ko 는 base 여섯 칸으로 맞춰진다.
+            festivalInfoService.saveTranslations(travelInfo.getId(), festivalInfo,
+                    form.getFestivalInfoTranslations());
 
             for (PreparedFestivalImage preparedImage : preparedImages.images()) {
                 insertTourApiImage(travelInfo.getId(), externalContentId, preparedImage);

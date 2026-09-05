@@ -26,7 +26,7 @@
         const csrfToken = document.querySelector('meta[name="_csrf"]')?.content;
         const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.content;
         if (!csrfToken || !csrfHeader) {
-            window.alert('북마크 처리에 실패했습니다.');
+            window.alert(text(button, 'failedMessage'));
             return;
         }
 
@@ -54,7 +54,7 @@
             updateButton(button, !bookmarked);
         } catch (error) {
             console.error(error);
-            window.alert('북마크 처리에 실패했습니다.');
+            window.alert(text(button, 'failedMessage'));
         } finally {
             button.disabled = false;
         }
@@ -64,11 +64,28 @@
         button.dataset.bookmarked = String(bookmarked);
         button.classList.toggle('is-bookmarked', bookmarked);
         button.setAttribute('aria-pressed', String(bookmarked));
-        button.setAttribute('aria-label', bookmarked ? '여행정보 저장 취소' : '여행정보 저장');
+        const ariaLabel = bookmarked
+            ? text(button, 'ariaRemove')
+            : text(button, 'ariaSave');
+        if (ariaLabel) {
+            button.setAttribute('aria-label', ariaLabel);
+        }
 
         const label = button.querySelector('.travel-info-bookmark-label');
-        if (label) {
-            label.textContent = bookmarked ? '저장됨' : '저장';
+        const labelText = bookmarked
+            ? text(button, 'labelSaved')
+            : text(button, 'labelSave');
+        if (label && labelText) {
+            label.textContent = labelText;
         }
+    }
+
+    /**
+     * 버튼이 들고 있는 현재 언어 문구. 목록·상세 화면이 messages 로 실어 준다.
+     * 값이 없으면 화면에 이미 있는 문구를 그대로 두고 건드리지 않는다.
+     */
+    function text(button, key) {
+        const value = button.dataset[key];
+        return value && value.trim() ? value : '';
     }
 })();

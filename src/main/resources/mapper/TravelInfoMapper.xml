@@ -50,6 +50,7 @@
         <result property="title" column="title"/>
         <result property="scope" column="scope"/>
         <result property="contentType" column="content_type"/>
+        <result property="categoryId" column="category_id"/>
         <result property="categoryName" column="category_name"/>
         <result property="content" column="content"/>
         <result property="views" column="views"/>
@@ -62,6 +63,15 @@
         <result property="startDate" column="start_date"/>
         <result property="endDate" column="end_date"/>
         <result property="infoId" column="info_id"/>
+    </resultMap>
+
+    <resultMap id="TravelInfoTranslationResultMap"
+               type="com.example.travlediary.model.TravelInfoTranslation">
+        <id property="id" column="id"/>
+        <result property="travelInfoId" column="travel_info_id"/>
+        <result property="languageCode" column="language_code"/>
+        <result property="title" column="title"/>
+        <result property="content" column="content"/>
     </resultMap>
 
     <resultMap id="InfoImageResultMap" type="com.example.travlediary.model.InfoImage">
@@ -236,6 +246,7 @@
                ti.title,
                ti.scope,
                ti.content_type,
+               ti.category_id,
                ic.name AS category_name,
                ti.content,
                ti.views,
@@ -374,6 +385,58 @@
         DELETE FROM info_images
         WHERE info_id = #{infoId}
           AND is_main = 1
+    </delete>
+
+    <!--
+      여행정보 번역. GENERAL/FESTIVAL 공용이며 언어 한 줄이 단위다.
+      언어 대체(요청 언어 -> ko -> 남은 언어)가 늘 같은 줄을 고르도록 정렬을 고정한다.
+    -->
+    <select id="findTranslationsByInfoId" parameterType="long"
+            resultMap="TravelInfoTranslationResultMap">
+        SELECT id, travel_info_id, language_code, title, content
+        FROM travel_info_translations
+        WHERE travel_info_id = #{infoId}
+        ORDER BY language_code ASC, id ASC
+    </select>
+
+    <select id="findTranslationsByInfoIds" resultMap="TravelInfoTranslationResultMap">
+        SELECT id, travel_info_id, language_code, title, content
+        FROM travel_info_translations
+        <choose>
+            <when test="infoIds != null and !infoIds.isEmpty()">
+                WHERE travel_info_id IN
+                <foreach collection="infoIds" item="infoId"
+                         open="(" separator="," close=")">
+                    #{infoId}
+                </foreach>
+            </when>
+            <otherwise>
+                WHERE 1 = 0
+            </otherwise>
+        </choose>
+        ORDER BY travel_info_id ASC, language_code ASC, id ASC
+    </select>
+
+    <insert id="insertTranslation"
+            parameterType="com.example.travlediary.model.TravelInfoTranslation"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO travel_info_translations (travel_info_id, language_code, title, content)
+        VALUES (#{travelInfoId}, #{languageCode}, #{title}, #{content})
+    </insert>
+
+    <update id="updateTranslation"
+            parameterType="com.example.travlediary.model.TravelInfoTranslation">
+        UPDATE travel_info_translations
+        SET title = #{title},
+            content = #{content}
+        WHERE travel_info_id = #{travelInfoId}
+          AND language_code = #{languageCode}
+    </update>
+
+    <delete id="deleteTranslation">
+        DELETE FROM travel_info_translations
+        WHERE travel_info_id = #{travelInfoId}
+          AND language_code = #{languageCode}
     </delete>
 
 </mapper>

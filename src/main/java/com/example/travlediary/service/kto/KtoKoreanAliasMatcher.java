@@ -1,6 +1,5 @@
 package com.example.travlediary.service.kto;
 
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -12,9 +11,6 @@ import java.util.regex.Pattern;
  */
 final class KtoKoreanAliasMatcher {
 
-    /** 반각 "(...)" 과 전각 "（...）" 를 같은 자리로 본다. 짝이 맞아야 한다. */
-    private static final Pattern TRAILING_PARENTHESIZED_TEXT =
-            Pattern.compile("(?:\\(([^()（）]*)\\)|（([^()（）]*)）)\\s*$");
     private static final Pattern HANGUL = Pattern.compile("[\\u1100-\\u11FF\\u3130-\\u318F\\uAC00-\\uD7AF]");
     private static final Pattern LATIN = Pattern.compile("[A-Za-z]");
 
@@ -33,11 +29,12 @@ final class KtoKoreanAliasMatcher {
         if (normalizedTitle == null) {
             return null;
         }
-        Matcher matcher = TRAILING_PARENTHESIZED_TEXT.matcher(normalizedTitle);
-        if (!matcher.find()) {
+        int start = trailingParenthesisStart(normalizedTitle);
+        if (start < 0) {
             return null;
         }
-        String alias = normalizeName(parenthesizedText(matcher));
+        String alias = normalizeName(
+                normalizedTitle.substring(start + 1, normalizedTitle.length() - 1));
         return alias != null && HANGUL.matcher(alias).find() && !LATIN.matcher(alias).find()
                 ? alias : null;
     }
@@ -47,15 +44,48 @@ final class KtoKoreanAliasMatcher {
         if (normalizedTitle == null || extractKoreanAlias(normalizedTitle) == null) {
             return normalizedTitle;
         }
-        Matcher matcher = TRAILING_PARENTHESIZED_TEXT.matcher(normalizedTitle);
-        if (!matcher.find()) {
-            return normalizedTitle;
-        }
-        return normalizeName(normalizedTitle.substring(0, matcher.start()));
+        return normalizeName(normalizedTitle.substring(0, trailingParenthesisStart(normalizedTitle)));
     }
 
-    /** 반각/전각 중 실제로 잡힌 쪽의 안쪽 글자. */
-    private static String parenthesizedText(Matcher matcher) {
-        return matcher.group(1) != null ? matcher.group(1) : matcher.group(2);
+    /**
+     * 제목 끝 괄호가 열리는 자리. 짝이 맞지 않으면 -1 이다.
+     *
+     * <p>국문 이름 자체가 괄호를 품는 축제가 있어 한 겹 안쪽까지 함께 본다.
+     * 예: {@code "100 Years Night Market (백년나이트 야시장 (메기의 귀환))"} 의 별칭은
+     * {@code "백년나이트 야시장 (메기의 귀환)"} 이다.
+     *
+     * <p>바깥 괄호는 반각끼리·전각끼리 짝이 맞아야 한다. 섞인 짝은 별칭으로 보지 않는다.
+     */
+    private static int trailingParenthesisStart(String title) {
+        int end = title.length();
+        if (end == 0) {
+            return -1;
+        }
+        char closing = title.charAt(end - 1);
+        if (!isClosingParenthesis(closing)) {
+            return -1;
+        }
+        char expectedOpening = closing == ')' ? '(' : '（';
+        int depth = 0;
+        for (int index = end - 1; index >= 0; index--) {
+            char character = title.charAt(index);
+            if (isClosingParenthesis(character)) {
+                depth++;
+            } else if (isOpeningParenthesis(character)) {
+                depth--;
+                if (depth == 0) {
+                    return character == expectedOpening ? index : -1;
+                }
+            }
+        }
+        return -1;
+    }
+
+    private static boolean isOpeningParenthesis(char character) {
+        return character == '(' || character == '（';
+    }
+
+    private static boolean isClosingParenthesis(char character) {
+        return character == ')' || character == '）';
     }
 }

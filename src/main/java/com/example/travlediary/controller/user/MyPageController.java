@@ -1,5 +1,6 @@
 package com.example.travlediary.controller.user;
 
+import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.dto.BoardListDto;
 import com.example.travlediary.dto.MyPageCommentPageDto;
 import com.example.travlediary.dto.MyPageBookmarkPageDto;
@@ -14,6 +15,7 @@ import com.example.travlediary.service.user.NicknameCheckStatus;
 import com.example.travlediary.service.user.NicknamePolicy;
 import com.example.travlediary.service.user.ProfileValidationException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
@@ -101,6 +103,11 @@ public class MyPageController {
                             Model model) {
         MyPageBookmarkPageDto bookmarkPage = myPageBookmarkService.getBookmarks(
                 userDetails.getId(), section, scope, type, page);
+        // 여행정보 북마크의 카테고리 이름만 현재 언어로 바꾼다. 필터·정렬은 그대로 둔다.
+        myPageBookmarkService.localizeTravelInfoBookmarks(
+                bookmarkPage.getBookmarks(),
+                SupportedLanguage.fromLocale(LocaleContextHolder.getLocale())
+                        .orElse(SupportedLanguage.KOREAN));
 
         model.addAttribute("bookmarks", bookmarkPage.getBookmarks());
         model.addAttribute("section", bookmarkPage.getSection());

@@ -129,7 +129,10 @@ class TravelInfoMapperContractTest {
         assertThat(projection)
                 .contains("ti.id", "ti.title", "ti.content", "ti.views")
                 .contains("ti.created_at", "ti.updated_at")
-                .doesNotContain("ti.user_id", "ti.category_id");
+                // 카테고리 번호는 이름을 언어별로 바꿀 때 쓴다. 목록에서도 이미 공개하는 값이다.
+                .contains("ti.category_id")
+                // 작성자는 공개 화면에 내보내지 않는다.
+                .doesNotContain("ti.user_id");
     }
 
     @Test

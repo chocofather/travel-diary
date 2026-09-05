@@ -23,6 +23,19 @@
         <result property="updatedAt" column="updated_at"/>
     </resultMap>
 
+    <resultMap id="FestivalInfoTranslationResultMap"
+               type="com.example.travlediary.model.FestivalInfoTranslation">
+        <id property="id" column="id"/>
+        <result property="infoId" column="info_id"/>
+        <result property="languageCode" column="language_code"/>
+        <result property="eventPlace" column="event_place"/>
+        <result property="address" column="address"/>
+        <result property="playTime" column="play_time"/>
+        <result property="useTime" column="use_time"/>
+        <result property="sponsor1" column="sponsor1"/>
+        <result property="sponsor2" column="sponsor2"/>
+    </resultMap>
+
     <select id="findByInfoId" parameterType="long" resultMap="FestivalInfoResultMap">
         SELECT info_id,
                event_place,
@@ -103,6 +116,69 @@
     <delete id="deleteByInfoId" parameterType="long">
         DELETE FROM festival_info
         WHERE info_id = #{infoId}
+    </delete>
+
+    <!--
+      축제·행사 상세정보 번역. 언어 한 줄이 단위다.
+      언어 대체(요청 언어 -> ko -> 남은 언어)가 늘 같은 줄을 고르도록 정렬을 고정한다.
+    -->
+    <select id="findTranslationsByInfoId" parameterType="long"
+            resultMap="FestivalInfoTranslationResultMap">
+        SELECT id, info_id, language_code,
+               event_place, address, play_time, use_time, sponsor1, sponsor2
+        FROM festival_info_translations
+        WHERE info_id = #{infoId}
+        ORDER BY language_code ASC, id ASC
+    </select>
+
+    <select id="findTranslationsByInfoIds" resultMap="FestivalInfoTranslationResultMap">
+        SELECT id, info_id, language_code,
+               event_place, address, play_time, use_time, sponsor1, sponsor2
+        FROM festival_info_translations
+        <choose>
+            <when test="infoIds != null and !infoIds.isEmpty()">
+                WHERE info_id IN
+                <foreach collection="infoIds" item="infoId"
+                         open="(" separator="," close=")">
+                    #{infoId}
+                </foreach>
+            </when>
+            <otherwise>
+                WHERE 1 = 0
+            </otherwise>
+        </choose>
+        ORDER BY info_id ASC, language_code ASC, id ASC
+    </select>
+
+    <insert id="insertTranslation"
+            parameterType="com.example.travlediary.model.FestivalInfoTranslation"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO festival_info_translations (
+            info_id, language_code, event_place, address, play_time, use_time, sponsor1, sponsor2
+        )
+        VALUES (
+            #{infoId}, #{languageCode}, #{eventPlace}, #{address},
+            #{playTime}, #{useTime}, #{sponsor1}, #{sponsor2}
+        )
+    </insert>
+
+    <update id="updateTranslation"
+            parameterType="com.example.travlediary.model.FestivalInfoTranslation">
+        UPDATE festival_info_translations
+        SET event_place = #{eventPlace},
+            address = #{address},
+            play_time = #{playTime},
+            use_time = #{useTime},
+            sponsor1 = #{sponsor1},
+            sponsor2 = #{sponsor2}
+        WHERE info_id = #{infoId}
+          AND language_code = #{languageCode}
+    </update>
+
+    <delete id="deleteTranslation">
+        DELETE FROM festival_info_translations
+        WHERE info_id = #{infoId}
+          AND language_code = #{languageCode}
     </delete>
 
 </mapper>

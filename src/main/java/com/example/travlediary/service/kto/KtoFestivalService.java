@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -151,6 +152,26 @@ public class KtoFestivalService {
                 lclsSystm3,
                 categoryName(lclsSystm1, lclsSystm2, lclsSystm3)
         );
+    }
+
+    /**
+     * 국문 축제 contentId 로 좌표만 복구한다. 외국어 축제 매칭이 좌표를 필요로 하는데
+     * festival_info 에는 좌표를 두지 않기 때문이다.
+     *
+     * <p>기존 detailCommon2 호출을 그대로 쓴다. 조회에 실패하거나 좌표가 없으면 비어 있는 값을
+     * 돌려주고, 부르는 쪽은 매칭 없음으로 처리한다.
+     */
+    public Optional<KtoFestivalCoordinates> getCoordinates(String contentId) {
+        try {
+            KtoFestivalApiResponse.Item common = getFestivalCommon(contentId);
+            String mapX = normalize(common.mapx());
+            String mapY = normalize(common.mapy());
+            return mapX == null || mapY == null
+                    ? Optional.empty()
+                    : Optional.of(new KtoFestivalCoordinates(mapX, mapY));
+        } catch (RuntimeException exception) {
+            return Optional.empty();
+        }
     }
 
     public KtoFestivalImageDetail getImageDetail(String contentId) {

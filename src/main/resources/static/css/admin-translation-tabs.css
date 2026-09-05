@@ -1,0 +1,79 @@
+/* ─── 번역 언어 탭 ───
+   관리자 폼 공통 번역 탭 모양. 동작은 /js/admin-translation-tabs.js 가 맡는다. */
+.admin-translation-tabs {
+    margin-top: 3px;
+    padding-top: 13px;
+    border-top: 1px solid #dde5f2;
+}
+
+.admin-translation-tablist {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 8px 0 12px;
+    padding: 3px;
+    border: 1px solid #dde5f2;
+    border-radius: 8px;
+    background-color: #f5f8fd;
+    overflow-x: auto;
+}
+
+.admin-translation-tab {
+    flex: 0 0 auto;
+    padding: 6px 14px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #5b6478;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.admin-translation-tab:hover {
+    color: #2f3b52;
+}
+
+.admin-translation-tab.is-active {
+    background-color: #fff;
+    color: #2b4aa0;
+    box-shadow: 0 1px 2px rgba(43, 74, 160, 0.18);
+}
+
+.admin-translation-tab:focus-visible {
+    outline: 2px solid #4860bd;
+    outline-offset: 1px;
+}
+
+/* 감춘 언어도 입력값은 폼에 그대로 남는다 (hidden 속성만 사용) */
+.admin-translation-panel[hidden] {
+    display: none;
+}
+
+.admin-translation-panel {
+    display: grid;
+    gap: 10px;
+}
+
+/* 외국어 TourAPI 자동입력 버튼과 상태 문구. 번역 탭 바로 위에 둔다. */
+.admin-festival-foreign-autofill {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+/* 같은 언어 패널 안에서 본문과 행사 상세정보를 눈으로 구분해 준다. */
+.admin-translation-festival-fields {
+    margin-top: 6px;
+    padding-top: 12px;
+    border-top: 1px dashed #dde5f2;
+}
+
+.admin-translation-festival-fields h4 {
+    margin: 0 0 10px;
+    color: #4860bd;
+    font-size: 0.85rem;
+}

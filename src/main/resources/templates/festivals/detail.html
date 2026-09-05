@@ -16,33 +16,40 @@
              data-festival-gallery>
           <div class="festival-detail-gallery-track"
                th:if="${!#lists.isEmpty(festival.galleryImages)}">
+            <!-- 라이선스는 코드로 오고, 보여 줄 이름은 여기서 현재 언어로 고른다. -->
             <figure class="festival-detail-gallery-slide"
                     th:each="image, imageStat : ${festival.galleryImages}"
                     th:classappend="${imageStat.first} ? ' is-active'"
+                    th:with="licenseName=${image.licenseCode == null} ? null
+                             : #{'travelInfo.festival.image.license.' + ${image.licenseCode}}"
                     th:attr="data-source-name=${image.sourceName},
                              data-source-title=${image.sourceTitle},
-                             data-license-label=${image.licenseLabel}"
+                             data-license-label=${licenseName}"
                     data-festival-gallery-slide>
               <button type="button" class="festival-detail-gallery-open"
-                      th:attr="aria-label=|${festival.travelInfo.title} 이미지 ${imageStat.count} 크게 보기|"
+                      th:attr="aria-label=#{travelInfo.festival.image.zoom(
+                               ${festival.travelInfo.title}, ${imageStat.count})}"
                       data-festival-gallery-open>
                 <img th:src="@{${image.imageUrl}}"
-                     th:alt="|${festival.travelInfo.title} 이미지 ${imageStat.count}|">
+                     th:alt="#{travelInfo.festival.image.alt(
+                             ${festival.travelInfo.title}, ${imageStat.count})}">
               </button>
             </figure>
           </div>
           <div th:if="${#lists.isEmpty(festival.galleryImages)}"
                class="festival-detail-image-placeholder"
-               role="img" aria-label="대표이미지가 없습니다">
+               role="img" th:attr="aria-label=#{travelInfo.festival.image.none}">
             <span aria-hidden="true">▧</span>
-            <strong>대표이미지가 없습니다</strong>
+            <strong th:text="#{travelInfo.festival.image.none}">대표이미지가 없습니다</strong>
           </div>
 
           <th:block th:if="${festival.gallery}">
             <button type="button" class="festival-detail-gallery-nav prev"
-                    aria-label="이전 이미지" data-festival-gallery-prev>&#10094;</button>
+                    th:attr="aria-label=#{travelInfo.festival.image.previous}"
+                    data-festival-gallery-prev>&#10094;</button>
             <button type="button" class="festival-detail-gallery-nav next"
-                    aria-label="다음 이미지" data-festival-gallery-next>&#10095;</button>
+                    th:attr="aria-label=#{travelInfo.festival.image.next}"
+                    data-festival-gallery-next>&#10095;</button>
             <span class="festival-detail-gallery-counter" aria-live="polite">
               <span data-festival-gallery-current>1</span>
               <span aria-hidden="true">/</span>
@@ -53,18 +60,21 @@
 
         <p class="festival-detail-attribution"
            th:if="${festival.galleryAttributionPresent}"
-           th:hidden="${!festival.galleryImages[0].attributionPresent}"
+           th:with="firstImage=${festival.galleryImages[0]},
+                    firstLicenseName=${festival.galleryImages[0].licenseCode == null} ? null
+                      : #{'travelInfo.festival.image.license.'
+                          + ${festival.galleryImages[0].licenseCode}}"
+           th:hidden="${!firstImage.attributionPresent}"
            data-festival-gallery-attribution>
-          <span>사진 출처:</span>
-          <span th:text="${festival.galleryImages[0].sourceName}"
-                th:hidden="${festival.galleryImages[0].sourceName == null}"
+          <span th:text="#{travelInfo.festival.image.source}">사진 출처:</span>
+          <span th:text="${firstImage.sourceName}"
+                th:hidden="${firstImage.sourceName == null}"
                 data-festival-gallery-source>한국관광공사</span>
           <span aria-hidden="true"
-                th:hidden="${festival.galleryImages[0].sourceName == null
-                             or festival.galleryImages[0].licenseLabel == null}"
+                th:hidden="${firstImage.sourceName == null or firstLicenseName == null}"
                 data-festival-gallery-separator>·</span>
-          <span th:text="${festival.galleryImages[0].licenseLabel}"
-                th:hidden="${festival.galleryImages[0].licenseLabel == null}"
+          <span th:text="${firstLicenseName}"
+                th:hidden="${firstLicenseName == null}"
                 data-festival-gallery-license>공공누리 제3유형</span>
         </p>
       </div>
@@ -80,11 +90,20 @@
                   th:classappend="${festival.travelInfo.bookmarked} ? ' is-bookmarked'"
                   th:data-bookmark-url="@{/bookmarks/travel-info/{id}(id=${festival.travelInfo.id})}"
                   th:data-bookmarked="${festival.travelInfo.bookmarked}"
-                  th:attr="aria-pressed=${festival.travelInfo.bookmarked},aria-label=${festival.travelInfo.bookmarked} ? '여행정보 저장 취소' : '여행정보 저장'"
+                  th:attr="aria-pressed=${festival.travelInfo.bookmarked},
+                           aria-label=${festival.travelInfo.bookmarked}
+                             ? #{travelInfo.bookmark.remove} : #{travelInfo.bookmark.save},
+                           data-label-save=#{travelInfo.bookmark.label.save},
+                           data-label-saved=#{travelInfo.bookmark.label.saved},
+                           data-aria-save=#{travelInfo.bookmark.save},
+                           data-aria-remove=#{travelInfo.bookmark.remove},
+                           data-failed-message=#{travelInfo.bookmark.failed}"
                   data-travel-info-bookmark>
             <span class="festival-detail-bookmark-icon" aria-hidden="true"></span>
             <span class="travel-info-bookmark-label"
-                  th:text="${festival.travelInfo.bookmarked} ? '저장됨' : '저장'">저장</span>
+                  th:text="${festival.travelInfo.bookmarked}
+                           ? #{travelInfo.bookmark.label.saved}
+                           : #{travelInfo.bookmark.label.save}">저장</span>
           </button>
         </div>
 
@@ -103,16 +122,18 @@
         </div>
 
         <p class="festival-detail-meta">
-          <span>등록 <time th:text="${#dates.format(festival.travelInfo.createdAt, 'yyyy.MM.dd')}">2026.08.01</time></span>
+          <span><span th:text="#{travelInfo.festival.meta.registered}">등록</span>
+            <time th:text="${#dates.format(festival.travelInfo.createdAt, 'yyyy.MM.dd')}">2026.08.01</time></span>
           <span aria-hidden="true">·</span>
-          <span>조회 <span th:text="${festival.travelInfo.views}">0</span></span>
+          <span th:text="#{travelInfo.list.views(${festival.travelInfo.views})}">조회 0</span>
         </p>
       </div>
     </header>
 
     <section class="festival-detail-section festival-detail-introduction"
              aria-labelledby="festival-introduction-title">
-      <h2 id="festival-introduction-title">행사 소개</h2>
+      <h2 id="festival-introduction-title"
+          th:text="#{travelInfo.festival.section.introduction}">행사 소개</h2>
       <div class="festival-detail-content rich-text-content"
            th:utext="${festival.travelInfo.content}"></div>
     </section>
@@ -120,10 +141,11 @@
     <section class="festival-detail-section festival-detail-information"
              th:if="${festival.eventInfoPresent}"
              aria-labelledby="festival-information-title">
-      <h2 id="festival-information-title">행사 정보</h2>
+      <h2 id="festival-information-title"
+          th:text="#{travelInfo.festival.section.information}">행사 정보</h2>
       <dl class="festival-detail-info-list">
         <div class="festival-detail-info-row" th:if="${festival.primaryPeriod != null}">
-          <dt>기간</dt>
+          <dt th:text="#{travelInfo.festival.info.period}">기간</dt>
           <dd>
             <time th:text="${#temporals.format(festival.primaryPeriod.startDate, 'yyyy.MM.dd')}">2026.09.02</time>
             <span aria-hidden="true">~</span>
@@ -131,24 +153,24 @@
           </dd>
         </div>
         <div class="festival-detail-info-row" th:if="${festival.playTime != null}">
-          <dt>행사시간</dt>
+          <dt th:text="#{travelInfo.festival.info.playTime}">행사시간</dt>
           <dd th:text="${festival.playTime}">1부 18:20~20:10</dd>
         </div>
         <div class="festival-detail-info-row" th:if="${festival.eventPlace != null}">
-          <dt>장소</dt>
+          <dt th:text="#{travelInfo.festival.info.eventPlace}">장소</dt>
           <dd th:text="${festival.eventPlace}">경복궁</dd>
         </div>
         <div class="festival-detail-info-row" th:if="${festival.useTime != null}">
-          <dt>이용요금</dt>
+          <dt th:text="#{travelInfo.festival.info.useTime}">이용요금</dt>
           <dd th:text="${festival.useTime}">1인 60,000원</dd>
         </div>
         <div class="festival-detail-info-row is-wide" th:if="${festival.address != null}">
-          <dt>주소</dt>
+          <dt th:text="#{travelInfo.festival.info.address}">주소</dt>
           <dd th:text="${festival.address}">서울특별시 종로구 사직로 161</dd>
         </div>
         <div class="festival-detail-info-row"
              th:if="${festival.sponsor1 != null or festival.sponsor1Tel != null}">
-          <dt>주최</dt>
+          <dt th:text="#{travelInfo.festival.info.sponsor1}">주최</dt>
           <dd>
             <span th:if="${festival.sponsor1 != null}"
                   th:text="${festival.sponsor1}">국가유산청 궁능유적본부</span>
@@ -157,7 +179,7 @@
         </div>
         <div class="festival-detail-info-row"
              th:if="${festival.sponsor2 != null or festival.sponsor2Tel != null}">
-          <dt>주관</dt>
+          <dt th:text="#{travelInfo.festival.info.sponsor2}">주관</dt>
           <dd>
             <span th:if="${festival.sponsor2 != null}"
                   th:text="${festival.sponsor2}">국가유산진흥원</span>
@@ -165,36 +187,43 @@
           </dd>
         </div>
         <div class="festival-detail-info-row" th:if="${festival.contactTel != null}">
-          <dt>문의</dt>
+          <dt th:text="#{travelInfo.festival.info.contact}">문의</dt>
           <dd th:text="${festival.contactTel}">1522-2295</dd>
         </div>
         <div class="festival-detail-info-row" th:if="${festival.homepageUrl != null}">
-          <dt>홈페이지</dt>
+          <dt th:text="#{travelInfo.festival.info.homepage}">홈페이지</dt>
           <dd>
             <a class="festival-detail-homepage"
                th:href="${festival.homepageUrl}"
-               target="_blank" rel="noopener noreferrer">공식 홈페이지 <span aria-hidden="true">↗</span></a>
+               target="_blank" rel="noopener noreferrer">
+              <span th:text="#{travelInfo.festival.info.officialHomepage}">공식 홈페이지</span>
+              <span aria-hidden="true">↗</span></a>
           </dd>
         </div>
       </dl>
     </section>
 
     <footer class="festival-detail-footer">
-      <a class="festival-detail-back" th:href="${listUrl}">목록으로</a>
+      <a class="festival-detail-back" th:href="${listUrl}"
+         th:text="#{travelInfo.detail.backToList}">목록으로</a>
     </footer>
   </article>
   <dialog th:if="${!#lists.isEmpty(festival.galleryImages)}"
           id="festival-image-modal" class="festival-image-modal"
-          aria-label="축제 이미지 확대 보기">
+          th:attr="aria-label=#{travelInfo.festival.image.modal},
+                   data-default-alt=#{travelInfo.festival.image.defaultAlt}">
     <button type="button" class="festival-image-modal-close"
-            aria-label="이미지 닫기" data-festival-modal-close>&times;</button>
+            th:attr="aria-label=#{travelInfo.festival.image.close}"
+            data-festival-modal-close>&times;</button>
     <button type="button" class="festival-image-modal-nav prev"
             th:hidden="${!festival.gallery}"
-            aria-label="이전 이미지" data-festival-modal-prev>&#10094;</button>
+            th:attr="aria-label=#{travelInfo.festival.image.previous}"
+            data-festival-modal-prev>&#10094;</button>
     <img class="festival-image-modal-image" src="" alt="">
     <button type="button" class="festival-image-modal-nav next"
             th:hidden="${!festival.gallery}"
-            aria-label="다음 이미지" data-festival-modal-next>&#10095;</button>
+            th:attr="aria-label=#{travelInfo.festival.image.next}"
+            data-festival-modal-next>&#10095;</button>
   </dialog>
   <script src="/js/travel-info-bookmark.js" defer></script>
   <script src="/js/festival-gallery.js" defer></script>

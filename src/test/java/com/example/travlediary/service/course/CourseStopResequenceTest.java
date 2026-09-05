@@ -3,6 +3,7 @@ package com.example.travlediary.service.course;
 import com.example.travlediary.model.CourseDestination;
 import com.example.travlediary.repository.category.CategoryMapper;
 import com.example.travlediary.repository.category.CountryCategoryMapper;
+import com.example.travlediary.repository.category.InfoCategoryMapper;
 import com.example.travlediary.repository.course.CourseMapper;
 import com.example.travlediary.repository.destination.DestinationMapper;
 import com.example.travlediary.service.category.LocalizedReferenceNameResolver;
@@ -52,6 +53,8 @@ class CourseStopResequenceTest {
     private CountryCategoryMapper countryCategoryMapper;
     @Mock
     private CategoryMapper categoryMapper;
+    @Mock
+    private InfoCategoryMapper infoCategoryMapper;
 
     private CourseServiceImpl service;
 
@@ -60,7 +63,7 @@ class CourseStopResequenceTest {
         service = new CourseServiceImpl(courseMapper, new PostContentSanitizer(),
                 new DestinationLocalizationService(destinationMapper),
                 new ReferenceNameLocalizationService(countryCategoryMapper, categoryMapper,
-                        new LocalizedReferenceNameResolver()));
+                        infoCategoryMapper, new LocalizedReferenceNameResolver()));
     }
 
     @Test

@@ -92,7 +92,14 @@ public record KtoTourApiResponse(Response response) {
             String parkinglodging,
             String reservationlodging,
             String scalelodging,
-            String accomcountlodging
+            String accomcountlodging,
+            // 축제·행사(외국어 85 / 국문 15) detailIntro2 - 실제 응답 필드명 그대로 받는다.
+            // 네 외국어 서비스(Eng/Jpn/Chs/Cht)가 모두 같은 이름을 쓴다.
+            String eventplace,
+            String playtime,
+            String usetimefestival,
+            String sponsor1,
+            String sponsor2
     ) {
     }
 }

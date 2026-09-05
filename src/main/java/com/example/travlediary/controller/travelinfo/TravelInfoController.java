@@ -1,16 +1,21 @@
 package com.example.travlediary.controller.travelinfo;
 
+import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.dto.TravelInfoDetailDto;
 import com.example.travlediary.dto.FestivalDetailDto;
 import com.example.travlediary.dto.TravelInfoListItemDto;
+import com.example.travlediary.model.InfoCategory;
 import com.example.travlediary.model.TravelInfoContentType;
 import com.example.travlediary.model.TravelInfoScope;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.category.InfoCategoryService;
+import com.example.travlediary.service.category.ReferenceNameLocalizationService;
 import com.example.travlediary.service.travelinfo.TravelInfoSearchKeyword;
 import com.example.travlediary.service.travelinfo.FestivalDetailService;
 import com.example.travlediary.service.travelinfo.TravelInfoService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -46,6 +51,9 @@ public class TravelInfoController {
     private final TravelInfoService travelInfoService;
     private final FestivalDetailService festivalDetailService;
     private final InfoCategoryService infoCategoryService;
+    private final ReferenceNameLocalizationService referenceNameLocalizationService;
+    /** 화면 제목처럼 템플릿 밖에서 만드는 문구만 여기서 읽는다. */
+    private final MessageSource messageSource;
 
     @GetMapping("/travel-info")
     public String list(@RequestParam(required = false) String keyword,
@@ -59,8 +67,16 @@ public class TravelInfoController {
                        @AuthenticationPrincipal CustomUserDetails userDetails,
                        Model model) {
         String safeKeyword = TravelInfoSearchKeyword.normalize(keyword);
+        // 여행정보와 축제·행사는 각각 독립된 화면이다. 유형을 비워 두면 일반 여행정보로 본다.
+        TravelInfoContentType safeContentType =
+                TravelInfoContentType.FESTIVAL == parseEnum(contentType, TravelInfoContentType.class)
+                        ? TravelInfoContentType.FESTIVAL
+                        : TravelInfoContentType.GENERAL;
         TravelInfoScope safeScope = parseEnum(scope, TravelInfoScope.class);
-        TravelInfoContentType safeContentType = parseEnum(contentType, TravelInfoContentType.class);
+        if (safeScope == null && TravelInfoContentType.GENERAL == safeContentType) {
+            // 일반 여행정보에는 '전체'가 없으므로 국내부터 보여 준다.
+            safeScope = TravelInfoScope.DOMESTIC;
+        }
         List<Long> safeCategoryIds = parsePositiveLongs(categoryIdValues);
         String safeSort = normalizeSort(sort);
         int safePage = Math.max(page, 1);
@@ -70,6 +86,8 @@ public class TravelInfoController {
         List<TravelInfoListItemDto> travelInfoList = travelInfoService.getPublicList(
                 safeScope, safeContentType, safeCategoryIds, safeKeyword,
                 safeSort, offset, safeSize);
+        // 검색·정렬·페이징은 원문 기준 그대로 두고, 보여 줄 제목만 현재 언어로 바꾼다.
+        travelInfoService.localizePublicList(travelInfoList, requestedLanguage());
         Long currentUserId = userDetails == null ? null : userDetails.getId();
         travelInfoService.populatePublicListBookmarks(travelInfoList, currentUserId);
         long totalCount = travelInfoService.countPublicList(
@@ -96,14 +114,22 @@ public class TravelInfoController {
         model.addAttribute("listUrl", buildListUrl(
                 safeKeyword, safeScope, safeContentType,
                 safeCategoryIds, safeSort, safePage, safeSize));
-        model.addAttribute("categories", infoCategoryService.getVisibleByContentType(
-                safeContentType == null ? TravelInfoContentType.GENERAL : safeContentType));
+        // 카테고리 원본은 그대로 두고, 이번 요청에 보여 줄 이름만 따로 실어 보낸다.
+        List<InfoCategory> categories =
+                infoCategoryService.getVisibleByContentType(safeContentType);
+        model.addAttribute("categories", categories);
+        model.addAttribute("categoryNames", referenceNameLocalizationService
+                .localizeInfoCategories(categories, requestedLanguage()));
 
         if ("XMLHttpRequest".equals(requestedWith)) {
             return FRAGMENT_VIEW;
         }
 
-        model.addAttribute("pageTitle", "여행정보");
+        model.addAttribute("pageTitle", messageSource.getMessage(
+                TravelInfoContentType.FESTIVAL == safeContentType
+                        ? "travelInfo.list.title.festival"
+                        : "travelInfo.list.title.general",
+                null, LocaleContextHolder.getLocale()));
         return "travel-info/list";
     }
 
@@ -116,11 +142,13 @@ public class TravelInfoController {
             return festivalRedirect(id, returnUrl);
         }
         TravelInfoDetailDto travelInfo = travelInfoService.getPublicDetail(id);
+        travelInfoService.localizePublicDetail(travelInfo, requestedLanguage());
         Long currentUserId = userDetails == null ? null : userDetails.getId();
         travelInfoService.populatePublicDetailBookmark(travelInfo, currentUserId);
         model.addAttribute("travelInfo", travelInfo);
         model.addAttribute("listUrl", validateReturnUrl(returnUrl));
-        model.addAttribute("pageTitle", travelInfo.getTitle() + " | 여행정보");
+        model.addAttribute("pageTitle", pageTitle(
+                "travelInfo.detail.pageTitle.general", travelInfo.getTitle()));
         return "travel-info/detail";
     }
 
@@ -130,12 +158,30 @@ public class TravelInfoController {
                                  @AuthenticationPrincipal CustomUserDetails userDetails,
                                  Model model) {
         FestivalDetailDto festival = festivalDetailService.getPublicDetail(id);
+        // 축제·행사도 같은 travel_info_translations 를 쓴다.
+        SupportedLanguage requestedLanguage = requestedLanguage();
+        travelInfoService.localizePublicDetail(festival.getTravelInfo(), requestedLanguage);
+        // 행사 상세정보(장소·주소·시간·요금·주최·주관)는 festival_info_translations 를 쓴다.
+        festivalDetailService.localizePublicDetail(festival, requestedLanguage);
         Long currentUserId = userDetails == null ? null : userDetails.getId();
         travelInfoService.populatePublicDetailBookmark(festival.getTravelInfo(), currentUserId);
         model.addAttribute("festival", festival);
         model.addAttribute("listUrl", validateReturnUrl(returnUrl));
-        model.addAttribute("pageTitle", festival.getTravelInfo().getTitle() + " | 축제·행사");
+        model.addAttribute("pageTitle", pageTitle(
+                "travelInfo.detail.pageTitle.festival", festival.getTravelInfo().getTitle()));
         return "festivals/detail";
+    }
+
+    /** 브라우저 탭 제목. 제목은 이미 번역된 값이고, 뒤에 붙는 이름만 현재 언어로 고른다. */
+    private String pageTitle(String code, String title) {
+        return messageSource.getMessage(
+                code, new Object[]{title}, LocaleContextHolder.getLocale());
+    }
+
+    /** 공개 여행정보 화면이 쓸 언어. 지원하지 않는 locale 이면 한국어로 본다. */
+    private SupportedLanguage requestedLanguage() {
+        return SupportedLanguage.fromLocale(LocaleContextHolder.getLocale())
+                .orElse(SupportedLanguage.KOREAN);
     }
 
     private String festivalRedirect(Long id, String returnUrl) {

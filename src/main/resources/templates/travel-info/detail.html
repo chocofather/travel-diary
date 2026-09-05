@@ -14,7 +14,8 @@
 <th:block th:fragment="body">
   <article class="travel-info-detail" aria-labelledby="travel-info-detail-title">
     <header class="travel-info-detail-header">
-      <p class="travel-info-detail-kicker">여행정보</p>
+      <p class="travel-info-detail-kicker"
+         th:text="#{travelInfo.list.title.general}">여행정보</p>
       <span class="travel-info-detail-category"
             th:text="${travelInfo.categoryName}">계절여행</span>
       <div class="travel-info-detail-title-row">
@@ -24,31 +25,44 @@
                 th:classappend="${travelInfo.bookmarked} ? ' is-bookmarked'"
                 th:data-bookmark-url="@{/bookmarks/travel-info/{id}(id=${travelInfo.id})}"
                 th:data-bookmarked="${travelInfo.bookmarked}"
-                th:attr="aria-pressed=${travelInfo.bookmarked},aria-label=${travelInfo.bookmarked} ? '여행정보 저장 취소' : '여행정보 저장'"
+                th:attr="aria-pressed=${travelInfo.bookmarked},
+                         aria-label=${travelInfo.bookmarked}
+                           ? #{travelInfo.bookmark.remove} : #{travelInfo.bookmark.save},
+                         data-label-save=#{travelInfo.bookmark.label.save},
+                         data-label-saved=#{travelInfo.bookmark.label.saved},
+                         data-aria-save=#{travelInfo.bookmark.save},
+                         data-aria-remove=#{travelInfo.bookmark.remove},
+                         data-failed-message=#{travelInfo.bookmark.failed}"
                 data-travel-info-bookmark>
           <span class="travel-info-bookmark-icon" aria-hidden="true"></span>
           <span class="travel-info-bookmark-label"
-                th:text="${travelInfo.bookmarked} ? '저장됨' : '저장'">저장</span>
+                th:text="${travelInfo.bookmarked}
+                         ? #{travelInfo.bookmark.label.saved}
+                         : #{travelInfo.bookmark.label.save}">저장</span>
         </button>
       </div>
 
       <div class="travel-info-detail-type">
-        <span th:text="${travelInfo.scope.name() == 'DOMESTIC'} ? '국내' : '해외'">국내</span>
+        <span th:text="${travelInfo.scope.name() == 'DOMESTIC'}
+                       ? #{travelInfo.scope.domestic}
+                       : #{travelInfo.scope.international}">국내</span>
         <span aria-hidden="true">·</span>
-        <span th:text="${travelInfo.contentType.name() == 'GENERAL'} ? '일반' : '축제'">일반</span>
+        <span th:text="${travelInfo.contentType.name() == 'GENERAL'}
+                       ? #{travelInfo.contentType.general}
+                       : #{travelInfo.contentType.festival}">일반</span>
       </div>
 
       <dl class="travel-info-detail-meta">
         <div>
-          <dt>작성일</dt>
+          <dt th:text="#{travelInfo.detail.createdAt}">작성일</dt>
           <dd><time th:text="${#dates.format(travelInfo.createdAt, 'yyyy.MM.dd')}">2026.08.10</time></dd>
         </div>
         <div>
-          <dt>조회수</dt>
+          <dt th:text="#{travelInfo.detail.views}">조회수</dt>
           <dd th:text="${travelInfo.views}">0</dd>
         </div>
         <div th:if="${travelInfo.updated}">
-          <dt>최종 수정</dt>
+          <dt th:text="#{travelInfo.detail.updatedAt}">최종 수정</dt>
           <dd><time th:text="${#dates.format(travelInfo.updatedAt, 'yyyy.MM.dd')}">2026.08.11</time></dd>
         </div>
       </dl>
@@ -58,7 +72,7 @@
              th:if="${travelInfo.contentType.name() == 'FESTIVAL'
                       and !#lists.isEmpty(travelInfo.periods)}"
              aria-labelledby="travel-info-period-title">
-      <h2 id="travel-info-period-title">행사 기간</h2>
+      <h2 id="travel-info-period-title" th:text="#{travelInfo.detail.periods}">행사 기간</h2>
       <ul>
         <li th:each="period : ${travelInfo.periods}">
           <time th:text="${period.startDate}">2026.08.10</time>
@@ -69,11 +83,12 @@
     </section>
 
     <section class="travel-info-detail-content rich-text-content"
-             aria-label="여행정보 본문"
+             th:attr="aria-label=#{travelInfo.detail.content}"
              th:utext="${travelInfo.content}"></section>
 
     <footer class="travel-info-detail-actions">
-      <a class="travel-info-detail-back" th:href="${listUrl}">목록으로</a>
+      <a class="travel-info-detail-back" th:href="${listUrl}"
+         th:text="#{travelInfo.detail.backToList}">목록으로</a>
     </footer>
   </article>
   <script src="/js/travel-info-bookmark.js" defer></script>

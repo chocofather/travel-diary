@@ -21,6 +21,18 @@ public record KtoForeignTourDetailResponse(
         /** 숙소 객실 유형. */
         String roomType,
         /** 쇼핑 주요 판매품목. */
-        String mainProducts
+        String mainProducts,
+        /** 축제·행사 행사장소(eventplace). */
+        String eventPlace,
+        /** 축제·행사 주소. detailIntro2 에 주소가 없어 detailCommon2 의 addr1/addr2 를 쓴다. */
+        String address,
+        /** 축제·행사 행사시간(playtime). */
+        String playTime,
+        /** 축제·행사 이용요금(usetimefestival). */
+        String useTime,
+        /** 축제·행사 주최(sponsor1). */
+        String sponsor1,
+        /** 축제·행사 주관(sponsor2). */
+        String sponsor2
 ) {
 }

@@ -223,10 +223,9 @@
 </ul>
 
 <ul th:fragment="infoLinks">
-  <li><a href="/travel-info" th:text="#{nav.info.all}">전체</a></li>
   <li><a href="/travel-info?scope=DOMESTIC" th:text="#{nav.info.domestic}">국내정보</a></li>
   <li><a href="/travel-info?scope=INTERNATIONAL" th:text="#{nav.info.international}">해외정보</a></li>
-  <li><a href="/travel-info?contentType=FESTIVAL" th:text="#{nav.info.festivals}">축제 정보</a></li>
+  <li><a href="/travel-info?contentType=FESTIVAL" th:text="#{nav.info.festivals}">축제·행사</a></li>
 </ul>
 
 <ul th:fragment="recordLinks">
@@ -242,9 +241,9 @@
 </ul>
 
 <ul th:fragment="eventLinks">
-  <li class="menu-item"><a th:href="@{/events(status='ongoing')}" th:text="#{nav.event.ongoing}">진행 이벤트</a></li>
-  <li class="menu-item"><a th:href="@{/events(status='upcoming')}" th:text="#{nav.event.upcoming}">예정 이벤트</a></li>
-  <li class="menu-item"><a th:href="@{/events(status='ended')}" th:text="#{nav.event.ended}">종료된 이벤트</a></li>
+  <li><a th:href="@{/events(status='ongoing')}" th:text="#{nav.event.ongoing}">진행 이벤트</a></li>
+  <li><a th:href="@{/events(status='upcoming')}" th:text="#{nav.event.upcoming}">예정 이벤트</a></li>
+  <li><a th:href="@{/events(status='ended')}" th:text="#{nav.event.ended}">종료된 이벤트</a></li>
 </ul>
 </body>
 </html>

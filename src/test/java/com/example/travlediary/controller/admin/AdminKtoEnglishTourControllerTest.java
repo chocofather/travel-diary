@@ -51,6 +51,7 @@ class AdminKtoEnglishTourControllerTest {
                         candidate, List.of()));
         when(ktoEnglishTourService.getDetail("eng-1", "76")).thenReturn(
                 new KtoForeignTourDetailResponse("Changdeokgung Palace", "English overview",
+                        null, null, null, null, null, null,
                         null, null, null, null, null, null));
 
         mockMvc.perform(get("/admin/api/kto/tour/english-match")

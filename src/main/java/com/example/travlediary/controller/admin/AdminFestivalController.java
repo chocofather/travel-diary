@@ -93,7 +93,7 @@ public class AdminFestivalController {
     @GetMapping("/{id}/edit")
     public String editForm(@PathVariable Long id, Model model) {
         FestivalEditData editData = festivalAdminService.getEditData(id);
-        prepareEditForm(model, editData.form(), id, editData.images());
+        prepareEditForm(model, editData.form(), id, editData.images(), editData.ktoContentId());
         return CREATE_VIEW;
     }
 
@@ -112,7 +112,7 @@ public class AdminFestivalController {
         }
         if (bindingResult.hasErrors()) {
             FestivalEditData persisted = festivalAdminService.getEditData(id);
-            prepareEditForm(model, festivalForm, id, persisted.images());
+            prepareEditForm(model, festivalForm, id, persisted.images(), persisted.ktoContentId());
             return CREATE_VIEW;
         }
 
@@ -133,12 +133,14 @@ public class AdminFestivalController {
         model.addAttribute("scope", festivalForm.getScope());
         model.addAttribute("editMode", false);
         model.addAttribute("formAction", "/admin/festivals/create");
+        addTranslationLabels(model);
     }
 
     private void prepareEditForm(Model model,
                                  FestivalEditForm festivalForm,
                                  Long id,
-                                 List<InfoImage> images) {
+                                 List<InfoImage> images,
+                                 String ktoContentId) {
         model.addAttribute("festivalForm", festivalForm);
         model.addAttribute("categories", categoriesByContentType(TravelInfoContentType.FESTIVAL));
         model.addAttribute("scope", festivalForm.getScope());
@@ -146,6 +148,15 @@ public class AdminFestivalController {
         model.addAttribute("festivalId", id);
         model.addAttribute("festivalImages", images);
         model.addAttribute("formAction", "/admin/festivals/" + id + "/edit");
+        // 외국어 자동입력이 좌표를 되찾을 때만 쓰는 읽기 전용 값이다. 폼 입력값이 아니다.
+        model.addAttribute("festivalKtoContentId", ktoContentId);
+        addTranslationLabels(model);
+    }
+
+    /** 번역 탭 라벨. 여행정보 폼과 같은 조각을 쓰므로 같은 라벨을 넘긴다. */
+    private void addTranslationLabels(Model model) {
+        model.addAttribute("translationLanguageLabels", AdminTranslationLabels.LANGUAGE_LABELS);
+        model.addAttribute("translationTabLabels", AdminTranslationLabels.TAB_LABELS);
     }
 
     private void rejectValidation(BindingResult bindingResult,

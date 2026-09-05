@@ -59,6 +59,10 @@ class FestivalAdminServiceTest {
     private BookmarkMapper bookmarkMapper;
     @Mock
     private KtoFestivalImageDownloadService festivalImageDownloadService;
+    @Mock
+    private TravelInfoService travelInfoService;
+    @Mock
+    private FestivalInfoService festivalInfoService;
 
     private FestivalAdminService service;
 
@@ -66,7 +70,8 @@ class FestivalAdminServiceTest {
     void setUp() {
         service = new FestivalAdminService(
                 travelInfoMapper, festivalInfoMapper, infoCategoryMapper,
-                bookmarkMapper, new PostContentSanitizer(), festivalImageDownloadService);
+                bookmarkMapper, new PostContentSanitizer(), festivalImageDownloadService,
+                travelInfoService, festivalInfoService);
     }
 
     @AfterEach
