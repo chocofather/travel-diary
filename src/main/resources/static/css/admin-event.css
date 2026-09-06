@@ -30,6 +30,15 @@
     line-height: 1.55;
 }
 
+/* 인포그래픽 이벤트에서 대표 이미지와 상세용 원본을 헷갈리지 않게 한 줄 더 짚어 준다 */
+.admin-event-section-header .admin-event-image-note {
+    color: #8a5a2b;
+}
+
+.admin-event-section-header .admin-event-image-note strong {
+    font-weight: 700;
+}
+
 .admin-required,
 .admin-optional {
     margin-left: 5px;

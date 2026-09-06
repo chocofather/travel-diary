@@ -74,7 +74,7 @@ class EventUiContractTest {
                 .contains("data-event-panel=\"mainImage\"")
                 .contains("data-event-panel=\"description\"")
                 .contains("<h2>인포그래픽 이미지 <span class=\"admin-required\">필수</span></h2>")
-                .contains("<h2>메인 이미지 <span class=\"admin-optional\">선택</span></h2>")
+                .contains("<h2>메인 슬라이더용 대표 이미지 <span class=\"admin-optional\">선택</span></h2>")
                 .contains("<h2>상세 내용 <span class=\"admin-required\">필수</span></h2>")
                 .contains("th:hidden=\"${isStandard}\"")
                 .contains("th:hidden=\"${!isStandard}\"")
@@ -155,11 +155,20 @@ class EventUiContractTest {
         // 서버가 이미 번역된 값을 내려주므로 슬라이더는 받은 값을 그리기만 한다.
         assertThat(script)
                 .contains("fetch('/api/events/slide')")
-                .contains("${ev.title}")
-                .contains("${ev.description}")
-                .contains("${ev.eventImg}")
-                // 고정 문구는 예전부터 messages 로 내려오고 있다. (home.event.*)
-                .contains("homeI18n.eventDetails");
+                .contains("escapeHtml(ev.title)")
+                .contains("escapeHtml(ev.description)")
+                .contains("escapeHtml(ev.eventImg)")
+                // 고정 문구는 messages 로 내려온다. 배지도 제목을 되풀이하지 않고 공통 라벨을 쓴다.
+                .contains("homeI18n.eventDetails")
+                .contains("homeI18n.eventBadge");
+        // 설명이 없거나 'null' 이면 그 영역을 아예 만들지 않는다.
+        assertThat(script)
+                .contains("hasText(ev.description)")
+                .contains("text !== 'null'");
+        // 슬라이더는 언제나 대표 이미지만 그린다. 유형으로 담는 방식을 나누지 않는다.
+        assertThat(script)
+                .doesNotContain("ev.eventType")
+                .doesNotContain("is-infographic");
         assertThat(script)
                 .doesNotContain("TRAVEL_DIARY_LOCALE")
                 .doesNotContain("navigator.language")

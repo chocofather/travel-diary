@@ -29,7 +29,7 @@ class AdminEventTranslationUiContractTest {
         // 기존 유형별 입력 구성은 그대로 남는다.
         assertThat(form)
                 .contains("<h2>인포그래픽 이미지 <span class=\"admin-required\">필수</span></h2>")
-                .contains("<h2>메인 이미지 <span class=\"admin-optional\">선택</span></h2>")
+                .contains("<h2>메인 슬라이더용 대표 이미지 <span class=\"admin-optional\">선택</span></h2>")
                 .contains("<h2>상세 내용 <span class=\"admin-required\">필수</span></h2>");
     }
 

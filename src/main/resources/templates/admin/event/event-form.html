@@ -132,7 +132,8 @@
                data-event-panel="poster" th:hidden="${isStandard}">
         <div class="admin-event-section-header">
           <h2>인포그래픽 이미지 <span class="admin-required">필수</span></h2>
-          <p>이벤트 안내가 모두 담긴 이미지 한 장을 등록합니다.</p>
+          <p>이벤트 안내가 모두 담긴 이미지 한 장을 등록합니다.
+            상세 페이지에 원본 비율 그대로 보여 주므로 세로로 길어도 됩니다.</p>
         </div>
         <div class="admin-event-image-field">
           <div class="admin-event-image-preview is-poster">
@@ -159,23 +160,30 @@
                data-event-panel="mainImage"
                th:hidden="${!isStandard and !eventForm.slide}">
         <div class="admin-event-section-header">
-          <h2>메인 이미지 <span class="admin-optional">선택</span></h2>
-          <p>대표 이미지는 없어도 됩니다. 메인 슬라이더에 표시하는 경우에만 필요합니다.</p>
+          <h2>메인 슬라이더용 대표 이미지 <span class="admin-optional">선택</span></h2>
+          <p>메인 슬라이더와 목록에 쓰는 가로형 이미지입니다. 16:9 비율을 권장합니다.
+            메인 슬라이더에 표시하는 경우에만 필요합니다.</p>
+          <!-- 인포그래픽 이벤트는 대표 이미지와 상세용 원본이 서로 다른 이미지다 -->
+          <p class="admin-event-image-note" th:if="${!isStandard}">
+            세로로 긴 인포그래픽 원본은 여기가 아니라 아래
+            <strong>인포그래픽 이미지</strong>에 등록하세요.
+            여기에 세로 이미지를 넣으면 메인 슬라이더에서 잘리거나 작게 보입니다.</p>
         </div>
         <div class="admin-event-image-field">
           <div class="admin-event-image-preview">
             <img id="event-image-preview" th:src="${currentEventImage}"
                  th:hidden="${!hasEventImage}"
                  onerror="this.onerror=null;this.src='/images/default.png';"
-                 alt="현재 이벤트 메인 이미지">
-            <p id="event-image-empty" th:hidden="${hasEventImage}">메인 이미지 미리보기</p>
+                 alt="현재 메인 슬라이더용 대표 이미지">
+            <p id="event-image-empty" th:hidden="${hasEventImage}">대표 이미지 미리보기</p>
           </div>
           <div class="admin-form-field">
-            <label for="event-image">메인 이미지 <span class="admin-optional">선택</span></label>
+            <label for="event-image">대표 이미지 <span class="admin-optional">선택</span></label>
             <input id="event-image" type="file" name="imageFile" accept="image/*"
                    th:attr="data-has-existing=${hasEventImage} ? 'true' : 'false'"
                    th:classappend="${#fields.hasErrors('imageFile')} ? 'is-invalid'">
-            <span class="admin-help-text" th:if="${hasEventImage}">새 파일을 선택하지 않으면 기존 메인 이미지를 유지합니다.</span>
+            <span class="admin-help-text">가로형 이미지를 올려 주세요. (권장 16:9)</span>
+            <span class="admin-help-text" th:if="${hasEventImage}">새 파일을 선택하지 않으면 기존 대표 이미지를 유지합니다.</span>
             <p class="admin-field-error" th:if="${#fields.hasErrors('imageFile')}"
                th:errors="*{imageFile}">메인 이미지 오류</p>
           </div>

@@ -27,21 +27,43 @@ document.addEventListener('DOMContentLoaded', async () => {
     const indexSpan = document.getElementById('slide-index');
     const progressBar = document.getElementById('progress-bar');
 
+    /* 관리자가 쓴 값이 그대로 마크업이 되지 않게 감싼다 */
+    const escapeHtml = (value) => String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
+    /* 값이 없거나 공백뿐이거나 문자열 'null' 이면 없는 값으로 본다 */
+    const hasText = (value) => {
+        const text = (value ?? '').toString().trim();
+        return text !== '' && text !== 'null';
+    };
+
     // 2. DOM에 슬라이드 추가
     list.forEach((ev, index) => {
         const div = document.createElement('div');
         ev.bgcolor = pastelColors[index % pastelColors.length];
         div.className = 'swiper-slide';
+        // 슬라이더가 받는 이미지는 유형과 무관하게 언제나 대표 이미지(event_img)다.
+        // 대표 이미지는 가로형으로 등록하는 값이라 유형별로 담는 방식을 나누지 않는다.
+        // 상세용 세로 인포그래픽(poster_img)은 여기로 오지 않는다.
+        const title = escapeHtml(ev.title);
+        // 설명이 없는 이벤트는 설명 영역 자체를 만들지 않는다.
+        const description = hasText(ev.description)
+            ? `<p class="description">${escapeHtml(ev.description)}</p>`
+            : '';
         div.innerHTML = `
       <div class="slide-inner">
         <div class="slide-text">
-          <span class="badge">${ev.title}</span>
-          <h2 class="title">${ev.title}</h2>
-          <p class="description">${ev.description}</p>
-          <a href="/events/${ev.id}" class="more">${homeI18n.eventDetails}</a>
+          <span class="badge">${escapeHtml(homeI18n.eventBadge)}</span>
+          <h2 class="title">${title}</h2>
+          ${description}
+          <a href="/events/${encodeURIComponent(ev.id)}" class="more">${escapeHtml(homeI18n.eventDetails)}</a>
         </div>
         <div class="slide-img">
-          <img src="${ev.eventImg}" alt="${ev.title}" data-id="${ev.id}">
+          <img src="${escapeHtml(ev.eventImg)}" alt="${title}" data-id="${escapeHtml(ev.id)}">
         </div>
       </div>
     `;

@@ -106,8 +106,9 @@ class HomePageContractTest {
                 .contains("${dest.name}", "${dest.regionName}")
                 .doesNotContain("데이터가 없습니다.", "불러오기에 실패했습니다.");
         assertThat(sliderScript)
-                .contains("home-i18n", ".dataset", "homeI18n.eventDetails")
-                .contains("${ev.title}", "${ev.description}")
+                .contains("home-i18n", ".dataset", "homeI18n.eventDetails", "homeI18n.eventBadge")
+                // 이벤트 값은 여전히 서버가 준 그대로 그린다. (escape 만 거친다)
+                .contains("escapeHtml(ev.title)", "escapeHtml(ev.description)")
                 .doesNotContain(">자세히 보기<");
     }
 

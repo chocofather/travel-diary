@@ -199,13 +199,14 @@ class EventApiControllerTest {
                 "\"title\":\"메인 슬라이드 이벤트\"",
                 "\"description\":\"메인 슬라이드 설명\"",
                 "\"eventImg\":\"/uploads/events/main.jpg\"");
-        // 등록자 번호나 내부 값은 공개 응답에 싣지 않는다.
+        // 슬라이더는 유형과 무관하게 대표 이미지만 그리므로 유형도 내려보내지 않는다.
+        // 상세용 세로 인포그래픽(posterImg)도 이 응답에 없다.
         assertThat(json)
                 .doesNotContain("userId")
                 .doesNotContain("createdAt")
                 .doesNotContain("eventType")
                 .doesNotContain("posterImg")
-                .doesNotContain("slide");
+                .doesNotContain("\"slide\"");
     }
 
     /* === helpers === */
