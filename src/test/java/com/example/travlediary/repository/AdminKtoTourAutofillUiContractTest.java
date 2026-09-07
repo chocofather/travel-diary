@@ -16,7 +16,7 @@ class AdminKtoTourAutofillUiContractTest {
         String edit = resource("/templates/admin/destinations/edit.html");
 
         assertThat(create)
-                .contains("/js/admin-kto-tour-autofill.js?v=20260822-3")
+                .contains("/js/admin-kto-tour-autofill.js?v=20260907-2")
                 .contains("/js/region-selector.js?v=20260822-3")
                 .contains("data-kto-tour-search-button")
                 .contains("data-kto-tour-results")
@@ -34,9 +34,9 @@ class AdminKtoTourAutofillUiContractTest {
                 .doesNotContain("data-kto-tour-english-results");
         assertThat(translationTabs)
                 .contains("data-kto-tour-foreign-name=\n"
-                        + "                          ${ktoAutofill} ? ${translation.languageCode} : null")
+                        + "                            ${ktoAutofill} ? ${translation.languageCode} : null")
                 .contains("data-kto-tour-foreign-overview=\n"
-                        + "                             ${ktoAutofill} ? ${translation.languageCode} : null")
+                        + "                               ${ktoAutofill} ? ${translation.languageCode} : null")
                 // 간단 설명은 자동입력 대상이 아니다
                 .doesNotContain("data-kto-tour-foreign-shortDescription");
         assertThat(edit)
@@ -97,6 +97,30 @@ class AdminKtoTourAutofillUiContractTest {
                         "ktoSelectedPhotosJson",
                         "data-kto-selected-photos-json",
                         "innerHTML");
+    }
+
+    /**
+     * 검색어(예: "경복")가 남지 않고 고른 후보의 이름(예: "경복궁")이 들어간다.
+     * 국문 여행지명과 관광사진 검색어가 같은 title 값을 쓴다.
+     */
+    @Test
+    void selectingACandidateReplacesTheKeywordWithTheSelectedTitle() throws IOException {
+        String script = resource("/static/js/admin-kto-tour-autofill.js");
+
+        assertThat(script)
+                .contains("applySelectedTitle(payload.title || item.title)")
+                .contains("function applySelectedTitle")
+                .contains("applyTitleTo(nameInput, selectedTitle)")
+                // 같은 title 을 관광사진 검색어 칸에도 넣는다 (별도 가공값을 만들지 않는다)
+                .contains("applyTitleTo(document.querySelector(\"[data-kto-photo-keyword]\"), "
+                        + "selectedTitle)")
+                // 이름만 덮어쓰고 나머지 자동입력은 빈 칸 규칙을 그대로 쓴다
+                .doesNotContain("fillIfEmpty(nameInput,");
+        // 관광사진 검색 화면이 실제로 그 selector 를 쓰는지 함께 고정한다
+        assertThat(resource("/templates/admin/destinations/fragments/kto-photo-search.html"))
+                .contains("data-kto-photo-keyword");
+        assertThat(resource("/static/js/admin-kto-photo-search.js"))
+                .contains("[data-kto-photo-keyword]");
     }
 
     @Test
@@ -234,7 +258,7 @@ class AdminKtoTourAutofillUiContractTest {
         assertThat(create)
                 .contains("/js/admin-kto-photo-search.js")
                 .contains("admin/destinations/fragments/kto-photo-search")
-                .contains("/js/admin-kto-tour-autofill.js?v=20260822-3");
+                .contains("/js/admin-kto-tour-autofill.js?v=20260907-2");
     }
 
     private String resource(String path) throws IOException {

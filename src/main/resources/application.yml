@@ -107,7 +107,9 @@ holiday:
 
 kto:
   photo:
-    api-key: ${KTO_PHOTO_API_KEY:}
+    # 관광사진도 같은 공공데이터포털(B551011) 인증키를 쓴다.
+    # 사진용 키를 따로 발급받았을 때만 KTO_PHOTO_API_KEY 로 덮어쓴다.
+    api-key: ${KTO_PHOTO_API_KEY:${KTO_TOUR_API_KEY:}}
     base-url: https://apis.data.go.kr/B551011/PhotoGalleryService1
   tour:
     # 국문/영문/일문/중문 다섯 서비스가 같은 공공데이터포털 인증키를 쓴다.

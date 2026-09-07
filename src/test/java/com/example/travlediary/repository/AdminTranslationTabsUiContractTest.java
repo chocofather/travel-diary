@@ -72,6 +72,38 @@ class AdminTranslationTabsUiContractTest {
         }
     }
 
+    /**
+     * 번역은 선택 입력이라 등록 화면에서만 접어 둔다.
+     * 감추기만 하므로 입력값은 폼에 그대로 실리고, 수정 화면은 지금처럼 펼쳐진 채로 둔다.
+     */
+    @Test
+    void onlyTheCreateFormCollapsesTheTranslationAreas() throws IOException {
+        String fragment = resource(FRAGMENT);
+        String create = resource("/templates/admin/destinations/create.html");
+        String edit = resource("/templates/admin/destinations/edit.html");
+        String script = resource("/static/js/admin-translation-collapse.js");
+
+        // 조각은 제목 영역과 입력 영역만 나눠 두고, 접기 자체는 스크립트가 얹는다
+        assertThat(fragment)
+                .contains("data-translation-tabs-heading")
+                .contains("data-translation-tabs-body");
+        assertThat(create)
+                .contains("data-translation-collapsible")
+                .contains("/js/admin-translation-collapse.js");
+        assertThat(edit).doesNotContain("data-translation-collapsible",
+                "/js/admin-translation-collapse.js");
+        assertThat(script)
+                .contains("[data-translation-collapsible] [data-translation-tabs]")
+                .contains("toggle.type = \"button\"")
+                .contains("aria-controls")
+                .contains("aria-expanded")
+                .contains("body.hidden = !expanded")
+                // 값이 있으면(검증 오류로 다시 그려졌을 때 등) 열어 둔다
+                .contains("hasEnteredValue(body)")
+                // 값을 지우거나 입력을 막지 않는다
+                .doesNotContain(".value = \"\"", "disabled", "remove()");
+    }
+
     @Test
     void theTabStyleStaysCompactAndSurvivesNarrowScreens() throws IOException {
         String css = resource("/static/css/destination-create.css");

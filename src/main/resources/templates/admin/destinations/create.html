@@ -9,7 +9,8 @@
   <script src="/js/admin-destination-amenity-filter.js?v=20260822-1" defer></script>
   <script src="/js/admin-destination-image-upload-preview.js?v=20260822-2" defer></script>
   <script src="/js/admin-translation-tabs.js" defer></script>
-  <script src="/js/admin-kto-tour-autofill.js?v=20260822-3" defer></script>
+  <script src="/js/admin-translation-collapse.js?v=20260907-1" defer></script>
+  <script src="/js/admin-kto-tour-autofill.js?v=20260907-2" defer></script>
   <script src="/js/admin-kto-photo-search.js?v=20260821-4" defer></script>
 </th:block>
 <th:block th:fragment="body">
@@ -27,8 +28,10 @@
 
 <div th:if="${imageError}" class="admin-alert" role="alert" th:text="${imageError}"></div>
 
+<!-- 번역 영역은 선택 입력이라 등록 화면에서만 접어 둔다 (data-translation-collapsible) -->
 <form th:action="@{/admin/destinations}" method="post" enctype="multipart/form-data"
-      th:object="${destinationForm}" class="admin-destination-form admin-form-card is-wide">
+      th:object="${destinationForm}" class="admin-destination-form admin-form-card is-wide"
+      data-translation-collapsible>
 
   <section class="admin-destination-section">
     <div class="admin-destination-section-header">
@@ -155,7 +158,7 @@
          th:errors="*{regionId}">지역 선택 오류</p>
     </div>
 
-    <!-- 위도 / 경도 -->
+    <!-- 위도 / 경도는 2열, Google Place ID(선택)는 같은 그리드의 전체 너비 행 -->
     <div class="admin-form-grid is-compact">
       <div class="admin-form-field">
         <label>위도</label>
@@ -165,11 +168,7 @@
         <label>경도</label>
         <input type="text" th:field="*{longitude}" placeholder="경도" data-kto-tour-longitude>
       </div>
-    </div>
-
-    <!-- Google Place ID (선택) -->
-    <div class="admin-form-grid is-compact">
-      <div class="admin-form-field">
+      <div class="admin-form-field is-wide">
         <label>Google Place ID <span class="admin-field-optional">선택</span></label>
         <input type="text" th:field="*{googlePlaceId}" placeholder="예: ChIJ...">
         <p class="admin-field-help">
@@ -591,31 +590,39 @@
   </section>
 
   <!-- 카테고리 -->
-  <section class="admin-category-select" data-category-select data-category-mode="">
-    <div class="admin-category-select-heading">
-      <h4>카테고리</h4>
-      <span>복수 선택 가능</span>
+  <section class="admin-destination-section">
+    <div class="admin-destination-section-header">
+      <div>
+        <h2>카테고리</h2>
+        <p>여행지에 붙일 카테고리를 복수로 선택합니다.</p>
+      </div>
     </div>
 
-    <div class="admin-category-selected" aria-live="polite">
-      <span class="admin-category-selected-label">선택된 카테고리</span>
-      <div class="admin-category-chips" data-category-chips></div>
-      <span class="admin-category-empty" data-category-empty>선택된 카테고리가 없습니다.</span>
-    </div>
+    <div class="admin-category-select" data-category-select data-category-mode="">
+      <div class="admin-category-selected" aria-live="polite">
+        <span class="admin-category-selected-label">선택된 카테고리</span>
+        <div class="admin-category-chips" data-category-chips></div>
+        <span class="admin-category-empty" data-category-empty>선택된 카테고리가 없습니다.</span>
+      </div>
 
-    <div th:replace="~{admin/destinations/fragments/category-filter :: filters}"></div>
+      <div class="admin-category-picker">
+        <div th:replace="~{admin/destinations/fragments/category-filter :: filters}"></div>
 
-    <label class="admin-category-search">
-      <span>카테고리 검색</span>
-      <input type="search" placeholder="카테고리 검색" autocomplete="off" data-category-search />
-    </label>
+        <label class="admin-category-search">
+          <span>카테고리 검색</span>
+          <input type="search" placeholder="카테고리 검색" autocomplete="off" data-category-search />
+        </label>
 
-    <div class="admin-category-options" role="group" aria-label="여행지 카테고리" data-category-options>
-      <label class="admin-category-option" th:each="cat : ${categories}" data-category-option
-             th:attr="data-category-types=${categoryTypeTags.get(cat.id)}">
-        <input type="checkbox" th:field="*{categoryIds}" th:value="${cat.id}" data-category-checkbox />
-        <span th:text="${cat.name}" data-category-name></span>
-      </label>
+        <div class="admin-category-options" role="group" aria-label="여행지 카테고리"
+             data-category-options>
+          <label class="admin-category-option" th:each="cat : ${categories}" data-category-option
+                 th:attr="data-category-types=${categoryTypeTags.get(cat.id)}">
+            <input type="checkbox" th:field="*{categoryIds}" th:value="${cat.id}"
+                   data-category-checkbox />
+            <span th:text="${cat.name}" data-category-name></span>
+          </label>
+        </div>
+      </div>
     </div>
   </section>
 

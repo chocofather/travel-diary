@@ -101,6 +101,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const payload = await response.json();
             if (!response.ok) throw new Error(payload.message || "관광정보를 불러오지 못했습니다.");
             if (requestGeneration !== foreignRequestGeneration) return;
+            // 입력창의 검색어는 후보를 찾기 위한 값이므로 고른 후보의 이름으로 바꾼다.
+            applySelectedTitle(payload.title || item.title);
             applyAutofill(payload);
             setStatus(`${payload.title || item.title || "선택한 장소"} 정보를 빈 항목에 입력했습니다.`);
             if (shouldApplyRegion) {
@@ -138,8 +140,25 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    /**
+     * 한국어 여행지명과 관광사진 검색어를 고른 후보의 이름으로 덮어쓴다.
+     * 검색에 쓴 일부 문자열("경복")이 아니라 선택한 후보의 이름("경복궁")을 두 곳에 같이 넣는다.
+     * 후보를 고르지 않았다면 이 함수는 호출되지 않으므로 직접 입력한 값은 그대로 남는다.
+     */
+    function applySelectedTitle(title) {
+        if (!hasValue(title)) return;
+        const selectedTitle = String(title);
+        applyTitleTo(nameInput, selectedTitle);
+        // 이후 관광사진 검색어를 직접 고치는 것은 그대로 두고, 후보 선택 시점에만 맞춘다.
+        applyTitleTo(document.querySelector("[data-kto-photo-keyword]"), selectedTitle);
+    }
+
+    function applyTitleTo(element, selectedTitle) {
+        if (!element || element.value === selectedTitle) return;
+        setFieldValue(element, selectedTitle);
+    }
+
     function applyAutofill(detail) {
-        fillIfEmpty(nameInput, detail.title);
         fillIfEmpty(document.querySelector("[data-kto-tour-overview]"), detail.overview);
         fillIfEmpty(document.querySelector("[data-kto-tour-longitude]"), detail.longitude);
         fillIfEmpty(document.querySelector("[data-kto-tour-latitude]"), detail.latitude);

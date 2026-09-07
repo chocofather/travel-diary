@@ -31,7 +31,7 @@ class AdminKtoEnglishRestaurantAutofillUiContractTest {
         assertThat(count(fragment, "data-kto-tour-foreign-field=")).isEqualTo(3);
         assertThat(count(fragment,
                 "data-kto-tour-foreign-language=\n"
-                        + "                            ${ktoAutofill} ? ${translation.languageCode} : null"))
+                        + "                              ${ktoAutofill} ? ${translation.languageCode} : null"))
                 .isEqualTo(3);
         // 번역 대상에서 제외한 값에는 훅을 달지 않는다
         for (String field : new String[]{"priceRange", "breakTime", "etc", "contactNumber"}) {

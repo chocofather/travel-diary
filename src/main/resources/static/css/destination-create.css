@@ -1,6 +1,6 @@
 .admin-destination-form-page .admin-destination-form {
     display: grid;
-    gap: 14px;
+    gap: 18px;
     width: 100%;
     max-width: 1080px;
     padding: 0;
@@ -11,15 +11,15 @@
     box-shadow: none;
 }
 
+/* 큰 구분은 section 하나까지만. 안쪽은 divider 와 여백으로만 나눈다. */
 .admin-destination-section {
     display: grid;
     min-width: 0;
-    gap: 14px;
-    padding: 16px 18px;
+    gap: 18px;
+    padding: 20px 22px 24px;
     background: #fff;
-    border: 1px solid #e1e7f0;
-    border-radius: 16px;
-    box-shadow: 0 7px 24px rgba(57, 75, 120, 0.055);
+    border: 1px solid #e6ebf3;
+    border-radius: 12px;
 }
 
 .admin-destination-section-header {
@@ -27,7 +27,7 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: 12px;
-    padding-bottom: 10px;
+    padding-bottom: 12px;
     border-bottom: 1px solid #edf0f5;
 }
 
@@ -58,6 +58,11 @@
     max-width: 720px;
 }
 
+/* 한 줄을 다 쓰는 입력 (Google Place ID 처럼 설명이 붙는 값) */
+.admin-form-field.is-wide {
+    grid-column: 1 / -1;
+}
+
 .admin-form-field,
 .admin-region-field,
 .admin-image-upload-field,
@@ -74,42 +79,33 @@
     line-height: 1.5;
 }
 
+/* 한국어 원문은 기본 정보의 일부이므로 다시 박스로 감싸지 않는다 */
 .admin-language-card {
     align-content: start;
-    gap: 10px;
-    padding: 14px;
-    background: #f8faff;
-    border: 1px solid #e1e7f3;
-    border-radius: 12px;
+    gap: 12px;
+    padding: 0;
+    background: none;
+    border: 0;
+    border-radius: 0;
 }
 
 .admin-language-card h3 {
-    margin: 0 0 1px;
-    color: #4860bd;
-    font-size: 0.9rem;
-}
-
-/* 한국어 원본은 번역보다 먼저, 전체 너비로 크게 보인다 */
-.admin-language-card.is-primary {
-    gap: 12px;
-    padding: 16px;
-}
-
-.admin-language-card.is-primary h3 {
-    font-size: 1rem;
-}
-
-/* 기본정보 아래 번역 탭 */
-.admin-destination-section .admin-translation-tabs {
-    margin-top: 14px;
-    padding-top: 14px;
-    border-top: 1px solid #dde5f2;
-}
-
-.admin-destination-section .admin-translation-tabs h3 {
     margin: 0;
-    color: #4860bd;
-    font-size: 0.9rem;
+    color: #7b8599;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.admin-language-card.is-primary {
+    gap: 14px;
+}
+
+/* 기본정보 아래 번역 영역 */
+.admin-destination-section .admin-translation-tabs {
+    margin-top: 2px;
+    padding-top: 16px;
+    border-top: 1px solid #e9edf4;
 }
 
 .admin-destination-section .admin-translation-panel {
@@ -413,16 +409,18 @@
     font-size: 0.84rem;
 }
 
+/* 유형별 상세는 section 안의 내용이므로 다시 박스로 감싸지 않는다 */
 .admin-destination-form .type-fields {
     display: none;
-    padding: 16px;
-    background: #f7faff;
-    border: 1px solid #dce5f5;
-    border-radius: 12px;
+    padding: 0;
+    background: none;
+    border: 0;
+    border-radius: 0;
 }
 
 .admin-type-fields-grid {
     margin-top: 12px;
+    row-gap: 14px;
 }
 
 .admin-type-fields-grid > div {
@@ -436,9 +434,18 @@
     min-width: 0;
 }
 
+/* 어떤 유형의 입력인지 알려 주는 라벨. 카드 제목이 아니라 작은 머리말로 둔다. */
 .admin-destination-form .type-fields > h4:first-child {
-    margin-top: 0;
-    color: #3853ba;
+    margin: 0;
+    color: #7b8599;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.admin-destination-form .admin-amenity-field h4 {
+    color: #3d4962;
+    font-size: 0.92rem;
 }
 
 .admin-destination-form .type-fields.active {
@@ -451,15 +458,89 @@
 
 .admin-amenity-field {
     margin-top: 3px;
-    padding-top: 13px;
-    border-top: 1px solid #dde5f2;
+    padding-top: 16px;
+    border-top: 1px solid #e9edf4;
 }
 
 /* ─── 번역 언어 탭 ─── */
 .admin-translation-tabs {
     margin-top: 3px;
-    padding-top: 13px;
-    border-top: 1px solid #dde5f2;
+    padding-top: 16px;
+    border-top: 1px solid #e9edf4;
+}
+
+/* 제목 줄 + 도움말 + (등록 화면에서만) 펼치기 버튼 */
+.admin-translation-tabs-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 12px;
+    row-gap: 4px;
+}
+
+.admin-translation-tabs-title {
+    display: flex;
+    align-items: center;
+    grid-row: 1;
+    grid-column: 1;
+    min-width: 0;
+    gap: 6px;
+}
+
+.admin-destination-form .admin-translation-tabs-title h3,
+.admin-destination-form .admin-translation-tabs-title h4 {
+    margin: 0;
+    color: #3d4962;
+    font-size: 0.92rem;
+    letter-spacing: -0.01em;
+}
+
+.admin-translation-tabs-heading > .admin-help-text {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    margin: 0;
+}
+
+.admin-translation-collapse-toggle {
+    display: inline-flex;
+    align-items: center;
+    grid-row: 1;
+    grid-column: 2;
+    gap: 6px;
+    min-height: 32px;
+    padding: 5px 9px;
+    color: #4860bd;
+    background: none;
+    border: 0;
+    border-radius: 8px;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 650;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.admin-translation-collapse-toggle:hover {
+    background: #f2f5fd;
+}
+
+.admin-translation-collapse-toggle:focus-visible {
+    outline: 2px solid #4860bd;
+    outline-offset: 1px;
+}
+
+.admin-translation-collapse-chevron {
+    font-size: 0.7rem;
+    line-height: 1;
+}
+
+.admin-translation-collapse-toggle[aria-expanded="true"] .admin-translation-collapse-chevron {
+    transform: rotate(180deg);
+}
+
+/* 접어도 입력값은 폼에 그대로 실린다 (hidden 속성만 사용) */
+.admin-translation-tabs-body[hidden] {
+    display: none;
 }
 
 .admin-translation-tablist {
@@ -950,11 +1031,10 @@
     justify-content: flex-end;
     flex-wrap: wrap;
     gap: 10px;
-    padding: 18px 22px;
+    padding: 16px 22px;
     background: #fff;
-    border: 1px solid #e1e7f0;
-    border-radius: 14px;
-    box-shadow: 0 5px 18px rgba(57, 75, 120, 0.045);
+    border: 1px solid #e6ebf3;
+    border-radius: 12px;
 }
 
 .admin-destination-form .admin-form-actions .admin-btn {
@@ -969,6 +1049,15 @@
     background: #f8faff;
     border: 1px solid #dce5f5;
     border-radius: 14px;
+}
+
+/* section 안에 들어간 카테고리(등록 화면)는 다시 박스로 감싸지 않는다 */
+.admin-destination-section .admin-category-select {
+    gap: 16px;
+    padding: 0;
+    background: none;
+    border: 0;
+    border-radius: 0;
 }
 
 .admin-category-select-heading {
@@ -997,6 +1086,21 @@
     background: #fff;
     border: 1px solid #e2e8f3;
     border-radius: 11px;
+}
+
+.admin-destination-section .admin-category-selected {
+    padding: 0;
+    background: none;
+    border: 0;
+    border-radius: 0;
+}
+
+/* 선택 결과와 고르는 영역은 얇은 divider 로만 나눈다 */
+.admin-category-picker {
+    display: grid;
+    gap: 12px;
+    padding-top: 16px;
+    border-top: 1px solid #e9edf4;
 }
 
 .admin-category-selected-label,
@@ -1150,9 +1254,8 @@
 }
 
 @media (max-width: 680px) {
-    .admin-destination-section,
-    .admin-destination-form .type-fields {
-        padding: 18px;
+    .admin-destination-section {
+        padding: 18px 16px 20px;
     }
 
     .admin-region-grid {
@@ -1164,8 +1267,13 @@
         gap: 12px;
     }
 
-    .admin-language-card {
-        padding: 15px;
+    /* 좁은 화면에서도 제목과 펼치기 버튼은 한 줄을 유지하고 제목만 줄바꿈한다 */
+    .admin-translation-tabs-title {
+        flex-wrap: wrap;
+    }
+
+    .admin-translation-collapse-toggle {
+        padding-inline: 6px;
     }
 
     .admin-destination-form .admin-form-actions .admin-btn {
