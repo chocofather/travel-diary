@@ -17,4 +17,11 @@ public class CategoryForm {
 
     /** category_destination_types. AmenityForm 과 같이 enum 을 그대로 바인딩한다. */
     private List<DestinationType> destinationTypes = new ArrayList<>();
+
+    /**
+     * category_translations. 언어별 카테고리명 입력 슬롯이다.
+     * 0번은 한국어 자리이고 화면에 그리지 않는다 — 한국어는 위의 name 이 그대로 원문이다.
+     */
+    private List<CategoryTranslationForm> translations =
+            CategoryTranslationForm.newTranslationSlots();
 }

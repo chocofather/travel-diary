@@ -3,6 +3,9 @@
       th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'categories')}">
 <th:block th:fragment="headFragment">
   <link rel="stylesheet" href="/css/admin-category-form.css">
+  <link rel="stylesheet" href="/css/admin-translation-tabs.css">
+  <script src="/js/admin-translation-tabs.js" defer></script>
+  <script src="/js/admin-translation-collapse.js?v=20260907-1" defer></script>
 </th:block>
 <th:block th:fragment="body">
   <section class="admin-page-section">
@@ -16,8 +19,9 @@
       </div>
     </header>
 
+    <!-- 번역은 선택 입력이라 기본은 접어 둔다. 값이 있으면 스크립트가 펼친다. -->
     <form th:action="@{|/admin/categories/${categoryId}/edit|}" method="post"
-          th:object="${categoryForm}" class="admin-form-card">
+          th:object="${categoryForm}" class="admin-form-card" data-translation-collapsible>
 
       <div th:if="${#fields.hasGlobalErrors()}" class="admin-alert" role="alert">
         <p th:each="error : ${#fields.globalErrors()}" th:text="${error}"></p>
@@ -45,6 +49,11 @@
           <span class="admin-help-text">하나 이상의 적용 대상을 선택해 주세요.</span>
           <p class="admin-field-error admin-alert" th:if="${#fields.hasErrors('destinationTypes')}"
              th:errors="*{destinationTypes}"></p>
+        </div>
+
+        <div class="admin-form-field admin-category-translations">
+          <th:block th:replace="~{fragments/admin/category-translation-tabs
+                                  :: categoryTranslations}"></th:block>
         </div>
       </div>
 

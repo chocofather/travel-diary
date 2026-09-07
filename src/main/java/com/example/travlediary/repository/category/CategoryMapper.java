@@ -46,6 +46,17 @@ public interface CategoryMapper {
     List<CategoryTranslation> findTranslationsByCategoryIds(
             @Param("categoryIds") Collection<Long> categoryIds);
 
+    /** 관리자 수정 화면용. 카테고리 한 건의 이름 번역을 언어 코드 순으로 읽는다. */
+    List<CategoryTranslation> findTranslationsByCategoryId(@Param("categoryId") Long categoryId);
+
+    /** 관리자 저장용. 언어 한 줄이 단위이며 UNIQUE(category_id, language_code) 를 따른다. */
+    int insertTranslation(CategoryTranslation translation);
+
+    int updateTranslation(CategoryTranslation translation);
+
+    int deleteTranslation(@Param("categoryId") Long categoryId,
+                          @Param("languageCode") String languageCode);
+
     void insert(Category category);
 
     /** 카테고리 이름 변경. id 와 매핑은 건드리지 않는다. */

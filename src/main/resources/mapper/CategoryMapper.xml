@@ -91,6 +91,38 @@
         ORDER BY category_id, language_code, id
     </select>
 
+    <!--
+      카테고리 이름 번역. 관리자 수정 화면 복원용이며 언어 한 줄이 단위다.
+      언어 대체가 늘 같은 줄을 고르도록 정렬을 고정한다.
+    -->
+    <select id="findTranslationsByCategoryId" resultMap="CategoryTranslationResultMap">
+        SELECT id, category_id, language_code, name
+        FROM category_translations
+        WHERE category_id = #{categoryId}
+        ORDER BY language_code ASC, id ASC
+    </select>
+
+    <insert id="insertTranslation"
+            parameterType="com.example.travlediary.model.CategoryTranslation"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO category_translations (category_id, language_code, name)
+        VALUES (#{categoryId}, #{languageCode}, #{name})
+    </insert>
+
+    <update id="updateTranslation"
+            parameterType="com.example.travlediary.model.CategoryTranslation">
+        UPDATE category_translations
+        SET name = #{name}
+        WHERE category_id = #{categoryId}
+          AND language_code = #{languageCode}
+    </update>
+
+    <delete id="deleteTranslation">
+        DELETE FROM category_translations
+        WHERE category_id = #{categoryId}
+          AND language_code = #{languageCode}
+    </delete>
+
     <!-- 카테고리 이름 변경 -->
     <update id="update" parameterType="com.example.travlediary.model.Category">
         UPDATE categories

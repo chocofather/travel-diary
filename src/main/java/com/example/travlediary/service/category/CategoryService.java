@@ -1,8 +1,11 @@
 package com.example.travlediary.service.category;
 
+import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.dto.CategoryForm;
+import com.example.travlediary.dto.CategoryTranslationForm;
 import com.example.travlediary.model.Category;
 import com.example.travlediary.model.CategoryDestinationType;
+import com.example.travlediary.model.CategoryTranslation;
 import com.example.travlediary.model.DestinationType;
 import com.example.travlediary.repository.category.CategoryMapper;
 import org.springframework.dao.DuplicateKeyException;
@@ -12,18 +15,26 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 @Service
 public class CategoryService {
 
     /** categories.name 은 varchar(100) */
     private static final int MAX_CATEGORY_NAME_LENGTH = 100;
+
+    /** 번역 슬롯 언어. 한국어는 categories.name 이 원문이라 여기에서 뺀다. */
+    private static final Set<String> SUPPORTED_TRANSLATION_CODES = SupportedLanguage.all().stream()
+            .filter(language -> language != SupportedLanguage.KOREAN)
+            .map(SupportedLanguage::getLanguageTag)
+            .collect(Collectors.toUnmodifiableSet());
 
     private final CategoryMapper categoryMapper;
 
@@ -114,6 +125,8 @@ public class CategoryService {
         for (DestinationType type : types) {
             categoryMapper.insertCategoryDestinationType(category.getId(), type.name());
         }
+        // 이름 저장과 같은 트랜잭션에서 번역까지 끝낸다. 비워 둔 언어는 줄을 만들지 않는다.
+        saveTranslations(category.getId(), form.getTranslations());
     }
 
     /** 수정 화면 복원용. 이름과 적용 대상 체크 상태를 폼에 담아 돌려준다. */
@@ -136,7 +149,36 @@ public class CategoryService {
             }
         }
         form.setDestinationTypes(types);
+        form.setTranslations(getTranslationForms(id));
         return form;
+    }
+
+    /**
+     * 수정 화면 복원용 번역 슬롯. 저장된 줄이 있으면 채우고, 없는 언어는 빈 슬롯으로 둔다.
+     *
+     * <p>슬롯은 언어 코드로 찾아 채운다. 자리 번호나 조회 순서에 뜻을 두지 않는다.
+     */
+    @Transactional(readOnly = true)
+    public List<CategoryTranslationForm> getTranslationForms(Long categoryId) {
+        List<CategoryTranslationForm> slots = CategoryTranslationForm.newTranslationSlots();
+        if (categoryId == null) {
+            return slots;
+        }
+
+        Map<String, CategoryTranslationForm> slotsByLanguage = new LinkedHashMap<>();
+        for (CategoryTranslationForm slot : slots) {
+            slotsByLanguage.putIfAbsent(slot.getLanguageCode(), slot);
+        }
+
+        for (CategoryTranslation translation : storedTranslations(categoryId)) {
+            CategoryTranslationForm slot = slotsByLanguage.get(translation.getLanguageCode());
+            if (slot == null) {
+                // 슬롯에 없는 언어가 남아 있어도 화면에는 그리지 않는다.
+                continue;
+            }
+            slot.setName(translation.getName() == null ? "" : translation.getName());
+        }
+        return slots;
     }
 
     /**
@@ -169,6 +211,84 @@ public class CategoryService {
         for (DestinationType type : types) {
             categoryMapper.insertCategoryDestinationType(categoryId, type.name());
         }
+        // 이름 수정과 같은 트랜잭션에서 번역까지 끝낸다. 비운 언어는 그 줄만 지워진다.
+        saveTranslations(categoryId, form.getTranslations());
+    }
+
+    /**
+     * 카테고리 이름 번역을 언어 한 줄씩 저장한다. (InfoCategoryService 와 같은 정책)
+     *
+     * <p>한국어는 categories.name 이 원문이므로 ko 슬롯이 섞여 들어와도 쓰지 않는다.
+     * 나머지 언어는 값이 있으면 없던 줄은 INSERT, 있던 줄은 UPDATE 하고,
+     * 값을 비우면 그 언어 줄만 DELETE 한다.
+     */
+    private void saveTranslations(Long categoryId, List<CategoryTranslationForm> translationForms) {
+        if (categoryId == null || translationForms == null) {
+            return;
+        }
+
+        // 기존 줄은 한 번만 읽고 언어 코드로 찾아 쓴다.
+        Map<String, CategoryTranslation> existing = new LinkedHashMap<>();
+        for (CategoryTranslation translation : storedTranslations(categoryId)) {
+            existing.putIfAbsent(translation.getLanguageCode(), translation);
+        }
+
+        Set<String> handledLanguages = new HashSet<>();
+        for (CategoryTranslationForm form : translationForms) {
+            if (form == null || form.getLanguageCode() == null) {
+                continue;
+            }
+            String languageCode = form.getLanguageCode();
+            if (!SUPPORTED_TRANSLATION_CODES.contains(languageCode)) {
+                // 화면이 정한 슬롯 언어만 저장한다. ko 슬롯과 임의 언어 코드는 무시한다.
+                continue;
+            }
+            if (!handledLanguages.add(languageCode)) {
+                // 같은 언어가 두 번 들어오면 앞의 값만 쓴다. (UNIQUE 충돌을 만들지 않는다)
+                continue;
+            }
+            saveTranslation(translationOf(categoryId, languageCode, form.getName()),
+                    existing.containsKey(languageCode));
+        }
+    }
+
+    /** 값이 아예 없으면 그 언어 줄을 남기지 않는다. */
+    private void saveTranslation(CategoryTranslation translation, boolean exists) {
+        if (translation.getName() == null) {
+            if (exists) {
+                categoryMapper.deleteTranslation(
+                        translation.getCategoryId(), translation.getLanguageCode());
+            }
+            return;
+        }
+        if (exists) {
+            categoryMapper.updateTranslation(translation);
+        } else {
+            categoryMapper.insertTranslation(translation);
+        }
+    }
+
+    private CategoryTranslation translationOf(Long categoryId, String languageCode, String name) {
+        CategoryTranslation translation = new CategoryTranslation();
+        translation.setCategoryId(categoryId);
+        translation.setLanguageCode(languageCode);
+        translation.setName(name == null || name.isBlank() ? null : name.strip());
+        return translation;
+    }
+
+    /** 언어 코드가 없는 줄은 어느 슬롯에도 맞출 수 없으므로 걸러 낸다. */
+    private List<CategoryTranslation> storedTranslations(Long categoryId) {
+        List<CategoryTranslation> stored = categoryMapper.findTranslationsByCategoryId(categoryId);
+        if (stored == null) {
+            return List.of();
+        }
+        List<CategoryTranslation> usable = new ArrayList<>();
+        for (CategoryTranslation translation : stored) {
+            if (translation != null && translation.getLanguageCode() != null) {
+                usable.add(translation);
+            }
+        }
+        return usable;
     }
 
     private Category requireCategory(Long id) {

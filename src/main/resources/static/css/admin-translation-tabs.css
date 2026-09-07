@@ -6,6 +6,89 @@
     border-top: 1px solid #dde5f2;
 }
 
+/* 제목 줄 + 도움말 + (접기를 켠 화면에서만) 펼치기 버튼.
+   버튼은 /js/admin-translation-collapse.js 가 붙인다. */
+.admin-translation-tabs-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 12px;
+    row-gap: 4px;
+}
+
+.admin-translation-tabs-title {
+    display: flex;
+    align-items: center;
+    grid-row: 1;
+    grid-column: 1;
+    min-width: 0;
+    gap: 6px;
+}
+
+.admin-translation-tabs-title h3 {
+    margin: 0;
+    color: #3d4962;
+    font-size: 0.92rem;
+    letter-spacing: -0.01em;
+}
+
+.admin-translation-tabs-title .admin-field-optional {
+    padding: 1px 6px;
+    color: #6b7897;
+    background: #eef2fb;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+}
+
+.admin-translation-tabs-heading > .admin-help-text {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    margin: 0;
+}
+
+.admin-translation-collapse-toggle {
+    display: inline-flex;
+    align-items: center;
+    grid-row: 1;
+    grid-column: 2;
+    gap: 6px;
+    min-height: 32px;
+    padding: 5px 9px;
+    color: #4860bd;
+    background: none;
+    border: 0;
+    border-radius: 8px;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 650;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.admin-translation-collapse-toggle:hover {
+    background: #f2f5fd;
+}
+
+.admin-translation-collapse-toggle:focus-visible {
+    outline: 2px solid #4860bd;
+    outline-offset: 1px;
+}
+
+.admin-translation-collapse-chevron {
+    font-size: 0.7rem;
+    line-height: 1;
+}
+
+.admin-translation-collapse-toggle[aria-expanded="true"] .admin-translation-collapse-chevron {
+    transform: rotate(180deg);
+}
+
+/* 접어도 입력값은 폼에 그대로 실린다 (hidden 속성만 사용) */
+.admin-translation-tabs-body[hidden] {
+    display: none;
+}
+
 .admin-translation-tablist {
     display: flex;
     flex-wrap: wrap;

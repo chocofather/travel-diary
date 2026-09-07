@@ -124,6 +124,9 @@ public class AdminCategoryController {
     private void addFormOptions(Model model) {
         model.addAttribute("destinationTypes", DestinationType.values());
         model.addAttribute("destinationTypeLabels", DESTINATION_TYPE_LABELS);
+        // 번역 탭 라벨. 다른 관리자 화면과 같은 조각/라벨을 그대로 쓴다.
+        model.addAttribute("translationLanguageLabels", AdminTranslationLabels.LANGUAGE_LABELS);
+        model.addAttribute("translationTabLabels", AdminTranslationLabels.TAB_LABELS);
     }
 
 
