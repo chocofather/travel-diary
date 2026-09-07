@@ -2,6 +2,7 @@ package com.example.travlediary.service.diary;
 
 import com.example.travlediary.model.DiarySticker;
 import com.example.travlediary.model.DiaryStickerCategory;
+import com.example.travlediary.model.DiaryStickerCollection;
 import com.example.travlediary.model.DiaryStickerRepeat;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -87,12 +88,25 @@ public class DiaryStickerCatalog {
                 throw new IllegalStateException("스티커 정보가 비어 있습니다: " + node);
             }
             DiarySticker sticker = new DiarySticker(id, name, category,
-                    assetUrl(imageUrl), tapeTypeOf(node), repeatOf(node));
+                    assetUrl(imageUrl), collectionOf(node, id), tapeTypeOf(node), repeatOf(node));
             if (stickers.putIfAbsent(id, sticker) != null) {
                 throw new IllegalStateException("스티커 id 가 겹칩니다: " + id);
             }
         }
         return stickers;
+    }
+
+    /**
+     * 표현 스타일. 적혀 있지 않으면 지금까지 쌓인 스티커처럼 기본 묶음으로 본다.
+     *
+     * <p>테이프 갈래와 달리 모르는 값은 조용히 기본으로 바꾸지 않는다.
+     * 오타 하나로 스티커가 엉뚱한 필터에 묻히는 편보다, 목록을 고칠 때 바로 알아채는 편이 낫다.
+     */
+    private DiaryStickerCollection collectionOf(JsonNode node, String stickerId) {
+        String code = node.path("collection").asText("").strip();
+        return DiaryStickerCollection.fromCode(code)
+                .orElseThrow(() -> new IllegalStateException(
+                        "알 수 없는 스티커 collection 입니다: " + stickerId + " → " + code));
     }
 
     /**

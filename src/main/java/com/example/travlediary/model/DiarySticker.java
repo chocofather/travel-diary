@@ -7,6 +7,7 @@ package com.example.travlediary.model;
  * 파일은 사용자 업로드가 아니라 사이트 공용 정적 asset 이므로 요소를 지워도 파일은 남긴다.
  */
 public record DiarySticker(String id, String name, String category, String imageUrl,
+                           DiaryStickerCollection collection,
                            String tapeType, DiaryStickerRepeat repeat) {
 
     /** 마스킹테이프 안의 작은 갈래. 적혀 있지 않으면 일반 테이프로 본다. */
@@ -19,6 +20,11 @@ public record DiarySticker(String id, String name, String category, String image
     /** picker 가 넓게 보여줄지 정할 때 쓰는 성격 값. (마스킹테이프 외에는 없음) */
     public String kind() {
         return DiaryStickerKind.of(imageUrl);
+    }
+
+    /** 화면(DOM)에 실어 주는 표현 스타일 값. 분류·테이프 갈래와는 다른 축이다. */
+    public String collectionCode() {
+        return collection.getCode();
     }
 
     /** 가운데 무늬를 되풀이해서 그리는 스티커인지. (목록에 조각 경로가 있을 때만) */

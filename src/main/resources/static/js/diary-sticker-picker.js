@@ -60,9 +60,14 @@ document.addEventListener('DOMContentLoaded', () => {
         option.addEventListener('click', () => attach(option.dataset.stickerId));
     });
 
-    // 마스킹테이프 안의 작은 갈래(전체/일반/투명). 그 묶음 안에서만 걸러 보여 준다.
+    /*
+      묶음 안의 작은 갈래. 지금은 두 줄이 있고 서로 다른 축이다.
+      - 마스킹테이프 종류(전체/일반/반투명/클리어)
+      - 표현 스타일(전체/기본/리얼)
+      한 줄에서 고른 값은 그 줄 안에서만 눌림을 주고받고, 보이기는 두 축을 함께 본다.
+    */
     popover.querySelectorAll('.diary-sticker-subtab').forEach((subtab) => {
-        subtab.addEventListener('click', () => showTapeType(subtab));
+        subtab.addEventListener('click', () => chooseSubfilter(subtab));
     });
 
     toggle(false);
@@ -85,19 +90,40 @@ document.addEventListener('DOMContentLoaded', () => {
         showStatus('');
     }
 
-    /** 고른 갈래의 테이프만 남긴다. (같은 묶음 안에서만 걸러 최근 탭 등에는 영향이 없다) */
-    function showTapeType(subtab) {
+    /**
+     * 하위 갈래 하나를 고른다. 고른 값은 그 묶음에만 새겨 둔다.
+     * (묶음마다 따로 기억하므로 분류를 옮겨도 앞 분류의 선택이 따라가지 않는다)
+     */
+    function chooseSubfilter(subtab) {
         const grid = subtab.closest('.diary-sticker-grid');
-        const chosen = subtab.dataset.tapeType;
-        if (!grid) return;
+        const row = subtab.closest('.diary-sticker-subfilter');
+        if (!grid || !row) return;
 
-        grid.querySelectorAll('.diary-sticker-subtab').forEach((other) => {
+        // 눌림은 같은 줄 안에서만 옮긴다. 다른 축의 줄은 고른 값을 그대로 지킨다.
+        row.querySelectorAll('.diary-sticker-subtab').forEach((other) => {
             const active = other === subtab;
             other.classList.toggle('is-active', active);
             other.setAttribute('aria-pressed', active ? 'true' : 'false');
         });
+
+        if (subtab.dataset.tapeType) {
+            grid.dataset.chosenTapeType = subtab.dataset.tapeType;
+        }
+        applySubfilters(grid);
+    }
+
+    /**
+     * 고른 갈래에 맞는 스티커만 남긴다.
+     * (같은 묶음 안에서만 걸러 최근 탭 등에는 영향이 없다)
+     *
+     * 표현 스타일(collection)은 화면에서 고르지 않는다. 여행 묶음의 기본/리얼 스티커는
+     * 한 grid 에 그대로 함께 나오고, collection 값은 속성으로만 실려 있다.
+     */
+    function applySubfilters(grid) {
+        const tapeType = grid.dataset.chosenTapeType || 'ALL';
+
         grid.querySelectorAll('.diary-sticker-option').forEach((option) => {
-            option.hidden = chosen !== 'ALL' && option.dataset.tapeType !== chosen;
+            option.hidden = !(tapeType === 'ALL' || option.dataset.tapeType === tapeType);
         });
         grid.scrollTop = 0;
         showStatus('');
@@ -176,6 +202,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         ids.forEach((id) => {
             const option = stickers.get(id).cloneNode(true);
+            // 원본이 하위 갈래로 걸러져 있어도 최근 탭에서는 늘 보이게 한다.
+            option.hidden = false;
             option.addEventListener('click', () => attach(id));
             recentGrid.append(option);
         });

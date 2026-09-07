@@ -22,7 +22,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const color = panel.querySelector('[data-label-color]');
     const colorValue = panel.querySelector('[data-label-color-value]');
     const attachButton = panel.querySelector('[data-label-attach]');
-    const status = document.getElementById('diary-sticker-status');
+    /*
+      결과 문구는 라벨기 판 안에 있는 자리를 먼저 쓴다.
+      페이지 편집에서 라벨기가 자기 판으로 떨어져 나오면서, 스티커 판 쪽 문구 자리는
+      그 판이 닫혀 있는 동안 읽을 수 없기 때문이다.
+      아직 자기 자리가 없는 화면(표지 디자인 편집)은 예전처럼 스티커 쪽을 그대로 쓴다.
+    */
+    const status = document.getElementById('diary-label-status')
+        || document.getElementById('diary-sticker-status');
     const createUrl = panel.dataset.createUrl;
     const canvas = document.querySelector('.diary-book-single .diary-canvas')
         || document.querySelector('.diary-cover-canvas.is-editable .diary-cover-surface');

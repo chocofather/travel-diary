@@ -57,10 +57,13 @@
                   data-tape-type="CLEAR" aria-pressed="false">클리어</button>
         </div>
 
+        <!-- 표현 스타일(기본 / 리얼)은 화면에서 고르지 않는다. 한 grid 에 섞여 나온다 -->
+
         <button type="button" class="diary-sticker-option"
                 th:each="sticker : ${category.stickers}"
                 th:data-sticker-id="${sticker.id}"
                 th:data-sticker-kind="${sticker.kind}"
+                th:data-sticker-collection="${sticker.collectionCode}"
                 th:data-tape-type="${sticker.tapeType}"
                 th:title="${sticker.name}"
                 th:attr="aria-label=|${sticker.name} 스티커 붙이기|">

@@ -423,7 +423,9 @@
 
 .travel-info-thumbnail {
     width: 100%;
-    aspect-ratio: 16 / 9;
+    /* 16/9 보다 한 단계만 높게. 카드 폭은 그대로 두고 그림만 조금 더 보이게 한다.
+       (축제 카드는 아래 is-festival 규칙이 포스터 비율을 따로 정한다) */
+    aspect-ratio: 16 / 10;
     overflow: hidden;
     background: #f1f5f9;
 }

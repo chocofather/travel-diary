@@ -116,7 +116,7 @@ class TravelInfoPublicUiContractTest {
                 .contains("@media (max-width: 1100px)")
                 .contains("@media (max-width: 880px)")
                 .contains("@media (max-width: 620px)")
-                .contains("aspect-ratio: 16 / 9")
+                .contains("aspect-ratio: 16 / 10")
                 .contains("object-fit: cover")
                 .contains(".travel-info-thumbnail-placeholder")
                 .contains(".travel-info-results.is-loading")

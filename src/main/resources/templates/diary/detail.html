@@ -239,9 +239,7 @@
                     aria-selected="false" data-decor-tab="label">라벨</button>
             <button type="button" class="diary-decor-tab" role="tab"
                     aria-selected="false" data-decor-tab="memo">메모지</button>
-            <!-- 종이 배경 없이 글씨만 붙이는 갈래. 위 '라벨'(NOTE)과 다른 기능이라 이름을 나눈다 -->
-            <button type="button" class="diary-decor-tab" role="tab"
-                    aria-selected="false" data-decor-tab="text">라벨기</button>
+            <!-- 라벨기(글씨만 붙이기)는 도구 줄의 자기 버튼으로 옮겼다. 여기 갈래가 아니다 -->
           </div>
 
           <!-- 스티커 묶음. 여기 안쪽은 예전 구조 그대로다 -->
@@ -291,11 +289,18 @@
                         data-tape-type="CLEAR" aria-pressed="false">클리어</button>
               </div>
 
+              <!--
+                표현 스타일(기본 / 리얼)은 화면에서 고르지 않는다. 여행 묶음을 열면
+                기본 스티커와 리얼 스티커가 한 grid 에 그대로 섞여 나온다.
+                collection 은 asset 을 갈라 두기 위한 내부 값으로만 남아 아래 속성에 실린다.
+              -->
+
               <!-- 마스킹테이프처럼 가로로 긴 스티커는 두 칸을 써서 디자인이 보이게 한다 -->
               <button type="button" class="diary-sticker-option"
                       th:each="sticker : ${category.stickers}"
                       th:data-sticker-id="${sticker.id}"
                       th:data-sticker-kind="${sticker.kind}"
+                      th:data-sticker-collection="${sticker.collectionCode}"
                       th:data-tape-type="${sticker.tapeType}"
                       th:title="${sticker.name}"
                       th:attr="aria-label=|${sticker.name} 스티커 붙이기|">
@@ -357,17 +362,35 @@
             </div>
           </div>
 
-          <!--
-            라벨기. 종이 배경 없이 글씨만 붙인다. (위 '라벨'(NOTE)과 다른 갈래다)
-            고르는 칸은 표지 디자인 편집과 같은 조각을 함께 쓴다 — 붙일 자리만 다르다.
-          -->
-          <div class="diary-decor-panel" data-decor-panel="text" hidden>
-            <div th:replace="~{diary/label-maker :: picker(${diaryLabelFonts},
-                               @{/diaries/{diaryId}/pages/{pageId}/elements/label
-                                 (diaryId=${diary.id},pageId=${editPage.id})})}"></div>
-          </div>
-
           <p class="diary-sticker-status" id="diary-sticker-status" role="status"></p>
+        </div>
+      </div>
+
+      <!--
+        라벨기: 종이 배경 없이 글씨만 붙인다. (꾸미기 팝오버의 '라벨'(NOTE)과 다른 기능)
+        표지 디자인 편집과 같은 조각·같은 여닫이 규칙을 쓰고 붙일 자리(createUrl)만 다르다.
+        여닫이는 diary-label-picker.js 가 버튼/판 id 를 보고 스스로 맡는다.
+      -->
+      <div class="diary-toolbar-group diary-sticker-picker" th:if="${editPage != null}">
+        <button type="button" class="diary-toolbar-button" id="diary-label-button"
+                aria-haspopup="dialog" aria-expanded="false"
+                aria-controls="diary-label-popover"
+                title="라벨기" aria-label="글씨 붙이기">
+          <svg class="diary-toolbar-icon" viewBox="0 0 16 16" aria-hidden="true"
+               fill="none" stroke="currentColor" stroke-width="1.3"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4.4 4.2h7.2" />
+            <path d="M8 4.2v7.6" />
+            <path d="M6.4 11.8h3.2" />
+          </svg>
+        </button>
+        <div class="diary-sticker-popover diary-label-popover" id="diary-label-popover"
+             role="dialog" aria-label="라벨기" hidden>
+          <div th:replace="~{diary/label-maker :: picker(${diaryLabelFonts},
+                             @{/diaries/{diaryId}/pages/{pageId}/elements/label
+                               (diaryId=${diary.id},pageId=${editPage.id})})}"></div>
+          <!-- 붙이기 결과는 이 판 안에서 보여 준다. (스티커 판이 닫혀 있어도 읽힌다) -->
+          <p class="diary-sticker-status" id="diary-label-status" role="status"></p>
         </div>
       </div>
 

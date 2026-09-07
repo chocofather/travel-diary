@@ -273,6 +273,19 @@ class DiaryCoverDesignControllerTest {
         assertThat(body).contains("/js/diary-canvas-drag.js");
         assertThat(body).contains("/js/diary-sticker-picker.js");
         assertThat(body).contains("/js/diary-tape-repeat.js");
+        // 표현 스타일(전체/기본/리얼)을 고르는 줄은 표지 picker 에도 없다
+        assertThat(body).doesNotContain("data-sticker-collection=\"ALL\"");
+        assertThat(body).doesNotContain("aria-label=\"스티커 스타일\"");
+        // 표지 picker 도 같은 목록을 쓰므로 분류 구성이 페이지 다꾸와 어긋나지 않는다
+        assertThat(body).containsPattern(
+                "data-sticker-category=\"travel\"[\\s\\S]*data-sticker-category=\"landmark\""
+                        + "[\\s\\S]*data-sticker-category=\"emotion\"");
+        assertThat(body).containsPattern(
+                "id=\"diary-sticker-grid-landmark\"(?:(?!diary-sticker-grid-)[\\s\\S])*"
+                        + "data-sticker-id=\"eiffel-tower\"[^>]*data-sticker-collection=\"realistic\"");
+        // 마스킹테이프의 갈래 필터는 그대로 남는다
+        assertThat(body).contains("aria-label=\"마스킹테이프 종류\"");
+        assertThat(body).contains("data-tape-type=\"CLEAR\"");
         // 이번 단계에는 사진/라벨/메모지 도구가 없다
         assertThat(body).doesNotContain("diary-photo-input");
         assertThat(body).doesNotContain("diary-decor-tab");

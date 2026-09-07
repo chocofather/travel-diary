@@ -2369,8 +2369,34 @@ class DiaryControllerTest {
         // 가로로 긴 마스킹테이프는 picker 에서 넓게 보이도록 성격을 함께 실어 준다
         assertThat(editBody).containsPattern(
                 "data-sticker-id=\"tape-cloud-sky\"\\s+data-sticker-kind=\"masking-tape\"");
+        // 표현 스타일은 화면에 실리기만 하고 고르는 줄은 없다.
+        // 목록에 적지 않은 스티커는 모두 기본 묶음으로 그려진다.
+        assertThat(editBody).containsPattern(
+                "data-sticker-id=\"airplane\"[^>]*data-sticker-collection=\"default\"");
+        assertThat(editBody).containsPattern(
+                "data-sticker-id=\"tape-cloud-sky\"[^>]*data-sticker-collection=\"default\"");
+        // 랜드마크는 여행과 나란한 별도 분류다. 분류 탭 차례는 목록 파일 순서를 그대로 따른다.
+        // (다음 묶음으로 넘어가기 전까지만 훑어 같은 grid 안이라는 것을 확인한다)
+        assertThat(editBody).containsPattern(
+                "data-sticker-category=\"travel\"[\\s\\S]*data-sticker-category=\"landmark\""
+                        + "[\\s\\S]*data-sticker-category=\"emotion\"");
+        assertThat(editBody).containsPattern(
+                "id=\"diary-sticker-grid-travel\"(?:(?!diary-sticker-grid-)[\\s\\S])*"
+                        + "data-sticker-id=\"airplane\"[^>]*data-sticker-collection=\"default\"");
+        assertThat(editBody).containsPattern(
+                "id=\"diary-sticker-grid-landmark\"(?:(?!diary-sticker-grid-)[\\s\\S])*"
+                        + "data-sticker-id=\"eiffel-tower\"[^>]*data-sticker-collection=\"realistic\"");
+        // 여행 묶음에는 랜드마크가 섞이지 않는다
+        assertThat(editBody).doesNotContainPattern(
+                "id=\"diary-sticker-grid-travel\"(?:(?!diary-sticker-grid-)[\\s\\S])*"
+                        + "data-sticker-id=\"eiffel-tower\"");
+        // 표현 스타일을 고르는 줄(전체/기본/리얼)은 그리지 않는다
+        assertThat(editBody).doesNotContain("data-sticker-collection=\"ALL\"");
+        assertThat(editBody).doesNotContain("aria-label=\"스티커 스타일\"");
         // 마스킹테이프 묶음 안에서만 일반/투명을 다시 고를 수 있다
         assertThat(editBody).contains("diary-sticker-subfilter");
+        assertThat(editBody).contains("aria-label=\"마스킹테이프 종류\"");
+        assertThat(editBody).contains("data-tape-type=\"ALL\"");
         assertThat(editBody).contains("data-tape-type=\"TRANSLUCENT\"");
         assertThat(editBody).contains("data-tape-type=\"CLEAR\"");
         assertThat(editBody).containsPattern(
@@ -2971,7 +2997,7 @@ class DiaryControllerTest {
     @Test
     void theLabelMakerOffersEveryDiaryFontAndAColour() throws Exception {
         String body = editPageBody();
-        String panel = between(body, "data-decor-panel=\"text\"", "diary-sticker-status");
+        String panel = between(body, "id=\"diary-label-popover\"", "diary-label-status");
 
         // 목록은 서버(카탈로그)가 그린다. 화면에 글꼴을 적어 두지 않는다
         assertThat(countOf(panel, "data-label-font=")).isEqualTo(15);
@@ -3533,18 +3559,23 @@ class DiaryControllerTest {
     }
 
     /**
-     * 라벨기는 꾸미기 팝오버의 네 번째 갈래다.
+     * 라벨기는 꾸미기 팝오버의 갈래가 아니라 도구 줄의 자기 버튼·자기 판이다.
      * 글꼴 목록은 서버가 manifest 대로 그려 준다 — 화면이 목록을 따로 들지 않는다.
      */
     @Test
-    void theLabelMakerIsAFourthDecorTabWithFontsFromTheManifest() throws Exception {
+    void theLabelMakerOpensFromItsOwnToolbarButtonWithFontsFromTheManifest() throws Exception {
         String body = editPageBody();
 
-        assertThat(body).contains("data-decor-tab=\"text\"");
-        // 기존 NOTE '라벨'과 이름이 겹치지 않게 나눈다
-        assertThat(between(body, "data-decor-tab=\"text\"", "</button>")).contains("라벨기");
+        // 꾸미기 팝오버에는 스티커 / 라벨 / 메모지 세 갈래만 남는다
+        assertThat(body).doesNotContain("data-decor-tab=\"text\"");
+        assertThat(body).doesNotContain("data-decor-panel=\"text\"");
+        // 도구 줄 버튼이 자기 판을 연다 (여닫이는 diary-label-picker.js 가 맡는다)
+        assertThat(body)
+                .contains("id=\"diary-label-button\"")
+                .contains("aria-controls=\"diary-label-popover\"")
+                .contains("id=\"diary-label-popover\"");
 
-        String panel = between(body, "data-decor-panel=\"text\"", "diary-sticker-status");
+        String panel = between(body, "id=\"diary-label-popover\"", "diary-label-status");
         // 붙일 자리는 고르는 칸이 들고 있다. (표지 편집과 같은 조각을 쓰는 자리다)
         assertThat(panel)
                 .contains("data-label-maker")

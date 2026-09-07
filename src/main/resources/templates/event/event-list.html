@@ -54,7 +54,10 @@
                   th:text="#{'event.status.' + ${selectedStatus}}">진행중</span>
             <h2 class="event-title" th:text="${event.title}">이벤트 제목</h2>
             <p class="event-date" th:text="|${event.startDate} ~ ${event.endDate}|">2026-08-01 ~ 2026-08-31</p>
-            <p class="event-desc" th:if="${event.description != null and !#strings.isEmpty(event.description)}"
+            <!-- 설명은 값이 있을 때만 그린다. 공백과 문자열 "null" 은 없는 것으로 본다. -->
+            <p class="event-desc"
+               th:if="${event.description != null and !#strings.isEmpty(#strings.trim(event.description))
+                       and !#strings.equalsIgnoreCase(#strings.trim(event.description), 'null')}"
                th:text="${event.description}">이벤트 설명</p>
           </div>
         </a>

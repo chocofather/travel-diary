@@ -11,7 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class EventUiContractTest {
 
     @Test
-    void publicListUsesCompactTabsSingleColumnCardsAndPosterFallback()
+    void publicListUsesUnderlineTabsDividerRowsAndPosterFallback()
             throws IOException {
         String template = resource("/templates/event/event-list.html");
         String css = resource("/static/css/event.css");
@@ -37,16 +37,20 @@ class EventUiContractTest {
                 .contains("#{event.list.empty.ended}");
 
         assertThat(css)
+                // 상태 탭은 pill 버튼이 아니라 밑줄로만 선택을 표시한다
                 .contains(".event-tab a")
-                .contains("min-height: 32px")
-                .contains("padding: 5px 12px")
+                .contains("min-height: 34px")
+                .contains(".event-tab a.active::after")
                 .contains("grid-template-columns: 1fr")
+                // 목록 행은 카드 박스 없이 얇은 divider 로만 구분한다
+                .contains(".event-card:not(:last-child)")
+                .contains("border-bottom: 1px solid #eceff2")
                 .contains(".event-card-link")
                 .contains("display: flex")
-                .contains("height: 124px")
-                .contains("width: 176px")
+                .contains("width: 260px")
+                .contains("aspect-ratio: 3 / 2")
                 .contains("object-fit: cover")
-                .contains("-webkit-line-clamp: 1")
+                .contains("-webkit-line-clamp: 2")
                 .contains(".event-status-badge.is-ongoing")
                 .contains(".event-status-badge.is-upcoming")
                 .contains(".event-status-badge.is-ended")
