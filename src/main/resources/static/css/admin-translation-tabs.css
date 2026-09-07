@@ -32,7 +32,7 @@
     letter-spacing: -0.01em;
 }
 
-.admin-translation-tabs-title .admin-field-optional {
+.admin-field-optional {
     padding: 1px 6px;
     color: #6b7897;
     background: #eef2fb;
@@ -45,6 +45,12 @@
     grid-row: 2;
     grid-column: 1 / -1;
     margin: 0;
+}
+
+/* 제목을 바깥 section 머리가 맡는 화면은 도움말이 첫 줄에 온다 */
+.admin-translation-tabs-heading.is-plain > .admin-help-text {
+    grid-row: 1;
+    grid-column: 1;
 }
 
 .admin-translation-collapse-toggle {

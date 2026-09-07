@@ -34,7 +34,8 @@ class FaqServiceTest {
 
     @BeforeEach
     void setUp() {
-        faqService = new FaqService(faqMapper);
+        faqService = new FaqService(faqMapper, new FaqLocalizationService(faqMapper),
+                new FaqCategoryLocalizationService(faqMapper));
     }
 
     @Test

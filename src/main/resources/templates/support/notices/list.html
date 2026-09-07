@@ -10,16 +10,16 @@
     <nav th:replace="~{fragments/support/navigation :: navigation('notices')}"></nav>
     <section class="support-notice-page support-layout-content" aria-labelledby="support-notice-title">
     <header class="support-notice-page-header">
-      <p>고객센터</p>
-      <h1 id="support-notice-title">공지사항</h1>
-      <span>Travel Diary의 새로운 소식과 중요한 안내를 확인하세요.</span>
+      <p th:text="#{support.title}">고객센터</p>
+      <h1 id="support-notice-title" th:text="#{support.notice.title}">공지사항</h1>
+      <span th:text="#{support.notice.description}">Travel Diary의 새로운 소식과 중요한 안내를 확인하세요.</span>
     </header>
 
     <div class="support-notice-board">
       <div class="support-notice-board-header" aria-hidden="true">
-        <span>제목</span>
-        <span>작성일</span>
-        <span>조회수</span>
+        <span th:text="#{support.notice.column.title}">제목</span>
+        <span th:text="#{support.notice.column.createdAt}">작성일</span>
+        <span th:text="#{support.notice.column.views}">조회수</span>
       </div>
 
       <ol class="support-notice-list">
@@ -27,7 +27,7 @@
             class="support-notice-item"
             th:classappend="${notice.pinned} ? ' is-pinned'">
           <div class="support-notice-title-cell">
-            <span class="support-notice-pin">공지</span>
+            <span class="support-notice-pin" th:text="#{support.notice.pin}">공지</span>
             <img th:if="${notice.pinned}"
                  class="support-notice-pin-icon"
                  th:src="@{/images/pin.svg}"
@@ -39,22 +39,25 @@
           <time th:datetime="${#dates.format(notice.createdAt, 'yyyy-MM-dd')}"
                 th:text="${#dates.format(notice.createdAt, 'yyyy.MM.dd')}">2026.08.12</time>
           <span class="support-notice-views">
-            <span class="support-notice-mobile-label">조회</span>
+            <span class="support-notice-mobile-label" th:text="#{support.notice.views}">조회</span>
             <span th:text="${notice.views}">0</span>
           </span>
         </li>
       </ol>
 
       <div th:if="${#lists.isEmpty(notices)}" class="support-notice-empty">
-        <p>등록된 공지사항이 없습니다.</p>
+        <p th:text="#{support.notice.empty}">등록된 공지사항이 없습니다.</p>
       </div>
     </div>
 
-    <nav class="support-notice-pagination" th:if="${totalPages > 1}" aria-label="공지사항 페이지">
+    <nav class="support-notice-pagination" th:if="${totalPages > 1}"
+         th:attr="aria-label=#{support.notice.pagination}">
       <a th:if="${currentPage > 1}"
          th:href="@{/support/notices(page=${currentPage - 1})}"
-         aria-label="이전 페이지">이전</a>
-      <span th:unless="${currentPage > 1}" class="is-disabled" aria-disabled="true">이전</span>
+         th:attr="aria-label=#{support.notice.pagination.previous}"
+         th:text="#{support.notice.pagination.previous}">이전</a>
+      <span th:unless="${currentPage > 1}" class="is-disabled" aria-disabled="true"
+            th:text="#{support.notice.pagination.previous}">이전</span>
 
       <a th:each="pageNumber : ${#numbers.sequence(pageStart, pageEnd)}"
          th:href="@{/support/notices(page=${pageNumber == 1 ? null : pageNumber})}"
@@ -64,8 +67,10 @@
 
       <a th:if="${currentPage < totalPages}"
          th:href="@{/support/notices(page=${currentPage + 1})}"
-         aria-label="다음 페이지">다음</a>
-      <span th:unless="${currentPage < totalPages}" class="is-disabled" aria-disabled="true">다음</span>
+         th:attr="aria-label=#{support.notice.pagination.next}"
+         th:text="#{support.notice.pagination.next}">다음</a>
+      <span th:unless="${currentPage < totalPages}" class="is-disabled" aria-disabled="true"
+            th:text="#{support.notice.pagination.next}">다음</span>
     </nav>
     </section>
   </div>

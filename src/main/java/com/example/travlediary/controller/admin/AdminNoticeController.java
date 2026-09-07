@@ -103,5 +103,8 @@ public class AdminNoticeController {
                 ? "공지사항의 제목, 본문과 상단 고정 여부를 수정합니다."
                 : "고객센터에 공개할 새 공지사항을 등록합니다.");
         model.addAttribute("submitLabel", editMode ? "수정 저장" : "등록");
+        // 번역 탭 라벨. 다른 관리자 화면과 같은 조각/라벨을 그대로 쓴다.
+        model.addAttribute("translationLanguageLabels", AdminTranslationLabels.LANGUAGE_LABELS);
+        model.addAttribute("translationTabLabels", AdminTranslationLabels.TAB_LABELS);
     }
 }

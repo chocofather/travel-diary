@@ -21,7 +21,9 @@ class NoticeUiContractTest {
                 .contains("/css/support-layout.css")
                 .contains("fragments/support/navigation :: navigation('notices')")
                 .contains("support-notice-pin")
-                .contains("class=\"support-notice-pin\">공지</span>")
+                // 고정 뱃지 문구도 메시지 번들에서 온다
+                .contains("class=\"support-notice-pin\" th:text=\"#{support.notice.pin}\"")
+                .contains("#{support.notice.title}", "#{support.notice.empty}")
                 .contains("th:if=\"${notice.pinned}\"")
                 .contains("class=\"support-notice-pin-icon\"")
                 .contains("th:src=\"@{/images/pin.svg}\"")
@@ -36,7 +38,11 @@ class NoticeUiContractTest {
                 .contains("quill-content.css")
                 .contains("rich-text-content")
                 .contains("th:utext=\"${notice.content}\"")
-                .contains("목록으로")
+                // 고정 문구는 메시지 번들에서 온다 (제목·본문은 DB 번역 값 그대로)
+                .contains("#{support.notice.detail.breadcrumb}",
+                        "#{support.notice.detail.createdAt}",
+                        "#{support.notice.detail.views}",
+                        "#{support.notice.detail.backToList}")
                 .doesNotContain("notice.userId");
     }
 
@@ -55,6 +61,42 @@ class NoticeUiContractTest {
         assertThat(script)
                 .contains("window.initQuillEditor")
                 .contains("'#notice-editor'", "'notice-content'", "'notice-form'");
+    }
+
+    /** 번역은 선택 입력이라 접힌 채로 원문 뒤에 오고, 탭·편집기·접기는 공용 자산을 그대로 쓴다. */
+    @Test
+    void adminFormAddsCollapsedTranslationTabsWithTheSharedAssets() throws IOException {
+        String form = file("src/main/resources/templates/admin/notices/form.html");
+        String fragment =
+                file("src/main/resources/templates/fragments/admin/notice-translation-tabs.html");
+
+        assertThat(form)
+                .contains("/css/admin-translation-tabs.css")
+                .contains("/js/admin-translation-tabs.js")
+                .contains("/js/admin-translation-collapse.js")
+                .contains("/js/admin-translation-editors.js")
+                .contains("data-translation-collapsible")
+                .contains("fragments/admin/notice-translation-tabs")
+                .contains(":: noticeTranslations");
+        // 한국어 원문(제목·본문) 다음에 번역이 온다
+        assertThat(form.indexOf(":: noticeTranslations"))
+                .isGreaterThan(form.indexOf("id=\"notice-content\""));
+        assertThat(fragment)
+                .contains("data-translation-tabs")
+                .contains("data-translation-tabs-heading")
+                .contains("data-translation-tabs-body")
+                .contains("th:field=\"*{translations[__${slot.index}__].languageCode}\"")
+                .contains("th:field=\"*{translations[__${slot.index}__].title}\"")
+                .contains("th:field=\"*{translations[__${slot.index}__].content}\"")
+                // 언어별 본문 편집기는 공용 규약(languageCode)으로 묶는다
+                .contains("data-translation-editor=${translation.languageCode}")
+                .contains("data-translation-content=${translation.languageCode}")
+                .contains("data-translation-initial-content=${translation.languageCode}")
+                // 0번 슬롯(한국어)은 탭에도 패널에도 그리지 않는다
+                .contains("th:unless=\"${slot.first}\"")
+                .doesNotContain("translations[0]")
+                // 감출 때 입력을 비활성화하지 않는다 (disabled 면 저장에서 빠진다)
+                .doesNotContain("disabled");
     }
 
     @Test

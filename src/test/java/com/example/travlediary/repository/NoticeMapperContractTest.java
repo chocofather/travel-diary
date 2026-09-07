@@ -57,6 +57,68 @@ class NoticeMapperContractTest {
         assertThat(delete).contains("DELETE FROM notices", "WHERE id = #{id}");
     }
 
+    /** 공지 번역은 언어 한 줄이 단위다. 언어 코드는 조건일 뿐 갱신 대상이 아니다. */
+    @Test
+    void translationStatementsTouchOnlyTheRequestedLanguageRow() throws IOException {
+        String xml = mapper();
+        String select = between(xml, "<select id=\"findTranslationsByNoticeId\"", "</select>");
+        String insert = between(xml, "<insert id=\"insertTranslation\"", "</insert>");
+        String update = between(xml, "<update id=\"updateTranslation\"", "</update>");
+        String delete = between(xml, "<delete id=\"deleteTranslation\"", "</delete>");
+
+        assertThat(select)
+                .contains("SELECT id, notice_id, language_code, title, content")
+                .contains("FROM notice_translations")
+                .contains("WHERE notice_id = #{noticeId}")
+                .contains("ORDER BY language_code ASC, id ASC");
+        assertThat(insert)
+                .contains("useGeneratedKeys=\"true\"")
+                .contains("INSERT INTO notice_translations (notice_id, language_code, title, content)")
+                .contains("VALUES (#{noticeId}, #{languageCode}, #{title}, #{content})");
+        assertThat(update)
+                .contains("UPDATE notice_translations")
+                .contains("title = #{title}", "content = #{content}")
+                .contains("WHERE notice_id = #{noticeId}", "AND language_code = #{languageCode}")
+                .doesNotContain("language_code =\n", "notice_id =\n");
+        assertThat(delete)
+                .contains("DELETE FROM notice_translations")
+                .contains("WHERE notice_id = #{noticeId}", "AND language_code = #{languageCode}");
+    }
+
+    /** 공개 목록은 공지마다 번역을 읽지 않고 한 번의 IN 조회로 모아 읽는다. */
+    @Test
+    void publicListTranslationsAreReadInOneQueryWithoutNPlusOne() throws IOException {
+        String query = between(mapper(), "<select id=\"findTranslationsByNoticeIds\"", "</select>");
+
+        assertThat(query)
+                .contains("SELECT id, notice_id, language_code, title, content")
+                .contains("FROM notice_translations")
+                .contains("WHERE notice_id IN")
+                .contains("<foreach collection=\"noticeIds\"")
+                // 빈 목록이 전체 조회로 넓어지지 않게 막는다
+                .contains("WHERE 1 = 0")
+                .contains("ORDER BY notice_id ASC, language_code ASC, id ASC")
+                .doesNotContain("${");
+    }
+
+    @Test
+    void schemaReferenceMatchesTheNoticeTranslationTable() throws IOException {
+        String schema = Files.readString(
+                Path.of("docs/db/travel_diary_schema_reference.md"), StandardCharsets.UTF_8);
+        String translations = between(schema, "CREATE TABLE `notice_translations`", ") ENGINE=InnoDB");
+
+        assertThat(translations)
+                .contains("`notice_id` bigint NOT NULL")
+                .contains("`language_code` varchar(10) CHARACTER SET ascii COLLATE ascii_bin NOT NULL")
+                .contains("`title` varchar(255)")
+                .contains("`content` mediumtext")
+                // 한 공지에 같은 언어 줄이 둘 생기지 않게 막는 키
+                .contains("UNIQUE KEY `uk_notice_translation` (`notice_id`,`language_code`)")
+                .contains("KEY `idx_notice_translation_locale` (`language_code`,`notice_id`)")
+                .contains("CONSTRAINT `fk_notice_translation` FOREIGN KEY (`notice_id`) "
+                        + "REFERENCES `notices` (`id`) ON DELETE CASCADE");
+    }
+
     @Test
     void schemaReferenceMatchesCompletedNoticeTable() throws IOException {
         String schema = Files.readString(

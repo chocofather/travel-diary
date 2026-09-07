@@ -10,17 +10,18 @@
     <nav th:replace="~{fragments/support/navigation :: navigation('faq')}"></nav>
     <section class="support-faq-page support-layout-content" aria-labelledby="support-faq-title">
     <header class="support-faq-page-header">
-      <p>고객센터</p>
-      <h1 id="support-faq-title">자주 묻는 질문</h1>
-      <span>궁금한 내용을 빠르게 확인해보세요.</span>
+      <p th:text="#{support.title}">고객센터</p>
+      <h1 id="support-faq-title" th:text="#{support.faq.title}">자주 묻는 질문</h1>
+      <span th:text="#{support.faq.description}">궁금한 내용을 빠르게 확인해보세요.</span>
     </header>
 
     <div class="support-faq-list" th:unless="${#lists.isEmpty(faqs)}">
       <details class="support-faq-item" th:each="faq : ${faqs}">
         <summary>
           <span class="support-faq-summary-content">
+            <!-- 표시 이름은 언어에 따라 바뀌므로 뱃지 스타일은 서버가 정해 준 클래스만 쓴다 -->
             <span class="support-faq-category"
-                  th:classappend="${faq.categoryName == '회원/계정' ? ' is-account' : (faq.categoryName == '여행정보' ? ' is-travel' : (faq.categoryName == '커뮤니티' ? ' is-community' : (faq.categoryName == '서비스 이용' ? ' is-service' : (faq.categoryName == '기타' ? ' is-etc' : ' is-default'))))}"
+                  th:classappend="${faq.categoryBadge}"
                   th:text="${faq.categoryName}">회원/계정</span>
             <span class="support-faq-question">
               <span class="support-faq-prefix" aria-hidden="true">Q.</span>
@@ -37,7 +38,7 @@
     </div>
 
     <div class="support-faq-empty" th:if="${#lists.isEmpty(faqs)}">
-      <p>등록된 자주 묻는 질문이 없습니다.</p>
+      <p th:text="#{support.faq.empty}">등록된 자주 묻는 질문이 없습니다.</p>
     </div>
     </section>
   </div>

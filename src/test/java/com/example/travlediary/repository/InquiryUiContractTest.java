@@ -21,9 +21,11 @@ class InquiryUiContractTest {
         assertThat(list)
                 .contains("fragments/support/navigation :: navigation('inquiries')")
                 .contains("fragments/support/inquiry-tabs :: tabs('list')")
-                .contains("inquiry.status.displayName", "inquiry.inquiryType.displayName")
+                // 상태·유형은 저장값(enum 이름)으로 문구만 고른다
+                .contains("#{'support.inquiry.status.' + ${inquiry.status.name()}}",
+                        "#{'support.inquiry.type.' + ${inquiry.inquiryType.name()}}")
                 .contains("support-inquiry-pagination")
-                .contains("등록한 1:1 문의가 없습니다.");
+                .contains("#{support.inquiry.empty}");
         assertThat(form)
                 .contains("fragments/support/inquiry-tabs :: tabs(${activeInquiryTab})")
                 .contains("th:action=\"${formAction}\"")

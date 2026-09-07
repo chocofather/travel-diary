@@ -434,6 +434,7 @@
 .admin-form-card input[type="number"],
 .admin-form-card input[type="date"],
 .admin-form-card input[type="file"],
+.admin-form-card input[type="url"],
 .admin-form-card select,
 .admin-form-card textarea {
     width: 100%;

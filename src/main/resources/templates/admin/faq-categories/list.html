@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'faqs')}">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/admin-compact-lists.css">
+</th:block>
+<th:block th:fragment="body">
+  <section class="admin-page-section admin-faq-category-page">
+    <header class="admin-page-header">
+      <div class="admin-page-heading">
+        <h1 class="admin-page-title">FAQ 카테고리</h1>
+        <p class="admin-page-description">자주 묻는 질문을 분류할 카테고리를 관리합니다.</p>
+      </div>
+      <div class="admin-page-actions">
+        <a th:href="@{/admin/faqs}" class="admin-btn">FAQ 목록</a>
+        <a th:href="@{/admin/faq-categories/create}" class="admin-btn is-primary">+ 카테고리 등록</a>
+      </div>
+    </header>
+
+    <div th:if="${error}" class="admin-alert" role="alert" th:text="${error}"></div>
+
+    <div class="admin-card is-table-card">
+      <div class="admin-table-wrapper">
+        <table class="admin-table admin-faq-category-table">
+          <thead>
+          <tr>
+            <th>카테고리명</th>
+            <th>사용 중인 FAQ</th>
+            <th>관리</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr th:each="category : ${categories}">
+            <td class="admin-faq-category-name" th:text="${category.categoryName}">회원/계정</td>
+            <td th:text="|${category.faqCount}건|">0건</td>
+            <td class="admin-table-actions">
+              <div class="admin-action-group">
+                <a th:href="@{/admin/faq-categories/edit/{id}(id=${category.id})}"
+                   class="admin-btn is-small">수정</a>
+                <form th:action="@{/admin/faq-categories/{id}/delete(id=${category.id})}"
+                      method="post"
+                      onsubmit="return confirm('이 FAQ 카테고리를 삭제하시겠습니까?');">
+                  <button type="submit" class="admin-btn is-small is-danger">삭제</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(categories)}">
+            <td colspan="3" class="admin-table-empty">등록된 FAQ 카테고리가 없습니다.</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</th:block>
+</html>

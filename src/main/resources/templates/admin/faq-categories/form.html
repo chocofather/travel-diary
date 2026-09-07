@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'faqs')}">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/admin-faqs.css">
+  <link rel="stylesheet" href="/css/admin-translation-tabs.css">
+  <script src="/js/admin-translation-tabs.js" defer></script>
+  <script src="/js/admin-translation-collapse.js?v=20260907-1" defer></script>
+</th:block>
+<th:block th:fragment="body">
+  <section class="admin-page-section admin-faq-form-page">
+    <header class="admin-page-header">
+      <div class="admin-page-heading">
+        <h1 class="admin-page-title" th:text="${pageTitle}">FAQ 카테고리 등록</h1>
+        <p class="admin-page-description" th:text="${pageDescription}">
+          FAQ를 분류할 새 카테고리를 등록합니다.
+        </p>
+      </div>
+      <div class="admin-page-actions">
+        <a th:href="@{/admin/faq-categories}" class="admin-btn">카테고리 목록</a>
+      </div>
+    </header>
+
+    <!-- 한국어 원문을 먼저 입력하고, 선택 입력인 번역은 접힌 채로 뒤에 온다 -->
+    <form th:action="${formAction}" method="post"
+          th:object="${faqCategoryForm}" class="admin-faq-form" data-translation-collapsible>
+      <div class="admin-alert" th:if="${#fields.hasGlobalErrors()}" role="alert">
+        <p th:each="error : ${#fields.globalErrors()}" th:text="${error}">입력 오류</p>
+      </div>
+
+      <section class="admin-form-card is-wide admin-faq-section">
+        <div class="admin-faq-section-header">
+          <h2>기본 정보</h2>
+          <p>관리자 화면과 공개 화면의 한국어 카테고리명입니다.</p>
+        </div>
+
+        <div class="admin-form-fields">
+          <div class="admin-form-field">
+            <label for="faq-category-name">카테고리명</label>
+            <input id="faq-category-name" type="text" th:field="*{categoryName}"
+                   maxlength="100" placeholder="예: 회원/계정"
+                   th:classappend="${#fields.hasErrors('categoryName')} ? ' is-invalid' : ''"
+                   required>
+            <p class="admin-field-error" th:if="${#fields.hasErrors('categoryName')}"
+               th:errors="*{categoryName}">카테고리명 오류</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="admin-form-card is-wide admin-faq-section">
+        <div class="admin-faq-section-header">
+          <div class="admin-faq-section-title">
+            <h2>번역</h2>
+            <span class="admin-field-optional">선택</span>
+          </div>
+          <p>한국어는 위에서 입력한 카테고리명이 그대로 저장됩니다. 나머지 언어는 선택 입력입니다.</p>
+        </div>
+        <th:block th:replace="~{fragments/admin/faq-category-translation-tabs
+                                :: faqCategoryTranslations}"></th:block>
+      </section>
+
+      <div class="admin-form-actions">
+        <a th:href="@{/admin/faq-categories}" class="admin-btn">취소</a>
+        <button type="submit" class="admin-btn is-primary" th:text="${submitLabel}">등록</button>
+      </div>
+    </form>
+  </section>
+</th:block>
+</html>

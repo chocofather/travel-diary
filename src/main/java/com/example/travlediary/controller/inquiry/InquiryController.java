@@ -9,6 +9,8 @@ import com.example.travlediary.service.inquiry.InquiryEditConflictException;
 import com.example.travlediary.service.inquiry.InquiryService;
 import com.example.travlediary.service.inquiry.InquiryValidationException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -31,6 +33,7 @@ public class InquiryController {
     private static final int PAGE_SIZE = 10;
 
     private final InquiryService inquiryService;
+    private final MessageSource messageSource;
 
     @GetMapping
     public String list(@RequestParam(required = false) String page,
@@ -47,7 +50,7 @@ public class InquiryController {
 
         addPagination(model, currentPage, totalPages, totalCount, PAGE_SIZE);
         model.addAttribute("inquiries", inquiries);
-        model.addAttribute("pageTitle", "내 문의내역 | 고객센터");
+        model.addAttribute("pageTitle", message("support.inquiry.pageTitle.list"));
         return "support/inquiries/list";
     }
 
@@ -82,7 +85,8 @@ public class InquiryController {
                          Model model) {
         InquiryDetailDto inquiry = inquiryService.getMyInquiry(id, userDetails.getId());
         model.addAttribute("inquiry", inquiry);
-        model.addAttribute("pageTitle", inquiry.getSubject() + " | 1:1 문의");
+        model.addAttribute("pageTitle",
+                message("support.inquiry.detail.pageTitle", inquiry.getSubject()));
         return "support/inquiries/detail";
     }
 
@@ -96,7 +100,7 @@ public class InquiryController {
             prepareFormModel(model, form, id);
             return "support/inquiries/form";
         } catch (InquiryEditConflictException exception) {
-            redirectAttributes.addFlashAttribute("inquiryMessage", exception.getMessage());
+            redirectAttributes.addFlashAttribute("inquiryMessage", conflictMessage(exception));
             return "redirect:/support/inquiries/" + id;
         }
     }
@@ -119,7 +123,7 @@ public class InquiryController {
             prepareFormModel(model, form, id);
             return "support/inquiries/form";
         } catch (InquiryEditConflictException exception) {
-            redirectAttributes.addFlashAttribute("inquiryMessage", exception.getMessage());
+            redirectAttributes.addFlashAttribute("inquiryMessage", conflictMessage(exception));
             return "redirect:/support/inquiries/" + id;
         }
         return "redirect:/support/inquiries/" + id;
@@ -138,28 +142,53 @@ public class InquiryController {
         model.addAttribute("inquiryTypes", InquiryType.values());
         model.addAttribute("editMode", editMode);
         model.addAttribute("activeInquiryTab", editMode ? "list" : "new");
-        model.addAttribute("formTitle", editMode ? "1:1 문의 수정" : "1:1 문의하기");
-        model.addAttribute("formDescription", editMode
-                ? "답변이 등록되기 전까지 문의 내용을 수정할 수 있습니다."
-                : "문의 내용을 자세히 남겨주시면 확인 후 답변해드립니다.");
+        model.addAttribute("formTitle", message(editMode
+                ? "support.inquiry.form.title.edit" : "support.inquiry.form.title.create"));
+        model.addAttribute("formDescription", message(editMode
+                ? "support.inquiry.form.description.edit"
+                : "support.inquiry.form.description.create"));
         model.addAttribute("formAction", editMode
                 ? "/support/inquiries/" + inquiryId + "/edit"
                 : "/support/inquiries");
         model.addAttribute("cancelUrl", editMode
                 ? "/support/inquiries/" + inquiryId
                 : "/support/inquiries");
-        model.addAttribute("submitLabel", editMode ? "문의 수정" : "문의 등록");
-        model.addAttribute("pageTitle", (editMode ? "1:1 문의 수정" : "1:1 문의하기")
-                + " | 고객센터");
+        model.addAttribute("submitLabel", message(editMode
+                ? "support.inquiry.form.submit.edit" : "support.inquiry.form.submit.create"));
+        model.addAttribute("pageTitle", message(editMode
+                ? "support.inquiry.pageTitle.edit" : "support.inquiry.pageTitle.create"));
+        // 입력 도움말의 글자 수는 서버 제한값을 그대로 쓴다.
+        model.addAttribute("maxContentLength", InquiryService.MAX_CONTENT_LENGTH);
     }
 
+    /**
+     * 입력 오류는 메시지 코드로 넘겨 Spring 이 요청 언어 문구를 찾게 한다.
+     * 코드가 없거나 번들에 없으면 서비스가 준 한국어 문구가 그대로 쓰인다.
+     */
     private void rejectValidation(BindingResult bindingResult,
                                   InquiryValidationException exception) {
+        String code = exception.getMessageCode() == null
+                ? "inquiry.invalid"
+                : exception.getMessageCode();
         if (exception.getField() == null) {
-            bindingResult.reject("inquiry.invalid", exception.getMessage());
+            bindingResult.reject(code, exception.getMessageArgs(), exception.getMessage());
             return;
         }
-        bindingResult.rejectValue(exception.getField(), "inquiry.invalid", exception.getMessage());
+        bindingResult.rejectValue(exception.getField(), code,
+                exception.getMessageArgs(), exception.getMessage());
+    }
+
+    /** 수정 불가 안내도 요청 언어 문구로 보여 준다. */
+    private String conflictMessage(InquiryEditConflictException exception) {
+        if (exception.getMessageCode() == null) {
+            return exception.getMessage();
+        }
+        return messageSource.getMessage(exception.getMessageCode(), null,
+                exception.getMessage(), LocaleContextHolder.getLocale());
+    }
+
+    private String message(String code, Object... args) {
+        return messageSource.getMessage(code, args, LocaleContextHolder.getLocale());
     }
 
     private int parsePage(String page) {

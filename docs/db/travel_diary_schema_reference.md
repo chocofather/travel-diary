@@ -1133,6 +1133,28 @@ CREATE TABLE `faq_categories` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `faq_category_translations`
+--
+-- FAQ 카테고리 이름의 언어별 값. 한국어 원문은 `faq_categories`.`category_name` 이 갖는다.
+-- 번역 대상은 category_name 하나뿐이며 en / ja / zh-CN / zh-TW 만 담는다.
+-- 공개 화면은 요청 언어 줄이 없으면 한국어 원문을 쓴다. (다른 언어로는 넘어가지 않는다)
+-- 카테고리가 지워지면 이 줄도 함께 지워진다.
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `faq_category_translations` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `faq_category_id` bigint NOT NULL,
+  `language_code` varchar(10) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `category_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_faq_category_translation` (`faq_category_id`,`language_code`),
+  KEY `idx_faq_category_translation_locale` (`language_code`,`faq_category_id`),
+  CONSTRAINT `fk_faq_category_translation` FOREIGN KEY (`faq_category_id`) REFERENCES `faq_categories` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `faqs`
 --
 
@@ -1154,6 +1176,31 @@ CREATE TABLE `faqs` (
   CONSTRAINT `fk_faqs_faqcategory` FOREIGN KEY (`category_id`) REFERENCES `faq_categories` (`id`),
   CONSTRAINT `fk_faqs_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `faq_translations`
+--
+-- 자주 묻는 질문의 언어별 질문·답변. 한국어 원문은 `faqs`.`question` / `answer` 가 갖는다.
+-- 번역 대상은 question / answer 두 개이며 en / ja / zh-CN / zh-TW 만 담는다.
+-- `order_index` / `is_visible` / `category_id` / `user_id` 처럼 언어와 무관한 값은 담지 않는다.
+-- answer 는 원문과 같이 서식 없는 일반 텍스트다.
+-- 공개 화면은 필드마다 요청 언어 줄이 없으면 한국어 원문을 쓴다. (다른 언어로는 넘어가지 않는다)
+-- 질문이 지워지면 이 줄도 함께 지워진다.
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `faq_translations` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `faq_id` bigint NOT NULL,
+  `language_code` varchar(10) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `question` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `answer` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_faq_translation` (`faq_id`,`language_code`),
+  KEY `idx_faq_translation_locale` (`language_code`,`faq_id`),
+  CONSTRAINT `fk_faq_translation` FOREIGN KEY (`faq_id`) REFERENCES `faqs` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1363,6 +1410,31 @@ CREATE TABLE `notices` (
   KEY `idx_notices_user_id` (`user_id`),
   CONSTRAINT `fk_notices_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `notice_translations`
+--
+-- 공지사항의 언어별 제목·본문. 한국어 원문은 `notices`.`title` / `content` 가 갖는다.
+-- 번역 대상은 title / content 두 개이며 en / ja / zh-CN / zh-TW 만 담는다.
+-- `is_pinned` / `views` / `user_id` 처럼 언어와 무관한 값은 담지 않는다.
+-- content 는 원문과 같이 Quill 편집기가 만든 HTML 이며 저장·표시 전에 같은 방식으로 정제한다.
+-- 공개 화면은 필드마다 요청 언어 줄이 없으면 한국어 원문을 쓴다. (다른 언어로는 넘어가지 않는다)
+-- 공지사항이 지워지면 이 줄도 함께 지워진다.
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `notice_translations` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `notice_id` bigint NOT NULL,
+  `language_code` varchar(10) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `content` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_notice_translation` (`notice_id`,`language_code`),
+  KEY `idx_notice_translation_locale` (`language_code`,`notice_id`),
+  CONSTRAINT `fk_notice_translation` FOREIGN KEY (`notice_id`) REFERENCES `notices` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --

@@ -12,10 +12,14 @@
         href="https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-kr@5.3.0/400.css">
   <link rel="stylesheet" href="/css/quill-content.css">
   <link rel="stylesheet" href="/css/admin-notices.css">
+  <link rel="stylesheet" href="/css/admin-translation-tabs.css">
   <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/quill-resize-module@2.1.3/dist/resize.js"></script>
   <script src="/js/quill-editor-init.js"></script>
   <script src="/js/admin-notice-form.js" defer></script>
+  <script src="/js/admin-translation-tabs.js" defer></script>
+  <script src="/js/admin-translation-collapse.js?v=20260907-1" defer></script>
+  <script src="/js/admin-translation-editors.js" defer></script>
 </th:block>
 <th:block th:fragment="body">
   <section class="admin-page-section admin-notice-form-page">
@@ -29,8 +33,9 @@
       </div>
     </header>
 
+    <!-- 한국어 원문을 먼저 입력하고, 선택 입력인 번역은 접힌 채로 뒤에 온다 -->
     <form id="notice-form" th:action="${formAction}" method="post"
-          th:object="${noticeForm}" class="admin-notice-form">
+          th:object="${noticeForm}" class="admin-notice-form" data-translation-collapsible>
       <div class="admin-alert" th:if="${#fields.hasGlobalErrors()}" role="alert">
         <p th:each="error : ${#fields.globalErrors()}" th:text="${error}">입력 오류</p>
       </div>
@@ -69,6 +74,18 @@
         <textarea id="notice-initial-content" hidden th:text="*{content}"></textarea>
         <p class="admin-field-error" th:if="${#fields.hasErrors('content')}"
            th:errors="*{content}">본문 오류</p>
+      </section>
+
+      <section class="admin-form-card is-wide admin-notice-section">
+        <div class="admin-notice-section-header">
+          <div class="admin-notice-section-title">
+            <h2>번역</h2>
+            <span class="admin-field-optional">선택</span>
+          </div>
+          <p>한국어는 위에서 입력한 제목·본문이 그대로 저장됩니다. 나머지 언어는 선택 입력입니다.</p>
+        </div>
+        <th:block th:replace="~{fragments/admin/notice-translation-tabs
+                                :: noticeTranslations}"></th:block>
       </section>
 
       <div class="admin-form-actions">

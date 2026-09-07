@@ -162,6 +162,46 @@ class InquiryControllerTest {
                 org.mockito.ArgumentMatchers.any());
     }
 
+    /**
+     * 고정 UI 문구는 요청 언어로, 사용자가 쓴 문의 내용과 답변은 원문 그대로 나온다.
+     * 상태 문구만 언어별로 바뀌고 저장값(enum)은 그대로다.
+     */
+    @Test
+    void supportLabelsFollowTheLocaleWhileUserWrittenContentStaysAsIs() throws Exception {
+        InquiryDetailDto pending = detail(false);
+        when(inquiryService.getMyInquiry(10L, 7L)).thenReturn(pending);
+
+        String english = mockMvc.perform(get("/support/inquiries/10").with(user(member()))
+                        .cookie(localeCookie("en")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        var englishPage = Jsoup.parse(english);
+
+        assertThat(englishPage.select(".support-navigation-title").text()).isEqualTo("Support");
+        assertThat(englishPage.select(".support-inquiry-status").text())
+                .isEqualTo("Awaiting reply");
+        assertThat(englishPage.select("#inquiry-answer-title").text())
+                .isEqualTo("Reply from support");
+        assertThat(englishPage.select(".support-inquiry-waiting").text())
+                .isEqualTo("No reply has been posted yet.");
+        assertThat(englishPage.select("form[action=/support/inquiries/10/delete]")
+                .attr("data-confirm")).isEqualTo("Delete this inquiry?");
+        // 사용자가 쓴 제목·내용은 번역하지 않는다
+        assertThat(englishPage.select("#support-inquiry-detail-title").text())
+                .isEqualTo("로그인 오류 문의");
+        assertThat(englishPage.select(".support-inquiry-plain-content").text())
+                .contains("첫 줄");
+
+        String japanese = mockMvc.perform(get("/support/inquiries/10").with(user(member()))
+                        .cookie(localeCookie("ja")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        var japanesePage = Jsoup.parse(japanese);
+        assertThat(japanesePage.select(".support-inquiry-status").text()).isEqualTo("回答待ち");
+        assertThat(japanesePage.select("#support-inquiry-detail-title").text())
+                .isEqualTo("로그인 오류 문의");
+    }
+
     @Test
     void ownDetailRendersPendingAndAnsweredPlainTextSafely() throws Exception {
         InquiryDetailDto pending = detail(false);
@@ -357,6 +397,12 @@ class InquiryControllerTest {
         user.setUserPassword("password");
         user.setUserRole(UserRole.ADMIN);
         return new CustomUserDetails(user);
+    }
+
+    private jakarta.servlet.http.Cookie localeCookie(String languageTag) {
+        return new jakarta.servlet.http.Cookie(
+                com.example.travlediary.config.i18n.TravelDiaryLocaleResolver.COOKIE_NAME,
+                languageTag);
     }
 
     private InquiryListItemDto listItem() {

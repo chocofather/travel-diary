@@ -86,12 +86,28 @@
     accent-color: #3e63dd;
 }
 
+/* 제목 옆에 '선택' 같은 표시를 함께 두는 섹션 머리 */
+.admin-notice-section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.admin-notice-section-title h2 {
+    margin: 0;
+}
+
 .admin-notice-editor-shell {
     min-width: 0;
 }
 
 .admin-notice-editor {
     min-height: 380px;
+}
+
+/* 번역 본문은 선택 입력이라 원문보다 낮게 연다 */
+.admin-notice-translation-editor.ql-container .ql-editor {
+    min-height: 240px;
 }
 
 .admin-notice-form .is-invalid {

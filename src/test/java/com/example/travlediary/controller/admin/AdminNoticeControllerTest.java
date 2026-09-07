@@ -74,6 +74,42 @@ class AdminNoticeControllerTest {
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("name=\"_csrf\"")));
     }
 
+    /** 번역 탭은 한국어를 뺀 네 언어만 그리고, 입력값은 슬롯 이름 그대로 서비스까지 실려 간다. */
+    @Test
+    void formRendersForeignLanguageTabsAndBindsTheirSlots() throws Exception {
+        String body = mockMvc.perform(get("/admin/notices/new").with(user(admin())))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        var document = org.jsoup.Jsoup.parse(body);
+
+        assertThat(document.select("[data-translation-tab]").eachAttr("data-translation-tab"))
+                .containsExactly("en", "ja", "zh-CN", "zh-TW");
+        assertThat(document.select("[data-translation-tab]").eachText())
+                .containsExactly("영어", "일본어", "간체", "번체");
+        assertThat(document.select("[name='translations[0].title']")).isEmpty();
+        for (int slot = 1; slot <= 4; slot++) {
+            assertThat(document.select("[name='translations[" + slot + "].title']")).hasSize(1);
+            assertThat(document.select("[name='translations[" + slot + "].content']")).hasSize(1);
+        }
+        assertThat(document.select("input[name='translations[1].languageCode']").attr("value"))
+                .isEqualTo("en");
+
+        mockMvc.perform(post("/admin/notices")
+                        .with(user(admin())).with(csrf())
+                        .param("title", "서비스 점검 안내")
+                        .param("content", "<p>본문</p>")
+                        .param("translations[1].languageCode", "en")
+                        .param("translations[1].title", "Maintenance")
+                        .param("translations[1].content", "<p>Body</p>"))
+                .andExpect(status().is3xxRedirection());
+
+        ArgumentCaptor<NoticeForm> captor = ArgumentCaptor.forClass(NoticeForm.class);
+        verify(noticeService).create(captor.capture(), eq(7L));
+        assertThat(captor.getValue().getTranslations().get(1).getLanguageCode()).isEqualTo("en");
+        assertThat(captor.getValue().getTranslations().get(1).getTitle()).isEqualTo("Maintenance");
+        assertThat(captor.getValue().getTranslations().get(1).getContent()).isEqualTo("<p>Body</p>");
+    }
+
     @Test
     void adminCreateUsesPrincipalIdAndRequiresCsrf() throws Exception {
         mockMvc.perform(post("/admin/notices")

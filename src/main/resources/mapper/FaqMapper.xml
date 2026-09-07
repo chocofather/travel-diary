@@ -34,6 +34,29 @@
         <result property="categoryName" column="category_name"/>
     </resultMap>
 
+    <resultMap id="FaqCategoryListResultMap"
+               type="com.example.travlediary.dto.FaqCategoryListItemDto">
+        <id property="id" column="id"/>
+        <result property="categoryName" column="category_name"/>
+        <result property="faqCount" column="faq_count"/>
+    </resultMap>
+
+    <resultMap id="FaqCategoryTranslationResultMap"
+               type="com.example.travlediary.model.FaqCategoryTranslation">
+        <id property="id" column="id"/>
+        <result property="faqCategoryId" column="faq_category_id"/>
+        <result property="languageCode" column="language_code"/>
+        <result property="categoryName" column="category_name"/>
+    </resultMap>
+
+    <resultMap id="FaqTranslationResultMap" type="com.example.travlediary.model.FaqTranslation">
+        <id property="id" column="id"/>
+        <result property="faqId" column="faq_id"/>
+        <result property="languageCode" column="language_code"/>
+        <result property="question" column="question"/>
+        <result property="answer" column="answer"/>
+    </resultMap>
+
     <sql id="FaqListColumns">
         f.id,
         f.question,
@@ -109,6 +132,154 @@
     <delete id="deleteFaq">
         DELETE FROM faqs
         WHERE id = #{id}
+    </delete>
+
+    <!--
+      자주 묻는 질문 번역. 언어 한 줄이 단위이며 한국어 원문은 faqs 가 갖는다.
+      질문을 지우면 번역은 FK ON DELETE CASCADE 로 함께 지워지므로 여기서 따로 지우지 않는다.
+      언어 대체가 늘 같은 줄을 고르도록 정렬을 고정한다.
+    -->
+    <select id="findTranslationsByFaqId" resultMap="FaqTranslationResultMap">
+        SELECT id, faq_id, language_code, question, answer
+        FROM faq_translations
+        WHERE faq_id = #{faqId}
+        ORDER BY language_code ASC, id ASC
+    </select>
+
+    <select id="findTranslationsByFaqIds" resultMap="FaqTranslationResultMap">
+        SELECT id, faq_id, language_code, question, answer
+        FROM faq_translations
+        <choose>
+            <when test="faqIds != null and !faqIds.isEmpty()">
+                WHERE faq_id IN
+                <foreach collection="faqIds" item="faqId" open="(" separator="," close=")">
+                    #{faqId}
+                </foreach>
+            </when>
+            <otherwise>
+                WHERE 1 = 0
+            </otherwise>
+        </choose>
+        ORDER BY faq_id ASC, language_code ASC, id ASC
+    </select>
+
+    <insert id="insertTranslation"
+            parameterType="com.example.travlediary.model.FaqTranslation"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO faq_translations (faq_id, language_code, question, answer)
+        VALUES (#{faqId}, #{languageCode}, #{question}, #{answer})
+    </insert>
+
+    <update id="updateTranslation"
+            parameterType="com.example.travlediary.model.FaqTranslation">
+        UPDATE faq_translations
+        SET question = #{question},
+            answer = #{answer}
+        WHERE faq_id = #{faqId}
+          AND language_code = #{languageCode}
+    </update>
+
+    <delete id="deleteTranslation">
+        DELETE FROM faq_translations
+        WHERE faq_id = #{faqId}
+          AND language_code = #{languageCode}
+    </delete>
+
+    <!--
+      FAQ 카테고리 관리. 공개/등록 화면이 쓰는 findCategories 는 그대로 두고
+      관리자 목록만 사용 중인 FAQ 수를 함께 읽는다. (삭제 차단 기준)
+    -->
+    <select id="findAdminCategories" resultMap="FaqCategoryListResultMap">
+        SELECT fc.id,
+               fc.category_name,
+               COUNT(f.id) AS faq_count
+        FROM faq_categories fc
+                 LEFT JOIN faqs f ON f.category_id = fc.id
+        GROUP BY fc.id, fc.category_name
+        ORDER BY fc.category_name ASC, fc.id ASC
+    </select>
+
+    <insert id="insertCategory" parameterType="com.example.travlediary.model.FaqCategory"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO faq_categories (category_name)
+        VALUES (#{categoryName})
+    </insert>
+
+    <update id="updateCategory" parameterType="com.example.travlediary.model.FaqCategory">
+        UPDATE faq_categories
+        SET category_name = #{categoryName}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteCategory">
+        DELETE FROM faq_categories
+        WHERE id = #{id}
+    </delete>
+
+    <select id="countCategoriesByNameExcludingId" resultType="int">
+        SELECT COUNT(*)
+        FROM faq_categories
+        WHERE category_name = #{categoryName}
+        <if test="excludeId != null">
+            AND id &lt;&gt; #{excludeId}
+        </if>
+    </select>
+
+    <select id="countFaqsByCategoryId" resultType="int">
+        SELECT COUNT(*)
+        FROM faqs
+        WHERE category_id = #{categoryId}
+    </select>
+
+    <!--
+      FAQ 카테고리 이름 번역. 언어 한 줄이 단위이며 한국어 원문은 faq_categories 가 갖는다.
+      카테고리를 지우면 번역은 FK ON DELETE CASCADE 로 함께 지워진다.
+    -->
+    <select id="findCategoryTranslationsByCategoryId" resultMap="FaqCategoryTranslationResultMap">
+        SELECT id, faq_category_id, language_code, category_name
+        FROM faq_category_translations
+        WHERE faq_category_id = #{faqCategoryId}
+        ORDER BY language_code ASC, id ASC
+    </select>
+
+    <select id="findCategoryTranslationsByCategoryIds"
+            resultMap="FaqCategoryTranslationResultMap">
+        SELECT id, faq_category_id, language_code, category_name
+        FROM faq_category_translations
+        <choose>
+            <when test="faqCategoryIds != null and !faqCategoryIds.isEmpty()">
+                WHERE faq_category_id IN
+                <foreach collection="faqCategoryIds" item="faqCategoryId"
+                         open="(" separator="," close=")">
+                    #{faqCategoryId}
+                </foreach>
+            </when>
+            <otherwise>
+                WHERE 1 = 0
+            </otherwise>
+        </choose>
+        ORDER BY faq_category_id ASC, language_code ASC, id ASC
+    </select>
+
+    <insert id="insertCategoryTranslation"
+            parameterType="com.example.travlediary.model.FaqCategoryTranslation"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO faq_category_translations (faq_category_id, language_code, category_name)
+        VALUES (#{faqCategoryId}, #{languageCode}, #{categoryName})
+    </insert>
+
+    <update id="updateCategoryTranslation"
+            parameterType="com.example.travlediary.model.FaqCategoryTranslation">
+        UPDATE faq_category_translations
+        SET category_name = #{categoryName}
+        WHERE faq_category_id = #{faqCategoryId}
+          AND language_code = #{languageCode}
+    </update>
+
+    <delete id="deleteCategoryTranslation">
+        DELETE FROM faq_category_translations
+        WHERE faq_category_id = #{faqCategoryId}
+          AND language_code = #{languageCode}
     </delete>
 
 </mapper>

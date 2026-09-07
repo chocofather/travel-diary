@@ -53,8 +53,8 @@ class AdminTravelInfoTranslationUiContractTest {
                 .doesNotContain("festivalInfoTranslations")
                 .doesNotContain("행사 상세정보");
         assertThat(count(travelInfoForm, ":: travelInfoTranslations")).isEqualTo(1);
-        // 탭 골격은 공용 조각 한 곳에만 있다
-        assertThat(count(resource(FRAGMENT), "data-translation-tabs")).isEqualTo(1);
+        // 탭 골격은 공용 조각 한 곳에만 있다 (제목/입력 영역 표시는 별개의 hook 이다)
+        assertThat(count(resource(FRAGMENT), "data-translation-tabs>")).isEqualTo(1);
     }
 
     @Test
@@ -62,7 +62,7 @@ class AdminTravelInfoTranslationUiContractTest {
             throws IOException {
         String fragment = resource(FRAGMENT);
         String panel = between(fragment,
-                "<div class=\"admin-translation-panel\"", "</th:block>\n  </div>");
+                "<div class=\"admin-translation-panel\"", "</th:block>\n    </div>");
 
         // 제목·본문·행사 상세정보가 같은 패널 안에 있다
         assertThat(panel)

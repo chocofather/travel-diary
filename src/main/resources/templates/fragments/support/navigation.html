@@ -3,26 +3,29 @@
 <body>
 <nav class="support-navigation"
      th:fragment="navigation(activeMenu)"
-     aria-label="고객센터 메뉴">
-  <span class="support-navigation-title">고객센터</span>
+     th:attr="aria-label=#{support.nav.label}">
+  <span class="support-navigation-title" th:text="#{support.title}">고객센터</span>
   <ul class="support-navigation-list">
     <li>
       <a class="support-navigation-link"
          th:classappend="${activeMenu == 'notices'} ? ' is-active' : ''"
          th:attr="aria-current=${activeMenu == 'notices'} ? 'page' : null"
-         th:href="@{/support/notices}">공지사항</a>
+         th:href="@{/support/notices}"
+         th:text="#{nav.support.notices}">공지사항</a>
     </li>
     <li>
       <a class="support-navigation-link"
          th:classappend="${activeMenu == 'faq'} ? ' is-active' : ''"
          th:attr="aria-current=${activeMenu == 'faq'} ? 'page' : null"
-         th:href="@{/support/faq}">자주 묻는 질문</a>
+         th:href="@{/support/faq}"
+         th:text="#{nav.support.faq}">자주 묻는 질문</a>
     </li>
     <li>
       <a class="support-navigation-link"
          th:classappend="${activeMenu == 'inquiries'} ? ' is-active' : ''"
          th:attr="aria-current=${activeMenu == 'inquiries'} ? 'page' : null"
-         th:href="@{/support/inquiries}">1:1 문의</a>
+         th:href="@{/support/inquiries}"
+         th:text="#{nav.support.inquiry}">1:1 문의</a>
     </li>
   </ul>
 </nav>

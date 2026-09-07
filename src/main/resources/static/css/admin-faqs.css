@@ -73,6 +73,13 @@
     font-size: 1.12rem;
 }
 
+/* 제목 옆에 '선택' 같은 표시를 함께 두는 섹션 머리 */
+.admin-faq-section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 .admin-faq-section-header p {
     margin: 7px 0 0;
     color: #717b91;

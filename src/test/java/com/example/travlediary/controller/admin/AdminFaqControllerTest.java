@@ -56,6 +56,47 @@ class AdminFaqControllerTest {
     private UserMapper userMapper;
 
     @Test
+    void translationTabsRenderForeignLanguagesAndBindTheirSlots() throws Exception {
+        when(faqService.getCategories()).thenReturn(List.of(category()));
+
+        String body = mockMvc.perform(get("/admin/faqs/new").with(user(admin())))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        var document = org.jsoup.Jsoup.parse(body);
+
+        assertThat(document.select("[data-translation-tab]").eachAttr("data-translation-tab"))
+                .containsExactly("en", "ja", "zh-CN", "zh-TW");
+        assertThat(document.select("[data-translation-tab]").eachText())
+                .containsExactly("영어", "일본어", "간체", "번체");
+        assertThat(document.select("[name='translations[0].question']")).isEmpty();
+        for (int slot = 1; slot <= 4; slot++) {
+            assertThat(document.select("[name='translations[" + slot + "].question']")).hasSize(1);
+            assertThat(document.select("textarea[name='translations[" + slot + "].answer']"))
+                    .hasSize(1);
+        }
+        assertThat(document.select("input[name='translations[1].languageCode']").attr("value"))
+                .isEqualTo("en");
+
+        mockMvc.perform(post("/admin/faqs").with(user(admin())).with(csrf())
+                        .param("categoryId", "3")
+                        .param("question", "회원 탈퇴는 어떻게 하나요?")
+                        .param("answer", "회원정보 수정에서 탈퇴할 수 있습니다.")
+                        .param("orderIndex", "1")
+                        .param("translations[1].languageCode", "en")
+                        .param("translations[1].question", "How do I close my account?")
+                        .param("translations[1].answer", "Open the settings page."))
+                .andExpect(status().is3xxRedirection());
+
+        ArgumentCaptor<FaqForm> captor = ArgumentCaptor.forClass(FaqForm.class);
+        verify(faqService).create(captor.capture(), eq(7L));
+        assertThat(captor.getValue().getTranslations().get(1).getLanguageCode()).isEqualTo("en");
+        assertThat(captor.getValue().getTranslations().get(1).getQuestion())
+                .isEqualTo("How do I close my account?");
+        assertThat(captor.getValue().getTranslations().get(1).getAnswer())
+                .isEqualTo("Open the settings page.");
+    }
+
+    @Test
     void adminCanOpenListAndCategoryBackedForm() throws Exception {
         when(faqService.getAdminList()).thenReturn(List.of(item()));
         when(faqService.getCategories()).thenReturn(List.of(category()));

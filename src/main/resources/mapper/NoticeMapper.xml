@@ -33,6 +33,15 @@
         <result property="createdAt" column="created_at"/>
     </resultMap>
 
+    <resultMap id="NoticeTranslationResultMap"
+               type="com.example.travlediary.model.NoticeTranslation">
+        <id property="id" column="id"/>
+        <result property="noticeId" column="notice_id"/>
+        <result property="languageCode" column="language_code"/>
+        <result property="title" column="title"/>
+        <result property="content" column="content"/>
+    </resultMap>
+
     <select id="findAdminList" resultMap="NoticeListResultMap">
         SELECT id, title, is_pinned, views, created_at, updated_at
         FROM notices
@@ -95,6 +104,58 @@
     <delete id="deleteNotice">
         DELETE FROM notices
         WHERE id = #{id}
+    </delete>
+
+    <!--
+      공지사항 번역. 언어 한 줄이 단위이며 한국어 원문은 notices 가 갖는다.
+      공지를 지우면 번역은 FK ON DELETE CASCADE 로 함께 지워지므로 여기서 따로 지우지 않는다.
+      언어 대체가 늘 같은 줄을 고르도록 정렬을 고정한다.
+    -->
+    <select id="findTranslationsByNoticeId" resultMap="NoticeTranslationResultMap">
+        SELECT id, notice_id, language_code, title, content
+        FROM notice_translations
+        WHERE notice_id = #{noticeId}
+        ORDER BY language_code ASC, id ASC
+    </select>
+
+    <select id="findTranslationsByNoticeIds" resultMap="NoticeTranslationResultMap">
+        SELECT id, notice_id, language_code, title, content
+        FROM notice_translations
+        <choose>
+            <when test="noticeIds != null and !noticeIds.isEmpty()">
+                WHERE notice_id IN
+                <foreach collection="noticeIds" item="noticeId"
+                         open="(" separator="," close=")">
+                    #{noticeId}
+                </foreach>
+            </when>
+            <otherwise>
+                WHERE 1 = 0
+            </otherwise>
+        </choose>
+        ORDER BY notice_id ASC, language_code ASC, id ASC
+    </select>
+
+    <insert id="insertTranslation"
+            parameterType="com.example.travlediary.model.NoticeTranslation"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO notice_translations (notice_id, language_code, title, content)
+        VALUES (#{noticeId}, #{languageCode}, #{title}, #{content})
+    </insert>
+
+    <update id="updateTranslation"
+            parameterType="com.example.travlediary.model.NoticeTranslation">
+        UPDATE notice_translations
+        SET title = #{title},
+            content = #{content}
+        WHERE notice_id = #{noticeId}
+          AND language_code = #{languageCode}
+    </update>
+
+    <delete id="deleteTranslation">
+        DELETE FROM notice_translations
+        WHERE notice_id = #{noticeId}
+          AND language_code = #{languageCode}
     </delete>
 
 </mapper>

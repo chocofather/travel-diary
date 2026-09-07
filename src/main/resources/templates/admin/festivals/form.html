@@ -17,6 +17,7 @@
   <script src="/js/admin-festival-form.js" defer></script>
   <script th:if="${!editMode}" src="/js/admin-festival-autofill.js" defer></script>
   <script src="/js/admin-translation-tabs.js" defer></script>
+  <script src="/js/admin-translation-collapse.js?v=20260907-1" defer></script>
   <script src="/js/admin-translation-editors.js" defer></script>
   <script src="/js/admin-festival-foreign-autofill.js" defer></script>
 </th:block>
@@ -33,8 +34,10 @@
       </div>
     </header>
 
+    <!-- 한국어 원문을 먼저 다 입력하고, 선택 입력인 번역은 접힌 채로 뒤에 온다 -->
     <form th:id="${editMode} ? 'festival-edit-form' : 'festival-create-form'"
-          class="admin-travel-info-form" th:action="${formAction}" method="post" th:object="${festivalForm}">
+          class="admin-travel-info-form" th:action="${formAction}" method="post"
+          th:object="${festivalForm}" data-translation-collapsible>
       <div class="admin-alert" th:if="${#fields.hasAnyErrors()}" role="alert">
         <p th:each="error : ${#fields.allErrors()}" th:text="${error}">입력값을 확인해 주세요.</p>
       </div>
@@ -116,37 +119,6 @@
       </section>
       </th:block>
 
-      <section th:if="${editMode and !#lists.isEmpty(festivalImages)}"
-               class="admin-form-card is-wide admin-travel-info-section">
-        <div class="admin-travel-info-section-header">
-          <h2>목록 썸네일 선택</h2>
-          <p>저장된 이미지 중 목록 카드에 사용할 이미지를 선택합니다. 선택하지 않으면 대표이미지가 사용됩니다.</p>
-        </div>
-        <div class="admin-kto-festival-image-picker-grid admin-festival-existing-image-picker"
-             role="radiogroup" aria-label="목록 썸네일로 사용할 축제 이미지">
-          <label class="admin-kto-festival-image-option is-existing is-none">
-            <span class="admin-kto-festival-image-placeholder">선택 안 함</span>
-            <span class="admin-kto-festival-image-option-body">
-              <strong>대표이미지 fallback</strong>
-              <span class="admin-kto-festival-image-option-select">
-                <input type="radio" th:field="*{thumbnailImageId}" value=""> 썸네일 해제
-              </span>
-            </span>
-          </label>
-          <label class="admin-kto-festival-image-option is-existing" th:each="image : ${festivalImages}">
-            <img th:src="${image.imageUrl}" th:alt="${image.sourceTitle ?: '축제 이미지'}">
-            <span class="admin-kto-festival-image-option-body">
-              <strong th:text="${image.sourceTitle ?: (image.isMain ? '대표사진' : '축제 이미지')}">축제 이미지</strong>
-              <span class="admin-kto-festival-image-option-meta"
-                    th:text="${(image.isMain ? '상세 대표 · ' : '') + (image.licenseType ?: '라이선스 미표기')}">상세 대표</span>
-              <span class="admin-kto-festival-image-option-select">
-                <input type="radio" th:field="*{thumbnailImageId}" th:value="${image.id}"> 목록 썸네일로 사용
-              </span>
-            </span>
-          </label>
-        </div>
-      </section>
-
       <section class="admin-form-card is-wide admin-travel-info-section">
         <div class="admin-travel-info-section-header">
           <h2>기본 정보</h2>
@@ -158,7 +130,8 @@
             <input id="festival-title" type="text" maxlength="255" placeholder="축제·행사 제목을 입력하세요"
                    th:field="*{title}">
           </div>
-          <div class="admin-travel-info-basic-grid">
+          <!-- 분류·범위, 시작일·종료일을 각각 한 쌍으로 묶어 보여 준다 -->
+          <div class="admin-travel-info-basic-grid is-pairs">
             <div class="admin-form-field">
               <label for="festival-category">축제 분류</label>
               <select id="festival-category" th:field="*{categoryId}">
@@ -200,7 +173,30 @@
 
       <section class="admin-form-card is-wide admin-travel-info-section">
         <div class="admin-travel-info-section-header">
-          <h2>번역</h2>
+          <h2>행사 상세정보</h2>
+          <p>행사 운영 정보를 각각 입력합니다. 여기까지가 한국어 원문입니다.</p>
+        </div>
+        <div class="admin-travel-info-basic-grid">
+          <div class="admin-form-field"><label for="festival-event-place">행사장소</label><input id="festival-event-place" type="text" maxlength="255" th:field="*{eventPlace}"></div>
+          <div class="admin-form-field"><label for="festival-address">주소</label><input id="festival-address" type="text" maxlength="500" th:field="*{address}"></div>
+          <div class="admin-form-field"><label for="festival-play-time">행사시간</label><input id="festival-play-time" type="text" maxlength="500" th:field="*{playTime}"></div>
+          <div class="admin-form-field"><label for="festival-use-time">이용요금</label><textarea id="festival-use-time" th:field="*{useTime}"></textarea></div>
+          <div class="admin-form-field"><label for="festival-sponsor1">주최</label><input id="festival-sponsor1" type="text" maxlength="255" th:field="*{sponsor1}"></div>
+          <div class="admin-form-field"><label for="festival-sponsor1-tel">주최 연락처</label><input id="festival-sponsor1-tel" type="text" maxlength="100" th:field="*{sponsor1Tel}"></div>
+          <div class="admin-form-field"><label for="festival-sponsor2">주관</label><input id="festival-sponsor2" type="text" maxlength="255" th:field="*{sponsor2}"></div>
+          <div class="admin-form-field"><label for="festival-sponsor2-tel">주관 연락처</label><input id="festival-sponsor2-tel" type="text" maxlength="100" th:field="*{sponsor2Tel}"></div>
+          <div class="admin-form-field"><label for="festival-contact-tel">대표 문의</label><input id="festival-contact-tel" type="text" maxlength="100" th:field="*{contactTel}"></div>
+          <!-- URL 은 한 줄을 다 쓴다 -->
+          <div class="admin-form-field is-full"><label for="festival-homepage-url">홈페이지</label><input id="festival-homepage-url" type="url" maxlength="1000" th:field="*{homepageUrl}"></div>
+        </div>
+      </section>
+
+      <section class="admin-form-card is-wide admin-travel-info-section">
+        <div class="admin-travel-info-section-header">
+          <div class="admin-travel-info-section-title">
+            <h2>번역</h2>
+            <span class="admin-field-optional">선택</span>
+          </div>
           <p>한국어는 위에서 입력한 제목·행사 소개·행사 상세정보가 그대로 저장됩니다.
              나머지 언어는 선택 입력입니다.</p>
         </div>
@@ -209,6 +205,7 @@
           외국어 TourAPI 자동입력 상태. 국문 TourAPI 축제를 고르면 바로 이어서 돌고,
           빈 번역칸만 채운다. 따로 누를 버튼은 두지 않는다.
           contentId 는 좌표를 되찾기 위한 읽기 전용 값이며 폼 입력값이 아니다.
+          접었을 때도 보이도록 번역 입력 영역 바깥에 둔다.
         -->
         <div class="admin-festival-foreign-autofill"
              data-festival-foreign-autofill
@@ -224,22 +221,35 @@
                                 :: travelInfoTranslations(true)}"></th:block>
       </section>
 
-      <section class="admin-form-card is-wide admin-travel-info-section">
+      <!-- 이미지(수정 화면의 저장된 축제 사진)는 입력을 모두 마친 뒤에 고른다 -->
+      <section th:if="${editMode and !#lists.isEmpty(festivalImages)}"
+               class="admin-form-card is-wide admin-travel-info-section">
         <div class="admin-travel-info-section-header">
-          <h2>행사 상세정보</h2>
-          <p>행사 운영 정보를 각각 입력합니다.</p>
+          <h2>목록 썸네일 선택</h2>
+          <p>저장된 이미지 중 목록 카드에 사용할 이미지를 선택합니다. 선택하지 않으면 대표이미지가 사용됩니다.</p>
         </div>
-        <div class="admin-travel-info-basic-grid">
-          <div class="admin-form-field"><label for="festival-event-place">행사장소</label><input id="festival-event-place" type="text" maxlength="255" th:field="*{eventPlace}"></div>
-          <div class="admin-form-field"><label for="festival-address">주소</label><input id="festival-address" type="text" maxlength="500" th:field="*{address}"></div>
-          <div class="admin-form-field"><label for="festival-play-time">행사시간</label><input id="festival-play-time" type="text" maxlength="500" th:field="*{playTime}"></div>
-          <div class="admin-form-field"><label for="festival-use-time">이용요금</label><textarea id="festival-use-time" th:field="*{useTime}"></textarea></div>
-          <div class="admin-form-field"><label for="festival-sponsor1">주최</label><input id="festival-sponsor1" type="text" maxlength="255" th:field="*{sponsor1}"></div>
-          <div class="admin-form-field"><label for="festival-sponsor1-tel">주최 연락처</label><input id="festival-sponsor1-tel" type="text" maxlength="100" th:field="*{sponsor1Tel}"></div>
-          <div class="admin-form-field"><label for="festival-sponsor2">주관</label><input id="festival-sponsor2" type="text" maxlength="255" th:field="*{sponsor2}"></div>
-          <div class="admin-form-field"><label for="festival-sponsor2-tel">주관 연락처</label><input id="festival-sponsor2-tel" type="text" maxlength="100" th:field="*{sponsor2Tel}"></div>
-          <div class="admin-form-field"><label for="festival-contact-tel">대표 문의</label><input id="festival-contact-tel" type="text" maxlength="100" th:field="*{contactTel}"></div>
-          <div class="admin-form-field"><label for="festival-homepage-url">홈페이지</label><input id="festival-homepage-url" type="url" maxlength="1000" th:field="*{homepageUrl}"></div>
+        <div class="admin-kto-festival-image-picker-grid admin-festival-existing-image-picker"
+             role="radiogroup" aria-label="목록 썸네일로 사용할 축제 이미지">
+          <label class="admin-kto-festival-image-option is-existing is-none">
+            <span class="admin-kto-festival-image-placeholder">선택 안 함</span>
+            <span class="admin-kto-festival-image-option-body">
+              <strong>대표이미지 fallback</strong>
+              <span class="admin-kto-festival-image-option-select">
+                <input type="radio" th:field="*{thumbnailImageId}" value=""> 썸네일 해제
+              </span>
+            </span>
+          </label>
+          <label class="admin-kto-festival-image-option is-existing" th:each="image : ${festivalImages}">
+            <img th:src="${image.imageUrl}" th:alt="${image.sourceTitle ?: '축제 이미지'}">
+            <span class="admin-kto-festival-image-option-body">
+              <strong th:text="${image.sourceTitle ?: (image.isMain ? '대표사진' : '축제 이미지')}">축제 이미지</strong>
+              <span class="admin-kto-festival-image-option-meta"
+                    th:text="${(image.isMain ? '상세 대표 · ' : '') + (image.licenseType ?: '라이선스 미표기')}">상세 대표</span>
+              <span class="admin-kto-festival-image-option-select">
+                <input type="radio" th:field="*{thumbnailImageId}" th:value="${image.id}"> 목록 썸네일로 사용
+              </span>
+            </span>
+          </label>
         </div>
       </section>
 

@@ -92,6 +92,12 @@ public class SecurityConfig {
                         new RegexRequestMatcher(
                                 "^/admin/faqs/[0-9]+/delete$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(
+                                "^/admin/faq-categories$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/admin/faq-categories/edit/[0-9]+$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/admin/faq-categories/[0-9]+/delete$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
                                 "^/support/inquiries$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(
                                 "^/support/inquiries/[0-9]+/delete$", HttpMethod.POST.name()),

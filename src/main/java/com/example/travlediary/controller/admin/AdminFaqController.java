@@ -104,5 +104,8 @@ public class AdminFaqController {
                 ? "질문, 답변, 노출 순서와 공개 상태를 수정합니다."
                 : "고객센터에 공개할 자주 묻는 질문을 등록합니다.");
         model.addAttribute("submitLabel", editMode ? "수정 저장" : "등록");
+        // 번역 탭 라벨. 다른 관리자 화면과 같은 조각/라벨을 그대로 쓴다.
+        model.addAttribute("translationLanguageLabels", AdminTranslationLabels.LANGUAGE_LABELS);
+        model.addAttribute("translationTabLabels", AdminTranslationLabels.TAB_LABELS);
     }
 }

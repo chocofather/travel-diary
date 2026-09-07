@@ -22,6 +22,9 @@ import java.util.List;
 public class InquiryService {
 
     public static final int MAX_CONTENT_LENGTH = 5_000;
+
+    /** inquiries.subject 는 varchar(255) */
+    public static final int MAX_SUBJECT_LENGTH = 255;
     public static final int MAX_ANSWER_LENGTH = 5_000;
 
     private final InquiryMapper inquiryMapper;
@@ -173,31 +176,39 @@ public class InquiryService {
         }
     }
 
+    /** 공개 화면이 언어에 맞는 문구를 보여 줄 수 있도록 메시지 코드를 함께 실어 준다. */
     private ValidatedInquiry validateInquiry(InquiryForm form) {
         if (form == null) {
-            throw new InquiryValidationException(null, "문의 내용을 입력해 주세요.");
+            throw new InquiryValidationException(null, "support.inquiry.error.form.required",
+                    "문의 내용을 입력해 주세요.");
         }
         if (form.getInquiryType() == null) {
-            throw new InquiryValidationException("inquiryType", "문의 유형을 선택해 주세요.");
+            throw new InquiryValidationException("inquiryType",
+                    "support.inquiry.error.type.required", "문의 유형을 선택해 주세요.");
         }
 
         String subject = form.getSubject() == null ? "" : form.getSubject().strip();
         form.setSubject(subject);
         if (subject.isEmpty()) {
-            throw new InquiryValidationException("subject", "제목을 입력해 주세요.");
+            throw new InquiryValidationException("subject",
+                    "support.inquiry.error.subject.required", "제목을 입력해 주세요.");
         }
-        if (subject.length() > 255) {
-            throw new InquiryValidationException("subject", "제목은 255자 이하로 입력해 주세요.");
+        if (subject.length() > MAX_SUBJECT_LENGTH) {
+            throw new InquiryValidationException("subject",
+                    "support.inquiry.error.subject.tooLong",
+                    "제목은 " + MAX_SUBJECT_LENGTH + "자 이하로 입력해 주세요.", MAX_SUBJECT_LENGTH);
         }
 
         String content = form.getContent() == null ? "" : form.getContent().strip();
         form.setContent(content);
         if (content.isEmpty()) {
-            throw new InquiryValidationException("content", "문의 내용을 입력해 주세요.");
+            throw new InquiryValidationException("content",
+                    "support.inquiry.error.content.required", "문의 내용을 입력해 주세요.");
         }
         if (content.length() > MAX_CONTENT_LENGTH) {
             throw new InquiryValidationException("content",
-                    "문의 내용은 " + MAX_CONTENT_LENGTH + "자 이하로 입력해 주세요.");
+                    "support.inquiry.error.content.tooLong",
+                    "문의 내용은 " + MAX_CONTENT_LENGTH + "자 이하로 입력해 주세요.", MAX_CONTENT_LENGTH);
         }
         return new ValidatedInquiry(subject, content);
     }
@@ -234,10 +245,11 @@ public class InquiryService {
     }
 
     private InquiryEditConflictException editConflict(InquiryDetailDto inquiry) {
-        String message = inquiry.isAnswered()
-                ? "답변이 완료된 문의는 수정할 수 없습니다."
-                : "답변대기 상태의 문의만 수정할 수 있습니다.";
-        return new InquiryEditConflictException(message);
+        return inquiry.isAnswered()
+                ? new InquiryEditConflictException("support.inquiry.error.edit.answered",
+                        "답변이 완료된 문의는 수정할 수 없습니다.")
+                : new InquiryEditConflictException("support.inquiry.error.edit.notPending",
+                        "답변대기 상태의 문의만 수정할 수 있습니다.");
     }
 
     private ResponseStatusException notFound() {

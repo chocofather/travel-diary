@@ -140,6 +140,44 @@ class AdminFestivalUiContractTest {
                 .contains("@media (max-width: 560px)");
     }
 
+    /**
+     * 한국어 원문(기본 정보 → 행사 소개 → 행사 상세정보)을 모두 입력한 뒤 번역이 온다.
+     * 번역 사이에 한국어 입력이 다시 끼어들면 안 된다.
+     */
+    @Test
+    void festivalFormPutsEveryKoreanSectionBeforeTheCollapsibleTranslation() throws IOException {
+        String form = resource("/templates/admin/festivals/form.html");
+
+        int tourApi = form.indexOf("<h2>TourAPI에서 축제·행사 불러오기</h2>");
+        int basic = form.indexOf("<h2>기본 정보</h2>");
+        int overview = form.indexOf("<h2>행사 소개</h2>");
+        int details = form.indexOf("<h2>행사 상세정보</h2>");
+        int translation = form.indexOf("<h2>번역</h2>");
+        int images = form.indexOf("<h2>목록 썸네일 선택</h2>");
+        int actions = form.indexOf("admin-travel-info-submit-actions");
+
+        assertThat(tourApi).isNotNegative();
+        assertThat(basic).isGreaterThan(tourApi);
+        assertThat(overview).isGreaterThan(basic);
+        assertThat(details).isGreaterThan(overview);
+        assertThat(translation).isGreaterThan(details);
+        // 이미지(수정 화면)와 버튼은 번역 뒤에 온다
+        assertThat(images).isGreaterThan(translation);
+        assertThat(actions).isGreaterThan(images);
+        // 한국어 원문 입력은 모두 번역 앞에 있다
+        assertThat(form.indexOf("th:field=\"*{homepageUrl}\"")).isLessThan(translation);
+        assertThat(form.indexOf("th:field=\"*{eventPlace}\"")).isLessThan(translation);
+
+        // 번역은 공용 접기 스크립트로 기본 접힘 상태가 된다
+        assertThat(form)
+                .contains("data-translation-collapsible")
+                .contains("/js/admin-translation-collapse.js")
+                .contains(":: travelInfoTranslations(true)");
+        assertThat(resource("/templates/fragments/admin/travel-info-translation-tabs.html"))
+                .contains("data-translation-tabs-heading")
+                .contains("data-translation-tabs-body");
+    }
+
     private String resource(String path) throws IOException {
         try (InputStream input = getClass().getResourceAsStream(path)) {
             assertThat(input).as("resource %s", path).isNotNull();

@@ -35,7 +35,8 @@ class NoticeServiceTest {
 
     @BeforeEach
     void setUp() {
-        noticeService = new NoticeService(noticeMapper, new PostContentSanitizer());
+        noticeService = new NoticeService(noticeMapper, new PostContentSanitizer(),
+                new NoticeLocalizationService(noticeMapper));
     }
 
     @Test

@@ -3,6 +3,8 @@ package com.example.travlediary.controller.notice;
 import com.example.travlediary.config.CustomLoginSuccessHandler;
 import com.example.travlediary.config.CustomLogoutSuccessHandler;
 import com.example.travlediary.config.SecurityConfig;
+import com.example.travlediary.config.i18n.SupportedLanguage;
+import com.example.travlediary.config.i18n.TravelDiaryLocaleResolver;
 import com.example.travlediary.dto.NoticeDetailDto;
 import com.example.travlediary.dto.NoticeListItemDto;
 import com.example.travlediary.repository.user.UserMapper;
@@ -21,6 +23,7 @@ import java.sql.Timestamp;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -107,6 +110,48 @@ class NoticeControllerTest {
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("목록으로")));
     }
 
+    /** 고정 UI 문구는 요청 언어를 따르고, 공지 제목·본문은 서비스가 준 값 그대로다. */
+    @Test
+    void staticLabelsFollowTheLocaleWhileNoticeContentComesFromTheService() throws Exception {
+        when(noticeService.getPublicDetail(10L)).thenReturn(detail());
+
+        var korean = Jsoup.parse(mockMvc.perform(get("/support/notices/10"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+        assertThat(korean.select(".support-notice-detail-actions a").text()).isEqualTo("목록으로");
+
+        var english = Jsoup.parse(mockMvc.perform(get("/support/notices/10")
+                        .cookie(localeCookie("en")))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+        assertThat(english.select(".support-notice-detail-actions a").text())
+                .isEqualTo("Back to list");
+        assertThat(english.select(".support-navigation-title").text()).isEqualTo("Support");
+        // 공지 제목은 DB 번역(또는 원문)을 그대로 쓴다
+        assertThat(english.select("#support-notice-detail-title").text())
+                .isEqualTo("서비스 점검 안내");
+    }
+
+    /** 공개 화면은 쿠키 locale 로 정한 요청 언어를 서비스에 그대로 넘긴다. (관리자 경로는 대상 아님) */
+    @Test
+    void requestedLanguageFromTheLocaleCookieReachesTheService() throws Exception {
+        NoticeDetailDto detail = detail();
+        when(noticeService.getPublicDetail(10L)).thenReturn(detail);
+        when(noticeService.getPublicList(0L, 10)).thenReturn(List.of(listItem(10L, true)));
+        when(noticeService.countPublicList()).thenReturn(1L);
+
+        mockMvc.perform(get("/support/notices/10").cookie(localeCookie("en")))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/support/notices").cookie(localeCookie("ja")))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/support/notices/10"))
+                .andExpect(status().isOk());
+
+        verify(noticeService).localizePublicDetail(detail, SupportedLanguage.ENGLISH);
+        verify(noticeService).localizePublicList(
+                org.mockito.ArgumentMatchers.anyList(), eq(SupportedLanguage.JAPANESE));
+        // locale 쿠키가 없으면 한국어로 본다
+        verify(noticeService).localizePublicDetail(detail, SupportedLanguage.KOREAN);
+    }
+
     @Test
     void missingNumericDetailReturnsApplicationNotFound() throws Exception {
         when(noticeService.getPublicDetail(999L))
@@ -121,6 +166,11 @@ class NoticeControllerTest {
         mockMvc.perform(get("/support/notices/abc"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/login?redirect=/support/notices/abc"));
+    }
+
+    private jakarta.servlet.http.Cookie localeCookie(String languageTag) {
+        return new jakarta.servlet.http.Cookie(
+                TravelDiaryLocaleResolver.COOKIE_NAME, languageTag);
     }
 
     private NoticeListItemDto listItem(Long id, boolean pinned) {

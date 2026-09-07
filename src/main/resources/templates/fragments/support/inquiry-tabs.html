@@ -3,15 +3,17 @@
 <body>
 <nav class="support-inquiry-tabs"
      th:fragment="tabs(activeTab)"
-     aria-label="1:1 문의 메뉴">
+     th:attr="aria-label=#{support.inquiry.tabs.label}">
   <a class="support-inquiry-tab"
      th:classappend="${activeTab == 'new'} ? ' is-active' : ''"
      th:attr="aria-current=${activeTab == 'new'} ? 'page' : null"
-     th:href="@{/support/inquiries/new}">문의하기</a>
+     th:href="@{/support/inquiries/new}"
+     th:text="#{support.inquiry.tab.new}">문의하기</a>
   <a class="support-inquiry-tab"
      th:classappend="${activeTab == 'list'} ? ' is-active' : ''"
      th:attr="aria-current=${activeTab == 'list'} ? 'page' : null"
-     th:href="@{/support/inquiries}">내 문의내역</a>
+     th:href="@{/support/inquiries}"
+     th:text="#{support.inquiry.tab.list}">내 문의내역</a>
 </nav>
 </body>
 </html>
