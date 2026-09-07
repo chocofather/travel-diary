@@ -13,8 +13,8 @@
     <section class="mypage-content mypage-profile-page" aria-labelledby="mypage-profile-title">
       <header class="mypage-page-header">
         <p>PROFILE</p>
-        <h1 id="mypage-profile-title">프로필 변경</h1>
-        <span>사이트에 표시되는 닉네임과 프로필 이미지를 관리합니다.</span>
+        <h1 id="mypage-profile-title" th:text="#{mypage.profile.title}">프로필 변경</h1>
+        <span th:text="#{mypage.profile.description}">사이트에 표시되는 닉네임과 프로필 이미지를 관리합니다.</span>
       </header>
 
       <p class="mypage-success-message" th:if="${profileMessage}" th:text="${profileMessage}">
@@ -29,40 +29,49 @@
         <div class="mypage-current-profile">
           <img class="mypage-profile-image"
                th:src="${profile.profileImage}"
-               th:alt="|${profile.nickname} 프로필 이미지|"
+               th:alt="#{mypage.profileImageAlt(${profile.nickname})}"
                onerror="this.onerror=null;this.src='/images/default.png';">
           <div>
-            <strong>현재 프로필 이미지</strong>
-            <span>새 이미지를 선택하지 않으면 기존 이미지가 유지됩니다.</span>
+            <strong th:text="#{mypage.profile.currentImage}">현재 프로필 이미지</strong>
+            <span th:text="#{mypage.profile.currentImage.help}">새 이미지를 선택하지 않으면 기존 이미지가 유지됩니다.</span>
           </div>
         </div>
 
         <div class="mypage-form-field">
-          <label for="profileImageFile">프로필 이미지</label>
+          <label for="profileImageFile" th:text="#{mypage.profile.image}">프로필 이미지</label>
           <input id="profileImageFile"
                  type="file"
                  th:field="*{profileImageFile}"
                  accept="image/jpeg,image/png,image/webp">
-          <small>JPG, PNG, WEBP 형식의 5MB 이하 이미지를 사용할 수 있습니다.</small>
+          <small th:text="#{mypage.profile.image.help}">JPG, PNG, WEBP 형식의 5MB 이하 이미지를 사용할 수 있습니다.</small>
           <p class="mypage-field-error"
              th:if="${#fields.hasErrors('profileImageFile')}"
              th:errors="*{profileImageFile}">이미지 오류</p>
         </div>
 
         <div class="mypage-form-field">
-          <label for="nickname">닉네임</label>
+          <label for="nickname" th:text="#{mypage.profile.nickname}">닉네임</label>
+          <!-- 입력 중 안내 문구는 data-* 로 넘긴다. (JS 에 언어별 문자열을 두지 않는다) -->
           <input id="nickname"
                  type="text"
                  th:field="*{nickname}"
-                 th:attr="data-current-nickname=${profile.nickname}"
+                 th:attr="data-current-nickname=${profile.nickname},
+                          data-message-too-short=#{mypage.profile.nickname.client.tooShort},
+                          data-message-too-long=#{mypage.profile.nickname.client.tooLong},
+                          data-message-invalid-chars=#{mypage.profile.nickname.client.invalidChars},
+                          data-message-current=#{mypage.profile.nickname.status.CURRENT},
+                          data-message-checking=#{mypage.profile.nickname.client.checking},
+                          data-message-check-failed=#{mypage.profile.nickname.client.checkFailed},
+                          data-message-forbidden=#{mypage.profile.nickname.status.FORBIDDEN},
+                          data-message-invalid=#{mypage.profile.nickname.status.INVALID_FORMAT}"
                  minlength="2"
                  maxlength="12"
                  autocomplete="nickname"
                  aria-describedby="nickname-help nickname-availability"
                  required>
           <small id="nickname-help">
-            2~12자의 한글, 영문, 숫자만 사용할 수 있습니다.<br>
-            공백·특수문자 및 부적절한 표현은 사용할 수 없습니다.
+            <span th:text="#{mypage.profile.nickname.help.format}">2~12자의 한글, 영문, 숫자만 사용할 수 있습니다.</span><br>
+            <span th:text="#{mypage.profile.nickname.help.forbidden}">공백·특수문자 및 부적절한 표현은 사용할 수 없습니다.</span>
           </small>
           <p id="nickname-availability"
              class="mypage-nickname-status"
@@ -77,8 +86,9 @@
         </div>
 
         <div class="mypage-form-actions">
-          <a th:href="@{/mypage}">취소</a>
-          <button id="profileSaveButton" type="submit">저장</button>
+          <a th:href="@{/mypage}" th:text="#{mypage.profile.cancel}">취소</a>
+          <button id="profileSaveButton" type="submit"
+                  th:text="#{mypage.profile.save}">저장</button>
         </div>
       </form>
     </section>

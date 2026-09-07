@@ -8,6 +8,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const originalNickname = nicknameInput.dataset.currentNickname || "";
+    // 안내 문구는 화면이 data-* 로 내려 준다. (언어별 문자열을 여기에 두지 않는다)
+    const messages = nicknameInput.dataset;
     const nicknamePattern = /^[가-힣A-Za-z0-9]{2,12}$/;
     let debounceTimer = null;
     let requestController = null;
@@ -42,13 +44,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function validateNickname(nickname) {
         if (nickname.length < 2) {
-            return "닉네임은 2자 이상 입력해주세요.";
+            return messages.messageTooShort;
         }
         if (nickname.length > 12) {
-            return "닉네임은 12자 이하로 입력해주세요.";
+            return messages.messageTooLong;
         }
         if (!nicknamePattern.test(nickname)) {
-            return "공백과 특수문자는 사용할 수 없습니다.";
+            return messages.messageInvalidChars;
         }
         return null;
     }
@@ -76,18 +78,18 @@ document.addEventListener("DOMContentLoaded", () => {
                     setState("current", result.message);
                     break;
                 case "FORBIDDEN":
-                    setState("forbidden", result.message || "사용할 수 없는 닉네임입니다.");
+                    setState("forbidden", result.message || messages.messageForbidden);
                     break;
                 case "DUPLICATE":
                     setState("duplicate", result.message);
                     break;
                 case "INVALID_FORMAT":
                 default:
-                    setState("invalid", result.message || "닉네임을 확인해주세요.");
+                    setState("invalid", result.message || messages.messageInvalid);
             }
         } catch (error) {
             if (error.name !== "AbortError" && sequence === requestSequence) {
-                setState("error", "중복 확인에 실패했습니다. 다시 입력해주세요.");
+                setState("error", messages.messageCheckFailed);
             }
         } finally {
             if (sequence === requestSequence) {
@@ -105,11 +107,11 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
         if (nickname === originalNickname) {
-            setState("current", "현재 사용 중인 닉네임입니다.");
+            setState("current", messages.messageCurrent);
             return;
         }
 
-        setState("checking", "닉네임 중복을 확인하고 있습니다.");
+        setState("checking", messages.messageChecking);
         const sequence = requestSequence;
         debounceTimer = window.setTimeout(() => {
             debounceTimer = null;

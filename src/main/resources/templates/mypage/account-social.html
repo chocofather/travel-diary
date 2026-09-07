@@ -12,38 +12,41 @@
     <section class="mypage-content mypage-account-page" aria-labelledby="account-title">
       <header class="mypage-page-header">
         <p>ACCOUNT</p>
-        <h1 id="account-title">계정 관리</h1>
-        <span>로그인 계정 정보를 확인할 수 있습니다.</span>
+        <h1 id="account-title" th:text="#{mypage.nav.account.social}">계정 관리</h1>
+        <span th:text="#{mypage.account.social.description}">로그인 계정 정보를 확인할 수 있습니다.</span>
       </header>
 
-      <p class="mypage-account-notice" th:if="${param.socialWithdrawalError}">
+      <p class="mypage-account-notice" th:if="${param.socialWithdrawalError}"
+         th:text="#{mypage.account.social.oauthError}">
         본인 확인 또는 소셜 계정 연결 해제 중 문제가 발생했습니다. 다시 시도해주세요.
       </p>
 
       <section class="mypage-account-panel" aria-labelledby="social-login-title">
         <div class="mypage-account-section-heading">
-          <h2 id="social-login-title">로그인 계정</h2>
-          <span>Travel Diary에 연결된 소셜 계정입니다.</span>
+          <h2 id="social-login-title" th:text="#{mypage.account.social.loginAccount}">로그인 계정</h2>
+          <span th:text="#{mypage.account.social.loginAccount.help}">Travel Diary에 연결된 소셜 계정입니다.</span>
         </div>
 
         <div class="mypage-social-account-list" th:if="${!#lists.isEmpty(socialAccounts)}">
           <article class="mypage-social-account-row" th:each="socialAccount : ${socialAccounts}">
+            <!-- 분기는 provider enum 이름으로 하고, 표시 이름만 언어에 맞춰 고른다. -->
             <strong class="mypage-social-account-provider"
                     th:switch="${socialAccount.provider.name()}">
-              <span th:case="'GOOGLE'">Google</span>
-              <span th:case="'KAKAO'">카카오</span>
-              <span th:case="'NAVER'">네이버</span>
-              <span th:case="*">소셜 계정</span>
+              <span th:case="'GOOGLE'" th:text="#{mypage.account.social.provider.GOOGLE}">Google</span>
+              <span th:case="'KAKAO'" th:text="#{mypage.account.social.provider.KAKAO}">카카오</span>
+              <span th:case="'NAVER'" th:text="#{mypage.account.social.provider.NAVER}">네이버</span>
+              <span th:case="*" th:text="#{mypage.account.social.provider.other}">소셜 계정</span>
             </strong>
             <span class="mypage-social-account-email">
-              <small>소셜 계정 이메일</small>
-              <span th:text="${#strings.isEmpty(socialAccount.providerEmail)
-                  ? '이메일 정보 없음'
-                  : socialAccount.providerEmail}">이메일 정보 없음</span>
+              <small th:text="#{mypage.account.social.providerEmail}">소셜 계정 이메일</small>
+              <span th:text="${#strings.isEmpty(socialAccount.providerEmail)}
+                  ? #{mypage.account.social.providerEmail.none}
+                  : ${socialAccount.providerEmail}">이메일 정보 없음</span>
             </span>
           </article>
         </div>
-        <p class="mypage-social-account-empty" th:if="${#lists.isEmpty(socialAccounts)}">
+        <p class="mypage-social-account-empty" th:if="${#lists.isEmpty(socialAccounts)}"
+           th:text="#{mypage.account.social.empty}">
           연결 정보를 확인할 수 없습니다.
         </p>
       </section>
@@ -51,12 +54,13 @@
       <section class="mypage-social-withdrawal"
                aria-labelledby="social-withdrawal-title">
         <div class="mypage-social-withdrawal-summary">
-          <h2 id="social-withdrawal-title">회원 탈퇴</h2>
-          <p>Travel Diary 계정을 삭제하고 개인 정보를 정리합니다.</p>
+          <h2 id="social-withdrawal-title" th:text="#{mypage.account.withdraw}">회원 탈퇴</h2>
+          <p th:text="#{mypage.account.withdrawal.summary}">Travel Diary 계정을 삭제하고 개인 정보를 정리합니다.</p>
         </div>
         <form th:action="@{/mypage/account/social-withdrawal}" method="post"
               class="mypage-account-actions">
-          <button type="submit" class="is-danger is-compact-danger">회원 탈퇴</button>
+          <button type="submit" class="is-danger is-compact-danger"
+                  th:text="#{mypage.account.withdraw}">회원 탈퇴</button>
         </form>
         <p class="mypage-account-notice" th:if="${socialWithdrawalError}"
            th:text="${socialWithdrawalError}">탈퇴를 시작할 수 없습니다.</p>

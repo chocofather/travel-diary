@@ -22,10 +22,17 @@ class MyPageNicknameUiContractTest {
         String template = read("templates/mypage/profile.html");
         String script = read("static/js/mypage-profile.js");
 
+        // 안내 문구는 화면이 data-* 로 내려 준다. (스크립트에 언어별 문자열을 두지 않는다)
         assertThat(template)
-                .contains("maxlength=\"12\"", FORMAT_GUIDANCE, POLICY_GUIDANCE,
+                .contains("maxlength=\"12\"",
+                        "#{mypage.profile.nickname.help.format}",
+                        "#{mypage.profile.nickname.help.forbidden}",
                         "/js/mypage-profile.js", "id=\"nickname-availability\"",
-                        "id=\"profileSaveButton\"", "data-current-nickname");
+                        "id=\"profileSaveButton\"", "data-current-nickname",
+                        "data-message-too-short=#{mypage.profile.nickname.client.tooShort}",
+                        "data-message-invalid-chars=#{mypage.profile.nickname.client.invalidChars}",
+                        "data-message-current=#{mypage.profile.nickname.status.CURRENT}",
+                        "data-message-forbidden=#{mypage.profile.nickname.status.FORBIDDEN}");
         assertThat(script)
                 .contains("/mypage/profile/check-nickname?nickname=",
                         "new AbortController()", "requestSequence", "}, 250)",
@@ -33,13 +40,16 @@ class MyPageNicknameUiContractTest {
                         "saveButton.disabled",
                         "case \"FORBIDDEN\"",
                         "setState(\"forbidden\"",
-                        "사용할 수 없는 닉네임입니다.",
-                        "현재 사용 중인 닉네임입니다.",
+                        "messages.messageForbidden",
+                        "messages.messageCurrent",
                         "case \"AVAILABLE\"",
                         "case \"DUPLICATE\"",
-                        "닉네임은 2자 이상 입력해주세요.",
-                        "공백과 특수문자는 사용할 수 없습니다.")
-                .doesNotContain("userId=");
+                        "messages.messageTooShort",
+                        "messages.messageInvalidChars")
+                .doesNotContain("userId=")
+                // 한국어 문구를 스크립트에 다시 넣지 않는다
+                .doesNotContain(FORMAT_GUIDANCE, POLICY_GUIDANCE,
+                        "사용할 수 없는 닉네임입니다.", "현재 사용 중인 닉네임입니다.");
     }
 
     @Test

@@ -72,21 +72,24 @@ public class MyPageAccountService {
     @Transactional
     public void changePassword(Long userId, PasswordChangeForm form) {
         if (form.getNewPassword() == null || form.getNewPassword().isEmpty()) {
-            throw new AccountValidationException(
-                    "newPassword", "새 비밀번호를 입력해주세요.");
+            throw new AccountValidationException("newPassword",
+                    "mypage.account.error.password.required", "새 비밀번호를 입력해주세요.");
         }
         if (form.getNewPasswordConfirm() == null || form.getNewPasswordConfirm().isEmpty()) {
-            throw new AccountValidationException(
-                    "newPasswordConfirm", "새 비밀번호 확인을 입력해주세요.");
+            throw new AccountValidationException("newPasswordConfirm",
+                    "mypage.account.error.password.confirmRequired",
+                    "새 비밀번호 확인을 입력해주세요.");
         }
         if (!form.getNewPassword().equals(form.getNewPasswordConfirm())) {
-            throw new AccountValidationException(
-                    "newPasswordConfirm", "새 비밀번호가 일치하지 않습니다.");
+            throw new AccountValidationException("newPasswordConfirm",
+                    "mypage.account.error.password.mismatch", "새 비밀번호가 일치하지 않습니다.");
         }
         try {
             PasswordPolicy.validate(form.getNewPassword());
         } catch (IllegalArgumentException exception) {
-            throw new AccountValidationException("newPassword", exception.getMessage());
+            // 정책 문구는 가입 화면과 공유하므로 여기서는 코드만 얹고 원문을 기본값으로 남긴다.
+            throw new AccountValidationException("newPassword",
+                    "mypage.account.error.password.invalid", exception.getMessage());
         }
 
         String encodedPassword = passwordEncoder.encode(form.getNewPassword());
@@ -102,8 +105,8 @@ public class MyPageAccountService {
         if (currentPassword == null
                 || account.getUserPassword() == null
                 || !passwordEncoder.matches(currentPassword, account.getUserPassword())) {
-            throw new AccountValidationException(
-                    "currentPassword", "비밀번호가 일치하지 않습니다.");
+            throw new AccountValidationException("currentPassword",
+                    "mypage.account.error.currentPassword.mismatch", "비밀번호가 일치하지 않습니다.");
         }
 
         deactivate(account);
@@ -130,8 +133,9 @@ public class MyPageAccountService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "회원 정보를 찾을 수 없습니다.");
         }
         if (account.getUserRole() != UserRole.USER) {
-            throw new AccountValidationException(
-                    null, "관리자 계정은 마이페이지에서 탈퇴할 수 없습니다.");
+            throw new AccountValidationException(null,
+                    "mypage.account.withdrawal.adminBlocked",
+                    "관리자 계정은 마이페이지에서 탈퇴할 수 없습니다.");
         }
     }
 
@@ -153,10 +157,12 @@ public class MyPageAccountService {
     private String normalizeName(String fullName) {
         String normalized = fullName == null ? "" : fullName.strip();
         if (normalized.isEmpty()) {
-            throw new AccountValidationException("fullName", "이름을 입력해주세요.");
+            throw new AccountValidationException("fullName",
+                    "mypage.account.error.fullName.required", "이름을 입력해주세요.");
         }
         if (normalized.length() > MAX_NAME_LENGTH) {
-            throw new AccountValidationException("fullName", "이름은 50자 이하로 입력해주세요.");
+            throw new AccountValidationException("fullName",
+                    "mypage.account.error.fullName.tooLong", "이름은 50자 이하로 입력해주세요.");
         }
         return normalized;
     }
@@ -167,8 +173,7 @@ public class MyPageAccountService {
         }
         String value = userPhone.strip();
         if (!value.matches("[0-9-]+")) {
-            throw new AccountValidationException(
-                    "userPhone", "전화번호 형식을 확인해주세요.");
+            throw invalidPhone();
         }
         String digits = value.replace("-", "");
         if (digits.length() == 10) {
@@ -179,16 +184,23 @@ public class MyPageAccountService {
             return digits.substring(0, 3) + "-" + digits.substring(3, 7)
                     + "-" + digits.substring(7);
         }
-        throw new AccountValidationException("userPhone", "전화번호 형식을 확인해주세요.");
+        throw invalidPhone();
+    }
+
+    private AccountValidationException invalidPhone() {
+        return new AccountValidationException("userPhone",
+                "mypage.account.error.phone.invalid", "전화번호 형식을 확인해주세요.");
     }
 
     private LocalDate validateBirth(LocalDate userBirth) {
         if (userBirth == null) {
-            throw new AccountValidationException("userBirth", "생년월일을 입력해주세요.");
+            throw new AccountValidationException("userBirth",
+                    "mypage.account.error.birth.required", "생년월일을 입력해주세요.");
         }
         if (userBirth.isAfter(LocalDate.now())) {
-            throw new AccountValidationException(
-                    "userBirth", "생년월일은 미래 날짜를 선택할 수 없습니다.");
+            throw new AccountValidationException("userBirth",
+                    "mypage.account.error.birth.future",
+                    "생년월일은 미래 날짜를 선택할 수 없습니다.");
         }
         return userBirth;
     }

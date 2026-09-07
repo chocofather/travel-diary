@@ -45,16 +45,19 @@ public class SocialWithdrawalService {
     }
 
     public PendingSocialWithdrawal begin(Long userId) {
+        // begin()의 오류만 계정 관리 화면에 그대로 노출되므로 여기에만 메시지 코드를 얹는다.
         if (userId == null || accountService.hasLocalPassword(userId)) {
-            throw new SocialWithdrawalException("소셜 계정 탈퇴를 시작할 수 없습니다.");
+            throw new SocialWithdrawalException("mypage.account.error.social.cannotStart",
+                    "소셜 계정 탈퇴를 시작할 수 없습니다.");
         }
 
         List<SocialAccount> accounts = socialAccountService.findAllByUserId(userId);
         if (accounts == null || accounts.isEmpty()) {
-            throw new SocialWithdrawalException("로그인 계정 정보를 확인할 수 없습니다.");
+            throw unknownAccount();
         }
         if (accounts.size() != 1) {
             throw new SocialWithdrawalException(
+                    "mypage.account.error.social.multipleProviders",
                     "여러 로그인 수단이 연결된 계정은 현재 탈퇴를 처리할 수 없습니다.");
         }
 
@@ -63,7 +66,7 @@ public class SocialWithdrawalService {
                 || account.getUserId() == null || !userId.equals(account.getUserId())
                 || account.getProviderUserId() == null
                 || account.getProviderUserId().isBlank()) {
-            throw new SocialWithdrawalException("로그인 계정 정보를 확인할 수 없습니다.");
+            throw unknownAccount();
         }
 
         Instant createdAt = clock.instant();
@@ -135,6 +138,11 @@ public class SocialWithdrawalService {
                 || authenticatedProvider != pending.provider()) {
             throw new SocialWithdrawalException(RETRY_MESSAGE);
         }
+    }
+
+    private SocialWithdrawalException unknownAccount() {
+        return new SocialWithdrawalException("mypage.account.error.social.accountUnknown",
+                "로그인 계정 정보를 확인할 수 없습니다.");
     }
 
     private String normalize(String value) {

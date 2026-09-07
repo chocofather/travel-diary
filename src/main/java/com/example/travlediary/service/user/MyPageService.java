@@ -48,7 +48,8 @@ public class MyPageService {
             throw new IllegalArgumentException("사용자 정보를 확인할 수 없습니다.");
         }
         if (form == null) {
-            throw new ProfileValidationException(null, "프로필 정보를 입력해 주세요.");
+            throw new ProfileValidationException(null, "mypage.profile.error.required",
+                    "프로필 정보를 입력해 주세요.");
         }
 
         MyPageProfileDto current = requireProfile(userMapper.findMyPageProfileByIdForUpdate(userId));
@@ -128,7 +129,8 @@ public class MyPageService {
         try {
             return NicknamePolicy.normalizeAndValidateFormat(nickname);
         } catch (NicknamePolicy.ViolationException exception) {
-            throw new ProfileValidationException("nickname", exception.getMessage());
+            throw new ProfileValidationException("nickname",
+                    "mypage.profile.error.nickname.invalidFormat", exception.getMessage());
         }
     }
 
@@ -136,7 +138,8 @@ public class MyPageService {
         try {
             NicknamePolicy.validateForbiddenExpression(nickname);
         } catch (NicknamePolicy.ViolationException exception) {
-            throw new ProfileValidationException("nickname", exception.getMessage());
+            throw new ProfileValidationException("nickname",
+                    "mypage.profile.error.nickname.forbidden", exception.getMessage());
         }
     }
 
@@ -180,6 +183,7 @@ public class MyPageService {
     }
 
     private ProfileValidationException duplicateNickname() {
-        return new ProfileValidationException("nickname", "이미 사용 중인 닉네임입니다.");
+        return new ProfileValidationException("nickname",
+                "mypage.profile.error.nickname.duplicate", "이미 사용 중인 닉네임입니다.");
     }
 }

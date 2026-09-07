@@ -15,6 +15,7 @@ import com.example.travlediary.service.user.NicknameCheckStatus;
 import com.example.travlediary.service.user.NicknamePolicy;
 import com.example.travlediary.service.user.ProfileValidationException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -47,12 +48,13 @@ public class MyPageController {
     private final BoardService boardService;
     private final MyPageCommentService myPageCommentService;
     private final MyPageBookmarkService myPageBookmarkService;
+    private final MessageSource messageSource;
 
     @GetMapping
     public String myPage(@AuthenticationPrincipal CustomUserDetails userDetails,
                          Model model) {
         model.addAttribute("profile", myPageService.getProfile(userDetails.getId()));
-        model.addAttribute("pageTitle", "마이페이지 | 여행일기");
+        model.addAttribute("pageTitle", message("mypage.index.pageTitle"));
         return "mypage/index";
     }
 
@@ -74,7 +76,7 @@ public class MyPageController {
         model.addAttribute("type", safeType);
         model.addAttribute("currentPage", safePage);
         model.addAttribute("totalPages", totalPages);
-        model.addAttribute("pageTitle", "내가 작성한 글 | 마이페이지");
+        model.addAttribute("pageTitle", message("mypage.posts.pageTitle"));
         return "mypage/posts";
     }
 
@@ -90,7 +92,7 @@ public class MyPageController {
         model.addAttribute("type", commentPage.getType());
         model.addAttribute("currentPage", commentPage.getCurrentPage());
         model.addAttribute("totalPages", commentPage.getTotalPages());
-        model.addAttribute("pageTitle", "내가 작성한 댓글 | 마이페이지");
+        model.addAttribute("pageTitle", message("mypage.comments.pageTitle"));
         return "mypage/comments";
     }
 
@@ -116,7 +118,7 @@ public class MyPageController {
         model.addAttribute("currentPage", bookmarkPage.getCurrentPage());
         model.addAttribute("totalPages", bookmarkPage.getTotalPages());
         model.addAttribute("totalCount", bookmarkPage.getTotalCount());
-        model.addAttribute("pageTitle", "북마크 | 마이페이지");
+        model.addAttribute("pageTitle", message("mypage.bookmarks.pageTitle"));
         return "mypage/bookmarks";
     }
 
@@ -145,7 +147,7 @@ public class MyPageController {
             return "mypage/profile";
         }
 
-        redirectAttributes.addFlashAttribute("profileMessage", "프로필이 변경되었습니다.");
+        redirectAttributes.addFlashAttribute("profileMessage", message("mypage.profile.updated"));
         return "redirect:/mypage/profile";
     }
 
@@ -167,11 +169,17 @@ public class MyPageController {
         }
     }
 
+    /**
+     * 닉네임 확인 응답. 상태 코드(enum 이름)와 가용 여부는 그대로 두고 안내 문구만 요청 언어로 고른다.
+     * 번들에 없으면 enum 이 들고 있는 한국어 문구가 그대로 쓰인다.
+     */
     private Map<String, Object> nicknameCheckResponse(NicknameCheckStatus status) {
         return Map.of(
                 "status", status.name(),
                 "available", status.isAvailable(),
-                "message", status.getMessage()
+                "message", messageSource.getMessage(
+                        "mypage.profile.nickname.status." + status.name(), null,
+                        status.getMessage(), LocaleContextHolder.getLocale())
         );
     }
 
@@ -187,14 +195,26 @@ public class MyPageController {
                                      ProfileUpdateForm form) {
         model.addAttribute("profile", profile);
         model.addAttribute("profileForm", form);
-        model.addAttribute("pageTitle", "프로필 변경 | 마이페이지");
+        model.addAttribute("pageTitle", message("mypage.profile.pageTitle"));
     }
 
+    /**
+     * 입력 오류는 메시지 코드로 넘겨 Spring 이 요청 언어 문구를 찾게 한다.
+     * 코드가 없거나 번들에 없으면 서비스가 준 한국어 문구가 그대로 쓰인다.
+     */
     private void reject(BindingResult bindingResult, ProfileValidationException exception) {
+        String code = exception.getMessageCode() == null
+                ? "profile.invalid"
+                : exception.getMessageCode();
         if (exception.getField() == null) {
-            bindingResult.reject("profile.invalid", exception.getMessage());
+            bindingResult.reject(code, null, exception.getMessage());
             return;
         }
-        bindingResult.rejectValue(exception.getField(), "profile.invalid", exception.getMessage());
+        bindingResult.rejectValue(exception.getField(), code, null, exception.getMessage());
+    }
+
+    /** 화면 문구는 다른 공개 화면과 같은 방식으로 메시지 번들에서 가져온다. */
+    private String message(String code, Object... args) {
+        return messageSource.getMessage(code, args, LocaleContextHolder.getLocale());
     }
 }

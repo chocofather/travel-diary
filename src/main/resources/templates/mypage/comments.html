@@ -12,23 +12,28 @@
     <section class="mypage-content mypage-comments-page" aria-labelledby="mypage-comments-title">
       <header class="mypage-page-header">
         <p>MY COMMENTS</p>
-        <h1 id="mypage-comments-title">내가 작성한 댓글</h1>
-        <span>여행지, 커뮤니티와 여행 코스에 남긴 댓글을 확인할 수 있습니다.</span>
+        <h1 id="mypage-comments-title" th:text="#{mypage.comments.title}">내가 작성한 댓글</h1>
+        <span th:text="#{mypage.comments.description}">여행지, 커뮤니티와 여행 코스에 남긴 댓글을 확인할 수 있습니다.</span>
       </header>
 
-      <nav class="mypage-comment-filters" aria-label="작성 댓글 유형">
+      <!-- 필터 판정은 type 코드로만 한다. 표시 문구는 언어에 따라 바뀐다. -->
+      <nav class="mypage-comment-filters" th:attr="aria-label=#{mypage.comments.filters.label}">
         <a th:href="@{/mypage/comments(type='all')}"
            th:classappend="${type == 'all'} ? ' is-active' : ''"
-           th:attr="aria-current=${type == 'all'} ? 'page' : null">전체</a>
+           th:attr="aria-current=${type == 'all'} ? 'page' : null"
+           th:text="#{mypage.filter.all}">전체</a>
         <a th:href="@{/mypage/comments(type='destination')}"
            th:classappend="${type == 'destination'} ? ' is-active' : ''"
-           th:attr="aria-current=${type == 'destination'} ? 'page' : null">여행지</a>
+           th:attr="aria-current=${type == 'destination'} ? 'page' : null"
+           th:text="#{mypage.target.destination}">여행지</a>
         <a th:href="@{/mypage/comments(type='post')}"
            th:classappend="${type == 'post'} ? ' is-active' : ''"
-           th:attr="aria-current=${type == 'post'} ? 'page' : null">커뮤니티</a>
+           th:attr="aria-current=${type == 'post'} ? 'page' : null"
+           th:text="#{mypage.target.community}">커뮤니티</a>
         <a th:href="@{/mypage/comments(type='course')}"
            th:classappend="${type == 'course'} ? ' is-active' : ''"
-           th:attr="aria-current=${type == 'course'} ? 'page' : null">여행 코스</a>
+           th:attr="aria-current=${type == 'course'} ? 'page' : null"
+           th:text="#{mypage.postType.course}">여행 코스</a>
       </nav>
 
       <div class="mypage-comment-list">
@@ -43,12 +48,14 @@
                             : (comment.postType == 'TIP'
                                 ? ' mypage-comment-type--tip'
                                 : ' mypage-comment-type--question'))}"
-                    th:text="${comment.commentType == 'destination'
-                        ? '여행지'
-                        : (comment.commentType == 'course'
-                            ? '여행 코스'
-                            : (comment.postType == 'TIP' ? '여행 팁' : '여행 질문'))}">여행지</span>
-              <span class="mypage-comment-reply" th:if="${comment.reply}">답글</span>
+                    th:text="${comment.commentType == 'destination'}
+                        ? #{mypage.target.destination}
+                        : (${comment.commentType == 'course'}
+                            ? #{mypage.postType.course}
+                            : (${comment.postType == 'TIP'}
+                                ? #{mypage.postType.tip} : #{mypage.postType.question}))">여행지</span>
+              <span class="mypage-comment-reply" th:if="${comment.reply}"
+                    th:text="#{mypage.comments.reply}">답글</span>
             </div>
             <h2 class="mypage-comment-target">
               <a th:if="${comment.commentType == 'destination'}"
@@ -69,34 +76,44 @@
             <time th:if="${comment.createdAt != null}"
                   th:datetime="${comment.createdAt}"
                   th:text="${#strings.replace(#strings.substring(comment.createdAt, 0, 10), '-', '.')}">2026.08.12</time>
-            <span th:unless="${comment.createdAt != null}">작성일 미상</span>
+            <span th:unless="${comment.createdAt != null}"
+                  th:text="#{mypage.comments.createdAtUnknown}">작성일 미상</span>
 
             <a th:if="${comment.commentType == 'destination'}"
-               th:href="@{/destinations/{id}(id=${comment.targetId},commentId=${comment.commentId})}">원문 보기</a>
+               th:href="@{/destinations/{id}(id=${comment.targetId},commentId=${comment.commentId})}"
+               th:text="#{mypage.comments.viewOriginal}">원문 보기</a>
             <a th:if="${comment.commentType == 'post'}"
-               th:href="@{/post/{id}(id=${comment.targetId},commentId=${comment.commentId})}">원문 보기</a>
+               th:href="@{/post/{id}(id=${comment.targetId},commentId=${comment.commentId})}"
+               th:text="#{mypage.comments.viewOriginal}">원문 보기</a>
             <a th:if="${comment.commentType == 'course'}"
-               th:href="@{/course/{id}(id=${comment.targetId},commentId=${comment.commentId})}">원문 보기</a>
+               th:href="@{/course/{id}(id=${comment.targetId},commentId=${comment.commentId})}"
+               th:text="#{mypage.comments.viewOriginal}">원문 보기</a>
           </div>
         </article>
 
-        <p class="mypage-comment-empty" th:if="${#lists.isEmpty(comments)}">
+        <p class="mypage-comment-empty" th:if="${#lists.isEmpty(comments)}"
+           th:text="#{mypage.comments.empty}">
           작성한 댓글이 없습니다.
         </p>
       </div>
 
-      <nav class="mypage-comment-pagination" th:if="${totalPages > 0}" aria-label="작성 댓글 페이지">
+      <nav class="mypage-comment-pagination" th:if="${totalPages > 0}"
+           th:attr="aria-label=#{mypage.comments.pagination}">
         <a th:if="${currentPage > 1}"
-           th:href="@{/mypage/comments(type=${type},page=${currentPage - 1})}">이전</a>
-        <span th:unless="${currentPage > 1}" class="is-disabled" aria-disabled="true">이전</span>
+           th:href="@{/mypage/comments(type=${type},page=${currentPage - 1})}"
+           th:text="#{mypage.pagination.previous}">이전</a>
+        <span th:unless="${currentPage > 1}" class="is-disabled" aria-disabled="true"
+              th:text="#{mypage.pagination.previous}">이전</span>
         <span class="mypage-comment-page-status">
           <strong th:text="${currentPage}">1</strong>
           <span aria-hidden="true">/</span>
           <span th:text="${totalPages}">1</span>
         </span>
         <a th:if="${currentPage < totalPages}"
-           th:href="@{/mypage/comments(type=${type},page=${currentPage + 1})}">다음</a>
-        <span th:unless="${currentPage < totalPages}" class="is-disabled" aria-disabled="true">다음</span>
+           th:href="@{/mypage/comments(type=${type},page=${currentPage + 1})}"
+           th:text="#{mypage.pagination.next}">다음</a>
+        <span th:unless="${currentPage < totalPages}" class="is-disabled" aria-disabled="true"
+              th:text="#{mypage.pagination.next}">다음</span>
       </nav>
     </section>
   </div>

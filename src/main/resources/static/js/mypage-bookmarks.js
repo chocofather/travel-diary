@@ -2,6 +2,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const status = document.querySelector('[data-bookmark-status]');
     const csrfToken = document.querySelector('meta[name="_csrf"]')?.content;
     const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.content;
+    // 안내 문구는 화면이 data-* 로 내려 준다. (언어별 문자열을 여기에 두지 않는다)
+    const messages = status?.dataset ?? {};
 
     document.addEventListener('click', async event => {
         if (!(event.target instanceof Element)) return;
@@ -11,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const deleteUrl = button.dataset.bookmarkDeleteUrl;
         if (!deleteUrl || !csrfToken || !csrfHeader) {
-            showStatus('북마크를 해제하지 못했습니다. 잠시 후 다시 시도해 주세요.', true);
+            showStatus(messages.messageRemoveFailed, true);
             return;
         }
 
@@ -32,15 +34,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             if (!response.ok) {
-                throw new Error(`북마크 해제 실패: ${response.status}`);
+                // 콘솔용 내부 메시지. 화면에는 위의 안내 문구만 나간다.
+                throw new Error(`bookmark remove failed: ${response.status}`);
             }
 
             button.closest('[data-bookmark-item]')?.remove();
-            showStatus('북마크를 해제했습니다.', false);
+            showStatus(messages.messageRemoved, false);
             handleEmptyPage();
         } catch (error) {
             console.error(error);
-            showStatus('북마크를 해제하지 못했습니다. 잠시 후 다시 시도해 주세요.', true);
+            showStatus(messages.messageRemoveFailed, true);
             button.disabled = false;
         }
     });

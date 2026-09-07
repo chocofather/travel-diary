@@ -18,6 +18,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.web.authentication.logout.CookieClearingLogoutHandler;
@@ -40,6 +42,7 @@ public class MyPageAccountController {
     private final AccountReauthenticationService reauthenticationService;
     private final SocialAccountService socialAccountService;
     private final SocialWithdrawalService socialWithdrawalService;
+    private final MessageSource messageSource;
 
     @GetMapping
     public String verifyForm(@AuthenticationPrincipal CustomUserDetails userDetails,
@@ -50,7 +53,7 @@ public class MyPageAccountController {
         if (!accountService.hasLocalPassword(userDetails.getId())) {
             model.addAttribute("socialAccounts",
                     socialAccountService.findAllByUserId(userDetails.getId()));
-            model.addAttribute("pageTitle", "계정 관리 | 마이페이지");
+            model.addAttribute("pageTitle", message("mypage.account.social.pageTitle"));
             return "mypage/account-social";
         }
         if (reauthenticationService.isVerified(session, userDetails.getId())) {
@@ -59,7 +62,7 @@ public class MyPageAccountController {
         if (!model.containsAttribute("verifyForm")) {
             model.addAttribute("verifyForm", new AccountVerifyForm());
         }
-        model.addAttribute("pageTitle", "본인 확인 | 마이페이지");
+        model.addAttribute("pageTitle", message("mypage.account.verify.pageTitle"));
         return "mypage/account-verify";
     }
 
@@ -78,8 +81,8 @@ public class MyPageAccountController {
             session.setAttribute(PendingSocialWithdrawal.SESSION_ATTRIBUTE, pending);
             return "redirect:/mypage/account/social-withdrawal/confirm";
         } catch (SocialWithdrawalException exception) {
-            redirectAttributes.addFlashAttribute(
-                    "socialWithdrawalError", exception.getMessage());
+            redirectAttributes.addFlashAttribute("socialWithdrawalError",
+                    messageOrDefault(exception.getMessageCode(), exception.getMessage()));
             return "redirect:/mypage/account";
         }
     }
@@ -99,15 +102,15 @@ public class MyPageAccountController {
         if (!(value instanceof PendingSocialWithdrawal pending)
                 || !socialWithdrawalService.isValid(pending, userDetails.getId())) {
             session.removeAttribute(PendingSocialWithdrawal.SESSION_ATTRIBUTE);
-            redirectAttributes.addFlashAttribute(
-                    "socialWithdrawalError", "본인 확인 정보가 만료되었습니다. 다시 시도해주세요.");
+            redirectAttributes.addFlashAttribute("socialWithdrawalError",
+                    message("mypage.account.withdrawal.social.expired"));
             return "redirect:/mypage/account";
         }
 
         model.addAttribute("providerName", providerName(pending.provider()));
         model.addAttribute("providerAuthorizationUrl",
                 "/oauth2/authorization/" + pending.provider().name().toLowerCase());
-        model.addAttribute("pageTitle", "회원 탈퇴 | 마이페이지");
+        model.addAttribute("pageTitle", message("mypage.account.withdrawal.pageTitle"));
         return "mypage/social-withdrawal-confirm";
     }
 
@@ -128,17 +131,19 @@ public class MyPageAccountController {
             return "redirect:/mypage/account";
         }
         if (form.getCurrentPassword() == null || form.getCurrentPassword().isEmpty()) {
-            bindingResult.rejectValue(
-                    "currentPassword", "required", "현재 비밀번호를 입력해주세요.");
+            bindingResult.rejectValue("currentPassword",
+                    "mypage.account.error.currentPassword.required",
+                    "현재 비밀번호를 입력해주세요.");
         } else if (!accountService.verifyCurrentPassword(
                 userDetails.getId(), form.getCurrentPassword())) {
-            bindingResult.rejectValue(
-                    "currentPassword", "mismatch", "비밀번호가 일치하지 않습니다.");
+            bindingResult.rejectValue("currentPassword",
+                    "mypage.account.error.currentPassword.mismatch",
+                    "비밀번호가 일치하지 않습니다.");
         }
 
         if (bindingResult.hasErrors()) {
             form.setCurrentPassword(null);
-            model.addAttribute("pageTitle", "본인 확인 | 마이페이지");
+            model.addAttribute("pageTitle", message("mypage.account.verify.pageTitle"));
             return "mypage/account-verify";
         }
 
@@ -189,7 +194,7 @@ public class MyPageAccountController {
         }
 
         redirectAttributes.addFlashAttribute(
-                "accountMessage", "회원정보가 수정되었습니다.");
+                "accountMessage", message("mypage.account.edit.updated"));
         return "redirect:/mypage/account/edit";
     }
 
@@ -268,7 +273,7 @@ public class MyPageAccountController {
         boolean verified = reauthenticationService.isVerified(session, userId);
         if (!verified) {
             redirectAttributes.addFlashAttribute(
-                    "verificationMessage", "본인 확인이 필요합니다.");
+                    "verificationMessage", message("mypage.account.verify.required"));
         }
         return verified;
     }
@@ -287,7 +292,7 @@ public class MyPageAccountController {
         if (!model.containsAttribute("withdrawalForm")) {
             model.addAttribute("withdrawalForm", new AccountWithdrawalForm());
         }
-        model.addAttribute("pageTitle", "회원정보 수정 | 마이페이지");
+        model.addAttribute("pageTitle", message("mypage.account.edit.pageTitle"));
     }
 
     private AccountEditForm accountEditForm(AccountDetailsDto details) {
@@ -298,13 +303,19 @@ public class MyPageAccountController {
         return form;
     }
 
+    /**
+     * 입력 오류는 메시지 코드로 넘겨 Spring 이 요청 언어 문구를 찾게 한다.
+     * 코드가 없거나 번들에 없으면 서비스가 준 한국어 문구가 그대로 쓰인다.
+     */
     private void reject(BindingResult bindingResult,
                         AccountValidationException exception) {
+        String code = exception.getMessageCode() == null
+                ? "account"
+                : exception.getMessageCode();
         if (exception.getField() == null) {
-            bindingResult.reject("account", exception.getMessage());
+            bindingResult.reject(code, exception.getMessage());
         } else {
-            bindingResult.rejectValue(
-                    exception.getField(), "account", exception.getMessage());
+            bindingResult.rejectValue(exception.getField(), code, exception.getMessage());
         }
     }
 
@@ -317,11 +328,22 @@ public class MyPageAccountController {
                 .logout(request, response, authentication);
     }
 
+    /** provider 는 enum 그대로 두고 표시 이름만 요청 언어로 고른다. */
     private String providerName(SocialProvider provider) {
-        return switch (provider) {
-            case GOOGLE -> "Google";
-            case KAKAO -> "카카오";
-            case NAVER -> "네이버";
-        };
+        return message("mypage.account.social.provider." + provider.name());
+    }
+
+    /** 화면 문구는 다른 마이페이지 화면과 같은 방식으로 메시지 번들에서 가져온다. */
+    private String message(String code) {
+        return messageSource.getMessage(code, null, LocaleContextHolder.getLocale());
+    }
+
+    /** 코드가 없거나 번들에 없으면 서비스가 준 한국어 문구를 그대로 쓴다. */
+    private String messageOrDefault(String code, String defaultMessage) {
+        if (code == null) {
+            return defaultMessage;
+        }
+        return messageSource.getMessage(
+                code, null, defaultMessage, LocaleContextHolder.getLocale());
     }
 }

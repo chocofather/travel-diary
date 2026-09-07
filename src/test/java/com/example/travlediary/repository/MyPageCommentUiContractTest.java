@@ -57,18 +57,21 @@ class MyPageCommentUiContractTest {
         String navigation = resource("templates/fragments/mypage/navigation.html");
         String index = resource("templates/mypage/index.html");
 
+        // 활성 판정은 activeMenu 코드로 하고, 메뉴 문구는 메시지 번들에서 온다
         assertThat(navigation)
                 .contains("activeMenu == 'comments'")
-                .contains("th:href=\"@{/mypage/comments}\">내가 작성한 댓글</a>")
+                .contains("th:href=\"@{/mypage/comments}\"")
+                .contains("#{mypage.nav.comments}")
                 .contains("activeMenu == 'bookmarks'")
-                .contains("th:href=\"@{/mypage/bookmarks}\">북마크</a>")
+                .contains("th:href=\"@{/mypage/bookmarks}\"")
+                .contains("#{mypage.nav.bookmarks}")
                 .contains("activeMenu == 'account'")
                 .contains("th:href=\"@{/mypage/account}\"")
-                .contains("hasLocalPassword == false ? '계정 관리' : '회원정보 수정'");
+                .contains("#{mypage.nav.account.social} : #{mypage.nav.account}");
         assertThat(index)
                 .contains("<a class=\"mypage-menu-item\" th:href=\"@{/mypage/comments}\">")
-                .contains("<strong>북마크</strong>")
-                .contains("hasLocalPassword == false ? '계정 관리' : '회원정보 수정'");
+                .contains("#{mypage.nav.bookmarks}")
+                .contains("#{mypage.nav.account.social} : #{mypage.nav.account}");
     }
 
     private String resource(String relativePath) throws IOException {

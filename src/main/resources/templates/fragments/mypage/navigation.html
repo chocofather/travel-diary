@@ -1,45 +1,55 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="ko">
 <body>
+<!-- 활성 메뉴 판정은 activeMenu 코드로만 한다. 표시 문구는 언어에 따라 바뀐다. -->
 <nav class="mypage-navigation"
      th:fragment="navigation(activeMenu)"
-     aria-label="마이페이지 메뉴">
+     th:attr="aria-label=#{mypage.nav.label}">
   <a class="mypage-navigation-title"
      th:classappend="${activeMenu == 'home'} ? ' is-active' : ''"
      th:attr="aria-current=${activeMenu == 'home'} ? 'page' : null"
-     th:href="@{/mypage}">마이페이지</a>
+     th:href="@{/mypage}"
+     th:text="#{mypage.title}">마이페이지</a>
   <ul class="mypage-navigation-list">
     <li>
       <a class="mypage-navigation-link"
          th:classappend="${activeMenu == 'profile'} ? ' is-active' : ''"
          th:attr="aria-current=${activeMenu == 'profile'} ? 'page' : null"
-         th:href="@{/mypage/profile}">프로필</a>
+         th:href="@{/mypage/profile}"
+         th:text="#{mypage.nav.profile}">프로필</a>
     </li>
     <li>
       <a class="mypage-navigation-link"
          th:classappend="${activeMenu == 'posts'} ? ' is-active' : ''"
          th:attr="aria-current=${activeMenu == 'posts'} ? 'page' : null"
-         th:href="@{/mypage/posts}">내가 작성한 글</a>
+         th:href="@{/mypage/posts}"
+         th:text="#{mypage.nav.posts}">내가 작성한 글</a>
     </li>
     <li>
       <a class="mypage-navigation-link"
          th:classappend="${activeMenu == 'comments'} ? ' is-active' : ''"
          th:attr="aria-current=${activeMenu == 'comments'} ? 'page' : null"
-         th:href="@{/mypage/comments}">내가 작성한 댓글</a>
+         th:href="@{/mypage/comments}"
+         th:text="#{mypage.nav.comments}">내가 작성한 댓글</a>
     </li>
     <li>
       <a class="mypage-navigation-link"
          th:classappend="${activeMenu == 'bookmarks'} ? ' is-active' : ''"
          th:attr="aria-current=${activeMenu == 'bookmarks'} ? 'page' : null"
-         th:href="@{/mypage/bookmarks}">북마크</a>
+         th:href="@{/mypage/bookmarks}"
+         th:text="#{mypage.nav.bookmarks}">북마크</a>
     </li>
-    <li><a class="mypage-navigation-link" th:href="@{/support/inquiries}">내 문의내역</a></li>
+    <li>
+      <a class="mypage-navigation-link" th:href="@{/support/inquiries}"
+         th:text="#{mypage.nav.inquiries}">내 문의내역</a>
+    </li>
     <li>
       <a class="mypage-navigation-link"
          th:classappend="${activeMenu == 'account'} ? ' is-active' : ''"
          th:attr="aria-current=${activeMenu == 'account'} ? 'page' : null"
          th:href="@{/mypage/account}"
-         th:text="${hasLocalPassword == false ? '계정 관리' : '회원정보 수정'}">회원정보 수정</a>
+         th:text="${hasLocalPassword == false}
+                  ? #{mypage.nav.account.social} : #{mypage.nav.account}">회원정보 수정</a>
     </li>
   </ul>
 </nav>

@@ -12,8 +12,8 @@
     <section class="mypage-content mypage-account-page" aria-labelledby="account-verify-title">
       <header class="mypage-page-header">
         <p>ACCOUNT</p>
-        <h1 id="account-verify-title">회원정보 수정</h1>
-        <span>회원정보 보호를 위해 현재 비밀번호를 다시 입력해주세요.</span>
+        <h1 id="account-verify-title" th:text="#{mypage.nav.account}">회원정보 수정</h1>
+        <span th:text="#{mypage.account.verify.description}">회원정보 보호를 위해 현재 비밀번호를 다시 입력해주세요.</span>
       </header>
 
       <p class="mypage-account-notice" th:if="${verificationMessage}"
@@ -23,7 +23,7 @@
             th:action="@{/mypage/account/verify-password}"
             th:object="${verifyForm}" method="post">
         <div class="mypage-account-field">
-          <label for="currentPassword">현재 비밀번호</label>
+          <label for="currentPassword" th:text="#{mypage.account.currentPassword}">현재 비밀번호</label>
           <input id="currentPassword" type="password"
                  th:field="*{currentPassword}"
                  autocomplete="current-password" required autofocus>
@@ -32,8 +32,8 @@
              th:errors="*{currentPassword}">비밀번호 오류</p>
         </div>
         <div class="mypage-account-actions">
-          <a th:href="@{/mypage}">취소</a>
-          <button type="submit">확인</button>
+          <a th:href="@{/mypage}" th:text="#{mypage.account.cancel}">취소</a>
+          <button type="submit" th:text="#{mypage.account.confirm}">확인</button>
         </div>
       </form>
     </section>
