@@ -1,23 +1,28 @@
 package com.example.travlediary.controller.user;
 
 import com.example.travlediary.dto.AccountDetailsDto;
-import com.example.travlediary.dto.AccountEditForm;
 import com.example.travlediary.dto.AccountVerifyForm;
 import com.example.travlediary.dto.AccountWithdrawalForm;
 import com.example.travlediary.dto.PasswordChangeForm;
+import com.example.travlediary.model.PendingSocialConnection;
+import com.example.travlediary.model.PendingSocialSignup;
 import com.example.travlediary.model.PendingSocialWithdrawal;
+import com.example.travlediary.model.SocialAccount;
+import com.example.travlediary.model.SocialConnectionNotice;
 import com.example.travlediary.model.SocialProvider;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.user.AccountReauthenticationService;
 import com.example.travlediary.service.user.AccountValidationException;
 import com.example.travlediary.service.user.MyPageAccountService;
 import com.example.travlediary.service.user.SocialAccountService;
+import com.example.travlediary.service.user.SocialDisconnectionResult;
 import com.example.travlediary.service.user.SocialWithdrawalException;
 import com.example.travlediary.service.user.SocialWithdrawalService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.security.core.Authentication;
@@ -29,14 +34,24 @@ import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.util.EnumMap;
+import java.util.EnumSet;
+import java.util.UUID;
+
 @Controller
 @RequiredArgsConstructor
+@Slf4j
 @RequestMapping("/mypage/account")
 public class MyPageAccountController {
+
+    private static final Duration SOCIAL_CONNECTION_TTL = Duration.ofMinutes(10);
 
     private final MyPageAccountService accountService;
     private final AccountReauthenticationService reauthenticationService;
@@ -51,8 +66,7 @@ public class MyPageAccountController {
         // 확인 화면을 떠나 계정 관리로 돌아온 경우 탈퇴 intent를 재사용하지 않는다.
         session.removeAttribute(PendingSocialWithdrawal.SESSION_ATTRIBUTE);
         if (!accountService.hasLocalPassword(userDetails.getId())) {
-            model.addAttribute("socialAccounts",
-                    socialAccountService.findAllByUserId(userDetails.getId()));
+            prepareSocialConnections(model, session, userDetails.getId());
             model.addAttribute("pageTitle", message("mypage.account.social.pageTitle"));
             return "mypage/account-social";
         }
@@ -64,6 +78,98 @@ public class MyPageAccountController {
         }
         model.addAttribute("pageTitle", message("mypage.account.verify.pageTitle"));
         return "mypage/account-verify";
+    }
+
+    @PostMapping("/social-connections/{registrationId}")
+    public String beginSocialConnection(
+            @PathVariable String registrationId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            HttpSession session,
+            RedirectAttributes redirectAttributes) {
+        SocialProvider provider = SocialProvider.fromRegistrationId(registrationId)
+                .orElse(null);
+        if (provider == null) {
+            session.setAttribute(
+                    SocialConnectionNotice.SESSION_ATTRIBUTE,
+                    new SocialConnectionNotice(SocialConnectionNotice.Type.ERROR, null));
+            return "redirect:/mypage/account";
+        }
+        if (accountService.hasLocalPassword(userDetails.getId())
+                && !reauthenticationService.isVerified(session, userDetails.getId())) {
+            redirectAttributes.addFlashAttribute(
+                    "verificationMessage", message("mypage.account.verify.required"));
+            return "redirect:/mypage/account";
+        }
+
+        session.removeAttribute(PendingSocialConnection.SESSION_ATTRIBUTE);
+        session.removeAttribute(PendingSocialWithdrawal.SESSION_ATTRIBUTE);
+        session.removeAttribute(PendingSocialSignup.SESSION_ATTRIBUTE);
+        if (socialAccountService.findByUserIdAndProvider(
+                userDetails.getId(), provider) != null) {
+            session.setAttribute(
+                    SocialConnectionNotice.SESSION_ATTRIBUTE,
+                    new SocialConnectionNotice(
+                            SocialConnectionNotice.Type.ALREADY_CONNECTED, provider));
+            return "redirect:/mypage/account";
+        }
+
+        Instant now = Instant.now();
+        session.setAttribute("userId", userDetails.getId());
+        session.setAttribute(
+                PendingSocialConnection.SESSION_ATTRIBUTE,
+                new PendingSocialConnection(
+                        UUID.randomUUID().toString(),
+                        userDetails.getId(),
+                        provider,
+                        now,
+                        now.plus(SOCIAL_CONNECTION_TTL),
+                        null));
+        return "redirect:/oauth2/authorization/" + registrationId;
+    }
+
+    @PostMapping("/social-connections/{registrationId}/disconnect")
+    public String disconnectSocialConnection(
+            @PathVariable String registrationId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            HttpSession session,
+            RedirectAttributes redirectAttributes) {
+        SocialProvider provider = SocialProvider.fromRegistrationId(registrationId)
+                .orElse(null);
+        if (provider == null) {
+            session.setAttribute(
+                    SocialConnectionNotice.SESSION_ATTRIBUTE,
+                    new SocialConnectionNotice(
+                            SocialConnectionNotice.Type.DISCONNECT_ERROR, null));
+            return "redirect:/mypage/account";
+        }
+        if (accountService.hasLocalPassword(userDetails.getId())
+                && !reauthenticationService.isVerified(session, userDetails.getId())) {
+            redirectAttributes.addFlashAttribute(
+                    "verificationMessage", message("mypage.account.verify.required"));
+            return "redirect:/mypage/account";
+        }
+
+        SocialDisconnectionResult result;
+        try {
+            result = socialAccountService.disconnectFromUser(userDetails.getId(), provider);
+        } catch (RuntimeException exception) {
+            log.warn("Failed to disconnect {} account for user {}",
+                    provider, userDetails.getId(), exception);
+            session.setAttribute(
+                    SocialConnectionNotice.SESSION_ATTRIBUTE,
+                    new SocialConnectionNotice(
+                            SocialConnectionNotice.Type.DISCONNECT_ERROR, provider));
+            return "redirect:/mypage/account";
+        }
+        SocialConnectionNotice.Type noticeType = switch (result) {
+            case DISCONNECTED -> SocialConnectionNotice.Type.DISCONNECTED;
+            case LAST_LOGIN_METHOD -> SocialConnectionNotice.Type.LAST_LOGIN_METHOD;
+            case ALREADY_DISCONNECTED -> SocialConnectionNotice.Type.ALREADY_DISCONNECTED;
+        };
+        session.setAttribute(
+                SocialConnectionNotice.SESSION_ATTRIBUTE,
+                new SocialConnectionNotice(noticeType, provider));
+        return "redirect:/mypage/account";
     }
 
     @PostMapping("/social-withdrawal")
@@ -163,17 +269,14 @@ public class MyPageAccountController {
             return "redirect:/mypage/account";
         }
         AccountDetailsDto details = accountService.getAccountDetails(userDetails.getId());
-        prepareEditModel(model, details, accountEditForm(details));
+        prepareEditModel(model, details, userDetails.getId(), session);
         return "mypage/account-edit";
     }
 
     @PostMapping("/edit")
-    public String updateAccount(
-            @ModelAttribute("accountForm") AccountEditForm form,
-            BindingResult bindingResult,
+    public String readonlyAccountRedirect(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             HttpSession session,
-            Model model,
             RedirectAttributes redirectAttributes) {
         if (!accountService.hasLocalPassword(userDetails.getId())) {
             return "redirect:/mypage/account";
@@ -181,23 +284,6 @@ public class MyPageAccountController {
         if (!requireVerification(session, userDetails.getId(), redirectAttributes)) {
             return "redirect:/mypage/account";
         }
-        // 형식이 깨진 생년월일은 바인딩에서 이미 걸린다. 그 위에 서비스 오류를 겹쳐 보이지 않는다.
-        if (!bindingResult.hasErrors()) {
-            try {
-                accountService.updateAccountDetails(userDetails.getId(), form);
-            } catch (AccountValidationException exception) {
-                reject(bindingResult, exception);
-            }
-        }
-
-        if (bindingResult.hasErrors()) {
-            prepareEditModel(
-                    model, accountService.getAccountDetails(userDetails.getId()), form);
-            return "mypage/account-edit";
-        }
-
-        redirectAttributes.addFlashAttribute(
-                "accountMessage", message("mypage.account.edit.updated"));
         return "redirect:/mypage/account/edit";
     }
 
@@ -227,7 +313,8 @@ public class MyPageAccountController {
         if (bindingResult.hasErrors()) {
             form.setNewPassword(null);
             form.setNewPasswordConfirm(null);
-            prepareEditModel(model, accountService.getAccountDetails(userDetails.getId()), null);
+            prepareEditModel(model, accountService.getAccountDetails(userDetails.getId()),
+                    userDetails.getId(), session);
             return "mypage/account-edit";
         }
 
@@ -261,7 +348,8 @@ public class MyPageAccountController {
 
         if (bindingResult.hasErrors()) {
             form.setCurrentPassword(null);
-            prepareEditModel(model, accountService.getAccountDetails(userDetails.getId()), null);
+            prepareEditModel(model, accountService.getAccountDetails(userDetails.getId()),
+                    userDetails.getId(), session);
             return "mypage/account-edit";
         }
 
@@ -283,26 +371,42 @@ public class MyPageAccountController {
 
     private void prepareEditModel(Model model,
                                   AccountDetailsDto details,
-                                  AccountEditForm accountForm) {
+                                  Long userId,
+                                  HttpSession session) {
         model.addAttribute("account", details);
-        if (!model.containsAttribute("accountForm")) {
-            model.addAttribute("accountForm",
-                    accountForm == null ? accountEditForm(details) : accountForm);
-        }
         if (!model.containsAttribute("passwordForm")) {
             model.addAttribute("passwordForm", new PasswordChangeForm());
         }
         if (!model.containsAttribute("withdrawalForm")) {
             model.addAttribute("withdrawalForm", new AccountWithdrawalForm());
         }
+        prepareSocialConnections(model, session, userId);
         model.addAttribute("pageTitle", message("mypage.account.edit.pageTitle"));
     }
 
-    private AccountEditForm accountEditForm(AccountDetailsDto details) {
-        AccountEditForm form = new AccountEditForm();
-        form.setFullName(details.getFullName());
-        form.setUserPhone(details.getUserPhone());
-        return form;
+    private void prepareSocialConnections(Model model,
+                                          HttpSession session,
+                                          Long userId) {
+        var socialAccounts = socialAccountService.findAllByUserId(userId);
+        EnumSet<SocialProvider> connectedProviders = EnumSet.noneOf(SocialProvider.class);
+        var socialAccountsByProvider =
+                new EnumMap<SocialProvider, SocialAccount>(SocialProvider.class);
+        socialAccounts.forEach(account -> {
+            connectedProviders.add(account.getProvider());
+            socialAccountsByProvider.put(account.getProvider(), account);
+        });
+        model.addAttribute("socialAccounts", socialAccounts);
+        model.addAttribute("socialAccountsByProvider", socialAccountsByProvider);
+        model.addAttribute("socialProviders", SocialProvider.values());
+        model.addAttribute("connectedSocialProviders", connectedProviders);
+
+        Object value = session.getAttribute(SocialConnectionNotice.SESSION_ATTRIBUTE);
+        session.removeAttribute(SocialConnectionNotice.SESSION_ATTRIBUTE);
+        if (value instanceof SocialConnectionNotice notice) {
+            model.addAttribute("socialConnectionNotice", notice);
+            model.addAttribute("socialConnectionProviderName",
+                    notice.provider() == null ? null : providerName(notice.provider()));
+        }
     }
 
     /**

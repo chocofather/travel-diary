@@ -91,19 +91,16 @@ class MyPageNicknameUiContractTest {
     }
 
     @Test
-    void accountBirthIsShownAsReadOnlyInformationInsteadOfAnInput() throws IOException {
+    void accountPageDoesNotExposeLegacyPersonalInformation() throws IOException {
         String template = read("templates/mypage/account-edit.html");
 
         assertThat(template)
-                // 회원이 고칠 수 있는 칸이 아니다
-                .doesNotContain("id=\"userBirth\"")
-                .doesNotContain("*{userBirth}")
-                .doesNotContain("type=\"date\"")
-                // 이메일·로그인 ID 와 같은 조회 전용 스타일을 쓴다
-                .contains("<dt th:text=\"#{mypage.account.edit.birth}\">",
-                        "th:text=\"${account.userBirth != null} ? ${account.userBirth} : '-'\"");
+                .contains("account.username", "account.userEmail")
+                .doesNotContain("id=\"userBirth\"", "*{userBirth}", "type=\"date\"",
+                        "account.fullName", "account.userPhone", "account.userBirth",
+                        "mypage.account.edit.personal.title");
         assertThat(template.split("mypage-account-readonly-list", -1).length - 1)
-                .as("계정 정보와 생년월일 두 곳에서 조회 전용 목록을 쓴다").isEqualTo(2);
+                .as("로그인 ID와 이메일을 한 계정 정보 목록에서 보여 준다").isEqualTo(1);
     }
 
     @Test

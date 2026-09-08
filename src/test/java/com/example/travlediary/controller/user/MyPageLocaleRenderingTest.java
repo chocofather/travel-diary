@@ -71,7 +71,7 @@ class MyPageLocaleRenderingTest {
                     assertThat(document.select("a[href=/mypage/bookmarks]").text())
                             .contains("Bookmarks");
                     assertThat(document.select("a[href=/mypage/account]").text())
-                            .contains("Account settings");
+                            .contains("Account & security");
                     assertThat(document.select(
                             ".mypage-navigation-title.is-active[aria-current=page]").text())
                             .isEqualTo("My Page");

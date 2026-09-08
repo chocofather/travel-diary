@@ -41,6 +41,14 @@
         ORDER BY created_at ASC, id ASC
     </select>
 
+    <select id="findAllByUserIdForUpdate" resultMap="SocialAccountResultMap">
+        SELECT <include refid="SocialAccountColumns"/>
+        FROM social_accounts
+        WHERE user_id = #{userId}
+        ORDER BY created_at ASC, id ASC
+        FOR UPDATE
+    </select>
+
     <insert id="insert" parameterType="com.example.travlediary.model.SocialAccount"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO social_accounts (
@@ -49,6 +57,12 @@
             #{userId}, #{provider}, #{providerUserId}, #{providerEmail}, #{providerEmailVerified}
         )
     </insert>
+
+    <delete id="deleteByUserIdAndProvider">
+        DELETE FROM social_accounts
+        WHERE user_id = #{userId}
+          AND provider = #{provider}
+    </delete>
 
     <delete id="deleteAllByUserId">
         DELETE FROM social_accounts

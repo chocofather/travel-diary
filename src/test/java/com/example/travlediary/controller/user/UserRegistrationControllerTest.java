@@ -125,9 +125,7 @@ class UserRegistrationControllerTest {
                         .param("userEmail", "member@gmail.com")
                         .param("userPassword", "Password!")
                         .param("passwordConfirm", "Password!")
-                        .param("nickname", "여행자123")
-                        .param("fullName", "여행자")
-                        .param("userBirth", "1995-05-10"))
+                        .param("nickname", "여행자123"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("register"))
                 .andExpect(model().attributeHasFieldErrors(
@@ -137,14 +135,18 @@ class UserRegistrationControllerTest {
     }
 
     @Test
-    void invalidFullNameIsRejectedBeforeRegistration() throws Exception {
-        mockMvc.perform(validRegistrationRequest("member@gmail.com")
-                        .param("fullName", "김민준1"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("register"))
-                .andExpect(model().attributeHasFieldErrors("registrationForm", "fullName"));
+    void legacyPersonalInformationParametersDoNotAffectRegistration() throws Exception {
+        when(userService.registerUser(any()))
+                .thenReturn(new RegistrationResult("member@gmail.com", true));
 
-        verify(userService, never()).registerUser(any());
+        mockMvc.perform(validRegistrationRequest("member@gmail.com")
+                        .param("fullName", "김민준1")
+                        .param("userPhone", "010-9999-9999")
+                        .param("userBirth", "1995-05-10"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/users/register/verify-waiting"));
+
+        verify(userService).registerUser(any());
     }
 
     @Test
@@ -262,9 +264,6 @@ class UserRegistrationControllerTest {
                 .param("userEmail", email)
                 .param("userPassword", "Password!")
                 .param("passwordConfirm", "Password!")
-                .param("nickname", "여행자123")
-                .param("fullName", "여행자")
-                .param("userPhone", "010-1234-5678")
-                .param("userBirth", "1995-05-10");
+                .param("nickname", "여행자123");
     }
 }

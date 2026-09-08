@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<th:block th:fragment="notices">
+  <p class="mypage-social-connection-notice is-success"
+     th:if="${socialConnectionNotice != null
+         and socialConnectionNotice.type().name() == 'CONNECTED'}"
+     role="status"
+     th:text="#{mypage.account.social.connection.connected(${socialConnectionProviderName})}">
+    소셜 계정이 연결되었습니다.
+  </p>
+  <p class="mypage-social-connection-notice"
+     th:if="${socialConnectionNotice != null
+         and socialConnectionNotice.type().name() == 'ALREADY_CONNECTED'}"
+     role="status"
+     th:text="#{mypage.account.social.connection.already(${socialConnectionProviderName})}">
+    이미 연결된 소셜 계정입니다.
+  </p>
+  <p class="mypage-social-connection-notice is-error"
+     th:if="${socialConnectionNotice != null
+         and socialConnectionNotice.type().name() == 'ERROR'}"
+     role="alert" th:text="#{mypage.account.social.connection.error}">
+    소셜 계정을 연결할 수 없습니다. 다시 시도해주세요.
+  </p>
+  <p class="mypage-social-connection-notice is-success"
+     th:if="${socialConnectionNotice != null
+         and socialConnectionNotice.type().name() == 'DISCONNECTED'}"
+     role="status"
+     th:text="#{mypage.account.social.disconnect.success(${socialConnectionProviderName})}">
+    소셜 계정 연결이 해제되었습니다.
+  </p>
+  <p class="mypage-social-connection-notice"
+     th:if="${socialConnectionNotice != null
+         and socialConnectionNotice.type().name() == 'ALREADY_DISCONNECTED'}"
+     role="status"
+     th:text="#{mypage.account.social.disconnect.already(${socialConnectionProviderName})}">
+    이미 연결 해제된 소셜 계정입니다.
+  </p>
+  <p class="mypage-social-connection-notice is-error"
+     th:if="${socialConnectionNotice != null
+         and socialConnectionNotice.type().name() == 'LAST_LOGIN_METHOD'}"
+     role="alert" th:text="#{mypage.account.social.disconnect.lastLoginMethod}">
+    마지막 로그인 수단은 연결 해제할 수 없습니다. 다른 로그인 수단을 먼저 추가해주세요.
+  </p>
+  <p class="mypage-social-connection-notice is-error"
+     th:if="${socialConnectionNotice != null
+         and socialConnectionNotice.type().name() == 'DISCONNECT_ERROR'}"
+     role="alert" th:text="#{mypage.account.social.disconnect.error}">
+    소셜 계정 연결을 해제할 수 없습니다. 다시 시도해주세요.
+  </p>
+
+</th:block>
+<div class="mypage-social-account-list" th:fragment="rows">
+  <article class="mypage-social-account-row" th:each="provider : ${socialProviders}"
+           th:with="socialAccount=${socialAccountsByProvider.get(provider)},
+                    providerName=#{|mypage.account.social.provider.${provider.name()}|}">
+    <span class="mypage-social-account-identity">
+      <strong class="mypage-social-account-provider"
+              th:text="${providerName}">Google</strong>
+      <small th:if="${socialAccount != null}"
+             th:text="${#strings.isEmpty(socialAccount.providerEmail)}
+                 ? #{mypage.account.social.providerEmail.none}
+                 : ${socialAccount.providerEmail}">이메일 정보 없음</small>
+    </span>
+    <div class="mypage-social-account-actions"
+         th:if="${connectedSocialProviders.contains(provider)}">
+      <span class="mypage-social-account-status is-connected"
+            th:text="#{mypage.account.social.connection.status.connected}">연결됨</span>
+      <form th:action="@{/mypage/account/social-connections/{provider}/disconnect(provider=${#strings.toLowerCase(provider.name())})}"
+            method="post"
+            th:data-confirm="#{mypage.account.social.disconnect.confirm(${providerName})}">
+        <button class="mypage-social-disconnect-button" type="submit"
+                th:text="#{mypage.account.social.disconnect.action}">연결 해제</button>
+      </form>
+    </div>
+    <form th:unless="${connectedSocialProviders.contains(provider)}"
+          th:action="@{/mypage/account/social-connections/{provider}(provider=${#strings.toLowerCase(provider.name())})}"
+          method="post">
+      <button class="mypage-social-connect-button" type="submit"
+              th:text="#{mypage.account.social.connection.action}">연결하기</button>
+    </form>
+  </article>
+</div>
+</html>

@@ -5,7 +5,6 @@ import com.example.travlediary.model.User;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.service.email.EmailDispatchService;
 import com.example.travlediary.service.email.EmailVerificationService;
-import com.example.travlediary.service.file.FileUploadService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,7 +25,6 @@ class UserServicePasswordPolicyTest {
 
     @Mock private UserMapper userMapper;
     @Mock private PasswordEncoder passwordEncoder;
-    @Mock private FileUploadService fileUploadService;
     @Mock private EmailDispatchService emailDispatchService;
     @Mock private EmailVerificationService emailVerificationService;
 
@@ -34,8 +32,8 @@ class UserServicePasswordPolicyTest {
 
     @BeforeEach
     void setUp() {
-        service = new UserService(userMapper, passwordEncoder, fileUploadService,
-                emailDispatchService, emailVerificationService);
+        service = new UserService(userMapper, passwordEncoder, emailDispatchService,
+                emailVerificationService);
     }
 
     @Test

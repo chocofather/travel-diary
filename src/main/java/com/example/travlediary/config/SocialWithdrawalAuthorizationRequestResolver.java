@@ -1,5 +1,6 @@
 package com.example.travlediary.config;
 
+import com.example.travlediary.model.PendingSocialConnection;
 import com.example.travlediary.model.PendingSocialWithdrawal;
 import com.example.travlediary.model.SocialProvider;
 import jakarta.servlet.http.HttpServletRequest;
@@ -55,6 +56,12 @@ public class SocialWithdrawalAuthorizationRequestResolver
         if (session == null) {
             return original;
         }
+        Object connectionValue = session.getAttribute(
+                PendingSocialConnection.SESSION_ATTRIBUTE);
+        if (connectionValue instanceof PendingSocialConnection pending) {
+            return customizeForConnection(
+                    session, original, registrationId, pending);
+        }
         Object value = session.getAttribute(PendingSocialWithdrawal.SESSION_ATTRIBUTE);
         if (!(value instanceof PendingSocialWithdrawal pending)) {
             return original;
@@ -69,6 +76,46 @@ public class SocialWithdrawalAuthorizationRequestResolver
             // 성공 핸들러가 이 intent를 일회성으로 소비하고 안전하게 실패 처리한다.
             // 여기서 제거하면 잘못된 provider 요청이 일반 로그인으로 바뀔 수 있다.
             return original;
+        }
+
+        Map<String, Object> parameters = new LinkedHashMap<>(
+                original.getAdditionalParameters());
+        switch (pending.provider()) {
+            case GOOGLE -> parameters.put("prompt", "select_account");
+            case KAKAO -> parameters.put("prompt", "login");
+            case NAVER -> parameters.put("auth_type", "reauthenticate");
+        }
+        return OAuth2AuthorizationRequest.from(original)
+                .additionalParameters(parameters)
+                .build();
+    }
+
+    private OAuth2AuthorizationRequest customizeForConnection(
+            HttpSession session,
+            OAuth2AuthorizationRequest original,
+            String registrationId,
+            PendingSocialConnection pending) {
+        Object userId = session.getAttribute("userId");
+        SocialProvider requestedProvider = SocialProvider.fromRegistrationId(registrationId)
+                .orElse(null);
+        if (!pending.isValidAt(Instant.now())
+                || !(userId instanceof Long currentUserId)
+                || !currentUserId.equals(pending.userId())
+                || requestedProvider != pending.provider()) {
+            return original;
+        }
+
+        synchronized (session) {
+            Object current = session.getAttribute(
+                    PendingSocialConnection.SESSION_ATTRIBUTE);
+            if (current instanceof PendingSocialConnection currentPending
+                    && pending.flowId().equals(currentPending.flowId())) {
+                session.setAttribute(
+                        PendingSocialConnection.SESSION_ATTRIBUTE,
+                        currentPending.bindOAuthState(original.getState()));
+            } else {
+                return original;
+            }
         }
 
         Map<String, Object> parameters = new LinkedHashMap<>(

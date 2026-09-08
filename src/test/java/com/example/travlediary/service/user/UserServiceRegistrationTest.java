@@ -7,7 +7,6 @@ import com.example.travlediary.model.UserStatus;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.service.email.EmailDispatchService;
 import com.example.travlediary.service.email.EmailVerificationService;
-import com.example.travlediary.service.file.FileUploadService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,7 +17,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -36,7 +34,6 @@ class UserServiceRegistrationTest {
 
     @Mock private UserMapper userMapper;
     @Mock private PasswordEncoder passwordEncoder;
-    @Mock private FileUploadService fileUploadService;
     @Mock private EmailDispatchService emailDispatchService;
     @Mock private EmailVerificationService emailVerificationService;
 
@@ -44,15 +41,14 @@ class UserServiceRegistrationTest {
 
     @BeforeEach
     void setUp() {
-        userService = new UserService(userMapper, passwordEncoder, fileUploadService,
-                emailDispatchService, emailVerificationService);
+        userService = new UserService(userMapper, passwordEncoder, emailDispatchService,
+                emailVerificationService);
     }
 
     @Test
     void registrationNormalizesEmailAndStoresOnlyServerControlledAccountState() {
         RegistrationForm form = validForm();
         form.setUserEmail("  MEMBER@GMAIL.COM  ");
-        form.setFullName("  Hong   Gil Dong  ");
         when(passwordEncoder.encode("Password!")).thenReturn("encoded");
         when(emailVerificationService.requestInitialVerification(any())).thenReturn(true);
         doAnswer(invocation -> {
@@ -69,7 +65,9 @@ class UserServiceRegistrationTest {
         verify(userMapper).insertUser(userCaptor.capture());
         User stored = userCaptor.getValue();
         assertThat(stored.getUserEmail()).isEqualTo("member@gmail.com");
-        assertThat(stored.getFullName()).isEqualTo("Hong Gil Dong");
+        assertThat(stored.getFullName()).isNull();
+        assertThat(stored.getUserPhone()).isNull();
+        assertThat(stored.getUserBirth()).isNull();
         assertThat(stored.getUserPassword()).isEqualTo("encoded");
         assertThat(stored.getStatus()).isEqualTo(UserStatus.INACTIVE);
         assertThat(stored.getUserRole()).isEqualTo(UserRole.USER);
@@ -153,9 +151,6 @@ class UserServiceRegistrationTest {
         form.setUserPassword("Password!");
         form.setPasswordConfirm("Password!");
         form.setNickname("여행자123");
-        form.setFullName("여행자");
-        form.setUserPhone("010-1234-5678");
-        form.setUserBirth(LocalDate.of(1995, 5, 10));
         return form;
     }
 }

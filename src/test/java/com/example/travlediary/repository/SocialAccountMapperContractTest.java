@@ -118,6 +118,29 @@ class SocialAccountMapperContractTest {
                 .containsExactly("userId");
     }
 
+    @Test
+    void disconnectLocksCurrentUsersConnectionsAndDeletesByUserAndProvider()
+            throws IOException {
+        Configuration configuration = mapperConfiguration();
+        BoundSql lockedConnections = configuration.getMappedStatement(
+                        NAMESPACE + ".findAllByUserIdForUpdate")
+                .getBoundSql(7L);
+        BoundSql disconnect = configuration.getMappedStatement(
+                        NAMESPACE + ".deleteByUserIdAndProvider")
+                .getBoundSql(Map.of("userId", 7L, "provider", SocialProvider.KAKAO));
+
+        assertThat(normalize(lockedConnections.getSql())).isEqualTo(
+                "SELECT id, user_id, provider, provider_user_id, provider_email, "
+                        + "provider_email_verified, created_at, updated_at "
+                        + "FROM social_accounts WHERE user_id = ? "
+                        + "ORDER BY created_at ASC, id ASC FOR UPDATE");
+        assertThat(normalize(disconnect.getSql())).isEqualTo(
+                "DELETE FROM social_accounts WHERE user_id = ? AND provider = ?");
+        assertThat(disconnect.getParameterMappings())
+                .extracting(ParameterMapping::getProperty)
+                .containsExactly("userId", "provider");
+    }
+
     private Configuration mapperConfiguration() throws IOException {
         Configuration configuration = new Configuration();
         configuration.setMapUnderscoreToCamelCase(true);

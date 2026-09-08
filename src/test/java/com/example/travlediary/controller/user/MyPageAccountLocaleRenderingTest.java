@@ -91,21 +91,20 @@ class MyPageAccountLocaleRenderingTest {
                         .cookie(english()))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "Manage your account and personal details securely.")))
+                        "Manage your account and sign-in methods securely.")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Sign-in ID")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "Date of birth")))
-                // 라벨만 번역되고 저장된 날짜 값은 그대로다
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("2000-01-02")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "Change password")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "Delete account")))
-                // 로그인 ID·이메일·이름 같은 사용자 데이터는 번역 대상이 아니다
+                // 로그인 ID와 이메일 같은 계정 데이터는 번역 대상이 아니다
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("minjun")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "member@example.com")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("여행 민준")));
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("Date of birth"))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("여행 민준"))));
     }
 
     @Test
@@ -118,11 +117,13 @@ class MyPageAccountLocaleRenderingTest {
                         .cookie(new Cookie(TravelDiaryLocaleResolver.COOKIE_NAME, "ja")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "ログインに使用しているアカウント情報を確認できます。")))
+                        "アカウント情報とログイン方法を安全に管理します。")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "ソーシャルアカウントのメール")))
+                        "ソーシャルアカウント連携")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("連携済み")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("連携する")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("退会する")))
-                // 브랜드 이름과 provider 가 준 이메일은 그대로 둔다
+                // 브랜드 이름은 번역하지 않는다
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Kakao")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "social@example.com")));

@@ -71,10 +71,10 @@
             <a class="mypage-menu-item" th:href="@{/mypage/account}">
               <span>
                 <strong th:text="${hasLocalPassword == false}
-                        ? #{mypage.nav.account.social} : #{mypage.nav.account}">회원정보 수정</strong>
+                        ? #{mypage.nav.account.social} : #{mypage.nav.account}">계정 및 보안</strong>
                 <small th:text="${hasLocalPassword == false}
                         ? #{mypage.index.menu.account.social.description}
-                        : #{mypage.index.menu.account.description}">개인정보와 비밀번호를 안전하게 관리합니다.</small>
+                        : #{mypage.index.menu.account.description}">계정 정보와 로그인 보안을 관리합니다.</small>
               </span>
               <span class="mypage-menu-arrow" aria-hidden="true">›</span>
             </a>

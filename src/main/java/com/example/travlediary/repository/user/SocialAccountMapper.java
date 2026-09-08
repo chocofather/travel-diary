@@ -19,7 +19,12 @@ public interface SocialAccountMapper {
 
     List<SocialAccount> findAllByUserId(@Param("userId") Long userId);
 
+    List<SocialAccount> findAllByUserIdForUpdate(@Param("userId") Long userId);
+
     int insert(SocialAccount socialAccount);
+
+    int deleteByUserIdAndProvider(@Param("userId") Long userId,
+                                  @Param("provider") SocialProvider provider);
 
     int deleteAllByUserId(@Param("userId") Long userId);
 }

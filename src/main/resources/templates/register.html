@@ -23,7 +23,7 @@
 
     <nav class="registration-progress" aria-label="회원가입 진행 단계">
       <p id="registrationStepStatus" class="registration-step-status" aria-live="polite">
-        3단계 중 1단계 · 약관 동의
+        2단계 중 1단계 · 약관 동의
       </p>
       <ol>
         <li data-step-indicator="1" aria-current="step">
@@ -32,14 +32,10 @@
         <li data-step-indicator="2">
           <span>2</span><strong>계정 정보</strong>
         </li>
-        <li data-step-indicator="3">
-          <span>3</span><strong>기본 정보</strong>
-        </li>
       </ol>
     </nav>
 
-    <form th:action="@{/users/register}" th:object="${registrationForm}"
-          method="post" enctype="multipart/form-data" novalidate>
+    <form th:action="@{/users/register}" th:object="${registrationForm}" method="post" novalidate>
       <input type="hidden" th:if="${_csrf != null}"
              th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
 
@@ -190,18 +186,6 @@
                 th:if="${#fields.hasErrors('passwordConfirmed')}" th:errors="*{passwordConfirmed}">비밀번호 확인 오류</span>
         </div>
 
-        <div class="step-actions">
-          <button type="button" class="button-secondary prev-step">이전</button>
-          <button type="button" class="button-primary next-step" id="step2-next" disabled>다음</button>
-        </div>
-      </section>
-
-      <section id="step-3" class="form-step" aria-labelledby="profile-title" hidden>
-        <div class="step-heading">
-          <h2 id="profile-title">기본 정보를 알려주세요</h2>
-          <p>여행 기록에 사용할 프로필 정보를 입력합니다.</p>
-        </div>
-
         <div class="input-group">
           <label class="field-label" for="nickname">닉네임</label>
           <div class="nickname-row">
@@ -217,43 +201,9 @@
                 th:if="${#fields.hasErrors('nickname')}" th:errors="*{nickname}">닉네임 오류</span>
         </div>
 
-        <div class="input-group">
-          <label class="field-label" for="fullName">이름</label>
-          <input class="field-control" type="text" id="fullName" th:field="*{fullName}"
-                 autocomplete="name" maxlength="50"
-                 aria-describedby="fullNameMessage fullNameServerError" required>
-          <span id="fullNameMessage" class="field-feedback">한글, 영문과 이름 사이의 공백만 입력할 수 있습니다.</span>
-          <span id="fullNameServerError" class="field-error" data-field-error="fullName"
-                th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}">이름 오류</span>
-        </div>
-
-        <div class="form-grid">
-          <div class="input-group">
-            <label class="field-label" for="userPhone">전화번호 <span>(선택)</span></label>
-            <input class="field-control" type="tel" id="userPhone" th:field="*{userPhone}"
-                   autocomplete="tel" inputmode="tel" maxlength="13" placeholder="010-1234-5678">
-            <span class="field-error" data-field-error="userPhone"
-                  th:if="${#fields.hasErrors('userPhone')}" th:errors="*{userPhone}">전화번호 오류</span>
-          </div>
-
-          <div class="input-group">
-            <label class="field-label" for="userBirth">생년월일</label>
-            <input class="field-control" type="date" id="userBirth" th:field="*{userBirth}"
-                   autocomplete="bday" required>
-            <span class="field-error" data-field-error="userBirth"
-                  th:if="${#fields.hasErrors('userBirth')}" th:errors="*{userBirth}">생년월일 오류</span>
-          </div>
-        </div>
-
-        <div class="input-group">
-          <label class="field-label" for="profileImageFile">프로필 이미지 <span>(선택)</span></label>
-          <input class="field-control file-control" type="file" id="profileImageFile"
-                 th:field="*{profileImageFile}" accept="image/*">
-        </div>
-
         <div class="step-actions">
           <button type="button" class="button-secondary prev-step">이전</button>
-          <button type="submit" class="button-primary" id="step3-submit" disabled>회원가입</button>
+          <button type="submit" class="button-primary" id="step2-submit" disabled>회원가입</button>
         </div>
       </section>
     </form>

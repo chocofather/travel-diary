@@ -36,6 +36,35 @@
     margin: 0;
 }
 
+.mypage-login-security {
+    gap: 0;
+}
+
+.mypage-security-group {
+    display: grid;
+    gap: 14px;
+    padding-top: 20px;
+    margin-top: 20px;
+    border-top: 1px solid #e8edf3;
+}
+
+.mypage-security-group-heading h3 {
+    margin: 0 0 4px;
+    color: #253044;
+    font-size: 16px;
+}
+
+.mypage-security-group-heading span {
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.mypage-password-form {
+    display: grid;
+    gap: 15px;
+}
+
 .mypage-account-readonly-list > div {
     padding: 15px 16px;
     border-radius: 10px;
@@ -350,9 +379,99 @@
     background: #f8fafc;
 }
 
+.mypage-social-account-row form {
+    margin: 0;
+}
+
 .mypage-social-account-provider {
     color: #172033;
     font-size: 15px;
+}
+
+.mypage-social-account-identity {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+}
+
+.mypage-social-account-identity small {
+    overflow-wrap: anywhere;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 400;
+}
+
+.mypage-social-account-status {
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.mypage-social-account-status.is-connected {
+    color: #28745a;
+}
+
+.mypage-social-account-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.mypage-social-connect-button {
+    min-height: 34px;
+    padding: 7px 13px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #fff;
+    color: #334155;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.mypage-social-connect-button:hover {
+    border-color: #94a3b8;
+    background: #f8fafc;
+}
+
+.mypage-social-disconnect-button {
+    min-height: 32px;
+    padding: 6px 11px;
+    border: 1px solid #d7b7b3;
+    border-radius: 8px;
+    background: #fff;
+    color: #8d3f38;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.mypage-social-disconnect-button:hover {
+    border-color: #c9958f;
+    background: #fff8f7;
+}
+
+.mypage-social-connection-notice {
+    margin: 0;
+    padding: 9px 12px;
+    border-left: 3px solid #94a3b8;
+    border-radius: 6px;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.mypage-social-connection-notice.is-success {
+    border-left-color: #6daa91;
+    background: #f3f8f5;
+    color: #27624d;
+}
+
+.mypage-social-connection-notice.is-error {
+    border-left-color: #c97c74;
+    background: #fff8f7;
+    color: #8d3028;
 }
 
 .mypage-social-account-email {
@@ -404,6 +523,11 @@
         align-items: flex-start;
         flex-direction: column;
         gap: 8px;
+    }
+
+    .mypage-social-account-actions {
+        justify-content: space-between;
+        width: 100%;
     }
 
     .mypage-social-account-email {

@@ -5,10 +5,9 @@ $(function () {
     const availability = {username: false, email: false, nickname: false};
     const requestVersion = {username: 0, email: 0, nickname: 0};
     const usernamePattern = /^(?=.*[a-z])[a-z0-9_-]{3,16}$/;
-    const fullNamePattern = /^[가-힣A-Za-z]+(?: +[가-힣A-Za-z]+)*$/;
     const passwordPattern = /^(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/;
     const emailPattern = /^[A-Z0-9._%+-]+@[A-Z0-9-]+(?:\.[A-Z0-9-]+)+$/i;
-    const stepNames = ["", "약관 동의", "계정 정보", "기본 정보"];
+    const stepNames = ["", "약관 동의", "계정 정보"];
     const serverErrorSelectors = {
         username: "#usernameServerError",
         userEmail: "#emailServerError",
@@ -19,8 +18,7 @@ $(function () {
         "#emailMessage": "#userEmail",
         "#passwordValidationMessage": "#userPassword",
         "#passwordMessage": "#passwordConfirm",
-        "#nicknameMessage": "#nickname",
-        "#fullNameMessage": "#fullName"
+        "#nicknameMessage": "#nickname"
     };
     let currentStep = initialStep();
     let suggestedEmail = "";
@@ -38,7 +36,6 @@ $(function () {
 
     function initialStep() {
         const field = $("[data-field-error]").first().data("field-error");
-        if (["nickname", "fullName", "userPhone", "userBirth"].includes(field)) return 3;
         if (field || $("[data-server-error]").length) return 2;
         return 1;
     }
@@ -53,7 +50,7 @@ $(function () {
                 .toggleClass("is-current", indicatorStep === step)
                 .attr("aria-current", indicatorStep === step ? "step" : null);
         });
-        $("#registrationStepStatus").text("3단계 중 " + step + "단계 · " + stepNames[step]);
+        $("#registrationStepStatus").text("2단계 중 " + step + "단계 · " + stepNames[step]);
         updateButtons();
         window.scrollTo({top: 0, behavior: "smooth"});
     }
@@ -74,15 +71,6 @@ $(function () {
         return password.length > 0 && password === $("#passwordConfirm").val();
     }
 
-    function normalizedFullName() {
-        return $("#fullName").val().trim().replace(/\s+/g, " ");
-    }
-
-    function fullNameIsValid() {
-        const fullName = normalizedFullName();
-        return fullName.length <= 50 && fullNamePattern.test(fullName);
-    }
-
     function updateButtons() {
         const requiredTermsAccepted = $("#termsAgree1").is(":checked")
             && $("#termsAgree2").is(":checked");
@@ -91,13 +79,9 @@ $(function () {
         const accountReady = availability.username
             && availability.email
             && passwordIsValid()
-            && passwordsMatch();
-        $("#step2-next").prop("disabled", !accountReady);
-
-        const profileReady = availability.nickname
-            && fullNameIsValid()
-            && $("#userBirth").val().length > 0;
-        $("#step3-submit").prop("disabled", isSubmitting || !profileReady);
+            && passwordsMatch()
+            && availability.nickname;
+        $("#step2-submit").prop("disabled", isSubmitting || !accountReady);
     }
 
     function invalidate(field) {
@@ -300,24 +284,8 @@ $(function () {
         updateButtons();
     });
 
-    $("#fullName").on("input", function () {
-        const valid = fullNameIsValid();
-        setMessage("#fullNameMessage",
-            valid ? "사용 가능한 이름입니다." : "한글, 영문과 이름 사이의 공백만 입력할 수 있습니다.",
-            valid ? "success" : "error");
-        updateButtons();
-    });
-    $("#userBirth").on("change", updateButtons);
-
-    $("#userPhone").on("input", function () {
-        const digits = this.value.replace(/[^0-9]/g, "").slice(0, 11);
-        this.value = digits.length <= 3 ? digits
-            : digits.length <= 7 ? digits.slice(0, 3) + "-" + digits.slice(3)
-                : digits.slice(0, 3) + "-" + digits.slice(3, 7) + "-" + digits.slice(7);
-    });
-
     $(".next-step").on("click", function () {
-        if (!this.disabled) showStep(Math.min(3, currentStep + 1));
+        if (!this.disabled) showStep(Math.min(2, currentStep + 1));
     });
     $(".prev-step").on("click", () => showStep(Math.max(1, currentStep - 1)));
 
@@ -335,36 +303,28 @@ $(function () {
             return;
         }
         if (!availability.username || !availability.email || !availability.nickname
-            || !passwordIsValid() || !passwordsMatch() || !fullNameIsValid()) {
+            || !passwordIsValid() || !passwordsMatch()) {
             event.preventDefault();
             setMessage("#nicknameMessage", "중복 확인과 입력값 검증을 완료해주세요.", "error");
-            showStep(availability.username && availability.email ? 3 : 2);
+            showStep(2);
             return;
         }
         $("#username").val($("#username").val().trim());
         $("#userEmail").val($("#userEmail").val().trim().toLowerCase());
         $("#nickname").val($("#nickname").val().trim());
-        $("#fullName").val(normalizedFullName());
         isSubmitting = true;
-        $("#step3-submit").text("가입 처리 중...");
+        $("#step2-submit").text("가입 처리 중...");
         updateButtons();
     });
-
-    const today = new Date();
-    $("#userBirth").attr("max", [today.getFullYear(),
-        String(today.getMonth() + 1).padStart(2, "0"),
-        String(today.getDate()).padStart(2, "0")].join("-"));
 
     showStep(currentStep);
     $("#username, #userEmail, #nickname").each(function () {
         const field = this.id;
         if (this.value.trim() && !$(serverErrorSelectors[field]).length) $(this).trigger("input");
     });
-    if ($("#fullName").val().trim()) $("#fullName").trigger("input");
-
     window.addEventListener("pageshow", function () {
         isSubmitting = false;
-        $("#step3-submit").text("회원가입");
+        $("#step2-submit").text("회원가입");
         updateButtons();
     });
 });

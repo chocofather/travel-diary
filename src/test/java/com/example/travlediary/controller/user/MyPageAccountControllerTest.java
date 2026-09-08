@@ -6,7 +6,9 @@ import com.example.travlediary.config.SecurityConfig;
 import com.example.travlediary.dto.AccountDetailsDto;
 import com.example.travlediary.dto.PasswordChangeForm;
 import com.example.travlediary.model.SocialAccount;
+import com.example.travlediary.model.PendingSocialConnection;
 import com.example.travlediary.model.PendingSocialWithdrawal;
+import com.example.travlediary.model.SocialConnectionNotice;
 import com.example.travlediary.model.SocialProvider;
 import com.example.travlediary.model.User;
 import com.example.travlediary.model.UserRole;
@@ -16,6 +18,7 @@ import com.example.travlediary.service.user.AccountReauthenticationService;
 import com.example.travlediary.service.user.AccountValidationException;
 import com.example.travlediary.service.user.MyPageAccountService;
 import com.example.travlediary.service.user.SocialAccountService;
+import com.example.travlediary.service.user.SocialDisconnectionResult;
 import com.example.travlediary.service.user.SocialWithdrawalException;
 import com.example.travlediary.service.user.SocialWithdrawalService;
 import org.junit.jupiter.api.BeforeEach;
@@ -91,11 +94,101 @@ class MyPageAccountControllerTest {
                 "/mypage/account/edit",
                 "/mypage/account/password",
                 "/mypage/account/withdraw",
+                "/mypage/account/social-connections/google",
+                "/mypage/account/social-connections/google/disconnect",
                 "/mypage/account/social-withdrawal",
                 "/mypage/account/social-withdrawal/cancel"}) {
             mockMvc.perform(post(url).with(user(principal)))
                     .andExpect(status().isForbidden());
         }
+    }
+
+    @Test
+    void unsupportedConnectionProviderStillRequiresCsrfBeforeTouchingSession()
+            throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        PendingSocialWithdrawal pending = pending(7L, SocialProvider.GOOGLE);
+        session.setAttribute(PendingSocialWithdrawal.SESSION_ATTRIBUTE, pending);
+
+        mockMvc.perform(post("/mypage/account/social-connections/unsupported")
+                        .session(session)
+                        .with(user(principal(7L, UserRole.USER))))
+                .andExpect(status().isForbidden());
+
+        assertThat(session.getAttribute(PendingSocialWithdrawal.SESSION_ATTRIBUTE))
+                .isEqualTo(pending);
+    }
+
+    @Test
+    void socialConnectionStartUsesPrincipalAndStoresOnlyServerSideIntent()
+            throws Exception {
+        when(accountService.hasLocalPassword(7L)).thenReturn(false);
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("userId", 999L);
+        session.setAttribute(PendingSocialWithdrawal.SESSION_ATTRIBUTE,
+                pending(7L, SocialProvider.NAVER));
+
+        mockMvc.perform(post("/mypage/account/social-connections/google")
+                        .param("userId", "999")
+                        .param("provider", "NAVER")
+                        .session(session)
+                        .with(user(principal(7L, UserRole.USER)))
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/oauth2/authorization/google"));
+
+        assertThat(session.getAttribute("userId")).isEqualTo(7L);
+        assertThat(session.getAttribute(PendingSocialWithdrawal.SESSION_ATTRIBUTE)).isNull();
+        assertThat(session.getAttribute(PendingSocialConnection.SESSION_ATTRIBUTE))
+                .isInstanceOfSatisfying(PendingSocialConnection.class, pending -> {
+                    assertThat(pending.userId()).isEqualTo(7L);
+                    assertThat(pending.provider()).isEqualTo(SocialProvider.GOOGLE);
+                    assertThat(pending.isValidAt(Instant.now())).isTrue();
+                });
+        verify(socialAccountService).findByUserIdAndProvider(
+                7L, SocialProvider.GOOGLE);
+        verify(socialAccountService, never()).findByUserIdAndProvider(
+                999L, SocialProvider.NAVER);
+    }
+
+    @Test
+    void localMemberCannotStartConnectionWithoutRecentPasswordVerification()
+            throws Exception {
+        MockHttpSession session = new MockHttpSession();
+
+        mockMvc.perform(post("/mypage/account/social-connections/google")
+                        .session(session)
+                        .with(user(principal(7L, UserRole.USER)))
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/mypage/account"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+                        .flash().attributeExists("verificationMessage"));
+
+        assertThat(session.getAttribute(PendingSocialConnection.SESSION_ATTRIBUTE)).isNull();
+        verify(socialAccountService, never()).findByUserIdAndProvider(
+                7L, SocialProvider.GOOGLE);
+    }
+
+    @Test
+    void existingProviderConnectionDoesNotCreateAnotherIntent() throws Exception {
+        when(accountService.hasLocalPassword(7L)).thenReturn(false);
+        MockHttpSession session = new MockHttpSession();
+        when(socialAccountService.findByUserIdAndProvider(7L, SocialProvider.KAKAO))
+                .thenReturn(socialAccount(7L, SocialProvider.KAKAO, "subject", null));
+
+        mockMvc.perform(post("/mypage/account/social-connections/kakao")
+                        .session(session)
+                        .with(user(principal(7L, UserRole.USER)))
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/mypage/account"));
+
+        assertThat(session.getAttribute(PendingSocialConnection.SESSION_ATTRIBUTE)).isNull();
+        assertThat(session.getAttribute(SocialConnectionNotice.SESSION_ATTRIBUTE))
+                .isEqualTo(new SocialConnectionNotice(
+                        SocialConnectionNotice.Type.ALREADY_CONNECTED,
+                        SocialProvider.KAKAO));
     }
 
     @Test
@@ -127,19 +220,22 @@ class MyPageAccountControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("mypage/account-social"))
                 .andExpect(model().attribute("socialAccounts", accounts))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("계정 관리")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("계정 및 보안")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "로그인 계정 정보를 확인할 수 있습니다.")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("로그인 계정")))
+                        "계정 정보와 로그인 수단을 안전하게 관리합니다.")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("소셜 계정 연결")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Google")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("카카오")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("네이버")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("연결됨")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "google@example.com")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "naver@example.com")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "이메일 정보 없음")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("연결하기"))))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("name=\"currentPassword\""))))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
@@ -155,6 +251,155 @@ class MyPageAccountControllerTest {
 
         verify(socialAccountService).findAllByUserId(77L);
         verify(socialAccountService, never()).findAllByUserId(999L);
+    }
+
+    @Test
+    void accountPageShowsConnectActionsOnlyForUnlinkedProviders() throws Exception {
+        when(accountService.hasLocalPassword(77L)).thenReturn(false);
+        when(userMapper.hasLocalPasswordById(77L)).thenReturn(false);
+        when(socialAccountService.findAllByUserId(77L)).thenReturn(List.of(
+                socialAccount(77L, SocialProvider.GOOGLE, "google-sub", null)));
+
+        mockMvc.perform(get("/mypage/account").with(user(socialPrincipal(77L))))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "action=\"/mypage/account/social-connections/kakao\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "action=\"/mypage/account/social-connections/naver\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString(
+                                "action=\"/mypage/account/social-connections/google\""))));
+    }
+
+    @Test
+    void connectionNoticeIsShownOnceAndRemovedFromSession() throws Exception {
+        when(accountService.hasLocalPassword(77L)).thenReturn(false);
+        when(userMapper.hasLocalPasswordById(77L)).thenReturn(false);
+        when(socialAccountService.findAllByUserId(77L)).thenReturn(List.of(
+                socialAccount(77L, SocialProvider.GOOGLE, "google-sub", null)));
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(SocialConnectionNotice.SESSION_ATTRIBUTE,
+                new SocialConnectionNotice(
+                        SocialConnectionNotice.Type.CONNECTED, SocialProvider.GOOGLE));
+
+        mockMvc.perform(get("/mypage/account")
+                        .session(session)
+                        .with(user(socialPrincipal(77L))))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "Google 계정이 연결되었습니다.")));
+
+        assertThat(session.getAttribute(SocialConnectionNotice.SESSION_ATTRIBUTE)).isNull();
+    }
+
+    @Test
+    void connectedProviderShowsStatusDisconnectActionAndConfirmation() throws Exception {
+        when(accountService.hasLocalPassword(77L)).thenReturn(false);
+        when(userMapper.hasLocalPasswordById(77L)).thenReturn(false);
+        when(socialAccountService.findAllByUserId(77L)).thenReturn(List.of(
+                socialAccount(77L, SocialProvider.GOOGLE, "hidden-subject", null)));
+
+        mockMvc.perform(get("/mypage/account").with(user(socialPrincipal(77L))))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("연결됨")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("연결 해제")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "action=\"/mypage/account/social-connections/google/disconnect\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "Google 계정 연결을 해제하시겠습니까? 해제 후에는 해당 계정으로 로그인할 수 없습니다.")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("hidden-subject"))));
+    }
+
+    @Test
+    void disconnectUsesAuthenticatedUserIdAndStoresSuccessNotice() throws Exception {
+        when(accountService.hasLocalPassword(7L)).thenReturn(false);
+        when(socialAccountService.disconnectFromUser(7L, SocialProvider.GOOGLE))
+                .thenReturn(SocialDisconnectionResult.DISCONNECTED);
+        MockHttpSession session = new MockHttpSession();
+
+        mockMvc.perform(post("/mypage/account/social-connections/google/disconnect")
+                        .param("userId", "999")
+                        .session(session)
+                        .with(user(socialPrincipal(7L)))
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/mypage/account"));
+
+        verify(socialAccountService).disconnectFromUser(7L, SocialProvider.GOOGLE);
+        verify(socialAccountService, never()).disconnectFromUser(
+                999L, SocialProvider.GOOGLE);
+        assertThat(session.getAttribute(SocialConnectionNotice.SESSION_ATTRIBUTE))
+                .isEqualTo(new SocialConnectionNotice(
+                        SocialConnectionNotice.Type.DISCONNECTED, SocialProvider.GOOGLE));
+    }
+
+    @Test
+    void lastLoginMethodRefusalIsShownWithoutDeletingAccountData() throws Exception {
+        when(accountService.hasLocalPassword(77L)).thenReturn(false);
+        when(userMapper.hasLocalPasswordById(77L)).thenReturn(false);
+        when(socialAccountService.disconnectFromUser(77L, SocialProvider.NAVER))
+                .thenReturn(SocialDisconnectionResult.LAST_LOGIN_METHOD);
+        when(socialAccountService.findAllByUserId(77L)).thenReturn(List.of(
+                socialAccount(77L, SocialProvider.NAVER, "naver-subject", null)));
+        MockHttpSession session = new MockHttpSession();
+
+        mockMvc.perform(post("/mypage/account/social-connections/naver/disconnect")
+                        .session(session)
+                        .with(user(socialPrincipal(77L)))
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/mypage/account"));
+
+        mockMvc.perform(get("/mypage/account")
+                        .session(session)
+                        .with(user(socialPrincipal(77L))))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "마지막 로그인 수단은 연결 해제할 수 없습니다. 다른 로그인 수단을 먼저 추가해주세요.")));
+
+        verify(accountService, never()).withdrawAfterSocialReauthentication(77L);
+    }
+
+    @Test
+    void unsupportedDisconnectProviderIsHandledWithoutCallingService() throws Exception {
+        when(accountService.hasLocalPassword(7L)).thenReturn(false);
+        MockHttpSession session = new MockHttpSession();
+
+        mockMvc.perform(post("/mypage/account/social-connections/unsupported/disconnect")
+                        .session(session)
+                        .with(user(socialPrincipal(7L)))
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/mypage/account"));
+
+        verify(socialAccountService, never()).disconnectFromUser(
+                org.mockito.ArgumentMatchers.anyLong(),
+                org.mockito.ArgumentMatchers.any(SocialProvider.class));
+        assertThat(session.getAttribute(SocialConnectionNotice.SESSION_ATTRIBUTE))
+                .isEqualTo(new SocialConnectionNotice(
+                        SocialConnectionNotice.Type.DISCONNECT_ERROR, null));
+    }
+
+    @Test
+    void disconnectFailureReturnsSafeNoticeWithoutExposingTheException() throws Exception {
+        when(accountService.hasLocalPassword(7L)).thenReturn(false);
+        when(socialAccountService.disconnectFromUser(7L, SocialProvider.KAKAO))
+                .thenThrow(new IllegalStateException("database connection details"));
+        MockHttpSession session = new MockHttpSession();
+
+        mockMvc.perform(post("/mypage/account/social-connections/kakao/disconnect")
+                        .session(session)
+                        .with(user(socialPrincipal(7L)))
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/mypage/account"))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("database connection details"))));
+
+        assertThat(session.getAttribute(SocialConnectionNotice.SESSION_ATTRIBUTE))
+                .isEqualTo(new SocialConnectionNotice(
+                        SocialConnectionNotice.Type.DISCONNECT_ERROR, SocialProvider.KAKAO));
     }
 
     @Test
@@ -402,7 +647,7 @@ class MyPageAccountControllerTest {
     }
 
     @Test
-    void detailsUpdateUsesPrincipalIdAndKeepsVerification() throws Exception {
+    void directDetailsUpdateCannotModifyReadonlyPersonalInformation() throws Exception {
         MockHttpSession session = new MockHttpSession();
         reauthenticationService.markVerified(session, 7L);
 
@@ -418,7 +663,7 @@ class MyPageAccountControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/mypage/account/edit"));
 
-        verify(accountService).updateAccountDetails(eq(7L), any());
+        verify(accountService, never()).updateAccountDetails(eq(7L), any());
         assertThat(reauthenticationService.isVerified(session, 7L)).isTrue();
     }
 
@@ -479,23 +724,42 @@ class MyPageAccountControllerTest {
     }
 
     @Test
-    void birthDateIsShownForReadingOnlyAndCannotBeChangedThroughTheEditForm()
+    void accountAndSecurityPageOmitsPersonalInformationAndKeepsRequiredActions()
             throws Exception {
         MockHttpSession session = new MockHttpSession();
         reauthenticationService.markVerified(session, 7L);
         when(accountService.getAccountDetails(7L))
                 .thenReturn(details("member", "member@example.com"));
 
-        // 저장된 값은 조회 전용으로 보이고, 고칠 수 있는 칸은 없다
         mockMvc.perform(get("/mypage/account/edit").session(session)
                         .with(user(principal(7L, UserRole.USER))))
                 .andExpect(status().isOk())
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("2000-01-02")))
-                .andExpect(content().string(
-                        org.hamcrest.Matchers.not(
-                                org.hamcrest.Matchers.containsString("name=\"userBirth\""))));
+                .andExpect(content().string(org.hamcrest.Matchers.matchesPattern(
+                        "(?s).*id=\"account-info-title\".*id=\"login-security-title\""
+                                + ".*id=\"withdrawal-title\".*")))
+                .andExpect(content().string(org.hamcrest.Matchers.matchesPattern(
+                        "(?s).*id=\"login-security-title\".*비밀번호 변경"
+                                + ".*id=\"social-connection-title\".*")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("계정 및 보안")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("personal-info-title"))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("여행 민준"))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("010-1234-5678"))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("2000-01-02"))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("name=\"fullName\""))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("name=\"userPhone\""))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("name=\"userBirth\""))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("회원정보 저장"))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("본인인증 완료"))));
 
-        // 요청에 생년월일을 끼워 넣어도 수정 대상이 되지 않는다
         mockMvc.perform(post("/mypage/account/edit").session(session)
                         .with(user(principal(7L, UserRole.USER))).with(csrf())
                         .param("fullName", "여행 민준")
@@ -504,9 +768,7 @@ class MyPageAccountControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/mypage/account/edit"));
 
-        verify(accountService).updateAccountDetails(eq(7L), org.mockito.ArgumentMatchers.argThat(
-                form -> "여행 민준".equals(form.getFullName())
-                        && "010-1234-5678".equals(form.getUserPhone())));
+        verify(accountService, never()).updateAccountDetails(eq(7L), any());
     }
 
     private AccountDetailsDto details(String username, String email) {

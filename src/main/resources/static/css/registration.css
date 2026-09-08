@@ -89,7 +89,7 @@
 
 .registration-progress ol {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0;
     padding: 0;
     margin: 0;
@@ -99,9 +99,10 @@
 .registration-progress li {
     position: relative;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 7px;
     min-width: 0;
     color: #94a3b8;
     font-size: 13px;
@@ -112,8 +113,8 @@
     position: absolute;
     z-index: 0;
     top: 16px;
-    left: calc(50% + 42px);
-    right: calc(-50% + 42px);
+    left: calc(50% + 16px);
+    right: calc(-50% + 16px);
     height: 1px;
     background: var(--register-border);
 }
@@ -587,15 +588,8 @@
     }
 
     .registration-progress li {
-        flex-direction: column;
         gap: 5px;
         font-size: 12px;
-    }
-
-    .registration-progress li:not(:last-child)::after {
-        top: 16px;
-        left: calc(50% + 22px);
-        right: calc(-50% + 22px);
     }
 }
 

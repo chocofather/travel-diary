@@ -1,5 +1,6 @@
 package com.example.travlediary.config;
 
+import com.example.travlediary.model.PendingSocialConnection;
 import com.example.travlediary.model.PendingSocialWithdrawal;
 import com.example.travlediary.model.SocialProvider;
 import org.junit.jupiter.api.Test;
@@ -32,6 +33,28 @@ class SocialWithdrawalAuthorizationRequestResolverTest {
         assertWithdrawalParameter(SocialProvider.GOOGLE, "google", "prompt", "select_account");
         assertWithdrawalParameter(SocialProvider.KAKAO, "kakao", "prompt", "login");
         assertWithdrawalParameter(SocialProvider.NAVER, "naver", "auth_type", "reauthenticate");
+    }
+
+    @Test
+    void validConnectionIntentKeepsSpringStateAndRequestsProviderAccountSelection() {
+        OAuth2AuthorizationRequest original = original("google");
+        SocialWithdrawalAuthorizationRequestResolver resolver = resolver(original);
+        MockHttpServletRequest request = request("google");
+        Instant now = Instant.now();
+        request.getSession().setAttribute(PendingSocialConnection.SESSION_ATTRIBUTE,
+                new PendingSocialConnection(
+                        "flow-id", 7L, SocialProvider.GOOGLE, now, now.plusSeconds(600),
+                        null));
+
+        OAuth2AuthorizationRequest resolved = resolver.resolve(request, "google");
+
+        assertThat(resolved.getState()).isEqualTo("spring-state");
+        assertThat(resolved.getAdditionalParameters())
+                .containsEntry("nonce", "spring-nonce")
+                .containsEntry("prompt", "select_account");
+        assertThat(((PendingSocialConnection) request.getSession().getAttribute(
+                PendingSocialConnection.SESSION_ATTRIBUTE)).oauthState())
+                .isEqualTo("spring-state");
     }
 
     @Test

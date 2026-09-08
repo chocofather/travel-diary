@@ -4,6 +4,7 @@
 <th:block th:fragment="headFragment">
   <link rel="stylesheet" href="/css/mypage-layout.css">
   <link rel="stylesheet" href="/css/mypage-account.css">
+  <script src="/js/confirm-submit.js" defer></script>
 </th:block>
 <th:block th:fragment="body">
   <div class="mypage-layout">
@@ -12,8 +13,8 @@
     <section class="mypage-content mypage-account-page" aria-labelledby="account-title">
       <header class="mypage-page-header">
         <p>ACCOUNT</p>
-        <h1 id="account-title" th:text="#{mypage.nav.account.social}">계정 관리</h1>
-        <span th:text="#{mypage.account.social.description}">로그인 계정 정보를 확인할 수 있습니다.</span>
+        <h1 id="account-title" th:text="#{mypage.nav.account.social}">계정 및 보안</h1>
+        <span th:text="#{mypage.account.social.description}">계정 정보와 로그인 수단을 안전하게 관리합니다.</span>
       </header>
 
       <p class="mypage-account-notice" th:if="${param.socialWithdrawalError}"
@@ -21,34 +22,17 @@
         본인 확인 또는 소셜 계정 연결 해제 중 문제가 발생했습니다. 다시 시도해주세요.
       </p>
 
-      <section class="mypage-account-panel" aria-labelledby="social-login-title">
-        <div class="mypage-account-section-heading">
-          <h2 id="social-login-title" th:text="#{mypage.account.social.loginAccount}">로그인 계정</h2>
-          <span th:text="#{mypage.account.social.loginAccount.help}">Travel Diary에 연결된 소셜 계정입니다.</span>
-        </div>
+      <th:block th:replace="~{fragments/mypage/social-connections :: notices}"></th:block>
 
-        <div class="mypage-social-account-list" th:if="${!#lists.isEmpty(socialAccounts)}">
-          <article class="mypage-social-account-row" th:each="socialAccount : ${socialAccounts}">
-            <!-- 분기는 provider enum 이름으로 하고, 표시 이름만 언어에 맞춰 고른다. -->
-            <strong class="mypage-social-account-provider"
-                    th:switch="${socialAccount.provider.name()}">
-              <span th:case="'GOOGLE'" th:text="#{mypage.account.social.provider.GOOGLE}">Google</span>
-              <span th:case="'KAKAO'" th:text="#{mypage.account.social.provider.KAKAO}">카카오</span>
-              <span th:case="'NAVER'" th:text="#{mypage.account.social.provider.NAVER}">네이버</span>
-              <span th:case="*" th:text="#{mypage.account.social.provider.other}">소셜 계정</span>
-            </strong>
-            <span class="mypage-social-account-email">
-              <small th:text="#{mypage.account.social.providerEmail}">소셜 계정 이메일</small>
-              <span th:text="${#strings.isEmpty(socialAccount.providerEmail)}
-                  ? #{mypage.account.social.providerEmail.none}
-                  : ${socialAccount.providerEmail}">이메일 정보 없음</span>
-            </span>
-          </article>
+      <section class="mypage-account-panel" aria-labelledby="social-connection-title">
+        <div class="mypage-account-section-heading">
+          <h2 id="social-connection-title"
+              th:text="#{mypage.account.social.connection.title}">소셜 계정 연결</h2>
+          <span th:text="#{mypage.account.social.connection.help}">
+            연결한 계정으로도 Travel Diary에 로그인할 수 있습니다.
+          </span>
         </div>
-        <p class="mypage-social-account-empty" th:if="${#lists.isEmpty(socialAccounts)}"
-           th:text="#{mypage.account.social.empty}">
-          연결 정보를 확인할 수 없습니다.
-        </p>
+        <div th:replace="~{fragments/mypage/social-connections :: rows}"></div>
       </section>
 
       <section class="mypage-social-withdrawal"

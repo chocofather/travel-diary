@@ -7,7 +7,6 @@ import com.example.travlediary.model.UserStatus;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.service.email.EmailDispatchService;
 import com.example.travlediary.service.email.EmailVerificationService;
-import com.example.travlediary.service.file.FileUploadService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,7 +30,6 @@ public class UserService {
 
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
-    private final FileUploadService fileUploadService;
     private final EmailDispatchService emailDispatchService;
     private final EmailVerificationService emailVerificationService;
 
@@ -40,12 +38,10 @@ public class UserService {
 
     @Autowired
     public UserService(UserMapper userMapper, PasswordEncoder passwordEncoder,
-                       FileUploadService fileUploadService,
                        EmailDispatchService emailDispatchService,
                        EmailVerificationService emailVerificationService) {
         this.userMapper = userMapper;
         this.passwordEncoder = passwordEncoder;
-        this.fileUploadService = fileUploadService;
         this.emailDispatchService = emailDispatchService;
         this.emailVerificationService = emailVerificationService;
     }
@@ -84,9 +80,6 @@ public class UserService {
         user.setUsername(username);
         user.setUserEmail(email);
         user.setNickname(nickname);
-        user.setFullName(FullNamePolicy.normalizeAndValidate(form.getFullName()));
-        user.setUserPhone(normalizeOptional(form.getUserPhone()));
-        user.setUserBirth(form.getUserBirth());
 
         user.setUserPassword(passwordEncoder.encode(rawPassword));
 
@@ -97,19 +90,7 @@ public class UserService {
 
         emailVerificationService.initializeVerification(user);
 
-        // 📷 프로필 이미지 업로드 처리
-        try {
-            if (form.getProfileImageFile() != null && !form.getProfileImageFile().isEmpty()) {
-                String imagePath = fileUploadService.saveFile(form.getProfileImageFile());
-                user.setProfileImage(imagePath);
-            } else {
-                user.setProfileImage("uploads/default.png"); // 기본 프로필 이미지 설정
-            }
-        } catch (Exception e) {
-            log.warn("Registration profile image could not be stored; using the default image: exceptionType={}",
-                    e.getClass().getSimpleName());
-            user.setProfileImage("uploads/default.png");
-        }
+        user.setProfileImage("uploads/default.png");
 
         try {
             userMapper.insertUser(user);
@@ -137,11 +118,6 @@ public class UserService {
             throw new RegistrationValidationException("nickname", "이미 사용 중인 닉네임입니다.");
         }
     }
-
-    private String normalizeOptional(String value) {
-        return value == null || value.isBlank() ? null : value.strip();
-    }
-
 
     // 🧐 사용자 조회 (null 체크 포함)
     public User findByUsername(String username) {

@@ -1,14 +1,17 @@
 package com.example.travlediary.config;
 
+import com.example.travlediary.model.PendingSocialConnection;
 import com.example.travlediary.model.PendingSocialSignup;
 import com.example.travlediary.model.PendingSocialWithdrawal;
 import com.example.travlediary.model.SocialAccount;
+import com.example.travlediary.model.SocialConnectionNotice;
 import com.example.travlediary.model.SocialProvider;
 import com.example.travlediary.model.User;
 import com.example.travlediary.model.UserStatus;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.user.SocialAccountService;
+import com.example.travlediary.service.user.SocialConnectionResult;
 import com.example.travlediary.service.user.SocialWithdrawalService;
 import com.example.travlediary.service.user.UserSanctionService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -84,10 +87,17 @@ public class SocialOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
     public void onAuthenticationSuccess(HttpServletRequest request,
                                         HttpServletResponse response,
                                         Authentication authentication) throws IOException {
+        PendingSocialConnection connection = consumePendingConnection(request);
         PendingSocialWithdrawal withdrawal = consumePendingWithdrawal(request);
         try {
+            if (connection != null && withdrawal != null) {
+                failConnection(request, response, connection);
+                return;
+            }
             if (!(authentication instanceof OAuth2AuthenticationToken oauthAuthentication)) {
-                if (withdrawal == null) {
+                if (connection != null) {
+                    failConnection(request, response, connection);
+                } else if (withdrawal == null) {
                     reject(request, response);
                 } else {
                     failWithdrawal(request, response, withdrawal);
@@ -98,11 +108,19 @@ public class SocialOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
             SocialIdentity identity = extractIdentity(oauthAuthentication);
             if (identity == null) {
                 removeAuthorizedClient(oauthAuthentication);
-                if (withdrawal == null) {
+                if (connection != null) {
+                    failConnection(request, response, connection);
+                } else if (withdrawal == null) {
                     reject(request, response);
                 } else {
                     failWithdrawal(request, response, withdrawal);
                 }
+                return;
+            }
+
+            if (connection != null) {
+                completeConnection(
+                        request, response, oauthAuthentication, identity, connection);
                 return;
             }
 
@@ -125,12 +143,92 @@ public class SocialOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
 
             loginConnectedAccount(request, response, socialAccount);
         } catch (RuntimeException exception) {
-            if (withdrawal == null) {
+            if (connection != null) {
+                failConnection(request, response, connection);
+            } else if (withdrawal == null) {
                 reject(request, response);
             } else {
                 failWithdrawal(request, response, withdrawal);
             }
         }
+    }
+
+    private void completeConnection(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    OAuth2AuthenticationToken authentication,
+                                    SocialIdentity identity,
+                                    PendingSocialConnection pending) throws IOException {
+        HttpSession session = request.getSession(false);
+        Long currentUserId = session != null && session.getAttribute("userId") instanceof Long id
+                ? id : null;
+        removeAuthorizedClient(authentication);
+        if (!pending.isValidAt(Instant.now())
+                || !pending.userId().equals(currentUserId)
+                || pending.provider() != identity.provider()) {
+            failConnection(request, response, pending);
+            return;
+        }
+        if (authenticationRestorer == null
+                || !authenticationRestorer.restore(request, response, pending.userId())) {
+            reject(request, response);
+            return;
+        }
+
+        SocialConnectionResult result = socialAccountService.connectToUser(
+                pending.userId(),
+                identity.provider(),
+                identity.providerUserId(),
+                identity.providerEmail(),
+                identity.providerEmailVerified());
+        SocialConnectionNotice.Type noticeType = switch (result) {
+            case CONNECTED -> SocialConnectionNotice.Type.CONNECTED;
+            case ALREADY_CONNECTED -> SocialConnectionNotice.Type.ALREADY_CONNECTED;
+            case OWNED_BY_ANOTHER_USER -> SocialConnectionNotice.Type.ERROR;
+        };
+        request.getSession().removeAttribute(PendingSocialSignup.SESSION_ATTRIBUTE);
+        request.getSession().setAttribute(
+                SocialConnectionNotice.SESSION_ATTRIBUTE,
+                new SocialConnectionNotice(noticeType, pending.provider()));
+        response.sendRedirect("/mypage/account");
+    }
+
+    private PendingSocialConnection consumePendingConnection(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session == null) {
+            return null;
+        }
+        synchronized (session) {
+            Object value = session.getAttribute(PendingSocialConnection.SESSION_ATTRIBUTE);
+            if (value instanceof PendingSocialConnection pending
+                    && pending.matchesOAuthState(request.getParameter("state"))) {
+                session.removeAttribute(PendingSocialConnection.SESSION_ATTRIBUTE);
+                return pending;
+            }
+            return null;
+        }
+    }
+
+    private void failConnection(HttpServletRequest request,
+                                HttpServletResponse response,
+                                PendingSocialConnection pending) throws IOException {
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            session.removeAttribute(PendingSocialConnection.SESSION_ATTRIBUTE);
+            session.removeAttribute(PendingSocialSignup.SESSION_ATTRIBUTE);
+        }
+        Object currentUserId = session == null ? null : session.getAttribute("userId");
+        if (currentUserId instanceof Long userId
+                && userId.equals(pending.userId())
+                && authenticationRestorer != null
+                && authenticationRestorer.restore(request, response, userId)) {
+            session.setAttribute(
+                    SocialConnectionNotice.SESSION_ATTRIBUTE,
+                    new SocialConnectionNotice(
+                            SocialConnectionNotice.Type.ERROR, pending.provider()));
+            response.sendRedirect("/mypage/account");
+            return;
+        }
+        reject(request, response);
     }
 
     private void completeWithdrawal(HttpServletRequest request,

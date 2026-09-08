@@ -4,7 +4,6 @@ import com.example.travlediary.dto.RegistrationForm;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.service.email.EmailDispatchService;
 import com.example.travlediary.service.email.EmailVerificationService;
-import com.example.travlediary.service.file.FileUploadService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,7 +22,6 @@ class UserServiceNicknameValidationTest {
 
     @Mock private UserMapper userMapper;
     @Mock private PasswordEncoder passwordEncoder;
-    @Mock private FileUploadService fileUploadService;
     @Mock private EmailDispatchService emailDispatchService;
     @Mock private EmailVerificationService emailVerificationService;
 
@@ -31,8 +29,8 @@ class UserServiceNicknameValidationTest {
 
     @BeforeEach
     void setUp() {
-        userService = new UserService(userMapper, passwordEncoder, fileUploadService,
-                emailDispatchService, emailVerificationService);
+        userService = new UserService(userMapper, passwordEncoder, emailDispatchService,
+                emailVerificationService);
     }
 
     @Test
@@ -97,7 +95,6 @@ class UserServiceNicknameValidationTest {
         form.setUserPassword("Password!");
         form.setPasswordConfirm("Password!");
         form.setUserEmail("member@example.com");
-        form.setFullName("여행자");
         return form;
     }
 }

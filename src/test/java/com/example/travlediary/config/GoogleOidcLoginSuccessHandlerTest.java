@@ -1,7 +1,9 @@
 package com.example.travlediary.config;
 
 import com.example.travlediary.model.PendingSocialSignup;
+import com.example.travlediary.model.PendingSocialConnection;
 import com.example.travlediary.model.PendingSocialWithdrawal;
+import com.example.travlediary.model.SocialConnectionNotice;
 import com.example.travlediary.model.SocialAccount;
 import com.example.travlediary.model.SocialProvider;
 import com.example.travlediary.model.User;
@@ -11,6 +13,7 @@ import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.security.LoginThrottle;
 import com.example.travlediary.service.user.SocialAccountService;
+import com.example.travlediary.service.user.SocialConnectionResult;
 import com.example.travlediary.service.user.SocialWithdrawalException;
 import com.example.travlediary.service.user.SocialWithdrawalService;
 import com.example.travlediary.service.user.UserSanctionService;
@@ -235,6 +238,143 @@ class SocialOAuth2LoginSuccessHandlerTest {
         verify(userMapper, never()).findByEmail(anyString());
         verify(userMapper, never()).insertUser(any());
         verify(socialAccountService, never()).connect(any());
+    }
+
+    @Test
+    void validConnectionIntentConnectsTheCurrentMemberAndBypassesNormalSocialLogin()
+            throws Exception {
+        handler = connectionHandler();
+        OAuth2AuthenticationToken authentication = googleAuthentication(
+                "google-link-sub", "existing@example.com", true, "OIDC_USER");
+        PendingSocialConnection pending = connectionPending(7L, SocialProvider.GOOGLE);
+        when(authenticationRestorer.restore(
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.eq(7L))).thenReturn(true);
+        when(socialAccountService.connectToUser(
+                7L, SocialProvider.GOOGLE, "google-link-sub",
+                "existing@example.com", true))
+                .thenReturn(SocialConnectionResult.CONNECTED);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setParameter("state", "connection-state");
+        request.getSession().setAttribute("userId", 7L);
+        request.getSession().setAttribute(
+                PendingSocialConnection.SESSION_ATTRIBUTE, pending);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        assertThat(response.getRedirectedUrl()).isEqualTo("/mypage/account");
+        assertThat(request.getSession().getAttribute("userId")).isEqualTo(7L);
+        assertThat(request.getSession().getAttribute(
+                PendingSocialConnection.SESSION_ATTRIBUTE)).isNull();
+        assertThat(request.getSession().getAttribute(
+                SocialConnectionNotice.SESSION_ATTRIBUTE))
+                .isEqualTo(new SocialConnectionNotice(
+                        SocialConnectionNotice.Type.CONNECTED, SocialProvider.GOOGLE));
+        verify(authenticationRestorer).restore(request, response, 7L);
+        verify(socialAccountService).connectToUser(
+                7L, SocialProvider.GOOGLE, "google-link-sub",
+                "existing@example.com", true);
+        verify(socialAccountService, never())
+                .findByProviderAndProviderUserId(any(), anyString());
+        verify(userMapper, never()).findByEmail(anyString());
+        verify(userMapper, never()).insertUser(any());
+    }
+
+    @Test
+    void connectionOwnedByAnotherMemberIsRejectedWithoutEnteringNormalLogin()
+            throws Exception {
+        handler = connectionHandler();
+        OAuth2AuthenticationToken authentication = naverAuthentication(
+                "00", Map.of("id", "owned-naver", "email", "same@example.com"),
+                "OAUTH2_USER", true);
+        PendingSocialConnection pending = connectionPending(7L, SocialProvider.NAVER);
+        when(authenticationRestorer.restore(
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.eq(7L))).thenReturn(true);
+        when(socialAccountService.connectToUser(
+                7L, SocialProvider.NAVER, "owned-naver", "same@example.com", null))
+                .thenReturn(SocialConnectionResult.OWNED_BY_ANOTHER_USER);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setParameter("state", "connection-state");
+        request.getSession().setAttribute("userId", 7L);
+        request.getSession().setAttribute(
+                PendingSocialConnection.SESSION_ATTRIBUTE, pending);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        assertThat(response.getRedirectedUrl()).isEqualTo("/mypage/account");
+        assertThat(request.getSession().getAttribute(
+                PendingSocialConnection.SESSION_ATTRIBUTE)).isNull();
+        assertThat(request.getSession().getAttribute(
+                SocialConnectionNotice.SESSION_ATTRIBUTE))
+                .isEqualTo(new SocialConnectionNotice(
+                        SocialConnectionNotice.Type.ERROR, SocialProvider.NAVER));
+        verify(socialAccountService, never())
+                .findByProviderAndProviderUserId(any(), anyString());
+    }
+
+    @Test
+    void duplicateProviderConnectionReturnsAHandledNoticeWithoutNormalLogin()
+            throws Exception {
+        handler = connectionHandler();
+        OAuth2AuthenticationToken authentication = oidcAuthentication(
+                "kakao", "https://kauth.kakao.com", "kakao-new",
+                null, null, "OIDC_USER");
+        PendingSocialConnection pending = connectionPending(7L, SocialProvider.KAKAO);
+        when(authenticationRestorer.restore(
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.eq(7L))).thenReturn(true);
+        when(socialAccountService.connectToUser(
+                7L, SocialProvider.KAKAO, "kakao-new", null, null))
+                .thenReturn(SocialConnectionResult.ALREADY_CONNECTED);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setParameter("state", "connection-state");
+        request.getSession().setAttribute("userId", 7L);
+        request.getSession().setAttribute(
+                PendingSocialConnection.SESSION_ATTRIBUTE, pending);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        assertThat(response.getRedirectedUrl()).isEqualTo("/mypage/account");
+        assertThat(request.getSession().getAttribute(
+                SocialConnectionNotice.SESSION_ATTRIBUTE))
+                .isEqualTo(new SocialConnectionNotice(
+                        SocialConnectionNotice.Type.ALREADY_CONNECTED,
+                        SocialProvider.KAKAO));
+        verify(socialAccountService, never())
+                .findByProviderAndProviderUserId(any(), anyString());
+    }
+
+    @Test
+    void differentOAuthStateCannotConsumeAConnectionIntent() throws Exception {
+        handler = connectionHandler();
+        OAuth2AuthenticationToken authentication = googleAuthentication(
+                "normal-login-sub", "normal@example.com", true, "OIDC_USER");
+        when(socialAccountService.findByProviderAndProviderUserId(
+                SocialProvider.GOOGLE, "normal-login-sub")).thenReturn(null);
+        PendingSocialConnection pending = connectionPending(7L, SocialProvider.GOOGLE);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setParameter("state", "different-state");
+        request.getSession().setAttribute("userId", 7L);
+        request.getSession().setAttribute(
+                PendingSocialConnection.SESSION_ATTRIBUTE, pending);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        assertThat(response.getRedirectedUrl()).isEqualTo("/social-signup");
+        assertThat(request.getSession().getAttribute(
+                PendingSocialConnection.SESSION_ATTRIBUTE)).isEqualTo(pending);
+        assertThat(request.getSession().getAttribute(
+                PendingSocialSignup.SESSION_ATTRIBUTE)).isInstanceOf(PendingSocialSignup.class);
+        verify(socialAccountService, never()).connectToUser(
+                any(), any(), anyString(), any(), any());
     }
 
     @Test
@@ -559,6 +699,18 @@ class SocialOAuth2LoginSuccessHandlerTest {
                 socialWithdrawalService,
                 authorizedClientService,
                 authenticationRestorer);
+    }
+
+    private SocialOAuth2LoginSuccessHandler connectionHandler() {
+        return withdrawalHandler();
+    }
+
+    private PendingSocialConnection connectionPending(
+            Long userId, SocialProvider provider) {
+        Instant now = Instant.now();
+        return new PendingSocialConnection(
+                "connection-flow", userId, provider, now, now.plusSeconds(600),
+                "connection-state");
     }
 
     private PendingSocialWithdrawal withdrawalPending(Long userId, SocialProvider provider) {

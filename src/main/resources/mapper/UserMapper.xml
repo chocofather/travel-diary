@@ -8,13 +8,13 @@
     <insert id="insertUser" parameterType="com.example.travlediary.model.User"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO users (
-            username, full_name, nickname, user_email, user_password, user_phone, profile_image,
-            user_birth, status, user_role, verification_token, verification_token_exp,
+            username, nickname, user_email, user_password, profile_image,
+            status, user_role, verification_token, verification_token_exp,
             verification_requested_at, created_at, updated_at,
             deleted_at, last_login)
         VALUES (
-            #{username}, #{fullName}, #{nickname}, #{userEmail}, #{userPassword}, #{userPhone},
-            #{profileImage}, #{userBirth}, #{status}, #{userRole}, #{verificationToken},
+            #{username}, #{nickname}, #{userEmail}, #{userPassword},
+            #{profileImage}, #{status}, #{userRole}, #{verificationToken},
             #{verificationTokenExp}, #{verificationRequestedAt}, #{createdAt}, #{updatedAt},
             #{deletedAt}, #{lastLogin}
             )

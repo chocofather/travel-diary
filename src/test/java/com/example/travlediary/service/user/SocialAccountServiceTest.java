@@ -3,10 +3,13 @@ package com.example.travlediary.service.user;
 import com.example.travlediary.model.SocialAccount;
 import com.example.travlediary.model.SocialProvider;
 import com.example.travlediary.repository.user.SocialAccountMapper;
+import com.example.travlediary.repository.user.UserMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.ArgumentCaptor;
+import org.springframework.dao.DuplicateKeyException;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
@@ -21,12 +24,14 @@ class SocialAccountServiceTest {
 
     @Mock
     private SocialAccountMapper socialAccountMapper;
+    @Mock
+    private UserMapper userMapper;
 
     private SocialAccountService socialAccountService;
 
     @BeforeEach
     void setUp() {
-        socialAccountService = new SocialAccountService(socialAccountMapper);
+        socialAccountService = new SocialAccountService(socialAccountMapper, userMapper);
     }
 
     @Test
@@ -123,6 +128,75 @@ class SocialAccountServiceTest {
     }
 
     @Test
+    void connectsAProviderIdentityOnlyWhenBothUniqueSlotsAreAvailable() {
+        when(socialAccountMapper.findByProviderAndProviderUserId(
+                SocialProvider.GOOGLE, "google-new")).thenReturn(null);
+        when(socialAccountMapper.findByUserIdAndProvider(
+                7L, SocialProvider.GOOGLE)).thenReturn(null);
+        when(socialAccountMapper.insert(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(1);
+
+        SocialConnectionResult result = socialAccountService.connectToUser(
+                7L, SocialProvider.GOOGLE, "google-new", "member@example.com", true);
+
+        assertThat(result).isEqualTo(SocialConnectionResult.CONNECTED);
+        ArgumentCaptor<SocialAccount> captor = ArgumentCaptor.forClass(SocialAccount.class);
+        verify(socialAccountMapper).insert(captor.capture());
+        assertThat(captor.getValue()).satisfies(account -> {
+            assertThat(account.getUserId()).isEqualTo(7L);
+            assertThat(account.getProvider()).isEqualTo(SocialProvider.GOOGLE);
+            assertThat(account.getProviderUserId()).isEqualTo("google-new");
+            assertThat(account.getProviderEmail()).isEqualTo("member@example.com");
+            assertThat(account.getProviderEmailVerified()).isTrue();
+        });
+    }
+
+    @Test
+    void refusesAProviderIdentityAlreadyOwnedByAnotherUserWithoutMovingIt() {
+        when(socialAccountMapper.findByProviderAndProviderUserId(
+                SocialProvider.KAKAO, "shared-kakao"))
+                .thenReturn(account(3L, 99L, SocialProvider.KAKAO, "shared-kakao"));
+
+        SocialConnectionResult result = socialAccountService.connectToUser(
+                7L, SocialProvider.KAKAO, "shared-kakao", "same@example.com", true);
+
+        assertThat(result).isEqualTo(SocialConnectionResult.OWNED_BY_ANOTHER_USER);
+        verify(socialAccountMapper, never()).insert(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void treatsAnExistingProviderForTheCurrentUserAsAlreadyConnected() {
+        when(socialAccountMapper.findByProviderAndProviderUserId(
+                SocialProvider.NAVER, "naver-new")).thenReturn(null);
+        when(socialAccountMapper.findByUserIdAndProvider(7L, SocialProvider.NAVER))
+                .thenReturn(account(4L, 7L, SocialProvider.NAVER, "naver-existing"));
+
+        SocialConnectionResult result = socialAccountService.connectToUser(
+                7L, SocialProvider.NAVER, "naver-new", "naver@example.com", null);
+
+        assertThat(result).isEqualTo(SocialConnectionResult.ALREADY_CONNECTED);
+        verify(socialAccountMapper, never()).insert(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void concurrentUniqueConflictIsRecheckedWithoutMovingAnotherUsersIdentity() {
+        when(socialAccountMapper.findByProviderAndProviderUserId(
+                SocialProvider.GOOGLE, "racing-id"))
+                .thenReturn(null)
+                .thenReturn(account(8L, 99L, SocialProvider.GOOGLE, "racing-id"));
+        when(socialAccountMapper.findByUserIdAndProvider(7L, SocialProvider.GOOGLE))
+                .thenReturn(null);
+        when(socialAccountMapper.insert(org.mockito.ArgumentMatchers.any()))
+                .thenThrow(new DuplicateKeyException("unique conflict"));
+
+        SocialConnectionResult result = socialAccountService.connectToUser(
+                7L, SocialProvider.GOOGLE, "racing-id", null, null);
+
+        assertThat(result).isEqualTo(SocialConnectionResult.OWNED_BY_ANOTHER_USER);
+        verify(socialAccountMapper).insert(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
     void optionalProviderEmailAndVerificationPreserveThreeStates() {
         SocialAccount unknown = account(1L, 10L, SocialProvider.GOOGLE, "google-unknown");
         unknown.setProviderEmail(null);
@@ -140,6 +214,78 @@ class SocialAccountServiceTest {
         assertThat(unknown.getProviderEmailVerified()).isNull();
         assertThat(verified.getProviderEmailVerified()).isTrue();
         assertThat(unverified.getProviderEmailVerified()).isFalse();
+    }
+
+    @Test
+    void disconnectsSocialAccountWhenLocalPasswordRemainsAvailable() {
+        when(socialAccountMapper.findAllByUserIdForUpdate(7L)).thenReturn(List.of(
+                account(1L, 7L, SocialProvider.GOOGLE, "google-123")));
+        when(userMapper.hasLocalPasswordById(7L)).thenReturn(true);
+        when(socialAccountMapper.deleteByUserIdAndProvider(7L, SocialProvider.GOOGLE))
+                .thenReturn(1);
+
+        SocialDisconnectionResult result = socialAccountService.disconnectFromUser(
+                7L, SocialProvider.GOOGLE);
+
+        assertThat(result).isEqualTo(SocialDisconnectionResult.DISCONNECTED);
+        verify(socialAccountMapper).deleteByUserIdAndProvider(7L, SocialProvider.GOOGLE);
+    }
+
+    @Test
+    void disconnectsOneOfTwoSocialLoginMethodsWithoutLocalPassword() {
+        when(socialAccountMapper.findAllByUserIdForUpdate(7L)).thenReturn(List.of(
+                account(1L, 7L, SocialProvider.GOOGLE, "google-123"),
+                account(2L, 7L, SocialProvider.KAKAO, "kakao-123")));
+        when(userMapper.hasLocalPasswordById(7L)).thenReturn(false);
+        when(socialAccountMapper.deleteByUserIdAndProvider(7L, SocialProvider.KAKAO))
+                .thenReturn(1);
+
+        SocialDisconnectionResult result = socialAccountService.disconnectFromUser(
+                7L, SocialProvider.KAKAO);
+
+        assertThat(result).isEqualTo(SocialDisconnectionResult.DISCONNECTED);
+        verify(socialAccountMapper).deleteByUserIdAndProvider(7L, SocialProvider.KAKAO);
+    }
+
+    @Test
+    void refusesToDisconnectTheOnlyLoginMethodOfSocialOnlyMember() {
+        when(socialAccountMapper.findAllByUserIdForUpdate(7L)).thenReturn(List.of(
+                account(1L, 7L, SocialProvider.NAVER, "naver-123")));
+        when(userMapper.hasLocalPasswordById(7L)).thenReturn(false);
+
+        SocialDisconnectionResult result = socialAccountService.disconnectFromUser(
+                7L, SocialProvider.NAVER);
+
+        assertThat(result).isEqualTo(SocialDisconnectionResult.LAST_LOGIN_METHOD);
+        verify(socialAccountMapper, never()).deleteByUserIdAndProvider(
+                7L, SocialProvider.NAVER);
+    }
+
+    @Test
+    void cannotDeleteAProviderConnectionOwnedByAnotherUser() {
+        when(socialAccountMapper.findAllByUserIdForUpdate(7L)).thenReturn(List.of());
+
+        SocialDisconnectionResult result = socialAccountService.disconnectFromUser(
+                7L, SocialProvider.GOOGLE);
+
+        assertThat(result).isEqualTo(SocialDisconnectionResult.ALREADY_DISCONNECTED);
+        verify(socialAccountMapper, never()).deleteByUserIdAndProvider(
+                org.mockito.ArgumentMatchers.anyLong(),
+                org.mockito.ArgumentMatchers.any(SocialProvider.class));
+    }
+
+    @Test
+    void concurrentOrRepeatedDisconnectIsHandledAsAlreadyDisconnected() {
+        when(socialAccountMapper.findAllByUserIdForUpdate(7L)).thenReturn(List.of(
+                account(1L, 7L, SocialProvider.GOOGLE, "google-123")));
+        when(userMapper.hasLocalPasswordById(7L)).thenReturn(true);
+        when(socialAccountMapper.deleteByUserIdAndProvider(7L, SocialProvider.GOOGLE))
+                .thenReturn(0);
+
+        SocialDisconnectionResult result = socialAccountService.disconnectFromUser(
+                7L, SocialProvider.GOOGLE);
+
+        assertThat(result).isEqualTo(SocialDisconnectionResult.ALREADY_DISCONNECTED);
     }
 
     @Test

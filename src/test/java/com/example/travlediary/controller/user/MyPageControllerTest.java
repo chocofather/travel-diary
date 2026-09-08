@@ -159,10 +159,10 @@ class MyPageControllerTest {
                 .andExpect(result -> {
                     var document = Jsoup.parse(result.getResponse().getContentAsString());
                     assertThat(document.select("a[href=/mypage/account]").text())
-                            .contains("계정 관리")
+                            .contains("계정 및 보안")
                             .doesNotContain("회원정보 수정");
                     assertThat(document.select(".mypage-menu-item[href=/mypage/account] small")
-                            .text()).isEqualTo("로그인 계정 정보를 확인합니다.");
+                            .text()).isEqualTo("계정 정보와 로그인 보안을 관리합니다.");
                 });
     }
 

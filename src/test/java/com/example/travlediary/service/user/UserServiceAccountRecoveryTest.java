@@ -4,7 +4,6 @@ import com.example.travlediary.model.User;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.service.email.EmailDispatchService;
 import com.example.travlediary.service.email.EmailVerificationService;
-import com.example.travlediary.service.file.FileUploadService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,7 +27,6 @@ class UserServiceAccountRecoveryTest {
 
     @Mock private UserMapper userMapper;
     @Mock private PasswordEncoder passwordEncoder;
-    @Mock private FileUploadService fileUploadService;
     @Mock private EmailDispatchService emailDispatchService;
     @Mock private EmailVerificationService emailVerificationService;
 
@@ -36,8 +34,8 @@ class UserServiceAccountRecoveryTest {
 
     @BeforeEach
     void setUp() {
-        userService = new UserService(userMapper, passwordEncoder, fileUploadService,
-                emailDispatchService, emailVerificationService);
+        userService = new UserService(userMapper, passwordEncoder, emailDispatchService,
+                emailVerificationService);
         ReflectionTestUtils.setField(
                 userService, "serverUrl", "https://travel-diary.example");
     }

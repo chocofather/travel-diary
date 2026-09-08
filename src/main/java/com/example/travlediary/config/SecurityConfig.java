@@ -329,6 +329,12 @@ public class SecurityConfig {
                                 "^/mypage/account/social-withdrawal/cancel$",
                                 HttpMethod.POST.name()),
                         new RegexRequestMatcher(
+                                "^/mypage/account/social-connections/[^/]+$",
+                                HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/mypage/account/social-connections/[^/]+/disconnect$",
+                                HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
                                 "^/users/verification/resend$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(
                                 "^/account/restricted/appeals$", HttpMethod.POST.name()),
