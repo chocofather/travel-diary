@@ -100,6 +100,19 @@ class MyPageLocaleRenderingTest {
                             .isEqualTo("ニックネームは2文字以上で入力してください。");
                     assertThat(document.select("#nickname").attr("data-current-nickname"))
                             .isEqualTo("여행자");
+                    // 파일 칸은 남아 있고, 화면에 보이는 것은 커스텀 버튼과 파일명이다
+                    assertThat(document.select("input#profileImageFile[type=file]"))
+                            .singleElement()
+                            .satisfies(input -> {
+                                assertThat(input.attr("name")).isEqualTo("profileImageFile");
+                                assertThat(input.className()).contains("mypage-file-input");
+                            });
+                    assertThat(document.select("label.mypage-file-button").attr("for"))
+                            .isEqualTo("profileImageFile");
+                    assertThat(document.select("label.mypage-file-button").text())
+                            .isEqualTo("ファイルを選択");
+                    assertThat(document.select("#profileImageFileName").text())
+                            .isEqualTo("選択されたファイルはありません");
                 });
     }
 

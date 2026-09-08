@@ -3,10 +3,12 @@ package com.example.travlediary.config;
 import com.example.travlediary.model.UserStatus;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
+import com.example.travlediary.security.LoginFormState;
+import com.example.travlediary.security.LoginThrottle;
 import com.example.travlediary.security.RestrictedAccountFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
@@ -19,11 +21,17 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 @Component
-@RequiredArgsConstructor
 public class CustomLoginSuccessHandler implements AuthenticationSuccessHandler {
 
     private final UserMapper userMapper;
+    private final LoginThrottle loginThrottle;
     private final RequestCache requestCache = new HttpSessionRequestCache();
+
+    @Autowired
+    public CustomLoginSuccessHandler(UserMapper userMapper, LoginThrottle loginThrottle) {
+        this.userMapper = userMapper;
+        this.loginThrottle = loginThrottle;
+    }
 
     @Override
     public void onAuthenticationSuccess(
@@ -33,6 +41,10 @@ public class CustomLoginSuccessHandler implements AuthenticationSuccessHandler {
     ) throws IOException {
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
         Long userId = userDetails.getId();
+        loginThrottle.recordSuccess(userDetails.getUsername());
+        if (request.getSession(false) != null) {
+            request.getSession(false).removeAttribute(LoginFormState.SESSION_ATTRIBUTE);
+        }
 
         // 1) 인증 완료 후에는 username 이 아니라 DB 회원 ID를 세션 식별값으로 사용한다.
         request.getSession().setAttribute("userId", userId);

@@ -37,6 +37,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -475,6 +476,37 @@ class MyPageAccountControllerTest {
 
         verify(accountService).withdraw(7L, "Password!");
         assertThat(session.isInvalid()).isTrue();
+    }
+
+    @Test
+    void birthDateIsShownForReadingOnlyAndCannotBeChangedThroughTheEditForm()
+            throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        reauthenticationService.markVerified(session, 7L);
+        when(accountService.getAccountDetails(7L))
+                .thenReturn(details("member", "member@example.com"));
+
+        // 저장된 값은 조회 전용으로 보이고, 고칠 수 있는 칸은 없다
+        mockMvc.perform(get("/mypage/account/edit").session(session)
+                        .with(user(principal(7L, UserRole.USER))))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("2000-01-02")))
+                .andExpect(content().string(
+                        org.hamcrest.Matchers.not(
+                                org.hamcrest.Matchers.containsString("name=\"userBirth\""))));
+
+        // 요청에 생년월일을 끼워 넣어도 수정 대상이 되지 않는다
+        mockMvc.perform(post("/mypage/account/edit").session(session)
+                        .with(user(principal(7L, UserRole.USER))).with(csrf())
+                        .param("fullName", "여행 민준")
+                        .param("userPhone", "010-1234-5678")
+                        .param("userBirth", "1900-01-01"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/mypage/account/edit"));
+
+        verify(accountService).updateAccountDetails(eq(7L), org.mockito.ArgumentMatchers.argThat(
+                form -> "여행 민준".equals(form.getFullName())
+                        && "010-1234-5678".equals(form.getUserPhone())));
     }
 
     private AccountDetailsDto details(String username, String email) {

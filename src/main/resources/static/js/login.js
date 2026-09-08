@@ -1,7 +1,7 @@
 // 페이지 로드 시 쿠키에서 아이디 불러오기
 $(document).ready(function () {
     const savedUsername = getCookie("savedUsername");
-    if (savedUsername) {
+    if (savedUsername && !$("#username").val()) {
         $("#username").val(savedUsername);
         $("#rememberId").prop("checked", true);
     }
@@ -18,6 +18,53 @@ $(document).ready(function () {
             deleteCookie("savedUsername");
         }
     });
+
+    const failureFeedback = document.getElementById("loginFailureFeedback");
+    const countdown = document.getElementById("loginThrottleCountdown");
+    const loginButton = document.querySelector(".login-submit");
+    const initialRemainingSeconds = failureFeedback
+        ? Number(failureFeedback.dataset.loginRemainingSeconds)
+        : 0;
+    if (failureFeedback && countdown && loginButton && initialRemainingSeconds > 0) {
+        const formatRemaining = function (seconds) {
+            if (seconds < 60) {
+                return seconds + "초";
+            }
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            return remainingSeconds === 0
+                ? minutes + "분"
+                : minutes + "분 " + remainingSeconds + "초";
+        };
+
+        const countdownEndsAt = performance.now() + initialRemainingSeconds * 1000;
+        let timerId;
+        const updateCountdown = function () {
+            const remainingSeconds = Math.max(
+                0, Math.ceil((countdownEndsAt - performance.now()) / 1000));
+            if (remainingSeconds === 0) {
+                loginButton.disabled = false;
+                failureFeedback.classList.remove("login-feedback--locked");
+                failureFeedback.classList.add("login-feedback--released");
+                failureFeedback.setAttribute("role", "status");
+                failureFeedback.setAttribute("aria-live", "polite");
+                const releasedMessage = document.createElement("p");
+                releasedMessage.className = "login-feedback__title";
+                releasedMessage.textContent =
+                    "로그인 제한이 해제되었습니다. 다시 로그인할 수 있습니다.";
+                failureFeedback.replaceChildren(releasedMessage);
+                if (timerId) {
+                    window.clearInterval(timerId);
+                }
+                return;
+            }
+            loginButton.disabled = true;
+            countdown.textContent = formatRemaining(remainingSeconds);
+        };
+
+        updateCountdown();
+        timerId = window.setInterval(updateCountdown, 250);
+    }
 });
 
 // 쿠키 저장 함수

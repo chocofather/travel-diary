@@ -9,6 +9,7 @@ import com.example.travlediary.model.UserRole;
 import com.example.travlediary.model.UserStatus;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
+import com.example.travlediary.security.LoginThrottle;
 import com.example.travlediary.service.user.SocialAccountService;
 import com.example.travlediary.service.user.SocialWithdrawalException;
 import com.example.travlediary.service.user.SocialWithdrawalService;
@@ -81,7 +82,7 @@ class SocialOAuth2LoginSuccessHandlerTest {
                 socialAccountService,
                 userMapper,
                 userSanctionService,
-                new CustomLoginSuccessHandler(userMapper));
+                new CustomLoginSuccessHandler(userMapper, new LoginThrottle()));
         SecurityContextHolder.clearContext();
     }
 
@@ -554,7 +555,7 @@ class SocialOAuth2LoginSuccessHandlerTest {
                 socialAccountService,
                 userMapper,
                 userSanctionService,
-                new CustomLoginSuccessHandler(userMapper),
+                new CustomLoginSuccessHandler(userMapper, new LoginThrottle()),
                 socialWithdrawalService,
                 authorizedClientService,
                 authenticationRestorer);

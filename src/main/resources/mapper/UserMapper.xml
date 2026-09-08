@@ -47,11 +47,11 @@
           AND deleted_at IS NULL
     </update>
 
+    <!-- 마이페이지 일반 수정. user_birth 는 건드리지 않는다. -->
     <update id="updateAccountDetails">
         UPDATE users
         SET full_name = #{fullName},
             user_phone = #{userPhone},
-            user_birth = #{userBirth},
             updated_at = NOW()
         WHERE id = #{id}
           AND status = 'ACTIVE'

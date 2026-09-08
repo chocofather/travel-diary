@@ -88,15 +88,13 @@ class MyPageAccountServiceTest {
         AccountEditForm form = new AccountEditForm();
         form.setFullName("  여행 민준  ");
         form.setUserPhone("01012345678");
-        form.setUserBirth(LocalDate.of(2000, 1, 2));
-        when(userMapper.updateAccountDetails(
-                7L, "여행 민준", "010-1234-5678", LocalDate.of(2000, 1, 2)))
+        when(userMapper.updateAccountDetails(7L, "여행 민준", "010-1234-5678"))
                 .thenReturn(1);
 
         service.updateAccountDetails(7L, form);
 
-        verify(userMapper).updateAccountDetails(
-                7L, "여행 민준", "010-1234-5678", LocalDate.of(2000, 1, 2));
+        // 생년월일은 이 경로에서 갱신하지 않는다
+        verify(userMapper).updateAccountDetails(7L, "여행 민준", "010-1234-5678");
         assertThat(form.getFullName()).isEqualTo("여행 민준");
         assertThat(form.getUserPhone()).isEqualTo("010-1234-5678");
     }
@@ -105,7 +103,6 @@ class MyPageAccountServiceTest {
     void rejectsInvalidDetailsBeforeUpdate() {
         AccountEditForm form = new AccountEditForm();
         form.setFullName(" ");
-        form.setUserBirth(LocalDate.now());
 
         assertThatThrownBy(() -> service.updateAccountDetails(7L, form))
                 .isInstanceOf(AccountValidationException.class)
@@ -113,7 +110,7 @@ class MyPageAccountServiceTest {
 
         verify(userMapper, never()).updateAccountDetails(
                 org.mockito.ArgumentMatchers.anyLong(), anyString(),
-                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+                org.mockito.ArgumentMatchers.any());
     }
 
     @Test

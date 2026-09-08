@@ -1,11 +1,14 @@
 package com.example.travlediary.config;
 
 import com.example.travlediary.security.RestrictedAccountFilter;
+import com.example.travlediary.security.LoginThrottle;
+import com.example.travlediary.security.LoginThrottleFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -14,6 +17,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.AuthorizationFilter;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 import org.springframework.security.web.savedrequest.RequestCache;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
@@ -22,6 +26,7 @@ import org.springframework.security.web.util.matcher.RegexRequestMatcher;
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
+@Import(LoginThrottleConfig.class)
 public class SecurityConfig {
 
     private final CustomLoginSuccessHandler customLoginSuccessHandler; // ✅ 여기에 추가
@@ -49,6 +54,7 @@ public class SecurityConfig {
             HttpSecurity http,
             RequestCache navigationRequestCache,
             ObjectProvider<RestrictedAccountFilter> restrictedAccountFilter,
+            LoginThrottle loginThrottle,
             ObjectProvider<SocialOAuth2LoginSuccessHandler> socialOAuth2LoginSuccessHandler,
             ObjectProvider<ClientRegistrationRepository> clientRegistrationRepository,
             ObjectProvider<TravelDiaryAuthenticationRestorer> authenticationRestorer)
@@ -57,6 +63,9 @@ public class SecurityConfig {
         // 이용제한 회원 접근 통제. 웹 계층 테스트 슬라이스에는 빈이 없으므로 선택 주입한다.
         restrictedAccountFilter.ifAvailable(
                 filter -> http.addFilterAfter(filter, AuthorizationFilter.class));
+        http.addFilterBefore(
+                new LoginThrottleFilter(loginThrottle),
+                UsernamePasswordAuthenticationFilter.class);
 
         http.requestCache(cache -> cache.requestCache(navigationRequestCache));
 
@@ -426,13 +435,14 @@ public class SecurityConfig {
                         /* === 그 외는 인증 필요 === */
                         .anyRequest().authenticated()
                 )
-                .formLogin(login -> login
-                        .loginPage("/login")
-                        .loginProcessingUrl("/login")
-                        .successHandler(customLoginSuccessHandler)
-                        .failureUrl("/login?error=true")
-                        .permitAll()
-                )
+                .formLogin(login -> {
+                    login.loginPage("/login")
+                            .loginProcessingUrl("/login")
+                            .successHandler(customLoginSuccessHandler)
+                            .permitAll();
+                    login.failureHandler(
+                            new LoginAuthenticationFailureHandler(loginThrottle));
+                })
                 .oauth2Login(oauth -> {
                     clientRegistrationRepository.ifAvailable(registrations ->
                             oauth.authorizationEndpoint(endpoint ->

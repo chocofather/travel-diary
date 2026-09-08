@@ -6,6 +6,7 @@ import com.example.travlediary.model.UserRole;
 import com.example.travlediary.model.UserStatus;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
+import com.example.travlediary.security.LoginThrottle;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -41,6 +42,9 @@ class FontResourceSecurityTest {
 
     @MockitoBean
     private CustomLogoutSuccessHandler customLogoutSuccessHandler;
+
+    @MockitoBean
+    private LoginThrottle loginThrottle;
 
     @Test
     void anonymousFontRequestReturnsInlineStaticResource() throws Exception {

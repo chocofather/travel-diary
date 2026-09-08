@@ -39,9 +39,10 @@ class MyPageAccountMapperContractTest {
 
         assertThat(update)
                 .contains("full_name = #{fullName}", "user_phone = #{userPhone}",
-                        "user_birth = #{userBirth}", "WHERE id = #{id}",
-                        "status = 'ACTIVE'", "deleted_at IS NULL")
-                .doesNotContain("username =", "user_email =", "nickname =",
+                        "WHERE id = #{id}", "status = 'ACTIVE'", "deleted_at IS NULL")
+                // 생년월일은 마이페이지 일반 수정 대상이 아니다
+                .doesNotContain("user_birth",
+                        "username =", "user_email =", "nickname =",
                         "profile_image =", "user_password =", "user_role =",
                         "verification_token =", "reset_token =");
     }

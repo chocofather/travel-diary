@@ -181,10 +181,13 @@ public class MyPageAccountController {
         if (!requireVerification(session, userDetails.getId(), redirectAttributes)) {
             return "redirect:/mypage/account";
         }
-        try {
-            accountService.updateAccountDetails(userDetails.getId(), form);
-        } catch (AccountValidationException exception) {
-            reject(bindingResult, exception);
+        // 형식이 깨진 생년월일은 바인딩에서 이미 걸린다. 그 위에 서비스 오류를 겹쳐 보이지 않는다.
+        if (!bindingResult.hasErrors()) {
+            try {
+                accountService.updateAccountDetails(userDetails.getId(), form);
+            } catch (AccountValidationException exception) {
+                reject(bindingResult, exception);
+            }
         }
 
         if (bindingResult.hasErrors()) {
@@ -299,7 +302,6 @@ public class MyPageAccountController {
         AccountEditForm form = new AccountEditForm();
         form.setFullName(details.getFullName());
         form.setUserPhone(details.getUserPhone());
-        form.setUserBirth(details.getUserBirth());
         return form;
     }
 

@@ -42,8 +42,7 @@
     font-weight: 750;
 }
 
-.mypage-form-field input[type="text"],
-.mypage-form-field input[type="file"] {
+.mypage-form-field input[type="text"] {
     width: 100%;
     min-height: 44px;
     padding: 10px 12px;
@@ -54,8 +53,64 @@
     font: inherit;
 }
 
-.mypage-form-field input[type="file"] {
-    padding: 8px 10px;
+/* 파일 칸은 화면에서만 감춘다. 초점과 label 연결은 그대로 남는다. */
+.mypage-file-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.mypage-file-picker {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+/* 취소 버튼과 같은 outline 톤. 필드 label 규칙보다 뒤에 오도록 한 단계 더 좁힌다. */
+.mypage-form-field .mypage-file-button {
+    display: inline-flex;
+    flex: none;
+    min-height: 42px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 18px;
+    color: #475569;
+    background: #fff;
+    border: 1px solid #d7dee7;
+    border-radius: 9px;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 750;
+    cursor: pointer;
+}
+
+.mypage-form-field .mypage-file-button:hover {
+    border-color: #b9c4d1;
+}
+
+.mypage-file-input:focus-visible + .mypage-file-button {
+    outline: 3px solid rgba(13, 148, 136, 0.25);
+    outline-offset: 2px;
+}
+
+.mypage-file-name {
+    min-width: 0;
+    overflow: hidden;
+    color: #64748b;
+    font-size: 13px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mypage-file-name.is-selected {
+    color: #263247;
 }
 
 .mypage-form-field input:focus {
@@ -171,5 +226,15 @@
     .mypage-form-actions a,
     .mypage-form-actions button {
         width: 100%;
+    }
+
+    .mypage-file-picker {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .mypage-file-name {
+        max-width: 100%;
     }
 }

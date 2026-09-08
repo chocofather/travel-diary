@@ -53,6 +53,60 @@ class MyPageNicknameUiContractTest {
     }
 
     @Test
+    void profileHidesTheNativeFilePickerButKeepsItsUploadContract() throws IOException {
+        String template = read("templates/mypage/profile.html");
+        String script = read("static/js/mypage-profile.js");
+        String stylesheet = read("static/css/mypage-profile.css");
+
+        assertThat(template)
+                // 실제 파일 칸은 그대로 두고 화면에서만 감춘다
+                .contains("class=\"mypage-file-input\"",
+                        "type=\"file\"",
+                        "th:field=\"*{profileImageFile}\"",
+                        "accept=\"image/jpeg,image/png,image/webp\"",
+                        "enctype=\"multipart/form-data\"",
+                        // 선택창은 label 이 연다
+                        "<label class=\"mypage-file-button\" for=\"profileImageFile\"",
+                        "#{mypage.profile.image.choose}",
+                        "id=\"profileImageFileName\"",
+                        "aria-live=\"polite\"",
+                        "th:text=\"#{mypage.profile.image.noneSelected}\"",
+                        "data-message-none-selected=#{mypage.profile.image.noneSelected}",
+                        // 업로드 안내는 그대로 유지한다
+                        "#{mypage.profile.image.help}");
+        assertThat(script)
+                .contains("#profileImageFile", "#profileImageFileName",
+                        "fileInput.files[0]",
+                        "fileName.dataset.messageNoneSelected",
+                        "addEventListener(\"change\"")
+                // 파일 안내 문구도 스크립트에 두지 않는다
+                .doesNotContain("파일 선택", "선택된 파일 없음",
+                        "No file selected", "ファイルを選択");
+        assertThat(stylesheet)
+                .contains(".mypage-file-input", "clip: rect(0, 0, 0, 0)",
+                        ".mypage-file-input:focus-visible + .mypage-file-button",
+                        "text-overflow: ellipsis")
+                // 회색 native 파일 버튼 스타일은 남기지 않는다
+                .doesNotContain("input[type=\"file\"]");
+    }
+
+    @Test
+    void accountBirthIsShownAsReadOnlyInformationInsteadOfAnInput() throws IOException {
+        String template = read("templates/mypage/account-edit.html");
+
+        assertThat(template)
+                // 회원이 고칠 수 있는 칸이 아니다
+                .doesNotContain("id=\"userBirth\"")
+                .doesNotContain("*{userBirth}")
+                .doesNotContain("type=\"date\"")
+                // 이메일·로그인 ID 와 같은 조회 전용 스타일을 쓴다
+                .contains("<dt th:text=\"#{mypage.account.edit.birth}\">",
+                        "th:text=\"${account.userBirth != null} ? ${account.userBirth} : '-'\"");
+        assertThat(template.split("mypage-account-readonly-list", -1).length - 1)
+                .as("계정 정보와 생년월일 두 곳에서 조회 전용 목록을 쓴다").isEqualTo(2);
+    }
+
+    @Test
     void registrationShowsTheSamePolicyAndKeepsItsClientValidationAligned() throws IOException {
         String template = read("templates/register.html");
         String sharedScript = read("static/js/nickname-availability.js");

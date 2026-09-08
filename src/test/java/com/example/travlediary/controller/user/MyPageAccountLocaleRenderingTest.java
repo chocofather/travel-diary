@@ -94,6 +94,10 @@ class MyPageAccountLocaleRenderingTest {
                         "Manage your account and personal details securely.")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Sign-in ID")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "Date of birth")))
+                // 라벨만 번역되고 저장된 날짜 값은 그대로다
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("2000-01-02")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "Change password")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "Delete account")))

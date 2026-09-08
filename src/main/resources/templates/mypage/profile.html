@@ -39,11 +39,21 @@
 
         <div class="mypage-form-field">
           <label for="profileImageFile" th:text="#{mypage.profile.image}">프로필 이미지</label>
-          <input id="profileImageFile"
-                 type="file"
-                 th:field="*{profileImageFile}"
-                 accept="image/jpeg,image/png,image/webp">
-          <small th:text="#{mypage.profile.image.help}">JPG, PNG, WEBP 형식의 5MB 이하 이미지를 사용할 수 있습니다.</small>
+          <!-- 파일 칸은 화면에서만 감춘다. 선택창은 아래 label 이 그대로 연다. -->
+          <div class="mypage-file-picker">
+            <input id="profileImageFile"
+                   class="mypage-file-input"
+                   type="file"
+                   th:field="*{profileImageFile}"
+                   accept="image/jpeg,image/png,image/webp"
+                   aria-describedby="profileImageFile-help">
+            <label class="mypage-file-button" for="profileImageFile"
+                   th:text="#{mypage.profile.image.choose}">파일 선택</label>
+            <span id="profileImageFileName" class="mypage-file-name" aria-live="polite"
+                  th:text="#{mypage.profile.image.noneSelected}"
+                  th:attr="data-message-none-selected=#{mypage.profile.image.noneSelected}">선택된 파일 없음</span>
+          </div>
+          <small id="profileImageFile-help" th:text="#{mypage.profile.image.help}">JPG, PNG, WEBP 형식의 5MB 이하 이미지를 사용할 수 있습니다.</small>
           <p class="mypage-field-error"
              th:if="${#fields.hasErrors('profileImageFile')}"
              th:errors="*{profileImageFile}">이미지 오류</p>

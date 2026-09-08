@@ -11,7 +11,6 @@ import com.example.travlediary.model.UserStatus;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -62,10 +61,10 @@ public interface UserMapper {
     int updateActiveUserPassword(@Param("id") Long id,
                                  @Param("userPassword") String userPassword);
 
+    /** 마이페이지 회원정보 수정. 생년월일은 이 화면에서 바꾸지 않으므로 갱신하지 않는다. */
     int updateAccountDetails(@Param("id") Long id,
                              @Param("fullName") String fullName,
-                             @Param("userPhone") String userPhone,
-                             @Param("userBirth") LocalDate userBirth);
+                             @Param("userPhone") String userPhone);
 
     int deactivateAccount(@Param("id") Long id,
                           @Param("userEmail") String userEmail,

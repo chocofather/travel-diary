@@ -15,8 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDate;
-
 @Service
 @RequiredArgsConstructor
 public class MyPageAccountService {
@@ -57,16 +55,15 @@ public class MyPageAccountService {
     public void updateAccountDetails(Long userId, AccountEditForm form) {
         String fullName = normalizeName(form.getFullName());
         String userPhone = normalizePhone(form.getUserPhone());
-        LocalDate userBirth = validateBirth(form.getUserBirth());
 
-        int updated = userMapper.updateAccountDetails(userId, fullName, userPhone, userBirth);
+        // 생년월일은 이 경로에서 건드리지 않는다. 가입 때 저장된 값이 그대로 남는다.
+        int updated = userMapper.updateAccountDetails(userId, fullName, userPhone);
         if (updated != 1) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "회원 정보를 찾을 수 없습니다.");
         }
 
         form.setFullName(fullName);
         form.setUserPhone(userPhone);
-        form.setUserBirth(userBirth);
     }
 
     @Transactional
@@ -190,19 +187,6 @@ public class MyPageAccountService {
     private AccountValidationException invalidPhone() {
         return new AccountValidationException("userPhone",
                 "mypage.account.error.phone.invalid", "전화번호 형식을 확인해주세요.");
-    }
-
-    private LocalDate validateBirth(LocalDate userBirth) {
-        if (userBirth == null) {
-            throw new AccountValidationException("userBirth",
-                    "mypage.account.error.birth.required", "생년월일을 입력해주세요.");
-        }
-        if (userBirth.isAfter(LocalDate.now())) {
-            throw new AccountValidationException("userBirth",
-                    "mypage.account.error.birth.future",
-                    "생년월일은 미래 날짜를 선택할 수 없습니다.");
-        }
-        return userBirth;
     }
 
 }

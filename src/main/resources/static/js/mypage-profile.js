@@ -1,4 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
+    setUpFileName();
+
     const form = document.querySelector(".mypage-profile-form");
     const nicknameInput = document.querySelector("#nickname");
     const status = document.querySelector("#nickname-availability");
@@ -128,3 +130,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
     handleNicknameInput();
 });
+
+/**
+ * 선택창은 label 이 열고, 여기서는 고른 파일 이름만 보여 준다.
+ * 안내 문구는 화면이 data-* 로 내려 준다. (언어별 문자열을 여기에 두지 않는다)
+ */
+function setUpFileName() {
+    const fileInput = document.querySelector("#profileImageFile");
+    const fileName = document.querySelector("#profileImageFileName");
+    if (!fileInput || !fileName) {
+        return;
+    }
+
+    const noneSelected = fileName.dataset.messageNoneSelected || "";
+
+    function showSelectedFile() {
+        // 선택창을 취소하면 브라우저가 이전 선택을 남겨 두므로 files 를 그대로 읽는다.
+        const selected = fileInput.files && fileInput.files[0];
+        fileName.textContent = selected ? selected.name : noneSelected;
+        fileName.classList.toggle("is-selected", Boolean(selected));
+    }
+
+    fileInput.addEventListener("change", showSelectedFile);
+    showSelectedFile();
+}

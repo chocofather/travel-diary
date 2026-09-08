@@ -5,6 +5,8 @@ import com.example.travlediary.model.UserRole;
 import com.example.travlediary.model.UserStatus;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
+import com.example.travlediary.security.LoginFormState;
+import com.example.travlediary.security.LoginThrottle;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,12 +29,29 @@ class CustomLoginSuccessHandlerTest {
 
     @Mock
     private UserMapper userMapper;
+    @Mock
+    private LoginThrottle loginThrottle;
 
     private CustomLoginSuccessHandler handler;
 
     @BeforeEach
     void setUp() {
-        handler = new CustomLoginSuccessHandler(userMapper);
+        handler = new CustomLoginSuccessHandler(userMapper, loginThrottle);
+    }
+
+    @Test
+    void successfulLoginClearsTheAccountFailureHistory() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.getSession().setAttribute(
+                LoginFormState.SESSION_ATTRIBUTE,
+                new LoginFormState("member", 4, null));
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(
+                request, response, authentication(7L, "member", UserRole.USER));
+
+        verify(loginThrottle).recordSuccess("member");
+        assertThat(request.getSession().getAttribute(LoginFormState.SESSION_ATTRIBUTE)).isNull();
     }
 
     @Test

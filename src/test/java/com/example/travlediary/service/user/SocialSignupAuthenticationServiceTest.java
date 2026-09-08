@@ -8,6 +8,7 @@ import com.example.travlediary.model.UserRole;
 import com.example.travlediary.model.UserStatus;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
+import com.example.travlediary.security.LoginThrottle;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,7 +39,7 @@ class SocialSignupAuthenticationServiceTest {
     @BeforeEach
     void setUp() {
         service = new SocialSignupAuthenticationService(
-                userMapper, new CustomLoginSuccessHandler(userMapper));
+                userMapper, new CustomLoginSuccessHandler(userMapper, new LoginThrottle()));
         SecurityContextHolder.clearContext();
     }
 

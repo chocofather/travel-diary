@@ -58,12 +58,13 @@
           <p class="mypage-account-field-error" th:if="${#fields.hasErrors('userPhone')}"
              th:errors="*{userPhone}">전화번호 오류</p>
         </div>
-        <div class="mypage-account-field">
-          <label for="userBirth" th:text="#{mypage.account.edit.birth}">생년월일</label>
-          <input id="userBirth" type="date" th:field="*{userBirth}" required>
-          <p class="mypage-account-field-error" th:if="${#fields.hasErrors('userBirth')}"
-             th:errors="*{userBirth}">생년월일 오류</p>
-        </div>
+        <!-- 생년월일은 마이페이지에서 고치지 않는다. 저장된 값만 보여 준다. -->
+        <dl class="mypage-account-readonly-list">
+          <div>
+            <dt th:text="#{mypage.account.edit.birth}">생년월일</dt>
+            <dd th:text="${account.userBirth != null} ? ${account.userBirth} : '-'">1996-07-14</dd>
+          </div>
+        </dl>
         <div class="mypage-account-actions">
           <button type="submit" th:text="#{mypage.account.edit.submit}">회원정보 저장</button>
         </div>
