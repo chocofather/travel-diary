@@ -173,6 +173,39 @@ class LoginFailureUxTest {
         verify(loginThrottle, never()).status("", "127.0.0.1");
     }
 
+    /** 실패 후 다시 그린 로그인 폼도 복귀 대상을 그대로 다시 전송한다. */
+    @Test
+    void reRenderedLoginFormKeepsTheReturnPathAfterAFailure() throws Exception {
+        when(loginThrottle.status("member", "127.0.0.1"))
+                .thenReturn(new LoginThrottleStatus(1, null));
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(LoginFormState.SESSION_ATTRIBUTE,
+                new LoginFormState("member", 1, null));
+
+        String html = mockMvc.perform(get("/login")
+                        .session(session)
+                        .param("error", "true")
+                        .param("redirect", "/post/13"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(Jsoup.parse(html).selectFirst("input[name=redirect]").val())
+                .isEqualTo("/post/13");
+    }
+
+    /** 헤더에서 바로 로그인한 경우처럼 복귀 대상이 없으면 기존 기본 목적지를 유지한다. */
+    @Test
+    void loginFormWithoutAReturnPathKeepsTheDefaultDestination() throws Exception {
+        when(loginThrottle.ipStatus("127.0.0.1"))
+                .thenReturn(new LoginThrottleStatus(0, null));
+
+        String html = mockMvc.perform(get("/login"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(Jsoup.parse(html).selectFirst("input[name=redirect]").val()).isEqualTo("/");
+    }
+
     private RenderedPage render(LoginFormState state) throws Exception {
         return render(state, true);
     }

@@ -72,6 +72,15 @@
     display: none;
 }
 
+/* 관리자 메뉴 토글: 작성자 ⋯ 와 같은 계열이되 라벨이 들어갈 폭을 쓴다. */
+.post-admin-toggle {
+    display: inline-flex;
+    gap: 4px;
+    width: auto;
+    padding: 0 12px;
+    font-size: 14px;
+}
+
 .post-owner-toggle:hover,
 .post-owner-menu[open] > summary {
     background: #f4f8f6;
@@ -165,7 +174,7 @@
     border-top: 1px solid #eee;
 }
 
-/* 하단 footer: 한 줄에 왼쪽 목록 이동 / 오른쪽 작성자 액션. 관리자 조치만 아래로 뺀다. */
+/* 하단 footer: 목록 이동만 남는다. 작성자/관리자 액션은 제목 우측 메뉴가 담당한다. */
 /* 본문과 하단 액션은 구분선 없이 여백으로만 구분한다. */
 .post-detail-footer {
     margin-top: 8px;
@@ -177,13 +186,6 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-}
-
-/* 작성자 액션 (본인 글에만 렌더링되므로 비어 있으면 높이를 차지하지 않는다) */
-.post-detail-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
 }
 
 /* 목록으로: solid 버튼 대신 가벼운 텍스트 링크 */
@@ -225,9 +227,10 @@
     margin: 0;
 }
 
-/* course 작성자 메뉴와 같은 터치 영역과 메뉴 항목 위계를 쓴다. */
+/* course 작성자 메뉴와 같은 터치 영역과 메뉴 항목 위계를 쓴다. 관리자 메뉴도 같은 항목 형태다. */
 .post-owner-menu-panel .post-edit-button,
-.post-owner-menu-panel .post-delete-button {
+.post-owner-menu-panel .post-delete-button,
+.post-owner-menu-panel .post-hide-button {
     display: flex;
     align-items: center;
     box-sizing: border-box;

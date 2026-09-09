@@ -1,5 +1,6 @@
 package com.example.travlediary.security;
 
+import com.example.travlediary.config.InternalRedirectValidator;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -10,6 +11,8 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 public class LoginThrottleFilter extends OncePerRequestFilter {
 
@@ -21,6 +24,19 @@ public class LoginThrottleFilter extends OncePerRequestFilter {
 
     public LoginThrottleFilter(LoginThrottle loginThrottle) {
         this.loginThrottle = loginThrottle;
+    }
+
+    /**
+     * 로그인 실패 후에도 원래 페이지 복귀 대상을 잃지 않도록 redirect 를 다시 붙인다.
+     * 내부 상대경로만 통과시키므로 외부 host 로는 되돌아가지 않는다.
+     */
+    public static String failureRedirect(HttpServletRequest request) {
+        String redirect = InternalRedirectValidator.normalize(request.getParameter("redirect"));
+        if (redirect == null) {
+            return FAILURE_REDIRECT;
+        }
+        return FAILURE_REDIRECT + "&redirect="
+                + URLEncoder.encode(redirect, StandardCharsets.UTF_8);
     }
 
     @Override
@@ -39,7 +55,7 @@ public class LoginThrottleFilter extends OncePerRequestFilter {
             request.getSession().setAttribute(
                     LoginFormState.SESSION_ATTRIBUTE,
                     LoginFormState.from(request.getParameter("username"), status));
-            response.sendRedirect(request.getContextPath() + FAILURE_REDIRECT);
+            response.sendRedirect(request.getContextPath() + failureRedirect(request));
             return;
         }
         filterChain.doFilter(request, response);

@@ -98,6 +98,15 @@
     display: none;
 }
 
+/* 관리자 메뉴 토글: 작성자 ⋯ 와 같은 계열이되 라벨이 들어갈 폭을 쓴다. */
+.course-admin-toggle {
+    display: inline-flex;
+    gap: 4px;
+    width: auto;
+    padding: 0 12px;
+    font-size: 14px;
+}
+
 .course-owner-toggle:hover,
 .course-owner-menu[open] > summary {
     background: #f4f8f6;
@@ -459,12 +468,6 @@
     gap: 12px;
 }
 
-.course-detail-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
 /* 코스 목록으로: solid 버튼 대신 가벼운 텍스트 링크 */
 .course-back-to-list {
     display: inline-flex;
@@ -504,9 +507,10 @@
     margin: 0;
 }
 
-/* 작성자 메뉴 항목은 터치할 수 있는 높이를 확보한다. */
+/* 작성자/관리자 메뉴 항목은 터치할 수 있는 높이를 확보한다. */
 .course-owner-menu-panel .course-edit-button,
-.course-owner-menu-panel .course-delete-button {
+.course-owner-menu-panel .course-delete-button,
+.course-owner-menu-panel .course-hide-button {
     display: flex;
     align-items: center;
     box-sizing: border-box;

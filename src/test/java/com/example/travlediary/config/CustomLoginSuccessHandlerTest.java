@@ -156,6 +156,20 @@ class CustomLoginSuccessHandlerTest {
         assertRedirectFallsBack("not-an-internal-path");
     }
 
+    /** 비로그인 댓글 클릭이 넘긴 상세페이지 경로로 항상 되돌아온다. */
+    @Test
+    void detailPagesAreRestoredAfterLogin() throws Exception {
+        for (String detailPath : new String[]{"/destinations/15", "/post/13", "/course/9"}) {
+            MockHttpServletRequest request = requestWithRedirect(detailPath);
+            MockHttpServletResponse response = new MockHttpServletResponse();
+
+            handler.onAuthenticationSuccess(
+                    request, response, authentication(7L, "member", UserRole.USER));
+
+            assertThat(response.getRedirectedUrl()).isEqualTo(detailPath);
+        }
+    }
+
     @Test
     void missingRedirectFallsBackToHome() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();

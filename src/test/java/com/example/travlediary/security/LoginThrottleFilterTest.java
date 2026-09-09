@@ -50,6 +50,28 @@ class LoginThrottleFilterTest {
         verify(filterChain, never()).doFilter(request, response);
     }
 
+    /** 잠금 대기 후 다시 로그인해도 원래 상세페이지로 돌아가야 하므로 redirect 를 유지한다. */
+    @Test
+    void blockedLoginKeepsTheInternalReturnPathAndDropsExternalOnes() throws Exception {
+        when(throttle.status("member", "203.0.113.25"))
+                .thenReturn(new LoginThrottleStatus(5, Instant.parse("2026-09-08T00:00:10Z")));
+
+        MockHttpServletRequest internal = loginRequest();
+        internal.addParameter("redirect", "/course/9");
+        MockHttpServletResponse internalResponse = new MockHttpServletResponse();
+        filter.doFilter(internal, internalResponse, filterChain);
+        assertThat(internalResponse.getRedirectedUrl())
+                .isEqualTo("/login?error=true&redirect=%2Fcourse%2F9");
+
+        MockHttpServletRequest external = loginRequest();
+        external.addParameter("redirect", "https://evil.example/course/9");
+        MockHttpServletResponse externalResponse = new MockHttpServletResponse();
+        filter.doFilter(external, externalResponse, filterChain);
+        assertThat(externalResponse.getRedirectedUrl()).isEqualTo("/login?error=true");
+
+        verify(filterChain, never()).doFilter(internal, internalResponse);
+    }
+
     @Test
     void loginPathParametersCannotBypassTheThrottle() throws Exception {
         MockHttpServletRequest request = loginRequest();

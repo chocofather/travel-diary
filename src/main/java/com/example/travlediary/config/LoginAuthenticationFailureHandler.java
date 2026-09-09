@@ -30,7 +30,8 @@ public class LoginAuthenticationFailureHandler implements AuthenticationFailureH
         request.getSession().setAttribute(
                 LoginFormState.SESSION_ATTRIBUTE,
                 LoginFormState.from(request.getParameter("username"), status));
+        // 실패해도 원래 복귀 대상을 유지해야 재시도 성공 시 상세페이지로 돌아온다.
         response.sendRedirect(
-                request.getContextPath() + LoginThrottleFilter.FAILURE_REDIRECT);
+                request.getContextPath() + LoginThrottleFilter.failureRedirect(request));
     }
 }

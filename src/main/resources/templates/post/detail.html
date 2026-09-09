@@ -65,6 +65,18 @@
                 </form>
               </div>
             </details>
+            <!-- 관리자 moderation 전용 메뉴. 작성자 ⋯ 와 섞지 않고 ADMIN 에게만 렌더링한다. -->
+            <details class="post-owner-menu post-admin-menu" data-owner-menu
+                     sec:authorize="hasRole('ADMIN')">
+              <summary class="post-owner-toggle post-admin-toggle" aria-label="게시글 관리자 메뉴">
+                <span>관리</span><span aria-hidden="true">▾</span>
+              </summary>
+              <div class="post-owner-menu-panel">
+                <!-- 상세는 공개 상태에서만 열리므로 숨김만 노출한다.
+                     숨김 해제는 기존 /admin/contents 조치 목록에서 처리한다. -->
+                <button type="button" class="post-hide-button" data-post-hide-open>숨김</button>
+              </div>
+            </details>
           </div>
         </div>
         <dl class="post-meta">
@@ -97,17 +109,11 @@
       </section>
 
       <footer class="post-detail-footer">
-        <!-- 목록 이동과 ADMIN 전용 숨김 액션만 남긴다. -->
+        <!-- 목록 이동만 남긴다. 작성자/관리자 액션은 모두 제목 우측 메뉴로 모았다. -->
         <div class="post-detail-footer-row">
           <a th:href="@{/board/list(boardType='post')}" class="back-to-list">
             <span class="back-to-list-arrow" aria-hidden="true">←</span>목록으로
           </a>
-          <div class="post-detail-actions">
-            <!-- 관리자 숨김. 사유는 상시 노출하지 않고 모달에서 받는다.
-                 버튼은 ADMIN 에게만 보이고 서비스에서도 권한을 다시 확인한다. -->
-            <button type="button" sec:authorize="hasRole('ADMIN')"
-                    class="post-hide-button" data-post-hide-open>숨김</button>
-          </div>
         </div>
       </footer>
 

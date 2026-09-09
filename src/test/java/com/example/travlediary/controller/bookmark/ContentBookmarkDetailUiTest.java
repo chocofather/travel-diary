@@ -79,7 +79,7 @@ class ContentBookmarkDetailUiTest {
                 .contains("content-bookmark-image")
                 .contains(expectedLabel);
         assertBookmarkState(body, bookmarked);
-        assertThat(actionSection(body, "post-detail-actions")).doesNotContain("content-bookmark-button");
+        assertThat(footerSection(body, "post-detail-footer")).doesNotContain("content-bookmark-button");
     }
 
     @ParameterizedTest
@@ -100,7 +100,7 @@ class ContentBookmarkDetailUiTest {
                 .contains("content-bookmark-image")
                 .contains(expectedLabel);
         assertBookmarkState(body, bookmarked);
-        assertThat(actionSection(body, "course-detail-actions")).doesNotContain("content-bookmark-button");
+        assertThat(footerSection(body, "course-detail-footer")).doesNotContain("content-bookmark-button");
     }
 
     @ParameterizedTest
@@ -239,9 +239,10 @@ class ContentBookmarkDetailUiTest {
         }
     }
 
-    private String actionSection(String body, String className) {
-        int start = body.indexOf("<div class=\"" + className + "\">");
-        int end = body.indexOf("</div>", start);
+    /** 북마크는 제목 우측 액션 영역에만 있고 하단 footer 로 내려오지 않는다. */
+    private String footerSection(String body, String className) {
+        int start = body.indexOf("<footer class=\"" + className + "\">");
+        int end = body.indexOf("</footer>", start);
         assertThat(start).isGreaterThanOrEqualTo(0);
         assertThat(end).isGreaterThan(start);
         return body.substring(start, end);

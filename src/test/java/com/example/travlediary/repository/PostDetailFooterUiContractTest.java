@@ -10,29 +10,24 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * 게시글 상세 하단 액션 영역 계약.
- * 목록 이동 / 관리자 숨김 버튼이 footer 에 남고 작성자 액션은 제목 우측 메뉴에 있으며,
+ * footer 에는 목록 이동만 남고 작성자 액션(⋯)과 관리자 조치(관리 ▾)는 모두 제목 우측 메뉴에 있으며,
  * 숨김 사유는 상시 노출 없이 모달에서만 받는다.
  */
 class PostDetailFooterUiContractTest {
 
     @Test
-    void listLinkAndAdminHideRemainInFooterWhileOwnerActionsMoveToHeaderMenu() throws IOException {
+    void footerKeepsOnlyTheListLinkWhileOwnerAndAdminActionsMoveToHeaderMenus() throws IOException {
         String detail = readFile("src/main/resources/templates/post/detail.html");
         String footer = between(detail, "<footer class=\"post-detail-footer\">", "</footer>");
 
-        // 한 줄 footer: 왼쪽 목록 이동 → 오른쪽 액션
-        assertThat(footer.indexOf("back-to-list"))
-                .isGreaterThanOrEqualTo(0)
-                .isLessThan(footer.indexOf("post-detail-actions"));
-
-        // footer 에는 관리자 숨김 버튼(ADMIN)만 남는다.
-        String actions = between(footer, "<div class=\"post-detail-actions\">", "</div>\n        </div>");
-        assertThat(actions)
-                .contains("sec:authorize=\"hasRole('ADMIN')\"")
-                .contains("post-hide-button")
-                .contains("data-post-hide-open")
+        // footer 에는 목록 이동만 남는다. 수정/삭제/숨김 중복 버튼이 없어야 한다.
+        assertThat(footer).contains("back-to-list");
+        assertThat(footer)
+                .doesNotContain("post-detail-actions")
                 .doesNotContain("post-edit-button")
-                .doesNotContain("post-delete-button");
+                .doesNotContain("post-delete-button")
+                .doesNotContain("post-hide-button")
+                .doesNotContain("data-post-hide-open");
 
         // 작성자 액션은 북마크 옆의 compact 메뉴에서만 렌더링된다.
         String header = between(detail, "<header class=\"post-detail-header\">", "</header>");
@@ -43,6 +38,23 @@ class PostDetailFooterUiContractTest {
                 .contains("post-edit-button")
                 .contains("post-delete-button")
                 .contains("onsubmit=\"return confirm('");
+
+        // 관리자 조치는 작성자 메뉴와 분리된 ADMIN 전용 드롭다운에 있다.
+        String adminMenu = between(header, "<details class=\"post-owner-menu post-admin-menu\"", "</details>");
+        assertThat(adminMenu)
+                .contains("data-owner-menu")
+                .contains("sec:authorize=\"hasRole('ADMIN')\"")
+                .contains("post-admin-toggle")
+                .contains("post-hide-button")
+                .contains("data-post-hide-open")
+                // 작성자 전용 액션은 관리 메뉴로 새지 않는다.
+                .doesNotContain("post-edit-button")
+                .doesNotContain("post-delete-button");
+        // 작성자 ⋯ 는 본인 글에만, 관리 ▾ 는 ADMIN 에게만 걸린다(권한 조건을 섞지 않는다).
+        String ownerMenu = between(header, "<details class=\"post-owner-menu\" data-owner-menu", "</details>");
+        assertThat(ownerMenu)
+                .contains("th:if=\"${post.myPost}\"")
+                .doesNotContain("hasRole('ADMIN')");
 
         // 상시 노출되던 관리자 조치 패널과 사유 입력창은 사라졌다
         assertThat(footer)
