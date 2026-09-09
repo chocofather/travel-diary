@@ -487,6 +487,7 @@ CREATE TABLE `course_comments` (
   `parent_comment_id` bigint DEFAULT NULL,
   `reply_to_comment_id` bigint DEFAULT NULL,
   `content` text NOT NULL,
+  `source_language` varchar(10) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'und',
   `likes` int DEFAULT '0',
   `deleted` tinyint(1) DEFAULT '0',
   `create_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,

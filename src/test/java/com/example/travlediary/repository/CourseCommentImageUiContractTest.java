@@ -149,7 +149,7 @@ class CourseCommentImageUiContractTest {
                 .doesNotContain("innerHTML");
         // 본문 아래, 액션 위에 붙는다 (원댓글/답글 모두 같은 renderComment 를 쓴다)
         assertThat(script)
-                .contains("body.append(meta, content);")
+                .contains("body.append(meta, content, translationStatus);")
                 .contains("if (images) body.append(images);")
                 .contains("body.append(actions);");
     }

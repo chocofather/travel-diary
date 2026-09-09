@@ -32,6 +32,7 @@
             ELSE FALSE
         END AS replyToDeleted,
         CASE WHEN cc.deleted = 1 THEN NULL ELSE cc.content END AS content,
+        cc.source_language AS sourceLanguage,
         CASE WHEN cc.deleted = 1 THEN NULL ELSE u.nickname END AS writerNickname,
         CASE WHEN cc.deleted = 1 THEN NULL ELSE cc.user_id END AS writerUserId,
         CASE WHEN cc.deleted = 1 THEN NULL ELSE u.profile_image END AS writerProfileImage,
@@ -296,6 +297,7 @@
             parent_comment_id AS parentCommentId,
             reply_to_comment_id AS replyToCommentId,
             content,
+            source_language AS sourceLanguage,
             create_at AS createdAt,
             updated_at AS updatedAt,
             deleted_at AS deletedAt,
@@ -313,6 +315,7 @@
             parent_comment_id AS parentCommentId,
             reply_to_comment_id AS replyToCommentId,
             content,
+            source_language AS sourceLanguage,
             create_at AS createdAt,
             updated_at AS updatedAt,
             deleted_at AS deletedAt,
@@ -331,6 +334,7 @@
             parent_comment_id AS parentCommentId,
             reply_to_comment_id AS replyToCommentId,
             content,
+            source_language AS sourceLanguage,
             create_at AS createdAt,
             updated_at AS updatedAt,
             deleted_at AS deletedAt,
@@ -355,13 +359,82 @@
           AND cc.deleted = 0
     </select>
 
+    <select id="findVisibleTranslationSource"
+            resultType="com.example.travlediary.model.translation.CourseCommentTranslationSource">
+        SELECT cc.id AS content_id,
+               cc.content AS source_text,
+               cc.source_language,
+               cc.updated_at
+        FROM course_comments cc
+        JOIN courses c
+          ON c.id = cc.course_id
+         AND c.deleted = 0
+        WHERE cc.id = #{id}
+          AND cc.deleted = 0
+          AND cc.content IS NOT NULL
+          AND NOT <include refid="ModeratedComment"><property name="alias" value="cc"/></include>
+    </select>
+
+    <select id="findVisibleTranslationSourceForUpdate"
+            resultType="com.example.travlediary.model.translation.CourseCommentTranslationSource">
+        SELECT cc.id AS content_id,
+               cc.content AS source_text,
+               cc.source_language,
+               cc.updated_at
+        FROM course_comments cc
+        JOIN courses c
+          ON c.id = cc.course_id
+         AND c.deleted = 0
+        WHERE cc.id = #{id}
+          AND cc.deleted = 0
+          AND cc.content IS NOT NULL
+          AND NOT <include refid="ModeratedComment"><property name="alias" value="cc"/></include>
+        FOR UPDATE
+    </select>
+
+    <update id="correctSourceLanguage">
+        UPDATE course_comments cc
+        JOIN courses c
+          ON c.id = cc.course_id
+         AND c.deleted = 0
+        SET cc.source_language = #{sourceLanguage},
+            cc.updated_at = cc.updated_at
+        WHERE cc.id = #{id}
+          AND cc.deleted = 0
+          AND cc.source_language = 'und'
+          AND cc.updated_at &lt;=&gt; #{updatedAt}
+          AND NOT <include refid="ModeratedComment"><property name="alias" value="cc"/></include>
+    </update>
+
+    <!-- 일회성 로컬 언어 backfill: 삭제 여부와 관계없이 und 행만 keyset 방식으로 읽는다. -->
+    <select id="findUndeterminedLanguagesAfter"
+            resultType="com.example.travlediary.model.translation.CourseCommentLanguageBackfillRow">
+        SELECT id, content, updated_at
+        FROM course_comments
+        WHERE source_language = 'und'
+          AND id &gt; #{afterId}
+        ORDER BY id
+        LIMIT #{limit}
+    </select>
+
+    <!-- 조회 뒤 댓글이 수정된 경우 이전 원문 감지 결과를 쓰지 않는다. -->
+    <update id="updateDetectedLanguageIfUndetermined">
+        UPDATE course_comments
+        SET source_language = #{sourceLanguage},
+            updated_at = updated_at
+        WHERE id = #{id}
+          AND source_language = 'und'
+          AND updated_at &lt;=&gt; #{updatedAt}
+          AND CAST(content AS BINARY) = CAST(#{content} AS BINARY)
+    </update>
+
     <insert id="insert" parameterType="com.example.travlediary.model.CourseComment"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO course_comments (
-            parent_comment_id, reply_to_comment_id, content, deleted,
+            parent_comment_id, reply_to_comment_id, content, source_language, deleted,
             create_at, updated_at, user_id, course_id
         ) VALUES (
-            #{parentCommentId}, #{replyToCommentId}, #{content}, 0,
+            #{parentCommentId}, #{replyToCommentId}, #{content}, #{sourceLanguage}, 0,
             NOW(), NOW(), #{userId}, #{courseId}
         )
     </insert>
@@ -369,6 +442,7 @@
     <update id="updateContent">
         UPDATE course_comments
         SET content = #{content},
+            source_language = #{sourceLanguage},
             updated_at = NOW()
         WHERE id = #{commentId}
           AND user_id = #{userId}

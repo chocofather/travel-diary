@@ -9,6 +9,9 @@ import com.example.travlediary.dto.PageResult;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.service.course.CourseCommentService;
+import com.example.travlediary.service.translation.ContentTranslationResponse;
+import com.example.travlediary.service.translation.ContentTranslationService;
+import com.example.travlediary.service.translation.TranslatableContentType;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -43,6 +46,8 @@ class CourseCommentSecurityTest {
 
     @MockitoBean
     private CourseCommentService service;
+    @MockitoBean
+    private ContentTranslationService contentTranslationService;
     @MockitoBean
     private CustomLoginSuccessHandler customLoginSuccessHandler;
     @MockitoBean
@@ -84,6 +89,17 @@ class CourseCommentSecurityTest {
                 .andExpect(status().isOk());
 
         verify(service).getCommentLocation(10L, 35L);
+    }
+
+    @Test
+    void guestCanTranslateAVisibleCourseComment() throws Exception {
+        when(contentTranslationService.translate(
+                eq(TranslatableContentType.COURSE_COMMENT), eq(35L), eq("ko"), any(), eq(null)))
+                .thenReturn(ContentTranslationResponse.ready(
+                        "번역 댓글", "en", "ko", true));
+
+        mockMvc.perform(get("/course-comments/35/translation"))
+                .andExpect(status().isOk());
     }
 
     @Test

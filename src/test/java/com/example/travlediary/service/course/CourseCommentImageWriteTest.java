@@ -7,6 +7,7 @@ import com.example.travlediary.repository.course.CourseCommentImageMapper;
 import com.example.travlediary.repository.course.CourseCommentMapper;
 import com.example.travlediary.service.comment.CommentImageLimitException;
 import com.example.travlediary.service.file.FileUploadService;
+import com.example.travlediary.service.translation.LocalContentLanguageDetector;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -56,7 +57,8 @@ class CourseCommentImageWriteTest {
     @BeforeEach
     void setUp() {
         service = new CourseCommentServiceImpl(
-                courseCommentMapper, courseCommentImageMapper, fileUploadService);
+                courseCommentMapper, courseCommentImageMapper, fileUploadService,
+                new LocalContentLanguageDetector());
         ReflectionTestUtils.setField(service, "uploadPath", uploadDir.toString());
     }
 

@@ -184,7 +184,14 @@
       </div>
     </div>
 
-    <section id="course-comments" class="course-comments content-comments" th:attr="data-course-id=${course.id}">
+    <section id="course-comments" class="course-comments content-comments"
+             th:attr="data-course-id=${course.id}"
+             th:data-translation-show="#{destination.detail.comment.translate}"
+             th:data-translation-original="#{destination.detail.comment.original}"
+             th:data-translation-loading="#{destination.detail.comment.translating}"
+             th:data-translation-retry="#{destination.detail.comment.translationRetry}"
+             th:data-translation-rate-limited="#{destination.detail.comment.translationRateLimited}"
+             th:data-translation-failed="#{destination.detail.comment.translationFailed}">
       <div class="content-comment-toolbar">
         <h2 class="content-comment-heading">
           <span th:text="#{course.detail.comment.heading}">댓글</span>

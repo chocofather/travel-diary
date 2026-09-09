@@ -7,6 +7,10 @@ import com.example.travlediary.dto.PageResult;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.comment.CommentImageLimitException;
 import com.example.travlediary.service.course.CourseCommentService;
+import com.example.travlediary.service.translation.ContentTranslationResponse;
+import com.example.travlediary.service.translation.ContentTranslationService;
+import com.example.travlediary.service.translation.TranslatableContentType;
+import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -29,11 +33,13 @@ class CourseCommentControllerTest {
     @Mock
     private CourseCommentService service;
     @Mock
+    private ContentTranslationService contentTranslationService;
+    @Mock
     private CustomUserDetails userDetails;
 
     @Test
     void guestGetPassesNullUserId() {
-        CourseCommentController controller = new CourseCommentController(service);
+        CourseCommentController controller = controller();
         when(service.getComments(10L, null)).thenReturn(List.of());
 
         assertThat(controller.getComments(10L, null)).isEmpty();
@@ -42,7 +48,7 @@ class CourseCommentControllerTest {
 
     @Test
     void guestPagedGetPassesPagingAndSortWithNullUserId() {
-        CourseCommentController controller = new CourseCommentController(service);
+        CourseCommentController controller = controller();
         PageResult<CourseCommentDto> page = new PageResult<>(List.of(), 6, 1, 5, 9);
         when(service.getCommentsPage(10L, null, 1, 5, "likes")).thenReturn(page);
 
@@ -52,7 +58,7 @@ class CourseCommentControllerTest {
 
     @Test
     void locationReturnsOnlyThePageAndNotFoundForInvalidRelation() {
-        CourseCommentController controller = new CourseCommentController(service);
+        CourseCommentController controller = controller();
         when(service.getCommentLocation(10L, 35L))
                 .thenReturn(Optional.of(new CommentLocationDto(2)));
         when(service.getCommentLocation(10L, 99L)).thenReturn(Optional.empty());
@@ -67,7 +73,7 @@ class CourseCommentControllerTest {
 
     @Test
     void authenticatedGetPassesPrincipalUserId() {
-        CourseCommentController controller = new CourseCommentController(service);
+        CourseCommentController controller = controller();
         when(userDetails.getId()).thenReturn(7L);
         when(service.getComments(10L, 7L)).thenReturn(List.of());
 
@@ -78,7 +84,7 @@ class CourseCommentControllerTest {
 
     @Test
     void createUsesPrincipalAndReturnsCreated() {
-        CourseCommentController controller = new CourseCommentController(service);
+        CourseCommentController controller = controller();
         CourseCommentRequest request = request(10L, "댓글");
         CourseCommentDto created = new CourseCommentDto();
         when(userDetails.getId()).thenReturn(7L);
@@ -93,7 +99,7 @@ class CourseCommentControllerTest {
 
     @Test
     void createPassesAttachedImagesAndReportsTheLimitAsABadRequestMessage() {
-        CourseCommentController controller = new CourseCommentController(service);
+        CourseCommentController controller = controller();
         CourseCommentRequest request = request(10L, "사진 댓글");
         List<MultipartFile> images = List.of(
                 new MockMultipartFile("images", "a.jpg", "image/jpeg", new byte[]{1}),
@@ -115,7 +121,7 @@ class CourseCommentControllerTest {
 
     @Test
     void createReplyPassesTargetIdAndPrincipalUserIdWithoutTrustingParentId() {
-        CourseCommentController controller = new CourseCommentController(service);
+        CourseCommentController controller = controller();
         CourseCommentRequest request = request(10L, "대댓글");
         request.setParentCommentId(20L);
         request.setReplyToCommentId(25L);
@@ -131,7 +137,7 @@ class CourseCommentControllerTest {
 
     @Test
     void updateUsesPrincipalUserId() {
-        CourseCommentController controller = new CourseCommentController(service);
+        CourseCommentController controller = controller();
         CourseCommentRequest request = request(null, "수정");
         CourseCommentDto updated = new CourseCommentDto();
         when(userDetails.getId()).thenReturn(7L);
@@ -143,7 +149,7 @@ class CourseCommentControllerTest {
 
     @Test
     void deleteUsesPrincipalAndReturnsNoContent() {
-        CourseCommentController controller = new CourseCommentController(service);
+        CourseCommentController controller = controller();
         when(userDetails.getId()).thenReturn(7L);
 
         var response = controller.delete(30L, userDetails);
@@ -154,7 +160,7 @@ class CourseCommentControllerTest {
 
     @Test
     void likeAndUnlikeUsePrincipalUserIdAndReturnNoContent() {
-        CourseCommentController controller = new CourseCommentController(service);
+        CourseCommentController controller = controller();
         when(userDetails.getId()).thenReturn(7L);
 
         var likeResponse = controller.likeComment(30L, userDetails);
@@ -164,6 +170,34 @@ class CourseCommentControllerTest {
         assertThat(unlikeResponse.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
         verify(service).likeComment(30L, 7L);
         verify(service).unlikeComment(30L, 7L);
+    }
+
+    @Test
+    void translationUsesTheCurrentLocaleAndServerSideCourseCommentSource() {
+        CourseCommentController controller = controller();
+        HttpServletRequest request = org.mockito.Mockito.mock(HttpServletRequest.class);
+        when(request.getRemoteAddr()).thenReturn("203.0.113.8");
+        ContentTranslationResponse translated = ContentTranslationResponse.ready(
+                "翻訳されたコメント", "en", "ja", true);
+        when(contentTranslationService.translate(
+                TranslatableContentType.COURSE_COMMENT, 30L, "ja", "203.0.113.8", null))
+                .thenReturn(translated);
+        org.springframework.context.i18n.LocaleContextHolder
+                .setLocale(java.util.Locale.forLanguageTag("ja"));
+        try {
+            var response = controller.translateComment(30L, null, request);
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(response.getBody()).isSameAs(translated);
+            verify(contentTranslationService).translate(
+                    TranslatableContentType.COURSE_COMMENT, 30L, "ja", "203.0.113.8", null);
+        } finally {
+            org.springframework.context.i18n.LocaleContextHolder.resetLocaleContext();
+        }
+    }
+
+    private CourseCommentController controller() {
+        return new CourseCommentController(service, contentTranslationService);
     }
 
     private CourseCommentRequest request(Long courseId, String content) {

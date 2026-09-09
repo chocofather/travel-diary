@@ -57,7 +57,10 @@ class CourseDetailI18nContractTest {
                 .contains("#{course.detail.comment.image.close}")
                 .contains("#{course.detail.comment.image.previous}")
                 .contains("#{course.detail.comment.image.next}")
-                .contains("#{course.detail.comment.image.enlargedAlt}");
+                .contains("#{course.detail.comment.image.enlargedAlt}")
+                .contains("#{destination.detail.comment.translate}")
+                .contains("#{destination.detail.comment.original}")
+                .contains("#{destination.detail.comment.translating}");
         // 삭제 확인은 화면이 내려준 문구를 쓰고, 화면 안에 한국어를 박아 두지 않는다.
         assertThat(detail).doesNotContain("confirm('이 여행 코스를 삭제하시겠습니까?')");
     }

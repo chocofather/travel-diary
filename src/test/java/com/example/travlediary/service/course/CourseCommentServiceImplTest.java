@@ -6,6 +6,7 @@ import com.example.travlediary.model.CourseComment;
 import com.example.travlediary.repository.course.CourseCommentImageMapper;
 import com.example.travlediary.repository.course.CourseCommentMapper;
 import com.example.travlediary.service.file.FileUploadService;
+import com.example.travlediary.service.translation.LocalContentLanguageDetector;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,7 +38,8 @@ class CourseCommentServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        service = new CourseCommentServiceImpl(mapper, imageMapper, fileUploadService);
+        service = new CourseCommentServiceImpl(
+                mapper, imageMapper, fileUploadService, new LocalContentLanguageDetector());
     }
 
     @Test
@@ -240,7 +242,7 @@ class CourseCommentServiceImplTest {
     @Test
     void updatesOwnedCommentAndReturnsLatestDto() {
         when(mapper.findActiveComment(30L)).thenReturn(comment(30L, 7L));
-        when(mapper.updateContent(30L, 7L, "수정 댓글")).thenReturn(1);
+        when(mapper.updateContent(30L, 7L, "수정 댓글", "ko")).thenReturn(1);
         CourseCommentDto latest = dto(30L, true);
         when(mapper.findDtoById(30L, 7L)).thenReturn(latest);
 
@@ -250,7 +252,7 @@ class CourseCommentServiceImplTest {
     @Test
     void missingOrDeletedCommentUpdateReturnsNotFound() {
         assertStatus(HttpStatus.NOT_FOUND, () -> service.update(30L, 7L, "수정"));
-        verify(mapper, never()).updateContent(any(), any(), any());
+        verify(mapper, never()).updateContent(any(), any(), any(), any());
     }
 
     @Test
@@ -258,7 +260,7 @@ class CourseCommentServiceImplTest {
         when(mapper.findActiveComment(30L)).thenReturn(comment(30L, 8L));
 
         assertStatus(HttpStatus.FORBIDDEN, () -> service.update(30L, 7L, "수정"));
-        verify(mapper, never()).updateContent(any(), any(), any());
+        verify(mapper, never()).updateContent(any(), any(), any(), any());
     }
 
     @Test
@@ -273,12 +275,12 @@ class CourseCommentServiceImplTest {
         CourseComment reply = comment(30L, 7L);
         reply.setParentCommentId(20L);
         when(mapper.findActiveComment(30L)).thenReturn(reply);
-        when(mapper.updateContent(30L, 7L, "수정 대댓글")).thenReturn(1);
+        when(mapper.updateContent(30L, 7L, "수정 대댓글", "ko")).thenReturn(1);
         when(mapper.findDtoById(30L, 7L)).thenReturn(dto(30L, true));
 
         service.update(30L, 7L, "수정 대댓글");
 
-        verify(mapper).updateContent(30L, 7L, "수정 대댓글");
+        verify(mapper).updateContent(30L, 7L, "수정 대댓글", "ko");
     }
 
     @Test

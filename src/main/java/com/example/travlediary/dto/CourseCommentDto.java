@@ -14,6 +14,8 @@ public class CourseCommentDto {
     private String replyToNickname;
     private boolean replyToDeleted;
     private String content;
+    private String sourceLanguage;
+    private boolean translationAvailable;
     private String writerNickname;
     private Long writerUserId;
     private String writerProfileImage;

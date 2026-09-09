@@ -166,6 +166,24 @@ class ContentCommentUiContractTest {
     }
 
     @Test
+    void courseCommentsReuseTheOnDemandTranslationUiWithoutSendingSourceText() throws IOException {
+        String template = resource("templates/course/detail.html");
+        String script = resource("static/js/course-comments.js");
+
+        assertThat(template)
+                .contains("th:data-translation-show")
+                .contains("th:data-translation-original")
+                .contains("th:data-translation-loading");
+        assertThat(script)
+                .contains("if (comment.translationAvailable !== true) return null;")
+                .contains("`/course-comments/${encodeURIComponent(commentId)}/translation`")
+                .contains("method: 'GET'")
+                .contains("content.textContent = response.translatedText || '';")
+                .contains("content.dataset.originalContent || ''")
+                .doesNotContain("body: JSON.stringify({sourceText");
+    }
+
+    @Test
     void destinationCommentsFollowTheCommunityLayoutInsteadOfLegacyRules() throws IOException {
         String css = resource("static/css/comment.css");
 

@@ -410,6 +410,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/course-comments", "/course-comments/page").permitAll()
                         .requestMatchers(new RegexRequestMatcher(
                                 "^/course-comments/[0-9]+/location$", HttpMethod.GET.name())).permitAll()
+                        .requestMatchers(new RegexRequestMatcher(
+                                "^/course-comments/[0-9]+/translation$", HttpMethod.GET.name())).permitAll()
 
                         // 여행 코스 댓글 작성·수정·삭제는 로그인 사용자만 가능
                         .requestMatchers("/course-comments", "/course-comments/**").authenticated()

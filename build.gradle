@@ -103,6 +103,14 @@ tasks.register('backfillPostCommentLanguages', JavaExec) {
     mainClass = 'com.example.travlediarybackfill.PostCommentLanguageBackfillApplication'
 }
 
+tasks.register('backfillCourseCommentLanguages', JavaExec) {
+    group = 'application'
+    description = 'Classify und course comment source languages with the local detector'
+    dependsOn tasks.named('classes')
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.example.travlediarybackfill.CourseCommentLanguageBackfillApplication'
+}
+
 tasks.register('backfillSharedTranslationCache', JavaExec) {
     group = 'application'
     description = 'Copy current READY content translations into the exact shared cache'

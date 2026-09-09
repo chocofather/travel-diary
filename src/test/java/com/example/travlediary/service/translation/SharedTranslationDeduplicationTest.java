@@ -95,6 +95,24 @@ class SharedTranslationDeduplicationTest {
     }
 
     @Test
+    void exactTextIsSharedFromPostToCourseWithoutAdditionalProviderOrUsageCalls() {
+        TestContext context = context(Map.of(
+                100L, source(TranslatableContentType.POST_COMMENT, 100L, "hello", "en"),
+                200L, source(TranslatableContentType.COURSE_COMMENT, 200L, "hello", "en")));
+
+        context.service().translate(
+                TranslatableContentType.POST_COMMENT, 100L, "ko", "10.0.0.1", 7L);
+        ContentTranslationResponse course = context.service().translate(
+                TranslatableContentType.COURSE_COMMENT, 200L, "ko", "10.0.0.2", 99L);
+
+        assertThat(course.cached()).isTrue();
+        assertThat(course.translatedText()).isEqualTo("ko:hello");
+        assertThat(context.providerCalls()).hasValue(1);
+        assertThat(context.usage().calls).isEqualTo(1);
+        assertThat(context.rateLimiter().externalCalls).isEqualTo(1);
+    }
+
+    @Test
     void whitespaceCasePunctuationAndDifferentTextRemainExact() {
         TestContext context = context(Map.of(
                 1L, source(TranslatableContentType.DESTINATION_COMMENT, 1L, "hello", "en"),
@@ -240,6 +258,25 @@ class SharedTranslationDeduplicationTest {
         assertThat(context.providerCalls()).hasValue(1);
     }
 
+    @Test
+    void unavailableCourseCommentCannotExposeAnExistingSharedResult() {
+        Map<Long, TranslationSourceSnapshot> sources = new ConcurrentHashMap<>();
+        sources.put(100L, source(
+                TranslatableContentType.POST_COMMENT, 100L, "hello", "en"));
+        sources.put(200L, source(
+                TranslatableContentType.COURSE_COMMENT, 200L, "hello", "en"));
+        TestContext context = context(sources);
+        context.service().translate(
+                TranslatableContentType.POST_COMMENT, 100L, "ko", "10.0.0.1", 7L);
+        sources.remove(200L);
+
+        assertThatThrownBy(() -> context.service().translate(
+                TranslatableContentType.COURSE_COMMENT, 200L, "ko", "10.0.0.2", 9L))
+                .isInstanceOf(TranslationNotFoundException.class);
+        assertThat(context.providerCalls()).hasValue(1);
+        assertThat(context.usage().calls).isEqualTo(1);
+    }
+
     private TestContext context(Map<Long, TranslationSourceSnapshot> sources) {
         return context(sources, false, false);
     }
@@ -291,7 +328,8 @@ class SharedTranslationDeduplicationTest {
     private TranslationSourceRegistry registry(Map<Long, TranslationSourceSnapshot> sources) {
         return new TranslationSourceRegistry(List.of(
                 new SnapshotReader(TranslatableContentType.DESTINATION_COMMENT, sources),
-                new SnapshotReader(TranslatableContentType.POST_COMMENT, sources)));
+                new SnapshotReader(TranslatableContentType.POST_COMMENT, sources),
+                new SnapshotReader(TranslatableContentType.COURSE_COMMENT, sources)));
     }
 
     private MachineTranslationClient countingClient(

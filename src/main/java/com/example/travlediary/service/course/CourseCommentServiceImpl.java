@@ -9,8 +9,12 @@ import com.example.travlediary.repository.course.CourseCommentImageMapper;
 import com.example.travlediary.repository.course.CourseCommentMapper;
 import com.example.travlediary.service.comment.CommentImageLimitException;
 import com.example.travlediary.service.file.FileUploadService;
+import com.example.travlediary.config.i18n.SupportedLanguage;
+import com.example.travlediary.service.translation.LocalContentLanguageDetector;
+import com.example.travlediary.service.translation.TranslationVisibility;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,6 +48,7 @@ public class CourseCommentServiceImpl implements CourseCommentService {
     private final CourseCommentMapper courseCommentMapper;
     private final CourseCommentImageMapper courseCommentImageMapper;
     private final FileUploadService fileUploadService;
+    private final LocalContentLanguageDetector languageDetector;
 
     @Value("${custom.upload-path}")
     private String uploadPath;
@@ -52,7 +57,7 @@ public class CourseCommentServiceImpl implements CourseCommentService {
     @Transactional(readOnly = true)
     public List<CourseCommentDto> getComments(Long courseId, Long currentUserId) {
         requireActiveCourse(courseId);
-        return attachImageUrls(courseCommentMapper.findByCourseId(courseId, currentUserId));
+        return prepareDtos(courseCommentMapper.findByCourseId(courseId, currentUserId));
     }
 
     @Override
@@ -78,7 +83,7 @@ public class CourseCommentServiceImpl implements CourseCommentService {
                 ? List.of()
                 : courseCommentMapper.findRepliesForRootComments(courseId, currentUserId, rootIds);
 
-        return new PageResult<>(attachImageUrls(mergeRootThreads(roots, replies)), totalThreads,
+        return new PageResult<>(prepareDtos(mergeRootThreads(roots, replies)), totalThreads,
                 safePage, safeSize, totalCommentCount);
     }
 
@@ -111,6 +116,7 @@ public class CourseCommentServiceImpl implements CourseCommentService {
         comment.setCourseId(courseId);
         comment.setUserId(userId);
         comment.setContent(validatedContent);
+        comment.setSourceLanguage(languageDetector.detect(validatedContent).code());
         comment.setParentCommentId(parentCommentId);
         comment.setReplyToCommentId(replyToCommentId);
 
@@ -137,8 +143,10 @@ public class CourseCommentServiceImpl implements CourseCommentService {
     public CourseCommentDto update(Long commentId, Long userId, String content) {
         CourseComment comment = requireOwnedActiveComment(commentId, userId);
         String validatedContent = validateContent(content);
+        String sourceLanguage = languageDetector.detect(validatedContent).code();
 
-        if (courseCommentMapper.updateContent(commentId, userId, validatedContent) != 1) {
+        if (courseCommentMapper.updateContent(
+                commentId, userId, validatedContent, sourceLanguage) != 1) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "댓글을 찾을 수 없습니다.");
         }
         return requireLatestDto(comment.getId(), userId);
@@ -300,8 +308,29 @@ public class CourseCommentServiceImpl implements CourseCommentService {
         if (dto == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "댓글을 찾을 수 없습니다.");
         }
-        attachImageUrls(List.of(dto));
+        prepareDtos(List.of(dto));
         return dto;
+    }
+
+    private List<CourseCommentDto> prepareDtos(List<CourseCommentDto> comments) {
+        applyTranslationMetadata(comments);
+        return attachImageUrls(comments);
+    }
+
+    private void applyTranslationMetadata(List<CourseCommentDto> comments) {
+        String targetLanguage = SupportedLanguage.fromLocale(LocaleContextHolder.getLocale())
+                .orElse(SupportedLanguage.KOREAN)
+                .getLanguageTag();
+        for (CourseCommentDto comment : comments) {
+            String sourceLanguage = comment.getSourceLanguage();
+            if (sourceLanguage == null || sourceLanguage.isBlank()) {
+                sourceLanguage = "und";
+            }
+            comment.setSourceLanguage(sourceLanguage);
+            comment.setTranslationAvailable(!comment.isDeleted()
+                    && !comment.isModerated()
+                    && TranslationVisibility.shouldOffer(sourceLanguage, targetLanguage));
+        }
     }
 
     /**

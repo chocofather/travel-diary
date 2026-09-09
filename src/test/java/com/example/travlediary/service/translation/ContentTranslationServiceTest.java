@@ -295,6 +295,36 @@ class ContentTranslationServiceTest {
         assertThat(usageReservation.lastUserId).isEqualTo(42L);
     }
 
+    @Test
+    void courseCommentUsesContentCacheAndInvalidatesItAfterTheSourceHashChanges() {
+        MutableSourceReader reader = new MutableSourceReader(
+                source(TranslatableContentType.COURSE_COMMENT, "첫 코스 댓글", "ko"));
+        InMemoryCacheMapper mapper = new InMemoryCacheMapper();
+        AtomicInteger providerCalls = new AtomicInteger();
+        MachineTranslationClient client = (text, source, target) -> {
+            providerCalls.incrementAndGet();
+            return new MachineTranslation("translated: " + text, "ko");
+        };
+        CountingUsageReservationGate usageReservation = new CountingUsageReservationGate();
+        ContentTranslationService service = service(reader, mapper, client, usageReservation);
+
+        ContentTranslationResponse miss = service.translate(
+                TranslatableContentType.COURSE_COMMENT, 7L, "en", "203.0.113.9", 42L);
+        ContentTranslationResponse hit = service.translate(
+                TranslatableContentType.COURSE_COMMENT, 7L, "en", "203.0.113.9", 42L);
+        reader.current.set(source(
+                TranslatableContentType.COURSE_COMMENT, "수정된 코스 댓글", "ko"));
+        ContentTranslationResponse changed = service.translate(
+                TranslatableContentType.COURSE_COMMENT, 7L, "en", "203.0.113.9", 42L);
+
+        assertThat(miss.cached()).isFalse();
+        assertThat(hit.cached()).isTrue();
+        assertThat(changed.cached()).isFalse();
+        assertThat(changed.translatedText()).isEqualTo("translated: 수정된 코스 댓글");
+        assertThat(providerCalls).hasValue(2);
+        assertThat(usageReservation.calls).isEqualTo(2);
+    }
+
     private ContentTranslationService service(TranslationSourceReader reader,
                                               ContentTranslationCacheMapper mapper,
                                               MachineTranslationClient client) {
