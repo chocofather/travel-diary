@@ -7,6 +7,7 @@ import com.example.travlediary.dto.PageResult;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.comment.CommentImageLimitException;
 import com.example.travlediary.service.post.PostCommentService;
+import com.example.travlediary.service.translation.ContentTranslationService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -29,11 +30,13 @@ class PostCommentControllerTest {
     @Mock
     private PostCommentService service;
     @Mock
+    private ContentTranslationService contentTranslationService;
+    @Mock
     private CustomUserDetails userDetails;
 
     @Test
     void guestGetPassesNullUserId() {
-        PostCommentController controller = new PostCommentController(service);
+        PostCommentController controller = new PostCommentController(service, contentTranslationService);
         when(service.getComments(10L, null)).thenReturn(List.of());
 
         assertThat(controller.getComments(10L, null)).isEmpty();
@@ -42,7 +45,7 @@ class PostCommentControllerTest {
 
     @Test
     void guestPagedGetPassesPagingAndSortWithNullUserId() {
-        PostCommentController controller = new PostCommentController(service);
+        PostCommentController controller = new PostCommentController(service, contentTranslationService);
         PageResult<PostCommentDto> page = new PageResult<>(List.of(), 6, 1, 5, 9);
         when(service.getCommentsPage(10L, null, 1, 5, "likes")).thenReturn(page);
 
@@ -52,7 +55,7 @@ class PostCommentControllerTest {
 
     @Test
     void locationReturnsOnlyThePageAndValidatesTargetThroughService() {
-        PostCommentController controller = new PostCommentController(service);
+        PostCommentController controller = new PostCommentController(service, contentTranslationService);
         when(service.getCommentLocation(10L, 35L))
                 .thenReturn(Optional.of(new CommentLocationDto(3)));
         when(service.getCommentLocation(10L, 99L)).thenReturn(Optional.empty());
@@ -67,7 +70,7 @@ class PostCommentControllerTest {
 
     @Test
     void createUsesTargetAndPrincipalWithoutTrustingParentId() {
-        PostCommentController controller = new PostCommentController(service);
+        PostCommentController controller = new PostCommentController(service, contentTranslationService);
         PostCommentRequest request = new PostCommentRequest();
         request.setPostId(10L);
         request.setParentCommentId(999L);
@@ -86,7 +89,7 @@ class PostCommentControllerTest {
 
     @Test
     void createPassesAttachedImagesAndReportsTheLimitAsABadRequestMessage() {
-        PostCommentController controller = new PostCommentController(service);
+        PostCommentController controller = new PostCommentController(service, contentTranslationService);
         PostCommentRequest request = new PostCommentRequest();
         request.setPostId(10L);
         request.setContent("사진 댓글");
@@ -110,7 +113,7 @@ class PostCommentControllerTest {
 
     @Test
     void updateAndDeleteUsePrincipalUserId() {
-        PostCommentController controller = new PostCommentController(service);
+        PostCommentController controller = new PostCommentController(service, contentTranslationService);
         PostCommentRequest request = new PostCommentRequest();
         request.setContent("수정");
         PostCommentDto updated = new PostCommentDto();
@@ -125,7 +128,7 @@ class PostCommentControllerTest {
 
     @Test
     void likeAndUnlikeUsePrincipalUserIdAndReturnNoContent() {
-        PostCommentController controller = new PostCommentController(service);
+        PostCommentController controller = new PostCommentController(service, contentTranslationService);
         when(userDetails.getId()).thenReturn(7L);
 
         var likeResponse = controller.likeComment(30L, userDetails);

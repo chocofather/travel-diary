@@ -7,6 +7,7 @@ import com.example.travlediary.model.PostComment;
 import com.example.travlediary.repository.post.PostCommentImageMapper;
 import com.example.travlediary.repository.post.PostCommentMapper;
 import com.example.travlediary.service.file.FileUploadService;
+import com.example.travlediary.service.translation.LocalContentLanguageDetector;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,7 +41,8 @@ class PostCommentServiceImplTest {
     @BeforeEach
     void setUp() {
         service = new PostCommentServiceImpl(
-                postCommentMapper, postCommentImageMapper, fileUploadService);
+                postCommentMapper, postCommentImageMapper, fileUploadService,
+                new LocalContentLanguageDetector());
     }
 
     @Test
@@ -166,7 +168,7 @@ class PostCommentServiceImplTest {
         when(postCommentMapper.findActiveComment(30L)).thenReturn(null);
 
         assertStatus(HttpStatus.NOT_FOUND, () -> service.update(30L, 7L, "수정"));
-        verify(postCommentMapper, never()).updateContent(any(), any(), any());
+        verify(postCommentMapper, never()).updateContent(any(), any(), any(), any());
     }
 
     @Test
@@ -174,13 +176,13 @@ class PostCommentServiceImplTest {
         when(postCommentMapper.findActiveComment(30L)).thenReturn(comment(30L, 8L));
 
         assertStatus(HttpStatus.FORBIDDEN, () -> service.update(30L, 7L, "수정"));
-        verify(postCommentMapper, never()).updateContent(any(), any(), any());
+        verify(postCommentMapper, never()).updateContent(any(), any(), any(), any());
     }
 
     @Test
     void updateReturnsLatestDto() {
         when(postCommentMapper.findActiveComment(30L)).thenReturn(comment(30L, 7L));
-        when(postCommentMapper.updateContent(30L, 7L, "수정 댓글")).thenReturn(1);
+        when(postCommentMapper.updateContent(30L, 7L, "수정 댓글", "ko")).thenReturn(1);
         PostCommentDto latest = dto(30L, true);
         when(postCommentMapper.findDtoById(30L, 7L)).thenReturn(latest);
 
@@ -193,7 +195,7 @@ class PostCommentServiceImplTest {
 
         assertStatus(HttpStatus.BAD_REQUEST, () -> service.update(30L, 7L, "  "));
         assertStatus(HttpStatus.BAD_REQUEST, () -> service.update(30L, 7L, "가".repeat(2_001)));
-        verify(postCommentMapper, never()).updateContent(any(), any(), any());
+        verify(postCommentMapper, never()).updateContent(any(), any(), any(), any());
     }
 
     @Test

@@ -3,12 +3,18 @@ package com.example.travlediary.controller.post;
 import com.example.travlediary.config.CustomLoginSuccessHandler;
 import com.example.travlediary.config.CustomLogoutSuccessHandler;
 import com.example.travlediary.config.SecurityConfig;
+import com.example.travlediary.model.User;
+import com.example.travlediary.model.UserRole;
 import com.example.travlediary.dto.CommentLocationDto;
 import com.example.travlediary.dto.PostCommentDto;
 import com.example.travlediary.dto.PageResult;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.post.PostCommentService;
+import com.example.travlediary.service.translation.ContentTranslationResponse;
+import com.example.travlediary.service.translation.ContentTranslationService;
+import com.example.travlediary.service.translation.TranslatableContentType;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -44,6 +50,8 @@ class PostCommentSecurityTest {
 
     @MockitoBean
     private PostCommentService service;
+    @MockitoBean
+    private ContentTranslationService contentTranslationService;
     @MockitoBean
     private CustomLoginSuccessHandler customLoginSuccessHandler;
     @MockitoBean
@@ -85,6 +93,53 @@ class PostCommentSecurityTest {
                 .andExpect(status().isOk());
 
         verify(service).getCommentLocation(10L, 35L);
+    }
+
+    @Test
+    void guestCanTranslateUsingServerLocaleAndRemoteAddress() throws Exception {
+        when(contentTranslationService.translate(
+                TranslatableContentType.POST_COMMENT, 35L, "ja", "203.0.113.9", null))
+                .thenReturn(ContentTranslationResponse.ready(
+                        "美しい場所です。", "ko", "ja", false));
+
+        mockMvc.perform(get("/post-comments/35/translation")
+                        .cookie(new Cookie("TRAVEL_DIARY_LOCALE", "ja"))
+                        .header("X-Forwarded-For", "198.51.100.77")
+                        .with(request -> {
+                            request.setRemoteAddr("203.0.113.9");
+                            return request;
+                        }))
+                .andExpect(status().isOk());
+
+        verify(contentTranslationService).translate(
+                TranslatableContentType.POST_COMMENT, 35L, "ja", "203.0.113.9", null);
+    }
+
+    @Test
+    void authenticatedTranslationUsesImmutableUserId() throws Exception {
+        User user = new User();
+        user.setId(42L);
+        user.setUsername("changeable-login-id");
+        user.setUserPassword("encoded");
+        user.setUserRole(UserRole.USER);
+        CustomUserDetails principal = new CustomUserDetails(user);
+        UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(
+                        principal, null, principal.getAuthorities());
+        when(contentTranslationService.translate(
+                TranslatableContentType.POST_COMMENT, 35L, "ko", "203.0.113.9", 42L))
+                .thenReturn(ContentTranslationResponse.ready("번역", "en", "ko", false));
+
+        mockMvc.perform(get("/post-comments/35/translation")
+                        .with(request -> {
+                            request.setRemoteAddr("203.0.113.9");
+                            return request;
+                        })
+                        .with(authentication(authentication)))
+                .andExpect(status().isOk());
+
+        verify(contentTranslationService).translate(
+                TranslatableContentType.POST_COMMENT, 35L, "ko", "203.0.113.9", 42L);
     }
 
     @Test

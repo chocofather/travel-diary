@@ -2,11 +2,13 @@ package com.example.travlediary.service.translation;
 
 import com.example.travlediary.model.translation.ContentTranslationCache;
 import com.example.travlediary.repository.translation.ContentTranslationCacheMapper;
+import com.example.travlediary.repository.translation.SharedTranslationCacheMapper;
 import org.junit.jupiter.api.Test;
 
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
@@ -262,6 +264,37 @@ class ContentTranslationServiceTest {
         }
     }
 
+    @Test
+    void postCommentUsesTheSharedCacheLeaseHashAndCostReservationFlow() {
+        MutableSourceReader reader = new MutableSourceReader(
+                source(TranslatableContentType.POST_COMMENT, "첫 게시글 댓글", "ko"));
+        InMemoryCacheMapper mapper = new InMemoryCacheMapper();
+        AtomicInteger providerCalls = new AtomicInteger();
+        MachineTranslationClient client = (text, source, target) -> {
+            providerCalls.incrementAndGet();
+            return new MachineTranslation("translated: " + text, "ko");
+        };
+        CountingUsageReservationGate usageReservation = new CountingUsageReservationGate();
+        ContentTranslationService service = service(reader, mapper, client, usageReservation);
+
+        ContentTranslationResponse miss = service.translate(
+                TranslatableContentType.POST_COMMENT, 7L, "en", "203.0.113.9", 42L);
+        ContentTranslationResponse hit = service.translate(
+                TranslatableContentType.POST_COMMENT, 7L, "en", "203.0.113.9", 42L);
+        reader.current.set(source(
+                TranslatableContentType.POST_COMMENT, "수정된 게시글 댓글", "ko"));
+        ContentTranslationResponse changed = service.translate(
+                TranslatableContentType.POST_COMMENT, 7L, "en", "203.0.113.9", 42L);
+
+        assertThat(miss.cached()).isFalse();
+        assertThat(hit.cached()).isTrue();
+        assertThat(changed.cached()).isFalse();
+        assertThat(changed.translatedText()).isEqualTo("translated: 수정된 게시글 댓글");
+        assertThat(providerCalls).hasValue(2);
+        assertThat(usageReservation.calls).isEqualTo(2);
+        assertThat(usageReservation.lastUserId).isEqualTo(42L);
+    }
+
     private ContentTranslationService service(TranslationSourceReader reader,
                                               ContentTranslationCacheMapper mapper,
                                               MachineTranslationClient client) {
@@ -274,10 +307,16 @@ class ContentTranslationServiceTest {
                                               TranslationUsageReservationGate usageReservation) {
         TranslationProperties properties = properties();
         TranslationSourceRegistry registry = new TranslationSourceRegistry(List.of(reader));
+        SharedTranslationCacheMapper sharedCacheMapper = mock(SharedTranslationCacheMapper.class);
+        when(sharedCacheMapper.insertProcessing(any())).thenReturn(1);
+        when(sharedCacheMapper.markReady(
+                any(), anyString(), anyString(), anyString(), anyString(), anyString(),
+                anyString(), any(), any())).thenReturn(1);
         return new ContentTranslationService(
-                registry, mapper, client,
+                registry, mapper, sharedCacheMapper, client,
                 new InMemoryTranslationRateLimiter(properties), properties,
-                new TranslationCacheFinalizer(registry, mapper), usageReservation);
+                new TranslationCacheFinalizer(registry, mapper), usageReservation,
+                new TranslationProviderMetadata("google-v3-general-v1"));
     }
 
     private TranslationProperties properties() {
@@ -288,8 +327,14 @@ class ContentTranslationServiceTest {
     }
 
     private TranslationSourceSnapshot source(String text, String language) {
+        return source(TranslatableContentType.DESTINATION_COMMENT, text, language);
+    }
+
+    private TranslationSourceSnapshot source(TranslatableContentType type,
+                                             String text,
+                                             String language) {
         return new TranslationSourceSnapshot(
-                TranslatableContentType.DESTINATION_COMMENT, 7L, "content", text, language, UPDATED_AT);
+                type, 7L, "content", text, language, UPDATED_AT);
     }
 
     private ContentTranslationCache cache(String source, String status, String translated) {
@@ -313,7 +358,10 @@ class ContentTranslationServiceTest {
 
         @Override
         public TranslatableContentType contentType() {
-            return TranslatableContentType.DESTINATION_COMMENT;
+            TranslationSourceSnapshot source = current.get();
+            return source == null
+                    ? TranslatableContentType.DESTINATION_COMMENT
+                    : source.contentType();
         }
 
         @Override
@@ -348,7 +396,16 @@ class ContentTranslationServiceTest {
         public synchronized int tryClaim(String contentType, Long contentId, String sourceField,
                                          String targetLanguage, byte[] sourceHash, String leaseToken,
                                          Timestamp now, Timestamp leaseExpiresAt) {
-            return 0;
+            if (value == null || Arrays.equals(value.getSourceHash(), sourceHash)) return 0;
+            value.setContentType(contentType);
+            value.setContentId(contentId);
+            value.setSourceField(sourceField);
+            value.setTargetLanguage(targetLanguage);
+            value.setSourceHash(sourceHash);
+            value.setLeaseToken(leaseToken);
+            value.setLeaseExpiresAt(leaseExpiresAt);
+            value.setStatus("PROCESSING");
+            return 1;
         }
 
         @Override
@@ -369,6 +426,22 @@ class ContentTranslationServiceTest {
                                            Timestamp retryAfter, Timestamp now) {
             if (value != null) value.setStatus("FAILED");
             return value == null ? 0 : 1;
+        }
+
+        @Override
+        public synchronized int upsertReady(ContentTranslationCache cache) {
+            value = cache;
+            value.setStatus("READY");
+            return 1;
+        }
+
+        @Override
+        public synchronized List<ContentTranslationCache> findReadyAfter(Long afterId, int limit) {
+            if (value == null || value.getId() == null || value.getId() <= afterId
+                    || !"READY".equals(value.getStatus())) {
+                return List.of();
+            }
+            return List.of(value);
         }
     }
 

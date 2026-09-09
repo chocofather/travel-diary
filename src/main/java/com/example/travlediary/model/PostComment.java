@@ -13,6 +13,7 @@ public class PostComment {
     private Long postId; // 회원게시물 번호
     private Long userId; // 회원번호
     private String content; // 내용
+    private String sourceLanguage = "und"; // 로컬 감지 원문 언어
     private Timestamp createdAt; // 생성일
     private Timestamp updatedAt; // 수정일
     private Timestamp deletedAt; // 삭제일

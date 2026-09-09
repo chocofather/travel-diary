@@ -59,6 +59,28 @@ class ContentTranslationCacheMapperContractTest {
     }
 
     @Test
+    void sharedResultCanPopulateTheContentCacheAndReadyRowsCanBeBackfilledInBatches() {
+        Configuration configuration = mapperConfiguration();
+        ContentTranslationCache cache = new ContentTranslationCache();
+
+        String upsert = sql(configuration, "upsertReady", cache);
+        assertThat(upsert)
+                .contains("INSERT INTO content_translation_cache")
+                .contains("ON DUPLICATE KEY UPDATE")
+                .contains("status = 'READY'")
+                .contains("lease_token = NULL");
+
+        String readyRows = sql(configuration, "findReadyAfter", Map.of(
+                "afterId", 0L, "limit", 500));
+        assertThat(readyRows)
+                .contains("status = 'READY'")
+                .contains("translated_text IS NOT NULL")
+                .contains("id > ?")
+                .contains("ORDER BY id")
+                .contains("LIMIT ?");
+    }
+
+    @Test
     void languageBackfillSelectsOnlyUndRowsIncludingDeletedOnesAndUpdatesConditionally() {
         String mapper = resourceText("/mapper/DestinationCommentMapper.xml");
         String select = between(mapper,

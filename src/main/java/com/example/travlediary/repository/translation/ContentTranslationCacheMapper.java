@@ -5,6 +5,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.sql.Timestamp;
+import java.util.List;
 
 @Mapper
 public interface ContentTranslationCacheMapper {
@@ -42,4 +43,9 @@ public interface ContentTranslationCacheMapper {
                    @Param("leaseToken") String leaseToken,
                    @Param("retryAfter") Timestamp retryAfter,
                    @Param("now") Timestamp now);
+
+    int upsertReady(ContentTranslationCache cache);
+
+    List<ContentTranslationCache> findReadyAfter(@Param("afterId") Long afterId,
+                                                 @Param("limit") int limit);
 }

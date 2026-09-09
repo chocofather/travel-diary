@@ -131,6 +131,7 @@ translation:
     enabled: ${GOOGLE_TRANSLATION_ENABLED:false}
     project-id: ${GOOGLE_CLOUD_PROJECT:}
     location: ${GOOGLE_TRANSLATION_LOCATION:global}
+    profile: ${GOOGLE_TRANSLATION_PROFILE:google-v3-general-v1}
   comment:
     max-characters: 2000
   lease-duration: 30s
@@ -142,4 +143,8 @@ translation:
     window: 1m
   backfill:
     destination-comments:
+      batch-size: 500
+    post-comments:
+      batch-size: 500
+    shared-cache:
       batch-size: 500

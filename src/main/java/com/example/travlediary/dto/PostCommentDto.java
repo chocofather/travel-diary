@@ -17,6 +17,8 @@ public class PostCommentDto {
     private boolean replyToDeleted;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private String content;
+    private String sourceLanguage;
+    private boolean translationAvailable;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private String writerNickname;
     @JsonInclude(JsonInclude.Include.NON_NULL)

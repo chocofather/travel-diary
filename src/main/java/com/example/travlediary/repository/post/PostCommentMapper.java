@@ -2,6 +2,8 @@ package com.example.travlediary.repository.post;
 
 import com.example.travlediary.dto.PostCommentDto;
 import com.example.travlediary.model.PostComment;
+import com.example.travlediary.model.translation.PostCommentLanguageBackfillRow;
+import com.example.travlediary.model.translation.PostCommentTranslationSource;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -44,11 +46,30 @@ public interface PostCommentMapper {
     PostCommentDto findDtoById(@Param("commentId") Long commentId,
                                @Param("currentUserId") Long currentUserId);
 
+    PostCommentTranslationSource findVisibleTranslationSource(@Param("id") Long id);
+
+    PostCommentTranslationSource findVisibleTranslationSourceForUpdate(@Param("id") Long id);
+
+    int correctSourceLanguage(@Param("id") Long id,
+                              @Param("sourceLanguage") String sourceLanguage,
+                              @Param("updatedAt") java.sql.Timestamp updatedAt);
+
+    List<PostCommentLanguageBackfillRow> findUndeterminedLanguagesAfter(
+            @Param("afterId") Long afterId,
+            @Param("limit") int limit);
+
+    int updateDetectedLanguageIfUndetermined(
+            @Param("id") Long id,
+            @Param("sourceLanguage") String sourceLanguage,
+            @Param("content") String content,
+            @Param("updatedAt") java.sql.Timestamp updatedAt);
+
     int insert(PostComment comment);
 
     int updateContent(@Param("commentId") Long commentId,
                       @Param("userId") Long userId,
-                      @Param("content") String content);
+                      @Param("content") String content,
+                      @Param("sourceLanguage") String sourceLanguage);
 
     int softDelete(@Param("commentId") Long commentId,
                    @Param("userId") Long userId);

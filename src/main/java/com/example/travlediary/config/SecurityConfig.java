@@ -400,6 +400,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/post-comments", "/post-comments/page").permitAll()
                         .requestMatchers(new RegexRequestMatcher(
                                 "^/post-comments/[0-9]+/location$", HttpMethod.GET.name())).permitAll()
+                        .requestMatchers(new RegexRequestMatcher(
+                                "^/post-comments/[0-9]+/translation$", HttpMethod.GET.name())).permitAll()
 
                         // 게시글 댓글 작성·수정·삭제는 로그인 사용자만 가능
                         .requestMatchers("/post-comments", "/post-comments/**").authenticated()

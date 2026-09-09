@@ -665,6 +665,42 @@ CREATE TABLE `content_translation_cache` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `shared_translation_cache`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `shared_translation_cache` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `source_hash` binary(32) NOT NULL,
+  `source_language` varchar(10) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `target_language` varchar(10) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `provider` varchar(20) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'GOOGLE',
+  `translation_profile` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `detected_source_language` varchar(10) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+  `translated_text` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  `status` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `lease_token` char(36) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+  `lease_expires_at` datetime(6) DEFAULT NULL,
+  `retry_after` datetime(6) DEFAULT NULL,
+  `created_at` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `updated_at` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
+    ON UPDATE CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_shared_translation_exact`
+    (`source_hash`,`source_language`,`target_language`,`provider`,`translation_profile`),
+  KEY `idx_shared_translation_status_retry`
+    (`status`,`retry_after`),
+  KEY `idx_shared_translation_lease`
+    (`status`,`lease_expires_at`),
+  CONSTRAINT `chk_shared_translation_status`
+    CHECK (`status` IN ('PROCESSING','READY','FAILED'))
+) ENGINE=InnoDB
+DEFAULT CHARSET=utf8mb4
+COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `destination_images`
 --
 -- `image_url`은 서비스 표시 URL이며, 외부 사진을 로컬 저장하면 `/uploads/...`를 사용한다.
@@ -1570,6 +1606,7 @@ CREATE TABLE `post_comment_likes` (
 CREATE TABLE `post_comments` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `content` text,
+  `source_language` varchar(10) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'und',
   `post_id` bigint NOT NULL,
   `user_id` bigint NOT NULL,
   `parent_comment_id` bigint DEFAULT NULL,

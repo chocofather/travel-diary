@@ -9,9 +9,13 @@ import com.example.travlediary.repository.post.PostCommentImageMapper;
 import com.example.travlediary.repository.post.PostCommentMapper;
 import com.example.travlediary.service.comment.CommentImageLimitException;
 import com.example.travlediary.service.file.FileUploadService;
+import com.example.travlediary.config.i18n.SupportedLanguage;
+import com.example.travlediary.service.translation.LocalContentLanguageDetector;
+import com.example.travlediary.service.translation.TranslationVisibility;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -44,6 +48,7 @@ public class PostCommentServiceImpl implements PostCommentService {
     private final PostCommentMapper postCommentMapper;
     private final PostCommentImageMapper postCommentImageMapper;
     private final FileUploadService fileUploadService;
+    private final LocalContentLanguageDetector languageDetector;
 
     @Value("${custom.upload-path}")
     private String uploadPath;
@@ -52,7 +57,7 @@ public class PostCommentServiceImpl implements PostCommentService {
     @Transactional(readOnly = true)
     public List<PostCommentDto> getComments(Long postId, Long currentUserId) {
         requireActivePost(postId);
-        return attachImageUrls(postCommentMapper.findByPostId(postId, currentUserId));
+        return prepareDtos(postCommentMapper.findByPostId(postId, currentUserId));
     }
 
     @Override
@@ -78,7 +83,7 @@ public class PostCommentServiceImpl implements PostCommentService {
                 ? List.of()
                 : postCommentMapper.findRepliesForRootComments(postId, currentUserId, rootIds);
 
-        return new PageResult<>(attachImageUrls(mergeRootThreads(roots, replies)), totalThreads,
+        return new PageResult<>(prepareDtos(mergeRootThreads(roots, replies)), totalThreads,
                 safePage, safeSize, totalCommentCount);
     }
 
@@ -111,6 +116,7 @@ public class PostCommentServiceImpl implements PostCommentService {
         comment.setPostId(postId);
         comment.setUserId(userId);
         comment.setContent(validatedContent);
+        comment.setSourceLanguage(languageDetector.detect(validatedContent).code());
         comment.setParentCommentId(parentCommentId);
         comment.setReplyToCommentId(replyToCommentId);
 
@@ -138,8 +144,10 @@ public class PostCommentServiceImpl implements PostCommentService {
     public PostCommentDto update(Long commentId, Long userId, String content) {
         PostComment comment = requireOwnedActiveComment(commentId, userId);
         String validatedContent = validateContent(content);
+        String sourceLanguage = languageDetector.detect(validatedContent).code();
 
-        if (postCommentMapper.updateContent(commentId, userId, validatedContent) != 1) {
+        if (postCommentMapper.updateContent(
+                commentId, userId, validatedContent, sourceLanguage) != 1) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "댓글을 찾을 수 없습니다.");
         }
         return requireLatestDto(comment.getId(), userId);
@@ -300,8 +308,29 @@ public class PostCommentServiceImpl implements PostCommentService {
         if (dto == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "댓글을 찾을 수 없습니다.");
         }
-        attachImageUrls(List.of(dto));
+        prepareDtos(List.of(dto));
         return dto;
+    }
+
+    private List<PostCommentDto> prepareDtos(List<PostCommentDto> comments) {
+        applyTranslationMetadata(comments);
+        return attachImageUrls(comments);
+    }
+
+    private void applyTranslationMetadata(List<PostCommentDto> comments) {
+        String targetLanguage = SupportedLanguage.fromLocale(LocaleContextHolder.getLocale())
+                .orElse(SupportedLanguage.KOREAN)
+                .getLanguageTag();
+        for (PostCommentDto comment : comments) {
+            String sourceLanguage = comment.getSourceLanguage();
+            if (sourceLanguage == null || sourceLanguage.isBlank()) {
+                sourceLanguage = "und";
+            }
+            comment.setSourceLanguage(sourceLanguage);
+            comment.setTranslationAvailable(!comment.isDeleted()
+                    && !comment.isModerated()
+                    && TranslationVisibility.shouldOffer(sourceLanguage, targetLanguage));
+        }
     }
 
     /**

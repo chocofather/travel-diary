@@ -31,6 +31,14 @@ document.addEventListener('DOMContentLoaded', () => {
     /** 댓글 하나에 첨부할 수 있는 사진 수. 서버 PostCommentServiceImpl.MAX_COMMENT_IMAGES 와 같은 값. */
     const MAX_COMMENT_IMAGES = 3;
     const IMAGE_LIMIT_MESSAGE = `사진은 최대 ${MAX_COMMENT_IMAGES}장까지 첨부할 수 있습니다.`;
+    const translationMessages = {
+        show: section.dataset.translationShow || '번역 보기',
+        original: section.dataset.translationOriginal || '원문 보기',
+        loading: section.dataset.translationLoading || '번역 중…',
+        retry: section.dataset.translationRetry || '번역이 처리 중입니다. 잠시 후 다시 시도해주세요.',
+        rateLimited: section.dataset.translationRateLimited || '번역 요청이 많습니다. 잠시 후 다시 시도해주세요.',
+        failed: section.dataset.translationFailed || '지금은 번역을 사용할 수 없습니다.'
+    };
     /** 폼(댓글/답글)별 사진 선택 상태 */
     const imagePickers = new WeakMap();
 
@@ -56,7 +64,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const body = await response.json();
                 errorMessage = body.detail || body.message || body.error || errorMessage;
             }
-            throw new Error(errorMessage);
+            const error = new Error(errorMessage);
+            error.status = response.status;
+            error.retryAfterSeconds = Number(response.headers.get('Retry-After') || 0);
+            throw error;
         }
 
         if (response.status === 204) return null;
@@ -244,6 +255,76 @@ document.addEventListener('DOMContentLoaded', () => {
         return button;
     }
 
+    function makeTranslationControl(comment) {
+        if (comment.translationAvailable !== true) return null;
+        const button = makeButton(
+            translationMessages.show,
+            'post-comment-translate content-comment-action');
+        button.dataset.translationState = 'original';
+        return button;
+    }
+
+    async function fetchTranslation(commentId) {
+        return requestJson(`/post-comments/${encodeURIComponent(commentId)}/translation`, {
+            method: 'GET',
+            cache: 'no-store'
+        });
+    }
+
+    function toggleTranslation(item, button) {
+        const content = item.querySelector('.post-comment-content-text');
+        const status = item.querySelector('.content-comment-translation-status');
+        if (!content || !status) return;
+
+        if (button.dataset.translationState === 'translated') {
+            content.textContent = content.dataset.originalContent || '';
+            button.dataset.translationState = 'original';
+            button.textContent = translationMessages.show;
+            status.hidden = true;
+            status.textContent = '';
+            return;
+        }
+
+        button.disabled = true;
+        button.textContent = translationMessages.loading;
+        status.hidden = true;
+        void requestTranslation(item.dataset.commentId, button, content, status, 0);
+    }
+
+    async function requestTranslation(commentId, button, content, status, attempt) {
+        try {
+            const response = await fetchTranslation(commentId);
+            if (response.status === 'PROCESSING') {
+                const waitSeconds = Math.max(1, Number(response.retryAfterSeconds || 1));
+                if (attempt >= 3) {
+                    button.disabled = false;
+                    button.textContent = translationMessages.show;
+                    status.textContent = translationMessages.retry;
+                    status.hidden = false;
+                    return;
+                }
+                window.setTimeout(
+                    () => requestTranslation(commentId, button, content, status, attempt + 1),
+                    Math.min(waitSeconds, 30) * 1000);
+                return;
+            }
+            // 번역 결과는 사용자 콘텐츠이므로 HTML로 해석하지 않는다.
+            content.textContent = response.translatedText || '';
+            button.dataset.translationState = 'translated';
+            button.textContent = translationMessages.original;
+            button.disabled = false;
+            status.hidden = true;
+            status.textContent = '';
+        } catch (error) {
+            button.disabled = false;
+            button.textContent = translationMessages.show;
+            status.textContent = error.status === 429
+                ? translationMessages.rateLimited
+                : translationMessages.failed;
+            status.hidden = false;
+        }
+    }
+
     function makeLikeControl(comment, loggedIn) {
         const likeCount = document.createElement('span');
         likeCount.className = 'post-comment-like-count content-comment-like-count';
@@ -342,12 +423,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 : `@${comment.replyToNickname || '알 수 없는 사용자'}`;
             content.append(replyTarget);
         }
-        content.append(document.createTextNode(comment.content || ''));
+        const contentText = document.createElement('span');
+        contentText.className = 'post-comment-content-text';
+        contentText.dataset.originalContent = comment.content || '';
+        contentText.textContent = comment.content || '';
+        content.append(contentText);
+
+        const translationStatus = document.createElement('p');
+        translationStatus.className = 'content-comment-translation-status';
+        translationStatus.hidden = true;
 
         const loggedIn = typeof isLoggedIn !== 'undefined' && isLoggedIn;
         const actions = document.createElement('div');
         actions.className = 'post-comment-actions content-comment-actions';
         actions.append(makeLikeControl(comment, loggedIn));
+        const translationControl = makeTranslationControl(comment);
+        if (translationControl) actions.append(translationControl);
         if (loggedIn) {
             actions.append(makeButton('답글', 'post-comment-reply-button content-comment-action'));
         }
@@ -367,7 +458,7 @@ document.addEventListener('DOMContentLoaded', () => {
         body.className = 'content-comment-body';
         // 삭제·관리자 조치 댓글은 위에서 플레이스홀더로 끝나므로 여기까지 오지 않는다.
         const images = makeCommentImages(comment);
-        body.append(meta, content);
+        body.append(meta, content, translationStatus);
         if (images) body.append(images);
         body.append(actions);
 
@@ -556,6 +647,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!item) return;
         const commentId = item.dataset.commentId;
 
+        const translationButton = event.target.closest('.post-comment-translate');
+        if (translationButton) {
+            toggleTranslation(item, translationButton);
+            return;
+        }
+
         if (event.target.closest('.post-comment-like-button')) {
             const likeButton = event.target.closest('.post-comment-like-button');
             if (likeButton.disabled) return;
@@ -651,7 +748,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const textarea = document.createElement('textarea');
             textarea.className = 'post-comment-edit-textarea';
             textarea.maxLength = 2000;
-            textarea.value = content.textContent;
+            textarea.value = item.querySelector('.post-comment-content-text')
+                ?.dataset.originalContent || content.textContent;
 
             const editActions = document.createElement('div');
             editActions.className = 'post-comment-edit-actions post-comment-actions';
