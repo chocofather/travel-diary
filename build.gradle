@@ -20,6 +20,10 @@ java {
     }
 }
 
+springBoot {
+    mainClass = 'com.example.travlediary.TravleDiaryApplication'
+}
+
 configurations {
     compileOnly {
         extendsFrom annotationProcessor
@@ -55,6 +59,11 @@ dependencies {
     // 게시글 에디터 HTML 정화
     implementation 'org.jsoup:jsoup:1.18.3'
 
+    // 사용자 콘텐츠 언어 감지 및 Google Cloud Translation v3
+    implementation 'com.github.pemistahl:lingua:1.2.2'
+    implementation platform('com.google.cloud:libraries-bom:26.86.0')
+    implementation 'com.google.cloud:google-cloud-translate'
+
     // 메일 전송
     implementation 'org.springframework.boot:spring-boot-starter-mail'
 
@@ -76,4 +85,12 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+tasks.register('backfillDestinationCommentLanguages', JavaExec) {
+    group = 'application'
+    description = 'Classify und destination comment source languages with the local detector'
+    dependsOn tasks.named('classes')
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.example.travlediarybackfill.DestinationCommentLanguageBackfillApplication'
 }

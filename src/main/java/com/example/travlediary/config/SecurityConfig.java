@@ -371,6 +371,8 @@ public class SecurityConfig {
                         // 댓글 deep-link 위치 조회는 상세페이지와 동일하게 공개 읽기만 허용
                         .requestMatchers(new RegexRequestMatcher(
                                 "^/comments/[0-9]+/location$", HttpMethod.GET.name())).permitAll()
+                        .requestMatchers(new RegexRequestMatcher(
+                                "^/comments/[0-9]+/translation$", HttpMethod.GET.name())).permitAll()
 
                         // 사용자 여행정보 목록 GET만 공개
                         .requestMatchers(HttpMethod.GET, "/travel-info").permitAll()

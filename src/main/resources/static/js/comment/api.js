@@ -65,6 +65,24 @@ export function fetchCommentLocation(destinationId, commentId) {
     }).then(res => handleJson(res, '댓글 위치 조회'));
 }
 
+/** 현재 사이트 언어로 댓글을 번역한다. target/source text는 서버가 결정한다. */
+export async function fetchCommentTranslation(commentId) {
+    const response = await fetch(`/comments/${encodeURIComponent(commentId)}/translation`, {
+        headers: { 'Accept': 'application/json' },
+        credentials: 'same-origin',
+        cache: 'no-store'
+    });
+    const contentType = response.headers.get('Content-Type') || '';
+    const body = contentType.includes('application/json') ? await response.json() : {};
+    if (!response.ok) {
+        const error = new Error(body.message || `번역 실패: HTTP ${response.status}`);
+        error.status = response.status;
+        error.retryAfterSeconds = Number(response.headers.get('Retry-After') || 0);
+        throw error;
+    }
+    return body;
+}
+
 /**
  * 대댓글(답글) 등록
  * @param {string|number} destinationId
@@ -132,4 +150,3 @@ export function fetchThumbnails(destinationId) {
     return fetch(`/comments/images?destinationId=${destinationId}`)
         .then(res => handleJson(res, '썸네일 로드'));
 }
-

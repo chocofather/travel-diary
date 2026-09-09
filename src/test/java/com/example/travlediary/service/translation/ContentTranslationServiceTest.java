@@ -1,0 +1,389 @@
+package com.example.travlediary.service.translation;
+
+import com.example.travlediary.model.translation.ContentTranslationCache;
+import com.example.travlediary.repository.translation.ContentTranslationCacheMapper;
+import org.junit.jupiter.api.Test;
+
+import java.sql.Timestamp;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+class ContentTranslationServiceTest {
+    private static final Timestamp UPDATED_AT = Timestamp.from(Instant.parse("2026-09-09T01:00:00Z"));
+
+    @Test
+    void readyHashMatchReturnsCacheWithoutCallingProvider() {
+        MutableSourceReader reader = new MutableSourceReader(source("원문 댓글", "ko"));
+        ContentTranslationCacheMapper mapper = mock(ContentTranslationCacheMapper.class);
+        MachineTranslationClient client = mock(MachineTranslationClient.class);
+        CountingUsageReservationGate monthlyUsage = new CountingUsageReservationGate();
+        ContentTranslationCache cached = cache("원문 댓글", "READY", "Translated once");
+        when(mapper.find("DESTINATION_COMMENT", 7L, "content", "en")).thenReturn(cached);
+
+        ContentTranslationResponse response = service(reader, mapper, client, monthlyUsage)
+                .translate(TranslatableContentType.DESTINATION_COMMENT, 7L, "en", "127.0.0.1", 3L);
+
+        assertThat(response.translatedText()).isEqualTo("Translated once");
+        assertThat(response.cached()).isTrue();
+        assertThat(monthlyUsage.calls).isZero();
+        verify(client, never()).translate(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void undeterminedSourceNeverCallsCacheOrExternalProvider() {
+        MutableSourceReader reader = new MutableSourceReader(source("OK", "und"));
+        ContentTranslationCacheMapper mapper = mock(ContentTranslationCacheMapper.class);
+        MachineTranslationClient client = mock(MachineTranslationClient.class);
+
+        ContentTranslationResponse response = service(reader, mapper, client)
+                .translate(TranslatableContentType.DESTINATION_COMMENT, 7L, "en", "127.0.0.1", null);
+
+        assertThat(response.translatedText()).isEqualTo("OK");
+        verify(mapper, never()).find(anyString(), any(), anyString(), anyString());
+        verify(client, never()).translate(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void cacheMissCallsProviderAndStoresReadyResult() {
+        MutableSourceReader reader = new MutableSourceReader(source("원문 댓글", "ko"));
+        ContentTranslationCacheMapper mapper = mock(ContentTranslationCacheMapper.class);
+        MachineTranslationClient client = (text, source, target) ->
+                new MachineTranslation("Translated comment", "ko");
+        CountingUsageReservationGate monthlyUsage = new CountingUsageReservationGate();
+        when(mapper.insertProcessing(any())).thenReturn(1);
+        when(mapper.markReady(anyString(), eq(7L), eq("content"), eq("en"), any(), anyString(),
+                eq("Translated comment"), eq("ko"), any())).thenReturn(1);
+
+        ContentTranslationResponse response = service(reader, mapper, client, monthlyUsage)
+                .translate(TranslatableContentType.DESTINATION_COMMENT, 7L, "en", "127.0.0.1", null);
+
+        assertThat(response.translatedText()).isEqualTo("Translated comment");
+        assertThat(response.cached()).isFalse();
+        assertThat(monthlyUsage.calls).isEqualTo(1);
+        assertThat(monthlyUsage.characters).isEqualTo(5L);
+        assertThat(monthlyUsage.lastIpAddress).isEqualTo("127.0.0.1");
+        assertThat(monthlyUsage.lastUserId).isNull();
+        verify(mapper).markReady(anyString(), eq(7L), eq("content"), eq("en"), any(), anyString(),
+                eq("Translated comment"), eq("ko"), any());
+    }
+
+    @Test
+    void changedSourceHashClaimsAndReplacesOldCache() {
+        MutableSourceReader reader = new MutableSourceReader(source("수정된 댓글", "ko"));
+        ContentTranslationCacheMapper mapper = mock(ContentTranslationCacheMapper.class);
+        when(mapper.find("DESTINATION_COMMENT", 7L, "content", "en"))
+                .thenReturn(cache("이전 댓글", "READY", "Old translation"));
+        when(mapper.insertProcessing(any())).thenReturn(0);
+        when(mapper.tryClaim(anyString(), eq(7L), eq("content"), eq("en"), any(), anyString(), any(), any()))
+                .thenReturn(1);
+        when(mapper.markReady(anyString(), eq(7L), eq("content"), eq("en"), any(), anyString(),
+                eq("New translation"), eq("ko"), any())).thenReturn(1);
+
+        ContentTranslationResponse response = service(reader, mapper,
+                (text, source, target) -> new MachineTranslation("New translation", "ko"))
+                .translate(TranslatableContentType.DESTINATION_COMMENT, 7L, "en", "127.0.0.1", null);
+
+        assertThat(response.translatedText()).isEqualTo("New translation");
+        verify(mapper).tryClaim(anyString(), eq(7L), eq("content"), eq("en"), any(), anyString(), any(), any());
+    }
+
+    @Test
+    void sourceChangedDuringProviderCallIsNeverStoredReady() {
+        MutableSourceReader reader = new MutableSourceReader(source("처음 댓글", "ko"));
+        ContentTranslationCacheMapper mapper = mock(ContentTranslationCacheMapper.class);
+        when(mapper.insertProcessing(any())).thenReturn(1);
+        MachineTranslationClient client = (text, source, target) -> {
+            reader.current.set(source("번역 중 수정된 댓글", "ko"));
+            return new MachineTranslation("Stale translation", "ko");
+        };
+
+        assertThatThrownBy(() -> service(reader, mapper, client)
+                .translate(TranslatableContentType.DESTINATION_COMMENT, 7L, "en", "127.0.0.1", null))
+                .isInstanceOf(TranslationStaleException.class);
+
+        verify(mapper, never()).markReady(anyString(), any(), anyString(), anyString(), any(),
+                anyString(), anyString(), any(), any());
+    }
+
+    @Test
+    void hiddenOrDeletedSourceReturnsNotFoundBeforeCacheLookup() {
+        MutableSourceReader reader = new MutableSourceReader(null);
+        ContentTranslationCacheMapper mapper = mock(ContentTranslationCacheMapper.class);
+        MachineTranslationClient client = mock(MachineTranslationClient.class);
+
+        assertThatThrownBy(() -> service(reader, mapper, client)
+                .translate(TranslatableContentType.DESTINATION_COMMENT, 7L, "en", "127.0.0.1", null))
+                .isInstanceOf(TranslationNotFoundException.class);
+
+        verify(mapper, never()).find(anyString(), any(), anyString(), anyString());
+        verify(client, never()).translate(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void providerFailureMarksLeaseFailedAndLeavesCommentFlowIndependent() {
+        MutableSourceReader reader = new MutableSourceReader(source("원문 댓글", "ko"));
+        ContentTranslationCacheMapper mapper = mock(ContentTranslationCacheMapper.class);
+        when(mapper.insertProcessing(any())).thenReturn(1);
+        MachineTranslationClient client = (text, source, target) -> {
+            throw new MachineTranslationException("provider unavailable");
+        };
+        CountingUsageReservationGate monthlyUsage = new CountingUsageReservationGate();
+
+        assertThatThrownBy(() -> service(reader, mapper, client, monthlyUsage)
+                .translate(TranslatableContentType.DESTINATION_COMMENT, 7L, "en", "127.0.0.1", null))
+                .isInstanceOf(MachineTranslationException.class);
+
+        assertThat(monthlyUsage.calls).isEqualTo(1);
+        assertThat(monthlyUsage.characters).isEqualTo(5L);
+        verify(mapper).markFailed(anyString(), eq(7L), eq("content"), eq("en"), any(),
+                anyString(), any(), any());
+    }
+
+    @Test
+    void providerPreparationFailureDoesNotReserveMonthlyUsage() {
+        MutableSourceReader reader = new MutableSourceReader(source("원문 댓글", "ko"));
+        ContentTranslationCacheMapper mapper = mock(ContentTranslationCacheMapper.class);
+        when(mapper.insertProcessing(any())).thenReturn(1);
+        MachineTranslationClient client = new MachineTranslationClient() {
+            @Override
+            public void prepare() {
+                throw new MachineTranslationException("provider unavailable");
+            }
+
+            @Override
+            public MachineTranslation translate(String sourceText, String sourceLanguage, String targetLanguage) {
+                throw new AssertionError("provider 호출까지 진행되면 안 됩니다.");
+            }
+        };
+        CountingUsageReservationGate monthlyUsage = new CountingUsageReservationGate();
+
+        assertThatThrownBy(() -> service(reader, mapper, client, monthlyUsage)
+                .translate(TranslatableContentType.DESTINATION_COMMENT, 7L, "en", "127.0.0.1", null))
+                .isInstanceOf(MachineTranslationException.class);
+
+        assertThat(monthlyUsage.calls).isZero();
+        verify(mapper).markFailed(anyString(), eq(7L), eq("content"), eq("en"), any(),
+                anyString(), any(), any());
+    }
+
+    @Test
+    void monthlyLimitRejectionNeverCallsTheProvider() {
+        MutableSourceReader reader = new MutableSourceReader(source("원문 댓글", "ko"));
+        ContentTranslationCacheMapper mapper = mock(ContentTranslationCacheMapper.class);
+        when(mapper.insertProcessing(any())).thenReturn(1);
+        MachineTranslationClient client = mock(MachineTranslationClient.class);
+        TranslationUsageReservationGate monthlyUsage = (sourceText, ipAddress, userId) -> {
+            throw new TranslationMonthlyLimitException();
+        };
+
+        assertThatThrownBy(() -> service(reader, mapper, client, monthlyUsage)
+                .translate(TranslatableContentType.DESTINATION_COMMENT, 7L, "en", "127.0.0.1", null))
+                .isInstanceOf(TranslationMonthlyLimitException.class);
+
+        verify(client, never()).translate(anyString(), anyString(), anyString());
+        verify(mapper).markFailed(anyString(), eq(7L), eq("content"), eq("en"), any(),
+                anyString(), any(), any());
+    }
+
+    @Test
+    void dailyLimitRejectionNeverCallsTheProvider() {
+        MutableSourceReader reader = new MutableSourceReader(source("원문 댓글", "ko"));
+        ContentTranslationCacheMapper mapper = mock(ContentTranslationCacheMapper.class);
+        when(mapper.insertProcessing(any())).thenReturn(1);
+        MachineTranslationClient client = mock(MachineTranslationClient.class);
+        TranslationUsageReservationGate usageReservation = (sourceText, ipAddress, userId) -> {
+            throw new TranslationDailyLimitException();
+        };
+
+        assertThatThrownBy(() -> service(reader, mapper, client, usageReservation)
+                .translate(TranslatableContentType.DESTINATION_COMMENT, 7L, "en", "127.0.0.1", 42L))
+                .isInstanceOf(TranslationDailyLimitException.class);
+
+        verify(client, never()).translate(anyString(), anyString(), anyString());
+        verify(mapper).markFailed(anyString(), eq(7L), eq("content"), eq("en"), any(),
+                anyString(), any(), any());
+    }
+
+    @Test
+    void concurrentFirstRequestsMakeOnlyOneProviderCall() throws Exception {
+        MutableSourceReader reader = new MutableSourceReader(source("원문 댓글", "ko"));
+        InMemoryCacheMapper mapper = new InMemoryCacheMapper();
+        AtomicInteger providerCalls = new AtomicInteger();
+        CountDownLatch providerStarted = new CountDownLatch(1);
+        CountDownLatch releaseProvider = new CountDownLatch(1);
+        MachineTranslationClient client = (text, source, target) -> {
+            providerCalls.incrementAndGet();
+            providerStarted.countDown();
+            try {
+                releaseProvider.await(2, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            return new MachineTranslation("Translated", "ko");
+        };
+        CountingUsageReservationGate monthlyUsage = new CountingUsageReservationGate();
+        ContentTranslationService service = service(reader, mapper, client, monthlyUsage);
+
+        var executor = Executors.newFixedThreadPool(2);
+        try {
+            var first = executor.submit(() -> service.translate(
+                    TranslatableContentType.DESTINATION_COMMENT, 7L, "en", "10.0.0.1", null));
+            assertThat(providerStarted.await(2, TimeUnit.SECONDS)).isTrue();
+            var second = executor.submit(() -> service.translate(
+                    TranslatableContentType.DESTINATION_COMMENT, 7L, "en", "10.0.0.2", null));
+            ContentTranslationResponse waiting = second.get(2, TimeUnit.SECONDS);
+            releaseProvider.countDown();
+            ContentTranslationResponse ready = first.get(2, TimeUnit.SECONDS);
+
+            assertThat(waiting.status()).isEqualTo("PROCESSING");
+            assertThat(ready.status()).isEqualTo("READY");
+            assertThat(providerCalls).hasValue(1);
+            assertThat(monthlyUsage.calls).isEqualTo(1);
+            assertThat(monthlyUsage.characters).isEqualTo(5L);
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    private ContentTranslationService service(TranslationSourceReader reader,
+                                              ContentTranslationCacheMapper mapper,
+                                              MachineTranslationClient client) {
+        return service(reader, mapper, client, (sourceText, ipAddress, userId) -> { });
+    }
+
+    private ContentTranslationService service(TranslationSourceReader reader,
+                                              ContentTranslationCacheMapper mapper,
+                                              MachineTranslationClient client,
+                                              TranslationUsageReservationGate usageReservation) {
+        TranslationProperties properties = properties();
+        TranslationSourceRegistry registry = new TranslationSourceRegistry(List.of(reader));
+        return new ContentTranslationService(
+                registry, mapper, client,
+                new InMemoryTranslationRateLimiter(properties), properties,
+                new TranslationCacheFinalizer(registry, mapper), usageReservation);
+    }
+
+    private TranslationProperties properties() {
+        return new TranslationProperties(
+                2000, Duration.ofSeconds(30), Duration.ofSeconds(30),
+                100, 100, 100, Duration.ofMinutes(1), true, 400_000L,
+                20_000L, 5_000L);
+    }
+
+    private TranslationSourceSnapshot source(String text, String language) {
+        return new TranslationSourceSnapshot(
+                TranslatableContentType.DESTINATION_COMMENT, 7L, "content", text, language, UPDATED_AT);
+    }
+
+    private ContentTranslationCache cache(String source, String status, String translated) {
+        ContentTranslationCache cache = new ContentTranslationCache();
+        cache.setContentType("DESTINATION_COMMENT");
+        cache.setContentId(7L);
+        cache.setSourceField("content");
+        cache.setTargetLanguage("en");
+        cache.setSourceHash(ContentTranslationService.sourceHash(source));
+        cache.setStatus(status);
+        cache.setTranslatedText(translated);
+        return cache;
+    }
+
+    private static final class MutableSourceReader implements TranslationSourceReader {
+        private final AtomicReference<TranslationSourceSnapshot> current;
+
+        private MutableSourceReader(TranslationSourceSnapshot source) {
+            this.current = new AtomicReference<>(source);
+        }
+
+        @Override
+        public TranslatableContentType contentType() {
+            return TranslatableContentType.DESTINATION_COMMENT;
+        }
+
+        @Override
+        public Optional<TranslationSourceSnapshot> findVisible(Long contentId) {
+            return Optional.ofNullable(current.get());
+        }
+
+        @Override
+        public Optional<TranslationSourceSnapshot> findVisibleForUpdate(Long contentId) {
+            return Optional.ofNullable(current.get());
+        }
+    }
+
+    private static final class InMemoryCacheMapper implements ContentTranslationCacheMapper {
+        private ContentTranslationCache value;
+
+        @Override
+        public synchronized ContentTranslationCache find(String contentType, Long contentId,
+                                                         String sourceField, String targetLanguage) {
+            return value;
+        }
+
+        @Override
+        public synchronized int insertProcessing(ContentTranslationCache cache) {
+            if (value != null) return 0;
+            value = cache;
+            value.setStatus("PROCESSING");
+            return 1;
+        }
+
+        @Override
+        public synchronized int tryClaim(String contentType, Long contentId, String sourceField,
+                                         String targetLanguage, byte[] sourceHash, String leaseToken,
+                                         Timestamp now, Timestamp leaseExpiresAt) {
+            return 0;
+        }
+
+        @Override
+        public synchronized int markReady(String contentType, Long contentId, String sourceField,
+                                          String targetLanguage, byte[] sourceHash, String leaseToken,
+                                          String translatedText, String detectedSourceLanguage,
+                                          Timestamp now) {
+            if (value == null || !leaseToken.equals(value.getLeaseToken())) return 0;
+            value.setTranslatedText(translatedText);
+            value.setDetectedSourceLanguage(detectedSourceLanguage);
+            value.setStatus("READY");
+            return 1;
+        }
+
+        @Override
+        public synchronized int markFailed(String contentType, Long contentId, String sourceField,
+                                           String targetLanguage, byte[] sourceHash, String leaseToken,
+                                           Timestamp retryAfter, Timestamp now) {
+            if (value != null) value.setStatus("FAILED");
+            return value == null ? 0 : 1;
+        }
+    }
+
+    private static final class CountingUsageReservationGate implements TranslationUsageReservationGate {
+        private int calls;
+        private long characters;
+        private String lastIpAddress;
+        private Long lastUserId;
+
+        @Override
+        public synchronized void reserve(String sourceText, String ipAddress, Long userId) {
+            calls++;
+            characters += sourceText.codePointCount(0, sourceText.length());
+            lastIpAddress = ipAddress;
+            lastUserId = userId;
+        }
+    }
+}

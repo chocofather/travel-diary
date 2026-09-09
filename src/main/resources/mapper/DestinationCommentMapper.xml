@@ -9,6 +9,7 @@
         <id property="id" column="id"/>
         <result property="parentCommentId" column="parent_comment_id"/>
         <result property="content" column="content"/>
+        <result property="sourceLanguage" column="source_language"/>
         <result property="likes" column="likes"/>
         <result property="deleted" column="deleted"/>
         <result property="createdAt" column="created_at"/>
@@ -22,6 +23,7 @@
     <resultMap id="commentWithWriterMap" type="com.example.travlediary.model.DestinationComment">
         <id     property="id"         column="c_id"/>
         <result property="content"    column="content"/>
+        <result property="sourceLanguage" column="source_language"/>
         <result property="createdAt"  column="created_at"/>
         <result property="updatedAt"  column="updated_at"/>
         <result property="likes"      column="likes"/>
@@ -57,11 +59,11 @@
     <!-- 댓글 등록 -->
     <insert id="insert" parameterType="DestinationComment" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO destination_comments (
-            destination_id, user_id, content, likes, deleted,
+            destination_id, user_id, content, source_language, likes, deleted,
             created_at, updated_at, parent_comment_id
         )
         VALUES (
-                   #{destinationId}, #{userId}, #{content}, #{likes}, #{deleted},
+                   #{destinationId}, #{userId}, #{content}, #{sourceLanguage}, #{likes}, #{deleted},
                    #{createdAt}, #{updatedAt}, #{parentCommentId}
                )
     </insert>
@@ -80,6 +82,66 @@
         SELECT * FROM destination_comments WHERE id = #{id}
     </select>
 
+    <select id="findVisibleTranslationSource"
+            resultType="com.example.travlediary.model.translation.DestinationCommentTranslationSource">
+        SELECT c.id AS content_id,
+               c.content AS source_text,
+               c.source_language,
+               c.updated_at
+        FROM destination_comments c
+        WHERE c.id = #{id}
+          AND c.deleted = 0
+          AND c.content IS NOT NULL
+          AND NOT <include refid="ModeratedExists"/>
+    </select>
+
+    <select id="findVisibleTranslationSourceForUpdate"
+            resultType="com.example.travlediary.model.translation.DestinationCommentTranslationSource">
+        SELECT c.id AS content_id,
+               c.content AS source_text,
+               c.source_language,
+               c.updated_at
+        FROM destination_comments c
+        WHERE c.id = #{id}
+          AND c.deleted = 0
+          AND c.content IS NOT NULL
+          AND NOT <include refid="ModeratedExists"/>
+        FOR UPDATE
+    </select>
+
+    <update id="correctSourceLanguage">
+        UPDATE destination_comments c
+        SET source_language = #{sourceLanguage},
+            updated_at = updated_at
+        WHERE c.id = #{id}
+          AND c.deleted = 0
+          AND c.source_language = 'und'
+          AND c.updated_at &lt;=&gt; #{updatedAt}
+          AND NOT <include refid="ModeratedExists"/>
+    </update>
+
+    <!-- 일회성 로컬 언어 backfill: 삭제 여부와 관계없이 und 행만 keyset 방식으로 읽는다. -->
+    <select id="findUndeterminedLanguagesAfter"
+            resultType="com.example.travlediary.model.translation.DestinationCommentLanguageBackfillRow">
+        SELECT id, content, updated_at
+        FROM destination_comments
+        WHERE source_language = 'und'
+          AND id &gt; #{afterId}
+        ORDER BY id
+        LIMIT #{limit}
+    </select>
+
+    <!-- 조회 뒤 댓글이 수정된 경우 이전 원문 감지 결과를 쓰지 않는다. -->
+    <update id="updateDetectedLanguageIfUndetermined">
+        UPDATE destination_comments
+        SET source_language = #{sourceLanguage},
+            updated_at = updated_at
+        WHERE id = #{id}
+          AND source_language = 'und'
+          AND updated_at &lt;=&gt; #{updatedAt}
+          AND CAST(content AS BINARY) = CAST(#{content} AS BINARY)
+    </update>
+
     <!-- 소프트 삭제 처리 (deleted = true, 삭제일 저장) -->
     <update id="updateDeleted">
         UPDATE destination_comments
@@ -92,6 +154,7 @@
     <update id="updateContent" parameterType="com.example.travlediary.model.DestinationComment">
         UPDATE destination_comments
         SET content = #{content},
+            source_language = #{sourceLanguage},
             updated_at = #{updatedAt}
         WHERE id = #{id}
     </update>
@@ -153,6 +216,7 @@
     SELECT
         c.id as c_id,
         CASE WHEN c.deleted = 1 THEN NULL ELSE c.content END AS content,
+        c.source_language,
         c.created_at,
         c.updated_at,
         c.likes,
@@ -177,6 +241,7 @@
         SELECT
             c.id as c_id,
             CASE WHEN c.deleted = 1 THEN NULL ELSE c.content END AS content,
+            c.source_language,
             c.created_at,
             c.updated_at,
             c.likes,
@@ -201,6 +266,7 @@
         SELECT
             c.id as c_id,
             CASE WHEN c.deleted = 1 THEN NULL ELSE c.content END AS content,
+            c.source_language,
             c.created_at,
             c.updated_at,
             c.likes,
@@ -238,7 +304,7 @@
     <!-- 오래된 순 -->
     <select id="findPagedByCreatedAtAsc" resultMap="commentWithWriterMap">
         SELECT
-            c.id as c_id, c.content, c.created_at, c.updated_at, c.likes,
+            c.id as c_id, c.content, c.source_language, c.created_at, c.updated_at, c.likes,
             c.parent_comment_id, c.user_id,
             u.id as u_id, u.nickname, u.profile_image
         FROM destination_comments c
@@ -252,7 +318,7 @@
     <!-- 최신순 -->
     <select id="findPagedByCreatedAtDesc" resultMap="commentWithWriterMap">
         SELECT
-            c.id as c_id, c.content, c.created_at, c.updated_at, c.likes,
+            c.id as c_id, c.content, c.source_language, c.created_at, c.updated_at, c.likes,
             c.parent_comment_id, c.user_id,
             u.id as u_id, u.nickname, u.profile_image
         FROM destination_comments c
@@ -266,7 +332,7 @@
     <!-- 좋아요순 -->
     <select id="findPagedByLikesDesc" resultMap="commentWithWriterMap">
         SELECT
-            c.id as c_id, c.content, c.created_at, c.updated_at, c.likes,
+            c.id as c_id, c.content, c.source_language, c.created_at, c.updated_at, c.likes,
             c.parent_comment_id, c.user_id,
             u.id as u_id, u.nickname, u.profile_image
         FROM destination_comments c
@@ -282,6 +348,7 @@
         SELECT
         c.id as c_id,
         CASE WHEN c.deleted = 1 THEN NULL ELSE c.content END AS content,
+        c.source_language,
         c.created_at, c.updated_at, c.likes,
         c.parent_comment_id, c.user_id,
         c.deleted,
@@ -313,6 +380,7 @@
         SELECT
         c.id as c_id,
         CASE WHEN c.deleted = 1 THEN NULL ELSE c.content END AS content,
+        c.source_language,
         c.created_at, c.updated_at, c.likes,
         c.parent_comment_id, c.user_id,
         c.deleted,

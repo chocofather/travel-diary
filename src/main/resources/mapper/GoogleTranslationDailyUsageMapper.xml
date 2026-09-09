@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.translation.GoogleTranslationDailyUsageMapper">
+    <insert id="insertUserDayIfAbsent">
+        INSERT IGNORE INTO google_translation_daily_usage (
+            usage_date, subject_type, user_id,
+            used_characters, provider_calls, created_at, updated_at
+        ) VALUES (
+            #{usageDate}, 'USER', #{userId},
+            0, 0, #{now}, #{now}
+        )
+    </insert>
+
+    <update id="reserveUserIfWithinLimit">
+        UPDATE google_translation_daily_usage
+        SET used_characters = used_characters + #{characters},
+            provider_calls = provider_calls + 1,
+            updated_at = #{now}
+        WHERE usage_date = #{usageDate}
+          AND subject_type = 'USER'
+          AND user_id = #{userId}
+          AND #{characters} &lt;= #{characterLimit}
+          AND used_characters &lt;= #{characterLimit} - #{characters}
+    </update>
+
+    <insert id="insertIpDayIfAbsent">
+        INSERT IGNORE INTO google_translation_daily_usage (
+            usage_date, subject_type, ip_hash,
+            used_characters, provider_calls, created_at, updated_at
+        ) VALUES (
+            #{usageDate}, 'IP', #{ipHash},
+            0, 0, #{now}, #{now}
+        )
+    </insert>
+
+    <update id="reserveIpIfWithinLimit">
+        UPDATE google_translation_daily_usage
+        SET used_characters = used_characters + #{characters},
+            provider_calls = provider_calls + 1,
+            updated_at = #{now}
+        WHERE usage_date = #{usageDate}
+          AND subject_type = 'IP'
+          AND ip_hash = #{ipHash}
+          AND #{characters} &lt;= #{characterLimit}
+          AND used_characters &lt;= #{characterLimit} - #{characters}
+    </update>
+</mapper>

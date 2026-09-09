@@ -4,7 +4,8 @@ import {
     fetchThumbnails,
     toggleLikeApi,
     deleteCommentApi,
-    updateCommentApi
+    updateCommentApi,
+    fetchCommentTranslation
 } from './api.js';
 
 import { createCommentItem } from './render.js';
@@ -225,6 +226,7 @@ export function bindCommentActions(containerEl, onCommentsReload, onThumbnailsRe
         const commentDiv = e.target.closest('.comment-item');
         if (!commentDiv) return;
         const id = commentDiv.dataset.id;
+        if (handleTranslation(e, commentDiv, id)) return;
         if (handleLike(e, id, onCommentsReload)) return;
         if (handleDelete(e, id, onCommentsReload, onThumbnailsReload)) return;
         if (showEditForm(e, commentDiv)) return;
@@ -233,6 +235,70 @@ export function bindCommentActions(containerEl, onCommentsReload, onThumbnailsRe
         if (toggleReplyForm(e, commentDiv)) return;
         if (cancelReply(e)) return;
     });
+}
+
+function handleTranslation(e, commentDiv, id) {
+    const button = e.target.closest('.translate-btn');
+    if (!button) return false;
+    const content = commentDiv.querySelector('.comment-content');
+    const status = commentDiv.querySelector('.content-comment-translation-status');
+    if (!content || !status) return true;
+
+    if (button.dataset.translationState === 'translated') {
+        content.innerHTML = safeOriginalMarkup(content.dataset.originalContent || '');
+        button.dataset.translationState = 'original';
+        button.textContent = detailMessage('commentTranslate');
+        status.hidden = true;
+        status.textContent = '';
+        return true;
+    }
+
+    button.disabled = true;
+    button.textContent = detailMessage('commentTranslating');
+    status.hidden = true;
+    requestTranslation(id, button, content, status, 0);
+    return true;
+}
+
+async function requestTranslation(id, button, content, status, attempt) {
+    try {
+        const response = await fetchCommentTranslation(id);
+        if (response.status === 'PROCESSING') {
+            const waitSeconds = Math.max(1, Number(response.retryAfterSeconds || 1));
+            if (attempt >= 3) {
+                button.disabled = false;
+                button.textContent = detailMessage('commentTranslate');
+                status.textContent = detailMessage('commentTranslationRetry');
+                status.hidden = false;
+                return;
+            }
+            window.setTimeout(
+                () => requestTranslation(id, button, content, status, attempt + 1),
+                Math.min(waitSeconds, 30) * 1000);
+            return;
+        }
+        // 외부 번역 결과는 HTML로 해석하지 않는다.
+        content.textContent = response.translatedText || '';
+        button.dataset.translationState = 'translated';
+        button.textContent = detailMessage('commentOriginal');
+        button.disabled = false;
+        status.hidden = true;
+        status.textContent = '';
+    } catch (error) {
+        button.disabled = false;
+        button.textContent = detailMessage('commentTranslate');
+        status.textContent = error.status === 429
+            ? detailMessage('commentTranslationRateLimited')
+            : detailMessage('commentTranslationFailed');
+        status.hidden = false;
+    }
+}
+
+function safeOriginalMarkup(original) {
+    const holder = document.createElement('div');
+    holder.textContent = original;
+    return holder.innerHTML.replace(/@([^\s@]+)/g, (match, nickname) =>
+        `<span class="mention content-comment-mention">@${nickname}</span>`);
 }
 
 function handleLike(e, id, onCommentsReload) {

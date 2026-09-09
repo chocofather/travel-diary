@@ -55,7 +55,9 @@ function makePublicProfileLink(userId, child, className) {
  */
 function highlightMentions(content) {
     if (!content) return '';
-    return content.replace(/@([^\s@]+)/g, (match, nickname) =>
+    const holder = document.createElement('div');
+    holder.textContent = content;
+    return holder.innerHTML.replace(/@([^\s@]+)/g, (match, nickname) =>
         `<span class="mention content-comment-mention">@${nickname}</span>`
     );
 }
@@ -130,6 +132,10 @@ export function createCommentItem(comment, depth = 0, parentNickname = '') {
                 <span class="content-comment-sr-only">${detailMessage('commentLike')}</span>
                 <span class="content-comment-like-count">${comment.likes ?? 0}</span>
             </span>`;
+    const translationControl = comment.translationAvailable === true
+        ? `<button type="button" class="translate-btn content-comment-action"
+                   data-translation-state="original">${detailMessage('commentTranslate')}</button>`
+        : '';
 
     const profileImage = document.createElement('img');
     profileImage.src = profileUrl;
@@ -152,9 +158,11 @@ export function createCommentItem(comment, depth = 0, parentNickname = '') {
             </span>
         </div>
         <p class="comment-content content-comment-text">${highlightMentions(comment.content)}</p>
+        <p class="content-comment-translation-status" hidden></p>
         ${renderCommentImages(comment)}
         <div class="comment-actions content-comment-actions">
             ${likeControl}
+            ${translationControl}
             ${isLoggedIn ? `<button type="button" class="reply-btn content-comment-action">${detailMessage('commentReply')}</button>` : ''}
             ${comment.myComment || comment.admin ? `
                 <button type="button" class="edit-btn content-comment-action">${detailMessage('commentEdit')}</button>
@@ -162,6 +170,7 @@ export function createCommentItem(comment, depth = 0, parentNickname = '') {
             ` : ''}
         </div>
     `;
+    body.querySelector('.comment-content').dataset.originalContent = comment.content || '';
     if (window.adminModeration?.isAdminUser()) {
         body.querySelector('.content-comment-actions').append(
             window.adminModeration.makeButton(

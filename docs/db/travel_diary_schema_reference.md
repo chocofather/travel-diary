@@ -615,6 +615,7 @@ CREATE TABLE `destination_comments` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `parent_comment_id` bigint DEFAULT NULL,
   `content` text,
+  `source_language` varchar(10) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'und',
   `likes` int NOT NULL DEFAULT '0',
   `deleted` tinyint NOT NULL DEFAULT '0',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
@@ -629,6 +630,38 @@ CREATE TABLE `destination_comments` (
   CONSTRAINT `fk_destinationcomments_destination` FOREIGN KEY (`destination_id`) REFERENCES `destinations` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_destinationcomments_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=86 DEFAULT CHARSET=utf8mb3;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `content_translation_cache`
+--
+-- 공용 사용자 콘텐츠 번역 캐시. 다형 콘텐츠 참조이므로 FK 대신
+-- content_type/content_id/source_field 자연키와 각 source reader의 공개 상태 검증을 사용한다.
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `content_translation_cache` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `content_type` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `content_id` bigint NOT NULL,
+  `source_field` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `target_language` varchar(10) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `source_hash` binary(32) NOT NULL,
+  `detected_source_language` varchar(10) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+  `translated_text` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  `provider` varchar(20) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'GOOGLE',
+  `status` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `lease_token` char(36) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+  `lease_expires_at` datetime(6) DEFAULT NULL,
+  `retry_after` datetime(6) DEFAULT NULL,
+  `created_at` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `updated_at` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_content_translation_target` (`content_type`,`content_id`,`source_field`,`target_language`),
+  KEY `idx_content_translation_status_retry` (`status`,`retry_after`),
+  KEY `idx_content_translation_lease` (`status`,`lease_expires_at`),
+  CONSTRAINT `chk_content_translation_status` CHECK ((`status` in ('PROCESSING','READY','FAILED')))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1259,6 +1292,61 @@ CREATE TABLE `festival_info_translations` (
   UNIQUE KEY `uk_festival_info_translation` (`info_id`,`language_code`),
   KEY `idx_festival_info_translation_locale` (`language_code`,`info_id`),
   CONSTRAINT `fk_festival_info_translation` FOREIGN KEY (`info_id`) REFERENCES `festival_info` (`info_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `google_translation_daily_usage`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `google_translation_daily_usage` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `usage_date` date NOT NULL,
+  `subject_type` varchar(8) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `user_id` bigint DEFAULT NULL,
+  `ip_hash` binary(32) DEFAULT NULL,
+  `used_characters` bigint unsigned NOT NULL DEFAULT '0',
+  `provider_calls` bigint unsigned NOT NULL DEFAULT '0',
+  `created_at` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `updated_at` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
+    ON UPDATE CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_google_translation_daily_user`
+    (`usage_date`,`subject_type`,`user_id`),
+  UNIQUE KEY `uq_google_translation_daily_ip`
+    (`usage_date`,`subject_type`,`ip_hash`),
+  KEY `idx_google_translation_daily_user` (`user_id`),
+  CONSTRAINT `fk_google_translation_daily_user`
+    FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `chk_google_translation_daily_subject_type`
+    CHECK (`subject_type` IN ('USER','IP')),
+  CONSTRAINT `chk_google_translation_daily_subject`
+    CHECK (
+      (`subject_type` = 'USER' AND `user_id` IS NOT NULL AND `ip_hash` IS NULL)
+      OR
+      (`subject_type` = 'IP' AND `user_id` IS NULL AND `ip_hash` IS NOT NULL)
+    )
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `google_translation_monthly_usage`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `google_translation_monthly_usage` (
+  `month_key` char(7) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `used_characters` bigint unsigned NOT NULL DEFAULT '0',
+  `provider_calls` bigint unsigned NOT NULL DEFAULT '0',
+  `created_at` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `updated_at` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
+    ON UPDATE CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (`month_key`),
+  CONSTRAINT `chk_google_translation_month_key`
+    CHECK (`month_key` REGEXP '^[0-9]{4}-(0[1-9]|1[0-2])$')
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 

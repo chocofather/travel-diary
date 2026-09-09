@@ -11,6 +11,11 @@ import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.comment.CommentLikeService;
 import com.example.travlediary.service.comment.DestinationCommentService;
+import com.example.travlediary.service.translation.ContentTranslationResponse;
+import com.example.travlediary.service.translation.ContentTranslationService;
+import com.example.travlediary.service.translation.TranslatableContentType;
+import com.example.travlediary.service.translation.TranslationDailyLimitException;
+import com.example.travlediary.service.translation.TranslationMonthlyLimitException;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +26,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.multipart.MultipartFile;
+import jakarta.servlet.http.Cookie;
 
 import java.util.List;
 import java.util.Optional;
@@ -47,6 +53,8 @@ class DestinationCommentSecurityTest {
     private DestinationCommentService destinationCommentService;
     @MockitoBean
     private CommentLikeService commentLikeService;
+    @MockitoBean
+    private ContentTranslationService contentTranslationService;
     @MockitoBean
     private CustomLoginSuccessHandler customLoginSuccessHandler;
     @MockitoBean
@@ -111,5 +119,76 @@ class DestinationCommentSecurityTest {
                 .andExpect(jsonPath("$.page").value(2));
 
         verify(destinationCommentService).getCommentLocation(10L, 35L);
+    }
+
+    @Test
+    void guestTranslationUsesServerLocaleAndRemoteAddress() throws Exception {
+        when(contentTranslationService.translate(
+                TranslatableContentType.DESTINATION_COMMENT, 35L, "ja", "203.0.113.9", null))
+                .thenReturn(ContentTranslationResponse.ready(
+                        "美しい場所です。", "ko", "ja", false));
+
+        mockMvc.perform(get("/comments/35/translation")
+                        .cookie(new Cookie("TRAVEL_DIARY_LOCALE", "ja"))
+                        .header("X-Forwarded-For", "198.51.100.77")
+                        .with(request -> {
+                            request.setRemoteAddr("203.0.113.9");
+                            return request;
+                        }))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.translatedText").value("美しい場所です。"))
+                .andExpect(jsonPath("$.targetLanguage").value("ja"));
+
+        verify(contentTranslationService).translate(
+                TranslatableContentType.DESTINATION_COMMENT, 35L, "ja", "203.0.113.9", null);
+    }
+
+    @Test
+    void authenticatedTranslationUsesImmutableUserId() throws Exception {
+        User user = new User();
+        user.setId(42L);
+        user.setUsername("changeable-login-id");
+        user.setUserPassword("encoded");
+        user.setUserRole(UserRole.USER);
+        CustomUserDetails principal = new CustomUserDetails(user);
+        when(contentTranslationService.translate(
+                TranslatableContentType.DESTINATION_COMMENT, 35L, "ko", "203.0.113.9", 42L))
+                .thenReturn(ContentTranslationResponse.ready("번역", "en", "ko", false));
+
+        mockMvc.perform(get("/comments/35/translation")
+                        .with(request -> {
+                            request.setRemoteAddr("203.0.113.9");
+                            return request;
+                        })
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                principal, "n/a", principal.getAuthorities()))))
+                .andExpect(status().isOk());
+
+        verify(contentTranslationService).translate(
+                TranslatableContentType.DESTINATION_COMMENT, 35L, "ko", "203.0.113.9", 42L);
+    }
+
+    @Test
+    void monthlyTranslationLimitReturnsAGenericRateLimitResponse() throws Exception {
+        when(contentTranslationService.translate(
+                TranslatableContentType.DESTINATION_COMMENT, 35L, "ko", "127.0.0.1", null))
+                .thenThrow(new TranslationMonthlyLimitException());
+
+        mockMvc.perform(get("/comments/35/translation"))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.message")
+                        .value("현재 번역 요청을 이용할 수 없습니다. 잠시 후 다시 시도해주세요."));
+    }
+
+    @Test
+    void dailyTranslationLimitReturnsTheSameGenericRateLimitResponse() throws Exception {
+        when(contentTranslationService.translate(
+                TranslatableContentType.DESTINATION_COMMENT, 35L, "ko", "127.0.0.1", null))
+                .thenThrow(new TranslationDailyLimitException());
+
+        mockMvc.perform(get("/comments/35/translation"))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.message")
+                        .value("현재 번역 요청을 이용할 수 없습니다. 잠시 후 다시 시도해주세요."));
     }
 }

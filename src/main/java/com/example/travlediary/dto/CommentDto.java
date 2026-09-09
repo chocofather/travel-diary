@@ -9,6 +9,8 @@ import java.util.List;
 public class CommentDto {
     private Long id;
     private String content;
+    private String sourceLanguage;
+    private boolean translationAvailable;
     /** 댓글 첨부 사진 (destination_comment_images, display_order 오름차순, 최대 3장) */
     private List<String> imageUrls = List.of();
     private String createdAt;

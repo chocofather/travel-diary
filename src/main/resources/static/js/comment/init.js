@@ -167,8 +167,8 @@ export function init() {
     if (commentFormEl) {
         bindReplySubmit(commentListEl, destinationId, reloadComments);
         initCommentForm(destinationId, reloadComments, reloadThumbnails);
-        bindCommentActions(commentListEl, reloadComments, reloadThumbnails);
     }
+    bindCommentActions(commentListEl, reloadComments, reloadThumbnails);
 
     bindGalleryEvents(destinationId, openModal);
     bindSingleImageModal();

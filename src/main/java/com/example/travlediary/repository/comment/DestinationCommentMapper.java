@@ -2,6 +2,8 @@ package com.example.travlediary.repository.comment;
 
 import com.example.travlediary.dto.CommentDto;
 import com.example.travlediary.model.DestinationComment;
+import com.example.travlediary.model.translation.DestinationCommentTranslationSource;
+import com.example.travlediary.model.translation.DestinationCommentLanguageBackfillRow;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -19,6 +21,24 @@ public interface DestinationCommentMapper {
 
     // 댓글 하나 조회
     DestinationComment findById(@Param("id") Long id);
+
+    DestinationCommentTranslationSource findVisibleTranslationSource(@Param("id") Long id);
+
+    DestinationCommentTranslationSource findVisibleTranslationSourceForUpdate(@Param("id") Long id);
+
+    int correctSourceLanguage(@Param("id") Long id,
+                              @Param("sourceLanguage") String sourceLanguage,
+                              @Param("updatedAt") java.sql.Timestamp updatedAt);
+
+    List<DestinationCommentLanguageBackfillRow> findUndeterminedLanguagesAfter(
+            @Param("afterId") Long afterId,
+            @Param("limit") int limit);
+
+    int updateDetectedLanguageIfUndetermined(
+            @Param("id") Long id,
+            @Param("sourceLanguage") String sourceLanguage,
+            @Param("content") String content,
+            @Param("updatedAt") java.sql.Timestamp updatedAt);
 
     // 삭제 플래그 업데이트
     void updateDeleted(DestinationComment comment);

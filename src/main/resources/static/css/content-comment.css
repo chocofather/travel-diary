@@ -301,6 +301,18 @@
     opacity: 0.5;
 }
 
+.content-comments .translate-btn {
+    color: #4f7467;
+    font-weight: 600;
+}
+
+.content-comments .content-comment-translation-status {
+    margin: 4px 0 0;
+    color: #7a6258;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
 .content-comments .content-comment-like-icon {
     display: block;
     width: 20px;

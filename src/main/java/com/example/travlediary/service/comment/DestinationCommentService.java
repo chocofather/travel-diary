@@ -13,6 +13,9 @@ import com.example.travlediary.repository.comment.DestinationCommentMapper;
 import com.example.travlediary.repository.destination.DestinationMapper;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.service.file.FileUploadService;
+import com.example.travlediary.config.i18n.SupportedLanguage;
+import com.example.travlediary.service.translation.LocalContentLanguageDetector;
+import com.example.travlediary.service.translation.TranslationVisibility;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.context.i18n.LocaleContextHolder;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -45,6 +49,7 @@ public class DestinationCommentService {
     private final DestinationCommentImageMapper destinationCommentImageMapper;
     private final UserMapper userMapper;
     private final FileUploadService fileUploadService;
+    private final LocalContentLanguageDetector languageDetector;
 
     @Value("${custom.upload-path}")
     private String uploadPath;
@@ -117,6 +122,7 @@ public class DestinationCommentService {
 
         // 내용과 수정 시간 업데이트
         comment.setContent(content);
+        comment.setSourceLanguage(languageDetector.detect(content).code());
         comment.setUpdatedAt(new Timestamp(System.currentTimeMillis()));
 
         // DB 반영
@@ -164,6 +170,7 @@ public class DestinationCommentService {
         comment.setDestinationId(destinationId);
         comment.setUserId(userId);
         comment.setContent(content);
+        comment.setSourceLanguage(languageDetector.detect(content).code());
         comment.setLikes(0);
         comment.setDeleted(false);
         comment.setCreatedAt(new Timestamp(System.currentTimeMillis()));
@@ -194,6 +201,7 @@ public class DestinationCommentService {
         CommentDto dto = new CommentDto();
         dto.setId(comment.getId());
         dto.setContent(comment.getContent());
+        applyTranslationMetadata(dto, comment);
         dto.setImageUrls(List.copyOf(savedImageUrls));
         dto.setCreatedAt(comment.getCreatedAt().toString());
         dto.setUpdatedAt(comment.getUpdatedAt().toString());
@@ -306,6 +314,7 @@ public class DestinationCommentService {
             CommentDto dto = new CommentDto();
             dto.setId(comment.getId());
             dto.setContent(comment.getContent());
+            applyTranslationMetadata(dto, comment);
             dto.setImageUrls(imagesByComment.getOrDefault(comment.getId(), List.of()));
             dto.setCreatedAt(comment.getCreatedAt().toString());
             dto.setUpdatedAt(comment.getUpdatedAt().toString());
@@ -465,6 +474,7 @@ public class DestinationCommentService {
         CommentDto dto = new CommentDto();
         dto.setId(comment.getId());
         dto.setContent(comment.getContent());
+        applyTranslationMetadata(dto, comment);
         dto.setImageUrls(imagesByComment.getOrDefault(comment.getId(), List.of()));
         dto.setCreatedAt(comment.getCreatedAt().toString());
         dto.setUpdatedAt(comment.getUpdatedAt().toString());
@@ -497,6 +507,20 @@ public class DestinationCommentService {
         dto.setLikedByMe(liked);
 
         return dto;
+    }
+
+    private void applyTranslationMetadata(CommentDto dto, DestinationComment comment) {
+        String sourceLanguage = comment.getSourceLanguage();
+        if (sourceLanguage == null || sourceLanguage.isBlank()) {
+            sourceLanguage = "und";
+        }
+        String targetLanguage = SupportedLanguage.fromLocale(LocaleContextHolder.getLocale())
+                .orElse(SupportedLanguage.KOREAN)
+                .getLanguageTag();
+        dto.setSourceLanguage(sourceLanguage);
+        dto.setTranslationAvailable(!Boolean.TRUE.equals(comment.getDeleted())
+                && !comment.isModerated()
+                && TranslationVisibility.shouldOffer(sourceLanguage, targetLanguage));
     }
 
     // 여러 여행지 댓글 수 카운트

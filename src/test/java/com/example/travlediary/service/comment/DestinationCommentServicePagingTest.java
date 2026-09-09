@@ -9,7 +9,9 @@ import com.example.travlediary.repository.comment.DestinationCommentMapper;
 import com.example.travlediary.repository.destination.DestinationMapper;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.service.file.FileUploadService;
+import com.example.travlediary.service.translation.LocalContentLanguageDetector;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -17,6 +19,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.sql.Timestamp;
 import java.util.List;
+import java.util.Locale;
+import org.springframework.context.i18n.LocaleContextHolder;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
@@ -46,7 +50,13 @@ class DestinationCommentServicePagingTest {
     @BeforeEach
     void setUp() {
         service = new DestinationCommentService(
-                destinationMapper, commentMapper, commentImageMapper, userMapper, fileUploadService);
+                destinationMapper, commentMapper, commentImageMapper, userMapper, fileUploadService,
+                new LocalContentLanguageDetector());
+    }
+
+    @AfterEach
+    void resetLocale() {
+        LocaleContextHolder.resetLocaleContext();
     }
 
     @Test
@@ -116,6 +126,31 @@ class DestinationCommentServicePagingTest {
 
         assertThat(service.getCommentLocation(10L, 36L)).isEmpty();
         verify(commentMapper, never()).countRootCommentsBefore(anyLong(), anyLong());
+    }
+
+    @Test
+    void commentDtoOffersTranslationOnlyForKnownDifferentSourceLanguage() {
+        DestinationComment korean = comment(1L, null, false);
+        korean.setSourceLanguage("ko");
+        when(commentMapper.countRootComments(10L)).thenReturn(1);
+        when(commentMapper.countByDestinationId(10L)).thenReturn(1);
+        when(commentMapper.findPagedParentComments(10L, 0, 5, "latest"))
+                .thenReturn(List.of(korean));
+        LocaleContextHolder.setLocale(Locale.KOREAN);
+
+        CommentDto sameLanguage = service.getCommentsPaged(10L, null, 0, 5, "latest")
+                .getContent().get(0);
+        assertThat(sameLanguage.isTranslationAvailable()).isFalse();
+
+        LocaleContextHolder.setLocale(Locale.ENGLISH);
+        CommentDto differentLanguage = service.getCommentsPaged(10L, null, 0, 5, "latest")
+                .getContent().get(0);
+        assertThat(differentLanguage.isTranslationAvailable()).isTrue();
+
+        korean.setSourceLanguage("und");
+        CommentDto unknownLanguage = service.getCommentsPaged(10L, null, 0, 5, "latest")
+                .getContent().get(0);
+        assertThat(unknownLanguage.isTranslationAvailable()).isFalse();
     }
 
     /** 관리자 조치 댓글은 deleted = 1 이면서 moderated = true 로 내려온다. */

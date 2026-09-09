@@ -119,3 +119,27 @@ kto:
     jpn-base-url: https://apis.data.go.kr/B551011/JpnService2
     chs-base-url: https://apis.data.go.kr/B551011/ChsService2
     cht-base-url: https://apis.data.go.kr/B551011/ChtService2
+
+translation:
+  monthly-character-limit-enabled: ${GOOGLE_TRANSLATION_MONTHLY_LIMIT_ENABLED:true}
+  monthly-character-limit: ${GOOGLE_TRANSLATION_MONTHLY_CHARACTER_LIMIT:400000}
+  daily-character-limit:
+    authenticated: ${GOOGLE_TRANSLATION_DAILY_AUTHENTICATED_LIMIT:20000}
+    anonymous: ${GOOGLE_TRANSLATION_DAILY_ANONYMOUS_LIMIT:5000}
+    ip-hmac-secret: ${GOOGLE_TRANSLATION_DAILY_IP_HMAC_SECRET:}
+  google:
+    enabled: ${GOOGLE_TRANSLATION_ENABLED:false}
+    project-id: ${GOOGLE_CLOUD_PROJECT:}
+    location: ${GOOGLE_TRANSLATION_LOCATION:global}
+  comment:
+    max-characters: 2000
+  lease-duration: 30s
+  failure-retry-after: 30s
+  rate-limit:
+    ip-requests: 30
+    user-requests: 20
+    external-requests: 10
+    window: 1m
+  backfill:
+    destination-comments:
+      batch-size: 500

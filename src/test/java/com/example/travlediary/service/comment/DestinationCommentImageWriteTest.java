@@ -9,6 +9,7 @@ import com.example.travlediary.repository.comment.DestinationCommentMapper;
 import com.example.travlediary.repository.destination.DestinationMapper;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.service.file.FileUploadService;
+import com.example.travlediary.service.translation.LocalContentLanguageDetector;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -56,7 +57,7 @@ class DestinationCommentImageWriteTest {
     void setUp() {
         service = new DestinationCommentService(
                 destinationMapper, commentMapper, commentImageMapper, userMapper,
-                new FileUploadService(uploadDir.toString()));
+                new FileUploadService(uploadDir.toString()), new LocalContentLanguageDetector());
         ReflectionTestUtils.setField(service, "uploadPath", uploadDir.toString());
     }
 
@@ -83,6 +84,9 @@ class DestinationCommentImageWriteTest {
 
         // 댓글 자체는 한 번만 저장된다 (사진은 별도 테이블)
         verify(commentMapper).insert(any(DestinationComment.class));
+        ArgumentCaptor<DestinationComment> commentCaptor = ArgumentCaptor.forClass(DestinationComment.class);
+        verify(commentMapper).insert(commentCaptor.capture());
+        assertThat(commentCaptor.getValue().getSourceLanguage()).isEqualTo("ko");
     }
 
     @Test
@@ -128,6 +132,22 @@ class DestinationCommentImageWriteTest {
                 .getAnnotation(Transactional.class);
 
         assertThat(transactional).isNotNull();
+    }
+
+    @Test
+    void editRedetectsAndPersistsSourceLanguage() {
+        DestinationComment comment = new DestinationComment();
+        comment.setId(50L);
+        comment.setUserId(7L);
+        comment.setDeleted(false);
+        when(commentMapper.findById(50L)).thenReturn(comment);
+
+        assertThat(service.updateComment(
+                50L, 7L, "This updated comment is written clearly in English.")).isTrue();
+
+        ArgumentCaptor<DestinationComment> captor = ArgumentCaptor.forClass(DestinationComment.class);
+        verify(commentMapper).updateContent(captor.capture());
+        assertThat(captor.getValue().getSourceLanguage()).isEqualTo("en");
     }
 
     /** insert 는 void 이므로 doAnswer 로 PK 채움만 흉내 낸다. */

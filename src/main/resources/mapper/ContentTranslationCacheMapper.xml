@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.translation.ContentTranslationCacheMapper">
+    <resultMap id="cacheMap" type="com.example.travlediary.model.translation.ContentTranslationCache">
+        <id property="id" column="id"/>
+        <result property="contentType" column="content_type"/>
+        <result property="contentId" column="content_id"/>
+        <result property="sourceField" column="source_field"/>
+        <result property="targetLanguage" column="target_language"/>
+        <result property="sourceHash" column="source_hash" jdbcType="BINARY"/>
+        <result property="detectedSourceLanguage" column="detected_source_language"/>
+        <result property="translatedText" column="translated_text"/>
+        <result property="provider" column="provider"/>
+        <result property="status" column="status"/>
+        <result property="leaseToken" column="lease_token"/>
+        <result property="leaseExpiresAt" column="lease_expires_at"/>
+        <result property="retryAfter" column="retry_after"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <select id="find" resultMap="cacheMap">
+        SELECT id, content_type, content_id, source_field, target_language, source_hash,
+               detected_source_language, translated_text, provider, status, lease_token,
+               lease_expires_at, retry_after, created_at, updated_at
+        FROM content_translation_cache
+        WHERE content_type = #{contentType}
+          AND content_id = #{contentId}
+          AND source_field = #{sourceField}
+          AND target_language = #{targetLanguage}
+    </select>
+
+    <insert id="insertProcessing" parameterType="com.example.travlediary.model.translation.ContentTranslationCache">
+        INSERT IGNORE INTO content_translation_cache (
+            content_type, content_id, source_field, target_language, source_hash,
+            provider, status, lease_token, lease_expires_at, created_at, updated_at
+        ) VALUES (
+            #{contentType}, #{contentId}, #{sourceField}, #{targetLanguage}, #{sourceHash},
+            #{provider}, 'PROCESSING', #{leaseToken}, #{leaseExpiresAt}, #{createdAt}, #{updatedAt}
+        )
+    </insert>
+
+    <update id="tryClaim">
+        UPDATE content_translation_cache
+        SET source_hash = #{sourceHash},
+            detected_source_language = NULL,
+            translated_text = NULL,
+            provider = 'GOOGLE',
+            status = 'PROCESSING',
+            lease_token = #{leaseToken},
+            lease_expires_at = #{leaseExpiresAt},
+            retry_after = NULL,
+            updated_at = #{now}
+        WHERE content_type = #{contentType}
+          AND content_id = #{contentId}
+          AND source_field = #{sourceField}
+          AND target_language = #{targetLanguage}
+          AND (
+              source_hash != #{sourceHash}
+              OR (status = 'PROCESSING' AND (lease_expires_at IS NULL OR lease_expires_at &lt;= #{now}))
+              OR (status = 'FAILED' AND (retry_after IS NULL OR retry_after &lt;= #{now}))
+          )
+    </update>
+
+    <update id="markReady">
+        UPDATE content_translation_cache
+        SET detected_source_language = #{detectedSourceLanguage},
+            translated_text = #{translatedText},
+            status = 'READY',
+            lease_token = NULL,
+            lease_expires_at = NULL,
+            retry_after = NULL,
+            updated_at = #{now}
+        WHERE content_type = #{contentType}
+          AND content_id = #{contentId}
+          AND source_field = #{sourceField}
+          AND target_language = #{targetLanguage}
+          AND source_hash = #{sourceHash}
+          AND status = 'PROCESSING'
+          AND lease_token = #{leaseToken}
+    </update>
+
+    <update id="markFailed">
+        UPDATE content_translation_cache
+        SET status = 'FAILED',
+            translated_text = NULL,
+            lease_token = NULL,
+            lease_expires_at = NULL,
+            retry_after = #{retryAfter},
+            updated_at = #{now}
+        WHERE content_type = #{contentType}
+          AND content_id = #{contentId}
+          AND source_field = #{sourceField}
+          AND target_language = #{targetLanguage}
+          AND source_hash = #{sourceHash}
+          AND status = 'PROCESSING'
+          AND lease_token = #{leaseToken}
+    </update>
+</mapper>
