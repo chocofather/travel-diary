@@ -1,0 +1,28 @@
+.content-translation-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.content-translation-button {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: #397a63;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.content-translation-button:disabled {
+    color: #8a9691;
+    cursor: wait;
+}
+
+.content-translation-status {
+    margin: 0;
+    color: #6b7280;
+    font-size: 13px;
+}

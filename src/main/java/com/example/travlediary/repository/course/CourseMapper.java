@@ -7,6 +7,8 @@ import com.example.travlediary.dto.HomePopularCourseDto;
 import com.example.travlediary.dto.HomePopularCourseStopDto;
 import com.example.travlediary.model.Course;
 import com.example.travlediary.model.CourseDestination;
+import com.example.travlediary.model.translation.CourseLanguageBackfillRow;
+import com.example.travlediary.model.translation.CourseTranslationSource;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -23,6 +25,32 @@ public interface CourseMapper {
     Course findActiveCourse(@Param("courseId") Long courseId);
 
     Course findActiveCourseForUpdate(@Param("courseId") Long courseId);
+
+    CourseTranslationSource findVisibleTranslationSource(@Param("courseId") Long courseId);
+
+    CourseTranslationSource findVisibleTranslationSourceForUpdate(@Param("courseId") Long courseId);
+
+    int correctTitleSourceLanguage(@Param("courseId") Long courseId,
+                                   @Param("sourceLanguage") String sourceLanguage,
+                                   @Param("updatedAt") java.sql.Timestamp updatedAt);
+
+    int correctContentSourceLanguage(@Param("courseId") Long courseId,
+                                     @Param("sourceLanguage") String sourceLanguage,
+                                     @Param("updatedAt") java.sql.Timestamp updatedAt);
+
+    List<CourseLanguageBackfillRow> findUndeterminedCourseLanguagesAfter(
+            @Param("afterId") Long afterId,
+            @Param("limit") int limit);
+
+    int updateCourseTitleLanguageIfUndetermined(@Param("courseId") Long courseId,
+                                                @Param("sourceLanguage") String sourceLanguage,
+                                                @Param("title") String title,
+                                                @Param("updatedAt") java.sql.Timestamp updatedAt);
+
+    int updateCourseContentLanguageIfUndetermined(@Param("courseId") Long courseId,
+                                                  @Param("sourceLanguage") String sourceLanguage,
+                                                  @Param("content") String content,
+                                                  @Param("updatedAt") java.sql.Timestamp updatedAt);
 
     List<CourseStopDto> findCourseStops(@Param("courseId") Long courseId);
 
@@ -46,7 +74,9 @@ public interface CourseMapper {
                      @Param("userId") Long userId,
                      @Param("countryId") Long countryId,
                      @Param("title") String title,
-                     @Param("content") String content);
+                     @Param("content") String content,
+                     @Param("titleSourceLanguage") String titleSourceLanguage,
+                     @Param("contentSourceLanguage") String contentSourceLanguage);
 
     int deleteCourseDestinations(@Param("courseId") Long courseId);
 

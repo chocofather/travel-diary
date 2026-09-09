@@ -9,7 +9,9 @@
         <id property="id" column="course_id"/>
         <result property="userId" column="course_user_id"/>
         <result property="title" column="course_title"/>
+        <result property="titleSourceLanguage" column="title_source_language"/>
         <result property="content" column="course_content"/>
+        <result property="contentSourceLanguage" column="content_source_language"/>
         <result property="nickname" column="writer_nickname"/>
         <result property="createdAt" column="course_created_at"/>
         <result property="updatedAt" column="course_updated_at"/>
@@ -57,7 +59,9 @@
             c.id AS course_id,
             c.user_id AS course_user_id,
             c.title AS course_title,
+            c.title_source_language,
             c.content AS course_content,
+            c.content_source_language,
             u.nickname AS writer_nickname,
             c.created_at AS course_created_at,
             c.updated_at AS course_updated_at,
@@ -87,7 +91,10 @@
                c.country_id,
                country.region_name AS country_name,
                c.title,
-               c.content
+               c.title_source_language,
+               c.content,
+               c.content_source_language,
+               c.updated_at
         FROM courses c
         LEFT JOIN country_categories country ON country.id = c.country_id
         WHERE c.id = #{courseId}
@@ -95,12 +102,103 @@
     </select>
 
     <select id="findActiveCourseForUpdate" resultType="com.example.travlediary.model.Course">
-        SELECT id, user_id, country_id, title, content
+        SELECT id, user_id, country_id, title, title_source_language,
+               content, content_source_language, updated_at
         FROM courses
         WHERE id = #{courseId}
           AND deleted = 0
         FOR UPDATE
     </select>
+
+    <sql id="ActiveCourseModeration">
+        EXISTS (
+            SELECT 1
+            FROM content_moderations cm
+            WHERE cm.target_type = 'COURSE'
+              AND cm.target_id = c.id
+              AND cm.status = 'ACTIVE'
+        )
+    </sql>
+
+    <select id="findVisibleTranslationSource"
+            resultType="com.example.travlediary.model.translation.CourseTranslationSource">
+        SELECT c.id AS content_id,
+               c.title,
+               c.title_source_language,
+               c.content,
+               c.content_source_language,
+               c.updated_at
+        FROM courses c
+        WHERE c.id = #{courseId}
+          AND c.deleted = 0
+          AND NOT <include refid="ActiveCourseModeration"/>
+    </select>
+
+    <select id="findVisibleTranslationSourceForUpdate"
+            resultType="com.example.travlediary.model.translation.CourseTranslationSource">
+        SELECT c.id AS content_id,
+               c.title,
+               c.title_source_language,
+               c.content,
+               c.content_source_language,
+               c.updated_at
+        FROM courses c
+        WHERE c.id = #{courseId}
+          AND c.deleted = 0
+          AND NOT <include refid="ActiveCourseModeration"/>
+        FOR UPDATE
+    </select>
+
+    <update id="correctTitleSourceLanguage">
+        UPDATE courses
+        SET title_source_language = #{sourceLanguage},
+            updated_at = updated_at
+        WHERE id = #{courseId}
+          AND deleted = 0
+          AND title_source_language = 'und'
+          AND updated_at &lt;=&gt; #{updatedAt}
+    </update>
+
+    <update id="correctContentSourceLanguage">
+        UPDATE courses
+        SET content_source_language = #{sourceLanguage},
+            updated_at = updated_at
+        WHERE id = #{courseId}
+          AND deleted = 0
+          AND content_source_language = 'und'
+          AND updated_at &lt;=&gt; #{updatedAt}
+    </update>
+
+    <select id="findUndeterminedCourseLanguagesAfter"
+            resultType="com.example.travlediary.model.translation.CourseLanguageBackfillRow">
+        SELECT id, title, content, title_source_language,
+               content_source_language, updated_at
+        FROM courses
+        WHERE id &gt; #{afterId}
+          AND (title_source_language = 'und' OR content_source_language = 'und')
+        ORDER BY id ASC
+        LIMIT #{limit}
+    </select>
+
+    <update id="updateCourseTitleLanguageIfUndetermined">
+        UPDATE courses
+        SET title_source_language = #{sourceLanguage},
+            updated_at = updated_at
+        WHERE id = #{courseId}
+          AND title_source_language = 'und'
+          AND updated_at &lt;=&gt; #{updatedAt}
+          AND CAST(title AS BINARY) = CAST(#{title} AS BINARY)
+    </update>
+
+    <update id="updateCourseContentLanguageIfUndetermined">
+        UPDATE courses
+        SET content_source_language = #{sourceLanguage},
+            updated_at = updated_at
+        WHERE id = #{courseId}
+          AND content_source_language = 'und'
+          AND updated_at &lt;=&gt; #{updatedAt}
+          AND CAST(content AS BINARY) = CAST(#{content} AS BINARY)
+    </update>
 
     <select id="findCourseStops" resultMap="CourseStopMap">
         SELECT
@@ -235,9 +333,11 @@
     <!-- 코스 등록 -->
     <insert id="insertCourse" parameterType="com.example.travlediary.model.Course" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO courses (
-            title, user_id, country_id, content, created_at, deleted
+            title, title_source_language, user_id, country_id,
+            content, content_source_language, created_at, deleted
         ) VALUES (
-                     #{title}, #{userId}, #{countryId}, #{content}, NOW(), 0
+                     #{title}, #{titleSourceLanguage}, #{userId}, #{countryId},
+                     #{content}, #{contentSourceLanguage}, NOW(), 0
                  )
     </insert>
 
@@ -253,8 +353,10 @@
     <update id="updateCourse">
         UPDATE courses
         SET title = #{title},
+            title_source_language = #{titleSourceLanguage},
             country_id = #{countryId},
             content = #{content},
+            content_source_language = #{contentSourceLanguage},
             updated_at = NOW()
         WHERE id = #{courseId}
           AND user_id = #{userId}

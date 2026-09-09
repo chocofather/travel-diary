@@ -1,9 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const article = document.querySelector('.post-detail[data-translation-url]');
-    const button = document.getElementById('user-post-translation-toggle');
-    const title = document.getElementById('user-post-title');
-    const content = document.getElementById('user-post-content');
-    const status = document.getElementById('user-post-translation-status');
+    const article = document.querySelector(
+        '[data-title-content-translation][data-translation-url]');
+    const button = article?.querySelector('[data-translation-toggle]');
+    const title = article?.querySelector('[data-translation-title]');
+    const content = article?.querySelector('[data-translation-content]');
+    const status = article?.querySelector('[data-translation-status]');
     if (!article || !button || !title || !content || !status) return;
 
     const messages = {

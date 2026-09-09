@@ -19,6 +19,7 @@ import com.example.travlediary.service.category.LocalizedReferenceNameResolver;
 import com.example.travlediary.service.category.ReferenceNameLocalizationService;
 import com.example.travlediary.service.destination.DestinationLocalizationService;
 import com.example.travlediary.service.post.PostContentSanitizer;
+import com.example.travlediary.service.translation.LocalContentLanguageDetector;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -58,7 +59,8 @@ class CourseServiceImplTest {
         service = new CourseServiceImpl(courseMapper, new PostContentSanitizer(),
                 new DestinationLocalizationService(destinationMapper),
                 new ReferenceNameLocalizationService(countryCategoryMapper, categoryMapper,
-                        infoCategoryMapper, new LocalizedReferenceNameResolver()));
+                        infoCategoryMapper, new LocalizedReferenceNameResolver()),
+                new LocalContentLanguageDetector());
     }
 
     @Test
@@ -100,6 +102,74 @@ class CourseServiceImplTest {
     }
 
     @Test
+    void detailOffersTranslationOnlyForAConfirmedForeignTitleOrContent() {
+        CourseDetailDto foreign = new CourseDetailDto();
+        foreign.setTitleSourceLanguage("ko");
+        foreign.setContentSourceLanguage("ja");
+        foreign.setContent("<p>紹介</p>");
+        when(courseMapper.incrementViews(10L)).thenReturn(1);
+        when(courseMapper.findCourseDetail(10L, null)).thenReturn(foreign);
+        when(courseMapper.findCourseStops(10L)).thenReturn(List.of());
+
+        assertThat(service.getCourseDetail(10L, null, SupportedLanguage.KOREAN)
+                .isTranslationAvailable()).isTrue();
+
+        CourseDetailDto undetermined = new CourseDetailDto();
+        undetermined.setTitleSourceLanguage("ko");
+        undetermined.setContentSourceLanguage("und");
+        undetermined.setContent("<p><img src=\"/uploads/a.png\"></p>");
+        when(courseMapper.incrementViews(11L)).thenReturn(1);
+        when(courseMapper.findCourseDetail(11L, null)).thenReturn(undetermined);
+        when(courseMapper.findCourseStops(11L)).thenReturn(List.of());
+
+        assertThat(service.getCourseDetail(11L, null, SupportedLanguage.KOREAN)
+                .isTranslationAvailable()).isFalse();
+    }
+
+    @Test
+    void updateReDetectsOnlyChangedCourseFieldAndPreservesOtherLanguage() {
+        Course current = activeCourse(10L, 5L);
+        current.setTitleSourceLanguage("ko");
+        current.setContentSourceLanguage("ja");
+        CourseUpdateRequest request = updateRequest(
+                "A completely new English itinerary", current.getContent(), List.of(12L));
+        when(courseMapper.findActiveCourseForUpdate(10L)).thenReturn(current);
+        when(courseMapper.countExistingDestinations(List.of(12L))).thenReturn(1);
+        when(courseMapper.findDestinationCountries(List.of(12L)))
+                .thenReturn(destinationCountries(List.of(12L), 7L, "대한민국"));
+        when(courseMapper.updateCourse(10L, 5L, 7L,
+                request.getTitle(), current.getContent(), "en", "ja")).thenReturn(1);
+        when(courseMapper.insertCourseDestination(any())).thenReturn(1);
+
+        service.updateCourse(10L, 5L, request);
+
+        verify(courseMapper).updateCourse(10L, 5L, 7L,
+                request.getTitle(), current.getContent(), "en", "ja");
+    }
+
+    @Test
+    void updateReDetectsChangedContentAndPreservesTitleLanguage() {
+        Course current = activeCourse(10L, 5L);
+        current.setTitleSourceLanguage("ja");
+        current.setContentSourceLanguage("ko");
+        String changedContent = "<p>This course has a detailed English description.</p>";
+        CourseUpdateRequest request = updateRequest(
+                current.getTitle(), changedContent, List.of(12L));
+        when(courseMapper.findActiveCourseForUpdate(10L)).thenReturn(current);
+        when(courseMapper.countExistingDestinations(List.of(12L))).thenReturn(1);
+        when(courseMapper.findDestinationCountries(List.of(12L)))
+                .thenReturn(destinationCountries(List.of(12L), 7L, "대한민국"));
+        when(courseMapper.updateCourse(10L, 5L, 7L,
+                current.getTitle(), changedContent, "ja", "en")).thenReturn(1);
+        when(courseMapper.insertCourseDestination(any())).thenReturn(1);
+
+        service.updateCourse(10L, 5L, request);
+
+        verify(courseMapper).updateCourse(10L, 5L, 7L,
+                current.getTitle(), changedContent, "ja", "en");
+    }
+
+    @Test
     void missingOrDeletedCourseReturnsNotFound() {
         when(courseMapper.incrementViews(10L)).thenReturn(0);
 
@@ -135,6 +205,8 @@ class CourseServiceImplTest {
             assertThat(course.getContent()).isEqualTo("<p>코스 소개</p>");
             assertThat(course.getUserId()).isEqualTo(5L);
             assertThat(course.getCountryId()).isEqualTo(7L);
+            assertThat(course.getTitleSourceLanguage()).isEqualTo("ko");
+            assertThat(course.getContentSourceLanguage()).isEqualTo("ko");
             course.setId(100L);
             return 1;
         });
@@ -153,6 +225,25 @@ class CourseServiceImplTest {
                 .containsExactly(1, 2, 3);
         assertThat(captor.getAllValues())
                 .allSatisfy(destination -> assertThat(destination.getCourseId()).isEqualTo(100L));
+    }
+
+    @Test
+    void imageOnlyContentIsStoredAsUndeterminedLanguage() {
+        String imageOnlyContent = "<p><img src=\"/uploads/editor/course-map.png\" width=\"600\"></p>";
+        CourseCreateRequest request = request("English city route", imageOnlyContent, List.of(12L));
+        when(courseMapper.countExistingDestinations(List.of(12L))).thenReturn(1);
+        when(courseMapper.findDestinationCountries(List.of(12L)))
+                .thenReturn(destinationCountries(List.of(12L), 7L, "대한민국"));
+        when(courseMapper.insertCourse(any(Course.class))).thenAnswer(invocation -> {
+            Course course = invocation.getArgument(0);
+            assertThat(course.getTitleSourceLanguage()).isEqualTo("en");
+            assertThat(course.getContentSourceLanguage()).isEqualTo("und");
+            course.setId(102L);
+            return 1;
+        });
+        when(courseMapper.insertCourseDestination(any(CourseDestination.class))).thenReturn(1);
+
+        assertThat(service.createCourse(request, 5L)).isEqualTo(102L);
     }
 
     @Test
@@ -387,7 +478,7 @@ class CourseServiceImplTest {
         when(courseMapper.findDestinationCountries(List.of(30L, 12L)))
                 .thenReturn(destinationCountries(List.of(30L, 12L), 7L, "대한민국"));
         when(courseMapper.updateCourse(10L, 5L, 7L,
-                "수정 제목", "<p>수정 소개</p>")).thenReturn(1);
+                "수정 제목", "<p>수정 소개</p>", "ko", "ko")).thenReturn(1);
         when(courseMapper.deleteCourseDestinations(10L)).thenReturn(0);
         when(courseMapper.insertCourseDestination(any())).thenReturn(1);
 
@@ -401,7 +492,7 @@ class CourseServiceImplTest {
         assertThat(captor.getAllValues()).extracting(CourseDestination::getVisitOrder)
                 .containsExactly(1, 2);
         verify(courseMapper).updateCourse(10L, 5L, 7L,
-                "수정 제목", "<p>수정 소개</p>");
+                "수정 제목", "<p>수정 소개</p>", "ko", "ko");
     }
 
     @Test
@@ -412,7 +503,7 @@ class CourseServiceImplTest {
         assertThatThrownBy(() -> service.updateCourse(10L, 5L, request))
                 .isInstanceOf(ResponseStatusException.class);
 
-        verify(courseMapper, never()).updateCourse(any(), any(), any(), any(), any());
+        verify(courseMapper, never()).updateCourse(any(), any(), any(), any(), any(), any(), any());
         verify(courseMapper, never()).deleteCourseDestinations(any());
     }
 
@@ -438,7 +529,7 @@ class CourseServiceImplTest {
                         .isEqualTo("코스 국가를 선택해 주세요."));
 
         verify(courseMapper, never()).countExistingDestinations(any());
-        verify(courseMapper, never()).updateCourse(any(), any(), any(), any(), any());
+        verify(courseMapper, never()).updateCourse(any(), any(), any(), any(), any(), any(), any());
         verify(courseMapper, never()).deleteCourseDestinations(any());
     }
 
@@ -452,7 +543,7 @@ class CourseServiceImplTest {
                 .isInstanceOf(ResponseStatusException.class);
 
         verify(courseMapper, never()).findDestinationCountries(any());
-        verify(courseMapper, never()).updateCourse(any(), any(), any(), any(), any());
+        verify(courseMapper, never()).updateCourse(any(), any(), any(), any(), any(), any(), any());
         verify(courseMapper, never()).deleteCourseDestinations(any());
     }
 
@@ -463,7 +554,8 @@ class CourseServiceImplTest {
         when(courseMapper.countExistingDestinations(List.of(1L, 2L))).thenReturn(2);
         when(courseMapper.findDestinationCountries(List.of(1L, 2L)))
                 .thenReturn(destinationCountries(List.of(1L, 2L), 7L, "대한민국"));
-        when(courseMapper.updateCourse(10L, 5L, 7L, "제목", "<p>소개</p>")).thenReturn(1);
+        when(courseMapper.updateCourse(10L, 5L, 7L, "제목", "<p>소개</p>", "ko", "ko"))
+                .thenReturn(1);
         when(courseMapper.insertCourseDestination(any())).thenReturn(1, 0);
 
         assertThatThrownBy(() -> service.updateCourse(10L, 5L, request))
@@ -484,7 +576,7 @@ class CourseServiceImplTest {
                 .satisfies(error -> assertThat(((ResponseStatusException) error).getReason())
                         .isEqualTo("선택한 국가와 여행지의 국가가 일치하지 않습니다."));
 
-        verify(courseMapper, never()).updateCourse(any(), any(), any(), any(), any());
+        verify(courseMapper, never()).updateCourse(any(), any(), any(), any(), any(), any(), any());
         verify(courseMapper, never()).deleteCourseDestinations(any());
         verify(courseMapper, never()).insertCourseDestination(any());
     }
@@ -504,7 +596,7 @@ class CourseServiceImplTest {
                 .satisfies(error -> assertThat(((ResponseStatusException) error).getReason())
                         .isEqualTo("하나의 여행 코스에는 같은 국가의 여행지만 추가할 수 있습니다."));
 
-        verify(courseMapper, never()).updateCourse(any(), any(), any(), any(), any());
+        verify(courseMapper, never()).updateCourse(any(), any(), any(), any(), any(), any(), any());
         verify(courseMapper, never()).deleteCourseDestinations(any());
     }
 
@@ -517,13 +609,13 @@ class CourseServiceImplTest {
         when(courseMapper.findDestinationCountries(List.of(71L, 72L)))
                 .thenReturn(destinationCountries(List.of(71L, 72L), 8L, "일본"));
         when(courseMapper.updateCourse(10L, 5L, 8L,
-                "일본 코스", "<p>도쿄와 오사카</p>")).thenReturn(1);
+                "일본 코스", "<p>도쿄와 오사카</p>", "ko", "ko")).thenReturn(1);
         when(courseMapper.insertCourseDestination(any())).thenReturn(1);
 
         service.updateCourse(10L, 5L, request);
 
         verify(courseMapper).updateCourse(10L, 5L, 8L,
-                "일본 코스", "<p>도쿄와 오사카</p>");
+                "일본 코스", "<p>도쿄와 오사카</p>", "ko", "ko");
         verify(courseMapper).deleteCourseDestinations(10L);
     }
 

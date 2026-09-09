@@ -16,6 +16,8 @@ import com.example.travlediary.repository.course.CourseMapper;
 import com.example.travlediary.service.category.ReferenceNameLocalizationService;
 import com.example.travlediary.service.destination.DestinationLocalizationService;
 import com.example.travlediary.service.post.PostContentSanitizer;
+import com.example.travlediary.service.translation.LocalContentLanguageDetector;
+import com.example.travlediary.service.translation.TranslationVisibility;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -46,6 +48,7 @@ public class CourseServiceImpl implements CourseService {
     private final DestinationLocalizationService destinationLocalizationService;
     /** STOP 지역명은 지역 번역에서 가져온다. */
     private final ReferenceNameLocalizationService referenceNameLocalizationService;
+    private final LocalContentLanguageDetector languageDetector;
 
     @Override
     @Transactional
@@ -61,6 +64,7 @@ public class CourseServiceImpl implements CourseService {
         }
 
         course.setContent(postContentSanitizer.sanitize(course.getContent()));
+        applyTranslationMetadata(course, requestedLanguage);
         course.setStops(localizeStopNames(courseMapper.findCourseStops(courseId), requestedLanguage));
         course.setMyCourse(currentUserId != null && Objects.equals(course.getUserId(), currentUserId));
         return course;
@@ -195,6 +199,8 @@ public class CourseServiceImpl implements CourseService {
         Course course = new Course();
         course.setTitle(validated.title());
         course.setContent(validated.content());
+        course.setTitleSourceLanguage(languageDetector.detect(validated.title()).code());
+        course.setContentSourceLanguage(detectContentLanguage(validated.content()));
         course.setUserId(userId);
         course.setCountryId(countryId);
 
@@ -221,13 +227,20 @@ public class CourseServiceImpl implements CourseService {
                 request == null ? null : request.getContent(),
                 request == null ? null : request.getDestinationIds());
 
-        requireOwnedActiveCourse(courseMapper.findActiveCourseForUpdate(courseId), userId);
+        Course current = requireOwnedActiveCourse(
+                courseMapper.findActiveCourseForUpdate(courseId), userId);
         Long requestedCountryId = validateRequestedCountryId(request == null ? null : request.getCountryId());
         validateDestinations(validated.destinationIds());
         Long countryId = validateCourseCountry(requestedCountryId, validated.destinationIds());
 
+        String titleLanguage = Objects.equals(current.getTitle(), validated.title())
+                ? normalizeLanguage(current.getTitleSourceLanguage())
+                : languageDetector.detect(validated.title()).code();
+        String contentLanguage = Objects.equals(current.getContent(), validated.content())
+                ? normalizeLanguage(current.getContentSourceLanguage())
+                : detectContentLanguage(validated.content());
         if (courseMapper.updateCourse(courseId, userId, countryId,
-                validated.title(), validated.content()) != 1) {
+                validated.title(), validated.content(), titleLanguage, contentLanguage) != 1) {
             throw new IllegalStateException("여행 코스 수정에 실패했습니다.");
         }
 
@@ -327,6 +340,28 @@ public class CourseServiceImpl implements CourseService {
         }
 
         return new ValidatedCourse(title, sanitizedContent, new ArrayList<>(destinationIds));
+    }
+
+    private String detectContentLanguage(String sanitizedContent) {
+        return languageDetector.detect(
+                Jsoup.parseBodyFragment(sanitizedContent).text()).code();
+    }
+
+    private void applyTranslationMetadata(CourseDetailDto course,
+                                          SupportedLanguage requestedLanguage) {
+        String targetLanguage = (requestedLanguage == null
+                ? SupportedLanguage.KOREAN : requestedLanguage).getLanguageTag();
+        String titleLanguage = normalizeLanguage(course.getTitleSourceLanguage());
+        String contentLanguage = normalizeLanguage(course.getContentSourceLanguage());
+        course.setTitleSourceLanguage(titleLanguage);
+        course.setContentSourceLanguage(contentLanguage);
+        course.setTranslationAvailable(
+                TranslationVisibility.shouldOffer(titleLanguage, targetLanguage)
+                        || TranslationVisibility.shouldOffer(contentLanguage, targetLanguage));
+    }
+
+    private String normalizeLanguage(String language) {
+        return language == null || language.isBlank() ? "und" : language;
     }
 
     private void validateDestinations(List<Long> destinationIds) {

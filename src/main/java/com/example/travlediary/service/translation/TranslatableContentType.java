@@ -4,5 +4,6 @@ public enum TranslatableContentType {
     DESTINATION_COMMENT,
     POST_COMMENT,
     COURSE_COMMENT,
-    USER_POST
+    USER_POST,
+    COURSE
 }

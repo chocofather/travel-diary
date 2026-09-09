@@ -13,6 +13,7 @@
         href="https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-kr@5.3.0/400.css">
   <link rel="stylesheet" href="/css/quill-content.css">
   <link rel="stylesheet" href="/css/post-detail.css" />
+  <link rel="stylesheet" href="/css/content-translation.css" />
   <link rel="stylesheet" href="/css/content-bookmark.css" />
   <link rel="stylesheet" href="/css/content-comment.css" />
   <script src="/js/comment-deep-link.js" defer></script>
@@ -24,7 +25,7 @@
 
 <th:block th:fragment="body">
   <main class="post-detail-container">
-    <article class="post-detail"
+    <article class="post-detail" data-title-content-translation
              th:data-translation-url="@{/post/{id}/translation(id=${post.id})}"
              th:data-translation-show="#{destination.detail.comment.translate}"
              th:data-translation-original="#{destination.detail.comment.original}"
@@ -36,7 +37,8 @@
         <div class="post-type"
              th:text="${post.postType.name() == 'TIP' ? '여행 팁' : '여행 질문'}">여행 질문</div>
         <div class="content-detail-title-row post-title-row">
-          <h1 id="user-post-title" th:text="${post.title}">게시글 제목</h1>
+          <h1 id="user-post-title" data-translation-title
+              th:text="${post.title}">게시글 제목</h1>
           <button type="button"
                   class="content-bookmark-button"
                   th:classappend="${post.bookmarked} ? ' is-bookmarked'"
@@ -56,16 +58,18 @@
           <div><dt>수정일</dt><dd th:text="${#dates.format(post.updatedAt, 'yyyy-MM-dd HH:mm')}">수정일</dd></div>
           <div><dt>조회수</dt><dd th:text="${post.views}">0</dd></div>
         </dl>
-        <div class="post-translation-control" th:if="${post.translationAvailable}">
+        <div class="content-translation-control" th:if="${post.translationAvailable}">
           <button id="user-post-translation-toggle" type="button"
-                  class="post-translation-button"
+                  class="content-translation-button" data-translation-toggle
                   th:text="#{destination.detail.comment.translate}">번역 보기</button>
-          <p id="user-post-translation-status" class="post-translation-status"
+          <p id="user-post-translation-status" class="content-translation-status"
+             data-translation-status
              role="status" hidden></p>
         </div>
       </header>
 
       <section id="user-post-content" class="post-content rich-text-content"
+               data-translation-content
                th:utext="${post.content}"></section>
 
       <section class="post-images" th:if="${post.images != null and !post.images.isEmpty()}">

@@ -10,7 +10,9 @@ public class CourseDetailDto {
     private Long id;
     private Long userId;
     private String title;
+    private String titleSourceLanguage;
     private String content;
+    private String contentSourceLanguage;
     private String nickname;
     private Timestamp createdAt;
     private Timestamp updatedAt;
@@ -18,4 +20,5 @@ public class CourseDetailDto {
     private List<CourseStopDto> stops;
     private boolean myCourse;
     private boolean bookmarked;
+    private boolean translationAvailable;
 }

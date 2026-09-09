@@ -378,6 +378,27 @@ class ContentTranslationServiceTest {
         assertThat(usage.characters).isEqualTo(html.codePointCount(0, html.length()));
     }
 
+    @Test
+    void courseBodyBeyondCommentLengthStillUsesTheExistingDailyUsageGate() {
+        String html = "<p>" + "English course description content ".repeat(80) + "</p>";
+        MutableSourceReader reader = new MutableSourceReader(new TranslationSourceSnapshot(
+                TranslatableContentType.COURSE, 7L, "content", html,
+                "en", UPDATED_AT, "text/html"));
+        ContentTranslationCacheMapper mapper = mock(ContentTranslationCacheMapper.class);
+        when(mapper.insertProcessing(any())).thenReturn(1);
+        when(mapper.markReady(anyString(), eq(7L), eq("content"), eq("ko"), any(), anyString(),
+                eq("<p>번역 코스</p>"), eq("en"), any())).thenReturn(1);
+        CountingUsageReservationGate usage = new CountingUsageReservationGate();
+
+        ContentTranslationResponse response = service(reader, mapper,
+                (text, source, target) -> new MachineTranslation("<p>번역 코스</p>", "en"), usage)
+                .translate(TranslatableContentType.COURSE, 7L, "content", "ko", null, 7L);
+
+        assertThat(response.status()).isEqualTo("READY");
+        assertThat(usage.calls).isEqualTo(1);
+        assertThat(usage.characters).isEqualTo(html.codePointCount(0, html.length()));
+    }
+
     private ContentTranslationService service(TranslationSourceReader reader,
                                               ContentTranslationCacheMapper mapper,
                                               MachineTranslationClient client) {

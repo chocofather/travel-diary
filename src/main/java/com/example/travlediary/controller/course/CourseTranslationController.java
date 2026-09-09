@@ -1,16 +1,17 @@
-package com.example.travlediary.controller.post;
+package com.example.travlediary.controller.course;
 
 import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.translation.MachineTranslationException;
+import com.example.travlediary.service.translation.TitleContentTranslationResponse;
+import com.example.travlediary.service.translation.TitleContentTranslationService;
+import com.example.travlediary.service.translation.TranslatableContentType;
 import com.example.travlediary.service.translation.TranslationDailyLimitException;
 import com.example.travlediary.service.translation.TranslationMonthlyLimitException;
 import com.example.travlediary.service.translation.TranslationNotFoundException;
 import com.example.travlediary.service.translation.TranslationRateLimitException;
 import com.example.travlediary.service.translation.TranslationStaleException;
 import com.example.travlediary.service.translation.TranslationTooLongException;
-import com.example.travlediary.service.translation.TitleContentTranslationResponse;
-import com.example.travlediary.service.translation.UserPostTranslationService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.i18n.LocaleContextHolder;
@@ -26,13 +27,13 @@ import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/post")
-public class UserPostTranslationController {
-    private final UserPostTranslationService translationService;
+@RequestMapping("/course")
+public class CourseTranslationController {
+    private final TitleContentTranslationService translationService;
 
-    @GetMapping("/{postId}/translation")
-    public ResponseEntity<?> translatePost(
-            @PathVariable Long postId,
+    @GetMapping("/{courseId}/translation")
+    public ResponseEntity<?> translateCourse(
+            @PathVariable Long courseId,
             @AuthenticationPrincipal CustomUserDetails userDetails,
             HttpServletRequest request) {
         String targetLanguage = SupportedLanguage.fromLocale(LocaleContextHolder.getLocale())
@@ -41,7 +42,8 @@ public class UserPostTranslationController {
         Long userId = userDetails == null ? null : userDetails.getId();
         try {
             TitleContentTranslationResponse response = translationService.translate(
-                    postId, targetLanguage, request.getRemoteAddr(), userId);
+                    TranslatableContentType.COURSE, courseId,
+                    targetLanguage, request.getRemoteAddr(), userId);
             if ("PROCESSING".equals(response.status())) {
                 return ResponseEntity.status(HttpStatus.ACCEPTED)
                         .header("Retry-After", Long.toString(response.retryAfterSeconds()))
@@ -52,7 +54,7 @@ public class UserPostTranslationController {
             return ResponseEntity.notFound().build();
         } catch (TranslationTooLongException e) {
             return ResponseEntity.unprocessableEntity()
-                    .body(Map.of("message", "번역할 수 있는 게시글 길이를 초과했습니다."));
+                    .body(Map.of("message", "번역할 수 있는 코스 길이를 초과했습니다."));
         } catch (TranslationRateLimitException e) {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                     .header("Retry-After", Long.toString(e.retryAfterSeconds()))
@@ -62,7 +64,7 @@ public class UserPostTranslationController {
                     .body(Map.of("message", "현재 번역 요청을 이용할 수 없습니다. 잠시 후 다시 시도해주세요."));
         } catch (TranslationStaleException e) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(Map.of("message", "게시글이 변경되었습니다. 다시 시도해주세요."));
+                    .body(Map.of("message", "코스가 변경되었습니다. 다시 시도해주세요."));
         } catch (MachineTranslationException e) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                     .body(Map.of("message", "지금은 번역을 사용할 수 없습니다."));

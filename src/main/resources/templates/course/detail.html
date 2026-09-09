@@ -13,11 +13,13 @@
         href="https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-kr@5.3.0/400.css">
   <link rel="stylesheet" href="/css/quill-content.css">
   <link rel="stylesheet" href="/css/course-detail.css" />
+  <link rel="stylesheet" href="/css/content-translation.css" />
   <link rel="stylesheet" href="/css/content-bookmark.css" />
   <link rel="stylesheet" href="/css/content-comment.css" />
   <script src="/js/comment-deep-link.js" defer></script>
   <script src="/js/confirm-submit.js" defer></script>
   <script src="/js/course-comments.js" defer></script>
+  <script src="/js/user-post-translation.js" defer></script>
   <script src="/js/content-bookmarks.js" defer></script>
   <script src="/js/course-hide-modal.js" defer></script>
 </th:block>
@@ -54,11 +56,19 @@
        th:data-comment-invalid-location-response="#{course.detail.comment.invalidLocationResponse}"></div>
 
   <main class="course-detail-container">
-    <article class="course-summary">
+    <article class="course-summary" data-title-content-translation
+             th:data-translation-url="@{/course/{id}/translation(id=${course.id})}"
+             th:data-translation-show="#{destination.detail.comment.translate}"
+             th:data-translation-original="#{destination.detail.comment.original}"
+             th:data-translation-loading="#{destination.detail.comment.translating}"
+             th:data-translation-retry="#{destination.detail.comment.translationRetry}"
+             th:data-translation-rate-limited="#{destination.detail.comment.translationRateLimited}"
+             th:data-translation-failed="#{destination.detail.comment.translationFailed}">
       <header class="course-summary-header">
         <p class="course-summary-label" th:text="#{course.detail.label}">나만의 여행 코스</p>
         <div class="content-detail-title-row course-title-row">
-          <h1 th:text="${course.title}">코스 제목</h1>
+          <h1 id="course-translation-title" data-translation-title
+              th:text="${course.title}">코스 제목</h1>
           <button type="button"
                   class="content-bookmark-button"
                   th:classappend="${course.bookmarked} ? ' is-bookmarked'"
@@ -78,11 +88,20 @@
           <div><dt th:text="#{course.detail.meta.updatedAt}">수정일</dt><dd th:text="${#dates.format(course.updatedAt, 'yyyy-MM-dd HH:mm')}">수정일</dd></div>
           <div><dt th:text="#{course.detail.meta.views}">조회수</dt><dd th:text="${course.views}">0</dd></div>
         </dl>
+        <div class="content-translation-control" th:if="${course.translationAvailable}">
+          <button id="course-translation-toggle" type="button"
+                  class="content-translation-button" data-translation-toggle
+                  th:text="#{destination.detail.comment.translate}">번역 보기</button>
+          <p id="course-translation-status" class="content-translation-status"
+             data-translation-status role="status" hidden></p>
+        </div>
       </header>
 
       <section class="course-introduction">
         <h2 th:text="#{course.detail.section.introduction}">코스 소개</h2>
-        <div class="course-introduction-content rich-text-content"
+        <div id="course-translation-content"
+             class="course-introduction-content rich-text-content"
+             data-translation-content
              th:utext="${course.content}"></div>
         <!-- 이미 화면에 내려온 stops 목록 크기만 사용한다. (추가 조회 없음) -->
         <p class="course-introduction-meta"

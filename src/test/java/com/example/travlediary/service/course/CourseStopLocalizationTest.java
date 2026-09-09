@@ -17,6 +17,7 @@ import com.example.travlediary.service.category.LocalizedReferenceNameResolver;
 import com.example.travlediary.service.category.ReferenceNameLocalizationService;
 import com.example.travlediary.service.destination.DestinationLocalizationService;
 import com.example.travlediary.service.post.PostContentSanitizer;
+import com.example.travlediary.service.translation.LocalContentLanguageDetector;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -54,7 +55,8 @@ class CourseStopLocalizationTest {
         service = new CourseServiceImpl(courseMapper, new PostContentSanitizer(),
                 new DestinationLocalizationService(destinationMapper),
                 new ReferenceNameLocalizationService(countryCategoryMapper, categoryMapper,
-                        infoCategoryMapper, new LocalizedReferenceNameResolver()));
+                        infoCategoryMapper, new LocalizedReferenceNameResolver()),
+                new LocalContentLanguageDetector());
     }
 
     @Test

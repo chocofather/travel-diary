@@ -37,8 +37,10 @@ class CourseCountryContractTest {
         String insert = between(mapper, "<insert id=\"insertCourse\"", "</insert>");
 
         assertThat(insert)
-                .contains("title, user_id, country_id, content")
-                .contains("#{title}, #{userId}, #{countryId}, #{content}");
+                .contains("title, title_source_language, user_id, country_id")
+                .contains("content, content_source_language")
+                .contains("#{title}, #{titleSourceLanguage}, #{userId}, #{countryId}")
+                .contains("#{content}, #{contentSourceLanguage}");
     }
 
     @Test

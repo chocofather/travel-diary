@@ -50,6 +50,7 @@ public class ContentTranslationService {
                 .orElseThrow(TranslationNotFoundException::new);
         if (source.text() == null) throw new TranslationNotFoundException();
         if (type != TranslatableContentType.USER_POST
+                && type != TranslatableContentType.COURSE
                 && source.text().codePointCount(0, source.text().length())
                 > properties.maxCommentCharacters()) {
             throw new TranslationTooLongException();
