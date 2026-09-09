@@ -27,7 +27,7 @@ public class TranslationCacheFinalizer {
             MachineTranslation translation,
             Timestamp completedAt) {
         TranslationSourceReader reader = sourceRegistry.get(type);
-        TranslationSourceSnapshot current = reader.findVisibleForUpdate(contentId).orElse(null);
+        TranslationSourceSnapshot current = reader.findVisibleForUpdate(contentId, sourceField).orElse(null);
         if (current == null) return TranslationFinalization.notFound();
         if (!matches(current, sourceField, expectedSourceHash, expectedSourceLanguage)) {
             return TranslationFinalization.stale(current);
@@ -52,7 +52,7 @@ public class TranslationCacheFinalizer {
             MachineTranslation translation,
             Timestamp completedAt) {
         TranslationSourceReader reader = sourceRegistry.get(type);
-        TranslationSourceSnapshot current = reader.findVisibleForUpdate(contentId).orElse(null);
+        TranslationSourceSnapshot current = reader.findVisibleForUpdate(contentId, sourceField).orElse(null);
         if (current == null) return TranslationFinalization.notFound();
         if (!matches(current, sourceField, expectedSourceHash, expectedSourceLanguage)) {
             return TranslationFinalization.stale(current);

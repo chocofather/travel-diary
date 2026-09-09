@@ -11,7 +11,9 @@ import java.sql.Timestamp;
 public class UserPost {
     private Long id; // 회원 게시물 번호
     private String title; // 제목
+    private String titleSourceLanguage = "und"; // 제목 원문 언어
     private String content; // 내용
+    private String contentSourceLanguage = "und"; // 본문 원문 언어
     private PostType postType; // 글 타입 여행질문, 팁
     private Integer views; // 조회 수
     private Timestamp createdAt; // 생성일

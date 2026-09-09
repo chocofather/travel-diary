@@ -37,11 +37,17 @@ public class GoogleCloudMachineTranslationClient implements MachineTranslationCl
 
     @Override
     public MachineTranslation translate(String sourceText, String sourceLanguage, String targetLanguage) {
+        return translate(sourceText, sourceLanguage, targetLanguage, "text/plain");
+    }
+
+    @Override
+    public MachineTranslation translate(
+            String sourceText, String sourceLanguage, String targetLanguage, String mimeType) {
         prepare();
         try {
             TranslateTextRequest.Builder request = TranslateTextRequest.newBuilder()
                     .setParent(LocationName.of(projectId, location).toString())
-                    .setMimeType("text/plain")
+                    .setMimeType("text/html".equals(mimeType) ? "text/html" : "text/plain")
                     .setTargetLanguageCode(targetLanguage)
                     .addContents(sourceText);
             if (sourceLanguage != null && !sourceLanguage.isBlank() && !"und".equals(sourceLanguage)) {

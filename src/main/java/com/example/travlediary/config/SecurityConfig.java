@@ -418,6 +418,8 @@ public class SecurityConfig {
 
                         // 숫자 ID 게시글 상세 GET만 공개 (/post/write는 일치하지 않음)
                         .requestMatchers(new RegexRequestMatcher("^/post/[0-9]+$", "GET")).permitAll()
+                        .requestMatchers(new RegexRequestMatcher(
+                                "^/post/[0-9]+/translation$", HttpMethod.GET.name())).permitAll()
 
                         // 숫자 ID 여행 코스 상세 GET만 공개 (/course/write는 일치하지 않음)
                         .requestMatchers(new RegexRequestMatcher("^/course/[0-9]+$", "GET")).permitAll()

@@ -146,5 +146,7 @@ translation:
       batch-size: 500
     post-comments:
       batch-size: 500
+    user-posts:
+      batch-size: 500
     shared-cache:
       batch-size: 500

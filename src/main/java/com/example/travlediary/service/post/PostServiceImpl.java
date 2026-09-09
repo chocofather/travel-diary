@@ -1,5 +1,6 @@
 package com.example.travlediary.service.post;
 
+import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.dto.PostDetailDto;
 import com.example.travlediary.dto.PostEditDto;
 import com.example.travlediary.dto.PostUpdateRequest;
@@ -7,9 +8,12 @@ import com.example.travlediary.model.PostImage;
 import com.example.travlediary.model.PostType;
 import com.example.travlediary.model.UserPost;
 import com.example.travlediary.repository.post.PostMapper;
+import com.example.travlediary.service.translation.LocalContentLanguageDetector;
+import com.example.travlediary.service.translation.TranslationVisibility;
 import lombok.RequiredArgsConstructor;
 import org.jsoup.Jsoup;
 import org.springframework.http.HttpStatus;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -23,6 +27,7 @@ public class PostServiceImpl implements PostService {
 
     private final PostMapper postMapper;
     private final PostContentSanitizer postContentSanitizer;
+    private final LocalContentLanguageDetector languageDetector;
 
     @Override
     @Transactional
@@ -37,6 +42,7 @@ public class PostServiceImpl implements PostService {
         }
 
         post.setContent(postContentSanitizer.sanitize(post.getContent()));
+        applyTranslationMetadata(post);
         post.setImages(postMapper.findPostImages(postId));
         UserPost activePost = postMapper.findActivePost(postId);
         post.setMyPost(activePost != null
@@ -60,9 +66,16 @@ public class PostServiceImpl implements PostService {
     @Override
     @Transactional
     public void updatePost(Long postId, Long userId, PostUpdateRequest request) {
-        requireOwnedActivePost(postId, userId);
+        UserPost current = requireOwnedActivePost(postId, userId);
         ValidatedPost validated = validatePost(request.getTitle(), request.getPostType(), request.getContent());
-        if (postMapper.updatePost(postId, userId, validated.title(), validated.postType(), validated.content()) != 1) {
+        String titleLanguage = Objects.equals(current.getTitle(), validated.title())
+                ? normalizeLanguage(current.getTitleSourceLanguage())
+                : languageDetector.detect(validated.title()).code();
+        String contentLanguage = Objects.equals(current.getContent(), validated.content())
+                ? normalizeLanguage(current.getContentSourceLanguage())
+                : detectContentLanguage(validated.content());
+        if (postMapper.updatePost(postId, userId, validated.title(), validated.postType(),
+                validated.content(), titleLanguage, contentLanguage) != 1) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다.");
         }
     }
@@ -83,6 +96,8 @@ public class PostServiceImpl implements PostService {
         post.setTitle(validated.title());
         post.setPostType(validated.postType());
         post.setContent(validated.content());
+        post.setTitleSourceLanguage(languageDetector.detect(validated.title()).code());
+        post.setContentSourceLanguage(detectContentLanguage(validated.content()));
 
         // 1. 게시글 저장
         postMapper.insertPost(post); // post.id가 useGeneratedKeys로 세팅됨
@@ -129,6 +144,28 @@ public class PostServiceImpl implements PostService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "본문을 입력해 주세요.");
         }
         return new ValidatedPost(trimmedTitle, postType, sanitizedContent);
+    }
+
+    private String detectContentLanguage(String sanitizedContent) {
+        return languageDetector.detect(
+                Jsoup.parseBodyFragment(sanitizedContent).text()).code();
+    }
+
+    private void applyTranslationMetadata(PostDetailDto post) {
+        String targetLanguage = SupportedLanguage.fromLocale(LocaleContextHolder.getLocale())
+                .orElse(SupportedLanguage.KOREAN)
+                .getLanguageTag();
+        String titleLanguage = normalizeLanguage(post.getTitleSourceLanguage());
+        String contentLanguage = normalizeLanguage(post.getContentSourceLanguage());
+        post.setTitleSourceLanguage(titleLanguage);
+        post.setContentSourceLanguage(contentLanguage);
+        post.setTranslationAvailable(
+                TranslationVisibility.shouldOffer(titleLanguage, targetLanguage)
+                        || TranslationVisibility.shouldOffer(contentLanguage, targetLanguage));
+    }
+
+    private String normalizeLanguage(String language) {
+        return language == null || language.isBlank() ? "und" : language;
     }
 
     private record ValidatedPost(String title,

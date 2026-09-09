@@ -5,4 +5,9 @@ public interface MachineTranslationClient {
     }
 
     MachineTranslation translate(String sourceText, String sourceLanguage, String targetLanguage);
+
+    default MachineTranslation translate(
+            String sourceText, String sourceLanguage, String targetLanguage, String mimeType) {
+        return translate(sourceText, sourceLanguage, targetLanguage);
+    }
 }

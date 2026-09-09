@@ -28,4 +28,11 @@ public class TranslationProviderMetadata {
     public String profile() {
         return profile;
     }
+
+    public String profileFor(String mimeType) {
+        if (!"text/html".equals(mimeType)) return profile;
+        String suffix = "-html";
+        int prefixLength = Math.min(profile.length(), 64 - suffix.length());
+        return profile.substring(0, prefixLength) + suffix;
+    }
 }

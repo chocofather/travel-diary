@@ -277,6 +277,71 @@ class SharedTranslationDeduplicationTest {
         assertThat(context.usage().calls).isEqualTo(1);
     }
 
+    @Test
+    void userPostTitleAndHtmlBodyReuseExactSharedEntriesWithoutAdditionalCost() {
+        Map<FieldSourceKey, TranslationSourceSnapshot> sources = new ConcurrentHashMap<>();
+        sources.put(new FieldSourceKey(1L, "title"),
+                postSource(1L, "title", "Best places in Seoul", "en", "text/plain"));
+        sources.put(new FieldSourceKey(2L, "title"),
+                postSource(2L, "title", "Best places in Seoul", "en", "text/plain"));
+        sources.put(new FieldSourceKey(1L, "content"),
+                postSource(1L, "content", "<p>Same English body</p>", "en", "text/html"));
+        sources.put(new FieldSourceKey(2L, "content"),
+                postSource(2L, "content", "<p>Same English body</p>", "en", "text/html"));
+        TestContext context = fieldContext(sources);
+
+        context.service().translate(
+                TranslatableContentType.USER_POST, 1L, "title", "ko", "10.0.0.1", 1L);
+        ContentTranslationResponse titleHit = context.service().translate(
+                TranslatableContentType.USER_POST, 2L, "title", "ko", "10.0.0.2", 2L);
+        context.service().translate(
+                TranslatableContentType.USER_POST, 1L, "content", "ko", "10.0.0.1", 1L);
+        ContentTranslationResponse contentHit = context.service().translate(
+                TranslatableContentType.USER_POST, 2L, "content", "ko", "10.0.0.2", 2L);
+
+        assertThat(titleHit.cached()).isTrue();
+        assertThat(contentHit.cached()).isTrue();
+        assertThat(context.providerCalls()).hasValue(2);
+        assertThat(context.usage().calls).isEqualTo(2);
+        assertThat(context.rateLimiter().externalCalls).isEqualTo(2);
+    }
+
+    @Test
+    void changingOneUserPostFieldKeepsTheOtherFieldContentCacheReady() {
+        Map<FieldSourceKey, TranslationSourceSnapshot> sources = new ConcurrentHashMap<>();
+        sources.put(new FieldSourceKey(1L, "title"),
+                postSource(1L, "title", "Original title", "en", "text/plain"));
+        sources.put(new FieldSourceKey(1L, "content"),
+                postSource(1L, "content", "<p>Original body</p>", "en", "text/html"));
+        TestContext context = fieldContext(sources);
+        context.service().translate(
+                TranslatableContentType.USER_POST, 1L, "title", "ko", "10.0.0.1", 1L);
+        context.service().translate(
+                TranslatableContentType.USER_POST, 1L, "content", "ko", "10.0.0.1", 1L);
+
+        sources.put(new FieldSourceKey(1L, "title"),
+                postSource(1L, "title", "Changed title", "en", "text/plain"));
+        ContentTranslationResponse titleMiss = context.service().translate(
+                TranslatableContentType.USER_POST, 1L, "title", "ko", "10.0.0.1", 1L);
+        ContentTranslationResponse unchangedContent = context.service().translate(
+                TranslatableContentType.USER_POST, 1L, "content", "ko", "10.0.0.1", 1L);
+
+        assertThat(titleMiss.cached()).isFalse();
+        assertThat(unchangedContent.cached()).isTrue();
+        assertThat(context.providerCalls()).hasValue(3);
+
+        sources.put(new FieldSourceKey(1L, "content"),
+                postSource(1L, "content", "<p>Changed body</p>", "en", "text/html"));
+        ContentTranslationResponse unchangedTitle = context.service().translate(
+                TranslatableContentType.USER_POST, 1L, "title", "ko", "10.0.0.1", 1L);
+        ContentTranslationResponse contentMiss = context.service().translate(
+                TranslatableContentType.USER_POST, 1L, "content", "ko", "10.0.0.1", 1L);
+
+        assertThat(unchangedTitle.cached()).isTrue();
+        assertThat(contentMiss.cached()).isFalse();
+        assertThat(context.providerCalls()).hasValue(4);
+    }
+
     private TestContext context(Map<Long, TranslationSourceSnapshot> sources) {
         return context(sources, false, false);
     }
@@ -309,6 +374,23 @@ class SharedTranslationDeduplicationTest {
                 "google-v3-general-v1");
         return new TestContext(service, contentCaches, providerCalls, usage, rateLimiter,
                 providerStarted, releaseProvider);
+    }
+
+    private TestContext fieldContext(Map<FieldSourceKey, TranslationSourceSnapshot> sources) {
+        FakeContentCacheMapper contentCaches = new FakeContentCacheMapper();
+        FakeSharedCacheMapper sharedCaches = new FakeSharedCacheMapper();
+        CountingUsageGate usage = new CountingUsageGate();
+        CountingRateLimiter rateLimiter = new CountingRateLimiter();
+        AtomicInteger providerCalls = new AtomicInteger();
+        MachineTranslationClient client = countingClient(providerCalls,
+                request -> new MachineTranslation(request.target() + ":" + request.text(), request.source()));
+        TranslationSourceRegistry registry = new TranslationSourceRegistry(
+                List.of(new FieldSnapshotReader(sources)));
+        ContentTranslationService service = service(
+                registry, contentCaches, sharedCaches, client, usage, rateLimiter,
+                "google-v3-general-v1");
+        return new TestContext(service, contentCaches, providerCalls, usage, rateLimiter,
+                new CountDownLatch(0), new CountDownLatch(0));
     }
 
     private ContentTranslationService service(
@@ -353,7 +435,15 @@ class SharedTranslationDeduplicationTest {
         return new TranslationSourceSnapshot(type, id, "content", text, language, VERSION);
     }
 
+    private static TranslationSourceSnapshot postSource(
+            Long id, String field, String text, String language, String mimeType) {
+        return new TranslationSourceSnapshot(
+                TranslatableContentType.USER_POST, id, field, text, language, VERSION, mimeType);
+    }
+
     private record TranslationRequest(String text, String source, String target) { }
+
+    private record FieldSourceKey(Long id, String field) { }
 
     private record TestContext(
             ContentTranslationService service,
@@ -387,6 +477,40 @@ class SharedTranslationDeduplicationTest {
         @Override
         public Optional<TranslationSourceSnapshot> findVisibleForUpdate(Long contentId) {
             return findVisible(contentId);
+        }
+    }
+
+    private static final class FieldSnapshotReader implements TranslationSourceReader {
+        private final Map<FieldSourceKey, TranslationSourceSnapshot> sources;
+
+        private FieldSnapshotReader(Map<FieldSourceKey, TranslationSourceSnapshot> sources) {
+            this.sources = sources;
+        }
+
+        @Override
+        public TranslatableContentType contentType() {
+            return TranslatableContentType.USER_POST;
+        }
+
+        @Override
+        public Optional<TranslationSourceSnapshot> findVisible(Long contentId) {
+            return findVisible(contentId, "content");
+        }
+
+        @Override
+        public Optional<TranslationSourceSnapshot> findVisible(Long contentId, String sourceField) {
+            return Optional.ofNullable(sources.get(new FieldSourceKey(contentId, sourceField)));
+        }
+
+        @Override
+        public Optional<TranslationSourceSnapshot> findVisibleForUpdate(Long contentId) {
+            return findVisibleForUpdate(contentId, "content");
+        }
+
+        @Override
+        public Optional<TranslationSourceSnapshot> findVisibleForUpdate(
+                Long contentId, String sourceField) {
+            return findVisible(contentId, sourceField);
         }
     }
 

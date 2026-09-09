@@ -1925,7 +1925,9 @@ CREATE TABLE `user_appeals` (
 CREATE TABLE `user_posts` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `title` varchar(255) NOT NULL,
+  `title_source_language` varchar(10) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'und',
   `content` mediumtext,
+  `content_source_language` varchar(10) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'und',
   `post_type` varchar(20) NOT NULL,
   `views` int NOT NULL DEFAULT '0',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,

@@ -87,7 +87,8 @@ public class SharedTranslationCacheBackfillService {
             return Optional.empty();
         }
 
-        TranslationSourceSnapshot source = reader.findVisible(cached.getContentId()).orElse(null);
+        TranslationSourceSnapshot source = reader.findVisible(
+                cached.getContentId(), cached.getSourceField()).orElse(null);
         if (source == null
                 || source.text() == null
                 || !Objects.equals(cached.getSourceField(), source.sourceField())
@@ -104,7 +105,7 @@ public class SharedTranslationCacheBackfillService {
         shared.setSourceLanguage(source.sourceLanguage());
         shared.setTargetLanguage(cached.getTargetLanguage());
         shared.setProvider(cached.getProvider());
-        shared.setTranslationProfile(providerMetadata.profile());
+        shared.setTranslationProfile(providerMetadata.profileFor(source.mimeType()));
         shared.setDetectedSourceLanguage(cached.getDetectedSourceLanguage());
         shared.setTranslatedText(cached.getTranslatedText());
         shared.setStatus("READY");

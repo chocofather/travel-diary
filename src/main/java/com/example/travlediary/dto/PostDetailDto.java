@@ -15,7 +15,9 @@ public class PostDetailDto {
     private Long userId;
     private PostType postType;
     private String title;
+    private String titleSourceLanguage;
     private String content;
+    private String contentSourceLanguage;
     private String nickname;
     private Timestamp createdAt;
     private Timestamp updatedAt;
@@ -23,4 +25,5 @@ public class PostDetailDto {
     private List<PostImage> images;
     private boolean myPost;
     private boolean bookmarked;
+    private boolean translationAvailable;
 }

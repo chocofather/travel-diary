@@ -325,6 +325,59 @@ class ContentTranslationServiceTest {
         assertThat(usageReservation.calls).isEqualTo(2);
     }
 
+    @Test
+    void htmlSourceUsesGoogleHtmlModeWhileExistingSourcesStayPlainText() {
+        TranslationSourceSnapshot html = new TranslationSourceSnapshot(
+                TranslatableContentType.USER_POST, 7L, "content", "<p>Hello world</p>",
+                "en", UPDATED_AT, "text/html");
+        MutableSourceReader reader = new MutableSourceReader(html);
+        ContentTranslationCacheMapper mapper = mock(ContentTranslationCacheMapper.class);
+        when(mapper.insertProcessing(any())).thenReturn(1);
+        when(mapper.markReady(anyString(), eq(7L), eq("content"), eq("ko"), any(), anyString(),
+                eq("<p>안녕하세요</p>"), eq("en"), any())).thenReturn(1);
+        AtomicReference<String> requestedMimeType = new AtomicReference<>();
+        MachineTranslationClient client = new MachineTranslationClient() {
+            @Override
+            public MachineTranslation translate(
+                    String sourceText, String sourceLanguage, String targetLanguage) {
+                throw new AssertionError("MIME 정보 없는 번역 경로를 사용하면 안 됩니다.");
+            }
+
+            @Override
+            public MachineTranslation translate(
+                    String sourceText, String sourceLanguage, String targetLanguage, String mimeType) {
+                requestedMimeType.set(mimeType);
+                return new MachineTranslation("<p>안녕하세요</p>", "en");
+            }
+        };
+
+        service(reader, mapper, client).translate(
+                TranslatableContentType.USER_POST, 7L, "content", "ko", null, null);
+
+        assertThat(requestedMimeType).hasValue("text/html");
+    }
+
+    @Test
+    void userPostBodyBeyondCommentLengthStillUsesTheExistingDailyUsageGate() {
+        String html = "<p>" + "English travel article content ".repeat(80) + "</p>";
+        MutableSourceReader reader = new MutableSourceReader(new TranslationSourceSnapshot(
+                TranslatableContentType.USER_POST, 7L, "content", html,
+                "en", UPDATED_AT, "text/html"));
+        ContentTranslationCacheMapper mapper = mock(ContentTranslationCacheMapper.class);
+        when(mapper.insertProcessing(any())).thenReturn(1);
+        when(mapper.markReady(anyString(), eq(7L), eq("content"), eq("ko"), any(), anyString(),
+                eq("<p>번역 본문</p>"), eq("en"), any())).thenReturn(1);
+        CountingUsageReservationGate usage = new CountingUsageReservationGate();
+
+        ContentTranslationResponse response = service(reader, mapper,
+                (text, source, target) -> new MachineTranslation("<p>번역 본문</p>", "en"), usage)
+                .translate(TranslatableContentType.USER_POST, 7L, "content", "ko", null, 7L);
+
+        assertThat(response.status()).isEqualTo("READY");
+        assertThat(usage.calls).isEqualTo(1);
+        assertThat(usage.characters).isEqualTo(html.codePointCount(0, html.length()));
+    }
+
     private ContentTranslationService service(TranslationSourceReader reader,
                                               ContentTranslationCacheMapper mapper,
                                               MachineTranslationClient client) {

@@ -42,6 +42,20 @@ class GoogleCloudMachineTranslationClientTest {
         assertThat(request.getValue().getSourceLanguageCode()).isEqualTo("en");
     }
 
+    @Test
+    void sendsRichTextContentToGoogleAsHtml() {
+        TranslationServiceClient translationService = mock(TranslationServiceClient.class);
+        when(translationService.translateText(any(TranslateTextRequest.class))).thenReturn(response("en"));
+        GoogleCloudMachineTranslationClient client = clientWith(translationService);
+
+        client.translate("<p>Hello</p>", "en", "ko", "text/html");
+
+        ArgumentCaptor<TranslateTextRequest> request = ArgumentCaptor.forClass(TranslateTextRequest.class);
+        verify(translationService).translateText(request.capture());
+        assertThat(request.getValue().getMimeType()).isEqualTo("text/html");
+        assertThat(request.getValue().getContentsList()).containsExactly("<p>Hello</p>");
+    }
+
     private GoogleCloudMachineTranslationClient clientWith(TranslationServiceClient translationService) {
         GoogleCloudMachineTranslationClient client = new GoogleCloudMachineTranslationClient(true, "project-id", "global");
         ReflectionTestUtils.setField(client, "client", translationService);

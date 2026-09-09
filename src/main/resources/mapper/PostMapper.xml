@@ -10,7 +10,9 @@
         <result property="userId" column="post_user_id"/>
         <result property="postType" column="post_type"/>
         <result property="title" column="post_title"/>
+        <result property="titleSourceLanguage" column="title_source_language"/>
         <result property="content" column="post_content"/>
+        <result property="contentSourceLanguage" column="content_source_language"/>
         <result property="nickname" column="writer_nickname"/>
         <result property="createdAt" column="post_created_at"/>
         <result property="updatedAt" column="post_updated_at"/>
@@ -32,8 +34,11 @@
         <id property="id" column="post_id"/>
         <result property="userId" column="post_user_id"/>
         <result property="title" column="post_title"/>
+        <result property="titleSourceLanguage" column="title_source_language"/>
         <result property="postType" column="post_type"/>
         <result property="content" column="post_content"/>
+        <result property="contentSourceLanguage" column="content_source_language"/>
+        <result property="updatedAt" column="post_updated_at"/>
     </resultMap>
 
     <resultMap id="PostEditMap" type="com.example.travlediary.dto.PostEditDto">
@@ -56,7 +61,9 @@
             p.user_id AS post_user_id,
             p.post_type AS post_type,
             p.title AS post_title,
+            p.title_source_language,
             p.content AS post_content,
+            p.content_source_language,
             u.nickname AS writer_nickname,
             p.created_at AS post_created_at,
             p.updated_at AS post_updated_at,
@@ -85,8 +92,11 @@
             p.id AS post_id,
             p.user_id AS post_user_id,
             p.title AS post_title,
+            p.title_source_language,
             p.post_type AS post_type,
-            p.content AS post_content
+            p.content AS post_content,
+            p.content_source_language,
+            p.updated_at AS post_updated_at
         FROM user_posts p
         WHERE p.id = #{postId}
           AND p.deleted = 0
@@ -97,14 +107,108 @@
             p.id AS post_id,
             p.user_id AS post_user_id,
             p.title AS post_title,
+            p.title_source_language,
             p.post_type AS post_type,
-            p.content AS post_content
+            p.content AS post_content,
+            p.content_source_language,
+            p.updated_at AS post_updated_at
         FROM user_posts p
         WHERE p.id = #{postId}
           AND p.deleted = 0
           AND p.post_type IN ('QUESTION', 'TIP')
         FOR UPDATE
     </select>
+
+    <sql id="ActivePostModeration">
+        EXISTS (
+            SELECT 1
+            FROM content_moderations cm
+            WHERE cm.target_type = 'POST'
+              AND cm.target_id = p.id
+              AND cm.status = 'ACTIVE'
+        )
+    </sql>
+
+    <select id="findVisibleTranslationSource"
+            resultType="com.example.travlediary.model.translation.UserPostTranslationSource">
+        SELECT p.id AS content_id,
+               p.title,
+               p.title_source_language,
+               p.content,
+               p.content_source_language,
+               p.updated_at
+        FROM user_posts p
+        WHERE p.id = #{postId}
+          AND p.deleted = 0
+          AND p.post_type IN ('QUESTION', 'TIP')
+          AND NOT <include refid="ActivePostModeration"/>
+    </select>
+
+    <select id="findVisibleTranslationSourceForUpdate"
+            resultType="com.example.travlediary.model.translation.UserPostTranslationSource">
+        SELECT p.id AS content_id,
+               p.title,
+               p.title_source_language,
+               p.content,
+               p.content_source_language,
+               p.updated_at
+        FROM user_posts p
+        WHERE p.id = #{postId}
+          AND p.deleted = 0
+          AND p.post_type IN ('QUESTION', 'TIP')
+          AND NOT <include refid="ActivePostModeration"/>
+        FOR UPDATE
+    </select>
+
+    <update id="correctTitleSourceLanguage">
+        UPDATE user_posts
+        SET title_source_language = #{sourceLanguage},
+            updated_at = updated_at
+        WHERE id = #{postId}
+          AND deleted = 0
+          AND title_source_language = 'und'
+          AND updated_at &lt;=&gt; #{updatedAt}
+    </update>
+
+    <update id="correctContentSourceLanguage">
+        UPDATE user_posts
+        SET content_source_language = #{sourceLanguage},
+            updated_at = updated_at
+        WHERE id = #{postId}
+          AND deleted = 0
+          AND content_source_language = 'und'
+          AND updated_at &lt;=&gt; #{updatedAt}
+    </update>
+
+    <select id="findUndeterminedPostLanguagesAfter"
+            resultType="com.example.travlediary.model.translation.UserPostLanguageBackfillRow">
+        SELECT id, title, content, title_source_language, content_source_language, updated_at
+        FROM user_posts
+        WHERE (title_source_language = 'und' OR content_source_language = 'und')
+          AND id &gt; #{afterId}
+        ORDER BY id
+        LIMIT #{limit}
+    </select>
+
+    <update id="updateTitleLanguageIfUndetermined">
+        UPDATE user_posts
+        SET title_source_language = #{sourceLanguage},
+            updated_at = updated_at
+        WHERE id = #{postId}
+          AND title_source_language = 'und'
+          AND updated_at &lt;=&gt; #{updatedAt}
+          AND CAST(title AS BINARY) = CAST(#{title} AS BINARY)
+    </update>
+
+    <update id="updateContentLanguageIfUndetermined">
+        UPDATE user_posts
+        SET content_source_language = #{sourceLanguage},
+            updated_at = updated_at
+        WHERE id = #{postId}
+          AND content_source_language = 'und'
+          AND updated_at &lt;=&gt; #{updatedAt}
+          AND CAST(content AS BINARY) = CAST(#{content} AS BINARY)
+    </update>
 
     <!-- 수정 화면 전용 조회: 조회수를 증가시키지 않는다. -->
     <select id="findPostForEdit" resultMap="PostEditMap">
@@ -136,9 +240,11 @@
     <!-- 게시글 저장 -->
     <insert id="insertPost" parameterType="com.example.travlediary.model.UserPost" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO user_posts (
-            title, content, post_type, views, created_at, user_id, deleted
+            title, title_source_language, content, content_source_language,
+            post_type, views, created_at, user_id, deleted
         ) VALUES (
-                     #{title}, #{content}, #{postType}, 0, NOW(), #{userId}, 0
+                     #{title}, #{titleSourceLanguage}, #{content}, #{contentSourceLanguage},
+                     #{postType}, 0, NOW(), #{userId}, 0
                  )
     </insert>
 
@@ -154,8 +260,10 @@
     <update id="updatePost">
         UPDATE user_posts
         SET title = #{title},
+            title_source_language = #{titleSourceLanguage},
             post_type = #{postType},
             content = #{content},
+            content_source_language = #{contentSourceLanguage},
             updated_at = NOW()
         WHERE id = #{postId}
           AND user_id = #{userId}

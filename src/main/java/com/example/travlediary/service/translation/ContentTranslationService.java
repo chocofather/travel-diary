@@ -36,11 +36,22 @@ public class ContentTranslationService {
                                                 String targetLanguage,
                                                 String ipAddress,
                                                 Long userId) {
+        return translate(type, contentId, "content", targetLanguage, ipAddress, userId);
+    }
+
+    public ContentTranslationResponse translate(TranslatableContentType type,
+                                                Long contentId,
+                                                String sourceField,
+                                                String targetLanguage,
+                                                String ipAddress,
+                                                Long userId) {
         rateLimiter.checkRequest(ipAddress, userId);
-        TranslationSourceSnapshot source = sourceRegistry.get(type).findVisible(contentId)
+        TranslationSourceSnapshot source = sourceRegistry.get(type).findVisible(contentId, sourceField)
                 .orElseThrow(TranslationNotFoundException::new);
         if (source.text() == null) throw new TranslationNotFoundException();
-        if (source.text().codePointCount(0, source.text().length()) > properties.maxCommentCharacters()) {
+        if (type != TranslatableContentType.USER_POST
+                && source.text().codePointCount(0, source.text().length())
+                > properties.maxCommentCharacters()) {
             throw new TranslationTooLongException();
         }
         if (!TranslationVisibility.shouldOffer(source.sourceLanguage(), targetLanguage)) {
@@ -131,7 +142,7 @@ public class ContentTranslationService {
         MachineTranslation translated;
         try {
             translated = translationClient.translate(
-                    source.text(), source.sourceLanguage(), targetLanguage);
+                    source.text(), source.sourceLanguage(), targetLanguage, source.mimeType());
         } catch (RuntimeException e) {
             Instant failedAt = clock.instant();
             markBothFailed(source, targetLanguage, sourceHash, contentLeaseToken,
@@ -142,7 +153,7 @@ public class ContentTranslationService {
         Timestamp completedAt = Timestamp.from(clock.instant());
         int sharedReady = sharedCacheMapper.markReady(
                 sourceHash, source.sourceLanguage(), targetLanguage,
-                providerMetadata.provider(), providerMetadata.profile(), sharedLeaseToken,
+                providerMetadata.provider(), providerMetadata.profileFor(source.mimeType()), sharedLeaseToken,
                 translated.translatedText(), translated.detectedSourceLanguage(), completedAt);
         if (sharedReady != 1) {
             SharedTranslationCache current = findSharedCache(source, targetLanguage, sourceHash);
@@ -182,7 +193,7 @@ public class ContentTranslationService {
                                                    byte[] sourceHash) {
         return sharedCacheMapper.find(
                 sourceHash, source.sourceLanguage(), targetLanguage,
-                providerMetadata.provider(), providerMetadata.profile());
+                providerMetadata.provider(), providerMetadata.profileFor(source.mimeType()));
     }
 
     private ContentTranslationResponse contentCacheResponse(
@@ -257,7 +268,7 @@ public class ContentTranslationService {
         cache.setSourceLanguage(source.sourceLanguage());
         cache.setTargetLanguage(targetLanguage);
         cache.setProvider(providerMetadata.provider());
-        cache.setTranslationProfile(providerMetadata.profile());
+        cache.setTranslationProfile(providerMetadata.profileFor(source.mimeType()));
         cache.setLeaseToken(leaseToken);
         cache.setLeaseExpiresAt(Timestamp.from(now.plus(properties.leaseDuration())));
         cache.setCreatedAt(Timestamp.from(now));
@@ -265,7 +276,7 @@ public class ContentTranslationService {
         if (sharedCacheMapper.insertProcessing(cache) == 1) return true;
         return sharedCacheMapper.tryClaim(
                 sourceHash, source.sourceLanguage(), targetLanguage,
-                providerMetadata.provider(), providerMetadata.profile(), leaseToken,
+                providerMetadata.provider(), providerMetadata.profileFor(source.mimeType()), leaseToken,
                 Timestamp.from(now), Timestamp.from(now.plus(properties.leaseDuration()))) == 1;
     }
 
@@ -278,7 +289,7 @@ public class ContentTranslationService {
                                 Instant now) {
         sharedCacheMapper.markFailed(
                 sourceHash, source.sourceLanguage(), targetLanguage,
-                providerMetadata.provider(), providerMetadata.profile(), sharedLeaseToken,
+                providerMetadata.provider(), providerMetadata.profileFor(source.mimeType()), sharedLeaseToken,
                 Timestamp.from(retryAfter), Timestamp.from(now));
         markContentFailed(source, targetLanguage, sourceHash, contentLeaseToken, retryAfter, now);
     }
@@ -300,7 +311,7 @@ public class ContentTranslationService {
                                     String sharedLeaseToken) {
         sharedCacheMapper.deleteProcessing(
                 sourceHash, source.sourceLanguage(), targetLanguage,
-                providerMetadata.provider(), providerMetadata.profile(), sharedLeaseToken);
+                providerMetadata.provider(), providerMetadata.profileFor(source.mimeType()), sharedLeaseToken);
     }
 
     private boolean isReadyFor(ContentTranslationCache cache, byte[] sourceHash) {
