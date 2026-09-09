@@ -1,15 +1,17 @@
 .course-detail-container {
     width: min(1120px, calc(100% - 40px));
-    margin: 48px auto 80px;
+    margin: 36px auto 64px;
+    /* layout/main의 바깥 main에서 이미 헤더 높이를 확보한다. */
+    padding-top: 0;
     color: #1f2937;
 }
 
 .course-summary {
-    padding: 36px 40px;
+    padding: 30px 32px;
     border: 1px solid #e2e8e5;
-    border-radius: 20px;
+    border-radius: 16px;
     background: #fff;
-    box-shadow: 0 14px 35px rgba(29, 78, 62, 0.08);
+    box-shadow: 0 2px 8px rgba(29, 78, 62, 0.03);
 }
 
 .course-summary-label,
@@ -17,36 +19,150 @@
     margin: 0 0 8px;
     color: #397a63;
     font-size: 13px;
-    font-weight: 800;
-    letter-spacing: 0.12em;
+    font-weight: 700;
 }
 
-.course-summary h1 {
+.course-summary-label {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 10px;
+    margin-bottom: 12px;
+    line-height: 1.5;
+}
+
+.course-stop-count {
+    color: #66736d;
+    font-weight: 500;
+}
+
+.course-stop-count::before {
+    content: "·";
+    margin-right: 10px;
+    color: #a3b0aa;
+}
+
+.course-summary .course-title-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.course-title-row > h1 {
     margin: 0;
     overflow-wrap: anywhere;
-    font-size: clamp(28px, 4vw, 42px);
+    font-size: clamp(26px, 3vw, 36px);
+    line-height: 1.35;
+    letter-spacing: -0.025em;
+}
+
+.course-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.course-header-actions .content-bookmark-button {
+    border-radius: 10px;
+    box-shadow: none;
+}
+
+.course-header-actions .content-bookmark-image {
+    width: 24px;
+    height: 24px;
+    transform: none;
+}
+
+.course-owner-menu {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.course-owner-toggle {
+    display: grid;
+    place-items: center;
+    box-sizing: border-box;
+    width: 44px;
+    height: 44px;
+    border: 1px solid #d8e2de;
+    border-radius: 10px;
+    background: #fff;
+    color: #52625a;
+    font-size: 24px;
+    line-height: 1;
+    list-style: none;
+    cursor: pointer;
+}
+
+.course-owner-toggle::-webkit-details-marker {
+    display: none;
+}
+
+.course-owner-toggle:hover,
+.course-owner-menu[open] > summary {
+    background: #f4f8f6;
+    border-color: #a6bfb3;
+}
+
+.course-owner-menu-panel {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 5;
+    min-width: 144px;
+    padding: 6px;
+    border: 1px solid #dfe7e2;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 4px 12px rgba(31, 41, 55, 0.08);
+}
+
+.course-owner-toggle:focus-visible,
+.course-owner-menu-panel a:focus-visible,
+.course-owner-menu-panel button:focus-visible {
+    outline: 2px solid #397a63;
+    outline-offset: 2px;
 }
 
 .course-meta {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px 26px;
+    gap: 8px 20px;
     margin: 0;
     color: #667085;
     font-size: 14px;
+    line-height: 1.5;
 }
 
 .course-meta div {
     display: flex;
     gap: 7px;
+    min-width: 0;
 }
 
 .course-meta dt {
+    flex-shrink: 0;
     font-weight: 700;
 }
 
 .course-meta dd {
     margin: 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.course-summary .content-translation-control {
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    margin-top: 12px;
+}
+
+.course-summary .content-translation-button {
+    padding: 6px 0;
+}
+
+.course-summary .content-translation-status {
+    overflow-wrap: anywhere;
 }
 
 .course-meta .content-writer-link {
@@ -66,27 +182,29 @@
 }
 
 .course-introduction {
-    margin-top: 30px;
-    padding-top: 26px;
+    margin-top: 20px;
+    padding-top: 22px;
     border-top: 1px solid #edf1ef;
 }
 
 .course-introduction > h2 {
-    margin: 0 0 14px;
-    font-size: 20px;
+    margin: 0 0 12px;
+    font-size: 17px;
 }
 
-/* 짧은 소개 글도 본문 영역으로 읽히도록 최소 높이만 주고, 긴 글은 내용 높이를 따른다. */
+/* 본문에 높이를 예약하지 않는다. 리치 텍스트와 번역 결과의 실제 높이를 따른다. */
 .course-introduction-content {
-    min-height: 190px;
     line-height: 1.75;
     overflow-wrap: anywhere;
+    display: flow-root;
 }
 
-@media (max-width: 600px) {
-    .course-introduction-content {
-        min-height: 140px;
-    }
+.course-introduction-content > :first-child {
+    margin-top: 0;
+}
+
+.course-introduction-content > :last-child {
+    margin-bottom: 0;
 }
 
 .course-introduction-content img {
@@ -94,32 +212,30 @@
     height: auto;
 }
 
-/* 소개 아래 우측의 작은 보조 정보 (배경/박스 없이 텍스트만) */
-.course-introduction-meta {
-    margin: 8px 0 0;
-    color: #667085;
-    font-size: 13px;
-    text-align: right;
-}
-
 .course-route {
-    margin-top: 54px;
+    margin-top: 36px;
 }
 
 .course-route-heading {
-    margin-bottom: 34px;
-    text-align: center;
+    margin-bottom: 22px;
+}
+
+.course-route-heading p {
+    margin-bottom: 6px;
+    font-size: 11px;
+    letter-spacing: 0.08em;
 }
 
 .course-route-heading h2 {
     margin: 0;
-    font-size: 30px;
+    font-size: 24px;
+    line-height: 1.4;
 }
 
 .course-timeline {
-    --route-column-gap: 26px;
-    --route-row-gap: 42px;
-    --route-marker-size: 44px;
+    --route-column-gap: 24px;
+    --route-row-gap: 32px;
+    --route-marker-size: 36px;
     --route-line-color: #b8d6c9;
     --route-turn-offset: 12px;
     position: relative;
@@ -128,6 +244,7 @@
     grid-auto-flow: row dense;
     align-items: stretch;
     gap: var(--route-row-gap) var(--route-column-gap);
+    margin-inline: var(--route-turn-offset);
 }
 
 .course-timeline::before {
@@ -139,8 +256,7 @@
     display: grid;
     grid-template-rows: var(--route-marker-size) minmax(0, 1fr);
     align-items: stretch;
-    gap: 7px;
-    height: 100%;
+    gap: 12px;
     min-width: 0;
 }
 
@@ -174,7 +290,7 @@
     top: calc(var(--route-marker-size) / 2 - 1px);
     left: 50%;
     width: calc(100% + var(--route-column-gap));
-    height: 3px;
+    height: 2px;
     border-radius: 999px;
     background: var(--route-line-color);
 }
@@ -185,7 +301,7 @@
     top: calc(var(--route-marker-size) / 2 - 1px);
     right: 50%;
     width: calc(100% + var(--route-column-gap));
-    height: 3px;
+    height: 2px;
     border-radius: 999px;
     background: var(--route-line-color);
 }
@@ -198,8 +314,8 @@
     width: calc(50% + var(--route-turn-offset));
     height: calc(100% + var(--route-row-gap));
     border: solid var(--route-line-color);
-    border-width: 3px 3px 3px 0;
-    border-radius: 0 20px 20px 0;
+    border-width: 2px 2px 2px 0;
+    border-radius: 0 14px 14px 0;
 }
 
 .course-timeline > .course-stop:nth-of-type(6n):not(:last-child)::after {
@@ -209,8 +325,8 @@
     width: calc(50% + var(--route-turn-offset));
     height: calc(100% + var(--route-row-gap));
     border: solid var(--route-line-color);
-    border-width: 3px 0 3px 3px;
-    border-radius: 20px 0 0 20px;
+    border-width: 2px 0 2px 2px;
+    border-radius: 14px 0 0 14px;
 }
 
 .course-stop-marker {
@@ -223,12 +339,13 @@
     box-sizing: border-box;
     width: var(--route-marker-size);
     height: var(--route-marker-size);
-    border: 5px solid #eaf4ef;
+    border: 3px solid #eaf4ef;
     border-radius: 50%;
     background: #397a63;
     color: #fff;
-    font-weight: 800;
-    box-shadow: 0 5px 14px rgba(57, 122, 99, 0.28);
+    font-size: 13px;
+    font-weight: 700;
+    box-shadow: 0 1px 3px rgba(57, 122, 99, 0.12);
 }
 
 .course-stop-card {
@@ -238,21 +355,26 @@
     display: flex;
     flex-direction: column;
     min-width: 0;
-    height: 100%;
+    box-sizing: border-box;
     overflow: hidden;
     border: 1px solid #e1e9e5;
-    border-radius: 18px;
+    border-radius: 12px;
     background: #fff;
     color: inherit;
     text-decoration: none;
-    box-shadow: 0 12px 28px rgba(31, 41, 55, 0.08);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 2px 6px rgba(31, 41, 55, 0.03);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .course-stop-card:hover,
 .course-stop-card:focus-visible {
-    transform: translateY(-4px);
-    box-shadow: 0 18px 34px rgba(31, 41, 55, 0.14);
+    border-color: #a6bfb3;
+    box-shadow: 0 3px 8px rgba(31, 41, 55, 0.06);
+}
+
+.course-stop-card:focus-visible {
+    outline: 2px solid #397a63;
+    outline-offset: 3px;
 }
 
 .course-stop-image-wrap {
@@ -264,52 +386,33 @@
 }
 
 .course-stop-image {
+    display: block;
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.3s ease;
-}
-
-.course-stop-card:hover .course-stop-image {
-    transform: scale(1.035);
-}
-
-.course-stop-order {
-    position: absolute;
-    top: 14px;
-    left: 14px;
-    padding: 6px 10px;
-    border-radius: 999px;
-    background: rgba(22, 64, 50, 0.88);
-    color: #fff;
-    font-size: 12px;
-    font-weight: 800;
-    letter-spacing: 0.06em;
 }
 
 .course-stop-body {
     display: flex;
     flex: 1 1 auto;
     flex-direction: column;
-    padding: 17px 18px 19px;
+    padding: 16px;
 }
 
 .course-stop-body h3 {
-    display: -webkit-box;
     margin: 0;
-    overflow: hidden;
     overflow-wrap: anywhere;
-    font-size: 19px;
+    font-size: 18px;
     line-height: 1.4;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
 }
 
 .course-stop-description {
     display: -webkit-box;
-    margin: 11px 0 0;
+    margin: 8px 0 0;
     overflow: hidden;
+    overflow-wrap: anywhere;
     color: #5f6b66;
+    font-size: 14px;
     line-height: 1.6;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
@@ -318,11 +421,12 @@
 .course-stop-region {
     display: flex;
     flex-wrap: wrap;
-    gap: 9px;
+    gap: 6px;
     margin: auto 0 0;
-    padding-top: 15px;
+    padding-top: 16px;
     color: #374b43;
-    font-size: 14px;
+    font-size: 13px;
+    line-height: 1.5;
 }
 
 .course-stop-region span {
@@ -343,10 +447,9 @@
     text-align: center;
 }
 
-/* 하단 액션: 구분선 없이 여백으로만 구분하고, 한 줄에 목록 이동 / 작성자·관리자 액션을 둔다.
-   버튼 규격은 커뮤니티 게시글 상세와 동일하게 맞춘다. */
+/* 하단은 목록 복귀와 기존 관리자 조치만 유지한다. */
 .course-detail-footer {
-    margin-top: 42px;
+    margin-top: 24px;
 }
 
 .course-detail-footer-row {
@@ -401,10 +504,23 @@
     margin: 0;
 }
 
-/* 수정: 중립 outline */
+/* 작성자 메뉴 항목은 터치할 수 있는 높이를 확보한다. */
+.course-owner-menu-panel .course-edit-button,
+.course-owner-menu-panel .course-delete-button {
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+    border: 0;
+    font: inherit;
+    font-size: 14px;
+    text-align: left;
+}
+
 .course-edit-button {
     color: #4b5563;
-    border: 1px solid #d5d7db;
 }
 
 .course-edit-button:hover {
@@ -412,10 +528,8 @@
     border-color: #c2c5cb;
 }
 
-/* 삭제: 강한 solid 대신 연한 red outline */
 .course-delete-button {
     color: #b42318;
-    border: 1px solid #e8c4c0;
     font-family: inherit;
     cursor: pointer;
 }
@@ -550,14 +664,17 @@
     border-color: #9a1d14;
 }
 
-/* 하단 액션과 댓글 사이는 구분선 없이 여백으로만 구분한다. */
+/* 목록 링크 뒤의 가는 구분선으로 댓글 영역을 연결한다. */
 .course-comments {
-    margin-top: 44px;
+    margin-top: 24px;
+    padding-top: 28px;
+    border-top: 1px solid #e2e8e5;
 }
 
-.course-comments h2 {
-    margin: 0 0 20px;
-    font-size: 22px;
+.course-comments.content-comments .content-comment-toolbar {
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
 }
 
 /* 작성폼은 커뮤니티 게시글 댓글과 같은 카드형 컨테이너로 맞춘다. (목록/답글/수정 폼은 그대로) */
@@ -565,7 +682,7 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
-    margin-bottom: 30px;
+    margin: 0 0 24px;
     padding: 16px;
     border: 1px solid #ddd;
     border-radius: 10px;
@@ -583,6 +700,21 @@
     border: 1px solid #ccc;
     border-radius: 6px;
     font: inherit;
+}
+
+/* 비로그인도 여행지 상세와 같은 크기의 읽기 전용 댓글 입력 영역을 유지한다. */
+.course-comment-guest textarea {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 100px;
+    padding: 12px;
+    resize: vertical;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background: #f9f9f9;
+    color: #777;
+    font: inherit;
+    cursor: default;
 }
 
 .course-comment-form-actions,
@@ -981,45 +1113,23 @@
     .course-detail-container {
         width: min(100% - 24px, 860px);
         margin-top: 24px;
-        overflow-x: hidden;
     }
 
     .course-summary {
-        padding: 26px 20px;
+        padding: 24px 20px;
         border-radius: 14px;
     }
 
-    .course-meta {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 7px;
-    }
-
     .course-route {
-        margin-top: 46px;
-    }
-
-    .course-route-heading {
-        text-align: left;
+        margin-top: 30px;
     }
 
     .course-timeline {
-        --route-marker-size: 38px;
+        --route-row-gap: 22px;
         display: flex;
         flex-direction: column;
-        gap: 22px;
-    }
-
-    .course-timeline::before {
-        content: "";
-        position: absolute;
-        top: calc(var(--route-marker-size) / 2);
-        bottom: calc(var(--route-marker-size) / 2);
-        left: calc(var(--route-marker-size) / 2);
-        width: 3px;
-        border-radius: 999px;
-        background: linear-gradient(#7bb69e, #d8e9e2);
-        transform: translateX(-50%);
+        gap: var(--route-row-gap);
+        margin-inline: 0;
     }
 
     .course-timeline > .course-stop:nth-of-type(n) {
@@ -1032,7 +1142,19 @@
         height: auto;
     }
 
-    .course-timeline > .course-stop::before,
+    /* 마지막 번호 이후에는 선을 그리지 않고, 높이가 다른 카드도 다음 번호에 연결한다. */
+    .course-timeline > .course-stop:nth-of-type(n):not(:last-child)::before {
+        content: "";
+        top: calc(var(--route-marker-size) / 2);
+        left: calc(var(--route-marker-size) / 2 - 1px);
+        right: auto;
+        width: 2px;
+        height: calc(100% + var(--route-row-gap));
+        border: 0;
+        border-radius: 0;
+        background: var(--route-line-color);
+    }
+
     .course-timeline > .course-stop::after {
         content: none !important;
         display: none !important;
@@ -1044,7 +1166,7 @@
     .course-stop-marker {
         grid-column: 1;
         grid-row: 1;
-        border-width: 4px;
+        border-width: 3px;
         font-size: 13px;
     }
 
@@ -1061,7 +1183,7 @@
     }
 
     .course-stop-body {
-        padding: 17px;
+        padding: 16px;
     }
 }
 
@@ -1070,9 +1192,49 @@
         width: calc(100% - 20px);
     }
 
+    .course-summary {
+        padding: 20px 16px;
+    }
+
+    .course-summary .course-title-row {
+        gap: 10px;
+    }
+
+    .course-title-row > h1 {
+        font-size: 24px;
+    }
+
+    .course-meta {
+        gap: 6px 14px;
+        font-size: 13px;
+    }
+
+    .course-meta div {
+        flex-wrap: wrap;
+        gap: 3px 6px;
+    }
+
+    .course-introduction {
+        margin-top: 16px;
+        padding-top: 18px;
+    }
+
+    .course-comments {
+        padding-top: 22px;
+    }
+
+    .course-comments.content-comments .content-comment-sort {
+        justify-content: flex-start;
+    }
+
+    .course-comment-form-actions {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
     .course-timeline {
-        --route-marker-size: 36px;
-        gap: 18px;
+        --route-marker-size: 32px;
+        --route-row-gap: 18px;
     }
 
     .course-timeline > .course-stop:nth-of-type(n) {
@@ -1095,8 +1257,7 @@
 
 @media (max-width: 320px) {
     .course-timeline {
-        --route-marker-size: 32px;
-        gap: 16px;
+        --route-row-gap: 16px;
     }
 
     .course-timeline > .course-stop:nth-of-type(n) {

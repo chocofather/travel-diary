@@ -53,7 +53,7 @@ class CourseDetailI18nContractTest {
                 .contains("#{course.detail.comment.placeholder}")
                 .contains("#{course.detail.comment.submit}")
                 .contains("#{course.detail.comment.loadMore}")
-                .contains("#{course.detail.comment.loginPrompt(${loginUrl})}")
+                .contains("#{destination.detail.comment.loginPrompt}")
                 .contains("#{course.detail.comment.image.close}")
                 .contains("#{course.detail.comment.image.previous}")
                 .contains("#{course.detail.comment.image.next}")
@@ -63,6 +63,8 @@ class CourseDetailI18nContractTest {
                 .contains("#{destination.detail.comment.translating}");
         // 삭제 확인은 화면이 내려준 문구를 쓰고, 화면 안에 한국어를 박아 두지 않는다.
         assertThat(detail).doesNotContain("confirm('이 여행 코스를 삭제하시겠습니까?')");
+        // 비로그인 안내는 textarea 안에서만 보여주고 별도 링크 문구는 만들지 않는다.
+        assertThat(detail).doesNotContain("#{course.detail.comment.loginPrompt(${loginUrl})}");
     }
 
     @Test

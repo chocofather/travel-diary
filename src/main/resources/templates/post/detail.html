@@ -21,6 +21,7 @@
   <script src="/js/user-post-translation.js" defer></script>
   <script src="/js/content-bookmarks.js" defer></script>
   <script src="/js/post-hide-modal.js" defer></script>
+  <script src="/js/course-detail.js" defer></script>
 </th:block>
 
 <th:block th:fragment="body">
@@ -39,16 +40,32 @@
         <div class="content-detail-title-row post-title-row">
           <h1 id="user-post-title" data-translation-title
               th:text="${post.title}">게시글 제목</h1>
-          <button type="button"
-                  class="content-bookmark-button"
-                  th:classappend="${post.bookmarked} ? ' is-bookmarked'"
-                  th:data-bookmark-url="@{/bookmarks/posts/{id}(id=${post.id})}"
-                  th:data-bookmarked="${post.bookmarked}"
-                  th:attr="aria-pressed=${post.bookmarked}">
-            <span class="content-bookmark-image" aria-hidden="true"></span>
-            <span class="content-bookmark-label"
-                  th:text="${post.bookmarked} ? '북마크 취소' : '북마크 저장'">북마크 저장</span>
-          </button>
+          <div class="post-header-actions">
+            <button type="button"
+                    class="content-bookmark-button"
+                    th:classappend="${post.bookmarked} ? ' is-bookmarked'"
+                    th:data-bookmark-url="@{/bookmarks/posts/{id}(id=${post.id})}"
+                    th:data-bookmarked="${post.bookmarked}"
+                    th:attr="aria-pressed=${post.bookmarked}">
+              <span class="content-bookmark-image" aria-hidden="true"></span>
+              <span class="content-bookmark-label"
+                    th:text="${post.bookmarked} ? '북마크 취소' : '북마크 저장'">북마크 저장</span>
+            </button>
+            <details class="post-owner-menu" data-owner-menu th:if="${post.myPost}">
+              <summary class="post-owner-toggle" aria-label="게시글 관리">
+                <span aria-hidden="true">⋯</span>
+              </summary>
+              <div class="post-owner-menu-panel">
+                <a th:href="@{/post/{id}/edit(id=${post.id})}" class="post-edit-button">수정</a>
+                <form th:action="@{/post/{id}/delete(id=${post.id})}"
+                      method="post"
+                      class="post-delete-form"
+                      onsubmit="return confirm('게시글을 삭제하시겠습니까?');">
+                  <button type="submit" class="post-delete-button">삭제</button>
+                </form>
+              </div>
+            </details>
+          </div>
         </div>
         <dl class="post-meta">
           <div><dt>작성자</dt><dd><a class="content-writer-link"
@@ -80,21 +97,12 @@
       </section>
 
       <footer class="post-detail-footer">
-        <!-- 한 줄 footer: 왼쪽은 목록 이동, 오른쪽은 작성자 액션 -->
+        <!-- 목록 이동과 ADMIN 전용 숨김 액션만 남긴다. -->
         <div class="post-detail-footer-row">
           <a th:href="@{/board/list(boardType='post')}" class="back-to-list">
             <span class="back-to-list-arrow" aria-hidden="true">←</span>목록으로
           </a>
           <div class="post-detail-actions">
-            <th:block th:if="${post.myPost}">
-              <a th:href="@{/post/{id}/edit(id=${post.id})}" class="post-edit-button">수정</a>
-              <form th:action="@{/post/{id}/delete(id=${post.id})}"
-                    method="post"
-                    class="post-delete-form"
-                    onsubmit="return confirm('게시글을 삭제하시겠습니까?');">
-                <button type="submit" class="post-delete-button">삭제</button>
-              </form>
-            </th:block>
             <!-- 관리자 숨김. 사유는 상시 노출하지 않고 모달에서 받는다.
                  버튼은 ADMIN 에게만 보이고 서비스에서도 권한을 다시 확인한다. -->
             <button type="button" sec:authorize="hasRole('ADMIN')"
@@ -165,9 +173,11 @@
         </div>
       </form>
 
-      <p class="post-comment-login" th:unless="${#authorization.expression('isAuthenticated()')}">
-        댓글을 작성하려면 <a th:href="@{/login(redirect=${'/post/' + post.id})}">로그인</a>해 주세요.
-      </p>
+      <div class="post-comment-guest" th:unless="${#authorization.expression('isAuthenticated()')}">
+        <label for="post-comment-content" class="sr-only">댓글 내용</label>
+        <textarea id="post-comment-content" readonly data-guest-comment-redirect
+                  th:placeholder="#{destination.detail.comment.loginPrompt}"></textarea>
+      </div>
 
       <p id="post-comment-message" class="post-comment-message" role="alert" hidden></p>
       <ul id="post-comment-list" class="post-comment-list content-comment-list" aria-live="polite"></ul>

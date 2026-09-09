@@ -1,5 +1,6 @@
 package com.example.travlediary.repository;
 
+import org.jsoup.Jsoup;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -21,7 +22,7 @@ class CourseTimelineUiContractTest {
                 .contains("th:each=\"stop : ${course.stops}\"")
                 .contains("class=\"course-stop\"")
                 .contains("th:text=\"${stop.visitOrder}\"")
-                .contains("#{course.detail.stop.order(${stop.visitOrder})}")
+                .doesNotContain("class=\"course-stop-order\"")
                 .contains("@{/destinations/{id}(id=${stop.destinationId})}")
                 .contains("stop.imageUrl")
                 .contains("'/images/default.png'")
@@ -32,6 +33,26 @@ class CourseTimelineUiContractTest {
                 .doesNotContain("course-stop--left")
                 .doesNotContain("course-stop--right")
                 .doesNotContain("reverse(");
+    }
+
+    @Test
+    void ownerActionsKeepTheirPermissionAndDeleteContractInTheHeader() throws IOException {
+        var document = Jsoup.parse(resource("templates/course/detail.html"));
+        var menu = document.selectFirst(".course-summary-header .course-owner-menu");
+
+        assertThat(menu).isNotNull();
+        assertThat(menu.attr("th:if")).isEqualTo("${course.myCourse}");
+        assertThat(menu.selectFirst("summary")).isNotNull();
+        assertThat(menu.selectFirst("a.course-edit-button").attr("th:href"))
+                .isEqualTo("@{/course/{id}/edit(id=${course.id})}");
+        var deleteForm = menu.selectFirst("form.course-delete-form");
+        assertThat(deleteForm.attr("method")).isEqualTo("post");
+        assertThat(deleteForm.attr("th:action"))
+                .isEqualTo("@{/course/{id}/delete(id=${course.id})}");
+        assertThat(deleteForm.attr("th:data-confirm")).isEqualTo("#{course.detail.deleteConfirm}");
+        assertThat(document.select(".course-detail-footer .course-edit-button, "
+                + ".course-detail-footer .course-delete-form")).isEmpty();
+        assertThat(document.select(".course-summary-label .course-stop-count")).hasSize(1);
     }
 
     @Test
@@ -82,8 +103,9 @@ class CourseTimelineUiContractTest {
                 .contains("flex-direction: column")
                 .contains(".course-stop:nth-of-type(n)")
                 .contains("grid-column: auto")
-                .contains("content: none !important")
-                .contains("display: none !important")
+                .contains(".course-timeline > .course-stop:nth-of-type(n):not(:last-child)::before")
+                .contains("height: calc(100% + var(--route-row-gap))")
+                .doesNotContain("linear-gradient")
                 .contains("@media (max-width: 480px)")
                 .contains("@media (max-width: 320px)")
                 .contains("minmax(0, 1fr)");

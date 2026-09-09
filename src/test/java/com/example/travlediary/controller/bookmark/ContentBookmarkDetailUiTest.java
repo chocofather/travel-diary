@@ -13,9 +13,12 @@ import com.example.travlediary.service.course.CourseService;
 import com.example.travlediary.service.category.CountryCategoryService;
 import com.example.travlediary.service.file.FileUploadService;
 import com.example.travlediary.service.post.PostService;
+import org.jsoup.Jsoup;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
@@ -98,6 +101,86 @@ class ContentBookmarkDetailUiTest {
                 .contains(expectedLabel);
         assertBookmarkState(body, bookmarked);
         assertThat(actionSection(body, "course-detail-actions")).doesNotContain("content-bookmark-button");
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void courseOwnerMenuRendersOnlyForOwnerAndKeepsDeleteCsrf(boolean myCourse) throws Exception {
+        CourseDetailDto detail = course(20L, false);
+        detail.setMyCourse(myCourse);
+        when(courseService.getCourseDetail(eq(20L), isNull(), any())).thenReturn(detail);
+
+        String body = mockMvc.perform(get("/course/20"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        var document = Jsoup.parse(body);
+        var menus = document.select(".course-summary-header .course-owner-menu");
+        assertThat(menus).hasSize(myCourse ? 1 : 0);
+        assertThat(document.select(".course-detail-footer .course-delete-form")).isEmpty();
+        if (myCourse) {
+            var menu = menus.first();
+            assertThat(menu.selectFirst("summary").attr("aria-label"))
+                    .isNotBlank().doesNotContain("#{");
+            assertThat(menu.selectFirst(".course-edit-button").attr("href")).isEqualTo("/course/20/edit");
+            var form = menu.selectFirst("form");
+            assertThat(form.attr("action")).isEqualTo("/course/20/delete");
+            assertThat(form.attr("method")).isEqualTo("post");
+            assertThat(form.attr("data-confirm")).isNotBlank();
+            assertThat(form.selectFirst("input[name=_csrf]").attr("value")).isNotBlank();
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void postOwnerMenuRendersOnlyForOwnerAndKeepsExistingDeleteConfirm(boolean myPost) throws Exception {
+        PostDetailDto detail = post(10L, PostType.TIP, false);
+        detail.setMyPost(myPost);
+        when(postService.getPostDetail(10L, null)).thenReturn(detail);
+
+        String body = mockMvc.perform(get("/post/10"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        var document = Jsoup.parse(body);
+        var menus = document.select(".post-detail-header .post-owner-menu");
+        assertThat(menus).hasSize(myPost ? 1 : 0);
+        assertThat(document.select(".post-detail-footer .post-edit-button, "
+                + ".post-detail-footer .post-delete-form")).isEmpty();
+        if (myPost) {
+            var menu = menus.first();
+            assertThat(menu.selectFirst("summary")).isNotNull();
+            assertThat(menu.selectFirst(".post-edit-button").attr("href")).isEqualTo("/post/10/edit");
+            var form = menu.selectFirst("form");
+            assertThat(form.attr("action")).isEqualTo("/post/10/delete");
+            assertThat(form.attr("method")).isEqualTo("post");
+            assertThat(form.attr("onsubmit")).contains("confirm(");
+            assertThat(form.selectFirst("input[name=_csrf]").attr("value")).isNotBlank();
+        }
+    }
+
+    @Test
+    void anonymousPostAndCourseKeepReadonlyCommentTextareaWithLoginLink() throws Exception {
+        when(postService.getPostDetail(10L, null)).thenReturn(post(10L, PostType.TIP, false));
+        when(courseService.getCourseDetail(eq(20L), isNull(), any())).thenReturn(course(20L, false));
+
+        String postBody = mockMvc.perform(get("/post/10"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String courseBody = mockMvc.perform(get("/course/20"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertAnonymousCommentComposer(Jsoup.parse(postBody), ".post-comment-guest");
+        assertAnonymousCommentComposer(Jsoup.parse(courseBody), ".course-comment-guest");
+    }
+
+    private void assertAnonymousCommentComposer(org.jsoup.nodes.Document document, String guestSelector) {
+        var guest = document.selectFirst(guestSelector);
+        assertThat(guest).isNotNull();
+        var textarea = guest.selectFirst("textarea[readonly]");
+        assertThat(textarea.attr("placeholder")).isNotBlank();
+        assertThat(textarea.hasAttr("data-guest-comment-redirect")).isTrue();
+        assertThat(guest.select("input[type=file], button[type=submit], .image-upload-label")).isEmpty();
+        assertThat(guest.select("p, a")).isEmpty();
     }
 
     private static Stream<Arguments> postBookmarkStates() {

@@ -83,10 +83,10 @@ class CourseStopOrderMapperContractTest {
 
         // index + 1 로 가리지 않는다. 고치는 것은 저장된 값 쪽이다
         assertThat(detail)
-                .contains("#{course.detail.stop.order(${stop.visitOrder})}")
                 .contains("th:text=\"${stop.visitOrder}\"");
-        // STOP 이라는 말은 그대로 둔다
+        // 이미지 배지를 중복 표시하지 않고 원형 마커에 저장된 순서만 표시한다.
         assertThat(detail)
+                .doesNotContain("class=\"course-stop-order\"")
                 .doesNotContain("STEP ")
                 .doesNotContain("stat.index + 1");
     }

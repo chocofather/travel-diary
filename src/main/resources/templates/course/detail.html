@@ -22,6 +22,7 @@
   <script src="/js/user-post-translation.js" defer></script>
   <script src="/js/content-bookmarks.js" defer></script>
   <script src="/js/course-hide-modal.js" defer></script>
+  <script src="/js/course-detail.js" defer></script>
 </th:block>
 
 <th:block th:fragment="body">
@@ -65,20 +66,44 @@
              th:data-translation-rate-limited="#{destination.detail.comment.translationRateLimited}"
              th:data-translation-failed="#{destination.detail.comment.translationFailed}">
       <header class="course-summary-header">
-        <p class="course-summary-label" th:text="#{course.detail.label}">나만의 여행 코스</p>
+        <p class="course-summary-label">
+          <span th:text="#{course.detail.label}">나만의 여행 코스</span>
+          <span class="course-stop-count"
+                th:if="${course.stops != null and !course.stops.isEmpty()}"
+                th:text="#{course.detail.stopCount(${course.stops.size()})}">총 3개의 여행지</span>
+        </p>
         <div class="content-detail-title-row course-title-row">
           <h1 id="course-translation-title" data-translation-title
               th:text="${course.title}">코스 제목</h1>
-          <button type="button"
-                  class="content-bookmark-button"
-                  th:classappend="${course.bookmarked} ? ' is-bookmarked'"
-                  th:data-bookmark-url="@{/bookmarks/courses/{id}(id=${course.id})}"
-                  th:data-bookmarked="${course.bookmarked}"
-                  th:attr="aria-pressed=${course.bookmarked}">
-            <span class="content-bookmark-image" aria-hidden="true"></span>
-            <span class="content-bookmark-label"
-                  th:text="${course.bookmarked} ? '북마크 취소' : '북마크 저장'">북마크 저장</span>
-          </button>
+          <div class="course-header-actions">
+            <button type="button"
+                    class="content-bookmark-button"
+                    th:classappend="${course.bookmarked} ? ' is-bookmarked'"
+                    th:data-bookmark-url="@{/bookmarks/courses/{id}(id=${course.id})}"
+                    th:data-bookmarked="${course.bookmarked}"
+                    th:attr="aria-pressed=${course.bookmarked}">
+              <span class="content-bookmark-image" aria-hidden="true"></span>
+              <span class="content-bookmark-label"
+                    th:text="${course.bookmarked} ? '북마크 취소' : '북마크 저장'">북마크 저장</span>
+            </button>
+            <details class="course-owner-menu" data-owner-menu th:if="${course.myCourse}">
+              <summary class="course-owner-toggle"
+                       th:aria-label="|#{course.detail.edit} / #{course.detail.delete}|">
+                <span aria-hidden="true">⋯</span>
+              </summary>
+              <div class="course-owner-menu-panel">
+                <a th:href="@{/course/{id}/edit(id=${course.id})}" class="course-edit-button"
+                   th:text="#{course.detail.edit}">수정</a>
+                <!-- 기존 POST/CSRF 및 confirm-submit.js 삭제 확인 계약을 유지한다. -->
+                <form th:action="@{/course/{id}/delete(id=${course.id})}"
+                      method="post" class="course-delete-form"
+                      th:data-confirm="#{course.detail.deleteConfirm}">
+                  <button type="submit" class="course-delete-button"
+                          th:text="#{course.detail.delete}">삭제</button>
+                </form>
+              </div>
+            </details>
+          </div>
         </div>
         <dl class="course-meta">
           <div><dt th:text="#{course.detail.meta.writer}">작성자</dt><dd><a class="content-writer-link"
@@ -103,12 +128,6 @@
              class="course-introduction-content rich-text-content"
              data-translation-content
              th:utext="${course.content}"></div>
-        <!-- 이미 화면에 내려온 stops 목록 크기만 사용한다. (추가 조회 없음) -->
-        <p class="course-introduction-meta"
-           th:if="${course.stops != null and !course.stops.isEmpty()}"
-           th:text="#{course.detail.stopCount(${course.stops.size()})}">
-          총 0개의 여행지
-        </p>
       </section>
     </article>
 
@@ -130,8 +149,6 @@
                    th:src="${stop.imageUrl != null and !#strings.isEmpty(stop.imageUrl) ? stop.imageUrl : '/images/default.png'}"
                    th:alt="#{course.detail.stop.imageAlt(${stop.name})}"
                    loading="lazy" />
-              <span class="course-stop-order"
-                    th:text="#{course.detail.stop.order(${stop.visitOrder})}">STOP 1</span>
             </div>
 
             <div class="course-stop-body">
@@ -154,25 +171,13 @@
     </section>
 
     <footer class="course-detail-footer">
-      <!-- 한 줄 액션: 왼쪽은 목록 이동, 오른쪽은 작성자/관리자 액션 -->
+      <!-- 목록 이동과 ADMIN 전용 숨김 액션만 남긴다. -->
       <div class="course-detail-footer-row">
         <a th:href="@{/board/list(boardType='course')}" class="course-back-to-list">
           <span class="course-back-to-list-arrow" aria-hidden="true">←</span><span
               th:text="#{course.detail.backToList}">코스 목록으로</span>
         </a>
         <div class="course-detail-actions">
-          <th:block th:if="${course.myCourse}">
-            <a th:href="@{/course/{id}/edit(id=${course.id})}" class="course-edit-button"
-               th:text="#{course.detail.edit}">수정</a>
-            <!-- 삭제 확인 문구는 confirm-submit.js 가 data-confirm 으로 읽는다. -->
-            <form th:action="@{/course/{id}/delete(id=${course.id})}"
-                  method="post"
-                  class="course-delete-form"
-                  th:data-confirm="#{course.detail.deleteConfirm}">
-              <button type="submit" class="course-delete-button"
-                      th:text="#{course.detail.delete}">삭제</button>
-            </form>
-          </th:block>
           <!-- 관리자 숨김. 사유는 상시 노출하지 않고 모달에서 받는다.
                버튼은 ADMIN 에게만 보이고 서비스에서도 권한을 다시 확인한다. -->
           <button type="button" sec:authorize="hasRole('ADMIN')"
@@ -249,13 +254,13 @@
         </div>
       </form>
 
-      <p class="course-comment-login"
-         th:unless="${#authorization.expression('isAuthenticated()')}"
-         th:with="loginUrl=@{/login(redirect=${'/course/' + course.id})}"
-         th:utext="#{course.detail.comment.loginPrompt(${loginUrl})}">
-        댓글을 작성하려면
-        <a th:href="@{/login(redirect=${'/course/' + course.id})}">로그인</a>해 주세요.
-      </p>
+      <div class="course-comment-guest"
+           th:unless="${#authorization.expression('isAuthenticated()')}">
+        <label for="course-comment-content" class="sr-only"
+               th:text="#{course.detail.comment.contentLabel}">댓글 내용</label>
+        <textarea id="course-comment-content" readonly data-guest-comment-redirect
+                  th:placeholder="#{destination.detail.comment.loginPrompt}"></textarea>
+      </div>
 
       <p id="course-comment-message" class="course-comment-message" role="alert" hidden></p>
       <ul id="course-comment-list" class="course-comment-list content-comment-list" aria-live="polite"></ul>

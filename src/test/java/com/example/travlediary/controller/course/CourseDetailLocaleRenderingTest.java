@@ -58,27 +58,32 @@ class CourseDetailLocaleRenderingTest {
                 Arguments.of(SupportedLanguage.KOREAN,
                         new String[]{"나만의 여행 코스", "작성자", "작성일", "수정일", "조회수",
                                 "코스 소개", "총 2개의 여행지", "여행 동선", "지역",
-                                "수정", "삭제", "댓글", "최신순", "등록", "코스 목록으로"},
+                                "수정", "삭제", "댓글", "최신순", "등록", "코스 목록으로",
+                                "댓글을 작성하려면 로그인하세요."},
                         "이 여행 코스를 삭제하시겠습니까?"),
                 Arguments.of(SupportedLanguage.ENGLISH,
                         new String[]{"My Travel Course", "Author", "Posted", "Updated", "Views",
                                 "Course Overview", "2 destinations in total", "Travel Route", "Area",
-                                "Edit", "Delete", "Comments", "Newest", "Post", "Back to course list"},
+                                "Edit", "Delete", "Comments", "Newest", "Post", "Back to course list",
+                                "Log in to leave a comment."},
                         "Delete this travel course?"),
                 Arguments.of(SupportedLanguage.JAPANESE,
                         new String[]{"わたしだけの旅行コース", "投稿者", "投稿日", "更新日", "閲覧数",
                                 "コース紹介", "全2カ所の旅行スポット", "旅行ルート", "地域",
-                                "編集", "削除", "コメント", "新着順", "投稿", "コース一覧へ"},
+                                "編集", "削除", "コメント", "新着順", "投稿", "コース一覧へ",
+                                "コメントするにはログインしてください。"},
                         "この旅行コースを削除しますか？"),
                 Arguments.of(SupportedLanguage.CHINESE_SIMPLIFIED,
                         new String[]{"我的旅行路线", "作者", "发布日期", "更新日期", "浏览量",
                                 "路线简介", "共 2 个旅行地", "旅行路线", "地区",
-                                "编辑", "删除", "评论", "最新", "发布", "返回路线列表"},
+                                "编辑", "删除", "评论", "最新", "发布", "返回路线列表",
+                                "请登录后发表评论。"},
                         "确定要删除这条旅行路线吗？"),
                 Arguments.of(SupportedLanguage.CHINESE_TRADITIONAL,
                         new String[]{"我的旅行路線", "作者", "發布日期", "更新日期", "瀏覽次數",
                                 "路線簡介", "共 2 個旅遊景點", "旅行路線", "地區",
-                                "編輯", "刪除", "留言", "最新", "發布", "返回路線列表"},
+                                "編輯", "刪除", "留言", "最新", "發布", "返回路線列表",
+                                "請登入後留言。"},
                         "確定要刪除這條旅行路線嗎？"));
     }
 
@@ -105,8 +110,10 @@ class CourseDetailLocaleRenderingTest {
                 .contains("여행자민준")
                 .contains("경복궁")
                 .contains("종로구");
-        // 로그인 안내는 언어별 문장 안에 로그인 링크를 그대로 품는다.
-        assertThat(body).contains("href=\"/login?redirect=/course/7\"");
+        // 비로그인 안내는 textarea 안에만 있고, 클릭 이동은 destination과 같은 data 계약으로 처리한다.
+        assertThat(body)
+                .contains("data-guest-comment-redirect")
+                .doesNotContain("href=\"/login?redirect=/course/7\"");
         // 없는 메시지 키가 남아 있지 않다.
         assertThat(body).doesNotContain("??");
     }

@@ -24,6 +24,80 @@
     overflow-wrap: anywhere;
 }
 
+.post-detail .post-title-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.post-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.post-header-actions .content-bookmark-button {
+    border-radius: 10px;
+    box-shadow: none;
+}
+
+.post-header-actions .content-bookmark-image {
+    width: 24px;
+    height: 24px;
+    transform: none;
+}
+
+.post-owner-menu {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.post-owner-toggle {
+    display: grid;
+    place-items: center;
+    box-sizing: border-box;
+    width: 44px;
+    height: 44px;
+    border: 1px solid #d8e2de;
+    border-radius: 10px;
+    background: #fff;
+    color: #52625a;
+    font-size: 24px;
+    line-height: 1;
+    list-style: none;
+    cursor: pointer;
+}
+
+.post-owner-toggle::-webkit-details-marker {
+    display: none;
+}
+
+.post-owner-toggle:hover,
+.post-owner-menu[open] > summary {
+    background: #f4f8f6;
+    border-color: #a6bfb3;
+}
+
+.post-owner-menu-panel {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 5;
+    min-width: 144px;
+    padding: 6px;
+    border: 1px solid #dfe7e2;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 4px 12px rgba(31, 41, 55, 0.08);
+}
+
+.post-owner-toggle:focus-visible,
+.post-owner-menu-panel a:focus-visible,
+.post-owner-menu-panel button:focus-visible {
+    outline: 2px solid #397a63;
+    outline-offset: 2px;
+}
+
 .post-meta {
     display: flex;
     flex-wrap: wrap;
@@ -149,6 +223,21 @@
 
 .post-delete-form {
     margin: 0;
+}
+
+/* course 작성자 메뉴와 같은 터치 영역과 메뉴 항목 위계를 쓴다. */
+.post-owner-menu-panel .post-edit-button,
+.post-owner-menu-panel .post-delete-button {
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+    border: 0;
+    font: inherit;
+    font-size: 14px;
+    text-align: left;
 }
 
 /* 삭제: 강한 solid 대신 연한 red outline */
@@ -346,6 +435,21 @@
     border: 1px solid #ccc;
     border-radius: 6px;
     font: inherit;
+}
+
+/* 비로그인도 여행지 상세와 같은 크기의 읽기 전용 댓글 입력 영역을 유지한다. */
+.post-comment-guest textarea {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 100px;
+    padding: 12px;
+    resize: vertical;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background: #f9f9f9;
+    color: #777;
+    font: inherit;
+    cursor: default;
 }
 
 .post-comment-form-actions,

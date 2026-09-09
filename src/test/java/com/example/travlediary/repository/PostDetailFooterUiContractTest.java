@@ -10,13 +10,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * 게시글 상세 하단 액션 영역 계약.
- * 목록 이동 / 작성자 액션 / 관리자 숨김 버튼이 한 줄 footer 에 모이고,
+ * 목록 이동 / 관리자 숨김 버튼이 footer 에 남고 작성자 액션은 제목 우측 메뉴에 있으며,
  * 숨김 사유는 상시 노출 없이 모달에서만 받는다.
  */
 class PostDetailFooterUiContractTest {
 
     @Test
-    void listLinkAuthorActionsAndHideButtonShareOneRow() throws IOException {
+    void listLinkAndAdminHideRemainInFooterWhileOwnerActionsMoveToHeaderMenu() throws IOException {
         String detail = readFile("src/main/resources/templates/post/detail.html");
         String footer = between(detail, "<footer class=\"post-detail-footer\">", "</footer>");
 
@@ -25,15 +25,24 @@ class PostDetailFooterUiContractTest {
                 .isGreaterThanOrEqualTo(0)
                 .isLessThan(footer.indexOf("post-detail-actions"));
 
-        // 작성자 액션(본인 글)과 관리자 숨김 버튼(ADMIN)이 같은 줄에 있다
+        // footer 에는 관리자 숨김 버튼(ADMIN)만 남는다.
         String actions = between(footer, "<div class=\"post-detail-actions\">", "</div>\n        </div>");
         assertThat(actions)
+                .contains("sec:authorize=\"hasRole('ADMIN')\"")
+                .contains("post-hide-button")
+                .contains("data-post-hide-open")
+                .doesNotContain("post-edit-button")
+                .doesNotContain("post-delete-button");
+
+        // 작성자 액션은 북마크 옆의 compact 메뉴에서만 렌더링된다.
+        String header = between(detail, "<header class=\"post-detail-header\">", "</header>");
+        assertThat(header)
+                .contains("post-header-actions")
+                .contains("post-owner-menu")
                 .contains("th:if=\"${post.myPost}\"")
                 .contains("post-edit-button")
                 .contains("post-delete-button")
-                .contains("sec:authorize=\"hasRole('ADMIN')\"")
-                .contains("post-hide-button")
-                .contains("data-post-hide-open");
+                .contains("onsubmit=\"return confirm('");
 
         // 상시 노출되던 관리자 조치 패널과 사유 입력창은 사라졌다
         assertThat(footer)
