@@ -11,8 +11,8 @@
     <div class="verification-card verification-request-card">
       <div class="verification-icon" aria-hidden="true">✉</div>
       <p class="verification-eyebrow">EMAIL VERIFICATION</p>
-      <h1 id="verification-resend-title">인증메일 다시 받기</h1>
-      <p class="verification-description">
+      <h1 id="verification-resend-title" th:text="#{verification.resend.title}">인증메일 다시 받기</h1>
+      <p class="verification-description" th:text="#{verification.resend.description}">
         회원가입에 사용한 이메일 주소를 입력해주세요.
       </p>
 
@@ -30,31 +30,36 @@
                th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
 
         <div class="verification-input-group">
-          <label for="resendEmail">이메일</label>
+          <label for="resendEmail" th:text="#{verification.resend.email}">이메일</label>
           <input type="email" id="resendEmail" name="email"
                  th:value="${submittedEmail}"
                  autocomplete="email" inputmode="email" maxlength="100" required
                  aria-describedby="resendEmailHelp resendEmailError emailSuggestionText"
                  th:attr="aria-invalid=${emailError != null}">
-          <p id="resendEmailHelp" class="verification-field-help">
+          <p id="resendEmailHelp" class="verification-field-help"
+             th:text="#{verification.resend.emailHelp}">
             인증이 필요한 계정인 경우 입력한 주소로 인증메일을 보내드립니다.
           </p>
           <p id="resendEmailError" class="verification-field-error" role="alert"
              th:if="${emailError}" th:text="${emailError}">
             유효한 이메일 주소를 입력해주세요.
           </p>
-          <div id="emailSuggestion" class="verification-email-suggestion" hidden>
+          <!-- 오타 추천 문구는 JS 가 만들므로 템플릿을 data-* 로 넘긴다. -->
+          <div id="emailSuggestion" class="verification-email-suggestion" hidden
+               th:data-suggestion-format="#{verification.email.suggestion}">
             <span id="emailSuggestionText"></span>
-            <button type="button" id="applyEmailSuggestion">수정하기</button>
+            <button type="button" id="applyEmailSuggestion"
+                    th:text="#{signup.field.email.applySuggestion}">수정하기</button>
           </div>
         </div>
 
-        <button type="submit" class="verification-submit-button">인증메일 요청</button>
+        <button type="submit" class="verification-submit-button"
+                th:text="#{verification.resend.submit}">인증메일 요청</button>
       </form>
 
       <div class="verification-links">
-        <a th:href="@{/login}">로그인 페이지</a>
-        <a th:href="@{/users/register}">회원가입</a>
+        <a th:href="@{/login}" th:text="#{verification.link.login}">로그인 페이지</a>
+        <a th:href="@{/users/register}" th:text="#{verification.link.signup}">회원가입</a>
       </div>
     </div>
   </section>

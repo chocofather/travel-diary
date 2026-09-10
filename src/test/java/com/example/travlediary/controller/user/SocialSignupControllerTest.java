@@ -46,7 +46,13 @@ class SocialSignupControllerTest {
 
     @BeforeEach
     void setUp() {
-        controller = new SocialSignupController(socialSignupService, authenticationService);
+        // provider 표시명은 messages 번들에서 온다(브랜드명이라 번역되지 않는 값).
+        var messages = new org.springframework.context.support.ResourceBundleMessageSource();
+        messages.setBasename("messages");
+        messages.setDefaultEncoding(java.nio.charset.StandardCharsets.UTF_8.name());
+        messages.setFallbackToSystemLocale(false);
+        controller = new SocialSignupController(
+                socialSignupService, authenticationService, messages);
     }
 
     @Test

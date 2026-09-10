@@ -139,7 +139,7 @@ class MyPageServiceTest {
 
         assertNicknamePolicyError(() -> service.updateProfile(7L, form("   ")));
         assertNicknamePolicyError(() -> service.updateProfile(7L, form("한")));
-        assertNicknamePolicyError(() -> service.updateProfile(7L, form("가".repeat(13))));
+        assertNicknamePolicyError(() -> service.updateProfile(7L, form("가".repeat(17))));
         assertNicknamePolicyError(() -> service.updateProfile(7L, form("여행 민준")));
         assertNicknamePolicyError(() -> service.updateProfile(7L, form("민준!")));
         assertNicknamePolicyError(() -> service.updateProfile(7L, form("min_jun")));

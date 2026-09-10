@@ -1,4 +1,9 @@
 document.addEventListener("DOMContentLoaded", () => {
+    /* 문구는 서버 messages 번들이 source of truth 다. data-* 로 현재 locale 값을 받는다. */
+    const formatMessage = (template, ...values) => values.reduce(
+        (text, value, index) => text.split("{" + index + "}").join(String(value)),
+        template || "");
+
     const button = document.getElementById("resendVerificationButton");
     const message = document.getElementById("resendCooldown");
     if (button && message) {
@@ -7,7 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const render = () => {
                 button.disabled = remainingSeconds > 0;
                 message.textContent = remainingSeconds > 0
-                    ? `${remainingSeconds}초 후 다시 요청할 수 있습니다.`
+                    ? formatMessage(button.dataset.cooldownFormat, remainingSeconds)
                     : "";
             };
 
@@ -31,7 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
         suggestedEmail = window.TravelDiaryEmailDomain?.suggest(emailInput.value) || "";
         suggestion.hidden = !suggestedEmail;
         suggestionText.textContent = suggestedEmail
-            ? `혹시 ${suggestedEmail}을 입력하려던 건가요?`
+            ? formatMessage(suggestion.dataset.suggestionFormat, suggestedEmail)
             : "";
     };
 

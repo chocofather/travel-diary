@@ -9,11 +9,20 @@ import java.util.regex.Pattern;
 public final class NicknamePolicy {
 
     public static final String INVALID_MESSAGE =
-            "2~12자의 한글, 영문, 숫자만 사용할 수 있습니다.";
+            "2~16자의 한글, 영문, 일본어, 중국어, 숫자만 사용할 수 있습니다.";
     public static final String FORBIDDEN_MESSAGE = "사용할 수 없는 닉네임입니다.";
 
-    private static final Pattern ALLOWED_PATTERN =
-            Pattern.compile("^[가-힣A-Za-z0-9]{2,12}$");
+    public static final int MIN_LENGTH = 2;
+    /** 지원 5개 언어의 자동 추천 조합 중 가장 긴 값(StrongPenguin999 = 16자)까지 담는다. */
+    public static final int MAX_LENGTH = 16;
+
+    /**
+     * 한글 / 영문 / 숫자에 일본어 가나와 CJK 한자를 더한다.
+     * 지원 언어에 필요한 범위만 열고 공백·이모지·특수문자는 그대로 막는다.
+     */
+    private static final Pattern ALLOWED_PATTERN = Pattern.compile(
+            "^[가-힣A-Za-z0-9\\u3041-\\u3096\\u30A1-\\u30FA\\u30FC\\u4E00-\\u9FFF]{"
+                    + MIN_LENGTH + "," + MAX_LENGTH + "}$");
 
     private static final List<ForbiddenNicknameRule> FORBIDDEN_RULES = List.of(
             contains("관리자", Category.IMPERSONATION),

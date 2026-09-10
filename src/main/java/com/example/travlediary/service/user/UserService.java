@@ -18,6 +18,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -71,7 +73,8 @@ public class UserService {
         PasswordPolicy.validate(rawPassword);
         if (!rawPassword.equals(form.getPasswordConfirm())) {
             throw new RegistrationValidationException(
-                    "passwordConfirm", "비밀번호가 일치하지 않습니다.");
+                    "passwordConfirm", "비밀번호가 일치하지 않습니다.",
+                    "signup.error.passwordConfirm.mismatch");
         }
 
         validateRegistrationDuplicates(username, email, nickname);
@@ -96,7 +99,8 @@ public class UserService {
             userMapper.insertUser(user);
         } catch (DataIntegrityViolationException exception) {
             throw new RegistrationValidationException(
-                    "registration", "이미 사용 중인 회원가입 정보가 있습니다.");
+                    "registration", "이미 사용 중인 회원가입 정보가 있습니다.",
+                    "signup.error.duplicate");
         }
         log.info("Registration user stored: userId={}, recipient={}",
                 user.getId(), EmailPolicy.mask(email));
@@ -109,13 +113,16 @@ public class UserService {
 
     private void validateRegistrationDuplicates(String username, String email, String nickname) {
         if (userMapper.countByUsername(username) > 0) {
-            throw new RegistrationValidationException("username", "이미 사용 중인 아이디입니다.");
+            throw new RegistrationValidationException("username", "이미 사용 중인 아이디입니다.",
+                    "signup.error.username.duplicate");
         }
         if (userMapper.findByEmail(email) != null) {
-            throw new RegistrationValidationException("userEmail", "이미 사용 중인 이메일입니다.");
+            throw new RegistrationValidationException("userEmail", "이미 사용 중인 이메일입니다.",
+                    "signup.error.email.duplicate");
         }
         if (userMapper.countByNickname(nickname) > 0) {
-            throw new RegistrationValidationException("nickname", "이미 사용 중인 닉네임입니다.");
+            throw new RegistrationValidationException("nickname", "이미 사용 중인 닉네임입니다.",
+                    "signup.error.nickname.duplicate");
         }
     }
 
@@ -139,6 +146,21 @@ public class UserService {
     public boolean isNicknameExists(String nickname) {
         String normalized = NicknamePolicy.normalizeAndValidate(nickname);
         return userMapper.countByNickname(normalized) > 0;
+    }
+
+    /**
+     * 자동 추천 전용. 같은 조합의 언어별 표기를 한 번의 조회로 확인한다.
+     * 사용자가 직접 입력한 닉네임 검사(isNicknameExists)는 기존 정책 그대로다.
+     */
+    public boolean isAnyNicknameExists(Collection<String> nicknames) {
+        if (nicknames == null || nicknames.isEmpty()) {
+            return false;
+        }
+        List<String> normalized = nicknames.stream()
+                .map(NicknamePolicy::normalizeAndValidate)
+                .distinct()
+                .toList();
+        return userMapper.countByNicknameIn(normalized) > 0;
     }
 
     // 이메일 중복검사

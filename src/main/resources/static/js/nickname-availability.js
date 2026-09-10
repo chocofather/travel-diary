@@ -1,7 +1,12 @@
 (function ($) {
     if (!$) return;
 
-    const nicknamePattern = /^[가-힣A-Za-z0-9]{2,12}$/;
+    // 서버 NicknamePolicy 와 같은 범위(한글/영문/숫자 + 일본어 가나 + CJK 한자, 2~16자)
+    const nicknamePattern = /^[가-힣A-Za-z0-9\u3041-\u3096\u30A1-\u30FA\u30FC\u4E00-\u9FFF]{2,16}$/;
+
+    /* 문구는 서버 messages 번들이 source of truth 다.
+       일반 가입 / 소셜 가입 템플릿이 같은 fragment 로 현재 locale 값을 data-* 에 실어 준다. */
+    const messages = document.getElementById("nickname-messages")?.dataset || {};
 
     function debounce(callback, delay = 300) {
         let timer;
@@ -49,14 +54,13 @@
                     const isAvailable = !response.exists && response.status === "AVAILABLE";
                     setAvailable(isAvailable);
                     const message = response.status === "FORBIDDEN"
-                        ? "사용할 수 없는 닉네임입니다."
-                        : response.exists ? "이미 사용 중인 닉네임입니다."
-                            : "사용 가능한 닉네임입니다.";
+                        ? messages.forbidden
+                        : response.exists ? messages.taken : messages.available;
                     setMessage(message, isAvailable ? "success" : "error");
                 })
                 .fail(function () {
                     if (version !== requestVersion) return;
-                    setMessage("닉네임 중복 확인에 실패했습니다.", "error");
+                    setMessage(messages.checkFailed, "error");
                 });
         });
 
@@ -65,12 +69,10 @@
             invalidate();
             const nickname = this.value.trim();
             if (!nicknamePattern.test(nickname)) {
-                setMessage(
-                    "2~12자의 한글, 영문, 숫자만 사용할 수 있습니다. 공백·특수문자 및 부적절한 표현은 사용할 수 없습니다.",
-                    "error");
+                setMessage(messages.invalid, "error");
                 return;
             }
-            setMessage("사용 가능 여부를 확인하고 있습니다.");
+            setMessage(messages.checking);
             checkAvailability();
         });
 
@@ -78,7 +80,7 @@
             invalidate();
             $.get("/api/users/generate-nickname")
                 .done(nickname => $input.val(nickname).trigger("input").focus())
-                .fail(() => setMessage("닉네임 생성에 실패했습니다.", "error"));
+                .fail(() => setMessage(messages.generateFailed, "error"));
         });
 
         return {

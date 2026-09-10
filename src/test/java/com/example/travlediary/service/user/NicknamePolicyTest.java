@@ -29,7 +29,7 @@ class NicknamePolicyTest {
     @ParameterizedTest
     @NullAndEmptySource
     @ValueSource(strings = {
-            " ", "한", "가나다라마바사아자차카타파", "여행 민준", "민준!", "min_jun", "min-jun"
+            " ", "한", "가나다라마바사아자차카타파하거너더", "여행 민준", "민준!", "min_jun", "min-jun"
     })
     void rejectsInvalidFormatWithTheSharedMessage(String nickname) {
         assertThatThrownBy(() -> NicknamePolicy.normalizeAndValidate(nickname))

@@ -9,6 +9,8 @@ import com.example.travlediary.service.user.RegistrationValidationException;
 import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,9 +30,17 @@ public class EmailVerificationController {
     private static final Logger log = LoggerFactory.getLogger(EmailVerificationController.class);
 
     private final EmailVerificationService emailVerificationService;
+    private final MessageSource messageSource;
 
-    public EmailVerificationController(EmailVerificationService emailVerificationService) {
+    public EmailVerificationController(EmailVerificationService emailVerificationService,
+                                       MessageSource messageSource) {
         this.emailVerificationService = emailVerificationService;
+        this.messageSource = messageSource;
+    }
+
+    /** 화면 문구는 현재 locale 의 messages 번들에서 가져온다. */
+    private String message(String code, Object... arguments) {
+        return messageSource.getMessage(code, arguments, LocaleContextHolder.getLocale());
     }
 
     @GetMapping("/verify")
@@ -44,9 +54,9 @@ public class EmailVerificationController {
             log.error("Email verification could not be completed: exceptionType={}",
                     exception.getClass().getSimpleName());
             model.addAttribute("verificationStatus", "invalid");
-            model.addAttribute("pageTitle", "이메일 인증 오류");
-            model.addAttribute("verificationTitle", "이메일 인증을 처리할 수 없습니다");
-            model.addAttribute("verificationDescription", "잠시 후 다시 시도해주세요.");
+            model.addAttribute("pageTitle", message("verification.error.pageTitle"));
+            model.addAttribute("verificationTitle", message("verification.error.title"));
+            model.addAttribute("verificationDescription", message("verification.error.description"));
             model.addAttribute("canResend",
                     session.getAttribute(PENDING_EMAIL_SESSION_ATTRIBUTE) != null);
             return "verification-result";
@@ -56,21 +66,23 @@ public class EmailVerificationController {
         switch (outcome.status()) {
             case SUCCESS -> {
                 session.removeAttribute(PENDING_EMAIL_SESSION_ATTRIBUTE);
-                model.addAttribute("pageTitle", "이메일 인증 완료");
-                model.addAttribute("verificationTitle", "이메일 인증이 완료되었습니다");
-                model.addAttribute("verificationDescription", "이제 Travel Diary에 로그인할 수 있습니다.");
+                model.addAttribute("pageTitle", message("verification.success.pageTitle"));
+                model.addAttribute("verificationTitle", message("verification.success.title"));
+                model.addAttribute("verificationDescription",
+                        message("verification.success.description"));
             }
             case EXPIRED -> {
                 session.setAttribute(PENDING_EMAIL_SESSION_ATTRIBUTE, outcome.email());
-                model.addAttribute("pageTitle", "인증 링크 만료");
-                model.addAttribute("verificationTitle", "인증 링크가 만료되었습니다");
-                model.addAttribute("verificationDescription", "새 인증메일을 요청한 뒤 다시 인증해주세요.");
+                model.addAttribute("pageTitle", message("verification.expired.pageTitle"));
+                model.addAttribute("verificationTitle", message("verification.expired.title"));
+                model.addAttribute("verificationDescription",
+                        message("verification.expired.description"));
             }
             case INVALID -> {
-                model.addAttribute("pageTitle", "유효하지 않은 인증 링크");
-                model.addAttribute("verificationTitle", "유효하지 않은 인증 링크입니다");
+                model.addAttribute("pageTitle", message("verification.invalid.pageTitle"));
+                model.addAttribute("verificationTitle", message("verification.invalid.title"));
                 model.addAttribute("verificationDescription",
-                        "링크가 잘못되었거나 이미 사용되었습니다. 메일의 최신 링크를 확인해주세요.");
+                        message("verification.invalid.description"));
             }
         }
         model.addAttribute("canResend",
@@ -83,7 +95,7 @@ public class EmailVerificationController {
     public String showVerifyWaitingPage(HttpSession session, Model model) {
         String pendingEmail = (String) session.getAttribute(PENDING_EMAIL_SESSION_ATTRIBUTE);
         WaitingState waitingState = emailVerificationService.getWaitingState(pendingEmail);
-        model.addAttribute("pageTitle", "이메일 인증 대기");
+        model.addAttribute("pageTitle", message("verification.waiting.pageTitle"));
         model.addAttribute("verificationAvailable", waitingState.available());
         model.addAttribute("maskedEmail", waitingState.maskedEmail());
         model.addAttribute("cooldownSeconds", waitingState.remainingSeconds());
@@ -92,7 +104,7 @@ public class EmailVerificationController {
 
     @GetMapping("/verification/resend")
     public String showStandaloneResendPage(Model model) {
-        model.addAttribute("pageTitle", "인증메일 다시 받기");
+        model.addAttribute("pageTitle", message("verification.resend.pageTitle"));
         return "verification-resend";
     }
 
@@ -106,20 +118,20 @@ public class EmailVerificationController {
         } catch (RuntimeException exception) {
             log.error("Verification resend could not be completed: recipient={}, exceptionType={}",
                     EmailPolicy.mask(pendingEmail), exception.getClass().getSimpleName());
-            addMessage(redirectAttributes, "error",
-                    "인증메일 발송 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.");
+            addMessage(redirectAttributes, "error", message("verification.message.error"));
             return "redirect:/users/register/verify-waiting";
         }
 
         switch (outcome.status()) {
             case SENT -> addMessage(redirectAttributes, "success",
-                    "인증메일 재발송을 요청했습니다. 잠시 후 최신 메일의 링크를 사용해주세요.");
+                    message("verification.message.resent"));
+            // 남은 시간은 언어별 어순을 위해 message parameter 로 넘긴다.
             case COOLDOWN -> addMessage(redirectAttributes, "info",
-                    outcome.remainingSeconds() + "초 후 다시 요청할 수 있습니다.");
+                    message("verification.message.cooldown", outcome.remainingSeconds()));
             case DELIVERY_FAILED -> addMessage(redirectAttributes, "error",
-                    "인증메일 발송 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.");
+                    message("verification.message.error"));
             case NOT_ELIGIBLE -> addMessage(redirectAttributes, "info",
-                    "인증이 필요한 계정이라면 인증메일 발송을 요청했습니다.");
+                    message("verification.message.maybeRequested"));
         }
         return "redirect:/users/register/verify-waiting";
     }
@@ -132,7 +144,8 @@ public class EmailVerificationController {
             normalizedEmail = EmailPolicy.normalizeAndValidate(email);
         } catch (RegistrationValidationException exception) {
             redirectAttributes.addFlashAttribute("submittedEmail", safeInput(email));
-            redirectAttributes.addFlashAttribute("emailError", EmailPolicy.INVALID_MESSAGE);
+            redirectAttributes.addFlashAttribute(
+                    "emailError", message("verification.error.emailInvalid"));
             return "redirect:/users/verification/resend";
         }
 
@@ -143,7 +156,7 @@ public class EmailVerificationController {
                     EmailPolicy.mask(normalizedEmail), exception.getClass().getSimpleName());
         }
 
-        addMessage(redirectAttributes, "success", PUBLIC_RESEND_MESSAGE);
+        addMessage(redirectAttributes, "success", message("verification.message.requested"));
         return "redirect:/users/verification/resend";
     }
 

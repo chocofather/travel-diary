@@ -11,6 +11,8 @@ import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -25,10 +27,16 @@ public class UserController {
     private static final Logger log = LoggerFactory.getLogger(UserController.class);
 
     private final UserService userService;
+    private final MessageSource messageSource;
 
     @Autowired
-    public UserController(UserService userService) {
+    public UserController(UserService userService, MessageSource messageSource) {
         this.userService = userService;
+        this.messageSource = messageSource;
+    }
+
+    private String message(String code) {
+        return messageSource.getMessage(code, null, LocaleContextHolder.getLocale());
     }
 
     // 회원가입 폼 화면
@@ -62,18 +70,24 @@ public class UserController {
             result = userService.registerUser(form);
         } catch (RegistrationValidationException exception) {
             log.info("Registration rejected before completion: field={}", exception.getField());
+            // messageCode 를 넘기면 현재 locale 의 messages 번들에서 문구를 찾고,
+            // 없으면 기존 메시지를 그대로 쓴다.
+            String messageCode = exception.getMessageCode();
             if ("registration".equals(exception.getField())) {
-                bindingResult.reject("registration.duplicate", exception.getMessage());
+                bindingResult.reject(
+                        messageCode == null ? "registration.duplicate" : messageCode,
+                        exception.getMessage());
             } else {
-                bindingResult.rejectValue(
-                        exception.getField(), "registration.invalid", exception.getMessage());
+                bindingResult.rejectValue(exception.getField(),
+                        messageCode == null ? "registration.invalid" : messageCode,
+                        exception.getMessage());
             }
             clearSensitiveFields(form);
             return "register";
         } catch (RuntimeException exception) {
             log.error("Registration failed before a completion result was returned: exceptionType={}",
                     exception.getClass().getSimpleName());
-            bindingResult.reject("registration.failed",
+            bindingResult.reject("signup.error.failed",
                     "회원가입을 완료할 수 없습니다. 잠시 후 다시 시도해주세요.");
             clearSensitiveFields(form);
             return "register";
@@ -85,12 +99,11 @@ public class UserController {
             if (result.verificationEmailRequested()) {
                 redirectAttributes.addFlashAttribute("verificationMessageType", "success");
                 redirectAttributes.addFlashAttribute(
-                        "verificationMessage",
-                        "인증메일 발송을 요청했습니다. 잠시 후 메일함을 확인해주세요.");
+                        "verificationMessage", message("verification.message.sent"));
             } else {
                 redirectAttributes.addFlashAttribute("verificationMessageType", "error");
-                redirectAttributes.addFlashAttribute("verificationMessage",
-                        "회원가입은 완료되었지만 인증메일 발송 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.");
+                redirectAttributes.addFlashAttribute(
+                        "verificationMessage", message("verification.message.sendFailed"));
             }
             log.info("Registration completed; redirecting to verification waiting: recipient={}, emailRequested={}",
                     EmailPolicy.mask(result.email()),

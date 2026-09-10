@@ -1,26 +1,33 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" th:lang="${currentLanguageTag}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>소셜 회원가입 | Travel Diary</title>
+  <title th:text="#{signup.social.pageTitle}">소셜 회원가입 | Travel Diary</title>
   <link rel="stylesheet" type="text/css" href="/css/style.css">
   <link rel="stylesheet" href="/css/login.css">
 </head>
 <body class="login-page">
+<!-- 로그인/회원가입과 같은 공용 언어 선택 fragment 를 그대로 쓴다. -->
+<div class="login-page__topbar">
+  <div th:replace="~{fragments/language-menu :: languageMenu}"></div>
+</div>
+
 <main class="login-page__main">
-  <a class="login-page__brand" th:href="@{/}" aria-label="Travel Diary 홈으로 이동">
+  <a class="login-page__brand" th:href="@{/}" th:aria-label="#{login.brand.home}"
+     aria-label="Travel Diary 홈으로 이동">
     <img src="/images/logo7.png" alt="Travel Diary">
   </a>
 
   <section class="login-container social-signup" aria-labelledby="socialSignupTitle">
     <header class="login-header">
-      <h1 id="socialSignupTitle">가입을 완료해주세요</h1>
-      <p>닉네임과 필수 약관 동의만 하면 바로 시작할 수 있습니다.</p>
+      <h1 id="socialSignupTitle" th:text="#{signup.social.title}">가입을 완료해주세요</h1>
+      <p th:text="#{signup.social.subtitle}">닉네임과 필수 약관 동의만 하면 바로 시작할 수 있습니다.</p>
     </header>
 
+    <!-- provider 표시명은 브랜드명이라 번역하지 않고 기존 provider key 를 그대로 쓴다. -->
     <div class="social-signup__account" th:if="${providerEmail != null}">
-      <span th:text="${providerDisplayName + ' 계정'}">소셜 계정</span>
+      <span th:text="#{signup.social.account(${providerDisplayName})}">소셜 계정</span>
       <strong th:text="${providerEmail}">travel@example.com</strong>
     </div>
 
@@ -28,21 +35,25 @@
           th:object="${socialSignupForm}" class="login-form">
       <div class="login-feedback login-feedback--error"
            th:if="${#fields.hasGlobalErrors()}" role="alert">
+        <!-- 문구는 BindingResult 가 messages 번들에서 이미 해석해 준다. -->
         <p th:each="error : ${#fields.globalErrors()}" th:text="${error}">가입 오류</p>
       </div>
 
       <div class="login-field">
-        <label for="nickname">닉네임</label>
+        <label for="nickname" th:text="#{signup.field.nickname}">닉네임</label>
         <div class="social-signup__nickname-row">
           <input type="text" id="nickname" th:field="*{nickname}"
-                 maxlength="12" autocomplete="nickname"
-                 placeholder="2~12자 한글, 영문, 숫자"
+                 maxlength="16" autocomplete="nickname"
+                 th:placeholder="#{signup.field.nickname.placeholder}"
+                 placeholder="2~16자 한글, 영문, 숫자"
                  aria-describedby="nicknameMessage nicknameServerError"
                  th:attr="aria-invalid=${#fields.hasErrors('nickname')}" required>
-          <button type="button" class="social-signup__recommend-button" id="generateNickname">자동 추천</button>
+          <button type="button" class="social-signup__recommend-button" id="generateNickname"
+                  th:text="#{signup.field.nickname.generate}">자동 추천</button>
         </div>
-        <p id="nicknameMessage" class="social-signup__field-feedback" aria-live="polite">
-          2~12자의 한글, 영문, 숫자만 사용할 수 있습니다. 공백·특수문자 및 부적절한 표현은 사용할 수 없습니다.
+        <p id="nicknameMessage" class="social-signup__field-feedback" aria-live="polite"
+           th:text="#{signup.field.nickname.help}">
+          2~16자의 한글, 영문, 일본어, 중국어, 숫자를 사용할 수 있습니다. 공백·특수문자 및 부적절한 표현은 사용할 수 없습니다.
         </p>
         <p class="social-signup__field-error" th:if="${#fields.hasErrors('nickname')}"
            th:errors="*{nickname}" role="alert" id="nicknameServerError">닉네임 오류</p>
@@ -51,28 +62,34 @@
       <div class="social-signup__consents">
         <label for="termsAccepted">
           <input type="checkbox" id="termsAccepted" th:field="*{termsAccepted}">
-          <span><em>[필수]</em> 이용약관에 동의합니다.</span>
+          <span><em>[<span th:text="#{signup.terms.required}">필수</span>]</em>
+            <span th:text="#{signup.social.terms.service}">이용약관에 동의합니다.</span></span>
         </label>
         <p class="social-signup__field-error" th:if="${#fields.hasErrors('termsAccepted')}"
            th:errors="*{termsAccepted}" role="alert">이용약관 동의 오류</p>
 
         <label for="privacyAccepted">
           <input type="checkbox" id="privacyAccepted" th:field="*{privacyAccepted}">
-          <span><em>[필수]</em> 개인정보 수집·이용에 동의합니다.</span>
+          <span><em>[<span th:text="#{signup.terms.required}">필수</span>]</em>
+            <span th:text="#{signup.social.terms.privacy}">개인정보 수집·이용에 동의합니다.</span></span>
         </label>
         <p class="social-signup__field-error" th:if="${#fields.hasErrors('privacyAccepted')}"
            th:errors="*{privacyAccepted}" role="alert">개인정보 동의 오류</p>
       </div>
 
-      <p class="social-signup__notice">
+      <p class="social-signup__notice" th:text="#{signup.social.notice}">
         기존 계정과 동일한 이메일은 자동으로 연결되지 않습니다.
       </p>
 
-      <button type="submit" class="login-submit">가입하고 시작하기</button>
+      <button type="submit" class="login-submit"
+              th:text="#{signup.social.submit}">가입하고 시작하기</button>
     </form>
   </section>
 </main>
+<!-- 닉네임 스크립트가 쓰는 현재 locale 문구 (일반 가입과 공용) -->
+<div th:replace="~{fragments/nickname-messages :: nicknameMessages}"></div>
 <script src="/js/jquery-3.6.0.min.js"></script>
+<script src="/js/language-menu.js" defer></script>
 <script src="/js/nickname-availability.js" defer></script>
 <script src="/js/social-signup.js" defer></script>
 </body>

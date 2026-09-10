@@ -39,7 +39,8 @@ public class SocialSignupService {
         String nickname = validateForm(form);
         if (userMapper.countByNickname(nickname) > 0) {
             throw new SocialSignupValidationException(
-                    "nickname", DUPLICATE_NICKNAME_MESSAGE);
+                    "nickname", DUPLICATE_NICKNAME_MESSAGE,
+                    "signup.error.nickname.duplicate");
         }
 
         User user = new User();
@@ -53,7 +54,8 @@ public class SocialSignupService {
             userMapper.insertUser(user);
         } catch (DataIntegrityViolationException exception) {
             throw new SocialSignupValidationException(
-                    "nickname", DUPLICATE_NICKNAME_MESSAGE);
+                    "nickname", DUPLICATE_NICKNAME_MESSAGE,
+                    "signup.error.nickname.duplicate");
         }
         if (user.getId() == null) {
             throw new SocialSignupPersistenceException("회원 정보를 저장하지 못했습니다.");
@@ -91,20 +93,27 @@ public class SocialSignupService {
     private String validateForm(SocialSignupForm form) {
         if (form == null) {
             throw new SocialSignupValidationException(
-                    "nickname", "닉네임을 입력해주세요.");
+                    "nickname", "닉네임을 입력해주세요.", "signup.error.nickname.required");
         }
         if (!form.isTermsAccepted()) {
             throw new SocialSignupValidationException(
-                    "termsAccepted", "서비스 이용약관에 동의해주세요.");
+                    "termsAccepted", "서비스 이용약관에 동의해주세요.", "signup.error.terms.service");
         }
         if (!form.isPrivacyAccepted()) {
             throw new SocialSignupValidationException(
-                    "privacyAccepted", "개인정보 수집 및 이용에 동의해주세요.");
+                    "privacyAccepted", "개인정보 수집 및 이용에 동의해주세요.",
+                    "signup.error.terms.privacy");
         }
         try {
             return NicknamePolicy.normalizeAndValidate(form.getNickname());
         } catch (NicknamePolicy.ViolationException exception) {
-            throw new SocialSignupValidationException("nickname", exception.getMessage());
+            // 형식/금칙어 구분은 일반 회원가입과 같은 key 를 쓴다.
+            String messageCode =
+                    exception.getViolationType() == NicknamePolicy.ViolationType.FORBIDDEN
+                            ? "signup.error.nickname.forbidden"
+                            : "signup.error.nickname.invalid";
+            throw new SocialSignupValidationException(
+                    "nickname", exception.getMessage(), messageCode);
         }
     }
 

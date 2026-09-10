@@ -410,9 +410,9 @@ class MyPageControllerTest {
                         org.hamcrest.Matchers.hasProperty("nickname",
                                 org.hamcrest.Matchers.is("기존닉네임"))))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("name=\"_csrf\"")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("maxlength=\"12\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("maxlength=\"16\"")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "2~12자의 한글, 영문, 숫자만 사용할 수 있습니다.")))
+                        "2~16자의 한글, 영문, 일본어, 중국어, 숫자만 사용할 수 있습니다.")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "공백·특수문자 및 부적절한 표현은 사용할 수 없습니다.")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(

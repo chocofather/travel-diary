@@ -18,7 +18,8 @@ public final class EmailPolicy {
     public static String normalizeAndValidate(String email) {
         String normalized = email == null ? "" : email.strip().toLowerCase(Locale.ROOT);
         if (normalized.length() > MAX_LENGTH || !EMAIL_PATTERN.matcher(normalized).matches()) {
-            throw new RegistrationValidationException("userEmail", INVALID_MESSAGE);
+            throw new RegistrationValidationException(
+                    "userEmail", INVALID_MESSAGE, "signup.error.email.invalid");
         }
         return normalized;
     }

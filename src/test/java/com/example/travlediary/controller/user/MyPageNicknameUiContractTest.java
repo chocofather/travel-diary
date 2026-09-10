@@ -13,7 +13,7 @@ class MyPageNicknameUiContractTest {
 
     private static final Path RESOURCES = Path.of("src/main/resources");
     private static final String FORMAT_GUIDANCE =
-            "2~12자의 한글, 영문, 숫자만 사용할 수 있습니다.";
+            "2~16자의 한글, 영문, 일본어, 중국어, 숫자를 사용할 수 있습니다.";
     private static final String POLICY_GUIDANCE =
             "공백·특수문자 및 부적절한 표현은 사용할 수 없습니다.";
 
@@ -24,7 +24,7 @@ class MyPageNicknameUiContractTest {
 
         // 안내 문구는 화면이 data-* 로 내려 준다. (스크립트에 언어별 문자열을 두지 않는다)
         assertThat(template)
-                .contains("maxlength=\"12\"",
+                .contains("maxlength=\"16\"",
                         "#{mypage.profile.nickname.help.format}",
                         "#{mypage.profile.nickname.help.forbidden}",
                         "/js/mypage-profile.js", "id=\"nickname-availability\"",
@@ -109,13 +109,20 @@ class MyPageNicknameUiContractTest {
         String sharedScript = read("static/js/nickname-availability.js");
 
         assertThat(template).contains(
-                "maxlength=\"12\"", FORMAT_GUIDANCE, POLICY_GUIDANCE,
-                "/js/nickname-availability.js");
+                "maxlength=\"16\"", FORMAT_GUIDANCE, POLICY_GUIDANCE,
+                "/js/nickname-availability.js",
+                // 문구는 공용 fragment 가 현재 locale 값으로 내려 준다.
+                "~{fragments/nickname-messages :: nicknameMessages}");
+        // 프론트 정규식은 서버 NicknamePolicy 와 같은 문자 범위/길이를 쓴다.
         assertThat(sharedScript).contains(
-                "const nicknamePattern = /^[가-힣A-Za-z0-9]{2,12}$/;",
-                "공백·특수문자 및 부적절한 표현은 사용할 수 없습니다.",
-                "response.status === \"FORBIDDEN\"",
-                "사용할 수 없는 닉네임입니다.");
+                "const nicknamePattern = "
+                        + "/^[가-힣A-Za-z0-9\\u3041-\\u3096\\u30A1-\\u30FA\\u30FC\\u4E00-\\u9FFF]{2,16}$/;",
+                "response.status === \"FORBIDDEN\"");
+        // 스크립트에는 언어별 문자열을 두지 않는다.
+        assertThat(sharedScript)
+                .doesNotContain("사용 가능한 닉네임입니다.")
+                .doesNotContain("이미 사용 중인 닉네임입니다.")
+                .doesNotContain("사용할 수 없는 닉네임입니다.");
     }
 
     @Test
@@ -130,13 +137,17 @@ class MyPageNicknameUiContractTest {
                 "id=\"generateNickname\"",
                 "id=\"nicknameMessage\"",
                 "aria-live=\"polite\"",
-                "/js/nickname-availability.js");
+                "/js/nickname-availability.js",
+                // 일반 회원가입과 같은 문구 fragment 를 쓴다.
+                "~{fragments/nickname-messages :: nicknameMessages}");
         assertThat(sharedScript).contains(
                 "/api/users/check-nickname",
                 "/api/users/generate-nickname",
-                "사용 가능한 닉네임입니다.",
-                "이미 사용 중인 닉네임입니다.",
-                "사용할 수 없는 닉네임입니다.");
+                // 문구는 data-* 로 받는다.
+                "document.getElementById(\"nickname-messages\")",
+                "messages.available",
+                "messages.taken",
+                "messages.forbidden");
         assertThat(stylesheet).contains(
                 ".social-signup__nickname-row",
                 "align-items: center;",

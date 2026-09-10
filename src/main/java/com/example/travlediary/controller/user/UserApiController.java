@@ -1,13 +1,17 @@
 package com.example.travlediary.controller.user;
 
+import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.service.user.UserService;
 import com.example.travlediary.service.user.NicknamePolicy;
+import com.example.travlediary.service.user.NicknameVocabulary;
 import com.example.travlediary.service.user.PasswordPolicy;
 import com.example.travlediary.service.user.RegistrationValidationException;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
@@ -43,22 +47,35 @@ public class UserApiController {
         return response;
     }
 
-    // ✅ 닉네임 자동 추천 API
+    /**
+     * ✅ 닉네임 자동 추천 API.
+     * 형용사 + 동물 + 숫자 구조와 추천 풀(10 x 10 x 1000)은 그대로 두고,
+     * 단어만 요청 시점의 사이트 언어로 고른다.
+     * <p>
+     * 중복 확인은 언어별 문자열이 아니라 canonical 조합 단위로 한다.
+     * 같은 조합의 5개 언어 표기 중 하나라도 쓰이고 있으면 그 조합은 버리고 다시 뽑는다.
+     * (예: `귀여운토끼123` 이 있으면 `CuteRabbit123` 도 추천하지 않는다)
+     * <p>
+     * 여기서 만든 문자열은 그대로 저장되는 실제 닉네임이므로 이후 언어를 바꿔도 번역하지 않는다.
+     */
     @GetMapping("/generate-nickname")
     public String generateNickname() {
-        String[] adjectives = {"귀여운", "상냥한", "멋진", "빠른", "행복한", "용감한", "차가운", "따뜻한", "강한", "조용한"};
-        String[] nouns = {"고양이", "강아지", "토끼", "호랑이", "사자", "부엉이", "여우", "늑대", "펭귄", "곰"};
+        SupportedLanguage language = SupportedLanguage.fromLocale(LocaleContextHolder.getLocale())
+                .orElse(SupportedLanguage.KOREAN);
+        List<NicknameVocabulary.Adjective> adjectives = NicknameVocabulary.ADJECTIVES;
+        List<NicknameVocabulary.Animal> animals = NicknameVocabulary.ANIMALS;
 
         Random random = new Random();
-        String nickname;
+        NicknameVocabulary.Combination combination;
         do {
-            String adjective = adjectives[random.nextInt(adjectives.length)];
-            String noun = nouns[random.nextInt(nouns.length)];
-            int number = random.nextInt(1000); // 0~999 랜덤 숫자
-            nickname = adjective + noun + number;
-        } while (userService.isNicknameExists(nickname)); // 중복 체크 후 중복되면 다시 생성
+            combination = new NicknameVocabulary.Combination(
+                    adjectives.get(random.nextInt(adjectives.size())),
+                    animals.get(random.nextInt(animals.size())),
+                    random.nextInt(1000)); // 0~999 랜덤 숫자
+            // 5개 언어 표기를 한 번의 조회로 확인한다.
+        } while (userService.isAnyNicknameExists(combination.allDisplayNames()));
 
-        return nickname;
+        return combination.displayIn(language);
     }
 
     @PostMapping("/validate-password")

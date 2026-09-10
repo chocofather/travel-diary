@@ -12,7 +12,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const originalNickname = nicknameInput.dataset.currentNickname || "";
     // 안내 문구는 화면이 data-* 로 내려 준다. (언어별 문자열을 여기에 두지 않는다)
     const messages = nicknameInput.dataset;
-    const nicknamePattern = /^[가-힣A-Za-z0-9]{2,12}$/;
+    // 서버 NicknamePolicy 와 같은 범위(한글/영문/숫자 + 일본어 가나 + CJK 한자, 2~16자)
+    const nicknamePattern = /^[가-힣A-Za-z0-9\u3041-\u3096\u30A1-\u30FA\u30FC\u4E00-\u9FFF]{2,16}$/;
     let debounceTimer = null;
     let requestController = null;
     let requestSequence = 0;
@@ -48,7 +49,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (nickname.length < 2) {
             return messages.messageTooShort;
         }
-        if (nickname.length > 12) {
+        if (nickname.length > 16) {
             return messages.messageTooLong;
         }
         if (!nicknamePattern.test(nickname)) {

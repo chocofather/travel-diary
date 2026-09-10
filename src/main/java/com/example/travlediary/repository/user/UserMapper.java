@@ -12,6 +12,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 
 @Mapper
@@ -74,6 +75,9 @@ public interface UserMapper {
     /* ---------- 중복 체크 ---------- */
     int countByUsername(String username);
     int countByNickname(String nickname);
+
+    /** 자동 추천용. 같은 조합의 언어별 표기를 한 번에 확인한다. */
+    int countByNicknameIn(@Param("nicknames") Collection<String> nicknames);
     int countByNicknameExcludingUserId(@Param("nickname") String nickname,
                                        @Param("userId") Long userId);
 

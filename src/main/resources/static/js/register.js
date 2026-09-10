@@ -7,7 +7,14 @@ $(function () {
     const usernamePattern = /^(?=.*[a-z])[a-z0-9_-]{3,16}$/;
     const passwordPattern = /^(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/;
     const emailPattern = /^[A-Z0-9._%+-]+@[A-Z0-9-]+(?:\.[A-Z0-9-]+)+$/i;
-    const stepNames = ["", "약관 동의", "계정 정보"];
+
+    /* 화면 문구는 서버 messages 번들이 source of truth 다. data-* 로 현재 locale 값을 받는다. */
+    const messages = form.get(0).dataset;
+    const progress = $(".registration-progress").get(0)?.dataset || {};
+    const stepNames = ["", progress.stepName1 || "", progress.stepName2 || ""];
+    const formatMessage = (template, ...values) => values.reduce(
+        (text, value, index) => text.split("{" + index + "}").join(String(value)),
+        template || "");
     const serverErrorSelectors = {
         username: "#usernameServerError",
         userEmail: "#emailServerError",
@@ -50,7 +57,8 @@ $(function () {
                 .toggleClass("is-current", indicatorStep === step)
                 .attr("aria-current", indicatorStep === step ? "step" : null);
         });
-        $("#registrationStepStatus").text("2단계 중 " + step + "단계 · " + stepNames[step]);
+        $("#registrationStepStatus").text(
+            formatMessage(progress.stepStatusFormat, 2, step, stepNames[step]));
         updateButtons();
         window.scrollTo({top: 0, behavior: "smooth"});
     }
@@ -104,13 +112,13 @@ $(function () {
                 if (version !== requestVersion.username || username !== $("#username").val().trim()) return;
                 availability.username = !response.exists;
                 setMessage("#usernameMessage",
-                    response.exists ? "이미 사용 중인 아이디입니다." : "사용 가능한 아이디입니다.",
+                    response.exists ? messages.msgUsernameTaken : messages.msgUsernameAvailable,
                     response.exists ? "error" : "success");
                 updateButtons();
             })
             .fail(function () {
                 if (version !== requestVersion.username) return;
-                setMessage("#usernameMessage", "아이디 중복 확인에 실패했습니다.", "error");
+                setMessage("#usernameMessage", messages.msgUsernameCheckFailed, "error");
             });
     });
 
@@ -125,17 +133,17 @@ $(function () {
                     || email !== $("#userEmail").val().trim().toLowerCase()) return;
                 availability.email = response.valid !== false && !response.exists;
                 if (response.valid === false) {
-                    setMessage("#emailMessage", "올바른 이메일 주소를 입력해주세요.", "error");
+                    setMessage("#emailMessage", messages.msgEmailInvalid, "error");
                 } else {
                     setMessage("#emailMessage",
-                        response.exists ? "이미 사용 중인 이메일입니다." : "사용 가능한 이메일입니다.",
+                        response.exists ? messages.msgEmailTaken : messages.msgEmailAvailable,
                         response.exists ? "error" : "success");
                 }
                 updateButtons();
             })
             .fail(function () {
                 if (version !== requestVersion.email) return;
-                setMessage("#emailMessage", "이메일 중복 확인에 실패했습니다.", "error");
+                setMessage("#emailMessage", messages.msgEmailCheckFailed, "error");
             });
     });
 
@@ -143,7 +151,8 @@ $(function () {
         suggestedEmail = window.TravelDiaryEmailDomain?.suggest(email) || "";
         $("#emailSuggestion").prop("hidden", !suggestedEmail);
         if (suggestedEmail) {
-            $("#emailSuggestionText").text("혹시 " + suggestedEmail + "을 입력하려던 건가요?");
+            $("#emailSuggestionText").text(
+                formatMessage(messages.msgEmailSuggestion, suggestedEmail));
         }
     }
 
@@ -207,7 +216,7 @@ $(function () {
         const panel = $("#" + $(this).attr("aria-controls"));
         const expanded = $(this).attr("aria-expanded") === "true";
         $(this).attr("aria-expanded", String(!expanded))
-            .text(expanded ? "내용 보기" : "내용 닫기");
+            .text(expanded ? messages.msgTermsView : messages.msgTermsHide);
         panel.prop("hidden", expanded);
     });
 
@@ -216,11 +225,10 @@ $(function () {
         invalidate("username");
         const username = this.value.trim();
         if (!usernamePattern.test(username)) {
-            setMessage("#usernameMessage",
-                "영문 소문자를 포함한 3~16자의 영문, 숫자, -, _만 사용할 수 있습니다.", "error");
+            setMessage("#usernameMessage", messages.msgUsernameInvalid, "error");
             return;
         }
-        setMessage("#usernameMessage", "사용 가능 여부를 확인하고 있습니다.");
+        setMessage("#usernameMessage", messages.msgChecking);
         checkUsernameAvailability();
     });
 
@@ -231,10 +239,10 @@ $(function () {
         updateEmailTypoSuggestion(email);
         renderEmailDomainOptions(email);
         if (!emailPattern.test(email)) {
-            setMessage("#emailMessage", "올바른 이메일 주소를 입력해주세요.", "error");
+            setMessage("#emailMessage", messages.msgEmailInvalid, "error");
             return;
         }
-        setMessage("#emailMessage", "사용 가능 여부를 확인하고 있습니다.");
+        setMessage("#emailMessage", messages.msgChecking);
         checkEmailAvailability();
     }).on("keydown", function (event) {
         if (event.key === "ArrowDown" || event.key === "ArrowUp") {
@@ -271,12 +279,11 @@ $(function () {
 
     $("#userPassword, #passwordConfirm").on("input", function () {
         setMessage("#passwordValidationMessage",
-            passwordIsValid() ? "사용 가능한 비밀번호입니다."
-                : "8자 이상이며 영문, 숫자, !@#$%^&*만 사용할 수 있고 특수문자를 포함해야 합니다.",
+            passwordIsValid() ? messages.msgPasswordValid : messages.msgPasswordInvalid,
             passwordIsValid() ? "success" : "error");
         if ($("#passwordConfirm").val().length > 0) {
             setMessage("#passwordMessage",
-                passwordsMatch() ? "비밀번호가 일치합니다." : "비밀번호가 일치하지 않습니다.",
+                passwordsMatch() ? messages.msgPasswordMatch : messages.msgPasswordMismatch,
                 passwordsMatch() ? "success" : "error");
         } else {
             setMessage("#passwordMessage", "");
@@ -293,8 +300,9 @@ $(function () {
         const input = $($(this).data("toggle"));
         const reveal = input.attr("type") === "password";
         input.attr("type", reveal ? "text" : "password");
+        // 표시/숨김 라벨은 버튼이 data-* 로 현재 locale 문구를 들고 있다.
         $(this).toggleClass("show", reveal).toggleClass("hide", !reveal)
-            .attr("aria-label", reveal ? "비밀번호 숨기기" : "비밀번호 표시");
+            .attr("aria-label", reveal ? $(this).data("hide-label") : $(this).data("show-label"));
     });
 
     form.on("submit", function (event) {
@@ -305,7 +313,7 @@ $(function () {
         if (!availability.username || !availability.email || !availability.nickname
             || !passwordIsValid() || !passwordsMatch()) {
             event.preventDefault();
-            setMessage("#nicknameMessage", "중복 확인과 입력값 검증을 완료해주세요.", "error");
+            setMessage("#nicknameMessage", messages.msgIncomplete, "error");
             showStep(2);
             return;
         }
@@ -313,7 +321,7 @@ $(function () {
         $("#userEmail").val($("#userEmail").val().trim().toLowerCase());
         $("#nickname").val($("#nickname").val().trim());
         isSubmitting = true;
-        $("#step2-submit").text("가입 처리 중...");
+        $("#step2-submit").text($("#step2-submit").data("submitting-label"));
         updateButtons();
     });
 
@@ -324,7 +332,7 @@ $(function () {
     });
     window.addEventListener("pageshow", function () {
         isSubmitting = false;
-        $("#step2-submit").text("회원가입");
+        $("#step2-submit").text($("#step2-submit").data("submit-label"));
         updateButtons();
     });
 });

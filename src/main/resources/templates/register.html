@@ -1,61 +1,92 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" th:lang="${currentLanguageTag}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>회원가입 | Travel Diary</title>
+  <title th:text="#{signup.pageTitle}">회원가입 | Travel Diary</title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/registration.css">
 </head>
 <body class="register-page">
+<!-- 로그인과 같은 헤더 없는 인증 화면이라 공용 언어 선택만 우측 상단에 둔다. -->
+<div class="register-page__topbar">
+  <div th:replace="~{fragments/language-menu :: languageMenu}"></div>
+</div>
+
 <main class="register-wrapper">
   <div class="register-logo">
-    <a th:href="@{/}" aria-label="Travel Diary 홈">
+    <a th:href="@{/}" th:aria-label="#{signup.brand.home}" aria-label="Travel Diary 홈">
       <img src="/images/logo7.png" alt="Travel Diary">
     </a>
   </div>
 
   <section class="register-container" aria-labelledby="register-title">
     <header class="registration-heading">
-      <h1 id="register-title">회원가입</h1>
-      <p>Travel Diary와 함께 여행의 기록을 시작해보세요.</p>
+      <h1 id="register-title" th:text="#{signup.title}">회원가입</h1>
+      <p th:text="#{signup.subtitle}">Travel Diary와 함께 여행의 기록을 시작해보세요.</p>
     </header>
 
-    <nav class="registration-progress" aria-label="회원가입 진행 단계">
-      <p id="registrationStepStatus" class="registration-step-status" aria-live="polite">
+    <!-- 단계 안내는 JS 가 갱신하므로 문구 템플릿과 단계 이름을 data-* 로 함께 넘긴다. -->
+    <nav class="registration-progress" th:aria-label="#{signup.progress.label}"
+         aria-label="회원가입 진행 단계"
+         th:data-step-status-format="#{signup.progress.status}"
+         th:data-step-name-1="#{signup.step.terms}"
+         th:data-step-name-2="#{signup.step.account}">
+      <p id="registrationStepStatus" class="registration-step-status" aria-live="polite"
+         th:text="#{signup.progress.status(2, 1, #{signup.step.terms})}">
         2단계 중 1단계 · 약관 동의
       </p>
       <ol>
         <li data-step-indicator="1" aria-current="step">
-          <span>1</span><strong>약관 동의</strong>
+          <span>1</span><strong th:text="#{signup.step.terms}">약관 동의</strong>
         </li>
         <li data-step-indicator="2">
-          <span>2</span><strong>계정 정보</strong>
+          <span>2</span><strong th:text="#{signup.step.account}">계정 정보</strong>
         </li>
       </ol>
     </nav>
 
-    <form th:action="@{/users/register}" th:object="${registrationForm}" method="post" novalidate>
+    <!-- 실시간 검증 문구는 JS 에 하드코딩하지 않고 현재 locale 메시지를 data-* 로 넘긴다. -->
+    <form th:action="@{/users/register}" th:object="${registrationForm}" method="post" novalidate
+          id="registrationForm"
+          th:data-msg-checking="#{signup.feedback.checking}"
+          th:data-msg-username-available="#{signup.feedback.username.available}"
+          th:data-msg-username-taken="#{signup.feedback.username.taken}"
+          th:data-msg-username-check-failed="#{signup.feedback.username.checkFailed}"
+          th:data-msg-username-invalid="#{signup.error.username.pattern}"
+          th:data-msg-email-available="#{signup.feedback.email.available}"
+          th:data-msg-email-taken="#{signup.feedback.email.taken}"
+          th:data-msg-email-check-failed="#{signup.feedback.email.checkFailed}"
+          th:data-msg-email-invalid="#{signup.error.email.invalid}"
+          th:data-msg-email-suggestion="#{signup.feedback.email.suggestion}"
+          th:data-msg-password-valid="#{signup.feedback.password.valid}"
+          th:data-msg-password-invalid="#{signup.field.password.help}"
+          th:data-msg-password-match="#{signup.feedback.passwordConfirm.match}"
+          th:data-msg-password-mismatch="#{signup.error.passwordConfirm.mismatch}"
+          th:data-msg-incomplete="#{signup.feedback.incomplete}"
+          th:data-msg-terms-view="#{signup.terms.view}"
+          th:data-msg-terms-hide="#{signup.terms.hide}">
       <input type="hidden" th:if="${_csrf != null}"
              th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
 
       <div class="registration-global-error" role="alert"
            th:if="${#fields.hasGlobalErrors()}" data-server-error="true">
+        <!-- 문구는 BindingResult 가 messages 번들에서 이미 해석해 준다. -->
         <p th:each="error : ${#fields.globalErrors()}" th:text="${error}">입력 내용을 확인해주세요.</p>
       </div>
 
       <section id="step-1" class="form-step" aria-labelledby="terms-title">
         <div class="step-heading">
-          <h2 id="terms-title">이용약관에 동의해주세요</h2>
-          <p>서비스 이용에 필요한 동의 항목을 확인해주세요.</p>
+          <h2 id="terms-title" th:text="#{signup.step.terms.title}">이용약관에 동의해주세요</h2>
+          <p th:text="#{signup.step.terms.description}">서비스 이용에 필요한 동의 항목을 확인해주세요.</p>
         </div>
 
         <div class="terms-card">
           <label class="terms-summary" for="agreeAll">
             <input type="checkbox" id="agreeAll">
             <span>
-              <strong>전체 동의</strong>
-              <small>필수 및 선택 항목에 모두 동의합니다.</small>
+              <strong th:text="#{signup.terms.agreeAll}">전체 동의</strong>
+              <small th:text="#{signup.terms.agreeAll.help}">필수 및 선택 항목에 모두 동의합니다.</small>
             </span>
           </label>
 
@@ -65,11 +96,12 @@
                 <label for="termsAgree1">
                   <input type="checkbox" id="termsAgree1" name="serviceTermsAccepted" value="true"
                          th:checked="*{serviceTermsAccepted}">
-                  <span class="term-badge required">필수</span>
-                  <span>서비스 이용약관</span>
+                  <span class="term-badge required" th:text="#{signup.terms.required}">필수</span>
+                  <span th:text="#{signup.terms.service}">서비스 이용약관</span>
                 </label>
                 <button type="button" class="term-toggle" aria-expanded="false"
-                        aria-controls="serviceTermsContent">내용 보기</button>
+                        aria-controls="serviceTermsContent"
+                        th:text="#{signup.terms.view}">내용 보기</button>
               </div>
               <div id="serviceTermsContent" class="term-content" hidden>
                 <p>여기에 서비스 이용약관 내용이 들어갑니다.</p>
@@ -83,11 +115,12 @@
                 <label for="termsAgree2">
                   <input type="checkbox" id="termsAgree2" name="privacyTermsAccepted" value="true"
                          th:checked="*{privacyTermsAccepted}">
-                  <span class="term-badge required">필수</span>
-                  <span>개인정보 수집 및 이용</span>
+                  <span class="term-badge required" th:text="#{signup.terms.required}">필수</span>
+                  <span th:text="#{signup.terms.privacy}">개인정보 수집 및 이용</span>
                 </label>
                 <button type="button" class="term-toggle" aria-expanded="false"
-                        aria-controls="privacyTermsContent">내용 보기</button>
+                        aria-controls="privacyTermsContent"
+                        th:text="#{signup.terms.view}">내용 보기</button>
               </div>
               <div id="privacyTermsContent" class="term-content" hidden>
                 <p>여기에 개인정보 수집 및 이용 동의 내용이 들어갑니다.</p>
@@ -100,11 +133,12 @@
               <div class="term-row">
                 <label for="termsAgree3">
                   <input type="checkbox" id="termsAgree3">
-                  <span class="term-badge optional">선택</span>
-                  <span>마케팅 정보 수신 동의</span>
+                  <span class="term-badge optional" th:text="#{signup.terms.optional}">선택</span>
+                  <span th:text="#{signup.terms.marketing}">마케팅 정보 수신 동의</span>
                 </label>
                 <button type="button" class="term-toggle" aria-expanded="false"
-                        aria-controls="marketingTermsContent">내용 보기</button>
+                        aria-controls="marketingTermsContent"
+                        th:text="#{signup.terms.view}">내용 보기</button>
               </div>
               <div id="marketingTermsContent" class="term-content" hidden>
                 <p>여기에 마케팅 정보 수신 동의 내용이 들어갑니다.</p>
@@ -114,22 +148,24 @@
         </div>
 
         <div class="step-actions single-action">
-          <button type="button" class="button-primary next-step" id="step1-next" disabled>다음</button>
+          <button type="button" class="button-primary next-step" id="step1-next" disabled
+                  th:text="#{signup.action.next}">다음</button>
         </div>
       </section>
 
       <section id="step-2" class="form-step" aria-labelledby="account-title" hidden>
         <div class="step-heading">
-          <h2 id="account-title">계정 정보를 입력해주세요</h2>
-          <p>로그인과 이메일 인증에 사용할 정보를 입력합니다.</p>
+          <h2 id="account-title" th:text="#{signup.step.account.title}">계정 정보를 입력해주세요</h2>
+          <p th:text="#{signup.step.account.description}">로그인과 이메일 인증에 사용할 정보를 입력합니다.</p>
         </div>
 
         <div class="input-group">
-          <label class="field-label" for="username">아이디</label>
+          <label class="field-label" for="username" th:text="#{signup.field.username}">아이디</label>
           <input class="field-control" type="text" id="username" th:field="*{username}"
                  autocomplete="username" minlength="3" maxlength="16"
                  aria-describedby="usernameMessage usernameServerError" required>
-          <span id="usernameMessage" class="field-feedback" aria-live="polite">
+          <span id="usernameMessage" class="field-feedback" aria-live="polite"
+                th:text="#{signup.field.username.help}">
             영문 소문자를 포함한 3~16자의 영문, 숫자, -, _를 사용할 수 있습니다.
           </span>
           <span id="usernameServerError" class="field-error" data-field-error="username"
@@ -137,7 +173,7 @@
         </div>
 
         <div class="input-group email-field">
-          <label class="field-label" for="userEmail">이메일</label>
+          <label class="field-label" for="userEmail" th:text="#{signup.field.email}">이메일</label>
           <div class="email-input-wrap">
             <input class="field-control" type="email" id="userEmail" th:field="*{userEmail}"
                    autocomplete="email" inputmode="email" maxlength="100"
@@ -145,26 +181,32 @@
                    aria-autocomplete="list" aria-controls="emailDomainSuggestions"
                    aria-expanded="false" required>
             <div id="emailDomainSuggestions" class="email-domain-suggestions"
-                 role="listbox" aria-label="이메일 도메인 추천" hidden></div>
+                 role="listbox" th:aria-label="#{signup.field.email.domainSuggestions}"
+                 aria-label="이메일 도메인 추천" hidden></div>
           </div>
           <span id="emailMessage" class="field-feedback" aria-live="polite"></span>
           <div id="emailSuggestion" class="email-suggestion" hidden>
             <span id="emailSuggestionText"></span>
-            <button type="button" id="applyEmailSuggestion">수정하기</button>
+            <button type="button" id="applyEmailSuggestion"
+                    th:text="#{signup.field.email.applySuggestion}">수정하기</button>
           </div>
           <span id="emailServerError" class="field-error" data-field-error="userEmail"
                 th:if="${#fields.hasErrors('userEmail')}" th:errors="*{userEmail}">이메일 오류</span>
         </div>
 
         <div class="input-group">
-          <label class="field-label" for="userPassword">비밀번호</label>
+          <label class="field-label" for="userPassword" th:text="#{signup.field.password}">비밀번호</label>
           <div class="password-control">
             <input class="field-control" type="password" id="userPassword" name="userPassword"
                    autocomplete="new-password" aria-describedby="passwordValidationMessage" required>
             <button class="toggle-password hide" type="button" data-toggle="#userPassword"
+                    th:aria-label="#{login.password.show}"
+                    th:data-show-label="#{login.password.show}"
+                    th:data-hide-label="#{login.password.hide}"
                     aria-label="비밀번호 표시"></button>
           </div>
-          <span id="passwordValidationMessage" class="field-feedback">
+          <span id="passwordValidationMessage" class="field-feedback"
+                th:text="#{signup.field.password.help}">
             8자 이상이며 영문, 숫자, !@#$%^&amp;*만 사용할 수 있고 특수문자를 포함해야 합니다.
           </span>
           <span class="field-error" data-field-error="userPassword"
@@ -172,11 +214,15 @@
         </div>
 
         <div class="input-group">
-          <label class="field-label" for="passwordConfirm">비밀번호 확인</label>
+          <label class="field-label" for="passwordConfirm"
+                 th:text="#{signup.field.passwordConfirm}">비밀번호 확인</label>
           <div class="password-control">
             <input class="field-control" type="password" id="passwordConfirm" name="passwordConfirm"
                    autocomplete="new-password" aria-describedby="passwordMessage" required>
             <button class="toggle-password hide" type="button" data-toggle="#passwordConfirm"
+                    th:aria-label="#{signup.field.passwordConfirm.show}"
+                    th:data-show-label="#{signup.field.passwordConfirm.show}"
+                    th:data-hide-label="#{signup.field.passwordConfirm.hide}"
                     aria-label="비밀번호 확인 표시"></button>
           </div>
           <span id="passwordMessage" class="field-feedback" aria-live="polite"></span>
@@ -187,29 +233,39 @@
         </div>
 
         <div class="input-group">
-          <label class="field-label" for="nickname">닉네임</label>
+          <label class="field-label" for="nickname" th:text="#{signup.field.nickname}">닉네임</label>
           <div class="nickname-row">
             <input class="field-control" type="text" id="nickname" th:field="*{nickname}"
-                   autocomplete="nickname" minlength="2" maxlength="12"
+                   autocomplete="nickname" minlength="2" maxlength="16"
                    aria-describedby="nicknameMessage nicknameServerError" required>
-            <button type="button" class="button-tertiary" id="generateNickname">자동 추천</button>
+            <button type="button" class="button-tertiary" id="generateNickname"
+                    th:text="#{signup.field.nickname.generate}">자동 추천</button>
           </div>
-          <span id="nicknameMessage" class="field-feedback">
-            2~12자의 한글, 영문, 숫자만 사용할 수 있습니다. 공백·특수문자 및 부적절한 표현은 사용할 수 없습니다.
+          <span id="nicknameMessage" class="field-feedback"
+                th:text="#{signup.field.nickname.help}">
+            2~16자의 한글, 영문, 일본어, 중국어, 숫자를 사용할 수 있습니다. 공백·특수문자 및 부적절한 표현은 사용할 수 없습니다.
           </span>
           <span id="nicknameServerError" class="field-error" data-field-error="nickname"
                 th:if="${#fields.hasErrors('nickname')}" th:errors="*{nickname}">닉네임 오류</span>
         </div>
 
+        <!-- 제출 중 라벨은 JS 가 바꾸므로 두 문구를 data-* 로 함께 넘긴다. -->
         <div class="step-actions">
-          <button type="button" class="button-secondary prev-step">이전</button>
-          <button type="submit" class="button-primary" id="step2-submit" disabled>회원가입</button>
+          <button type="button" class="button-secondary prev-step"
+                  th:text="#{signup.action.prev}">이전</button>
+          <button type="submit" class="button-primary" id="step2-submit" disabled
+                  th:data-submit-label="#{signup.action.submit}"
+                  th:data-submitting-label="#{signup.action.submitting}"
+                  th:text="#{signup.action.submit}">회원가입</button>
         </div>
       </section>
     </form>
   </section>
 </main>
+<!-- 닉네임 스크립트가 쓰는 현재 locale 문구 (소셜 가입과 공용) -->
+<div th:replace="~{fragments/nickname-messages :: nicknameMessages}"></div>
 <script src="/js/jquery-3.6.0.min.js"></script>
+<script src="/js/language-menu.js" defer></script>
 <script src="/js/email-domain-suggestion.js"></script>
 <script src="/js/nickname-availability.js"></script>
 <script src="/js/register.js" defer></script>

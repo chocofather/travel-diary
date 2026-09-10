@@ -19,6 +19,30 @@
     background: var(--register-bg);
 }
 
+/* 헤더가 없는 인증 화면이라 로그인처럼 언어 선택만 우측 상단에 둔다.
+   흐름 안에 두어 로고/카드와 겹치지 않는다. */
+.register-page .register-page__topbar {
+    display: flex;
+    justify-content: flex-end;
+    width: min(100%, 720px);
+    margin: 0 auto 10px;
+}
+
+/* 헤더처럼 좁지 않으므로 현재 언어의 native name 을 그대로 보여준다. */
+.register-page .language-menu-current {
+    display: inline;
+}
+
+.register-page .language-menu-chevron {
+    display: block;
+}
+
+.register-page .language-menu-toggle {
+    width: auto;
+    justify-content: flex-start;
+    padding: 7px 9px;
+}
+
 .register-wrapper {
     width: min(100%, 720px);
     padding-top: 0;
@@ -684,6 +708,18 @@
 
     .term-row {
         gap: 7px;
+    }
+
+    /* 아주 좁은 화면에서만 사이트 헤더와 같은 아이콘 전용 형태로 줄인다. */
+    .register-page .language-menu-current,
+    .register-page .language-menu-chevron {
+        display: none;
+    }
+
+    .register-page .language-menu-toggle {
+        width: 36px;
+        justify-content: center;
+        padding: 7px;
     }
 }
 

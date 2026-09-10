@@ -85,6 +85,15 @@
         SELECT COUNT(*) FROM users WHERE nickname = #{nickname}
     </select>
 
+    <!-- 자동 추천에서 같은 조합의 언어별 표기를 한 번의 조회로 확인한다. -->
+    <select id="countByNicknameIn" resultType="int">
+        SELECT COUNT(*) FROM users
+        WHERE nickname IN
+        <foreach item="nickname" collection="nicknames" open="(" separator="," close=")">
+            #{nickname}
+        </foreach>
+    </select>
+
     <select id="findPendingVerificationByToken" resultType="com.example.travlediary.model.User">
         SELECT *
         FROM users

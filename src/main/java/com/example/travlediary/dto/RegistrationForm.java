@@ -12,33 +12,33 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class RegistrationForm {
 
-    @AssertTrue(message = "서비스 이용약관에 동의해주세요.")
+    @AssertTrue(message = "{signup.error.terms.service}")
     private boolean serviceTermsAccepted;
 
-    @AssertTrue(message = "개인정보 수집 및 이용에 동의해주세요.")
+    @AssertTrue(message = "{signup.error.terms.privacy}")
     private boolean privacyTermsAccepted;
 
-    @NotBlank(message = "아이디를 입력해주세요.")
+    @NotBlank(message = "{signup.error.username.required}")
     @Pattern(regexp = "^(?=.*[a-z])[a-z0-9_-]{3,16}$",
-            message = "아이디는 영문 소문자를 포함한 3~16자의 영문, 숫자, -, _만 사용할 수 있습니다.")
+            message = "{signup.error.username.pattern}")
     private String username;
 
-    @NotBlank(message = "이메일 주소를 입력해주세요.")
-    @Email(message = "올바른 이메일 주소를 입력해주세요.")
-    @Size(max = 100, message = "이메일 주소는 100자 이하여야 합니다.")
+    @NotBlank(message = "{signup.error.email.required}")
+    @Email(message = "{signup.error.email.invalid}")
+    @Size(max = 100, message = "{signup.error.email.tooLong}")
     private String userEmail;
 
-    @NotBlank(message = "비밀번호를 입력해주세요.")
+    @NotBlank(message = "{signup.error.password.required}")
     private String userPassword;
 
-    @NotBlank(message = "비밀번호 확인을 입력해주세요.")
+    @NotBlank(message = "{signup.error.passwordConfirm.required}")
     private String passwordConfirm;
 
-    @NotBlank(message = "닉네임을 입력해주세요.")
-    @Size(min = 2, max = 12, message = "닉네임은 2~12자여야 합니다.")
+    @NotBlank(message = "{signup.error.nickname.required}")
+    @Size(min = 2, max = 16, message = "{signup.error.nickname.size}")
     private String nickname;
 
-    @AssertTrue(message = "비밀번호가 일치하지 않습니다.")
+    @AssertTrue(message = "{signup.error.passwordConfirm.mismatch}")
     public boolean isPasswordConfirmed() {
         return userPassword != null && userPassword.equals(passwordConfirm);
     }

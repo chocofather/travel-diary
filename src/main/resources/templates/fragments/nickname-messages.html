@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--
+  nickname-availability.js 가 쓰는 문구 모음.
+  일반 회원가입과 소셜 회원가입이 같은 스크립트를 쓰므로 messages 번들을 source of truth 로 두고
+  현재 locale 값만 data-* 로 넘긴다. (JS 안에 언어별 문자열을 두지 않는다)
+-->
+<div th:fragment="nicknameMessages" id="nickname-messages" hidden
+     th:data-checking="#{signup.feedback.checking}"
+     th:data-available="#{signup.feedback.nickname.available}"
+     th:data-taken="#{signup.error.nickname.duplicate}"
+     th:data-forbidden="#{signup.error.nickname.forbidden}"
+     th:data-invalid="#{signup.field.nickname.help}"
+     th:data-check-failed="#{signup.feedback.nickname.checkFailed}"
+     th:data-generate-failed="#{signup.feedback.nickname.generateFailed}"></div>
+</body>
+</html>

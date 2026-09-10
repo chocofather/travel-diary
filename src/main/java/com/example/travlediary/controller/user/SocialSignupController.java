@@ -15,6 +15,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.dao.DataAccessException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -36,6 +38,7 @@ public class SocialSignupController {
 
     private final SocialSignupService socialSignupService;
     private final SocialSignupAuthenticationService authenticationService;
+    private final MessageSource messageSource;
 
     @GetMapping("/social-signup")
     public String signupPage(Authentication authentication,
@@ -83,15 +86,18 @@ public class SocialSignupController {
         try {
             userId = socialSignupService.complete(pending, form);
         } catch (SocialSignupValidationException exception) {
-            bindingResult.rejectValue(
-                    exception.getField(), "socialSignup.invalid", exception.getMessage());
+            // messageCode 가 있으면 현재 locale 의 messages 번들에서 문구를 찾는다.
+            String messageCode = exception.getMessageCode();
+            bindingResult.rejectValue(exception.getField(),
+                    messageCode == null ? "socialSignup.invalid" : messageCode,
+                    exception.getMessage());
             return signupForm(model, form, pending);
         } catch (SocialSignupFlowException exception) {
             clearPending(session);
             return EXPIRED_REDIRECT;
         } catch (SocialSignupPersistenceException | DataAccessException exception) {
             bindingResult.reject(
-                    "socialSignup.saveFailed",
+                    "signup.social.saveFailed",
                     "가입 정보를 저장하지 못했습니다. 잠시 후 다시 시도해주세요.");
             return signupForm(model, form, pending);
         }
@@ -119,12 +125,11 @@ public class SocialSignupController {
         model.addAttribute("providerEmail", pending.providerEmail());
     }
 
+    /** 브랜드명은 번역하지 않고 마이페이지와 같은 provider key 를 그대로 재사용한다. */
     private String providerDisplayName(SocialProvider provider) {
-        return switch (provider) {
-            case GOOGLE -> "Google";
-            case KAKAO -> "카카오";
-            case NAVER -> "네이버";
-        };
+        return messageSource.getMessage(
+                "mypage.account.social.provider." + provider.name(),
+                null, LocaleContextHolder.getLocale());
     }
 
     private PendingSocialSignup validPending(HttpSession session) {
