@@ -26,15 +26,22 @@ $(document).ready(function () {
         ? Number(failureFeedback.dataset.loginRemainingSeconds)
         : 0;
     if (failureFeedback && countdown && loginButton && initialRemainingSeconds > 0) {
+        // 문구는 서버 messages 를 source of truth 로 두고 data-* 로 받는다.
+        const messages = failureFeedback.dataset;
+        const formatMessage = function (template, ...values) {
+            return values.reduce(
+                (text, value, index) => text.split("{" + index + "}").join(String(value)),
+                template);
+        };
         const formatRemaining = function (seconds) {
             if (seconds < 60) {
-                return seconds + "초";
+                return formatMessage(messages.remainingSecondsFormat, seconds);
             }
             const minutes = Math.floor(seconds / 60);
             const remainingSeconds = seconds % 60;
             return remainingSeconds === 0
-                ? minutes + "분"
-                : minutes + "분 " + remainingSeconds + "초";
+                ? formatMessage(messages.remainingMinutesFormat, minutes)
+                : formatMessage(messages.remainingMinutesSecondsFormat, minutes, remainingSeconds);
         };
 
         const countdownEndsAt = performance.now() + initialRemainingSeconds * 1000;
@@ -50,8 +57,7 @@ $(document).ready(function () {
                 failureFeedback.setAttribute("aria-live", "polite");
                 const releasedMessage = document.createElement("p");
                 releasedMessage.className = "login-feedback__title";
-                releasedMessage.textContent =
-                    "로그인 제한이 해제되었습니다. 다시 로그인할 수 있습니다.";
+                releasedMessage.textContent = messages.releasedMessage;
                 failureFeedback.replaceChildren(releasedMessage);
                 if (timerId) {
                     window.clearInterval(timerId);
@@ -106,7 +112,11 @@ $(document).on("click", ".toggle-password", function () {
     $(this).toggleClass("show", isPassword);
     $(this).toggleClass("hide", !isPassword);
     $(this).attr("aria-pressed", isPassword);
-    $(this).attr("aria-label", isPassword ? "비밀번호 숨기기" : "비밀번호 표시");
+    // 로그인 화면은 현재 locale 문구를 data-* 로 넘긴다.
+    // 아직 다국어 처리하지 않은 화면은 기존 한국어 라벨을 그대로 쓴다.
+    const showLabel = $(this).data("show-label") || "비밀번호 표시";
+    const hideLabel = $(this).data("hide-label") || "비밀번호 숨기기";
+    $(this).attr("aria-label", isPassword ? hideLabel : showLabel);
 });
 
 // 새 비밀번호와 확인 값 일치 여부를 브라우저에서도 안내

@@ -88,6 +88,8 @@ class LocaleMessageAndTemplateContractTest {
         var publicLayout = Jsoup.parse(resource("/templates/layout/main.html"));
         var adminLayout = Jsoup.parse(resource("/templates/layout/admin.html"));
         var header = Jsoup.parse(resource("/templates/fragments/header.html"));
+        // 언어 선택은 헤더 없는 인증 화면과 공용 fragment 로 분리되어 있다.
+        var languageMenu = Jsoup.parse(resource("/templates/fragments/language-menu.html"));
 
         assertThat(publicLayout.selectFirst("html").attr("th:lang"))
                 .isEqualTo("${currentLanguageTag}");
@@ -98,10 +100,18 @@ class LocaleMessageAndTemplateContractTest {
                 .filter(element -> element.hasAttr("th:text"))
                 .map(element -> element.attr("th:text")))
                 .contains("#{nav.domestic}", "#{nav.community}", "#{auth.login}");
-        assertThat(header.select("form.locale-option-form[method=post] input[name=languageTag]"))
-                .hasSize(1);
-        assertThat(header.select("form.locale-option-form").attr("th:each"))
+        assertThat(header.selectFirst("[th:replace]").attr("th:replace"))
+                .isEqualTo("~{fragments/language-menu :: languageMenu}");
+        assertThat(languageMenu.selectFirst("details.language-menu").attr("th:fragment"))
+                .isEqualTo("languageMenu");
+        assertThat(languageMenu.select(
+                "form.locale-option-form[method=post] input[name=languageTag]")).hasSize(1);
+        assertThat(languageMenu.select("form.locale-option-form").attr("th:each"))
                 .isEqualTo("language : ${supportedLanguages}");
+        // 언어 변경 후 되돌아갈 주소는 현재 URL(쿼리 포함)이어야 redirect 파라미터가 살아남는다.
+        assertThat(languageMenu.select(
+                "form.locale-option-form input[name=returnTo]").attr("th:value"))
+                .isEqualTo("${currentUri}");
     }
 
     private String resource(String path) throws IOException {

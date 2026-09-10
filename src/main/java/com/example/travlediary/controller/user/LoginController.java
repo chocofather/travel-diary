@@ -5,6 +5,8 @@ import com.example.travlediary.security.LoginThrottle;
 import com.example.travlediary.security.LoginThrottleStatus;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -13,13 +15,16 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Locale;
 
 @Controller
 public class LoginController {
     private final LoginThrottle loginThrottle;
+    private final MessageSource messageSource;
 
-    public LoginController(LoginThrottle loginThrottle) {
+    public LoginController(LoginThrottle loginThrottle, MessageSource messageSource) {
         this.loginThrottle = loginThrottle;
+        this.messageSource = messageSource;
     }
 
     @GetMapping("/login")
@@ -79,14 +84,21 @@ public class LoginController {
         model.addAttribute("loginRemainingText", formatRemaining(remainingSeconds));
     }
 
+    /** 남은 시간 문구는 언어별 어순을 위해 message parameter 로 조립한다. */
     private String formatRemaining(long seconds) {
+        Locale locale = LocaleContextHolder.getLocale();
         if (seconds < 60) {
-            return seconds + "초";
+            return message("login.throttle.remaining.seconds", locale, seconds);
         }
         long minutes = seconds / 60;
         long remainingSeconds = seconds % 60;
         return remainingSeconds == 0
-                ? minutes + "분"
-                : minutes + "분 " + remainingSeconds + "초";
+                ? message("login.throttle.remaining.minutes", locale, minutes)
+                : message("login.throttle.remaining.minutesSeconds", locale,
+                        minutes, remainingSeconds);
+    }
+
+    private String message(String code, Locale locale, Object... arguments) {
+        return messageSource.getMessage(code, arguments, locale);
     }
 }

@@ -163,23 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    /* 언어 메뉴: native details를 유지하고 바깥 클릭·Esc 닫기만 보완한다. */
-    const languageMenu = document.querySelector('.language-menu');
-
-    if (languageMenu) {
-        document.addEventListener('click', e => {
-            if (languageMenu.open && !languageMenu.contains(e.target)) {
-                languageMenu.removeAttribute('open');
-            }
-        });
-
-        document.addEventListener('keydown', e => {
-            if (e.key === 'Escape' && languageMenu.open) {
-                languageMenu.removeAttribute('open');
-                languageMenu.querySelector('summary')?.focus();
-            }
-        });
-    }
+    /* 언어 메뉴 열고 닫기는 헤더 없는 화면과 공용인 language-menu.js 가 담당한다. */
 
     /* 이미지 우클릭 방지 */
     document.addEventListener('contextmenu', e => {

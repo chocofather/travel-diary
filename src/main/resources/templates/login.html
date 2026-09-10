@@ -1,37 +1,47 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" th:lang="${currentLanguageTag}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>로그인 | Travel Diary</title>
+  <title th:text="#{login.pageTitle}">로그인 | Travel Diary</title>
   <link rel="stylesheet" type="text/css" href="/css/style.css">
   <link rel="stylesheet" href="/css/login.css">
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body class="login-page">
+<!-- 전체 사이트 헤더 대신 언어 선택만 우측 상단에 둔다. 카드 바깥이라 로그인 폼과 겹치지 않는다. -->
+<div class="login-page__topbar">
+  <div th:replace="~{fragments/language-menu :: languageMenu}"></div>
+</div>
+
 <main class="login-page__main">
-  <a class="login-page__brand" th:href="@{/}" aria-label="Travel Diary 홈으로 이동">
+  <a class="login-page__brand" th:href="@{/}" th:aria-label="#{login.brand.home}"
+     aria-label="Travel Diary 홈으로 이동">
     <img src="/images/logo7.png" alt="Travel Diary">
   </a>
 
   <section class="login-container" aria-labelledby="loginTitle">
     <header class="login-header">
-      <h1 id="loginTitle">로그인</h1>
-      <p>여행의 순간을 기록하고 다시 만나보세요.</p>
+      <h1 id="loginTitle" th:text="#{auth.login}">로그인</h1>
+      <p th:text="#{login.subtitle}">여행의 순간을 기록하고 다시 만나보세요.</p>
     </header>
 
+    <!-- countdown/해제 문구는 JS 가 현재 locale 메시지로 갱신하므로 data-* 로 함께 넘긴다. -->
     <div id="loginFailureFeedback"
          class="login-feedback login-feedback--locked"
          th:if="${loginBlocked}"
          th:attr="data-login-remaining-seconds=${loginRemainingSeconds}"
+         th:data-released-message="#{login.throttle.released}"
+         th:data-remaining-seconds-format="#{login.throttle.remaining.seconds}"
+         th:data-remaining-minutes-format="#{login.throttle.remaining.minutes}"
+         th:data-remaining-minutes-seconds-format="#{login.throttle.remaining.minutesSeconds}"
          role="alert"
          aria-live="assertive">
-      <p class="login-feedback__title">로그인이 잠시 제한되었습니다.</p>
-      <p class="login-feedback__detail">
+      <p class="login-feedback__title" th:text="#{login.throttle.title}">로그인이 잠시 제한되었습니다.</p>
+      <p class="login-feedback__detail"
+         th:utext="#{login.throttle.detail(${loginRemainingText})}">
         보안을 위해
-        <strong id="loginThrottleCountdown"
-                class="login-feedback__countdown"
-                th:text="${loginRemainingText}">10초</strong>
+        <strong id="loginThrottleCountdown" class="login-feedback__countdown">10초</strong>
         후 다시 시도할 수 있습니다.
       </p>
     </div>
@@ -39,33 +49,38 @@
     <div class="login-feedback login-feedback--error"
          th:if="${param.oauthError}"
          role="alert"
-         aria-live="assertive">
+         aria-live="assertive"
+         th:text="#{login.error.oauth}">
       소셜 로그인에 실패했습니다. 다시 시도해 주세요.
     </div>
 
     <div class="login-feedback login-feedback--error"
          th:if="${param.socialSignupExpired}"
          role="alert"
-         aria-live="assertive">
+         aria-live="assertive"
+         th:text="#{login.error.socialSignupExpired}">
       소셜 로그인 정보가 만료되었습니다. 다시 로그인해주세요.
     </div>
 
     <div class="login-feedback login-feedback--error"
          th:if="${param.socialSignupError}"
          role="alert"
-         aria-live="assertive">
+         aria-live="assertive"
+         th:text="#{login.error.socialSignupFailed}">
       가입 후 로그인에 실패했습니다. 다시 로그인해주세요.
     </div>
 
     <div class="login-feedback login-feedback--success"
          th:if="${param.logout}"
-         role="status">
+         role="status"
+         th:text="#{login.status.loggedOut}">
       안전하게 로그아웃되었습니다.
     </div>
 
     <div class="login-feedback login-feedback--success"
          th:if="${param.passwordChanged != null and param.passwordChanged[0] == 'true'}"
-         role="status">
+         role="status"
+         th:text="#{login.status.passwordChanged}">
       비밀번호가 변경되었습니다. 다시 로그인해주세요.
     </div>
 
@@ -73,28 +88,34 @@
       <input type="hidden" name="redirect" th:value="${param.redirect ?: '/'}">
 
       <div class="login-field">
-        <label for="username">아이디</label>
+        <label for="username" th:text="#{login.field.username}">아이디</label>
         <input type="text"
                name="username"
                id="username"
                th:value="${loginFormState != null ? loginFormState.username : ''}"
+               th:placeholder="#{login.field.username.placeholder}"
                placeholder="아이디를 입력해주세요"
                autocomplete="username"
                required>
       </div>
 
       <div class="login-field">
-        <label for="loginPassword">비밀번호</label>
+        <label for="loginPassword" th:text="#{login.field.password}">비밀번호</label>
         <div class="login-password-control">
           <input type="password"
                  id="loginPassword"
                  name="password"
+                 th:placeholder="#{login.field.password.placeholder}"
                  placeholder="비밀번호를 입력해주세요"
                  autocomplete="current-password"
                  required>
+          <!-- 표시/숨김 토글 라벨은 JS 가 바꾸므로 두 문구를 data-* 로 함께 넘긴다. -->
           <button class="toggle-password hide"
                   type="button"
                   data-toggle="#loginPassword"
+                  th:aria-label="#{login.password.show}"
+                  th:data-show-label="#{login.password.show}"
+                  th:data-hide-label="#{login.password.hide}"
                   aria-label="비밀번호 표시"
                   aria-pressed="false"></button>
         </div>
@@ -104,16 +125,20 @@
              th:if="${param.error != null and not loginBlocked}"
              role="alert"
              aria-live="assertive">
-          <p class="login-inline-message__title">
+          <p class="login-inline-message__title" th:text="#{login.error.credentials}">
             아이디 또는 비밀번호를 확인해주세요.
           </p>
+          <!-- 남은 시도/잠금 시간은 message parameter 로 넘겨 언어별 어순을 맞춘다.
+               분기 값(3/4회, 10초)은 기존 throttle 정책 그대로다. -->
           <p class="login-inline-message__detail"
              th:if="${loginFormState != null and loginFormState.failureCount > 0}"
              th:switch="${loginFormState.failureCount}">
-            <span th:case="3">로그인 실패 3회 · 2회 더 실패하면 잠시 제한됩니다.</span>
-            <span th:case="4">로그인 실패 4회 · 한 번 더 실패하면 10초 동안 제한됩니다.</span>
+            <span th:case="3"
+                  th:text="#{login.error.attempts.remaining(3, 2)}">로그인 실패 3회 · 2회 더 실패하면 잠시 제한됩니다.</span>
+            <span th:case="4"
+                  th:text="#{login.error.attempts.last(4, 10)}">로그인 실패 4회 · 한 번 더 실패하면 10초 동안 제한됩니다.</span>
             <span th:case="*"
-                  th:text="|로그인 실패 ${loginFormState.failureCount}회|">
+                  th:text="#{login.error.attempts.count(${loginFormState.failureCount})}">
               로그인 실패 1회
             </span>
           </p>
@@ -122,63 +147,75 @@
 
       <label class="remember-label" for="rememberId">
         <input type="checkbox" id="rememberId">
-        <span>아이디 저장</span>
+        <span th:text="#{login.rememberId}">아이디 저장</span>
       </label>
 
       <button type="submit"
               class="login-submit"
-              th:disabled="${loginBlocked}">로그인</button>
+              th:disabled="${loginBlocked}"
+              th:text="#{auth.login}">로그인</button>
     </form>
 
-    <div class="social-login" aria-label="소셜 로그인">
+    <!-- 브랜드명은 번역하지 않고 기존 provider key 를 그대로 재사용한다. -->
+    <div class="social-login" th:aria-label="#{login.social.label}" aria-label="소셜 로그인">
       <div class="social-login__divider" aria-hidden="true">
-        <span>또는</span>
+        <span th:text="#{login.social.divider}">또는</span>
       </div>
       <div class="social-login__buttons">
         <a class="social-login-provider social-login-provider--google"
            th:href="@{/oauth2/authorization/google}"
+           th:aria-label="#{login.social.signInWith(#{mypage.account.social.provider.GOOGLE})}"
            aria-label="Google로 로그인">
           <span class="social-login-provider__button" aria-hidden="true">
             <img src="/images/social/google-g-logo.png" alt="">
           </span>
-          <span class="social-login-provider__label">Google</span>
+          <span class="social-login-provider__label"
+                th:text="#{mypage.account.social.provider.GOOGLE}">Google</span>
         </a>
         <a class="social-login-provider social-login-provider--kakao"
            th:href="@{/oauth2/authorization/kakao}"
+           th:aria-label="#{login.social.signInWith(#{mypage.account.social.provider.KAKAO})}"
            aria-label="카카오로 로그인">
           <span class="social-login-provider__button" aria-hidden="true">
             <img src="/images/social/kakao-symbol.png" alt="">
           </span>
-          <span class="social-login-provider__label">카카오</span>
+          <span class="social-login-provider__label"
+                th:text="#{mypage.account.social.provider.KAKAO}">카카오</span>
         </a>
         <a class="social-login-provider social-login-provider--naver"
            th:href="@{/oauth2/authorization/naver}"
+           th:aria-label="#{login.social.signInWith(#{mypage.account.social.provider.NAVER})}"
            aria-label="네이버로 로그인">
           <span class="social-login-provider__button" aria-hidden="true">
             <img src="/images/social/naver-symbol.png" alt="">
           </span>
-          <span class="social-login-provider__label">네이버</span>
+          <span class="social-login-provider__label"
+                th:text="#{mypage.account.social.provider.NAVER}">네이버</span>
         </a>
       </div>
     </div>
 
-    <nav class="account-recovery" aria-label="계정 찾기">
-      <a th:href="@{/users/find-username}">아이디 찾기</a>
+    <nav class="account-recovery" th:aria-label="#{login.recovery.label}" aria-label="계정 찾기">
+      <a th:href="@{/users/find-username}"
+         th:text="#{login.recovery.findUsername}">아이디 찾기</a>
       <span aria-hidden="true"></span>
-      <a th:href="@{/users/find-password}">비밀번호 찾기</a>
+      <a th:href="@{/users/find-password}"
+         th:text="#{login.recovery.findPassword}">비밀번호 찾기</a>
     </nav>
 
     <div class="signup-entry">
-      <span>아직 회원이 아니신가요?</span>
-      <a th:href="@{/users/register}">회원가입</a>
+      <span th:text="#{login.signup.prompt}">아직 회원이 아니신가요?</span>
+      <a th:href="@{/users/register}" th:text="#{login.signup.action}">회원가입</a>
     </div>
 
     <p class="verification-resend-entry">
-      이메일 인증이 완료되지 않았나요?
-      <a th:href="@{/users/verification/resend}">인증메일 다시 받기</a>
+      <span th:text="#{login.verification.prompt}">이메일 인증이 완료되지 않았나요?</span>
+      <a th:href="@{/users/verification/resend}"
+         th:text="#{login.verification.action}">인증메일 다시 받기</a>
     </p>
   </section>
 </main>
+<script src="/js/language-menu.js" defer></script>
 <script src="/js/login.js" defer></script>
 </body>
 </html>

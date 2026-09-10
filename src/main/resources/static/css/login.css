@@ -1,8 +1,32 @@
 .login-page {
+    position: relative;
     min-width: 320px;
     min-height: 100vh;
     background: #f6f7f8;
     color: #202124;
+}
+
+/* 헤더가 없는 화면이라 언어 선택만 우측 상단에 띄운다. 모양/동작은 사이트 헤더와 같다. */
+.login-page .login-page__topbar {
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    z-index: 20;
+}
+
+/* 헤더처럼 좁지 않으므로 현재 언어의 native name 을 그대로 보여준다. */
+.login-page .language-menu-current {
+    display: inline;
+}
+
+.login-page .language-menu-chevron {
+    display: block;
+}
+
+.login-page .language-menu-toggle {
+    width: auto;
+    justify-content: flex-start;
+    padding: 7px 9px;
 }
 
 .login-page .login-page__main {
@@ -635,9 +659,15 @@
         background: #fff;
     }
 
+    .login-page .login-page__topbar {
+        top: 12px;
+        right: 12px;
+    }
+
+    /* 위에서부터 쌓이는 레이아웃이라 상단 언어 선택과 겹치지 않게 여백을 확보한다. */
     .login-page .login-page__main {
         justify-content: flex-start;
-        padding: 32px 20px;
+        padding: 64px 20px 32px;
     }
 
     .login-page .login-page__brand {
@@ -677,5 +707,17 @@
 
     .login-page .account-recovery {
         gap: 10px;
+    }
+
+    /* 아주 좁은 화면에서만 사이트 헤더와 같은 아이콘 전용 형태로 줄인다. */
+    .login-page .language-menu-current,
+    .login-page .language-menu-chevron {
+        display: none;
+    }
+
+    .login-page .language-menu-toggle {
+        width: 36px;
+        justify-content: center;
+        padding: 7px;
     }
 }
