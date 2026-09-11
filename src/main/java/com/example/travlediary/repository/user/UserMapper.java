@@ -103,6 +103,32 @@ public interface UserMapper {
                           @Param("nickname") String nickname,
                           @Param("status") UserStatus status);
 
+    /**
+     * 유예가 끝난 최종 파기 대상 회원 번호. 한 번에 다 읽지 않고 batch 크기만큼만 가져온다.
+     * 관리자 계정은 애초에 탈퇴할 수 없으므로 여기서도 USER 만 본다.
+     */
+    List<Long> findDueWithdrawalUserIds(@Param("currentTime") LocalDateTime currentTime,
+                                        @Param("limit") int limit);
+
+    /**
+     * 최종 파기 직전의 잠금 조회. 복구(restoreWithdrawalPendingAccount)와 같은 users 행을 두고
+     * 경쟁하므로 여기서 잠근 뒤 조건을 전부 다시 확인한다. 대상이 아니면 null 이다.
+     */
+    User findPurgeTargetByIdForUpdate(@Param("id") Long id,
+                                      @Param("currentTime") LocalDateTime currentTime);
+
+    /**
+     * 최종 파기. 개인정보를 지우고 DEACTIVATED 로 바꾼다.
+     * 공개 콘텐츠 FK 를 지키기 위해 행 자체는 남기고, 탈퇴 경위(withdrawal_requested_at,
+     * purge_scheduled_at)와 created_at, user_role 은 그대로 둔다.
+     */
+    int finalizeWithdrawal(@Param("id") Long id,
+                           @Param("userEmail") String userEmail,
+                           @Param("nickname") String nickname,
+                           @Param("status") UserStatus status,
+                           @Param("deletedAt") LocalDateTime deletedAt,
+                           @Param("currentTime") LocalDateTime currentTime);
+
     /* ---------- 중복 체크 ---------- */
     int countByUsername(String username);
     int countByNickname(String nickname);

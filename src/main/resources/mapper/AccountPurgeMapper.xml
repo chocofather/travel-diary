@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.user.AccountPurgeMapper">
+
+    <!--
+      회원당 한 건(user_id UNIQUE)이라 잠그고 확인하면 같은 회원을 두 번 처리하지 않는다.
+      앞선 시도가 롤백되지 않고 남은 비정상 상황에서도 여기서 기존 job 을 찾아 이어 쓴다.
+    -->
+    <select id="findJobByUserIdForUpdate"
+            resultType="com.example.travlediary.model.AccountPurgeJob">
+        SELECT id, user_id, status, db_completed_at, completed_at, created_at, updated_at
+        FROM account_purge_jobs
+        WHERE user_id = #{userId}
+        FOR UPDATE
+    </select>
+
+    <insert id="insertJob" useGeneratedKeys="true" keyProperty="id"
+            parameterType="com.example.travlediary.model.AccountPurgeJob">
+        INSERT INTO account_purge_jobs (user_id, status)
+        VALUES (#{userId}, #{status})
+    </insert>
+
+    <update id="markJobDbDone">
+        UPDATE account_purge_jobs
+        SET status = 'DB_DONE',
+            db_completed_at = #{dbCompletedAt}
+        WHERE id = #{id}
+    </update>
+
+    <update id="markJobCompleted">
+        UPDATE account_purge_jobs
+        SET status = 'COMPLETED',
+            db_completed_at = #{dbCompletedAt},
+            completed_at = #{completedAt}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteTasksByJobId">
+        DELETE FROM account_purge_tasks
+        WHERE purge_job_id = #{purgeJobId}
+    </delete>
+
+    <insert id="insertTask" useGeneratedKeys="true" keyProperty="id"
+            parameterType="com.example.travlediary.model.AccountPurgeTask">
+        INSERT INTO account_purge_tasks
+            (purge_job_id, task_type, provider, target_value, status, attempts)
+        VALUES
+            (#{purgeJobId}, #{taskType}, #{provider}, #{targetValue}, #{status}, #{attempts})
+    </insert>
+
+    <select id="findTasksByJobId" resultType="com.example.travlediary.model.AccountPurgeTask">
+        SELECT id, purge_job_id, task_type, provider, target_value, status, attempts,
+               next_retry_at, last_attempt_at, completed_at, last_error, created_at, updated_at
+        FROM account_purge_tasks
+        WHERE purge_job_id = #{purgeJobId}
+        ORDER BY id
+    </select>
+
+    <sql id="taskColumns">
+        id, purge_job_id, task_type, provider, target_value, status, attempts,
+        next_retry_at, last_attempt_at, completed_at, last_error, created_at, updated_at
+    </sql>
+
+    <select id="findTaskById" resultType="com.example.travlediary.model.AccountPurgeTask">
+        SELECT <include refid="taskColumns"/>
+        FROM account_purge_tasks
+        WHERE id = #{id}
+    </select>
+
+    <!--
+      지금 실행할 수 있는 파일 삭제 task.
+      COMPLETED 와 FAILED 는 status 조건에서 빠지고, 아직 재시도 시각이 남은 task 도 빠진다.
+      idx_account_purge_task_ready(status, next_retry_at, id) 를 그대로 탄다.
+      한 번도 시도하지 않은 task(next_retry_at IS NULL)가 먼저 나온다.
+    -->
+    <select id="findReadyTasks"
+            resultType="com.example.travlediary.model.AccountPurgeTask">
+        SELECT <include refid="taskColumns"/>
+        FROM account_purge_tasks
+        WHERE status = 'PENDING'
+          AND task_type = #{taskType}
+        <if test="provider != null">
+          AND provider = #{provider}
+        </if>
+          AND (next_retry_at IS NULL OR next_retry_at &lt;= #{currentTime})
+        ORDER BY next_retry_at, id
+        LIMIT #{limit}
+    </select>
+
+    <!--
+      집어 들기. 조건이 조회 때와 같으므로 두 worker 가 동시에 들어와도 한쪽만 1 을 받는다.
+      임대 시각을 넣어 두어, 처리 중인 task 를 다른 worker 가 곧바로 다시 집지 않게 한다.
+      처리 중 서버가 죽어도 임대가 지나면 다시 대상이 된다.
+      taskType/provider 조건이 함께 걸려 있어 한 worker 가 다른 종류의 task 를 집을 수 없다.
+    -->
+    <update id="claimTask">
+        UPDATE account_purge_tasks
+        SET attempts = attempts + 1,
+            last_attempt_at = #{currentTime},
+            next_retry_at = #{leaseUntil}
+        WHERE id = #{id}
+          AND status = 'PENDING'
+          AND task_type = #{taskType}
+        <if test="provider != null">
+          AND provider = #{provider}
+        </if>
+          AND (next_retry_at IS NULL OR next_retry_at &lt;= #{currentTime})
+    </update>
+
+    <update id="markTaskCompleted">
+        UPDATE account_purge_tasks
+        SET status = 'COMPLETED',
+            completed_at = #{completedAt},
+            next_retry_at = NULL,
+            last_error = NULL
+        WHERE id = #{id}
+          AND status = 'PENDING'
+    </update>
+
+    <update id="markTaskRetry">
+        UPDATE account_purge_tasks
+        SET next_retry_at = #{nextRetryAt},
+            last_error = #{lastError}
+        WHERE id = #{id}
+          AND status = 'PENDING'
+    </update>
+
+    <update id="markTaskFailed">
+        UPDATE account_purge_tasks
+        SET status = 'FAILED',
+            next_retry_at = NULL,
+            last_error = #{lastError}
+        WHERE id = #{id}
+          AND status = 'PENDING'
+    </update>
+
+    <!--
+      남은 task 가 하나도 없을 때만 job 을 끝낸다.
+      SOCIAL_UNLINK 가 PENDING 이거나 FILE_DELETE 가 FAILED 로 남아 있으면 조건이 깨져
+      DB_DONE 상태가 유지되고, 운영에서 "후처리 미완료"로 보인다.
+      status = 'DB_DONE' 조건이 이미 끝난 job 을 다시 완료 처리하는 것도 막는다.
+    -->
+    <update id="completeJobIfAllTasksDone">
+        UPDATE account_purge_jobs
+        SET status = 'COMPLETED',
+            completed_at = #{completedAt}
+        WHERE id = #{purgeJobId}
+          AND status = 'DB_DONE'
+          AND NOT EXISTS (
+              SELECT 1
+              FROM account_purge_tasks t
+              WHERE t.purge_job_id = #{purgeJobId}
+                AND t.status &lt;&gt; 'COMPLETED'
+          )
+    </update>
+
+    <!--
+      다이어리 대표 이미지와 페이지 PHOTO 요소의 업로드 경로.
+      STICKER 는 /images/diary/stickers/... 정적 리소스를 가리키므로 element_type 으로 먼저 거른다.
+      허용 경로 최종 판정은 저장 직전 애플리케이션(AccountPurgeFileTargets)이 한 번 더 한다.
+    -->
+    <select id="findDiaryImageUrlsByUserId" resultType="string">
+        SELECT d.cover_image_url AS image_url
+        FROM diaries d
+        WHERE d.user_id = #{userId}
+          AND d.cover_image_url IS NOT NULL
+        UNION
+        SELECT e.image_url
+        FROM diary_elements e
+                 JOIN diary_pages p ON p.id = e.page_id
+                 JOIN diaries d ON d.id = p.diary_id
+        WHERE d.user_id = #{userId}
+          AND e.element_type = 'PHOTO'
+          AND e.image_url IS NOT NULL
+    </select>
+
+    <select id="findCoverDesignImageUrlsByUserId" resultType="string">
+        SELECT DISTINCT e.image_url
+        FROM diary_cover_design_elements e
+                 JOIN diary_cover_designs c ON c.id = e.design_id
+        WHERE c.user_id = #{userId}
+          AND e.element_type = 'PHOTO'
+          AND e.image_url IS NOT NULL
+    </select>
+</mapper>

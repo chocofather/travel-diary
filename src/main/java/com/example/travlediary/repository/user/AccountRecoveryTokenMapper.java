@@ -32,4 +32,7 @@ public interface AccountRecoveryTokenMapper {
     /** used_at IS NULL 조건으로 단 한 번만 성공한다. 같은 링크의 재사용은 0 을 돌려준다. */
     int markUsed(@Param("id") Long id,
                  @Param("usedAt") LocalDateTime usedAt);
+
+    /** 최종 탈퇴 파기용. 파기 뒤에는 복구 자체가 불가능하므로 토큰을 남기지 않는다. */
+    int deleteAllByUserId(@Param("userId") Long userId);
 }

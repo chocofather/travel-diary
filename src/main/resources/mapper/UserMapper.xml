@@ -148,6 +148,71 @@
           AND deleted_at IS NULL
     </update>
 
+    <!--
+      최종 파기 대상. 인덱스 idx_users_withdrawal_purge(status, purge_scheduled_at) 를 그대로 탄다.
+      오래 기다린 회원부터 처리하도록 유예 종료 시각 순으로 준다.
+    -->
+    <select id="findDueWithdrawalUserIds" resultType="long">
+        SELECT id
+        FROM users
+        WHERE user_role = 'USER'
+          AND status = 'WITHDRAWAL_PENDING'
+          AND deleted_at IS NULL
+          AND purge_scheduled_at IS NOT NULL
+          AND purge_scheduled_at &lt;= #{currentTime}
+        ORDER BY purge_scheduled_at, id
+        LIMIT #{limit}
+    </select>
+
+    <!-- 파기 트랜잭션에서 회원 행을 잠그고 대상 조건을 다시 확인한다. -->
+    <select id="findPurgeTargetByIdForUpdate"
+            resultType="com.example.travlediary.model.User">
+        SELECT id, username, user_email, nickname, user_role, status,
+               profile_image, withdrawal_requested_at, purge_scheduled_at
+        FROM users
+        WHERE id = #{id}
+          AND user_role = 'USER'
+          AND status = 'WITHDRAWAL_PENDING'
+          AND deleted_at IS NULL
+          AND purge_scheduled_at IS NOT NULL
+          AND purge_scheduled_at &lt;= #{currentTime}
+        FOR UPDATE
+    </select>
+
+    <!--
+      최종 파기. 개인 식별정보를 지우고 DEACTIVATED 로 바꾼다.
+      nickname 은 NOT NULL UNIQUE 라 NULL 로 둘 수 없어 익명값을 받고,
+      user_email 도 UNIQUE 라 재가입을 막지 않도록 익명 주소로 바꾼다.
+      username 은 nullable 이라 NULL 로 비워 아이디를 다시 쓸 수 있게 한다.
+      withdrawal_requested_at / purge_scheduled_at / created_at / user_role 은 그대로 둔다.
+    -->
+    <update id="finalizeWithdrawal">
+        UPDATE users
+        SET username = NULL,
+            user_email = #{userEmail},
+            nickname = #{nickname},
+            full_name = NULL,
+            user_phone = NULL,
+            user_birth = NULL,
+            user_password = NULL,
+            profile_image = NULL,
+            last_login = NULL,
+            verification_token = NULL,
+            verification_token_exp = NULL,
+            verification_requested_at = NULL,
+            reset_token = NULL,
+            reset_token_exp = NULL,
+            status = #{status},
+            deleted_at = #{deletedAt},
+            updated_at = NOW()
+        WHERE id = #{id}
+          AND user_role = 'USER'
+          AND status = 'WITHDRAWAL_PENDING'
+          AND deleted_at IS NULL
+          AND purge_scheduled_at IS NOT NULL
+          AND purge_scheduled_at &lt;= #{currentTime}
+    </update>
+
     <!--  아이디 중복 개수 확인 -->
     <select id="countByUsername" parameterType="java.lang.String" resultType="int">
         SELECT COUNT(*) FROM users WHERE username = #{username}

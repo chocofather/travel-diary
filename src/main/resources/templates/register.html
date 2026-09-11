@@ -69,6 +69,14 @@
       <input type="hidden" th:if="${_csrf != null}"
              th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
 
+      <!-- 유예가 끝난 기존 계정을 정리한 뒤 넘어온 경우. 세션을 끊고 왔으므로 파라미터로 받는다. -->
+      <div class="registration-notice" role="status"
+           id="withdrawalExpiredNotice"
+           th:if="${param.withdrawalExpired != null and param.withdrawalExpired[0] == 'true'}"
+           th:text="#{signup.withdrawalExpired.notice}">
+        기존 계정의 복구 가능 기간이 종료되었습니다. 새 계정으로 가입할 수 있습니다.
+      </div>
+
       <div class="registration-global-error" role="alert"
            th:if="${#fields.hasGlobalErrors()}" data-server-error="true">
         <!-- 문구는 BindingResult 가 messages 번들에서 이미 해석해 준다. -->

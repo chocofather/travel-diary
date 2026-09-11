@@ -17,6 +17,7 @@ import com.example.travlediary.service.user.SocialConnectionResult;
 import com.example.travlediary.service.user.SocialWithdrawalException;
 import com.example.travlediary.service.user.SocialWithdrawalService;
 import com.example.travlediary.service.user.UserSanctionService;
+import com.example.travlediary.service.user.WithdrawalGraceService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -76,6 +77,8 @@ class SocialOAuth2LoginSuccessHandlerTest {
     private OAuth2AuthorizedClientService authorizedClientService;
     @Mock
     private TravelDiaryAuthenticationRestorer authenticationRestorer;
+    @Mock
+    private WithdrawalGraceService withdrawalGraceService;
 
     private SocialOAuth2LoginSuccessHandler handler;
 
@@ -85,7 +88,9 @@ class SocialOAuth2LoginSuccessHandlerTest {
                 socialAccountService,
                 userMapper,
                 userSanctionService,
-                new CustomLoginSuccessHandler(userMapper, new LoginThrottle()));
+                new CustomLoginSuccessHandler(userMapper, new LoginThrottle(),
+                        withdrawalGraceService),
+                withdrawalGraceService);
         SecurityContextHolder.clearContext();
     }
 
@@ -203,6 +208,10 @@ class SocialOAuth2LoginSuccessHandlerTest {
         when(userMapper.findById(7L))
                 .thenReturn(user(7L, null, UserRole.USER, UserStatus.WITHDRAWAL_PENDING));
         when(userMapper.findStatusById(7L)).thenReturn(UserStatus.WITHDRAWAL_PENDING);
+        when(withdrawalGraceService.resolveAccess(7L, SocialProvider.GOOGLE))
+                .thenReturn(WithdrawalGraceService.Outcome.IN_GRACE);
+        when(withdrawalGraceService.resolveAccess(7L, null))
+                .thenReturn(WithdrawalGraceService.Outcome.IN_GRACE);
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -212,6 +221,67 @@ class SocialOAuth2LoginSuccessHandlerTest {
         assertThat(request.getSession().getAttribute("userId")).isEqualTo(7L);
         assertThat(savedAuthentication(request).getPrincipal())
                 .isInstanceOf(CustomUserDetails.class);
+    }
+
+    /**
+     * 유예가 끝난 계정으로 같은 Kakao 로 다시 로그인한 경우.
+     * provider 인증은 방금 끝났으므로 기존 계정을 즉시 파기하고 그대로 신규 가입으로 이어간다.
+     * 안내 화면으로 보내면 복구도 못 하면서 식별정보만 점유한 채 갇힌다.
+     */
+    @Test
+    void anExpiredKakaoAccountIsFinalizedAndContinuesIntoTheSocialSignupFlow()
+            throws Exception {
+        OAuth2AuthenticationToken authentication = oidcAuthentication(
+                "kakao", "https://kauth.kakao.com", "5068008846",
+                "member@example.com", true, "OIDC_USER");
+        when(socialAccountService.findByProviderAndProviderUserId(
+                SocialProvider.KAKAO, "5068008846"))
+                .thenReturn(socialAccount(19L, SocialProvider.KAKAO, "5068008846"));
+        when(userMapper.findById(19L))
+                .thenReturn(user(19L, null, UserRole.USER, UserStatus.WITHDRAWAL_PENDING));
+        when(withdrawalGraceService.resolveAccess(19L, SocialProvider.KAKAO))
+                .thenReturn(WithdrawalGraceService.Outcome.GRACE_ENDED);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        // 지금 인증한 provider 를 그대로 들고 기존 소셜 가입 흐름으로 간다.
+        PendingSocialSignup pending = (PendingSocialSignup) request.getSession()
+                .getAttribute(PendingSocialSignup.SESSION_ATTRIBUTE);
+        assertThat(pending.provider()).isEqualTo(SocialProvider.KAKAO);
+        assertThat(pending.providerUserId()).isEqualTo("5068008846");
+        assertThat(response.getRedirectedUrl()).isEqualTo("/social-signup");
+        assertThat(request.getSession().getAttribute("userId")).isNull();
+        // 정상 회원 세션은 만들어지지 않는다. 가입을 끝내야 로그인된다.
+        assertThat(request.getSession().getAttribute(
+                HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY)).isNull();
+        // 최종 파기는 지금 로그인한 provider 를 알려 주고 맡긴다(현재 provider unlink 억제).
+        verify(withdrawalGraceService).resolveAccess(19L, SocialProvider.KAKAO);
+    }
+
+    /** Google/Naver 도 같은 흐름을 탄다. provider 별로 분기하지 않는다. */
+    @Test
+    void anExpiredGoogleAccountAlsoContinuesIntoTheSocialSignupFlow() throws Exception {
+        OAuth2AuthenticationToken authentication = googleAuthentication(
+                "expired-sub", "member@example.com", true, "OIDC_USER");
+        when(socialAccountService.findByProviderAndProviderUserId(
+                SocialProvider.GOOGLE, "expired-sub"))
+                .thenReturn(socialAccount(7L, "expired-sub"));
+        when(userMapper.findById(7L))
+                .thenReturn(user(7L, null, UserRole.USER, UserStatus.WITHDRAWAL_PENDING));
+        when(withdrawalGraceService.resolveAccess(7L, SocialProvider.GOOGLE))
+                .thenReturn(WithdrawalGraceService.Outcome.GRACE_ENDED);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        PendingSocialSignup pending = (PendingSocialSignup) request.getSession()
+                .getAttribute(PendingSocialSignup.SESSION_ATTRIBUTE);
+        assertThat(pending.provider()).isEqualTo(SocialProvider.GOOGLE);
+        assertThat(pending.providerUserId()).isEqualTo("expired-sub");
+        assertThat(response.getRedirectedUrl()).isEqualTo("/social-signup");
     }
 
     /** 최종 탈퇴(DEACTIVATED)는 이번 변경과 무관하게 그대로 막힌다. */
@@ -721,7 +791,9 @@ class SocialOAuth2LoginSuccessHandlerTest {
                 socialAccountService,
                 userMapper,
                 userSanctionService,
-                new CustomLoginSuccessHandler(userMapper, new LoginThrottle()),
+                new CustomLoginSuccessHandler(userMapper, new LoginThrottle(),
+                        withdrawalGraceService),
+                withdrawalGraceService,
                 socialWithdrawalService,
                 authorizedClientService,
                 authenticationRestorer);

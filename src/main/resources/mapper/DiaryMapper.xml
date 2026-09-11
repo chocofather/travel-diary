@@ -164,4 +164,10 @@
           AND user_id = #{userId}
     </delete>
 
+    <!-- 최종 탈퇴 파기용. diary_pages -> diary_elements 는 FK CASCADE 로 함께 지워진다. -->
+    <delete id="deleteAllByUserId">
+        DELETE FROM diaries
+        WHERE user_id = #{userId}
+    </delete>
+
 </mapper>

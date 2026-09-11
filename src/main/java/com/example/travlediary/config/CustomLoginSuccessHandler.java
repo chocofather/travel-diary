@@ -3,10 +3,12 @@ package com.example.travlediary.config;
 import com.example.travlediary.model.UserStatus;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
+import com.example.travlediary.security.ExpiredWithdrawalResponse;
 import com.example.travlediary.security.LoginFormState;
 import com.example.travlediary.security.LoginThrottle;
 import com.example.travlediary.security.RestrictedAccountFilter;
 import com.example.travlediary.security.WithdrawalPendingAccountFilter;
+import com.example.travlediary.service.user.WithdrawalGraceService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,12 +28,16 @@ public class CustomLoginSuccessHandler implements AuthenticationSuccessHandler {
 
     private final UserMapper userMapper;
     private final LoginThrottle loginThrottle;
+    private final WithdrawalGraceService withdrawalGraceService;
     private final RequestCache requestCache = new HttpSessionRequestCache();
 
     @Autowired
-    public CustomLoginSuccessHandler(UserMapper userMapper, LoginThrottle loginThrottle) {
+    public CustomLoginSuccessHandler(UserMapper userMapper,
+                                     LoginThrottle loginThrottle,
+                                     WithdrawalGraceService withdrawalGraceService) {
         this.userMapper = userMapper;
         this.loginThrottle = loginThrottle;
+        this.withdrawalGraceService = withdrawalGraceService;
     }
 
     @Override
@@ -59,6 +65,14 @@ public class CustomLoginSuccessHandler implements AuthenticationSuccessHandler {
         }
         if (status == UserStatus.WITHDRAWAL_PENDING) {
             requestCache.removeRequest(request, response);
+            // 유예 여부는 배치 실행 여부가 아니라 purge_scheduled_at 으로 판정한다.
+            // 이미 끝난 계정이면 본인 확인이 끝난 지금 최종 파기하고 새 가입으로 보낸다.
+            if (withdrawalGraceService.resolveAccess(userId, null)
+                    == WithdrawalGraceService.Outcome.GRACE_ENDED) {
+                ExpiredWithdrawalResponse.endSession(request, response);
+                response.sendRedirect(ExpiredWithdrawalResponse.REGISTER_PATH);
+                return;
+            }
             response.sendRedirect(WithdrawalPendingAccountFilter.WITHDRAWAL_PENDING_PATH);
             return;
         }

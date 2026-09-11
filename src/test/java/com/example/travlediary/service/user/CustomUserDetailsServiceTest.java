@@ -97,6 +97,24 @@ class CustomUserDetailsServiceTest {
         assertThat(details.isEnabled()).isTrue();
     }
 
+    /**
+     * 아이디만 알면 여기까지는 누구나 올 수 있다. 비밀번호 검증은 그 다음이므로
+     * 유예가 끝난 계정이라도 이 단계에서는 아무것도 지우거나 바꾸지 않는다.
+     * 최종 파기는 인증에 성공한 뒤 로그인 성공 핸들러에서만 일어난다.
+     */
+    @Test
+    void loadingAnExpiredWithdrawalAccountNeverChangesAnything() {
+        User account = user(UserStatus.WITHDRAWAL_PENDING);
+        account.setPurgeScheduledAt(java.time.LocalDateTime.now().minusDays(1));
+        when(userMapper.findByUsername("travler")).thenReturn(account);
+
+        assertThat(service.loadUserByUsername("travler").getUsername()).isEqualTo("travler");
+
+        verify(userMapper).findByUsername("travler");
+        org.mockito.Mockito.verifyNoMoreInteractions(userMapper);
+        org.mockito.Mockito.verifyNoInteractions(userSanctionService);
+    }
+
     @Test
     void restrictedUserIsAuthenticatedSoAccessControlCanHandleIt() {
         when(userMapper.findByUsername("travler")).thenReturn(user(UserStatus.RESTRICTED));

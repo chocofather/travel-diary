@@ -2636,3 +2636,75 @@ CREATE TABLE `account_recovery_tokens` (
   CONSTRAINT `fk_account_recovery_token_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `account_purge_jobs`
+--
+-- WITHDRAWAL_PENDING 회원의 30일 유예가 끝난 뒤 진행하는 최종 탈퇴/파기 작업의 전체 진행 상태.
+-- 회원 한 명당 purge job 한 개이며, DB 제약으로는 user_id UNIQUE 가 그것을 보장한다.
+-- DB 안에서 끝내는 최종 파기 처리와, 커밋 이후에 해야 하는 파일/외부 연동 후처리를
+-- 나누기 위한 기준점이다.
+--   db_completed_at : DB 내부 파기 단계가 끝난 시각
+--   completed_at    : 후처리까지 모두 끝나 최종 완료된 시각
+-- 대상 회원 행을 tombstone 으로 남기므로 user_id 는 ON DELETE RESTRICT 로 묶는다.
+-- users 1 : 1 account_purge_jobs (user_id, ON DELETE RESTRICT)
+-- 스키마만 반영된 상태이며 최종 파기 배치의 애플리케이션 구현은 아직 반영 전이다.
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `account_purge_jobs` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `user_id` bigint NOT NULL,
+  `status` varchar(20) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'PENDING',
+  `db_completed_at` datetime(6) DEFAULT NULL,
+  `completed_at` datetime(6) DEFAULT NULL,
+  `created_at` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `updated_at` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_account_purge_job_user` (`user_id`),
+  KEY `idx_account_purge_job_status` (`status`,`created_at`),
+  CONSTRAINT `fk_account_purge_job_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `account_purge_tasks`
+--
+-- 하나의 account_purge_jobs 에 속하는 실제 후처리 작업 목록.
+-- DB row 를 지우고 나면 다시 알아낼 수 없는 업로드 파일 경로나 외부 provider 식별값을
+-- 미리 옮겨 두어, 서버 장애로 후처리가 끊겨도 나중에 다시 시도할 수 있게 한다.
+--   task_type       : 수행할 후처리 종류. 애플리케이션 설계상 초기 사용 예정 값은
+--                     FILE_DELETE, SOCIAL_UNLINK 이며, DB 에는 ENUM/CHECK 제약이 없다.
+--   provider        : 외부 provider 작업일 때의 provider 식별값. 파일 삭제 등에서는 NULL.
+--   target_value    : 작업 대상 값. FILE_DELETE 면 업로드 파일 경로,
+--                     SOCIAL_UNLINK 면 provider 사용자 식별값 등을 담는다.
+--   attempts        : 실행 시도 횟수
+--   next_retry_at   : 다음 재시도 가능 시각
+--   last_attempt_at : 마지막 실행 시각
+--   completed_at    : task 완료 시각
+--   last_error      : 마지막 실패 정보
+-- account_purge_jobs 1 : N account_purge_tasks (purge_job_id, ON DELETE CASCADE)
+-- 스키마만 반영된 상태이며 후처리 worker 의 애플리케이션 구현은 아직 반영 전이다.
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `account_purge_tasks` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `purge_job_id` bigint NOT NULL,
+  `task_type` varchar(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `provider` varchar(20) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+  `target_value` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
+  `status` varchar(20) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'PENDING',
+  `attempts` int unsigned NOT NULL DEFAULT '0',
+  `next_retry_at` datetime(6) DEFAULT NULL,
+  `last_attempt_at` datetime(6) DEFAULT NULL,
+  `completed_at` datetime(6) DEFAULT NULL,
+  `last_error` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `created_at` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `updated_at` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (`id`),
+  KEY `idx_account_purge_task_job` (`purge_job_id`),
+  KEY `idx_account_purge_task_ready` (`status`,`next_retry_at`,`id`),
+  CONSTRAINT `fk_account_purge_task_job` FOREIGN KEY (`purge_job_id`) REFERENCES `account_purge_jobs` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;

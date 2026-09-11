@@ -39,7 +39,9 @@ class SocialSignupAuthenticationServiceTest {
     @BeforeEach
     void setUp() {
         service = new SocialSignupAuthenticationService(
-                userMapper, new CustomLoginSuccessHandler(userMapper, new LoginThrottle()));
+                userMapper,
+                new CustomLoginSuccessHandler(userMapper, new LoginThrottle(),
+                        org.mockito.Mockito.mock(WithdrawalGraceService.class)));
         SecurityContextHolder.clearContext();
     }
 

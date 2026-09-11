@@ -27,4 +27,7 @@ public interface GoogleTranslationDailyUsageMapper {
                                @Param("characters") long characters,
                                @Param("characterLimit") long characterLimit,
                                @Param("now") Timestamp now);
+
+    /** 최종 탈퇴 파기용. 회원에 묶인 사용량 집계를 지운다(IP 집계는 건드리지 않는다). */
+    int deleteAllByUserId(@Param("userId") Long userId);
 }

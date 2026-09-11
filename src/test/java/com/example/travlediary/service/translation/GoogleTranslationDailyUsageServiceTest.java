@@ -12,6 +12,7 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -184,6 +185,18 @@ class GoogleTranslationDailyUsageServiceTest {
         @Override
         public void insertUserDayIfAbsent(LocalDate usageDate, Long userId, Timestamp now) {
             userValues.putIfAbsent(new UserKey(usageDate, userId), new Usage());
+        }
+
+        /** 최종 탈퇴 파기 경로에서만 쓰인다. 사용량 한도 검증과는 무관하다. */
+        @Override
+        public int deleteAllByUserId(Long userId) {
+            int removed = 0;
+            for (UserKey key : Set.copyOf(userValues.keySet())) {
+                if (key.userId().equals(userId) && userValues.remove(key) != null) {
+                    removed++;
+                }
+            }
+            return removed;
         }
 
         @Override

@@ -7,6 +7,8 @@ import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.security.LoginFormState;
 import com.example.travlediary.security.LoginThrottle;
+import com.example.travlediary.service.user.WithdrawalGraceService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,6 +18,7 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -31,12 +34,20 @@ class CustomLoginSuccessHandlerTest {
     private UserMapper userMapper;
     @Mock
     private LoginThrottle loginThrottle;
+    @Mock
+    private WithdrawalGraceService withdrawalGraceService;
 
     private CustomLoginSuccessHandler handler;
 
     @BeforeEach
     void setUp() {
-        handler = new CustomLoginSuccessHandler(userMapper, loginThrottle);
+        handler = new CustomLoginSuccessHandler(
+                userMapper, loginThrottle, withdrawalGraceService);
+    }
+
+    @AfterEach
+    void clearContext() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -75,6 +86,8 @@ class CustomLoginSuccessHandlerTest {
     @Test
     void withdrawalPendingMemberGoesToTheNoticePageBeforeAnySavedRedirect() throws Exception {
         when(userMapper.findStatusById(7L)).thenReturn(UserStatus.WITHDRAWAL_PENDING);
+        when(withdrawalGraceService.resolveAccess(7L, null))
+                .thenReturn(WithdrawalGraceService.Outcome.IN_GRACE);
         MockHttpServletRequest request = requestWithRedirect("/mypage");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -83,6 +96,29 @@ class CustomLoginSuccessHandlerTest {
 
         assertThat(response.getRedirectedUrl()).isEqualTo("/account/withdrawal-pending");
         assertThat(request.getSession().getAttribute("userId")).isEqualTo(7L);
+    }
+
+    /**
+     * 유예가 끝난 계정으로 올바른 비밀번호를 넣은 경우.
+     * 본인 확인이 끝났으므로 기존 계정을 즉시 최종 파기하고, 정상 회원 세션은 만들지 않는다.
+     */
+    @Test
+    void anExpiredWithdrawalLoginIsFinalizedAndSentToTheSignupPage() throws Exception {
+        when(userMapper.findStatusById(7L)).thenReturn(UserStatus.WITHDRAWAL_PENDING);
+        when(withdrawalGraceService.resolveAccess(7L, null))
+                .thenReturn(WithdrawalGraceService.Outcome.GRACE_ENDED);
+        MockHttpServletRequest request = requestWithRedirect("/mypage");
+        MockHttpSession session = (MockHttpSession) request.getSession();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(
+                request, response, authentication(7L, "travler", UserRole.USER));
+
+        assertThat(response.getRedirectedUrl())
+                .isEqualTo("/users/register?withdrawalExpired=true");
+        // 탈퇴 유예 화면으로도, 저장된 요청으로도 가지 않는다.
+        assertThat(session.isInvalid()).isTrue();
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
     }
 
     @Test

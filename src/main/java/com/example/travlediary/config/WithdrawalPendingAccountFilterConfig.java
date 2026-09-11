@@ -1,7 +1,7 @@
 package com.example.travlediary.config;
 
-import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.WithdrawalPendingAccountFilter;
+import com.example.travlediary.service.user.WithdrawalGraceService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -13,7 +13,8 @@ import org.springframework.context.annotation.Configuration;
 public class WithdrawalPendingAccountFilterConfig {
 
     @Bean
-    public WithdrawalPendingAccountFilter withdrawalPendingAccountFilter(UserMapper userMapper) {
-        return new WithdrawalPendingAccountFilter(userMapper);
+    public WithdrawalPendingAccountFilter withdrawalPendingAccountFilter(
+            WithdrawalGraceService withdrawalGraceService) {
+        return new WithdrawalPendingAccountFilter(withdrawalGraceService);
     }
 }

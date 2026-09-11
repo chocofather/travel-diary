@@ -41,4 +41,13 @@
           AND used_at IS NULL
     </update>
 
+    <!--
+      최종 탈퇴 파기용. users 행은 tombstone 으로 남기므로 FK CASCADE 가 동작하지 않아
+      여기서 직접 지운다.
+    -->
+    <delete id="deleteAllByUserId">
+        DELETE FROM account_recovery_tokens
+        WHERE user_id = #{userId}
+    </delete>
+
 </mapper>

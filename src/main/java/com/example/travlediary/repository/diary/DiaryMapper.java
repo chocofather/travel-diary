@@ -59,4 +59,7 @@ public interface DiaryMapper {
     /** 본인 소유 다이어리 삭제 (페이지/요소는 FK CASCADE 로 함께 지워진다) */
     int delete(@Param("diaryId") Long diaryId,
                @Param("userId") Long userId);
+
+    /** 최종 탈퇴 파기용. 페이지와 요소는 FK ON DELETE CASCADE 로 함께 지워진다. */
+    int deleteAllByUserId(@Param("userId") Long userId);
 }

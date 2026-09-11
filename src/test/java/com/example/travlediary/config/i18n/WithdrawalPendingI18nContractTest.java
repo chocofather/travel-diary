@@ -8,6 +8,7 @@ import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.user.AccountRecoveryService;
 import com.example.travlediary.service.user.AccountRecoveryService.RecoveryRequestOutcome;
+import com.example.travlediary.service.user.WithdrawalGraceService;
 import jakarta.servlet.http.Cookie;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -60,6 +61,8 @@ class WithdrawalPendingI18nContractTest {
     @MockitoBean
     private AccountRecoveryService accountRecoveryService;
     @MockitoBean
+    private WithdrawalGraceService withdrawalGraceService;
+    @MockitoBean
     private com.example.travlediary.config.CustomLoginSuccessHandler customLoginSuccessHandler;
     @MockitoBean
     private com.example.travlediary.config.CustomLogoutSuccessHandler customLogoutSuccessHandler;
@@ -105,24 +108,23 @@ class WithdrawalPendingI18nContractTest {
         assertThat(page.selectFirst("#withdrawalRemaining").text()).doesNotContain("초");
     }
 
-    /** 유예기간이 이미 지나도 화면은 떠야 한다. 안 그러면 격리 필터와 루프가 생긴다. */
+    /**
+     * 유예가 끝난 계정은 이 화면을 직접 열어도 정상 렌더되지 않는다.
+     * 복구도 못 하면서 기존 식별정보만 점유한 채 갇히는 화면이기 때문이다.
+     */
     @Test
-    void anExpiredGracePeriodStillRendersTheNoticeWithoutTheRecoveryButton() throws Exception {
-        givenWithdrawalPendingAccount(LocalDateTime.now().minusMinutes(1));
+    void anExpiredGracePeriodLeavesTheNoticeScreenForTheSignupPage() throws Exception {
+        when(withdrawalGraceService.resolveAccess(7L, null))
+                .thenReturn(WithdrawalGraceService.Outcome.GRACE_ENDED);
 
-        Document page = render(get("/account/withdrawal-pending").with(user(principal())));
-
-        assertThat(page.selectFirst("#withdrawalPendingTitle")).isNotNull();
-        assertThat(page.select("#recoveryLinkForm")).isEmpty();
-        assertThat(page.selectFirst("#withdrawalRemaining").text())
-                .isEqualTo("복구 가능 기간이 지났습니다.");
-        // 로그아웃 경로는 항상 남는다.
-        assertThat(page.selectFirst(".login-secondary")).isNotNull();
+        mockMvc.perform(get("/account/withdrawal-pending").with(user(principal())))
+                .andExpect(redirectedUrl("/users/register?withdrawalExpired=true"));
     }
 
     @Test
     void aMemberThatIsNoLongerPendingLeavesTheNoticeScreen() throws Exception {
-        when(userMapper.findWithdrawalPendingById(7L)).thenReturn(null);
+        when(withdrawalGraceService.resolveAccess(7L, null))
+                .thenReturn(WithdrawalGraceService.Outcome.NOT_PENDING);
 
         mockMvc.perform(get("/account/withdrawal-pending").with(user(principal())))
                 .andExpect(redirectedUrl("/"));
@@ -148,6 +150,8 @@ class WithdrawalPendingI18nContractTest {
     @CsvSource({"SENT", "COOLDOWN", "NOT_ELIGIBLE"})
     void theRecoveryRequestUsesTheAuthenticatedMemberAndReportsTheOutcome(String outcome)
             throws Exception {
+        when(withdrawalGraceService.resolveAccess(7L, null))
+                .thenReturn(WithdrawalGraceService.Outcome.IN_GRACE);
         when(accountRecoveryService.requestRecoveryFor(7L))
                 .thenReturn(RecoveryRequestOutcome.valueOf(outcome));
 
@@ -161,6 +165,8 @@ class WithdrawalPendingI18nContractTest {
 
     @Test
     void anUnexpectedRecoveryFailureStillEndsOnTheNoticeScreen() throws Exception {
+        when(withdrawalGraceService.resolveAccess(7L, null))
+                .thenReturn(WithdrawalGraceService.Outcome.IN_GRACE);
         when(accountRecoveryService.requestRecoveryFor(7L))
                 .thenThrow(new IllegalStateException("mail down"));
 
@@ -253,6 +259,8 @@ class WithdrawalPendingI18nContractTest {
     /* ---------- helpers ---------- */
 
     private void givenWithdrawalPendingAccount(LocalDateTime purgeScheduledAt) {
+        when(withdrawalGraceService.resolveAccess(7L, null))
+                .thenReturn(WithdrawalGraceService.Outcome.IN_GRACE);
         User account = new User();
         account.setId(7L);
         account.setUsername("travler");

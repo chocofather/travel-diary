@@ -14,6 +14,7 @@ import com.example.travlediary.service.user.SocialAccountService;
 import com.example.travlediary.service.user.SocialConnectionResult;
 import com.example.travlediary.service.user.SocialWithdrawalService;
 import com.example.travlediary.service.user.UserSanctionService;
+import com.example.travlediary.service.user.WithdrawalGraceService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
@@ -50,6 +51,7 @@ public class SocialOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
     private final UserMapper userMapper;
     private final UserSanctionService userSanctionService;
     private final CustomLoginSuccessHandler customLoginSuccessHandler;
+    private final WithdrawalGraceService withdrawalGraceService;
     private final SocialWithdrawalService socialWithdrawalService;
     private final OAuth2AuthorizedClientService authorizedClientService;
     private final TravelDiaryAuthenticationRestorer authenticationRestorer;
@@ -62,6 +64,7 @@ public class SocialOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
             UserMapper userMapper,
             UserSanctionService userSanctionService,
             CustomLoginSuccessHandler customLoginSuccessHandler,
+            WithdrawalGraceService withdrawalGraceService,
             SocialWithdrawalService socialWithdrawalService,
             OAuth2AuthorizedClientService authorizedClientService,
             TravelDiaryAuthenticationRestorer authenticationRestorer) {
@@ -69,6 +72,7 @@ public class SocialOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
         this.userMapper = userMapper;
         this.userSanctionService = userSanctionService;
         this.customLoginSuccessHandler = customLoginSuccessHandler;
+        this.withdrawalGraceService = withdrawalGraceService;
         this.socialWithdrawalService = socialWithdrawalService;
         this.authorizedClientService = authorizedClientService;
         this.authenticationRestorer = authenticationRestorer;
@@ -78,9 +82,10 @@ public class SocialOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
             SocialAccountService socialAccountService,
             UserMapper userMapper,
             UserSanctionService userSanctionService,
-            CustomLoginSuccessHandler customLoginSuccessHandler) {
+            CustomLoginSuccessHandler customLoginSuccessHandler,
+            WithdrawalGraceService withdrawalGraceService) {
         this(socialAccountService, userMapper, userSanctionService,
-                customLoginSuccessHandler, null, null, null);
+                customLoginSuccessHandler, withdrawalGraceService, null, null, null);
     }
 
     @Override
@@ -141,7 +146,7 @@ public class SocialOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
                 return;
             }
 
-            loginConnectedAccount(request, response, socialAccount);
+            loginConnectedAccount(request, response, identity, socialAccount);
         } catch (RuntimeException exception) {
             if (connection != null) {
                 failConnection(request, response, connection);
@@ -377,11 +382,21 @@ public class SocialOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
 
     private void loginConnectedAccount(HttpServletRequest request,
                                        HttpServletResponse response,
+                                       SocialIdentity identity,
                                        SocialAccount socialAccount) throws IOException {
         Long userId = socialAccount.getUserId();
         User user = userId == null ? null : userMapper.findById(userId);
         if (!canAuthenticate(user)) {
             reject(request, response);
+            return;
+        }
+
+        // 유예가 이미 끝난 계정이면 안내 화면으로 보내지 않는다. provider 인증은 방금 끝났으므로
+        // 기존 계정을 최종 파기해 연결을 풀고, 같은 provider 식별정보로 신규 가입을 이어간다.
+        if (user.getStatus() == UserStatus.WITHDRAWAL_PENDING
+                && withdrawalGraceService.resolveAccess(user.getId(), identity.provider())
+                        == WithdrawalGraceService.Outcome.GRACE_ENDED) {
+            beginSignup(request, response, identity);
             return;
         }
 

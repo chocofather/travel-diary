@@ -105,13 +105,19 @@ class AccountRecoveryMapperContractTest {
                 .contains("used_at = #{usedAt}", "WHERE id = #{id}", "used_at IS NULL");
     }
 
-    /** 재발급은 이력을 지우지 않고 기존 미사용 토큰만 닫는다. */
+    /**
+     * 재발급은 이력을 지우지 않고 기존 미사용 토큰만 닫는다.
+     *
+     * <p>행을 지우는 문장은 최종 탈퇴 파기(deleteAllByUserId) 하나뿐이다. 그쪽은 계정이
+     * 사라지는 경로라 이력을 남길 이유가 없다. 재발급 경로가 그 문장을 쓰지 않는지만 본다.
+     */
     @Test
     void reissuingClosesOldTokensWithoutDeletingTheHistory() throws IOException {
         assertThat(statement(recoveryXml(), "update", "invalidateUnusedTokens"))
                 .contains("used_at = #{invalidatedAt}", "user_id = #{userId}",
-                        "used_at IS NULL");
-        assertThat(recoveryXml()).doesNotContain("DELETE FROM account_recovery_tokens");
+                        "used_at IS NULL")
+                .doesNotContain("DELETE");
+        assertThat(statement(recoveryXml(), "update", "markUsed")).doesNotContain("DELETE");
     }
 
     private String userXml() throws IOException {

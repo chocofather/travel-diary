@@ -32,4 +32,7 @@ public interface DiaryCoverDesignMapper {
     /** 본인 소유 디자인 삭제 (요소는 FK CASCADE 로 함께 지워진다) */
     int deleteByIdAndUserId(@Param("designId") Long designId,
                             @Param("userId") Long userId);
+
+    /** 최종 탈퇴 파기용. 표지 요소는 FK ON DELETE CASCADE 로 함께 지워진다. */
+    int deleteAllByUserId(@Param("userId") Long userId);
 }

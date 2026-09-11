@@ -47,4 +47,14 @@
           AND #{characters} &lt;= #{characterLimit}
           AND used_characters &lt;= #{characterLimit} - #{characters}
     </update>
+
+    <!--
+      최종 탈퇴 파기용. users 행을 tombstone 으로 남기므로 FK CASCADE 가 동작하지 않아 직접 지운다.
+      subject_type = 'USER' 행만 user_id 를 갖는다.
+    -->
+    <delete id="deleteAllByUserId">
+        DELETE FROM google_translation_daily_usage
+        WHERE subject_type = 'USER'
+          AND user_id = #{userId}
+    </delete>
 </mapper>

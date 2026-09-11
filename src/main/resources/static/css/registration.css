@@ -319,6 +319,18 @@
     margin: 0;
 }
 
+/* 유예가 끝난 기존 계정을 정리하고 새로 가입하러 온 경우의 안내. 오류가 아니라 안내다. */
+.registration-notice {
+    margin: 0 0 22px;
+    padding: 12px 14px;
+    border: 1px solid #cfe3ff;
+    border-radius: 9px;
+    color: #1d4ed8;
+    background: #f4f8ff;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
 .password-control,
 .email-input-wrap {
     position: relative;

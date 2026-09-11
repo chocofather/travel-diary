@@ -57,12 +57,11 @@
       </div>
       <div>
         <dt th:text="#{account.withdrawalPending.remaining}">남은 기간</dt>
+        <!-- 이 화면은 유예가 남은 회원에게만 열리므로 "기간이 지났습니다" 상태는 두지 않는다. -->
         <dd id="withdrawalRemaining">
-          <span th:if="${!recoverable}"
-                th:text="#{account.withdrawalPending.remaining.ended}">복구 가능 기간이 지났습니다.</span>
-          <span th:if="${recoverable and remainingDays > 0}"
+          <span th:if="${remainingDays > 0}"
                 th:text="#{account.withdrawalPending.remaining.days(${remainingDays}, ${remainingHours})}">29일 23시간 남음</span>
-          <span th:if="${recoverable and remainingDays == 0}"
+          <span th:if="${remainingDays == 0}"
                 th:text="#{account.withdrawalPending.remaining.hours(${remainingHours}, ${remainingMinutes})}">3시간 20분 남음</span>
         </dd>
       </div>
@@ -76,8 +75,7 @@
     <form th:action="@{/account/withdrawal-pending/recovery-link}"
           method="post"
           id="recoveryLinkForm"
-          class="login-form"
-          th:if="${recoverable}">
+          class="login-form">
       <button type="submit" class="login-submit"
               th:text="#{account.withdrawalPending.recovery.request}">복구 링크 받기</button>
     </form>
