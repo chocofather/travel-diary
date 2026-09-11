@@ -86,7 +86,7 @@ class SocialWithdrawalServiceTest {
 
     @ParameterizedTest
     @EnumSource(SocialProvider.class)
-    void matchingProviderIdentityIsUnlinkedBeforeExistingWithdrawalPolicyRuns(
+    void matchingProviderIdentityRequestsWithdrawalWithoutUnlinkingDuringTheGracePeriod(
             SocialProvider provider) {
         String providerUserId = provider.name().toLowerCase() + "-identity";
         PendingSocialWithdrawal pending = pending(7L, provider);
@@ -98,10 +98,9 @@ class SocialWithdrawalServiceTest {
         service.complete(
                 pending, 7L, provider, providerUserId, "one-use-access-token");
 
-        InOrder order = inOrder(providerUnlinkClient, accountService);
-        order.verify(providerUnlinkClient).unlink(
-                provider, "one-use-access-token", providerUserId);
-        order.verify(accountService).withdrawAfterSocialReauthentication(7L);
+        // provider 재인증은 본인 확인 용도로만 쓰고, 연결 해제는 최종 파기 단계로 미룬다.
+        verify(accountService).withdrawAfterSocialReauthentication(7L);
+        org.mockito.Mockito.verifyNoInteractions(providerUnlinkClient);
     }
 
     @ParameterizedTest
@@ -148,22 +147,21 @@ class SocialWithdrawalServiceTest {
 
     @ParameterizedTest
     @EnumSource(SocialProvider.class)
-    void providerFailureStopsBeforeTravelDiaryWithdrawal(SocialProvider provider) {
+    void withdrawalRequestFailureIsReportedAndNothingIsUnlinked(SocialProvider provider) {
         String providerUserId = provider.name().toLowerCase() + "-identity";
         PendingSocialWithdrawal pending = pending(7L, provider);
         when(socialAccountService.findAllByUserId(7L))
                 .thenReturn(List.of(account(7L, provider, providerUserId)));
         when(socialAccountService.findByUserIdAndProvider(7L, provider))
                 .thenReturn(account(7L, provider, providerUserId));
-        org.mockito.Mockito.doThrow(new SocialProviderUnlinkException())
-                .when(providerUnlinkClient)
-                .unlink(provider, "token", providerUserId);
+        org.mockito.Mockito.doThrow(new IllegalStateException("database failure"))
+                .when(accountService).withdrawAfterSocialReauthentication(7L);
 
         assertThatThrownBy(() -> service.complete(
                 pending, 7L, provider, providerUserId, "token"))
                 .isInstanceOf(SocialWithdrawalException.class);
 
-        verify(accountService, never()).withdrawAfterSocialReauthentication(7L);
+        org.mockito.Mockito.verifyNoInteractions(providerUnlinkClient);
     }
 
     @Test
@@ -186,7 +184,7 @@ class SocialWithdrawalServiceTest {
     }
 
     @Test
-    void databaseFailureAfterProviderSuccessIsReportedAsFailureWithoutRetryingUnlink() {
+    void databaseFailureIsReportedWithTheSupportMessage() {
         PendingSocialWithdrawal pending = pending(7L, SocialProvider.NAVER);
         when(socialAccountService.findAllByUserId(7L))
                 .thenReturn(List.of(account(7L, SocialProvider.NAVER, "naver-id")));
@@ -200,7 +198,6 @@ class SocialWithdrawalServiceTest {
                 .isInstanceOf(SocialWithdrawalException.class)
                 .hasMessage("회원 탈퇴 처리 중 문제가 발생했습니다. 고객센터에 문의해주세요.");
 
-        verify(providerUnlinkClient).unlink(SocialProvider.NAVER, "token", "naver-id");
         verify(accountService).withdrawAfterSocialReauthentication(7L);
     }
 

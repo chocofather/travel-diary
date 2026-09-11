@@ -23,6 +23,11 @@ public class Destination {
     private Long regionId; // 지역 카테고리 번호
     private DestinationType type;
 
+    /** 등록 출처: ADMIN(관리자 직접 입력), KTO_TOURAPI(TourAPI 가져오기). */
+    private String sourceType;
+    /** TourAPI contentId. 같은 출처 안에서 여행지 중복 판정의 유일한 기준이다. */
+    private String externalContentId;
+
     // ✅ 추가: 다국어 표시용
     private String name; // destinationTranslation join용
     private String description; // destinationTranslation join용

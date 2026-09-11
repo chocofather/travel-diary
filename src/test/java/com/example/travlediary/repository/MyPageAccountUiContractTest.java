@@ -25,13 +25,19 @@ class MyPageAccountUiContractTest {
                 .doesNotContain("userId", "th:utext");
         assertThat(edit)
                 .contains("/mypage/account/password", "/mypage/account/withdraw")
-                .contains("autocomplete=\"new-password\"", "autocomplete=\"current-password\"")
+                .contains("autocomplete=\"new-password\"")
                 .contains("account.username", "account.userEmail",
                         "id=\"account-info-title\"", "id=\"login-security-title\"",
                         "id=\"withdrawal-title\"")
-                .contains("작성한 게시글, 댓글, 여행 코스와 문의 기록은 유지됩니다.")
+                .contains("작성한 게시글, 댓글, 여행 코스와 문의 기록은 그대로 유지됩니다.")
                 .contains("기존 로그인 ID는 다시 사용할 수 없습니다.")
-                .doesNotContain("/mypage/account/edit", "accountForm", "th:utext",
+                // 진입 단계에서 재인증을 마쳤으므로 이 화면은 기존 비밀번호를 다시 받지 않는다.
+                .contains("th:field=\"*{confirmationPhrase}\"",
+                        "mypage.account.withdrawal.confirm.phrase",
+                        "mypage.account.withdrawal.submit")
+                .doesNotContain("autocomplete=\"current-password\"",
+                        "th:field=\"*{currentPassword}\"",
+                        "/mypage/account/edit", "accountForm", "th:utext",
                         "name=\"userId\"", "th:field=\"*{username}\"",
                         "th:field=\"*{userEmail}\"", "th:field=\"*{fullName}\"",
                         "th:field=\"*{userPhone}\"", "th:field=\"*{userBirth}\"",

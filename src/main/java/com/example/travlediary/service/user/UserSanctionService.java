@@ -303,6 +303,7 @@ public class UserSanctionService {
     private String statusRejectionMessage(UserStatus status) {
         return switch (status) {
             case RESTRICTED -> "이미 이용제한 상태인 회원입니다.";
+            case WITHDRAWAL_PENDING -> "탈퇴를 신청한 회원은 이용제한 대상이 아닙니다.";
             case DEACTIVATED -> "탈퇴한 회원은 이용제한 대상이 아닙니다.";
             case INACTIVE -> "이메일 인증을 마치지 않은 회원은 이용제한 대상이 아닙니다.";
             default -> "이용제한을 적용할 수 없는 회원 상태입니다.";

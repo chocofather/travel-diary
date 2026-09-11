@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" th:lang="${currentLanguageTag}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title th:text="#{account.withdrawalPending.pageTitle}">탈퇴 처리 중인 계정 | Travel Diary</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/login.css">
+</head>
+<body class="login-page">
+<!-- 로그인/복구 화면과 같은 공용 언어 선택 fragment. -->
+<div class="login-page__topbar">
+  <div th:replace="~{fragments/language-menu :: languageMenu}"></div>
+</div>
+
+<main class="login-page__main">
+  <span class="login-page__brand">
+    <img src="/images/logo7.png" alt="Travel Diary">
+  </span>
+
+  <section class="login-container" aria-labelledby="withdrawalPendingTitle">
+    <header class="login-header">
+      <h1 id="withdrawalPendingTitle" th:text="#{account.withdrawalPending.title}">탈퇴 처리 중인 계정입니다.</h1>
+      <p th:text="#{account.withdrawalPending.description}">회원탈퇴를 신청한 계정이라 서비스를 이용할 수 없습니다.</p>
+    </header>
+
+    <div class="login-feedback login-feedback--success"
+         id="recoveryLinkSent"
+         th:if="${recoveryLinkOutcome == 'SENT'}"
+         role="status"
+         th:text="#{account.withdrawalPending.recovery.sent(${maskedEmail})}">
+      복구 안내를 보내드렸습니다.
+    </div>
+    <div class="login-feedback login-feedback--error"
+         id="recoveryLinkCooldown"
+         th:if="${recoveryLinkOutcome == 'COOLDOWN'}"
+         role="alert"
+         th:text="#{account.withdrawalPending.recovery.cooldown}">
+      방금 복구 메일을 보냈습니다. 잠시 후 다시 시도해 주세요.
+    </div>
+    <div class="login-feedback login-feedback--error"
+         id="recoveryLinkUnavailable"
+         th:if="${recoveryLinkOutcome == 'NOT_ELIGIBLE'}"
+         role="alert"
+         th:text="#{account.withdrawalPending.recovery.unavailable}">
+      지금은 복구 링크를 보낼 수 없습니다.
+    </div>
+
+    <dl class="withdrawal-pending-detail">
+      <div>
+        <dt th:text="#{account.withdrawalPending.requestedAt}">탈퇴 신청일</dt>
+        <dd th:text="${withdrawalRequestedAt} ?: '-'">2026년 9월 11일 오후 5:20</dd>
+      </div>
+      <div>
+        <dt th:text="#{account.withdrawalPending.purgeScheduledAt}">최종 삭제 예정일</dt>
+        <dd id="purgeScheduledAt" th:text="${purgeScheduledAt} ?: '-'">2026년 10월 11일 오후 5:20</dd>
+      </div>
+      <div>
+        <dt th:text="#{account.withdrawalPending.remaining}">남은 기간</dt>
+        <dd id="withdrawalRemaining">
+          <span th:if="${!recoverable}"
+                th:text="#{account.withdrawalPending.remaining.ended}">복구 가능 기간이 지났습니다.</span>
+          <span th:if="${recoverable and remainingDays > 0}"
+                th:text="#{account.withdrawalPending.remaining.days(${remainingDays}, ${remainingHours})}">29일 23시간 남음</span>
+          <span th:if="${recoverable and remainingDays == 0}"
+                th:text="#{account.withdrawalPending.remaining.hours(${remainingHours}, ${remainingMinutes})}">3시간 20분 남음</span>
+        </dd>
+      </div>
+    </dl>
+
+    <p class="recovery-note" th:text="#{account.withdrawalPending.dataPreserved}">
+      유예기간 동안 계정 및 여행 기록, 다이어리, 게시물 등의 데이터는 보존됩니다.
+    </p>
+
+    <!-- 이메일은 다시 입력받지 않는다. 로그인된 회원의 가입 주소로만 보낸다. -->
+    <form th:action="@{/account/withdrawal-pending/recovery-link}"
+          method="post"
+          id="recoveryLinkForm"
+          class="login-form"
+          th:if="${recoverable}">
+      <button type="submit" class="login-submit"
+              th:text="#{account.withdrawalPending.recovery.request}">복구 링크 받기</button>
+    </form>
+
+    <form th:action="@{/logout}" method="post" class="login-form withdrawal-pending-logout">
+      <button type="submit" class="login-secondary"
+              th:text="#{account.withdrawalPending.logout}">로그아웃</button>
+    </form>
+  </section>
+</main>
+<script src="/js/language-menu.js" defer></script>
+</body>
+</html>

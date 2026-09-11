@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.user.AccountRecoveryTokenMapper">
+
+    <!-- 원문 토큰은 저장하지 않는다. 메일 URL 에만 존재한다. -->
+    <insert id="insertToken">
+        INSERT INTO account_recovery_tokens (user_id, token_hash, expires_at)
+        VALUES (#{userId}, #{tokenHash}, #{expiresAt})
+    </insert>
+
+    <!-- 재발급 시 기존 링크 무효화. 행을 지우지 않고 used_at 으로 닫는다. -->
+    <update id="invalidateUnusedTokens">
+        UPDATE account_recovery_tokens
+        SET used_at = #{invalidatedAt}
+        WHERE user_id = #{userId}
+          AND used_at IS NULL
+    </update>
+
+    <select id="findLatestIssuedAt" resultType="java.time.LocalDateTime">
+        SELECT MAX(created_at)
+        FROM account_recovery_tokens
+        WHERE user_id = #{userId}
+    </select>
+
+    <select id="findUsableByTokenHash"
+            resultType="com.example.travlediary.model.AccountRecoveryToken">
+        SELECT id, user_id, expires_at, used_at, created_at
+        FROM account_recovery_tokens
+        WHERE token_hash = #{tokenHash}
+          AND used_at IS NULL
+          AND expires_at &gt; #{currentTime}
+    </select>
+
+    <!-- used_at IS NULL 조건이 일회성을 보장한다. -->
+    <update id="markUsed">
+        UPDATE account_recovery_tokens
+        SET used_at = #{usedAt}
+        WHERE id = #{id}
+          AND used_at IS NULL
+    </update>
+
+</mapper>

@@ -110,6 +110,7 @@ class TravelPlanFinalDeleteServiceTest {
         deleteService.deleteForMe(USER_C, PLAN_ID);
 
         assertThat(TravelPlanFinalDeleteService.class.getDeclaredFields())
+                .filteredOn(field -> !java.lang.reflect.Modifier.isStatic(field.getModifiers()))
                 .extracting(java.lang.reflect.Field::getType)
                 .extracting(Class::getSimpleName)
                 .containsExactlyInAnyOrder("TravelPlanMapper", "TravelPlanFinalMapper");
@@ -162,6 +163,31 @@ class TravelPlanFinalDeleteServiceTest {
 
         verify(travelPlanFinalMapper).countVisibleMembersByPlanId(
                 PLAN_ID, UserStatus.DEACTIVATED.name());
+    }
+
+    /**
+     * 탈퇴를 신청했을 뿐인 계정은 아직 보관자다.
+     * 여기서 빼면 남은 사람이 0 이 되는 순간 유예 중에 여행이 통째로 사라진다.
+     */
+    @Test
+    void someoneStillInTheWithdrawalGracePeriodKeepsTheTripAlive() {
+        givenCompletedRoom();
+        givenMyRowCleared(USER_A);
+        /*
+          A 와 B 가 완료한 뒤 B 가 탈퇴를 신청했다(유예 중).
+          B 는 로그인할 수 없지만 관계는 살아 있으므로 SQL 이 B 를 계속 센다.
+        */
+        when(travelPlanFinalMapper.countVisibleMembersByPlanId(PLAN_ID, "DEACTIVATED"))
+                .thenReturn(1);
+
+        assertThat(deleteService.deleteForMe(USER_A, PLAN_ID)).isFalse();
+
+        // 유예 기간에는 되돌릴 수 없는 DELETE 가 일어나지 않는다.
+        verify(travelPlanMapper, never()).deletePlanByIdAndStatus(anyLong(), anyString());
+        // 빼는 상태는 탈퇴 완료 하나뿐이다.
+        verify(travelPlanFinalMapper).countVisibleMembersByPlanId(
+                PLAN_ID, UserStatus.DEACTIVATED.name());
+        assertThat(UserStatus.WITHDRAWAL_PENDING.name()).isNotEqualTo("DEACTIVATED");
     }
 
     @Test

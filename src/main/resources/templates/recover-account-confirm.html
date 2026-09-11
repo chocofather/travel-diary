@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" th:lang="${currentLanguageTag}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title th:text="#{account.recover.confirm.pageTitle}">계정 복구 확인 | Travel Diary</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/login.css">
+</head>
+<body class="login-page">
+<!-- 복구 요청 화면과 같은 공용 언어 선택 fragment. -->
+<div class="login-page__topbar">
+  <div th:replace="~{fragments/language-menu :: languageMenu}"></div>
+</div>
+
+<main class="login-page__main">
+  <a class="login-page__brand" th:href="@{/}" th:aria-label="#{login.brand.home}"
+     aria-label="Travel Diary 홈으로 이동">
+    <img src="/images/logo7.png" alt="Travel Diary">
+  </a>
+
+  <section class="login-container" aria-labelledby="recoveryConfirmTitle">
+    <header class="login-header">
+      <h1 id="recoveryConfirmTitle" th:text="#{account.recover.confirm.title}">계정을 복구하시겠습니까?</h1>
+      <p th:text="#{account.recover.confirm.description}">복구하면 기존 계정과 보관 중인 데이터를 다시 이용할 수 있습니다.</p>
+    </header>
+
+    <!-- 상태 변경은 사용자가 직접 누르는 이 POST 에서만 일어난다. -->
+    <form th:action="@{/users/recover-account/confirm}"
+          method="post"
+          id="recoverAccountConfirmForm"
+          class="login-form">
+      <input type="hidden" name="token" th:value="${recoveryToken}">
+      <button type="submit" class="login-submit"
+              th:text="#{account.recover.confirm.submit}">계정 복구</button>
+    </form>
+
+    <p class="recovery-note" th:text="#{account.recover.confirm.note}">
+      링크 유효시간이 지나면 이 화면에서도 복구할 수 없습니다.
+    </p>
+
+    <nav class="account-recovery" th:aria-label="#{account.recover.confirm.nav.label}"
+         aria-label="계정 복구 확인 이동">
+      <a th:href="@{/login}" th:text="#{account.recover.confirm.cancel}">취소</a>
+    </nav>
+  </section>
+</main>
+<script src="/js/language-menu.js" defer></script>
+</body>
+</html>

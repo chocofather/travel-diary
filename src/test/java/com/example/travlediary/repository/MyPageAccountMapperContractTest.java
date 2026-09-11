@@ -61,6 +61,26 @@ class MyPageAccountMapperContractTest {
                         "user_birth =", "DELETE FROM users");
     }
 
+    /**
+     * 탈퇴 신청(30일 유예)은 상태와 일정만 남긴다.
+     * 개인정보·토큰·deleted_at 을 건드리면 나중에 복구할 수 없게 되므로 여기서 막는다.
+     */
+    @Test
+    void withdrawalRequestOnlyRecordsTheStatusAndTheGraceSchedule() throws IOException {
+        String update = statement(userXml(), "update", "requestWithdrawal");
+
+        assertThat(update)
+                .contains("status = #{status}",
+                        "withdrawal_requested_at = #{requestedAt}",
+                        "purge_scheduled_at = #{purgeScheduledAt}",
+                        "WHERE id = #{id}", "status = 'ACTIVE'", "deleted_at IS NULL")
+                .doesNotContain("user_email =", "nickname =", "username =",
+                        "full_name =", "user_phone =", "user_birth =",
+                        "user_password =", "profile_image =",
+                        "verification_token", "reset_token",
+                        "deleted_at =", "DELETE FROM users");
+    }
+
     @Test
     void withdrawalLocksTheActiveAccountBeforeMutatingRelatedRows() throws IOException {
         assertThat(statement(userXml(), "select", "findActiveAccountSecurityByIdForUpdate"))

@@ -341,13 +341,13 @@ public class MyPageAccountController {
             return "redirect:/mypage/account";
         }
         try {
-            accountService.withdraw(userDetails.getId(), form.getCurrentPassword());
+            accountService.withdraw(userDetails.getId(), form.getConfirmationPhrase());
         } catch (AccountValidationException exception) {
             reject(bindingResult, exception);
         }
 
         if (bindingResult.hasErrors()) {
-            form.setCurrentPassword(null);
+            form.setConfirmationPhrase(null);
             prepareEditModel(model, accountService.getAccountDetails(userDetails.getId()),
                     userDetails.getId(), session);
             return "mypage/account-edit";

@@ -312,6 +312,52 @@ class LoginPageI18nContractTest {
                 .isEqualTo("/course/9");
     }
 
+    /**
+     * 만료/무효한 비밀번호 재설정 링크는 일반 인증 실패와 다른 안내를 보여준다.
+     * (`?error=invalid_token` 이 credentials 메시지로 새지 않아야 한다)
+     */
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+            "ko    | 비밀번호 재설정 링크가 유효하지 않거나 만료되었습니다.",
+            "en    | This password reset link is invalid or has expired.",
+            "ja    | このパスワード再設定リンクは無効か、有効期限が切れています。",
+            "zh-CN | 该密码重置链接无效或已过期。",
+            "zh-TW | 此密碼重設連結無效或已過期。"
+    })
+    void invalidResetTokenShowsItsOwnNoticeInsteadOfTheCredentialsError(String cookie,
+                                                                       String expected)
+            throws Exception {
+        Document page = render(get("/login")
+                .cookie(localeCookie(cookie))
+                .param("error", "invalid_token"));
+
+        assertThat(page.selectFirst(".login-feedback--error .login-feedback__title").text())
+                .isEqualTo(expected);
+        assertThat(page.selectFirst(".login-feedback--error .login-feedback__detail").text())
+                .isNotBlank();
+        // 일반 로그인 실패 안내는 나오지 않는다.
+        assertThat(page.selectFirst("#loginFailureInline")).isNull();
+        // 새 링크는 기존 비밀번호 찾기 링크로 요청한다(새 흐름을 만들지 않는다).
+        assertThat(page.select(".account-recovery a[href='/users/find-password']")).isNotEmpty();
+        assertThat(page.selectFirst(".login-container").text()).doesNotContain("??");
+    }
+
+    /** 일반 인증 실패는 기존 안내를 그대로 쓰고 재설정 링크 문구가 섞이지 않는다. */
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+            "ko    | 아이디 또는 비밀번호를 확인해주세요. | 비밀번호 재설정 링크가",
+            "en    | Please check your username or password. | password reset link",
+            "ja    | IDまたはパスワードをご確認ください。 | 再設定リンク"
+    })
+    void normalCredentialsFailureIsUnchanged(String cookie, String expected, String notExpected)
+            throws Exception {
+        Document page = render(get("/login").cookie(localeCookie(cookie)).param("error", "true"));
+
+        assertThat(page.selectFirst(".login-inline-message__title").text()).isEqualTo(expected);
+        assertThat(page.selectFirst(".login-container").text()).doesNotContain(notExpected);
+        assertThat(page.select(".login-feedback--error")).isEmpty();
+    }
+
     /** 비밀번호 표시/숨김 라벨도 JS 하드코딩 대신 data-* 로 전달된다. */
     @Test
     void passwordToggleLabelsComeFromTheBundle() throws Exception {

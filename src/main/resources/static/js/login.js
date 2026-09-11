@@ -127,11 +127,14 @@ $(document).ready(function () {
         return;
     }
 
+    // 문구는 서버 messages 번들이 source of truth 다. 폼이 data-* 로 현재 locale 값을 넘긴다.
+    const mismatchMessage =
+        passwordConfirmation.form?.dataset.passwordMismatch || "새 비밀번호가 일치하지 않습니다.";
+
     const validatePasswordConfirmation = function () {
         const mismatched = passwordConfirmation.value.length > 0
             && password.value !== passwordConfirmation.value;
-        passwordConfirmation.setCustomValidity(
-            mismatched ? "새 비밀번호가 일치하지 않습니다." : "");
+        passwordConfirmation.setCustomValidity(mismatched ? mismatchMessage : "");
         passwordConfirmation.setAttribute("aria-invalid", String(mismatched));
     };
 

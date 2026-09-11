@@ -52,7 +52,19 @@ public class DestinationService {
     private String uploadPath;
 
 
+    /** 관리자가 화면에서 직접 입력한 여행지. 등록 출처는 ADMIN 이다. */
+    public static final String ADMIN_SOURCE_TYPE = "ADMIN";
+    /** TourAPI 에서 가져온 여행지. contentId 와 짝을 이뤄 중복 판정 기준이 된다. */
+    public static final String KTO_TOUR_API_SOURCE_TYPE = "KTO_TOURAPI";
+
     public Long registerDestination(DestinationForm form, Long userId) {
+        return registerDestination(form, userId, null);
+    }
+
+    /**
+     * @param externalContentId TourAPI contentId. null 이면 관리자 직접 등록(ADMIN)으로 저장한다.
+     */
+    public Long registerDestination(DestinationForm form, Long userId, String externalContentId) {
         Destination destination = new Destination();
         destination.setLatitude(form.getLatitude());
         destination.setLongitude(form.getLongitude());
@@ -65,6 +77,9 @@ public class DestinationService {
         destination.setCreatedAt(new java.sql.Timestamp(System.currentTimeMillis()));
 
         destination.setType(form.getType());
+        destination.setSourceType(
+                externalContentId == null ? ADMIN_SOURCE_TYPE : KTO_TOUR_API_SOURCE_TYPE);
+        destination.setExternalContentId(externalContentId);
 
         destinationMapper.insertDestination(destination);
         Long destinationId = destination.getId();
@@ -159,6 +174,41 @@ public class DestinationService {
         destinationImageService.saveImages(
                 destinationId, form.getImages(), form.isMain(), form.isSlide());
         return destinationId;
+    }
+
+    /** TourAPI contentId 로만 본 중복 여부. 여행지명은 보지 않는다. */
+    public boolean existsTourApiDestination(String externalContentId) {
+        if (externalContentId == null || externalContentId.isBlank()) {
+            return false;
+        }
+        return destinationMapper.countByExternalContentId(
+                KTO_TOUR_API_SOURCE_TYPE, externalContentId.strip()) > 0;
+    }
+
+    /** IN 절이 지나치게 길어지지 않도록 나눠 조회하는 단위. */
+    private static final int EXTERNAL_CONTENT_ID_CHUNK_SIZE = 500;
+
+    /** 넘긴 contentId 중 이미 등록된 것만 돌려준다. 후보 목록의 등록 여부 표시에 쓴다. */
+    public Set<String> findRegisteredTourApiContentIds(Collection<String> externalContentIds) {
+        if (externalContentIds == null || externalContentIds.isEmpty()) {
+            return Set.of();
+        }
+        List<String> normalized = externalContentIds.stream()
+                .filter(contentId -> contentId != null && !contentId.isBlank())
+                .map(String::strip)
+                .distinct()
+                .toList();
+        if (normalized.isEmpty()) {
+            return Set.of();
+        }
+
+        Set<String> registered = new HashSet<>();
+        for (int start = 0; start < normalized.size(); start += EXTERNAL_CONTENT_ID_CHUNK_SIZE) {
+            int end = Math.min(start + EXTERNAL_CONTENT_ID_CHUNK_SIZE, normalized.size());
+            registered.addAll(destinationMapper.findExternalContentIds(
+                    KTO_TOUR_API_SOURCE_TYPE, normalized.subList(start, end)));
+        }
+        return Set.copyOf(registered);
     }
 
     public List<Destination> getDomesticDestinations() {

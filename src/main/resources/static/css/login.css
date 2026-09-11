@@ -312,6 +312,60 @@
     background: #1e5088;
 }
 
+/* 탈퇴 유예 안내 화면. 인증 계열 카드 안에 정보와 보조 동작만 얹는다. */
+.login-page .login-secondary {
+    width: 100%;
+    height: 46px;
+    margin: 0;
+    padding: 0 20px;
+    border: 1px solid #d0d5dd;
+    border-radius: 6px;
+    background: #fff;
+    color: #475467;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.login-page .login-secondary:hover {
+    border-color: #b4bcc7;
+    background: #f6f7f8;
+}
+
+.login-page .withdrawal-pending-logout {
+    margin-top: 10px;
+}
+
+.login-page .withdrawal-pending-detail {
+    display: grid;
+    gap: 12px;
+    margin: 0 0 18px;
+    padding: 16px 18px;
+    border: 1px solid #e4e7ec;
+    border-radius: 8px;
+    background: #f9fafb;
+}
+
+.login-page .withdrawal-pending-detail > div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.login-page .withdrawal-pending-detail dt {
+    color: #667085;
+    font-size: 13px;
+}
+
+.login-page .withdrawal-pending-detail dd {
+    margin: 0;
+    color: #182230;
+    font-size: 14px;
+    font-weight: 700;
+    text-align: right;
+}
+
 .login-page .login-submit:disabled,
 .login-page .login-submit:disabled:hover {
     border-color: #9aa4b2;

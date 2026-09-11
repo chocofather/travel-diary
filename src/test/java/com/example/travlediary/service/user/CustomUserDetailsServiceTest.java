@@ -81,6 +81,22 @@ class CustomUserDetailsServiceTest {
                 .hasMessage("휴면 상태의 계정입니다. 고객센터로 문의해주세요.");
     }
 
+    /** 탈퇴 유예 회원은 로그인할 수 없고, 탈퇴 완료와 다른 안내를 받는다. */
+    @Test
+    /**
+     * 탈퇴 유예 회원은 인증까지만 허용한다. 서비스 이용 권한이 돌아오는 것은 아니고,
+     * 격리와 안내 화면 이동은 WithdrawalPendingAccountFilter 와 로그인 성공 핸들러가 맡는다.
+     */
+    void withdrawalPendingUserIsAuthenticatedSoTheNoticeScreenCanHandleIt() {
+        when(userMapper.findByUsername("travler"))
+                .thenReturn(user(UserStatus.WITHDRAWAL_PENDING));
+
+        var details = service.loadUserByUsername("travler");
+
+        assertThat(details.getUsername()).isEqualTo("travler");
+        assertThat(details.isEnabled()).isTrue();
+    }
+
     @Test
     void restrictedUserIsAuthenticatedSoAccessControlCanHandleIt() {
         when(userMapper.findByUsername("travler")).thenReturn(user(UserStatus.RESTRICTED));

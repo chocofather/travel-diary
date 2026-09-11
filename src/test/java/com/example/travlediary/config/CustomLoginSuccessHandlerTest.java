@@ -68,6 +68,23 @@ class CustomLoginSuccessHandlerTest {
         verify(userMapper, never()).findByUsername(anyString());
     }
 
+    /**
+     * 탈퇴 유예 회원은 인증만 통과한다. 저장된 요청으로 일반 서비스에 들어가지 못하고
+     * 전용 안내 화면으로만 간다.
+     */
+    @Test
+    void withdrawalPendingMemberGoesToTheNoticePageBeforeAnySavedRedirect() throws Exception {
+        when(userMapper.findStatusById(7L)).thenReturn(UserStatus.WITHDRAWAL_PENDING);
+        MockHttpServletRequest request = requestWithRedirect("/mypage");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(
+                request, response, authentication(7L, "travler", UserRole.USER));
+
+        assertThat(response.getRedirectedUrl()).isEqualTo("/account/withdrawal-pending");
+        assertThat(request.getSession().getAttribute("userId")).isEqualTo(7L);
+    }
+
     @Test
     void activeMemberKeepsTheExistingRedirectBehaviour() throws Exception {
         when(userMapper.findStatusById(7L)).thenReturn(UserStatus.ACTIVE);

@@ -76,8 +76,13 @@ public class TravelPlanFinalDeleteService {
 
         /*
           지운 사람 수가 아니라 남은 사람 수를 본다.
-          탈퇴한 계정은 다시 들어와 지울 수 없으므로 남은 사람으로 세지 않는다.
+          탈퇴가 끝난 계정은 다시 들어와 지울 수 없으므로 남은 사람으로 세지 않는다.
           그러지 않으면 아무도 볼 수 없는 여행이 영원히 남는다.
+
+          탈퇴를 신청했을 뿐인 계정(WITHDRAWAL_PENDING)은 빼지 않는다.
+          유예 기간에는 데이터를 그대로 보존해야 하는데,
+          여기서 빼면 남은 사람이 0 이 되는 순간 되돌릴 수 없는 DELETE 가 유예 중에 일어난다.
+          로그인 차단과 데이터 보존은 별개다.
         */
         if (travelPlanFinalMapper.countVisibleMembersByPlanId(
                 travelPlanId, UserStatus.DEACTIVATED.name()) > 0) {

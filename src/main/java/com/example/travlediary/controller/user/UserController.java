@@ -178,7 +178,8 @@ public class UserController {
             return "redirect:/login?error=invalid_token";
         }
         m.addAttribute("token", token);         // hidden 으로 전달
-        m.addAttribute("passwordPolicyMessage", PasswordPolicy.INVALID_MESSAGE);
+        // 비밀번호 정책 문구는 회원가입과 같은 key 를 그대로 쓴다.
+        m.addAttribute("passwordPolicyMessage", message("signup.error.password.policy"));
         return "reset-password";
     }
 
@@ -196,9 +197,26 @@ public class UserController {
             if (UserService.INVALID_RESET_TOKEN_MESSAGE.equals(exception.getMessage())) {
                 return "redirect:/login?error=invalid_token";
             }
-            ra.addFlashAttribute("error", exception.getMessage());
+            ra.addFlashAttribute("error", resetPasswordError(exception.getMessage()));
             ra.addAttribute("token", token);
             return "redirect:/users/reset-password";
         }
+    }
+
+    /**
+     * 재설정 화면에 보여줄 오류 문구를 현재 locale 로 맞춘다.
+     * 검증 규칙은 그대로 두고, 정책 상수와 같은 메시지만 기존 message key 로 바꿔 준다.
+     */
+    private String resetPasswordError(String rawMessage) {
+        if (PasswordPolicy.INVALID_MESSAGE.equals(rawMessage)) {
+            return message("signup.error.password.policy");
+        }
+        if (PasswordPolicy.MISMATCH_MESSAGE.equals(rawMessage)) {
+            return message("mypage.account.error.password.mismatch");
+        }
+        if (UserService.SAME_AS_CURRENT_PASSWORD_MESSAGE.equals(rawMessage)) {
+            return message("password.reset.error.sameAsCurrent");
+        }
+        return rawMessage;
     }
 }

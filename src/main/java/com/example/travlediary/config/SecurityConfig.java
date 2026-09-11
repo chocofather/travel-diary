@@ -3,6 +3,7 @@ package com.example.travlediary.config;
 import com.example.travlediary.security.RestrictedAccountFilter;
 import com.example.travlediary.security.LoginThrottle;
 import com.example.travlediary.security.LoginThrottleFilter;
+import com.example.travlediary.security.WithdrawalPendingAccountFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.ObjectProvider;
@@ -54,6 +55,7 @@ public class SecurityConfig {
             HttpSecurity http,
             RequestCache navigationRequestCache,
             ObjectProvider<RestrictedAccountFilter> restrictedAccountFilter,
+            ObjectProvider<WithdrawalPendingAccountFilter> withdrawalPendingAccountFilter,
             LoginThrottle loginThrottle,
             ObjectProvider<SocialOAuth2LoginSuccessHandler> socialOAuth2LoginSuccessHandler,
             ObjectProvider<ClientRegistrationRepository> clientRegistrationRepository,
@@ -62,6 +64,9 @@ public class SecurityConfig {
 
         // 이용제한 회원 접근 통제. 웹 계층 테스트 슬라이스에는 빈이 없으므로 선택 주입한다.
         restrictedAccountFilter.ifAvailable(
+                filter -> http.addFilterAfter(filter, AuthorizationFilter.class));
+        // 탈퇴 유예 회원 접근 통제. 상태가 서로 배타적이라 이용제한 격리와 겹치지 않는다.
+        withdrawalPendingAccountFilter.ifAvailable(
                 filter -> http.addFilterAfter(filter, AuthorizationFilter.class));
         http.addFilterBefore(
                 new LoginThrottleFilter(loginThrottle),
@@ -336,6 +341,12 @@ public class SecurityConfig {
                                 HttpMethod.POST.name()),
                         new RegexRequestMatcher(
                                 "^/users/verification/resend$", HttpMethod.POST.name()),
+                        // 실제로 계정 상태를 되돌리는 요청. 링크 진입(GET)에는 필요 없다.
+                        new RegexRequestMatcher(
+                                "^/users/recover-account/confirm$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/account/withdrawal-pending/recovery-link$",
+                                HttpMethod.POST.name()),
                         new RegexRequestMatcher(
                                 "^/account/restricted/appeals$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(
@@ -354,6 +365,8 @@ public class SecurityConfig {
                                 "/users/verify", "/users/register/verify-waiting",
                                 "/users/verification/resend",
                                 "/users/find-username", "/users/find-password", "/users/reset-password/**",
+                                // 메일로 받은 복구 링크만 공개다. 복구 요청은 탈퇴 유예 안내 화면에서만 한다.
+                                "/users/recover-account/confirm",
                                 "/css/**", "/js/**", "/images/**", "/fonts/**", "/uploads/**",
                                 "/webjars/**",   // STOMP 클라이언트 등 정적 라이브러리
                                 "/api/**",     "/api/destinations/**",

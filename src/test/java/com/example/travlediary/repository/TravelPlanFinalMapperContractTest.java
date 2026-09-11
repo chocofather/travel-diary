@@ -329,9 +329,12 @@ class TravelPlanFinalMapperContractTest {
         */
         assertThat(select)
                 .contains("JOIN users u ON u.id = m.user_id")
+                // 빼는 상태는 하나뿐이다. 유예 중 계정까지 빼면 보존 정책이 깨진다.
                 .contains("AND u.status != #{withdrawnStatus}")
+                .doesNotContain("NOT IN")
                 // 어떤 상태를 빼는지는 부르는 쪽이 enum 에서 가져온다
-                .doesNotContain("'DEACTIVATED'");
+                .doesNotContain("'DEACTIVATED'")
+                .doesNotContain("'WITHDRAWAL_PENDING'");
 
         // 계정과 연결이 끊긴 행도 INNER JOIN 에서 함께 빠진다
         assertThat(select).doesNotContain("LEFT JOIN");
@@ -341,7 +344,10 @@ class TravelPlanFinalMapperContractTest {
                 Path.of("src/main/java/com/example/travlediary/service/travelplan/"
                         + "TravelPlanFinalDeleteService.java"),
                 StandardCharsets.UTF_8);
-        assertThat(service).contains("UserStatus.DEACTIVATED.name()");
+        assertThat(service)
+                .contains("UserStatus.DEACTIVATED.name()")
+                // 유예 중 계정을 빼면 30일 보존 정책이 깨지므로 여기서는 넘기지 않는다.
+                .doesNotContain("UserStatus.WITHDRAWAL_PENDING.name()");
 
         // 그 이름이 실제 컬럼에 있는 값인지 스키마에서 확인한다
         assertThat(between(schemaReference(), "CREATE TABLE `users`", ") ENGINE=InnoDB"))

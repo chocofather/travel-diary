@@ -46,6 +46,20 @@
       </p>
     </div>
 
+    <!-- 만료/무효한 비밀번호 재설정 링크. 일반 인증 실패와 섞이지 않도록 따로 안내한다.
+         새 링크는 아래 계정 찾기의 기존 '비밀번호 찾기' 링크로 요청한다. -->
+    <div class="login-feedback login-feedback--error"
+         th:if="${param.error != null and param.error[0] == 'invalid_token'}"
+         role="alert"
+         aria-live="assertive">
+      <p class="login-feedback__title" th:text="#{login.error.resetLink.title}">
+        비밀번호 재설정 링크가 유효하지 않거나 만료되었습니다.
+      </p>
+      <p class="login-feedback__detail" th:text="#{login.error.resetLink.detail}">
+        필요하면 새 비밀번호 재설정 링크를 요청해 주세요.
+      </p>
+    </div>
+
     <div class="login-feedback login-feedback--error"
          th:if="${param.oauthError}"
          role="alert"
@@ -82,6 +96,29 @@
          role="status"
          th:text="#{login.status.passwordChanged}">
       비밀번호가 변경되었습니다. 다시 로그인해주세요.
+    </div>
+
+    <!-- 계정 복구는 자동 로그인하지 않고 이 안내만 띄운다. -->
+    <div class="login-feedback login-feedback--success"
+         id="accountRecoveredFeedback"
+         th:if="${param.accountRecovered != null and param.accountRecovered[0] == 'true'}"
+         role="status"
+         th:text="#{login.status.accountRecovered}">
+      계정이 복구되었습니다. 다시 로그인해 주세요.
+    </div>
+
+    <!-- 만료/사용완료 복구 링크. 로그인하면 전용 화면에서 새 링크를 받을 수 있다. -->
+    <div class="login-feedback login-feedback--error"
+         id="recoveryLinkInvalidFeedback"
+         th:if="${param.recoveryLinkInvalid != null and param.recoveryLinkInvalid[0] == 'true'}"
+         role="alert"
+         aria-live="assertive">
+      <p class="login-feedback__title" th:text="#{account.recover.link.expired}">
+        복구 링크가 만료되었거나 이미 사용되었습니다.
+      </p>
+      <p th:text="#{account.recover.link.retry}">
+        아직 계정 복구 가능 기간이 남아 있다면 로그인 후 새로운 복구 링크를 요청할 수 있습니다.
+      </p>
     </div>
 
     <form method="POST" th:action="@{/login}" id="loginForm" class="login-form">
@@ -122,7 +159,7 @@
         <div id="loginFailureInline"
              class="login-inline-message"
              th:classappend="${(loginFormState != null and loginFormState.failureCount >= 3) ? 'login-inline-message--warning' : ''}"
-             th:if="${param.error != null and not loginBlocked}"
+             th:if="${param.error != null and param.error[0] != 'invalid_token' and not loginBlocked}"
              role="alert"
              aria-live="assertive">
           <p class="login-inline-message__title" th:text="#{login.error.credentials}">

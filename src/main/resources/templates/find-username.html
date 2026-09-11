@@ -1,65 +1,79 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" th:lang="${currentLanguageTag}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>아이디 찾기 | Travel Diary</title>
+  <title th:text="#{username.find.pageTitle}">아이디 찾기 | Travel Diary</title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/login.css">
 </head>
 <body class="login-page">
+<!-- 다른 Auth 화면과 같은 공용 언어 선택 fragment. returnTo 로 현재 URL 을 그대로 넘긴다. -->
+<div class="login-page__topbar">
+  <div th:replace="~{fragments/language-menu :: languageMenu}"></div>
+</div>
+
 <main class="login-page__main">
-  <a class="login-page__brand" th:href="@{/}" aria-label="Travel Diary 홈으로 이동">
+  <a class="login-page__brand" th:href="@{/}" th:aria-label="#{login.brand.home}"
+     aria-label="Travel Diary 홈으로 이동">
     <img src="/images/logo7.png" alt="Travel Diary">
   </a>
 
   <section class="login-container" aria-labelledby="recoveryTitle">
     <div th:unless="${recoveryRequested}">
       <header class="login-header">
-        <h1 id="recoveryTitle">아이디 찾기</h1>
-        <p>가입한 이메일을 입력하면 아이디 안내 메일을 보내드려요.</p>
+        <h1 id="recoveryTitle" th:text="#{username.find.title}">아이디 찾기</h1>
+        <p th:text="#{username.find.description}">가입한 이메일을 입력하면 아이디 안내 메일을 보내드려요.</p>
       </header>
 
       <form method="post"
             th:action="@{/users/find-username}"
             class="login-form">
         <div class="login-field">
-          <label for="findUsernameEmail">가입 이메일</label>
+          <label for="findUsernameEmail" th:text="#{password.find.field.email}">가입 이메일</label>
           <input type="email"
                  id="findUsernameEmail"
                  name="userEmail"
+                 th:placeholder="#{password.find.field.email.placeholder}"
                  placeholder="이메일을 입력해주세요"
                  autocomplete="email"
                  inputmode="email"
                  required>
         </div>
 
-        <button type="submit" class="login-submit">아이디 안내 메일 받기</button>
+        <button type="submit" class="login-submit"
+                th:text="#{username.find.submit}">아이디 안내 메일 받기</button>
       </form>
 
-      <nav class="account-recovery" aria-label="계정 복구 이동">
-        <a th:href="@{/users/find-password}">비밀번호 재설정</a>
+      <nav class="account-recovery" th:aria-label="#{password.find.nav.label}"
+           aria-label="계정 복구 이동">
+        <a th:href="@{/users/find-password}"
+           th:text="#{username.find.link.resetPassword}">비밀번호 재설정</a>
         <span aria-hidden="true"></span>
-        <a th:href="@{/login}">로그인으로 돌아가기</a>
+        <a th:href="@{/login}" th:text="#{password.link.backToLogin}">로그인으로 돌아가기</a>
       </nav>
     </div>
 
+    <!-- 계정 존재 여부를 알리지 않는 기존 안내 정책을 그대로 유지한다. -->
     <div class="recovery-complete"
          th:if="${recoveryRequested}"
          role="status"
          aria-live="polite">
       <header class="login-header">
-        <h1 id="recoveryTitle">아이디 안내를 요청했어요</h1>
-        <p>입력하신 이메일과 일치하는 계정이 있다면 아이디 안내 메일을 보내드렸습니다.</p>
+        <h1 id="recoveryTitle" th:text="#{username.find.requested.title}">아이디 안내를 요청했어요</h1>
+        <p th:text="#{username.find.requested.description}">입력하신 이메일과 일치하는 계정이 있다면 아이디 안내 메일을 보내드렸습니다.</p>
       </header>
-      <p class="recovery-note">메일이 보이지 않는다면 스팸함도 확인해 주세요.</p>
-      <nav class="account-recovery" aria-label="완료 후 이동">
-        <a th:href="@{/login}">로그인으로 돌아가기</a>
+      <p class="recovery-note" th:text="#{password.find.requested.note}">메일이 보이지 않는다면 스팸함도 확인해 주세요.</p>
+      <nav class="account-recovery" th:aria-label="#{password.find.requested.navLabel}"
+           aria-label="완료 후 이동">
+        <a th:href="@{/login}" th:text="#{password.link.backToLogin}">로그인으로 돌아가기</a>
         <span aria-hidden="true"></span>
-        <a th:href="@{/users/find-password}">비밀번호 재설정</a>
+        <a th:href="@{/users/find-password}"
+           th:text="#{username.find.link.resetPassword}">비밀번호 재설정</a>
       </nav>
     </div>
   </section>
 </main>
+<script src="/js/language-menu.js" defer></script>
 </body>
 </html>

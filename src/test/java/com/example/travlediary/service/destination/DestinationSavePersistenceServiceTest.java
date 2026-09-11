@@ -17,7 +17,10 @@ import java.time.Instant;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -39,23 +42,49 @@ class DestinationSavePersistenceServiceTest {
     void registerUsesGeneratedDestinationIdForPreparedKtoPhotos() {
         DestinationForm form = new DestinationForm();
         List<PreparedKtoPhoto> prepared = List.of(prepared());
-        when(destinationService.registerDestination(form, 7L)).thenReturn(42L);
+        when(destinationService.registerDestination(form, 7L, null)).thenReturn(42L);
 
         service.registerDestination(form, 7L, prepared);
 
         InOrder order = inOrder(destinationService, ktoPersistenceService);
-        order.verify(destinationService).registerDestination(form, 7L);
+        // 화면 폼 등록은 외부 contentId 없이(ADMIN 출처로) 저장한다.
+        order.verify(destinationService).registerDestination(form, 7L, null);
         order.verify(ktoPersistenceService).persistPhotos(42L, prepared);
     }
 
     @Test
     void registerWithoutKtoStillUsesTheSameTransactionalMethod() {
         DestinationForm form = new DestinationForm();
-        when(destinationService.registerDestination(form, 7L)).thenReturn(42L);
+        when(destinationService.registerDestination(form, 7L, null)).thenReturn(42L);
 
         service.registerDestination(form, 7L, List.of());
 
         verify(ktoPersistenceService).persistPhotos(42L, List.of());
+    }
+
+    @Test
+    void tourApiRegisterChecksDuplicatesAgainRightBeforeSaving() {
+        DestinationForm form = new DestinationForm();
+        when(destinationService.existsTourApiDestination("126508")).thenReturn(true);
+
+        assertThatThrownBy(() -> service.registerDestination(form, 7L, "126508", List.of()))
+                .isInstanceOf(DuplicateTourApiDestinationException.class);
+
+        verify(destinationService, never()).registerDestination(
+                any(DestinationForm.class), any(), any());
+        verify(ktoPersistenceService, never()).persistPhotos(any(), any());
+    }
+
+    @Test
+    void tourApiRegisterSavesWithTheExternalContentId() {
+        DestinationForm form = new DestinationForm();
+        List<PreparedKtoPhoto> prepared = List.of(prepared());
+        when(destinationService.existsTourApiDestination("126508")).thenReturn(false);
+        when(destinationService.registerDestination(form, 7L, "126508")).thenReturn(42L);
+
+        assertThat(service.registerDestination(form, 7L, "126508", prepared)).isEqualTo(42L);
+
+        verify(ktoPersistenceService).persistPhotos(42L, prepared);
     }
 
     @Test

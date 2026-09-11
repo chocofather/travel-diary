@@ -1,6 +1,7 @@
 package com.example.travlediary.service.email;
 
 import com.example.travlediary.config.MailAsyncConfig;
+import com.example.travlediary.config.i18n.SupportedLanguage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +19,7 @@ import java.util.concurrent.TimeUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertTimeout;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
@@ -47,27 +49,27 @@ class EmailDispatchServiceTest {
             smtpStarted.countDown();
             releaseSmtp.await(2, TimeUnit.SECONDS);
             return null;
-        }).when(emailService).sendVerificationEmail(anyString(), anyString());
+        }).when(emailService).sendVerificationEmail(anyString(), anyString(), any());
 
         assertTimeout(Duration.ofMillis(500), () ->
                 emailDispatchService.dispatchVerificationEmail(
-                        7L, "member@gmail.com", "safe-test-token"));
+                        7L, "member@gmail.com", "safe-test-token", SupportedLanguage.KOREAN));
         assertThat(smtpStarted.await(1, TimeUnit.SECONDS)).isTrue();
 
         releaseSmtp.countDown();
         verify(emailService, timeout(2_000))
-                .sendVerificationEmail("member@gmail.com", "safe-test-token");
+                .sendVerificationEmail("member@gmail.com", "safe-test-token", SupportedLanguage.KOREAN);
     }
 
     @Test
     void asynchronousSmtpFailureDoesNotEscapeToTheCaller() {
         doThrow(new EmailDeliveryException("delivery failed"))
-                .when(emailService).sendVerificationEmail(anyString(), anyString());
+                .when(emailService).sendVerificationEmail(anyString(), anyString(), any());
 
         assertDoesNotThrow(() -> emailDispatchService.dispatchVerificationEmail(
-                7L, "member@gmail.com", "safe-test-token"));
+                        7L, "member@gmail.com", "safe-test-token", SupportedLanguage.KOREAN));
         verify(emailService, timeout(2_000))
-                .sendVerificationEmail("member@gmail.com", "safe-test-token");
+                .sendVerificationEmail("member@gmail.com", "safe-test-token", SupportedLanguage.KOREAN);
     }
 
     @Test
@@ -78,32 +80,34 @@ class EmailDispatchServiceTest {
             smtpStarted.countDown();
             releaseSmtp.await(2, TimeUnit.SECONDS);
             return null;
-        }).when(emailService).sendPasswordResetEmail(anyString(), anyString());
+        }).when(emailService).sendPasswordResetEmail(anyString(), anyString(), any());
 
         assertTimeout(Duration.ofMillis(500), () ->
                 emailDispatchService.dispatchPasswordResetEmail(
-                        "member@gmail.com", "https://travel.example/reset"));
+                        "member@gmail.com", "https://travel.example/reset", SupportedLanguage.KOREAN));
         assertThat(smtpStarted.await(1, TimeUnit.SECONDS)).isTrue();
 
         releaseSmtp.countDown();
         verify(emailService, timeout(2_000))
                 .sendPasswordResetEmail(
-                        "member@gmail.com", "https://travel.example/reset");
+                        "member@gmail.com", "https://travel.example/reset", SupportedLanguage.KOREAN);
     }
 
     @Test
     void usernameRecoverySmtpFailureDoesNotEscapeToTheCaller() {
         doThrow(new EmailDeliveryException("delivery failed"))
                 .when(emailService).sendUsernameRecoveryEmail(
-                        anyString(), anyString(), anyString(), anyString());
+                        anyString(), anyString(), anyString(), anyString(), any());
 
         assertDoesNotThrow(() -> emailDispatchService.dispatchUsernameRecoveryEmail(
                 "member@gmail.com", "travel-member",
-                "https://travel.example/login", "https://travel.example/find-password"));
+                "https://travel.example/login", "https://travel.example/find-password",
+                SupportedLanguage.KOREAN));
         verify(emailService, timeout(2_000))
                 .sendUsernameRecoveryEmail(
                         "member@gmail.com", "travel-member",
-                        "https://travel.example/login", "https://travel.example/find-password");
+                        "https://travel.example/login", "https://travel.example/find-password",
+                        SupportedLanguage.KOREAN);
     }
 
     @Test

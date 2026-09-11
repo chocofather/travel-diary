@@ -1,5 +1,6 @@
 package com.example.travlediary.service.email;
 
+import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.model.User;
 import com.example.travlediary.model.UserStatus;
 import com.example.travlediary.repository.user.UserMapper;
@@ -124,7 +125,7 @@ class EmailVerificationServiceTest {
                 eq(LOCAL_NOW.minusSeconds(60)));
         assertThat(tokenCaptor.getValue()).isNotEqualTo("old-token");
         verify(emailDispatchService).dispatchVerificationEmail(
-                7L, "member@gmail.com", tokenCaptor.getValue());
+                7L, "member@gmail.com", tokenCaptor.getValue(), SupportedLanguage.KOREAN);
         assertThat(outcome.status()).isEqualTo(EmailVerificationService.ResendStatus.SENT);
     }
 
@@ -146,7 +147,7 @@ class EmailVerificationServiceTest {
         assertThat(user.getVerificationTokenExp()).isEqualTo(LOCAL_NOW.plusHours(24));
         assertThat(user.getVerificationRequestedAt()).isEqualTo(LOCAL_NOW);
         verify(emailDispatchService).dispatchVerificationEmail(
-                7L, "member@gmail.com", user.getVerificationToken());
+                7L, "member@gmail.com", user.getVerificationToken(), SupportedLanguage.KOREAN);
     }
 
     @Test
@@ -176,7 +177,7 @@ class EmailVerificationServiceTest {
         assertThat(outcome.status()).isEqualTo(EmailVerificationService.ResendStatus.COOLDOWN);
         assertThat(outcome.remainingSeconds()).isEqualTo(50);
         verify(userMapper, never()).refreshVerificationToken(any(), any(), any(), any(), any());
-        verify(emailDispatchService, never()).dispatchVerificationEmail(any(), any(), any());
+        verify(emailDispatchService, never()).dispatchVerificationEmail(any(), any(), any(), any());
     }
 
     @Test
@@ -207,7 +208,7 @@ class EmailVerificationServiceTest {
                 .isEqualTo(EmailVerificationService.ResendStatus.NOT_ELIGIBLE);
         assertThat(service.resend("unknown@gmail.com").status())
                 .isEqualTo(EmailVerificationService.ResendStatus.NOT_ELIGIBLE);
-        verify(emailDispatchService, never()).dispatchVerificationEmail(any(), any(), any());
+        verify(emailDispatchService, never()).dispatchVerificationEmail(any(), any(), any(), any());
     }
 
     @Test
@@ -220,7 +221,7 @@ class EmailVerificationServiceTest {
         EmailVerificationService.ResendOutcome outcome = service.resend("member@gmail.com");
 
         assertThat(outcome.status()).isEqualTo(EmailVerificationService.ResendStatus.COOLDOWN);
-        verify(emailDispatchService, never()).dispatchVerificationEmail(any(), any(), any());
+        verify(emailDispatchService, never()).dispatchVerificationEmail(any(), any(), any(), any());
     }
 
     @Test
@@ -230,7 +231,7 @@ class EmailVerificationServiceTest {
         when(userMapper.findPendingVerificationByEmail("member@gmail.com")).thenReturn(user);
         when(userMapper.refreshVerificationToken(any(), any(), any(), any(), any())).thenReturn(1);
         org.mockito.Mockito.doThrow(new TaskRejectedException("mail queue is full"))
-                .when(emailDispatchService).dispatchVerificationEmail(any(), any(), any());
+                .when(emailDispatchService).dispatchVerificationEmail(any(), any(), any(), any());
 
         EmailVerificationService.ResendOutcome outcome = service.resend("member@gmail.com");
 
@@ -245,7 +246,7 @@ class EmailVerificationServiceTest {
         User user = pendingUser();
         user.setVerificationToken("safe-token");
         org.mockito.Mockito.doThrow(new IllegalStateException("template rendering failed"))
-                .when(emailDispatchService).dispatchVerificationEmail(any(), any(), any());
+                .when(emailDispatchService).dispatchVerificationEmail(any(), any(), any(), any());
 
         boolean sent = service.requestInitialVerification(user);
 

@@ -121,6 +121,26 @@
     font-size: 13px;
 }
 
+/* 탈퇴 확인 문구. 그대로 따라 입력해야 하므로 눈에 띄게 보여준다. */
+.mypage-account-confirm-phrase {
+    margin: 0;
+    padding: 9px 12px;
+    border: 1px dashed #f0b4ab;
+    border-radius: 9px;
+    background: #fef3f2;
+    color: #b42318;
+    font-size: 14px;
+    font-weight: 750;
+    user-select: all;
+}
+
+.mypage-account-actions button:disabled {
+    border-color: #cbd5e1;
+    background: #e2e8f0;
+    color: #94a3b8;
+    cursor: not-allowed;
+}
+
 .mypage-account-actions {
     display: flex;
     justify-content: flex-end;

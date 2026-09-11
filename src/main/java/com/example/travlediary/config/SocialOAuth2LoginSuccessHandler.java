@@ -409,8 +409,11 @@ public class SocialOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
                 || user.getStatus() == null) {
             return false;
         }
+        // 탈퇴 유예 회원도 기존 소셜 연결이 그대로 남아 있으므로 인증까지는 허용한다.
+        // 이동 화면과 접근 통제는 CustomLoginSuccessHandler 와 격리 필터가 맡는다.
         return user.getStatus() == UserStatus.ACTIVE
-                || user.getStatus() == UserStatus.RESTRICTED;
+                || user.getStatus() == UserStatus.RESTRICTED
+                || user.getStatus() == UserStatus.WITHDRAWAL_PENDING;
     }
 
     private void beginSignup(HttpServletRequest request,

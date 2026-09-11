@@ -6,6 +6,7 @@ import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.security.LoginFormState;
 import com.example.travlediary.security.LoginThrottle;
 import com.example.travlediary.security.RestrictedAccountFilter;
+import com.example.travlediary.security.WithdrawalPendingAccountFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,10 +50,16 @@ public class CustomLoginSuccessHandler implements AuthenticationSuccessHandler {
         // 1) 인증 완료 후에는 username 이 아니라 DB 회원 ID를 세션 식별값으로 사용한다.
         request.getSession().setAttribute("userId", userId);
 
-        // 2) 이용제한 회원은 저장된 요청보다 제한 안내 화면을 우선한다.
-        if (userMapper.findStatusById(userId) == UserStatus.RESTRICTED) {
+        // 2) 상태 격리 화면은 저장된 요청보다 우선한다. 인증은 됐지만 서비스 이용 권한은 아니다.
+        UserStatus status = userMapper.findStatusById(userId);
+        if (status == UserStatus.RESTRICTED) {
             requestCache.removeRequest(request, response);
             response.sendRedirect(RestrictedAccountFilter.RESTRICTED_PATH);
+            return;
+        }
+        if (status == UserStatus.WITHDRAWAL_PENDING) {
+            requestCache.removeRequest(request, response);
+            response.sendRedirect(WithdrawalPendingAccountFilter.WITHDRAWAL_PENDING_PATH);
             return;
         }
 

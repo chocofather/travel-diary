@@ -9,6 +9,7 @@ import com.example.travlediary.dto.kto.KtoTourSearchItemResponse;
 import com.example.travlediary.dto.kto.KtoTourSearchResponse;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.service.kto.KtoTourApiException;
+import com.example.travlediary.service.kto.KtoTourDetailLookupService;
 import com.example.travlediary.service.kto.KtoTourRegionMatchService;
 import com.example.travlediary.service.kto.KtoTourService;
 import org.junit.jupiter.api.Test;
@@ -30,8 +31,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+// 상세조회 + 지역 매칭 조합은 일괄등록과 공유하는 Service 라 실제 구현을 그대로 태운다.
 @WebMvcTest(AdminKtoTourController.class)
-@Import(SecurityConfig.class)
+@Import({SecurityConfig.class, KtoTourDetailLookupService.class})
 class AdminKtoTourControllerTest {
 
     @Autowired

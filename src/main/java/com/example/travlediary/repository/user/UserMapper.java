@@ -67,6 +67,37 @@ public interface UserMapper {
                              @Param("fullName") String fullName,
                              @Param("userPhone") String userPhone);
 
+    /**
+     * 탈퇴 신청. 상태와 유예 일정만 기록하고 개인정보/콘텐츠는 전혀 건드리지 않는다.
+     * 최종 파기(익명화)는 별도의 deactivateAccount 가 담당한다.
+     */
+    int requestWithdrawal(@Param("id") Long id,
+                          @Param("status") UserStatus status,
+                          @Param("requestedAt") LocalDateTime requestedAt,
+                          @Param("purgeScheduledAt") LocalDateTime purgeScheduledAt);
+
+    /**
+     * 탈퇴 유예 안내 화면용 조회. 유예기간이 이미 끝난 회원도 화면은 봐야 하므로
+     * 날짜 조건 없이 상태만으로 찾는다.
+     */
+    User findWithdrawalPendingById(@Param("id") Long id);
+
+    /** 복구 링크 확인 화면용 읽기 전용 조회. 아무것도 잠그지 않는다. */
+    User findRecoverableWithdrawalById(@Param("id") Long id,
+                                       @Param("currentTime") LocalDateTime currentTime);
+
+    /** 복구 확정 직전의 재검증용 잠금 조회. */
+    User findRecoverableWithdrawalByIdForUpdate(@Param("id") Long id,
+                                                @Param("currentTime") LocalDateTime currentTime);
+
+    /**
+     * 탈퇴 유예 계정을 ACTIVE 로 되돌린다. 상태와 유예 일정만 되돌리고
+     * 이메일/닉네임/비밀번호 등 나머지 회원 정보는 건드리지 않는다.
+     */
+    int restoreWithdrawalPendingAccount(@Param("id") Long id,
+                                        @Param("status") UserStatus status,
+                                        @Param("currentTime") LocalDateTime currentTime);
+
     int deactivateAccount(@Param("id") Long id,
                           @Param("userEmail") String userEmail,
                           @Param("nickname") String nickname,

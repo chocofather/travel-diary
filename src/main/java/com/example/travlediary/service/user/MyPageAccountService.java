@@ -8,23 +8,55 @@ import com.example.travlediary.model.UserRole;
 import com.example.travlediary.model.UserStatus;
 import com.example.travlediary.repository.user.SocialAccountMapper;
 import com.example.travlediary.repository.user.UserMapper;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Clock;
+import java.time.Duration;
+import java.time.LocalDateTime;
+
 @Service
-@RequiredArgsConstructor
 public class MyPageAccountService {
 
     private static final int MAX_NAME_LENGTH = 50;
+    /** 탈퇴 신청 후 최종 파기까지의 보존 기간. */
+    public static final Duration WITHDRAWAL_GRACE_PERIOD = Duration.ofDays(30);
 
     private final UserMapper userMapper;
     private final AccountAnonymizationService accountAnonymizationService;
     private final PasswordEncoder passwordEncoder;
     private final SocialAccountMapper socialAccountMapper;
+    private final MessageSource messageSource;
+    private final Clock clock;
+
+    @Autowired
+    public MyPageAccountService(UserMapper userMapper,
+                                AccountAnonymizationService accountAnonymizationService,
+                                PasswordEncoder passwordEncoder,
+                                SocialAccountMapper socialAccountMapper,
+                                MessageSource messageSource) {
+        this(userMapper, accountAnonymizationService, passwordEncoder, socialAccountMapper,
+                messageSource, Clock.systemDefaultZone());
+    }
+
+    MyPageAccountService(UserMapper userMapper,
+                         AccountAnonymizationService accountAnonymizationService,
+                         PasswordEncoder passwordEncoder,
+                         SocialAccountMapper socialAccountMapper,
+                         MessageSource messageSource,
+                         Clock clock) {
+        this.userMapper = userMapper;
+        this.accountAnonymizationService = accountAnonymizationService;
+        this.passwordEncoder = passwordEncoder;
+        this.socialAccountMapper = socialAccountMapper;
+        this.messageSource = messageSource;
+        this.clock = clock;
+    }
 
     @Transactional(readOnly = true)
     public boolean hasLocalPassword(Long userId) {
@@ -95,18 +127,24 @@ public class MyPageAccountService {
         }
     }
 
+    /**
+     * 회원탈퇴 신청.
+     *
+     * <p>본인 확인은 계정 및 보안 진입 단계의 재인증이 이미 끝냈으므로 여기서 비밀번호를 다시 받지 않는다.
+     * 재인증이 없거나 만료된 요청은 컨트롤러의 requireVerification 이 먼저 막는다.
+     * 이 단계에서는 실수 방지를 위한 확인 문구만 서버에서 다시 확인한다.
+     */
     @Transactional
-    public void withdraw(Long userId, String currentPassword) {
+    public void withdraw(Long userId, String confirmationPhrase) {
         User account = userMapper.findActiveAccountSecurityByIdForUpdate(userId);
         validateWithdrawableAccount(account);
-        if (currentPassword == null
-                || account.getUserPassword() == null
-                || !passwordEncoder.matches(currentPassword, account.getUserPassword())) {
-            throw new AccountValidationException("currentPassword",
-                    "mypage.account.error.currentPassword.mismatch", "비밀번호가 일치하지 않습니다.");
+        if (!WithdrawalConfirmationPolicy.matches(confirmationPhrase, messageSource)) {
+            throw new AccountValidationException("confirmationPhrase",
+                    "mypage.account.error.withdrawal.confirm.mismatch",
+                    "확인 문구가 일치하지 않습니다.");
         }
 
-        deactivate(account);
+        requestWithdrawal(account);
     }
 
     @Transactional
@@ -118,11 +156,8 @@ public class MyPageAccountService {
                     null, "소셜 계정 탈퇴를 처리할 수 없습니다.");
         }
 
-        deactivate(account);
-        if (socialAccountMapper.deleteAllByUserId(userId) < 1) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT, "회원 탈퇴를 완료할 수 없습니다.");
-        }
+        // 30일 유예 동안에는 social_accounts 도 provider 연결도 그대로 둔다.
+        requestWithdrawal(account);
     }
 
     private void validateWithdrawableAccount(User account) {
@@ -136,16 +171,17 @@ public class MyPageAccountService {
         }
     }
 
-    private void deactivate(User account) {
-        Long userId = account.getId();
-
-        String withdrawnEmail = accountAnonymizationService.anonymizedEmail(userId);
-        String withdrawnNickname = accountAnonymizationService.anonymizedNickname();
-
-        accountAnonymizationService.clearPersonalTraces(userId);
-
-        int updated = userMapper.deactivateAccount(
-                userId, withdrawnEmail, withdrawnNickname, UserStatus.DEACTIVATED);
+    /**
+     * 탈퇴 신청. 상태와 유예 일정만 남기고 개인정보·콘텐츠·소셜 연결은 전부 보존한다.
+     * 익명화와 개인 흔적 정리는 30일 뒤 최종 파기 단계의 몫이라 여기서는 하지 않는다.
+     */
+    private void requestWithdrawal(User account) {
+        LocalDateTime requestedAt = LocalDateTime.now(clock);
+        int updated = userMapper.requestWithdrawal(
+                account.getId(),
+                UserStatus.WITHDRAWAL_PENDING,
+                requestedAt,
+                requestedAt.plus(WITHDRAWAL_GRACE_PERIOD));
         if (updated != 1) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "회원 탈퇴를 완료할 수 없습니다.");
         }

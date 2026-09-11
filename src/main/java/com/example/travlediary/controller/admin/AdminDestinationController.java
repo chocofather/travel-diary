@@ -19,6 +19,7 @@ import com.example.travlediary.service.info.RestaurantInfoService;
 import com.example.travlediary.service.info.ShopInfoService;
 import com.example.travlediary.service.kto.InvalidKtoSelectedPhotosException;
 import com.example.travlediary.service.kto.KtoSelectedPhotoRequestParser;
+import com.example.travlediary.service.kto.KtoTourImportContentType;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -74,6 +75,13 @@ public class AdminDestinationController {
         this.accommodationInfoService = accommodationInfoService;
         this.activityInfoService = activityInfoService;
         this.shopInfoService = shopInfoService;
+    }
+
+    /** TourAPI 지역별 일괄 가져오기 화면. 후보 조회와 등록은 모두 /admin/api/kto/tour/bulk 가 맡는다. */
+    @GetMapping("/kto-import")
+    public String showKtoImportPage(Model model) {
+        model.addAttribute("importContentTypes", KtoTourImportContentType.supported());
+        return "admin/destinations/kto-import";
     }
 
     // 여행지 등록

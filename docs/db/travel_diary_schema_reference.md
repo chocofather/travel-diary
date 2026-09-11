@@ -758,6 +758,11 @@ CREATE TABLE `destination_translations` (
 --
 -- Table structure for table `destinations`
 --
+-- `source_type`은 여행지 등록 출처이며, 관리자가 화면에서 직접 등록하면 `ADMIN`이다.
+-- TourAPI 일괄 가져오기로 등록한 여행지는 `KTO_TOURAPI`이고 `external_content_id`에 contentId를 남긴다.
+-- 같은 TourAPI contentId가 두 번 등록되지 않도록 두 칸을 UNIQUE로 묶는다. 중복 판정은 여행지명이 아니라
+-- 언제나 이 contentId 기준이다.
+-- MySQL UNIQUE KEY는 NULL 중복을 허용하므로 `external_content_id`가 NULL인 `ADMIN` 여행지는 제한받지 않는다.
 
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
@@ -772,7 +777,10 @@ CREATE TABLE `destinations` (
   `user_id` bigint NOT NULL,
   `region_id` bigint NOT NULL,
   `type` varchar(32) NOT NULL DEFAULT 'ATTRACTION',
+  `source_type` varchar(30) NOT NULL DEFAULT 'ADMIN' COMMENT '등록 출처: ADMIN, KTO_TOURAPI',
+  `external_content_id` varchar(100) DEFAULT NULL COMMENT '외부 API 콘텐츠 식별자 (KTO_TOURAPI인 경우 TourAPI contentId)',
   PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_destinations_source_content` (`source_type`,`external_content_id`),
   KEY `fk_destinations_users1_idx` (`user_id`),
   KEY `fk_destinations_country_category2_idx` (`region_id`),
   CONSTRAINT `fk_destinations_region` FOREIGN KEY (`region_id`) REFERENCES `country_categories` (`id`),
@@ -1983,6 +1991,20 @@ CREATE TABLE `user_sanctions` (
 --
 -- Table structure for table `users`
 --
+-- status 값의 의미
+--   INACTIVE           이메일 인증 전
+--   ACTIVE             정상 회원
+--   SUSPENDED          휴면
+--   RESTRICTED         관리자 제재 상태
+--   WITHDRAWAL_PENDING 회원탈퇴 신청 후 최종 처리 전 30일 유예 상태
+--   DEACTIVATED        최종 탈퇴 처리 완료 상태
+--
+-- 탈퇴 유예 컬럼 사용 규약(예정)
+--   withdrawal_requested_at : 탈퇴 신청 시각
+--   purge_scheduled_at      : 30일 유예 후 최종 탈퇴/파기 예정 시각
+--   deleted_at              : WITHDRAWAL_PENDING 동안에는 NULL 로 두고,
+--                             최종 탈퇴 처리로 DEACTIVATED 전환할 때 기록
+--   위 규약은 스키마 기준의 예정 사용 방식이며 애플리케이션 구현은 아직 반영 전이다.
 
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
@@ -2000,9 +2022,11 @@ CREATE TABLE `users` (
   `verification_token_exp` datetime DEFAULT NULL,
   `verification_requested_at` datetime DEFAULT NULL,
   `profile_image` varchar(255) DEFAULT NULL,
-  `status` enum('INACTIVE','ACTIVE','SUSPENDED','DEACTIVATED','RESTRICTED') NOT NULL DEFAULT 'INACTIVE',
+  `status` enum('INACTIVE','ACTIVE','SUSPENDED','DEACTIVATED','RESTRICTED','WITHDRAWAL_PENDING') NOT NULL DEFAULT 'INACTIVE',
   `last_login` timestamp NULL DEFAULT NULL,
   `deleted_at` timestamp NULL DEFAULT NULL,
+  `withdrawal_requested_at` datetime(6) DEFAULT NULL,
+  `purge_scheduled_at` datetime(6) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `reset_token` varchar(255) DEFAULT NULL,
@@ -2011,7 +2035,8 @@ CREATE TABLE `users` (
   UNIQUE KEY `user_email_UNIQUE` (`user_email`),
   UNIQUE KEY `username_UNIQUE` (`username`),
   UNIQUE KEY `nickname_UNIQUE` (`nickname`),
-  UNIQUE KEY `verification_token_UNIQUE` (`verification_token`)
+  UNIQUE KEY `verification_token_UNIQUE` (`verification_token`),
+  KEY `idx_users_withdrawal_purge` (`status`,`purge_scheduled_at`)
 ) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -2499,5 +2524,115 @@ CREATE TABLE `travel_plan_final_item_alternatives` (
   UNIQUE KEY `uk_travel_plan_final_item_alternatives_item_order` (`final_item_id`,`alternative_order`),
   CONSTRAINT `fk_travel_plan_final_item_alternatives_item` FOREIGN KEY (`final_item_id`) REFERENCES `travel_plan_final_items` (`id`) ON DELETE CASCADE,
   CONSTRAINT `chk_travel_plan_final_item_alternatives_order` CHECK ((`alternative_order` in (1,2)))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `policy_versions`
+--
+-- 약관 종류별 버전 관리. 동의 필요 여부, 필수 동의 여부, 새 버전 재동의 필요 여부와
+-- 시행일/게시일/현재 활성 버전을 담는다.
+-- policy_type 초기값: TERMS_OF_SERVICE, PRIVACY_POLICY, PRIVACY_COLLECTION, MARKETING_EMAIL
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `policy_versions` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `policy_type` varchar(40) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `version` varchar(20) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `requires_consent` tinyint(1) NOT NULL DEFAULT '1',
+  `is_required` tinyint(1) NOT NULL DEFAULT '0',
+  `requires_reconsent` tinyint(1) NOT NULL DEFAULT '0',
+  `effective_at` datetime(6) NOT NULL,
+  `published_at` datetime(6) DEFAULT NULL,
+  `is_active` tinyint(1) NOT NULL DEFAULT '0',
+  `created_at` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `updated_at` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_policy_version` (`policy_type`,`version`),
+  KEY `idx_policy_active` (`policy_type`,`is_active`,`effective_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `policy_translations`
+--
+-- 하나의 약관 버전에 대한 5개 언어 전문. 같은 법적 버전 안에서 locale별 title/content 를 관리한다.
+-- policy_versions 1 : N policy_translations (policy_version_id, ON DELETE CASCADE)
+-- 지원 locale: ko, en, ja, zh-CN, zh-TW
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `policy_translations` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `policy_version_id` bigint NOT NULL,
+  `locale` varchar(10) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `content` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `created_at` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `updated_at` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_policy_translation` (`policy_version_id`,`locale`),
+  KEY `idx_policy_translation_locale` (`locale`),
+  CONSTRAINT `fk_policy_translation_version` FOREIGN KEY (`policy_version_id`) REFERENCES `policy_versions` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `chk_policy_translation_locale` CHECK ((`locale` in ('ko','en','ja','zh-CN','zh-TW')))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `user_policy_consents`
+--
+-- 회원의 약관 동의/거부 이력. 현재값을 UPDATE 하지 않고 이벤트마다 INSERT 하는 이력 구조라
+-- agreed = 0/1 이 모두 남고, 동의 당시 표시 locale 과 출처를 함께 기록한다.
+-- users 1 : N user_policy_consents (user_id, ON DELETE CASCADE)
+-- policy_versions 1 : N user_policy_consents (policy_version_id, ON DELETE RESTRICT)
+-- 마케팅 수신 여부는 가장 최근 MARKETING_EMAIL 동의 이력으로 판단한다.
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_policy_consents` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `user_id` bigint NOT NULL,
+  `policy_version_id` bigint NOT NULL,
+  `agreed` tinyint(1) NOT NULL,
+  `locale` varchar(10) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `consent_source` varchar(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `created_at` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (`id`),
+  KEY `idx_user_policy_consent_user` (`user_id`,`policy_version_id`,`created_at`),
+  KEY `idx_user_policy_consent_version` (`policy_version_id`,`created_at`),
+  CONSTRAINT `fk_user_policy_consent_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_user_policy_consent_version` FOREIGN KEY (`policy_version_id`) REFERENCES `policy_versions` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `chk_user_policy_consent_locale` CHECK ((`locale` in ('ko','en','ja','zh-CN','zh-TW'))),
+  CONSTRAINT `chk_user_policy_consent_source` CHECK ((`consent_source` in ('SIGNUP','SOCIAL_SIGNUP','MYPAGE','RECONSENT')))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `account_recovery_tokens`
+--
+-- WITHDRAWAL_PENDING 회원의 계정 복구 본인확인에 사용하는 일회성 토큰 저장.
+-- 복구 URL 에 쓰이는 원문 토큰은 저장하지 않고 token_hash 만 보관한다.
+--   expires_at : 해당 복구 링크 자체의 유효기간
+--   used_at    : 토큰 사용 완료 여부 기록(미사용이면 NULL)
+-- 계정의 30일 탈퇴 유예기간은 users.purge_scheduled_at 으로 판단하며
+-- account_recovery_tokens.expires_at 과는 별개의 개념이다.
+-- users 1 : N account_recovery_tokens (user_id, ON DELETE CASCADE)
+-- 스키마만 반영된 상태이며 복구 기능의 애플리케이션 구현은 아직 반영 전이다.
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `account_recovery_tokens` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `user_id` bigint NOT NULL,
+  `token_hash` varchar(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `expires_at` datetime(6) NOT NULL,
+  `used_at` datetime(6) DEFAULT NULL,
+  `created_at` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_account_recovery_token_hash` (`token_hash`),
+  KEY `idx_account_recovery_user` (`user_id`,`created_at`),
+  KEY `idx_account_recovery_expiry` (`expires_at`),
+  CONSTRAINT `fk_account_recovery_token_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;

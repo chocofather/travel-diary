@@ -107,17 +107,13 @@ public class SocialWithdrawalService {
             throw new SocialWithdrawalException(RETRY_MESSAGE);
         }
 
-        try {
-            providerUnlinkClient.unlink(authenticatedProvider, token, providerUserId);
-        } catch (RuntimeException exception) {
-            throw new SocialWithdrawalException(RETRY_MESSAGE);
-        }
-
+        // 30일 유예 동안에는 provider 연결을 끊지 않는다.
+        // 최종 파기 단계에서 providerUnlinkClient.unlink() 를 호출한다.
         try {
             accountService.withdrawAfterSocialReauthentication(currentUserId);
         } catch (RuntimeException exception) {
-            log.error("Provider unlink succeeded but Travel Diary withdrawal failed. "
-                    + "userId={}, provider={}", currentUserId, authenticatedProvider, exception);
+            log.error("Social withdrawal request failed. userId={}, provider={}",
+                    currentUserId, authenticatedProvider, exception);
             throw new SocialWithdrawalException(
                     "회원 탈퇴 처리 중 문제가 발생했습니다. 고객센터에 문의해주세요.");
         }

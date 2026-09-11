@@ -35,6 +35,8 @@ public class User {
     private Timestamp updatedAt; // 수정일
     private Timestamp deletedAt; // 탈퇴일
     private Timestamp lastLogin; // 마지막 로그인
+    private LocalDateTime withdrawalRequestedAt; // 탈퇴 신청 시각
+    private LocalDateTime purgeScheduledAt; // 탈퇴 유예 종료(최종 파기 예정) 시각
 
     // 메일인증
     private String verificationToken; // 메일 인증 토큰

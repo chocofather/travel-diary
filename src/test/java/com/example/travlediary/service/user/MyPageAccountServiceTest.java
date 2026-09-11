@@ -54,13 +54,30 @@ class MyPageAccountServiceTest {
     @BeforeEach
     void setUp() {
         // 익명화/흔적 정리는 관리자 강제탈퇴와 공용하는 실제 컴포넌트를 그대로 사용한다.
+        // 유예 기한을 그대로 확인하려고 시계를 고정한다.
         service = new MyPageAccountService(
                 userMapper,
                 new AccountAnonymizationService(bookmarkMapper, commentLikeMapper,
                         postCommentMapper, courseCommentMapper),
                 passwordEncoder,
-                socialAccountMapper);
+                socialAccountMapper,
+                messages(),
+                FIXED_CLOCK);
     }
+
+    /** 탈퇴 확인 문구는 화면과 같은 messages 번들에서 온다. */
+    private static org.springframework.context.MessageSource messages() {
+        var messageSource = new org.springframework.context.support.ResourceBundleMessageSource();
+        messageSource.setBasename("messages");
+        messageSource.setDefaultEncoding(java.nio.charset.StandardCharsets.UTF_8.name());
+        messageSource.setFallbackToSystemLocale(false);
+        return messageSource;
+    }
+
+    private static final java.time.Clock FIXED_CLOCK = java.time.Clock.fixed(
+            java.time.Instant.parse("2026-09-11T03:00:00Z"), java.time.ZoneOffset.UTC);
+    private static final java.time.LocalDateTime NOW =
+            java.time.LocalDateTime.now(FIXED_CLOCK);
 
     @Test
     void checksLocalPasswordCapabilityByUserIdWithoutLoadingThePasswordHash() {
@@ -127,29 +144,69 @@ class MyPageAccountServiceTest {
         verify(userMapper).updateActiveUserPassword(7L, "new-encoded-password");
     }
 
+    /**
+     * 본인 확인은 계정 및 보안 진입 단계의 재인증이 이미 끝냈다.
+     * 여기서는 비밀번호를 다시 받지 않고 확인 문구만 서버에서 다시 본다.
+     */
     @Test
-    void wrongWithdrawalPasswordMakesNoMutation() {
+    void aWrongConfirmationPhraseMakesNoMutation() {
         User account = activeAccount(UserRole.USER);
         when(userMapper.findActiveAccountSecurityByIdForUpdate(7L)).thenReturn(account);
-        when(passwordEncoder.matches("wrong", "encoded-password")).thenReturn(false);
 
-        assertThatThrownBy(() -> service.withdraw(7L, "wrong"))
+        assertThatThrownBy(() -> service.withdraw(7L, "탈퇴할래요"))
                 .isInstanceOf(AccountValidationException.class)
-                .hasMessage("비밀번호가 일치하지 않습니다.");
+                .hasMessage("확인 문구가 일치하지 않습니다.");
 
-        verifyNoInteractions(bookmarkMapper, commentLikeMapper,
+        verify(userMapper, never()).requestWithdrawal(
+                org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+        verifyNoInteractions(passwordEncoder, bookmarkMapper, commentLikeMapper,
                 postCommentMapper, courseCommentMapper);
         verify(userMapper, never()).deactivateAccount(
                 org.mockito.ArgumentMatchers.anyLong(), anyString(), anyString(),
                 org.mockito.ArgumentMatchers.any());
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"", "   ", "탈퇴", "I request deletion"})
+    void anEmptyOrPartialConfirmationPhraseIsRejected(String phrase) {
+        when(userMapper.findActiveAccountSecurityByIdForUpdate(7L))
+                .thenReturn(activeAccount(UserRole.USER));
+
+        assertThatThrownBy(() -> service.withdraw(7L, phrase))
+                .isInstanceOf(AccountValidationException.class);
+
+        verify(userMapper, never()).requestWithdrawal(
+                org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+    }
+
+    /** 입력 도중 언어를 바꿔도 지원 언어의 문구면 접수된다. */
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {
+            "탈퇴를 신청합니다", "  탈퇴를  신청합니다 ", "I request account deletion",
+            "退会を申請します", "我申请注销账号", "我申請註銷帳號"})
+    void theConfirmationPhraseOfEverySupportedLanguageIsAccepted(String phrase) {
+        when(userMapper.findActiveAccountSecurityByIdForUpdate(7L))
+                .thenReturn(activeAccount(UserRole.USER));
+        when(userMapper.requestWithdrawal(
+                org.mockito.ArgumentMatchers.eq(7L),
+                org.mockito.ArgumentMatchers.eq(UserStatus.WITHDRAWAL_PENDING),
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+                .thenReturn(1);
+
+        service.withdraw(7L, phrase);
+
+        verify(userMapper).requestWithdrawal(7L, UserStatus.WITHDRAWAL_PENDING,
+                NOW, NOW.plusDays(30));
+    }
+
     @Test
-    void adminWithdrawalIsRejectedBeforePasswordOrMutation() {
+    void adminWithdrawalIsRejectedBeforeAnyMutation() {
         when(userMapper.findActiveAccountSecurityByIdForUpdate(99L))
                 .thenReturn(activeAccount(UserRole.ADMIN));
 
-        assertThatThrownBy(() -> service.withdraw(99L, "Password!"))
+        assertThatThrownBy(() -> service.withdraw(99L, "탈퇴를 신청합니다"))
                 .isInstanceOf(AccountValidationException.class)
                 .hasMessage("관리자 계정은 마이페이지에서 탈퇴할 수 없습니다.");
 
@@ -158,37 +215,31 @@ class MyPageAccountServiceTest {
     }
 
     @Test
-    void withdrawalClearsPrivateActivityAndReleasesEmailAndNicknameOnly() {
+    void withdrawalRequestOnlySchedulesThePurgeAndKeepsEverythingElse() {
         User account = activeAccount(UserRole.USER);
         when(userMapper.findActiveAccountSecurityByIdForUpdate(7L)).thenReturn(account);
-        when(passwordEncoder.matches("Password!", "encoded-password")).thenReturn(true);
-        when(userMapper.deactivateAccount(
-                org.mockito.ArgumentMatchers.eq(7L), anyString(), anyString(),
-                org.mockito.ArgumentMatchers.eq(UserStatus.DEACTIVATED))).thenReturn(1);
+        when(userMapper.requestWithdrawal(
+                org.mockito.ArgumentMatchers.eq(7L),
+                org.mockito.ArgumentMatchers.eq(UserStatus.WITHDRAWAL_PENDING),
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+                .thenReturn(1);
 
-        service.withdraw(7L, "Password!");
+        service.withdraw(7L, "탈퇴를 신청합니다");
 
-        verify(commentLikeMapper).decrementDestinationLikeCountsByUserId(7L);
-        verify(commentLikeMapper).deleteAllByUserId(7L);
-        verify(postCommentMapper).deleteAllLikesByUserId(7L);
-        verify(courseCommentMapper).deleteAllLikesByUserId(7L);
-        verify(bookmarkMapper).deleteAllByUserId(7L);
+        // 상태와 유예 일정만 기록한다. 30일 뒤 최종 파기 전까지는 아무것도 지우지 않는다.
+        verify(userMapper).requestWithdrawal(7L, UserStatus.WITHDRAWAL_PENDING,
+                NOW, NOW.plusDays(30));
+        assertThat(MyPageAccountService.WITHDRAWAL_GRACE_PERIOD)
+                .isEqualTo(java.time.Duration.ofDays(30));
 
-        ArgumentCaptor<String> email = ArgumentCaptor.forClass(String.class);
-        ArgumentCaptor<String> nickname = ArgumentCaptor.forClass(String.class);
-        verify(userMapper).deactivateAccount(
-                org.mockito.ArgumentMatchers.eq(7L), email.capture(), nickname.capture(),
-                org.mockito.ArgumentMatchers.eq(UserStatus.DEACTIVATED));
-
-        assertThat(email.getValue())
-                .startsWith("withdrawn-7-")
-                .endsWith("@example.invalid")
-                .doesNotContain("member@example.com")
-                .hasSizeLessThanOrEqualTo(100);
-        assertThat(nickname.getValue())
-                .startsWith("탈퇴")
-                .hasSize(12)
-                .matches("[가-힣A-Za-z0-9]+");
+        // 익명화도, 개인 흔적 정리도 일어나지 않는다.
+        verify(userMapper, never()).deactivateAccount(
+                org.mockito.ArgumentMatchers.anyLong(), anyString(), anyString(),
+                org.mockito.ArgumentMatchers.any());
+        verifyNoInteractions(bookmarkMapper, commentLikeMapper,
+                postCommentMapper, courseCommentMapper);
+        verify(socialAccountMapper, never()).deleteAllByUserId(
+                org.mockito.ArgumentMatchers.anyLong());
         verify(socialAccountMapper, never()).deleteAllByUserId(7L);
     }
 
@@ -203,40 +254,42 @@ class MyPageAccountServiceTest {
     }
 
     @Test
-    void socialWithdrawalReusesTheSameAnonymizationWithoutAPasswordCheck() {
+    void socialWithdrawalRequestKeepsTheSocialLinkWithoutAPasswordCheck() {
         User account = activeAccount(UserRole.USER);
         account.setUserPassword(null);
         when(userMapper.findActiveAccountSecurityByIdForUpdate(7L)).thenReturn(account);
-        when(userMapper.deactivateAccount(
-                org.mockito.ArgumentMatchers.eq(7L), anyString(), anyString(),
-                org.mockito.ArgumentMatchers.eq(UserStatus.DEACTIVATED))).thenReturn(1);
-        when(socialAccountMapper.deleteAllByUserId(7L)).thenReturn(1);
+        when(userMapper.requestWithdrawal(
+                org.mockito.ArgumentMatchers.eq(7L),
+                org.mockito.ArgumentMatchers.eq(UserStatus.WITHDRAWAL_PENDING),
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+                .thenReturn(1);
 
         service.withdrawAfterSocialReauthentication(7L);
 
         verifyNoInteractions(passwordEncoder);
-        verify(bookmarkMapper).deleteAllByUserId(7L);
-        verify(userMapper).deactivateAccount(
-                org.mockito.ArgumentMatchers.eq(7L), anyString(), anyString(),
-                org.mockito.ArgumentMatchers.eq(UserStatus.DEACTIVATED));
-        verify(socialAccountMapper).deleteAllByUserId(7L);
+        verify(userMapper).requestWithdrawal(7L, UserStatus.WITHDRAWAL_PENDING,
+                NOW, NOW.plusDays(30));
 
-        InOrder order = inOrder(userMapper, socialAccountMapper);
-        order.verify(userMapper).deactivateAccount(
-                org.mockito.ArgumentMatchers.eq(7L), anyString(), anyString(),
-                org.mockito.ArgumentMatchers.eq(UserStatus.DEACTIVATED));
-        order.verify(socialAccountMapper).deleteAllByUserId(7L);
+        // 유예 기간에는 소셜 연결도 개인 흔적도 그대로 둔다.
+        verify(socialAccountMapper, never()).deleteAllByUserId(
+                org.mockito.ArgumentMatchers.anyLong());
+        verify(userMapper, never()).deactivateAccount(
+                org.mockito.ArgumentMatchers.anyLong(), anyString(), anyString(),
+                org.mockito.ArgumentMatchers.any());
+        verifyNoInteractions(bookmarkMapper, commentLikeMapper,
+                postCommentMapper, courseCommentMapper);
     }
 
     @Test
-    void socialWithdrawalRequiresItsSocialIdentityToBeRemoved() {
+    void withdrawalRequestThatChangedNoRowIsReportedAsAConflict() {
         User account = activeAccount(UserRole.USER);
         account.setUserPassword(null);
         when(userMapper.findActiveAccountSecurityByIdForUpdate(7L)).thenReturn(account);
-        when(userMapper.deactivateAccount(
-                org.mockito.ArgumentMatchers.eq(7L), anyString(), anyString(),
-                org.mockito.ArgumentMatchers.eq(UserStatus.DEACTIVATED))).thenReturn(1);
-        when(socialAccountMapper.deleteAllByUserId(7L)).thenReturn(0);
+        // 이미 ACTIVE 가 아니면 UPDATE 가 0 행을 바꾼다(중복 신청 가드).
+        when(userMapper.requestWithdrawal(
+                org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+                .thenReturn(0);
 
         assertThatThrownBy(() -> service.withdrawAfterSocialReauthentication(7L))
                 .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
@@ -267,15 +320,16 @@ class MyPageAccountServiceTest {
     }
 
     @Test
-    void socialIdentityDeleteFailureRollsBackTheWithdrawalTransaction() {
+    void withdrawalRequestFailureRollsBackTheWithdrawalTransaction() {
         User account = activeAccount(UserRole.USER);
         account.setUserPassword(null);
         when(userMapper.findActiveAccountSecurityByIdForUpdate(7L)).thenReturn(account);
-        when(userMapper.deactivateAccount(
-                org.mockito.ArgumentMatchers.eq(7L), anyString(), anyString(),
-                org.mockito.ArgumentMatchers.eq(UserStatus.DEACTIVATED))).thenReturn(1);
-        org.mockito.Mockito.doThrow(new IllegalStateException("delete failed"))
-                .when(socialAccountMapper).deleteAllByUserId(7L);
+        org.mockito.Mockito.doThrow(new IllegalStateException("update failed"))
+                .when(userMapper).requestWithdrawal(
+                        org.mockito.ArgumentMatchers.anyLong(),
+                        org.mockito.ArgumentMatchers.any(),
+                        org.mockito.ArgumentMatchers.any(),
+                        org.mockito.ArgumentMatchers.any());
         RecordingTransactionManager transactionManager = new RecordingTransactionManager();
         MyPageAccountService transactionalService = transactionalProxy(transactionManager);
 
@@ -283,10 +337,6 @@ class MyPageAccountServiceTest {
                 transactionalService.withdrawAfterSocialReauthentication(7L))
                 .isInstanceOf(IllegalStateException.class);
 
-        verify(userMapper).deactivateAccount(
-                org.mockito.ArgumentMatchers.eq(7L), anyString(), anyString(),
-                org.mockito.ArgumentMatchers.eq(UserStatus.DEACTIVATED));
-        verify(socialAccountMapper).deleteAllByUserId(7L);
         assertThat(transactionManager.rolledBack).isTrue();
         assertThat(transactionManager.committed).isFalse();
     }

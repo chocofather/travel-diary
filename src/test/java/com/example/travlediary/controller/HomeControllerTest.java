@@ -13,6 +13,8 @@ import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.course.CourseService;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.jsoup.Jsoup;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -26,6 +28,7 @@ import jakarta.servlet.http.Cookie;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -100,11 +103,49 @@ class HomeControllerTest {
                             ".home-withdrawal-toast[role=status][aria-live=polite]"))
                             .hasSize(1);
                     assertThat(document.select(".home-withdrawal-toast").text())
-                            .isEqualTo("회원 탈퇴가 완료되었습니다.");
+                            .isEqualTo("회원탈퇴 신청이 완료되었습니다. 계정은 30일 동안 보존됩니다.");
                     assertThat(document.select(".home-account-status")).isEmpty();
                     assertThat(document.select(
                             "script[src='/js/home-withdrawal-toast.js']")).hasSize(1);
                 });
+    }
+
+    /** 탈퇴 완료 안내는 5개 언어 모두 messages 번들에서 나온다. */
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+            "ko    | 회원탈퇴 신청이 완료되었습니다. 계정은 30일 동안 보존됩니다.",
+            "en    | Your account deletion request has been received. Your account is kept for 30 days.",
+            "ja    | 退会申請が完了しました。アカウントは30日間保存されます。",
+            "zh-CN | 注销申请已提交，账号将保留 30 天。",
+            "zh-TW | 註銷申請已送出，帳號將保留 30 天。"
+    })
+    void withdrawalToastFollowsTheCurrentLanguage(String languageTag, String expected)
+            throws Exception {
+        when(courseService.getPopularCoursesForHome(any())).thenReturn(List.of());
+
+        mockMvc.perform(get("/")
+                        .queryParam("withdrawn", "true")
+                        .cookie(new Cookie(TravelDiaryLocaleResolver.COOKIE_NAME, languageTag)))
+                .andExpect(status().isOk())
+                .andExpect(result -> {
+                    String html = result.getResponse().getContentAsString();
+                    assertThat(Jsoup.parse(html).select(".home-withdrawal-toast").text())
+                            .isEqualTo(expected);
+                    assertThat(html).doesNotContain("??");
+                });
+    }
+
+    /** withdrawn=true 가 아니면 어떤 언어에서도 안내가 뜨지 않는다. */
+    @ParameterizedTest
+    @CsvSource({"false", "TRUE", "1", "yes"})
+    void onlyTheExactWithdrawnTrueValueRendersTheToast(String value) throws Exception {
+        when(courseService.getPopularCoursesForHome(any())).thenReturn(List.of());
+
+        mockMvc.perform(get("/").queryParam("withdrawn", value))
+                .andExpect(status().isOk())
+                .andExpect(result -> assertThat(Jsoup.parse(
+                        result.getResponse().getContentAsString())
+                        .select(".home-withdrawal-toast")).isEmpty());
     }
 
     @Test

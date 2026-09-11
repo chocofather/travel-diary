@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'destinations')}">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/admin-kto-tour-import.css">
+  <script src="/js/admin-kto-tour-bulk-import.js?v=20260911-2" defer></script>
+</th:block>
+<th:block th:fragment="body">
+  <section class="admin-page-section" data-kto-import>
+    <header class="admin-page-header">
+      <div class="admin-page-heading">
+        <h1 class="admin-page-title">TourAPI 일괄 가져오기</h1>
+        <p class="admin-page-description">
+          국내 지역별 관광 콘텐츠 후보를 조회하고, 아직 등록되지 않은 여행지만 골라 한 번에 등록합니다.
+          숙박·음식점·축제/행사는 대상이 아닙니다.
+        </p>
+      </div>
+      <div class="admin-page-actions">
+        <a th:href="@{/admin/destinations}" class="admin-btn">여행지 목록</a>
+      </div>
+    </header>
+
+    <div class="admin-filter-card is-toolbar">
+      <div class="admin-filter-form admin-kto-import-filters">
+        <label class="admin-kto-import-field">
+          <span>시/도</span>
+          <select class="admin-select" data-kto-import-region>
+            <option value="">- 지역 선택 -</option>
+          </select>
+        </label>
+        <label class="admin-kto-import-field">
+          <span>시/군/구</span>
+          <select class="admin-select" data-kto-import-sub-region disabled>
+            <option value="">전체</option>
+          </select>
+        </label>
+        <label class="admin-kto-import-field">
+          <span>콘텐츠 유형</span>
+          <select class="admin-select" data-kto-import-content-type>
+            <option value="">전체</option>
+            <option th:each="type : ${importContentTypes}"
+                    th:value="${type.contentTypeId()}"
+                    th:text="${type.contentTypeName()}">관광지</option>
+          </select>
+        </label>
+        <div class="admin-filter-actions">
+          <button type="button" class="admin-btn is-primary" data-kto-import-search>후보 조회</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="admin-card is-table-card">
+      <div class="admin-kto-import-toolbar">
+        <!-- 건수는 선택한 지역·유형에 실제로 해당하는 후보 기준이다 (TourAPI 원본 총건수가 아니다) -->
+        <div class="admin-kto-import-tabs" role="group" aria-label="등록 여부 필터">
+          <button type="button" class="admin-filter-tab" data-kto-import-filter="ALL">
+            전체 <span data-kto-import-count="ALL">0</span>건
+          </button>
+          <button type="button" class="admin-filter-tab active" data-kto-import-filter="NEW">
+            미등록 <span data-kto-import-count="NEW">0</span>건
+          </button>
+          <button type="button" class="admin-filter-tab" data-kto-import-filter="REGISTERED">
+            등록완료 <span data-kto-import-count="REGISTERED">0</span>건
+          </button>
+        </div>
+        <div class="admin-kto-import-actions">
+          <button type="button" class="admin-btn is-small" data-kto-import-select-all>미등록 전체선택</button>
+          <button type="button" class="admin-btn is-small" data-kto-import-clear>선택해제</button>
+          <span class="admin-kto-import-count" data-kto-import-selected-count aria-live="polite">선택 0건</span>
+          <button type="button" class="admin-btn is-primary is-small" data-kto-import-submit disabled>
+            선택 항목 등록
+          </button>
+        </div>
+      </div>
+
+      <p class="admin-kto-import-status" aria-live="polite" data-kto-import-status>
+        지역을 선택한 뒤 후보를 조회해 주세요.
+      </p>
+
+      <div class="admin-table-wrapper">
+        <table class="admin-table admin-kto-import-table">
+          <thead>
+          <tr>
+            <th scope="col" class="is-check"><span class="admin-visually-hidden">선택</span></th>
+            <th scope="col" class="is-thumb">이미지</th>
+            <th scope="col">여행지명</th>
+            <th scope="col">지역</th>
+            <th scope="col">유형</th>
+            <th scope="col">contentId</th>
+            <th scope="col">등록 여부</th>
+          </tr>
+          </thead>
+          <tbody data-kto-import-rows></tbody>
+        </table>
+      </div>
+
+      <div class="admin-kto-import-paging">
+        <button type="button" class="admin-btn is-small" data-kto-import-prev disabled>이전</button>
+        <span data-kto-import-page>1</span>
+        <button type="button" class="admin-btn is-small" data-kto-import-next disabled>다음</button>
+      </div>
+    </div>
+
+    <section class="admin-card admin-kto-import-result" data-kto-import-result hidden>
+      <h2 class="admin-kto-import-result-title">등록 결과</h2>
+      <p class="admin-kto-import-result-summary" data-kto-import-result-summary></p>
+      <ul class="admin-kto-import-result-list" data-kto-import-result-list></ul>
+    </section>
+  </section>
+</th:block>
+</html>

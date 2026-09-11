@@ -12,6 +12,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class KtoPhotoImportPersistenceService {
 
+    /** 출처를 따로 넘기지 않는 관광사진 갤러리 경로의 기본값. */
     private static final String SOURCE_TYPE = "KTO_PHOTO_GALLERY";
     private static final String SOURCE_NAME = "한국관광공사";
     private static final String LICENSE_TYPE = "KOGL_TYPE_1";
@@ -34,16 +35,20 @@ public class KtoPhotoImportPersistenceService {
         DestinationImage image = new DestinationImage();
         image.setDestinationId(destinationId);
         image.setImageUrl(preparedPhoto.localImageUrl());
-        image.setSourceType(SOURCE_TYPE);
+        image.setSourceType(valueOrDefault(preparedPhoto.sourceType(), SOURCE_TYPE));
         image.setSourceName(SOURCE_NAME);
         image.setExternalContentId(preparedPhoto.externalContentId());
         image.setSourceTitle(preparedPhoto.title());
         image.setPhotographer(preparedPhoto.photographer());
-        image.setLicenseType(LICENSE_TYPE);
+        image.setLicenseType(valueOrDefault(preparedPhoto.licenseType(), LICENSE_TYPE));
         image.setSourceImageUrl(preparedPhoto.sourceImageUrl());
         image.setLicenseCheckedAt(preparedPhoto.licenseCheckedAt());
         image.setIsMain(preparedPhoto.isMain());
         image.setIsSlide(false);
         return image;
+    }
+
+    private String valueOrDefault(String value, String defaultValue) {
+        return value == null || value.isBlank() ? defaultValue : value;
     }
 }

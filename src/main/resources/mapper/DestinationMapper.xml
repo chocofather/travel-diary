@@ -92,9 +92,29 @@
 
     <!-- ========== INSERT / UPDATE ========== -->
     <insert id="insertDestination" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO destinations (latitude, longitude, google_place_id, created_at, views, season, user_id, region_id, type)
-        VALUES (#{latitude}, #{longitude}, #{googlePlaceId}, #{createdAt}, #{views}, #{season}, #{userID}, #{regionId}, #{type})
+        INSERT INTO destinations (latitude, longitude, google_place_id, created_at, views, season, user_id, region_id, type,
+                                  source_type, external_content_id)
+        VALUES (#{latitude}, #{longitude}, #{googlePlaceId}, #{createdAt}, #{views}, #{season}, #{userID}, #{regionId}, #{type},
+                #{sourceType}, #{externalContentId})
     </insert>
+
+    <!-- 외부 출처 여행지 중복 판정. 여행지명이 아니라 contentId 로만 본다. -->
+    <select id="countByExternalContentId" resultType="int">
+        SELECT COUNT(*)
+        FROM destinations
+        WHERE source_type = #{sourceType}
+          AND external_content_id = #{externalContentId}
+    </select>
+
+    <select id="findExternalContentIds" resultType="string">
+        SELECT external_content_id
+        FROM destinations
+        WHERE source_type = #{sourceType}
+          AND external_content_id IN
+        <foreach collection="externalContentIds" item="externalContentId" open="(" separator="," close=")">
+            #{externalContentId}
+        </foreach>
+    </select>
 
     <insert id="insertTranslation" parameterType="com.example.travlediary.model.DestinationTranslation">
         INSERT INTO destination_translations (destination_id, language_code, name, description, short_description)

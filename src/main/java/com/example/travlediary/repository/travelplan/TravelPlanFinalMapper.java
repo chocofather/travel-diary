@@ -74,7 +74,11 @@ public interface TravelPlanFinalMapper {
      * 함께 세면 아무도 볼 수 없는 여행이 영원히 남는다.
      * 계정과의 연결이 끊긴 행(user_id 가 비어 있는 행)도 같은 이유로 빠진다.
      *
-     * @param withdrawnStatus 탈퇴 상태의 enum 이름. SQL 에 문자열을 박지 않는다.
+     * <p>탈퇴를 신청했을 뿐인 계정(WITHDRAWAL_PENDING)은 여기서 빼지 않는다.
+     * 유예 기간에는 관계를 그대로 두어야 하고, 여기서 빼면 남은 사람이 0 이 되는 순간
+     * 되돌릴 수 없는 DELETE 가 유예 중에 일어난다.
+     *
+     * @param withdrawnStatus 탈퇴 완료 상태의 enum 이름. SQL 에 문자열을 박지 않는다.
      */
     int countVisibleMembersByPlanId(@Param("travelPlanId") Long travelPlanId,
                                     @Param("withdrawnStatus") String withdrawnStatus);

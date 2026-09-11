@@ -58,6 +58,79 @@
           AND deleted_at IS NULL
     </update>
 
+    <!--
+      탈퇴 신청(30일 유예). 상태와 유예 일정만 기록한다.
+      이메일/닉네임/비밀번호/프로필/인증·재설정 토큰과 deleted_at 은 그대로 둔다.
+      deleted_at 은 최종 파기 시 deactivateAccount 가 기록한다.
+    -->
+    <update id="requestWithdrawal">
+        UPDATE users
+        SET status = #{status},
+            withdrawal_requested_at = #{requestedAt},
+            purge_scheduled_at = #{purgeScheduledAt},
+            updated_at = NOW()
+        WHERE id = #{id}
+          AND status = 'ACTIVE'
+          AND deleted_at IS NULL
+    </update>
+
+    <!--
+      탈퇴 유예 안내 화면용. 유예기간이 끝난 회원도 안내 화면 자체는 봐야 하므로
+      여기서는 날짜를 조건에 넣지 않는다. 복구 가능 여부 판단은 위의 조회들이 맡는다.
+    -->
+    <select id="findWithdrawalPendingById"
+            resultType="com.example.travlediary.model.User">
+        SELECT id, username, user_email, status,
+               withdrawal_requested_at, purge_scheduled_at
+        FROM users
+        WHERE id = #{id}
+          AND status = 'WITHDRAWAL_PENDING'
+          AND deleted_at IS NULL
+    </select>
+
+    <!-- 확인 화면에서 링크가 아직 쓸 수 있는지만 본다. 잠그지 않고 아무것도 바꾸지 않는다. -->
+    <select id="findRecoverableWithdrawalById"
+            resultType="com.example.travlediary.model.User">
+        SELECT id, username, user_email, status, purge_scheduled_at
+        FROM users
+        WHERE id = #{id}
+          AND status = 'WITHDRAWAL_PENDING'
+          AND deleted_at IS NULL
+          AND purge_scheduled_at IS NOT NULL
+          AND purge_scheduled_at &gt; #{currentTime}
+    </select>
+
+    <!-- 복구 확정 트랜잭션에서 회원 행을 잠그고 같은 조건을 다시 확인한다. -->
+    <select id="findRecoverableWithdrawalByIdForUpdate"
+            resultType="com.example.travlediary.model.User">
+        SELECT id, username, user_email, status, purge_scheduled_at
+        FROM users
+        WHERE id = #{id}
+          AND status = 'WITHDRAWAL_PENDING'
+          AND deleted_at IS NULL
+          AND purge_scheduled_at IS NOT NULL
+          AND purge_scheduled_at &gt; #{currentTime}
+        FOR UPDATE
+    </select>
+
+    <!--
+      탈퇴 유예 복구. 상태와 유예 일정만 원래대로 되돌린다.
+      이메일/닉네임/비밀번호/프로필/소셜 연결은 유예 기간 동안 그대로 보존돼 있으므로 건드리지 않는다.
+    -->
+    <update id="restoreWithdrawalPendingAccount">
+        UPDATE users
+        SET status = #{status},
+            withdrawal_requested_at = NULL,
+            purge_scheduled_at = NULL,
+            deleted_at = NULL,
+            updated_at = NOW()
+        WHERE id = #{id}
+          AND status = 'WITHDRAWAL_PENDING'
+          AND deleted_at IS NULL
+          AND purge_scheduled_at IS NOT NULL
+          AND purge_scheduled_at &gt; #{currentTime}
+    </update>
+
     <update id="deactivateAccount">
         UPDATE users
         SET user_email = #{userEmail},

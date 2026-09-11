@@ -563,7 +563,7 @@ class MyPageAccountControllerTest {
                 .andExpect(redirectedUrl("/mypage/account"));
         mockMvc.perform(post("/mypage/account/withdraw")
                         .session(session).with(user(principal)).with(csrf())
-                        .param("currentPassword", "attacker-value"))
+                        .param("confirmationPhrase", "탈퇴를 신청합니다"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/mypage/account"));
 
@@ -693,16 +693,39 @@ class MyPageAccountControllerTest {
                 .thenReturn(details("admin", "admin@example.com"));
         doThrow(new AccountValidationException(
                 null, "관리자 계정은 마이페이지에서 탈퇴할 수 없습니다."))
-                .when(accountService).withdraw(99L, "Password!");
+                .when(accountService).withdraw(99L, "탈퇴를 신청합니다");
 
         mockMvc.perform(post("/mypage/account/withdraw")
                         .session(session)
                         .with(user(principal(99L, UserRole.ADMIN)))
                         .with(csrf())
-                        .param("currentPassword", "Password!"))
+                        .param("confirmationPhrase", "탈퇴를 신청합니다"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("mypage/account-edit"));
 
+        assertThat(session.isInvalid()).isFalse();
+    }
+
+    /**
+     * 비밀번호 재입력을 없앤 대신 진입 단계의 재인증이 유일한 본인 확인이다.
+     * 재인증 없이 탈퇴 POST 를 직접 호출하면 기존 requireVerification 정책이 그대로 막는다.
+     */
+    @Test
+    void withdrawalWithoutARecentReauthenticationIsBlocked() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+
+        mockMvc.perform(post("/mypage/account/withdraw")
+                        .session(session)
+                        .with(user(principal(7L, UserRole.USER)))
+                        .with(csrf())
+                        .param("confirmationPhrase", "탈퇴를 신청합니다"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/mypage/account"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+                        .flash().attributeExists("verificationMessage"));
+
+        verify(accountService, never()).withdraw(
+                org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.anyString());
         assertThat(session.isInvalid()).isFalse();
     }
 
@@ -715,11 +738,14 @@ class MyPageAccountControllerTest {
                         .session(session)
                         .with(user(principal(7L, UserRole.USER)))
                         .with(csrf())
-                        .param("currentPassword", "Password!"))
+                        .param("confirmationPhrase", "탈퇴를 신청합니다"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/?withdrawn=true"));
 
-        verify(accountService).withdraw(7L, "Password!");
+        // 비밀번호를 다시 받지 않는다. 본인 확인은 진입 단계의 재인증이 이미 끝냈다.
+        verify(accountService).withdraw(7L, "탈퇴를 신청합니다");
+        verify(accountService, never()).verifyCurrentPassword(
+                org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.anyString());
         assertThat(session.isInvalid()).isTrue();
     }
 

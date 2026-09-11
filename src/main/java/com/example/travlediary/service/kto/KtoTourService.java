@@ -2,7 +2,10 @@ package com.example.travlediary.service.kto;
 
 import com.example.travlediary.dto.kto.KtoTourApiResponse;
 import com.example.travlediary.model.DestinationType;
+import com.example.travlediary.dto.kto.KtoTourAreaCandidateResponse;
+import com.example.travlediary.dto.kto.KtoTourAreaResponse;
 import com.example.travlediary.dto.kto.KtoTourAutofillResponse;
+import com.example.travlediary.dto.kto.KtoTourImageCandidate;
 import com.example.travlediary.dto.kto.KtoTourSearchItemResponse;
 import com.example.travlediary.dto.kto.KtoTourSearchResponse;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -45,6 +48,13 @@ public class KtoTourService {
      */
     private static final String FOOD_CONTENT_TYPE_ID = "39";
     private static final String STAY_CONTENT_TYPE_ID = "32";
+
+    /** 시/도(17) + 한 시/도의 시/군/구를 한 번에 받기 충분한 크기. */
+    private static final int AREA_CODE_PAGE_SIZE = 100;
+    private static final int DETAIL_IMAGE_PAGE_SIZE = 100;
+    /** 후보 전체 수집용 페이지 크기. 유형 하나당 최대 100 × 20 = 2,000건까지 모은다. */
+    private static final int AREA_FETCH_PAGE_SIZE = 100;
+    private static final int MAX_AREA_FETCH_PAGES = 20;
 
     private static final Map<String, String> SEARCH_CONTENT_TYPE_BY_DESTINATION_TYPE = Map.of(
             DestinationType.RESTAURANTS.name(), FOOD_CONTENT_TYPE_ID,
@@ -118,6 +128,158 @@ public class KtoTourService {
             return null;
         }
         return SEARCH_CONTENT_TYPE_BY_DESTINATION_TYPE.get(destinationType.strip());
+    }
+
+    /**
+     * 법정동 기준 국내 지역 코드 목록. regionCode(시/도)를 주면 그 아래 시/군/구를 준다.
+     *
+     * <p>legacy areaCode/sigunguCode 는 KorService2 에서 상당수 항목이 빈 값이라 쓰지 않는다.
+     * 지역 코드는 TourAPI 가 주는 값을 그대로 쓰고 우리 country_categories 와 매칭하지 않는다
+     * (매칭은 등록 시점에 주소로 {@link KtoTourRegionMatchService} 가 한다).
+     */
+    public List<KtoTourAreaResponse> getLegalDongAreas(String regionCode) {
+        String normalizedRegionCode = normalize(regionCode);
+        KtoTourApiResponse response = request("/ldongCode2", builder -> {
+            builder.queryParam("numOfRows", AREA_CODE_PAGE_SIZE)
+                    .queryParam("pageNo", 1);
+            if (normalizedRegionCode != null) {
+                builder.queryParam("lDongRegnCd", normalizedRegionCode);
+            }
+        });
+
+        List<KtoTourAreaResponse> areas = new ArrayList<>();
+        for (KtoTourApiResponse.Item item : readItems(response.response().body().items())) {
+            String code = normalize(item.code());
+            String name = plainText(item.name());
+            if (code == null || name == null) {
+                continue;
+            }
+            areas.add(new KtoTourAreaResponse(code, name));
+        }
+        return List.copyOf(areas);
+    }
+
+    /**
+     * 한 콘텐츠 유형의 지역별 후보 전체를 페이지 끝까지 모아서 준다. 조회만 하고 저장하지 않는다.
+     *
+     * <p>UI 페이징은 우리 서버가 따로 하므로 여기서는 TourAPI 페이지를 전부 소진한다.
+     * 지역 조건은 법정동 코드만 보낸다 — legacy areaCode/sigunguCode 를 함께 보내면
+     * 두 조건의 교집합이 되어 오히려 결과가 줄어든다.
+     */
+    public List<KtoTourAreaCandidateResponse> fetchAllByArea(String regionCode, String subRegionCode,
+                                                             KtoTourImportContentType contentType) {
+        String normalizedRegionCode = normalize(regionCode);
+        if (normalizedRegionCode == null) {
+            throw new IllegalArgumentException("regionCode must not be blank");
+        }
+        String normalizedSubRegionCode = normalize(subRegionCode);
+
+        List<KtoTourAreaCandidateResponse> items = new ArrayList<>();
+        int pageNo = 1;
+        int collected = 0;
+        while (pageNo <= MAX_AREA_FETCH_PAGES) {
+            int requestedPage = pageNo;
+            KtoTourApiResponse response = request("/areaBasedList2", builder -> {
+                builder.queryParam("lDongRegnCd", normalizedRegionCode)
+                        // 제목순 고정. 페이지를 끝까지 넘겨도 후보 순서가 흔들리지 않게 한다.
+                        .queryParam("arrange", "A")
+                        .queryParam("contentTypeId", contentType.contentTypeId())
+                        .queryParam("pageNo", requestedPage)
+                        .queryParam("numOfRows", AREA_FETCH_PAGE_SIZE);
+                if (normalizedSubRegionCode != null) {
+                    builder.queryParam("lDongSignguCd", normalizedSubRegionCode);
+                }
+            });
+
+            KtoTourApiResponse.Body body = response.response().body();
+            List<KtoTourApiResponse.Item> pageItems = readItems(body.items());
+            collected += pageItems.size();
+            for (KtoTourApiResponse.Item item : pageItems) {
+                KtoTourAreaCandidateResponse candidate = toCandidate(item);
+                if (candidate != null) {
+                    items.add(candidate);
+                }
+            }
+
+            int totalCount = valueOrDefault(body.totalCount(), collected);
+            if (pageItems.isEmpty() || pageItems.size() < AREA_FETCH_PAGE_SIZE
+                    || collected >= totalCount) {
+                break;
+            }
+            pageNo++;
+        }
+        return List.copyOf(items);
+    }
+
+    /** 지원하지 않는 유형(숙박·음식점·축제·여행코스)이나 식별값이 없는 줄은 후보에서 뺀다. */
+    private KtoTourAreaCandidateResponse toCandidate(KtoTourApiResponse.Item item) {
+        KtoTourImportContentType type = KtoTourImportContentType
+                .fromContentTypeId(item.contenttypeid())
+                .orElse(null);
+        if (type == null) {
+            return null;
+        }
+        String contentId = normalize(item.contentid());
+        String title = plainText(item.title());
+        if (contentId == null || title == null) {
+            return null;
+        }
+        return new KtoTourAreaCandidateResponse(
+                contentId,
+                type.contentTypeId(),
+                type.contentTypeName(),
+                title,
+                join(item.addr1(), item.addr2()),
+                firstNonBlank(normalize(item.firstimage2()), normalize(item.firstimage())),
+                false
+        );
+    }
+
+    /**
+     * 저장 후보 이미지. 대표이미지(detailCommon2) 다음에 추가이미지(detailImage2) 순서로 준다.
+     * 저작권 코드는 그대로 넘기고, 저장 가능 여부 판정은 이미지 import 쪽에서 한다.
+     */
+    public List<KtoTourImageCandidate> getImportableImages(String contentId) {
+        String normalizedContentId = normalize(contentId);
+        if (normalizedContentId == null) {
+            throw KtoTourApiException.upstreamFailure();
+        }
+
+        List<KtoTourImageCandidate> candidates = new ArrayList<>();
+        KtoTourApiResponse commonResponse = request("/detailCommon2", builder -> builder
+                .queryParam("contentId", normalizedContentId));
+        KtoTourApiResponse.Item common = firstItem(commonResponse.response().body().items());
+        if (common == null) {
+            throw KtoTourApiException.upstreamFailure();
+        }
+        String mainImageUrl = normalize(common.firstimage());
+        if (mainImageUrl != null) {
+            candidates.add(new KtoTourImageCandidate(
+                    normalizedContentId,
+                    plainText(common.title()),
+                    mainImageUrl,
+                    normalize(common.cpyrhtDivCd()),
+                    true));
+        }
+
+        KtoTourApiResponse imageResponse = request("/detailImage2", builder -> builder
+                .queryParam("contentId", normalizedContentId)
+                .queryParam("imageYN", "Y")
+                .queryParam("pageNo", 1)
+                .queryParam("numOfRows", DETAIL_IMAGE_PAGE_SIZE));
+        for (KtoTourApiResponse.Item item : readItems(imageResponse.response().body().items())) {
+            String originalImageUrl = normalize(item.originimgurl());
+            if (originalImageUrl == null || originalImageUrl.equals(mainImageUrl)) {
+                continue;
+            }
+            candidates.add(new KtoTourImageCandidate(
+                    normalizedContentId,
+                    plainText(item.imgname()),
+                    originalImageUrl,
+                    normalize(item.cpyrhtDivCd()),
+                    false));
+        }
+        return List.copyOf(candidates);
     }
 
     public KtoTourAutofillResponse getDetail(String contentId, String contentTypeId) {

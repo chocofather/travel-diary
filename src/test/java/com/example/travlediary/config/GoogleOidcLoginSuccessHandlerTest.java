@@ -189,6 +189,32 @@ class SocialOAuth2LoginSuccessHandlerTest {
                 .isInstanceOf(CustomUserDetails.class);
     }
 
+    /**
+     * 30일 유예 동안 social_accounts 연결을 그대로 두므로 소셜 인증 자체는 통과한다.
+     * 다만 일반 로그인과 똑같이 탈퇴 유예 전용 화면으로만 간다.
+     */
+    @Test
+    void withdrawalPendingGoogleAccountGoesToTheWithdrawalNoticePage() throws Exception {
+        OAuth2AuthenticationToken authentication = googleAuthentication(
+                "pending-sub", "member@example.com", true, "OIDC_USER");
+        when(socialAccountService.findByProviderAndProviderUserId(
+                SocialProvider.GOOGLE, "pending-sub"))
+                .thenReturn(socialAccount(7L, "pending-sub"));
+        when(userMapper.findById(7L))
+                .thenReturn(user(7L, null, UserRole.USER, UserStatus.WITHDRAWAL_PENDING));
+        when(userMapper.findStatusById(7L)).thenReturn(UserStatus.WITHDRAWAL_PENDING);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        assertThat(response.getRedirectedUrl()).isEqualTo("/account/withdrawal-pending");
+        assertThat(request.getSession().getAttribute("userId")).isEqualTo(7L);
+        assertThat(savedAuthentication(request).getPrincipal())
+                .isInstanceOf(CustomUserDetails.class);
+    }
+
+    /** 최종 탈퇴(DEACTIVATED)는 이번 변경과 무관하게 그대로 막힌다. */
     @ParameterizedTest
     @EnumSource(value = UserStatus.class, names = {"INACTIVE", "SUSPENDED", "DEACTIVATED"})
     void unavailableGoogleAccountStatusesAreRejected(UserStatus status) throws Exception {

@@ -6,6 +6,7 @@
   <link rel="stylesheet" href="/css/mypage-layout.css">
   <link rel="stylesheet" href="/css/mypage-account.css">
   <script src="/js/confirm-submit.js" defer></script>
+  <script src="/js/withdrawal-confirm.js" defer></script>
 </th:block>
 <th:block th:fragment="body">
   <div class="mypage-layout">
@@ -91,32 +92,45 @@
             <h2 id="withdrawal-title" th:text="#{mypage.account.withdraw}">회원 탈퇴</h2>
           </div>
           <ul>
-            <li th:text="#{mypage.account.withdrawal.notice.irreversible}">탈퇴 후 계정은 복구할 수 없습니다.</li>
-            <li th:text="#{mypage.account.withdrawal.notice.contentKept}">작성한 게시글, 댓글, 여행 코스와 문의 기록은 유지됩니다.</li>
-            <li th:text="#{mypage.account.withdrawal.notice.bookmarksRemoved}">북마크와 좋아요는 삭제됩니다.</li>
-            <li th:text="#{mypage.account.withdrawal.notice.emailReusable}">기존 이메일과 닉네임은 새 계정에서 다시 사용할 수 있습니다.</li>
+            <li th:text="#{mypage.account.withdrawal.notice.irreversible}">탈퇴를 신청하면 즉시 로그인할 수 없고, 30일 뒤 계정과 개인 정보가 최종 삭제됩니다.</li>
+            <li th:text="#{mypage.account.withdrawal.notice.contentKept}">작성한 게시글, 댓글, 여행 코스와 문의 기록은 그대로 유지됩니다.</li>
+            <li th:text="#{mypage.account.withdrawal.notice.dataPreserved}">북마크와 좋아요를 포함한 계정 데이터는 보존 기간 동안 삭제되지 않습니다.</li>
+            <li th:text="#{mypage.account.withdrawal.notice.emailLocked}">기존 이메일과 닉네임은 최종 삭제 전까지 새 계정에서 사용할 수 없습니다.</li>
             <li th:text="#{mypage.account.withdrawal.notice.usernameNotReusable}">기존 로그인 ID는 다시 사용할 수 없습니다.</li>
+            <li th:text="#{mypage.account.withdrawal.notice.recoverable}">유예기간 동안에는 로그인 후 안내 화면에서 계정을 복구할 수 있습니다.</li>
           </ul>
           <p class="mypage-account-admin-warning" sec:authorize="hasRole('ADMIN')"
              th:text="#{mypage.account.withdrawal.adminBlocked}">
             관리자 계정은 마이페이지에서 탈퇴할 수 없습니다.
           </p>
+          <!--
+            계정 및 보안 진입 단계에서 이미 재인증을 마쳤으므로 비밀번호는 다시 받지 않는다.
+            실수 방지를 위해 확인 문구만 입력받고, 일치 여부는 서버에서도 다시 검증한다.
+          -->
           <form th:action="@{/mypage/account/withdraw}" th:object="${withdrawalForm}"
-                method="post" sec:authorize="hasRole('USER')">
+                method="post" sec:authorize="hasRole('USER')"
+                id="withdrawalForm"
+                th:data-confirm-phrase="#{mypage.account.withdrawal.confirm.phrase}">
             <div class="mypage-account-field">
-              <label for="withdrawalPassword" th:text="#{mypage.account.currentPassword}">현재 비밀번호</label>
-              <input id="withdrawalPassword" type="password"
-                     th:field="*{currentPassword}" autocomplete="current-password" required>
+              <label for="withdrawalConfirmPhrase"
+                     th:text="#{mypage.account.withdrawal.confirm.label}">탈퇴를 신청하려면 아래 문구를 입력해 주세요.</label>
+              <p class="mypage-account-confirm-phrase" id="withdrawalConfirmPhraseSample"
+                 th:text="#{mypage.account.withdrawal.confirm.phrase}">탈퇴를 신청합니다</p>
+              <input id="withdrawalConfirmPhrase" type="text"
+                     th:field="*{confirmationPhrase}"
+                     th:placeholder="#{mypage.account.withdrawal.confirm.placeholder}"
+                     autocomplete="off" spellcheck="false" required>
               <p class="mypage-account-field-error"
-                 th:if="${#fields.hasErrors('currentPassword')}"
-                 th:errors="*{currentPassword}">비밀번호 오류</p>
+                 th:if="${#fields.hasErrors('confirmationPhrase')}"
+                 th:errors="*{confirmationPhrase}">확인 문구 오류</p>
             </div>
             <div class="mypage-account-global-error" th:if="${#fields.hasGlobalErrors()}"
                  role="alert">
               <p th:each="error : ${#fields.globalErrors()}" th:text="${error}">탈퇴 오류</p>
             </div>
             <div class="mypage-account-actions">
-              <button class="is-danger" type="submit" th:text="#{mypage.account.withdraw}">회원 탈퇴</button>
+              <button class="is-danger" type="submit" id="withdrawalSubmit"
+                      th:text="#{mypage.account.withdrawal.submit}">회원 탈퇴 신청</button>
             </div>
           </form>
       </section>

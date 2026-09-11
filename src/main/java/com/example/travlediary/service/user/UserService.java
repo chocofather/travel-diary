@@ -1,5 +1,6 @@
 package com.example.travlediary.service.user;
 
+import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.dto.RegistrationForm;
 import com.example.travlediary.model.User;
 import com.example.travlediary.model.UserRole;
@@ -11,12 +12,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import java.sql.Timestamp;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -28,6 +31,8 @@ public class UserService {
             "만료되었거나 잘못된 토큰입니다.";
     public static final String SAME_AS_CURRENT_PASSWORD_MESSAGE =
             "현재 사용 중인 비밀번호와 다른 비밀번호를 입력해 주세요.";
+    /** 재설정 링크 유효시간. 메일 안내 문구도 이 값을 그대로 쓴다. */
+    public static final Duration RESET_TOKEN_VALIDITY = Duration.ofMinutes(30);
     private static final Logger log = LoggerFactory.getLogger(UserService.class);
 
     private final UserMapper userMapper;
@@ -197,7 +202,7 @@ public class UserService {
 
         String rawToken = UUID.randomUUID().toString();
         String tokenHash = ResetTokenHasher.hash(rawToken);
-        LocalDateTime exp = LocalDateTime.now().plusMinutes(30);
+        LocalDateTime exp = LocalDateTime.now().plus(RESET_TOKEN_VALIDITY);
 
         userMapper.updateResetToken(u.getId(), tokenHash, exp);
 
@@ -211,16 +216,27 @@ public class UserService {
                     recipient,
                     username,
                     serverUrl + "/login",
-                    serverUrl + "/users/find-password");
+                    serverUrl + "/users/find-password",
+                    requestLanguage());
         } catch (RuntimeException exception) {
             log.error("Username recovery email could not be scheduled: exceptionType={}",
                     exception.getClass().getSimpleName());
         }
     }
 
+    /**
+     * 메일 발송은 @Async 라 워커 스레드에서 locale 을 다시 읽을 수 없다.
+     * 요청 스레드인 여기서 언어를 확정해 넘긴다.
+     */
+    private SupportedLanguage requestLanguage() {
+        return SupportedLanguage.fromLocale(LocaleContextHolder.getLocale())
+                .orElse(SupportedLanguage.KOREAN);
+    }
+
     private void dispatchPasswordResetEmail(String recipient, String resetUrl) {
         try {
-            emailDispatchService.dispatchPasswordResetEmail(recipient, resetUrl);
+            emailDispatchService.dispatchPasswordResetEmail(
+                    recipient, resetUrl, requestLanguage());
         } catch (RuntimeException exception) {
             log.error("Password reset email could not be scheduled: exceptionType={}",
                     exception.getClass().getSimpleName());

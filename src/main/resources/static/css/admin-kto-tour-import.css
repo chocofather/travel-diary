@@ -1,0 +1,171 @@
+/* TourAPI 지역별 일괄 가져오기 화면. 관리자 목록 화면과 같은 톤으로 compact 하게 맞춘다. */
+
+.admin-kto-import-filters {
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 10px;
+}
+
+.admin-kto-import-field {
+    display: grid;
+    gap: 4px;
+    color: #5b6780;
+    font-size: 0.76rem;
+    font-weight: 700;
+}
+
+.admin-kto-import-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 14px;
+    border-bottom: 1px solid #e6ebf4;
+}
+
+.admin-kto-import-tabs {
+    display: flex;
+    gap: 4px;
+}
+
+.admin-kto-import-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.admin-kto-import-count {
+    color: #35415a;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.admin-kto-import-status {
+    margin: 0;
+    padding: 10px 14px;
+    color: #748096;
+    font-size: 0.78rem;
+    line-height: 1.45;
+}
+
+.admin-kto-import-status.is-error {
+    color: #b04444;
+}
+
+.admin-kto-import-table th.is-check,
+.admin-kto-import-table td.is-check {
+    width: 40px;
+    text-align: center;
+}
+
+.admin-kto-import-table th.is-thumb,
+.admin-kto-import-table td.is-thumb {
+    width: 78px;
+}
+
+.admin-kto-import-thumb {
+    display: block;
+    width: 66px;
+    height: 46px;
+    object-fit: cover;
+    background: #f1f4fa;
+    border-radius: 6px;
+}
+
+.admin-kto-import-thumb.is-empty {
+    display: grid;
+    place-items: center;
+    color: #a3aec4;
+    font-size: 0.64rem;
+}
+
+.admin-kto-import-table td {
+    font-size: 0.8rem;
+    vertical-align: middle;
+}
+
+.admin-kto-import-table tr.is-registered td {
+    color: #98a2b6;
+}
+
+.admin-kto-import-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    border-radius: 999px;
+}
+
+.admin-kto-import-badge.is-new {
+    color: #2f5bd0;
+    background: #e8eeff;
+}
+
+.admin-kto-import-badge.is-registered {
+    color: #6b7487;
+    background: #eef0f5;
+}
+
+.admin-kto-import-paging {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px;
+    color: #5b6780;
+    font-size: 0.78rem;
+}
+
+.admin-kto-import-result {
+    margin-top: 14px;
+    padding: 14px 16px;
+}
+
+.admin-kto-import-result-title {
+    margin: 0 0 6px;
+    font-size: 0.95rem;
+}
+
+.admin-kto-import-result-summary {
+    margin: 0 0 8px;
+    color: #35415a;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.admin-kto-import-result-list {
+    display: grid;
+    gap: 4px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    color: #748096;
+    font-size: 0.78rem;
+}
+
+.admin-kto-import-result-list li.is-failed {
+    color: #b04444;
+}
+
+.admin-visually-hidden {
+    position: absolute;
+    overflow: hidden;
+    width: 1px;
+    height: 1px;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+    .admin-kto-import-toolbar {
+        align-items: stretch;
+    }
+
+    .admin-kto-import-table th.is-thumb,
+    .admin-kto-import-table td.is-thumb {
+        display: none;
+    }
+}

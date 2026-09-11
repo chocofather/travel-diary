@@ -1,5 +1,6 @@
 package com.example.travlediary.service.email;
 
+import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.model.User;
 import com.example.travlediary.model.UserStatus;
 import com.example.travlediary.repository.user.UserMapper;
@@ -8,6 +9,7 @@ import com.example.travlediary.service.user.RegistrationValidationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.Clock;
@@ -131,10 +133,16 @@ public class EmailVerificationService {
                 remainingCooldownSeconds(user.getVerificationRequestedAt(), now()));
     }
 
+    /**
+     * 메일 발송은 @Async 라 워커 스레드에서 locale 을 다시 읽을 수 없다.
+     * 최초 발송이든 재발송이든 요청 스레드인 여기서 언어를 확정해 넘긴다.
+     */
     private boolean dispatch(User user) {
+        SupportedLanguage language = SupportedLanguage.fromLocale(LocaleContextHolder.getLocale())
+                .orElse(SupportedLanguage.KOREAN);
         try {
             emailDispatchService.dispatchVerificationEmail(
-                    user.getId(), user.getUserEmail(), user.getVerificationToken());
+                    user.getId(), user.getUserEmail(), user.getVerificationToken(), language);
             return true;
         } catch (RuntimeException exception) {
             log.error("Verification email dispatch was rejected: "

@@ -14,6 +14,14 @@
     public interface DestinationMapper {
         void insertDestination(Destination destination);
 
+        /** 외부 출처(TourAPI) 여행지가 이미 있는지 본다. 저장 직전 2차 중복 검사에 쓴다. */
+        int countByExternalContentId(@Param("sourceType") String sourceType,
+                                     @Param("externalContentId") String externalContentId);
+
+        /** 후보 목록의 1차 중복 표시용. 넘긴 contentId 중 이미 등록된 것만 돌려준다. */
+        List<String> findExternalContentIds(@Param("sourceType") String sourceType,
+                                            @Param("externalContentIds") Collection<String> externalContentIds);
+
         void insertTranslation(DestinationTranslation translation);
 
         void insertCategory(DestinationCategory category);

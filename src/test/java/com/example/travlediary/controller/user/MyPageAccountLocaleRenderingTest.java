@@ -144,7 +144,7 @@ class MyPageAccountLocaleRenderingTest {
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "What happens when you leave")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "Once deleted, your account cannot be restored.")))
+                        "You cannot use the service from the moment you request deletion")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "Verify with Naver")))
                 // 인증 경로는 provider enum 으로 만들어지므로 언어와 무관하다

@@ -21,6 +21,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class SocialVoluntaryWithdrawalRejoinTest {
@@ -40,54 +43,35 @@ class SocialVoluntaryWithdrawalRejoinTest {
         SocialAccountMapper socialAccountMapper = mock(SocialAccountMapper.class);
         AccountAnonymizationService anonymizationService = mock(AccountAnonymizationService.class);
         when(userMapper.findActiveAccountSecurityByIdForUpdate(oldUserId)).thenReturn(oldUser);
-        when(anonymizationService.anonymizedEmail(oldUserId))
-                .thenReturn("withdrawn-7@example.invalid");
-        when(anonymizationService.anonymizedNickname()).thenReturn("탈퇴회원1234567");
         doAnswer(invocation -> {
-            oldUser.setStatus(invocation.getArgument(3));
-            oldUser.setUserEmail(invocation.getArgument(1));
-            oldUser.setNickname(invocation.getArgument(2));
+            oldUser.setStatus(invocation.getArgument(1));
             return 1;
-        }).when(userMapper).deactivateAccount(
-                org.mockito.ArgumentMatchers.eq(oldUserId), anyString(), anyString(),
-                org.mockito.ArgumentMatchers.eq(UserStatus.DEACTIVATED));
-        doAnswer(invocation -> {
-            storedAccount.set(null);
-            return 1;
-        }).when(socialAccountMapper).deleteAllByUserId(oldUserId);
+        }).when(userMapper).requestWithdrawal(
+                org.mockito.ArgumentMatchers.eq(oldUserId),
+                org.mockito.ArgumentMatchers.eq(UserStatus.WITHDRAWAL_PENDING),
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
         when(socialAccountMapper.findByProviderAndProviderUserId(provider, providerUserId))
                 .thenAnswer(invocation -> storedAccount.get());
-        doAnswer(invocation -> {
-            invocation.<User>getArgument(0).setId(newUserId);
-            return null;
-        }).when(userMapper).insertUser(any(User.class));
-        doAnswer(invocation -> {
-            storedAccount.set(invocation.getArgument(0));
-            return 1;
-        }).when(socialAccountMapper).insert(any(SocialAccount.class));
 
         MyPageAccountService withdrawalService = new MyPageAccountService(
                 userMapper,
                 anonymizationService,
                 mock(PasswordEncoder.class),
-                socialAccountMapper);
+                socialAccountMapper,
+                mock(org.springframework.context.MessageSource.class));
         withdrawalService.withdrawAfterSocialReauthentication(oldUserId);
 
-        assertThat(oldUser.getStatus()).isEqualTo(UserStatus.DEACTIVATED);
-        assertThat(socialAccountMapper.findByProviderAndProviderUserId(
-                provider, providerUserId)).isNull();
-
-        SocialSignupService signupService = new SocialSignupService(
-                userMapper, socialAccountMapper);
-        long signedUpUserId = signupService.complete(
-                pending(provider, providerUserId), acceptedForm("새로운여행자"));
-
-        assertThat(signedUpUserId).isEqualTo(newUserId);
-        assertThat(storedAccount.get().getUserId()).isEqualTo(newUserId);
-        assertThat(storedAccount.get().getProvider()).isEqualTo(provider);
-        assertThat(storedAccount.get().getProviderUserId()).isEqualTo(providerUserId);
+        // 30일 유예 동안에는 상태만 바뀐다.
+        assertThat(oldUser.getStatus()).isEqualTo(UserStatus.WITHDRAWAL_PENDING);
         assertThat(oldUser.getId()).isEqualTo(oldUserId);
-        assertThat(oldUser.getStatus()).isEqualTo(UserStatus.DEACTIVATED);
+
+        // 소셜 연결과 개인정보는 그대로라 같은 provider 계정으로 곧바로 재가입할 수 없다.
+        verify(socialAccountMapper, never()).deleteAllByUserId(oldUserId);
+        verifyNoInteractions(anonymizationService);
+        assertThat(socialAccountMapper.findByProviderAndProviderUserId(
+                provider, providerUserId)).isNotNull();
+        assertThat(storedAccount.get().getUserId()).isEqualTo(oldUserId);
+        assertThat(newUserId).isNotEqualTo(oldUserId);
     }
 
     private User socialUser(long userId) {

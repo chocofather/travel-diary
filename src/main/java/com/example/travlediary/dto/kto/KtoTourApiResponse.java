@@ -27,6 +27,18 @@ public record KtoTourApiResponse(Response response) {
             String addr2,
             String mapx,
             String mapy,
+            // areaBasedList2 / detailCommon2 대표이미지. 후보 목록 썸네일과 대표이미지 저장에 쓴다.
+            String firstimage,
+            String firstimage2,
+            // detailImage2 추가이미지. cpyrhtDivCd 는 detailCommon2 대표이미지에도 함께 온다.
+            String cpyrhtDivCd,
+            String imgname,
+            String originimgurl,
+            String serialnum,
+            String smallimageurl,
+            // areaCode2 지역 코드 목록
+            String code,
+            String name,
             String overview,
             String homepage,
             String tel,
