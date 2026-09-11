@@ -190,4 +190,50 @@
         WHERE id = #{id}
     </update>
 
+    <!--
+      보존기간(3년) 만료 정리.
+
+      처리가 끝난 문의만 대상이다. PENDING/IN_PROGRESS 는 아직 진행 중인 기록이라
+      아무리 오래돼도 자동으로 지우지 않는다.
+
+      기준 시점은 답변을 등록한 시각(inquiry_answers.created_at)이다. 답변 저장과 ANSWERED 전환이
+      같은 트랜잭션이라 이 값이 곧 처리 종료 시각이다. 답변 없이 끝난 취소 문의는 답변 행이 없으므로
+      마지막 상태 변경 시각(inquiries.updated_at)으로 대신한다.
+      만료 판정 시각은 애플리케이션이 계산해서 넘긴다(테스트에서 경계를 고정하기 위해서다).
+    -->
+    <sql id="RetentionBase">
+        COALESCE(
+            (SELECT ia.created_at FROM inquiry_answers ia WHERE ia.inquiry_id = i.id),
+            i.updated_at)
+    </sql>
+
+    <sql id="ExpiredInquiryCondition">
+        i.status IN ('ANSWERED', 'CANCELLED')
+        AND <include refid="RetentionBase"/> IS NOT NULL
+        AND <include refid="RetentionBase"/> &lt;= #{retentionCutoff}
+    </sql>
+
+    <select id="findExpiredInquiryIds" resultType="long">
+        SELECT i.id
+        FROM inquiries i
+        WHERE <include refid="ExpiredInquiryCondition"/>
+        ORDER BY i.id
+        LIMIT #{limit}
+    </select>
+
+    <select id="findExpiredInquiryByIdForUpdate" resultMap="InquiryResultMap">
+        SELECT i.id, i.subject, i.content, i.status, i.created_at, i.updated_at,
+               i.user_id, i.inquiry_type
+        FROM inquiries i
+        WHERE i.id = #{id}
+          AND <include refid="ExpiredInquiryCondition"/>
+        FOR UPDATE
+    </select>
+
+    <!-- 답변(inquiry_answers)은 fk_inquiryanswers_inquiry 의 ON DELETE CASCADE 로 함께 지워진다. -->
+    <delete id="deleteInquiryById">
+        DELETE FROM inquiries
+        WHERE id = #{id}
+    </delete>
+
 </mapper>

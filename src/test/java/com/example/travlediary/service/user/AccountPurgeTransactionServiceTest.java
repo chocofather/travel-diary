@@ -269,6 +269,19 @@ class AccountPurgeTransactionServiceTest {
         assertThat(outcome.jobStatus()).isEqualTo(AccountPurgeJobStatus.COMPLETED);
     }
 
+    /**
+     * 1:1 문의와 답변은 회원 탈퇴와 별개의 보존 수명(3년)을 갖는 업무기록이다.
+     * 최종 파기가 즉시 지우면 안 되고, 정리는 문의 보존 배치만 한다.
+     */
+    @Test
+    void inquiriesAreNotTouchedByTheAccountPurge() {
+        service.purgeOne(USER_ID, NOW);
+
+        assertThat(AccountPurgeTransactionService.class.getDeclaredFields())
+                .extracting(field -> field.getType().getSimpleName())
+                .doesNotContain("InquiryMapper", "InquiryRetentionTransactionService");
+    }
+
     @Test
     void personalDataIsDeletedAndPublicContentIsLeftAlone() {
         service.purgeOne(USER_ID, NOW);
