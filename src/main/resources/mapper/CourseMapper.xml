@@ -13,6 +13,8 @@
         <result property="content" column="course_content"/>
         <result property="contentSourceLanguage" column="content_source_language"/>
         <result property="nickname" column="writer_nickname"/>
+        <!-- 최종 탈퇴 회원의 익명 nickname 대신 공통 문구를 쓸지 판단하는 플래그. -->
+        <result property="writerWithdrawn" column="writer_withdrawn"/>
         <result property="createdAt" column="course_created_at"/>
         <result property="updatedAt" column="course_updated_at"/>
         <result property="views" column="course_views"/>
@@ -36,6 +38,7 @@
         <id property="courseId" column="course_id"/>
         <result property="title" column="course_title"/>
         <result property="nickname" column="writer_nickname"/>
+        <result property="writerWithdrawn" column="writer_withdrawn"/>
         <result property="views" column="course_views"/>
         <result property="totalDestinationCount" column="destination_count"/>
     </resultMap>
@@ -63,6 +66,7 @@
             c.content AS course_content,
             c.content_source_language,
             u.nickname AS writer_nickname,
+            (u.status = 'DEACTIVATED') AS writer_withdrawn,
             c.created_at AS course_created_at,
             c.updated_at AS course_updated_at,
             c.views AS course_views,
@@ -245,6 +249,7 @@
             c.id AS course_id,
             c.title AS course_title,
             u.nickname AS writer_nickname,
+            (u.status = 'DEACTIVATED') AS writer_withdrawn,
             c.views AS course_views,
             COUNT(cd.id) AS destination_count
         FROM courses c
@@ -252,7 +257,7 @@
         JOIN course_destinations cd ON cd.course_id = c.id
         WHERE c.deleted = 0
           AND c.deleted_at IS NULL
-        GROUP BY c.id, c.title, u.nickname, c.views, c.created_at
+        GROUP BY c.id, c.title, u.nickname, u.status, c.views, c.created_at
         ORDER BY c.views DESC, c.created_at DESC, c.id DESC
         LIMIT #{limit}
     </select>

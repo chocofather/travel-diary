@@ -8,6 +8,7 @@ import com.example.travlediary.dto.WriterDto;
 import com.example.travlediary.model.DestinationComment;
 import com.example.travlediary.model.DestinationCommentImage;
 import com.example.travlediary.model.User;
+import com.example.travlediary.model.UserStatus;
 import com.example.travlediary.repository.comment.DestinationCommentImageMapper;
 import com.example.travlediary.repository.comment.DestinationCommentMapper;
 import com.example.travlediary.repository.destination.DestinationMapper;
@@ -16,6 +17,7 @@ import com.example.travlediary.service.file.FileUploadService;
 import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.service.translation.LocalContentLanguageDetector;
 import com.example.travlediary.service.translation.TranslationVisibility;
+import com.example.travlediary.service.user.WithdrawnMemberName;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -50,6 +52,7 @@ public class DestinationCommentService {
     private final UserMapper userMapper;
     private final FileUploadService fileUploadService;
     private final LocalContentLanguageDetector languageDetector;
+    private final WithdrawnMemberName withdrawnMemberName;
 
     @Value("${custom.upload-path}")
     private String uploadPath;
@@ -192,10 +195,7 @@ public class DestinationCommentService {
         //    (writer 등은 엔티티가 아니라 DTO로 만들어서 리턴해야 프론트에서 바로 append 가능)
         // -- writer(작성자) 정보 넣기 위해 user 테이블도 조회
         User user = userMapper.findById(userId);
-        WriterDto writerDto = new WriterDto();
-        writerDto.setId(user.getId());
-        writerDto.setNickname(user.getNickname());
-        writerDto.setProfileImage(user.getProfileImage());
+        WriterDto writerDto = writerDto(user);
         writerDto.setIsWriter(false); // 방금 작성한 건 본인이니까, 필요시 true도 가능
 
         CommentDto dto = new CommentDto();
@@ -322,10 +322,7 @@ public class DestinationCommentService {
             dto.setParentCommentId(comment.getParentCommentId());
 
             // 작성자 정보
-            WriterDto writerDto = new WriterDto();
-            writerDto.setId(comment.getWriter().getId());
-            writerDto.setNickname(comment.getWriter().getNickname());
-            writerDto.setProfileImage(comment.getWriter().getProfileImage());
+            WriterDto writerDto = writerDto(comment.getWriter());
 
             // [작성자] 태그 여부 판단
             boolean isWriter = false;
@@ -481,10 +478,7 @@ public class DestinationCommentService {
         dto.setLikes(comment.getLikes().intValue());
         dto.setParentCommentId(comment.getParentCommentId());
 
-        WriterDto writerDto = new WriterDto();
-        writerDto.setId(comment.getWriter().getId());
-        writerDto.setNickname(comment.getWriter().getNickname());
-        writerDto.setProfileImage(comment.getWriter().getProfileImage());
+        WriterDto writerDto = writerDto(comment.getWriter());
         writerDto.setIsWriter(false); // 계층 판단 생략 (단일 기준이므로)
 
         dto.setWriter(writerDto);
@@ -507,6 +501,21 @@ public class DestinationCommentService {
         dto.setLikedByMe(liked);
 
         return dto;
+    }
+
+    /**
+     * 댓글 작성자 정보. 최종 탈퇴(DEACTIVATED) 회원이면 users.nickname 에 들어 있는
+     * 내부 익명값 대신 현재 언어의 공통 문구를 내려보내고, 공개 프로필 링크도 걸지 않게 표시한다.
+     * (프로필 이미지는 최종 파기에서 NULL 이 되므로 화면의 기본 이미지 처리가 그대로 쓰인다)
+     */
+    private WriterDto writerDto(User writer) {
+        WriterDto writerDto = new WriterDto();
+        writerDto.setId(writer.getId());
+        boolean withdrawn = writer.getStatus() == UserStatus.DEACTIVATED;
+        writerDto.setWithdrawn(withdrawn);
+        writerDto.setNickname(withdrawnMemberName.orNickname(writer.getNickname(), withdrawn));
+        writerDto.setProfileImage(writer.getProfileImage());
+        return writerDto;
     }
 
     private void applyTranslationMetadata(CommentDto dto, DestinationComment comment) {

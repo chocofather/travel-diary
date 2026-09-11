@@ -12,6 +12,7 @@ import com.example.travlediary.service.comment.DestinationCommentService;
 import com.example.travlediary.service.course.CourseService;
 import com.example.travlediary.service.file.FileUploadService;
 import com.example.travlediary.service.translation.LocalContentLanguageDetector;
+import com.example.travlediary.service.user.TestWithdrawnMemberName;
 import com.example.travlediary.service.info.AccommodationInfoService;
 import com.example.travlediary.service.info.ActivityInfoService;
 import com.example.travlediary.service.info.AttractionInfoService;
@@ -88,7 +89,8 @@ class DestinationServiceDeletionFileLifecycleTest {
                 destinationCommentImageMapper,
                 userMapper,
                 fileUploadService,
-                new LocalContentLanguageDetector());
+                new LocalContentLanguageDetector(),
+                TestWithdrawnMemberName.real());
         ReflectionTestUtils.setField(destinationCommentService, "uploadPath", uploadRoot.toString());
         destinationService = new DestinationService(
                 destinationMapper,

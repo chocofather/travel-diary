@@ -123,7 +123,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function makeProfileLink(comment, child, className) {
-        if (comment.writerUserId == null) return child;
+        // 최종 탈퇴 회원은 공개 프로필이 없으므로 링크를 걸지 않는다.
+        if (comment.writerUserId == null || comment.writerWithdrawn === true) return child;
         const link = document.createElement('a');
         link.className = className;
         link.href = `/users/${encodeURIComponent(String(comment.writerUserId))}`;

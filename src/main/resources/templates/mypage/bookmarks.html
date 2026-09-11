@@ -137,7 +137,7 @@
                    th:text="${bookmark.title}">코스 제목</a>
               </h2>
               <p class="mypage-bookmark-community-meta">
-                <span th:text="${bookmark.nickname}">작성자</span>
+                <span th:text="${bookmark.writerWithdrawn} ? #{member.withdrawn} : ${bookmark.nickname}">작성자</span>
                 <span aria-hidden="true">·</span>
                 <time th:if="${bookmark.createdAt != null}"
                       th:datetime="${bookmark.createdAt}"

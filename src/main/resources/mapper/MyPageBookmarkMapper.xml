@@ -71,6 +71,8 @@
             p.post_type AS postType,
             p.title,
             u.nickname,
+            <!-- 최종 탈퇴 회원의 익명 nickname 은 화면에 쓰지 않는다. 문구는 View 가 고른다. -->
+            (u.status = 'DEACTIVATED') AS writerWithdrawn,
             p.created_at AS createdAt,
             p.views,
             b.created_at AS bookmarkCreatedAt
@@ -92,6 +94,7 @@
             CAST(NULL AS CHAR) AS postType,
             c.title,
             u.nickname,
+            (u.status = 'DEACTIVATED') AS writerWithdrawn,
             c.created_at AS createdAt,
             c.views,
             b.created_at AS bookmarkCreatedAt
@@ -126,6 +129,7 @@
             bookmarked_content.postType,
             bookmarked_content.title,
             bookmarked_content.nickname,
+            bookmarked_content.writerWithdrawn,
             bookmarked_content.createdAt,
             bookmarked_content.views,
             bookmarked_content.bookmarkCreatedAt

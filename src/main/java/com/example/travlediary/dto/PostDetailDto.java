@@ -19,6 +19,8 @@ public class PostDetailDto {
     private String content;
     private String contentSourceLanguage;
     private String nickname;
+    /** 최종 탈퇴(DEACTIVATED) 회원이면 true. 화면은 nickname 대신 공통 문구를 쓴다. */
+    private boolean writerWithdrawn;
     private Timestamp createdAt;
     private Timestamp updatedAt;
     private Integer views;

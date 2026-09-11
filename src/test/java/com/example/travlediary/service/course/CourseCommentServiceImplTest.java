@@ -7,6 +7,7 @@ import com.example.travlediary.repository.course.CourseCommentImageMapper;
 import com.example.travlediary.repository.course.CourseCommentMapper;
 import com.example.travlediary.service.file.FileUploadService;
 import com.example.travlediary.service.translation.LocalContentLanguageDetector;
+import com.example.travlediary.service.user.TestWithdrawnMemberName;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,7 +40,8 @@ class CourseCommentServiceImplTest {
     @BeforeEach
     void setUp() {
         service = new CourseCommentServiceImpl(
-                mapper, imageMapper, fileUploadService, new LocalContentLanguageDetector());
+                mapper, imageMapper, fileUploadService, new LocalContentLanguageDetector(),
+                TestWithdrawnMemberName.real());
     }
 
     @Test

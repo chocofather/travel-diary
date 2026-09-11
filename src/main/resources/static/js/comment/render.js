@@ -41,8 +41,9 @@ function bindProfileFallback(image) {
     });
 }
 
-function makePublicProfileLink(userId, child, className) {
-    if (userId == null) return child;
+function makePublicProfileLink(userId, child, className, withdrawn = false) {
+    // 최종 탈퇴 회원은 공개 프로필이 없으므로 링크를 걸지 않는다.
+    if (userId == null || withdrawn === true) return child;
     const link = document.createElement('a');
     link.className = className;
     link.href = `/users/${encodeURIComponent(String(userId))}`;
@@ -177,13 +178,15 @@ export function createCommentItem(comment, depth = 0, parentNickname = '') {
                 'DESTINATION_COMMENT', comment.id, 'moderate-btn content-comment-action'));
     }
     body.querySelector('.content-comment-header').prepend(
-        makePublicProfileLink(comment.writer?.id, nicknameElement, 'content-comment-writer-link')
+        makePublicProfileLink(comment.writer?.id, nicknameElement,
+            'content-comment-writer-link', comment.writer?.withdrawn)
     );
 
     const card = document.createElement('div');
     card.className = 'content-comment-card';
     card.append(
-        makePublicProfileLink(comment.writer?.id, profileImage, 'content-comment-profile-link'),
+        makePublicProfileLink(comment.writer?.id, profileImage,
+            'content-comment-profile-link', comment.writer?.withdrawn),
         body
     );
     li.append(card);

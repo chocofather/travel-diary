@@ -26,6 +26,8 @@
             WHEN reply_target.id IS NULL OR reply_target.deleted = 1 THEN NULL
             ELSE reply_target_user.nickname
         END AS replyToNickname,
+        <!-- 최종 탈퇴 회원의 익명 nickname 은 내려보내지 않는다. 문구는 서버가 현재 언어로 채운다. -->
+        (reply_target_user.status = 'DEACTIVATED') AS replyToWithdrawn,
         CASE
             WHEN pc.reply_to_comment_id IS NOT NULL
              AND (reply_target.id IS NULL OR reply_target.deleted = 1) THEN TRUE
@@ -34,6 +36,7 @@
         CASE WHEN pc.deleted = 1 THEN NULL ELSE pc.content END AS content,
         pc.source_language AS sourceLanguage,
         CASE WHEN pc.deleted = 1 THEN NULL ELSE u.nickname END AS writerNickname,
+        (u.status = 'DEACTIVATED') AS writerWithdrawn,
         CASE WHEN pc.deleted = 1 THEN NULL ELSE pc.user_id END AS writerUserId,
         CASE WHEN pc.deleted = 1 THEN NULL ELSE u.profile_image END AS writerProfileImage,
         pc.created_at AS createdAt,

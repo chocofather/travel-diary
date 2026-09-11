@@ -6,6 +6,7 @@ import com.example.travlediary.repository.course.CourseCommentImageMapper;
 import com.example.travlediary.repository.course.CourseCommentMapper;
 import com.example.travlediary.service.file.FileUploadService;
 import com.example.travlediary.service.translation.LocalContentLanguageDetector;
+import com.example.travlediary.service.user.TestWithdrawnMemberName;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.i18n.LocaleContextHolder;
@@ -25,7 +26,8 @@ class CourseCommentTranslationMetadataTest {
     private final CourseCommentImageMapper imageMapper = mock(CourseCommentImageMapper.class);
     private final FileUploadService fileUploadService = mock(FileUploadService.class);
     private final CourseCommentServiceImpl service = new CourseCommentServiceImpl(
-            mapper, imageMapper, fileUploadService, new LocalContentLanguageDetector());
+            mapper, imageMapper, fileUploadService, new LocalContentLanguageDetector(),
+            TestWithdrawnMemberName.real());
 
     @AfterEach
     void clearLocale() {

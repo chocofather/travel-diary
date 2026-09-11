@@ -6,6 +6,7 @@ import com.example.travlediary.repository.post.PostCommentImageMapper;
 import com.example.travlediary.repository.post.PostCommentMapper;
 import com.example.travlediary.service.file.FileUploadService;
 import com.example.travlediary.service.translation.LocalContentLanguageDetector;
+import com.example.travlediary.service.user.TestWithdrawnMemberName;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,7 +35,8 @@ class PostCommentLanguageSupportTest {
                 mapper,
                 mock(PostCommentImageMapper.class),
                 mock(FileUploadService.class),
-                new LocalContentLanguageDetector());
+                new LocalContentLanguageDetector(),
+                TestWithdrawnMemberName.real());
     }
 
     @AfterEach

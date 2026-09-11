@@ -100,7 +100,9 @@ class PublicProfileContractTest {
             assertThat(deletedReturn).isGreaterThan(deletedBranch);
             assertThat(authorLink).isGreaterThan(deletedReturn);
             assertThat(avatarLink).isGreaterThan(deletedReturn);
-            assertThat(script).contains("if (comment.writerUserId == null) return child;");
+            // 작성자 링크는 회원 번호가 없을 때와 최종 탈퇴 회원일 때 모두 만들지 않는다.
+            assertThat(script).contains(
+                    "if (comment.writerUserId == null || comment.writerWithdrawn === true) return child;");
         }
     }
 

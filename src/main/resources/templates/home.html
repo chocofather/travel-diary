@@ -93,7 +93,7 @@
            th:href="${course.detailUrl}">
           <h3 th:text="${course.title}">서울 하루 고궁 산책</h3>
           <p class="popular-course-meta">
-            <span th:text="${course.nickname}">minjun</span>
+            <span th:text="${course.writerWithdrawn} ? #{member.withdrawn} : ${course.nickname}">minjun</span>
             <span aria-hidden="true">·</span>
             <span th:text="#{home.course.views(${#numbers.formatInteger(course.views, 1, 'COMMA')})}">조회 1,284</span>
           </p>

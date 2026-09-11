@@ -37,6 +37,8 @@
             <id     property="id"            column="u_id"/>
             <result property="nickname"      column="nickname"/>
             <result property="profileImage"  column="profile_image"/>
+            <!-- 최종 탈퇴 회원인지 판단하는 근거. 닉네임 문자열로 추측하지 않는다. -->
+            <result property="status"        column="u_status"/>
         </association>
     </resultMap>
 
@@ -227,7 +229,8 @@
 
         u.id as u_id,
         CASE WHEN c.deleted = 1 THEN NULL ELSE u.nickname END AS nickname,
-        CASE WHEN c.deleted = 1 THEN NULL ELSE u.profile_image END AS profile_image
+        CASE WHEN c.deleted = 1 THEN NULL ELSE u.profile_image END AS profile_image,
+        u.status AS u_status
 
     FROM destination_comments c
              JOIN users u ON c.user_id = u.id
@@ -252,7 +255,8 @@
 
             u.id as u_id,
             CASE WHEN c.deleted = 1 THEN NULL ELSE u.nickname END AS nickname,
-            CASE WHEN c.deleted = 1 THEN NULL ELSE u.profile_image END AS profile_image
+            CASE WHEN c.deleted = 1 THEN NULL ELSE u.profile_image END AS profile_image,
+            u.status AS u_status
 
         FROM destination_comments c
                  JOIN users u ON c.user_id = u.id
@@ -277,7 +281,8 @@
 
             u.id as u_id,
             CASE WHEN c.deleted = 1 THEN NULL ELSE u.nickname END AS nickname,
-            CASE WHEN c.deleted = 1 THEN NULL ELSE u.profile_image END AS profile_image
+            CASE WHEN c.deleted = 1 THEN NULL ELSE u.profile_image END AS profile_image,
+            u.status AS u_status
 
         FROM destination_comments c
                  JOIN users u ON c.user_id = u.id
@@ -306,7 +311,7 @@
         SELECT
             c.id as c_id, c.content, c.source_language, c.created_at, c.updated_at, c.likes,
             c.parent_comment_id, c.user_id,
-            u.id as u_id, u.nickname, u.profile_image
+            u.id as u_id, u.nickname, u.profile_image, u.status AS u_status
         FROM destination_comments c
                  JOIN users u ON c.user_id = u.id
         WHERE c.destination_id = #{destinationId}
@@ -320,7 +325,7 @@
         SELECT
             c.id as c_id, c.content, c.source_language, c.created_at, c.updated_at, c.likes,
             c.parent_comment_id, c.user_id,
-            u.id as u_id, u.nickname, u.profile_image
+            u.id as u_id, u.nickname, u.profile_image, u.status AS u_status
         FROM destination_comments c
                  JOIN users u ON c.user_id = u.id
         WHERE c.destination_id = #{destinationId}
@@ -334,7 +339,7 @@
         SELECT
             c.id as c_id, c.content, c.source_language, c.created_at, c.updated_at, c.likes,
             c.parent_comment_id, c.user_id,
-            u.id as u_id, u.nickname, u.profile_image
+            u.id as u_id, u.nickname, u.profile_image, u.status AS u_status
         FROM destination_comments c
                  JOIN users u ON c.user_id = u.id
         WHERE c.destination_id = #{destinationId}
@@ -355,7 +360,8 @@
         <include refid="ModeratedFlag"/>
         u.id as u_id,
         CASE WHEN c.deleted = 1 THEN NULL ELSE u.nickname END AS nickname,
-        CASE WHEN c.deleted = 1 THEN NULL ELSE u.profile_image END AS profile_image
+        CASE WHEN c.deleted = 1 THEN NULL ELSE u.profile_image END AS profile_image,
+        u.status AS u_status
         FROM destination_comments c
         JOIN users u ON c.user_id = u.id
         WHERE c.destination_id = #{destinationId}
@@ -387,7 +393,8 @@
         <include refid="ModeratedFlag"/>
         u.id as u_id,
         CASE WHEN c.deleted = 1 THEN NULL ELSE u.nickname END AS nickname,
-        CASE WHEN c.deleted = 1 THEN NULL ELSE u.profile_image END AS profile_image
+        CASE WHEN c.deleted = 1 THEN NULL ELSE u.profile_image END AS profile_image,
+        u.status AS u_status
         FROM destination_comments c
         JOIN users u ON c.user_id = u.id
         WHERE c.parent_comment_id IN

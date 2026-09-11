@@ -12,6 +12,7 @@ import com.example.travlediary.repository.destination.DestinationMapper;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.service.file.FileUploadService;
 import com.example.travlediary.service.translation.LocalContentLanguageDetector;
+import com.example.travlediary.service.user.TestWithdrawnMemberName;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -49,7 +50,7 @@ class DestinationCommentImageReadTest {
     void setUp() {
         service = new DestinationCommentService(
                 destinationMapper, commentMapper, commentImageMapper, userMapper, fileUploadService,
-                new LocalContentLanguageDetector());
+                new LocalContentLanguageDetector(), TestWithdrawnMemberName.real());
     }
 
     @Test

@@ -118,9 +118,15 @@
           </div>
         </div>
         <dl class="course-meta">
-          <div><dt th:text="#{course.detail.meta.writer}">작성자</dt><dd><a class="content-writer-link"
+          <!-- 최종 탈퇴 회원은 공개 프로필이 없으므로 링크 없이 공통 문구만 보여준다. -->
+          <div><dt th:text="#{course.detail.meta.writer}">작성자</dt><dd><a
+                                       th:unless="${course.writerWithdrawn}"
+                                       class="content-writer-link"
                                        th:href="@{/users/{id}(id=${course.userId})}"
-                                       th:text="${course.nickname}">작성자</a></dd></div>
+                                       th:text="${course.nickname}">작성자</a><span
+                                       th:if="${course.writerWithdrawn}"
+                                       class="content-writer-withdrawn"
+                                       th:text="#{member.withdrawn}">탈퇴한 회원</span></dd></div>
           <div><dt th:text="#{course.detail.meta.createdAt}">작성일</dt><dd th:text="${#dates.format(course.createdAt, 'yyyy-MM-dd HH:mm')}">작성일</dd></div>
           <div><dt th:text="#{course.detail.meta.updatedAt}">수정일</dt><dd th:text="${#dates.format(course.updatedAt, 'yyyy-MM-dd HH:mm')}">수정일</dd></div>
           <div><dt th:text="#{course.detail.meta.views}">조회수</dt><dd th:text="${course.views}">0</dd></div>

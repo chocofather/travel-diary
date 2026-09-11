@@ -12,6 +12,7 @@ import com.example.travlediary.service.file.FileUploadService;
 import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.service.translation.LocalContentLanguageDetector;
 import com.example.travlediary.service.translation.TranslationVisibility;
+import com.example.travlediary.service.user.WithdrawnMemberName;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.i18n.LocaleContextHolder;
@@ -49,6 +50,7 @@ public class CourseCommentServiceImpl implements CourseCommentService {
     private final CourseCommentImageMapper courseCommentImageMapper;
     private final FileUploadService fileUploadService;
     private final LocalContentLanguageDetector languageDetector;
+    private final WithdrawnMemberName withdrawnMemberName;
 
     @Value("${custom.upload-path}")
     private String uploadPath;
@@ -314,7 +316,22 @@ public class CourseCommentServiceImpl implements CourseCommentService {
 
     private List<CourseCommentDto> prepareDtos(List<CourseCommentDto> comments) {
         applyTranslationMetadata(comments);
+        applyWithdrawnWriterNames(comments);
         return attachImageUrls(comments);
+    }
+
+    /**
+     * 최종 탈퇴 회원의 작성자명을 현재 언어의 공통 문구로 바꾼다.
+     * 화면을 브라우저가 그리므로 익명 닉네임이 응답에 실리지 않도록 여기에서 처리한다.
+     * 판정은 users.status(DEACTIVATED)이고 닉네임 문자열로 추측하지 않는다.
+     */
+    private void applyWithdrawnWriterNames(List<CourseCommentDto> comments) {
+        for (CourseCommentDto comment : comments) {
+            comment.setWriterNickname(withdrawnMemberName.orNickname(
+                    comment.getWriterNickname(), comment.isWriterWithdrawn()));
+            comment.setReplyToNickname(withdrawnMemberName.orNickname(
+                    comment.getReplyToNickname(), comment.isReplyToWithdrawn()));
+        }
     }
 
     private void applyTranslationMetadata(List<CourseCommentDto> comments) {

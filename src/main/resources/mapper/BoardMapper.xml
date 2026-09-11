@@ -5,6 +5,15 @@
 
 <mapper namespace="com.example.travlediary.repository.board.BoardMapper">
 
+    <!--
+      최종 탈퇴 회원의 작성자 표시용 플래그.
+      nickname 은 UNIQUE 충돌을 피하려고 익명값으로 바꿔 둔 내부 값이라 화면에 쓰지 않는다.
+      표시 문구는 View 가 messages 번들에서 고른다. 여기서 문구를 만들지 않는다.
+    -->
+    <sql id="writerWithdrawn">
+        (u.status = 'DEACTIVATED') AS writerWithdrawn
+    </sql>
+
     <sql id="postBoardSelectBase">
         SELECT
             p.id,
@@ -16,6 +25,7 @@
             p.views,
             p.created_at AS createdAt,
             u.nickname,
+            <include refid="writerWithdrawn"/>,
             (
                 SELECT COUNT(*)
                 FROM post_comments pc
@@ -37,6 +47,7 @@
             c.views,
             c.created_at AS createdAt,
             u.nickname,
+            <include refid="writerWithdrawn"/>,
             (
                 SELECT COUNT(*)
                 FROM course_comments cc
@@ -124,6 +135,7 @@
             board.title,
             board.commentCount,
             board.nickname,
+            board.writerWithdrawn,
             board.createdAt,
             board.views,
             COALESCE(bookmarkCounts.bookmarkCount, 0) AS bookmarkCount
@@ -186,6 +198,7 @@
             board.title,
             board.commentCount,
             board.nickname,
+            board.writerWithdrawn,
             board.createdAt,
             board.views
         FROM (
