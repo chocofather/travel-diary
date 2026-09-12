@@ -577,6 +577,59 @@ class SocialOAuth2LoginSuccessHandlerTest {
         verify(userMapper, never()).insertUser(any());
     }
 
+    /**
+     * Kakao/Naver 가입 후 이메일 인증 전에 같은 버튼을 다시 누른 경우.
+     * 새 가입 화면을 다시 띄우거나 새 users 를 만들지 않고 인증 대기 화면으로 보낸다.
+     */
+    @ParameterizedTest
+    @EnumSource(value = SocialProvider.class, names = {"KAKAO", "NAVER"})
+    void reLoggingInBeforeEmailVerificationGoesBackToTheWaitingScreen(SocialProvider provider)
+            throws Exception {
+        String providerUserId = provider == SocialProvider.KAKAO ? "kakao-sub" : "naver-id";
+        OAuth2AuthenticationToken authentication = provider == SocialProvider.KAKAO
+                ? oidcAuthentication("kakao", "https://kauth.kakao.com",
+                        providerUserId, null, null, "OIDC_USER")
+                : naverAuthentication("00", Map.of("id", providerUserId), "OAUTH2_USER", true);
+        when(socialAccountService.findByProviderAndProviderUserId(provider, providerUserId))
+                .thenReturn(socialAccount(52L, provider, providerUserId));
+        User pendingMember = user(52L, null, UserRole.USER, UserStatus.INACTIVE);
+        pendingMember.setUserEmail("member@example.com");
+        when(userMapper.findById(52L)).thenReturn(pendingMember);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        assertThat(response.getRedirectedUrl()).isEqualTo("/users/register/verify-waiting");
+        // 재발송과 대기 화면이 보는 세션 값은 일반 회원가입과 같다.
+        assertThat(request.getSession().getAttribute("pendingVerificationEmail"))
+                .isEqualTo("member@example.com");
+        assertThat(request.getSession().getAttribute(
+                PendingSocialSignup.SESSION_ATTRIBUTE)).isNull();
+        assertThat(request.getSession().getAttribute("userId")).isNull();
+        assertThat(request.getSession().getAttribute(
+                HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY)).isNull();
+        verify(userMapper, never()).insertUser(any());
+    }
+
+    /** 이메일이 없는 옛 소셜 INACTIVE 계정은 인증 대기 흐름으로 보내지 않고 기존 정책을 쓴다. */
+    @Test
+    void anInactiveSocialAccountWithoutAnEmailKeepsTheExistingRejection() throws Exception {
+        OAuth2AuthenticationToken authentication = oidcAuthentication(
+                "kakao", "https://kauth.kakao.com", "kakao-sub", null, null, "OIDC_USER");
+        when(socialAccountService.findByProviderAndProviderUserId(
+                SocialProvider.KAKAO, "kakao-sub"))
+                .thenReturn(socialAccount(52L, SocialProvider.KAKAO, "kakao-sub"));
+        when(userMapper.findById(52L))
+                .thenReturn(user(52L, null, UserRole.USER, UserStatus.INACTIVE));
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        assertThat(response.getRedirectedUrl()).isEqualTo("/login?oauthError=true");
+    }
+
     /** 이메일 인증 대기 계정을 소셜 로그인으로 조용히 가져가거나 우회 가입하지 않는다. */
     @Test
     void googleEmailHeldByAnUnverifiedRegularAccountGoesToTheVerificationNotice()

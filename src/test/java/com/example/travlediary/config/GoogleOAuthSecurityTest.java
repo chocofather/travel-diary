@@ -6,7 +6,9 @@ import com.example.travlediary.model.PendingSocialSignup;
 import com.example.travlediary.model.PendingSocialWithdrawal;
 import com.example.travlediary.model.SocialProvider;
 import com.example.travlediary.repository.user.UserMapper;
+import com.example.travlediary.service.user.SocialEmailAccountResolver;
 import com.example.travlediary.service.user.SocialSignupAuthenticationService;
+import com.example.travlediary.service.user.SocialSignupOutcome;
 import com.example.travlediary.service.user.SocialSignupService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -91,6 +93,8 @@ class GoogleOAuthSecurityTest {
     private SocialSignupService socialSignupService;
     @MockitoBean
     private SocialSignupAuthenticationService socialSignupAuthenticationService;
+    @MockitoBean
+    private SocialEmailAccountResolver socialEmailAccountResolver;
 
     @Test
     void googleAuthorizationEntryUsesSpringSecurityStateNonceAndDefaultCallback()
@@ -287,7 +291,8 @@ class GoogleOAuthSecurityTest {
                         "flow", SocialProvider.GOOGLE, "trusted-session-sub",
                         "trusted@example.com", true,
                         now.minusSeconds(10), now.plusSeconds(590)));
-        when(socialSignupService.complete(any(), any())).thenReturn(41L);
+        when(socialSignupService.complete(any(), any()))
+                .thenReturn(new SocialSignupOutcome(41L, "trusted@example.com", null));
 
         mockMvc.perform(post("/social-signup")
                         .with(csrf())

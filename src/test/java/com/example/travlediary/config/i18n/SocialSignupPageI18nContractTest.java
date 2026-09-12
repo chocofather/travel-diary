@@ -50,6 +50,9 @@ class SocialSignupPageI18nContractTest {
     @MockitoBean
     private SocialSignupAuthenticationService authenticationService;
     @MockitoBean
+    private com.example.travlediary.service.user.SocialEmailAccountResolver
+            socialEmailAccountResolver;
+    @MockitoBean
     private com.example.travlediary.repository.user.UserMapper userMapper;
 
     @ParameterizedTest
@@ -179,6 +182,73 @@ class SocialSignupPageI18nContractTest {
                         .as("%s in %s bundle", key, language.getLanguageTag()).isNotNull();
             }
         }
+    }
+
+    /** Kakao/Naver 는 Travel Diary 이메일 인증을 받으므로 입력 칸이 5개 언어로 나온다. */
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+            "ko    | 이메일   | 중복확인",
+            "en    | Email   | Check",
+            "ja    | メールアドレス | 重複確認",
+            "zh-CN | 邮箱     | 重复确认",
+            "zh-TW | 電子郵件  | 重複確認"
+    })
+    void kakaoSignupRendersTheEmailFieldInEverySupportedLanguage(
+            String cookie, String label, String check) throws Exception {
+        Document page = renderKakao(cookie);
+
+        assertThat(page.selectFirst("label[for=userEmail]").text()).isEqualTo(label);
+        assertThat(page.selectFirst("#checkEmailStatus").text()).isEqualTo(check);
+        assertThat(page.selectFirst("#emailMessage").text()).isNotBlank();
+        assertThat(page.selectFirst("#userEmail").attr("placeholder")).isNotBlank();
+        // 안내 문구도 번들에서 온다.
+        var field = page.selectFirst("#socialSignupEmailField");
+        for (String attribute : new String[]{"data-msg-available", "data-msg-existing",
+                "data-msg-unavailable", "data-msg-invalid", "data-msg-check-failed"}) {
+            assertThat(field.attr(attribute)).as("%s in %s", attribute, cookie).isNotBlank();
+        }
+        assertThat(page.selectFirst(".social-signup").text()).doesNotContain("??", "{0}");
+    }
+
+    /** Naver 가 준 연락처 이메일은 초기값일 뿐이라 읽기 전용이 아니다. */
+    @Test
+    void naverProviderEmailIsPrefilledButStillEditable() throws Exception {
+        Instant now = Instant.now();
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(PendingSocialSignup.SESSION_ATTRIBUTE, new PendingSocialSignup(
+                "naver-flow", SocialProvider.NAVER, "naver-id", "naver@example.com",
+                null, now.minusSeconds(10), now.plusSeconds(590)));
+
+        Document page = Jsoup.parse(mockMvc.perform(get("/social-signup")
+                        .session(session).cookie(localeCookie("ko")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString());
+
+        var input = page.selectFirst("#userEmail");
+        assertThat(input.attr("value")).isEqualTo("naver@example.com");
+        assertThat(input.hasAttr("readonly")).isFalse();
+        assertThat(input.hasAttr("disabled")).isFalse();
+    }
+
+    /** Google 화면에는 이메일 입력 칸이 생기지 않는다. */
+    @Test
+    void googleSignupStillHasNoEmailField() throws Exception {
+        Document page = render("ko");
+
+        assertThat(page.selectFirst("#socialSignupEmailField")).isNull();
+        assertThat(page.selectFirst("#userEmail")).isNull();
+    }
+
+    private Document renderKakao(String cookie) throws Exception {
+        Instant now = Instant.now();
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(PendingSocialSignup.SESSION_ATTRIBUTE, new PendingSocialSignup(
+                "kakao-flow", SocialProvider.KAKAO, "kakao-sub", null, null,
+                now.minusSeconds(10), now.plusSeconds(590)));
+        return Jsoup.parse(mockMvc.perform(get("/social-signup")
+                        .session(session).cookie(localeCookie(cookie)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString());
     }
 
     private Document render(String cookie) throws Exception {

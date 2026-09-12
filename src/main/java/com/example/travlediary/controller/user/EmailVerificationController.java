@@ -3,6 +3,7 @@ package com.example.travlediary.controller.user;
 import com.example.travlediary.service.email.EmailVerificationService;
 import com.example.travlediary.service.email.EmailVerificationService.ResendOutcome;
 import com.example.travlediary.service.email.EmailVerificationService.VerificationOutcome;
+import com.example.travlediary.service.email.EmailVerificationService.VerificationProgress;
 import com.example.travlediary.service.email.EmailVerificationService.WaitingState;
 import com.example.travlediary.service.user.EmailPolicy;
 import com.example.travlediary.service.user.RegistrationValidationException;
@@ -17,13 +18,17 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.util.Map;
 
 @Controller
 @RequestMapping("/users")
 public class EmailVerificationController {
 
-    static final String PENDING_EMAIL_SESSION_ATTRIBUTE = "pendingVerificationEmail";
+    /** 인증 대기 화면과 재발송이 함께 보는 세션 값. 일반 가입과 소셜 가입이 같은 값을 쓴다. */
+    public static final String PENDING_EMAIL_SESSION_ATTRIBUTE = "pendingVerificationEmail";
     static final String PUBLIC_RESEND_MESSAGE =
             "인증이 필요한 계정이라면 입력한 이메일 주소로 인증메일 발송을 요청했습니다. "
                     + "메일함과 스팸함을 확인해주세요.";
@@ -100,6 +105,34 @@ public class EmailVerificationController {
         model.addAttribute("maskedEmail", waitingState.maskedEmail());
         model.addAttribute("cooldownSeconds", waitingState.remainingSeconds());
         return "verify-waiting";
+    }
+
+    /**
+     * 인증 대기 화면이 5초마다 묻는 진행 상태.
+     *
+     * <p>확인 대상은 오직 이 세션이 기다리고 있는 이메일이다. 요청 파라미터로 다른 회원의 상태를
+     * 조회할 수 없고, 응답도 PENDING/VERIFIED/UNKNOWN 세 가지로만 좁힌다.
+     */
+    @GetMapping("/verification/status")
+    @ResponseBody
+    public Map<String, String> verificationStatus(HttpSession session) {
+        Object pendingEmail = session.getAttribute(PENDING_EMAIL_SESSION_ATTRIBUTE);
+        if (!(pendingEmail instanceof String email)) {
+            return Map.of("status", VerificationProgress.UNKNOWN.name());
+        }
+        final VerificationProgress progress;
+        try {
+            progress = emailVerificationService.checkProgress(email);
+        } catch (RuntimeException exception) {
+            log.error("Verification status could not be checked: exceptionType={}",
+                    exception.getClass().getSimpleName());
+            return Map.of("status", VerificationProgress.UNKNOWN.name());
+        }
+        if (progress == VerificationProgress.VERIFIED) {
+            // 인증이 끝났으면 이 세션은 더 기다릴 것이 없다. 재발송 대상에서도 빠진다.
+            session.removeAttribute(PENDING_EMAIL_SESSION_ATTRIBUTE);
+        }
+        return Map.of("status", progress.name());
     }
 
     @GetMapping("/verification/resend")

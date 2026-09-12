@@ -51,6 +51,45 @@ class EmailVerificationUiContractTest {
                 .contains("TravelDiaryEmailDomain");
     }
 
+    /** 다른 탭에서 인증을 끝냈을 때 대기 화면이 스스로 알아채도록 polling 이 연결돼 있다. */
+    @Test
+    void waitingPageWiresTheStatusPollingScriptWithServerProvidedTextAndUrls() throws IOException {
+        String waiting = resource("templates/verify-waiting.html");
+
+        assertThat(waiting)
+                .contains("/js/email-verification.js")
+                .contains("id=\"verificationStatusPoller\"")
+                .contains("id=\"verificationCompleteNotice\"")
+                .contains("th:data-status-url=\"@{/users/verification/status}\"")
+                .contains("th:data-login-url=\"@{/login(verified=true)}\"")
+                .contains("th:data-msg-verified=\"#{verification.waiting.verified}\"")
+                // 기다릴 문맥이 있을 때만 폴링한다.
+                .contains("th:if=\"${verificationAvailable}\" hidden");
+    }
+
+    /** 문구는 번들에서 오고, 확인 요청에는 어떤 식별값도 싣지 않는다. */
+    @Test
+    void pollingScriptCarriesNoHardcodedTextNoIdentifiersAndCleansUpItsTimer() throws IOException {
+        String script = resource("static/js/email-verification.js");
+
+        assertThat(script)
+                .contains("dataset.msgVerified")
+                .contains("document.hidden")
+                .contains("visibilitychange")
+                .contains("pagehide")
+                .contains("window.clearInterval")
+                // 겹치는 요청을 막는 guard 와 자동 로그인 없는 이동.
+                .contains("inFlight")
+                .contains("window.location.href = loginUrl");
+        // 주석은 한국어라도 화면에 나가는 문자열 리터럴에는 한글이 없어야 한다.
+        assertThat(java.util.regex.Pattern.compile("[\"'][^\"'\\n]*[가-힣][^\"'\\n]*[\"']")
+                .matcher(script).find())
+                .as("hardcoded Korean string literal in email-verification.js")
+                .isFalse();
+        // 이메일이나 회원 id 를 요청에 싣지 않는다.
+        assertThat(script).doesNotContain("statusUrl + \"?", "email=", "userId=");
+    }
+
     private String resource(String path) throws IOException {
         try (var input = getClass().getClassLoader().getResourceAsStream(path)) {
             if (input == null) throw new IOException("Missing resource: " + path);

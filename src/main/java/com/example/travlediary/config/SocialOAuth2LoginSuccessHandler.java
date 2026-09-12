@@ -9,6 +9,7 @@ import com.example.travlediary.model.SocialConnectionNotice;
 import com.example.travlediary.model.SocialProvider;
 import com.example.travlediary.model.User;
 import com.example.travlediary.model.UserStatus;
+import com.example.travlediary.controller.user.EmailVerificationController;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.user.SocialAccountService;
@@ -58,6 +59,8 @@ public class SocialOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
     static final String WITHDRAWAL_PENDING_REDIRECT = "/login?socialEmailWithdrawing=true";
     /** 같은 이메일의 계정이 휴면·최종탈퇴 상태다. */
     static final String BLOCKED_EMAIL_REDIRECT = "/login?socialEmailBlocked=true";
+    /** 이메일 인증을 마치지 않은 소셜 가입 계정. 일반 회원가입과 같은 대기 화면을 쓴다. */
+    static final String VERIFY_WAITING_REDIRECT = "/users/register/verify-waiting";
 
     private final SocialAccountService socialAccountService;
     private final UserMapper userMapper;
@@ -403,6 +406,13 @@ public class SocialOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
                                        SocialAccount socialAccount) throws IOException {
         Long userId = socialAccount.getUserId();
         User user = userId == null ? null : userMapper.findById(userId);
+
+        // 이메일 인증을 아직 마치지 않은 소셜 가입 계정. 새 가입 화면을 다시 띄우거나
+        // 새 users 를 만들지 않고, 일반 회원가입과 같은 인증 대기 화면으로 보낸다.
+        if (isAwaitingEmailVerification(user)) {
+            sendToVerificationWaiting(request, response, user);
+            return;
+        }
         if (!canAuthenticate(user)) {
             reject(request, response);
             return;
@@ -435,6 +445,34 @@ public class SocialOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
 
         customLoginSuccessHandler.onAuthenticationSuccess(
                 request, response, internalAuthentication);
+    }
+
+    /**
+     * social_accounts 로 찾아온 회원이 아직 이메일 인증 대기 중인지 본다.
+     * 이메일 없는 옛 소셜 계정과 섞이지 않도록 user_email 이 있는 경우만 인정한다.
+     */
+    private boolean isAwaitingEmailVerification(User user) {
+        return user != null
+                && user.getId() != null
+                && user.getStatus() == UserStatus.INACTIVE
+                && user.getDeletedAt() == null
+                && user.getUserEmail() != null
+                && !user.getUserEmail().isBlank();
+    }
+
+    private void sendToVerificationWaiting(HttpServletRequest request,
+                                           HttpServletResponse response,
+                                           User user) throws IOException {
+        HttpSession session = request.getSession();
+        session.removeAttribute(PendingSocialSignup.SESSION_ATTRIBUTE);
+        session.removeAttribute(PendingSocialLink.SESSION_ATTRIBUTE);
+        session.removeAttribute("userId");
+        // 인증 대기 화면과 재발송은 일반 회원가입과 같은 세션 값을 그대로 쓴다.
+        session.setAttribute(
+                EmailVerificationController.PENDING_EMAIL_SESSION_ATTRIBUTE,
+                user.getUserEmail());
+        clearAuthentication(request, response);
+        response.sendRedirect(VERIFY_WAITING_REDIRECT);
     }
 
     private boolean canAuthenticate(User user) {

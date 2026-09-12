@@ -9,9 +9,11 @@ import com.example.travlediary.model.UserRole;
 import com.example.travlediary.model.UserStatus;
 import com.example.travlediary.repository.user.SocialAccountMapper;
 import com.example.travlediary.repository.user.UserMapper;
+import com.example.travlediary.service.email.EmailVerificationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -34,23 +36,35 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class SocialSignupServiceTest {
 
+    private static final String VERIFICATION_TOKEN = "verification-token";
+
     @Mock
     private UserMapper userMapper;
     @Mock
     private SocialAccountMapper socialAccountMapper;
+    @Mock
+    private WithdrawalGraceService withdrawalGraceService;
+    @Mock
+    private EmailVerificationService emailVerificationService;
 
     private SocialSignupService service;
 
     @BeforeEach
     void setUp() {
-        service = new SocialSignupService(userMapper, socialAccountMapper);
+        // 이메일 상태 판정은 mock 이 아니라 실제 resolver 를 태운다. 계정 유무는 userMapper stub 이 정한다.
+        service = new SocialSignupService(
+                userMapper, socialAccountMapper,
+                new SocialEmailAccountResolver(userMapper, withdrawalGraceService),
+                emailVerificationService);
     }
 
     @Test
@@ -65,9 +79,10 @@ class SocialSignupServiceTest {
         arrangeGeneratedUserId(41L);
         SocialSignupForm form = acceptedForm(" 여행자123 ");
 
-        long userId = service.complete(pending("google-sub", "new@example.com", true), form);
+        SocialSignupOutcome outcome =
+                service.complete(pending("google-sub", "new@example.com", true), form);
 
-        assertThat(userId).isEqualTo(41L);
+        assertThat(outcome.userId()).isEqualTo(41L);
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
         verify(userMapper).insertUser(userCaptor.capture());
         User user = userCaptor.getValue();
@@ -93,21 +108,33 @@ class SocialSignupServiceTest {
     }
 
     @Test
-    void createsKakaoConnectionWithoutRequiringProviderEmail() {
+    void createsInactiveKakaoUserFromTheEnteredEmailAndIssuesAVerificationToken() {
         arrangeGeneratedUserId(52L);
         PendingSocialSignup pending = pending(
                 SocialProvider.KAKAO, "kakao-sub", null, null);
 
-        long userId = service.complete(pending, acceptedForm("카카오여행자"));
+        SocialSignupOutcome outcome = service.complete(
+                pending, acceptedForm("카카오여행자", " Kakao@Example.com "));
 
-        assertThat(userId).isEqualTo(52L);
+        assertThat(outcome.userId()).isEqualTo(52L);
+        assertThat(outcome.userEmail()).isEqualTo("kakao@example.com");
+        assertThat(outcome.requiresEmailVerification()).isTrue();
+        assertThat(outcome.verificationToken()).isEqualTo(VERIFICATION_TOKEN);
+
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
         verify(userMapper).insertUser(userCaptor.capture());
-        assertThat(userCaptor.getValue().getUserEmail()).isNull();
+        User user = userCaptor.getValue();
+        // provider 가 인증하지 않은 이메일이라 일반 회원가입과 같이 인증 대기로 만든다.
+        assertThat(user.getStatus()).isEqualTo(UserStatus.INACTIVE);
+        assertThat(user.getUserEmail()).isEqualTo("kakao@example.com");
+        assertThat(user.getUsername()).isNull();
+        assertThat(user.getUserPassword()).isNull();
+        assertThat(user.getVerificationToken()).isEqualTo(VERIFICATION_TOKEN);
 
         ArgumentCaptor<SocialAccount> accountCaptor = ArgumentCaptor.forClass(SocialAccount.class);
         verify(socialAccountMapper).insert(accountCaptor.capture());
         SocialAccount account = accountCaptor.getValue();
+        assertThat(account.getUserId()).isEqualTo(52L);
         assertThat(account.getProvider()).isEqualTo(SocialProvider.KAKAO);
         assertThat(account.getProviderUserId()).isEqualTo("kakao-sub");
         assertThat(account.getProviderEmail()).isNull();
@@ -116,59 +143,40 @@ class SocialSignupServiceTest {
                 SocialProvider.KAKAO, "kakao-sub");
     }
 
+    /** provider 이메일은 참조로만 남고, users 에는 사용자가 입력한 이메일이 들어간다. */
     @Test
-    void keepsKakaoEmailOnlyAsSocialAccountReference() {
-        arrangeGeneratedUserId(53L);
-        PendingSocialSignup pending = pending(
-                SocialProvider.KAKAO, "kakao-sub-with-email", "kakao@example.com", true);
-
-        service.complete(pending, acceptedForm("카카오여행자"));
-
-        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
-        verify(userMapper).insertUser(userCaptor.capture());
-        assertThat(userCaptor.getValue().getUserEmail()).isNull();
-        ArgumentCaptor<SocialAccount> accountCaptor = ArgumentCaptor.forClass(SocialAccount.class);
-        verify(socialAccountMapper).insert(accountCaptor.capture());
-        assertThat(accountCaptor.getValue().getProviderEmail()).isEqualTo("kakao@example.com");
-        assertThat(accountCaptor.getValue().getProviderEmailVerified()).isTrue();
-        verify(userMapper, never()).findByEmail(any());
-    }
-
-    @Test
-    void createsNaverConnectionWithOptionalUnverifiedProviderEmailOnly() {
+    void keepsTheProviderEmailAsAReferenceEvenWhenTheMemberEntersADifferentAddress() {
         arrangeGeneratedUserId(61L);
         PendingSocialSignup pending = pending(
                 SocialProvider.NAVER, "naver-id", "naver@example.com", null);
 
-        long userId = service.complete(pending, acceptedForm("네이버여행자"));
+        service.complete(pending, acceptedForm("네이버여행자", "chosen@example.com"));
 
-        assertThat(userId).isEqualTo(61L);
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
         verify(userMapper).insertUser(userCaptor.capture());
-        assertThat(userCaptor.getValue().getUserEmail()).isNull();
+        assertThat(userCaptor.getValue().getUserEmail()).isEqualTo("chosen@example.com");
+        assertThat(userCaptor.getValue().getStatus()).isEqualTo(UserStatus.INACTIVE);
         ArgumentCaptor<SocialAccount> accountCaptor = ArgumentCaptor.forClass(SocialAccount.class);
         verify(socialAccountMapper).insert(accountCaptor.capture());
-        SocialAccount account = accountCaptor.getValue();
-        assertThat(account.getProvider()).isEqualTo(SocialProvider.NAVER);
-        assertThat(account.getProviderUserId()).isEqualTo("naver-id");
-        assertThat(account.getProviderEmail()).isEqualTo("naver@example.com");
-        assertThat(account.getProviderEmailVerified()).isNull();
-        verify(userMapper, never()).findByEmail(any());
+        assertThat(accountCaptor.getValue().getProviderEmail()).isEqualTo("naver@example.com");
+        assertThat(accountCaptor.getValue().getProviderEmailVerified()).isNull();
     }
 
+    /** Kakao 가 앞으로 verified 이메일을 주더라도 이번 단계에서는 신뢰하지 않는다. */
     @Test
-    void createsNaverConnectionWithoutProviderEmail() {
-        arrangeGeneratedUserId(62L);
+    void aVerifiedKakaoProviderEmailIsStillNotTrustedAsTheOfficialEmail() {
+        arrangeGeneratedUserId(53L);
         PendingSocialSignup pending = pending(
-                SocialProvider.NAVER, "naver-id-no-email", null, null);
+                SocialProvider.KAKAO, "kakao-sub-with-email", "kakao@example.com", true);
 
-        service.complete(pending, acceptedForm("네이버여행자"));
+        SocialSignupOutcome outcome = service.complete(
+                pending, acceptedForm("카카오여행자", "typed@example.com"));
 
-        ArgumentCaptor<SocialAccount> accountCaptor = ArgumentCaptor.forClass(SocialAccount.class);
-        verify(socialAccountMapper).insert(accountCaptor.capture());
-        assertThat(accountCaptor.getValue().getProvider()).isEqualTo(SocialProvider.NAVER);
-        assertThat(accountCaptor.getValue().getProviderEmail()).isNull();
-        assertThat(accountCaptor.getValue().getProviderEmailVerified()).isNull();
+        assertThat(outcome.requiresEmailVerification()).isTrue();
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+        verify(userMapper).insertUser(userCaptor.capture());
+        assertThat(userCaptor.getValue().getUserEmail()).isEqualTo("typed@example.com");
+        assertThat(userCaptor.getValue().getStatus()).isEqualTo(UserStatus.INACTIVE);
     }
 
     /** users 에는 정규화한 값을, social_accounts 에는 provider 가 준 표기를 그대로 남긴다. */
@@ -176,44 +184,77 @@ class SocialSignupServiceTest {
     void storesTheVerifiedGoogleEmailAsTheOfficialUserEmailAndKeepsTheProviderReference() {
         arrangeGeneratedUserId(41L);
 
-        service.complete(pending("sub", " New@Example.com ", true), acceptedForm("여행자123"));
+        SocialSignupOutcome outcome = service.complete(
+                pending("sub", " New@Example.com ", true), acceptedForm("여행자123"));
 
+        // Google 은 provider 가 이미 인증했으므로 추가 인증메일이 없다.
+        assertThat(outcome.requiresEmailVerification()).isFalse();
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
         verify(userMapper).insertUser(userCaptor.capture());
         assertThat(userCaptor.getValue().getUserEmail()).isEqualTo("new@example.com");
+        assertThat(userCaptor.getValue().getStatus()).isEqualTo(UserStatus.ACTIVE);
+        assertThat(userCaptor.getValue().getVerificationToken()).isNull();
         ArgumentCaptor<SocialAccount> accountCaptor = ArgumentCaptor.forClass(SocialAccount.class);
         verify(socialAccountMapper).insert(accountCaptor.capture());
         assertThat(accountCaptor.getValue().getProviderEmail()).isEqualTo("New@Example.com");
         assertThat(accountCaptor.getValue().getProviderEmailVerified()).isTrue();
         verify(userMapper).findByEmail("new@example.com");
+        verifyNoInteractions(emailVerificationService);
     }
 
-    /** Kakao/Naver 는 아직 자체 이메일 인증이 없어 기존 정책 그대로 user_email 을 비워 둔다. */
+    /** Kakao/Naver 는 이메일 없이 가입할 수 없다. */
     @ParameterizedTest
-    @MethodSource("providersWithoutOwnEmailVerification")
-    void keepsUserEmailNullForProvidersWithoutOwnEmailVerification(PendingSocialSignup pending) {
-        arrangeGeneratedUserId(41L);
+    @MethodSource("providersRequiringOwnEmailVerification")
+    void refusesKakaoAndNaverSignupWithoutAnEnteredEmail(PendingSocialSignup pending) {
+        assertValidation("userEmail", pending, acceptedForm("여행자123", "  "));
+        assertValidation("userEmail", pending, acceptedForm("여행자123", null));
 
-        service.complete(pending, acceptedForm("여행자123"));
-
-        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
-        verify(userMapper).insertUser(userCaptor.capture());
-        assertThat(userCaptor.getValue().getUserEmail()).isNull();
-        ArgumentCaptor<SocialAccount> accountCaptor = ArgumentCaptor.forClass(SocialAccount.class);
-        verify(socialAccountMapper).insert(accountCaptor.capture());
-        assertThat(accountCaptor.getValue().getProviderEmail())
-                .isEqualTo(pending.providerEmail());
-        assertThat(accountCaptor.getValue().getProviderEmailVerified())
-                .isEqualTo(pending.providerEmailVerified());
-        verify(userMapper, never()).findByEmail(any());
+        verify(userMapper, never()).insertUser(any());
+        verify(socialAccountMapper, never()).insert(any());
     }
 
-    static Stream<PendingSocialSignup> providersWithoutOwnEmailVerification() {
+    /** 형식이 우리 정책을 통과하지 못하면 가입시키지 않는다. */
+    @ParameterizedTest
+    @MethodSource("providersRequiringOwnEmailVerification")
+    void refusesKakaoAndNaverSignupWithAMalformedEmail(PendingSocialSignup pending) {
+        assertValidation("userEmail", pending, acceptedForm("여행자123", "not-an-email"));
+
+        verify(userMapper, never()).insertUser(any());
+    }
+
+    /** 이미 가입된 이메일이면 새 users 도, social_accounts 연결도 만들지 않는다. */
+    @ParameterizedTest
+    @MethodSource("providersRequiringOwnEmailVerification")
+    void refusesKakaoAndNaverSignupOnAnAlreadyRegisteredEmail(PendingSocialSignup pending) {
+        when(userMapper.findByEmail("taken@example.com"))
+                .thenReturn(userWithStatus(UserStatus.ACTIVE));
+
+        assertValidation("userEmail", pending, acceptedForm("여행자123", "taken@example.com"));
+
+        verify(userMapper, never()).insertUser(any());
+        verify(socialAccountMapper, never()).insert(any());
+        verifyNoInteractions(emailVerificationService);
+    }
+
+    /** 인증 대기·탈퇴 유예·휴면·제재 계정의 이메일로 우회 가입할 수 없다. */
+    @ParameterizedTest
+    @EnumSource(value = UserStatus.class,
+            names = {"INACTIVE", "WITHDRAWAL_PENDING", "SUSPENDED", "RESTRICTED", "DEACTIVATED"})
+    void refusesKakaoSignupOnAnEmailHeldByAnUnusableAccount(UserStatus status) {
+        when(userMapper.findByEmail("held@example.com")).thenReturn(userWithStatus(status));
+
+        assertValidation("userEmail",
+                pending(SocialProvider.KAKAO, "kakao-sub", null, null),
+                acceptedForm("여행자123", "held@example.com"));
+
+        verify(userMapper, never()).insertUser(any());
+        verify(socialAccountMapper, never()).insert(any());
+    }
+
+    static Stream<PendingSocialSignup> providersRequiringOwnEmailVerification() {
         return Stream.of(
-                pending(SocialProvider.KAKAO, "kakao-verified", "kakao@example.com", true),
-                pending(SocialProvider.KAKAO, "kakao-none", null, null),
-                pending(SocialProvider.NAVER, "naver-unverified", "naver@example.com", null),
-                pending(SocialProvider.NAVER, "naver-none", null, null));
+                pending(SocialProvider.KAKAO, "kakao-sub", null, null),
+                pending(SocialProvider.NAVER, "naver-id", "naver@example.com", null));
     }
 
     /** Google 인데 인증된 이메일이 없으면 이메일 없는 계정을 만들지 않고 흐름을 끝낸다. */
@@ -350,6 +391,11 @@ class SocialSignupServiceTest {
             return null;
         }).when(userMapper).insertUser(any());
         when(socialAccountMapper.insert(any())).thenReturn(1);
+        // 토큰 발급은 일반 회원가입과 같은 서비스가 맡는다. 여기서는 값만 흉내 낸다.
+        lenient().doAnswer(invocation -> {
+            invocation.<User>getArgument(0).setVerificationToken(VERIFICATION_TOKEN);
+            return null;
+        }).when(emailVerificationService).initializeVerification(any());
     }
 
     private void assertValidation(String field, PendingSocialSignup pending,
@@ -360,11 +406,23 @@ class SocialSignupServiceTest {
     }
 
     private SocialSignupForm acceptedForm(String nickname) {
+        return acceptedForm(nickname, null);
+    }
+
+    private SocialSignupForm acceptedForm(String nickname, String userEmail) {
         SocialSignupForm form = new SocialSignupForm();
         form.setNickname(nickname);
+        form.setUserEmail(userEmail);
         form.setTermsAccepted(true);
         form.setPrivacyAccepted(true);
         return form;
+    }
+
+    private User userWithStatus(UserStatus status) {
+        User user = new User();
+        user.setId(99L);
+        user.setStatus(status);
+        return user;
     }
 
     private static PendingSocialSignup pending(String sub, String email, Boolean verified) {

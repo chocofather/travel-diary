@@ -21,6 +21,18 @@
         <strong th:text="${maskedEmail}">dae***@gmail.com</strong>
       </p>
 
+      <!-- 다른 탭에서 인증 링크를 눌러 끝난 경우 이 화면이 스스로 알아채고 채운다. -->
+      <div id="verificationCompleteNotice" class="verification-notice" role="status"
+           aria-live="polite" hidden></div>
+
+      <!-- polling 설정과 문구는 서버가 내려준다. JS 에 한국어를 두지 않는다. -->
+      <div id="verificationStatusPoller" th:if="${verificationAvailable}" hidden
+           th:data-status-url="@{/users/verification/status}"
+           th:data-login-url="@{/login(verified=true)}"
+           data-poll-interval="5000"
+           data-redirect-delay="1500"
+           th:data-msg-verified="#{verification.waiting.verified}"></div>
+
       <div class="verification-notice"
            th:if="${verificationMessage}"
            th:classappend="| is-${verificationMessageType}|"

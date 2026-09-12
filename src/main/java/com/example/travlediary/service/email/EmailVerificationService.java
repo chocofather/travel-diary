@@ -111,6 +111,35 @@ public class EmailVerificationService {
         return dispatch(user) ? ResendOutcome.sent() : ResendOutcome.deliveryFailed();
     }
 
+    /**
+     * 인증 대기 화면이 주기적으로 묻는 최소 상태.
+     *
+     * <p>이메일은 호출하는 쪽이 서버 세션에서 꺼내 온 값이어야 한다. 응답을 세 가지로만 좁혀
+     * 회원 존재 여부나 내부 status 를 그대로 드러내지 않는다.
+     */
+    public VerificationProgress checkProgress(String email) {
+        if (email == null || email.isBlank()) {
+            return VerificationProgress.UNKNOWN;
+        }
+
+        final User user;
+        try {
+            user = userMapper.findByEmail(EmailPolicy.normalizeAndValidate(email));
+        } catch (RuntimeException ignored) {
+            return VerificationProgress.UNKNOWN;
+        }
+        if (user == null || user.getStatus() == null || user.getDeletedAt() != null) {
+            return VerificationProgress.UNKNOWN;
+        }
+
+        return switch (user.getStatus()) {
+            case INACTIVE -> VerificationProgress.PENDING;
+            case ACTIVE -> VerificationProgress.VERIFIED;
+            // 휴면·제재·탈퇴 등은 인증 진행 상태가 아니다. 어떤 상태인지는 알려주지 않는다.
+            default -> VerificationProgress.UNKNOWN;
+        };
+    }
+
     public WaitingState getWaitingState(String email) {
         if (email == null || email.isBlank()) {
             return WaitingState.unavailable();
@@ -176,6 +205,16 @@ public class EmailVerificationService {
 
     private String newToken() {
         return UUID.randomUUID().toString();
+    }
+
+    /** 대기 화면 polling 이 받는 값. 이 세 가지 밖으로는 아무것도 알려주지 않는다. */
+    public enum VerificationProgress {
+        /** 인증 대기 중인 계정이 그대로 있다. */
+        PENDING,
+        /** 인증이 끝나 로그인할 수 있다. */
+        VERIFIED,
+        /** 확인할 대기 문맥이 없다. */
+        UNKNOWN
     }
 
     public enum VerificationStatus {

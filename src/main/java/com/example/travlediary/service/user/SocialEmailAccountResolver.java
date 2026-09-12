@@ -84,6 +84,46 @@ public class SocialEmailAccountResolver {
         return resolveByEmail(email, false);
     }
 
+    /**
+     * 사용자가 social-signup 폼에 직접 입력한 이메일의 가입 가능 여부.
+     *
+     * <p>{@link #resolve} 와 달리 본인 확인이 끝난 상태가 아니므로 탈퇴 유예 계정을 여기서
+     * 파기하지 않는다. 유예가 끝난 계정은 기존 배치가 정리할 때까지 이메일을 계속 점유한다.
+     */
+    public EnteredEmail classifyEnteredEmail(String email) {
+        final String normalized;
+        try {
+            normalized = EmailPolicy.normalizeAndValidate(email);
+        } catch (RegistrationValidationException exception) {
+            return new EnteredEmail(EnteredEmailStatus.INVALID, null);
+        }
+
+        User existing = userMapper.findByEmail(normalized);
+        if (existing == null || existing.getStatus() == null) {
+            return new EnteredEmail(EnteredEmailStatus.AVAILABLE, normalized);
+        }
+        // ACTIVE 는 다음 단계의 기존 계정 연결 대상이라 안내 문구를 구분한다.
+        // 나머지 상태는 신규가입 우회 통로가 되지 않도록 한 가지 안내로 묶는다.
+        return existing.getStatus() == UserStatus.ACTIVE
+                ? new EnteredEmail(EnteredEmailStatus.EXISTING_ACTIVE, normalized)
+                : new EnteredEmail(EnteredEmailStatus.UNAVAILABLE, normalized);
+    }
+
+    public enum EnteredEmailStatus {
+        /** 쓰는 계정이 없다. 이번 단계에서 신규 가입할 수 있다. */
+        AVAILABLE,
+        /** 이미 가입된 계정이 있다. 연결은 다음 단계에서 지원한다. */
+        EXISTING_ACTIVE,
+        /** 인증 대기·탈퇴 유예·휴면·제재 등으로 지금은 쓸 수 없다. */
+        UNAVAILABLE,
+        /** 이메일 형식이 우리 정책을 통과하지 못한다. */
+        INVALID
+    }
+
+    /** @param email 정규화된 이메일. INVALID 에서는 null */
+    public record EnteredEmail(EnteredEmailStatus status, String email) {
+    }
+
     public enum Type {
         /** Google 이 아니다. 기존 신규가입 흐름을 그대로 쓴다. */
         NOT_APPLICABLE,

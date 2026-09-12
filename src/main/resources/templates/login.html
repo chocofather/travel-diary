@@ -132,6 +132,14 @@
       계정 연결을 취소했습니다. 저장된 내용은 없습니다.
     </div>
 
+    <!-- 인증 대기 화면이 완료를 감지해 보낸 경우. 자동 로그인은 하지 않는다. -->
+    <div class="login-feedback login-feedback--success"
+         th:if="${param.verified != null and param.verified[0] == 'true'}"
+         role="status"
+         th:text="#{login.status.emailVerified}">
+      이메일 인증이 완료되었습니다. 로그인해주세요.
+    </div>
+
     <div class="login-feedback login-feedback--success"
          th:if="${param.logout}"
          role="status"

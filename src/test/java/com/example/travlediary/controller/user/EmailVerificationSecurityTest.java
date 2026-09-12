@@ -13,6 +13,7 @@ import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -20,6 +21,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -151,6 +153,80 @@ class EmailVerificationSecurityTest {
                     .andExpect(flash().attribute("verificationMessage",
                             EmailVerificationController.PUBLIC_RESEND_MESSAGE));
         }
+    }
+
+    /** 세션에 기다리는 이메일이 없으면 아무것도 알려주지 않는다. */
+    @Test
+    void verificationStatusWithoutAPendingSessionIsUnknown() throws Exception {
+        mockMvc.perform(get("/users/verification/status"))
+                .andExpect(status().isOk())
+                .andExpect(content().json("{\"status\":\"UNKNOWN\"}"));
+
+        verify(emailVerificationService, never()).checkProgress(anyString());
+    }
+
+    /** 조회 대상은 오직 세션이 기다리는 이메일이다. 요청 파라미터는 무시한다. */
+    @Test
+    void verificationStatusOnlyEverChecksTheEmailHeldInTheSession() throws Exception {
+        when(emailVerificationService.checkProgress("member@gmail.com"))
+                .thenReturn(EmailVerificationService.VerificationProgress.PENDING);
+
+        mockMvc.perform(get("/users/verification/status")
+                        .param("email", "victim@gmail.com")
+                        .param("userId", "17")
+                        .session(pendingSession()))
+                .andExpect(status().isOk())
+                .andExpect(content().json("{\"status\":\"PENDING\"}"));
+
+        verify(emailVerificationService).checkProgress("member@gmail.com");
+        verify(emailVerificationService, never()).checkProgress("victim@gmail.com");
+    }
+
+    @Test
+    void verificationStatusReportsVerifiedAndReleasesTheWaitingSession() throws Exception {
+        MockHttpSession session = pendingSession();
+        when(emailVerificationService.checkProgress("member@gmail.com"))
+                .thenReturn(EmailVerificationService.VerificationProgress.VERIFIED);
+
+        mockMvc.perform(get("/users/verification/status").session(session))
+                .andExpect(status().isOk())
+                .andExpect(content().json("{\"status\":\"VERIFIED\"}"));
+
+        assertThat(session.getAttribute(
+                EmailVerificationController.PENDING_EMAIL_SESSION_ATTRIBUTE)).isNull();
+    }
+
+    /** 응답 본문은 status 한 줄뿐이다. 회원 존재 여부나 내부 상태는 새어 나가지 않는다. */
+    @Test
+    void verificationStatusBodyCarriesNothingBesidesTheThreeAllowedValues() throws Exception {
+        when(emailVerificationService.checkProgress("member@gmail.com"))
+                .thenReturn(EmailVerificationService.VerificationProgress.UNKNOWN);
+
+        String body = mockMvc.perform(get("/users/verification/status").session(pendingSession()))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).isEqualTo("{\"status\":\"UNKNOWN\"}")
+                .doesNotContain("member@gmail.com", "SUSPENDED", "RESTRICTED",
+                        "WITHDRAWAL_PENDING", "DEACTIVATED", "INACTIVE", "userId");
+    }
+
+    /** 조회가 실패해도 상태를 흘리지 않고 UNKNOWN 으로 답한다. */
+    @Test
+    void verificationStatusFailureStaysUnknownInsteadOfErroring() throws Exception {
+        when(emailVerificationService.checkProgress("member@gmail.com"))
+                .thenThrow(new IllegalStateException("db down"));
+
+        mockMvc.perform(get("/users/verification/status").session(pendingSession()))
+                .andExpect(status().isOk())
+                .andExpect(content().json("{\"status\":\"UNKNOWN\"}"));
+    }
+
+    private MockHttpSession pendingSession() {
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute(EmailVerificationController.PENDING_EMAIL_SESSION_ATTRIBUTE,
+                "member@gmail.com");
+        return session;
     }
 
     @Test

@@ -9,6 +9,7 @@ import com.example.travlediary.model.UserRole;
 import com.example.travlediary.model.UserStatus;
 import com.example.travlediary.repository.user.SocialAccountMapper;
 import com.example.travlediary.repository.user.UserMapper;
+import com.example.travlediary.service.email.EmailVerificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -26,9 +27,18 @@ public class SocialSignupService {
 
     private final UserMapper userMapper;
     private final SocialAccountMapper socialAccountMapper;
+    private final SocialEmailAccountResolver socialEmailAccountResolver;
+    private final EmailVerificationService emailVerificationService;
 
+    /**
+     * 가입 트랜잭션. users 와 social_accounts 를 함께 쓰고, Travel Diary 이메일 인증이 필요한
+     * provider 면 인증 토큰 컬럼까지 같은 INSERT 에 담는다.
+     *
+     * <p>인증메일 발송은 커밋 뒤에 {@link #sendVerificationEmail} 로 따로 한다.
+     * 일반 회원가입과 마찬가지로 발송이 실패해도 가입 자체는 남는다.
+     */
     @Transactional
-    public long complete(PendingSocialSignup pending, SocialSignupForm form) {
+    public SocialSignupOutcome complete(PendingSocialSignup pending, SocialSignupForm form) {
         validatePending(pending);
 
         if (socialAccountMapper.findByProviderAndProviderUserId(
@@ -43,18 +53,25 @@ public class SocialSignupService {
                     "signup.error.nickname.duplicate");
         }
 
-        String userEmail = resolveUserEmail(pending);
+        String userEmail = resolveUserEmail(pending, form);
         // 가입 화면을 여는 사이 같은 이메일 계정이 생겼을 수 있다. UNIQUE 예외를 기다리지 않고 먼저 본다.
         if (userEmail != null && userMapper.findByEmail(userEmail) != null) {
             throw new SocialSignupFlowException("이미 같은 이메일로 가입된 계정이 있습니다.");
         }
 
+        // Google 은 provider 가 인증한 이메일이라 바로 ACTIVE 다.
+        // Kakao/Naver 는 일반 회원가입과 같이 INACTIVE 로 두고 인증 링크를 기다린다.
+        boolean verifiedByProvider = pending.provider() == SocialProvider.GOOGLE;
+
         User user = new User();
         user.setNickname(nickname);
         user.setUserEmail(userEmail);
         user.setUserRole(UserRole.USER);
-        user.setStatus(UserStatus.ACTIVE);
+        user.setStatus(verifiedByProvider ? UserStatus.ACTIVE : UserStatus.INACTIVE);
         user.setCreatedAt(Timestamp.from(Instant.now()));
+        if (!verifiedByProvider) {
+            emailVerificationService.initializeVerification(user);
+        }
 
         try {
             userMapper.insertUser(user);
@@ -85,7 +102,26 @@ public class SocialSignupService {
         } catch (DataIntegrityViolationException exception) {
             throw new SocialSignupFlowException("이미 처리된 소셜 가입 정보입니다.");
         }
-        return user.getId();
+        return new SocialSignupOutcome(
+                user.getId(), userEmail,
+                verifiedByProvider ? null : user.getVerificationToken());
+    }
+
+    /**
+     * 인증메일 발송. 트랜잭션이 끝난 뒤에 부른다. 발송용 메서드가 @Async 라 커밋 전에 부르면
+     * 아직 없는 회원에게 인증 링크를 보낼 수 있다.
+     *
+     * @return 일반 회원가입과 같이 발송을 요청했는지 여부. 실패해도 가입은 되돌리지 않는다.
+     */
+    public boolean sendVerificationEmail(SocialSignupOutcome outcome) {
+        if (!outcome.requiresEmailVerification()) {
+            return false;
+        }
+        User user = new User();
+        user.setId(outcome.userId());
+        user.setUserEmail(outcome.userEmail());
+        user.setVerificationToken(outcome.verificationToken());
+        return emailVerificationService.requestInitialVerification(user);
     }
 
     private void validatePending(PendingSocialSignup pending) {
@@ -130,13 +166,18 @@ public class SocialSignupService {
     /**
      * users.user_email 에 저장할 공식 이메일.
      *
-     * <p>Google 은 OIDC 가 email_verified 를 함께 주므로 그 이메일을 인증된 이메일로 신뢰한다.
-     * Kakao/Naver 는 아직 이메일 확보·인증 수단이 없어 기존대로 비워 둔다.
+     * <p>Google 은 OIDC 가 email_verified 를 함께 주므로 provider 가 준 이메일을 그대로 신뢰한다.
+     * Kakao/Naver 는 provider 이메일을 인증된 것으로 보지 않으므로 사용자가 입력한 이메일을 받아
+     * Travel Diary 이메일 인증을 거치게 한다.
      */
-    private String resolveUserEmail(PendingSocialSignup pending) {
-        if (pending.provider() != SocialProvider.GOOGLE) {
-            return null;
+    private String resolveUserEmail(PendingSocialSignup pending, SocialSignupForm form) {
+        if (pending.provider() == SocialProvider.GOOGLE) {
+            return googleVerifiedEmail(pending);
         }
+        return enteredEmail(form);
+    }
+
+    private String googleVerifiedEmail(PendingSocialSignup pending) {
         if (isBlank(pending.providerEmail())
                 || !Boolean.TRUE.equals(pending.providerEmailVerified())) {
             throw new SocialSignupFlowException("인증된 소셜 이메일을 확인할 수 없습니다.");
@@ -146,6 +187,33 @@ public class SocialSignupService {
         } catch (RegistrationValidationException exception) {
             throw new SocialSignupFlowException("인증된 소셜 이메일을 확인할 수 없습니다.");
         }
+    }
+
+    /**
+     * 사용자가 입력한 이메일. AJAX 결과와 무관하게 여기서 다시 정규화하고 상태를 확인한다.
+     * 이번 단계에서는 아무도 쓰지 않는 이메일만 신규 가입으로 진행한다.
+     */
+    private String enteredEmail(SocialSignupForm form) {
+        String submitted = form == null ? null : form.getUserEmail();
+        if (isBlank(submitted)) {
+            throw new SocialSignupValidationException(
+                    "userEmail", "이메일을 입력해주세요.", "signup.social.email.required");
+        }
+
+        // 화면 안내와 같은 message key 를 쓴다. AJAX 와 최종 판정의 문구가 갈리지 않는다.
+        SocialEmailAccountResolver.EnteredEmail entered =
+                socialEmailAccountResolver.classifyEnteredEmail(submitted);
+        return switch (entered.status()) {
+            case AVAILABLE -> entered.email();
+            case INVALID -> throw new SocialSignupValidationException(
+                    "userEmail", EmailPolicy.INVALID_MESSAGE, "signup.error.email.invalid");
+            // 연결은 다음 단계에서 지원한다. 지금은 새 계정을 만들지 않고 안내만 한다.
+            case EXISTING_ACTIVE -> throw new SocialSignupValidationException(
+                    "userEmail", "이미 가입된 이메일입니다.", "signup.social.email.existing");
+            case UNAVAILABLE -> throw new SocialSignupValidationException(
+                    "userEmail", "현재 사용할 수 없는 이메일입니다.",
+                    "signup.social.email.unavailable");
+        };
     }
 
     private String normalizeReferenceEmail(String email) {

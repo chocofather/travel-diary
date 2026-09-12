@@ -366,10 +366,13 @@ public class SecurityConfig {
                                 "/", "/home", "/random-travel", "/locale",
                                 "/login", "/logout",
                                 "/oauth2/**", "/login/oauth2/**", "/social-signup",
+                                "/social-signup/email-status",
                                 "/social-link", "/social-link/cancel",
                                 "/register", "/users/register",
                                 "/users/verify", "/users/register/verify-waiting",
                                 "/users/verification/resend",
+                                // 인증 대기 화면이 세션 문맥만으로 진행 상태를 확인한다.
+                                "/users/verification/status",
                                 "/users/find-username", "/users/find-password", "/users/reset-password/**",
                                 // 메일로 받은 복구 링크만 공개다. 복구 요청은 탈퇴 유예 안내 화면에서만 한다.
                                 "/users/recover-account/confirm",
