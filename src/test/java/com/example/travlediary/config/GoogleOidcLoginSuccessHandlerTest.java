@@ -1,5 +1,6 @@
 package com.example.travlediary.config;
 
+import com.example.travlediary.model.PendingSocialLink;
 import com.example.travlediary.model.PendingSocialSignup;
 import com.example.travlediary.model.PendingSocialConnection;
 import com.example.travlediary.model.PendingSocialWithdrawal;
@@ -14,6 +15,7 @@ import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.security.LoginThrottle;
 import com.example.travlediary.service.user.SocialAccountService;
 import com.example.travlediary.service.user.SocialConnectionResult;
+import com.example.travlediary.service.user.SocialEmailAccountResolver;
 import com.example.travlediary.service.user.SocialWithdrawalException;
 import com.example.travlediary.service.user.SocialWithdrawalService;
 import com.example.travlediary.service.user.UserSanctionService;
@@ -22,6 +24,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -90,8 +94,17 @@ class SocialOAuth2LoginSuccessHandlerTest {
                 userSanctionService,
                 new CustomLoginSuccessHandler(userMapper, new LoginThrottle(),
                         withdrawalGraceService),
-                withdrawalGraceService);
+                withdrawalGraceService,
+                emailAccountResolver());
         SecurityContextHolder.clearContext();
+    }
+
+    /**
+     * 이메일 판정은 mock 이 아니라 실제 resolver 를 태운다.
+     * 같은 이메일 계정 유무는 userMapper.findByEmail stub 으로 정한다.
+     */
+    private SocialEmailAccountResolver emailAccountResolver() {
+        return new SocialEmailAccountResolver(userMapper, withdrawalGraceService);
     }
 
     @Test
@@ -331,7 +344,8 @@ class SocialOAuth2LoginSuccessHandlerTest {
         assertThat(response.getRedirectedUrl()).isEqualTo("/social-signup");
         assertThat(Collections.list(request.getSession().getAttributeNames()))
                 .containsExactly(PendingSocialSignup.SESSION_ATTRIBUTE);
-        verify(userMapper, never()).findByEmail(anyString());
+        // 같은 이메일 계정 유무는 먼저 확인하되, 없으면 기존 신규가입 흐름 그대로다.
+        verify(userMapper).findByEmail("new@example.com");
         verify(userMapper, never()).insertUser(any());
         verify(socialAccountService, never()).connect(any());
     }
@@ -473,11 +487,17 @@ class SocialOAuth2LoginSuccessHandlerTest {
                 any(), any(), anyString(), any(), any());
     }
 
-    @Test
-    void unknownGoogleAccountPreservesFalseEmailVerificationWithoutUsingEmailAsIdentity()
+    /**
+     * Google 이 email_verified 를 주지 않으면 인증된 이메일로 쓰지 않는다.
+     * 이메일 없이 조용히 가입시키지도, 그 이메일의 기존 계정을 찾지도 않는다.
+     */
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(booleans = {false})
+    void unverifiedGoogleEmailNeitherSignsUpNorLooksUpAnExistingAccount(Boolean emailVerified)
             throws Exception {
         OAuth2AuthenticationToken authentication = googleAuthentication(
-                "sub-not-email", "existing@example.com", false, "OIDC_USER");
+                "sub-not-email", "existing@example.com", emailVerified, "OIDC_USER");
         when(socialAccountService.findByProviderAndProviderUserId(
                 SocialProvider.GOOGLE, "sub-not-email")).thenReturn(null);
         MockHttpServletRequest request = new MockHttpServletRequest();
@@ -485,13 +505,97 @@ class SocialOAuth2LoginSuccessHandlerTest {
 
         handler.onAuthenticationSuccess(request, response, authentication);
 
-        PendingSocialSignup pending = (PendingSocialSignup) request.getSession()
-                .getAttribute(PendingSocialSignup.SESSION_ATTRIBUTE);
-        assertThat(pending.providerEmailVerified()).isFalse();
-        assertThat(pending.providerUserId()).isEqualTo("sub-not-email");
-        verify(socialAccountService).findByProviderAndProviderUserId(
-                SocialProvider.GOOGLE, "sub-not-email");
+        assertThat(response.getRedirectedUrl())
+                .isEqualTo("/login?socialEmailUnverified=true");
+        assertThat(request.getSession().getAttribute(
+                PendingSocialSignup.SESSION_ATTRIBUTE)).isNull();
+        assertThat(request.getSession().getAttribute(
+                PendingSocialLink.SESSION_ATTRIBUTE)).isNull();
         verify(userMapper, never()).findByEmail("existing@example.com");
+        verify(userMapper, never()).insertUser(any());
+    }
+
+    /** verified 이메일이 기존 회원의 이메일과 같으면 새 users 대신 연결 확인으로 보낸다. */
+    @Test
+    void googleVerifiedEmailOfAnActiveMemberStartsLinkConfirmationInsteadOfSignup()
+            throws Exception {
+        OAuth2AuthenticationToken authentication = googleAuthentication(
+                "new-google-sub", "Member@Example.com", true, "OIDC_USER");
+        when(socialAccountService.findByProviderAndProviderUserId(
+                SocialProvider.GOOGLE, "new-google-sub")).thenReturn(null);
+        when(userMapper.findByEmail("member@example.com"))
+                .thenReturn(user(17L, "member", UserRole.USER, UserStatus.ACTIVE));
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        saveAuthentication(request, authentication);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        PendingSocialLink pending = (PendingSocialLink) request.getSession()
+                .getAttribute(PendingSocialLink.SESSION_ATTRIBUTE);
+        assertThat(pending.flowId()).isNotBlank();
+        assertThat(pending.provider()).isEqualTo(SocialProvider.GOOGLE);
+        assertThat(pending.providerUserId()).isEqualTo("new-google-sub");
+        assertThat(pending.email()).isEqualTo("member@example.com");
+        assertThat(pending.targetUserId()).isEqualTo(17L);
+        assertThat(Duration.between(pending.createdAt(), pending.expiresAt()))
+                .isEqualTo(Duration.ofMinutes(10));
+        assertThat(response.getRedirectedUrl()).isEqualTo("/social-link");
+        // 확인 전에는 아무것도 저장하지 않고 로그인도 시키지 않는다.
+        assertThat(request.getSession().getAttribute(
+                PendingSocialSignup.SESSION_ATTRIBUTE)).isNull();
+        assertThat(request.getSession().getAttribute("userId")).isNull();
+        assertThat(request.getSession().getAttribute(
+                HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY)).isNull();
+        verify(userMapper, never()).insertUser(any());
+        verify(socialAccountService, never()).connect(any());
+    }
+
+    /** 유예 중인 계정이 그 이메일을 점유한다. 새 계정도 연결도 만들지 않는다. */
+    @Test
+    void googleEmailHeldByAnAccountStillInWithdrawalGraceCannotCreateABypassAccount()
+            throws Exception {
+        OAuth2AuthenticationToken authentication = googleAuthentication(
+                "new-google-sub", "member@example.com", true, "OIDC_USER");
+        when(socialAccountService.findByProviderAndProviderUserId(
+                SocialProvider.GOOGLE, "new-google-sub")).thenReturn(null);
+        when(userMapper.findByEmail("member@example.com")).thenReturn(
+                user(17L, "member", UserRole.USER, UserStatus.WITHDRAWAL_PENDING));
+        when(withdrawalGraceService.resolveAccess(17L, null))
+                .thenReturn(WithdrawalGraceService.Outcome.IN_GRACE);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        assertThat(response.getRedirectedUrl())
+                .isEqualTo("/login?socialEmailWithdrawing=true");
+        assertThat(request.getSession().getAttribute(
+                PendingSocialSignup.SESSION_ATTRIBUTE)).isNull();
+        assertThat(request.getSession().getAttribute(
+                PendingSocialLink.SESSION_ATTRIBUTE)).isNull();
+        verify(userMapper, never()).insertUser(any());
+    }
+
+    /** 이메일 인증 대기 계정을 소셜 로그인으로 조용히 가져가거나 우회 가입하지 않는다. */
+    @Test
+    void googleEmailHeldByAnUnverifiedRegularAccountGoesToTheVerificationNotice()
+            throws Exception {
+        OAuth2AuthenticationToken authentication = googleAuthentication(
+                "new-google-sub", "member@example.com", true, "OIDC_USER");
+        when(socialAccountService.findByProviderAndProviderUserId(
+                SocialProvider.GOOGLE, "new-google-sub")).thenReturn(null);
+        when(userMapper.findByEmail("member@example.com"))
+                .thenReturn(user(17L, "member", UserRole.USER, UserStatus.INACTIVE));
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        assertThat(response.getRedirectedUrl()).isEqualTo("/login?socialEmailPending=true");
+        assertThat(request.getSession().getAttribute(
+                PendingSocialLink.SESSION_ATTRIBUTE)).isNull();
+        verify(userMapper, never()).insertUser(any());
     }
 
     @Test
@@ -796,7 +900,8 @@ class SocialOAuth2LoginSuccessHandlerTest {
                 withdrawalGraceService,
                 socialWithdrawalService,
                 authorizedClientService,
-                authenticationRestorer);
+                authenticationRestorer,
+                emailAccountResolver());
     }
 
     private SocialOAuth2LoginSuccessHandler connectionHandler() {

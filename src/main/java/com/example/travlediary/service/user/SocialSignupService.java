@@ -43,9 +43,15 @@ public class SocialSignupService {
                     "signup.error.nickname.duplicate");
         }
 
+        String userEmail = resolveUserEmail(pending);
+        // 가입 화면을 여는 사이 같은 이메일 계정이 생겼을 수 있다. UNIQUE 예외를 기다리지 않고 먼저 본다.
+        if (userEmail != null && userMapper.findByEmail(userEmail) != null) {
+            throw new SocialSignupFlowException("이미 같은 이메일로 가입된 계정이 있습니다.");
+        }
+
         User user = new User();
         user.setNickname(nickname);
-        user.setUserEmail(null);
+        user.setUserEmail(userEmail);
         user.setUserRole(UserRole.USER);
         user.setStatus(UserStatus.ACTIVE);
         user.setCreatedAt(Timestamp.from(Instant.now()));
@@ -53,6 +59,10 @@ public class SocialSignupService {
         try {
             userMapper.insertUser(user);
         } catch (DataIntegrityViolationException exception) {
+            // user_email 도 UNIQUE 라 닉네임이 아니라 이메일 경합일 수 있다.
+            if (userEmail != null && userMapper.findByEmail(userEmail) != null) {
+                throw new SocialSignupFlowException("이미 같은 이메일로 가입된 계정이 있습니다.");
+            }
             throw new SocialSignupValidationException(
                     "nickname", DUPLICATE_NICKNAME_MESSAGE,
                     "signup.error.nickname.duplicate");
@@ -114,6 +124,27 @@ public class SocialSignupService {
                             : "signup.error.nickname.invalid";
             throw new SocialSignupValidationException(
                     "nickname", exception.getMessage(), messageCode);
+        }
+    }
+
+    /**
+     * users.user_email 에 저장할 공식 이메일.
+     *
+     * <p>Google 은 OIDC 가 email_verified 를 함께 주므로 그 이메일을 인증된 이메일로 신뢰한다.
+     * Kakao/Naver 는 아직 이메일 확보·인증 수단이 없어 기존대로 비워 둔다.
+     */
+    private String resolveUserEmail(PendingSocialSignup pending) {
+        if (pending.provider() != SocialProvider.GOOGLE) {
+            return null;
+        }
+        if (isBlank(pending.providerEmail())
+                || !Boolean.TRUE.equals(pending.providerEmailVerified())) {
+            throw new SocialSignupFlowException("인증된 소셜 이메일을 확인할 수 없습니다.");
+        }
+        try {
+            return EmailPolicy.normalizeAndValidate(pending.providerEmail());
+        } catch (RegistrationValidationException exception) {
+            throw new SocialSignupFlowException("인증된 소셜 이메일을 확인할 수 없습니다.");
         }
     }
 

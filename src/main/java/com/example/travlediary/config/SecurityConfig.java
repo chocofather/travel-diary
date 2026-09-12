@@ -351,6 +351,11 @@ public class SecurityConfig {
                                 "^/account/restricted/appeals$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(
                                 "^/social-signup$", HttpMethod.POST.name()),
+                        // 기존 계정에 소셜 로그인을 붙이는 확인/취소. 둘 다 토큰을 요구한다.
+                        new RegexRequestMatcher(
+                                "^/social-link$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/social-link/cancel$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(
                                 "^/logout$", HttpMethod.POST.name())
                 )))
@@ -361,6 +366,7 @@ public class SecurityConfig {
                                 "/", "/home", "/random-travel", "/locale",
                                 "/login", "/logout",
                                 "/oauth2/**", "/login/oauth2/**", "/social-signup",
+                                "/social-link", "/social-link/cancel",
                                 "/register", "/users/register",
                                 "/users/verify", "/users/register/verify-waiting",
                                 "/users/verification/resend",

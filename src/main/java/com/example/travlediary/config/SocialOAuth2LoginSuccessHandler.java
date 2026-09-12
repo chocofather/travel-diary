@@ -1,6 +1,7 @@
 package com.example.travlediary.config;
 
 import com.example.travlediary.model.PendingSocialConnection;
+import com.example.travlediary.model.PendingSocialLink;
 import com.example.travlediary.model.PendingSocialSignup;
 import com.example.travlediary.model.PendingSocialWithdrawal;
 import com.example.travlediary.model.SocialAccount;
@@ -12,6 +13,7 @@ import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.user.SocialAccountService;
 import com.example.travlediary.service.user.SocialConnectionResult;
+import com.example.travlediary.service.user.SocialEmailAccountResolver;
 import com.example.travlediary.service.user.SocialWithdrawalService;
 import com.example.travlediary.service.user.UserSanctionService;
 import com.example.travlediary.service.user.WithdrawalGraceService;
@@ -45,7 +47,17 @@ import java.util.UUID;
 public class SocialOAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
     private static final Duration SIGNUP_TTL = Duration.ofMinutes(10);
+    private static final Duration LINK_TTL = Duration.ofMinutes(10);
     private static final String NAVER_SUCCESS_RESULT_CODE = "00";
+
+    /** provider 가 인증한 이메일을 받지 못했다. 임의로 가입시키지 않는다. */
+    static final String UNVERIFIED_EMAIL_REDIRECT = "/login?socialEmailUnverified=true";
+    /** 같은 이메일의 계정이 아직 이메일 인증 대기 중이다. */
+    static final String VERIFICATION_PENDING_REDIRECT = "/login?socialEmailPending=true";
+    /** 같은 이메일의 계정이 탈퇴 유예 중이다. 30일 동안 그 계정이 이메일을 점유한다. */
+    static final String WITHDRAWAL_PENDING_REDIRECT = "/login?socialEmailWithdrawing=true";
+    /** 같은 이메일의 계정이 휴면·최종탈퇴 상태다. */
+    static final String BLOCKED_EMAIL_REDIRECT = "/login?socialEmailBlocked=true";
 
     private final SocialAccountService socialAccountService;
     private final UserMapper userMapper;
@@ -55,6 +67,7 @@ public class SocialOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
     private final SocialWithdrawalService socialWithdrawalService;
     private final OAuth2AuthorizedClientService authorizedClientService;
     private final TravelDiaryAuthenticationRestorer authenticationRestorer;
+    private final SocialEmailAccountResolver socialEmailAccountResolver;
     private final SecurityContextRepository securityContextRepository =
             new HttpSessionSecurityContextRepository();
 
@@ -67,7 +80,8 @@ public class SocialOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
             WithdrawalGraceService withdrawalGraceService,
             SocialWithdrawalService socialWithdrawalService,
             OAuth2AuthorizedClientService authorizedClientService,
-            TravelDiaryAuthenticationRestorer authenticationRestorer) {
+            TravelDiaryAuthenticationRestorer authenticationRestorer,
+            SocialEmailAccountResolver socialEmailAccountResolver) {
         this.socialAccountService = socialAccountService;
         this.userMapper = userMapper;
         this.userSanctionService = userSanctionService;
@@ -76,6 +90,7 @@ public class SocialOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
         this.socialWithdrawalService = socialWithdrawalService;
         this.authorizedClientService = authorizedClientService;
         this.authenticationRestorer = authenticationRestorer;
+        this.socialEmailAccountResolver = socialEmailAccountResolver;
     }
 
     SocialOAuth2LoginSuccessHandler(
@@ -83,9 +98,11 @@ public class SocialOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
             UserMapper userMapper,
             UserSanctionService userSanctionService,
             CustomLoginSuccessHandler customLoginSuccessHandler,
-            WithdrawalGraceService withdrawalGraceService) {
+            WithdrawalGraceService withdrawalGraceService,
+            SocialEmailAccountResolver socialEmailAccountResolver) {
         this(socialAccountService, userMapper, userSanctionService,
-                customLoginSuccessHandler, withdrawalGraceService, null, null, null);
+                customLoginSuccessHandler, withdrawalGraceService, null, null, null,
+                socialEmailAccountResolver);
     }
 
     @Override
@@ -142,7 +159,7 @@ public class SocialOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
                     .findByProviderAndProviderUserId(
                             identity.provider(), identity.providerUserId());
             if (socialAccount == null) {
-                beginSignup(request, response, identity);
+                beginNewIdentityFlow(request, response, identity);
                 return;
             }
 
@@ -396,7 +413,7 @@ public class SocialOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
         if (user.getStatus() == UserStatus.WITHDRAWAL_PENDING
                 && withdrawalGraceService.resolveAccess(user.getId(), identity.provider())
                         == WithdrawalGraceService.Outcome.GRACE_ENDED) {
-            beginSignup(request, response, identity);
+            beginNewIdentityFlow(request, response, identity);
             return;
         }
 
@@ -410,6 +427,7 @@ public class SocialOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
                         userDetails, null, userDetails.getAuthorities());
 
         request.getSession().removeAttribute(PendingSocialSignup.SESSION_ATTRIBUTE);
+        request.getSession().removeAttribute(PendingSocialLink.SESSION_ATTRIBUTE);
         SecurityContext context = SecurityContextHolder.createEmptyContext();
         context.setAuthentication(internalAuthentication);
         SecurityContextHolder.setContext(context);
@@ -431,6 +449,35 @@ public class SocialOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
                 || user.getStatus() == UserStatus.WITHDRAWAL_PENDING;
     }
 
+    /**
+     * 아직 우리 DB 에 없는 provider 식별자를 어떻게 처리할지 정한다.
+     *
+     * <p>Google 은 인증된 이메일이 곧 Travel Diary 의 공식 이메일이라 같은 이메일의 계정이 이미
+     * 있으면 새 users 를 만들지 않는다. 판정은 {@link SocialEmailAccountResolver} 가 맡는다.
+     */
+    private void beginNewIdentityFlow(HttpServletRequest request,
+                                      HttpServletResponse response,
+                                      SocialIdentity identity) throws IOException {
+        if (socialEmailAccountResolver == null) {
+            beginSignup(request, response, identity);
+            return;
+        }
+        SocialEmailAccountResolver.Resolution resolution = socialEmailAccountResolver.resolve(
+                identity.provider(), identity.providerEmail(), identity.providerEmailVerified());
+        switch (resolution.type()) {
+            // Kakao/Naver 는 아직 이 정책을 적용하지 않는다.
+            case NOT_APPLICABLE, NEW_ACCOUNT -> beginSignup(request, response, identity);
+            case LINK_EXISTING -> beginLink(request, response, identity, resolution);
+            case UNVERIFIED_EMAIL ->
+                    rejectTo(request, response, UNVERIFIED_EMAIL_REDIRECT);
+            case VERIFICATION_PENDING ->
+                    rejectTo(request, response, VERIFICATION_PENDING_REDIRECT);
+            case WITHDRAWAL_PENDING ->
+                    rejectTo(request, response, WITHDRAWAL_PENDING_REDIRECT);
+            case BLOCKED -> rejectTo(request, response, BLOCKED_EMAIL_REDIRECT);
+        }
+    }
+
     private void beginSignup(HttpServletRequest request,
                              HttpServletResponse response,
                              SocialIdentity identity) throws IOException {
@@ -445,17 +492,50 @@ public class SocialOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
                 createdAt.plus(SIGNUP_TTL));
 
         request.getSession().setAttribute(PendingSocialSignup.SESSION_ATTRIBUTE, pending);
+        request.getSession().removeAttribute(PendingSocialLink.SESSION_ATTRIBUTE);
         request.getSession().removeAttribute("userId");
         clearAuthentication(request, response);
         response.sendRedirect("/social-signup");
     }
 
-    private void reject(HttpServletRequest request,
-                        HttpServletResponse response) throws IOException {
+    /**
+     * 대상 회원 id 는 세션에만 둔다. 확인 화면과 확인 POST 는 이 문맥만 보고 동작한다.
+     * 아직 아무것도 저장하지 않으며, 실제 연결은 사용자가 확인 버튼을 눌러야 일어난다.
+     */
+    private void beginLink(HttpServletRequest request,
+                           HttpServletResponse response,
+                           SocialIdentity identity,
+                           SocialEmailAccountResolver.Resolution resolution) throws IOException {
+        Instant createdAt = Instant.now();
+        PendingSocialLink pending = new PendingSocialLink(
+                UUID.randomUUID().toString(),
+                identity.provider(),
+                identity.providerUserId(),
+                resolution.email(),
+                resolution.existingUserId(),
+                createdAt,
+                createdAt.plus(LINK_TTL));
+
+        request.getSession().setAttribute(PendingSocialLink.SESSION_ATTRIBUTE, pending);
         request.getSession().removeAttribute(PendingSocialSignup.SESSION_ATTRIBUTE);
         request.getSession().removeAttribute("userId");
         clearAuthentication(request, response);
-        response.sendRedirect(OAuth2LoginFailureHandler.FAILURE_REDIRECT);
+        response.sendRedirect("/social-link");
+    }
+
+    private void reject(HttpServletRequest request,
+                        HttpServletResponse response) throws IOException {
+        rejectTo(request, response, OAuth2LoginFailureHandler.FAILURE_REDIRECT);
+    }
+
+    private void rejectTo(HttpServletRequest request,
+                          HttpServletResponse response,
+                          String redirect) throws IOException {
+        request.getSession().removeAttribute(PendingSocialSignup.SESSION_ATTRIBUTE);
+        request.getSession().removeAttribute(PendingSocialLink.SESSION_ATTRIBUTE);
+        request.getSession().removeAttribute("userId");
+        clearAuthentication(request, response);
+        response.sendRedirect(redirect);
     }
 
     private void clearAuthentication(HttpServletRequest request,

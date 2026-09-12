@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" th:lang="${currentLanguageTag}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title th:text="#{signup.social.link.pageTitle}">계정 연결 확인 | Travel Diary</title>
+  <link rel="stylesheet" type="text/css" href="/css/style.css">
+  <link rel="stylesheet" href="/css/login.css">
+</head>
+<body class="login-page">
+<!-- 로그인/소셜 가입과 같은 공용 언어 선택 fragment 를 그대로 쓴다. -->
+<div class="login-page__topbar">
+  <div th:replace="~{fragments/language-menu :: languageMenu}"></div>
+</div>
+
+<main class="login-page__main">
+  <a class="login-page__brand" th:href="@{/}" th:aria-label="#{login.brand.home}"
+     aria-label="Travel Diary 홈으로 이동">
+    <img src="/images/logo7.png" alt="Travel Diary">
+  </a>
+
+  <section class="login-container social-signup" aria-labelledby="socialLinkTitle">
+    <header class="login-header">
+      <h1 id="socialLinkTitle" th:text="#{signup.social.link.title}">
+        이미 가입된 계정이 있습니다
+      </h1>
+      <p th:text="#{signup.social.link.subtitle}">
+        이 이메일로 가입된 Travel Diary 계정이 있습니다. 소셜 로그인을 기존 계정에 연결할 수 있습니다.
+      </p>
+    </header>
+
+    <!-- 계정 열거에 쓰이지 않도록 가려진 이메일과 브랜드명만 보여준다. -->
+    <div class="social-signup__account">
+      <span th:text="#{signup.social.account(${providerDisplayName})}">소셜 계정</span>
+      <strong id="socialLinkEmail" th:text="${maskedEmail}">tra***@example.com</strong>
+    </div>
+
+    <p class="social-signup__notice" th:text="#{signup.social.link.question(${providerDisplayName})}">
+      이 소셜 로그인을 기존 계정에 연결하시겠습니까?
+    </p>
+
+    <form method="POST" th:action="@{/social-link}" class="login-form">
+      <input type="hidden" name="flowId" th:value="${flowId}">
+      <button type="submit" class="login-submit"
+              th:text="#{signup.social.link.confirm}">기존 계정에 연결하기</button>
+    </form>
+
+    <form method="POST" th:action="@{/social-link/cancel}" class="login-form">
+      <button type="submit" class="social-signup__recommend-button" id="cancelSocialLink"
+              th:text="#{signup.social.link.cancel}">취소</button>
+    </form>
+
+    <p class="social-signup__notice" th:text="#{signup.social.link.help}">
+      연결하면 기존 계정에 그대로 로그인되고, 다음부터는 두 방법 모두 사용할 수 있습니다.
+      취소하면 아무것도 저장되지 않습니다.
+    </p>
+  </section>
+</main>
+<script src="/js/jquery-3.6.0.min.js"></script>
+<script src="/js/language-menu.js" defer></script>
+</body>
+</html>

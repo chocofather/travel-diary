@@ -84,6 +84,54 @@
       가입 후 로그인에 실패했습니다. 다시 로그인해주세요.
     </div>
 
+    <!-- 소셜 로그인 이메일 통합 안내. 새 계정을 만들지 않고 여기로 돌려보낸 경우들이다. -->
+    <div class="login-feedback login-feedback--error"
+         th:if="${param.socialEmailUnverified}"
+         role="alert"
+         aria-live="assertive"
+         th:text="#{login.error.socialEmailUnverified}">
+      소셜 계정의 이메일을 확인할 수 없어 가입을 진행할 수 없습니다.
+    </div>
+
+    <div class="login-feedback login-feedback--error"
+         th:if="${param.socialEmailPending}"
+         role="alert"
+         aria-live="assertive"
+         th:text="#{login.error.socialEmailPending}">
+      이 이메일로 가입 신청된 계정이 있습니다. 인증 메일로 가입을 먼저 완료해주세요.
+    </div>
+
+    <div class="login-feedback login-feedback--error"
+         th:if="${param.socialEmailWithdrawing}"
+         role="alert"
+         aria-live="assertive"
+         th:text="#{login.error.socialEmailWithdrawing}">
+      이 이메일의 계정은 탈퇴 처리 중입니다. 기존 로그인 수단으로 로그인하면 복구할 수 있습니다.
+    </div>
+
+    <div class="login-feedback login-feedback--error"
+         th:if="${param.socialEmailBlocked}"
+         role="alert"
+         aria-live="assertive"
+         th:text="#{login.error.socialEmailBlocked}">
+      이 이메일의 계정은 현재 사용할 수 없습니다. 고객센터로 문의해주세요.
+    </div>
+
+    <div class="login-feedback login-feedback--error"
+         th:if="${param.socialLinkError}"
+         role="alert"
+         aria-live="assertive"
+         th:text="#{login.error.socialLinkFailed}">
+      기존 계정에 소셜 로그인을 연결하지 못했습니다. 다시 시도해주세요.
+    </div>
+
+    <div class="login-feedback login-feedback--success"
+         th:if="${param.socialLinkCancelled}"
+         role="status"
+         th:text="#{login.status.socialLinkCancelled}">
+      계정 연결을 취소했습니다. 저장된 내용은 없습니다.
+    </div>
+
     <div class="login-feedback login-feedback--success"
          th:if="${param.logout}"
          role="status"

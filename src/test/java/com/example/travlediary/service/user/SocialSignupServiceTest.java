@@ -75,6 +75,8 @@ class SocialSignupServiceTest {
         assertThat(user.getUserPassword()).isNull();
         assertThat(user.getFullName()).isNull();
         assertThat(user.getUserBirth()).isNull();
+        // Google 은 email_verified 를 함께 주므로 그 이메일이 곧 공식 이메일이다.
+        assertThat(user.getUserEmail()).isEqualTo("new@example.com");
         assertThat(user.getNickname()).isEqualTo("여행자123");
         assertThat(user.getUserRole()).isEqualTo(UserRole.USER);
         assertThat(user.getStatus()).isEqualTo(UserStatus.ACTIVE);
@@ -169,25 +171,27 @@ class SocialSignupServiceTest {
         assertThat(accountCaptor.getValue().getProviderEmailVerified()).isNull();
     }
 
+    /** users 에는 정규화한 값을, social_accounts 에는 provider 가 준 표기를 그대로 남긴다. */
     @Test
-    void keepsVerifiedGoogleEmailOutOfUserAndStoresItOnlyOnSocialAccount() {
+    void storesTheVerifiedGoogleEmailAsTheOfficialUserEmailAndKeepsTheProviderReference() {
         arrangeGeneratedUserId(41L);
 
         service.complete(pending("sub", " New@Example.com ", true), acceptedForm("여행자123"));
 
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
         verify(userMapper).insertUser(userCaptor.capture());
-        assertThat(userCaptor.getValue().getUserEmail()).isNull();
+        assertThat(userCaptor.getValue().getUserEmail()).isEqualTo("new@example.com");
         ArgumentCaptor<SocialAccount> accountCaptor = ArgumentCaptor.forClass(SocialAccount.class);
         verify(socialAccountMapper).insert(accountCaptor.capture());
         assertThat(accountCaptor.getValue().getProviderEmail()).isEqualTo("New@Example.com");
         assertThat(accountCaptor.getValue().getProviderEmailVerified()).isTrue();
-        verify(userMapper, never()).findByEmail(any());
+        verify(userMapper).findByEmail("new@example.com");
     }
 
+    /** Kakao/Naver 는 아직 자체 이메일 인증이 없어 기존 정책 그대로 user_email 을 비워 둔다. */
     @ParameterizedTest
-    @MethodSource("providerEmailStates")
-    void alwaysKeepsUserEmailNullAndPreservesProviderEmailState(PendingSocialSignup pending) {
+    @MethodSource("providersWithoutOwnEmailVerification")
+    void keepsUserEmailNullForProvidersWithoutOwnEmailVerification(PendingSocialSignup pending) {
         arrangeGeneratedUserId(41L);
 
         service.complete(pending, acceptedForm("여행자123"));
@@ -204,29 +208,62 @@ class SocialSignupServiceTest {
         verify(userMapper, never()).findByEmail(any());
     }
 
-    static Stream<PendingSocialSignup> providerEmailStates() {
+    static Stream<PendingSocialSignup> providersWithoutOwnEmailVerification() {
         return Stream.of(
-                pending("sub-true", "verified@example.com", true),
-                pending("sub-false", "existing@example.com", false),
-                pending("sub-unknown", "existing@example.com", null),
-                pending("sub-missing", null, true));
+                pending(SocialProvider.KAKAO, "kakao-verified", "kakao@example.com", true),
+                pending(SocialProvider.KAKAO, "kakao-none", null, null),
+                pending(SocialProvider.NAVER, "naver-unverified", "naver@example.com", null),
+                pending(SocialProvider.NAVER, "naver-none", null, null));
     }
 
+    /** Google 인데 인증된 이메일이 없으면 이메일 없는 계정을 만들지 않고 흐름을 끝낸다. */
+    @ParameterizedTest
+    @MethodSource("googleStatesWithoutVerifiedEmail")
+    void refusesGoogleSignupWithoutAVerifiedProviderEmail(PendingSocialSignup pending) {
+        assertThatThrownBy(() -> service.complete(pending, acceptedForm("여행자123")))
+                .isInstanceOf(SocialSignupFlowException.class);
+
+        verify(userMapper, never()).insertUser(any());
+        verify(socialAccountMapper, never()).insert(any());
+    }
+
+    static Stream<PendingSocialSignup> googleStatesWithoutVerifiedEmail() {
+        return Stream.of(
+                pending("sub-false", "existing@example.com", false),
+                pending("sub-unknown", "existing@example.com", null),
+                pending("sub-missing", null, true),
+                pending("sub-invalid", "not-an-email", true));
+    }
+
+    /** 같은 이메일의 users 가 이미 있으면 두 번째 계정을 만들지 않는다. */
     @Test
-    void matchingRegularMemberEmailDoesNotBlockSocialSignupOrOccupyUserEmail() {
-        arrangeGeneratedUserId(41L);
+    void refusesToCreateASecondUserWhenTheGoogleEmailIsAlreadyTaken() {
+        when(userMapper.findByEmail("existing@example.com")).thenReturn(new User());
 
-        service.complete(pending("different-google-sub", "existing@example.com", true),
-                acceptedForm("새여행자"));
+        assertThatThrownBy(() -> service.complete(
+                pending("different-google-sub", "existing@example.com", true),
+                acceptedForm("새여행자")))
+                .isInstanceOf(SocialSignupFlowException.class);
 
-        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
-        verify(userMapper).insertUser(userCaptor.capture());
-        assertThat(userCaptor.getValue().getUserEmail()).isNull();
-        ArgumentCaptor<SocialAccount> accountCaptor = ArgumentCaptor.forClass(SocialAccount.class);
-        verify(socialAccountMapper).insert(accountCaptor.capture());
-        assertThat(accountCaptor.getValue().getUserId()).isEqualTo(41L);
-        assertThat(accountCaptor.getValue().getProviderEmail()).isEqualTo("existing@example.com");
-        verify(userMapper, never()).findByEmail(any());
+        verify(userMapper, never()).insertUser(any());
+        verify(socialAccountMapper, never()).insert(any());
+    }
+
+    /** 사전 조회를 통과한 뒤 경합으로 UNIQUE 가 터져도 닉네임 오류로 오인하지 않는다. */
+    @Test
+    void emailUniqueRaceAtInsertIsReportedAsAFlowFailureNotANicknameError() {
+        when(userMapper.findByEmail("new@example.com"))
+                .thenReturn(null)
+                .thenReturn(new User());
+        doThrow(new DuplicateKeyException("user_email_UNIQUE"))
+                .when(userMapper).insertUser(any());
+
+        assertThatThrownBy(() -> service.complete(
+                pending("sub", "new@example.com", true), acceptedForm("여행자123")))
+                .isInstanceOf(SocialSignupFlowException.class)
+                .hasMessageNotContaining("user_email_UNIQUE");
+
+        verify(socialAccountMapper, never()).insert(any());
     }
 
     @Test
@@ -278,7 +315,7 @@ class SocialSignupServiceTest {
                 .when(userMapper).insertUser(any());
 
         assertThatThrownBy(() -> service.complete(
-                pending("sub", null, null), acceptedForm("여행자123")))
+                pending("sub", "new@example.com", true), acceptedForm("여행자123")))
                 .isInstanceOf(SocialSignupValidationException.class)
                 .hasMessageNotContaining("duplicate user");
 
@@ -298,7 +335,7 @@ class SocialSignupServiceTest {
         SocialSignupService transactionalService = transactionalProxy(transactionManager);
 
         assertThatThrownBy(() -> transactionalService.complete(
-                pending("sub", null, null), acceptedForm("여행자123")))
+                pending("sub", "new@example.com", true), acceptedForm("여행자123")))
                 .isInstanceOf(SocialSignupFlowException.class)
                 .hasMessageNotContaining("provider unique");
 
