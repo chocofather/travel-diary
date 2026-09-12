@@ -155,6 +155,41 @@ public interface UserMapper {
                                  @Param("requestedAt") LocalDateTime requestedAt,
                                  @Param("cooldownCutoff") LocalDateTime cooldownCutoff);
 
+    /** 이메일 없이 남아 있는 예전 Kakao/Naver 회원인지. 요청마다 DB 로 판정한다. */
+    boolean isSocialAccountMissingEmail(@Param("id") Long id);
+
+    /**
+     * 정상적인 이메일 인증 대기 계정인지. 가입 경로를 가리지 않는다.
+     * 이메일 주소 변경 안전장치의 공통 자격 조건이다.
+     */
+    boolean isEmailVerificationPending(@Param("id") Long id);
+
+    /** 예전 소셜 회원의 이메일 보완이 아직 인증 대기 중인지. 이메일 등록 게이트가 쓴다. */
+    boolean isSocialAccountVerificationPending(@Param("id") Long id);
+
+    /**
+     * 인증 대기 중인 이메일을 새 이메일로 교체하고 토큰을 새로 발급한다.
+     * 지금 이메일이 기대값과 같을 때만 바뀌므로 그사이 인증이 끝났거나 값이 달라졌으면 0행이 된다.
+     */
+    int changePendingVerificationEmail(
+            @Param("id") Long id,
+            @Param("userEmail") String userEmail,
+            @Param("expectedCurrentEmail") String expectedCurrentEmail,
+            @Param("token") String token,
+            @Param("expiresAt") LocalDateTime expiresAt,
+            @Param("requestedAt") LocalDateTime requestedAt);
+
+    /**
+     * 예전 Kakao/Naver 회원의 이메일 등록 시작. 대상 조건을 WHERE 로 다시 걸어
+     * 조건이 하나라도 깨지면 아무것도 바꾸지 않는다.
+     */
+    int startEmailVerificationForSocialAccount(
+            @Param("id") Long id,
+            @Param("userEmail") String userEmail,
+            @Param("token") String token,
+            @Param("expiresAt") LocalDateTime expiresAt,
+            @Param("requestedAt") LocalDateTime requestedAt);
+
     /* ---------- 아이디/비밀번호 찾기 ---------- */
     User findActiveByEmailForUsernameRecovery(@Param("userEmail") String userEmail);
 

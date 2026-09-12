@@ -62,12 +62,13 @@ class CustomUserDetailsServiceTest {
     }
 
     @Test
-    void inactiveUserKeepsTheEmailVerificationMessage() {
+    void inactiveUserPassesCredentialCheckButIsNotLoggedIn() {
         when(userMapper.findByUsername("travler")).thenReturn(user(UserStatus.INACTIVE));
 
-        assertThatThrownBy(() -> service.loadUserByUsername("travler"))
-                .isInstanceOf(BadCredentialsException.class)
-                .hasMessage("이메일 인증이 완료되지 않았습니다.");
+        // 자격증명 확인까지는 허용한다. 오타로 잘못된 이메일을 넣은 사람이 다시 들어와
+        // 인증 대기 화면에서 이메일을 고칠 수 있어야 하기 때문이다.
+        assertThat(service.loadUserByUsername("travler")).isNotNull();
+        // 로그인으로 이어지지 않는 것은 CustomLoginSuccessHandler 가 보장한다.
     }
 
     @Test

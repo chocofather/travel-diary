@@ -3,6 +3,8 @@ package com.example.travlediary.controller.user;
 import com.example.travlediary.config.CustomLoginSuccessHandler;
 import com.example.travlediary.config.CustomLogoutSuccessHandler;
 import com.example.travlediary.config.SecurityConfig;
+import com.example.travlediary.model.SocialProvider;
+import com.example.travlediary.service.user.EmailCorrectionService;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.service.email.EmailVerificationService;
 import org.junit.jupiter.api.Test;
@@ -34,6 +36,8 @@ class EmailVerificationSecurityTest {
 
     @Autowired private MockMvc mockMvc;
     @MockitoBean private EmailVerificationService emailVerificationService;
+    @MockitoBean private com.example.travlediary.service.user.EmailCorrectionService
+            emailCorrectionService;
     @MockitoBean private CustomLoginSuccessHandler customLoginSuccessHandler;
     @MockitoBean private CustomLogoutSuccessHandler customLogoutSuccessHandler;
     @MockitoBean private UserMapper userMapper;
@@ -302,6 +306,81 @@ class EmailVerificationSecurityTest {
         // 기다릴 이메일이 아예 없으면 폴링도 걸지 않는다.
         mockMvc.perform(get("/users/register/verify-waiting"))
                 .andExpect(model().attribute("verificationPollingAvailable", false));
+    }
+
+
+    /**
+     * 예전 소셜 회원 보완 인증에서만 [이메일 주소 변경] 이 열린다.
+     * 판정 근거는 세션이 아니라 users.email_verification_purpose 다.
+     */
+    @Test
+    void onlyTheLegacyCorrectionFlowSeesTheEmailChangeEntry() throws Exception {
+        arrangeWaiting();
+        when(emailCorrectionService.optionsFor("member@gmail.com"))
+                .thenReturn(new EmailCorrectionService.CorrectionOptions(
+                        false, java.util.List.of(SocialProvider.KAKAO)));
+
+        mockMvc.perform(get("/users/register/verify-waiting").session(pendingSession()))
+                .andExpect(model().attribute("emailCorrectionAvailable", true))
+                .andExpect(model().attribute("emailCorrectionProviders",
+                        java.util.List.of(SocialProvider.KAKAO)));
+    }
+
+    /**
+     * 세션이 완전히 새로 만들어져도 같은 DB 상태면 버튼이 그대로 복원된다.
+     * 브라우저를 닫았다 다시 로그인한 경우가 이 시나리오다.
+     */
+    @Test
+    void aBrandNewSessionRestoresTheEntryFromTheDatabaseAlone() throws Exception {
+        arrangeWaiting();
+        when(emailCorrectionService.optionsFor("member@gmail.com"))
+                .thenReturn(new EmailCorrectionService.CorrectionOptions(
+                        true, java.util.List.of(SocialProvider.NAVER)));
+
+        // 재로그인으로 새로 만들어진 세션. 대기 이메일 말고는 아무 표시도 없다.
+        MockHttpSession freshSession = new MockHttpSession();
+        freshSession.setAttribute(EmailVerificationController.PENDING_EMAIL_SESSION_ATTRIBUTE,
+                "member@gmail.com");
+
+        mockMvc.perform(get("/users/register/verify-waiting").session(freshSession))
+                .andExpect(model().attribute("emailCorrectionAvailable", true))
+                .andExpect(model().attribute("emailCorrectionProviders",
+                        java.util.List.of(SocialProvider.NAVER)));
+    }
+
+    /**
+     * purpose 가 NULL 인 인증 대기(일반 회원가입, 신규 Kakao/Naver 가입)에는 버튼이 없다.
+     * 그 판정은 서비스가 빈 목록으로 알려준다.
+     */
+    @Test
+    void aPlainSignupVerificationNeverSeesTheEntry() throws Exception {
+        arrangeWaiting();
+        when(emailCorrectionService.optionsFor("member@gmail.com"))
+                .thenReturn(new EmailCorrectionService.CorrectionOptions(
+                        false, java.util.List.of()));
+
+        mockMvc.perform(get("/users/register/verify-waiting").session(pendingSession()))
+                .andExpect(model().attributeDoesNotExist("emailCorrectionAvailable"))
+                .andExpect(model().attributeDoesNotExist("emailCorrectionProviders"));
+    }
+
+    /** 기다리는 이메일 자체가 없으면 판정하지 않는다. */
+    @Test
+    void aSessionWithoutAPendingEmailAsksNothing() throws Exception {
+        when(emailVerificationService.getWaitingState(null))
+                .thenReturn(new EmailVerificationService.WaitingState(false, "", 0));
+        when(emailCorrectionService.optionsFor(null))
+                .thenReturn(new EmailCorrectionService.CorrectionOptions(
+                        false, java.util.List.of()));
+
+        mockMvc.perform(get("/users/register/verify-waiting"))
+                .andExpect(model().attributeDoesNotExist("emailCorrectionAvailable"));
+    }
+
+    private void arrangeWaiting() {
+        when(emailVerificationService.getWaitingState("member@gmail.com"))
+                .thenReturn(new EmailVerificationService.WaitingState(
+                        true, "mem***@gmail.com", 0));
     }
 
     private MockHttpSession pendingSession() {

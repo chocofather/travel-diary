@@ -1,5 +1,6 @@
 package com.example.travlediary.config;
 
+import com.example.travlediary.model.PendingEmailCorrection;
 import com.example.travlediary.model.PendingSocialConnection;
 import com.example.travlediary.model.PendingSocialLink;
 import com.example.travlediary.model.PendingSocialLoginLink;
@@ -15,6 +16,7 @@ import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.user.SocialAccountService;
 import com.example.travlediary.service.user.SocialConnectionResult;
+import com.example.travlediary.service.user.EmailCorrectionService;
 import com.example.travlediary.service.user.SocialEmailAccountResolver;
 import com.example.travlediary.service.user.SocialWithdrawalService;
 import com.example.travlediary.service.user.UserSanctionService;
@@ -64,6 +66,11 @@ public class SocialOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
     static final String VERIFY_WAITING_REDIRECT = "/users/register/verify-waiting";
     /** 연결 대기 중인 provider 로 다시 로그인했다. 다른 로그인 수단을 써야 한다. */
     static final String LINK_LOGIN_REQUIRED_REDIRECT = "/login?socialLinkLoginRequired=true";
+    /** 이메일 변경 본인확인 성공. 로그인이 아니라 변경 화면으로만 보낸다. */
+    static final String EMAIL_CORRECTION_REDIRECT = "/account/email-required/change";
+    /** 이메일 변경 본인확인 실패. 인증 대기 화면으로 돌려보낸다. */
+    static final String EMAIL_CORRECTION_FAILED_REDIRECT =
+            VERIFY_WAITING_REDIRECT + "?emailCorrectionFailed=true";
 
     private final SocialAccountService socialAccountService;
     private final UserMapper userMapper;
@@ -74,6 +81,7 @@ public class SocialOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
     private final OAuth2AuthorizedClientService authorizedClientService;
     private final TravelDiaryAuthenticationRestorer authenticationRestorer;
     private final SocialEmailAccountResolver socialEmailAccountResolver;
+    private final EmailCorrectionService emailCorrectionService;
     private final SecurityContextRepository securityContextRepository =
             new HttpSessionSecurityContextRepository();
 
@@ -87,7 +95,8 @@ public class SocialOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
             SocialWithdrawalService socialWithdrawalService,
             OAuth2AuthorizedClientService authorizedClientService,
             TravelDiaryAuthenticationRestorer authenticationRestorer,
-            SocialEmailAccountResolver socialEmailAccountResolver) {
+            SocialEmailAccountResolver socialEmailAccountResolver,
+            EmailCorrectionService emailCorrectionService) {
         this.socialAccountService = socialAccountService;
         this.userMapper = userMapper;
         this.userSanctionService = userSanctionService;
@@ -97,6 +106,7 @@ public class SocialOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
         this.authorizedClientService = authorizedClientService;
         this.authenticationRestorer = authenticationRestorer;
         this.socialEmailAccountResolver = socialEmailAccountResolver;
+        this.emailCorrectionService = emailCorrectionService;
     }
 
     SocialOAuth2LoginSuccessHandler(
@@ -105,10 +115,11 @@ public class SocialOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
             UserSanctionService userSanctionService,
             CustomLoginSuccessHandler customLoginSuccessHandler,
             WithdrawalGraceService withdrawalGraceService,
-            SocialEmailAccountResolver socialEmailAccountResolver) {
+            SocialEmailAccountResolver socialEmailAccountResolver,
+            EmailCorrectionService emailCorrectionService) {
         this(socialAccountService, userMapper, userSanctionService,
                 customLoginSuccessHandler, withdrawalGraceService, null, null, null,
-                socialEmailAccountResolver);
+                socialEmailAccountResolver, emailCorrectionService);
     }
 
     @Override
@@ -117,7 +128,17 @@ public class SocialOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
                                         Authentication authentication) throws IOException {
         PendingSocialConnection connection = consumePendingConnection(request);
         PendingSocialWithdrawal withdrawal = consumePendingWithdrawal(request);
+        PendingEmailCorrection correction = consumePendingCorrection(request);
         try {
+            // 이메일 변경 본인확인은 로그인이 아니다. 일반 로그인 판정보다 먼저 끝낸다.
+            if (correction != null) {
+                if (connection != null || withdrawal != null) {
+                    failCorrection(request, response);
+                    return;
+                }
+                completeCorrection(request, response, authentication, correction);
+                return;
+            }
             if (connection != null && withdrawal != null) {
                 failConnection(request, response, connection);
                 return;
@@ -218,6 +239,67 @@ public class SocialOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
                 SocialConnectionNotice.SESSION_ATTRIBUTE,
                 new SocialConnectionNotice(noticeType, pending.provider()));
         response.sendRedirect("/mypage/account");
+    }
+
+    /**
+     * 이메일 변경 본인확인. 성공해도 로그인시키지 않는다.
+     * OAuth 신원이 target 회원의 social_accounts 와 정확히 같을 때만 변경 권한을 준다.
+     */
+    private void completeCorrection(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    Authentication authentication,
+                                    PendingEmailCorrection correction) throws IOException {
+        if (!(authentication instanceof OAuth2AuthenticationToken oauthAuthentication)) {
+            failCorrection(request, response);
+            return;
+        }
+        removeAuthorizedClient(oauthAuthentication);
+
+        SocialIdentity identity = extractIdentity(oauthAuthentication);
+        PendingEmailCorrection authorized = identity == null ? null
+                : emailCorrectionService.authorize(
+                        correction, identity.provider(), identity.providerUserId());
+        if (authorized == null) {
+            failCorrection(request, response);
+            return;
+        }
+
+        HttpSession session = request.getSession();
+        session.setAttribute(PendingEmailCorrection.SESSION_ATTRIBUTE, authorized);
+        session.removeAttribute(PendingSocialSignup.SESSION_ATTRIBUTE);
+        session.removeAttribute(PendingSocialLink.SESSION_ATTRIBUTE);
+        session.removeAttribute("userId");
+        // 이 계정은 여전히 인증 대기 상태다. 서비스에 들어갈 수 있는 인증을 만들지 않는다.
+        clearAuthentication(request, response);
+        response.sendRedirect(EMAIL_CORRECTION_REDIRECT);
+    }
+
+    /** 본인확인에 실패했다. 권한을 주지 않고 인증 대기 화면으로 돌려보낸다. */
+    private void failCorrection(HttpServletRequest request,
+                                HttpServletResponse response) throws IOException {
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            session.removeAttribute(PendingEmailCorrection.SESSION_ATTRIBUTE);
+            session.removeAttribute("userId");
+        }
+        clearAuthentication(request, response);
+        response.sendRedirect(EMAIL_CORRECTION_FAILED_REDIRECT);
+    }
+
+    private PendingEmailCorrection consumePendingCorrection(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session == null) {
+            return null;
+        }
+        synchronized (session) {
+            Object value = session.getAttribute(PendingEmailCorrection.SESSION_ATTRIBUTE);
+            if (value instanceof PendingEmailCorrection pending) {
+                // 일회성이다. 실패든 성공이든 이 왕복에서 소비한다.
+                session.removeAttribute(PendingEmailCorrection.SESSION_ATTRIBUTE);
+                return pending;
+            }
+            return null;
+        }
     }
 
     private PendingSocialConnection consumePendingConnection(HttpServletRequest request) {

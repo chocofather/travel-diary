@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" th:lang="${currentLanguageTag}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title th:text="#{account.emailRequired.pageTitle}">이메일 인증 필요 | Travel Diary</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/login.css">
+</head>
+<body class="login-page">
+<!-- 로그인/탈퇴 안내 화면과 같은 공용 언어 선택 fragment. -->
+<div class="login-page__topbar">
+  <div th:replace="~{fragments/language-menu :: languageMenu}"></div>
+</div>
+
+<main class="login-page__main">
+  <span class="login-page__brand">
+    <img src="/images/logo7.png" alt="Travel Diary">
+  </span>
+
+  <section class="login-container social-signup" aria-labelledby="emailRequiredTitle">
+    <header class="login-header">
+      <h1 id="emailRequiredTitle" th:text="#{account.emailRequired.title}">
+        계정 보호를 위해 이메일 인증이 필요합니다.
+      </h1>
+      <p th:text="#{account.emailRequired.description}">
+        탈퇴 복구, 계정 보안 및 중요 안내를 위해 사용할 이메일을 등록해주세요.
+      </p>
+    </header>
+
+    <form method="POST" th:action="@{/account/email-required}" class="login-form">
+      <input type="hidden" th:if="${_csrf != null}"
+             th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+
+      <!-- 회원가입이 아니라 기존 계정의 이메일 보완이다. 닉네임도 약관도 받지 않는다. -->
+      <div class="login-field" id="accountEmailField"
+           th:data-msg-available="#{account.emailRequired.email.available}"
+           th:data-msg-unavailable="#{account.emailRequired.email.unavailable}"
+           th:data-msg-invalid="#{signup.error.email.invalid}"
+           th:data-msg-check-failed="#{signup.feedback.email.checkFailed}">
+        <label for="userEmail" th:text="#{signup.field.email}">이메일</label>
+        <div class="social-signup__nickname-row">
+          <input type="email" id="userEmail" name="userEmail"
+                 th:value="${enteredEmail}"
+                 maxlength="100" autocomplete="email" inputmode="email"
+                 th:placeholder="#{signup.social.email.placeholder}"
+                 placeholder="example@gmail.com"
+                 aria-describedby="emailMessage emailServerError" required>
+          <button type="button" class="social-signup__recommend-button" id="checkEmailStatus"
+                  th:text="#{signup.social.email.check}">중복확인</button>
+        </div>
+        <p id="emailMessage" class="social-signup__field-feedback" aria-live="polite"
+           th:text="#{account.emailRequired.email.help}">
+          Travel Diary에서 사용할 이메일을 입력해주세요. 인증메일을 보내드립니다.
+        </p>
+        <p class="social-signup__field-error" id="emailServerError"
+           th:if="${emailError}" role="alert" th:text="${emailError}">이메일 오류</p>
+      </div>
+
+      <button type="submit" class="login-submit"
+              th:text="#{account.emailRequired.submit}">인증메일 받기</button>
+    </form>
+
+    <p class="social-signup__notice" th:text="#{account.emailRequired.notice}">
+      인증을 완료해야 Travel Diary 서비스를 계속 이용할 수 있습니다.
+    </p>
+
+    <form method="POST" th:action="@{/logout}" class="login-form">
+      <input type="hidden" th:if="${_csrf != null}"
+             th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+      <button type="submit" class="social-signup__recommend-button" id="emailRequiredLogout"
+              th:text="#{account.emailRequired.logout}">로그아웃</button>
+    </form>
+  </section>
+</main>
+<script src="/js/jquery-3.6.0.min.js"></script>
+<script src="/js/language-menu.js" defer></script>
+<script src="/js/account-email-required.js" defer></script>
+</body>
+</html>

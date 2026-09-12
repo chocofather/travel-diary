@@ -139,6 +139,62 @@
     font-size: 13px;
 }
 
+/*
+  이메일 주소 변경은 재전송 다음의 보조 행동이다. 같은 청록 계열을 쓰되
+  면이 아니라 테두리로 표현해 primary 인 재전송 버튼보다 한 단계 약하게 둔다.
+  LOCAL / KAKAO / NAVER 모두 이 한 가지 스타일을 쓰고 provider 브랜드색은 쓰지 않는다.
+*/
+.verification-correction {
+    display: flex;
+    margin-top: 30px;
+    align-items: center;
+    flex-direction: column;
+    gap: 9px;
+}
+
+.verification-correction-prompt {
+    margin: 0;
+    color: #6d7c8e;
+    font-size: 13px;
+}
+
+.verification-correction-button {
+    display: inline-flex;
+    max-width: min(340px, 100%);
+    min-height: 42px;
+    padding: 9px 20px;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    border: 1px solid #9dc2ce;
+    border-radius: 9px;
+    color: #176b87;
+    background: #ffffff;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.45;
+    text-align: center;
+    cursor: pointer;
+}
+
+.verification-correction-button:hover {
+    border-color: #176b87;
+    background: #f2f7f9;
+}
+
+.verification-correction-button:focus-visible {
+    outline: 3px solid rgba(23, 107, 135, .25);
+    outline-offset: 3px;
+}
+
+.verification-correction-button:disabled {
+    border-color: #dfe7ec;
+    color: #778597;
+    background: #f7f9fb;
+    cursor: not-allowed;
+}
+
 .verification-request-form {
     margin-top: 24px;
     text-align: left;
@@ -276,5 +332,10 @@
     .verification-primary-link,
     .verification-submit-button {
         width: 100%;
+    }
+
+    /* 좁은 화면에서는 카드 폭을 넘지 않게 두고 문구는 자연스럽게 줄바꿈시킨다. */
+    .verification-correction-button {
+        max-width: 100%;
     }
 }

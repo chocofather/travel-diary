@@ -1,6 +1,7 @@
 package com.example.travlediary.controller.user;
 
 import com.example.travlediary.service.email.EmailVerificationService;
+import com.example.travlediary.service.user.EmailCorrectionService;
 import com.example.travlediary.service.email.EmailVerificationService.ResendOutcome;
 import com.example.travlediary.service.email.EmailVerificationService.VerificationOutcome;
 import com.example.travlediary.service.email.EmailVerificationService.VerificationProgress;
@@ -35,11 +36,14 @@ public class EmailVerificationController {
     private static final Logger log = LoggerFactory.getLogger(EmailVerificationController.class);
 
     private final EmailVerificationService emailVerificationService;
+    private final EmailCorrectionService emailCorrectionService;
     private final MessageSource messageSource;
 
     public EmailVerificationController(EmailVerificationService emailVerificationService,
+                                       EmailCorrectionService emailCorrectionService,
                                        MessageSource messageSource) {
         this.emailVerificationService = emailVerificationService;
+        this.emailCorrectionService = emailCorrectionService;
         this.messageSource = messageSource;
     }
 
@@ -109,6 +113,7 @@ public class EmailVerificationController {
         model.addAttribute("verificationPollingAvailable", pendingEmail != null);
         model.addAttribute("maskedEmail", waitingState.maskedEmail());
         model.addAttribute("cooldownSeconds", waitingState.remainingSeconds());
+        addEmailCorrectionEntry(model, pendingEmail);
         return "verify-waiting";
     }
 
@@ -138,6 +143,26 @@ public class EmailVerificationController {
             session.removeAttribute(PENDING_EMAIL_SESSION_ATTRIBUTE);
         }
         return Map.of("status", progress.name());
+    }
+
+    /**
+     * 정상적인 이메일 인증 대기 계정이면 가입 경로를 가리지 않고 [이메일 주소 변경] 을 연다.
+     *
+     * <p>판정 근거는 DB 상태 하나뿐이다. 세션은 "지금 어떤 이메일을 기다리는지" 만 알려주므로
+     * 세션이 끊겼다 다시 로그인해도 같은 판정이 복원된다.
+     *
+     * <p>버튼이 보이는 것과 실제 변경 권한은 별개다. 권한은 비밀번호 재확인이나
+     * 소셜 재인증을 마쳐야 생긴다.
+     */
+    private void addEmailCorrectionEntry(Model model, String pendingEmail) {
+        EmailCorrectionService.CorrectionOptions options =
+                emailCorrectionService.optionsFor(pendingEmail);
+        if (options == null || !options.available()) {
+            return;
+        }
+        model.addAttribute("emailCorrectionAvailable", true);
+        model.addAttribute("emailCorrectionPasswordAvailable", options.passwordAvailable());
+        model.addAttribute("emailCorrectionProviders", options.providers());
     }
 
     @GetMapping("/verification/resend")

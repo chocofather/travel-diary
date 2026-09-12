@@ -46,6 +46,12 @@ public class CustomUserDetailsService implements UserDetailsService {
             // 탈퇴 유예 회원도 인증까지만 허용한다. 서비스 이용 권한이 돌아오는 것은 아니고,
             // 접근 통제와 안내 화면 이동은 WithdrawalPendingAccountFilter 가 맡는다.
             log.debug("Withdrawal pending account authenticated for the notice screen only");
+        } else if (user.getStatus() == UserStatus.INACTIVE) {
+            // 이메일 인증 대기 회원도 자격증명 확인까지는 허용한다. 오타로 잘못된 주소를 넣은
+            // 사람이 다시 들어와 이메일을 고칠 수 있어야 하기 때문이다.
+            // 로그인으로 이어지지는 않는다. CustomLoginSuccessHandler 가 인증을 곧바로 비우고
+            // 인증 대기 화면으로만 보낸다.
+            log.debug("Email verification pending account authenticated for the waiting screen only");
         } else if (user.getStatus() != UserStatus.ACTIVE) {
             throw new BadCredentialsException(inactiveMessage(user.getStatus()));
         }
@@ -54,12 +60,15 @@ public class CustomUserDetailsService implements UserDetailsService {
         return new com.example.travlediary.security.CustomUserDetails(user);
     }
 
-    /** WITHDRAWAL_PENDING 은 인증을 허용하므로 여기로 오지 않는다. 최종 탈퇴(DEACTIVATED)는 그대로 차단한다. */
+    /**
+     * RESTRICTED / WITHDRAWAL_PENDING / INACTIVE 는 인증을 허용하므로 여기로 오지 않는다.
+     * 최종 탈퇴(DEACTIVATED)와 휴면(SUSPENDED)은 그대로 차단한다.
+     */
     private String inactiveMessage(UserStatus status) {
         return switch (status) {
             case DEACTIVATED -> "탈퇴한 계정입니다.";
             case SUSPENDED -> "휴면 상태의 계정입니다. 고객센터로 문의해주세요.";
-            default -> "이메일 인증이 완료되지 않았습니다.";
+            default -> "로그인할 수 없는 계정입니다.";
         };
     }
 }

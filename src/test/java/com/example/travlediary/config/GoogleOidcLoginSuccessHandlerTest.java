@@ -3,6 +3,7 @@ package com.example.travlediary.config;
 import com.example.travlediary.model.PendingSocialLink;
 import com.example.travlediary.model.PendingSocialLoginLink;
 import com.example.travlediary.model.PendingSocialSignup;
+import com.example.travlediary.model.PendingEmailCorrection;
 import com.example.travlediary.model.PendingSocialConnection;
 import com.example.travlediary.model.PendingSocialWithdrawal;
 import com.example.travlediary.model.SocialConnectionNotice;
@@ -14,6 +15,8 @@ import com.example.travlediary.model.UserStatus;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.security.LoginThrottle;
+import com.example.travlediary.service.user.MissingEmailRegistrationService;
+import com.example.travlediary.service.user.EmailCorrectionService;
 import com.example.travlediary.service.user.SocialAccountService;
 import com.example.travlediary.service.user.SocialConnectionResult;
 import com.example.travlediary.service.user.SocialEmailAccountResolver;
@@ -85,6 +88,8 @@ class SocialOAuth2LoginSuccessHandlerTest {
     private TravelDiaryAuthenticationRestorer authenticationRestorer;
     @Mock
     private WithdrawalGraceService withdrawalGraceService;
+    @Mock
+    private EmailCorrectionService emailCorrectionService;
 
     private SocialOAuth2LoginSuccessHandler handler;
 
@@ -96,9 +101,11 @@ class SocialOAuth2LoginSuccessHandlerTest {
                 userSanctionService,
                 new CustomLoginSuccessHandler(userMapper, new LoginThrottle(),
                         withdrawalGraceService,
-                        socialLoginLinkService()),
+                        socialLoginLinkService(),
+                        missingEmailRegistrationService()),
                 withdrawalGraceService,
-                emailAccountResolver());
+                emailAccountResolver(),
+                emailCorrectionService);
         SecurityContextHolder.clearContext();
     }
 
@@ -953,12 +960,14 @@ class SocialOAuth2LoginSuccessHandlerTest {
                 userSanctionService,
                 new CustomLoginSuccessHandler(userMapper, new LoginThrottle(),
                         withdrawalGraceService,
-                        socialLoginLinkService()),
+                        socialLoginLinkService(),
+                        missingEmailRegistrationService()),
                 withdrawalGraceService,
                 socialWithdrawalService,
                 authorizedClientService,
                 authenticationRestorer,
-                emailAccountResolver());
+                emailAccountResolver(),
+                emailCorrectionService);
     }
 
     private SocialOAuth2LoginSuccessHandler connectionHandler() {
@@ -1098,6 +1107,15 @@ class SocialOAuth2LoginSuccessHandlerTest {
     }
 
     /** 기다리는 연결 문맥이 없으면 항상 NONE 이라 평소 로그인 흐름이 그대로 유지된다. */
+    /** userMapper stub 이 false 를 주므로 기본값은 "이메일 등록 대상 아님" 이다. */
+    private MissingEmailRegistrationService missingEmailRegistrationService() {
+        return new MissingEmailRegistrationService(
+                userMapper,
+                org.mockito.Mockito.mock(SocialEmailAccountResolver.class),
+                org.mockito.Mockito.mock(
+                        com.example.travlediary.service.email.EmailVerificationService.class));
+    }
+
     private SocialLoginLinkService socialLoginLinkService() {
         return new SocialLoginLinkService(
                 userMapper, org.mockito.Mockito.mock(SocialAccountService.class));
@@ -1159,6 +1177,66 @@ class SocialOAuth2LoginSuccessHandlerTest {
         // 연결 후처리는 CustomLoginSuccessHandler 안의 공통 서비스가 맡는다.
         assertThat(request.getSession().getAttribute("userId")).isEqualTo(25L);
         assertThat(savedAuthentication(request)).isNotNull();
+    }
+
+
+    /**
+     * 이메일 변경 본인확인. target 의 신원과 일치하면 변경 화면으로만 보낸다.
+     * 재인증 성공은 로그인이 아니다.
+     */
+    @Test
+    void emailCorrectionReauthenticationGrantsTheRightWithoutLoggingAnyoneIn() throws Exception {
+        OAuth2AuthenticationToken authentication = oidcAuthentication(
+                "kakao", "https://kauth.kakao.com", "kakao-sub", null, null, "OIDC_USER");
+        PendingEmailCorrection pending = correction();
+        PendingEmailCorrection authorized = pending.authorize();
+        when(emailCorrectionService.authorize(
+                pending, SocialProvider.KAKAO, "kakao-sub")).thenReturn(authorized);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.getSession().setAttribute(PendingEmailCorrection.SESSION_ATTRIBUTE, pending);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        assertThat(response.getRedirectedUrl()).isEqualTo("/account/email-required/change");
+        assertThat(request.getSession().getAttribute(PendingEmailCorrection.SESSION_ATTRIBUTE))
+                .isSameAs(authorized);
+        // 로그인시키지 않는다. 계정은 여전히 인증 대기다.
+        assertThat(request.getSession().getAttribute("userId")).isNull();
+        assertThat(request.getSession().getAttribute(
+                HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY)).isNull();
+        // 일반 로그인 판정으로 새지 않는다.
+        verify(socialAccountService, never())
+                .findByProviderAndProviderUserId(any(), anyString());
+        verify(userMapper, never()).insertUser(any());
+    }
+
+    /** 남의 소셜 계정으로 인증하면 권한을 주지 않고 인증 대기 화면으로 돌려보낸다. */
+    @Test
+    void anIdentityThatDoesNotMatchTheTargetGetsNoCorrectionRight() throws Exception {
+        OAuth2AuthenticationToken authentication = oidcAuthentication(
+                "kakao", "https://kauth.kakao.com", "someone-else", null, null, "OIDC_USER");
+        when(emailCorrectionService.authorize(any(), any(), anyString())).thenReturn(null);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.getSession().setAttribute(
+                PendingEmailCorrection.SESSION_ATTRIBUTE, correction());
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        assertThat(response.getRedirectedUrl())
+                .isEqualTo("/users/register/verify-waiting?emailCorrectionFailed=true");
+        assertThat(request.getSession().getAttribute(
+                PendingEmailCorrection.SESSION_ATTRIBUTE)).isNull();
+        assertThat(request.getSession().getAttribute("userId")).isNull();
+        assertThat(request.getSession().getAttribute(
+                HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY)).isNull();
+    }
+
+    private PendingEmailCorrection correction() {
+        Instant now = Instant.now();
+        return new PendingEmailCorrection("correction-flow", 23L, "typo@example.com",
+                PendingEmailCorrection.Method.SOCIAL, SocialProvider.KAKAO, false, now.minusSeconds(10), now.plusSeconds(590));
     }
 
     private PendingSocialLoginLink pendingLoginLink(SocialProvider provider) {

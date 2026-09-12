@@ -4,6 +4,13 @@
 
 <mapper namespace="com.example.travlediary.repository.user.UserMapper">
 
+    <!--
+      email_verification_purpose 값. 예전 Kakao/Naver 회원의 이메일 보완 인증임을 나타낸다.
+      다른 인증(일반 신규가입, 신규 소셜가입, Google)은 NULL 이다.
+      값이 여러 문에 흩어지지 않도록 여기 한 곳에만 둔다.
+    -->
+    <sql id="LegacySocialEmailPurpose">'LEGACY_SOCIAL_EMAIL'</sql>
+
     <!-- 사용자 저장 -->
     <insert id="insertUser" parameterType="com.example.travlediary.model.User"
             useGeneratedKeys="true" keyProperty="id">
@@ -140,6 +147,7 @@
             verification_token = NULL,
             verification_token_exp = NULL,
             verification_requested_at = NULL,
+            email_verification_purpose = NULL,
             reset_token = NULL,
             reset_token_exp = NULL,
             updated_at = NOW()
@@ -200,6 +208,7 @@
             verification_token = NULL,
             verification_token_exp = NULL,
             verification_requested_at = NULL,
+            email_verification_purpose = NULL,
             reset_token = NULL,
             reset_token_exp = NULL,
             status = #{status},
@@ -253,6 +262,7 @@
         SET status = 'ACTIVE',
             verification_token = NULL,
             verification_token_exp = NULL,
+            email_verification_purpose = NULL,
             updated_at = #{verifiedAt}
         WHERE id = #{id}
           AND status = 'INACTIVE'
@@ -289,6 +299,111 @@
     <select id="findByEmail" parameterType="String" resultType="com.example.travlediary.model.User">
         SELECT * FROM users WHERE user_email = #{email}
     </select>
+
+    <!--
+      이메일 없이 남아 있는 예전 Kakao/Naver 회원 판정.
+      Google 만 연결된 계정은 과거 중복 데이터 정리가 따로 필요하므로 여기 대상이 아니다.
+      uq_social_accounts_user_provider(user_id, provider) 를 그대로 탄다.
+    -->
+    <select id="isSocialAccountMissingEmail" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1
+            FROM users u
+            JOIN social_accounts sa ON sa.user_id = u.id
+            WHERE u.id = #{id}
+              AND u.status = 'ACTIVE'
+              AND u.deleted_at IS NULL
+              AND (u.user_email IS NULL OR TRIM(u.user_email) = '')
+              AND sa.provider IN ('KAKAO', 'NAVER')
+        )
+    </select>
+
+    <!--
+      정상적인 이메일 인증 대기 계정인지. 가입 경로(일반/신규 소셜/예전 소셜 보완)를 가리지 않는다.
+      INACTIVE 는 이 프로젝트에서 "이메일 인증 미완료" 한 가지 뜻으로만 쓰이므로 그대로 조건에 쓴다.
+      verification_token_exp 는 보지 않는다. 링크가 만료됐어도 본인확인 뒤 새 토큰을 받아
+      복구할 수 있어야 하고, 그것이 재발송(refreshVerificationToken) 정책과도 같다.
+    -->
+    <select id="isEmailVerificationPending" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1
+            FROM users u
+            WHERE u.id = #{id}
+              AND u.status = 'INACTIVE'
+              AND u.deleted_at IS NULL
+              AND u.user_email IS NOT NULL
+              AND u.verification_token IS NOT NULL
+        )
+    </select>
+
+    <!--
+      예전 소셜 회원의 이메일 보완이 아직 인증 대기 중인지.
+      DB 만으로는 신규 소셜 가입의 인증 대기와 구분되지 않으므로 흐름 구분은 세션이 맡는다.
+    -->
+    <select id="isSocialAccountVerificationPending" resultType="boolean">
+        SELECT EXISTS (
+            SELECT 1
+            FROM users u
+            JOIN social_accounts sa ON sa.user_id = u.id
+            WHERE u.id = #{id}
+              AND u.status = 'INACTIVE'
+              AND u.deleted_at IS NULL
+              AND u.user_email IS NOT NULL
+              AND u.verification_token IS NOT NULL
+              AND u.email_verification_purpose = <include refid="LegacySocialEmailPurpose"/>
+              AND sa.provider IN ('KAKAO', 'NAVER')
+        )
+    </select>
+
+    <!--
+      잘못 입력한 이메일 교체. 같은 users 행에 이메일과 새 토큰만 쓴다.
+      가입 경로를 가리지 않고 "이메일 인증 대기" 상태이기만 하면 된다. 본인확인은 서비스가
+      비밀번호나 소셜 재인증으로 이미 끝낸 뒤에 부른다.
+      expectedCurrentEmail 을 WHERE 에 걸어, 그사이 인증이 끝나 ACTIVE 가 됐거나
+      이메일이 달라졌으면 0행이 된다. 새 토큰이 예전 토큰을 덮어쓰므로 옛 링크는 즉시 무효가 된다.
+      email_verification_purpose 는 SET 하지 않아 legacy 값이 인증 완료까지 그대로 유지된다.
+      nickname / profile_image / created_at / social_accounts 는 건드리지 않는다.
+    -->
+    <update id="changePendingVerificationEmail">
+        UPDATE users
+        SET user_email = #{userEmail},
+            verification_token = #{token},
+            verification_token_exp = #{expiresAt},
+            verification_requested_at = #{requestedAt},
+            updated_at = NOW()
+        WHERE id = #{id}
+          AND status = 'INACTIVE'
+          AND deleted_at IS NULL
+          AND user_email = #{expectedCurrentEmail}
+          AND verification_token IS NOT NULL
+    </update>
+
+    <!--
+      기존 회원의 이메일 등록 시작. 새 users 를 만들지 않고 같은 행을 인증 대기로 돌린다.
+      대상 조건을 WHERE 에 그대로 다시 걸어 화면을 열어 둔 사이 상태가 바뀌었으면 0행이 된다.
+      user_email 은 UNIQUE 라 경합이 나면 DuplicateKeyException 이 올라온다.
+      nickname / profile_image / created_at / social_accounts 는 건드리지 않는다.
+    -->
+    <update id="startEmailVerificationForSocialAccount">
+        UPDATE users
+        SET user_email = #{userEmail},
+            status = 'INACTIVE',
+            verification_token = #{token},
+            verification_token_exp = #{expiresAt},
+            verification_requested_at = #{requestedAt},
+            email_verification_purpose = <include refid="LegacySocialEmailPurpose"/>,
+            updated_at = NOW()
+        WHERE id = #{id}
+          AND status = 'ACTIVE'
+          AND deleted_at IS NULL
+          AND (user_email IS NULL OR TRIM(user_email) = '')
+          AND EXISTS (
+              SELECT 1
+              FROM social_accounts sa
+              WHERE sa.user_id = users.id
+                AND sa.provider IN ('KAKAO', 'NAVER')
+          )
+    </update>
 
     <select id="findActiveByEmailForUsernameRecovery"
             parameterType="string"

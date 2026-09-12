@@ -64,6 +64,41 @@
                     ? #{verification.resend.cooldown(${cooldownSeconds})} : ''"></p>
       </form>
 
+      <!-- 이메일 인증 대기 계정이면 가입 경로를 가리지 않고 열린다. 오타로 갇히지 않게 하는
+           안전장치다. 실제 변경 권한은 비밀번호 재확인이나 소셜 재인증을 마쳐야 생긴다. -->
+      <div class="verification-correction" th:if="${emailCorrectionAvailable}">
+        <p class="verification-correction-prompt" th:text="#{verification.correction.prompt}">
+          이메일 주소를 잘못 입력하셨나요?
+        </p>
+        <form th:if="${emailCorrectionPasswordAvailable}" method="post"
+              th:action="@{/account/email-required/change/password/start}">
+          <input type="hidden" th:if="${_csrf != null}"
+                 th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+          <button type="submit" class="verification-correction-button" id="correctWithPassword"
+                  th:text="#{verification.correction.action.password}">
+            비밀번호로 확인하고 이메일 주소 변경
+          </button>
+        </form>
+        <form th:each="provider : ${emailCorrectionProviders}" method="post"
+              th:action="@{/account/email-required/change/start}"
+              th:with="providerName=#{|mypage.account.social.provider.${provider.name()}|}">
+          <input type="hidden" th:if="${_csrf != null}"
+                 th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+          <input type="hidden" name="provider"
+                 th:value="${#strings.toLowerCase(provider.name())}">
+          <button type="submit" class="verification-correction-button"
+                  th:text="#{verification.correction.action(${providerName})}">
+            이메일 주소 변경
+          </button>
+        </form>
+      </div>
+
+      <div class="verification-notice is-error" role="alert"
+           th:if="${param.emailCorrectionFailed}"
+           th:text="#{verification.correction.failed}">
+        본인 확인에 실패해 이메일을 변경하지 않았습니다.
+      </div>
+
       <div th:unless="${verificationAvailable}" class="verification-notice is-info" role="status"
            th:text="#{verification.waiting.noPending}">
         현재 브라우저에서 확인 중인 가입 정보가 없습니다.

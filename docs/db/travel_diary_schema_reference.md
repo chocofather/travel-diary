@@ -1999,6 +1999,16 @@ CREATE TABLE `user_sanctions` (
 --   WITHDRAWAL_PENDING 회원탈퇴 신청 후 최종 처리 전 30일 유예 상태
 --   DEACTIVATED        최종 탈퇴 처리 완료 상태
 --
+-- email_verification_purpose 사용 규약
+--   이메일 인증이 "왜" 진행 중인지 남긴다. 인증 대기가 아닌 회원은 언제나 NULL.
+--   LEGACY_SOCIAL_EMAIL : 이메일 없이 남아 있던 예전 Kakao/Naver 회원의 이메일 보완 인증.
+--                         이 값이 있을 때만 인증 대기 화면에 [이메일 주소 변경] 이 열린다.
+--   NULL                : 일반 신규가입 / 신규 Kakao·Naver 가입 / Google (그 외 모든 인증)
+--   기록  : startEmailVerificationForSocialAccount (보완 시작)
+--   유지  : changePendingVerificationEmail (오타 수정 중에도 인증 완료 전까지 유지)
+--   정리  : activatePendingUser (인증 완료 ACTIVE 전환), finalizeWithdrawal (최종 파기)
+--   값 비교는 언제나 완전 일치다. prefix/LIKE 로 판정하지 않는다.
+--
 -- 탈퇴 유예 컬럼 사용 규약(예정)
 --   withdrawal_requested_at : 탈퇴 신청 시각
 --   purge_scheduled_at      : 30일 유예 후 최종 탈퇴/파기 예정 시각
@@ -2021,6 +2031,7 @@ CREATE TABLE `users` (
   `verification_token` varchar(255) DEFAULT NULL,
   `verification_token_exp` datetime DEFAULT NULL,
   `verification_requested_at` datetime DEFAULT NULL,
+  `email_verification_purpose` varchar(30) DEFAULT NULL COMMENT '이메일 인증 진행 사유. LEGACY_SOCIAL_EMAIL = 예전 Kakao/Naver 회원 이메일 보완. 그 외 인증은 NULL',
   `profile_image` varchar(255) DEFAULT NULL,
   `status` enum('INACTIVE','ACTIVE','SUSPENDED','DEACTIVATED','RESTRICTED','WITHDRAWAL_PENDING') NOT NULL DEFAULT 'INACTIVE',
   `last_login` timestamp NULL DEFAULT NULL,

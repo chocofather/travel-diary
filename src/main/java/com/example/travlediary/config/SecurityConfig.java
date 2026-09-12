@@ -3,6 +3,7 @@ package com.example.travlediary.config;
 import com.example.travlediary.security.RestrictedAccountFilter;
 import com.example.travlediary.security.LoginThrottle;
 import com.example.travlediary.security.LoginThrottleFilter;
+import com.example.travlediary.security.MissingEmailAccountFilter;
 import com.example.travlediary.security.WithdrawalPendingAccountFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -56,6 +57,7 @@ public class SecurityConfig {
             RequestCache navigationRequestCache,
             ObjectProvider<RestrictedAccountFilter> restrictedAccountFilter,
             ObjectProvider<WithdrawalPendingAccountFilter> withdrawalPendingAccountFilter,
+            ObjectProvider<MissingEmailAccountFilter> missingEmailAccountFilter,
             LoginThrottle loginThrottle,
             ObjectProvider<SocialOAuth2LoginSuccessHandler> socialOAuth2LoginSuccessHandler,
             ObjectProvider<ClientRegistrationRepository> clientRegistrationRepository,
@@ -67,6 +69,9 @@ public class SecurityConfig {
                 filter -> http.addFilterAfter(filter, AuthorizationFilter.class));
         // 탈퇴 유예 회원 접근 통제. 상태가 서로 배타적이라 이용제한 격리와 겹치지 않는다.
         withdrawalPendingAccountFilter.ifAvailable(
+                filter -> http.addFilterAfter(filter, AuthorizationFilter.class));
+        // 이메일 미등록 소셜 회원 격리. 판정 자체가 ACTIVE 한정이라 위 두 상태 격리를 앞지르지 않는다.
+        missingEmailAccountFilter.ifAvailable(
                 filter -> http.addFilterAfter(filter, AuthorizationFilter.class));
         http.addFilterBefore(
                 new LoginThrottleFilter(loginThrottle),
@@ -349,6 +354,20 @@ public class SecurityConfig {
                                 HttpMethod.POST.name()),
                         new RegexRequestMatcher(
                                 "^/account/restricted/appeals$", HttpMethod.POST.name()),
+                        // 예전 소셜 회원의 이메일 등록 시작과 오타 수정.
+                        new RegexRequestMatcher(
+                                "^/account/email-required$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/account/email-required/change$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/account/email-required/change/start$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/account/email-required/change/password$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/account/email-required/change/password/start$",
+                                HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/account/email-required/change/cancel$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(
                                 "^/social-signup$", HttpMethod.POST.name()),
                         // 기존 계정 로그인으로 소셜 연결을 시작하는 요청.
@@ -370,6 +389,14 @@ public class SecurityConfig {
                                 "/login", "/logout",
                                 "/oauth2/**", "/login/oauth2/**", "/social-signup",
                                 "/social-signup/email-status", "/social-signup/link-existing",
+                                // 인증 대기 계정의 이메일 오타 수정. 로그인 상태가 아니라
+                                // 세션 문맥과 소셜 재인증으로만 보호된다.
+                                "/account/email-required/change",
+                                "/account/email-required/change/start",
+                                "/account/email-required/change/cancel",
+                                "/account/email-required/change/email-status",
+                                "/account/email-required/change/password",
+                                "/account/email-required/change/password/start",
                                 "/social-link", "/social-link/cancel",
                                 "/register", "/users/register",
                                 "/users/verify", "/users/register/verify-waiting",

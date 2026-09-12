@@ -9,7 +9,9 @@ import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.security.LoginFormState;
 import com.example.travlediary.security.LoginThrottle;
+import com.example.travlediary.service.user.MissingEmailRegistrationService;
 import com.example.travlediary.service.user.SocialAccountService;
+import com.example.travlediary.service.user.SocialEmailAccountResolver;
 import com.example.travlediary.service.user.SocialConnectionResult;
 import com.example.travlediary.service.user.SocialLoginLinkService;
 import com.example.travlediary.service.user.WithdrawalGraceService;
@@ -52,7 +54,8 @@ class CustomLoginSuccessHandlerTest {
     void setUp() {
         handler = new CustomLoginSuccessHandler(
                 userMapper, loginThrottle, withdrawalGraceService,
-                        socialLoginLinkService());
+                        socialLoginLinkService(),
+                        missingEmailRegistrationService());
     }
 
     @AfterEach
@@ -289,6 +292,15 @@ class CustomLoginSuccessHandlerTest {
     }
 
     /** 기다리는 연결 문맥이 없으면 항상 NONE 이라 평소 로그인 흐름이 그대로 유지된다. */
+    /** userMapper stub 이 false 를 주므로 기본값은 "이메일 등록 대상 아님" 이다. */
+    private MissingEmailRegistrationService missingEmailRegistrationService() {
+        return new MissingEmailRegistrationService(
+                userMapper,
+                org.mockito.Mockito.mock(SocialEmailAccountResolver.class),
+                org.mockito.Mockito.mock(
+                        com.example.travlediary.service.email.EmailVerificationService.class));
+    }
+
     private SocialLoginLinkService socialLoginLinkService() {
         return new SocialLoginLinkService(userMapper, socialAccountService);
     }
@@ -337,6 +349,71 @@ class CustomLoginSuccessHandlerTest {
                         org.mockito.ArgumentMatchers.any(),
                         org.mockito.ArgumentMatchers.any(),
                         org.mockito.ArgumentMatchers.any());
+    }
+
+
+    /** 이메일 없이 남아 있던 예전 소셜 회원은 로그인 직후 이메일 등록 화면으로 간다. */
+    @Test
+    void aLegacySocialAccountWithoutAnEmailIsSentToTheEmailRegistrationScreen()
+            throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addParameter("redirect", "/mypage");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        when(userMapper.findStatusById(7L)).thenReturn(UserStatus.ACTIVE);
+        when(userMapper.isSocialAccountMissingEmail(7L)).thenReturn(true);
+
+        handler.onAuthenticationSuccess(request, response, authentication(7L));
+
+        assertThat(response.getRedirectedUrl()).isEqualTo("/account/email-required");
+    }
+
+    /** 이용제한·탈퇴 유예는 기존 격리가 먼저다. 이메일 게이트가 그 정책을 앞지르지 않는다. */
+    @Test
+    void theExistingStatusIsolationStillComesFirst() throws Exception {
+        MockHttpServletResponse restricted = new MockHttpServletResponse();
+        when(userMapper.findStatusById(7L)).thenReturn(UserStatus.RESTRICTED);
+        handler.onAuthenticationSuccess(
+                new MockHttpServletRequest(), restricted, authentication(7L));
+        assertThat(restricted.getRedirectedUrl()).isEqualTo("/account/restricted");
+
+        MockHttpServletResponse withdrawing = new MockHttpServletResponse();
+        when(userMapper.findStatusById(7L)).thenReturn(UserStatus.WITHDRAWAL_PENDING);
+        when(withdrawalGraceService.resolveAccess(7L, null))
+                .thenReturn(WithdrawalGraceService.Outcome.IN_GRACE);
+        handler.onAuthenticationSuccess(
+                new MockHttpServletRequest(), withdrawing, authentication(7L));
+        assertThat(withdrawing.getRedirectedUrl()).isEqualTo("/account/withdrawal-pending");
+
+        // 두 경우 모두 이메일 게이트 판정까지 가지 않는다.
+        verify(userMapper, never()).isSocialAccountMissingEmail(org.mockito.ArgumentMatchers.anyLong());
+    }
+
+
+    /**
+     * 자격증명은 맞지만 아직 이메일 인증 전인 계정.
+     * 로그인 상태로 두지 않고 인증 대기 화면으로만 보낸다. 오타를 낸 사람의 복구 경로다.
+     */
+    @Test
+    void aCredentialCheckOnAnUnverifiedAccountEndsAtTheWaitingScreenWithoutALogin()
+            throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addParameter("redirect", "/mypage");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        when(userMapper.findStatusById(7L)).thenReturn(UserStatus.INACTIVE);
+        User pending = new User();
+        pending.setId(7L);
+        pending.setUserEmail("typo@example.com");
+        when(userMapper.findById(7L)).thenReturn(pending);
+
+        handler.onAuthenticationSuccess(request, response, authentication(7L));
+
+        assertThat(response.getRedirectedUrl()).isEqualTo("/users/register/verify-waiting");
+        // 대기 화면과 이메일 변경이 쓸 세션 값만 남는다.
+        assertThat(request.getSession().getAttribute("pendingVerificationEmail"))
+                .isEqualTo("typo@example.com");
+        // 일반 서비스에 들어갈 수 있는 인증은 남지 않는다.
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        assertThat(request.getSession().getAttribute("userId")).isNull();
     }
 
     private UsernamePasswordAuthenticationToken authentication(long userId) {
