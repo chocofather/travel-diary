@@ -7,6 +7,7 @@ import com.example.travlediary.model.PendingSocialWithdrawal;
 import com.example.travlediary.model.SocialProvider;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.service.user.SocialEmailAccountResolver;
+import com.example.travlediary.service.user.SocialLoginLinkService;
 import com.example.travlediary.service.user.SocialSignupAuthenticationService;
 import com.example.travlediary.service.user.SocialSignupOutcome;
 import com.example.travlediary.service.user.SocialSignupService;
@@ -95,6 +96,8 @@ class GoogleOAuthSecurityTest {
     private SocialSignupAuthenticationService socialSignupAuthenticationService;
     @MockitoBean
     private SocialEmailAccountResolver socialEmailAccountResolver;
+    @MockitoBean
+    private SocialLoginLinkService socialLoginLinkService;
 
     @Test
     void googleAuthorizationEntryUsesSpringSecurityStateNonceAndDefaultCallback()

@@ -53,6 +53,8 @@ class SocialSignupPageI18nContractTest {
     private com.example.travlediary.service.user.SocialEmailAccountResolver
             socialEmailAccountResolver;
     @MockitoBean
+    private com.example.travlediary.service.user.SocialLoginLinkService socialLoginLinkService;
+    @MockitoBean
     private com.example.travlediary.repository.user.UserMapper userMapper;
 
     @ParameterizedTest
@@ -237,6 +239,71 @@ class SocialSignupPageI18nContractTest {
 
         assertThat(page.selectFirst("#socialSignupEmailField")).isNull();
         assertThat(page.selectFirst("#userEmail")).isNull();
+    }
+
+
+    /**
+     * 기존 계정 연결은 새 users 를 만들지 않으므로 닉네임·약관을 다시 받지 않는다.
+     * 두 상태가 각각 하나의 영역으로 갈라져 있어야 JS 가 한쪽만 남길 수 있다.
+     */
+    @Test
+    void theSignupAndLinkModesAreSeparateRegionsWithTheLinkOneClosedByDefault()
+            throws Exception {
+        Document page = renderKakao("ko");
+
+        var newFields = page.selectFirst("#socialSignupNewFields");
+        assertThat(newFields).isNotNull();
+        // 닉네임·자동추천·약관·가입 버튼은 모두 신규가입 영역 안에 있다.
+        for (String selector : new String[]{"#nickname", "#generateNickname", "#nicknameMessage",
+                ".social-signup__consents", "#socialSignupSubmit"}) {
+            assertThat(newFields.selectFirst(selector))
+                    .as("%s belongs to the signup-only region", selector).isNotNull();
+        }
+        // 이메일 칸은 두 상태에서 모두 보이므로 그 영역 밖에 있다.
+        assertThat(newFields.selectFirst("#userEmail")).isNull();
+        assertThat(page.selectFirst("#userEmail")).isNotNull();
+
+        // 연결 전용 영역은 처음에는 닫혀 있다.
+        assertThat(page.selectFirst("#socialSignupLinkHeader").hasAttr("hidden")).isTrue();
+        assertThat(page.selectFirst("#socialSignupExistingAccount").hasAttr("hidden")).isTrue();
+        assertThat(newFields.hasAttr("hidden")).isFalse();
+        assertThat(page.selectFirst("#socialSignupNewHeader").hasAttr("hidden")).isFalse();
+        // 연결 form 은 가입 form 밖에 있어 닉네임/약관 검증과 무관하다.
+        assertThat(page.selectFirst("form[action=/social-signup] #linkExistingEmail")).isNull();
+        assertThat(page.selectFirst("#socialSignupExistingAccount #linkExistingEmail"))
+                .isNotNull();
+    }
+
+    /** 연결 문맥 제목과 설명도 5개 언어에서 번들로 내려온다. */
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+            "ko    | 카카오",
+            "en    | Kakao",
+            "ja    | Kakao",
+            "zh-CN | Kakao",
+            "zh-TW | Kakao"
+    })
+    void theLinkModeHeaderIsTranslatedInEverySupportedLanguage(String cookie, String brand)
+            throws Exception {
+        Document page = renderKakao(cookie);
+
+        assertThat(page.selectFirst("#socialSignupLinkTitle").text())
+                .as("link title in %s", cookie).isNotBlank().doesNotContain("??");
+        String description = page.selectFirst("#socialSignupLinkHeader p").text();
+        assertThat(description).isNotBlank().doesNotContain("??", "{0}");
+        // provider 표시명은 마이페이지와 같은 key 에서 그대로 온다.
+        assertThat(description).contains(brand);
+    }
+
+    /** Google 화면에는 연결 전용 영역 자체가 없다. */
+    @Test
+    void googleStillHasNeitherTheEmailFieldNorTheLinkMode() throws Exception {
+        Document page = render("ko");
+
+        assertThat(page.selectFirst("#socialSignupEmailField")).isNull();
+        assertThat(page.selectFirst("#socialSignupLinkHeader")).isNull();
+        assertThat(page.selectFirst("#socialSignupExistingAccount")).isNull();
+        assertThat(page.selectFirst("#nickname")).isNotNull();
     }
 
     private Document renderKakao(String cookie) throws Exception {

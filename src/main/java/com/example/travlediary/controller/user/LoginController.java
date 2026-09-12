@@ -1,5 +1,6 @@
 package com.example.travlediary.controller.user;
 
+import com.example.travlediary.model.PendingSocialLoginLink;
 import com.example.travlediary.security.LoginFormState;
 import com.example.travlediary.security.LoginThrottle;
 import com.example.travlediary.security.LoginThrottleStatus;
@@ -37,7 +38,28 @@ public class LoginController {
             return "redirect:/";
         }
         addLoginFormState(request, model);
+        addPendingSocialLink(request, model);
         return "login"; // login.html을 반환
+    }
+
+    /**
+     * 기존 계정 로그인을 기다리는 소셜 연결이 있으면 안내와 함께 그 provider 버튼을 막는다.
+     * 같은 provider 로 다시 로그인하면 가입 화면으로 되돌아가는 순환이 되기 때문이다.
+     */
+    private void addPendingSocialLink(HttpServletRequest request, Model model) {
+        HttpSession session = request.getSession(false);
+        if (session == null) {
+            return;
+        }
+        if (!(session.getAttribute(PendingSocialLoginLink.SESSION_ATTRIBUTE)
+                instanceof PendingSocialLoginLink pending)
+                || !pending.isUsableAt(Instant.now())) {
+            return;
+        }
+        model.addAttribute("pendingSocialLinkProvider", pending.provider().name());
+        model.addAttribute("pendingSocialLinkProviderName", messageSource.getMessage(
+                "mypage.account.social.provider." + pending.provider().name(),
+                null, LocaleContextHolder.getLocale()));
     }
 
     private void addLoginFormState(HttpServletRequest request, Model model) {

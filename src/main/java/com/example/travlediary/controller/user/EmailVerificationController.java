@@ -70,7 +70,9 @@ public class EmailVerificationController {
 
         switch (outcome.status()) {
             case SUCCESS -> {
-                session.removeAttribute(PENDING_EMAIL_SESSION_ATTRIBUTE);
+                // 여기서 대기 문맥을 지우지 않는다. 같은 브라우저의 다른 탭이 아직 인증 완료를
+                // 감지하지 못했을 수 있고, 세션은 탭끼리 공유되기 때문이다.
+                // 정리는 /verification/status 가 VERIFIED 를 돌려줄 때와 로그인 성공 시에 한다.
                 model.addAttribute("pageTitle", message("verification.success.pageTitle"));
                 model.addAttribute("verificationTitle", message("verification.success.title"));
                 model.addAttribute("verificationDescription",
@@ -102,6 +104,9 @@ public class EmailVerificationController {
         WaitingState waitingState = emailVerificationService.getWaitingState(pendingEmail);
         model.addAttribute("pageTitle", message("verification.waiting.pageTitle"));
         model.addAttribute("verificationAvailable", waitingState.available());
+        // 재발송 UI 는 아직 인증 대기 중일 때만 열지만, 진행 상태 확인은 세션이 기다리는 이메일이
+        // 있으면 언제나 돈다. 이미 인증이 끝난 뒤 이 화면을 새로고침해도 곧바로 알아채기 위해서다.
+        model.addAttribute("verificationPollingAvailable", pendingEmail != null);
         model.addAttribute("maskedEmail", waitingState.maskedEmail());
         model.addAttribute("cooldownSeconds", waitingState.remainingSeconds());
         return "verify-waiting";

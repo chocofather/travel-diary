@@ -1,6 +1,7 @@
 package com.example.travlediary.controller.user;
 
 import com.example.travlediary.dto.SocialSignupForm;
+import com.example.travlediary.model.PendingSocialLoginLink;
 import com.example.travlediary.model.PendingSocialSignup;
 import com.example.travlediary.model.SocialProvider;
 import com.example.travlediary.model.User;
@@ -11,6 +12,7 @@ import com.example.travlediary.service.user.SocialSignupAuthenticationService;
 import com.example.travlediary.service.user.SocialSignupFlowException;
 import com.example.travlediary.service.user.SocialSignupPersistenceException;
 import com.example.travlediary.service.user.SocialEmailAccountResolver;
+import com.example.travlediary.service.user.SocialLoginLinkService;
 import com.example.travlediary.service.user.SocialSignupOutcome;
 import com.example.travlediary.service.user.SocialSignupService;
 import com.example.travlediary.service.user.SocialSignupValidationException;
@@ -47,6 +49,8 @@ class SocialSignupControllerTest {
     private SocialSignupAuthenticationService authenticationService;
     @Mock
     private SocialEmailAccountResolver socialEmailAccountResolver;
+    @Mock
+    private SocialLoginLinkService socialLoginLinkService;
 
     private SocialSignupController controller;
 
@@ -59,7 +63,7 @@ class SocialSignupControllerTest {
         messages.setFallbackToSystemLocale(false);
         controller = new SocialSignupController(
                 socialSignupService, authenticationService,
-                socialEmailAccountResolver, messages);
+                socialEmailAccountResolver, socialLoginLinkService, messages);
     }
 
     private RedirectAttributes redirectAttributes() {
@@ -387,6 +391,80 @@ class SocialSignupControllerTest {
                 .containsEntry("status", "INVALID");
         assertThat(controller.checkEmailStatus(null, sessionWith(kakaoPending())))
                 .containsEntry("status", "INVALID");
+    }
+
+
+    // ---------- 기존 계정으로 로그인하여 연결 ----------
+
+    @Test
+    void startingAnExistingAccountLinkMovesTheIdentityIntoTheServerSessionOnly() {
+        PendingSocialSignup pending = kakaoPending();
+        MockHttpServletRequest request = requestWith(pending);
+        PendingSocialLoginLink link = loginLink();
+        when(socialLoginLinkService.begin(pending, "member@example.com")).thenReturn(link);
+
+        String view = controller.beginExistingAccountLink(
+                "member@example.com", null, request, new ConcurrentModel());
+
+        assertThat(view).isEqualTo("redirect:/login");
+        assertThat(request.getSession().getAttribute(
+                PendingSocialLoginLink.SESSION_ATTRIBUTE)).isSameAs(link);
+        // 가입 문맥은 정리하고 새 users 는 만들지 않는다.
+        assertThat(request.getSession().getAttribute(
+                PendingSocialSignup.SESSION_ATTRIBUTE)).isNull();
+        verify(socialSignupService, never()).complete(any(), any());
+    }
+
+    /** AJAX 가 EXISTING_ACTIVE 였어도 POST 시점 재확인에서 막히면 시작하지 않는다. */
+    @Test
+    void anEmailThatNoLongerQualifiesReturnsToTheFormWithoutAPendingLink() {
+        PendingSocialSignup pending = naverPending("naver@example.com");
+        MockHttpServletRequest request = requestWith(pending);
+        when(socialLoginLinkService.begin(pending, "member@example.com")).thenReturn(null);
+        ConcurrentModel model = new ConcurrentModel();
+
+        String view = controller.beginExistingAccountLink(
+                "member@example.com", null, request, model);
+
+        assertThat(view).isEqualTo("social-signup");
+        assertThat(request.getSession().getAttribute(
+                PendingSocialLoginLink.SESSION_ATTRIBUTE)).isNull();
+        // 가입 문맥은 남겨 사용자가 다른 이메일로 이어갈 수 있게 한다.
+        assertThat(request.getSession().getAttribute(
+                PendingSocialSignup.SESSION_ATTRIBUTE)).isSameAs(pending);
+        assertThat(model.getAttribute("emailVerificationRequired")).isEqualTo(true);
+    }
+
+    /** Google 과 만료된 문맥은 이 경로를 쓸 수 없다. */
+    @Test
+    void googleAndExpiredContextsCannotStartAnExistingAccountLink() {
+        MockHttpServletRequest google = requestWith(pending(
+                Instant.now().minusSeconds(10), Instant.now().plusSeconds(590)));
+        assertThat(controller.beginExistingAccountLink(
+                "member@example.com", null, google, new ConcurrentModel()))
+                .isEqualTo("redirect:/login?socialSignupExpired=true");
+
+        assertThat(controller.beginExistingAccountLink(
+                "member@example.com", null, new MockHttpServletRequest(), new ConcurrentModel()))
+                .isEqualTo("redirect:/login?socialSignupExpired=true");
+
+        verify(socialLoginLinkService, never()).begin(any(), any());
+    }
+
+    @Test
+    void anAlreadySignedInMemberCannotStartAnExistingAccountLink() {
+        assertThat(controller.beginExistingAccountLink(
+                "member@example.com", authentication(),
+                requestWith(kakaoPending()), new ConcurrentModel()))
+                .isEqualTo("redirect:/");
+        verify(socialLoginLinkService, never()).begin(any(), any());
+    }
+
+    private PendingSocialLoginLink loginLink() {
+        Instant now = Instant.now();
+        return new PendingSocialLoginLink(
+                "link-flow", SocialProvider.KAKAO, "kakao-sub", null, null,
+                25L, "member@example.com", now, now.plusSeconds(600));
     }
 
     private PendingSocialSignup kakaoPending() {

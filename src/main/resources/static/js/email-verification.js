@@ -136,5 +136,9 @@ function initializeVerificationPolling(stopResendCooldown) {
     });
     window.addEventListener("pagehide", stop);
 
-    if (!document.hidden) start();
+    if (!document.hidden) {
+        // 이미 다른 탭에서 인증이 끝난 뒤 이 화면을 열었을 수 있으니 한 주기 기다리지 않는다.
+        check();
+        start();
+    }
 }

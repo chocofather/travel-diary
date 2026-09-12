@@ -2,6 +2,7 @@ package com.example.travlediary.config;
 
 import com.example.travlediary.model.PendingSocialConnection;
 import com.example.travlediary.model.PendingSocialLink;
+import com.example.travlediary.model.PendingSocialLoginLink;
 import com.example.travlediary.model.PendingSocialSignup;
 import com.example.travlediary.model.PendingSocialWithdrawal;
 import com.example.travlediary.model.SocialAccount;
@@ -61,6 +62,8 @@ public class SocialOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
     static final String BLOCKED_EMAIL_REDIRECT = "/login?socialEmailBlocked=true";
     /** 이메일 인증을 마치지 않은 소셜 가입 계정. 일반 회원가입과 같은 대기 화면을 쓴다. */
     static final String VERIFY_WAITING_REDIRECT = "/users/register/verify-waiting";
+    /** 연결 대기 중인 provider 로 다시 로그인했다. 다른 로그인 수단을 써야 한다. */
+    static final String LINK_LOGIN_REQUIRED_REDIRECT = "/login?socialLinkLoginRequired=true";
 
     private final SocialAccountService socialAccountService;
     private final UserMapper userMapper;
@@ -451,6 +454,18 @@ public class SocialOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
      * social_accounts 로 찾아온 회원이 아직 이메일 인증 대기 중인지 본다.
      * 이메일 없는 옛 소셜 계정과 섞이지 않도록 user_email 이 있는 경우만 인정한다.
      */
+    /** 지금 이 provider 를 기존 계정에 붙이려고 로그인을 기다리는 중인지. */
+    private boolean isAwaitingLinkFor(HttpServletRequest request, SocialProvider provider) {
+        HttpSession session = request.getSession(false);
+        if (session == null) {
+            return false;
+        }
+        return session.getAttribute(PendingSocialLoginLink.SESSION_ATTRIBUTE)
+                instanceof PendingSocialLoginLink pending
+                && pending.isUsableAt(Instant.now())
+                && pending.provider() == provider;
+    }
+
     private boolean isAwaitingEmailVerification(User user) {
         return user != null
                 && user.getId() != null
@@ -496,6 +511,12 @@ public class SocialOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
     private void beginNewIdentityFlow(HttpServletRequest request,
                                       HttpServletResponse response,
                                       SocialIdentity identity) throws IOException {
+        // 연결을 기다리는 provider 로 다시 로그인하면 가입 화면이 또 열리는 순환이 된다.
+        // 새 users 를 만들지 않고, 기다리는 문맥도 지우지 않은 채 다른 로그인 수단을 안내한다.
+        if (isAwaitingLinkFor(request, identity.provider())) {
+            response.sendRedirect(LINK_LOGIN_REQUIRED_REDIRECT);
+            return;
+        }
         if (socialEmailAccountResolver == null) {
             beginSignup(request, response, identity);
             return;

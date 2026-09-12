@@ -351,6 +351,9 @@ public class SecurityConfig {
                                 "^/account/restricted/appeals$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(
                                 "^/social-signup$", HttpMethod.POST.name()),
+                        // 기존 계정 로그인으로 소셜 연결을 시작하는 요청.
+                        new RegexRequestMatcher(
+                                "^/social-signup/link-existing$", HttpMethod.POST.name()),
                         // 기존 계정에 소셜 로그인을 붙이는 확인/취소. 둘 다 토큰을 요구한다.
                         new RegexRequestMatcher(
                                 "^/social-link$", HttpMethod.POST.name()),
@@ -366,7 +369,7 @@ public class SecurityConfig {
                                 "/", "/home", "/random-travel", "/locale",
                                 "/login", "/logout",
                                 "/oauth2/**", "/login/oauth2/**", "/social-signup",
-                                "/social-signup/email-status",
+                                "/social-signup/email-status", "/social-signup/link-existing",
                                 "/social-link", "/social-link/cancel",
                                 "/register", "/users/register",
                                 "/users/verify", "/users/register/verify-waiting",

@@ -1,6 +1,7 @@
 package com.example.travlediary.config;
 
 import com.example.travlediary.model.PendingSocialLink;
+import com.example.travlediary.model.PendingSocialLoginLink;
 import com.example.travlediary.model.PendingSocialSignup;
 import com.example.travlediary.model.PendingSocialConnection;
 import com.example.travlediary.model.PendingSocialWithdrawal;
@@ -19,6 +20,7 @@ import com.example.travlediary.service.user.SocialEmailAccountResolver;
 import com.example.travlediary.service.user.SocialWithdrawalException;
 import com.example.travlediary.service.user.SocialWithdrawalService;
 import com.example.travlediary.service.user.UserSanctionService;
+import com.example.travlediary.service.user.SocialLoginLinkService;
 import com.example.travlediary.service.user.WithdrawalGraceService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -93,7 +95,8 @@ class SocialOAuth2LoginSuccessHandlerTest {
                 userMapper,
                 userSanctionService,
                 new CustomLoginSuccessHandler(userMapper, new LoginThrottle(),
-                        withdrawalGraceService),
+                        withdrawalGraceService,
+                        socialLoginLinkService()),
                 withdrawalGraceService,
                 emailAccountResolver());
         SecurityContextHolder.clearContext();
@@ -949,7 +952,8 @@ class SocialOAuth2LoginSuccessHandlerTest {
                 userMapper,
                 userSanctionService,
                 new CustomLoginSuccessHandler(userMapper, new LoginThrottle(),
-                        withdrawalGraceService),
+                        withdrawalGraceService,
+                        socialLoginLinkService()),
                 withdrawalGraceService,
                 socialWithdrawalService,
                 authorizedClientService,
@@ -1092,4 +1096,76 @@ class SocialOAuth2LoginSuccessHandlerTest {
         assertThat(context).isNotNull();
         return context.getAuthentication();
     }
+
+    /** 기다리는 연결 문맥이 없으면 항상 NONE 이라 평소 로그인 흐름이 그대로 유지된다. */
+    private SocialLoginLinkService socialLoginLinkService() {
+        return new SocialLoginLinkService(
+                userMapper, org.mockito.Mockito.mock(SocialAccountService.class));
+    }
+
+
+    /**
+     * 연결 대기 중인 provider 로 다시 로그인해도 가입 화면이 또 열리지 않는다.
+     * 새 users 도 만들지 않고, 기다리는 문맥도 지우지 않는다.
+     */
+    @ParameterizedTest
+    @EnumSource(value = SocialProvider.class, names = {"KAKAO", "NAVER"})
+    void reAuthenticatingWithTheProviderBeingLinkedNeverReopensSignup(SocialProvider provider)
+            throws Exception {
+        String providerUserId = provider == SocialProvider.KAKAO ? "kakao-sub" : "naver-id";
+        OAuth2AuthenticationToken authentication = provider == SocialProvider.KAKAO
+                ? oidcAuthentication("kakao", "https://kauth.kakao.com",
+                        providerUserId, null, null, "OIDC_USER")
+                : naverAuthentication("00", Map.of("id", providerUserId), "OAUTH2_USER", true);
+        when(socialAccountService.findByProviderAndProviderUserId(provider, providerUserId))
+                .thenReturn(null);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        PendingSocialLoginLink pending = pendingLoginLink(provider);
+        request.getSession().setAttribute(PendingSocialLoginLink.SESSION_ATTRIBUTE, pending);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        assertThat(response.getRedirectedUrl())
+                .isEqualTo("/login?socialLinkLoginRequired=true");
+        assertThat(request.getSession().getAttribute(
+                PendingSocialSignup.SESSION_ATTRIBUTE)).isNull();
+        // 다른 로그인 수단으로 돌아올 수 있도록 대기 문맥은 그대로 둔다.
+        assertThat(request.getSession().getAttribute(
+                PendingSocialLoginLink.SESSION_ATTRIBUTE)).isSameAs(pending);
+        verify(userMapper, never()).insertUser(any());
+        verify(userMapper, never()).findByEmail(anyString());
+    }
+
+    /** 다른 provider 로 기존 계정에 로그인하면 평소 로그인 경로를 그대로 타고 후처리가 붙는다. */
+    @Test
+    void loggingInWithAnotherConnectedProviderStillReachesTheSharedLoginSuccessHandler()
+            throws Exception {
+        OAuth2AuthenticationToken authentication = googleAuthentication(
+                "google-sub-123", "member@example.com", true, "OIDC_USER");
+        when(socialAccountService.findByProviderAndProviderUserId(
+                SocialProvider.GOOGLE, "google-sub-123"))
+                .thenReturn(socialAccount(25L, "google-sub-123"));
+        when(userMapper.findById(25L))
+                .thenReturn(user(25L, "member", UserRole.USER, UserStatus.ACTIVE));
+        when(userMapper.findStatusById(25L)).thenReturn(UserStatus.ACTIVE);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.getSession().setAttribute(PendingSocialLoginLink.SESSION_ATTRIBUTE,
+                pendingLoginLink(SocialProvider.KAKAO));
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        // 연결 후처리는 CustomLoginSuccessHandler 안의 공통 서비스가 맡는다.
+        assertThat(request.getSession().getAttribute("userId")).isEqualTo(25L);
+        assertThat(savedAuthentication(request)).isNotNull();
+    }
+
+    private PendingSocialLoginLink pendingLoginLink(SocialProvider provider) {
+        Instant now = Instant.now();
+        return new PendingSocialLoginLink(
+                "link-flow", provider, "linking-sub", null, null,
+                25L, "member@example.com", now.minusSeconds(10), now.plusSeconds(590));
+    }
+
 }

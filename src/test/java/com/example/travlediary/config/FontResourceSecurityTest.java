@@ -49,6 +49,9 @@ class FontResourceSecurityTest {
     @MockitoBean
     private com.example.travlediary.service.user.WithdrawalGraceService withdrawalGraceService;
 
+    @MockitoBean
+    private com.example.travlediary.service.user.SocialLoginLinkService socialLoginLinkService;
+
     @Test
     void anonymousFontRequestReturnsInlineStaticResource() throws Exception {
         mockMvc.perform(get(FONT_URL))

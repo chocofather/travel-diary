@@ -17,6 +17,12 @@
   </p>
   <p class="mypage-social-connection-notice is-error"
      th:if="${socialConnectionNotice != null
+         and socialConnectionNotice.type().name() == 'TARGET_MISMATCH'}"
+     role="alert" th:text="#{mypage.account.social.connection.targetMismatch}">
+    로그인한 계정이 연결 대상 계정과 달라 소셜 계정을 연결하지 않았습니다.
+  </p>
+  <p class="mypage-social-connection-notice is-error"
+     th:if="${socialConnectionNotice != null
          and socialConnectionNotice.type().name() == 'ERROR'}"
      role="alert" th:text="#{mypage.account.social.connection.error}">
     소셜 계정을 연결할 수 없습니다. 다시 시도해주세요.

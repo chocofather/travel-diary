@@ -26,7 +26,7 @@
            aria-live="polite" hidden></div>
 
       <!-- polling 설정과 문구는 서버가 내려준다. JS 에 한국어를 두지 않는다. -->
-      <div id="verificationStatusPoller" th:if="${verificationAvailable}" hidden
+      <div id="verificationStatusPoller" th:if="${verificationPollingAvailable}" hidden
            th:data-status-url="@{/users/verification/status}"
            th:data-login-url="@{/login(verified=true)}"
            data-poll-interval="5000"

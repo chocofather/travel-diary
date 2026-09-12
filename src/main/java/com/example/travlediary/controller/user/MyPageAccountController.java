@@ -73,6 +73,8 @@ public class MyPageAccountController {
         if (reauthenticationService.isVerified(session, userDetails.getId())) {
             return "redirect:/mypage/account/edit";
         }
+        // 본인 확인 화면에서도 로그인 직후 처리된 소셜 연결 결과를 흘리지 않고 보여준다.
+        consumeSocialConnectionNotice(model, session);
         if (!model.containsAttribute("verifyForm")) {
             model.addAttribute("verifyForm", new AccountVerifyForm());
         }
@@ -400,6 +402,10 @@ public class MyPageAccountController {
         model.addAttribute("socialProviders", SocialProvider.values());
         model.addAttribute("connectedSocialProviders", connectedProviders);
 
+        consumeSocialConnectionNotice(model, session);
+    }
+
+    private void consumeSocialConnectionNotice(Model model, HttpSession session) {
         Object value = session.getAttribute(SocialConnectionNotice.SESSION_ATTRIBUTE);
         session.removeAttribute(SocialConnectionNotice.SESSION_ATTRIBUTE);
         if (value instanceof SocialConnectionNotice notice) {

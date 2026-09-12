@@ -23,6 +23,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
@@ -220,6 +221,87 @@ class EmailVerificationSecurityTest {
         mockMvc.perform(get("/users/verification/status").session(pendingSession()))
                 .andExpect(status().isOk())
                 .andExpect(content().json("{\"status\":\"UNKNOWN\"}"));
+    }
+
+
+    /**
+     * 같은 브라우저의 새 탭이 인증을 끝내도 대기 탭의 polling 문맥은 남아 있어야 한다.
+     * 세션은 탭끼리 공유되므로 여기서 지우면 대기 탭이 영영 완료를 감지하지 못한다.
+     */
+    @Test
+    void verifyingInAnotherTabKeepsThePollingContextForTheWaitingTab() throws Exception {
+        MockHttpSession session = pendingSession();
+        when(emailVerificationService.verify("valid-token")).thenReturn(
+                new EmailVerificationService.VerificationOutcome(
+                        EmailVerificationService.VerificationStatus.SUCCESS, "member@gmail.com"));
+
+        mockMvc.perform(get("/users/verify").param("token", "valid-token").session(session))
+                .andExpect(status().isOk())
+                .andExpect(view().name("verification-result"));
+
+        assertThat(session.getAttribute(
+                EmailVerificationController.PENDING_EMAIL_SESSION_ATTRIBUTE))
+                .isEqualTo("member@gmail.com");
+    }
+
+    /** 대기 탭의 다음 polling 이 ACTIVE 를 확인하고, 그때 비로소 문맥을 닫는다. */
+    @Test
+    void theWaitingTabThenSeesVerifiedAndTheContextIsClosedInThatOrder() throws Exception {
+        MockHttpSession session = pendingSession();
+        when(emailVerificationService.verify("valid-token")).thenReturn(
+                new EmailVerificationService.VerificationOutcome(
+                        EmailVerificationService.VerificationStatus.SUCCESS, "member@gmail.com"));
+        when(emailVerificationService.checkProgress("member@gmail.com"))
+                .thenReturn(EmailVerificationService.VerificationProgress.VERIFIED);
+
+        mockMvc.perform(get("/users/verify").param("token", "valid-token").session(session));
+        mockMvc.perform(get("/users/verification/status").session(session))
+                .andExpect(content().json("{\"status\":\"VERIFIED\"}"));
+
+        assertThat(session.getAttribute(
+                EmailVerificationController.PENDING_EMAIL_SESSION_ATTRIBUTE)).isNull();
+    }
+
+    /**
+     * 다른 브라우저나 기기에서 인증한 경우. 대기 브라우저의 세션은 그대로이므로
+     * 자기 세션의 이메일로 DB 상태를 조회해 ACTIVE 를 알아챈다.
+     */
+    @Test
+    void verifyingOnAnotherDeviceIsStillDetectedFromTheWaitingSession() throws Exception {
+        MockHttpSession waiting = pendingSession();
+        when(emailVerificationService.checkProgress("member@gmail.com"))
+                .thenReturn(EmailVerificationService.VerificationProgress.PENDING)
+                .thenReturn(EmailVerificationService.VerificationProgress.VERIFIED);
+
+        mockMvc.perform(get("/users/verification/status").session(waiting))
+                .andExpect(content().json("{\"status\":\"PENDING\"}"));
+        assertThat(waiting.getAttribute(
+                EmailVerificationController.PENDING_EMAIL_SESSION_ATTRIBUTE))
+                .isEqualTo("member@gmail.com");
+
+        mockMvc.perform(get("/users/verification/status").session(waiting))
+                .andExpect(content().json("{\"status\":\"VERIFIED\"}"));
+        assertThat(waiting.getAttribute(
+                EmailVerificationController.PENDING_EMAIL_SESSION_ATTRIBUTE)).isNull();
+    }
+
+    /** 인증이 끝난 뒤 대기 화면을 새로고침해도 polling 은 계속 붙는다. */
+    @Test
+    void theWaitingPageKeepsPollingEvenWhenTheAccountIsNoLongerPending() throws Exception {
+        MockHttpSession session = pendingSession();
+        when(emailVerificationService.getWaitingState(null))
+                .thenReturn(new EmailVerificationService.WaitingState(false, "", 0));
+        when(emailVerificationService.getWaitingState("member@gmail.com"))
+                .thenReturn(new EmailVerificationService.WaitingState(false, "", 0));
+
+        mockMvc.perform(get("/users/register/verify-waiting").session(session))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("verificationAvailable", false))
+                .andExpect(model().attribute("verificationPollingAvailable", true));
+
+        // 기다릴 이메일이 아예 없으면 폴링도 걸지 않는다.
+        mockMvc.perform(get("/users/register/verify-waiting"))
+                .andExpect(model().attribute("verificationPollingAvailable", false));
     }
 
     private MockHttpSession pendingSession() {

@@ -1,5 +1,6 @@
 package com.example.travlediary.config;
 
+import com.example.travlediary.controller.user.EmailVerificationController;
 import com.example.travlediary.model.UserStatus;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
@@ -8,6 +9,7 @@ import com.example.travlediary.security.LoginFormState;
 import com.example.travlediary.security.LoginThrottle;
 import com.example.travlediary.security.RestrictedAccountFilter;
 import com.example.travlediary.security.WithdrawalPendingAccountFilter;
+import com.example.travlediary.service.user.SocialLoginLinkService;
 import com.example.travlediary.service.user.WithdrawalGraceService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -26,18 +28,24 @@ import java.net.URISyntaxException;
 @Component
 public class CustomLoginSuccessHandler implements AuthenticationSuccessHandler {
 
+    /** 소셜 연결 결과 안내가 렌더링되는 화면. 마이페이지 계정 및 보안과 같은 자리를 쓴다. */
+    static final String SOCIAL_LINK_RESULT_PATH = "/mypage/account";
+
     private final UserMapper userMapper;
     private final LoginThrottle loginThrottle;
     private final WithdrawalGraceService withdrawalGraceService;
+    private final SocialLoginLinkService socialLoginLinkService;
     private final RequestCache requestCache = new HttpSessionRequestCache();
 
     @Autowired
     public CustomLoginSuccessHandler(UserMapper userMapper,
                                      LoginThrottle loginThrottle,
-                                     WithdrawalGraceService withdrawalGraceService) {
+                                     WithdrawalGraceService withdrawalGraceService,
+                                     SocialLoginLinkService socialLoginLinkService) {
         this.userMapper = userMapper;
         this.loginThrottle = loginThrottle;
         this.withdrawalGraceService = withdrawalGraceService;
+        this.socialLoginLinkService = socialLoginLinkService;
     }
 
     @Override
@@ -51,10 +59,20 @@ public class CustomLoginSuccessHandler implements AuthenticationSuccessHandler {
         loginThrottle.recordSuccess(userDetails.getUsername());
         if (request.getSession(false) != null) {
             request.getSession(false).removeAttribute(LoginFormState.SESSION_ATTRIBUTE);
+            // 이메일 인증 대기 문맥은 인증 링크가 아니라 여기서 닫는다. 인증 화면에서 바로 지우면
+            // 같은 브라우저의 대기 탭이 완료를 감지하지 못한다.
+            request.getSession(false).removeAttribute(
+                    EmailVerificationController.PENDING_EMAIL_SESSION_ATTRIBUTE);
         }
 
         // 1) 인증 완료 후에는 username 이 아니라 DB 회원 ID를 세션 식별값으로 사용한다.
         request.getSession().setAttribute("userId", userId);
+
+        // 1-1) 기존 계정 로그인을 기다리던 소셜 연결이 있으면 여기서 마무리한다.
+        //      일반 로그인과 소셜 로그인이 같은 서비스를 쓴다. 아래 상태 격리보다 먼저 부르는 이유는
+        //      대기 문맥을 상태와 무관하게 반드시 소비해 세션에 남기지 않기 위해서다.
+        SocialLoginLinkService.Outcome linkOutcome =
+                socialLoginLinkService.completeAfterLogin(request.getSession(), userId);
 
         // 2) 상태 격리 화면은 저장된 요청보다 우선한다. 인증은 됐지만 서비스 이용 권한은 아니다.
         UserStatus status = userMapper.findStatusById(userId);
@@ -74,6 +92,14 @@ public class CustomLoginSuccessHandler implements AuthenticationSuccessHandler {
                 return;
             }
             response.sendRedirect(WithdrawalPendingAccountFilter.WITHDRAWAL_PENDING_PATH);
+            return;
+        }
+
+        // 2-1) 소셜 연결을 시도했다면 결과 안내가 보이는 계정 화면으로 보낸다.
+        //      기다리던 연결이 없었으면(NONE) 아래 평소 이동 규칙을 그대로 쓴다.
+        if (linkOutcome != null && linkOutcome.handled()) {
+            requestCache.removeRequest(request, response);
+            response.sendRedirect(SOCIAL_LINK_RESULT_PATH);
             return;
         }
 

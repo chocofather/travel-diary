@@ -63,8 +63,8 @@ class EmailVerificationUiContractTest {
                 .contains("th:data-status-url=\"@{/users/verification/status}\"")
                 .contains("th:data-login-url=\"@{/login(verified=true)}\"")
                 .contains("th:data-msg-verified=\"#{verification.waiting.verified}\"")
-                // 기다릴 문맥이 있을 때만 폴링한다.
-                .contains("th:if=\"${verificationAvailable}\" hidden");
+                // 세션이 기다리는 이메일이 있으면 폴링한다. 재발송 UI 조건과는 따로 본다.
+                .contains("th:if=\"${verificationPollingAvailable}\" hidden");
     }
 
     /** 문구는 번들에서 오고, 확인 요청에는 어떤 식별값도 싣지 않는다. */
@@ -88,6 +88,32 @@ class EmailVerificationUiContractTest {
                 .isFalse();
         // 이메일이나 회원 id 를 요청에 싣지 않는다.
         assertThat(script).doesNotContain("statusUrl + \"?", "email=", "userId=");
+    }
+
+
+    /** 이메일 확인 결과에 따라 두 상태를 오가고, 이메일을 고치면 신규가입으로 되돌아간다. */
+    @Test
+    void socialSignupScriptSwitchesBetweenSignupAndLinkModesWithoutHardcodedText()
+            throws IOException {
+        String script = resource("static/js/social-signup.js");
+
+        assertThat(script)
+                .contains("function showExistingAccount(show)")
+                // 신규가입 영역과 두 header 를 통째로 여닫는다.
+                .contains("$newFields.prop(\"hidden\", show)")
+                .contains("$newHeader.prop(\"hidden\", show)")
+                .contains("$linkHeader.prop(\"hidden\", !show)")
+                // 감춘 필수 입력이 브라우저 검증을 막지 않게 required 도 함께 내린다.
+                .contains("$(\"#nickname\").prop(\"required\", !show)")
+                .contains("$signupSubmit.prop(\"disabled\", show)")
+                // 이메일을 고치면 이전 판정을 버리고 신규가입으로 복귀한다.
+                .contains("showExistingAccount(status === \"EXISTING_ACTIVE\")")
+                .contains("showExistingAccount(false)");
+        // 문구는 전부 data-* 로 서버에서 온다.
+        assertThat(java.util.regex.Pattern.compile("[\"'][^\"'\\n]*[가-힣][^\"'\\n]*[\"']")
+                .matcher(script).find())
+                .as("hardcoded Korean string literal in social-signup.js")
+                .isFalse();
     }
 
     private String resource(String path) throws IOException {

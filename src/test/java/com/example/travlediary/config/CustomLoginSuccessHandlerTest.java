@@ -1,5 +1,7 @@
 package com.example.travlediary.config;
 
+import com.example.travlediary.model.PendingSocialLoginLink;
+import com.example.travlediary.model.SocialProvider;
 import com.example.travlediary.model.User;
 import com.example.travlediary.model.UserRole;
 import com.example.travlediary.model.UserStatus;
@@ -7,6 +9,9 @@ import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.security.LoginFormState;
 import com.example.travlediary.security.LoginThrottle;
+import com.example.travlediary.service.user.SocialAccountService;
+import com.example.travlediary.service.user.SocialConnectionResult;
+import com.example.travlediary.service.user.SocialLoginLinkService;
 import com.example.travlediary.service.user.WithdrawalGraceService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,6 +25,8 @@ import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
+
+import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -36,13 +43,16 @@ class CustomLoginSuccessHandlerTest {
     private LoginThrottle loginThrottle;
     @Mock
     private WithdrawalGraceService withdrawalGraceService;
+    @Mock
+    private SocialAccountService socialAccountService;
 
     private CustomLoginSuccessHandler handler;
 
     @BeforeEach
     void setUp() {
         handler = new CustomLoginSuccessHandler(
-                userMapper, loginThrottle, withdrawalGraceService);
+                userMapper, loginThrottle, withdrawalGraceService,
+                        socialLoginLinkService());
     }
 
     @AfterEach
@@ -277,4 +287,76 @@ class CustomLoginSuccessHandlerTest {
         user.setUserRole(role);
         return user;
     }
+
+    /** 기다리는 연결 문맥이 없으면 항상 NONE 이라 평소 로그인 흐름이 그대로 유지된다. */
+    private SocialLoginLinkService socialLoginLinkService() {
+        return new SocialLoginLinkService(userMapper, socialAccountService);
+    }
+
+
+    /** 기다리던 소셜 연결이 있으면 로그인 직후 붙이고 결과 화면으로 보낸다. */
+    @Test
+    void aPendingSocialLinkIsCompletedRightAfterLoginAndOverridesTheDestination()
+            throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addParameter("redirect", "/mypage");
+        Instant now = Instant.now();
+        request.getSession().setAttribute(PendingSocialLoginLink.SESSION_ATTRIBUTE,
+                new PendingSocialLoginLink("link-flow", SocialProvider.KAKAO, "kakao-sub",
+                        null, null, 7L, "member@example.com",
+                        now.minusSeconds(10), now.plusSeconds(590)));
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        when(userMapper.findStatusById(7L)).thenReturn(UserStatus.ACTIVE);
+        when(userMapper.findById(7L)).thenReturn(linkTarget());
+        when(socialAccountService.connectToUser(
+                7L, SocialProvider.KAKAO, "kakao-sub", null, null))
+                .thenReturn(SocialConnectionResult.CONNECTED);
+
+        handler.onAuthenticationSuccess(request, response, authentication(7L));
+
+        assertThat(response.getRedirectedUrl()).isEqualTo("/mypage/account");
+        assertThat(request.getSession().getAttribute(
+                PendingSocialLoginLink.SESSION_ATTRIBUTE)).isNull();
+        assertThat(request.getSession().getAttribute("userId")).isEqualTo(7L);
+    }
+
+    /** 연결 대기가 없으면 평소 이동 규칙을 그대로 쓴다. */
+    @Test
+    void anOrdinaryLoginKeepsItsUsualRedirect() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addParameter("redirect", "/mypage");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        when(userMapper.findStatusById(7L)).thenReturn(UserStatus.ACTIVE);
+
+        handler.onAuthenticationSuccess(request, response, authentication(7L));
+
+        assertThat(response.getRedirectedUrl()).isEqualTo("/mypage");
+        verify(socialAccountService, never())
+                .connectToUser(org.mockito.ArgumentMatchers.anyLong(),
+                        org.mockito.ArgumentMatchers.any(),
+                        org.mockito.ArgumentMatchers.any(),
+                        org.mockito.ArgumentMatchers.any(),
+                        org.mockito.ArgumentMatchers.any());
+    }
+
+    private UsernamePasswordAuthenticationToken authentication(long userId) {
+        User user = new User();
+        user.setId(userId);
+        user.setUsername("member");
+        user.setUserRole(UserRole.USER);
+        user.setStatus(UserStatus.ACTIVE);
+        CustomUserDetails principal = new CustomUserDetails(user);
+        return UsernamePasswordAuthenticationToken.authenticated(
+                principal, null, principal.getAuthorities());
+    }
+
+    private User linkTarget() {
+        User user = new User();
+        user.setId(7L);
+        user.setUserEmail("member@example.com");
+        user.setUserRole(UserRole.USER);
+        user.setStatus(UserStatus.ACTIVE);
+        return user;
+    }
+
 }

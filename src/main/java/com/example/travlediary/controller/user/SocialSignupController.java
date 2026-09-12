@@ -1,6 +1,7 @@
 package com.example.travlediary.controller.user;
 
 import com.example.travlediary.dto.SocialSignupForm;
+import com.example.travlediary.model.PendingSocialLoginLink;
 import com.example.travlediary.model.PendingSocialSignup;
 import com.example.travlediary.model.SocialProvider;
 import com.example.travlediary.security.CustomUserDetails;
@@ -9,6 +10,7 @@ import com.example.travlediary.service.user.SocialSignupAuthenticationService;
 import com.example.travlediary.service.user.SocialSignupFlowException;
 import com.example.travlediary.service.user.SocialSignupPersistenceException;
 import com.example.travlediary.service.user.SocialEmailAccountResolver;
+import com.example.travlediary.service.user.SocialLoginLinkService;
 import com.example.travlediary.service.user.SocialEmailAccountResolver.EnteredEmailStatus;
 import com.example.travlediary.service.user.SocialSignupOutcome;
 import com.example.travlediary.service.user.SocialSignupService;
@@ -26,6 +28,7 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -50,6 +53,7 @@ public class SocialSignupController {
     private final SocialSignupService socialSignupService;
     private final SocialSignupAuthenticationService authenticationService;
     private final SocialEmailAccountResolver socialEmailAccountResolver;
+    private final SocialLoginLinkService socialLoginLinkService;
     private final MessageSource messageSource;
 
     @GetMapping("/social-signup")
@@ -91,6 +95,55 @@ public class SocialSignupController {
         }
         return Map.of("status", socialEmailAccountResolver
                 .classifyEnteredEmail(email).status().name());
+    }
+
+    /**
+     * 이미 가입된 이메일이 나왔을 때 "기존 계정으로 로그인하여 연결" 을 시작한다.
+     *
+     * <p>여기서는 아무것도 저장하지 않는다. provider 식별자와 연결 대상만 서버 세션으로 옮기고
+     * 로그인 화면으로 보낸다. 실제 연결은 그 계정으로 로그인에 성공한 뒤에야 일어난다.
+     */
+    @PostMapping("/social-signup/link-existing")
+    public String beginExistingAccountLink(
+            @RequestParam(name = "userEmail", required = false) String userEmail,
+            Authentication authentication,
+            HttpServletRequest request,
+            Model model) {
+        if (isTravelDiaryMember(authentication)) {
+            return "redirect:/";
+        }
+
+        HttpSession session = request.getSession();
+        PendingSocialSignup pending = validPending(session);
+        // Google 은 provider 가 인증한 이메일을 쓰므로 /social-link 로 따로 처리한다.
+        if (pending == null || pending.provider() == SocialProvider.GOOGLE) {
+            clearPending(session);
+            return EXPIRED_REDIRECT;
+        }
+
+        // AJAX 결과를 믿지 않는다. provider 식별자와 대상 계정 상태를 서비스가 다시 확인한다.
+        PendingSocialLoginLink link = socialLoginLinkService.begin(pending, userEmail);
+        if (link == null) {
+            return signupFormWithEmailError(model, pending, userEmail);
+        }
+
+        session.setAttribute(PendingSocialLoginLink.SESSION_ATTRIBUTE, link);
+        clearPending(session);
+        return "redirect:/login";
+    }
+
+    /** 연결을 시작할 수 없으면 가입 화면으로 돌아가 이메일 칸에 사유를 보여준다. */
+    private String signupFormWithEmailError(Model model,
+                                            PendingSocialSignup pending,
+                                            String userEmail) {
+        SocialSignupForm form = new SocialSignupForm();
+        form.setUserEmail(userEmail);
+        BeanPropertyBindingResult binding =
+                new BeanPropertyBindingResult(form, "socialSignupForm");
+        binding.rejectValue("userEmail", "signup.social.email.unavailable",
+                "현재 사용할 수 없는 이메일입니다.");
+        model.addAttribute(BindingResult.MODEL_KEY_PREFIX + "socialSignupForm", binding);
+        return signupForm(model, form, pending);
     }
 
     @PostMapping("/social-signup")

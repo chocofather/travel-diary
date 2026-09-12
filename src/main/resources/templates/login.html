@@ -132,6 +132,23 @@
       계정 연결을 취소했습니다. 저장된 내용은 없습니다.
     </div>
 
+    <!-- 기존 계정 로그인을 기다리는 소셜 연결. 로그인에 성공하면 그 자리에서 연결된다. -->
+    <div class="login-feedback login-feedback--success"
+         id="pendingSocialLinkNotice"
+         th:if="${pendingSocialLinkProviderName != null}"
+         role="status"
+         th:text="#{login.social.link.pending(${pendingSocialLinkProviderName})}">
+      기존 Travel Diary 계정으로 로그인하면 소셜 계정 연결이 완료됩니다.
+    </div>
+
+    <div class="login-feedback login-feedback--error"
+         th:if="${param.socialLinkLoginRequired}"
+         role="alert"
+         aria-live="assertive"
+         th:text="#{login.social.link.otherMethodRequired}">
+      연결하려는 소셜 계정으로는 본인 확인을 할 수 없습니다. 기존 계정의 다른 로그인 수단을 사용해주세요.
+    </div>
+
     <!-- 인증 대기 화면이 완료를 감지해 보낸 경우. 자동 로그인은 하지 않는다. -->
     <div class="login-feedback login-feedback--success"
          th:if="${param.verified != null and param.verified[0] == 'true'}"
@@ -256,7 +273,9 @@
       </div>
       <div class="social-login__buttons">
         <a class="social-login-provider social-login-provider--google"
-           th:href="@{/oauth2/authorization/google}"
+           th:href="${pendingSocialLinkProvider == 'GOOGLE'} ? null : @{/oauth2/authorization/google}"
+           th:classappend="${pendingSocialLinkProvider == 'GOOGLE'} ? ' is-disabled' : ''"
+           th:attr="aria-disabled=${pendingSocialLinkProvider == 'GOOGLE'} ? 'true' : null"
            th:aria-label="#{login.social.signInWith(#{mypage.account.social.provider.GOOGLE})}"
            aria-label="Google로 로그인">
           <span class="social-login-provider__button" aria-hidden="true">
@@ -266,7 +285,9 @@
                 th:text="#{mypage.account.social.provider.GOOGLE}">Google</span>
         </a>
         <a class="social-login-provider social-login-provider--kakao"
-           th:href="@{/oauth2/authorization/kakao}"
+           th:href="${pendingSocialLinkProvider == 'KAKAO'} ? null : @{/oauth2/authorization/kakao}"
+           th:classappend="${pendingSocialLinkProvider == 'KAKAO'} ? ' is-disabled' : ''"
+           th:attr="aria-disabled=${pendingSocialLinkProvider == 'KAKAO'} ? 'true' : null"
            th:aria-label="#{login.social.signInWith(#{mypage.account.social.provider.KAKAO})}"
            aria-label="카카오로 로그인">
           <span class="social-login-provider__button" aria-hidden="true">
@@ -276,7 +297,9 @@
                 th:text="#{mypage.account.social.provider.KAKAO}">카카오</span>
         </a>
         <a class="social-login-provider social-login-provider--naver"
-           th:href="@{/oauth2/authorization/naver}"
+           th:href="${pendingSocialLinkProvider == 'NAVER'} ? null : @{/oauth2/authorization/naver}"
+           th:classappend="${pendingSocialLinkProvider == 'NAVER'} ? ' is-disabled' : ''"
+           th:attr="aria-disabled=${pendingSocialLinkProvider == 'NAVER'} ? 'true' : null"
            th:aria-label="#{login.social.signInWith(#{mypage.account.social.provider.NAVER})}"
            aria-label="네이버로 로그인">
           <span class="social-login-provider__button" aria-hidden="true">
