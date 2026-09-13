@@ -8,6 +8,9 @@ import com.example.travlediary.model.UserStatus;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.service.email.EmailDispatchService;
 import com.example.travlediary.service.email.EmailVerificationService;
+import com.example.travlediary.service.policy.PolicyConsentDecision;
+import com.example.travlediary.service.policy.PolicyConsentRequiredException;
+import com.example.travlediary.service.policy.SignupPolicyService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +23,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import java.sql.Timestamp;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -39,6 +43,8 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final EmailDispatchService emailDispatchService;
     private final EmailVerificationService emailVerificationService;
+    private final SignupPolicyService signupPolicyService;
+    private final RegistrationTransactionService registrationTransactionService;
 
     @Value("${custom.server-url}")
     private String serverUrl;
@@ -46,11 +52,15 @@ public class UserService {
     @Autowired
     public UserService(UserMapper userMapper, PasswordEncoder passwordEncoder,
                        EmailDispatchService emailDispatchService,
-                       EmailVerificationService emailVerificationService) {
+                       EmailVerificationService emailVerificationService,
+                       SignupPolicyService signupPolicyService,
+                       RegistrationTransactionService registrationTransactionService) {
         this.userMapper = userMapper;
         this.passwordEncoder = passwordEncoder;
         this.emailDispatchService = emailDispatchService;
         this.emailVerificationService = emailVerificationService;
+        this.signupPolicyService = signupPolicyService;
+        this.registrationTransactionService = registrationTransactionService;
     }
 
     // 🔐 로그인 기능
@@ -70,6 +80,9 @@ public class UserService {
 
     // 📝 회원가입 기능
     public RegistrationResult registerUser(RegistrationForm form) {
+        // 만 14세 미만은 여기서 막는다. 생년월일은 판정에만 쓰고 User 에 담지 않는다.
+        AgeVerificationPolicy.verify(form.getBirthDate(), LocalDate.now());
+
         String username = form.getUsername().strip();
         String email = EmailPolicy.normalizeAndValidate(form.getUserEmail());
         String nickname = NicknamePolicy.normalizeAndValidate(form.getNickname());
@@ -83,6 +96,12 @@ public class UserService {
         }
 
         validateRegistrationDuplicates(username, email, nickname);
+
+        // 화면 체크박스를 믿지 않는다. 현재 가입 정책 세트를 서버가 다시 조회해서
+        // 필수 동의가 모두 들어왔는지 보고, 저장할 결정 목록도 여기에서 만든다.
+        String consentLocale = SignupPolicyService.currentLocaleTag();
+        List<PolicyConsentDecision> consentDecisions =
+                resolveConsentDecisions(form.getAgreedPolicyVersionIds());
 
         User user = new User();
         user.setUsername(username);
@@ -101,19 +120,37 @@ public class UserService {
         user.setProfileImage("uploads/default.png");
 
         try {
-            userMapper.insertUser(user);
+            // users INSERT 와 동의 이력 INSERT 가 한 트랜잭션이다.
+            // 동의 저장이 실패하면 회원도 남지 않는다.
+            registrationTransactionService.insertUserWithConsents(
+                    user, consentDecisions, consentLocale);
         } catch (DataIntegrityViolationException exception) {
             throw new RegistrationValidationException(
                     "registration", "이미 사용 중인 회원가입 정보가 있습니다.",
                     "signup.error.duplicate");
         }
-        log.info("Registration user stored: userId={}, recipient={}",
-                user.getId(), EmailPolicy.mask(email));
+        log.info("Registration user stored: userId={}, recipient={}, consents={}, locale={}",
+                user.getId(), EmailPolicy.mask(email), consentDecisions.size(), consentLocale);
 
         boolean emailRequested = emailVerificationService.requestInitialVerification(user);
         log.info("Registration verification email dispatch completed: userId={}, requested={}",
                 user.getId(), emailRequested);
         return new RegistrationResult(email, emailRequested);
+    }
+
+    /**
+     * 현재 가입 정책 세트로 동의 여부를 판정한다.
+     *
+     * <p>정책이 아직 활성화되지 않았으면 세트가 비어 있어 필수 동의도 없고 남길 결정도 없다.
+     * 활성화 SQL 을 실행하는 순간부터 같은 코드가 필수 동의를 강제하기 시작한다.
+     */
+    private List<PolicyConsentDecision> resolveConsentDecisions(List<Long> agreedPolicyVersionIds) {
+        try {
+            return signupPolicyService.loadSignupPolicies().decide(agreedPolicyVersionIds);
+        } catch (PolicyConsentRequiredException exception) {
+            throw new RegistrationValidationException(
+                    "agreedPolicyVersionIds", exception.getMessage(), exception.getMessageCode());
+        }
     }
 
     private void validateRegistrationDuplicates(String username, String email, String nickname) {

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.policy.PolicyMapper">
+
+    <resultMap id="PolicyVersionResultMap" type="com.example.travlediary.model.PolicyVersion">
+        <id property="id" column="id"/>
+        <result property="policyType" column="policy_type"/>
+        <result property="version" column="version"/>
+        <result property="requiresConsent" column="requires_consent"/>
+        <result property="required" column="is_required"/>
+        <result property="requiresReconsent" column="requires_reconsent"/>
+        <result property="effectiveAt" column="effective_at"/>
+        <result property="publishedAt" column="published_at"/>
+        <result property="active" column="is_active"/>
+    </resultMap>
+
+    <resultMap id="PolicyTranslationResultMap"
+               type="com.example.travlediary.model.PolicyTranslation">
+        <result property="policyVersionId" column="policy_version_id"/>
+        <result property="locale" column="locale"/>
+        <result property="title" column="title"/>
+        <result property="content" column="content"/>
+    </resultMap>
+
+    <!--
+      현재 사용 중인 정책의 조건. 셋을 모두 만족해야 한다.
+        is_active = 1            : 운영이 활성화한 버전
+        published_at IS NOT NULL : 게시 전 초안은 회원가입에 쓰지 않는다
+        effective_at <= now      : 시행일이 아직 오지 않은 버전도 쓰지 않는다
+
+      본문만 등록하고 아직 활성화하지 않은 지금 상태에서는 한 행도 나오지 않는다.
+      활성화는 별도 SQL 로 하며, 코드에 특정 버전을 박아 두지 않는다.
+
+      policy_type 당 정확히 한 행만 준다. 같은 타입에 활성 버전이 둘 이상 남아 있어도
+      NOT EXISTS 가 "나보다 뒤인 활성 버전이 없다" 를 확인하므로
+      더 나중에 시행된 버전(동률이면 더 큰 id) 하나가 선택된다.
+    -->
+    <select id="findActiveVersions" resultMap="PolicyVersionResultMap">
+        SELECT v.id, v.policy_type, v.version, v.requires_consent, v.is_required,
+               v.requires_reconsent, v.effective_at, v.published_at, v.is_active
+        FROM policy_versions v
+        WHERE v.policy_type IN
+        <foreach collection="policyTypes" item="policyType" open="(" separator="," close=")">
+            #{policyType}
+        </foreach>
+          AND v.is_active = 1
+          AND v.published_at IS NOT NULL
+          AND v.effective_at &lt;= #{currentTime}
+          AND NOT EXISTS (
+              SELECT 1
+              FROM policy_versions newer
+              WHERE newer.policy_type = v.policy_type
+                AND newer.is_active = 1
+                AND newer.published_at IS NOT NULL
+                AND newer.effective_at &lt;= #{currentTime}
+                AND (newer.effective_at &gt; v.effective_at
+                     OR (newer.effective_at = v.effective_at AND newer.id &gt; v.id))
+          )
+    </select>
+
+    <!--
+      요청 locale 과 대체 locale 두 가지만 읽는다. 어느 쪽을 쓸지는 서비스가 고르므로
+      여기에서 우선순위를 정하지 않는다. 두 locale 이 같으면 IN 이 한 값으로 줄어든다.
+    -->
+    <select id="findTranslations" resultMap="PolicyTranslationResultMap">
+        SELECT t.policy_version_id, t.locale, t.title, t.content
+        FROM policy_translations t
+        WHERE t.policy_version_id IN
+        <foreach collection="policyVersionIds" item="versionId" open="(" separator="," close=")">
+            #{versionId}
+        </foreach>
+          AND t.locale IN (#{locale}, #{fallbackLocale})
+    </select>
+
+</mapper>

@@ -663,37 +663,6 @@
     font-size: 14px;
 }
 
-.login-page .social-signup__consents {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin: 0 0 18px;
-}
-
-.login-page .social-signup__consents label {
-    display: flex;
-    align-items: flex-start;
-    gap: 9px;
-    color: #475467;
-    font-size: 14px;
-    line-height: 1.5;
-    cursor: pointer;
-}
-
-.login-page .social-signup__consents input[type="checkbox"] {
-    flex: 0 0 auto;
-    width: 17px;
-    height: 17px;
-    margin: 2px 0 0;
-    accent-color: #2563a6;
-}
-
-.login-page .social-signup__consents em {
-    color: #2563a6;
-    font-style: normal;
-    font-weight: 700;
-}
-
 .login-page .social-signup__field-error {
     margin: 6px 0 0;
     color: #b42318;

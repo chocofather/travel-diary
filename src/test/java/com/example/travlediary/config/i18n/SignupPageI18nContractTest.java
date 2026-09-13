@@ -13,6 +13,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.support.ResourceBundleMessageSource;
+import com.example.travlediary.service.policy.SignupPolicyService;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -43,10 +44,20 @@ class SignupPageI18nContractTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @MockitoBean private SignupPolicyService signupPolicyService;
+
     @MockitoBean
     private UserService userService;
     @MockitoBean
     private com.example.travlediary.repository.user.UserMapper userMapper;
+
+    @org.junit.jupiter.api.BeforeEach
+    void activatePolicies() {
+        // 약관 항목은 DB 정책 세트에서 나온다. 활성화 후 화면을 재현한다.
+        org.mockito.Mockito.when(signupPolicyService.loadSignupPolicies())
+                .thenReturn(com.example.travlediary.service.policy.SignupPolicyFixtures
+                        .activeSignupPolicies());
+    }
 
     @ParameterizedTest
     @CsvSource(delimiter = '|', value = {
@@ -110,8 +121,28 @@ class SignupPageI18nContractTest {
                 .andReturn().getResponse().getContentAsString());
 
         List<String> errors = page.select("[data-field-error], .field-error").eachText();
-        assertThat(errors).contains(usernameRequired, termsRequired);
+        assertThat(errors).contains(usernameRequired);
         assertThat(page.select(".field-error").text()).doesNotContain("??").doesNotContain("{0}");
+
+        // 필수 동의 누락은 서버가 현재 정책 세트로 판정하고 같은 번들 문구로 안내한다.
+        org.mockito.Mockito.when(userService.registerUser(org.mockito.ArgumentMatchers.any()))
+                .thenThrow(new com.example.travlediary.service.user
+                        .RegistrationValidationException(
+                        "agreedPolicyVersionIds", "fallback",
+                        "signup.error.terms.service"));
+        Document consentPage = Jsoup.parse(mockMvc.perform(post("/users/register")
+                        .cookie(localeCookie(cookie))
+                        .param("birthDate", "2000-01-01")
+                        .param("username", "member")
+                        .param("userEmail", "member@gmail.com")
+                        .param("userPassword", "Password!")
+                        .param("passwordConfirm", "Password!")
+                        .param("nickname", "여행자123"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString());
+
+        assertThat(consentPage.select("[data-field-error], .field-error").eachText())
+                .contains(termsRequired);
     }
 
     /** 로그인에서 만든 공용 언어 selector 를 그대로 쓴다. */

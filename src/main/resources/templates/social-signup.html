@@ -5,29 +5,31 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title th:text="#{signup.social.pageTitle}">소셜 회원가입 | Travel Diary</title>
   <link rel="stylesheet" type="text/css" href="/css/style.css">
-  <link rel="stylesheet" href="/css/login.css">
+  <!-- 같은 가입 플로우로 보이도록 일반 회원가입과 같은 스타일시트를 쓴다. -->
+  <link rel="stylesheet" href="/css/registration.css">
 </head>
-<body class="login-page">
-<!-- 로그인/회원가입과 같은 공용 언어 선택 fragment 를 그대로 쓴다. -->
-<div class="login-page__topbar">
+<body class="register-page">
+<!-- 헤더 없는 인증 화면이라 일반 회원가입과 같이 언어 선택만 우측 상단에 둔다. -->
+<div class="register-page__topbar">
   <div th:replace="~{fragments/language-menu :: languageMenu}"></div>
 </div>
 
-<main class="login-page__main">
-  <a class="login-page__brand" th:href="@{/}" th:aria-label="#{login.brand.home}"
-     aria-label="Travel Diary 홈으로 이동">
-    <img src="/images/logo7.png" alt="Travel Diary">
-  </a>
+<main class="register-wrapper">
+  <div class="register-logo">
+    <a th:href="@{/}" th:aria-label="#{signup.brand.home}" aria-label="Travel Diary 홈">
+      <img src="/images/logo7.png" alt="Travel Diary">
+    </a>
+  </div>
 
-  <section class="login-container social-signup" aria-labelledby="socialSignupTitle">
+  <section class="register-container social-signup" aria-labelledby="socialSignupTitle">
     <!-- 화면은 두 상태다. 이메일 확인 결과에 따라 JS 가 한쪽만 남긴다. -->
-    <header class="login-header" id="socialSignupNewHeader">
+    <header class="registration-heading" id="socialSignupNewHeader">
       <h1 id="socialSignupTitle" th:text="#{signup.social.title}">가입을 완료해주세요</h1>
       <p th:text="#{signup.social.subtitle}">닉네임과 필수 약관 동의만 하면 바로 시작할 수 있습니다.</p>
     </header>
 
-    <!-- 기존 계정 연결 문맥. 새 계정을 만들지 않으므로 닉네임·약관을 다시 받지 않는다. -->
-    <header class="login-header" id="socialSignupLinkHeader"
+    <!-- 기존 계정 연결 문맥. 새 계정을 만들지 않으므로 연령·약관·닉네임을 다시 받지 않는다. -->
+    <header class="registration-heading" id="socialSignupLinkHeader"
             th:if="${emailVerificationRequired}" hidden>
       <h1 id="socialSignupLinkTitle" th:text="#{signup.social.linkExisting.title}">
         기존 계정에 연결할 수 있어요
@@ -46,99 +48,217 @@
     </div>
 
     <form method="POST" th:action="@{/social-signup}"
-          th:object="${socialSignupForm}" class="login-form">
-      <div class="login-feedback login-feedback--error"
-           th:if="${#fields.hasGlobalErrors()}" role="alert">
+          th:object="${socialSignupForm}" id="socialSignupForm"
+          th:data-msg-terms-view="#{signup.terms.view}"
+          th:data-msg-terms-hide="#{signup.terms.hide}">
+      <div class="registration-global-error" role="alert"
+           th:if="${#fields.hasGlobalErrors()}" data-server-error="true">
         <!-- 문구는 BindingResult 가 messages 번들에서 이미 해석해 준다. -->
         <p th:each="error : ${#fields.globalErrors()}" th:text="${error}">가입 오류</p>
       </div>
 
-      <!-- Kakao/Naver 는 provider 이메일을 인증된 것으로 보지 않아 Travel Diary 인증을 받는다.
-           Naver 가 준 연락처 이메일은 초기값일 뿐이라 사용자가 고칠 수 있다. -->
-      <div class="login-field" th:if="${emailVerificationRequired}"
-           id="socialSignupEmailField"
-           th:data-msg-available="#{signup.social.email.available}"
-           th:data-msg-existing="#{signup.social.email.existing}"
-           th:data-msg-unavailable="#{signup.social.email.unavailable}"
-           th:data-msg-invalid="#{signup.error.email.invalid}"
-           th:data-msg-check-failed="#{signup.feedback.email.checkFailed}">
-        <label for="userEmail" th:text="#{signup.field.email}">이메일</label>
-        <div class="social-signup__nickname-row">
-          <input type="email" id="userEmail" th:field="*{userEmail}"
-                 maxlength="100" autocomplete="email" inputmode="email"
-                 th:placeholder="#{signup.social.email.placeholder}"
-                 placeholder="example@gmail.com"
-                 aria-describedby="emailMessage emailServerError"
-                 th:attr="aria-invalid=${#fields.hasErrors('userEmail')}" required>
-          <button type="button" class="social-signup__recommend-button" id="checkEmailStatus"
-                  th:text="#{signup.social.email.check}">중복확인</button>
-        </div>
-        <p id="emailMessage" class="social-signup__field-feedback" aria-live="polite"
-           th:text="#{signup.social.email.help}">
-          Travel Diary에서 사용할 이메일을 입력해주세요. 인증메일을 보내드립니다.
+      <!-- 단계 안내는 JS 가 갱신하므로 문구 템플릿과 단계 이름을 data-* 로 함께 넘긴다.
+           연결 모드에서는 신규가입 단계가 없으므로 통째로 숨긴다. -->
+      <nav class="registration-progress" id="socialSignupProgress" data-signup-only
+           th:aria-label="#{signup.progress.label}" aria-label="회원가입 진행 단계"
+           th:data-step-status-format="#{signup.progress.status}"
+           th:data-step-name-1="#{signup.step.terms}"
+           th:data-step-name-2="#{signup.step.account}">
+        <p id="registrationStepStatus" class="registration-step-status" aria-live="polite"
+           th:text="#{signup.progress.status(2, 1, #{signup.step.terms})}">
+          2단계 중 1단계 · 약관 동의
         </p>
-        <p class="social-signup__field-error" th:if="${#fields.hasErrors('userEmail')}"
-           th:errors="*{userEmail}" role="alert" id="emailServerError">이메일 오류</p>
-      </div>
+        <ol>
+          <li data-step-indicator="1" aria-current="step">
+            <span>1</span><strong th:text="#{signup.step.terms}">약관 동의</strong>
+          </li>
+          <li data-step-indicator="2">
+            <span>2</span><strong th:text="#{signup.step.account}">계정 정보</strong>
+          </li>
+        </ol>
+      </nav>
 
-      <!-- 신규가입 전용 영역. 기존 계정 연결에서는 통째로 숨긴다. -->
-      <div id="socialSignupNewFields">
-      <div class="login-field">
-        <label for="nickname" th:text="#{signup.field.nickname}">닉네임</label>
-        <div class="social-signup__nickname-row">
-          <input type="text" id="nickname" th:field="*{nickname}"
-                 maxlength="16" autocomplete="nickname"
-                 th:placeholder="#{signup.field.nickname.placeholder}"
-                 placeholder="2~16자 한글, 영문, 숫자"
-                 aria-describedby="nicknameMessage nicknameServerError"
-                 th:attr="aria-invalid=${#fields.hasErrors('nickname')}" required>
-          <button type="button" class="social-signup__recommend-button" id="generateNickname"
-                  th:text="#{signup.field.nickname.generate}">자동 추천</button>
+      <!-- STEP 1. 일반 회원가입 1단계와 같은 구성/같은 클래스를 쓴다. -->
+      <section id="step-1" class="form-step" aria-labelledby="social-terms-title" data-signup-only>
+        <div class="step-heading">
+          <h2 id="social-terms-title" th:text="#{signup.step.terms.title}">이용약관에 동의해주세요</h2>
+          <p th:text="#{signup.step.terms.description}">서비스 이용에 필요한 동의 항목을 확인해주세요.</p>
         </div>
-        <p id="nicknameMessage" class="social-signup__field-feedback" aria-live="polite"
-           th:text="#{signup.field.nickname.help}">
-          2~16자의 한글, 영문, 일본어, 중국어, 숫자를 사용할 수 있습니다. 공백·특수문자 및 부적절한 표현은 사용할 수 없습니다.
+
+        <!-- 만 14세 미만 가입을 첫 단계에서 막는다. 생년월일은 판정에만 쓰고 저장하지 않는다. -->
+        <div class="input-group age-check" id="socialSignupBirthDateField"
+             th:data-msg-underage="#{signup.error.birthDate.underage}"
+             th:data-msg-invalid="#{signup.error.birthDate.invalid}">
+          <label class="field-label" for="birthDate"
+                 th:text="#{signup.field.birthDate}">생년월일</label>
+          <!-- 만 14세 경계는 서버 기준일로 판정한다. 브라우저 timezone 은 판정에 넣지 않는다. -->
+          <input class="field-control" type="date" id="birthDate" th:field="*{birthDate}"
+                 autocomplete="bday" th:max="${#dates.format(#dates.createNow(), 'yyyy-MM-dd')}"
+                 th:data-today="${#dates.format(#dates.createNow(), 'yyyy-MM-dd')}"
+                 aria-describedby="birthDateMessage birthDateServerError"
+                 th:attr="aria-invalid=${#fields.hasErrors('birthDate')}" required>
+          <span id="birthDateMessage" class="field-feedback" aria-live="polite"
+                th:text="#{signup.field.birthDate.help}">
+            Travel Diary는 만 14세 이상부터 가입할 수 있습니다.
+          </span>
+          <span id="birthDateServerError" class="field-error" data-field-error="birthDate"
+                th:if="${#fields.hasErrors('birthDate')}" th:errors="*{birthDate}">생년월일 오류</span>
+        </div>
+
+        <!--
+          약관 항목은 DB 의 현재 정책 세트가 정한다. 필수/선택 표시도 화면 문자열이 아니라
+          policy_versions.is_required 를 그대로 따른다. 활성화한 정책이 없으면 이 영역은 비어 있다.
+        -->
+        <div class="terms-card" th:if="${signupPolicies != null and !signupPolicies.empty}">
+          <label class="terms-summary" for="agreeAll"
+                 th:if="${!signupPolicies.consentPolicies.isEmpty()}">
+            <input type="checkbox" id="agreeAll">
+            <span>
+              <strong th:text="#{signup.terms.agreeAll}">전체 동의</strong>
+              <small th:text="#{signup.terms.agreeAll.help}">필수 및 선택 항목에 모두 동의합니다.</small>
+            </span>
+          </label>
+
+          <div class="terms-list">
+            <!-- 동의 대상 정책. 체크박스 value 는 실제 policy_versions.id 다. -->
+            <article class="term-item"
+                     th:each="policy, item : ${signupPolicies.consentPolicies}">
+              <div class="term-row">
+                <label th:for="'policyConsent' + ${item.index}">
+                  <input type="checkbox" name="agreedPolicyVersionIds"
+                         th:id="'policyConsent' + ${item.index}"
+                         th:value="${policy.policyVersionId}"
+                         data-policy-consent="true"
+                         th:attr="data-policy-required=${policy.required}"
+                         th:checked="${#lists.contains(
+                             socialSignupForm.agreedPolicyVersionIds, policy.policyVersionId)}">
+                  <span class="term-badge"
+                        th:classappend="${policy.required} ? 'required' : 'optional'"
+                        th:text="${policy.required}
+                            ? #{signup.terms.required} : #{signup.terms.optional}">필수</span>
+                  <span th:text="${policy.title} ?: #{${policy.labelCode}}">서비스 이용약관</span>
+                </label>
+                <button type="button" class="term-toggle" aria-expanded="false"
+                        th:attr="aria-controls='policyContent' + ${item.index}"
+                        th:text="#{signup.terms.view}">내용 보기</button>
+              </div>
+              <!-- 본문이 길어도 카드 안에서만 스크롤된다. 끝까지 읽어야 체크되는 구조가 아니다. -->
+              <div class="term-content" hidden
+                   th:id="'policyContent' + ${item.index}"
+                   th:utext="${policy.content}">
+                <p>여기에 약관 내용이 들어갑니다.</p>
+              </div>
+            </article>
+
+            <!-- 동의를 받지 않는 정책(개인정보처리방침)은 열람만 제공한다. 체크박스를 만들지 않는다. -->
+            <article class="term-item term-item--view-only"
+                     th:each="policy, item : ${signupPolicies.viewOnlyPolicies}">
+              <div class="term-row">
+                <span class="term-view-label"
+                      th:text="${policy.title} ?: #{${policy.labelCode}}">개인정보처리방침</span>
+                <button type="button" class="term-toggle" aria-expanded="false"
+                        th:attr="aria-controls='policyViewContent' + ${item.index}"
+                        th:text="#{signup.terms.view}">내용 보기</button>
+              </div>
+              <div class="term-content" hidden
+                   th:id="'policyViewContent' + ${item.index}"
+                   th:utext="${policy.content}">
+                <p>여기에 개인정보처리방침 내용이 들어갑니다.</p>
+              </div>
+            </article>
+          </div>
+        </div>
+
+        <!-- 필수 동의 누락은 서버가 현재 정책 세트로 판정한 결과다. -->
+        <span class="field-error" data-field-error="agreedPolicyVersionIds"
+              th:if="${#fields.hasErrors('agreedPolicyVersionIds')}"
+              th:errors="*{agreedPolicyVersionIds}">약관 동의 오류</span>
+
+        <div class="step-actions single-action">
+          <button type="button" class="button-primary next-step" id="step1-next" disabled
+                  th:text="#{signup.action.next}">다음</button>
+        </div>
+      </section>
+
+      <!-- STEP 2. 이메일 칸만 연결 모드에서도 남는다. 나머지는 신규가입 전용이다. -->
+      <section id="step-2" class="form-step" aria-labelledby="social-account-title" hidden>
+        <div class="step-heading" data-signup-only>
+          <h2 id="social-account-title" th:text="#{signup.step.account.title}">계정 정보를 입력해주세요</h2>
+          <p th:text="#{signup.step.account.description}">로그인과 이메일 인증에 사용할 정보를 입력합니다.</p>
+        </div>
+
+        <!-- Kakao/Naver 는 provider 이메일을 인증된 것으로 보지 않아 Travel Diary 인증을 받는다.
+             Naver 가 준 연락처 이메일은 초기값일 뿐이라 사용자가 고칠 수 있다. -->
+        <div class="input-group" th:if="${emailVerificationRequired}"
+             id="socialSignupEmailField"
+             th:data-msg-available="#{signup.social.email.available}"
+             th:data-msg-existing="#{signup.social.email.existing}"
+             th:data-msg-unavailable="#{signup.social.email.unavailable}"
+             th:data-msg-invalid="#{signup.error.email.invalid}"
+             th:data-msg-check-failed="#{signup.feedback.email.checkFailed}">
+          <label class="field-label" for="userEmail" th:text="#{signup.field.email}">이메일</label>
+          <div class="nickname-row">
+            <input class="field-control" type="email" id="userEmail" th:field="*{userEmail}"
+                   maxlength="100" autocomplete="email" inputmode="email"
+                   th:placeholder="#{signup.social.email.placeholder}"
+                   placeholder="example@gmail.com"
+                   aria-describedby="emailMessage emailServerError"
+                   th:attr="aria-invalid=${#fields.hasErrors('userEmail')}" required>
+            <button type="button" class="button-tertiary" id="checkEmailStatus"
+                    th:text="#{signup.social.email.check}">중복확인</button>
+          </div>
+          <span id="emailMessage" class="field-feedback" aria-live="polite"
+                th:text="#{signup.social.email.help}">
+            Travel Diary에서 사용할 이메일을 입력해주세요. 인증메일을 보내드립니다.
+          </span>
+          <span id="emailServerError" class="field-error" data-field-error="userEmail"
+                th:if="${#fields.hasErrors('userEmail')}" th:errors="*{userEmail}">이메일 오류</span>
+        </div>
+
+        <div class="input-group" data-signup-only>
+          <label class="field-label" for="nickname" th:text="#{signup.field.nickname}">닉네임</label>
+          <div class="nickname-row">
+            <input class="field-control" type="text" id="nickname" th:field="*{nickname}"
+                   minlength="2" maxlength="16" autocomplete="nickname"
+                   th:placeholder="#{signup.field.nickname.placeholder}"
+                   placeholder="2~16자 한글, 영문, 숫자"
+                   aria-describedby="nicknameMessage nicknameServerError"
+                   th:attr="aria-invalid=${#fields.hasErrors('nickname')}" required>
+            <button type="button" class="button-tertiary" id="generateNickname"
+                    th:text="#{signup.field.nickname.generate}">자동 추천</button>
+          </div>
+          <span id="nicknameMessage" class="field-feedback" aria-live="polite"
+                th:text="#{signup.field.nickname.help}">
+            2~16자의 한글, 영문, 일본어, 중국어, 숫자를 사용할 수 있습니다. 공백·특수문자 및 부적절한 표현은 사용할 수 없습니다.
+          </span>
+          <span id="nicknameServerError" class="field-error" data-field-error="nickname"
+                th:if="${#fields.hasErrors('nickname')}" th:errors="*{nickname}">닉네임 오류</span>
+        </div>
+
+        <p class="social-signup__notice" data-signup-only th:text="#{signup.social.notice}">
+          기존 계정과 동일한 이메일은 자동으로 연결되지 않습니다.
         </p>
-        <p class="social-signup__field-error" th:if="${#fields.hasErrors('nickname')}"
-           th:errors="*{nickname}" role="alert" id="nicknameServerError">닉네임 오류</p>
-      </div>
 
-      <div class="social-signup__consents">
-        <label for="termsAccepted">
-          <input type="checkbox" id="termsAccepted" th:field="*{termsAccepted}">
-          <span><em>[<span th:text="#{signup.terms.required}">필수</span>]</em>
-            <span th:text="#{signup.social.terms.service}">이용약관에 동의합니다.</span></span>
-        </label>
-        <p class="social-signup__field-error" th:if="${#fields.hasErrors('termsAccepted')}"
-           th:errors="*{termsAccepted}" role="alert">이용약관 동의 오류</p>
-
-        <label for="privacyAccepted">
-          <input type="checkbox" id="privacyAccepted" th:field="*{privacyAccepted}">
-          <span><em>[<span th:text="#{signup.terms.required}">필수</span>]</em>
-            <span th:text="#{signup.social.terms.privacy}">개인정보 수집·이용에 동의합니다.</span></span>
-        </label>
-        <p class="social-signup__field-error" th:if="${#fields.hasErrors('privacyAccepted')}"
-           th:errors="*{privacyAccepted}" role="alert">개인정보 동의 오류</p>
-      </div>
-
-      <p class="social-signup__notice" th:text="#{signup.social.notice}">
-        기존 계정과 동일한 이메일은 자동으로 연결되지 않습니다.
-      </p>
-
-      <button type="submit" class="login-submit" id="socialSignupSubmit"
-              th:text="#{signup.social.submit}">가입하고 시작하기</button>
-      </div>
+        <div class="step-actions" data-signup-only>
+          <button type="button" class="button-secondary prev-step"
+                  th:text="#{signup.action.prev}">이전</button>
+          <button type="submit" class="button-primary" id="socialSignupSubmit"
+                  th:text="#{signup.social.submit}">가입하고 시작하기</button>
+        </div>
+      </section>
     </form>
 
     <!-- 이미 가입된 이메일일 때만 열리는 두 번째 경로. 새 계정을 만들지 않고 기존 계정에 붙인다.
          중첩 form 이 될 수 없어 가입 form 밖에 두고 이메일만 JS 가 옮겨 담는다. -->
     <div id="socialSignupExistingAccount" th:if="${emailVerificationRequired}" hidden>
-      <form method="POST" th:action="@{/social-signup/link-existing}" class="login-form">
+      <form method="POST" th:action="@{/social-signup/link-existing}">
         <input type="hidden" th:if="${_csrf != null}"
                th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
         <input type="hidden" name="userEmail" id="linkExistingEmail" value="">
-        <button type="submit" class="login-submit" id="linkExistingSubmit"
-                th:text="#{signup.social.link.loginAction}">기존 계정으로 로그인하여 연결</button>
+        <div class="step-actions single-action">
+          <button type="submit" class="button-primary" id="linkExistingSubmit"
+                  th:text="#{signup.social.link.loginAction}">기존 계정으로 로그인하여 연결</button>
+        </div>
       </form>
     </div>
   </section>
@@ -147,6 +267,7 @@
 <div th:replace="~{fragments/nickname-messages :: nicknameMessages}"></div>
 <script src="/js/jquery-3.6.0.min.js"></script>
 <script src="/js/language-menu.js" defer></script>
+<script src="/js/age-eligibility.js"></script>
 <script src="/js/nickname-availability.js" defer></script>
 <script src="/js/social-signup.js" defer></script>
 </body>

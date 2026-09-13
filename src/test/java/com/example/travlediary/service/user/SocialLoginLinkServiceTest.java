@@ -278,6 +278,22 @@ class SocialLoginLinkServiceTest {
         assertThat(target.getNickname()).isEqualTo("기존닉네임");
     }
 
+
+    /** 기존 계정에 소셜을 붙이는 경로는 신규 users 를 만들지 않으므로 연령 확인이 없다. */
+    @Test
+    void linkingAnExistingAccountNeverAsksForAnAgeCheck() {
+        MockHttpSession session = sessionWith(link(SocialProvider.KAKAO, 25L, EMAIL));
+        when(userMapper.findById(25L)).thenReturn(activeTarget());
+        when(socialAccountService.connectToUser(anyLong(), any(), any(), any(), any()))
+                .thenReturn(SocialConnectionResult.CONNECTED);
+
+        assertThat(service.completeAfterLogin(session, 25L))
+                .isEqualTo(SocialLoginLinkService.Outcome.CONNECTED);
+
+        // 새 계정을 만들지 않으니 생년월일을 물을 일도 없다.
+        verify(userMapper, never()).insertUser(any());
+    }
+
     private PendingSocialSignup signupPending(SocialProvider provider) {
         Instant now = Instant.now();
         return new PendingSocialSignup(

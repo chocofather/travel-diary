@@ -5,6 +5,7 @@ import com.example.travlediary.model.PendingSocialLoginLink;
 import com.example.travlediary.model.PendingSocialSignup;
 import com.example.travlediary.model.SocialProvider;
 import com.example.travlediary.security.CustomUserDetails;
+import com.example.travlediary.service.policy.SignupPolicyService;
 import com.example.travlediary.service.user.SocialSignupAuthenticationException;
 import com.example.travlediary.service.user.SocialSignupAuthenticationService;
 import com.example.travlediary.service.user.SocialSignupFlowException;
@@ -54,6 +55,7 @@ public class SocialSignupController {
     private final SocialSignupAuthenticationService authenticationService;
     private final SocialEmailAccountResolver socialEmailAccountResolver;
     private final SocialLoginLinkService socialLoginLinkService;
+    private final SignupPolicyService signupPolicyService;
     private final MessageSource messageSource;
 
     @GetMapping("/social-signup")
@@ -253,6 +255,8 @@ public class SocialSignupController {
     }
 
     private void addReferenceInformation(Model model, PendingSocialSignup pending) {
+        // 일반 회원가입과 같은 정책 세트를 쓴다. 이 화면을 그리는 모든 경로가 여기를 지난다.
+        model.addAttribute("signupPolicies", signupPolicyService.loadSignupPolicies());
         model.addAttribute("provider", pending.provider());
         model.addAttribute("providerDisplayName", providerDisplayName(pending.provider()));
         model.addAttribute("providerEmail", pending.providerEmail());

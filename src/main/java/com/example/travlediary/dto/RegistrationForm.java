@@ -8,15 +8,28 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Data
 @NoArgsConstructor
 public class RegistrationForm {
 
-    @AssertTrue(message = "{signup.error.terms.service}")
-    private boolean serviceTermsAccepted;
+    /**
+     * 화면에서 체크된 policy_versions.id. 신뢰하지 않는 입력이다.
+     *
+     * <p>필수 동의 판정은 Bean Validation 이 아니라 서버가 다시 조회한 현재 정책 세트가 한다.
+     * 어떤 정책이 필수인지는 화면 문자열이 아니라 policy_versions.is_required 가 정하기 때문이다.
+     * 세트에 없는 id 는 버려지므로 예전 버전 id 를 보내도 동의로 처리되지 않는다.
+     */
+    private List<Long> agreedPolicyVersionIds = new ArrayList<>();
 
-    @AssertTrue(message = "{signup.error.terms.privacy}")
-    private boolean privacyTermsAccepted;
+    /**
+     * 연령 확인용 생년월일(yyyy-MM-dd). 판정에만 쓰고 저장하지 않는다.
+     * 형식/경계 판정은 AgeVerificationPolicy 가 서버에서 다시 한다.
+     */
+    @NotBlank(message = "{signup.error.birthDate.required}")
+    private String birthDate;
 
     @NotBlank(message = "{signup.error.username.required}")
     @Pattern(regexp = "^(?=.*[a-z])[a-z0-9_-]{3,16}$",

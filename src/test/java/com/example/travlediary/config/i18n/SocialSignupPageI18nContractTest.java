@@ -17,6 +17,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.support.ResourceBundleMessageSource;
 import org.springframework.mock.web.MockHttpSession;
+import com.example.travlediary.service.policy.SignupPolicyService;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -45,6 +46,8 @@ class SocialSignupPageI18nContractTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @MockitoBean private SignupPolicyService signupPolicyService;
+
     @MockitoBean
     private SocialSignupService socialSignupService;
     @MockitoBean
@@ -56,6 +59,14 @@ class SocialSignupPageI18nContractTest {
     private com.example.travlediary.service.user.SocialLoginLinkService socialLoginLinkService;
     @MockitoBean
     private com.example.travlediary.repository.user.UserMapper userMapper;
+
+    @org.junit.jupiter.api.BeforeEach
+    void activatePolicies() {
+        // 약관 항목은 DB 정책 세트에서 나온다. 활성화 후 화면을 재현한다.
+        org.mockito.Mockito.when(signupPolicyService.loadSignupPolicies())
+                .thenReturn(com.example.travlediary.service.policy.SignupPolicyFixtures
+                        .activeSignupPolicies());
+    }
 
     @ParameterizedTest
     @CsvSource(delimiter = '|', value = {
@@ -76,11 +87,14 @@ class SocialSignupPageI18nContractTest {
         assertThat(page.selectFirst("#socialSignupTitle").text()).isEqualTo(title);
         assertThat(page.selectFirst("label[for=nickname]").text()).isEqualTo(nickname);
         assertThat(page.selectFirst("#generateNickname").text()).isEqualTo(suggest);
-        assertThat(page.selectFirst(".login-submit").text()).isEqualTo(submit);
-        assertThat(page.select(".social-signup__consents em").first().text())
-                .isEqualTo("[" + required + "]");
+        assertThat(page.selectFirst("#socialSignupSubmit").text()).isEqualTo(submit);
+        // 필수/선택 badge 도 일반 회원가입과 같은 markup 을 쓴다.
+        assertThat(page.selectFirst(".term-badge.required").text()).isEqualTo(required);
         // 설명 / 도움말 / 안내도 번들에서 온다.
-        assertThat(page.selectFirst(".login-header p").text()).isNotBlank();
+        assertThat(page.selectFirst("#socialSignupNewHeader p").text()).isNotBlank();
+        // 단계 안내도 일반 회원가입과 같은 구조다.
+        assertThat(page.select("[data-step-indicator]")).hasSize(2);
+        assertThat(page.selectFirst("#step1-next").text()).isNotBlank();
         assertThat(page.selectFirst("#nicknameMessage").text()).isNotBlank();
         assertThat(page.selectFirst(".social-signup__notice").text()).isNotBlank();
         assertThat(page.selectFirst("#nickname").attr("placeholder")).isNotBlank();
@@ -126,7 +140,7 @@ class SocialSignupPageI18nContractTest {
             throws Exception {
         Document page = render(cookie);
 
-        var menu = page.selectFirst(".login-page__topbar .language-menu");
+        var menu = page.selectFirst(".register-page__topbar .language-menu");
         assertThat(menu).isNotNull();
         assertThat(menu.selectFirst(".language-menu-current").text()).isEqualTo(nativeName);
         assertThat(menu.select("form.locale-option-form[action=/locale][method=post]")).hasSize(5);
@@ -251,23 +265,26 @@ class SocialSignupPageI18nContractTest {
             throws Exception {
         Document page = renderKakao("ko");
 
-        var newFields = page.selectFirst("#socialSignupNewFields");
-        assertThat(newFields).isNotNull();
-        // 닉네임·자동추천·약관·가입 버튼은 모두 신규가입 영역 안에 있다.
-        for (String selector : new String[]{"#nickname", "#generateNickname", "#nicknameMessage",
-                ".social-signup__consents", "#socialSignupSubmit"}) {
-            assertThat(newFields.selectFirst(selector))
+        // 연령·약관·단계 UI·닉네임·가입 버튼은 모두 신규가입 전용으로 표시된다.
+        // 연결 모드에서 JS 가 이 표시만 보고 한 번에 감춘다.
+        for (String selector : new String[]{"#socialSignupProgress", "#step-1",
+                "#socialSignupBirthDateField", ".terms-card", "#nickname", "#generateNickname"}) {
+            assertThat(page.selectFirst(selector).closest("[data-signup-only]"))
                     .as("%s belongs to the signup-only region", selector).isNotNull();
         }
-        // 이메일 칸은 두 상태에서 모두 보이므로 그 영역 밖에 있다.
-        assertThat(newFields.selectFirst("#userEmail")).isNull();
+        assertThat(page.selectFirst("#socialSignupSubmit").closest("[data-signup-only]"))
+                .isNotNull();
+        // 이메일 칸은 두 상태에서 모두 보여야 하므로 신규가입 전용 표시가 붙지 않는다.
         assertThat(page.selectFirst("#userEmail")).isNotNull();
+        assertThat(page.selectFirst("#userEmail").closest("[data-signup-only]")).isNull();
 
-        // 연결 전용 영역은 처음에는 닫혀 있다.
+        // 연결 전용 영역은 처음에는 닫혀 있고, 신규가입 문맥이 열려 있다.
         assertThat(page.selectFirst("#socialSignupLinkHeader").hasAttr("hidden")).isTrue();
         assertThat(page.selectFirst("#socialSignupExistingAccount").hasAttr("hidden")).isTrue();
-        assertThat(newFields.hasAttr("hidden")).isFalse();
         assertThat(page.selectFirst("#socialSignupNewHeader").hasAttr("hidden")).isFalse();
+        // 신규가입은 1단계에서 시작한다. 2단계는 닫혀 있다.
+        assertThat(page.selectFirst("#step-1").hasAttr("hidden")).isFalse();
+        assertThat(page.selectFirst("#step-2").hasAttr("hidden")).isTrue();
         // 연결 form 은 가입 form 밖에 있어 닉네임/약관 검증과 무관하다.
         assertThat(page.selectFirst("form[action=/social-signup] #linkExistingEmail")).isNull();
         assertThat(page.selectFirst("#socialSignupExistingAccount #linkExistingEmail"))

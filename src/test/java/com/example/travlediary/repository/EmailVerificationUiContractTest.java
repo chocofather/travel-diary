@@ -99,13 +99,15 @@ class EmailVerificationUiContractTest {
 
         assertThat(script)
                 .contains("function showExistingAccount(show)")
-                // 신규가입 영역과 두 header 를 통째로 여닫는다.
-                .contains("$newFields.prop(\"hidden\", show)")
-                .contains("$newHeader.prop(\"hidden\", show)")
-                .contains("$linkHeader.prop(\"hidden\", !show)")
+                // 신규가입 전용 영역(단계 UI·연령·약관·닉네임)과 두 header 를 통째로 여닫는다.
+                .contains("$(\"[data-signup-only]\").prop(\"hidden\", show)")
+                .contains("$(\"#socialSignupNewHeader\").prop(\"hidden\", show)")
+                .contains("$(\"#socialSignupLinkHeader\").prop(\"hidden\", !show)")
                 // 감춘 필수 입력이 브라우저 검증을 막지 않게 required 도 함께 내린다.
                 .contains("$(\"#nickname\").prop(\"required\", !show)")
-                .contains("$signupSubmit.prop(\"disabled\", show)")
+                // 제출 버튼은 연결 상태와 필수 동의를 함께 보고 판단한다.
+                .contains("updateSocialSignupSubmitState()")
+                .contains("linkingExistingAccount || !socialSignupRequiredPoliciesAccepted()")
                 // 이메일을 고치면 이전 판정을 버리고 신규가입으로 복귀한다.
                 .contains("showExistingAccount(status === \"EXISTING_ACTIVE\")")
                 .contains("showExistingAccount(false)");

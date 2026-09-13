@@ -10,6 +10,10 @@ import com.example.travlediary.model.UserStatus;
 import com.example.travlediary.repository.user.SocialAccountMapper;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.service.email.EmailVerificationService;
+import com.example.travlediary.service.policy.PolicyConsentDecision;
+import com.example.travlediary.service.policy.PolicyConsentRecorder;
+import com.example.travlediary.service.policy.SignupPolicyFixtures;
+import com.example.travlediary.service.policy.SignupPolicyService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -29,6 +33,7 @@ import org.springframework.transaction.support.AbstractPlatformTransactionManage
 import org.springframework.transaction.support.DefaultTransactionStatus;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -55,16 +60,23 @@ class SocialSignupServiceTest {
     private WithdrawalGraceService withdrawalGraceService;
     @Mock
     private EmailVerificationService emailVerificationService;
+    @Mock
+    private SignupPolicyService signupPolicyService;
+    @Mock
+    private PolicyConsentRecorder policyConsentRecorder;
 
     private SocialSignupService service;
 
     @BeforeEach
     void setUp() {
+        // 정책이 활성화된 뒤의 상태로 둔다. 일반 회원가입과 같은 세트를 쓴다.
+        lenient().when(signupPolicyService.loadSignupPolicies())
+                .thenReturn(SignupPolicyFixtures.activeSignupPolicies());
         // 이메일 상태 판정은 mock 이 아니라 실제 resolver 를 태운다. 계정 유무는 userMapper stub 이 정한다.
         service = new SocialSignupService(
                 userMapper, socialAccountMapper,
                 new SocialEmailAccountResolver(userMapper, withdrawalGraceService),
-                emailVerificationService);
+                emailVerificationService, signupPolicyService, policyConsentRecorder);
     }
 
     @Test
@@ -313,12 +325,13 @@ class SocialSignupServiceTest {
         assertValidation("nickname", pending("sub", null, null), acceptedForm("닉네임 공백"));
 
         SocialSignupForm noTerms = acceptedForm("여행자123");
-        noTerms.setTermsAccepted(false);
-        assertValidation("termsAccepted", pending("sub", null, null), noTerms);
+        noTerms.setAgreedPolicyVersionIds(
+                List.of(SignupPolicyFixtures.PRIVACY_COLLECTION_ID));
+        assertValidation("agreedPolicyVersionIds", pending("sub", null, null), noTerms);
 
         SocialSignupForm noPrivacy = acceptedForm("여행자123");
-        noPrivacy.setPrivacyAccepted(false);
-        assertValidation("privacyAccepted", pending("sub", null, null), noPrivacy);
+        noPrivacy.setAgreedPolicyVersionIds(List.of(SignupPolicyFixtures.TERMS_ID));
+        assertValidation("agreedPolicyVersionIds", pending("sub", null, null), noPrivacy);
     }
 
     @Test
@@ -385,6 +398,144 @@ class SocialSignupServiceTest {
         assertThat(transactionManager.committed).isFalse();
     }
 
+
+    /* ---------- 연령 확인 (만 14세) ---------- */
+
+    /** Google/Kakao/Naver 어느 provider 든 연령 확인 전에는 users 가 만들어지지 않는다. */
+    @ParameterizedTest
+    @MethodSource("everySignupProvider")
+    void noProviderCreatesAUserBeforeTheAgeCheckPasses(PendingSocialSignup pending) {
+        SocialSignupForm underage = acceptedForm("여행자123", "new@example.com");
+        underage.setBirthDate(
+                java.time.LocalDate.now().minusYears(14).plusDays(1).toString());
+
+        assertThatThrownBy(() -> service.complete(pending, underage))
+                .isInstanceOfSatisfying(SocialSignupValidationException.class, exception -> {
+                    assertThat(exception.getField()).isEqualTo("birthDate");
+                    assertThat(exception.getMessageCode())
+                            .isEqualTo("signup.error.birthDate.underage");
+                });
+
+        verify(userMapper, never()).insertUser(any());
+        verify(socialAccountMapper, never()).insert(any());
+    }
+
+    /** 생년월일 누락·형식 오류·미래 날짜도 INSERT 전에 막힌다. */
+    @ParameterizedTest
+    @MethodSource("everySignupProvider")
+    void aMissingMalformedOrFutureBirthDateBlocksTheSignup(PendingSocialSignup pending) {
+        for (String raw : new String[]{null, "", "not-a-date",
+                java.time.LocalDate.now().plusDays(1).toString()}) {
+            SocialSignupForm form = acceptedForm("여행자123", "new@example.com");
+            form.setBirthDate(raw);
+            assertThatThrownBy(() -> service.complete(pending, form))
+                    .isInstanceOf(SocialSignupValidationException.class);
+        }
+
+        verify(userMapper, never()).insertUser(any());
+        verify(socialAccountMapper, never()).insert(any());
+    }
+
+    /** 14번째 생일 당일은 통과하고, 생년월일은 users 에 담기지 않는다. */
+    @Test
+    void theFourteenthBirthdayPassesAndTheBirthDateIsNeverStored() {
+        arrangeGeneratedUserId(41L);
+        SocialSignupForm form = acceptedForm("여행자123");
+        form.setBirthDate(java.time.LocalDate.now().minusYears(14).toString());
+
+        service.complete(pending("google-sub", "new@example.com", true), form);
+
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+        verify(userMapper).insertUser(userCaptor.capture());
+        assertThat(userCaptor.getValue().getUserBirth()).isNull();
+    }
+
+    /** 7) 소셜 신규가입의 출처는 SOCIAL_SIGNUP 이고, 화면의 현재 locale 이 함께 남는다. */
+    @Test
+    void theSocialSignupSourceAndTheScreenLocaleAreStored() {
+        arrangeGeneratedUserId(41L);
+        SocialSignupForm form = acceptedForm("여행자123");
+
+        org.springframework.context.i18n.LocaleContextHolder.setLocale(
+                java.util.Locale.forLanguageTag("ja"));
+        try {
+            service.complete(pending("google-sub", "new@example.com", true), form);
+        } finally {
+            org.springframework.context.i18n.LocaleContextHolder.resetLocaleContext();
+        }
+
+        verify(policyConsentRecorder).record(
+                org.mockito.ArgumentMatchers.eq(41L), any(),
+                org.mockito.ArgumentMatchers.eq(
+                        com.example.travlediary.model.PolicyConsentSource.SOCIAL_SIGNUP),
+                org.mockito.ArgumentMatchers.eq("ja"));
+    }
+
+    /**
+     * 8) 실제 사용된 policy_version_id 가 그대로 남고, 선택 항목 거절도 결정으로 기록된다.
+     * 5) 열람 전용 개인정보처리방침은 동의행을 만들지 않는다.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void everyConsentDecisionKeepsItsVersionIdAndTheViewOnlyPolicyIsSkipped() {
+        arrangeGeneratedUserId(41L);
+
+        service.complete(pending("google-sub", "new@example.com", true),
+                acceptedForm("여행자123"));
+
+        ArgumentCaptor<List<PolicyConsentDecision>> captor =
+                ArgumentCaptor.forClass(List.class);
+        verify(policyConsentRecorder).record(any(), captor.capture(), any(), any());
+        assertThat(captor.getValue())
+                .extracting(PolicyConsentDecision::policyVersionId,
+                        PolicyConsentDecision::agreed)
+                .containsExactlyInAnyOrder(
+                        org.assertj.core.api.Assertions.tuple(
+                                SignupPolicyFixtures.TERMS_ID, true),
+                        org.assertj.core.api.Assertions.tuple(
+                                SignupPolicyFixtures.PRIVACY_COLLECTION_ID, true),
+                        // 체크하지 않은 선택 항목도 거절 이력으로 남는다.
+                        org.assertj.core.api.Assertions.tuple(
+                                SignupPolicyFixtures.MARKETING_ID, false));
+        assertThat(captor.getValue()).extracting(PolicyConsentDecision::policyVersionId)
+                .doesNotContain(SignupPolicyFixtures.PRIVACY_POLICY_ID);
+    }
+
+    /** 9) 임의의 policy version id 로는 필수 동의를 대신할 수 없다. */
+    @Test
+    void aForgedPolicyVersionIdDoesNotSatisfyTheSocialSignupConsent() {
+        SocialSignupForm form = acceptedForm("여행자123");
+        form.setAgreedPolicyVersionIds(List.of(999_999L));
+
+        assertThatThrownBy(() -> service.complete(
+                pending("google-sub", "new@example.com", true), form))
+                .isInstanceOf(SocialSignupValidationException.class);
+
+        verify(userMapper, never()).insertUser(any());
+        verify(socialAccountMapper, never()).insert(any());
+        verifyNoInteractions(policyConsentRecorder);
+    }
+
+    /** 10) 동의 이력 저장이 실패하면 가입 저장 실패로 다뤄져 같은 트랜잭션이 되돌아간다. */
+    @Test
+    void aFailedConsentInsertFailsTheWholeSocialSignup() {
+        arrangeGeneratedUserId(41L);
+        doThrow(new com.example.travlediary.service.policy.PolicyConsentPersistenceException(
+                "insert failed"))
+                .when(policyConsentRecorder).record(any(), any(), any(), any());
+
+        assertThatThrownBy(() -> service.complete(
+                pending("google-sub", "new@example.com", true), acceptedForm("여행자123")))
+                .isInstanceOf(SocialSignupPersistenceException.class);
+    }
+
+    static Stream<PendingSocialSignup> everySignupProvider() {
+        return Stream.of(
+                pending("google-sub", "new@example.com", true),
+                pending(SocialProvider.KAKAO, "kakao-sub", null, null),
+                pending(SocialProvider.NAVER, "naver-id", "naver@example.com", null));
+    }
+
     private void arrangeGeneratedUserId(long userId) {
         doAnswer(invocation -> {
             invocation.<User>getArgument(0).setId(userId);
@@ -411,10 +562,12 @@ class SocialSignupServiceTest {
 
     private SocialSignupForm acceptedForm(String nickname, String userEmail) {
         SocialSignupForm form = new SocialSignupForm();
+        // 연령 확인은 이 테스트들의 관심사가 아니므로 통과하는 값을 기본으로 둔다.
+        form.setBirthDate("2000-01-01");
         form.setNickname(nickname);
         form.setUserEmail(userEmail);
-        form.setTermsAccepted(true);
-        form.setPrivacyAccepted(true);
+        // 활성 정책 세트의 필수 동의 두 건. 선택 항목은 기본적으로 거절 상태다.
+        form.setAgreedPolicyVersionIds(SignupPolicyFixtures.requiredConsentIds());
         return form;
     }
 

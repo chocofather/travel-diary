@@ -254,6 +254,13 @@ CREATE TABLE `attraction_info_translations` (
 --
 -- Table structure for table `blocked_emails`
 --
+-- 영구제재 회원의 재가입 차단 기록. 원본 이메일은 보관하지 않고 email_hash 만 남긴다.
+--
+-- 보관정책: 최종 탈퇴 완료(users.deleted_at) 후 3년 보관 후 삭제.
+--   이 기록의 목적이 "탈퇴 후 재가입 차단"이라 기준일이 제재 종료일이 아니라 최종 탈퇴일이다.
+--   탈퇴하지 않은 회원의 차단 기록은 자동 정리 대상이 아니다(제재 해제 시 released_at 만 기록).
+--   WITHDRAWAL_PENDING 은 최종 탈퇴가 아니며, 30일 유예 중 복구하면 deleted_at 이 NULL 로 돌아가 제외된다.
+--   SanctionRetentionScheduler 가 회원 단위로 정리한다. 최종 account purge 는 이 표를 지우지 않는다.
 
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
@@ -1954,6 +1961,24 @@ CREATE TABLE `user_posts` (
 --
 -- Table structure for table `user_sanctions`
 --
+-- 보관정책: 제재 종료(released_at) 후 3년 보관 후 삭제. 기준일이 두 갈래다.
+--   A. status IN ('EXPIRED','LIFTED') 이고 released_at 이 cutoff 이전이면 삭제.
+--      기준일은 실제 종료 시각 released_at 이다. expires_at 은 TEMPORARY 의 예정 종료일일 뿐이고
+--      실제 종료(만료 배치/이의신청 인용)와 다를 수 있으며 PERMANENT 는 NULL 이다.
+--      회원이 나중에 탈퇴하더라도 이미 종료된 제재의 보관기간을 탈퇴일부터 다시 세지 않는다.
+--   B. type = 'PERMANENT' AND status = 'ACTIVE' 인 제재는 released_at 이 영원히 NULL 이라
+--      A 로는 정리되지 않는다. 그래서 회원이 최종 탈퇴(users.status = 'DEACTIVATED' 이고
+--      users.deleted_at 기록)한 경우에만 users.deleted_at 기준 3년으로 센다.
+--      계정이 살아 있는 동안(ACTIVE/RESTRICTED 등)의 영구제재는 기간 제한 없이 유지한다.
+--      WITHDRAWAL_PENDING 은 최종 탈퇴가 아니라 대상이 아니고, 30일 유예 중 복구하면
+--      deleted_at 이 NULL 로 돌아가 제외된다.
+--   적용중인 임시제재는 두 갈래 어디에도 걸리지 않는다.
+--   두 갈래 모두, 그 제재를 가리키는 재가입 차단(blocked_emails.released_at IS NULL)이
+--   남아 있으면 삭제하지 않는다. B 는 같은 users.deleted_at 기준으로 blocked_emails 가
+--   먼저 정리된 뒤(같은 실행 또는 다음 주기) 삭제된다.
+--   삭제 시 user_appeals 는 fk_user_appeals_sanction 의 ON DELETE CASCADE 로 함께 사라지고,
+--   blocked_emails.sanction_id / user_account_actions.sanction_id 는 ON DELETE SET NULL 로 남는다.
+--   SanctionRetentionScheduler 가 정리하며, 만료 배치(SanctionExpiryScheduler)와는 별개 책임이다.
 
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
@@ -2598,6 +2623,16 @@ CREATE TABLE `policy_translations` (
 -- users 1 : N user_policy_consents (user_id, ON DELETE CASCADE)
 -- policy_versions 1 : N user_policy_consents (policy_version_id, ON DELETE RESTRICT)
 -- 마케팅 수신 여부는 가장 최근 MARKETING_EMAIL 동의 이력으로 판단한다.
+--
+-- 보관정책: 회원 유지 중 보관, 최종 탈퇴 완료(users.deleted_at) 후 3년 보관 후 삭제.
+--   회원이 존재하는 동안과 WITHDRAWAL_PENDING 30일 유예기간에는 전체 이력을 계속 보관한다.
+--   보관기간의 기준 시점은 users.deleted_at(최종 파기 완료 시각)이며,
+--   withdrawal_requested_at / purge_scheduled_at 으로 계산하지 않는다.
+--   30일 유예 중 복구한 회원은 deleted_at 이 NULL 로 돌아가므로 삭제 대상이 아니다.
+--   삭제는 오래된 개별 동의행 단위가 아니라 보관기한이 끝난 탈퇴 회원 단위 전체 삭제이며,
+--   PolicyConsentRetentionScheduler 가 수행한다.
+--   최종 account purge 는 이 테이블을 지우지 않는다(users tombstone 이 남아 CASCADE 도 일어나지 않는다).
+--   그 외에는 append-only 기록이라 기존 행을 수정하거나 덮어쓰지 않는다.
 
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;

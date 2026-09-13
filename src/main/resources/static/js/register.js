@@ -18,15 +18,20 @@ $(function () {
     const serverErrorSelectors = {
         username: "#usernameServerError",
         userEmail: "#emailServerError",
-        nickname: "#nicknameServerError"
+        nickname: "#nicknameServerError",
+        birthDate: "#birthDateServerError",
+        agreedPolicyVersionIds: "[data-field-error='agreedPolicyVersionIds']"
     };
     const feedbackOwners = {
         "#usernameMessage": "#username",
         "#emailMessage": "#userEmail",
         "#passwordValidationMessage": "#userPassword",
         "#passwordMessage": "#passwordConfirm",
-        "#nicknameMessage": "#nickname"
+        "#nicknameMessage": "#nickname",
+        "#birthDateMessage": "#birthDate"
     };
+    /* 통과했을 때 되돌릴 기본 안내. 서버가 내려준 현재 locale 문구다. */
+    const birthDateHelpText = $("#birthDateMessage").text();
     let currentStep = initialStep();
     let suggestedEmail = "";
     let emailDomainOptions = [];
@@ -70,6 +75,26 @@ $(function () {
         }
     }
 
+    /* 만 14세 판정은 소셜 가입 화면과 같은 age-eligibility.js 를 쓴다.
+       기준일은 브라우저가 아니라 서버가 내려준 data-today 다. */
+    function birthDateStatus() {
+        const field = $("#birthDate");
+        if (field.length === 0) return "ok";
+        return window.TravelDiaryAgeEligibility.status(field.val(), field.data("today"));
+    }
+
+    function renderBirthDateStatus(status) {
+        if ($("#birthDate").length === 0) return;
+        if (status === "underage") {
+            setMessage("#birthDateMessage", messages.msgBirthdateUnderage, "error");
+        } else if (status === "invalid") {
+            setMessage("#birthDateMessage", messages.msgBirthdateInvalid, "error");
+        } else {
+            // 비어 있는 동안에는 오류가 아니라 원래 안내로 되돌린다.
+            setMessage("#birthDateMessage", birthDateHelpText);
+        }
+    }
+
     function passwordIsValid() {
         return passwordPattern.test($("#userPassword").val());
     }
@@ -79,10 +104,18 @@ $(function () {
         return password.length > 0 && password === $("#passwordConfirm").val();
     }
 
+    // 어떤 항목이 필수인지는 서버가 정책 세트를 보고 data-policy-required 로 내려준다.
+    // 활성화한 정책이 없으면 대상 체크박스도 없어 이 단계가 통과된다.
+    function requiredPoliciesAccepted() {
+        return $("[data-policy-consent][data-policy-required='true']")
+            .filter(":not(:checked)").length === 0;
+    }
+
     function updateButtons() {
-        const requiredTermsAccepted = $("#termsAgree1").is(":checked")
-            && $("#termsAgree2").is(":checked");
-        $("#step1-next").prop("disabled", !requiredTermsAccepted);
+        const requiredTermsAccepted = requiredPoliciesAccepted();
+        // 가입 대상이 아닌 사용자를 다음 단계로 보내지 않는다. 약관과 연령을 모두 만족해야 한다.
+        const birthDateAccepted = birthDateStatus() === "ok";
+        $("#step1-next").prop("disabled", !requiredTermsAccepted || !birthDateAccepted);
 
         const accountReady = availability.username
             && availability.email
@@ -91,6 +124,13 @@ $(function () {
             && availability.nickname;
         $("#step2-submit").prop("disabled", isSubmitting || !accountReady);
     }
+
+    $("#birthDate").on("input change", function () {
+        clearServerError("birthDate");
+        // 고쳐서 만 14세 이상이 되면 오류가 그 자리에서 풀린다.
+        renderBirthDateStatus(birthDateStatus());
+        updateButtons();
+    });
 
     function invalidate(field) {
         availability[field] = false;
@@ -200,15 +240,15 @@ $(function () {
     }
 
     $("#agreeAll").on("change", function () {
-        $("#termsAgree1, #termsAgree2, #termsAgree3").prop("checked", this.checked);
+        $("[data-policy-consent]").prop("checked", this.checked);
         updateButtons();
     });
 
-    $("#termsAgree1, #termsAgree2, #termsAgree3").on("change", function () {
+    $(document).on("change", "[data-policy-consent]", function () {
+        const consents = $("[data-policy-consent]");
         $("#agreeAll").prop("checked",
-            $("#termsAgree1").is(":checked")
-            && $("#termsAgree2").is(":checked")
-            && $("#termsAgree3").is(":checked"));
+            consents.length > 0 && consents.filter(":not(:checked)").length === 0);
+        clearServerError("agreedPolicyVersionIds");
         updateButtons();
     });
 
@@ -292,7 +332,16 @@ $(function () {
     });
 
     $(".next-step").on("click", function () {
-        if (!this.disabled) showStep(Math.min(2, currentStep + 1));
+        if (this.disabled) return;
+        // 버튼은 이미 비활성이지만, 값이 바뀐 직후를 대비해 넘어가기 직전에 한 번 더 본다.
+        const status = birthDateStatus();
+        if (status !== "ok") {
+            renderBirthDateStatus(status);
+            updateButtons();
+            $("#birthDate").trigger("focus");
+            return;
+        }
+        showStep(Math.min(2, currentStep + 1));
     });
     $(".prev-step").on("click", () => showStep(Math.max(1, currentStep - 1)));
 

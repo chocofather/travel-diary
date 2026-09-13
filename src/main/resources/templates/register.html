@@ -65,7 +65,9 @@
           th:data-msg-password-mismatch="#{signup.error.passwordConfirm.mismatch}"
           th:data-msg-incomplete="#{signup.feedback.incomplete}"
           th:data-msg-terms-view="#{signup.terms.view}"
-          th:data-msg-terms-hide="#{signup.terms.hide}">
+          th:data-msg-terms-hide="#{signup.terms.hide}"
+          th:data-msg-birthdate-underage="#{signup.error.birthDate.underage}"
+          th:data-msg-birthdate-invalid="#{signup.error.birthDate.invalid}">
       <input type="hidden" th:if="${_csrf != null}"
              th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
 
@@ -89,8 +91,30 @@
           <p th:text="#{signup.step.terms.description}">서비스 이용에 필요한 동의 항목을 확인해주세요.</p>
         </div>
 
-        <div class="terms-card">
-          <label class="terms-summary" for="agreeAll">
+        <!-- 만 14세 미만 가입을 첫 단계에서 막는다. 생년월일은 판정에만 쓰고 저장하지 않는다. -->
+        <div class="input-group age-check">
+          <label class="field-label" for="birthDate" th:text="#{signup.field.birthDate}">생년월일</label>
+          <!-- 만 14세 경계는 서버 기준일로 판정한다. 브라우저 timezone 이 앞서거나 뒤처져도
+               가입 가능한 사용자를 화면에서 먼저 막지 않는다. -->
+          <input class="field-control" type="date" id="birthDate" th:field="*{birthDate}"
+                 autocomplete="bday" th:max="${#dates.format(#dates.createNow(), 'yyyy-MM-dd')}"
+                 th:data-today="${#dates.format(#dates.createNow(), 'yyyy-MM-dd')}"
+                 aria-describedby="birthDateMessage birthDateServerError" required>
+          <span id="birthDateMessage" class="field-feedback" aria-live="polite"
+                th:text="#{signup.field.birthDate.help}">
+            Travel Diary는 만 14세 이상부터 가입할 수 있습니다.
+          </span>
+          <span id="birthDateServerError" class="field-error" data-field-error="birthDate"
+                th:if="${#fields.hasErrors('birthDate')}" th:errors="*{birthDate}">생년월일 오류</span>
+        </div>
+
+        <!--
+          약관 항목은 DB 의 현재 정책 세트가 정한다. 필수/선택 표시도 화면 문자열이 아니라
+          policy_versions.is_required 를 그대로 따른다. 아직 활성화한 정책이 없으면 이 영역은 비어 있다.
+        -->
+        <div class="terms-card" th:if="${signupPolicies != null and !signupPolicies.empty}">
+          <label class="terms-summary" for="agreeAll"
+                 th:if="${!signupPolicies.consentPolicies.isEmpty()}">
             <input type="checkbox" id="agreeAll">
             <span>
               <strong th:text="#{signup.terms.agreeAll}">전체 동의</strong>
@@ -99,61 +123,59 @@
           </label>
 
           <div class="terms-list">
-            <article class="term-item">
+            <!-- 동의 대상 정책. 체크박스 value 는 실제 policy_versions.id 다. -->
+            <article class="term-item"
+                     th:each="policy, item : ${signupPolicies.consentPolicies}">
               <div class="term-row">
-                <label for="termsAgree1">
-                  <input type="checkbox" id="termsAgree1" name="serviceTermsAccepted" value="true"
-                         th:checked="*{serviceTermsAccepted}">
-                  <span class="term-badge required" th:text="#{signup.terms.required}">필수</span>
-                  <span th:text="#{signup.terms.service}">서비스 이용약관</span>
+                <label th:for="'policyConsent' + ${item.index}">
+                  <input type="checkbox" name="agreedPolicyVersionIds"
+                         th:id="'policyConsent' + ${item.index}"
+                         th:value="${policy.policyVersionId}"
+                         data-policy-consent="true"
+                         th:attr="data-policy-required=${policy.required}"
+                         th:checked="${#lists.contains(
+                             registrationForm.agreedPolicyVersionIds, policy.policyVersionId)}">
+                  <span class="term-badge"
+                        th:classappend="${policy.required} ? 'required' : 'optional'"
+                        th:text="${policy.required}
+                            ? #{signup.terms.required} : #{signup.terms.optional}">필수</span>
+                  <span th:text="${policy.title} ?: #{${policy.labelCode}}">서비스 이용약관</span>
                 </label>
                 <button type="button" class="term-toggle" aria-expanded="false"
-                        aria-controls="serviceTermsContent"
+                        th:attr="aria-controls='policyContent' + ${item.index}"
                         th:text="#{signup.terms.view}">내용 보기</button>
               </div>
-              <div id="serviceTermsContent" class="term-content" hidden>
-                <p>여기에 서비스 이용약관 내용이 들어갑니다.</p>
+              <!-- 본문이 길어도 카드 안에서만 스크롤된다. 끝까지 읽어야 체크되는 구조가 아니다. -->
+              <div class="term-content" hidden
+                   th:id="'policyContent' + ${item.index}"
+                   th:utext="${policy.content}">
+                <p>여기에 약관 내용이 들어갑니다.</p>
               </div>
-              <span class="field-error" th:if="${#fields.hasErrors('serviceTermsAccepted')}"
-                    th:errors="*{serviceTermsAccepted}">서비스 이용약관 동의 오류</span>
             </article>
 
-            <article class="term-item">
+            <!-- 동의를 받지 않는 정책(개인정보처리방침)은 열람만 제공한다. 체크박스를 만들지 않는다. -->
+            <article class="term-item term-item--view-only"
+                     th:each="policy, item : ${signupPolicies.viewOnlyPolicies}">
               <div class="term-row">
-                <label for="termsAgree2">
-                  <input type="checkbox" id="termsAgree2" name="privacyTermsAccepted" value="true"
-                         th:checked="*{privacyTermsAccepted}">
-                  <span class="term-badge required" th:text="#{signup.terms.required}">필수</span>
-                  <span th:text="#{signup.terms.privacy}">개인정보 수집 및 이용</span>
-                </label>
+                <span class="term-view-label"
+                      th:text="${policy.title} ?: #{${policy.labelCode}}">개인정보처리방침</span>
                 <button type="button" class="term-toggle" aria-expanded="false"
-                        aria-controls="privacyTermsContent"
+                        th:attr="aria-controls='policyViewContent' + ${item.index}"
                         th:text="#{signup.terms.view}">내용 보기</button>
               </div>
-              <div id="privacyTermsContent" class="term-content" hidden>
-                <p>여기에 개인정보 수집 및 이용 동의 내용이 들어갑니다.</p>
-              </div>
-              <span class="field-error" th:if="${#fields.hasErrors('privacyTermsAccepted')}"
-                    th:errors="*{privacyTermsAccepted}">개인정보 수집 및 이용 동의 오류</span>
-            </article>
-
-            <article class="term-item">
-              <div class="term-row">
-                <label for="termsAgree3">
-                  <input type="checkbox" id="termsAgree3">
-                  <span class="term-badge optional" th:text="#{signup.terms.optional}">선택</span>
-                  <span th:text="#{signup.terms.marketing}">마케팅 정보 수신 동의</span>
-                </label>
-                <button type="button" class="term-toggle" aria-expanded="false"
-                        aria-controls="marketingTermsContent"
-                        th:text="#{signup.terms.view}">내용 보기</button>
-              </div>
-              <div id="marketingTermsContent" class="term-content" hidden>
-                <p>여기에 마케팅 정보 수신 동의 내용이 들어갑니다.</p>
+              <div class="term-content" hidden
+                   th:id="'policyViewContent' + ${item.index}"
+                   th:utext="${policy.content}">
+                <p>여기에 개인정보처리방침 내용이 들어갑니다.</p>
               </div>
             </article>
           </div>
         </div>
+
+        <!-- 필수 동의 누락은 서버가 현재 정책 세트로 판정한 결과다. -->
+        <span class="field-error" data-field-error="agreedPolicyVersionIds"
+              th:if="${#fields.hasErrors('agreedPolicyVersionIds')}"
+              th:errors="*{agreedPolicyVersionIds}">약관 동의 오류</span>
 
         <div class="step-actions single-action">
           <button type="button" class="button-primary next-step" id="step1-next" disabled
@@ -274,6 +296,7 @@
 <div th:replace="~{fragments/nickname-messages :: nicknameMessages}"></div>
 <script src="/js/jquery-3.6.0.min.js"></script>
 <script src="/js/language-menu.js" defer></script>
+<script src="/js/age-eligibility.js"></script>
 <script src="/js/email-domain-suggestion.js"></script>
 <script src="/js/nickname-availability.js"></script>
 <script src="/js/register.js" defer></script>

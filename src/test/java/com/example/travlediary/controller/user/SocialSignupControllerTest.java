@@ -1,6 +1,8 @@
 package com.example.travlediary.controller.user;
 
 import com.example.travlediary.dto.SocialSignupForm;
+import com.example.travlediary.service.policy.SignupPolicyFixtures;
+import com.example.travlediary.service.policy.SignupPolicyService;
 import com.example.travlediary.model.PendingSocialLoginLink;
 import com.example.travlediary.model.PendingSocialSignup;
 import com.example.travlediary.model.SocialProvider;
@@ -37,6 +39,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -52,6 +55,9 @@ class SocialSignupControllerTest {
     @Mock
     private SocialLoginLinkService socialLoginLinkService;
 
+    @Mock
+    private SignupPolicyService signupPolicyService;
+
     private SocialSignupController controller;
 
     @BeforeEach
@@ -61,9 +67,13 @@ class SocialSignupControllerTest {
         messages.setBasename("messages");
         messages.setDefaultEncoding(java.nio.charset.StandardCharsets.UTF_8.name());
         messages.setFallbackToSystemLocale(false);
+        // 화면 렌더링 경로가 정책 세트를 함께 담는지 보기 위해 활성 세트를 준다.
+        lenient().when(signupPolicyService.loadSignupPolicies())
+                .thenReturn(SignupPolicyFixtures.activeSignupPolicies());
         controller = new SocialSignupController(
                 socialSignupService, authenticationService,
-                socialEmailAccountResolver, socialLoginLinkService, messages);
+                socialEmailAccountResolver, socialLoginLinkService,
+                signupPolicyService, messages);
     }
 
     private RedirectAttributes redirectAttributes() {
@@ -182,7 +192,8 @@ class SocialSignupControllerTest {
         MockHttpServletRequest request = requestWith(pending);
         SocialSignupForm form = acceptedForm("입력닉네임");
         BeanPropertyBindingResult binding = binding(form);
-        binding.rejectValue("termsAccepted", "required", "서비스 이용약관에 동의해주세요.");
+        binding.rejectValue("agreedPolicyVersionIds", "required",
+                "서비스 이용약관에 동의해주세요.");
 
         String bindingView = controller.completeSignup(
                 form, binding, null, request, new MockHttpServletResponse(),
@@ -252,9 +263,10 @@ class SocialSignupControllerTest {
 
     private SocialSignupForm acceptedForm(String nickname) {
         SocialSignupForm form = new SocialSignupForm();
+        // 연령 확인은 이 테스트들의 관심사가 아니므로 통과하는 값을 기본으로 둔다.
+        form.setBirthDate("2000-01-01");
         form.setNickname(nickname);
-        form.setTermsAccepted(true);
-        form.setPrivacyAccepted(true);
+        form.setAgreedPolicyVersionIds(SignupPolicyFixtures.requiredConsentIds());
         return form;
     }
 

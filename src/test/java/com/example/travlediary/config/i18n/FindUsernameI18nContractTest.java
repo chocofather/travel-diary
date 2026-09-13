@@ -13,6 +13,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.support.ResourceBundleMessageSource;
+import com.example.travlediary.service.policy.SignupPolicyService;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -42,6 +43,8 @@ class FindUsernameI18nContractTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockitoBean private SignupPolicyService signupPolicyService;
 
     @MockitoBean
     private UserService userService;

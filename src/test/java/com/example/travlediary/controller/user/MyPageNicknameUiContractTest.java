@@ -130,7 +130,8 @@ class MyPageNicknameUiContractTest {
             throws IOException {
         String template = read("templates/social-signup.html");
         String sharedScript = read("static/js/nickname-availability.js");
-        String stylesheet = read("static/css/login.css");
+        // 소셜 신규가입은 일반 회원가입과 같은 스타일시트를 쓴다.
+        String stylesheet = read("static/css/registration.css");
 
         assertThat(template).contains(
                 "id=\"nickname\"",
@@ -148,18 +149,16 @@ class MyPageNicknameUiContractTest {
                 "messages.available",
                 "messages.taken",
                 "messages.forbidden");
+        // 닉네임 행·추천 버튼·피드백 문구 스타일은 일반 회원가입 것을 그대로 재사용한다.
+        assertThat(template).contains(
+                "class=\"nickname-row\"",
+                "class=\"button-tertiary\" id=\"generateNickname\"",
+                "class=\"field-feedback\"");
         assertThat(stylesheet).contains(
-                ".social-signup__nickname-row",
-                "align-items: center;",
-                "gap: 8px;",
-                ".social-signup__recommend-button",
-                "box-sizing: border-box;",
-                ".social-signup__field-feedback",
-                "text-align: left;",
-                ".social-signup .login-field",
-                "margin-bottom: 12px;",
-                ".social-signup__consents",
-                "margin: 0 0 18px;");
+                ".nickname-row",
+                "grid-template-columns: minmax(0, 1fr) auto;",
+                ".button-tertiary",
+                ".field-feedback");
     }
 
     private String read(String relativePath) throws IOException {

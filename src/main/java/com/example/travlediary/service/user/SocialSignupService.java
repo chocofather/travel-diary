@@ -2,6 +2,7 @@ package com.example.travlediary.service.user;
 
 import com.example.travlediary.dto.SocialSignupForm;
 import com.example.travlediary.model.PendingSocialSignup;
+import com.example.travlediary.model.PolicyConsentSource;
 import com.example.travlediary.model.SocialAccount;
 import com.example.travlediary.model.SocialProvider;
 import com.example.travlediary.model.User;
@@ -10,6 +11,11 @@ import com.example.travlediary.model.UserStatus;
 import com.example.travlediary.repository.user.SocialAccountMapper;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.service.email.EmailVerificationService;
+import com.example.travlediary.service.policy.PolicyConsentDecision;
+import com.example.travlediary.service.policy.PolicyConsentPersistenceException;
+import com.example.travlediary.service.policy.PolicyConsentRecorder;
+import com.example.travlediary.service.policy.PolicyConsentRequiredException;
+import com.example.travlediary.service.policy.SignupPolicyService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -17,6 +23,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +37,8 @@ public class SocialSignupService {
     private final SocialAccountMapper socialAccountMapper;
     private final SocialEmailAccountResolver socialEmailAccountResolver;
     private final EmailVerificationService emailVerificationService;
+    private final SignupPolicyService signupPolicyService;
+    private final PolicyConsentRecorder policyConsentRecorder;
 
     /**
      * 가입 트랜잭션. users 와 social_accounts 를 함께 쓰고, Travel Diary 이메일 인증이 필요한
@@ -45,6 +55,15 @@ public class SocialSignupService {
                 pending.provider(), pending.providerUserId()) != null) {
             throw new SocialSignupFlowException("이미 처리된 소셜 가입 정보입니다.");
         }
+
+        // 신규 users 를 만드는 경로다. Google/Kakao/Naver 모두 여기를 지나므로
+        // 어떤 provider 든 연령 확인 전에는 INSERT 가 일어나지 않는다.
+        verifyAge(form);
+
+        // 일반 회원가입과 같은 정책 세트를 같은 방식으로 검증한다.
+        // 기존 계정 로그인/연결은 이 메서드를 지나지 않으므로 동의를 다시 받지 않는다.
+        String consentLocale = SignupPolicyService.currentLocaleTag();
+        List<PolicyConsentDecision> consentDecisions = resolveConsentDecisions(form);
 
         String nickname = validateForm(form);
         if (userMapper.countByNickname(nickname) > 0) {
@@ -102,6 +121,14 @@ public class SocialSignupService {
         } catch (DataIntegrityViolationException exception) {
             throw new SocialSignupFlowException("이미 처리된 소셜 가입 정보입니다.");
         }
+
+        // 같은 트랜잭션이다. 동의 이력을 남기지 못하면 users 와 social_accounts 도 되돌아간다.
+        try {
+            policyConsentRecorder.record(user.getId(), consentDecisions,
+                    PolicyConsentSource.SOCIAL_SIGNUP, consentLocale);
+        } catch (PolicyConsentPersistenceException exception) {
+            throw new SocialSignupPersistenceException(exception.getMessage());
+        }
         return new SocialSignupOutcome(
                 user.getId(), userEmail,
                 verifiedByProvider ? null : user.getVerificationToken());
@@ -136,19 +163,35 @@ public class SocialSignupService {
         }
     }
 
+    /** 생년월일은 판정에만 쓰고 User 에 담지 않는다. */
+    private void verifyAge(SocialSignupForm form) {
+        try {
+            AgeVerificationPolicy.verify(
+                    form == null ? null : form.getBirthDate(), LocalDate.now());
+        } catch (RegistrationValidationException exception) {
+            throw new SocialSignupValidationException(
+                    exception.getField(), exception.getMessage(), exception.getMessageCode());
+        }
+    }
+
+    /**
+     * 현재 가입 정책 세트로 동의 여부를 판정한다. 화면이 보낸 id 중 세트에 없는 값은 버려지므로
+     * 임의의 policy version id 로 필수 동의를 대신할 수 없다.
+     */
+    private List<PolicyConsentDecision> resolveConsentDecisions(SocialSignupForm form) {
+        List<Long> agreed = form == null ? null : form.getAgreedPolicyVersionIds();
+        try {
+            return signupPolicyService.loadSignupPolicies().decide(agreed);
+        } catch (PolicyConsentRequiredException exception) {
+            throw new SocialSignupValidationException(
+                    "agreedPolicyVersionIds", exception.getMessage(), exception.getMessageCode());
+        }
+    }
+
     private String validateForm(SocialSignupForm form) {
         if (form == null) {
             throw new SocialSignupValidationException(
                     "nickname", "닉네임을 입력해주세요.", "signup.error.nickname.required");
-        }
-        if (!form.isTermsAccepted()) {
-            throw new SocialSignupValidationException(
-                    "termsAccepted", "서비스 이용약관에 동의해주세요.", "signup.error.terms.service");
-        }
-        if (!form.isPrivacyAccepted()) {
-            throw new SocialSignupValidationException(
-                    "privacyAccepted", "개인정보 수집 및 이용에 동의해주세요.",
-                    "signup.error.terms.privacy");
         }
         try {
             return NicknamePolicy.normalizeAndValidate(form.getNickname());

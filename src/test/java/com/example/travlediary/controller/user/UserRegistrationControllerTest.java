@@ -5,7 +5,10 @@ import com.example.travlediary.config.CustomLogoutSuccessHandler;
 import com.example.travlediary.dto.RegistrationForm;
 import com.example.travlediary.model.User;
 import com.example.travlediary.repository.user.UserMapper;
+import com.example.travlediary.service.policy.SignupPolicyFixtures;
+import com.example.travlediary.service.policy.SignupPolicyService;
 import com.example.travlediary.service.user.RegistrationResult;
+import com.example.travlediary.service.user.RegistrationValidationException;
 import com.example.travlediary.service.user.PasswordPolicy;
 import com.example.travlediary.service.user.UserService;
 import jakarta.servlet.http.HttpSession;
@@ -43,6 +46,7 @@ class UserRegistrationControllerTest {
     @Autowired private MockMvc mockMvc;
     @Autowired private UserController userController;
     @MockitoBean private UserService userService;
+    @MockitoBean private SignupPolicyService signupPolicyService;
     @MockitoBean private UserMapper userMapper;
     @MockitoBean private CustomLoginSuccessHandler customLoginSuccessHandler;
     @MockitoBean private CustomLogoutSuccessHandler customLogoutSuccessHandler;
@@ -101,6 +105,8 @@ class UserRegistrationControllerTest {
     @Test
     void postRegistrationSessionFailureNeverReturnsTheRegistrationForm() {
         RegistrationForm form = new RegistrationForm();
+        // 연령 확인은 이 테스트들의 관심사가 아니므로 통과하는 값을 기본으로 둔다.
+        form.setBirthDate("2000-01-01");
         BeanPropertyBindingResult bindingResult =
                 new BeanPropertyBindingResult(form, "registrationForm");
         HttpSession session = mock(HttpSession.class);
@@ -113,14 +119,24 @@ class UserRegistrationControllerTest {
                         "member@gmail.com");
 
         String destination = userController.registerUser(
-                form, bindingResult, null, session, redirectAttributes);
+                form, bindingResult, null, session, redirectAttributes,
+                new org.springframework.ui.ConcurrentModel());
 
         assertThat(destination).isEqualTo("redirect:/users/verification/resend");
     }
 
+    /**
+     * 필수 동의 판정은 화면이 아니라 서버가 현재 정책 세트로 한다.
+     * 체크박스를 하나도 보내지 않아도 요청 자체는 서비스까지 가고, 거기에서 거절된다.
+     */
     @Test
-    void requiredTermsAreValidatedByTheServer() throws Exception {
+    void aMissingRequiredConsentIsRejectedByTheServerAndShownOnTheForm() throws Exception {
+        when(userService.registerUser(any())).thenThrow(new RegistrationValidationException(
+                "agreedPolicyVersionIds", "서비스 이용약관에 동의해주세요.",
+                "signup.error.terms.service"));
+
         mockMvc.perform(multipart("/users/register")
+                        .param("birthDate", "2000-01-01")
                         .param("username", "member")
                         .param("userEmail", "member@gmail.com")
                         .param("userPassword", "Password!")
@@ -129,9 +145,21 @@ class UserRegistrationControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("register"))
                 .andExpect(model().attributeHasFieldErrors(
-                        "registrationForm", "serviceTermsAccepted", "privacyTermsAccepted"));
+                        "registrationForm", "agreedPolicyVersionIds"));
+    }
 
-        verify(userService, never()).registerUser(any());
+    /** 화면을 그리는 모든 경로가 현재 정책 세트를 함께 담는다. */
+    @Test
+    void everyRegisterViewCarriesTheCurrentPolicySet() throws Exception {
+        when(signupPolicyService.loadSignupPolicies())
+                .thenReturn(SignupPolicyFixtures.activeSignupPolicies());
+
+        mockMvc.perform(get("/users/register"))
+                .andExpect(model().attributeExists("signupPolicies"));
+
+        // 검증 실패로 되돌아오는 화면에도 약관 항목이 남아 있어야 한다.
+        mockMvc.perform(validRegistrationRequest("not-an-email"))
+                .andExpect(model().attributeExists("signupPolicies"));
     }
 
     @Test
@@ -163,6 +191,7 @@ class UserRegistrationControllerTest {
     @Test
     void passwordRecoveryShowsTheGenericCompletionState() throws Exception {
         mockMvc.perform(post("/users/find-password")
+                        .param("birthDate", "2000-01-01")
                         .param("username", "member")
                         .param("userEmail", "member@gmail.com"))
                 .andExpect(status().is3xxRedirection())
@@ -190,6 +219,7 @@ class UserRegistrationControllerTest {
                 .when(userService).processResetPasswordRequest("member", "member@gmail.com");
 
         mockMvc.perform(post("/users/find-password")
+                        .param("birthDate", "2000-01-01")
                         .param("username", "member")
                         .param("userEmail", "member@gmail.com"))
                 .andExpect(status().is3xxRedirection())
@@ -258,9 +288,10 @@ class UserRegistrationControllerTest {
     private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
     validRegistrationRequest(String email) {
         return multipart("/users/register")
-                .param("serviceTermsAccepted", "true")
-                .param("privacyTermsAccepted", "true")
-                .param("username", "member")
+                .param("agreedPolicyVersionIds", "101")
+                .param("agreedPolicyVersionIds", "103")
+                .param("birthDate", "2000-01-01")
+                        .param("username", "member")
                 .param("userEmail", email)
                 .param("userPassword", "Password!")
                 .param("passwordConfirm", "Password!")

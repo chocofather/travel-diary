@@ -22,6 +22,7 @@ import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequ
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 import org.springframework.test.context.TestPropertySource;
+import com.example.travlediary.service.policy.SignupPolicyService;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -83,6 +84,8 @@ class GoogleOAuthSecurityTest {
 
     @Autowired
     private ClientRegistrationRepository clientRegistrationRepository;
+
+    @MockitoBean private SignupPolicyService signupPolicyService;
 
     @MockitoBean
     private UserMapper userMapper;
@@ -216,9 +219,10 @@ class GoogleOAuthSecurityTest {
     @Test
     void socialSignupPostRequiresCsrf() throws Exception {
         mockMvc.perform(post("/social-signup")
+                        .param("birthDate", "2000-01-01")
                         .param("nickname", "여행자123")
-                        .param("termsAccepted", "true")
-                        .param("privacyAccepted", "true"))
+                        .param("agreedPolicyVersionIds", "101")
+                        .param("agreedPolicyVersionIds", "103"))
                 .andExpect(status().isForbidden());
     }
 
@@ -256,6 +260,9 @@ class GoogleOAuthSecurityTest {
 
     @Test
     void validSignupPageContainsOnlyAllowedInputsAndCsrfToken() throws Exception {
+        org.mockito.Mockito.when(signupPolicyService.loadSignupPolicies())
+                .thenReturn(com.example.travlediary.service.policy.SignupPolicyFixtures
+                        .activeSignupPolicies());
         Instant now = Instant.now();
         MockHttpSession session = new MockHttpSession();
         session.setAttribute(PendingSocialSignup.SESSION_ATTRIBUTE,
@@ -267,8 +274,8 @@ class GoogleOAuthSecurityTest {
         mockMvc.perform(get("/social-signup").session(session))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("name=\"nickname\"")))
-                .andExpect(content().string(containsString("name=\"termsAccepted\"")))
-                .andExpect(content().string(containsString("name=\"privacyAccepted\"")))
+                // 약관 체크박스는 DB 정책 세트에서 나온다. 이름은 하나로 고정되고 값이 버전 id 다.
+                .andExpect(content().string(containsString("name=\"agreedPolicyVersionIds\"")))
                 .andExpect(content().string(containsString("name=\"_csrf\"")))
                 .andExpect(content().string(not(containsString("google-sub-secret"))))
                 .andExpect(content().string(not(containsString("flow-secret"))));
@@ -278,9 +285,10 @@ class GoogleOAuthSecurityTest {
     void socialSignupPostWithCsrfReachesPendingValidation() throws Exception {
         mockMvc.perform(post("/social-signup")
                         .with(csrf())
+                        .param("birthDate", "2000-01-01")
                         .param("nickname", "여행자123")
-                        .param("termsAccepted", "true")
-                        .param("privacyAccepted", "true"))
+                        .param("agreedPolicyVersionIds", "101")
+                        .param("agreedPolicyVersionIds", "103"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/login?socialSignupExpired=true"));
     }
@@ -300,9 +308,10 @@ class GoogleOAuthSecurityTest {
         mockMvc.perform(post("/social-signup")
                         .with(csrf())
                         .session(session)
+                        .param("birthDate", "2000-01-01")
                         .param("nickname", "여행자123")
-                        .param("termsAccepted", "true")
-                        .param("privacyAccepted", "true")
+                        .param("agreedPolicyVersionIds", "101")
+                        .param("agreedPolicyVersionIds", "103")
                         .param("providerUserId", "attacker-sub")
                         .param("providerEmail", "attacker@example.com"))
                 .andExpect(status().isOk());

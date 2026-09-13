@@ -5,6 +5,8 @@ import com.example.travlediary.model.User;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.service.email.EmailDispatchService;
 import com.example.travlediary.service.email.EmailVerificationService;
+import com.example.travlediary.service.policy.PolicyConsentRecorder;
+import com.example.travlediary.service.policy.SignupPolicyService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,13 +32,16 @@ class UserServiceAccountRecoveryTest {
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private EmailDispatchService emailDispatchService;
     @Mock private EmailVerificationService emailVerificationService;
+    @Mock private SignupPolicyService signupPolicyService;
+    @Mock private PolicyConsentRecorder policyConsentRecorder;
 
     private UserService userService;
 
     @BeforeEach
     void setUp() {
         userService = new UserService(userMapper, passwordEncoder, emailDispatchService,
-                emailVerificationService);
+                emailVerificationService, signupPolicyService,
+                new RegistrationTransactionService(userMapper, policyConsentRecorder));
         ReflectionTestUtils.setField(
                 userService, "serverUrl", "https://travel-diary.example");
     }

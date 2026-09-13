@@ -104,8 +104,8 @@ class SocialVoluntaryWithdrawalRejoinTest {
     private SocialSignupForm acceptedForm(String nickname) {
         SocialSignupForm form = new SocialSignupForm();
         form.setNickname(nickname);
-        form.setTermsAccepted(true);
-        form.setPrivacyAccepted(true);
+        form.setAgreedPolicyVersionIds(
+                com.example.travlediary.service.policy.SignupPolicyFixtures.requiredConsentIds());
         return form;
     }
 }

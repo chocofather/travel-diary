@@ -5,6 +5,9 @@ import com.example.travlediary.model.User;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.service.email.EmailDispatchService;
 import com.example.travlediary.service.email.EmailVerificationService;
+import com.example.travlediary.service.policy.PolicyConsentRecorder;
+import com.example.travlediary.service.policy.SignupPolicyService;
+import com.example.travlediary.service.policy.SignupPolicySet;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,6 +19,7 @@ import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -27,18 +31,26 @@ class UserServicePasswordPolicyTest {
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private EmailDispatchService emailDispatchService;
     @Mock private EmailVerificationService emailVerificationService;
+    @Mock private SignupPolicyService signupPolicyService;
+    @Mock private PolicyConsentRecorder policyConsentRecorder;
 
     private UserService service;
 
     @BeforeEach
     void setUp() {
+        // 정책 활성화 전 상태가 기본값이다. 필수 동의가 없어 기존 가입 검증만 남는다.
+        lenient().when(signupPolicyService.loadSignupPolicies())
+                .thenReturn(SignupPolicySet.empty());
         service = new UserService(userMapper, passwordEncoder, emailDispatchService,
-                emailVerificationService);
+                emailVerificationService, signupPolicyService,
+                new RegistrationTransactionService(userMapper, policyConsentRecorder));
     }
 
     @Test
     void registrationUsesTheSharedPasswordPolicyBeforeEncoding() {
         RegistrationForm form = new RegistrationForm();
+        // 연령 확인은 이 테스트들의 관심사가 아니므로 통과하는 값을 기본으로 둔다.
+        form.setBirthDate("2000-01-01");
         form.setNickname("여행자123");
         form.setUsername("member");
         form.setUserEmail("member@example.com");

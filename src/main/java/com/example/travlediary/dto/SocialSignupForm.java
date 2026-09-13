@@ -1,14 +1,29 @@
 package com.example.travlediary.dto;
 
-import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Data
 @NoArgsConstructor
 public class SocialSignupForm {
+
+    /**
+     * 화면에서 체크된 policy_versions.id. 일반 회원가입과 같은 정책 세트를 쓰고,
+     * 필수 동의 판정도 서버가 현재 정책 세트로 다시 한다.
+     */
+    private List<Long> agreedPolicyVersionIds = new ArrayList<>();
+
+    /**
+     * 연령 확인용 생년월일(yyyy-MM-dd). 판정에만 쓰고 저장하지 않는다.
+     * 신규 users 를 만드는 Google/Kakao/Naver 가입에 모두 필요하다.
+     */
+    @NotBlank(message = "{signup.error.birthDate.required}")
+    private String birthDate;
 
     // 길이/문구 정책은 일반 회원가입(RegistrationForm)과 같은 key 를 쓴다.
     @NotBlank(message = "{signup.error.nickname.required}")
@@ -22,10 +37,4 @@ public class SocialSignupForm {
      */
     @Size(max = 100, message = "{signup.error.email.invalid}")
     private String userEmail;
-
-    @AssertTrue(message = "{signup.error.terms.service}")
-    private boolean termsAccepted;
-
-    @AssertTrue(message = "{signup.error.terms.privacy}")
-    private boolean privacyAccepted;
 }

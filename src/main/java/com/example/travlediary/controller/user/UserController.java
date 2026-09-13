@@ -1,6 +1,7 @@
 package com.example.travlediary.controller.user;
 
 import com.example.travlediary.dto.RegistrationForm;
+import com.example.travlediary.service.policy.SignupPolicyService;
 import com.example.travlediary.service.user.EmailPolicy;
 import com.example.travlediary.service.user.PasswordPolicy;
 import com.example.travlediary.service.user.RegistrationResult;
@@ -28,11 +29,14 @@ public class UserController {
 
     private final UserService userService;
     private final MessageSource messageSource;
+    private final SignupPolicyService signupPolicyService;
 
     @Autowired
-    public UserController(UserService userService, MessageSource messageSource) {
+    public UserController(UserService userService, MessageSource messageSource,
+                          SignupPolicyService signupPolicyService) {
         this.userService = userService;
         this.messageSource = messageSource;
+        this.signupPolicyService = signupPolicyService;
     }
 
     private String message(String code) {
@@ -48,6 +52,15 @@ public class UserController {
         if (!model.containsAttribute("registrationForm")) {
             model.addAttribute("registrationForm", new RegistrationForm());
         }
+        return registerForm(model);
+    }
+
+    /**
+     * 회원가입 화면. 약관 항목은 DB 의 현재 정책 세트가 정한다.
+     * 아직 활성화하지 않은 정책은 세트에 들어오지 않아 화면에도 나오지 않는다.
+     */
+    private String registerForm(Model model) {
+        model.addAttribute("signupPolicies", signupPolicyService.loadSignupPolicies());
         return "register";
     }
 
@@ -56,13 +69,14 @@ public class UserController {
                                BindingResult bindingResult,
                                Authentication authentication,
                                HttpSession session,
-                               RedirectAttributes redirectAttributes) {
+                               RedirectAttributes redirectAttributes,
+                               Model model) {
         if (isAuthenticated(authentication)) {
             return "redirect:/";
         }
         if (bindingResult.hasErrors()) {
             clearSensitiveFields(form);
-            return "register";
+            return registerForm(model);
         }
 
         final RegistrationResult result;
@@ -83,14 +97,14 @@ public class UserController {
                         exception.getMessage());
             }
             clearSensitiveFields(form);
-            return "register";
+            return registerForm(model);
         } catch (RuntimeException exception) {
             log.error("Registration failed before a completion result was returned: exceptionType={}",
                     exception.getClass().getSimpleName());
             bindingResult.reject("signup.error.failed",
                     "회원가입을 완료할 수 없습니다. 잠시 후 다시 시도해주세요.");
             clearSensitiveFields(form);
-            return "register";
+            return registerForm(model);
         }
 
         try {

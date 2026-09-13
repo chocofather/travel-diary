@@ -1239,6 +1239,48 @@ class SocialOAuth2LoginSuccessHandlerTest {
                 PendingEmailCorrection.Method.SOCIAL, SocialProvider.KAKAO, false, now.minusSeconds(10), now.plusSeconds(590));
     }
 
+
+    /** 이미 연결된 소셜 계정 로그인은 신규 users 를 만들지 않으므로 연령 확인 화면을 거치지 않는다. */
+    @Test
+    void anExistingSocialLoginNeverPassesThroughTheAgeCheckScreen() throws Exception {
+        OAuth2AuthenticationToken authentication = googleAuthentication(
+                "google-sub-123", "same@example.com", true, "OIDC_USER");
+        when(socialAccountService.findByProviderAndProviderUserId(
+                SocialProvider.GOOGLE, "google-sub-123"))
+                .thenReturn(socialAccount(7L, "google-sub-123"));
+        when(userMapper.findById(7L)).thenReturn(user(7L, null, UserRole.USER, UserStatus.ACTIVE));
+        when(userMapper.findStatusById(7L)).thenReturn(UserStatus.ACTIVE);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        // 가입 화면(/social-signup)으로 가지 않고 곧바로 로그인된다.
+        assertThat(response.getRedirectedUrl()).isNotEqualTo("/social-signup");
+        assertThat(request.getSession().getAttribute(
+                PendingSocialSignup.SESSION_ATTRIBUTE)).isNull();
+        verify(userMapper, never()).insertUser(any());
+    }
+
+    /** 신규 소셜 식별자는 users 를 만들지 않고 연령 확인이 있는 가입 화면으로만 보낸다. */
+    @Test
+    void aBrandNewSocialIdentityOnlyReachesTheSignupScreenWithoutCreatingAUser()
+            throws Exception {
+        OAuth2AuthenticationToken authentication = googleAuthentication(
+                "brand-new-sub", "brand-new@example.com", true, "OIDC_USER");
+        when(socialAccountService.findByProviderAndProviderUserId(
+                SocialProvider.GOOGLE, "brand-new-sub")).thenReturn(null);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        handler.onAuthenticationSuccess(request, response, authentication);
+
+        assertThat(response.getRedirectedUrl()).isEqualTo("/social-signup");
+        // OAuth 성공만으로는 아무 계정도 만들어지지 않는다.
+        verify(userMapper, never()).insertUser(any());
+        verify(socialAccountService, never()).connect(any());
+    }
+
     private PendingSocialLoginLink pendingLoginLink(SocialProvider provider) {
         Instant now = Instant.now();
         return new PendingSocialLoginLink(
