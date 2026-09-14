@@ -16,7 +16,6 @@
     </g>
   </defs>
   <g clip-path="url(#tape)">
-    <rect width="160" height="40" fill="#ffffff" fill-opacity="0.11"/>
     <use href="#sprig" x="26" y="20"/>
     <use href="#sprig" x="62" y="20"/>
     <use href="#sprig" x="98" y="20"/>

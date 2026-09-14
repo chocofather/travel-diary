@@ -204,9 +204,18 @@ class DiaryCoverEditorAssetTest {
     void thePolaroidFrameIsOneRuleSharedByTheCoverAndThePages() throws IOException {
         String css = read(Path.of("src/main/resources/static/css/diary.css"));
 
-        // 요소 크기에 따라 함께 줄고 늘도록 % 로 두고, 아래만 두 배쯤 넓다
-        // (DiaryPhotoFrame 의 SIDE / BOTTOM 과 같은 값이어야 사진 자리가 프레임과 맞는다)
-        assertThat(rule(css, ".diary-photo")).contains("padding: 3.5% 3.5% 8%;");
+        /*
+          프레임 두께는 요소 자신의 폭으로 잰다. (cqw — 요소를 container 로 두고 안쪽에서 쓴다)
+          padding 의 % 는 이 요소가 아니라 바깥 캔버스의 폭을 재므로 쓰지 않는다.
+          값은 DiaryPhotoFrame 의 SIDE / BOTTOM 과 같아야 사진 자리가 프레임과 맞는다.
+        */
+        String photo = rule(css, ".diary-photo");
+        assertThat(photo)
+                .contains("container-type: inline-size;")
+                .contains("--diary-photo-side: 3.5cqw;")
+                .contains("--diary-photo-bottom: 6cqw;")
+                .contains("padding: 0;")
+                .doesNotContain("padding: 3.5%");
         // 표지 전용 프레임 값을 따로 두지 않는다
         assertThat(css).doesNotContain(".diary-cover-surface .diary-photo.is-photo-polaroid");
         // 사진은 자기 자리를 꽉 채운다. 사진 때문에 생기는 흰 자리는 없다

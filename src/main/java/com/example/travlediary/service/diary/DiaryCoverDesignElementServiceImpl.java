@@ -155,19 +155,18 @@ public class DiaryCoverDesignElementServiceImpl implements DiaryCoverDesignEleme
         element.setPositionX(STICKER_CENTER.add(offset));
         element.setPositionY(STICKER_CENTER.add(offset));
         /*
-          폴라로이드는 흰 프레임 안에 사진이 꽉 차는 모습이라 상자 비율이 사진과 맞아야 한다.
-          가로 사진에는 가로 폴라로이드가 되도록 원본 비율에서 높이를 구한다.
+          두 모습 모두 상자 비율이 원본 사진과 맞아야 잘리지 않는다.
+          일반 사진은 상자가 곧 사진이고, 폴라로이드는 흰 프레임 안쪽이 사진 자리다.
+          가로 사진에는 가로 상자가 되도록 원본 비율에서 크기를 구한다.
           (페이지 다꾸와 같은 셈을 쓰고, 다른 것은 캔버스 비율뿐이다)
         */
-        if (DiaryCoverPhotoStyle.FULL.getCode().equals(photoStyle)) {
-            element.setWidth(PHOTO_SIZE);
-            element.setHeight(PHOTO_SIZE);
-        } else {
-            BigDecimal[] size = DiaryPhotoFrame.polaroidSize(
-                    photoRatio, DiaryPhotoFrame.COVER_CANVAS_ASPECT, PHOTO_SIZE);
-            element.setWidth(size[0]);
-            element.setHeight(size[1]);
-        }
+        BigDecimal[] size = DiaryCoverPhotoStyle.FULL.getCode().equals(photoStyle)
+                ? DiaryPhotoFrame.fullSize(
+                        photoRatio, DiaryPhotoFrame.COVER_CANVAS_ASPECT, PHOTO_SIZE)
+                : DiaryPhotoFrame.polaroidSize(
+                        photoRatio, DiaryPhotoFrame.COVER_CANVAS_ASPECT, PHOTO_SIZE);
+        element.setWidth(size[0]);
+        element.setHeight(size[1]);
         element.setRotation(DEFAULT_ROTATION);
         // 새로 올린 것은 늘 맨 위에, 고른 순서대로 쌓인다.
         element.setZIndex(nextZIndex(placed) + placedBefore);

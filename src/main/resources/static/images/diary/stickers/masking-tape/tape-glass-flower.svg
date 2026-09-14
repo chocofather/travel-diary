@@ -7,7 +7,6 @@
     </clipPath>
   </defs>
   <g clip-path="url(#tape)">
-    <rect width="160" height="40" fill="#ffffff" fill-opacity="0.12"/>
     <g fill="none" stroke="#6f8f5f" stroke-width="1.4" stroke-linecap="round">
       <path d="M30 30v-8M30 26l-4-3M30 24l4-3"/>
       <path d="M82 30v-8M82 26l4-3M82 24l-4-3"/>

@@ -1,6 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 40" role="img"
      aria-label="클리어 압화 마스킹테이프 무늬">
-  <rect width="52" height="40" fill="#ffffff" fill-opacity="0.12"/>
   <g transform="translate(16 6)">
     <path d="M0 26V12" stroke="#8a9a6b" stroke-width="1.2" stroke-linecap="round"/>
     <ellipse cx="-5" cy="20" rx="4.6" ry="1.8" transform="rotate(-24 -5 20)" fill="#93a473"/>

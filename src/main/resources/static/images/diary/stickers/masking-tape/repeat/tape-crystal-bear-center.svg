@@ -1,6 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 40" role="img"
      aria-label="클리어 곰 마스킹테이프 무늬">
-  <rect width="52" height="40" fill="#ffffff" fill-opacity="0.1"/>
   <g transform="translate(16 20)" fill="none" stroke="#a98b6a" stroke-width="1.5">
     <circle cx="-6" cy="-6" r="3"/>
     <circle cx="6" cy="-6" r="3"/>

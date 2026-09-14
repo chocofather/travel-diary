@@ -63,6 +63,26 @@ public class DiaryStickerCatalog {
         return stickerId == null ? Optional.empty() : Optional.ofNullable(byId.get(stickerId.strip()));
     }
 
+    /**
+     * 그림 경로로 찾는다. 아는 스티커일 때만 돌려준다.
+     *
+     * <p>회원 화면은 스티커 id 만 보내고 경로는 서버가 고르므로 이 길이 필요 없다.
+     * 체험 여행일기를 가져올 때는 브라우저에 저장돼 있던 경로가 올라오므로,
+     * 그 값이 정말 우리 공용 asset 인지 여기에서 확인한다. (외부 주소·서버 경로 저장 금지)
+     */
+    public Optional<DiarySticker> findByImageUrl(String imageUrl) {
+        if (imageUrl == null) {
+            return Optional.empty();
+        }
+        String requested = imageUrl.strip();
+        if (!requested.startsWith(ASSET_PREFIX)) {
+            return Optional.empty();
+        }
+        return byId.values().stream()
+                .filter(sticker -> sticker.imageUrl().equals(requested))
+                .findFirst();
+    }
+
     /** picker 가 그대로 그리는 묶음 목록. 스티커가 없는 묶음은 빼고 준다. */
     public List<DiaryStickerCategory> getCategories() {
         return categories;

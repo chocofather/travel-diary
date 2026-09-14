@@ -1,6 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 40" role="img"
      aria-label="클리어 손글씨 레터링 마스킹테이프 무늬">
-  <rect width="48" height="40" fill="#ffffff" fill-opacity="0.1"/>
   <!-- 두 획이 한 마디. 마디 끝에서 획이 끊겨 손글씨 흐름이 이어진다 -->
   <g fill="none" stroke="#8a7f74" stroke-width="1.6" stroke-linecap="round">
     <path d="M4 24c4-10 8-10 10-4s-3 8-6 6 0-9 8-9"/>

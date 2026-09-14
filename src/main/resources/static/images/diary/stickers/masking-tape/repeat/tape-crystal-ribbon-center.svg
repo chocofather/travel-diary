@@ -1,6 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 40" role="img"
      aria-label="클리어 리본 마스킹테이프 무늬">
-  <rect width="50" height="40" fill="#ffffff" fill-opacity="0.1"/>
   <g transform="translate(16 18)" fill="none" stroke="#c98fa2" stroke-width="1.5"
      stroke-linejoin="round">
     <path d="M-2.4-1-9-5.6-10 3.4-2.4 1.6Z"/>

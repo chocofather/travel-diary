@@ -15,7 +15,6 @@
     </g>
   </defs>
   <g clip-path="url(#tape)">
-    <rect width="160" height="40" fill="#ffffff" fill-opacity="0.1"/>
     <use href="#camera" x="26" y="20"/>
     <use href="#tag" x="62" y="20"/>
     <use href="#camera" x="102" y="20"/>

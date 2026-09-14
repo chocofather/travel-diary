@@ -6,7 +6,6 @@
     </clipPath>
   </defs>
   <g clip-path="url(#tape)">
-    <rect width="160" height="40" fill="#ffffff" fill-opacity="0.1"/>
     <!-- 바탕이 거의 없으므로 구름은 윤곽선으로 그려 아래 글자가 그대로 읽힌다 -->
     <g fill="none" stroke="#7aa6c8" stroke-width="1.6" stroke-linejoin="round">
       <path d="M20 24q-5 0-5-4t5-4q1-4 5-4t5 3q4-1 6 2t-2 7Z"/>

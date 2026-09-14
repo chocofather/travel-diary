@@ -12,6 +12,9 @@
        같은 우선순위인 diary.css 의 font-family 보다 뒤에 와야 실제로 적용된다. -->
   <link rel="stylesheet" href="/css/diary-fonts.css">
   <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
+  <!-- 편집 저장이 지나는 공통 통로. 아래 모듈들보다 먼저 실려야 한다.
+       이 화면(회원)에서는 예전과 같은 서버 POST 를 그대로 쓴다. -->
+  <script src="/js/diary-save-transport.js" defer></script>
   <script src="/js/diary-canvas-drag.js" defer></script>
   <!-- 되풀이형 마스킹테이프는 읽기 화면에서도 같은 모습이어야 하므로 편집 여부와 무관하게 싣는다 -->
   <script src="/js/diary-tape-repeat.js" defer></script>
@@ -612,6 +615,7 @@
           th:each="color, stat : ${diaryNoteColors}"
           th:classappend="${color.cssClass} + (${stat.first} ? ' is-active' : '')"
           th:data-note-color="${color.code}"
+          th:data-note-color-class="${color.cssClass}"
           th:attr="aria-pressed=${stat.first} ? 'true' : 'false',
                    aria-label=|${color.label} 색|"
           th:title="${color.label}"></button>

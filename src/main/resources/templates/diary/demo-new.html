@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
+
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/diary.css">
+  <link rel="stylesheet" href="/css/diary-fonts.css">
+  <script src="/js/guest-diary-draft-store.js" defer></script>
+  <script src="/js/guest-diary-new.js" defer></script>
+</th:block>
+
+<th:block th:fragment="body">
+  <!--
+    비회원 체험 다이어리 만들기.
+
+    회원의 "새 여행일기"(diary/new)와 같은 상자·같은 조각을 쓴다. 다른 점은 두 가지다.
+      - 저장은 서버가 아니라 브라우저 draft 한 자리다. (그래서 form 이 아니다)
+      - 대표 이미지 올리기가 없다. 사진은 로그인 후에 쓸 수 있다.
+  -->
+  <section class="diary-form-page" aria-labelledby="demo-new-title"
+           data-guest-new
+           th:data-shelf-url="@{/diaries/demo}"
+           th:data-cover-url="@{/diaries/demo/cover}"
+           th:data-edit-url="@{/diaries/demo/edit}"
+           th:data-import-url="@{/diaries/import}">
+    <header class="diary-form-header">
+      <a class="diary-detail-back" th:href="@{/diaries/demo}">← 나의 여행일기로</a>
+      <p class="diary-list-eyebrow">NEW TRAVEL DIARY</p>
+      <!-- 덜 채워진 예전 체험 여행일기를 보완하러 들어오면 제목 줄만 바뀐다. -->
+      <h1 id="demo-new-title"
+          data-guest-heading
+          data-heading-complete="여행일기 정보 입력">새 여행일기</h1>
+      <p class="diary-list-subtitle"
+         data-guest-subtitle
+         data-subtitle-complete="표지와 작성한 페이지는 그대로 두고 제목과 여행 기간만 채웁니다.">
+        <span class="diary-demo-badge">비회원 체험</span>
+        <span data-guest-subtitle-text>제목과 기간을 정하고 표지를 고르면 나만의 다이어리 한 권이 만들어집니다.</span>
+      </p>
+    </header>
+
+    <p class="diary-form-error" role="alert" hidden data-guest-error>
+      체험 다이어리를 만들지 못했습니다. 잠시 후 다시 시도해 주세요.
+    </p>
+
+    <!--
+      서버로 보내지 않으므로 action 이 없다. 값은 만들기를 누를 때 draft 로 들어간다.
+      다만 form 그대로 두어 회원 화면과 같은 required 검사가 먼저 걸리게 한다.
+    -->
+    <form class="diary-form" data-guest-form>
+      <div class="diary-form-field">
+        <label for="diary-title">제목</label>
+        <input type="text" id="diary-title" maxlength="150" required
+               placeholder="여행일기 제목을 입력해 주세요."
+               data-guest-title />
+      </div>
+
+      <div class="diary-form-field">
+        <span class="diary-form-label">여행 기간</span>
+        <div class="diary-period-inputs">
+          <div class="diary-period-item">
+            <label for="diary-start-date">여행 시작일</label>
+            <input type="date" id="diary-start-date" required
+                   min="1000-01-01" max="9999-12-31" data-guest-start-date />
+          </div>
+          <span class="diary-period-separator" aria-hidden="true">~</span>
+          <div class="diary-period-item">
+            <label for="diary-end-date">여행 종료일</label>
+            <input type="date" id="diary-end-date" required
+                   min="1000-01-01" max="9999-12-31" data-guest-end-date />
+          </div>
+        </div>
+      </div>
+
+      <!--
+        표지 고르기. 회원 화면과 같은 두 갈래다.
+        기본 디자인(제공 표지 8종) / 직접 꾸미기(체험 표지 편집기).
+      -->
+      <div class="diary-form-field diary-cover-choice" data-guest-cover-choice>
+        <span class="diary-form-label">표지</span>
+
+        <div class="diary-cover-tabs" role="tablist" aria-label="표지 종류">
+          <button type="button" class="diary-cover-tab is-active" role="tab"
+                  aria-selected="true" data-guest-cover-tab="PRESET">기본 디자인</button>
+          <button type="button" class="diary-cover-tab" role="tab"
+                  aria-selected="false" data-guest-cover-tab="CUSTOM">직접 꾸미기</button>
+        </div>
+
+        <!-- 제공 표지 8종. 회원 화면과 같은 조각을 그대로 쓴다. -->
+        <div data-guest-cover-panel="PRESET">
+          <div th:replace="~{diary/cover-style :: picker(${coverStyles}, null)}"></div>
+        </div>
+
+        <div data-guest-cover-panel="CUSTOM" hidden>
+          <p class="diary-form-hint">
+            표지 편집기에서 재질과 색을 고르고 스티커·글씨를 올릴 수 있어요.
+            표지를 적용하면 이 여행일기가 만들어집니다.
+          </p>
+        </div>
+      </div>
+
+      <!-- 노트 종류도 회원 화면과 같은 조각이다. 표지와 따로 고른다. -->
+      <div class="diary-form-field"
+           th:replace="~{diary/notebook-type :: picker(${notebookTypes}, null)}"></div>
+
+      <div class="diary-form-actions">
+        <a class="diary-form-cancel" th:href="@{/diaries/demo}">취소</a>
+        <!-- 고른 갈래에 따라 만들기 바로 끝나거나 표지 편집기로 이어진다. -->
+        <button type="submit" class="diary-form-submit" data-guest-action="create"
+                data-label-preset="여행일기 만들기"
+                data-label-custom="표지 꾸미러 가기"
+                data-label-complete="여행일기 정보 저장">여행일기 만들기</button>
+      </div>
+    </form>
+  </section>
+</th:block>
+</html>

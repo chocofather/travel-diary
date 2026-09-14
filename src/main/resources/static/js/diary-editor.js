@@ -301,38 +301,13 @@ document.addEventListener('DOMContentLoaded', () => {
         return page.headerSaving;
     }
 
-    /** CSRF 토큰은 layout 의 meta 값을 그대로 쓴다. */
-    async function sendField(url, fields) {
-        const csrfToken = document.querySelector('meta[name="_csrf"]')?.content;
-        const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.content;
-        if (!csrfToken || !csrfHeader) {
-            throw new Error('보안 토큰을 확인할 수 없어 저장하지 못했습니다');
-        }
-
-        const response = await fetch(url, {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-                [csrfHeader]: csrfToken
-            },
-            body: new URLSearchParams(fields)
-        });
-
-        if (response.status === 401) {
-            const redirect = window.location.pathname + window.location.search;
-            window.location.href = `/login?redirect=${encodeURIComponent(redirect)}`;
-            throw new Error('로그인이 필요합니다');
-        }
-        if (!response.ok) {
-            let message = '저장하지 못했습니다';
-            if ((response.headers.get('Content-Type') || '').includes('application/json')) {
-                const payload = await response.json();
-                message = payload.message || message;
-            }
-            throw new Error(message);
-        }
+    /**
+     * 본문/한 줄 메모 저장. 회원은 예전과 같은 서버 POST 이고,
+     * 비회원 체험만 통로 구현이 바뀐다. (저장 주소는 화면이 data-*-url 로 실어 준다)
+     */
+    function sendField(url, fields) {
+        return window.DiarySaveTransport.post(url, fields,
+            {defaultMessage: '저장하지 못했습니다'});
     }
 
     function showStatus(text, isError = false) {

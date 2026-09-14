@@ -6,7 +6,6 @@
     </clipPath>
   </defs>
   <g clip-path="url(#tape)">
-    <rect width="160" height="40" fill="#ffffff" fill-opacity="0.1"/>
     <path d="M0 27h160" fill="none" stroke="#7f97ac" stroke-width="1.6"
           stroke-linecap="round" stroke-dasharray="1 6"/>
     <g fill="#6d8ba3">

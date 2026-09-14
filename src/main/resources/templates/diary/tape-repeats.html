@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!--
+  마스킹테이프 조각 경로 표. (보이지 않는 자료 한 줄씩)
+
+  이미 붙여 둔 테이프는 저장된 그림 경로 하나만 들고 있어서, 화면에 그릴 때
+  [왼쪽 끝][가운데][오른쪽 끝] 을 다시 찾아야 한다. 꾸미기 목록(.diary-sticker-option)이
+  있는 편집 화면은 그 목록에서 찾지만, 미리보기만 있는 화면(비회원 책장·가져오기)에는
+  목록이 없다. 그 화면들이 이 표를 실어 두면 같은 이름표로 같은 답을 얻는다.
+
+  이름표는 꾸미기 목록과 똑같이 둔다. 찾는 쪽(diary-tape-repeat.js)이 한 가지만 알면 된다.
+-->
+<div th:fragment="table(repeats)" class="diary-tape-repeats" hidden aria-hidden="true">
+  <span th:each="entry : ${repeats}"
+        th:attr="data-sticker-image=${entry.key},
+                 data-tape-left=${entry.value.leftUrl},
+                 data-tape-center=${entry.value.centerUrl},
+                 data-tape-right=${entry.value.rightUrl}"></span>
+</div>
+
+</body>
+</html>

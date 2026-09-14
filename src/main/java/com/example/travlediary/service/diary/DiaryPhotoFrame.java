@@ -12,7 +12,11 @@ import java.math.RoundingMode;
 import java.util.Iterator;
 
 /**
- * 폴라로이드로 붙일 사진의 처음 크기.
+ * 붙일 사진의 처음 크기.
+ *
+ * <p>두 모습을 함께 맡는다. 일반 사진(FULL)은 요소 상자가 곧 사진이라 상자의 화면 비율이
+ * 원본과 같아야 하고, 폴라로이드는 흰 프레임 안쪽이 사진 비율과 맞아야 한다.
+ * 둘 다 "화면에서 보이는 비율" 을 기준으로 세므로 캔버스의 가로/세로를 함께 본다.
  *
  * <p>폴라로이드는 흰 프레임 안쪽에 사진이 꽉 차는 모습이다. 그래서 요소 상자의 비율이
  * 사진 비율과 맞지 않으면 남는 자리가 흰 여백으로 보이거나 사진이 잘린다.
@@ -27,10 +31,13 @@ import java.util.Iterator;
  */
 public final class DiaryPhotoFrame {
 
-    /** 좌·우·위 흰 여백. 요소 폭 기준이다. (diary.css 의 padding 과 같은 값) */
+    /** 좌·우·위 흰 여백. 요소 폭 기준이다. (diary.css 의 --diary-photo-side 와 같은 값) */
     private static final double SIDE = 0.035;
-    /** 아래 흰 여백. 위쪽의 두 배 넘게 넓은 것이 폴라로이드다운 비대칭이다. */
-    private static final double BOTTOM = 0.08;
+    /**
+     * 아래 흰 여백. 위쪽보다 넓은 비대칭이 폴라로이드다운 모습이다.
+     * (diary.css 의 --diary-photo-bottom 과 같은 값)
+     */
+    private static final double BOTTOM = 0.06;
     /** 프레임을 뺀 사진 자리의 폭 / 높이 (요소 폭 기준) */
     public static final double INNER_WIDTH = 1 - 2 * SIDE;
     public static final double FRAME_HEIGHT = SIDE + BOTTOM;
@@ -45,6 +52,8 @@ public final class DiaryPhotoFrame {
     private static final double RATIO_MAX = 5.0;
     /** 요소 높이 상한. (DB CHECK 과 같은 1 보다 조금 낮게 두어 화면에 다 들어오게 한다) */
     private static final double HEIGHT_MAX = 0.9;
+    /** 저장 조건이 0 보다 큰 값만 받으므로 아주 얇은 사진에도 남겨 두는 바닥. */
+    private static final double SIZE_MIN = 0.01;
 
     private DiaryPhotoFrame() {
     }
@@ -74,6 +83,42 @@ public final class DiaryPhotoFrame {
             elementHeight = HEIGHT_MAX;
         }
         return new BigDecimal[]{relative(elementWidth), relative(elementHeight)};
+    }
+
+    /**
+     * 일반 사진(FULL) 요소의 처음 크기. 0~1 상대값 {너비, 높이} 를 돌려준다.
+     *
+     * <p>프레임이 없는 사진이라 요소 상자가 곧 사진의 모습이다. 그래서 상자의 화면 비율이
+     * 원본 비율과 같아야 잘리지 않는다. 좌표가 0~1 상대값이라 캔버스의 가로/세로가
+     * 그대로 곱해지므로, 상자 비율만 정사각으로 두면 캔버스가 세로로 긴 표지에서는
+     * 세로 상자가 되어 가로 사진의 좌우가 잘린다. 그 셈을 여기에서 바로잡는다.
+     *
+     * <p>화면에서 보이는 비율은 (너비 × 캔버스폭) / (높이 × 캔버스높이) 이므로,
+     * 이것이 원본 비율과 같아지려면 높이 = 너비 × 캔버스비율 / 원본비율 이다.
+     *
+     * <p>긴 쪽을 base 로 잡아 가로 사진은 너비가, 세로 사진은 높이가 base 가 된다.
+     * 두 변 모두 base 를 넘지 않으므로 처음부터 캔버스를 넘치지 않는다.
+     *
+     * @param photoRatio   사진 원본의 가로/세로. 알 수 없으면 0 이하를 넘기면 된다(정사각으로 본다).
+     * @param canvasAspect 붙일 캔버스의 가로/세로.
+     * @param base         긴 쪽의 기본 크기.
+     */
+    public static BigDecimal[] fullSize(double photoRatio, double canvasAspect,
+                                        BigDecimal base) {
+        double ratio = photoRatio > 0 ? Math.min(Math.max(photoRatio, RATIO_MIN), RATIO_MAX) : 1.0;
+        double longSide = base.doubleValue();
+
+        double width = longSide;
+        double height = width * canvasAspect / ratio;
+        if (height > longSide) {
+            // 화면에서 세로로 긴 사진이다. 높이를 기준으로 잡는다.
+            height = longSide;
+            width = height * ratio / canvasAspect;
+        }
+        // 위 구성상 두 변 모두 base 이하지만, 저장 조건(0 초과)을 지키도록 바닥만 둔다.
+        return new BigDecimal[]{
+                relative(Math.max(width, SIZE_MIN)),
+                relative(Math.max(height, SIZE_MIN))};
     }
 
     /**

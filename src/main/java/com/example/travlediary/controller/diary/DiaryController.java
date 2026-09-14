@@ -730,17 +730,20 @@ public class DiaryController {
                 // 아는 값인지는 서비스가 확인한다. (비어 있으면 그대로 비워 둔다)
                 element.setPhotoStyle(photoStyle);
                 /*
-                  폴라로이드는 흰 프레임 안에 사진이 꽉 차는 모습이라 상자 비율이 사진과 맞아야 한다.
-                  가로 사진에는 가로 폴라로이드가 되도록 원본 비율에서 높이를 구한다.
-                  (일반 사진은 예전 기본 크기 그대로다)
+                  두 모습 모두 상자 비율이 원본 사진과 맞아야 잘리지 않는다.
+                  일반 사진은 상자가 곧 사진이고, 폴라로이드는 흰 프레임 안쪽이 사진 자리다.
+                  가로 사진에는 가로 상자가 되도록 원본 비율에서 크기를 구한다.
+                  (표지 디자인도 같은 셈을 쓰고, 다른 것은 캔버스 비율뿐이다)
                 */
-                if (!DiaryCoverPhotoStyle.FULL.getCode().equals(photoStyle)) {
-                    BigDecimal[] size = DiaryPhotoFrame.polaroidSize(
-                            DiaryPhotoFrame.ratioOf(image),
-                            DiaryPhotoFrame.PAGE_CANVAS_ASPECT, PHOTO_WIDTH);
-                    element.setWidth(size[0]);
-                    element.setHeight(size[1]);
-                }
+                double photoRatio = DiaryPhotoFrame.ratioOf(image);
+                BigDecimal[] size =
+                        DiaryCoverPhotoStyle.FULL.getCode().equals(photoStyle)
+                                ? DiaryPhotoFrame.fullSize(photoRatio,
+                                        DiaryPhotoFrame.PAGE_CANVAS_ASPECT, PHOTO_WIDTH)
+                                : DiaryPhotoFrame.polaroidSize(photoRatio,
+                                        DiaryPhotoFrame.PAGE_CANVAS_ASPECT, PHOTO_WIDTH);
+                element.setWidth(size[0]);
+                element.setHeight(size[1]);
                 /*
                   첫 장은 예전처럼 기본 자리에 놓고, 함께 고른 나머지만 조금씩 어긋나게 둔다.
                   (여러 장이 정확히 겹쳐 한 장처럼 보이지 않게 하려는 것뿐이다)

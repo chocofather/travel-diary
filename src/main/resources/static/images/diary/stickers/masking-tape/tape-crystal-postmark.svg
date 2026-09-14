@@ -14,7 +14,6 @@
     </g>
   </defs>
   <g clip-path="url(#tape)">
-    <rect width="160" height="40" fill="#ffffff" fill-opacity="0.1"/>
     <use href="#stamp-outline" x="26" y="20"/>
     <use href="#stamp-outline" x="98" y="20"/>
     <use href="#postmark" x="62" y="20"/>

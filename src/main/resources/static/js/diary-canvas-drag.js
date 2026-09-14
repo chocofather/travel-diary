@@ -534,43 +534,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }, '겹침 순서를 저장하지 못했습니다.');
     }
 
-    /** 저장은 기존 화면을 그대로 둔 채 값만 보낸다. (CSRF 토큰은 layout 의 meta 사용) */
-    async function save(url, fields, defaultMessage) {
-        const csrfToken = document.querySelector('meta[name="_csrf"]')?.content;
-        const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.content;
-        if (!csrfToken || !csrfHeader) {
-            throw new Error(`보안 토큰을 확인할 수 없어 ${defaultMessage}`);
-        }
-
-        const response = await fetch(url, {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-                [csrfHeader]: csrfToken
-            },
-            body: new URLSearchParams(fields)
-        });
-
-        if (response.status === 401) {
-            const redirect = window.location.pathname + window.location.search;
-            window.location.href = `/login?redirect=${encodeURIComponent(redirect)}`;
-            throw new Error('로그인이 필요합니다.');
-        }
-        if (!response.ok) {
-            let message = defaultMessage;
-            const contentType = response.headers.get('Content-Type') || '';
-            if (contentType.includes('application/json')) {
-                const payload = await response.json();
-                message = payload.message || message;
-            }
-            throw new Error(message);
-        }
-
-        // 204(위치/크기/회전)는 본문이 없고, 겹침 순서만 정리된 목록을 돌려준다.
-        if (response.status === 204) return null;
-        const contentType = response.headers.get('Content-Type') || '';
-        return contentType.includes('application/json') ? response.json() : null;
+    /**
+     * 저장은 기존 화면을 그대로 둔 채 값만 보낸다.
+     * 회원은 예전과 같은 서버 POST 이고, 비회원 체험만 통로 구현이 바뀐다.
+     * 이 엔진은 어느 쪽인지 몰라도 된다. (저장 주소도 요소마다 data-*-url 로 실려 온다)
+     */
+    function save(url, fields, defaultMessage) {
+        return window.DiarySaveTransport.post(url, fields, {defaultMessage});
     }
 });

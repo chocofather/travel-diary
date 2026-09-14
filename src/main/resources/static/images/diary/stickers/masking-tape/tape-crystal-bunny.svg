@@ -14,7 +14,6 @@
     </g>
   </defs>
   <g clip-path="url(#tape)">
-    <rect width="160" height="40" fill="#ffffff" fill-opacity="0.1"/>
     <use href="#bunny-face" x="28" y="22"/>
     <use href="#bunny-face" x="80" y="22"/>
     <use href="#bunny-face" x="132" y="22"/>

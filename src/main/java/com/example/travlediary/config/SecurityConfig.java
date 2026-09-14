@@ -321,6 +321,8 @@ public class SecurityConfig {
                                 "^/diaries/[0-9]+/pages/[0-9]+/elements/label$",
                                 HttpMethod.POST.name()),
                         new RegexRequestMatcher(
+                                "^/diaries/import$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
                                 "^/diaries/[0-9]+/pages/[0-9]+/elements/[0-9]+/label/delete$",
                                 HttpMethod.POST.name()),
                         new RegexRequestMatcher(
@@ -485,6 +487,16 @@ public class SecurityConfig {
                         // 방 관리 경로 /travel-plans/{id}/** 는 그대로 인증이 필요하다
                         .requestMatchers(new RegexRequestMatcher(
                                 "^/travel-plans/invitations/[A-Za-z0-9_-]+$",
+                                HttpMethod.GET.name())).permitAll()
+
+                        // 비회원 다이어리 체험 시작 화면 GET 한 건만 공개한다.
+                        // 체험 다이어리는 브라우저 localStorage 에만 남고 서버에 저장되지 않는다.
+                        // 아래 /diaries/** 인증 규칙보다 먼저 와야 하며, 회원용 저장 endpoint 는
+                        // 그대로 인증이 필요하다(POST /diaries, /diaries/{id}/** 등).
+                        // 이 matcher 는 경로 뒤에 물음표까지 붙은 문자열을 보므로 쿼리스트링을 함께 허용한다.
+                        // (체험 정보 보완이 /diaries/demo/new?mode=complete 로 들어온다)
+                        .requestMatchers(new RegexRequestMatcher(
+                                "^/diaries/demo(?:/new|/edit|/cover)?(?:\\?.*)?$",
                                 HttpMethod.GET.name())).permitAll()
 
                         /* === 관리자만 접근 가능한 영역 === */

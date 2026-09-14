@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
+
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css">
+  <link rel="stylesheet" href="/css/quill-content.css">
+  <link rel="stylesheet" href="/css/diary.css">
+  <link rel="stylesheet" href="/css/diary-fonts.css">
+  <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
+  <!--
+    저장 통로를 먼저 싣고, 이 화면에서만 브라우저 저장 구현을 끼운다.
+    아래 편집 모듈들은 회원 화면과 같은 파일 그대로이며 어느 쪽인지 모른다.
+  -->
+  <script src="/js/diary-save-transport.js" defer></script>
+  <script src="/js/guest-diary-draft-store.js" defer></script>
+  <script src="/js/diary-canvas-drag.js" defer></script>
+  <script src="/js/diary-tape-repeat.js" defer></script>
+  <script src="/js/diary-emoji-data.js" defer></script>
+  <script src="/js/diary-editor.js" defer></script>
+  <script src="/js/diary-sticker-picker.js" defer></script>
+  <script src="/js/diary-note-picker.js" defer></script>
+  <script src="/js/diary-note-text.js" defer></script>
+  <script src="/js/diary-label-picker.js" defer></script>
+  <script src="/js/diary-paper-color.js" defer></script>
+  <!--
+    사진. 원본은 IndexedDB 에만 두고 draft 에는 photoRef 만 남는다.
+    그리는 마크업은 회원 표지 사진과 같은 생성기를 그대로 쓴다.
+  -->
+  <script src="/js/diary-cover-photo.js" defer></script>
+  <script src="/js/guest-diary-photo-store.js" defer></script>
+  <script src="/js/guest-diary-photo.js" defer></script>
+  <!-- 저장하려고 로그인하러 갈 때 남기는 쪽지 -->
+  <script src="/js/guest-diary-import-intent.js" defer></script>
+  <!--
+    체험 편집기는 맨 뒤에 싣는다. 종이/본문 채우기는 defer 실행 시점(=DOMContentLoaded 전)이라
+    Quill·조작 엔진이 값을 찾기 전에 끝나고, 저장해 둔 꾸미기 요소를 되살리는 일은
+    위 모듈들이 마크업 생성기를 등록한 뒤에 돌아야 하기 때문이다.
+  -->
+  <script src="/js/guest-diary-editor.js" defer></script>
+</th:block>
+
+<th:block th:fragment="body">
+  <!--
+    비회원 체험 편집 화면.
+
+    서버는 빈 편집기와 꾸미기 목록만 내려준다. 어떤 장을 어떻게 그릴지는
+    guest-diary-editor.js 가 localStorage draft 를 읽어 정한다.
+    저장 주소는 모두 /guest/... 라는 이름표라서 네트워크로 나가지 않는다.
+  -->
+  <section class="diary-detail-page is-edit-mode diary-demo-editor"
+           aria-labelledby="diary-detail-title" data-guest-editor
+           th:data-shelf-url="@{/diaries/demo}">
+    <header class="diary-detail-header">
+      <a class="diary-detail-back" th:href="@{/diaries/demo}">← 나의 여행일기로</a>
+
+      <!--
+        표지는 다이어리 한 권의 속성이라 이 화면에는 진입점을 두지 않는다.
+        표지 수정은 책장(/diaries/demo)의 카드 ⋯ 메뉴에서 연다.
+        여기는 본문·꾸미기·페이지 관리에만 쓴다.
+      -->
+      <div class="diary-detail-headline">
+        <div class="diary-detail-heading">
+          <h1 id="diary-detail-title" data-guest-diary-title>여행일기 체험</h1>
+          <p class="diary-detail-meta">
+            <span class="diary-demo-badge">비회원 체험</span>
+            <span class="diary-detail-meta-dot" aria-hidden="true">·</span>
+            <span data-guest-page-count>0 / 3장</span>
+          </p>
+        </div>
+
+        <div class="diary-detail-actions">
+          <!--
+            새 페이지 추가. 회원 읽기 화면(diary/detail)과 같은 팝오버 조각·같은 CSS 다.
+            날짜를 고른 뒤에 만든다. 고를 수 있는 범위(min/max)는 화면이 열릴 때
+            이 여행일기의 여행 기간으로 채워진다.
+          -->
+          <details class="diary-page-add" data-guest-page-add>
+            <summary class="diary-page-add-button is-labelled"
+                     data-guest-action="add-page" title="새 페이지 추가">
+              <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor"
+                   stroke-width="1.5" stroke-linecap="round">
+                <path d="M8 3.2v9.6M3.2 8h9.6"/>
+              </svg>
+              <span>새 페이지</span>
+            </summary>
+            <!-- 폼이지만 서버로 보내지 않는다. JS 가 받아 draft 에만 쓴다. -->
+            <form data-guest-add-page-form onsubmit="return false;">
+              <label>
+                <span>페이지 날짜</span>
+                <input type="date" name="pageDate" required data-guest-new-page-date />
+              </label>
+              <p class="diary-form-error" role="alert" hidden data-guest-add-page-error></p>
+              <div class="diary-text-edit-actions">
+                <button type="button" class="diary-text-action is-primary"
+                        data-guest-action="confirm-add-page">페이지 추가</button>
+              </div>
+            </form>
+          </details>
+          <a class="diary-page-add-button is-labelled" th:href="@{/login}"
+             data-guest-action="login">
+            <span>로그인하고 저장하기</span>
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <!--
+      draft 가 없을 때. 여기에서 몰래 만들지 않는다. 다이어리 만들기는 책장에서 시작한다.
+      (스크립트가 곧바로 책장으로 돌려보내고, 그 사이 이 안내가 잠깐 보인다)
+    -->
+    <p class="diary-form-error" role="alert" hidden data-guest-missing-draft>
+      만들어 둔 체험 여행일기가 없습니다.
+      <a th:href="@{/diaries/demo}">나의 여행일기</a>로 이동합니다.
+    </p>
+
+    <!--
+      제목이나 여행 기간이 아직 없는 체험 여행일기. (기본정보를 받기 전에 만들어 둔 것)
+      여행 기간이 없으면 장의 날짜도 정할 수 없으므로 그 이유와 갈 자리를 먼저 알린다.
+      채우는 화면은 이미 있는 보완 모드를 그대로 쓴다. 여기에 따로 만들지 않는다.
+    -->
+    <p class="diary-import-notice" role="status" hidden data-guest-basics-missing>
+      여행일기 정보를 먼저 입력해 주세요.
+      제목과 여행기간을 설정해야 페이지 날짜를 지정할 수 있습니다.
+      <a class="diary-import-notice-action"
+         th:href="@{/diaries/demo/new(mode=complete,returnTo=edit)}">정보 입력하기</a>
+    </p>
+
+    <!--
+      날짜가 아직 없는 장. (기본정보를 받기 전에 늘려 둔 예전 체험 여행일기의 장)
+      지우지 않고 이 장의 날짜만 채울 수 있게 페이지 설정을 열어 준다.
+      글·사진·꾸미기는 그대로 남는다.
+    -->
+    <p class="diary-import-notice" role="status" hidden data-guest-page-date-missing>
+      이 페이지의 날짜를 선택해 주세요.
+      <button type="button" class="diary-import-notice-action diary-text-action"
+              data-guest-action="set-page-date">날짜 설정</button>
+    </p>
+
+    <div class="diary-detail-board" data-guest-board>
+      <div class="diary-page-meta">
+        <div class="diary-page-actions">
+          <details class="diary-page-settings">
+            <summary class="diary-page-action diary-page-settings-toggle"
+                     title="페이지 설정" aria-label="페이지 설정">
+              <svg class="diary-page-action-icon" viewBox="0 0 16 16" aria-hidden="true"
+                   fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+                <path d="M2 4.5h4M9 4.5h5M2 11.5h5M10 11.5h4" />
+                <circle cx="7.5" cy="4.5" r="1.8" />
+                <circle cx="8.5" cy="11.5" r="1.8" />
+              </svg>
+            </summary>
+            <!-- 폼이지만 서버로 보내지 않는다. JS 가 submit 을 가로채 draft 에만 쓴다. -->
+            <form data-guest-page-settings onsubmit="return false;">
+              <label>
+                <span>날짜</span>
+                <input type="date" name="pageDate" required data-guest-page-date />
+              </label>
+              <!-- 여행 기간이 없으면 날짜 칸을 잠그고 어디에서 채우는지 알려 준다. -->
+              <p class="diary-form-hint" hidden data-guest-page-date-locked>
+                여행 기간을 먼저 입력해 주세요.
+                <a th:href="@{/diaries/demo/new(mode=complete,returnTo=edit)}">정보 입력하기</a>
+              </p>
+              <p class="diary-form-error" role="alert" hidden data-guest-page-error></p>
+              <label>
+                <span>배경</span>
+                <select name="backgroundType" data-guest-page-background>
+                  <option value="PLAIN">무지</option>
+                  <option value="LINED">줄노트</option>
+                  <option value="GRID">모눈</option>
+                  <option value="DOT">도트</option>
+                </select>
+              </label>
+
+              <!-- 종이 색상 고르개는 회원 편집기와 같은 조각·같은 스크립트를 쓴다. -->
+              <div class="diary-paper-color">
+                <span class="diary-paper-color-label">종이 색상</span>
+                <input type="hidden" name="paperColor" class="diary-paper-color-value"
+                       data-guest-page-paper />
+                <div class="diary-paper-color-swatches" role="radiogroup" aria-label="종이 색상">
+                  <button type="button" class="diary-paper-swatch is-default" data-paper-color=""
+                          title="기본" aria-label="기본 종이색" aria-pressed="true"></button>
+                  <button type="button" class="diary-paper-swatch" data-paper-color="#FFFFFF"
+                          style="--diary-swatch:#FFFFFF" title="화이트"
+                          aria-label="화이트" aria-pressed="false"></button>
+                  <button type="button" class="diary-paper-swatch" data-paper-color="#FDFAF3"
+                          style="--diary-swatch:#FDFAF3" title="아이보리"
+                          aria-label="아이보리" aria-pressed="false"></button>
+                  <button type="button" class="diary-paper-swatch" data-paper-color="#FFF9E8"
+                          style="--diary-swatch:#FFF9E8" title="버터"
+                          aria-label="버터" aria-pressed="false"></button>
+                  <button type="button" class="diary-paper-swatch" data-paper-color="#F7F0DC"
+                          style="--diary-swatch:#F7F0DC" title="크림"
+                          aria-label="크림" aria-pressed="false"></button>
+                  <button type="button" class="diary-paper-swatch" data-paper-color="#FCEBEC"
+                          style="--diary-swatch:#FCEBEC" title="연분홍"
+                          aria-label="연분홍" aria-pressed="false"></button>
+                  <button type="button" class="diary-paper-swatch" data-paper-color="#E8F2F8"
+                          style="--diary-swatch:#E8F2F8" title="연하늘"
+                          aria-label="연하늘" aria-pressed="false"></button>
+                  <button type="button" class="diary-paper-swatch" data-paper-color="#F1EAF7"
+                          style="--diary-swatch:#F1EAF7" title="연보라"
+                          aria-label="연보라" aria-pressed="false"></button>
+                </div>
+                <label class="diary-paper-color-custom">
+                  <input type="color" class="diary-paper-color-picker" value="#FDFDFA" />
+                  <span>직접 선택</span>
+                </label>
+              </div>
+
+              <div class="diary-text-edit-actions">
+                <button type="button" class="diary-text-action is-primary"
+                        data-guest-action="save-page-settings">저장</button>
+              </div>
+            </form>
+          </details>
+
+          <button type="button" class="diary-page-action is-danger"
+                  data-guest-action="delete-page"
+                  title="페이지 삭제" aria-label="페이지 삭제">
+            <svg class="diary-page-action-icon" viewBox="0 0 16 16" aria-hidden="true"
+                 fill="none" stroke="currentColor" stroke-width="1.4"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2.8 4.4h10.4M6.4 4.4V2.9h3.2v1.5" />
+              <path d="M4.2 4.4 4.9 13.2h6.2l.7-8.8" />
+              <path d="M6.7 6.9v3.8M9.3 6.9v3.8" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!--
+        편집 툴바. 회원 편집기와 같은 id/클래스를 쓰므로 같은 스크립트가 그대로 붙는다.
+        사진만 빠져 있고 그 자리에 로그인 안내 버튼이 들어간다.
+      -->
+      <div class="diary-toolbar" role="toolbar" aria-label="본문 편집 도구">
+        <span class="diary-edit-badge">체험 중 · 최대 3장</span>
+
+        <div class="diary-toolbar-group diary-font-picker">
+          <span class="diary-toolbar-label" id="diary-font-label">글꼴</span>
+          <button type="button" class="diary-font-trigger" id="diary-font-trigger"
+                  aria-haspopup="listbox" aria-expanded="false"
+                  aria-controls="diary-font-list"
+                  aria-labelledby="diary-font-label diary-font-trigger">기본</button>
+          <div class="diary-font-list" id="diary-font-list" role="listbox"
+               aria-label="글꼴 고르기" hidden></div>
+
+          <label class="diary-toolbar-label" for="diary-size">글자 크기</label>
+          <select class="diary-toolbar-select" id="diary-size" data-editor-command="size">
+            <option value="small">작게</option>
+            <option value="">보통</option>
+            <option value="large">크게</option>
+            <option value="huge">아주 크게</option>
+          </select>
+        </div>
+
+        <div class="diary-toolbar-group">
+          <button type="button" class="diary-toolbar-button" data-editor-command="bold"
+                  title="굵게" aria-label="굵게" aria-pressed="false"><strong>B</strong></button>
+          <button type="button" class="diary-toolbar-button" data-editor-command="italic"
+                  title="기울임" aria-label="기울임" aria-pressed="false"><em>I</em></button>
+          <button type="button" class="diary-toolbar-button" data-editor-command="underline"
+                  title="밑줄" aria-label="밑줄" aria-pressed="false"><u>U</u></button>
+
+          <label class="diary-toolbar-label" for="diary-color">글자 색</label>
+          <input type="color" class="diary-toolbar-color" id="diary-color" value="#3f3427"
+                 data-editor-command="color" aria-label="글자 색" />
+
+          <span class="diary-toolbar-label" id="diary-highlight-label">형광펜</span>
+          <span class="diary-highlight">
+            <button type="button" class="diary-highlight-trigger" id="diary-highlight-trigger"
+                    aria-haspopup="listbox" aria-expanded="false" aria-pressed="false"
+                    aria-controls="diary-highlight-palette"
+                    aria-labelledby="diary-highlight-label diary-highlight-trigger"
+                    title="형광펜">
+              <span class="diary-highlight-icon" aria-hidden="true">🖍</span>
+              <span class="diary-highlight-current" id="diary-highlight-current"
+                    aria-hidden="true"></span>
+            </button>
+            <div class="diary-highlight-palette" id="diary-highlight-palette" role="listbox"
+                 aria-label="형광펜 색 고르기" hidden></div>
+          </span>
+
+          <label class="diary-toolbar-label" for="diary-align">정렬</label>
+          <select class="diary-toolbar-select" id="diary-align" data-editor-command="align">
+            <option value="">왼쪽</option>
+            <option value="center">가운데</option>
+            <option value="right">오른쪽</option>
+            <option value="justify">양쪽</option>
+          </select>
+        </div>
+
+        <div class="diary-toolbar-group diary-emoji">
+          <button type="button" class="diary-toolbar-button" id="diary-emoji-button"
+                  aria-haspopup="dialog" aria-expanded="false" aria-controls="diary-emoji-popover"
+                  title="이모지" aria-label="이모지 넣기">😊</button>
+          <div class="diary-emoji-popover" id="diary-emoji-popover" role="dialog"
+               aria-label="이모지 고르기" hidden>
+            <div class="diary-emoji-tabs" id="diary-emoji-tabs"
+                 role="tablist" aria-label="이모지 분류"></div>
+            <div class="diary-emoji-grid" id="diary-emoji-grid" role="group"
+                 aria-label="이모지 목록"></div>
+          </div>
+        </div>
+
+        <!--
+          사진. 회원 화면과 같이 붙을 모습(일반 / 폴라로이드)마다 고르개를 따로 둔다.
+          다른 점은 보내는 곳뿐이다 — form 이 아니라 고른 파일을 IndexedDB 에 넣는다.
+          (action 도 enctype 도 없어 서버로 나가는 길 자체가 없다)
+        -->
+        <div class="diary-toolbar-group">
+          <th:block th:each="style : ${coverPhotoStyles}">
+            <input type="file" class="diary-photo-input" accept="image/*" multiple
+                   data-guest-photo-input
+                   th:id="|guest-photo-input-${style.code}|"
+                   th:data-photo-style="${style.code}"
+                   th:attr="aria-label=|${style.label} 사진 추가|" />
+            <label class="diary-toolbar-button diary-photo-button"
+                   th:for="|guest-photo-input-${style.code}|"
+                   th:title="|${style.label} 사진 추가|">
+              <svg class="diary-toolbar-icon" viewBox="0 0 16 16" aria-hidden="true"
+                   fill="none" stroke="currentColor" stroke-width="1.3"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="3.6" width="12" height="9" rx="1.4" />
+                <circle cx="5.8" cy="6.8" r="1.1" />
+                <path d="M2.6 11.4 6.2 8.2l2.4 2.1 2.2-1.9 2.6 2.4" />
+              </svg>
+              <!-- 어느 쪽이 일반이고 어느 쪽이 폴라로이드인지 회원 화면과 같이 글자로 보여 준다 -->
+              <span th:text="${style.label}">일반</span>
+            </label>
+          </th:block>
+        </div>
+
+        <!-- 꾸미기(스티커 / 라벨 / 메모지). 회원 편집기와 같은 목록·같은 스크립트다. -->
+        <div class="diary-toolbar-group diary-sticker-picker">
+          <button type="button" class="diary-toolbar-button" id="diary-sticker-button"
+                  aria-haspopup="dialog" aria-expanded="false" aria-controls="diary-sticker-popover"
+                  data-create-url="/guest/elements/sticker"
+                  data-note-create-url="/guest/elements/note"
+                  title="꾸미기" aria-label="스티커·라벨·메모지 붙이기">✦</button>
+          <div class="diary-sticker-popover" id="diary-sticker-popover" role="dialog"
+               aria-label="꾸미기 고르기" hidden>
+            <div class="diary-decor-tabs" role="tablist" aria-label="꾸미기 종류">
+              <button type="button" class="diary-decor-tab is-active" role="tab"
+                      aria-selected="true" data-decor-tab="sticker">스티커</button>
+              <button type="button" class="diary-decor-tab" role="tab"
+                      aria-selected="false" data-decor-tab="label">라벨</button>
+              <button type="button" class="diary-decor-tab" role="tab"
+                      aria-selected="false" data-decor-tab="memo">메모지</button>
+            </div>
+
+            <div class="diary-decor-panel" data-decor-panel="sticker">
+              <div class="diary-sticker-tabs" role="tablist" aria-label="스티커 분류">
+                <button type="button" class="diary-sticker-tab" role="tab"
+                        data-sticker-category="recent" aria-selected="false"
+                        aria-controls="diary-sticker-grid-recent">최근</button>
+                <button type="button" class="diary-sticker-tab" role="tab"
+                        th:each="category, stat : ${diaryStickerCategories}"
+                        th:data-sticker-category="${category.id}"
+                        th:classappend="${stat.first} ? ' is-active' : ''"
+                        th:attr="aria-selected=${stat.first} ? 'true' : 'false',
+                                 aria-controls=|diary-sticker-grid-${category.id}|"
+                        th:text="${category.name}">여행</button>
+              </div>
+
+              <div class="diary-sticker-panels">
+                <div class="diary-sticker-grid" role="group" id="diary-sticker-grid-recent"
+                     data-sticker-category="recent" aria-label="최근 사용한 스티커" hidden>
+                  <p class="diary-sticker-empty" id="diary-sticker-recent-empty">
+                    아직 사용한 스티커가 없어요.
+                  </p>
+                </div>
+
+                <div class="diary-sticker-grid" role="group"
+                     th:each="category, stat : ${diaryStickerCategories}"
+                     th:id="|diary-sticker-grid-${category.id}|"
+                     th:data-sticker-category="${category.id}"
+                     th:attr="aria-label=|${category.name} 스티커|"
+                     th:hidden="${!stat.first}">
+                  <div class="diary-sticker-subfilter" th:if="${category.id == 'masking-tape'}"
+                       role="group" aria-label="마스킹테이프 종류">
+                    <button type="button" class="diary-sticker-subtab is-active"
+                            data-tape-type="ALL" aria-pressed="true">전체</button>
+                    <button type="button" class="diary-sticker-subtab"
+                            data-tape-type="NORMAL" aria-pressed="false">일반</button>
+                    <button type="button" class="diary-sticker-subtab"
+                            data-tape-type="TRANSLUCENT" aria-pressed="false">반투명</button>
+                    <button type="button" class="diary-sticker-subtab"
+                            data-tape-type="CLEAR" aria-pressed="false">클리어</button>
+                  </div>
+
+                  <!--
+                    체험에서는 서버가 붙여 주지 않으므로 화면이 스스로 값을 만들어야 한다.
+                    그래서 그림 경로와 되풀이 조각 경로를 목록에 함께 실어 둔다.
+                  -->
+                  <button type="button" class="diary-sticker-option"
+                          th:each="sticker : ${category.stickers}"
+                          th:data-sticker-id="${sticker.id}"
+                          th:data-sticker-kind="${sticker.kind}"
+                          th:data-sticker-collection="${sticker.collectionCode}"
+                          th:data-tape-type="${sticker.tapeType}"
+                          th:data-sticker-image="${sticker.imageUrl}"
+                          th:attr="data-tape-left=${sticker.repeating} ? ${sticker.repeat.leftUrl} : null,
+                                   data-tape-center=${sticker.repeating} ? ${sticker.repeat.centerUrl} : null,
+                                   data-tape-right=${sticker.repeating} ? ${sticker.repeat.rightUrl} : null,
+                                   aria-label=|${sticker.name} 스티커 붙이기|"
+                          th:title="${sticker.name}">
+                    <img th:src="${sticker.imageUrl}" alt="" aria-hidden="true" loading="lazy" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="diary-decor-panel" data-decor-panel="label" hidden>
+              <div th:replace="~{diary/detail :: noteSwatches('라벨')}"></div>
+              <div class="diary-note-grid" role="group" aria-label="라벨">
+                <button type="button" class="diary-note-option"
+                        th:each="style : ${diaryLabelStyles}"
+                        th:data-note-style="${style.code}"
+                        th:data-note-style-class="${style.styleClass}"
+                        th:data-note-label="${style.label}"
+                        th:title="${style.label}"
+                        th:attr="aria-label=|${style.label} 붙이기|">
+                  <span class="diary-note-preview"
+                        th:classappend="${style.styleClass}" aria-hidden="true">
+                    <span class="diary-note-surface">
+                      <span class="diary-note-text" th:text="${style.sample}">2026.08.28</span>
+                    </span>
+                  </span>
+                  <span class="diary-note-option-label" th:text="${style.label}">날짜 라벨</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="diary-decor-panel" data-decor-panel="memo" hidden>
+              <div th:replace="~{diary/detail :: noteSwatches('메모지')}"></div>
+              <div class="diary-note-grid is-memo" role="group" aria-label="메모지">
+                <button type="button" class="diary-note-option"
+                        th:each="style : ${diaryMemoStyles}"
+                        th:data-note-style="${style.code}"
+                        th:data-note-style-class="${style.styleClass}"
+                        th:data-note-label="${style.label}"
+                        th:title="${style.label}"
+                        th:attr="aria-label=|${style.label} 붙이기|">
+                  <span class="diary-note-preview is-memo"
+                        th:classappend="${style.styleClass}" aria-hidden="true">
+                    <span class="diary-note-surface">
+                      <span class="diary-note-text" th:text="${style.sample}">오늘의 기록</span>
+                    </span>
+                  </span>
+                  <span class="diary-note-option-label" th:text="${style.label}">사각 메모지</span>
+                </button>
+              </div>
+            </div>
+
+            <p class="diary-sticker-status" id="diary-sticker-status" role="status"></p>
+          </div>
+        </div>
+
+        <!-- 라벨기(글씨만 붙이기). 회원 편집기와 같은 조각을 쓰고 붙일 자리만 다르다. -->
+        <div class="diary-toolbar-group diary-sticker-picker">
+          <button type="button" class="diary-toolbar-button" id="diary-label-button"
+                  aria-haspopup="dialog" aria-expanded="false"
+                  aria-controls="diary-label-popover"
+                  title="라벨기" aria-label="글씨 붙이기">
+            <svg class="diary-toolbar-icon" viewBox="0 0 16 16" aria-hidden="true"
+                 fill="none" stroke="currentColor" stroke-width="1.3"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4.4 4.2h7.2" />
+              <path d="M8 4.2v7.6" />
+              <path d="M6.4 11.8h3.2" />
+            </svg>
+          </button>
+          <div class="diary-sticker-popover diary-label-popover" id="diary-label-popover"
+               role="dialog" aria-label="라벨기" hidden>
+            <div th:replace="~{diary/label-maker :: picker(${diaryLabelFonts},
+                               '/guest/elements/label')}"></div>
+            <p class="diary-sticker-status" id="diary-label-status" role="status"></p>
+          </div>
+        </div>
+
+        <div class="diary-toolbar-group diary-header-style">
+          <span class="diary-toolbar-label" id="diary-header-font-label">한 줄 메모</span>
+          <button type="button" class="diary-font-trigger is-compact" id="diary-header-font-trigger"
+                  aria-haspopup="listbox" aria-expanded="false"
+                  aria-controls="diary-header-font-list"
+                  aria-labelledby="diary-header-font-label diary-header-font-trigger">기본</button>
+          <div class="diary-font-list" id="diary-header-font-list" role="listbox"
+               aria-label="한 줄 메모 글꼴 고르기" hidden></div>
+
+          <button type="button" class="diary-toolbar-button" id="diary-header-bold"
+                  title="한 줄 메모 굵게" aria-label="한 줄 메모 굵게"
+                  aria-pressed="false"><strong>B</strong></button>
+        </div>
+
+        <p class="diary-save-status" id="diary-save-status" role="status">저장됨</p>
+      </div>
+
+      <!--
+        한 장만 크게 펼쳐 놓는 편집 화면. 안쪽(머리말/본문/캔버스)은
+        guest-diary-editor.js 가 draft 를 읽어 채운다.
+      -->
+      <div class="diary-book-single">
+        <article class="diary-sheet diary-sheet-single" data-guest-sheet>
+          <div class="diary-sheet-head">
+            <div class="diary-sheet-head-row">
+              <time class="diary-sheet-date" data-guest-sheet-date></time>
+              <input type="text" class="diary-sheet-header-input" maxlength="100"
+                     autocomplete="off" placeholder="오늘의 한 줄..."
+                     aria-label="이 페이지의 한 줄 메모"
+                     data-guest-header data-header-font="DEFAULT" data-header-bold="false" />
+            </div>
+          </div>
+          <div class="diary-sheet-body">
+            <div class="diary-writing-layer">
+              <!-- 본문은 회원 편집기와 같은 Quill 붙이기 규칙을 그대로 쓴다. -->
+              <div class="diary-editor" data-guest-content></div>
+            </div>
+          </div>
+          <p class="diary-sheet-number" data-guest-page-number>1</p>
+          <div class="diary-canvas" data-guest-canvas></div>
+        </article>
+      </div>
+
+      <!-- 장 이동. 저장은 그때그때 끝나 있으므로 바로 갈아 끼운다. -->
+      <nav class="diary-spread-nav is-compact" aria-label="페이지 이동">
+        <button type="button" class="diary-spread-arrow"
+                data-guest-action="previous-page"
+                title="이전 페이지" aria-label="이전 페이지">&#8249;</button>
+        <span class="diary-spread-position" data-guest-page-position>1 / 1</span>
+        <button type="button" class="diary-spread-arrow"
+                data-guest-action="next-page"
+                title="다음 페이지" aria-label="다음 페이지">&#8250;</button>
+      </nav>
+    </div>
+  </section>
+
+  <!--
+    3장을 다 쓴 뒤의 로그인 안내. 기존 화면의 팝오버/버튼 스타일을 그대로 쓴다.
+    이번 단계에서는 안내만 하고 체험 내용을 DB 로 옮기지 않는다.
+  -->
+  <div class="diary-guest-prompt" role="dialog" aria-modal="true"
+       aria-labelledby="diary-guest-prompt-title" hidden data-guest-prompt>
+    <div class="diary-guest-prompt-panel">
+      <h2 id="diary-guest-prompt-title" data-guest-prompt-title>
+        비회원 체험에서는 최대 3페이지까지 작성할 수 있어요
+      </h2>
+      <p data-guest-prompt-text>
+        로그인하면 계속해서 여행일기를 만들 수 있습니다.
+      </p>
+      <p class="diary-guest-prompt-note">
+        작성 중인 체험 데이터는 이 브라우저에 임시로 보관됩니다.
+      </p>
+      <div class="diary-guest-prompt-actions">
+        <button type="button" class="diary-text-action" data-guest-action="close-prompt">닫기</button>
+        <a class="diary-text-action" th:href="@{/users/register}">회원가입</a>
+        <a class="diary-text-action is-primary" th:href="@{/login}">로그인</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 회전/크기 손잡이는 회원 편집기와 같은 조각을 쓴다. -->
+  <template data-guest-canvas-handles>
+    <th:block th:replace="~{diary/detail :: canvasHandles}"></th:block>
+  </template>
+</th:block>
+</html>

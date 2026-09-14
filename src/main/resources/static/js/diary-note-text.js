@@ -179,27 +179,16 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     async function save(item, text, next, previous) {
         const url = item.dataset.textUrl;
-        const csrfToken = document.querySelector('meta[name="_csrf"]')?.content;
-        const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.content;
-        if (!url || !csrfToken || !csrfHeader) {
+        if (!url) {
             restore(item, text, previous);
             return;
         }
 
         try {
-            const response = await fetch(url, {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-                    [csrfHeader]: csrfToken
-                },
-                body: new URLSearchParams({text: next})
-            });
-            if (!response.ok) throw new Error('저장하지 못했습니다.');
-
-            const payload = await response.json();
+            // 회원은 예전과 같은 서버 POST 이고, 비회원 체험만 통로 구현이 바뀐다.
+            const payload = await window.DiarySaveTransport.post(url, {text: next},
+                {defaultMessage: '저장하지 못했습니다.'});
+            if (!payload) throw new Error('저장하지 못했습니다.');
             // 길이를 넘겨 다듬였거나 줄이 합쳐졌어도 새로고침 전후가 같아진다.
             text.textContent = payload.textContent;
             item.dataset.savedText = payload.textContent;

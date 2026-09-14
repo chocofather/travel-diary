@@ -55,6 +55,20 @@ public class FileUploadService {
     private static final String AMENITY_ICON_DIRECTORY = "icons/amenities";
     private static final String AMENITY_ICON_URL_PREFIX = "/uploads/" + AMENITY_ICON_DIRECTORY + "/";
     private static final long AMENITY_ICON_MAX_SIZE = 512L * 1024;
+
+    /** 가져온 사진 한 장의 한도. Spring 의 max-file-size 와 같은 값이다. */
+    private static final long DIARY_PHOTO_MAX_SIZE = 10L * 1024 * 1024;
+    /**
+     * 받아들일 사진 형식.
+     * 이 목록은 서버가 실제로 펼쳐 볼 수 있는 것만 담는다. (WebP 는 표준 ImageIO 에 reader 가 없다)
+     * 체험 화면의 고르개도 같은 목록을 쓴다. 한쪽만 넓으면 붙일 수는 있는데 가져올 수 없는 사진이 생긴다.
+     */
+    private static final java.util.Set<String> DIARY_PHOTO_FORMATS =
+            java.util.Set.of("JPEG", "JPG", "PNG", "GIF");
+    public static final String UNSUPPORTED_DIARY_PHOTO_MESSAGE =
+            "JPG, PNG, GIF 사진만 저장할 수 있습니다.";
+    public static final String OVERSIZED_DIARY_PHOTO_MESSAGE =
+            "사진은 10MB까지 저장할 수 있습니다.";
     /** 아이콘 파일명은 code 에서 만들어지므로 code 형식을 저장 직전에 한 번 더 확인한다. */
     private static final Pattern AMENITY_CODE = Pattern.compile("^[A-Z0-9_]{2,50}$");
     public static final String UNSUPPORTED_AMENITY_ICON_MESSAGE =
@@ -138,6 +152,60 @@ public class FileUploadService {
      * @param subDir    복사해 둘 하위 폴더
      * @return 복사본의 웹 경로. 원본이 없거나 업로드 폴더 밖을 가리키면 null.
      */
+    /**
+     * 체험 여행일기에서 가져온 사진 한 장 저장.
+     *
+     * <p>브라우저에서 이미 걸렀더라도 그것은 보안 경계가 아니다. 여기에서 다시 연다.
+     * 파일 이름이나 클라이언트가 말한 MIME 을 믿지 않고 실제로 decode 되는지까지 본다.
+     * (SVG 는 읽을 reader 가 없어 그대로 걸린다)
+     */
+    public String saveImportedDiaryPhoto(MultipartFile file, String subDir) {
+        validateImportedDiaryPhoto(file);
+        return saveFile(file, subDir);
+    }
+
+    /** 실제로 열리는 사진인지. 크기와 형식을 함께 본다. */
+    private void validateImportedDiaryPhoto(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new UnsupportedImageFormatException("사진 파일을 선택해 주세요.");
+        }
+        if (file.getSize() > DIARY_PHOTO_MAX_SIZE) {
+            throw new UnsupportedImageFormatException(OVERSIZED_DIARY_PHOTO_MESSAGE);
+        }
+
+        try (InputStream input = file.getInputStream();
+             ImageInputStream imageInput = ImageIO.createImageInputStream(input)) {
+            if (imageInput == null) {
+                throw unsupportedDiaryPhoto();
+            }
+            Iterator<ImageReader> readers = ImageIO.getImageReaders(imageInput);
+            if (!readers.hasNext()) {
+                throw unsupportedDiaryPhoto();
+            }
+            ImageReader reader = readers.next();
+            try {
+                String format = reader.getFormatName();
+                if (!DIARY_PHOTO_FORMATS.contains(format.toUpperCase(java.util.Locale.ROOT))) {
+                    throw unsupportedDiaryPhoto();
+                }
+                reader.setInput(imageInput);
+                if (reader.getWidth(0) <= 0 || reader.getHeight(0) <= 0) {
+                    throw unsupportedDiaryPhoto();
+                }
+                // 머리말만 그럴듯한 파일을 막으려면 실제로 펼쳐 봐야 한다.
+                reader.read(0);
+            } finally {
+                reader.dispose();
+            }
+        } catch (IOException exception) {
+            throw unsupportedDiaryPhoto();
+        }
+    }
+
+    private UnsupportedImageFormatException unsupportedDiaryPhoto() {
+        return new UnsupportedImageFormatException(UNSUPPORTED_DIARY_PHOTO_MESSAGE);
+    }
+
     public String copyStoredFile(String sourceUrl, String subDir) {
         if (sourceUrl == null || !sourceUrl.startsWith(UPLOAD_URL_PREFIX)) {
             // 업로드한 파일이 아니면 복사할 것이 없다. (공용 asset 은 경로만 나눠 쓴다)

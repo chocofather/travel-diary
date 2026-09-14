@@ -7,6 +7,14 @@
  * (이동/크기/회전/겹침 순서 저장은 사진과 같은 endpoint 를 그대로 쓴다)
  */
 document.addEventListener('DOMContentLoaded', () => {
+    /*
+      마크업 생성기는 이 화면에 고르는 칸이 없어도 등록해 둔다. (함수 선언이라 끌어올려진다)
+      비회원 체험 화면이 새로고침 뒤 저장해 둔 요소를 되살릴 때 같은 마크업을 그대로 쓴다.
+      회원 화면은 서버가 그려 주므로 이 등록을 쓰지 않는다.
+    */
+    window.diaryElementRenderers = window.diaryElementRenderers || {};
+    window.diaryElementRenderers.STICKER = renderSticker;
+
     const button = document.getElementById('diary-sticker-button');
     const popover = document.getElementById('diary-sticker-popover');
     if (!button || !popover) return;
@@ -241,39 +249,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    /** CSRF 토큰은 layout 의 meta 값을 그대로 쓴다. (기존 저장 요청과 같은 방식) */
-    async function createSticker(stickerId) {
-        const csrfToken = document.querySelector('meta[name="_csrf"]')?.content;
-        const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.content;
-        if (!csrfToken || !csrfHeader) {
-            throw new Error('보안 토큰을 확인할 수 없어 스티커를 붙이지 못했습니다');
-        }
-
-        const response = await fetch(createUrl, {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-                [csrfHeader]: csrfToken
-            },
-            body: new URLSearchParams({sticker: stickerId})
-        });
-
-        if (response.status === 401) {
-            const redirect = window.location.pathname + window.location.search;
-            window.location.href = `/login?redirect=${encodeURIComponent(redirect)}`;
-            throw new Error('로그인이 필요합니다');
-        }
-        if (!response.ok) {
-            let message = '스티커를 붙이지 못했습니다';
-            if ((response.headers.get('Content-Type') || '').includes('application/json')) {
-                const payload = await response.json();
-                message = payload.message || message;
-            }
-            throw new Error(message);
-        }
-        return response.json();
+    /**
+     * 붙이기 요청. 보내는 것은 고른 스티커 이름뿐이고 나머지는 저장 쪽이 정한다.
+     * 회원은 예전과 같은 서버 POST 이고, 비회원 체험만 통로 구현이 바뀐다.
+     */
+    function createSticker(stickerId) {
+        return window.DiarySaveTransport.post(createUrl, {sticker: stickerId},
+            {defaultMessage: '스티커를 붙이지 못했습니다'});
     }
 
     /** 서버 렌더링 결과와 같은 마크업을 만든다. (detail.html 의 스티커 figure 와 동일) */

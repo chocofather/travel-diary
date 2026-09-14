@@ -6,7 +6,6 @@
     </clipPath>
   </defs>
   <g clip-path="url(#tape)">
-    <rect width="160" height="40" fill="#ffffff" fill-opacity="0.1"/>
     <!-- 흘려 쓴 손글씨처럼 이어지는 획 -->
     <g fill="none" stroke="#8a7f74" stroke-width="1.6" stroke-linecap="round">
       <path d="M8 24c4-10 8-10 10-4s-3 8-6 6 0-9 8-9"/>

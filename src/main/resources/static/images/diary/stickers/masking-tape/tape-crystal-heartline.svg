@@ -8,7 +8,6 @@
                              .4-3.2 1.4-4.4 2.6-5.2 4.6-6.4 7-5 7-2.4 7 .4 4.6 3 0 6.4Z"/>
   </defs>
   <g clip-path="url(#tape)">
-    <rect width="160" height="40" fill="#ffffff" fill-opacity="0.1"/>
     <!-- 가는 선 위에 빈 하트가 이어 달린다 -->
     <path d="M0 20h160" fill="none" stroke="#e0aeb8" stroke-width="1.2"/>
     <g fill="none" stroke="#d3808f" stroke-width="1.5" stroke-linejoin="round">

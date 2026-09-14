@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
+
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/diary.css">
+  <link rel="stylesheet" href="/css/diary-fonts.css">
+  <script src="/js/diary-tape-repeat.js" defer></script>
+  <script src="/js/guest-diary-draft-store.js" defer></script>
+  <!-- 표지에 올린 사진도 미리보기에 보여야 한다. 원본은 IndexedDB 에서 읽는다. -->
+  <script src="/js/guest-diary-photo-store.js" defer></script>
+  <script src="/js/guest-diary-photo.js" defer></script>
+  <script src="/js/guest-diary-cover-preview.js" defer></script>
+  <script src="/js/guest-diary-import-intent.js" defer></script>
+  <!-- 표지를 그리려면 위 모듈들이 먼저 있어야 한다. 그래서 맨 뒤에 싣는다. -->
+  <script src="/js/guest-diary-import.js" defer></script>
+</th:block>
+
+<th:block th:fragment="body">
+  <!--
+    체험 여행일기 가져오기 확인.
+
+    서버는 가져올 내용을 알지 못한다. 체험 여행일기는 이 브라우저에만 있으므로
+    guest-diary-import.js 가 자기 저장소를 읽어 아래를 채우거나 빈 안내를 남긴다.
+  -->
+  <section class="diary-form-page diary-import-page" aria-labelledby="diary-import-title"
+           data-guest-import
+           th:data-diaries-url="@{/diaries}"
+           th:data-import-url="@{/diaries/import}"
+           th:data-import-token="${importToken}">
+    <header class="diary-form-header">
+      <!--
+        체험 화면에서 "로그인하고 저장하기" 를 누르고 온 경우에는 물어보지 않고 바로 저장한다.
+        그때만 제목 줄이 진행 상태로 바뀐다. (스스로 찾아온 경우에는 예전 그대로 묻는다)
+      -->
+      <h1 id="diary-import-title"
+          data-guest-import-heading
+          data-heading-auto="여행일기를 저장하고 있어요">작성 중인 여행일기가 있어요</h1>
+      <p class="diary-list-subtitle"
+         data-guest-import-subtitle
+         data-subtitle-auto="체험 중 작성한 내용을 내 여행일기로 옮기는 중입니다.">
+        체험 중 만든 여행일기를 내 여행일기로 저장할 수 있습니다.
+      </p>
+    </header>
+
+    <!-- 자동으로 저장하는 동안의 자리. 누를 것이 없으므로 진행 상태만 남긴다. -->
+    <div class="diary-import-progress" role="status" hidden data-guest-import-auto>
+      <span class="diary-import-spinner" aria-hidden="true"></span>
+      <span>체험 여행일기를 내 여행일기로 옮기는 중입니다…</span>
+    </div>
+
+    <!-- 가져올 것이 있을 때. 안쪽 값은 브라우저가 채운다. -->
+    <div class="diary-import-card" hidden data-guest-import-card>
+      <div class="diary-book">
+        <div class="diary-book-cover" data-guest-import-cover></div>
+      </div>
+
+      <div class="diary-import-summary">
+        <h2 class="diary-book-title" data-guest-import-title>여행일기 제목</h2>
+        <div class="diary-book-meta">
+          <time class="diary-book-period" data-guest-import-period></time>
+          <span class="diary-book-pages" data-guest-import-pages>0장</span>
+        </div>
+        <p class="diary-form-hint" hidden data-guest-import-photos>
+          사진이 함께 저장됩니다.
+        </p>
+      </div>
+    </div>
+
+    <!--
+      제목이나 여행 기간이 비어 있는 체험 여행일기. 그대로는 내 여행일기로 저장할 수 없다.
+      (회원 여행일기도 그 값 없이는 만들어지지 않는다)
+      여기에서 지어내 채우지 않고, 체험 화면에서 사용자가 채우도록 안내한다.
+    -->
+    <p class="diary-import-notice" role="status" hidden data-guest-import-incomplete>
+      여행일기 정보가 완성되지 않았습니다. 제목과 여행 기간을 입력해 주세요.
+      <a class="diary-import-notice-action"
+         th:href="@{/diaries/demo/new(mode=complete,returnTo=import)}">정보 입력하기</a>
+    </p>
+
+    <!--
+      날짜가 아직 없는 장이 있는 체험 여행일기. 서버도 페이지 날짜를 요구하므로
+      보내 놓고 거절당하는 대신 여기에서 먼저 알리고 채울 자리로 보낸다.
+      (이 확인은 편의일 뿐이고, 실제 판정은 저장할 때 서버가 다시 한다)
+    -->
+    <p class="diary-import-notice" role="status" hidden data-guest-import-undated>
+      날짜가 설정되지 않은 페이지가 있습니다.
+      <a class="diary-import-notice-action"
+         th:href="@{/diaries/demo/edit}">여행일기 수정하기</a>
+    </p>
+
+    <div class="diary-form-actions" hidden data-guest-import-actions>
+      <a class="diary-form-cancel" th:href="@{/diaries}"
+         data-guest-import-later>나중에 하기</a>
+      <!-- 누르면 사진 원본까지 함께 올려 정식 여행일기로 저장한다. -->
+      <!-- 자동 저장이 실패한 뒤에는 같은 버튼이 [다시 시도] 가 된다. (같은 저장 경로를 쓴다) -->
+      <button type="button" class="diary-form-submit"
+              data-guest-import-confirm
+              data-label="내 여행일기로 저장하기"
+              data-label-retry="다시 시도"
+              data-label-busy="저장하는 중…">내 여행일기로 저장하기</button>
+    </div>
+
+    <!-- 진행/실패 안내. 실패해도 체험 여행일기는 그대로 남는다. -->
+    <p class="diary-form-hint" role="status" hidden data-guest-import-status></p>
+    <p class="diary-form-error" role="alert" hidden data-guest-import-error></p>
+    <!-- 자동 저장이 실패했을 때만. 무엇이 남아 있는지 분명히 알린다. -->
+    <p class="diary-form-hint" hidden data-guest-import-kept>
+      작성한 내용은 이 브라우저에 그대로 보관되어 있습니다. 다시 시도할 수 있어요.
+    </p>
+
+    <!--
+      가져올 것이 없을 때. 체험 여행일기는 브라우저마다 따로 남으므로
+      다른 기기·다른 브라우저에서 로그인하면 여기가 비어 있는 것이 정상이다.
+    -->
+    <div class="diary-empty" role="status" hidden data-guest-import-empty>
+      <span class="diary-empty-mark" aria-hidden="true">✎</span>
+      <p class="diary-empty-title">가져올 체험 여행일기가 없습니다.</p>
+      <p class="diary-empty-text">
+        체험 여행일기는 만들던 브라우저에만 남아 있어요. 그 브라우저에서 다시 열어 주세요.
+      </p>
+      <a class="diary-new-button" th:href="@{/diaries}">나의 여행일기로</a>
+    </div>
+  </section>
+
+  <!-- 미리보기의 마스킹테이프도 편집 화면·저장한 뒤와 같은 모습이 되도록 조각 경로를 실어 둔다 -->
+  <div th:replace="~{diary/tape-repeats :: table(${stickerRepeats})}"></div>
+</th:block>
+</html>

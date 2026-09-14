@@ -190,7 +190,10 @@
    th:text="#{nav.community}">여행 커뮤니티</a>
 <a th:fragment="linkTravelInfo" href="/travel-info"
    th:text="#{nav.travelInfo}">여행정보</a>
-<a th:fragment="linkDiaries" href="/diaries"
+<!-- 회원은 기존 내 여행일기 목록으로, 비회원은 로그인 대신 체험 화면으로 보낸다.
+     회원의 /diaries 링크·북마크 계약은 그대로다. -->
+<a th:fragment="linkDiaries"
+   th:href="${isLoggedIn} ? @{/diaries} : @{/diaries/demo}" href="/diaries"
    th:text="#{nav.travelRecords}">여행기록</a>
 <a th:fragment="linkSupport" href="/support/notices"
    th:text="#{nav.support}">고객센터</a>
@@ -210,7 +213,9 @@
 </ul>
 
 <ul th:fragment="recordLinks">
-  <li><a href="/diaries" th:text="#{nav.record.diary}">나의 여행일기</a></li>
+  <!-- 비회원은 같은 자리에서 체험 화면으로 들어간다. 회원 경로는 바뀌지 않는다. -->
+  <li><a th:href="${isLoggedIn} ? @{/diaries} : @{/diaries/demo}" href="/diaries"
+         th:text="#{nav.record.diary}">나의 여행일기</a></li>
   <li><a href="/travel-plans" th:text="#{nav.record.planTogether}">함께 계획하기</a></li>
   <li><a href="/random-travel" th:text="#{nav.record.random}">랜덤 여행</a></li>
 </ul>

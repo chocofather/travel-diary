@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
+
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/diary.css">
+  <link rel="stylesheet" href="/css/diary-fonts.css">
+  <!-- 마스킹테이프는 책장에서도 같은 모습으로 이어 그린다 (회원 목록과 같은 스크립트) -->
+  <script src="/js/diary-tape-repeat.js" defer></script>
+  <!-- 카드의 ⋯ 메뉴도 회원 목록과 같은 스크립트를 그대로 쓴다 -->
+  <script src="/js/diary-book-menu.js" defer></script>
+  <script src="/js/guest-diary-draft-store.js" defer></script>
+  <!-- 체험 여행일기를 지울 때 남아 있는 "저장하러 로그인" 쪽지도 함께 거둔다. -->
+  <script src="/js/guest-diary-import-intent.js" defer></script>
+  <!-- 표지에 올린 사진도 책장 카드에 보여야 한다. 원본은 IndexedDB 에서 읽는다. -->
+  <script src="/js/guest-diary-photo-store.js" defer></script>
+  <script src="/js/guest-diary-photo.js" defer></script>
+  <script src="/js/guest-diary-cover-preview.js" defer></script>
+  <!-- 표지를 그리려면 위 두 모듈이 먼저 있어야 한다. 그래서 맨 뒤에 싣는다. -->
+  <script src="/js/guest-diary-demo.js" defer></script>
+</th:block>
+
+<th:block th:fragment="body">
+  <!--
+    비회원용 "나의 여행일기" 책장.
+
+    회원 /diaries 와 같은 상자·같은 카드 구조를 쓴다. 다른 것은 저장소뿐이다.
+    체험 다이어리는 한 권뿐이라 검색·정렬·쪽 이동은 두지 않는다.
+  -->
+  <section class="diary-list-page diary-list-page--shelf" aria-labelledby="diary-list-title"
+           data-guest-shelf
+           th:data-new-url="@{/diaries/demo/new}"
+           th:data-edit-url="@{/diaries/demo/edit}">
+    <header class="diary-list-header">
+      <div class="diary-list-heading">
+        <p class="diary-list-eyebrow">MY TRAVEL DIARY</p>
+        <h1 id="diary-list-title">나의 여행일기</h1>
+        <p class="diary-list-subtitle">
+          <span class="diary-demo-badge">체험 중 · 여행일기 1개, 최대 3장</span>
+          회원가입 전에도 직접 꾸며볼 수 있어요.
+        </p>
+      </div>
+
+      <div class="diary-list-tools">
+        <a class="diary-new-button" th:href="@{/diaries/demo/new}"
+           data-guest-action="new-diary"><span
+                class="diary-new-button-plus" aria-hidden="true">+</span>새 여행일기</a>
+      </div>
+    </header>
+
+    <!-- 저장소를 쓸 수 없는 환경(시크릿 모드 등). 화면을 막지 않고 안내만 한다. -->
+    <p class="diary-form-error" role="alert" hidden data-guest-unavailable>
+      이 브라우저에서는 체험 내용을 임시 보관할 수 없습니다. 시크릿 모드를 끄거나 다른 브라우저에서 시도해 주세요.
+    </p>
+
+    <!--
+      제목이나 여행 기간이 비어 있는 체험 여행일기. (기본정보를 받기 전에 만들어 둔 것)
+      지우지 않고 채울 자리로 안내한다. 표지와 작성한 페이지는 그대로 남는다.
+    -->
+    <p class="diary-import-notice" role="status" hidden data-guest-incomplete>
+      여행일기 정보가 완성되지 않았습니다.
+      <a class="diary-import-notice-action"
+         th:href="@{/diaries/demo/new(mode=complete,returnTo=shelf)}">정보 입력하기</a>
+    </p>
+
+    <div class="diary-results">
+      <!--
+        만들어 둔 체험 다이어리 한 권. 회원 목록의 카드와 같은 구조라
+        표지를 누르면 그 다이어리의 페이지 작성으로 들어간다.
+      -->
+      <ul class="diary-shelf" hidden data-guest-shelf-list>
+        <li class="diary-book" data-guest-book>
+          <a class="diary-book-inner" th:href="@{/diaries/demo/edit}">
+            <div class="diary-book-cover" data-guest-book-cover></div>
+            <div class="diary-book-info">
+              <h2 class="diary-book-title" data-guest-book-title>여행일기 제목</h2>
+              <div class="diary-book-meta">
+                <time class="diary-book-period" data-guest-book-period></time>
+                <span class="diary-book-pages" data-guest-book-pages>0장</span>
+              </div>
+            </div>
+          </a>
+
+          <!--
+            책 관리 메뉴. 회원 목록과 같은 조각·같은 스크립트를 쓴다.
+            카드 링크(a) 바깥에 있어 표지 클릭을 가로채지 않는다.
+            표지는 다이어리 한 권의 속성이라 그 수정을 여기에서 연다.
+          -->
+          <div class="diary-book-menu">
+            <button type="button" class="diary-book-menu-button"
+                    aria-haspopup="menu" aria-expanded="false"
+                    aria-controls="diary-book-menu-guest"
+                    aria-label="체험 여행일기 관리 메뉴">⋯</button>
+            <div class="diary-book-menu-panel" role="menu"
+                 id="diary-book-menu-guest" aria-label="체험 여행일기 관리" hidden>
+              <a class="diary-book-menu-item" role="menuitem"
+                 th:href="@{/diaries/demo/cover}">표지 수정</a>
+              <!--
+                체험 여행일기 삭제. 회원 목록의 삭제 칸과 같은 조각이다.
+                다른 점은 지우는 자리다 — 서버가 아니라 이 브라우저(localStorage / IndexedDB)만 지운다.
+                그래서 form 이 아니고, 누른 즉시 지우지도 않는다.
+              -->
+              <button type="button" class="diary-book-menu-item is-danger" role="menuitem"
+                      data-guest-action="delete-diary">체험 여행일기 삭제</button>
+            </div>
+          </div>
+        </li>
+      </ul>
+
+      <!-- 아직 한 권도 없는 상태. 회원 목록의 빈 상태와 같은 조각을 쓴다. -->
+      <div class="diary-empty" role="status" hidden data-guest-empty>
+        <span class="diary-empty-mark" aria-hidden="true">✎</span>
+        <p class="diary-empty-title">아직 만든 여행일기가 없습니다.</p>
+        <p class="diary-empty-text">여행에서의 추억을 한 권의 다이어리로 남겨보세요.</p>
+        <a class="diary-new-button" th:href="@{/diaries/demo/new}"
+           data-guest-action="new-diary"><span
+                class="diary-new-button-plus" aria-hidden="true">+</span>새 여행일기</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- 카드에 그린 마스킹테이프가 편집 화면·회원 책장과 같은 모습이 되도록 조각 경로를 실어 둔다 -->
+  <div th:replace="~{diary/tape-repeats :: table(${stickerRepeats})}"></div>
+
+  <!--
+    체험 여행일기 삭제 확인. 교체(새로 만들기)와 같은 조각을 쓰되 하는 일이 다르다.
+    이쪽은 지우고 끝난다. 만들기 화면으로 이어지지 않는다.
+  -->
+  <div class="diary-guest-prompt" role="dialog" aria-modal="true"
+       aria-labelledby="diary-guest-delete-title" hidden data-guest-delete-prompt>
+    <div class="diary-guest-prompt-panel">
+      <h2 id="diary-guest-delete-title">체험 여행일기를 삭제할까요?</h2>
+      <p>작성한 페이지와 사진도 함께 삭제됩니다.</p>
+      <p class="diary-guest-prompt-note">
+        이 브라우저에 임시 보관된 체험 내용만 지웁니다. 되돌릴 수 없습니다.
+      </p>
+      <div class="diary-guest-prompt-actions">
+        <button type="button" class="diary-text-action"
+                data-guest-action="cancel-delete">취소</button>
+        <button type="button" class="diary-text-action is-primary"
+                data-guest-action="confirm-delete">삭제</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 이미 체험 다이어리가 있을 때의 교체 확인. 바로 덮어쓰지 않는다. -->
+  <div class="diary-guest-prompt" role="dialog" aria-modal="true"
+       aria-labelledby="diary-guest-replace-title" hidden data-guest-replace-prompt>
+    <div class="diary-guest-prompt-panel">
+      <h2 id="diary-guest-replace-title">비회원 체험에서는 여행일기 1개만 만들 수 있어요</h2>
+      <p>새로 만들면 현재 체험 여행일기는 삭제됩니다.</p>
+      <p class="diary-guest-prompt-note">
+        여행일기를 여러 권 보관하려면 로그인해 주세요.
+      </p>
+      <div class="diary-guest-prompt-actions">
+        <button type="button" class="diary-text-action"
+                data-guest-action="cancel-replace">취소</button>
+        <a class="diary-text-action is-primary" th:href="@{/diaries/demo/new}"
+           data-guest-action="confirm-replace">새로 만들기</a>
+      </div>
+    </div>
+  </div>
+</th:block>
+</html>

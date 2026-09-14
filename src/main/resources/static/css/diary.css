@@ -5,6 +5,14 @@
     color: #2b2b2b;
 }
 
+/* 책장형 목록만 조금 더 넓게 쓴다. 열 수(4열)와 표지 비율은 그대로 두고 콘텐츠 폭만 키워
+   사용자가 꾸민 표지의 사진·스티커·글자가 더 크게 보이게 한다.
+   달력 보기와 표지 보관함도 .diary-list-page 를 쓰므로 그쪽 폭은 건드리지 않는다.
+   상단 도구 영역(보기 전환/검색/정렬/표지 관리/새 여행일기)은 이 상자 안에 있어 같이 맞춰진다. */
+.diary-list-page--shelf {
+    width: min(1320px, calc(100% - 40px));
+}
+
 /* ===== 표지 스타일 (diaries.cover_style) =====
    구조 CSS 는 한 벌만 두고, 표지 스타일 클래스는 아래 변수(색/결/각인)만 덮어쓴다.
    목록의 책(.diary-book)과 폼의 견본(.diary-cover-option)이 같은 값을 쓴다. */
@@ -487,6 +495,15 @@
     margin: 0;
     padding: 0;
     list-style: none;
+}
+
+/*
+  책장을 통째로 접을 때. display 를 정해 둔 상자는 hidden 만으로 사라지지 않는다.
+  (비회원 체험 책장이 이 자리를 감췄다 폈다 하며 쓴다 — 감추지 못하면 지운 뒤에도
+   틀로 남겨 둔 빈 카드가 그대로 보인다)
+*/
+.diary-shelf[hidden] {
+    display: none;
 }
 
 .diary-book {
@@ -1361,6 +1378,186 @@
     letter-spacing: -0.02em;
 }
 
+/* 비회원 체험 편집 화면. 회원 편집기 스타일을 그대로 쓰고 표시 몇 개만 얹는다. */
+.diary-demo-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    color: #6f5a3c;
+    background: #f2ece1;
+    font-size: 11.5px;
+    font-weight: 800;
+}
+
+/* 내 여행일기 목록 위의 "체험 여행일기가 남아 있어요" 한 줄. */
+.diary-import-notice {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 18px;
+    padding: 12px 16px;
+    border: 1px solid #e7dfd2;
+    border-radius: 10px;
+    background: #faf7f1;
+    color: #6b6259;
+    font-size: 13.5px;
+}
+
+.diary-import-notice[hidden] {
+    display: none;
+}
+
+.diary-import-notice-action {
+    margin-left: auto;
+    color: #6f5a3c;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+/* 묻지 않고 바로 저장하는 동안의 자리. 누를 것이 없으므로 진행 상태만 한 줄 둔다. */
+.diary-import-progress {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 24px;
+    padding: 16px 18px;
+    border: 1px solid #e7dfd2;
+    border-radius: 12px;
+    background: #faf7f1;
+    color: #6b6259;
+    font-size: 14px;
+}
+
+.diary-import-progress[hidden] {
+    display: none;
+}
+
+/* 돌아가는 고리 하나. 검색창의 것과 같은 애니메이션을 함께 쓴다. */
+.diary-import-spinner {
+    flex: 0 0 auto;
+    width: 15px;
+    height: 15px;
+    border: 2px solid #e6dccb;
+    border-top-color: #b39a75;
+    border-radius: 50%;
+    animation: diary-search-spin 700ms linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .diary-import-spinner {
+        animation: none;
+    }
+}
+
+/* 체험 여행일기 가져오기 확인. 표지 한 장과 요약을 나란히 둔다. */
+.diary-import-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 18px;
+    margin-bottom: 24px;
+    padding: 18px;
+    border: 1px solid #e7dfd2;
+    border-radius: 12px;
+    background: #faf7f1;
+}
+
+.diary-import-card[hidden] {
+    display: none;
+}
+
+/* 표지는 책장 카드와 같은 상자를 쓰고 폭만 줄인다. (비율은 그 규칙이 지킨다) */
+.diary-import-card .diary-book {
+    width: 92px;
+    flex: 0 0 92px;
+}
+
+.diary-import-summary {
+    min-width: 0;
+    padding-top: 4px;
+}
+
+/* 책장/만들기 화면의 체험 안내. 제목 줄에 작게 붙는다. */
+.diary-list-subtitle .diary-demo-badge,
+.diary-form-header .diary-demo-badge {
+    margin-right: 6px;
+}
+
+/* 3장을 다 썼을 때/사진을 눌렀을 때 여는 안내. 화면 위에 얹는 작은 판 하나다. */
+.diary-guest-prompt {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(38, 31, 22, 0.42);
+}
+
+.diary-guest-prompt[hidden] {
+    display: none;
+}
+
+.diary-guest-prompt-panel {
+    width: min(420px, 100%);
+    padding: 24px 24px 20px;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 18px 44px rgba(45, 36, 24, 0.26);
+}
+
+.diary-guest-prompt-panel h2 {
+    margin: 0 0 10px;
+    color: #2b2b2b;
+    font-size: 17px;
+    line-height: 1.45;
+}
+
+.diary-guest-prompt-panel p {
+    margin: 0 0 8px;
+    color: #6b6259;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.diary-guest-prompt-note {
+    color: #8b8378;
+    font-size: 12.5px;
+}
+
+.diary-guest-prompt-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 18px;
+}
+
+/* 비회원 체험 시작 화면. 새 여행일기 폼의 폭/버튼을 그대로 쓰고 간격만 조금 넓힌다. */
+.diary-demo-limit {
+    margin: 0 0 18px;
+    padding: 14px 16px;
+    border: 1px solid #e7dfd2;
+    border-radius: 10px;
+    background: #faf7f1;
+    line-height: 1.6;
+}
+
+.diary-demo-state {
+    margin: 0 0 16px;
+    color: #6b6259;
+    font-size: 14px;
+}
+
+.diary-demo-state:focus-visible {
+    outline: 3px solid rgba(111, 90, 60, 0.32);
+    outline-offset: 3px;
+}
+
+.diary-demo-signin {
+    margin-top: 20px;
+}
+
 .diary-form-error {
     margin: 0 0 18px;
     padding: 12px 16px;
@@ -1865,7 +2062,9 @@
   규칙을 한 곳에만 두고 양쪽이 함께 쓴다. (폴라로이드는 예전 규칙 그대로다)
 */
 .diary-photo.is-photo-full {
-    padding: 0;
+    /* 프레임이 없는 사진이다. 두께를 0 으로 두면 폴라로이드와 같은 규칙으로 그려진다. */
+    --diary-photo-side: 0cqw;
+    --diary-photo-bottom: 0cqw;
     background: none;
     /* 종이에 붙인 느낌은 남기되 프레임의 두께감은 뺀다 */
     box-shadow: 0 2px 6px rgba(63, 52, 38, 0.16);
@@ -5451,20 +5650,36 @@
 */
 .diary-photo {
     box-sizing: border-box;
-    padding: 3.5% 3.5% 8%;
+    padding: 0;
     background: #fff;
     box-shadow: 0 3px 9px rgba(63, 52, 38, 0.18);
+    /*
+      요소 자체를 container 로 두어 크기를 바꾸면 프레임도 함께 줄고 커진다.
+      (라벨기 글씨 .diary-label 이 쓰는 것과 같은 방법이다)
+
+      프레임을 padding 으로 두면 % 가 이 요소가 아니라 바깥 캔버스의 폭을 재기 때문에
+      요소를 줄여도 흰 여백만 그대로 남는다. 안쪽 요소에서 cqw 로 재면 기준이 이 요소가 된다.
+    */
+    container-type: inline-size;
+    --diary-photo-side: 3.5cqw;
+    --diary-photo-bottom: 6cqw;
 }
 
 /*
-  사진은 자기 자리를 꽉 채운다.
+  사진은 프레임을 뺀 자기 자리를 꽉 채운다.
   상자 비율을 사진 원본에 맞춰 만들기 때문에(DiaryPhotoFrame) 이때 잘려 나가는 부분이 거의 없다.
-  흰 부분은 오직 위의 프레임뿐이고, 사진 때문에 생기는 빈 자리는 두지 않는다.
+  흰 부분은 오직 프레임뿐이고, 사진 때문에 생기는 빈 자리는 두지 않는다.
+
+  네 변을 모두 요소 폭(cqw)으로 재므로 가로로만 늘리든 세로로만 줄이든
+  프레임 두께가 사진과 같은 비율로 따라간다. 높이만 이 요소의 높이(100%)에서 위아래를 뺀다.
 */
 .diary-photo img {
     display: block;
-    width: 100%;
-    height: 100%;
+    position: absolute;
+    left: var(--diary-photo-side);
+    top: var(--diary-photo-side);
+    width: calc(100cqw - var(--diary-photo-side) * 2);
+    height: calc(100% - var(--diary-photo-side) - var(--diary-photo-bottom));
     object-fit: cover;
 }
 

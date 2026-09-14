@@ -13,10 +13,14 @@
   <script src="/js/diary-pin-shelf.js" defer></script>
   <!-- 커스텀 표지의 마스킹테이프를 폭에 맞춰 이어 그린다 (보기 전용에서도 같은 모습) -->
   <script src="/js/diary-tape-repeat.js" defer></script>
+  <!-- 이 브라우저에 체험 여행일기가 남아 있을 때만 가져오기 안내를 띄운다 -->
+  <script src="/js/guest-diary-draft-store.js" defer></script>
+  <script src="/js/guest-diary-import-notice.js" defer></script>
 </th:block>
 
 <th:block th:fragment="body">
-  <section class="diary-list-page" aria-labelledby="diary-list-title">
+  <!-- 책장형 목록은 표지를 크게 보여주려고 달력/표지 보관함보다 조금 넓은 폭을 쓴다. -->
+  <section class="diary-list-page diary-list-page--shelf" aria-labelledby="diary-list-title">
     <header class="diary-list-header">
       <div class="diary-list-heading">
         <p class="diary-list-eyebrow">MY TRAVEL DIARY</p>
@@ -88,6 +92,15 @@
                 class="diary-new-button-plus" aria-hidden="true">+</span>새 여행일기</a>
       </div>
     </header>
+
+    <!--
+      체험 여행일기가 이 브라우저에 남아 있을 때만 보이는 줄.
+      서버는 남아 있는지 알 수 없으므로 브라우저가 자기 저장소를 보고 켠다.
+    -->
+    <p class="diary-import-notice" role="status" hidden data-guest-import-notice>
+      <span>이 브라우저에 체험 중 작성한 여행일기가 있습니다.</span>
+      <a class="diary-import-notice-action" th:href="@{/diaries/import}">가져오기</a>
+    </p>
 
     <p class="diary-flash-message" th:if="${diaryMessage}" th:text="${diaryMessage}"
        role="status">여행일기가 만들어졌습니다.</p>

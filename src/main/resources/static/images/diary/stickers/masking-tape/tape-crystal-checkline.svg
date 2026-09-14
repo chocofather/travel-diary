@@ -6,7 +6,6 @@
     </clipPath>
   </defs>
   <g clip-path="url(#tape)">
-    <rect width="160" height="40" fill="#ffffff" fill-opacity="0.1"/>
     <!-- 가는 선만 남긴 격자. 아래 글자가 선 사이로 그대로 읽힌다 -->
     <g fill="none" stroke="#a8b4bd" stroke-width="1">
       <path d="M0 12h160M0 28h160"/>

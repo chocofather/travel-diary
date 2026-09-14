@@ -736,9 +736,11 @@ class TravelPlanCreateFormUiContractTest {
         assertThat(header.indexOf("함께 계획하기"))
                 .isGreaterThan(header.indexOf("나의 여행일기"))
                 .isLessThan(header.indexOf("랜덤 여행"));
-        // 기존 항목은 그대로 둔다
+        // 기존 항목은 그대로 둔다.
+        // 나의 여행일기는 회원 /diaries, 비회원 체험 화면으로 갈리지만 회원 경로는 그대로다.
         assertThat(header)
-                .contains("href=\"/diaries\" th:text=\"#{nav.record.diary}\"")
+                .contains("${isLoggedIn} ? @{/diaries} : @{/diaries/demo}")
+                .contains("th:text=\"#{nav.record.diary}\"")
                 .contains("href=\"/random-travel\" th:text=\"#{nav.record.random}\"");
     }
 

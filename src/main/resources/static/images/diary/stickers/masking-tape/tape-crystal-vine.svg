@@ -6,7 +6,6 @@
     </clipPath>
   </defs>
   <g clip-path="url(#tape)">
-    <rect width="160" height="40" fill="#ffffff" fill-opacity="0.1"/>
     <!-- 물결치는 덩굴 줄기에 작은 잎이 번갈아 달린다 -->
     <path d="M0 20q10-8 20 0t20 0 20 0 20 0 20 0 20 0 20 0 20 0" fill="none"
           stroke="#6f8f5f" stroke-width="1.4" stroke-linecap="round"/>

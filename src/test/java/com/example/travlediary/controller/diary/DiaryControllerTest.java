@@ -3765,9 +3765,9 @@ class DiaryControllerTest {
         String pickerJs = Files.readString(
                 Path.of("src/main/resources/static/js/diary-note-picker.js"));
 
-        assertThat(pickerJs).contains("body.append('color', colorType)");
+        assertThat(pickerJs).contains("fields.color = colorType");
         // 고르지 않았으면 아예 보내지 않는다. 서버가 그 모양의 기본색을 쓴다
-        assertThat(pickerJs).contains("if (colorType) body.append");
+        assertThat(pickerJs).contains("if (colorType) fields.color = colorType;");
         // 붙은 뒤 화면에 칠하는 색도 서버가 준 class 다
         assertThat(pickerJs).contains("note.colorClass");
     }
@@ -3799,7 +3799,7 @@ class DiaryControllerTest {
         // 붙이는 요청에는 글이 실리지 않는다. 서버가 빈 글로 만든다
         String noteJs = Files.readString(
                 Path.of("src/main/resources/static/js/diary-note-picker.js"));
-        assertThat(between(noteJs, "new URLSearchParams(", ")"))
+        assertThat(between(noteJs, "const fields = {", "}"))
                 .contains("style: styleType")
                 .doesNotContain("text");
     }

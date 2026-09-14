@@ -8,7 +8,23 @@
  * 여기서는 서버가 그려 준 것과 같은 마크업을 만들어 캔버스에 넣고 엔진에 넘기기만 한다.
  */
 document.addEventListener('DOMContentLoaded', () => {
-    const inputs = Array.from(document.querySelectorAll('.diary-cover-photo-input'));
+    /*
+      마크업 생성기는 이 화면에 올리는 칸이 없어도 등록해 둔다. (함수 선언이라 끌어올려진다)
+      사진 figure 의 구조는 표지와 페이지가 같아서(둘 다 diary-canvas-photo diary-photo)
+      비회원 체험 화면이 저장해 둔 사진을 되살릴 때 두 자리 모두 이 한 벌을 그대로 쓴다.
+      회원 화면은 서버가 그려 주므로 이 등록을 쓰지 않는다.
+    */
+    window.diaryElementRenderers = window.diaryElementRenderers || {};
+    window.diaryElementRenderers.PHOTO = render;
+
+    /*
+      서버로 올리는 일은 올릴 주소가 있는 화면에서만 맡는다.
+      class 만 보고 잡으면 같은 모습을 쓰는 다른 화면(비회원 체험)의 고르개까지 잡게 되고,
+      주소가 없다는 것은 upload() 안에서야 드러나 그때는 이미 change 처리가 끝난 뒤다.
+      (파일 고르개의 모습은 class 가, 무엇을 하는 칸인지는 이 주소가 정한다)
+    */
+    const inputs = Array.from(
+        document.querySelectorAll('.diary-cover-photo-input[data-create-url]'));
     if (!inputs.length) return;
 
     const canvas = document.querySelector('.diary-cover-canvas.is-editable .diary-cover-surface');
@@ -114,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const image = document.createElement('img');
         image.src = photo.imageUrl;
-        image.alt = '표지 사진';
+        image.alt = photo.alt || '표지 사진';
         item.append(image, handle('diary-rotate-handle', '회전'),
                 handle('diary-resize-handle', '크기 조절'), layerActions(photo.urls.delete));
         return item;

@@ -66,7 +66,11 @@
                 th:data-sticker-collection="${sticker.collectionCode}"
                 th:data-tape-type="${sticker.tapeType}"
                 th:title="${sticker.name}"
-                th:attr="aria-label=|${sticker.name} 스티커 붙이기|">
+                th:data-sticker-image="${sticker.imageUrl}"
+                th:attr="data-tape-left=${sticker.repeating} ? ${sticker.repeat.leftUrl} : null,
+                         data-tape-center=${sticker.repeating} ? ${sticker.repeat.centerUrl} : null,
+                         data-tape-right=${sticker.repeating} ? ${sticker.repeat.rightUrl} : null,
+                         aria-label=|${sticker.name} 스티커 붙이기|">
           <img th:src="${sticker.imageUrl}" alt="" aria-hidden="true" loading="lazy" />
         </button>
       </div>

@@ -194,6 +194,11 @@
       </p>
     </div>
 
+    <!--
+      회원가입 → 이메일 인증 → 로그인처럼 중간에 세션이 끊기면 서버가 기억해 둔
+      "원래 가려던 곳" 이 사라진다. 그때만 이 브라우저에 남은 쪽지를 보고 다시 채운다.
+      (채워 넣는 값은 고정 내부 경로라 바깥 주소가 들어올 자리가 없다)
+    -->
     <form method="POST" th:action="@{/login}" id="loginForm" class="login-form">
       <input type="hidden" name="redirect" th:value="${param.redirect ?: '/'}">
 
@@ -333,5 +338,8 @@
 </main>
 <script src="/js/language-menu.js" defer></script>
 <script src="/js/login.js" defer></script>
+<!-- 체험 여행일기를 저장하려고 온 경우에만 돌아갈 자리를 다시 붙인다 -->
+<script src="/js/guest-diary-import-intent.js" defer></script>
+<script src="/js/guest-diary-import-login.js" defer></script>
 </body>
 </html>
