@@ -11,6 +11,7 @@ import com.example.travlediary.model.Diary;
 import com.example.travlediary.model.DiaryElement;
 import com.example.travlediary.model.DiaryPage;
 import com.example.travlediary.repository.user.UserMapper;
+import com.example.travlediary.repository.diary.DiaryStickerMapper;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.dto.DiarySort;
 import com.example.travlediary.model.DiaryCover;
@@ -32,6 +33,7 @@ import com.example.travlediary.service.holiday.HolidayService;
 import com.example.travlediary.service.holiday.SpecialDay;
 import com.example.travlediary.service.holiday.SpecialDays;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -106,6 +108,13 @@ class DiaryControllerTest {
     private UserMapper userMapper;
     @MockitoBean
     private CustomUserDetails userDetails;
+    @MockitoBean
+    private DiaryStickerMapper diaryStickerMapper;
+
+    @BeforeEach
+    void setUpStickerCatalog() {
+        com.example.travlediary.support.DiaryStickerTestCatalogData.stub(diaryStickerMapper);
+    }
 
     @Test
     void guestIsSentToLogin() throws Exception {
@@ -2373,6 +2382,9 @@ class DiaryControllerTest {
         // 목록에 적지 않은 스티커는 모두 기본 묶음으로 그려진다.
         assertThat(editBody).containsPattern(
                 "data-sticker-id=\"airplane\"[^>]*data-sticker-collection=\"default\"");
+        assertThat(editBody).containsPattern(
+                "data-sticker-id=\"airplane\"[^>]*data-access-tier=\"PREMIUM\"")
+                .contains("diary-sticker-premium-badge");
         assertThat(editBody).containsPattern(
                 "data-sticker-id=\"tape-cloud-sky\"[^>]*data-sticker-collection=\"default\"");
         // 랜드마크는 여행과 나란한 별도 분류다. 분류 탭 차례는 목록 파일 순서를 그대로 따른다.

@@ -1,5 +1,6 @@
 package com.example.travlediary.service.file;
 
+import com.example.travlediary.model.DiaryStickerType;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -55,6 +56,12 @@ public class FileUploadService {
     private static final String AMENITY_ICON_DIRECTORY = "icons/amenities";
     private static final String AMENITY_ICON_URL_PREFIX = "/uploads/" + AMENITY_ICON_DIRECTORY + "/";
     private static final long AMENITY_ICON_MAX_SIZE = 512L * 1024;
+    private static final long DIARY_STICKER_MAX_SIZE = 5L * 1024 * 1024;
+    private static final String DIARY_STICKER_DIRECTORY = "diary-stickers";
+    private static final String DIARY_STICKER_URL_PREFIX = "/uploads/diary-stickers/";
+    private static final Pattern MANAGED_DIARY_STICKER_PATH = Pattern.compile(
+            "^(?:normal|masking-tape)/[0-9a-f-]+\\.(?:png|webp)$",
+            Pattern.CASE_INSENSITIVE);
 
     /** 가져온 사진 한 장의 한도. Spring 의 max-file-size 와 같은 값이다. */
     private static final long DIARY_PHOTO_MAX_SIZE = 10L * 1024 * 1024;
@@ -344,6 +351,217 @@ public class FileUploadService {
             return Files.deleteIfExists(target);
         } catch (IOException exception) {
             throw new RuntimeException("썸네일 파일 삭제에 실패했습니다.", exception);
+        }
+    }
+
+    /** 관리자 스티커는 정적 리소스가 아닌 공용 업로드 저장소에 유형별로 보관한다. */
+    public String saveDiaryStickerImage(MultipartFile file, DiaryStickerType type) {
+        if (type == null) {
+            throw new IllegalArgumentException("스티커 유형을 선택해 주세요.");
+        }
+        DiaryStickerImageFormat format = validateDiaryStickerImage(file);
+        Path directory = resolveDiaryStickerDirectory(type.directoryName(), true);
+        String savedName = UUID.randomUUID() + "." + format.extension;
+        Path destination = directory.resolve(savedName).normalize();
+        ensureContained(directory, destination);
+        try (InputStream input = file.getInputStream()) {
+            Files.copy(input, destination);
+        } catch (IOException exception) {
+            deleteAmenityIconPathQuietly(destination);
+            throw new RuntimeException("스티커 이미지 저장에 실패했습니다.", exception);
+        }
+        return DIARY_STICKER_URL_PREFIX + type.directoryName() + "/" + savedName;
+    }
+
+    /** 등록 트랜잭션 실패 시 이번에 만든 파일만 되돌리는 용도다. 일반 숨김에서는 호출하지 않는다. */
+    public boolean deleteDiaryStickerImage(String imageUrl) {
+        if (imageUrl == null || !imageUrl.startsWith(DIARY_STICKER_URL_PREFIX)) {
+            return false;
+        }
+        String relative = imageUrl.substring(DIARY_STICKER_URL_PREFIX.length());
+        if (!MANAGED_DIARY_STICKER_PATH.matcher(relative).matches()) {
+            return false;
+        }
+        Path root = Paths.get(uploadDir).toAbsolutePath().normalize();
+        Path target = root.resolve(DIARY_STICKER_DIRECTORY).resolve(relative).normalize();
+        ensureContained(root.resolve(DIARY_STICKER_DIRECTORY).normalize(), target);
+        try {
+            return Files.deleteIfExists(target);
+        } catch (IOException exception) {
+            throw new RuntimeException("스티커 이미지 정리에 실패했습니다.", exception);
+        }
+    }
+
+    private DiaryStickerImageFormat validateDiaryStickerImage(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("PNG 또는 WebP 이미지를 선택해 주세요.");
+        }
+        if (file.getSize() > DIARY_STICKER_MAX_SIZE) {
+            throw new IllegalArgumentException("스티커 이미지는 5MB 이하만 업로드할 수 있습니다.");
+        }
+        String originalName = file.getOriginalFilename();
+        if (originalName == null || originalName.isBlank()
+                || originalName.contains("/") || originalName.contains("\\")
+                || originalName.contains("..")) {
+            throw new IllegalArgumentException("올바르지 않은 스티커 파일명입니다.");
+        }
+        int dot = originalName.lastIndexOf('.');
+        if (dot <= 0 || dot == originalName.length() - 1) {
+            throw new IllegalArgumentException("PNG 또는 WebP 이미지만 업로드할 수 있습니다.");
+        }
+        String extension = originalName.substring(dot + 1).toLowerCase(Locale.ROOT);
+        DiaryStickerImageFormat detected = detectDiaryStickerFormat(file);
+        validateDiaryStickerPayload(file, detected);
+        String contentType = file.getContentType();
+        boolean matches = switch (detected) {
+            case PNG -> "png".equals(extension) && "image/png".equalsIgnoreCase(contentType);
+            case WEBP -> "webp".equals(extension) && "image/webp".equalsIgnoreCase(contentType);
+        };
+        if (!matches) {
+            throw new IllegalArgumentException("파일 확장자, MIME 형식과 실제 이미지 형식이 일치하지 않습니다.");
+        }
+        return detected;
+    }
+
+    private void validateDiaryStickerPayload(MultipartFile file, DiaryStickerImageFormat format) {
+        if (format == DiaryStickerImageFormat.PNG) {
+            try (InputStream input = file.getInputStream()) {
+                BufferedImage image = ImageIO.read(input);
+                if (image == null || image.getWidth() <= 0 || image.getHeight() <= 0) {
+                    throw invalidDiaryStickerImage();
+                }
+                return;
+            } catch (IOException exception) {
+                throw invalidDiaryStickerImage();
+            }
+        }
+
+        try {
+            byte[] data = file.getBytes();
+            if (data.length < 20) throw invalidDiaryStickerImage();
+            long declaredSize = readLittleEndian(data, 4, 4);
+            if (declaredSize + 8L != data.length
+                    || !containsValidWebpFrame(data, 12, data.length)) {
+                throw invalidDiaryStickerImage();
+            }
+        } catch (IOException exception) {
+            throw invalidDiaryStickerImage();
+        }
+    }
+
+    private boolean containsValidWebpFrame(byte[] data, int start, int end) {
+        return containsValidWebpFrame(data, start, end, true);
+    }
+
+    private boolean containsValidWebpFrame(byte[] data, int start, int end,
+                                           boolean allowAnimationFrame) {
+        int offset = start;
+        boolean validFrame = false;
+        while (offset < end) {
+            if (end - offset < 8) return false;
+            long chunkSizeValue = readLittleEndian(data, offset + 4, 4);
+            if (chunkSizeValue > Integer.MAX_VALUE) return false;
+            int chunkSize = (int) chunkSizeValue;
+            int payloadStart = offset + 8;
+            long chunkEndValue = (long) payloadStart + chunkSize;
+            long paddedEndValue = chunkEndValue + (chunkSize & 1);
+            if (chunkEndValue > end || paddedEndValue > end) return false;
+            int chunkEnd = (int) chunkEndValue;
+
+            if (matchesFourCc(data, offset, 'V', 'P', '8', ' ')) {
+                validFrame |= isValidVp8Frame(data, payloadStart, chunkSize);
+            } else if (matchesFourCc(data, offset, 'V', 'P', '8', 'L')) {
+                validFrame |= isValidVp8lFrame(data, payloadStart, chunkSize);
+            } else if (matchesFourCc(data, offset, 'V', 'P', '8', 'X')) {
+                if (!isValidVp8xHeader(data, payloadStart, chunkSize)) return false;
+            } else if (matchesFourCc(data, offset, 'A', 'N', 'M', 'F')) {
+                if (!allowAnimationFrame || chunkSize < 16) return false;
+                validFrame |= containsValidWebpFrame(
+                        data, payloadStart + 16, chunkEnd, false);
+            }
+            offset = (int) paddedEndValue;
+        }
+        return offset == end && validFrame;
+    }
+
+    private boolean isValidVp8Frame(byte[] data, int start, int size) {
+        if (size < 10) return false;
+        if (unsigned(data[start + 3]) != 0x9d
+                || unsigned(data[start + 4]) != 0x01
+                || unsigned(data[start + 5]) != 0x2a) {
+            return false;
+        }
+        int width = (int) readLittleEndian(data, start + 6, 2) & 0x3fff;
+        int height = (int) readLittleEndian(data, start + 8, 2) & 0x3fff;
+        return width > 0 && height > 0;
+    }
+
+    private boolean isValidVp8lFrame(byte[] data, int start, int size) {
+        if (size < 5 || unsigned(data[start]) != 0x2f) return false;
+        int dimensionsAndVersion = (int) readLittleEndian(data, start + 1, 4);
+        int width = (dimensionsAndVersion & 0x3fff) + 1;
+        int height = ((dimensionsAndVersion >> 14) & 0x3fff) + 1;
+        int version = (dimensionsAndVersion >> 29) & 0x7;
+        return width > 0 && height > 0 && version == 0;
+    }
+
+    private boolean isValidVp8xHeader(byte[] data, int start, int size) {
+        if (size != 10) return false;
+        int width = (int) readLittleEndian(data, start + 4, 3) + 1;
+        int height = (int) readLittleEndian(data, start + 7, 3) + 1;
+        return width > 0 && height > 0;
+    }
+
+    private boolean matchesFourCc(byte[] data, int offset, char a, char b, char c, char d) {
+        return data[offset] == a && data[offset + 1] == b
+                && data[offset + 2] == c && data[offset + 3] == d;
+    }
+
+    private long readLittleEndian(byte[] data, int offset, int length) {
+        long value = 0;
+        for (int index = 0; index < length; index++) {
+            value |= (long) unsigned(data[offset + index]) << (8 * index);
+        }
+        return value;
+    }
+
+    private IllegalArgumentException invalidDiaryStickerImage() {
+        return new IllegalArgumentException("실제 PNG 또는 WebP 이미지 파일만 업로드할 수 있습니다.");
+    }
+
+    private DiaryStickerImageFormat detectDiaryStickerFormat(MultipartFile file) {
+        byte[] header = new byte[12];
+        int length;
+        try (InputStream input = file.getInputStream()) {
+            length = input.read(header);
+        } catch (IOException exception) {
+            throw new RuntimeException("스티커 이미지를 확인할 수 없습니다.", exception);
+        }
+        if (length >= 8
+                && unsigned(header[0]) == 0x89
+                && header[1] == 'P' && header[2] == 'N' && header[3] == 'G'
+                && unsigned(header[4]) == 0x0d && unsigned(header[5]) == 0x0a
+                && unsigned(header[6]) == 0x1a && unsigned(header[7]) == 0x0a) {
+            return DiaryStickerImageFormat.PNG;
+        }
+        if (length >= 12
+                && header[0] == 'R' && header[1] == 'I' && header[2] == 'F' && header[3] == 'F'
+                && header[8] == 'W' && header[9] == 'E' && header[10] == 'B' && header[11] == 'P') {
+            return DiaryStickerImageFormat.WEBP;
+        }
+        throw new IllegalArgumentException("실제 PNG 또는 WebP 이미지 파일만 업로드할 수 있습니다.");
+    }
+
+    private Path resolveDiaryStickerDirectory(String typeDirectory, boolean create) {
+        Path root = Paths.get(uploadDir).toAbsolutePath().normalize();
+        Path directory = root.resolve(DIARY_STICKER_DIRECTORY).resolve(typeDirectory).normalize();
+        ensureContained(root, directory);
+        try {
+            if (create) Files.createDirectories(directory);
+            if (!create && Files.notExists(directory)) return null;
+            return directory;
+        } catch (IOException exception) {
+            throw new RuntimeException("스티커 저장 경로를 준비할 수 없습니다.", exception);
         }
     }
 
@@ -1025,6 +1243,17 @@ public class FileUploadService {
         private final String extension;
 
         ThumbnailFormat(String extension) {
+            this.extension = extension;
+        }
+    }
+
+    private enum DiaryStickerImageFormat {
+        PNG("png"),
+        WEBP("webp");
+
+        private final String extension;
+
+        DiaryStickerImageFormat(String extension) {
             this.extension = extension;
         }
     }

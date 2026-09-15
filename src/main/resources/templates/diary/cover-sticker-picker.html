@@ -5,7 +5,7 @@
 <!--
   표지 꾸미기 picker.
 
-  스티커 목록/분류/마스킹테이프 갈래는 페이지 다꾸와 같은 manifest(diary_stickers.json)가
+  스티커 목록/분류/마스킹테이프 갈래는 페이지 다꾸와 같은 DB 카탈로그가
   그려 주고, 클래스와 id 도 그대로 쓴다. 그래야 기존 CSS 와 diary-sticker-picker.js 가
   손대지 않고 그대로 동작한다. (id 는 그 스크립트가 붙잡는 손잡이라 바꾸지 않는다)
 
@@ -15,7 +15,7 @@
 <div th:fragment="picker" class="diary-sticker-popover" id="diary-sticker-popover" role="dialog"
      aria-label="스티커 고르기" hidden>
   <div class="diary-decor-panel" data-decor-panel="sticker">
-    <!-- 분류 탭. '최근' 은 manifest 의 분류가 아니라 이 브라우저에만 남는 화면용 탭이다. -->
+    <!-- 분류 탭. '최근' 은 DB 분류가 아니라 이 브라우저에만 남는 화면용 탭이다. -->
     <div class="diary-sticker-tabs" role="tablist" aria-label="스티커 분류">
       <button type="button" class="diary-sticker-tab" role="tab"
               data-sticker-category="recent" aria-selected="false"
@@ -65,6 +65,7 @@
                 th:data-sticker-kind="${sticker.kind}"
                 th:data-sticker-collection="${sticker.collectionCode}"
                 th:data-tape-type="${sticker.tapeType}"
+                th:data-access-tier="${sticker.accessTier}"
                 th:title="${sticker.name}"
                 th:data-sticker-image="${sticker.imageUrl}"
                 th:attr="data-tape-left=${sticker.repeating} ? ${sticker.repeat.leftUrl} : null,
@@ -72,6 +73,9 @@
                          data-tape-right=${sticker.repeating} ? ${sticker.repeat.rightUrl} : null,
                          aria-label=|${sticker.name} 스티커 붙이기|">
           <img th:src="${sticker.imageUrl}" alt="" aria-hidden="true" loading="lazy" />
+          <span class="diary-sticker-premium-badge"
+                th:if="${sticker.accessTier.name() == 'PREMIUM'}"
+                aria-hidden="true">P</span>
         </button>
       </div>
     </div>

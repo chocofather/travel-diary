@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'diary-stickers')}">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/admin-diary-stickers.css">
+  <script src="/js/admin-diary-stickers.js" defer></script>
+</th:block>
+<th:block th:fragment="body">
+  <section class="admin-page-section">
+    <header class="admin-page-header">
+      <div class="admin-page-heading">
+        <h1 class="admin-page-title">스티커 관리</h1>
+        <p class="admin-page-description">다이어리와 커스텀 표지에서 사용하는 스티커를 관리합니다.</p>
+      </div>
+      <div class="admin-page-actions">
+        <a th:href="@{/admin/diary/stickers/categories}" class="admin-btn">카테고리 관리</a>
+        <a th:href="@{/admin/diary/stickers/new}" class="admin-btn is-primary">+ 스티커 등록</a>
+      </div>
+    </header>
+
+    <div th:if="${message}" class="admin-alert is-success" th:text="${message}"></div>
+    <form id="admin-sticker-filter" th:action="@{/admin/diary/stickers}" th:object="${filter}" method="get" class="admin-sticker-filter">
+      <div class="admin-sticker-filter-field"><label for="filter-category">카테고리</label><select id="filter-category" th:field="*{categoryId}"><option value="">전체</option><option th:each="category : ${categories}" th:value="${category.id}" th:text="${category.name}">여행</option></select></div>
+      <div class="admin-sticker-filter-field"><label for="filter-type">유형</label><select id="filter-type" th:field="*{stickerType}"><option value="">전체</option><option th:each="type : ${stickerTypes}" th:value="${type}" th:text="${type}">NORMAL</option></select></div>
+      <div class="admin-sticker-filter-field"><label for="filter-tier">등급</label><select id="filter-tier" th:field="*{accessTier}"><option value="">전체</option><option th:each="tier : ${accessTiers}" th:value="${tier}" th:text="${tier}">FREE</option></select></div>
+      <div class="admin-sticker-filter-field"><label for="filter-visible">상태</label><select id="filter-visible" th:field="*{visible}"><option value="">전체</option><option value="true">노출</option><option value="false">숨김</option></select></div>
+      <div class="admin-sticker-filter-actions"><a th:href="@{/admin/diary/stickers}" class="admin-btn is-small">초기화</a></div>
+    </form>
+    <p id="admin-sticker-filter-error" class="admin-sticker-filter-error" role="status" hidden>목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</p>
+    <div id="admin-sticker-results">
+      <th:block th:fragment="results">
+        <p class="admin-sticker-result-count" th:text="|검색 결과 ${resultCount}개|">검색 결과 0개</p>
+        <div class="admin-card is-table-card">
+          <div class="admin-table-wrapper">
+            <table class="admin-table admin-sticker-table">
+              <thead><tr><th>이미지</th><th>이름</th><th>카테고리</th><th>유형</th><th>등급</th><th>순서</th><th>상태</th><th>관리</th></tr></thead>
+              <tbody>
+              <tr th:each="sticker : ${stickers}" th:classappend="${!sticker.visible} ? 'is-hidden-row'">
+                <td><span class="admin-sticker-preview"><img th:src="${sticker.imageUrl}" th:alt="${sticker.name}" loading="lazy"></span></td>
+                <td th:text="${sticker.name}">스티커</td>
+                <td th:text="${sticker.categoryName}">여행</td>
+                <td th:text="${sticker.stickerType}">NORMAL</td>
+                <td><span class="admin-sticker-tier" th:classappend="${sticker.accessTier.name() == 'PREMIUM'} ? ' is-premium'" th:text="${sticker.accessTier}">FREE</span></td>
+                <td th:text="${sticker.displayOrder}">1</td>
+                <td><span class="admin-status-badge" th:classappend="${sticker.visible} ? ' is-visible' : ' is-hidden'" th:text="${sticker.visible} ? '노출' : '숨김'">노출</span></td>
+                <td class="admin-table-actions">
+                  <a th:href="@{/admin/diary/stickers/{id}/edit(id=${sticker.id})}" class="admin-btn is-small is-primary">수정</a>
+                  <form th:if="${sticker.visible}" th:action="@{/admin/diary/stickers/{id}/hide(id=${sticker.id})}" method="post">
+                    <button type="submit" class="admin-btn is-small" onclick="return confirm('목록에서 숨기시겠습니까? 기존 다이어리의 이미지는 유지됩니다.');">숨김</button>
+                  </form>
+                </td>
+              </tr>
+              <tr th:if="${#lists.isEmpty(stickers)}"><td colspan="8" class="admin-table-empty">등록된 스티커가 없습니다.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </th:block>
+    </div>
+  </section>
+</th:block>
+</html>

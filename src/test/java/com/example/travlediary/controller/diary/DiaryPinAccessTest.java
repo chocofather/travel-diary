@@ -6,6 +6,7 @@ import com.example.travlediary.config.DiaryPinLockedAdvice;
 import com.example.travlediary.config.SecurityConfig;
 import com.example.travlediary.model.Diary;
 import com.example.travlediary.repository.diary.DiaryMapper;
+import com.example.travlediary.repository.diary.DiaryStickerMapper;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.diary.DiaryCoverDesignElementService;
@@ -93,11 +94,14 @@ class DiaryPinAccessTest {
     private UserMapper userMapper;
     @MockitoBean
     private CustomUserDetails userDetails;
+    @MockitoBean
+    private DiaryStickerMapper diaryStickerMapper;
 
     private MockHttpSession session;
 
     @BeforeEach
     void setUp() {
+        com.example.travlediary.support.DiaryStickerTestCatalogData.stub(diaryStickerMapper);
         session = new MockHttpSession();
         when(userDetails.getId()).thenReturn(7L);
         when(diaryMapper.findByIdAndUserId(10L, 7L)).thenAnswer(invocation -> diary());

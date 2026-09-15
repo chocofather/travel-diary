@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.travlediary.repository.diary.DiaryStickerMapper">
+
+    <resultMap id="CategoryMap" type="com.example.travlediary.model.DiaryStickerCategoryEntity">
+        <id property="id" column="id"/>
+        <result property="code" column="code"/>
+        <result property="name" column="name"/>
+        <result property="displayOrder" column="display_order"/>
+        <result property="visible" column="is_visible"/>
+    </resultMap>
+
+    <resultMap id="StickerMap" type="com.example.travlediary.model.DiaryStickerCatalogItem">
+        <id property="id" column="id"/>
+        <result property="catalogKey" column="catalog_key"/>
+        <result property="name" column="name"/>
+        <result property="categoryId" column="category_id"/>
+        <result property="categoryCode" column="category_code"/>
+        <result property="categoryName" column="category_name"/>
+        <result property="imageUrl" column="image_url"/>
+        <result property="stickerType" column="sticker_type"/>
+        <result property="accessTier" column="access_tier"/>
+        <result property="visible" column="is_visible"/>
+        <result property="displayOrder" column="display_order"/>
+        <result property="collectionCode" column="collection_code"/>
+        <result property="tapeStyle" column="tape_style"/>
+        <result property="repeatLeftUrl" column="repeat_left_url"/>
+        <result property="repeatCenterUrl" column="repeat_center_url"/>
+        <result property="repeatRightUrl" column="repeat_right_url"/>
+    </resultMap>
+
+    <sql id="StickerColumns">
+        s.id, s.catalog_key, s.name, s.category_id,
+        c.code AS category_code, c.name AS category_name,
+        s.image_url, s.sticker_type, s.access_tier, s.is_visible,
+        s.display_order, s.collection_code, s.tape_style,
+        s.repeat_left_url, s.repeat_center_url, s.repeat_right_url
+    </sql>
+
+    <select id="findAllCategories" resultMap="CategoryMap">
+        SELECT id, code, name, display_order, is_visible
+        FROM diary_sticker_categories
+        ORDER BY display_order ASC, id ASC
+    </select>
+
+    <select id="findVisibleCategories" resultMap="CategoryMap">
+        SELECT id, code, name, display_order, is_visible
+        FROM diary_sticker_categories
+        WHERE is_visible = 1
+        ORDER BY display_order ASC, id ASC
+    </select>
+
+    <select id="findCategoryById" resultMap="CategoryMap">
+        SELECT id, code, name, display_order, is_visible
+        FROM diary_sticker_categories
+        WHERE id = #{id}
+    </select>
+
+    <insert id="insertCategory" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO diary_sticker_categories (code, name, display_order, is_visible)
+        VALUES (#{code}, #{name}, #{displayOrder}, #{visible})
+    </insert>
+
+    <update id="updateCategory">
+        UPDATE diary_sticker_categories
+        SET name = #{name}, display_order = #{displayOrder}, is_visible = #{visible}
+        WHERE id = #{id}
+    </update>
+
+    <select id="findAllStickers" resultMap="StickerMap">
+        SELECT <include refid="StickerColumns"/>
+        FROM diary_stickers s
+        JOIN diary_sticker_categories c ON c.id = s.category_id
+        ORDER BY c.display_order ASC, c.id ASC, s.display_order ASC, s.id ASC
+    </select>
+
+    <select id="findAdminStickers" resultMap="StickerMap">
+        SELECT <include refid="StickerColumns"/>
+        FROM diary_stickers s
+        JOIN diary_sticker_categories c ON c.id = s.category_id
+        WHERE s.catalog_key NOT LIKE 'history-%'
+        <if test="categoryId != null">
+            AND s.category_id = #{categoryId}
+        </if>
+        <if test="stickerType != null">
+            AND s.sticker_type = #{stickerType}
+        </if>
+        <if test="accessTier != null">
+            AND s.access_tier = #{accessTier}
+        </if>
+        <if test="visible != null">
+            AND s.is_visible = #{visible}
+        </if>
+        ORDER BY c.display_order ASC, c.id ASC, s.display_order ASC, s.id ASC
+    </select>
+
+    <select id="findVisibleStickers" resultMap="StickerMap">
+        SELECT <include refid="StickerColumns"/>
+        FROM diary_stickers s
+        JOIN diary_sticker_categories c ON c.id = s.category_id
+        WHERE s.is_visible = 1 AND c.is_visible = 1
+        ORDER BY c.display_order ASC, c.id ASC, s.display_order ASC, s.id ASC
+    </select>
+
+    <select id="findStickerById" resultMap="StickerMap">
+        SELECT <include refid="StickerColumns"/>
+        FROM diary_stickers s
+        JOIN diary_sticker_categories c ON c.id = s.category_id
+        WHERE s.id = #{id} AND s.catalog_key NOT LIKE 'history-%'
+    </select>
+
+    <select id="findVisibleByCatalogKey" resultMap="StickerMap">
+        SELECT <include refid="StickerColumns"/>
+        FROM diary_stickers s
+        JOIN diary_sticker_categories c ON c.id = s.category_id
+        WHERE s.catalog_key = #{catalogKey} AND s.is_visible = 1 AND c.is_visible = 1
+    </select>
+
+    <select id="findByImageUrl" resultMap="StickerMap">
+        SELECT <include refid="StickerColumns"/>
+        FROM diary_stickers s
+        JOIN diary_sticker_categories c ON c.id = s.category_id
+        WHERE s.image_url = #{imageUrl}
+        LIMIT 1
+    </select>
+
+    <insert id="insertSticker" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO diary_stickers
+        (catalog_key, name, category_id, image_url, sticker_type, access_tier,
+         is_visible, display_order, collection_code, tape_style,
+         repeat_left_url, repeat_center_url, repeat_right_url)
+        VALUES
+        (#{catalogKey}, #{name}, #{categoryId}, #{imageUrl}, #{stickerType}, #{accessTier},
+         #{visible}, #{displayOrder}, #{collectionCode}, #{tapeStyle},
+         #{repeatLeftUrl}, #{repeatCenterUrl}, #{repeatRightUrl})
+    </insert>
+
+    <update id="updateSticker">
+        UPDATE diary_stickers
+        SET name = #{name}, category_id = #{categoryId}, image_url = #{imageUrl},
+            sticker_type = #{stickerType}, access_tier = #{accessTier},
+            is_visible = #{visible}, display_order = #{displayOrder},
+            collection_code = #{collectionCode}, tape_style = #{tapeStyle},
+            repeat_left_url = #{repeatLeftUrl}, repeat_center_url = #{repeatCenterUrl},
+            repeat_right_url = #{repeatRightUrl}
+        WHERE id = #{id}
+    </update>
+
+    <update id="hideSticker">
+        UPDATE diary_stickers SET is_visible = 0 WHERE id = #{id}
+    </update>
+
+    <select id="countStickersByCategoryId" resultType="int">
+        SELECT COUNT(*) FROM diary_stickers WHERE category_id = #{categoryId}
+    </select>
+
+    <select id="countCategoryName" resultType="int">
+        SELECT COUNT(*) FROM diary_sticker_categories WHERE name = #{name}
+        <if test="excludeId != null">
+            AND id &lt;&gt; #{excludeId}
+        </if>
+    </select>
+</mapper>

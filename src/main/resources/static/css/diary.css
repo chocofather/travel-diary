@@ -4218,6 +4218,7 @@
 }
 
 .diary-sticker-option {
+    position: relative;
     display: inline-flex;
     aspect-ratio: 1 / 1;
     align-items: center;
@@ -4227,6 +4228,24 @@
     border-radius: 8px;
     background: none;
     cursor: pointer;
+}
+
+.diary-sticker-premium-badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    display: grid;
+    width: 16px;
+    height: 16px;
+    place-items: center;
+    border-radius: 50%;
+    color: #704d00;
+    background: #ffe08a;
+    box-shadow: 0 1px 3px rgba(54, 40, 8, .22);
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1;
+    pointer-events: none;
 }
 
 /* 마스킹테이프는 띠 그대로 얇고 길게 본다. 섞여 있는 '최근' 탭에서는 두 칸을 이어 쓴다.

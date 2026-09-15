@@ -52,6 +52,13 @@
     </section>
 
     <section class="admin-nav-group">
+      <h2 class="admin-nav-group-title">다이어리 관리</h2>
+      <a class="admin-nav-link"
+         th:classappend="${activeMenu == 'diary-stickers'} ? ' is-active' : ''"
+         th:href="@{/admin/diary/stickers}">스티커 관리</a>
+    </section>
+
+    <section class="admin-nav-group">
       <h2 class="admin-nav-group-title">고객지원</h2>
       <a class="admin-nav-link"
          th:classappend="${activeMenu == 'notices'} ? ' is-active' : ''"

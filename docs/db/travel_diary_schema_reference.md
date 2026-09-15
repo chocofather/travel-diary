@@ -1141,6 +1141,73 @@ CREATE TABLE `diary_pages` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `diary_sticker_categories`
+--
+-- 관리자 스티커 카탈로그의 카테고리다. `is_visible`과 `display_order`는
+-- 다이어리 및 커스텀 표지 스티커 선택창의 노출 여부와 정렬을 결정한다.
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `diary_sticker_categories` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `code` varchar(80) NOT NULL,
+  `name` varchar(50) NOT NULL,
+  `display_order` int NOT NULL DEFAULT '1',
+  `is_visible` tinyint(1) NOT NULL DEFAULT '1',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_diary_sticker_categories_code` (`code`),
+  UNIQUE KEY `uk_diary_sticker_categories_name` (`name`),
+  KEY `idx_diary_sticker_categories_display` (`is_visible`,`display_order`,`id`),
+  CONSTRAINT `chk_diary_sticker_categories_display_order` CHECK ((`display_order` >= 1))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `diary_stickers`
+--
+-- 사용자 다이어리·커스텀 표지의 STICKER 요소는 기존처럼 각 요소 테이블의
+-- `image_url`만 저장한다. 이 카탈로그는 선택과 메타데이터를 관리하며 요소 테이블과 FK를 맺지 않는다.
+-- 기존 static 스티커 URL도 이 테이블에 등록해 호환하고, 숨김 또는 이미지 교체 후에도
+-- 이전 URL을 지우지 않는다. `is_visible = 0`은 선택창에서만 제외한다.
+-- 관리자가 이미지를 교체하면 기존 URL과 반복 테이프 정보는 숨김 이력 행으로 남길 수 있다.
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `diary_stickers` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `catalog_key` varchar(100) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `category_id` bigint NOT NULL,
+  `image_url` varchar(500) NOT NULL,
+  `sticker_type` varchar(20) NOT NULL,
+  `access_tier` varchar(20) NOT NULL DEFAULT 'FREE',
+  `is_visible` tinyint(1) NOT NULL DEFAULT '1',
+  `display_order` int NOT NULL DEFAULT '1',
+  `collection_code` varchar(20) NOT NULL DEFAULT 'default',
+  `tape_style` varchar(20) NOT NULL DEFAULT 'NORMAL',
+  `repeat_left_url` varchar(500) DEFAULT NULL,
+  `repeat_center_url` varchar(500) DEFAULT NULL,
+  `repeat_right_url` varchar(500) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_diary_stickers_catalog_key` (`catalog_key`),
+  UNIQUE KEY `uk_diary_stickers_image_url` (`image_url`),
+  KEY `idx_diary_stickers_picker` (`category_id`,`is_visible`,`display_order`,`id`),
+  CONSTRAINT `fk_diary_stickers_category` FOREIGN KEY (`category_id`) REFERENCES `diary_sticker_categories` (`id`),
+  CONSTRAINT `chk_diary_stickers_type` CHECK ((`sticker_type` in (_utf8mb4'NORMAL',_utf8mb4'MASKING_TAPE'))),
+  CONSTRAINT `chk_diary_stickers_access_tier` CHECK ((`access_tier` in (_utf8mb4'FREE',_utf8mb4'PREMIUM'))),
+  CONSTRAINT `chk_diary_stickers_tape_style` CHECK ((`tape_style` in (_utf8mb4'NORMAL',_utf8mb4'TRANSLUCENT',_utf8mb4'CLEAR'))),
+  CONSTRAINT `chk_diary_stickers_display_order` CHECK ((`display_order` >= 1)),
+  CONSTRAINT `chk_diary_stickers_repeat_urls` CHECK ((((`repeat_left_url` is null) and (`repeat_center_url` is null) and (`repeat_right_url` is null)) or ((`repeat_left_url` is not null) and (`repeat_center_url` is not null) and (`repeat_right_url` is not null))))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `events`
 --
 

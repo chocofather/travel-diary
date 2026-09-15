@@ -216,8 +216,8 @@
         </form>
       </div>
 
-      <!-- 스티커: 공용 asset 목록에서 고르면 지금 편집 중인 장에 바로 붙는다.
-           분류/스티커 모두 서버 목록(json/diary_stickers.json)을 그대로 그리므로
+      <!-- 스티커: DB 카탈로그에서 고르면 지금 편집 중인 장에 바로 붙는다.
+           분류/스티커 모두 서버가 조회한 목록을 그대로 그리므로
            스티커를 늘려도 이 마크업은 손대지 않는다. -->
       <div class="diary-toolbar-group diary-sticker-picker" th:if="${editPage != null}">
         <button type="button" class="diary-toolbar-button" id="diary-sticker-button"
@@ -248,7 +248,7 @@
           <!-- 스티커 묶음. 여기 안쪽은 예전 구조 그대로다 -->
           <div class="diary-decor-panel" data-decor-panel="sticker">
           <!-- 분류 탭. 목록이 늘어나면 가로로만 조금 넘겨 본다.
-               '최근' 은 manifest 의 분류가 아니라 이 브라우저에만 남는 화면용 탭이다. -->
+               '최근' 은 DB 분류가 아니라 이 브라우저에만 남는 화면용 탭이다. -->
           <div class="diary-sticker-tabs" role="tablist" aria-label="스티커 분류">
             <button type="button" class="diary-sticker-tab" role="tab"
                     data-sticker-category="recent" aria-selected="false"
@@ -305,9 +305,13 @@
                       th:data-sticker-kind="${sticker.kind}"
                       th:data-sticker-collection="${sticker.collectionCode}"
                       th:data-tape-type="${sticker.tapeType}"
+                      th:data-access-tier="${sticker.accessTier}"
                       th:title="${sticker.name}"
                       th:attr="aria-label=|${sticker.name} 스티커 붙이기|">
                 <img th:src="${sticker.imageUrl}" alt="" aria-hidden="true" loading="lazy" />
+                <span class="diary-sticker-premium-badge"
+                      th:if="${sticker.accessTier.name() == 'PREMIUM'}"
+                      aria-hidden="true">P</span>
               </button>
             </div>
           </div>

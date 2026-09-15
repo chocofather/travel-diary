@@ -1,7 +1,7 @@
 /**
  * 다이어리 편집 화면의 스티커 붙이기.
  * picker 에서 고른 스티커 id 만 서버로 보내고, 실제 이미지 경로는 서버가 허용 목록에서 정한다.
- * 분류 탭/스티커 목록은 서버가 manifest(json/diary_stickers.json)대로 그려 주므로 여기서 목록을 들지 않는다.
+ * 분류 탭/스티커 목록은 서버가 DB 카탈로그대로 그려 주므로 여기서 목록을 들지 않는다.
  * '최근' 탭만 이 브라우저(localStorage)에 남는 화면용 분류로, 서버 목록에 있는 스티커만 담는다.
  * 서버가 만들어 준 요소를 지금 보고 있는 캔버스에 바로 그려 화면을 새로 고치지 않는다.
  * (이동/크기/회전/겹침 순서 저장은 사진과 같은 endpoint 를 그대로 쓴다)
@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const recentGrid = document.getElementById('diary-sticker-grid-recent');
     const recentEmpty = document.getElementById('diary-sticker-recent-empty');
-    // 지금 목록(manifest)에 있는 스티커만 id 로 찾아 쓴다.
+    // 지금 DB 카탈로그에 노출된 스티커만 id 로 찾아 쓴다.
     const stickers = new Map();
     popover.querySelectorAll('.diary-sticker-grid:not(#diary-sticker-grid-recent) '
         + '.diary-sticker-option').forEach((option) => {

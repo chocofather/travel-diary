@@ -72,16 +72,23 @@ class GuestDiaryImportServiceTest {
     @Mock
     private FileUploadService fileUploadService;
 
+    @Mock
     private DiaryStickerCatalog stickerCatalog;
+
     private GuestDiaryImportService service;
     /** 목록 첫 스티커. 값을 적어 두지 않고 실제 목록에서 가져온다. */
     private String knownStickerUrl;
 
     @BeforeEach
     void setUp() {
-        stickerCatalog = new DiaryStickerCatalog();
-        stickerCatalog.load();
-        knownStickerUrl = stickerCatalog.getCategories().get(0).stickers().get(0).imageUrl();
+        knownStickerUrl = "/images/diary/stickers/travel/airplane.svg";
+        when(stickerCatalog.findByImageUrl(knownStickerUrl)).thenReturn(java.util.Optional.of(
+                new com.example.travlediary.model.DiarySticker(
+                        "airplane", "비행기", "travel", knownStickerUrl,
+                        com.example.travlediary.model.DiaryStickerCollection.DEFAULT,
+                        "NORMAL", null,
+                        com.example.travlediary.model.DiaryStickerType.NORMAL,
+                        com.example.travlediary.model.DiaryStickerAccessTier.FREE)));
 
         DiaryNoteCatalog noteCatalog = new DiaryNoteCatalog();
         noteCatalog.load();

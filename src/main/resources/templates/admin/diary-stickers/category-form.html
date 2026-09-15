@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'diary-stickers')}">
+<th:block th:fragment="headFragment"><link rel="stylesheet" href="/css/admin-diary-stickers.css"></th:block>
+<th:block th:fragment="body">
+  <section class="admin-page-section"><header class="admin-page-header"><div class="admin-page-heading"><h1 class="admin-page-title" th:text="${pageTitle}">카테고리 등록</h1></div><div class="admin-page-actions"><a th:href="@{/admin/diary/stickers/categories}" class="admin-btn">카테고리 목록</a></div></header>
+    <form th:action="${formAction}" th:object="${categoryForm}" method="post" class="admin-form-card">
+      <div th:if="${#fields.hasAnyErrors()}" class="admin-alert" role="alert"><p th:each="error : ${#fields.allErrors()}" th:text="${error}"></p></div>
+      <div class="admin-form-fields"><div class="admin-form-field"><label for="category-name">카테고리명</label><input id="category-name" type="text" th:field="*{name}" maxlength="50" required></div><div class="admin-form-field"><label for="category-order">표시순서</label><input id="category-order" type="number" th:field="*{displayOrder}" min="1" required></div><div class="admin-form-field"><label for="category-visible">노출여부</label><select id="category-visible" th:field="*{visible}"><option value="true">노출</option><option value="false">숨김</option></select></div></div>
+      <div class="admin-form-actions"><a th:href="@{/admin/diary/stickers/categories}" class="admin-btn">취소</a><button type="submit" class="admin-btn is-primary" th:text="${editMode} ? '수정 저장' : '등록'">등록</button></div>
+    </form>
+  </section>
+</th:block>
+</html>

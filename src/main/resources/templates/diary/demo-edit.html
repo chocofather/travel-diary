@@ -399,6 +399,7 @@
                           th:data-sticker-kind="${sticker.kind}"
                           th:data-sticker-collection="${sticker.collectionCode}"
                           th:data-tape-type="${sticker.tapeType}"
+                          th:data-access-tier="${sticker.accessTier}"
                           th:data-sticker-image="${sticker.imageUrl}"
                           th:attr="data-tape-left=${sticker.repeating} ? ${sticker.repeat.leftUrl} : null,
                                    data-tape-center=${sticker.repeating} ? ${sticker.repeat.centerUrl} : null,
@@ -406,6 +407,9 @@
                                    aria-label=|${sticker.name} 스티커 붙이기|"
                           th:title="${sticker.name}">
                     <img th:src="${sticker.imageUrl}" alt="" aria-hidden="true" loading="lazy" />
+                    <span class="diary-sticker-premium-badge"
+                          th:if="${sticker.accessTier.name() == 'PREMIUM'}"
+                          aria-hidden="true">P</span>
                   </button>
                 </div>
               </div>

@@ -1,14 +1,16 @@
 package com.example.travlediary.model;
 
 /**
- * 공용 스티커 한 개. 목록은 resources/json/diary_stickers.json 이 관리한다.
- * 클라이언트는 id 만 보내고 실제 경로(imageUrl)는 서버가 이 목록에서 고른다.
+ * 공용 스티커 한 개. 관리자가 DB 카탈로그에서 관리한다.
+ * 클라이언트는 id 만 보내고 실제 경로(imageUrl)는 서버가 카탈로그에서 고른다.
  *
- * 파일은 사용자 업로드가 아니라 사이트 공용 정적 asset 이므로 요소를 지워도 파일은 남긴다.
+ * 여러 다이어리가 같은 URL을 저장하므로 요소를 지우거나 카탈로그에서 숨겨도 파일은 남긴다.
  */
 public record DiarySticker(String id, String name, String category, String imageUrl,
                            DiaryStickerCollection collection,
-                           String tapeType, DiaryStickerRepeat repeat) {
+                           String tapeType, DiaryStickerRepeat repeat,
+                           DiaryStickerType stickerType,
+                           DiaryStickerAccessTier accessTier) {
 
     /** 마스킹테이프 안의 작은 갈래. 적혀 있지 않으면 일반 테이프로 본다. */
     public static final String TAPE_NORMAL = "NORMAL";
@@ -19,7 +21,7 @@ public record DiarySticker(String id, String name, String category, String image
 
     /** picker 가 넓게 보여줄지 정할 때 쓰는 성격 값. (마스킹테이프 외에는 없음) */
     public String kind() {
-        return DiaryStickerKind.of(imageUrl);
+        return stickerType == null ? DiaryStickerKind.of(imageUrl) : stickerType.kindCode();
     }
 
     /** 화면(DOM)에 실어 주는 표현 스타일 값. 분류·테이프 갈래와는 다른 축이다. */

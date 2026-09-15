@@ -6,6 +6,7 @@ import com.example.travlediary.config.SecurityConfig;
 import com.example.travlediary.model.DiaryCoverDesign;
 import com.example.travlediary.model.DiaryCoverDesignElement;
 import com.example.travlediary.repository.user.UserMapper;
+import com.example.travlediary.repository.diary.DiaryStickerMapper;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.diary.DiaryCoverDesignElementService;
 import com.example.travlediary.service.diary.DiaryCoverDesignService;
@@ -13,6 +14,7 @@ import com.example.travlediary.service.diary.DiaryLabelFontCatalog;
 import com.example.travlediary.service.diary.DiaryStickerCatalog;
 import com.example.travlediary.service.file.FileUploadService;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -69,6 +71,8 @@ class DiaryCoverDesignControllerTest {
     private FileUploadService fileUploadService;
     @MockitoBean
     private CustomUserDetails userDetails;
+    @MockitoBean
+    private DiaryStickerMapper diaryStickerMapper;
 
     /** 붙일 수 있는 스티커 목록. 실제 manifest 를 그대로 읽는다. */
     @Autowired
@@ -76,6 +80,11 @@ class DiaryCoverDesignControllerTest {
     /** 파일 정리는 업로드 폴더 안에서만 일어나야 하므로, 시험용 폴더를 심어 확인한다. */
     @Autowired
     private DiaryCoverDesignController controller;
+
+    @BeforeEach
+    void setUpStickerCatalog() {
+        com.example.travlediary.support.DiaryStickerTestCatalogData.stub(diaryStickerMapper);
+    }
 
     @Test
     void guestIsSentToLogin() throws Exception {

@@ -1,16 +1,12 @@
 package com.example.travlediary.repository;
 
-import com.example.travlediary.model.DiarySticker;
 import com.example.travlediary.model.DiaryStickerKind;
-import com.example.travlediary.service.diary.DiaryStickerCatalog;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -78,20 +74,12 @@ class DiaryMaskingTapeContractTest {
     /** 일반 스티커와 테이프가 뒤바뀌지 않는다. 테이프만 늘려 그리고 되풀이한다. */
     @Test
     void anOrdinaryStickerIsNeverDrawnAsATape() throws IOException {
-        DiaryStickerCatalog catalog = new DiaryStickerCatalog();
-        catalog.load();
-
-        List<DiarySticker> all = new ArrayList<>();
-        catalog.getCategories().forEach(category -> all.addAll(category.stickers()));
-        assertThat(all).isNotEmpty();
-        for (DiarySticker sticker : all) {
-            assertThat(DiaryStickerKind.isMaskingTape(sticker.imageUrl()))
-                    .as(sticker.id())
-                    .isEqualTo(sticker.imageUrl().contains("/masking-tape/"));
-        }
-        // 되풀이 조각을 가진 스티커는 모두 마스킹테이프다. (반대로 판정이 새지 않는다)
-        catalog.getRepeatsByImageUrl().keySet()
-                .forEach(url -> assertThat(DiaryStickerKind.isMaskingTape(url)).as(url).isTrue());
+        assertThat(DiaryStickerKind.isMaskingTape(
+                "/images/diary/stickers/masking-tape/tape.svg")).isTrue();
+        assertThat(DiaryStickerKind.isMaskingTape(
+                "/uploads/diary-stickers/masking-tape/tape.webp")).isTrue();
+        assertThat(DiaryStickerKind.isMaskingTape(
+                "/uploads/diary-stickers/normal/sticker.webp")).isFalse();
 
         String css = read(Path.of("src/main/resources/static/css/diary.css"));
         assertThat(css)
@@ -119,50 +107,6 @@ class DiaryMaskingTapeContractTest {
                 .contains("th:data-sticker-kind=\"${element.stickerKind}\"");
     }
 
-    /** 클리어 테이프에는 흰 필름이 없다. 어두운 바탕에서 회색 얼룩처럼 뜨지 않는다. */
-    @Test
-    void clearTapesCarryNoWhiteFilm() throws IOException {
-        DiaryStickerCatalog catalog = new DiaryStickerCatalog();
-        catalog.load();
-
-        List<DiarySticker> clear = new ArrayList<>();
-        catalog.getCategories().forEach(category -> category.stickers().stream()
-                .filter(sticker -> DiarySticker.TAPE_CLEAR.equals(sticker.tapeType()))
-                .forEach(clear::add));
-        assertThat(clear).as("클리어 테이프가 목록에 있어야 한다").isNotEmpty();
-
-        for (DiarySticker sticker : clear) {
-            assertThat(fileOf(sticker.imageUrl())).as(sticker.id())
-                    .doesNotContain("fill=\"#ffffff\"");
-            // 되풀이 조각(끝/가운데)도 같은 기준이다. 한 조각만 뿌예도 이어 붙이면 보인다.
-            for (String piece : new String[]{
-                    sticker.repeat().leftUrl(), sticker.repeat().centerUrl(),
-                    sticker.repeat().rightUrl()}) {
-                assertThat(fileOf(piece)).as(sticker.id() + " " + piece)
-                        .doesNotContain("fill=\"#ffffff\"");
-            }
-        }
-    }
-
-    /** 반투명(TRANSLUCENT) 테이프의 흰 필름은 그대로 둔다. 그쪽은 뿌연 것이 제 모습이다. */
-    @Test
-    void translucentTapesKeepTheirMilkyFilm() throws IOException {
-        DiaryStickerCatalog catalog = new DiaryStickerCatalog();
-        catalog.load();
-
-        List<DiarySticker> translucent = new ArrayList<>();
-        catalog.getCategories().forEach(category -> category.stickers().stream()
-                .filter(sticker -> DiarySticker.TAPE_TRANSLUCENT.equals(sticker.tapeType()))
-                .forEach(translucent::add));
-        assertThat(translucent).isNotEmpty();
-
-        for (DiarySticker sticker : translucent) {
-            // 테이프 전체를 덮는 필름 한 겹이 그대로 남아 있다. (이번에 걷어낸 것은 클리어뿐이다)
-            assertThat(fileOf(sticker.imageUrl())).as(sticker.id())
-                    .contains("<rect width=\"160\" height=\"40\" fill=\"#");
-        }
-    }
-
     /** 색을 걷어낸 것은 그림뿐이다. 요소 전체를 흐리게 만드는 규칙을 새로 두지 않았다. */
     @Test
     void theClearLookIsNotFakedWithOpacity() throws IOException {
@@ -175,10 +119,6 @@ class DiaryMaskingTapeContractTest {
         assertThat(css)
                 .contains(".diary-tape-cap {")
                 .contains(".diary-tape-fill {");
-    }
-
-    private String fileOf(String imageUrl) throws IOException {
-        return read(Path.of("src/main/resources/static").resolve(imageUrl.substring(1)));
     }
 
     private String script(String name) throws IOException {

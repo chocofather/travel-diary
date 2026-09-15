@@ -20,10 +20,13 @@
      * (두 곳이 어긋나면 같은 테이프가 화면마다 다르게 그려진다)
      */
     const MASKING_TAPE_PREFIX = '/images/diary/stickers/masking-tape/';
+    const UPLOADED_MASKING_TAPE_PREFIX = '/uploads/diary-stickers/masking-tape/';
 
     /** 저장된 그림 경로만 보고 마스킹테이프인지 가린다. 목록(picker)이 없는 화면에서도 답이 같다. */
     function isMaskingTape(imageUrl) {
-        return typeof imageUrl === 'string' && imageUrl.startsWith(MASKING_TAPE_PREFIX);
+        return typeof imageUrl === 'string'
+            && (imageUrl.startsWith(MASKING_TAPE_PREFIX)
+                || imageUrl.startsWith(UPLOADED_MASKING_TAPE_PREFIX));
     }
 
     /**

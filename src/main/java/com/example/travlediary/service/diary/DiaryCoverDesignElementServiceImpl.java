@@ -64,7 +64,7 @@ public class DiaryCoverDesignElementServiceImpl implements DiaryCoverDesignEleme
     /** 디자인 소유권은 보관함 서비스가 확인해 준다. (그 규칙을 그대로 따른다) */
     private final DiaryCoverDesignService diaryCoverDesignService;
     private final DiaryCoverDesignElementMapper diaryCoverDesignElementMapper;
-    /** 붙일 수 있는 스티커 목록. 페이지 다꾸와 같은 manifest 를 함께 쓴다. */
+    /** 붙일 수 있는 스티커 목록. 페이지 다꾸와 같은 DB 카탈로그를 함께 쓴다. */
     private final DiaryStickerCatalog diaryStickerCatalog;
     /** 라벨기 글꼴 목록. 이것도 페이지 다꾸와 같은 manifest 를 함께 쓴다. */
     private final DiaryLabelFontCatalog diaryLabelFontCatalog;
