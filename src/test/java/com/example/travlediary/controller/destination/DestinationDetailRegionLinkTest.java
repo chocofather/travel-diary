@@ -9,6 +9,8 @@ import com.example.travlediary.service.destination.DestinationImageService;
 import com.example.travlediary.service.destination.DestinationService;
 import com.example.travlediary.service.category.CountryCategoryService;
 import com.example.travlediary.service.category.ReferenceNameLocalizationService;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -21,6 +23,7 @@ import org.springframework.ui.ExtendedModelMap;
 import org.springframework.ui.Model;
 import org.springframework.context.i18n.LocaleContextHolder;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -163,6 +166,29 @@ class DestinationDetailRegionLinkTest {
                 .doesNotContain("'&region='");
     }
 
+    @Test
+    void destinationDetailAddsPlaceJsonLdWithCoordinates() throws Exception {
+        givenRegionTree(
+                region(101L, "종로구", 4, 10L),
+                region(10L, "서울", 3, KOREA_ROOT_ID),
+                region(KOREA_ROOT_ID, "대한민국", 1, null));
+
+        Model model = renderDetail(101L);
+
+        JsonNode place = new ObjectMapper().readTree(
+                        (String) model.getAttribute("seoJsonLd"))
+                .path("@graph").get(0);
+        assertThat(place.path("@type").asText()).isEqualTo("Place");
+        assertThat(place.path("name").asText()).isEqualTo("여행지");
+        assertThat(place.path("geo").path("latitude").decimalValue())
+                .isEqualByComparingTo("37.579617");
+        assertThat(place.path("geo").path("longitude").decimalValue())
+                .isEqualByComparingTo("126.977041");
+        assertThat(place.path("url").asText())
+                .isEqualTo("https://travel.example/destinations/7");
+        assertThat(place.has("address")).isFalse();
+    }
+
     private String heroBlock() throws java.io.IOException {
         String detail = java.nio.file.Files.readString(
                 java.nio.file.Path.of("src/main/resources/templates/destination/detail.html"),
@@ -184,6 +210,10 @@ class DestinationDetailRegionLinkTest {
         Destination destination = new Destination();
         destination.setId(7L);
         destination.setName("여행지");
+        destination.setDescription("<p>도심 속 역사 여행지입니다.</p>");
+        destination.setThumbnailPath("/uploads/destinations/palace.webp");
+        destination.setLatitude(new BigDecimal("37.579617"));
+        destination.setLongitude(new BigDecimal("126.977041"));
         destination.setRegionId(regionId);
 
         DestinationDetailDto dto = new DestinationDetailDto();
@@ -196,6 +226,7 @@ class DestinationDetailRegionLinkTest {
         when(destinationService.convertToDtoWithBookmark(List.of(), null)).thenReturn(List.of());
 
         Model model = new ExtendedModelMap();
+        model.addAttribute("seoSiteBaseUrl", "https://travel.example");
         controller.destinationDetail(7L, null, model);
         return model;
     }

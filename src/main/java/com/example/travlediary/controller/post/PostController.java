@@ -6,6 +6,7 @@ import com.example.travlediary.model.PostImage;
 import com.example.travlediary.model.UserPost;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.seo.SeoModel;
+import com.example.travlediary.seo.SeoStructuredData;
 import com.example.travlediary.service.file.FileUploadService;
 import com.example.travlediary.service.post.PostService;
 import lombok.RequiredArgsConstructor;
@@ -40,6 +41,10 @@ public class PostController {
                 .orElse(null);
         SeoModel.apply(model, post.getTitle() + " | Travel Diary", post.getContent(),
                 "/post/" + id, seoImage, "article");
+        SeoStructuredData.article(model, "/post/" + id,
+                post.getTitle(), post.getContent(), seoImage,
+                post.getCreatedAt(), post.getUpdatedAt(),
+                post.isWriterWithdrawn() ? null : post.getNickname());
         return "post/detail";
     }
 

@@ -4,10 +4,12 @@ import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.dto.TravelInfoDetailDto;
 import com.example.travlediary.dto.FestivalDetailDto;
 import com.example.travlediary.dto.TravelInfoListItemDto;
+import com.example.travlediary.dto.TravelInfoPeriodDto;
 import com.example.travlediary.model.InfoCategory;
 import com.example.travlediary.model.TravelInfoContentType;
 import com.example.travlediary.model.TravelInfoScope;
 import com.example.travlediary.seo.SeoModel;
+import com.example.travlediary.seo.SeoStructuredData;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.category.InfoCategoryService;
 import com.example.travlediary.service.category.ReferenceNameLocalizationService;
@@ -175,12 +177,16 @@ public class TravelInfoController {
         model.addAttribute("listUrl", validateReturnUrl(returnUrl));
         model.addAttribute("pageTitle", pageTitle(
                 "travelInfo.detail.pageTitle.general", travelInfo.getTitle()));
+        String seoImage = travelInfoService.getThumbnailUrl(id);
         SeoModel.apply(model,
                 pageTitle("travelInfo.detail.pageTitle.general", travelInfo.getTitle()),
                 travelInfo.getContent(),
                 "/travel-info/" + id,
-                travelInfoService.getThumbnailUrl(id),
+                seoImage,
                 "article");
+        SeoStructuredData.article(model, "/travel-info/" + id,
+                travelInfo.getTitle(), travelInfo.getContent(), seoImage,
+                travelInfo.getCreatedAt(), travelInfo.getUpdatedAt(), null);
         return "travel-info/detail";
     }
 
@@ -208,6 +214,13 @@ public class TravelInfoController {
                 "/festivals/" + id,
                 festival.getImageUrl(),
                 "article");
+        TravelInfoPeriodDto primaryPeriod = festival.getPrimaryPeriod();
+        SeoStructuredData.event(model, "/festivals/" + id,
+                festival.getTravelInfo().getTitle(),
+                festival.getTravelInfo().getContent(), festival.getImageUrl(),
+                primaryPeriod == null ? null : primaryPeriod.getStartDate(),
+                primaryPeriod == null ? null : primaryPeriod.getEndDate(),
+                festival.getEventPlace(), festival.getAddress());
         return "festivals/detail";
     }
 

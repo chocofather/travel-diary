@@ -6,6 +6,7 @@ import com.example.travlediary.dto.DestinationDto;
 import com.example.travlediary.model.CountryCategory;
 import com.example.travlediary.model.Destination;
 import com.example.travlediary.seo.SeoModel;
+import com.example.travlediary.seo.SeoStructuredData;
 import com.example.travlediary.seo.SeoTextUtils;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.category.CountryCategoryService;
@@ -363,6 +364,13 @@ public class DestinationController {
                 "/destinations/" + id,
                 SeoTextUtils.firstNonBlank(dto.getDestination().getThumbnailPath(), seoImage),
                 "article");
+        SeoStructuredData.place(model, "/destinations/" + id,
+                dto.getDestination().getName(),
+                SeoTextUtils.firstNonBlank(dto.getDestination().getShortDescription(),
+                        dto.getDestination().getDescription()),
+                SeoTextUtils.firstNonBlank(dto.getDestination().getThumbnailPath(), seoImage),
+                null,
+                dto.getDestination().getLatitude(), dto.getDestination().getLongitude());
 
         return "destination/detail";
     }

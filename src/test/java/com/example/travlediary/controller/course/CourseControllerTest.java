@@ -1,12 +1,16 @@
 package com.example.travlediary.controller.course;
 
 import com.example.travlediary.dto.CourseCreateRequest;
+import com.example.travlediary.dto.CourseDetailDto;
 import com.example.travlediary.dto.CourseEditDto;
+import com.example.travlediary.dto.CourseStopDto;
 import com.example.travlediary.dto.CourseUpdateRequest;
 import com.example.travlediary.model.CountryCategory;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.category.CountryCategoryService;
 import com.example.travlediary.service.course.CourseService;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -104,11 +108,47 @@ class CourseControllerTest {
         assertThat(model.get("overseasCourseCountries")).isEqualTo(List.of(japan));
     }
 
+    @Test
+    void publicCourseDetailAddsTouristTripJsonLdWithOrderedStops() throws Exception {
+        CourseDetailDto course = new CourseDetailDto();
+        course.setId(100L);
+        course.setTitle("서울 궁궐 산책");
+        course.setContent("<p>두 궁궐을 차례로 걷는 코스입니다.</p>");
+        course.setStops(List.of(stop(21L, 1, "경복궁"), stop(22L, 2, "창덕궁")));
+        when(courseService.getCourseDetail(eq(100L), eq(null), any())).thenReturn(course);
+        ExtendedModelMap model = new ExtendedModelMap();
+        model.addAttribute("seoSiteBaseUrl", "https://travel.example");
+        CourseController controller = new CourseController(courseService, countryCategoryService);
+
+        controller.courseDetail(100L, null, model);
+
+        JsonNode trip = new ObjectMapper().readTree((String) model.get("seoJsonLd"))
+                .path("@graph").get(0);
+        assertThat(trip.path("@type").asText()).isEqualTo("TouristTrip");
+        JsonNode items = trip.path("itinerary").path("itemListElement");
+        assertThat(items).hasSize(2);
+        assertThat(items.get(0).path("position").asInt()).isEqualTo(1);
+        assertThat(items.get(0).path("item").path("name").asText()).isEqualTo("경복궁");
+        assertThat(items.get(0).path("item").path("url").asText())
+                .isEqualTo("https://travel.example/destinations/21");
+        assertThat(trip.path("url").asText())
+                .isEqualTo("https://travel.example/course/100");
+        assertThat(trip.has("datePublished")).isFalse();
+    }
+
     private CountryCategory country(Long id, String name, Long parentId) {
         CountryCategory country = new CountryCategory();
         country.setId(id);
         country.setRegionName(name);
         country.setParentId(parentId);
         return country;
+    }
+
+    private CourseStopDto stop(Long destinationId, int visitOrder, String name) {
+        CourseStopDto stop = new CourseStopDto();
+        stop.setDestinationId(destinationId);
+        stop.setVisitOrder(visitOrder);
+        stop.setName(name);
+        return stop;
     }
 }

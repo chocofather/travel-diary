@@ -1,5 +1,7 @@
 package com.example.travlediary.controller.travelinfo;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.example.travlediary.config.CustomLoginSuccessHandler;
 import com.example.travlediary.config.CustomLogoutSuccessHandler;
 import com.example.travlediary.config.SecurityConfig;
@@ -915,6 +917,74 @@ class TravelInfoControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(model().attribute("listUrl", "/travel-info?page=2"))
                 .andExpect(model().attribute("seoCanonicalPath", "/travel-info/10"));
+    }
+
+    @Test
+    void generalDetailRendersScriptSafeArticleAndBreadcrumbJsonLd() throws Exception {
+        TravelInfoDetailDto detail = detail(TravelInfoContentType.GENERAL);
+        detail.setTitle("제주 </script><script>alert(1)</script> 여행 안내");
+        detail.setContent("<p>바다 &amp; 산책 코스</p>");
+        when(travelInfoService.getPublicDetail(10L)).thenReturn(detail);
+        when(travelInfoService.getThumbnailUrl(10L))
+                .thenReturn("/uploads/travel-info/jeju.webp");
+
+        mockMvc.perform(get("/travel-info/10").param("returnUrl", "/travel-info?page=2"))
+                .andExpect(status().isOk())
+                .andExpect(result -> {
+                    var document = Jsoup.parse(result.getResponse().getContentAsString());
+                    var script = document.selectFirst("script[type=application/ld+json]");
+                    assertThat(script).isNotNull();
+                    String json = script.data();
+                    assertThat(json).doesNotContain("</script>");
+
+                    JsonNode graph = new ObjectMapper().readTree(json).path("@graph");
+                    JsonNode article = graph.get(0);
+                    assertThat(article.path("@type").asText()).isEqualTo("Article");
+                    assertThat(article.path("headline").asText())
+                            .isEqualTo("제주 </script><script>alert(1)</script> 여행 안내");
+                    assertThat(article.path("description").asText())
+                            .isEqualTo("바다 & 산책 코스");
+                    assertThat(article.path("url").asText())
+                            .isEqualTo(document.selectFirst("link[rel=canonical]").attr("href"));
+                    assertThat(article.path("image").asText())
+                            .isEqualTo("http://localhost/uploads/travel-info/jeju.webp");
+                    assertThat(article.path("datePublished").asText()).isNotBlank();
+                    assertThat(article.path("dateModified").asText()).isNotBlank();
+                    assertThat(article.has("author")).isFalse();
+                    assertThat(graph.get(1).path("@type").asText())
+                            .isEqualTo("BreadcrumbList");
+                    assertThat(graph.get(1).path("itemListElement")).hasSize(2);
+                });
+    }
+
+    @Test
+    void festivalDetailRendersEventJsonLdFromStoredPeriodAndLocation() throws Exception {
+        TravelInfoDetailDto detail = detail(TravelInfoContentType.FESTIVAL);
+        detail.setTitle("경복궁 별빛야행");
+        detail.setPeriods(List.of(new TravelInfoPeriodDto(
+                LocalDate.of(2026, 9, 1), LocalDate.of(2026, 10, 12))));
+        when(festivalDetailService.getPublicDetail(10L)).thenReturn(
+                new FestivalDetailDto(detail, festivalInfo(), mainImage("KOGL_TYPE_1")));
+
+        mockMvc.perform(get("/festivals/10"))
+                .andExpect(status().isOk())
+                .andExpect(result -> {
+                    var document = Jsoup.parse(result.getResponse().getContentAsString());
+                    JsonNode event = new ObjectMapper().readTree(
+                            document.selectFirst("script[type=application/ld+json]").data())
+                            .path("@graph").get(0);
+                    assertThat(event.path("@type").asText()).isEqualTo("Event");
+                    assertThat(event.path("name").asText()).isEqualTo("경복궁 별빛야행");
+                    assertThat(event.path("startDate").asText()).isEqualTo("2026-09-01");
+                    assertThat(event.path("endDate").asText()).isEqualTo("2026-10-12");
+                    assertThat(event.path("location").path("name").asText())
+                            .isEqualTo("경복궁");
+                    assertThat(event.path("location").path("address")
+                            .path("streetAddress").asText())
+                            .isEqualTo("서울특별시 종로구 사직로 161");
+                    assertThat(event.path("url").asText())
+                            .isEqualTo(document.selectFirst("link[rel=canonical]").attr("href"));
+                });
     }
 
     @Test

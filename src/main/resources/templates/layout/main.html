@@ -24,6 +24,8 @@
     <meta property="og:image" th:if="${seoImage != null and !#strings.isEmpty(seoImage)}"
           th:content="${#strings.startsWith(seoImage, 'http://') or #strings.startsWith(seoImage, 'https://')
                        ? seoImage : seoSiteBaseUrl + seoImage}" />
+    <script th:if="${seoJsonLd != null}" type="application/ld+json"
+            th:utext="${seoJsonLd}"></script>
 
     <!-- 공통 CSS -->
     <link rel="stylesheet" href="/css/style.css" />

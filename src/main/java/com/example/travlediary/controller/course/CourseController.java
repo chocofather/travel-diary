@@ -8,6 +8,7 @@ import com.example.travlediary.dto.CourseStopDto;
 import com.example.travlediary.model.CountryCategory;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.seo.SeoModel;
+import com.example.travlediary.seo.SeoStructuredData;
 import com.example.travlediary.service.category.CountryCategoryService;
 import com.example.travlediary.service.course.CourseService;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +43,14 @@ public class CourseController {
                 .orElse(null);
         SeoModel.apply(model, course.getTitle() + " | Travel Diary", course.getContent(),
                 "/course/" + id, seoImage, "article");
+        List<SeoStructuredData.ItineraryStop> itinerary = course.getStops() == null
+                ? List.of()
+                : course.getStops().stream()
+                .map(stop -> new SeoStructuredData.ItineraryStop(
+                        stop.getName(), stop.getDestinationId()))
+                .toList();
+        SeoStructuredData.touristTrip(model, "/course/" + id,
+                course.getTitle(), course.getContent(), seoImage, itinerary);
         return "course/detail";
     }
 
