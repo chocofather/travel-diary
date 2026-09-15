@@ -49,6 +49,8 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
     /** 일기 본문에 필요한 서식만 허용한다. (붙여넣기도 이 범위로 걸러진다) */
     const FORMATS = ['bold', 'italic', 'underline', 'font', 'size', 'color', 'background', 'align'];
+    /** Enter 뒤의 새 커서에도 이어져야 하는 Quill inline format. */
+    const INLINE_FORMATS = ['font', 'size', 'bold', 'italic', 'underline', 'color', 'background'];
     /** 이모지 목록은 diary-emoji-data.js 가 제공한다. */
     const EMOJI_CATEGORIES = window.DIARY_EMOJI_CATEGORIES || [];
     /** 최근 사용 이모지는 이 브라우저에만 남긴다. (서버 저장 없음) */
@@ -59,6 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const Font = Quill.import('formats/font');
     Font.whitelist = FONT_VALUES;
     Quill.register(Font, true);
+    const Delta = Quill.import('delta');
 
     const pages = editorElements.map(createPage);
     let activePage = null;
@@ -86,11 +89,105 @@ document.addEventListener('DOMContentLoaded', () => {
     setupSaveBeforeLeaving();
     setupEditDone();
 
+    /**
+     * Quill 2의 기본 clipboard 파서는 하이픈이 든 ql-font-* 클래스 이름을 잘못 나눠
+     * 초기 HTML의 custom font를 놓친다. 서버가 허용한 현재 글꼴 클래스만 Delta에 복원한다.
+     */
+    function restoreDiaryFontFormat(node, delta) {
+        const font = FONT_VALUES.find(value => node.classList.contains(`ql-font-${value}`));
+        if (!font) return delta;
+        return delta.compose(new Delta().retain(delta.length(), {font}));
+    }
+
+    /**
+     * Quill 2의 기본 Enter는 block format만 새 줄에 옮기고 빈 커서의 inline format은 비운다.
+     * 기본 줄바꿈은 그대로 실행시킨 뒤, 그 직전에 실제로 활성화되어 있던 값 중 Quill이
+     * 승계하지 못한 것만 새 collapsed selection에 되돌린다.
+     */
+    function preserveActiveInlineFormatsOnEnter(range) {
+        const quill = this.quill;
+        const beforeFormats = quill.getFormat(range);
+        const trailingInlineRuns = captureTrailingInlineRuns(quill, range);
+        const activeFormats = Object.fromEntries(INLINE_FORMATS
+            .filter(name => beforeFormats[name] !== undefined
+                && beforeFormats[name] !== false
+                && !Array.isArray(beforeFormats[name]))
+            .map(name => [name, beforeFormats[name]]));
+
+        Promise.resolve().then(() => {
+            const selection = quill.getSelection();
+            if (!selection || selection.length !== 0 || selection.index !== range.index + 1) return;
+
+            restoreTrailingInlineRuns(quill, range.index + 1, trailingInlineRuns);
+            const afterFormats = quill.getFormat(selection);
+            Object.entries(activeFormats).forEach(([name, value]) => {
+                if (afterFormats[name] === value) return;
+                quill.format(name, value, 'silent');
+            });
+        });
+
+        // true를 반환해야 뒤에 등록된 Quill 기본 Enter handler가 줄바꿈을 그대로 처리한다.
+        return true;
+    }
+
+    /**
+     * Quill 2/Parchment는 줄을 나누며 ql-font-park-dahyun처럼 값에 하이픈이 든 class를
+     * 다시 읽을 때 trailing text의 font attribute를 잃는다. 기본 Enter 전에 뒤쪽 텍스트가
+     * 실제로 가진 inline format을 Delta run 단위로 기억한다.
+     */
+    function captureTrailingInlineRuns(quill, range) {
+        const [line, offset] = quill.getLine(range.index);
+        if (!line) return [];
+        const trailingLength = line.length() - offset - 1;
+        if (trailingLength <= 0) return [];
+
+        return quill.getContents(range.index, trailingLength).ops.map(operation => ({
+            length: typeof operation.insert === 'string' ? operation.insert.length : 1,
+            formats: pickExistingInlineFormats(operation.attributes)
+        }));
+    }
+
+    function pickExistingInlineFormats(attributes = {}) {
+        return Object.fromEntries(INLINE_FORMATS
+            .filter(name => attributes[name] !== undefined
+                && attributes[name] !== false
+                && !Array.isArray(attributes[name]))
+            .map(name => [name, attributes[name]]));
+    }
+
+    /** 기본 Enter 뒤 각 trailing run에서 유실된 값만 원래 구간에 복원한다. */
+    function restoreTrailingInlineRuns(quill, startIndex, runs) {
+        let index = startIndex;
+        runs.forEach(run => {
+            if (run.length <= 0) return;
+            const currentFormats = quill.getFormat(index, run.length);
+            Object.entries(run.formats).forEach(([name, value]) => {
+                if (currentFormats[name] === value) return;
+                quill.formatText(index, run.length, name, value, 'user');
+            });
+            index += run.length;
+        });
+    }
+
     function createPage(element) {
         const quill = new Quill(element, {
             placeholder: '이 날의 기록을 남겨보세요.',
             formats: FORMATS,
-            modules: {toolbar: false, history: {userOnly: true}}
+            modules: {
+                toolbar: false,
+                history: {userOnly: true},
+                keyboard: {bindings: {
+                    preserveDiaryInlineFormatsOnEnter: {
+                        key: 'Enter',
+                        collapsed: true,
+                        handler: preserveActiveInlineFormatsOnEnter
+                    }
+                }},
+                // 생성자가 기존 innerHTML을 읽을 때부터 custom font matcher가 있어야 한다.
+                clipboard: {matchers: [
+                    ['span[class*="ql-font-"]', restoreDiaryFontFormat]
+                ]}
+            }
         });
 
         quill.root.setAttribute('aria-label', '페이지 본문');
@@ -213,7 +310,7 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function rejectOverflow(page, previousContents) {
         const root = page.quill.root;
-        if (root.scrollHeight <= root.clientHeight + 1) return false;
+        if (contentFlowHeight(root) <= root.clientHeight + 1) return false;
         // 글자 수가 줄어드는 변경(지우기)은 그대로 둔다
         if (page.quill.getLength() <= previousContents.length()) return false;
 
@@ -224,6 +321,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         showStatus('이 페이지가 가득 찼습니다. 새 페이지를 추가해 주세요.', true);
         return true;
+    }
+
+    /**
+     * 마지막 블록의 끝으로 본문이 차지한 줄 상자 높이를 잰다.
+     * scrollHeight 는 글꼴의 ascender/descender 같은 잉크 영역까지 포함할 수 있어
+     * 같은 line-height 여도 글꼴에 따라 한도 판정이 달라진다.
+     */
+    function contentFlowHeight(root) {
+        const lastBlock = root.lastElementChild;
+        return lastBlock ? lastBlock.offsetTop + lastBlock.offsetHeight : 0;
     }
 
     function scheduleSave(page) {
@@ -241,7 +348,14 @@ document.addEventListener('DOMContentLoaded', () => {
     /** 저장 결과를 boolean 으로 돌려준다. (실패해도 예외를 던지지 않는다) */
     function savePage(page) {
         window.clearTimeout(page.timer);
-        if (page.saving) return page.saving;
+        // 저장 중에 들어온 글/서식은 진행 중인 요청만 기다리고 화면을 떠나면 유실된다.
+        // 현재 요청 뒤에 최신 HTML 저장을 이어 붙여 flush()가 마지막 변경까지 기다리게 한다.
+        if (page.saving) {
+            return page.saving.then(saved => {
+                if (!saved) return false;
+                return savePage(page);
+            });
+        }
         if (!isContentDirty(page)) {
             return Promise.resolve(true);
         }

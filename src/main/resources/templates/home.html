@@ -70,6 +70,20 @@
       <div class="trip-card-list"></div>
     </section>
 
+    <section class="home-service-teaser" aria-labelledby="home-service-teaser-title">
+      <div class="home-service-teaser-inner">
+        <div class="home-service-teaser-copy">
+          <span class="home-service-teaser-label" th:text="#{home.about.eyebrow}">TRAVEL DIARY</span>
+          <h2 id="home-service-teaser-title" th:text="#{home.about.bannerTitle}">여행의 시작부터, 오래 남을 기록까지.</h2>
+          <p th:text="#{home.about.bannerDescription}">여행지를 발견하고, 함께 계획하고, 나만의 여행일기로 남겨보세요.</p>
+        </div>
+        <div class="home-service-teaser-action">
+          <p class="home-service-teaser-flow" aria-label="Discover, plan, record">DISCOVER <span>→</span> PLAN <span>→</span> RECORD</p>
+          <a class="home-service-teaser-link" href="/about" th:text="#{home.about.cta}">Travel Diary 알아보기 →</a>
+        </div>
+      </div>
+    </section>
+
     <!-- 인기 여행지 -->
     <section class="popular-recommend">
       <div class="recommend-header">

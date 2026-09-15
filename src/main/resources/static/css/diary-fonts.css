@@ -205,3 +205,26 @@
 .diary-font-park-dahyun {
     font-family: 'OwnglyphParkDaHyun', "Malgun Gothic", sans-serif;
 }
+
+/*
+ * 박다현체의 한글 실제 글자 면적은 같은 1000 UPM 기준으로 기본 글꼴의 약 89%다.
+ * 글자만 1.12배 보정해 기본 글꼴과 비슷한 시각 크기로 맞추고, 줄 높이는 종이의
+ * --diary-line을 그대로 물려받아 줄노트와 페이지 입력 한도를 바꾸지 않는다.
+ */
+.diary-editor .ql-font-park-dahyun {
+    font-size: 1.12em;
+    line-height: inherit;
+}
+
+/* Quill 글자 크기 서식과 박다현체 보정이 함께 있을 때도 기존 크기 비율을 지킨다. */
+.diary-editor .ql-font-park-dahyun.ql-size-small {
+    font-size: 0.896em;
+}
+
+.diary-editor .ql-font-park-dahyun.ql-size-large {
+    font-size: 1.568em;
+}
+
+.diary-editor .ql-font-park-dahyun.ql-size-huge {
+    font-size: 2.24em;
+}

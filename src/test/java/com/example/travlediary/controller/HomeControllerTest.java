@@ -75,6 +75,14 @@ class HomeControllerTest {
                 .andExpect(result -> {
                     var document = Jsoup.parse(result.getResponse().getContentAsString());
                     assertThat(document.select("#event-slider #slide-area")).hasSize(1);
+                    assertThat(document.select(".home-service-teaser")).hasSize(1);
+                    assertThat(document.select(".home-service-teaser a[href='/about']")).hasSize(1);
+                    assertThat(document.selectFirst("#event-slider").nextElementSibling())
+                            .matches(element -> element.hasClass("seasonal-recommend"));
+                    assertThat(document.selectFirst(".seasonal-recommend").nextElementSibling())
+                            .matches(element -> element.hasClass("home-service-teaser"));
+                    assertThat(document.selectFirst(".home-service-teaser").nextElementSibling())
+                            .matches(element -> element.hasClass("popular-recommend"));
                     assertThat(document.select(".seasonal-recommend")).hasSize(1);
                     assertThat(document.select(".popular-recommend")).hasSize(1);
                     assertThat(document.select("a.popular-course-card[href='/course/12']")).hasSize(1);
@@ -181,6 +189,31 @@ class HomeControllerTest {
                     assertThat(document.selectFirst("meta[property=og:url]").attr("content"))
                             .isEqualTo("http://localhost/");
                     assertThat(document.select(".home-page > h1")).hasSize(1);
+                });
+    }
+
+    @Test
+    void guestAboutIsPublicAndRendersIndexedSeoMetadata() throws Exception {
+        mockMvc.perform(get("/about"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("about"))
+                .andExpect(result -> {
+                    var document = Jsoup.parse(result.getResponse().getContentAsString());
+                    assertThat(document.title()).isEqualTo("Travel Diary 소개 | Travel Diary");
+                    assertThat(document.selectFirst("meta[name=description]").attr("content"))
+                            .contains("여행지", "여행 계획", "여행 기록");
+                    assertThat(document.selectFirst("link[rel=canonical]").attr("href"))
+                            .isEqualTo("http://localhost/about");
+                    assertThat(document.selectFirst("meta[name=robots]").attr("content"))
+                            .isEqualTo("index, follow");
+                    assertThat(document.selectFirst("meta[property=og:url]").attr("content"))
+                            .isEqualTo("http://localhost/about");
+                    assertThat(document.select("main .about-page h1")).hasSize(1);
+                    assertThat(document.select(".about-guide-step")).hasSize(5);
+                    assertThat(document.select(".about-guide-step a").eachAttr("href"))
+                            .containsExactly(
+                                    "/destinations", "/travel-info", "/board/list?boardType=course",
+                                    "/travel-plans", "/diaries/demo");
                 });
     }
 

@@ -14,7 +14,7 @@ import java.util.List;
 public class SitemapService {
 
     private static final List<String> STATIC_PATHS = List.of(
-            "/", "/destinations", "/travel-info",
+            "/", "/about", "/destinations", "/travel-info",
             "/travel-info?contentType=FESTIVAL", "/events", "/board/list");
 
     private final SitemapMapper sitemapMapper;

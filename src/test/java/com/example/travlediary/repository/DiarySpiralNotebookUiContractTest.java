@@ -215,7 +215,7 @@ class DiarySpiralNotebookUiContractTest {
                 .contains("aspect-ratio: 41 / 38;")
                 .contains("container-type: inline-size;")
                 .contains("--diary-page-unit: max(0.87px, 100cqw / 576);")
-                .contains("padding: 5.2% 5.2% 6.95%;");
+                .contains("padding: 5.2% 5.2% 3.5%;");
         // 자유배치 층도 예전처럼 종이 전체를 덮는다
         assertThat(rule(css, ".diary-canvas")).contains("inset: 0;");
         // 스프링이라고 해서 종이 안쪽 여백이나 칸 나눔을 새로 정하지 않는다

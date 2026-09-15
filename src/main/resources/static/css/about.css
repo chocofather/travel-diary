@@ -1,0 +1,516 @@
+.about-page {
+    color: #20252b;
+    background: #fff;
+}
+
+.about-page *,
+.about-page *::before,
+.about-page *::after {
+    box-sizing: border-box;
+}
+
+.about-content {
+    width: min(1120px, calc(100% - 40px));
+    margin: 0 auto;
+}
+
+.about-hero {
+    padding: 104px 0 112px;
+    background: #f8f8f7;
+}
+
+.about-hero .about-content {
+    max-width: 820px;
+    margin-left: max(20px, calc((100% - 1120px) / 2));
+}
+
+.about-eyebrow,
+.about-section-heading > span {
+    display: block;
+    color: #6b7280;
+    font-size: 12px;
+    font-weight: 750;
+    letter-spacing: 0.12em;
+}
+
+.about-hero h1 {
+    max-width: 760px;
+    margin: 18px 0 20px;
+    font-size: clamp(36px, 5vw, 58px);
+    font-weight: 750;
+    letter-spacing: -0.055em;
+    line-height: 1.18;
+}
+
+.about-hero p {
+    max-width: 620px;
+    margin: 0;
+    color: #59616c;
+    font-size: 18px;
+    line-height: 1.75;
+    word-break: keep-all;
+}
+
+.about-guide {
+    padding: 108px 0 0;
+}
+
+.about-section-heading {
+    max-width: 620px;
+    margin-bottom: 48px;
+}
+
+.about-section-heading h2,
+.about-final h2 {
+    margin: 15px 0 12px;
+    font-size: clamp(28px, 3.5vw, 40px);
+    font-weight: 750;
+    letter-spacing: -0.045em;
+    line-height: 1.28;
+}
+
+.about-section-heading p,
+.about-final p {
+    margin: 0;
+    color: #68717d;
+    font-size: 16px;
+    line-height: 1.7;
+    word-break: keep-all;
+}
+
+.about-guide-steps {
+    margin: 0 -20px;
+}
+
+.about-guide-step {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: center;
+    gap: clamp(48px, 9vw, 132px);
+    min-height: 410px;
+    padding: 70px max(20px, calc((100vw - 1120px) / 2));
+    background: #fff;
+}
+
+.about-guide-step:nth-child(even) {
+    direction: rtl;
+    background: #f7f8f9;
+}
+
+.about-guide-step:nth-child(even) > * {
+    direction: ltr;
+}
+
+.about-guide-step--diary {
+    background: #f2f3f4;
+}
+
+.about-step-content {
+    max-width: 430px;
+}
+
+.about-step-content h3 {
+    margin: 0 0 12px;
+    color: #20252b;
+    font-size: clamp(25px, 3vw, 34px);
+    font-weight: 730;
+    letter-spacing: -0.045em;
+    line-height: 1.28;
+}
+
+.about-step-content p {
+    margin: 0;
+    color: #68717d;
+    font-size: 16px;
+    line-height: 1.72;
+    word-break: keep-all;
+}
+
+.about-step-content a {
+    display: inline-block;
+    margin-top: 24px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #20252b;
+    color: #20252b;
+    font-size: 14px;
+    font-weight: 750;
+    text-decoration: none;
+}
+
+.about-step-content a:hover {
+    color: #6a727c;
+}
+
+.about-step-content a:focus-visible {
+    outline: 3px solid rgba(0, 102, 204, 0.28);
+    outline-offset: 4px;
+}
+
+.about-step-visual {
+    position: relative;
+    min-height: 260px;
+    overflow: hidden;
+    border-radius: 2px;
+    background: #eceff1;
+}
+
+.about-step-number {
+    position: absolute;
+    z-index: 2;
+    top: 24px;
+    left: 26px;
+    color: #20252b;
+    font-size: 42px;
+    font-weight: 780;
+    letter-spacing: -0.08em;
+    line-height: 1;
+}
+
+.about-step-visual::before,
+.about-step-visual::after {
+    position: absolute;
+    content: "";
+}
+
+.about-guide-step--destination .about-step-visual {
+    background: linear-gradient(145deg, #e8edf0 0%, #f9faf9 100%);
+}
+
+.about-guide-step--destination .about-step-visual::before {
+    right: -24px;
+    bottom: -57px;
+    width: 250px;
+    height: 194px;
+    border-radius: 52% 52% 0 0;
+    background: #b7c4ca;
+    transform: rotate(-10deg);
+}
+
+.about-guide-step--destination .about-step-visual::after {
+    right: 18px;
+    bottom: -45px;
+    width: 170px;
+    height: 164px;
+    border-radius: 52% 52% 0 0;
+    background: #778e98;
+    transform: rotate(11deg);
+}
+
+.about-visual-marker {
+    position: absolute;
+    z-index: 3;
+    width: 20px;
+    height: 20px;
+    border: 5px solid #20252b;
+    border-radius: 50% 50% 50% 0;
+    background: #fff;
+    transform: rotate(-45deg);
+}
+
+.about-visual-marker--one {
+    top: 95px;
+    left: 43%;
+}
+
+.about-visual-marker--two {
+    right: 17%;
+    bottom: 76px;
+}
+
+.about-visual-route {
+    position: absolute;
+    z-index: 2;
+    top: 120px;
+    left: 38%;
+    width: 45%;
+    height: 75px;
+    border: 2px dashed #687780;
+    border-width: 0 0 2px 2px;
+    border-radius: 0 0 0 58px;
+    transform: rotate(-12deg);
+}
+
+.about-guide-step--info .about-step-visual {
+    background: #e9ecee;
+}
+
+.about-visual-calendar {
+    position: absolute;
+    right: 16%;
+    bottom: 34px;
+    width: 57%;
+    height: 176px;
+    border: 1px solid #c6cdd2;
+    border-radius: 4px;
+    background: #fff;
+    box-shadow: 14px 15px 0 #d6dce0;
+}
+
+.about-visual-calendar::before {
+    position: absolute;
+    top: 23px;
+    left: 22px;
+    width: calc(100% - 44px);
+    height: 1px;
+    background: #dfe3e5;
+    content: "";
+}
+
+.about-visual-calendar-line {
+    position: absolute;
+    z-index: 2;
+    left: 34%;
+    width: 43%;
+    height: 8px;
+    border-radius: 999px;
+    background: #aab5bc;
+}
+
+.about-visual-calendar-line--one {
+    top: 91px;
+}
+
+.about-visual-calendar-line--two {
+    top: 119px;
+    width: 31%;
+}
+
+.about-visual-calendar-dot {
+    position: absolute;
+    z-index: 3;
+    top: 78px;
+    left: 23%;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #20252b;
+}
+
+.about-guide-step--course .about-step-visual {
+    background: linear-gradient(135deg, #f9f9f8 0%, #e8ecee 100%);
+}
+
+.about-visual-stop {
+    position: absolute;
+    z-index: 3;
+    width: 25px;
+    height: 25px;
+    border: 7px solid #fff;
+    border-radius: 50%;
+    background: #20252b;
+    box-shadow: 0 0 0 1px #20252b;
+}
+
+.about-visual-stop--one {
+    top: 87px;
+    left: 23%;
+}
+
+.about-visual-stop--two {
+    top: 143px;
+    left: 49%;
+}
+
+.about-visual-stop--three {
+    right: 19%;
+    bottom: 54px;
+}
+
+.about-visual-route--course {
+    top: 87px;
+    left: 29%;
+    width: 52%;
+    height: 108px;
+    border-color: #20252b;
+    border-radius: 0 0 80px 0;
+    transform: rotate(11deg);
+}
+
+.about-guide-step--plan .about-step-visual {
+    background: #e9edef;
+}
+
+.about-visual-schedule {
+    position: absolute;
+    right: 14%;
+    bottom: 34px;
+    width: 64%;
+    height: 133px;
+    border: 1px solid #c9d0d4;
+    border-radius: 4px;
+    background: repeating-linear-gradient(to bottom, #fff 0 31px, #e2e6e8 32px 33px);
+}
+
+.about-visual-avatar {
+    position: absolute;
+    z-index: 3;
+    top: 56px;
+    width: 42px;
+    height: 42px;
+    border: 3px solid #fff;
+    border-radius: 50%;
+    background: #65727a;
+}
+
+.about-visual-avatar--one {
+    right: 30%;
+}
+
+.about-visual-avatar--two {
+    right: 22%;
+    background: #20252b;
+}
+
+.about-visual-avatar--three {
+    right: 14%;
+    background: #a4adb2;
+}
+
+.about-guide-step--diary .about-step-visual {
+    background: #e3e6e7;
+}
+
+.about-visual-notebook {
+    position: absolute;
+    right: 17%;
+    bottom: 25px;
+    width: 58%;
+    height: 194px;
+    border: 1px solid #b7c0c5;
+    border-radius: 4px;
+    background: repeating-linear-gradient(to bottom, #fff 0 27px, #e4e7e9 28px 29px);
+    box-shadow: 13px 14px 0 #c4cbcf;
+    transform: rotate(3deg);
+}
+
+.about-visual-notebook::before {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 1px;
+    height: 100%;
+    background: #d6dbde;
+    content: "";
+}
+
+.about-visual-tape {
+    position: absolute;
+    z-index: 2;
+    top: 55px;
+    right: 31%;
+    width: 38%;
+    height: 27px;
+    background: rgba(91, 108, 116, 0.48);
+    transform: rotate(-7deg);
+}
+
+.about-visual-sticker {
+    position: absolute;
+    z-index: 3;
+    display: grid;
+    width: 43px;
+    height: 43px;
+    place-items: center;
+    border-radius: 50%;
+    background: #20252b;
+    color: #fff;
+    font-size: 22px;
+    font-weight: 700;
+}
+
+.about-visual-sticker--one {
+    right: 28%;
+    bottom: 61px;
+}
+
+.about-visual-sticker--two {
+    right: 55%;
+    bottom: 48px;
+    background: #89979f;
+    font-size: 15px;
+}
+
+.about-final {
+    padding: 88px 0 96px;
+    background: #20252b;
+    color: #fff;
+}
+
+.about-final .about-content {
+    text-align: center;
+}
+
+.about-final h2 {
+    margin-top: 0;
+}
+
+.about-final p {
+    color: #cbd0d6;
+}
+
+.about-final-link {
+    display: inline-flex;
+    margin-top: 30px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid currentColor;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.about-final-link:hover {
+    color: #d9dde2;
+}
+
+.about-final-link:focus-visible {
+    outline: 3px solid rgba(255, 255, 255, 0.72);
+    outline-offset: 5px;
+}
+
+@media (max-width: 680px) {
+    .about-content {
+        width: min(100% - 32px, 1120px);
+    }
+
+    .about-hero {
+        padding: 78px 0 84px;
+    }
+
+    .about-hero .about-content {
+        margin: 0 auto;
+    }
+
+    .about-hero p {
+        font-size: 16px;
+    }
+
+    .about-guide {
+        padding: 76px 0 0;
+    }
+
+    .about-section-heading {
+        margin-bottom: 34px;
+    }
+
+    .about-guide-steps {
+        margin: 0 -16px;
+    }
+
+    .about-guide-step,
+    .about-guide-step:nth-child(even) {
+        grid-template-columns: 1fr;
+        gap: 30px;
+        min-height: 0;
+        padding: 52px 16px;
+        direction: ltr;
+    }
+
+    .about-step-visual {
+        min-height: 222px;
+    }
+
+    .about-final {
+        padding: 72px 0 76px;
+    }
+}

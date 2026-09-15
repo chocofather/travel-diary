@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -235,6 +236,28 @@ class DiaryPageServiceImplTest {
         assertThat(saved).doesNotContain("onclick");
         // 글자는 지워지지 않는다
         assertThat(saved).contains("박다현체").contains("임의 클래스");
+    }
+
+    @Test
+    void savedParkDahyunFontIsReturnedWithTheReloadedPage() {
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        AtomicReference<String> storedContent = new AtomicReference<>();
+        when(diaryPageMapper.findByIdAndDiaryId(3L, 10L)).thenAnswer(invocation -> {
+            DiaryPage stored = page();
+            stored.setContent(storedContent.get());
+            return stored;
+        });
+        when(diaryPageMapper.updateContent(eq(3L), eq(10L), any())).thenAnswer(invocation -> {
+            storedContent.set(invocation.getArgument(2, String.class));
+            return 1;
+        });
+
+        DiaryPage reloaded = diaryPageService.updateContent(10L, 3L, 7L,
+                "<p><span class=\"ql-font-park-dahyun\"><strong>박다현체 기록</strong></span></p>");
+
+        assertThat(reloaded.getContent())
+                .contains("ql-font-park-dahyun")
+                .contains("<strong>박다현체 기록</strong>");
     }
 
     @Test

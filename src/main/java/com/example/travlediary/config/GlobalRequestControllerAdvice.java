@@ -66,6 +66,9 @@ public class GlobalRequestControllerAdvice {
         if ("/".equals(path)) {
             return new SeoDefaults("seo.home.title", "seo.home.description");
         }
+        if ("/about".equals(path)) {
+            return new SeoDefaults("seo.about.title", "seo.about.description");
+        }
         if ("/destinations".equals(path)) {
             return new SeoDefaults("seo.destinations.title", "seo.destinations.description");
         }

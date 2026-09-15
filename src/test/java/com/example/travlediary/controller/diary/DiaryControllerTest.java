@@ -3337,7 +3337,8 @@ class DiaryControllerTest {
         when(userDetails.getId()).thenReturn(7L);
         when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
         DiaryPage first = page(1, "2026-08-01");
-        first.setContent("<p><span style=\"background-color: #fff5a5;\">형광펜 문장</span></p>");
+        first.setContent("<p><span class=\"ql-font-park-dahyun\" "
+                + "style=\"background-color: #fff5a5;\">박다현체 형광펜 문장</span></p>");
         when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(first));
 
         String editBody = mockMvc.perform(get("/diaries/10").param("edit", "true")
@@ -3349,6 +3350,8 @@ class DiaryControllerTest {
         assertThat(editBody).contains("형광펜");
         assertThat(editBody).contains("diary-highlight-trigger");
         assertThat(editBody).contains("diary-highlight-palette");
+        // 저장된 Quill 글꼴 클래스가 수정 모드의 초기 HTML에도 그대로 실린다
+        assertThat(editBody).contains("ql-font-park-dahyun").contains("박다현체 형광펜 문장");
 
         String readBody = mockMvc.perform(get("/diaries/10")
                         .with(authentication(new UsernamePasswordAuthenticationToken(
@@ -3357,7 +3360,10 @@ class DiaryControllerTest {
                 .andReturn().getResponse().getContentAsString();
 
         // 읽기 모드는 편집 도구만 감추고 형광펜 자국은 그대로 보여준다
-        assertThat(readBody).contains("background-color: #fff5a5").contains("형광펜 문장");
+        assertThat(readBody)
+                .contains("background-color: #fff5a5")
+                .contains("ql-font-park-dahyun")
+                .contains("박다현체 형광펜 문장");
         assertThat(readBody).doesNotContain("diary-highlight-trigger");
     }
 

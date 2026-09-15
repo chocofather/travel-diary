@@ -2759,8 +2759,9 @@
       컨테이너를 재기 때문에 값이 완전히 달라진다.
     */
     --diary-line: 4.75cqw;
-    --diary-lines: 16;
-    padding: 5.2% 5.2% 6.95%;
+    --diary-lines: 18;
+    /* 본문 폭/윗자리는 그대로 두고 페이지 번호 아래 여백만 줄인다. */
+    padding: 5.2% 5.2% 3.5%;
     background: var(--diary-paper-texture), var(--diary-paper-color);
 }
 
@@ -3388,16 +3389,33 @@
 }
 
 /* 툴바에서 쓰는 글꼴은 diary-fonts.css 에서 정의한다 (다이어리 화면에서만 불러온다) */
+/* 글꼴의 ascent/descent가 다르더라도 inline baseline이 문단 높이를 키우지 않게
+   줄 상자의 위를 공통 기준점으로 쓴다. diary-fonts.css의 현재 지원 글꼴 모두에 적용된다. */
+.diary-editor [class*="ql-font-"] {
+    vertical-align: top;
+}
+
 .diary-editor .ql-size-small {
     font-size: 0.8em;
+    /* 크기는 달라도 줄 상자는 줄노트의 공통 간격을 그대로 쓴다.
+       relative 이동은 글자만 옮기므로 줄 수와 입력 한도에는 영향을 주지 않는다. */
+    line-height: inherit;
+    position: relative;
+    vertical-align: top;
+    top: 0.13em;
 }
 
 .diary-editor .ql-size-large {
     font-size: 1.4em;
+    line-height: inherit;
+    position: relative;
+    vertical-align: top;
+    top: -0.10em;
 }
 
 .diary-editor .ql-size-huge {
     font-size: 2em;
+    line-height: inherit;
 }
 
 .diary-editor .ql-align-center {
@@ -5780,8 +5798,10 @@
 
 .diary-sheet-number {
     margin: 0;
+    flex: 0 0 auto;
     color: #a89a83;
     font-size: calc(12 * var(--diary-page-unit));
+    line-height: 1;
     text-align: center;
 }
 

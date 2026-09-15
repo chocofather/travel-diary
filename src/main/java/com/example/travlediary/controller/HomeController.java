@@ -37,6 +37,11 @@ public class HomeController {
         return "home";
     }
 
+    @GetMapping("/about")
+    public String about() {
+        return "about";
+    }
+
     private CustomUserDetails authenticatedUser(Authentication auth) {
         if (auth == null || !auth.isAuthenticated()
                 || !(auth.getPrincipal() instanceof CustomUserDetails userDetails)) {

@@ -56,6 +56,134 @@
     text-align: center;
 }
 
+.home-service-teaser {
+    padding: 28px 20px 72px;
+    background: #fff;
+}
+
+.home-service-teaser-inner {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+    align-items: center;
+    gap: 44px;
+    width: min(var(--home-content-width), 100%);
+    min-height: 240px;
+    margin: 0 auto;
+    padding: 38px 44px;
+    overflow: hidden;
+    background: linear-gradient(112deg, #faf9f5 0%, #f6f4ee 54%, #f1f0eb 100%);
+}
+
+.home-service-teaser-inner::before {
+    position: absolute;
+    top: 25px;
+    right: 30px;
+    width: 124px;
+    height: 1px;
+    background: #c8c6be;
+    content: "";
+}
+
+.home-service-teaser-inner::after {
+    position: absolute;
+    right: -78px;
+    bottom: -118px;
+    width: 270px;
+    height: 270px;
+    border: 1px solid rgba(99, 102, 95, 0.18);
+    border-radius: 50%;
+    content: "";
+}
+
+.home-service-teaser-copy {
+    position: relative;
+    z-index: 1;
+}
+
+.home-service-teaser-label {
+    display: block;
+    margin-bottom: 13px;
+    color: #65645f;
+    font-size: 11px;
+    font-weight: 750;
+    letter-spacing: 0.16em;
+}
+
+.home-service-teaser h2 {
+    max-width: 490px;
+    margin: 0 0 12px;
+    color: #20252b;
+    font-size: clamp(25px, 2.5vw, 32px);
+    font-weight: 750;
+    letter-spacing: -0.045em;
+    line-height: 1.35;
+}
+
+.home-service-teaser-copy > p {
+    margin: 0;
+    color: #686966;
+    font-size: 14px;
+    line-height: 1.65;
+}
+
+.home-service-teaser-action {
+    position: relative;
+    z-index: 1;
+    padding-left: 38px;
+}
+
+.home-service-teaser-action::before {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 1px;
+    height: 94px;
+    background: #d7d5ce;
+    content: "";
+    transform: translateY(-50%);
+}
+
+.home-service-teaser-flow {
+    margin: 0 0 24px;
+    color: #30312f;
+    font-size: clamp(19px, 2vw, 27px);
+    font-weight: 760;
+    letter-spacing: -0.055em;
+    line-height: 1.22;
+    white-space: nowrap;
+}
+
+.home-service-teaser-flow span {
+    margin: 0 4px;
+    color: #93948e;
+    font-weight: 500;
+}
+
+.home-service-teaser-link {
+    display: inline-flex;
+    min-height: 38px;
+    padding: 0 15px;
+    align-items: center;
+    border: 1px solid #252624;
+    border-radius: 2px;
+    color: #20252b;
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: background-color 0.18s ease, color 0.18s ease;
+}
+
+.home-service-teaser-link:hover {
+    color: #fff;
+    background: #252624;
+}
+
+.home-service-teaser-link:focus-visible {
+    outline: 3px solid rgba(0, 102, 204, 0.28);
+    outline-offset: 4px;
+}
+
 .season-badge,
 .recommend-badge,
 .home-section-badge {
@@ -468,6 +596,39 @@
     .popular-course-section {
         padding-right: 14px;
         padding-left: 14px;
+    }
+
+    .home-service-teaser {
+        padding: 20px 16px 52px;
+    }
+
+    .home-service-teaser-inner {
+        grid-template-columns: 1fr;
+        gap: 30px;
+        min-height: 0;
+        padding: 32px 26px;
+    }
+
+    .home-service-teaser h2 {
+        font-size: 24px;
+    }
+
+    .home-service-teaser-action {
+        padding-top: 21px;
+        padding-left: 0;
+    }
+
+    .home-service-teaser-action::before {
+        top: 0;
+        width: 58px;
+        height: 1px;
+        transform: none;
+    }
+
+    .home-service-teaser-flow {
+        margin-bottom: 18px;
+        font-size: 20px;
+        white-space: normal;
     }
 
 }

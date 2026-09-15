@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="layout/main :: layout(~{::body}, ~{::headFragment})">
+
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/about.css" />
+</th:block>
+
+<th:block th:fragment="body">
+  <div class="about-page">
+    <section class="about-hero" aria-labelledby="about-title">
+      <div class="about-content">
+        <span class="about-eyebrow" th:text="#{about.hero.eyebrow}">TRAVEL DIARY</span>
+        <h1 id="about-title" th:text="#{about.hero.title}">처음이라면, 이 순서로 여행을 시작하세요</h1>
+        <p th:text="#{about.hero.description}">여행지를 발견하고, 계획을 함께 만들고, 다녀온 순간을 나만의 여행일기로 남기는 Travel Diary의 사용 흐름을 안내합니다.</p>
+      </div>
+    </section>
+
+    <section class="about-guide" aria-labelledby="about-guide-title">
+      <div class="about-content">
+        <div class="about-section-heading">
+          <span th:text="#{about.flow.eyebrow}">YOUR TRAVEL FLOW</span>
+          <h2 id="about-guide-title" th:text="#{about.flow.title}">여행이 이어지는 다섯 단계</h2>
+          <p th:text="#{about.flow.description}">여행을 준비하는 순간부터 기록을 완성하는 순간까지, 필요한 기능을 순서대로 만나보세요.</p>
+        </div>
+        <div class="about-guide-steps">
+          <article class="about-guide-step about-guide-step--destination">
+            <div class="about-step-visual" aria-hidden="true">
+              <span class="about-step-number">01</span>
+              <span class="about-visual-marker about-visual-marker--one"></span>
+              <span class="about-visual-marker about-visual-marker--two"></span>
+              <span class="about-visual-route"></span>
+            </div>
+            <div class="about-step-content">
+              <h3 th:text="#{about.flow.destination.title}">여행지 발견</h3>
+              <p th:text="#{about.flow.destination.description}">국내외 여행지의 소개와 위치, 사진을 살펴보며 가고 싶은 곳을 찾아보세요.</p>
+              <a href="/destinations" th:text="#{about.flow.destination.cta}">여행지 둘러보기 →</a>
+            </div>
+          </article>
+          <article class="about-guide-step about-guide-step--info">
+            <div class="about-step-visual" aria-hidden="true">
+              <span class="about-step-number">02</span>
+              <span class="about-visual-calendar"></span>
+              <span class="about-visual-calendar-line about-visual-calendar-line--one"></span>
+              <span class="about-visual-calendar-line about-visual-calendar-line--two"></span>
+              <span class="about-visual-calendar-dot"></span>
+            </div>
+            <div class="about-step-content">
+              <h3 th:text="#{about.flow.info.title}">여행정보·축제 확인</h3>
+              <p th:text="#{about.flow.info.description}">여행에 도움이 되는 정보와 축제·행사 소식을 확인해 여행의 때를 정해보세요.</p>
+              <a href="/travel-info" th:text="#{about.flow.info.cta}">여행정보·축제 보기 →</a>
+            </div>
+          </article>
+          <article class="about-guide-step about-guide-step--course">
+            <div class="about-step-visual" aria-hidden="true">
+              <span class="about-step-number">03</span>
+              <span class="about-visual-stop about-visual-stop--one"></span>
+              <span class="about-visual-stop about-visual-stop--two"></span>
+              <span class="about-visual-stop about-visual-stop--three"></span>
+              <span class="about-visual-route about-visual-route--course"></span>
+            </div>
+            <div class="about-step-content">
+              <h3 th:text="#{about.flow.course.title}">여행코스 참고</h3>
+              <p th:text="#{about.flow.course.description}">다른 여행자가 만든 공개 여행코스를 참고해 나만의 동선을 그려보세요.</p>
+              <a href="/board/list?boardType=course" th:text="#{about.flow.course.cta}">여행코스 보기 →</a>
+            </div>
+          </article>
+          <article class="about-guide-step about-guide-step--plan">
+            <div class="about-step-visual" aria-hidden="true">
+              <span class="about-step-number">04</span>
+              <span class="about-visual-avatar about-visual-avatar--one"></span>
+              <span class="about-visual-avatar about-visual-avatar--two"></span>
+              <span class="about-visual-avatar about-visual-avatar--three"></span>
+              <span class="about-visual-schedule"></span>
+            </div>
+            <div class="about-step-content">
+              <h3 th:text="#{about.flow.plan.title}">함께 여행 계획</h3>
+              <p th:text="#{about.flow.plan.description}">동행과 여행 계획을 함께 정리하고, 일정을 한곳에서 맞춰보세요.</p>
+              <a href="/travel-plans" th:text="#{about.flow.plan.cta}">함께 계획하기 →</a>
+            </div>
+          </article>
+          <article class="about-guide-step about-guide-step--diary">
+            <div class="about-step-visual" aria-hidden="true">
+              <span class="about-step-number">05</span>
+              <span class="about-visual-notebook"></span>
+              <span class="about-visual-tape"></span>
+              <span class="about-visual-sticker about-visual-sticker--one">✦</span>
+              <span class="about-visual-sticker about-visual-sticker--two">●</span>
+            </div>
+            <div class="about-step-content">
+              <h3 th:text="#{about.flow.diary.title}">나만의 여행일기</h3>
+              <p th:text="#{about.flow.diary.description}">여행이 끝난 뒤 사진과 이야기, 스티커와 마스킹테이프로 나만의 기록을 완성하세요.</p>
+              <a th:href="${isLoggedIn} ? @{/diaries} : @{/diaries/demo}"
+                 href="/diaries/demo" th:text="#{about.flow.diary.cta}">여행기록 시작하기 →</a>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="about-final" aria-labelledby="about-final-title">
+      <div class="about-content">
+        <h2 id="about-final-title" th:text="#{about.final.title}">다음 여행은 어디에서 시작할까요?</h2>
+        <p th:text="#{about.final.description}">새로운 여행지를 둘러보며 여행의 첫 장을 열어보세요.</p>
+        <a class="about-final-link" href="/destinations" th:text="#{about.final.cta}">여행지 둘러보기 →</a>
+      </div>
+    </section>
+  </div>
+</th:block>
+</html>

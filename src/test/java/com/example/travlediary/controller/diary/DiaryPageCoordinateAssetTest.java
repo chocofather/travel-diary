@@ -30,7 +30,7 @@ class DiaryPageCoordinateAssetTest {
         assertThat(sheet).contains("container-type: inline-size;");
         assertThat(sheet).contains("--diary-page-unit:");
         // 종이 자신의 여백은 %(자기 너비 기준)라 어느 화면에서도 같은 비율이다
-        assertThat(sheet).contains("padding: 5.2% 5.2% 6.95%;");
+        assertThat(sheet).contains("padding: 5.2% 5.2% 3.5%;");
     }
 
     /**
@@ -47,7 +47,7 @@ class DiaryPageCoordinateAssetTest {
         String body = bodyTextRule(css);
 
         // 기준값은 종이에 한 번만 적는다
-        assertThat(sheet).contains("--diary-line: 4.75cqw;").contains("--diary-lines: 16;");
+        assertThat(sheet).contains("--diary-line: 4.75cqw;").contains("--diary-lines: 18;");
         // 본문 줄 높이 / 줄 그림 / 글 쓰는 자리 높이가 모두 그 값을 가리킨다
         assertThat(body).contains("line-height: var(--diary-line);");
         assertThat(rule(css, ".diary-sheet-bg-lined .diary-writing-layer"))
@@ -62,6 +62,36 @@ class DiaryPageCoordinateAssetTest {
         */
         assertThat(body).contains("font-size: calc(15 * var(--diary-page-unit));");
         assertThat(sheet).contains("--diary-page-unit: max(0.87px, 100cqw / 576);");
+    }
+
+    /**
+     * Quill의 크기 서식은 글자를 그리는 위치만 조금 보정한다.
+     *
+     * <p>작은/큰 글자의 glyph는 같은 line box 안에서도 실제 잉크의 위아래 여백이 달라
+     * 줄노트 선보다 높거나 낮아 보일 수 있다. line-height를 크기별로 바꾸면 페이지에
+     * 들어가는 행 수까지 달라지므로, 공통 줄 간격은 물려받고 relative 위치만 보정한다.
+     */
+    @Test
+    void sizeFormatsKeepTheCommonLineBoxAndOnlyAdjustTheirPaintPosition() throws IOException {
+        String css = Files.readString(DIARY_CSS);
+        String small = rule(css, ".diary-editor .ql-size-small");
+        String large = rule(css, ".diary-editor .ql-size-large");
+
+        assertThat(small)
+                .contains("font-size: 0.8em;")
+                .contains("line-height: inherit;")
+                .contains("position: relative;")
+                .contains("vertical-align: top;")
+                .contains("top: 0.13em;");
+        assertThat(large)
+                .contains("font-size: 1.4em;")
+                .contains("line-height: inherit;")
+                .contains("position: relative;")
+                .contains("vertical-align: top;")
+                .contains("top: -0.10em;");
+        // 글꼴별 glyph metrics도 line box를 늘리지 않게 현재 지원 글꼴 전체에 같은 기준을 준다.
+        assertThat(rule(css, ".diary-editor [class*=\"ql-font-\"]"))
+                .contains("vertical-align: top;");
     }
 
     /** 본문 글자를 그리는 규칙 한 덩어리. (읽기/편집이 함께 쓴다) */
@@ -151,8 +181,16 @@ class DiaryPageCoordinateAssetTest {
         String guard = js.substring(js.indexOf("function rejectOverflow"));
         guard = guard.substring(0, guard.indexOf("\n    }"));
 
-        // 넘쳤는지는 실제로 그려진 높이로 판단한다
-        assertThat(guard).contains("root.scrollHeight <= root.clientHeight");
+        // 글꼴의 잉크 영역까지 포함하는 scrollHeight 가 아니라 고정 line-height 로 만든
+        // 마지막 글줄 상자의 끝을 본다. 그래야 글꼴 metrics가 입력 한도를 바꾸지 않는다.
+        assertThat(guard).contains("contentFlowHeight(root) <= root.clientHeight")
+                .doesNotContain("root.scrollHeight");
+        String measurement = js.substring(js.indexOf("function contentFlowHeight(root)"));
+        measurement = measurement.substring(0, measurement.indexOf("\n    }"));
+        assertThat(measurement)
+                .contains("lastElementChild")
+                .contains("offsetTop")
+                .contains("offsetHeight");
         // 넘치게 만든 입력만 직전 상태로 되돌린다
         assertThat(guard).contains("setContents(previousContents, 'silent')");
         // 지우는 쪽은 막지 않는다 (이미 넘쳐 있는 글을 정리할 수 있어야 한다)
@@ -191,7 +229,7 @@ class DiaryPageCoordinateAssetTest {
         assertThat(rule(css, ".diary-book-spread"))
                 .contains("grid-template-columns: minmax(0, 1fr) 26px minmax(0, 1fr);");
         // 종이 자신의 여백 값은 두 화면이 나눠 쓰는 한 벌 그대로다
-        assertThat(rule(css, ".diary-sheet")).contains("padding: 5.2% 5.2% 6.95%;");
+        assertThat(rule(css, ".diary-sheet")).contains("padding: 5.2% 5.2% 3.5%;");
     }
 
     /**

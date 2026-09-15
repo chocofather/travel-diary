@@ -166,9 +166,9 @@ class HeaderProfileMenuTest {
         assertThat(document.selectFirst("#site-menu-toggle").attr("data-close-label"))
                 .isEqualTo("關閉主選單");
         assertThat(document.select(".footer-links a").eachText())
-                .containsExactly("使用條款", "隱私權政策", "客服中心");
+                .containsExactly("關於旅行日記", "使用條款", "隱私權政策", "客服中心");
         assertThat(document.select(".footer-links a").eachAttr("href"))
-                .containsExactly("#", "#", "#");
+                .containsExactly("/about", "#", "#", "#");
     }
 
     @Test
