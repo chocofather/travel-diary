@@ -7,6 +7,7 @@ import com.example.travlediary.dto.TravelInfoListItemDto;
 import com.example.travlediary.model.InfoCategory;
 import com.example.travlediary.model.TravelInfoContentType;
 import com.example.travlediary.model.TravelInfoScope;
+import com.example.travlediary.seo.SeoModel;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.category.InfoCategoryService;
 import com.example.travlediary.service.category.ReferenceNameLocalizationService;
@@ -33,6 +34,7 @@ import java.net.URLEncoder;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 @Controller
@@ -143,6 +145,17 @@ public class TravelInfoController {
                         ? "travelInfo.list.title.festival"
                         : "travelInfo.list.title.general",
                 null, LocaleContextHolder.getLocale()));
+        Map<String, Object> canonicalParameters = SeoModel.parameters();
+        canonicalParameters.put("contentType",
+                TravelInfoContentType.FESTIVAL == safeContentType ? "FESTIVAL" : null);
+        canonicalParameters.put("scope",
+                TravelInfoScope.DOMESTIC == safeScope
+                        && TravelInfoContentType.GENERAL == safeContentType ? null : safeScope);
+        canonicalParameters.put("categoryId", safeCategoryIds.stream().sorted().toList());
+        canonicalParameters.put("eventStatus", safeEventStatus);
+        canonicalParameters.put("page", safePage);
+        model.addAttribute("seoCanonicalPath",
+                SeoModel.canonicalPath(LIST_PATH, canonicalParameters));
         return "travel-info/list";
     }
 
@@ -162,6 +175,12 @@ public class TravelInfoController {
         model.addAttribute("listUrl", validateReturnUrl(returnUrl));
         model.addAttribute("pageTitle", pageTitle(
                 "travelInfo.detail.pageTitle.general", travelInfo.getTitle()));
+        SeoModel.apply(model,
+                pageTitle("travelInfo.detail.pageTitle.general", travelInfo.getTitle()),
+                travelInfo.getContent(),
+                "/travel-info/" + id,
+                travelInfoService.getThumbnailUrl(id),
+                "article");
         return "travel-info/detail";
     }
 
@@ -182,6 +201,13 @@ public class TravelInfoController {
         model.addAttribute("listUrl", validateReturnUrl(returnUrl));
         model.addAttribute("pageTitle", pageTitle(
                 "travelInfo.detail.pageTitle.festival", festival.getTravelInfo().getTitle()));
+        SeoModel.apply(model,
+                pageTitle("travelInfo.detail.pageTitle.festival",
+                        festival.getTravelInfo().getTitle()),
+                festival.getTravelInfo().getContent(),
+                "/festivals/" + id,
+                festival.getImageUrl(),
+                "article");
         return "festivals/detail";
     }
 

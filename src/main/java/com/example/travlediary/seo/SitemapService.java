@@ -1,0 +1,35 @@
+package com.example.travlediary.seo;
+
+import com.example.travlediary.model.TravelInfoContentType;
+import com.example.travlediary.repository.seo.SitemapMapper;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+public class SitemapService {
+
+    private static final List<String> STATIC_PATHS = List.of(
+            "/", "/destinations", "/travel-info",
+            "/travel-info?contentType=FESTIVAL", "/events", "/board/list");
+
+    private final SitemapMapper sitemapMapper;
+
+    @Transactional(readOnly = true)
+    public List<String> canonicalPaths() {
+        List<String> paths = new ArrayList<>(STATIC_PATHS);
+        sitemapMapper.findDestinationIds().forEach(id -> paths.add("/destinations/" + id));
+        sitemapMapper.findTravelInfoEntries().forEach(info -> paths.add(
+                TravelInfoContentType.FESTIVAL == info.contentType()
+                        ? "/festivals/" + info.id()
+                        : "/travel-info/" + info.id()));
+        sitemapMapper.findEventIds().forEach(id -> paths.add("/events/" + id));
+        sitemapMapper.findPostIds().forEach(id -> paths.add("/post/" + id));
+        sitemapMapper.findCourseIds().forEach(id -> paths.add("/course/" + id));
+        return List.copyOf(paths);
+    }
+}

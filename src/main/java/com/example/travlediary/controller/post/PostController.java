@@ -1,9 +1,11 @@
 package com.example.travlediary.controller.post;
 
 import com.example.travlediary.dto.PostUpdateRequest;
+import com.example.travlediary.dto.PostDetailDto;
 import com.example.travlediary.model.PostImage;
 import com.example.travlediary.model.UserPost;
 import com.example.travlediary.security.CustomUserDetails;
+import com.example.travlediary.seo.SeoModel;
 import com.example.travlediary.service.file.FileUploadService;
 import com.example.travlediary.service.post.PostService;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +31,15 @@ public class PostController {
                              @AuthenticationPrincipal CustomUserDetails loginUser,
                              Model model) {
         Long currentUserId = loginUser == null ? null : loginUser.getId();
-        model.addAttribute("post", postService.getPostDetail(id, currentUserId));
+        PostDetailDto post = postService.getPostDetail(id, currentUserId);
+        model.addAttribute("post", post);
+        String seoImage = post.getImages() == null ? null : post.getImages().stream()
+                .map(PostImage::getImageUrl)
+                .filter(url -> url != null && !url.isBlank())
+                .findFirst()
+                .orElse(null);
+        SeoModel.apply(model, post.getTitle() + " | Travel Diary", post.getContent(),
+                "/post/" + id, seoImage, "article");
         return "post/detail";
     }
 

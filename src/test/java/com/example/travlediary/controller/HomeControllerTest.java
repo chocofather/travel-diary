@@ -161,6 +161,30 @@ class HomeControllerTest {
     }
 
     @Test
+    void homeRendersCanonicalSeoHeadAndOnePageHeading() throws Exception {
+        when(courseService.getPopularCoursesForHome(SupportedLanguage.KOREAN))
+                .thenReturn(List.of());
+
+        mockMvc.perform(get("/").queryParam("withdrawn", "true"))
+                .andExpect(status().isOk())
+                .andExpect(result -> {
+                    var document = Jsoup.parse(result.getResponse().getContentAsString());
+                    assertThat(document.title()).isEqualTo("Travel Diary | 여행을 발견하고 기록하는 공간");
+                    assertThat(document.selectFirst("meta[name=description]").attr("content"))
+                            .contains("여행지", "여행정보", "여행 기록");
+                    assertThat(document.selectFirst("link[rel=canonical]").attr("href"))
+                            .isEqualTo("http://localhost/");
+                    assertThat(document.selectFirst("meta[name=robots]").attr("content"))
+                            .isEqualTo("index, follow");
+                    assertThat(document.selectFirst("meta[property=og:title]").attr("content"))
+                            .isEqualTo(document.title());
+                    assertThat(document.selectFirst("meta[property=og:url]").attr("content"))
+                            .isEqualTo("http://localhost/");
+                    assertThat(document.select(".home-page > h1")).hasSize(1);
+                });
+    }
+
+    @Test
     void authenticatedHomeLoadsCurrentUserByPrincipalId() throws Exception {
         User user = user(7L, "member");
         when(userMapper.findById(7L)).thenReturn(user);

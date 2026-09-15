@@ -5,6 +5,8 @@ import com.example.travlediary.dto.DestinationDetailDto;
 import com.example.travlediary.dto.DestinationDto;
 import com.example.travlediary.model.CountryCategory;
 import com.example.travlediary.model.Destination;
+import com.example.travlediary.seo.SeoModel;
+import com.example.travlediary.seo.SeoTextUtils;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.category.CountryCategoryService;
 import com.example.travlediary.service.category.ReferenceNameLocalizationService;
@@ -223,7 +225,12 @@ public class DestinationController {
         model.addAttribute("totalPages", totalPages);
         model.addAttribute("totalCount", totalCount);
 
-
+        Map<String, Object> canonicalParameters = SeoModel.parameters();
+        canonicalParameters.put("type", "overseas".equals(type) ? type : null);
+        canonicalParameters.put("region", regionId);
+        canonicalParameters.put("page", page);
+        model.addAttribute("seoCanonicalPath",
+                SeoModel.canonicalPath("/destinations", canonicalParameters));
 
         return "destination/list";
 
@@ -343,6 +350,19 @@ public class DestinationController {
         List<Destination> similarEntities = destinationService.getSimilarDestinations(id, 4);
         List<DestinationDto> similarDtos = destinationService.convertToDtoWithBookmark(similarEntities, userId);
         model.addAttribute("similarDestinations", similarDtos);
+
+        String seoImage = dto.getImages() == null ? null : dto.getImages().stream()
+                .map(image -> image.getImageUrl())
+                .filter(url -> url != null && !url.isBlank())
+                .findFirst()
+                .orElse(null);
+        SeoModel.apply(model,
+                dto.getDestination().getName() + " | Travel Diary",
+                SeoTextUtils.firstNonBlank(dto.getDestination().getShortDescription(),
+                        dto.getDestination().getDescription()),
+                "/destinations/" + id,
+                SeoTextUtils.firstNonBlank(dto.getDestination().getThumbnailPath(), seoImage),
+                "article");
 
         return "destination/detail";
     }

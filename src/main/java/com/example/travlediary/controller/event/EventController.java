@@ -2,6 +2,8 @@ package com.example.travlediary.controller.event;
 
 import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.model.Event;
+import com.example.travlediary.seo.SeoModel;
+import com.example.travlediary.seo.SeoTextUtils;
 import com.example.travlediary.service.event.EventLocalizationService;
 import com.example.travlediary.service.event.EventService;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
+import java.util.Map;
 
 @RequiredArgsConstructor
 @Controller
@@ -61,6 +64,11 @@ public class EventController {
         model.addAttribute("totalCount", totalCount);
         model.addAttribute("pageStart", pageStart);
         model.addAttribute("pageEnd", pageEnd);
+        Map<String, Object> canonicalParameters = SeoModel.parameters();
+        canonicalParameters.put("status", "ongoing".equals(selectedStatus) ? null : selectedStatus);
+        canonicalParameters.put("page", safePage);
+        model.addAttribute("seoCanonicalPath",
+                SeoModel.canonicalPath("/events", canonicalParameters));
         return "event/event-list";
     }
 
@@ -78,6 +86,12 @@ public class EventController {
         Event event = eventLocalizationService.localize(
                 eventService.getEventDetail(id), requestedLanguage());
         model.addAttribute("event", event);
+        SeoModel.apply(model,
+                event.getTitle() + " | Travel Diary",
+                event.getDescription(),
+                "/events/" + id,
+                SeoTextUtils.firstNonBlank(event.getEventImg(), event.getPosterImg()),
+                "article");
         return "event/event-detail"; // templates/event/event-detail.html
     }
 

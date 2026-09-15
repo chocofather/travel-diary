@@ -73,14 +73,14 @@
     <div id="destination-list">
 
         <div class="destination-list-wrapper">
-            <h2 id="page-title">
+            <h1 id="page-title">
                 <span th:if="${selectedCityName != null}"
                       th:text="#{destination.list.title.region(${selectedCityName})}">서울 여행지</span>
                 <span th:if="${selectedCityName == null and type == 'overseas'}"
                       th:text="#{destination.list.title.international}">해외 여행지</span>
                 <span th:if="${selectedCityName == null and type != 'overseas'}"
                       th:text="#{destination.list.title.domestic}">국내 여행지</span>
-            </h2>
+            </h1>
             <!-- 하위 지역(구/군) -->
             <section class="subregion-selector"
                      th:if="${subregions != null and #lists.size(subregions) > 0}">

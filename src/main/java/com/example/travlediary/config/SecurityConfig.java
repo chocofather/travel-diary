@@ -388,6 +388,7 @@ public class SecurityConfig {
                         /* === 비회원도 접근 가능한 공개 영역 === */
                         .requestMatchers(
                                 "/", "/home", "/random-travel", "/locale",
+                                "/robots.txt", "/sitemap.xml",
                                 "/login", "/logout",
                                 "/oauth2/**", "/login/oauth2/**", "/social-signup",
                                 "/social-signup/email-status", "/social-signup/link-existing",

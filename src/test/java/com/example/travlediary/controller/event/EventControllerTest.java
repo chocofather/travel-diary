@@ -74,6 +74,18 @@ class EventControllerTest {
     }
 
     @Test
+    void listCanonicalKeepsStatusAndPageButDropsPageSize() {
+        when(eventService.countEventsByStatus("upcoming")).thenReturn(100L);
+        when(eventService.getEventsByStatus("upcoming", 48L, 48)).thenReturn(List.of());
+        ConcurrentModel model = new ConcurrentModel();
+
+        controller.eventList("upcoming", 2, 48, model);
+
+        assertThat(model.getAttribute("seoCanonicalPath"))
+                .isEqualTo("/events?status=upcoming&page=2");
+    }
+
+    @Test
     void pagingUsesOffsetAndClampsPageToTheLastAvailablePage() {
         Event ongoing = event(1L, "진행 중 이벤트");
         when(eventService.countEventsByStatus("ongoing")).thenReturn(10L);
@@ -103,6 +115,26 @@ class EventControllerTest {
 
         controller.eventList("ongoing", 1, 999, model);
         assertThat(model.getAttribute("pageSize")).isEqualTo(48);
+    }
+
+    @Test
+    void detailUsesEventContentForSeoMetadata() {
+        Event event = event(3L, "가을 여행 이벤트");
+        event.setDescription("<p>단풍 여행자를 위한 특별 혜택입니다.</p>");
+        event.setEventImg("/uploads/events/autumn.webp");
+        when(eventService.getEventDetail(3L)).thenReturn(event);
+        ConcurrentModel model = new ConcurrentModel();
+
+        String view = controller.eventDetail(3L, model);
+
+        assertThat(view).isEqualTo("event/event-detail");
+        assertThat(model.getAttribute("seoTitle"))
+                .isEqualTo("가을 여행 이벤트 | Travel Diary");
+        assertThat(model.getAttribute("seoDescription"))
+                .isEqualTo("단풍 여행자를 위한 특별 혜택입니다.");
+        assertThat(model.getAttribute("seoCanonicalPath")).isEqualTo("/events/3");
+        assertThat(model.getAttribute("seoImage"))
+                .isEqualTo("/uploads/events/autumn.webp");
     }
 
     private Event event(Long id, String title) {

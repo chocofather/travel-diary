@@ -1,4 +1,16 @@
 
+.seo-visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
 /* ─── 레이아웃용 Flexbox 설정 (추가) ─── */
 html, body {
     height: 100%;

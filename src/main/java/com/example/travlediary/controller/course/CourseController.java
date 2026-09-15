@@ -2,9 +2,12 @@ package com.example.travlediary.controller.course;
 
 import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.dto.CourseCreateRequest;
+import com.example.travlediary.dto.CourseDetailDto;
 import com.example.travlediary.dto.CourseUpdateRequest;
+import com.example.travlediary.dto.CourseStopDto;
 import com.example.travlediary.model.CountryCategory;
 import com.example.travlediary.security.CustomUserDetails;
+import com.example.travlediary.seo.SeoModel;
 import com.example.travlediary.service.category.CountryCategoryService;
 import com.example.travlediary.service.course.CourseService;
 import lombok.RequiredArgsConstructor;
@@ -29,8 +32,16 @@ public class CourseController {
                                @AuthenticationPrincipal CustomUserDetails principal,
                                Model model) {
         Long currentUserId = principal == null ? null : principal.getId();
-        model.addAttribute("course",
-                courseService.getCourseDetail(id, currentUserId, requestedLanguage()));
+        CourseDetailDto course = courseService.getCourseDetail(
+                id, currentUserId, requestedLanguage());
+        model.addAttribute("course", course);
+        String seoImage = course.getStops() == null ? null : course.getStops().stream()
+                .map(CourseStopDto::getImageUrl)
+                .filter(url -> url != null && !url.isBlank())
+                .findFirst()
+                .orElse(null);
+        SeoModel.apply(model, course.getTitle() + " | Travel Diary", course.getContent(),
+                "/course/" + id, seoImage, "article");
         return "course/detail";
     }
 

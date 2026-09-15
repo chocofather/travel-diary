@@ -913,7 +913,8 @@ class TravelInfoControllerTest {
         mockMvc.perform(get("/travel-info/10")
                         .param("returnUrl", "/travel-info?sort=latest&page=2"))
                 .andExpect(status().isOk())
-                .andExpect(model().attribute("listUrl", "/travel-info?page=2"));
+                .andExpect(model().attribute("listUrl", "/travel-info?page=2"))
+                .andExpect(model().attribute("seoCanonicalPath", "/travel-info/10"));
     }
 
     @Test

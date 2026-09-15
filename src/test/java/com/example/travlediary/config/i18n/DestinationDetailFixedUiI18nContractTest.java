@@ -29,12 +29,13 @@ class DestinationDetailFixedUiI18nContractTest {
     void sectionHeadingsAndTypeInformationLabelsUseDestinationDetailMessages() throws IOException {
         Document detail = Jsoup.parse(resource("/templates/destination/detail.html"));
 
-        assertThat(detail.select("main.detail-container h2, main.detail-container dt.info-item-label, "
-                + "main.detail-container .info-note-label, main.detail-container .amenities-title"))
+        assertThat(detail.select("div.detail-container h2, div.detail-container dt.info-item-label, "
+                + "div.detail-container .info-note-label, div.detail-container .amenities-title"))
                 .isNotEmpty()
                 .allSatisfy(element -> assertThat(element.attr("th:text"))
                         .as(element.cssSelector())
                         .startsWith("#{destination.detail."));
+        assertThat(detail.select("main.detail-container")).isEmpty();
 
         assertThat(detail.selectFirst(".info h2").attr("th:text"))
                 .isEqualTo("#{destination.detail.section.introduction}");

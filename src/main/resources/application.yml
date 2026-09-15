@@ -157,3 +157,7 @@ translation:
       batch-size: 500
     shared-cache:
       batch-size: 500
+
+seo:
+  # 운영 환경에서는 canonical 및 sitemap에 사용할 공개 origin을 지정한다.
+  site-base-url: ${SEO_SITE_BASE_URL:}

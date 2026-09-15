@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.seo.SitemapMapper">
+
+    <resultMap id="TravelInfoSitemapMap" type="com.example.travlediary.seo.SitemapTravelInfo">
+        <constructor>
+            <arg column="id" javaType="java.lang.Long"/>
+            <arg column="content_type"
+                 javaType="com.example.travlediary.model.TravelInfoContentType"/>
+        </constructor>
+    </resultMap>
+
+    <select id="findDestinationIds" resultType="long">
+        SELECT d.id
+        FROM destinations d
+        WHERE EXISTS (
+            SELECT 1
+            FROM destination_translations dt
+            WHERE dt.destination_id = d.id
+              AND dt.name IS NOT NULL
+              AND TRIM(dt.name) != ''
+        )
+        ORDER BY d.id
+    </select>
+
+    <select id="findTravelInfoEntries" resultMap="TravelInfoSitemapMap">
+        SELECT ti.id, ti.content_type
+        FROM travel_info ti
+        JOIN info_categories ic ON ic.id = ti.category_id
+        WHERE ic.is_visible = 1
+        ORDER BY ti.id
+    </select>
+
+    <select id="findEventIds" resultType="long">
+        SELECT id
+        FROM events
+        ORDER BY id
+    </select>
+
+    <select id="findPostIds" resultType="long">
+        SELECT p.id
+        FROM user_posts p
+        WHERE p.deleted = 0
+          AND NOT EXISTS (
+            SELECT 1
+            FROM content_moderations cm
+            WHERE cm.target_type = 'POST'
+              AND cm.target_id = p.id
+              AND cm.status = 'ACTIVE'
+          )
+        ORDER BY p.id
+    </select>
+
+    <select id="findCourseIds" resultType="long">
+        SELECT c.id
+        FROM courses c
+        WHERE c.deleted = 0
+          AND NOT EXISTS (
+            SELECT 1
+            FROM content_moderations cm
+            WHERE cm.target_type = 'COURSE'
+              AND cm.target_id = c.id
+              AND cm.status = 'ACTIVE'
+          )
+        ORDER BY c.id
+    </select>
+
+</mapper>

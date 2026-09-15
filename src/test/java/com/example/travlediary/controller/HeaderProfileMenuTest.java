@@ -125,6 +125,16 @@ class HeaderProfileMenuTest {
     }
 
     @Test
+    void logoIsANavigationLinkRatherThanAPageHeading() throws Exception {
+        var document = page();
+
+        assertThat(document.select("header .logo")).hasSize(1);
+        assertThat(document.select("header h1.logo")).isEmpty();
+        assertThat(document.selectFirst("header .logo").tagName()).isEqualTo("div");
+        assertThat(document.select("header .logo > a[href='/'] img")).hasSize(1);
+    }
+
+    @Test
     void selectedLocaleChangesThePublicLangHeaderAndFiveOptionSelector() throws Exception {
         var document = pageWithLocale("zh-TW");
 

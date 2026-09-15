@@ -2,6 +2,7 @@ package com.example.travlediary.controller.board;
 
 import com.example.travlediary.dto.BoardListDto;
 import com.example.travlediary.model.CountryCategory;
+import com.example.travlediary.seo.SeoModel;
 import com.example.travlediary.service.board.BoardService;
 import com.example.travlediary.service.category.CountryCategoryService;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 @Controller
 @RequiredArgsConstructor
@@ -50,6 +52,19 @@ public class BoardController {
         model.addAttribute("totalPages", totalPages);
         model.addAttribute("pageSize", safeSize);
         model.addAttribute("pageTitle", "여행 커뮤니티");
+
+        Map<String, Object> canonicalParameters = SeoModel.parameters();
+        canonicalParameters.put("boardType", boardType == null
+                ? null : boardType.toLowerCase(Locale.ROOT));
+        canonicalParameters.put("postType", postType == null
+                ? null : postType.toLowerCase(Locale.ROOT));
+        canonicalParameters.put("scope",
+                courseFilter.courseBoard() && !"all".equals(courseFilter.scope())
+                        ? courseFilter.scope() : null);
+        canonicalParameters.put("countryId", courseFilter.countryId());
+        canonicalParameters.put("page", safePage);
+        model.addAttribute("seoCanonicalPath",
+                SeoModel.canonicalPath("/board/list", canonicalParameters));
 
         return "board/list";
     }
