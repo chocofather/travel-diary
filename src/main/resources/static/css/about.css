@@ -20,8 +20,7 @@
 }
 
 .about-hero .about-content {
-    max-width: 820px;
-    margin-left: max(20px, calc((100% - 1120px) / 2));
+    max-width: 1120px;
 }
 
 .about-eyebrow,
@@ -34,21 +33,23 @@
 }
 
 .about-hero h1 {
-    max-width: 760px;
+    max-width: 1040px;
     margin: 18px 0 20px;
-    font-size: clamp(36px, 5vw, 58px);
+    font-size: clamp(36px, 4.6vw, 56px);
     font-weight: 750;
     letter-spacing: -0.055em;
     line-height: 1.18;
+    word-break: keep-all;
 }
 
 .about-hero p {
-    max-width: 620px;
+    max-width: 760px;
     margin: 0;
     color: #59616c;
     font-size: 18px;
     line-height: 1.75;
     word-break: keep-all;
+    overflow-wrap: anywhere;
 }
 
 .about-guide {
@@ -67,6 +68,7 @@
     font-weight: 750;
     letter-spacing: -0.045em;
     line-height: 1.28;
+    word-break: keep-all;
 }
 
 .about-section-heading p,
@@ -76,19 +78,20 @@
     font-size: 16px;
     line-height: 1.7;
     word-break: keep-all;
+    overflow-wrap: anywhere;
 }
 
 .about-guide-steps {
-    margin: 0 -20px;
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
 }
 
 .about-guide-step {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1.38fr) minmax(360px, 1fr);
     align-items: center;
-    gap: clamp(48px, 9vw, 132px);
-    min-height: 410px;
-    padding: 70px max(20px, calc((100vw - 1120px) / 2));
+    gap: clamp(48px, 6vw, 84px);
+    padding: 60px max(20px, calc((100vw - 1200px) / 2));
     background: #fff;
 }
 
@@ -102,11 +105,15 @@
 }
 
 .about-guide-step--diary {
-    background: #f2f3f4;
+    grid-template-columns: minmax(0, 1.56fr) minmax(350px, 0.94fr);
+    padding-top: 72px;
+    padding-bottom: 72px;
+    background: #f1f2f1;
 }
 
 .about-step-content {
-    max-width: 430px;
+    width: 100%;
+    max-width: 480px;
 }
 
 .about-step-content h3 {
@@ -116,6 +123,7 @@
     font-weight: 730;
     letter-spacing: -0.045em;
     line-height: 1.28;
+    word-break: keep-all;
 }
 
 .about-step-content p {
@@ -124,6 +132,7 @@
     font-size: 16px;
     line-height: 1.72;
     word-break: keep-all;
+    overflow-wrap: anywhere;
 }
 
 .about-step-content a {
@@ -148,286 +157,77 @@
 
 .about-step-visual {
     position: relative;
-    min-height: 260px;
-    overflow: hidden;
-    border-radius: 2px;
-    background: #eceff1;
+    min-width: 0;
+}
+
+.about-step-visual--screenshot {
+    width: 100%;
+}
+
+.about-step-visual--screenshot > img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid rgba(32, 37, 43, 0.12);
+    border-radius: 14px;
+    background: #fff;
+    object-fit: contain;
+    box-shadow: 0 14px 28px rgba(32, 37, 43, 0.1);
 }
 
 .about-step-number {
     position: absolute;
     z-index: 2;
-    top: 24px;
-    left: 26px;
-    color: #20252b;
-    font-size: 42px;
-    font-weight: 780;
-    letter-spacing: -0.08em;
-    line-height: 1;
-}
-
-.about-step-visual::before,
-.about-step-visual::after {
-    position: absolute;
-    content: "";
-}
-
-.about-guide-step--destination .about-step-visual {
-    background: linear-gradient(145deg, #e8edf0 0%, #f9faf9 100%);
-}
-
-.about-guide-step--destination .about-step-visual::before {
-    right: -24px;
-    bottom: -57px;
-    width: 250px;
-    height: 194px;
-    border-radius: 52% 52% 0 0;
-    background: #b7c4ca;
-    transform: rotate(-10deg);
-}
-
-.about-guide-step--destination .about-step-visual::after {
-    right: 18px;
-    bottom: -45px;
-    width: 170px;
-    height: 164px;
-    border-radius: 52% 52% 0 0;
-    background: #778e98;
-    transform: rotate(11deg);
-}
-
-.about-visual-marker {
-    position: absolute;
-    z-index: 3;
-    width: 20px;
-    height: 20px;
-    border: 5px solid #20252b;
-    border-radius: 50% 50% 50% 0;
-    background: #fff;
-    transform: rotate(-45deg);
-}
-
-.about-visual-marker--one {
-    top: 95px;
-    left: 43%;
-}
-
-.about-visual-marker--two {
-    right: 17%;
-    bottom: 76px;
-}
-
-.about-visual-route {
-    position: absolute;
-    z-index: 2;
-    top: 120px;
-    left: 38%;
-    width: 45%;
-    height: 75px;
-    border: 2px dashed #687780;
-    border-width: 0 0 2px 2px;
-    border-radius: 0 0 0 58px;
-    transform: rotate(-12deg);
-}
-
-.about-guide-step--info .about-step-visual {
-    background: #e9ecee;
-}
-
-.about-visual-calendar {
-    position: absolute;
-    right: 16%;
-    bottom: 34px;
-    width: 57%;
-    height: 176px;
-    border: 1px solid #c6cdd2;
-    border-radius: 4px;
-    background: #fff;
-    box-shadow: 14px 15px 0 #d6dce0;
-}
-
-.about-visual-calendar::before {
-    position: absolute;
-    top: 23px;
-    left: 22px;
-    width: calc(100% - 44px);
-    height: 1px;
-    background: #dfe3e5;
-    content: "";
-}
-
-.about-visual-calendar-line {
-    position: absolute;
-    z-index: 2;
-    left: 34%;
-    width: 43%;
-    height: 8px;
-    border-radius: 999px;
-    background: #aab5bc;
-}
-
-.about-visual-calendar-line--one {
-    top: 91px;
-}
-
-.about-visual-calendar-line--two {
-    top: 119px;
-    width: 31%;
-}
-
-.about-visual-calendar-dot {
-    position: absolute;
-    z-index: 3;
-    top: 78px;
-    left: 23%;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background: #20252b;
-}
-
-.about-guide-step--course .about-step-visual {
-    background: linear-gradient(135deg, #f9f9f8 0%, #e8ecee 100%);
-}
-
-.about-visual-stop {
-    position: absolute;
-    z-index: 3;
-    width: 25px;
-    height: 25px;
-    border: 7px solid #fff;
-    border-radius: 50%;
-    background: #20252b;
-    box-shadow: 0 0 0 1px #20252b;
-}
-
-.about-visual-stop--one {
-    top: 87px;
-    left: 23%;
-}
-
-.about-visual-stop--two {
-    top: 143px;
-    left: 49%;
-}
-
-.about-visual-stop--three {
-    right: 19%;
-    bottom: 54px;
-}
-
-.about-visual-route--course {
-    top: 87px;
-    left: 29%;
-    width: 52%;
-    height: 108px;
-    border-color: #20252b;
-    border-radius: 0 0 80px 0;
-    transform: rotate(11deg);
-}
-
-.about-guide-step--plan .about-step-visual {
-    background: #e9edef;
-}
-
-.about-visual-schedule {
-    position: absolute;
-    right: 14%;
-    bottom: 34px;
-    width: 64%;
-    height: 133px;
-    border: 1px solid #c9d0d4;
-    border-radius: 4px;
-    background: repeating-linear-gradient(to bottom, #fff 0 31px, #e2e6e8 32px 33px);
-}
-
-.about-visual-avatar {
-    position: absolute;
-    z-index: 3;
-    top: 56px;
-    width: 42px;
-    height: 42px;
-    border: 3px solid #fff;
-    border-radius: 50%;
-    background: #65727a;
-}
-
-.about-visual-avatar--one {
-    right: 30%;
-}
-
-.about-visual-avatar--two {
-    right: 22%;
-    background: #20252b;
-}
-
-.about-visual-avatar--three {
-    right: 14%;
-    background: #a4adb2;
-}
-
-.about-guide-step--diary .about-step-visual {
-    background: #e3e6e7;
-}
-
-.about-visual-notebook {
-    position: absolute;
-    right: 17%;
-    bottom: 25px;
-    width: 58%;
-    height: 194px;
-    border: 1px solid #b7c0c5;
-    border-radius: 4px;
-    background: repeating-linear-gradient(to bottom, #fff 0 27px, #e4e7e9 28px 29px);
-    box-shadow: 13px 14px 0 #c4cbcf;
-    transform: rotate(3deg);
-}
-
-.about-visual-notebook::before {
-    position: absolute;
-    top: 0;
-    left: 50%;
-    width: 1px;
-    height: 100%;
-    background: #d6dbde;
-    content: "";
-}
-
-.about-visual-tape {
-    position: absolute;
-    z-index: 2;
-    top: 55px;
-    right: 31%;
-    width: 38%;
-    height: 27px;
-    background: rgba(91, 108, 116, 0.48);
-    transform: rotate(-7deg);
-}
-
-.about-visual-sticker {
-    position: absolute;
-    z-index: 3;
+    top: -4px;
+    left: -2px;
     display: grid;
-    width: 43px;
-    height: 43px;
+    width: 54px;
+    height: 54px;
     place-items: center;
+    border: 1px solid rgba(32, 37, 43, 0.13);
     border-radius: 50%;
-    background: #20252b;
-    color: #fff;
-    font-size: 22px;
-    font-weight: 700;
+    background: rgba(255, 255, 255, 0.96);
+    color: #20252b;
+    font-size: 17px;
+    font-weight: 780;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    box-shadow: 0 5px 14px rgba(32, 37, 43, 0.08);
 }
 
-.about-visual-sticker--one {
-    right: 28%;
-    bottom: 61px;
+.about-step-visual--diary-showcase {
+    width: 100%;
+    max-width: 680px;
+    padding: 0 72px 14px 0;
 }
 
-.about-visual-sticker--two {
-    right: 55%;
-    bottom: 48px;
-    background: #89979f;
-    font-size: 15px;
+.about-diary-page-image {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid rgba(32, 37, 43, 0.12);
+    border-radius: 15px;
+    background: #fff;
+    object-fit: contain;
+    box-shadow: 0 18px 34px rgba(32, 37, 43, 0.12);
+}
+
+.about-diary-cover-image {
+    position: absolute;
+    right: 0;
+    bottom: -12px;
+    width: min(32%, 224px);
+    height: auto;
+    border: 1px solid rgba(32, 37, 43, 0.16);
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 16px 28px rgba(32, 37, 43, 0.16);
+    transform: rotate(4deg);
+}
+
+.about-guide-step--diary .about-step-number {
+    top: -7px;
+    left: -5px;
 }
 
 .about-final {
@@ -468,17 +268,17 @@
     outline-offset: 5px;
 }
 
-@media (max-width: 680px) {
+@media (max-width: 860px) {
     .about-content {
-        width: min(100% - 32px, 1120px);
+        width: min(calc(100% - 32px), 1120px);
     }
 
     .about-hero {
         padding: 78px 0 84px;
     }
 
-    .about-hero .about-content {
-        margin: 0 auto;
+    .about-hero h1 {
+        font-size: clamp(34px, 10vw, 44px);
     }
 
     .about-hero p {
@@ -494,20 +294,46 @@
     }
 
     .about-guide-steps {
-        margin: 0 -16px;
+        width: 100%;
+        margin-left: 0;
     }
 
     .about-guide-step,
     .about-guide-step:nth-child(even) {
         grid-template-columns: 1fr;
-        gap: 30px;
+        gap: 32px;
         min-height: 0;
         padding: 52px 16px;
         direction: ltr;
     }
 
-    .about-step-visual {
-        min-height: 222px;
+    .about-step-visual--screenshot {
+        padding: 0;
+    }
+
+    .about-step-number {
+        top: -8px;
+        left: -3px;
+        width: 46px;
+        height: 46px;
+        font-size: 15px;
+    }
+
+    .about-guide-step--diary {
+        padding-top: 64px;
+        padding-bottom: 64px;
+    }
+
+    .about-step-visual--diary-showcase {
+        min-height: 0;
+        max-width: none;
+        padding: 0 48px 12px 0;
+    }
+
+    .about-diary-cover-image {
+        right: -2px;
+        bottom: -10px;
+        width: min(32%, 180px);
     }
 
     .about-final {
