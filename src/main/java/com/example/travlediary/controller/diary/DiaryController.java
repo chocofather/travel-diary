@@ -269,7 +269,24 @@ public class DiaryController {
                               @AuthenticationPrincipal CustomUserDetails userDetails,
                               Model model) {
         addDetailAttributes(diaryId, spread, edit, page, userDetails.getId(), model);
+        if (!edit) {
+            addPdfCoverAttributes(diaryId, userDetails.getId(), model);
+        }
         return "diary/detail";
+    }
+
+    /**
+     * 전체 PDF의 첫 장에 쓸 적용 표지. 목록과 같은 일괄 조회와 같은 표지 조각을 재사용한다.
+     * 펼침 fragment에는 넣지 않아 페이지를 순회할 때 표지를 반복 조회하지 않는다.
+     */
+    private void addPdfCoverAttributes(Long diaryId, Long userId, Model model) {
+        Map<Long, DiaryCover> covers = diaryCoverService.findCoversByDiary(List.of(diaryId), userId);
+        DiaryCover cover = covers.get(diaryId);
+        model.addAttribute("pdfCover", cover);
+        model.addAttribute("pdfCoverElements", cover == null
+                ? List.of()
+                : diaryCoverService.findElementsByCover(List.of(cover))
+                        .getOrDefault(cover.getId(), List.of()));
     }
 
     /**

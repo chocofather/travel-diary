@@ -18,7 +18,7 @@
   <script src="/js/diary-canvas-drag.js" defer></script>
   <!-- 되풀이형 마스킹테이프는 읽기 화면에서도 같은 모습이어야 하므로 편집 여부와 무관하게 싣는다 -->
   <script src="/js/diary-tape-repeat.js" defer></script>
-  <!-- Phase 1 PDF 검증: CDN 호출 없이 현재 내지 DOM 한 장만 브라우저에서 이미지/PDF로 만든다 -->
+  <!-- 표지와 전체 내지를 CDN 호출 없이 브라우저에서 한 장씩 이미지/PDF로 만든다 -->
   <script src="/webjars/html-to-image/1.11.13/dist/html-to-image.js" defer></script>
   <script src="/webjars/jspdf/3.0.1/dist/jspdf.umd.min.js" defer></script>
   <script src="/js/diary-pdf.js" defer></script>
@@ -63,6 +63,14 @@
           읽기 화면의 펼침이 바뀌어도 이 자리는 다시 그려지지 않는다.
         -->
         <div class="diary-detail-actions" th:unless="${editMode}">
+          <button type="button" class="diary-pdf-download" data-diary-pdf-button
+                  th:data-diary-pdf-cover-template="diary-pdf-cover-template"
+                  th:data-diary-pdf-spread-url="@{/diaries/{id}/spread(id=${diary.id})}"
+                  th:data-diary-pdf-total-spreads="${totalSpreads}"
+                  th:data-diary-pdf-page-count="${#lists.size(diaryPages)}"
+                  th:data-diary-title="${diary.title}">
+            <span class="diary-pdf-download-label">PDF 다운로드</span>
+          </button>
           <details class="diary-page-add">
             <summary class="diary-page-add-button is-labelled" title="새 페이지 추가">
               <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor"
@@ -95,6 +103,19 @@
         </div>
       </div>
     </header>
+
+    <!-- 화면에는 만들지 않고 보관하는 적용 표지 markup. PDF 때만 복제해 A5 원본 크기로 캡처한다. -->
+    <template id="diary-pdf-cover-template" th:unless="${editMode}">
+      <div class="diary-book" data-diary-pdf-cover-context
+           th:classappend="${diary.coverStyle != null and !#strings.isEmpty(diary.coverStyle)}
+                           ? ' diary-cover-'
+                             + ${#strings.replace(#strings.toLowerCase(diary.coverStyle), '_', '-')} : ''">
+        <div class="diary-book-cover" data-diary-pdf-cover>
+          <th:block th:replace="~{diary/cover-preview :: appliedCover(
+                     ${diary}, ${pdfCover}, ${pdfCoverElements})}"></th:block>
+        </div>
+      </div>
+    </template>
 
     <p class="diary-flash-message" th:if="${diaryMessage}" th:text="${diaryMessage}"
        role="status">새 페이지가 추가되었습니다.</p>
@@ -494,13 +515,6 @@
     -->
     <div class="diary-read-tools">
       <div class="diary-read-tools-page">
-        <button type="button" class="diary-page-pdf"
-                th:if="${leftPage != null}"
-                data-diary-pdf-button="left"
-                th:data-diary-page-order="${leftPage.pageOrder}"
-                th:attr="aria-label=|${leftPage.pageOrder}페이지 PDF 테스트|">
-          <span class="diary-page-pdf-label">PDF 테스트</span>
-        </button>
         <a class="diary-page-edit" th:if="${leftPage != null}"
            th:href="@{/diaries/{id}(id=${diary.id},spread=${currentSpread},
                       edit=true,page=${leftPage.pageOrder})}"
@@ -518,13 +532,6 @@
       <div aria-hidden="true"></div>
 
       <div class="diary-read-tools-page is-right">
-        <button type="button" class="diary-page-pdf"
-                th:if="${rightPage != null}"
-                data-diary-pdf-button="right"
-                th:data-diary-page-order="${rightPage.pageOrder}"
-                th:attr="aria-label=|${rightPage.pageOrder}페이지 PDF 테스트|">
-          <span class="diary-page-pdf-label">PDF 테스트</span>
-        </button>
         <a class="diary-page-edit" th:if="${rightPage != null}"
            th:href="@{/diaries/{id}(id=${diary.id},spread=${currentSpread},
                       edit=true,page=${rightPage.pageOrder})}"
@@ -546,7 +553,6 @@
       <!-- 좌/우 종이색은 서로 독립이다. (같은 색으로 맞추지 않는다) -->
       <div class="diary-sheet-viewport" data-diary-sheet-viewport>
       <article class="diary-sheet diary-sheet-left"
-               data-diary-pdf-page="left"
                th:data-diary-page-order="${leftPage?.pageOrder}"
                th:classappend="${leftPage != null and leftPage.backgroundType != null}
                                ? ' diary-sheet-bg-' + ${#strings.toLowerCase(leftPage.backgroundType)} : ''"
@@ -580,7 +586,6 @@
 
       <div class="diary-sheet-viewport" data-diary-sheet-viewport>
       <article class="diary-sheet diary-sheet-right"
-               data-diary-pdf-page="right"
                th:data-diary-page-order="${rightPage?.pageOrder}"
                th:classappend="${rightPage != null and rightPage.backgroundType != null}
                                ? ' diary-sheet-bg-' + ${#strings.toLowerCase(rightPage.backgroundType)} : ''"

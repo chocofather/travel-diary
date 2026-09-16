@@ -8,9 +8,7 @@ import java.nio.file.Path;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/**
- * Phase 1 다이어리 PDF는 읽기 화면의 실제 한 페이지 DOM을 그대로 캡처해야 한다.
- */
+/** 표지와 모든 내지를 기존 화면 renderer로 순차 캡처하는 PDF 계약. */
 class DiaryPdfExportAssetTest {
 
     private static final Path BUILD_GRADLE = Path.of("build.gradle");
@@ -41,38 +39,36 @@ class DiaryPdfExportAssetTest {
     }
 
     @Test
-    void eachRenderedReadPageHasItsOwnPdfTestButtonAndTarget() throws IOException {
+    void readModeOffersOneFullDiaryPdfDownloadOutsideTheReplaceableSpread() throws IOException {
         String template = Files.readString(DETAIL_TEMPLATE);
 
         int readBoard = template.indexOf("id=\"diary-read-board\"");
-        int leftButton = template.indexOf("data-diary-pdf-button=\"left\"");
-        int rightButton = template.indexOf("data-diary-pdf-button=\"right\"");
+        int button = template.indexOf("data-diary-pdf-button");
         assertThat(readBoard).isPositive();
-        assertThat(template.substring(readBoard, template.indexOf('>', readBoard)))
-                .contains("th:unless=\"${editMode}\"");
-        assertThat(leftButton).isGreaterThan(readBoard);
-        assertThat(rightButton).isGreaterThan(leftButton);
+        assertThat(button).isPositive().isLessThan(readBoard);
         assertThat(template).contains(
-                "data-diary-pdf-page=\"left\"",
-                "data-diary-pdf-page=\"right\"",
-                "th:data-diary-page-order=\"${leftPage.pageOrder}\"",
-                "th:data-diary-page-order=\"${rightPage.pageOrder}\"",
-                "PDF 테스트");
+                "PDF 다운로드",
+                "th:data-diary-pdf-cover-template",
+                "th:data-diary-pdf-spread-url",
+                "th:data-diary-pdf-total-spreads",
+                "th:data-diary-pdf-page-count",
+                "th:data-diary-page-order=\"${leftPage?.pageOrder}\"",
+                "th:data-diary-page-order=\"${rightPage?.pageOrder}\"")
+                .doesNotContain("PDF 테스트", "data-diary-pdf-page=\"");
     }
 
     @Test
-    void exporterClonesTheExistingSheetAtTheReferencePageSize() throws IOException {
+    void exporterClonesEachExistingSheetAtTheA5ReferencePageSize() throws IOException {
         String script = Files.readString(PDF_SCRIPT);
 
         assertThat(script)
                 .contains("const PAGE_WIDTH = 720;")
                 .contains("const PAGE_HEIGHT = PAGE_WIDTH * 210 / 148;")
                 .contains("const PIXEL_RATIO = 2;")
-                .contains(".diary-sheet[data-diary-pdf-page=\"")
+                .contains("querySelectorAll('.diary-sheet[data-diary-page-order]')")
                 .contains("source.cloneNode(true)")
                 .contains("host.className = 'diary-pdf-capture-host';")
-                .contains("clone.style.width = `${PAGE_WIDTH}px`;")
-                .contains("clone.style.height = `${PAGE_HEIGHT}px`;")
+                .contains("setFixedSize(clone, width, height);")
                 .contains("clone.style.transform = 'none';")
                 .contains("clone.style.setProperty('--diary-page-scale', '1');")
                 .doesNotContain("PAGE_WIDTH * 38 / 41")
@@ -86,6 +82,7 @@ class DiaryPdfExportAssetTest {
 
         assertThat(script)
                 .contains("source.closest('.diary-detail-page')")
+                .contains("source.closest('.diary-book-spread')")
                 .contains("pageContext.append(host);")
                 .doesNotContain("document.body.append(host);");
     }
@@ -95,7 +92,7 @@ class DiaryPdfExportAssetTest {
         String script = Files.readString(PDF_SCRIPT);
 
         assertThat(script)
-                .contains("copyComputedPaperBackground(source, clone);")
+                .contains("copyComputedBackground(source, clone);")
                 .contains("const computed = global.getComputedStyle(source);")
                 .contains("clone.style.backgroundImage = computed.backgroundImage;")
                 .contains("clone.style.backgroundColor = computed.backgroundColor;")
@@ -112,7 +109,7 @@ class DiaryPdfExportAssetTest {
                 .contains("document.fonts.check(")
                 .contains("image.decode()")
                 .contains("image.naturalWidth")
-                .contains("window.diaryTape.render(item)")
+                .contains("global.diaryTape.render(item)")
                 .contains("await waitForFrame();")
                 .contains("await waitForBackgroundImages(clone);")
                 .contains("throw new Error(")
@@ -120,12 +117,12 @@ class DiaryPdfExportAssetTest {
     }
 
     @Test
-    void exporterCreatesOneUncroppedPageAndSanitizesTheFilename() throws IOException {
+    void exporterBuildsCoverThenEveryOrderedDiaryPageIntoOneA5Pdf() throws IOException {
         String script = Files.readString(PDF_SCRIPT);
 
         assertThat(script)
-                .contains("htmlToImage.getFontEmbedCSS(clone)")
-                .contains("htmlToImage.toPng(clone")
+                .contains("htmlToImage.getFontEmbedCSS(capture.clone)")
+                .contains("htmlToImage.toPng(capture.clone")
                 .contains("pixelRatio: PIXEL_RATIO")
                 .contains("const PDF_WIDTH_MM = 148;")
                 .contains("const PDF_HEIGHT_MM = 210;")
@@ -133,11 +130,48 @@ class DiaryPdfExportAssetTest {
                 .contains("unit: 'mm'")
                 .contains("format: [PDF_WIDTH_MM, PDF_HEIGHT_MM]")
                 .contains("pdf.addImage(png, 'PNG', 0, 0, PDF_WIDTH_MM, PDF_HEIGHT_MM")
+                .contains("await captureCover(")
+                .contains("for (let spread = 0; spread < spreadsToFetch; spread += 1)")
+                .contains("await fetchSpread(")
+                .contains("pdf.addPage([PDF_WIDTH_MM, PDF_HEIGHT_MM], 'portrait')")
                 .doesNotContain("const PDF_WIDTH_MM = 200;")
                 .doesNotContain("PDF_WIDTH_MM * 38 / 41")
-                .contains("${safeTitle}_page_${pageOrder}.pdf")
+                .contains("pdf.save(`${safeTitle}.pdf`)")
                 .contains("INVALID_FILENAME_CHARACTERS")
                 .contains("finally {")
                 .contains("host.remove();");
+    }
+
+    @Test
+    void exporterProcessesOneCaptureAtATimeAndOnlyDownloadsAfterEveryPageSucceeds()
+            throws IOException {
+        String script = Files.readString(PDF_SCRIPT);
+
+        assertThat(script)
+                .contains("const totalPdfPages = pageCount + 1;")
+                .contains("PDF 만드는 중... ${completed} / ${total}")
+                .contains("button.disabled = true;")
+                .contains("button.disabled = false;")
+                .contains("capture.dispose();")
+                .contains("spreadHost.remove();")
+                .contains("png = null;")
+                .contains("pdf.save(`${safeTitle}.pdf`)");
+        assertThat(script.indexOf("pdf.save(`${safeTitle}.pdf`)"))
+                .isGreaterThan(script.indexOf("for (let spread = 0; spread < spreadsToFetch; spread += 1)"));
+    }
+
+    @Test
+    void coverUsesTheSharedA5CoverRendererInsteadOfAListThumbnail() throws IOException {
+        String detail = Files.readString(DETAIL_TEMPLATE);
+        String preview = Files.readString(
+                Path.of("src/main/resources/templates/diary/cover-preview.html"));
+
+        assertThat(detail)
+                .contains("id=\"diary-pdf-cover-template\"")
+                .contains("data-diary-pdf-cover")
+                .contains("diary/cover-preview :: appliedCover(");
+        assertThat(preview)
+                .contains("th:fragment=\"appliedCover(diary, cover, elements)\"")
+                .contains("diary/cover-preview :: canvas(${cover}, ${elements})");
     }
 }

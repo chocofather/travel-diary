@@ -1,14 +1,16 @@
 /**
- * 다이어리 PDF Phase 1.
+ * 다이어리 전체 PDF.
  *
- * 읽기 화면에 이미 그려진 내지 한 장을 고정 크기 clone으로 캡처한다. 화면의 종이를
- * 다시 구현하지 않으며, 원본 DOM도 바꾸지 않는다. 표지와 다페이지 병합은 이 단계의 범위가 아니다.
+ * 서버가 이미 소유권과 PIN을 확인해 그리는 표지/내지 DOM을 한 장씩 준비한다. 각 장은 화면용
+ * viewport와 transform에서 떼어 낸 고정 A5 clone으로 캡처하고, 바로 PDF에 넣은 뒤 해제한다.
  */
 (function (global) {
     'use strict';
 
     const PAGE_WIDTH = 720;
     const PAGE_HEIGHT = PAGE_WIDTH * 210 / 148;
+    const COVER_WIDTH = 480;
+    const COVER_HEIGHT = COVER_WIDTH * 210 / 148;
     const PDF_WIDTH_MM = 148;
     const PDF_HEIGHT_MM = 210;
     const PIXEL_RATIO = 2;
@@ -23,65 +25,32 @@
         const button = event.target.closest('[data-diary-pdf-button]');
         if (!button) return;
         event.preventDefault();
-        createPagePdf(button);
+        createDiaryPdf(button);
     });
 
-    async function createPagePdf(button) {
+    async function createDiaryPdf(button) {
         if (makingPdf) return;
         makingPdf = true;
 
-        const buttons = Array.from(document.querySelectorAll('[data-diary-pdf-button]'));
-        const label = button.querySelector('.diary-page-pdf-label');
+        const label = button.querySelector('.diary-pdf-download-label');
         const originalLabel = label ? label.textContent : '';
-        let host = null;
-
-        buttons.forEach(item => item.disabled = true);
+        button.disabled = true;
         button.setAttribute('aria-busy', 'true');
-        if (label) label.textContent = 'PDF 만드는 중...';
 
         try {
-            const side = button.dataset.diaryPdfButton;
-            const pageOrder = button.dataset.diaryPageOrder;
-            if (!side || !/^\d+$/.test(pageOrder || '')) {
-                throw new Error('PDF로 만들 페이지 정보를 찾지 못했습니다.');
+            const pageCount = nonNegativeInteger(button.dataset.diaryPdfPageCount, '내지 수');
+            const totalSpreads = nonNegativeInteger(
+                button.dataset.diaryPdfTotalSpreads, '펼침 수');
+            const totalPdfPages = pageCount + 1;
+            if (pageCount > 0 && totalSpreads < 1) {
+                throw new Error('다이어리 펼침 정보를 찾지 못했습니다.');
             }
-
-            const source = document.querySelector(
-                `.diary-sheet[data-diary-pdf-page="${cssEscape(side)}"]`
-                + `[data-diary-page-order="${cssEscape(pageOrder)}"]`);
-            if (!source || !source.querySelector('.diary-sheet-body')) {
-                throw new Error('현재 페이지 화면을 찾지 못했습니다.');
-            }
-
-            const capture = createCaptureClone(source);
-            host = capture.host;
-            const clone = capture.clone;
-
-            await prepareResources(clone);
 
             const htmlToImage = global.htmlToImage;
             const JsPdf = global.jspdf && global.jspdf.jsPDF;
             if (!htmlToImage || !JsPdf) {
                 throw new Error('PDF 라이브러리를 불러오지 못했습니다.');
             }
-
-            const fontEmbedCSS = await withTimeout(
-                htmlToImage.getFontEmbedCSS(clone),
-                RESOURCE_TIMEOUT_MS,
-                'PDF에 글꼴을 포함하지 못했습니다.');
-            const png = await withTimeout(
-                htmlToImage.toPng(clone, {
-                    width: PAGE_WIDTH,
-                    height: PAGE_HEIGHT,
-                    canvasWidth: PAGE_WIDTH,
-                    canvasHeight: PAGE_HEIGHT,
-                    pixelRatio: PIXEL_RATIO,
-                    skipAutoScale: true,
-                    cacheBust: false,
-                    fontEmbedCSS
-                }),
-                RESOURCE_TIMEOUT_MS,
-                '페이지 이미지를 만들지 못했습니다.');
 
             const pdf = new JsPdf({
                 orientation: 'portrait',
@@ -90,11 +59,44 @@
                 compress: true,
                 putOnlyUsedFonts: true
             });
-            pdf.addImage(png, 'PNG', 0, 0, PDF_WIDTH_MM, PDF_HEIGHT_MM, undefined, 'FAST');
 
-            const title = document.getElementById('diary-detail-title')?.textContent || 'travel_diary';
-            const safeTitle = sanitizeFilename(title);
-            pdf.save(`${safeTitle}_page_${pageOrder}.pdf`);
+            let completed = 0;
+            updateProgress(label, completed + 1, totalPdfPages);
+            await captureCover(button, pdf, htmlToImage);
+            completed += 1;
+
+            let capturedDiaryPages = 0;
+            const spreadsToFetch = pageCount === 0 ? 0 : totalSpreads;
+            for (let spread = 0; spread < spreadsToFetch; spread += 1) {
+                const spreadHost = await fetchSpread(button.dataset.diaryPdfSpreadUrl, spread);
+                try {
+                    const sheets = Array.from(
+                        spreadHost.querySelectorAll('.diary-sheet[data-diary-page-order]'))
+                        .filter(sheet => /^\d+$/.test(sheet.dataset.diaryPageOrder || ''))
+                        .sort((first, second) => Number(first.dataset.diaryPageOrder)
+                            - Number(second.dataset.diaryPageOrder));
+
+                    for (const sheet of sheets) {
+                        if (capturedDiaryPages >= pageCount) break;
+                        updateProgress(label, completed + 1, totalPdfPages);
+                        await appendCapturedPage(pdf, sheet, PAGE_WIDTH, PAGE_HEIGHT,
+                            htmlToImage, true);
+                        capturedDiaryPages += 1;
+                        completed += 1;
+                        sheet.remove();
+                    }
+                } finally {
+                    spreadHost.remove();
+                }
+            }
+
+            if (capturedDiaryPages !== pageCount || completed !== totalPdfPages) {
+                throw new Error('모든 다이어리 페이지를 불러오지 못했습니다.');
+            }
+
+            const safeTitle = sanitizeFilename(
+                button.dataset.diaryTitle || document.getElementById('diary-detail-title')?.textContent);
+            pdf.save(`${safeTitle}.pdf`);
         } catch (error) {
             console.error('다이어리 PDF 생성 실패', error);
             const message = error instanceof Error && error.message
@@ -102,15 +104,116 @@
                 : '알 수 없는 오류가 발생했습니다.';
             window.alert(`PDF를 만들지 못했습니다.\n${message}`);
         } finally {
-            if (host) host.remove();
-            buttons.forEach(item => item.disabled = false);
+            button.disabled = false;
             button.removeAttribute('aria-busy');
             if (label) label.textContent = originalLabel;
             makingPdf = false;
         }
     }
 
-    function createCaptureClone(source) {
+    async function captureCover(button, pdf, htmlToImage) {
+        const templateId = button.dataset.diaryPdfCoverTemplate;
+        const template = templateId ? document.getElementById(templateId) : null;
+        if (!(template instanceof HTMLTemplateElement)) {
+            throw new Error('다이어리 표지를 찾지 못했습니다.');
+        }
+
+        const host = createSourceHost(COVER_WIDTH, COVER_HEIGHT);
+        try {
+            host.append(template.content.cloneNode(true));
+            const context = host.querySelector('[data-diary-pdf-cover-context]');
+            const source = host.querySelector('[data-diary-pdf-cover]');
+            if (!context || !source) {
+                throw new Error('다이어리 표지를 준비하지 못했습니다.');
+            }
+            setFixedSize(context, COVER_WIDTH, COVER_HEIGHT);
+            setFixedSize(source, COVER_WIDTH, COVER_HEIGHT);
+            await appendCapturedPage(pdf, source, COVER_WIDTH, COVER_HEIGHT,
+                htmlToImage, false);
+        } finally {
+            host.remove();
+        }
+    }
+
+    async function fetchSpread(spreadUrl, spread) {
+        if (!spreadUrl) throw new Error('다이어리 페이지 주소를 찾지 못했습니다.');
+        const url = new URL(spreadUrl, document.baseURI);
+        url.searchParams.set('spread', String(spread));
+        const response = await withTimeout(fetch(url, {
+            credentials: 'same-origin',
+            headers: {
+                'Accept': 'text/html',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        }), RESOURCE_TIMEOUT_MS, '다이어리 페이지를 불러오는 시간이 초과되었습니다.');
+        if (!response.ok) {
+            throw new Error(`${spread + 1}번째 펼침을 불러오지 못했습니다.`);
+        }
+
+        const html = await response.text();
+        const board = new DOMParser().parseFromString(html, 'text/html')
+            .getElementById('diary-read-board');
+        if (!board) throw new Error(`${spread + 1}번째 펼침 화면을 찾지 못했습니다.`);
+        board.removeAttribute('id');
+
+        const host = createSourceHost(PAGE_WIDTH * 2 + 40, PAGE_HEIGHT);
+        host.append(board);
+        return host;
+    }
+
+    function createSourceHost(width, height) {
+        const pageContext = document.querySelector('.diary-detail-page');
+        if (!pageContext) throw new Error('다이어리 화면을 찾지 못했습니다.');
+
+        const host = document.createElement('div');
+        host.className = 'diary-pdf-source-host';
+        host.setAttribute('aria-hidden', 'true');
+        Object.assign(host.style, {
+            position: 'fixed',
+            left: '-100000px',
+            top: '0',
+            width: `${width}px`,
+            height: `${height}px`,
+            overflow: 'visible',
+            pointerEvents: 'none',
+            zIndex: '-2147483647'
+        });
+        pageContext.append(host);
+        return host;
+    }
+
+    async function appendCapturedPage(pdf, source, width, height, htmlToImage, addPage) {
+        const capture = createCaptureClone(source, width, height);
+        let png = null;
+        try {
+            await prepareResources(capture.clone);
+            const fontEmbedCSS = await withTimeout(
+                htmlToImage.getFontEmbedCSS(capture.clone),
+                RESOURCE_TIMEOUT_MS,
+                'PDF에 글꼴을 포함하지 못했습니다.');
+            png = await withTimeout(
+                htmlToImage.toPng(capture.clone, {
+                    width,
+                    height,
+                    canvasWidth: width,
+                    canvasHeight: height,
+                    pixelRatio: PIXEL_RATIO,
+                    skipAutoScale: true,
+                    cacheBust: false,
+                    fontEmbedCSS
+                }),
+                RESOURCE_TIMEOUT_MS,
+                '페이지 이미지를 만들지 못했습니다.');
+
+            if (addPage) pdf.addPage([PDF_WIDTH_MM, PDF_HEIGHT_MM], 'portrait');
+            pdf.addImage(png, 'PNG', 0, 0, PDF_WIDTH_MM, PDF_HEIGHT_MM, undefined, 'FAST');
+        } finally {
+            png = null;
+            capture.dispose();
+        }
+    }
+
+    function createCaptureClone(source, width, height) {
         const pageContext = source.closest('.diary-detail-page');
         if (!pageContext) {
             throw new Error('다이어리 페이지 스타일 기준을 찾지 못했습니다.');
@@ -123,20 +226,20 @@
             position: 'fixed',
             left: '-100000px',
             top: '0',
-            width: `${PAGE_WIDTH}px`,
-            height: `${PAGE_HEIGHT}px`,
+            width: `${width}px`,
+            height: `${height}px`,
             overflow: 'visible',
             pointerEvents: 'none',
             zIndex: '-2147483647'
         });
 
         const context = document.createElement('div');
-        context.className = captureContextClasses(source.parentElement);
+        context.className = captureContextClasses(source);
         Object.assign(context.style, {
             position: 'relative',
             display: 'block',
-            width: `${PAGE_WIDTH}px`,
-            height: `${PAGE_HEIGHT}px`,
+            width: `${width}px`,
+            height: `${height}px`,
             margin: '0',
             border: '0',
             borderRadius: '0',
@@ -145,23 +248,31 @@
         });
 
         const clone = source.cloneNode(true);
-        clone.style.width = `${PAGE_WIDTH}px`;
-        clone.style.height = `${PAGE_HEIGHT}px`;
-        clone.style.minWidth = `${PAGE_WIDTH}px`;
-        clone.style.maxWidth = 'none';
+        setFixedSize(clone, width, height);
         clone.style.transform = 'none';
         clone.style.setProperty('--diary-page-scale', '1');
         clone.style.flex = 'none';
         clone.style.scrollSnapAlign = 'none';
-        copyComputedPaperBackground(source, clone);
+        copyComputedBackground(source, clone);
 
         context.append(clone);
         host.append(context);
         pageContext.append(host);
-        return {host, clone};
+        return {host, clone, dispose: () => host.remove()};
     }
 
-    function copyComputedPaperBackground(source, clone) {
+    function setFixedSize(element, width, height) {
+        element.style.width = `${width}px`;
+        element.style.height = `${height}px`;
+        element.style.minWidth = `${width}px`;
+        element.style.maxWidth = 'none';
+        element.style.minHeight = `${height}px`;
+        element.style.maxHeight = 'none';
+        element.style.margin = '0';
+        element.style.transform = 'none';
+    }
+
+    function copyComputedBackground(source, clone) {
         const computed = global.getComputedStyle(source);
         clone.style.backgroundImage = computed.backgroundImage;
         clone.style.backgroundColor = computed.backgroundColor;
@@ -174,9 +285,13 @@
         clone.style.backgroundBlendMode = computed.backgroundBlendMode;
     }
 
-    function captureContextClasses(parent) {
-        if (!parent) return 'diary-book-spread';
-        return Array.from(parent.classList)
+    function captureContextClasses(source) {
+        const classes = new Set(source.parentElement
+            ? Array.from(source.parentElement.classList)
+            : []);
+        const spread = source.closest('.diary-book-spread');
+        if (spread) Array.from(spread.classList).forEach(name => classes.add(name));
+        return Array.from(classes)
             .filter(name => !name.startsWith('is-flipping') && !name.startsWith('is-slide-'))
             .join(' ');
     }
@@ -203,7 +318,7 @@
 
         tapes.forEach((item) => {
             if (!item.classList.contains('is-tape-repeat')) {
-                window.diaryTape.render(item);
+                global.diaryTape.render(item);
             }
             if (!item.querySelector('.diary-tape')) {
                 throw new Error('마스킹테이프 렌더링이 끝나지 않았습니다.');
@@ -321,6 +436,15 @@
         if (typeof image.decode === 'function') await image.decode();
     }
 
+    function updateProgress(label, completed, total) {
+        if (label) label.textContent = `PDF 만드는 중... ${completed} / ${total}`;
+    }
+
+    function nonNegativeInteger(value, label) {
+        if (!/^\d+$/.test(value || '')) throw new Error(`${label} 정보를 찾지 못했습니다.`);
+        return Number.parseInt(value, 10);
+    }
+
     function waitForFrame() {
         return new Promise(resolve => global.requestAnimationFrame(() => resolve()));
     }
@@ -344,19 +468,13 @@
         let safe = String(value || '')
             .normalize('NFC')
             .replace(INVALID_FILENAME_CHARACTERS, '_')
-            .replace(/\s+/g, '_')
+            .replace(/\s+/g, ' ')
             .replace(/_+/g, '_')
             .replace(/^[. ]+|[. ]+$/g, '');
-        if (!safe || WINDOWS_RESERVED_NAME.test(safe)) safe = 'travel_diary';
+        if (!safe || WINDOWS_RESERVED_NAME.test(safe)) safe = 'travel-diary';
         safe = safe.slice(0, 80).replace(/[. ]+$/g, '');
-        return safe || 'travel_diary';
+        return safe || 'travel-diary';
     }
 
-    function cssEscape(value) {
-        return global.CSS && typeof global.CSS.escape === 'function'
-            ? global.CSS.escape(String(value))
-            : String(value).replace(/["\\]/g, '\\$&');
-    }
-
-    global.diaryPdfPhase1 = {createPagePdf, sanitizeFilename};
+    global.diaryPdfExport = {createDiaryPdf, sanitizeFilename};
 })(window);

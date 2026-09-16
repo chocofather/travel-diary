@@ -3,6 +3,27 @@
 <body>
 
 <!--
+  한 다이어리에 실제로 적용된 표지 내용. 책장과 PDF 준비 DOM이 이 조각을 함께 쓴다.
+  바깥 .diary-book-cover가 A5 표지 상자를 맡고, 이 조각은 커스텀/기본 표지의 내용만 고른다.
+-->
+<th:block th:fragment="appliedCover(diary, cover, elements)">
+  <th:block th:if="${cover != null}">
+    <div th:replace="~{diary/cover-preview :: canvas(${cover}, ${elements})}"></div>
+  </th:block>
+
+  <th:block th:if="${cover == null}">
+    <img th:if="${diary.coverImageUrl != null and !#strings.isEmpty(diary.coverImageUrl)}"
+         class="diary-book-image"
+         th:src="${diary.coverImageUrl}"
+         th:alt="|${diary.title} 표지|"
+         loading="lazy" />
+    <div th:unless="${diary.coverImageUrl != null and !#strings.isEmpty(diary.coverImageUrl)}"
+         class="diary-book-placeholder" aria-hidden="true"></div>
+    <span class="diary-book-spine" aria-hidden="true"></span>
+  </th:block>
+</th:block>
+
+<!--
   완성된 표지 한 장을 그대로 줄여 보여 준다. (보관함 카드용, 보기 전용)
 
   바깥(.diary-cover-canvas)이 표지 자체다. 세로형 비율과 재질을 여기서 정하고,

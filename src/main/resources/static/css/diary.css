@@ -4548,7 +4548,7 @@
 
 /* 감상을 방해하지 않게 평소에는 아주 옅게만 둔다 */
 .diary-page-edit,
-.diary-page-pdf,
+.diary-pdf-download,
 .diary-page-add-button {
     display: inline-flex;
     width: 26px;
@@ -4564,7 +4564,7 @@
 }
 
 .diary-page-edit:hover,
-.diary-page-pdf:hover,
+.diary-pdf-download:hover,
 .diary-page-add-button:hover {
     border-color: #e6ded1;
     background: #f7f3ec;
@@ -4572,7 +4572,7 @@
 }
 
 .diary-page-edit:focus-visible,
-.diary-page-pdf:focus-visible,
+.diary-pdf-download:focus-visible,
 .diary-page-add-button:focus-visible {
     outline: 2px solid #b39a75;
     outline-offset: 1px;
@@ -4584,8 +4584,8 @@
     height: 15px;
 }
 
-/* Phase 1 검증 버튼. 종이 밖에 있어 캡처 결과에는 들어가지 않는다. */
-.diary-page-pdf {
+/* 전체 PDF 버튼. 교체되는 펼침 밖에 있어 생성 중에도 상태가 유지된다. */
+.diary-pdf-download {
     width: auto;
     min-width: 74px;
     padding: 0 9px;
@@ -4594,7 +4594,7 @@
     white-space: nowrap;
 }
 
-.diary-page-pdf:disabled {
+.diary-pdf-download:disabled {
     cursor: wait;
     opacity: 0.65;
 }

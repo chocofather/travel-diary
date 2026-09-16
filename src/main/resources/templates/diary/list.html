@@ -140,27 +140,11 @@
                         and !unlockedDiaryIds.contains(diary.id)} ? ${diary.id} : null">
           <!-- 표지에는 대표 이미지와 책 재질/책등만 남긴다 (제목은 표지 아래 정보로) -->
           <div class="diary-book-cover" th:with="cover=${coversByDiary.get(diary.id)}">
-            <!--
-              커스텀 표지를 입힌 책은 보관함과 같은 조각으로 그린다. (보기 전용)
-              이때는 다이어리의 cover_style/대표 이미지 대신 표지가 가진 값만 쓴다.
-            -->
-            <th:block th:if="${cover != null}">
-              <div th:replace="~{diary/cover-preview :: canvas(${cover},
-                                 ${coverElementsByCover.getOrDefault(cover.id,
-                                                                    #lists.toList({}))})}"></div>
-            </th:block>
-
-            <th:block th:if="${cover == null}">
-              <img th:if="${diary.coverImageUrl != null and !#strings.isEmpty(diary.coverImageUrl)}"
-                   class="diary-book-image"
-                   th:src="${diary.coverImageUrl}"
-                   th:alt="|${diary.title} 표지|"
-                   loading="lazy" />
-              <!-- 대표 이미지가 없으면 깨진 이미지 대신 표지 소재만 보이는 무지 표지를 쓴다 -->
-              <div th:unless="${diary.coverImageUrl != null and !#strings.isEmpty(diary.coverImageUrl)}"
-                   class="diary-book-placeholder" aria-hidden="true"></div>
-              <span class="diary-book-spine" aria-hidden="true"></span>
-            </th:block>
+            <th:block th:replace="~{diary/cover-preview :: appliedCover(
+                       ${diary}, ${cover},
+                       ${cover != null
+                         ? coverElementsByCover.getOrDefault(cover.id, #lists.toList({}))
+                         : #lists.toList({})})}"></th:block>
 
             <!-- 잠금 표시. 표지 위에 아주 옅은 그늘과 작은 자물쇠만 얹는다 -->
             <span class="diary-book-lock" th:if="${diary.pinEnabled}"

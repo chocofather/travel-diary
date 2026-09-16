@@ -1145,6 +1145,46 @@ class DiaryControllerTest {
     }
 
     @Test
+    void readDetailPreparesTheAppliedCoverForThePdfWithTheSharedRenderer() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
+        when(diaryPageService.getPages(10L, 7L)).thenReturn(List.of(page(1, "2026-08-01")));
+
+        DiaryCover cover = new DiaryCover();
+        cover.setId(30L);
+        cover.setDiaryId(10L);
+        cover.setBaseCoverStyle("LEATHER_DEEP_GREEN");
+        DiaryCoverElement photo = new DiaryCoverElement();
+        photo.setCoverId(30L);
+        photo.setElementType("PHOTO");
+        photo.setImageUrl("/uploads/diary-cover-elements/pdf-cover.jpg");
+        photo.setPositionX(new java.math.BigDecimal("0.10000"));
+        photo.setPositionY(new java.math.BigDecimal("0.20000"));
+        photo.setWidth(new java.math.BigDecimal("0.50000"));
+        photo.setHeight(new java.math.BigDecimal("0.40000"));
+        photo.setRotation(new java.math.BigDecimal("3.00"));
+        photo.setZIndex(2);
+        when(diaryCoverService.findCoversByDiary(List.of(10L), 7L))
+                .thenReturn(Map.of(10L, cover));
+        when(diaryCoverService.findElementsByCover(List.of(cover)))
+                .thenReturn(Map.of(30L, List.of(photo)));
+
+        String body = mockMvc.perform(get("/diaries/10")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body)
+                .contains("id=\"diary-pdf-cover-template\"")
+                .contains("data-diary-pdf-cover")
+                .contains("diary-cover-canvas")
+                .contains("/uploads/diary-cover-elements/pdf-cover.jpg");
+        verify(diaryCoverService).findCoversByDiary(List.of(10L), 7L);
+        verify(diaryCoverService).findElementsByCover(List.of(cover));
+    }
+
+    @Test
     void editQueryOpensTheEditingUi() throws Exception {
         when(userDetails.getId()).thenReturn(7L);
         when(diaryService.getMyDiary(10L, 7L)).thenReturn(diary());
