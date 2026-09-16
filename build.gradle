@@ -81,6 +81,10 @@ dependencies {
     // 브라우저 STOMP 클라이언트. CDN 대신 WebJar 로 함께 배포한다
     implementation 'org.webjars.npm:stomp__stompjs:7.0.0'
 
+    // 다이어리 PDF Phase 1: 현재 페이지 DOM 캡처와 브라우저 PDF 생성
+    implementation 'org.webjars.npm:html-to-image:1.11.13'
+    implementation 'org.webjars.npm:jspdf:3.0.1'
+
 }
 
 tasks.named('test') {
