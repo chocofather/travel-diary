@@ -174,4 +174,19 @@ class DiaryPdfExportAssetTest {
                 .contains("th:fragment=\"appliedCover(diary, cover, elements)\"")
                 .contains("diary/cover-preview :: canvas(${cover}, ${elements})");
     }
+
+    @Test
+    void coverCaptureCloneIsFullBleedWithoutTheScreenCoverCornerOrShadow() throws IOException {
+        String script = Files.readString(PDF_SCRIPT);
+
+        assertThat(script)
+                .contains("htmlToImage, false, prepareCoverClone")
+                .contains("function prepareCoverClone(clone)")
+                .contains("clone.style.borderRadius = '0';")
+                .contains("clone.style.boxShadow = 'none';")
+                .contains("clone.style.margin = '0';")
+                .contains("clone.style.width = '100%';")
+                .contains("clone.style.height = '100%';")
+                .contains("clone.style.overflow = 'hidden';");
+    }
 }

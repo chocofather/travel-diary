@@ -129,7 +129,7 @@
             setFixedSize(context, COVER_WIDTH, COVER_HEIGHT);
             setFixedSize(source, COVER_WIDTH, COVER_HEIGHT);
             await appendCapturedPage(pdf, source, COVER_WIDTH, COVER_HEIGHT,
-                htmlToImage, false);
+                htmlToImage, false, prepareCoverClone);
         } finally {
             host.remove();
         }
@@ -182,10 +182,12 @@
         return host;
     }
 
-    async function appendCapturedPage(pdf, source, width, height, htmlToImage, addPage) {
+    async function appendCapturedPage(pdf, source, width, height, htmlToImage, addPage,
+                                      prepareClone) {
         const capture = createCaptureClone(source, width, height);
         let png = null;
         try {
+            if (typeof prepareClone === 'function') prepareClone(capture.clone);
             await prepareResources(capture.clone);
             const fontEmbedCSS = await withTimeout(
                 htmlToImage.getFontEmbedCSS(capture.clone),
@@ -211,6 +213,16 @@
             png = null;
             capture.dispose();
         }
+    }
+
+    /** PDF 표지는 종이 바깥까지 이어지는 한 장이다. 화면용 양장 모서리/그림자는 clone에서만 걷는다. */
+    function prepareCoverClone(clone) {
+        clone.style.borderRadius = '0';
+        clone.style.boxShadow = 'none';
+        clone.style.margin = '0';
+        clone.style.width = '100%';
+        clone.style.height = '100%';
+        clone.style.overflow = 'hidden';
     }
 
     function createCaptureClone(source, width, height) {
