@@ -2533,6 +2533,17 @@
     width: min(1180px, calc(100% - 40px));
     margin: 44px auto 90px;
     color: #2b2b2b;
+    /* 읽기·편집이 함께 쓰는 실제 A5 내부 캔버스. 화면 표시 크기는 바깥 viewport가 맡는다. */
+    --diary-page-base-width: 720px;
+    --diary-page-ratio: 148 / 210;
+    --diary-page-height: calc(var(--diary-page-base-width) * 210 / 148);
+    --diary-read-page-width: calc(var(--diary-page-base-width) * 0.8);
+    --diary-editor-controls-width: 880px;
+    --diary-book-gutter: 26px;
+    --diary-spread-width: calc(
+        var(--diary-read-page-width) + var(--diary-read-page-width) + var(--diary-book-gutter));
+    /* 기존 41:38 종이와 같은 실제 간격으로 코일이 이어지게 한다. */
+    --diary-binding-step: 4.57%;
     /* 읽기 화면은 상단 버튼이 빠진 만큼 책을 조금 더 크게 본다. (아래 is-read-mode) */
 
     /* 종이 기본색 (아이보리) */
@@ -2723,11 +2734,24 @@
 /* 펼친 공책: 왼쪽 장 + 제본선 + 오른쪽 장 */
 .diary-book-spread {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 26px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) var(--diary-book-gutter) minmax(0, 1fr);
     border: 1px solid #e0d8cb;
     border-radius: 12px;
     background: #f6efe3;
     box-shadow: 0 10px 26px rgba(63, 52, 38, 0.14);
+}
+
+/*
+ * 종이는 언제나 같은 720px A5 캔버스로 배치한다. 이 상자만 화면 공간에 맞춰 작아지고,
+ * diary-page-scale.js가 종이 전체에 같은 배율을 주므로 본문은 다시 줄바꿈되지 않는다.
+ */
+.diary-sheet-viewport {
+    position: relative;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: var(--diary-page-base-width);
+    aspect-ratio: var(--diary-page-ratio);
+    min-width: 0;
 }
 
 /* 종이: 무늬(있으면) → 종이 질감 → 종이 기본색 순으로 겹친다.
@@ -2740,13 +2764,18 @@
  * (자유배치 층 .diary-canvas 는 예전처럼 이 종이를 inset:0 으로 덮는다)
  */
 .diary-sheet {
-    position: relative;
+    /* transform은 그려지는 크기만 바꾸므로, 720px 캔버스는 viewport 레이아웃에서 뺀다.
+       viewport의 A5 비율 상자가 현재 scale에 맞는 실제 표시 높이를 맡는다. */
+    position: absolute;
     box-sizing: border-box;
     display: flex;
-    aspect-ratio: 41 / 38;
+    width: var(--diary-page-base-width);
+    height: var(--diary-page-height);
+    aspect-ratio: var(--diary-page-ratio);
     flex-direction: column;
-    /* 종이 너비 576px 짜리 한 장을 기준으로 삼는다. (읽기 화면의 한 면 크기)
-       좁은 화면에서는 읽기/편집 종이 너비가 같아지므로 최소값을 둬도 두 화면이 어긋나지 않는다. */
+    transform: scale(var(--diary-page-scale, 1));
+    transform-origin: top left;
+    /* 576px에서 맞춘 기존 종이 비례값을 720px 캔버스에서도 같은 비율로 확대한다. */
     container-type: inline-size;
     --diary-page-unit: max(0.87px, 100cqw / 576);
     /*
@@ -2758,8 +2787,10 @@
       이 값은 종이 '안쪽' 요소에서만 쓴다. 종이 자신의 속성에 쓰면 cqw 가 바깥
       컨테이너를 재기 때문에 값이 완전히 달라진다.
     */
-    --diary-line: 4.75cqw;
-    --diary-lines: 18;
+    /* 24줄의 첫 줄~마지막 줄 간격(23 interval)을 쪽번호 바로 위까지 늘린 값.
+       720px 기준 39px, 실제 A5 기준 약 8.02mm다. */
+    --diary-line: 5.416667cqw;
+    --diary-lines: 24;
     /* 본문 폭/윗자리는 그대로 두고 페이지 번호 아래 여백만 줄인다. */
     padding: 5.2% 5.2% 3.5%;
     background: var(--diary-paper-texture), var(--diary-paper-color);
@@ -2841,6 +2872,9 @@
 /* 일반 노트: 가운데를 비워 두 장이 그대로 이어진다.
    (칸 나눔은 이 규칙 하나로만 갈리고, 종이 비율과 안쪽 단위는 그대로다) */
 .diary-book-spread.diary-book-classic {
+    width: min(100%, calc(var(--diary-read-page-width) + var(--diary-read-page-width)));
+    margin-right: auto;
+    margin-left: auto;
     grid-template-columns: minmax(0, 1fr) 0 minmax(0, 1fr);
 }
 
@@ -2915,7 +2949,7 @@
             rgba(103, 88, 68, 0) 100%
         );
     background-repeat: repeat-y;
-    background-size: 100% 7%;
+    background-size: 100% var(--diary-binding-step);
     pointer-events: none;
 }
 
@@ -2957,8 +2991,8 @@
     transform: translateX(-50%);
     background-image: url('/images/diary/notebook/spring-ring.svg');
     background-repeat: repeat-y;
-    /* 고리 간격 = 한 장 높이의 7%. 한 장에 열네 개쯤 지나간다 */
-    background-size: 100% 7%;
+    /* A5 세로 길이에서도 기존과 비슷한 실제 간격으로 고리가 이어진다. */
+    background-size: 100% var(--diary-binding-step);
     /* 철사가 종이에서 살짝 떠 있는 정도의 그림자만 */
     filter: drop-shadow(0 1px 1px rgba(63, 52, 38, 0.12));
     pointer-events: none;
@@ -2976,7 +3010,7 @@
     width: 7.74%;
     background-image: url('/images/diary/notebook/spring-ring.svg');
     background-repeat: repeat-y;
-    background-size: 100% 7%;
+    background-size: 100% var(--diary-binding-step);
     filter: drop-shadow(0 1px 1px rgba(63, 52, 38, 0.12));
     pointer-events: none;
 }
@@ -3296,7 +3330,8 @@
     display: flex;
     flex: 1;
     flex-direction: column;
-    gap: calc(14 * var(--diary-page-unit));
+    /* 24번째 줄과 쪽번호가 A5 safe area 안에 온전히 들어가는 간격. */
+    gap: calc(12 * var(--diary-page-unit));
     min-height: 0;
     /* 구분선 아래에서 본문이 바로 이어지도록 좁게 둔다.
        머리말 쪽 아래 여백을 5.39u 늘려 선을 줄에 앉혔으므로, 그만큼 여기서 뺀다.
@@ -3354,6 +3389,7 @@
 /* 본문도 종이 너비에 비례해 그린다. (읽기/편집에서 글자와 자유배치 요소의 겹침이 같아진다) */
 .diary-editor .ql-editor,
 .diary-editor.is-read-only {
+    box-sizing: border-box;
     width: 100%;
     height: 100%;
     padding: 0;
@@ -3365,6 +3401,7 @@
     /* 종이 안에서는 스크롤하지 않는다. 보이는 줄이 곧 쓸 수 있는 줄이다.
        (더 쓸 곳이 필요하면 페이지를 한 장 더 만든다) */
     overflow: hidden;
+    letter-spacing: normal;
     overflow-wrap: anywhere;
 }
 
@@ -3442,6 +3479,7 @@
 /* ===== 펼침 공통 편집 툴바 =====
    첫 줄: 본문 서식 + 사진/스티커 + 저장 상태 / 둘째 줄: 한 줄 메모 전용 */
 .diary-toolbar {
+    box-sizing: border-box;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -4540,40 +4578,33 @@
 /* 툴바 바로 위 오른쪽의 작은 액션 줄. (쪽번호/날짜는 종이 안·아래 이동 줄에 있다) */
 .diary-page-meta {
     display: flex;
-    width: min(820px, 100%);
+    width: min(var(--diary-page-base-width), 100%);
     align-items: center;
     justify-content: flex-end;
     gap: 12px;
     margin: 0 auto 6px;
 }
 
-/* ===== 편집 모드: 한 장 집중 편집 =====
-   읽기 모드의 2페이지 펼침(.diary-book-spread) 규칙은 그대로 두고, 여기에만 규칙을 더한다. */
-/*
-  종이를 담는 상자는 종이와 같은 폭이어야 한다.
-
-  종이 자신의 여백(padding: 5.2% ...)은 자기 폭이 아니라 "담고 있는 상자"의 폭으로 계산된다.
-  읽기 모드의 종이는 펼침 그리드의 한 칸에 들어 있어 그 칸의 폭 = 종이 폭이라 늘 맞지만,
-  여기서 상자를 그냥 두면 화면 폭(최대 1180px)이 기준이 되어 820px 종이에
-  5.2% x 1180 만큼의 여백이 잡힌다. 그만큼 본문이 아래로 밀려 줄노트의 줄과 어긋난다.
-  (창이 넓을수록 더 밀린다)
-*/
+/* ===== 편집 모드: 한 장 집중 편집 ===== */
 .diary-book-single {
     display: flex;
-    width: min(820px, 100%);
+    width: min(var(--diary-page-base-width), 100%);
     margin: 0 auto;
     justify-content: center;
 }
 
-/* 편집은 한 장을 크게 본다. 안쪽 여백/글자 크기는 종이 너비에 비례하므로 따로 정하지 않는다. */
-.diary-book-single .diary-sheet-single {
-    width: min(820px, 100%);
-    border: 1px solid #e0d8cb;
+/* 테두리와 그림자는 바깥 상자가 맡아 읽기/편집 종이의 content box를 똑같이 지킨다. */
+.diary-book-single .diary-sheet-viewport {
     border-radius: 12px;
-    box-shadow: 0 10px 26px rgba(63, 52, 38, 0.14);
+    box-shadow:
+        0 0 0 1px #e0d8cb,
+        0 10px 26px rgba(63, 52, 38, 0.14);
 }
 
-/* 툴바는 종이 너비에 맞춰 가운데로 */
+.diary-book-single .diary-sheet-single {
+    border-radius: 12px;
+}
+
 /* 상단 정보 → 액션 줄 → 툴바 → 종이가 바로 이어지도록 사이 여백만 조금 줄인다 */
 .is-edit-mode .diary-detail-header {
     margin-bottom: 18px;
@@ -4581,14 +4612,14 @@
 
 /* 툴바 아래와 종이 사이는 붙지 않을 만큼만 남긴다 */
 .is-edit-mode .diary-toolbar {
-    width: min(820px, 100%);
+    width: min(var(--diary-editor-controls-width), 100%);
     margin-right: auto;
     margin-bottom: 12px;
     margin-left: auto;
 }
 
 .is-edit-mode .diary-spread-nav {
-    width: min(820px, 100%);
+    width: min(var(--diary-page-base-width), 100%);
     margin-right: auto;
     margin-left: auto;
 }
@@ -4601,18 +4632,18 @@
 /*
   읽는 화면은 펼친 책 자체를 크게 본다. 넓히는 것은 바깥 폭뿐이라,
   종이에 붙여 둔 사진·스티커·라벨은 제자리·같은 비율로 함께 커진다.
-  (종이 비율 41:38 과 --diary-page-unit 셈은 그대로 둔다)
+  (종이 비율 148:210 과 --diary-page-unit 셈은 그대로 둔다)
 */
 .diary-detail-page.is-read-mode {
     /* 큰 모니터에서는 여기서 멈춘다. 화면이 넓어져도 책이 계속 커지면
        한 줄이 너무 길어져 읽기 어렵다. (노트북에서는 화면 폭을 그대로 쓴다) */
-    width: min(1140px, calc(100% - 40px));
+    width: min(var(--diary-spread-width), calc(100% - 40px));
 }
 
 /*
   폭만 키우면 세로가 화면을 넘어가므로, 두 장을 나란히 펼치는 폭에서는 높이도 함께 본다.
-  한 면 높이 = (펼침폭 - 제본선 26px) / 2 * 38/41 이므로,
-  쓸 수 있는 높이에서 거꾸로 계산한 폭(높이 * 2.158 + 26px)을 넘지 않게 한다.
+  한 면 높이 = (펼침폭 - 제본선) / 2 * 210/148 이므로,
+  쓸 수 있는 높이에서 거꾸로 계산한 폭(높이 * 1.409524 + 제본선)을 넘지 않게 한다.
 
   좁은 화면(860px 이하)은 한 장씩 넘겨 보는 구조라 화면 폭이 그대로 기준이다.
   (거기서 높이로 폭을 줄이면 가로로 누운 화면에서 책만 작아진다)
@@ -4621,13 +4652,13 @@
 @media (min-width: 861px) {
     .diary-detail-page.is-read-mode {
         width: min(
-            1140px,
+            var(--diary-spread-width),
             calc(100% - 40px),
-            calc(max(420px, 100vh - 200px) * 2.158 + 26px));
+            calc(max(420px, 100vh - 200px) * 1.409524 + var(--diary-book-gutter)));
         width: min(
-            1140px,
+            var(--diary-spread-width),
             calc(100% - 40px),
-            calc(max(420px, 100dvh - 200px) * 2.158 + 26px));
+            calc(max(420px, 100dvh - 200px) * 1.409524 + var(--diary-book-gutter)));
     }
 }
 
@@ -5815,6 +5846,9 @@
 }
 
 .diary-sheet-number {
+    /* 마지막 줄이 하단까지 이어져도 쪽번호는 같은 자리에서 또렷하게 읽힌다. */
+    position: relative;
+    z-index: 2;
     margin: 0;
     flex: 0 0 auto;
     color: #a89a83;
@@ -6254,8 +6288,8 @@ body.is-pin-open {
         -webkit-overflow-scrolling: touch;
     }
 
-    /* 좁은 화면에서도 종이 안쪽은 같은 비율로 그려진다. (여백/글자 크기를 따로 정하지 않는다) */
-    .diary-sheet {
+    /* 한 장의 viewport만 화면 폭을 차지한다. 내부 720px 캔버스는 그대로다. */
+    .diary-book-spread > .diary-sheet-viewport {
         flex: 0 0 100%;
         scroll-snap-align: start;
     }
@@ -6284,12 +6318,6 @@ body.is-pin-open {
 
     .diary-spread-nav {
         gap: 8px;
-    }
-
-    /* 편집 모드 한 장은 화면 폭에 맞춘다 (읽기 모드 가로 스냅은 그대로)
-       안쪽 여백/글자 크기는 종이 너비에 비례하므로 여기서 따로 정하지 않는다. */
-    .diary-book-single .diary-sheet-single {
-        width: 100%;
     }
 
     .is-edit-mode .diary-toolbar,

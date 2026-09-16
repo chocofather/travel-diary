@@ -19,6 +19,18 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class GuestDiaryEditorContractTest {
 
+    @Test
+    void newPageDecorationsUseA5RelativeHeightsAndOffsets() throws IOException {
+        String editor = script("guest-diary-editor.js");
+
+        assertThat(editor)
+                .contains("const STICKER_HEIGHT = 0.11757;")
+                .contains("const TAPE_HEIGHT = 0.05879;")
+                .contains("const LABEL_HEIGHT = 0.05226;")
+                .contains("const MEMO_HEIGHT = 0.18289;")
+                .contains("const OFFSET_Y_STEP = 0.02613;");
+    }
+
     /**
      * 3) 다이어리는 만들기 화면에서 만들어진다. 첫 장까지 함께 열린다.
      * 페이지 편집기가 몰래 만들지 않는다.

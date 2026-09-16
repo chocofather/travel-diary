@@ -17,7 +17,9 @@
     "use strict";
 
     const STORAGE_KEY = "travelDiary.guestDiaryDraft.v1";
-    const SCHEMA_VERSION = 1;
+    const SCHEMA_VERSION = 2;
+    /** 기존 41:38 내지의 세로 픽셀 위치/크기를 A5 상대값으로 옮기는 정확한 계수. */
+    const LEGACY_VERTICAL_SCALE = 2812 / 4305;
     /** 비회원 체험 한도. UI 뿐 아니라 addPage() 자체가 이 수를 넘기지 않는다. */
     const MAX_PAGES = 3;
 
@@ -178,7 +180,7 @@
         return url;
     }
 
-    function normalizeElement(raw) {
+    function normalizeElement(raw, legacyPageCoordinates) {
         if (!isObject(raw)) {
             return null;
         }
@@ -200,15 +202,21 @@
             textFont: text(raw.textFont, null),
             textColor: text(raw.textColor, null),
             positionX: number(raw.positionX, 0),
-            positionY: number(raw.positionY, 0),
+            positionY: legacyPageCoordinates
+                ? verticalA5(number(raw.positionY, 0)) : number(raw.positionY, 0),
             width: number(raw.width, 0.3),
-            height: number(raw.height, 0.3),
+            height: legacyPageCoordinates
+                ? verticalA5(number(raw.height, 0.3)) : number(raw.height, 0.3),
             rotation: number(raw.rotation, 0),
             zIndex: number(raw.zIndex, 0)
         };
     }
 
-    function normalizePage(raw, order) {
+    function verticalA5(value) {
+        return Math.round(value * LEGACY_VERTICAL_SCALE * 100000) / 100000;
+    }
+
+    function normalizePage(raw, order, legacyPageCoordinates) {
         const page = isObject(raw) ? raw : {};
         const elements = Array.isArray(page.elements) ? page.elements : [];
         return {
@@ -222,7 +230,9 @@
             pageHeaderFont: text(page.pageHeaderFont, DEFAULT_HEADER_FONT),
             pageHeaderBold: page.pageHeaderBold === true,
             content: text(page.content, ""),
-            elements: elements.map(normalizeElement).filter(Boolean)
+            elements: elements
+                .map((element) => normalizeElement(element, legacyPageCoordinates))
+                .filter(Boolean)
         };
     }
 
@@ -240,7 +250,7 @@
             name: text(raw.name, null),
             baseCoverStyle: text(raw.baseCoverStyle, DEFAULT_COVER_STYLE),
             backgroundColor: text(raw.backgroundColor, null),
-            elements: elements.map(normalizeElement).filter(Boolean)
+            elements: elements.map((element) => normalizeElement(element, false)).filter(Boolean)
         };
     }
 
@@ -254,6 +264,7 @@
             return null;
         }
         const pages = Array.isArray(raw.pages) ? raw.pages : [];
+        const legacyPageCoordinates = number(raw.schemaVersion, 1) < SCHEMA_VERSION;
         return {
             schemaVersion: SCHEMA_VERSION,
             draftId: text(raw.draftId, null) || newId("gd_"),
@@ -270,7 +281,7 @@
             // 새로고침 뒤 보고 있던 장으로 돌아가기 위한 화면 상태. 별도 key 를 만들지 않는다.
             currentPageId: text(raw.currentPageId, null),
             pages: pages.slice(0, MAX_PAGES)
-                .map((page, index) => normalizePage(page, index + 1))
+                .map((page, index) => normalizePage(page, index + 1, legacyPageCoordinates))
         };
     }
 
@@ -504,7 +515,7 @@
         }
         const added = normalizeElement(Object.assign({}, isObject(element) ? element : {}, {
             elementId: newId("ge_")
-        }));
+        }), false);
         if (!added) {
             return {ok: false, reason: REASON.ELEMENT_NOT_FOUND};
         }
@@ -541,7 +552,7 @@
         // 식별자와 종류는 patch 로 바꾸지 못한다.
         merged.elementId = elements[elementIndex].elementId;
         merged.elementType = elements[elementIndex].elementType;
-        elements[elementIndex] = normalizeElement(merged);
+        elements[elementIndex] = normalizeElement(merged, false);
 
         const pages = draft.pages.slice();
         pages[pageIndex] = Object.assign({}, draft.pages[pageIndex], {elements: elements});
@@ -621,7 +632,7 @@
         const cover = ensureCoverDesign(draft);
         const added = normalizeElement(Object.assign({}, isObject(element) ? element : {}, {
             elementId: newId("gc_")
-        }));
+        }), false);
         if (!added) {
             return {ok: false, reason: REASON.ELEMENT_NOT_FOUND};
         }
@@ -654,7 +665,7 @@
         // 식별자와 종류는 patch 로 바꾸지 못한다.
         merged.elementId = elements[index].elementId;
         merged.elementType = elements[index].elementType;
-        elements[index] = normalizeElement(merged);
+        elements[index] = normalizeElement(merged, false);
 
         const next = Object.assign({}, cover, {elements: elements});
         const result = write(Object.assign({}, draft, {coverDesign: next}));

@@ -23,15 +23,17 @@
     }
 
     /* 서버(DiaryController)가 쓰는 것과 같은 기본 자리·크기. 붙는 모습이 회원 화면과 같아진다. */
-    const STICKER_SIZE = 0.18;
+    const STICKER_WIDTH = 0.18;
+    const STICKER_HEIGHT = 0.11757;
     const TAPE_WIDTH = 0.46;
-    const TAPE_HEIGHT = 0.09;
+    const TAPE_HEIGHT = 0.05879;
     const LABEL_WIDTH = 0.30;
-    const LABEL_HEIGHT = 0.08;
+    const LABEL_HEIGHT = 0.05226;
     const MEMO_WIDTH = 0.26;
-    const MEMO_HEIGHT = 0.28;
+    const MEMO_HEIGHT = 0.18289;
     const CENTER = 0.41;
-    const OFFSET_STEP = 0.04;
+    const OFFSET_X_STEP = 0.04;
+    const OFFSET_Y_STEP = 0.02613;
     const OFFSET_CYCLE = 5;
     const MEMO_STYLE_PREFIX = 'MEMO';
 
@@ -241,7 +243,8 @@
 
     /** 서버가 하던 것처럼 이미 붙어 있는 수만큼 조금씩 어긋나게 놓는다. */
     function placementOffset() {
-        return OFFSET_STEP * (current.elements.length % OFFSET_CYCLE);
+        const step = current.elements.length % OFFSET_CYCLE;
+        return {x: OFFSET_X_STEP * step, y: OFFSET_Y_STEP * step};
     }
 
     function elementUrls(elementId, deleteCommand) {
@@ -274,10 +277,10 @@
         const saved = attach({
             elementType: 'STICKER',
             imageUrl: option.dataset.stickerImage,
-            positionX: CENTER + offset,
-            positionY: CENTER + offset,
-            width: tape ? TAPE_WIDTH : STICKER_SIZE,
-            height: tape ? TAPE_HEIGHT : STICKER_SIZE,
+            positionX: CENTER + offset.x,
+            positionY: CENTER + offset.y,
+            width: tape ? TAPE_WIDTH : STICKER_WIDTH,
+            height: tape ? TAPE_HEIGHT : STICKER_HEIGHT,
             rotation: 0
         });
 
@@ -316,8 +319,8 @@
             textContent: '',
             styleType: styleType,
             colorType: colorType || null,
-            positionX: CENTER + offset,
-            positionY: CENTER + offset,
+            positionX: CENTER + offset.x,
+            positionY: CENTER + offset.y,
             width: memo ? MEMO_WIDTH : LABEL_WIDTH,
             height: memo ? MEMO_HEIGHT : LABEL_HEIGHT,
             rotation: 0
@@ -349,8 +352,8 @@
             textContent: String(text === undefined ? '' : text),
             textFont: textFont || null,
             textColor: textColor || null,
-            positionX: CENTER + offset,
-            positionY: CENTER + offset,
+            positionX: CENTER + offset.x,
+            positionY: CENTER + offset.y,
             width: LABEL_WIDTH,
             height: LABEL_HEIGHT,
             rotation: 0

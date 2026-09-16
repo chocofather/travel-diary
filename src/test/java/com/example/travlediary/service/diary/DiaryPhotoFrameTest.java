@@ -5,12 +5,19 @@ import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
 /**
  * 폴라로이드의 처음 크기. 사진 자리가 원본 비율 그대로가 되도록 요소 높이를 구한다.
  * (프레임 두께는 diary.css 의 padding 과 같은 값을 쓴다)
  */
 class DiaryPhotoFrameTest {
+
+    @Test
+    void pageCanvasUsesA5PortraitAspect() {
+        assertThat(DiaryPhotoFrame.PAGE_CANVAS_ASPECT)
+                .isCloseTo(148.0 / 210.0, within(0.0000001));
+    }
 
     private static final BigDecimal WIDTH = new BigDecimal("0.34000");
 

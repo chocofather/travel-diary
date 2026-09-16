@@ -23,6 +23,7 @@ import com.example.travlediary.service.diary.DiaryElementService;
 import com.example.travlediary.service.diary.DiaryLabelFontCatalog;
 import com.example.travlediary.service.diary.DiaryNoteCatalog;
 import com.example.travlediary.config.DiaryPinLockedAdvice;
+import com.example.travlediary.service.diary.DiaryPageGeometry;
 import com.example.travlediary.service.diary.DiaryPageService;
 import com.example.travlediary.service.diary.DiaryPhotoFrame;
 import com.example.travlediary.service.diary.DiaryPinSession;
@@ -78,26 +79,32 @@ public class DiaryController {
     private static final String STICKER_ELEMENT_TYPE = "STICKER";
     /** 스티커를 처음 붙이는 자리/크기. 종이 가운데 부근에서 조금씩 어긋나게 놓는다. */
     private static final BigDecimal STICKER_SIZE = new BigDecimal("0.18000");
+    private static final BigDecimal STICKER_HEIGHT =
+            DiaryPageGeometry.fromLegacyVertical(STICKER_SIZE);
     /** 마스킹테이프는 처음부터 띠 모양으로 놓는다. (길이 ↔ 두께를 따로 조절한다) */
     private static final BigDecimal TAPE_WIDTH = new BigDecimal("0.46000");
-    private static final BigDecimal TAPE_HEIGHT = new BigDecimal("0.09000");
+    private static final BigDecimal TAPE_HEIGHT = DiaryPageGeometry.fromLegacyVertical(
+            new BigDecimal("0.09000"));
     /** 폴라로이드를 처음 놓는 너비. 높이는 사진 원본 비율에서 구한다. */
     private static final BigDecimal PHOTO_WIDTH = new BigDecimal("0.34000");
     private static final BigDecimal STICKER_CENTER = new BigDecimal("0.41000");
-    private static final BigDecimal STICKER_OFFSET_STEP = new BigDecimal("0.04000");
+    private static final BigDecimal STICKER_OFFSET_X_STEP = new BigDecimal("0.04000");
+    private static final BigDecimal STICKER_OFFSET_Y_STEP = DiaryPageGeometry.fromLegacyVertical(
+            STICKER_OFFSET_X_STEP);
     private static final int STICKER_OFFSET_CYCLE = 5;
     private static final String NOTE_ELEMENT_TYPE = "NOTE";
     /*
       라벨/떡메모지를 처음 놓는 크기. 자리는 스티커와 같은 규칙을 그대로 쓴다.
 
-      종이 한 장은 가로:세로가 41:38 이라 가로 쪽이 조금 넓다.
-      그래서 화면에서 정사각형으로 보이려면 세로 비율을 그만큼 더 줘야 한다
-      (0.26 * 41 ≈ 0.28 * 38). 라벨은 반대로 납작한 가로 딱지 모양이다.
+      기존 41:38 화면에서 보이던 픽셀 크기를 A5에서도 유지한다.
+      가로값은 그대로 두고 세로값만 내지 좌표 변환 계수로 환산한다.
     */
     private static final BigDecimal LABEL_WIDTH = new BigDecimal("0.30000");
-    private static final BigDecimal LABEL_HEIGHT = new BigDecimal("0.08000");
+    private static final BigDecimal LABEL_HEIGHT = DiaryPageGeometry.fromLegacyVertical(
+            new BigDecimal("0.08000"));
     private static final BigDecimal MEMO_WIDTH = new BigDecimal("0.26000");
-    private static final BigDecimal MEMO_HEIGHT = new BigDecimal("0.28000");
+    private static final BigDecimal MEMO_HEIGHT = DiaryPageGeometry.fromLegacyVertical(
+            new BigDecimal("0.28000"));
 
     /** 표지를 "내 디자인"으로 고른 요청. (그 밖의 값은 기본 표지로 본다) */
     private static final String CUSTOM_COVER_SELECTION = "CUSTOM";
@@ -749,10 +756,12 @@ public class DiaryController {
                   (여러 장이 정확히 겹쳐 한 장처럼 보이지 않게 하려는 것뿐이다)
                 */
                 if (placed > 0) {
-                    BigDecimal offset = STICKER_OFFSET_STEP
+                    BigDecimal offsetX = STICKER_OFFSET_X_STEP
                             .multiply(BigDecimal.valueOf(placed % STICKER_OFFSET_CYCLE));
-                    element.setPositionX(offset);
-                    element.setPositionY(offset);
+                    BigDecimal offsetY = STICKER_OFFSET_Y_STEP
+                            .multiply(BigDecimal.valueOf(placed % STICKER_OFFSET_CYCLE));
+                    element.setPositionX(offsetX);
+                    element.setPositionY(offsetY);
                 }
                 diaryElementService.create(diaryId, pageId, userDetails.getId(), element);
                 placed++;
@@ -818,17 +827,19 @@ public class DiaryController {
         try {
             // 같은 자리에 겹쳐 쌓이지 않게 이미 붙어 있는 요소 수만큼 조금씩 어긋나게 놓는다.
             int placed = diaryElementService.getElements(diaryId, pageId, userId).size();
-            BigDecimal offset = STICKER_OFFSET_STEP
+            BigDecimal offsetX = STICKER_OFFSET_X_STEP
+                    .multiply(BigDecimal.valueOf(placed % STICKER_OFFSET_CYCLE));
+            BigDecimal offsetY = STICKER_OFFSET_Y_STEP
                     .multiply(BigDecimal.valueOf(placed % STICKER_OFFSET_CYCLE));
 
             boolean tape = DiaryStickerKind.isMaskingTape(sticker.imageUrl());
             DiaryElement element = new DiaryElement();
             element.setElementType(STICKER_ELEMENT_TYPE);
             element.setImageUrl(sticker.imageUrl());
-            element.setPositionX(STICKER_CENTER.add(offset));
-            element.setPositionY(STICKER_CENTER.add(offset));
+            element.setPositionX(STICKER_CENTER.add(offsetX));
+            element.setPositionY(STICKER_CENTER.add(offsetY));
             element.setWidth(tape ? TAPE_WIDTH : STICKER_SIZE);
-            element.setHeight(tape ? TAPE_HEIGHT : STICKER_SIZE);
+            element.setHeight(tape ? TAPE_HEIGHT : STICKER_HEIGHT);
             // 회전 0 / 겹침 순서는 사진과 같은 기본값을 쓴다.
             created = diaryElementService.create(diaryId, pageId, userId, element);
         } catch (ResponseStatusException exception) {
@@ -895,7 +906,9 @@ public class DiaryController {
         try {
             // 스티커와 같은 규칙으로 조금씩 어긋나게 놓는다. (새 좌표 계산을 만들지 않는다)
             int placed = diaryElementService.getElements(diaryId, pageId, userId).size();
-            BigDecimal offset = STICKER_OFFSET_STEP
+            BigDecimal offsetX = STICKER_OFFSET_X_STEP
+                    .multiply(BigDecimal.valueOf(placed % STICKER_OFFSET_CYCLE));
+            BigDecimal offsetY = STICKER_OFFSET_Y_STEP
                     .multiply(BigDecimal.valueOf(placed % STICKER_OFFSET_CYCLE));
 
             boolean label = DiaryNoteStyle.CATEGORY_LABEL.equals(style.category());
@@ -906,8 +919,8 @@ public class DiaryController {
             element.setColorType(colorType);
             // 붙인 직후에는 아직 적은 글이 없다. NULL 만 막히므로 빈 글로 둔다.
             element.setTextContent("");
-            element.setPositionX(STICKER_CENTER.add(offset));
-            element.setPositionY(STICKER_CENTER.add(offset));
+            element.setPositionX(STICKER_CENTER.add(offsetX));
+            element.setPositionY(STICKER_CENTER.add(offsetY));
             element.setWidth(label ? LABEL_WIDTH : MEMO_WIDTH);
             element.setHeight(label ? LABEL_HEIGHT : MEMO_HEIGHT);
             // 회전 0 / 겹침 순서는 사진·스티커와 같은 기본값을 쓴다.

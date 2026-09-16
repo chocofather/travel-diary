@@ -43,7 +43,7 @@ public final class DiaryPhotoFrame {
     public static final double FRAME_HEIGHT = SIDE + BOTTOM;
 
     /** 종이 한 장의 가로/세로 비율. (읽기/편집이 같은 비율을 쓴다) */
-    public static final double PAGE_CANVAS_ASPECT = 41.0 / 38.0;
+    public static final double PAGE_CANVAS_ASPECT = DiaryPageGeometry.PAGE_CANVAS_ASPECT;
     /** 표지 한 장의 가로/세로 비율. */
     public static final double COVER_CANVAS_ASPECT = 3.0 / 4.0;
 

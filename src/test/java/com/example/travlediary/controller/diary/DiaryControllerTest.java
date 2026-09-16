@@ -2148,8 +2148,9 @@ class DiaryControllerTest {
         assertThat(saved.getTextContent()).isNull();
         // 종이 가운데 부근의 작은 기본 크기
         assertThat(saved.getWidth()).isEqualByComparingTo("0.18000");
-        assertThat(saved.getHeight()).isEqualByComparingTo("0.18000");
+        assertThat(saved.getHeight()).isEqualByComparingTo("0.11757");
         assertThat(saved.getPositionX()).isEqualByComparingTo("0.41000");
+        assertThat(saved.getPositionY()).isEqualByComparingTo("0.41000");
     }
 
     /** 마스킹테이프는 처음부터 띠 모양으로 놓이고, 화면도 그렇게 다루도록 함께 알려 준다. */
@@ -2175,7 +2176,7 @@ class DiaryControllerTest {
         // 유형은 그대로 STICKER 이고 크기만 띠 모양이다
         assertThat(saved.getElementType()).isEqualTo("STICKER");
         assertThat(saved.getWidth()).isEqualByComparingTo("0.46000");
-        assertThat(saved.getHeight()).isEqualByComparingTo("0.09000");
+        assertThat(saved.getHeight()).isEqualByComparingTo("0.05879");
         // 화면이 곧바로 마스킹테이프로 알아보게 함께 내려 준다
         assertThat(body).contains("\"maskingTape\":true");
         // 마스킹테이프는 모두 되풀이형이라 조각 경로도 함께 온다
@@ -4113,7 +4114,7 @@ class DiaryControllerTest {
         DiaryElement label = captor.getValue();
         // 라벨은 납작한 가로 딱지다
         assertThat(label.getWidth()).isEqualByComparingTo("0.30000");
-        assertThat(label.getHeight()).isEqualByComparingTo("0.08000");
+        assertThat(label.getHeight()).isEqualByComparingTo("0.05226");
         // 자리와 회전·겹침 순서는 스티커와 같은 규칙을 그대로 쓴다
         assertThat(label.getPositionX()).isEqualByComparingTo("0.41000");
         assertThat(label.getPositionY()).isEqualByComparingTo("0.41000");
@@ -4134,12 +4135,9 @@ class DiaryControllerTest {
 
         verify(diaryElementService).create(eq(10L), eq(3L), eq(7L), captor.capture());
         DiaryElement memo = captor.getValue();
-        /*
-          종이가 41:38 이라 화면에서 정사각형으로 보이려면 세로를 그만큼 더 준다.
-          (0.26 * 41 ≈ 0.28 * 38) 페이지 절반을 넘지 않는다.
-        */
+        // A5에서도 기존 41:38 화면의 정사각형 크기를 그대로 유지한다.
         assertThat(memo.getWidth()).isEqualByComparingTo("0.26000");
-        assertThat(memo.getHeight()).isEqualByComparingTo("0.28000");
+        assertThat(memo.getHeight()).isEqualByComparingTo("0.18289");
     }
 
     @Test
@@ -4160,9 +4158,9 @@ class DiaryControllerTest {
 
         ArgumentCaptor<DiaryElement> captor = ArgumentCaptor.forClass(DiaryElement.class);
         verify(diaryElementService).create(eq(10L), eq(3L), eq(7L), captor.capture());
-        // 0.41 + 0.04 * 2 (스티커와 같은 계단)
+        // 가로는 기존 0.04, 세로는 A5 환산값 0.02613으로 어긋난다.
         assertThat(captor.getValue().getPositionX()).isEqualByComparingTo("0.49000");
-        assertThat(captor.getValue().getPositionY()).isEqualByComparingTo("0.49000");
+        assertThat(captor.getValue().getPositionY()).isEqualByComparingTo("0.46226");
     }
 
     @Test

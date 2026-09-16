@@ -75,7 +75,7 @@ class DiarySpiralNotebookUiContractTest {
             // 장식일 뿐이라 클릭/드래그를 가로채지 않는다
             assertThat(coil).contains("pointer-events: none;");
             // 크기가 모두 % 라 확대/축소해도 고리 모양과 개수가 그대로다
-            assertThat(coil).contains("background-size: 100% 7%;");
+            assertThat(coil).contains("background-size: 100% var(--diary-binding-step);");
         }
         /*
           폭은 두 화면 모두 "한 장" 기준이다.
@@ -99,7 +99,8 @@ class DiarySpiralNotebookUiContractTest {
         String holes = rule(css, ".diary-book-spiral .diary-sheet::after");
 
         // 코일과 같은 간격, 같은 시작점
-        assertThat(holes).contains("background-size: 100% 7%;").contains("top: 0;");
+        assertThat(holes).contains("background-size: 100% var(--diary-binding-step);")
+                .contains("top: 0;");
         assertThat(holes).contains("background-repeat: repeat-y;");
         // 사진/스티커(2층)보다 아래에 있는 종이의 일부다
         assertThat(holes).contains("z-index: 1;");
@@ -184,7 +185,7 @@ class DiarySpiralNotebookUiContractTest {
                 .contains("inset -5px 0 8px -8px");
         // 칸 나눔(제본선 폭)은 일반 노트와 같은 값을 그대로 쓴다
         assertThat(rule(css, ".diary-book-spread"))
-                .contains("grid-template-columns: minmax(0, 1fr) 26px minmax(0, 1fr);");
+                .contains("grid-template-columns: minmax(0, 1fr) var(--diary-book-gutter) minmax(0, 1fr);");
     }
 
     @Test
@@ -212,7 +213,7 @@ class DiarySpiralNotebookUiContractTest {
         // 종이 자체의 좌표계는 그대로다
         String sheet = rule(css, ".diary-sheet");
         assertThat(sheet)
-                .contains("aspect-ratio: 41 / 38;")
+                .contains("aspect-ratio: var(--diary-page-ratio);")
                 .contains("container-type: inline-size;")
                 .contains("--diary-page-unit: max(0.87px, 100cqw / 576);")
                 .contains("padding: 5.2% 5.2% 3.5%;");

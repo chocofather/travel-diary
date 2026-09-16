@@ -393,10 +393,10 @@ class GuestDiaryPhotoContractTest {
                 .contains("canvasAspect: global.GuestDiaryPhoto.COVER_CANVAS_ASPECT");
         // 두 층의 캔버스 비율 값이 같아야 같은 모습이 된다.
         assertThat(guestPhoto)
-                .contains("const PAGE_CANVAS_ASPECT = 41 / 38;")
+                .contains("const PAGE_CANVAS_ASPECT = 148 / 210;")
                 .contains("const COVER_CANVAS_ASPECT = 3 / 4;");
         assertThat(source("service/diary/DiaryPhotoFrame.java"))
-                .contains("PAGE_CANVAS_ASPECT = 41.0 / 38.0")
+                .contains("PAGE_CANVAS_ASPECT = DiaryPageGeometry.PAGE_CANVAS_ASPECT")
                 .contains("COVER_CANVAS_ASPECT = 3.0 / 4.0");
     }
 

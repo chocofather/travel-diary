@@ -19,18 +19,86 @@ class DiaryPageCoordinateAssetTest {
     private static final Path DIARY_CSS = Path.of("src/main/resources/static/css/diary.css");
     private static final Path DETAIL_HTML =
             Path.of("src/main/resources/templates/diary/detail.html");
+    private static final Path DEMO_EDIT_HTML =
+            Path.of("src/main/resources/templates/diary/demo-edit.html");
+    private static final Path PAGE_SCALE_JS =
+            Path.of("src/main/resources/static/js/diary-page-scale.js");
 
     /** 종이 한 장의 비율이 두 화면에서 같아야 세로 % 가 같은 자리를 가리킨다. */
     @Test
     void paperKeepsOneRatioAndOneInnerUnit() throws IOException {
         String css = Files.readString(DIARY_CSS);
+        String page = rule(css, ".diary-detail-page");
         String sheet = rule(css, ".diary-sheet");
 
-        assertThat(sheet).contains("aspect-ratio: 41 / 38;");
+        assertThat(page)
+                .contains("--diary-page-base-width: 720px;")
+                .contains("--diary-page-ratio: 148 / 210;")
+                .contains("--diary-page-height: calc(var(--diary-page-base-width) * 210 / 148);");
+        assertThat(sheet).contains("aspect-ratio: var(--diary-page-ratio);");
+        assertThat(sheet)
+                .contains("width: var(--diary-page-base-width);")
+                .contains("height: var(--diary-page-height);");
         assertThat(sheet).contains("container-type: inline-size;");
         assertThat(sheet).contains("--diary-page-unit:");
         // 종이 자신의 여백은 %(자기 너비 기준)라 어느 화면에서도 같은 비율이다
         assertThat(sheet).contains("padding: 5.2% 5.2% 3.5%;");
+    }
+
+    @Test
+    void everyModeUsesOne720PixelCanvasAndScalesOnlyItsViewport() throws IOException {
+        String css = Files.readString(DIARY_CSS);
+        String detail = Files.readString(DETAIL_HTML);
+        String demo = Files.readString(DEMO_EDIT_HTML);
+        assertThat(PAGE_SCALE_JS).exists();
+        String scaler = Files.readString(PAGE_SCALE_JS);
+        String sheet = rule(css, ".diary-sheet");
+        String viewport = rule(css, ".diary-sheet-viewport");
+
+        assertThat(sheet)
+                .contains("width: var(--diary-page-base-width);")
+                .contains("height: var(--diary-page-height);")
+                .contains("position: absolute;")
+                .contains("transform: scale(var(--diary-page-scale, 1));")
+                .contains("transform-origin: top left;");
+        assertThat(viewport)
+                .contains("max-width: var(--diary-page-base-width);")
+                .contains("aspect-ratio: var(--diary-page-ratio);");
+        assertThat(detail.split("data-diary-sheet-viewport", -1)).hasSize(4);
+        assertThat(demo.split("data-diary-sheet-viewport", -1)).hasSize(2);
+        assertThat(detail).contains("/js/diary-page-scale.js");
+        assertThat(demo).contains("/js/diary-page-scale.js");
+        assertThat(scaler)
+                .contains("ResizeObserver")
+                .contains("frame.getBoundingClientRect().width")
+                .contains("frameWidth / baseWidth")
+                .contains("--diary-page-scale");
+    }
+
+    @Test
+    void readOnlyAndQuillTextShareOnlyTheHorizontalWrapGeometry() throws IOException {
+        String body = bodyTextRule(Files.readString(DIARY_CSS));
+
+        assertThat(body)
+                .contains("box-sizing: border-box;")
+                .contains("width: 100%;")
+                .contains("padding: 0;")
+                .contains("font-size: calc(15 * var(--diary-page-unit));")
+                .contains("letter-spacing: normal;")
+                .doesNotContain("tab-size:")
+                .doesNotContain("text-align:")
+                .doesNotContain("white-space:")
+                .doesNotContain("word-break:");
+    }
+
+    @Test
+    void readOnlyBodyHasNoModeSpecificHorizontalInset() throws IOException {
+        String css = Files.readString(DIARY_CSS);
+
+        assertThat(bodyTextRule(css)).contains("padding: 0;");
+        assertThat(rule(css, ".is-read-mode .diary-editor.is-read-only"))
+                .doesNotContain("padding")
+                .doesNotContain("width");
     }
 
     /**
@@ -47,7 +115,7 @@ class DiaryPageCoordinateAssetTest {
         String body = bodyTextRule(css);
 
         // 기준값은 종이에 한 번만 적는다
-        assertThat(sheet).contains("--diary-line: 4.75cqw;").contains("--diary-lines: 18;");
+        assertThat(sheet).contains("--diary-line: 5.416667cqw;").contains("--diary-lines: 24;");
         // 본문 줄 높이 / 줄 그림 / 글 쓰는 자리 높이가 모두 그 값을 가리킨다
         assertThat(body).contains("line-height: var(--diary-line);");
         assertThat(rule(css, ".diary-sheet-bg-lined .diary-writing-layer"))
@@ -62,6 +130,16 @@ class DiaryPageCoordinateAssetTest {
         */
         assertThat(body).contains("font-size: calc(15 * var(--diary-page-unit));");
         assertThat(sheet).contains("--diary-page-unit: max(0.87px, 100cqw / 576);");
+
+        // 720px A5 기준 39px(약 8.02mm) 간격으로 24번째 줄을 쪽번호 바로 위까지 내린다.
+        assertThat(720 * 5.416667 / 100).isCloseTo(39.0, within(0.01));
+        assertThat(39.0 * 148 / 720).isCloseTo(8.02, within(0.01));
+        // 24번째 줄 슬롯부터 하단 쪽번호 시작점까지는 약 1.75mm다.
+        assertThat((981.421622 - (75.9025 + 23 * 39.0)) * 148 / 720)
+                .isCloseTo(1.75, within(0.01));
+        assertThat(rule(css, ".diary-sheet-number"))
+                .contains("position: relative;")
+                .contains("z-index: 2;");
     }
 
     /**
@@ -217,19 +295,29 @@ class DiaryPageCoordinateAssetTest {
      * (한 장 820px, 상자 1121px 이면 위 여백이 29.95u 가 아니라 40.95u 가 된다)
      */
     @Test
-    void thePaperSizesItsOwnMarginsFromItsOwnWidthInBothModes() throws IOException {
+    void thePaperSizesItsOwnMarginsFromTheSharedBaseCanvasInBothModes() throws IOException {
         String css = Files.readString(DIARY_CSS);
         String single = rule(css, ".diary-book-single");
 
-        // 상자와 종이가 같은 폭이라 % 여백이 종이 폭 기준이 된다
-        assertThat(single).contains("width: min(820px, 100%);");
-        assertThat(rule(css, ".diary-book-single .diary-sheet-single"))
-                .contains("width: min(820px, 100%);");
-        // 읽기 쪽은 그리드 칸이 그 일을 한다. 칸 나눔은 그대로다
+        assertThat(single).contains("width: min(var(--diary-page-base-width), 100%);");
+        assertThat(rule(css, ".diary-sheet"))
+                .contains("width: var(--diary-page-base-width);");
+        // 읽기 쪽은 viewport만 그리드 칸에 맞춰 줄어든다. 칸 나눔은 그대로다.
         assertThat(rule(css, ".diary-book-spread"))
-                .contains("grid-template-columns: minmax(0, 1fr) 26px minmax(0, 1fr);");
+                .contains("grid-template-columns: minmax(0, 1fr) var(--diary-book-gutter) minmax(0, 1fr);");
         // 종이 자신의 여백 값은 두 화면이 나눠 쓰는 한 벌 그대로다
         assertThat(rule(css, ".diary-sheet")).contains("padding: 5.2% 5.2% 3.5%;");
+    }
+
+    @Test
+    void editFrameDecorationDoesNotNarrowTheSharedSheetContentBox() throws IOException {
+        String css = Files.readString(DIARY_CSS);
+
+        assertThat(rule(css, ".diary-book-single .diary-sheet-single"))
+                .doesNotContain("border:")
+                .doesNotContain("box-shadow:");
+        assertThat(rule(css, ".diary-book-single .diary-sheet-viewport"))
+                .contains("box-shadow:");
     }
 
     /**
@@ -273,17 +361,34 @@ class DiaryPageCoordinateAssetTest {
         assertThat(css).doesNotContain(".diary-editor.is-read-only p {");
     }
 
-    /** 편집/읽기 어느 쪽도 종이 안쪽 크기를 px 로 따로 정하지 않는다. */
+    /** 편집/읽기는 같은 고정 A5 내부 geometry를 쓰고 바깥 viewport만 달라진다. */
     @Test
-    void neitherModeOverridesPaperMetricsWithFixedPixels() throws IOException {
+    void neitherModeAddsASecondPageLayout() throws IOException {
         String css = Files.readString(DIARY_CSS);
+        String sheet = rule(css, ".diary-sheet");
 
-        assertThat(rule(css, ".diary-book-single .diary-sheet-single"))
-                .doesNotContain("min-height")
-                .doesNotContain("padding:");
-        // 종이 크기를 px 로 못 박아 두면 두 화면의 세로 비율이 어긋난다
+        assertThat(sheet)
+                .contains("width: var(--diary-page-base-width);")
+                .contains("height: var(--diary-page-height);");
+        assertThat(css)
+                .doesNotContain(".is-read-mode .diary-sheet {")
+                .doesNotContain(".is-edit-mode .diary-sheet {");
+        // 예전 화면별 높이는 남기지 않는다.
         assertThat(css).doesNotContain("min-height: 760px;");
         assertThat(css).doesNotContain("min-height: 520px;");
+    }
+
+    @Test
+    void editorToolbarUsesItsOwnWiderResponsiveWidth() throws IOException {
+        String css = Files.readString(DIARY_CSS);
+        String page = rule(css, ".diary-detail-page");
+        String toolbar = rule(css, ".is-edit-mode .diary-toolbar");
+
+        assertThat(page).contains("--diary-editor-controls-width: 880px;");
+        assertThat(rule(css, ".diary-toolbar")).contains("box-sizing: border-box;");
+        assertThat(toolbar)
+                .contains("width: min(var(--diary-editor-controls-width), 100%);")
+                .doesNotContain("--diary-page-base-width");
     }
 
     /** 본문/머리말/쪽번호는 모두 종이 안쪽 단위로 그린다. */
@@ -319,14 +424,17 @@ class DiaryPageCoordinateAssetTest {
      * 제자리·같은 비율로 함께 커진다. 세로가 화면을 넘지 않도록 높이도 함께 본다.
      */
     @Test
-    void theReadingSpreadOnlyGrowsItsOuterWidth() throws IOException {
+    void theReadingSpreadShrinksTheWholeSharedCanvas() throws IOException {
         String css = Files.readString(DIARY_CSS);
         String read = rule(css, ".diary-detail-page.is-read-mode");
+        String viewport = rule(css, ".diary-sheet-viewport");
 
-        // 넓히는 것은 바깥 폭뿐이다. 종이 자체의 크기를 따로 정하지 않는다
-        // 큰 모니터에서는 더 커지지 않는다 (노트북에서는 화면 폭을 그대로 쓴다)
-        assertThat(read).contains("width: min(1140px, calc(100% - 40px));");
+        // 펼침의 바깥 폭만 제한하고 실제 내부 캔버스는 720px 한 벌을 그대로 쓴다.
+        assertThat(read).contains("width: min(var(--diary-spread-width), calc(100% - 40px));");
         assertThat(read).doesNotContain("aspect-ratio").doesNotContain("--diary-page-unit");
+        assertThat(viewport).contains("aspect-ratio: var(--diary-page-ratio);");
+        // transform은 레이아웃 높이를 줄이지 않으므로, 고정 캔버스는 viewport 흐름에서 뺀다.
+        assertThat(rule(css, ".diary-sheet")).contains("position: absolute;");
 
         // 두 장을 나란히 펼치는 폭에서만 높이로도 한 번 더 줄인다
         int wide = css.indexOf("@media (min-width: 861px) {");
@@ -334,10 +442,24 @@ class DiaryPageCoordinateAssetTest {
         String tall = css.substring(wide, css.indexOf("\n}", wide));
         assertThat(tall).contains(".diary-detail-page.is-read-mode");
         assertThat(tall).contains("100vh - 200px").contains("100dvh - 200px");
+        assertThat(tall).contains("* 1.409524 + var(--diary-book-gutter)");
         // dvh 를 모르는 브라우저가 앞줄(vh)을 쓰도록 순서를 지킨다
         assertThat(tall.indexOf("100vh")).isLessThan(tall.indexOf("100dvh"));
         // 좁은 화면(한 장씩 넘겨 보는 쪽)은 화면 폭 그대로다
         assertThat(rule(css, ".diary-detail-page.is-read-mode")).doesNotContain("vh");
+    }
+
+    @Test
+    void dragAndResizeUseTheDisplayedCanvasSizeAfterWholePageScaling() throws IOException {
+        String js = Files.readString(
+                Path.of("src/main/resources/static/js/diary-canvas-drag.js"));
+
+        assertThat(js)
+                .contains("function displayedCanvasSize(canvas)")
+                .contains("canvas.getBoundingClientRect()")
+                .contains("const displaySize = displayedCanvasSize(canvas);")
+                .contains("/ displaySize.width")
+                .contains("/ displaySize.height");
     }
 
     /**

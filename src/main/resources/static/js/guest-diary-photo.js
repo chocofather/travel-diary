@@ -30,7 +30,7 @@
 
     /* 서버(DiaryPhotoFrame)가 쓰는 것과 같은 값. 붙는 모습이 회원 화면과 같아진다. */
     const PHOTO_WIDTH = 0.34;
-    const PAGE_CANVAS_ASPECT = 41 / 38;
+    const PAGE_CANVAS_ASPECT = 148 / 210;
     const COVER_CANVAS_ASPECT = 3 / 4;
     const INNER_WIDTH = 1 - 2 * 0.035;
     const FRAME_HEIGHT = 0.035 + 0.08;
@@ -242,7 +242,9 @@
         const size = photoStyle === FULL_PHOTO_STYLE
             ? fullSize(ratio, host.canvasAspect)
             : polaroidSize(ratio, host.canvasAspect);
-        const offset = host.placementOffset();
+        const placement = host.placementOffset();
+        const offsetX = typeof placement === 'number' ? placement : placement.x;
+        const offsetY = typeof placement === 'number' ? placement : placement.y;
 
         let element;
         try {
@@ -252,8 +254,8 @@
                 // 서버 경로가 아니다. 화면 주소는 그릴 때마다 photoRef 로 새로 얻는다.
                 imageUrl: null,
                 photoStyle: photoStyle,
-                positionX: offset,
-                positionY: offset,
+                positionX: offsetX,
+                positionY: offsetY,
                 width: size.width,
                 height: size.height,
                 rotation: 0

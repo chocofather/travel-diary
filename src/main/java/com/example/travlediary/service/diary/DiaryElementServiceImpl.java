@@ -52,17 +52,22 @@ public class DiaryElementServiceImpl implements DiaryElementService {
      * 그보다 낮게 두면 크기를 잡는 순간 높이가 튄다.
      */
     private static final BigDecimal TEXT_LABEL_WIDTH = new BigDecimal("0.32000");
-    private static final BigDecimal TEXT_LABEL_HEIGHT = new BigDecimal("0.08000");
+    private static final BigDecimal TEXT_LABEL_HEIGHT = DiaryPageGeometry.fromLegacyVertical(
+            new BigDecimal("0.08000"));
     /** 처음 놓는 자리. 스티커·라벨과 같은 규칙으로 조금씩 어긋나게 쌓는다. */
     private static final BigDecimal TEXT_LABEL_CENTER = new BigDecimal("0.34000");
-    private static final BigDecimal TEXT_LABEL_OFFSET_STEP = new BigDecimal("0.04000");
+    private static final BigDecimal TEXT_LABEL_OFFSET_X_STEP = new BigDecimal("0.04000");
+    private static final BigDecimal TEXT_LABEL_OFFSET_Y_STEP =
+            DiaryPageGeometry.fromLegacyVertical(TEXT_LABEL_OFFSET_X_STEP);
     private static final int TEXT_LABEL_OFFSET_CYCLE = 5;
     /** 떡메모지는 여러 줄을 적는 자리라 넉넉히 둔다. */
     private static final int MEMO_TEXT_MAX = 1000;
 
     /** 좌표/크기 기본값과 허용 범위 (DB 기본값·CHECK 제약과 같은 값) */
     private static final BigDecimal DEFAULT_POSITION = new BigDecimal("0.00000");
-    private static final BigDecimal DEFAULT_SIZE = new BigDecimal("0.30000");
+    private static final BigDecimal DEFAULT_WIDTH = new BigDecimal("0.30000");
+    private static final BigDecimal DEFAULT_HEIGHT = DiaryPageGeometry.fromLegacyVertical(
+            DEFAULT_WIDTH);
     private static final BigDecimal DEFAULT_ROTATION = new BigDecimal("0.00");
     private static final int DEFAULT_Z_INDEX = 0;
     private static final BigDecimal POSITION_MIN = new BigDecimal("-0.5");
@@ -114,7 +119,9 @@ public class DiaryElementServiceImpl implements DiaryElementService {
 
         // 스티커·떡메모지와 같은 규칙으로 조금씩 어긋나게 놓는다. (새 좌표 계산을 만들지 않는다)
         int placed = diaryElementMapper.findByPageId(page.getId()).size();
-        BigDecimal offset = TEXT_LABEL_OFFSET_STEP
+        BigDecimal offsetX = TEXT_LABEL_OFFSET_X_STEP
+                .multiply(BigDecimal.valueOf(placed % TEXT_LABEL_OFFSET_CYCLE));
+        BigDecimal offsetY = TEXT_LABEL_OFFSET_Y_STEP
                 .multiply(BigDecimal.valueOf(placed % TEXT_LABEL_OFFSET_CYCLE));
 
         DiaryElement element = new DiaryElement();
@@ -123,8 +130,8 @@ public class DiaryElementServiceImpl implements DiaryElementService {
         element.setTextContent(text);
         element.setTextFont(textFont);
         element.setTextColor(textColor);
-        element.setPositionX(TEXT_LABEL_CENTER.add(offset));
-        element.setPositionY(TEXT_LABEL_CENTER.add(offset));
+        element.setPositionX(TEXT_LABEL_CENTER.add(offsetX));
+        element.setPositionY(TEXT_LABEL_CENTER.add(offsetY));
         element.setWidth(TEXT_LABEL_WIDTH);
         element.setHeight(TEXT_LABEL_HEIGHT);
         // 회전 0 / 겹침 순서는 사진·스티커와 같은 기본값을 쓴다.
@@ -427,8 +434,8 @@ public class DiaryElementServiceImpl implements DiaryElementService {
 
         prepared.setPositionX(position(element.getPositionX(), "가로 위치"));
         prepared.setPositionY(position(element.getPositionY(), "세로 위치"));
-        prepared.setWidth(size(element.getWidth(), "너비"));
-        prepared.setHeight(size(element.getHeight(), "높이"));
+        prepared.setWidth(size(element.getWidth(), DEFAULT_WIDTH, "너비"));
+        prepared.setHeight(size(element.getHeight(), DEFAULT_HEIGHT, "높이"));
         prepared.setRotation(rotation(element.getRotation()));
         prepared.setZIndex(zIndex(element.getZIndex()));
         return prepared;
@@ -539,8 +546,8 @@ public class DiaryElementServiceImpl implements DiaryElementService {
         return safeValue;
     }
 
-    private BigDecimal size(BigDecimal value, String label) {
-        BigDecimal safeValue = value == null ? DEFAULT_SIZE : value;
+    private BigDecimal size(BigDecimal value, BigDecimal fallback, String label) {
+        BigDecimal safeValue = value == null ? fallback : value;
         if (safeValue.compareTo(BigDecimal.ZERO) <= 0 || safeValue.compareTo(SIZE_MAX) > 0) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST, label + "가 허용 범위를 벗어났습니다.");

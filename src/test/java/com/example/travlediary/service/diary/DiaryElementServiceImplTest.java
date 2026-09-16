@@ -576,7 +576,7 @@ class DiaryElementServiceImplTest {
         // 자리·크기는 요청 값이 아니라 서버가 정한다
         assertThat(saved.getWidth()).isEqualByComparingTo("0.32");
         // 화면에서 조절할 수 있는 가장 짧은 길이와 같아 크기를 잡아도 튀지 않는다
-        assertThat(saved.getHeight()).isEqualByComparingTo("0.08");
+        assertThat(saved.getHeight()).isEqualByComparingTo("0.05226");
         assertThat(saved.getZIndex()).isZero();
     }
 

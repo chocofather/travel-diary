@@ -25,7 +25,7 @@ class GuestDiaryDraftStoreContractTest {
 
         assertThat(store)
                 .contains("const STORAGE_KEY = \"travelDiary.guestDiaryDraft.v1\";")
-                .contains("const SCHEMA_VERSION = 1;");
+                .contains("const SCHEMA_VERSION = 2;");
         // 목록/배열로 여러 draft 를 들고 있지 않다. 새로 만들면 이전 것을 덮어쓴다.
         assertThat(store)
                 .doesNotContain("drafts")
@@ -130,6 +130,21 @@ class GuestDiaryDraftStoreContractTest {
                 .doesNotContain("userEmail")
                 .doesNotContain("token")
                 .doesNotContain("userId");
+    }
+
+    @Test
+    void legacyPageElementsAreConvertedToA5OnceButCoverElementsAreNot() throws IOException {
+        String store = store();
+
+        assertThat(store)
+                .contains("const LEGACY_VERTICAL_SCALE = 2812 / 4305;")
+                .contains("const legacyPageCoordinates = number(raw.schemaVersion, 1) < SCHEMA_VERSION;")
+                .contains("normalizePage(page, index + 1, legacyPageCoordinates)")
+                .contains("positionY: legacyPageCoordinates")
+                .contains("height: legacyPageCoordinates")
+                .contains(".map((element) => normalizeElement(element, legacyPageCoordinates))");
+        // 표지는 별도의 3:4 좌표계라 A5 환산 플래그를 넘기지 않는다.
+        assertThat(store).contains("elements.map((element) => normalizeElement(element, false))");
     }
 
     /**

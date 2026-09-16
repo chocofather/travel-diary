@@ -54,12 +54,13 @@ class DiaryPhotoFrameFullSizeTest {
             assertThat(screenRatio(size, canvas)).isCloseTo(ratio, within(0.001));
             assertThat(screenRatio(size, canvas)).isLessThan(1.0);
             /*
-              세로 사진은 높이가 기본 크기다.
-              너비는 그보다 작거나, 사진 비율이 마침 캔버스 비율과 같으면 같다.
-              (900x1200 은 표지 3:4 와 같은 비율이라 상대값이 정사각이 된다 — 화면에서는 세로다)
+              긴 쪽의 화면 크기가 기본 크기를 넘지 않는다. A5처럼 사진보다 더 세로로 긴
+              캔버스에서는 상대 너비가 기준이 될 수 있으므로 정규화 값의 대소로 방향을
+              판정하지 않고 위의 실제 화면 비율로 판정한다.
             */
-            assertThat(size[1]).isEqualByComparingTo(BASE);
             assertThat(size[0]).isLessThanOrEqualTo(BASE);
+            assertThat(size[1]).isLessThanOrEqualTo(BASE);
+            assertThat(size[0].compareTo(BASE) == 0 || size[1].compareTo(BASE) == 0).isTrue();
         }
     }
 
@@ -76,7 +77,7 @@ class DiaryPhotoFrameFullSizeTest {
 
     /**
      * 4) 캔버스 비율을 실제로 반영한다.
-     * 같은 사진이라도 종이(41:38)와 표지(3:4)의 상대값은 달라야 화면 비율이 같아진다.
+     * 같은 사진이라도 A5 종이와 표지(3:4)의 상대값은 달라야 화면 비율이 같아진다.
      */
     @Test
     void theCanvasAspectChangesTheStoredSize() {

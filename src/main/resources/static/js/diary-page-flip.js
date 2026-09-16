@@ -152,6 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
         board.replaceWith(fresh);
         board = fresh;
         spread = board.querySelector('.diary-book-spread');
+        window.diaryPageScale?.refresh(board);
         // 새로 그려진 되풀이형 마스킹테이프를 같은 렌더러로 다시 이어 붙인다.
         board.querySelectorAll('.diary-sticker[data-tape-center]')
             .forEach(item => window.diaryTape?.render(item));

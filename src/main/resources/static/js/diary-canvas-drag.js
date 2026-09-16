@@ -25,6 +25,12 @@ document.addEventListener('DOMContentLoaded', () => {
     /** 끝 조각 한 개의 가로세로 비율. (CSS 의 .diary-tape-cap aspect-ratio 와 같은 값) */
     const TAPE_CAP_ASPECT = 18 / 40;
 
+    /** 페이지 전체가 축소된 화면에서는 포인터 이동량도 화면에 보이는 캔버스 크기로 나눈다. */
+    function displayedCanvasSize(canvas) {
+        const rect = canvas.getBoundingClientRect();
+        return {width: rect.width, height: rect.height};
+    }
+
     /** 액션(수정/삭제 등)을 눌렀을 때는 드래그를 시작하지 않는다. */
     const isActionTarget = target =>
         !!target.closest('button, a, summary, details, form, textarea, input, select');
@@ -186,15 +192,17 @@ document.addEventListener('DOMContentLoaded', () => {
         item.addEventListener('pointermove', (event) => {
             if (!dragging) return;
 
-            const canvasWidth = canvas.clientWidth;
-            const canvasHeight = canvas.clientHeight;
-            if (canvasWidth === 0 || canvasHeight === 0) return;
+            const displaySize = displayedCanvasSize(canvas);
+            const layoutWidth = canvas.clientWidth;
+            const layoutHeight = canvas.clientHeight;
+            if (displaySize.width === 0 || displaySize.height === 0
+                || layoutWidth === 0 || layoutHeight === 0) return;
 
             // 픽셀 이동량을 캔버스 크기로 나눠 상대값으로 바꾼다.
-            const deltaX = (event.clientX - startPointerX) / canvasWidth;
-            const deltaY = (event.clientY - startPointerY) / canvasHeight;
-            currentX = clamp(startX + deltaX, item.offsetWidth / canvasWidth);
-            currentY = clamp(startY + deltaY, item.offsetHeight / canvasHeight);
+            const deltaX = (event.clientX - startPointerX) / displaySize.width;
+            const deltaY = (event.clientY - startPointerY) / displaySize.height;
+            currentX = clamp(startX + deltaX, item.offsetWidth / layoutWidth);
+            currentY = clamp(startY + deltaY, item.offsetHeight / layoutHeight);
             apply(currentX, currentY);
         });
 
@@ -279,20 +287,22 @@ document.addEventListener('DOMContentLoaded', () => {
         handle.addEventListener('pointerdown', (event) => {
             if (event.button !== 0 && event.pointerType === 'mouse') return;
 
-            const canvasWidth = canvas.clientWidth;
-            const canvasHeight = canvas.clientHeight;
-            if (canvasWidth === 0 || canvasHeight === 0) return;
+            const displaySize = displayedCanvasSize(canvas);
+            const layoutWidth = canvas.clientWidth;
+            const layoutHeight = canvas.clientHeight;
+            if (displaySize.width === 0 || displaySize.height === 0
+                || layoutWidth === 0 || layoutHeight === 0) return;
 
             resizing = true;
             // 조절 중에 다른 손가락이 종이를 눌러도 이 값들이 바뀌지 않게 여기서만 잡아 둔다.
             resizePointerId = event.pointerId;
             resizeStartX = event.clientX;
             resizeStartY = event.clientY;
-            resizeCanvasWidth = canvasWidth;
-            resizeCanvasHeight = canvasHeight;
+            resizeCanvasWidth = displaySize.width;
+            resizeCanvasHeight = displaySize.height;
             startWidth = ratio(item.dataset.width);
             startHeight = ratio(item.dataset.height);
-            resizeMinWidth = minWidthOf(startHeight, canvasWidth, canvasHeight);
+            resizeMinWidth = minWidthOf(startHeight, layoutWidth, layoutHeight);
             currentWidth = startWidth;
             currentHeight = startHeight;
 
