@@ -65,14 +65,18 @@ class DiaryPdfExportAssetTest {
         String script = Files.readString(PDF_SCRIPT);
 
         assertThat(script)
-                .contains("const PAGE_WIDTH = 576;")
-                .contains("const PAGE_HEIGHT = PAGE_WIDTH * 38 / 41;")
+                .contains("const PAGE_WIDTH = 720;")
+                .contains("const PAGE_HEIGHT = PAGE_WIDTH * 210 / 148;")
                 .contains("const PIXEL_RATIO = 2;")
-                .contains("[data-diary-pdf-page=\"")
+                .contains(".diary-sheet[data-diary-pdf-page=\"")
                 .contains("source.cloneNode(true)")
                 .contains("host.className = 'diary-pdf-capture-host';")
                 .contains("clone.style.width = `${PAGE_WIDTH}px`;")
                 .contains("clone.style.height = `${PAGE_HEIGHT}px`;")
+                .contains("clone.style.transform = 'none';")
+                .contains("clone.style.setProperty('--diary-page-scale', '1');")
+                .doesNotContain("PAGE_WIDTH * 38 / 41")
+                .doesNotContain("const PAGE_WIDTH = 576;")
                 .doesNotContain("source.style.width", "source.style.height");
     }
 
@@ -123,11 +127,14 @@ class DiaryPdfExportAssetTest {
                 .contains("htmlToImage.getFontEmbedCSS(clone)")
                 .contains("htmlToImage.toPng(clone")
                 .contains("pixelRatio: PIXEL_RATIO")
-                .contains("const PDF_WIDTH_MM = 200;")
-                .contains("const PDF_HEIGHT_MM = PDF_WIDTH_MM * 38 / 41;")
+                .contains("const PDF_WIDTH_MM = 148;")
+                .contains("const PDF_HEIGHT_MM = 210;")
+                .contains("orientation: 'portrait'")
                 .contains("unit: 'mm'")
                 .contains("format: [PDF_WIDTH_MM, PDF_HEIGHT_MM]")
                 .contains("pdf.addImage(png, 'PNG', 0, 0, PDF_WIDTH_MM, PDF_HEIGHT_MM")
+                .doesNotContain("const PDF_WIDTH_MM = 200;")
+                .doesNotContain("PDF_WIDTH_MM * 38 / 41")
                 .contains("${safeTitle}_page_${pageOrder}.pdf")
                 .contains("INVALID_FILENAME_CHARACTERS")
                 .contains("finally {")

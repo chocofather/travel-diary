@@ -7,10 +7,10 @@
 (function (global) {
     'use strict';
 
-    const PAGE_WIDTH = 576;
-    const PAGE_HEIGHT = PAGE_WIDTH * 38 / 41;
-    const PDF_WIDTH_MM = 200;
-    const PDF_HEIGHT_MM = PDF_WIDTH_MM * 38 / 41;
+    const PAGE_WIDTH = 720;
+    const PAGE_HEIGHT = PAGE_WIDTH * 210 / 148;
+    const PDF_WIDTH_MM = 148;
+    const PDF_HEIGHT_MM = 210;
     const PIXEL_RATIO = 2;
     const RESOURCE_TIMEOUT_MS = 20000;
     const FONT_SAMPLE = '가을 햇살 아래 경복궁을 걷다 0123456789';
@@ -47,7 +47,7 @@
             }
 
             const source = document.querySelector(
-                `[data-diary-pdf-page="${cssEscape(side)}"]`
+                `.diary-sheet[data-diary-pdf-page="${cssEscape(side)}"]`
                 + `[data-diary-page-order="${cssEscape(pageOrder)}"]`);
             if (!source || !source.querySelector('.diary-sheet-body')) {
                 throw new Error('현재 페이지 화면을 찾지 못했습니다.');
@@ -84,7 +84,7 @@
                 '페이지 이미지를 만들지 못했습니다.');
 
             const pdf = new JsPdf({
-                orientation: 'landscape',
+                orientation: 'portrait',
                 unit: 'mm',
                 format: [PDF_WIDTH_MM, PDF_HEIGHT_MM],
                 compress: true,
@@ -149,6 +149,8 @@
         clone.style.height = `${PAGE_HEIGHT}px`;
         clone.style.minWidth = `${PAGE_WIDTH}px`;
         clone.style.maxWidth = 'none';
+        clone.style.transform = 'none';
+        clone.style.setProperty('--diary-page-scale', '1');
         clone.style.flex = 'none';
         clone.style.scrollSnapAlign = 'none';
         copyComputedPaperBackground(source, clone);
