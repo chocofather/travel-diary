@@ -74,6 +74,9 @@ class HomePageContractTest {
                 .contains("여행자들이 많이 본 코스")
                 .contains("th:each=\"course : ${popularCourses}\"")
                 .contains("th:href=\"${course.detailUrl}\"")
+                .contains("th:each=\"imageUrl, imageStatus : ${course.previewImageUrls}\"")
+                .contains("onerror=\"this.onerror=null;this.src='/images/default.png';\"")
+                .contains("popular-course-image-more")
                 .contains("th:each=\"destinationName, stopStatus : ${course.previewDestinationNames}\"")
                 .contains("popular-course-route-dot")
                 .contains("popular-course-route-connector")
@@ -81,9 +84,10 @@ class HomePageContractTest {
                 .contains("course.totalDestinationCount");
         assertThat(homeCss)
                 .contains(".popular-course-list")
-                .contains("display: flex")
-                .contains("justify-content: center")
-                .contains("flex: 0 1 360px")
+                .contains("grid-template-columns: repeat(3, minmax(0, 1fr))")
+                .contains(".popular-course-visual.is-count-1 .is-photo-1")
+                .contains(".popular-course-visual.is-count-2 .is-photo-1")
+                .contains(".popular-course-visual.is-count-3 .is-photo-1")
                 .contains("white-space: nowrap")
                 .contains("text-overflow: ellipsis");
     }

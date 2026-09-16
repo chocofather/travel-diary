@@ -48,6 +48,7 @@
         <result property="destinationId" column="destination_id"/>
         <result property="visitOrder" column="visit_order"/>
         <result property="destinationName" column="destination_name"/>
+        <result property="imageUrl" column="image_url"/>
     </resultMap>
 
     <update id="incrementViews">
@@ -267,7 +268,24 @@
             cd.course_id,
             cd.destination_id,
             cd.visit_order,
-            COALESCE(dt.name, '이름 없는 여행지') AS destination_name
+            COALESCE(dt.name, '이름 없는 여행지') AS destination_name,
+            COALESCE(
+                (
+                    SELECT di.image_url
+                    FROM destination_images di
+                    WHERE di.destination_id = d.id
+                      AND di.is_main = 1
+                    ORDER BY di.order_index ASC, di.id ASC
+                    LIMIT 1
+                ),
+                (
+                    SELECT di.image_url
+                    FROM destination_images di
+                    WHERE di.destination_id = d.id
+                    ORDER BY di.order_index ASC, di.id ASC
+                    LIMIT 1
+                )
+            ) AS image_url
         FROM course_destinations cd
         JOIN destinations d ON d.id = cd.destination_id
         LEFT JOIN destination_translations dt

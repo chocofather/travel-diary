@@ -16,6 +16,7 @@ public class HomePopularCourseDto {
     private int views;
     private int totalDestinationCount;
     private List<String> previewDestinationNames = new ArrayList<>();
+    private List<String> previewImageUrls = new ArrayList<>();
 
     public String getDetailUrl() {
         return "/course/" + courseId;

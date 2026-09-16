@@ -64,6 +64,10 @@ class HomeControllerTest {
         course.setViews(1284);
         course.setTotalDestinationCount(5);
         course.setPreviewDestinationNames(List.of("경복궁", "북촌한옥마을", "창덕궁"));
+        course.setPreviewImageUrls(List.of(
+                "/images/gyeongbokgung.jpg",
+                "/images/bukchon.jpg",
+                "/images/changdeokgung.jpg"));
         when(courseService.getPopularCoursesForHome(SupportedLanguage.KOREAN))
                 .thenReturn(List.of(course));
 
@@ -86,10 +90,17 @@ class HomeControllerTest {
                     assertThat(document.select(".seasonal-recommend")).hasSize(1);
                     assertThat(document.select(".popular-recommend")).hasSize(1);
                     assertThat(document.select("a.popular-course-card[href='/course/12']")).hasSize(1);
+                    assertThat(document.select(".popular-course-visual.is-count-3 img")
+                            .eachAttr("src")).containsExactly(
+                                    "/images/gyeongbokgung.jpg",
+                                    "/images/bukchon.jpg",
+                                    "/images/changdeokgung.jpg");
+                    assertThat(document.select(".popular-course-image-more").text()).isEqualTo("+2");
+                    assertThat(document.select(".popular-course-route-track").text())
+                            .isEqualTo("경복궁 → 북촌한옥마을 → 창덕궁");
                     assertThat(document.select(".popular-course-card").text())
                             .contains("서울 하루 고궁 산책")
                             .contains("minjun · 조회 1,284")
-                            .contains("경복궁 → 북촌한옥마을 → 창덕궁 +2")
                             .contains("장소 5곳");
                     assertThat(document.select(".instant-trip, #roulette-canvas")).isEmpty();
                 });

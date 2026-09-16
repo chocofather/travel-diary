@@ -639,11 +639,14 @@ class CourseServiceImplTest {
         when(courseMapper.findPopularCourses(3))
                 .thenReturn(List.of(first, second, third, unexpectedFourth));
         when(courseMapper.findPopularCourseStops(List.of(10L, 20L, 30L))).thenReturn(List.of(
-                homeStop(10L, 1, "경복궁"),
-                homeStop(10L, 2, "북촌한옥마을"),
-                homeStop(10L, 3, "창덕궁"),
-                homeStop(10L, 4, "익선동"),
-                homeStop(20L, 1, "해운대")
+                homeStop(10L, 1, "경복궁", "/images/gyeongbokgung.jpg"),
+                homeStop(10L, 2, "북촌한옥마을", null),
+                homeStop(10L, 3, "창덕궁", "/images/changdeokgung.jpg"),
+                homeStop(10L, 4, "익선동", "/images/ikseondong.jpg"),
+                homeStop(10L, 5, "광화문", "/images/gwanghwamun.jpg"),
+                homeStop(20L, 1, "해운대", "/images/haeundae.jpg"),
+                homeStop(20L, 2, "광안리", "/images/gwangalli.jpg"),
+                homeStop(30L, 1, "이미지 없는 여행지", "   ")
         ));
 
         List<HomePopularCourseDto> result =
@@ -654,8 +657,15 @@ class CourseServiceImplTest {
                 .containsExactly("경복궁", "북촌한옥마을", "창덕궁");
         assertThat(first.getRoutePreview()).isEqualTo("경복궁 → 북촌한옥마을 → 창덕궁");
         assertThat(first.getRemainingDestinationCount()).isEqualTo(2);
-        assertThat(second.getPreviewDestinationNames()).containsExactly("해운대");
-        assertThat(second.getRemainingDestinationCount()).isEqualTo(1);
+        assertThat(first.getPreviewImageUrls()).containsExactly(
+                "/images/gyeongbokgung.jpg",
+                "/images/changdeokgung.jpg",
+                "/images/ikseondong.jpg");
+        assertThat(second.getPreviewDestinationNames()).containsExactly("해운대", "광안리");
+        assertThat(second.getRemainingDestinationCount()).isZero();
+        assertThat(second.getPreviewImageUrls())
+                .containsExactly("/images/haeundae.jpg", "/images/gwangalli.jpg");
+        assertThat(third.getPreviewImageUrls()).containsExactly("/images/default.png");
         verify(courseMapper).findPopularCourseStops(List.of(10L, 20L, 30L));
     }
 
@@ -687,10 +697,16 @@ class CourseServiceImplTest {
     }
 
     private HomePopularCourseStopDto homeStop(Long courseId, int visitOrder, String name) {
+        return homeStop(courseId, visitOrder, name, null);
+    }
+
+    private HomePopularCourseStopDto homeStop(Long courseId, int visitOrder, String name,
+                                              String imageUrl) {
         HomePopularCourseStopDto stop = new HomePopularCourseStopDto();
         stop.setCourseId(courseId);
         stop.setVisitOrder(visitOrder);
         stop.setDestinationName(name);
+        stop.setImageUrl(imageUrl);
         return stop;
     }
 

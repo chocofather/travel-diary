@@ -41,6 +41,7 @@ public class CourseServiceImpl implements CourseService {
 
     private static final int HOME_POPULAR_COURSE_LIMIT = 3;
     private static final int HOME_COURSE_PREVIEW_STOP_LIMIT = 3;
+    private static final String HOME_COURSE_FALLBACK_IMAGE_URL = "/images/default.png";
 
     private final CourseMapper courseMapper;
     private final PostContentSanitizer postContentSanitizer;
@@ -98,14 +99,23 @@ public class CourseServiceImpl implements CourseService {
             return courses;
         }
 
-        // 화면에 실제로 나가는 STOP 만 모아 둔다. 이름 번역도 이 만큼만 읽는다.
+        // 경로 이름은 앞 3곳만 번역하고, 이미지는 뒤 STOP 까지 훑어 사용 가능한 3장을 고른다.
         Map<Long, List<HomePopularCourseStopDto>> previewStopsByCourseId = new LinkedHashMap<>();
+        Map<Long, List<String>> previewImagesByCourseId = new LinkedHashMap<>();
         for (HomePopularCourseStopDto stop : courseMapper.findPopularCourseStops(
                 courses.stream().map(HomePopularCourseDto::getCourseId).toList())) {
             List<HomePopularCourseStopDto> preview = previewStopsByCourseId.computeIfAbsent(
                     stop.getCourseId(), ignored -> new ArrayList<>());
             if (preview.size() < HOME_COURSE_PREVIEW_STOP_LIMIT) {
                 preview.add(stop);
+            }
+
+            List<String> previewImages = previewImagesByCourseId.computeIfAbsent(
+                    stop.getCourseId(), ignored -> new ArrayList<>());
+            if (previewImages.size() < HOME_COURSE_PREVIEW_STOP_LIMIT
+                    && stop.getImageUrl() != null
+                    && !stop.getImageUrl().isBlank()) {
+                previewImages.add(stop.getImageUrl());
             }
         }
 
@@ -115,11 +125,18 @@ public class CourseServiceImpl implements CourseService {
                         .map(HomePopularCourseStopDto::getDestinationId),
                 requestedLanguage);
 
-        courses.forEach(course -> course.setPreviewDestinationNames(
-                previewStopsByCourseId.getOrDefault(course.getCourseId(), List.of()).stream()
-                        .map(stop -> localizedName(stop.getDestinationId(),
-                                stop.getDestinationName(), localizedContent))
-                        .toList()));
+        courses.forEach(course -> {
+            course.setPreviewDestinationNames(
+                    previewStopsByCourseId.getOrDefault(course.getCourseId(), List.of()).stream()
+                            .map(stop -> localizedName(stop.getDestinationId(),
+                                    stop.getDestinationName(), localizedContent))
+                            .toList());
+            List<String> previewImages = previewImagesByCourseId.getOrDefault(
+                    course.getCourseId(), List.of());
+            course.setPreviewImageUrls(previewImages.isEmpty()
+                    ? List.of(HOME_COURSE_FALLBACK_IMAGE_URL)
+                    : List.copyOf(previewImages));
+        });
         return courses;
     }
 

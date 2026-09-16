@@ -28,13 +28,18 @@ class HomePopularCourseMapperContractTest {
     }
 
     @Test
-    void previewStopsAreLoadedInOneBatchAndVisitOrder() throws IOException {
+    void previewStopsAndTheirRepresentativeImagesAreLoadedInOneBatchAndVisitOrder()
+            throws IOException {
         String mapper = resource("/mapper/CourseMapper.xml");
         String query = between(mapper, "<select id=\"findPopularCourseStops\"", "</select>");
 
         assertThat(query)
                 .contains("FROM course_destinations cd")
                 .contains("dt.language_code = 'ko'")
+                .contains("FROM destination_images di")
+                .contains("di.is_main = 1")
+                .contains("ORDER BY di.order_index ASC, di.id ASC")
+                .contains("AS image_url")
                 .contains("WHERE cd.course_id IN")
                 .contains("<foreach collection=\"courseIds\"")
                 .contains("ORDER BY cd.course_id ASC, cd.visit_order ASC, cd.id ASC")

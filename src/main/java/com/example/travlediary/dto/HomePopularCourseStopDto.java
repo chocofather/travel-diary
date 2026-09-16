@@ -9,4 +9,5 @@ public class HomePopularCourseStopDto {
     private Long destinationId;
     private Integer visitOrder;
     private String destinationName;
+    private String imageUrl;
 }

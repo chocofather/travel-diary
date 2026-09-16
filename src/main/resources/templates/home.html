@@ -106,32 +106,44 @@
       <div class="popular-course-list" th:if="${!#lists.isEmpty(popularCourses)}">
         <a class="popular-course-card" th:each="course : ${popularCourses}"
            th:href="${course.detailUrl}">
-          <h3 th:text="${course.title}">서울 하루 고궁 산책</h3>
-          <p class="popular-course-meta">
-            <span th:text="${course.writerWithdrawn} ? #{member.withdrawn} : ${course.nickname}">minjun</span>
-            <span aria-hidden="true">·</span>
-            <span th:text="#{home.course.views(${#numbers.formatInteger(course.views, 1, 'COMMA')})}">조회 1,284</span>
-          </p>
-          <div class="popular-course-route">
-            <span class="popular-course-route-label" th:text="#{home.course.route}">경로</span>
-            <div class="popular-course-route-track">
-              <th:block th:each="destinationName, stopStatus : ${course.previewDestinationNames}">
-                <span class="popular-course-route-stop">
-                  <span class="popular-course-route-dot" aria-hidden="true"></span>
-                  <span class="popular-course-route-name" th:text="${destinationName}">경복궁</span>
-                </span>
-                <span class="popular-course-route-connector"
-                      th:unless="${stopStatus.last}"
-                      aria-hidden="true">→</span>
-              </th:block>
-              <strong class="popular-course-more"
-                      th:if="${course.remainingDestinationCount > 0}"
-                      th:text="|+${course.remainingDestinationCount}|">+2</strong>
-            </div>
+          <div class="popular-course-visual"
+               th:classappend="|is-count-${#lists.size(course.previewImageUrls)}|"
+               aria-hidden="true">
+            <span class="popular-course-photo"
+                  th:each="imageUrl, imageStatus : ${course.previewImageUrls}"
+                  th:classappend="|is-photo-${imageStatus.count}|">
+              <img th:src="${imageUrl}" alt="" loading="lazy" decoding="async"
+                   onerror="this.onerror=null;this.src='/images/default.png';">
+            </span>
+            <strong class="popular-course-image-more"
+                    th:if="${course.remainingDestinationCount > 0}"
+                    th:text="|+${course.remainingDestinationCount}|">+2</strong>
           </div>
-          <div class="popular-course-footer">
-            <span th:text="#{home.course.stopCount(${course.totalDestinationCount})}">장소 5곳</span>
-            <span class="popular-course-arrow" aria-hidden="true">→</span>
+          <div class="popular-course-content">
+            <h3 th:text="${course.title}" th:title="${course.title}">서울 하루 고궁 산책</h3>
+            <p class="popular-course-meta">
+              <span th:text="${course.writerWithdrawn} ? #{member.withdrawn} : ${course.nickname}">minjun</span>
+              <span aria-hidden="true">·</span>
+              <span th:text="#{home.course.views(${#numbers.formatInteger(course.views, 1, 'COMMA')})}">조회 1,284</span>
+            </p>
+            <div class="popular-course-route">
+              <span class="popular-course-route-label" th:text="#{home.course.route}">경로</span>
+              <div class="popular-course-route-track">
+                <th:block th:each="destinationName, stopStatus : ${course.previewDestinationNames}">
+                  <span class="popular-course-route-stop">
+                    <span class="popular-course-route-dot" aria-hidden="true"></span>
+                    <span class="popular-course-route-name" th:text="${destinationName}">경복궁</span>
+                  </span>
+                  <span class="popular-course-route-connector"
+                        th:unless="${stopStatus.last}"
+                        aria-hidden="true">→</span>
+                </th:block>
+              </div>
+            </div>
+            <div class="popular-course-footer">
+              <span th:text="#{home.course.stopCount(${course.totalDestinationCount})}">장소 5곳</span>
+              <span class="popular-course-arrow" aria-hidden="true">→</span>
+            </div>
           </div>
         </a>
       </div>
