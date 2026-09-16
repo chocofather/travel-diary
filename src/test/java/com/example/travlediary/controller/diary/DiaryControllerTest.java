@@ -3076,7 +3076,18 @@ class DiaryControllerTest {
                                 userDetails, null, List.of()))))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("아직 만든 표지 디자인이 없습니다.")))
-                .andExpect(content().string(containsString("/diaries/cover-designs")));
+                .andExpect(content().string(containsString("+ 새 표지 디자인 만들기")))
+                .andExpect(content().string(containsString("data-cover-design-create")))
+                .andExpect(content().string(containsString("target=\"_blank\"")))
+                .andExpect(content().string(containsString(
+                        "href=\"/diaries/cover-designs/new\"")))
+                .andExpect(content().string(containsString(
+                        "data-cover-design-refresh-url=\"/diaries/cover-designs/choices\"")));
+
+        String choiceScript = Files.readString(
+                Path.of("src/main/resources/static/js/diary-cover-choice.js"));
+        assertThat(choiceScript).contains("imageInput.disabled = custom;")
+                .doesNotContain("imageInput.value = ''");
     }
 
     /**

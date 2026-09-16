@@ -59,7 +59,7 @@ public class DiaryCoverDesignController {
     private static final String PHOTO_ELEMENT_TYPE = "PHOTO";
     /** 이 서비스가 올린 파일만 가리키는 주소 앞머리. 그 밖의 경로는 지우지 않는다. */
     private static final String UPLOAD_URL_PREFIX = "/uploads/";
-    /** 새로 만든 디자인의 이름. 편집 화면에서 바로 고칠 수 있다. */
+    /** 신규 미저장 화면에서 먼저 보여 주는 이름. */
     private static final String DEFAULT_DESIGN_NAME = "새 표지 디자인";
 
     private final DiaryCoverDesignService diaryCoverDesignService;
@@ -94,24 +94,48 @@ public class DiaryCoverDesignController {
         return "diary/cover-designs";
     }
 
-    /**
-     * 새 디자인을 하나 만들고 바로 꾸미러 간다.
-     *
-     * <p>이름과 바탕은 편집 화면에서 그대로 고칠 수 있으므로 중간에 따로 묻지 않는다.
-     * 다만 자유배치 요소를 붙이려면 디자인 번호가 먼저 있어야 해서, 기본값으로 한 줄 만든 뒤
-     * 그 편집 화면으로 보낸다. (이름 중복은 허용이라 기본 이름이 겹쳐도 괜찮다)
-     */
+    /** 새 여행일기 화면에서 복귀했을 때 내 디자인 선택 목록만 다시 그린다. */
+    @GetMapping("/choices")
+    public String designChoices(@AuthenticationPrincipal CustomUserDetails userDetails,
+                                Model model) {
+        Long userId = userDetails.getId();
+        List<DiaryCoverDesign> designs = diaryCoverDesignService.getMyDesigns(userId);
+        List<Long> designIds = designs.stream().map(DiaryCoverDesign::getId).toList();
+
+        model.addAttribute("coverDesigns", designs);
+        model.addAttribute("coverElementsByDesign",
+                diaryCoverDesignElementService.getElementsByDesign(designIds, userId));
+        model.addAttribute("stickerRepeats", diaryStickerCatalog.getRepeatsByImageUrl());
+        return "diary/cover-design-choices :: choices";
+    }
+
+    /** 새 디자인의 미저장 편집 화면. 이 단계에서는 디자인 행을 만들지 않는다. */
+    @GetMapping("/new")
+    public String newDesignForm(Model model) {
+        DiaryCoverDesign draft = new DiaryCoverDesign();
+        draft.setName(DEFAULT_DESIGN_NAME);
+        draft.setBaseCoverStyle(DiaryCoverStyle.DEFAULT.getCode());
+        return renderNewForm(model, draft, null);
+    }
+
+    /** 디자인 저장을 눌렀을 때 처음 행을 만들고, 저장된 편집 화면으로 이동한다. */
     @PostMapping
     public String createDesign(@AuthenticationPrincipal CustomUserDetails userDetails,
+                               @ModelAttribute("coverDesign") DiaryCoverDesign coverDesign,
+                               Model model,
                                RedirectAttributes redirectAttributes) {
-        DiaryCoverDesign blank = new DiaryCoverDesign();
-        blank.setName(DEFAULT_DESIGN_NAME);
-        blank.setBaseCoverStyle(DiaryCoverStyle.DEFAULT.getCode());
-        // 색은 고르지 않은 채로 둔다. (표지 재질의 원래 색으로 시작한다)
-        DiaryCoverDesign created = diaryCoverDesignService.create(userDetails.getId(), blank);
+        DiaryCoverDesign created;
+        try {
+            created = diaryCoverDesignService.create(userDetails.getId(), coverDesign);
+        } catch (ResponseStatusException exception) {
+            if (exception.getStatusCode().is4xxClientError()) {
+                return renderNewForm(model, coverDesign, exception.getReason());
+            }
+            throw exception;
+        }
 
         redirectAttributes.addFlashAttribute("coverDesignMessage",
-                "새 표지 디자인이 만들어졌습니다. 이름과 바탕은 여기서 정하면 됩니다.");
+                "표지 디자인을 저장했습니다. 이제 사진과 스티커를 꾸밀 수 있어요.");
         return "redirect:/diaries/cover-designs/" + created.getId() + "/edit";
     }
 
@@ -533,6 +557,7 @@ public class DiaryCoverDesignController {
                                   DiaryCoverDesign coverDesign, String errorMessage) {
         model.addAttribute("coverDesign", coverDesign);
         model.addAttribute("designId", designId);
+        model.addAttribute("newDesign", false);
         // 고르는 것은 재질 세 갈래뿐이다. 색은 아래 color picker 가 따로 맡는다.
         model.addAttribute("coverMaterials", DiaryCoverMaterial.values());
         model.addAttribute("coverElements",
@@ -545,6 +570,17 @@ public class DiaryCoverDesignController {
         model.addAttribute("diaryLabelFonts", diaryLabelFontCatalog.getFonts());
         model.addAttribute("coverDesignError", errorMessage);
         model.addAttribute("pageTitle", "표지 디자인 편집");
+        return "diary/cover-design-edit";
+    }
+
+    /** 신규 기본정보 폼. 자유배치 요소는 디자인 번호가 생긴 뒤 기존 편집 화면에서 붙인다. */
+    private String renderNewForm(Model model, DiaryCoverDesign coverDesign, String errorMessage) {
+        model.addAttribute("coverDesign", coverDesign);
+        model.addAttribute("newDesign", true);
+        model.addAttribute("coverMaterials", DiaryCoverMaterial.values());
+        model.addAttribute("coverElements", List.of());
+        model.addAttribute("coverDesignError", errorMessage);
+        model.addAttribute("pageTitle", "새 표지 디자인");
         return "diary/cover-design-edit";
     }
 }

@@ -31,7 +31,7 @@
     /* 서버(DiaryPhotoFrame)가 쓰는 것과 같은 값. 붙는 모습이 회원 화면과 같아진다. */
     const PHOTO_WIDTH = 0.34;
     const PAGE_CANVAS_ASPECT = 148 / 210;
-    const COVER_CANVAS_ASPECT = 3 / 4;
+    const COVER_CANVAS_ASPECT = 148 / 210;
     const INNER_WIDTH = 1 - 2 * 0.035;
     const FRAME_HEIGHT = 0.035 + 0.08;
     const RATIO_MIN = 0.2;

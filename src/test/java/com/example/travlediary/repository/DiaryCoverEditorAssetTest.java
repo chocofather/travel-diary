@@ -193,7 +193,9 @@ class DiaryCoverEditorAssetTest {
         // 왼쪽(표지)이 남는 폭을 갖고 오른쪽(설정)은 좁게 고정한다
         assertThat(rule(css, ".diary-cover-design-editor"))
                 .contains("grid-template-columns: minmax(0, 1fr) minmax(0, 300px);");
-        assertThat(rule(css, ".diary-cover-preview")).contains("width: min(420px, 100%);");
+        assertThat(css).contains("--diary-cover-base-width: 480px;");
+        assertThat(rule(css, ".diary-cover-preview"))
+                .contains("width: min(var(--diary-cover-base-width), 100%);");
     }
 
     /**
@@ -232,10 +234,39 @@ class DiaryCoverEditorAssetTest {
         // 재질 변수를 나눠 쓰는 규칙이 앞에 한 번 더 나오므로, 표지 상자를 정하는 규칙에서 찾는다
         String canvas = rule(css.substring(css.indexOf("표지 한 장. 여기가 곧 표지의 좌표계다")),
                 ".diary-cover-canvas");
-        assertThat(canvas).contains("aspect-ratio: 3 / 4;")
+        assertThat(css).contains("--diary-cover-ratio: 148 / 210;");
+        assertThat(canvas).contains("aspect-ratio: var(--diary-cover-ratio);")
                 .contains("container-type: inline-size;")
                 .doesNotContain("41 / 38")
                 .doesNotContain("--diary-page-unit");
+    }
+
+    /** 편집과 보기용 표지는 같은 A5 캔버스와 같은 상대좌표를 쓴다. */
+    @Test
+    void editingAndReadOnlyCoversShareTheA5Geometry() throws IOException {
+        String edit = read(COVER_EDIT);
+        String preview = read(Path.of("src/main/resources/templates/diary/cover-preview.html"));
+
+        assertThat(edit).contains("class=\"diary-cover-canvas\"")
+                .contains("newDesign ? '' : 'is-editable '");
+        assertThat(preview).contains("class=\"diary-cover-canvas\"");
+        for (String relativeValue : new String[]{
+                "element.positionX * 100", "element.positionY * 100",
+                "element.width * 100", "element.height * 100"}) {
+            assertThat(edit).as("편집 표지: %s", relativeValue).contains(relativeValue);
+            assertThat(preview).as("보기 표지: %s", relativeValue).contains(relativeValue);
+        }
+    }
+
+    /** 좁은 화면에서도 별도 좌표계를 만들지 않고 같은 A5 표지의 폭만 줄인다. */
+    @Test
+    void mobileCoverKeepsTheSharedA5Geometry() throws IOException {
+        String css = read(Path.of("src/main/resources/static/css/diary.css"));
+        String narrow = css.substring(css.indexOf("@media (max-width: 780px) {"));
+
+        assertThat(narrow).contains(".diary-cover-preview {\n"
+                + "        width: min(var(--diary-cover-base-width), 100%);\n"
+                + "    }");
     }
 
     /** 페이지 다꾸는 예전 그대로다. (이번 기능 때문에 바뀐 곳이 없다) */

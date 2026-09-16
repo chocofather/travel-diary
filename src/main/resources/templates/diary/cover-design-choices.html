@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- 새 여행일기 화면의 내 표지 디자인 목록. 처음 표시와 복귀 후 갱신이 같은 조각을 쓴다. -->
+<div th:fragment="choices" data-cover-design-list
+     th:data-cover-design-refresh-url="@{/diaries/cover-designs/choices}">
+  <div class="diary-cover-design-choices" aria-label="내 표지 디자인">
+    <a class="diary-cover-design-create" th:href="@{/diaries/cover-designs/new}"
+       target="_blank" rel="noopener" data-cover-design-create>
+      <span class="diary-cover-design-create-canvas" aria-hidden="true">
+        <span class="diary-cover-design-create-mark">+</span>
+      </span>
+      <span class="diary-cover-design-choice-name">+ 새 표지 디자인 만들기</span>
+    </a>
+
+    <label class="diary-cover-design-choice" th:each="design : ${coverDesigns}">
+      <input type="radio" name="coverDesignChoice" class="diary-cover-option-input"
+             th:value="${design.id}" data-cover-design-option />
+      <span class="diary-cover-design-choice-canvas">
+        <span th:replace="~{diary/cover-preview :: canvas(${design},
+                            ${coverElementsByDesign.getOrDefault(design.id,
+                                                                #lists.toList({}))})}"></span>
+      </span>
+      <span class="diary-cover-design-choice-name" th:text="${design.name}">제주 여행</span>
+    </label>
+  </div>
+
+  <p class="diary-cover-design-empty" th:if="${#lists.isEmpty(coverDesigns)}">
+    아직 만든 표지 디자인이 없습니다.
+  </p>
+</div>
+
+</body>
+</html>

@@ -153,6 +153,31 @@ class DiaryCoverDesignControllerTest {
         verify(diaryCoverDesignElementService, never()).getElements(any(), any());
     }
 
+    /** 새 여행일기 화면은 내 디자인 목록만 조각으로 다시 받아 올 수 있다. */
+    @Test
+    void theChoiceFragmentReturnsOnlyMyLatestDesigns() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryCoverDesignService.getMyDesigns(7L))
+                .thenReturn(List.of(design(5L, "제주 여행")));
+        when(diaryCoverDesignElementService.getElementsByDesign(List.of(5L), 7L))
+                .thenReturn(Map.of(5L, List.of()));
+
+        String body = mockMvc.perform(get("/diaries/cover-designs/choices")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andExpect(view().name("diary/cover-design-choices :: choices"))
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).contains("data-cover-design-list")
+                .contains("data-cover-design-create")
+                .contains("target=\"_blank\"")
+                .contains("제주 여행")
+                .contains("data-cover-design-option");
+        verify(diaryCoverDesignService).getMyDesigns(7L);
+        verify(diaryCoverDesignElementService).getElementsByDesign(List.of(5L), 7L);
+    }
+
     /**
      * 보관함 미리보기에도 라벨기로 붙인 글씨가 그대로 보인다.
      * 편집 화면과 같은 모양 규칙·같은 글꼴 class·같은 상대좌표를 쓰고, 조작 UI 만 없다.
@@ -216,21 +241,20 @@ class DiaryCoverDesignControllerTest {
                 .andReturn().getResponse().getContentAsString();
 
         assertThat(body).contains("아직 저장한 표지 디자인이 없습니다.");
-        // 만들기는 폼 전송 하나다. 중간에 이름을 묻는 화면이 없다
-        assertThat(body).contains("action=\"/diaries/cover-designs\"");
-        assertThat(body).doesNotContain("/diaries/cover-designs/new");
+        assertThat(body).contains("href=\"/diaries/cover-designs/new\"")
+                .doesNotContain("action=\"/diaries/cover-designs\"");
     }
 
-    /**
-     * 만들기 전에 이름이나 바탕을 따로 묻지 않는다.
-     * 요소를 붙이려면 디자인 번호가 먼저 있어야 해서 기본값으로 한 줄 만들고 바로 넘어간다.
-     */
+    /** 저장 POST를 했을 때만 입력한 기본값으로 디자인을 처음 만든다. */
     @Test
-    void makingADesignAsksNothingUpFront() throws Exception {
+    void savingANewDesignCreatesItForTheFirstTime() throws Exception {
         when(userDetails.getId()).thenReturn(7L);
         when(diaryCoverDesignService.create(eq(7L), any())).thenReturn(design(5L, "새 표지 디자인"));
 
         mockMvc.perform(post("/diaries/cover-designs")
+                        .param("name", "가을 표지")
+                        .param("baseCoverStyle", "HARDCOVER_NAVY")
+                        .param("backgroundColor", "#c9b79a")
                         .with(csrf())
                         .with(authentication(new UsernamePasswordAuthenticationToken(
                                 userDetails, null, List.of()))))
@@ -239,21 +263,30 @@ class DiaryCoverDesignControllerTest {
 
         ArgumentCaptor<DiaryCoverDesign> captor = ArgumentCaptor.forClass(DiaryCoverDesign.class);
         verify(diaryCoverDesignService).create(eq(7L), captor.capture());
-        assertThat(captor.getValue().getName()).isEqualTo("새 표지 디자인");
-        assertThat(captor.getValue().getBaseCoverStyle()).isEqualTo("DEFAULT");
-        // 색은 고르지 않은 채로 시작한다 (재질의 원래 색)
-        assertThat(captor.getValue().getBackgroundColor()).isNull();
+        assertThat(captor.getValue().getName()).isEqualTo("가을 표지");
+        assertThat(captor.getValue().getBaseCoverStyle()).isEqualTo("HARDCOVER_NAVY");
+        assertThat(captor.getValue().getBackgroundColor()).isEqualTo("#c9b79a");
     }
 
-    /** 중간 입력 화면은 더 이상 없다. */
+    /** 신규 화면을 열거나 닫는 것만으로는 디자인 행이나 요소를 만들지 않는다. */
     @Test
-    void thereIsNoSeparateCreationForm() throws Exception {
+    void openingTheNewEditorDoesNotCreateAnything() throws Exception {
         when(userDetails.getId()).thenReturn(7L);
 
-        mockMvc.perform(get("/diaries/cover-designs/new")
+        String body = mockMvc.perform(get("/diaries/cover-designs/new")
                         .with(authentication(new UsernamePasswordAuthenticationToken(
                                 userDetails, null, List.of()))))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isOk())
+                .andExpect(view().name("diary/cover-design-edit"))
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).contains("새 표지 디자인")
+                .contains("action=\"/diaries/cover-designs\"")
+                .contains("디자인 저장")
+                .doesNotContain("data-create-url=")
+                .doesNotContain("이 디자인 삭제");
+        verify(diaryCoverDesignService, never()).create(any(), any());
+        verify(diaryCoverDesignElementService, never()).getElements(any(), any());
     }
 
     /** 편집 화면은 바탕 고치기 + 스티커 붙이기까지다. 사진/라벨은 아직 없다. */

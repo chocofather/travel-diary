@@ -6,13 +6,12 @@
   <link rel="stylesheet" href="/css/diary.css">
   <!-- 라벨기 글꼴. 페이지 다꾸와 같은 파일을 그대로 불러온다 (정의를 옮겨 적지 않는다) -->
   <link rel="stylesheet" href="/css/diary-fonts.css">
-  <!-- 자유배치 조작은 페이지 다꾸와 같은 엔진을 그대로 쓴다. (표지용 사본을 따로 두지 않는다) -->
-  <script src="/js/diary-canvas-drag.js" defer></script>
-  <script src="/js/diary-tape-repeat.js" defer></script>
-  <script src="/js/diary-sticker-picker.js" defer></script>
-  <!-- 라벨기도 페이지 다꾸와 같은 스크립트를 함께 쓴다 -->
-  <script src="/js/diary-label-picker.js" defer></script>
-  <script src="/js/diary-cover-photo.js" defer></script>
+  <!-- 저장된 디자인만 번호가 필요한 자유배치 도구를 연다. -->
+  <script th:unless="${newDesign}" src="/js/diary-canvas-drag.js" defer></script>
+  <script th:unless="${newDesign}" src="/js/diary-tape-repeat.js" defer></script>
+  <script th:unless="${newDesign}" src="/js/diary-sticker-picker.js" defer></script>
+  <script th:unless="${newDesign}" src="/js/diary-label-picker.js" defer></script>
+  <script th:unless="${newDesign}" src="/js/diary-cover-photo.js" defer></script>
   <script src="/js/diary-cover-design.js" defer></script>
 </th:block>
 
@@ -20,8 +19,14 @@
   <section class="diary-cover-design-page" aria-labelledby="cover-design-edit-title">
     <header class="diary-form-header">
       <a class="diary-detail-back" th:href="@{/diaries/cover-designs}">← 내 표지 디자인으로</a>
-      <h1 id="cover-design-edit-title">표지 디자인 편집</h1>
-      <p class="diary-list-subtitle">표지 위에 사진과 스티커를 올려 나만의 표지를 만들어 보세요.</p>
+      <h1 id="cover-design-edit-title"
+          th:text="${newDesign} ? '새 표지 디자인' : '표지 디자인 편집'">표지 디자인 편집</h1>
+      <p class="diary-list-subtitle"
+         th:text="${newDesign}
+                  ? '이름과 바탕을 정해 저장하면 사진과 스티커를 꾸밀 수 있어요.'
+                  : '표지 위에 사진과 스티커를 올려 나만의 표지를 만들어 보세요.'">
+        표지 위에 사진과 스티커를 올려 나만의 표지를 만들어 보세요.
+      </p>
     </header>
 
     <p class="diary-flash-message" th:if="${coverDesignMessage}" th:text="${coverDesignMessage}"
@@ -37,8 +42,8 @@
           바탕(재질 + 색) 위에 자유배치 층이 얹히고, 책등은 그 위에 남는다.
           is-editable 이 붙어 있을 때만 드래그 엔진과 붙이기 도구가 동작한다.
         -->
-        <div class="diary-cover-canvas is-editable"
-             th:classappend="${coverDesign.baseCoverStyleClass}"
+        <div class="diary-cover-canvas"
+             th:classappend="${(newDesign ? '' : 'is-editable ') + coverDesign.baseCoverStyleClass}"
              th:style="${coverDesign.backgroundColor != null
                           and !#strings.isEmpty(coverDesign.backgroundColor)}
                        ? '--diary-cover-color:' + ${coverDesign.backgroundColor} : null">
@@ -199,7 +204,10 @@
 
       <div class="diary-cover-design-panel">
         <form class="diary-form diary-cover-design-form"
-              th:action="@{/diaries/cover-designs/{id}/update(id=${designId})}" method="post"
+              th:action="${newDesign}
+                         ? @{/diaries/cover-designs}
+                         : @{/diaries/cover-designs/{id}/update(id=${designId})}"
+              method="post"
               th:object="${coverDesign}">
           <div class="diary-form-field">
             <label for="cover-design-name">디자인 이름</label>
@@ -236,7 +244,8 @@
           </div>
 
           <div class="diary-form-actions">
-            <a class="diary-form-cancel" th:href="@{/diaries/cover-designs}">목록으로</a>
+            <a class="diary-form-cancel" th:href="@{/diaries/cover-designs}"
+               th:text="${newDesign} ? '취소' : '목록으로'">목록으로</a>
             <button type="submit" class="diary-form-submit">디자인 저장</button>
           </div>
         </form>
@@ -245,7 +254,7 @@
           꾸미기 도구. 표지 위에 띄우지 않고 설정과 같은 자리에 둔다.
           붙인 것의 자리/크기/각도는 손을 뗄 때 바로 저장되므로 저장 버튼과 상관이 없다.
         -->
-        <section class="diary-cover-tools" aria-label="꾸미기">
+        <section class="diary-cover-tools" aria-label="꾸미기" th:unless="${newDesign}">
           <h2 class="diary-form-label">꾸미기</h2>
           <div class="diary-cover-tool-row">
             <button type="button" class="diary-cover-tool" id="diary-sticker-button"
@@ -313,6 +322,7 @@
 
         <!-- 삭제는 낮은 위계의 보조 동작이라 맨 아래에 따로 둔다. -->
         <form class="diary-cover-design-danger"
+              th:unless="${newDesign}"
               th:action="@{/diaries/cover-designs/{id}/delete(id=${designId})}" method="post"
               th:attr="onsubmit=|return confirm('${coverDesign.name} 디자인을 삭제할까요? 이미 여행일기에 적용한 표지는 그대로 남습니다.')|">
           <button type="submit" class="diary-cover-design-delete-button">이 디자인 삭제</button>

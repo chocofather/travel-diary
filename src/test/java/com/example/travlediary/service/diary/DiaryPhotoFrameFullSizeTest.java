@@ -11,7 +11,7 @@ import static org.assertj.core.api.Assertions.within;
  * 일반 사진(FULL)의 처음 크기.
  *
  * <p>버그: 상자를 늘 정사각 상대값으로 잡아 두었다. 좌표가 0~1 상대값이라 캔버스의
- * 가로/세로가 그대로 곱해지므로, 세로로 긴 표지(3:4)에서는 그 상자가 세로가 되어
+ * 가로/세로가 그대로 곱해지므로, 세로로 긴 표지에서는 그 상자가 세로가 되어
  * 가로 사진의 좌우가 잘렸다. 이제 화면에서 보이는 비율이 원본과 같아지도록 센다.
  *
  * <p>여기에서 재는 것은 상대값 자체가 아니라 "화면에서 보이는 비율" 이다.
@@ -76,11 +76,10 @@ class DiaryPhotoFrameFullSizeTest {
     }
 
     /**
-     * 4) 캔버스 비율을 실제로 반영한다.
-     * 같은 사진이라도 A5 종이와 표지(3:4)의 상대값은 달라야 화면 비율이 같아진다.
+     * 4) 같은 A5 캔버스를 쓰는 페이지와 표지는 같은 상대 크기를 얻는다.
      */
     @Test
-    void theCanvasAspectChangesTheStoredSize() {
+    void pageAndCoverUseTheSameStoredSizeAtTheSameA5Aspect() {
         double ratio = 1600.0 / 900.0;
 
         BigDecimal[] page = DiaryPhotoFrame.fullSize(
@@ -88,9 +87,8 @@ class DiaryPhotoFrameFullSizeTest {
         BigDecimal[] cover = DiaryPhotoFrame.fullSize(
                 ratio, DiaryPhotoFrame.COVER_CANVAS_ASPECT, BASE);
 
-        // 저장되는 상대 높이는 서로 다르다.
-        assertThat(page[1]).isNotEqualByComparingTo(cover[1]);
-        // 그런데 화면에서 보이는 비율은 같다. 그게 이 셈의 목적이다.
+        assertThat(page[0]).isEqualByComparingTo(cover[0]);
+        assertThat(page[1]).isEqualByComparingTo(cover[1]);
         assertThat(screenRatio(page, DiaryPhotoFrame.PAGE_CANVAS_ASPECT))
                 .isCloseTo(screenRatio(cover, DiaryPhotoFrame.COVER_CANVAS_ASPECT),
                         within(0.001));
@@ -105,7 +103,7 @@ class DiaryPhotoFrameFullSizeTest {
         BigDecimal[] size = DiaryPhotoFrame.fullSize(
                 1600.0 / 900.0, DiaryPhotoFrame.COVER_CANVAS_ASPECT, BASE);
 
-        // 예전 값(정사각 상대값)이었다면 화면 비율이 0.75 로 세로였다.
+        // 예전 값(정사각 상대값)이었다면 A5 캔버스 비율만큼 세로였다.
         assertThat(size[0]).isNotEqualByComparingTo(size[1]);
         assertThat(screenRatio(size, DiaryPhotoFrame.COVER_CANVAS_ASPECT))
                 .isNotCloseTo(DiaryPhotoFrame.COVER_CANVAS_ASPECT, within(0.01));

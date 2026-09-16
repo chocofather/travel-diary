@@ -109,8 +109,9 @@ class DiaryPaperAssetTest {
 
         String cover = rule(css, ".diary-book-cover");
         assertThat(cover).contains("var(--diary-cover-grain)").contains("var(--diary-cover-color)");
-        // 3:4 비율과 표지 두께/페이지 단면
-        assertThat(cover).contains("aspect-ratio: 3 / 4;");
+        // A5 비율과 표지 두께/페이지 단면
+        assertThat(css).contains("--diary-cover-ratio: 148 / 210;");
+        assertThat(cover).contains("aspect-ratio: var(--diary-cover-ratio);");
         assertThat(cover).contains("box-shadow:");
         // 앞표지와 책등 사이의 홈
         assertThat(css).contains(".diary-book-spine::after {");

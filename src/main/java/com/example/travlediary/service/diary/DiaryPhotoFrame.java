@@ -26,7 +26,7 @@ import java.util.Iterator;
  * <p>프레임 두께는 화면(diary.css) 쪽 규칙과 같은 값이다. 좌·우·위는 얇고 아래만 조금 넓다.
  * 두 값이 어긋나면 사진 자리가 프레임과 맞지 않으므로 한 곳에서만 바꾼다.
  *
- * <p>페이지 다꾸와 표지 디자인이 같은 셈을 함께 쓴다. 다른 것은 캔버스 비율뿐이라
+ * <p>페이지 다꾸와 표지 디자인이 같은 셈과 같은 A5 캔버스 비율을 함께 쓴다.
  * 같은 사진이면 두 화면에서 같은 폴라로이드 모습이 된다.
  */
 public final class DiaryPhotoFrame {
@@ -44,8 +44,8 @@ public final class DiaryPhotoFrame {
 
     /** 종이 한 장의 가로/세로 비율. (읽기/편집이 같은 비율을 쓴다) */
     public static final double PAGE_CANVAS_ASPECT = DiaryPageGeometry.PAGE_CANVAS_ASPECT;
-    /** 표지 한 장의 가로/세로 비율. */
-    public static final double COVER_CANVAS_ASPECT = 3.0 / 4.0;
+    /** 표지도 속지와 같은 A5 가로/세로 비율을 쓴다. */
+    public static final double COVER_CANVAS_ASPECT = DiaryPageGeometry.PAGE_CANVAS_ASPECT;
 
     /** 너무 길쭉한 사진이 상자를 캔버스 밖까지 밀어내지 않게 둔다. */
     private static final double RATIO_MIN = 0.2;

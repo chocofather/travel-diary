@@ -95,24 +95,7 @@
 
         <!-- 내 디자인. 보관함과 같은 조각으로 완성된 표지를 그대로 줄여 보여 준다. -->
         <div data-cover-panel="CUSTOM" hidden>
-          <div class="diary-cover-design-choices" th:unless="${#lists.isEmpty(coverDesigns)}"
-               role="radiogroup" aria-label="내 표지 디자인">
-            <label class="diary-cover-design-choice" th:each="design : ${coverDesigns}">
-              <input type="radio" name="coverDesignChoice" class="diary-cover-option-input"
-                     th:value="${design.id}" data-cover-design-option />
-              <span class="diary-cover-design-choice-canvas">
-                <span th:replace="~{diary/cover-preview :: canvas(${design},
-                                    ${coverElementsByDesign.getOrDefault(design.id,
-                                                                        #lists.toList({}))})}"></span>
-              </span>
-              <span class="diary-cover-design-choice-name" th:text="${design.name}">제주 여행</span>
-            </label>
-          </div>
-
-          <p class="diary-cover-design-empty" th:if="${#lists.isEmpty(coverDesigns)}">
-            아직 만든 표지 디자인이 없습니다.
-            <a class="diary-cover-designs-link" th:href="@{/diaries/cover-designs}">내 표지 디자인 만들기</a>
-          </p>
+          <div th:replace="~{diary/cover-design-choices :: choices}"></div>
         </div>
 
         <span class="diary-form-hint" data-cover-custom-hint hidden>

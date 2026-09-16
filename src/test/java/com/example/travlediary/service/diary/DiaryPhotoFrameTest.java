@@ -19,6 +19,12 @@ class DiaryPhotoFrameTest {
                 .isCloseTo(148.0 / 210.0, within(0.0000001));
     }
 
+    @Test
+    void coverCanvasUsesTheSameA5PortraitAspect() {
+        assertThat(DiaryPhotoFrame.COVER_CANVAS_ASPECT)
+                .isCloseTo(148.0 / 210.0, within(0.0000001));
+    }
+
     private static final BigDecimal WIDTH = new BigDecimal("0.34000");
 
     /** 사진 자리의 가로/세로가 원본과 같아야 사진이 잘리지도, 흰 자리가 남지도 않는다. */

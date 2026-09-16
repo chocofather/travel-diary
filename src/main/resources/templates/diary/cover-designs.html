@@ -19,11 +19,8 @@
         <p class="diary-list-subtitle">직접 꾸민 표지를 저장해 두고 여행일기에 사용할 수 있어요.</p>
       </div>
       <div class="diary-list-tools">
-        <!-- 이름과 바탕은 편집 화면에서 정한다. 여기서는 빈 디자인 하나를 만들고 바로 넘어간다. -->
-        <form th:action="@{/diaries/cover-designs}" method="post">
-          <button type="submit" class="diary-new-button"><span
-                  class="diary-new-button-plus" aria-hidden="true">+</span>새 디자인 만들기</button>
-        </form>
+        <a class="diary-new-button" th:href="@{/diaries/cover-designs/new}"><span
+                class="diary-new-button-plus" aria-hidden="true">+</span>새 디자인 만들기</a>
       </div>
     </header>
 
@@ -59,10 +56,8 @@
       <span class="diary-empty-mark" aria-hidden="true">✎</span>
       <p class="diary-empty-title">아직 저장한 표지 디자인이 없습니다.</p>
       <p class="diary-empty-text">나만의 표지를 만들어 두면 여행일기를 만들 때 골라 쓸 수 있어요.</p>
-      <form th:action="@{/diaries/cover-designs}" method="post">
-        <button type="submit" class="diary-new-button"><span
-                class="diary-new-button-plus" aria-hidden="true">+</span>새 디자인 만들기</button>
-      </form>
+      <a class="diary-new-button" th:href="@{/diaries/cover-designs/new}"><span
+              class="diary-new-button-plus" aria-hidden="true">+</span>새 디자인 만들기</a>
     </div>
   </section>
 </th:block>
