@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
+
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/diary.css">
+  <link rel="stylesheet" href="/css/diary-fonts.css">
+  <script src="/js/diary-tape-repeat.js" defer></script>
+</th:block>
+
+<th:block th:fragment="body">
+  <section class="diary-list-page diary-cover-library-page"
+           aria-labelledby="cover-library-title">
+    <header class="diary-list-header">
+      <div class="diary-list-heading">
+        <a class="diary-detail-back" th:href="@{/diaries}">← 나의 여행일기로</a>
+        <p class="diary-list-eyebrow">COVER LIBRARY</p>
+        <h1 id="cover-library-title">표지 라이브러리</h1>
+        <p class="diary-list-subtitle">여행자들이 만든 표지 디자인을 둘러보세요.</p>
+      </div>
+      <div class="diary-list-tools">
+        <a class="diary-cover-designs-button" th:href="@{/diaries/cover-library/mine}">
+          내 공유 디자인
+        </a>
+        <div class="diary-view-switch" role="group" aria-label="표지 정렬">
+          <a class="diary-view-option"
+             th:each="option : ${libraryPage.sortOptions}"
+             th:classappend="${option == libraryPage.sort} ? ' is-current' : ''"
+             th:attr="aria-current=${option == libraryPage.sort} ? 'page' : null"
+             th:href="@{/diaries/cover-library(sort=${libraryPage.sortParamFor(option)})}"
+             th:text="${option.label}">최신순</a>
+        </div>
+        <a class="diary-cover-designs-button" th:href="@{/diaries/cover-designs}">내 표지 디자인</a>
+      </div>
+    </header>
+
+    <p class="diary-form-error" th:if="${coverLibraryError}"
+       th:text="${coverLibraryError}" role="alert">표지 디자인을 받을 수 없습니다.</p>
+
+    <ul class="diary-cover-library-grid" th:unless="${#lists.isEmpty(libraryItems)}">
+      <li class="diary-cover-library-card" th:each="item : ${libraryItems}">
+        <a th:href="@{/diaries/cover-library/{id}(id=${item.id})}"
+           th:attr="aria-label=|${item.title} 표지 상세|">
+          <div class="diary-cover-library-card-preview">
+            <div th:replace="~{diary/cover-preview :: canvas(
+                       ${item},
+                       ${libraryElementsByItem.getOrDefault(item.id, #lists.toList({}))})}"></div>
+          </div>
+          <div class="diary-cover-library-card-info">
+            <h2 th:text="${item.title}">여름의 표지</h2>
+            <p class="diary-cover-library-creator"
+               th:text="|by ${item.creatorDisplayName}|">by 여행자</p>
+            <div class="diary-cover-library-card-meta">
+              <span th:text="|다운로드 ${item.downloadCount}|">다운로드 0</span>
+              <time th:datetime="${#dates.format(item.publishedAt, 'yyyy-MM-dd')}"
+                    th:text="${#dates.format(item.publishedAt, 'yyyy.MM.dd')}">2026.09.17</time>
+            </div>
+          </div>
+        </a>
+      </li>
+    </ul>
+
+    <nav class="diary-pagination" th:if="${libraryPage.totalPages > 1}"
+         aria-label="표지 라이브러리 페이지">
+      <a th:if="${libraryPage.currentPage > 1}" class="page-nav" aria-label="이전 페이지"
+         th:href="@{/diaries/cover-library(sort=${libraryPage.sortParam},page=${libraryPage.currentPage - 1})}">&#8249;</a>
+      <span th:unless="${libraryPage.currentPage > 1}" class="page-nav is-disabled"
+            aria-disabled="true">&#8249;</span>
+
+      <th:block th:each="i : ${#numbers.sequence(1, libraryPage.totalPages)}">
+        <a th:if="${i != libraryPage.currentPage}" class="page-number"
+           th:href="@{/diaries/cover-library(sort=${libraryPage.sortParam},page=${i})}"
+           th:text="${i}">1</a>
+        <span th:if="${i == libraryPage.currentPage}" class="page-number is-current"
+              aria-current="page" th:text="${i}">1</span>
+      </th:block>
+
+      <a th:if="${libraryPage.currentPage < libraryPage.totalPages}" class="page-nav"
+         aria-label="다음 페이지"
+         th:href="@{/diaries/cover-library(sort=${libraryPage.sortParam},page=${libraryPage.currentPage + 1})}">&#8250;</a>
+      <span th:unless="${libraryPage.currentPage < libraryPage.totalPages}"
+            class="page-nav is-disabled" aria-disabled="true">&#8250;</span>
+    </nav>
+
+    <div class="diary-empty" th:if="${#lists.isEmpty(libraryItems)}" role="status">
+      <span class="diary-empty-mark" aria-hidden="true">◇</span>
+      <p class="diary-empty-title">아직 공개된 표지 디자인이 없습니다.</p>
+      <p class="diary-empty-text">내 표지 디자인에서 첫 표지를 공유해 보세요.</p>
+      <a class="diary-new-button" th:href="@{/diaries/cover-designs}">내 표지 디자인</a>
+    </div>
+  </section>
+</th:block>
+</html>

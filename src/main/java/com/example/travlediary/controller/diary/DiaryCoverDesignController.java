@@ -1,7 +1,11 @@
 package com.example.travlediary.controller.diary;
 
+import com.example.travlediary.dto.DiaryCoverLibraryPhotoSelection;
+import com.example.travlediary.dto.DiaryCoverLibraryRegistrationRequest;
+import com.example.travlediary.dto.DiaryCoverLibraryShareForm;
 import com.example.travlediary.model.DiaryCoverDesign;
 import com.example.travlediary.model.DiaryCoverDesignElement;
+import com.example.travlediary.model.DiaryCoverLibraryPhotoShareMode;
 import com.example.travlediary.model.DiaryCoverPhotoStyle;
 import com.example.travlediary.model.DiaryCoverMaterial;
 import com.example.travlediary.model.DiaryCoverStyle;
@@ -10,11 +14,13 @@ import com.example.travlediary.model.DiaryStickerKind;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.diary.DiaryCoverDesignElementService;
 import com.example.travlediary.service.diary.DiaryCoverDesignService;
+import com.example.travlediary.service.diary.DiaryCoverLibraryRegistrationService;
 import com.example.travlediary.service.diary.DiaryLabelFontCatalog;
 import com.example.travlediary.service.diary.DiaryPhotoFrame;
 import com.example.travlediary.service.diary.DiaryStickerCatalog;
 import com.example.travlediary.service.file.FileUploadService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,14 +37,18 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.validation.BindingResult;
 
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 내 표지 디자인 보관함.
@@ -52,6 +62,7 @@ import java.util.Map;
 @Controller
 @RequestMapping("/diaries/cover-designs")
 @RequiredArgsConstructor
+@Slf4j
 public class DiaryCoverDesignController {
 
     /** 표지 디자인에 올린 사진을 두는 곳. 페이지 사진(diary-pages)과 섞지 않는다. */
@@ -64,6 +75,7 @@ public class DiaryCoverDesignController {
 
     private final DiaryCoverDesignService diaryCoverDesignService;
     private final DiaryCoverDesignElementService diaryCoverDesignElementService;
+    private final DiaryCoverLibraryRegistrationService diaryCoverLibraryRegistrationService;
     /** 붙일 수 있는 스티커 목록. 페이지 다꾸와 같은 manifest 를 함께 쓴다. */
     private final DiaryStickerCatalog diaryStickerCatalog;
     /** 라벨기 글꼴 목록. 이것도 페이지 다꾸와 같은 manifest 를 함께 쓴다. */
@@ -92,6 +104,104 @@ public class DiaryCoverDesignController {
         model.addAttribute("stickerRepeats", diaryStickerCatalog.getRepeatsByImageUrl());
         model.addAttribute("pageTitle", "내 표지 디자인");
         return "diary/cover-designs";
+    }
+
+    /** 저장해 둔 내 표지를 확인하고 사진별 공유 범위를 고르는 화면. */
+    @GetMapping("/{designId:\\d+}/library-share")
+    public String libraryShareForm(@PathVariable Long designId,
+                                   @AuthenticationPrincipal CustomUserDetails userDetails,
+                                   Model model) {
+        Long userId = userDetails.getId();
+        DiaryCoverDesign design = diaryCoverDesignService.getMyDesign(designId, userId);
+        List<DiaryCoverDesignElement> elements =
+                diaryCoverDesignElementService.getElements(designId, userId);
+
+        DiaryCoverLibraryShareForm shareForm =
+                (DiaryCoverLibraryShareForm) model.getAttribute("shareForm");
+        if (shareForm == null) {
+            shareForm = new DiaryCoverLibraryShareForm();
+            shareForm.setTitle(design.getName());
+            model.addAttribute("shareForm", shareForm);
+        }
+
+        List<DiaryCoverDesignElement> photos = elements.stream()
+                .filter(element -> PHOTO_ELEMENT_TYPE.equals(element.getElementType()))
+                .toList();
+        Set<Long> includedPhotoIds = shareForm.getPhotoModes() == null ? Set.of()
+                : shareForm.getPhotoModes().entrySet().stream()
+                        .filter(entry -> entry.getValue()
+                                == DiaryCoverLibraryPhotoShareMode.INCLUDED)
+                        .map(Map.Entry::getKey)
+                        .collect(Collectors.toSet());
+
+        model.addAttribute("coverDesign", design);
+        model.addAttribute("coverElements", elements);
+        model.addAttribute("photoElements", photos);
+        model.addAttribute("includedPhotoIds", includedPhotoIds);
+        model.addAttribute("stickerRepeats", diaryStickerCatalog.getRepeatsByImageUrl());
+        model.addAttribute("pageTitle", "표지 라이브러리에 공유");
+        return "diary/cover-library-share";
+    }
+
+    /** 화면 입력을 기존 snapshot 등록 서비스의 요청으로만 변환한다. */
+    @PostMapping("/{designId:\\d+}/library-share")
+    public String shareToLibrary(@PathVariable Long designId,
+                                 @ModelAttribute("shareForm")
+                                 DiaryCoverLibraryShareForm shareForm,
+                                 BindingResult bindingResult,
+                                 @AuthenticationPrincipal CustomUserDetails userDetails,
+                                 RedirectAttributes redirectAttributes) {
+        if (bindingResult.hasErrors()) {
+            return redirectLibraryShareError(designId, shareForm, redirectAttributes,
+                    "사진 공유 방식을 다시 선택해 주세요.");
+        }
+
+        Map<Long, DiaryCoverLibraryPhotoSelection> photoSelections = new LinkedHashMap<>();
+        if (shareForm.getPhotoModes() != null) {
+            shareForm.getPhotoModes().forEach((elementId, mode) -> photoSelections.put(
+                    elementId,
+                    new DiaryCoverLibraryPhotoSelection(mode, shareForm.isRightsConfirmed())));
+        }
+        DiaryCoverLibraryRegistrationRequest request =
+                new DiaryCoverLibraryRegistrationRequest(
+                        designId, shareForm.getTitle(), shareForm.getDescription(), photoSelections);
+
+        try {
+            diaryCoverLibraryRegistrationService.register(userDetails.getId(), request);
+        } catch (ResponseStatusException exception) {
+            if (HttpStatus.NOT_FOUND.equals(exception.getStatusCode())) {
+                redirectAttributes.addFlashAttribute("coverDesignError",
+                        "표지 디자인을 찾을 수 없거나 공유 권한이 없습니다.");
+                return "redirect:/diaries/cover-designs";
+            }
+            if (exception.getStatusCode().is4xxClientError()) {
+                String message = exception.getReason() == null
+                        ? "공유 설정을 다시 확인해 주세요." : exception.getReason();
+                return redirectLibraryShareError(
+                        designId, shareForm, redirectAttributes, message);
+            }
+            log.error("표지 라이브러리 공유 등록에 실패했습니다. designId={}",
+                    designId, exception);
+            return redirectLibraryShareError(designId, shareForm, redirectAttributes,
+                    "표지 디자인을 공유하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+        } catch (RuntimeException exception) {
+            log.error("표지 라이브러리 공유 등록에 실패했습니다. designId={}",
+                    designId, exception);
+            return redirectLibraryShareError(designId, shareForm, redirectAttributes,
+                    "표지 디자인을 공유하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+        }
+
+        redirectAttributes.addFlashAttribute("coverDesignMessage",
+                "표지 디자인을 라이브러리에 공유했습니다.");
+        return "redirect:/diaries/cover-designs";
+    }
+
+    private String redirectLibraryShareError(
+            Long designId, DiaryCoverLibraryShareForm shareForm,
+            RedirectAttributes redirectAttributes, String message) {
+        redirectAttributes.addFlashAttribute("shareForm", shareForm);
+        redirectAttributes.addFlashAttribute("coverDesignError", message);
+        return "redirect:/diaries/cover-designs/" + designId + "/library-share";
     }
 
     /** 새 여행일기 화면에서 복귀했을 때 내 디자인 선택 목록만 다시 그린다. */

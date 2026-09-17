@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'cover-library-reports')}">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/diary.css">
+  <link rel="stylesheet" href="/css/diary-fonts.css">
+  <link rel="stylesheet" href="/css/admin-cover-library-reports.css">
+  <script src="/js/diary-tape-repeat.js" defer></script>
+  <script src="/js/admin-cover-library-reports.js" defer></script>
+</th:block>
+<th:block th:fragment="body">
+  <section class="admin-page-section admin-cover-report-detail-page">
+    <header class="admin-page-header">
+      <div class="admin-page-heading">
+        <a class="admin-cover-report-back" th:href="@{/admin/cover-library/reports}">← 신고 목록</a>
+        <h1 class="admin-page-title" th:text="|신고 #${report.id}|">신고 #50</h1>
+        <p class="admin-page-description"
+           th:text="|신고 당시 snapshot ${report.reportedSnapshotVersion}|">신고 당시 snapshot 3</p>
+      </div>
+    </header>
+
+    <p class="admin-alert is-success" th:if="${coverReportMessage}"
+       th:text="${coverReportMessage}" role="status">처리 완료</p>
+    <p class="admin-alert is-error" th:if="${coverReportError}"
+       th:text="${coverReportError}" role="alert">처리 실패</p>
+
+    <div class="admin-cover-report-detail-grid">
+      <section class="admin-card admin-cover-report-preview-card">
+        <h2 class="admin-card-heading">신고 당시 표지</h2>
+        <div class="admin-cover-report-preview">
+          <div th:replace="~{diary/cover-preview :: canvas(${libraryItem}, ${libraryElements})}"></div>
+        </div>
+      </section>
+
+      <section class="admin-card">
+        <h2 class="admin-card-heading">신고 정보</h2>
+        <dl class="admin-cover-report-meta">
+          <div><dt>대상</dt><dd th:text="${report.photoAssetId == null ? '표지 전체' : '공유 사진'}">표지 전체</dd></div>
+          <div><dt>표지 제목</dt><dd th:text="${libraryItem.title}">여름 표지</dd></div>
+          <div><dt>작성자</dt><dd th:text="${libraryItem.creatorDisplayName}">공유 당시 이름</dd></div>
+          <div><dt>현재 표지 상태</dt><dd th:text="${libraryItem.status}">PUBLISHED</dd></div>
+          <div><dt>신고자</dt><dd th:text="${reporterDisplayName}">신고자</dd></div>
+          <div><dt>신고 사유</dt><dd th:text="${report.reasonCode.displayName}">저작권 침해</dd></div>
+          <div><dt>신고 상태</dt><dd th:text="${report.status.displayName}">대기 중</dd></div>
+          <div><dt>신고일</dt><dd th:text="${#dates.format(report.createdAt, 'yyyy-MM-dd HH:mm')}">2026-09-17</dd></div>
+        </dl>
+        <div class="admin-cover-report-description">
+          <h3>상세 설명</h3>
+          <p th:text="${report.description != null ? report.description : '상세 설명이 없습니다.'}">권리 침해 의심</p>
+        </div>
+
+        <div class="admin-cover-report-target-photo" th:if="${targetPhotoAsset != null}">
+          <h3>신고 대상 공유 사진</h3>
+          <div class="admin-cover-report-photo-frame">
+            <img th:if="${targetPhotoAsset.status.name() == 'ACTIVE'}"
+                 th:src="@{/diaries/cover-library/assets/{id}(id=${targetPhotoAsset.id})}"
+                 alt="신고 대상 공유 사진" loading="lazy">
+            <span th:unless="${targetPhotoAsset.status.name() == 'ACTIVE'}">사진 제공 중지됨</span>
+          </div>
+          <p th:text="|현재 사진 상태: ${targetPhotoAsset.status}|">현재 사진 상태: ACTIVE</p>
+        </div>
+      </section>
+    </div>
+
+    <section class="admin-form-card is-wide admin-cover-report-process"
+             th:if="${report.status.name() == 'PENDING'}">
+      <h2 class="admin-card-heading">관리자 처리</h2>
+      <form th:action="@{/admin/cover-library/reports/{id}/process(id=${report.id})}"
+            method="post" data-cover-report-process-form>
+        <input type="hidden" name="photoAssetId" th:if="${report.photoAssetId != null}"
+               th:value="${report.photoAssetId}">
+        <div class="admin-form-fields">
+          <label class="admin-form-field">
+            <span class="admin-field-label">처리 방법</span>
+            <select name="decision" required data-cover-report-decision>
+              <option value="">선택해 주세요</option>
+              <option value="REJECT">신고 기각</option>
+              <option value="BLOCK_ITEM">표지 전체 차단</option>
+              <option value="BLOCK_PHOTO" th:if="${report.photoAssetId != null}">해당 사진 차단</option>
+              <option value="BLOCK_ITEM_AND_PHOTO" th:if="${report.photoAssetId != null}">표지와 해당 사진 모두 차단</option>
+            </select>
+          </label>
+          <label class="admin-form-field">
+            <span class="admin-field-label">차단 사유 <small data-cover-report-reason-hint>(차단 시 필수)</small></span>
+            <input type="text" name="reason" maxlength="500" data-cover-report-reason
+                   placeholder="콘텐츠에 기록할 차단 사유">
+          </label>
+          <label class="admin-form-field">
+            <span class="admin-field-label">관리자 메모 (선택)</span>
+            <textarea name="adminNote" rows="4" class="admin-textarea"></textarea>
+          </label>
+        </div>
+        <div class="admin-form-actions">
+          <button type="submit" class="admin-btn is-danger" data-cover-report-process-submit>처리 완료</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="admin-card admin-section-spacer" th:unless="${report.status.name() == 'PENDING'}">
+      <h2 class="admin-card-heading">처리 결과</h2>
+      <dl class="admin-cover-report-meta">
+        <div><dt>결과</dt><dd th:text="${report.resolutionAction}">NO_ACTION</dd></div>
+        <div><dt>처리일</dt><dd th:text="${report.processedAt != null ? #dates.format(report.processedAt, 'yyyy-MM-dd HH:mm') : '-'}">-</dd></div>
+        <div><dt>관리자 메모</dt><dd th:text="${report.adminNote != null ? report.adminNote : '-'}">-</dd></div>
+      </dl>
+    </section>
+
+    <section class="admin-form-card is-wide admin-cover-report-restore"
+             th:if="${libraryItem.status.name() == 'BLOCKED'
+                 or (targetPhotoAsset != null and targetPhotoAsset.status.name() == 'BLOCKED')}">
+      <h2 class="admin-card-heading">차단 복구</h2>
+      <p class="admin-cover-report-restore-help">
+        복구 사유는 운영 이력에 기록되며 기존 신고 처리 결과는 변경되지 않습니다.
+      </p>
+      <div class="admin-cover-report-restore-grid">
+        <form th:if="${libraryItem.status.name() == 'BLOCKED'}"
+              th:action="@{/admin/cover-library/items/{id}/restore(id=${libraryItem.id})}"
+              method="post" class="admin-cover-report-restore-form"
+              data-cover-restore-form data-cover-restore-kind="표지">
+          <h3>표지 차단 해제</h3>
+          <label class="admin-form-field">
+            <span class="admin-field-label">복구 사유</span>
+            <input type="text" name="reason" maxlength="500" required
+                   placeholder="차단을 해제하는 운영 사유">
+          </label>
+          <label class="admin-form-field">
+            <span class="admin-field-label">관리자 메모 (선택)</span>
+            <textarea name="adminNote" rows="3" class="admin-textarea"></textarea>
+          </label>
+          <div class="admin-form-actions">
+            <button type="submit" class="admin-btn" data-cover-restore-submit>
+              표지 차단 해제
+            </button>
+          </div>
+        </form>
+
+        <form th:if="${targetPhotoAsset != null and targetPhotoAsset.status.name() == 'BLOCKED'}"
+              th:action="@{/admin/cover-library/photo-assets/{id}/restore(id=${targetPhotoAsset.id})}"
+              method="post" class="admin-cover-report-restore-form"
+              data-cover-restore-form data-cover-restore-kind="사진">
+          <h3>사진 차단 해제</h3>
+          <label class="admin-form-field">
+            <span class="admin-field-label">복구 사유</span>
+            <input type="text" name="reason" maxlength="500" required
+                   placeholder="차단을 해제하는 운영 사유">
+          </label>
+          <label class="admin-form-field">
+            <span class="admin-field-label">관리자 메모 (선택)</span>
+            <textarea name="adminNote" rows="3" class="admin-textarea"></textarea>
+          </label>
+          <div class="admin-form-actions">
+            <button type="submit" class="admin-btn" data-cover-restore-submit>
+              사진 차단 해제
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
+  </section>
+</th:block>
+</html>

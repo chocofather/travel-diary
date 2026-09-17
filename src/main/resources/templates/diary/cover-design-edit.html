@@ -80,7 +80,10 @@
                                transform:rotate(${element.rotation}deg);
                                --diary-item-rotation:${element.rotation}deg;
                                z-index:${element.zIndex};|">
-              <img th:src="${element.imageUrl}" alt="표지 사진" loading="lazy" />
+              <span class="diary-cover-photo-placeholder" aria-hidden="true">사진 넣기</span>
+              <img th:if="${element.imageUrl != null and !#strings.isEmpty(element.imageUrl)}"
+                   th:src="${element.imageUrl}" alt="표지 사진" loading="lazy"
+                   onerror="this.remove()" />
 
               <button type="button" class="diary-rotate-handle" aria-label="회전"></button>
               <button type="button" class="diary-resize-handle" aria-label="크기 조절"></button>

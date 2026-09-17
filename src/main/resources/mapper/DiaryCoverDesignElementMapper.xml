@@ -12,6 +12,7 @@
         <result property="elementType" column="element_type"/>
         <result property="textContent" column="text_content"/>
         <result property="imageUrl"    column="image_url"/>
+        <result property="libraryPhotoAssetId" column="library_photo_asset_id"/>
         <result property="styleType"   column="style_type"/>
         <result property="colorType"   column="color_type"/>
         <result property="photoStyle"  column="photo_style"/>
@@ -28,7 +29,8 @@
     </resultMap>
 
     <sql id="DiaryCoverDesignElementColumns">
-        id, design_id, element_type, text_content, image_url, style_type, color_type,
+        id, design_id, element_type, text_content, image_url, library_photo_asset_id,
+        style_type, color_type,
         photo_style, text_font, text_color,
         position_x, position_y, width, height, rotation, z_index,
         created_at, updated_at
@@ -43,13 +45,15 @@
     <insert id="insert" parameterType="com.example.travlediary.model.DiaryCoverDesignElement"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO diary_cover_design_elements (
-            design_id, element_type, text_content, image_url, style_type, color_type,
+            design_id, element_type, text_content, image_url, library_photo_asset_id,
+            style_type, color_type,
             photo_style, text_font, text_color,
             position_x, position_y, width, height, rotation, z_index,
             created_at, updated_at
         ) VALUES (
             #{designId}, #{elementType}, #{textContent}, #{imageUrl},
-            #{styleType}, #{colorType}, #{photoStyle}, #{textFont}, #{textColor},
+            #{libraryPhotoAssetId}, #{styleType}, #{colorType},
+            #{photoStyle}, #{textFont}, #{textColor},
             #{positionX}, #{positionY}, #{width}, #{height}, #{rotation}, #{zIndex},
             NOW(), NOW()
         )
@@ -79,6 +83,7 @@
     <select id="findAllByDesignIds" resultMap="DiaryCoverDesignElementMap">
         SELECT
             e.id, e.design_id, e.element_type, e.text_content, e.image_url,
+            e.library_photo_asset_id,
             e.style_type, e.color_type, e.photo_style, e.text_font, e.text_color,
             e.position_x, e.position_y, e.width, e.height, e.rotation, e.z_index,
             e.created_at, e.updated_at

@@ -33,6 +33,7 @@ public class DiaryCoverServiceImpl implements DiaryCoverService {
     /** 적용본 사진을 두는 곳. 보관함 원본(diary-cover-designs)과 나눠 둔다. */
     private static final String COVER_IMAGE_DIRECTORY = "diary-cover-elements";
     private static final String PHOTO_ELEMENT_TYPE = "PHOTO";
+    private static final String LIBRARY_ASSET_URL_PREFIX = "/diaries/cover-library/assets/";
     /** 업로드한 파일을 가리키는 경로의 앞머리. 그 밖의 경로는 지우지 않는다. */
     private static final String UPLOAD_URL_PREFIX = "/uploads/";
 
@@ -68,7 +69,10 @@ public class DiaryCoverServiceImpl implements DiaryCoverService {
     @Transactional(readOnly = true)
     public List<DiaryCoverElement> getElements(Long diaryId, Long userId) {
         DiaryCover cover = getMyCover(diaryId, userId);
-        return diaryCoverElementMapper.findAllByCoverId(cover.getId());
+        List<DiaryCoverElement> elements =
+                diaryCoverElementMapper.findAllByCoverId(cover.getId());
+        prepareLibraryPhotoUrls(elements);
+        return elements;
     }
 
     @Override
@@ -119,7 +123,9 @@ public class DiaryCoverServiceImpl implements DiaryCoverService {
             return Map.of();
         }
         List<Long> coverIds = covers.stream().map(DiaryCover::getId).toList();
-        return diaryCoverElementMapper.findAllByCoverIds(coverIds).stream()
+        List<DiaryCoverElement> elements = diaryCoverElementMapper.findAllByCoverIds(coverIds);
+        prepareLibraryPhotoUrls(elements);
+        return elements.stream()
                 .collect(Collectors.groupingBy(DiaryCoverElement::getCoverId,
                         LinkedHashMap::new, Collectors.toList()));
     }
@@ -228,17 +234,35 @@ public class DiaryCoverServiceImpl implements DiaryCoverService {
           그래서 파일을 새로 만들고 그 경로를 저장한다.
           스티커(마스킹테이프 포함)는 공용 asset 이라 경로만 그대로 옮긴다.
         */
-        String copiedUrl = PHOTO_ELEMENT_TYPE.equals(source.getElementType())
-                ? fileUploadService.copyStoredFile(source.getImageUrl(), COVER_IMAGE_DIRECTORY)
-                : null;
-        if (copiedUrl != null) {
-            copiedFiles.add(copiedUrl);
+        if (PHOTO_ELEMENT_TYPE.equals(source.getElementType())
+                && source.getLibraryPhotoAssetId() != null) {
+            copied.setImageUrl(null);
+            copied.setLibraryPhotoAssetId(source.getLibraryPhotoAssetId());
+        } else {
+            String copiedUrl = PHOTO_ELEMENT_TYPE.equals(source.getElementType())
+                    ? fileUploadService.copyStoredFile(
+                            source.getImageUrl(), COVER_IMAGE_DIRECTORY)
+                    : null;
+            if (copiedUrl != null) {
+                copiedFiles.add(copiedUrl);
+            }
+            copied.setImageUrl(copiedUrl != null ? copiedUrl : source.getImageUrl());
         }
-        copied.setImageUrl(copiedUrl != null ? copiedUrl : source.getImageUrl());
 
         if (diaryCoverElementMapper.insert(copied) != 1) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "표지를 적용하지 못했습니다.");
+        }
+    }
+
+    private void prepareLibraryPhotoUrls(List<DiaryCoverElement> elements) {
+        for (DiaryCoverElement element : elements) {
+            if (PHOTO_ELEMENT_TYPE.equals(element.getElementType())
+                    && element.getImageUrl() == null
+                    && element.getLibraryPhotoAssetId() != null) {
+                element.setImageUrl(
+                        LIBRARY_ASSET_URL_PREFIX + element.getLibraryPhotoAssetId());
+            }
         }
     }
 

@@ -58,10 +58,10 @@ class AdminDashboardControllerTest {
         var document = adminPage();
 
         assertThat(document.select(".admin-dashboard h1").text()).isEqualTo("관리자 대시보드");
-        assertThat(document.select(".admin-dashboard-card")).hasSize(6);
+        assertThat(document.select(".admin-dashboard-card")).hasSize(7);
         assertThat(document.select(".admin-dashboard-card > h2").eachText())
                 .containsExactly("여행지 관리", "여행정보 관리", "이벤트 관리", "고객지원 관리",
-                        "회원 관리", "콘텐츠 관리");
+                        "회원 관리", "다이어리 관리", "콘텐츠 관리");
         assertThat(document.select(".admin-dashboard-entry, .admin-dashboard-entry-arrow"))
                 .isEmpty();
         assertThat(document.select(".admin-dashboard-actions a").eachAttr("href"))
@@ -79,6 +79,8 @@ class AdminDashboardControllerTest {
                         "/admin/inquiries",
                         "/admin/users",
                         "/admin/appeals",
+                        "/admin/diary/stickers",
+                        "/admin/cover-library/reports",
                         "/admin/contents"));
         assertThat(document.select(".admin-dashboard-card:last-child p").text())
                 .isEqualTo("관리자가 숨긴 글·코스·댓글을 확인하고 복구합니다.");

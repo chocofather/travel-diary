@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
+
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/diary.css">
+  <link rel="stylesheet" href="/css/diary-fonts.css">
+  <script src="/js/diary-tape-repeat.js" defer></script>
+  <script src="/js/diary-cover-library-share.js" defer></script>
+</th:block>
+
+<th:block th:fragment="body">
+  <section class="diary-cover-design-page" aria-labelledby="cover-library-share-title">
+    <header class="diary-form-header">
+      <a class="diary-detail-back" th:href="@{/diaries/cover-designs}">← 내 표지 디자인으로</a>
+      <h1 id="cover-library-share-title">라이브러리에 공유</h1>
+      <p class="diary-list-subtitle">완성한 표지와 사진별 공유 범위를 확인해 주세요.</p>
+    </header>
+
+    <p class="diary-form-error" th:if="${coverDesignError}" th:text="${coverDesignError}"
+       role="alert">공유 설정을 다시 확인해 주세요.</p>
+
+    <div class="diary-cover-design-editor diary-cover-library-share-layout">
+      <div class="diary-cover-library-preview-column">
+        <p class="diary-cover-library-section-label">공유할 표지</p>
+        <div class="diary-cover-preview">
+          <div th:replace="~{diary/cover-preview :: canvas(${coverDesign}, ${coverElements})}"></div>
+        </div>
+      </div>
+
+      <div class="diary-cover-design-panel">
+        <form class="diary-form diary-cover-library-share-form"
+              th:action="@{/diaries/cover-designs/{id}/library-share(id=${coverDesign.id})}"
+              method="post" th:object="${shareForm}" data-cover-library-share-form>
+          <div class="diary-form-field">
+            <label for="cover-library-title">라이브러리 제목</label>
+            <input type="text" id="cover-library-title" name="title" maxlength="50"
+                   required autocomplete="off" th:value="*{title}" />
+          </div>
+
+          <div class="diary-form-field">
+            <label for="cover-library-description">설명 <span class="diary-optional">선택</span></label>
+            <textarea id="cover-library-description" name="description" rows="4"
+                      th:text="*{description}"></textarea>
+          </div>
+
+          <fieldset class="diary-cover-library-photo-settings"
+                    th:unless="${#lists.isEmpty(photoElements)}"
+                    data-photo-sharing-options>
+            <legend>사진 공유 설정</legend>
+            <p class="diary-cover-library-help">사진마다 라이브러리에 함께 공유할 범위를 선택하세요.</p>
+
+            <article class="diary-cover-library-photo" th:each="photo, status : ${photoElements}">
+              <div class="diary-cover-library-photo-thumb"
+                   th:classappend="${photo.photoStyleClass}">
+                <img th:src="${photo.imageUrl}"
+                     th:alt="|표지 사진 ${status.count}|" loading="lazy" />
+              </div>
+              <div class="diary-cover-library-photo-choice">
+                <p class="diary-cover-library-photo-name" th:text="|사진 ${status.count}|">사진 1</p>
+                <label class="diary-cover-library-mode">
+                  <input type="radio"
+                         th:name="|photoModes[${photo.id}]|" value="EXCLUDED"
+                         th:checked="${photo.libraryPhotoAssetId != null
+                                      or !includedPhotoIds.contains(photo.id)}" />
+                  <span><strong>사진 제외</strong>
+                    <small>사진 위치·크기·각도·프레임만 공유되며, 받은 사람이 자신의 사진을 넣을 수 있습니다.</small>
+                  </span>
+                </label>
+                <label class="diary-cover-library-mode">
+                  <input type="radio" class="diary-cover-library-included"
+                         th:name="|photoModes[${photo.id}]|" value="INCLUDED"
+                         th:checked="${photo.libraryPhotoAssetId == null
+                                      and includedPhotoIds.contains(photo.id)}"
+                         th:disabled="${photo.libraryPhotoAssetId != null}" />
+                  <span><strong>사진까지 함께 공유</strong>
+                    <small th:if="${photo.libraryPhotoAssetId == null}">
+                      현재 사진도 디자인과 함께 다른 회원이 수정·사용할 수 있습니다.
+                    </small>
+                    <small th:if="${photo.libraryPhotoAssetId != null}">
+                      라이브러리에서 받은 공유 사진은 다시 포함할 수 없습니다.
+                    </small>
+                  </span>
+                </label>
+              </div>
+            </article>
+          </fieldset>
+
+          <div class="diary-cover-library-rights"
+               th:unless="${#lists.isEmpty(photoElements)}"
+               th:hidden="${#sets.isEmpty(includedPhotoIds)}"
+               data-rights-confirmation>
+            <label>
+              <input type="checkbox" name="rightsConfirmed" value="true"
+                     th:checked="*{rightsConfirmed}" data-rights-checkbox />
+              <span>이 사진을 직접 촬영했거나,<br>
+                다른 회원이 다운로드·수정·사용할 수 있도록 허락할 권한이 있음을 확인합니다.</span>
+            </label>
+          </div>
+
+          <div class="diary-cover-library-submit-row">
+            <a class="diary-detail-back" th:href="@{/diaries/cover-designs}">취소</a>
+            <button type="submit" class="diary-new-button" data-share-submit>
+              라이브러리에 공유
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+</th:block>
+</html>

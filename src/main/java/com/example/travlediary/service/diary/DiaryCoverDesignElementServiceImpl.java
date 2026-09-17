@@ -29,6 +29,7 @@ public class DiaryCoverDesignElementServiceImpl implements DiaryCoverDesignEleme
     /** 표지에 붙일 수 있는 유형. (NOTE 는 표지 화면에서 쓰지 않는다) */
     private static final String TYPE_STICKER = "STICKER";
     private static final String TYPE_PHOTO = "PHOTO";
+    private static final String LIBRARY_ASSET_URL_PREFIX = "/diaries/cover-library/assets/";
     /** 라벨기로 붙이는 글씨. 배경 없이 글자만 놓인다. */
     private static final String TYPE_TEXT = "TEXT";
     /** 표지의 글씨도 한 줄짜리 짧은 문구다. (페이지 다꾸와 같은 상한) */
@@ -72,7 +73,10 @@ public class DiaryCoverDesignElementServiceImpl implements DiaryCoverDesignEleme
     @Override
     @Transactional(readOnly = true)
     public List<DiaryCoverDesignElement> getElements(Long designId, Long userId) {
-        return diaryCoverDesignElementMapper.findAllByDesignId(requireDesignId(designId, userId));
+        List<DiaryCoverDesignElement> elements = diaryCoverDesignElementMapper
+                .findAllByDesignId(requireDesignId(designId, userId));
+        prepareLibraryPhotoUrls(elements);
+        return elements;
     }
 
     @Override
@@ -84,9 +88,23 @@ public class DiaryCoverDesignElementServiceImpl implements DiaryCoverDesignEleme
             return Map.of();
         }
         // 한 번만 묻고 디자인 번호로 나눠 담는다. (카드마다 따로 묻지 않는다)
-        return diaryCoverDesignElementMapper.findAllByDesignIds(designIds, userId).stream()
+        List<DiaryCoverDesignElement> elements =
+                diaryCoverDesignElementMapper.findAllByDesignIds(designIds, userId);
+        prepareLibraryPhotoUrls(elements);
+        return elements.stream()
                 .collect(Collectors.groupingBy(DiaryCoverDesignElement::getDesignId,
                         LinkedHashMap::new, Collectors.toList()));
+    }
+
+    private void prepareLibraryPhotoUrls(List<DiaryCoverDesignElement> elements) {
+        for (DiaryCoverDesignElement element : elements) {
+            if (TYPE_PHOTO.equals(element.getElementType())
+                    && element.getImageUrl() == null
+                    && element.getLibraryPhotoAssetId() != null) {
+                element.setImageUrl(
+                        LIBRARY_ASSET_URL_PREFIX + element.getLibraryPhotoAssetId());
+            }
+        }
     }
 
     @Override

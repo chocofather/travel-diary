@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.diary.DiaryCoverLibraryModerationActionMapper">
+
+    <resultMap id="LibraryModerationActionMap"
+               type="com.example.travlediary.model.DiaryCoverLibraryModerationAction">
+        <id property="id" column="id"/>
+        <result property="reportId" column="report_id"/>
+        <result property="libraryItemId" column="library_item_id"/>
+        <result property="photoAssetId" column="photo_asset_id"/>
+        <result property="actionType" column="action_type"/>
+        <result property="previousStatus" column="previous_status"/>
+        <result property="resultingStatus" column="resulting_status"/>
+        <result property="reason" column="reason"/>
+        <result property="adminNote" column="admin_note"/>
+        <result property="actionByUserId" column="action_by_user_id"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <sql id="LibraryModerationActionColumns">
+        id, report_id, library_item_id, photo_asset_id, action_type,
+        previous_status, resulting_status, reason, admin_note,
+        action_by_user_id, created_at
+    </sql>
+
+    <select id="findLatestBlockItemByLibraryItemId"
+            resultMap="LibraryModerationActionMap">
+        SELECT <include refid="LibraryModerationActionColumns"/>
+        FROM diary_cover_library_moderation_actions
+        WHERE library_item_id = #{libraryItemId}
+          AND action_type = 'BLOCK_ITEM'
+        ORDER BY created_at DESC, id DESC
+        LIMIT 1
+    </select>
+
+    <select id="findLatestBlockPhotoByPhotoAssetId"
+            resultMap="LibraryModerationActionMap">
+        SELECT <include refid="LibraryModerationActionColumns"/>
+        FROM diary_cover_library_moderation_actions
+        WHERE photo_asset_id = #{photoAssetId}
+          AND action_type = 'BLOCK_PHOTO'
+        ORDER BY created_at DESC, id DESC
+        LIMIT 1
+    </select>
+
+    <insert id="insert"
+            parameterType="com.example.travlediary.model.DiaryCoverLibraryModerationAction"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO diary_cover_library_moderation_actions (
+            report_id, library_item_id, photo_asset_id, action_type,
+            previous_status, resulting_status, reason, admin_note,
+            action_by_user_id, created_at
+        ) VALUES (
+            #{reportId}, #{libraryItemId}, #{photoAssetId}, #{actionType},
+            #{previousStatus}, #{resultingStatus}, #{reason}, #{adminNote},
+            #{actionByUserId}, #{createdAt}
+        )
+    </insert>
+
+</mapper>

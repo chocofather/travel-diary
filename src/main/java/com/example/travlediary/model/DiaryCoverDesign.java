@@ -21,6 +21,7 @@ public class DiaryCoverDesign {
 
     private Long id; // 디자인 번호 (PK)
     private Long userId; // 회원 번호
+    private Long sourceLibraryItemId; // 라이브러리에서 받은 경우 출처 항목 번호
     private String name; // 디자인 이름
     private String baseCoverStyle; // 바탕으로 쓴 기본 표지 스타일
     private String backgroundColor; // 표지 바탕색 (#RRGGBB, 없으면 기본색)

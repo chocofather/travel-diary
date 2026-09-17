@@ -82,9 +82,19 @@
             </article>
 
             <article class="admin-dashboard-card">
+                <h2>다이어리 관리</h2>
+                <p>다이어리와 커스텀 표지에서 사용하는 스티커를 관리합니다.</p>
+                <div class="admin-dashboard-actions">
+                    <a class="admin-dashboard-link" th:href="@{/admin/diary/stickers}">스티커 관리</a>
+                </div>
+            </article>
+
+            <article class="admin-dashboard-card">
                 <h2>콘텐츠 관리</h2>
                 <p>관리자가 숨긴 글·코스·댓글을 확인하고 복구합니다.</p>
                 <div class="admin-dashboard-actions">
+                    <a class="admin-dashboard-link"
+                       th:href="@{/admin/cover-library/reports}">표지 라이브러리 신고</a>
                     <a class="admin-dashboard-link" th:href="@{/admin/contents}">조치된 콘텐츠</a>
                 </div>
             </article>

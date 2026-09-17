@@ -8,6 +8,7 @@
     <resultMap id="DiaryCoverDesignMap" type="com.example.travlediary.model.DiaryCoverDesign">
         <id     property="id"              column="id"/>
         <result property="userId"          column="user_id"/>
+        <result property="sourceLibraryItemId" column="source_library_item_id"/>
         <result property="name"            column="name"/>
         <result property="baseCoverStyle"  column="base_cover_style"/>
         <result property="backgroundColor" column="background_color"/>
@@ -16,15 +17,18 @@
     </resultMap>
 
     <sql id="DiaryCoverDesignColumns">
-        id, user_id, name, base_cover_style, background_color, created_at, updated_at
+        id, user_id, source_library_item_id, name, base_cover_style, background_color,
+        created_at, updated_at
     </sql>
 
     <insert id="insert" parameterType="com.example.travlediary.model.DiaryCoverDesign"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO diary_cover_designs (
-            user_id, name, base_cover_style, background_color, created_at, updated_at
+            user_id, source_library_item_id, name, base_cover_style, background_color,
+            created_at, updated_at
         ) VALUES (
-            #{userId}, #{name}, #{baseCoverStyle}, #{backgroundColor}, NOW(), NOW()
+            #{userId}, #{sourceLibraryItemId}, #{name}, #{baseCoverStyle},
+            #{backgroundColor}, NOW(), NOW()
         )
     </insert>
 

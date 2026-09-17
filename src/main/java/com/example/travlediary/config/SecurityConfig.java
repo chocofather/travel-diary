@@ -137,6 +137,15 @@ public class SecurityConfig {
                         new RegexRequestMatcher(
                                 "^/admin/contents/[A-Z_]+/[0-9]+/restore$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(
+                                "^/admin/cover-library/reports/[0-9]+/process$",
+                                HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/admin/cover-library/items/[0-9]+/restore$",
+                                HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/admin/cover-library/photo-assets/[0-9]+/restore$",
+                                HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
                                 "^/travel-plans$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(
                                 "^/travel-plans/invitations/[A-Za-z0-9_-]+/join$",
@@ -222,6 +231,18 @@ public class SecurityConfig {
                                 "^/diaries/cover-designs/[0-9]+/update$", HttpMethod.POST.name()),
                         new RegexRequestMatcher(
                                 "^/diaries/cover-designs/[0-9]+/delete$", HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/diaries/cover-designs/[0-9]+/library-share$",
+                                HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/diaries/cover-library/[0-9]+/download$",
+                                HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/diaries/cover-library/[0-9]+/(withdraw|republish|delete)$",
+                                HttpMethod.POST.name()),
+                        new RegexRequestMatcher(
+                                "^/diaries/cover-library/[0-9]+/reports$",
+                                HttpMethod.POST.name()),
                         // 표지 위 자유배치 요소 (fetch 요청, 토큰은 meta 값을 그대로 쓴다)
                         new RegexRequestMatcher(
                                 "^/diaries/cover-designs/[0-9]+/elements/sticker$",

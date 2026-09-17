@@ -975,6 +975,7 @@ CREATE TABLE `diary_cover_design_elements` (
   `element_type` varchar(10) NOT NULL,
   `text_content` text,
   `image_url` varchar(255) DEFAULT NULL,
+  `library_photo_asset_id` bigint DEFAULT NULL,
   `style_type` varchar(30) DEFAULT NULL,
   `color_type` varchar(20) DEFAULT NULL,
   `photo_style` varchar(20) DEFAULT NULL,
@@ -990,9 +991,12 @@ CREATE TABLE `diary_cover_design_elements` (
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_diary_cover_design_elements_design` (`design_id`,`z_index`,`id`),
+  KEY `idx_diary_cover_design_elements_library_asset` (`library_photo_asset_id`),
   CONSTRAINT `fk_diary_cover_design_elements_design` FOREIGN KEY (`design_id`) REFERENCES `diary_cover_designs` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_dcde_library_photo_asset` FOREIGN KEY (`library_photo_asset_id`) REFERENCES `diary_cover_library_photo_assets` (`id`) ON DELETE RESTRICT,
   CONSTRAINT `chk_diary_cover_design_elements_type` CHECK ((`element_type` in (_utf8mb4'PHOTO',_utf8mb4'STICKER',_utf8mb4'NOTE',_utf8mb4'TEXT'))),
-  CONSTRAINT `chk_diary_cover_design_elements_payload` CHECK ((((`element_type` in (_utf8mb4'PHOTO',_utf8mb4'STICKER')) and (`image_url` is not null) and (`text_content` is null) and (`style_type` is null)) or ((`element_type` = _utf8mb4'NOTE') and (`text_content` is not null) and (`image_url` is null) and (`style_type` is not null)) or ((`element_type` = _utf8mb4'TEXT') and (`text_content` is not null) and (`image_url` is null) and (`style_type` is null)))),
+  CONSTRAINT `chk_diary_cover_design_elements_payload` CHECK ((((`element_type` = _utf8mb4'PHOTO') and (`text_content` is null) and (`style_type` is null) and (((`image_url` is not null) and (`library_photo_asset_id` is null)) or ((`image_url` is null) and (`library_photo_asset_id` is not null)) or ((`image_url` is null) and (`library_photo_asset_id` is null)))) or ((`element_type` = _utf8mb4'STICKER') and (`image_url` is not null) and (`library_photo_asset_id` is null) and (`text_content` is null) and (`style_type` is null)) or ((`element_type` = _utf8mb4'NOTE') and (`text_content` is not null) and (`image_url` is null) and (`library_photo_asset_id` is null) and (`style_type` is not null)) or ((`element_type` = _utf8mb4'TEXT') and (`text_content` is not null) and (`image_url` is null) and (`library_photo_asset_id` is null) and (`style_type` is null)))),
+  CONSTRAINT `chk_dcde_library_asset_usage` CHECK ((`library_photo_asset_id` is null or ((`element_type` = _utf8mb4'PHOTO') and (`image_url` is null)))),
   CONSTRAINT `chk_diary_cover_design_elements_position` CHECK (((`position_x` between -(0.5) and 1.5) and (`position_y` between -(0.5) and 1.5))),
   CONSTRAINT `chk_diary_cover_design_elements_size` CHECK (((`width` > 0) and (`width` <= 1) and (`height` > 0) and (`height` <= 1))),
   CONSTRAINT `chk_diary_cover_design_elements_rotation` CHECK ((`rotation` between -(360) and 360)),
@@ -1009,6 +1013,7 @@ CREATE TABLE `diary_cover_design_elements` (
 CREATE TABLE `diary_cover_designs` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `user_id` bigint NOT NULL,
+  `source_library_item_id` bigint DEFAULT NULL,
   `name` varchar(50) NOT NULL,
   `base_cover_style` varchar(30) NOT NULL DEFAULT 'DEFAULT',
   `background_color` varchar(7) DEFAULT NULL,
@@ -1016,7 +1021,9 @@ CREATE TABLE `diary_cover_designs` (
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_diary_cover_designs_user` (`user_id`,`updated_at`,`id`),
-  CONSTRAINT `fk_diary_cover_designs_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+  KEY `idx_diary_cover_designs_source_library` (`source_library_item_id`),
+  CONSTRAINT `fk_diary_cover_designs_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_diary_cover_designs_source_library` FOREIGN KEY (`source_library_item_id`) REFERENCES `diary_cover_library_items` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -1032,6 +1039,7 @@ CREATE TABLE `diary_cover_elements` (
   `element_type` varchar(10) NOT NULL,
   `text_content` text,
   `image_url` varchar(255) DEFAULT NULL,
+  `library_photo_asset_id` bigint DEFAULT NULL,
   `style_type` varchar(30) DEFAULT NULL,
   `color_type` varchar(20) DEFAULT NULL,
   `photo_style` varchar(20) DEFAULT NULL,
@@ -1047,13 +1055,231 @@ CREATE TABLE `diary_cover_elements` (
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_diary_cover_elements_cover` (`cover_id`,`z_index`,`id`),
+  KEY `idx_diary_cover_elements_library_asset` (`library_photo_asset_id`),
   CONSTRAINT `fk_diary_cover_elements_cover` FOREIGN KEY (`cover_id`) REFERENCES `diary_covers` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_dce_library_photo_asset` FOREIGN KEY (`library_photo_asset_id`) REFERENCES `diary_cover_library_photo_assets` (`id`) ON DELETE RESTRICT,
   CONSTRAINT `chk_diary_cover_elements_type` CHECK ((`element_type` in (_utf8mb4'PHOTO',_utf8mb4'STICKER',_utf8mb4'NOTE',_utf8mb4'TEXT'))),
-  CONSTRAINT `chk_diary_cover_elements_payload` CHECK ((((`element_type` in (_utf8mb4'PHOTO',_utf8mb4'STICKER')) and (`image_url` is not null) and (`text_content` is null) and (`style_type` is null)) or ((`element_type` = _utf8mb4'NOTE') and (`text_content` is not null) and (`image_url` is null) and (`style_type` is not null)) or ((`element_type` = _utf8mb4'TEXT') and (`text_content` is not null) and (`image_url` is null) and (`style_type` is null)))),
+  CONSTRAINT `chk_diary_cover_elements_payload` CHECK ((((`element_type` = _utf8mb4'PHOTO') and (`text_content` is null) and (`style_type` is null) and (((`image_url` is not null) and (`library_photo_asset_id` is null)) or ((`image_url` is null) and (`library_photo_asset_id` is not null)) or ((`image_url` is null) and (`library_photo_asset_id` is null)))) or ((`element_type` = _utf8mb4'STICKER') and (`image_url` is not null) and (`library_photo_asset_id` is null) and (`text_content` is null) and (`style_type` is null)) or ((`element_type` = _utf8mb4'NOTE') and (`text_content` is not null) and (`image_url` is null) and (`library_photo_asset_id` is null) and (`style_type` is not null)) or ((`element_type` = _utf8mb4'TEXT') and (`text_content` is not null) and (`image_url` is null) and (`library_photo_asset_id` is null) and (`style_type` is null)))),
+  CONSTRAINT `chk_dce_library_asset_usage` CHECK ((`library_photo_asset_id` is null or ((`element_type` = _utf8mb4'PHOTO') and (`image_url` is null)))),
   CONSTRAINT `chk_diary_cover_elements_position` CHECK (((`position_x` between -(0.5) and 1.5) and (`position_y` between -(0.5) and 1.5))),
   CONSTRAINT `chk_diary_cover_elements_size` CHECK (((`width` > 0) and (`width` <= 1) and (`height` > 0) and (`height` <= 1))),
   CONSTRAINT `chk_diary_cover_elements_rotation` CHECK ((`rotation` between -(360) and 360)),
   CONSTRAINT `chk_diary_cover_elements_z_index` CHECK ((`z_index` >= 0))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `diary_cover_library_items`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `diary_cover_library_items` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `creator_user_id` bigint DEFAULT NULL,
+  `creator_display_name` varchar(50) NOT NULL,
+  `source_cover_design_id` bigint DEFAULT NULL,
+  `title` varchar(50) NOT NULL,
+  `description` text DEFAULT NULL,
+  `base_cover_style` varchar(30) NOT NULL DEFAULT 'DEFAULT',
+  `background_color` varchar(7) DEFAULT NULL,
+  `status` varchar(20) NOT NULL DEFAULT 'PUBLISHED',
+  `download_count` bigint unsigned NOT NULL DEFAULT '0',
+  `snapshot_version` int unsigned NOT NULL DEFAULT '1',
+  `published_at` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `withdrawn_at` timestamp(6) NULL DEFAULT NULL,
+  `deleted_at` timestamp(6) NULL DEFAULT NULL,
+  `blocked_at` timestamp(6) NULL DEFAULT NULL,
+  `blocked_reason` varchar(500) DEFAULT NULL,
+  `created_at` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `updated_at` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (`id`),
+  KEY `idx_dcli_latest` (`status`,`published_at` DESC,`id` DESC),
+  KEY `idx_dcli_popular` (`status`,`download_count` DESC,`published_at` DESC,`id` DESC),
+  KEY `idx_dcli_creator` (`creator_user_id`,`status`,`updated_at` DESC,`id` DESC),
+  KEY `idx_dcli_source_design` (`source_cover_design_id`),
+  CONSTRAINT `fk_dcli_creator_user` FOREIGN KEY (`creator_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_dcli_source_design` FOREIGN KEY (`source_cover_design_id`) REFERENCES `diary_cover_designs` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `chk_dcli_status` CHECK ((`status` in (_utf8mb4'PUBLISHED',_utf8mb4'WITHDRAWN',_utf8mb4'DELETED',_utf8mb4'BLOCKED'))),
+  CONSTRAINT `chk_dcli_snapshot_version` CHECK ((`snapshot_version` >= 1)),
+  CONSTRAINT `chk_dcli_creator_display_name` CHECK ((char_length(trim(`creator_display_name`)) > 0))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `diary_cover_library_photo_assets`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `diary_cover_library_photo_assets` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `library_item_id` bigint NOT NULL,
+  `original_uploader_user_id` bigint DEFAULT NULL,
+  `original_uploader_display_name` varchar(50) NOT NULL,
+  `snapshot_version` int unsigned NOT NULL DEFAULT '1',
+  `storage_key` varchar(500) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `content_type` varchar(100) CHARACTER SET ascii COLLATE ascii_general_ci NOT NULL,
+  `file_size` bigint unsigned NOT NULL,
+  `status` varchar(20) NOT NULL DEFAULT 'ACTIVE',
+  `rights_confirmed_at` timestamp(6) NOT NULL,
+  `rights_terms_version` varchar(50) NOT NULL,
+  `blocked_at` timestamp(6) NULL DEFAULT NULL,
+  `blocked_reason` varchar(500) DEFAULT NULL,
+  `retired_at` timestamp(6) NULL DEFAULT NULL,
+  `created_at` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `updated_at` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_dclpa_storage_key` (`storage_key`),
+  UNIQUE KEY `uq_dclpa_item_asset` (`library_item_id`,`id`),
+  KEY `idx_dclpa_item_version` (`library_item_id`,`snapshot_version`,`id`),
+  KEY `idx_dclpa_uploader` (`original_uploader_user_id`,`created_at`,`id`),
+  CONSTRAINT `fk_dclpa_library_item` FOREIGN KEY (`library_item_id`) REFERENCES `diary_cover_library_items` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_dclpa_uploader` FOREIGN KEY (`original_uploader_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `chk_dclpa_status` CHECK ((`status` in (_utf8mb4'ACTIVE',_utf8mb4'BLOCKED'))),
+  CONSTRAINT `chk_dclpa_snapshot_version` CHECK ((`snapshot_version` >= 1)),
+  CONSTRAINT `chk_dclpa_file_size` CHECK ((`file_size` > 0)),
+  CONSTRAINT `chk_dclpa_uploader_display_name` CHECK ((char_length(trim(`original_uploader_display_name`)) > 0)),
+  CONSTRAINT `chk_dclpa_rights_terms_version` CHECK ((char_length(trim(`rights_terms_version`)) > 0))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `diary_cover_library_elements`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `diary_cover_library_elements` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `library_item_id` bigint NOT NULL,
+  `snapshot_version` int unsigned NOT NULL DEFAULT '1',
+  `element_type` varchar(10) NOT NULL,
+  `text_content` text DEFAULT NULL,
+  `image_url` varchar(255) DEFAULT NULL,
+  `style_type` varchar(30) DEFAULT NULL,
+  `color_type` varchar(20) DEFAULT NULL,
+  `photo_style` varchar(20) DEFAULT NULL,
+  `text_font` varchar(30) DEFAULT NULL,
+  `text_color` varchar(7) DEFAULT NULL,
+  `photo_share_mode` varchar(20) DEFAULT NULL,
+  `photo_asset_id` bigint DEFAULT NULL,
+  `position_x` decimal(6,5) NOT NULL DEFAULT '0.00000',
+  `position_y` decimal(6,5) NOT NULL DEFAULT '0.00000',
+  `width` decimal(6,5) NOT NULL DEFAULT '0.30000',
+  `height` decimal(6,5) NOT NULL DEFAULT '0.30000',
+  `rotation` decimal(6,2) NOT NULL DEFAULT '0.00',
+  `z_index` int NOT NULL DEFAULT '0',
+  `created_at` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `updated_at` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (`id`),
+  KEY `idx_dcle_item_version_order` (`library_item_id`,`snapshot_version`,`z_index`,`id`),
+  KEY `idx_dcle_photo_asset` (`library_item_id`,`photo_asset_id`),
+  CONSTRAINT `fk_dcle_library_item` FOREIGN KEY (`library_item_id`) REFERENCES `diary_cover_library_items` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_dcle_photo_asset` FOREIGN KEY (`library_item_id`, `photo_asset_id`) REFERENCES `diary_cover_library_photo_assets` (`library_item_id`, `id`) ON DELETE RESTRICT,
+  CONSTRAINT `chk_dcle_type` CHECK ((`element_type` in (_utf8mb4'PHOTO',_utf8mb4'STICKER',_utf8mb4'NOTE',_utf8mb4'TEXT'))),
+  CONSTRAINT `chk_dcle_snapshot_version` CHECK ((`snapshot_version` >= 1)),
+  CONSTRAINT `chk_dcle_payload` CHECK ((((`element_type` = _utf8mb4'PHOTO') and (`text_content` is null) and (`image_url` is null) and (`style_type` is null) and (`color_type` is null) and (`photo_style` is not null) and (`photo_style` in (_utf8mb4'FULL',_utf8mb4'POLAROID')) and (`text_font` is null) and (`text_color` is null) and (`photo_share_mode` is not null) and (((`photo_share_mode` = _utf8mb4'EXCLUDED') and (`photo_asset_id` is null)) or ((`photo_share_mode` = _utf8mb4'INCLUDED') and (`photo_asset_id` is not null)))) or ((`element_type` = _utf8mb4'STICKER') and (`image_url` is not null) and (`text_content` is null) and (`style_type` is null) and (`color_type` is null) and (`photo_style` is null) and (`text_font` is null) and (`text_color` is null) and (`photo_share_mode` is null) and (`photo_asset_id` is null)) or ((`element_type` = _utf8mb4'NOTE') and (`text_content` is not null) and (`image_url` is null) and (`style_type` is not null) and (`photo_style` is null) and (`text_font` is null) and (`text_color` is null) and (`photo_share_mode` is null) and (`photo_asset_id` is null)) or ((`element_type` = _utf8mb4'TEXT') and (`text_content` is not null) and (`image_url` is null) and (`style_type` is null) and (`color_type` is null) and (`photo_style` is null) and (`photo_share_mode` is null) and (`photo_asset_id` is null)))),
+  CONSTRAINT `chk_dcle_position` CHECK (((`position_x` between -(0.5) and 1.5) and (`position_y` between -(0.5) and 1.5))),
+  CONSTRAINT `chk_dcle_size` CHECK (((`width` > 0) and (`width` <= 1) and (`height` > 0) and (`height` <= 1))),
+  CONSTRAINT `chk_dcle_rotation` CHECK ((`rotation` between -(360) and 360)),
+  CONSTRAINT `chk_dcle_z_index` CHECK ((`z_index` >= 0))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `diary_cover_library_downloads`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `diary_cover_library_downloads` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `library_item_id` bigint NOT NULL,
+  `downloader_user_id` bigint DEFAULT NULL,
+  `first_downloaded_at` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_dcld_item_downloader` (`library_item_id`,`downloader_user_id`),
+  KEY `idx_dcld_item_first` (`library_item_id`,`first_downloaded_at`,`id`),
+  KEY `idx_dcld_downloader` (`downloader_user_id`,`first_downloaded_at` DESC,`id`),
+  CONSTRAINT `fk_dcld_library_item` FOREIGN KEY (`library_item_id`) REFERENCES `diary_cover_library_items` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_dcld_downloader` FOREIGN KEY (`downloader_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `diary_cover_library_reports`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `diary_cover_library_reports` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `library_item_id` bigint NOT NULL,
+  `reported_snapshot_version` int unsigned NOT NULL,
+  `photo_asset_id` bigint DEFAULT NULL,
+  `reporter_user_id` bigint DEFAULT NULL,
+  `reason_code` varchar(30) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `description` varchar(1000) DEFAULT NULL,
+  `status` varchar(20) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'PENDING',
+  `resolution_action` varchar(30) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+  `processed_by_user_id` bigint DEFAULT NULL,
+  `processed_at` timestamp(6) NULL DEFAULT NULL,
+  `admin_note` text DEFAULT NULL,
+  `target_photo_asset_key` bigint GENERATED ALWAYS AS (coalesce(`photo_asset_id`,0)) STORED,
+  `created_at` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `updated_at` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_dclr_id_item` (`id`,`library_item_id`),
+  UNIQUE KEY `uq_dclr_reporter_target` (`reporter_user_id`,`library_item_id`,`reported_snapshot_version`,`target_photo_asset_key`),
+  KEY `idx_dclr_status_created` (`status`,`created_at`,`id`),
+  KEY `idx_dclr_item_created` (`library_item_id`,`created_at`,`id`),
+  KEY `idx_dclr_item_snapshot_created` (`library_item_id`,`reported_snapshot_version`,`created_at`,`id`),
+  KEY `idx_dclr_item_photo` (`library_item_id`,`photo_asset_id`),
+  KEY `idx_dclr_photo_created` (`photo_asset_id`,`created_at`,`id`),
+  KEY `idx_dclr_processor` (`processed_by_user_id`,`processed_at`,`id`),
+  CONSTRAINT `fk_dclr_library_item` FOREIGN KEY (`library_item_id`) REFERENCES `diary_cover_library_items` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_dclr_photo_asset` FOREIGN KEY (`library_item_id`,`photo_asset_id`) REFERENCES `diary_cover_library_photo_assets` (`library_item_id`,`id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_dclr_reporter` FOREIGN KEY (`reporter_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_dclr_processor` FOREIGN KEY (`processed_by_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `chk_dclr_reported_snapshot_version` CHECK ((`reported_snapshot_version` >= 1)),
+  CONSTRAINT `chk_dclr_reason_code` CHECK ((`reason_code` in (_utf8mb4'COPYRIGHT',_utf8mb4'PORTRAIT_PRIVACY',_utf8mb4'INAPPROPRIATE',_utf8mb4'SPAM',_utf8mb4'OTHER'))),
+  CONSTRAINT `chk_dclr_description` CHECK ((((`description` is null) or (char_length(trim(`description`)) > 0)) and ((`reason_code` <> _utf8mb4'OTHER') or ((`description` is not null) and (char_length(trim(`description`)) > 0))))),
+  CONSTRAINT `chk_dclr_status` CHECK ((`status` in (_utf8mb4'PENDING',_utf8mb4'RESOLVED',_utf8mb4'REJECTED'))),
+  CONSTRAINT `chk_dclr_resolution_action` CHECK (((`resolution_action` is null) or (`resolution_action` in (_utf8mb4'NO_ACTION',_utf8mb4'ITEM_BLOCKED',_utf8mb4'PHOTO_BLOCKED',_utf8mb4'ITEM_AND_PHOTO_BLOCKED')))),
+  CONSTRAINT `chk_dclr_processing_state` CHECK ((((`status` = _utf8mb4'PENDING') and (`processed_at` is null) and (`resolution_action` is null)) or ((`status` = _utf8mb4'RESOLVED') and (`processed_at` is not null) and (`resolution_action` is not null) and (`resolution_action` in (_utf8mb4'NO_ACTION',_utf8mb4'ITEM_BLOCKED',_utf8mb4'PHOTO_BLOCKED',_utf8mb4'ITEM_AND_PHOTO_BLOCKED'))) or ((`status` = _utf8mb4'REJECTED') and (`processed_at` is not null) and (`resolution_action` is not null) and (`resolution_action` = _utf8mb4'NO_ACTION'))))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `diary_cover_library_moderation_actions`
+--
+
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `diary_cover_library_moderation_actions` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `report_id` bigint NOT NULL,
+  `library_item_id` bigint NOT NULL,
+  `photo_asset_id` bigint DEFAULT NULL,
+  `action_type` varchar(30) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `previous_status` varchar(20) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `resulting_status` varchar(20) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `reason` varchar(500) NOT NULL,
+  `admin_note` text DEFAULT NULL,
+  `action_by_user_id` bigint DEFAULT NULL,
+  `created_at` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (`id`),
+  KEY `idx_dclma_report_item_created` (`report_id`,`library_item_id`,`created_at`,`id`),
+  KEY `idx_dclma_item_created` (`library_item_id`,`created_at`,`id`),
+  KEY `idx_dclma_item_photo` (`library_item_id`,`photo_asset_id`),
+  KEY `idx_dclma_photo_created` (`photo_asset_id`,`created_at`,`id`),
+  KEY `idx_dclma_admin_created` (`action_by_user_id`,`created_at`,`id`),
+  CONSTRAINT `fk_dclma_report_item` FOREIGN KEY (`report_id`,`library_item_id`) REFERENCES `diary_cover_library_reports` (`id`,`library_item_id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_dclma_photo_asset` FOREIGN KEY (`library_item_id`,`photo_asset_id`) REFERENCES `diary_cover_library_photo_assets` (`library_item_id`,`id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_dclma_admin` FOREIGN KEY (`action_by_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `chk_dclma_reason` CHECK ((char_length(trim(`reason`)) > 0)),
+  CONSTRAINT `chk_dclma_transition` CHECK ((((`action_type` = _utf8mb4'BLOCK_ITEM') and (`photo_asset_id` is null) and (`previous_status` in (_utf8mb4'PUBLISHED',_utf8mb4'WITHDRAWN')) and (`resulting_status` = _utf8mb4'BLOCKED')) or ((`action_type` = _utf8mb4'RESTORE_ITEM') and (`photo_asset_id` is null) and (`previous_status` = _utf8mb4'BLOCKED') and (`resulting_status` in (_utf8mb4'PUBLISHED',_utf8mb4'WITHDRAWN'))) or ((`action_type` = _utf8mb4'BLOCK_PHOTO') and (`photo_asset_id` is not null) and (`previous_status` = _utf8mb4'ACTIVE') and (`resulting_status` = _utf8mb4'BLOCKED')) or ((`action_type` = _utf8mb4'RESTORE_PHOTO') and (`photo_asset_id` is not null) and (`previous_status` = _utf8mb4'BLOCKED') and (`resulting_status` = _utf8mb4'ACTIVE'))))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 

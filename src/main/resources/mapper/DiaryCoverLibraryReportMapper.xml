@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.diary.DiaryCoverLibraryReportMapper">
+
+    <resultMap id="LibraryReportMap"
+               type="com.example.travlediary.model.DiaryCoverLibraryReport">
+        <id property="id" column="id"/>
+        <result property="libraryItemId" column="library_item_id"/>
+        <result property="reportedSnapshotVersion" column="reported_snapshot_version"/>
+        <result property="photoAssetId" column="photo_asset_id"/>
+        <result property="reporterUserId" column="reporter_user_id"/>
+        <result property="reasonCode" column="reason_code"/>
+        <result property="description" column="description"/>
+        <result property="status" column="status"/>
+        <result property="resolutionAction" column="resolution_action"/>
+        <result property="processedByUserId" column="processed_by_user_id"/>
+        <result property="processedAt" column="processed_at"/>
+        <result property="adminNote" column="admin_note"/>
+        <result property="targetPhotoAssetKey" column="target_photo_asset_key"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <resultMap id="AdminReportListMap"
+               type="com.example.travlediary.dto.DiaryCoverLibraryReportListItemDto">
+        <id property="reportId" column="report_id"/>
+        <result property="libraryItemId" column="library_item_id"/>
+        <result property="reportedSnapshotVersion" column="reported_snapshot_version"/>
+        <result property="photoAssetId" column="photo_asset_id"/>
+        <result property="libraryTitle" column="library_title"/>
+        <result property="creatorDisplayName" column="creator_display_name"/>
+        <result property="reasonCode" column="reason_code"/>
+        <result property="reporterDisplayName" column="reporter_display_name"/>
+        <result property="status" column="status"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <sql id="LibraryReportColumns">
+        id, library_item_id, reported_snapshot_version, photo_asset_id,
+        reporter_user_id, reason_code, description, status, resolution_action,
+        processed_by_user_id, processed_at, admin_note, target_photo_asset_key,
+        created_at, updated_at
+    </sql>
+
+    <insert id="insert" parameterType="com.example.travlediary.model.DiaryCoverLibraryReport"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO diary_cover_library_reports (
+            library_item_id, reported_snapshot_version, photo_asset_id,
+            reporter_user_id, reason_code, description, status
+        ) VALUES (
+            #{libraryItemId}, #{reportedSnapshotVersion}, #{photoAssetId},
+            #{reporterUserId}, #{reasonCode}, #{description}, #{status}
+        )
+    </insert>
+
+    <select id="findById" resultMap="LibraryReportMap">
+        SELECT <include refid="LibraryReportColumns"/>
+        FROM diary_cover_library_reports
+        WHERE id = #{reportId}
+    </select>
+
+    <select id="findByIdForUpdate" resultMap="LibraryReportMap">
+        SELECT <include refid="LibraryReportColumns"/>
+        FROM diary_cover_library_reports
+        WHERE id = #{reportId}
+        FOR UPDATE
+    </select>
+
+    <select id="countForAdmin" resultType="int">
+        SELECT COUNT(*)
+        FROM diary_cover_library_reports
+        <if test="status != null">
+            WHERE status = #{status}
+        </if>
+    </select>
+
+    <select id="findForAdmin" resultMap="AdminReportListMap">
+        SELECT r.id AS report_id,
+               r.library_item_id,
+               r.reported_snapshot_version,
+               r.photo_asset_id,
+               i.title AS library_title,
+               i.creator_display_name,
+               r.reason_code,
+               COALESCE(NULLIF(u.nickname, ''), '탈퇴한 사용자') AS reporter_display_name,
+               r.status,
+               r.created_at
+        FROM diary_cover_library_reports r
+        JOIN diary_cover_library_items i ON i.id = r.library_item_id
+        LEFT JOIN users u ON u.id = r.reporter_user_id
+        <if test="status != null">
+            WHERE r.status = #{status}
+        </if>
+        ORDER BY r.created_at DESC, r.id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <update id="markProcessed">
+        UPDATE diary_cover_library_reports
+        SET status = #{status},
+            resolution_action = #{resolutionAction},
+            processed_by_user_id = #{processedByUserId},
+            processed_at = #{processedAt},
+            admin_note = #{adminNote}
+        WHERE id = #{reportId}
+          AND status = 'PENDING'
+    </update>
+
+</mapper>

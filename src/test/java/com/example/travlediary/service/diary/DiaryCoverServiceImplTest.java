@@ -154,6 +154,41 @@ class DiaryCoverServiceImplTest {
         assertThat(saved.getAllValues().get(0).getPhotoStyle()).isEqualTo("POLAROID");
     }
 
+    @Test
+    void applyingADownloadedDesignKeepsTheCentralSharedPhotoReference() {
+        givenOwnedDesign(5L, 7L, "LEATHER_DEEP_GREEN", "#123456");
+        DiaryCoverDesignElement shared = designElement(
+                "PHOTO", "/diaries/cover-library/assets/701");
+        shared.setLibraryPhotoAssetId(701L);
+        when(diaryCoverDesignElementService.getElements(5L, 7L))
+                .thenReturn(List.of(shared));
+        givenInsertedCover(3L);
+        when(diaryCoverElementMapper.insert(any())).thenReturn(1);
+
+        service.applyDesign(10L, 5L, 7L);
+
+        ArgumentCaptor<DiaryCoverElement> saved = ArgumentCaptor.forClass(DiaryCoverElement.class);
+        verify(diaryCoverElementMapper).insert(saved.capture());
+        assertThat(saved.getValue().getImageUrl()).isNull();
+        assertThat(saved.getValue().getLibraryPhotoAssetId()).isEqualTo(701L);
+        verify(fileUploadService, never()).copyStoredFile(any(), any());
+    }
+
+    @Test
+    void appliedSharedPhotoUsesTheControlledEndpointWhenRead() {
+        DiaryCover cover = new DiaryCover();
+        cover.setId(3L);
+        cover.setDiaryId(10L);
+        when(diaryCoverMapper.findByDiaryIdAndUserId(10L, 7L)).thenReturn(cover);
+        DiaryCoverElement shared = new DiaryCoverElement();
+        shared.setElementType("PHOTO");
+        shared.setLibraryPhotoAssetId(701L);
+        when(diaryCoverElementMapper.findAllByCoverId(3L)).thenReturn(List.of(shared));
+
+        assertThat(service.getElements(10L, 7L).get(0).getImageUrl())
+                .isEqualTo("/diaries/cover-library/assets/701");
+    }
+
     /**
      * 라벨기로 붙인 글씨는 파일이 없다. 글과 글꼴까지 값만 그대로 적용본으로 옮겨진다.
      * (원본 디자인을 고치거나 지워도 이미 적용된 표지의 글씨는 그대로 남는다)

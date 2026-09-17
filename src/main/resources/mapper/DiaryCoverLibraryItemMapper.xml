@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.diary.DiaryCoverLibraryItemMapper">
+
+    <resultMap id="LibraryItemMap" type="com.example.travlediary.model.DiaryCoverLibraryItem">
+        <id property="id" column="id"/>
+        <result property="creatorUserId" column="creator_user_id"/>
+        <result property="creatorDisplayName" column="creator_display_name"/>
+        <result property="sourceCoverDesignId" column="source_cover_design_id"/>
+        <result property="title" column="title"/>
+        <result property="description" column="description"/>
+        <result property="baseCoverStyle" column="base_cover_style"/>
+        <result property="backgroundColor" column="background_color"/>
+        <result property="status" column="status"/>
+        <result property="downloadCount" column="download_count"/>
+        <result property="snapshotVersion" column="snapshot_version"/>
+        <result property="publishedAt" column="published_at"/>
+        <result property="withdrawnAt" column="withdrawn_at"/>
+        <result property="deletedAt" column="deleted_at"/>
+        <result property="blockedAt" column="blocked_at"/>
+        <result property="blockedReason" column="blocked_reason"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <sql id="LibraryItemColumns">
+        id, creator_user_id, creator_display_name, source_cover_design_id,
+        title, description, base_cover_style, background_color,
+        status, download_count, snapshot_version,
+        published_at, withdrawn_at, deleted_at, blocked_at, blocked_reason,
+        created_at, updated_at
+    </sql>
+
+    <insert id="insert" parameterType="com.example.travlediary.model.DiaryCoverLibraryItem"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO diary_cover_library_items (
+            creator_user_id, creator_display_name, source_cover_design_id,
+            title, description, base_cover_style, background_color,
+            status, download_count, snapshot_version
+        ) VALUES (
+            #{creatorUserId}, #{creatorDisplayName}, #{sourceCoverDesignId},
+            #{title}, #{description}, #{baseCoverStyle}, #{backgroundColor},
+            #{status}, #{downloadCount}, #{snapshotVersion}
+        )
+    </insert>
+
+    <select id="findById" resultMap="LibraryItemMap">
+        SELECT <include refid="LibraryItemColumns"/>
+        FROM diary_cover_library_items
+        WHERE id = #{itemId}
+    </select>
+
+    <select id="findByIdAndCreatorUserId" resultMap="LibraryItemMap">
+        SELECT <include refid="LibraryItemColumns"/>
+        FROM diary_cover_library_items
+        WHERE id = #{itemId}
+          AND creator_user_id = #{creatorUserId}
+    </select>
+
+    <select id="countPublished" resultType="int">
+        SELECT COUNT(*)
+        FROM diary_cover_library_items
+        WHERE status = 'PUBLISHED'
+    </select>
+
+    <select id="findPublished" resultMap="LibraryItemMap">
+        SELECT <include refid="LibraryItemColumns"/>
+        FROM diary_cover_library_items
+        WHERE status = 'PUBLISHED'
+        ORDER BY
+        <choose>
+            <when test="sort == 'POPULAR'">
+                download_count DESC, published_at DESC, id DESC
+            </when>
+            <otherwise>
+                published_at DESC, id DESC
+            </otherwise>
+        </choose>
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="findManageableByCreatorUserId" resultMap="LibraryItemMap">
+        SELECT <include refid="LibraryItemColumns"/>
+        FROM diary_cover_library_items
+        WHERE creator_user_id = #{creatorUserId}
+          AND status &lt;&gt; 'DELETED'
+        ORDER BY updated_at DESC, id DESC
+    </select>
+
+    <select id="findPublishedById" resultMap="LibraryItemMap">
+        SELECT <include refid="LibraryItemColumns"/>
+        FROM diary_cover_library_items
+        WHERE id = #{itemId}
+          AND status = 'PUBLISHED'
+    </select>
+
+    <select id="findPublishedByIdForUpdate" resultMap="LibraryItemMap">
+        SELECT <include refid="LibraryItemColumns"/>
+        FROM diary_cover_library_items
+        WHERE id = #{itemId}
+          AND status = 'PUBLISHED'
+        FOR UPDATE
+    </select>
+
+    <update id="incrementDownloadCountIfPublished">
+        UPDATE diary_cover_library_items
+        SET download_count = download_count + 1
+        WHERE id = #{itemId}
+          AND status = 'PUBLISHED'
+    </update>
+
+    <select id="findByIdForUpdate" resultMap="LibraryItemMap">
+        SELECT <include refid="LibraryItemColumns"/>
+        FROM diary_cover_library_items
+        WHERE id = #{itemId}
+        FOR UPDATE
+    </select>
+
+    <update id="withdrawByOwner">
+        UPDATE diary_cover_library_items
+        SET status = 'WITHDRAWN',
+            withdrawn_at = #{withdrawnAt}
+        WHERE id = #{itemId}
+          AND creator_user_id = #{creatorUserId}
+          AND status = 'PUBLISHED'
+    </update>
+
+    <update id="republishByOwner">
+        UPDATE diary_cover_library_items
+        SET status = 'PUBLISHED',
+            withdrawn_at = NULL
+        WHERE id = #{itemId}
+          AND creator_user_id = #{creatorUserId}
+          AND status = 'WITHDRAWN'
+    </update>
+
+    <update id="softDeleteByOwner">
+        UPDATE diary_cover_library_items
+        SET status = 'DELETED',
+            deleted_at = #{deletedAt}
+        WHERE id = #{itemId}
+          AND creator_user_id = #{creatorUserId}
+          AND status = #{expectedStatus}
+    </update>
+
+    <update id="blockByAdmin">
+        UPDATE diary_cover_library_items
+        SET status = 'BLOCKED',
+            blocked_at = #{blockedAt},
+            blocked_reason = #{blockedReason}
+        WHERE id = #{itemId}
+          AND status = #{expectedStatus}
+    </update>
+
+    <update id="restoreByAdmin">
+        UPDATE diary_cover_library_items
+        SET status = #{restoredStatus},
+            blocked_at = NULL,
+            blocked_reason = NULL
+        WHERE id = #{itemId}
+          AND status = 'BLOCKED'
+    </update>
+
+</mapper>

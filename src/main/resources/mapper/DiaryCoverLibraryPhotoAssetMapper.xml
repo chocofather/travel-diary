@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.diary.DiaryCoverLibraryPhotoAssetMapper">
+
+    <resultMap id="LibraryPhotoAssetMap"
+               type="com.example.travlediary.model.DiaryCoverLibraryPhotoAsset">
+        <id property="id" column="id"/>
+        <result property="libraryItemId" column="library_item_id"/>
+        <result property="originalUploaderUserId" column="original_uploader_user_id"/>
+        <result property="originalUploaderDisplayName" column="original_uploader_display_name"/>
+        <result property="snapshotVersion" column="snapshot_version"/>
+        <result property="storageKey" column="storage_key"/>
+        <result property="contentType" column="content_type"/>
+        <result property="fileSize" column="file_size"/>
+        <result property="status" column="status"/>
+        <result property="rightsConfirmedAt" column="rights_confirmed_at"/>
+        <result property="rightsTermsVersion" column="rights_terms_version"/>
+        <result property="blockedAt" column="blocked_at"/>
+        <result property="blockedReason" column="blocked_reason"/>
+        <result property="retiredAt" column="retired_at"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <sql id="LibraryPhotoAssetColumns">
+        id, library_item_id, original_uploader_user_id, original_uploader_display_name,
+        snapshot_version, storage_key, content_type, file_size, status,
+        rights_confirmed_at, rights_terms_version,
+        blocked_at, blocked_reason, retired_at, created_at, updated_at
+    </sql>
+
+    <insert id="insert" parameterType="com.example.travlediary.model.DiaryCoverLibraryPhotoAsset"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO diary_cover_library_photo_assets (
+            library_item_id, original_uploader_user_id, original_uploader_display_name,
+            snapshot_version, storage_key, content_type, file_size, status,
+            rights_confirmed_at, rights_terms_version
+        ) VALUES (
+            #{libraryItemId}, #{originalUploaderUserId}, #{originalUploaderDisplayName},
+            #{snapshotVersion}, #{storageKey}, #{contentType}, #{fileSize}, #{status},
+            #{rightsConfirmedAt}, #{rightsTermsVersion}
+        )
+    </insert>
+
+    <select id="findById" resultMap="LibraryPhotoAssetMap">
+        SELECT <include refid="LibraryPhotoAssetColumns"/>
+        FROM diary_cover_library_photo_assets
+        WHERE id = #{assetId}
+    </select>
+
+    <select id="findAllByLibraryItemIdAndSnapshotVersion" resultMap="LibraryPhotoAssetMap">
+        SELECT <include refid="LibraryPhotoAssetColumns"/>
+        FROM diary_cover_library_photo_assets
+        WHERE library_item_id = #{libraryItemId}
+          AND snapshot_version = #{snapshotVersion}
+        ORDER BY id ASC
+    </select>
+
+    <select id="findAllByLibraryItemIdAndSnapshotVersionForUpdate"
+            resultMap="LibraryPhotoAssetMap">
+        SELECT <include refid="LibraryPhotoAssetColumns"/>
+        FROM diary_cover_library_photo_assets
+        WHERE library_item_id = #{libraryItemId}
+          AND snapshot_version = #{snapshotVersion}
+        ORDER BY id ASC
+        FOR UPDATE
+    </select>
+
+    <select id="findByIdForUpdate" resultMap="LibraryPhotoAssetMap">
+        SELECT <include refid="LibraryPhotoAssetColumns"/>
+        FROM diary_cover_library_photo_assets
+        WHERE id = #{assetId}
+        FOR UPDATE
+    </select>
+
+    <update id="blockByAdmin">
+        UPDATE diary_cover_library_photo_assets
+        SET status = 'BLOCKED',
+            blocked_at = #{blockedAt},
+            blocked_reason = #{blockedReason}
+        WHERE id = #{assetId}
+          AND status = 'ACTIVE'
+    </update>
+
+    <update id="restoreByAdmin">
+        UPDATE diary_cover_library_photo_assets
+        SET status = 'ACTIVE',
+            blocked_at = NULL,
+            blocked_reason = NULL
+        WHERE id = #{assetId}
+          AND status = 'BLOCKED'
+    </update>
+
+</mapper>

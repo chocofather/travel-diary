@@ -3,13 +3,16 @@ package com.example.travlediary.controller.diary;
 import com.example.travlediary.config.CustomLoginSuccessHandler;
 import com.example.travlediary.config.CustomLogoutSuccessHandler;
 import com.example.travlediary.config.SecurityConfig;
+import com.example.travlediary.dto.DiaryCoverLibraryRegistrationRequest;
 import com.example.travlediary.model.DiaryCoverDesign;
 import com.example.travlediary.model.DiaryCoverDesignElement;
+import com.example.travlediary.model.DiaryCoverLibraryPhotoShareMode;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.repository.diary.DiaryStickerMapper;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.diary.DiaryCoverDesignElementService;
 import com.example.travlediary.service.diary.DiaryCoverDesignService;
+import com.example.travlediary.service.diary.DiaryCoverLibraryRegistrationService;
 import com.example.travlediary.service.diary.DiaryLabelFontCatalog;
 import com.example.travlediary.service.diary.DiaryStickerCatalog;
 import com.example.travlediary.service.file.FileUploadService;
@@ -47,6 +50,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
@@ -61,6 +65,8 @@ class DiaryCoverDesignControllerTest {
     private DiaryCoverDesignService diaryCoverDesignService;
     @MockitoBean
     private DiaryCoverDesignElementService diaryCoverDesignElementService;
+    @MockitoBean
+    private DiaryCoverLibraryRegistrationService diaryCoverLibraryRegistrationService;
     @MockitoBean
     private CustomLoginSuccessHandler customLoginSuccessHandler;
     @MockitoBean
@@ -92,6 +98,219 @@ class DiaryCoverDesignControllerTest {
                 .andExpect(status().is3xxRedirection());
     }
 
+    @Test
+    void guestCannotOpenOrSubmitTheLibraryShareForm() throws Exception {
+        mockMvc.perform(get("/diaries/cover-designs/5/library-share"))
+                .andExpect(status().is3xxRedirection());
+        mockMvc.perform(post("/diaries/cover-designs/5/library-share").with(csrf()))
+                .andExpect(status().is3xxRedirection());
+
+        verify(diaryCoverLibraryRegistrationService, never()).register(any(), any());
+    }
+
+    @Test
+    void eachShelfCardOffersTheLibraryShareEntry() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryCoverDesignService.getMyDesigns(7L))
+                .thenReturn(List.of(design(5L, "제주 여행")));
+
+        String body = mockMvc.perform(get("/diaries/cover-designs")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).contains("/diaries/cover-designs/5/library-share")
+                .contains("라이브러리에 공유")
+                .contains("href=\"/diaries/cover-library\"")
+                .contains("표지 라이브러리");
+    }
+
+    @Test
+    void shareFormReusesTheFinishedCoverAndListsEachPhotoAsExcludedByDefault() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryCoverDesignService.getMyDesign(5L, 7L))
+                .thenReturn(design(5L, "제주 여행"));
+        when(diaryCoverDesignElementService.getElements(5L, 7L))
+                .thenReturn(List.of(
+                        photo(101L, "/uploads/diary-cover-designs/a.jpg"),
+                        sticker(102L, "/images/diary/stickers/travel/plane.svg")));
+
+        String body = mockMvc.perform(get("/diaries/cover-designs/5/library-share")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andExpect(view().name("diary/cover-library-share"))
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).contains("diary-cover-canvas")
+                .contains("/uploads/diary-cover-designs/a.jpg")
+                .contains("photoModes[101]")
+                .contains("value=\"EXCLUDED\" checked=\"checked\"")
+                .contains("사진 제외")
+                .contains("사진까지 함께 공유")
+                .contains("이 사진을 직접 촬영했거나")
+                .contains("/js/diary-cover-library-share.js");
+    }
+
+    @Test
+    void omittedPhotoModesRemainExcludedInTheRegistrationService() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+
+        mockMvc.perform(post("/diaries/cover-designs/5/library-share")
+                        .param("title", "제주 여행 표지")
+                        .param("description", "여름 바다 표지")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/diaries/cover-designs"))
+                .andExpect(flash().attribute("coverDesignMessage",
+                        "표지 디자인을 라이브러리에 공유했습니다."));
+
+        ArgumentCaptor<DiaryCoverLibraryRegistrationRequest> captor =
+                ArgumentCaptor.forClass(DiaryCoverLibraryRegistrationRequest.class);
+        verify(diaryCoverLibraryRegistrationService).register(eq(7L), captor.capture());
+        assertThat(captor.getValue().sourceCoverDesignId()).isEqualTo(5L);
+        assertThat(captor.getValue().title()).isEqualTo("제주 여행 표지");
+        assertThat(captor.getValue().description()).isEqualTo("여름 바다 표지");
+        assertThat(captor.getValue().photoSelections()).isEmpty();
+    }
+
+    @Test
+    void includedPhotoAndRightsConfirmationArePassedToTheRegistrationService() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+
+        mockMvc.perform(post("/diaries/cover-designs/5/library-share")
+                        .param("title", "사진 포함 표지")
+                        .param("photoModes[101]", "INCLUDED")
+                        .param("photoModes[102]", "EXCLUDED")
+                        .param("rightsConfirmed", "true")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/diaries/cover-designs"));
+
+        ArgumentCaptor<DiaryCoverLibraryRegistrationRequest> captor =
+                ArgumentCaptor.forClass(DiaryCoverLibraryRegistrationRequest.class);
+        verify(diaryCoverLibraryRegistrationService).register(eq(7L), captor.capture());
+        assertThat(captor.getValue().photoSelections()).containsOnlyKeys(101L, 102L);
+        assertThat(captor.getValue().photoSelections().get(101L).mode())
+                .isEqualTo(DiaryCoverLibraryPhotoShareMode.INCLUDED);
+        assertThat(captor.getValue().photoSelections().get(101L).rightsConfirmed()).isTrue();
+        assertThat(captor.getValue().photoSelections().get(102L).mode())
+                .isEqualTo(DiaryCoverLibraryPhotoShareMode.EXCLUDED);
+    }
+
+    @Test
+    void missingRightsConfirmationIsReportedWithoutClaimingSuccess() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        org.mockito.Mockito.doThrow(new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "사진 공유 권리를 확인해 주세요."))
+                .when(diaryCoverLibraryRegistrationService).register(eq(7L), any());
+
+        mockMvc.perform(post("/diaries/cover-designs/5/library-share")
+                        .param("title", "사진 포함 표지")
+                        .param("photoModes[101]", "INCLUDED")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/diaries/cover-designs/5/library-share"))
+                .andExpect(flash().attribute("coverDesignError", "사진 공유 권리를 확인해 주세요."));
+
+        ArgumentCaptor<DiaryCoverLibraryRegistrationRequest> captor =
+                ArgumentCaptor.forClass(DiaryCoverLibraryRegistrationRequest.class);
+        verify(diaryCoverLibraryRegistrationService).register(eq(7L), captor.capture());
+        assertThat(captor.getValue().photoSelections().get(101L).rightsConfirmed()).isFalse();
+    }
+
+    @Test
+    void fileStorageFailureDoesNotExposeItsInternalPath() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        org.mockito.Mockito.doThrow(new IllegalStateException(
+                        "/private/cover-library/secret/photo.jpg 저장 실패"))
+                .when(diaryCoverLibraryRegistrationService).register(eq(7L), any());
+
+        mockMvc.perform(post("/diaries/cover-designs/5/library-share")
+                        .param("title", "사진 포함 표지")
+                        .param("photoModes[101]", "INCLUDED")
+                        .param("rightsConfirmed", "true")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/diaries/cover-designs/5/library-share"))
+                .andExpect(flash().attribute("coverDesignError",
+                        "표지 디자인을 공유하지 못했습니다. 잠시 후 다시 시도해 주세요."));
+    }
+
+    @Test
+    void anotherUsersDesignCannotBeShared() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        org.mockito.Mockito.doThrow(new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "표지 디자인을 찾을 수 없습니다."))
+                .when(diaryCoverLibraryRegistrationService).register(eq(7L), any());
+
+        mockMvc.perform(post("/diaries/cover-designs/99/library-share")
+                        .param("title", "남의 표지")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/diaries/cover-designs"))
+                .andExpect(flash().attribute("coverDesignError",
+                        "표지 디자인을 찾을 수 없거나 공유 권한이 없습니다."));
+    }
+
+    @Test
+    void manipulatedPhotoElementIdIsRejectedByTheRegistrationService() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        org.mockito.Mockito.doThrow(new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "사진 공유 대상을 다시 선택해 주세요."))
+                .when(diaryCoverLibraryRegistrationService).register(eq(7L), any());
+
+        mockMvc.perform(post("/diaries/cover-designs/5/library-share")
+                        .param("title", "조작 요청")
+                        .param("photoModes[999]", "INCLUDED")
+                        .param("rightsConfirmed", "true")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/diaries/cover-designs/5/library-share"))
+                .andExpect(flash().attribute("coverDesignError",
+                        "사진 공유 대상을 다시 선택해 주세요."));
+    }
+
+    @Test
+    void aDesignWithoutPhotosCanBeSharedWithoutAnEmptyPhotoSection() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryCoverDesignService.getMyDesign(5L, 7L))
+                .thenReturn(design(5L, "글씨만 있는 표지"));
+        when(diaryCoverDesignElementService.getElements(5L, 7L))
+                .thenReturn(List.of(sticker(102L, "/images/diary/stickers/travel/plane.svg")));
+
+        String body = mockMvc.perform(get("/diaries/cover-designs/5/library-share")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        assertThat(body).doesNotContain("data-photo-sharing-options")
+                .doesNotContain("data-rights-confirmation");
+
+        mockMvc.perform(post("/diaries/cover-designs/5/library-share")
+                        .param("title", "글씨만 있는 표지")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/diaries/cover-designs"));
+
+        verify(diaryCoverLibraryRegistrationService).register(eq(7L), any());
+    }
+
     /** 보관함은 언제나 로그인한 사람의 것만 읽는다. (요청에 실린 소유자 값은 쓰지 않는다) */
     @Test
     void theShelfOnlyShowsMyOwnDesigns() throws Exception {
@@ -110,6 +329,12 @@ class DiaryCoverDesignControllerTest {
         assertThat(body).contains("diary-cover-canvas").contains("diary-cover-leather-black");
         // 다음 단계에서 이 안쪽이 자유배치 캔버스가 된다
         assertThat(body).contains("diary-cover-surface");
+        // 디자인은 갤러리 카드 안에서 열고, 공유·삭제 동작은 기존 경로를 유지한다.
+        assertThat(body).contains("diary-cover-design-gallery")
+                .contains("href=\"/diaries/cover-designs/5/edit\"")
+                .contains("href=\"/diaries/cover-designs/5/library-share\"")
+                .contains("diary-book-menu")
+                .contains("/js/diary-book-menu.js");
         verify(diaryCoverDesignService).getMyDesigns(7L);
     }
 
@@ -597,6 +822,24 @@ class DiaryCoverDesignControllerTest {
         assertThat(body).contains("/elements/101/photo/delete");
     }
 
+    @Test
+    void anEmptyDownloadedPhotoShowsTheExistingPlaceholderInTheEditor() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        when(diaryCoverDesignService.getMyDesign(5L, 7L)).thenReturn(design(5L, "받은 표지"));
+        when(diaryCoverDesignElementService.getElements(5L, 7L))
+                .thenReturn(List.of(photo(101L, null)));
+
+        String body = mockMvc.perform(get("/diaries/cover-designs/5/edit")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).contains("diary-cover-photo-placeholder")
+                .contains("사진 넣기")
+                .doesNotContain("<img src=\"\" alt=\"표지 사진\"");
+    }
+
     /** 스티커 액션 줄에는 사진 관련 칸이 들어가지 않는다. */
     @Test
     void stickersKeepTheirOwnActions() throws Exception {
@@ -865,7 +1108,7 @@ class DiaryCoverDesignControllerTest {
         verify(diaryCoverDesignService).delete(5L, 7L);
     }
 
-    /** 폼 전송에는 CSRF 토큰이 필요하다. (SecurityConfig 의 목록에 세 주소를 넣어 두었다) */
+    /** 폼 전송에는 CSRF 토큰이 필요하다. */
     @Test
     void formPostsNeedACsrfToken() throws Exception {
         when(userDetails.getId()).thenReturn(7L);
@@ -873,7 +1116,8 @@ class DiaryCoverDesignControllerTest {
         for (String url : new String[]{
                 "/diaries/cover-designs",
                 "/diaries/cover-designs/5/update",
-                "/diaries/cover-designs/5/delete"}) {
+                "/diaries/cover-designs/5/delete",
+                "/diaries/cover-designs/5/library-share"}) {
             mockMvc.perform(post(url)
                             .with(authentication(new UsernamePasswordAuthenticationToken(
                                     userDetails, null, List.of()))))

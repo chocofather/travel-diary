@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'cover-library-reports')}">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/admin-cover-library-reports.css">
+</th:block>
+<th:block th:fragment="body">
+  <section class="admin-page-section admin-cover-reports-page">
+    <header class="admin-page-header">
+      <div class="admin-page-heading">
+        <h1 class="admin-page-title">표지 라이브러리 신고</h1>
+        <p class="admin-page-description">회원이 접수한 표지·공유 사진 신고를 검토합니다.</p>
+      </div>
+    </header>
+
+    <nav class="admin-filter-tabs" aria-label="신고 상태 필터">
+      <a class="admin-filter-tab" th:each="option : ${reportPage.filterOptions}"
+         th:classappend="${option == reportPage.filter} ? ' active' : ''"
+         th:href="@{/admin/cover-library/reports(status=${option.name() == 'PENDING' ? null : option.name()})}"
+         th:text="${option.label}">대기 중</a>
+    </nav>
+
+    <p class="admin-cover-report-count">
+      총 <strong th:text="${reportPage.totalCount}">0</strong>건
+    </p>
+
+    <div class="admin-card is-table-card">
+      <div class="admin-table-wrapper">
+        <table class="admin-table admin-cover-report-table">
+          <thead>
+          <tr>
+            <th>신고 ID</th>
+            <th>대상</th>
+            <th>표지</th>
+            <th>작성자</th>
+            <th>신고 사유</th>
+            <th>신고자</th>
+            <th>신고일</th>
+            <th>상태</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr th:each="report : ${reports}">
+            <td><a th:href="@{/admin/cover-library/reports/{id}(id=${report.reportId})}"
+                   th:text="|#${report.reportId}|">#50</a></td>
+            <td><span class="admin-cover-report-target"
+                      th:text="${report.targetTypeLabel}">표지</span></td>
+            <td>
+              <a th:href="@{/admin/cover-library/reports/{id}(id=${report.reportId})}"
+                 th:text="${report.libraryTitle}">여름 표지</a>
+            </td>
+            <td th:text="${report.creatorDisplayName}">공유 당시 이름</td>
+            <td th:text="${report.reasonCode.displayName}">저작권 침해</td>
+            <td th:text="${report.reporterDisplayName}">신고자</td>
+            <td th:text="${#dates.format(report.createdAt, 'yyyy-MM-dd HH:mm')}">2026-09-17 12:00</td>
+            <td><span class="admin-cover-report-status"
+                      th:classappend="| is-${#strings.toLowerCase(report.status.name())}|"
+                      th:text="${report.status.displayName}">대기 중</span></td>
+          </tr>
+          <tr th:if="${#lists.isEmpty(reports)}">
+            <td colspan="8" class="admin-table-empty">해당 상태의 신고가 없습니다.</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <nav class="admin-cover-report-pagination" th:if="${reportPage.totalPages > 1}"
+         aria-label="신고 목록 페이지">
+      <a th:if="${reportPage.currentPage > 1}"
+         th:href="@{/admin/cover-library/reports(status=${reportPage.filter.name()},page=${reportPage.currentPage - 1})}">이전</a>
+      <span th:unless="${reportPage.currentPage > 1}" aria-disabled="true">이전</span>
+      <a th:each="pageNumber : ${#numbers.sequence(1, reportPage.totalPages)}"
+         th:href="@{/admin/cover-library/reports(status=${reportPage.filter.name()},page=${pageNumber})}"
+         th:text="${pageNumber}"
+         th:classappend="${pageNumber == reportPage.currentPage} ? ' is-active' : ''">1</a>
+      <a th:if="${reportPage.currentPage < reportPage.totalPages}"
+         th:href="@{/admin/cover-library/reports(status=${reportPage.filter.name()},page=${reportPage.currentPage + 1})}">다음</a>
+      <span th:unless="${reportPage.currentPage < reportPage.totalPages}" aria-disabled="true">다음</span>
+    </nav>
+  </section>
+</th:block>
+</html>

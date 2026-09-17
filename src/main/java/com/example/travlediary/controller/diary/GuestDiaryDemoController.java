@@ -9,6 +9,8 @@ import com.example.travlediary.service.diary.DiaryLabelFontCatalog;
 import com.example.travlediary.service.diary.DiaryNoteCatalog;
 import com.example.travlediary.service.diary.DiaryStickerCatalog;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -46,7 +48,11 @@ public class GuestDiaryDemoController {
      * 브라우저가 localStorage 를 보고 카드를 그리거나 빈 상태를 보여 준다.
      */
     @GetMapping("/diaries/demo")
-    public String guestDiaryDemo(Model model) {
+    public String guestDiaryDemo(Authentication authentication, Model model) {
+        if (authentication != null && authentication.isAuthenticated()
+                && !(authentication instanceof AnonymousAuthenticationToken)) {
+            return "redirect:/diaries";
+        }
         /*
           카드에 그릴 표지에 마스킹테이프가 있을 수 있다. 저장된 그림 경로만으로는
           되풀이 조각을 알 수 없으므로 편집 화면과 같은 표를 함께 내려 준다.

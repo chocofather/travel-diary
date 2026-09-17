@@ -23,6 +23,7 @@ public class DiaryCoverDesignElement {
     private String elementType; // 요소 유형 (PHOTO | STICKER | NOTE | TEXT)
     private String textContent; // 글 (NOTE / TEXT 전용)
     private String imageUrl; // 이미지 경로 (PHOTO/STICKER 전용)
+    private Long libraryPhotoAssetId; // 라이브러리 공유 PHOTO 자산 (개인 사진과 동시 사용 금지)
     private String styleType; // 라벨/메모지 모양 (NOTE 전용)
     private String colorType; // 라벨/메모지 색 (NOTE 전용, 없으면 그 모양의 기본색)
     private String photoStyle; // 사진의 모습 (PHOTO 전용, 없으면 폴라로이드로 본다)

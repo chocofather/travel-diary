@@ -13,7 +13,9 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
@@ -59,6 +61,14 @@ class GuestDiaryDemoAccessTest {
         mockMvc.perform(get("/diaries/demo/cover"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("diary/demo-cover"));
+    }
+
+    /** 로그인한 사용자는 체험 책장이 아니라 실제 내 여행일기 목록으로 간다. */
+    @Test
+    void theGuestDemoStartPageRedirectsSignedInUsersToTheirDiaryList() throws Exception {
+        mockMvc.perform(get("/diaries/demo").with(user("member").roles("USER")))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/diaries"));
     }
 
     /**

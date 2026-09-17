@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.diary.DiaryCoverLibraryElementMapper">
+
+    <resultMap id="LibraryElementMap"
+               type="com.example.travlediary.model.DiaryCoverLibraryElement">
+        <id property="id" column="id"/>
+        <result property="libraryItemId" column="library_item_id"/>
+        <result property="snapshotVersion" column="snapshot_version"/>
+        <result property="elementType" column="element_type"/>
+        <result property="textContent" column="text_content"/>
+        <result property="imageUrl" column="image_url"/>
+        <result property="styleType" column="style_type"/>
+        <result property="colorType" column="color_type"/>
+        <result property="photoStyle" column="photo_style"/>
+        <result property="textFont" column="text_font"/>
+        <result property="textColor" column="text_color"/>
+        <result property="photoShareMode" column="photo_share_mode"/>
+        <result property="photoAssetId" column="photo_asset_id"/>
+        <result property="positionX" column="position_x"/>
+        <result property="positionY" column="position_y"/>
+        <result property="width" column="width"/>
+        <result property="height" column="height"/>
+        <result property="rotation" column="rotation"/>
+        <result property="zIndex" column="z_index"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <sql id="LibraryElementColumns">
+        id, library_item_id, snapshot_version,
+        element_type, text_content, image_url, style_type, color_type,
+        photo_style, text_font, text_color, photo_share_mode, photo_asset_id,
+        position_x, position_y, width, height, rotation, z_index,
+        created_at, updated_at
+    </sql>
+
+    <insert id="insert" parameterType="com.example.travlediary.model.DiaryCoverLibraryElement"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO diary_cover_library_elements (
+            library_item_id, snapshot_version,
+            element_type, text_content, image_url, style_type, color_type,
+            photo_style, text_font, text_color, photo_share_mode, photo_asset_id,
+            position_x, position_y, width, height, rotation, z_index
+        ) VALUES (
+            #{libraryItemId}, #{snapshotVersion},
+            #{elementType}, #{textContent}, #{imageUrl}, #{styleType}, #{colorType},
+            #{photoStyle}, #{textFont}, #{textColor}, #{photoShareMode}, #{photoAssetId},
+            #{positionX}, #{positionY}, #{width}, #{height}, #{rotation}, #{zIndex}
+        )
+    </insert>
+
+    <select id="findAllByLibraryItemIdAndSnapshotVersion" resultMap="LibraryElementMap">
+        SELECT <include refid="LibraryElementColumns"/>
+        FROM diary_cover_library_elements
+        WHERE library_item_id = #{libraryItemId}
+          AND snapshot_version = #{snapshotVersion}
+        ORDER BY z_index ASC, id ASC
+    </select>
+
+    <select id="findAllByLibraryItemIds" resultMap="LibraryElementMap">
+        SELECT
+            e.id, e.library_item_id, e.snapshot_version,
+            e.element_type, e.text_content, e.image_url, e.style_type, e.color_type,
+            e.photo_style, e.text_font, e.text_color, e.photo_share_mode, e.photo_asset_id,
+            e.position_x, e.position_y, e.width, e.height, e.rotation, e.z_index,
+            e.created_at, e.updated_at
+        FROM diary_cover_library_elements e
+        JOIN diary_cover_library_items i ON i.id = e.library_item_id
+        WHERE e.library_item_id IN
+        <foreach collection="libraryItemIds" item="itemId" open="(" separator="," close=")">
+            #{itemId}
+        </foreach>
+          AND e.snapshot_version = i.snapshot_version
+        ORDER BY e.library_item_id ASC, e.z_index ASC, e.id ASC
+    </select>
+
+</mapper>

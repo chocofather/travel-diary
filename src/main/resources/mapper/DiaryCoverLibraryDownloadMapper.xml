@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.diary.DiaryCoverLibraryDownloadMapper">
+
+    <resultMap id="LibraryDownloadMap"
+               type="com.example.travlediary.model.DiaryCoverLibraryDownload">
+        <id property="id" column="id"/>
+        <result property="libraryItemId" column="library_item_id"/>
+        <result property="downloaderUserId" column="downloader_user_id"/>
+        <result property="firstDownloadedAt" column="first_downloaded_at"/>
+    </resultMap>
+
+    <insert id="insertIgnore" parameterType="com.example.travlediary.model.DiaryCoverLibraryDownload"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT IGNORE INTO diary_cover_library_downloads (
+            library_item_id, downloader_user_id, first_downloaded_at
+        ) VALUES (
+            #{libraryItemId}, #{downloaderUserId}, #{firstDownloadedAt}
+        )
+    </insert>
+
+    <select id="findByLibraryItemIdAndDownloaderUserId" resultMap="LibraryDownloadMap">
+        SELECT id, library_item_id, downloader_user_id, first_downloaded_at
+        FROM diary_cover_library_downloads
+        WHERE library_item_id = #{libraryItemId}
+          AND downloader_user_id = #{downloaderUserId}
+    </select>
+
+</mapper>
