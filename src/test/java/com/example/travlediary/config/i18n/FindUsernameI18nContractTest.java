@@ -1,5 +1,6 @@
 package com.example.travlediary.config.i18n;
 
+import com.example.travlediary.security.AccountAbuseGuard;
 import com.example.travlediary.controller.user.UserController;
 import com.example.travlediary.service.user.UserService;
 import jakarta.servlet.http.Cookie;
@@ -44,6 +45,8 @@ class FindUsernameI18nContractTest {
     @Autowired
     private MockMvc mockMvc;
 
+    // 요청 남용 제한은 이 화면 계약의 관심사가 아니라 통과시키는 가짜를 쓴다.
+    @MockitoBean private AccountAbuseGuard accountAbuseGuard;
     @MockitoBean private SignupPolicyService signupPolicyService;
 
     @MockitoBean

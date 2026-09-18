@@ -10,12 +10,16 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 /**
- * 업로드 폴더 안의 관리 파일 하나를 지운다.
+ * 회원이 남긴 관리 파일 하나를 지운다.
  *
- * <p>여행일기 표지/페이지 사진처럼 업로드 폴더에 남는 파일은 지금까지 화면 코드가 직접 지웠고
- * 재사용할 수 있는 자리가 없었다. 최종 파기 worker 가 Controller 에 기대지 않도록 여기로 모은다.
+ * <p>여행일기 표지/페이지 사진처럼 남는 파일은 지금까지 화면 코드가 직접 지웠고 재사용할 수
+ * 있는 자리가 없었다. 최종 파기 worker 가 Controller 에 기대지 않도록 여기로 모은다.
  *
- * <p>어떤 폴더를 지워도 되는지는 부르는 쪽의 정책이다. 이 클래스는 업로드 루트 밖으로 나가는
+ * <p>개인 다이어리 사진은 공개 업로드 폴더를 떠나 private 저장소에 있으므로 그쪽에 맡긴다.
+ * (아직 옮기지 않은 예전 파일까지 그 저장소가 함께 정리한다) 프로필 이미지처럼 공개 업로드
+ * 폴더에 남는 파일만 여기에서 직접 지운다.
+ *
+ * <p>어떤 폴더를 지워도 되는지는 부르는 쪽의 정책이다. 이 클래스는 허용된 루트 밖으로 나가는
  * 경로를 막는 일만 한다. 이미 없는 파일은 목표 상태가 이미 이뤄진 것으로 본다.
  */
 @Service
@@ -24,16 +28,25 @@ public class ManagedUploadFileDeleter {
     private static final String UPLOAD_URL_PREFIX = "/uploads/";
 
     private final Path uploadRoot;
+    private final DiaryPrivatePhotoStorage diaryPrivatePhotoStorage;
 
-    public ManagedUploadFileDeleter(@Value("${custom.upload-path}") String uploadPath) {
+    public ManagedUploadFileDeleter(@Value("${custom.upload-path}") String uploadPath,
+                                    DiaryPrivatePhotoStorage diaryPrivatePhotoStorage) {
         this.uploadRoot = Paths.get(uploadPath).toAbsolutePath().normalize();
+        this.diaryPrivatePhotoStorage = diaryPrivatePhotoStorage;
     }
 
     /**
-     * @param imageUrl {@code /uploads/...} 형태의 서비스 표시 경로
+     * @param imageUrl {@code /uploads/...} 형태의 서비스 표시 경로 (개인 사진은 저장 키)
      * @throws IOException 파일이 있는데 지우지 못했을 때. 재시도 대상이다.
      */
     public DeletionOutcome delete(String imageUrl) throws IOException {
+        if (diaryPrivatePhotoStorage.isManagedKey(imageUrl)) {
+            // private 저장소와 아직 옮기지 않은 예전 파일을 함께 본다.
+            return diaryPrivatePhotoStorage.delete(imageUrl)
+                    ? DeletionOutcome.DELETED
+                    : DeletionOutcome.ALREADY_ABSENT;
+        }
         Path target = resolveManagedFile(imageUrl);
         if (target == null) {
             return DeletionOutcome.REJECTED;

@@ -19,16 +19,54 @@ class ManagedUploadFileDeleterTest {
     Path root;
 
     private Path uploadRoot;
+    private Path diaryPrivateRoot;
     private ManagedUploadFileDeleter deleter;
 
     @BeforeEach
     void setUp() throws IOException {
         uploadRoot = Files.createDirectory(root.resolve("uploads"));
+        diaryPrivateRoot = root.resolve("diary-private");
         for (String directory : new String[]{
-                "profiles", "diary-covers", "diary-pages", "diary-cover-designs", "posts"}) {
+                "profiles", "diary-covers", "diary-pages", "diary-cover-elements",
+                "diary-cover-designs", "posts"}) {
             Files.createDirectory(uploadRoot.resolve(directory));
         }
-        deleter = new ManagedUploadFileDeleter(uploadRoot.toString());
+        deleter = new ManagedUploadFileDeleter(uploadRoot.toString(),
+                new DiaryPrivatePhotoStorage(new FileUploadService(uploadRoot.toString()),
+                        uploadRoot.toString(), diaryPrivateRoot.toString()));
+    }
+
+    /**
+     * 개인 다이어리 사진은 private 저장소에서 지워진다.
+     * 회원 파기가 예전 경로만 보고 private 파일을 남기면 안 된다.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "diary-covers", "diary-pages", "diary-cover-elements", "diary-cover-designs"})
+    void aPrivateDiaryPhotoIsDeletedFromThePrivateRoot(String directory) throws IOException {
+        String storageKey = "/uploads/" + directory
+                + "/11111111-2222-4333-8444-555555555555.jpg";
+        Path file = diaryPrivateRoot.resolve(directory)
+                .resolve("11111111-2222-4333-8444-555555555555.jpg");
+        Files.createDirectories(file.getParent());
+        Files.createFile(file);
+
+        assertThat(deleter.delete(storageKey))
+                .isEqualTo(ManagedUploadFileDeleter.DeletionOutcome.DELETED);
+        assertThat(file).doesNotExist();
+    }
+
+    /** 아직 옮기지 않은 예전 파일도 같은 저장 키로 정리된다. */
+    @Test
+    void aLegacyDiaryPhotoStillInThePublicRootIsDeleted() throws IOException {
+        String storageKey = "/uploads/diary-pages/11111111-2222-4333-8444-555555555555.jpg";
+        Path legacy = uploadRoot.resolve("diary-pages")
+                .resolve("11111111-2222-4333-8444-555555555555.jpg");
+        Files.createFile(legacy);
+
+        assertThat(deleter.delete(storageKey))
+                .isEqualTo(ManagedUploadFileDeleter.DeletionOutcome.DELETED);
+        assertThat(legacy).doesNotExist();
     }
 
     @ParameterizedTest

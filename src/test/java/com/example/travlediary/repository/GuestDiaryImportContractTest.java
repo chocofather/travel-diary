@@ -125,10 +125,13 @@ class GuestDiaryImportContractTest {
     void theMemberSaveRoutesAreUntouched() throws IOException {
         String security = source("config/SecurityConfig.java");
 
+        // 저장 경로는 예전처럼 인증 + CSRF 를 받는다.
+        // 이제는 주소 목록 대신 기본 CSRF 정책이 GET 외 모든 요청을 보호한다.
         assertThat(security)
-                .contains("\"^/diaries$\", HttpMethod.POST.name()")
-                .contains("\"^/diaries/[0-9]+/pages$\", HttpMethod.POST.name()")
-                .contains("\"^/diaries/cover-designs$\", HttpMethod.POST.name()");
+                .contains("\"/diaries/**\",  // 개인 여행일기는 본인만 접근")
+                .doesNotContain("requireCsrfProtectionMatcher")
+                .doesNotContain("ignoringRequestMatchers")
+                .doesNotContain("csrf(AbstractHttpConfigurer::disable)");
 
         // 가져오기 서비스는 가져오기 입구에서만 쓰인다.
         assertThat(referencesTo("GuestDiaryImportService"))
@@ -169,7 +172,7 @@ class GuestDiaryImportContractTest {
         }
         // 서비스는 참조로 올라온 파일을 찾는 데에만 쓰고, 저장하는 것은 새 주소다.
         assertThat(source("service/diary/GuestDiaryImportService.java"))
-                .contains("String saved = fileUploadService.saveImportedDiaryPhoto(file, directory);")
+                .contains("String saved = diaryPrivatePhotoStorage.saveImportedPhoto(file, directory);")
                 .contains("return saved;");
     }
 

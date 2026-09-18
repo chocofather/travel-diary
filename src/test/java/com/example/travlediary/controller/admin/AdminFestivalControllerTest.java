@@ -37,6 +37,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -134,6 +135,7 @@ class AdminFestivalControllerTest {
                 .thenReturn(new FestivalRegistrationResult(10L, null));
         mockMvc.perform(post("/admin/festivals/create")
                         .with(user(adminDetails()))
+                        .with(csrf())
                         .param("title", "서울 빛 축제")
                         .param("content", "<p>행사 소개</p>")
                         .param("scope", "DOMESTIC")
@@ -159,6 +161,7 @@ class AdminFestivalControllerTest {
 
         mockMvc.perform(post("/admin/festivals/create")
                         .with(user(adminDetails()))
+                        .with(csrf())
                         .param("title", "이미지 경고 축제")
                         .param("scope", "DOMESTIC")
                         .param("categoryId", "5")
@@ -181,6 +184,7 @@ class AdminFestivalControllerTest {
 
         mockMvc.perform(post("/admin/festivals/create")
                         .with(user(adminDetails()))
+                        .with(csrf())
                         .param("title", "입력 유지 축제")
                         .param("content", "<p>소개</p>")
                         .param("scope", "DOMESTIC")
@@ -237,6 +241,7 @@ class AdminFestivalControllerTest {
     void validFestivalEditRedirectsWithFlashMessage() throws Exception {
         mockMvc.perform(post("/admin/festivals/10/edit")
                         .with(user("admin").roles("ADMIN"))
+                        .with(csrf())
                         .param("title", "수정 축제")
                         .param("scope", "DOMESTIC")
                         .param("categoryId", "5")
@@ -267,6 +272,7 @@ class AdminFestivalControllerTest {
 
         mockMvc.perform(post("/admin/festivals/10/edit")
                         .with(user("admin").roles("ADMIN"))
+                        .with(csrf())
                         .param("title", "입력 유지 수정 축제")
                         .param("scope", "DOMESTIC")
                         .param("categoryId", "5")
@@ -283,7 +289,9 @@ class AdminFestivalControllerTest {
 
     @Test
     void adminCanDeleteFestivalThroughPostAndReceivesFlashMessage() throws Exception {
-        mockMvc.perform(post("/admin/festivals/10/delete").with(user("admin").roles("ADMIN")))
+        mockMvc.perform(post("/admin/festivals/10/delete")
+                        .with(user("admin").roles("ADMIN"))
+                        .with(csrf()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/festivals"))
                 .andExpect(flash().attribute("festivalMessage", "축제·행사가 삭제되었습니다."));

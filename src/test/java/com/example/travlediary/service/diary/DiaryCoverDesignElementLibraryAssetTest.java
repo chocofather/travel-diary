@@ -42,9 +42,12 @@ class DiaryCoverDesignElementLibraryAssetTest {
 
         List<DiaryCoverDesignElement> elements = service.getElements(41L, 7L);
 
+        // 화면 주소만 바뀌고 저장 키는 그대로 남는다. (삭제 흐름이 저장 키를 계속 쓴다)
+        assertThat(elements).extracting(DiaryCoverDesignElement::getViewUrl)
+                .containsExactly("/diaries/cover-library/assets/701", null,
+                        "/diaries/cover-designs/41/elements/103/photo");
         assertThat(elements).extracting(DiaryCoverDesignElement::getImageUrl)
-                .containsExactly(
-                        "/diaries/cover-library/assets/701", null, "/uploads/mine.jpg");
+                .containsExactly(null, null, "/uploads/mine.jpg");
     }
 
     @Test
@@ -56,7 +59,7 @@ class DiaryCoverDesignElementLibraryAssetTest {
         Map<Long, List<DiaryCoverDesignElement>> elements =
                 service.getElementsByDesign(List.of(41L), 7L);
 
-        assertThat(elements.get(41L).get(0).getImageUrl())
+        assertThat(elements.get(41L).get(0).getViewUrl())
                 .isEqualTo("/diaries/cover-library/assets/701");
     }
 

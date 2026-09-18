@@ -185,8 +185,11 @@ class TravelPlanPollUiContractTest {
         assertThat(between(poll, "function csrfHeaders()", "\n    }"))
                 .contains("meta[name=\\\"_csrf\\\"]")
                 .contains("meta[name=\\\"_csrf_header\\\"]");
-        // requireCsrfProtectionMatcher 는 여기 적힌 것만 보호한다
-        assertThat(security).contains("\"^/travel-plans/[0-9]+/polls$\", HttpMethod.POST.name()");
+        // 기본 CSRF 정책이 GET 외 모든 요청을 보호하므로 주소 목록이 없다
+        assertThat(security)
+                .doesNotContain("requireCsrfProtectionMatcher")
+                .doesNotContain("ignoringRequestMatchers")
+                .doesNotContain("csrf(AbstractHttpConfigurer::disable)");
     }
 
     @Test

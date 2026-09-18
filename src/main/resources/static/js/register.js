@@ -5,7 +5,7 @@ $(function () {
     const availability = {username: false, email: false, nickname: false};
     const requestVersion = {username: 0, email: 0, nickname: 0};
     const usernamePattern = /^(?=.*[a-z])[a-z0-9_-]{3,16}$/;
-    const passwordPattern = /^(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/;
+    const passwordPattern = /^(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,72}$/;
     const emailPattern = /^[A-Z0-9._%+-]+@[A-Z0-9-]+(?:\.[A-Z0-9-]+)+$/i;
 
     /* 화면 문구는 서버 messages 번들이 source of truth 다. data-* 로 현재 locale 값을 받는다. */

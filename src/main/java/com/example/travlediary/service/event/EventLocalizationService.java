@@ -5,6 +5,7 @@ import com.example.travlediary.model.Event;
 import com.example.travlediary.model.EventTranslation;
 import com.example.travlediary.model.EventType;
 import com.example.travlediary.repository.event.EventMapper;
+import com.example.travlediary.service.post.PostContentSanitizer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,6 +42,7 @@ import java.util.stream.Collectors;
 public class EventLocalizationService {
 
     private final EventMapper eventMapper;
+    private final PostContentSanitizer postContentSanitizer;
 
     /**
      * 이벤트 한 건의 표시용 값을 만든다. 번역은 이 안에서 한 번 읽는다.
@@ -164,7 +166,16 @@ public class EventLocalizationService {
         EventTranslation localized = resolveLocalizedContent(
                 event.getId(), event.getTitle(), event.getDescription(), event.getPosterImg(),
                 requestedLanguage);
-        return display(event, localized);
+        Event display = display(event, localized);
+        /*
+          상세 화면만 본문을 HTML 로 내보낸다(th:utext).
+          저장 경로는 이미 걸러 두지만, sanitize 를 도입하기 전에 저장된 줄이 남아 있을 수 있어
+          내보내기 직전에 한 번 더 같은 정책을 적용한다. 목록은 th:text 라 여기서만 처리한다.
+        */
+        if (display.getDescription() != null) {
+            display.setDescription(postContentSanitizer.sanitize(display.getDescription()));
+        }
+        return display;
     }
 
     private EventTranslation localizedFor(Map<Long, EventTranslation> localized, Event event) {

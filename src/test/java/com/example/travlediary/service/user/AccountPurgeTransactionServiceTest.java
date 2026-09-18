@@ -129,7 +129,9 @@ class AccountPurgeTransactionServiceTest {
         when(userMapper.findPurgeTargetByIdForUpdate(USER_ID, NOW))
                 .thenReturn(target("/uploads/profiles/p.jpg"));
         when(accountPurgeMapper.findDiaryImageUrlsByUserId(USER_ID)).thenReturn(List.of(
-                "/uploads/diary-covers/c.jpg", "/uploads/diary-pages/e.jpg"));
+                "/uploads/diary-covers/c.jpg", "/uploads/diary-pages/e.jpg",
+                // 다이어리에 적용된 표지 사진도 같은 조회에서 함께 온다
+                "/uploads/diary-cover-elements/a.jpg"));
         when(accountPurgeMapper.findCoverDesignImageUrlsByUserId(USER_ID)).thenReturn(List.of(
                 "/uploads/diary-cover-designs/d.jpg"));
 
@@ -137,7 +139,7 @@ class AccountPurgeTransactionServiceTest {
 
         var order = org.mockito.Mockito.inOrder(accountPurgeMapper, diaryMapper,
                 diaryCoverDesignMapper, userMapper);
-        order.verify(accountPurgeMapper, times(4)).insertTask(any(AccountPurgeTask.class));
+        order.verify(accountPurgeMapper, times(5)).insertTask(any(AccountPurgeTask.class));
         order.verify(diaryMapper).deleteAllByUserId(USER_ID);
         order.verify(diaryCoverDesignMapper).deleteAllByUserId(USER_ID);
         order.verify(userMapper).finalizeWithdrawal(eq(USER_ID), any(), any(), any(), any(), any());
@@ -152,6 +154,9 @@ class AccountPurgeTransactionServiceTest {
                         tuple(AccountPurgeTaskType.FILE_DELETE, "/uploads/diary-covers/c.jpg",
                                 AccountPurgeTaskStatus.PENDING),
                         tuple(AccountPurgeTaskType.FILE_DELETE, "/uploads/diary-pages/e.jpg",
+                                AccountPurgeTaskStatus.PENDING),
+                        tuple(AccountPurgeTaskType.FILE_DELETE,
+                                "/uploads/diary-cover-elements/a.jpg",
                                 AccountPurgeTaskStatus.PENDING),
                         tuple(AccountPurgeTaskType.FILE_DELETE, "/uploads/diary-cover-designs/d.jpg",
                                 AccountPurgeTaskStatus.PENDING));

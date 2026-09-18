@@ -5,6 +5,7 @@ import com.example.travlediary.model.DiaryElement;
 import com.example.travlediary.model.DiaryNoteColor;
 import com.example.travlediary.model.DiaryNoteStyle;
 import com.example.travlediary.model.DiaryPage;
+import com.example.travlediary.model.DiaryPhotoUrls;
 import com.example.travlediary.repository.diary.DiaryElementMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -87,14 +88,34 @@ public class DiaryElementServiceImpl implements DiaryElementService {
     @Transactional(readOnly = true)
     public List<DiaryElement> getElements(Long diaryId, Long pageId, Long userId) {
         DiaryPage page = requireOwnedPage(diaryId, pageId, userId);
-        return diaryElementMapper.findByPageId(page.getId());
+        List<DiaryElement> elements = diaryElementMapper.findByPageId(page.getId());
+        elements.forEach(element -> prepareViewUrl(diaryId, page.getId(), element));
+        return elements;
     }
 
     @Override
     @Transactional(readOnly = true)
     public DiaryElement getElement(Long diaryId, Long pageId, Long elementId, Long userId) {
         DiaryPage page = requireOwnedPage(diaryId, pageId, userId);
-        return requireElementOfPage(elementId, page.getId());
+        DiaryElement element = requireElementOfPage(elementId, page.getId());
+        prepareViewUrl(diaryId, page.getId(), element);
+        return element;
+    }
+
+    /**
+     * 화면이 쓸 그림 주소를 채운다.
+     *
+     * <p>사진은 private 저장소에 있어 저장 키를 그대로 내보낼 수 없다. 소유권과 PIN 을
+     * 확인하는 통제된 endpoint 주소를 대신 담는다. 공용 asset 인 스티커는 저장 경로가 곧
+     * 공개 주소라 그대로 둔다.
+     */
+    private void prepareViewUrl(Long diaryId, Long pageId, DiaryElement element) {
+        if (TYPE_PHOTO.equals(element.getElementType())) {
+            element.setViewUrl(
+                    DiaryPhotoUrls.pageElementPhoto(diaryId, pageId, element.getId()));
+            return;
+        }
+        element.setViewUrl(element.getImageUrl());
     }
 
     @Override

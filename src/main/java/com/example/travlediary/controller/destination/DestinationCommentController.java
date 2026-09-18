@@ -4,8 +4,10 @@ import com.example.travlediary.dto.CommentDto;
 import com.example.travlediary.dto.CommentImageDto;
 import com.example.travlediary.dto.CommentLocationDto;
 import com.example.travlediary.dto.PageResult;
+import com.example.travlediary.security.ClientIpResolver;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.comment.CommentImageLimitException;
+import com.example.travlediary.service.file.UnsupportedImageFormatException;
 import com.example.travlediary.service.comment.CommentLikeService;
 import com.example.travlediary.service.comment.DestinationCommentService;
 import com.example.travlediary.config.i18n.SupportedLanguage;
@@ -104,8 +106,8 @@ public class DestinationCommentController {
             CommentDto dto = destinationCommentService.create(
                     destinationId, userDetails.getId(), content, images, parentCommentId);
             return ResponseEntity.ok(dto);
-        } catch (CommentImageLimitException e) {
-            // 프런트에서 그대로 안내할 수 있도록 메시지를 JSON 으로 돌려준다.
+        } catch (CommentImageLimitException | UnsupportedImageFormatException e) {
+            // 프런트에서 그대로 안내할 수 있도록 메시지를 JSON 으로 돌려준다. (사진 수·형식 오류)
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
@@ -154,7 +156,7 @@ public class DestinationCommentController {
                     TranslatableContentType.DESTINATION_COMMENT,
                     commentId,
                     targetLanguage,
-                    request.getRemoteAddr(),
+                    ClientIpResolver.of(request),
                     userId);
             if ("PROCESSING".equals(response.status())) {
                 return ResponseEntity.status(HttpStatus.ACCEPTED)

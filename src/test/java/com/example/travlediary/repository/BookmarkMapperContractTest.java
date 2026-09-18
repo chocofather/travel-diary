@@ -108,19 +108,15 @@ class BookmarkMapperContractTest {
         String layout = resource("/templates/layout/main.html");
         String javascript = resource("/static/js/travel-info-bookmark.js");
 
+        /*
+          북마크 토글(POST/DELETE)과 관리자 공지 변경은 Spring Security 기본 CSRF 정책이 보호한다.
+          보호할 주소를 목록으로 적지 않으므로, 새 endpoint 를 추가해도 빠질 수 없다.
+        */
         assertThat(security)
-                .contains("requireCsrfProtectionMatcher")
-                .contains("^/bookmarks$")
-                .contains("^/bookmarks/destinations/[0-9]+$")
-                .contains("^/bookmarks/posts/[0-9]+$")
-                .contains("^/bookmarks/courses/[0-9]+$")
-                .contains("^/bookmarks/travel-info/[0-9]+$")
-                .contains("^/admin/notices$")
-                .contains("^/admin/notices/[0-9]+/edit$")
-                .contains("^/admin/notices/[0-9]+/delete$")
-                .contains("^/logout$")
-                .contains("HttpMethod.POST.name()", "HttpMethod.DELETE.name()")
-                .doesNotContain("csrf(AbstractHttpConfigurer::disable)");
+                .doesNotContain("requireCsrfProtectionMatcher")
+                .doesNotContain("ignoringRequestMatchers")
+                .doesNotContain("csrf(AbstractHttpConfigurer::disable)")
+                .doesNotContain("csrf.disable()");
         assertThat(layout)
                 .contains("name=\"_csrf\"", "name=\"_csrf_header\"")
                 .contains("${_csrf.token}", "${_csrf.headerName}");

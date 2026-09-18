@@ -22,6 +22,15 @@ public interface DiaryCoverDesignElementMapper {
     DiaryCoverDesignElement findById(@Param("elementId") Long elementId,
                                      @Param("designId") Long designId);
 
+    /**
+     * 통제된 사진 응답이 쓰는 저장 키 한 칸. 요소 → 디자인 소유권을 SQL 한 번에 본다.
+     * 디자인은 다이어리에 속하지 않으므로 PIN 은 보지 않는다.
+     * 라이브러리 공유 사진(library_photo_asset_id)은 자기 endpoint 를 쓰므로 여기서 제외한다.
+     */
+    String findPhotoStorageKey(@Param("designId") Long designId,
+                               @Param("elementId") Long elementId,
+                               @Param("userId") Long userId);
+
     /** 한 디자인의 요소 전부 (겹침 순서 그대로) */
     List<DiaryCoverDesignElement> findAllByDesignId(@Param("designId") Long designId);
 

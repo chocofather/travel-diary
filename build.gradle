@@ -1,6 +1,8 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '3.4.3'
+    // 3.4.x 는 지원이 끝났다. Java 17 을 그대로 쓰는 3.5 지원 라인의 최신 패치를 쓴다.
+    // Spring Framework/Security/Tomcat 등 Boot 가 관리하는 버전은 이 BOM 에 맡긴다.
+    id 'org.springframework.boot' version '3.5.16'
     id 'io.spring.dependency-management' version '1.1.7'
 }
 
@@ -12,8 +14,6 @@ repositories {
     mavenCentral()
 }
 
-
-
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(17)
@@ -24,14 +24,22 @@ springBoot {
     mainClass = 'com.example.travlediary.TravleDiaryApplication'
 }
 
+/*
+  Boot BOM 이 정한 버전을 그대로 쓰되, BOM 판보다 뒤에 나온 보안 수정이 있는 것만 끌어올린다.
+  Boot 가 다음 패치에서 같은 버전 이상을 가리키면 이 줄은 지워도 된다.
+
+  - tomcat 10.1.55 : 인증/권한 우회 계열 CRITICAL 3건(CVE-2026-65905 / 65182 / 68525)이
+                     10.1.58 에서 고쳐졌다. 10.1.58 은 배포되지 않아 그다음 판을 쓴다.
+                     (Jakarta EE 10 / Java 17 기준은 그대로다)
+  - jackson  2.21.4 : 역직렬화 애노테이션 우회 3건이 2.21.5 에서 고쳐졌다.
+*/
+ext['tomcat.version'] = '10.1.60'
+ext['jackson-bom.version'] = '2.21.6'
+
 configurations {
     compileOnly {
         extendsFrom annotationProcessor
     }
-}
-
-repositories {
-    mavenCentral()
 }
 
 dependencies {
@@ -46,8 +54,11 @@ dependencies {
     annotationProcessor 'org.projectlombok:lombok'
 
     // MyBatis + MySQL
+    // Connector/J 버전은 Boot BOM 이 관리한다. (직접 고정하지 않는다)
     implementation 'com.mysql:mysql-connector-j'
-    implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.4'
+    // MyBatis starter 는 Boot BOM 이 관리하지 않아 직접 고정한다.
+    // 3.0.5 는 Spring Boot 3.5 기준으로 만들어진 판이다.
+    implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.5'
 
     // DevTools (자동 리로드)
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
@@ -56,12 +67,13 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
     implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
 
-    // 게시글 에디터 HTML 정화
-    implementation 'org.jsoup:jsoup:1.18.3'
+    // 게시글 에디터 HTML 정화. Boot BOM 이 관리하지 않아 직접 고정한다.
+    // 사용자 HTML 을 실제로 걸러 내는 자리라 보안 수정을 따라가려고 최신 판을 쓴다.
+    implementation 'org.jsoup:jsoup:1.23.2'
 
     // 사용자 콘텐츠 언어 감지 및 Google Cloud Translation v3
     implementation 'com.github.pemistahl:lingua:1.2.2'
-    implementation platform('com.google.cloud:libraries-bom:26.86.0')
+    implementation platform('com.google.cloud:libraries-bom:26.88.1')
     implementation 'com.google.cloud:google-cloud-translate'
 
     // 메일 전송
@@ -69,7 +81,7 @@ dependencies {
 
     // 테스트 관련
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter-test:3.0.4'
+    testImplementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter-test:3.0.5'
     testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 

@@ -8,9 +8,8 @@ import com.example.travlediary.model.DiaryElement;
 import com.example.travlediary.model.DiaryPage;
 import com.example.travlediary.repository.diary.DiaryCoverElementMapper;
 import com.example.travlediary.repository.diary.DiaryCoverMapper;
-import com.example.travlediary.service.file.FileUploadService;
+import com.example.travlediary.service.file.DiaryPrivatePhotoStorage;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,10 +18,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.io.IOException;
 import java.math.BigDecimal;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
@@ -52,11 +48,10 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class GuestDiaryImportService {
 
-    /** 가져온 페이지 사진 저장 위치. 회원 페이지 사진과 같은 자리다. */
-    private static final String PAGE_IMAGE_DIRECTORY = "diary-pages";
-    /** 가져온 표지 사진 저장 위치. 회원 표지 사진과 같은 자리다. */
-    private static final String COVER_IMAGE_DIRECTORY = "diary-covers";
-    private static final String UPLOAD_URL_PREFIX = "/uploads/";
+    /** 가져온 페이지 사진 저장 위치. 회원 페이지 사진과 같은 private 저장소다. */
+    private static final String PAGE_IMAGE_DIRECTORY = DiaryPrivatePhotoStorage.PAGE_DIRECTORY;
+    /** 가져온 표지 사진 저장 위치. 회원 표지 사진과 같은 private 저장소다. */
+    private static final String COVER_IMAGE_DIRECTORY = DiaryPrivatePhotoStorage.COVER_DIRECTORY;
 
     private static final String TYPE_TEXT = "TEXT";
     private static final String TYPE_PHOTO = "PHOTO";
@@ -84,10 +79,8 @@ public class GuestDiaryImportService {
     private final DiaryNoteCatalog diaryNoteCatalog;
     private final DiaryLabelFontCatalog diaryLabelFontCatalog;
     private final DiaryContentSanitizer diaryContentSanitizer;
-    private final FileUploadService fileUploadService;
-
-    @Value("${custom.upload-path}")
-    private String uploadPath;
+    /** 가져온 사진도 회원 개인 사진이므로 공개 업로드 폴더가 아니라 private 저장소에 둔다. */
+    private final DiaryPrivatePhotoStorage diaryPrivatePhotoStorage;
 
     /**
      * 체험 여행일기 한 권을 옮겨 담는다.
@@ -167,13 +160,12 @@ public class GuestDiaryImportService {
 
     /** 이번 요청에서 저장한 파일만 지운다. */
     private void deleteSavedFile(String imageUrl) {
-        if (imageUrl == null || !imageUrl.startsWith(UPLOAD_URL_PREFIX)) {
+        if (imageUrl == null || imageUrl.isEmpty()) {
             return;
         }
         try {
-            Files.deleteIfExists(
-                    Paths.get(uploadPath, imageUrl.substring(UPLOAD_URL_PREFIX.length())));
-        } catch (IOException | RuntimeException ignored) {
+            diaryPrivatePhotoStorage.delete(imageUrl);
+        } catch (RuntimeException ignored) {
             // 정리 실패가 원래 오류를 덮지 않게 한다.
         }
     }
@@ -394,7 +386,7 @@ public class GuestDiaryImportService {
         if (file == null) {
             throw badRequest("사진 원본을 찾을 수 없습니다.");
         }
-        String saved = fileUploadService.saveImportedDiaryPhoto(file, directory);
+        String saved = diaryPrivatePhotoStorage.saveImportedPhoto(file, directory);
         savedFiles.add(saved);
         return saved;
     }

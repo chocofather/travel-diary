@@ -153,4 +153,23 @@
         WHERE cover_id = #{coverId}
     </delete>
 
+    <!--
+      통제된 사진 응답 전용. 표지 행에는 소유자가 없으므로 다이어리까지 이어 user_id 로 본다.
+      라이브러리 공유 사진은 자기 asset endpoint 가 따로 있으므로 여기서는 제외한다.
+    -->
+    <select id="findPhotoRef" resultType="com.example.travlediary.dto.DiaryPrivatePhotoRef">
+        SELECT e.image_url AS image_url,
+               d.id        AS diary_id,
+               d.pin_hash  AS pin_hash
+        FROM diary_cover_elements e
+                 JOIN diary_covers c ON c.id = e.cover_id
+                 JOIN diaries d ON d.id = c.diary_id
+        WHERE e.id = #{elementId}
+          AND c.diary_id = #{diaryId}
+          AND d.user_id = #{userId}
+          AND e.element_type = 'PHOTO'
+          AND e.image_url IS NOT NULL
+          AND e.library_photo_asset_id IS NULL
+    </select>
+
 </mapper>

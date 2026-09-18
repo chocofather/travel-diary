@@ -167,12 +167,12 @@ class FaqUiContractTest {
                 "src/main/java/com/example/travlediary/config/SecurityConfig.java");
 
         assertThat(security)
-                .contains("^/admin/faqs$")
-                .contains("^/admin/faqs/[0-9]+/edit$")
-                .contains("^/admin/faqs/[0-9]+/delete$")
                 .contains("HttpMethod.GET, \"/support/faq\"")
-                .contains("^/admin/notices$", "^/bookmarks/travel-info/[0-9]+$", "^/logout$")
-                .doesNotContain("HttpMethod.GET, \"/support/**\"");
+                .doesNotContain("HttpMethod.GET, \"/support/**\"")
+                // 관리자 등록·수정·삭제 POST 는 기본 CSRF 정책이 보호한다. (주소 목록을 두지 않는다)
+                .doesNotContain("requireCsrfProtectionMatcher")
+                .doesNotContain("ignoringRequestMatchers")
+                .doesNotContain("csrf(AbstractHttpConfigurer::disable)");
     }
 
     @Test

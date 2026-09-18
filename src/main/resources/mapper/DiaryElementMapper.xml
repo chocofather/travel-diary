@@ -98,4 +98,24 @@
           AND page_id = #{pageId}
     </delete>
 
+    <!--
+      통제된 사진 응답 전용. 요소 → 페이지 → 다이어리를 한 번에 이어 소유권과 PIN 을 함께 본다.
+      요소 PK 로 시작해 FK 인덱스만 타므로 사진 한 장에 query 한 번이면 끝난다.
+      부모 번호를 조작하면 조건이 맞지 않아 결과가 없다 — 존재 여부가 드러나지 않는다.
+    -->
+    <select id="findPhotoRef" resultType="com.example.travlediary.dto.DiaryPrivatePhotoRef">
+        SELECT e.image_url AS image_url,
+               d.id        AS diary_id,
+               d.pin_hash  AS pin_hash
+        FROM diary_elements e
+                 JOIN diary_pages p ON p.id = e.page_id
+                 JOIN diaries d ON d.id = p.diary_id
+        WHERE e.id = #{elementId}
+          AND e.page_id = #{pageId}
+          AND p.diary_id = #{diaryId}
+          AND d.user_id = #{userId}
+          AND e.element_type = 'PHOTO'
+          AND e.image_url IS NOT NULL
+    </select>
+
 </mapper>

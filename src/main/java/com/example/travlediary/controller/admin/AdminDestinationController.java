@@ -207,9 +207,6 @@ public class AdminDestinationController {
         // 공백만 입력한 검색어는 검색 조건 없음으로 본다.
         String searchKeyword = (keyword == null || keyword.isBlank()) ? null : keyword.strip();
 
-        System.out.println("type: " + type);
-        System.out.println("continentId: " + continentId);
-
       /*  // 기본값 설정
         if (type == null) {
             type = "overseas";  // 기본값을 "overseas"로 설정

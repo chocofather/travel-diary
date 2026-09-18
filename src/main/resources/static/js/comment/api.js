@@ -16,6 +16,20 @@ function handleJson(res, label) {
 }
 
 /**
+ * 상태를 바꾸는 요청에 실을 CSRF 헤더.
+ * 토큰과 헤더 이름은 layout 의 meta 값을 그대로 쓴다. (폼 전송이 쓰는 값과 같다)
+ * @param {Object} [extra] 함께 보낼 다른 헤더
+ * @returns {Object} fetch headers
+ */
+function csrfHeaders(extra) {
+    const token = document.querySelector('meta[name="_csrf"]')?.content;
+    const header = document.querySelector('meta[name="_csrf_header"]')?.content;
+    const headers = {...(extra || {})};
+    if (token && header) headers[header] = token;
+    return headers;
+}
+
+/**
  * URL에서 destinationId 추출
  * @returns {string}
  */
@@ -32,6 +46,7 @@ export function getDestinationId() {
 export function postComment(destinationId, formData) {
     return fetch(`/comments?destinationId=${destinationId}`, {
         method: 'POST',
+        headers: csrfHeaders(),
         body: formData
     }).then(res => handleJson(res, '댓글 등록'));
 }
@@ -94,7 +109,7 @@ export function postReply(destinationId, parentCommentId, formData) {
     formData.append('parentCommentId', parentCommentId);
     return fetch(
         `/comments?destinationId=${destinationId}`,
-        { method: 'POST', body: formData }
+        { method: 'POST', headers: csrfHeaders(), body: formData }
     )
     .then(res => handleJson(res, '대댓글 등록'));
 }
@@ -105,7 +120,8 @@ export function postReply(destinationId, parentCommentId, formData) {
  * @returns {Promise<string>} 'liked' 또는 'unliked'
  */
 export function toggleLikeApi(commentId) {
-    return fetch(`/comments/${commentId}/like-toggle`, { method: 'POST' })
+    return fetch(`/comments/${commentId}/like-toggle`,
+        { method: 'POST', headers: csrfHeaders() })
         .then(res => {
             if (!res.ok) throw new Error(`좋아요 토글 실패: HTTP ${res.status}`);
             return res.text();
@@ -121,9 +137,9 @@ export function deleteCommentApi(commentId) {
     return fetch(`/comments/${commentId}`, {
         method: 'DELETE',
         credentials: 'include', // 반드시 추가!
-        headers: {
+        headers: csrfHeaders({
             'Content-Type': 'application/json' // 있으면 좋음 (필수는 아님)
-        }
+        })
     });
 }
 
@@ -136,7 +152,7 @@ export function deleteCommentApi(commentId) {
 export function updateCommentApi(commentId, body) {
     return fetch(`/comments/${commentId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(body)
     });
 }

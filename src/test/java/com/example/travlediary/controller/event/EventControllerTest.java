@@ -2,6 +2,7 @@ package com.example.travlediary.controller.event;
 
 import com.example.travlediary.model.Event;
 import com.example.travlediary.repository.event.EventMapper;
+import com.example.travlediary.service.post.PostContentSanitizer;
 import com.example.travlediary.service.event.EventLocalizationService;
 import com.example.travlediary.service.event.EventService;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,7 +32,7 @@ class EventControllerTest {
     @BeforeEach
     void setUp() {
         controller = new EventController(
-                eventService, new EventLocalizationService(eventMapper));
+                eventService, new EventLocalizationService(eventMapper, new PostContentSanitizer()));
     }
 
     @Test

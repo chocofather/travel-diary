@@ -7,6 +7,7 @@ import com.example.travlediary.model.EventTranslation;
 import com.example.travlediary.model.EventType;
 import com.example.travlediary.repository.event.EventMapper;
 import com.example.travlediary.service.file.FileUploadService;
+import com.example.travlediary.service.post.PostContentSanitizer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -64,7 +65,7 @@ class EventTranslationPosterTest {
 
     @BeforeEach
     void setUp() {
-        eventService = new EventService(eventMapper, fileUploadService);
+        eventService = new EventService(eventMapper, fileUploadService, new PostContentSanitizer());
         ReflectionTestUtils.setField(eventService, "uploadDir", uploadDir.toString());
     }
 

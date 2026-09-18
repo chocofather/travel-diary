@@ -2,26 +2,23 @@ package com.example.travlediary.service.category;
 
 import com.example.travlediary.model.CountryCategory;
 import com.example.travlediary.repository.category.CountryCategoryMapper;
+import com.example.travlediary.service.file.FileUploadService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 
 @Service
 @RequiredArgsConstructor
 public class CountryCategoryService {
 
-    private final CountryCategoryMapper mapper;
+    /** 지역 아이콘을 두는 곳. 예전에 올린 아이콘과 같은 자리라 기존 경로가 그대로 열린다. */
+    private static final String ICON_DIRECTORY = "icons";
 
-    @Value("${custom.upload-path}")
-    private String uploadPath;
+    private final CountryCategoryMapper mapper;
+    /** 이미지 검증과 저장은 다른 업로드와 한 벌을 쓴다. 여기에 따로 만들지 않는다. */
+    private final FileUploadService fileUploadService;
 
     // 1. depth1(최상위): 대륙 or 대한민국만
     public List<CountryCategory> getRootRegions() {
@@ -68,18 +65,25 @@ public class CountryCategoryService {
         return path;
     }
 
-    // 5. 아이콘 저장/업데이트
-    public void saveIcon(Long id, MultipartFile file) throws IOException {
+    /**
+     * 5. 아이콘 저장/업데이트
+     *
+     * <p>저장 위치가 {@code /uploads/icons/**} 라 올린 파일이 같은 origin 에서 그대로 공개된다.
+     * 그래서 올린 이름과 클라이언트가 말한 형식은 쓰지 않고, 다른 이미지 업로드와 <b>같은</b>
+     * 검증({@link FileUploadService#saveFile(MultipartFile, String)})을 지나게 한다.
+     * 실제로 펼쳐지는 JPEG/PNG/WEBP 만 통과하고 파일 이름은 서버가 정한 UUID 다 —
+     * HTML·SVG·XML 처럼 브라우저가 실행하는 내용은 들어올 수 없다.
+     *
+     * <p>지역 아이콘에 SVG 가 필요하지 않으므로 이 경로에서는 받지 않는다.
+     * (편의시설 아이콘만 별도의 엄격한 SVG 검사를 거쳐 허용한다)
+     *
+     * @throws com.example.travlediary.service.file.UnsupportedImageFormatException
+     *         이미지가 아니거나 허용 형식이 아닐 때. 파일은 저장되지 않는다.
+     */
+    public void saveIcon(Long id, MultipartFile file) {
         if (file == null || file.isEmpty()) return;
 
-        Path iconsDir = Paths.get(uploadPath, "icons");
-        Files.createDirectories(iconsDir);
-
-        String filename = UUID.randomUUID() + "_" + StringUtils.cleanPath(file.getOriginalFilename());
-        Path dest = iconsDir.resolve(filename);
-        file.transferTo(dest.toFile());
-
-        String iconPath = "/uploads/icons/" + filename;
+        String iconPath = fileUploadService.saveFile(file, ICON_DIRECTORY);
         mapper.updateIconPath(id, iconPath);
     }
 

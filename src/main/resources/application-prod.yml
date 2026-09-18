@@ -1,0 +1,73 @@
+# 운영(HTTPS + Cloudflare Tunnel) 전용 설정.
+#
+# 실행 예: SPRING_PROFILES_ACTIVE=prod
+#
+# 이 파일에는 실제 값(계정·비밀번호·키·도메인)을 절대 적지 않는다. 전부 ${ENV} 참조만 둔다.
+# 그래서 이 파일 자체는 저장소에 넣어도 안전하고, 오히려 넣어야 한다 —
+# 이 파일이 없으면 prod 로 띄워도 개발 기본값(application.yml)으로 조용히 돌아간다.
+#
+# 여기 적힌 항목은 대부분 기본값을 두지 않는다. 값이 빠지면 애플리케이션이 뜨지 않고,
+# 그 편이 "잘못된 DB 로 붙었거나 localhost 링크로 메일이 나가는" 상태보다 훨씬 낫다.
+spring:
+  datasource:
+    # 운영 DB 접속 정보. 기본값이 없으므로 개발용 localmaster/mydb 로 새어 나가지 않는다.
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+  mail:
+    # 가입 인증·비밀번호 재설정이 전부 메일에 걸려 있다. 자격증명이 비면 기동 때 멈춘다.
+    # (기본값을 두면 회원이 가입을 시도하는 순간에야 실패가 드러난다)
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+
+server:
+  # Cloudflare Tunnel 로만 공개한다. cloudflared 는 같은 기기에서 붙으므로
+  # 루프백에만 바인딩해 같은 Wi-Fi 의 다른 기기가 <맥주소>:8080 으로 들어오지 못하게 한다.
+  # 다른 기기에서 접근시켜야 하는 구성으로 바뀌면 SERVER_ADDRESS 로 덮어쓴다.
+  # 주의: cloudflared ingress 는 http://127.0.0.1:8080 으로 적는다.
+  #       localhost 로 적으면 ::1 로 먼저 붙어 연결이 거부될 수 있다.
+  address: ${SERVER_ADDRESS:127.0.0.1}
+  servlet:
+    session:
+      cookie:
+        # 운영은 HTTPS 이므로 세션 쿠키를 암호화된 연결에서만 보낸다.
+        # 여기서는 환경변수로 끌 수 없게 고정한다.
+        secure: true
+        http-only: true
+        same-site: lax
+
+custom:
+  # 메일 본문의 인증·재설정 링크가 이 주소로 만들어진다.
+  # 기본값을 두면 운영에서 http://localhost:8080 링크가 발송되어 가입 자체가 불가능해진다.
+  server-url: ${APP_BASE_URL}
+
+  # 재가입 차단용 이메일 해시 secret. 실제 값은 환경변수로만 주입한다.
+  email-hash-secret: ${EMAIL_HASH_SECRET}
+  # 살아 있는 초대 링크 재표시용 AES-256 키(Base64 32바이트). 실제 값은 환경변수로만 주입한다.
+  invite-token-encryption-key: ${TRAVEL_PLAN_INVITE_ENCRYPTION_KEY}
+
+  # 저장소 경로 세 개는 모두 절대경로를 따로 받는다.
+  # application.yml 의 파생 기본값(${custom.upload-path}../...)에 기대지 않는다.
+  # 그 형태는 UPLOAD_PATH 끝에 슬래시가 없으면 상위 폴더가 아니라
+  # "uploads.." 라는 이름의 폴더를 만들어 버린다.
+  upload-path: ${UPLOAD_PATH}
+  cover-library-private-path: ${COVER_LIBRARY_PRIVATE_PATH}
+  diary-private-path: ${DIARY_PRIVATE_PATH}
+
+  client-ip:
+    # DIRECT           : 전달 머리말을 전혀 믿지 않고 늘 실제 접속 주소를 쓴다.
+    # CLOUDFLARE_TUNNEL: trusted-proxies 에서 들어온 요청의 CF-Connecting-IP 만 믿는다.
+    #
+    # 운영에서 이 값을 빠뜨린 채 터널 뒤에 두면 모든 요청이 루프백 주소 하나로 보여
+    # 한 사람이 걸린 로그인 제한에 전체 이용자가 함께 막힌다. 그래서 기본값을 두지 않는다.
+    mode: ${CLIENT_IP_MODE}
+    # 전달 머리말을 믿어도 되는 접속 경로(주소 또는 CIDR, 쉼표 구분).
+    # 비워 두면 어떤 경로도 믿지 않는다 — 판단을 강제하려고 기본값 없이 둔다.
+    # DIRECT 로 운영할 때는 빈 값으로 정의한다: CLIENT_IP_TRUSTED_PROXIES=
+    # cloudflared 가 같은 기기에서 붙는 구성이면 127.0.0.0/8,::1 이면 충분하다.
+    trusted-proxies: ${CLIENT_IP_TRUSTED_PROXIES}
+
+seo:
+  # canonical·sitemap 의 공개 origin. 비면 검색엔진에 잘못된 주소가 노출되므로 기본값을 두지 않는다.
+  site-base-url: ${SEO_SITE_BASE_URL}

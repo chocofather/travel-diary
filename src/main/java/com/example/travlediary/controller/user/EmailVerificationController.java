@@ -1,5 +1,8 @@
 package com.example.travlediary.controller.user;
 
+import com.example.travlediary.security.AccountAbuseGuard;
+import com.example.travlediary.security.ClientIpResolver;
+import com.example.travlediary.security.TooManyAccountRequestsException;
 import com.example.travlediary.service.email.EmailVerificationService;
 import com.example.travlediary.service.user.EmailCorrectionService;
 import com.example.travlediary.service.email.EmailVerificationService.ResendOutcome;
@@ -8,11 +11,14 @@ import com.example.travlediary.service.email.EmailVerificationService.Verificati
 import com.example.travlediary.service.email.EmailVerificationService.WaitingState;
 import com.example.travlediary.service.user.EmailPolicy;
 import com.example.travlediary.service.user.RegistrationValidationException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -38,13 +44,21 @@ public class EmailVerificationController {
     private final EmailVerificationService emailVerificationService;
     private final EmailCorrectionService emailCorrectionService;
     private final MessageSource messageSource;
+    /**
+     * 메일이 나갈 수 있는 요청의 남용을 막는 자리.
+     * 같은 주소로의 60초 cooldown 은 이미 {@link EmailVerificationService} 가 맡고 있어
+     * 여기서는 IP 축만 더한다. (주소를 바꿔 가며 SMTP 한도를 소진하는 쪽)
+     */
+    private final AccountAbuseGuard accountAbuseGuard;
 
     public EmailVerificationController(EmailVerificationService emailVerificationService,
                                        EmailCorrectionService emailCorrectionService,
-                                       MessageSource messageSource) {
+                                       MessageSource messageSource,
+                                       AccountAbuseGuard accountAbuseGuard) {
         this.emailVerificationService = emailVerificationService;
         this.emailCorrectionService = emailCorrectionService;
         this.messageSource = messageSource;
+        this.accountAbuseGuard = accountAbuseGuard;
     }
 
     /** 화면 문구는 현재 locale 의 messages 번들에서 가져온다. */
@@ -201,7 +215,24 @@ public class EmailVerificationController {
 
     @PostMapping(value = "/verification/resend", params = "email")
     public String requestStandaloneResend(@RequestParam String email,
+                                          HttpServletRequest request,
+                                          HttpServletResponse response,
+                                          Model model,
                                           RedirectAttributes redirectAttributes) {
+        try {
+            // 주소를 확인하기 전에 먼저 센다. 아는 주소인지로 응답이 갈리지 않게 한다.
+            accountAbuseGuard.checkRecoveryRequest(ClientIpResolver.of(request));
+        } catch (TooManyAccountRequestsException exception) {
+            response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
+            response.setHeader("Retry-After", Long.toString(exception.getRetryAfterSeconds()));
+            model.addAttribute("pageTitle", message("verification.resend.pageTitle"));
+            model.addAttribute("recoveryThrottled", true);
+            model.addAttribute("recoveryThrottledMessage",
+                    message("account.recovery.throttled.description",
+                            exception.getRetryAfterSeconds()));
+            return "verification-resend";
+        }
+
         final String normalizedEmail;
         try {
             normalizedEmail = EmailPolicy.normalizeAndValidate(email);

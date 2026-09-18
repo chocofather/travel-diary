@@ -4,7 +4,10 @@ import com.example.travlediary.dto.SocialSignupForm;
 import com.example.travlediary.model.PendingSocialLoginLink;
 import com.example.travlediary.model.PendingSocialSignup;
 import com.example.travlediary.model.SocialProvider;
+import com.example.travlediary.security.AccountAbuseGuard;
+import com.example.travlediary.security.ClientIpResolver;
 import com.example.travlediary.security.CustomUserDetails;
+import com.example.travlediary.security.TooManyAccountRequestsException;
 import com.example.travlediary.service.policy.SignupPolicyService;
 import com.example.travlediary.service.user.SocialSignupAuthenticationException;
 import com.example.travlediary.service.user.SocialSignupAuthenticationService;
@@ -26,6 +29,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.dao.DataAccessException;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -57,6 +61,8 @@ public class SocialSignupController {
     private final SocialLoginLinkService socialLoginLinkService;
     private final SignupPolicyService signupPolicyService;
     private final MessageSource messageSource;
+    /** 인증메일이 나갈 수 있는 요청의 남용을 막는 자리. 일반 회원가입과 같은 통을 쓴다. */
+    private final AccountAbuseGuard accountAbuseGuard;
 
     @GetMapping("/social-signup")
     public String signupPage(Authentication authentication,
@@ -169,6 +175,22 @@ public class SocialSignupController {
         }
 
         if (bindingResult.hasErrors()) {
+            return signupForm(model, form, pending);
+        }
+
+        /*
+          Travel Diary 인증이 필요한 가입은 끝나면 인증메일이 나간다. 일반 회원가입과 같은
+          SMTP 자원을 쓰므로 같은 IP 통에서 함께 센다 — 한쪽만 막으면 다른 쪽으로 돌아간다.
+          입력 형식 오류는 메일과 무관하므로 위 검사를 지난 뒤에 센다.
+        */
+        try {
+            accountAbuseGuard.checkRecoveryRequest(ClientIpResolver.of(request));
+        } catch (TooManyAccountRequestsException exception) {
+            response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
+            response.setHeader("Retry-After", Long.toString(exception.getRetryAfterSeconds()));
+            bindingResult.reject("account.recovery.throttled.description",
+                    new Object[]{exception.getRetryAfterSeconds()},
+                    "요청이 너무 많습니다. 잠시 후 다시 시도해주세요.");
             return signupForm(model, form, pending);
         }
 

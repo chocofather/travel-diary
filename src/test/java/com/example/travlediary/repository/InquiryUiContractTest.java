@@ -92,12 +92,11 @@ class InquiryUiContractTest {
                 .contains("HttpMethod.GET, \"/support/notices\"")
                 .contains("HttpMethod.GET, \"/support/faq\"")
                 .contains("\"/support/inquiries\", \"/support/inquiries/**\").authenticated()")
-                .contains("^/support/inquiries$")
-                .contains("^/support/inquiries/[0-9]+/edit$")
-                .contains("^/support/inquiries/[0-9]+/delete$")
-                .contains("^/admin/inquiries/[0-9]+/answer$")
-                .contains("^/admin/notices$", "^/admin/faqs$", "^/logout$")
-                .doesNotContain("\"/support/**\").permitAll()");
+                .doesNotContain("\"/support/**\").permitAll()")
+                // 문의 작성·수정·삭제와 관리자 답변 POST 는 기본 CSRF 정책이 보호한다.
+                .doesNotContain("requireCsrfProtectionMatcher")
+                .doesNotContain("ignoringRequestMatchers")
+                .doesNotContain("csrf(AbstractHttpConfigurer::disable)");
     }
 
     @Test

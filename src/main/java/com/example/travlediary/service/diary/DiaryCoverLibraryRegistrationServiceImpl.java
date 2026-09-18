@@ -19,6 +19,7 @@ import com.example.travlediary.repository.diary.DiaryCoverLibraryItemMapper;
 import com.example.travlediary.repository.diary.DiaryCoverLibraryPhotoAssetMapper;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.service.file.DiaryCoverLibraryPhotoStorage;
+import com.example.travlediary.service.file.DiaryPrivatePhotoStorage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -51,6 +52,8 @@ public class DiaryCoverLibraryRegistrationServiceImpl
     private final DiaryCoverDesignElementMapper designElementMapper;
     private final UserMapper userMapper;
     private final DiaryCoverLibraryPhotoStorage photoStorage;
+    /** 공유할 원본이 있는 자리. 내 표지 디자인 사진은 공개 업로드 폴더를 떠나 여기에 있다. */
+    private final DiaryPrivatePhotoStorage diaryPhotoStorage;
     private final Clock clock;
 
     @Autowired
@@ -61,9 +64,10 @@ public class DiaryCoverLibraryRegistrationServiceImpl
             DiaryCoverDesignMapper designMapper,
             DiaryCoverDesignElementMapper designElementMapper,
             UserMapper userMapper,
-            DiaryCoverLibraryPhotoStorage photoStorage) {
+            DiaryCoverLibraryPhotoStorage photoStorage,
+            DiaryPrivatePhotoStorage diaryPhotoStorage) {
         this(itemMapper, photoAssetMapper, elementMapper, designMapper, designElementMapper,
-                userMapper, photoStorage, Clock.systemUTC());
+                userMapper, photoStorage, diaryPhotoStorage, Clock.systemUTC());
     }
 
     DiaryCoverLibraryRegistrationServiceImpl(
@@ -74,6 +78,7 @@ public class DiaryCoverLibraryRegistrationServiceImpl
             DiaryCoverDesignElementMapper designElementMapper,
             UserMapper userMapper,
             DiaryCoverLibraryPhotoStorage photoStorage,
+            DiaryPrivatePhotoStorage diaryPhotoStorage,
             Clock clock) {
         this.itemMapper = itemMapper;
         this.photoAssetMapper = photoAssetMapper;
@@ -82,6 +87,7 @@ public class DiaryCoverLibraryRegistrationServiceImpl
         this.designElementMapper = designElementMapper;
         this.userMapper = userMapper;
         this.photoStorage = photoStorage;
+        this.diaryPhotoStorage = diaryPhotoStorage;
         this.clock = clock;
     }
 
@@ -99,6 +105,11 @@ public class DiaryCoverLibraryRegistrationServiceImpl
         if (design == null) {
             throw new ResponseStatusException(
                     HttpStatus.NOT_FOUND, "표지 디자인을 찾을 수 없습니다.");
+        }
+        // 다른 회원의 표지를 받아 내 것처럼 다시 올리지 못하게 한다. 받은 뒤 편집했어도 출처는 남아 있다.
+        if (design.getSourceLibraryItemId() != null) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, LIBRARY_SOURCED_SHARE_MESSAGE);
         }
 
         List<DiaryCoverDesignElement> sourceElements =
@@ -174,8 +185,13 @@ public class DiaryCoverLibraryRegistrationServiceImpl
             DiaryCoverLibraryItem item,
             User creator,
             List<String> newStorageKeys) {
-        DiaryCoverLibraryPhotoStorage.StoredPhoto stored =
-                photoStorage.copyFromPublicUpload(source.getImageUrl());
+        /*
+          공유 원본은 사용자가 넘긴 경로가 아니라 저장된 요소의 저장 키다.
+          개인 사진 저장소가 관리 키인지 확인해 실제 경로를 내주고, 그 경로만 복사한다.
+        */
+        DiaryCoverLibraryPhotoStorage.StoredPhoto stored = photoStorage
+                .copyFromDiaryPrivateStorage(
+                        diaryPhotoStorage.resolveManagedSource(source.getImageUrl()));
         newStorageKeys.add(stored.storageKey());
 
         DiaryCoverLibraryPhotoAsset asset = new DiaryCoverLibraryPhotoAsset();

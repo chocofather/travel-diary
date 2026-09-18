@@ -1,5 +1,6 @@
 package com.example.travlediary.service.user;
 
+import com.example.travlediary.security.InMemoryAccountAbuseGuard;
 import com.example.travlediary.dto.RegistrationForm;
 import com.example.travlediary.model.PolicyConsentSource;
 import com.example.travlediary.model.PolicyType;
@@ -66,7 +67,9 @@ class UserServiceRegistrationTest {
         }).when(userMapper).insertUser(any());
         userService = new UserService(userMapper, passwordEncoder, emailDispatchService,
                 emailVerificationService, signupPolicyService,
-                new RegistrationTransactionService(userMapper, policyConsentRecorder));
+                new RegistrationTransactionService(userMapper, policyConsentRecorder),
+                // 테스트마다 새 guard 라 첫 요청은 늘 지나간다. (cooldown 은 이 클래스의 관심사가 아니다)
+                new InMemoryAccountAbuseGuard());
     }
 
     /** 정책이 활성화된 뒤의 가입. 화면이 보낸 동의 id 를 서버가 다시 판정한다. */

@@ -23,8 +23,14 @@
           class="admin-form-card">
       <div class="admin-form-field">
         <label for="region-icon">아이콘 이미지</label>
-        <input id="region-icon" type="file" name="icon" accept="image/*" required />
-        <span class="admin-help-text">원형 썸네일에 맞는 정사각형 이미지를 권장합니다.</span>
+        <input id="region-icon" type="file" name="icon"
+               accept="image/jpeg,image/png,image/webp" required />
+        <span class="admin-help-text">
+          원형 썸네일에 맞는 정사각형 JPG·PNG·WEBP 이미지를 권장합니다.
+        </span>
+        <!-- 형식이 맞지 않아 저장하지 않았을 때의 안내 -->
+        <span class="field-error" role="alert"
+              th:if="${iconError}" th:text="${iconError}">이미지 오류</span>
       </div>
       <div class="admin-form-actions">
         <a th:href="@{/admin/region-categories}" class="admin-btn">취소</a>

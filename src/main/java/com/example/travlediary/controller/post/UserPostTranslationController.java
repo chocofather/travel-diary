@@ -1,6 +1,7 @@
 package com.example.travlediary.controller.post;
 
 import com.example.travlediary.config.i18n.SupportedLanguage;
+import com.example.travlediary.security.ClientIpResolver;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.translation.MachineTranslationException;
 import com.example.travlediary.service.translation.TranslationDailyLimitException;
@@ -41,7 +42,7 @@ public class UserPostTranslationController {
         Long userId = userDetails == null ? null : userDetails.getId();
         try {
             TitleContentTranslationResponse response = translationService.translate(
-                    postId, targetLanguage, request.getRemoteAddr(), userId);
+                    postId, targetLanguage, ClientIpResolver.of(request), userId);
             if ("PROCESSING".equals(response.status())) {
                 return ResponseEntity.status(HttpStatus.ACCEPTED)
                         .header("Retry-After", Long.toString(response.retryAfterSeconds()))

@@ -39,4 +39,7 @@ out/
 uploads/
 output/pdf/
 
+### 로컬 전용 설정 (실제 DB 비밀번호 등은 여기에만 둔다) ###
+src/main/resources/application-local.yml
+
 .DS_Store

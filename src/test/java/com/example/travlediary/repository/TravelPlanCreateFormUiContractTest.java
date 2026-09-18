@@ -198,10 +198,11 @@ class TravelPlanCreateFormUiContractTest {
                 Path.of("src/main/java/com/example/travlediary/config/SecurityConfig.java"),
                 StandardCharsets.UTF_8);
 
-        // /diaries POST 와 같은 방식으로 CSRF 매처에 등록한다
+        // /diaries POST 와 같은 방식으로 기본 CSRF 정책의 보호를 받는다
         assertThat(securityConfig)
-                .contains("\"^/travel-plans$\", HttpMethod.POST.name()")
-                .contains("\"^/diaries$\", HttpMethod.POST.name()");
+                .doesNotContain("requireCsrfProtectionMatcher")
+                .doesNotContain("ignoringRequestMatchers")
+                .doesNotContain("csrf(AbstractHttpConfigurer::disable)");
         // 공동여행용 별도 인가 규칙은 추가하지 않는다 (anyRequest().authenticated() 사용)
         assertThat(securityConfig).doesNotContain("/travel-plans/**");
     }
@@ -569,10 +570,11 @@ class TravelPlanCreateFormUiContractTest {
                 Path.of("src/main/java/com/example/travlediary/config/SecurityConfig.java"),
                 StandardCharsets.UTF_8);
 
+        // 순서 이동 POST 도 기본 CSRF 정책이 보호한다 (주소 목록을 두지 않는다)
         assertThat(securityConfig)
-                .contains("\"^/travel-plans/[0-9]+/days/[0-9]+/items/[0-9]+/move-up$\"")
-                .contains("\"^/travel-plans/[0-9]+/days/[0-9]+/items/[0-9]+/move-down$\"")
-                .contains("\"^/travel-plans/[0-9]+/days/[0-9]+/items/[0-9]+/move$\"");
+                .doesNotContain("requireCsrfProtectionMatcher")
+                .doesNotContain("ignoringRequestMatchers")
+                .doesNotContain("csrf(AbstractHttpConfigurer::disable)");
     }
 
     @Test
@@ -623,9 +625,11 @@ class TravelPlanCreateFormUiContractTest {
                 Path.of("src/main/java/com/example/travlediary/config/SecurityConfig.java"),
                 StandardCharsets.UTF_8);
 
+        // 일정 수정/삭제 POST 도 기본 CSRF 정책이 보호한다
         assertThat(securityConfig)
-                .contains("\"^/travel-plans/[0-9]+/days/[0-9]+/items/[0-9]+/update$\"")
-                .contains("\"^/travel-plans/[0-9]+/days/[0-9]+/items/[0-9]+/delete$\"");
+                .doesNotContain("requireCsrfProtectionMatcher")
+                .doesNotContain("ignoringRequestMatchers")
+                .doesNotContain("csrf(AbstractHttpConfigurer::disable)");
     }
 
     @Test
@@ -722,8 +726,11 @@ class TravelPlanCreateFormUiContractTest {
                 Path.of("src/main/java/com/example/travlediary/config/SecurityConfig.java"),
                 StandardCharsets.UTF_8);
 
-        assertThat(securityConfig).contains(
-                "\"^/travel-plans/[0-9]+/days/[0-9]+/items$\", HttpMethod.POST.name()");
+        // 일정 추가 POST 도 기본 CSRF 정책이 보호한다
+        assertThat(securityConfig)
+                .doesNotContain("requireCsrfProtectionMatcher")
+                .doesNotContain("ignoringRequestMatchers")
+                .doesNotContain("csrf(AbstractHttpConfigurer::disable)");
     }
 
     @Test

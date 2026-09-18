@@ -127,6 +127,53 @@ class DestinationCommentImageWriteTest {
         }
     }
 
+    /**
+     * 여행지 댓글 사진도 공통 이미지 검증을 거친다.
+     * 원본 파일명은 저장 이름에 쓰지 않고, 확장자는 판별한 형식으로 정한다.
+     */
+    @Test
+    void storedImageNamesIgnoreTheOriginalFileName() {
+        givenCommentIsInserted(50L);
+        givenWriterExists();
+        when(commentImageMapper.insert(any(DestinationCommentImage.class))).thenReturn(1);
+
+        service.create(10L, 7L, "사진 후기", List.of(image("../evil name.html")), null);
+
+        ArgumentCaptor<DestinationCommentImage> captor =
+                ArgumentCaptor.forClass(DestinationCommentImage.class);
+        verify(commentImageMapper).insert(captor.capture());
+        assertThat(captor.getValue().getImageUrl())
+                .matches("^/uploads/comments/[0-9a-f-]{36}\\.jpg$");
+    }
+
+    /**
+     * HTML·스크립트 SVG·사진으로 위장한 파일은 받지 않는다.
+     * 앞서 받은 정상 사진까지 지우고, 댓글도 저장하지 않으며, 폴더에 아무것도 남기지 않는다.
+     */
+    @Test
+    void nonImageFilesAreRejectedAndLeaveNothingBehind() throws Exception {
+        byte[] html = "<html><script>alert(1)</script></html>".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        byte[] svg = ("<svg xmlns=\"http://www.w3.org/2000/svg\"><script>alert(1)</script></svg>")
+                .getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        for (MultipartFile rejected : List.of(
+                new MockMultipartFile("images", "x.html", "text/html", html),
+                new MockMultipartFile("images", "x.svg", "image/svg+xml", svg),
+                new MockMultipartFile("images", "x.jpg", "image/jpeg", html))) {
+            assertThatThrownBy(() -> service.create(10L, 7L, "위장 파일",
+                    List.of(image("ok.jpg"), rejected), null))
+                    .isInstanceOf(com.example.travlediary.service.file.UnsupportedImageFormatException.class);
+        }
+
+        verify(commentMapper, never()).insert(any());
+        verify(commentImageMapper, never()).insert(any());
+        Path comments = uploadDir.resolve("comments");
+        if (Files.exists(comments)) {
+            try (var files = Files.list(comments)) {
+                assertThat(files).isEmpty();
+            }
+        }
+    }
+
     @Test
     void createStillRunsInOneTransaction() throws NoSuchMethodException {
         Transactional transactional = DestinationCommentService.class
@@ -168,8 +215,17 @@ class DestinationCommentImageWriteTest {
         when(userMapper.findById(7L)).thenReturn(user);
     }
 
+    /** 실제로 펼쳐지는 작은 JPEG. 댓글 사진도 공통 이미지 검증을 거치므로 진짜 사진이어야 한다. */
     private MultipartFile image(String name) {
-        return new MockMultipartFile("images", name, "image/jpeg", new byte[]{1, 2, 3});
+        try {
+            java.awt.image.BufferedImage drawn =
+                    new java.awt.image.BufferedImage(8, 6, java.awt.image.BufferedImage.TYPE_INT_RGB);
+            java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+            javax.imageio.ImageIO.write(drawn, "jpg", bytes);
+            return new MockMultipartFile("images", name, "image/jpeg", bytes.toByteArray());
+        } catch (java.io.IOException exception) {
+            throw new IllegalStateException(exception);
+        }
     }
 
     private MultipartFile emptyImage() {

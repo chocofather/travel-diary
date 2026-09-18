@@ -42,9 +42,11 @@ spring:
     servlet:
       produce-partial-output-while-processing: false
   datasource:
-    url: jdbc:mysql://localhost:3306/mydb?connectionTimeZone=LOCAL&characterEncoding=UTF-8
-    username: localmaster
-    password: 1234
+    # 접속 정보는 환경변수로만 주입한다. 비밀번호는 저장소에 두지 않는다.
+    # 로컬 개발: DB_PASSWORD 환경변수 또는 gitignore 된 application-local.yml 사용
+    url: ${DB_URL:jdbc:mysql://localhost:3306/mydb?connectionTimeZone=LOCAL&characterEncoding=UTF-8}
+    username: ${DB_USERNAME:localmaster}
+    password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
   servlet:
     multipart:
@@ -76,9 +78,23 @@ custom:
   email-hash-secret: ${EMAIL_HASH_SECRET:}
   # 살아 있는 초대 링크 재표시용 AES-256 키(Base64 32바이트). 값은 환경변수로만 주입한다.
   invite-token-encryption-key: ${TRAVEL_PLAN_INVITE_ENCRYPTION_KEY:}
-  upload-path: /Users/minjun/travlediary-uploads/ # ✅ 이 줄 추가
+  # 업로드 저장소. 특정 개발자의 절대경로를 고정하지 않는다.
+  # 운영은 UPLOAD_PATH 환경변수로 실제 저장 경로를 지정한다.
+  upload-path: ${UPLOAD_PATH:${user.home}/travlediary-uploads/}
   # /uploads/** 정적 매핑 바깥의 표지 라이브러리 공유 사진 전용 저장소.
   cover-library-private-path: ${COVER_LIBRARY_PRIVATE_PATH:${custom.upload-path}../traveldiary-cover-library-private}
+  # /uploads/** 정적 매핑 바깥의 회원 개인 다이어리 사진 전용 저장소.
+  # 대표 이미지·페이지 사진·적용 표지 사진·내 표지 디자인 사진이 여기에 들어간다.
+  diary-private-path: ${DIARY_PRIVATE_PATH:${custom.upload-path}../traveldiary-diary-private}
+  # 로그인 제한과 요청 제한이 함께 쓰는 클라이언트 주소 판별 정책.
+  client-ip:
+    # DIRECT           : 전달 머리말을 전혀 믿지 않는다. 늘 실제 접속 주소를 쓴다. (기본값)
+    # CLOUDFLARE_TUNNEL: 아래 trusted-proxies 에서 들어온 요청의 CF-Connecting-IP 만 믿는다.
+    mode: ${CLIENT_IP_MODE:DIRECT}
+    # 전달 머리말을 믿어도 되는 접속 경로. 주소 하나 또는 CIDR 를 쉼표로 잇는다.
+    # 비어 있으면 어떤 경로도 믿지 않는다. (mode 만 켜고 여기를 비워 두면 DIRECT 와 같다)
+    # cloudflared 가 같은 기기에서 연결하는 구성이면 loopback 만 적으면 된다.
+    trusted-proxies: ${CLIENT_IP_TRUSTED_PROXIES:}
 
 server:
   error:
@@ -87,6 +103,13 @@ server:
   servlet:
     session:
       tracking-modes: cookie
+      cookie:
+        # 세션 쿠키는 스크립트가 읽을 수 없고, 다른 사이트에서 시작한 요청에는 실리지 않는다.
+        http-only: true
+        same-site: lax
+        # HTTPS 전용 전송은 운영에서만 켠다. 로컬은 HTTP 라 기본값이 false 여야 로그인이 된다.
+        # 운영 배포에서는 SESSION_COOKIE_SECURE=true 환경변수를 주거나 prod 프로파일을 쓴다.
+        secure: ${SESSION_COOKIE_SECURE:false}
 
 mybatis:
   mapper-locations: classpath:mapper/*.xml
@@ -94,14 +117,8 @@ mybatis:
   configuration:
     map-underscore-to-camel-case: true
 
-security:
-  user:
-    name: admin
-    password: admin
-
 logging:
   level:
-    org.springframework.security: DEBUG
     org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping: INFO
 
 holiday:

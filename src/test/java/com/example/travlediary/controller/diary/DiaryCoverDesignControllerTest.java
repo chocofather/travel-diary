@@ -15,7 +15,7 @@ import com.example.travlediary.service.diary.DiaryCoverDesignService;
 import com.example.travlediary.service.diary.DiaryCoverLibraryRegistrationService;
 import com.example.travlediary.service.diary.DiaryLabelFontCatalog;
 import com.example.travlediary.service.diary.DiaryStickerCatalog;
-import com.example.travlediary.service.file.FileUploadService;
+import com.example.travlediary.service.file.DiaryPrivatePhotoStorage;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.io.TempDir;
@@ -74,7 +74,7 @@ class DiaryCoverDesignControllerTest {
     @MockitoBean
     private UserMapper userMapper;
     @MockitoBean
-    private FileUploadService fileUploadService;
+    private DiaryPrivatePhotoStorage diaryPrivatePhotoStorage;
     @MockitoBean
     private CustomUserDetails userDetails;
     @MockitoBean
@@ -108,22 +108,22 @@ class DiaryCoverDesignControllerTest {
         verify(diaryCoverLibraryRegistrationService, never()).register(any(), any());
     }
 
+    /**
+     * 예전 보관함 주소는 전용 화면 대신 나의 여행일기 위 표지 디자인 패널로 보낸다.
+     * (보유 디자인 목록은 패널 아래쪽이 그린다 — DiaryCoverLibraryControllerTest)
+     * 앞 요청이 남긴 안내 문구도 다음 화면까지 옮기고, 목록을 따로 읽지 않는다.
+     */
     @Test
-    void eachShelfCardOffersTheLibraryShareEntry() throws Exception {
-        when(userDetails.getId()).thenReturn(7L);
-        when(diaryCoverDesignService.getMyDesigns(7L))
-                .thenReturn(List.of(design(5L, "제주 여행")));
-
-        String body = mockMvc.perform(get("/diaries/cover-designs")
+    void theOldShelfAddressOpensTheCoverDesignPanelOnTheDiaryList() throws Exception {
+        mockMvc.perform(get("/diaries/cover-designs")
+                        .flashAttr("coverDesignMessage", "표지 디자인을 삭제했습니다.")
                         .with(authentication(new UsernamePasswordAuthenticationToken(
                                 userDetails, null, List.of()))))
-                .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/diaries?coverDesigns=open"))
+                .andExpect(flash().attribute("coverDesignMessage", "표지 디자인을 삭제했습니다."));
 
-        assertThat(body).contains("/diaries/cover-designs/5/library-share")
-                .contains("라이브러리에 공유")
-                .contains("href=\"/diaries/cover-library\"")
-                .contains("표지 라이브러리");
+        verify(diaryCoverDesignService, never()).getMyDesigns(any());
     }
 
     @Test
@@ -144,7 +144,9 @@ class DiaryCoverDesignControllerTest {
                 .andReturn().getResponse().getContentAsString();
 
         assertThat(body).contains("diary-cover-canvas")
-                .contains("/uploads/diary-cover-designs/a.jpg")
+                // 사진은 저장 키가 아니라 통제된 주소로만 그려진다
+                .contains(photoViewUrl(101L))
+                .doesNotContain("/uploads/diary-cover-designs/a.jpg")
                 .contains("photoModes[101]")
                 .contains("value=\"EXCLUDED\" checked=\"checked\"")
                 .contains("사진 제외")
@@ -164,7 +166,7 @@ class DiaryCoverDesignControllerTest {
                         .with(authentication(new UsernamePasswordAuthenticationToken(
                                 userDetails, null, List.of()))))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/diaries/cover-designs"))
+                .andExpect(redirectedUrl("/diaries?coverDesigns=open"))
                 .andExpect(flash().attribute("coverDesignMessage",
                         "표지 디자인을 라이브러리에 공유했습니다."));
 
@@ -190,7 +192,7 @@ class DiaryCoverDesignControllerTest {
                         .with(authentication(new UsernamePasswordAuthenticationToken(
                                 userDetails, null, List.of()))))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/diaries/cover-designs"));
+                .andExpect(redirectedUrl("/diaries?coverDesigns=open"));
 
         ArgumentCaptor<DiaryCoverLibraryRegistrationRequest> captor =
                 ArgumentCaptor.forClass(DiaryCoverLibraryRegistrationRequest.class);
@@ -246,6 +248,37 @@ class DiaryCoverDesignControllerTest {
                         "표지 디자인을 공유하지 못했습니다. 잠시 후 다시 시도해 주세요."));
     }
 
+    /** 라이브러리에서 받은 디자인은 공유 화면을 열지 않고, 공유 등록이 거부되면 안내와 함께 돌려보낸다. */
+    @Test
+    void libraryDownloadedDesignCannotOpenOrSubmitTheShareForm() throws Exception {
+        when(userDetails.getId()).thenReturn(7L);
+        DiaryCoverDesign downloaded = design(5L, "받은 표지");
+        downloaded.setSourceLibraryItemId(11L);
+        when(diaryCoverDesignService.getMyDesign(5L, 7L)).thenReturn(downloaded);
+
+        mockMvc.perform(get("/diaries/cover-designs/5/library-share")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/diaries?coverDesigns=open"))
+                .andExpect(flash().attribute("coverDesignError",
+                        "라이브러리에서 받은 디자인은 다시 공유할 수 없습니다."));
+        verify(diaryCoverDesignElementService, never()).getElements(any(), any());
+
+        org.mockito.Mockito.doThrow(new ResponseStatusException(
+                        HttpStatus.CONFLICT, "라이브러리에서 받은 디자인은 다시 공유할 수 없습니다."))
+                .when(diaryCoverLibraryRegistrationService).register(eq(7L), any());
+        mockMvc.perform(post("/diaries/cover-designs/5/library-share")
+                        .param("title", "남의 표지를 내 것처럼")
+                        .with(csrf())
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                userDetails, null, List.of()))))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/diaries?coverDesigns=open"))
+                .andExpect(flash().attribute("coverDesignError",
+                        "라이브러리에서 받은 디자인은 다시 공유할 수 없습니다."));
+    }
+
     @Test
     void anotherUsersDesignCannotBeShared() throws Exception {
         when(userDetails.getId()).thenReturn(7L);
@@ -259,7 +292,7 @@ class DiaryCoverDesignControllerTest {
                         .with(authentication(new UsernamePasswordAuthenticationToken(
                                 userDetails, null, List.of()))))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/diaries/cover-designs"))
+                .andExpect(redirectedUrl("/diaries?coverDesigns=open"))
                 .andExpect(flash().attribute("coverDesignError",
                         "표지 디자인을 찾을 수 없거나 공유 권한이 없습니다."));
     }
@@ -306,76 +339,9 @@ class DiaryCoverDesignControllerTest {
                         .with(authentication(new UsernamePasswordAuthenticationToken(
                                 userDetails, null, List.of()))))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/diaries/cover-designs"));
+                .andExpect(redirectedUrl("/diaries?coverDesigns=open"));
 
         verify(diaryCoverLibraryRegistrationService).register(eq(7L), any());
-    }
-
-    /** 보관함은 언제나 로그인한 사람의 것만 읽는다. (요청에 실린 소유자 값은 쓰지 않는다) */
-    @Test
-    void theShelfOnlyShowsMyOwnDesigns() throws Exception {
-        when(userDetails.getId()).thenReturn(7L);
-        when(diaryCoverDesignService.getMyDesigns(7L)).thenReturn(List.of(design(5L, "제주 여행")));
-
-        String body = mockMvc.perform(get("/diaries/cover-designs")
-                        .with(authentication(new UsernamePasswordAuthenticationToken(
-                                userDetails, null, List.of()))))
-                .andExpect(status().isOk())
-                .andExpect(view().name("diary/cover-designs"))
-                .andReturn().getResponse().getContentAsString();
-
-        assertThat(body).contains("제주 여행");
-        // 표지 미리보기는 목록 카드와 같은 재질 클래스를 쓴다
-        assertThat(body).contains("diary-cover-canvas").contains("diary-cover-leather-black");
-        // 다음 단계에서 이 안쪽이 자유배치 캔버스가 된다
-        assertThat(body).contains("diary-cover-surface");
-        // 디자인은 갤러리 카드 안에서 열고, 공유·삭제 동작은 기존 경로를 유지한다.
-        assertThat(body).contains("diary-cover-design-gallery")
-                .contains("href=\"/diaries/cover-designs/5/edit\"")
-                .contains("href=\"/diaries/cover-designs/5/library-share\"")
-                .contains("diary-book-menu")
-                .contains("/js/diary-book-menu.js");
-        verify(diaryCoverDesignService).getMyDesigns(7L);
-    }
-
-    /**
-     * 카드에는 꾸민 표지가 그대로 줄어 보인다.
-     * 요소는 카드마다 따로 묻지 않고 디자인 번호를 모아 한 번에 읽는다.
-     */
-    @Test
-    void theShelfShowsTheFinishedCoversAndAsksForTheElementsOnlyOnce() throws Exception {
-        when(userDetails.getId()).thenReturn(7L);
-        when(diaryCoverDesignService.getMyDesigns(7L))
-                .thenReturn(List.of(design(5L, "제주 여행"), design(6L, "빈티지")));
-        when(diaryCoverDesignElementService.getElementsByDesign(List.of(5L, 6L), 7L))
-                .thenReturn(Map.of(
-                        5L, List.of(photo(101L, "/uploads/diary-cover-designs/a.jpg"),
-                                sticker(100L, "/images/diary/stickers/travel/plane.svg")),
-                        6L, List.of()));
-
-        String body = mockMvc.perform(get("/diaries/cover-designs")
-                        .with(authentication(new UsernamePasswordAuthenticationToken(
-                                userDetails, null, List.of()))))
-                .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
-
-        // 사진과 스티커가 실제로 그려진다
-        assertThat(body).contains("/uploads/diary-cover-designs/a.jpg");
-        assertThat(body).contains("/images/diary/stickers/travel/plane.svg");
-        assertThat(body).contains("is-photo-full");
-        // 보기 전용이다. 조작 손잡이도 저장 주소도 없다
-        assertThat(body).doesNotContain("diary-resize-handle")
-                .doesNotContain("diary-rotate-handle")
-                .doesNotContain("diary-layer-action")
-                .doesNotContain("data-position-url")
-                .doesNotContain("is-editable");
-        // 마스킹테이프는 편집 화면과 같은 렌더러가 그린다
-        assertThat(body).contains("/js/diary-tape-repeat.js");
-        assertThat(body).doesNotContain("/js/diary-canvas-drag.js");
-
-        // 한 번만 묻는다 (카드 수만큼 부르지 않는다)
-        verify(diaryCoverDesignElementService).getElementsByDesign(List.of(5L, 6L), 7L);
-        verify(diaryCoverDesignElementService, never()).getElements(any(), any());
     }
 
     /** 새 여행일기 화면은 내 디자인 목록만 조각으로 다시 받아 올 수 있다. */
@@ -401,73 +367,6 @@ class DiaryCoverDesignControllerTest {
                 .contains("data-cover-design-option");
         verify(diaryCoverDesignService).getMyDesigns(7L);
         verify(diaryCoverDesignElementService).getElementsByDesign(List.of(5L), 7L);
-    }
-
-    /**
-     * 보관함 미리보기에도 라벨기로 붙인 글씨가 그대로 보인다.
-     * 편집 화면과 같은 모양 규칙·같은 글꼴 class·같은 상대좌표를 쓰고, 조작 UI 만 없다.
-     */
-    @Test
-    void theShelfAlsoShowsTheLabelsWithTheirFont() throws Exception {
-        when(userDetails.getId()).thenReturn(7L);
-        when(diaryCoverDesignService.getMyDesigns(7L)).thenReturn(List.of(design(5L, "제주 여행")));
-        when(diaryCoverDesignElementService.getElementsByDesign(List.of(5L), 7L))
-                .thenReturn(Map.of(5L, List.of(label(100L, "JEJU 2026", "park-dahyun"))));
-
-        String body = mockMvc.perform(get("/diaries/cover-designs")
-                        .with(authentication(new UsernamePasswordAuthenticationToken(
-                                userDetails, null, List.of()))))
-                .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
-
-        String item = between(body, "class=\"diary-canvas-item diary-label\"", "</figure>");
-        assertThat(item).contains("JEJU 2026").contains("diary-font-park-dahyun");
-        // 자리·크기·회전은 편집 화면과 같은 값이다
-        assertThat(item).contains("left:38.00000%").contains("width:44.00000%");
-        assertThat(item).contains("--diary-label-chars:9");
-        // 보기 전용이다. 조작 손잡이도 저장 주소도 없다
-        assertThat(item)
-                .doesNotContain("diary-resize-handle")
-                .doesNotContain("diary-layer-action")
-                .doesNotContain("data-position-url")
-                .doesNotContain("data-element-id");
-        // 글꼴 정의는 편집 화면과 같은 파일에서 온다
-        assertThat(body).contains("/css/diary-fonts.css");
-    }
-
-    /** 글꼴을 고르지 않고 붙인 글씨는 class 없이 기본 글꼴로 그려진다. */
-    @Test
-    void aLabelWithoutAFontFallsBackToTheDefaultOne() throws Exception {
-        when(userDetails.getId()).thenReturn(7L);
-        when(diaryCoverDesignService.getMyDesigns(7L)).thenReturn(List.of(design(5L, "제주 여행")));
-        when(diaryCoverDesignElementService.getElementsByDesign(List.of(5L), 7L))
-                .thenReturn(Map.of(5L, List.of(label(100L, "여행의 순간", null))));
-
-        String body = mockMvc.perform(get("/diaries/cover-designs")
-                        .with(authentication(new UsernamePasswordAuthenticationToken(
-                                userDetails, null, List.of()))))
-                .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
-
-        String item = between(body, "class=\"diary-canvas-item diary-label\"", "</figure>");
-        assertThat(item).contains("여행의 순간");
-        assertThat(item).doesNotContain("diary-font-");
-    }
-
-    @Test
-    void theEmptyShelfInvitesMakingOne() throws Exception {
-        when(userDetails.getId()).thenReturn(7L);
-        when(diaryCoverDesignService.getMyDesigns(7L)).thenReturn(List.of());
-
-        String body = mockMvc.perform(get("/diaries/cover-designs")
-                        .with(authentication(new UsernamePasswordAuthenticationToken(
-                                userDetails, null, List.of()))))
-                .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
-
-        assertThat(body).contains("아직 저장한 표지 디자인이 없습니다.");
-        assertThat(body).contains("href=\"/diaries/cover-designs/new\"")
-                .doesNotContain("action=\"/diaries/cover-designs\"");
     }
 
     /** 저장 POST를 했을 때만 입력한 기본값으로 디자인을 처음 만든다. */
@@ -649,7 +548,7 @@ class DiaryCoverDesignControllerTest {
     @Test
     void severalPhotosBecomeSeveralElementsWithTheLookOfTheirEntryPoint() throws Exception {
         when(userDetails.getId()).thenReturn(7L);
-        when(fileUploadService.saveFile(any(), eq("diary-cover-designs")))
+        when(diaryPrivatePhotoStorage.save(any(), eq("diary-cover-designs")))
                 .thenReturn("/uploads/diary-cover-designs/a.jpg",
                         "/uploads/diary-cover-designs/b.jpg");
         when(diaryCoverDesignElementService.createPhoto(eq(5L), eq(7L), any(), anyInt(), any(), anyDouble()))
@@ -666,8 +565,8 @@ class DiaryCoverDesignControllerTest {
                 .andExpect(status().isOk());
 
         // 표지 디자인 전용 폴더에 둔다. (페이지 사진과 섞지 않는다)
-        verify(fileUploadService, org.mockito.Mockito.times(2))
-                .saveFile(any(), eq("diary-cover-designs"));
+        verify(diaryPrivatePhotoStorage, org.mockito.Mockito.times(2))
+                .save(any(), eq("diary-cover-designs"));
         // 두 번째 장은 첫 장과 겹치지 않게 한 칸 밀려 놓이고, 두 장 모두 고른 자리의 모습이다
         verify(diaryCoverDesignElementService)
                 .createPhoto(eq(5L), eq(7L), eq("/uploads/diary-cover-designs/a.jpg"),
@@ -681,7 +580,7 @@ class DiaryCoverDesignControllerTest {
     @Test
     void theOtherEntryPointStoresTheOtherLook() throws Exception {
         when(userDetails.getId()).thenReturn(7L);
-        when(fileUploadService.saveFile(any(), eq("diary-cover-designs")))
+        when(diaryPrivatePhotoStorage.save(any(), eq("diary-cover-designs")))
                 .thenReturn("/uploads/diary-cover-designs/a.jpg");
         when(diaryCoverDesignElementService.createPhoto(eq(5L), eq(7L), any(), anyInt(), any(), anyDouble()))
                 .thenReturn(photo(101L, "/uploads/diary-cover-designs/a.jpg"));
@@ -701,17 +600,13 @@ class DiaryCoverDesignControllerTest {
 
     /** DB 저장이 실패하면 방금 올린 파일을 남기지 않는다. */
     @Test
-    void aPhotoThatCannotBeSavedLeavesNoFileBehind(@TempDir Path uploadRoot) throws Exception {
+    void aPhotoThatCannotBeSavedLeavesNoFileBehind() throws Exception {
         when(userDetails.getId()).thenReturn(7L);
-        Path saved = Files.createDirectories(uploadRoot.resolve("diary-cover-designs"))
-                .resolve("a.jpg");
-        Files.writeString(saved, "x");
-        when(fileUploadService.saveFile(any(), eq("diary-cover-designs")))
+        when(diaryPrivatePhotoStorage.save(any(), eq("diary-cover-designs")))
                 .thenReturn("/uploads/diary-cover-designs/a.jpg");
         when(diaryCoverDesignElementService.createPhoto(eq(5L), eq(7L), any(), anyInt(), any(), anyDouble()))
                 .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "표지 디자인을 찾을 수 없습니다."));
-        ReflectionTestUtils.setField(controller, "uploadPath", uploadRoot.toString());
 
         mockMvc.perform(multipart("/diaries/cover-designs/5/elements/photo")
                         .file(new MockMultipartFile("images", "a.jpg", "image/jpeg", new byte[]{1}))
@@ -721,19 +616,16 @@ class DiaryCoverDesignControllerTest {
                                 userDetails, null, List.of()))))
                 .andExpect(status().isNotFound());
 
-        assertThat(Files.exists(saved)).as("실패한 장의 파일").isFalse();
+        // 방금 저장한 사진만 정리한다. (실제 파일 위치는 private 저장소가 판단한다)
+        verify(diaryPrivatePhotoStorage).delete("/uploads/diary-cover-designs/a.jpg");
     }
 
     /** 사진을 지우면 올린 파일도 함께 정리된다. */
     @Test
-    void deletingAPhotoAlsoRemovesTheUploadedFile(@TempDir Path uploadRoot) throws Exception {
+    void deletingAPhotoAlsoRemovesTheUploadedFile() throws Exception {
         when(userDetails.getId()).thenReturn(7L);
-        Path saved = Files.createDirectories(uploadRoot.resolve("diary-cover-designs"))
-                .resolve("a.jpg");
-        Files.writeString(saved, "x");
         when(diaryCoverDesignElementService.delete(5L, 101L, 7L))
                 .thenReturn(photo(101L, "/uploads/diary-cover-designs/a.jpg"));
-        ReflectionTestUtils.setField(controller, "uploadPath", uploadRoot.toString());
 
         mockMvc.perform(post("/diaries/cover-designs/5/elements/101/photo/delete")
                         .with(csrf())
@@ -741,7 +633,7 @@ class DiaryCoverDesignControllerTest {
                                 userDetails, null, List.of()))))
                 .andExpect(status().isNoContent());
 
-        assertThat(Files.exists(saved)).as("지운 사진의 파일").isFalse();
+        verify(diaryPrivatePhotoStorage).delete("/uploads/diary-cover-designs/a.jpg");
     }
 
     /**
@@ -749,15 +641,11 @@ class DiaryCoverDesignControllerTest {
      * 공용 asset 이라 지우면 다른 디자인과 페이지 다꾸까지 함께 깨진다.
      */
     @Test
-    void removingAStickerNeverTouchesAnyFile(@TempDir Path uploadRoot) throws Exception {
+    void removingAStickerNeverTouchesAnyFile() throws Exception {
         when(userDetails.getId()).thenReturn(7L);
-        Path assetLike = Files.createDirectories(uploadRoot.resolve("images/diary/stickers/travel"))
-                .resolve("plane.svg");
-        Files.writeString(assetLike, "x");
         // 공용 asset 경로를 들고 있는 요소를 뗀다
         when(diaryCoverDesignElementService.delete(5L, 100L, 7L))
                 .thenReturn(sticker(100L, "/images/diary/stickers/travel/plane.svg"));
-        ReflectionTestUtils.setField(controller, "uploadPath", uploadRoot.toString());
 
         mockMvc.perform(post("/diaries/cover-designs/5/elements/100/sticker/delete")
                         .with(csrf())
@@ -765,7 +653,8 @@ class DiaryCoverDesignControllerTest {
                                 userDetails, null, List.of()))))
                 .andExpect(status().isNoContent());
 
-        assertThat(Files.exists(assetLike)).as("공용 스티커 파일").isTrue();
+        // 사진이 아닌 요소는 저장소를 부르지도 않는다.
+        verify(diaryPrivatePhotoStorage, org.mockito.Mockito.never()).delete(any());
     }
 
     /**
@@ -883,11 +772,18 @@ class DiaryCoverDesignControllerTest {
         verify(diaryCoverDesignElementService).changePhotoStyle(5L, 101L, 7L, "POLAROID");
     }
 
+    /** 조회 서비스를 거친 사진 요소. 화면이 쓸 통제된 주소까지 채워 준다. */
     private DiaryCoverDesignElement photo(Long id, String imageUrl) {
         DiaryCoverDesignElement element = sticker(id, imageUrl);
         element.setElementType("PHOTO");
         element.setPhotoStyle("FULL");
+        element.setViewUrl(photoViewUrl(id));
         return element;
+    }
+
+    /** 내 표지 디자인 사진의 통제된 주소. (디자인 소유자만 열 수 있다) */
+    private String photoViewUrl(Long elementId) {
+        return "/diaries/cover-designs/5/elements/" + elementId + "/photo";
     }
 
     private void perform(String url, String... params) throws Exception {
@@ -1066,6 +962,8 @@ class DiaryCoverDesignControllerTest {
         element.setDesignId(5L);
         element.setElementType("STICKER");
         element.setImageUrl(imageUrl);
+        // 공용 asset 이라 저장 경로가 곧 공개 주소다.
+        element.setViewUrl(imageUrl);
         element.setPositionX(new java.math.BigDecimal("0.38000"));
         element.setPositionY(new java.math.BigDecimal("0.38000"));
         element.setWidth(new java.math.BigDecimal("0.22000"));
@@ -1103,7 +1001,7 @@ class DiaryCoverDesignControllerTest {
                         .with(authentication(new UsernamePasswordAuthenticationToken(
                                 userDetails, null, List.of()))))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/diaries/cover-designs"));
+                .andExpect(redirectedUrl("/diaries?coverDesigns=open"));
 
         verify(diaryCoverDesignService).delete(5L, 7L);
     }

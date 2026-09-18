@@ -6,6 +6,7 @@ import com.example.travlediary.model.User;
 import com.example.travlediary.model.UserRole;
 import com.example.travlediary.model.UserStatus;
 import com.example.travlediary.repository.user.UserMapper;
+import com.example.travlediary.security.AccountAbuseGuard;
 import com.example.travlediary.service.email.EmailDispatchService;
 import com.example.travlediary.service.email.EmailVerificationService;
 import com.example.travlediary.service.policy.PolicyConsentDecision;
@@ -21,6 +22,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.LocalDate;
@@ -45,6 +47,8 @@ public class UserService {
     private final EmailVerificationService emailVerificationService;
     private final SignupPolicyService signupPolicyService;
     private final RegistrationTransactionService registrationTransactionService;
+    /** 같은 주소로 복구 메일이 거듭 나가지 않게 하는 자리. 한도는 이 서비스가 알지 않는다. */
+    private final AccountAbuseGuard accountAbuseGuard;
 
     @Value("${custom.server-url}")
     private String serverUrl;
@@ -54,13 +58,15 @@ public class UserService {
                        EmailDispatchService emailDispatchService,
                        EmailVerificationService emailVerificationService,
                        SignupPolicyService signupPolicyService,
-                       RegistrationTransactionService registrationTransactionService) {
+                       RegistrationTransactionService registrationTransactionService,
+                       AccountAbuseGuard accountAbuseGuard) {
         this.userMapper = userMapper;
         this.passwordEncoder = passwordEncoder;
         this.emailDispatchService = emailDispatchService;
         this.emailVerificationService = emailVerificationService;
         this.signupPolicyService = signupPolicyService;
         this.registrationTransactionService = registrationTransactionService;
+        this.accountAbuseGuard = accountAbuseGuard;
     }
 
     // 🔐 로그인 기능
@@ -219,10 +225,23 @@ public class UserService {
     }
 
     /* ================= [ 아이디 찾기 메일 ] ================= */
+    /**
+     * 아이디 안내 메일 요청.
+     *
+     * <p>같은 주소로 거듭 요청해도 60초에 한 통만 나간다. 쉬어 가는 동안에도 하는 일과 돌려주는
+     * 값은 같아서, 계정이 있는지 없는지가 밖으로 드러나지 않는다.
+     */
     public void processFindUsername(String email) {
         String normalizedEmail = EmailPolicy.normalizeAndValidate(email);
+        /*
+          회원을 찾기 전에 먼저 센다. 회원이 있을 때만 세면 "셌는지" 로 존재 여부가 갈린다.
+          (이 호출은 예외를 던지지 않는다 — 막혀도 응답은 그대로다)
+        */
+        boolean mayDispatch = accountAbuseGuard.allowRecoveryEmail(
+                AccountAbuseGuard.RecoveryEmailKind.USERNAME_RECOVERY, normalizedEmail);
+
         User u = userMapper.findActiveByEmailForUsernameRecovery(normalizedEmail);
-        if (u == null) {
+        if (u == null || !mayDispatch) {
             return;
         }
 
@@ -230,10 +249,21 @@ public class UserService {
     }
 
     /* =========== [ 비밀번호 재설정 링크 발송 ] =========== */
+
+    /**
+     * 비밀번호 재설정 링크 요청.
+     *
+     * <p>cooldown 에 걸린 요청은 토큰을 새로 발급하지도 않는다. 재설정 토큰은 한 회원에
+     * 하나뿐이라 새로 발급하면 방금 메일로 받은 링크가 곧바로 무효가 되기 때문이다.
+     * 그래서 거듭 눌러도 먼저 받은 링크를 그대로 쓸 수 있다.
+     */
     public void processResetPasswordRequest(String username, String email) {
         String normalizedEmail = EmailPolicy.normalizeAndValidate(email);
+        boolean mayDispatch = accountAbuseGuard.allowRecoveryEmail(
+                AccountAbuseGuard.RecoveryEmailKind.PASSWORD_RESET, normalizedEmail);
+
         User u = userMapper.findByUsernameAndEmail(username.strip(), normalizedEmail);
-        if (u == null) {
+        if (u == null || !mayDispatch) {
             return;
         }
 
@@ -289,10 +319,27 @@ public class UserService {
     }
 
     /* =========== [ 실제 비밀번호 변경 ] =========== */
+
+    /**
+     * 확인 입력 없이 같은 값으로 바꾼다.
+     *
+     * <p>이 자리에도 경계를 두는 이유는 아래 3-인자 메서드를 같은 객체에서 부르기 때문이다.
+     * 그 호출은 Spring 프록시를 지나지 않아 저쪽 어노테이션이 걸리지 않는다. 바깥에서 들어오는
+     * 문은 둘 다이므로 둘 다 경계를 갖는다.
+     */
+    @Transactional
     public void resetPassword(String rawToken, String rawPw) {
         resetPassword(rawToken, rawPw, rawPw);
     }
 
+    /**
+     * 재설정 링크로 비밀번호를 바꾼다.
+     *
+     * <p>비밀번호 변경과 토큰 폐기는 한 작업이다. 한쪽만 커밋되면 비밀번호는 바뀌었는데
+     * 재설정 토큰이 만료 전까지 살아 있어, 메일을 가로챈 쪽이 다시 바꿀 수 있는 창이 남는다.
+     * 그래서 둘을 한 트랜잭션으로 묶는다.
+     */
+    @Transactional
     public void resetPassword(String rawToken, String rawPw, String passwordConfirmation) {
         User u = validateResetToken(rawToken);
         if (u == null) throw new IllegalArgumentException(INVALID_RESET_TOKEN_MESSAGE);

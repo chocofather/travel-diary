@@ -12,6 +12,7 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReadParam;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
 import javax.xml.XMLConstants;
@@ -19,7 +20,6 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import java.awt.image.BufferedImage;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -76,6 +76,14 @@ public class FileUploadService {
             "JPG, PNG, GIF 사진만 저장할 수 있습니다.";
     public static final String OVERSIZED_DIARY_PHOTO_MESSAGE =
             "사진은 10MB까지 저장할 수 있습니다.";
+    /** 일반 이미지 업로드 한도. multipart max-file-size 와 같은 값이다. */
+    private static final long GENERAL_IMAGE_MAX_SIZE = 10L * 1024 * 1024;
+    /** 검증 decode 때 한 변을 이 정도로 줄여 읽는다. (저장 파일은 원본 그대로다) */
+    private static final int VALIDATION_DECODE_EDGE = 2048;
+    public static final String UNSUPPORTED_IMAGE_MESSAGE =
+            "JPG, PNG, WEBP 이미지 파일만 업로드할 수 있습니다.";
+    public static final String OVERSIZED_IMAGE_MESSAGE =
+            "이미지는 10MB까지 업로드할 수 있습니다.";
     /** 아이콘 파일명은 code 에서 만들어지므로 code 형식을 저장 직전에 한 번 더 확인한다. */
     private static final Pattern AMENITY_CODE = Pattern.compile("^[A-Z0-9_]{2,50}$");
     public static final String UNSUPPORTED_AMENITY_ICON_MESSAGE =
@@ -116,63 +124,202 @@ public class FileUploadService {
     public String saveFile(MultipartFile file, String subDir) {
         if (file == null || file.isEmpty()) return null;
 
-        // 하위 폴더 지정
-        File dir = subDir.isEmpty()
-                ? new File(uploadDir)
-                : new File(uploadDir + File.separator + subDir);
-
-        if (!dir.exists()) dir.mkdirs();
-
-        String original = file.getOriginalFilename();
-        String ext = "";
-
-        int dotIdx = original.lastIndexOf('.');
-        if (dotIdx != -1) {
-            ext = original.substring(dotIdx);
-        }
-
-        String savedName = UUID.randomUUID().toString() + ext;
-        File dest = new File(dir, savedName);
-
-        try {
-            file.transferTo(dest);
-            System.out.println("✅ 저장 완료: " + dest.getAbsolutePath());
-        } catch (IOException e) {
-            System.err.println("❌ 저장 실패: " + e.getMessage());
-            throw new RuntimeException("파일 저장 실패", e);
-        }
-
-        // 웹 경로 반환
-        return subDir.isEmpty()
-                ? "/uploads/" + savedName
-                : "/uploads/" + subDir + "/" + savedName;
+        /*
+          /uploads/** 는 누구나 열 수 있는 같은 origin 경로다.
+          여기에 HTML/SVG 같은 파일이 저장되면 사이트 안에서 스크립트가 실행되므로,
+          실제로 펼쳐지는 JPEG/PNG/WEBP 만 받는다.
+          원본 파일명·확장자·클라이언트 MIME 은 믿지 않고, 확장자는 서버가 판별한 형식으로 정한다.
+        */
+        ImageFormat format = validateGeneralImage(file);
+        return storeValidatedFile(file, subDir, format.extension);
     }
 
     /**
-     * 이미 올라와 있는 파일을 다른 업로드 폴더로 복사한다.
-     *
-     * <p>표지 디자인을 여행일기에 적용할 때처럼, 원본과 적용본이 같은 파일을 나눠 쓰면
-     * 한쪽을 지웠을 때 다른 쪽이 깨진다. 그래서 값만 옮기지 않고 파일도 새로 만든다.
-     * 원본은 건드리지 않는다.
-     *
-     * @param sourceUrl 업로드 폴더 안의 웹 경로 (/uploads/... 로 시작해야 한다)
-     * @param subDir    복사해 둘 하위 폴더
-     * @return 복사본의 웹 경로. 원본이 없거나 업로드 폴더 밖을 가리키면 null.
+     * 검증을 마친 파일만 UUID 이름으로 저장한다.
+     * 파일 이름에 사용자 입력을 쓰지 않고, 하위 폴더도 업로드 폴더 밖을 가리키지 못하게 한다.
      */
+    private String storeValidatedFile(MultipartFile file, String subDir, String extension) {
+        String directoryName = subDir == null ? "" : subDir;
+        Path uploadRoot = Paths.get(uploadDir).toAbsolutePath().normalize();
+        Path directory = uploadRoot.resolve(directoryName).normalize();
+        ensureContained(uploadRoot, directory);
+
+        String savedName = UUID.randomUUID() + "." + extension;
+        Path destination = directory.resolve(savedName).normalize();
+        ensureContained(directory, destination);
+
+        try (InputStream input = file.getInputStream()) {
+            Files.createDirectories(directory);
+            Files.copy(input, destination);
+        } catch (IOException exception) {
+            deleteAmenityIconPathQuietly(destination);
+            // 서버 경로가 메시지로 새어 나가지 않게 원인만 붙여 둔다.
+            throw new RuntimeException("파일 저장 실패", exception);
+        }
+
+        return directoryName.isEmpty()
+                ? UPLOAD_URL_PREFIX + savedName
+                : UPLOAD_URL_PREFIX + directoryName + "/" + savedName;
+    }
+
     /**
-     * 체험 여행일기에서 가져온 사진 한 장 저장.
+     * 일반 이미지 업로드(에디터·게시글·댓글·다이어리·표지·이벤트)의 공통 검증.
+     *
+     * <p>파일 앞머리 signature 로 형식을 정하고, 그 형식으로 실제로 읽히는지까지 확인한다.
+     * <ul>
+     *   <li>JPEG/PNG: ImageIO 로 끝까지 decode 한다. 큰 사진이 메모리를 과하게 쓰지 않도록
+     *       한 변이 {@value #VALIDATION_DECODE_EDGE}px 안쪽이 되게 건너뛰며 읽는다.</li>
+     *   <li>WEBP: 표준 ImageIO 에 reader 가 없어 스티커 업로드와 같은 RIFF/VP8 구조 검증을 쓴다.</li>
+     * </ul>
+     * 크기는 multipart 한도와 같은 10MB 안쪽만 받으므로 WEBP 를 bytes 로 읽어도 상한이 있다.
+     */
+    private ImageFormat validateGeneralImage(MultipartFile file) {
+        if (file.getSize() > GENERAL_IMAGE_MAX_SIZE) {
+            throw new UnsupportedImageFormatException(OVERSIZED_IMAGE_MESSAGE);
+        }
+
+        ImageFormat format = detectGeneralImageFormat(file);
+        if (format == ImageFormat.WEBP) {
+            validateWebpStructure(file);
+            return format;
+        }
+
+        try (InputStream input = file.getInputStream();
+             ImageInputStream imageInput = ImageIO.createImageInputStream(input)) {
+            if (imageInput == null) {
+                throw unsupportedImage();
+            }
+            Iterator<ImageReader> readers = ImageIO.getImageReaders(imageInput);
+            if (!readers.hasNext()) {
+                throw unsupportedImage();
+            }
+            ImageReader reader = readers.next();
+            try {
+                if (!format.readerFormatName.equalsIgnoreCase(reader.getFormatName())) {
+                    throw unsupportedImage();
+                }
+                reader.setInput(imageInput);
+                int width = reader.getWidth(0);
+                int height = reader.getHeight(0);
+                if (width <= 0 || height <= 0) {
+                    throw unsupportedImage();
+                }
+                ImageReadParam param = reader.getDefaultReadParam();
+                int step = Math.max(1, (int) Math.ceil(
+                        (double) Math.max(width, height) / VALIDATION_DECODE_EDGE));
+                param.setSourceSubsampling(step, step, 0, 0);
+                // 머리말만 그럴듯한 파일을 막으려면 실제로 펼쳐 봐야 한다.
+                reader.read(0, param);
+            } finally {
+                reader.dispose();
+            }
+        } catch (IOException | RuntimeException exception) {
+            if (exception instanceof UnsupportedImageFormatException unsupported) {
+                throw unsupported;
+            }
+            throw unsupportedImage();
+        }
+        return format;
+    }
+
+    /** 파일 앞머리만 보고 JPEG/PNG/WEBP 중 무엇인지 정한다. 셋 다 아니면 거부한다. */
+    private ImageFormat detectGeneralImageFormat(MultipartFile file) {
+        byte[] header = new byte[12];
+        int length;
+        try (InputStream input = file.getInputStream()) {
+            length = input.readNBytes(header, 0, header.length);
+        } catch (IOException exception) {
+            throw unsupportedImage();
+        }
+
+        if (length >= 3
+                && unsigned(header[0]) == 0xff
+                && unsigned(header[1]) == 0xd8
+                && unsigned(header[2]) == 0xff) {
+            return ImageFormat.JPEG;
+        }
+        if (length >= 8
+                && unsigned(header[0]) == 0x89
+                && header[1] == 'P' && header[2] == 'N' && header[3] == 'G'
+                && unsigned(header[4]) == 0x0d && unsigned(header[5]) == 0x0a
+                && unsigned(header[6]) == 0x1a && unsigned(header[7]) == 0x0a) {
+            return ImageFormat.PNG;
+        }
+        if (length >= 12
+                && header[0] == 'R' && header[1] == 'I' && header[2] == 'F' && header[3] == 'F'
+                && header[8] == 'W' && header[9] == 'E' && header[10] == 'B' && header[11] == 'P') {
+            return ImageFormat.WEBP;
+        }
+        throw unsupportedImage();
+    }
+
+    /** WEBP 는 스티커 업로드와 같은 기준(RIFF 크기 일치 + 읽을 수 있는 VP8/VP8L 프레임)으로 본다. */
+    private void validateWebpStructure(MultipartFile file) {
+        try {
+            byte[] data = file.getBytes();
+            if (data.length < 20) {
+                throw unsupportedImage();
+            }
+            long declaredSize = readLittleEndian(data, 4, 4);
+            if (declaredSize + 8L != data.length
+                    || !containsValidWebpFrame(data, 12, data.length)) {
+                throw unsupportedImage();
+            }
+        } catch (IOException exception) {
+            throw unsupportedImage();
+        }
+    }
+
+    private UnsupportedImageFormatException unsupportedImage() {
+        return new UnsupportedImageFormatException(UNSUPPORTED_IMAGE_MESSAGE);
+    }
+
+    /** 일반 이미지 업로드가 받는 형식. 저장 확장자는 여기서만 정한다. */
+    private enum ImageFormat {
+        JPEG("jpg", "jpeg"),
+        PNG("png", "png"),
+        WEBP("webp", "webp");
+
+        private final String extension;
+        private final String readerFormatName;
+
+        ImageFormat(String extension, String readerFormatName) {
+            this.extension = extension;
+            this.readerFormatName = readerFormatName;
+        }
+    }
+
+    /**
+     * 일반 이미지 업로드 검증만 하고 저장은 하지 않는다.
+     *
+     * <p>개인 다이어리 사진은 공개 업로드 폴더가 아니라
+     * {@link DiaryPrivatePhotoStorage} 가 저장한다. 저장 자리는 달라도 형식 검증은
+     * 한 벌이어야 하므로, 그쪽이 이 자리를 빌려 쓴다.
+     *
+     * @return 서버가 파일 내용으로 정한 저장 확장자
+     */
+    public String validatedGeneralImageExtension(MultipartFile file) {
+        return validateGeneralImage(file).extension;
+    }
+
+    /**
+     * 체험 여행일기에서 가져온 사진의 검증만 하고 저장은 하지 않는다.
      *
      * <p>브라우저에서 이미 걸렀더라도 그것은 보안 경계가 아니다. 여기에서 다시 연다.
      * 파일 이름이나 클라이언트가 말한 MIME 을 믿지 않고 실제로 decode 되는지까지 본다.
      * (SVG 는 읽을 reader 가 없어 그대로 걸린다)
+     *
+     * @return 서버가 파일 내용으로 정한 저장 확장자. 체험 사진은 GIF 도 받는다.
      */
-    public String saveImportedDiaryPhoto(MultipartFile file, String subDir) {
-        validateImportedDiaryPhoto(file);
-        return saveFile(file, subDir);
+    public String validatedImportedDiaryPhotoExtension(MultipartFile file) {
+        return validateImportedDiaryPhoto(file);
     }
 
-    /** 실제로 열리는 사진인지. 크기와 형식을 함께 본다. */
-    private void validateImportedDiaryPhoto(MultipartFile file) {
+    /**
+     * 실제로 열리는 사진인지. 크기와 형식을 함께 본다.
+     * @return 판별한 형식의 저장 확장자 (원본 파일명의 확장자는 쓰지 않는다)
+     */
+    private String validateImportedDiaryPhoto(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new UnsupportedImageFormatException("사진 파일을 선택해 주세요.");
         }
@@ -201,6 +348,11 @@ public class FileUploadService {
                 }
                 // 머리말만 그럴듯한 파일을 막으려면 실제로 펼쳐 봐야 한다.
                 reader.read(0);
+                return switch (format.toUpperCase(java.util.Locale.ROOT)) {
+                    case "PNG" -> "png";
+                    case "GIF" -> "gif";
+                    default -> "jpg";
+                };
             } finally {
                 reader.dispose();
             }
@@ -211,38 +363,6 @@ public class FileUploadService {
 
     private UnsupportedImageFormatException unsupportedDiaryPhoto() {
         return new UnsupportedImageFormatException(UNSUPPORTED_DIARY_PHOTO_MESSAGE);
-    }
-
-    public String copyStoredFile(String sourceUrl, String subDir) {
-        if (sourceUrl == null || !sourceUrl.startsWith(UPLOAD_URL_PREFIX)) {
-            // 업로드한 파일이 아니면 복사할 것이 없다. (공용 asset 은 경로만 나눠 쓴다)
-            return null;
-        }
-
-        Path uploadRoot = Paths.get(uploadDir).toAbsolutePath().normalize();
-        Path source = uploadRoot.resolve(sourceUrl.substring(UPLOAD_URL_PREFIX.length()))
-                .normalize();
-        // '..' 같은 조각으로 업로드 폴더 밖을 가리키지 못하게 한다.
-        if (!source.startsWith(uploadRoot) || !Files.isRegularFile(source)) {
-            return null;
-        }
-
-        String name = source.getFileName().toString();
-        int dotIndex = name.lastIndexOf('.');
-        String ext = dotIndex == -1 ? "" : name.substring(dotIndex);
-        String savedName = UUID.randomUUID() + ext;
-
-        try {
-            Path targetDir = uploadRoot.resolve(subDir).normalize();
-            if (!targetDir.startsWith(uploadRoot)) {
-                return null;
-            }
-            Files.createDirectories(targetDir);
-            Files.copy(source, targetDir.resolve(savedName));
-        } catch (IOException exception) {
-            throw new RuntimeException("파일 복사 실패", exception);
-        }
-        return UPLOAD_URL_PREFIX + subDir + "/" + savedName;
     }
 
     /**

@@ -269,6 +269,28 @@ class DiaryCoverEditorAssetTest {
                 + "    }");
     }
 
+    /**
+     * 표지 편집기의 스티커 붙이기·라벨기·드래그 엔진(떼기 포함)은 모두 window.DiarySaveTransport.post 로 저장한다.
+     * 이 통로 스크립트가 빠지면 세 기능이 함께 "undefined 의 post" 오류로 멈추므로,
+     * 그것을 쓰는 모듈마다 통로가 실제로 실리고 그보다 앞에 실리는지 고정한다.
+     */
+    @Test
+    void theCoverEditorLoadsTheSaveTransportBeforeEveryModuleThatSavesThroughIt() throws IOException {
+        String template = read(COVER_EDIT);
+        int transport = template.indexOf("src=\"/js/diary-save-transport.js\"");
+        assertThat(transport).as("표지 편집기가 저장 통로를 싣지 않습니다").isNotNegative();
+
+        for (String module : new String[]{
+                "diary-canvas-drag.js", "diary-sticker-picker.js", "diary-label-picker.js"}) {
+            String script = read(Path.of("src/main/resources/static/js/" + module));
+            assertThat(script).as(module + " 저장 통로").contains("window.DiarySaveTransport.post(");
+            int moduleTag = template.indexOf("src=\"/js/" + module + "\"");
+            assertThat(moduleTag).as(module + " 스크립트").isNotNegative();
+            // defer 스크립트는 적힌 순서대로 실행되므로, 통로가 먼저 적혀 있어야 한다
+            assertThat(transport).as(module + " 보다 먼저 실려야 합니다").isLessThan(moduleTag);
+        }
+    }
+
     /** 페이지 다꾸는 예전 그대로다. (이번 기능 때문에 바뀐 곳이 없다) */
     @Test
     void thePageEditorIsUntouched() throws IOException {

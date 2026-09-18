@@ -86,6 +86,8 @@ public class DiaryContentSanitizer {
         // 위험 요소 제거는 공통 정리기에 맡기되, 다이어리 글꼴 클래스는 살아남게 함께 넘긴다.
         Document document = Jsoup.parseBodyFragment(
                 postContentSanitizer.sanitize(content, DIARY_FONT_CLASSES));
+        // 저장되는 HTML 이 jsoup 정렬기 판에 따라 달라지지 않게 한다. (공통 정리기와 같은 설정)
+        document.outputSettings(new Document.OutputSettings().prettyPrint(false));
         // body 자체는 대상이 아니므로 자식부터 훑는다.
         for (Element element : document.body().children().select("*")) {
             if (ALLOWED_TAGS.contains(element.tagName())) {

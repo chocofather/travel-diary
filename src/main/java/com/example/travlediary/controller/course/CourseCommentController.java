@@ -5,8 +5,10 @@ import com.example.travlediary.dto.CommentLocationDto;
 import com.example.travlediary.dto.CourseCommentDto;
 import com.example.travlediary.dto.CourseCommentRequest;
 import com.example.travlediary.dto.PageResult;
+import com.example.travlediary.security.ClientIpResolver;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.comment.CommentImageLimitException;
+import com.example.travlediary.service.file.UnsupportedImageFormatException;
 import com.example.travlediary.service.course.CourseCommentService;
 import com.example.travlediary.service.translation.ContentTranslationResponse;
 import com.example.travlediary.service.translation.ContentTranslationService;
@@ -93,7 +95,7 @@ public class CourseCommentController {
                     TranslatableContentType.COURSE_COMMENT,
                     commentId,
                     targetLanguage,
-                    request.getRemoteAddr(),
+                    ClientIpResolver.of(request),
                     userId);
             if ("PROCESSING".equals(response.status())) {
                 return ResponseEntity.status(HttpStatus.ACCEPTED)
@@ -137,7 +139,7 @@ public class CourseCommentController {
                     request.getCourseId(), userDetails.getId(), request.getContent(),
                     request.getReplyToCommentId(), images);
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
-        } catch (CommentImageLimitException e) {
+        } catch (CommentImageLimitException | UnsupportedImageFormatException e) {
             // 프런트에서 그대로 안내할 수 있도록 메시지를 JSON 으로 돌려준다.
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }

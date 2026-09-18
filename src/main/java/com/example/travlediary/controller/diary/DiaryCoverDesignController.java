@@ -9,6 +9,7 @@ import com.example.travlediary.model.DiaryCoverLibraryPhotoShareMode;
 import com.example.travlediary.model.DiaryCoverPhotoStyle;
 import com.example.travlediary.model.DiaryCoverMaterial;
 import com.example.travlediary.model.DiaryCoverStyle;
+import com.example.travlediary.model.DiaryPhotoUrls;
 import com.example.travlediary.model.DiarySticker;
 import com.example.travlediary.model.DiaryStickerKind;
 import com.example.travlediary.security.CustomUserDetails;
@@ -18,10 +19,10 @@ import com.example.travlediary.service.diary.DiaryCoverLibraryRegistrationServic
 import com.example.travlediary.service.diary.DiaryLabelFontCatalog;
 import com.example.travlediary.service.diary.DiaryPhotoFrame;
 import com.example.travlediary.service.diary.DiaryStickerCatalog;
-import com.example.travlediary.service.file.FileUploadService;
+import com.example.travlediary.service.file.DiaryPrivatePhotoStorage;
+import com.example.travlediary.service.file.UnsupportedImageFormatException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -39,10 +40,7 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.validation.BindingResult;
 
-import java.io.IOException;
 import java.math.BigDecimal;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -65,11 +63,13 @@ import java.util.stream.Collectors;
 @Slf4j
 public class DiaryCoverDesignController {
 
-    /** 표지 디자인에 올린 사진을 두는 곳. 페이지 사진(diary-pages)과 섞지 않는다. */
-    private static final String COVER_DESIGN_IMAGE_DIRECTORY = "diary-cover-designs";
+    /**
+     * 표지 디자인에 올린 사진을 두는 곳. 페이지 사진(diary-pages)과 섞지 않는다.
+     * 실제 파일은 공개 업로드 폴더가 아니라 private 저장소에 들어간다.
+     */
+    private static final String COVER_DESIGN_IMAGE_DIRECTORY =
+            DiaryPrivatePhotoStorage.COVER_DESIGN_DIRECTORY;
     private static final String PHOTO_ELEMENT_TYPE = "PHOTO";
-    /** 이 서비스가 올린 파일만 가리키는 주소 앞머리. 그 밖의 경로는 지우지 않는다. */
-    private static final String UPLOAD_URL_PREFIX = "/uploads/";
     /** 신규 미저장 화면에서 먼저 보여 주는 이름. */
     private static final String DEFAULT_DESIGN_NAME = "새 표지 디자인";
 
@@ -80,39 +80,33 @@ public class DiaryCoverDesignController {
     private final DiaryStickerCatalog diaryStickerCatalog;
     /** 라벨기 글꼴 목록. 이것도 페이지 다꾸와 같은 manifest 를 함께 쓴다. */
     private final DiaryLabelFontCatalog diaryLabelFontCatalog;
-    private final FileUploadService fileUploadService;
-
-    /** 업로드 폴더의 실제 경로. (application.yml 의 custom.upload-path) */
-    @Value("${custom.upload-path}")
-    private String uploadPath;
+    /** 표지 디자인 사진은 공개 업로드 폴더가 아니라 이 private 저장소에 둔다. */
+    private final DiaryPrivatePhotoStorage diaryPrivatePhotoStorage;
 
     /**
-     * 보관함 목록.
-     * 카드마다 완성된 표지를 그대로 줄여 보여 주므로 요소도 함께 읽는다.
-     * 카드 수만큼 묻지 않도록 디자인 번호를 모아 한 번에 읽는다.
+     * 예전 보관함 주소. 전용 페이지 대신 나의 여행일기 위 표지 디자인 패널을 연다.
+     * (내 보유 디자인 목록은 패널 아래쪽이 라이브러리 화면과 함께 보여 준다)
+     * 북마크·다른 화면의 링크가 깨지지 않도록 주소는 남겨 두고, 안내 문구도 함께 옮긴다.
      */
     @GetMapping
-    public String designs(@AuthenticationPrincipal CustomUserDetails userDetails, Model model) {
-        Long userId = userDetails.getId();
-        List<DiaryCoverDesign> designs = diaryCoverDesignService.getMyDesigns(userId);
-        List<Long> designIds = designs.stream().map(DiaryCoverDesign::getId).toList();
-
-        model.addAttribute("coverDesigns", designs);
-        model.addAttribute("coverElementsByDesign",
-                diaryCoverDesignElementService.getElementsByDesign(designIds, userId));
-        // 마스킹테이프 조각 경로. 편집 화면과 같은 값을 써서 같은 모습으로 그려진다.
-        model.addAttribute("stickerRepeats", diaryStickerCatalog.getRepeatsByImageUrl());
-        model.addAttribute("pageTitle", "내 표지 디자인");
-        return "diary/cover-designs";
+    public String designs(Model model, RedirectAttributes redirectAttributes) {
+        return DiaryCoverDesignHub.open(model, redirectAttributes);
     }
 
     /** 저장해 둔 내 표지를 확인하고 사진별 공유 범위를 고르는 화면. */
     @GetMapping("/{designId:\\d+}/library-share")
     public String libraryShareForm(@PathVariable Long designId,
                                    @AuthenticationPrincipal CustomUserDetails userDetails,
-                                   Model model) {
+                                   Model model,
+                                   RedirectAttributes redirectAttributes) {
         Long userId = userDetails.getId();
         DiaryCoverDesign design = diaryCoverDesignService.getMyDesign(designId, userId);
+        // 라이브러리에서 받은 디자인은 공유 화면도 열지 않는다. (등록 서비스도 다시 막는다)
+        if (design.getSourceLibraryItemId() != null) {
+            redirectAttributes.addFlashAttribute("coverDesignError",
+                    DiaryCoverLibraryRegistrationService.LIBRARY_SOURCED_SHARE_MESSAGE);
+            return DiaryCoverDesignHub.REDIRECT;
+        }
         List<DiaryCoverDesignElement> elements =
                 diaryCoverDesignElementService.getElements(designId, userId);
 
@@ -172,7 +166,13 @@ public class DiaryCoverDesignController {
             if (HttpStatus.NOT_FOUND.equals(exception.getStatusCode())) {
                 redirectAttributes.addFlashAttribute("coverDesignError",
                         "표지 디자인을 찾을 수 없거나 공유 권한이 없습니다.");
-                return "redirect:/diaries/cover-designs";
+                return DiaryCoverDesignHub.REDIRECT;
+            }
+            // 라이브러리에서 받은 디자인. 공유 화면으로 돌려보내도 다시 막히므로 표지 디자인 화면으로 보낸다.
+            if (HttpStatus.CONFLICT.equals(exception.getStatusCode())) {
+                redirectAttributes.addFlashAttribute("coverDesignError",
+                        DiaryCoverLibraryRegistrationService.LIBRARY_SOURCED_SHARE_MESSAGE);
+                return DiaryCoverDesignHub.REDIRECT;
             }
             if (exception.getStatusCode().is4xxClientError()) {
                 String message = exception.getReason() == null
@@ -193,7 +193,7 @@ public class DiaryCoverDesignController {
 
         redirectAttributes.addFlashAttribute("coverDesignMessage",
                 "표지 디자인을 라이브러리에 공유했습니다.");
-        return "redirect:/diaries/cover-designs";
+        return DiaryCoverDesignHub.REDIRECT;
     }
 
     private String redirectLibraryShareError(
@@ -311,7 +311,7 @@ public class DiaryCoverDesignController {
             // 이번 장에서 저장한 파일만 추적해 실패 시 정리한다. (기존 사진 업로드와 같은 방식)
             String savedImageUrl = null;
             try {
-                savedImageUrl = fileUploadService.saveFile(image, COVER_DESIGN_IMAGE_DIRECTORY);
+                savedImageUrl = diaryPrivatePhotoStorage.save(image, COVER_DESIGN_IMAGE_DIRECTORY);
                 // 폴라로이드의 처음 상자 비율은 사진 원본 비율에서 나온다. (가로 사진 → 가로 폴라로이드)
                 DiaryCoverDesignElement element = diaryCoverDesignElementService
                         .createPhoto(designId, userId, savedImageUrl, created.size(), photoStyle,
@@ -323,6 +323,14 @@ public class DiaryCoverDesignController {
                     return elementErrorResponse(exception, "사진을 붙이지 못했습니다.");
                 }
                 break; // 앞서 붙은 사진은 그대로 두고 거기까지만 돌려준다
+            } catch (UnsupportedImageFormatException exception) {
+                // 실제 JPEG/PNG/WEBP 가 아니면 저장하지 않는다. 다른 요소 오류와 같은 규칙으로 알린다.
+                if (created.isEmpty()) {
+                    return elementErrorResponse(
+                            new ResponseStatusException(HttpStatus.BAD_REQUEST, exception.getMessage()),
+                            "사진을 붙이지 못했습니다.");
+                }
+                break;
             } catch (RuntimeException exception) {
                 deleteUploadedFile(savedImageUrl);
                 throw exception;
@@ -571,7 +579,9 @@ public class DiaryCoverDesignController {
         String base = "/diaries/cover-designs/" + designId + "/elements/" + element.getId();
         return Map.ofEntries(
                 Map.entry("id", element.getId()),
-                Map.entry("imageUrl", element.getImageUrl()),
+                // 저장 키가 아니라 통제된 주소를 내려 준다. (화면은 이 주소로만 사진을 연다)
+                Map.entry("imageUrl",
+                        DiaryPhotoUrls.coverDesignElementPhoto(designId, element.getId())),
                 // 어떤 모습으로 붙었는지. (등록한 자리가 정한 값을 그대로 알려 준다)
                 Map.entry("photoStyle", element.getPhotoStyleCode()),
                 Map.entry("photoStyleClass", element.getPhotoStyleClass()),
@@ -593,18 +603,17 @@ public class DiaryCoverDesignController {
     /**
      * 이 화면에서 올린 파일만 지운다.
      *
-     * <p>업로드 폴더 안의 경로(/uploads/...)가 아니면 아무것도 하지 않는다.
-     * 스티커 같은 공용 asset 경로(/images/...)가 실수로 넘어와도 파일이 지워지지 않게 하는
-     * 방어다. (부르는 쪽에서도 유형으로 한 번 거르지만, 여기서 한 번 더 막는다)
+     * <p>관리 대상 저장 키가 아니면 저장소가 스스로 아무것도 하지 않는다. 스티커 같은 공용
+     * asset 경로(/images/...)가 실수로 넘어와도 파일이 지워지지 않게 하는 방어다.
+     * (부르는 쪽에서도 유형으로 한 번 거르지만, 저장소에서 한 번 더 막힌다)
      */
     private void deleteUploadedFile(String imageUrl) {
-        if (imageUrl == null || !imageUrl.startsWith(UPLOAD_URL_PREFIX)) {
+        if (imageUrl == null || imageUrl.isEmpty()) {
             return;
         }
         try {
-            String relativePath = imageUrl.substring(UPLOAD_URL_PREFIX.length());
-            Files.deleteIfExists(Paths.get(uploadPath, relativePath));
-        } catch (IOException ignored) {
+            diaryPrivatePhotoStorage.delete(imageUrl);
+        } catch (RuntimeException ignored) {
             // 파일 정리 실패는 삭제 요청을 깨뜨리지 않는다.
         }
     }
@@ -654,7 +663,7 @@ public class DiaryCoverDesignController {
                                RedirectAttributes redirectAttributes) {
         diaryCoverDesignService.delete(designId, userDetails.getId());
         redirectAttributes.addFlashAttribute("coverDesignMessage", "표지 디자인을 삭제했습니다.");
-        return "redirect:/diaries/cover-designs";
+        return DiaryCoverDesignHub.REDIRECT;
     }
 
     /**

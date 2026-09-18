@@ -35,6 +35,14 @@ public class DiaryCoverElement {
     private Integer zIndex; // 겹침 순서
     private Timestamp createdAt; // 생성일
     private Timestamp updatedAt; // 수정일
+    /**
+     * 화면이 쓰는 그림 주소. DB 칸이 아니라 조회 서비스가 채운다.
+     *
+     * <p>개인 사진은 private 저장소의 저장 키({@link #imageUrl})를 그대로 내보낼 수 없어
+     * 통제된 endpoint 주소가 담기고, 라이브러리 공유 사진은 기존 asset 주소가 담긴다.
+     * 공용 asset 인 스티커만 저장 경로가 곧 공개 주소다.
+     */
+    private String viewUrl;
 
     /** 스티커의 성격. 저장된 image_url 하나만 보고 페이지 다꾸와 같은 값을 얻는다. */
     public String getStickerKind() {

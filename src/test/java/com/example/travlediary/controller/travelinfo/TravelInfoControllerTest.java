@@ -42,6 +42,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -107,17 +108,17 @@ class TravelInfoControllerTest {
                     var document = Jsoup.parse(result.getResponse().getContentAsString());
                     assertThat(document.selectFirst(
                             "button[data-filter-name=categoryId][data-filter-value='']"))
-                            .isNotNull()
-                            .extracting(element -> element.attr("aria-pressed"))
-                            .isEqualTo("true");
+                            .isNotNull();
+                    assertThat(document.selectFirst(
+                            "button[data-filter-name=categoryId][data-filter-value='']")
+                            .attr("aria-pressed")).isEqualTo("true");
                     assertThat(document.selectFirst("a[data-travel-info-sort].is-active"))
-                            .isNotNull()
-                            .extracting(element -> element.attr("data-sort-value"))
-                            .isEqualTo("latest");
+                            .isNotNull();
+                    assertThat(document.selectFirst("a[data-travel-info-sort].is-active")
+                            .attr("data-sort-value")).isEqualTo("latest");
                     assertThat(document.selectFirst("a.travel-info-card-link"))
-                            .isNotNull()
-                            .extracting(element -> element.attr("href"))
-                            .asString()
+                            .isNotNull();
+                    assertThat(document.selectFirst("a.travel-info-card-link").attr("href"))
                             .startsWith("/travel-info/11?returnUrl=");
                 });
 
@@ -364,9 +365,10 @@ class TravelInfoControllerTest {
                             .containsExactly("1", "3", "5");
                     assertThat(document.selectFirst(
                             "button[data-filter-name=categoryId][data-filter-value='']"))
-                            .isNotNull()
-                            .extracting(element -> element.attr("aria-pressed"))
-                            .isEqualTo("false");
+                            .isNotNull();
+                    assertThat(document.selectFirst(
+                            "button[data-filter-name=categoryId][data-filter-value='']")
+                            .attr("aria-pressed")).isEqualTo("false");
                 });
 
         verify(travelInfoService).getPublicList(
@@ -410,8 +412,7 @@ class TravelInfoControllerTest {
                     // 일반 여행정보 버튼은 이 화면에 없다
                     assertThat(document.select("a[data-filter-content-type=GENERAL]")).isEmpty();
                     assertThat(document.selectFirst(
-                            "button[data-filter-name=categoryId][data-filter-value='3']"))
-                            .extracting(org.jsoup.nodes.Element::text)
+                            "button[data-filter-name=categoryId][data-filter-value='3']").text())
                             .isEqualTo("축제·행사");
                     assertThat(document.select(".travel-info-card.is-festival"))
                             .singleElement();
@@ -419,8 +420,7 @@ class TravelInfoControllerTest {
                             + ".travel-info-festival-thumbnail"))
                             .singleElement();
                     assertThat(document.selectFirst(".travel-info-card.is-festival "
-                            + ".travel-info-festival-thumbnail img"))
-                            .extracting(element -> element.attr("src"))
+                            + ".travel-info-festival-thumbnail img").attr("src"))
                             .isEqualTo("/uploads/travel-info/festivals/poster.jpg");
                     assertThat(document.select(".travel-info-card.is-festival "
                             + ".travel-info-festival-period"))
@@ -1030,20 +1030,24 @@ class TravelInfoControllerTest {
 
         mockMvc.perform(get("/travel-info"))
                 .andExpect(status().isOk());
-        mockMvc.perform(post("/travel-info"))
+        // 공개 규칙은 GET 뿐이다. 토큰을 갖춘 쓰기 요청도 로그인으로 보낸다
+        mockMvc.perform(post("/travel-info").with(csrf()))
                 .andExpect(status().is3xxRedirection());
+        // 토큰이 없으면 그 전에 CSRF 로 막힌다
+        mockMvc.perform(post("/travel-info"))
+                .andExpect(status().isForbidden());
         mockMvc.perform(get("/travel-info/10"))
                 .andExpect(status().isOk());
         mockMvc.perform(get(URI.create(
                         "/travel-info/10?returnUrl=%2Ftravel-info%3Fscope%3DDOMESTIC")))
                 .andExpect(status().isOk());
-        mockMvc.perform(post("/travel-info/10?returnUrl=%2Ftravel-info"))
+        mockMvc.perform(post("/travel-info/10?returnUrl=%2Ftravel-info").with(csrf()))
                 .andExpect(status().is3xxRedirection());
-        mockMvc.perform(put("/travel-info/10"))
+        mockMvc.perform(put("/travel-info/10").with(csrf()))
                 .andExpect(status().is3xxRedirection());
-        mockMvc.perform(patch("/travel-info/10"))
+        mockMvc.perform(patch("/travel-info/10").with(csrf()))
                 .andExpect(status().is3xxRedirection());
-        mockMvc.perform(delete("/travel-info/10"))
+        mockMvc.perform(delete("/travel-info/10").with(csrf()))
                 .andExpect(status().is3xxRedirection());
         mockMvc.perform(get("/travel-info/abc?returnUrl=%2Ftravel-info"))
                 .andExpect(status().is3xxRedirection());

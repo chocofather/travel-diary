@@ -226,9 +226,12 @@ class AccountRecoveryI18nContractTest {
     void theConfirmationPostIsProtectedByCsrf() throws Exception {
         String security = read("src/main/java/com/example/travlediary/config/SecurityConfig.java");
 
+        // 보호할 주소를 목록으로 적지 않는다. 기본 정책이 GET 외 모든 요청을 보호한다.
         assertThat(security)
-                .contains("^/users/recover-account/confirm$")
-                .doesNotContain("csrf(AbstractHttpConfigurer::disable)");
+                .doesNotContain("requireCsrfProtectionMatcher")
+                .doesNotContain("ignoringRequestMatchers")
+                .doesNotContain("csrf(AbstractHttpConfigurer::disable)")
+                .doesNotContain("csrf.disable()");
     }
 
     /* ---------- 복구 요청 UI 는 로그인 화면에서 사라졌다 ---------- */

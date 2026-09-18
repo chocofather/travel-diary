@@ -5,19 +5,16 @@ import com.example.travlediary.model.DiaryCover;
 import com.example.travlediary.model.DiaryCoverDesign;
 import com.example.travlediary.model.DiaryCoverDesignElement;
 import com.example.travlediary.model.DiaryCoverElement;
+import com.example.travlediary.model.DiaryPhotoUrls;
 import com.example.travlediary.repository.diary.DiaryCoverElementMapper;
 import com.example.travlediary.repository.diary.DiaryCoverMapper;
-import com.example.travlediary.service.file.FileUploadService;
+import com.example.travlediary.service.file.DiaryPrivatePhotoStorage;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -30,12 +27,13 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class DiaryCoverServiceImpl implements DiaryCoverService {
 
-    /** 적용본 사진을 두는 곳. 보관함 원본(diary-cover-designs)과 나눠 둔다. */
-    private static final String COVER_IMAGE_DIRECTORY = "diary-cover-elements";
+    /**
+     * 적용본 사진을 두는 곳. 보관함 원본(diary-cover-designs)과 나눠 둔다.
+     * 실제 파일은 공개 업로드 폴더가 아니라 private 저장소에 들어간다.
+     */
+    private static final String COVER_IMAGE_DIRECTORY =
+            DiaryPrivatePhotoStorage.COVER_ELEMENT_DIRECTORY;
     private static final String PHOTO_ELEMENT_TYPE = "PHOTO";
-    private static final String LIBRARY_ASSET_URL_PREFIX = "/diaries/cover-library/assets/";
-    /** 업로드한 파일을 가리키는 경로의 앞머리. 그 밖의 경로는 지우지 않는다. */
-    private static final String UPLOAD_URL_PREFIX = "/uploads/";
 
     /** 다이어리 소유권은 기존 서비스가 이미 확인해 준다. (그 규칙을 그대로 따른다) */
     private final DiaryService diaryService;
@@ -44,11 +42,8 @@ public class DiaryCoverServiceImpl implements DiaryCoverService {
     private final DiaryCoverDesignElementService diaryCoverDesignElementService;
     private final DiaryCoverMapper diaryCoverMapper;
     private final DiaryCoverElementMapper diaryCoverElementMapper;
-    private final FileUploadService fileUploadService;
-
-    /** 업로드 폴더의 실제 경로. (application.yml 의 custom.upload-path) */
-    @Value("${custom.upload-path}")
-    private String uploadPath;
+    /** 적용본 사진도 개인 사진이라 공개 업로드 폴더가 아니라 private 저장소에서 다룬다. */
+    private final DiaryPrivatePhotoStorage diaryPrivatePhotoStorage;
 
     @Override
     @Transactional(readOnly = true)
@@ -71,7 +66,7 @@ public class DiaryCoverServiceImpl implements DiaryCoverService {
         DiaryCover cover = getMyCover(diaryId, userId);
         List<DiaryCoverElement> elements =
                 diaryCoverElementMapper.findAllByCoverId(cover.getId());
-        prepareLibraryPhotoUrls(elements);
+        prepareViewUrls(diaryId, elements);
         return elements;
     }
 
@@ -123,8 +118,13 @@ public class DiaryCoverServiceImpl implements DiaryCoverService {
             return Map.of();
         }
         List<Long> coverIds = covers.stream().map(DiaryCover::getId).toList();
+        // 통제된 사진 주소에는 다이어리 번호가 필요한데 요소 행에는 없다. 표지에서 찾아 쓴다.
+        Map<Long, Long> diaryIdByCover = covers.stream()
+                .collect(Collectors.toMap(DiaryCover::getId, DiaryCover::getDiaryId,
+                        (first, second) -> first, LinkedHashMap::new));
         List<DiaryCoverElement> elements = diaryCoverElementMapper.findAllByCoverIds(coverIds);
-        prepareLibraryPhotoUrls(elements);
+        elements.forEach(element ->
+                prepareViewUrl(diaryIdByCover.get(element.getCoverId()), element));
         return elements.stream()
                 .collect(Collectors.groupingBy(DiaryCoverElement::getCoverId,
                         LinkedHashMap::new, Collectors.toList()));
@@ -240,7 +240,7 @@ public class DiaryCoverServiceImpl implements DiaryCoverService {
             copied.setLibraryPhotoAssetId(source.getLibraryPhotoAssetId());
         } else {
             String copiedUrl = PHOTO_ELEMENT_TYPE.equals(source.getElementType())
-                    ? fileUploadService.copyStoredFile(
+                    ? diaryPrivatePhotoStorage.copyManaged(
                             source.getImageUrl(), COVER_IMAGE_DIRECTORY)
                     : null;
             if (copiedUrl != null) {
@@ -255,26 +255,39 @@ public class DiaryCoverServiceImpl implements DiaryCoverService {
         }
     }
 
-    private void prepareLibraryPhotoUrls(List<DiaryCoverElement> elements) {
-        for (DiaryCoverElement element : elements) {
-            if (PHOTO_ELEMENT_TYPE.equals(element.getElementType())
-                    && element.getImageUrl() == null
-                    && element.getLibraryPhotoAssetId() != null) {
-                element.setImageUrl(
-                        LIBRARY_ASSET_URL_PREFIX + element.getLibraryPhotoAssetId());
-            }
+    private void prepareViewUrls(Long diaryId, List<DiaryCoverElement> elements) {
+        elements.forEach(element -> prepareViewUrl(diaryId, element));
+    }
+
+    /**
+     * 화면이 쓸 그림 주소를 채운다.
+     *
+     * <p>개인 사진은 private 저장소에 있어 저장 키를 그대로 내보낼 수 없으므로 소유권과 PIN 을
+     * 확인하는 통제된 주소를 담고, 라이브러리에서 받은 사진은 예전처럼 공유 asset 주소를 담는다.
+     * 공용 asset 인 스티커만 저장 경로가 곧 공개 주소다.
+     */
+    private void prepareViewUrl(Long diaryId, DiaryCoverElement element) {
+        if (!PHOTO_ELEMENT_TYPE.equals(element.getElementType())) {
+            element.setViewUrl(element.getImageUrl());
+            return;
         }
+        if (element.getLibraryPhotoAssetId() != null) {
+            element.setViewUrl(DiaryPhotoUrls.libraryAsset(element.getLibraryPhotoAssetId()));
+            return;
+        }
+        element.setViewUrl(element.getImageUrl() == null || diaryId == null
+                ? null
+                : DiaryPhotoUrls.coverElementPhoto(diaryId, element.getId()));
     }
 
     /** 이번 요청에서 새로 만든 복사본만 지운다. (원본 디자인 파일은 건드리지 않는다) */
     private void deleteCopiedFile(String imageUrl) {
-        if (imageUrl == null || !imageUrl.startsWith(UPLOAD_URL_PREFIX)) {
+        if (imageUrl == null || imageUrl.isEmpty()) {
             return;
         }
         try {
-            Files.deleteIfExists(
-                    Paths.get(uploadPath, imageUrl.substring(UPLOAD_URL_PREFIX.length())));
-        } catch (IOException | RuntimeException ignored) {
+            diaryPrivatePhotoStorage.delete(imageUrl);
+        } catch (RuntimeException ignored) {
             // 정리 실패가 원래 오류를 덮지 않게 한다.
         }
     }

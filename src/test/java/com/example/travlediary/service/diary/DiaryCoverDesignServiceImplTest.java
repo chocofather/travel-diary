@@ -126,6 +126,37 @@ class DiaryCoverDesignServiceImplTest {
         assertThat(captor.getValue().getName()).isEqualTo("빈티지");
     }
 
+    /**
+     * 라이브러리에서 받은 디자인을 편집해도 출처는 그대로 남는다. (재공유 제한이 유지된다)
+     * 서비스가 출처를 비우지 않고, 수정 SQL 도 출처 열을 건드리지 않는다.
+     */
+    @Test
+    void editingALibraryDesignKeepsItsSource() throws Exception {
+        DiaryCoverDesign existing = new DiaryCoverDesign();
+        existing.setId(5L);
+        existing.setUserId(7L);
+        existing.setSourceLibraryItemId(11L);
+        existing.setBaseCoverStyle("LEATHER_BLACK");
+        when(diaryCoverDesignMapper.findByIdAndUserId(5L, 7L)).thenReturn(existing);
+        when(diaryCoverDesignMapper.update(any())).thenReturn(1);
+
+        service.updateBasics(5L, 7L, "내 식으로 고친 표지", "HARDCOVER_NAVY", "#7a5cc4");
+        service.rename(5L, 7L, "다시 고친 이름");
+
+        ArgumentCaptor<DiaryCoverDesign> captor = ArgumentCaptor.forClass(DiaryCoverDesign.class);
+        verify(diaryCoverDesignMapper, org.mockito.Mockito.times(2)).update(captor.capture());
+        assertThat(captor.getAllValues()).allSatisfy(saved ->
+                assertThat(saved.getSourceLibraryItemId()).isEqualTo(11L));
+
+        String mapper;
+        try (var input = getClass().getResourceAsStream("/mapper/DiaryCoverDesignMapper.xml")) {
+            mapper = new String(input.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        }
+        int start = mapper.indexOf("<update id=\"update\"");
+        String update = mapper.substring(start, mapper.indexOf("</update>", start));
+        assertThat(update).doesNotContain("source_library_item_id =");
+    }
+
     /** 재질을 실제로 바꾸면 그 갈래의 대표 값으로 옮긴다. */
     @Test
     void switchingMaterialMovesToThatMaterial() {

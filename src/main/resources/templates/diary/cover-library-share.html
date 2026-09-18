@@ -53,7 +53,8 @@
             <article class="diary-cover-library-photo" th:each="photo, status : ${photoElements}">
               <div class="diary-cover-library-photo-thumb"
                    th:classappend="${photo.photoStyleClass}">
-                <img th:src="${photo.imageUrl}"
+                <!-- 내 디자인 사진은 통제된 주소로만 연다 (viewUrl) -->
+                <img th:src="${photo.viewUrl}"
                      th:alt="|표지 사진 ${status.count}|" loading="lazy" />
               </div>
               <div class="diary-cover-library-photo-choice">

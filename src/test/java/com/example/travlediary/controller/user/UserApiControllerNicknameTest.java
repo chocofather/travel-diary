@@ -1,5 +1,6 @@
 package com.example.travlediary.controller.user;
 
+import com.example.travlediary.security.InMemoryAccountAbuseGuard;
 import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.service.user.NicknamePolicy;
 import com.example.travlediary.service.user.NicknameVocabulary;
@@ -15,6 +16,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import org.springframework.mock.web.MockHttpServletRequest;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -26,13 +29,16 @@ import static org.mockito.Mockito.when;
 class UserApiControllerNicknameTest {
 
     private final UserService userService = mock(UserService.class);
-    private final UserApiController controller = new UserApiController(userService);
+    private final UserApiController controller =
+            new UserApiController(userService, new InMemoryAccountAbuseGuard());
+    /** 조회 제한은 IP 로 센다. 이 테스트의 관심사가 아니라 고정 주소 하나만 쓴다. */
+    private final MockHttpServletRequest request = new MockHttpServletRequest();
 
     @Test
     void existingSignupBooleanContractRemainsAvailableForValidNames() {
         when(userService.isNicknameExists("여행왕123")).thenReturn(false);
 
-        Map<String, Object> response = controller.checkNickname("여행왕123");
+        Map<String, Object> response = controller.checkNickname("여행왕123", request);
 
         assertThat(response)
                 .containsEntry("exists", false)
@@ -47,7 +53,7 @@ class UserApiControllerNicknameTest {
                         NicknamePolicy.ViolationType.FORBIDDEN,
                         NicknamePolicy.FORBIDDEN_MESSAGE));
 
-        Map<String, Object> response = controller.checkNickname("관12리34자");
+        Map<String, Object> response = controller.checkNickname("관12리34자", request);
 
         assertThat(response)
                 .containsEntry("exists", true)

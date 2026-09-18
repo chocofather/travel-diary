@@ -6,87 +6,220 @@
   <link rel="stylesheet" href="/css/diary.css">
   <link rel="stylesheet" href="/css/diary-fonts.css">
   <script src="/js/diary-tape-repeat.js" defer></script>
+  <!-- 아래 내 보유 디자인의 ⋯ 메뉴. 내 표지 디자인 페이지와 같은 스크립트다. -->
+  <script src="/js/diary-book-menu.js" defer></script>
+  <!-- 목록 카드의 ⋯ 메뉴에서 여는 신고 창 -->
+  <script src="/js/diary-cover-library-report.js" defer></script>
 </th:block>
 
 <th:block th:fragment="body">
-  <section class="diary-list-page diary-cover-library-page"
-           aria-labelledby="cover-library-title">
-    <header class="diary-list-header">
-      <div class="diary-list-heading">
-        <a class="diary-detail-back" th:href="@{/diaries}">← 나의 여행일기로</a>
-        <p class="diary-list-eyebrow">COVER LIBRARY</p>
-        <h1 id="cover-library-title">표지 라이브러리</h1>
-        <p class="diary-list-subtitle">여행자들이 만든 표지 디자인을 둘러보세요.</p>
-      </div>
-      <div class="diary-list-tools">
-        <a class="diary-cover-designs-button" th:href="@{/diaries/cover-library/mine}">
-          내 공유 디자인
-        </a>
-        <div class="diary-view-switch" role="group" aria-label="표지 정렬">
-          <a class="diary-view-option"
-             th:each="option : ${libraryPage.sortOptions}"
-             th:classappend="${option == libraryPage.sort} ? ' is-current' : ''"
-             th:attr="aria-current=${option == libraryPage.sort} ? 'page' : null"
-             th:href="@{/diaries/cover-library(sort=${libraryPage.sortParamFor(option)})}"
-             th:text="${option.label}">최신순</a>
-        </div>
-        <a class="diary-cover-designs-button" th:href="@{/diaries/cover-designs}">내 표지 디자인</a>
-      </div>
-    </header>
+  <section class="diary-library-page">
+    <!--
+      표지 디자인 허브 한 장. 위는 표지 라이브러리, 아래는 내 보유 디자인.
+      직접 열면 이 페이지로 보이고,
+      내 표지 디자인에서는 스크립트가 이 [data-cover-library-view] 만 가져가 패널 안에 넣는다.
+    -->
+    <div class="diary-library" data-cover-library-view="list">
+      <div th:replace="~{diary/cover-library/head :: head('list')}"></div>
 
-    <p class="diary-form-error" th:if="${coverLibraryError}"
-       th:text="${coverLibraryError}" role="alert">표지 디자인을 받을 수 없습니다.</p>
+      <!--
+        둘러보는 영역. 아주 옅은 바탕으로 아래 내 보유 디자인(흰 바탕)과 나눈다.
+        머리(제목·설명)만 남기고 본문을 접을 수 있다. 접으면 아래 내 보유 디자인이 위로 올라온다.
+      -->
+      <section class="diary-library-section is-library" aria-label="표지 라이브러리" data-library-section>
+        <div th:replace="~{diary/cover-library/head :: libraryHeading(
+                   ${libraryPage.sort != null ? libraryPage.sort.name() : 'LATEST'},
+                   ${libraryPage.totalCount})}"></div>
 
-    <ul class="diary-cover-library-grid" th:unless="${#lists.isEmpty(libraryItems)}">
-      <li class="diary-cover-library-card" th:each="item : ${libraryItems}">
-        <a th:href="@{/diaries/cover-library/{id}(id=${item.id})}"
-           th:attr="aria-label=|${item.title} 표지 상세|">
-          <div class="diary-cover-library-card-preview">
-            <div th:replace="~{diary/cover-preview :: canvas(
-                       ${item},
-                       ${libraryElementsByItem.getOrDefault(item.id, #lists.toList({}))})}"></div>
-          </div>
-          <div class="diary-cover-library-card-info">
-            <h2 th:text="${item.title}">여름의 표지</h2>
-            <p class="diary-cover-library-creator"
-               th:text="|by ${item.creatorDisplayName}|">by 여행자</p>
-            <div class="diary-cover-library-card-meta">
-              <span th:text="|다운로드 ${item.downloadCount}|">다운로드 0</span>
-              <time th:datetime="${#dates.format(item.publishedAt, 'yyyy-MM-dd')}"
-                    th:text="${#dates.format(item.publishedAt, 'yyyy.MM.dd')}">2026.09.17</time>
+        <div class="diary-library-section-body" id="cover-library-section-body" data-library-section-body>
+
+        <p class="diary-flash-message" th:if="${coverLibraryMessage}"
+           th:text="${coverLibraryMessage}" role="status">신고가 접수되었습니다.</p>
+        <p class="diary-form-error" th:if="${coverLibraryError}"
+           th:text="${coverLibraryError}" role="alert">표지 디자인을 받을 수 없습니다.</p>
+
+        <!--
+          내 표지 디자인 갤러리와 같은 모양. 상자 없이 표지만 세워 둔다.
+          상세 화면은 없다. 받기와 신고를 이 목록에서 바로 한다.
+        -->
+        <ul class="diary-cover-design-gallery diary-library-gallery"
+            th:unless="${#lists.isEmpty(libraryItems)}">
+          <li class="diary-cover-design-item" th:each="item : ${libraryItems}"
+              th:attr="data-library-item=${item.id}">
+            <div class="diary-library-cover">
+              <div th:replace="~{diary/cover-preview :: canvas(
+                         ${item},
+                         ${libraryElementsByItem.getOrDefault(item.id, #lists.toList({}))})}"></div>
             </div>
-          </div>
-        </a>
-      </li>
-    </ul>
 
-    <nav class="diary-pagination" th:if="${libraryPage.totalPages > 1}"
-         aria-label="표지 라이브러리 페이지">
-      <a th:if="${libraryPage.currentPage > 1}" class="page-nav" aria-label="이전 페이지"
-         th:href="@{/diaries/cover-library(sort=${libraryPage.sortParam},page=${libraryPage.currentPage - 1})}">&#8249;</a>
-      <span th:unless="${libraryPage.currentPage > 1}" class="page-nav is-disabled"
-            aria-disabled="true">&#8249;</span>
+            <div class="diary-library-item-info">
+              <h3 class="diary-cover-design-name" th:text="${item.title}">여름의 표지</h3>
+              <p class="diary-library-creator" th:text="|by ${item.creatorDisplayName}|">by 여행자</p>
+              <!-- 설명은 있을 때만, 두 줄까지만 보인다. -->
+              <p class="diary-library-item-description"
+                 th:if="${item.description != null and !#strings.isEmpty(item.description)}"
+                 th:text="${item.description}" th:title="${item.description}">바다의 색을 담은 표지</p>
 
-      <th:block th:each="i : ${#numbers.sequence(1, libraryPage.totalPages)}">
-        <a th:if="${i != libraryPage.currentPage}" class="page-number"
-           th:href="@{/diaries/cover-library(sort=${libraryPage.sortParam},page=${i})}"
-           th:text="${i}">1</a>
-        <span th:if="${i == libraryPage.currentPage}" class="page-number is-current"
-              aria-current="page" th:text="${i}">1</span>
-      </th:block>
+              <!-- 다운로드 수·등록일 한 줄 오른쪽에 작은 아이콘 액션(받기 또는 보유중, 신고)을 둔다. -->
+              <div class="diary-library-card-row">
+                <p class="diary-library-meta">
+                  <span data-library-download-count
+                        th:text="|다운로드 ${item.downloadCount}|">다운로드 0</span>
+                  <span aria-hidden="true">·</span>
+                  <time th:datetime="${#dates.format(item.publishedAt, 'yyyy-MM-dd')}"
+                        th:text="${#dates.format(item.publishedAt, 'yyyy.MM.dd')}">2026.09.17</time>
+                </p>
 
-      <a th:if="${libraryPage.currentPage < libraryPage.totalPages}" class="page-nav"
-         aria-label="다음 페이지"
-         th:href="@{/diaries/cover-library(sort=${libraryPage.sortParam},page=${libraryPage.currentPage + 1})}">&#8250;</a>
-      <span th:unless="${libraryPage.currentPage < libraryPage.totalPages}"
-            class="page-nav is-disabled" aria-disabled="true">&#8250;</span>
-    </nav>
+                <!--
+                  카드 상태는 이 순서로 정한다.
+                  A. 내가 공유한 표지 → "내 공유" (받기·신고 없음)
+                  B. 이 표지에서 받은 디자인을 지금 가지고 있음 → "보유중"
+                  C. 그 밖 → 받기(+)
+                -->
+                <div class="diary-library-card-actions"
+                     th:with="sharedByMe=${item.creatorUserId != null and item.creatorUserId == libraryViewerId},
+                              ownedByMe=${!sharedByMe and ownedLibraryItemIds.contains(item.id)}">
+                  <th:block th:if="${sharedByMe}">
+                    <span th:replace="~{diary/cover-library/head :: sharedBadge}"></span>
+                  </th:block>
+                  <!-- 지금 이 표지에서 받은 디자인을 가지고 있으면 받기 대신 보유중으로 둔다. (지웠다면 다시 받을 수 있다) -->
+                  <th:block th:if="${ownedByMe}">
+                    <span th:replace="~{diary/cover-library/head :: ownedBadge}"></span>
+                  </th:block>
+                  <!--
+                    바로 받기. 기존 다운로드 주소(같은 다운로드 서비스)로 보낸다.
+                    패널 안에서는 스크립트가 보내고, 이 카드와 아래 내 보유 디자인만 새로 그린다.
+                  -->
+                  <form class="diary-library-quick-download"
+                        th:unless="${sharedByMe or ownedByMe}"
+                        th:action="@{/diaries/cover-library/{id}/download(id=${item.id})}"
+                        method="post" data-cover-library-quick-download>
+                    <button type="submit" class="diary-library-icon-button is-add"
+                            data-tooltip="내 디자인에 추가"
+                            th:attr="aria-label=|${item.title} 표지를 내 디자인에 추가|">
+                      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3.5v9M3.5 8h9"/></svg>
+                    </button>
+                  </form>
 
-    <div class="diary-empty" th:if="${#lists.isEmpty(libraryItems)}" role="status">
-      <span class="diary-empty-mark" aria-hidden="true">◇</span>
-      <p class="diary-empty-title">아직 공개된 표지 디자인이 없습니다.</p>
-      <p class="diary-empty-text">내 표지 디자인에서 첫 표지를 공유해 보세요.</p>
-      <a class="diary-new-button" th:href="@{/diaries/cover-designs}">내 표지 디자인</a>
+                  <!-- 신고. 기존 신고 창을 이 표지 기준으로 연다. 내가 공유한 표지에는 두지 않는다. -->
+                  <th:block th:unless="${sharedByMe}">
+                  <button type="button" class="diary-library-icon-button is-report"
+                          data-tooltip="신고" data-cover-report-open
+                          th:attr="data-report-action=@{/diaries/cover-library/{id}/reports(id=${item.id})},
+                                   data-report-title=${item.title},
+                                   aria-label=|${item.title} 표지 신고|">
+                    <!-- 경광등 모양 선 아이콘 -->
+                    <svg viewBox="0 0 16 16" aria-hidden="true">
+                      <path d="M4.5 11.5V8.2a3.5 3.5 0 0 1 7 0v3.3"/>
+                      <path d="M3 13.5h10"/>
+                      <path d="M8 2v1.2M2.9 4.1l.9.8M13.1 4.1l-.9.8"/>
+                    </svg>
+                  </button>
+
+                  <!-- 이 표지에서 신고 대상으로 고를 수 있는 공유 사진. 신고 창을 열 때 대상 목록에 넣는다. -->
+                  <template data-cover-report-photos>
+                    <label class="diary-cover-library-report-target"
+                           th:each="element, photoStat : ${reportablePhotosByItem.getOrDefault(item.id, #lists.toList({}))}">
+                      <input type="radio" name="photoAssetId" th:value="${element.photoAssetId}">
+                      <span class="diary-cover-library-report-thumb">
+                        <img th:src="${element.imageUrl}" alt="" loading="lazy">
+                      </span>
+                      <span th:text="|공유 사진 ${photoStat.count}|">공유 사진 1</span>
+                    </label>
+                  </template>
+                  </th:block>
+                </div>
+              </div>
+            </div>
+          </li>
+        </ul>
+
+        <!-- 바로 받은 뒤 카드의 받기(+)를 바꿔 끼울 보유중 표시 -->
+        <template data-cover-library-owned-badge>
+          <span th:replace="~{diary/cover-library/head :: ownedBadge}"></span>
+        </template>
+        <!-- 방금 받은 표지와 서버가 반영한 다운로드 수. 패널이 해당 카드 숫자를 이 값으로 고친다. -->
+        <span hidden data-cover-library-download-result
+              th:if="${coverLibraryDownloadedItemId != null}"
+              th:attr="data-item-id=${coverLibraryDownloadedItemId},
+                       data-download-count=${coverLibraryDownloadCount}"></span>
+
+        <nav class="diary-pagination" th:if="${libraryPage.totalPages > 1}"
+             aria-label="표지 라이브러리 페이지">
+          <a th:if="${libraryPage.currentPage > 1}" class="page-nav" aria-label="이전 페이지"
+             th:href="@{/diaries/cover-library(sort=${libraryPage.sortParam},page=${libraryPage.currentPage - 1})}">&#8249;</a>
+          <span th:unless="${libraryPage.currentPage > 1}" class="page-nav is-disabled"
+                aria-disabled="true">&#8249;</span>
+
+          <th:block th:each="i : ${#numbers.sequence(1, libraryPage.totalPages)}">
+            <a th:if="${i != libraryPage.currentPage}" class="page-number"
+               th:href="@{/diaries/cover-library(sort=${libraryPage.sortParam},page=${i})}"
+               th:text="${i}">1</a>
+            <span th:if="${i == libraryPage.currentPage}" class="page-number is-current"
+                  aria-current="page" th:text="${i}">1</span>
+          </th:block>
+
+          <a th:if="${libraryPage.currentPage < libraryPage.totalPages}" class="page-nav"
+             aria-label="다음 페이지"
+             th:href="@{/diaries/cover-library(sort=${libraryPage.sortParam},page=${libraryPage.currentPage + 1})}">&#8250;</a>
+          <span th:unless="${libraryPage.currentPage < libraryPage.totalPages}"
+                class="page-nav is-disabled" aria-disabled="true">&#8250;</span>
+        </nav>
+
+        <div class="diary-library-empty" th:if="${#lists.isEmpty(libraryItems)}" role="status">
+          <p class="diary-library-empty-title">아직 공개된 표지 디자인이 없습니다.</p>
+          <p class="diary-library-empty-text">아래 내 보유 디자인에서 첫 표지를 공유해 보세요.</p>
+        </div>
+        </div>
+      </section>
+
+      <!--
+        공유 표지 신고 창. 목록에 하나만 두고, 카드의 신고 아이콘을 누른 표지 기준으로
+        보낼 주소와 공유 사진 대상만 바꿔 연다. (신고 서비스·검증은 그대로다)
+      -->
+      <div class="diary-cover-library-report-modal" data-cover-report-modal hidden>
+        <section class="diary-cover-library-report-dialog" role="dialog" aria-modal="true"
+                 aria-labelledby="cover-library-report-title">
+          <button type="button" class="diary-cover-library-report-close"
+                  data-cover-report-close aria-label="신고 창 닫기">×</button>
+          <h2 id="cover-library-report-title">공유 표지 신고</h2>
+          <p><span class="diary-cover-library-report-subject" data-cover-report-subject></span>문제가 있는 대상을 선택해 주세요.</p>
+
+          <form th:action="@{/diaries/cover-library}" method="post" data-cover-report-form>
+            <fieldset class="diary-cover-library-report-targets" data-cover-report-targets>
+              <legend>신고 대상</legend>
+              <label class="diary-cover-library-report-target is-item">
+                <input type="radio" name="photoAssetId" value="" checked>
+                <span>표지 전체</span>
+              </label>
+            </fieldset>
+
+            <label class="diary-cover-library-report-field">
+              <span>신고 사유</span>
+              <select name="reasonCode" required data-cover-report-reason>
+                <option value="">선택해 주세요</option>
+                <option th:each="reason : ${reportReasons}"
+                        th:value="${reason.name()}" th:text="${reason.displayName}">저작권 침해</option>
+              </select>
+            </label>
+
+            <label class="diary-cover-library-report-field">
+              <span>상세 설명 <small data-cover-report-description-hint>(선택)</small></span>
+              <textarea name="description" rows="4" maxlength="1000"
+                        data-cover-report-description
+                        placeholder="신고 내용을 구체적으로 알려주세요."></textarea>
+            </label>
+
+            <div class="diary-cover-library-report-actions">
+              <button type="button" data-cover-report-close>취소</button>
+              <button type="submit" class="is-danger" data-cover-report-submit>신고 접수</button>
+            </div>
+          </form>
+        </section>
+      </div>
+
+      <section th:replace="~{diary/cover-library/head :: owned(${coverDesigns}, ${coverElementsByDesign},
+                           ${coverDesignAddedId}, ${coverDesignAddedId != null ? coverDesignMessage : null})}"></section>
     </div>
   </section>
 </th:block>

@@ -31,6 +31,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -89,6 +90,7 @@ class AdminInfoCategoryControllerTest {
     void blankNameReturnsFieldErrorAndKeepsForm() throws Exception {
         mockMvc.perform(post("/admin/info-categories")
                         .with(user("admin").roles("ADMIN"))
+                        .with(csrf())
                         .param("name", "   ")
                         .param("displayOrder", "2")
                         .param("isVisible", "true"))
@@ -104,6 +106,7 @@ class AdminInfoCategoryControllerTest {
     void oversizedNameReturnsFieldError() throws Exception {
         mockMvc.perform(post("/admin/info-categories")
                         .with(user("admin").roles("ADMIN"))
+                        .with(csrf())
                         .param("name", "가".repeat(101))
                         .param("displayOrder", "1")
                         .param("isVisible", "true"))
@@ -117,6 +120,7 @@ class AdminInfoCategoryControllerTest {
     void zeroDisplayOrderReturnsFieldError() throws Exception {
         mockMvc.perform(post("/admin/info-categories")
                         .with(user("admin").roles("ADMIN"))
+                        .with(csrf())
                         .param("name", "여행준비")
                         .param("displayOrder", "0")
                         .param("isVisible", "true"))
@@ -130,6 +134,7 @@ class AdminInfoCategoryControllerTest {
     void validCreateRedirectsToList() throws Exception {
         mockMvc.perform(post("/admin/info-categories")
                         .with(user("admin").roles("ADMIN"))
+                        .with(csrf())
                         .param("name", "  여행준비  ")
                         .param("displayOrder", "3")
                         .param("contentType", "FESTIVAL")
@@ -151,6 +156,7 @@ class AdminInfoCategoryControllerTest {
 
         mockMvc.perform(post("/admin/info-categories")
                         .with(user("admin").roles("ADMIN"))
+                        .with(csrf())
                         .param("name", "여행준비")
                         .param("displayOrder", "1")
                         .param("isVisible", "true"))
@@ -167,6 +173,7 @@ class AdminInfoCategoryControllerTest {
 
         mockMvc.perform(post("/admin/info-categories/edit/7")
                         .with(user("admin").roles("ADMIN"))
+                        .with(csrf())
                         .param("name", "핫플레이스")
                         .param("displayOrder", "4")
                         .param("isVisible", "false"))
@@ -189,6 +196,7 @@ class AdminInfoCategoryControllerTest {
 
         mockMvc.perform(post("/admin/info-categories/edit/99")
                         .with(user("admin").roles("ADMIN"))
+                        .with(csrf())
                         .param("name", "여행준비")
                         .param("displayOrder", "1")
                         .param("isVisible", "true"))
@@ -200,7 +208,8 @@ class AdminInfoCategoryControllerTest {
     @Test
     void adminCanDeleteUnusedCategoryWithPost() throws Exception {
         mockMvc.perform(post("/admin/info-categories/7/delete")
-                        .with(user("admin").roles("ADMIN")))
+                        .with(user("admin").roles("ADMIN"))
+                        .with(csrf()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/info-categories"));
 
@@ -212,7 +221,8 @@ class AdminInfoCategoryControllerTest {
         doThrow(new InfoCategoryInUseException()).when(infoCategoryService).delete(7L);
 
         mockMvc.perform(post("/admin/info-categories/7/delete")
-                        .with(user("admin").roles("ADMIN")))
+                        .with(user("admin").roles("ADMIN"))
+                        .with(csrf()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/info-categories"))
                 .andExpect(flash().attribute("error",
@@ -225,7 +235,8 @@ class AdminInfoCategoryControllerTest {
                 .when(infoCategoryService).delete(99L);
 
         mockMvc.perform(post("/admin/info-categories/99/delete")
-                        .with(user("admin").roles("ADMIN")))
+                        .with(user("admin").roles("ADMIN"))
+                        .with(csrf()))
                 .andExpect(status().isNotFound());
     }
 
@@ -238,8 +249,15 @@ class AdminInfoCategoryControllerTest {
                         .with(user("member").roles("USER")))
                 .andExpect(status().isForbidden());
 
+        // 토큰을 갖춰도 권한에서 막힌다
         mockMvc.perform(post("/admin/info-categories/7/delete")
-                        .with(user("member").roles("USER")))
+                        .with(user("member").roles("USER"))
+                        .with(csrf()))
+                .andExpect(status().isForbidden());
+
+        // 관리자라도 토큰이 없으면 막힌다
+        mockMvc.perform(post("/admin/info-categories/7/delete")
+                        .with(user("admin").roles("ADMIN")))
                 .andExpect(status().isForbidden());
 
         verify(infoCategoryService, never()).delete(7L);
@@ -300,6 +318,7 @@ class AdminInfoCategoryControllerTest {
     void submittedForeignTranslationsReachTheService() throws Exception {
         mockMvc.perform(post("/admin/info-categories")
                         .with(user("admin").roles("ADMIN"))
+                        .with(csrf())
                         .param("name", "계절여행")
                         .param("contentType", "GENERAL")
                         .param("displayOrder", "1")

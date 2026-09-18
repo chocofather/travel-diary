@@ -30,6 +30,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -143,7 +144,8 @@ class AdminKtoTourBulkImportControllerTest {
                                 {"items":[{"contentId":"126508","contentTypeId":"12"},
                                           {"contentId":"126509","contentTypeId":"12"},
                                           {"contentId":"126510","contentTypeId":"12"}]}""")
-                        .with(user(adminPrincipal())))
+                        .with(user(adminPrincipal()))
+                        .with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.successCount").value(1))
                 .andExpect(jsonPath("$.duplicateCount").value(1))
@@ -158,7 +160,8 @@ class AdminKtoTourBulkImportControllerTest {
         mockMvc.perform(post("/admin/api/kto/tour/bulk/import")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"items\":[]}")
-                        .with(user(adminPrincipal())))
+                        .with(user(adminPrincipal()))
+                        .with(csrf()))
                 .andExpect(status().isBadRequest());
 
         verify(ktoTourBulkImportService, never()).importSelected(anyList(), any());

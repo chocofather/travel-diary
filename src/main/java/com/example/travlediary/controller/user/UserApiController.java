@@ -1,12 +1,18 @@
 package com.example.travlediary.controller.user;
 
 import com.example.travlediary.config.i18n.SupportedLanguage;
+import com.example.travlediary.security.AccountAbuseGuard;
+import com.example.travlediary.security.ClientIpResolver;
+import com.example.travlediary.security.TooManyAccountRequestsException;
 import com.example.travlediary.service.user.UserService;
 import com.example.travlediary.service.user.NicknamePolicy;
 import com.example.travlediary.service.user.NicknameVocabulary;
 import com.example.travlediary.service.user.PasswordPolicy;
 import com.example.travlediary.service.user.RegistrationValidationException;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,14 +25,22 @@ import java.util.Random;
 @RequestMapping("/api/users")
 public class UserApiController {
     private final UserService userService;
+    /**
+     * 비로그인으로 열려 있는 존재 확인 조회의 남용을 막는 자리.
+     * 한도 자체는 이 Controller 가 알지 않는다 — 나중에 공유 저장소로 바꿔도 여기는 그대로다.
+     */
+    private final AccountAbuseGuard accountAbuseGuard;
 
-    public UserApiController(UserService userService) {
+    public UserApiController(UserService userService, AccountAbuseGuard accountAbuseGuard) {
         this.userService = userService;
+        this.accountAbuseGuard = accountAbuseGuard;
     }
 
     // 아이디 중복 검사 API (JSON 응답)
     @GetMapping("/check-username")
-    public Map<String, Boolean> checkUsername(@RequestParam String username) {
+    public Map<String, Boolean> checkUsername(@RequestParam String username,
+                                              HttpServletRequest request) {
+        accountAbuseGuard.checkExistenceLookup(ClientIpResolver.of(request));
         Map<String, Boolean> response = new HashMap<>();
         response.put("exists", userService.isUsernameExists(username));
         return response;
@@ -34,7 +48,9 @@ public class UserApiController {
 
     // 닉네임 중복 검사 API (AJAX 요청 처리)
     @GetMapping("/check-nickname")
-    public Map<String, Object> checkNickname(@RequestParam String nickname) {
+    public Map<String, Object> checkNickname(@RequestParam String nickname,
+                                             HttpServletRequest request) {
+        accountAbuseGuard.checkExistenceLookup(ClientIpResolver.of(request));
         Map<String, Object> response = new HashMap<>();
         try {
             boolean exists = userService.isNicknameExists(nickname);
@@ -88,7 +104,9 @@ public class UserApiController {
 
     /*이메일 중복 */
     @GetMapping("/check-email")
-    public Map<String, Object> checkEmail(@RequestParam String email) {
+    public Map<String, Object> checkEmail(@RequestParam String email,
+                                          HttpServletRequest request) {
+        accountAbuseGuard.checkExistenceLookup(ClientIpResolver.of(request));
         Map<String, Object> response = new HashMap<>();
         try {
             response.put("exists", userService.isEmailExists(email));
@@ -98,6 +116,20 @@ public class UserApiController {
             response.put("valid", false);
         }
         return response;
+    }
+
+    /**
+     * 조회 한도를 넘었을 때의 응답.
+     *
+     * <p>기존 JSON 오류(번역 요청 제한 등)와 같은 모양으로 맞춘다.
+     * 어떤 한도에 걸렸는지, 어떤 키로 세고 있는지, 회원이 있는지는 담지 않는다.
+     */
+    @ExceptionHandler(TooManyAccountRequestsException.class)
+    public ResponseEntity<Map<String, String>> handleTooManyRequests(
+            TooManyAccountRequestsException exception) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(HttpHeaders.RETRY_AFTER, Long.toString(exception.getRetryAfterSeconds()))
+                .body(Map.of("message", "요청이 너무 많습니다. 잠시 후 다시 시도해주세요."));
     }
 
 }

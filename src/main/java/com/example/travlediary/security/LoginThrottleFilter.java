@@ -50,7 +50,7 @@ public class LoginThrottleFilter extends OncePerRequestFilter {
                                     FilterChain filterChain)
             throws ServletException, IOException {
         LoginThrottleStatus status = loginThrottle.status(
-                request.getParameter("username"), request.getRemoteAddr());
+                request.getParameter("username"), ClientIpResolver.of(request));
         if (status.blocked()) {
             request.getSession().setAttribute(
                     LoginFormState.SESSION_ATTRIBUTE,

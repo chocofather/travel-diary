@@ -16,6 +16,7 @@ import com.example.travlediary.repository.diary.DiaryCoverLibraryItemMapper;
 import com.example.travlediary.repository.diary.DiaryCoverLibraryPhotoAssetMapper;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.service.file.DiaryCoverLibraryPhotoStorage;
+import com.example.travlediary.service.file.DiaryPrivatePhotoStorage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,6 +33,7 @@ import org.springframework.transaction.support.DefaultTransactionStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -58,6 +60,7 @@ class DiaryCoverLibraryRegistrationServiceTest {
     @Mock private DiaryCoverDesignElementMapper designElementMapper;
     @Mock private UserMapper userMapper;
     @Mock private DiaryCoverLibraryPhotoStorage photoStorage;
+    @Mock private DiaryPrivatePhotoStorage diaryPhotoStorage;
 
     private DiaryCoverLibraryRegistrationServiceImpl service;
 
@@ -65,8 +68,17 @@ class DiaryCoverLibraryRegistrationServiceTest {
     void setUp() {
         service = new DiaryCoverLibraryRegistrationServiceImpl(
                 itemMapper, photoAssetMapper, elementMapper,
-                designMapper, designElementMapper, userMapper, photoStorage,
+                designMapper, designElementMapper, userMapper, photoStorage, diaryPhotoStorage,
                 Clock.fixed(CONFIRMED_AT, ZoneOffset.UTC));
+    }
+
+    /** 공유 원본은 개인 사진 저장소가 저장 키를 확인해 내준 경로만 쓴다. */
+    private void givenSharedSource(DiaryCoverDesignElement photo, String storageKey) {
+        Path source = Path.of("/tmp/private-diary", storageKey);
+        when(diaryPhotoStorage.resolveManagedSource(photo.getImageUrl())).thenReturn(source);
+        when(photoStorage.copyFromDiaryPrivateStorage(source))
+                .thenReturn(new DiaryCoverLibraryPhotoStorage.StoredPhoto(
+                        storageKey, "image/jpeg", 321L));
     }
 
     @Test
@@ -125,9 +137,7 @@ class DiaryCoverLibraryRegistrationServiceTest {
     void includedPhotoCreatesAPrivateAssetAndLinksTheSnapshotElement() {
         DiaryCoverDesignElement photo = photo(101L, "FULL", "/uploads/diary-cover-designs/original.jpg");
         prepareRegistration(ownedDesign(), List.of(photo));
-        when(photoStorage.copyFromPublicUpload(photo.getImageUrl()))
-                .thenReturn(new DiaryCoverLibraryPhotoStorage.StoredPhoto(
-                        "photos/private-copy.jpg", "image/jpeg", 321L));
+        givenSharedSource(photo, "photos/private-copy.jpg");
         when(photoAssetMapper.insert(any())).thenAnswer(invocation -> {
             invocation.getArgument(0, DiaryCoverLibraryPhotoAsset.class).setId(701L);
             return 1;
@@ -237,9 +247,7 @@ class DiaryCoverLibraryRegistrationServiceTest {
     void aDatabaseFailureRollsBackAndDeletesEveryNewPrivatePhoto() {
         DiaryCoverDesignElement photo = photo(101L, "FULL", "/uploads/photo.jpg");
         prepareRegistration(ownedDesign(), List.of(photo));
-        when(photoStorage.copyFromPublicUpload(photo.getImageUrl()))
-                .thenReturn(new DiaryCoverLibraryPhotoStorage.StoredPhoto(
-                        "photos/rollback.jpg", "image/jpeg", 321L));
+        givenSharedSource(photo, "photos/rollback.jpg");
         when(photoAssetMapper.insert(any())).thenAnswer(invocation -> {
             invocation.getArgument(0, DiaryCoverLibraryPhotoAsset.class).setId(701L);
             return 1;
@@ -267,6 +275,41 @@ class DiaryCoverLibraryRegistrationServiceTest {
         ProxyFactory proxyFactory = new ProxyFactory(service);
         proxyFactory.addAdvice(interceptor);
         return (DiaryCoverLibraryRegistrationService) proxyFactory.getProxy();
+    }
+
+    /**
+     * 라이브러리에서 받은 디자인(출처가 있는 디자인)은 편집했더라도 다시 공유할 수 없다.
+     * 요소·회원·파일을 읽거나 쓰기 전에 거부한다.
+     */
+    @Test
+    void designDownloadedFromTheLibraryCannotBeSharedAgain() {
+        DiaryCoverDesign downloaded = ownedDesign();
+        downloaded.setSourceLibraryItemId(11L);
+        when(designMapper.findByIdAndUserId(41L, 7L)).thenReturn(downloaded);
+
+        assertThatThrownBy(() -> service.register(7L, request(41L, Map.of())))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(error -> {
+                    ResponseStatusException exception = (ResponseStatusException) error;
+                    assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+                    assertThat(exception.getReason())
+                            .isEqualTo("라이브러리에서 받은 디자인은 다시 공유할 수 없습니다.");
+                });
+
+        verifyNoInteractions(designElementMapper, userMapper, itemMapper, elementMapper,
+                photoAssetMapper, photoStorage);
+    }
+
+    /** 직접 만든 디자인(출처 없음)은 기존처럼 공유된다. */
+    @Test
+    void designMadeByTheMemberCanStillBeShared() {
+        prepareRegistration(ownedDesign(), List.of(element(301L, "STICKER")));
+
+        DiaryCoverLibraryItem item = service.register(7L, request(41L, Map.of()));
+
+        assertThat(item.getId()).isEqualTo(501L);
+        verify(itemMapper).insert(any());
+        verify(elementMapper).insert(any());
     }
 
     private void prepareRegistration(DiaryCoverDesign design,

@@ -52,6 +52,19 @@ document.addEventListener('DOMContentLoaded', () => {
     /** 폼(댓글/답글)별 사진 선택 상태 */
     const imagePickers = new WeakMap();
 
+    /**
+     * 상태를 바꾸는 요청에 CSRF 토큰을 싣는다.
+     * 토큰과 헤더 이름은 layout 의 meta 값을 그대로 쓴다. (폼 전송이 쓰는 값과 같다)
+     */
+    function csrfHeader(method) {
+        const unsafe = !['GET', 'HEAD', 'OPTIONS', 'TRACE']
+            .includes(String(method || 'GET').toUpperCase());
+        if (!unsafe) return {};
+        const token = document.querySelector('meta[name="_csrf"]')?.content;
+        const header = document.querySelector('meta[name="_csrf_header"]')?.content;
+        return token && header ? {[header]: token} : {};
+    }
+
     async function requestJson(url, options = {}) {
         // FormData 는 브라우저가 boundary 를 붙여야 하므로 Content-Type 을 직접 지정하지 않는다.
         const sendsFormData = options.body instanceof FormData;
@@ -59,7 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const response = await fetch(url, {
             credentials: 'same-origin',
             ...options,
-            headers: {...baseHeaders, ...(options.headers || {})}
+            headers: {...baseHeaders, ...csrfHeader(options.method), ...(options.headers || {})}
         });
 
         if (response.status === 401) {

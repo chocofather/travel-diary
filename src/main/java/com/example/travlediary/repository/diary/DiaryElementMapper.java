@@ -1,5 +1,6 @@
 package com.example.travlediary.repository.diary;
 
+import com.example.travlediary.dto.DiaryPrivatePhotoRef;
 import com.example.travlediary.model.DiaryElement;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -19,6 +20,15 @@ public interface DiaryElementMapper {
     /** 해당 요소가 그 페이지에 속하는지 함께 확인하는 1건 조회 */
     DiaryElement findByIdAndPageId(@Param("elementId") Long elementId,
                                    @Param("pageId") Long pageId);
+
+    /**
+     * 통제된 사진 응답이 쓰는 한 줄. 요소 → 페이지 → 다이어리 관계와 소유권을 SQL 한 번에 본다.
+     * 관계가 어긋나거나 남의 다이어리이거나 사진 요소가 아니면 결과가 없다.
+     */
+    DiaryPrivatePhotoRef findPhotoRef(@Param("diaryId") Long diaryId,
+                                      @Param("pageId") Long pageId,
+                                      @Param("elementId") Long elementId,
+                                      @Param("userId") Long userId);
 
     /** 요소 등록. 생성된 id 는 element.id 에 채워진다. */
     int insert(DiaryElement element);

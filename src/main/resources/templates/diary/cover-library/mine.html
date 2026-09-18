@@ -6,86 +6,93 @@
   <link rel="stylesheet" href="/css/diary.css">
   <link rel="stylesheet" href="/css/diary-fonts.css">
   <script src="/js/diary-tape-repeat.js" defer></script>
+  <!-- 아래 내 보유 디자인의 ⋯ 메뉴. 내 표지 디자인 페이지와 같은 스크립트다. -->
+  <script src="/js/diary-book-menu.js" defer></script>
 </th:block>
 
 <th:block th:fragment="body">
-  <section class="diary-list-page diary-cover-library-page"
-           aria-labelledby="cover-library-mine-title">
-    <header class="diary-list-header">
-      <div class="diary-list-heading">
-        <a class="diary-detail-back" th:href="@{/diaries/cover-library}">← 표지 라이브러리로</a>
-        <p class="diary-list-eyebrow">MY SHARED COVERS</p>
-        <h1 id="cover-library-mine-title">내 공유 디자인</h1>
-        <p class="diary-list-subtitle">라이브러리에 공개한 표지를 관리할 수 있어요.</p>
-      </div>
-      <div class="diary-list-tools">
-        <a class="diary-cover-designs-button" th:href="@{/diaries/cover-library}">표지 라이브러리</a>
-        <a class="diary-cover-designs-button" th:href="@{/diaries/cover-designs}">내 표지 디자인</a>
-      </div>
-    </header>
+  <section class="diary-library-page">
+    <!--
+      내 공유 디자인은 위쪽 표지 라이브러리의 탭 하나로 둔다. 둘러보기와 같은 머리/갤러리를 쓰고,
+      아래 내 보유 디자인도 그대로 이어진다. (공유한 스냅샷과 보유 디자인은 섞지 않는다)
+    -->
+    <div class="diary-library" data-cover-library-view="mine">
+      <div th:replace="~{diary/cover-library/head :: head('mine')}"></div>
 
-    <p class="diary-flash-message" th:if="${coverLibraryMessage}"
-       th:text="${coverLibraryMessage}" role="status">상태를 변경했습니다.</p>
-    <p class="diary-form-error" th:if="${coverLibraryError}"
-       th:text="${coverLibraryError}" role="alert">상태를 변경할 수 없습니다.</p>
+      <section class="diary-library-section is-library" aria-label="표지 라이브러리" data-library-section>
+        <div th:replace="~{diary/cover-library/head :: libraryHeading('mine', null)}"></div>
 
-    <ul class="diary-cover-library-grid diary-cover-library-mine-grid"
-        th:unless="${#lists.isEmpty(libraryItems)}">
-      <li class="diary-cover-library-card diary-cover-library-mine-card"
-          th:each="item : ${libraryItems}">
-        <div class="diary-cover-library-card-preview">
-          <div th:replace="~{diary/cover-preview :: canvas(
-                     ${item},
-                     ${libraryElementsByItem.getOrDefault(item.id, #lists.toList({}))})}"></div>
+        <div class="diary-library-section-body" id="cover-library-section-body" data-library-section-body>
+
+        <p class="diary-flash-message" th:if="${coverLibraryMessage}"
+           th:text="${coverLibraryMessage}" role="status">상태를 변경했습니다.</p>
+        <p class="diary-form-error" th:if="${coverLibraryError}"
+           th:text="${coverLibraryError}" role="alert">상태를 변경할 수 없습니다.</p>
+
+        <p class="diary-library-section-note" th:unless="${#lists.isEmpty(libraryItems)}">
+          라이브러리에 공개한 표지를 관리할 수 있어요.
+        </p>
+
+        <ul class="diary-cover-design-gallery diary-library-gallery"
+            th:unless="${#lists.isEmpty(libraryItems)}">
+          <li class="diary-cover-design-item diary-library-mine-item" th:each="item : ${libraryItems}"
+              th:classappend="${item.status.name() != 'PUBLISHED'} ? ' is-inactive' : ''">
+            <div class="diary-library-mine-preview">
+              <div th:replace="~{diary/cover-preview :: canvas(
+                         ${item},
+                         ${libraryElementsByItem.getOrDefault(item.id, #lists.toList({}))})}"></div>
+            </div>
+
+            <div class="diary-library-item-info">
+              <h3 class="diary-cover-design-name" th:text="${item.title}">여름의 표지</h3>
+              <p class="diary-library-creator" th:text="|by ${item.creatorDisplayName}|">by 여행자</p>
+              <p class="diary-library-meta">
+                <span class="diary-library-status is-published"
+                      th:if="${item.status.name() == 'PUBLISHED'}">공개중</span>
+                <span class="diary-library-status is-withdrawn"
+                      th:if="${item.status.name() == 'WITHDRAWN'}">공개중지</span>
+                <span class="diary-library-status is-blocked"
+                      th:if="${item.status.name() == 'BLOCKED'}">이용 제한</span>
+                <span aria-hidden="true">·</span>
+                <span th:text="|다운로드 ${item.downloadCount}|">다운로드 0</span>
+                <span aria-hidden="true">·</span>
+                <time th:datetime="${#dates.format(item.publishedAt, 'yyyy-MM-dd')}"
+                      th:text="${#dates.format(item.publishedAt, 'yyyy.MM.dd')}">2026.09.17</time>
+              </p>
+            </div>
+
+            <div class="diary-library-mine-actions">
+              <form th:if="${item.status.name() == 'PUBLISHED'}"
+                    th:action="@{/diaries/cover-library/{id}/withdraw(id=${item.id})}"
+                    method="post">
+                <button type="submit" class="diary-library-action">공개중지</button>
+              </form>
+              <form th:if="${item.status.name() == 'WITHDRAWN'}"
+                    th:action="@{/diaries/cover-library/{id}/republish(id=${item.id})}"
+                    method="post">
+                <button type="submit" class="diary-library-action">재공개</button>
+              </form>
+              <form th:if="${item.status.name() == 'PUBLISHED' or item.status.name() == 'WITHDRAWN'}"
+                    th:action="@{/diaries/cover-library/{id}/delete(id=${item.id})}"
+                    method="post"
+                    onsubmit="return confirm('삭제 후 다시 공개할 수 없습니다. 이미 다른 회원이 받은 디자인에는 영향을 주지 않습니다.');">
+                <button type="submit" class="diary-library-action is-danger">삭제</button>
+              </form>
+              <p class="diary-library-blocked-note"
+                 th:if="${item.status.name() == 'BLOCKED'}">운영 정책에 따라 이용이 제한된 표지입니다.</p>
+            </div>
+          </li>
+        </ul>
+
+        <div class="diary-library-empty" th:if="${#lists.isEmpty(libraryItems)}" role="status">
+          <p class="diary-library-empty-title">관리할 공유 디자인이 없습니다.</p>
+          <p class="diary-library-empty-text">아래 내 보유 디자인에서 라이브러리에 공유해 보세요.</p>
         </div>
-
-        <div class="diary-cover-library-card-info">
-          <div class="diary-cover-library-mine-heading">
-            <h2 th:text="${item.title}">여름의 표지</h2>
-            <span class="diary-cover-library-status is-published"
-                  th:if="${item.status.name() == 'PUBLISHED'}">공개중</span>
-            <span class="diary-cover-library-status is-withdrawn"
-                  th:if="${item.status.name() == 'WITHDRAWN'}">공개중지</span>
-            <span class="diary-cover-library-status is-blocked"
-                  th:if="${item.status.name() == 'BLOCKED'}">이용 제한</span>
-          </div>
-          <p class="diary-cover-library-creator"
-             th:text="|by ${item.creatorDisplayName}|">by 여행자</p>
-          <div class="diary-cover-library-card-meta">
-            <span th:text="|다운로드 ${item.downloadCount}|">다운로드 0</span>
-            <time th:datetime="${#dates.format(item.publishedAt, 'yyyy-MM-dd')}"
-                  th:text="${#dates.format(item.publishedAt, 'yyyy.MM.dd')}">2026.09.17</time>
-          </div>
         </div>
+      </section>
 
-        <div class="diary-cover-library-mine-actions">
-          <form th:if="${item.status.name() == 'PUBLISHED'}"
-                th:action="@{/diaries/cover-library/{id}/withdraw(id=${item.id})}"
-                method="post">
-            <button type="submit" class="diary-cover-library-action">공개중지</button>
-          </form>
-          <form th:if="${item.status.name() == 'WITHDRAWN'}"
-                th:action="@{/diaries/cover-library/{id}/republish(id=${item.id})}"
-                method="post">
-            <button type="submit" class="diary-cover-library-action">재공개</button>
-          </form>
-          <form th:if="${item.status.name() == 'PUBLISHED' or item.status.name() == 'WITHDRAWN'}"
-                th:action="@{/diaries/cover-library/{id}/delete(id=${item.id})}"
-                method="post"
-                onsubmit="return confirm('삭제 후 다시 공개할 수 없습니다. 이미 다른 회원이 받은 디자인에는 영향을 주지 않습니다.');">
-            <button type="submit" class="diary-cover-library-action is-danger">삭제</button>
-          </form>
-          <p class="diary-cover-library-blocked-note"
-             th:if="${item.status.name() == 'BLOCKED'}">운영 정책에 따라 이용이 제한된 표지입니다.</p>
-        </div>
-      </li>
-    </ul>
-
-    <div class="diary-empty" th:if="${#lists.isEmpty(libraryItems)}" role="status">
-      <span class="diary-empty-mark" aria-hidden="true">◇</span>
-      <p class="diary-empty-title">관리할 공유 디자인이 없습니다.</p>
-      <p class="diary-empty-text">내 표지 디자인에서 라이브러리에 공유해 보세요.</p>
-      <a class="diary-new-button" th:href="@{/diaries/cover-designs}">내 표지 디자인</a>
+      <section th:replace="~{diary/cover-library/head :: owned(${coverDesigns}, ${coverElementsByDesign},
+                           null, null)}"></section>
     </div>
   </section>
 </th:block>

@@ -39,6 +39,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -238,6 +239,7 @@ class AdminTravelInfoControllerTest {
     void validCreateUsesAuthenticatedAdminId() throws Exception {
         mockMvc.perform(post("/admin/travel-info")
                         .with(user(adminDetails()))
+                        .with(csrf())
                         .param("title", "벚꽃 여행")
                         .param("content", "<p>본문</p>")
                         .param("scope", "DOMESTIC")
@@ -258,6 +260,7 @@ class AdminTravelInfoControllerTest {
         mockMvc.perform(multipart("/admin/travel-info")
                         .file(thumbnail)
                         .with(user(adminDetails()))
+                        .with(csrf())
                         .param("title", "썸네일 여행")
                         .param("content", "<p>본문</p>")
                         .param("scope", "DOMESTIC")
@@ -278,6 +281,7 @@ class AdminTravelInfoControllerTest {
 
         mockMvc.perform(post("/admin/travel-info")
                         .with(user(adminDetails()))
+                        .with(csrf())
                         .param("title", "입력 유지 제목")
                         .param("content", "<p>본문</p>")
                         .param("scope", "UNKNOWN")
@@ -298,6 +302,7 @@ class AdminTravelInfoControllerTest {
 
         mockMvc.perform(post("/admin/travel-info")
                         .with(user(adminDetails()))
+                        .with(csrf())
                         .param("title", "제목")
                         .param("content", "<p><br></p>")
                         .param("scope", "DOMESTIC")
@@ -314,6 +319,7 @@ class AdminTravelInfoControllerTest {
 
         mockMvc.perform(post("/admin/travel-info/edit/10")
                         .with(user("admin").roles("ADMIN"))
+                        .with(csrf())
                         .param("title", "수정 제목")
                         .param("content", "<p>수정 본문</p>")
                         .param("scope", "INTERNATIONAL")
@@ -326,7 +332,8 @@ class AdminTravelInfoControllerTest {
         verify(travelInfoService).update(org.mockito.ArgumentMatchers.eq(10L), any());
 
         mockMvc.perform(post("/admin/travel-info/10/delete")
-                        .with(user("admin").roles("ADMIN")))
+                        .with(user("admin").roles("ADMIN"))
+                        .with(csrf()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/travel-info"));
         verify(travelInfoService).delete(10L);
@@ -338,6 +345,7 @@ class AdminTravelInfoControllerTest {
 
         mockMvc.perform(post("/admin/travel-info/edit/10")
                         .with(user("admin").roles("ADMIN"))
+                        .with(csrf())
                         .param("title", "수정 제목")
                         .param("content", "<p>수정 본문</p>")
                         .param("scope", "DOMESTIC")
@@ -365,10 +373,12 @@ class AdminTravelInfoControllerTest {
         mockMvc.perform(get("/admin/travel-info/edit/99").with(user("admin").roles("ADMIN")))
                 .andExpect(status().isNotFound());
         mockMvc.perform(post("/admin/travel-info/edit/99")
-                        .with(user("admin").roles("ADMIN")))
+                        .with(user("admin").roles("ADMIN"))
+                        .with(csrf()))
                 .andExpect(status().isNotFound());
         mockMvc.perform(post("/admin/travel-info/99/delete")
-                        .with(user("admin").roles("ADMIN")))
+                        .with(user("admin").roles("ADMIN"))
+                        .with(csrf()))
                 .andExpect(status().isNotFound());
     }
 
@@ -386,7 +396,14 @@ class AdminTravelInfoControllerTest {
                 .andExpect(status().is3xxRedirection());
         mockMvc.perform(get("/admin/travel-info").with(user("member").roles("USER")))
                 .andExpect(status().isForbidden());
-        mockMvc.perform(post("/admin/travel-info/10/delete").with(user("member").roles("USER")))
+        // 토큰을 갖춰도 권한에서 막힌다
+        mockMvc.perform(post("/admin/travel-info/10/delete")
+                        .with(user("member").roles("USER"))
+                        .with(csrf()))
+                .andExpect(status().isForbidden());
+        // 관리자라도 토큰이 없으면 막힌다
+        mockMvc.perform(post("/admin/travel-info/10/delete")
+                        .with(user("admin").roles("ADMIN")))
                 .andExpect(status().isForbidden());
         verify(travelInfoService, never()).delete(10L);
     }

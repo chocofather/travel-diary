@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -22,11 +23,16 @@ import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 import org.springframework.security.web.savedrequest.RequestCache;
-import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.security.web.util.matcher.RegexRequestMatcher;
 
 @Configuration
 @EnableWebSecurity
+/*
+  관리자 Controller 들이 이미 @PreAuthorize("hasRole('ADMIN')") 를 달고 있었지만 이 설정이
+  없어 실제로는 아무 일도 하지 않았다. 켜 두어야 아래 /admin/** URL 규칙과 함께 진짜 이중
+  방어가 된다. URL 규칙은 그대로 두므로 정상 흐름의 동작은 달라지지 않는다.
+*/
+@EnableMethodSecurity
 @RequiredArgsConstructor
 @Import(LoginThrottleConfig.class)
 public class SecurityConfig {
@@ -79,332 +85,29 @@ public class SecurityConfig {
 
         http.requestCache(cache -> cache.requestCache(navigationRequestCache));
 
-        http.csrf(csrf -> csrf.requireCsrfProtectionMatcher(new OrRequestMatcher(
-                        new RegexRequestMatcher(
-                                "^/locale$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/bookmarks$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/bookmarks/destinations/[0-9]+$", HttpMethod.DELETE.name()),
-                        new RegexRequestMatcher(
-                                "^/bookmarks/posts/[0-9]+$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/bookmarks/posts/[0-9]+$", HttpMethod.DELETE.name()),
-                        new RegexRequestMatcher(
-                                "^/bookmarks/courses/[0-9]+$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/bookmarks/courses/[0-9]+$", HttpMethod.DELETE.name()),
-                        new RegexRequestMatcher(
-                                "^/bookmarks/travel-info/[0-9]+$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/bookmarks/travel-info/[0-9]+$", HttpMethod.DELETE.name()),
-                        new RegexRequestMatcher(
-                                "^/admin/notices$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/admin/notices/[0-9]+/edit$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/admin/notices/[0-9]+/delete$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/admin/faqs$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/admin/faqs/[0-9]+/edit$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/admin/faqs/[0-9]+/delete$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/admin/faq-categories$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/admin/faq-categories/edit/[0-9]+$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/admin/faq-categories/[0-9]+/delete$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/support/inquiries$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/support/inquiries/[0-9]+/delete$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/support/inquiries/[0-9]+/edit$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/admin/inquiries/[0-9]+/answer$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/admin/users/[0-9]+/restrict$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/admin/users/[0-9]+/release$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/admin/appeals/[0-9]+/approve$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/admin/appeals/[0-9]+/reject$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/admin/contents/[A-Z_]+/[0-9]+/hide$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/admin/contents/[A-Z_]+/[0-9]+/restore$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/admin/cover-library/reports/[0-9]+/process$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/admin/cover-library/items/[0-9]+/restore$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/admin/cover-library/photo-assets/[0-9]+/restore$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/travel-plans$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/travel-plans/invitations/[A-Za-z0-9_-]+/join$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/travel-plans/[0-9]+/members/leave$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/travel-plans/[0-9]+/members/[0-9]+/remove$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/travel-plans/[0-9]+/members/[0-9]+/transfer-owner$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/travel-plans/[0-9]+/members/[0-9]+/allow-rejoin$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/travel-plans/[0-9]+/invitations$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/travel-plans/[0-9]+/invitations/regenerate$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/travel-plans/[0-9]+/invitations/disable$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/travel-plans/[0-9]+/polls$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/travel-plans/[0-9]+/polls/[0-9]+/vote$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/travel-plans/[0-9]+/polls/[0-9]+/close$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/travel-plans/[0-9]+/polls/[0-9]+/delete$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/travel-plans/[0-9]+/finalize/check$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/travel-plans/[0-9]+/finalize$", HttpMethod.POST.name()),
-                        // 완료된 여행을 내 목록에서만 지우기
-                        new RegexRequestMatcher(
-                                "^/travel-plans/[0-9]+/final/delete$", HttpMethod.POST.name()),
-                        // 진행 중인 방을 방장이 통째로 지우기 (위의 개인 삭제와 다른 일이다)
-                        new RegexRequestMatcher(
-                                "^/travel-plans/[0-9]+/delete$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/travel-plans/[0-9]+/days/[0-9]+/items$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/travel-plans/[0-9]+/days/[0-9]+/items/[0-9]+/update$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/travel-plans/[0-9]+/days/[0-9]+/items/[0-9]+/delete$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/travel-plans/[0-9]+/days/[0-9]+/items/[0-9]+/delete-group$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/travel-plans/[0-9]+/days/[0-9]+/items/[0-9]+/alternatives$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/travel-plans/[0-9]+/days/[0-9]+/items/[0-9]+"
-                                        + "/alternatives/[0-9]+/update$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/travel-plans/[0-9]+/days/[0-9]+/items/[0-9]+"
-                                        + "/alternatives/[0-9]+/delete$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/travel-plans/[0-9]+/days/[0-9]+/items/[0-9]+/move-up$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/travel-plans/[0-9]+/days/[0-9]+/items/[0-9]+/move-down$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/travel-plans/[0-9]+/days/[0-9]+/items/[0-9]+/move$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/diaries$", HttpMethod.POST.name()),
-                        // 내 표지 디자인 보관함 (Thymeleaf 폼 전송)
-                        new RegexRequestMatcher(
-                                "^/diaries/cover-designs$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/diaries/cover-designs/[0-9]+/update$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/diaries/cover-designs/[0-9]+/delete$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/diaries/cover-designs/[0-9]+/library-share$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/diaries/cover-library/[0-9]+/download$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/diaries/cover-library/[0-9]+/(withdraw|republish|delete)$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/diaries/cover-library/[0-9]+/reports$",
-                                HttpMethod.POST.name()),
-                        // 표지 위 자유배치 요소 (fetch 요청, 토큰은 meta 값을 그대로 쓴다)
-                        new RegexRequestMatcher(
-                                "^/diaries/cover-designs/[0-9]+/elements/sticker$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/diaries/cover-designs/[0-9]+/elements/photo$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/diaries/cover-designs/[0-9]+/elements/[0-9]+/photo/delete$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/diaries/cover-designs/[0-9]+/elements/[0-9]+/photo-style$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/diaries/cover-designs/[0-9]+/elements/[0-9]+/position$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/diaries/cover-designs/[0-9]+/elements/[0-9]+/size$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/diaries/cover-designs/[0-9]+/elements/[0-9]+/rotation$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/diaries/cover-designs/[0-9]+/elements/[0-9]+/layer$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/diaries/cover-designs/[0-9]+/elements/[0-9]+/sticker/delete$",
-                                HttpMethod.POST.name()),
-                        // 라벨기로 붙이는 글씨. 스티커와 같은 정책을 쓴다
-                        new RegexRequestMatcher(
-                                "^/diaries/cover-designs/[0-9]+/elements/label$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/diaries/cover-designs/[0-9]+/elements/[0-9]+/label/delete$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/diaries/[0-9]+/update$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/diaries/[0-9]+/delete$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/diaries/[0-9]+/pages$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/diaries/[0-9]+/pages/[0-9]+/update$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/diaries/[0-9]+/pages/[0-9]+/delete$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/diaries/[0-9]+/pages/[0-9]+/content$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/diaries/[0-9]+/pages/[0-9]+/header$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/diaries/[0-9]+/pages/[0-9]+/elements/[0-9]+/position$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/diaries/[0-9]+/pages/[0-9]+/elements/[0-9]+/size$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/diaries/[0-9]+/pages/[0-9]+/elements/[0-9]+/rotation$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/diaries/[0-9]+/pages/[0-9]+/elements/[0-9]+/layer$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/diaries/[0-9]+/pages/[0-9]+/elements/photo$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/diaries/[0-9]+/pages/[0-9]+/elements/[0-9]+/photo/delete$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/diaries/[0-9]+/pages/[0-9]+/elements/sticker$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/diaries/[0-9]+/pages/[0-9]+/elements/[0-9]+/sticker/delete$",
-                                HttpMethod.POST.name()),
-                        // 라벨 / 떡메모지. 스티커와 같은 정책을 쓴다
-                        new RegexRequestMatcher(
-                                "^/diaries/[0-9]+/pages/[0-9]+/elements/note$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/diaries/[0-9]+/pages/[0-9]+/elements/[0-9]+/note/delete$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/diaries/[0-9]+/pages/[0-9]+/elements/[0-9]+/text$",
-                                HttpMethod.POST.name()),
-                        // 4자리 PIN 잠금. 걸고 풀고 바꾸고 없애는 길 모두 토큰을 요구한다
-                        new RegexRequestMatcher(
-                                "^/diaries/[0-9]+/pin$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/diaries/[0-9]+/pin/unlock$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/diaries/[0-9]+/pin/change$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/diaries/[0-9]+/pin/remove$", HttpMethod.POST.name()),
-                        // 라벨기로 붙이는 글씨. 라벨/떡메모지와 같은 정책을 쓴다
-                        new RegexRequestMatcher(
-                                "^/diaries/[0-9]+/pages/[0-9]+/elements/label$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/diaries/import$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/diaries/[0-9]+/pages/[0-9]+/elements/[0-9]+/label/delete$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/mypage/profile$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/mypage/account/verify-password$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/mypage/account/edit$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/mypage/account/password$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/mypage/account/withdraw$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/mypage/account/social-withdrawal$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/mypage/account/social-withdrawal/cancel$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/mypage/account/social-connections/[^/]+$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/mypage/account/social-connections/[^/]+/disconnect$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/users/verification/resend$", HttpMethod.POST.name()),
-                        // 실제로 계정 상태를 되돌리는 요청. 링크 진입(GET)에는 필요 없다.
-                        new RegexRequestMatcher(
-                                "^/users/recover-account/confirm$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/account/withdrawal-pending/recovery-link$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/account/restricted/appeals$", HttpMethod.POST.name()),
-                        // 예전 소셜 회원의 이메일 등록 시작과 오타 수정.
-                        new RegexRequestMatcher(
-                                "^/account/email-required$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/account/email-required/change$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/account/email-required/change/start$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/account/email-required/change/password$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/account/email-required/change/password/start$",
-                                HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/account/email-required/change/cancel$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/social-signup$", HttpMethod.POST.name()),
-                        // 기존 계정 로그인으로 소셜 연결을 시작하는 요청.
-                        new RegexRequestMatcher(
-                                "^/social-signup/link-existing$", HttpMethod.POST.name()),
-                        // 기존 계정에 소셜 로그인을 붙이는 확인/취소. 둘 다 토큰을 요구한다.
-                        new RegexRequestMatcher(
-                                "^/social-link$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/social-link/cancel$", HttpMethod.POST.name()),
-                        new RegexRequestMatcher(
-                                "^/logout$", HttpMethod.POST.name())
-                )))
-                .authorizeHttpRequests(auth -> auth
+        /*
+          CSRF 는 Spring Security 기본 정책을 그대로 쓴다.
+          GET/HEAD/OPTIONS/TRACE 를 뺀 모든 요청(POST/PUT/PATCH/DELETE)이 토큰을 요구한다.
+          비로그인 사용자가 보내는 로그인·회원가입·비밀번호 찾기 같은 폼도 같은 보호를 받는다.
+          (화면은 Thymeleaf 가 hidden 토큰을, fetch 는 layout 의 meta 토큰을 실어 보낸다)
+
+          예전에는 보호할 주소를 목록으로 적어 두었는데, 목록에 없는 상태 변경 요청이
+          그대로 통과했다. 그 목록을 없앤 것이 이번 변경이다.
+          토큰을 실을 수 없는 외부 서비스 callback 이 없으므로 보호에서 빼는 주소도 두지 않는다.
+          (소셜 로그인 redirect 는 GET 이라 애초에 CSRF 대상이 아니다)
+        */
+        http.authorizeHttpRequests(auth -> auth
+
+                        // 에디터 이미지 업로드는 로그인 사용자만. 아래 /api/** 공개 규칙보다 먼저 와야 한다.
+                        .requestMatchers("/api/upload/**").authenticated()
+
+                        /*
+                          공개 업로드 이미지. 예전에는 /uploads/** 를 통째로 열어 두어 개인 다이어리
+                          사진까지 주소만 알면 열렸다. 이제 공개해도 되는 폴더만 연다.
+                          목록은 정적 매핑(WebConfig)과 한 벌이어야 해서 그쪽 상수를 그대로 쓴다.
+                          개인 사진은 여기에 없고 /diaries/** 의 통제된 endpoint 로만 나간다.
+                        */
+                        .requestMatchers(publicUploadPatterns()).permitAll()
 
                         /* === 비회원도 접근 가능한 공개 영역 === */
                         .requestMatchers(
@@ -430,7 +133,7 @@ public class SecurityConfig {
                                 "/users/find-username", "/users/find-password", "/users/reset-password/**",
                                 // 메일로 받은 복구 링크만 공개다. 복구 요청은 탈퇴 유예 안내 화면에서만 한다.
                                 "/users/recover-account/confirm",
-                                "/css/**", "/js/**", "/images/**", "/fonts/**", "/uploads/**",
+                                "/css/**", "/js/**", "/images/**", "/fonts/**",
                                 "/webjars/**",   // STOMP 클라이언트 등 정적 라이브러리
                                 "/api/**",     "/api/destinations/**",
                                 "/search", "/search.html",
@@ -579,5 +282,17 @@ public class SecurityConfig {
 
 
         return http.build();
+    }
+
+    /**
+     * 공개해도 되는 업로드 폴더의 요청 패턴.
+     *
+     * <p>정적 매핑({@link WebConfig#PUBLIC_UPLOAD_DIRECTORIES})과 같은 목록을 써서
+     * 한쪽만 늘어나 매핑은 없는데 접근만 열리는 일이 생기지 않게 한다.
+     */
+    private static String[] publicUploadPatterns() {
+        return WebConfig.PUBLIC_UPLOAD_DIRECTORIES.stream()
+                .map(directory -> "/uploads/" + directory + "/**")
+                .toArray(String[]::new);
     }
 }

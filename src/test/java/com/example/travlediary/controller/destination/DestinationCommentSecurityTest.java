@@ -37,6 +37,7 @@ import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -96,7 +97,8 @@ class DestinationCommentSecurityTest {
                         .param("destinationId", "10")
                         .param("content", "사진 3장")
                         .with(authentication(new UsernamePasswordAuthenticationToken(
-                                principal, "n/a", principal.getAuthorities()))))
+                                principal, "n/a", principal.getAuthorities())))
+                        .with(csrf()))
                 .andExpect(status().isOk());
 
         @SuppressWarnings("unchecked")
@@ -106,6 +108,33 @@ class DestinationCommentSecurityTest {
         assertThat(captor.getValue())
                 .extracting(MultipartFile::getOriginalFilename)
                 .containsExactly("a.jpg", "b.jpg", "c.jpg");
+    }
+
+    /** 실제 사진이 아닌 첨부는 서버 오류가 아니라 안내 문구를 담은 400 으로 끝난다. */
+    @Test
+    void anInvalidImageIsAnsweredWithAUserErrorMessage() throws Exception {
+        User user = new User();
+        user.setId(7L);
+        user.setUsername("writer");
+        user.setUserPassword("encoded");
+        user.setUserRole(UserRole.USER);
+        CustomUserDetails principal = new CustomUserDetails(user);
+        when(destinationCommentService.create(eq(10L), eq(7L), eq("위장 파일"),
+                org.mockito.ArgumentMatchers.anyList(), isNull()))
+                .thenThrow(new com.example.travlediary.service.file.UnsupportedImageFormatException(
+                        com.example.travlediary.service.file.FileUploadService.UNSUPPORTED_IMAGE_MESSAGE));
+
+        mockMvc.perform(multipart("/comments")
+                        .file(new MockMultipartFile("images", "x.html", "text/html",
+                                "<script>alert(1)</script>".getBytes()))
+                        .param("destinationId", "10")
+                        .param("content", "위장 파일")
+                        .with(authentication(new UsernamePasswordAuthenticationToken(
+                                principal, "n/a", principal.getAuthorities())))
+                        .with(csrf()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message")
+                        .value(com.example.travlediary.service.file.FileUploadService.UNSUPPORTED_IMAGE_MESSAGE));
     }
 
     @Test

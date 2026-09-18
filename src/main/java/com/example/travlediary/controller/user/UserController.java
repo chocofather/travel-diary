@@ -1,12 +1,17 @@
 package com.example.travlediary.controller.user;
 
 import com.example.travlediary.dto.RegistrationForm;
+import com.example.travlediary.security.AccountAbuseGuard;
+import com.example.travlediary.security.ClientIpResolver;
+import com.example.travlediary.security.TooManyAccountRequestsException;
 import com.example.travlediary.service.policy.SignupPolicyService;
 import com.example.travlediary.service.user.EmailPolicy;
 import com.example.travlediary.service.user.PasswordPolicy;
 import com.example.travlediary.service.user.RegistrationResult;
 import com.example.travlediary.service.user.RegistrationValidationException;
 import com.example.travlediary.service.user.UserService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -14,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -30,17 +36,25 @@ public class UserController {
     private final UserService userService;
     private final MessageSource messageSource;
     private final SignupPolicyService signupPolicyService;
+    /** 메일이 나갈 수 있는 요청의 남용을 막는 자리. 한도는 이 Controller 가 알지 않는다. */
+    private final AccountAbuseGuard accountAbuseGuard;
 
     @Autowired
     public UserController(UserService userService, MessageSource messageSource,
-                          SignupPolicyService signupPolicyService) {
+                          SignupPolicyService signupPolicyService,
+                          AccountAbuseGuard accountAbuseGuard) {
         this.userService = userService;
         this.messageSource = messageSource;
         this.signupPolicyService = signupPolicyService;
+        this.accountAbuseGuard = accountAbuseGuard;
     }
 
     private String message(String code) {
         return messageSource.getMessage(code, null, LocaleContextHolder.getLocale());
+    }
+
+    private String message(String code, Object... arguments) {
+        return messageSource.getMessage(code, arguments, LocaleContextHolder.getLocale());
     }
 
     // 회원가입 폼 화면
@@ -68,6 +82,8 @@ public class UserController {
     public String registerUser(@Valid @ModelAttribute("registrationForm") RegistrationForm form,
                                BindingResult bindingResult,
                                Authentication authentication,
+                               HttpServletRequest request,
+                               HttpServletResponse response,
                                HttpSession session,
                                RedirectAttributes redirectAttributes,
                                Model model) {
@@ -76,6 +92,21 @@ public class UserController {
         }
         if (bindingResult.hasErrors()) {
             clearSensitiveFields(form);
+            return registerForm(model);
+        }
+
+        /*
+          가입이 끝나면 인증메일이 나간다. 주소를 바꿔 가며 가입을 되풀이하면 SMTP 한도가
+          바닥나고, 그 순간 정상 회원의 비밀번호 재설정 메일까지 함께 막힌다.
+          그래서 복구 메일과 같은 IP 통에서 함께 센다 — 쓰는 SMTP 자원이 하나이기 때문이다.
+
+          입력 형식 오류는 메일과 무관하므로 위 검사를 지난 뒤에 센다.
+        */
+        try {
+            accountAbuseGuard.checkRecoveryRequest(ClientIpResolver.of(request));
+        } catch (TooManyAccountRequestsException exception) {
+            clearSensitiveFields(form);
+            rejectAsThrottled(exception, response, bindingResult);
             return registerForm(model);
         }
 
@@ -150,9 +181,25 @@ public class UserController {
         return "find-username";
     }
 
+    /**
+     * 아이디 안내 메일 요청.
+     *
+     * <p>같은 IP 에서 너무 자주 부르면 회원을 찾아보기도 전에 막는다. 회원이 있는지 확인한
+     * 뒤에 막으면 그 차이로 계정 존재 여부가 드러나기 때문이다.
+     * 같은 주소로의 재발송 억제는 서비스가 맡는다 — 응답은 어느 쪽이든 똑같다.
+     */
     @PostMapping("/find-username")
     public String findUsername(@RequestParam String userEmail,
+                               HttpServletRequest request,
+                               HttpServletResponse response,
+                               Model model,
                                RedirectAttributes ra) {  // POST 처리
+        try {
+            accountAbuseGuard.checkRecoveryRequest(ClientIpResolver.of(request));
+        } catch (TooManyAccountRequestsException exception) {
+            return throttledRecoveryView(exception, response, model, "find-username");
+        }
+
         try {
             userService.processFindUsername(userEmail);
         } catch (RuntimeException exception) {
@@ -170,10 +217,20 @@ public class UserController {
         return "find-password";
     }
 
+    /** 비밀번호 재설정 링크 요청. 막는 기준과 응답 정책은 아이디 찾기와 같다. */
     @PostMapping("/find-password")
     public String findPassword(@RequestParam String username,
                                @RequestParam String userEmail,
+                               HttpServletRequest request,
+                               HttpServletResponse response,
+                               Model model,
                                RedirectAttributes ra) {  // POST 처리
+        try {
+            accountAbuseGuard.checkRecoveryRequest(ClientIpResolver.of(request));
+        } catch (TooManyAccountRequestsException exception) {
+            return throttledRecoveryView(exception, response, model, "find-password");
+        }
+
         try {
             userService.processResetPasswordRequest(username, userEmail);
         } catch (RuntimeException exception) {
@@ -182,6 +239,42 @@ public class UserController {
         }
         ra.addFlashAttribute("recoveryRequested", true);
         return "redirect:/users/find-password";
+    }
+
+    /**
+     * 요청이 너무 많을 때 보여 주는 화면.
+     *
+     * <p>흐름을 끊지 않도록 원래 폼을 그대로 다시 그리고 안내만 얹는다. 상태 코드는 429 이고
+     * 다시 시도할 수 있는 시각만 알려 준다 — 계정이 있는지, 어떤 한도에 걸렸는지는 담지 않는다.
+     */
+    private String throttledRecoveryView(TooManyAccountRequestsException exception,
+                                         HttpServletResponse response,
+                                         Model model,
+                                         String viewName) {
+        response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
+        response.setHeader("Retry-After", Long.toString(exception.getRetryAfterSeconds()));
+        model.addAttribute("recoveryThrottled", true);
+        model.addAttribute("recoveryRetryAfterSeconds", exception.getRetryAfterSeconds());
+        model.addAttribute("recoveryThrottledMessage",
+                message("account.recovery.throttled.description",
+                        exception.getRetryAfterSeconds()));
+        return viewName;
+    }
+
+    /**
+     * 가입 폼이 요청 한도에 걸렸을 때의 표시.
+     *
+     * <p>가입 화면은 이미 전체 오류를 보여 주는 자리가 있으므로 그 자리에 안내를 얹는다.
+     * 계정이 있는지나 어떤 한도인지는 담지 않고, 다시 시도할 수 있는 시각만 알려 준다.
+     */
+    private void rejectAsThrottled(TooManyAccountRequestsException exception,
+                                   HttpServletResponse response,
+                                   BindingResult bindingResult) {
+        response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
+        response.setHeader("Retry-After", Long.toString(exception.getRetryAfterSeconds()));
+        bindingResult.reject("account.recovery.throttled.description",
+                new Object[]{exception.getRetryAfterSeconds()},
+                "요청이 너무 많습니다. 잠시 후 다시 시도해주세요.");
     }
 
     /* ─────────────── 토큰 클릭 ⇒ 새 비밀번호 입력 ─────────────── */

@@ -180,8 +180,11 @@ class TravelPlanFinalizeUiContractTest {
                 Path.of("src/main/java/com/example/travlediary/config/SecurityConfig.java"),
                 StandardCharsets.UTF_8);
 
+        // 확정 검사 POST 도 다른 쓰기 요청과 같은 기본 CSRF 정책을 받는다
         assertThat(security)
-                .contains("\"^/travel-plans/[0-9]+/finalize/check$\"");
+                .doesNotContain("requireCsrfProtectionMatcher")
+                .doesNotContain("ignoringRequestMatchers")
+                .doesNotContain("csrf(AbstractHttpConfigurer::disable)");
     }
 
     @Test

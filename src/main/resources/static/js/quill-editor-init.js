@@ -326,8 +326,15 @@ window.initQuillEditor = function (editorSelector, contentInputId, formId, initi
                             pendingImageUploads += 1;
 
                             try {
+                                // 상태를 바꾸는 요청이라 layout 의 meta 토큰을 함께 보낸다.
+                                const csrfToken = document.querySelector('meta[name="_csrf"]')?.content;
+                                const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.content;
                                 const response = await fetch('/api/upload/editor-image', {
                                     method: 'POST',
+                                    credentials: 'same-origin',
+                                    headers: csrfToken && csrfHeader
+                                        ? {[csrfHeader]: csrfToken}
+                                        : {},
                                     body: formData
                                 });
                                 if (!response.ok) {

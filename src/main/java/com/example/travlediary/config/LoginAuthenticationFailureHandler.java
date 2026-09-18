@@ -1,5 +1,6 @@
 package com.example.travlediary.config;
 
+import com.example.travlediary.security.ClientIpResolver;
 import com.example.travlediary.security.LoginFormState;
 import com.example.travlediary.security.LoginThrottle;
 import com.example.travlediary.security.LoginThrottleFilter;
@@ -26,7 +27,7 @@ public class LoginAuthenticationFailureHandler implements AuthenticationFailureH
                                         AuthenticationException exception)
             throws IOException, ServletException {
         LoginThrottleStatus status = loginThrottle.recordFailure(
-                request.getParameter("username"), request.getRemoteAddr());
+                request.getParameter("username"), ClientIpResolver.of(request));
         request.getSession().setAttribute(
                 LoginFormState.SESSION_ATTRIBUTE,
                 LoginFormState.from(request.getParameter("username"), status));

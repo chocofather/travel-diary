@@ -1,0 +1,30 @@
+[
+  {
+    "id": 9001,
+    "region_name": "테스트대륙",
+    "name_en": "Test Continent",
+    "code": "TC",
+    "parent_id": null,
+    "depth": 1,
+    "children": [
+      {
+        "id": 9002,
+        "region_name": "테스트국가",
+        "name_en": "Test Country",
+        "code": "TCY",
+        "parent_id": 9001,
+        "depth": 2,
+        "children": [
+          {
+            "id": 9003,
+            "region_name": "테스트도시",
+            "name_en": "Test City",
+            "code": "TCT",
+            "parent_id": 9002,
+            "depth": 3
+          }
+        ]
+      }
+    ]
+  }
+]

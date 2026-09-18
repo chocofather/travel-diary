@@ -84,18 +84,12 @@ public class DestinationController {
             final Long rootId = 7L;
             if (regionId == null) {
                 cities = countryCategoryService.getSubregions(rootId, 3);
-                //테스트
-                System.out.println("=== 상단 cities 리스트 ===");
-                for (CountryCategory c : cities) System.out.println(c.getRegionName() + " " + c.getId() + " depth=" + c.getDepth());
             } else {
                 CountryCategory region = countryCategoryService.getById(regionId);
                 if (region.getDepth() == 3) {
                     // 시/도 클릭 (서울 등)
                     cities = countryCategoryService.getSubregions(rootId, 3);
 
-                    //테스트
-                    System.out.println("=== 상단 cities 리스트 ===");
-                    for (CountryCategory c : cities) System.out.println(c.getRegionName() + " " + c.getId() + " depth=" + c.getDepth());
 
                     selectedCityId = region.getId();
                     // 구/군(하위) 있는지 체크
@@ -105,16 +99,10 @@ public class DestinationController {
                     CountryCategory parent = countryCategoryService.getById(region.getParentId());
                     cities = countryCategoryService.getSubregions(rootId, 3);
                     selectedCityId = parent.getId();
-                    //테스트
-                    System.out.println("=== 상단 cities 리스트 ===");
-                    for (CountryCategory c : cities) System.out.println(c.getRegionName() + " " + c.getId() + " depth=" + c.getDepth());
                     // 구/군 형제들
                     subregions = countryCategoryService.getSubregions(parent.getId(), 4);
                 } else {
                     cities = countryCategoryService.getSubregions(rootId, 3);
-                    //테스트
-                    System.out.println("=== 상단 cities 리스트 ===");
-                    for (CountryCategory c : cities) System.out.println(c.getRegionName() + " " + c.getId() + " depth=" + c.getDepth());
                 }
             }
         } else {
@@ -125,18 +113,12 @@ public class DestinationController {
                 cities = overseasRootIds.stream()
                         .map(countryCategoryService::getById)
                         .toList();
-                //테스트
-                System.out.println("=== 상단 cities 리스트 ===");
-                for (CountryCategory c : cities) System.out.println(c.getRegionName() + " " + c.getId() + " depth=" + c.getDepth());
             } else {
                 CountryCategory region = countryCategoryService.getById(regionId);
                 if (region.getDepth() == 1) {
                     // 대륙 클릭 → 국가 리스트
                     cities = countryCategoryService.getSubregions(regionId, 2);
 
-                    // 테스트
-                    System.out.println("=== 상단 cities 리스트 ===");
-                    for (CountryCategory c : cities) System.out.println(c.getRegionName() + " " + c.getId() + " depth=" + c.getDepth());
                     selectedCityId = region.getId();
                     subregions = null;
 
@@ -148,9 +130,6 @@ public class DestinationController {
                         // 하위 도시 있음: cities=형제국가, subregions=하위도시
                         cities = countryCategoryService.getSubregions(region.getParentId(), 2);
 
-                        //테스트
-                        System.out.println("=== 상단 cities 리스트 ===");
-                        for (CountryCategory c : cities) System.out.println(c.getRegionName() + " " + c.getId() + " depth=" + c.getDepth());
 
                         selectedCityId = region.getId();
                         subregions = childCities;
@@ -158,9 +137,6 @@ public class DestinationController {
                         // 하위 도시 없음: cities=형제국가, subregions=null
                         cities = countryCategoryService.getSubregions(region.getParentId(), 2);
 
-                        //테스트
-                        System.out.println("=== 상단 cities 리스트 ===");
-                        for (CountryCategory c : cities) System.out.println(c.getRegionName() + " " + c.getId() + " depth=" + c.getDepth());
 
                         selectedCityId = region.getId();
                         subregions = null;
@@ -169,9 +145,6 @@ public class DestinationController {
                     // 도시 클릭: cities=해당 국가 모든 도시, subregions=형제 도시들
                     CountryCategory parent = countryCategoryService.getById(region.getParentId());
                     cities = countryCategoryService.getSubregions(parent.getId(), 3);
-                    //테스트
-                    System.out.println("=== 상단 cities 리스트 ===");
-                    for (CountryCategory c : cities) System.out.println(c.getRegionName() + " " + c.getId() + " depth=" + c.getDepth());
 
                     selectedCityId = region.getId();
                     subregions = countryCategoryService.getSubregions(parent.getId(), 3);

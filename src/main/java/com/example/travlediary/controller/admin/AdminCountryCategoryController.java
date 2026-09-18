@@ -2,6 +2,7 @@ package com.example.travlediary.controller.admin;
 
 import com.example.travlediary.model.CountryCategory;
 import com.example.travlediary.service.category.CountryCategoryService;
+import com.example.travlediary.service.file.UnsupportedImageFormatException;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import lombok.RequiredArgsConstructor;
@@ -11,7 +12,6 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.util.List;
 
 @Controller
@@ -32,9 +32,6 @@ public class AdminCountryCategoryController {
             @RequestParam(value = "page", defaultValue = "1") int page,
             Model model
     ) {
-
-        System.out.println("▶▶▶ list() called with type=" + type
-                + ", depth=" + depth + ", parentId=" + parentId);
         int pageSize = 20;
         PageHelper.startPage(page, pageSize);
 
@@ -78,11 +75,23 @@ public class AdminCountryCategoryController {
         return "admin/region/icon-upload";
     }
 
-    /** 3) 아이콘 업로드 처리 */
+    /**
+     * 3) 아이콘 업로드 처리
+     *
+     * <p>올린 파일은 {@code /uploads/icons/**} 에서 그대로 공개되므로 실제로 펼쳐지는 이미지만
+     * 받는다. 형식이 맞지 않으면 저장하지 않고 업로드 화면으로 돌아가 이유를 알려 준다.
+     */
     @PostMapping("/{id}/icon")
     public String uploadIcon(@PathVariable Long id,
-                             @RequestParam("icon") MultipartFile icon) throws IOException {
-        countryCategoryService.saveIcon(id, icon);
+                             @RequestParam("icon") MultipartFile icon,
+                             Model model) {
+        try {
+            countryCategoryService.saveIcon(id, icon);
+        } catch (UnsupportedImageFormatException exception) {
+            model.addAttribute("category", countryCategoryService.getById(id));
+            model.addAttribute("iconError", exception.getMessage());
+            return "admin/region/icon-upload";
+        }
         CountryCategory c = countryCategoryService.getById(id);
 
         // 리다이렉트 파라미터 결정

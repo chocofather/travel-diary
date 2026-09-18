@@ -11,11 +11,19 @@ import java.util.List;
  */
 public final class AccountPurgeFileTargets {
 
-    /** 이 회원만 쓰는 업로드 폴더. 공개 콘텐츠(posts, comments, editor)는 들어 있지 않다. */
+    /**
+     * 이 회원만 쓰는 폴더. 공개 콘텐츠(posts, comments, editor)는 들어 있지 않다.
+     *
+     * <p>다이어리 관련 네 폴더의 실제 파일은 이제 private 저장소에 있지만, DB 에 남는 값은
+     * 예전과 같은 {@code /uploads/...} 저장 키다. 실제 어느 루트를 지울지는 파일을 지우는
+     * 쪽({@code ManagedUploadFileDeleter})이 정하므로 여기 목록은 그대로 둔다.
+     */
     private static final List<String> ALLOWED_PREFIXES = List.of(
             "/uploads/profiles/",
             "/uploads/diary-covers/",
             "/uploads/diary-pages/",
+            // 다이어리에 적용된 표지 사진. 예전에는 빠져 있어 파기 뒤에도 파일이 남았다.
+            "/uploads/diary-cover-elements/",
             "/uploads/diary-cover-designs/");
 
     /** account_purge_tasks.target_value 의 컬럼 길이. */

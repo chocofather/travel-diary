@@ -84,8 +84,10 @@ public interface AccountPurgeMapper {
                                   @Param("completedAt") LocalDateTime completedAt);
 
     /**
-     * 다이어리가 쓰는 업로드 파일 경로. 대표 이미지와 페이지 PHOTO 요소를 함께 준다.
+     * 다이어리가 쓰는 업로드 파일 경로. 대표 이미지와 페이지 PHOTO 요소, 그리고 다이어리에
+     * 실제로 적용된 표지의 PHOTO 요소를 함께 준다.
      * STICKER/NOTE/TEXT 는 업로드 파일이 아니므로 여기에 들어오지 않는다.
+     * 라이브러리 공유 사진은 회원 파일이 아니라 공유 자산이므로 들어오지 않는다.
      */
     List<String> findDiaryImageUrlsByUserId(@Param("userId") Long userId);
 

@@ -5,6 +5,7 @@ import com.example.travlediary.model.Event;
 import com.example.travlediary.model.EventTranslation;
 import com.example.travlediary.model.EventType;
 import com.example.travlediary.repository.event.EventMapper;
+import com.example.travlediary.service.post.PostContentSanitizer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -43,7 +44,7 @@ class EventLocalizationServiceTest {
 
     @BeforeEach
     void setUp() {
-        localizationService = new EventLocalizationService(eventMapper);
+        localizationService = new EventLocalizationService(eventMapper, new PostContentSanitizer());
     }
 
     @Test

@@ -210,11 +210,11 @@ class TravelPlanInvitationContractTest {
     void theOwnerActionsAreCsrfProtectedAndThePreviewGetIsPublic() throws IOException {
         String securityConfig = securityConfig();
 
-        // 생성 / 재발급 / 비활성화 POST
+        // 생성 / 재발급 / 비활성화 POST 는 기본 CSRF 정책이 보호한다
         assertThat(securityConfig)
-                .contains("\"^/travel-plans/[0-9]+/invitations$\", HttpMethod.POST.name()")
-                .contains("\"^/travel-plans/[0-9]+/invitations/regenerate$\"")
-                .contains("\"^/travel-plans/[0-9]+/invitations/disable$\"");
+                .doesNotContain("requireCsrfProtectionMatcher")
+                .doesNotContain("ignoringRequestMatchers")
+                .doesNotContain("csrf(AbstractHttpConfigurer::disable)");
 
         // 미리보기 GET 만 공개한다. 방 관리 경로는 그대로 인증이 필요하다
         assertThat(securityConfig)
@@ -519,8 +519,11 @@ class TravelPlanInvitationContractTest {
     void theJoinPostIsCsrfProtectedWhileTheOpenPreviewStaysPublic() throws IOException {
         String securityConfig = securityConfig();
 
+        // 참여 POST 는 기본 CSRF 정책이 보호한다 (예외로 빼지 않는다)
         assertThat(securityConfig)
-                .contains("\"^/travel-plans/invitations/[A-Za-z0-9_-]+/join$\"");
+                .doesNotContain("requireCsrfProtectionMatcher")
+                .doesNotContain("ignoringRequestMatchers")
+                .doesNotContain("csrf(AbstractHttpConfigurer::disable)");
 
         // 공개 미리보기 matcher 는 토큰 끝에 $ 가 있어 /join 까지 열어 주지 않는다
         assertThat(securityConfig).contains("\"^/travel-plans/invitations/[A-Za-z0-9_-]+$\"");

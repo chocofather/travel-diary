@@ -5,6 +5,7 @@ import com.example.travlediary.model.Event;
 import com.example.travlediary.model.EventTranslation;
 import com.example.travlediary.model.EventType;
 import com.example.travlediary.repository.event.EventMapper;
+import com.example.travlediary.service.post.PostContentSanitizer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -46,7 +47,8 @@ class EventPublicLocalizationTest {
 
     @BeforeEach
     void setUp() {
-        controller = new EventController(eventService, new EventLocalizationService(eventMapper));
+        controller = new EventController(
+                eventService, new EventLocalizationService(eventMapper, new PostContentSanitizer()));
         originalLocale = LocaleContextHolder.getLocale();
     }
 

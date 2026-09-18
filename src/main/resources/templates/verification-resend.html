@@ -24,6 +24,14 @@
         인증이 필요한 계정이라면 인증메일 발송을 요청했습니다.
       </div>
 
+      <!-- 요청이 너무 잦을 때의 안내. 계정 존재 여부와는 무관한 메시지다. -->
+      <div class="verification-notice is-info"
+           th:if="${recoveryThrottled}"
+           role="status" aria-live="polite"
+           th:text="${recoveryThrottledMessage}">
+        요청이 너무 많습니다.
+      </div>
+
       <form class="verification-request-form"
             th:action="@{/users/verification/resend}" method="post" novalidate>
         <input type="hidden" th:if="${_csrf != null}"

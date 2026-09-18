@@ -140,6 +140,8 @@ public class DiaryCoverLibraryQueryServiceImpl implements DiaryCoverLibraryQuery
     private void preparePhotoUrls(List<DiaryCoverLibraryElement> elements) {
         for (DiaryCoverLibraryElement element : elements) {
             if (!PHOTO.equals(element.getElementType())) {
+                // 스티커 등 공용 asset 은 저장 경로가 곧 공개 주소다.
+                element.setViewUrl(element.getImageUrl());
                 continue;
             }
             if (element.getPhotoShareMode() == DiaryCoverLibraryPhotoShareMode.INCLUDED
@@ -148,6 +150,7 @@ public class DiaryCoverLibraryQueryServiceImpl implements DiaryCoverLibraryQuery
             } else {
                 element.setImageUrl(null);
             }
+            element.setViewUrl(element.getImageUrl());
         }
     }
 

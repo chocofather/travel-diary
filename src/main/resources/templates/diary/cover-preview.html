@@ -12,12 +12,13 @@
   </th:block>
 
   <th:block th:if="${cover == null}">
-    <img th:if="${diary.coverImageUrl != null and !#strings.isEmpty(diary.coverImageUrl)}"
+    <!-- 저장 경로가 아니라 소유권을 확인하는 통제된 주소로만 사진을 연다 (coverViewUrl) -->
+    <img th:if="${diary.coverViewUrl != null}"
          class="diary-book-image"
-         th:src="${diary.coverImageUrl}"
+         th:src="${diary.coverViewUrl}"
          th:alt="|${diary.title} 표지|"
          loading="lazy" />
-    <div th:unless="${diary.coverImageUrl != null and !#strings.isEmpty(diary.coverImageUrl)}"
+    <div th:unless="${diary.coverViewUrl != null}"
          class="diary-book-placeholder" aria-hidden="true"></div>
     <span class="diary-book-spine" aria-hidden="true"></span>
   </th:block>
@@ -52,8 +53,9 @@
                        transform:rotate(${element.rotation}deg);
                        z-index:${element.zIndex};|">
       <span class="diary-cover-photo-placeholder" aria-hidden="true">사진 넣기</span>
-      <img th:if="${element.imageUrl != null and !#strings.isEmpty(element.imageUrl)}"
-           th:src="${element.imageUrl}" alt="" aria-hidden="true" loading="lazy"
+      <!-- 사진은 저장 경로가 아니라 통제된 주소로만 연다 (viewUrl) -->
+      <img th:if="${element.viewUrl != null and !#strings.isEmpty(element.viewUrl)}"
+           th:src="${element.viewUrl}" alt="" aria-hidden="true" loading="lazy"
            onerror="this.remove()" />
     </figure>
 

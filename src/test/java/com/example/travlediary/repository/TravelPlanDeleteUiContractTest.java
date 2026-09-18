@@ -180,8 +180,11 @@ class TravelPlanDeleteUiContractTest {
                 .contains("method=\"post\"")
                 .contains("th:action=\"@{|/travel-plans/${travelPlan.plan.id}/delete|}\"");
         // 토큰이 붙는 form 이라야 남이 대신 눌러 줄 수 없다
+        // (POST 는 기본 CSRF 정책이 보호한다. 예외를 두지 않는다)
         assertThat(securityConfig())
-                .contains("\"^/travel-plans/[0-9]+/delete$\", HttpMethod.POST.name()");
+                .doesNotContain("requireCsrfProtectionMatcher")
+                .doesNotContain("ignoringRequestMatchers")
+                .doesNotContain("csrf(AbstractHttpConfigurer::disable)");
     }
 
     // ── 서버 ────────────────────────────────────────────────

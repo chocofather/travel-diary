@@ -1,5 +1,6 @@
 package com.example.travlediary.service.diary;
 
+import com.example.travlediary.dto.DiaryCoverLibraryDownloadResult;
 import com.example.travlediary.model.DiaryCoverDesign;
 import com.example.travlediary.model.DiaryCoverDesignElement;
 import com.example.travlediary.model.DiaryCoverLibraryElement;
@@ -93,9 +94,14 @@ class DiaryCoverLibraryDownloadServiceTest {
                 .thenReturn(List.of(asset(701L, DiaryCoverLibraryPhotoAssetStatus.ACTIVE),
                         asset(702L, DiaryCoverLibraryPhotoAssetStatus.BLOCKED)));
 
-        DiaryCoverDesign created = service.download(7L, 11L);
+        DiaryCoverLibraryDownloadResult result = service.download(7L, 11L);
+        DiaryCoverDesign created = result.design();
 
         assertThat(created.getId()).isEqualTo(901L);
+        // 처음 받은 회원이라 잠근 채 읽은 4에 1이 더해진 값을 돌려준다
+        assertThat(result.downloadCount()).isEqualTo(5L);
+        // 받기 전에 지금 보유 중인지 확인한다
+        verify(designMapper).countByUserIdAndSourceLibraryItemId(7L, 11L);
         ArgumentCaptor<DiaryCoverDesign> design = ArgumentCaptor.forClass(DiaryCoverDesign.class);
         verify(designMapper).insert(design.capture());
         assertThat(design.getValue()).satisfies(saved -> {
@@ -172,8 +178,12 @@ class DiaryCoverLibraryDownloadServiceTest {
                 designMapper, designElementMapper, downloadMapper);
     }
 
+    /**
+     * 받은 디자인을 지운 뒤 다시 받으면 새 디자인은 만들어지지만,
+     * 이미 다운로드 이력이 있어 다운로드 수는 늘지 않고 화면에 돌려주는 수도 그대로다.
+     */
     @Test
-    void repeatedMemberDownloadsCreateDesignsEveryTimeButCountOnlyNewMembers() {
+    void redownloadAfterDeletingCreatesADesignButCountsOnlyNewMembers() {
         when(accessService.canDownload(7L)).thenReturn(true);
         when(accessService.canDownload(8L)).thenReturn(true);
         when(itemMapper.findPublishedByIdForUpdate(11L)).thenReturn(publishedItem());
@@ -181,6 +191,8 @@ class DiaryCoverLibraryDownloadServiceTest {
                 .thenReturn(List.of());
         when(photoAssetMapper.findAllByLibraryItemIdAndSnapshotVersionForUpdate(11L, 3))
                 .thenReturn(List.of());
+        // 매번 지금은 보유하지 않은 상태다. (두 번째는 첫 디자인을 지운 뒤라고 본다)
+        when(designMapper.countByUserIdAndSourceLibraryItemId(any(), any())).thenReturn(0);
         AtomicLong id = new AtomicLong(900L);
         when(designMapper.insert(any())).thenAnswer(invocation -> {
             invocation.getArgument(0, DiaryCoverDesign.class).setId(id.incrementAndGet());
@@ -189,15 +201,60 @@ class DiaryCoverLibraryDownloadServiceTest {
         when(downloadMapper.insertIgnore(any())).thenReturn(1, 0, 1);
         when(itemMapper.incrementDownloadCountIfPublished(11L)).thenReturn(1);
 
-        DiaryCoverDesign first = service.download(7L, 11L);
-        DiaryCoverDesign repeated = service.download(7L, 11L);
-        DiaryCoverDesign otherMember = service.download(8L, 11L);
+        DiaryCoverLibraryDownloadResult first = service.download(7L, 11L);
+        DiaryCoverLibraryDownloadResult repeated = service.download(7L, 11L);
+        DiaryCoverLibraryDownloadResult otherMember = service.download(8L, 11L);
 
-        assertThat(List.of(first.getId(), repeated.getId(), otherMember.getId()))
+        assertThat(List.of(first.design().getId(), repeated.design().getId(),
+                otherMember.design().getId()))
                 .containsExactly(901L, 902L, 903L);
+        // 잠근 채 읽은 수는 4. 다시 받은 회원은 늘지 않은 4를 그대로 돌려받는다.
+        assertThat(List.of(first.downloadCount(), repeated.downloadCount(),
+                otherMember.downloadCount()))
+                .containsExactly(5L, 4L, 5L);
         verify(designMapper, times(3)).insert(any());
         verify(downloadMapper, times(3)).insertIgnore(any());
         verify(itemMapper, times(2)).incrementDownloadCountIfPublished(11L);
+    }
+
+    /** 직접 공유한 표지는 원작자 본인이 받을 수 없다. 디자인·이력·다운로드 수 모두 건드리지 않는다. */
+    @Test
+    void creatorCannotDownloadTheirOwnSharedDesign() {
+        DiaryCoverLibraryItem mine = publishedItem();
+        mine.setCreatorUserId(7L);
+        when(accessService.canDownload(7L)).thenReturn(true);
+        when(itemMapper.findPublishedByIdForUpdate(11L)).thenReturn(mine);
+
+        assertThatThrownBy(() -> service.download(7L, 11L))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(error -> {
+                    ResponseStatusException exception = (ResponseStatusException) error;
+                    assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+                    assertThat(exception.getReason())
+                            .isEqualTo("직접 공유한 디자인은 다시 받을 수 없습니다.");
+                });
+
+        verifyNoInteractions(designMapper, libraryElementMapper, photoAssetMapper,
+                designElementMapper, downloadMapper);
+        verify(itemMapper, never()).incrementDownloadCountIfPublished(any());
+    }
+
+    /** 이 표지에서 받은 디자인을 지금 가지고 있으면 다시 만들지 않고, 이력·다운로드 수도 건드리지 않는다. */
+    @Test
+    void currentlyOwnedLibraryDesignCannotBeDownloadedAgain() {
+        when(accessService.canDownload(7L)).thenReturn(true);
+        when(itemMapper.findPublishedByIdForUpdate(11L)).thenReturn(publishedItem());
+        when(designMapper.countByUserIdAndSourceLibraryItemId(7L, 11L)).thenReturn(1);
+
+        assertThatThrownBy(() -> service.download(7L, 11L))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(error -> assertThat(((ResponseStatusException) error).getStatusCode())
+                        .isEqualTo(HttpStatus.CONFLICT));
+
+        verify(designMapper, never()).insert(any());
+        verifyNoInteractions(libraryElementMapper, photoAssetMapper, designElementMapper,
+                downloadMapper);
+        verify(itemMapper, never()).incrementDownloadCountIfPublished(any());
     }
 
     @Test
@@ -247,6 +304,7 @@ class DiaryCoverLibraryDownloadServiceTest {
         item.setBackgroundColor("#123456");
         item.setStatus(DiaryCoverLibraryItemStatus.PUBLISHED);
         item.setSnapshotVersion(3);
+        item.setDownloadCount(4L);
         return item;
     }
 

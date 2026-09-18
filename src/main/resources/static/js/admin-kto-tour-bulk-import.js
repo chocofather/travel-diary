@@ -306,8 +306,22 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    /** 상태를 바꾸는 요청에 CSRF 토큰을 싣는다. (layout 의 meta 값을 그대로 쓴다) */
+    function csrfHeader(method) {
+        const unsafe = !["GET", "HEAD", "OPTIONS", "TRACE"]
+            .includes(String(method || "GET").toUpperCase());
+        if (!unsafe) return {};
+        const token = document.querySelector('meta[name="_csrf"]')?.content;
+        const header = document.querySelector('meta[name="_csrf_header"]')?.content;
+        return token && header ? {[header]: token} : {};
+    }
+
     async function requestJson(url, options) {
-        const response = await fetch(url, options || {headers: {Accept: "application/json"}});
+        const settings = options || {headers: {Accept: "application/json"}};
+        const response = await fetch(url, {
+            ...settings,
+            headers: {...(settings.headers || {}), ...csrfHeader(settings.method)}
+        });
         let payload = null;
         try {
             payload = await response.json();

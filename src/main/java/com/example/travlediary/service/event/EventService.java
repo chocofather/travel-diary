@@ -8,6 +8,7 @@ import com.example.travlediary.model.EventTranslation;
 import com.example.travlediary.model.EventType;
 import com.example.travlediary.repository.event.EventMapper;
 import com.example.travlediary.service.file.FileUploadService;
+import com.example.travlediary.service.post.PostContentSanitizer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -43,6 +44,8 @@ public class EventService {
 
     private final EventMapper eventMapper;
     private final FileUploadService fileUploadService;
+    /** 상세 내용은 게시글·공지와 같은 HTML 허용 정책을 쓴다. 이벤트만의 규칙을 따로 두지 않는다. */
+    private final PostContentSanitizer postContentSanitizer;
 
     @Value("${custom.upload-path}")
     private String uploadDir;
@@ -284,7 +287,8 @@ public class EventService {
                                         EventTranslationForm form,
                                         EventTranslation existing) {
         String title = nonBlank(form.getTitle());
-        String description = nonBlank(form.getDescription());
+        // 번역 본문도 한국어 원문과 같은 허용 정책을 거친다.
+        String description = nonBlank(postContentSanitizer.sanitize(form.getDescription()));
         // 예전 경로는 서버가 읽은 DB 값이다. 이 값만 삭제 대상이 될 수 있다.
         String storedPoster = existing == null ? null : nonBlank(existing.getPosterImg());
 
@@ -400,7 +404,10 @@ public class EventService {
             throw new EventValidationException("eventType", "이벤트 유형을 선택해 주세요.");
         }
 
-        String description = form.getDescription() == null ? "" : form.getDescription().strip();
+        // 상세 내용은 공개 화면에서 HTML 로 나가므로 저장 전에 허용 목록으로 걸러 둔다.
+        // (script / onerror 같은 이벤트 핸들러 / javascript: 링크는 여기서 사라진다)
+        // 폼에도 걸러진 값을 돌려놓아 검증 실패로 되돌아간 화면이 원문을 다시 보여 주지 않는다.
+        String description = postContentSanitizer.sanitize(form.getDescription()).strip();
         form.setDescription(description);
         LocalDate startDate = resolveDate(
                 form.getStartYear(), form.getStartMonth(), form.getStartDay(),

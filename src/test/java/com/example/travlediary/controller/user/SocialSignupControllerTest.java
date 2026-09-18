@@ -1,5 +1,6 @@
 package com.example.travlediary.controller.user;
 
+import com.example.travlediary.security.AccountAbuseGuard;
 import com.example.travlediary.dto.SocialSignupForm;
 import com.example.travlediary.service.policy.SignupPolicyFixtures;
 import com.example.travlediary.service.policy.SignupPolicyService;
@@ -58,6 +59,9 @@ class SocialSignupControllerTest {
     @Mock
     private SignupPolicyService signupPolicyService;
 
+    /** 가입 인증메일의 IP 제한. 이 테스트의 관심사가 아니라 통과시키는 가짜를 쓴다. */
+    @Mock private AccountAbuseGuard accountAbuseGuard;
+
     private SocialSignupController controller;
 
     @BeforeEach
@@ -73,7 +77,7 @@ class SocialSignupControllerTest {
         controller = new SocialSignupController(
                 socialSignupService, authenticationService,
                 socialEmailAccountResolver, socialLoginLinkService,
-                signupPolicyService, messages);
+                signupPolicyService, messages, accountAbuseGuard);
     }
 
     private RedirectAttributes redirectAttributes() {

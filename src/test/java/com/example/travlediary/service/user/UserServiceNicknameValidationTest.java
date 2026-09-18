@@ -1,5 +1,6 @@
 package com.example.travlediary.service.user;
 
+import com.example.travlediary.security.InMemoryAccountAbuseGuard;
 import com.example.travlediary.dto.RegistrationForm;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.service.email.EmailDispatchService;
@@ -40,7 +41,9 @@ class UserServiceNicknameValidationTest {
                 .thenReturn(SignupPolicySet.empty());
         userService = new UserService(userMapper, passwordEncoder, emailDispatchService,
                 emailVerificationService, signupPolicyService,
-                new RegistrationTransactionService(userMapper, policyConsentRecorder));
+                new RegistrationTransactionService(userMapper, policyConsentRecorder),
+                // 테스트마다 새 guard 라 첫 요청은 늘 지나간다. (cooldown 은 이 클래스의 관심사가 아니다)
+                new InMemoryAccountAbuseGuard());
     }
 
     @Test

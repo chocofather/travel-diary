@@ -8,7 +8,7 @@ import com.example.travlediary.model.DiaryElement;
 import com.example.travlediary.model.DiaryPage;
 import com.example.travlediary.repository.diary.DiaryCoverElementMapper;
 import com.example.travlediary.repository.diary.DiaryCoverMapper;
-import com.example.travlediary.service.file.FileUploadService;
+import com.example.travlediary.service.file.DiaryPrivatePhotoStorage;
 import com.example.travlediary.service.post.PostContentSanitizer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -70,7 +70,7 @@ class GuestDiaryImportServiceTest {
     @Mock
     private DiaryCoverElementMapper diaryCoverElementMapper;
     @Mock
-    private FileUploadService fileUploadService;
+    private DiaryPrivatePhotoStorage diaryPrivatePhotoStorage;
 
     @Mock
     private DiaryStickerCatalog stickerCatalog;
@@ -98,8 +98,7 @@ class GuestDiaryImportServiceTest {
         service = new GuestDiaryImportService(diaryService, diaryPageService,
                 diaryElementService, diaryCoverMapper, diaryCoverElementMapper,
                 stickerCatalog, noteCatalog, fontCatalog,
-                new DiaryContentSanitizer(new PostContentSanitizer()), fileUploadService);
-        ReflectionTestUtils.setField(service, "uploadPath", "/tmp/travel-diary-import-test");
+                new DiaryContentSanitizer(new PostContentSanitizer()), diaryPrivatePhotoStorage);
 
         when(diaryService.create(anyLong(), any())).thenAnswer(call -> {
             Diary saved = call.getArgument(1, Diary.class);
@@ -116,7 +115,7 @@ class GuestDiaryImportServiceTest {
             return 1;
         });
         when(diaryCoverElementMapper.insert(any())).thenReturn(1);
-        when(fileUploadService.saveImportedDiaryPhoto(any(), anyString()))
+        when(diaryPrivatePhotoStorage.saveImportedPhoto(any(), anyString()))
                 .thenReturn("/uploads/diary-pages/saved.jpg");
     }
 
@@ -517,7 +516,7 @@ class GuestDiaryImportServiceTest {
     /** 23) 브라우저가 말한 사진 주소는 버리고, 올라온 원본을 저장해 새 주소를 만든다. */
     @Test
     void aPhotoReferenceNeverReachesTheDatabase() {
-        when(fileUploadService.saveImportedDiaryPhoto(any(), eq("diary-pages")))
+        when(diaryPrivatePhotoStorage.saveImportedPhoto(any(), eq("diary-pages")))
                 .thenReturn("/uploads/diary-pages/new-name.jpg");
 
         GuestDiaryImportManifest.Element photo = elementWith("PHOTO", builder -> builder
@@ -539,7 +538,7 @@ class GuestDiaryImportServiceTest {
     /** 23) 표지 사진도 표지 자리에 저장된다. */
     @Test
     void aCoverPhotoIsStoredInTheCoverFolder() {
-        when(fileUploadService.saveImportedDiaryPhoto(any(), eq("diary-covers")))
+        when(diaryPrivatePhotoStorage.saveImportedPhoto(any(), eq("diary-covers")))
                 .thenReturn("/uploads/diary-covers/new-name.jpg");
 
         GuestDiaryImportManifest.Element photo = coverElement("PHOTO", builder -> builder
@@ -557,7 +556,7 @@ class GuestDiaryImportServiceTest {
         assertThat(saved.getValue().getImageUrl())
                 .isEqualTo("/uploads/diary-covers/new-name.jpg");
         assertThat(saved.getValue().getPhotoStyle()).isEqualTo("FULL");
-        verify(fileUploadService).saveImportedDiaryPhoto(any(), eq("diary-covers"));
+        verify(diaryPrivatePhotoStorage).saveImportedPhoto(any(), eq("diary-covers"));
     }
 
     /** 24) 스티커는 이미 서버에 있는 그림이다. 파일을 새로 만들지 않는다. */
@@ -566,7 +565,7 @@ class GuestDiaryImportServiceTest {
         service.importDraft(7L, manifest(page(
                 elementWith("STICKER", builder -> builder.imageUrl(knownStickerUrl)))), Map.of());
 
-        verifyNoInteractions(fileUploadService);
+        verifyNoInteractions(diaryPrivatePhotoStorage);
     }
 
     /* ===================== 트랜잭션과 파일 ===================== */
@@ -587,17 +586,8 @@ class GuestDiaryImportServiceTest {
      * 파일은 트랜잭션이 되돌려 주지 않으므로 이 정리가 유일한 수습이다.
      */
     @Test
-    void aRolledBackImportDeletesOnlyTheFilesItCreated(@org.junit.jupiter.api.io.TempDir Path uploads)
-            throws IOException {
-        ReflectionTestUtils.setField(service, "uploadPath", uploads.toString());
-
-        Path mine = uploads.resolve("diary-pages/mine.jpg");
-        Path existing = uploads.resolve("diary-pages/someone-elses.jpg");
-        Files.createDirectories(mine.getParent());
-        Files.writeString(mine, "new");
-        Files.writeString(existing, "old");
-
-        when(fileUploadService.saveImportedDiaryPhoto(any(), anyString()))
+    void aRolledBackImportDeletesOnlyTheFilesItCreated() {
+        when(diaryPrivatePhotoStorage.saveImportedPhoto(any(), anyString()))
                 .thenReturn("/uploads/diary-pages/mine.jpg");
 
         List<TransactionSynchronization> callbacks = withActiveTransaction(() ->
@@ -609,21 +599,15 @@ class GuestDiaryImportServiceTest {
         assertThat(callbacks).hasSize(1);
         callbacks.get(0).afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK);
 
-        assertThat(mine).doesNotExist();
-        // 원래 있던 파일은 건드리지 않는다.
-        assertThat(existing).exists();
+        // 이번에 저장한 사진만 정리한다. (실제 파일 위치는 private 저장소가 판단한다)
+        verify(diaryPrivatePhotoStorage).delete("/uploads/diary-pages/mine.jpg");
+        verify(diaryPrivatePhotoStorage, org.mockito.Mockito.times(1)).delete(anyString());
     }
 
     /** 26) 저장이 끝났으면 사진은 그대로 남는다. */
     @Test
-    void aCommittedImportKeepsItsPhotos(@org.junit.jupiter.api.io.TempDir Path uploads)
-            throws IOException {
-        ReflectionTestUtils.setField(service, "uploadPath", uploads.toString());
-        Path mine = uploads.resolve("diary-pages/mine.jpg");
-        Files.createDirectories(mine.getParent());
-        Files.writeString(mine, "new");
-
-        when(fileUploadService.saveImportedDiaryPhoto(any(), anyString()))
+    void aCommittedImportKeepsItsPhotos() {
+        when(diaryPrivatePhotoStorage.saveImportedPhoto(any(), anyString()))
                 .thenReturn("/uploads/diary-pages/mine.jpg");
 
         List<TransactionSynchronization> callbacks = withActiveTransaction(() ->
@@ -634,26 +618,28 @@ class GuestDiaryImportServiceTest {
 
         callbacks.get(0).afterCompletion(TransactionSynchronization.STATUS_COMMITTED);
 
-        assertThat(mine).exists();
+        verify(diaryPrivatePhotoStorage, never()).delete(any());
     }
 
-    /** 27) 업로드 폴더 밖을 가리키는 주소로는 아무것도 지우지 않는다. */
+    /**
+     * 27) 값이 없으면 저장소를 부르지도 않는다.
+     *
+     * <p>어떤 경로를 지울 수 있는지는 private 저장소의 계약이다. (관리 저장 키가 아니면
+     * 아무것도 지우지 않는다 — 그쪽 테스트가 확인한다) 여기서는 그 판단을 스스로 하지 않고
+     * 저장소에 맡기는지만 본다.
+     */
     @Test
-    void cleanupNeverLeavesTheUploadFolder(@org.junit.jupiter.api.io.TempDir Path uploads)
-            throws Exception {
-        ReflectionTestUtils.setField(service, "uploadPath", uploads.toString());
-        Path stayed = uploads.resolve("keep.txt");
-        Files.writeString(stayed, "keep");
-
+    void cleanupDelegatesEveryPathToThePrivateStorage() throws Exception {
         java.lang.reflect.Method delete = GuestDiaryImportService.class
                 .getDeclaredMethod("deleteSavedFile", String.class);
         delete.setAccessible(true);
-        for (String outside : new String[]{null, "/images/diary/stickers/heart.png",
-                "keep.txt", "../keep.txt"}) {
-            delete.invoke(service, outside);
-        }
 
-        assertThat(stayed).exists();
+        delete.invoke(service, (Object) null);
+        delete.invoke(service, "");
+        verify(diaryPrivatePhotoStorage, never()).delete(any());
+
+        delete.invoke(service, "/images/diary/stickers/heart.png");
+        verify(diaryPrivatePhotoStorage).delete("/images/diary/stickers/heart.png");
     }
 
     /* ===================== 도우미 ===================== */

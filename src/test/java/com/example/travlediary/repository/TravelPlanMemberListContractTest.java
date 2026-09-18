@@ -422,11 +422,11 @@ class TravelPlanMemberListContractTest {
                 Path.of("src/main/java/com/example/travlediary/config/SecurityConfig.java"),
                 StandardCharsets.UTF_8);
 
+        // 나가기/내보내기/방장 넘기기/재참여 허용 POST 는 기본 CSRF 정책이 보호한다
         assertThat(securityConfig)
-                .contains("\"^/travel-plans/[0-9]+/members/leave$\", HttpMethod.POST.name()")
-                .contains("\"^/travel-plans/[0-9]+/members/[0-9]+/remove$\"")
-                .contains("\"^/travel-plans/[0-9]+/members/[0-9]+/transfer-owner$\"")
-                .contains("\"^/travel-plans/[0-9]+/members/[0-9]+/allow-rejoin$\"");
+                .doesNotContain("requireCsrfProtectionMatcher")
+                .doesNotContain("ignoringRequestMatchers")
+                .doesNotContain("csrf(AbstractHttpConfigurer::disable)");
         // 인가는 그대로 anyRequest().authenticated() 를 쓴다
         assertThat(securityConfig).doesNotContain("/travel-plans/**");
     }

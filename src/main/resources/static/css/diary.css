@@ -155,44 +155,57 @@
     margin-bottom: 34px;
 }
 
-/* 검색 + 새 여행일기 만들기는 한 묶음으로 오른쪽에 둔다 */
+/*
+  상단 툴바: [책장|달력] 검색 정렬 표지 디자인 관리 + 새 여행일기.
+  모든 컨트롤을 34px 높이·연한 1px 테두리·8px 모서리로 맞춰 한 줄의 control bar 로 보이게 한다.
+  색 강조는 새 여행일기 하나에만 두고, 나머지는 흰 바탕/옅은 neutral 로 둔다.
+*/
 .diary-list-tools {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
 }
 
-/* 책장 ↔ 달력 전환. 작은 세그먼트 하나로만 둔다. */
+/* 책장 ↔ 달력 전환. 얇은 외곽선 안의 segmented control. 현재 보기만 옅은 바탕으로 구분한다. */
 .diary-view-switch {
     display: inline-flex;
-    padding: 3px;
-    border: 1px solid #ded5c8;
-    border-radius: 999px;
-    background: #faf6ef;
+    box-sizing: border-box;
+    height: 34px;
+    align-items: center;
+    gap: 2px;
+    padding: 2px;
+    border: 1px solid #e4e2de;
+    border-radius: 8px;
+    background: #fff;
 }
 
 .diary-view-option {
-    padding: 5px 12px;
-    border-radius: 999px;
-    color: #8b8378;
+    display: inline-flex;
+    height: 28px;
+    align-items: center;
+    padding: 0 11px;
+    border-radius: 6px;
+    color: #7b756d;
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 500;
     text-decoration: none;
     white-space: nowrap;
+    transition: background-color 140ms ease, color 140ms ease;
 }
 
 .diary-view-option:hover {
-    color: #6f5a3c;
+    background: #f6f5f3;
+    color: #2f2b26;
 }
 
 .diary-view-option.is-current {
-    background: #fff;
-    box-shadow: 0 1px 2px rgba(63, 52, 38, 0.12);
-    color: #4a3d2b;
+    background: #f1f0ed;
+    color: #2f2b26;
+    font-weight: 600;
 }
 
 .diary-view-option:focus-visible {
-    outline: 2px solid #b39a75;
+    outline: 2px solid #a8a29a;
     outline-offset: 1px;
 }
 
@@ -206,38 +219,40 @@
 
 .diary-search-icon {
     position: absolute;
-    left: 10px;
-    width: 15px;
-    height: 15px;
-    color: #a3937c;
+    left: 11px;
+    width: 14px;
+    height: 14px;
+    color: #a39e97;
     pointer-events: none;
 }
 
+/* 다른 컨트롤과 같은 34px·연한 테두리·8px 모서리. 아이콘과 글자 사이는 9px 정도만 둔다. */
 .diary-search-input {
     box-sizing: border-box;
-    width: 210px;
-    height: 36px;
-    padding: 0 12px 0 31px;
-    border: 1px solid #ded5c8;
-    border-radius: 999px;
+    width: 220px;
+    height: 34px;
+    padding: 0 12px 0 34px;
+    border: 1px solid #e4e2de;
+    border-radius: 8px;
     background: #fff;
-    color: #5c5346;
+    color: #2f2b26;
     font: inherit;
     font-size: 13px;
+    transition: border-color 140ms ease;
 }
 
 .diary-search-input::placeholder {
-    color: #b3a897;
+    color: #aaa49c;
 }
 
 .diary-search-input:hover {
-    border-color: #cbbba0;
+    border-color: #d6d3ce;
 }
 
 .diary-search-input:focus {
     outline: none;
-    border-color: #b39a75;
-    box-shadow: 0 0 0 3px rgba(179, 154, 117, 0.18);
+    border-color: #b8b3ab;
+    box-shadow: 0 0 0 3px rgba(47, 43, 38, 0.06);
 }
 
 /* 찾는 중 표시. 결과를 깜빡이게 하지 않고 검색창 안에서만 조용히 알린다. */
@@ -246,8 +261,8 @@
     right: 11px;
     width: 13px;
     height: 13px;
-    border: 2px solid #e6dccb;
-    border-top-color: #b39a75;
+    border: 2px solid #e8e6e2;
+    border-top-color: #8e8880;
     border-radius: 50%;
     animation: diary-search-spin 700ms linear infinite;
     pointer-events: none;
@@ -287,15 +302,15 @@
 .diary-search-submit:focus-visible {
     position: static;
     width: auto;
-    height: 32px;
+    height: 34px;
     margin: 0 0 0 6px;
     padding: 0 12px;
-    border: 1px solid #b39a75;
-    border-radius: 999px;
+    border: 1px solid #d6d3ce;
+    border-radius: 8px;
     background: #fff;
     clip: auto;
     clip-path: none;
-    color: #5c5346;
+    color: #2f2b26;
     font: inherit;
     font-size: 13px;
     cursor: pointer;
@@ -308,44 +323,45 @@
     flex: 0 0 auto;
 }
 
-/* 검색창 옆의 보조 컨트롤이라 테두리 없이 글자만 둔다.
-   (강조는 '새 여행일기 만들기' 하나에만 남긴다) */
+/* 검색창 옆의 보조 필터라 테두리 없이 글자만 둔다.
+   (강조는 '새 여행일기' 하나에만 남긴다) */
 .diary-sort-button {
     display: inline-flex;
     box-sizing: border-box;
-    height: 36px;
+    height: 34px;
     align-items: center;
-    padding: 0 9px;
+    padding: 0 8px;
     border: 1px solid transparent;
-    border-radius: 9px;
+    border-radius: 8px;
     background: none;
-    color: #8b8378;
+    color: #6b665f;
     font: inherit;
     font-size: 12.5px;
     gap: 5px;
     white-space: nowrap;
     cursor: pointer;
+    transition: background-color 140ms ease, color 140ms ease;
 }
 
 /* 눌러서 열려 있을 때도 바탕만 아주 옅게 바뀐다 */
 .diary-sort-button:hover,
 .diary-sort-button.is-open {
-    background: #f7f3ec;
-    color: #5c5346;
+    background: #f4f3f1;
+    color: #2f2b26;
 }
 
 .diary-sort-button:focus-visible {
-    outline: 2px solid #b39a75;
+    outline: 2px solid #a8a29a;
     outline-offset: 1px;
 }
 
 .diary-sort-mark {
-    color: #bdb2a0;
+    color: #aaa49c;
     font-size: 12px;
 }
 
 .diary-sort-arrow {
-    color: #bdb2a0;
+    color: #aaa49c;
     font-size: 9px;
 }
 
@@ -359,10 +375,10 @@
     min-width: 152px;
     flex-direction: column;
     padding: 4px;
-    border: 1px solid #ebe5db;
-    border-radius: 9px;
+    border: 1px solid #e8e6e2;
+    border-radius: 8px;
     background: #fff;
-    box-shadow: 0 3px 10px rgba(120, 100, 70, 0.08);
+    box-shadow: 0 3px 10px rgba(40, 36, 31, 0.07);
     gap: 1px;
 }
 
@@ -389,23 +405,23 @@
 
 /* 체크 자리는 늘 오른쪽에 비워 둬 고른 것이 바뀌어도 글자가 흔들리지 않는다 */
 .diary-sort-option::after {
-    color: #c3b7a2;
+    color: #8e8880;
     content: "";
 }
 
 .diary-sort-option:hover {
-    background: #f7f3ec;
-    color: #4a3d2b;
+    background: #f4f3f1;
+    color: #2f2b26;
 }
 
 .diary-sort-option:focus-visible {
-    outline: 2px solid #b39a75;
+    outline: 2px solid #a8a29a;
     outline-offset: -2px;
 }
 
 /* 지금 보고 있는 정렬은 칠하지 않고 글씨와 체크로만 알린다 */
 .diary-sort-option.is-current {
-    color: #4a3d2b;
+    color: #2f2b26;
     font-weight: 600;
 }
 
@@ -1901,24 +1917,23 @@
    표지는 속지와 다른 물건이다. 종이의 단위(--diary-page-unit / --diary-line)나
    속지용 계산을 쓰지 않고, A5 세로형 표지 하나로만 크기를 잡는다. */
 
-/* 목록에서 표지 보관함으로 가는 낮은 위계의 링크 (새 여행일기보다 약하게) */
 /* 목록 상단의 "표지 디자인 관리".
-   검색·정렬과 같은 높이의 작은 외곽선 버튼이라 한 줄에 자연스럽게 놓이고,
-   바탕이 흰색이라 바로 옆 primary(새 여행일기)와 위계가 뚜렷하게 갈린다. */
+   검색·정렬과 같은 34px 의 흰 바탕 외곽선 보조 버튼이라 한 줄에 자연스럽게 놓이고,
+   바로 옆 primary(새 여행일기)와 위계가 뚜렷하게 갈린다. */
 .diary-cover-designs-button {
     display: inline-flex;
     box-sizing: border-box;
     flex: 0 0 auto;
-    height: 36px;
+    height: 34px;
     align-items: center;
     gap: 6px;
-    padding: 0 12px;
-    border: 1px solid #ded5c8;
-    border-radius: 9px;
+    padding: 0 11px;
+    border: 1px solid #e4e2de;
+    border-radius: 8px;
     background: #fff;
-    color: #7a6a52;
+    color: #3f3b36;
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 500;
     white-space: nowrap;
     text-decoration: none;
     transition: background-color 140ms ease, border-color 140ms ease;
@@ -1926,13 +1941,13 @@
 
 /* 눌러도 되는 곳이라는 것만 알린다. 그림자는 두지 않는다 */
 .diary-cover-designs-button:hover {
-    border-color: #cbbba0;
-    background: #faf6ef;
-    color: #6f5a3c;
+    border-color: #d6d3ce;
+    background: #f7f6f4;
+    color: #2f2b26;
 }
 
 .diary-cover-designs-button:focus-visible {
-    outline: 3px solid rgba(111, 90, 60, 0.24);
+    outline: 2px solid #a8a29a;
     outline-offset: 2px;
 }
 
@@ -1940,12 +1955,40 @@
     flex: 0 0 auto;
     width: 14px;
     height: 14px;
-    color: #a3937c;
+    color: #8e8880;
 }
 
-/* 관리 버튼과 새 여행일기 사이만 조금 더 벌려 두 갈래를 나눈다 */
+/*
+  툴바 안의 새 여행일기. 이 화면의 유일한 주요 액션이라 채움 버튼으로 두되,
+  갈색 대신 차분한 짙은 차콜로, 다른 컨트롤과 같은 34px·8px 모서리로 맞춘다.
+  (다른 화면에서 쓰는 .diary-new-button 모양은 건드리지 않도록 툴바 안에서만 바꾼다)
+*/
 .diary-list-tools .diary-new-button {
-    margin-left: 6px;
+    box-sizing: border-box;
+    min-height: 34px;
+    height: 34px;
+    gap: 4px;
+    margin-left: 4px;
+    padding: 0 13px 0 11px;
+    border-color: #2f2b26;
+    border-radius: 8px;
+    background: #2f2b26;
+    font-size: 13px;
+}
+
+.diary-list-tools .diary-new-button .diary-new-button-plus {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.diary-list-tools .diary-new-button:hover {
+    border-color: #46413b;
+    background: #46413b;
+}
+
+.diary-list-tools .diary-new-button:focus-visible {
+    outline: 2px solid #a8a29a;
+    outline-offset: 2px;
 }
 
 .diary-cover-designs-link {
@@ -2228,46 +2271,58 @@
 
 /* 보관함 목록 */
 /* ===== 내 표지 디자인 갤러리 =====
-   표지 자체를 가장 크게 읽히게 두고, 정보와 관리 동작은 카드 아래로 정리한다. */
+   표지를 상자에 담지 않는다. 페이지 바탕 위에 표지만 한 권씩 세워 두고,
+   이름/재질/공유는 그 아래에 작게 붙여 표지가 가장 먼저 읽히게 한다.
+   헤더와 갤러리가 같은 폭을 써서 버튼이 목록 오른쪽 끝과 맞는다. */
 .diary-cover-designs-page {
-    width: min(1440px, calc(100% - 48px));
+    width: min(1180px, calc(100% - 48px));
 }
 
 .diary-cover-designs-page .diary-list-header {
-    margin-bottom: 40px;
+    margin-bottom: 52px;
 }
 
+/* 열 수는 고정하지 않는다. 표지가 230px 아래로 줄지 않는 만큼만 채워
+   넓은 화면 4열 → 3열 → 2열로 자연스럽게 내려간다. */
 .diary-cover-design-gallery {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 28px 22px;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 60px 48px;
     margin: 0;
     padding: 0;
     list-style: none;
 }
 
-.diary-cover-design-card {
-    position: relative;
+.diary-cover-design-item {
     display: flex;
     min-width: 0;
     flex-direction: column;
-    overflow: hidden;
-    border: 1px solid #e7e4de;
-    border-radius: 14px;
-    background: #fff;
-    box-shadow: 0 2px 8px rgba(52, 46, 37, 0.035);
-    transition: border-color 160ms ease, box-shadow 160ms ease;
 }
 
-.diary-cover-design-card:hover {
-    border-color: #ddd7cd;
-    box-shadow: 0 5px 14px rgba(52, 46, 37, 0.075);
-}
-
-.diary-cover-design-link {
+.diary-cover-design-preview-link {
     display: block;
+    border-radius: 4px 13px 13px 4px;
     color: inherit;
     text-decoration: none;
+}
+
+/* 실제 표지 렌더러 그대로. 그림자만 책이 바닥에서 살짝 뜬 정도로 낮춘다. */
+.diary-cover-design-preview-link .diary-cover-canvas {
+    box-shadow:
+        inset 0 0 14px rgba(0, 0, 0, 0.07),
+        inset 0 1px 0 rgba(255, 255, 255, 0.18),
+        0 1px 2px rgba(40, 34, 26, 0.06),
+        0 6px 16px rgba(40, 34, 26, 0.07);
+    transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.diary-cover-design-preview-link:hover .diary-cover-canvas {
+    transform: translateY(-2px);
+    box-shadow:
+        inset 0 0 14px rgba(0, 0, 0, 0.07),
+        inset 0 1px 0 rgba(255, 255, 255, 0.18),
+        0 2px 4px rgba(40, 34, 26, 0.07),
+        0 10px 22px rgba(40, 34, 26, 0.1);
 }
 
 .diary-cover-design-preview-link:focus-visible,
@@ -2277,30 +2332,17 @@
     outline-offset: 3px;
 }
 
-.diary-cover-design-preview {
-    display: grid;
-    min-height: clamp(300px, 25vw, 430px);
-    place-items: center;
-    padding: 24px 20px;
-    background: #f7f7f5;
-}
-
-.diary-cover-design-preview .diary-cover-canvas {
-    width: min(100%, 270px);
-}
-
-/* 기존 여행일기 목록의 ⋯ 메뉴를 같은 카드 위에서 조용히 노출한다. */
-.diary-cover-design-card:hover .diary-book-menu-button,
-.diary-cover-design-card:focus-within .diary-book-menu-button {
-    opacity: 1;
-}
-
-.diary-cover-design-card-body {
+/* 이름·재질과 ⋯ 를 한 줄에 둔다. 메뉴는 표지 아래에 있어 디자인을 가리지 않는다. */
+.diary-cover-design-info {
     display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 18px;
+}
+
+.diary-cover-design-text {
     min-width: 0;
     flex: 1;
-    flex-direction: column;
-    padding: 16px 17px 17px;
 }
 
 .diary-cover-design-title-link {
@@ -2313,88 +2355,120 @@
 .diary-cover-design-name {
     margin: 0;
     overflow: hidden;
-    color: #3f3a33;
-    font-size: 16px;
-    font-weight: 700;
+    color: #2f2b26;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.4;
     letter-spacing: -0.01em;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.diary-cover-design-title-link:hover .diary-cover-design-name {
-    color: #6f5a3c;
-}
-
 .diary-cover-design-style {
-    margin: 5px 0 0;
-    color: #8b8378;
+    margin: 2px 0 0;
+    color: #948c81;
     font-size: 12.5px;
+    line-height: 1.4;
 }
 
-.diary-cover-design-actions {
-    display: flex;
-    align-items: center;
-    margin-top: 15px;
+/* 여행일기 카드의 ⋯ 메뉴를 그대로 쓰되, 표지 위가 아니라 글 옆에 놓이므로
+   떠 있는 자리·어두운 바탕을 걷고 hover 없이도 옅게 보이게 한다. */
+.diary-cover-design-info .diary-book-menu {
+    position: relative;
+    top: auto;
+    right: auto;
+    flex: 0 0 auto;
+    margin: -2px -6px 0 0;
 }
 
+.diary-cover-design-info .diary-book-menu-button {
+    width: 30px;
+    height: 30px;
+    background: transparent;
+    color: #9a9288;
+    font-size: 17px;
+    opacity: 1;
+}
+
+.diary-cover-design-info .diary-book-menu-button:hover,
+.diary-cover-design-info .diary-book-menu.is-open .diary-book-menu-button {
+    background: #f2efea;
+    color: #5c5346;
+}
+
+.diary-cover-design-info .diary-book-menu-button:focus-visible {
+    outline: 2px solid #b39a75;
+}
+
+/* 공유는 글자 위주의 작은 보조 동작. 버튼 상자를 두지 않는다. */
 .diary-cover-design-share {
-    display: inline-flex;
-    min-height: 32px;
-    align-items: center;
-    padding: 0 11px;
-    border: 1px solid #ded8ce;
-    border-radius: 7px;
-    background: #fff;
-    color: #665f55;
-    font-size: 12px;
-    font-weight: 700;
+    align-self: flex-start;
+    margin-top: 8px;
+    color: #7a6a52;
+    font-size: 12.5px;
+    font-weight: 600;
     text-decoration: none;
-    transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
+}
+
+.diary-cover-design-share::after {
+    content: " →";
 }
 
 .diary-cover-design-share:hover {
-    border-color: #cfc4b4;
-    background: #faf8f4;
     color: #5b4c38;
+    text-decoration: underline;
+    text-underline-offset: 3px;
 }
 
 .diary-cover-design-delete {
     margin: 0;
 }
 
-.diary-cover-design-gallery-empty {
-    padding: 64px 24px;
-    border-style: solid;
-    border-color: #e6e2da;
-    background: #fcfcfb;
+/* 빈 상태. 큰 상자 없이 문장 하나와 버튼 하나만 둔다. */
+.diary-cover-design-empty {
+    padding: 72px 16px;
+    text-align: center;
 }
 
-@media (max-width: 1320px) {
-    .diary-cover-design-gallery {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
+.diary-cover-design-empty-title {
+    margin: 0;
+    color: #7b756d;
+    font-size: 15px;
 }
 
-@media (max-width: 980px) {
-    .diary-cover-design-gallery {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .diary-cover-design-preview {
-        min-height: clamp(310px, 48vw, 430px);
-    }
+.diary-cover-design-empty .diary-new-button {
+    margin-top: 18px;
 }
 
 @media (max-width: 620px) {
-    .diary-cover-design-gallery {
-        grid-template-columns: minmax(0, 1fr);
-        gap: 20px;
+    .diary-cover-designs-page .diary-list-header {
+        margin-bottom: 36px;
     }
 
-    .diary-cover-design-preview {
-        min-height: clamp(330px, 105vw, 470px);
-        padding: 24px;
+    /* 한 열일 때는 표지가 화면 폭을 꽉 채우지 않게 가운데 적당한 크기로 둔다. */
+    .diary-cover-design-gallery {
+        grid-template-columns: minmax(0, 300px);
+        justify-content: center;
+        gap: 48px;
     }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .diary-cover-design-preview-link .diary-cover-canvas {
+        transition: none;
+    }
+
+    .diary-cover-design-preview-link:hover .diary-cover-canvas {
+        transform: none;
+    }
+}
+
+/* 라이브러리에서 방금 받은 디자인. 표지 아래 한 줄로만 알린다. */
+.diary-cover-design-added {
+    margin: 4px 0 0;
+    color: #557a58;
+    font-size: 12px;
+    font-weight: 600;
 }
 
 /* 내 표지 → 라이브러리 공유 */
@@ -2589,253 +2663,896 @@
     cursor: wait;
 }
 
-/* 회원 공유 표지 라이브러리 */
-.diary-cover-library-page {
-    width: min(1160px, calc(100% - 40px));
-}
-
-.diary-cover-library-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 32px 24px;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-}
-
-.diary-cover-library-card {
-    min-width: 0;
-}
-
-.diary-cover-library-card > a {
-    display: block;
-    color: inherit;
-    text-decoration: none;
-}
-
-.diary-cover-library-card-preview {
-    width: min(100%, 220px);
-    margin-inline: auto;
-    transition: transform 150ms ease;
-}
-
-.diary-cover-library-card > a:hover .diary-cover-library-card-preview {
-    transform: translateY(-2px);
-}
-
-.diary-cover-library-card > a:focus-visible {
-    outline: 2px solid #b39a75;
-    outline-offset: 5px;
-    border-radius: 5px;
-}
-
-.diary-cover-library-card-info {
-    width: min(100%, 220px);
-    margin: 11px auto 0;
-}
-
-.diary-cover-library-card-info h2 {
-    margin: 0;
-    overflow: hidden;
-    color: #3f3a33;
-    font-size: 15px;
-    font-weight: 700;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.diary-cover-library-creator {
-    margin: 4px 0 0;
-    overflow: hidden;
-    color: #766d62;
-    font-size: 12px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.diary-cover-library-card-meta {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px solid #eee8df;
-    color: #999084;
-    font-size: 11px;
-}
-
-.diary-cover-library-card-meta time {
-    white-space: nowrap;
-}
-
-.diary-cover-library-mine-card {
-    display: flex;
-    min-width: 0;
-    flex-direction: column;
-}
-
-.diary-cover-library-mine-heading {
-    display: flex;
-    min-width: 0;
-    align-items: center;
-    gap: 7px;
-}
-
-.diary-cover-library-mine-heading h2 {
-    flex: 1;
-}
-
-.diary-cover-library-status {
-    flex: 0 0 auto;
-    padding: 3px 7px;
-    border-radius: 999px;
-    background: #f1eee8;
-    color: #746b60;
-    font-size: 10px;
-    font-weight: 700;
-    white-space: nowrap;
-}
-
-.diary-cover-library-status.is-published {
-    background: #edf5ed;
-    color: #557255;
-}
-
-.diary-cover-library-status.is-blocked {
-    background: #f6ecea;
-    color: #925e58;
-}
-
-.diary-cover-library-mine-actions {
-    display: flex;
-    width: min(100%, 220px);
-    min-height: 32px;
-    align-items: center;
-    gap: 7px;
-    margin: 10px auto 0;
-}
-
-.diary-cover-library-mine-actions form {
-    margin: 0;
-}
-
-.diary-cover-library-action {
-    min-height: 30px;
-    padding: 5px 9px;
-    border: 1px solid #dcd3c5;
-    border-radius: 7px;
-    background: #fff;
-    color: #6f6250;
-    font: inherit;
-    font-size: 11px;
-    font-weight: 700;
-    cursor: pointer;
-}
-
-.diary-cover-library-action:hover {
-    border-color: #c7b79e;
-    background: #faf6ef;
-}
-
-.diary-cover-library-action.is-danger {
-    color: #9b5d55;
-}
-
-.diary-cover-library-blocked-note {
-    margin: 0;
-    color: #8c7e73;
-    font-size: 11px;
-    line-height: 1.45;
-}
-
-.diary-cover-library-detail {
-    width: min(980px, calc(100% - 40px));
+/* ===== 표지 라이브러리 =====
+   둘러보기/상세/내 공유 디자인이 같은 화면(.diary-library)을 쓴다.
+   직접 열면 일반 페이지로, 내 표지 디자인에서는 그 위 넓은 패널 안에 들어간다.
+   갤러리는 내 표지 디자인과 같은 클래스(.diary-cover-design-gallery 등)를 그대로 쓴다. */
+.diary-library-page {
+    width: min(1180px, calc(100% - 48px));
     margin: 44px auto 90px;
     color: #2b2b2b;
 }
 
-.diary-cover-library-detail-layout {
-    display: grid;
-    grid-template-columns: minmax(280px, 440px) minmax(0, 1fr);
-    gap: 56px;
-    align-items: start;
-    margin-top: 20px;
+.diary-library-head {
+    margin-bottom: 40px;
 }
 
-.diary-cover-library-detail-preview {
-    width: min(100%, var(--diary-cover-base-width));
-    margin-inline: auto;
+.diary-library-head-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
 }
 
-.diary-cover-library-detail-info {
+.diary-library-heading {
     min-width: 0;
-    padding-top: 20px;
 }
 
-.diary-cover-library-detail-info h1 {
+.diary-library-title {
     margin: 0;
-    color: #38332d;
-    font-size: clamp(25px, 3vw, 34px);
-    line-height: 1.25;
-    overflow-wrap: anywhere;
+    color: #2b2b2b;
+    font-size: 26px;
+    letter-spacing: -0.02em;
 }
 
-.diary-cover-library-detail-creator {
-    margin: 10px 0 0;
-    color: #776e63;
+.diary-library-title:focus {
+    outline: none;
+}
+
+.diary-library-subtitle {
+    margin: 6px 0 0;
+    color: #7b756d;
     font-size: 14px;
 }
 
-.diary-cover-library-description {
-    margin: 28px 0 0;
-    color: #554f47;
-    font-size: 15px;
-    line-height: 1.75;
-    white-space: pre-wrap;
+/* 제목줄 오른쪽: 새 디자인 만들기(작은 primary) + 닫기 */
+.diary-library-head-actions {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 10px;
 }
 
-.diary-cover-library-description.is-empty {
-    color: #a0988d;
-}
-
-.diary-cover-library-detail-meta {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-    margin: 28px 0 0;
-}
-
-.diary-cover-library-detail-meta > div {
-    padding: 12px 14px;
-    border: 1px solid #e7e0d5;
-    border-radius: 9px;
-    background: #fdfbf7;
-}
-
-.diary-cover-library-detail-meta dt {
-    color: #968d82;
-    font-size: 11px;
-}
-
-.diary-cover-library-detail-meta dd {
-    margin: 4px 0 0;
-    color: #514a41;
+/*
+  새 디자인 만들기. 패널의 주요 액션이지만 진한 채움 대신 흰 바탕 외곽선 버튼으로 두어
+  라이브러리 toolbar·닫기 버튼과 같은 톤으로 머리에 녹아들게 한다.
+*/
+.diary-library-new {
+    display: inline-flex;
+    box-sizing: border-box;
+    height: 32px;
+    align-items: center;
+    gap: 4px;
+    padding: 0 11px 0 9px;
+    border: 1px solid #e3e0db;
+    border-radius: 7px;
+    background: #fff;
+    color: #2f2b26;
     font-size: 13px;
-    font-weight: 700;
+    font-weight: 600;
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background-color 140ms ease, border-color 140ms ease;
 }
 
-.diary-cover-library-report-open {
-    align-self: flex-start;
-    margin-top: 14px;
-    padding: 4px 0;
-    color: #77716a;
-    background: transparent;
-    border: 0;
-    border-bottom: 1px solid #cfc8bf;
-    font: inherit;
-    font-size: 0.82rem;
+.diary-library-new-plus {
+    color: #6b645b;
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1;
+}
+
+.diary-library-new:hover {
+    border-color: #d3cfc8;
+    background: #f7f6f4;
+}
+
+.diary-library-new:focus-visible {
+    outline: 2px solid #b39a75;
+    outline-offset: 2px;
+}
+
+.diary-library-close {
+    display: inline-flex;
+    flex: 0 0 auto;
+    width: 38px;
+    height: 38px;
+    align-items: center;
+    justify-content: center;
+    margin: 0 -8px 0 0;
+    border-radius: 999px;
+    color: #6b645b;
+    transition: background-color 140ms ease;
+}
+
+.diary-library-close svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-width: 1.7;
+}
+
+.diary-library-close:hover {
+    background: #f2efea;
+    color: #2f2b26;
+}
+
+.diary-library-close:focus-visible,
+.diary-library-tab:focus-visible {
+    outline: 2px solid #b39a75;
+    outline-offset: 2px;
+}
+
+/* 정렬 두 개와 내 공유 디자인을 글자 탭 한 줄로 둔다. 현재 탭만 밑줄로 구분한다. */
+.diary-library-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 20px;
+    margin-top: 22px;
+    border-bottom: 1px solid #efece7;
+}
+
+.diary-library-tab {
+    margin-bottom: -1px;
+    padding: 8px 0 10px;
+    border-bottom: 2px solid transparent;
+    color: #8b8378;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.diary-library-tab:hover {
+    color: #2f2b26;
+}
+
+.diary-library-tab.is-current {
+    border-bottom-color: #2f2b26;
+    color: #2f2b26;
+}
+
+.diary-library-tab-divider {
+    width: 1px;
+    height: 14px;
+    background: #e3dfd8;
+}
+
+.diary-library .diary-flash-message,
+.diary-library .diary-form-error {
+    margin-bottom: 28px;
+}
+
+.diary-library-section-note {
+    margin: -16px 0 32px;
+    color: #948c81;
+    font-size: 13px;
+}
+
+/* 패널 안 두 영역. 위 표지 라이브러리(둘러보는 곳), 아래 내 보유 디자인(개인 보관함).
+   상자로 감싸지 않고, 라이브러리만 아주 옅은 바탕의 띠로 깔아 역할을 나눈다. */
+.diary-library-section-head {
+    margin-bottom: 40px;
+}
+
+.diary-library-section-title {
+    margin: 0;
+    color: #2b2b2b;
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+/* 둘러보는 영역. 테두리 없이 페이지보다 아주 약간 어두운 바탕 톤으로만 나눈다. */
+/*
+  둘러보는 영역. 거의 흰색에 가까운 바탕과 위아래 아주 연한 선으로만 나눈다.
+  (색 띠로 강하게 구분하지 않고, 여백과 선이 역할을 나눈다)
+*/
+.diary-library-section.is-library {
+    padding: 28px 32px 40px;
+    border-block: 1px solid #efeeeb;
+    background: #fcfcfb;
+}
+
+/* 머리 한 줄: 왼쪽 제목·설명, 오른쪽 탭과 접기 버튼. */
+.diary-library-section.is-library .diary-library-section-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 24px;
+    margin-bottom: 0;
+}
+
+.diary-library-section-heading {
+    min-width: 0;
+}
+
+.diary-library-section.is-library .diary-library-subtitle {
+    margin-top: 4px;
+    font-size: 13.5px;
+}
+
+/* 오른쪽 toolbar: [최신순|인기순|내 공유 디자인] (접으면 개수) + 접기 버튼. 모두 32px 높이로 맞춘다. */
+.diary-library-section-tools {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 10px;
+}
+
+/* 탭은 얇은 외곽선 안의 작은 segmented control. 현재 탭만 옅은 바탕으로 구분한다. */
+.diary-library-section.is-library .diary-library-tabs {
+    flex-wrap: nowrap;
+    gap: 2px;
+    height: 32px;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 2px;
+    border: 1px solid #e8e6e2;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.diary-library-section.is-library .diary-library-tab {
+    display: inline-flex;
+    height: 26px;
+    align-items: center;
+    margin: 0;
+    padding: 0 10px;
+    border-bottom: 0;
+    border-radius: 6px;
+    font-size: 12.5px;
+    transition: background-color 140ms ease, color 140ms ease;
+}
+
+.diary-library-section.is-library .diary-library-tab:hover {
+    background: #f6f5f3;
+}
+
+.diary-library-section.is-library .diary-library-tab.is-current {
+    background: #f1f0ed;
+    color: #2f2b26;
+}
+
+.diary-library-section.is-library .diary-library-tabs[hidden] {
+    display: none;
+}
+
+/* segmented control 안에서는 칸 바탕이 경계를 대신하므로 구분선을 두지 않는다. */
+.diary-library-section.is-library .diary-library-tab-divider {
+    display: none;
+}
+
+/* 접혔을 때만 보이는 공개 디자인 개수 */
+.diary-library-section-count {
+    display: none;
+    color: #948c81;
+    font-size: 12.5px;
+    white-space: nowrap;
+}
+
+.diary-library-section.is-collapsed .diary-library-section-count {
+    display: inline;
+}
+
+/* 갤러리는 머리 아래에 약간 띄워 둔다. */
+.diary-library-section.is-library .diary-library-section-body {
+    margin-top: 28px;
+}
+
+/* 머리 줄 전체가 접기/펼치기 자리다. (버튼이 켜진 패널 안에서만) */
+.diary-library-section-head:has(.diary-library-section-toggle:not([hidden])) {
     cursor: pointer;
+}
+
+.diary-library-section-head:has(.diary-library-section-toggle:not([hidden])) .diary-library-tabs {
+    cursor: default;
+}
+
+/* 접기 버튼도 탭과 같은 높이·외곽선의 작은 네모로 toolbar 끝에 둔다. */
+.diary-library-section-toggle {
+    display: inline-flex;
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    width: 32px;
+    height: 32px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 1px solid #e8e6e2;
+    border-radius: 8px;
+    background: #fff;
+    color: #6b645b;
+    cursor: pointer;
+    transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+.diary-library-section-toggle[hidden] {
+    display: none;
+}
+
+.diary-library-section-toggle svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.7;
+    transition: transform 160ms ease;
+}
+
+.diary-library-section-heading:hover ~ .diary-library-section-tools .diary-library-section-toggle,
+.diary-library-section-toggle:hover,
+.diary-library-section-toggle:focus-visible {
+    border-color: #dcd9d3;
+    background: #f6f5f3;
+    color: #2f2b26;
+}
+
+.diary-library-section-toggle:focus-visible {
+    outline: 2px solid #b39a75;
+    outline-offset: 1px;
+}
+
+/* 접힌 상태: 위쪽 화살표를 아래로 돌리고, 바탕 띠는 머리 높이만큼만 남긴다. */
+.diary-library-section.is-collapsed .diary-library-section-toggle svg {
+    transform: rotate(180deg);
+}
+
+.diary-library-section.is-library.is-collapsed {
+    padding-block: 22px;
+}
+
+.diary-library-section.is-collapsed + .diary-library-section.is-owned {
+    margin-top: 40px;
+}
+
+.diary-library-section-body:not([hidden]) {
+    animation: diary-library-section-reveal 160ms ease-out;
+}
+
+@keyframes diary-library-section-reveal {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .diary-library-section-toggle svg {
+        transition: none;
+    }
+
+    .diary-library-section-body:not([hidden]) {
+        animation: none;
+    }
+}
+
+.diary-library-section.is-owned {
+    margin-top: 56px;
+}
+
+.diary-library-section.is-owned .diary-flash-message {
+    margin-bottom: 32px;
+}
+
+/*
+  라이브러리 갤러리. 둘러보는 곳이라 내 보유 디자인보다 가볍게 둔다.
+  넓은 화면에서 4열까지 두되 칸이 200px 아래로 줄면 열을 줄인다. (5열 이상은 만들지 않는다)
+  표지는 칸 폭의 86% 로 가운데에 놓아 칸 사이 여백을 넉넉히 둔다. (A5 비율·renderer 는 그대로)
+*/
+.diary-cover-design-gallery.diary-library-gallery {
+    grid-template-columns: repeat(auto-fill,
+        minmax(max(200px, calc((100% - 3 * 24px) / 4)), 1fr));
+    gap: 40px 24px;
+}
+
+.diary-library-gallery > .diary-cover-design-item {
+    width: 86%;
+    justify-self: center;
+}
+
+/* 카드 정보: 제목 → by 작성자 → 설명(한 줄) → 다운로드·등록일 + 상태/액션. 한 덩어리로 촘촘하게. */
+.diary-library-gallery .diary-library-item-info {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    margin-top: 12px;
+}
+
+.diary-library-gallery .diary-cover-design-name {
+    font-size: 14px;
+    line-height: 1.35;
+}
+
+.diary-library-gallery .diary-library-creator {
+    margin-top: 1px;
+    font-size: 12.5px;
+}
+
+.diary-library-gallery .diary-library-item-description {
+    margin-top: 4px;
+    font-size: 12px;
+    line-height: 1.5;
+    -webkit-line-clamp: 1;
+}
+
+/*
+  같은 줄 카드들의 아래 줄이 나란히 맞도록 아래에 붙인다.
+  설명이 한 줄로 고정돼 있어 비는 자리는 많아야 한 줄이다.
+*/
+.diary-library-card-row {
+    display: flex;
+    min-height: 28px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    margin-top: auto;
+    padding-top: 4px;
+}
+
+.diary-library-card-row .diary-library-meta {
+    min-width: 0;
+    margin: 0;
+    font-size: 11.5px;
+}
+
+.diary-library-card-actions {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 2px;
+    margin-right: -5px;
+}
+
+/* 라이브러리 표지 그림자는 아주 약하게. 올리면 1px 만 떠오른다. (정보 영역은 그대로) */
+.diary-library-gallery .diary-library-cover .diary-cover-canvas {
+    box-shadow:
+        inset 0 0 14px rgba(0, 0, 0, 0.07),
+        inset 0 1px 0 rgba(255, 255, 255, 0.18),
+        0 1px 2px rgba(40, 34, 26, 0.05),
+        0 4px 10px rgba(40, 34, 26, 0.05);
+    transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.diary-library-gallery .diary-library-cover:hover .diary-cover-canvas {
+    transform: translateY(-1px);
+    box-shadow:
+        inset 0 0 14px rgba(0, 0, 0, 0.07),
+        inset 0 1px 0 rgba(255, 255, 255, 0.18),
+        0 1px 3px rgba(40, 34, 26, 0.06),
+        0 6px 14px rgba(40, 34, 26, 0.08);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .diary-library-gallery .diary-library-cover .diary-cover-canvas {
+        transition: none;
+    }
+
+    .diary-library-gallery .diary-library-cover:hover .diary-cover-canvas {
+        transform: none;
+    }
+}
+
+.diary-library-quick-download {
+    display: flex;
+    margin: 0;
+}
+
+/* 받기(+)·신고 아이콘. 평소에는 옅게, 올리거나 초점이 가면 뜻이 분명해진다. */
+.diary-library-icon-button {
+    position: relative;
+    display: inline-flex;
+    width: 28px;
+    height: 28px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: #8b8378;
+    cursor: pointer;
+    transition: background-color 140ms ease, color 140ms ease;
+}
+
+.diary-library-icon-button svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.5;
+}
+
+.diary-library-icon-button.is-add svg {
+    stroke-width: 1.8;
+}
+
+.diary-library-icon-button:hover,
+.diary-library-icon-button:focus-visible {
+    background: #efeeeb;
+    color: #2f2b26;
+}
+
+.diary-library-icon-button.is-report:hover,
+.diary-library-icon-button.is-report:focus-visible {
+    color: #a3564d;
+}
+
+.diary-library-icon-button:focus-visible {
+    outline: 2px solid #b39a75;
+    outline-offset: 1px;
+}
+
+.diary-library-icon-button:disabled {
+    cursor: wait;
+    opacity: 0.5;
+}
+
+/* 아이콘만으로 뜻이 잘 안 읽히는 경우를 위한 작은 설명. (화면 낭독은 aria-label 이 맡는다) */
+.diary-library-icon-button[data-tooltip]::after {
+    position: absolute;
+    z-index: 4;
+    /* 오른쪽 끝 카드에서도 패널 밖으로 나가지 않게 아이콘 오른쪽에 맞춘다. */
+    right: 0;
+    bottom: calc(100% + 6px);
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: #2f2b26;
+    color: #fff;
+    content: attr(data-tooltip);
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 1.3;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 120ms ease;
+    white-space: nowrap;
+}
+
+.diary-library-icon-button[data-tooltip]:hover::after,
+.diary-library-icon-button[data-tooltip]:focus-visible::after {
+    opacity: 1;
+}
+
+.diary-library-icon-button.is-busy[data-tooltip]::after {
+    opacity: 0;
+}
+
+/* 내가 공유한 표지. 받을 대상이 아니라는 것만 조용히 알린다. */
+.diary-library-shared-badge {
+    display: inline-flex;
+    height: 28px;
+    align-items: center;
+    padding: 0 5px;
+    color: #8b8378;
+    font-size: 11.5px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* 이미 가지고 있는 표지. 받기(+) 자리에 조용한 글자로 놓인다. */
+.diary-library-owned-badge {
+    display: inline-flex;
+    height: 28px;
+    align-items: center;
+    gap: 3px;
+    padding: 0 5px;
+    color: #557a58;
+    font-size: 11.5px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.diary-library-owned-badge svg {
+    width: 13px;
+    height: 13px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.8;
+}
+
+/* 내 보유 디자인의 출처. 라이브러리에서 받은 디자인에만 작게 붙는다. */
+.diary-cover-design-source {
+    margin: 3px 0 0;
+    color: #8b8378;
+    font-size: 11.5px;
+    line-height: 1.4;
+}
+
+/* 방금 받은 보유 디자인. 표지 둘레가 아주 옅게 한 번 번졌다 사라진다. */
+.diary-cover-design-item.is-just-added .diary-cover-canvas {
+    animation: diary-library-just-added 2.4s ease-out 1;
+}
+
+@keyframes diary-library-just-added {
+    0%,
+    35% {
+        outline: 3px solid rgba(85, 122, 88, 0.35);
+        outline-offset: 4px;
+    }
+
+    100% {
+        outline: 3px solid rgba(85, 122, 88, 0);
+        outline-offset: 4px;
+    }
+}
+
+/* 바로 받은 결과 안내. 패널 아래 가운데에 잠깐 뜬다. */
+.diary-library-toast {
+    position: fixed;
+    z-index: 5;
+    bottom: calc(40px + env(safe-area-inset-bottom, 0px));
+    left: 50%;
+    display: flex;
+    max-width: calc(100% - 40px);
+    align-items: center;
+    gap: 14px;
+    padding: 11px 16px;
+    border-radius: 10px;
+    background: #2f2b26;
+    box-shadow: 0 6px 18px rgba(33, 29, 25, 0.18);
+    color: #fff;
+    font-size: 13.5px;
+    transform: translateX(-50%);
+}
+
+.diary-library-toast[hidden] {
+    display: none;
+}
+
+.diary-library-toast.is-error {
+    background: #8f4a43;
+}
+
+.diary-library-toast-action {
+    padding: 2px 0;
+    border: 0;
+    background: none;
+    color: #fff;
+    font: inherit;
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+}
+
+.diary-library-toast-action[hidden] {
+    display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .diary-cover-design-item.is-just-added .diary-cover-canvas {
+        animation: none;
+        outline: 3px solid rgba(85, 122, 88, 0.3);
+        outline-offset: 4px;
+    }
+}
+
+.diary-library-owned-empty {
+    margin: 0;
+    padding: 32px 0 8px;
+    color: #948c81;
+    font-size: 14px;
+    text-align: center;
+}
+
+/* 받은 표지로 내려갈 때 패널 위 제목줄에 가리지 않게 한다. */
+.diary-library .diary-cover-design-item {
+    scroll-margin-top: 120px;
+}
+
+/* 갤러리 항목 정보. 제목은 내 표지 디자인과 같은 크기, 나머지는 작고 옅게. */
+.diary-library-item-info {
+    min-width: 0;
+    margin-top: 18px;
+}
+
+.diary-library-creator {
+    margin: 2px 0 0;
+    overflow: hidden;
+    color: #7b756d;
+    font-size: 13px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.diary-library-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px 6px;
+    margin: 6px 0 0;
+    color: #a39b90;
+    font-size: 12px;
+}
+
+.diary-library-meta time {
+    white-space: nowrap;
+}
+
+/* 내 공유 디자인: 공개 상태는 배지 대신 색 있는 글자로만 보인다. */
+.diary-library-status {
+    font-weight: 600;
+}
+
+.diary-library-status.is-published {
+    color: #557a58;
+}
+
+.diary-library-status.is-withdrawn {
+    color: #8b8378;
+}
+
+.diary-library-status.is-blocked {
+    color: #a3564d;
+}
+
+/* 누르는 곳이 아닌 표지(라이브러리 카드·내 공유 디자인). 떠오르는 효과 없이 옅은 그림자만 둔다. */
+.diary-library-cover .diary-cover-canvas,
+.diary-library-mine-preview .diary-cover-canvas {
+    box-shadow:
+        inset 0 0 14px rgba(0, 0, 0, 0.07),
+        inset 0 1px 0 rgba(255, 255, 255, 0.18),
+        0 1px 2px rgba(40, 34, 26, 0.06),
+        0 6px 16px rgba(40, 34, 26, 0.07);
+}
+
+/* 공개하지 않은 표지는 살짝 옅게 두어 상태가 한눈에 갈린다. */
+.diary-library-mine-item.is-inactive .diary-library-mine-preview {
+    opacity: 0.55;
+}
+
+.diary-library-mine-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 14px;
+    margin-top: 10px;
+}
+
+.diary-library-mine-actions form {
+    margin: 0;
+}
+
+.diary-library-action {
+    padding: 2px 0;
+    border: 0;
+    background: none;
+    color: #6b645b;
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.diary-library-action:hover {
+    color: #2f2b26;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.diary-library-action.is-danger {
+    color: #a3645b;
+}
+
+.diary-library-action:disabled {
+    cursor: wait;
+    opacity: 0.5;
+}
+
+.diary-library-blocked-note {
+    margin: 0;
+    color: #8c7e73;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.diary-library-empty {
+    padding: 72px 16px;
+    text-align: center;
+}
+
+.diary-library-empty-title {
+    margin: 0;
+    color: #5c554c;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.diary-library-empty-text {
+    margin: 6px 0 0;
+    color: #948c81;
+    font-size: 13px;
+}
+
+/* 라이브러리 카드 설명. 있을 때만, 두 줄까지만 보이고 넘치면 말줄임한다. */
+.diary-library-item-description {
+    display: -webkit-box;
+    margin: 8px 0 0;
+    overflow: hidden;
+    color: #6b645b;
+    font-size: 12.5px;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+/* 신고 창 안내 앞에 붙는 표지 제목 */
+.diary-cover-library-report-subject:not(:empty)::after {
+    content: " · ";
+}
+
+/* 내 표지 디자인 위에 여는 패널. 뒤 화면은 옅게 비치고, 패널이 화면 대부분을 쓴다. */
+.is-cover-library-open,
+.is-cover-library-open body {
+    overflow: hidden;
+}
+
+.diary-library-overlay {
+    position: fixed;
+    z-index: 1200;
+    inset: 0;
+    display: flex;
+    padding: 28px;
+    background: rgba(33, 29, 25, 0.32);
+}
+
+.diary-library-overlay[hidden] {
+    display: none;
+}
+
+.diary-library-sheet {
+    position: relative;
+    width: min(1320px, 100%);
+    height: 100%;
+    margin: 0 auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 18px 48px rgba(33, 29, 25, 0.16);
+}
+
+.diary-library-sheet[aria-busy="true"] .diary-library-sheet-content {
+    opacity: 0.55;
+    transition: opacity 120ms ease 120ms;
+}
+
+.diary-library-sheet .diary-library {
+    padding: 0 48px 56px;
+}
+
+/* 패널 안에서는 라이브러리 바탕을 패널 양 끝까지 깔아 카드가 아니라 한 영역으로 보이게 한다. */
+.diary-library-sheet .diary-library-section.is-library {
+    margin-inline: -48px;
+    padding-inline: 48px;
+    border-radius: 0;
+}
+
+/* 스크롤해도 제목·닫기(상세에서는 목록으로)는 패널 위에 남는다. */
+.diary-library-sheet .diary-library-head {
+    position: sticky;
+    z-index: 3;
+    top: 0;
+    margin-bottom: 24px;
+    padding-top: 26px;
+    padding-bottom: 10px;
+    background: #fff;
 }
 
 .diary-cover-library-report-modal {
@@ -2996,31 +3713,14 @@
     opacity: 0.6;
 }
 
-.diary-cover-library-download {
-    margin: 22px 0 0;
-    padding-top: 16px;
-    border-top: 1px solid #eee8df;
-}
-
-.diary-cover-library-download p {
-    margin: 0 0 12px;
-    color: #9a9185;
-    font-size: 12px;
-}
-
-.diary-cover-library-download .diary-new-button:disabled {
-    border-color: #a99e8d;
-    background: #a99e8d;
-    cursor: wait;
-}
-
-@media (max-width: 900px) {
-    .diary-cover-library-grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+@media (max-width: 980px) {
+    .diary-library-sheet .diary-library {
+        padding-inline: 32px;
     }
 
-    .diary-cover-library-detail-layout {
-        gap: 32px;
+    .diary-library-sheet .diary-library-section.is-library {
+        margin-inline: -32px;
+        padding-inline: 32px;
     }
 }
 
@@ -3029,27 +3729,119 @@
         grid-template-columns: 68px minmax(0, 1fr);
     }
 
-    .diary-cover-library-page,
-    .diary-cover-library-detail {
-        width: min(100% - 32px, 620px);
+    /* 모바일에서는 작은 창이 아니라 화면 전체를 쓰는 라이브러리 화면이 된다. */
+    .diary-library-overlay {
+        padding: 0;
     }
 
-    .diary-cover-library-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 26px 16px;
+    .diary-library-sheet {
+        width: 100%;
+        border-radius: 0;
+        box-shadow: none;
     }
 
-    .diary-cover-library-detail-layout {
-        grid-template-columns: minmax(0, 1fr);
+    .diary-library-sheet .diary-library {
+        padding: 0 20px 40px;
     }
 
-    .diary-cover-library-detail-preview {
-        width: min(82vw, var(--diary-cover-base-width));
+    .diary-library-sheet .diary-library-head {
+        padding-top: max(16px, env(safe-area-inset-top, 0px));
     }
 
-    .diary-cover-library-detail-info {
-        padding-top: 0;
+    .diary-library-head {
+        margin-bottom: 28px;
     }
+
+    .diary-library-title {
+        font-size: 22px;
+    }
+
+    .diary-library-tabs {
+        margin-top: 14px;
+    }
+
+    .diary-library-section-head {
+        margin-bottom: 28px;
+    }
+
+    .diary-library-section.is-library {
+        padding: 32px 20px 40px;
+    }
+
+    .diary-library-sheet .diary-library-section.is-library {
+        margin-inline: -20px;
+        padding-inline: 20px;
+    }
+
+    .diary-library-section.is-owned {
+        margin-top: 48px;
+    }
+
+    /* 손가락으로 누르기 편한 높이 */
+    .diary-library-icon-button,
+    .diary-library-owned-badge,
+    .diary-library-shared-badge {
+        width: 38px;
+        height: 38px;
+    }
+
+    .diary-library-owned-badge,
+    .diary-library-shared-badge {
+        width: auto;
+    }
+
+    /*
+      좁은 화면의 라이브러리 머리: 첫 줄에 제목·설명과 접기 버튼,
+      둘째 줄에 탭(펼쳤을 때) 또는 공개 디자인 개수(접었을 때).
+    */
+    .diary-library-section.is-library .diary-library-section-head {
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 10px 12px;
+    }
+
+    .diary-library-section.is-library .diary-library-section-tools {
+        display: contents;
+    }
+
+    .diary-library-section.is-library .diary-library-section-heading {
+        flex: 1 1 0;
+        order: 1;
+    }
+
+    .diary-library-section.is-library .diary-library-section-toggle {
+        order: 2;
+    }
+
+    .diary-library-section.is-library .diary-library-tabs,
+    .diary-library-section.is-library .diary-library-section-count {
+        flex-basis: 100%;
+        order: 3;
+        margin-top: 0;
+    }
+
+    /* 둘째 줄 탭은 폭을 나눠 쓰는 segmented control 로 둔다. */
+    .diary-library-section.is-library .diary-library-tab {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .diary-library-section.is-library .diary-library-section-body {
+        margin-top: 24px;
+    }
+
+    /* 한 열일 때는 내 보유 디자인과 같은 크기로 가운데에 둔다. */
+    .diary-cover-design-gallery.diary-library-gallery {
+        grid-template-columns: minmax(0, 300px);
+        justify-content: center;
+        gap: 40px;
+    }
+
+    .diary-library-section-toggle {
+        width: 38px;
+        height: 38px;
+    }
+
 }
 
 /* 새 여행일기 폼의 표지 고르기: 기본 디자인 / 내 디자인 두 갈래 */
@@ -7222,8 +8014,9 @@ body.is-pin-open {
         flex-wrap: wrap;
     }
 
+    /* 검색창은 한 줄을 다 쓰고, 보기 전환 / 정렬·표지 디자인 관리·새 여행일기는 그 위아래 줄에 놓인다 */
     .diary-search {
-        flex: 1;
+        flex: 1 1 100%;
         min-width: 180px;
     }
 

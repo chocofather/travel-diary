@@ -175,6 +175,16 @@
         WHERE d.user_id = #{userId}
           AND e.element_type = 'PHOTO'
           AND e.image_url IS NOT NULL
+        UNION
+        -- 다이어리에 적용된 표지의 사진. 보관함 원본과 다른 복사본이라 따로 지워야 한다.
+        -- (라이브러리에서 받은 사진은 image_url 이 비어 있어 여기에 들어오지 않는다)
+        SELECT e.image_url
+        FROM diary_cover_elements e
+                 JOIN diary_covers c ON c.id = e.cover_id
+                 JOIN diaries d ON d.id = c.diary_id
+        WHERE d.user_id = #{userId}
+          AND e.element_type = 'PHOTO'
+          AND e.image_url IS NOT NULL
     </select>
 
     <select id="findCoverDesignImageUrlsByUserId" resultType="string">

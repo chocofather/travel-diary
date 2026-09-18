@@ -1,5 +1,6 @@
 package com.example.travlediary.config.i18n;
 
+import com.example.travlediary.security.AccountAbuseGuard;
 import com.example.travlediary.controller.user.SocialSignupController;
 import com.example.travlediary.model.PendingSocialSignup;
 import com.example.travlediary.model.SocialProvider;
@@ -45,6 +46,10 @@ class SocialSignupPageI18nContractTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    // 가입 인증메일의 IP 제한은 이 화면 계약의 관심사가 아니라 통과시키는 가짜를 쓴다.
+
+    @MockitoBean private AccountAbuseGuard accountAbuseGuard;
 
     @MockitoBean private SignupPolicyService signupPolicyService;
 

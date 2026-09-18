@@ -1,6 +1,7 @@
 package com.example.travlediary.controller.user;
 
 import com.example.travlediary.model.PendingSocialLoginLink;
+import com.example.travlediary.security.ClientIpResolver;
 import com.example.travlediary.security.LoginFormState;
 import com.example.travlediary.security.LoginThrottle;
 import com.example.travlediary.security.LoginThrottleStatus;
@@ -75,8 +76,8 @@ public class LoginController {
 
         String username = storedState == null ? null : storedState.username();
         LoginThrottleStatus currentStatus = storedState == null
-                ? loginThrottle.ipStatus(request.getRemoteAddr())
-                : loginThrottle.status(username, request.getRemoteAddr());
+                ? loginThrottle.ipStatus(ClientIpResolver.of(request))
+                : loginThrottle.status(username, ClientIpResolver.of(request));
         LoginFormState currentState = LoginFormState.from(username, currentStatus);
 
         if (!currentStatus.blocked()) {

@@ -63,6 +63,12 @@ public class PostContentSanitizer {
         String nonNullContent = content == null ? "" : content;
         String cleaned = Jsoup.clean(nonNullContent, "", safelist, outputSettings());
         Document document = Jsoup.parseBodyFragment(cleaned);
+        /*
+          다시 읽어 들인 문서는 기본 출력 설정(보기 좋게 줄바꿈)을 쓴다. 그대로 두면 저장되는
+          HTML 모양이 jsoup 의 정렬기 판에 따라 달라진다. 걸러 낼 때와 같은 설정을 다시 걸어
+          결과가 판올림에 흔들리지 않게 한다.
+        */
+        document.outputSettings(outputSettings());
 
         sanitizeQuillClasses(document, additionalInlineClasses);
         sanitizeQuillStyles(document);

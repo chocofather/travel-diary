@@ -170,4 +170,18 @@
         WHERE user_id = #{userId}
     </delete>
 
+    <!--
+      통제된 대표 이미지 응답 전용. 다이어리 한 권을 통째로 읽지 않고 필요한 세 칸만 가져온다.
+      소유권(user_id)이 조건에 들어 있어 남의 다이어리는 결과 자체가 없다. (PK 로 한 행)
+    -->
+    <select id="findCoverPhotoRef" resultType="com.example.travlediary.dto.DiaryPrivatePhotoRef">
+        SELECT d.cover_image_url AS image_url,
+               d.id              AS diary_id,
+               d.pin_hash        AS pin_hash
+        FROM diaries d
+        WHERE d.id = #{diaryId}
+          AND d.user_id = #{userId}
+          AND d.cover_image_url IS NOT NULL
+    </select>
+
 </mapper>

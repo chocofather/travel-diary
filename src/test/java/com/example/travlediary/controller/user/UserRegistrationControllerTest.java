@@ -1,5 +1,6 @@
 package com.example.travlediary.controller.user;
 
+import com.example.travlediary.security.AccountAbuseGuard;
 import com.example.travlediary.config.CustomLoginSuccessHandler;
 import com.example.travlediary.config.CustomLogoutSuccessHandler;
 import com.example.travlediary.dto.RegistrationForm;
@@ -45,6 +46,8 @@ class UserRegistrationControllerTest {
 
     @Autowired private MockMvc mockMvc;
     @Autowired private UserController userController;
+    // 요청 남용 제한은 이 화면 계약의 관심사가 아니라 통과시키는 가짜를 쓴다.
+    @MockitoBean private AccountAbuseGuard accountAbuseGuard;
     @MockitoBean private UserService userService;
     @MockitoBean private SignupPolicyService signupPolicyService;
     @MockitoBean private UserMapper userMapper;
@@ -119,7 +122,10 @@ class UserRegistrationControllerTest {
                         "member@gmail.com");
 
         String destination = userController.registerUser(
-                form, bindingResult, null, session, redirectAttributes,
+                form, bindingResult, null,
+                new org.springframework.mock.web.MockHttpServletRequest(),
+                new org.springframework.mock.web.MockHttpServletResponse(),
+                session, redirectAttributes,
                 new org.springframework.ui.ConcurrentModel());
 
         assertThat(destination).isEqualTo("redirect:/users/verification/resend");

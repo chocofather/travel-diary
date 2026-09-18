@@ -81,12 +81,14 @@ class HomeControllerTest {
                     assertThat(document.select("#event-slider #slide-area")).hasSize(1);
                     assertThat(document.select(".home-service-teaser")).hasSize(1);
                     assertThat(document.select(".home-service-teaser a[href='/about']")).hasSize(1);
-                    assertThat(document.selectFirst("#event-slider").nextElementSibling())
-                            .matches(element -> element.hasClass("seasonal-recommend"));
-                    assertThat(document.selectFirst(".seasonal-recommend").nextElementSibling())
-                            .matches(element -> element.hasClass("home-service-teaser"));
-                    assertThat(document.selectFirst(".home-service-teaser").nextElementSibling())
-                            .matches(element -> element.hasClass("popular-recommend"));
+                    // jsoup 의 Element 는 Iterable<Element> 라 assertThat(요소) 가 컬렉션 단언으로
+                    // 잡힌다. 확인하려는 것은 "바로 다음 형제의 class" 하나이므로 그 값을 직접 본다.
+                    assertThat(document.selectFirst("#event-slider").nextElementSibling()
+                            .hasClass("seasonal-recommend")).isTrue();
+                    assertThat(document.selectFirst(".seasonal-recommend").nextElementSibling()
+                            .hasClass("home-service-teaser")).isTrue();
+                    assertThat(document.selectFirst(".home-service-teaser").nextElementSibling()
+                            .hasClass("popular-recommend")).isTrue();
                     assertThat(document.select(".seasonal-recommend")).hasSize(1);
                     assertThat(document.select(".popular-recommend")).hasSize(1);
                     assertThat(document.select("a.popular-course-card[href='/course/12']")).hasSize(1);

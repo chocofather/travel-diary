@@ -294,11 +294,11 @@ class TravelPlanAlternativeUiContractTest {
                 Path.of("src/main/java/com/example/travlediary/config/SecurityConfig.java"),
                 StandardCharsets.UTF_8);
 
+        // 대안 추가/수정/삭제 POST 는 기본 CSRF 정책이 보호한다 (주소 목록을 두지 않는다)
         assertThat(securityConfig)
-                .contains("\"^/travel-plans/[0-9]+/days/[0-9]+/items/[0-9]+/alternatives$\"")
-                .contains("\"/alternatives/[0-9]+/update$\"")
-                .contains("\"/alternatives/[0-9]+/delete$\"")
-                .contains("\"^/travel-plans/[0-9]+/days/[0-9]+/items/[0-9]+/delete-group$\"");
+                .doesNotContain("requireCsrfProtectionMatcher")
+                .doesNotContain("ignoringRequestMatchers")
+                .doesNotContain("csrf(AbstractHttpConfigurer::disable)");
         // 인가 정책은 그대로 anyRequest().authenticated() 를 쓴다
         assertThat(securityConfig).doesNotContain("/travel-plans/**");
     }

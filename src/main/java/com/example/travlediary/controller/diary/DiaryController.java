@@ -30,10 +30,10 @@ import com.example.travlediary.service.diary.DiaryPinSession;
 import jakarta.servlet.http.HttpSession;
 import com.example.travlediary.service.diary.DiaryService;
 import com.example.travlediary.service.diary.DiaryStickerCatalog;
-import com.example.travlediary.service.file.FileUploadService;
+import com.example.travlediary.service.file.DiaryPrivatePhotoStorage;
+import com.example.travlediary.service.file.UnsupportedImageFormatException;
 import com.example.travlediary.service.holiday.HolidayService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -52,10 +52,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.io.IOException;
 import java.math.BigDecimal;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeParseException;
@@ -69,10 +66,10 @@ import java.util.stream.Collectors;
 @RequestMapping("/diaries")
 public class DiaryController {
 
-    /** 대표 이미지 저장 위치. 다른 업로드와 섞지 않는다. */
-    private static final String COVER_IMAGE_DIRECTORY = "diary-covers";
+    /** 대표 이미지 저장 위치. 실제 파일은 공개 업로드 폴더가 아니라 private 저장소에 들어간다. */
+    private static final String COVER_IMAGE_DIRECTORY = DiaryPrivatePhotoStorage.COVER_DIRECTORY;
     /** 페이지에 붙이는 사진 저장 위치 */
-    private static final String PAGE_IMAGE_DIRECTORY = "diary-pages";
+    private static final String PAGE_IMAGE_DIRECTORY = DiaryPrivatePhotoStorage.PAGE_DIRECTORY;
     /** 한 번에 펼쳐 보여주는 페이지 수 (좌/우 두 장) */
     private static final int SPREAD_SIZE = 2;
     private static final String PHOTO_ELEMENT_TYPE = "PHOTO";
@@ -117,7 +114,8 @@ public class DiaryController {
     private final DiaryCoverService diaryCoverService;
     private final DiaryPageService diaryPageService;
     private final DiaryElementService diaryElementService;
-    private final FileUploadService fileUploadService;
+    /** 대표 이미지와 페이지 사진은 공개 업로드 폴더가 아니라 이 private 저장소에 둔다. */
+    private final DiaryPrivatePhotoStorage diaryPrivatePhotoStorage;
     private final DiaryStickerCatalog diaryStickerCatalog;
     /** 라벨/떡메모지 디자인 허용 목록. 화면이 보낸 값이 아는 것인지 여기서만 확인한다. */
     private final DiaryNoteCatalog diaryNoteCatalog;
@@ -126,9 +124,6 @@ public class DiaryController {
     /** 이 세션에서 어떤 다이어리를 풀어 두었는지. (목록이 자물쇠 동작을 가르는 데만 쓴다) */
     private final DiaryPinSession diaryPinSession;
     private final HolidayService holidayService;
-
-    @Value("${custom.upload-path}")
-    private String uploadPath;
 
     /**
      * 내 여행일기 목록 (본인 다이어리만).
@@ -456,7 +451,7 @@ public class DiaryController {
             requirePagesInsidePeriod(diaryId, userId, diaryForm.getStartDate(), diaryForm.getEndDate());
             // 커스텀 표지를 쓰는 동안에는 대표 이미지를 쓰지 않으므로 저장조차 하지 않는다.
             if (!custom && coverImage != null && !coverImage.isEmpty()) {
-                savedCoverImageUrl = fileUploadService.saveFile(coverImage, COVER_IMAGE_DIRECTORY);
+                savedCoverImageUrl = diaryPrivatePhotoStorage.save(coverImage, COVER_IMAGE_DIRECTORY);
             }
 
             Diary diary = new Diary();
@@ -502,6 +497,9 @@ public class DiaryController {
                 return renderEditForm(model, diaryId, diaryForm, exception.getReason());
             }
             throw exception;
+        } catch (UnsupportedImageFormatException exception) {
+            // 대표 이미지가 실제 JPEG/PNG/WEBP 가 아니다. 저장되지 않았으므로 지울 파일도 없다.
+            return renderEditForm(model, diaryId, diaryForm, exception.getMessage());
         } catch (RuntimeException exception) {
             deleteStoredFile(savedCoverImageUrl);
             throw exception;
@@ -746,7 +744,7 @@ public class DiaryController {
             // 이번 장에서 저장한 파일만 추적해 실패 시 정리한다.
             String savedImageUrl = null;
             try {
-                savedImageUrl = fileUploadService.saveFile(image, PAGE_IMAGE_DIRECTORY);
+                savedImageUrl = diaryPrivatePhotoStorage.save(image, PAGE_IMAGE_DIRECTORY);
 
                 DiaryElement element = new DiaryElement();
                 element.setElementType(PHOTO_ELEMENT_TYPE);
@@ -786,6 +784,11 @@ public class DiaryController {
                 deleteStoredFile(savedImageUrl);
                 return redirectWithElementError(
                         exception, diaryId, spread, page, redirectAttributes);
+            } catch (UnsupportedImageFormatException exception) {
+                // 실제 사진이 아니면 저장하지 않고 편집 화면에 안내만 남긴다. (앞서 붙은 사진은 그대로)
+                return redirectWithElementError(
+                        new ResponseStatusException(HttpStatus.BAD_REQUEST, exception.getMessage()),
+                        diaryId, spread, page, redirectAttributes);
             } catch (RuntimeException exception) {
                 deleteStoredFile(savedImageUrl);
                 throw exception;
@@ -1377,7 +1380,7 @@ public class DiaryController {
         String savedCoverImageUrl = null;
         try {
             if (!custom && coverImage != null && !coverImage.isEmpty()) {
-                savedCoverImageUrl = fileUploadService.saveFile(coverImage, COVER_IMAGE_DIRECTORY);
+                savedCoverImageUrl = diaryPrivatePhotoStorage.save(coverImage, COVER_IMAGE_DIRECTORY);
             }
 
             // 제목/기간/표지 스타일과 업로드 결과만 사용하고 요청의 다른 값은 신뢰하지 않는다.
@@ -1411,6 +1414,9 @@ public class DiaryController {
                 return renderNewForm(model, exception.getReason());
             }
             throw exception;
+        } catch (UnsupportedImageFormatException exception) {
+            // 대표 이미지가 실제 JPEG/PNG/WEBP 가 아니다. 저장되지 않았으므로 지울 파일도 없다.
+            return renderNewForm(model, exception.getMessage());
         } catch (RuntimeException exception) {
             deleteStoredFile(savedCoverImageUrl);
             throw exception;
@@ -1450,14 +1456,18 @@ public class DiaryController {
         return ((CustomUserDetails) principal).getId();
     }
 
-    /** 저장에 실패했을 때 이번 요청에서 올라간 대표 이미지만 정리한다. */
+    /**
+     * 이 화면에서 다룬 개인 사진 파일 하나를 정리한다.
+     *
+     * <p>지우는 자리는 private 저장소 한 곳이다. 아직 옮기지 않은 예전 파일도 그쪽이 함께
+     * 정리한다. 관리 대상이 아닌 경로(공용 스티커 등)는 저장소가 스스로 걸러 낸다.
+     */
     private void deleteStoredFile(String imageUrl) {
         if (imageUrl == null || imageUrl.isEmpty()) return;
         try {
-            String relativePath = imageUrl.replaceFirst("^/uploads/", "");
-            Files.deleteIfExists(Paths.get(uploadPath, relativePath));
-        } catch (IOException ignored) {
-            // 파일 정리 실패는 등록 실패 원인을 덮지 않도록 무시한다.
+            diaryPrivatePhotoStorage.delete(imageUrl);
+        } catch (RuntimeException ignored) {
+            // 파일 정리 실패는 요청을 깨뜨리지 않는다.
         }
     }
 }

@@ -1,5 +1,7 @@
 package com.example.travlediary.controller.user;
 
+import com.example.travlediary.security.AccountAbuseGuard;
+import com.example.travlediary.security.TooManyAccountRequestsException;
 import com.example.travlediary.config.CustomLoginSuccessHandler;
 import com.example.travlediary.config.CustomLogoutSuccessHandler;
 import com.example.travlediary.config.SecurityConfig;
@@ -25,6 +27,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -35,6 +38,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class EmailVerificationSecurityTest {
 
     @Autowired private MockMvc mockMvc;
+    // 요청 남용 제한은 이 화면 계약의 관심사가 아니라 통과시키는 가짜를 쓴다.
+    @MockitoBean private AccountAbuseGuard accountAbuseGuard;
     @MockitoBean private EmailVerificationService emailVerificationService;
     @MockitoBean private com.example.travlediary.service.user.EmailCorrectionService
             emailCorrectionService;
@@ -128,6 +133,27 @@ class EmailVerificationSecurityTest {
                         EmailVerificationController.PUBLIC_RESEND_MESSAGE));
 
         verify(emailVerificationService).resend("member@gmail.com");
+    }
+
+    /**
+     * 주소를 바꿔 가며 인증메일을 퍼붓는 요청도 같은 IP 한도에 걸린다.
+     *
+     * <p>같은 주소로의 60초 cooldown 은 {@link EmailVerificationService} 가 이미 맡고 있어
+     * 여기서 더하지 않는다. 여기서 막는 것은 주소를 계속 바꿔 SMTP 한도를 소진하는 쪽이다.
+     * 막힌 요청은 인증 서비스까지 내려가지도 않는다.
+     */
+    @Test
+    void standaloneResendIsThrottledPerClientBeforeAnyMailIsScheduled() throws Exception {
+        org.mockito.Mockito.doThrow(new TooManyAccountRequestsException(42))
+                .when(accountAbuseGuard).checkRecoveryRequest(anyString());
+
+        mockMvc.perform(post("/users/verification/resend")
+                        .param("email", "member@gmail.com")
+                        .with(csrf()))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(header().string("Retry-After", "42"));
+
+        verify(emailVerificationService, never()).resend(anyString());
     }
 
     @Test

@@ -1,5 +1,6 @@
 package com.example.travlediary.dto;
 
+import com.example.travlediary.model.DiaryPhotoUrls;
 import lombok.Data;
 
 import java.time.LocalDate;
@@ -20,4 +21,15 @@ public class DiaryListItemDto {
      * (해시 자체는 SQL 에서 이미 참/거짓으로 바뀌어 이 자리까지 오지 않는다)
      */
     private boolean pinEnabled;
+
+    /**
+     * 책장 카드가 쓰는 대표 이미지 주소. 저장 키는 내보내지 않는다.
+     * (다이어리 상세와 같은 통제된 endpoint 를 쓴다)
+     */
+    public String getCoverViewUrl() {
+        if (id == null || coverImageUrl == null || coverImageUrl.isBlank()) {
+            return null;
+        }
+        return DiaryPhotoUrls.coverImage(id);
+    }
 }

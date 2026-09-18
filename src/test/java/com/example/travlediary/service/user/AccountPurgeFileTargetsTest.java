@@ -17,7 +17,9 @@ class AccountPurgeFileTargetsTest {
             "/uploads/profiles/11111111-1111-4111-8111-111111111111.jpg",
             "/uploads/diary-covers/22222222-2222-4222-8222-222222222222.png",
             "/uploads/diary-pages/33333333-3333-4333-8333-333333333333.jpeg",
-            "/uploads/diary-cover-designs/44444444-4444-4444-8444-444444444444.webp"
+            "/uploads/diary-cover-designs/44444444-4444-4444-8444-444444444444.webp",
+            // 다이어리에 적용된 표지 사진. 예전에는 빠져 있어 파기 뒤에도 파일이 남았다.
+            "/uploads/diary-cover-elements/55555555-5555-4555-8555-555555555555.jpg"
     })
     void personalUploadFoldersAreDeletable(String imageUrl) {
         assertThat(AccountPurgeFileTargets.normalizeDeletable(imageUrl)).isEqualTo(imageUrl);

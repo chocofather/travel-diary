@@ -67,15 +67,13 @@ class MyPageAccountUiContractTest {
                 "src/main/java/com/example/travlediary/config/SecurityConfig.java"),
                 StandardCharsets.UTF_8);
 
+        // 계정 변경 POST 는 기본 CSRF 정책이 보호한다. (보호 목록을 따로 두지 않는다)
         assertThat(security)
-                .contains("^/mypage/account/verify-password$",
-                        "^/mypage/account/edit$",
-                        "^/mypage/account/password$",
-                        "^/mypage/account/withdraw$",
-                        "^/mypage/account/social-connections/[^/]+$",
-                        "^/mypage/account/social-connections/[^/]+/disconnect$")
                 .contains("/mypage/**")
-                .doesNotContain("csrf(AbstractHttpConfigurer::disable)");
+                .doesNotContain("requireCsrfProtectionMatcher")
+                .doesNotContain("ignoringRequestMatchers")
+                .doesNotContain("csrf(AbstractHttpConfigurer::disable)")
+                .doesNotContain("csrf.disable()");
     }
 
     private String resource(String relativePath) throws IOException {

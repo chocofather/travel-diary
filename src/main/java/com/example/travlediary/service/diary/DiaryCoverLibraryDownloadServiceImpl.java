@@ -1,5 +1,6 @@
 package com.example.travlediary.service.diary;
 
+import com.example.travlediary.dto.DiaryCoverLibraryDownloadResult;
 import com.example.travlediary.model.DiaryCoverDesign;
 import com.example.travlediary.model.DiaryCoverDesignElement;
 import com.example.travlediary.model.DiaryCoverLibraryDownload;
@@ -76,7 +77,7 @@ public class DiaryCoverLibraryDownloadServiceImpl
 
     @Override
     @Transactional
-    public DiaryCoverDesign download(Long userId, Long libraryItemId) {
+    public DiaryCoverLibraryDownloadResult download(Long userId, Long libraryItemId) {
         DiaryCoverValues.requireUser(userId);
         if (!accessService.canDownload(userId)) {
             throw new ResponseStatusException(
@@ -89,6 +90,20 @@ public class DiaryCoverLibraryDownloadServiceImpl
         DiaryCoverLibraryItem item = itemMapper.findPublishedByIdForUpdate(libraryItemId);
         if (item == null) {
             throw notFound();
+        }
+        // 직접 공유한 표지는 원본을 이미 가지고 있으므로 받지 않는다. (이력·다운로드 수도 건드리지 않는다)
+        if (userId.equals(item.getCreatorUserId())) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_ENTITY, "직접 공유한 디자인은 다시 받을 수 없습니다.");
+        }
+        /*
+          이 표지에서 받은 디자인을 지금 가지고 있으면 또 만들지 않는다.
+          표지 행을 잠근 뒤에 세므로 같은 회원의 동시 요청도 한 번만 통과한다.
+          다운로드 이력이 아니라 현재 보유 여부로 본다 — 받은 디자인을 지웠다면 다시 받을 수 있다.
+        */
+        if (designMapper.countByUserIdAndSourceLibraryItemId(userId, item.getId()) > 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, "이미 내 보유 디자인에 있는 표지입니다.");
         }
         List<DiaryCoverLibraryElement> snapshot =
                 libraryElementMapper.findAllByLibraryItemIdAndSnapshotVersion(
@@ -113,11 +128,14 @@ public class DiaryCoverLibraryDownloadServiceImpl
         history.setLibraryItemId(item.getId());
         history.setDownloaderUserId(userId);
         history.setFirstDownloadedAt(Timestamp.from(clock.instant()));
-        if (downloadMapper.insertIgnore(history) == 1
-                && itemMapper.incrementDownloadCountIfPublished(item.getId()) != 1) {
+        // 회원별 첫 다운로드만 센다. (다시 받은 경우 이력이 이미 있어 늘지 않는다)
+        boolean counted = downloadMapper.insertIgnore(history) == 1;
+        if (counted && itemMapper.incrementDownloadCountIfPublished(item.getId()) != 1) {
             throw new IllegalStateException("라이브러리 다운로드 수를 갱신하지 못했습니다.");
         }
-        return design;
+        // 잠근 채로 읽은 값에 이번에 실제로 더한 만큼만 반영해 돌려준다. (화면이 그대로 쓴다)
+        long lockedCount = item.getDownloadCount() == null ? 0L : item.getDownloadCount();
+        return new DiaryCoverLibraryDownloadResult(design, counted ? lockedCount + 1 : lockedCount);
     }
 
     private DiaryCoverDesign copyDesign(DiaryCoverLibraryItem item, Long userId) {

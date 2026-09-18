@@ -28,7 +28,7 @@ import com.example.travlediary.service.diary.DiaryPageService;
 import com.example.travlediary.service.diary.DiaryService;
 import com.example.travlediary.service.diary.DiaryNoteCatalog;
 import com.example.travlediary.service.diary.DiaryStickerCatalog;
-import com.example.travlediary.service.file.FileUploadService;
+import com.example.travlediary.service.file.DiaryPrivatePhotoStorage;
 import com.example.travlediary.service.holiday.HolidayService;
 import com.example.travlediary.service.holiday.SpecialDay;
 import com.example.travlediary.service.holiday.SpecialDays;
@@ -81,6 +81,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         DiaryLabelFontCatalog.class, DiaryPinSession.class})
 class DiaryControllerTest {
 
+    /**
+     * 화면에 나가야 하는 사진 주소. 저장 키({@code /uploads/...})가 아니라 소유권과 PIN 을
+     * 확인하는 통제된 endpoint 다.
+     */
+    private static final String PHOTO_VIEW_URL = "/diaries/10/pages/1/elements/101/photo";
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -91,7 +97,7 @@ class DiaryControllerTest {
     @MockitoBean
     private DiaryElementService diaryElementService;
     @MockitoBean
-    private FileUploadService fileUploadService;
+    private DiaryPrivatePhotoStorage diaryPrivatePhotoStorage;
     @MockitoBean
     private DiaryCoverService diaryCoverService;
     @MockitoBean
@@ -722,7 +728,10 @@ class DiaryControllerTest {
                 // 본문은 종이 자체에 그대로 그려진다
                 .andExpect(content().string(containsString("<p>첫째 날 기록</p>")))
                 .andExpect(content().string(containsString("diary-editor")))
-                .andExpect(content().string(containsString("/uploads/diary/photo.jpg")));
+                .andExpect(content().string(containsString(PHOTO_VIEW_URL)))
+                // 저장 키는 화면으로 나가지 않는다
+                .andExpect(content().string(
+                        org.hamcrest.Matchers.not(containsString("/uploads/diary/photo.jpg"))));
 
         // 펼친 두 장만 조회한다
         verify(diaryElementService).getElements(10L, 1L, 7L);
@@ -801,7 +810,7 @@ class DiaryControllerTest {
         assertThat(captor.getValue().getTitle()).isEqualTo("제주 여행 다시");
         assertThat(captor.getValue().getCoverImageUrl()).isEqualTo("/uploads/diary-covers/old.jpg");
         // 표지를 바꾸지 않았으므로 새 파일 저장도 없다
-        verify(fileUploadService, org.mockito.Mockito.never()).saveFile(any(), any());
+        verify(diaryPrivatePhotoStorage, org.mockito.Mockito.never()).save(any(), any());
     }
 
     @Test
@@ -1141,7 +1150,7 @@ class DiaryControllerTest {
         assertThat(body).contains("is-read-only");
         assertThat(body).doesNotContain("data-content-url");
         // 사진 자체는 그대로 보인다
-        assertThat(body).contains("/uploads/diary/photo.jpg");
+        assertThat(body).contains(PHOTO_VIEW_URL).doesNotContain("/uploads/diary/photo.jpg");
     }
 
     @Test
@@ -1157,7 +1166,10 @@ class DiaryControllerTest {
         DiaryCoverElement photo = new DiaryCoverElement();
         photo.setCoverId(30L);
         photo.setElementType("PHOTO");
+        photo.setId(77L);
         photo.setImageUrl("/uploads/diary-cover-elements/pdf-cover.jpg");
+        // 조회 서비스가 채우는 통제된 주소. 화면과 PDF 준비 DOM 모두 이 값을 쓴다.
+        photo.setViewUrl("/diaries/10/cover/elements/77/photo");
         photo.setPositionX(new java.math.BigDecimal("0.10000"));
         photo.setPositionY(new java.math.BigDecimal("0.20000"));
         photo.setWidth(new java.math.BigDecimal("0.50000"));
@@ -1179,7 +1191,9 @@ class DiaryControllerTest {
                 .contains("id=\"diary-pdf-cover-template\"")
                 .contains("data-diary-pdf-cover")
                 .contains("diary-cover-canvas")
-                .contains("/uploads/diary-cover-elements/pdf-cover.jpg");
+                .contains("/diaries/10/cover/elements/77/photo")
+                // 저장 키는 PDF 준비 DOM 에도 실리지 않는다
+                .doesNotContain("/uploads/diary-cover-elements/pdf-cover.jpg");
         verify(diaryCoverService).findCoversByDiary(List.of(10L), 7L);
         verify(diaryCoverService).findElementsByCover(List.of(cover));
     }
@@ -1844,7 +1858,7 @@ class DiaryControllerTest {
     @Test
     void addPhotoStoresTheUploadedFileAsAPhotoElement() throws Exception {
         when(userDetails.getId()).thenReturn(7L);
-        when(fileUploadService.saveFile(any(), eq("diary-pages")))
+        when(diaryPrivatePhotoStorage.save(any(), eq("diary-pages")))
                 .thenReturn("/uploads/diary-pages/new.jpg");
 
         mockMvc.perform(multipart("/diaries/10/pages/3/elements/photo")
@@ -1875,7 +1889,7 @@ class DiaryControllerTest {
                 .andExpect(redirectedUrl("/diaries/10?spread=0&edit=true"))
                 .andExpect(flash().attribute("diaryPageError", "사진을 선택해 주세요."));
 
-        verify(fileUploadService, org.mockito.Mockito.never()).saveFile(any(), any());
+        verify(diaryPrivatePhotoStorage, org.mockito.Mockito.never()).save(any(), any());
         verify(diaryElementService, org.mockito.Mockito.never())
                 .create(any(), any(), any(), any());
     }
@@ -2294,7 +2308,7 @@ class DiaryControllerTest {
 
         verify(diaryElementService).delete(10L, 3L, 200L, 7L);
         // 공용 asset 이므로 업로드 파일 정리 경로를 타지 않는다
-        verify(fileUploadService, org.mockito.Mockito.never()).saveFile(any(), any());
+        verify(diaryPrivatePhotoStorage, org.mockito.Mockito.never()).save(any(), any());
 
         // 사진은 스티커 삭제 경로로 지울 수 없다
         when(diaryElementService.getElement(10L, 3L, 201L, 7L))
@@ -2632,7 +2646,7 @@ class DiaryControllerTest {
 
         verify(diaryElementService).deleteLabel(10L, 3L, 100L, 7L);
         // 사진 삭제와 달리 파일 저장소는 아예 부르지 않는다
-        org.mockito.Mockito.verifyNoInteractions(fileUploadService);
+        org.mockito.Mockito.verifyNoInteractions(diaryPrivatePhotoStorage);
     }
 
     /**
@@ -2884,7 +2898,7 @@ class DiaryControllerTest {
         verify(diaryCoverService).updateWithDesign(eq(10L), eq(7L), captor.capture(), eq(5L));
         assertThat(captor.getValue().getCoverImageUrl()).isNull();
         assertThat(captor.getValue().getCoverStyle()).isEqualTo("LEATHER_DEEP_GREEN");
-        verify(fileUploadService, org.mockito.Mockito.never()).saveFile(any(), anyString());
+        verify(diaryPrivatePhotoStorage, org.mockito.Mockito.never()).save(any(), anyString());
         verify(diaryService, org.mockito.Mockito.never()).update(anyLong(), anyLong(), any());
     }
 
@@ -3002,7 +3016,7 @@ class DiaryControllerTest {
     @Test
     void severalPhotosBecomeSeveralElementsWithTheLookOfTheirEntryPoint() throws Exception {
         when(userDetails.getId()).thenReturn(7L);
-        when(fileUploadService.saveFile(any(), anyString()))
+        when(diaryPrivatePhotoStorage.save(any(), anyString()))
                 .thenReturn("/uploads/diary-pages/a.jpg", "/uploads/diary-pages/b.jpg");
         when(diaryElementService.create(anyLong(), anyLong(), anyLong(), any()))
                 .thenReturn(new DiaryElement());
@@ -3159,7 +3173,7 @@ class DiaryControllerTest {
         ArgumentCaptor<Diary> captor = ArgumentCaptor.forClass(Diary.class);
         verify(diaryCoverService).createWithDesign(eq(7L), captor.capture(), eq(5L));
         // 표지에 들어갈 사진은 디자인이 들고 있으므로 대표 이미지는 저장조차 하지 않는다
-        verify(fileUploadService, org.mockito.Mockito.never()).saveFile(any(), anyString());
+        verify(diaryPrivatePhotoStorage, org.mockito.Mockito.never()).save(any(), anyString());
         assertThat(captor.getValue().getCoverImageUrl()).isNull();
         // 커스텀 표지를 지웠을 때 돌아갈 자리
         assertThat(captor.getValue().getCoverStyle()).isEqualTo("LEATHER_DEEP_GREEN");
@@ -3229,6 +3243,8 @@ class DiaryControllerTest {
         element.setCoverId(3L);
         element.setElementType("PHOTO");
         element.setImageUrl("/uploads/diary-cover-elements/a.jpg");
+        // 조회 서비스가 채우는 통제된 주소. 화면에는 이 값만 나간다.
+        element.setViewUrl("/diaries/10/cover/elements/55/photo");
         element.setPhotoStyle("POLAROID");
         element.setPositionX(new java.math.BigDecimal("0.2000"));
         element.setPositionY(new java.math.BigDecimal("0.3000"));
@@ -3245,7 +3261,10 @@ class DiaryControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("diary-cover-canvas")))
                 .andExpect(content().string(
-                        containsString("/uploads/diary-cover-elements/a.jpg")))
+                        containsString("/diaries/10/cover/elements/55/photo")))
+                // 저장 키는 화면으로 나가지 않는다
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        containsString("/uploads/diary-cover-elements/a.jpg"))))
                 // 보기 전용이라 조작 손잡이나 저장 주소는 실리지 않는다
                 .andExpect(content().string(
                         org.hamcrest.Matchers.not(containsString("data-position-url"))));
@@ -3438,7 +3457,9 @@ class DiaryControllerTest {
 
         assertThat(body).contains("href=\"/diaries/10\"").contains("href=\"/diaries/11\"");
         // 대표 이미지가 있으면 표지 이미지, 없으면 기본 표지
-        assertThat(body).contains("diary-book-image").contains("/uploads/diary/cover.jpg");
+        // 주소는 저장 키가 아니라 소유권을 확인하는 통제된 endpoint 다
+        assertThat(body).contains("diary-book-image").contains("/diaries/10/cover-image")
+                .doesNotContain("/uploads/diary/cover.jpg");
         assertThat(body).contains("diary-book-placeholder");
         assertThat(body).contains("diary-book-spine");
         assertThat(body).contains("diary-book-title");
@@ -3600,9 +3621,14 @@ class DiaryControllerTest {
         return element;
     }
 
+    /**
+     * 조회 서비스를 거친 사진 요소. 저장 키와 함께 화면이 쓸 통제된 주소도 채운다.
+     * (실제 서비스가 하는 일과 같다 — 화면에는 저장 키가 나가지 않는다)
+     */
     private DiaryElement photoElement(Long id, String imageUrl) {
         DiaryElement element = element(id, "PHOTO");
         element.setImageUrl(imageUrl);
+        element.setViewUrl(PHOTO_VIEW_URL);
         return element;
     }
 
@@ -4288,7 +4314,7 @@ class DiaryControllerTest {
 
         verify(diaryElementService).delete(10L, 3L, 300L, 7L);
         // 라벨은 파일을 갖지 않는다. 파일을 다루는 쪽은 아예 부르지 않는다
-        org.mockito.Mockito.verifyNoInteractions(fileUploadService);
+        org.mockito.Mockito.verifyNoInteractions(diaryPrivatePhotoStorage);
     }
 
     @Test

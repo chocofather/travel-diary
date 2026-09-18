@@ -1,6 +1,7 @@
 package com.example.travlediary.repository.diary;
 
 import com.example.travlediary.dto.DiaryListItemDto;
+import com.example.travlediary.dto.DiaryPrivatePhotoRef;
 import com.example.travlediary.model.Diary;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -17,6 +18,13 @@ public interface DiaryMapper {
 
     /** 회원이 가진 다이어리 목록 (최근 여행부터) */
     List<Diary> findByUserId(@Param("userId") Long userId);
+
+    /**
+     * 통제된 대표 이미지 응답이 쓰는 한 줄. 소유권과 PIN 판단, 저장 키를 함께 읽는다.
+     * 남의 다이어리이거나 대표 이미지가 없으면 결과가 없다.
+     */
+    DiaryPrivatePhotoRef findCoverPhotoRef(@Param("diaryId") Long diaryId,
+                                           @Param("userId") Long userId);
 
     /**
      * 일기장형 목록 한 쪽. 페이지 수까지 한 번에 읽는다. (다이어리마다 재조회하지 않는다)

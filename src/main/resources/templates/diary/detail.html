@@ -859,7 +859,8 @@
                          transform:rotate(${element.rotation}deg);
                          --diary-item-rotation:${element.rotation}deg;
                          z-index:${element.zIndex};|">
-        <img th:src="${element.imageUrl}" alt="여행일기 사진" loading="lazy" />
+        <!-- 사진은 저장 경로가 아니라 소유권·PIN 을 확인하는 통제된 주소로만 연다 (viewUrl) -->
+        <img th:src="${element.viewUrl}" alt="여행일기 사진" loading="lazy" />
 
         <!-- 조작 UI 는 편집 모드에서만 만든다. 읽기 모드에는 사진만 남는다. -->
         <th:block th:if="${editMode}">

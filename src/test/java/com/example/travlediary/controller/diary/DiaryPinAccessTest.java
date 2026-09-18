@@ -22,7 +22,7 @@ import com.example.travlediary.service.diary.DiaryPinServiceImpl;
 import com.example.travlediary.service.diary.DiaryPinSession;
 import com.example.travlediary.service.diary.DiaryServiceImpl;
 import com.example.travlediary.service.diary.DiaryStickerCatalog;
-import com.example.travlediary.service.file.FileUploadService;
+import com.example.travlediary.service.file.DiaryPrivatePhotoStorage;
 import com.example.travlediary.service.holiday.HolidayService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -83,7 +83,7 @@ class DiaryPinAccessTest {
     @MockitoBean
     private DiaryCoverDesignElementService diaryCoverDesignElementService;
     @MockitoBean
-    private FileUploadService fileUploadService;
+    private DiaryPrivatePhotoStorage diaryPrivatePhotoStorage;
     @MockitoBean
     private HolidayService holidayService;
     @MockitoBean

@@ -1,5 +1,6 @@
 package com.example.travlediary.service.category;
 
+import com.example.travlediary.service.file.FileUploadService;
 import com.example.travlediary.model.CountryCategory;
 import com.example.travlediary.repository.category.CountryCategoryMapper;
 import org.junit.jupiter.api.Test;
@@ -10,6 +11,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -26,7 +28,7 @@ class CountryCategoryRandomScopeTest {
         when(mapper.selectCourseCountries()).thenReturn(List.of(korea, japan));
         when(mapper.findByDepth(1, null)).thenReturn(List.of(asia, korea));
 
-        CountryCategoryService service = new CountryCategoryService(mapper);
+        CountryCategoryService service = new CountryCategoryService(mapper, mock(FileUploadService.class));
 
         assertThat(service.getDomesticRootIds()).containsExactly(909L);
         assertThat(service.getOverseasRootIds()).containsExactly(301L);
@@ -40,7 +42,7 @@ class CountryCategoryRandomScopeTest {
         when(mapper.selectCourseCountries()).thenReturn(List.of(japan));
         when(mapper.findByDepth(1, null)).thenReturn(List.of(asia));
 
-        CountryCategoryService service = new CountryCategoryService(mapper);
+        CountryCategoryService service = new CountryCategoryService(mapper, mock(FileUploadService.class));
 
         assertThat(service.getDomesticRootIds()).isEmpty();
         assertThat(service.getKoreaRootId()).isNull();

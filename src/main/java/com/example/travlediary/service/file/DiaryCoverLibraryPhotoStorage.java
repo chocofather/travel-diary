@@ -4,18 +4,16 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Locale;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
 @Service
 public class DiaryCoverLibraryPhotoStorage {
 
-    private static final String PUBLIC_URL_PREFIX = "/uploads/";
     private static final String PHOTO_DIRECTORY = "photos";
     private static final Pattern MANAGED_STORAGE_KEY = Pattern.compile(
             "^photos/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\\.(?:jpg|png|gif|webp)$",
@@ -37,9 +35,23 @@ public class DiaryCoverLibraryPhotoStorage {
         }
     }
 
-    public StoredPhoto copyFromPublicUpload(String sourceUrl) {
-        Path source = resolvePublicSource(sourceUrl);
-        PhotoFormat format = detectFormat(source);
+    /**
+     * 개인 다이어리 저장소의 검증된 사진을 라이브러리 private 저장소로 복사한다.
+     *
+     * <p>내 표지 디자인 사진이 공개 업로드 폴더를 떠난 뒤의 공유 등록 경로다.
+     * 부르는 쪽이 임의 경로를 넘길 수 없도록, 원본 경로는 사용자 입력이 아니라
+     * {@link DiaryPrivatePhotoStorage#resolveManagedSource(String)} 가 관리 저장 키를
+     * 확인해 내준 실제 경로만 받는다.
+     */
+    public StoredPhoto copyFromDiaryPrivateStorage(Path validatedSource) {
+        if (validatedSource == null || !Files.isRegularFile(validatedSource)) {
+            throw new IllegalArgumentException("공유할 사진 파일을 찾을 수 없습니다.");
+        }
+        return copyValidatedSource(validatedSource);
+    }
+
+    private StoredPhoto copyValidatedSource(Path source) {
+        StoredImageFormat format = detectFormat(source);
         long fileSize;
         try {
             fileSize = Files.size(source);
@@ -50,7 +62,7 @@ public class DiaryCoverLibraryPhotoStorage {
             throw new IllegalArgumentException("공유할 사진 파일이 비어 있습니다.");
         }
 
-        String storageKey = PHOTO_DIRECTORY + "/" + UUID.randomUUID() + "." + format.extension;
+        String storageKey = PHOTO_DIRECTORY + "/" + UUID.randomUUID() + "." + format.extension();
         Path photoDirectory = privateStorageRoot.resolve(PHOTO_DIRECTORY).normalize();
         Path target = privateStorageRoot.resolve(storageKey).normalize();
         ensureContained(privateStorageRoot, photoDirectory);
@@ -63,7 +75,7 @@ public class DiaryCoverLibraryPhotoStorage {
             deletePathQuietly(target);
             throw new RuntimeException("공유 사진 파일을 private 저장소에 복사하지 못했습니다.", exception);
         }
-        return new StoredPhoto(storageKey, format.contentType, fileSize);
+        return new StoredPhoto(storageKey, format.contentType(), fileSize);
     }
 
     public boolean delete(String storageKey) {
@@ -87,27 +99,11 @@ public class DiaryCoverLibraryPhotoStorage {
             throw new IllegalArgumentException("공유 사진 파일을 찾을 수 없습니다.", exception);
         }
 
-        PhotoFormat format = detectFormat(target);
-        if (!storageKey.toLowerCase(Locale.ROOT).endsWith("." + format.extension)) {
+        StoredImageFormat format = detectFormat(target);
+        if (!format.matchesStorageKey(storageKey)) {
             throw new IllegalArgumentException("공유 사진 파일 형식이 올바르지 않습니다.");
         }
         return target;
-    }
-
-    private Path resolvePublicSource(String sourceUrl) {
-        if (sourceUrl == null || !sourceUrl.startsWith(PUBLIC_URL_PREFIX)) {
-            throw new IllegalArgumentException("공개 업로드 사진만 라이브러리에 포함할 수 있습니다.");
-        }
-        String relative = sourceUrl.substring(PUBLIC_URL_PREFIX.length());
-        if (relative.isBlank()) {
-            throw new IllegalArgumentException("공유할 사진 파일을 찾을 수 없습니다.");
-        }
-        Path source = publicUploadRoot.resolve(relative).normalize();
-        ensureContained(publicUploadRoot, source);
-        if (!Files.isRegularFile(source)) {
-            throw new IllegalArgumentException("공유할 사진 파일을 찾을 수 없습니다.");
-        }
-        return source;
     }
 
     private Path resolveManagedPath(String storageKey) {
@@ -119,41 +115,16 @@ public class DiaryCoverLibraryPhotoStorage {
         return target;
     }
 
-    private PhotoFormat detectFormat(Path source) {
-        byte[] header = new byte[12];
-        int length;
-        try (InputStream input = Files.newInputStream(source)) {
-            length = input.read(header);
+    /** 형식 판별은 개인 다이어리 사진과 한 벌을 쓴다. 오류 문구만 이 자리의 것이다. */
+    private StoredImageFormat detectFormat(Path source) {
+        Optional<StoredImageFormat> format;
+        try {
+            format = StoredImageFormat.detect(source);
         } catch (IOException exception) {
             throw new RuntimeException("공유 사진 파일을 읽지 못했습니다.", exception);
         }
-
-        if (length >= 3 && unsigned(header[0]) == 0xff
-                && unsigned(header[1]) == 0xd8 && unsigned(header[2]) == 0xff) {
-            return PhotoFormat.JPEG;
-        }
-        if (length >= 8 && unsigned(header[0]) == 0x89 && header[1] == 'P'
-                && header[2] == 'N' && header[3] == 'G'
-                && unsigned(header[4]) == 0x0d && unsigned(header[5]) == 0x0a
-                && unsigned(header[6]) == 0x1a && unsigned(header[7]) == 0x0a) {
-            return PhotoFormat.PNG;
-        }
-        if (length >= 6 && header[0] == 'G' && header[1] == 'I' && header[2] == 'F'
-                && header[3] == '8' && (header[4] == '7' || header[4] == '9')
-                && header[5] == 'a') {
-            return PhotoFormat.GIF;
-        }
-        if (length >= 12 && header[0] == 'R' && header[1] == 'I'
-                && header[2] == 'F' && header[3] == 'F'
-                && header[8] == 'W' && header[9] == 'E'
-                && header[10] == 'B' && header[11] == 'P') {
-            return PhotoFormat.WEBP;
-        }
-        throw new IllegalArgumentException("JPG, PNG, GIF 또는 WebP 사진만 공유할 수 있습니다.");
-    }
-
-    private int unsigned(byte value) {
-        return value & 0xff;
+        return format.orElseThrow(() ->
+                new IllegalArgumentException("JPG, PNG, GIF 또는 WebP 사진만 공유할 수 있습니다."));
     }
 
     private void ensureContained(Path root, Path candidate) {
@@ -171,20 +142,5 @@ public class DiaryCoverLibraryPhotoStorage {
     }
 
     public record StoredPhoto(String storageKey, String contentType, long fileSize) {
-    }
-
-    private enum PhotoFormat {
-        JPEG("jpg", "image/jpeg"),
-        PNG("png", "image/png"),
-        GIF("gif", "image/gif"),
-        WEBP("webp", "image/webp");
-
-        private final String extension;
-        private final String contentType;
-
-        PhotoFormat(String extension, String contentType) {
-            this.extension = extension.toLowerCase(Locale.ROOT);
-            this.contentType = contentType;
-        }
     }
 }

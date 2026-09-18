@@ -30,7 +30,6 @@ import org.springframework.context.i18n.LocaleContextHolder;
 
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.Timestamp;
 import java.util.*;
@@ -149,23 +148,19 @@ public class DestinationCommentService {
                     "사진은 최대 " + MAX_COMMENT_IMAGES + "장까지 첨부할 수 있습니다.");
         }
 
-        // 2) 파일 저장 (경로·파일명 규칙은 기존과 동일)
+        /*
+          2) 파일 저장. 게시글·코스 댓글과 같은 공통 이미지 저장을 쓴다.
+          실제 JPEG/PNG/WEBP 만 받고, 저장 이름은 UUID + 판별한 확장자다. (원본 파일명은 쓰지 않는다)
+          한 장이라도 거부되면 앞서 저장한 사진도 지우고 요청 전체를 실패시킨다.
+        */
         List<String> savedImageUrls = new ArrayList<>();
         try {
-            if (!uploads.isEmpty()) {
-                Path dir = Paths.get(uploadPath, "comments");
-                if (Files.notExists(dir)) Files.createDirectories(dir);
-
-                for (MultipartFile imageFile : uploads) {
-                    String filename = UUID.randomUUID() + "_" + imageFile.getOriginalFilename();
-                    Path filePath = dir.resolve(filename);
-                    imageFile.transferTo(filePath.toFile());
-                    savedImageUrls.add("/uploads/comments/" + filename);
-                }
+            for (MultipartFile imageFile : uploads) {
+                savedImageUrls.add(fileUploadService.saveFile(imageFile, "comments"));
             }
-        } catch (IOException e) {
+        } catch (RuntimeException e) {
             deleteStoredFiles(savedImageUrls);
-            throw new RuntimeException("댓글 이미지 업로드 실패", e);
+            throw e;
         }
 
         // 3) 댓글 객체 생성 (사진은 destination_comment_images 에 따로 저장한다)

@@ -28,6 +28,7 @@ import static org.hamcrest.Matchers.not;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -127,8 +128,13 @@ class PublicProfileControllerTest {
         mockMvc.perform(get("/users/traveler"))
                 .andExpect(status().is3xxRedirection());
 
-        mockMvc.perform(post("/users/7"))
+        // 토큰을 갖춰도 공개 규칙(GET 전용)에 걸려 로그인으로 보낸다
+        mockMvc.perform(post("/users/7").with(csrf()))
                 .andExpect(status().is3xxRedirection());
+
+        // 토큰이 없으면 그 전에 CSRF 로 막힌다
+        mockMvc.perform(post("/users/7"))
+                .andExpect(status().isForbidden());
     }
 
     private PublicUserProfileDto profile(Long id, String nickname, String image) {

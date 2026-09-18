@@ -38,4 +38,17 @@ public class Diary {
     public boolean isPinEnabled() {
         return pinHash != null && !pinHash.isBlank();
     }
+
+    /**
+     * 화면이 쓰는 대표 이미지 주소. 저장 키({@link #coverImageUrl})는 내보내지 않는다.
+     *
+     * <p>실제 파일은 공개 업로드 폴더 밖의 private 저장소에 있고, 소유권과 PIN 을 확인한
+     * 통제된 endpoint 로만 열린다.
+     */
+    public String getCoverViewUrl() {
+        if (id == null || coverImageUrl == null || coverImageUrl.isBlank()) {
+            return null;
+        }
+        return DiaryPhotoUrls.coverImage(id);
+    }
 }

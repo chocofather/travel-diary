@@ -14,18 +14,22 @@ class DiaryCoverLibraryPhotoStorageTest {
     @TempDir
     Path temporaryDirectory;
 
+    /**
+     * 공유 등록은 개인 다이어리 저장소가 검증해 내준 경로만 받는다.
+     * 원본은 그대로 두고 라이브러리 private 루트에 복사본이 생긴다.
+     */
     @Test
-    void copiesAPublicUploadIntoTheSeparatePrivateRoot() throws Exception {
+    void copiesAValidatedDiaryPhotoIntoTheSeparatePrivateRoot() throws Exception {
         Path publicRoot = temporaryDirectory.resolve("public-uploads");
         Path privateRoot = temporaryDirectory.resolve("private-cover-library");
-        Path source = publicRoot.resolve("diary-cover-designs/original.jpg");
+        Path source = temporaryDirectory.resolve("private-diary/diary-cover-designs/original.jpg");
         Files.createDirectories(source.getParent());
         Files.write(source, jpeg());
         DiaryCoverLibraryPhotoStorage storage =
                 new DiaryCoverLibraryPhotoStorage(publicRoot.toString(), privateRoot.toString());
 
         DiaryCoverLibraryPhotoStorage.StoredPhoto stored =
-                storage.copyFromPublicUpload("/uploads/diary-cover-designs/original.jpg");
+                storage.copyFromDiaryPrivateStorage(source);
 
         assertThat(stored.storageKey()).startsWith("photos/").endsWith(".jpg");
         assertThat(stored.storageKey()).doesNotContain("/uploads/");
@@ -40,18 +44,20 @@ class DiaryCoverLibraryPhotoStorageTest {
         assertThat(source).isRegularFile();
     }
 
+    /** 없는 파일이나 폴더를 원본으로 넘기면 복사하지 않는다. */
     @Test
-    void rejectsMissingExternalAndTraversalSources() {
+    void rejectsMissingSources() {
         Path publicRoot = temporaryDirectory.resolve("public-uploads");
         Path privateRoot = temporaryDirectory.resolve("private-cover-library");
         DiaryCoverLibraryPhotoStorage storage =
                 new DiaryCoverLibraryPhotoStorage(publicRoot.toString(), privateRoot.toString());
 
-        assertThatThrownBy(() -> storage.copyFromPublicUpload("/images/static.jpg"))
+        assertThatThrownBy(() -> storage.copyFromDiaryPrivateStorage(null))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> storage.copyFromPublicUpload("/uploads/../secret.jpg"))
+        assertThatThrownBy(() -> storage.copyFromDiaryPrivateStorage(
+                temporaryDirectory.resolve("missing.jpg")))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> storage.copyFromPublicUpload("/uploads/missing.jpg"))
+        assertThatThrownBy(() -> storage.copyFromDiaryPrivateStorage(temporaryDirectory))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

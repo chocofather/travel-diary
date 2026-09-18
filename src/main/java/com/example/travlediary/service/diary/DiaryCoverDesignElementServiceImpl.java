@@ -3,6 +3,7 @@ package com.example.travlediary.service.diary;
 import com.example.travlediary.model.DiaryCoverDesign;
 import com.example.travlediary.model.DiaryCoverDesignElement;
 import com.example.travlediary.model.DiaryCoverPhotoStyle;
+import com.example.travlediary.model.DiaryPhotoUrls;
 import com.example.travlediary.model.DiarySticker;
 import com.example.travlediary.model.DiaryStickerKind;
 import com.example.travlediary.repository.diary.DiaryCoverDesignElementMapper;
@@ -29,7 +30,6 @@ public class DiaryCoverDesignElementServiceImpl implements DiaryCoverDesignEleme
     /** 표지에 붙일 수 있는 유형. (NOTE 는 표지 화면에서 쓰지 않는다) */
     private static final String TYPE_STICKER = "STICKER";
     private static final String TYPE_PHOTO = "PHOTO";
-    private static final String LIBRARY_ASSET_URL_PREFIX = "/diaries/cover-library/assets/";
     /** 라벨기로 붙이는 글씨. 배경 없이 글자만 놓인다. */
     private static final String TYPE_TEXT = "TEXT";
     /** 표지의 글씨도 한 줄짜리 짧은 문구다. (페이지 다꾸와 같은 상한) */
@@ -75,7 +75,7 @@ public class DiaryCoverDesignElementServiceImpl implements DiaryCoverDesignEleme
     public List<DiaryCoverDesignElement> getElements(Long designId, Long userId) {
         List<DiaryCoverDesignElement> elements = diaryCoverDesignElementMapper
                 .findAllByDesignId(requireDesignId(designId, userId));
-        prepareLibraryPhotoUrls(elements);
+        prepareViewUrls(elements);
         return elements;
     }
 
@@ -90,20 +90,33 @@ public class DiaryCoverDesignElementServiceImpl implements DiaryCoverDesignEleme
         // 한 번만 묻고 디자인 번호로 나눠 담는다. (카드마다 따로 묻지 않는다)
         List<DiaryCoverDesignElement> elements =
                 diaryCoverDesignElementMapper.findAllByDesignIds(designIds, userId);
-        prepareLibraryPhotoUrls(elements);
+        prepareViewUrls(elements);
         return elements.stream()
                 .collect(Collectors.groupingBy(DiaryCoverDesignElement::getDesignId,
                         LinkedHashMap::new, Collectors.toList()));
     }
 
-    private void prepareLibraryPhotoUrls(List<DiaryCoverDesignElement> elements) {
+    /**
+     * 화면이 쓸 그림 주소를 채운다.
+     *
+     * <p>개인 사진은 private 저장소에 있어 저장 키를 그대로 내보낼 수 없으므로 소유권을
+     * 확인하는 통제된 주소를 담고, 라이브러리에서 받은 사진은 예전처럼 공유 asset 주소를 담는다.
+     * 공용 asset 인 스티커만 저장 경로가 곧 공개 주소다.
+     */
+    private void prepareViewUrls(List<DiaryCoverDesignElement> elements) {
         for (DiaryCoverDesignElement element : elements) {
-            if (TYPE_PHOTO.equals(element.getElementType())
-                    && element.getImageUrl() == null
-                    && element.getLibraryPhotoAssetId() != null) {
-                element.setImageUrl(
-                        LIBRARY_ASSET_URL_PREFIX + element.getLibraryPhotoAssetId());
+            if (!TYPE_PHOTO.equals(element.getElementType())) {
+                element.setViewUrl(element.getImageUrl());
+                continue;
             }
+            if (element.getLibraryPhotoAssetId() != null) {
+                element.setViewUrl(DiaryPhotoUrls.libraryAsset(element.getLibraryPhotoAssetId()));
+                continue;
+            }
+            element.setViewUrl(element.getImageUrl() == null
+                    ? null
+                    : DiaryPhotoUrls.coverDesignElementPhoto(
+                            element.getDesignId(), element.getId()));
         }
     }
 

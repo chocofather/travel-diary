@@ -1,5 +1,6 @@
 package com.example.travlediary.config.i18n;
 
+import com.example.travlediary.security.AccountAbuseGuard;
 import com.example.travlediary.controller.user.UserController;
 import com.example.travlediary.model.User;
 import com.example.travlediary.service.user.PasswordPolicy;
@@ -52,6 +53,8 @@ class PasswordRecoveryI18nContractTest {
     @Autowired
     private MockMvc mockMvc;
 
+    // 요청 남용 제한은 이 화면 계약의 관심사가 아니라 통과시키는 가짜를 쓴다.
+    @MockitoBean private AccountAbuseGuard accountAbuseGuard;
     @MockitoBean private SignupPolicyService signupPolicyService;
 
     @MockitoBean
@@ -158,8 +161,8 @@ class PasswordRecoveryI18nContractTest {
     /** 서버 오류 문구도 현재 locale 로 나온다(검증 규칙은 그대로). */
     @ParameterizedTest
     @CsvSource(delimiter = '|', value = {
-            "ko    | POLICY   | 비밀번호는 8자 이상이며, 영문, 숫자, !@#$%^&*만 사용하고 특수문자를 1개 이상 포함해야 합니다.",
-            "en    | POLICY   | Passwords must be at least 8 characters using letters, numbers and !@#$%^&*, including at least one special character.",
+            "ko    | POLICY   | 비밀번호는 8자 이상 72자 이하이며, 영문, 숫자, !@#$%^&*만 사용하고 특수문자를 1개 이상 포함해야 합니다.",
+            "en    | POLICY   | Passwords must be 8 to 72 characters using letters, numbers and !@#$%^&*, including at least one special character.",
             "ko    | MISMATCH | 새 비밀번호가 일치하지 않습니다.",
             "ja    | MISMATCH | 新しいパスワードが一致しません。",
             "zh-CN | SAME     | 请输入与当前密码不同的密码。",

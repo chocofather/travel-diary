@@ -1,5 +1,6 @@
 package com.example.travlediary.repository.diary;
 
+import com.example.travlediary.dto.DiaryPrivatePhotoRef;
 import com.example.travlediary.model.DiaryCoverElement;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -21,6 +22,14 @@ public interface DiaryCoverElementMapper {
     /** 요소 1건. (그 표지의 것인지는 cover_id 로 함께 확인한다) */
     DiaryCoverElement findById(@Param("elementId") Long elementId,
                                @Param("coverId") Long coverId);
+
+    /**
+     * 통제된 사진 응답이 쓰는 한 줄. 요소 → 표지 → 다이어리 관계와 소유권을 SQL 한 번에 본다.
+     * 라이브러리 공유 사진(library_photo_asset_id)은 자기 endpoint 를 쓰므로 여기서 제외한다.
+     */
+    DiaryPrivatePhotoRef findPhotoRef(@Param("diaryId") Long diaryId,
+                                      @Param("elementId") Long elementId,
+                                      @Param("userId") Long userId);
 
     /** 한 표지의 요소 전부 (겹침 순서 그대로) */
     List<DiaryCoverElement> findAllByCoverId(@Param("coverId") Long coverId);

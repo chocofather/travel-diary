@@ -7,7 +7,7 @@ import com.example.travlediary.model.DiaryCoverDesignElement;
 import com.example.travlediary.model.DiaryCoverElement;
 import com.example.travlediary.repository.diary.DiaryCoverElementMapper;
 import com.example.travlediary.repository.diary.DiaryCoverMapper;
-import com.example.travlediary.service.file.FileUploadService;
+import com.example.travlediary.service.file.DiaryPrivatePhotoStorage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -50,7 +50,7 @@ class DiaryCoverServiceImplTest {
     @Mock
     private DiaryCoverElementMapper diaryCoverElementMapper;
     @Mock
-    private FileUploadService fileUploadService;
+    private DiaryPrivatePhotoStorage diaryPrivatePhotoStorage;
 
     private DiaryCoverService service;
 
@@ -58,7 +58,7 @@ class DiaryCoverServiceImplTest {
     void setUp() {
         service = new DiaryCoverServiceImpl(diaryService, diaryCoverDesignService,
                 diaryCoverDesignElementService, diaryCoverMapper, diaryCoverElementMapper,
-                fileUploadService);
+                diaryPrivatePhotoStorage);
     }
 
     @Test
@@ -130,7 +130,7 @@ class DiaryCoverServiceImplTest {
                 designElement("PHOTO", "/uploads/diary-cover-designs/a.jpg"),
                 designElement("STICKER", "/images/diary/stickers/tape-center.png")));
         givenInsertedCover(3L);
-        when(fileUploadService.copyStoredFile("/uploads/diary-cover-designs/a.jpg",
+        when(diaryPrivatePhotoStorage.copyManaged("/uploads/diary-cover-designs/a.jpg",
                 "diary-cover-elements")).thenReturn("/uploads/diary-cover-elements/b.jpg");
         when(diaryCoverElementMapper.insert(any())).thenReturn(1);
 
@@ -142,8 +142,8 @@ class DiaryCoverServiceImplTest {
                 .containsExactly("/uploads/diary-cover-elements/b.jpg",
                         "/images/diary/stickers/tape-center.png");
         // 스티커는 파일을 복사하지 않는다
-        verify(fileUploadService, org.mockito.Mockito.times(1))
-                .copyStoredFile(any(), any());
+        verify(diaryPrivatePhotoStorage, org.mockito.Mockito.times(1))
+                .copyManaged(any(), any());
         // 적용본은 표지 번호만 새로 받고 꾸민 값은 그대로 옮겨 온다
         assertThat(saved.getAllValues()).allSatisfy(element -> {
             assertThat(element.getCoverId()).isEqualTo(3L);
@@ -171,7 +171,7 @@ class DiaryCoverServiceImplTest {
         verify(diaryCoverElementMapper).insert(saved.capture());
         assertThat(saved.getValue().getImageUrl()).isNull();
         assertThat(saved.getValue().getLibraryPhotoAssetId()).isEqualTo(701L);
-        verify(fileUploadService, never()).copyStoredFile(any(), any());
+        verify(diaryPrivatePhotoStorage, never()).copyManaged(any(), any());
     }
 
     @Test
@@ -185,8 +185,29 @@ class DiaryCoverServiceImplTest {
         shared.setLibraryPhotoAssetId(701L);
         when(diaryCoverElementMapper.findAllByCoverId(3L)).thenReturn(List.of(shared));
 
-        assertThat(service.getElements(10L, 7L).get(0).getImageUrl())
-                .isEqualTo("/diaries/cover-library/assets/701");
+        DiaryCoverElement read = service.getElements(10L, 7L).get(0);
+        assertThat(read.getViewUrl()).isEqualTo("/diaries/cover-library/assets/701");
+        // 저장 키는 비어 있는 그대로다. 화면 주소만 따로 채운다.
+        assertThat(read.getImageUrl()).isNull();
+    }
+
+    /** 개인 사진은 저장 키가 아니라 소유권·PIN 을 확인하는 통제된 주소로 나간다. */
+    @Test
+    void appliedPrivatePhotoUsesTheControlledDiaryEndpointWhenRead() {
+        DiaryCover cover = new DiaryCover();
+        cover.setId(3L);
+        cover.setDiaryId(10L);
+        when(diaryCoverMapper.findByDiaryIdAndUserId(10L, 7L)).thenReturn(cover);
+        DiaryCoverElement photo = new DiaryCoverElement();
+        photo.setId(42L);
+        photo.setElementType("PHOTO");
+        photo.setImageUrl("/uploads/diary-cover-elements/b.jpg");
+        when(diaryCoverElementMapper.findAllByCoverId(3L)).thenReturn(List.of(photo));
+
+        DiaryCoverElement read = service.getElements(10L, 7L).get(0);
+        assertThat(read.getViewUrl()).isEqualTo("/diaries/10/cover/elements/42/photo");
+        // 저장 키는 그대로 남아 삭제 흐름이 계속 쓸 수 있다.
+        assertThat(read.getImageUrl()).isEqualTo("/uploads/diary-cover-elements/b.jpg");
     }
 
     /**
@@ -214,7 +235,7 @@ class DiaryCoverServiceImplTest {
         assertThat(saved.getValue().getTextFont()).isEqualTo("park-dahyun");
         assertThat(saved.getValue().getTextColor()).isEqualTo("#C86B7C");
         // 글씨는 복사할 파일이 없다
-        verify(fileUploadService, never()).copyStoredFile(any(), any());
+        verify(diaryPrivatePhotoStorage, never()).copyManaged(any(), any());
     }
 
     /** 남의 디자인은 표지가 만들어지기 전에 막힌다. */
@@ -234,23 +255,16 @@ class DiaryCoverServiceImplTest {
      * 그래서 이번에 새로 만든 복사본만 지우고 오류를 그대로 올린다.
      */
     @Test
-    void aFailureInTheMiddleRemovesOnlyTheFilesCopiedThisTime(@TempDir Path uploadRoot)
-            throws IOException {
-        ReflectionTestUtils.setField(service, "uploadPath", uploadRoot.toString());
-        Path copied = uploadRoot.resolve("diary-cover-elements").resolve("copied.jpg");
-        Files.createDirectories(copied.getParent());
-        Files.createFile(copied);
-        Path original = uploadRoot.resolve("diary-cover-designs").resolve("a.jpg");
-        Files.createDirectories(original.getParent());
-        Files.createFile(original);
-
+    void aFailureInTheMiddleRemovesOnlyTheFilesCopiedThisTime() {
         givenOwnedDesign(5L, 7L, "LEATHER_DEEP_GREEN", null);
         when(diaryCoverDesignElementService.getElements(5L, 7L)).thenReturn(List.of(
                 designElement("PHOTO", "/uploads/diary-cover-designs/a.jpg"),
                 designElement("PHOTO", "/uploads/diary-cover-designs/b.jpg")));
         givenInsertedCover(3L);
-        when(fileUploadService.copyStoredFile(any(), any()))
-                .thenReturn("/uploads/diary-cover-elements/copied.jpg");
+        // 복사본은 장마다 새 저장 키를 받는다. (첫 장만 성공하고 둘째 장에서 실패한다)
+        when(diaryPrivatePhotoStorage.copyManaged(any(), any()))
+                .thenReturn("/uploads/diary-cover-elements/copied.jpg")
+                .thenReturn("/uploads/diary-cover-elements/copied-2.jpg");
         // 두 번째 요소를 저장하지 못하는 상황
         when(diaryCoverElementMapper.insert(any())).thenReturn(1).thenReturn(0);
 
@@ -259,8 +273,12 @@ class DiaryCoverServiceImplTest {
                 .hasMessageContaining("표지를 적용하지 못했습니다.");
 
         // 이번에 만든 복사본만 지우고, 원본 디자인의 사진은 그대로 둔다
-        assertThat(copied).doesNotExist();
-        assertThat(original).exists();
+        verify(diaryPrivatePhotoStorage).delete("/uploads/diary-cover-elements/copied.jpg");
+        verify(diaryPrivatePhotoStorage).delete("/uploads/diary-cover-elements/copied-2.jpg");
+        verify(diaryPrivatePhotoStorage, never())
+                .delete("/uploads/diary-cover-designs/a.jpg");
+        verify(diaryPrivatePhotoStorage, never())
+                .delete("/uploads/diary-cover-designs/b.jpg");
     }
 
     /** 다이어리와 표지는 한 번에 만들어진다. 다이어리만 남는 상태를 허용하지 않는다. */

@@ -5,6 +5,7 @@ import com.example.travlediary.model.Event;
 import com.example.travlediary.model.EventTranslation;
 import com.example.travlediary.model.EventType;
 import com.example.travlediary.repository.event.EventMapper;
+import com.example.travlediary.service.post.PostContentSanitizer;
 import com.example.travlediary.service.event.EventLocalizationService;
 import com.example.travlediary.service.event.EventService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -45,7 +46,7 @@ class EventApiControllerTest {
     @BeforeEach
     void setUp() {
         controller = new EventApiController(
-                eventService, new EventLocalizationService(eventMapper));
+                eventService, new EventLocalizationService(eventMapper, new PostContentSanitizer()));
         originalLocale = LocaleContextHolder.getLocale();
     }
 

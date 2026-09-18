@@ -26,7 +26,11 @@ public interface DiaryCoverDesignMapper {
     /** 회원이 가진 디자인 목록 (최근 수정한 것부터) */
     List<DiaryCoverDesign> findAllByUserId(@Param("userId") Long userId);
 
-    /** 본인 소유 디자인 수정 (이름 / 바탕 표지 / 바탕색) */
+    /** 회원이 이 라이브러리 표지에서 받은 디자인을 지금 몇 개 가지고 있는지 (지운 것은 세지 않는다) */
+    int countByUserIdAndSourceLibraryItemId(@Param("userId") Long userId,
+                                            @Param("libraryItemId") Long libraryItemId);
+
+    /** 본인 소유 디자인 수정 (이름 / 바탕 표지 / 바탕색. 출처 source_library_item_id 는 바꾸지 않는다) */
     int update(DiaryCoverDesign design);
 
     /** 본인 소유 디자인 삭제 (요소는 FK CASCADE 로 함께 지워진다) */

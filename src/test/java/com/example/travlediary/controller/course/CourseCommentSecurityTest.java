@@ -30,6 +30,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -108,19 +109,25 @@ class CourseCommentSecurityTest {
                         .param("courseId", "10")
                         .param("replyToCommentId", "20")
                         .param("content", "댓글")
-                        .accept(MediaType.APPLICATION_JSON))
+                        .accept(MediaType.APPLICATION_JSON)
+                        .with(csrf()))
                 .andExpect(status().isUnauthorized());
         mockMvc.perform(put("/course-comments/30")
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
-                        .content("{\"content\":\"수정\"}"))
+                        .content("{\"content\":\"수정\"}")
+                        .with(csrf()))
                 .andExpect(status().isUnauthorized());
-        mockMvc.perform(delete("/course-comments/30").accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(delete("/course-comments/30").accept(MediaType.APPLICATION_JSON).with(csrf()))
                 .andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/course-comments/30/likes").accept(MediaType.APPLICATION_JSON).with(csrf()))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(delete("/course-comments/30/likes").accept(MediaType.APPLICATION_JSON).with(csrf()))
+                .andExpect(status().isUnauthorized());
+
+        // 토큰이 없는 쓰기 요청은 인증 단계 이전에 막힌다
         mockMvc.perform(post("/course-comments/30/likes").accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isUnauthorized());
-        mockMvc.perform(delete("/course-comments/30/likes").accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -137,18 +144,23 @@ class CourseCommentSecurityTest {
                         .param("courseId", "10")
                         .param("replyToCommentId", "20")
                         .param("content", "댓글")
-                        .with(authentication(authentication)))
+                        .with(authentication(authentication))
+                        .with(csrf()))
                 .andExpect(status().isCreated());
         mockMvc.perform(put("/course-comments/30")
                         .with(authentication(authentication))
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"content\":\"수정\"}"))
                 .andExpect(status().isOk());
-        mockMvc.perform(delete("/course-comments/30").with(authentication(authentication)))
+        mockMvc.perform(delete("/course-comments/30")
+                        .with(authentication(authentication)).with(csrf()))
                 .andExpect(status().isNoContent());
-        mockMvc.perform(post("/course-comments/30/likes").with(authentication(authentication)))
+        mockMvc.perform(post("/course-comments/30/likes")
+                        .with(authentication(authentication)).with(csrf()))
                 .andExpect(status().isNoContent());
-        mockMvc.perform(delete("/course-comments/30/likes").with(authentication(authentication)))
+        mockMvc.perform(delete("/course-comments/30/likes")
+                        .with(authentication(authentication)).with(csrf()))
                 .andExpect(status().isNoContent());
 
         verify(service).likeComment(30L, 7L);

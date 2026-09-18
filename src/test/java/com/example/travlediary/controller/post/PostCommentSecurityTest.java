@@ -32,8 +32,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -144,22 +146,44 @@ class PostCommentSecurityTest {
 
     @Test
     void guestCannotMutateCommentsOrLikes() throws Exception {
+        // 토큰까지 갖춰도 로그인 전에는 401 이다
         mockMvc.perform(multipart("/post-comments")
                         .param("postId", "10")
                         .param("content", "댓글")
-                        .accept(MediaType.APPLICATION_JSON))
+                        .accept(MediaType.APPLICATION_JSON)
+                        .with(csrf()))
                 .andExpect(status().isUnauthorized());
         mockMvc.perform(put("/post-comments/30")
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
-                        .content("{\"content\":\"수정\"}"))
+                        .content("{\"content\":\"수정\"}")
+                        .with(csrf()))
                 .andExpect(status().isUnauthorized());
-        mockMvc.perform(delete("/post-comments/30").accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(delete("/post-comments/30").accept(MediaType.APPLICATION_JSON).with(csrf()))
                 .andExpect(status().isUnauthorized());
-        mockMvc.perform(post("/post-comments/30/likes").accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(post("/post-comments/30/likes").accept(MediaType.APPLICATION_JSON).with(csrf()))
                 .andExpect(status().isUnauthorized());
-        mockMvc.perform(delete("/post-comments/30/likes").accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(delete("/post-comments/30/likes").accept(MediaType.APPLICATION_JSON).with(csrf()))
                 .andExpect(status().isUnauthorized());
+    }
+
+    /** 로그인 사용자라도 CSRF 토큰 없는 쓰기 요청은 막힌다. 남의 사이트가 대신 쓸 수 없다. */
+    @Test
+    void writesWithoutACsrfTokenAreRejectedEvenWhenLoggedIn() throws Exception {
+        UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(userDetails, null, List.of());
+
+        mockMvc.perform(multipart("/post-comments")
+                        .param("postId", "10")
+                        .param("content", "댓글")
+                        .with(authentication(authentication)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(delete("/post-comments/30").with(authentication(authentication)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/post-comments/30/likes").with(authentication(authentication)))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(service);
     }
 
     @Test
@@ -175,18 +199,23 @@ class PostCommentSecurityTest {
                         .file(new MockMultipartFile("images", "a.jpg", "image/jpeg", new byte[]{1}))
                         .param("postId", "10")
                         .param("content", "댓글")
-                        .with(authentication(authentication)))
+                        .with(authentication(authentication))
+                        .with(csrf()))
                 .andExpect(status().isCreated());
         mockMvc.perform(put("/post-comments/30")
                         .with(authentication(authentication))
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"content\":\"수정\"}"))
                 .andExpect(status().isOk());
-        mockMvc.perform(delete("/post-comments/30").with(authentication(authentication)))
+        mockMvc.perform(delete("/post-comments/30")
+                        .with(authentication(authentication)).with(csrf()))
                 .andExpect(status().isNoContent());
-        mockMvc.perform(post("/post-comments/30/likes").with(authentication(authentication)))
+        mockMvc.perform(post("/post-comments/30/likes")
+                        .with(authentication(authentication)).with(csrf()))
                 .andExpect(status().isNoContent());
-        mockMvc.perform(delete("/post-comments/30/likes").with(authentication(authentication)))
+        mockMvc.perform(delete("/post-comments/30/likes")
+                        .with(authentication(authentication)).with(csrf()))
                 .andExpect(status().isNoContent());
 
         verify(service).likeComment(30L, 7L);

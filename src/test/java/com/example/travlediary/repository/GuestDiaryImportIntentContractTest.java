@@ -94,14 +94,14 @@ class GuestDiaryImportIntentContractTest {
         // (쿼리를 허용하지만 열리는 경로는 여전히 체험 화면 네 개뿐이다)
         assertThat(security).contains("\"^/diaries/demo(?:/new|/edit|/cover)?(?:\\\\?.*)?$\"");
         /*
-          SecurityConfig 가 가져오기를 말하는 곳은 CSRF 목록 한 줄뿐이다.
+          SecurityConfig 는 가져오기를 아예 말하지 않는다.
           permitAll 쪽에 이름이 없으므로 /diaries/** 인증 규칙을 그대로 받는다.
         */
         assertThat(security.lines()
                 .filter(line -> line.contains("/diaries/import"))
                 .map(String::strip)
                 .toList())
-                .containsExactly("\"^/diaries/import$\", HttpMethod.POST.name()),");
+                .isEmpty();
         assertThat(security).contains("\"/diaries/**\",  // 개인 여행일기는 본인만 접근");
 
         // 화면과 저장 둘 다 로그인 사용자 전용이다. 열어 둔 경로에 들어 있지 않다.
@@ -113,8 +113,11 @@ class GuestDiaryImportIntentContractTest {
                 .contains("@AuthenticationPrincipal CustomUserDetails userDetails")
                 .contains("userDetails.getId()")
                 .doesNotContain("@RequestParam(\"userId\")");
-        // 저장 요청에도 CSRF 가 걸린다.
-        assertThat(security).contains("\"^/diaries/import$\", HttpMethod.POST.name()");
+        // 저장 요청에도 CSRF 가 걸린다. (기본 정책이 GET 외 모든 요청을 보호한다)
+        assertThat(security)
+                .doesNotContain("requireCsrfProtectionMatcher")
+                .doesNotContain("ignoringRequestMatchers")
+                .doesNotContain("csrf(AbstractHttpConfigurer::disable)");
     }
 
     /**

@@ -9,6 +9,7 @@ import com.example.travlediary.repository.event.EventMapper;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.service.event.EventLocalizationService;
 import com.example.travlediary.service.event.EventService;
+import com.example.travlediary.service.post.PostContentSanitizer;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -30,7 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 @WebMvcTest(EventController.class)
-@Import({SecurityConfig.class, EventLocalizationService.class})
+@Import({SecurityConfig.class, EventLocalizationService.class, PostContentSanitizer.class})
 class EventPageControllerTest {
 
     @Autowired
