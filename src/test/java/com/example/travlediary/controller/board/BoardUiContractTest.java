@@ -16,6 +16,9 @@ class BoardUiContractTest {
         String combobox = resource("/static/js/country-combobox.js");
         String template = resource("/templates/board/list.html");
         String css = resource("/static/css/board-list.css");
+        String scopeCss = css.substring(
+                css.indexOf(".board-scope-options"),
+                css.indexOf(".board-country-select-wrap {"));
 
         assertThat(javascript)
                 .contains("['latest', 'oldest', 'views', 'comments', 'bookmarks']")
@@ -48,15 +51,23 @@ class BoardUiContractTest {
                 .contains("id=\"board-country-listbox\"")
                 .contains("overseasCourseCountries")
                 .contains("/js/country-combobox.js")
-                .doesNotContain("<select id=\"board-country-select\"");
+                .doesNotContain("<select id=\"board-country-select\"", "board-scope-link--");
         assertThat(css)
                 .contains(".board-country-option-list")
                 .contains("max-height: 220px")
                 .contains("overflow-y: auto")
-                .contains(".board-scope-link--all.active")
-                .contains(".board-scope-link--domestic.active")
-                .contains(".board-scope-link--overseas.active")
                 .contains(".board-sort-button.active::after");
+        assertThat(scopeCss)
+                .contains("min-width: 58px", "min-height: 34px", "padding: 0 12px")
+                .contains(".board-scope-link.active,")
+                .contains(".board-scope-link[aria-current=\"page\"]")
+                .contains("border-color: var(--tripbora-border)")
+                .contains("background: var(--tripbora-soft)")
+                .contains("color: var(--tripbora-primary)")
+                .contains("outline: 3px solid var(--tripbora-focus)")
+                .contains(".board-scope-link:active")
+                .contains("color: var(--tripbora-primary-active)")
+                .doesNotContain("#99f6e4", "#bfdbfe", "#eff6ff", "#1d4ed8");
     }
 
     @Test

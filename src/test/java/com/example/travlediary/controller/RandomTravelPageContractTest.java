@@ -12,6 +12,22 @@ import static org.assertj.core.api.Assertions.assertThat;
 class RandomTravelPageContractTest {
 
     @Test
+    void heroBadgeAndScopeControlsUseTripboraPurpleStates() throws IOException {
+        String css = resource("/static/css/random-travel.css");
+
+        assertThat(css)
+                .contains(".random-travel-eyebrow")
+                .contains("border: 1px solid var(--tripbora-border)")
+                .contains("color: var(--tripbora-primary)")
+                .contains(".random-scope-button:hover:not(:disabled)")
+                .contains(".random-scope-button.is-active")
+                .contains(".random-scope-button:active:not(:disabled)")
+                .contains("color: var(--tripbora-primary-active)")
+                .contains("outline: 3px solid var(--tripbora-focus)")
+                .doesNotContain("#fff1bd", "#67521d");
+    }
+
+    @Test
     void drawInteractionUsesOneRequestAndAvoidsThePreviousRegion() throws IOException {
         String script = resource("/static/js/random-travel.js");
 

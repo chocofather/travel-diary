@@ -33,9 +33,10 @@
     align-items: center;
     min-height: 30px;
     padding: 5px 12px;
+    border: 1px solid var(--tripbora-border);
     border-radius: 999px;
-    background: #fff1bd;
-    color: #67521d;
+    background: #fff;
+    color: var(--tripbora-primary);
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.13em;
@@ -70,19 +71,33 @@
 .random-scope-button {
     min-width: 112px;
     min-height: 46px;
-    border: 0;
+    box-sizing: border-box;
+    border: 1px solid var(--tripbora-border);
     border-radius: 11px;
-    background: transparent;
-    color: #52747a;
+    background: #fff;
+    color: var(--tripbora-text);
     font: inherit;
     font-weight: 700;
     cursor: pointer;
-    transition: background-color 160ms ease, color 160ms ease;
+    transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease;
+}
+
+.random-scope-button:hover:not(:disabled) {
+    border-color: var(--tripbora-border);
+    background: var(--tripbora-soft);
+    color: var(--tripbora-primary-hover);
 }
 
 .random-scope-button.is-active {
+    border-color: var(--tripbora-border);
     background: var(--tripbora-soft);
     color: var(--tripbora-primary);
+}
+
+.random-scope-button:active:not(:disabled) {
+    border-color: var(--tripbora-primary-active);
+    background: var(--tripbora-soft);
+    color: var(--tripbora-primary-active);
 }
 
 .random-scope-button:focus-visible,
