@@ -76,7 +76,7 @@ class RandomTravelPageContractTest {
         String script = resource("/static/js/random-travel.js");
         var document = Jsoup.parse(template);
 
-        assertThat(document.select(".random-travel-decoration img[src='/images/random1.png']"))
+        assertThat(document.select(".random-travel-decoration img[src='/images/random1.webp']"))
                 .hasSize(1);
         assertThat(document.select("canvas, .roulette-canvas")).isEmpty();
         assertThat(script)
