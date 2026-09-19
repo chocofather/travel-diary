@@ -6,7 +6,12 @@
   <title th:text="#{login.pageTitle}">로그인 | Tripbora</title>
   <link rel="stylesheet" type="text/css" href="/css/style.css">
   <link rel="stylesheet" href="/css/login.css">
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <!--
+    저장소가 이미 같은 버전을 담고 있다. 바깥에서 한 벌 더 받으면 출처가 달라
+    다른 화면이 받아 둔 것과 캐시를 나눠 쓰지 못한다. login.js 는 defer 라 문서상 뒤에 있고,
+    defer 끼리는 문서 순서대로 실행되므로 이 파일이 먼저 끝난다.
+  -->
+  <script src="/js/jquery-3.6.0.min.js" defer></script>
 </head>
 <body class="login-page">
 <!-- 전체 사이트 헤더 대신 언어 선택만 우측 상단에 둔다. 카드 바깥이라 로그인 폼과 겹치지 않는다. -->
@@ -17,7 +22,7 @@
 <main class="login-page__main">
   <a class="login-page__brand" th:href="@{/}" th:aria-label="#{login.brand.home}"
      aria-label="Tripbora 홈으로 이동">
-    <img src="/images/branding/tripbora-logo.svg" alt="Tripbora">
+    <img src="/images/branding/tripbora-logo.png" alt="Tripbora">
   </a>
 
   <section class="login-container" aria-labelledby="loginTitle">

@@ -44,6 +44,7 @@
                th:if="${thumbnail != null and !#strings.isEmpty(thumbnail)}">
             <img class="event-card-image"
                  th:src="${thumbnail}"
+                 loading="lazy"
                  onerror="this.onerror=null;this.src='/images/default.png';"
                  th:alt="#{event.imageAlt(${event.title})}" />
           </div>

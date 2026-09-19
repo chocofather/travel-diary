@@ -7,6 +7,11 @@
     <link rel="stylesheet" href="/css/detail.css">
     <link rel="stylesheet" href="/css/comment.css">
     <link rel="stylesheet" href="/css/content-comment.css">
+    <!--
+      detail-carousel.js 가 $ 를 쓴다. 공통 layout 에서 내려온 jQuery 에 기대지 않고 여기서 부른다.
+      defer 라 문서 순서대로 실행된다 — head 의 이 파일이 body 의 detail-carousel.js 보다 먼저다.
+    -->
+    <script src="/js/jquery-3.6.0.min.js" defer></script>
     <script src="/js/comment-deep-link.js" defer></script>
 </th:block>
 
@@ -97,7 +102,12 @@
             <div class="track">
                 <div class="slide" th:each="img, idx : ${destination.images}"
                      th:classappend="${idx.index == 0} ? 'active'">
+                    <!--
+                      첫 장은 열자마자 보이므로 그대로 받는다.
+                      둘째 장부터는 넘겨야 보이는 자리라 그때 받는다. (th:attr 은 null 이면 속성을 뺀다)
+                    -->
                     <img th:src="@{${img.imageUrl}}"
+                         th:attr="loading=${idx.index == 0} ? null : 'lazy'"
                          th:alt="#{destination.detail.gallery.imageAlt(${idx.index + 1})}"/>
                 </div>
             </div>
@@ -1176,7 +1186,8 @@
                             <a class="similar-destination-media-link"
                                th:href="@{'/destinations/' + ${d.id}}"
                                th:attr="aria-label=${d.name}">
-                                <img th:src="${d.thumbnailPath}" th:alt="${d.name}" class="similar-destination-thumbnail"/>
+                                <img th:src="${d.thumbnailPath}" th:alt="${d.name}"
+                                     loading="lazy" class="similar-destination-thumbnail"/>
                             </a>
                             <!-- 북마크 버튼: 이미지 우상단 오버레이 (토글 로직은 기존 그대로) -->
                             <button

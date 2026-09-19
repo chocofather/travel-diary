@@ -32,7 +32,6 @@
 
     <!-- 공통 CSS -->
     <link rel="stylesheet" href="/css/style.css" />
-    <link rel="stylesheet" href="https://unpkg.com/swiper@9/swiper-bundle.min.css" />
 
     <!-- 각 페이지에서만 필요한 head/css -->
     <th:block th:if="${headFragment != null}" th:replace="${headFragment}"></th:block>
@@ -60,14 +59,14 @@
   <!-- 공통 푸터 -->
   <div th:replace="fragments/footer :: siteFooter"></div>
 
-  <!-- **jQuery**: 반드시 `$` 사용하는 스크립트보다 먼저! -->
-  <script src="/js/jquery-3.6.0.min.js"></script>
-
-  <!-- Color-Thief: SRI 제거 -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.2/color-thief.umd.js" ></script>
-
-  <!-- Swiper -->
-  <script src="https://unpkg.com/swiper@9/swiper-bundle.min.js" defer></script>
+  <!--
+    jQuery / Swiper 는 공통으로 두지 않는다.
+    쓰는 화면이 정해져 있어 그 화면의 headFragment 에서 defer 로 직접 불러온다.
+    (jQuery: destination/detail, login, reset-password, register, social-signup, account/email-*)
+    (Swiper: home 의 이벤트 슬라이더)
+    공통으로 두면 모든 페이지가 쓰지도 않는 파일을 내려받고, jQuery 는 defer 가 없어
+    첫 페인트까지 막았다. Color-Thief 는 저장소 전체에 사용처가 없어 제거했다.
+  -->
 
   <!-- 페이지별 공통 스크립트 -->
   <script src="/js/language-menu.js" defer></script>

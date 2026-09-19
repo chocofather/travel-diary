@@ -55,6 +55,7 @@
            th:classappend="${info.contentType.name() == 'FESTIVAL'} ? ' travel-info-festival-thumbnail'">
         <img th:if="${info.thumbnailUrl != null and !#strings.isEmpty(info.thumbnailUrl)}"
              th:src="@{${info.thumbnailUrl}}"
+             loading="lazy"
              th:alt="#{travelInfo.list.card.thumbnailAlt(${info.title})}">
         <div th:unless="${info.thumbnailUrl != null and !#strings.isEmpty(info.thumbnailUrl)}"
              class="travel-info-thumbnail-placeholder"

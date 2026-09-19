@@ -4,6 +4,13 @@
       th:replace="layout/main :: layout(~{::body}, ~{::headFragment})">
 
 <th:block th:fragment="headFragment">
+  <!--
+    Swiper 는 이 화면의 이벤트 슬라이더만 쓴다. 공통 layout 이 아니라 여기서 부른다.
+    defer 라 문서 순서대로 실행된다 — head 의 이 파일이 body 의 slider.js 보다 먼저 끝나고,
+    slider.js 는 DOMContentLoaded 안에서 new Swiper 를 부르므로 순서가 보장된다.
+  -->
+  <link rel="stylesheet" href="https://unpkg.com/swiper@9/swiper-bundle.min.css" />
+  <script src="https://unpkg.com/swiper@9/swiper-bundle.min.js" defer></script>
   <link rel="stylesheet" href="/css/slider.css" />
   <link rel="stylesheet" href="/css/home.css" />
 </th:block>

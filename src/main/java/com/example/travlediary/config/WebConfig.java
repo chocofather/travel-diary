@@ -2,11 +2,13 @@ package com.example.travlediary.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.CacheControl;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.List;
 
 @Configuration
@@ -34,11 +36,44 @@ public class WebConfig implements WebMvcConfigurer {
             "diary-stickers",  // 관리자 스티커 카탈로그 (공용 asset)
             "icons");          // 사이트 아이콘과 편의시설 아이콘(icons/amenities)
 
+    /**
+     * 배포에 함께 나가는 정적 리소스 폴더. 여기 적힌 것만 브라우저 캐시를 허용한다.
+     *
+     * <p>회원이 올린 파일({@code /uploads/**})과 통제된 endpoint 로만 나가는 개인 사진은
+     * 이 목록에 넣지 않는다. 그쪽은 소유권·PIN 검사와 기존 캐시 정책을 그대로 둔다.
+     */
+    private static final List<String> BUNDLED_STATIC_DIRECTORIES =
+            List.of("css", "js", "images", "fonts");
+
+    /**
+     * 정적 리소스를 브라우저가 들고 있어도 되는 시간.
+     *
+     * <p>한 시간만 준다. 아직 파일 이름에 내용 해시를 붙이지 않아서, 길게 주면 배포한 뒤에도
+     * 예전 CSS 를 든 브라우저가 남는다. 해시 전략이 생기기 전까지는 이 값을 늘리지 않는다.
+     */
+    private static final Duration BUNDLED_STATIC_CACHE = Duration.ofHours(1);
+
     @Value("${custom.upload-path}")
     private String uploadPath;
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        /*
+          배포 정적 리소스에만 짧은 캐시를 준다.
+
+          Spring Security 는 모든 응답에 no-store 를 붙이지만, 응답에 Cache-Control 이
+          이미 있으면 건드리지 않는다(CacheControlHeadersWriter). 헤더를 쓰는 시점도
+          핸들러가 끝난 뒤라서, 여기서 먼저 붙인 값이 그대로 나간다.
+          그래서 보안 필터를 걷어내지 않고도 정적 파일만 캐시할 수 있다.
+
+          HTML 은 Controller 가 만들어 이 핸들러를 지나지 않으므로 그대로 no-store 다.
+        */
+        for (String directory : BUNDLED_STATIC_DIRECTORIES) {
+            registry.addResourceHandler("/" + directory + "/**")
+                    .addResourceLocations("classpath:/static/" + directory + "/")
+                    .setCacheControl(CacheControl.maxAge(BUNDLED_STATIC_CACHE).cachePublic());
+        }
+
         Path uploadRoot = Paths.get(uploadPath).toAbsolutePath().normalize();
         for (String directory : PUBLIC_UPLOAD_DIRECTORIES) {
             registry.addResourceHandler("/uploads/" + directory + "/**")

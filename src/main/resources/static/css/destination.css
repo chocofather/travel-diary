@@ -1,12 +1,19 @@
+/*
+  font-display 가 없으면 브라우저 기본값(block)이라 글꼴을 받는 동안 글자가 보이지 않는다.
+  woff2 두 벌이 180KB 씩이라 그 사이 최대 3초까지 빈 화면이 된다.
+  swap 을 주면 기본 글꼴로 먼저 읽히고 다 받은 뒤 바뀐다. 글꼴·굵기는 그대로다.
+*/
 @font-face {
     font-family: 'Spoqa Han Sans Neo';
     src: url('/fonts/SpoqaHanSansNeo-Regular.woff2') format('woff2');
     font-weight: 400;
+    font-display: swap;
 }
 @font-face {
     font-family: 'Spoqa Han Sans Neo';
     src: url('/fonts/SpoqaHanSansNeo-Bold.woff2') format('woff2');
     font-weight: 700;
+    font-display: swap;
 }
 
 /*!* ─── 래퍼: .region-selector ─── *!
