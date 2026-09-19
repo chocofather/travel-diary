@@ -1,7 +1,6 @@
 // src/main/java/com/example/travlediary/config/GlobalModelAttributes.java
 package com.example.travlediary.config;
 
-import com.example.travlediary.model.User;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
 import org.springframework.security.core.Authentication;
@@ -25,10 +24,10 @@ public class GlobalModelAttributes {
         model.addAttribute("isLoggedIn", isLoggedIn);
 
         if (isLoggedIn) {
-            Long userId = userDetails.getId();
-            User user = userMapper.findById(userId);
+            // 헤더가 쓰는 값은 프로필 사진뿐이다. 회원 한 줄을 통째로 읽지 않는다.
             model.addAttribute("currentUserProfileImage",
-                    normalizeProfileImage(user == null ? null : user.getProfileImage()));
+                    normalizeProfileImage(
+                            userMapper.findProfileImageById(userDetails.getId())));
         }
     }
 

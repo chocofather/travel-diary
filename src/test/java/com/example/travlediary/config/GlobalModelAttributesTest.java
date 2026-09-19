@@ -14,6 +14,7 @@ import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.ui.ExtendedModelMap;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -27,9 +28,7 @@ class GlobalModelAttributesTest {
     @Test
     void authenticatedMemberProfileUsesPrincipalId() {
         User authenticatedUser = user(7L);
-        User storedUser = user(7L);
-        storedUser.setProfileImage("/uploads/member.png");
-        when(userMapper.findById(7L)).thenReturn(storedUser);
+        when(userMapper.findProfileImageById(7L)).thenReturn("/uploads/member.png");
         ExtendedModelMap model = new ExtendedModelMap();
 
         new GlobalModelAttributes(userMapper).addCommonAttributes(
@@ -38,16 +37,27 @@ class GlobalModelAttributesTest {
         assertThat(model.get("isLoggedIn")).isEqualTo(true);
         assertThat(model.get("currentUserProfileImage")).isEqualTo("/uploads/member.png");
         assertThat(model).doesNotContainKey("hasLocalPassword");
-        verify(userMapper).findById(7L);
+        verify(userMapper).findProfileImageById(7L);
         verify(userMapper, never()).hasLocalPasswordById(7L);
+    }
+
+    /** 헤더에 필요한 값은 사진 한 칸뿐이라 회원 한 줄을 통째로 읽지 않는다. */
+    @Test
+    void headerProfileDoesNotReadTheWholeMemberRow() {
+        User authenticatedUser = user(7L);
+        when(userMapper.findProfileImageById(7L)).thenReturn("/uploads/member.png");
+        ExtendedModelMap model = new ExtendedModelMap();
+
+        new GlobalModelAttributes(userMapper).addCommonAttributes(
+                model, authentication(authenticatedUser));
+
+        verify(userMapper, never()).findById(7L);
     }
 
     @Test
     void socialOnlyMemberDoesNotExposeLocalPasswordCapabilityGlobally() {
         User authenticatedUser = user(77L);
-        User storedUser = user(77L);
-        storedUser.setUserPassword(null);
-        when(userMapper.findById(77L)).thenReturn(storedUser);
+        when(userMapper.findProfileImageById(77L)).thenReturn(null);
         ExtendedModelMap model = new ExtendedModelMap();
 
         new GlobalModelAttributes(userMapper).addCommonAttributes(
@@ -68,7 +78,8 @@ class GlobalModelAttributesTest {
 
         assertThat(model.get("isLoggedIn")).isEqualTo(false);
         assertThat(model).doesNotContainKey("currentUserProfileImage");
-        verify(userMapper, never()).findById(7L);
+        verify(userMapper, never()).findProfileImageById(anyLong());
+        verify(userMapper, never()).findById(anyLong());
     }
 
     @Test
@@ -81,7 +92,8 @@ class GlobalModelAttributesTest {
 
         assertThat(model.get("isLoggedIn")).isEqualTo(false);
         assertThat(model).doesNotContainKey("currentUserProfileImage");
-        verify(userMapper, never()).findById(7L);
+        verify(userMapper, never()).findProfileImageById(anyLong());
+        verify(userMapper, never()).findById(anyLong());
     }
 
     private UsernamePasswordAuthenticationToken authentication(User user) {

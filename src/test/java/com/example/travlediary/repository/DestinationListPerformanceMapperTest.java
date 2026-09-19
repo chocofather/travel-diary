@@ -70,6 +70,26 @@ class DestinationListPerformanceMapperTest {
         }
     }
 
+    /**
+     * 목록 카드는 짧은 소개만 그린다. 본문(description)은 상세에서만 쓰는데
+     * 목록 SELECT 가 함께 읽으면 한 쪽마다 긴 TEXT 를 그만큼 실어 오게 된다.
+     */
+    @Test
+    void regionListDoesNotReadTheLongDescriptionColumn() throws IOException {
+        Configuration configuration = mapperConfiguration(
+                "/mapper/DestinationMapper.xml", "mapper/DestinationMapper.xml");
+
+        for (String sort : List.of("default", "views", "bookmarks")) {
+            String sql = destinationListSql(configuration, sort);
+
+            assertThat(sql).doesNotContain("dt.description");
+            // 카드가 실제로 쓰는 값은 그대로 남아 있어야 한다.
+            assertThat(sql)
+                    .contains("dt.short_description AS shortDescription")
+                    .contains("dt.name AS name");
+        }
+    }
+
     private String destinationListSql(Configuration configuration, String sort) {
         return normalize(configuration.getMappedStatement(
                         DESTINATION_NAMESPACE + ".findByRegionIdsPaged")

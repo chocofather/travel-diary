@@ -294,14 +294,7 @@ public class DestinationCommentService {
             commentIdToUserIdMap.put(c.getId(), c.getUserId());
         }
 
-        boolean tempIsAdmin = false;
-        if (currentUserId != null) {
-            User user = userMapper.findById(currentUserId);
-            if (user != null && "ADMIN".equals(user.getRole())) {
-                tempIsAdmin = true;
-            }
-        }
-        final boolean isAdmin = tempIsAdmin;
+        final boolean isAdmin = isAdmin(currentUserId);
         // 첨부 사진은 댓글마다 조회하지 않고 한 번에 읽는다.
         Map<Long, List<String>> imagesByComment = loadImageUrlsByCommentId(comments);
 
@@ -427,8 +420,10 @@ public class DestinationCommentService {
 
         // 5. DTO 변환 (첨부 사진은 부모+자식 전체를 한 번에 조회)
         Map<Long, List<String>> imagesByComment = loadImageUrlsByCommentId(merged);
+        // 보고 있는 사람이 관리자인지는 댓글 수와 상관없는 값 하나다. 목록 경로와 같이 한 번만 읽는다.
+        boolean viewerIsAdmin = isAdmin(userId);
         List<CommentDto> dtos = merged.stream()
-                .map(c -> enrichComment(c, userId, imagesByComment))
+                .map(c -> enrichComment(c, userId, viewerIsAdmin, imagesByComment))
                 .toList();
 
         return new PageResult<>(dtos, totalThreads, safePage, safeSize, totalCommentCount);
@@ -462,6 +457,7 @@ public class DestinationCommentService {
 
 
     private CommentDto enrichComment(DestinationComment comment, Long currentUserId,
+                                     boolean currentUserIsAdmin,
                                      Map<Long, List<String>> imagesByComment) {
         CommentDto dto = new CommentDto();
         dto.setId(comment.getId());
@@ -481,21 +477,29 @@ public class DestinationCommentService {
         // 관리자 조치 댓글은 목록 경로와 동일하게 플레이스홀더로 표시되어야 한다.
         dto.setModerated(comment.isModerated());
 
-        boolean isAdmin = false;
-        if (currentUserId != null) {
-            User user = userMapper.findById(currentUserId);
-            if (user != null && "ADMIN".equals(user.getRole())) {
-                isAdmin = true;
-            }
-        }
-
-        dto.setAdmin(isAdmin);
+        // 관리자 여부는 댓글마다 다시 읽지 않는다. 부르는 쪽이 한 번 읽어 넘겨 준다.
+        dto.setAdmin(currentUserIsAdmin);
         dto.setIsLoggedIn(currentUserId != null);
 
         boolean liked = destinationCommentMapper.existsLikeByUserAndComment(currentUserId, comment.getId());
         dto.setLikedByMe(liked);
 
         return dto;
+    }
+
+    /**
+     * 지금 보고 있는 사람이 관리자인가.
+     *
+     * <p>댓글 하나하나의 값이 아니라 요청 한 번의 값이므로 목록을 그리기 전에 한 번만 읽는다.
+     * 판정 기준은 예전과 같은 users.user_role 이다 — 로그인 때 받아 둔 권한을 쓰지 않는 이유는,
+     * 관리자 권한을 거둬들였을 때 다시 로그인하기 전이라도 바로 반영되게 하기 위해서다.
+     */
+    private boolean isAdmin(Long currentUserId) {
+        if (currentUserId == null) {
+            return false;
+        }
+        User user = userMapper.findById(currentUserId);
+        return user != null && "ADMIN".equals(user.getRole());
     }
 
     /**

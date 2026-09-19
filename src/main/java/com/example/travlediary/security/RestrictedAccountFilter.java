@@ -63,12 +63,14 @@ public class RestrictedAccountFilter extends OncePerRequestFilter {
                                     FilterChain filterChain)
             throws ServletException, IOException {
         Long userId = authenticatedUserId();
-        if (userId == null || !isRestricted(userId)) {
+        if (userId == null || !isRestricted(request, userId)) {
             filterChain.doFilter(request, response);
             return;
         }
         // 기간이 끝난 제재는 이 시점에 해제하고 요청을 그대로 진행한다.
         if (userSanctionService.releaseIfExpired(userId)) {
+            // status 가 방금 바뀌었다. 읽어 둔 값을 지워 뒤쪽 판정이 낡은 값을 보지 않게 한다.
+            AccountStatusRequestScope.clear(request);
             filterChain.doFilter(request, response);
             return;
         }
@@ -90,8 +92,15 @@ public class RestrictedAccountFilter extends OncePerRequestFilter {
         return admin ? null : details.getId();
     }
 
-    private boolean isRestricted(Long userId) {
-        return userMapper.findStatusById(userId) == UserStatus.RESTRICTED;
+    /**
+     * 상태를 한 번 읽고 이 요청에 한해 남겨 둔다.
+     * 뒤따르는 탈퇴 유예 판정이 같은 값을 다시 읽지 않아도 되게 하기 위한 것이고,
+     * 요청이 끝나면 함께 사라진다({@link AccountStatusRequestScope}).
+     */
+    private boolean isRestricted(HttpServletRequest request, Long userId) {
+        UserStatus status = userMapper.findStatusById(userId);
+        AccountStatusRequestScope.remember(request, userId, status);
+        return status == UserStatus.RESTRICTED;
     }
 
     private void blockRequest(HttpServletRequest request, HttpServletResponse response)

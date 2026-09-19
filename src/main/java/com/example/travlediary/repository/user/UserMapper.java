@@ -47,6 +47,15 @@ public interface UserMapper {
     /** 요청마다 현재 상태만 확인할 때 사용하는 가벼운 조회. */
     UserStatus findStatusById(@Param("id") Long id);
 
+    /**
+     * 공통 헤더의 프로필 사진 경로만 읽는다.
+     *
+     * <p>모든 화면이 요청마다 한 번씩 부르는 자리라 회원 한 줄을 통째로 읽지 않는다.
+     * 상태 조건을 걸지 않는 것은 의도한 것이다 — 제한·탈퇴유예 회원도 자신에게 허용된
+     * 안내 화면에서는 예전과 같은 프로필 사진을 봐야 한다.
+     */
+    String findProfileImageById(@Param("id") Long id);
+
     /** 관리자 조치로 회원 상태만 변경한다. */
     int updateStatusForAdmin(@Param("id") Long id,
                              @Param("status") UserStatus status,

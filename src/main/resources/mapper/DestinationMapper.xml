@@ -455,11 +455,16 @@
         LIMIT #{limit}
     </select>
 
+    <!--
+      목록 카드가 쓰는 값만 읽는다.
+      본문(dt.description)은 상세(findDestinationDetail)에서만 쓰는 긴 TEXT 라
+      여기서 함께 읽으면 한 쪽(12건)마다 그만큼을 헛되이 실어 오게 된다.
+      DestinationDto 에는 description 자리가 아예 없다.
+    -->
     <select id="findByRegionIdsPaged" resultType="com.example.travlediary.model.Destination">
         SELECT
         d.id,
         dt.name AS name,
-        dt.description AS description,
         dt.short_description AS shortDescription,
         d.latitude,
         d.longitude,

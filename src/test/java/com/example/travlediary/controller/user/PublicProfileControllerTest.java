@@ -77,7 +77,8 @@ class PublicProfileControllerTest {
     @Test
     void authenticatedMemberCanOpenAnotherPublicProfile() throws Exception {
         User currentUser = user(5L, "/uploads/member.png");
-        when(userMapper.findById(5L)).thenReturn(currentUser);
+        // 공통 헤더는 회원 한 줄이 아니라 프로필 사진 한 칸만 읽는다.
+        when(userMapper.findProfileImageById(5L)).thenReturn("/uploads/member.png");
         when(publicProfileService.getPublicProfile(7L))
                 .thenReturn(profile(7L, "여행자", "/images/default.png"));
         when(boardService.getBoardListByUserId(7L, "tip", 2, 10)).thenReturn(List.of());

@@ -1,5 +1,6 @@
 package com.example.travlediary.security;
 
+import com.example.travlediary.model.UserStatus;
 import com.example.travlediary.service.user.WithdrawalGraceService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -64,6 +65,19 @@ public class WithdrawalPendingAccountFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         Long userId = authenticatedUserId();
         if (userId == null) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        /*
+          앞선 제한 격리 필터가 이미 이 요청에서 users.status 를 읽었다면 그 값을 쓴다.
+          유예 대상이 아닌 것이 그 값만으로 확실하면 판정을 부르지 않는다 —
+          resolveAccess 도 첫 줄에서 똑같이 status 를 보고 NOT_PENDING 을 돌려주므로 결과는 같다.
+          읽어 둔 값이 없거나(관리자 요청 등) 유예 상태라면 예전 그대로 판정을 부른다.
+          그 안에서 purge_scheduled_at 까지 확인해야 하기 때문이다.
+        */
+        UserStatus knownStatus = AccountStatusRequestScope.find(request, userId);
+        if (knownStatus != null && knownStatus != UserStatus.WITHDRAWAL_PENDING) {
             filterChain.doFilter(request, response);
             return;
         }

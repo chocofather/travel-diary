@@ -234,10 +234,13 @@ class HomeControllerTest {
                 });
     }
 
+    /**
+     * 홈은 로그인 여부만 알면 된다. 회원 한 줄을 통째로 읽어 화면으로 넘기지 않는다.
+     * (헤더가 쓰는 프로필 사진은 GlobalModelAttributes 가 따로 최소 조회로 넣어 준다)
+     */
     @Test
-    void authenticatedHomeLoadsCurrentUserByPrincipalId() throws Exception {
+    void authenticatedHomeDoesNotLoadTheWholeMemberRow() throws Exception {
         User user = user(7L);
-        when(userMapper.findById(7L)).thenReturn(user);
         when(courseService.getPopularCoursesForHome(SupportedLanguage.KOREAN))
                 .thenReturn(List.of());
 
@@ -245,9 +248,9 @@ class HomeControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("home"))
                 .andExpect(model().attribute("isLoggedIn", true))
-                .andExpect(model().attribute("user", user));
+                .andExpect(model().attributeDoesNotExist("user"));
 
-        verify(userMapper, atLeastOnce()).findById(7L);
+        verify(userMapper, never()).findById(7L);
         verify(userMapper, never()).hasLocalPasswordById(7L);
     }
 

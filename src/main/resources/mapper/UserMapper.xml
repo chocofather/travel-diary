@@ -613,6 +613,16 @@
         WHERE id = #{id}
     </select>
 
+    <!--
+      공통 헤더가 쓰는 값은 프로필 사진 한 칸뿐이다.
+      회원 한 줄을 통째로 읽으면 비밀번호 해시까지 화면 쪽으로 따라 나간다.
+    -->
+    <select id="findProfileImageById" resultType="string">
+        SELECT profile_image
+        FROM users
+        WHERE id = #{id}
+    </select>
+
     <update id="updateStatusForAdmin">
         UPDATE users
         SET status = #{status},
