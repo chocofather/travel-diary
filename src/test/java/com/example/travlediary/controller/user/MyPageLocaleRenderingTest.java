@@ -127,7 +127,6 @@ class MyPageLocaleRenderingTest {
     private CustomUserDetails principal(Long id) {
         User user = new User();
         user.setId(id);
-        user.setUsername("member");
         user.setUserPassword("password");
         user.setUserRole(UserRole.USER);
         return new CustomUserDetails(user);

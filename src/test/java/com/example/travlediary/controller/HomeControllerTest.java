@@ -236,7 +236,7 @@ class HomeControllerTest {
 
     @Test
     void authenticatedHomeLoadsCurrentUserByPrincipalId() throws Exception {
-        User user = user(7L, "member");
+        User user = user(7L);
         when(userMapper.findById(7L)).thenReturn(user);
         when(courseService.getPopularCoursesForHome(SupportedLanguage.KOREAN))
                 .thenReturn(List.of());
@@ -292,10 +292,9 @@ class HomeControllerTest {
                 userDetails, userDetails.getPassword(), userDetails.getAuthorities());
     }
 
-    private User user(Long id, String username) {
+    private User user(Long id) {
         User user = new User();
         user.setId(id);
-        user.setUsername(username);
         user.setUserPassword("encoded-password");
         user.setUserRole(UserRole.USER);
         return user;

@@ -1526,7 +1526,6 @@ class TravelPlanControllerTest {
     private CustomUserDetails plainMember() {
         User user = new User();
         user.setId(8L);
-        user.setUsername("junnie");
         user.setUserPassword("password");
         user.setUserRole(UserRole.USER);
         return new CustomUserDetails(user);
@@ -1535,7 +1534,6 @@ class TravelPlanControllerTest {
     private CustomUserDetails member() {
         User user = new User();
         user.setId(7L);
-        user.setUsername("minjun");
         user.setUserPassword("password");
         user.setUserRole(UserRole.USER);
         return new CustomUserDetails(user);

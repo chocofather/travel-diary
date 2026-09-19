@@ -192,7 +192,6 @@ class WithdrawalPendingAccountFilterTest {
     private void authenticate(UserRole role) {
         User user = new User();
         user.setId(5L);
-        user.setUsername("travler");
         user.setUserPassword("encoded");
         user.setUserRole(role);
         CustomUserDetails details = new CustomUserDetails(user);

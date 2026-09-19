@@ -205,7 +205,6 @@ class MyPageBookmarkControllerTest {
     private CustomUserDetails principal(Long id, UserRole role) {
         User user = new User();
         user.setId(id);
-        user.setUsername(role == UserRole.ADMIN ? "admin" : "member");
         user.setUserPassword("password");
         user.setUserRole(role);
         return new CustomUserDetails(user);

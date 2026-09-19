@@ -384,7 +384,6 @@ class InquiryControllerTest {
     private CustomUserDetails member() {
         User user = new User();
         user.setId(7L);
-        user.setUsername("member");
         user.setUserPassword("password");
         user.setUserRole(UserRole.USER);
         return new CustomUserDetails(user);
@@ -393,7 +392,6 @@ class InquiryControllerTest {
     private CustomUserDetails admin() {
         User user = new User();
         user.setId(99L);
-        user.setUsername("admin");
         user.setUserPassword("password");
         user.setUserRole(UserRole.ADMIN);
         return new CustomUserDetails(user);

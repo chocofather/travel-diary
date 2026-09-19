@@ -26,8 +26,8 @@ class GlobalModelAttributesTest {
 
     @Test
     void authenticatedMemberProfileUsesPrincipalId() {
-        User authenticatedUser = user(7L, "member");
-        User storedUser = user(7L, "member");
+        User authenticatedUser = user(7L);
+        User storedUser = user(7L);
         storedUser.setProfileImage("/uploads/member.png");
         when(userMapper.findById(7L)).thenReturn(storedUser);
         ExtendedModelMap model = new ExtendedModelMap();
@@ -44,8 +44,8 @@ class GlobalModelAttributesTest {
 
     @Test
     void socialOnlyMemberDoesNotExposeLocalPasswordCapabilityGlobally() {
-        User authenticatedUser = user(77L, null);
-        User storedUser = user(77L, null);
+        User authenticatedUser = user(77L);
+        User storedUser = user(77L);
         storedUser.setUserPassword(null);
         when(userMapper.findById(77L)).thenReturn(storedUser);
         ExtendedModelMap model = new ExtendedModelMap();
@@ -90,10 +90,9 @@ class GlobalModelAttributesTest {
                 userDetails, userDetails.getPassword(), userDetails.getAuthorities());
     }
 
-    private User user(Long id, String username) {
+    private User user(Long id) {
         User user = new User();
         user.setId(id);
-        user.setUsername(username);
         user.setUserPassword("encoded-password");
         user.setUserRole(UserRole.USER);
         return user;

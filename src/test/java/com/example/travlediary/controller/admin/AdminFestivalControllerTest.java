@@ -335,7 +335,6 @@ class AdminFestivalControllerTest {
     private com.example.travlediary.security.CustomUserDetails adminDetails() {
         com.example.travlediary.model.User user = new com.example.travlediary.model.User();
         user.setId(7L);
-        user.setUsername("admin");
         user.setUserPassword("password");
         user.setUserRole(com.example.travlediary.model.UserRole.ADMIN);
         return new com.example.travlediary.security.CustomUserDetails(user);

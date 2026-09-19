@@ -121,7 +121,6 @@ class PostCommentSecurityTest {
     void authenticatedTranslationUsesImmutableUserId() throws Exception {
         User user = new User();
         user.setId(42L);
-        user.setUsername("changeable-login-id");
         user.setUserPassword("encoded");
         user.setUserRole(UserRole.USER);
         CustomUserDetails principal = new CustomUserDetails(user);

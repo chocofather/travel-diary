@@ -13,7 +13,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class LoginThrottleTest {
 
-    private static final String USERNAME = "traveler";
+    private static final String EMAIL = "traveler@example.com";
     private static final String IP_ADDRESS = "203.0.113.10";
 
     private MutableClock clock;
@@ -29,85 +29,85 @@ class LoginThrottleTest {
     void firstFourAccountFailuresDoNotBlockLogin() {
         recordAccountFailures(4);
 
-        assertThat(throttle.isBlocked(USERNAME, "198.51.100.20")).isFalse();
+        assertThat(throttle.isBlocked(EMAIL, "198.51.100.20")).isFalse();
     }
 
     @Test
     void fifthAccountFailureBlocksForTenSeconds() {
         recordAccountFailures(5);
 
-        assertThat(throttle.isBlocked(USERNAME, "198.51.100.20")).isTrue();
+        assertThat(throttle.isBlocked(EMAIL, "198.51.100.20")).isTrue();
         clock.advance(Duration.ofSeconds(9));
-        assertThat(throttle.isBlocked(USERNAME, "198.51.100.20")).isTrue();
+        assertThat(throttle.isBlocked(EMAIL, "198.51.100.20")).isTrue();
         clock.advance(Duration.ofSeconds(1));
-        assertThat(throttle.isBlocked(USERNAME, "198.51.100.20")).isFalse();
+        assertThat(throttle.isBlocked(EMAIL, "198.51.100.20")).isFalse();
     }
 
     @Test
     void failureResultReportsTheAccountCountAndAuthoritativeBlockDeadline() {
         LoginThrottleStatus status = null;
         for (int attempt = 0; attempt < 4; attempt++) {
-            status = throttle.recordFailure(USERNAME, IP_ADDRESS);
+            status = throttle.recordFailure(EMAIL, IP_ADDRESS);
         }
 
         assertThat(status.accountFailureCount()).isEqualTo(4);
         assertThat(status.blockedUntil()).isNull();
 
-        status = throttle.recordFailure(USERNAME, IP_ADDRESS);
+        status = throttle.recordFailure(EMAIL, IP_ADDRESS);
 
         assertThat(status.accountFailureCount()).isEqualTo(5);
         assertThat(status.blockedUntil())
                 .isEqualTo(Instant.parse("2026-09-08T00:00:10Z"));
-        assertThat(throttle.status(USERNAME, IP_ADDRESS)).isEqualTo(status);
+        assertThat(throttle.status(EMAIL, IP_ADDRESS)).isEqualTo(status);
     }
 
     @Test
     void sixthAccountFailureBlocksForThirtySeconds() {
         recordAccountFailures(5);
         clock.advance(Duration.ofSeconds(10));
-        throttle.recordFailure(USERNAME, IP_ADDRESS);
+        throttle.recordFailure(EMAIL, IP_ADDRESS);
 
         clock.advance(Duration.ofSeconds(29));
-        assertThat(throttle.isBlocked(USERNAME, "198.51.100.20")).isTrue();
+        assertThat(throttle.isBlocked(EMAIL, "198.51.100.20")).isTrue();
         clock.advance(Duration.ofSeconds(1));
-        assertThat(throttle.isBlocked(USERNAME, "198.51.100.20")).isFalse();
+        assertThat(throttle.isBlocked(EMAIL, "198.51.100.20")).isFalse();
     }
 
     @Test
     void seventhAccountFailureBlocksForOneMinute() {
         reachSixFailuresAndWait();
-        throttle.recordFailure(USERNAME, IP_ADDRESS);
+        throttle.recordFailure(EMAIL, IP_ADDRESS);
 
         clock.advance(Duration.ofSeconds(59));
-        assertThat(throttle.isBlocked(USERNAME, "198.51.100.20")).isTrue();
+        assertThat(throttle.isBlocked(EMAIL, "198.51.100.20")).isTrue();
         clock.advance(Duration.ofSeconds(1));
-        assertThat(throttle.isBlocked(USERNAME, "198.51.100.20")).isFalse();
+        assertThat(throttle.isBlocked(EMAIL, "198.51.100.20")).isFalse();
     }
 
     @Test
     void eighthAndLaterAccountFailuresBlockForFiveMinutes() {
         reachSevenFailuresAndWait();
-        throttle.recordFailure(USERNAME, IP_ADDRESS);
+        throttle.recordFailure(EMAIL, IP_ADDRESS);
 
         clock.advance(Duration.ofMinutes(4).plusSeconds(59));
-        assertThat(throttle.isBlocked(USERNAME, "198.51.100.20")).isTrue();
+        assertThat(throttle.isBlocked(EMAIL, "198.51.100.20")).isTrue();
         clock.advance(Duration.ofSeconds(1));
-        assertThat(throttle.isBlocked(USERNAME, "198.51.100.20")).isFalse();
+        assertThat(throttle.isBlocked(EMAIL, "198.51.100.20")).isFalse();
 
-        throttle.recordFailure(USERNAME, IP_ADDRESS);
+        throttle.recordFailure(EMAIL, IP_ADDRESS);
         clock.advance(Duration.ofMinutes(4).plusSeconds(59));
-        assertThat(throttle.isBlocked(USERNAME, "198.51.100.20")).isTrue();
+        assertThat(throttle.isBlocked(EMAIL, "198.51.100.20")).isTrue();
     }
 
     @Test
     void successfulLoginClearsOnlyTheAccountFailureHistory() {
         recordAccountFailures(5);
 
-        throttle.recordSuccess(" TRAVELER ");
+        throttle.recordSuccess(" TRAVELER@EXAMPLE.COM ");
 
-        assertThat(throttle.isBlocked(USERNAME, "198.51.100.20")).isFalse();
+        assertThat(throttle.isBlocked(EMAIL, "198.51.100.20")).isFalse();
         recordAccountFailures(4);
-        assertThat(throttle.isBlocked(USERNAME, "198.51.100.20")).isFalse();
+        assertThat(throttle.isBlocked(EMAIL, "198.51.100.20")).isFalse();
     }
 
     @Test
@@ -171,20 +171,20 @@ class LoginThrottleTest {
 
     private void recordAccountFailures(int count) {
         for (int attempt = 0; attempt < count; attempt++) {
-            throttle.recordFailure(USERNAME, IP_ADDRESS);
+            throttle.recordFailure(EMAIL, IP_ADDRESS);
         }
     }
 
     private void reachSixFailuresAndWait() {
         recordAccountFailures(5);
         clock.advance(Duration.ofSeconds(10));
-        throttle.recordFailure(USERNAME, IP_ADDRESS);
+        throttle.recordFailure(EMAIL, IP_ADDRESS);
         clock.advance(Duration.ofSeconds(30));
     }
 
     private void reachSevenFailuresAndWait() {
         reachSixFailuresAndWait();
-        throttle.recordFailure(USERNAME, IP_ADDRESS);
+        throttle.recordFailure(EMAIL, IP_ADDRESS);
         clock.advance(Duration.ofMinutes(1));
     }
 

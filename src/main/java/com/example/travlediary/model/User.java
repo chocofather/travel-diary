@@ -12,8 +12,6 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class User {
     private Long id; // 회원 ID값
-    /** 롤백 호환을 위해 유지하는 legacy 컬럼. 신규 계정에서는 사용하지 않는다. */
-    private String username;
     private String userPassword; // 비밀번호
 
     // 개인정보

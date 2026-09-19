@@ -76,7 +76,7 @@ class PublicProfileControllerTest {
 
     @Test
     void authenticatedMemberCanOpenAnotherPublicProfile() throws Exception {
-        User currentUser = user(5L, "member", "/uploads/member.png");
+        User currentUser = user(5L, "/uploads/member.png");
         when(userMapper.findById(5L)).thenReturn(currentUser);
         when(publicProfileService.getPublicProfile(7L))
                 .thenReturn(profile(7L, "여행자", "/images/default.png"));
@@ -151,10 +151,9 @@ class PublicProfileControllerTest {
                 userDetails, userDetails.getPassword(), userDetails.getAuthorities());
     }
 
-    private User user(Long id, String username, String profileImage) {
+    private User user(Long id, String profileImage) {
         User user = new User();
         user.setId(id);
-        user.setUsername(username);
         user.setUserPassword("encoded-password");
         user.setUserRole(UserRole.USER);
         user.setProfileImage(profileImage);

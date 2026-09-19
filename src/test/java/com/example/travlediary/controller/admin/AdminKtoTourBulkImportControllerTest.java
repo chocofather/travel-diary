@@ -180,7 +180,6 @@ class AdminKtoTourBulkImportControllerTest {
     private CustomUserDetails adminPrincipal() {
         User admin = new User();
         admin.setId(7L);
-        admin.setUsername("admin");
         admin.setUserPassword("{noop}password");
         admin.setUserRole(UserRole.ADMIN);
         return new CustomUserDetails(admin);

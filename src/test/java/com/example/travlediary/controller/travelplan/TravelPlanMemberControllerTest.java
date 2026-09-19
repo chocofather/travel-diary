@@ -182,7 +182,6 @@ class TravelPlanMemberControllerTest {
     private CustomUserDetails member() {
         User user = new User();
         user.setId(7L);
-        user.setUsername("minjun");
         user.setUserPassword("password");
         user.setUserRole(UserRole.USER);
         return new CustomUserDetails(user);

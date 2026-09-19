@@ -73,7 +73,7 @@ class CustomLoginSuccessHandlerTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         handler.onAuthenticationSuccess(
-                request, response, authentication(7L, "member", UserRole.USER));
+                request, response, authentication(7L, UserRole.USER));
 
         verify(loginThrottle).recordSuccess("member@example.com");
         assertThat(request.getSession().getAttribute(LoginFormState.SESSION_ATTRIBUTE)).isNull();
@@ -86,7 +86,7 @@ class CustomLoginSuccessHandlerTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         handler.onAuthenticationSuccess(
-                request, response, authentication(7L, "travler", UserRole.USER));
+                request, response, authentication(7L, UserRole.USER));
 
         assertThat(response.getRedirectedUrl()).isEqualTo("/account/restricted");
         assertThat(request.getSession().getAttribute("userId")).isEqualTo(7L);
@@ -106,7 +106,7 @@ class CustomLoginSuccessHandlerTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         handler.onAuthenticationSuccess(
-                request, response, authentication(7L, "travler", UserRole.USER));
+                request, response, authentication(7L, UserRole.USER));
 
         assertThat(response.getRedirectedUrl()).isEqualTo("/account/withdrawal-pending");
         assertThat(request.getSession().getAttribute("userId")).isEqualTo(7L);
@@ -126,7 +126,7 @@ class CustomLoginSuccessHandlerTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         handler.onAuthenticationSuccess(
-                request, response, authentication(7L, "travler", UserRole.USER));
+                request, response, authentication(7L, UserRole.USER));
 
         assertThat(response.getRedirectedUrl())
                 .isEqualTo("/users/register?withdrawalExpired=true");
@@ -142,7 +142,7 @@ class CustomLoginSuccessHandlerTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         handler.onAuthenticationSuccess(
-                request, response, authentication(7L, "travler", UserRole.USER));
+                request, response, authentication(7L, UserRole.USER));
 
         assertThat(response.getRedirectedUrl()).isEqualTo("/mypage");
         assertThat(request.getSession().getAttribute("userId")).isEqualTo(7L);
@@ -154,7 +154,7 @@ class CustomLoginSuccessHandlerTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         handler.onAuthenticationSuccess(
-                request, response, authentication(99L, "admin", UserRole.ADMIN));
+                request, response, authentication(99L, UserRole.ADMIN));
 
         assertThat(response.getRedirectedUrl()).isEqualTo("/travel-info?sort=views");
         assertThat(request.getSession().getAttribute("userId")).isEqualTo(99L);
@@ -166,7 +166,7 @@ class CustomLoginSuccessHandlerTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         handler.onAuthenticationSuccess(
-                request, response, authentication(99L, "admin", UserRole.ADMIN));
+                request, response, authentication(99L, UserRole.ADMIN));
 
         assertThat(response.getRedirectedUrl()).isEqualTo("/");
     }
@@ -179,7 +179,7 @@ class CustomLoginSuccessHandlerTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         handler.onAuthenticationSuccess(
-                request, response, authentication(99L, "admin", UserRole.ADMIN));
+                request, response, authentication(99L, UserRole.ADMIN));
 
         assertThat(response.getRedirectedUrl())
                 .isEqualTo("/admin/inquiries?status=PENDING&page=2");
@@ -194,7 +194,7 @@ class CustomLoginSuccessHandlerTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         handler.onAuthenticationSuccess(
-                request, response, authentication(7L, "member", UserRole.USER));
+                request, response, authentication(7L, UserRole.USER));
 
         assertThat(response.getRedirectedUrl()).isEqualTo("/");
         assertThat(new HttpSessionRequestCache().getRequest(request, response)).isNull();
@@ -206,7 +206,7 @@ class CustomLoginSuccessHandlerTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         handler.onAuthenticationSuccess(
-                request, response, authentication(7L, "member", UserRole.USER));
+                request, response, authentication(7L, UserRole.USER));
 
         assertThat(response.getRedirectedUrl()).isEqualTo("/travel-info?sort=views");
         assertThat(request.getSession().getAttribute("userId")).isEqualTo(7L);
@@ -231,7 +231,7 @@ class CustomLoginSuccessHandlerTest {
             MockHttpServletResponse response = new MockHttpServletResponse();
 
             handler.onAuthenticationSuccess(
-                    request, response, authentication(7L, "member", UserRole.USER));
+                    request, response, authentication(7L, UserRole.USER));
 
             assertThat(response.getRedirectedUrl()).isEqualTo(detailPath);
         }
@@ -243,7 +243,7 @@ class CustomLoginSuccessHandlerTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         handler.onAuthenticationSuccess(
-                request, response, authentication(7L, "member", UserRole.USER));
+                request, response, authentication(7L, UserRole.USER));
 
         assertThat(response.getRedirectedUrl()).isEqualTo("/");
     }
@@ -253,7 +253,7 @@ class CustomLoginSuccessHandlerTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         handler.onAuthenticationSuccess(
-                request, response, authentication(7L, "member", UserRole.USER));
+                request, response, authentication(7L, UserRole.USER));
 
         assertThat(response.getRedirectedUrl()).isEqualTo("/");
     }
@@ -276,18 +276,15 @@ class CustomLoginSuccessHandlerTest {
         return session;
     }
 
-    private UsernamePasswordAuthenticationToken authentication(Long id,
-                                                               String username,
-                                                               UserRole role) {
-        CustomUserDetails userDetails = new CustomUserDetails(user(id, username, role));
+    private UsernamePasswordAuthenticationToken authentication(Long id, UserRole role) {
+        CustomUserDetails userDetails = new CustomUserDetails(user(id, role));
         return new UsernamePasswordAuthenticationToken(
                 userDetails, "password", userDetails.getAuthorities());
     }
 
-    private User user(Long id, String username, UserRole role) {
+    private User user(Long id, UserRole role) {
         User user = new User();
         user.setId(id);
-        user.setUsername(username);
         user.setUserRole(role);
         return user;
     }
@@ -420,7 +417,6 @@ class CustomLoginSuccessHandlerTest {
     private UsernamePasswordAuthenticationToken authentication(long userId) {
         User user = new User();
         user.setId(userId);
-        user.setUsername("member");
         user.setUserRole(UserRole.USER);
         user.setStatus(UserStatus.ACTIVE);
         CustomUserDetails principal = new CustomUserDetails(user);

@@ -123,7 +123,7 @@ class SocialOAuth2LoginSuccessHandlerTest {
         OAuth2AuthenticationToken googleAuthentication = googleAuthentication(
                 "google-sub-123", "same@example.com", true, "ROLE_ADMIN");
         SocialAccount socialAccount = socialAccount(7L, "google-sub-123");
-        User user = user(7L, null, UserRole.USER, UserStatus.ACTIVE);
+        User user = user(7L, UserRole.USER, UserStatus.ACTIVE);
         when(socialAccountService.findByProviderAndProviderUserId(
                 SocialProvider.GOOGLE, "google-sub-123")).thenReturn(socialAccount);
         when(userMapper.findById(7L)).thenReturn(user);
@@ -158,7 +158,7 @@ class SocialOAuth2LoginSuccessHandlerTest {
                 SocialProvider.GOOGLE, "admin-sub"))
                 .thenReturn(socialAccount(99L, "admin-sub"));
         when(userMapper.findById(99L))
-                .thenReturn(user(99L, "admin", UserRole.ADMIN, UserStatus.ACTIVE));
+                .thenReturn(user(99L, UserRole.ADMIN, UserStatus.ACTIVE));
         when(userMapper.findStatusById(99L)).thenReturn(UserStatus.ACTIVE);
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -178,7 +178,7 @@ class SocialOAuth2LoginSuccessHandlerTest {
                 SocialProvider.GOOGLE, "google-sub-123"))
                 .thenReturn(socialAccount(7L, "google-sub-123"));
         when(userMapper.findById(7L))
-                .thenReturn(user(7L, null, UserRole.USER, UserStatus.ACTIVE));
+                .thenReturn(user(7L, UserRole.USER, UserStatus.ACTIVE));
         when(userMapper.findStatusById(7L)).thenReturn(UserStatus.ACTIVE);
         MockHttpServletRequest original = new MockHttpServletRequest("GET", "/travel-info");
         original.setScheme("http");
@@ -203,7 +203,7 @@ class SocialOAuth2LoginSuccessHandlerTest {
                 SocialProvider.GOOGLE, "restricted-sub"))
                 .thenReturn(socialAccount(7L, "restricted-sub"));
         when(userMapper.findById(7L))
-                .thenReturn(user(7L, null, UserRole.USER, UserStatus.RESTRICTED));
+                .thenReturn(user(7L, UserRole.USER, UserStatus.RESTRICTED));
         when(userSanctionService.releaseIfExpired(7L)).thenReturn(false);
         when(userMapper.findStatusById(7L)).thenReturn(UserStatus.RESTRICTED);
         MockHttpServletRequest request = new MockHttpServletRequest();
@@ -229,7 +229,7 @@ class SocialOAuth2LoginSuccessHandlerTest {
                 SocialProvider.GOOGLE, "pending-sub"))
                 .thenReturn(socialAccount(7L, "pending-sub"));
         when(userMapper.findById(7L))
-                .thenReturn(user(7L, null, UserRole.USER, UserStatus.WITHDRAWAL_PENDING));
+                .thenReturn(user(7L, UserRole.USER, UserStatus.WITHDRAWAL_PENDING));
         when(userMapper.findStatusById(7L)).thenReturn(UserStatus.WITHDRAWAL_PENDING);
         when(withdrawalGraceService.resolveAccess(7L, SocialProvider.GOOGLE))
                 .thenReturn(WithdrawalGraceService.Outcome.IN_GRACE);
@@ -261,7 +261,7 @@ class SocialOAuth2LoginSuccessHandlerTest {
                 SocialProvider.KAKAO, "5068008846"))
                 .thenReturn(socialAccount(19L, SocialProvider.KAKAO, "5068008846"));
         when(userMapper.findById(19L))
-                .thenReturn(user(19L, null, UserRole.USER, UserStatus.WITHDRAWAL_PENDING));
+                .thenReturn(user(19L, UserRole.USER, UserStatus.WITHDRAWAL_PENDING));
         when(withdrawalGraceService.resolveAccess(19L, SocialProvider.KAKAO))
                 .thenReturn(WithdrawalGraceService.Outcome.GRACE_ENDED);
         MockHttpServletRequest request = new MockHttpServletRequest();
@@ -292,7 +292,7 @@ class SocialOAuth2LoginSuccessHandlerTest {
                 SocialProvider.GOOGLE, "expired-sub"))
                 .thenReturn(socialAccount(7L, "expired-sub"));
         when(userMapper.findById(7L))
-                .thenReturn(user(7L, null, UserRole.USER, UserStatus.WITHDRAWAL_PENDING));
+                .thenReturn(user(7L, UserRole.USER, UserStatus.WITHDRAWAL_PENDING));
         when(withdrawalGraceService.resolveAccess(7L, SocialProvider.GOOGLE))
                 .thenReturn(WithdrawalGraceService.Outcome.GRACE_ENDED);
         MockHttpServletRequest request = new MockHttpServletRequest();
@@ -317,7 +317,7 @@ class SocialOAuth2LoginSuccessHandlerTest {
                 SocialProvider.GOOGLE, "blocked-sub"))
                 .thenReturn(socialAccount(7L, "blocked-sub"));
         when(userMapper.findById(7L))
-                .thenReturn(user(7L, null, UserRole.USER, status));
+                .thenReturn(user(7L, UserRole.USER, status));
         MockHttpServletRequest request = new MockHttpServletRequest();
         saveAuthentication(request, authentication);
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -534,7 +534,7 @@ class SocialOAuth2LoginSuccessHandlerTest {
         when(socialAccountService.findByProviderAndProviderUserId(
                 SocialProvider.GOOGLE, "new-google-sub")).thenReturn(null);
         when(userMapper.findByEmail("member@example.com"))
-                .thenReturn(user(17L, "member", UserRole.USER, UserStatus.ACTIVE));
+                .thenReturn(user(17L, UserRole.USER, UserStatus.ACTIVE));
         MockHttpServletRequest request = new MockHttpServletRequest();
         saveAuthentication(request, authentication);
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -570,7 +570,7 @@ class SocialOAuth2LoginSuccessHandlerTest {
         when(socialAccountService.findByProviderAndProviderUserId(
                 SocialProvider.GOOGLE, "new-google-sub")).thenReturn(null);
         when(userMapper.findByEmail("member@example.com")).thenReturn(
-                user(17L, "member", UserRole.USER, UserStatus.WITHDRAWAL_PENDING));
+                user(17L, UserRole.USER, UserStatus.WITHDRAWAL_PENDING));
         when(withdrawalGraceService.resolveAccess(17L, null))
                 .thenReturn(WithdrawalGraceService.Outcome.IN_GRACE);
         MockHttpServletRequest request = new MockHttpServletRequest();
@@ -602,7 +602,7 @@ class SocialOAuth2LoginSuccessHandlerTest {
                 : naverAuthentication("00", Map.of("id", providerUserId), "OAUTH2_USER", true);
         when(socialAccountService.findByProviderAndProviderUserId(provider, providerUserId))
                 .thenReturn(socialAccount(52L, provider, providerUserId));
-        User pendingMember = user(52L, null, UserRole.USER, UserStatus.INACTIVE);
+        User pendingMember = user(52L, UserRole.USER, UserStatus.INACTIVE);
         pendingMember.setUserEmail("member@example.com");
         when(userMapper.findById(52L)).thenReturn(pendingMember);
         MockHttpServletRequest request = new MockHttpServletRequest();
@@ -631,7 +631,7 @@ class SocialOAuth2LoginSuccessHandlerTest {
                 SocialProvider.KAKAO, "kakao-sub"))
                 .thenReturn(socialAccount(52L, SocialProvider.KAKAO, "kakao-sub"));
         when(userMapper.findById(52L))
-                .thenReturn(user(52L, null, UserRole.USER, UserStatus.INACTIVE));
+                .thenReturn(user(52L, UserRole.USER, UserStatus.INACTIVE));
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -649,7 +649,7 @@ class SocialOAuth2LoginSuccessHandlerTest {
         when(socialAccountService.findByProviderAndProviderUserId(
                 SocialProvider.GOOGLE, "new-google-sub")).thenReturn(null);
         when(userMapper.findByEmail("member@example.com"))
-                .thenReturn(user(17L, "member", UserRole.USER, UserStatus.INACTIVE));
+                .thenReturn(user(17L, UserRole.USER, UserStatus.INACTIVE));
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -671,7 +671,7 @@ class SocialOAuth2LoginSuccessHandlerTest {
                 SocialProvider.KAKAO, "kakao-sub-123"))
                 .thenReturn(socialAccount(17L, SocialProvider.KAKAO, "kakao-sub-123"));
         when(userMapper.findById(17L))
-                .thenReturn(user(17L, null, UserRole.USER, UserStatus.ACTIVE));
+                .thenReturn(user(17L, UserRole.USER, UserStatus.ACTIVE));
         when(userMapper.findStatusById(17L)).thenReturn(UserStatus.ACTIVE);
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -729,7 +729,7 @@ class SocialOAuth2LoginSuccessHandlerTest {
                 .thenReturn(socialAccount(
                         17L, SocialProvider.KAKAO, "suspended-kakao-sub"));
         when(userMapper.findById(17L))
-                .thenReturn(user(17L, null, UserRole.USER, UserStatus.SUSPENDED));
+                .thenReturn(user(17L, UserRole.USER, UserStatus.SUSPENDED));
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -748,7 +748,7 @@ class SocialOAuth2LoginSuccessHandlerTest {
                 SocialProvider.NAVER, "naver-id-123"))
                 .thenReturn(socialAccount(27L, SocialProvider.NAVER, "naver-id-123"));
         when(userMapper.findById(27L))
-                .thenReturn(user(27L, null, UserRole.USER, UserStatus.ACTIVE));
+                .thenReturn(user(27L, UserRole.USER, UserStatus.ACTIVE));
         when(userMapper.findStatusById(27L)).thenReturn(UserStatus.ACTIVE);
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -827,7 +827,7 @@ class SocialOAuth2LoginSuccessHandlerTest {
                 .thenReturn(socialAccount(
                         27L, SocialProvider.NAVER, "suspended-naver-id"));
         when(userMapper.findById(27L))
-                .thenReturn(user(27L, null, UserRole.USER, UserStatus.SUSPENDED));
+                .thenReturn(user(27L, UserRole.USER, UserStatus.SUSPENDED));
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -1083,10 +1083,9 @@ class SocialOAuth2LoginSuccessHandlerTest {
         return account;
     }
 
-    private User user(Long id, String username, UserRole role, UserStatus status) {
+    private User user(Long id, UserRole role, UserStatus status) {
         User user = new User();
         user.setId(id);
-        user.setUsername(username);
         user.setUserRole(role);
         user.setStatus(status);
         return user;
@@ -1165,7 +1164,7 @@ class SocialOAuth2LoginSuccessHandlerTest {
                 SocialProvider.GOOGLE, "google-sub-123"))
                 .thenReturn(socialAccount(25L, "google-sub-123"));
         when(userMapper.findById(25L))
-                .thenReturn(user(25L, "member", UserRole.USER, UserStatus.ACTIVE));
+                .thenReturn(user(25L, UserRole.USER, UserStatus.ACTIVE));
         when(userMapper.findStatusById(25L)).thenReturn(UserStatus.ACTIVE);
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.getSession().setAttribute(PendingSocialLoginLink.SESSION_ATTRIBUTE,
@@ -1248,7 +1247,7 @@ class SocialOAuth2LoginSuccessHandlerTest {
         when(socialAccountService.findByProviderAndProviderUserId(
                 SocialProvider.GOOGLE, "google-sub-123"))
                 .thenReturn(socialAccount(7L, "google-sub-123"));
-        when(userMapper.findById(7L)).thenReturn(user(7L, null, UserRole.USER, UserStatus.ACTIVE));
+        when(userMapper.findById(7L)).thenReturn(user(7L, UserRole.USER, UserStatus.ACTIVE));
         when(userMapper.findStatusById(7L)).thenReturn(UserStatus.ACTIVE);
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();

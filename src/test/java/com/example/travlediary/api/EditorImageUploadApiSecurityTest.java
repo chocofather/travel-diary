@@ -128,7 +128,6 @@ class EditorImageUploadApiSecurityTest {
     private UsernamePasswordAuthenticationToken member() {
         User user = new User();
         user.setId(7L);
-        user.setUsername("writer");
         user.setUserPassword("encoded");
         user.setUserRole(UserRole.USER);
         CustomUserDetails principal = new CustomUserDetails(user);

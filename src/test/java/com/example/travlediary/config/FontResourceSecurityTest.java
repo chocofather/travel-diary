@@ -72,7 +72,6 @@ class FontResourceSecurityTest {
 
         User user = new User();
         user.setId(7L);
-        user.setUsername("member");
         user.setUserRole(UserRole.USER);
         when(userMapper.findStatusById(7L)).thenReturn(UserStatus.ACTIVE);
 

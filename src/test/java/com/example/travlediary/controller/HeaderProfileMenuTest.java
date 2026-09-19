@@ -63,7 +63,7 @@ class HeaderProfileMenuTest {
 
     @Test
     void regularUserReceivesMypageAndPostLogoutWithoutAdminEntry() throws Exception {
-        var document = page("member", "USER");
+        var document = page("USER");
 
         assertThat(document.select(
                 "#profile-menu-toggle[aria-controls=profile-menu][aria-expanded=false]"))
@@ -82,7 +82,7 @@ class HeaderProfileMenuTest {
 
     @Test
     void adminReceivesServerRenderedAdminEntryInsideTheProfileMenu() throws Exception {
-        var document = page("admin", "ADMIN");
+        var document = page("ADMIN");
 
         assertThat(document.select("#profile-menu a.profile-menu-admin[href='/admin']").text())
                 .isEqualTo("관리자 페이지");
@@ -103,7 +103,7 @@ class HeaderProfileMenuTest {
     })
     void theAdminEntryStaysKoreanWhileTheRestOfTheProfileMenuFollowsTheLocale(
             String tag, String profile, String mypage, String logout) throws Exception {
-        var document = page("admin", "ADMIN", tag);
+        var document = page("ADMIN", tag);
 
         assertThat(document.select("#profile-menu a.profile-menu-admin[href='/admin']").text())
                 .isEqualTo("관리자 페이지");
@@ -115,7 +115,7 @@ class HeaderProfileMenuTest {
     @ParameterizedTest
     @CsvSource({"ko", "en", "ja", "zh-CN", "zh-TW"})
     void aRegularUserNeverSeesTheAdminEntryInAnyLanguage(String tag) throws Exception {
-        var document = page("member", "USER", tag);
+        var document = page("USER", tag);
 
         assertThat(document.select("#profile-menu a[href='/admin']")).isEmpty();
         assertThat(document.select("#profile-menu")).hasSize(1);
@@ -401,15 +401,14 @@ class HeaderProfileMenuTest {
                 .andReturn().getResponse().getContentAsString());
     }
 
-    private org.jsoup.nodes.Document page(String username, String role) throws Exception {
-        return page(username, role, null);
+    private org.jsoup.nodes.Document page(String role) throws Exception {
+        return page(role, null);
     }
 
-    private org.jsoup.nodes.Document page(String username, String role, String languageTag)
+    private org.jsoup.nodes.Document page(String role, String languageTag)
             throws Exception {
         User user = new User();
         user.setId("ADMIN".equals(role) ? 2L : 1L);
-        user.setUsername(username);
         user.setUserPassword("password");
         user.setUserRole(UserRole.valueOf(role));
         when(userMapper.findById(user.getId())).thenReturn(user);

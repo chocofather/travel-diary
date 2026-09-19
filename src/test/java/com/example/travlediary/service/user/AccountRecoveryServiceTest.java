@@ -335,7 +335,6 @@ class AccountRecoveryServiceTest {
         User socialMember = new User();
         socialMember.setId(9L);
         socialMember.setUserEmail("social@gmail.com");
-        socialMember.setUsername(null);
         socialMember.setUserPassword(null);
         socialMember.setStatus(UserStatus.WITHDRAWAL_PENDING);
         socialMember.setPurgeScheduledAt(NOW.plusDays(30));

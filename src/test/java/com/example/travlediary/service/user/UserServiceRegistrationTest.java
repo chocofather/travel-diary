@@ -252,7 +252,6 @@ class UserServiceRegistrationTest {
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
         verify(userMapper).insertUser(userCaptor.capture());
         User stored = userCaptor.getValue();
-        assertThat(stored.getUsername()).isNull();
         assertThat(stored.getUserEmail()).isEqualTo("member@gmail.com");
         assertThat(stored.getFullName()).isNull();
         assertThat(stored.getUserPhone()).isNull();

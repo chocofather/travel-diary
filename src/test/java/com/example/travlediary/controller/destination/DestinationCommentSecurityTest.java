@@ -85,7 +85,6 @@ class DestinationCommentSecurityTest {
     void everySelectedImagePartReachesTheService() throws Exception {
         User user = new User();
         user.setId(7L);
-        user.setUsername("writer");
         user.setUserPassword("encoded");
         user.setUserRole(UserRole.USER);
         CustomUserDetails principal = new CustomUserDetails(user);
@@ -115,7 +114,6 @@ class DestinationCommentSecurityTest {
     void anInvalidImageIsAnsweredWithAUserErrorMessage() throws Exception {
         User user = new User();
         user.setId(7L);
-        user.setUsername("writer");
         user.setUserPassword("encoded");
         user.setUserRole(UserRole.USER);
         CustomUserDetails principal = new CustomUserDetails(user);
@@ -176,7 +174,6 @@ class DestinationCommentSecurityTest {
     void authenticatedTranslationUsesImmutableUserId() throws Exception {
         User user = new User();
         user.setId(42L);
-        user.setUsername("changeable-login-id");
         user.setUserPassword("encoded");
         user.setUserRole(UserRole.USER);
         CustomUserDetails principal = new CustomUserDetails(user);

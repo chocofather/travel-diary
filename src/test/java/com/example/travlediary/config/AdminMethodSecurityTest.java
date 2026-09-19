@@ -129,7 +129,6 @@ class AdminMethodSecurityTest {
     private UsernamePasswordAuthenticationToken token(UserRole role) {
         User user = new User();
         user.setId(role == UserRole.ADMIN ? 1L : 7L);
-        user.setUsername(role == UserRole.ADMIN ? "admin" : "member");
         user.setUserRole(role);
         user.setStatus(UserStatus.ACTIVE);
         CustomUserDetails principal = new CustomUserDetails(user);

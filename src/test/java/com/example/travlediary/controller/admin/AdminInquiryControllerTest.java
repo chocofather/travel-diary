@@ -154,7 +154,6 @@ class AdminInquiryControllerTest {
     private CustomUserDetails admin() {
         User user = new User();
         user.setId(99L);
-        user.setUsername("admin");
         user.setUserPassword("password");
         user.setUserRole(UserRole.ADMIN);
         return new CustomUserDetails(user);

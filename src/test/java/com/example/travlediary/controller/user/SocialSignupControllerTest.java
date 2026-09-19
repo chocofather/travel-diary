@@ -518,7 +518,6 @@ class SocialSignupControllerTest {
     private UsernamePasswordAuthenticationToken authentication() {
         User user = new User();
         user.setId(7L);
-        user.setUsername("member");
         user.setUserRole(UserRole.USER);
         user.setStatus(UserStatus.ACTIVE);
         CustomUserDetails principal = new CustomUserDetails(user);

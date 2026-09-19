@@ -98,7 +98,6 @@ class SocialSignupServiceTest {
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
         verify(userMapper).insertUser(userCaptor.capture());
         User user = userCaptor.getValue();
-        assertThat(user.getUsername()).isNull();
         assertThat(user.getUserPassword()).isNull();
         assertThat(user.getFullName()).isNull();
         assertThat(user.getUserBirth()).isNull();
@@ -139,7 +138,6 @@ class SocialSignupServiceTest {
         // provider 가 인증하지 않은 이메일이라 일반 회원가입과 같이 인증 대기로 만든다.
         assertThat(user.getStatus()).isEqualTo(UserStatus.INACTIVE);
         assertThat(user.getUserEmail()).isEqualTo("kakao@example.com");
-        assertThat(user.getUsername()).isNull();
         assertThat(user.getUserPassword()).isNull();
         assertThat(user.getVerificationToken()).isEqualTo(VERIFICATION_TOKEN);
 

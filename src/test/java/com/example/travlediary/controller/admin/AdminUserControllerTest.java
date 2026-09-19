@@ -372,7 +372,6 @@ class AdminUserControllerTest {
     private CustomUserDetails admin() {
         User adminUser = new User();
         adminUser.setId(1L);
-        adminUser.setUsername("master");
         adminUser.setUserPassword("password");
         adminUser.setUserRole(UserRole.ADMIN);
         return new CustomUserDetails(adminUser);

@@ -44,9 +44,8 @@ class CustomUserDetailsServiceTest {
     }
 
     @Test
-    void socialUserWithoutUsernameGetsStableInternalPrincipalNameAndDatabaseRole() {
+    void socialUserGetsStableInternalPrincipalNameAndDatabaseRole() {
         User user = user(UserStatus.ACTIVE);
-        user.setUsername(null);
 
         var details = new com.example.travlediary.security.CustomUserDetails(user);
 
@@ -174,7 +173,6 @@ class CustomUserDetailsServiceTest {
     private User user(UserStatus status) {
         User user = new User();
         user.setId(5L);
-        user.setUsername("travler");
         user.setUserPassword("encoded");
         user.setUserRole(UserRole.USER);
         user.setStatus(status);

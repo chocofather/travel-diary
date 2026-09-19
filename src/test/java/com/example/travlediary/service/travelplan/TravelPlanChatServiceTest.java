@@ -997,7 +997,6 @@ class TravelPlanChatServiceTest {
     private Principal principal() {
         User user = new User();
         user.setId(USER_ID);
-        user.setUsername("minjun");
         user.setUserPassword("password");
         user.setUserRole(UserRole.USER);
         CustomUserDetails userDetails = new CustomUserDetails(user);

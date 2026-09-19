@@ -621,8 +621,8 @@ class MyPageAccountControllerTest {
 
     @Test
     void userAndAdminCanOpenVerifiedEditPageUsingPrincipalId() throws Exception {
-        AccountDetailsDto member = details("member", "member@example.com");
-        AccountDetailsDto admin = details("admin", "admin@example.com");
+        AccountDetailsDto member = details("member@example.com");
+        AccountDetailsDto admin = details("admin@example.com");
         when(accountService.getAccountDetails(7L)).thenReturn(member);
         when(accountService.getAccountDetails(99L)).thenReturn(admin);
 
@@ -690,7 +690,7 @@ class MyPageAccountControllerTest {
         MockHttpSession session = new MockHttpSession();
         reauthenticationService.markVerified(session, 99L);
         when(accountService.getAccountDetails(99L))
-                .thenReturn(details("admin", "admin@example.com"));
+                .thenReturn(details("admin@example.com"));
         doThrow(new AccountValidationException(
                 null, "관리자 계정은 마이페이지에서 탈퇴할 수 없습니다."))
                 .when(accountService).withdraw(99L, "탈퇴를 신청합니다");
@@ -755,7 +755,7 @@ class MyPageAccountControllerTest {
         MockHttpSession session = new MockHttpSession();
         reauthenticationService.markVerified(session, 7L);
         when(accountService.getAccountDetails(7L))
-                .thenReturn(details("member", "member@example.com"));
+                .thenReturn(details("member@example.com"));
 
         mockMvc.perform(get("/mypage/account/edit").session(session)
                         .with(user(principal(7L, UserRole.USER))))
@@ -797,7 +797,7 @@ class MyPageAccountControllerTest {
         verify(accountService, never()).updateAccountDetails(eq(7L), any());
     }
 
-    private AccountDetailsDto details(String username, String email) {
+    private AccountDetailsDto details(String email) {
         AccountDetailsDto details = new AccountDetailsDto();
         details.setUserEmail(email);
         details.setFullName("여행 민준");
@@ -809,7 +809,6 @@ class MyPageAccountControllerTest {
     private CustomUserDetails principal(Long id, UserRole role) {
         User user = new User();
         user.setId(id);
-        user.setUsername("member" + id);
         user.setUserPassword("encoded-password");
         user.setUserRole(role);
         return new CustomUserDetails(user);

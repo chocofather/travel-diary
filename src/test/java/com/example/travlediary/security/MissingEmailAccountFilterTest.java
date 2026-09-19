@@ -129,7 +129,6 @@ class MissingEmailAccountFilterTest {
     private void authenticate(Long userId) {
         User user = new User();
         user.setId(userId);
-        user.setUsername("member");
         user.setUserRole(UserRole.USER);
         user.setStatus(UserStatus.ACTIVE);
         CustomUserDetails principal = new CustomUserDetails(user);

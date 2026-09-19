@@ -491,7 +491,6 @@ class AccountEmailRequiredControllerTest {
     private CustomUserDetails userDetails() {
         User user = new User();
         user.setId(7L);
-        user.setUsername("member");
         user.setNickname("기존닉네임");
         user.setUserRole(UserRole.USER);
         user.setStatus(UserStatus.ACTIVE);

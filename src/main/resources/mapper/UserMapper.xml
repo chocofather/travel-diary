@@ -184,13 +184,11 @@
       최종 파기. 개인 식별정보를 지우고 DEACTIVATED 로 바꾼다.
       nickname 은 NOT NULL UNIQUE 라 NULL 로 둘 수 없어 익명값을 받고,
       user_email 도 UNIQUE 라 재가입을 막지 않도록 익명 주소로 바꾼다.
-      롤백 호환을 위해 남겨 둔 legacy username 컬럼도 파기 시 NULL 로 비운다.
       withdrawal_requested_at / purge_scheduled_at / created_at / user_role 은 그대로 둔다.
     -->
     <update id="finalizeWithdrawal">
         UPDATE users
-        SET username = NULL,
-            user_email = #{userEmail},
+        SET user_email = #{userEmail},
             nickname = #{nickname},
             full_name = NULL,
             user_phone = NULL,

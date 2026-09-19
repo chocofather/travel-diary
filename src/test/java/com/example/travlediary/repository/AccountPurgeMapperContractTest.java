@@ -56,7 +56,6 @@ class AccountPurgeMapperContractTest {
         String update = statement(userXml(), "update", "finalizeWithdrawal");
 
         assertThat(update)
-                .contains("username = NULL")
                 .contains("user_email = #{userEmail}")
                 .contains("nickname = #{nickname}")
                 .contains("full_name = NULL")
@@ -73,6 +72,8 @@ class AccountPurgeMapperContractTest {
                 .contains("status = #{status}")
                 .contains("deleted_at = #{deletedAt}")
                 .contains("updated_at = NOW()");
+
+        assertThat(update).doesNotContain("username");
 
         // 탈퇴 경위와 가입 시점, 역할은 남긴다 (WHERE 조건과 섞이지 않게 SET 절만 본다)
         String setClause = update.substring(0, update.indexOf("WHERE"));

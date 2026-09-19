@@ -84,7 +84,7 @@ class MyPageAccountLocaleRenderingTest {
         MockHttpSession session = new MockHttpSession();
         reauthenticationService.markVerified(session, 7L);
         when(accountService.getAccountDetails(7L))
-                .thenReturn(details("minjun", "member@example.com"));
+                .thenReturn(details("member@example.com"));
 
         mockMvc.perform(get("/mypage/account/edit").session(session)
                         .with(user(principal(7L, UserRole.USER)))
@@ -184,7 +184,7 @@ class MyPageAccountLocaleRenderingTest {
         return new Cookie(TravelDiaryLocaleResolver.COOKIE_NAME, "en");
     }
 
-    private AccountDetailsDto details(String username, String email) {
+    private AccountDetailsDto details(String email) {
         AccountDetailsDto dto = new AccountDetailsDto();
         dto.setUserEmail(email);
         dto.setFullName("여행 민준");
@@ -211,7 +211,6 @@ class MyPageAccountLocaleRenderingTest {
     private CustomUserDetails principal(Long id, UserRole role) {
         User user = new User();
         user.setId(id);
-        user.setUsername("member");
         user.setUserPassword("password");
         user.setUserRole(role);
         return new CustomUserDetails(user);

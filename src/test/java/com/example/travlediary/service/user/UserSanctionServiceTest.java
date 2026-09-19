@@ -339,7 +339,6 @@ class UserSanctionServiceTest {
     private User user(UserStatus status) {
         User user = new User();
         user.setId(5L);
-        user.setUsername("travler");
         user.setUserEmail("user@example.com");
         user.setUserRole(UserRole.USER);
         user.setStatus(status);

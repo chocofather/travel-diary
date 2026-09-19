@@ -259,7 +259,6 @@ class AccountEmailRequiredI18nContractTest {
     private User target() {
         User user = new User();
         user.setId(7L);
-        user.setUsername("legacy");
         user.setNickname("예전회원");
         user.setUserRole(UserRole.USER);
         user.setStatus(UserStatus.ACTIVE);

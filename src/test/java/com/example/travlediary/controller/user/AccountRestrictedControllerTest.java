@@ -181,7 +181,6 @@ class AccountRestrictedControllerTest {
     private CustomUserDetails member() {
         User user = new User();
         user.setId(5L);
-        user.setUsername("travler");
         user.setUserPassword("encoded");
         user.setUserRole(UserRole.USER);
         return new CustomUserDetails(user);

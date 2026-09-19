@@ -273,7 +273,6 @@ class WithdrawalPendingI18nContractTest {
     private CustomUserDetails principal() {
         User user = new User();
         user.setId(7L);
-        user.setUsername("travler");
         user.setUserPassword("encoded");
         user.setUserRole(UserRole.USER);
         return new CustomUserDetails(user);
