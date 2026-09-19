@@ -43,3 +43,18 @@ output/pdf/
 src/main/resources/application-local.yml
 
 .DS_Store
+
+### Markdown 문서 Git 제외 ###
+*.md
+!docs/licenses/diary-pdf-third-party.md
+### DB dumps / local backups ###
+*.dump
+*.bak
+*.sql.gz
+/db-backups/
+/backups/
+/local-db/
+
+### Local secrets ###
+.env
+.env.*
