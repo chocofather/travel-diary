@@ -37,6 +37,8 @@ public interface CountryCategoryMapper {
 
     List<CountryCategory> selectByParentId(Long parentId);
 
+    List<Long> findAllRegionIdsUnder(@Param("rootRegionId") Long rootRegionId);
+
     List<CountryCategory> selectByParentIdAndDepth(@Param("parentId") Long parentId, @Param("depth") int depth);
 
     // 대한민국 추출

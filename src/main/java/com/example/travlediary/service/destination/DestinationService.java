@@ -500,12 +500,16 @@ public class DestinationService {
             Map<Long, String> localizedRegionNames,
             Map<Long, List<DestinationTranslation>> translationsByDestinationId) {
         List<Destination> available = destinations == null ? List.of() : destinations;
-        Set<Long> bookmarkedIds = (userId != null)
-                ? bookmarkMapper.findBookmarkedTargetIdsByUserId(userId, "DESTINATION")
+        // 현재 페이지에 표시하는 여행지만 북마크 상태와 댓글 수를 읽는다.
+        List<Long> ids = available.stream()
+                .map(Destination::getId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        Set<Long> bookmarkedIds = (userId != null && !ids.isEmpty())
+                ? bookmarkMapper.findBookmarkedTargetIds(userId, "DESTINATION", ids)
                 : Collections.emptySet();
 
-        //  여행지 ID 목록 뽑기
-        List<Long> ids = available.stream().map(Destination::getId).toList();
         // 여행지별 댓글 수를 한 번에 조회
         Map<Long, Integer> commentCountMap = destinationCommentService.countCommentsByDestinationIds(ids);
 

@@ -9,9 +9,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -57,6 +62,16 @@ class CountryCategoryRegionPathTest {
         lenient().when(mapper.selectById(12L)).thenReturn(second);
 
         assertThat(service.getRegionPath(11L)).isEmpty();
+    }
+
+    @Test
+    void descendantRegionIdsAreLoadedByOneMapperQueryIncludingTheRoot() {
+        when(mapper.findAllRegionIdsUnder(7L)).thenReturn(List.of(7L, 38L, 235L));
+
+        assertThat(service.getAllRegionIdsUnder(7L))
+                .containsExactly(7L, 38L, 235L);
+        verify(mapper).findAllRegionIdsUnder(7L);
+        verify(mapper, never()).selectByParentId(anyLong());
     }
 
     private CountryCategory region(Long id, String regionName, Long parentId) {

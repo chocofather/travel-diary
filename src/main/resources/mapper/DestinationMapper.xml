@@ -473,7 +473,9 @@
         LIMIT 1
         ) AS thumbnailPath,
         cc.region_name AS regionName,
-        (SELECT COUNT(*) FROM bookmarks WHERE target_type = 'DESTINATION' AND target_id = d.id) AS bookmarkCount,
+        <if test="sort == 'bookmarks'">
+            (SELECT COUNT(*) FROM bookmarks WHERE target_type = 'DESTINATION' AND target_id = d.id) AS bookmarkCount,
+        </if>
         d.views
         FROM destinations d
         JOIN destination_translations dt ON d.id = dt.destination_id AND dt.language_code = 'ko'
@@ -522,7 +524,9 @@
         WHERE destination_id = d.id AND is_main = 1
         LIMIT 1
         ) AS thumbnailPath,
-        (SELECT COUNT(*) FROM bookmarks WHERE target_type = 'DESTINATION' AND target_id = d.id) AS bookmarkCount,
+        <if test="sort == 'bookmarks'">
+            (SELECT COUNT(*) FROM bookmarks WHERE target_type = 'DESTINATION' AND target_id = d.id) AS bookmarkCount,
+        </if>
         d.views
         FROM destinations d
         JOIN country_categories c ON d.region_id = c.id

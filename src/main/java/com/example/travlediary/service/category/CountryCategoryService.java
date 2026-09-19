@@ -89,20 +89,7 @@ public class CountryCategoryService {
 
     // 6. 특정 지역의 모든 하위 지역(자손까지) ID 반환
     public List<Long> getAllRegionIdsUnder(Long parentId) {
-        // RECURSIVE 쿼리 지원하면 아래 주석 해제
-        // return mapper.findAllRegionIdsUnder(parentId);
-
-        // 직접 재귀 구현 (성능/정확도 모두 OK)
-        List<Long> ids = new ArrayList<>();
-        collectRegionIds(parentId, ids);
-        return ids;
-    }
-    private void collectRegionIds(Long parentId, List<Long> result) {
-        result.add(parentId);
-        List<CountryCategory> children = mapper.selectByParentId(parentId);
-        for (CountryCategory child : children) {
-            collectRegionIds(child.getId(), result);
-        }
+        return mapper.findAllRegionIdsUnder(parentId);
     }
 
     // 7. 특정 parent에서 depth까지의 지역 반환 (예: parent=서울, depth=4 -> 구)

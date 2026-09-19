@@ -27,6 +27,7 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -64,7 +65,8 @@ class DestinationServiceLocalizedListTest {
                         translation(1L, 15L, "ko", "경복궁", "한국어 소개"),
                         translation(2L, 15L, "en", "Gyeongbokgung Palace", " "),
                         translation(3L, 16L, "ko", "마을", "마을 소개")));
-        when(bookmarkMapper.findBookmarkedTargetIdsByUserId(9L, "DESTINATION"))
+        when(bookmarkMapper.findBookmarkedTargetIds(
+                9L, "DESTINATION", List.of(15L, 16L)))
                 .thenReturn(Set.of(15L));
         when(destinationCommentService.countCommentsByDestinationIds(List.of(15L, 16L)))
                 .thenReturn(Map.of(15L, 4));
@@ -83,6 +85,16 @@ class DestinationServiceLocalizedListTest {
         assertThat(cards.get(0).getCommentCount()).isEqualTo(4);
         verify(destinationMapper, times(1))
                 .findTranslationsByDestinationIds(List.of(15L, 16L));
+        verify(bookmarkMapper).findBookmarkedTargetIds(
+                9L, "DESTINATION", List.of(15L, 16L));
+    }
+
+    @Test
+    void loggedInEmptyPageSkipsBookmarkLookup() {
+        assertThat(service.convertToLocalizedDtoWithBookmark(
+                List.of(), 9L, SupportedLanguage.KOREAN, Map.of())).isEmpty();
+
+        verifyNoInteractions(bookmarkMapper);
     }
 
     @Test
