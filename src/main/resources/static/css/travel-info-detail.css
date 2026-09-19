@@ -1,7 +1,7 @@
 .travel-info-detail {
-    --travel-info-detail-accent: #0f766e;
-    --travel-info-detail-accent-dark: #115e59;
-    --travel-info-detail-accent-soft: #f0fdfa;
+    --travel-info-detail-accent: var(--tripbora-primary);
+    --travel-info-detail-accent-dark: var(--tripbora-primary-hover);
+    --travel-info-detail-accent-soft: var(--tripbora-soft);
     --travel-info-detail-border: #e2e8f0;
     width: min(960px, calc(100% - 40px));
     margin: 46px auto 80px;
@@ -82,7 +82,7 @@
 }
 
 .travel-info-detail-bookmark:focus-visible {
-    outline: 3px solid rgba(13, 148, 136, 0.3);
+    outline: 3px solid rgba(118, 87, 200, 0.3);
     outline-offset: 3px;
 }
 
@@ -227,7 +227,7 @@
 }
 
 .travel-info-detail-back:focus-visible {
-    outline: 3px solid rgba(13, 148, 136, 0.25);
+    outline: 3px solid rgba(118, 87, 200, 0.25);
     outline-offset: 3px;
 }
 

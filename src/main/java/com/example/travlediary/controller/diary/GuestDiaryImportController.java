@@ -72,7 +72,7 @@ public class GuestDiaryImportController {
           알 수 없으므로 편집 화면과 같은 표를 함께 내려 준다. (manifest 를 읽는 카탈로그다)
         */
         model.addAttribute("stickerRepeats", diaryStickerCatalog.getRepeatsByImageUrl());
-        model.addAttribute("pageTitle", "체험 여행일기 가져오기 | Travel Diary");
+        model.addAttribute("pageTitle", "체험 여행일기 가져오기 | Tripbora");
         return "diary/import";
     }
 

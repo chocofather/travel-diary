@@ -44,7 +44,7 @@ class NicknamePolicyTest {
     @ValueSource(strings = {
             "관리자", "관리자123", "진짜관리자", "운영자아님", "운영진123", "어드민",
             "admin", "Admin", "ADMIN", "admin123", "traveladmin",
-            "staff123", "official123", "여행일기123", "TravelDiary", "TravleDiary"
+            "staff123", "official123", "Tripbora123"
     })
     void blocksImpersonationRulesAsContainsIgnoringEnglishCase(String nickname) {
         assertForbidden(nickname);

@@ -1125,7 +1125,7 @@
     min-height: 30px;
     padding: 5px 7px 5px 10px;
     color: #3853ba;
-    background: #eef3ff;
+    background: var(--admin-blue-soft);
     border: 1px solid #d5e0fb;
     border-radius: 999px;
     font-size: 0.8rem;
@@ -1215,7 +1215,7 @@
 
 .admin-destination-form .admin-category-option.is-selected {
     color: #3853ba;
-    background: #eef3ff;
+    background: var(--admin-blue-soft);
     border-color: #d4def8;
 }
 

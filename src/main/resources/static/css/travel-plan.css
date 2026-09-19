@@ -1,24 +1,16 @@
 /*
   기능별 바탕 톤.
 
-  전부 같은 베이지로 두면 페이지·플래너·채팅·투표가 한 덩어리로 보인다.
-  사이트 색을 바꾸는 것이 아니라, 온도만 아주 조금 달리해 층을 구분한다.
-
-    페이지   따뜻한 베이지 (그대로)
-    종이     거의 흰색      (그대로)
-    채팅     조금 더 중립적인 아이보리
-    투표     아주 옅은 blue-gray
-
-  투표 accent 는 강조가 필요한 곳에만 쓴다.
-  (배지 / 선택지 번호 / 탭 밑줄 / 카드 테두리)
+  흰색과 중립 회색을 기본으로 두고, 선택·추가·투표처럼 행동이 필요한 곳에만
+  Tripbora 보라 계열을 쓴다. 채팅과 상태 색은 각각의 의미를 유지한다.
 */
 :root {
-    --tp-page: #f5f2ec;
-    --tp-paper: #fffdf8;
-    --tp-line: #e8e1d5;
-    --tp-ink: #3f3426;
-    --tp-ink-soft: #6b6259;
-    --tp-ink-faint: #a1968a;
+    --tp-page: #fafafc;
+    --tp-paper: #ffffff;
+    --tp-line: #e8e5ee;
+    --tp-ink: #28272d;
+    --tp-ink-soft: #65636d;
+    --tp-ink-faint: #908c98;
 
     /*
       스케줄러 화면.
@@ -28,33 +20,32 @@
       (아래 .travel-plan-paper 참고). 선은 전부 중립이다.
     */
     --tp-plan-page: #ffffff;
-    --tp-plan-paper: #fdfdfa;
-    --tp-plan-line: #eceef0;
-    --tp-plan-line-strong: #dde1e5;
-    --tp-plan-ink: #2f3438;
-    --tp-plan-ink-soft: #5f6871;
-    --tp-plan-ink-faint: #8d959d;
+    --tp-plan-paper: #ffffff;
+    --tp-plan-line: #ecebef;
+    --tp-plan-line-strong: #dedbe5;
+    --tp-plan-ink: #28272d;
+    --tp-plan-ink-soft: #65636d;
+    --tp-plan-ink-faint: #908c98;
 
     /*
-      일정표의 약한 accent. 갈색 하나로 통일하지 않기 위한 색이다.
-      "+ 일정 추가" 와 대안(B/C)이 이 계열을 나눠 쓴다.
+      일정표의 약한 accent. "+ 일정 추가"와 선택 상태에만 쓴다.
     */
-    --tp-plan-accent: #6d8579;
-    --tp-plan-accent-strong: #55695f;
-    --tp-plan-accent-soft: #f0f4f2;
-    --tp-plan-accent-line: #d6e0da;
+    --tp-plan-accent: #7657c8;
+    --tp-plan-accent-strong: #6042b0;
+    --tp-plan-accent-soft: #f3efff;
+    --tp-plan-accent-line: #ded5f5;
 
     /* 채팅: 스케줄러와 덩어리로 보이지 않게 아주 옅은 cool gray */
     --tp-chat-surface: #f8fafb;
     --tp-chat-composer: #eef2f5;
     --tp-chat-line: #e2e8ec;
 
-    /* 투표: 아주 옅은 blue-gray. 강한 파랑이 아니다 */
-    --tp-poll-surface: #f7f8fa;
-    --tp-poll-soft: #e9edf1;
-    --tp-poll-line: #dbe1e8;
-    --tp-poll-accent: #6f7d8c;
-    --tp-poll-accent-strong: #57616d;
+    /* 투표: 선택지·강조에만 아주 옅은 lavender */
+    --tp-poll-surface: #faf9fd;
+    --tp-poll-soft: #f3efff;
+    --tp-poll-line: #ded5f5;
+    --tp-poll-accent: #7657c8;
+    --tp-poll-accent-strong: #6042b0;
 
     /*
       목록 카드.
@@ -2053,7 +2044,7 @@
     z-index: 2;
     padding: 4px;
     background: #fff;
-    border: 1px solid #e8e1d5;
+    border: 1px solid var(--tp-line);
     border-radius: 6px;
     box-shadow: 0 2px 8px rgba(78, 66, 48, 0.1);
 }
@@ -2133,7 +2124,7 @@
 
 .travel-plan-day-page-header h1 {
     margin: 0 0 4px;
-    color: #3f3426;
+    color: var(--tp-ink);
     font-size: 22px;
     font-weight: 700;
     letter-spacing: 0.04em;
@@ -2170,7 +2161,7 @@
 
 .travel-plan-item-content {
     margin: 0;
-    color: #3f3426;
+    color: var(--tp-ink);
     font-size: 15px;
     line-height: 1.75;
     /* 자유 텍스트의 줄바꿈을 그대로 보여 준다 */
@@ -2203,10 +2194,10 @@
     box-sizing: border-box;
     width: 100%;
     padding: 12px 14px;
-    border: 1px solid #ded5c8;
+    border: 1px solid var(--tp-plan-line-strong);
     border-radius: 10px;
     background: #fff;
-    color: #3f3426;
+    color: var(--tp-ink);
     font-family: inherit;
     font-size: 15px;
     line-height: 1.7;
@@ -2214,8 +2205,8 @@
 }
 
 .travel-plan-item-form textarea:focus {
-    border-color: #b9a98f;
-    outline: 3px solid rgba(185, 169, 143, 0.18);
+    border-color: var(--tp-plan-accent);
+    outline: 3px solid rgba(118, 87, 200, 0.18);
 }
 
 .travel-plan-item-form textarea.is-invalid {
@@ -2414,7 +2405,7 @@
     border: none;
     border-radius: 4px;
     background: none;
-    color: #a1968a;
+    color: var(--tp-ink-faint);
     font-family: inherit;
     font-size: 14px;
     line-height: 1;
@@ -2817,9 +2808,9 @@
     z-index: 1;
     min-width: 76px;
     padding: 4px;
-    border: 1px solid #e2dbcd;
+    border: 1px solid var(--tp-line);
     border-radius: 6px;
-    background: #fffdf8;
+    background: var(--tp-paper);
     box-shadow: 0 6px 16px rgba(63, 52, 38, 0.12);
 }
 

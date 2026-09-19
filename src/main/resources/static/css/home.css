@@ -23,7 +23,7 @@
     border-radius: 10px;
     background: #f7fffd;
     box-shadow: 0 8px 22px rgba(24, 70, 64, 0.12);
-    color: #115e59;
+    color: var(--tripbora-primary-hover);
     font-size: 14px;
     font-weight: 650;
     line-height: 1.45;
@@ -165,9 +165,9 @@
     min-height: 38px;
     padding: 0 15px;
     align-items: center;
-    border: 1px solid #252624;
+    border: 1px solid var(--tripbora-primary);
     border-radius: 2px;
-    color: #20252b;
+    color: var(--tripbora-primary-hover);
     font-size: 14px;
     font-weight: 700;
     text-decoration: none;
@@ -175,12 +175,12 @@
 }
 
 .home-service-teaser-link:hover {
-    color: #fff;
-    background: #252624;
+    color: var(--tripbora-primary-hover);
+    background: var(--tripbora-soft);
 }
 
 .home-service-teaser-link:focus-visible {
-    outline: 3px solid rgba(0, 102, 204, 0.28);
+    outline: 3px solid var(--tripbora-focus);
     outline-offset: 4px;
 }
 
@@ -192,7 +192,7 @@
     padding: 5px 14px;
     align-items: center;
     border-radius: 999px;
-    background: #20252b;
+    background: var(--tripbora-primary);
     color: #fff;
     font-size: 13px;
     font-weight: 700;
@@ -282,20 +282,36 @@
 
 .season-tag-list .tag:hover,
 .recommend-tag-list .tag:hover {
-    background: #f1f3f5;
+    border-color: var(--tripbora-border);
+    background: var(--tripbora-soft);
+    color: var(--tripbora-primary-hover);
 }
 
 .season-tag-list .tag.active,
 .recommend-tag-list .tag.active {
-    border-color: #20252b;
-    background: #20252b;
+    border-color: var(--tripbora-primary);
+    background: var(--tripbora-primary);
     color: #fff;
     font-weight: 700;
 }
 
+.season-tag-list .tag.active:hover,
+.recommend-tag-list .tag.active:hover {
+    border-color: var(--tripbora-primary-hover);
+    background: var(--tripbora-primary-hover);
+    color: #fff;
+}
+
+.season-tag-list .tag:active,
+.recommend-tag-list .tag:active {
+    border-color: var(--tripbora-primary-active);
+    background: var(--tripbora-primary-active);
+    color: #fff;
+}
+
 .season-tag-list .tag:focus-visible,
 .recommend-tag-list .tag:focus-visible {
-    outline: 3px solid rgba(0, 102, 204, 0.3);
+    outline: 3px solid var(--tripbora-focus);
     outline-offset: 2px;
 }
 
@@ -354,7 +370,7 @@
 }
 
 .trip-card:hover .trip-info h4 {
-    color: #0066cc;
+    color: var(--tripbora-primary);
 }
 
 .trip-info p {

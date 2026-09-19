@@ -137,7 +137,7 @@ public final class SeoStructuredData {
         Map<String, Object> breadcrumb = new LinkedHashMap<>();
         breadcrumb.put("@type", "BreadcrumbList");
         breadcrumb.put("itemListElement", List.of(
-                breadcrumbItem(1, "Travel Diary", absolute(model, "/")),
+                breadcrumbItem(1, "Tripbora", absolute(model, "/")),
                 breadcrumbItem(2, currentName.strip(), canonicalUrl)));
 
         Map<String, Object> graph = new LinkedHashMap<>();

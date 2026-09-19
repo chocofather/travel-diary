@@ -55,7 +55,7 @@
 }
 
 .content-bookmark-button:focus-visible {
-    outline: 3px solid rgba(57, 122, 99, 0.32);
+    outline: 3px solid rgba(118, 87, 200, 0.32);
     outline-offset: 3px;
 }
 

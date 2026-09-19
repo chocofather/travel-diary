@@ -36,7 +36,7 @@
 }
 
 .mypage-navigation-title.is-active {
-    color: #115e59;
+    color: var(--tripbora-primary-hover);
 }
 
 .mypage-navigation-list {
@@ -64,22 +64,22 @@
 
 a.mypage-navigation-link:hover,
 .mypage-navigation-title:hover {
-    color: #115e59;
-    background: #f5fbfa;
+    color: var(--tripbora-primary-hover);
+    background: var(--tripbora-soft);
 }
 
 a.mypage-navigation-link:focus-visible,
 .mypage-navigation-title:focus-visible,
 .mypage-primary-action:focus-visible,
 .mypage-menu-item:focus-visible {
-    outline: 3px solid rgba(13, 148, 136, 0.25);
+    outline: 3px solid rgba(118, 87, 200, 0.25);
     outline-offset: 2px;
 }
 
 .mypage-navigation-link.is-active {
-    color: #115e59;
-    background: #ecf9f6;
-    border-left-color: #0f766e;
+    color: var(--tripbora-primary-hover);
+    background: var(--tripbora-soft);
+    border-left-color: var(--tripbora-primary);
     font-weight: 800;
 }
 
@@ -100,7 +100,7 @@ a.mypage-navigation-link:focus-visible,
 
 .mypage-page-header > p {
     margin: 0 0 9px;
-    color: #0f766e;
+    color: var(--tripbora-primary);
     font-size: 12px;
     font-weight: 800;
     letter-spacing: 0.1em;
@@ -165,7 +165,7 @@ a.mypage-navigation-link:focus-visible,
     justify-content: center;
     padding: 0 17px;
     color: #fff;
-    background: #0f766e;
+    background: var(--tripbora-primary);
     border-radius: 9px;
     font-size: 14px;
     font-weight: 750;
@@ -209,7 +209,7 @@ a.mypage-navigation-link:focus-visible,
 }
 
 a.mypage-menu-item:hover {
-    color: #115e59;
+    color: var(--tripbora-primary-hover);
     background: #f8fcfb;
 }
 
@@ -287,7 +287,7 @@ a.mypage-menu-item:hover {
     }
 
     .mypage-navigation-link.is-active {
-        border-bottom-color: #0f766e;
+        border-bottom-color: var(--tripbora-primary);
     }
 }
 

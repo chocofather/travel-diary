@@ -16,7 +16,7 @@
 
 .restricted-eyebrow {
     margin: 0 0 12px;
-    color: #168e89;
+    color: var(--tripbora-primary);
     font-size: 0.76rem;
     font-weight: 800;
     letter-spacing: 0.12em;
@@ -147,7 +147,7 @@
 
 .restricted-required {
     margin-left: 5px;
-    color: #168e89;
+    color: var(--tripbora-primary);
     font-size: 0.74rem;
     font-weight: 700;
 }
@@ -167,8 +167,8 @@
 
 .restricted-appeal-form textarea:focus {
     background: #fff;
-    border-color: #8fcbc7;
-    outline: 3px solid rgba(22, 142, 137, 0.14);
+    border-color: var(--tripbora-primary);
+    outline: 3px solid var(--tripbora-focus);
 }
 
 .restricted-appeal-actions {
@@ -179,15 +179,15 @@
 
 .restricted-button.is-primary {
     color: #fff;
-    background: #168e89;
-    border-color: #168e89;
+    background: var(--tripbora-primary);
+    border-color: var(--tripbora-primary);
 }
 
 .restricted-button.is-primary:hover,
 .restricted-button.is-primary:focus-visible {
     color: #fff;
-    background: #12746f;
-    border-color: #12746f;
+    background: var(--tripbora-primary-hover);
+    border-color: var(--tripbora-primary-hover);
 }
 
 /* 접수 상태 */
@@ -290,9 +290,9 @@
 
 .restricted-button:hover,
 .restricted-button:focus-visible {
-    color: #168e89;
-    background: #f3fbfa;
-    border-color: #a8d5d1;
+    color: var(--tripbora-primary);
+    background: var(--tripbora-soft);
+    border-color: var(--tripbora-border);
 }
 
 @media (max-width: 700px) {

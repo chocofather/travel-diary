@@ -9,7 +9,14 @@
 <th:block th:fragment="body">
   <section class="verification-page" aria-labelledby="verification-resend-title">
     <div class="verification-card verification-request-card">
-      <div class="verification-icon" aria-hidden="true">✉</div>
+      <div class="verification-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+             stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3.5" y="5.5" width="17" height="13" rx="2.5"></rect>
+          <path d="m5 7 7 5 7-5"></path>
+          <path d="M16 14h4M18 12l2 2-2 2"></path>
+        </svg>
+      </div>
       <p class="verification-eyebrow">EMAIL VERIFICATION</p>
       <h1 id="verification-resend-title" th:text="#{verification.resend.title}">인증메일 다시 받기</h1>
       <p class="verification-description" th:text="#{verification.resend.description}">

@@ -1,7 +1,7 @@
 .support-faq-page {
-    --faq-accent: #0f766e;
-    --faq-accent-dark: #115e59;
-    --faq-accent-soft: #f0fdfa;
+    --faq-accent: var(--tripbora-primary);
+    --faq-accent-dark: var(--tripbora-primary-hover);
+    --faq-accent-soft: var(--tripbora-soft);
     --faq-border: #e2e8f0;
     --faq-text: #172033;
     --faq-muted: #64748b;
@@ -84,7 +84,7 @@
 .support-faq-item summary:focus-visible {
     position: relative;
     z-index: 1;
-    outline: 3px solid rgba(13, 148, 136, 0.25);
+    outline: 3px solid rgba(118, 87, 200, 0.25);
     outline-offset: -3px;
 }
 

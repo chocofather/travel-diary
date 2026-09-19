@@ -39,7 +39,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
-@WebMvcTest(HomeController.class)
+@WebMvcTest(value = HomeController.class,
+        properties = "app.contact-email=contact@tripbora.test")
 @Import({SecurityConfig.class, I18nConfig.class})
 class HomeControllerTest {
 
@@ -78,6 +79,9 @@ class HomeControllerTest {
                 .andExpect(model().attribute("popularCourses", List.of(course)))
                 .andExpect(result -> {
                     var document = Jsoup.parse(result.getResponse().getContentAsString());
+                    assertThat(document.select(".footer-operations .footer-operator-name")).isEmpty();
+                    assertThat(document.select(".footer-operations .footer-contact-email").text())
+                            .isEqualTo("contact@tripbora.test");
                     assertThat(document.select("#event-slider #slide-area")).hasSize(1);
                     assertThat(document.select(".home-service-teaser")).hasSize(1);
                     assertThat(document.select(".home-service-teaser a[href='/about']")).hasSize(1);
@@ -190,7 +194,7 @@ class HomeControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(result -> {
                     var document = Jsoup.parse(result.getResponse().getContentAsString());
-                    assertThat(document.title()).isEqualTo("Travel Diary | 여행을 발견하고 기록하는 공간");
+                    assertThat(document.title()).isEqualTo("Tripbora | 여행을 발견하고 기록하는 공간");
                     assertThat(document.selectFirst("meta[name=description]").attr("content"))
                             .contains("여행지", "여행정보", "여행 기록");
                     assertThat(document.selectFirst("link[rel=canonical]").attr("href"))
@@ -212,7 +216,7 @@ class HomeControllerTest {
                 .andExpect(view().name("about"))
                 .andExpect(result -> {
                     var document = Jsoup.parse(result.getResponse().getContentAsString());
-                    assertThat(document.title()).isEqualTo("Travel Diary 소개 | Travel Diary");
+                    assertThat(document.title()).isEqualTo("Tripbora 소개 | Tripbora");
                     assertThat(document.selectFirst("meta[name=description]").attr("content"))
                             .contains("여행지", "여행 계획", "여행 기록");
                     assertThat(document.selectFirst("link[rel=canonical]").attr("href"))

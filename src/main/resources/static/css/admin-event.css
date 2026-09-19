@@ -47,7 +47,7 @@
 }
 
 .admin-required {
-    color: #4265f7;
+    color: var(--admin-blue);
 }
 
 .admin-optional {

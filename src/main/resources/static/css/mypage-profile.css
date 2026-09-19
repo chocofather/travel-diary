@@ -96,7 +96,7 @@
 }
 
 .mypage-file-input:focus-visible + .mypage-file-button {
-    outline: 3px solid rgba(13, 148, 136, 0.25);
+    outline: 3px solid rgba(118, 87, 200, 0.25);
     outline-offset: 2px;
 }
 
@@ -115,7 +115,7 @@
 
 .mypage-form-field input:focus {
     border-color: #5b9f98;
-    outline: 3px solid rgba(13, 148, 136, 0.12);
+    outline: 3px solid rgba(118, 87, 200, 0.12);
 }
 
 .mypage-form-field small {
@@ -200,13 +200,13 @@
 
 .mypage-form-actions button {
     color: #fff;
-    background: #0f766e;
-    border-color: #0f766e;
+    background: var(--tripbora-primary);
+    border-color: var(--tripbora-primary);
 }
 
 .mypage-form-actions a:focus-visible,
 .mypage-form-actions button:focus-visible {
-    outline: 3px solid rgba(13, 148, 136, 0.25);
+    outline: 3px solid rgba(118, 87, 200, 0.25);
     outline-offset: 2px;
 }
 

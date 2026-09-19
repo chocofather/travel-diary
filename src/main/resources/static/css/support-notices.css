@@ -1,8 +1,8 @@
 .support-notice-page,
 .support-notice-detail {
-    --notice-accent: #0f766e;
-    --notice-accent-dark: #115e59;
-    --notice-accent-soft: #f0fdfa;
+    --notice-accent: var(--tripbora-primary);
+    --notice-accent-dark: var(--tripbora-primary-hover);
+    --notice-accent-soft: var(--tripbora-soft);
     --notice-border: #e2e8f0;
     --notice-text: #172033;
     --notice-muted: #64748b;
@@ -49,7 +49,7 @@
 
 .support-notice-board {
     overflow: hidden;
-    border-top: 2px solid #27354f;
+    border-top: 2px solid var(--notice-accent);
     border-bottom: 1px solid var(--notice-border);
 }
 
@@ -93,7 +93,7 @@
 }
 
 .support-notice-item.is-pinned {
-    background: #fbfefd;
+    background: #faf9ff;
 }
 
 .support-notice-title-cell {
@@ -122,7 +122,7 @@
 .support-notice-title-cell a:focus-visible,
 .support-notice-pagination a:focus-visible,
 .support-notice-detail-actions a:focus-visible {
-    outline: 3px solid rgba(13, 148, 136, 0.25);
+    outline: 3px solid var(--tripbora-focus);
     outline-offset: 3px;
 }
 
@@ -136,7 +136,7 @@
     padding: 0 8px;
     color: var(--notice-accent-dark);
     background: var(--notice-accent-soft);
-    border: 1px solid #c7eee7;
+    border: 1px solid var(--tripbora-border);
     border-radius: 999px;
     font-size: 11px;
     font-weight: 800;

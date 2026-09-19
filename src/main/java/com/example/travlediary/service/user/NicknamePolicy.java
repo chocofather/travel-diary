@@ -33,9 +33,7 @@ public final class NicknamePolicy {
             contains("administrator", Category.IMPERSONATION),
             contains("staff", Category.IMPERSONATION),
             contains("official", Category.IMPERSONATION),
-            contains("여행일기", Category.IMPERSONATION),
-            contains("traveldiary", Category.IMPERSONATION),
-            contains("travlediary", Category.IMPERSONATION),
+            contains("tripbora", Category.IMPERSONATION),
 
             contains("씨발", Category.PROFANITY),
             contains("개새끼", Category.PROFANITY),

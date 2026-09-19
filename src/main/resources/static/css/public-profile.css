@@ -1,7 +1,7 @@
 .public-profile-page {
-    --profile-accent: #0f766e;
-    --profile-accent-dark: #115e59;
-    --profile-accent-soft: #f0fdfa;
+    --profile-accent: var(--tripbora-primary);
+    --profile-accent-dark: var(--tripbora-primary-hover);
+    --profile-accent-soft: var(--tripbora-soft);
     --profile-border: #e2e8f0;
     --profile-text: #172033;
     --profile-muted: #64748b;
@@ -26,7 +26,7 @@
     padding: 26px 30px;
     border: 1px solid var(--profile-border);
     border-radius: 22px;
-    background: linear-gradient(135deg, #fff 15%, #f0fdfa 100%);
+    background: linear-gradient(135deg, #fff 15%, #f3efff 100%);
     box-shadow: 0 14px 40px rgba(15, 23, 42, 0.06);
 }
 
@@ -37,8 +37,8 @@
     height: 82px;
     border: 3px solid #fff;
     border-radius: 50%;
-    background: #edf4f1;
-    box-shadow: 0 8px 22px rgba(15, 118, 110, 0.14);
+    background: #f3efff;
+    box-shadow: 0 8px 22px rgba(118, 87, 200, 0.14);
     object-fit: cover;
 }
 
@@ -116,7 +116,7 @@
 }
 
 .public-profile-filters a.is-active {
-    border-color: #99f6e4;
+    border-color: var(--tripbora-border);
     background: var(--profile-accent-soft);
     color: var(--profile-accent-dark);
 }
@@ -124,7 +124,7 @@
 .public-profile-filters a:focus-visible,
 .public-profile-pagination a:focus-visible,
 .public-profile-item h3 a:focus-visible {
-    outline: 3px solid rgba(13, 148, 136, 0.25);
+    outline: 3px solid rgba(118, 87, 200, 0.25);
     outline-offset: 2px;
 }
 

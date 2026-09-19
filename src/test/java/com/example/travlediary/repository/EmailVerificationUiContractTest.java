@@ -10,6 +10,26 @@ import static org.assertj.core.api.Assertions.assertThat;
 class EmailVerificationUiContractTest {
 
     @Test
+    void verificationPagesUseOneSvgIconSystemAndTheTripboraPalette() throws IOException {
+        for (String path : new String[]{
+                "templates/verify-waiting.html",
+                "templates/verification-resend.html",
+                "templates/verification-result.html"
+        }) {
+            assertThat(resource(path))
+                    .as(path)
+                    .contains("class=\"verification-icon\"")
+                    .contains("<svg")
+                    .doesNotContain(">✉<");
+        }
+
+        assertThat(resource("static/css/email-verification.css").toLowerCase())
+                .contains("#7657c8", "#6042b0", "#f3efff", "#ded5f5")
+                .contains("rgba(118, 87, 200")
+                .doesNotContain("#11556c", "rgba(23, 107, 135");
+    }
+
+    @Test
     void standaloneResendFormAcceptsOnlyEmailAndIncludesCsrfAndAccessibleHints() throws IOException {
         String template = resource("templates/verification-resend.html");
 

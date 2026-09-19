@@ -205,7 +205,7 @@ class SocialSignupPageI18nContractTest {
         }
     }
 
-    /** Kakao/Naver 는 Travel Diary 이메일 인증을 받으므로 입력 칸이 5개 언어로 나온다. */
+    /** Kakao/Naver 는 Tripbora 이메일 인증을 받으므로 입력 칸이 5개 언어로 나온다. */
     @ParameterizedTest
     @CsvSource(delimiter = '|', value = {
             "ko    | 이메일   | 중복확인",

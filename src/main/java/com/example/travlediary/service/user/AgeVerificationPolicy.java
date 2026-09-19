@@ -4,7 +4,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 
 /**
- * 가입 연령 확인. Travel Diary 는 만 14세 이상만 가입할 수 있다.
+ * 가입 연령 확인. Tripbora 는 만 14세 이상만 가입할 수 있다.
  *
  * <p>생년월일은 판정에만 쓰고 어디에도 저장하지 않는다. 요청 처리 중에만 존재했다가
  * 통과 여부만 남기고 사라진다. users.user_birth 는 이 기능에서 쓰지 않는다.
@@ -16,7 +16,7 @@ public final class AgeVerificationPolicy {
     public static final int MINIMUM_AGE = 14;
 
     public static final String INVALID_MESSAGE = "생년월일을 정확히 입력해주세요.";
-    public static final String UNDERAGE_MESSAGE = "Travel Diary는 만 14세 이상부터 가입할 수 있습니다.";
+    public static final String UNDERAGE_MESSAGE = "Tripbora는 만 14세 이상부터 가입할 수 있습니다.";
 
     public static final String FIELD = "birthDate";
     public static final String INVALID_CODE = "signup.error.birthDate.invalid";

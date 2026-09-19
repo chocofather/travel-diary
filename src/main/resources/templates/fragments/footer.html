@@ -5,21 +5,57 @@
   <meta charset="UTF-8" />
 </head>
 <body>
-<footer th:fragment="siteFooter">
+<footer th:fragment="siteFooter" th:with="currentYear=${#dates.format(#dates.createNow(), 'yyyy')}">
   <div class="site-footer">
     <div class="footer-inner">
-      <div class="footer-logo">여행일기 Travel Diary</div>
+      <div class="footer-main">
+        <div class="footer-brand">
+          <a class="footer-logo" href="/">Tripbora</a>
+          <p class="footer-description" th:text="#{footer.description}">
+            여행을 발견하고, 기록하고, 나누는 공간
+          </p>
+        </div>
 
-      <ul class="footer-links">
-        <li><a href="/about" th:text="#{footer.about}">여행일기 소개</a></li>
-        <li><a href="#" th:text="#{footer.terms}">이용약관</a></li>
-        <li><a href="#" th:text="#{footer.privacy}">개인정보처리방침</a></li>
-        <li><a href="#" th:text="#{footer.support}">고객센터</a></li>
-      </ul>
+        <nav class="footer-nav" th:aria-label="#{footer.navigation}">
+          <h2 class="footer-column-title" th:text="#{footer.information}">주요 정보</h2>
+          <ul class="footer-links">
+            <li><a href="/about" th:text="#{footer.about}">Tripbora 소개</a></li>
+            <li><a href="/terms" th:text="#{footer.terms}">이용약관</a></li>
+            <li><a href="/privacy" th:text="#{footer.privacy}">개인정보처리방침</a></li>
+          </ul>
+        </nav>
+
+        <section class="footer-contact" th:aria-label="#{footer.contact}">
+          <h2 class="footer-column-title" th:text="#{footer.contact}">문의</h2>
+          <ul class="footer-links">
+            <li><a href="/support/notices" th:text="#{footer.support}">고객센터</a></li>
+            <li><a href="/support/inquiries" th:text="#{nav.support.inquiry}">1:1 문의</a></li>
+          </ul>
+        </section>
+      </div>
 
       <div class="footer-info">
-        <p th:text="#{footer.copyright}">© 2025 여행일기 Travel Diary. 모든 권리 보유.</p>
-        <p><span th:text="#{footer.contact}">문의</span>: travel@diary.com</p>
+        <p class="footer-operations"
+           th:if="${(footerOperatorName != null and !#strings.isEmpty(footerOperatorName))
+                    or (footerContactEmail != null and !#strings.isEmpty(footerContactEmail))}">
+          <span class="footer-operation"
+                th:if="${footerOperatorName != null and !#strings.isEmpty(footerOperatorName)}">
+            <span class="footer-operator-label" th:text="#{footer.operator}">운영자</span><span>:</span>
+            <span class="footer-operator-name" th:text="${footerOperatorName}"></span>
+          </span>
+          <span class="footer-operation"
+                th:classappend="${footerOperatorName != null and !#strings.isEmpty(footerOperatorName)}
+                                ? ' footer-operation--separated'"
+                th:if="${footerContactEmail != null and !#strings.isEmpty(footerContactEmail)}">
+            <span class="footer-contact-label" th:text="#{footer.contact}">문의</span><span>:</span>
+            <a class="footer-contact-email"
+               th:href="|mailto:${footerContactEmail}|"
+               th:text="${footerContactEmail}"></a>
+          </span>
+        </p>
+        <p class="footer-copyright" th:text="#{footer.copyright(${currentYear})}">
+          © Tripbora. 모든 권리 보유.
+        </p>
       </div>
     </div>
   </div>

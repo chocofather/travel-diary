@@ -1,7 +1,7 @@
 .travel-info-page {
-    --travel-info-accent: #0f766e;
-    --travel-info-accent-dark: #115e59;
-    --travel-info-accent-soft: #f0fdfa;
+    --travel-info-accent: var(--tripbora-primary);
+    --travel-info-accent-dark: var(--tripbora-primary-hover);
+    --travel-info-accent-soft: var(--tripbora-soft);
     --travel-info-border: #e2e8f0;
     --travel-info-text: #172033;
     --travel-info-muted: #64748b;
@@ -72,8 +72,8 @@
 }
 
 .travel-info-search-control:focus-within {
-    border-color: #5eead4;
-    box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
+    border-color: var(--travel-info-accent);
+    box-shadow: 0 0 0 3px var(--tripbora-focus);
 }
 
 .travel-info-search input[type="search"] {
@@ -136,7 +136,7 @@
 .travel-info-search-submit:focus-visible {
     position: relative;
     z-index: 1;
-    outline: 3px solid rgba(13, 148, 136, 0.28);
+    outline: 3px solid var(--tripbora-focus);
     outline-offset: -3px;
 }
 
@@ -184,20 +184,20 @@
 }
 
 .travel-info-filter-pill:hover {
-    border-color: #99f6e4;
-    background: #f8fffe;
+    border-color: var(--tripbora-border);
+    background: var(--travel-info-accent-soft);
     color: var(--travel-info-accent-dark);
 }
 
 .travel-info-filter-pill:focus-visible,
 .travel-info-filter-reset:focus-visible,
 .travel-info-pagination a:focus-visible {
-    outline: 3px solid rgba(13, 148, 136, 0.24);
+    outline: 3px solid var(--tripbora-focus);
     outline-offset: 2px;
 }
 
 .travel-info-filter-pill.is-active {
-    border-color: #99f6e4;
+    border-color: var(--travel-info-accent);
     background: var(--travel-info-accent-soft);
     color: var(--travel-info-accent-dark);
 }
@@ -329,7 +329,7 @@
 }
 
 .travel-info-sort-option:focus-visible {
-    outline: 3px solid rgba(13, 148, 136, 0.24);
+    outline: 3px solid var(--tripbora-focus);
     outline-offset: 2px;
 }
 
@@ -388,7 +388,7 @@
 }
 
 .travel-info-card-bookmark:focus-visible {
-    outline: 3px solid rgba(13, 148, 136, 0.4);
+    outline: 3px solid var(--tripbora-focus);
     outline-offset: 2px;
 }
 
@@ -562,8 +562,8 @@
 }
 
 .travel-info-card:focus-within {
-    border-color: #5eead4;
-    outline: 3px solid rgba(13, 148, 136, 0.22);
+    border-color: var(--travel-info-accent);
+    outline: 3px solid var(--tripbora-focus);
     outline-offset: 3px;
 }
 
@@ -701,7 +701,7 @@
 }
 
 .travel-info-pagination a:hover {
-    border-color: #99f6e4;
+    border-color: var(--tripbora-border);
     background: var(--travel-info-accent-soft);
     color: var(--travel-info-accent-dark);
 }

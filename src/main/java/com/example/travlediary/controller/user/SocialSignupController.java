@@ -179,7 +179,7 @@ public class SocialSignupController {
         }
 
         /*
-          Travel Diary 인증이 필요한 가입은 끝나면 인증메일이 나간다. 일반 회원가입과 같은
+          Tripbora 인증이 필요한 가입은 끝나면 인증메일이 나간다. 일반 회원가입과 같은
           SMTP 자원을 쓰므로 같은 IP 통에서 함께 센다 — 한쪽만 막으면 다른 쪽으로 돌아간다.
           입력 형식 오류는 메일과 무관하므로 위 검사를 지난 뒤에 센다.
         */
@@ -216,7 +216,7 @@ public class SocialSignupController {
 
         clearPending(session);
 
-        // Travel Diary 이메일 인증이 필요한 가입은 자동 로그인하지 않는다.
+        // Tripbora 이메일 인증이 필요한 가입은 자동 로그인하지 않는다.
         // 일반 회원가입과 똑같이 인증 대기 화면으로 보낸다.
         if (outcome.requiresEmailVerification()) {
             return redirectToVerificationWaiting(outcome, session, redirectAttributes);

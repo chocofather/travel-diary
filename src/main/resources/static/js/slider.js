@@ -13,13 +13,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const list = await res.json();
 
     const pastelColors = [
-        '#f8e8ee', // 연분홍
-        '#e6f7ff', // 연하늘
-        '#e0ffe0', // 연초록
-        '#fff5cc', // 연노랑
-        '#f3e5f5', // 연보라
-        '#ffe0f0', // 복숭아색
-        '#e0f7fa'  // 민트
+        '#F3EFFF', // 라벤더
+        '#EEF4FA', // 미스트 블루
+        '#FBF5EE', // 웜 아이보리
+        '#F8F0F4'  // 소프트 로즈
     ];
 
     const slideArea = document.getElementById('slide-area');

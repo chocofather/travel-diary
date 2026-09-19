@@ -85,7 +85,7 @@
 }
 
 .global-search-header h1 span {
-    color:#0066cc;
+    color: var(--tripbora-primary);
 }
 
 .global-search-header p {
@@ -113,13 +113,13 @@
 }
 
 .global-search-filters a:hover {
-    color:#005bb8;
-    background:#f4f7fa;
+    color:var(--tripbora-primary-hover);
+    background:var(--tripbora-soft);
 }
 
 .global-search-filters a.is-active {
     color:#fff;
-    background:#0066cc;
+    background: var(--tripbora-primary);
 }
 
 .global-search-results {
@@ -154,7 +154,7 @@
 }
 
 .global-search-result > a:hover h2 {
-    color:#0066cc;
+    color: var(--tripbora-primary);
     text-decoration:underline;
     text-underline-offset:3px;
 }
@@ -248,13 +248,13 @@
 }
 
 .global-search-pagination a:hover {
-    border-color:#7ca9d5;
-    color:#005bb8;
+    border-color:var(--tripbora-border);
+    color:var(--tripbora-primary-hover);
 }
 
 .global-search-pagination a.is-active {
-    border-color:#0066cc;
-    background:#0066cc;
+    border-color: var(--tripbora-primary);
+    background: var(--tripbora-primary);
     color:#fff;
     font-weight:700;
 }

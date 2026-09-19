@@ -11,12 +11,15 @@
     <meta name="_csrf_header"
           th:if="${#authentication.principal != null and #authentication.principal != 'anonymousUser' and _csrf != null}"
           th:content="${_csrf.headerName}">
-    <title th:text="${seoTitle} ?: (${pageTitle} ?: 'Travel Diary')">Travel Diary</title>
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <title th:text="${seoTitle} ?: (${pageTitle} ?: 'Tripbora')">Tripbora</title>
     <meta name="description" th:content="${seoDescription}" />
     <link rel="canonical" th:href="${seoSiteBaseUrl + seoCanonicalPath}" />
     <meta name="robots" th:content="${seoRobots}" />
-    <meta property="og:site_name" content="Travel Diary" />
-    <meta property="og:title" th:content="${seoTitle} ?: (${pageTitle} ?: 'Travel Diary')" />
+    <meta property="og:site_name" content="Tripbora" />
+    <meta property="og:title" th:content="${seoTitle} ?: (${pageTitle} ?: 'Tripbora')" />
     <meta property="og:description" th:content="${seoDescription}" />
     <meta property="og:type" th:content="${seoOpenGraphType}" />
     <meta property="og:url" th:content="${seoSiteBaseUrl + seoCanonicalPath}" />

@@ -60,7 +60,7 @@
     justify-content: center;
     padding: 4px 8px;
     color: #3558c6;
-    background: #eef3ff;
+    background: var(--admin-blue-soft);
     border: 1px solid #d6e0ff;
     border-radius: 999px;
     font-size: 0.73rem;
@@ -264,13 +264,13 @@
 .admin-kto-festival-month-grid button:hover,
 .admin-kto-festival-direct-period-toggle:hover {
     color: #3558c6;
-    background: #eef3ff;
+    background: var(--admin-blue-soft);
     border-color: #cbd7f8;
 }
 
 .admin-kto-festival-month-grid button.active {
     color: #3558c6;
-    background: #eef3ff;
+    background: var(--admin-blue-soft);
     border-color: #adc0f7;
 }
 

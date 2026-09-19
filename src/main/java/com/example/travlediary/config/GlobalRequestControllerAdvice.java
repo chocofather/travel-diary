@@ -15,16 +15,22 @@ import java.util.Locale;
 @ControllerAdvice
 public class GlobalRequestControllerAdvice {
 
-    private static final String DEFAULT_OG_IMAGE = "/images/logo1.png";
+    private static final String DEFAULT_OG_IMAGE = "/images/branding/tripbora-og.png";
 
     private final MessageSource messageSource;
     private final String configuredSiteBaseUrl;
+    private final String contactEmail;
+    private final String operatorName;
 
     public GlobalRequestControllerAdvice(
             MessageSource messageSource,
-            @Value("${seo.site-base-url:}") String configuredSiteBaseUrl) {
+            @Value("${seo.site-base-url:}") String configuredSiteBaseUrl,
+            @Value("${app.contact-email:}") String contactEmail,
+            @Value("${app.operator-name:}") String operatorName) {
         this.messageSource = messageSource;
         this.configuredSiteBaseUrl = configuredSiteBaseUrl;
+        this.contactEmail = contactEmail == null ? "" : contactEmail.strip();
+        this.operatorName = operatorName == null ? "" : operatorName.strip();
     }
 
     @ModelAttribute("currentUri")
@@ -42,6 +48,8 @@ public class GlobalRequestControllerAdvice {
         model.addAttribute("supportedLanguages", SupportedLanguage.all());
         model.addAttribute("currentLanguage", currentLanguage);
         model.addAttribute("currentLanguageTag", currentLanguage.getLanguageTag());
+        model.addAttribute("footerContactEmail", contactEmail);
+        model.addAttribute("footerOperatorName", operatorName);
     }
 
     @ModelAttribute
@@ -68,6 +76,12 @@ public class GlobalRequestControllerAdvice {
         }
         if ("/about".equals(path)) {
             return new SeoDefaults("seo.about.title", "seo.about.description");
+        }
+        if ("/terms".equals(path)) {
+            return new SeoDefaults("seo.terms.title", "seo.terms.description");
+        }
+        if ("/privacy".equals(path)) {
+            return new SeoDefaults("seo.privacy.title", "seo.privacy.description");
         }
         if ("/destinations".equals(path)) {
             return new SeoDefaults("seo.destinations.title", "seo.destinations.description");

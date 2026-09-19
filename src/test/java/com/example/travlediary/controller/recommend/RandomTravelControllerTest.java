@@ -23,7 +23,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
-@WebMvcTest(RandomTravelController.class)
+@WebMvcTest(value = RandomTravelController.class,
+        properties = "app.operator-name=운영자테스트")
 @Import({SecurityConfig.class, I18nConfig.class})
 class RandomTravelControllerTest {
 
@@ -47,10 +48,14 @@ class RandomTravelControllerTest {
                     var document = Jsoup.parse(result.getResponse().getContentAsString());
                     assertThat(document.select("header .main-nav")).hasSize(1);
                     assertThat(document.select("footer .site-footer")).hasSize(1);
+                    assertThat(document.select(".footer-operations .footer-operator-name").text())
+                            .isEqualTo("운영자테스트");
+                    assertThat(document.select(".footer-operations .footer-contact-email")).isEmpty();
+                    assertThat(document.select(".footer-operations > span")).hasSize(1);
                     assertThat(document.select(".random-travel-page h1").text())
                             .isEqualTo("어디로 떠나볼까요?");
                     assertThat(document.select(".random-travel-subtitle").text())
-                            .isEqualTo("고민은 잠깐 내려놓고, Travel Diary가 여행지를 골라드릴게요.");
+                            .isEqualTo("고민은 잠깐 내려놓고, Tripbora가 여행지를 골라드릴게요.");
                     assertThat(document.select("#random-scope-group [data-random-scope]")).hasSize(2);
                     assertThat(document.select("#random-draw-button").text()).contains("여행지 뽑기");
                     assertThat(document.select("#random-status[aria-live=polite]")).hasSize(1);

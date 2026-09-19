@@ -85,7 +85,7 @@ class CourseTimelineUiContractTest {
                 .contains(":not(:last-child)::before")
                 .contains(".course-stop:nth-of-type(6n + 3):not(:last-child)::after")
                 .contains(".course-stop:nth-of-type(6n):not(:last-child)::after")
-                .contains("--route-line-color: #b8d6c9")
+                .contains("--route-line-color: var(--tripbora-border)")
                 .contains("height: calc(100% + var(--route-row-gap))")
                 .contains("z-index: 2")
                 .contains("align-items: stretch");

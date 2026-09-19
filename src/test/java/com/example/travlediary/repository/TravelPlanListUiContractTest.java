@@ -241,10 +241,10 @@ class TravelPlanListUiContractTest {
     }
 
     @Test
-    void theWarmPageBackgroundIsLeftAlone() throws IOException {
-        // 사이트 색을 바꾸는 것이 아니다. 바탕은 그대로 따뜻하다
+    void thePageBackgroundUsesTheNeutralTripboraSurface() throws IOException {
+        // 기본 바탕은 따뜻한 베이지 대신 중립색을 쓴다
         assertThat(between(resource("/static/css/travel-plan.css"), ":root {", "}"))
-                .contains("--tp-page: #f5f2ec");
+                .contains("--tp-page: #fafafc");
     }
 
     @Test

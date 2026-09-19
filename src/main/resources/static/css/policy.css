@@ -1,0 +1,101 @@
+.policy-page {
+    width: min(920px, calc(100% - 40px));
+    margin: 48px auto 80px;
+    color: var(--tripbora-text);
+}
+
+.policy-header {
+    padding-bottom: 28px;
+    border-bottom: 1px solid var(--tripbora-border);
+}
+
+.policy-eyebrow {
+    display: block;
+    margin-bottom: 10px;
+    color: var(--tripbora-primary);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+}
+
+.policy-header h1 {
+    margin: 0;
+    font-size: clamp(30px, 4vw, 42px);
+    line-height: 1.25;
+}
+
+.policy-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 24px;
+    margin: 18px 0 0;
+    color: #6b6674;
+    font-size: 14px;
+}
+
+.policy-meta div {
+    display: flex;
+    gap: 8px;
+}
+
+.policy-meta dt {
+    font-weight: 700;
+}
+
+.policy-meta dd {
+    margin: 0;
+}
+
+.policy-document {
+    padding: 36px 0;
+    color: #3f3c45;
+    font-size: 16px;
+    line-height: 1.85;
+    overflow-wrap: anywhere;
+}
+
+.policy-document h2,
+.policy-document h3 {
+    margin: 30px 0 12px;
+    color: var(--tripbora-text);
+    line-height: 1.4;
+}
+
+.policy-document p,
+.policy-document ul,
+.policy-document ol,
+.policy-document table {
+    margin: 0 0 18px;
+}
+
+.policy-document ul,
+.policy-document ol {
+    padding-left: 24px;
+}
+
+.policy-document a {
+    color: var(--tripbora-primary-hover);
+}
+
+.policy-unavailable {
+    margin: 36px 0;
+    padding: 28px;
+    border: 1px solid var(--tripbora-border);
+    border-radius: 12px;
+    background: var(--tripbora-soft);
+    color: #625e6b;
+    line-height: 1.7;
+}
+
+@media (max-width: 640px) {
+    .policy-page {
+        width: min(100% - 32px, 920px);
+        margin-top: 32px;
+        margin-bottom: 56px;
+    }
+
+    .policy-document {
+        padding-top: 28px;
+        font-size: 15px;
+    }
+}

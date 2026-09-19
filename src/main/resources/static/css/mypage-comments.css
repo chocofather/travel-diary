@@ -30,16 +30,16 @@
 }
 
 .mypage-comment-filters a.is-active {
-    color: #115e59;
-    background: #f0fdfa;
-    border-color: #99f6e4;
+    color: var(--tripbora-primary-hover);
+    background: var(--tripbora-soft);
+    border-color: var(--tripbora-border);
 }
 
 .mypage-comment-filters a:focus-visible,
 .mypage-comment-target a:focus-visible,
 .mypage-comment-footer a:focus-visible,
 .mypage-comment-pagination a:focus-visible {
-    outline: 3px solid rgba(13, 148, 136, 0.25);
+    outline: 3px solid rgba(118, 87, 200, 0.25);
     outline-offset: 2px;
 }
 
@@ -111,7 +111,7 @@
 }
 
 .mypage-comment-type--course {
-    color: #115e59;
+    color: var(--tripbora-primary-hover);
     background: #f0fdfa;
 }
 
@@ -137,7 +137,7 @@
 }
 
 .mypage-comment-target a:hover {
-    color: #115e59;
+    color: var(--tripbora-primary-hover);
     text-decoration: underline;
     text-underline-offset: 3px;
 }
@@ -167,7 +167,7 @@
 
 .mypage-comment-footer a {
     flex: 0 0 auto;
-    color: #115e59;
+    color: var(--tripbora-primary-hover);
     font-weight: 750;
     text-decoration: none;
 }
@@ -200,7 +200,7 @@
     align-items: center;
     justify-content: center;
     padding: 8px 15px;
-    color: #115e59;
+    color: var(--tripbora-primary-hover);
     border: 1px solid #cdded6;
     border-radius: 999px;
     font-size: 14px;

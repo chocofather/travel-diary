@@ -29,7 +29,7 @@ public class EmailServiceImpl implements EmailService {
     static final String USERNAME_RECOVERY_SUBJECT_CODE = "mail.usernameRecovery.subject";
     static final String PASSWORD_RESET_SUBJECT_CODE = "mail.passwordReset.subject";
     static final String ACCOUNT_RECOVERY_SUBJECT_CODE = "mail.accountRecovery.subject";
-    private static final String SENDER_NAME = "Travel Diary";
+    private static final String SENDER_NAME = "Tripbora";
     private static final String MISSING_CONFIGURATION_MESSAGE =
             "메일 발송 설정이 구성되지 않았습니다. MAIL_USERNAME / MAIL_PASSWORD 환경변수를 확인하세요.";
     private static final Logger log = LoggerFactory.getLogger(EmailServiceImpl.class);

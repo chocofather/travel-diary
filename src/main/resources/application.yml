@@ -180,3 +180,9 @@ translation:
 seo:
   # 운영 환경에서는 canonical 및 sitemap에 사용할 공개 origin을 지정한다.
   site-base-url: ${SEO_SITE_BASE_URL:}
+
+app:
+  # 공개 문의 주소는 SMTP 인증 계정과 분리하며, 비어 있으면 footer에 노출하지 않는다.
+  contact-email: ${CONTACT_EMAIL:}
+  # 운영자명은 소스에 고정하지 않고, 비어 있으면 footer에 노출하지 않는다.
+  operator-name: ${OPERATOR_NAME:}

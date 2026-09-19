@@ -74,7 +74,7 @@ class DiaryNotebookPickerUiContractTest {
 
         String checked = rule(css,
                 ".diary-notebook-option:has(.diary-notebook-option-input:checked)");
-        assertThat(checked).contains("border-color: #b39a75;");
+        assertThat(checked).contains("border-color: var(--diary-ui-primary);");
         // :has() 를 못 쓰는 환경에서도 고른 것이 보인다
         assertThat(css).contains(".diary-notebook-option-input:checked ~ .diary-notebook-preview");
         // 고르는 카드에 움직임이나 큰 그림자를 두지 않는다

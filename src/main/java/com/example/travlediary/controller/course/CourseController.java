@@ -41,7 +41,7 @@ public class CourseController {
                 .filter(url -> url != null && !url.isBlank())
                 .findFirst()
                 .orElse(null);
-        SeoModel.apply(model, course.getTitle() + " | Travel Diary", course.getContent(),
+        SeoModel.apply(model, course.getTitle() + " | Tripbora", course.getContent(),
                 "/course/" + id, seoImage, "article");
         List<SeoStructuredData.ItineraryStop> itinerary = course.getStops() == null
                 ? List.of()

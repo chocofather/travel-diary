@@ -239,7 +239,7 @@ class MyPageAccountControllerTest {
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("name=\"currentPassword\""))))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
-                        org.hamcrest.Matchers.containsString("Travel Diary 비밀번호"))))
+                        org.hamcrest.Matchers.containsString("Tripbora 비밀번호"))))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("추후 제공될 예정입니다"))))
                 .andExpect(content().string(org.hamcrest.Matchers.not(

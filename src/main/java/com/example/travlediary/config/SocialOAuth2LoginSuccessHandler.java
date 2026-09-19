@@ -587,7 +587,7 @@ public class SocialOAuth2LoginSuccessHandler implements AuthenticationSuccessHan
     /**
      * 아직 우리 DB 에 없는 provider 식별자를 어떻게 처리할지 정한다.
      *
-     * <p>Google 은 인증된 이메일이 곧 Travel Diary 의 공식 이메일이라 같은 이메일의 계정이 이미
+     * <p>Google 은 인증된 이메일이 곧 Tripbora 의 공식 이메일이라 같은 이메일의 계정이 이미
      * 있으면 새 users 를 만들지 않는다. 판정은 {@link SocialEmailAccountResolver} 가 맡는다.
      */
     private void beginNewIdentityFlow(HttpServletRequest request,

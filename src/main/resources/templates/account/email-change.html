@@ -3,22 +3,30 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title th:text="#{account.emailChange.pageTitle}">이메일 주소 변경 | Travel Diary</title>
+  <title th:text="#{account.emailChange.pageTitle}">이메일 주소 변경 | Tripbora</title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/login.css">
 </head>
-<body class="login-page">
+<body class="login-page auth-flow-page">
 <div class="login-page__topbar">
   <div th:replace="~{fragments/language-menu :: languageMenu}"></div>
 </div>
 
 <main class="login-page__main">
   <span class="login-page__brand">
-    <img src="/images/logo7.png" alt="Travel Diary">
+    <img src="/images/branding/tripbora-logo.svg" alt="Tripbora">
   </span>
 
   <section class="login-container social-signup" aria-labelledby="emailChangeTitle">
     <header class="login-header">
+      <div class="auth-flow-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+             stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3.5" y="5.5" width="17" height="13" rx="2.5"></rect>
+          <path d="m5 7 7 5 7-5"></path>
+          <path d="M16 14h4M18 12l2 2-2 2"></path>
+        </svg>
+      </div>
       <h1 id="emailChangeTitle" th:text="#{account.emailChange.title}">이메일 주소 변경</h1>
       <p th:text="#{account.emailChange.description}">
         본인 확인이 끝났습니다. 인증메일을 받을 새 이메일 주소를 입력해주세요.

@@ -27,8 +27,8 @@
 .admin-inquiry-filters a:hover,
 .admin-inquiry-filters a.is-active {
     color: #fff;
-    background: #4265f7;
-    border-color: #4265f7;
+    background: var(--admin-blue);
+    border-color: var(--admin-blue);
 }
 
 .admin-inquiries-table {
@@ -77,7 +77,7 @@
 }
 
 .admin-inquiry-subject a:hover {
-    color: #3558c6;
+    color: var(--admin-blue-dark);
     text-decoration: underline;
     text-underline-offset: 3px;
 }
@@ -110,8 +110,8 @@
 .admin-inquiry-pagination a:hover,
 .admin-inquiry-pagination a.is-active {
     color: #fff;
-    background: #4265f7;
-    border-color: #4265f7;
+    background: var(--admin-blue);
+    border-color: var(--admin-blue);
 }
 
 .admin-inquiry-pagination .is-disabled {

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title th:text="#{signup.pageTitle}">회원가입 | Travel Diary</title>
+  <title th:text="#{signup.pageTitle}">회원가입 | Tripbora</title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/registration.css">
 </head>
@@ -15,15 +15,15 @@
 
 <main class="register-wrapper">
   <div class="register-logo">
-    <a th:href="@{/}" th:aria-label="#{signup.brand.home}" aria-label="Travel Diary 홈">
-      <img src="/images/logo7.png" alt="Travel Diary">
+    <a th:href="@{/}" th:aria-label="#{signup.brand.home}" aria-label="Tripbora 홈">
+      <img src="/images/branding/tripbora-logo.svg" alt="Tripbora">
     </a>
   </div>
 
   <section class="register-container" aria-labelledby="register-title">
     <header class="registration-heading">
       <h1 id="register-title" th:text="#{signup.title}">회원가입</h1>
-      <p th:text="#{signup.subtitle}">Travel Diary와 함께 여행의 기록을 시작해보세요.</p>
+      <p th:text="#{signup.subtitle}">Tripbora와 함께 여행의 기록을 시작해보세요.</p>
     </header>
 
     <!-- 단계 안내는 JS 가 갱신하므로 문구 템플릿과 단계 이름을 data-* 로 함께 넘긴다. -->
@@ -102,7 +102,7 @@
                  aria-describedby="birthDateMessage birthDateServerError" required>
           <span id="birthDateMessage" class="field-feedback" aria-live="polite"
                 th:text="#{signup.field.birthDate.help}">
-            Travel Diary는 만 14세 이상부터 가입할 수 있습니다.
+            Tripbora는 만 14세 이상부터 가입할 수 있습니다.
           </span>
           <span id="birthDateServerError" class="field-error" data-field-error="birthDate"
                 th:if="${#fields.hasErrors('birthDate')}" th:errors="*{birthDate}">생년월일 오류</span>

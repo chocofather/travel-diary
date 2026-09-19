@@ -58,19 +58,19 @@
 }
 
 a.support-navigation-link:hover {
-    color: #115e59;
-    background: #f5fbfa;
+    color: var(--tripbora-primary-hover);
+    background: #f8f5ff;
 }
 
 a.support-navigation-link:focus-visible {
-    outline: 3px solid rgba(13, 148, 136, 0.25);
+    outline: 3px solid var(--tripbora-focus);
     outline-offset: 2px;
 }
 
 .support-navigation-link.is-active {
-    color: #115e59;
-    background: #ecf9f6;
-    border-left-color: #0f766e;
+    color: var(--tripbora-primary-hover);
+    background: var(--tripbora-soft);
+    border-left-color: var(--tripbora-primary);
     font-weight: 800;
 }
 
@@ -118,7 +118,7 @@ a.support-navigation-link:focus-visible {
     }
 
     .support-navigation-link.is-active {
-        border-bottom-color: #0f766e;
+        border-bottom-color: var(--tripbora-primary);
     }
 }
 

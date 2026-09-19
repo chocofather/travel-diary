@@ -331,7 +331,7 @@ public class DestinationController {
                 .findFirst()
                 .orElse(null);
         SeoModel.apply(model,
-                dto.getDestination().getName() + " | Travel Diary",
+                dto.getDestination().getName() + " | Tripbora",
                 SeoTextUtils.firstNonBlank(dto.getDestination().getShortDescription(),
                         dto.getDestination().getDescription()),
                 "/destinations/" + id,

@@ -26,6 +26,7 @@ import jakarta.servlet.http.Cookie;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.time.Year;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -34,7 +35,11 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(RandomTravelController.class)
+@WebMvcTest(value = RandomTravelController.class,
+        properties = {
+                "app.contact-email=contact@tripbora.test",
+                "app.operator-name=운영자테스트"
+        })
 @Import({SecurityConfig.class, I18nConfig.class})
 class HeaderProfileMenuTest {
 
@@ -165,10 +170,36 @@ class HeaderProfileMenuTest {
                 .isEqualTo("開啟主選單");
         assertThat(document.selectFirst("#site-menu-toggle").attr("data-close-label"))
                 .isEqualTo("關閉主選單");
-        assertThat(document.select(".footer-links a").eachText())
-                .containsExactly("關於旅行日記", "使用條款", "隱私權政策", "客服中心");
-        assertThat(document.select(".footer-links a").eachAttr("href"))
-                .containsExactly("/about", "#", "#", "#");
+        assertThat(document.select(".footer-main > .footer-brand, "
+                + ".footer-main > .footer-nav, .footer-main > .footer-contact"))
+                .hasSize(3);
+        assertThat(document.select(".footer-nav .footer-links a").eachText())
+                .containsExactly(
+                        "關於 Tripbora", "使用條款", "隱私權政策");
+        assertThat(document.select(".footer-nav .footer-links a").eachAttr("href"))
+                .containsExactly(
+                        "/about", "/terms", "/privacy");
+        assertThat(document.select(".footer-contact .footer-links a").eachText())
+                .containsExactly("客服中心", "1:1 諮詢");
+        assertThat(document.select(".footer-contact .footer-links a").eachAttr("href"))
+                .containsExactly("/support/notices", "/support/inquiries");
+        assertThat(document.select(".footer-operations .footer-operator-label").text())
+                .isEqualTo("營運者");
+        assertThat(document.select(".footer-operations .footer-operator-name").text())
+                .isEqualTo("운영자테스트");
+        assertThat(document.select(".footer-operations .footer-contact-label").text())
+                .isEqualTo("聯絡我們");
+        assertThat(document.select(".footer-operations a.footer-contact-email").eachAttr("href"))
+                .containsExactly("mailto:contact@tripbora.test");
+        assertThat(document.select(".footer-operations a.footer-contact-email").text())
+                .isEqualTo("contact@tripbora.test");
+        assertThat(document.select(".footer-inquiry-link, .footer-contact-description")).isEmpty();
+        assertThat(document.select(".footer-description").text())
+                .isEqualTo("探索、記錄並分享旅程的空間");
+        assertThat(document.select(".footer-info").text())
+                .contains(String.valueOf(Year.now().getValue()), "Tripbora")
+                .doesNotContain("travel@diary.com");
+        assertThat(document.select("footer a[href='#']")).isEmpty();
     }
 
     @Test

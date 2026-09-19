@@ -111,7 +111,8 @@ public class SecurityConfig {
 
                         /* === 비회원도 접근 가능한 공개 영역 === */
                         .requestMatchers(
-                                "/", "/home", "/about", "/random-travel", "/locale",
+                                "/", "/home", "/about", "/terms", "/privacy",
+                                "/random-travel", "/locale",
                                 "/robots.txt", "/sitemap.xml",
                                 "/login", "/logout",
                                 "/oauth2/**", "/login/oauth2/**", "/social-signup",
@@ -134,6 +135,7 @@ public class SecurityConfig {
                                 // 메일로 받은 복구 링크만 공개다. 복구 요청은 탈퇴 유예 안내 화면에서만 한다.
                                 "/users/recover-account/confirm",
                                 "/css/**", "/js/**", "/images/**", "/fonts/**",
+                                "/favicon.ico", "/favicon-32x32.png", "/apple-touch-icon.png",
                                 "/webjars/**",   // STOMP 클라이언트 등 정적 라이브러리
                                 "/api/**",     "/api/destinations/**",
                                 "/search", "/search.html",

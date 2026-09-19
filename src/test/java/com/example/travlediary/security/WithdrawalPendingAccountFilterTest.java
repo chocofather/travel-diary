@@ -134,7 +134,7 @@ class WithdrawalPendingAccountFilterTest {
                 "/account/withdrawal-pending/recovery-link",
                 "/users/recover-account/confirm",
                 "/logout", "/login", "/locale",
-                "/css/login.css", "/js/language-menu.js", "/images/logo7.png",
+                "/css/login.css", "/js/language-menu.js", "/images/branding/tripbora-logo.svg",
                 "/fonts/pretendard.woff2", "/uploads/events/a.jpg",
                 "/favicon.ico", "/error")) {
             MockHttpServletResponse response = new MockHttpServletResponse();

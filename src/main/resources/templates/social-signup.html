@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title th:text="#{signup.social.pageTitle}">소셜 회원가입 | Travel Diary</title>
+  <title th:text="#{signup.social.pageTitle}">소셜 회원가입 | Tripbora</title>
   <link rel="stylesheet" type="text/css" href="/css/style.css">
   <!-- 같은 가입 플로우로 보이도록 일반 회원가입과 같은 스타일시트를 쓴다. -->
   <link rel="stylesheet" href="/css/registration.css">
@@ -16,8 +16,8 @@
 
 <main class="register-wrapper">
   <div class="register-logo">
-    <a th:href="@{/}" th:aria-label="#{signup.brand.home}" aria-label="Travel Diary 홈">
-      <img src="/images/logo7.png" alt="Travel Diary">
+    <a th:href="@{/}" th:aria-label="#{signup.brand.home}" aria-label="Tripbora 홈">
+      <img src="/images/branding/tripbora-logo.svg" alt="Tripbora">
     </a>
   </div>
 
@@ -35,7 +35,7 @@
         기존 계정에 연결할 수 있어요
       </h1>
       <p th:text="#{signup.social.linkExisting.description(${providerDisplayName})}">
-        이미 이 이메일로 가입된 Travel Diary 계정이 있습니다.
+        이미 이 이메일로 가입된 Tripbora 계정이 있습니다.
       </p>
     </header>
 
@@ -99,7 +99,7 @@
                  th:attr="aria-invalid=${#fields.hasErrors('birthDate')}" required>
           <span id="birthDateMessage" class="field-feedback" aria-live="polite"
                 th:text="#{signup.field.birthDate.help}">
-            Travel Diary는 만 14세 이상부터 가입할 수 있습니다.
+            Tripbora는 만 14세 이상부터 가입할 수 있습니다.
           </span>
           <span id="birthDateServerError" class="field-error" data-field-error="birthDate"
                 th:if="${#fields.hasErrors('birthDate')}" th:errors="*{birthDate}">생년월일 오류</span>
@@ -187,7 +187,7 @@
           <p th:text="#{signup.step.account.description}">로그인과 이메일 인증에 사용할 정보를 입력합니다.</p>
         </div>
 
-        <!-- Kakao/Naver 는 provider 이메일을 인증된 것으로 보지 않아 Travel Diary 인증을 받는다.
+        <!-- Kakao/Naver 는 provider 이메일을 인증된 것으로 보지 않아 Tripbora 인증을 받는다.
              Naver 가 준 연락처 이메일은 초기값일 뿐이라 사용자가 고칠 수 있다. -->
         <div class="input-group" th:if="${emailVerificationRequired}"
              id="socialSignupEmailField"
@@ -209,7 +209,7 @@
           </div>
           <span id="emailMessage" class="field-feedback" aria-live="polite"
                 th:text="#{signup.social.email.help}">
-            Travel Diary에서 사용할 이메일을 입력해주세요. 인증메일을 보내드립니다.
+            Tripbora에서 사용할 이메일을 입력해주세요. 인증메일을 보내드립니다.
           </span>
           <span id="emailServerError" class="field-error" data-field-error="userEmail"
                 th:if="${#fields.hasErrors('userEmail')}" th:errors="*{userEmail}">이메일 오류</span>

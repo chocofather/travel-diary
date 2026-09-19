@@ -65,7 +65,7 @@ class EventPublicMessagesContractTest {
                     .isNotEqualTo(korean.getProperty(key));
         }
         // 브랜드 눈썹 문구는 어느 언어에서도 영문 그대로 둔다.
-        assertThat(translated.getProperty("event.kicker")).isEqualTo("TRAVEL DIARY EVENT");
+        assertThat(translated.getProperty("event.kicker")).isEqualTo("TRIPBORA EVENT");
     }
 
     @ParameterizedTest

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
+
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/policy.css" />
+</th:block>
+
+<th:block th:fragment="body">
+  <div class="policy-page">
+    <header class="policy-header">
+      <span class="policy-eyebrow" th:text="#{policy.page.eyebrow}">TRIPBORA POLICY</span>
+      <h1 th:if="${policy != null and policy.title != null and !#strings.isEmpty(policy.title)}"
+          th:text="${policy.title}">이용약관</h1>
+      <h1 th:unless="${policy != null and policy.title != null and !#strings.isEmpty(policy.title)}"
+          th:text="#{${policyHeadingCode}}">이용약관</h1>
+
+      <dl class="policy-meta" th:if="${policy != null}">
+        <div th:if="${policy.version != null and !#strings.isEmpty(policy.version)}">
+          <dt th:text="#{policy.page.version}">버전</dt>
+          <dd th:text="${policy.version}">1.0</dd>
+        </div>
+        <div th:if="${policy.effectiveAt != null}">
+          <dt th:text="#{policy.page.effectiveDate}">시행일</dt>
+          <dd>
+            <time th:datetime="${#temporals.format(policy.effectiveAt, 'yyyy-MM-dd')}"
+                  th:text="${#temporals.format(policy.effectiveAt, 'yyyy.MM.dd')}"></time>
+          </dd>
+        </div>
+      </dl>
+    </header>
+
+    <!-- SignupPolicyService에서 기존 PolicyContent sanitizing을 거친 본문만 렌더링한다. -->
+    <article class="policy-document"
+             th:if="${policy != null and policy.content != null and !#strings.isEmpty(policy.content)}"
+             th:utext="${policy.content}"></article>
+    <p class="policy-unavailable"
+       th:unless="${policy != null and policy.content != null and !#strings.isEmpty(policy.content)}"
+       th:text="#{policy.page.unavailable}">
+      현재 게시된 정책이 없습니다.
+    </p>
+  </div>
+</th:block>
+</html>

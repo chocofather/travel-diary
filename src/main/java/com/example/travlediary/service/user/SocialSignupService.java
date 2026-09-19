@@ -41,7 +41,7 @@ public class SocialSignupService {
     private final PolicyConsentRecorder policyConsentRecorder;
 
     /**
-     * 가입 트랜잭션. users 와 social_accounts 를 함께 쓰고, Travel Diary 이메일 인증이 필요한
+     * 가입 트랜잭션. users 와 social_accounts 를 함께 쓰고, Tripbora 이메일 인증이 필요한
      * provider 면 인증 토큰 컬럼까지 같은 INSERT 에 담는다.
      *
      * <p>인증메일 발송은 커밋 뒤에 {@link #sendVerificationEmail} 로 따로 한다.
@@ -211,7 +211,7 @@ public class SocialSignupService {
      *
      * <p>Google 은 OIDC 가 email_verified 를 함께 주므로 provider 가 준 이메일을 그대로 신뢰한다.
      * Kakao/Naver 는 provider 이메일을 인증된 것으로 보지 않으므로 사용자가 입력한 이메일을 받아
-     * Travel Diary 이메일 인증을 거치게 한다.
+     * Tripbora 이메일 인증을 거치게 한다.
      */
     private String resolveUserEmail(PendingSocialSignup pending, SocialSignupForm form) {
         if (pending.provider() == SocialProvider.GOOGLE) {

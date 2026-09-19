@@ -10,6 +10,40 @@ import static org.assertj.core.api.Assertions.assertThat;
 class AccountRecoveryUiContractTest {
 
     @Test
+    void recoveryAndEmailAccountPagesUseTheScopedAuthFlowPresentation() throws IOException {
+        for (String path : new String[]{
+                "templates/find-username.html",
+                "templates/find-password.html",
+                "templates/reset-password.html",
+                "templates/recover-account-confirm.html",
+                "templates/account/email-required.html",
+                "templates/account/email-change.html",
+                "templates/account/email-change-password.html"
+        }) {
+            assertThat(resource(path))
+                    .as(path)
+                    .contains("class=\"login-page auth-flow-page\"")
+                    .contains("class=\"auth-flow-icon\"")
+                    .contains("<svg")
+                    .doesNotContain(">✉<");
+        }
+
+        assertThat(resource("templates/login.html"))
+                .doesNotContain("auth-flow-page", "auth-flow-icon");
+    }
+
+    @Test
+    void scopedAuthFlowKeepsSemanticErrorsAndUsesPurpleKeyboardFocus() throws IOException {
+        String css = resource("static/css/login.css");
+
+        assertThat(css)
+                .contains(".login-page.auth-flow-page .login-field input[aria-invalid=\"true\"]")
+                .contains(".login-page.auth-flow-page .login-password-control .toggle-password:focus-visible")
+                .contains("border-color: #d92d20;")
+                .contains("outline-color: rgba(118, 87, 200, 0.28);");
+    }
+
+    @Test
     void usernameRecoveryAcceptsOnlyEmailAndUsesAGenericCompletionState() throws IOException {
         String template = resource("templates/find-username.html");
 
@@ -51,7 +85,7 @@ class AccountRecoveryUiContractTest {
         String template = resource("templates/reset-password.html");
 
         assertThat(template)
-                .contains("/css/login.css", "class=\"login-page\"")
+                .contains("/css/login.css", "class=\"login-page auth-flow-page\"")
                 .contains("name=\"token\"", "name=\"newPassword\"")
                 .contains("name=\"newPasswordConfirm\"")
                 .contains("data-toggle=\"#newPassword\"")

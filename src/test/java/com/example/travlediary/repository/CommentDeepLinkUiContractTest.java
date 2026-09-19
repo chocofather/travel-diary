@@ -30,7 +30,7 @@ class CommentDeepLinkUiContractTest {
                 .doesNotContain("history.");
         assertThat(css)
                 .contains(".content-comment-item.is-deep-link-target > .content-comment-card")
-                .contains("background: #ecf9f6")
+                .contains("background: #f3efff")
                 .contains("box-shadow:")
                 .doesNotContain("@keyframes");
     }

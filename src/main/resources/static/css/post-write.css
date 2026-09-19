@@ -62,7 +62,7 @@
     border: 1px solid #cfe0d8;
     border-radius: 999px;
     background: #f0fdfa;
-    color: #115e59;
+    color: var(--tripbora-primary-hover);
     font-size: 13px;
     font-weight: 700;
 }
@@ -80,7 +80,7 @@
 }
 
 .write-type-change:hover {
-    color: #115e59;
+    color: var(--tripbora-primary-hover);
 }
 
 /* 3. 각 폼 그룹 공통 */
@@ -190,9 +190,9 @@
 
 /* 11. 주 버튼: 사이트 primary 초록 */
 .btn-primary {
-    background: #397a63;
+    background: var(--tripbora-primary);
     color: #fff;
-    border: 1px solid #397a63;
+    border: 1px solid var(--tripbora-primary);
 }
 .btn-primary:hover {
     background: #2f6653;

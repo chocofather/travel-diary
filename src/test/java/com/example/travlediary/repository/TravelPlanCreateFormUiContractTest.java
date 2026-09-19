@@ -360,11 +360,11 @@ class TravelPlanCreateFormUiContractTest {
 
         // 바깥은 그냥 흰 책상이다
         assertThat(between(root, "--tp-plan-page:", ";")).contains("#ffffff");
-        // 종이만 아주 미세하게 따뜻하다 (여행일기의 종이 기본색과 같은 값)
-        assertThat(between(root, "--tp-plan-paper:", ";")).contains("#fdfdfa");
+        // 종이도 중립 흰색으로 두고, 선택 상태에만 라벤더를 쓴다
+        assertThat(between(root, "--tp-plan-paper:", ";")).contains("#ffffff");
         assertThat(resource("/static/css/diary.css")).contains("--diary-paper-color: #fdfdfa");
         // 선은 전부 중립이다
-        assertThat(between(root, "--tp-plan-line:", ";")).contains("#eceef0");
+        assertThat(between(root, "--tp-plan-line:", ";")).contains("#ecebef");
     }
 
     @Test

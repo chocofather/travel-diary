@@ -31,7 +31,7 @@ public class SocialSignupForm {
     private String nickname;
 
     /**
-     * Travel Diary 이메일 인증이 필요한 provider(Kakao/Naver)에서만 쓰는 입력값.
+     * Tripbora 이메일 인증이 필요한 provider(Kakao/Naver)에서만 쓰는 입력값.
      * Google 은 provider 가 인증한 이메일을 쓰므로 이 값을 보내도 무시한다.
      * 필수 여부와 형식은 provider 별 정책이라 Bean Validation 이 아니라 서비스에서 본다.
      */

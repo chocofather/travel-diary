@@ -1,9 +1,9 @@
 /* ===== 커뮤니티 글쓰기 종류 선택 모달 =====
    목록(board/list)과 질문·팁 작성폼에서 같이 쓰므로 색 변수는 여기서 직접 갖는다. */
 .board-write-modal {
-    --board-accent: #0f766e;
-    --board-accent-dark: #115e59;
-    --board-accent-soft: #f0fdfa;
+    --board-accent: var(--tripbora-primary);
+    --board-accent-dark: var(--tripbora-primary-hover);
+    --board-accent-soft: var(--tripbora-soft);
     --board-border: #e2e8f0;
     --board-text: #172033;
     --board-muted: #64748b;

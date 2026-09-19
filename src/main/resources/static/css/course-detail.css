@@ -17,7 +17,7 @@
 .course-summary-label,
 .course-route-heading p {
     margin: 0 0 8px;
-    color: #397a63;
+    color: var(--tripbora-primary);
     font-size: 13px;
     font-weight: 700;
 }
@@ -109,8 +109,8 @@
 
 .course-owner-toggle:hover,
 .course-owner-menu[open] > summary {
-    background: #f4f8f6;
-    border-color: #a6bfb3;
+    background: #f8f5ff;
+    border-color: var(--tripbora-border);
 }
 
 .course-owner-menu-panel {
@@ -129,7 +129,7 @@
 .course-owner-toggle:focus-visible,
 .course-owner-menu-panel a:focus-visible,
 .course-owner-menu-panel button:focus-visible {
-    outline: 2px solid #397a63;
+    outline: 2px solid var(--tripbora-primary);
     outline-offset: 2px;
 }
 
@@ -175,7 +175,7 @@
 }
 
 .course-meta .content-writer-link {
-    color: #397a63;
+    color: var(--tripbora-primary);
     font-weight: 700;
     text-decoration: none;
 }
@@ -186,7 +186,7 @@
 }
 
 .course-meta .content-writer-link:focus-visible {
-    outline: 2px solid rgba(57, 122, 99, 0.28);
+    outline: 2px solid rgba(118, 87, 200, 0.28);
     outline-offset: 2px;
 }
 
@@ -245,7 +245,7 @@
     --route-column-gap: 24px;
     --route-row-gap: 32px;
     --route-marker-size: 36px;
-    --route-line-color: #b8d6c9;
+    --route-line-color: var(--tripbora-border);
     --route-turn-offset: 12px;
     position: relative;
     display: grid;
@@ -348,13 +348,13 @@
     box-sizing: border-box;
     width: var(--route-marker-size);
     height: var(--route-marker-size);
-    border: 3px solid #eaf4ef;
+    border: 3px solid var(--tripbora-soft);
     border-radius: 50%;
-    background: #397a63;
+    background: var(--tripbora-primary);
     color: #fff;
     font-size: 13px;
     font-weight: 700;
-    box-shadow: 0 1px 3px rgba(57, 122, 99, 0.12);
+    box-shadow: 0 1px 3px rgba(118, 87, 200, 0.14);
 }
 
 .course-stop-card {
@@ -366,7 +366,7 @@
     min-width: 0;
     box-sizing: border-box;
     overflow: hidden;
-    border: 1px solid #e1e9e5;
+    border: 1px solid #e7e2f2;
     border-radius: 12px;
     background: #fff;
     color: inherit;
@@ -377,12 +377,12 @@
 
 .course-stop-card:hover,
 .course-stop-card:focus-visible {
-    border-color: #a6bfb3;
+    border-color: var(--tripbora-border);
     box-shadow: 0 3px 8px rgba(31, 41, 55, 0.06);
 }
 
 .course-stop-card:focus-visible {
-    outline: 2px solid #397a63;
+    outline: 2px solid var(--tripbora-primary);
     outline-offset: 3px;
 }
 
@@ -481,7 +481,7 @@
 }
 
 .course-back-to-list:hover {
-    color: #397a63;
+    color: var(--tripbora-primary);
     text-decoration: underline;
     text-underline-offset: 3px;
 }
@@ -733,16 +733,16 @@
 .course-comment-form button,
 .course-comment-actions button {
     padding: 7px 13px;
-    border: 1px solid #397a63;
+    border: 1px solid var(--tripbora-primary);
     border-radius: 5px;
     background: #fff;
-    color: #397a63;
+    color: var(--tripbora-primary);
     cursor: pointer;
 }
 
 .course-comment-form button[type="submit"],
 .course-comment-actions .course-comment-save {
-    background: #397a63;
+    background: var(--tripbora-primary);
     color: #fff;
 }
 
@@ -1001,7 +1001,7 @@
 
 .course-comment-reply-target {
     margin: 0 0 7px;
-    color: #397a63;
+    color: var(--tripbora-primary);
     font-size: 13px;
     font-weight: 700;
 }
@@ -1026,18 +1026,18 @@
 
 .course-comment-actions .course-comment-like-button:hover,
 .course-comment-actions .course-comment-like-button:focus-visible {
-    border-color: #397a63;
-    color: #397a63;
+    border-color: var(--tripbora-primary);
+    color: var(--tripbora-primary);
 }
 
 .course-comment-actions .course-comment-like-button.is-liked {
-    border-color: #397a63;
-    background: #397a63;
+    border-color: var(--tripbora-primary);
+    background: var(--tripbora-primary);
     color: #fff;
 }
 
 .course-comment-actions .course-comment-like-button:focus-visible {
-    outline: 2px solid #8bc3ae;
+    outline: 2px solid var(--tripbora-primary);
     outline-offset: 2px;
 }
 
@@ -1059,7 +1059,7 @@
 .course-comment-replies {
     margin: 16px 0 0 28px;
     padding: 0 0 0 18px;
-    border-left: 2px solid #e3eee9;
+    border-left: 2px solid #e7e2f2;
     list-style: none;
 }
 
@@ -1096,15 +1096,15 @@
 
 .course-comment-reply-actions button {
     padding: 7px 13px;
-    border: 1px solid #397a63;
+    border: 1px solid var(--tripbora-primary);
     border-radius: 5px;
     background: #fff;
-    color: #397a63;
+    color: var(--tripbora-primary);
     cursor: pointer;
 }
 
 .course-comment-reply-actions .course-comment-reply-submit {
-    background: #397a63;
+    background: var(--tripbora-primary);
     color: #fff;
 }
 

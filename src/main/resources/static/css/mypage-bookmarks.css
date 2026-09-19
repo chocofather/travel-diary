@@ -17,7 +17,7 @@
 
 .mypage-bookmark-sections a:hover,
 .mypage-bookmark-sections a.is-active {
-    color: #115e59;
+    color: var(--tripbora-primary-hover);
 }
 
 .mypage-bookmark-sections a.is-active::after {
@@ -27,7 +27,7 @@
     left: 0;
     height: 3px;
     border-radius: 999px 999px 0 0;
-    background: #0f766e;
+    background: var(--tripbora-primary);
     content: "";
 }
 
@@ -58,9 +58,9 @@
 
 .mypage-bookmark-filters a:hover,
 .mypage-bookmark-filters a.is-active {
-    color: #115e59;
-    border-color: #99d8cb;
-    background: #f0fdfa;
+    color: var(--tripbora-primary-hover);
+    border-color: var(--tripbora-border);
+    background: var(--tripbora-soft);
 }
 
 .mypage-bookmark-sections a:focus-visible,
@@ -70,14 +70,14 @@
 .mypage-bookmark-remove:focus-visible,
 .mypage-bookmark-row-remove:focus-visible,
 .mypage-bookmark-pagination a:focus-visible {
-    outline: 3px solid rgba(13, 148, 136, 0.25);
+    outline: 3px solid rgba(118, 87, 200, 0.25);
     outline-offset: 2px;
 }
 
 .mypage-bookmark-status {
     margin: 0 0 14px;
     padding: 10px 13px;
-    color: #115e59;
+    color: var(--tripbora-primary-hover);
     border: 1px solid #a7e3d8;
     border-radius: 9px;
     background: #f0fdfa;
@@ -173,7 +173,7 @@
 }
 
 .mypage-bookmark-remove:hover {
-    background: #f0fdfa;
+    background: var(--tripbora-soft);
     transform: translateY(-1px);
 }
 
@@ -207,7 +207,7 @@
 }
 
 .mypage-bookmark-card-body h2 a:hover {
-    color: #115e59;
+    color: var(--tripbora-primary-hover);
     text-decoration: underline;
     text-underline-offset: 3px;
 }
@@ -288,7 +288,7 @@
 }
 
 .mypage-bookmark-type--course {
-    color: #115e59;
+    color: var(--tripbora-primary-hover);
     background: #f0fdfa;
 }
 
@@ -312,7 +312,7 @@
 }
 
 .mypage-bookmark-community-copy h2 a:hover {
-    color: #115e59;
+    color: var(--tripbora-primary-hover);
     text-decoration: underline;
     text-underline-offset: 3px;
 }
@@ -333,7 +333,7 @@
 .mypage-bookmark-row-remove {
     min-height: 38px;
     padding: 7px 13px;
-    color: #115e59;
+    color: var(--tripbora-primary-hover);
     border: 1px solid #b9d7d0;
     border-radius: 999px;
     background: #fff;
@@ -343,8 +343,8 @@
 }
 
 .mypage-bookmark-row-remove:hover {
-    border-color: #80b7aa;
-    background: #f0fdfa;
+    border-color: var(--tripbora-border);
+    background: var(--tripbora-soft);
 }
 
 .mypage-bookmark-empty {
@@ -373,7 +373,7 @@
     align-items: center;
     justify-content: center;
     padding: 8px 15px;
-    color: #115e59;
+    color: var(--tripbora-primary-hover);
     border: 1px solid #cdded6;
     border-radius: 999px;
     font-size: 14px;

@@ -95,7 +95,8 @@ public class SignupPolicyService {
                     version.isRequired(),
                     translation == null ? null : translation.getTitle(),
                     translation == null ? null : PolicyContent.toSafeHtml(translation.getContent()),
-                    translation == null ? null : translation.getLocale()));
+                    translation == null ? null : translation.getLocale(),
+                    version.getEffectiveAt()));
         }
         return new SignupPolicySet(policies);
     }

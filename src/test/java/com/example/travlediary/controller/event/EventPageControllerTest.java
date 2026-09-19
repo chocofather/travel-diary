@@ -402,7 +402,7 @@ class EventPageControllerTest {
         assertThat(document.select(".event-tab a").first().text()).isEqualTo(ongoing);
         assertThat(document.selectFirst(".event-tab").attr("aria-label")).isEqualTo(tabs);
         assertThat(document.selectFirst(".event-list-eyebrow").text())
-                .isEqualTo("TRAVEL DIARY EVENT");
+                .isEqualTo("TRIPBORA EVENT");
         // 동적 콘텐츠는 그대로 event_translations 값을 쓴다. (번역이 없으면 base)
         assertThat(document.selectFirst(".event-title").text()).isEqualTo("진행 중 이벤트");
     }

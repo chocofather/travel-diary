@@ -9,7 +9,7 @@
     padding: 0;
     border: 0;
     background: none;
-    color: #397a63;
+    color: var(--tripbora-primary);
     font: inherit;
     font-size: 14px;
     font-weight: 700;

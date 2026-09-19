@@ -1,6 +1,6 @@
 :root {
-    --register-primary: #0f766e;
-    --register-primary-dark: #0b5f59;
+    --register-primary: var(--tripbora-primary);
+    --register-primary-dark: var(--tripbora-primary-hover);
     --register-text: #17212b;
     --register-muted: #64748b;
     --register-border: #dbe3ea;
@@ -55,15 +55,20 @@
 }
 
 .register-logo a {
-    display: inline-flex;
+    display: inline-block;
+    width: min(154px, 74vw);
+    aspect-ratio: 773 / 727;
     border-radius: 8px;
 }
 
 .register-logo img {
     display: block;
-    width: auto;
-    max-width: min(178px, 56vw);
-    max-height: 82px;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    object-fit: contain;
+    object-position: center;
 }
 
 .register-container {
@@ -250,7 +255,7 @@
 
 .register-container .field-control:focus {
     border-color: var(--register-primary);
-    box-shadow: 0 0 0 3px rgba(15, 118, 110, .12);
+    box-shadow: 0 0 0 3px rgba(118, 87, 200, .12);
 }
 
 .register-container .field-control[aria-invalid="true"] {
@@ -388,7 +393,7 @@
 .register-container .email-domain-suggestions button:hover,
 .register-container .email-domain-suggestions button[aria-selected="true"] {
     color: var(--register-primary-dark);
-    background: #edf7f6;
+    background: var(--tripbora-soft);
 }
 
 .email-suggestion {
@@ -433,7 +438,7 @@
 .register-container button:focus-visible,
 .register-container input:focus-visible,
 .register-logo a:focus-visible {
-    outline: 3px solid rgba(15, 118, 110, .24);
+    outline: 3px solid rgba(118, 87, 200, .24);
     outline-offset: 2px;
 }
 
@@ -688,8 +693,8 @@
         margin-bottom: 12px;
     }
 
-    .register-logo img {
-        max-height: 66px;
+    .register-logo a {
+        width: min(137px, 78vw);
     }
 
     .register-container {

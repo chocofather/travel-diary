@@ -1,8 +1,8 @@
 .random-travel-page {
     min-height: calc(100vh - 100px);
     padding: 44px 20px 80px;
-    background: #f7fbfc;
-    color: #183b42;
+    background: #fafafc;
+    color: var(--tripbora-text);
 }
 
 .random-travel-shell {
@@ -17,9 +17,9 @@
     align-items: center;
     min-height: 410px;
     overflow: hidden;
-    border: 1px solid #cfe8e8;
+    border: 1px solid var(--tripbora-border);
     border-radius: 28px;
-    background: #eef9f8;
+    background: var(--tripbora-soft);
 }
 
 .random-travel-copy {
@@ -62,7 +62,7 @@
     gap: 8px;
     margin-top: 30px;
     padding: 5px;
-    border: 1px solid #b9dfe0;
+    border: 1px solid var(--tripbora-border);
     border-radius: 16px;
     background: #fff;
 }
@@ -81,15 +81,15 @@
 }
 
 .random-scope-button.is-active {
-    background: #d9f1f0;
-    color: #0c6868;
+    background: var(--tripbora-soft);
+    color: var(--tripbora-primary);
 }
 
 .random-scope-button:focus-visible,
 .random-draw-button:focus-visible,
 .random-destination-card:focus-visible,
 .random-redraw-button:focus-visible {
-    outline: 3px solid #73c9d6;
+    outline: 3px solid var(--tripbora-focus);
     outline-offset: 3px;
 }
 
@@ -104,7 +104,7 @@
     padding: 13px 24px;
     border: 0;
     border-radius: 15px;
-    background: #087f7c;
+    background: var(--tripbora-primary);
     color: #fff;
     font: inherit;
     font-size: 17px;
@@ -114,7 +114,7 @@
 }
 
 .random-draw-button:hover:not(:disabled) {
-    background: #076c6a;
+    background: var(--tripbora-primary-hover);
     transform: translateY(-1px);
 }
 
@@ -165,7 +165,7 @@
     width: min(620px, 100%);
     margin: 0 auto;
     padding: 28px 24px;
-    border: 1px dashed #79bdc5;
+    border: 1px dashed var(--tripbora-border);
     border-radius: 20px;
     background: #fff;
     text-align: center;
@@ -173,7 +173,7 @@
 
 .random-stage span {
     display: block;
-    color: #6d8c91;
+    color: #65636d;
     font-size: 14px;
 }
 
@@ -181,7 +181,7 @@
     display: block;
     min-height: 46px;
     margin-top: 8px;
-    color: #087f7c;
+    color: var(--tripbora-primary);
     font-size: 30px;
     line-height: 1.5;
 }
@@ -220,7 +220,7 @@
     width: 7px;
     height: 11px;
     border-radius: 2px;
-    background: #087f7c;
+    background: var(--tripbora-primary);
     opacity: 0;
     animation: random-confetti-fall 1200ms ease-in forwards;
 }
@@ -230,7 +230,7 @@
 }
 
 .random-confetti-piece:nth-child(3n + 1) {
-    background: #73c9d6;
+    background: #c4b5fd;
 }
 
 @keyframes random-confetti-fall {
@@ -396,7 +396,7 @@
 .random-destination-cta {
     margin-top: auto;
     padding-top: 12px;
-    color: #087f7c;
+    color: var(--tripbora-primary);
     font-size: 13px;
     font-weight: 800;
 }
@@ -433,7 +433,7 @@
 
 .random-redraw-button:hover {
     background: #f6f9f9;
-    border-color: #c2d1d4;
+    border-color: var(--tripbora-border);
 }
 
 /* 결과 지역으로 필터된 여행지 목록으로 이동 (primary, 컴팩트하게) */
@@ -444,9 +444,9 @@
     gap: 6px;
     min-height: 34px;
     padding: 6px 12px;
-    border: 1px solid #087f7c;
+    border: 1px solid var(--tripbora-primary);
     border-radius: 8px;
-    background: #087f7c;
+    background: var(--tripbora-primary);
     color: #fff;
     font-size: 14px;
     font-weight: 700;
@@ -461,7 +461,7 @@
 }
 
 .random-all-destinations-link:focus-visible {
-    outline: 3px solid #73c9d6;
+    outline: 3px solid var(--tripbora-focus);
     outline-offset: 3px;
 }
 

@@ -1,7 +1,7 @@
 .support-inquiry-page,
 .support-inquiry-detail {
-    --inquiry-accent: #0f766e;
-    --inquiry-accent-dark: #115e59;
+    --inquiry-accent: var(--tripbora-primary);
+    --inquiry-accent-dark: var(--tripbora-primary-hover);
     --inquiry-border: #e2e8f0;
     --inquiry-text: #172033;
     --inquiry-muted: #64748b;
@@ -77,7 +77,7 @@
 .support-inquiry-form-actions button:focus-visible,
 .support-inquiry-detail-actions a:focus-visible,
 .support-inquiry-detail-actions button:focus-visible {
-    outline: 3px solid rgba(13, 148, 136, 0.25);
+    outline: 3px solid rgba(118, 87, 200, 0.25);
     outline-offset: 3px;
 }
 
@@ -284,7 +284,7 @@
 .support-inquiry-field select:focus,
 .support-inquiry-field textarea:focus {
     border-color: #5b9f98;
-    outline: 3px solid rgba(13, 148, 136, 0.12);
+    outline: 3px solid rgba(118, 87, 200, 0.12);
 }
 
 .support-inquiry-field .is-invalid {

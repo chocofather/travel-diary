@@ -72,7 +72,7 @@
     margin-bottom: 16px;
     padding: 5px 12px;
     border-radius: 999px;
-    background: #000;
+    background: var(--tripbora-primary);
     color: #fff;
     font-size: 14px;
     font-weight: 600;
@@ -103,9 +103,9 @@
     margin-top: 7px;
     padding: 6px 12px;
     align-items: center;
-    border: 1px solid #20252b;
+    border: 1px solid var(--tripbora-primary);
     border-radius: 5px;
-    background: #20252b;
+    background: var(--tripbora-primary);
     color: #fff;
     font-size: 13px;
     font-weight: 700;
@@ -115,13 +115,18 @@
 }
 
 #event-slider .slide-text a.more:hover {
-    border-color: #0066cc;
-    background: #0066cc;
+    border-color: var(--tripbora-primary-hover);
+    background: var(--tripbora-primary-hover);
+}
+
+#event-slider .slide-text a.more:active {
+    border-color: var(--tripbora-primary-active);
+    background: var(--tripbora-primary-active);
 }
 
 #event-slider .slide-text a.more:focus-visible,
 #event-slider button.nav:focus-visible {
-    outline: 3px solid rgba(0, 102, 204, 0.32);
+    outline: 3px solid var(--tripbora-focus);
     outline-offset: 3px;
 }
 
@@ -155,7 +160,7 @@
     bottom: 0;
     left: 0;
     width: 0;
-    background: #000;
+    background: var(--tripbora-primary);
 }
 
 #event-slider button.nav {

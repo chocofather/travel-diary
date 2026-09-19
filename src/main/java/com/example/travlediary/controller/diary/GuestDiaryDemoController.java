@@ -73,7 +73,7 @@ public class GuestDiaryDemoController {
         // 제공 표지 8종과 노트 종류. 둘 다 enum 이라 DB 를 타지 않는다.
         model.addAttribute("coverStyles", DiaryCoverStyle.values());
         model.addAttribute("notebookTypes", DiaryNotebookType.values());
-        model.addAttribute("pageTitle", "새 여행일기 체험 | Travel Diary");
+        model.addAttribute("pageTitle", "새 여행일기 체험 | Tripbora");
         return "diary/demo-new";
     }
 
@@ -96,7 +96,7 @@ public class GuestDiaryDemoController {
         model.addAttribute("diaryLabelFonts", diaryLabelFontCatalog.getFonts());
         // 사진을 붙일 자리(일반 / 폴라로이드). 회원 화면과 같은 목록이다.
         model.addAttribute("coverPhotoStyles", DiaryCoverPhotoStyle.values());
-        model.addAttribute("pageTitle", "여행일기 체험 | Travel Diary");
+        model.addAttribute("pageTitle", "여행일기 체험 | Tripbora");
         return "diary/demo-edit";
     }
 
@@ -118,7 +118,7 @@ public class GuestDiaryDemoController {
         model.addAttribute("stickerRepeats", diaryStickerCatalog.getRepeatsByImageUrl());
         model.addAttribute("diaryLabelFonts", diaryLabelFontCatalog.getFonts());
         model.addAttribute("coverPhotoStyles", DiaryCoverPhotoStyle.values());
-        model.addAttribute("pageTitle", "표지 꾸미기 체험 | Travel Diary");
+        model.addAttribute("pageTitle", "표지 꾸미기 체험 | Tripbora");
         return "diary/demo-cover";
     }
 }

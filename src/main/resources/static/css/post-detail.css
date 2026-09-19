@@ -15,7 +15,7 @@
 
 .post-type {
     margin-bottom: 8px;
-    color: #397a63;
+    color: var(--tripbora-primary);
     font-weight: 700;
 }
 
@@ -103,7 +103,7 @@
 .post-owner-toggle:focus-visible,
 .post-owner-menu-panel a:focus-visible,
 .post-owner-menu-panel button:focus-visible {
-    outline: 2px solid #397a63;
+    outline: 2px solid var(--tripbora-primary);
     outline-offset: 2px;
 }
 
@@ -130,7 +130,7 @@
 }
 
 .post-meta .content-writer-link {
-    color: #397a63;
+    color: var(--tripbora-primary);
     font-weight: 700;
     text-decoration: none;
 }
@@ -141,7 +141,7 @@
 }
 
 .post-meta .content-writer-link:focus-visible {
-    outline: 2px solid rgba(57, 122, 99, 0.28);
+    outline: 2px solid rgba(118, 87, 200, 0.28);
     outline-offset: 2px;
 }
 
@@ -201,7 +201,7 @@
 }
 
 .back-to-list:hover {
-    color: #397a63;
+    color: var(--tripbora-primary);
     text-decoration: underline;
     text-underline-offset: 3px;
 }
@@ -467,16 +467,16 @@
 .post-comment-form button,
 .post-comment-actions button {
     padding: 7px 13px;
-    border: 1px solid #397a63;
+    border: 1px solid var(--tripbora-primary);
     border-radius: 5px;
     background: #fff;
-    color: #397a63;
+    color: var(--tripbora-primary);
     cursor: pointer;
 }
 
 .post-comment-form button[type="submit"],
 .post-comment-actions .post-comment-save {
-    background: #397a63;
+    background: var(--tripbora-primary);
     color: #fff;
 }
 
@@ -735,7 +735,7 @@
 
 .post-comment-reply-target {
     margin: 0 0 7px;
-    color: #397a63;
+    color: var(--tripbora-primary);
     font-size: 13px;
     font-weight: 700;
 }
@@ -760,13 +760,13 @@
 
 .post-comment-actions .post-comment-like-button:hover,
 .post-comment-actions .post-comment-like-button:focus-visible {
-    border-color: #397a63;
-    color: #397a63;
+    border-color: var(--tripbora-primary);
+    color: var(--tripbora-primary);
 }
 
 .post-comment-actions .post-comment-like-button.is-liked {
-    border-color: #397a63;
-    background: #397a63;
+    border-color: var(--tripbora-primary);
+    background: var(--tripbora-primary);
     color: #fff;
 }
 
@@ -819,15 +819,15 @@
 
 .post-comment-reply-actions button {
     padding: 7px 13px;
-    border: 1px solid #397a63;
+    border: 1px solid var(--tripbora-primary);
     border-radius: 5px;
     background: #fff;
-    color: #397a63;
+    color: var(--tripbora-primary);
     cursor: pointer;
 }
 
 .post-comment-reply-actions .post-comment-reply-submit {
-    background: #397a63;
+    background: var(--tripbora-primary);
     color: #fff;
 }
 

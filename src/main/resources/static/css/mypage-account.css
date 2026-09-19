@@ -109,9 +109,9 @@
 }
 
 .mypage-account-field input:focus-visible {
-    outline: 3px solid rgba(13, 148, 136, 0.2);
+    outline: 3px solid rgba(118, 87, 200, 0.2);
     outline-offset: 1px;
-    border-color: #0f766e;
+    border-color: var(--tripbora-primary);
 }
 
 .mypage-account-field-error,
@@ -154,9 +154,9 @@
     align-items: center;
     justify-content: center;
     padding: 9px 18px;
-    border: 1px solid #0f766e;
+    border: 1px solid var(--tripbora-primary);
     border-radius: 9px;
-    background: #0f766e;
+    background: var(--tripbora-primary);
     color: #fff;
     cursor: pointer;
     font-size: 14px;
@@ -171,12 +171,12 @@
 }
 
 .mypage-account-actions button:hover {
-    background: #115e59;
+    background: var(--tripbora-primary-hover);
 }
 
 .mypage-account-actions a:focus-visible,
 .mypage-account-actions button:focus-visible {
-    outline: 3px solid rgba(13, 148, 136, 0.25);
+    outline: 3px solid rgba(118, 87, 200, 0.25);
     outline-offset: 2px;
 }
 
@@ -193,7 +193,7 @@
 .mypage-account-notice.is-success {
     border-color: #a7e3d8;
     background: #f0fdfa;
-    color: #115e59;
+    color: var(--tripbora-primary-hover);
 }
 
 .mypage-account-danger {

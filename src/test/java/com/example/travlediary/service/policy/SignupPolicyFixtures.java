@@ -2,6 +2,7 @@ package com.example.travlediary.service.policy;
 
 import com.example.travlediary.model.PolicyType;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -35,6 +36,7 @@ public final class SignupPolicyFixtures {
     public static SignupPolicy policy(long id, PolicyType type,
                                       boolean requiresConsent, boolean required) {
         return new SignupPolicy(id, type, "1.0", requiresConsent, required,
-                type.name() + " 제목", "<p>" + type.name() + " 본문</p>", "ko");
+                type.name() + " 제목", "<p>" + type.name() + " 본문</p>", "ko",
+                LocalDateTime.of(2026, 9, 1, 0, 0));
     }
 }

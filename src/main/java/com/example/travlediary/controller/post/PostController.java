@@ -39,7 +39,7 @@ public class PostController {
                 .filter(url -> url != null && !url.isBlank())
                 .findFirst()
                 .orElse(null);
-        SeoModel.apply(model, post.getTitle() + " | Travel Diary", post.getContent(),
+        SeoModel.apply(model, post.getTitle() + " | Tripbora", post.getContent(),
                 "/post/" + id, seoImage, "article");
         SeoStructuredData.article(model, "/post/" + id,
                 post.getTitle(), post.getContent(), seoImage,

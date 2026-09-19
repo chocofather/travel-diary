@@ -2,6 +2,8 @@ package com.example.travlediary.service.policy;
 
 import com.example.travlediary.model.PolicyType;
 
+import java.time.LocalDateTime;
+
 /**
  * 회원가입 화면에 내보낼 정책 한 건. 화면과 서버 검증이 같은 값을 본다.
  *
@@ -22,7 +24,8 @@ public record SignupPolicy(
         boolean required,
         String title,
         String content,
-        String contentLocale) {
+        String contentLocale,
+        LocalDateTime effectiveAt) {
 
     /** 번역 제목이 아직 없을 때 화면이 대신 쓸 messages key. */
     public String labelCode() {

@@ -309,8 +309,8 @@
 .admin-user-pagination a:hover,
 .admin-user-pagination a.is-active {
     color: #fff;
-    background: #4265f7;
-    border-color: #4265f7;
+    background: var(--admin-blue);
+    border-color: var(--admin-blue);
 }
 
 .admin-user-pagination span.is-disabled {

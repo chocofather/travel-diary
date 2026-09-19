@@ -4,9 +4,9 @@
   색은 여행지 상세와 같은 중립 톤을 쓰고, 강조는 링크에만 아주 조금 준다.
 */
 .festival-detail {
-    --festival-accent: #0066cc;
-    --festival-accent-dark: #0a55a6;
-    --festival-accent-soft: #eef5fc;
+    --festival-accent: var(--tripbora-primary);
+    --festival-accent-dark: var(--tripbora-primary-hover);
+    --festival-accent-soft: var(--tripbora-soft);
     --festival-border: #e3e6ef;
     --festival-border-soft: #eef0f4;
     --festival-muted: #6b7686;

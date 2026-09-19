@@ -26,7 +26,7 @@
 }
 
 .admin-faq-visibility.is-visible {
-    color: #0f766e;
+    color: var(--admin-blue-dark);
     background: #f0fdfa;
     border: 1px solid #bfe9e3;
 }

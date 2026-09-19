@@ -3,7 +3,7 @@
     min-width: 0;
     padding: 64px 16px 88px;
     box-sizing: border-box;
-    background: #f5f8fa;
+    background: #fafafc;
 }
 
 .verification-card {
@@ -11,10 +11,10 @@
     margin: 0 auto;
     padding: 44px 42px;
     box-sizing: border-box;
-    border: 1px solid #e2eaf0;
+    border: 1px solid #ded5f5;
     border-radius: 18px;
     background: #ffffff;
-    box-shadow: 0 14px 40px rgba(31, 51, 73, .08);
+    box-shadow: 0 12px 32px rgba(81, 54, 148, .06);
     text-align: center;
 }
 
@@ -25,15 +25,20 @@
     margin: 0 auto 18px;
     place-items: center;
     border-radius: 50%;
-    color: #ffffff;
-    background: #176b87;
-    font-size: 28px;
-    font-weight: 800;
+    border: 1px solid #ded5f5;
+    color: #7657c8;
+    background: #f3efff;
+}
+
+.verification-icon svg {
+    display: block;
+    width: 28px;
+    height: 28px;
 }
 
 .verification-eyebrow {
     margin: 0 0 8px;
-    color: #176b87;
+    color: #7657c8;
     font-size: 12px;
     font-weight: 800;
     letter-spacing: .12em;
@@ -41,7 +46,7 @@
 
 .verification-card h1 {
     margin: 0 0 12px;
-    color: #182230;
+    color: #28272d;
     font-size: 28px;
     line-height: 1.35;
     letter-spacing: -.5px;
@@ -49,7 +54,7 @@
 
 .verification-description {
     margin: 0 auto 22px;
-    color: #5f6f82;
+    color: #625f6d;
     font-size: 16px;
     line-height: 1.7;
 }
@@ -58,8 +63,9 @@
     margin: 0 auto 22px;
     padding: 12px 14px;
     border-radius: 9px;
-    color: #365168;
-    background: #f2f7f9;
+    border: 1px solid #ded5f5;
+    color: #513694;
+    background: #f3efff;
     font-size: 14px;
     overflow-wrap: anywhere;
 }
@@ -68,29 +74,31 @@
     margin: 18px 0;
     padding: 13px 15px;
     border-radius: 9px;
-    color: #067647;
-    background: #ecfdf3;
+    border: 1px solid #ded5f5;
+    color: #513694;
+    background: #f3efff;
     font-size: 14px;
     line-height: 1.55;
 }
 
 .verification-notice.is-error {
+    border-color: #fecdca;
     color: #b42318;
     background: #fef3f2;
 }
 
 .verification-notice.is-info {
-    color: #365168;
-    background: #eef5f8;
+    color: #6042b0;
+    background: #faf8ff;
 }
 
 .verification-checklist {
     margin: 24px 0 28px;
     padding: 20px 20px 20px 40px;
-    border: 1px solid #e3ebf1;
+    border: 1px solid #ded5f5;
     border-radius: 10px;
-    color: #526275;
-    background: #fafcfd;
+    color: #5f5b69;
+    background: #faf8ff;
     font-size: 14px;
     line-height: 1.75;
     text-align: left;
@@ -107,7 +115,7 @@
     border: 0;
     border-radius: 9px;
     color: #ffffff;
-    background: #176b87;
+    background: #7657c8;
     font: inherit;
     font-weight: 700;
     text-decoration: none;
@@ -116,13 +124,18 @@
 
 .verification-resend-form button:hover,
 .verification-primary-link:hover {
-    background: #11556c;
+    background: #6042b0;
+}
+
+.verification-resend-form button:active,
+.verification-primary-link:active {
+    background: #513694;
 }
 
 .verification-resend-form button:focus-visible,
 .verification-primary-link:focus-visible,
 .verification-links a:focus-visible {
-    outline: 3px solid rgba(23, 107, 135, .25);
+    outline: 3px solid rgba(118, 87, 200, .24);
     outline-offset: 3px;
 }
 
@@ -140,7 +153,7 @@
 }
 
 /*
-  이메일 주소 변경은 재전송 다음의 보조 행동이다. 같은 청록 계열을 쓰되
+  이메일 주소 변경은 재전송 다음의 보조 행동이다. 같은 보라 계열을 쓰되
   면이 아니라 테두리로 표현해 primary 인 재전송 버튼보다 한 단계 약하게 둔다.
   LOCAL / KAKAO / NAVER 모두 이 한 가지 스타일을 쓰고 provider 브랜드색은 쓰지 않는다.
 */
@@ -166,9 +179,9 @@
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
-    border: 1px solid #9dc2ce;
+    border: 1px solid #ded5f5;
     border-radius: 9px;
-    color: #176b87;
+    color: #7657c8;
     background: #ffffff;
     font: inherit;
     font-size: 14px;
@@ -179,12 +192,12 @@
 }
 
 .verification-correction-button:hover {
-    border-color: #176b87;
-    background: #f2f7f9;
+    border-color: #7657c8;
+    background: #f3efff;
 }
 
 .verification-correction-button:focus-visible {
-    outline: 3px solid rgba(23, 107, 135, .25);
+    outline: 3px solid rgba(118, 87, 200, .24);
     outline-offset: 3px;
 }
 
@@ -203,7 +216,7 @@
 .verification-input-group label {
     display: block;
     margin-bottom: 8px;
-    color: #273849;
+    color: #28272d;
     font-size: 14px;
     font-weight: 700;
 }
@@ -214,16 +227,16 @@
     min-height: 48px;
     padding: 0 14px;
     box-sizing: border-box;
-    border: 1px solid #cbd8e2;
+    border: 1px solid #ded5f5;
     border-radius: 9px;
-    color: #182230;
+    color: #28272d;
     background: #ffffff;
     font: inherit;
 }
 
 .verification-input-group input:focus {
-    border-color: #176b87;
-    outline: 3px solid rgba(23, 107, 135, .14);
+    border-color: #7657c8;
+    outline: 3px solid rgba(118, 87, 200, .16);
 }
 
 .verification-input-group input[aria-invalid="true"] {
@@ -249,8 +262,8 @@
     margin-top: 10px;
     padding: 11px 12px;
     border-radius: 8px;
-    color: #365168;
-    background: #eef5f8;
+    color: #6042b0;
+    background: #f3efff;
     font-size: 13px;
     line-height: 1.5;
 }
@@ -259,7 +272,7 @@
     margin-left: 6px;
     padding: 2px 0;
     border: 0;
-    color: #176b87;
+    color: #7657c8;
     background: transparent;
     font: inherit;
     font-weight: 700;
@@ -275,19 +288,23 @@
     border: 0;
     border-radius: 9px;
     color: #ffffff;
-    background: #176b87;
+    background: #7657c8;
     font: inherit;
     font-weight: 700;
     cursor: pointer;
 }
 
 .verification-submit-button:hover {
-    background: #11556c;
+    background: #6042b0;
+}
+
+.verification-submit-button:active {
+    background: #513694;
 }
 
 .verification-submit-button:focus-visible,
 .verification-email-suggestion button:focus-visible {
-    outline: 3px solid rgba(23, 107, 135, .25);
+    outline: 3px solid rgba(118, 87, 200, .24);
     outline-offset: 3px;
 }
 
@@ -300,17 +317,21 @@
 }
 
 .verification-links a {
-    color: #365168;
+    color: #6042b0;
     font-size: 14px;
     text-underline-offset: 3px;
 }
 
 .verification-result-card.is-success .verification-icon {
+    border-color: #14804a;
+    color: #ffffff;
     background: #14804a;
 }
 
 .verification-result-card.is-expired .verification-icon,
 .verification-result-card.is-invalid .verification-icon {
+    border-color: #b54708;
+    color: #ffffff;
     background: #b54708;
 }
 

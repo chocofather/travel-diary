@@ -111,7 +111,7 @@ class MissingEmailAccountFilterTest {
             "/locale",
             "/css/style.css",
             "/js/account-email-required.js",
-            "/images/logo7.png",
+            "/images/branding/tripbora-logo.svg",
             "/error"
     })
     void theScreensNeededToFinishRegistrationAreNeverBlocked(String path) throws Exception {

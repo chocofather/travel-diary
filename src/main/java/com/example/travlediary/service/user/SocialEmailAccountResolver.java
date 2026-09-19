@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 /**
  * 아직 연결된 적 없는 social identity 를 어떻게 처리할지 정한다.
  *
- * <p>Google 은 OIDC 가 email_verified 를 함께 주므로 그 이메일을 Travel Diary 의 공식 이메일로
+ * <p>Google 은 OIDC 가 email_verified 를 함께 주므로 그 이메일을 Tripbora 의 공식 이메일로
  * 신뢰한다. 같은 이메일의 users 가 이미 있으면 새 users 를 만들지 않고 기존 계정 연결 확인으로 보낸다.
  * Kakao/Naver 는 아직 이메일 확보 수단이 없어 기존 신규가입 흐름을 그대로 쓴다.
  *

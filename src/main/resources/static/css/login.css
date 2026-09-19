@@ -42,15 +42,20 @@
 }
 
 .login-page .login-page__brand {
-    display: inline-flex;
+    display: block;
+    width: min(154px, 74vw);
+    aspect-ratio: 773 / 727;
     margin-bottom: 16px;
     border-radius: 4px;
 }
 
 .login-page .login-page__brand img {
     display: block;
-    width: 184px;
-    height: auto;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    object-fit: contain;
+    object-position: center;
 }
 
 .login-page .login-container {
@@ -211,8 +216,8 @@
 
 .login-page .login-field input:focus {
     outline: none;
-    border-color: #2563a6;
-    box-shadow: 0 0 0 3px rgba(37, 99, 166, 0.14);
+    border-color: var(--tripbora-primary);
+    box-shadow: 0 0 0 3px rgba(118, 87, 200, 0.14);
 }
 
 .login-page .login-field input[aria-invalid="true"] {
@@ -269,7 +274,7 @@
 .login-page .login-page__brand:focus-visible,
 .login-page a:focus-visible,
 .login-page .remember-label:focus-within {
-    outline: 3px solid rgba(37, 99, 166, 0.25);
+    outline: 3px solid rgba(118, 87, 200, 0.25);
     outline-offset: 2px;
 }
 
@@ -288,7 +293,7 @@
     width: 16px;
     height: 16px;
     margin: 0;
-    accent-color: #2563a6;
+    accent-color: var(--tripbora-primary);
     cursor: pointer;
 }
 
@@ -297,9 +302,9 @@
     height: 50px;
     margin: 0;
     padding: 0 20px;
-    border: 1px solid #2563a6;
+    border: 1px solid var(--tripbora-primary);
     border-radius: 6px;
-    background: #2563a6;
+    background: var(--tripbora-primary);
     color: #fff;
     font-size: 16px;
     font-weight: 700;
@@ -308,8 +313,8 @@
 }
 
 .login-page .login-submit:hover {
-    border-color: #1e5088;
-    background: #1e5088;
+    border-color: #6042b0;
+    background: #6042b0;
 }
 
 /* 탈퇴 유예 안내 화면. 인증 계열 카드 안에 정보와 보조 동작만 얹는다. */
@@ -375,7 +380,7 @@
 }
 
 .login-page .login-submit:focus-visible {
-    outline: 3px solid rgba(37, 99, 166, 0.28);
+    outline: 3px solid rgba(118, 87, 200, 0.28);
     outline-offset: 2px;
 }
 
@@ -487,7 +492,7 @@
 }
 
 .login-page .social-login-provider:focus-visible {
-    outline: 3px solid rgba(37, 99, 166, 0.28);
+    outline: 3px solid rgba(118, 87, 200, 0.28);
     outline-offset: 3px;
 }
 
@@ -524,7 +529,7 @@
 }
 
 .login-page .social-signup__recommend-button:focus-visible {
-    outline: 3px solid rgba(37, 99, 166, 0.28);
+    outline: 3px solid rgba(118, 87, 200, 0.28);
     outline-offset: 2px;
 }
 
@@ -577,7 +582,7 @@
 
 .login-page .account-recovery a:hover,
 .login-page .verification-resend-entry a:hover {
-    color: #2563a6;
+    color: var(--tripbora-primary);
     text-decoration: underline;
 }
 
@@ -594,7 +599,7 @@
 }
 
 .login-page .signup-entry a {
-    color: #2563a6;
+    color: var(--tripbora-primary);
     font-weight: 700;
 }
 
@@ -677,6 +682,93 @@
     line-height: 1.55;
 }
 
+/* 아이디·비밀번호 복구와 이메일 보완 화면에만 적용한다.
+   로그인/회원가입의 크기와 간격 계약은 기존 .login-page 규칙을 그대로 사용한다. */
+.login-page.auth-flow-page {
+    background: #fafafc;
+    color: #28272d;
+}
+
+.login-page.auth-flow-page .login-container {
+    border-color: #ded5f5;
+    box-shadow: 0 8px 28px rgba(81, 54, 148, 0.06);
+}
+
+.login-page.auth-flow-page .login-header {
+    text-align: center;
+}
+
+.login-page.auth-flow-page .login-header p {
+    text-align: center;
+}
+
+.login-page.auth-flow-page .auth-flow-icon {
+    display: grid;
+    width: 52px;
+    height: 52px;
+    margin: 0 auto 14px;
+    place-items: center;
+    border: 1px solid #ded5f5;
+    border-radius: 50%;
+    color: #7657c8;
+    background: #f3efff;
+}
+
+.login-page.auth-flow-page .auth-flow-icon svg {
+    display: block;
+    width: 25px;
+    height: 25px;
+}
+
+.login-page.auth-flow-page .login-field input[type="text"],
+.login-page.auth-flow-page .login-field input[type="email"],
+.login-page.auth-flow-page .login-field input[type="password"] {
+    border-color: #ded5f5;
+    color: #28272d;
+}
+
+.login-page.auth-flow-page .login-field input:hover {
+    border-color: #b9a8e6;
+}
+
+.login-page.auth-flow-page .login-field input:focus {
+    border-color: #7657c8;
+    box-shadow: 0 0 0 3px rgba(118, 87, 200, 0.16);
+}
+
+.login-page.auth-flow-page .login-field input[aria-invalid="true"] {
+    border-color: #d92d20;
+}
+
+.login-page.auth-flow-page .login-submit:hover {
+    border-color: #6042b0;
+    background: #6042b0;
+}
+
+.login-page.auth-flow-page .login-submit:active {
+    border-color: #513694;
+    background: #513694;
+}
+
+.login-page.auth-flow-page .login-submit:focus-visible,
+.login-page.auth-flow-page .login-password-control .toggle-password:focus-visible,
+.login-page.auth-flow-page .social-signup__recommend-button:focus-visible,
+.login-page.auth-flow-page a:focus-visible {
+    outline-color: rgba(118, 87, 200, 0.28);
+}
+
+.login-page.auth-flow-page .recovery-note,
+.login-page.auth-flow-page .social-signup__account {
+    border: 1px solid #ded5f5;
+    background: #f3efff;
+}
+
+.login-page.auth-flow-page .social-signup__recommend-button:hover {
+    border-color: #ded5f5;
+    color: #6042b0;
+    background: #f3efff;
+}
+
 @media (max-width: 560px) {
     .login-page {
         background: #fff;
@@ -697,8 +789,8 @@
         margin-bottom: 20px;
     }
 
-    .login-page .login-page__brand img {
-        width: 160px;
+    .login-page .login-page__brand {
+        width: min(137px, 78vw);
     }
 
     .login-page .login-container {

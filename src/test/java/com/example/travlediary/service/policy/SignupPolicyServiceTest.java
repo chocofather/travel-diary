@@ -122,6 +122,7 @@ class SignupPolicyServiceTest {
         assertThat(terms.title()).isEqualTo("이용약관");
         assertThat(terms.contentLocale()).isEqualTo("ko");
         assertThat(terms.content()).contains("이용약관");
+        assertThat(terms.effectiveAt()).isEqualTo(NOW.minusDays(1));
     }
 
     /** 요청 locale 번역이 있으면 대체본을 먼저 읽었더라도 그쪽이 이긴다. */

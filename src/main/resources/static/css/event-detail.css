@@ -1,8 +1,8 @@
 /* 이벤트 상세 전용 스타일. 목록(event.css)과 분리해 서로 영향을 주지 않는다. */
 .event-detail {
-    --event-detail-accent: #0f766e;
-    --event-detail-accent-dark: #115e59;
-    --event-detail-accent-soft: #f0fdfa;
+    --event-detail-accent: var(--tripbora-primary);
+    --event-detail-accent-dark: var(--tripbora-primary-hover);
+    --event-detail-accent-soft: var(--tripbora-soft);
     --event-detail-border: #e2e8f0;
     width: min(960px, calc(100% - 40px));
     margin: 46px auto 90px;
@@ -18,7 +18,7 @@
 /* 이미지가 없는 이벤트는 헤더 자체를 옅은 밴드로 채워 상단이 비어 보이지 않게 한다 */
 .event-detail.is-text-only .event-detail-header {
     padding: 34px 32px 30px;
-    background: linear-gradient(140deg, #f0fdfa 0%, #f6fbfc 62%, #ffffff 100%);
+    background: linear-gradient(140deg, #f3efff 0%, #fafafc 62%, #ffffff 100%);
     border: 1px solid #d8ebe8;
     border-radius: 18px;
 }
@@ -187,7 +187,7 @@
 }
 
 .event-detail-back-link:focus-visible {
-    outline: 3px solid rgba(15, 118, 110, 0.18);
+    outline: 3px solid rgba(118, 87, 200, 0.18);
     outline-offset: 2px;
 }
 

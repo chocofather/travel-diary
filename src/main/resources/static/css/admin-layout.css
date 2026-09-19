@@ -13,10 +13,10 @@
 }
 
 .admin-shell {
-    --admin-blue: #4265f7;
-    --admin-blue-dark: #2f4fc7;
-    --admin-blue-soft: #eef3ff;
-    --admin-border: #e2e8f3;
+    --admin-blue: #7657c8;
+    --admin-blue-dark: #6042b0;
+    --admin-blue-soft: #f3efff;
+    --admin-border: #e4e0ed;
     --admin-muted: #717b91;
     display: grid;
     grid-template-columns: 256px minmax(0, 1fr);

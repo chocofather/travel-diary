@@ -28,6 +28,8 @@ class HomePageContractTest {
         assertThat(sliderScript)
                 .contains("fetch('/api/events/slide')")
                 .contains("navBar.style.backgroundColor = bgColor")
+                .contains("#F3EFFF", "#EEF4FA", "#FBF5EE", "#F8F0F4")
+                .doesNotContain("#e0ffe0", "#fff5cc", "#ffe0f0", "#e0f7fa")
                 .contains("autoplay: { delay: 10000")
                 .contains("swiper.slidePrev()", "swiper.slideNext()");
         assertThat(sliderCss)
