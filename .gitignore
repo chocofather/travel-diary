@@ -58,3 +58,7 @@ src/main/resources/application-local.yml
 ### Local secrets ###
 .env
 .env.*
+
+### Local SQL / analysis docs ###
+*.sql
+docs/course-comment-images-analysis.txt
