@@ -55,7 +55,6 @@ class UserServicePasswordPolicyTest {
         // 연령 확인은 이 테스트들의 관심사가 아니므로 통과하는 값을 기본으로 둔다.
         form.setBirthDate("2000-01-01");
         form.setNickname("여행자123");
-        form.setUsername("member");
         form.setUserEmail("member@example.com");
         form.setUserPassword("no-special-password");
         form.setPasswordConfirm("no-special-password");

@@ -74,11 +74,11 @@ public class LoginController {
             }
         }
 
-        String username = storedState == null ? null : storedState.username();
+        String email = storedState == null ? null : storedState.email();
         LoginThrottleStatus currentStatus = storedState == null
                 ? loginThrottle.ipStatus(ClientIpResolver.of(request))
-                : loginThrottle.status(username, ClientIpResolver.of(request));
-        LoginFormState currentState = LoginFormState.from(username, currentStatus);
+                : loginThrottle.status(email, ClientIpResolver.of(request));
+        LoginFormState currentState = LoginFormState.from(email, currentStatus);
 
         if (!currentStatus.blocked()) {
             if (storedState != null) {

@@ -64,13 +64,13 @@ class CsrfPolicyTest {
     @Test
     void theLoginPostNeedsAToken() throws Exception {
         mockMvc.perform(post("/login")
-                        .param("username", "member")
+                        .param("email", "member@example.com")
                         .param("password", "Password!"))
                 .andExpect(status().isForbidden());
 
         // 토큰이 있으면 CSRF 를 지나 인증 단계로 간다 (성공/실패는 자격 증명이 정한다)
         mockMvc.perform(post("/login")
-                        .param("username", "member")
+                        .param("email", "member@example.com")
                         .param("password", "Password!")
                         .with(csrf()))
                 .andExpect(status().is3xxRedirection());
@@ -80,7 +80,6 @@ class CsrfPolicyTest {
     @Test
     void theAnonymousSignupPostNeedsAToken() throws Exception {
         mockMvc.perform(post("/users/register")
-                        .param("username", "member")
                         .param("userEmail", "member@gmail.com")
                         .param("userPassword", "Password!")
                         .param("passwordConfirm", "Password!")
@@ -96,7 +95,6 @@ class CsrfPolicyTest {
         when(userService.registerUser(any()))
                 .thenReturn(new RegistrationResult("member@gmail.com", true));
         mockMvc.perform(post("/users/register")
-                        .param("username", "member")
                         .param("userEmail", "member@gmail.com")
                         .param("userPassword", "Password!")
                         .param("passwordConfirm", "Password!")

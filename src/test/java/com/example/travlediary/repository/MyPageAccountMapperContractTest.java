@@ -16,10 +16,10 @@ class MyPageAccountMapperContractTest {
         String select = statement(userXml(), "select", "findAccountDetailsById");
 
         assertThat(select)
-                .contains("username", "user_email AS userEmail", "full_name AS fullName",
+                .contains("user_email AS userEmail", "full_name AS fullName",
                         "user_phone AS userPhone", "user_birth AS userBirth")
                 .contains("id = #{id}", "status = 'ACTIVE'", "deleted_at IS NULL")
-                .doesNotContain("user_password", "user_role", "verification_token",
+                .doesNotContain("username", "user_password", "user_role", "verification_token",
                         "reset_token");
     }
 
@@ -106,8 +106,9 @@ class MyPageAccountMapperContractTest {
 
     @Test
     void deactivatedAccountsCannotRequestOrUsePasswordResetTokens() throws IOException {
-        assertThat(statement(userXml(), "select", "findByUsernameAndEmail"))
-                .contains("status = 'ACTIVE'", "deleted_at IS NULL");
+        assertThat(statement(userXml(), "select", "findActiveLocalAccountByEmailForPasswordReset"))
+                .contains("user_email = #{userEmail}", "status = 'ACTIVE'",
+                        "deleted_at IS NULL", "user_password IS NOT NULL");
         assertThat(statement(userXml(), "select", "findByResetToken"))
                 .contains("status = 'ACTIVE'", "deleted_at IS NULL");
     }
@@ -120,14 +121,6 @@ class MyPageAccountMapperContractTest {
         assertThat(statement(userXml(), "select", "findByResetToken"))
                 .contains("reset_token = #{tokenHash}")
                 .doesNotContain("#{token}");
-    }
-
-    @Test
-    void usernameRecoveryUsesEmailOnlyAndExcludesInactiveOrDeletedAccounts() throws IOException {
-        assertThat(statement(userXml(), "select", "findActiveByEmailForUsernameRecovery"))
-                .contains("user_email = #{userEmail}", "status = 'ACTIVE'",
-                        "deleted_at IS NULL")
-                .doesNotContain("full_name");
     }
 
     private String userXml() throws IOException {

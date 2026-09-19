@@ -26,7 +26,6 @@ import java.util.Locale;
 public class EmailServiceImpl implements EmailService {
 
     static final String VERIFICATION_SUBJECT_CODE = "mail.verification.subject";
-    static final String USERNAME_RECOVERY_SUBJECT_CODE = "mail.usernameRecovery.subject";
     static final String PASSWORD_RESET_SUBJECT_CODE = "mail.passwordReset.subject";
     static final String ACCOUNT_RECOVERY_SUBJECT_CODE = "mail.accountRecovery.subject";
     private static final String SENDER_NAME = "Tripbora";
@@ -63,24 +62,6 @@ public class EmailServiceImpl implements EmailService {
         context.setVariable("validHours", EmailVerificationService.TOKEN_VALIDITY.toHours());
 
         send(to, VERIFICATION_SUBJECT_CODE, "email/verification-email", context, language);
-    }
-
-    @Override
-    public void sendUsernameRecoveryEmail(String to, String username, String loginUrl,
-                                          String passwordResetUrl, SupportedLanguage language) {
-        SupportedLanguage resolved = resolve(language);
-        Context context = mailContext(resolved);
-        context.setVariable("username", username);
-        context.setVariable("loginUrl", loginUrl);
-        context.setVariable("passwordResetUrl", passwordResetUrl);
-
-        // 이 메일은 주소가 링크 안에만 있어 평문에서는 보이지 않으므로 따로 덧붙인다.
-        String plainTextLinks = "%n%n%s: %s%n%s: %s".formatted(
-                message("mail.usernameRecovery.loginButton", resolved), loginUrl,
-                message("mail.usernameRecovery.resetLink", resolved), passwordResetUrl);
-
-        send(to, USERNAME_RECOVERY_SUBJECT_CODE, "email/username-recovery-email",
-                context, resolved, plainTextLinks);
     }
 
     @Override

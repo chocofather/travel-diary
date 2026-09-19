@@ -2,9 +2,8 @@ $(function () {
     const form = $(".register-container form");
     if (!form.length) return;
 
-    const availability = {username: false, email: false, nickname: false};
-    const requestVersion = {username: 0, email: 0, nickname: 0};
-    const usernamePattern = /^(?=.*[a-z])[a-z0-9_-]{3,16}$/;
+    const availability = {email: false, nickname: false};
+    const requestVersion = {email: 0, nickname: 0};
     const passwordPattern = /^(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,72}$/;
     const emailPattern = /^[A-Z0-9._%+-]+@[A-Z0-9-]+(?:\.[A-Z0-9-]+)+$/i;
 
@@ -16,14 +15,12 @@ $(function () {
         (text, value, index) => text.split("{" + index + "}").join(String(value)),
         template || "");
     const serverErrorSelectors = {
-        username: "#usernameServerError",
         userEmail: "#emailServerError",
         nickname: "#nicknameServerError",
         birthDate: "#birthDateServerError",
         agreedPolicyVersionIds: "[data-field-error='agreedPolicyVersionIds']"
     };
     const feedbackOwners = {
-        "#usernameMessage": "#username",
         "#emailMessage": "#userEmail",
         "#passwordValidationMessage": "#userPassword",
         "#passwordMessage": "#passwordConfirm",
@@ -117,8 +114,7 @@ $(function () {
         const birthDateAccepted = birthDateStatus() === "ok";
         $("#step1-next").prop("disabled", !requiredTermsAccepted || !birthDateAccepted);
 
-        const accountReady = availability.username
-            && availability.email
+        const accountReady = availability.email
             && passwordIsValid()
             && passwordsMatch()
             && availability.nickname;
@@ -141,26 +137,6 @@ $(function () {
     function clearServerError(field) {
         $(serverErrorSelectors[field]).prop("hidden", true);
     }
-
-    const checkUsernameAvailability = debounce(function () {
-        const username = $("#username").val().trim();
-        if (!usernamePattern.test(username)) return;
-        const version = requestVersion.username;
-
-        $.get("/api/users/check-username", {username})
-            .done(function (response) {
-                if (version !== requestVersion.username || username !== $("#username").val().trim()) return;
-                availability.username = !response.exists;
-                setMessage("#usernameMessage",
-                    response.exists ? messages.msgUsernameTaken : messages.msgUsernameAvailable,
-                    response.exists ? "error" : "success");
-                updateButtons();
-            })
-            .fail(function () {
-                if (version !== requestVersion.username) return;
-                setMessage("#usernameMessage", messages.msgUsernameCheckFailed, "error");
-            });
-    });
 
     const checkEmailAvailability = debounce(function () {
         const email = $("#userEmail").val().trim().toLowerCase();
@@ -260,18 +236,6 @@ $(function () {
         panel.prop("hidden", expanded);
     });
 
-    $("#username").on("input", function () {
-        clearServerError("username");
-        invalidate("username");
-        const username = this.value.trim();
-        if (!usernamePattern.test(username)) {
-            setMessage("#usernameMessage", messages.msgUsernameInvalid, "error");
-            return;
-        }
-        setMessage("#usernameMessage", messages.msgChecking);
-        checkUsernameAvailability();
-    });
-
     $("#userEmail").on("input", function () {
         clearServerError("userEmail");
         invalidate("email");
@@ -359,14 +323,13 @@ $(function () {
             event.preventDefault();
             return;
         }
-        if (!availability.username || !availability.email || !availability.nickname
+        if (!availability.email || !availability.nickname
             || !passwordIsValid() || !passwordsMatch()) {
             event.preventDefault();
             setMessage("#nicknameMessage", messages.msgIncomplete, "error");
             showStep(2);
             return;
         }
-        $("#username").val($("#username").val().trim());
         $("#userEmail").val($("#userEmail").val().trim().toLowerCase());
         $("#nickname").val($("#nickname").val().trim());
         isSubmitting = true;
@@ -375,7 +338,7 @@ $(function () {
     });
 
     showStep(currentStep);
-    $("#username, #userEmail, #nickname").each(function () {
+    $("#userEmail, #nickname").each(function () {
         const field = this.id;
         if (this.value.trim() && !$(serverErrorSelectors[field]).length) $(this).trigger("input");
     });

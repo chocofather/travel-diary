@@ -379,7 +379,6 @@ class MyPageAccountServiceTest {
     private User activeAccount(UserRole role) {
         User account = new User();
         account.setId(7L);
-        account.setUsername("minjun");
         account.setUserEmail("member@example.com");
         account.setNickname("여행자");
         account.setUserPassword("encoded-password");

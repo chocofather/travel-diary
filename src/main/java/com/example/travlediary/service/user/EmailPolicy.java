@@ -15,8 +15,13 @@ public final class EmailPolicy {
     private EmailPolicy() {
     }
 
+    /** 로그인·제한 키가 같은 canonical 이메일을 사용하도록 형식 검사 전 정규화만 수행한다. */
+    public static String normalize(String email) {
+        return email == null ? "" : email.strip().toLowerCase(Locale.ROOT);
+    }
+
     public static String normalizeAndValidate(String email) {
-        String normalized = email == null ? "" : email.strip().toLowerCase(Locale.ROOT);
+        String normalized = normalize(email);
         if (normalized.length() > MAX_LENGTH || !EMAIL_PATTERN.matcher(normalized).matches()) {
             throw new RegistrationValidationException(
                     "userEmail", INVALID_MESSAGE, "signup.error.email.invalid");

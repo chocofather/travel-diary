@@ -46,13 +46,13 @@ public class LoginThrottle {
         this.ipCapacity = ipCapacity;
     }
 
-    public synchronized boolean isBlocked(String username, String ipAddress) {
-        return status(username, ipAddress).blocked();
+    public synchronized boolean isBlocked(String email, String ipAddress) {
+        return status(email, ipAddress).blocked();
     }
 
-    public synchronized LoginThrottleStatus status(String username, String ipAddress) {
+    public synchronized LoginThrottleStatus status(String email, String ipAddress) {
         Instant now = clock.instant();
-        AccountState account = currentAccount(normalizeAccount(username), now);
+        AccountState account = currentAccount(normalizeEmail(email), now);
         IpState ip = currentIp(normalizeIp(ipAddress), now);
         cleanUpIfNeeded(now);
         return status(account, ip, now);
@@ -68,10 +68,10 @@ public class LoginThrottle {
         return new LoginThrottleStatus(0, blockedUntil);
     }
 
-    public synchronized LoginThrottleStatus recordFailure(String username, String ipAddress) {
+    public synchronized LoginThrottleStatus recordFailure(String email, String ipAddress) {
         Instant now = clock.instant();
 
-        String accountKey = normalizeAccount(username);
+        String accountKey = normalizeEmail(email);
         AccountState account = currentAccount(accountKey, now);
         if (account == null) {
             account = new AccountState();
@@ -110,8 +110,8 @@ public class LoginThrottle {
         return status(account, ip, now);
     }
 
-    public synchronized void recordSuccess(String username) {
-        accounts.remove(normalizeAccount(username));
+    public synchronized void recordSuccess(String email) {
+        accounts.remove(normalizeEmail(email));
         cleanUpIfNeeded(clock.instant());
     }
 
@@ -195,8 +195,8 @@ public class LoginThrottle {
         }
     }
 
-    private String normalizeAccount(String username) {
-        return normalize(username, "<empty>", MAX_ACCOUNT_KEY_LENGTH)
+    private String normalizeEmail(String email) {
+        return normalize(email, "<empty>", MAX_ACCOUNT_KEY_LENGTH)
                 .toLowerCase(Locale.ROOT);
     }
 

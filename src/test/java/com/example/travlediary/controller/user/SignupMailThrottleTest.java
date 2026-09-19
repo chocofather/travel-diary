@@ -127,14 +127,12 @@ class SignupMailThrottleTest {
 
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
                         .post("/users/find-password")
-                        .param("username", "member")
                         .param("userEmail", "member@gmail.com")
                         .with(csrf())
                         .with(from("203.0.113.64")))
                 .andExpect(status().isTooManyRequests());
 
         verify(userService, never()).processResetPasswordRequest(
-                org.mockito.ArgumentMatchers.anyString(),
                 org.mockito.ArgumentMatchers.anyString());
     }
 
@@ -170,7 +168,6 @@ class SignupMailThrottleTest {
                 .param("agreedPolicyVersionIds", "101")
                 .param("agreedPolicyVersionIds", "103")
                 .param("birthDate", "2000-01-01")
-                .param("username", "member")
                 .param("userEmail", email)
                 .param("userPassword", "Password!")
                 .param("passwordConfirm", "Password!")

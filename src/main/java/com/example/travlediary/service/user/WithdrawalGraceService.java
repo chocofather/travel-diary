@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
  * <p>유예 여부의 기준은 배치 실행 여부가 아니라 언제나 users.purge_scheduled_at 이다.
  * {@link AccountPurgeScheduler}는 매시 정각에만 돌기 때문에 "유예는 끝났는데 아직 파기되지 않은"
  * 구간이 최대 한 시간 생기는데, 그동안 이 계정을 유예 중인 것처럼 다루면
- * 복구도 못 하고 기존 email/username/nickname/social 연결은 그대로 점유한 채
+ * 복구도 못 하고 기존 email/nickname/social 연결은 그대로 점유한 채
  * 새로 가입할 수도 없는 상태에 갇힌다. 그래서 요청 시점에 직접 판정한다.
  *
  * <p>여기서 실행하는 파기는 배치의 파기와 같은 절차를 쓴다. 단 방금 본인 인증에 사용한

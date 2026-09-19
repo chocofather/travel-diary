@@ -66,14 +66,14 @@ class PasswordRecoveryI18nContractTest {
 
     @ParameterizedTest
     @CsvSource(delimiter = '|', value = {
-            "ko    | ko    | 비밀번호 재설정        | 아이디   | 가입 이메일           | 재설정 링크 보내기 | 로그인으로 돌아가기",
-            "en    | en    | Reset your password  | Username| Registered email     | Send reset link  | Back to login",
-            "ja    | ja    | パスワードを再設定     | ID      | 登録メールアドレス     | 再設定リンクを送信 | ログインへ戻る",
-            "zh-CN | zh-CN | 重置密码              | 账号     | 注册邮箱             | 发送重置链接      | 返回登录",
-            "zh-TW | zh-TW | 重設密碼              | 帳號     | 註冊電子郵件          | 寄送重設連結      | 返回登入"
+            "ko    | ko    | 비밀번호 재설정        | 가입 이메일           | 재설정 링크 보내기 | 로그인으로 돌아가기",
+            "en    | en    | Reset your password  | Registered email     | Send reset link  | Back to login",
+            "ja    | ja    | パスワードを再設定     | 登録メールアドレス     | 再設定リンクを送信 | ログインへ戻る",
+            "zh-CN | zh-CN | 重置密码              | 注册邮箱             | 发送重置链接      | 返回登录",
+            "zh-TW | zh-TW | 重設密碼              | 註冊電子郵件          | 寄送重設連結      | 返回登入"
     })
     void findPasswordRendersInEverySupportedLanguage(String cookie, String expectedLang,
-                                                     String title, String username, String email,
+                                                     String title, String email,
                                                      String submit, String backToLogin)
             throws Exception {
         Document page = render(get("/users/find-password").cookie(localeCookie(cookie)));
@@ -81,7 +81,7 @@ class PasswordRecoveryI18nContractTest {
         assertThat(page.selectFirst("html").attr("lang")).isEqualTo(expectedLang);
         assertThat(page.title()).isNotBlank().doesNotContain("??");
         assertThat(page.selectFirst("#recoveryTitle").text()).isEqualTo(title);
-        assertThat(page.selectFirst("label[for=findPasswordUsername]").text()).isEqualTo(username);
+        assertThat(page.selectFirst("#findPasswordUsername")).isNull();
         assertThat(page.selectFirst("label[for=findPasswordEmail]").text()).isEqualTo(email);
         assertThat(page.selectFirst(".login-submit").text()).isEqualTo(submit);
         assertThat(page.select(".account-recovery a").eachText()).contains(backToLogin);

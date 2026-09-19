@@ -3,7 +3,7 @@ package com.example.travlediary.service.travelplan;
 /**
  * 방 전용 표시 이름 규칙.
  * 방을 만드는 OWNER 와 초대로 들어오는 MEMBER 가 같은 규칙을 쓴다.
- * 사이트 전체의 username / nickname 과는 별개다.
+ * 사이트 전체의 회원 닉네임과는 별개다.
  */
 final class TravelPlanDisplayName {
 

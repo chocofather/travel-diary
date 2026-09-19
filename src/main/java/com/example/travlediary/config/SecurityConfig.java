@@ -131,7 +131,7 @@ public class SecurityConfig {
                                 "/users/verification/resend",
                                 // 인증 대기 화면이 세션 문맥만으로 진행 상태를 확인한다.
                                 "/users/verification/status",
-                                "/users/find-username", "/users/find-password", "/users/reset-password/**",
+                                "/users/find-password", "/users/reset-password/**",
                                 // 메일로 받은 복구 링크만 공개다. 복구 요청은 탈퇴 유예 안내 화면에서만 한다.
                                 "/users/recover-account/confirm",
                                 "/css/**", "/js/**", "/images/**", "/fonts/**",
@@ -245,6 +245,7 @@ public class SecurityConfig {
                 .formLogin(login -> {
                     login.loginPage("/login")
                             .loginProcessingUrl("/login")
+                            .usernameParameter("email")
                             .successHandler(customLoginSuccessHandler)
                             .permitAll();
                     login.failureHandler(

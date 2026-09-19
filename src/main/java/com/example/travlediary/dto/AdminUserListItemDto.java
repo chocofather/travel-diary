@@ -10,7 +10,6 @@ import java.sql.Timestamp;
 @Data
 public class AdminUserListItemDto {
     private Long id;
-    private String username;
     private String nickname;
     private String userEmail;
     private UserRole userRole;
@@ -20,5 +19,9 @@ public class AdminUserListItemDto {
     /** 관리자 계정은 이후 제재(정지/강제탈퇴) 대상에서 제외한다. */
     public boolean isAdmin() {
         return userRole == UserRole.ADMIN;
+    }
+
+    public String getDisplayName() {
+        return nickname == null || nickname.isBlank() ? "회원 #" + id : nickname;
     }
 }

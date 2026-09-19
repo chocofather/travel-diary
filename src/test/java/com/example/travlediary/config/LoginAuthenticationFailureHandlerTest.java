@@ -35,38 +35,38 @@ class LoginAuthenticationFailureHandlerTest {
     }
 
     @Test
-    void failedAuthenticationRecordsTheSubmittedAccountAndRemoteIp() throws Exception {
-        MockHttpServletRequest request = request("member", "203.0.113.25");
+    void failedAuthenticationRecordsTheNormalizedSubmittedEmailAndRemoteIp() throws Exception {
+        MockHttpServletRequest request = request("  MEMBER@EXAMPLE.COM  ", "203.0.113.25");
         request.addParameter("password", "very-secret-password");
         MockHttpServletResponse response = new MockHttpServletResponse();
-        when(throttle.recordFailure("member", "203.0.113.25"))
+        when(throttle.recordFailure("member@example.com", "203.0.113.25"))
                 .thenReturn(new LoginThrottleStatus(3, null));
 
         handler.onAuthenticationFailure(
                 request, response, new BadCredentialsException("wrong password"));
 
-        verify(throttle).recordFailure("member", "203.0.113.25");
+        verify(throttle).recordFailure("member@example.com", "203.0.113.25");
         assertThat(response.getRedirectedUrl()).isEqualTo("/login?error=true");
         LoginFormState formState = (LoginFormState) request.getSession()
                 .getAttribute(LoginFormState.SESSION_ATTRIBUTE);
-        assertThat(formState.username()).isEqualTo("member");
+        assertThat(formState.email()).isEqualTo("member@example.com");
         assertThat(formState.failureCount()).isEqualTo(3);
         assertThat(formState.blockedUntil()).isNull();
         assertThat(response.getRedirectedUrl())
-                .doesNotContain("member", "very-secret-password");
+                .doesNotContain("member@example.com", "very-secret-password");
         assertThat(Collections.list(request.getSession().getAttributeNames()))
                 .containsExactly(LoginFormState.SESSION_ATTRIBUTE);
     }
 
     @Test
     void differentAuthenticationFailuresUseTheSamePublicResponse() throws Exception {
-        MockHttpServletRequest firstRequest = request("missing", "203.0.113.25");
+        MockHttpServletRequest firstRequest = request("missing@example.com", "203.0.113.25");
         MockHttpServletResponse firstResponse = new MockHttpServletResponse();
-        MockHttpServletRequest secondRequest = request("disabled", "203.0.113.26");
+        MockHttpServletRequest secondRequest = request("disabled@example.com", "203.0.113.26");
         MockHttpServletResponse secondResponse = new MockHttpServletResponse();
-        when(throttle.recordFailure("missing", "203.0.113.25"))
+        when(throttle.recordFailure("missing@example.com", "203.0.113.25"))
                 .thenReturn(new LoginThrottleStatus(1, null));
-        when(throttle.recordFailure("disabled", "203.0.113.26"))
+        when(throttle.recordFailure("disabled@example.com", "203.0.113.26"))
                 .thenReturn(new LoginThrottleStatus(1, null));
 
         handler.onAuthenticationFailure(
@@ -81,11 +81,11 @@ class LoginAuthenticationFailureHandlerTest {
     /** 1회 실패 후 재시도해도 원래 상세페이지로 돌아가야 하므로 redirect 를 잃지 않는다. */
     @Test
     void failedLoginKeepsTheOriginalDetailPageForTheNextAttempt() throws Exception {
-        when(throttle.recordFailure("member", "203.0.113.25"))
+        when(throttle.recordFailure("member@example.com", "203.0.113.25"))
                 .thenReturn(new LoginThrottleStatus(1, null));
 
         for (String detailPath : new String[]{"/destinations/15", "/post/13", "/course/9"}) {
-            MockHttpServletRequest request = request("member", "203.0.113.25");
+            MockHttpServletRequest request = request("member@example.com", "203.0.113.25");
             request.addParameter("redirect", detailPath);
             MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -101,7 +101,7 @@ class LoginAuthenticationFailureHandlerTest {
     /** 외부 host 로는 되돌아가지 않는다(open redirect 방지). */
     @Test
     void unsafeRedirectIsDroppedOnFailure() throws Exception {
-        when(throttle.recordFailure("member", "203.0.113.25"))
+        when(throttle.recordFailure("member@example.com", "203.0.113.25"))
                 .thenReturn(new LoginThrottleStatus(1, null));
 
         for (String unsafe : new String[]{
@@ -110,7 +110,7 @@ class LoginAuthenticationFailureHandlerTest {
                 "//evil.example/path",
                 "/post/13%0d%0aLocation:https://evil.example",
                 "not-an-internal-path"}) {
-            MockHttpServletRequest request = request("member", "203.0.113.25");
+            MockHttpServletRequest request = request("member@example.com", "203.0.113.25");
             request.addParameter("redirect", unsafe);
             MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -123,9 +123,9 @@ class LoginAuthenticationFailureHandlerTest {
         }
     }
 
-    private MockHttpServletRequest request(String username, String ipAddress) {
+    private MockHttpServletRequest request(String email, String ipAddress) {
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/login");
-        request.addParameter("username", username);
+        request.addParameter("email", email);
         request.setRemoteAddr(ipAddress);
         return request;
     }

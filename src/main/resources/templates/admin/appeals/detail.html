@@ -28,7 +28,7 @@
               th:text="${appeal.status.displayName}">접수됨</span>
       </div>
       <dl class="admin-appeal-meta">
-        <div><dt>아이디</dt><dd th:text="${appeal.username}">travler</dd></div>
+        <div><dt>회원 번호</dt><dd th:text="|#${appeal.userId}|">#5</dd></div>
         <div><dt>닉네임</dt><dd th:text="${appeal.nickname}">여행자</dd></div>
         <div><dt>이메일</dt><dd th:text="${appeal.userEmail}">user@example.com</dd></div>
         <div>

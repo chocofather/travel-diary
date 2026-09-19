@@ -33,7 +33,8 @@ class RegistrationUiContractTest {
                         "*{userBirth}", "id=\"fullName\"", "id=\"userPhone\"",
                         "id=\"userBirth\"", "data-step-indicator=\"3\"",
                         "id=\"step-3\"", "profileImageFile",
-                        "enctype=\"multipart/form-data\"", "step3-submit");
+                        "enctype=\"multipart/form-data\"", "step3-submit",
+                        "*{username}", "id=\"username\"", "/api/users/check-username");
 
         assertThat(template.indexOf("id=\"step-2\""))
                 .isLessThan(template.indexOf("id=\"nickname\""));
@@ -41,12 +42,14 @@ class RegistrationUiContractTest {
         assertThat(Arrays.stream(
                         com.example.travlediary.dto.RegistrationForm.class.getDeclaredFields())
                 .map(java.lang.reflect.Field::getName))
-                .doesNotContain("fullName", "userPhone", "userBirth", "profileImageFile");
+                .doesNotContain("username", "fullName", "userPhone", "userBirth",
+                        "profileImageFile");
 
         String mapper = resource("mapper/UserMapper.xml");
         String insert = mapper.substring(
                 mapper.indexOf("<insert id=\"insertUser\""), mapper.indexOf("</insert>"));
         assertThat(insert).doesNotContain(
+                "username", "#{username}",
                 "full_name", "user_phone", "user_birth",
                 "#{fullName}", "#{userPhone}", "#{userBirth}");
     }
@@ -59,10 +62,8 @@ class RegistrationUiContractTest {
         String template = resource("templates/register.html");
 
         assertThat(javascript)
-                .contains("username: false")
                 .contains("email: false")
                 .contains("nickname: false")
-                .contains("invalidate(\"username\")")
                 .contains("invalidate(\"email\")")
                 .contains("TravelDiaryNicknameAvailability.initialize")
                 .contains("TravelDiaryEmailDomain?.suggest(email)")
@@ -77,7 +78,8 @@ class RegistrationUiContractTest {
                 .contains("if (isSubmitting)")
                 .contains("isSubmitting = true")
                 .contains("!$(serverErrorSelectors[field]).length")
-                .contains("!availability.username || !availability.email || !availability.nickname");
+                .contains("!availability.email || !availability.nickname")
+                .doesNotContain("username", "check-username", "msgUsername");
         assertThat(javascript).doesNotContain(
                 "fullNamePattern", "#fullName", "#userPhone", "#userBirth",
                 "step-3", "step3-submit", "3단계 중", "Math.min(3");

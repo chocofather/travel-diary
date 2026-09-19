@@ -19,7 +19,7 @@
           <span>검색</span>
           <input type="text" name="keyword" class="admin-input"
                  th:value="${keyword}" maxlength="100"
-                 placeholder="아이디 · 닉네임 · 이메일">
+                 placeholder="회원 번호 · 닉네임 · 이메일">
         </label>
 
         <label class="admin-filter-field">
@@ -49,7 +49,7 @@
         <table class="admin-table admin-users-table">
           <thead>
           <tr>
-            <th>아이디</th>
+            <th>회원 번호</th>
             <th>닉네임</th>
             <th>이메일</th>
             <th>권한</th>
@@ -60,11 +60,11 @@
           </thead>
           <tbody>
           <tr th:each="user : ${users}">
-            <td class="admin-user-username">
+            <td class="admin-user-id">
               <a th:href="@{/admin/users/{id}(id=${user.id})}"
-                 th:text="${user.username}">travler</a>
+                 th:text="${user.id}">7</a>
             </td>
-            <td th:text="${user.nickname}">여행자</td>
+            <td th:text="${user.displayName}">여행자</td>
             <td class="admin-user-email" th:text="${user.userEmail}">user@example.com</td>
             <td>
               <span class="admin-user-role"

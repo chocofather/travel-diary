@@ -36,16 +36,6 @@ public class UserApiController {
         this.accountAbuseGuard = accountAbuseGuard;
     }
 
-    // 아이디 중복 검사 API (JSON 응답)
-    @GetMapping("/check-username")
-    public Map<String, Boolean> checkUsername(@RequestParam String username,
-                                              HttpServletRequest request) {
-        accountAbuseGuard.checkExistenceLookup(ClientIpResolver.of(request));
-        Map<String, Boolean> response = new HashMap<>();
-        response.put("exists", userService.isUsernameExists(username));
-        return response;
-    }
-
     // 닉네임 중복 검사 API (AJAX 요청 처리)
     @GetMapping("/check-nickname")
     public Map<String, Object> checkNickname(@RequestParam String nickname,

@@ -45,8 +45,6 @@ public interface AccountAbuseGuard {
 
     /** 메일 종류. 종류가 다르면 서로의 cooldown 에 걸리지 않는다. */
     enum RecoveryEmailKind {
-        /** 아이디 안내 메일 */
-        USERNAME_RECOVERY,
         /** 비밀번호 재설정 링크 메일 */
         PASSWORD_RESET
     }

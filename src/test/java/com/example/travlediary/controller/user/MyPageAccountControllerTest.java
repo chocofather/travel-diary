@@ -799,7 +799,6 @@ class MyPageAccountControllerTest {
 
     private AccountDetailsDto details(String username, String email) {
         AccountDetailsDto details = new AccountDetailsDto();
-        details.setUsername(username);
         details.setUserEmail(email);
         details.setFullName("여행 민준");
         details.setUserPhone("010-1234-5678");

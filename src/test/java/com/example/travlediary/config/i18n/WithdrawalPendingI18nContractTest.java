@@ -263,7 +263,6 @@ class WithdrawalPendingI18nContractTest {
                 .thenReturn(WithdrawalGraceService.Outcome.IN_GRACE);
         User account = new User();
         account.setId(7L);
-        account.setUsername("travler");
         account.setUserEmail("member@gmail.com");
         account.setStatus(UserStatus.WITHDRAWAL_PENDING);
         account.setWithdrawalRequestedAt(REQUESTED_AT);

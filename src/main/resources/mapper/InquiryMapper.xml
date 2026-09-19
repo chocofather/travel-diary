@@ -60,7 +60,7 @@
         i.created_at,
         i.updated_at,
         i.user_id,
-        COALESCE(NULLIF(u.nickname, ''), u.username) AS user_display_name,
+        COALESCE(NULLIF(u.nickname, ''), CONCAT('회원 #', u.id)) AS user_display_name,
         ia.id AS answer_id,
         ia.content AS answer_content,
         ia.created_at AS answer_created_at,
@@ -138,7 +138,7 @@
                i.inquiry_type,
                i.created_at,
                i.user_id,
-               COALESCE(NULLIF(u.nickname, ''), u.username) AS user_display_name
+               COALESCE(NULLIF(u.nickname, ''), CONCAT('회원 #', u.id)) AS user_display_name
         FROM inquiries i
         JOIN users u ON u.id = i.user_id
         <if test="status != null">

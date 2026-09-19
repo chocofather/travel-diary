@@ -95,12 +95,13 @@ class MyPageNicknameUiContractTest {
         String template = read("templates/mypage/account-edit.html");
 
         assertThat(template)
-                .contains("account.username", "account.userEmail")
+                .contains("account.userEmail")
+                .doesNotContain("account.username")
                 .doesNotContain("id=\"userBirth\"", "*{userBirth}", "type=\"date\"",
                         "account.fullName", "account.userPhone", "account.userBirth",
                         "mypage.account.edit.personal.title");
         assertThat(template.split("mypage-account-readonly-list", -1).length - 1)
-                .as("로그인 ID와 이메일을 한 계정 정보 목록에서 보여 준다").isEqualTo(1);
+                .as("로그인 이메일을 계정 정보 목록에서 보여 준다").isEqualTo(1);
     }
 
     @Test

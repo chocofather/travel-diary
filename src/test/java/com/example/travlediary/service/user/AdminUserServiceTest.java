@@ -55,7 +55,6 @@ class AdminUserServiceTest {
     void detailReturnsStoredUser() {
         AdminUserDetailDto detail = new AdminUserDetailDto();
         detail.setId(7L);
-        detail.setUsername("travler");
         when(userMapper.findAdminUserById(7L)).thenReturn(detail);
 
         assertThat(adminUserService.getUser(7L)).isSameAs(detail);

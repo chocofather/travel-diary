@@ -19,7 +19,7 @@
 
     <section class="admin-form-card is-wide admin-user-section">
       <div class="admin-user-section-header">
-        <h2 th:text="${user.username}">travler</h2>
+        <h2 th:text="${user.displayName}">여행자</h2>
         <div class="admin-user-badges">
           <span class="admin-user-status"
                 th:classappend="|is-${#strings.toLowerCase(user.status.name())}|"
@@ -32,7 +32,6 @@
 
       <dl class="admin-user-meta">
         <div><dt>회원 번호</dt><dd th:text="${user.id}">1</dd></div>
-        <div><dt>아이디</dt><dd th:text="${user.username}">travler</dd></div>
         <div><dt>닉네임</dt><dd th:text="${user.nickname}">여행자</dd></div>
         <div><dt>이메일</dt><dd th:text="${user.userEmail}">user@example.com</dd></div>
         <div><dt>이름</dt><dd th:text="${user.fullName}">홍길동</dd></div>

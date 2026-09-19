@@ -21,7 +21,6 @@ public class AdminAppealDto {
 
     /* 신청 회원 */
     private Long userId;
-    private String username;
     private String nickname;
     private String userEmail;
 
@@ -45,5 +44,9 @@ public class AdminAppealDto {
 
     public boolean isPermanentSanction() {
         return sanctionType == SanctionType.PERMANENT;
+    }
+
+    public String getDisplayName() {
+        return nickname == null || nickname.isBlank() ? "회원 #" + userId : nickname;
     }
 }

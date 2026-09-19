@@ -28,13 +28,13 @@
     padding-bottom: 12px;
 }
 
-.admin-user-username a {
+.admin-user-id a {
     color: #34415e;
     font-weight: 750;
     text-decoration: none;
 }
 
-.admin-user-username a:hover {
+.admin-user-id a:hover {
     color: #3853ba;
     text-decoration: underline;
 }

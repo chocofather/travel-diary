@@ -47,31 +47,27 @@ class UserApiThrottleTest {
     @MockitoBean
     private CustomLogoutSuccessHandler customLogoutSuccessHandler;
 
-    /** 평범한 조회는 그대로 답한다. */
+    /** username 가입 기능을 지운 뒤에는 예전 존재 확인 endpoint 도 열리지 않는다. */
     @Test
-    void anOrdinaryLookupStillAnswers() throws Exception {
-        when(userService.isUsernameExists("traveler")).thenReturn(false);
-
+    void usernameLookupEndpointIsRemoved() throws Exception {
         mockMvc.perform(get("/api/users/check-username")
                         .param("username", "traveler")
                         .with(from("203.0.113.1")))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.exists").value(false));
+                .andExpect(status().isNotFound());
     }
 
     /**
      * 한 화면을 채우는 만큼의 조회로는 막히지 않는다.
-     * (아이디·이메일·닉네임을 고쳐 가며 스무 번씩 불러도 한도 안이다)
+     * (이메일·닉네임을 고쳐 가며 스무 번씩 불러도 한도 안이다)
      */
     @Test
     void oneSignupFormSessionNeverReachesTheLimit() throws Exception {
-        when(userService.isUsernameExists(anyString())).thenReturn(false);
         when(userService.isNicknameExists(anyString())).thenReturn(false);
         when(userService.isEmailExists(anyString())).thenReturn(false);
 
         for (int attempt = 0; attempt < 20; attempt++) {
-            mockMvc.perform(get("/api/users/check-username")
-                            .param("username", "traveler" + attempt)
+            mockMvc.perform(get("/api/users/check-email")
+                            .param("email", "traveler" + attempt + "@example.com")
                             .with(from("203.0.113.2")))
                     .andExpect(status().isOk());
         }
@@ -88,11 +84,11 @@ class UserApiThrottleTest {
     /** 한도를 넘긴 조회는 429 로 끝나고 다시 시도할 시각만 알려 준다. */
     @Test
     void lookupsBeyondTheLimitAnswerWith429AndRetryAfter() throws Exception {
-        when(userService.isUsernameExists(anyString())).thenReturn(false);
+        when(userService.isEmailExists(anyString())).thenReturn(false);
         fillLimit("203.0.113.3");
 
-        mockMvc.perform(get("/api/users/check-username")
-                        .param("username", "traveler")
+        mockMvc.perform(get("/api/users/check-email")
+                        .param("email", "traveler@example.com")
                         .with(from("203.0.113.3")))
                 .andExpect(status().isTooManyRequests())
                 .andExpect(header().exists(HttpHeaders.RETRY_AFTER))
@@ -104,8 +100,8 @@ class UserApiThrottleTest {
 
     /** 세 조회는 같은 한도를 나눠 쓴다. 하나로 채우면 나머지도 함께 막힌다. */
     @Test
-    void allThreeLookupsShareOneLimit() throws Exception {
-        when(userService.isUsernameExists(anyString())).thenReturn(false);
+    void BothLookupsShareOneLimit() throws Exception {
+        when(userService.isEmailExists(anyString())).thenReturn(false);
         fillLimit("203.0.113.4");
 
         mockMvc.perform(get("/api/users/check-email")
@@ -121,15 +117,15 @@ class UserApiThrottleTest {
     /** 한 사람이 막혀도 다른 사람의 가입은 그대로 진행된다. */
     @Test
     void anotherClientIsNotBlockedAlong() throws Exception {
-        when(userService.isUsernameExists(anyString())).thenReturn(false);
+        when(userService.isEmailExists(anyString())).thenReturn(false);
         fillLimit("203.0.113.5");
 
-        mockMvc.perform(get("/api/users/check-username")
-                        .param("username", "traveler")
+        mockMvc.perform(get("/api/users/check-email")
+                        .param("email", "traveler@example.com")
                         .with(from("203.0.113.5")))
                 .andExpect(status().isTooManyRequests());
-        mockMvc.perform(get("/api/users/check-username")
-                        .param("username", "traveler")
+        mockMvc.perform(get("/api/users/check-email")
+                        .param("email", "traveler@example.com")
                         .with(from("198.51.100.20")))
                 .andExpect(status().isOk());
     }
@@ -143,8 +139,8 @@ class UserApiThrottleTest {
 
     private void fillLimit(String ipAddress) throws Exception {
         for (int attempt = 0; attempt < LIMIT; attempt++) {
-            mockMvc.perform(get("/api/users/check-username")
-                            .param("username", "traveler" + attempt)
+            mockMvc.perform(get("/api/users/check-email")
+                            .param("email", "traveler" + attempt + "@example.com")
                             .with(from(ipAddress)))
                     .andExpect(status().isOk());
         }

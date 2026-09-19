@@ -64,14 +64,14 @@ class SignupPageI18nContractTest {
 
     @ParameterizedTest
     @CsvSource(delimiter = '|', value = {
-            "ko    | ko    | 회원가입   | 아이디  | 비밀번호   | 닉네임    | 다음      | 필수",
-            "en    | en    | Sign up   | Username| Password  | Nickname | Next     | Required",
-            "ja    | ja    | 登録する   | ID      | パスワード | ニックネーム | 次へ   | 必須",
-            "zh-CN | zh-CN | 注册      | 账号     | 密码      | 昵称      | 下一步   | 必选",
-            "zh-TW | zh-TW | 註冊      | 帳號     | 密碼      | 暱稱      | 下一步   | 必填"
+            "ko    | ko    | 회원가입   | 이메일  | 비밀번호   | 닉네임    | 다음      | 필수",
+            "en    | en    | Sign up   | Email   | Password  | Nickname | Next     | Required",
+            "ja    | ja    | 登録する   | メールアドレス | パスワード | ニックネーム | 次へ   | 必須",
+            "zh-CN | zh-CN | 注册      | 邮箱     | 密码      | 昵称      | 下一步   | 必选",
+            "zh-TW | zh-TW | 註冊      | 電子郵件 | 密碼      | 暱稱      | 下一步   | 必填"
     })
     void signupFormRendersInEverySupportedLanguage(String cookie, String expectedLang,
-                                                   String submit, String username, String password,
+                                                   String submit, String email, String password,
                                                    String nickname, String next, String required)
             throws Exception {
         Document page = render(get("/users/register").cookie(localeCookie(cookie)));
@@ -80,14 +80,14 @@ class SignupPageI18nContractTest {
         assertThat(page.title()).isNotBlank().doesNotContain("??");
         assertThat(page.selectFirst(".login-submit, .button-primary#step2-submit").text())
                 .isEqualTo(submit);
-        assertThat(page.selectFirst("label[for=username]").text()).isEqualTo(username);
+        assertThat(page.selectFirst("label[for=userEmail]").text()).isEqualTo(email);
         assertThat(page.selectFirst("label[for=userPassword]").text()).isEqualTo(password);
         assertThat(page.selectFirst("label[for=nickname]").text()).isEqualTo(nickname);
         assertThat(page.selectFirst("#step1-next").text()).isEqualTo(next);
         assertThat(page.selectFirst(".term-badge.required").text()).isEqualTo(required);
         // 단계 안내 / 도움말 / 약관 라벨도 번들에서 나온다.
         assertThat(page.selectFirst("#registrationStepStatus").text()).isNotBlank();
-        assertThat(page.selectFirst("#usernameMessage").text()).isNotBlank();
+        assertThat(page.selectFirst("#emailMessage")).isNotNull();
         assertThat(page.selectFirst("#passwordValidationMessage").text()).isNotBlank();
         assertThat(page.selectFirst("#nicknameMessage").text()).isNotBlank();
         assertThat(page.selectFirst(".terms-summary strong").text()).isNotBlank();
@@ -110,13 +110,13 @@ class SignupPageI18nContractTest {
     /** Bean Validation 메시지도 현재 locale 의 번들에서 나온다. */
     @ParameterizedTest
     @CsvSource(delimiter = '|', value = {
-            "ko    | 아이디를 입력해주세요.        | 서비스 이용약관에 동의해주세요.",
-            "en    | Please enter a username.     | Please accept the Terms of Service.",
-            "ja    | IDを入力してください。         | サービス利用規約に同意してください。",
-            "zh-CN | 请输入账号。                  | 请同意服务使用条款。",
-            "zh-TW | 請輸入帳號。                  | 請同意服務使用條款。"
+            "ko    | 이메일 주소를 입력해주세요.        | 서비스 이용약관에 동의해주세요.",
+            "en    | Please enter your email address.  | Please accept the Terms of Service.",
+            "ja    | メールアドレスを入力してください。   | サービス利用規約に同意してください。",
+            "zh-CN | 请输入邮箱地址。                   | 请同意服务使用条款。",
+            "zh-TW | 請輸入電子郵件地址。               | 請同意服務使用條款。"
     })
-    void validationMessagesAreLocalized(String cookie, String usernameRequired, String termsRequired)
+    void validationMessagesAreLocalized(String cookie, String emailRequired, String termsRequired)
             throws Exception {
         Document page = Jsoup.parse(mockMvc.perform(post("/users/register")
                         .cookie(localeCookie(cookie)))
@@ -124,7 +124,7 @@ class SignupPageI18nContractTest {
                 .andReturn().getResponse().getContentAsString());
 
         List<String> errors = page.select("[data-field-error], .field-error").eachText();
-        assertThat(errors).contains(usernameRequired);
+        assertThat(errors).contains(emailRequired);
         assertThat(page.select(".field-error").text()).doesNotContain("??").doesNotContain("{0}");
 
         // 필수 동의 누락은 서버가 현재 정책 세트로 판정하고 같은 번들 문구로 안내한다.
@@ -136,7 +136,6 @@ class SignupPageI18nContractTest {
         Document consentPage = Jsoup.parse(mockMvc.perform(post("/users/register")
                         .cookie(localeCookie(cookie))
                         .param("birthDate", "2000-01-01")
-                        .param("username", "member")
                         .param("userEmail", "member@gmail.com")
                         .param("userPassword", "Password!")
                         .param("passwordConfirm", "Password!")
@@ -177,7 +176,7 @@ class SignupPageI18nContractTest {
         Document page = render(get("/users/register").cookie(localeCookie("en")));
 
         var form = page.selectFirst("#registrationForm");
-        assertThat(form.attr("data-msg-username-taken")).isEqualTo("This username is already taken.");
+        assertThat(form.attr("data-msg-email-taken")).isEqualTo("This email is already registered.");
         assertThat(form.attr("data-msg-checking")).isEqualTo("Checking availability...");
         assertThat(form.attr("data-msg-email-suggestion")).contains("{0}");
         assertThat(form.attr("data-msg-terms-view")).isEqualTo("View");

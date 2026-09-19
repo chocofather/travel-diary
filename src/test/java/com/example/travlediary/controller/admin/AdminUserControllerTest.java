@@ -78,8 +78,8 @@ class AdminUserControllerTest {
         Document document = adminPage("/admin/users");
 
         assertThat(document.select(".admin-users-table thead th").eachText())
-                .containsExactly("아이디", "닉네임", "이메일", "권한", "회원 상태", "가입일", "관리");
-        assertThat(document.selectFirst(".admin-user-username a").text()).isEqualTo("travler");
+                .containsExactly("회원 번호", "닉네임", "이메일", "권한", "회원 상태", "가입일", "관리");
+        assertThat(document.selectFirst(".admin-user-id a").text()).isEqualTo("7");
         assertThat(document.selectFirst(".admin-user-email").text()).isEqualTo("user@example.com");
         assertThat(document.selectFirst(".admin-user-status").text()).isEqualTo("정상");
         assertThat(document.selectFirst(".admin-user-status").hasClass("is-active")).isTrue();
@@ -91,7 +91,6 @@ class AdminUserControllerTest {
     void listShowsAdminAccountsWithAnAdminRoleBadge() throws Exception {
         AdminUserListItemDto admin = listItem();
         admin.setId(1L);
-        admin.setUsername("master");
         admin.setUserRole(UserRole.ADMIN);
         when(adminUserService.countUsers(null, null)).thenReturn(2L);
         when(adminUserService.getUsers(null, null, 0L, 20))
@@ -100,8 +99,8 @@ class AdminUserControllerTest {
         Document document = adminPage("/admin/users");
 
         // 관리자 계정도 목록에는 그대로 노출된다
-        assertThat(document.select(".admin-users-table tbody .admin-user-username a").eachText())
-                .containsExactly("master", "travler");
+        assertThat(document.select(".admin-users-table tbody .admin-user-id a").eachText())
+                .containsExactly("1", "7");
         assertThat(document.select(".admin-users-table tbody .admin-user-role").eachText())
                 .containsExactly("관리자", "일반회원");
         assertThat(document.select(".admin-users-table tbody .admin-user-role.is-admin"))
@@ -203,7 +202,7 @@ class AdminUserControllerTest {
 
         assertThat(document.selectFirst(".admin-page-title").text()).isEqualTo("회원 상세");
         assertThat(document.select(".admin-user-meta dd").eachText())
-                .contains("travler", "여행자", "user@example.com", "홍길동", "2000-05-04");
+                .contains("7", "여행자", "user@example.com", "홍길동", "2000-05-04");
         assertThat(document.selectFirst(".admin-user-status").text()).isEqualTo("정상");
     }
 
@@ -362,7 +361,6 @@ class AdminUserControllerTest {
     private AdminUserListItemDto listItem() {
         AdminUserListItemDto item = new AdminUserListItemDto();
         item.setId(7L);
-        item.setUsername("travler");
         item.setNickname("여행자");
         item.setUserEmail("user@example.com");
         item.setUserRole(UserRole.USER);
@@ -396,7 +394,6 @@ class AdminUserControllerTest {
     private AdminUserDetailDto detail() {
         AdminUserDetailDto user = new AdminUserDetailDto();
         user.setId(7L);
-        user.setUsername("travler");
         user.setNickname("여행자");
         user.setUserEmail("user@example.com");
         user.setFullName("홍길동");

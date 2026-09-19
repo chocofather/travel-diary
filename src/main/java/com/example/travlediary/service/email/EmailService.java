@@ -9,9 +9,6 @@ import com.example.travlediary.config.i18n.SupportedLanguage;
 public interface EmailService {
     void sendVerificationEmail(String to, String token, SupportedLanguage language);
 
-    void sendUsernameRecoveryEmail(String to, String username, String loginUrl,
-                                   String passwordResetUrl, SupportedLanguage language);
-
     void sendPasswordResetEmail(String to, String resetUrl, SupportedLanguage language);
 
     /** 탈퇴 유예 계정 복구 링크. 유효시간은 계정의 남은 유예기간에 따라 30분보다 짧아질 수 있다. */

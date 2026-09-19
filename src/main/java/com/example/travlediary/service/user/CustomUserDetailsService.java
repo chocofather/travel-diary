@@ -29,9 +29,15 @@ public class CustomUserDetailsService implements UserDetailsService {
     }
 
     @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        final String normalizedEmail;
+        try {
+            normalizedEmail = EmailPolicy.normalizeAndValidate(email);
+        } catch (RegistrationValidationException exception) {
+            throw new UsernameNotFoundException("사용자를 찾을 수 없습니다.");
+        }
 
-        User user = userMapper.findByUsername(username);
+        User user = userMapper.findForAuthenticationByEmail(normalizedEmail);
         if (user == null) {
             throw new UsernameNotFoundException("사용자를 찾을 수 없습니다.");
         }

@@ -252,6 +252,7 @@ class UserServiceRegistrationTest {
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
         verify(userMapper).insertUser(userCaptor.capture());
         User stored = userCaptor.getValue();
+        assertThat(stored.getUsername()).isNull();
         assertThat(stored.getUserEmail()).isEqualTo("member@gmail.com");
         assertThat(stored.getFullName()).isNull();
         assertThat(stored.getUserPhone()).isNull();
@@ -290,19 +291,6 @@ class UserServiceRegistrationTest {
                 .isEqualTo("userEmail");
 
         verify(passwordEncoder, never()).encode(any());
-        verify(userMapper, never()).insertUser(any());
-    }
-
-    @Test
-    void duplicateUsernameIsRejectedByTheFinalServerCheck() {
-        RegistrationForm form = validForm();
-        when(userMapper.countByUsername("member")).thenReturn(1);
-
-        assertThatThrownBy(() -> userService.registerUser(form))
-                .isInstanceOf(RegistrationValidationException.class)
-                .extracting(exception -> ((RegistrationValidationException) exception).getField())
-                .isEqualTo("username");
-
         verify(userMapper, never()).insertUser(any());
     }
 
@@ -383,7 +371,6 @@ class UserServiceRegistrationTest {
         RegistrationForm form = new RegistrationForm();
         // 연령 확인은 이 테스트들의 관심사가 아니므로 통과하는 값을 기본으로 둔다.
         form.setBirthDate("2000-01-01");
-        form.setUsername("member");
         form.setUserEmail("member@gmail.com");
         form.setUserPassword("Password!");
         form.setPasswordConfirm("Password!");

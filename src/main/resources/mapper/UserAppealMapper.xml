@@ -74,7 +74,6 @@
         <result property="handledAt" column="handled_at"/>
         <result property="handledAdminName" column="handled_admin_name"/>
         <result property="userId" column="user_id"/>
-        <result property="username" column="username"/>
         <result property="nickname" column="nickname"/>
         <result property="userEmail" column="user_email"/>
         <result property="sanctionId" column="sanction_id"/>
@@ -95,7 +94,6 @@
         a.handled_at,
         a.created_at,
         a.user_id,
-        u.username,
         u.nickname,
         u.user_email,
         a.sanction_id,
@@ -104,7 +102,7 @@
         s.reason AS sanction_reason,
         s.starts_at AS sanction_starts_at,
         s.expires_at AS sanction_expires_at,
-        COALESCE(NULLIF(handled_admin.nickname, ''), handled_admin.username) AS handled_admin_name
+        COALESCE(NULLIF(handled_admin.nickname, ''), CONCAT('회원 #', handled_admin.id)) AS handled_admin_name
     </sql>
 
     <sql id="AdminAppealJoins">
@@ -122,7 +120,7 @@
                 AND a.status = #{status}
             </if>
             <if test="keyword != null and keyword != ''">
-                AND (u.username LIKE CONCAT('%', #{keyword}, '%')
+                AND (CAST(u.id AS CHAR) LIKE CONCAT('%', #{keyword}, '%')
                      OR u.nickname LIKE CONCAT('%', #{keyword}, '%')
                      OR u.user_email LIKE CONCAT('%', #{keyword}, '%'))
             </if>

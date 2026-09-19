@@ -92,13 +92,11 @@ class MyPageAccountLocaleRenderingTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "Manage your account and sign-in methods securely.")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("Sign-in ID")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "Change password")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "Delete account")))
-                // 로그인 ID와 이메일 같은 계정 데이터는 번역 대상이 아니다
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("minjun")))
+                // 로그인 이메일은 번역 대상이 아니다
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "member@example.com")))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
@@ -188,7 +186,6 @@ class MyPageAccountLocaleRenderingTest {
 
     private AccountDetailsDto details(String username, String email) {
         AccountDetailsDto dto = new AccountDetailsDto();
-        dto.setUsername(username);
         dto.setUserEmail(email);
         dto.setFullName("여행 민준");
         dto.setUserPhone("010-1234-5678");

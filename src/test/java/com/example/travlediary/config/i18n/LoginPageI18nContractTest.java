@@ -61,14 +61,14 @@ class LoginPageI18nContractTest {
 
     @ParameterizedTest
     @CsvSource(delimiter = '|', value = {
-            "ko    | ko    | 로그인            | 아이디            | 비밀번호      | 또는 | 회원가입",
-            "en    | en    | Log in           | Username         | Password     | or   | Sign up",
-            "ja    | ja    | ログイン          | ID               | パスワード    | または| 会員登録",
-            "zh-CN | zh-CN | 登录             | 账号              | 密码         | 或   | 注册",
-            "zh-TW | zh-TW | 登入             | 帳號              | 密碼         | 或   | 註冊"
+            "ko    | ko    | 로그인            | 이메일            | 비밀번호      | 또는 | 회원가입",
+            "en    | en    | Log in           | Email            | Password     | or   | Sign up",
+            "ja    | ja    | ログイン          | メールアドレス      | パスワード    | または| 会員登録",
+            "zh-CN | zh-CN | 登录             | 邮箱              | 密码         | 或   | 注册",
+            "zh-TW | zh-TW | 登入             | 電子郵件           | 密碼         | 或   | 註冊"
     })
     void loginFormRendersInEverySupportedLanguage(String cookie, String expectedLang,
-                                                  String submit, String username,
+                                                  String submit, String email,
                                                   String password, String divider,
                                                   String signUp) throws Exception {
         Document page = render(get("/login").cookie(localeCookie(cookie)));
@@ -76,12 +76,12 @@ class LoginPageI18nContractTest {
         assertThat(page.selectFirst("html").attr("lang")).isEqualTo(expectedLang);
         assertThat(page.selectFirst("#loginTitle").text()).isEqualTo(submit);
         assertThat(page.selectFirst(".login-submit").text()).isEqualTo(submit);
-        assertThat(page.selectFirst("label[for=username]").text()).isEqualTo(username);
+        assertThat(page.selectFirst("label[for=email]").text()).isEqualTo(email);
         assertThat(page.selectFirst("label[for=loginPassword]").text()).isEqualTo(password);
         assertThat(page.selectFirst(".social-login__divider span").text()).isEqualTo(divider);
         assertThat(page.selectFirst(".signup-entry a").text()).isEqualTo(signUp);
         // placeholder / subtitle / 계정 찾기 문구도 번들에서 나와야 한다.
-        assertThat(page.selectFirst("#username").attr("placeholder")).isNotBlank();
+        assertThat(page.selectFirst("#email").attr("placeholder")).isNotBlank();
         assertThat(page.selectFirst("#loginPassword").attr("placeholder")).isNotBlank();
         assertThat(page.selectFirst(".login-header p").text()).isNotBlank();
         assertThat(page.selectFirst(".account-recovery").text()).isNotBlank();
@@ -99,7 +99,7 @@ class LoginPageI18nContractTest {
     @CsvSource({"ko", "en", "ja", "zh-CN", "zh-TW"})
     void noUnresolvedMessageMarkerSurvivesAnywhereOnThePage(String cookie) throws Exception {
         Instant blockedUntil = Instant.now().plusSeconds(70);
-        when(loginThrottle.status("member", "127.0.0.1"))
+        when(loginThrottle.status("member@example.com", "127.0.0.1"))
                 .thenReturn(new LoginThrottleStatus(5, blockedUntil));
 
         // 잠금 / 실패 / 로그아웃 / 비밀번호 변경 안내까지 한 번에 켜서 모든 분기를 렌더링한다.
@@ -109,9 +109,9 @@ class LoginPageI18nContractTest {
                         .param("error", "true").param("logout", "true")
                         .param("passwordChanged", "true").param("oauthError", "true")
                         .param("socialSignupExpired", "true").param("socialSignupError", "true")
-                        .session(sessionWith(new LoginFormState("member", 4, null))),
+                        .session(sessionWith(new LoginFormState("member@example.com", 4, null))),
                 get("/login").cookie(localeCookie(cookie))
-                        .session(sessionWith(new LoginFormState("member", 5, blockedUntil))))) {
+                        .session(sessionWith(new LoginFormState("member@example.com", 5, blockedUntil))))) {
             String html = mockMvc.perform(request)
                     .andExpect(status().isOk())
                     .andReturn().getResponse().getContentAsString();
@@ -183,18 +183,17 @@ class LoginPageI18nContractTest {
     })
     void failureCountMessageIsBuiltFromMessageParameters(String cookie, String expected)
             throws Exception {
-        when(loginThrottle.status("member", "127.0.0.1"))
+        when(loginThrottle.status("member@example.com", "127.0.0.1"))
                 .thenReturn(new LoginThrottleStatus(3, null));
 
         Document page = render(get("/login")
                 .cookie(localeCookie(cookie))
                 .param("error", "true")
-                .session(sessionWith(new LoginFormState("member", 3, null))));
+                .session(sessionWith(new LoginFormState("member@example.com", 3, null))));
 
         assertThat(page.selectFirst(".login-inline-message__detail").text()).isEqualTo(expected);
         assertThat(page.selectFirst(".login-inline-message__title").text()).isNotBlank();
-        // username 보존은 그대로다.
-        assertThat(page.selectFirst("#username").val()).isEqualTo("member");
+        assertThat(page.selectFirst("#email").val()).isEqualTo("member@example.com");
     }
 
     /** 잠금 안내는 countdown 요소를 유지하고 남은 시간을 현재 언어로 채운다. */
@@ -209,12 +208,12 @@ class LoginPageI18nContractTest {
     void lockedNoticeKeepsTheCountdownElementAndLocalizesTheRemainingTime(
             String cookie, String expectedRemaining) throws Exception {
         Instant blockedUntil = Instant.now().plusSeconds(10);
-        when(loginThrottle.status("member", "127.0.0.1"))
+        when(loginThrottle.status("member@example.com", "127.0.0.1"))
                 .thenReturn(new LoginThrottleStatus(5, blockedUntil));
 
         Document page = render(get("/login")
                 .cookie(localeCookie(cookie))
-                .session(sessionWith(new LoginFormState("member", 5, blockedUntil))));
+                .session(sessionWith(new LoginFormState("member@example.com", 5, blockedUntil))));
 
         assertThat(page.selectFirst("#loginThrottleCountdown").text())
                 .isEqualTo(expectedRemaining);
@@ -342,12 +341,12 @@ class LoginPageI18nContractTest {
         assertThat(page.selectFirst(".login-container").text()).doesNotContain("??");
     }
 
-    /** 일반 인증 실패는 기존 안내를 그대로 쓰고 재설정 링크 문구가 섞이지 않는다. */
+    /** 일반 인증 실패는 이메일 존재 여부와 무관한 안내만 쓰고 재설정 링크 문구가 섞이지 않는다. */
     @ParameterizedTest
     @CsvSource(delimiter = '|', value = {
-            "ko    | 아이디 또는 비밀번호를 확인해주세요. | 비밀번호 재설정 링크가",
-            "en    | Please check your username or password. | password reset link",
-            "ja    | IDまたはパスワードをご確認ください。 | 再設定リンク"
+            "ko    | 이메일 또는 비밀번호를 확인해주세요. | 비밀번호 재설정 링크가",
+            "en    | Please check your email or password. | password reset link",
+            "ja    | メールアドレスまたはパスワードをご確認ください。 | 再設定リンク"
     })
     void normalCredentialsFailureIsUnchanged(String cookie, String expected, String notExpected)
             throws Exception {

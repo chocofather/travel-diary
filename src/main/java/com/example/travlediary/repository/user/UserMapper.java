@@ -20,7 +20,7 @@ public interface UserMapper {
 
     /* ---------- 회원가입 & 조회 ---------- */
     void insertUser(User user);
-    User findByUsername(@Param("username") String username);
+    User findForAuthenticationByEmail(@Param("email") String email);
     User findById(Long id);
     PublicUserProfileDto findPublicProfileById(@Param("id") Long id);
     MyPageProfileDto findMyPageProfileById(@Param("id") Long id);
@@ -130,7 +130,6 @@ public interface UserMapper {
                            @Param("currentTime") LocalDateTime currentTime);
 
     /* ---------- 중복 체크 ---------- */
-    int countByUsername(String username);
     int countByNickname(String nickname);
 
     /** 자동 추천용. 같은 조합의 언어별 표기를 한 번에 확인한다. */
@@ -190,11 +189,8 @@ public interface UserMapper {
             @Param("expiresAt") LocalDateTime expiresAt,
             @Param("requestedAt") LocalDateTime requestedAt);
 
-    /* ---------- 아이디/비밀번호 찾기 ---------- */
-    User findActiveByEmailForUsernameRecovery(@Param("userEmail") String userEmail);
-
-    User findByUsernameAndEmail(@Param("username") String username,
-                                @Param("userEmail") String userEmail);
+    /* ---------- 비밀번호 찾기 ---------- */
+    User findActiveLocalAccountByEmailForPasswordReset(@Param("userEmail") String userEmail);
 
     /* ---------- 재설정 토큰 ---------- */
     void updateResetToken(@Param("id") Long id,

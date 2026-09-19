@@ -73,7 +73,7 @@ spring:
           writetimeout: 5000
 
 custom:
-  server-url: ${APP_BASE_URL:http://localhost:8080}
+  server-url: ${APP_BASE_URL:http://localhost:8081}
   # 재가입 차단용 이메일 해시 secret. 값은 환경변수로만 주입한다.
   email-hash-secret: ${EMAIL_HASH_SECRET:}
   # 살아 있는 초대 링크 재표시용 AES-256 키(Base64 32바이트). 값은 환경변수로만 주입한다.
@@ -97,6 +97,9 @@ custom:
     trusted-proxies: ${CLIENT_IP_TRUSTED_PROXIES:}
 
 server:
+  # IntelliJ / bootRun 개발 서버. 운영은 application-prod.yml 에서 8080으로 덮어쓴다.
+  address: 127.0.0.1
+  port: 8081
   error:
     include-stacktrace: never
     include-message: never

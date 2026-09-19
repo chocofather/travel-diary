@@ -9,7 +9,6 @@ import java.time.ZoneOffset;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.example.travlediary.security.AccountAbuseGuard.RecoveryEmailKind.PASSWORD_RESET;
-import static com.example.travlediary.security.AccountAbuseGuard.RecoveryEmailKind.USERNAME_RECOVERY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThatCode;
@@ -119,15 +118,6 @@ class InMemoryAccountAbuseGuardTest {
         advance(InMemoryAccountAbuseGuard.RECOVERY_EMAIL_COOLDOWN.plusSeconds(1));
 
         assertThat(guard.allowRecoveryEmail(PASSWORD_RESET, "member@gmail.com")).isTrue();
-    }
-
-    /** 메일 종류가 다르면 서로의 cooldown 에 걸리지 않는다. */
-    @Test
-    void differentMailKindsKeepTheirOwnCooldown() {
-        assertThat(guard.allowRecoveryEmail(PASSWORD_RESET, "member@gmail.com")).isTrue();
-
-        assertThat(guard.allowRecoveryEmail(USERNAME_RECOVERY, "member@gmail.com")).isTrue();
-        assertThat(guard.allowRecoveryEmail(USERNAME_RECOVERY, "member@gmail.com")).isFalse();
     }
 
     /** 다른 주소는 함께 막히지 않는다. */

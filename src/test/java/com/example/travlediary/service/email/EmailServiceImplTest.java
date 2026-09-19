@@ -100,33 +100,6 @@ class EmailServiceImplTest {
         assertTripboraMailPresentation(bodies.html());
     }
 
-    @Test
-    void usernameRecoveryMailContainsTheFullUsernameAndServiceLinks() throws Exception {
-        emailService.sendUsernameRecoveryEmail(
-                "member@gmail.com",
-                "travel-member",
-                "https://travel.example/login",
-                "https://travel.example/users/find-password",
-                SupportedLanguage.KOREAN);
-
-        verify(mailSender).send(message);
-        message.saveChanges();
-        assertThat(message.getSubject())
-                .isEqualTo("[Tripbora] 아이디를 안내해 드려요")
-                .doesNotContain("travel-member");
-
-        MailBodies bodies = mailBodies(message.getContent());
-        assertThat(bodies.plainText())
-                .contains("travel-member")
-                .contains("https://travel.example/login")
-                .contains("https://travel.example/users/find-password");
-        assertThat(bodies.html())
-                .contains("Tripbora", "아이디를 안내해 드려요", "travel-member")
-                .contains("로그인하기", "비밀번호 재설정")
-                .contains("https://travel.example/login")
-                .contains("https://travel.example/users/find-password");
-        assertTripboraMailPresentation(bodies.html());
-    }
 
     @Test
     void passwordResetMailKeepsTheResetUrlAndThirtyMinuteSecurityGuidance()
@@ -248,33 +221,6 @@ class EmailServiceImplTest {
         assertThat(bodies.plainText()).contains("복구", "요청하지 않았다면");
     }
 
-    @ParameterizedTest
-    @CsvSource(delimiter = '|', value = {
-            "KOREAN              | [Tripbora] 아이디를 안내해 드려요     | 로그인하기",
-            "ENGLISH             | [Tripbora] Here is your username    | Log in",
-            "JAPANESE            | [Tripbora] IDのご案内                | ログインする",
-            "CHINESE_SIMPLIFIED  | [Tripbora] 为你找回账号               | 前往登录",
-            "CHINESE_TRADITIONAL | [Tripbora] 為你找回帳號               | 前往登入"
-    })
-    void usernameRecoveryMailFollowsTheRequestedLanguageButKeepsTheUsername(
-            SupportedLanguage language, String subject, String loginButton) throws Exception {
-        emailService.sendUsernameRecoveryEmail(
-                "member@gmail.com", "travel-member",
-                "https://travel.example/login",
-                "https://travel.example/users/find-password", language);
-
-        message.saveChanges();
-        assertThat(message.getSubject()).isEqualTo(subject).doesNotContain("travel-member");
-        MailBodies bodies = mailBodies(message.getContent());
-        // 아이디 값 자체는 언어와 무관하게 그대로다.
-        assertThat(bodies.html())
-                .contains(loginButton, "travel-member", "Tripbora")
-                .doesNotContain("??").doesNotContain("{0}");
-        assertThat(bodies.plainText())
-                .contains("travel-member")
-                .contains("https://travel.example/login")
-                .contains("https://travel.example/users/find-password");
-    }
 
     /** 지원하지 않는 언어가 들어와도 사이트 기본값(한국어)으로 보낸다. */
     @Test

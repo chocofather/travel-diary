@@ -5,6 +5,7 @@ import com.example.travlediary.security.LoginFormState;
 import com.example.travlediary.security.LoginThrottle;
 import com.example.travlediary.security.LoginThrottleFilter;
 import com.example.travlediary.security.LoginThrottleStatus;
+import com.example.travlediary.service.user.EmailPolicy;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -26,11 +27,12 @@ public class LoginAuthenticationFailureHandler implements AuthenticationFailureH
                                         HttpServletResponse response,
                                         AuthenticationException exception)
             throws IOException, ServletException {
+        String email = EmailPolicy.normalize(request.getParameter("email"));
         LoginThrottleStatus status = loginThrottle.recordFailure(
-                request.getParameter("username"), ClientIpResolver.of(request));
+                email, ClientIpResolver.of(request));
         request.getSession().setAttribute(
                 LoginFormState.SESSION_ATTRIBUTE,
-                LoginFormState.from(request.getParameter("username"), status));
+                LoginFormState.from(email, status));
         // 실패해도 원래 복귀 대상을 유지해야 재시도 성공 시 상세페이지로 돌아온다.
         response.sendRedirect(
                 request.getContextPath() + LoginThrottleFilter.failureRedirect(request));

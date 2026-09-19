@@ -15,12 +15,12 @@
     <insert id="insertUser" parameterType="com.example.travlediary.model.User"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO users (
-            username, nickname, user_email, user_password, profile_image,
+            nickname, user_email, user_password, profile_image,
             status, user_role, verification_token, verification_token_exp,
             verification_requested_at, created_at, updated_at,
             deleted_at, last_login)
         VALUES (
-            #{username}, #{nickname}, #{userEmail}, #{userPassword},
+            #{nickname}, #{userEmail}, #{userPassword},
             #{profileImage}, #{status}, #{userRole}, #{verificationToken},
             #{verificationTokenExp}, #{verificationRequestedAt}, #{createdAt}, #{updatedAt},
             #{deletedAt}, #{lastLogin}
@@ -28,13 +28,6 @@
     </insert>
 
 
-    <!-- 사용자 조회
-    <select id="findByUsername" parameterType="java.lang.String" resultType="com.example.travlediary.model.User">
-        SELECT id, username, user_password AS userPassword, user_role AS userRole, status, created_at AS createdAt
-        FROM users
-        WHERE username = #{username}
-    </select>
--->
     <!-- 사용자 역할 업데이트 -->
     <update id="updateUserRole">
         UPDATE users SET user_role = #{userRole} WHERE id = #{id}
@@ -87,7 +80,7 @@
     -->
     <select id="findWithdrawalPendingById"
             resultType="com.example.travlediary.model.User">
-        SELECT id, username, user_email, status,
+        SELECT id, user_email, status,
                withdrawal_requested_at, purge_scheduled_at
         FROM users
         WHERE id = #{id}
@@ -98,7 +91,7 @@
     <!-- 확인 화면에서 링크가 아직 쓸 수 있는지만 본다. 잠그지 않고 아무것도 바꾸지 않는다. -->
     <select id="findRecoverableWithdrawalById"
             resultType="com.example.travlediary.model.User">
-        SELECT id, username, user_email, status, purge_scheduled_at
+        SELECT id, user_email, status, purge_scheduled_at
         FROM users
         WHERE id = #{id}
           AND status = 'WITHDRAWAL_PENDING'
@@ -110,7 +103,7 @@
     <!-- 복구 확정 트랜잭션에서 회원 행을 잠그고 같은 조건을 다시 확인한다. -->
     <select id="findRecoverableWithdrawalByIdForUpdate"
             resultType="com.example.travlediary.model.User">
-        SELECT id, username, user_email, status, purge_scheduled_at
+        SELECT id, user_email, status, purge_scheduled_at
         FROM users
         WHERE id = #{id}
           AND status = 'WITHDRAWAL_PENDING'
@@ -175,7 +168,7 @@
     <!-- 파기 트랜잭션에서 회원 행을 잠그고 대상 조건을 다시 확인한다. -->
     <select id="findPurgeTargetByIdForUpdate"
             resultType="com.example.travlediary.model.User">
-        SELECT id, username, user_email, nickname, user_role, status,
+        SELECT id, user_email, nickname, user_role, status,
                profile_image, withdrawal_requested_at, purge_scheduled_at
         FROM users
         WHERE id = #{id}
@@ -191,7 +184,7 @@
       최종 파기. 개인 식별정보를 지우고 DEACTIVATED 로 바꾼다.
       nickname 은 NOT NULL UNIQUE 라 NULL 로 둘 수 없어 익명값을 받고,
       user_email 도 UNIQUE 라 재가입을 막지 않도록 익명 주소로 바꾼다.
-      username 은 nullable 이라 NULL 로 비워 아이디를 다시 쓸 수 있게 한다.
+      롤백 호환을 위해 남겨 둔 legacy username 컬럼도 파기 시 NULL 로 비운다.
       withdrawal_requested_at / purge_scheduled_at / created_at / user_role 은 그대로 둔다.
     -->
     <update id="finalizeWithdrawal">
@@ -221,11 +214,6 @@
           AND purge_scheduled_at IS NOT NULL
           AND purge_scheduled_at &lt;= #{currentTime}
     </update>
-
-    <!--  아이디 중복 개수 확인 -->
-    <select id="countByUsername" parameterType="java.lang.String" resultType="int">
-        SELECT COUNT(*) FROM users WHERE username = #{username}
-    </select>
 
     <!-- 닉네임 중복 개수 확인 -->
     <select id="countByNickname" parameterType="java.lang.String" resultType="int">
@@ -283,21 +271,24 @@
                OR verification_requested_at &lt;= #{cooldownCutoff})
     </update>
 
-    <select id="findByUsername" parameterType="java.lang.String" resultType="com.example.travlediary.model.User">
-        SELECT
-            id,
-            username,
-            user_password AS userPassword,
-            user_role AS userRole,
-            status,
-            created_at AS createdAt,
-            profile_image AS profileImage
-        FROM users
-        WHERE username = #{username}
-    </select>
-
     <select id="findByEmail" parameterType="String" resultType="com.example.travlediary.model.User">
         SELECT * FROM users WHERE user_email = #{email}
+    </select>
+
+    <!-- 일반 이메일/비밀번호 인증 전용. 소셜 이메일 충돌 조회와 인증 조건을 섞지 않는다. -->
+    <select id="findForAuthenticationByEmail"
+            parameterType="string"
+            resultType="com.example.travlediary.model.User">
+        SELECT id,
+               user_email AS userEmail,
+               user_password AS userPassword,
+               user_role AS userRole,
+               status,
+               created_at AS createdAt,
+               profile_image AS profileImage
+        FROM users
+        WHERE user_email = #{email}
+          AND deleted_at IS NULL
     </select>
 
     <!--
@@ -405,26 +396,16 @@
           )
     </update>
 
-    <select id="findActiveByEmailForUsernameRecovery"
+    <!-- 삭제되지 않은 활성 로컬 계정만 비밀번호를 재설정할 수 있다. -->
+    <select id="findActiveLocalAccountByEmailForPasswordReset"
             parameterType="string"
             resultType="com.example.travlediary.model.User">
-        SELECT id, username
+        SELECT id
         FROM users
         WHERE user_email = #{userEmail}
           AND status = 'ACTIVE'
           AND deleted_at IS NULL
-    </select>
-
-    <!-- ① 아이디+이메일로 사용자 찾기 (비밀번호 재설정 요청 단계) -->
-    <select id="findByUsernameAndEmail"
-            parameterType="map"
-            resultType="com.example.travlediary.model.User">
-        SELECT *
-        FROM users
-        WHERE username   = #{username}
-          AND user_email = #{userEmail}
-          AND status = 'ACTIVE'
-          AND deleted_at IS NULL
+          AND user_password IS NOT NULL
     </select>
 
     <!-- ② 비밀번호 재설정 토큰·만료시간 저장 -->
@@ -463,8 +444,7 @@
     </select>
 
     <select id="findAccountDetailsById" resultType="com.example.travlediary.dto.AccountDetailsDto">
-        SELECT username,
-               user_email AS userEmail,
+        SELECT user_email AS userEmail,
                full_name AS fullName,
                user_phone AS userPhone,
                user_birth AS userBirth
@@ -485,7 +465,6 @@
 
     <select id="findActiveAccountSecurityById" resultType="com.example.travlediary.model.User">
         SELECT id,
-               username,
                user_password AS userPassword,
                user_role AS userRole,
                status,
@@ -498,7 +477,6 @@
 
     <select id="findActiveAccountSecurityByIdForUpdate" resultType="com.example.travlediary.model.User">
         SELECT id,
-               username,
                user_password AS userPassword,
                user_role AS userRole,
                status,
@@ -568,7 +546,6 @@
 
     <resultMap id="AdminUserListResultMap" type="com.example.travlediary.dto.AdminUserListItemDto">
         <id property="id" column="id"/>
-        <result property="username" column="username"/>
         <result property="nickname" column="nickname"/>
         <result property="userEmail" column="user_email"/>
         <result property="userRole" column="user_role"/>
@@ -578,7 +555,6 @@
 
     <resultMap id="AdminUserDetailResultMap" type="com.example.travlediary.dto.AdminUserDetailDto">
         <id property="id" column="id"/>
-        <result property="username" column="username"/>
         <result property="nickname" column="nickname"/>
         <result property="userEmail" column="user_email"/>
         <result property="fullName" column="full_name"/>
@@ -596,7 +572,7 @@
     <sql id="AdminUserFilter">
         <where>
             <if test="keyword != null and keyword != ''">
-                AND (username LIKE CONCAT('%', #{keyword}, '%')
+                AND (CAST(id AS CHAR) LIKE CONCAT('%', #{keyword}, '%')
                      OR nickname LIKE CONCAT('%', #{keyword}, '%')
                      OR user_email LIKE CONCAT('%', #{keyword}, '%'))
             </if>
@@ -613,7 +589,7 @@
     </select>
 
     <select id="findAdminUsers" resultMap="AdminUserListResultMap">
-        SELECT id, username, nickname, user_email, user_role, status, created_at
+        SELECT id, nickname, user_email, user_role, status, created_at
         FROM users
         <include refid="AdminUserFilter"/>
         ORDER BY created_at DESC, id DESC
@@ -623,7 +599,6 @@
 
     <select id="findByIdForUpdate" resultType="com.example.travlediary.model.User">
         SELECT id,
-               username,
                user_email AS userEmail,
                nickname,
                user_role AS userRole,
@@ -649,7 +624,7 @@
     </update>
 
     <select id="findAdminUserById" resultMap="AdminUserDetailResultMap">
-        SELECT id, username, nickname, user_email, full_name, user_phone, user_birth,
+        SELECT id, nickname, user_email, full_name, user_phone, user_birth,
                profile_image, user_role, status, created_at, updated_at,
                last_login, deleted_at
         FROM users

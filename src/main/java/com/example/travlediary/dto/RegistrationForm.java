@@ -3,7 +3,6 @@ package com.example.travlediary.dto;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -30,11 +29,6 @@ public class RegistrationForm {
      */
     @NotBlank(message = "{signup.error.birthDate.required}")
     private String birthDate;
-
-    @NotBlank(message = "{signup.error.username.required}")
-    @Pattern(regexp = "^(?=.*[a-z])[a-z0-9_-]{3,16}$",
-            message = "{signup.error.username.pattern}")
-    private String username;
 
     @NotBlank(message = "{signup.error.email.required}")
     @Email(message = "{signup.error.email.invalid}")

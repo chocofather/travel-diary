@@ -12,7 +12,6 @@ class AccountRecoveryUiContractTest {
     @Test
     void recoveryAndEmailAccountPagesUseTheScopedAuthFlowPresentation() throws IOException {
         for (String path : new String[]{
-                "templates/find-username.html",
                 "templates/find-password.html",
                 "templates/reset-password.html",
                 "templates/recover-account-confirm.html",
@@ -44,29 +43,17 @@ class AccountRecoveryUiContractTest {
     }
 
     @Test
-    void usernameRecoveryAcceptsOnlyEmailAndUsesAGenericCompletionState() throws IOException {
-        String template = resource("templates/find-username.html");
-
-        assertThat(template)
-                .contains("/css/login.css", "name=\"userEmail\"", "type=\"email\"")
-                .contains("th:if=\"${recoveryRequested}\"")
-                .contains("아이디 안내를 요청했어요")
-                .contains("입력하신 이메일과 일치하는 계정이 있다면")
-                .doesNotContain("name=\"fullName\"", "정보가 일치하지 않습니다.",
-                        "register-container", "<style>", "${username}");
-    }
-
-    @Test
-    void passwordRecoveryKeepsUsernameAndEmailAndUsesAGenericCompletionState()
+    void passwordRecoveryUsesOnlyEmailAndAGenericCompletionState()
             throws IOException {
         String template = resource("templates/find-password.html");
 
         assertThat(template)
-                .contains("/css/login.css", "name=\"username\"", "name=\"userEmail\"")
+                .contains("/css/login.css", "name=\"userEmail\"", "autocomplete=\"email\"")
                 .contains("th:if=\"${recoveryRequested}\"")
                 .contains("재설정 링크를 요청했어요")
-                .contains("입력하신 정보와 일치하는 계정이 있다면")
-                .doesNotContain("정보가 일치하지 않습니다.", "<style>");
+                .contains("입력하신 이메일의 로컬 계정이 있다면")
+                .doesNotContain("name=\"username\"", "/users/find-username",
+                        "정보가 일치하지 않습니다.", "<style>");
     }
 
     @Test
@@ -74,8 +61,8 @@ class AccountRecoveryUiContractTest {
         String template = resource("templates/login.html");
 
         assertThat(template)
-                .contains("id=\"loginForm\"", "id=\"username\"", "name=\"username\"")
-                .contains("id=\"rememberId\"", "id=\"loginPassword\"", "name=\"password\"")
+                .contains("id=\"loginForm\"", "id=\"email\"", "name=\"email\"")
+                .contains("autocomplete=\"email\"", "id=\"loginPassword\"", "name=\"password\"")
                 .contains("name=\"redirect\"", "data-toggle=\"#loginPassword\"");
     }
 

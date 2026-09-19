@@ -175,41 +175,6 @@ public class UserController {
     }
 
 
-    // 아이디 찾기
-    @GetMapping("/find-username")
-    public String showFindUsername() {          // GET  폼
-        return "find-username";
-    }
-
-    /**
-     * 아이디 안내 메일 요청.
-     *
-     * <p>같은 IP 에서 너무 자주 부르면 회원을 찾아보기도 전에 막는다. 회원이 있는지 확인한
-     * 뒤에 막으면 그 차이로 계정 존재 여부가 드러나기 때문이다.
-     * 같은 주소로의 재발송 억제는 서비스가 맡는다 — 응답은 어느 쪽이든 똑같다.
-     */
-    @PostMapping("/find-username")
-    public String findUsername(@RequestParam String userEmail,
-                               HttpServletRequest request,
-                               HttpServletResponse response,
-                               Model model,
-                               RedirectAttributes ra) {  // POST 처리
-        try {
-            accountAbuseGuard.checkRecoveryRequest(ClientIpResolver.of(request));
-        } catch (TooManyAccountRequestsException exception) {
-            return throttledRecoveryView(exception, response, model, "find-username");
-        }
-
-        try {
-            userService.processFindUsername(userEmail);
-        } catch (RuntimeException exception) {
-            log.error("Username recovery request could not be completed: exceptionType={}",
-                    exception.getClass().getSimpleName());
-        }
-        ra.addFlashAttribute("recoveryRequested", true);
-        return "redirect:/users/find-username";
-    }
-
     /* ─────────────── 비밀번호 재설정 링크 발송 ─────────────── */
 
     @GetMapping("/find-password")
@@ -217,10 +182,9 @@ public class UserController {
         return "find-password";
     }
 
-    /** 비밀번호 재설정 링크 요청. 막는 기준과 응답 정책은 아이디 찾기와 같다. */
+    /** 비밀번호 재설정 링크 요청. 계정 존재 여부와 관계없이 같은 응답을 보낸다. */
     @PostMapping("/find-password")
-    public String findPassword(@RequestParam String username,
-                               @RequestParam String userEmail,
+    public String findPassword(@RequestParam String userEmail,
                                HttpServletRequest request,
                                HttpServletResponse response,
                                Model model,
@@ -232,7 +196,7 @@ public class UserController {
         }
 
         try {
-            userService.processResetPasswordRequest(username, userEmail);
+            userService.processResetPasswordRequest(userEmail);
         } catch (RuntimeException exception) {
             log.error("Password recovery request could not be completed: exceptionType={}",
                     exception.getClass().getSimpleName());

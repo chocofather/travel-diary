@@ -143,7 +143,6 @@ class UserRegistrationControllerTest {
 
         mockMvc.perform(multipart("/users/register")
                         .param("birthDate", "2000-01-01")
-                        .param("username", "member")
                         .param("userEmail", "member@gmail.com")
                         .param("userPassword", "Password!")
                         .param("passwordConfirm", "Password!")
@@ -184,49 +183,30 @@ class UserRegistrationControllerTest {
     }
 
     @Test
-    void usernameRecoveryAcceptsEmailOnlyAndShowsTheGenericCompletionState() throws Exception {
-        mockMvc.perform(post("/users/find-username")
-                        .param("userEmail", "member@gmail.com"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/users/find-username"))
-                .andExpect(flash().attribute("recoveryRequested", true));
-
-        verify(userService).processFindUsername("member@gmail.com");
+    void usernameRecoveryRouteIsRemoved() throws Exception {
+        mockMvc.perform(get("/users/find-username"))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(post("/users/find-username").param("userEmail", "member@gmail.com"))
+                .andExpect(status().isNotFound());
     }
 
     @Test
     void passwordRecoveryShowsTheGenericCompletionState() throws Exception {
         mockMvc.perform(post("/users/find-password")
-                        .param("birthDate", "2000-01-01")
-                        .param("username", "member")
                         .param("userEmail", "member@gmail.com"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/users/find-password"))
                 .andExpect(flash().attribute("recoveryRequested", true));
 
-        verify(userService).processResetPasswordRequest("member", "member@gmail.com");
-    }
-
-    @Test
-    void usernameRecoveryFailureUsesTheSameGenericCompletionState() throws Exception {
-        doThrow(new IllegalStateException("recovery unavailable"))
-                .when(userService).processFindUsername("member@gmail.com");
-
-        mockMvc.perform(post("/users/find-username")
-                        .param("userEmail", "member@gmail.com"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/users/find-username"))
-                .andExpect(flash().attribute("recoveryRequested", true));
+        verify(userService).processResetPasswordRequest("member@gmail.com");
     }
 
     @Test
     void passwordRecoveryFailureUsesTheSameGenericCompletionState() throws Exception {
         doThrow(new IllegalStateException("recovery unavailable"))
-                .when(userService).processResetPasswordRequest("member", "member@gmail.com");
+                .when(userService).processResetPasswordRequest("member@gmail.com");
 
         mockMvc.perform(post("/users/find-password")
-                        .param("birthDate", "2000-01-01")
-                        .param("username", "member")
                         .param("userEmail", "member@gmail.com"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/users/find-password"))
@@ -297,7 +277,6 @@ class UserRegistrationControllerTest {
                 .param("agreedPolicyVersionIds", "101")
                 .param("agreedPolicyVersionIds", "103")
                 .param("birthDate", "2000-01-01")
-                        .param("username", "member")
                 .param("userEmail", email)
                 .param("userPassword", "Password!")
                 .param("passwordConfirm", "Password!")

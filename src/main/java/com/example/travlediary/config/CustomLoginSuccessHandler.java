@@ -12,6 +12,7 @@ import com.example.travlediary.security.MissingEmailAccountFilter;
 import com.example.travlediary.security.RestrictedAccountFilter;
 import com.example.travlediary.security.WithdrawalPendingAccountFilter;
 import com.example.travlediary.service.user.MissingEmailRegistrationService;
+import com.example.travlediary.service.user.EmailPolicy;
 import com.example.travlediary.service.user.SocialLoginLinkService;
 import com.example.travlediary.service.user.WithdrawalGraceService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -70,7 +71,10 @@ public class CustomLoginSuccessHandler implements AuthenticationSuccessHandler {
     ) throws IOException {
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
         Long userId = userDetails.getId();
-        loginThrottle.recordSuccess(userDetails.getUsername());
+        String submittedEmail = request.getParameter("email");
+        if (submittedEmail != null && !submittedEmail.isBlank()) {
+            loginThrottle.recordSuccess(EmailPolicy.normalize(submittedEmail));
+        }
         if (request.getSession(false) != null) {
             request.getSession(false).removeAttribute(LoginFormState.SESSION_ATTRIBUTE);
             // 이메일 인증 대기 문맥은 인증 링크가 아니라 여기서 닫는다. 인증 화면에서 바로 지우면
@@ -79,7 +83,7 @@ public class CustomLoginSuccessHandler implements AuthenticationSuccessHandler {
                     EmailVerificationController.PENDING_EMAIL_SESSION_ATTRIBUTE);
         }
 
-        // 1) 인증 완료 후에는 username 이 아니라 DB 회원 ID를 세션 식별값으로 사용한다.
+        // 1) 인증 완료 후에는 DB 회원 ID를 세션 식별값으로 사용한다.
         request.getSession().setAttribute("userId", userId);
 
         // 1-1) 기존 계정 로그인을 기다리던 소셜 연결이 있으면 여기서 마무리한다.

@@ -1,6 +1,7 @@
 package com.example.travlediary.security;
 
 import com.example.travlediary.config.InternalRedirectValidator;
+import com.example.travlediary.service.user.EmailPolicy;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -49,12 +50,12 @@ public class LoginThrottleFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain)
             throws ServletException, IOException {
-        LoginThrottleStatus status = loginThrottle.status(
-                request.getParameter("username"), ClientIpResolver.of(request));
+        String email = EmailPolicy.normalize(request.getParameter("email"));
+        LoginThrottleStatus status = loginThrottle.status(email, ClientIpResolver.of(request));
         if (status.blocked()) {
             request.getSession().setAttribute(
                     LoginFormState.SESSION_ATTRIBUTE,
-                    LoginFormState.from(request.getParameter("username"), status));
+                    LoginFormState.from(email, status));
             response.sendRedirect(request.getContextPath() + failureRedirect(request));
             return;
         }

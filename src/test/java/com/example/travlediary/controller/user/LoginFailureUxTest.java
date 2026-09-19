@@ -38,18 +38,18 @@ class LoginFailureUxTest {
     private LoginThrottle loginThrottle;
 
     @Test
-    void thirdFailureRestoresOnlyUsernameAndShowsTwoAttemptsRemaining() throws Exception {
-        RenderedPage rendered = render(new LoginFormState("member", 3, null));
+    void thirdFailureRestoresOnlyEmailAndShowsTwoAttemptsRemaining() throws Exception {
+        RenderedPage rendered = render(new LoginFormState("member@example.com", 3, null));
         Document page = rendered.document();
         var inlineMessage = page.selectFirst(
                 ".login-password-control + #loginFailureInline");
 
-        assertThat(page.selectFirst("#username").val()).isEqualTo("member");
+        assertThat(page.selectFirst("#email").val()).isEqualTo("member@example.com");
         assertThat(page.selectFirst("#loginPassword").hasAttr("value")).isFalse();
         assertThat(page.selectFirst("#loginFailureFeedback")).isNull();
         assertThat(inlineMessage).isNotNull();
         assertThat(inlineMessage.text())
-                .contains("아이디 또는 비밀번호를 확인해주세요.")
+                .contains("이메일 또는 비밀번호를 확인해주세요.")
                 .contains("로그인 실패 3회 · 2회 더 실패하면 잠시 제한됩니다.");
         assertThat(inlineMessage.hasClass("login-inline-message--warning")).isTrue();
         assertThat(page.selectFirst(".login-submit").hasAttr("disabled")).isFalse();
@@ -59,7 +59,7 @@ class LoginFailureUxTest {
 
     @Test
     void firstTwoFailuresShowOnlyTheCompactFailureCountBelowPassword() throws Exception {
-        Document page = render(new LoginFormState("member", 2, null)).document();
+        Document page = render(new LoginFormState("member@example.com", 2, null)).document();
         var inlineMessage = page.selectFirst("#loginFailureInline");
 
         assertThat(inlineMessage).isNotNull();
@@ -70,7 +70,7 @@ class LoginFailureUxTest {
 
     @Test
     void fourthFailureShowsOneAttemptUntilTheTenSecondLimit() throws Exception {
-        Document page = render(new LoginFormState("missing-account", 4, null))
+        Document page = render(new LoginFormState("missing@example.com", 4, null))
                 .document();
 
         assertThat(page.selectFirst("#loginFailureInline").text())
@@ -80,8 +80,8 @@ class LoginFailureUxTest {
     @Test
     void activeLimitDisablesLoginAndRendersServerRemainingTimeForCountdown() throws Exception {
         LoginFormState state = new LoginFormState(
-                "member", 6, Instant.now().plusSeconds(10));
-        when(loginThrottle.status("member", "127.0.0.1"))
+                "member@example.com", 6, Instant.now().plusSeconds(10));
+        when(loginThrottle.status("member@example.com", "127.0.0.1"))
                 .thenAnswer(invocation -> new LoginThrottleStatus(
                         6, Instant.now().plusSeconds(30)));
 
@@ -105,7 +105,7 @@ class LoginFailureUxTest {
     @Test
     void activeLimitRemainsVisibleWhenTheLoginPageIsReopenedWithoutTheErrorQuery() throws Exception {
         LoginFormState state = new LoginFormState(
-                "member", 5, Instant.now().plusSeconds(10));
+                "member@example.com", 5, Instant.now().plusSeconds(10));
 
         Document page = render(state, false).document();
 
@@ -116,8 +116,8 @@ class LoginFailureUxTest {
     @Test
     void loginPageUsesTheCurrentServerLimitInsteadOfTheStoredSnapshot() throws Exception {
         LoginFormState staleState = new LoginFormState(
-                "member", 5, Instant.now().plusSeconds(10));
-        when(loginThrottle.status("member", "127.0.0.1"))
+                "member@example.com", 5, Instant.now().plusSeconds(10));
+        when(loginThrottle.status("member@example.com", "127.0.0.1"))
                 .thenAnswer(invocation -> new LoginThrottleStatus(
                         8, Instant.now().plusSeconds(300)));
 
@@ -176,11 +176,11 @@ class LoginFailureUxTest {
     /** 실패 후 다시 그린 로그인 폼도 복귀 대상을 그대로 다시 전송한다. */
     @Test
     void reRenderedLoginFormKeepsTheReturnPathAfterAFailure() throws Exception {
-        when(loginThrottle.status("member", "127.0.0.1"))
+        when(loginThrottle.status("member@example.com", "127.0.0.1"))
                 .thenReturn(new LoginThrottleStatus(1, null));
         MockHttpSession session = new MockHttpSession();
         session.setAttribute(LoginFormState.SESSION_ATTRIBUTE,
-                new LoginFormState("member", 1, null));
+                new LoginFormState("member@example.com", 1, null));
 
         String html = mockMvc.perform(get("/login")
                         .session(session)
@@ -211,7 +211,7 @@ class LoginFailureUxTest {
     }
 
     private RenderedPage render(LoginFormState state, boolean errorQuery) throws Exception {
-        when(loginThrottle.status(state.username(), "127.0.0.1"))
+        when(loginThrottle.status(state.email(), "127.0.0.1"))
                 .thenReturn(new LoginThrottleStatus(
                         state.failureCount(), state.blockedUntil()));
         return renderWithoutStatusStub(state, errorQuery);

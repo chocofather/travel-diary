@@ -34,10 +34,13 @@ class CustomUserDetailsServiceTest {
     }
 
     @Test
-    void activeUserStillLogsIn() {
-        when(userMapper.findByUsername("travler")).thenReturn(user(UserStatus.ACTIVE));
+    void activeUserLoginNormalizesEmailAndUsesAStableInternalPrincipal() {
+        when(userMapper.findForAuthenticationByEmail("member@example.com"))
+                .thenReturn(user(UserStatus.ACTIVE));
 
-        assertThat(service.loadUserByUsername("travler").getUsername()).isEqualTo("travler");
+        assertThat(service.loadUserByUsername("  MEMBER@EXAMPLE.COM  ").getUsername())
+                .isEqualTo("user:5");
+        verify(userMapper).findForAuthenticationByEmail("member@example.com");
     }
 
     @Test
@@ -55,30 +58,41 @@ class CustomUserDetailsServiceTest {
 
     @Test
     void unknownUserIsRejected() {
-        when(userMapper.findByUsername("nobody")).thenReturn(null);
+        when(userMapper.findForAuthenticationByEmail("nobody@example.com")).thenReturn(null);
 
-        assertThatThrownBy(() -> service.loadUserByUsername("nobody"))
+        assertThatThrownBy(() -> service.loadUserByUsername("nobody@example.com"))
                 .isInstanceOf(UsernameNotFoundException.class);
     }
 
     @Test
+    void malformedEmailIsRejectedLikeAnUnknownAccountWithoutQueryingTheDatabase() {
+        assertThatThrownBy(() -> service.loadUserByUsername("not-an-email"))
+                .isInstanceOf(UsernameNotFoundException.class);
+
+        org.mockito.Mockito.verifyNoInteractions(userMapper);
+    }
+
+    @Test
     void inactiveUserPassesCredentialCheckButIsNotLoggedIn() {
-        when(userMapper.findByUsername("travler")).thenReturn(user(UserStatus.INACTIVE));
+        when(userMapper.findForAuthenticationByEmail("member@example.com"))
+                .thenReturn(user(UserStatus.INACTIVE));
 
         // 자격증명 확인까지는 허용한다. 오타로 잘못된 이메일을 넣은 사람이 다시 들어와
         // 인증 대기 화면에서 이메일을 고칠 수 있어야 하기 때문이다.
-        assertThat(service.loadUserByUsername("travler")).isNotNull();
+        assertThat(service.loadUserByUsername("member@example.com")).isNotNull();
         // 로그인으로 이어지지 않는 것은 CustomLoginSuccessHandler 가 보장한다.
     }
 
     @Test
     void deactivatedAndSuspendedUsersGetTheirOwnMessages() {
-        when(userMapper.findByUsername("travler")).thenReturn(user(UserStatus.DEACTIVATED));
-        assertThatThrownBy(() -> service.loadUserByUsername("travler"))
+        when(userMapper.findForAuthenticationByEmail("member@example.com"))
+                .thenReturn(user(UserStatus.DEACTIVATED));
+        assertThatThrownBy(() -> service.loadUserByUsername("member@example.com"))
                 .hasMessage("탈퇴한 계정입니다.");
 
-        when(userMapper.findByUsername("travler")).thenReturn(user(UserStatus.SUSPENDED));
-        assertThatThrownBy(() -> service.loadUserByUsername("travler"))
+        when(userMapper.findForAuthenticationByEmail("member@example.com"))
+                .thenReturn(user(UserStatus.SUSPENDED));
+        assertThatThrownBy(() -> service.loadUserByUsername("member@example.com"))
                 .hasMessage("휴면 상태의 계정입니다. 고객센터로 문의해주세요.");
     }
 
@@ -89,12 +103,12 @@ class CustomUserDetailsServiceTest {
      * 격리와 안내 화면 이동은 WithdrawalPendingAccountFilter 와 로그인 성공 핸들러가 맡는다.
      */
     void withdrawalPendingUserIsAuthenticatedSoTheNoticeScreenCanHandleIt() {
-        when(userMapper.findByUsername("travler"))
+        when(userMapper.findForAuthenticationByEmail("member@example.com"))
                 .thenReturn(user(UserStatus.WITHDRAWAL_PENDING));
 
-        var details = service.loadUserByUsername("travler");
+        var details = service.loadUserByUsername("member@example.com");
 
-        assertThat(details.getUsername()).isEqualTo("travler");
+        assertThat(details.getUsername()).isEqualTo("user:5");
         assertThat(details.isEnabled()).isTrue();
     }
 
@@ -107,24 +121,26 @@ class CustomUserDetailsServiceTest {
     void loadingAnExpiredWithdrawalAccountNeverChangesAnything() {
         User account = user(UserStatus.WITHDRAWAL_PENDING);
         account.setPurgeScheduledAt(java.time.LocalDateTime.now().minusDays(1));
-        when(userMapper.findByUsername("travler")).thenReturn(account);
+        when(userMapper.findForAuthenticationByEmail("member@example.com")).thenReturn(account);
 
-        assertThat(service.loadUserByUsername("travler").getUsername()).isEqualTo("travler");
+        assertThat(service.loadUserByUsername("member@example.com").getUsername())
+                .isEqualTo("user:5");
 
-        verify(userMapper).findByUsername("travler");
+        verify(userMapper).findForAuthenticationByEmail("member@example.com");
         org.mockito.Mockito.verifyNoMoreInteractions(userMapper);
         org.mockito.Mockito.verifyNoInteractions(userSanctionService);
     }
 
     @Test
     void restrictedUserIsAuthenticatedSoAccessControlCanHandleIt() {
-        when(userMapper.findByUsername("travler")).thenReturn(user(UserStatus.RESTRICTED));
+        when(userMapper.findForAuthenticationByEmail("member@example.com"))
+                .thenReturn(user(UserStatus.RESTRICTED));
         when(userSanctionService.releaseIfExpired(5L)).thenReturn(false);
 
-        var details = service.loadUserByUsername("travler");
+        var details = service.loadUserByUsername("member@example.com");
 
         // 인증 자체는 성공하고, 접근 제한은 RestrictedAccountFilter 가 처리한다
-        assertThat(details.getUsername()).isEqualTo("travler");
+        assertThat(details.getUsername()).isEqualTo("user:5");
         assertThat(details.isEnabled()).isTrue();
         assertThat(details.isAccountNonLocked()).isTrue();
         assertThat(details.getAuthorities())
@@ -134,20 +150,24 @@ class CustomUserDetailsServiceTest {
 
     @Test
     void restrictedUserPasswordIsStillHandedToTheProviderSoWrongPasswordsFailNormally() {
-        when(userMapper.findByUsername("travler")).thenReturn(user(UserStatus.RESTRICTED));
+        when(userMapper.findForAuthenticationByEmail("member@example.com"))
+                .thenReturn(user(UserStatus.RESTRICTED));
         when(userSanctionService.releaseIfExpired(5L)).thenReturn(false);
 
         // 비밀번호 비교는 DaoAuthenticationProvider 가 수행한다.
         // 즉 비밀번호가 틀리면 제재 여부와 무관하게 기존 로그인 실패 흐름을 탄다.
-        assertThat(service.loadUserByUsername("travler").getPassword()).isEqualTo("encoded");
+        assertThat(service.loadUserByUsername("member@example.com").getPassword())
+                .isEqualTo("encoded");
     }
 
     @Test
     void expiredTemporarySanctionIsReleasedAtLoginTime() {
-        when(userMapper.findByUsername("travler")).thenReturn(user(UserStatus.RESTRICTED));
+        when(userMapper.findForAuthenticationByEmail("member@example.com"))
+                .thenReturn(user(UserStatus.RESTRICTED));
         when(userSanctionService.releaseIfExpired(5L)).thenReturn(true);
 
-        assertThat(service.loadUserByUsername("travler").getUsername()).isEqualTo("travler");
+        assertThat(service.loadUserByUsername("member@example.com").getUsername())
+                .isEqualTo("user:5");
         verify(userSanctionService).releaseIfExpired(5L);
     }
 

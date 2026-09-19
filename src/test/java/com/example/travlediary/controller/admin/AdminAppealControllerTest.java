@@ -70,7 +70,7 @@ class AdminAppealControllerTest {
         assertThat(document.select(".admin-appeals-table thead th").eachText())
                 .containsExactly("상태", "회원", "제재", "이의제기 내용", "제출일", "처리");
         assertThat(document.selectFirst(".admin-appeal-status").text()).isEqualTo("접수됨");
-        assertThat(document.selectFirst(".admin-appeal-member strong").text()).isEqualTo("travler");
+        assertThat(document.selectFirst(".admin-appeal-member strong").text()).isEqualTo("여행자");
         assertThat(document.selectFirst(".admin-appeal-sanction").text()).isEqualTo("기간제한");
         assertThat(document.select(".admin-appeals-table tbody a").eachAttr("href"))
                 .contains("/admin/appeals/30");
@@ -112,7 +112,7 @@ class AdminAppealControllerTest {
         Document document = adminPage("/admin/appeals/30");
 
         assertThat(document.select(".admin-appeal-meta dd").eachText())
-                .contains("travler", "여행자", "user@example.com", "적용중", "이용약관 위반");
+                .contains("#5", "여행자", "user@example.com", "적용중", "이용약관 위반");
         assertThat(document.selectFirst(".admin-appeal-body").text()).isEqualTo("소명합니다");
 
         var form = document.selectFirst("#appeal-handle-form");
@@ -276,7 +276,6 @@ class AdminAppealControllerTest {
         appeal.setContent("소명합니다");
         appeal.setSubmittedAt(LocalDateTime.of(2026, 8, 15, 12, 0));
         appeal.setUserId(5L);
-        appeal.setUsername("travler");
         appeal.setNickname("여행자");
         appeal.setUserEmail("user@example.com");
         appeal.setSanctionId(10L);

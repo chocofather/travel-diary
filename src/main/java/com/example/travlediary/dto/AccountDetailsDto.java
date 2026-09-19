@@ -8,7 +8,6 @@ import java.time.LocalDate;
 @Data
 @NoArgsConstructor
 public class AccountDetailsDto {
-    private String username;
     private String userEmail;
     private String fullName;
     private String userPhone;

@@ -64,8 +64,6 @@ class BoardControllerSecurityTest {
 
     @Test
     void memberSeesCourseWriteActionBelowTheList() throws Exception {
-        User member = new User();
-        when(userMapper.findByUsername("member")).thenReturn(member);
         when(countryCategoryService.getCourseCountries()).thenReturn(List.of());
         when(boardService.getBoardList("course", null, "all", null, "latest", 1, 10)).thenReturn(List.of());
         when(boardService.getBoardCount("course", null, "all", null)).thenReturn(0);

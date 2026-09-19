@@ -47,21 +47,6 @@ public class EmailDispatchService {
     }
 
     @Async(MailAsyncConfig.MAIL_EXECUTOR)
-    public void dispatchUsernameRecoveryEmail(String recipient,
-                                              String username,
-                                              String loginUrl,
-                                              String passwordResetUrl,
-                                              SupportedLanguage language) {
-        try {
-            emailService.sendUsernameRecoveryEmail(
-                    recipient, username, loginUrl, passwordResetUrl, language);
-        } catch (RuntimeException exception) {
-            log.error("Asynchronous username recovery email delivery failed: exceptionType={}",
-                    exception.getClass().getSimpleName());
-        }
-    }
-
-    @Async(MailAsyncConfig.MAIL_EXECUTOR)
     public void dispatchPasswordResetEmail(String recipient, String resetUrl,
                                            SupportedLanguage language) {
         try {

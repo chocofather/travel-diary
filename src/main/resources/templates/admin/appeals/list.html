@@ -36,7 +36,7 @@
           <span>회원 검색</span>
           <input type="text" name="keyword" class="admin-input"
                  th:value="${keyword}" maxlength="100"
-                 placeholder="아이디 · 닉네임 · 이메일">
+                 placeholder="회원 번호 · 닉네임 · 이메일">
         </label>
         <div class="admin-filter-actions">
           <button type="submit" class="admin-btn is-primary">조회</button>
@@ -70,8 +70,8 @@
                     th:text="${appeal.status.displayName}">접수됨</span>
             </td>
             <td class="admin-appeal-member">
-              <strong th:text="${appeal.username}">travler</strong>
-              <span th:text="${appeal.nickname}">여행자</span>
+              <strong th:text="${appeal.displayName}">여행자</strong>
+              <span th:text="|#${appeal.userId}|">#5</span>
             </td>
             <td>
               <span class="admin-appeal-sanction"

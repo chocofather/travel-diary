@@ -18,8 +18,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -69,27 +67,11 @@ public class UserService {
         this.accountAbuseGuard = accountAbuseGuard;
     }
 
-    // 🔐 로그인 기능
-    public User login(String username, String password) {
-        User user = userMapper.findByUsername(username);
-
-        if (user == null) {
-            throw new UsernameNotFoundException("사용자를 찾을 수 없습니다.");
-        }
-
-        // 비밀번호 검증
-        if (!passwordEncoder.matches(password, user.getUserPassword())) {
-            throw new BadCredentialsException("비밀번호가 일치하지 않습니다.");
-        }
-        return user;
-    }
-
     // 📝 회원가입 기능
     public RegistrationResult registerUser(RegistrationForm form) {
         // 만 14세 미만은 여기서 막는다. 생년월일은 판정에만 쓰고 User 에 담지 않는다.
         AgeVerificationPolicy.verify(form.getBirthDate(), LocalDate.now());
 
-        String username = form.getUsername().strip();
         String email = EmailPolicy.normalizeAndValidate(form.getUserEmail());
         String nickname = NicknamePolicy.normalizeAndValidate(form.getNickname());
         String rawPassword = form.getUserPassword();
@@ -101,7 +83,7 @@ public class UserService {
                     "signup.error.passwordConfirm.mismatch");
         }
 
-        validateRegistrationDuplicates(username, email, nickname);
+        validateRegistrationDuplicates(email, nickname);
 
         // 화면 체크박스를 믿지 않는다. 현재 가입 정책 세트를 서버가 다시 조회해서
         // 필수 동의가 모두 들어왔는지 보고, 저장할 결정 목록도 여기에서 만든다.
@@ -110,7 +92,6 @@ public class UserService {
                 resolveConsentDecisions(form.getAgreedPolicyVersionIds());
 
         User user = new User();
-        user.setUsername(username);
         user.setUserEmail(email);
         user.setNickname(nickname);
 
@@ -159,11 +140,7 @@ public class UserService {
         }
     }
 
-    private void validateRegistrationDuplicates(String username, String email, String nickname) {
-        if (userMapper.countByUsername(username) > 0) {
-            throw new RegistrationValidationException("username", "이미 사용 중인 아이디입니다.",
-                    "signup.error.username.duplicate");
-        }
+    private void validateRegistrationDuplicates(String email, String nickname) {
         if (userMapper.findByEmail(email) != null) {
             throw new RegistrationValidationException("userEmail", "이미 사용 중인 이메일입니다.",
                     "signup.error.email.duplicate");
@@ -172,22 +149,6 @@ public class UserService {
             throw new RegistrationValidationException("nickname", "이미 사용 중인 닉네임입니다.",
                     "signup.error.nickname.duplicate");
         }
-    }
-
-    // 🧐 사용자 조회 (null 체크 포함)
-    public User findByUsername(String username) {
-        User user = userMapper.findByUsername(username);
-
-        if (user == null) {
-            throw new UsernameNotFoundException("사용자를 찾을 수 없습니다: " + username);
-        }
-
-        return user;
-    }
-
-    // 📌 아이디 중복 검사
-    public boolean isUsernameExists(String username) {
-        return userMapper.countByUsername(username) > 0;
     }
 
     // 🏷 닉네임 중복 검사
@@ -224,30 +185,6 @@ public class UserService {
         return user.getProfileImage();
     }
 
-    /* ================= [ 아이디 찾기 메일 ] ================= */
-    /**
-     * 아이디 안내 메일 요청.
-     *
-     * <p>같은 주소로 거듭 요청해도 60초에 한 통만 나간다. 쉬어 가는 동안에도 하는 일과 돌려주는
-     * 값은 같아서, 계정이 있는지 없는지가 밖으로 드러나지 않는다.
-     */
-    public void processFindUsername(String email) {
-        String normalizedEmail = EmailPolicy.normalizeAndValidate(email);
-        /*
-          회원을 찾기 전에 먼저 센다. 회원이 있을 때만 세면 "셌는지" 로 존재 여부가 갈린다.
-          (이 호출은 예외를 던지지 않는다 — 막혀도 응답은 그대로다)
-        */
-        boolean mayDispatch = accountAbuseGuard.allowRecoveryEmail(
-                AccountAbuseGuard.RecoveryEmailKind.USERNAME_RECOVERY, normalizedEmail);
-
-        User u = userMapper.findActiveByEmailForUsernameRecovery(normalizedEmail);
-        if (u == null || !mayDispatch) {
-            return;
-        }
-
-        dispatchUsernameRecoveryEmail(normalizedEmail, u.getUsername());
-    }
-
     /* =========== [ 비밀번호 재설정 링크 발송 ] =========== */
 
     /**
@@ -257,12 +194,12 @@ public class UserService {
      * 하나뿐이라 새로 발급하면 방금 메일로 받은 링크가 곧바로 무효가 되기 때문이다.
      * 그래서 거듭 눌러도 먼저 받은 링크를 그대로 쓸 수 있다.
      */
-    public void processResetPasswordRequest(String username, String email) {
+    public void processResetPasswordRequest(String email) {
         String normalizedEmail = EmailPolicy.normalizeAndValidate(email);
         boolean mayDispatch = accountAbuseGuard.allowRecoveryEmail(
                 AccountAbuseGuard.RecoveryEmailKind.PASSWORD_RESET, normalizedEmail);
 
-        User u = userMapper.findByUsernameAndEmail(username.strip(), normalizedEmail);
+        User u = userMapper.findActiveLocalAccountByEmailForPasswordReset(normalizedEmail);
         if (u == null || !mayDispatch) {
             return;
         }
@@ -275,20 +212,6 @@ public class UserService {
 
         String link = serverUrl + "/users/reset-password?token=" + rawToken;
         dispatchPasswordResetEmail(normalizedEmail, link);
-    }
-
-    private void dispatchUsernameRecoveryEmail(String recipient, String username) {
-        try {
-            emailDispatchService.dispatchUsernameRecoveryEmail(
-                    recipient,
-                    username,
-                    serverUrl + "/login",
-                    serverUrl + "/users/find-password",
-                    requestLanguage());
-        } catch (RuntimeException exception) {
-            log.error("Username recovery email could not be scheduled: exceptionType={}",
-                    exception.getClass().getSimpleName());
-        }
     }
 
     /**

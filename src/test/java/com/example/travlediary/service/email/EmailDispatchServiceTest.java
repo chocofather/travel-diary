@@ -93,22 +93,6 @@ class EmailDispatchServiceTest {
                         "member@gmail.com", "https://travel.example/reset", SupportedLanguage.KOREAN);
     }
 
-    @Test
-    void usernameRecoverySmtpFailureDoesNotEscapeToTheCaller() {
-        doThrow(new EmailDeliveryException("delivery failed"))
-                .when(emailService).sendUsernameRecoveryEmail(
-                        anyString(), anyString(), anyString(), anyString(), any());
-
-        assertDoesNotThrow(() -> emailDispatchService.dispatchUsernameRecoveryEmail(
-                "member@gmail.com", "travel-member",
-                "https://travel.example/login", "https://travel.example/find-password",
-                SupportedLanguage.KOREAN));
-        verify(emailService, timeout(2_000))
-                .sendUsernameRecoveryEmail(
-                        "member@gmail.com", "travel-member",
-                        "https://travel.example/login", "https://travel.example/find-password",
-                        SupportedLanguage.KOREAN);
-    }
 
     @Test
     void dedicatedMailExecutorIsBoundedAndNamed() {

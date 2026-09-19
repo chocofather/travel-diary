@@ -40,6 +40,7 @@ class TravelDiaryAuthenticationRestorerTest {
         assertThat(restored).isTrue();
         assertThat(context.getAuthentication().getPrincipal())
                 .isInstanceOf(CustomUserDetails.class);
+        assertThat(context.getAuthentication().getName()).isEqualTo("user:7");
         assertThat(context.getAuthentication().getAuthorities())
                 .extracting(authority -> authority.getAuthority())
                 .containsExactly("ROLE_USER");

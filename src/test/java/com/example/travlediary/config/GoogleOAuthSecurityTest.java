@@ -365,7 +365,7 @@ class GoogleOAuthSecurityTest {
                 .andExpect(content().string(containsString(
                         "src=\"/images/social/naver-symbol.png\"")))
                 .andExpect(content().string(containsString(
-                        "name=\"username\"")))
+                        "name=\"email\"")))
                 .andExpect(content().string(containsString(
                         "name=\"password\"")));
     }

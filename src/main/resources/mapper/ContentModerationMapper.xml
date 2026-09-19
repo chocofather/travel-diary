@@ -145,7 +145,7 @@
             AND (t.title LIKE CONCAT('%', #{keyword}, '%')
                  OR t.content_snippet LIKE CONCAT('%', #{keyword}, '%')
                  OR author.nickname LIKE CONCAT('%', #{keyword}, '%')
-                 OR author.username LIKE CONCAT('%', #{keyword}, '%'))
+                 OR CAST(author.id AS CHAR) LIKE CONCAT('%', #{keyword}, '%'))
         </if>
     </sql>
 
@@ -169,8 +169,8 @@
                t.title,
                LEFT(t.content_snippet, 200) AS content_snippet,
                t.author_user_id,
-               COALESCE(NULLIF(author.nickname, ''), author.username) AS author_name,
-               COALESCE(NULLIF(admin_user.nickname, ''), admin_user.username) AS admin_name
+               COALESCE(NULLIF(author.nickname, ''), CONCAT('회원 #', author.id)) AS author_name,
+               COALESCE(NULLIF(admin_user.nickname, ''), CONCAT('회원 #', admin_user.id)) AS admin_name
         FROM content_moderations cm
         JOIN (<include refid="ModeratedTargets"/>) t
           ON t.target_type = cm.target_type

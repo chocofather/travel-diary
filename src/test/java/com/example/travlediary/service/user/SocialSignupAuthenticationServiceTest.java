@@ -70,6 +70,7 @@ class SocialSignupAuthenticationServiceTest {
         Authentication authentication = context.getAuthentication();
         assertThat(authentication.getPrincipal()).isInstanceOf(CustomUserDetails.class);
         assertThat(((CustomUserDetails) authentication.getPrincipal()).getId()).isEqualTo(41L);
+        assertThat(authentication.getName()).isEqualTo("user:41");
         assertThat(authentication.getAuthorities())
                 .extracting(authority -> authority.getAuthority())
                 .containsExactly("ROLE_USER");

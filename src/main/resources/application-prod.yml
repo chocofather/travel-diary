@@ -28,6 +28,7 @@ server:
   # 주의: cloudflared ingress 는 http://127.0.0.1:8080 으로 적는다.
   #       localhost 로 적으면 ::1 로 먼저 붙어 연결이 거부될 수 있다.
   address: ${SERVER_ADDRESS:127.0.0.1}
+  port: 8080
   servlet:
     session:
       cookie:

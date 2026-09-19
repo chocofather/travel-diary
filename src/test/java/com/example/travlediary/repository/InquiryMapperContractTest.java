@@ -67,7 +67,8 @@ class InquiryMapperContractTest {
         assertThat(count).contains("i.status = #{status}");
         assertThat(list)
                 .contains("JOIN users u ON u.id = i.user_id")
-                .contains("COALESCE(NULLIF(u.nickname, ''), u.username) AS user_display_name")
+                .contains("COALESCE(NULLIF(u.nickname, ''), CONCAT('회원 #', u.id)) AS user_display_name")
+                .doesNotContain("u.username")
                 .contains("i.status = #{status}")
                 .contains("ORDER BY i.created_at DESC, i.id DESC")
                 .contains("LIMIT #{limit}", "OFFSET #{offset}");

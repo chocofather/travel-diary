@@ -106,7 +106,6 @@ class UserServiceNicknameValidationTest {
         // 연령 확인은 이 테스트들의 관심사가 아니므로 통과하는 값을 기본으로 둔다.
         form.setBirthDate("2000-01-01");
         form.setNickname(nickname);
-        form.setUsername("member");
         form.setUserPassword("Password!");
         form.setPasswordConfirm("Password!");
         form.setUserEmail("member@example.com");

@@ -57,15 +57,15 @@ class AccountRecoveryThrottleTest {
 
     /** 평범한 요청은 예전 그대로 완료 화면으로 넘어간다. */
     @Test
-    void anOrdinaryUsernameRecoveryStillRedirectsToTheRequestedScreen() throws Exception {
-        mockMvc.perform(post("/users/find-username")
+    void anOrdinaryPasswordRecoveryStillRedirectsToTheRequestedScreen() throws Exception {
+        mockMvc.perform(post("/users/find-password")
                         .param("userEmail", "member@gmail.com")
                         .with(csrf())
                         .with(from("203.0.113.31")))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/users/find-username"));
+                .andExpect(redirectedUrl("/users/find-password"));
 
-        verify(userService).processFindUsername("member@gmail.com");
+        verify(userService).processResetPasswordRequest("member@gmail.com");
     }
 
     /**
@@ -77,13 +77,11 @@ class AccountRecoveryThrottleTest {
     @Test
     void existingAndMissingAccountsAnswerIdentically() throws Exception {
         MvcResult existing = mockMvc.perform(post("/users/find-password")
-                        .param("username", "member")
                         .param("userEmail", "member@gmail.com")
                         .with(csrf())
                         .with(from("203.0.113.32")))
                 .andReturn();
         MvcResult missing = mockMvc.perform(post("/users/find-password")
-                        .param("username", "nobody")
                         .param("userEmail", "nobody@gmail.com")
                         .with(csrf())
                         .with(from("203.0.113.32")))
@@ -101,14 +99,14 @@ class AccountRecoveryThrottleTest {
     @Test
     void aFailureInsideTheServiceDoesNotChangeWhatTheCallerSees() throws Exception {
         doThrow(new RuntimeException("mail down"))
-                .when(userService).processFindUsername(anyString());
+                .when(userService).processResetPasswordRequest(anyString());
 
-        mockMvc.perform(post("/users/find-username")
+        mockMvc.perform(post("/users/find-password")
                         .param("userEmail", "member@gmail.com")
                         .with(csrf())
                         .with(from("203.0.113.33")))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/users/find-username"));
+                .andExpect(redirectedUrl("/users/find-password"));
     }
 
     /**
@@ -118,61 +116,40 @@ class AccountRecoveryThrottleTest {
     @Test
     void changingTheEmailDoesNotEscapeTheLimitForOneClient() throws Exception {
         for (int attempt = 0; attempt < LIMIT; attempt++) {
-            mockMvc.perform(post("/users/find-username")
+            mockMvc.perform(post("/users/find-password")
                             .param("userEmail", "victim" + attempt + "@gmail.com")
                             .with(csrf())
                             .with(from("203.0.113.34")))
                     .andExpect(status().is3xxRedirection());
         }
 
-        mockMvc.perform(post("/users/find-username")
+        mockMvc.perform(post("/users/find-password")
                         .param("userEmail", "victim-last@gmail.com")
                         .with(csrf())
                         .with(from("203.0.113.34")))
                 .andExpect(status().isTooManyRequests())
                 .andExpect(header().exists(HttpHeaders.RETRY_AFTER));
 
-        verify(userService, never()).processFindUsername("victim-last@gmail.com");
-    }
-
-    /** 아이디 찾기와 비밀번호 재설정은 같은 SMTP 한도를 쓰므로 같은 통에서 센다. */
-    @Test
-    void bothRecoveryFormsShareOneLimit() throws Exception {
-        for (int attempt = 0; attempt < LIMIT; attempt++) {
-            mockMvc.perform(post("/users/find-username")
-                            .param("userEmail", "victim" + attempt + "@gmail.com")
-                            .with(csrf())
-                            .with(from("203.0.113.35")))
-                    .andExpect(status().is3xxRedirection());
-        }
-
-        mockMvc.perform(post("/users/find-password")
-                        .param("username", "member")
-                        .param("userEmail", "member@gmail.com")
-                        .with(csrf())
-                        .with(from("203.0.113.35")))
-                .andExpect(status().isTooManyRequests());
-
-        verify(userService, never()).processResetPasswordRequest(anyString(), anyString());
+        verify(userService, never()).processResetPasswordRequest("victim-last@gmail.com");
     }
 
     /** 한 사람이 막혀도 다른 사람의 계정 복구는 그대로 된다. */
     @Test
     void anotherClientCanStillRecoverTheirAccount() throws Exception {
         for (int attempt = 0; attempt < LIMIT; attempt++) {
-            mockMvc.perform(post("/users/find-username")
+            mockMvc.perform(post("/users/find-password")
                             .param("userEmail", "victim" + attempt + "@gmail.com")
                             .with(csrf())
                             .with(from("203.0.113.36")))
                     .andExpect(status().is3xxRedirection());
         }
 
-        mockMvc.perform(post("/users/find-username")
+        mockMvc.perform(post("/users/find-password")
                         .param("userEmail", "victim@gmail.com")
                         .with(csrf())
                         .with(from("203.0.113.36")))
                 .andExpect(status().isTooManyRequests());
-        mockMvc.perform(post("/users/find-username")
+        mockMvc.perform(post("/users/find-password")
                         .param("userEmail", "member@gmail.com")
                         .with(csrf())
                         .with(from("198.51.100.40")))

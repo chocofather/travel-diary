@@ -66,15 +66,16 @@ class CustomLoginSuccessHandlerTest {
     @Test
     void successfulLoginClearsTheAccountFailureHistory() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addParameter("email", "  MEMBER@EXAMPLE.COM  ");
         request.getSession().setAttribute(
                 LoginFormState.SESSION_ATTRIBUTE,
-                new LoginFormState("member", 4, null));
+                new LoginFormState("member@example.com", 4, null));
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         handler.onAuthenticationSuccess(
                 request, response, authentication(7L, "member", UserRole.USER));
 
-        verify(loginThrottle).recordSuccess("member");
+        verify(loginThrottle).recordSuccess("member@example.com");
         assertThat(request.getSession().getAttribute(LoginFormState.SESSION_ATTRIBUTE)).isNull();
     }
 
@@ -89,7 +90,7 @@ class CustomLoginSuccessHandlerTest {
 
         assertThat(response.getRedirectedUrl()).isEqualTo("/account/restricted");
         assertThat(request.getSession().getAttribute("userId")).isEqualTo(7L);
-        verify(userMapper, never()).findByUsername(anyString());
+        verify(userMapper, never()).findForAuthenticationByEmail(anyString());
     }
 
     /**
