@@ -48,7 +48,7 @@ class CountryCategorySeedTransactionServiceTest {
         context.registerBean(CountryCategoryMapper.class, () -> mapper);
         context.registerBean(PlatformTransactionManager.class, () -> transactionManager);
         context.registerBean(CountryCategorySeedTransactionService.class,
-                () -> new CountryCategorySeedTransactionService(mapper));
+                () -> new CountryCategorySeedTransactionService(mapper, new CountryCategoryCache()));
         context.register(TransactionConfig.class);
         context.refresh();
 

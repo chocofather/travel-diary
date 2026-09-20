@@ -29,7 +29,8 @@ class CountryCategoryRegionPathTest {
 
     @BeforeEach
     void setUp() {
-        service = new CountryCategoryService(mapper, mock(FileUploadService.class));
+        service = new CountryCategoryService(
+                mapper, mock(FileUploadService.class), new CountryCategoryCache());
     }
 
     @Test

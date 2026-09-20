@@ -19,10 +19,17 @@ public class CountryCategoryService {
     private final CountryCategoryMapper mapper;
     /** 이미지 검증과 저장은 다른 업로드와 한 벌을 쓴다. 여기에 따로 만들지 않는다. */
     private final FileUploadService fileUploadService;
+    /**
+     * 요청 사이에도 들고 있는 기준 데이터.
+     *
+     * <p>여러 번 불리고 좀처럼 바뀌지 않는 조회만 골라 담는다. 무작위로 고르는 조회와
+     * 어쩌다 한 번 부르는 조회는 담지 않는다 — 담아 봐야 이득이 없고, 무작위는 뜻이 바뀐다.
+     */
+    private final CountryCategoryCache cache;
 
     // 1. depth1(최상위): 대륙 or 대한민국만
     public List<CountryCategory> getRootRegions() {
-        return mapper.selectDepth1();
+        return cache.readList(CountryCategoryCache.Key.of("depth1"), mapper::selectDepth1);
     }
 
     // 2. 특정 부모의 하위 지역 리스트
@@ -33,16 +40,23 @@ public class CountryCategoryService {
     // 3. 특정 depth 전체 리스트
     public List<CountryCategory> getRegionsByDepth(int depth) {
         // parentId 없이 전체를 뽑을 때는 null로
-        return mapper.findByDepth(depth, null);
+        return findByDepth(depth, null);
     }
 
     public List<CountryCategory> getCourseCountries() {
-        return mapper.selectCourseCountries();
+        return cache.readList(
+                CountryCategoryCache.Key.of("courseCountries"), mapper::selectCourseCountries);
     }
 
     // 4. 카테고리 ID로 조회
     public CountryCategory getById(Long id) {
-        return mapper.selectById(id);
+        return cache.read(CountryCategoryCache.Key.of("byId", id), () -> mapper.selectById(id));
+    }
+
+    /** depth(+parent) 목록. 여러 메서드가 같은 조합을 나눠 쓰므로 한 자리에 모은다. */
+    private List<CountryCategory> findByDepth(int depth, Long parentId) {
+        return cache.readList(CountryCategoryCache.Key.of("byDepth", depth, parentId),
+                () -> mapper.findByDepth(depth, parentId));
     }
 
     // 4-1. 최상위부터 해당 지역까지의 경로 (수정 화면 지역 select 복원용)
@@ -85,16 +99,21 @@ public class CountryCategoryService {
 
         String iconPath = fileUploadService.saveFile(file, ICON_DIRECTORY);
         mapper.updateIconPath(id, iconPath);
+        // 아이콘 경로가 바뀌었다. 들고 있던 지역을 버려야 바뀐 아이콘이 바로 보인다.
+        cache.invalidate();
     }
 
     // 6. 특정 지역의 모든 하위 지역(자손까지) ID 반환
     public List<Long> getAllRegionIdsUnder(Long parentId) {
-        return mapper.findAllRegionIdsUnder(parentId);
+        // 재귀 질의라 이 표에서 가장 비싸고, 여행지 목록이 한 요청에 여러 번 부른다.
+        return cache.readList(CountryCategoryCache.Key.of("subtree", parentId),
+                () -> mapper.findAllRegionIdsUnder(parentId));
     }
 
     // 7. 특정 parent에서 depth까지의 지역 반환 (예: parent=서울, depth=4 -> 구)
     public List<CountryCategory> getSubregions(Long parentId, int depth) {
-        return mapper.selectByParentIdAndDepth(parentId, depth);
+        return cache.readList(CountryCategoryCache.Key.of("subregions", parentId, depth),
+                () -> mapper.selectByParentIdAndDepth(parentId, depth));
     }
 
     // 8. [국내] 현재 계층에서 최상위에 놓인 실제 국가 root id 반환
@@ -107,7 +126,7 @@ public class CountryCategoryService {
     // 9. [해외] 대륙 루트 id 복수 반환
     public List<Long> getOverseasRootIds() {
         Set<Long> domesticRootIds = new HashSet<>(getDomesticRootIds());
-        return mapper.findByDepth(1, null).stream()
+        return findByDepth(1, null).stream()
                 .filter(category -> !domesticRootIds.contains(category.getId()))
                 .map(CountryCategory::getId)
                 .toList();
@@ -116,11 +135,11 @@ public class CountryCategoryService {
     // 10. depth1 전체(대륙/대한민국) 반환
     public List<CountryCategory> getContinentRoots() {
         // parentId 조건 없이 전체 depth=1 뽑으려면 null 넘겨야 함
-        return mapper.findByDepth(1, null);
+        return findByDepth(1, null);
     }
     // depth + parentId 조합으로 리스트
     public List<CountryCategory> getRegionsByDepthAndParent(int depth, Long parentId) {
-        return mapper.findByDepth(depth, parentId);
+        return findByDepth(depth, parentId);
     }
 
     // 현재 구조상 최상위에 놓인 실제 국가(대한민국) 뽑기
@@ -138,7 +157,7 @@ public class CountryCategoryService {
 
     public List<CountryCategory> getOverseasContinentRegions() {
         Set<Long> domesticRootIds = new HashSet<>(getDomesticRootIds());
-        return mapper.findByDepth(1, null).stream()
+        return findByDepth(1, null).stream()
                 .filter(category -> !domesticRootIds.contains(category.getId()))
                 .toList();
     }

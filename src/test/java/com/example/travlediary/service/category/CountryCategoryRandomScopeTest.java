@@ -28,7 +28,8 @@ class CountryCategoryRandomScopeTest {
         when(mapper.selectCourseCountries()).thenReturn(List.of(korea, japan));
         when(mapper.findByDepth(1, null)).thenReturn(List.of(asia, korea));
 
-        CountryCategoryService service = new CountryCategoryService(mapper, mock(FileUploadService.class));
+        CountryCategoryService service = new CountryCategoryService(
+                mapper, mock(FileUploadService.class), new CountryCategoryCache());
 
         assertThat(service.getDomesticRootIds()).containsExactly(909L);
         assertThat(service.getOverseasRootIds()).containsExactly(301L);
@@ -42,7 +43,8 @@ class CountryCategoryRandomScopeTest {
         when(mapper.selectCourseCountries()).thenReturn(List.of(japan));
         when(mapper.findByDepth(1, null)).thenReturn(List.of(asia));
 
-        CountryCategoryService service = new CountryCategoryService(mapper, mock(FileUploadService.class));
+        CountryCategoryService service = new CountryCategoryService(
+                mapper, mock(FileUploadService.class), new CountryCategoryCache());
 
         assertThat(service.getDomesticRootIds()).isEmpty();
         assertThat(service.getKoreaRootId()).isNull();

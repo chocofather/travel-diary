@@ -30,6 +30,8 @@ import java.util.Set;
 public class CountryCategorySeedTransactionService {
 
     private final CountryCategoryMapper mapper;
+    /** 기준 데이터를 채우고 나면 그 전에 들고 있던 값은 버린다. */
+    private final CountryCategoryCache cache;
 
     /**
      * 아직 없는 지역만 넣는다.
@@ -52,6 +54,13 @@ public class CountryCategorySeedTransactionService {
             mapper.insert(category);
             inserted++;
         }
+
+        /*
+          넣은 줄이 없더라도 버린다. 비어 있는 캐시는 늘 옳지만, 남아 있는 캐시는 틀릴 수 있다.
+          이 트랜잭션이 되돌아가도 마찬가지다 — 다시 읽을 뿐이라 잘못된 값이 남지 않는다.
+          기동 중에만 일어나는 일이라 다시 읽는 비용도 문제가 되지 않는다.
+        */
+        cache.invalidate();
         return inserted;
     }
 }

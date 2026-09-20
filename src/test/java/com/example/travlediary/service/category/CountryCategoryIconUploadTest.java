@@ -175,7 +175,8 @@ class CountryCategoryIconUploadTest {
     /* ===== 도우미 ===== */
 
     private CountryCategoryService service() {
-        return new CountryCategoryService(mapper, new FileUploadService(uploadRoot.toString()));
+        return new CountryCategoryService(
+                mapper, new FileUploadService(uploadRoot.toString()), new CountryCategoryCache());
     }
 
     private void assertNothingStored() throws IOException {
