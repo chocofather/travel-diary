@@ -18,6 +18,20 @@
     </resultMap>
 
     <!--
+      ================= 통합검색 =================
+
+      예전에는 검색 갈래 여섯을 언제나 모두 만들고, 갈래를 고르는 일은 각 분기의
+      WHERE #{type} IN ('all', ...) 에 맡겼다. 그래서 공지만 찾는 중에도 여행지·게시글·코스·
+      여행정보·이벤트를 모두 훑었다. 게다가 조건에 맞는 <b>모든</b> 줄의 본문(MEDIUMTEXT)이
+      summary 라는 이름으로 UNION 임시 결과에 들어간 뒤, 열 줄만 남기고 버려졌다.
+
+      지금은 고른 갈래만 만들고, 본문과 대표 이미지는 쪽을 자른 뒤 그 열 줄에 대해서만 읽는다.
+      찾는 조건(LIKE)과 정렬식은 예전 그대로라 같은 자료에서 같은 결과와 같은 차례가 나온다.
+      (GlobalSearchType 이 all/destination/community/course/travel-info/event/notice 로
+       미리 다듬어 넘기므로 아래 분기 조건은 그 일곱 값만 본다)
+    -->
+
+    <!--
       여행지 이름을 요청 언어 번역에서도 찾는다. 제목이 맞으면 기존과 같이 위로 올린다.
       EXISTS 라 행이 늘지 않아 같은 여행지가 두 번 나오지 않는다.
     -->
@@ -31,22 +45,144 @@
         )
     </sql>
 
-    <sql id="GlobalSearchUnion">
+    <!--
+      갈래별 FROM 과 찾는 조건.
+      목록과 개수 세기가 이 조각을 함께 쓴다. 조건이 갈라지면 쪽 수가 맞지 않는다.
+    -->
+
+    <sql id="destinationFrom">
+        FROM destinations d
+        JOIN destination_translations dt
+          ON dt.destination_id = d.id
+         AND dt.language_code = 'ko'
+        LEFT JOIN country_categories cc ON cc.id = d.region_id
+        LEFT JOIN country_categories pcc ON pcc.id = cc.parent_id
+    </sql>
+
+    <sql id="destinationWhere">
+        WHERE (
+            dt.name LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+            OR dt.short_description LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+            OR dt.description LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+            OR cc.region_name LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+            OR pcc.region_name LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+            OR EXISTS (
+                SELECT 1
+                FROM destination_categories dcat
+                JOIN categories cat ON cat.id = dcat.category_id
+                WHERE dcat.destination_id = d.id
+                  AND cat.name LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+            )
+            <if test="languageCode != null and languageCode != ''">
+                <!-- 현재 언어의 여행지 이름·짧은 소개 -->
+                OR EXISTS (
+                    SELECT 1
+                    FROM destination_translations dtr
+                    WHERE dtr.destination_id = d.id
+                      AND dtr.language_code = #{languageCode}
+                      AND (
+                          dtr.name LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+                          OR dtr.short_description LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+                      )
+                )
+                <!-- 현재 언어의 지역명(해당 지역과 상위 지역) -->
+                OR EXISTS (
+                    SELECT 1
+                    FROM country_category_translations cctr
+                    WHERE cctr.country_category_id IN (cc.id, pcc.id)
+                      AND cctr.language_code = #{languageCode}
+                      AND cctr.name LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+                )
+                <!-- 현재 언어의 카테고리명 -->
+                OR EXISTS (
+                    SELECT 1
+                    FROM destination_categories dcat
+                    JOIN category_translations ctr ON ctr.category_id = dcat.category_id
+                    WHERE dcat.destination_id = d.id
+                      AND ctr.language_code = #{languageCode}
+                      AND ctr.name LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+                )
+            </if>
+        )
+    </sql>
+
+    <sql id="communityFrom">
+        FROM user_posts p
+    </sql>
+
+    <sql id="communityWhere">
+        WHERE p.post_type IN ('QUESTION', 'TIP')
+          AND p.deleted = 0
+          AND p.deleted_at IS NULL
+          AND (
+              p.title LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+              OR p.content LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+          )
+    </sql>
+
+    <sql id="courseFrom">
+        FROM courses c
+    </sql>
+
+    <sql id="courseWhere">
+        WHERE c.deleted = 0
+          AND c.deleted_at IS NULL
+          AND (
+              c.title LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+              OR c.content LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+          )
+    </sql>
+
+    <!-- 숨긴 분류의 여행정보는 검색에도 나오지 않는다. 이 JOIN 은 공개 여부 조건이라 남긴다. -->
+    <sql id="travelInfoFrom">
+        FROM travel_info ti
+        JOIN info_categories ic
+          ON ic.id = ti.category_id
+         AND ic.is_visible = 1
+    </sql>
+
+    <sql id="travelInfoWhere">
+        WHERE (
+            ti.title LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+            OR ti.content LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+        )
+    </sql>
+
+    <sql id="eventFrom">
+        FROM events e
+    </sql>
+
+    <sql id="eventWhere">
+        WHERE (
+            e.title LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+            OR e.description LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+        )
+    </sql>
+
+    <sql id="noticeFrom">
+        FROM notices n
+    </sql>
+
+    <sql id="noticeWhere">
+        WHERE (
+            n.title LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+            OR n.content LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
+        )
+    </sql>
+
+    <!--
+      후보 줄.
+      정렬과 쪽 나누기에 필요한 값만 싣는다. 본문과 대표 이미지는 여기 담지 않는다.
+      relevance 는 예전과 같이 제목이 맞으면 2, 아니면 1 이다.
+    -->
+
+    <sql id="destinationCandidate">
         SELECT
             'destination' AS search_type,
             d.id,
             dt.name AS title,
-            COALESCE(NULLIF(dt.short_description, ''), dt.description, '') AS summary,
             d.created_at,
             CONCAT('/destinations/', d.id) AS detail_url,
-            (
-                SELECT di.image_url
-                FROM destination_images di
-                WHERE di.destination_id = d.id
-                  AND di.is_main = 1
-                ORDER BY di.order_index ASC, di.id ASC
-                LIMIT 1
-            ) AS thumbnail_url,
             NULL AS start_date,
             NULL AS end_date,
             CASE WHEN dt.name LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
@@ -54,183 +190,290 @@
                     OR <include refid="DestinationTranslatedNameMatch"/>
                 </if>
                 THEN 2 ELSE 1 END AS relevance
-        FROM destinations d
-        JOIN destination_translations dt
-          ON dt.destination_id = d.id
-         AND dt.language_code = 'ko'
-        LEFT JOIN country_categories cc ON cc.id = d.region_id
-        LEFT JOIN country_categories pcc ON pcc.id = cc.parent_id
-        WHERE #{type} IN ('all', 'destination')
-          AND (
-              dt.name LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
-              OR dt.short_description LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
-              OR dt.description LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
-              OR cc.region_name LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
-              OR pcc.region_name LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
-              OR EXISTS (
-                  SELECT 1
-                  FROM destination_categories dcat
-                  JOIN categories cat ON cat.id = dcat.category_id
-                  WHERE dcat.destination_id = d.id
-                    AND cat.name LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
-              )
-              <if test="languageCode != null and languageCode != ''">
-                  <!-- 현재 언어의 여행지 이름·짧은 소개 -->
-                  OR EXISTS (
-                      SELECT 1
-                      FROM destination_translations dtr
-                      WHERE dtr.destination_id = d.id
-                        AND dtr.language_code = #{languageCode}
-                        AND (
-                            dtr.name LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
-                            OR dtr.short_description LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
-                        )
-                  )
-                  <!-- 현재 언어의 지역명(해당 지역과 상위 지역) -->
-                  OR EXISTS (
-                      SELECT 1
-                      FROM country_category_translations cctr
-                      WHERE cctr.country_category_id IN (cc.id, pcc.id)
-                        AND cctr.language_code = #{languageCode}
-                        AND cctr.name LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
-                  )
-                  <!-- 현재 언어의 카테고리명 -->
-                  OR EXISTS (
-                      SELECT 1
-                      FROM destination_categories dcat
-                      JOIN category_translations ctr ON ctr.category_id = dcat.category_id
-                      WHERE dcat.destination_id = d.id
-                        AND ctr.language_code = #{languageCode}
-                        AND ctr.name LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
-                  )
-              </if>
-          )
+        <include refid="destinationFrom"/>
+        <include refid="destinationWhere"/>
+    </sql>
 
-        UNION ALL
-
+    <sql id="communityCandidate">
         SELECT
             'community' AS search_type,
             p.id,
             p.title,
-            p.content AS summary,
             p.created_at,
             CONCAT('/post/', p.id) AS detail_url,
-            NULL AS thumbnail_url,
             NULL AS start_date,
             NULL AS end_date,
             CASE WHEN p.title LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!' THEN 2 ELSE 1 END AS relevance
-        FROM user_posts p
-        WHERE #{type} IN ('all', 'community')
-          AND p.post_type IN ('QUESTION', 'TIP')
-          AND p.deleted = 0
-          AND p.deleted_at IS NULL
-          AND (
-              p.title LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
-              OR p.content LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
-          )
+        <include refid="communityFrom"/>
+        <include refid="communityWhere"/>
+    </sql>
 
-        UNION ALL
-
+    <sql id="courseCandidate">
         SELECT
             'course' AS search_type,
             c.id,
             c.title,
-            c.content AS summary,
             c.created_at,
             CONCAT('/course/', c.id) AS detail_url,
-            NULL AS thumbnail_url,
             NULL AS start_date,
             NULL AS end_date,
             CASE WHEN c.title LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!' THEN 2 ELSE 1 END AS relevance
-        FROM courses c
-        WHERE #{type} IN ('all', 'course')
-          AND c.deleted = 0
-          AND c.deleted_at IS NULL
-          AND (
-              c.title LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
-              OR c.content LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
-          )
+        <include refid="courseFrom"/>
+        <include refid="courseWhere"/>
+    </sql>
 
-        UNION ALL
-
+    <sql id="travelInfoCandidate">
         SELECT
             'travel-info' AS search_type,
             ti.id,
             ti.title,
-            ti.content AS summary,
             ti.created_at,
             CONCAT('/travel-info/', ti.id) AS detail_url,
-            NULL AS thumbnail_url,
             NULL AS start_date,
             NULL AS end_date,
             CASE WHEN ti.title LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!' THEN 2 ELSE 1 END AS relevance
-        FROM travel_info ti
-        JOIN info_categories ic
-          ON ic.id = ti.category_id
-         AND ic.is_visible = 1
-        WHERE #{type} IN ('all', 'travel-info')
-          AND (
-              ti.title LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
-              OR ti.content LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
-          )
+        <include refid="travelInfoFrom"/>
+        <include refid="travelInfoWhere"/>
+    </sql>
 
-        UNION ALL
-
+    <sql id="eventCandidate">
         SELECT
             'event' AS search_type,
             e.id,
             e.title,
-            e.description AS summary,
             e.created_at,
             CONCAT('/events/', e.id) AS detail_url,
-            COALESCE(NULLIF(e.event_img, ''), NULLIF(e.poster_img, '')) AS thumbnail_url,
             e.start_date,
             e.end_date,
             CASE WHEN e.title LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!' THEN 2 ELSE 1 END AS relevance
-        FROM events e
-        WHERE #{type} IN ('all', 'event')
-          AND (
-              e.title LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
-              OR e.description LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
-          )
+        <include refid="eventFrom"/>
+        <include refid="eventWhere"/>
+    </sql>
 
-        UNION ALL
-
+    <sql id="noticeCandidate">
         SELECT
             'notice' AS search_type,
             n.id,
             n.title,
-            n.content AS summary,
             n.created_at,
             CONCAT('/support/notices/', n.id) AS detail_url,
-            NULL AS thumbnail_url,
             NULL AS start_date,
             NULL AS end_date,
             CASE WHEN n.title LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!' THEN 2 ELSE 1 END AS relevance
-        FROM notices n
-        WHERE #{type} IN ('all', 'notice')
-          AND (
-              n.title LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
-              OR n.content LIKE CONCAT('%', #{keywordPattern}, '%') ESCAPE '!'
-          )
+        <include refid="noticeFrom"/>
+        <include refid="noticeWhere"/>
+    </sql>
+
+    <!-- 고른 갈래만 만든다. 전체일 때만 여섯을 UNION ALL 로 붙인다. -->
+    <sql id="searchCandidates">
+        <choose>
+            <when test="type == 'destination'">
+                <include refid="destinationCandidate"/>
+            </when>
+            <when test="type == 'community'">
+                <include refid="communityCandidate"/>
+            </when>
+            <when test="type == 'course'">
+                <include refid="courseCandidate"/>
+            </when>
+            <when test="type == 'travel-info'">
+                <include refid="travelInfoCandidate"/>
+            </when>
+            <when test="type == 'event'">
+                <include refid="eventCandidate"/>
+            </when>
+            <when test="type == 'notice'">
+                <include refid="noticeCandidate"/>
+            </when>
+            <otherwise>
+                <include refid="destinationCandidate"/>
+
+                UNION ALL
+
+                <include refid="communityCandidate"/>
+
+                UNION ALL
+
+                <include refid="courseCandidate"/>
+
+                UNION ALL
+
+                <include refid="travelInfoCandidate"/>
+
+                UNION ALL
+
+                <include refid="eventCandidate"/>
+
+                UNION ALL
+
+                <include refid="noticeCandidate"/>
+            </otherwise>
+        </choose>
+    </sql>
+
+    <!--
+      화면에 쓸 미리보기. 갈래마다 예전 SELECT 가 쓰던 식을 그대로 옮겨 온 것이라 값이 같다.
+      쪽을 자른 뒤(LIMIT) 남은 줄에 대해서만 계산되므로 한 쪽 분량만 읽는다.
+      HTML 을 걷어내고 길이를 줄이는 일은 예전처럼 서비스가 맡는다.
+    -->
+    <sql id="destinationSummaryValue">
+        SELECT COALESCE(NULLIF(dt.short_description, ''), dt.description, '')
+        FROM destination_translations dt
+        WHERE dt.destination_id = r.id
+          AND dt.language_code = 'ko'
+    </sql>
+    <sql id="communitySummaryValue">
+        SELECT p.content FROM user_posts p WHERE p.id = r.id
+    </sql>
+    <sql id="courseSummaryValue">
+        SELECT c.content FROM courses c WHERE c.id = r.id
+    </sql>
+    <sql id="travelInfoSummaryValue">
+        SELECT ti.content FROM travel_info ti WHERE ti.id = r.id
+    </sql>
+    <sql id="eventSummaryValue">
+        SELECT e.description FROM events e WHERE e.id = r.id
+    </sql>
+    <sql id="noticeSummaryValue">
+        SELECT n.content FROM notices n WHERE n.id = r.id
+    </sql>
+
+    <!--
+      갈래를 고르는 조건은 searchCandidates 와 똑같은 모양으로 둔다.
+      한쪽만 'all' 을 명시로 잡으면, 뜻밖의 type 이 들어왔을 때 후보는 여섯 갈래인데
+      미리보기는 한 갈래만 아는 상태로 어긋난다.
+    -->
+    <sql id="searchSummary">
+        <choose>
+            <when test="type == 'destination'">
+                (<include refid="destinationSummaryValue"/>) AS summary
+            </when>
+            <when test="type == 'community'">
+                (<include refid="communitySummaryValue"/>) AS summary
+            </when>
+            <when test="type == 'course'">
+                (<include refid="courseSummaryValue"/>) AS summary
+            </when>
+            <when test="type == 'travel-info'">
+                (<include refid="travelInfoSummaryValue"/>) AS summary
+            </when>
+            <when test="type == 'event'">
+                (<include refid="eventSummaryValue"/>) AS summary
+            </when>
+            <when test="type == 'notice'">
+                (<include refid="noticeSummaryValue"/>) AS summary
+            </when>
+            <otherwise>
+                CASE r.search_type
+                    WHEN 'destination' THEN (<include refid="destinationSummaryValue"/>)
+                    WHEN 'community' THEN (<include refid="communitySummaryValue"/>)
+                    WHEN 'course' THEN (<include refid="courseSummaryValue"/>)
+                    WHEN 'travel-info' THEN (<include refid="travelInfoSummaryValue"/>)
+                    WHEN 'event' THEN (<include refid="eventSummaryValue"/>)
+                    WHEN 'notice' THEN (<include refid="noticeSummaryValue"/>)
+                END AS summary
+            </otherwise>
+        </choose>
+    </sql>
+
+    <sql id="destinationThumbnailValue">
+        SELECT di.image_url
+        FROM destination_images di
+        WHERE di.destination_id = r.id
+          AND di.is_main = 1
+        ORDER BY di.order_index ASC, di.id ASC
+        LIMIT 1
+    </sql>
+
+    <sql id="eventThumbnailValue">
+        SELECT COALESCE(NULLIF(e.event_img, ''), NULLIF(e.poster_img, ''))
+        FROM events e
+        WHERE e.id = r.id
+    </sql>
+
+    <!--
+      대표 이미지도 같은 이유로 쪽을 자른 뒤에 찾는다.
+      대표 이미지를 가진 갈래는 여행지와 이벤트뿐이라, 나머지 갈래만 고른 검색은
+      예전처럼 그냥 비어 있다. (WHEN 이 하나도 없는 CASE 는 문법 오류라 여기서 갈라 둔다)
+    -->
+    <sql id="searchThumbnail">
+        <choose>
+            <when test="type == 'destination'">
+                (<include refid="destinationThumbnailValue"/>) AS thumbnail_url
+            </when>
+            <when test="type == 'event'">
+                (<include refid="eventThumbnailValue"/>) AS thumbnail_url
+            </when>
+            <!-- 대표 이미지가 없는 갈래만 고른 검색. 예전과 같이 늘 비어 있다. -->
+            <when test="type == 'community' or type == 'course'
+                        or type == 'travel-info' or type == 'notice'">
+                NULL AS thumbnail_url
+            </when>
+            <otherwise>
+                CASE r.search_type
+                    WHEN 'destination' THEN (<include refid="destinationThumbnailValue"/>)
+                    WHEN 'event' THEN (<include refid="eventThumbnailValue"/>)
+                    ELSE NULL
+                END AS thumbnail_url
+            </otherwise>
+        </choose>
     </sql>
 
     <select id="search" resultMap="GlobalSearchResultMap">
-        SELECT search_type, id, title, summary, created_at, detail_url,
-               thumbnail_url, start_date, end_date
+        SELECT
+            r.search_type,
+            r.id,
+            r.title,
+            <include refid="searchSummary"/>,
+            r.created_at,
+            r.detail_url,
+            <include refid="searchThumbnail"/>,
+            r.start_date,
+            r.end_date
         FROM (
-            <include refid="GlobalSearchUnion"/>
-        ) search_results
-        ORDER BY relevance DESC, created_at DESC, search_type ASC, id DESC
-        LIMIT #{limit}
-        OFFSET #{offset}
+            <include refid="searchCandidates"/>
+            ORDER BY relevance DESC, created_at DESC, search_type ASC, id DESC
+            LIMIT #{limit}
+            OFFSET #{offset}
+        ) r
     </select>
 
+    <!--
+      개수 세기는 화면에 그릴 값을 하나도 만들지 않는다.
+      미리보기도, 주소도, 대표 이미지도, 정렬도 필요 없다 — 조건에 맞는 줄 수만 있으면 된다.
+      찾는 조건은 위 목록과 같은 조각을 쓰므로 갈라질 수 없다.
+    -->
     <select id="count" resultType="long">
-        SELECT COUNT(*)
-        FROM (
-            <include refid="GlobalSearchUnion"/>
-        ) search_results
+        <choose>
+            <when test="type == 'destination'">
+                SELECT COUNT(*) <include refid="destinationFrom"/> <include refid="destinationWhere"/>
+            </when>
+            <when test="type == 'community'">
+                SELECT COUNT(*) <include refid="communityFrom"/> <include refid="communityWhere"/>
+            </when>
+            <when test="type == 'course'">
+                SELECT COUNT(*) <include refid="courseFrom"/> <include refid="courseWhere"/>
+            </when>
+            <when test="type == 'travel-info'">
+                SELECT COUNT(*) <include refid="travelInfoFrom"/> <include refid="travelInfoWhere"/>
+            </when>
+            <when test="type == 'event'">
+                SELECT COUNT(*) <include refid="eventFrom"/> <include refid="eventWhere"/>
+            </when>
+            <when test="type == 'notice'">
+                SELECT COUNT(*) <include refid="noticeFrom"/> <include refid="noticeWhere"/>
+            </when>
+            <otherwise>
+                <!-- 여섯을 UNION 으로 붙여 실체화하지 않고 각각 센 뒤 더한다. -->
+                SELECT
+                    (SELECT COUNT(*) <include refid="destinationFrom"/> <include refid="destinationWhere"/>)
+                  + (SELECT COUNT(*) <include refid="communityFrom"/> <include refid="communityWhere"/>)
+                  + (SELECT COUNT(*) <include refid="courseFrom"/> <include refid="courseWhere"/>)
+                  + (SELECT COUNT(*) <include refid="travelInfoFrom"/> <include refid="travelInfoWhere"/>)
+                  + (SELECT COUNT(*) <include refid="eventFrom"/> <include refid="eventWhere"/>)
+                  + (SELECT COUNT(*) <include refid="noticeFrom"/> <include refid="noticeWhere"/>)
+            </otherwise>
+        </choose>
     </select>
 
 </mapper>

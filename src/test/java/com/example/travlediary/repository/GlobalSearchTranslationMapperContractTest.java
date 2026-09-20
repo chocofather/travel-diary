@@ -69,11 +69,16 @@ class GlobalSearchTranslationMapperContractTest {
     @Test
     void otherContentTypesAreLeftUntouched() throws IOException {
         String mapper = mapperXml();
-        String union = between(mapper, "<sql id=\"GlobalSearchUnion\">", "</sql>");
-        String others = union.substring(union.indexOf("'community' AS search_type"));
+        StringBuilder others = new StringBuilder();
+        for (String source : new String[]{"community", "course", "travelInfo", "event", "notice"}) {
+            others.append(fragment(mapper, source + "From"))
+                    .append(fragment(mapper, source + "Where"))
+                    .append(fragment(mapper, source + "Candidate"))
+                    .append(fragment(mapper, source + "SummaryValue"));
+        }
 
         // 커뮤니티·코스·여행정보·이벤트·공지사항은 예전 조건 그대로 (번역 테이블 없음)
-        assertThat(others)
+        assertThat(others.toString())
                 .contains("p.title LIKE", "p.content LIKE")
                 .contains("c.title LIKE", "c.content LIKE")
                 .contains("ti.title LIKE", "ti.content LIKE")
@@ -83,9 +88,16 @@ class GlobalSearchTranslationMapperContractTest {
                 .doesNotContain("_translations");
     }
 
+    /** 여행지 갈래를 이루는 조각들. 예전 union 안의 여행지 분기와 같은 범위다. */
     private String destinationBranch() throws IOException {
-        String union = between(mapperXml(), "<sql id=\"GlobalSearchUnion\">", "</sql>");
-        return union.substring(0, union.indexOf("'community' AS search_type"));
+        String mapper = mapperXml();
+        return fragment(mapper, "destinationFrom")
+                + fragment(mapper, "destinationWhere")
+                + fragment(mapper, "destinationCandidate");
+    }
+
+    private String fragment(String mapper, String id) {
+        return between(mapper, "<sql id=\"" + id + "\">", "</sql>");
     }
 
     private int count(String source, String token) {
