@@ -19,6 +19,22 @@ import java.util.regex.Pattern;
 public class ProfileImageStorageService {
 
     private static final long MAX_PROFILE_IMAGE_SIZE = 5L * 1024 * 1024;
+
+    /**
+     * 저장하는 프로필 사진의 긴 변 상한.
+     *
+     * <p>가장 큰 표시 자리가 공개 프로필의 82×82 이므로 3배 해상도 화면(246px)까지 덮고도 남는다.
+     */
+    static final int PROFILE_MAX_EDGE = 256;
+
+    /**
+     * 펼쳐서 메모리에 올리는 단계의 긴 변 상한.
+     *
+     * <p>최종이 256px 이라 네 배 여유면 단계적 축소(1024 → 512 → 256)에 충분하다.
+     * 이 크기의 ARGB 한 장은 4MB 를 넘지 않는다.
+     */
+    static final int PROFILE_DECODE_EDGE = 1024;
+
     private static final String PROFILE_DIRECTORY = "profiles";
     private static final String PROFILE_URL_PREFIX = "/uploads/profiles/";
     private static final Pattern MANAGED_PROFILE_IMAGE_NAME = Pattern.compile(
@@ -45,8 +61,9 @@ public class ProfileImageStorageService {
         ImageFormat format = validate(file);
 
         byte[] content = readAll(file);
-        if (format.imageIoName != null && ProfileImageResizer.canResize(format.imageIoName)) {
-            content = ProfileImageResizer.optimize(content, format.imageIoName, format.keepsAlpha);
+        if (format.imageIoName != null && RasterImageResizer.canResize(format.imageIoName)) {
+            content = RasterImageResizer.optimize(content, format.imageIoName, format.keepsAlpha,
+                    PROFILE_MAX_EDGE, PROFILE_DECODE_EDGE);
         }
 
         Path profileDirectory = resolveProfileDirectory(true);

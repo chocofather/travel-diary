@@ -47,6 +47,27 @@ public class FileUploadService {
     private static final String COMMENT_DIRECTORY = "comments";
     private static final String COMMENT_URL_PREFIX = "/uploads/comments/";
     private static final long TRAVEL_INFO_THUMBNAIL_MAX_SIZE = 5L * 1024 * 1024;
+
+    /**
+     * 여행정보 썸네일을 줄일 때 목표로 삼는 긴 변.
+     *
+     * <p>목록 카드는 약 278px 이라 훨씬 작아도 되지만, 같은 파일이 공유 카드의 og:image 로도
+     * 쓰인다. 카카오톡·트위터 권장 폭이 1200px 이라 거기에 맞춘다.
+     *
+     * <p>모든 파일이 이 크기로 저장된다는 뜻은 아니다. 축소본을 채택했을 때의 긴 변일 뿐이고,
+     * 언제 채택하는지는 {@link #saveTravelInfoThumbnail} 에 적어 두었다.
+     */
+    static final int TRAVEL_INFO_THUMBNAIL_MAX_EDGE = 1200;
+
+    /**
+     * 펼쳐서 메모리에 올리는 단계의 긴 변 상한.
+     *
+     * <p>최종 1200px 의 두 배라 단계적 축소가 2400 → 1200 한 걸음으로 끝난다.
+     * 이 크기의 ARGB 한 장은 23MB 를 넘지 않아, 5MB 상한을 통과한 어떤 그림이 와도
+     * 펼치는 데 드는 메모리가 여기에서 묶인다.
+     */
+    static final int TRAVEL_INFO_THUMBNAIL_DECODE_EDGE = 2400;
+
     private static final String TRAVEL_INFO_THUMBNAIL_DIRECTORY = "travel-info/thumbnails";
     private static final String TRAVEL_INFO_THUMBNAIL_URL_PREFIX =
             "/uploads/" + TRAVEL_INFO_THUMBNAIL_DIRECTORY + "/";
@@ -438,15 +459,58 @@ public class FileUploadService {
         }
     }
 
+    /**
+     * 일반 여행정보(GENERAL)의 목록 썸네일을 저장한다.
+     *
+     * <p>이 파일은 목록 카드(약 278px)와 관리자 미리보기, 그리고 공유 카드의 og:image 로만 쓰인다.
+     * 상세 본문에는 그려지지 않는다. 그래서 원본을 따로 남기지 않고 저장할 것 하나만 둔다.
+     * 줄일 때의 목표를 {@value #TRAVEL_INFO_THUMBNAIL_MAX_EDGE}px 로 잡은 것은 목록 때문이 아니라
+     * 공유 카드 권장 폭(1200px) 때문이다.
+     *
+     * <p>무엇을 저장하는지는 형식과 결과에 따라 갈린다. 목적이 내려받는 양을 줄이는 것이라
+     * 줄인 쪽이 더 커지면 줄인 것을 버린다.
+     * <ul>
+     *   <li>긴 변 {@value #TRAVEL_INFO_THUMBNAIL_MAX_EDGE}px 이하 JPEG/PNG — 원본 바이트 그대로</li>
+     *   <li>JPEG — 줄여서 다시 굽는다. 사진은 언제나 작아지므로 사실상 축소본이 저장된다</li>
+     *   <li>PNG — 줄인 것이 원본보다 작을 때만 채택한다. 넓은 단색 면이 많은 PNG 는 줄이면
+     *       보간 때문에 색이 잘게 번져 압축이 덜 되고, 오히려 파일이 커진다.
+     *       그럴 때는 원본 크기 그대로 남는다</li>
+     *   <li>WebP — 이 런타임의 ImageIO 가 읽지도 쓰지도 못한다. 원본 그대로</li>
+     * </ul>
+     *
+     * <p>축제(FESTIVAL)의 목록 대표 이미지는 여기를 지나지 않는다. 그쪽은 파일을 따로 올리지 않고
+     * 갤러리 사진 하나를 {@code is_thumbnail} 로 가리키는 방식이라, 같은 파일이 상세의 확대 보기에
+     * 쓰인다. 줄이면 그 화면이 상한다.
+     *
+     * <p>줄이는 일은 파일을 만들기 전에 메모리에서 끝낸다. 그래야 줄이다가 잘못되어도
+     * 반쯤 쓰다 만 파일이 남지 않는다.
+     */
     public String saveTravelInfoThumbnail(MultipartFile file) {
         ThumbnailFormat format = validateTravelInfoThumbnail(file);
+
+        byte[] content = readAllBytes(file);
+        if (format.imageIoName != null && RasterImageResizer.canResize(format.imageIoName)) {
+            byte[] resized = RasterImageResizer.optimize(content, format.imageIoName,
+                    format.keepsAlpha,
+                    TRAVEL_INFO_THUMBNAIL_MAX_EDGE, TRAVEL_INFO_THUMBNAIL_DECODE_EDGE);
+            /*
+              줄였는데 파일이 더 커지는 경우가 있다. 넓은 단색 면이 많은 PNG 를 줄이면
+              보간 때문에 색이 잘게 번져서 압축이 덜 된다. 내려받는 양을 줄이려고 하는 일이라
+              커진 쪽을 저장하면 앞뒤가 맞지 않는다. 그럴 때는 올라온 그대로 둔다.
+             */
+            if (resized.length < content.length) {
+                content = resized;
+            }
+        }
+
         Path thumbnailDirectory = resolveThumbnailDirectory(true);
         String savedName = UUID.randomUUID() + "." + format.extension;
         Path destination = thumbnailDirectory.resolve(savedName).normalize();
         ensureContained(thumbnailDirectory, destination);
 
-        try (InputStream input = file.getInputStream()) {
-            Files.copy(input, destination);
+        try {
+            Files.write(destination, content, StandardOpenOption.CREATE_NEW,
+                    StandardOpenOption.WRITE);
         } catch (IOException exception) {
             try {
                 Files.deleteIfExists(destination);
@@ -456,6 +520,15 @@ public class FileUploadService {
             throw new RuntimeException("썸네일 파일 저장에 실패했습니다.", exception);
         }
         return TRAVEL_INFO_THUMBNAIL_URL_PREFIX + savedName;
+    }
+
+    /** 크기 상한을 이미 확인한 뒤라 통째로 읽어도 된다. */
+    private byte[] readAllBytes(MultipartFile file) {
+        try (InputStream input = file.getInputStream()) {
+            return input.readAllBytes();
+        } catch (IOException exception) {
+            throw new RuntimeException("썸네일 파일 저장에 실패했습니다.", exception);
+        }
     }
 
     public boolean deleteTravelInfoThumbnail(String imageUrl) {
@@ -1355,15 +1428,28 @@ public class FileUploadService {
         }
     }
 
+    /**
+     * 저장 확장자와, 이 런타임에서 다시 구울 수 있는지.
+     *
+     * <p>WEBP 는 표준 ImageIO 가 읽지도 쓰지도 못해 {@code imageIoName} 이 없다.
+     * 줄이지 못하므로 올라온 그대로 저장한다. 다른 형식으로 구워 {@code .webp} 이름을
+     * 붙이는 일은 하지 않는다 — 이름과 속이 다른 파일이 된다.
+     */
     private enum ThumbnailFormat {
-        JPEG("jpg"),
-        PNG("png"),
-        WEBP("webp");
+        JPEG("jpg", "jpeg", false),
+        PNG("png", "png", true),
+        WEBP("webp", null, true);
 
         private final String extension;
+        /** ImageIO 형식 이름. 다시 구울 수 없으면 null. */
+        private final String imageIoName;
+        /** 투명도를 지닐 수 있는 형식인지. */
+        private final boolean keepsAlpha;
 
-        ThumbnailFormat(String extension) {
+        ThumbnailFormat(String extension, String imageIoName, boolean keepsAlpha) {
             this.extension = extension;
+            this.imageIoName = imageIoName;
+            this.keepsAlpha = keepsAlpha;
         }
     }
 
