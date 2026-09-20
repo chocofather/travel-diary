@@ -436,6 +436,13 @@
             LIMIT #{limit}
             OFFSET #{offset}
         ) r
+        <!--
+          안쪽이 어느 줄을 남길지 정하고, 여기서 남은 줄을 같은 차례로 내보낸다.
+          파생 테이블이 담아 둔 순서에 기대지 않는다 — 그 순서는 MySQL 이 실제로는 지켜 주지만
+          SQL 이 보장하는 것은 아니라서, 옵티마이저가 바뀌면 조용히 뒤섞일 수 있다.
+          두 식은 반드시 같은 뜻이어야 한다. (GlobalSearchSqlContractTest 가 확인한다)
+        -->
+        ORDER BY r.relevance DESC, r.created_at DESC, r.search_type ASC, r.id DESC
     </select>
 
     <!--

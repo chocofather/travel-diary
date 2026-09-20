@@ -142,6 +142,27 @@ class GlobalSearchSqlContractTest {
         }
     }
 
+    /**
+     * 어느 줄을 남길지 정하는 정렬(파생 테이블 안)과, 남은 줄을 내보내는 정렬(바깥)은
+     * 언제나 같은 뜻이어야 한다. 둘이 어긋나면 쪽마다 차례가 흔들린다.
+     *
+     * <p>바깥 정렬이 아예 없으면 파생 테이블이 담아 둔 순서에 기대게 되는데,
+     * 그 순서는 SQL 이 보장하는 것이 아니라 그것도 함께 막는다.
+     */
+    @Test
+    void theCandidateOrderAndTheOutputOrderAlwaysAgree() throws IOException {
+        for (String type : allSearchInputs()) {
+            String sql = searchSql(type);
+            String candidate = orderInside(derivedTableOf(sql));
+            String output = orderInside(sql.substring(sql.lastIndexOf(") r")));
+
+            assertThat(output).as("type=%s 에 바깥 정렬이 없다", type).isNotEmpty();
+            assertThat(stripAlias(output))
+                    .as("type=%s 의 두 정렬식이 다르다", type)
+                    .isEqualTo(stripAlias(candidate));
+        }
+    }
+
     @Test
     void relevanceStillPrefersATitleHit() throws IOException {
         assertThat(searchSql("community"))
@@ -339,6 +360,30 @@ class GlobalSearchSqlContractTest {
                 .getMappedStatement(NAMESPACE + "." + statement)
                 .getBoundSql(parameters)
                 .getSql();
+    }
+
+    /** 갈래를 고르는 값들. 예상 밖의 값도 섞어 본다(서비스가 all 로 바꿔 주지만). */
+    private List<String> allSearchInputs() {
+        List<String> inputs = new java.util.ArrayList<>(SPECIFIC_TYPES);
+        inputs.add("all");
+        inputs.add("뜻밖의값");
+        return inputs;
+    }
+
+    /**
+     * 조각의 줄 세우기 식. 대표 이미지를 고르는 서브쿼리 안에도 ORDER BY 가 있으므로
+     * 맨 뒤의 것(줄을 세우는 쪽)을 본다.
+     */
+    private String orderInside(String fragment) {
+        int start = fragment.lastIndexOf("ORDER BY");
+        assertThat(start).as("ORDER BY 가 없다: %s", fragment).isGreaterThanOrEqualTo(0);
+        int end = fragment.indexOf(" LIMIT", start);
+        return (end < 0 ? fragment.substring(start) : fragment.substring(start, end)).trim();
+    }
+
+    /** 표 이름만 걷어낸다. 남는 것은 어떤 값을 어떤 차례로 보는지다. */
+    private String stripAlias(String order) {
+        return order.replace("r.", "");
     }
 
     /** 후보를 고르고 줄 세우고 쪽을 자르는 부분. 바깥 SELECT 는 뺀다. */
