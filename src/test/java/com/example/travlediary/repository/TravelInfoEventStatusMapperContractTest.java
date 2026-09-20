@@ -70,18 +70,24 @@ class TravelInfoEventStatusMapperContractTest {
         String order = orderClause(sql);
 
         // 묶음 순서: 진행중(0) → 예정(1) → 종료(2)
+        // 한 쪽만 남긴 뒤 내보내는 정렬이라 대표기간을 page.start_date / page.end_date 로 본다.
         assertThat(order)
-                .contains("WHEN representative_period.start_date <= CURDATE() "
-                        + "AND representative_period.end_date >= CURDATE() THEN 0")
-                .contains("WHEN representative_period.start_date > CURDATE() THEN 1")
+                .contains("WHEN page.start_date <= CURDATE() "
+                        + "AND page.end_date >= CURDATE() THEN 0")
+                .contains("WHEN page.start_date > CURDATE() THEN 1")
                 .contains("ELSE 2");
         // 진행중은 먼저 끝나는 순, 예정은 먼저 시작하는 순, 종료는 최근에 끝난 순.
         assertThat(order)
-                .contains("THEN representative_period.end_date END ASC")
-                .contains("THEN representative_period.start_date END ASC")
-                .contains("THEN representative_period.end_date END DESC")
+                .contains("THEN page.end_date END ASC")
+                .contains("THEN page.start_date END ASC")
+                .contains("THEN page.end_date END DESC")
                 // 같은 값이면 언제 불러도 같은 순서가 되도록 id 로 끊는다.
-                .endsWith("ti.id DESC");
+                .endsWith("page.id DESC");
+        // 어느 줄을 남길지 정하는 쪽도 같은 규칙을 그대로 쓴다.
+        assertThat(sql)
+                .contains("WHEN representative_period.start_date <= CURDATE() "
+                        + "AND representative_period.end_date >= CURDATE() THEN 0")
+                .contains("THEN representative_period.end_date END DESC");
     }
 
     @Test
@@ -89,7 +95,8 @@ class TravelInfoEventStatusMapperContractTest {
         String sql = normalize(listSql("ongoing", "views"));
         String order = orderClause(sql);
 
-        assertThat(order).isEqualTo("ORDER BY ti.views DESC, ti.created_at DESC, ti.id DESC");
+        assertThat(order).isEqualTo("ORDER BY page.views DESC, page.created_at DESC, page.id DESC");
+        assertThat(sql).contains("ORDER BY ti.views DESC, ti.created_at DESC, ti.id DESC");
         // 조회순을 골라도 상태 필터는 그대로 걸린다.
         assertThat(sql).contains("representative_period.end_date >= CURDATE()");
     }
@@ -99,7 +106,8 @@ class TravelInfoEventStatusMapperContractTest {
         String sql = normalize(listSql(null, "latest"));
         String order = orderClause(sql);
 
-        assertThat(order).isEqualTo("ORDER BY ti.created_at DESC, ti.id DESC");
+        assertThat(order).isEqualTo("ORDER BY page.created_at DESC, page.id DESC");
+        assertThat(sql).contains("ORDER BY ti.created_at DESC, ti.id DESC");
     }
 
     private String listSql(String eventStatus, String sort) throws IOException {

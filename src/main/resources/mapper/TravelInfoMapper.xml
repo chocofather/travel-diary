@@ -132,6 +132,11 @@
       대표 행사기간. 진행중 → 예정 → 종료 우선으로 한 줄만 고른다.
       목록에 찍는 기간, 행사 상태 판정, 행사일순 정렬이 모두 이 한 줄을 본다.
       기간이 여러 건인 기존 데이터도 같은 규칙으로 한 줄만 대표가 된다.
+
+      이 계산이 필요한 요청은 셋뿐이다 — 축제 목록(기간을 찍는다),
+      행사 상태로 거르는 요청, 행사일순 정렬. 그 밖에는 붙이지 않는다.
+      일반 여행정보는 ti.content_type = 'FESTIVAL' 이 늘 거짓이라 예전에도 결과가 NULL 이었다.
+      (유형을 가리지 않는 호출이 생기면 축제가 섞일 수 있으므로 그때도 붙인다)
     -->
     <sql id="RepresentativePeriodJoin">
         LEFT JOIN info_periods representative_period
@@ -210,36 +215,53 @@
         </where>
     </sql>
 
-    <select id="findPublicList" resultMap="PublicListResultMap">
+    <!--
+      후보를 고르고 줄 세워 한 쪽만 남긴다.
+
+      대표 행사기간은 이 요청이 실제로 쓸 때만 붙인다 — 축제 목록이거나, 행사 상태로 거르거나,
+      행사일순으로 줄 세울 때다. 붙이지 않는 요청에서는 예전에도 늘 NULL 이었으므로
+      빈 날짜 칸을 그대로 내보낸다.
+    -->
+    <sql id="PublicListPage">
         SELECT ti.id,
                ti.title,
                ti.scope,
                ti.content_type,
                ti.category_id,
                ic.name AS category_name,
-               (
-                   SELECT ii.image_url
-                   FROM info_images ii
-                   WHERE ii.info_id = ti.id
-                     AND (
-                         (ti.content_type = 'FESTIVAL' AND (ii.is_thumbnail = 1 OR ii.is_main = 1))
-                         OR (ti.content_type != 'FESTIVAL' AND ii.is_main = 1)
-                     )
-                   ORDER BY CASE
-                                WHEN ti.content_type = 'FESTIVAL' AND ii.is_thumbnail = 1 THEN 0
-                                ELSE 1
-                            END ASC,
-                            ii.order_index ASC, ii.id ASC
-                   LIMIT 1
-               ) AS thumbnail_url,
                ti.views,
                ti.created_at,
+        <choose>
+            <when test="contentType == null or contentType.name() == 'FESTIVAL'
+                        or eventStatus != null or sort == 'event'">
                representative_period.start_date,
                representative_period.end_date
+            </when>
+            <otherwise>
+               CAST(NULL AS DATE) AS start_date,
+               CAST(NULL AS DATE) AS end_date
+            </otherwise>
+        </choose>
         FROM travel_info ti
         JOIN info_categories ic ON ic.id = ti.category_id
-        <include refid="RepresentativePeriodJoin"/>
+        <if test="contentType == null or contentType.name() == 'FESTIVAL'
+                  or eventStatus != null or sort == 'event'">
+            <include refid="RepresentativePeriodJoin"/>
+        </if>
         <include refid="PublicListFilters"/>
+        <include refid="PublicListCandidateOrder"/>
+        LIMIT #{limit}
+        OFFSET #{offset}
+    </sql>
+
+    <!--
+      줄 세우는 규칙.
+
+      아래 PublicListPageOrder 와 반드시 같은 뜻이어야 한다. 여기가 어느 줄을 남길지 정하고,
+      저기가 남은 줄을 같은 차례로 내보낸다. 둘이 어긋나면 쪽마다 차례가 흔들린다.
+      (TravelInfoListSqlContractTest 가 두 식이 같은지 확인한다)
+    -->
+    <sql id="PublicListCandidateOrder">
         <choose>
             <when test="sort == 'views'">
                 ORDER BY ti.views DESC, ti.created_at DESC, ti.id DESC
@@ -276,16 +298,115 @@
                 ORDER BY ti.created_at DESC, ti.id DESC
             </otherwise>
         </choose>
-        LIMIT #{limit}
-        OFFSET #{offset}
+    </sql>
+
+    <!-- 남은 한 쪽을 같은 차례로 내보낸다. 파생 테이블이 담아 둔 순서에 기대지 않는다. -->
+    <sql id="PublicListPageOrder">
+        <choose>
+            <when test="sort == 'views'">
+                ORDER BY page.views DESC, page.created_at DESC, page.id DESC
+            </when>
+            <when test="sort == 'event'">
+                ORDER BY
+                    CASE
+                        WHEN page.start_date &lt;= CURDATE()
+                             AND page.end_date >= CURDATE() THEN 0
+                        WHEN page.start_date > CURDATE() THEN 1
+                        ELSE 2
+                    END ASC,
+                    CASE
+                        WHEN page.start_date &lt;= CURDATE()
+                             AND page.end_date >= CURDATE()
+                            THEN page.end_date
+                    END ASC,
+                    CASE
+                        WHEN page.start_date > CURDATE()
+                            THEN page.start_date
+                    END ASC,
+                    CASE
+                        WHEN page.end_date &lt; CURDATE()
+                            THEN page.end_date
+                    END DESC,
+                    page.id DESC
+            </when>
+            <otherwise>
+                ORDER BY page.created_at DESC, page.id DESC
+            </otherwise>
+        </choose>
+    </sql>
+
+    <!--
+      목록 카드의 대표 이미지.
+
+      예전에는 조건에 맞는 모든 줄마다 이 서브쿼리를 돌린 뒤 열두 줄만 남겼다.
+      지금은 쪽을 자른 뒤라 남은 줄에 대해서만 돈다.
+      고르는 규칙은 예전과 같다 — 축제는 썸네일로 지정한 것을 먼저, 그 다음 대표 이미지,
+      일반 여행정보는 대표 이미지만. 같은 순위 안에서는 order_index, id 차례다.
+      (유형이 섞여 들어올 수 있는 호출은 예전처럼 줄마다 유형을 보고 고른다)
+    -->
+    <sql id="PublicListThumbnail">
+        (
+            SELECT ii.image_url
+            FROM info_images ii
+            WHERE ii.info_id = page.id
+        <choose>
+            <when test="contentType != null and contentType.name() == 'FESTIVAL'">
+              AND (ii.is_thumbnail = 1 OR ii.is_main = 1)
+            ORDER BY CASE WHEN ii.is_thumbnail = 1 THEN 0 ELSE 1 END ASC,
+                     ii.order_index ASC, ii.id ASC
+            </when>
+            <when test="contentType != null">
+              AND ii.is_main = 1
+            ORDER BY ii.order_index ASC, ii.id ASC
+            </when>
+            <otherwise>
+              AND (
+                  (page.content_type = 'FESTIVAL' AND (ii.is_thumbnail = 1 OR ii.is_main = 1))
+                  OR (page.content_type != 'FESTIVAL' AND ii.is_main = 1)
+              )
+            ORDER BY CASE
+                         WHEN page.content_type = 'FESTIVAL' AND ii.is_thumbnail = 1 THEN 0
+                         ELSE 1
+                     END ASC,
+                     ii.order_index ASC, ii.id ASC
+            </otherwise>
+        </choose>
+            LIMIT 1
+        ) AS thumbnail_url
+    </sql>
+
+    <select id="findPublicList" resultMap="PublicListResultMap">
+        SELECT page.id,
+               page.title,
+               page.scope,
+               page.content_type,
+               page.category_id,
+               page.category_name,
+               <include refid="PublicListThumbnail"/>,
+               page.views,
+               page.created_at,
+               page.start_date,
+               page.end_date
+        FROM (
+            <include refid="PublicListPage"/>
+        ) page
+        <include refid="PublicListPageOrder"/>
     </select>
 
-    <!-- 목록과 같은 대표기간을 봐야 상태 필터를 건 페이지 수가 맞는다. -->
+    <!--
+      개수 세기는 화면에 그릴 값을 하나도 만들지 않는다.
+      대표 행사기간은 행사 상태로 거를 때만 필요하다 — 그때만 붙여야 쪽 수가 맞는다.
+      축제 목록이라는 이유만으로 붙이지 않는다. 거르는 조건은 목록과 같은 조각을 쓴다.
+      (info_categories 조인은 ic.is_visible = 1 을 보기 위한 것이라 남긴다.
+       travel_info.category_id 가 NOT NULL 이고 ic.id 가 PK 라 줄 수를 바꾸지 않는다)
+    -->
     <select id="countPublicList" resultType="long">
         SELECT COUNT(*)
         FROM travel_info ti
         JOIN info_categories ic ON ic.id = ti.category_id
-        <include refid="RepresentativePeriodJoin"/>
+        <if test="eventStatus != null">
+            <include refid="RepresentativePeriodJoin"/>
+        </if>
         <include refid="PublicListFilters"/>
     </select>
 

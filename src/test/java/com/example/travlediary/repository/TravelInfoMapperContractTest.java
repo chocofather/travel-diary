@@ -48,7 +48,9 @@ class TravelInfoMapperContractTest {
     void publicListAndCountShareVisibleCategoryAndOptionalFilters() throws IOException {
         String mapper = mapper();
         String filters = between(mapper, "<sql id=\"PublicListFilters\"", "</sql>");
-        String list = between(mapper, "<select id=\"findPublicList\"", "</select>");
+        // 목록은 후보를 고르는 조각과 줄 세우는 조각으로 나뉘어 있다.
+        String list = between(mapper, "<sql id=\"PublicListPage\">", "</sql>")
+                + between(mapper, "<sql id=\"PublicListCandidateOrder\">", "</sql>");
         String count = between(mapper, "<select id=\"countPublicList\"", "</select>");
 
         assertThat(filters)
@@ -88,14 +90,16 @@ class TravelInfoMapperContractTest {
     @Test
     void publicListUsesFestivalThumbnailBeforeMainAndKeepsGeneralMainPolicy() throws IOException {
         String mapper = mapper();
-        // 대표기간은 목록·개수 쿼리가 함께 쓰는 조각으로 빠졌다.
-        String query = between(mapper, "<select id=\"findPublicList\"", "</select>")
+        // 대표 이미지와 대표기간은 각각 조각으로 빠졌다.
+        // 대표 이미지는 쪽을 자른 뒤 남은 줄(page)에 대해서만 찾는다.
+        String query = between(mapper, "<sql id=\"PublicListThumbnail\">", "</sql>")
+                + between(mapper, "<sql id=\"PublicListPage\">", "</sql>")
                 + between(mapper, "<sql id=\"RepresentativePeriodJoin\">", "</sql>");
 
         assertThat(query)
                 .contains("SELECT ii.image_url")
                 .contains("FROM info_images ii")
-                .contains("ii.info_id = ti.id")
+                .contains("ii.info_id = page.id")
                 .contains("ti.content_type = 'FESTIVAL'")
                 .contains("ii.is_thumbnail = 1")
                 .contains("ii.is_main = 1")

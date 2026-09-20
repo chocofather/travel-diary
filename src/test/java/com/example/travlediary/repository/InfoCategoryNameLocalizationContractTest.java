@@ -59,7 +59,8 @@ class InfoCategoryNameLocalizationContractTest {
     @Test
     void publicListAlreadyCarriesTheCategoryIdForEveryCard() throws IOException {
         String mapper = resource("/mapper/TravelInfoMapper.xml");
-        String list = between(mapper, "<select id=\"findPublicList\"", "</select>");
+        // 목록이 읽어 오는 칸은 후보를 고르는 조각에 들어 있다.
+        String list = between(mapper, "<sql id=\"PublicListPage\">", "</sql>");
 
         // GENERAL / FESTIVAL 이 같은 목록 쿼리를 쓴다.
         assertThat(list)
