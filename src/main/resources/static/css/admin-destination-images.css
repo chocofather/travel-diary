@@ -129,6 +129,23 @@
     white-space: nowrap;
 }
 
+.admin-destination-image-metadata-form {
+    display: grid;
+    gap: 8px;
+    margin: 10px 14px 0;
+    padding-top: 10px;
+    border-top: 1px solid #edf0f5;
+}
+
+.admin-destination-image-metadata-form .admin-image-metadata-fields {
+    padding: 0;
+    border-top: 0;
+}
+
+.admin-destination-image-metadata-form > .admin-btn {
+    justify-self: end;
+}
+
 .admin-destination-image-actions {
     display: flex;
     flex-wrap: wrap;

@@ -311,6 +311,53 @@
     text-overflow: ellipsis;
 }
 
+/* 이미지 자체보다 한 단계 낮은 밀도의 선택 메타데이터 입력 */
+.admin-image-metadata-fields {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 7px;
+    padding: 8px;
+    border-top: 1px solid #edf0f5;
+}
+
+.admin-image-metadata-fields label {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
+    color: #69748a;
+    font-size: 11px;
+    font-weight: 650;
+}
+
+.admin-image-metadata-fields label.is-wide {
+    grid-column: 1 / -1;
+}
+
+.admin-image-metadata-fields input,
+.admin-image-metadata-fields select {
+    width: 100%;
+    min-width: 0;
+    min-height: 32px;
+    padding: 5px 7px;
+    color: #3e4b68;
+    background: #fbfcfe;
+    border: 1px solid #dfe5ef;
+    border-radius: 6px;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 400;
+}
+
+@media (max-width: 520px) {
+    .admin-image-metadata-fields {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-image-metadata-fields label.is-wide {
+        grid-column: auto;
+    }
+}
+
 /* 편의시설·카테고리 필터 (보이기/숨기기 전용) */
 .admin-category-filters,
 .admin-amenity-filters {

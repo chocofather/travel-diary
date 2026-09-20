@@ -131,6 +131,52 @@ class DestinationImageServiceTest {
     }
 
     @Test
+    void directUploadsKeepSourceMetadataPerImageIncludingKoglAndSourceUrl() {
+        when(destinationMapper.findImagesByDestinationId(10L)).thenReturn(List.of());
+        when(fileUploadService.saveDestinationImage(any()))
+                .thenReturn("/uploads/destinations/a.jpg")
+                .thenReturn("/uploads/destinations/b.jpg");
+
+        service.saveImages(
+                10L,
+                files("a.jpg", "b.jpg"),
+                null,
+                new Integer[0],
+                new String[]{"한국관광공사", "서울특별시"},
+                new String[]{"김지호", "박하늘"},
+                new String[]{"KOGL_TYPE_1", "KOGL_TYPE_3"},
+                new String[]{"https://example.com/a", "https://example.com/b"});
+
+        assertThat(insertedImages())
+                .extracting(DestinationImage::getSourceName,
+                        DestinationImage::getPhotographer,
+                        DestinationImage::getLicenseType,
+                        DestinationImage::getSourceUrl)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple(
+                                "한국관광공사", "김지호", "KOGL_TYPE_1", "https://example.com/a"),
+                        org.assertj.core.groups.Tuple.tuple(
+                                "서울특별시", "박하늘", "KOGL_TYPE_3", "https://example.com/b"));
+    }
+
+    @Test
+    void directUploadWithoutSourceMetadataKeepsAllMetadataNull() {
+        when(destinationMapper.findImagesByDestinationId(10L)).thenReturn(List.of());
+        when(fileUploadService.saveDestinationImage(any()))
+                .thenReturn("/uploads/destinations/existing-compatible.jpg");
+
+        service.saveImages(10L, files("existing-compatible.jpg"), null, new Integer[0]);
+
+        assertThat(insertedImages())
+                .singleElement()
+                .satisfies(image -> {
+                    assertThat(image.getSourceName()).isNull();
+                    assertThat(image.getLicenseType()).isNull();
+                    assertThat(image.getSourceUrl()).isNull();
+                });
+    }
+
+    @Test
     void metadataBatchForcesDestinationAndAppendsInOrderUsingExistingMainRule() {
         when(destinationMapper.findImagesByDestinationId(10L)).thenReturn(List.of(
                 image(1L, 10L, 4, true)
@@ -338,6 +384,26 @@ class DestinationImageServiceTest {
         service.toggleSlideImage(10L, 2L);
 
         verify(destinationMapper).updateImageSlide(2L, false);
+    }
+
+    @Test
+    void metadataUpdateDoesNotTouchImageStateOrFile() {
+        DestinationImage selected = image(2L, 10L, 3, true);
+        selected.setIsSlide(true);
+        when(destinationMapper.findImageById(2L)).thenReturn(selected);
+
+        service.updateImageMetadata(
+                10L, 2L, "  한국관광공사  ", " 한국관광공사 김지호 ",
+                " KOGL_TYPE_4 ", " https://example.com/source ");
+
+        verify(destinationMapper).updateImageMetadata(
+                2L, "한국관광공사", "한국관광공사 김지호",
+                "KOGL_TYPE_4", "https://example.com/source");
+        verify(destinationMapper, never()).clearMainImagesByDestinationId(anyLong());
+        verify(destinationMapper, never()).setMainImage(anyLong());
+        verify(destinationMapper, never()).updateImageSlide(anyLong(), org.mockito.ArgumentMatchers.anyBoolean());
+        verify(destinationMapper, never()).deleteImageById(anyLong());
+        verifyNoInteractions(fileUploadService);
     }
 
     @Test

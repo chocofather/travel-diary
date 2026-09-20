@@ -49,7 +49,10 @@ class AdminDestinationImageManagementUiContractTest {
                 .contains("/main(imageId=${img.id})")
                 .contains("/slide(imageId=${img.id})")
                 .contains("/delete(id=${img.id})")
+                .contains("/metadata(imageId=${img.id})")
                 .contains("img.sourceType == 'KTO_PHOTO_GALLERY'");
+        assertThat(page.select("input[name=sourceName], input[name=photographer], "
+                + "select[name=licenseType], input[name=sourceUrl]")).hasSize(4);
     }
 
     @Test

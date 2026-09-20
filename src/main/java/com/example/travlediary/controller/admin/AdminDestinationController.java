@@ -1,6 +1,7 @@
 package com.example.travlediary.controller.admin;
 
 import com.example.travlediary.dto.DestinationForm;
+import com.example.travlediary.model.DestinationImageLicenseType;
 import com.example.travlediary.dto.kto.KtoSelectedPhotoRequest;
 import com.example.travlediary.model.CountryCategory;
 import com.example.travlediary.model.DestinationType;
@@ -110,6 +111,10 @@ public class AdminDestinationController {
 
     private void prepareCreateFormModel(Model model, DestinationForm form, String lang) {
         model.addAttribute("destinationForm", form);
+        model.addAttribute("imageLicenseOptions", DestinationImageLicenseType.values());
+        model.addAttribute("imageLicenseCodes", Arrays.stream(DestinationImageLicenseType.values())
+                .map(DestinationImageLicenseType::getCode)
+                .toList());
         // 지역 선택 UI 의 국내/해외 구분 기준. 숫자 ID 를 화면에 하드코딩하지 않는다.
         model.addAttribute("domesticRootId", countryCategoryService.getKoreaRootId());
         addCategoryModel(model);

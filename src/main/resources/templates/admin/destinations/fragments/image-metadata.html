@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<th:block th:fragment="metadataTemplate">
+  <!-- 파일 선택 뒤 JS가 이미지별로 복제하고 실제 request parameter name을 붙인다. -->
+  <template data-destination-image-metadata-template>
+    <div class="admin-image-metadata-fields">
+      <label>
+        <span>출처</span>
+        <input type="text" maxlength="100" placeholder="예: 한국관광공사"
+               data-image-metadata-field="sourceName">
+      </label>
+      <label>
+        <span>촬영자</span>
+        <input type="text" maxlength="100" placeholder="예: 김지호"
+               data-image-metadata-field="photographer">
+      </label>
+      <label>
+        <span>라이선스</span>
+        <select data-image-metadata-field="licenseType">
+          <option value="">선택 안 함</option>
+          <option th:each="option : ${imageLicenseOptions}"
+                  th:value="${option.code}" th:text="${option.displayName}"></option>
+        </select>
+      </label>
+      <label class="is-wide">
+        <span>출처 URL</span>
+        <input type="url" maxlength="1000" inputmode="url"
+               placeholder="https://..." data-image-metadata-field="sourceUrl">
+      </label>
+    </div>
+  </template>
+</th:block>
+</html>

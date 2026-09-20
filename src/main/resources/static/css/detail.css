@@ -67,6 +67,35 @@ body {
     display: block;
 }
 
+/* 이미지 출처는 캡션처럼 가까이 두되 본문보다 충분히 조용하게 보인다. */
+.destination-image-attribution {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 3px 6px;
+    margin: 6px 2px 0;
+    overflow-wrap: anywhere;
+    color: #9299a6;
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.destination-image-attribution[hidden],
+.destination-image-attribution [hidden] {
+    display: none;
+}
+
+.destination-image-attribution a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.destination-image-attribution a:hover,
+.destination-image-attribution a:focus-visible {
+    color: #6f7785;
+    text-decoration: underline;
+}
+
 /* 네비게이션 버튼 (이미지 내부 중앙에 위치) */
 .carousel .nav {
     position: absolute;

@@ -34,6 +34,7 @@ class AdminDestinationCreateImagePreviewUiContractTest {
                 // KTO 선택 영역(hidden JSON 포함 프래그먼트)은 그대로 둔다
                 .contains("kto-photo-search :: search")
                 .contains("admin-destination-image-upload-preview.js");
+        assertThat(create).contains("image-metadata :: metadataTemplate");
     }
 
     @Test
@@ -69,6 +70,7 @@ class AdminDestinationCreateImagePreviewUiContractTest {
                 .contains("input.files")
                 .contains("replaceChildren")
                 .contains("선택한 이미지")
+                .contains("imageSourceNames", "imagePhotographers", "imageLicenseTypes", "imageSourceUrls")
                 .doesNotContain("fetch(")
                 .doesNotContain("XMLHttpRequest")
                 .doesNotContain("form.submit");

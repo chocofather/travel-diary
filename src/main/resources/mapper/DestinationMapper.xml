@@ -30,6 +30,7 @@
         <result property="sourceTitle" column="source_title"/>
         <result property="photographer" column="photographer"/>
         <result property="licenseType" column="license_type"/>
+        <result property="sourceUrl" column="source_url"/>
         <result property="sourceImageUrl" column="source_image_url"/>
         <result property="licenseCheckedAt" column="license_checked_at"/>
         <result property="isMain"     column="is_main"/>
@@ -76,6 +77,7 @@
             di.source_title,
             di.photographer,
             di.license_type,
+            di.source_url,
             di.source_image_url,
             di.license_checked_at,
             di.is_main,
@@ -135,6 +137,7 @@
             source_title,
             photographer,
             license_type,
+            source_url,
             source_image_url,
             license_checked_at,
             is_main,
@@ -151,6 +154,7 @@
             #{sourceTitle},
             #{photographer},
             #{licenseType},
+            #{sourceUrl},
             #{sourceImageUrl},
             #{licenseCheckedAt},
             #{isMain},
@@ -204,6 +208,7 @@
             source_title,
             photographer,
             license_type,
+            source_url,
             source_image_url,
             license_checked_at,
             is_main,
@@ -265,6 +270,15 @@
     <update id="updateImageOrder">
         UPDATE destination_images
         SET order_index = #{orderIndex}
+        WHERE id = #{imageId}
+    </update>
+
+    <update id="updateImageMetadata">
+        UPDATE destination_images
+        SET source_name = #{sourceName},
+            photographer = #{photographer},
+            license_type = #{licenseType},
+            source_url = #{sourceUrl}
         WHERE id = #{imageId}
     </update>
 

@@ -32,6 +32,30 @@ public class DestinationImageService {
                            MultipartFile[] files,
                            Integer mainIdx,
                            Integer[] slideIdx) {
+        saveImages(destId, files, mainIdx, slideIdx, null, null, null);
+    }
+
+    @Transactional
+    public void saveImages(Long destId,
+                           MultipartFile[] files,
+                           Integer mainIdx,
+                           Integer[] slideIdx,
+                           String[] sourceNames,
+                           String[] licenseTypes,
+                           String[] sourceUrls) {
+        saveImages(destId, files, mainIdx, slideIdx,
+                sourceNames, null, licenseTypes, sourceUrls);
+    }
+
+    @Transactional
+    public void saveImages(Long destId,
+                           MultipartFile[] files,
+                           Integer mainIdx,
+                           Integer[] slideIdx,
+                           String[] sourceNames,
+                           String[] photographers,
+                           String[] licenseTypes,
+                           String[] sourceUrls) {
         if (files == null || files.length == 0) return;
 
         List<DestinationImage> existingImages = destinationMapper.findImagesByDestinationId(destId);
@@ -48,6 +72,10 @@ public class DestinationImageService {
 
             DestinationImage img = new DestinationImage();
             img.setImageUrl(imageUrl);
+            img.setSourceName(metadataValue(sourceNames, uploadIndex));
+            img.setPhotographer(metadataValue(photographers, uploadIndex));
+            img.setLicenseType(metadataValue(licenseTypes, uploadIndex));
+            img.setSourceUrl(metadataValue(sourceUrls, uploadIndex));
 
             int finalIdx = uploadIndex;
             img.setIsSlide(slideIdx != null &&
@@ -75,9 +103,33 @@ public class DestinationImageService {
                            MultipartFile[] files,
                            boolean main,
                            boolean slide) {
+        saveImages(destId, files, main, slide, null, null, null);
+    }
+
+    @Transactional
+    public void saveImages(Long destId,
+                           MultipartFile[] files,
+                           boolean main,
+                           boolean slide,
+                           String[] sourceNames,
+                           String[] licenseTypes,
+                           String[] sourceUrls) {
+        saveImages(destId, files, main, slide, sourceNames, null, licenseTypes, sourceUrls);
+    }
+
+    @Transactional
+    public void saveImages(Long destId,
+                           MultipartFile[] files,
+                           boolean main,
+                           boolean slide,
+                           String[] sourceNames,
+                           String[] photographers,
+                           String[] licenseTypes,
+                           String[] sourceUrls) {
         Integer mainIdx = main ? 0 : null;
         Integer[] slideIdx = slide ? allUploadIndexes(files) : new Integer[0];
-        saveImages(destId, files, mainIdx, slideIdx);
+        saveImages(destId, files, mainIdx, slideIdx,
+                sourceNames, photographers, licenseTypes, sourceUrls);
     }
 
     public List<DestinationImage> getImages(Long destId) {
@@ -95,6 +147,22 @@ public class DestinationImageService {
     public void toggleSlideImage(Long destinationId, Long imageId) {
         DestinationImage image = requireDestinationImage(destinationId, imageId);
         destinationMapper.updateImageSlide(imageId, !Boolean.TRUE.equals(image.getIsSlide()));
+    }
+
+    @Transactional
+    public void updateImageMetadata(Long destinationId,
+                                    Long imageId,
+                                    String sourceName,
+                                    String photographer,
+                                    String licenseType,
+                                    String sourceUrl) {
+        requireDestinationImage(destinationId, imageId);
+        destinationMapper.updateImageMetadata(
+                imageId,
+                metadataValue(sourceName),
+                metadataValue(photographer),
+                metadataValue(licenseType),
+                metadataValue(sourceUrl));
     }
 
     @Transactional
@@ -146,6 +214,16 @@ public class DestinationImageService {
                 .filter(java.util.Objects::nonNull)
                 .max(Integer::compareTo)
                 .orElse(-1) + 1;
+    }
+
+    private String metadataValue(String[] values, int index) {
+        return values == null || index < 0 || index >= values.length
+                ? null
+                : metadataValue(values[index]);
+    }
+
+    private String metadataValue(String value) {
+        return value == null || value.isBlank() ? null : value.strip();
     }
 
     private DestinationImage requireDestinationImage(Long destinationId, Long imageId) {

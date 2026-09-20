@@ -2,6 +2,7 @@ package com.example.travlediary.controller.admin;
 
 import com.example.travlediary.dto.kto.KtoSelectedPhotoRequest;
 import com.example.travlediary.model.DestinationImage;
+import com.example.travlediary.model.DestinationImageLicenseType;
 import com.example.travlediary.model.DestinationTranslation;
 import com.example.travlediary.service.destination.DestinationImageService;
 import com.example.travlediary.service.destination.DestinationKtoImageManagementService;
@@ -23,6 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Arrays;
 
 @Controller
 @RequiredArgsConstructor
@@ -41,16 +43,41 @@ public class AdminDestinationImageController {
         model.addAttribute("destinationName", destinationName(id));
         model.addAttribute("imageList", images);
         model.addAttribute("imageCount", images.size());
+        model.addAttribute("imageLicenseOptions", DestinationImageLicenseType.values());
+        model.addAttribute("imageLicenseCodes", Arrays.stream(DestinationImageLicenseType.values())
+                .map(DestinationImageLicenseType::getCode)
+                .toList());
         return "admin/destinations/image-upload";
+    }
+
+    public String uploadImages(Long id,
+                               MultipartFile[] files,
+                               Model model,
+                               HttpServletResponse response) {
+        return uploadImages(id, files, null, null, null, null, model, response);
     }
 
     @PostMapping("/{id}/images")
     public String uploadImages(@PathVariable Long id,
                                @RequestParam("files") MultipartFile[] files,
+                               @RequestParam(value = "imageSourceNames", required = false)
+                               String[] sourceNames,
+                               @RequestParam(value = "imagePhotographers", required = false)
+                               String[] photographers,
+                               @RequestParam(value = "imageLicenseTypes", required = false)
+                               String[] licenseTypes,
+                               @RequestParam(value = "imageSourceUrls", required = false)
+                               String[] sourceUrls,
                                Model model,
                                HttpServletResponse response) {
         try {
-            destinationImageService.saveImages(id, files, null, new Integer[0]);
+            if (sourceNames == null && photographers == null && licenseTypes == null && sourceUrls == null) {
+                destinationImageService.saveImages(id, files, null, new Integer[0]);
+            } else {
+                destinationImageService.saveImages(
+                        id, files, null, new Integer[0],
+                        sourceNames, photographers, licenseTypes, sourceUrls);
+            }
         } catch (UnsupportedImageFormatException exception) {
             // 잘못된 이미지는 입력 오류이므로 400 을 유지하되 관리 화면 안에서 이유를 보여준다
             response.setStatus(HttpStatus.BAD_REQUEST.value());
@@ -92,6 +119,26 @@ public class AdminDestinationImageController {
                                    @PathVariable Long imageId) {
         try {
             destinationImageService.toggleSlideImage(destinationId, imageId);
+        } catch (IllegalArgumentException exception) {
+            throw invalidImageRequest();
+        }
+        return managementRedirect(destinationId);
+    }
+
+    @PostMapping("/images/{imageId}/metadata")
+    public String updateImageMetadata(@RequestParam("destinationId") Long destinationId,
+                                      @PathVariable Long imageId,
+                                      @RequestParam(value = "sourceName", required = false)
+                                      String sourceName,
+                                      @RequestParam(value = "photographer", required = false)
+                                      String photographer,
+                                      @RequestParam(value = "licenseType", required = false)
+                                      String licenseType,
+                                      @RequestParam(value = "sourceUrl", required = false)
+                                      String sourceUrl) {
+        try {
+            destinationImageService.updateImageMetadata(
+                    destinationId, imageId, sourceName, photographer, licenseType, sourceUrl);
         } catch (IllegalArgumentException exception) {
             throw invalidImageRequest();
         }

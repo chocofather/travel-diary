@@ -126,6 +126,10 @@ public class DestinationForm {
     private boolean slide;
 
     private MultipartFile[] images;
+    private String[] imageSourceNames;
+    private String[] imagePhotographers;
+    private String[] imageLicenseTypes;
+    private String[] imageSourceUrls;
     private String ktoSelectedPhotosJson = "[]";
 
     private List<Integer> attractionAmenityIds;

@@ -11,6 +11,7 @@ function setUpPreview(preview) {
     const input = document.getElementById(preview.dataset.destinationUploadPreview);
     const count = preview.querySelector("[data-destination-upload-preview-count]");
     const grid = preview.querySelector("[data-destination-upload-preview-grid]");
+    const metadataTemplate = preview.querySelector("[data-destination-image-metadata-template]");
     if (!input || !count || !grid) return;
 
     let objectUrls = [];
@@ -26,6 +27,24 @@ function setUpPreview(preview) {
         releaseObjectUrls();
         count.textContent = "";
         preview.hidden = true;
+    }
+
+    function appendMetadataFields(card) {
+        if (!metadataTemplate) return;
+        const fields = metadataTemplate.content.cloneNode(true);
+        const parameterNames = {
+            sourceName: "imageSourceNames",
+            photographer: "imagePhotographers",
+            licenseType: "imageLicenseTypes",
+            sourceUrl: "imageSourceUrls"
+        };
+        fields.querySelectorAll("[data-image-metadata-field]").forEach(control => {
+            control.name = parameterNames[control.dataset.imageMetadataField];
+            if (preview.dataset.metadataForm) {
+                control.setAttribute("form", preview.dataset.metadataForm);
+            }
+        });
+        card.append(fields);
     }
 
     function previewCard(file) {
@@ -54,6 +73,7 @@ function setUpPreview(preview) {
         name.title = file.name;
 
         card.append(image, name);
+        appendMetadataFields(card);
         return card;
     }
 

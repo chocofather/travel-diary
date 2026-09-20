@@ -3,6 +3,7 @@ package com.example.travlediary.service.destination;
 import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.dto.DestinationDetailDto;
 import com.example.travlediary.model.Destination;
+import com.example.travlediary.model.DestinationImage;
 import com.example.travlediary.model.DestinationTranslation;
 import com.example.travlediary.model.DestinationType;
 import com.example.travlediary.model.AttractionInfo;
@@ -191,6 +192,36 @@ class DestinationServiceLocalizedDetailTest {
         verify(attractionInfoService).findByDestinationId(15L);
         verify(attractionInfoService, never()).findLocalizedByDestinationId(
                 15L, SupportedLanguage.KOREAN);
+    }
+
+    @Test
+    void detailDtoKeepsEachImagesSourceMetadata() {
+        when(destinationMapper.findTranslationsByDestinationId(15L)).thenReturn(List.of(
+                translation(1L, "ko", "경복궁", "요약", "설명")));
+        DestinationImage first = new DestinationImage();
+        first.setSourceName("한국관광공사");
+        first.setLicenseType("KOGL_TYPE_1");
+        first.setSourceUrl("https://example.com/first");
+        DestinationImage second = new DestinationImage();
+        second.setSourceName("서울특별시");
+        second.setLicenseType("KOGL_TYPE_3");
+        second.setSourceUrl("https://example.com/second");
+        when(destinationMapper.findImagesByDestinationId(15L)).thenReturn(List.of(first, second));
+        when(destinationMapper.findCategoryIdsByDestinationId(15L)).thenReturn(List.of());
+        when(amenityService.getAttractionAmenities(eq(15L), any())).thenReturn(List.of());
+
+        DestinationDetailDto detail = destinationService.getDestinationDetailWithInfo(
+                15L, SupportedLanguage.KOREAN);
+
+        assertThat(detail.getImages())
+                .extracting(DestinationImage::getSourceName,
+                        DestinationImage::getLicenseType,
+                        DestinationImage::getSourceUrl)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple(
+                                "한국관광공사", "KOGL_TYPE_1", "https://example.com/first"),
+                        org.assertj.core.groups.Tuple.tuple(
+                                "서울특별시", "KOGL_TYPE_3", "https://example.com/second"));
     }
 
     private Destination detail(SupportedLanguage language) {

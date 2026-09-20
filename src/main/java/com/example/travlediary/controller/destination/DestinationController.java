@@ -5,6 +5,7 @@ import com.example.travlediary.dto.DestinationDetailDto;
 import com.example.travlediary.dto.DestinationDto;
 import com.example.travlediary.model.CountryCategory;
 import com.example.travlediary.model.Destination;
+import com.example.travlediary.model.DestinationImage;
 import com.example.travlediary.seo.SeoModel;
 import com.example.travlediary.seo.SeoStructuredData;
 import com.example.travlediary.seo.SeoTextUtils;
@@ -235,6 +236,8 @@ public class DestinationController {
 
         model.addAttribute("destination", dto.getDestination());
         model.addAttribute("images", dto.getImages());
+        model.addAttribute("hasImageAttribution", dto.getImages() != null
+                && dto.getImages().stream().anyMatch(DestinationImage::isAttributionPresent));
 
         model.addAttribute("descriptionParagraphs", descriptionParagraphs(dto.getDestination().getDescription()));
 

@@ -5,6 +5,7 @@ import com.example.travlediary.dto.DestinationDetailDto;
 import com.example.travlediary.model.AttractionInfo;
 import com.example.travlediary.model.CountryCategory;
 import com.example.travlediary.model.Destination;
+import com.example.travlediary.model.DestinationImage;
 import com.example.travlediary.service.category.CountryCategoryService;
 import com.example.travlediary.service.category.ReferenceNameLocalizationService;
 import com.example.travlediary.service.comment.DestinationCommentService;
@@ -74,7 +75,23 @@ class DestinationAttractionGuideRenderingTest {
                 .isEqualTo("First<br>Second<br><br>Third<br>Fourth");
     }
 
+    @Test
+    void imageAttributionAreaIsEnabledOnlyWhenAtLeastOneImageHasMetadata() {
+        assertThat(render("guide").getAttribute("hasImageAttribution")).isEqualTo(false);
+
+        DestinationImage withoutSource = new DestinationImage();
+        DestinationImage withSource = new DestinationImage();
+        withSource.setSourceName("한국관광공사");
+
+        assertThat(render("guide", List.of(withoutSource, withSource))
+                .getAttribute("hasImageAttribution")).isEqualTo(true);
+    }
+
     private Model render(String guide) {
+        return render(guide, List.of());
+    }
+
+    private Model render(String guide, List<DestinationImage> images) {
         Destination destination = new Destination();
         destination.setId(15L);
         destination.setRegionId(101L);
@@ -88,7 +105,7 @@ class DestinationAttractionGuideRenderingTest {
         dto.setDestination(destination);
         dto.setAttractionInfo(attractionInfo);
         dto.setAttractionAmenities(List.of());
-        dto.setImages(List.of());
+        dto.setImages(images);
         dto.setCategoryIds(List.of());
 
         when(destinationService.getDestinationDetailWithInfo(

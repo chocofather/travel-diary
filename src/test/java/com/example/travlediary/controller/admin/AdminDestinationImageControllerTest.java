@@ -143,6 +143,18 @@ class AdminDestinationImageControllerTest {
     }
 
     @Test
+    void imageMetadataCanBeUpdatedWithoutUploadingAReplacement() {
+        String view = controller.updateImageMetadata(
+                10L, 2L, "한국관광공사", "한국관광공사 김지호",
+                "KOGL_TYPE_1", "https://example.com/source");
+
+        assertThat(view).isEqualTo("redirect:/admin/destinations/10/images");
+        verify(destinationImageService).updateImageMetadata(
+                10L, 2L, "한국관광공사", "한국관광공사 김지호",
+                "KOGL_TYPE_1", "https://example.com/source");
+    }
+
+    @Test
     void unknownOrForeignImageDeletionAnswersBadRequestInsteadOfServerError() throws Exception {
         doThrow(new IllegalArgumentException("여행지 이미지를 찾을 수 없습니다."))
                 .when(destinationImageService).deleteImage(100L, 404L);

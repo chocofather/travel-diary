@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="/css/destination-create.css">
   <script src="/js/admin-destination-category-select.js?v=20260822-2" defer></script>
   <script src="/js/admin-destination-amenity-filter.js?v=20260822-1" defer></script>
-  <script src="/js/admin-destination-image-upload-preview.js?v=20260822-2" defer></script>
+  <script src="/js/admin-destination-image-upload-preview.js?v=20260920-1" defer></script>
   <script src="/js/admin-translation-tabs.js" defer></script>
   <script src="/js/admin-translation-collapse.js?v=20260907-1" defer></script>
   <script src="/js/admin-kto-tour-autofill.js?v=20260907-2" defer></script>
@@ -649,6 +649,7 @@
         <p class="admin-field-help admin-upload-preview-count"
            data-destination-upload-preview-count></p>
         <div class="admin-upload-preview-grid" data-destination-upload-preview-grid></div>
+        <th:block th:replace="~{admin/destinations/fragments/image-metadata :: metadataTemplate}"></th:block>
       </div>
     </div>
   </section>

@@ -51,6 +51,11 @@
                               @Param("isSlide") boolean isSlide);
         void updateImageOrder(@Param("imageId") Long imageId,
                               @Param("orderIndex") int orderIndex);
+        void updateImageMetadata(@Param("imageId") Long imageId,
+                                 @Param("sourceName") String sourceName,
+                                 @Param("photographer") String photographer,
+                                 @Param("licenseType") String licenseType,
+                                 @Param("sourceUrl") String sourceUrl);
 
         List<Destination> findByCountryCategoryId(@Param("cityId") Long cityId);
 

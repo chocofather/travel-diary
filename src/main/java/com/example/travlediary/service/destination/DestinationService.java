@@ -172,7 +172,14 @@ public class DestinationService {
         }
 
         destinationImageService.saveImages(
-                destinationId, form.getImages(), form.isMain(), form.isSlide());
+                destinationId,
+                form.getImages(),
+                form.isMain(),
+                form.isSlide(),
+                form.getImageSourceNames(),
+                form.getImagePhotographers(),
+                form.getImageLicenseTypes(),
+                form.getImageSourceUrls());
         return destinationId;
     }
 

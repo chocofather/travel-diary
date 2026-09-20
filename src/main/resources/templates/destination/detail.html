@@ -96,12 +96,16 @@
     </section>
 
     <!-- ────── 이미지 슬라이드 영역 ────── -->
-    <div class="carousel-wrapper" th:if="${destination.images != null and !destination.images.isEmpty()}">
+    <div class="carousel-wrapper" th:if="${images != null and !images.isEmpty()}">
         <div class="carousel">
             <button class="nav prev" th:aria-label="#{destination.detail.gallery.previous}">&#10094;</button>
             <div class="track">
-                <div class="slide" th:each="img, idx : ${destination.images}"
-                     th:classappend="${idx.index == 0} ? 'active'">
+                <div class="slide" th:each="img, idx : ${images}"
+                     th:classappend="${idx.index == 0} ? 'active'"
+                     th:attr="data-source-name=${img.sourceName},
+                              data-license-label=${img.licenseLabel},
+                              data-photographer=${img.photographer},
+                              data-source-url=${img.safeSourceUrl}">
                     <!--
                       첫 장은 열자마자 보이므로 그대로 받는다.
                       둘째 장부터는 넘겨야 보이는 자리라 그때 받는다. (th:attr 은 null 이면 속성을 뺀다)
@@ -113,9 +117,43 @@
             </div>
             <button class="nav next" th:aria-label="#{destination.detail.gallery.next}">&#10095;</button>
         </div>
+
+        <p class="destination-image-attribution" aria-live="polite"
+           th:if="${hasImageAttribution}"
+           th:with="firstImage=${images[0]}"
+           th:hidden="${!firstImage.attributionPresent}"
+           data-destination-image-attribution>
+            <span th:text="#{destination.detail.gallery.source}">출처:</span>
+            <span th:text="${firstImage.sourceName}"
+                  th:hidden="${firstImage.sourceName == null or #strings.isEmpty(firstImage.sourceName)}"
+                  data-destination-image-source></span>
+            <span aria-hidden="true"
+                  th:hidden="${firstImage.sourceName == null or #strings.isEmpty(firstImage.sourceName)
+                               or firstImage.licenseLabel == null}"
+                  data-destination-image-separator>·</span>
+            <span th:text="${firstImage.licenseLabel}"
+                  th:hidden="${firstImage.licenseLabel == null}"
+                  data-destination-image-license></span>
+            <span aria-hidden="true"
+                  th:hidden="${firstImage.photographer == null or #strings.isEmpty(firstImage.photographer)
+                               or (firstImage.sourceName == null or #strings.isEmpty(firstImage.sourceName))
+                               and firstImage.licenseLabel == null}"
+                  data-destination-image-photographer-separator>·</span>
+            <span th:hidden="${firstImage.photographer == null or #strings.isEmpty(firstImage.photographer)}"
+                  data-destination-image-photographer-prefix
+                  th:text="#{destination.detail.gallery.photographer}">촬영</span>
+            <span th:text="${firstImage.photographer}"
+                  th:hidden="${firstImage.photographer == null or #strings.isEmpty(firstImage.photographer)}"
+                  data-destination-image-photographer></span>
+            <a th:href="${firstImage.safeSourceUrl}"
+               th:hidden="${firstImage.safeSourceUrl == null}"
+               th:aria-label="#{destination.detail.gallery.sourceLink}"
+               target="_blank" rel="noopener noreferrer"
+               data-destination-image-source-link>↗</a>
+        </p>
     </div>
 
-    <div class="carousel no-image" th:if="${destination.images == null or destination.images.isEmpty()}">
+    <div class="carousel no-image" th:if="${images == null or images.isEmpty()}">
         <img th:src="@{${destination.thumbnailPath}}"
              th:alt="#{destination.detail.gallery.coverAlt(${destination.name})}"/>
     </div>

@@ -36,6 +36,9 @@
         modalImage.alt = source.alt || messages?.galleryFallbackAlt || '';
         // 이미지가 한 장뿐이면 좌/우 버튼을 숨긴다.
         modal.classList.toggle('is-single', images.length <= 1);
+        document.dispatchEvent(new CustomEvent('destination-gallery-change', {
+            detail: {index: currentIndex}
+        }));
     }
 
     /** 순환 이동. 첫 장에서 이전 -> 마지막, 마지막에서 다음 -> 첫 장. */
