@@ -14,6 +14,260 @@
         (u.status = 'DEACTIVATED') AS writerWithdrawn
     </sql>
 
+    <!--
+      ================= 공개 커뮤니티 목록(/board/list, /board/fragment) =================
+
+      예전에는 게시글 전체와 코스 전체를 UNION ALL 로 붙여 파생 테이블을 통째로 만든 뒤,
+      boardType / postType / 국가 조건을 그 바깥에서 걸었다. 그래서 코스 게시판만 보는 중에도
+      게시글 전체를 읽었고, 댓글 수는 그 모든 행마다 COUNT 서브쿼리를 한 번씩 돌렸다.
+
+      지금은 조건을 각 원본 테이블의 WHERE 로 내려보내고, 필요 없는 UNION 분기는 아예 만들지 않는다.
+      댓글 수와 북마크 수도 행마다 세지 않고 한 번 묶어 센 뒤 붙인다.
+
+      거르는 조건과 정렬식은 예전 그대로다. 같은 자료에서 같은 결과와 같은 차례가 나온다.
+      (BoardServiceImpl 이 boardType 을 post/course/null 로, postType 을 QUESTION/TIP/null 로
+       미리 다듬어 넘기므로 아래 분기 조건은 그 세 값만 본다)
+    -->
+
+    <sql id="postCommentCount">
+        LEFT JOIN (
+            SELECT post_id, COUNT(*) AS commentCount
+            FROM post_comments
+            WHERE deleted = 0
+            GROUP BY post_id
+        ) postComments ON postComments.post_id = p.id
+    </sql>
+
+    <sql id="postBookmarkCount">
+        LEFT JOIN (
+            SELECT target_id, COUNT(*) AS bookmarkCount
+            FROM bookmarks
+            WHERE target_type = 'POST'
+            GROUP BY target_id
+        ) postBookmarks ON postBookmarks.target_id = p.id
+    </sql>
+
+    <sql id="courseCommentCount">
+        LEFT JOIN (
+            SELECT course_id, COUNT(*) AS commentCount
+            FROM course_comments
+            WHERE deleted = 0
+            GROUP BY course_id
+        ) courseComments ON courseComments.course_id = c.id
+    </sql>
+
+    <sql id="courseBookmarkCount">
+        LEFT JOIN (
+            SELECT target_id, COUNT(*) AS bookmarkCount
+            FROM bookmarks
+            WHERE target_type = 'COURSE'
+            GROUP BY target_id
+        ) courseBookmarks ON courseBookmarks.target_id = c.id
+    </sql>
+
+    <!--
+      코스 국가 조건. 예전에는 파생 테이블의 countryId 를 봤고 지금은 courses 를 바로 본다.
+      boardType 조건은 예전 그대로 남겨 둔다. 이 조각은 코스 분기에서만 쓰이지만,
+      조각 자체가 "코스 게시판일 때만 거른다"는 계약을 스스로 들고 있어야 한다.
+    -->
+    <sql id="courseCountryFilters">
+        <if test="boardType == 'course' and scope == 'domestic'">
+            AND EXISTS (
+                SELECT 1
+                FROM country_categories country
+                WHERE country.id = c.country_id
+                  AND country.is_visible = 1
+                  AND country.parent_id IS NULL
+                  AND EXISTS (
+                      SELECT 1
+                      FROM country_categories country_child
+                      WHERE country_child.parent_id = country.id
+                        AND country_child.code LIKE CONCAT(country.code, '-%')
+                  )
+            )
+        </if>
+        <if test="boardType == 'course' and scope == 'overseas'">
+            AND EXISTS (
+                SELECT 1
+                FROM country_categories country
+                JOIN country_categories parent ON parent.id = country.parent_id
+                WHERE country.id = c.country_id
+                  AND country.is_visible = 1
+                  AND country.parent_id IS NOT NULL
+                  AND parent.parent_id IS NULL
+                  AND country.code NOT LIKE '%-%'
+                <if test="countryId != null">
+                  AND country.id = #{countryId}
+                </if>
+            )
+        </if>
+    </sql>
+
+    <sql id="publicPostBranch">
+        SELECT
+            p.id,
+            p.user_id AS userId,
+            'post' AS boardType,
+            p.post_type AS postType,
+            p.title,
+            p.views,
+            p.created_at AS createdAt,
+            u.nickname,
+            <include refid="writerWithdrawn"/>,
+            COALESCE(postComments.commentCount, 0) AS commentCount,
+            COALESCE(postBookmarks.bookmarkCount, 0) AS bookmarkCount
+        FROM user_posts p
+        JOIN users u ON u.id = p.user_id
+        <include refid="postCommentCount"/>
+        <include refid="postBookmarkCount"/>
+        WHERE p.deleted = 0
+        <if test="postType != null">
+            AND p.post_type = #{postType}
+        </if>
+    </sql>
+
+    <sql id="publicCourseBranch">
+        SELECT
+            c.id,
+            c.user_id AS userId,
+            'course' AS boardType,
+            NULL AS postType,
+            c.title,
+            c.views,
+            c.created_at AS createdAt,
+            u.nickname,
+            <include refid="writerWithdrawn"/>,
+            COALESCE(courseComments.commentCount, 0) AS commentCount,
+            COALESCE(courseBookmarks.bookmarkCount, 0) AS bookmarkCount
+        FROM courses c
+        JOIN users u ON u.id = c.user_id
+        <include refid="courseCommentCount"/>
+        <include refid="courseBookmarkCount"/>
+        WHERE c.deleted = 0
+        <include refid="courseCountryFilters"/>
+    </sql>
+
+    <!--
+      읽어야 하는 분기만 만든다.
+
+      게시판을 고르지 않았고 글 유형도 없을 때만 둘을 UNION ALL 로 붙인다.
+      코스 게시판에 글 유형이 함께 오면 예전 필터가 boardType 을 'course' 와 'post' 로 동시에
+      요구해 결과가 늘 비었다. 화면에서 만들 수 있는 주소라 그 계약을 그대로 남긴다.
+    -->
+    <sql id="publicBoardSource">
+        <choose>
+            <when test="boardType == 'post'">
+                <include refid="publicPostBranch"/>
+            </when>
+            <when test="boardType == 'course'">
+                <include refid="publicCourseBranch"/>
+                <if test="postType != null">
+                    AND 1 = 0
+                </if>
+            </when>
+            <when test="postType != null">
+                <include refid="publicPostBranch"/>
+            </when>
+            <otherwise>
+                <include refid="publicPostBranch"/>
+
+                UNION ALL
+
+                <include refid="publicCourseBranch"/>
+            </otherwise>
+        </choose>
+    </sql>
+
+    <!-- 정렬식은 예전과 글자까지 같다. 동점일 때의 차례도 그대로다. -->
+    <sql id="publicBoardOrder">
+        <choose>
+            <when test="sort == 'oldest'">
+                ORDER BY board.createdAt ASC, board.boardType ASC, board.id ASC
+            </when>
+            <when test="sort == 'views'">
+                ORDER BY board.views DESC, board.createdAt DESC, board.boardType ASC, board.id DESC
+            </when>
+            <when test="sort == 'comments'">
+                ORDER BY board.commentCount DESC, board.createdAt DESC, board.boardType ASC, board.id DESC
+            </when>
+            <when test="sort == 'bookmarks'">
+                ORDER BY board.bookmarkCount DESC, board.createdAt DESC, board.boardType ASC, board.id DESC
+            </when>
+            <otherwise>
+                ORDER BY board.createdAt DESC, board.boardType ASC, board.id DESC
+            </otherwise>
+        </choose>
+    </sql>
+
+    <select id="findBoardList" resultType="com.example.travlediary.dto.BoardListDto">
+        SELECT
+            board.id,
+            board.userId,
+            board.boardType,
+            board.postType,
+            board.title,
+            board.commentCount,
+            board.nickname,
+            board.writerWithdrawn,
+            board.createdAt,
+            board.views,
+            board.bookmarkCount
+        FROM (
+            <include refid="publicBoardSource"/>
+        ) board
+        <include refid="publicBoardOrder"/>
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <!--
+      개수 세기는 화면에 그릴 값을 하나도 만들지 않는다.
+      작성자 정보도, 댓글·북마크 수도, 정렬도 필요 없다 — 거른 뒤 남는 줄 수만 있으면 된다.
+      거르는 조건은 위 목록과 반드시 같아야 쪽 수가 맞는다.
+    -->
+    <select id="countBoard" resultType="int">
+        <choose>
+            <when test="boardType == 'post'">
+                SELECT COUNT(*)
+                FROM user_posts p
+                WHERE p.deleted = 0
+                <if test="postType != null">
+                    AND p.post_type = #{postType}
+                </if>
+            </when>
+            <when test="boardType == 'course'">
+                SELECT COUNT(*)
+                FROM courses c
+                WHERE c.deleted = 0
+                <include refid="courseCountryFilters"/>
+                <if test="postType != null">
+                    AND 1 = 0
+                </if>
+            </when>
+            <when test="postType != null">
+                SELECT COUNT(*)
+                FROM user_posts p
+                WHERE p.deleted = 0
+                  AND p.post_type = #{postType}
+            </when>
+            <otherwise>
+                <!--
+                  user_id 가 NOT NULL 이고 users 를 FK 로 가리키므로
+                  예전 JOIN users 가 줄을 걸러내는 일이 없었다. 그래서 그냥 세면 된다.
+                -->
+                SELECT
+                    (SELECT COUNT(*) FROM user_posts p WHERE p.deleted = 0)
+                  + (SELECT COUNT(*) FROM courses c WHERE c.deleted = 0)
+            </otherwise>
+        </choose>
+    </select>
+
+    <!--
+      ================= 공개 프로필의 작성 글 목록 =================
+
+      이쪽은 이번 작업 범위가 아니다. 보는 조건이 위와 다르고(글 유형 두 가지만,
+      deleted_at 까지 확인) 언제나 한 사람 것만 읽어 양이 적다. 예전 형태를 그대로 둔다.
+    -->
+
     <sql id="postBoardSelectBase">
         SELECT
             p.id,
@@ -58,16 +312,6 @@
         JOIN users u ON c.user_id = u.id
     </sql>
 
-    <sql id="unifiedBoardSelect">
-        <include refid="postBoardSelectBase"/>
-        WHERE p.deleted = 0
-
-        UNION ALL
-
-        <include refid="courseBoardSelectBase"/>
-        WHERE c.deleted = 0
-    </sql>
-
     <sql id="unifiedBoardSelectByUserId">
         <include refid="postBoardSelectBase"/>
         WHERE p.user_id = #{userId}
@@ -92,102 +336,6 @@
             AND board.postType = #{postType}
         </if>
     </sql>
-
-    <sql id="courseCountryFilters">
-        <if test="boardType == 'course' and scope == 'domestic'">
-            AND EXISTS (
-                SELECT 1
-                FROM country_categories country
-                WHERE country.id = board.countryId
-                  AND country.is_visible = 1
-                  AND country.parent_id IS NULL
-                  AND EXISTS (
-                      SELECT 1
-                      FROM country_categories country_child
-                      WHERE country_child.parent_id = country.id
-                        AND country_child.code LIKE CONCAT(country.code, '-%')
-                  )
-            )
-        </if>
-        <if test="boardType == 'course' and scope == 'overseas'">
-            AND EXISTS (
-                SELECT 1
-                FROM country_categories country
-                JOIN country_categories parent ON parent.id = country.parent_id
-                WHERE country.id = board.countryId
-                  AND country.is_visible = 1
-                  AND country.parent_id IS NOT NULL
-                  AND parent.parent_id IS NULL
-                  AND country.code NOT LIKE '%-%'
-                <if test="countryId != null">
-                  AND country.id = #{countryId}
-                </if>
-            )
-        </if>
-    </sql>
-
-    <select id="findBoardList" resultType="com.example.travlediary.dto.BoardListDto">
-        SELECT
-            board.id,
-            board.userId,
-            board.boardType,
-            board.postType,
-            board.title,
-            board.commentCount,
-            board.nickname,
-            board.writerWithdrawn,
-            board.createdAt,
-            board.views,
-            COALESCE(bookmarkCounts.bookmarkCount, 0) AS bookmarkCount
-        FROM (
-            <include refid="unifiedBoardSelect"/>
-        ) board
-        LEFT JOIN (
-            SELECT
-                b.target_type,
-                b.target_id,
-                COUNT(*) AS bookmarkCount
-            FROM bookmarks b
-            WHERE b.target_type IN ('POST', 'COURSE')
-            GROUP BY b.target_type, b.target_id
-        ) bookmarkCounts
-          ON bookmarkCounts.target_id = board.id
-         AND bookmarkCounts.target_type = CASE
-             WHEN board.boardType = 'course' THEN 'COURSE'
-             ELSE 'POST'
-         END
-        WHERE 1 = 1
-        <include refid="boardFilters"/>
-        <include refid="courseCountryFilters"/>
-        <choose>
-            <when test="sort == 'oldest'">
-                ORDER BY board.createdAt ASC, board.boardType ASC, board.id ASC
-            </when>
-            <when test="sort == 'views'">
-                ORDER BY board.views DESC, board.createdAt DESC, board.boardType ASC, board.id DESC
-            </when>
-            <when test="sort == 'comments'">
-                ORDER BY board.commentCount DESC, board.createdAt DESC, board.boardType ASC, board.id DESC
-            </when>
-            <when test="sort == 'bookmarks'">
-                ORDER BY bookmarkCount DESC, board.createdAt DESC, board.boardType ASC, board.id DESC
-            </when>
-            <otherwise>
-                ORDER BY board.createdAt DESC, board.boardType ASC, board.id DESC
-            </otherwise>
-        </choose>
-        LIMIT #{offset}, #{limit}
-    </select>
-
-    <select id="countBoard" resultType="int">
-        SELECT COUNT(*)
-        FROM (
-            <include refid="unifiedBoardSelect"/>
-        ) board
-        WHERE 1 = 1
-        <include refid="boardFilters"/>
-        <include refid="courseCountryFilters"/>
-    </select>
 
     <select id="findBoardListByUserId" resultType="com.example.travlediary.dto.BoardListDto">
         SELECT
