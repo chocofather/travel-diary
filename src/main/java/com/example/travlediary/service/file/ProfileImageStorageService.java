@@ -31,19 +31,34 @@ public class ProfileImageStorageService {
         this.uploadDir = uploadDir;
     }
 
+    /**
+     * 프로필 사진을 저장한다.
+     *
+     * <p>이 사이트에는 프로필 원본을 크게 보여 주는 화면이 없다. 가장 큰 자리가 공개 프로필의
+     * 82×82 다. 그래서 원본을 따로 남기지 않고 화면에 필요한 크기까지 줄인 것 하나만 둔다.
+     *
+     * <p>줄이는 일은 파일을 만들기 <b>전에</b> 메모리에서 끝낸다. 그래야 줄이다가 잘못되어도
+     * 반쯤 쓰다 만 파일이 남지 않는다. 줄이지 못하는 형식이거나 줄이다 실패하면 원본을
+     * 그대로 저장한다 — 사진을 줄이는 일 때문에 되던 업로드가 막히면 안 된다.
+     */
     public String saveProfileImage(MultipartFile file) {
         ImageFormat format = validate(file);
+
+        byte[] content = readAll(file);
+        if (format.imageIoName != null && ProfileImageResizer.canResize(format.imageIoName)) {
+            content = ProfileImageResizer.optimize(content, format.imageIoName, format.keepsAlpha);
+        }
+
         Path profileDirectory = resolveProfileDirectory(true);
         String savedName = UUID.randomUUID() + "." + format.extension;
         Path destination = profileDirectory.resolve(savedName).normalize();
         ensureContained(profileDirectory, destination);
 
         boolean created = false;
-        try (InputStream input = file.getInputStream();
-             OutputStream output = Files.newOutputStream(
-                     destination, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)) {
+        try (OutputStream output = Files.newOutputStream(
+                destination, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)) {
             created = true;
-            input.transferTo(output);
+            output.write(content);
         } catch (IOException exception) {
             if (created) {
                 deletePathQuietly(destination);
@@ -51,6 +66,16 @@ public class ProfileImageStorageService {
             throw new IllegalStateException("프로필 이미지를 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.", exception);
         }
         return PROFILE_URL_PREFIX + savedName;
+    }
+
+    /** 5MB 상한을 이미 확인한 뒤라 통째로 읽어도 된다. */
+    private byte[] readAll(MultipartFile file) {
+        try (InputStream input = file.getInputStream()) {
+            return input.readAllBytes();
+        } catch (IOException exception) {
+            throw new IllegalStateException(
+                    "프로필 이미지를 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.", exception);
+        }
     }
 
     public boolean deleteManagedProfileImage(String imageUrl) {
@@ -195,15 +220,28 @@ public class ProfileImageStorageService {
         return value & 0xff;
     }
 
+    /**
+     * 저장 확장자와, 이 런타임에서 다시 구울 수 있는지.
+     *
+     * <p>WEBP 는 표준 ImageIO 가 읽지도 쓰지도 못해 {@code imageIoName} 이 없다.
+     * 줄이지 못하므로 올라온 그대로 저장한다. 다른 형식으로 구워 {@code .webp} 이름을
+     * 붙이는 일은 하지 않는다 — 이름과 속이 다른 파일이 된다.
+     */
     private enum ImageFormat {
-        JPEG("jpg"),
-        PNG("png"),
-        WEBP("webp");
+        JPEG("jpg", "jpeg", false),
+        PNG("png", "png", true),
+        WEBP("webp", null, true);
 
         private final String extension;
+        /** ImageIO 형식 이름. 다시 구울 수 없으면 null. */
+        private final String imageIoName;
+        /** 투명도를 지닐 수 있는 형식인지. */
+        private final boolean keepsAlpha;
 
-        ImageFormat(String extension) {
+        ImageFormat(String extension, String imageIoName, boolean keepsAlpha) {
             this.extension = extension;
+            this.imageIoName = imageIoName;
+            this.keepsAlpha = keepsAlpha;
         }
     }
 }
