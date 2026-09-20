@@ -327,13 +327,6 @@
           <p class="diary-sticker-status" id="diary-sticker-status" role="status"></p>
         </section>
 
-        <!-- 삭제는 낮은 위계의 보조 동작이라 맨 아래에 따로 둔다. -->
-        <form class="diary-cover-design-danger"
-              th:unless="${newDesign}"
-              th:action="@{/diaries/cover-designs/{id}/delete(id=${designId})}" method="post"
-              th:attr="onsubmit=|return confirm('${coverDesign.name} 디자인을 삭제할까요? 이미 여행일기에 적용한 표지는 그대로 남습니다.')|">
-          <button type="submit" class="diary-cover-design-delete-button">이 디자인 삭제</button>
-        </form>
       </div>
     </div>
   </section>

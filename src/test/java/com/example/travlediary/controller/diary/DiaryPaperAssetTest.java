@@ -30,12 +30,13 @@ class DiaryPaperAssetTest {
     }
 
     @Test
-    void paperTextureIsMadeWithGradientsOnlyAndNoExternalImage() throws IOException {
+    void paperTextureKeepsLightingButHasNoRepeatingFiberPattern() throws IOException {
         String css = Files.readString(DIARY_CSS);
         String texture = css.substring(css.indexOf("--diary-paper-grain:"),
                 css.indexOf("--diary-paper-texture:"));
 
-        assertThat(texture).contains("repeating-linear-gradient").contains("radial-gradient");
+        assertThat(texture).contains("radial-gradient")
+                .doesNotContain("repeating-linear-gradient");
         /*
           종이 질감에 외부 이미지를 쓰지 않는다.
           (라벨/메모지의 장식이나 스프링 코일은 그림을 쓰지만, 그것들은 종이 위에 얹는

@@ -226,7 +226,7 @@ class GuestDiaryCoverContractTest {
         // 회원 화면은 예전 저장 경로를 그대로 쓴다.
         assertThat(memberEditor)
                 .contains("@{/diaries/cover-designs/{id}/update(id=${designId})}")
-                .contains("@{/diaries/cover-designs/{id}/delete(id=${designId})}")
+                .doesNotContain("@{/diaries/cover-designs/{id}/delete(id=${designId})}")
                 .contains("data-create-url=@{/diaries/cover-designs/{id}/elements/sticker")
                 .contains("@{/diaries/cover-designs/{id}/elements/photo")
                 .contains("/js/diary-cover-photo.js");

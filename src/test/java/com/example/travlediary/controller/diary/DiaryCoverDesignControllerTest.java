@@ -429,7 +429,8 @@ class DiaryCoverDesignControllerTest {
 
         assertThat(body).contains("name=\"baseCoverStyle\"").contains("name=\"backgroundColor\"");
         assertThat(body).contains("action=\"/diaries/cover-designs/5/update\"");
-        assertThat(body).contains("action=\"/diaries/cover-designs/5/delete\"");
+        assertThat(body).doesNotContain("action=\"/diaries/cover-designs/5/delete\"")
+                .doesNotContain("이 디자인 삭제");
         // 표지가 곧 꾸미는 자리다. 엔진은 이 표시를 보고 붙는다
         assertThat(body).contains("diary-cover-canvas is-editable");
         assertThat(body).contains("diary-cover-surface");

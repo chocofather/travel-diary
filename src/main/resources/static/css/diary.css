@@ -4006,13 +4006,6 @@
     margin: 0;
 }
 
-.diary-cover-design-danger {
-    margin-top: 26px;
-    padding-top: 16px;
-    border-top: 1px solid #efe8dc;
-    text-align: right;
-}
-
 /* 배경색 고르기: 실제로 저장되는 값은 hidden 이고 여기는 고르는 자리다 */
 .diary-cover-color-field {
     display: flex;
@@ -4193,20 +4186,9 @@
        흰 종이 위에서도 결이 보이도록 그늘 쪽을 조금 더 준다. */
     --diary-paper-light: rgba(255, 255, 255, 0.55);
     --diary-paper-shade: rgba(92, 76, 54, 0.065);
-    --diary-paper-fiber: rgba(120, 100, 72, 0.045);
 
-    /* 아주 미세한 섬유결 + 불규칙한 명암 */
+    /* 반복 결 없이 종이 위에 남는 부드러운 명암 */
     --diary-paper-grain:
-        repeating-linear-gradient(
-            96deg,
-            rgba(255, 255, 255, 0) 0 2px,
-            var(--diary-paper-fiber) 2px 3px
-        ),
-        repeating-linear-gradient(
-            4deg,
-            rgba(255, 255, 255, 0) 0 3px,
-            var(--diary-paper-fiber) 3px 4px
-        ),
         radial-gradient(
             120% 90% at 18% 14%,
             var(--diary-paper-light) 0%,
