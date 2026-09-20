@@ -70,7 +70,8 @@ class AdminDestinationCreateImagePreviewUiContractTest {
                 .contains("input.files")
                 .contains("replaceChildren")
                 .contains("선택한 이미지")
-                .contains("imageSourceNames", "imagePhotographers", "imageLicenseTypes", "imageSourceUrls")
+                .contains("imageSourceNames", "imagePhotographers", "imageLicenseTypes",
+                        "imageLicenseDetails", "imageSourceUrls")
                 .doesNotContain("fetch(")
                 .doesNotContain("XMLHttpRequest")
                 .doesNotContain("form.submit");

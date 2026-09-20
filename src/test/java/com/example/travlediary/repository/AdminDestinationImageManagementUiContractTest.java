@@ -52,7 +52,12 @@ class AdminDestinationImageManagementUiContractTest {
                 .contains("/metadata(imageId=${img.id})")
                 .contains("img.sourceType == 'KTO_PHOTO_GALLERY'");
         assertThat(page.select("input[name=sourceName], input[name=photographer], "
-                + "select[name=licenseType], input[name=sourceUrl]")).hasSize(4);
+                + "select[name=licenseType], input[name=licenseDetail], input[name=sourceUrl]")).hasSize(5);
+        assertThat(source)
+                .contains("data-image-license-detail")
+                .contains("data-image-license-unknown-warning");
+        assertThat(resource("/static/js/admin-destination-image-upload-preview.js"))
+                .contains("CREATIVE_COMMONS", "PERMISSION", "OTHER");
     }
 
     @Test

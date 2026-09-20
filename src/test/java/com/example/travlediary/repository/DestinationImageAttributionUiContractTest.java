@@ -21,7 +21,7 @@ class DestinationImageAttributionUiContractTest {
         assertThat(source)
                 .contains("th:if=\"${hasImageAttribution}\"")
                 .contains("data-source-name=${img.sourceName}")
-                .contains("data-license-label=${img.licenseLabel}")
+                .contains("data-license-label=${img.licenseDisplay}")
                 .contains("data-photographer=${img.photographer}")
                 .contains("data-source-url=${img.safeSourceUrl}");
         assertThat(page.select("[data-destination-image-source-link][target=_blank]"

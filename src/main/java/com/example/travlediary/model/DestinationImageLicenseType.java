@@ -13,7 +13,12 @@ public enum DestinationImageLicenseType {
     KOGL_TYPE_2("공공누리 제2유형"),
     KOGL_TYPE_3("공공누리 제3유형"),
     KOGL_TYPE_4("공공누리 제4유형"),
-    OTHER("기타"),
+    DIRECT("직접 촬영 / 자체 저작권"),
+    CREATIVE_COMMONS("Creative Commons"),
+    PERMISSION("별도 이용허락"),
+    OTHER("기타 라이선스"),
+    UNKNOWN("라이선스 확인 안 됨"),
+    /** 기존 저장값 호환용. 새 입력에서는 별도 표기 없음을 선택하면 된다. */
     NONE("별도 표기 없음");
 
     private final String displayName;
@@ -41,4 +46,5 @@ public enum DestinationImageLicenseType {
                 .findFirst()
                 .orElse(normalized);
     }
+
 }

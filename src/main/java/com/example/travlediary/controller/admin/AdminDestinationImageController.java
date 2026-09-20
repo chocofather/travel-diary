@@ -54,7 +54,7 @@ public class AdminDestinationImageController {
                                MultipartFile[] files,
                                Model model,
                                HttpServletResponse response) {
-        return uploadImages(id, files, null, null, null, null, model, response);
+        return uploadImages(id, files, null, null, null, null, null, model, response);
     }
 
     @PostMapping("/{id}/images")
@@ -66,17 +66,20 @@ public class AdminDestinationImageController {
                                String[] photographers,
                                @RequestParam(value = "imageLicenseTypes", required = false)
                                String[] licenseTypes,
+                               @RequestParam(value = "imageLicenseDetails", required = false)
+                               String[] licenseDetails,
                                @RequestParam(value = "imageSourceUrls", required = false)
                                String[] sourceUrls,
                                Model model,
                                HttpServletResponse response) {
         try {
-            if (sourceNames == null && photographers == null && licenseTypes == null && sourceUrls == null) {
+            if (sourceNames == null && photographers == null && licenseTypes == null
+                    && licenseDetails == null && sourceUrls == null) {
                 destinationImageService.saveImages(id, files, null, new Integer[0]);
             } else {
                 destinationImageService.saveImages(
                         id, files, null, new Integer[0],
-                        sourceNames, photographers, licenseTypes, sourceUrls);
+                        sourceNames, photographers, licenseTypes, licenseDetails, sourceUrls);
             }
         } catch (UnsupportedImageFormatException exception) {
             // 잘못된 이미지는 입력 오류이므로 400 을 유지하되 관리 화면 안에서 이유를 보여준다
@@ -134,11 +137,14 @@ public class AdminDestinationImageController {
                                       String photographer,
                                       @RequestParam(value = "licenseType", required = false)
                                       String licenseType,
+                                      @RequestParam(value = "licenseDetail", required = false)
+                                      String licenseDetail,
                                       @RequestParam(value = "sourceUrl", required = false)
                                       String sourceUrl) {
         try {
             destinationImageService.updateImageMetadata(
-                    destinationId, imageId, sourceName, photographer, licenseType, sourceUrl);
+                    destinationId, imageId, sourceName, photographer,
+                    licenseType, licenseDetail, sourceUrl);
         } catch (IllegalArgumentException exception) {
             throw invalidImageRequest();
         }

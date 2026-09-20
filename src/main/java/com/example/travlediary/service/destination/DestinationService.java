@@ -179,6 +179,7 @@ public class DestinationService {
                 form.getImageSourceNames(),
                 form.getImagePhotographers(),
                 form.getImageLicenseTypes(),
+                form.getImageLicenseDetails(),
                 form.getImageSourceUrls());
         return destinationId;
     }

@@ -55,6 +55,7 @@
                                  @Param("sourceName") String sourceName,
                                  @Param("photographer") String photographer,
                                  @Param("licenseType") String licenseType,
+                                 @Param("licenseDetail") String licenseDetail,
                                  @Param("sourceUrl") String sourceUrl);
 
         List<Destination> findByCountryCategoryId(@Param("cityId") Long cityId);

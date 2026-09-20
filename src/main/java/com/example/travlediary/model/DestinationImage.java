@@ -19,6 +19,7 @@
         private String sourceTitle; // 외부 원본 사진 제목
         private String photographer; // 촬영자/저작자
         private String licenseType; // 라이선스 유형
+        private String licenseDetail; // 라이선스 세부 이용조건
         private String sourceUrl; // 원본/출처 페이지 URL
         private String sourceImageUrl; // 외부 제공처의 원본 이미지 URL
         private Timestamp licenseCheckedAt; // 라이선스 조건 확인 시각
@@ -32,8 +33,17 @@
             return DestinationImageLicenseType.displayName(licenseType);
         }
 
+        /** 세부조건이 있으면 우선하고, 없으면 사람이 읽는 기본 라벨을 쓴다. */
+        public String getLicenseDisplay() {
+            String detail = text(licenseDetail);
+            if (detail != null) {
+                return detail;
+            }
+            return getLicenseLabel();
+        }
+
         public boolean isAttributionPresent() {
-            return text(sourceName) != null || getLicenseLabel() != null
+            return text(sourceName) != null || getLicenseDisplay() != null
                     || text(photographer) != null || getSafeSourceUrl() != null;
         }
 

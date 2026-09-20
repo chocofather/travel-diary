@@ -131,7 +131,7 @@ class DestinationImageServiceTest {
     }
 
     @Test
-    void directUploadsKeepSourceMetadataPerImageIncludingKoglAndSourceUrl() {
+    void directUploadsKeepSourceMetadataAndLicenseDetailsPerImage() {
         when(destinationMapper.findImagesByDestinationId(10L)).thenReturn(List.of());
         when(fileUploadService.saveDestinationImage(any()))
                 .thenReturn("/uploads/destinations/a.jpg")
@@ -144,19 +144,23 @@ class DestinationImageServiceTest {
                 new Integer[0],
                 new String[]{"한국관광공사", "서울특별시"},
                 new String[]{"김지호", "박하늘"},
-                new String[]{"KOGL_TYPE_1", "KOGL_TYPE_3"},
+                new String[]{"KOGL_TYPE_1", "CREATIVE_COMMONS"},
+                new String[]{null, "CC BY 4.0"},
                 new String[]{"https://example.com/a", "https://example.com/b"});
 
         assertThat(insertedImages())
                 .extracting(DestinationImage::getSourceName,
                         DestinationImage::getPhotographer,
                         DestinationImage::getLicenseType,
+                        DestinationImage::getLicenseDetail,
                         DestinationImage::getSourceUrl)
                 .containsExactly(
                         org.assertj.core.groups.Tuple.tuple(
-                                "한국관광공사", "김지호", "KOGL_TYPE_1", "https://example.com/a"),
+                                "한국관광공사", "김지호", "KOGL_TYPE_1", null,
+                                "https://example.com/a"),
                         org.assertj.core.groups.Tuple.tuple(
-                                "서울특별시", "박하늘", "KOGL_TYPE_3", "https://example.com/b"));
+                                "서울특별시", "박하늘", "CREATIVE_COMMONS", "CC BY 4.0",
+                                "https://example.com/b"));
     }
 
     @Test
@@ -394,11 +398,11 @@ class DestinationImageServiceTest {
 
         service.updateImageMetadata(
                 10L, 2L, "  한국관광공사  ", " 한국관광공사 김지호 ",
-                " KOGL_TYPE_4 ", " https://example.com/source ");
+                " KOGL_TYPE_4 ", " CC BY 4.0 ", " https://example.com/source ");
 
         verify(destinationMapper).updateImageMetadata(
                 2L, "한국관광공사", "한국관광공사 김지호",
-                "KOGL_TYPE_4", "https://example.com/source");
+                "KOGL_TYPE_4", "CC BY 4.0", "https://example.com/source");
         verify(destinationMapper, never()).clearMainImagesByDestinationId(anyLong());
         verify(destinationMapper, never()).setMainImage(anyLong());
         verify(destinationMapper, never()).updateImageSlide(anyLong(), org.mockito.ArgumentMatchers.anyBoolean());

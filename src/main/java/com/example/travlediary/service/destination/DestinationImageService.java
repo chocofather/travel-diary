@@ -44,7 +44,7 @@ public class DestinationImageService {
                            String[] licenseTypes,
                            String[] sourceUrls) {
         saveImages(destId, files, mainIdx, slideIdx,
-                sourceNames, null, licenseTypes, sourceUrls);
+                sourceNames, null, licenseTypes, null, sourceUrls);
     }
 
     @Transactional
@@ -55,6 +55,20 @@ public class DestinationImageService {
                            String[] sourceNames,
                            String[] photographers,
                            String[] licenseTypes,
+                           String[] sourceUrls) {
+        saveImages(destId, files, mainIdx, slideIdx,
+                sourceNames, photographers, licenseTypes, null, sourceUrls);
+    }
+
+    @Transactional
+    public void saveImages(Long destId,
+                           MultipartFile[] files,
+                           Integer mainIdx,
+                           Integer[] slideIdx,
+                           String[] sourceNames,
+                           String[] photographers,
+                           String[] licenseTypes,
+                           String[] licenseDetails,
                            String[] sourceUrls) {
         if (files == null || files.length == 0) return;
 
@@ -75,6 +89,7 @@ public class DestinationImageService {
             img.setSourceName(metadataValue(sourceNames, uploadIndex));
             img.setPhotographer(metadataValue(photographers, uploadIndex));
             img.setLicenseType(metadataValue(licenseTypes, uploadIndex));
+            img.setLicenseDetail(metadataValue(licenseDetails, uploadIndex));
             img.setSourceUrl(metadataValue(sourceUrls, uploadIndex));
 
             int finalIdx = uploadIndex;
@@ -114,7 +129,7 @@ public class DestinationImageService {
                            String[] sourceNames,
                            String[] licenseTypes,
                            String[] sourceUrls) {
-        saveImages(destId, files, main, slide, sourceNames, null, licenseTypes, sourceUrls);
+        saveImages(destId, files, main, slide, sourceNames, null, licenseTypes, null, sourceUrls);
     }
 
     @Transactional
@@ -126,10 +141,24 @@ public class DestinationImageService {
                            String[] photographers,
                            String[] licenseTypes,
                            String[] sourceUrls) {
+        saveImages(destId, files, main, slide,
+                sourceNames, photographers, licenseTypes, null, sourceUrls);
+    }
+
+    @Transactional
+    public void saveImages(Long destId,
+                           MultipartFile[] files,
+                           boolean main,
+                           boolean slide,
+                           String[] sourceNames,
+                           String[] photographers,
+                           String[] licenseTypes,
+                           String[] licenseDetails,
+                           String[] sourceUrls) {
         Integer mainIdx = main ? 0 : null;
         Integer[] slideIdx = slide ? allUploadIndexes(files) : new Integer[0];
         saveImages(destId, files, mainIdx, slideIdx,
-                sourceNames, photographers, licenseTypes, sourceUrls);
+                sourceNames, photographers, licenseTypes, licenseDetails, sourceUrls);
     }
 
     public List<DestinationImage> getImages(Long destId) {
@@ -156,12 +185,25 @@ public class DestinationImageService {
                                     String photographer,
                                     String licenseType,
                                     String sourceUrl) {
+        updateImageMetadata(destinationId, imageId, sourceName, photographer,
+                licenseType, null, sourceUrl);
+    }
+
+    @Transactional
+    public void updateImageMetadata(Long destinationId,
+                                    Long imageId,
+                                    String sourceName,
+                                    String photographer,
+                                    String licenseType,
+                                    String licenseDetail,
+                                    String sourceUrl) {
         requireDestinationImage(destinationId, imageId);
         destinationMapper.updateImageMetadata(
                 imageId,
                 metadataValue(sourceName),
                 metadataValue(photographer),
                 metadataValue(licenseType),
+                metadataValue(licenseDetail),
                 metadataValue(sourceUrl));
     }
 

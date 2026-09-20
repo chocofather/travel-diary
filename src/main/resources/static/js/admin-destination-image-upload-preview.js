@@ -5,7 +5,24 @@
 document.addEventListener("DOMContentLoaded", () => {
     // 화면마다 파일 input 이 다르므로 블록이 자기 input 을 id 로 가리킨다.
     document.querySelectorAll("[data-destination-upload-preview]").forEach(setUpPreview);
+    document.querySelectorAll("[data-image-license-fields]").forEach(setUpLicenseFields);
 });
+
+function setUpLicenseFields(fields) {
+    const licenseType = fields.querySelector("[data-image-metadata-field='licenseType'], select[name='licenseType']");
+    const detail = fields.querySelector("[data-image-license-detail]");
+    const unknownWarning = fields.querySelector("[data-image-license-unknown-warning]");
+    if (!licenseType || !detail || !unknownWarning) return;
+
+    const detailLicenseTypes = ["CREATIVE_COMMONS", "PERMISSION", "OTHER"];
+    const updateVisibility = () => {
+        detail.hidden = !detailLicenseTypes.includes(licenseType.value);
+        unknownWarning.hidden = licenseType.value !== "UNKNOWN";
+    };
+
+    licenseType.addEventListener("change", updateVisibility);
+    updateVisibility();
+}
 
 function setUpPreview(preview) {
     const input = document.getElementById(preview.dataset.destinationUploadPreview);
@@ -36,6 +53,7 @@ function setUpPreview(preview) {
             sourceName: "imageSourceNames",
             photographer: "imagePhotographers",
             licenseType: "imageLicenseTypes",
+            licenseDetail: "imageLicenseDetails",
             sourceUrl: "imageSourceUrls"
         };
         fields.querySelectorAll("[data-image-metadata-field]").forEach(control => {
@@ -45,6 +63,7 @@ function setUpPreview(preview) {
             }
         });
         card.append(fields);
+        setUpLicenseFields(card);
     }
 
     function previewCard(file) {

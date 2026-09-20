@@ -103,7 +103,7 @@
                 <div class="slide" th:each="img, idx : ${images}"
                      th:classappend="${idx.index == 0} ? 'active'"
                      th:attr="data-source-name=${img.sourceName},
-                              data-license-label=${img.licenseLabel},
+                              data-license-label=${img.licenseDisplay},
                               data-photographer=${img.photographer},
                               data-source-url=${img.safeSourceUrl}">
                     <!--
@@ -129,15 +129,15 @@
                   data-destination-image-source></span>
             <span aria-hidden="true"
                   th:hidden="${firstImage.sourceName == null or #strings.isEmpty(firstImage.sourceName)
-                               or firstImage.licenseLabel == null}"
+                               or firstImage.licenseDisplay == null}"
                   data-destination-image-separator>·</span>
-            <span th:text="${firstImage.licenseLabel}"
-                  th:hidden="${firstImage.licenseLabel == null}"
+            <span th:text="${firstImage.licenseDisplay}"
+                  th:hidden="${firstImage.licenseDisplay == null}"
                   data-destination-image-license></span>
             <span aria-hidden="true"
                   th:hidden="${firstImage.photographer == null or #strings.isEmpty(firstImage.photographer)
                                or (firstImage.sourceName == null or #strings.isEmpty(firstImage.sourceName))
-                               and firstImage.licenseLabel == null}"
+                               and firstImage.licenseDisplay == null}"
                   data-destination-image-photographer-separator>·</span>
             <span th:hidden="${firstImage.photographer == null or #strings.isEmpty(firstImage.photographer)}"
                   data-destination-image-photographer-prefix

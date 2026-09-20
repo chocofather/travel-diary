@@ -106,7 +106,7 @@
                 th:action="@{/admin/destinations/images/{imageId}/metadata(imageId=${img.id})}"
                 method="post">
             <input type="hidden" name="destinationId" th:value="${destinationId}">
-            <div class="admin-image-metadata-fields">
+            <div class="admin-image-metadata-fields" data-image-license-fields>
               <label>
                 <span>출처</span>
                 <input type="text" name="sourceName" maxlength="100"
@@ -129,6 +129,14 @@
                           th:selected="${option.code == img.licenseType}"></option>
                 </select>
               </label>
+              <label class="is-wide" data-image-license-detail hidden>
+                <span>세부 이용조건</span>
+                <input type="text" name="licenseDetail" maxlength="255"
+                       th:value="${img.licenseDetail}" placeholder="예: CC BY 4.0">
+              </label>
+              <p class="admin-field-help is-wide" data-image-license-unknown-warning hidden>
+                이용조건이 확인되지 않은 이미지는 공개 서비스 사용 전에 권리관계를 확인하세요.
+              </p>
               <label class="is-wide">
                 <span>출처 URL</span>
                 <input type="url" name="sourceUrl" maxlength="1000" inputmode="url"

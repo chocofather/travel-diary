@@ -32,6 +32,34 @@ class DestinationImageAttributionTest {
     }
 
     @Test
+    void licenseChoicesKeepLegacyValuesAndPreferDetailForDisplay() {
+        DestinationImage image = new DestinationImage();
+
+        image.setLicenseType("NONE");
+        assertThat(image.getLicenseLabel()).isEqualTo("별도 표기 없음");
+        image.setLicenseType("OTHER");
+        assertThat(image.getLicenseLabel()).isEqualTo("기타 라이선스");
+        image.setLicenseType("DIRECT");
+        assertThat(image.getLicenseLabel()).isEqualTo("직접 촬영 / 자체 저작권");
+        image.setLicenseType("UNKNOWN");
+        assertThat(image.getLicenseLabel()).isEqualTo("라이선스 확인 안 됨");
+
+        image.setLicenseType("CREATIVE_COMMONS");
+        image.setLicenseDetail("CC BY 4.0");
+        assertThat(image.getLicenseDisplay()).isEqualTo("CC BY 4.0");
+
+        image.setLicenseType("PERMISSION");
+        image.setLicenseDetail(null);
+        assertThat(image.getLicenseDisplay()).isEqualTo("별도 이용허락");
+
+        image.setLicenseDetail("한국관광공사 별도 사용 허락");
+        assertThat(image.getLicenseDisplay()).isEqualTo("한국관광공사 별도 사용 허락");
+        image.setLicenseType("OTHER");
+        image.setLicenseDetail("서울특별시 공공저작물 이용조건");
+        assertThat(image.getLicenseDisplay()).isEqualTo("서울특별시 공공저작물 이용조건");
+    }
+
+    @Test
     void existingKtoPhotographerAloneStillCreatesAttribution() {
         DestinationImage image = new DestinationImage();
         image.setPhotographer("한국관광공사 김지호");

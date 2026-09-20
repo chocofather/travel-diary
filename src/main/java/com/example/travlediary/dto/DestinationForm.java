@@ -129,6 +129,7 @@ public class DestinationForm {
     private String[] imageSourceNames;
     private String[] imagePhotographers;
     private String[] imageLicenseTypes;
+    private String[] imageLicenseDetails;
     private String[] imageSourceUrls;
     private String ktoSelectedPhotosJson = "[]";
 

@@ -30,6 +30,7 @@
         <result property="sourceTitle" column="source_title"/>
         <result property="photographer" column="photographer"/>
         <result property="licenseType" column="license_type"/>
+        <result property="licenseDetail" column="license_detail"/>
         <result property="sourceUrl" column="source_url"/>
         <result property="sourceImageUrl" column="source_image_url"/>
         <result property="licenseCheckedAt" column="license_checked_at"/>
@@ -77,6 +78,7 @@
             di.source_title,
             di.photographer,
             di.license_type,
+            di.license_detail,
             di.source_url,
             di.source_image_url,
             di.license_checked_at,
@@ -137,6 +139,7 @@
             source_title,
             photographer,
             license_type,
+            license_detail,
             source_url,
             source_image_url,
             license_checked_at,
@@ -154,6 +157,7 @@
             #{sourceTitle},
             #{photographer},
             #{licenseType},
+            #{licenseDetail},
             #{sourceUrl},
             #{sourceImageUrl},
             #{licenseCheckedAt},
@@ -208,6 +212,7 @@
             source_title,
             photographer,
             license_type,
+            license_detail,
             source_url,
             source_image_url,
             license_checked_at,
@@ -278,6 +283,7 @@
         SET source_name = #{sourceName},
             photographer = #{photographer},
             license_type = #{licenseType},
+            license_detail = #{licenseDetail},
             source_url = #{sourceUrl}
         WHERE id = #{imageId}
     </update>

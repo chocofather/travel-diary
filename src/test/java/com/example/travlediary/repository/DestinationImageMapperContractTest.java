@@ -40,6 +40,7 @@ class DestinationImageMapperContractTest {
                 .containsEntry("sourceTitle", String.class)
                 .containsEntry("photographer", String.class)
                 .containsEntry("licenseType", String.class)
+                .containsEntry("licenseDetail", String.class)
                 .containsEntry("sourceUrl", String.class)
                 .containsEntry("sourceImageUrl", String.class)
                 .containsEntry("licenseCheckedAt", Timestamp.class);
@@ -60,6 +61,7 @@ class DestinationImageMapperContractTest {
                 .containsEntry("sourceTitle", "source_title")
                 .containsEntry("photographer", "photographer")
                 .containsEntry("licenseType", "license_type")
+                .containsEntry("licenseDetail", "license_detail")
                 .containsEntry("sourceUrl", "source_url")
                 .containsEntry("sourceImageUrl", "source_image_url")
                 .containsEntry("licenseCheckedAt", "license_checked_at");
@@ -73,6 +75,7 @@ class DestinationImageMapperContractTest {
                     .contains("source_title")
                     .contains("photographer")
                     .contains("license_type")
+                    .contains("license_detail")
                     .contains("source_url")
                     .contains("source_image_url")
                     .contains("license_checked_at");
@@ -92,7 +95,7 @@ class DestinationImageMapperContractTest {
 
         assertThat(sql)
                 .contains("image_url, source_type, source_name, external_content_id, source_title, "
-                        + "photographer, license_type, source_url, source_image_url, license_checked_at")
+                        + "photographer, license_type, license_detail, source_url, source_image_url, license_checked_at")
                 .contains("VALUES (?, COALESCE(?, 'ADMIN_UPLOAD'), ?, ?, ?, ?, ?, ?, ?");
         assertThat(boundSql.getParameterMappings())
                 .extracting(ParameterMapping::getProperty)
@@ -104,6 +107,7 @@ class DestinationImageMapperContractTest {
                         "sourceTitle",
                         "photographer",
                         "licenseType",
+                        "licenseDetail",
                         "sourceUrl",
                         "sourceImageUrl",
                         "licenseCheckedAt",
@@ -137,11 +141,12 @@ class DestinationImageMapperContractTest {
                 "sourceName", "한국관광공사",
                 "photographer", "한국관광공사 김지호",
                 "licenseType", "KOGL_TYPE_1",
+                "licenseDetail", "CC BY 4.0",
                 "sourceUrl", "https://example.com/source"
         ));
 
         assertThat(sql).isEqualTo("UPDATE destination_images SET source_name = ?, "
-                + "photographer = ?, license_type = ?, source_url = ? WHERE id = ?");
+                + "photographer = ?, license_type = ?, license_detail = ?, source_url = ? WHERE id = ?");
         assertThat(sql).doesNotContain("source_title", "source_image_url", "external_content_id",
                 "license_checked_at");
     }
