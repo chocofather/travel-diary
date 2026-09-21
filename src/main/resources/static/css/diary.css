@@ -4443,6 +4443,7 @@
         180deg,
         rgba(255, 255, 255, 0) 0,
         rgba(255, 255, 255, 0) calc(var(--diary-line) * 0.96619),
+        rgba(150, 128, 96, 0.17) calc(var(--diary-line) * 0.96619),
         rgba(150, 128, 96, 0.17) var(--diary-line)
     );
 }
