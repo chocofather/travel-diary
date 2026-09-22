@@ -30,20 +30,29 @@
     }
 
     function renderNoteLines(frame, sheet, pageScale) {
+        const isEditMode = !!sheet.closest('.is-edit-mode');
         if (!sheet.classList.contains('diary-sheet-bg-lined')
-            || !sheet.closest('.is-read-mode')) return;
+            || (!sheet.closest('.is-read-mode') && !isEditMode)) return;
 
         const layer = sheet.querySelector('.diary-writing-layer');
-        const editor = layer?.querySelector('.diary-editor');
-        if (!editor) return;
+        const text = isEditMode
+            ? layer?.querySelector('.diary-editor .ql-editor')
+            : layer?.querySelector('.diary-editor.is-read-only');
+        if (!text) return;
 
-        const lineHeight = Number.parseFloat(getComputedStyle(editor).lineHeight);
+        const lineHeight = Number.parseFloat(getComputedStyle(text).lineHeight);
         const lineCount = Number.parseInt(
             getComputedStyle(sheet).getPropertyValue('--diary-lines'), 10);
-        if (!Number.isFinite(lineHeight) || !Number.isFinite(lineCount)) return;
+        const lineStart = Number.parseFloat(
+            getComputedStyle(layer).getPropertyValue('--diary-note-line-start'));
+        if (!Number.isFinite(lineHeight) || !Number.isFinite(lineCount)
+            || !Number.isFinite(lineStart)) return;
 
         const pixelRatio = window.devicePixelRatio || 1;
         const pixel = 1 / pixelRatio;
+        const screenThickness = lineHeight * (1 - lineStart) * pageScale;
+        const snappedThickness = Math.max(1, Math.round(screenThickness * pixelRatio))
+            / pixelRatio;
         const frameRect = frame.getBoundingClientRect();
         const layerRect = layer.getBoundingClientRect();
         let paper = frame.querySelector(':scope > .diary-note-paper');
@@ -70,7 +79,8 @@
         lines.style.top = `${layerRect.top - frameRect.top}px`;
         lines.style.left = `${layerRect.left - frameRect.left}px`;
         lines.style.width = `${layerRect.width}px`;
-        lines.style.setProperty('--diary-note-pixel', `${pixel}px`);
+        lines.style.setProperty('--diary-note-pixel',
+            `${isEditMode ? snappedThickness : pixel}px`);
 
         const rows = document.createDocumentFragment();
         for (let index = 1; index <= lineCount; index++) {

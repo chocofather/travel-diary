@@ -48,6 +48,9 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 sheet.style.removeProperty('--diary-paper-color');
             }
+            if (sheet.classList.contains('diary-sheet-bg-lined')) {
+                window.diaryPageScale?.refresh(sheet.closest('[data-diary-sheet-viewport]'));
+            }
         }
 
         /** 서버가 받는 형식(#RRGGBB)으로만 맞춘다. 그 밖의 값은 기본 종이색으로 본다. */

@@ -4444,16 +4444,26 @@
     background: none;
 }
 
+.is-edit-mode .diary-sheet-viewport.has-screen-note-lines .diary-sheet-bg-lined {
+    z-index: 2;
+    background: none;
+}
+
 .diary-sheet-bg-lined .diary-writing-layer {
+    --diary-note-line-start: 0.96619;
     background: repeating-linear-gradient(
         180deg,
-        transparent 0 calc(var(--diary-line) * 0.96619),
+        transparent 0 calc(var(--diary-line) * var(--diary-note-line-start)),
         rgba(150, 128, 96, 0.17) 0 var(--diary-line)
     );
 }
 
 /* 읽기 화면에서는 1px보다 얇아지는 gradient를 줄마다 화면 픽셀에 맞춰 그린다. */
 .is-read-mode .diary-sheet-viewport.has-screen-note-lines .diary-writing-layer {
+    background: none;
+}
+
+.is-edit-mode .diary-sheet-viewport.has-screen-note-lines .diary-writing-layer {
     background: none;
 }
 

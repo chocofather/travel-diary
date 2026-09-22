@@ -256,7 +256,8 @@ class DiaryPageCoordinateAssetTest {
                 .contains("position: absolute;")
                 .contains("background: rgba(150, 128, 96, 0.17);");
         assertThat(scaler)
-                .contains("getComputedStyle(editor).lineHeight")
+                .contains("getComputedStyle(text).lineHeight")
+                .contains(".diary-editor.is-read-only")
                 .contains("getComputedStyle(sheet).getPropertyValue('--diary-lines')")
                 .contains("window.devicePixelRatio")
                 .contains("Math.round(")
@@ -267,6 +268,31 @@ class DiaryPageCoordinateAssetTest {
                 .contains("getPropertyValue('--diary-paper-color')")
                 .contains("layerRect.left - frameRect.left")
                 .doesNotContain("1 / pageScale");
+        assertThat(bodyTextRule(css)).contains("line-height: var(--diary-line);");
+    }
+
+    /** 쓰기 NOTE도 본문 줄 좌표에서 그리되 선 두께는 기기 픽셀의 정수배로 고정한다. */
+    @Test
+    void editModeNoteLinesUsePixelWidthsAndKeepThePaperColorPreview() throws IOException {
+        String css = Files.readString(DIARY_CSS);
+        String scaler = Files.readString(PAGE_SCALE_JS);
+        String paperColor = Files.readString(
+                Path.of("src/main/resources/static/js/diary-paper-color.js"));
+
+        assertThat(rule(css, ".is-edit-mode .diary-sheet-viewport.has-screen-note-lines .diary-writing-layer"))
+                .contains("background: none;");
+        assertThat(rule(css, ".is-edit-mode .diary-sheet-viewport.has-screen-note-lines .diary-sheet-bg-lined"))
+                .contains("background: none;")
+                .contains("z-index: 2;");
+        assertThat(rule(css, ".diary-sheet-bg-lined .diary-writing-layer"))
+                .contains("--diary-note-line-start: 0.96619;");
+        assertThat(scaler)
+                .contains("sheet.closest('.is-edit-mode')")
+                .contains(".diary-editor .ql-editor")
+                .contains("getPropertyValue('--diary-note-line-start')")
+                .contains("Math.round(screenThickness * pixelRatio)")
+                .contains("isEditMode ? snappedThickness : pixel");
+        assertThat(paperColor).contains("window.diaryPageScale?.refresh(");
         assertThat(bodyTextRule(css)).contains("line-height: var(--diary-line);");
     }
 
