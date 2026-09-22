@@ -26,6 +26,63 @@
 
         const pageScale = Math.min(1, frameWidth / baseWidth);
         sheet.style.setProperty('--diary-page-scale', pageScale.toFixed(6));
+        renderNoteLines(frame, sheet, pageScale);
+    }
+
+    function renderNoteLines(frame, sheet, pageScale) {
+        if (!sheet.classList.contains('diary-sheet-bg-lined')
+            || !sheet.closest('.is-read-mode')) return;
+
+        const layer = sheet.querySelector('.diary-writing-layer');
+        const editor = layer?.querySelector('.diary-editor');
+        if (!editor) return;
+
+        const lineHeight = Number.parseFloat(getComputedStyle(editor).lineHeight);
+        const lineCount = Number.parseInt(
+            getComputedStyle(sheet).getPropertyValue('--diary-lines'), 10);
+        if (!Number.isFinite(lineHeight) || !Number.isFinite(lineCount)) return;
+
+        const pixelRatio = window.devicePixelRatio || 1;
+        const pixel = 1 / pixelRatio;
+        const frameRect = frame.getBoundingClientRect();
+        const layerRect = layer.getBoundingClientRect();
+        let paper = frame.querySelector(':scope > .diary-note-paper');
+        if (!paper) {
+            paper = document.createElement('div');
+            paper.className = 'diary-note-paper';
+            paper.setAttribute('aria-hidden', 'true');
+            frame.prepend(paper);
+        }
+        const sheetStyle = getComputedStyle(sheet);
+        paper.style.setProperty('--diary-paper-color',
+            sheetStyle.getPropertyValue('--diary-paper-color'));
+        paper.style.borderRadius = sheetStyle.borderRadius;
+        paper.style.transform = `scale(${pageScale})`;
+
+        let lines = frame.querySelector(':scope > .diary-note-lines');
+        if (!lines) {
+            lines = document.createElement('div');
+            lines.className = 'diary-note-lines';
+            lines.setAttribute('aria-hidden', 'true');
+            frame.append(lines);
+        }
+
+        lines.style.top = `${layerRect.top - frameRect.top}px`;
+        lines.style.left = `${layerRect.left - frameRect.left}px`;
+        lines.style.width = `${layerRect.width}px`;
+        lines.style.setProperty('--diary-note-pixel', `${pixel}px`);
+
+        const rows = document.createDocumentFragment();
+        for (let index = 1; index <= lineCount; index++) {
+            const row = document.createElement('div');
+            row.className = 'diary-note-line';
+            const screenY = layerRect.top + index * lineHeight * pageScale;
+            const snappedTop = Math.round((screenY - pixel) * pixelRatio) / pixelRatio;
+            row.style.top = `${snappedTop - layerRect.top}px`;
+            rows.append(row);
+        }
+        lines.replaceChildren(rows);
+        frame.classList.add('has-screen-note-lines');
     }
 
     const resizeObserver = typeof ResizeObserver === 'function'

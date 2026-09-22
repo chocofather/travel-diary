@@ -4438,14 +4438,49 @@
     background: var(--diary-paper-texture), var(--diary-paper-color);
 }
 
+/* 읽기 NOTE의 종이만 별도 층으로 두어 선은 종이 위, 글과 사진은 선 위에 남긴다. */
+.is-read-mode .diary-sheet-viewport.has-screen-note-lines .diary-sheet-bg-lined {
+    z-index: 2;
+    background: none;
+}
+
 .diary-sheet-bg-lined .diary-writing-layer {
     background: repeating-linear-gradient(
         180deg,
-        rgba(255, 255, 255, 0) 0,
-        rgba(255, 255, 255, 0) calc(var(--diary-line) * 0.96619),
-        rgba(150, 128, 96, 0.17) calc(var(--diary-line) * 0.96619),
-        rgba(150, 128, 96, 0.17) var(--diary-line)
+        transparent 0 calc(var(--diary-line) * 0.96619),
+        rgba(150, 128, 96, 0.17) 0 var(--diary-line)
     );
+}
+
+/* 읽기 화면에서는 1px보다 얇아지는 gradient를 줄마다 화면 픽셀에 맞춰 그린다. */
+.is-read-mode .diary-sheet-viewport.has-screen-note-lines .diary-writing-layer {
+    background: none;
+}
+
+.diary-note-paper {
+    position: absolute;
+    z-index: 0;
+    top: 0;
+    left: 0;
+    width: var(--diary-page-base-width);
+    height: var(--diary-page-height);
+    transform-origin: top left;
+    background: var(--diary-paper-texture), var(--diary-paper-color);
+    pointer-events: none;
+}
+
+.diary-note-lines {
+    position: absolute;
+    z-index: 1;
+    pointer-events: none;
+}
+
+.diary-note-line {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: var(--diary-note-pixel);
+    background: rgba(150, 128, 96, 0.17);
 }
 
 .diary-sheet-bg-grid {

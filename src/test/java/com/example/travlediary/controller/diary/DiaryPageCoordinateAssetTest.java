@@ -119,7 +119,8 @@ class DiaryPageCoordinateAssetTest {
         // 본문 줄 높이 / 줄 그림 / 글 쓰는 자리 높이가 모두 그 값을 가리킨다
         assertThat(body).contains("line-height: var(--diary-line);");
         assertThat(rule(css, ".diary-sheet-bg-lined .diary-writing-layer"))
-                .contains("rgba(150, 128, 96, 0.17) var(--diary-line)");
+                .contains("rgba(150, 128, 96, 0.17)")
+                .contains("var(--diary-line)");
         assertThat(rule(css, ".diary-writing-layer"))
                 .contains("height: calc(var(--diary-lines) * var(--diary-line));");
 
@@ -231,6 +232,42 @@ class DiaryPageCoordinateAssetTest {
         assertThat(lines).doesNotContain("background-size").doesNotContain("repeat,");
         // 줄 하나가 글 한 줄의 아래에 오도록 위에서 아래로 되풀이한다
         assertThat(lines).contains("180deg");
+    }
+
+    /** 읽기 화면은 축소된 gradient 대신 본문 줄 좌표를 화면 픽셀에 맞춰 그린다. */
+    @Test
+    void readModeNoteLinesUseScreenPixelSnappingWithoutMovingTheBody() throws IOException {
+        String css = Files.readString(DIARY_CSS);
+        String scaler = Files.readString(PAGE_SCALE_JS);
+
+        assertThat(rule(css, ".is-read-mode .diary-sheet-viewport.has-screen-note-lines .diary-writing-layer"))
+                .contains("background: none;");
+        assertThat(rule(css, ".is-read-mode .diary-sheet-viewport.has-screen-note-lines .diary-sheet-bg-lined"))
+                .contains("background: none;")
+                .contains("z-index: 2;");
+        assertThat(rule(css, ".diary-note-paper"))
+                .contains("background: var(--diary-paper-texture), var(--diary-paper-color);")
+                .contains("z-index: 0;");
+        assertThat(rule(css, ".diary-note-lines"))
+                .contains("position: absolute;")
+                .contains("z-index: 1;")
+                .contains("pointer-events: none;");
+        assertThat(rule(css, ".diary-note-line"))
+                .contains("position: absolute;")
+                .contains("background: rgba(150, 128, 96, 0.17);");
+        assertThat(scaler)
+                .contains("getComputedStyle(editor).lineHeight")
+                .contains("getComputedStyle(sheet).getPropertyValue('--diary-lines')")
+                .contains("window.devicePixelRatio")
+                .contains("Math.round(")
+                .contains("1 / pixelRatio")
+                .contains("frame.append(lines)")
+                .contains("frame.prepend(paper)")
+                .contains("frame.classList.add('has-screen-note-lines')")
+                .contains("getPropertyValue('--diary-paper-color')")
+                .contains("layerRect.left - frameRect.left")
+                .doesNotContain("1 / pageScale");
+        assertThat(bodyTextRule(css)).contains("line-height: var(--diary-line);");
     }
 
     /**
