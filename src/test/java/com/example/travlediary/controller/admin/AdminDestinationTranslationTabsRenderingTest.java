@@ -59,6 +59,23 @@ class AdminDestinationTranslationTabsRenderingTest {
     @MockitoBean private UserMapper userMapper;
 
     @Test
+    void wikidataPreviewIsOutsideTheDestinationSaveForm() throws Exception {
+        var document = Jsoup.parse(mockMvc.perform(get("/admin/destinations/create")
+                        .with(user("admin").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString());
+
+        var preview = document.selectFirst("[data-wikidata-preview]");
+        assertThat(preview).isNotNull();
+        assertThat(preview.closest("form")).isNull();
+        assertThat(preview.select("[data-wikidata-keyword]")).hasSize(1);
+        assertThat(preview.select("[data-wikidata-search]")).hasSize(1);
+        assertThat(preview.select("[data-wikidata-detail][hidden]")).hasSize(1);
+        assertThat(preview.select("[name]")).isEmpty();
+        assertThat(document.select("script[src^='/js/admin-wikidata-preview.js']")).hasSize(1);
+    }
+
+    @Test
     void everyTabGroupRendersFourLanguagesWithOnlyEnglishOpen() throws Exception {
         String body = mockMvc.perform(get("/admin/destinations/create")
                         .with(user("admin").roles("ADMIN")))

@@ -5,6 +5,7 @@
 
 <th:block th:fragment="headFragment">
   <link rel="stylesheet" href="/css/destination-create.css">
+  <link rel="stylesheet" href="/css/admin-wikidata-preview.css">
   <script src="/js/admin-destination-category-select.js?v=20260822-2" defer></script>
   <script src="/js/admin-destination-amenity-filter.js?v=20260822-1" defer></script>
   <script src="/js/admin-destination-image-upload-preview.js?v=20260920-1" defer></script>
@@ -12,6 +13,7 @@
   <script src="/js/admin-translation-collapse.js?v=20260907-1" defer></script>
   <script src="/js/admin-kto-tour-autofill.js?v=20260907-2" defer></script>
   <script src="/js/admin-kto-photo-search.js?v=20260821-4" defer></script>
+  <script src="/js/admin-wikidata-preview.js?v=20260924-1" defer></script>
 </th:block>
 <th:block th:fragment="body">
 
@@ -27,6 +29,28 @@
 </header>
 
 <div th:if="${imageError}" class="admin-alert" role="alert" th:text="${imageError}"></div>
+
+<section class="admin-destination-section admin-wikidata" data-wikidata-preview>
+  <div class="admin-destination-section-header">
+    <div>
+      <h2>해외 여행지 찾기 · Wikidata</h2>
+      <p>한국어 또는 영어로 검색하고 QID를 확인해 후보의 원본 정보를 미리 볼 수 있습니다. 이 단계에서는 등록폼에 입력하거나 저장하지 않습니다.</p>
+    </div>
+  </div>
+  <div class="admin-wikidata-search">
+    <label for="wikidata-keyword" class="admin-form-label">해외 여행지명</label>
+    <div class="admin-wikidata-search-row">
+      <input id="wikidata-keyword" type="search" placeholder="예: 에펠탑 또는 Eiffel Tower"
+             autocomplete="off" data-wikidata-keyword>
+      <button type="button" class="admin-btn" data-wikidata-search>검색</button>
+    </div>
+  </div>
+  <p class="admin-wikidata-status" role="status" aria-live="polite" data-wikidata-status>
+    해외 명소를 검색해 후보를 선택하세요.
+  </p>
+  <div class="admin-wikidata-results" data-wikidata-results></div>
+  <div class="admin-wikidata-detail" data-wikidata-detail hidden></div>
+</section>
 
 <!-- 번역 영역은 선택 입력이라 등록 화면에서만 접어 둔다 (data-translation-collapsible) -->
 <form th:action="@{/admin/destinations}" method="post" enctype="multipart/form-data"

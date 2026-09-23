@@ -1,0 +1,60 @@
+.admin-destination-form-page > .admin-wikidata {
+    width: 100%;
+    max-width: 1080px;
+    margin-bottom: 18px;
+}
+
+.admin-wikidata-search { display: grid; gap: 6px; max-width: 650px; }
+.admin-wikidata-search-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.admin-wikidata-search-row input {
+    min-width: 0;
+    padding: 10px 12px;
+    border: 1px solid #d7deea;
+    border-radius: 8px;
+    font: inherit;
+}
+.admin-wikidata-status { margin: 0; color: #56647d; font-size: 0.88rem; }
+.admin-wikidata-status.is-error { color: #ae3030; }
+.admin-wikidata-results { display: grid; gap: 10px; }
+.admin-wikidata-candidate {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px;
+    border: 1px solid #e3e8f1;
+    border-radius: 9px;
+}
+.admin-wikidata-image {
+    width: 76px;
+    height: 76px;
+    flex: none;
+    object-fit: cover;
+    border-radius: 7px;
+    background: #f3f5f9;
+}
+.admin-wikidata-candidate-text { min-width: 0; flex: 1; }
+.admin-wikidata-candidate-text strong { color: #27375f; }
+.admin-wikidata-qid { margin-left: 8px; color: #596784; font-size: 0.8rem; }
+.admin-wikidata-candidate-text p { margin: 4px 0; font-size: 0.87rem; }
+.admin-wikidata-candidate-text small { color: #66738a; }
+.admin-wikidata-detail { display: grid; gap: 14px; padding-top: 16px; border-top: 1px solid #e3e8f1; }
+.admin-wikidata-detail[hidden] { display: none; }
+.admin-wikidata-detail h3, .admin-wikidata-language h4 { margin: 0; color: #27375f; }
+.admin-wikidata-detail-grid { display: grid; gap: 8px; margin: 0; }
+.admin-wikidata-field { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 10px; }
+.admin-wikidata-field dt { color: #66738a; font-size: 0.85rem; }
+.admin-wikidata-field dd { margin: 0; overflow-wrap: anywhere; font-size: 0.9rem; }
+.admin-wikidata-languages { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.admin-wikidata-language { display: grid; align-content: start; gap: 10px; padding: 12px; border: 1px solid #e3e8f1; border-radius: 9px; }
+.admin-wikidata-language h4 { font-size: 0.92rem; }
+.admin-wikidata-image-info { display: flex; align-items: center; gap: 12px; }
+.admin-wikidata-image-info p { margin: 4px 0; overflow-wrap: anywhere; }
+.admin-wikidata-image-info a { font-size: 0.85rem; }
+.admin-wikidata-match { margin: 0; padding: 10px 12px; border-radius: 8px; background: #edf4fc; color: #2e4d79; }
+.admin-wikidata-match.is-review { background: #fff3de; color: #805b1c; }
+
+@media (max-width: 680px) {
+    .admin-wikidata-candidate { flex-wrap: wrap; }
+    .admin-wikidata-candidate .admin-btn { margin-left: auto; }
+    .admin-wikidata-languages { grid-template-columns: 1fr; }
+}
