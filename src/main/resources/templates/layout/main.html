@@ -14,18 +14,24 @@
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-    <title th:text="${seoTitle} ?: (${pageTitle} ?: 'Tripbora')">Tripbora</title>
+    <title th:text="${seoTitle} ?: (${pageTitle} ?: 'TripBora')">TripBora</title>
     <meta name="description" th:content="${seoDescription}" />
     <link rel="canonical" th:href="${seoSiteBaseUrl + seoCanonicalPath}" />
     <meta name="robots" th:content="${seoRobots}" />
     <meta name="naver-site-verification" content="aa175e3590c086a5d9f0e0d9c77e6029c7fa7c55" />
-    <meta property="og:site_name" content="Tripbora" />
-    <meta property="og:title" th:content="${seoTitle} ?: (${pageTitle} ?: 'Tripbora')" />
+    <meta property="og:site_name" content="TripBora" />
+    <meta property="og:title" th:content="${seoTitle} ?: (${pageTitle} ?: 'TripBora')" />
     <meta property="og:description" th:content="${seoDescription}" />
     <meta property="og:type" th:content="${seoOpenGraphType}" />
     <meta property="og:url" th:content="${seoSiteBaseUrl + seoCanonicalPath}" />
     <meta property="og:locale" th:content="${#strings.replace(currentLanguageTag, '-', '_')}" />
     <meta property="og:image" th:if="${seoImage != null and !#strings.isEmpty(seoImage)}"
+          th:content="${#strings.startsWith(seoImage, 'http://') or #strings.startsWith(seoImage, 'https://')
+                       ? seoImage : seoSiteBaseUrl + seoImage}" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" th:content="${seoTitle} ?: (${pageTitle} ?: 'TripBora')" />
+    <meta name="twitter:description" th:content="${seoDescription}" />
+    <meta name="twitter:image" th:if="${seoImage != null and !#strings.isEmpty(seoImage)}"
           th:content="${#strings.startsWith(seoImage, 'http://') or #strings.startsWith(seoImage, 'https://')
                        ? seoImage : seoSiteBaseUrl + seoImage}" />
     <script th:if="${seoJsonLd != null}" type="application/ld+json"

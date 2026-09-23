@@ -21,6 +21,20 @@ public final class SeoStructuredData {
     private SeoStructuredData() {
     }
 
+    public static void website(Model model) {
+        String url = absolute(model, "/");
+        if (!hasText(url)) {
+            return;
+        }
+        Map<String, Object> website = new LinkedHashMap<>();
+        website.put("@context", CONTEXT);
+        website.put("@type", "WebSite");
+        website.put("name", "TripBora");
+        website.put("alternateName", "트립보라");
+        website.put("url", url);
+        model.addAttribute("seoJsonLd", scriptSafeJson(website));
+    }
+
     public static void article(Model model, String canonicalPath, String headline,
                                String description, String imageUrl,
                                Timestamp publishedAt, Timestamp modifiedAt,
@@ -137,7 +151,7 @@ public final class SeoStructuredData {
         Map<String, Object> breadcrumb = new LinkedHashMap<>();
         breadcrumb.put("@type", "BreadcrumbList");
         breadcrumb.put("itemListElement", List.of(
-                breadcrumbItem(1, "Tripbora", absolute(model, "/")),
+                breadcrumbItem(1, "TripBora", absolute(model, "/")),
                 breadcrumbItem(2, currentName.strip(), canonicalUrl)));
 
         Map<String, Object> graph = new LinkedHashMap<>();

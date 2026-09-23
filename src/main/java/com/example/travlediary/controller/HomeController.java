@@ -2,6 +2,7 @@ package com.example.travlediary.controller;
 
 import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.security.CustomUserDetails;
+import com.example.travlediary.seo.SeoStructuredData;
 import com.example.travlediary.service.course.CourseService;
 
 import org.springframework.context.i18n.LocaleContextHolder;
@@ -29,6 +30,7 @@ public class HomeController {
         model.addAttribute("popularCourses", courseService.getPopularCoursesForHome(
                 SupportedLanguage.fromLocale(LocaleContextHolder.getLocale())
                         .orElse(SupportedLanguage.KOREAN)));
+        SeoStructuredData.website(model);
 
         return "home";
     }

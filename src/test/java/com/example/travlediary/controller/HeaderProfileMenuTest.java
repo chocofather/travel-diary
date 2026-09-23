@@ -175,7 +175,7 @@ class HeaderProfileMenuTest {
                 .hasSize(3);
         assertThat(document.select(".footer-nav .footer-links a").eachText())
                 .containsExactly(
-                        "關於 Tripbora", "使用條款", "隱私權政策");
+                        "關於 TripBora", "使用條款", "隱私權政策");
         assertThat(document.select(".footer-nav .footer-links a").eachAttr("href"))
                 .containsExactly(
                         "/about", "/terms", "/privacy");
@@ -195,7 +195,7 @@ class HeaderProfileMenuTest {
                 .isEqualTo("contact@tripbora.test");
         assertThat(document.select(".footer-inquiry-link, .footer-contact-description")).isEmpty();
         assertThat(document.select(".footer-description").text())
-                .isEqualTo("探索、記錄並分享旅程的空間");
+                .isEqualTo("看見旅程，留下回憶。");
         assertThat(document.select(".footer-info").text())
                 .contains(String.valueOf(Year.now().getValue()), "Tripbora")
                 .doesNotContain("travel@diary.com");

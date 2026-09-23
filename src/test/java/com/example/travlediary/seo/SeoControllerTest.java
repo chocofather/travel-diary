@@ -17,20 +17,25 @@ class SeoControllerTest {
     @Test
     void robotsAndSitemapUseAbsolutePublicUrls() throws Exception {
         SitemapService sitemapService = mock(SitemapService.class);
-        when(sitemapService.canonicalPaths()).thenReturn(List.of("/", "/destinations/9"));
-        SeoController controller = new SeoController(sitemapService, "https://travel.example");
+        when(sitemapService.canonicalPaths()).thenReturn(List.of(
+                "/", "/destinations/9", "/travel-info?contentType=FESTIVAL", "/festivals/4"));
+        SeoController controller = new SeoController(sitemapService, "https://tripbora.com/");
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         mockMvc.perform(get("/robots.txt"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith("text/plain"))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "Sitemap: https://travel.example/sitemap.xml")));
+                        "Sitemap: https://tripbora.com/sitemap.xml")));
 
         mockMvc.perform(get("/sitemap.xml"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith("application/xml"))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "<loc>https://travel.example/destinations/9</loc>")));
+                        "<loc>https://tripbora.com/destinations/9</loc>")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "<loc>https://tripbora.com/travel-info?contentType=FESTIVAL</loc>")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "<loc>https://tripbora.com/festivals/4</loc>")));
     }
 }

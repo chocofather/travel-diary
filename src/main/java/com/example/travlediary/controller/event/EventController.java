@@ -87,7 +87,7 @@ public class EventController {
                 eventService.getEventDetail(id), requestedLanguage());
         model.addAttribute("event", event);
         SeoModel.apply(model,
-                event.getTitle() + " | Tripbora",
+                event.getTitle() + " | TripBora",
                 event.getDescription(),
                 "/events/" + id,
                 SeoTextUtils.firstNonBlank(event.getEventImg(), event.getPosterImg()),

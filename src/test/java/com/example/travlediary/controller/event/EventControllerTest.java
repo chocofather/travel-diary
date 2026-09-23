@@ -130,7 +130,7 @@ class EventControllerTest {
 
         assertThat(view).isEqualTo("event/event-detail");
         assertThat(model.getAttribute("seoTitle"))
-                .isEqualTo("가을 여행 이벤트 | Tripbora");
+                .isEqualTo("가을 여행 이벤트 | TripBora");
         assertThat(model.getAttribute("seoDescription"))
                 .isEqualTo("단풍 여행자를 위한 특별 혜택입니다.");
         assertThat(model.getAttribute("seoCanonicalPath")).isEqualTo("/events/3");

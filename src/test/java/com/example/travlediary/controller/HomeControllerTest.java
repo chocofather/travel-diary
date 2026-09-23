@@ -12,6 +12,7 @@ import com.example.travlediary.model.UserRole;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.course.CourseService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -40,7 +41,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 @WebMvcTest(value = HomeController.class,
-        properties = "app.contact-email=contact@tripbora.test")
+        properties = {"app.contact-email=contact@tripbora.test",
+                "seo.site-base-url=https://tripbora.com"})
 @Import({SecurityConfig.class, I18nConfig.class})
 class HomeControllerTest {
 
@@ -194,18 +196,39 @@ class HomeControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(result -> {
                     var document = Jsoup.parse(result.getResponse().getContentAsString());
-                    assertThat(document.title()).isEqualTo("Tripbora | 여행을 발견하고 기록하는 공간");
+                    assertThat(document.title()).isEqualTo("TripBora(트립보라) | 여행을 보라, 추억을 남겨라");
                     assertThat(document.selectFirst("meta[name=description]").attr("content"))
-                            .contains("여행지", "여행정보", "여행 기록");
+                            .contains("TripBora", "트립보라", "여행을 보라, 추억을 남겨라");
                     assertThat(document.selectFirst("link[rel=canonical]").attr("href"))
-                            .isEqualTo("http://localhost/");
+                            .isEqualTo("https://tripbora.com/");
                     assertThat(document.selectFirst("meta[name=robots]").attr("content"))
                             .isEqualTo("index, follow");
                     assertThat(document.selectFirst("meta[property=og:title]").attr("content"))
                             .isEqualTo(document.title());
                     assertThat(document.selectFirst("meta[property=og:url]").attr("content"))
-                            .isEqualTo("http://localhost/");
+                            .isEqualTo("https://tripbora.com/");
+                    assertThat(document.selectFirst("meta[property=og:site_name]").attr("content"))
+                            .isEqualTo("TripBora");
+                    assertThat(document.selectFirst("meta[property=og:description]").attr("content"))
+                            .contains("여행을 보라, 추억을 남겨라");
+                    assertThat(document.selectFirst("meta[name=twitter:card]").attr("content"))
+                            .isEqualTo("summary_large_image");
+                    assertThat(document.selectFirst("meta[name=twitter:title]").attr("content"))
+                            .isEqualTo(document.title());
+                    assertThat(document.selectFirst("meta[name=twitter:image]").attr("content"))
+                            .isEqualTo("https://tripbora.com/images/branding/tripbora-og.png");
+                    assertThat(document.select("link[rel=alternate][hreflang]")).isEmpty();
                     assertThat(document.select(".home-page > h1")).hasSize(1);
+                    assertThat(document.select(".home-service-teaser h2").text())
+                            .isEqualTo("여행을 보라, 추억을 남겨라");
+                    assertThat(document.select(".footer-description").text())
+                            .isEqualTo("여행을 보라, 추억을 남겨라");
+                    var website = new ObjectMapper().readTree(document
+                            .selectFirst("script[type=application/ld+json]").data());
+                    assertThat(website.path("@type").asText()).isEqualTo("WebSite");
+                    assertThat(website.path("name").asText()).isEqualTo("TripBora");
+                    assertThat(website.path("alternateName").asText()).isEqualTo("트립보라");
+                    assertThat(website.path("url").asText()).isEqualTo("https://tripbora.com/");
                 });
     }
 
@@ -216,15 +239,15 @@ class HomeControllerTest {
                 .andExpect(view().name("about"))
                 .andExpect(result -> {
                     var document = Jsoup.parse(result.getResponse().getContentAsString());
-                    assertThat(document.title()).isEqualTo("Tripbora 소개 | Tripbora");
+                    assertThat(document.title()).isEqualTo("TripBora(트립보라) 소개 | TripBora");
                     assertThat(document.selectFirst("meta[name=description]").attr("content"))
                             .contains("여행지", "여행 계획", "여행 기록");
                     assertThat(document.selectFirst("link[rel=canonical]").attr("href"))
-                            .isEqualTo("http://localhost/about");
+                            .isEqualTo("https://tripbora.com/about");
                     assertThat(document.selectFirst("meta[name=robots]").attr("content"))
                             .isEqualTo("index, follow");
                     assertThat(document.selectFirst("meta[property=og:url]").attr("content"))
-                            .isEqualTo("http://localhost/about");
+                            .isEqualTo("https://tripbora.com/about");
                     assertThat(document.select("main .about-page h1")).hasSize(1);
                     assertThat(document.select(".about-guide-step")).hasSize(5);
                     assertThat(document.select(".about-guide-step a").eachAttr("href"))

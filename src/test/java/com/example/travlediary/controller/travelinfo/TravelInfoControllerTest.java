@@ -335,7 +335,8 @@ class TravelInfoControllerTest {
                 .andExpect(model().attribute("sort", "event"))
                 // 기본 정렬이라 주소에는 남기지 않는다.
                 .andExpect(model().attribute("sortParam", (Object) null))
-                .andExpect(model().attribute("listUrl", "/travel-info?contentType=FESTIVAL"));
+                .andExpect(model().attribute("listUrl", "/travel-info?contentType=FESTIVAL"))
+                .andExpect(model().attribute("seoCanonicalPath", "/travel-info?contentType=FESTIVAL"));
     }
 
     @Test
