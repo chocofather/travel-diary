@@ -329,7 +329,11 @@ document.addEventListener("DOMContentLoaded", () => {
             payload = null;
         }
         if (!response.ok) {
-            throw new Error((payload && payload.message) || "요청을 처리하지 못했습니다.");
+            if (response.status === 403) {
+                throw new Error("요청 권한 또는 보안 토큰을 확인할 수 없습니다. 관리자 페이지를 새로고침한 뒤 다시 시도해 주세요.");
+            }
+            throw new Error((payload && payload.message)
+                || `요청을 처리하지 못했습니다. (HTTP ${response.status})`);
         }
         return payload;
     }

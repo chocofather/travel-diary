@@ -96,6 +96,16 @@ class AdminDestinationKtoImportPageRenderingTest {
         assertThat(options.eachAttr("value")).containsExactly("", "12", "14", "28", "38");
     }
 
+    @Test
+    void importPageProvidesCsrfTokenForTheRegistrationRequest() throws Exception {
+        var document = Jsoup.parse(render());
+
+        assertThat(document.selectFirst("meta[name=_csrf]")).isNotNull();
+        assertThat(document.selectFirst("meta[name=_csrf]").attr("content")).isNotBlank();
+        assertThat(document.selectFirst("meta[name=_csrf_header]").attr("content"))
+                .isEqualTo("X-CSRF-TOKEN");
+    }
+
     /** 여행지 관리 화면에서 이 기능으로 들어갈 수 있어야 한다. */
     @Test
     void theDestinationListLinksToTheImportPage() throws Exception {

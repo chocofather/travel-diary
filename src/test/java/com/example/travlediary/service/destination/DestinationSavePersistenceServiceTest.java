@@ -19,6 +19,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -88,6 +89,18 @@ class DestinationSavePersistenceServiceTest {
     }
 
     @Test
+    void tourApiPhotoSaveFailurePropagatesFromTheTransactionBoundary() {
+        DestinationForm form = new DestinationForm();
+        List<PreparedKtoPhoto> prepared = List.of(prepared());
+        when(destinationService.registerDestination(form, 7L, "126508")).thenReturn(42L);
+        doThrow(new IllegalStateException("image insert failed"))
+                .when(ktoPersistenceService).persistPhotos(42L, prepared);
+
+        assertThatThrownBy(() -> service.registerDestination(form, 7L, "126508", prepared))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
     void updatePersistsKtoPhotosForTheServerPathDestinationId() {
         DestinationForm form = new DestinationForm();
         List<PreparedKtoPhoto> prepared = List.of(prepared());
@@ -103,10 +116,13 @@ class DestinationSavePersistenceServiceTest {
     void createAndUpdatePersistenceBoundariesArePublicTransactionalMethods() throws Exception {
         Method register = DestinationSavePersistenceService.class.getMethod(
                 "registerDestination", DestinationForm.class, Long.class, List.class);
+        Method tourApiRegister = DestinationSavePersistenceService.class.getMethod(
+                "registerDestination", DestinationForm.class, Long.class, String.class, List.class);
         Method update = DestinationSavePersistenceService.class.getMethod(
                 "updateDestination", Long.class, DestinationForm.class, List.class);
 
         assertThat(register.getAnnotation(Transactional.class)).isNotNull();
+        assertThat(tourApiRegister.getAnnotation(Transactional.class)).isNotNull();
         assertThat(update.getAnnotation(Transactional.class)).isNotNull();
     }
 

@@ -35,6 +35,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(AdminKtoTourBulkImportController.class)
@@ -153,6 +154,18 @@ class AdminKtoTourBulkImportControllerTest {
                 .andExpect(jsonPath("$.results[2].contentId").value("126510"))
                 .andExpect(jsonPath("$.results[2].title").value("종묘"))
                 .andExpect(jsonPath("$.results[2].message").value("저장 실패"));
+    }
+
+    @Test
+    void importWithoutCsrfIsRejectedBeforeRegistration() throws Exception {
+        mockMvc.perform(post("/admin/api/kto/tour/bulk/import")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"items\":[{\"contentId\":\"126508\",\"contentTypeId\":\"12\"}]}")
+                        .with(user(adminPrincipal())))
+                .andExpect(status().isForbidden())
+                .andExpect(content().string(""));
+
+        verify(ktoTourBulkImportService, never()).importSelected(anyList(), any());
     }
 
     @Test
