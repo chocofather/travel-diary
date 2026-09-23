@@ -22,6 +22,8 @@ spring:
     password: ${MAIL_PASSWORD}
 
 server:
+  # Cloudflare Tunnel 에서 전달한 원래 HTTPS 스킴을 Tomcat 리다이렉트에 반영한다.
+  forward-headers-strategy: native
   # Cloudflare Tunnel 로만 공개한다. cloudflared 는 같은 기기에서 붙으므로
   # 루프백에만 바인딩해 같은 Wi-Fi 의 다른 기기가 <맥주소>:8080 으로 들어오지 못하게 한다.
   # 다른 기기에서 접근시켜야 하는 구성으로 바뀌면 SERVER_ADDRESS 로 덮어쓴다.
