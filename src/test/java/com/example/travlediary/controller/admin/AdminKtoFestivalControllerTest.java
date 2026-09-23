@@ -7,14 +7,18 @@ import com.example.travlediary.dto.kto.KtoFestivalAutofillResponse;
 import com.example.travlediary.dto.kto.KtoFestivalSearchItemResponse;
 import com.example.travlediary.dto.kto.KtoFestivalSearchResponse;
 import com.example.travlediary.dto.kto.KtoFestivalThumbnailCandidate;
+import com.example.travlediary.repository.travelinfo.FestivalInfoMapper;
 import com.example.travlediary.repository.user.UserMapper;
+import com.example.travlediary.service.kto.AdminKtoFestivalSearchService;
 import com.example.travlediary.service.kto.KtoFestivalService;
 import com.example.travlediary.service.kto.KtoTourApiException;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -26,6 +30,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -33,7 +39,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(AdminKtoFestivalController.class)
-@Import(SecurityConfig.class)
+@Import({SecurityConfig.class, AdminKtoFestivalSearchService.class})
 class AdminKtoFestivalControllerTest {
 
     @Autowired
@@ -42,11 +48,18 @@ class AdminKtoFestivalControllerTest {
     @MockitoBean
     private KtoFestivalService ktoFestivalService;
     @MockitoBean
+    private FestivalInfoMapper festivalInfoMapper;
+    @MockitoBean
     private CustomLoginSuccessHandler customLoginSuccessHandler;
     @MockitoBean
     private CustomLogoutSuccessHandler customLogoutSuccessHandler;
     @MockitoBean
     private UserMapper userMapper;
+
+    @BeforeEach
+    void noRegisteredFestivalsByDefault() {
+        when(festivalInfoMapper.findOccurrencesByContentIds(anyString(), anyList())).thenReturn(List.of());
+    }
 
     @Test
     void adminCanSearchFestivalsForADateRange() throws Exception {
@@ -67,9 +80,29 @@ class AdminKtoFestivalControllerTest {
                 .andExpect(jsonPath("$.pageNo").value(1))
                 .andExpect(jsonPath("$.items[0].contentId").value("12345"))
                 .andExpect(jsonPath("$.items[0].eventStartDate").value("2026-09-01"))
-                .andExpect(jsonPath("$.items[0].categoryName").value("축제"));
+                .andExpect(jsonPath("$.items[0].categoryName").value("축제"))
+                .andExpect(jsonPath("$.items[0].registrationStatus").value("UNREGISTERED"));
 
         verify(ktoFestivalService).search(startDate, endDate, 1, 10);
+    }
+
+    @Test
+    void registrationLookupFailureReturnsAnErrorInsteadOfUnregisteredStatus() throws Exception {
+        LocalDate startDate = LocalDate.of(2026, 9, 1);
+        when(ktoFestivalService.search(startDate, null, 1, 20)).thenReturn(new KtoFestivalSearchResponse(
+                1, 20, 1, List.of(new KtoFestivalSearchItemResponse(
+                        "festival-1", "축제", startDate, startDate, null, null, "서울",
+                        "EV", "EV01", "EV010100", "축제"))));
+        when(festivalInfoMapper.findOccurrencesByContentIds("KTO_TOURAPI", List.of("festival-1")))
+                .thenThrow(new DataAccessResourceFailureException("DB unavailable"));
+
+        mockMvc.perform(get("/admin/api/kto/festivals/search")
+                        .param("eventStartDate", "2026-09-01")
+                        .param("numOfRows", "20")
+                        .with(user("admin").roles("ADMIN")))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.message").value("축제 등록 여부를 확인하지 못했습니다. 다시 검색해 주세요."))
+                .andExpect(jsonPath("$.items").doesNotExist());
     }
 
     @Test

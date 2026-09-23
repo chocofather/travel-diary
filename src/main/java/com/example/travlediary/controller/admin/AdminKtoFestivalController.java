@@ -1,9 +1,11 @@
 package com.example.travlediary.controller.admin;
 
 import com.example.travlediary.service.kto.KtoFestivalService;
+import com.example.travlediary.service.kto.AdminKtoFestivalSearchService;
 import com.example.travlediary.service.kto.KtoTourApiException;
 import com.example.travlediary.dto.kto.KtoFestivalThumbnailCandidatesResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -24,12 +26,14 @@ public class AdminKtoFestivalController {
     private static final int MAX_NUM_OF_ROWS = 30;
 
     private final KtoFestivalService ktoFestivalService;
+    private final AdminKtoFestivalSearchService adminKtoFestivalSearchService;
 
     @GetMapping("/search")
     public ResponseEntity<?> search(@RequestParam(required = false) String eventStartDate,
                                     @RequestParam(required = false) String eventEndDate,
                                     @RequestParam(defaultValue = "1") int pageNo,
-                                    @RequestParam(defaultValue = "10") int numOfRows) {
+                                    @RequestParam(defaultValue = "10") int numOfRows,
+                                    @RequestParam(defaultValue = "false") boolean unregisteredOnly) {
         LocalDate startDate = parseDate(eventStartDate);
         if (startDate == null) {
             return error(HttpStatus.BAD_REQUEST, "행사 시작일을 yyyy-MM-dd 형식으로 입력해 주세요.");
@@ -52,9 +56,12 @@ public class AdminKtoFestivalController {
         }
 
         try {
-            return ResponseEntity.ok(ktoFestivalService.search(startDate, endDate, pageNo, numOfRows));
+            return ResponseEntity.ok(adminKtoFestivalSearchService.search(
+                    startDate, endDate, pageNo, numOfRows, unregisteredOnly));
         } catch (KtoTourApiException exception) {
             return apiError(exception);
+        } catch (DataAccessException exception) {
+            return error(HttpStatus.SERVICE_UNAVAILABLE, "축제 등록 여부를 확인하지 못했습니다. 다시 검색해 주세요.");
         }
     }
 
@@ -88,7 +95,8 @@ public class AdminKtoFestivalController {
     @GetMapping("/search-by-keyword")
     public ResponseEntity<?> searchByKeyword(@RequestParam(required = false) String keyword,
                                              @RequestParam(defaultValue = "1") int pageNo,
-                                             @RequestParam(defaultValue = "10") int numOfRows) {
+                                             @RequestParam(defaultValue = "10") int numOfRows,
+                                             @RequestParam(defaultValue = "false") boolean unregisteredOnly) {
         String normalizedKeyword = normalize(keyword);
         if (normalizedKeyword.isEmpty()) {
             return error(HttpStatus.BAD_REQUEST, "축제·행사명을 입력해 주세요.");
@@ -101,9 +109,12 @@ public class AdminKtoFestivalController {
                     "numOfRows는 1에서 " + MAX_NUM_OF_ROWS + " 사이여야 합니다.");
         }
         try {
-            return ResponseEntity.ok(ktoFestivalService.searchByKeyword(normalizedKeyword, pageNo, numOfRows));
+            return ResponseEntity.ok(adminKtoFestivalSearchService.searchByKeyword(
+                    normalizedKeyword, pageNo, numOfRows, unregisteredOnly));
         } catch (KtoTourApiException exception) {
             return apiError(exception);
+        } catch (DataAccessException exception) {
+            return error(HttpStatus.SERVICE_UNAVAILABLE, "축제 등록 여부를 확인하지 못했습니다. 다시 검색해 주세요.");
         }
     }
 

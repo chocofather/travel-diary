@@ -23,6 +23,9 @@ public interface FestivalInfoMapper {
                         @Param("externalContentId") String externalContentId,
                         @Param("eventYear") Integer eventYear);
 
+    List<FestivalInfo> findOccurrencesByContentIds(@Param("sourceType") String sourceType,
+                                                   @Param("externalContentIds") List<String> externalContentIds);
+
     int insert(FestivalInfo festivalInfo);
 
     int update(FestivalInfo festivalInfo);

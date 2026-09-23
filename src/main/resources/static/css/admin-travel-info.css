@@ -291,6 +291,21 @@
     border-top: 1px solid #edf0f5;
 }
 
+.admin-kto-festival-unregistered-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 16px;
+    color: #53617c;
+    font-size: 0.86rem;
+    font-weight: 650;
+    cursor: pointer;
+}
+
+.admin-kto-festival-unregistered-toggle input {
+    accent-color: var(--admin-blue);
+}
+
 .admin-kto-festival-status {
     min-height: 1.4em;
     margin: 16px 0 0;
@@ -414,6 +429,23 @@
     border-radius: 999px;
     font-size: 0.72rem;
     font-weight: 750;
+}
+
+.admin-kto-festival-registration-badge {
+    display: inline-flex;
+    padding: 3px 8px;
+    color: #277153;
+    background: #eaf7ef;
+    border: 1px solid #bee5ce;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 750;
+}
+
+.admin-kto-festival-registration-badge.is-unknown {
+    color: #7a5b2d;
+    background: #fff7e8;
+    border-color: #efd9ac;
 }
 
 .admin-kto-festival-image-picker {

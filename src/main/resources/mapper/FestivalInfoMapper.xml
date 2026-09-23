@@ -67,6 +67,16 @@
           AND event_year = #{eventYear}
     </select>
 
+    <select id="findOccurrencesByContentIds" resultMap="FestivalInfoResultMap">
+        SELECT info_id, source_type, external_content_id, event_year
+        FROM festival_info
+        WHERE source_type = #{sourceType}
+          AND external_content_id IN
+          <foreach collection="externalContentIds" item="externalContentId" open="(" separator="," close=")">
+              #{externalContentId}
+          </foreach>
+    </select>
+
     <insert id="insert" parameterType="com.example.travlediary.model.FestivalInfo">
         INSERT INTO festival_info (
             info_id,

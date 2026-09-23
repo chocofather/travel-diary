@@ -124,6 +124,7 @@ class AdminFestivalControllerTest {
                 .andExpect(model().attributeExists("festivalForm"))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("축제·행사 등록")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("data-festival-pagination")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("data-festival-unregistered-only")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("공연")))
                 .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("계절여행"))));
 

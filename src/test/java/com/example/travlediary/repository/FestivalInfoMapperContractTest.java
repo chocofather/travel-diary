@@ -85,6 +85,18 @@ class FestivalInfoMapperContractTest {
     }
 
     @Test
+    void registrationStatusLookupBatchesTourApiContentIds() throws IOException {
+        String select = between(mapper(), "<select id=\"findOccurrencesByContentIds\"", "</select>");
+
+        assertThat(select)
+                .contains("SELECT info_id, source_type, external_content_id, event_year")
+                .contains("FROM festival_info")
+                .contains("source_type = #{sourceType}")
+                .contains("external_content_id IN")
+                .contains("collection=\"externalContentIds\"");
+    }
+
+    @Test
     void festivalInfoCarriesTheEventYearOfItsOccurrence() throws IOException {
         String mapper = mapper();
 
