@@ -48,7 +48,7 @@ class AdminFestivalUiContractTest {
                         "data-festival-direct-period-panel")
                 .contains("data-festival-search-start-date", "data-festival-search-end-date",
                         "data-festival-keyword-search-button", "data-festival-period-search-button",
-                        "data-festival-results")
+                        "data-festival-results", "data-festival-pagination")
                 .contains("id=\"festival-title\"", "id=\"festival-category\"",
                         "id=\"festival-scope\"", "id=\"festival-start-date\"", "id=\"festival-end-date\"")
                 .contains("id=\"festival-editor\"", "id=\"festival-content\"")
@@ -62,13 +62,15 @@ class AdminFestivalUiContractTest {
                 .doesNotContain("admin-travel-info-festival-autofill.js");
 
         assertThat(autofill)
-                .contains("/admin/api/kto/festivals/search-by-keyword?${params.toString()}")
-                .contains("/admin/api/kto/festivals/search?${params.toString()}")
+                .contains("path: '/admin/api/kto/festivals/search-by-keyword'")
+                .contains("path: '/admin/api/kto/festivals/search'")
                 .contains("/admin/api/kto/festivals/detail?${params.toString()}")
                 .contains("setSearchMode('keyword')")
                 .contains("results.replaceChildren()")
                 .contains("async function searchByKeyword()", "async function searchByPeriod()",
-                        "function renderCandidates(items)", "function createCandidate(item)")
+                        "function renderCandidates(payload)", "function createCandidate(item)")
+                .contains("const PAGE_SIZE = 20", "pageNo: String(requestedPage)",
+                        "numOfRows: String(PAGE_SIZE)", "renderPagination(pageNo, numOfRows, totalCount)")
                 .contains("function searchByMonth(month, button)", "function monthDateRange(year, month)",
                         "new Date(year, month - 1, 1)", "new Date(year, month, 0)")
                 .contains("function toggleDirectPeriod()", "directPeriodPanel.hidden = !expanded")

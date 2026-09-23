@@ -73,6 +73,31 @@ class AdminKtoFestivalControllerTest {
     }
 
     @Test
+    void adminCanRequestTheSecondPageOfTwentyFestivalCandidates() throws Exception {
+        LocalDate startDate = LocalDate.of(2026, 9, 1);
+        LocalDate endDate = LocalDate.of(2026, 9, 30);
+        when(ktoFestivalService.search(startDate, endDate, 2, 20))
+                .thenReturn(new KtoFestivalSearchResponse(2, 20, 87, List.of(
+                        new KtoFestivalSearchItemResponse(
+                                "page-two", "두 번째 페이지 축제", startDate, endDate,
+                                null, null, "서울", "EV", "EV01", "EV010100", "축제"))));
+
+        mockMvc.perform(get("/admin/api/kto/festivals/search")
+                        .param("eventStartDate", "2026-09-01")
+                        .param("eventEndDate", "2026-09-30")
+                        .param("pageNo", "2")
+                        .param("numOfRows", "20")
+                        .with(user("admin").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.pageNo").value(2))
+                .andExpect(jsonPath("$.numOfRows").value(20))
+                .andExpect(jsonPath("$.totalCount").value(87))
+                .andExpect(jsonPath("$.items[0].contentId").value("page-two"));
+
+        verify(ktoFestivalService).search(startDate, endDate, 2, 20);
+    }
+
+    @Test
     void adminCanSearchFestivalsByKeywordWithoutDates() throws Exception {
         when(ktoFestivalService.searchByKeyword("경복궁", 1, 10)).thenReturn(new KtoFestivalSearchResponse(
                 1, 10, 1, List.of(new KtoFestivalSearchItemResponse(

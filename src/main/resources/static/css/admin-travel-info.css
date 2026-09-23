@@ -309,6 +309,53 @@
     margin-top: 14px;
 }
 
+.admin-kto-festival-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 7px;
+    margin-top: 18px;
+}
+
+.admin-kto-festival-pagination[hidden] {
+    display: none;
+}
+
+.admin-kto-festival-pagination button {
+    min-width: 36px;
+    min-height: 36px;
+    padding: 7px 11px;
+    color: #56627c;
+    background: #fff;
+    border: 1px solid #dce2ed;
+    border-radius: 8px;
+    font: inherit;
+    font-size: 0.84rem;
+    font-weight: 650;
+    cursor: pointer;
+}
+
+.admin-kto-festival-pagination button:hover:not(:disabled),
+.admin-kto-festival-pagination button[aria-current="page"] {
+    color: #fff;
+    background: var(--admin-blue);
+    border-color: var(--admin-blue);
+}
+
+.admin-kto-festival-pagination button:disabled {
+    cursor: default;
+}
+
+.admin-kto-festival-pagination button:disabled:not([aria-current="page"]) {
+    color: #98a1b2;
+    background: #f3f5f8;
+}
+
+.admin-kto-festival-pagination span {
+    align-self: center;
+    color: #66728a;
+}
+
 .admin-kto-festival-candidate {
     display: grid;
     grid-template-columns: 132px minmax(0, 1fr) auto;

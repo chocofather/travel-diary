@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const directPeriodPanel = panel.querySelector('[data-festival-direct-period-panel]');
     const status = panel.querySelector('[data-festival-status]');
     const results = panel.querySelector('[data-festival-results]');
+    const pagination = panel.querySelector('[data-festival-pagination]');
     const imagePicker = panel.querySelector('[data-festival-image-picker]');
     const imagePickerStatus = panel.querySelector('[data-festival-image-picker-status]');
     const imagePickerItems = panel.querySelector('[data-festival-image-picker-items]');
@@ -43,13 +44,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!scope || !title || !category || !eventStartDate || !eventEndDate || !eventPlace || !address
         || !playTime || !useTime || !sponsor1 || !sponsor1Tel || !sponsor2 || !sponsor2Tel || !contactTel
         || !homepageUrl || !ktoFestivalContentId || !thumbnailSelection || !keyword || !startDate || !endDate || !keywordSearchButton || !periodSearchButton
-        || !periodYear || !directPeriodToggle || !directPeriodPanel || !status || !results || !imagePicker
+        || !periodYear || !directPeriodToggle || !directPeriodPanel || !status || !results || !pagination || !imagePicker
         || !imagePickerStatus || !imagePickerItems || !editorElement) return;
 
+    const PAGE_SIZE = 20;
     const managedValues = new Map();
     let lastSelectedContentId = null;
     let searchRequestGeneration = 0;
     let detailRequestGeneration = 0;
+    let activeSearch = null;
 
     searchModeButtons.forEach(button => button.addEventListener('click', () => {
         setSearchMode(button.dataset.festivalSearchMode);
@@ -60,6 +63,11 @@ document.addEventListener('DOMContentLoaded', () => {
         searchByMonth(Number(button.dataset.festivalMonth), button);
     }));
     directPeriodToggle.addEventListener('click', toggleDirectPeriod);
+    [startDate, endDate, periodYear].forEach(input => input.addEventListener('change', () => {
+        resetSearchResults();
+        monthButtons.forEach(button => button.classList.remove('active'));
+        setStatus('검색 기간이 변경되었습니다. 다시 검색해 주세요.');
+    }));
     keyword.addEventListener('keydown', event => {
         if (event.key === 'Enter') {
             event.preventDefault();
@@ -71,7 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function setSearchMode(mode) {
         if (mode !== 'keyword' && mode !== 'period') return;
-        searchRequestGeneration += 1;
+        resetSearchResults();
         detailRequestGeneration += 1;
         searchModeButtons.forEach(button => {
             const active = button.dataset.festivalSearchMode === mode;
@@ -81,10 +89,6 @@ document.addEventListener('DOMContentLoaded', () => {
         searchPanels.forEach(searchPanel => {
             searchPanel.hidden = searchPanel.dataset.festivalSearchPanel !== mode;
         });
-        keywordSearchButton.disabled = false;
-        periodSearchButton.disabled = false;
-        monthButtons.forEach(button => button.disabled = false);
-        results.replaceChildren();
         clearImagePicker();
         setStatus(mode === 'keyword'
             ? '축제·행사명을 입력한 뒤 검색해 주세요.'
@@ -93,31 +97,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function searchByKeyword() {
         const normalizedKeyword = keyword.value.trim();
-        results.replaceChildren();
+        resetSearchResults();
         if (!normalizedKeyword) {
             setStatus('축제·행사명을 입력해 주세요.', true);
             keyword.focus();
             return;
         }
 
-        const params = new URLSearchParams({keyword: normalizedKeyword, pageNo: '1', numOfRows: '10'});
-        await requestCandidates(
-            `/admin/api/kto/festivals/search-by-keyword?${params.toString()}`,
-            keywordSearchButton,
-            'TourAPI에서 축제·행사를 검색하고 있습니다.'
-        );
+        activeSearch = {
+            path: '/admin/api/kto/festivals/search-by-keyword',
+            filters: {keyword: normalizedKeyword},
+            button: keywordSearchButton
+        };
+        await requestCandidates(1);
     }
 
     async function searchByPeriod() {
         const normalizedStartDate = startDate.value.trim();
         const normalizedEndDate = endDate.value.trim();
-        results.replaceChildren();
         if (!normalizedStartDate) {
+            resetSearchResults();
             setStatus('검색 시작일을 선택해 주세요.', true);
             startDate.focus();
             return;
         }
         if (normalizedEndDate && normalizedEndDate < normalizedStartDate) {
+            resetSearchResults();
             setStatus('검색 종료일은 시작일보다 빠를 수 없습니다.', true);
             endDate.focus();
             return;
@@ -136,18 +141,17 @@ document.addEventListener('DOMContentLoaded', () => {
         monthButtons.forEach(monthButton => {
             monthButton.classList.toggle('active', monthButton === button);
         });
-        results.replaceChildren();
         await searchByPeriodRange(range.startDate, range.endDate, button);
     }
 
     async function searchByPeriodRange(eventStartDate, eventEndDate, button) {
-        const params = new URLSearchParams({eventStartDate, pageNo: '1', numOfRows: '10'});
-        if (eventEndDate) params.set('eventEndDate', eventEndDate);
-        await requestCandidates(
-            `/admin/api/kto/festivals/search?${params.toString()}`,
-            button,
-            'TourAPI에서 축제·행사를 검색하고 있습니다.'
-        );
+        resetSearchResults();
+        activeSearch = {
+            path: '/admin/api/kto/festivals/search',
+            filters: eventEndDate ? {eventStartDate, eventEndDate} : {eventStartDate},
+            button
+        };
+        await requestCandidates(1);
     }
 
     function populatePeriodYears(currentYear) {
@@ -182,30 +186,106 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${year}-${month}-${day}`;
     }
 
-    async function requestCandidates(url, button, loadingMessage) {
+    function clearCandidateResults() {
+        results.replaceChildren();
+        pagination.replaceChildren();
+        pagination.hidden = true;
+    }
+
+    function resetSearchResults() {
+        searchRequestGeneration += 1;
+        activeSearch = null;
+        keywordSearchButton.disabled = false;
+        periodSearchButton.disabled = false;
+        monthButtons.forEach(button => button.disabled = false);
+        clearCandidateResults();
+    }
+
+    async function requestCandidates(requestedPage) {
+        if (!activeSearch) return;
+        const search = activeSearch;
+        const params = new URLSearchParams({
+            ...search.filters,
+            pageNo: String(requestedPage),
+            numOfRows: String(PAGE_SIZE)
+        });
         const requestGeneration = ++searchRequestGeneration;
-        setSearchLoading(button, true, loadingMessage);
+        clearCandidateResults();
+        setSearchLoading(search.button, true, 'TourAPI에서 축제·행사를 검색하고 있습니다.');
         try {
-            const response = await fetch(url, {headers: {Accept: 'application/json'}});
+            const response = await fetch(`${search.path}?${params.toString()}`,
+                {headers: {Accept: 'application/json'}});
             const payload = await response.json();
             if (requestGeneration !== searchRequestGeneration) return;
             if (!response.ok) throw new Error(payload.message || '축제·행사를 검색하지 못했습니다.');
-            renderCandidates(Array.isArray(payload.items) ? payload.items : []);
+            renderCandidates(payload);
         } catch (error) {
             if (requestGeneration === searchRequestGeneration) setStatus(error.message || '축제·행사를 검색하지 못했습니다.', true);
         } finally {
-            if (requestGeneration === searchRequestGeneration) button.disabled = false;
+            if (requestGeneration === searchRequestGeneration) search.button.disabled = false;
         }
     }
 
-    function renderCandidates(items) {
-        results.replaceChildren();
-        if (!items.length) {
-            setStatus('검색 결과가 없습니다.');
-            return;
+    function renderCandidates(payload) {
+        const items = Array.isArray(payload.items) ? payload.items : [];
+        const totalCount = Number(payload.totalCount);
+        const numOfRows = Number(payload.numOfRows);
+        const pageNo = Number(payload.pageNo);
+        if (!Number.isInteger(totalCount) || totalCount < 0
+            || !Number.isInteger(numOfRows) || numOfRows < 1
+            || !Number.isInteger(pageNo) || pageNo < 1) {
+            throw new Error('TourAPI 검색 결과의 페이지 정보가 올바르지 않습니다.');
         }
-        setStatus(`${items.length}개의 축제·행사 후보를 찾았습니다.`);
-        items.forEach(item => results.append(createCandidate(item)));
+
+        if (!items.length) {
+            setStatus(totalCount ? `총 ${totalCount}건 / 현재 페이지에 표시할 결과가 없습니다.` : '검색 결과가 없습니다.');
+        } else {
+            const first = (pageNo - 1) * numOfRows + 1;
+            const last = Math.min(totalCount, first + items.length - 1);
+            setStatus(`총 ${totalCount}건 / ${first}~${last}건`);
+            items.forEach(item => results.append(createCandidate(item)));
+        }
+        renderPagination(pageNo, numOfRows, totalCount);
+    }
+
+    function renderPagination(pageNo, numOfRows, totalCount) {
+        const totalPages = Math.ceil(totalCount / numOfRows);
+        if (totalPages <= 1) return;
+
+        pagination.hidden = false;
+        pagination.append(pageButton('이전', pageNo - 1, pageNo === 1));
+        const firstPage = Math.max(1, Math.min(pageNo - 2, totalPages - 4));
+        const lastPage = Math.min(totalPages, firstPage + 4);
+        if (firstPage > 1) {
+            pagination.append(pageButton('1', 1));
+            if (firstPage > 2) pagination.append(pageGap());
+        }
+        for (let page = firstPage; page <= lastPage; page += 1) {
+            pagination.append(pageButton(String(page), page, page === pageNo));
+        }
+        if (lastPage < totalPages) {
+            if (lastPage < totalPages - 1) pagination.append(pageGap());
+            pagination.append(pageButton(String(totalPages), totalPages));
+        }
+        pagination.append(pageButton('다음', pageNo + 1, pageNo >= totalPages));
+    }
+
+    function pageButton(label, pageNo, disabled = false) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = label;
+        button.disabled = disabled;
+        if (/^\d+$/.test(label)) button.setAttribute('aria-label', `${label}페이지`);
+        if (disabled && label === String(pageNo)) button.setAttribute('aria-current', 'page');
+        if (!disabled) button.addEventListener('click', () => requestCandidates(pageNo));
+        return button;
+    }
+
+    function pageGap() {
+        const gap = document.createElement('span');
+        gap.textContent = '…';
+        gap.setAttribute('aria-hidden', 'true');
+        return gap;
     }
 
     function createCandidate(item) {
