@@ -547,6 +547,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const value = formats[select.dataset.editorCommand];
             select.value = typeof value === 'string' ? value : '';
         });
+        const colorInput = toolbar.querySelector('.diary-toolbar-color[data-editor-command="color"]');
+        if (colorInput) {
+            colorInput.value = typeof formats.color === 'string' ? formats.color : '#000000';
+        }
         syncFontTrigger(formats);
         syncHighlightTrigger(formats);
     }
