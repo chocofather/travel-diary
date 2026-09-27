@@ -56,19 +56,15 @@
 
 .register-logo a {
     display: inline-block;
-    width: min(154px, 74vw);
-    aspect-ratio: 773 / 727;
+    width: min(232px, 72vw);
     border-radius: 8px;
 }
 
 .register-logo img {
     display: block;
     width: 100%;
-    height: 100%;
-    max-width: none;
-    max-height: none;
-    object-fit: contain;
-    object-position: center;
+    height: auto;
+    aspect-ratio: 1200 / 327;
 }
 
 .register-container {
@@ -694,7 +690,7 @@
     }
 
     .register-logo a {
-        width: min(137px, 78vw);
+        width: min(208px, 72vw);
     }
 
     .register-container {

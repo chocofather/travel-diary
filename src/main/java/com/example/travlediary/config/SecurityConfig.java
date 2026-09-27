@@ -137,7 +137,9 @@ public class SecurityConfig {
                                 // 메일로 받은 복구 링크만 공개다. 복구 요청은 탈퇴 유예 안내 화면에서만 한다.
                                 "/users/recover-account/confirm",
                                 "/css/**", "/js/**", "/images/**", "/fonts/**",
-                                "/favicon.ico", "/favicon-32x32.png", "/apple-touch-icon.png",
+                                "/favicon.ico", "/favicon-16x16.png", "/favicon-32x32.png", "/apple-touch-icon.png",
+                                "/android-chrome-192x192.png", "/android-chrome-512x512.png",
+                                "/safari-pinned-tab.svg", "/site.webmanifest",
                                 "/webjars/**",   // STOMP 클라이언트 등 정적 라이브러리
                                 "/api/**",     "/api/destinations/**",
                                 "/search", "/search.html",

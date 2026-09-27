@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>TripBora</title>
+  <g fill="#6d28d9">
+    <path d="M22 16V10a6 6 0 0 1 6-6h8a6 6 0 0 1 6 6v6h-5v-6a1 1 0 0 0-1-1h-8a1 1 0 0 0-1 1v6Z"/>
+    <rect x="10" y="14" width="44" height="42" rx="9"/>
+    <rect x="17" y="52" width="7" height="9" rx="3"/>
+    <rect x="40" y="52" width="7" height="9" rx="3"/>
+  </g>
+  <path fill="#fff" d="m42 23-11 7-10-3-4 3 10 7-3 9 4 3 7-10 8 4 3-3-7-8 7-6q2-4-4-3Z"/>
+</svg>

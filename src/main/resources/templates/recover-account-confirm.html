@@ -2,10 +2,11 @@
 <html lang="ko" xmlns:th="http://www.thymeleaf.org" th:lang="${currentLanguageTag}">
 <head>
   <meta charset="UTF-8">
+  <th:block th:replace="~{fragments/branding-head :: icons}"></th:block>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title th:text="#{account.recover.confirm.pageTitle}">계정 복구 확인 | Tripbora</title>
-  <link rel="stylesheet" href="/css/style.css">
-  <link rel="stylesheet" href="/css/login.css">
+  <link rel="stylesheet" href="/css/style.css?v=20260928-1">
+  <link rel="stylesheet" href="/css/login.css?v=20260928-1">
 </head>
 <body class="login-page auth-flow-page">
 <!-- 복구 요청 화면과 같은 공용 언어 선택 fragment. -->
@@ -16,7 +17,7 @@
 <main class="login-page__main">
   <a class="login-page__brand" th:href="@{/}" th:aria-label="#{login.brand.home}"
      aria-label="Tripbora 홈으로 이동">
-    <img src="/images/branding/tripbora-logo.png" alt="Tripbora">
+    <img src="/images/branding/tripbora-logo6.png?v=20260928-1" alt="Tripbora">
   </a>
 
   <section class="login-container" aria-labelledby="recoveryConfirmTitle">

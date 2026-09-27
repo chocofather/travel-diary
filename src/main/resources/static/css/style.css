@@ -74,9 +74,8 @@ body {
     position: absolute;
     left: 58px;
     top: 0;
-    margin-top: 8px;
-    width: 124px;
-    height: 116px;
+    width: 150px;
+    height: 100px;
     display: flex;
     align-items: center;
     z-index: 20;
@@ -84,15 +83,12 @@ body {
 .logo > a {
     display: block;
     width: 100%;
-    height: 116px;
 }
 .logo img {
     display: block;
     width: 100%;
-    height: 100%;
-    max-width: none;
-    object-fit: contain;
-    object-position: left center;
+    height: auto;
+    aspect-ratio: 1200 / 327;
 }
 
 /* 그리드 레이아웃 */
@@ -356,13 +352,8 @@ body {
 
     .logo {
         left: 24px;
-        margin-top: 0;
-        width: 106px;
+        width: 140px;
         height: 100px;
-    }
-
-    .logo > a {
-        height: 99px;
     }
 
     .nav-grid,
@@ -380,14 +371,11 @@ body {
   모바일도 같은 세로 메뉴를 쓴다. 구조는 그대로 두고 여백과 글자만 조금 줄인다.
 */
 @media (max-width: 767px) {
+    /* 오른쪽 검색·메뉴·언어·로그인 묶음(약 236px)과 겹치지 않도록 좁은 화면에서 함께 줄인다. */
     .logo {
         left: 20px;
-        width: 92px;
+        width: clamp(92px, calc(100vw - 268px), 124px);
         height: 100px;
-    }
-
-    .logo > a {
-        height: 86px;
     }
 
     .site-menu {

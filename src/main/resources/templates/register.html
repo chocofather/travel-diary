@@ -2,10 +2,11 @@
 <html lang="ko" xmlns:th="http://www.thymeleaf.org" th:lang="${currentLanguageTag}">
 <head>
   <meta charset="UTF-8">
+  <th:block th:replace="~{fragments/branding-head :: icons}"></th:block>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title th:text="#{signup.pageTitle}">회원가입 | Tripbora</title>
-  <link rel="stylesheet" href="/css/style.css">
-  <link rel="stylesheet" href="/css/registration.css">
+  <link rel="stylesheet" href="/css/style.css?v=20260928-1">
+  <link rel="stylesheet" href="/css/registration.css?v=20260928-1">
 </head>
 <body class="register-page">
 <!-- 로그인과 같은 헤더 없는 인증 화면이라 공용 언어 선택만 우측 상단에 둔다. -->
@@ -16,7 +17,7 @@
 <main class="register-wrapper">
   <div class="register-logo">
     <a th:href="@{/}" th:aria-label="#{signup.brand.home}" aria-label="Tripbora 홈">
-      <img src="/images/branding/tripbora-logo.png" alt="Tripbora">
+      <img src="/images/branding/tripbora-logo6.png?v=20260928-1" alt="Tripbora">
     </a>
   </div>
 

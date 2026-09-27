@@ -35,6 +35,16 @@ class SeoControllerSecurityTest {
     private CustomLogoutSuccessHandler customLogoutSuccessHandler;
 
     @Test
+    void anonymousUserCanLoadBrandingAssetsWithoutRedirectingToLogin() throws Exception {
+        for (String path : List.of("/favicon.ico", "/favicon-16x16.png", "/favicon-32x32.png",
+                "/apple-touch-icon.png", "/android-chrome-192x192.png",
+                "/android-chrome-512x512.png", "/safari-pinned-tab.svg", "/site.webmanifest")) {
+            mockMvc.perform(get(path).param("v", "20260928-1"))
+                    .andExpect(status().isOk());
+        }
+    }
+
+    @Test
     void anonymousUserCanReadRobotsAndSitemap() throws Exception {
         when(sitemapService.canonicalPaths()).thenReturn(List.of("/"));
 
