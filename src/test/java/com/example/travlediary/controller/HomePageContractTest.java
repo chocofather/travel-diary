@@ -30,7 +30,9 @@ class HomePageContractTest {
                 .contains("navBar.style.backgroundColor = bgColor")
                 .contains("#F3EFFF", "#EEF4FA", "#FBF5EE", "#F8F0F4")
                 .doesNotContain("#e0ffe0", "#fff5cc", "#ffe0f0", "#e0f7fa")
-                .contains("autoplay: { delay: 10000")
+                // 자동재생은 슬라이드가 두 장 이상일 때만 켠다. 0장이면 타이머 없이 영역을 숨긴다.
+                .contains("autoplay: hasMultipleSlides ? { delay: 10000")
+                .contains("if (slideCount === 0)", "classList.add('is-empty')")
                 .contains("swiper.slidePrev()", "swiper.slideNext()");
         assertThat(sliderCss)
                 .contains("padding-top: 150px")

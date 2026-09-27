@@ -10,10 +10,17 @@ final class JdkKtoPhotoHttpTransport implements KtoPhotoHttpTransport {
 
     private final int connectTimeoutMillis;
     private final int readTimeoutMillis;
+    private final String userAgent;
 
     JdkKtoPhotoHttpTransport(Duration connectTimeout, Duration readTimeout) {
+        this(connectTimeout, readTimeout, null);
+    }
+
+    /** Wikimedia처럼 식별 가능한 User-Agent를 요구하는 제공처에만 userAgent를 넘긴다. */
+    JdkKtoPhotoHttpTransport(Duration connectTimeout, Duration readTimeout, String userAgent) {
         this.connectTimeoutMillis = timeoutMillis(connectTimeout);
         this.readTimeoutMillis = timeoutMillis(readTimeout);
+        this.userAgent = userAgent;
     }
 
     @Override
@@ -24,6 +31,9 @@ final class JdkKtoPhotoHttpTransport implements KtoPhotoHttpTransport {
         connection.setReadTimeout(readTimeoutMillis);
         connection.setRequestMethod("GET");
         connection.setUseCaches(false);
+        if (userAgent != null) {
+            connection.setRequestProperty("User-Agent", userAgent);
+        }
 
         try {
             int statusCode = connection.getResponseCode();
@@ -35,7 +45,8 @@ final class JdkKtoPhotoHttpTransport implements KtoPhotoHttpTransport {
                     connection.getContentType(),
                     connection.getContentLengthLong(),
                     body,
-                    connection::disconnect);
+                    connection::disconnect,
+                    connection.getHeaderField("Retry-After"));
         } catch (IOException exception) {
             connection.disconnect();
             throw exception;

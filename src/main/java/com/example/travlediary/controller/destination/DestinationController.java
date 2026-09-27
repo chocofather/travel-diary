@@ -1,6 +1,7 @@
 package com.example.travlediary.controller.destination;
 
 import com.example.travlediary.config.i18n.SupportedLanguage;
+import com.example.travlediary.dto.DestinationCategoryFilterDto;
 import com.example.travlediary.dto.DestinationDetailDto;
 import com.example.travlediary.dto.DestinationDto;
 import com.example.travlediary.model.CountryCategory;
@@ -15,6 +16,7 @@ import com.example.travlediary.service.category.ReferenceNameLocalizationService
 import com.example.travlediary.service.comment.DestinationCommentService;
 import com.example.travlediary.service.destination.DestinationImageService;
 import com.example.travlediary.service.destination.DestinationService;
+import com.example.travlediary.service.file.DestinationCardThumbnailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -32,7 +34,9 @@ import jakarta.servlet.http.HttpServletRequest; // Spring Boot 3.x
 import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.text.Collator;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -56,6 +60,7 @@ public class DestinationController {
     private final CountryCategoryService countryCategoryService;
     private final DestinationCommentService destinationCommentService;
     private final ReferenceNameLocalizationService referenceNameLocalizationService;
+    private final DestinationCardThumbnailService cardThumbnailService;
 
     // 공통 리스트: type=domestic or overseas, region(도시, 국가 등) id
     @GetMapping("/destinations")
@@ -65,6 +70,7 @@ public class DestinationController {
             @RequestParam(value = "page", defaultValue = "1") int page,
             @RequestParam(value = "size", defaultValue = DEFAULT_PAGE_SIZE) int size,
             @RequestParam(value = "sort", defaultValue = "default") String sort,
+            @RequestParam(value = "category", required = false) String category,
             @AuthenticationPrincipal CustomUserDetails userDetails,
             HttpServletRequest request,
             Model model) {
@@ -170,8 +176,9 @@ public class DestinationController {
             model.addAttribute("selectedCityName", selectedCityName);
 
             List<Long> regionIds = countryCategoryService.getAllRegionIdsUnder(regionId);
-            rawList = destinationService.getDestinationsByRegionIdsPaged(regionIds, offset, size, sort);
-            totalCount = destinationService.countDestinationsByRegionIds(regionIds);
+            List<Long> categoryIds = applyCategoryFilter(category,regionIds, model);
+            rawList = destinationService.getDestinationsByRegionIdsPaged(regionIds, categoryIds, offset, size, sort);
+            totalCount = destinationService.countDestinationsByRegionIds(regionIds, categoryIds);
 
         } else {
             List<Long> rootRegionIds = "overseas".equals(type)
@@ -180,8 +187,9 @@ public class DestinationController {
             List<Long> allRegionIds = rootRegionIds.stream()
                     .flatMap(id -> countryCategoryService.getAllRegionIdsUnder(id).stream())
                     .toList();
-            rawList = destinationService.getDestinationsByRegionIdsPaged(allRegionIds, offset, size, sort);
-            totalCount = destinationService.countDestinationsByRegionIds(allRegionIds);
+            List<Long> categoryIds = applyCategoryFilter(category,allRegionIds, model);
+            rawList = destinationService.getDestinationsByRegionIdsPaged(allRegionIds, categoryIds, offset, size, sort);
+            totalCount = destinationService.countDestinationsByRegionIds(allRegionIds, categoryIds);
 
             model.addAttribute("selectedCityName", null);
         }
@@ -199,6 +207,8 @@ public class DestinationController {
         model.addAttribute("pageSize", size);
         model.addAttribute("totalPages", totalPages);
         model.addAttribute("totalCount", totalCount);
+        // 주소로 바로 연 정렬(새로고침·공유)도 정렬 버튼에 그대로 표시한다.
+        model.addAttribute("sort", sort);
 
         Map<String, Object> canonicalParameters = SeoModel.parameters();
         canonicalParameters.put("type", "overseas".equals(type) ? type : null);
@@ -240,6 +250,8 @@ public class DestinationController {
                 && dto.getImages().stream().anyMatch(DestinationImage::isAttributionPresent));
 
         model.addAttribute("descriptionParagraphs", descriptionParagraphs(dto.getDestination().getDescription()));
+        model.addAttribute("wikipediaSource", destinationService.findDisplayedWikipediaSource(
+                id, requestedLanguage, dto.getDestination().getDescription()));
 
         // 2. 타입별 추가 정보
         if (dto.getAccommodationInfo() != null) {
@@ -312,14 +324,19 @@ public class DestinationController {
         List<Long> categoryIds = dto.getCategoryIds() == null ? List.of() : dto.getCategoryIds();
         Map<Long, String> localizedCategoryNames =
                 referenceNameLocalizationService.localizeCategories(categoryIds, requestedLanguage);
-        String categoryName = categoryIds.stream()
+        // 대표 카테고리 하나만 보여준다. 대표가 없는 기존 데이터는 가장 작은 ID(MIN(category_id))를 쓴다.
+        Long mainCategoryId = dto.getMainCategoryId();
+        Long categoryId = categoryIds.stream()
                 .filter(java.util.Objects::nonNull)
-                .sorted()
-                .map(categoryId -> localizedDisplayName(localizedCategoryNames, categoryId, null))
-                .filter(java.util.Objects::nonNull)
+                .sorted(java.util.Comparator.comparing((Long candidate) -> !candidate.equals(mainCategoryId))
+                        .thenComparing(java.util.Comparator.naturalOrder()))
+                .filter(candidate -> localizedDisplayName(localizedCategoryNames, candidate, null) != null)
                 .findFirst()
                 .orElse(null);
-        model.addAttribute("categoryName", categoryName);
+        model.addAttribute("categoryName", categoryId == null ? null
+                : localizedDisplayName(localizedCategoryNames, categoryId, null));
+        // 배지를 누르면 이 카테고리가 선택된 목록(같은 국내/해외 전체 지역)으로 간다.
+        model.addAttribute("categoryId", categoryId);
 
         int commentCount = destinationCommentService.getCommentCountByDestinationId(id);
         model.addAttribute("commentCount", commentCount);
@@ -494,6 +511,7 @@ public class DestinationController {
             @RequestParam(value = "page", defaultValue = "1") int page,
             @RequestParam(value = "size", defaultValue = DEFAULT_PAGE_SIZE) int size,
             @RequestParam(value = "sort", defaultValue = "default") String sort,
+            @RequestParam(value = "category", required = false) String category,
             @AuthenticationPrincipal CustomUserDetails userDetails,
             Model model) {
 
@@ -576,8 +594,9 @@ public class DestinationController {
                     .toList();
             selectedCityName = null;
         }
-        rawList = destinationService.getDestinationsByRegionIdsPaged(regionIds, offset, size, sort);
-        totalCount = destinationService.countDestinationsByRegionIds(regionIds);
+        List<Long> categoryIds = applyCategoryFilter(category,regionIds, model);
+        rawList = destinationService.getDestinationsByRegionIdsPaged(regionIds, categoryIds, offset, size, sort);
+        totalCount = destinationService.countDestinationsByRegionIds(regionIds, categoryIds);
 
         DestinationListLocalization localization = localizeDestinationList(
                 cities, subregions, rawList, regionId, selectedCityName, userId);
@@ -610,6 +629,7 @@ public class DestinationController {
             @RequestParam(value = "page", defaultValue = "1") int page,
             @RequestParam(value = "size", defaultValue = DEFAULT_PAGE_SIZE) int size,
             @RequestParam(value = "sort", defaultValue = "default") String sort,
+            @RequestParam(value = "category", required = false) String category,
             @AuthenticationPrincipal CustomUserDetails userDetails,
             Model model) {
 
@@ -671,8 +691,9 @@ public class DestinationController {
                     .toList();
             selectedCityName = null;
         }
-        rawList = destinationService.getDestinationsByRegionIdsPaged(regionIds, offset, size, sort);
-        totalCount = destinationService.countDestinationsByRegionIds(regionIds);
+        List<Long> categoryIds = applyCategoryFilter(category,regionIds, model);
+        rawList = destinationService.getDestinationsByRegionIdsPaged(regionIds, categoryIds, offset, size, sort);
+        totalCount = destinationService.countDestinationsByRegionIds(regionIds, categoryIds);
 
         DestinationListLocalization localization = localizeDestinationList(
                 null, subregions, rawList, regionId, selectedCityName, userId);
@@ -695,6 +716,60 @@ public class DestinationController {
 
         // ★ destinationList만 리턴 (region-bar 없음)
         return "destination/fragment :: destinationList";
+    }
+
+    /**
+     * 목록 카테고리 필터(하나만 고른다). 주소의 category 값이 실제로 있는 카테고리일 때만 고른 것으로 보고,
+     * 아니면 전체로 본다. 선택지는 지금 지역 범위의 여행지에 등록된 카테고리와 고른 카테고리이며, 요청 언어 이름순이다.
+     *
+     * @return 목록 조회에 쓸 카테고리 ID(0개 또는 1개). 비어 있으면 카테고리 조건 없음(전체)
+     */
+    private List<Long> applyCategoryFilter(String categoryValue, List<Long> regionIds, Model model) {
+        Long requested = parseCategoryId(categoryValue);
+        Map<Long, Integer> counts = destinationService.getCategoryFilterCounts(regionIds,
+                requested == null ? List.of() : List.of(requested));
+        SupportedLanguage requestedLanguage = SupportedLanguage
+                .fromLocale(LocaleContextHolder.getLocale())
+                .orElse(SupportedLanguage.KOREAN);
+        Map<Long, String> names = counts.isEmpty() ? Map.of()
+                : referenceNameLocalizationService.localizeCategories(counts.keySet(), requestedLanguage);
+        Long selectedId = requested != null && counts.containsKey(requested) && names.get(requested) != null
+                ? requested : null;
+
+        Collator collator = Collator.getInstance(requestedLanguage.getLocale());
+        List<DestinationCategoryFilterDto> options = counts.entrySet().stream()
+                .filter(entry -> names.get(entry.getKey()) != null)
+                .map(entry -> new DestinationCategoryFilterDto(entry.getKey(), names.get(entry.getKey()),
+                        entry.getValue(), entry.getKey().equals(selectedId)))
+                .sorted(Comparator.comparing(DestinationCategoryFilterDto::name, collator)
+                        .thenComparing(DestinationCategoryFilterDto::id))
+                .toList();
+
+        model.addAttribute("categoryFilterOptions", options);
+        model.addAttribute("selectedCategoryId", selectedId);
+        model.addAttribute("selectedCategoryName", selectedId == null ? null : names.get(selectedId));
+        return selectedId == null ? List.of() : List.of(selectedId);
+    }
+
+    /**
+     * 주소의 category 값(하나). 숫자가 아니거나 0 이하면 전체로 본다.
+     * 예전 다중 선택 주소(category=3&category=5)는 스프링이 "3,5" 로 이어 주므로 그중 첫 번째 올바른 값만 쓴다.
+     */
+    private static Long parseCategoryId(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        for (String part : value.split(",")) {
+            try {
+                long id = Long.parseLong(part.strip());
+                if (id > 0) {
+                    return id;
+                }
+            } catch (NumberFormatException ignored) {
+                // 잘못된 값은 목록 요청을 실패시키지 않고 무시한다.
+            }
+        }
+        return null;
     }
 
     private DestinationListLocalization localizeDestinationList(
@@ -731,6 +806,14 @@ public class DestinationController {
         List<DestinationDto> localizedDestinations =
                 destinationService.convertToLocalizedDtoWithBookmark(
                         destinations, userId, requestedLanguage, localizedRegionNames);
+        // 목록 카드는 원본 대신 카드 크기 썸네일을 쓴다. (메인 추천 카드와 같은 규칙)
+        // 카드 사진 칸은 4:3 이다(destination.css 의 aspect-ratio).
+        cardThumbnailService.applyCardImages(localizedDestinations, DestinationDto::getThumbnailPath,
+                (destination, image) -> {
+                    destination.setCardImageUrl(image.src());
+                    destination.setCardImageSrcset(image.srcset());
+                    destination.setCardImageCoverScale(image.coverScale(4, 3));
+                });
         return new DestinationListLocalization(
                 localizedDestinations, localizedRegionNames, selectedRegionName);
     }

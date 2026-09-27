@@ -3,7 +3,7 @@
       th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
 <th:block th:fragment="headFragment">
   <link rel="stylesheet" href="/css/mypage-layout.css">
-  <link rel="stylesheet" href="/css/mypage-account.css">
+  <link rel="stylesheet" href="/css/mypage-account.css?v=20260927-1">
 </th:block>
 <th:block th:fragment="body">
   <div class="mypage-layout">
@@ -16,15 +16,14 @@
         <span th:text="#{mypage.account.verify.description}">회원정보 보호를 위해 현재 비밀번호를 다시 입력해주세요.</span>
       </header>
 
-      <!-- 로그인 직후 처리된 소셜 연결 결과도 여기서 보여준다. 본인 확인 전이라도 안내는 놓치지 않는다. -->
-      <th:block th:replace="~{fragments/mypage/social-connections :: notices}"></th:block>
-
       <p class="mypage-account-notice" th:if="${verificationMessage}"
          role="alert" th:text="${verificationMessage}">본인 확인이 필요합니다.</p>
 
+      <!-- 확인이 끝나면 next 로 정한 곳(비밀번호 변경·회원 탈퇴·계정 관리)으로 돌아간다. 값은 서버가 목록 안에서만 고른다. -->
       <form class="mypage-account-panel mypage-account-verify-form"
             th:action="@{/mypage/account/verify-password}"
             th:object="${verifyForm}" method="post">
+        <input type="hidden" name="next" th:value="${verificationTarget}">
         <div class="mypage-account-field">
           <label for="currentPassword" th:text="#{mypage.account.currentPassword}">현재 비밀번호</label>
           <input id="currentPassword" type="password"
@@ -35,7 +34,7 @@
              th:errors="*{currentPassword}">비밀번호 오류</p>
         </div>
         <div class="mypage-account-actions">
-          <a th:href="@{/mypage}" th:text="#{mypage.account.cancel}">취소</a>
+          <a th:href="@{/mypage/account}" th:text="#{mypage.account.cancel}">취소</a>
           <button type="submit" th:text="#{mypage.account.confirm}">확인</button>
         </div>
       </form>

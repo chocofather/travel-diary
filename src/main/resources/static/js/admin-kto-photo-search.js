@@ -115,6 +115,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const mainStatus = searchArea.querySelector("[data-kto-photo-main-status]");
         const selectedList = searchArea.querySelector("[data-kto-photo-selected-list]");
         const selectedPhotosJson = searchArea.querySelector("[data-kto-selected-photos-json]");
+        const submitButton = searchArea.querySelector("[data-kto-photo-submit]");
         const destinationNameInput = document.querySelector("[data-destination-korean-name]");
 
         if (!keywordInput || !searchButton || !status || !results || !moreButton
@@ -356,6 +357,7 @@ document.addEventListener("DOMContentLoaded", () => {
             selections.forEach(selection => fragment.append(createSelectedPhoto(selection)));
             selectedList.replaceChildren(fragment);
             selectedPhotosJson.value = JSON.stringify(serializeKtoSelectedPhotos(selectionState.entries()));
+            if (submitButton) submitButton.disabled = selections.length === 0;
 
             selectedCount.textContent = `${selectionState.count()}장`;
             selectedArea.hidden = selections.length === 0;

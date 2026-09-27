@@ -245,13 +245,13 @@ class GuestDiaryPhotoContractTest {
                 .doesNotContain("image/webp")
                 // SVG 는 스크립트를 품을 수 있어 받지 않는다.
                 .doesNotContain("image/svg")
-                // Spring max-file-size 와 같은 10MB
+                // 서버 다이어리 사진 한도(DIARY_PHOTO_MAX_SIZE)와 같은 10MB.
+                // multipart 한도는 관리자 여행지 사진(20MB) 때문에 더 크므로 기준이 아니다.
                 .contains("const MAX_SIZE = 10 * 1024 * 1024;")
                 // 확장자만 믿지 않는다. 실제로 그려지는지까지 본다.
                 .contains("function decodedSize(file)")
                 .contains("createImageBitmap");
-        assertThat(resource("application.yml")).contains("max-file-size: 10MB");
-        // 가져올 때 서버가 보는 목록도 같다.
+        // 가져올 때 서버가 보는 목록과 한도도 같다.
         assertThat(source("service/file/FileUploadService.java"))
                 .contains("java.util.Set.of(\"JPEG\", \"JPG\", \"PNG\", \"GIF\")")
                 .contains("DIARY_PHOTO_MAX_SIZE = 10L * 1024 * 1024");

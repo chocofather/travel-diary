@@ -1,133 +1,51 @@
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org"
-      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
       th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
 <th:block th:fragment="headFragment">
   <link rel="stylesheet" href="/css/mypage-layout.css">
-  <link rel="stylesheet" href="/css/mypage-account.css">
-  <script src="/js/confirm-submit.js" defer></script>
-  <script src="/js/withdrawal-confirm.js" defer></script>
+  <link rel="stylesheet" href="/css/mypage-account.css?v=20260927-1">
 </th:block>
 <th:block th:fragment="body">
+  <!-- 비밀번호 변경 전용 화면. 계정 관리 화면에서 비밀번호를 다시 확인한 회원만 들어온다. -->
   <div class="mypage-layout">
     <nav th:replace="~{fragments/mypage/navigation :: navigation('account')}"></nav>
 
     <section class="mypage-content mypage-account-page" aria-labelledby="account-edit-title">
       <header class="mypage-page-header">
         <p>ACCOUNT</p>
-        <h1 id="account-edit-title" th:text="#{mypage.nav.account}">계정 및 보안</h1>
-        <span th:text="#{mypage.account.edit.description}">계정 정보와 로그인 수단을 안전하게 관리합니다.</span>
+        <h1 id="account-edit-title" th:text="#{mypage.account.password.title}">비밀번호 변경</h1>
+        <span th:text="#{mypage.account.password.help}">변경 후에는 안전을 위해 다시 로그인해야 합니다.</span>
       </header>
 
-      <section class="mypage-account-panel" aria-labelledby="account-info-title">
-        <div class="mypage-account-section-heading">
-          <h2 id="account-info-title" th:text="#{mypage.account.edit.info.title}">계정 정보</h2>
-          <span th:text="#{mypage.account.edit.info.help}">로그인 ID와 이메일은 현재 변경할 수 없습니다.</span>
-        </div>
-        <dl class="mypage-account-readonly-list">
-          <div>
-            <dt th:text="#{mypage.account.edit.email}">이메일</dt>
-            <dd th:text="${account.userEmail}">test@example.com</dd>
+      <section class="mypage-account-panel mypage-account-verify-form"
+               aria-labelledby="account-edit-title">
+        <form class="mypage-password-form" th:action="@{/mypage/account/password}"
+              th:object="${passwordForm}" method="post">
+          <div class="mypage-account-field">
+            <label for="newPassword" th:text="#{mypage.account.password.new}">새 비밀번호</label>
+            <input id="newPassword" type="password" th:field="*{newPassword}"
+                   autocomplete="new-password" required>
+            <small th:text="#{mypage.account.password.new.help}">8자 이상이며 영문, 숫자, !@#$%^&amp;*만 사용할 수 있고 특수문자를 1개 이상 포함해야 합니다.</small>
+            <p class="mypage-account-field-error" th:if="${#fields.hasErrors('newPassword')}"
+               th:errors="*{newPassword}">비밀번호 오류</p>
           </div>
-        </dl>
-      </section>
-
-      <section class="mypage-account-panel mypage-login-security"
-               aria-labelledby="login-security-title">
-        <div class="mypage-account-section-heading">
-          <h2 id="login-security-title"
-              th:text="#{mypage.account.security.title}">로그인 및 보안</h2>
-          <span th:text="#{mypage.account.security.help}">비밀번호와 소셜 로그인 수단을 관리합니다.</span>
-        </div>
-
-        <div class="mypage-security-group">
-          <div class="mypage-security-group-heading">
-            <h3 th:text="#{mypage.account.password.title}">비밀번호 변경</h3>
-            <span th:text="#{mypage.account.password.help}">변경 후에는 안전을 위해 다시 로그인해야 합니다.</span>
+          <div class="mypage-account-field">
+            <label for="newPasswordConfirm" th:text="#{mypage.account.password.confirm}">새 비밀번호 확인</label>
+            <input id="newPasswordConfirm" type="password"
+                   th:field="*{newPasswordConfirm}" autocomplete="new-password" required>
+            <p class="mypage-account-field-error"
+               th:if="${#fields.hasErrors('newPasswordConfirm')}"
+               th:errors="*{newPasswordConfirm}">비밀번호 확인 오류</p>
           </div>
-          <form class="mypage-password-form" th:action="@{/mypage/account/password}"
-                th:object="${passwordForm}" method="post">
-            <div class="mypage-account-field">
-              <label for="newPassword" th:text="#{mypage.account.password.new}">새 비밀번호</label>
-              <input id="newPassword" type="password" th:field="*{newPassword}"
-                     autocomplete="new-password" required>
-              <small th:text="#{mypage.account.password.new.help}">8자 이상이며 영문, 숫자, !@#$%^&amp;*만 사용할 수 있고 특수문자를 1개 이상 포함해야 합니다.</small>
-              <p class="mypage-account-field-error" th:if="${#fields.hasErrors('newPassword')}"
-                 th:errors="*{newPassword}">비밀번호 오류</p>
-            </div>
-            <div class="mypage-account-field">
-              <label for="newPasswordConfirm" th:text="#{mypage.account.password.confirm}">새 비밀번호 확인</label>
-              <input id="newPasswordConfirm" type="password"
-                     th:field="*{newPasswordConfirm}" autocomplete="new-password" required>
-              <p class="mypage-account-field-error"
-                 th:if="${#fields.hasErrors('newPasswordConfirm')}"
-                 th:errors="*{newPasswordConfirm}">비밀번호 확인 오류</p>
-            </div>
-            <div class="mypage-account-actions">
-              <button type="submit" th:text="#{mypage.account.password.title}">비밀번호 변경</button>
-            </div>
-          </form>
-        </div>
-
-        <div class="mypage-security-group" aria-labelledby="social-connection-title">
-          <div class="mypage-security-group-heading">
-            <h3 id="social-connection-title"
-                th:text="#{mypage.account.social.connection.title}">소셜 계정 연결</h3>
-            <span th:text="#{mypage.account.social.connection.help}">
-              연결한 계정으로도 Tripbora에 로그인할 수 있습니다.
-            </span>
+          <div class="mypage-account-global-error" th:if="${#fields.hasGlobalErrors()}"
+               role="alert">
+            <p th:each="error : ${#fields.globalErrors()}" th:text="${error}">비밀번호 변경 오류</p>
           </div>
-          <th:block th:replace="~{fragments/mypage/social-connections :: notices}"></th:block>
-          <div th:replace="~{fragments/mypage/social-connections :: rows}"></div>
-        </div>
-      </section>
-
-      <section class="mypage-account-panel mypage-account-danger"
-               aria-labelledby="withdrawal-title">
-          <div class="mypage-account-section-heading">
-            <h2 id="withdrawal-title" th:text="#{mypage.account.withdraw}">회원 탈퇴</h2>
+          <div class="mypage-account-actions">
+            <a th:href="@{/mypage/account}" th:text="#{mypage.account.cancel}">취소</a>
+            <button type="submit" th:text="#{mypage.account.password.title}">비밀번호 변경</button>
           </div>
-          <ul>
-            <li th:text="#{mypage.account.withdrawal.notice.irreversible}">탈퇴를 신청하면 즉시 로그인할 수 없고, 30일 뒤 계정과 개인 정보가 최종 삭제됩니다.</li>
-            <li th:text="#{mypage.account.withdrawal.notice.contentKept}">작성한 게시글, 댓글, 여행 코스와 문의 기록은 그대로 유지됩니다.</li>
-            <li th:text="#{mypage.account.withdrawal.notice.dataPreserved}">북마크와 좋아요를 포함한 계정 데이터는 보존 기간 동안 삭제되지 않습니다.</li>
-            <li th:text="#{mypage.account.withdrawal.notice.emailLocked}">기존 이메일과 닉네임은 최종 삭제 전까지 새 계정에서 사용할 수 없습니다.</li>
-            <li th:text="#{mypage.account.withdrawal.notice.recoverable}">유예기간 동안에는 로그인 후 안내 화면에서 계정을 복구할 수 있습니다.</li>
-          </ul>
-          <p class="mypage-account-admin-warning" sec:authorize="hasRole('ADMIN')"
-             th:text="#{mypage.account.withdrawal.adminBlocked}">
-            관리자 계정은 마이페이지에서 탈퇴할 수 없습니다.
-          </p>
-          <!--
-            계정 및 보안 진입 단계에서 이미 재인증을 마쳤으므로 비밀번호는 다시 받지 않는다.
-            실수 방지를 위해 확인 문구만 입력받고, 일치 여부는 서버에서도 다시 검증한다.
-          -->
-          <form th:action="@{/mypage/account/withdraw}" th:object="${withdrawalForm}"
-                method="post" sec:authorize="hasRole('USER')"
-                id="withdrawalForm"
-                th:data-confirm-phrase="#{mypage.account.withdrawal.confirm.phrase}">
-            <div class="mypage-account-field">
-              <label for="withdrawalConfirmPhrase"
-                     th:text="#{mypage.account.withdrawal.confirm.label}">탈퇴를 신청하려면 아래 문구를 입력해 주세요.</label>
-              <p class="mypage-account-confirm-phrase" id="withdrawalConfirmPhraseSample"
-                 th:text="#{mypage.account.withdrawal.confirm.phrase}">탈퇴를 신청합니다</p>
-              <input id="withdrawalConfirmPhrase" type="text"
-                     th:field="*{confirmationPhrase}"
-                     th:placeholder="#{mypage.account.withdrawal.confirm.placeholder}"
-                     autocomplete="off" spellcheck="false" required>
-              <p class="mypage-account-field-error"
-                 th:if="${#fields.hasErrors('confirmationPhrase')}"
-                 th:errors="*{confirmationPhrase}">확인 문구 오류</p>
-            </div>
-            <div class="mypage-account-global-error" th:if="${#fields.hasGlobalErrors()}"
-                 role="alert">
-              <p th:each="error : ${#fields.globalErrors()}" th:text="${error}">탈퇴 오류</p>
-            </div>
-            <div class="mypage-account-actions">
-              <button class="is-danger" type="submit" id="withdrawalSubmit"
-                      th:text="#{mypage.account.withdrawal.submit}">회원 탈퇴 신청</button>
-            </div>
-          </form>
+        </form>
       </section>
     </section>
   </div>

@@ -134,7 +134,7 @@ class AdminDestinationKtoSelectionControllerTest {
                         .param("ktoSelectedPhotosJson", "[]"))
                 .andReturn();
 
-        assertThat(result.getResponse().getRedirectedUrl()).isEqualTo("/admin");
+        assertThat(result.getResponse().getRedirectedUrl()).isEqualTo("/admin/destinations");
         verify(destinationSaveOrchestrationService).registerDestination(
                 argThat(form -> Long.valueOf(9L).equals(form.getRegionId())),
                 eq(7L),
@@ -208,7 +208,7 @@ class AdminDestinationKtoSelectionControllerTest {
 
         String view = register(form, userDetails);
 
-        assertThat(view).isEqualTo("redirect:/admin");
+        assertThat(view).isEqualTo("redirect:/admin/destinations");
         assertThat(form.getImages()).containsExactly(image);
         verify(destinationSaveOrchestrationService)
                 .registerDestination(form, 7L, java.util.List.of());

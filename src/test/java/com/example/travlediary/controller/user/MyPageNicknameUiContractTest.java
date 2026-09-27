@@ -92,7 +92,7 @@ class MyPageNicknameUiContractTest {
 
     @Test
     void accountPageDoesNotExposeLegacyPersonalInformation() throws IOException {
-        String template = read("templates/mypage/account-edit.html");
+        String template = read("templates/mypage/account.html");
 
         assertThat(template)
                 .contains("account.userEmail")

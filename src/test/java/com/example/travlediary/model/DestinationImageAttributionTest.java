@@ -94,4 +94,30 @@ class DestinationImageAttributionTest {
         assertThat(image.getSafeSourceUrl()).isEqualTo("https://example.com/photo-source");
         assertThat(image.isAttributionPresent()).isTrue();
     }
+
+    /** 관리 화면 카드의 출처 상태와 한 줄 요약. 출처 입력폼을 접어도 이 두 가지로 사진을 훑어본다. */
+    @Test
+    void cardSourceStatusAndSummaryFollowTheSavedSource() {
+        DestinationImage image = new DestinationImage();
+        assertThat(image.getSourceStatus()).isEqualTo("MISSING");
+        assertThat(image.getSourceSummary()).isNull();
+
+        // URL 만 있고 제공기관·촬영자가 없으면 아직 출처 입력이 필요하다.
+        image.setSourceUrl("https://example.com/photo-source");
+        image.setPhotographer("  ");
+        assertThat(image.getSourceStatus()).isEqualTo("MISSING");
+
+        image.setSourceName("한국관광공사");
+        assertThat(image.getSourceStatus()).isEqualTo("LICENSE_NEEDED");
+        image.setLicenseType("UNKNOWN");
+        assertThat(image.getSourceStatus()).isEqualTo("LICENSE_NEEDED");
+
+        image.setPhotographer("김지호");
+        image.setLicenseType("KOGL_TYPE_1");
+        assertThat(image.getSourceStatus()).isEqualTo("COMPLETE");
+        assertThat(image.getSourceSummary()).isEqualTo("한국관광공사 · 김지호 · 공공누리 제1유형");
+
+        image.setSourceType(DestinationImage.COMMONS_SOURCE_TYPE);
+        assertThat(image.getSourceStatus()).isEqualTo("COMMONS");
+    }
 }

@@ -3,7 +3,8 @@
       th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
 <th:block th:fragment="headFragment">
   <link rel="stylesheet" href="/css/support-layout.css">
-  <link rel="stylesheet" href="/css/support-faq.css">
+  <link rel="stylesheet" href="/css/support-faq.css?v=20260926-1">
+  <script src="/js/support-faq-filter.js?v=20260926-1" defer></script>
 </th:block>
 <th:block th:fragment="body">
   <div class="support-layout">
@@ -14,6 +15,28 @@
       <h1 id="support-faq-title" th:text="#{support.faq.title}">자주 묻는 질문</h1>
       <span th:text="#{support.faq.description}">궁금한 내용을 빠르게 확인해보세요.</span>
     </header>
+
+    <!-- 카테고리는 DB 값으로 만든다. 링크에 앵커를 붙여 다시 그려도 필터와 목록이 바로 보이게 한다. -->
+    <nav id="support-faq-filter" class="support-faq-filter"
+         th:if="${hasPublicFaqs and !#lists.isEmpty(faqCategories)}"
+         th:attr="aria-label=#{support.faq.filter.label}">
+      <ul class="support-faq-filter-list">
+        <li>
+          <a class="support-faq-filter-link"
+             th:classappend="${selectedCategoryId == null} ? ' is-active' : ''"
+             th:attr="aria-current=${selectedCategoryId == null} ? 'page' : null"
+             th:href="@{/support/faq} + '#support-faq-filter'"
+             th:text="#{support.faq.filter.all}">전체</a>
+        </li>
+        <li th:each="category : ${faqCategories}">
+          <a class="support-faq-filter-link"
+             th:classappend="${category.id == selectedCategoryId} ? ' is-active' : ''"
+             th:attr="aria-current=${category.id == selectedCategoryId} ? 'page' : null"
+             th:href="@{/support/faq(category=${category.id})} + '#support-faq-filter'"
+             th:text="${category.name}">회원/계정</a>
+        </li>
+      </ul>
+    </nav>
 
     <div class="support-faq-list" th:unless="${#lists.isEmpty(faqs)}">
       <details class="support-faq-item" th:each="faq : ${faqs}">
@@ -38,7 +61,12 @@
     </div>
 
     <div class="support-faq-empty" th:if="${#lists.isEmpty(faqs)}">
-      <p th:text="#{support.faq.empty}">등록된 자주 묻는 질문이 없습니다.</p>
+      <p th:if="${selectedCategoryId == null}" th:text="#{support.faq.empty}">등록된 자주 묻는 질문이 없습니다.</p>
+      <th:block th:unless="${selectedCategoryId == null}">
+        <p th:text="#{support.faq.filter.empty}">이 카테고리에 등록된 질문이 아직 없습니다.</p>
+        <a class="support-faq-empty-link" th:href="@{/support/faq} + '#support-faq-filter'"
+           th:text="#{support.faq.filter.showAll}">전체 질문 보기</a>
+      </th:block>
     </div>
     </section>
   </div>

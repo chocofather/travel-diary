@@ -15,5 +15,9 @@ public class SeasonDestinationDto {
     private Long categoryId;
     private String categoryName;
 
+    // 카드 썸네일 (여행지 업로드 사진이 아니면 null → imageUrl 을 쓴다), 후보 srcset (폭은 실제 픽셀)
+    private String cardImageUrl;
+    private String cardImageSrcset;
+
 
 }

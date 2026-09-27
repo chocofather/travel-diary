@@ -61,6 +61,32 @@ final class RasterImageResizer {
      */
     static byte[] optimize(byte[] source, String imageIoFormat, boolean keepAlpha,
                            int maxEdge, int decodeEdge) {
+        return shrink(source, imageIoFormat, keepAlpha, decodeEdge,
+                (width, height) -> (double) maxEdge / Math.max(width, height),
+                "maxEdge=" + maxEdge);
+    }
+
+    /**
+     * {@code coverWidth × coverHeight} 상자를 {@code object-fit: cover} 로 빈틈없이 채울 수 있는
+     * 가장 작은 크기까지 줄인다. (가로·세로가 모두 상자 이상이 되는 크기)
+     *
+     * <p>긴 변 상한으로 줄이면 세로 사진은 폭이, 파노라마는 높이가 모자라 카드에서 다시 확대된다.
+     * 카드 썸네일은 이 방식으로 만든다. 이미 상자 크기 안쪽이면 {@link #optimize} 와 같이 원본을 그대로 돌려준다.
+     */
+    static byte[] coverThumbnail(byte[] source, String imageIoFormat, boolean keepAlpha,
+                                 int coverWidth, int coverHeight, int decodeEdge) {
+        return shrink(source, imageIoFormat, keepAlpha, decodeEdge,
+                (width, height) -> Math.max((double) coverWidth / width, (double) coverHeight / height),
+                "cover=" + coverWidth + "x" + coverHeight);
+    }
+
+    /** 바로 선 모습의 원본 치수 → 줄일 배율. 1 이상이면 줄이지 않는다. */
+    private interface ScaleRule {
+        double scaleFor(int uprightWidth, int uprightHeight);
+    }
+
+    private static byte[] shrink(byte[] source, String imageIoFormat, boolean keepAlpha,
+                                 int decodeEdge, ScaleRule rule, String target) {
         try {
             int[] dimensions = readDimensions(source, imageIoFormat);
             if (dimensions == null) {
@@ -79,7 +105,8 @@ final class RasterImageResizer {
             int uprightHeight = JpegOrientation.swapsEdges(orientation)
                     ? dimensions[0] : dimensions[1];
 
-            if (Math.max(uprightWidth, uprightHeight) <= maxEdge) {
+            double scale = rule.scaleFor(uprightWidth, uprightHeight);
+            if (scale >= 1) {
                 // 이미 충분히 작다. 펼쳐 보지도 않는다. 돌리는 표시도 원본에 그대로 남는다.
                 return source;
             }
@@ -89,10 +116,10 @@ final class RasterImageResizer {
                 return source;
             }
             BufferedImage upright = JpegOrientation.apply(decoded, orientation, keepAlpha);
-            double scale = (double) maxEdge / Math.max(upright.getWidth(), upright.getHeight());
+            // 목표 크기는 원본 치수로 정한다. 펼칠 때 건너뛰며 읽었어도 결과 크기는 같다.
             BufferedImage resized = scale(upright,
-                    Math.max(1, (int) Math.round(upright.getWidth() * scale)),
-                    Math.max(1, (int) Math.round(upright.getHeight() * scale)),
+                    Math.max(1, (int) Math.round(uprightWidth * scale)),
+                    Math.max(1, (int) Math.round(uprightHeight * scale)),
                     keepAlpha);
 
             byte[] encoded = encode(resized, imageIoFormat);
@@ -107,8 +134,8 @@ final class RasterImageResizer {
               그대로 올려보내 컨테이너가 알아채게 둔다.
              */
             log.warn("Uploaded image could not be resized, the original is stored as is:"
-                    + " format={}, bytes={}, maxEdge={}, failureType={}",
-                    imageIoFormat, source.length, maxEdge, failure.getClass().getSimpleName());
+                    + " format={}, bytes={}, target={}, failureType={}",
+                    imageIoFormat, source.length, target, failure.getClass().getSimpleName());
             return source;
         }
     }

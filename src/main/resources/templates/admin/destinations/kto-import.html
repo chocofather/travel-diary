@@ -2,8 +2,9 @@
 <html lang="ko" xmlns:th="http://www.thymeleaf.org"
       th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'destinations')}">
 <th:block th:fragment="headFragment">
-  <link rel="stylesheet" href="/css/admin-kto-tour-import.css">
-  <script src="/js/admin-kto-tour-bulk-import.js?v=20260924-1" defer></script>
+  <link rel="stylesheet" href="/css/admin-kto-tour-import.css?v=20260926-1">
+  <script src="/js/admin-bulk-page-selection.js?v=20260926-1" defer></script>
+  <script src="/js/admin-kto-tour-bulk-import.js?v=20260926-1" defer></script>
 </th:block>
 <th:block th:fragment="body">
   <section class="admin-page-section" data-kto-import>
@@ -64,9 +65,12 @@
           </button>
         </div>
         <div class="admin-kto-import-actions">
-          <button type="button" class="admin-btn is-small" data-kto-import-select-all>미등록 전체선택</button>
-          <button type="button" class="admin-btn is-small" data-kto-import-clear>선택해제</button>
-          <span class="admin-kto-import-count" data-kto-import-selected-count aria-live="polite">선택 0건</span>
+          <!-- 현재 페이지 선택은 이 페이지의 미등록 후보만 다룬다. 다른 페이지에서 고른 항목은 그대로 남는다. -->
+          <span class="admin-kto-import-page-count" data-kto-import-page-count>현재 페이지 선택 가능 0건 중 0건 선택</span>
+          <button type="button" class="admin-btn is-small" data-kto-import-select-all disabled>현재 페이지 전체선택</button>
+          <button type="button" class="admin-btn is-small" data-kto-import-page-clear disabled>현재 페이지 선택해제</button>
+          <span class="admin-kto-import-count" data-kto-import-selected-count aria-live="polite">전체 선택 0건</span>
+          <button type="button" class="admin-btn is-small" data-kto-import-clear disabled>전체 선택해제</button>
           <button type="button" class="admin-btn is-primary is-small" data-kto-import-submit disabled>
             선택 항목 등록
           </button>
@@ -81,7 +85,9 @@
         <table class="admin-table admin-kto-import-table">
           <thead>
           <tr>
-            <th scope="col" class="is-check"><span class="admin-visually-hidden">선택</span></th>
+            <th scope="col" class="is-check">
+              <input type="checkbox" aria-label="현재 페이지 전체선택" data-kto-import-page-toggle disabled>
+            </th>
             <th scope="col" class="is-thumb">이미지</th>
             <th scope="col">여행지명</th>
             <th scope="col">지역</th>

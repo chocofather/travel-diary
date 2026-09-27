@@ -4,6 +4,11 @@ import com.example.travlediary.dto.DestinationForm;
 import com.example.travlediary.dto.DestinationTranslationForm;
 import com.example.travlediary.model.Destination;
 import com.example.travlediary.model.DestinationTranslation;
+import com.example.travlediary.model.DestinationTranslationSource;
+import com.example.travlediary.repository.destination.DestinationTranslationSourceMapper;
+import com.example.travlediary.config.i18n.SupportedLanguage;
+import com.example.travlediary.service.wikidata.WikidataRegistrationService;
+import org.springframework.test.util.ReflectionTestUtils;
 import com.example.travlediary.model.DestinationType;
 import com.example.travlediary.repository.bookmark.BookmarkMapper;
 import com.example.travlediary.repository.destination.DestinationMapper;
@@ -45,6 +50,7 @@ import static org.mockito.Mockito.when;
 class DestinationTranslationSlotSaveTest {
 
     @Mock private DestinationMapper destinationMapper;
+    @Mock private DestinationTranslationSourceMapper sourceMapper;
     @Mock private DestinationImageService destinationImageService;
     @Mock private BookmarkMapper bookmarkMapper;
     @Mock private AmenityService amenityService;
@@ -65,6 +71,77 @@ class DestinationTranslationSlotSaveTest {
                 accommodationInfoService, attractionInfoService, restaurantInfoService,
                 activityInfoService, shopInfoService,
                 new DestinationLocalizationService(destinationMapper));
+        ReflectionTestUtils.setField(destinationService, "translationSourceMapper", sourceMapper);
+    }
+
+    @Test
+    void editingWikipediaDescriptionKeepsOriginalRevisionAndUpdatesModifiedFlag() {
+        givenExistingDestination();
+        DestinationTranslation korean = stored("ko", "에펠탑");
+        korean.setId(20L);
+        korean.setDescription("원문");
+        when(destinationMapper.findTranslationsByDestinationId(9L)).thenReturn(List.of(korean));
+        DestinationTranslationSource source = new DestinationTranslationSource();
+        source.setOriginalContentSha256(WikidataRegistrationService.sha256("원문"));
+        source.setSourceRevisionId(123L);
+        when(sourceMapper.findByTranslationId(20L)).thenReturn(source);
+        DestinationForm form = form();
+        fill(form, "ko", "에펠탑", "", "관리자 수정");
+
+        destinationService.updateDestination(9L, form);
+
+        verify(sourceMapper).updateModified(20L, true);
+        assertThat(source.getSourceRevisionId()).isEqualTo(123L);
+        verify(sourceMapper, never()).deleteByTranslationId(20L);
+    }
+
+    @Test
+    void deletingDescriptionRemovesOnlyItsWikipediaSource() {
+        givenExistingDestination();
+        DestinationTranslation korean = stored("ko", "에펠탑");
+        korean.setId(20L);
+        when(destinationMapper.findTranslationsByDestinationId(9L)).thenReturn(List.of(korean));
+        when(sourceMapper.findByTranslationId(20L)).thenReturn(new DestinationTranslationSource());
+        DestinationForm form = form();
+        fill(form, "ko", "에펠탑", "", "");
+
+        destinationService.updateDestination(9L, form);
+
+        verify(sourceMapper).deleteByTranslationId(20L);
+    }
+
+    @Test
+    void explicitUnlinkRemovesSourceButPreservesEditedDescription() {
+        givenExistingDestination();
+        DestinationTranslation korean = stored("ko", "에펠탑");
+        korean.setId(20L);
+        when(destinationMapper.findTranslationsByDestinationId(9L)).thenReturn(List.of(korean));
+        when(sourceMapper.findByTranslationId(20L)).thenReturn(new DestinationTranslationSource());
+        DestinationForm form = form();
+        fill(form, "ko", "에펠탑", "", "관리자 직접 설명");
+        form.setWikipediaUnlinkLanguages(List.of("ko"));
+
+        destinationService.updateDestination(9L, form);
+
+        verify(sourceMapper).deleteByTranslationId(20L);
+        assertThat(updatedTranslations().get(0).getDescription()).isEqualTo("관리자 직접 설명");
+    }
+
+    @Test
+    void displayedFallbackUsesSourceOfActuallyDisplayedDescription() {
+        DestinationTranslation korean = stored("ko", "에펠탑");
+        korean.setId(20L);
+        korean.setDescription("한국어 소개");
+        DestinationTranslation english = stored("en", "Eiffel Tower");
+        english.setId(21L);
+        english.setDescription("");
+        when(destinationMapper.findTranslationsByDestinationId(9L)).thenReturn(List.of(english, korean));
+        DestinationTranslationSource source = new DestinationTranslationSource();
+        when(sourceMapper.findByTranslationId(20L)).thenReturn(source);
+
+        assertThat(destinationService.findDisplayedWikipediaSource(9L, SupportedLanguage.ENGLISH,
+                "한국어 소개")).isSameAs(source);
+        verify(sourceMapper, never()).findByTranslationId(21L);
     }
 
     @Test
@@ -82,6 +159,19 @@ class DestinationTranslationSlotSaveTest {
                 .containsExactly(
                         tuple("ko", "경복궁"),
                         tuple("en", "Gyeongbokgung Palace"));
+    }
+
+    @Test
+    void wikidataRegistrationUsesValidatedSourceTypeAndQid() {
+        givenGeneratedId(9L);
+        DestinationForm form = form();
+
+        destinationService.registerDestination(form, 7L, "WIKIDATA", "Q243");
+
+        ArgumentCaptor<Destination> captured = ArgumentCaptor.forClass(Destination.class);
+        verify(destinationMapper).insertDestination(captured.capture());
+        assertThat(captured.getValue().getSourceType()).isEqualTo("WIKIDATA");
+        assertThat(captured.getValue().getExternalContentId()).isEqualTo("Q243");
     }
 
     @Test

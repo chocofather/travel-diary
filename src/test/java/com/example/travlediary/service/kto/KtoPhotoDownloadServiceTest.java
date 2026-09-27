@@ -217,6 +217,67 @@ class KtoPhotoDownloadServiceTest {
         assertThat(outside).isRegularFile();
     }
 
+    @Test
+    void commonsImageUsesItsOwnTransportAndSameManagedStorage() throws Exception {
+        List<URI> requested = new java.util.ArrayList<>();
+        KtoPhotoHttpTransport commonsTransport = uri -> {
+            requested.add(uri);
+            return new KtoPhotoHttpResponse(200, "image/jpeg", jpeg.length, new ByteArrayInputStream(jpeg));
+        };
+        KtoPhotoHttpTransport ktoTransport = uri -> {
+            throw new AssertionError("관광사진 transport 로 Commons 를 받으면 안 된다");
+        };
+        KtoPhotoDownloadService service = new KtoPhotoDownloadService(publicAddressValidator(), ktoTransport,
+                KtoPhotoUrlValidator.wikimediaCommons(host -> new InetAddress[]{
+                        InetAddress.getByAddress(new byte[]{(byte) 198, 51, 100, 7})}),
+                commonsTransport, uploadRoot, 10 * 1024);
+        String url = "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a8/Tour_Eiffel.jpg/1920px-Tour_Eiffel.jpg";
+
+        KtoDownloadedPhoto result = service.downloadCommonsImage(url);
+        KtoDownloadedPhoto original = service.downloadCommonsImage(
+                "https://upload.wikimedia.org/wikipedia/commons/a/a8/Tour_Eiffel.jpg");
+        service.deleteDownloadedPhoto(original.localImageUrl());
+
+        assertThat(requested).hasSize(2).first().isEqualTo(URI.create(url));
+        assertThat(result.localImageUrl()).startsWith("/uploads/destinations/").endsWith(".jpg")
+                .doesNotContain("Tour_Eiffel");
+        assertThat(storedPath(result)).hasBinaryContent(jpeg);
+        assertThat(service.deleteDownloadedPhoto(result.localImageUrl())).isTrue();
+        assertThat(filesInDestinationDirectory()).isEmpty();
+    }
+
+    @Test
+    void commonsRedirectAndUntrustedAddressesAreRefusedWithoutLeavingFiles() throws Exception {
+        KtoPhotoDownloadService redirecting = new KtoPhotoDownloadService(publicAddressValidator(),
+                responding(200, "image/jpeg", jpeg.length, jpeg),
+                KtoPhotoUrlValidator.wikimediaCommons(host -> new InetAddress[]{
+                        InetAddress.getByAddress(new byte[]{(byte) 198, 51, 100, 7})}),
+                responding(302, "text/html", 0, new byte[0]), uploadRoot, 10 * 1024);
+        String url = "https://upload.wikimedia.org/wikipedia/commons/a/a8/Tour_Eiffel.jpg";
+
+        assertThatThrownBy(() -> redirecting.downloadCommonsImage(url))
+                .isInstanceOf(KtoPhotoDownloadException.class);
+        assertThatThrownBy(() -> redirecting.downloadCommonsImage(
+                "http://upload.wikimedia.org/wikipedia/commons/a/a8/Tour_Eiffel.jpg"))
+                .isInstanceOf(InvalidKtoPhotoUrlException.class);
+        assertThatThrownBy(() -> redirecting.downloadCommonsImage(
+                "https://upload.wikimedia.org.evil.example/wikipedia/commons/a.jpg"))
+                .isInstanceOf(InvalidKtoPhotoUrlException.class);
+        assertThatThrownBy(() -> redirecting.downloadCommonsImage(
+                "https://thumb.wikimedia.org/wikipedia/en/a.jpg"))
+                .isInstanceOf(InvalidKtoPhotoUrlException.class);
+        assertThatThrownBy(() -> redirecting.downloadCommonsImage(SOURCE_URL))
+                .isInstanceOf(InvalidKtoPhotoUrlException.class);
+
+        KtoPhotoDownloadService privateAddress = new KtoPhotoDownloadService(publicAddressValidator(),
+                responding(200, "image/jpeg", jpeg.length, jpeg),
+                KtoPhotoUrlValidator.wikimediaCommons(host -> new InetAddress[]{InetAddress.getByName("10.0.0.5")}),
+                responding(200, "image/jpeg", jpeg.length, jpeg), uploadRoot, 10 * 1024);
+        assertThatThrownBy(() -> privateAddress.downloadCommonsImage(url))
+                .isInstanceOf(InvalidKtoPhotoUrlException.class);
+        assertThat(filesInDestinationDirectory()).isEmpty();
+    }
+
     private void assertDownloadFailure(KtoPhotoHttpTransport transport) {
         KtoPhotoDownloadService service = service(transport, 10 * 1024);
         assertThatThrownBy(() -> service.download(SOURCE_URL))

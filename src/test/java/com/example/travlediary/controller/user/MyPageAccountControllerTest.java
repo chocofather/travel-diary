@@ -156,18 +156,44 @@ class MyPageAccountControllerTest {
             throws Exception {
         MockHttpSession session = new MockHttpSession();
 
+        // 비밀번호 확인 화면으로 보내고, 확인이 끝나면 계정 관리 화면으로 돌아온다.
         mockMvc.perform(post("/mypage/account/social-connections/google")
                         .session(session)
                         .with(user(principal(7L, UserRole.USER)))
                         .with(csrf()))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/mypage/account"))
+                .andExpect(redirectedUrl("/mypage/account/verify?next=account"))
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
-                        .flash().attributeExists("verificationMessage"));
+                        .flash().attribute("verificationMessage",
+                                "소셜 계정 연결을 바꾸려면 비밀번호를 한 번 더 확인해 주세요."));
+        mockMvc.perform(post("/mypage/account/social-connections/google/disconnect")
+                        .session(session)
+                        .with(user(principal(7L, UserRole.USER)))
+                        .with(csrf()))
+                .andExpect(redirectedUrl("/mypage/account/verify?next=account"));
 
         assertThat(session.getAttribute(PendingSocialConnection.SESSION_ATTRIBUTE)).isNull();
         verify(socialAccountService, never()).findByUserIdAndProvider(
                 7L, SocialProvider.GOOGLE);
+        verify(socialAccountService, never()).disconnectFromUser(any(), any());
+    }
+
+    @Test
+    void verifiedLocalMemberStartsTheSameOAuthConnectionFlow() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        reauthenticationService.markVerified(session, 7L);
+
+        mockMvc.perform(post("/mypage/account/social-connections/naver")
+                        .session(session)
+                        .with(user(principal(7L, UserRole.USER)))
+                        .with(csrf()))
+                .andExpect(redirectedUrl("/oauth2/authorization/naver"));
+
+        assertThat(session.getAttribute(PendingSocialConnection.SESSION_ATTRIBUTE))
+                .isInstanceOfSatisfying(PendingSocialConnection.class, pending -> {
+                    assertThat(pending.userId()).isEqualTo(7L);
+                    assertThat(pending.provider()).isEqualTo(SocialProvider.NAVER);
+                });
     }
 
     @Test
@@ -191,16 +217,82 @@ class MyPageAccountControllerTest {
                         SocialProvider.KAKAO));
     }
 
+    /** 일반 회원도 비밀번호 입력 없이 공통 계정 관리 화면에서 소셜 계정 연결 영역을 바로 본다. */
     @Test
-    void localPasswordMemberStillOpensTheExistingVerificationForm() throws Exception {
+    void localPasswordMemberSeesTheCommonAccountPageWithoutEnteringAPassword() throws Exception {
+        when(accountService.getAccountDetails(7L)).thenReturn(details("member@example.com"));
+
         mockMvc.perform(get("/mypage/account")
+                        .with(user(principal(7L, UserRole.USER))))
+                .andExpect(status().isOk())
+                .andExpect(view().name("mypage/account"))
+                .andExpect(model().attribute("localPasswordAccount", true))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("member@example.com")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("소셜 계정 연결")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "action=\"/mypage/account/social-connections/google\"")))
+                // 비밀번호 변경은 별도 메뉴(누르면 비밀번호 확인)로만 보이고, 이 화면에서는 비밀번호를 묻지 않는다.
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "href=\"/mypage/account/edit\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("변경하기")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("name=\"currentPassword\""))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("name=\"newPassword\""))))
+                // 비밀번호 회원의 탈퇴는 비밀번호 확인 뒤 탈퇴 화면으로, 소셜 인증 탈퇴 폼은 없다.
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "href=\"/mypage/account/withdraw\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("/mypage/account/social-withdrawal"))));
+    }
+
+    /** 일반 회원이 소셜 계정도 연결한 경우: 비밀번호 변경 메뉴와 연결 상태·해제 버튼이 함께 보인다. */
+    @Test
+    void mixedMemberSeesPasswordMenuAndEveryProviderState() throws Exception {
+        when(socialAccountService.findAllByUserId(7L)).thenReturn(List.of(
+                socialAccount(7L, SocialProvider.KAKAO, "kakao-sub", "kakao@example.com")));
+
+        mockMvc.perform(get("/mypage/account").with(user(principal(7L, UserRole.USER))))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "href=\"/mypage/account/edit\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("kakao@example.com")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "action=\"/mypage/account/social-connections/kakao/disconnect\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "action=\"/mypage/account/social-connections/google\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "action=\"/mypage/account/social-connections/naver\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString(
+                                "action=\"/mypage/account/social-connections/kakao\""))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("kakao-sub"))));
+    }
+
+    @Test
+    void passwordVerificationFormKeepsOnlyAnAllowedDestination() throws Exception {
+        mockMvc.perform(get("/mypage/account/verify").param("next", "password")
                         .with(user(principal(7L, UserRole.USER))))
                 .andExpect(status().isOk())
                 .andExpect(view().name("mypage/account-verify"))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "회원정보 보호를 위해 현재 비밀번호를 다시 입력해주세요.")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "name=\"currentPassword\"")));
+                        "name=\"currentPassword\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "name=\"next\" value=\"password\"")));
+        // 목록에 없는 값(외부 주소 등)은 계정 관리로 되돌린다.
+        mockMvc.perform(get("/mypage/account/verify").param("next", "https://evil.example")
+                        .with(user(principal(7L, UserRole.USER))))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "name=\"next\" value=\"account\"")));
+        // 이미 최근에 확인했으면 바로 목적지로 간다.
+        MockHttpSession session = new MockHttpSession();
+        reauthenticationService.markVerified(session, 7L);
+        mockMvc.perform(get("/mypage/account/verify").param("next", "withdraw").session(session)
+                        .with(user(principal(7L, UserRole.USER))))
+                .andExpect(redirectedUrl("/mypage/account/withdraw"));
     }
 
     @Test
@@ -218,8 +310,14 @@ class MyPageAccountControllerTest {
                         .param("userId", "999")
                         .with(user(socialPrincipal(77L))))
                 .andExpect(status().isOk())
-                .andExpect(view().name("mypage/account-social"))
+                .andExpect(view().name("mypage/account"))
                 .andExpect(model().attribute("socialAccounts", accounts))
+                .andExpect(model().attribute("localPasswordAccount", false))
+                // 비밀번호가 없는 소셜 회원에게는 비밀번호 변경 메뉴를 보이지 않는다.
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("href=\"/mypage/account/edit\""))))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "action=\"/mypage/account/social-withdrawal\"")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("계정 및 보안")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "계정 정보와 로그인 수단을 안전하게 관리합니다.")))
@@ -586,11 +684,34 @@ class MyPageAccountControllerTest {
                         .session(session)
                         .with(user(principal(7L, UserRole.USER)))
                         .with(csrf())
-                        .param("currentPassword", "Password!"))
+                        .param("currentPassword", "Password!")
+                        .param("next", "password"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/mypage/account/edit"));
 
         assertThat(reauthenticationService.isVerified(session, 7L)).isTrue();
+    }
+
+    @Test
+    void verificationReturnsOnlyToAnAllowedDestination() throws Exception {
+        when(accountService.verifyCurrentPassword(7L, "Password!")).thenReturn(true);
+
+        mockMvc.perform(post("/mypage/account/verify-password")
+                        .with(user(principal(7L, UserRole.USER))).with(csrf())
+                        .param("currentPassword", "Password!").param("next", "withdraw"))
+                .andExpect(redirectedUrl("/mypage/account/withdraw"));
+        // 소셜 연결을 바꾸려다 확인한 경우: 계정 관리로 돌아가 다시 누르도록 안내한다.
+        mockMvc.perform(post("/mypage/account/verify-password")
+                        .with(user(principal(7L, UserRole.USER))).with(csrf())
+                        .param("currentPassword", "Password!").param("next", "account"))
+                .andExpect(redirectedUrl("/mypage/account"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+                        .flash().attributeExists("verifiedMessage"));
+        // 목록에 없는 값은 외부 주소로 보내지 않고 계정 관리로 돌아간다.
+        mockMvc.perform(post("/mypage/account/verify-password")
+                        .with(user(principal(7L, UserRole.USER))).with(csrf())
+                        .param("currentPassword", "Password!").param("next", "//evil.example"))
+                .andExpect(redirectedUrl("/mypage/account"));
     }
 
     @Test
@@ -609,23 +730,24 @@ class MyPageAccountControllerTest {
                         org.hamcrest.Matchers.containsString("value=\"wrong\""))));
     }
 
+    /** 비밀번호 변경·탈퇴 화면은 주소로 바로 들어와도 비밀번호 확인을 건너뛸 수 없다. */
     @Test
     void directEditAccessWithoutRecentVerificationRedirects() throws Exception {
         mockMvc.perform(get("/mypage/account/edit")
                         .with(user(principal(7L, UserRole.USER))))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/mypage/account"));
+                .andExpect(redirectedUrl("/mypage/account/verify?next=password"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+                        .flash().attributeExists("verificationMessage"));
+        mockMvc.perform(get("/mypage/account/withdraw")
+                        .with(user(principal(7L, UserRole.USER))))
+                .andExpect(redirectedUrl("/mypage/account/verify?next=withdraw"));
 
         verify(accountService, never()).getAccountDetails(7L);
     }
 
     @Test
-    void userAndAdminCanOpenVerifiedEditPageUsingPrincipalId() throws Exception {
-        AccountDetailsDto member = details("member@example.com");
-        AccountDetailsDto admin = details("admin@example.com");
-        when(accountService.getAccountDetails(7L)).thenReturn(member);
-        when(accountService.getAccountDetails(99L)).thenReturn(admin);
-
+    void verifiedEditPageOnlyChangesThePassword() throws Exception {
         MockHttpSession memberSession = new MockHttpSession();
         reauthenticationService.markVerified(memberSession, 7L);
         mockMvc.perform(get("/mypage/account/edit")
@@ -633,15 +755,37 @@ class MyPageAccountControllerTest {
                         .with(user(principal(7L, UserRole.USER))))
                 .andExpect(status().isOk())
                 .andExpect(view().name("mypage/account-edit"))
-                .andExpect(model().attribute("account", member));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "action=\"/mypage/account/password\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("name=\"newPassword\"")))
+                // 소셜 연결·탈퇴는 이 화면에 중복해서 두지 않는다.
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("social-connection-title"))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("/mypage/account/social-connections"))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("action=\"/mypage/account/withdraw\""))));
+    }
+
+    @Test
+    void userAndAdminCanOpenVerifiedWithdrawalPageUsingPrincipalId() throws Exception {
+        MockHttpSession memberSession = new MockHttpSession();
+        reauthenticationService.markVerified(memberSession, 7L);
+        mockMvc.perform(get("/mypage/account/withdraw")
+                        .session(memberSession)
+                        .with(user(principal(7L, UserRole.USER))))
+                .andExpect(status().isOk())
+                .andExpect(view().name("mypage/account-withdraw"))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "action=\"/mypage/account/withdraw\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("탈퇴를 신청합니다")));
 
         MockHttpSession adminSession = new MockHttpSession();
         reauthenticationService.markVerified(adminSession, 99L);
-        mockMvc.perform(get("/mypage/account/edit")
+        mockMvc.perform(get("/mypage/account/withdraw")
                         .session(adminSession)
                         .with(user(principal(99L, UserRole.ADMIN))))
                 .andExpect(status().isOk())
-                .andExpect(model().attribute("account", admin))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "관리자 계정은 마이페이지에서 탈퇴할 수 없습니다.")));
     }
@@ -701,7 +845,7 @@ class MyPageAccountControllerTest {
                         .with(csrf())
                         .param("confirmationPhrase", "탈퇴를 신청합니다"))
                 .andExpect(status().isOk())
-                .andExpect(view().name("mypage/account-edit"));
+                .andExpect(view().name("mypage/account-withdraw"));
 
         assertThat(session.isInvalid()).isFalse();
     }
@@ -720,7 +864,7 @@ class MyPageAccountControllerTest {
                         .with(csrf())
                         .param("confirmationPhrase", "탈퇴를 신청합니다"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/mypage/account"))
+                .andExpect(redirectedUrl("/mypage/account/verify?next=withdraw"))
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
                         .flash().attributeExists("verificationMessage"));
 
@@ -757,7 +901,7 @@ class MyPageAccountControllerTest {
         when(accountService.getAccountDetails(7L))
                 .thenReturn(details("member@example.com"));
 
-        mockMvc.perform(get("/mypage/account/edit").session(session)
+        mockMvc.perform(get("/mypage/account").session(session)
                         .with(user(principal(7L, UserRole.USER))))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.matchesPattern(

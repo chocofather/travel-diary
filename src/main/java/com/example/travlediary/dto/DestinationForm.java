@@ -22,6 +22,12 @@ public class DestinationForm {
     private DestinationType type; // enum 직접 받아도 됨 (권장)
 
     private Long destinationId; // 여행지 기본키
+    /** Wikidata 후보를 명시적으로 선택했을 때만 설정한다. 서버에서 다시 조회한다. */
+    private String wikidataQid;
+    /** 슬롯별 미리보기 판본. 원문 출처는 서버가 다시 조회하며 이 값과 대조한다. */
+    private List<Long> wikipediaRevisionIds = new ArrayList<>(Arrays.asList(null, null, null, null, null));
+    /** 수정 화면에서 관리자가 명시적으로 Wikipedia 출처 연결을 해제할 언어. */
+    private List<String> wikipediaUnlinkLanguages = new ArrayList<>();
 
     /**
      * 관리자 화면 번역 슬롯 순서: 0 = 한국어(원본), 1~4 = 번역 탭 언어.
@@ -121,6 +127,8 @@ public class DestinationForm {
             List.of("en", "ja", "zh-CN", "zh-TW");
 
     private List<Long> categoryIds = new ArrayList<>();
+    /** 선택한 카테고리 중 대표 하나. 비어 있으면 선택한 것 중 가장 작은 ID를 쓴다. */
+    private Long mainCategoryId;
 
     private boolean main;
     private boolean slide;
@@ -131,7 +139,14 @@ public class DestinationForm {
     private String[] imageLicenseTypes;
     private String[] imageLicenseDetails;
     private String[] imageSourceUrls;
+    private String[] imageCommonSourceUrls;
+    private String[] imageWorkPageUrls;
     private String ktoSelectedPhotosJson = "[]";
+    /**
+     * Wikidata 등록에서 고른 Commons 사진. {"qid":..,"photos":[{"fileName":..,"main":..}]} 한 칸만 보낸다.
+     * URL·저작자·라이선스는 보내지 않으며 서버가 Commons에서 다시 조회한다.
+     */
+    private String commonsSelectedPhotosJson = "";
 
     private List<Integer> attractionAmenityIds;
     private List<Integer> accommodationAmenityIds;
@@ -180,6 +195,7 @@ public class DestinationForm {
         // 3. 카테고리 복사
         if (dto.getCategoryIds() != null)
             form.setCategoryIds(dto.getCategoryIds());
+        form.setMainCategoryId(dto.getMainCategoryId());
 
         // 4. 편의시설 ID만 복사
         if (dto.getAttractionAmenities() != null)

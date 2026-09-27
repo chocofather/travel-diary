@@ -69,7 +69,8 @@ class DestinationSubregionSelectionTest {
         LocaleContextHolder.setLocale(SupportedLanguage.KOREAN.getLocale());
         controller = new DestinationController(destinationService, destinationImageService,
                 countryCategoryService, destinationCommentService,
-                referenceNameLocalizationService);
+                referenceNameLocalizationService,
+                new com.example.travlediary.service.file.DestinationCardThumbnailService("build/tmp/no-uploads"));
 
         when(countryCategoryService.getById(38L)).thenReturn(seoul);
         when(countryCategoryService.getById(235L)).thenReturn(jongno);
@@ -89,10 +90,10 @@ class DestinationSubregionSelectionTest {
         when(countryCategoryService.getAllRegionIdsUnder(anyLongId())).thenReturn(List.of(1L));
 
         when(destinationService.getDestinationsByRegionIdsPaged(
-                anyList(), org.mockito.ArgumentMatchers.anyInt(),
+                anyList(), anyList(), org.mockito.ArgumentMatchers.anyInt(),
                 org.mockito.ArgumentMatchers.anyInt(), anyString()))
                 .thenReturn(List.of());
-        when(destinationService.countDestinationsByRegionIds(anyList())).thenReturn(0);
+        when(destinationService.countDestinationsByRegionIds(anyList(), anyList())).thenReturn(0);
         when(destinationService.convertToLocalizedDtoWithBookmark(
                 anyList(), eq(null), org.mockito.ArgumentMatchers.any(), anyMap()))
                 .thenReturn(List.of());
@@ -165,7 +166,7 @@ class DestinationSubregionSelectionTest {
     @Test
     void sortingOrPagingKeepsTheOverseasCityHighlighted() {
         Model model = new ExtendedModelMap();
-        controller.destinationListFragment("overseas", 101L, 2, 12, "views", null, model);
+        controller.destinationListFragment("overseas", 101L, 2, 12, "views", null, null, model);
 
         assertThat(model.getAttribute("selectedSubregionId")).isEqualTo(101L);
         assertThat(model.getAttribute("selectedCityId")).isEqualTo(101L);
@@ -174,7 +175,7 @@ class DestinationSubregionSelectionTest {
     @Test
     void aFullPageLoadAlsoHighlightsTheOverseasCity() {
         Model model = new ExtendedModelMap();
-        controller.destinationList("overseas", 101L, 1, 12, "default", null, request, model);
+        controller.destinationList("overseas", 101L, 1, 12, "default", null, null, request, model);
 
         assertThat(model.getAttribute("selectedSubregionId")).isEqualTo(101L);
     }
@@ -213,7 +214,7 @@ class DestinationSubregionSelectionTest {
 
     private Model fragment(String type, Long regionId) {
         Model model = new ExtendedModelMap();
-        controller.regionFragment(type, regionId, 1, 12, "default", null, model);
+        controller.regionFragment(type, regionId, 1, 12, "default", null, null, model);
         return model;
     }
 

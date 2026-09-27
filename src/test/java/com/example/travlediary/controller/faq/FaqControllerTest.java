@@ -5,6 +5,7 @@ import com.example.travlediary.config.CustomLogoutSuccessHandler;
 import com.example.travlediary.config.SecurityConfig;
 import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.config.i18n.TravelDiaryLocaleResolver;
+import com.example.travlediary.dto.FaqCategoryFilterDto;
 import com.example.travlediary.dto.FaqListItemDto;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.service.faq.FaqService;
@@ -19,6 +20,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -163,11 +165,67 @@ class FaqControllerTest {
                         "등록된 자주 묻는 질문이 없습니다.")));
     }
 
+    /**
+     * 카테고리 필터는 공개 목록 전체에서 고른다. 관리자 노출 순서는 그대로이고,
+     * 없는 번호·숫자가 아닌 값은 '전체'로, 질문이 없는 카테고리는 빈 상태로 보인다.
+     */
+    @Test
+    void categoryFilterNarrowsTheFullListKeepingOrderAndShowsAnEmptyState() throws Exception {
+        FaqListItemDto first = item(11L, 1L, "회원/계정", "탈퇴는 어떻게 하나요?");
+        FaqListItemDto second = item(12L, 6L, "고객센터", "문의 답변은 언제 오나요?");
+        FaqListItemDto third = item(13L, 1L, "회원/계정", "비밀번호를 잊었어요.");
+        when(faqService.getPublicList()).thenReturn(List.of(first, second, third));
+        when(faqService.getPublicCategoryFilters(any(), any())).thenReturn(List.of(
+                new FaqCategoryFilterDto(1L, "회원/계정"),
+                new FaqCategoryFilterDto(6L, "고객센터"),
+                new FaqCategoryFilterDto(9L, "새 카테고리")));
+
+        var selected = render("/support/faq?category=1");
+        assertThat(selected.select(".support-faq-question").eachText())
+                .containsExactly("Q. 탈퇴는 어떻게 하나요?", "Q. 비밀번호를 잊었어요.");
+        assertThat(selected.select(".support-faq-filter-link").eachText())
+                .containsExactly("전체", "회원/계정", "고객센터", "새 카테고리");
+        assertThat(selected.select(".support-faq-filter-link.is-active[aria-current=page]").text())
+                .isEqualTo("회원/계정");
+        assertThat(selected.select(".support-faq-filter-link[aria-current]")).hasSize(1);
+        assertThat(selected.select(".support-faq-filter-link").eachAttr("href"))
+                .contains("/support/faq#support-faq-filter", "/support/faq?category=6#support-faq-filter");
+        // 질문별 카테고리 뱃지와 고객센터 메뉴는 그대로다.
+        assertThat(selected.select(".support-faq-category").eachText()).containsExactly("회원/계정", "회원/계정");
+        assertThat(selected.select(".support-navigation-link.is-active").text()).isEqualTo("자주 묻는 질문");
+
+        var empty = render("/support/faq?category=9");
+        assertThat(empty.select("details.support-faq-item")).isEmpty();
+        assertThat(empty.select(".support-faq-empty p").text()).isEqualTo("이 카테고리에 등록된 질문이 아직 없습니다.");
+        assertThat(empty.select(".support-faq-empty a").attr("href")).isEqualTo("/support/faq#support-faq-filter");
+        assertThat(empty.select(".support-faq-filter-link.is-active").text()).isEqualTo("새 카테고리");
+
+        for (String url : List.of("/support/faq", "/support/faq?category=404", "/support/faq?category=abc")) {
+            var all = render(url);
+            assertThat(all.select("details.support-faq-item")).as(url).hasSize(3);
+            assertThat(all.select(".support-faq-filter-link.is-active").text()).as(url).isEqualTo("전체");
+        }
+    }
+
     @Test
     void faqHasNoPublicDetailRoute() throws Exception {
         mockMvc.perform(get("/support/faq/1"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/login?redirect=/support/faq/1"));
+    }
+
+    private org.jsoup.nodes.Document render(String url) throws Exception {
+        return Jsoup.parse(mockMvc.perform(get(url))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString());
+    }
+
+    private FaqListItemDto item(Long id, Long categoryId, String categoryName, String question) {
+        FaqListItemDto item = item(categoryName);
+        item.setId(id);
+        item.setCategoryId(categoryId);
+        item.setQuestion(question);
+        return item;
     }
 
     private FaqListItemDto item(String categoryName) {

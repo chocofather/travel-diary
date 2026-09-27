@@ -23,9 +23,15 @@ class DestinationImageAttributionUiContractTest {
                 .contains("data-source-name=${img.sourceName}")
                 .contains("data-license-label=${img.licenseDisplay}")
                 .contains("data-photographer=${img.photographer}")
-                .contains("data-source-url=${img.safeSourceUrl}");
+                .contains("data-license-url=${img.safeLicenseUrl}")
+                .contains("data-credit=${img.customAttribution}")
+                // Commons 사진은 사진별 파일 페이지, 그 외 사진은 기존 safeSourceUrl 과 같은 값이다.
+                .contains("data-source-url=${img.attributionUrl}");
         assertThat(page.select("[data-destination-image-source-link][target=_blank]"
                 + "[rel='noopener noreferrer']")).hasSize(1);
+        assertThat(page.select("[data-destination-image-license-link][target=_blank]"
+                + "[rel='noopener noreferrer license']")).hasSize(1);
+        assertThat(page.select("[data-destination-image-credit]")).hasSize(1);
     }
 
     @Test
@@ -43,6 +49,8 @@ class DestinationImageAttributionUiContractTest {
                 .contains("$license.text(licenseLabel)")
                 .contains("$photographer.text(photographer)")
                 .contains("$sourceLink.attr('href', sourceUrl)")
+                .contains("$licenseLink.attr('href', licenseUrl)")
+                .contains("$credit.text(credit)")
                 .contains("updateAttribution();")
                 .contains("destination-gallery-change")
                 .contains("move(0);");

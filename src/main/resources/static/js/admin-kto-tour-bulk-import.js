@@ -12,6 +12,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const submitButton = root.querySelector("[data-kto-import-submit]");
     const selectAllButton = root.querySelector("[data-kto-import-select-all]");
     const clearButton = root.querySelector("[data-kto-import-clear]");
+    const pageClearButton = root.querySelector("[data-kto-import-page-clear]");
+    const pageToggle = root.querySelector("[data-kto-import-page-toggle]");
+    const pageCount = root.querySelector("[data-kto-import-page-count]");
+    const {pageSelection, applyPageSelection} = window.TravelDiaryBulkPageSelection;
     const filterButtons = Array.from(root.querySelectorAll("[data-kto-import-filter]"));
     const previousButton = root.querySelector("[data-kto-import-prev]");
     const nextButton = root.querySelector("[data-kto-import-next]");
@@ -59,11 +63,9 @@ document.addEventListener("DOMContentLoaded", () => {
         pageNo = 1;
         void loadCandidates();
     }));
-    selectAllButton.addEventListener("click", () => {
-        // 등록완료 항목은 전체선택 대상이 아니다.
-        pageItems.filter(item => !item.registered).forEach(remember);
-        renderRows();
-    });
+    selectAllButton.addEventListener("click", () => selectCurrentPage(true));
+    pageClearButton.addEventListener("click", () => selectCurrentPage(false));
+    pageToggle.addEventListener("change", () => selectCurrentPage(pageToggle.checked));
     clearButton.addEventListener("click", () => {
         selected.clear();
         renderRows();
@@ -152,6 +154,20 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    /** 현재 페이지 기준 선택 상태. 등록완료 항목은 고를 수 없으므로 대상이 아니다. */
+    function currentPageSelection() {
+        return pageSelection(pageItems, item => !item.registered, item => selected.has(item.contentId));
+    }
+
+    /** 현재 페이지의 미등록 후보만 고르거나 푼다. 다른 페이지에서 고른 항목은 그대로 둔다. */
+    function selectCurrentPage(select) {
+        currentPageSelection().targets.forEach(item => {
+            if (select) remember(item);
+            else selected.delete(item.contentId);
+        });
+        renderRows();
+    }
+
     function renderRows() {
         rows.replaceChildren();
         pageItems.forEach(item => rows.append(buildRow(item)));
@@ -234,10 +250,17 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    /** 선택 건수는 현재 페이지가 아니라 전체 선택 기준이다. */
+    /** 전체 선택 건수는 페이지를 넘어 고른 항목 기준이고, 현재 페이지 건수는 따로 보여준다. */
     function updateSelection() {
-        selectedCount.textContent = `선택 ${selected.size}건`;
+        selectedCount.textContent = `전체 선택 ${selected.size}건`;
         submitButton.disabled = selected.size === 0;
+        clearButton.disabled = selected.size === 0;
+        applyPageSelection(currentPageSelection(), {
+            toggle: pageToggle,
+            selectButton: selectAllButton,
+            clearButton: pageClearButton,
+            count: pageCount
+        });
     }
 
     function updatePaging() {

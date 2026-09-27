@@ -166,6 +166,84 @@ body {
     margin-top: 0.9em;
 }
 
+/* 소개 글 아래 Wikipedia 출처. 본문에 붙여 두고 작고 조용하게 보인다. */
+.destination-description:has(+ .destination-description-source) {
+    margin-bottom: 10px;
+}
+
+.destination-description-source {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 6px;
+    margin: 0 0 40px;
+    overflow-wrap: anywhere;
+    color: #8a919e;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.5;
+}
+
+.destination-description-source-label {
+    color: #6f7785;
+}
+
+/* 링크는 알아볼 수 있을 만큼만: 본문보다 조금 진한 회색과 옅은 밑줄 */
+.destination-description-source a {
+    color: #6f7785;
+    font-weight: 400;
+    text-decoration: underline;
+    text-decoration-color: #d3d7de;
+    text-underline-offset: 2px;
+}
+
+.destination-description-source a:hover,
+.destination-description-source a:focus-visible {
+    color: #4b5563;
+    text-decoration-color: currentColor;
+}
+
+.destination-description-source-details summary {
+    cursor: pointer;
+    color: #6f7785;
+    list-style: none;
+}
+
+.destination-description-source-details summary::-webkit-details-marker {
+    display: none;
+}
+
+.destination-description-source-details summary::after {
+    content: " ▾";
+    font-size: 10px;
+}
+
+.destination-description-source-details[open] summary::after {
+    content: " ▴";
+}
+
+/* 펼치면 세부 정보가 캡션 아래 한 줄을 모두 쓴다 */
+.destination-description-source-details[open] {
+    flex-basis: 100%;
+}
+
+.destination-description-source-details dl {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 14px;
+    margin: 4px 0 0;
+}
+
+.destination-description-source-details dl div {
+    display: flex;
+    gap: 4px;
+}
+
+.destination-description-source-details dd {
+    margin: 0;
+    color: #6f7785;
+}
+
 /* 메타 정보 */
 .meta {
     display: flex;
@@ -1143,6 +1221,28 @@ body {
 .region-path-link:hover {
     color: #005cc8;           /* 마우스 올릴 때만 색 바꾸고 싶으면 */
     text-decoration: underline; /* (옵션) 호버시에만 밑줄 */
+}
+
+/*
+  대표 카테고리 링크: 지역명과 같은 진한 글씨(600)로 눌러 볼 수 있는 글자임을 보여 준다.
+  크기·배치는 breadcrumb 그대로이고, 올리면 보라색 밑줄, 키보드 초점은 테두리로 표시한다.
+*/
+.category-path-link {
+    color: #222;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 3px;
+    transition: color 0.15s;
+}
+.category-path-link:hover {
+    color: var(--tripbora-primary, #7657c8);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+.category-path-link:focus-visible {
+    color: var(--tripbora-primary, #7657c8);
+    outline: 2px solid var(--tripbora-focus, rgba(118, 87, 200, 0.24));
+    outline-offset: 2px;
 }
 
 /* 해외 지도(Maps Embed API): 기존 #map 과 같은 크기/여백 */

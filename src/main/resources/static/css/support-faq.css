@@ -42,6 +42,53 @@
     font-size: 15px;
 }
 
+/* 카테고리 필터: 선택한 항목만 보라색으로 채우고 나머지는 테두리 버튼으로 둔다 */
+.support-faq-filter {
+    margin: -8px 0 18px;
+    scroll-margin-top: 16px;
+}
+
+.support-faq-filter-list {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.support-faq-filter-link {
+    display: inline-flex;
+    min-height: 34px;
+    align-items: center;
+    padding: 6px 14px;
+    color: #475569;
+    background: #fff;
+    border: 1px solid var(--faq-border);
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.support-faq-filter-link:hover {
+    color: var(--faq-accent-dark);
+    border-color: #cbbdf0;
+}
+
+.support-faq-filter-link:focus-visible {
+    outline: 3px solid rgba(118, 87, 200, 0.25);
+    outline-offset: 2px;
+}
+
+.support-faq-filter-link.is-active {
+    color: #fff;
+    background: var(--faq-accent);
+    border-color: var(--faq-accent);
+}
+
 .support-faq-list {
     overflow: hidden;
     border-top: 2px solid #27354f;
@@ -220,6 +267,8 @@
     display: grid;
     min-height: 220px;
     place-items: center;
+    align-content: center;
+    gap: 12px;
     color: var(--faq-muted);
     border-top: 2px solid #27354f;
     border-bottom: 1px solid var(--faq-border);
@@ -229,10 +278,33 @@
     margin: 0;
 }
 
+.support-faq-empty-link {
+    color: var(--faq-accent);
+    font-size: 14px;
+    font-weight: 700;
+    text-underline-offset: 3px;
+}
+
 @media (max-width: 680px) {
     .support-faq-page {
         width: 100%;
         margin-top: 0;
+    }
+
+    /* 버튼이 여러 줄로 쌓이지 않게 한 줄로 두고 가로로 넘긴다 */
+    .support-faq-filter-list {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding: 3px 1px 5px;
+        scrollbar-width: none;
+    }
+
+    .support-faq-filter-list::-webkit-scrollbar {
+        display: none;
+    }
+
+    .support-faq-filter-link {
+        flex: 0 0 auto;
     }
 
     .support-faq-item summary {

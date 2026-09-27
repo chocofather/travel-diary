@@ -42,6 +42,13 @@
     font-weight: 700;
 }
 
+/* 현재 페이지 선택 건수. 전체 선택 건수보다 한 단계 약하게 보여 둘을 구분한다. (국내·해외 일괄 등록 공통) */
+.admin-kto-import-page-count {
+    color: #748096;
+    font-size: 0.76rem;
+    font-weight: 600;
+}
+
 .admin-kto-import-status {
     margin: 0;
     padding: 10px 14px;

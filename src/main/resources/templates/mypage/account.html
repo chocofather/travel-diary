@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/mypage-layout.css">
+  <link rel="stylesheet" href="/css/mypage-account.css?v=20260927-1">
+  <script src="/js/confirm-submit.js" defer></script>
+</th:block>
+<th:block th:fragment="body">
+  <!--
+    모든 회원이 같은 주소로 들어오는 계정 관리 화면.
+    비밀번호 변경·회원 탈퇴·(비밀번호가 있는 회원의) 소셜 연결 변경은 누를 때 비밀번호를 다시 확인한다.
+  -->
+  <div class="mypage-layout">
+    <nav th:replace="~{fragments/mypage/navigation :: navigation('account')}"></nav>
+
+    <section class="mypage-content mypage-account-page" aria-labelledby="account-title">
+      <header class="mypage-page-header">
+        <p>ACCOUNT</p>
+        <h1 id="account-title" th:text="#{mypage.nav.account}">계정 및 보안</h1>
+        <span th:text="#{mypage.account.social.description}">계정 정보와 로그인 수단을 안전하게 관리합니다.</span>
+      </header>
+
+      <p class="mypage-account-notice" th:if="${param.socialWithdrawalError}"
+         th:text="#{mypage.account.social.oauthError}">
+        본인 확인 또는 소셜 계정 연결 해제 중 문제가 발생했습니다. 다시 시도해주세요.
+      </p>
+      <p class="mypage-account-notice is-success" th:if="${verifiedMessage}"
+         role="status" th:text="${verifiedMessage}">
+        본인 확인이 끝났습니다. 소셜 계정 연결하기·연결 해제를 다시 눌러 주세요.
+      </p>
+
+      <section class="mypage-account-panel" th:if="${account != null}"
+               aria-labelledby="account-info-title">
+        <div class="mypage-account-section-heading">
+          <h2 id="account-info-title" th:text="#{mypage.account.edit.info.title}">계정 정보</h2>
+          <span th:text="#{mypage.account.edit.info.help}">로그인 ID와 이메일은 현재 변경할 수 없습니다.</span>
+        </div>
+        <dl class="mypage-account-readonly-list">
+          <div>
+            <dt th:text="#{mypage.account.edit.email}">이메일</dt>
+            <dd th:text="${account.userEmail}">test@example.com</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="mypage-account-panel mypage-login-security"
+               aria-labelledby="login-security-title">
+        <div class="mypage-account-section-heading">
+          <h2 id="login-security-title"
+              th:text="#{mypage.account.security.title}">로그인 및 보안</h2>
+          <span th:text="#{mypage.account.security.help}">비밀번호와 소셜 로그인 수단을 관리합니다.</span>
+        </div>
+
+        <!-- 비밀번호가 설정된 회원에게만 보인다. 변경하기를 누르면 비밀번호를 확인한 뒤 변경 화면으로 간다. -->
+        <div class="mypage-security-group" th:if="${localPasswordAccount}"
+             aria-labelledby="password-change-title">
+          <div class="mypage-social-account-row">
+            <span class="mypage-social-account-identity">
+              <strong class="mypage-social-account-provider" id="password-change-title"
+                      th:text="#{mypage.account.password.title}">비밀번호 변경</strong>
+              <small th:text="#{mypage.account.password.help}">변경 후에는 안전을 위해 다시 로그인해야 합니다.</small>
+            </span>
+            <a class="mypage-social-connect-button" th:href="@{/mypage/account/edit}"
+               th:text="#{mypage.account.password.action}">변경하기</a>
+          </div>
+        </div>
+
+        <div class="mypage-security-group" aria-labelledby="social-connection-title">
+          <div class="mypage-security-group-heading">
+            <h3 id="social-connection-title"
+                th:text="#{mypage.account.social.connection.title}">소셜 계정 연결</h3>
+            <span th:text="#{mypage.account.social.connection.help}">
+              연결한 계정으로도 Tripbora에 로그인할 수 있습니다.
+            </span>
+          </div>
+          <th:block th:replace="~{fragments/mypage/social-connections :: notices}"></th:block>
+          <div th:replace="~{fragments/mypage/social-connections :: rows}"></div>
+        </div>
+      </section>
+
+      <section class="mypage-social-withdrawal"
+               aria-labelledby="withdrawal-title">
+        <div class="mypage-social-withdrawal-summary">
+          <h2 id="withdrawal-title" th:text="#{mypage.account.withdraw}">회원 탈퇴</h2>
+          <p th:text="#{mypage.account.withdrawal.summary}">탈퇴를 신청하면 계정과 데이터가 30일 동안 보존된 뒤 최종 삭제됩니다.</p>
+        </div>
+        <!-- 비밀번호가 있는 회원: 비밀번호 확인 뒤 탈퇴 화면에서 확인 문구를 입력한다. -->
+        <div class="mypage-account-actions" th:if="${localPasswordAccount}">
+          <a class="is-danger is-compact-danger" th:href="@{/mypage/account/withdraw}"
+             th:text="#{mypage.account.withdraw}">회원 탈퇴</a>
+        </div>
+        <!-- 비밀번호가 없는 소셜 회원: 연결된 소셜 계정으로 본인 확인 뒤 탈퇴한다. -->
+        <form th:unless="${localPasswordAccount}" th:action="@{/mypage/account/social-withdrawal}"
+              method="post" class="mypage-account-actions">
+          <button type="submit" class="is-danger is-compact-danger"
+                  th:text="#{mypage.account.withdraw}">회원 탈퇴</button>
+        </form>
+        <p class="mypage-account-notice" th:if="${socialWithdrawalError}"
+           th:text="${socialWithdrawalError}">탈퇴를 시작할 수 없습니다.</p>
+      </section>
+
+    </section>
+  </div>
+</th:block>
+</html>

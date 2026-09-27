@@ -10,13 +10,17 @@ import com.example.travlediary.model.Destination;
 import com.example.travlediary.model.DestinationImage;
 import com.example.travlediary.model.DestinationSeason;
 import com.example.travlediary.model.DestinationTranslation;
+import com.example.travlediary.model.DestinationTranslationSource;
 import com.example.travlediary.repository.bookmark.BookmarkMapper;
 import com.example.travlediary.repository.destination.DestinationMapper;
+import com.example.travlediary.repository.destination.DestinationTranslationSourceMapper;
 import com.example.travlediary.service.amenity.AmenityService;
 import com.example.travlediary.service.comment.DestinationCommentService;
 import com.example.travlediary.service.course.CourseService;
 import com.example.travlediary.service.info.*;
+import com.example.travlediary.service.wikidata.WikidataRegistrationService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,6 +51,7 @@ public class DestinationService {
 
     /** 여행지 번역 일괄 조회와 언어 대체 규칙은 코스 STOP 과 함께 쓰도록 떼어 두었다. */
     private final DestinationLocalizationService destinationLocalizationService;
+    @Autowired private DestinationTranslationSourceMapper translationSourceMapper;
 
     @Value("${custom.upload-path}")
     private String uploadPath;
@@ -56,6 +61,7 @@ public class DestinationService {
     public static final String ADMIN_SOURCE_TYPE = "ADMIN";
     /** TourAPI 에서 가져온 여행지. contentId 와 짝을 이뤄 중복 판정 기준이 된다. */
     public static final String KTO_TOUR_API_SOURCE_TYPE = "KTO_TOURAPI";
+    public static final String WIKIDATA_SOURCE_TYPE = "WIKIDATA";
 
     public Long registerDestination(DestinationForm form, Long userId) {
         return registerDestination(form, userId, null);
@@ -65,6 +71,15 @@ public class DestinationService {
      * @param externalContentId TourAPI contentId. null 이면 관리자 직접 등록(ADMIN)으로 저장한다.
      */
     public Long registerDestination(DestinationForm form, Long userId, String externalContentId) {
+        return registerDestination(form, userId,
+                externalContentId == null ? ADMIN_SOURCE_TYPE : KTO_TOUR_API_SOURCE_TYPE,
+                externalContentId);
+    }
+
+    public Long registerDestination(DestinationForm form, Long userId, String sourceType,
+                                    String externalContentId) {
+        // 잘못된 대표값이면 어떤 DB 작업도 시작하지 않는다. KTO·Wikidata 처럼 값이 없으면 가장 작은 ID가 대표다.
+        Long mainCategoryId = resolveMainCategoryId(form.getCategoryIds(), form.getMainCategoryId());
         Destination destination = new Destination();
         destination.setLatitude(form.getLatitude());
         destination.setLongitude(form.getLongitude());
@@ -77,8 +92,7 @@ public class DestinationService {
         destination.setCreatedAt(new java.sql.Timestamp(System.currentTimeMillis()));
 
         destination.setType(form.getType());
-        destination.setSourceType(
-                externalContentId == null ? ADMIN_SOURCE_TYPE : KTO_TOUR_API_SOURCE_TYPE);
+        destination.setSourceType(sourceType);
         destination.setExternalContentId(externalContentId);
 
         destinationMapper.insertDestination(destination);
@@ -151,6 +165,7 @@ public class DestinationService {
         for (Long categoryId : form.getCategoryIds()) {
             destinationMapper.insertDestinationCategory(destinationId, categoryId);
         }
+        saveMainCategory(destinationId, null, mainCategoryId);
         // === 편의시설 체크박스 값 저장 ===
         switch (form.getType()) {
             case ATTRACTION:
@@ -180,7 +195,9 @@ public class DestinationService {
                 form.getImagePhotographers(),
                 form.getImageLicenseTypes(),
                 form.getImageLicenseDetails(),
-                form.getImageSourceUrls());
+                form.getImageSourceUrls(),
+                form.getImageCommonSourceUrls(),
+                form.getImageWorkPageUrls());
         return destinationId;
     }
 
@@ -193,11 +210,24 @@ public class DestinationService {
                 KTO_TOUR_API_SOURCE_TYPE, externalContentId.strip()) > 0;
     }
 
+    public Long findWikidataDestinationId(String qid) {
+        return destinationMapper.findIdByExternalContentId(WIKIDATA_SOURCE_TYPE, qid);
+    }
+
     /** IN 절이 지나치게 길어지지 않도록 나눠 조회하는 단위. */
     private static final int EXTERNAL_CONTENT_ID_CHUNK_SIZE = 500;
 
     /** 넘긴 contentId 중 이미 등록된 것만 돌려준다. 후보 목록의 등록 여부 표시에 쓴다. */
     public Set<String> findRegisteredTourApiContentIds(Collection<String> externalContentIds) {
+        return findRegisteredExternalContentIds(KTO_TOUR_API_SOURCE_TYPE, externalContentIds);
+    }
+
+    /** 넘긴 QID 중 이미 Wikidata 여행지로 등록된 것만 돌려준다. 해외 일괄 등록 후보의 등록 여부 표시에 쓴다. */
+    public Set<String> findRegisteredWikidataQids(Collection<String> qids) {
+        return findRegisteredExternalContentIds(WIKIDATA_SOURCE_TYPE, qids);
+    }
+
+    private Set<String> findRegisteredExternalContentIds(String sourceType, Collection<String> externalContentIds) {
         if (externalContentIds == null || externalContentIds.isEmpty()) {
             return Set.of();
         }
@@ -214,7 +244,7 @@ public class DestinationService {
         for (int start = 0; start < normalized.size(); start += EXTERNAL_CONTENT_ID_CHUNK_SIZE) {
             int end = Math.min(start + EXTERNAL_CONTENT_ID_CHUNK_SIZE, normalized.size());
             registered.addAll(destinationMapper.findExternalContentIds(
-                    KTO_TOUR_API_SOURCE_TYPE, normalized.subList(start, end)));
+                    sourceType, normalized.subList(start, end)));
         }
         return Set.copyOf(registered);
     }
@@ -262,6 +292,7 @@ public class DestinationService {
         // 이미지 리스트
         dto.setImages(destinationMapper.findImagesByDestinationId(id));
         dto.setCategoryIds(destinationMapper.findCategoryIdsByDestinationId(id));
+        dto.setMainCategoryId(destinationMapper.findMainCategoryId(id));
 
         // 타입별 상세정보 및 amenity 리스트 셋팅
         switch (destination.getType()) {
@@ -562,6 +593,43 @@ public class DestinationService {
         return localized == null ? baseValue : localized;
     }
 
+    /**
+     * 저장할 대표 카테고리. 선택한 카테고리 중 하나여야 한다.
+     *
+     * @return 요청한 대표, 요청이 없으면 선택한 것 중 가장 작은 ID, 선택이 없으면 null
+     * @throws InvalidMainCategoryException 선택하지 않은 카테고리를 대표로 보낸 경우
+     */
+    public static Long resolveMainCategoryId(List<Long> categoryIds, Long requestedMainCategoryId) {
+        List<Long> selected = categoryIds == null ? List.of()
+                : categoryIds.stream().filter(Objects::nonNull).toList();
+        if (requestedMainCategoryId != null) {
+            if (!selected.contains(requestedMainCategoryId)) {
+                throw new InvalidMainCategoryException();
+            }
+            return requestedMainCategoryId;
+        }
+        return selected.stream().min(Comparator.naturalOrder()).orElse(null);
+    }
+
+    /**
+     * 연결을 모두 맞춘 뒤 대표 표시만 바꾼다. 기존 대표를 먼저 지워야 여행지당 대표 1개 UNIQUE 와 부딪히지 않는다.
+     *
+     * @param current 연결을 맞춘 뒤의 현재 대표(새로 등록한 여행지는 null)
+     */
+    private void saveMainCategory(Long destinationId, Long current, Long mainCategoryId) {
+        if (Objects.equals(current, mainCategoryId)) {
+            return;
+        }
+        if (current != null) {
+            destinationMapper.clearMainCategory(destinationId);
+        }
+        if (mainCategoryId != null && destinationMapper.markMainCategory(destinationId, mainCategoryId) != 1) {
+            // 방금 맞춘 연결에 없는 대표 → 트랜잭션을 되돌린다.
+            throw new IllegalStateException("Main category link is missing: destinationId="
+                    + destinationId + ", categoryId=" + mainCategoryId);
+        }
+    }
+
     @Transactional
     public void updateDestination(Long destinationId, DestinationForm form) {
         // 1. 기본 정보 update
@@ -570,6 +638,7 @@ public class DestinationService {
         if (destination == null) {
             throw new DestinationNotFoundException();
         }
+        Long mainCategoryId = resolveMainCategoryId(form.getCategoryIds(), form.getMainCategoryId());
         destination.setLatitude(form.getLatitude());
         destination.setLongitude(form.getLongitude());
         destination.setGooglePlaceId(form.getGooglePlaceId());
@@ -644,6 +713,18 @@ public class DestinationService {
                 match.setDescription(transForm.getDescription());
                 match.setShortDescription(transForm.getShortDescription());
                 destinationMapper.updateTranslation(match);
+                DestinationTranslationSource source = translationSourceMapper == null ? null
+                        : translationSourceMapper.findByTranslationId(match.getId());
+                if (source != null) {
+                    if (!hasText(transForm.getDescription())
+                            || form.getWikipediaUnlinkLanguages().contains(transForm.getLanguageCode())) {
+                        translationSourceMapper.deleteByTranslationId(match.getId());
+                    } else {
+                        translationSourceMapper.updateModified(match.getId(), !Arrays.equals(
+                                WikidataRegistrationService.sha256(transForm.getDescription()),
+                                source.getOriginalContentSha256()));
+                    }
+                }
             } else {
                 // INSERT
                 DestinationTranslation trans = new DestinationTranslation();
@@ -670,6 +751,8 @@ public class DestinationService {
                 destinationMapper.deleteDestinationCategory(destinationId, id);
             }
         }
+        // 대표는 연결 행의 표시만 바꾼다(대표만 바뀌면 위 연결 INSERT/DELETE 는 일어나지 않는다).
+        saveMainCategory(destinationId, destinationMapper.findMainCategoryId(destinationId), mainCategoryId);
 
         // 5. 편의시설(amenity) 부분도 위와 동일(amenityService에서 비교 후 갱신)
         switch (form.getType()) {
@@ -696,6 +779,40 @@ public class DestinationService {
         return destinationMapper.findTranslationsByDestinationId(destinationId);
     }
 
+    public Map<String, DestinationTranslationSource> getWikipediaSourcesByDestinationId(Long destinationId) {
+        Map<String, DestinationTranslationSource> sources = new LinkedHashMap<>();
+        List<DestinationTranslation> translations = destinationMapper.findTranslationsByDestinationId(destinationId);
+        if (translations == null) return sources;
+        for (DestinationTranslation translation : translations) {
+            DestinationTranslationSource source = translationSourceMapper == null ? null
+                    : translationSourceMapper.findByTranslationId(translation.getId());
+            if (source != null) sources.put(translation.getLanguageCode(), source);
+        }
+        return sources;
+    }
+
+    public DestinationTranslationSource findDisplayedWikipediaSource(Long destinationId,
+            SupportedLanguage requestedLanguage, String displayedDescription) {
+        if (!hasText(displayedDescription)) return null;
+        List<DestinationTranslation> ordered = orderedTranslations(
+                destinationMapper.findTranslationsByDestinationId(destinationId));
+        DestinationTranslation requested = translationFor(ordered, requestedLanguage.getLanguageTag());
+        DestinationTranslation korean = translationFor(ordered, SupportedLanguage.KOREAN.getLanguageTag());
+        List<DestinationTranslation> candidates = new ArrayList<>();
+        if (requested != null) candidates.add(requested);
+        if (korean != null && !candidates.contains(korean)) candidates.add(korean);
+        for (DestinationTranslation translation : ordered) {
+            if (!candidates.contains(translation)) candidates.add(translation);
+        }
+        for (DestinationTranslation translation : candidates) {
+            if (hasText(translation.getDescription())) {
+                return displayedDescription.equals(translation.getDescription())
+                        ? translationSourceMapper.findByTranslationId(translation.getId()) : null;
+            }
+        }
+        return null;
+    }
+
     // 페이징
     // 국내 전체 여행지 페이징 (대한민국=7 기준)
     public List<Destination> getDomesticDestinationsPaged(int offset, int size, String sort) {
@@ -710,7 +827,7 @@ public class DestinationService {
         List<Long> regionIds = destinationMapper.findAllRegionIdsUnder(rootRegionId);
         return regionIds.isEmpty()
                 ? Collections.emptyList()
-                : destinationMapper.findByRegionIdsPaged(regionIds, offset, size, sort);
+                : destinationMapper.findByRegionIdsPaged(regionIds, null, offset, size, sort);
     }
 
     //  (공통) 특정 루트 지역(rootRegionId) 이하 전체(계층 포함) 카운트
@@ -718,16 +835,39 @@ public class DestinationService {
         List<Long> regionIds = destinationMapper.findAllRegionIdsUnder(rootRegionId);
         return regionIds.isEmpty()
                 ? 0
-                : destinationMapper.countByRegionIds(regionIds);
+                : destinationMapper.countByRegionIds(regionIds, null);
     }
 
 
     // 지역별 여행지 페이징
-    public List<Destination> getDestinationsByRegionIdsPaged(List<Long> regionIds, int offset, int size, String sort) {
-        return destinationMapper.findByRegionIdsPaged(regionIds, offset, size, sort);
+    /**
+     * 지역 목록 한 쪽.
+     *
+     * @param categoryIds 비어 있지 않으면 그중 하나라도 등록된 여행지만(대표만이 아니라 모든 카테고리 연결 기준)
+     */
+    public List<Destination> getDestinationsByRegionIdsPaged(List<Long> regionIds, List<Long> categoryIds,
+                                                             int offset, int size, String sort) {
+        return destinationMapper.findByRegionIdsPaged(regionIds, categoryIds, offset, size, sort);
     }
-    public int countDestinationsByRegionIds(List<Long> regionIds) {
-        return destinationMapper.countByRegionIds(regionIds);
+    public int countDestinationsByRegionIds(List<Long> regionIds, List<Long> categoryIds) {
+        return destinationMapper.countByRegionIds(regionIds, categoryIds);
+    }
+
+    /**
+     * 목록 카테고리 필터의 선택지: 카테고리 ID → 지역 범위에서 그 카테고리가 등록된 여행지 수.
+     * 지역 범위 여행지에 등록된 카테고리와, 고른 카테고리 중 실제로 있는 것(0곳이어도)만 들어 있다.
+     */
+    public Map<Long, Integer> getCategoryFilterCounts(List<Long> regionIds, List<Long> selectedCategoryIds) {
+        Map<Long, Integer> counts = new LinkedHashMap<>();
+        if (regionIds == null || regionIds.isEmpty()) {
+            return counts;
+        }
+        for (var row : destinationMapper.findCategoryFilterCounts(regionIds, selectedCategoryIds)) {
+            if (row != null && row.getCategoryId() != null) {
+                counts.put(row.getCategoryId(), row.getDestinationCount());
+            }
+        }
+        return counts;
     }
 
 

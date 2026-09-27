@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="layout/main :: layout(~{::body}, ~{::headFragment})">
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
 
 <th:block th:fragment="headFragment">
   <link rel="stylesheet" href="/css/about.css" />

@@ -4,8 +4,9 @@
       th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'destinations')}">
 
 <th:block th:fragment="headFragment">
-  <link rel="stylesheet" href="/css/destination-create.css">
-  <script src="/js/admin-destination-category-select.js?v=20260822-2" defer></script>
+  <link rel="stylesheet" href="/css/destination-create.css?v=20260927-2">
+  <link rel="stylesheet" href="/css/admin-wikidata-preview.css?v=20260926-5">
+  <script src="/js/admin-destination-category-select.js?v=20260927-1" defer></script>
   <script src="/js/admin-destination-amenity-filter.js?v=20260822-1" defer></script>
   <script src="/js/admin-translation-tabs.js" defer></script>
 </th:block>
@@ -81,6 +82,28 @@
       <!-- 번역(언어 탭) -->
       <th:block th:replace="~{admin/destinations/fragments/translation-tabs
                               :: destinationTranslations(false)}"></th:block>
+      <div th:if="${wikipediaSources != null and !wikipediaSources.isEmpty()}"
+           class="admin-wikidata-review">
+        <h3>Wikipedia 설명 출처</h3>
+        <p class="admin-field-help">설명을 고쳐도 원문 판본은 유지되고 '관리자 수정'으로 표시됩니다. 설명을 비우거나 연결 해제를 선택하면 출처가 제거됩니다.</p>
+        <ul class="admin-wikipedia-source-list">
+          <li class="admin-wikipedia-source" th:each="entry : ${wikipediaSources}">
+            <strong th:text="${entry.key == 'ko' ? '한국어' : (translationLanguageLabels[entry.key] ?: entry.key)}">한국어</strong>
+            <a th:href="${entry.value.sourceUrl}" target="_blank" rel="noopener noreferrer"
+               th:text="${entry.value.sourceTitle}">Wikipedia 원문</a>
+            <span th:text="|판본 ${entry.value.sourceRevisionId}|">판본</span>
+            <a th:href="${entry.value.licenseUrl}" target="_blank" rel="noopener noreferrer"
+               th:text="${entry.value.licenseName}">라이선스</a>
+            <span th:if="${entry.value.sourceVariant != null}"
+                  th:text="${entry.value.sourceVariant == 'zh-tw' ? '중국어 문서 번체 변환' : '중국어 문서 간체 변환'}">표기 변환</span>
+            <span th:text="${entry.value.contentModified} ? '관리자 수정됨' : '원문 그대로'">원문 그대로</span>
+            <label>
+              <input type="checkbox" name="wikipediaUnlinkLanguages" th:value="${entry.key}">
+              출처 연결 해제
+            </label>
+          </li>
+        </ul>
+      </div>
     </section>
 
     <section class="admin-destination-section">
@@ -554,6 +577,11 @@
         <span class="admin-category-selected-label">선택된 카테고리</span>
         <div class="admin-category-chips" data-category-chips></div>
         <span class="admin-category-empty" data-category-empty>선택된 카테고리가 없습니다.</span>
+        <!-- 대표 카테고리: 저장된 대표로 시작하고, 칩의 '대표로' 버튼이 바꾼다. -->
+        <input type="hidden" th:field="*{mainCategoryId}" data-category-main />
+        <p class="admin-category-main-note" data-category-main-note hidden></p>
+        <p class="admin-field-error" th:if="${#fields.hasErrors('mainCategoryId')}"
+           th:errors="*{mainCategoryId}">대표 카테고리 오류</p>
       </div>
 
       <div th:replace="~{admin/destinations/fragments/category-filter :: filters}"></div>

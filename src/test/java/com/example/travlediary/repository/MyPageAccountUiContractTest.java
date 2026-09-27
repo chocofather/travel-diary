@@ -14,37 +14,42 @@ class MyPageAccountUiContractTest {
     @Test
     void accountAndSecurityPageOmitsPersonalDetailsAndKeepsSafeBindings() throws IOException {
         String verify = resource("templates/mypage/account-verify.html");
+        String account = resource("templates/mypage/account.html");
         String edit = resource("templates/mypage/account-edit.html");
-        String social = resource("templates/mypage/account-social.html");
+        String withdraw = resource("templates/mypage/account-withdraw.html");
         String socialConnections = resource(
                 "templates/fragments/mypage/social-connections.html");
 
         assertThat(verify)
                 .contains("/mypage/account/verify-password", "autocomplete=\"current-password\"")
-                .contains("navigation('account')")
+                .contains("name=\"next\"", "navigation('account')")
                 .doesNotContain("userId", "th:utext");
-        assertThat(edit)
-                .contains("/mypage/account/password", "/mypage/account/withdraw")
-                .contains("autocomplete=\"new-password\"")
+        // 공통 계정 관리: 계정 정보 · 로그인 및 보안(비밀번호 변경 메뉴 + 소셜 연결) · 회원 탈퇴. 비밀번호는 묻지 않는다.
+        assertThat(account)
                 .contains("account.userEmail",
                         "id=\"account-info-title\"", "id=\"login-security-title\"",
-                        "id=\"withdrawal-title\"")
-                .contains("작성한 게시글, 댓글, 여행 코스와 문의 기록은 그대로 유지됩니다.")
-                // 진입 단계에서 재인증을 마쳤으므로 이 화면은 기존 비밀번호를 다시 받지 않는다.
-                .contains("th:field=\"*{confirmationPhrase}\"",
+                        "id=\"social-connection-title\"", "id=\"withdrawal-title\"")
+                .contains("@{/mypage/account/edit}", "@{/mypage/account/withdraw}",
+                        "@{/mypage/account/social-withdrawal}", "th:if=\"${localPasswordAccount}\"")
+                .contains("~{fragments/mypage/social-connections :: rows}", "/js/confirm-submit.js")
+                .doesNotContain("th:field=\"*{currentPassword}\"", "th:field=\"*{newPassword}\"",
+                        "th:utext", "name=\"userId\"", "account.fullName", "account.userPhone",
+                        "account.userBirth", "personal-info-title");
+        // 비밀번호 변경 전용: 소셜 연결·탈퇴를 중복해서 두지 않는다.
+        assertThat(edit)
+                .contains("/mypage/account/password", "autocomplete=\"new-password\"")
+                .doesNotContain("autocomplete=\"current-password\"", "th:field=\"*{currentPassword}\"",
+                        "social-connections", "/mypage/account/withdraw", "th:utext",
+                        "name=\"userId\"", "account.fullName", "account.userPhone", "account.userBirth");
+        // 탈퇴: 비밀번호 확인 뒤 들어오므로 확인 문구만 다시 받는다.
+        assertThat(withdraw)
+                .contains("/mypage/account/withdraw",
+                        "작성한 게시글, 댓글, 여행 코스와 문의 기록은 그대로 유지됩니다.",
+                        "th:field=\"*{confirmationPhrase}\"",
                         "mypage.account.withdrawal.confirm.phrase",
-                        "mypage.account.withdrawal.submit")
-                .doesNotContain("autocomplete=\"current-password\"",
-                        "th:field=\"*{currentPassword}\"",
-                        "/mypage/account/edit", "accountForm", "th:utext",
-                        "name=\"userId\"", "account.username", "th:field=\"*{username}\"",
-                        "usernameNotReusable",
-                        "th:field=\"*{userEmail}\"", "th:field=\"*{fullName}\"",
-                        "th:field=\"*{userPhone}\"", "th:field=\"*{userBirth}\"",
-                        "account.fullName", "account.userPhone", "account.userBirth",
-                        "personal-info-title");
-        assertThat(edit).contains("/js/confirm-submit.js");
-        assertThat(social).contains("/js/confirm-submit.js");
+                        "mypage.account.withdrawal.submit", "/js/withdrawal-confirm.js")
+                .doesNotContain("autocomplete=\"current-password\"", "th:field=\"*{currentPassword}\"",
+                        "social-connections", "th:utext", "name=\"userId\"");
         assertThat(socialConnections)
                 .contains("/social-connections/{provider}/disconnect",
                         "method=\"post\"", "th:data-confirm",

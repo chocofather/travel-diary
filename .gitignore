@@ -61,4 +61,5 @@ src/main/resources/application-local.yml
 
 ### Local SQL / analysis docs ###
 *.sql
+!docs/db/wikimedia_destination_source_proposal.sql
 docs/course-comment-images-analysis.txt

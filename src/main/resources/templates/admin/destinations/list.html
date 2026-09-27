@@ -12,8 +12,10 @@
         <p class="admin-page-description">전체 여행지를 조회하고 관리합니다.</p>
       </div>
       <div class="admin-page-actions">
-        <a th:href="@{/admin/destinations/kto-import}" class="admin-btn">TourAPI 일괄 가져오기</a>
-        <a th:href="@{/admin/destinations/create}" class="admin-btn is-primary">+ 새 여행지 등록</a>
+        <!-- 등록 방법 세 가지. 크기·모양을 같게 두고 순서로만 구분한다. -->
+        <a th:href="@{/admin/destinations/wikidata-import}" class="admin-btn">해외 일괄 등록</a>
+        <a th:href="@{/admin/destinations/kto-import}" class="admin-btn">국내 일괄 등록</a>
+        <a th:href="@{/admin/destinations/create}" class="admin-btn">직접 등록</a>
       </div>
     </header>
 

@@ -11,7 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class AdminKtoPhotoSearchUiContractTest {
 
     /** 선택 계약이 바뀌었으므로 두 화면 모두 새 스크립트를 받아야 한다. */
-    private static final String KTO_PHOTO_SCRIPT_VERSION = "20260821-4";
+    private static final String KTO_PHOTO_SCRIPT_VERSION = "20260925-1";
 
     @Test
     void createAndImageManagementUseTheSameKtoPhotoSearchUiWhileEditStaysInformationOnly() throws IOException {
@@ -33,7 +33,7 @@ class AdminKtoPhotoSearchUiContractTest {
                 .contains("data-destination-korean-name")
                 .contains("admin/destinations/fragments/kto-photo-search")
                 .contains("/js/admin-kto-photo-search.js")
-                .contains("data-kto-photo-submit");
+                .contains("search(true)");
         assertThat(fragment)
                 .contains("data-kto-photo-search")
                 .contains("data-kto-photo-keyword")
@@ -45,6 +45,7 @@ class AdminKtoPhotoSearchUiContractTest {
                 .contains("type=\"hidden\"")
                 .contains("name=\"ktoSelectedPhotosJson\"")
                 .contains("data-kto-selected-photos-json")
+                .contains("data-kto-photo-submit")
                 .doesNotContain("type=\"checkbox\"");
     }
 

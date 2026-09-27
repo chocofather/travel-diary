@@ -11,6 +11,10 @@ $(document).ready(function () {
         const $photographerPrefix = $attribution.find('[data-destination-image-photographer-prefix]');
         const $photographer = $attribution.find('[data-destination-image-photographer]');
         const $sourceLink = $attribution.find('[data-destination-image-source-link]');
+        const $licenseLink = $attribution.find('[data-destination-image-license-link]');
+        const $creditSeparator = $attribution.find('[data-destination-image-credit-separator]');
+        const $creditPrefix = $attribution.find('[data-destination-image-credit-prefix]');
+        const $credit = $attribution.find('[data-destination-image-credit]');
         let idx = 0;
 
         if ($slides.length === 0) return;
@@ -35,10 +39,22 @@ $(document).ready(function () {
             const licenseLabel = slide?.dataset.licenseLabel || '';
             const photographer = slide?.dataset.photographer || '';
             const sourceUrl = slide?.dataset.sourceUrl || '';
+            const licenseUrl = slide?.dataset.licenseUrl || '';
+            const credit = slide?.dataset.credit || '';
 
             $attribution.prop('hidden', !sourceName && !licenseLabel && !photographer && !sourceUrl);
             $source.text(sourceName).prop('hidden', !sourceName);
-            $license.text(licenseLabel).prop('hidden', !licenseLabel);
+            // 라이선스 전문 주소가 있으면 라이선스명을 링크로 보여준다.
+            $license.text(licenseLabel).prop('hidden', !licenseLabel || Boolean(licenseUrl));
+            $licenseLink.text(licenseLabel).prop('hidden', !licenseLabel || !licenseUrl);
+            if (licenseLabel && licenseUrl) {
+                $licenseLink.attr('href', licenseUrl);
+            } else {
+                $licenseLink.removeAttr('href');
+            }
+            $creditSeparator.prop('hidden', !credit);
+            $creditPrefix.prop('hidden', !credit);
+            $credit.text(credit).prop('hidden', !credit);
             $separator.prop('hidden', !sourceName || !licenseLabel);
             $photographerSeparator.prop('hidden', !photographer || (!sourceName && !licenseLabel));
             $photographerPrefix.prop('hidden', !photographer);

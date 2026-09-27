@@ -3,6 +3,7 @@ package com.example.travlediary.service.destination;
 import com.example.travlediary.model.DestinationImage;
 import com.example.travlediary.repository.destination.DestinationMapper;
 import com.example.travlediary.service.file.FileUploadService;
+import com.example.travlediary.service.file.UnsupportedImageFormatException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,6 +16,12 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.Set;
+import java.util.Map;
+import java.net.URI;
+import java.util.Locale;
 
 @RequiredArgsConstructor
 @Service
@@ -70,6 +77,22 @@ public class DestinationImageService {
                            String[] licenseTypes,
                            String[] licenseDetails,
                            String[] sourceUrls) {
+        saveImages(destId, files, mainIdx, slideIdx, sourceNames, photographers,
+                licenseTypes, licenseDetails, sourceUrls, null, null);
+    }
+
+    @Transactional
+    public void saveImages(Long destId,
+                           MultipartFile[] files,
+                           Integer mainIdx,
+                           Integer[] slideIdx,
+                           String[] sourceNames,
+                           String[] photographers,
+                           String[] licenseTypes,
+                           String[] licenseDetails,
+                           String[] sourceUrls,
+                           String[] commonSourceUrls,
+                           String[] workPageUrls) {
         if (files == null || files.length == 0) return;
 
         List<DestinationImage> existingImages = destinationMapper.findImagesByDestinationId(destId);
@@ -79,26 +102,72 @@ public class DestinationImageService {
         for (MultipartFile file : files) {
             if (file == null || file.isEmpty()) continue;
 
-            // ✅ 실제 이미지 검증 후 저장하고 URL 경로 반환
-            String imageUrl = fileUploadService.saveDestinationImage(file);
-            registerRollbackCleanup(imageUrl);
             boolean isMain = mainIdx != null && mainIdx == uploadIndex;
-
-            DestinationImage img = new DestinationImage();
-            img.setImageUrl(imageUrl);
-            img.setSourceName(metadataValue(sourceNames, uploadIndex));
-            img.setPhotographer(metadataValue(photographers, uploadIndex));
-            img.setLicenseType(metadataValue(licenseTypes, uploadIndex));
-            img.setLicenseDetail(metadataValue(licenseDetails, uploadIndex));
-            img.setSourceUrl(metadataValue(sourceUrls, uploadIndex));
-
             int finalIdx = uploadIndex;
-            img.setIsSlide(slideIdx != null &&
-                    Arrays.stream(slideIdx).anyMatch(i -> i == finalIdx));
-
-            insertImage(destId, img, isMain, orderIndex++);
+            boolean isSlide = slideIdx != null &&
+                    Arrays.stream(slideIdx).anyMatch(i -> i == finalIdx);
+            storeUploadedFile(destId, file,
+                    metadataValue(sourceNames, uploadIndex),
+                    metadataValue(photographers, uploadIndex),
+                    metadataValue(licenseTypes, uploadIndex),
+                    metadataValue(licenseDetails, uploadIndex),
+                    metadataValue(sourceUrls, uploadIndex),
+                    metadataValue(commonSourceUrls, uploadIndex),
+                    metadataValue(workPageUrls, uploadIndex),
+                    isMain, isSlide, orderIndex++);
             uploadIndex++;
         }
+    }
+
+    /**
+     * 관리 화면에서 사진을 한 장씩 나눠 올릴 때의 한 장.
+     *
+     * <p>여러 장을 한 요청에 담는 {@link #saveImages} 와 같은 검증·파일 저장·출처 저장을 쓴다.
+     * 한 장이 한 트랜잭션이라, 여러 장 중 한 장이 실패해도 앞서 저장된 사진과 그 출처는 그대로 남는다.
+     * 대표·슬라이드는 지정하지 않는다(업로드 뒤 관리 카드에서 정한다). 순서는 기존 사진 다음이다.
+     *
+     * @return 저장된 이미지 번호
+     */
+    @Transactional
+    public Long saveUploadedImage(Long destId, MultipartFile file,
+                                  String sourceName, String photographer, String licenseType,
+                                  String licenseDetail, String sourceUrl,
+                                  String commonSourceUrl, String workPageUrl) {
+        if (file == null || file.isEmpty()) {
+            throw new UnsupportedImageFormatException("이미지 파일을 선택해 주세요.");
+        }
+        List<DestinationImage> existingImages = destinationMapper.findImagesByDestinationId(destId);
+        return storeUploadedFile(destId, file,
+                metadataValue(sourceName), metadataValue(photographer), metadataValue(licenseType),
+                metadataValue(licenseDetail), metadataValue(sourceUrl),
+                metadataValue(commonSourceUrl), metadataValue(workPageUrl),
+                false, false, nextOrderIndex(existingImages)).getId();
+    }
+
+    /** 올라온 사진 한 장을 검증·저장하고 출처와 함께 등록한다. 트랜잭션이 되돌려지면 저장한 파일도 지운다. */
+    private DestinationImage storeUploadedFile(Long destId, MultipartFile file,
+                                               String sourceName, String photographer,
+                                               String licenseType, String licenseDetail,
+                                               String sourceUrl, String commonSourceUrl,
+                                               String workPageUrl,
+                                               boolean isMain, boolean isSlide, int orderIndex) {
+        // ✅ 실제 이미지 검증 후 저장하고 URL 경로 반환
+        String imageUrl = fileUploadService.saveDestinationImage(file);
+        registerRollbackCleanup(imageUrl);
+
+        DestinationImage img = new DestinationImage();
+        img.setImageUrl(imageUrl);
+        img.setSourceName(sourceName);
+        img.setPhotographer(photographer);
+        img.setLicenseType(licenseType);
+        img.setLicenseDetail(licenseDetail);
+        img.setSourceUrl(sourceUrl);
+        img.setCommonSourceUrl(verifiedPageUrl(commonSourceUrl));
+        img.setWorkPageUrl(verifiedPageUrl(workPageUrl));
+        img.setIsSlide(isSlide);
+
+        insertImage(destId, img, isMain, orderIndex);
+        return img;
     }
 
     @Transactional
@@ -155,10 +224,27 @@ public class DestinationImageService {
                            String[] licenseTypes,
                            String[] licenseDetails,
                            String[] sourceUrls) {
+        saveImages(destId, files, main, slide, sourceNames, photographers,
+                licenseTypes, licenseDetails, sourceUrls, null, null);
+    }
+
+    @Transactional
+    public void saveImages(Long destId,
+                           MultipartFile[] files,
+                           boolean main,
+                           boolean slide,
+                           String[] sourceNames,
+                           String[] photographers,
+                           String[] licenseTypes,
+                           String[] licenseDetails,
+                           String[] sourceUrls,
+                           String[] commonSourceUrls,
+                           String[] workPageUrls) {
         Integer mainIdx = main ? 0 : null;
         Integer[] slideIdx = slide ? allUploadIndexes(files) : new Integer[0];
         saveImages(destId, files, mainIdx, slideIdx,
-                sourceNames, photographers, licenseTypes, licenseDetails, sourceUrls);
+                sourceNames, photographers, licenseTypes, licenseDetails, sourceUrls,
+                commonSourceUrls, workPageUrls);
     }
 
     public List<DestinationImage> getImages(Long destId) {
@@ -190,6 +276,139 @@ public class DestinationImageService {
     }
 
     @Transactional
+    public void updateImageMetadataAndPages(Long destinationId, Long imageId,
+                                            String sourceName, String photographer,
+                                            String licenseType, String licenseDetail,
+                                            String sourceUrl, String commonSourceUrl,
+                                            String workPageUrl) {
+        DestinationImage image = requireDestinationImage(destinationId, imageId);
+        updateImageMetadata(destinationId, imageId, sourceName, photographer,
+                licenseType, licenseDetail, sourceUrl);
+        String common = commonSourceUrl == null ? image.getCommonSourceUrl()
+                : verifiedPageUrl(metadataValue(commonSourceUrl));
+        String work = workPageUrl == null ? image.getWorkPageUrl()
+                : verifiedPageUrl(metadataValue(workPageUrl));
+        if (Boolean.TRUE.equals(image.getSourceRecordPresent()) || common != null || work != null) {
+            destinationMapper.upsertImageSourcePages(imageId, common, work);
+        }
+    }
+
+    public record BulkSourceResult(int appliedImageCount, int skippedFieldCount,
+                                   List<Long> manualReviewImageIds) { }
+
+    private static final Set<String> BULK_FIELDS = Set.of(
+            "sourceName", "photographer", "licenseType", "licenseDetail", "commonSourceUrl");
+
+    @Transactional
+    public BulkSourceResult applyBulkSource(Long destinationId, List<Long> imageIds,
+                                            String sourceName, String photographer,
+                                            String licenseType, String licenseDetail,
+                                            String commonSourceUrl, Set<String> overwriteFields,
+                                            boolean licenseConfirmed, boolean overwriteConfirmed) {
+        if (imageIds == null || imageIds.isEmpty() || imageIds.stream().anyMatch(java.util.Objects::isNull)) {
+            throw new IllegalArgumentException("적용할 사진을 선택해 주세요.");
+        }
+        Set<String> overwrite = overwriteFields == null ? Set.of() : Set.copyOf(overwriteFields);
+        if (!BULK_FIELDS.containsAll(overwrite) || (!overwrite.isEmpty() && !overwriteConfirmed)) {
+            throw new IllegalArgumentException("덮어쓸 항목을 선택하고 변경을 확인해 주세요.");
+        }
+        Map<String, String> values = Map.ofEntries(
+                Map.entry("sourceName", metadataValue(sourceName) == null ? "" : metadataValue(sourceName)),
+                Map.entry("photographer", metadataValue(photographer) == null ? "" : metadataValue(photographer)),
+                Map.entry("licenseType", metadataValue(licenseType) == null ? "" : metadataValue(licenseType)),
+                Map.entry("licenseDetail", metadataValue(licenseDetail) == null ? "" : metadataValue(licenseDetail)),
+                Map.entry("commonSourceUrl", metadataValue(commonSourceUrl) == null ? "" : metadataValue(commonSourceUrl)));
+        if (values.values().stream().allMatch(String::isEmpty)) {
+            throw new IllegalArgumentException("적용할 공통 출처 정보를 입력해 주세요.");
+        }
+        if ((!values.get("licenseType").isEmpty() || !values.get("licenseDetail").isEmpty())
+                && !licenseConfirmed) {
+            throw new IllegalArgumentException("선택한 모든 사진의 라이선스가 동일한지 확인해 주세요.");
+        }
+        if (values.get("sourceName").length() > 100 || values.get("photographer").length() > 100
+                || values.get("licenseType").length() > 50 || values.get("licenseDetail").length() > 255
+                || values.get("commonSourceUrl").length() > 2000) {
+            throw new IllegalArgumentException("공통 출처 입력 길이를 확인해 주세요.");
+        }
+        verifiedPageUrl(values.get("commonSourceUrl").isEmpty() ? null : values.get("commonSourceUrl"));
+
+        int applied = 0;
+        int skipped = 0;
+        List<Long> manualReview = new ArrayList<>();
+        for (Long imageId : new LinkedHashSet<>(imageIds)) {
+            DestinationImage image = requireEditableSourceImage(destinationId, imageId);
+            Set<String> changed = new LinkedHashSet<>();
+            int skippedForImage = 0;
+            for (String field : BULK_FIELDS) {
+                String value = values.get(field);
+                if (value.isEmpty()) continue;
+                String current = bulkFieldValue(image, field);
+                if (current != null && !current.isBlank() && !overwrite.contains(field)) {
+                    if (!current.equals(value)) skippedForImage++;
+                    continue;
+                }
+                if (!value.equals(current)) {
+                    setBulkField(image, field, value);
+                    changed.add(field);
+                }
+            }
+            if (skippedForImage > 0) manualReview.add(imageId);
+            skipped += skippedForImage;
+            if (changed.isEmpty()) continue;
+            Set<String> legacyFields = new LinkedHashSet<>(changed);
+            legacyFields.remove("commonSourceUrl");
+            if (!legacyFields.isEmpty()) destinationMapper.updateBulkImageLegacy(image, legacyFields);
+            if (Boolean.TRUE.equals(image.getSourceRecordPresent())) {
+                destinationMapper.updateBulkImageSource(image, changed);
+            } else {
+                destinationMapper.insertImageSource(image);
+            }
+            applied++;
+        }
+        return new BulkSourceResult(applied, skipped, List.copyOf(manualReview));
+    }
+
+    private String bulkFieldValue(DestinationImage image, String field) {
+        return switch (field) {
+            case "sourceName" -> image.getSourceName();
+            case "photographer" -> image.getPhotographer();
+            case "licenseType" -> image.getLicenseType();
+            case "licenseDetail" -> image.getLicenseDetail();
+            case "commonSourceUrl" -> image.getCommonSourceUrl();
+            default -> throw new IllegalArgumentException("알 수 없는 출처 항목입니다.");
+        };
+    }
+
+    private void setBulkField(DestinationImage image, String field, String value) {
+        switch (field) {
+            case "sourceName" -> image.setSourceName(value);
+            case "photographer" -> image.setPhotographer(value);
+            case "licenseType" -> image.setLicenseType(value);
+            case "licenseDetail" -> image.setLicenseDetail(value);
+            case "commonSourceUrl" -> image.setCommonSourceUrl(value);
+            default -> throw new IllegalArgumentException("알 수 없는 출처 항목입니다.");
+        }
+    }
+
+    private String verifiedPageUrl(String value) {
+        if (value == null) return null;
+        if (value.length() > 2000) throw new InvalidSourceUrlException("출처 URL이 너무 깁니다.");
+        try {
+            URI uri = URI.create(value);
+            String scheme = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase(Locale.ROOT);
+            if (("http".equals(scheme) || "https".equals(scheme))
+                    && uri.getHost() != null && uri.getUserInfo() == null) return value;
+        } catch (IllegalArgumentException ignored) {
+            // 아래에서 관리자에게 유효한 URL을 요청한다.
+        }
+        throw new InvalidSourceUrlException("출처 URL은 http 또는 https 주소여야 합니다.");
+    }
+
+    public static class InvalidSourceUrlException extends IllegalArgumentException {
+        public InvalidSourceUrlException(String message) { super(message); }
+    }
+
+    @Transactional
     public void updateImageMetadata(Long destinationId,
                                     Long imageId,
                                     String sourceName,
@@ -197,14 +416,72 @@ public class DestinationImageService {
                                     String licenseType,
                                     String licenseDetail,
                                     String sourceUrl) {
-        requireDestinationImage(destinationId, imageId);
+        DestinationImage image = requireEditableSourceImage(destinationId, imageId);
+        String normalizedSourceName = metadataValue(sourceName);
+        String normalizedPhotographer = metadataValue(photographer);
+        String normalizedLicenseType = metadataValue(licenseType);
+        String normalizedLicenseDetail = metadataValue(licenseDetail);
+        String normalizedSourceUrl = metadataValue(sourceUrl);
         destinationMapper.updateImageMetadata(
                 imageId,
-                metadataValue(sourceName),
-                metadataValue(photographer),
-                metadataValue(licenseType),
-                metadataValue(licenseDetail),
-                metadataValue(sourceUrl));
+                normalizedSourceName,
+                normalizedPhotographer,
+                normalizedLicenseType,
+                normalizedLicenseDetail,
+                normalizedSourceUrl);
+        if (Boolean.TRUE.equals(image.getSourceRecordPresent())) {
+            destinationMapper.upsertImageSourceMetadata(
+                    imageId, normalizedSourceName, normalizedPhotographer,
+                    normalizedLicenseType, normalizedLicenseDetail, normalizedSourceUrl);
+        } else {
+            // 백필 전 사진을 처음 수정하는 경우, 화면에서 수정하지 않는 원본 식별자도 보존한다.
+            image.setSourceName(normalizedSourceName);
+            image.setPhotographer(normalizedPhotographer);
+            image.setLicenseType(normalizedLicenseType);
+            image.setLicenseDetail(normalizedLicenseDetail);
+            image.setSourceUrl(normalizedSourceUrl);
+            if (hasSourceMetadata(image)) {
+                destinationMapper.insertImageSource(image);
+            }
+        }
+    }
+
+    /**
+     * 관리 화면에서 정한 사진 순서를 한 번에 저장한다.
+     *
+     * <p>요청은 이 여행지의 사진 전부를 원하는 순서대로 담아야 한다. 다른 여행지 사진, 중복, 빠진 사진이 있으면
+     * 아무것도 바꾸지 않는다(그 사이 다른 곳에서 사진이 추가·삭제된 경우도 여기서 걸린다).
+     * 순서는 기존 규칙대로 0부터 매기며, 대표 이미지·슬라이드 지정은 건드리지 않는다.
+     */
+    @Transactional
+    public void saveImageOrder(Long destinationId, List<Long> orderedImageIds) {
+        if (orderedImageIds == null || orderedImageIds.isEmpty()) {
+            throw new InvalidImageOrderException("저장할 사진 순서가 없습니다.");
+        }
+        if (orderedImageIds.stream().anyMatch(java.util.Objects::isNull)
+                || new LinkedHashSet<>(orderedImageIds).size() != orderedImageIds.size()) {
+            throw new InvalidImageOrderException("같은 사진이 두 번 들어 있거나 비어 있는 항목이 있습니다.");
+        }
+        List<DestinationImage> images = destinationMapper.findImagesByDestinationId(destinationId);
+        Set<Long> currentIds = new LinkedHashSet<>();
+        images.forEach(image -> currentIds.add(image.getId()));
+        if (!currentIds.equals(new LinkedHashSet<>(orderedImageIds))) {
+            throw new InvalidImageOrderException(
+                    "이 여행지의 사진 목록이 바뀌었습니다. 새로고침한 뒤 다시 순서를 정해 주세요.");
+        }
+        Map<Long, Integer> previousOrder = new java.util.HashMap<>();
+        images.forEach(image -> previousOrder.put(image.getId(), image.getOrderIndex()));
+        for (int orderIndex = 0; orderIndex < orderedImageIds.size(); orderIndex++) {
+            Long imageId = orderedImageIds.get(orderIndex);
+            if (!Integer.valueOf(orderIndex).equals(previousOrder.get(imageId))) {
+                destinationMapper.updateImageOrder(imageId, orderIndex);
+            }
+        }
+    }
+
+    /** 사진 순서 요청이 이 여행지의 현재 사진 목록과 맞지 않는다. */
+    public static class InvalidImageOrderException extends IllegalArgumentException {
+        public InvalidImageOrderException(String message) { super(message); }
     }
 
     @Transactional
@@ -276,6 +553,16 @@ public class DestinationImageService {
         return image;
     }
 
+    /** Commons 사진 출처는 원본에서 재검증한 값이라 관리자 출처 수정·일괄 적용 대상에서 뺀다. */
+    private DestinationImage requireEditableSourceImage(Long destinationId, Long imageId) {
+        DestinationImage image = requireDestinationImage(destinationId, imageId);
+        if (image.isCommonsImage()) {
+            throw new IllegalArgumentException(
+                    "Wikimedia Commons 사진의 출처는 원본에서 검증한 값이라 수정할 수 없습니다.");
+        }
+        return image;
+    }
+
     private void insertImage(Long destId,
                              DestinationImage image,
                              boolean isMain,
@@ -290,6 +577,26 @@ public class DestinationImageService {
         }
         image.setOrderIndex(orderIndex);
         destinationMapper.insertImage(image);
+        if (hasSourceMetadata(image)) {
+            if (image.getId() == null) {
+                throw new IllegalStateException("저장된 여행지 이미지 ID를 확인할 수 없습니다.");
+            }
+            destinationMapper.insertImageSource(image);
+        }
+    }
+
+    private boolean hasSourceMetadata(DestinationImage image) {
+        return image.getSourceName() != null
+                || image.getExternalContentId() != null
+                || image.getSourceTitle() != null
+                || image.getPhotographer() != null
+                || image.getLicenseType() != null
+                || image.getLicenseDetail() != null
+                || image.getSourceUrl() != null
+                || image.getCommonSourceUrl() != null
+                || image.getWorkPageUrl() != null
+                || image.getSourceImageUrl() != null
+                || image.getLicenseCheckedAt() != null;
     }
 
     private Integer[] allUploadIndexes(MultipartFile[] files) {

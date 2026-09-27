@@ -168,6 +168,39 @@ class AdminDestinationRegionEditTest {
                 .isEqualTo("지역을 선택해 주세요.");
     }
 
+    @Test
+    void updatePassesTheChosenMainCategoryWithTheSelectedCategories() throws Exception {
+        mockMvc.perform(post("/admin/destinations/edit/" + DESTINATION_ID)
+                        .param("regionId", String.valueOf(JONGNO_ID))
+                        .param("type", "ATTRACTION")
+                        .param("season", "SPRING")
+                        .param("categoryIds", "10", "20", "30")
+                        .param("mainCategoryId", "20"))
+                .andExpect(status().is3xxRedirection());
+
+        assertThat(capturedForm().getCategoryIds()).containsExactly(10L, 20L, 30L);
+        assertThat(capturedForm().getMainCategoryId()).isEqualTo(20L);
+    }
+
+    @Test
+    void updateRejectsAMainCategoryThatWasNotSelected() throws Exception {
+        var result = mockMvc.perform(post("/admin/destinations/edit/" + DESTINATION_ID)
+                        .param("regionId", String.valueOf(JONGNO_ID))
+                        .param("type", "ATTRACTION")
+                        .param("season", "SPRING")
+                        .param("categoryIds", "10", "20")
+                        .param("mainCategoryId", "30"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/destinations/edit"))
+                .andReturn();
+
+        verify(destinationService, never()).updateDestination(any(), any());
+        BindingResult bindingResult = (BindingResult) result.getModelAndView().getModel()
+                .get(BindingResult.MODEL_KEY_PREFIX + "destinationForm");
+        assertThat(bindingResult.getFieldError("mainCategoryId").getDefaultMessage())
+                .isEqualTo("대표 카테고리는 선택한 카테고리 중에서 지정해 주세요.");
+    }
+
     private DestinationForm capturedForm() {
         ArgumentCaptor<DestinationForm> captor = ArgumentCaptor.forClass(DestinationForm.class);
         verify(destinationService).updateDestination(eq(DESTINATION_ID), captor.capture());

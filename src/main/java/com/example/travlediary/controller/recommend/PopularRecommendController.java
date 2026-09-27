@@ -2,6 +2,7 @@ package com.example.travlediary.controller.recommend;
 
 import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.dto.RecommendDestinationDto;
+import com.example.travlediary.service.file.DestinationCardThumbnailService;
 import com.example.travlediary.service.recommend.PopularRecommendService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -15,6 +16,7 @@ import java.util.Locale;
 public class PopularRecommendController {
 
     private final PopularRecommendService popularRecommendService;
+    private final DestinationCardThumbnailService cardThumbnailService;
 
     // 국내 인기
     @GetMapping("/domestic")
@@ -22,7 +24,7 @@ public class PopularRecommendController {
             @RequestParam(defaultValue = "5") int limit,
             Locale locale
     ) {
-        return popularRecommendService.findDomesticPopular(limit, supportedLanguage(locale));
+        return withCardImages(popularRecommendService.findDomesticPopular(limit, supportedLanguage(locale)));
     }
 
     // 해외 인기
@@ -31,7 +33,7 @@ public class PopularRecommendController {
             @RequestParam(defaultValue = "5") int limit,
             Locale locale
     ) {
-        return popularRecommendService.findOverseasPopular(limit, supportedLanguage(locale));
+        return withCardImages(popularRecommendService.findOverseasPopular(limit, supportedLanguage(locale)));
     }
 
     // 역사 여행
@@ -40,8 +42,8 @@ public class PopularRecommendController {
             @RequestParam(defaultValue = "5") int limit,
             Locale locale
     ) {
-        return popularRecommendService.findThemePopular(
-                "history", limit, supportedLanguage(locale));
+        return withCardImages(popularRecommendService.findThemePopular(
+                "history", limit, supportedLanguage(locale)));
     }
 
     // 인생샷 여행
@@ -50,8 +52,8 @@ public class PopularRecommendController {
             @RequestParam(defaultValue = "5") int limit,
             Locale locale
     ) {
-        return popularRecommendService.findThemePopular(
-                "photo", limit, supportedLanguage(locale));
+        return withCardImages(popularRecommendService.findThemePopular(
+                "photo", limit, supportedLanguage(locale)));
     }
 
     // 박물관·미술관
@@ -60,8 +62,8 @@ public class PopularRecommendController {
             @RequestParam(defaultValue = "5") int limit,
             Locale locale
     ) {
-        return popularRecommendService.findThemePopular(
-                "artmuseum", limit, supportedLanguage(locale));
+        return withCardImages(popularRecommendService.findThemePopular(
+                "artmuseum", limit, supportedLanguage(locale)));
     }
 
     // 수족관·동물원
@@ -70,11 +72,20 @@ public class PopularRecommendController {
             @RequestParam(defaultValue = "5") int limit,
             Locale locale
     ) {
-        return popularRecommendService.findThemePopular(
-                "zooaquarium", limit, supportedLanguage(locale));
+        return withCardImages(popularRecommendService.findThemePopular(
+                "zooaquarium", limit, supportedLanguage(locale)));
     }
 
     private SupportedLanguage supportedLanguage(Locale locale) {
         return SupportedLanguage.fromLocale(locale).orElse(SupportedLanguage.KOREAN);
+    }
+
+    /** 카드는 원본 대신 카드 크기 썸네일을 쓴다. (공개 여행지 목록 카드와 같은 규칙) */
+    private List<RecommendDestinationDto> withCardImages(List<RecommendDestinationDto> destinations) {
+        return cardThumbnailService.applyCardImages(destinations, RecommendDestinationDto::getImageUrl,
+                (destination, image) -> {
+                    destination.setCardImageUrl(image.src());
+                    destination.setCardImageSrcset(image.srcset());
+                });
     }
 }

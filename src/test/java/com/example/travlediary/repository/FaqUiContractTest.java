@@ -28,7 +28,9 @@ class FaqUiContractTest {
                 // 고정 문구는 메시지 번들에서 온다
                 .contains("#{support.faq.title}", "#{support.faq.description}",
                         "#{support.faq.empty}")
-                .doesNotContain("th:utext", "<script", "support-faq-pagination")
+                // 스크립트는 필터 가로 위치를 맞추는 외부 파일 하나뿐이다. 인라인 스크립트는 두지 않는다.
+                .contains("<script src=\"/js/support-faq-filter.js")
+                .doesNotContain("th:utext", "<script>", "support-faq-pagination")
                 // 한국어 이름 문자열을 스타일 판단(identity)에 쓰지 않는다
                 .doesNotContain("categoryName == '", "is-account", "is-travel", "is-community",
                         "is-service", "is-etc", "is-default");

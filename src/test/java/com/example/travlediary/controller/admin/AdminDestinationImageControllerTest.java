@@ -3,6 +3,7 @@ package com.example.travlediary.controller.admin;
 import com.example.travlediary.dto.kto.KtoSelectedPhotoRequest;
 import com.example.travlediary.model.DestinationImage;
 import com.example.travlediary.model.DestinationTranslation;
+import com.example.travlediary.service.destination.DestinationCommonsImageManagementService;
 import com.example.travlediary.service.destination.DestinationImageService;
 import com.example.travlediary.service.destination.DestinationKtoImageManagementService;
 import com.example.travlediary.service.destination.DestinationService;
@@ -36,6 +37,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(MockitoExtension.class)
@@ -45,6 +47,7 @@ class AdminDestinationImageControllerTest {
     @Mock private DestinationService destinationService;
     @Mock private KtoSelectedPhotoRequestParser requestParser;
     @Mock private DestinationKtoImageManagementService ktoImageManagementService;
+    @Mock private DestinationCommonsImageManagementService commonsImageManagementService;
 
     private AdminDestinationImageController controller;
     private MockMvc mockMvc;
@@ -55,7 +58,9 @@ class AdminDestinationImageControllerTest {
                 destinationImageService,
                 destinationService,
                 requestParser,
-                ktoImageManagementService);
+                ktoImageManagementService,
+                commonsImageManagementService,
+                new com.example.travlediary.service.file.DestinationCardThumbnailService("build/tmp/no-uploads"));
         mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
     }
 
@@ -95,6 +100,28 @@ class AdminDestinationImageControllerTest {
                 eq(new MockMultipartFile[]{first, second}),
                 eq(null),
                 eq(new Integer[0]));
+    }
+
+    @Test
+    void directUploadSubmitsThreeAppliedAndIndividuallyEditedSourceValues() throws Exception {
+        mockMvc.perform(multipart("/admin/destinations/10/images")
+                        .file(image("first.jpg"))
+                        .file(image("second.jpg"))
+                        .file(image("third.jpg"))
+                        .param("imageSourceNames", "공통 기관", "공통 기관", "공통 기관")
+                        .param("imagePhotographers", "공통 촬영자", "개별 촬영자", "수정한 촬영자")
+                        .param("imageCommonSourceUrls", "https://example.org/source",
+                                "https://example.org/source", "https://example.org/source"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/destinations/10/images"));
+
+        verify(destinationImageService).saveImages(eq(10L),
+                any(org.springframework.web.multipart.MultipartFile[].class), eq(null), eq(new Integer[0]),
+                eq(new String[]{"공통 기관", "공통 기관", "공통 기관"}),
+                eq(new String[]{"공통 촬영자", "개별 촬영자", "수정한 촬영자"}),
+                eq(null), eq(null), eq(null),
+                eq(new String[]{"https://example.org/source", "https://example.org/source",
+                        "https://example.org/source"}), eq(null));
     }
 
     @Test
@@ -152,6 +179,147 @@ class AdminDestinationImageControllerTest {
         verify(destinationImageService).updateImageMetadata(
                 10L, 2L, "한국관광공사", "한국관광공사 김지호",
                 "CREATIVE_COMMONS", "CC BY 4.0", "https://example.com/source");
+    }
+
+    @Test
+    void bulkSourceEndpointPassesSelectedImagesAndExplicitConfirmations() throws Exception {
+        when(destinationImageService.applyBulkSource(10L, List.of(2L, 3L),
+                "공공기관", null, "KOGL_TYPE_1", null,
+                "https://example.com/collection", java.util.Set.of("sourceName"), true, true))
+                .thenReturn(new DestinationImageService.BulkSourceResult(2, 1, List.of(2L)));
+
+        mockMvc.perform(post("/admin/destinations/10/images/sources/bulk")
+                        .param("imageIds", "2", "3")
+                        .param("sourceName", "공공기관")
+                        .param("licenseType", "KOGL_TYPE_1")
+                        .param("commonSourceUrl", "https://example.com/collection")
+                        .param("overwriteFields", "sourceName")
+                        .param("licenseConfirmed", "true")
+                        .param("overwriteConfirmed", "true"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/destinations/10/images#registered-images"))
+                .andExpect(flash().attributeExists("bulkSourceResult"));
+
+        verify(destinationImageService).applyBulkSource(10L, List.of(2L, 3L),
+                "공공기관", null, "KOGL_TYPE_1", null,
+                "https://example.com/collection", java.util.Set.of("sourceName"), true, true);
+    }
+
+    @Test
+    void wikidataDestinationPageExposesQidAndAlreadyRegisteredCommonsFiles() {
+        List<DestinationImage> images = List.of(new DestinationImage());
+        when(destinationImageService.getImages(10L)).thenReturn(images);
+        when(commonsImageManagementService.findWikidataQid(10L)).thenReturn("Q243");
+        when(commonsImageManagementService.registeredCommonsFileNames(images)).thenReturn(List.of("A.jpg"));
+        ExtendedModelMap model = new ExtendedModelMap();
+
+        controller.showImageUploadForm(10L, model);
+
+        assertThat(model.get("wikidataQid")).isEqualTo("Q243");
+        assertThat(model.get("registeredCommonsFiles")).isEqualTo(List.of("A.jpg"));
+    }
+
+    @Test
+    void commonsAddSuccessAndFailuresReturnToTheCommonsSectionWithAMessage() throws Exception {
+        String json = "{\"qid\":\"Q243\",\"photos\":[{\"fileName\":\"B.jpg\",\"main\":false}]}";
+        when(commonsImageManagementService.addPhotos(10L, json))
+                .thenReturn(2)
+                .thenThrow(new com.example.travlediary.service.wikidata.CommonsPhotoSelectionException(
+                        "다음 Commons 사진은 자동 저장할 수 없습니다. B.jpg: 퍼블릭 도메인"))
+                .thenThrow(new com.example.travlediary.service.wikidata.CommonsPhotoDownloadException(
+                        "Commons 사진을 내려받지 못했습니다: B.jpg", null))
+                .thenThrow(new org.springframework.dao.DataIntegrityViolationException("insert failed"));
+
+        mockMvc.perform(post("/admin/destinations/10/images/commons").param("commonsSelectedPhotosJson", json))
+                .andExpect(redirectedUrl("/admin/destinations/10/images#commons-add"))
+                .andExpect(flash().attribute("commonsAddResult", "Commons 사진 2장을 추가했습니다."));
+        mockMvc.perform(post("/admin/destinations/10/images/commons").param("commonsSelectedPhotosJson", json))
+                .andExpect(flash().attribute("commonsAddError", "다음 Commons 사진은 자동 저장할 수 없습니다. B.jpg: 퍼블릭 도메인"));
+        mockMvc.perform(post("/admin/destinations/10/images/commons").param("commonsSelectedPhotosJson", json))
+                .andExpect(flash().attribute("commonsAddError", "Commons 사진을 내려받지 못했습니다: B.jpg"));
+        mockMvc.perform(post("/admin/destinations/10/images/commons").param("commonsSelectedPhotosJson", json))
+                .andExpect(flash().attribute("commonsAddError",
+                        "Commons 사진 저장에 실패했습니다. 선택한 사진은 하나도 저장되지 않았습니다. 다시 시도해 주세요."));
+    }
+
+    @Test
+    void bulkSourceFailureReturnsToTheVisibleErrorArea() throws Exception {
+        when(destinationImageService.applyBulkSource(10L, List.of(2L),
+                null, null, null, null, null, null, false, false))
+                .thenThrow(new IllegalArgumentException("출처 URL 형식이 올바르지 않습니다."));
+
+        mockMvc.perform(post("/admin/destinations/10/images/sources/bulk")
+                        .param("imageIds", "2"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/destinations/10/images#registered-images"))
+                .andExpect(flash().attribute("bulkSourceError", "출처 URL 형식이 올바르지 않습니다."));
+    }
+
+    @Test
+    void bulkSourceStorageFailureShowsAUsableError() throws Exception {
+        when(destinationImageService.applyBulkSource(10L, List.of(2L),
+                "공공기관", null, null, null, null, null, false, false))
+                .thenThrow(new IllegalStateException("storage unavailable"));
+
+        mockMvc.perform(post("/admin/destinations/10/images/sources/bulk")
+                        .param("imageIds", "2")
+                        .param("sourceName", "공공기관"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/destinations/10/images#registered-images"))
+                .andExpect(flash().attribute("bulkSourceError", "공통 출처 저장에 실패했습니다. 다시 시도해 주세요."));
+    }
+
+    @Test
+    void individualPhotoEditKeepsCommonAndWorkPagesSeparateFromLegacyUrl() throws Exception {
+        mockMvc.perform(post("/admin/destinations/images/2/metadata")
+                        .param("destinationId", "10")
+                        .param("sourceName", "공공기관")
+                        .param("sourceUrl", "https://example.com/legacy")
+                        .param("commonSourceUrl", "https://example.com/collection")
+                        .param("workPageUrl", "https://example.com/work/2"))
+                .andExpect(status().is3xxRedirection());
+
+        verify(destinationImageService).updateImageMetadataAndPages(10L, 2L,
+                "공공기관", null, null, null, "https://example.com/legacy",
+                "https://example.com/collection", "https://example.com/work/2");
+    }
+
+    /**
+     * 출처 저장은 그 사진 카드로 돌아간다. 입력값 검증에 실패해도 오류 페이지로 보내지 않고
+     * 이유와 방금 입력한 값을 넘겨 그 카드의 출처 영역을 펼쳐 보이게 한다.
+     */
+    @Test
+    void savingASourceReturnsToThatCardAndARejectedUrlKeepsTheDraftInsteadOfAnErrorPage() throws Exception {
+        mockMvc.perform(post("/admin/destinations/images/2/metadata")
+                        .param("destinationId", "10")
+                        .param("sourceName", "한국관광공사"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/destinations/10/images#image-2"))
+                .andExpect(flash().attribute("metadataSavedImageId", 2L));
+
+        doThrow(new DestinationImageService.InvalidSourceUrlException("출처 URL은 http 또는 https 주소여야 합니다."))
+                .when(destinationImageService).updateImageMetadataAndPages(10L, 3L,
+                        "공공기관", "김지호", null, null, null, "ftp://bad", null);
+        mockMvc.perform(post("/admin/destinations/images/3/metadata")
+                        .param("destinationId", "10")
+                        .param("sourceName", "공공기관")
+                        .param("photographer", "김지호")
+                        .param("commonSourceUrl", "ftp://bad"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/destinations/10/images#image-3"))
+                .andExpect(flash().attribute("metadataErrorImageId", 3L))
+                .andExpect(flash().attribute("metadataError", "출처 URL은 http 또는 https 주소여야 합니다."))
+                .andExpect(result -> assertThat((java.util.Map<String, String>) result.getFlashMap().get("metadataDraft"))
+                        .containsEntry("sourceName", "공공기관")
+                        .containsEntry("photographer", "김지호")
+                        .containsEntry("commonSourceUrl", "ftp://bad"));
+
+        // 없는·다른 여행지 사진은 입력 문제가 아니므로 그대로 400 이다.
+        doThrow(new IllegalArgumentException("여행지 이미지를 찾을 수 없습니다."))
+                .when(destinationImageService).updateImageMetadataAndPages(eq(10L), eq(404L),
+                        any(), any(), any(), any(), any(), any(), any());
+        mockMvc.perform(post("/admin/destinations/images/404/metadata").param("destinationId", "10"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

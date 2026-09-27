@@ -4,16 +4,20 @@
       th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'destinations')}">
 
 <th:block th:fragment="headFragment">
-  <link rel="stylesheet" href="/css/destination-create.css">
-  <link rel="stylesheet" href="/css/admin-wikidata-preview.css">
-  <script src="/js/admin-destination-category-select.js?v=20260822-2" defer></script>
+  <link rel="stylesheet" href="/css/destination-create.css?v=20260927-2">
+  <link rel="stylesheet" href="/css/admin-wikidata-preview.css?v=20260926-5">
+  <script src="/js/admin-destination-category-select.js?v=20260927-1" defer></script>
   <script src="/js/admin-destination-amenity-filter.js?v=20260822-1" defer></script>
   <script src="/js/admin-destination-image-upload-preview.js?v=20260920-1" defer></script>
+  <script src="/js/admin-destination-image-bulk-source.js?v=20260927-1" defer></script>
   <script src="/js/admin-translation-tabs.js" defer></script>
   <script src="/js/admin-translation-collapse.js?v=20260907-1" defer></script>
   <script src="/js/admin-kto-tour-autofill.js?v=20260907-2" defer></script>
-  <script src="/js/admin-kto-photo-search.js?v=20260821-4" defer></script>
-  <script src="/js/admin-wikidata-preview.js?v=20260924-1" defer></script>
+  <script src="/js/admin-kto-photo-search.js?v=20260925-1" defer></script>
+  <script src="/js/admin-wikidata-form-apply.js?v=20260926-3" defer></script>
+  <script src="/js/admin-wikipedia-description-apply.js?v=20260926-1" defer></script>
+  <script src="/js/admin-commons-photo-picker.js?v=20260926-5" defer></script>
+  <script src="/js/admin-wikidata-preview.js?v=20260926-10" defer></script>
 </th:block>
 <th:block th:fragment="body">
 
@@ -29,12 +33,20 @@
 </header>
 
 <div th:if="${imageError}" class="admin-alert" role="alert" th:text="${imageError}"></div>
+<!-- 서버가 등록을 거부하면 폼이 맨 위부터 다시 그려진다. 원인은 처음 보이는 이 자리에 둔다. -->
+<div th:if="${registrationError}" class="admin-alert" role="alert" tabindex="-1" data-registration-error>
+  <strong>여행지를 등록하지 못했습니다.</strong>
+  <span th:text="${registrationError}">오류 원인</span>
+  <span>입력한 내용과 선택한 사진은 그대로 남아 있으니 고친 뒤 다시 등록해 주세요.</span>
+  <a th:if="${existingWikidataDestinationId}" class="admin-btn is-small"
+     th:href="@{/admin/destinations/edit/{id}(id=${existingWikidataDestinationId})}">기존 여행지 수정</a>
+</div>
 
 <section class="admin-destination-section admin-wikidata" data-wikidata-preview>
   <div class="admin-destination-section-header">
     <div>
       <h2>해외 여행지 찾기 · Wikidata</h2>
-      <p>한국어 또는 영어로 검색하고 QID를 확인해 후보의 원본 정보를 미리 볼 수 있습니다. 이 단계에서는 등록폼에 입력하거나 저장하지 않습니다.</p>
+      <p>후보를 선택하면 비어 있는 입력칸만 자동입력하고, 직접 입력한 값은 유지합니다.</p>
     </div>
   </div>
   <div class="admin-wikidata-search">
@@ -46,9 +58,15 @@
     </div>
   </div>
   <p class="admin-wikidata-status" role="status" aria-live="polite" data-wikidata-status>
-    해외 명소를 검색해 후보를 선택하세요.
+    한국어 또는 영어 명칭으로 검색한 뒤 QID·국가를 확인해 선택하세요.
   </p>
   <div class="admin-wikidata-results" data-wikidata-results></div>
+  <div class="admin-wikidata-review" data-wikidata-switch-review></div>
+  <div class="admin-wikidata-progress" aria-live="polite">
+    <p data-wikidata-stage="basic">기본정보 대기 중</p>
+    <p data-wikidata-stage="wikipedia">Wikipedia 다국어 설명 대기 중</p>
+    <p data-wikidata-stage="commons">Commons 사진 대기 중</p>
+  </div>
   <div class="admin-wikidata-detail" data-wikidata-detail hidden></div>
 </section>
 
@@ -56,40 +74,20 @@
 <form th:action="@{/admin/destinations}" method="post" enctype="multipart/form-data"
       th:object="${destinationForm}" class="admin-destination-form admin-form-card is-wide"
       data-translation-collapsible>
+  <input type="hidden" th:field="*{wikidataQid}" data-wikidata-qid>
+  <input type="hidden" th:field="*{wikipediaRevisionIds[0]}" data-wikipedia-revision="ko">
+  <input type="hidden" th:field="*{wikipediaRevisionIds[1]}" data-wikipedia-revision="en">
+  <input type="hidden" th:field="*{wikipediaRevisionIds[2]}" data-wikipedia-revision="ja">
+  <input type="hidden" th:field="*{wikipediaRevisionIds[3]}" data-wikipedia-revision="zh-CN">
+  <input type="hidden" th:field="*{wikipediaRevisionIds[4]}" data-wikipedia-revision="zh-TW">
+  <!-- Commons 사진 선택은 파일명·대표 여부만 한 칸으로 보낸다. 출처와 이미지는 서버가 다시 조회해 받는다. -->
+  <input type="hidden" th:field="*{commonsSelectedPhotosJson}" data-commons-selection>
 
   <section class="admin-destination-section">
     <div class="admin-destination-section-header">
       <div>
         <h2>기본 정보</h2>
-        <p>여행지 유형과 계절, 화면에 표시할 이름과 설명을 입력합니다.</p>
-      </div>
-    </div>
-
-    <div class="admin-form-grid is-compact">
-      <!-- 타입 선택 -->
-      <div class="admin-form-field">
-        <label>타입</label>
-        <select th:field="*{type}" required data-kto-tour-destination-type>
-          <option value="" disabled selected>-- 선택 --</option>
-          <option value="ATTRACTION">관광지</option>
-          <option value="ACCOMMODATION">숙소</option>
-          <option value="RESTAURANTS">음식점</option>
-          <option value="CAFE">카페</option>
-          <option value="SHOP">쇼핑</option>
-          <option value="ACTIVITY">체험/액티비티</option>
-        </select>
-      </div>
-
-      <!-- 시즌 선택 -->
-      <div class="admin-form-field">
-        <label>시즌</label>
-        <select th:field="*{season}">
-          <option value="SPRING">봄</option>
-          <option value="SUMMER">여름</option>
-          <option value="FALL">가을</option>
-          <option value="WINTER">겨울</option>
-          <option value="ALL_SEASONS">사계절</option>
-        </select>
+        <p>화면에 표시할 여행지명과 언어별 설명을 입력합니다.</p>
       </div>
     </div>
 
@@ -123,6 +121,42 @@
                             :: destinationTranslations(true)}"></th:block>
     <div class="admin-kto-tour-autofill" aria-live="polite">
       <p class="admin-kto-tour-status" data-kto-tour-foreign-status>국문 후보를 선택하면 언어별 관광정보를 찾아봅니다.</p>
+    </div>
+  </section>
+
+  <section class="admin-destination-section admin-wikidata-wikipedia" data-wikidata-wikipedia-area hidden></section>
+
+  <section class="admin-destination-section">
+    <div class="admin-destination-section-header">
+      <div>
+        <h2>유형·시즌 확인</h2>
+        <p>여행지에 맞는 유형과 시즌을 직접 확인해 주세요.</p>
+      </div>
+    </div>
+    <div class="admin-form-grid is-compact">
+      <div class="admin-form-field">
+        <label>타입</label>
+        <select th:field="*{type}" required data-kto-tour-destination-type>
+          <option value="" disabled selected>-- 선택 --</option>
+          <option value="ATTRACTION">관광지</option>
+          <option value="ACCOMMODATION">숙소</option>
+          <option value="RESTAURANTS">음식점</option>
+          <option value="CAFE">카페</option>
+          <option value="SHOP">쇼핑</option>
+          <option value="ACTIVITY">체험/액티비티</option>
+        </select>
+      </div>
+      <div class="admin-form-field">
+        <label>시즌</label>
+        <select th:field="*{season}">
+          <option value="SPRING">봄</option>
+          <option value="SUMMER">여름</option>
+          <option value="FALL">가을</option>
+          <option value="WINTER">겨울</option>
+          <option value="ALL_SEASONS">사계절</option>
+          <option value="" disabled>-- 선택 --</option>
+        </select>
+      </div>
     </div>
   </section>
 
@@ -618,7 +652,7 @@
     <div class="admin-destination-section-header">
       <div>
         <h2>카테고리</h2>
-        <p>여행지에 붙일 카테고리를 복수로 선택합니다.</p>
+        <p>여행지에 붙일 카테고리를 복수로 선택합니다. 상세 화면에는 대표 카테고리 하나만 표시됩니다.</p>
       </div>
     </div>
 
@@ -627,6 +661,11 @@
         <span class="admin-category-selected-label">선택된 카테고리</span>
         <div class="admin-category-chips" data-category-chips></div>
         <span class="admin-category-empty" data-category-empty>선택된 카테고리가 없습니다.</span>
+        <!-- 대표 카테고리: 칩의 '대표로' 버튼이 바꾼다. 비어 있으면 서버가 선택한 것 중 가장 작은 ID를 쓴다. -->
+        <input type="hidden" th:field="*{mainCategoryId}" data-category-main />
+        <p class="admin-category-main-note" data-category-main-note hidden></p>
+        <p class="admin-field-error" th:if="${#fields.hasErrors('mainCategoryId')}"
+           th:errors="*{mainCategoryId}">대표 카테고리 오류</p>
       </div>
 
       <div class="admin-category-picker">
@@ -649,6 +688,9 @@
       </div>
     </div>
   </section>
+
+  <!-- Wikidata 후보를 고르면 보이는 Commons 사진 후보. 사진 영역끼리 모아 이미지 추가 앞에 둔다. -->
+  <section class="admin-destination-section admin-wikidata-commons" data-wikidata-commons-area hidden></section>
 
   <!-- 이미지 업로드 -->
   <section class="admin-destination-section">
@@ -673,16 +715,26 @@
         <p class="admin-field-help admin-upload-preview-count"
            data-destination-upload-preview-count></p>
         <div class="admin-upload-preview-grid" data-destination-upload-preview-grid></div>
+        <div class="admin-image-bulk-panel" data-image-bulk="upload">
+          <h3>선택 사진에 공통 출처 적용</h3>
+          <th:block th:replace="~{admin/destinations/fragments/image-bulk-source :: fields}"></th:block>
+        </div>
         <th:block th:replace="~{admin/destinations/fragments/image-metadata :: metadataTemplate}"></th:block>
       </div>
     </div>
   </section>
 
-  <th:block th:replace="~{admin/destinations/fragments/kto-photo-search :: search}"></th:block>
+  <th:block th:replace="~{admin/destinations/fragments/kto-photo-search :: search(false)}"></th:block>
 
   <div class="admin-form-actions">
     <a th:href="@{/admin/destinations}" class="admin-btn">취소</a>
-    <button type="submit" class="admin-btn is-primary">등록</button>
+    <p th:if="${wikipediaSourcesPending}" class="admin-wikidata-review-note">
+      Wikipedia 설명이 선택되어 있습니다. 저장 시 원문 QID·판본·라이선스를 다시 확인합니다.
+    </p>
+    <!-- 등록 진행 상태와, 제출 전에 막힌 이유(빈 시즌, 숨은 칸 오류, 자동입력 조회 중)를 버튼 옆에 보여준다. -->
+    <p class="admin-wikidata-review-note" role="status" aria-live="polite"
+       data-registration-status hidden></p>
+    <button type="submit" class="admin-btn is-primary" data-registration-submit>등록</button>
   </div>
 </form>
 <script src="/js/region-selector.js?v=20260822-3" defer></script>

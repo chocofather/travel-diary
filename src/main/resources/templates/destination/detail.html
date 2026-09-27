@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
-      th:replace="layout/main :: layout(~{::body}, ~{::headFragment})">
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
 
 <th:block th:fragment="headFragment">
-    <link rel="stylesheet" href="/css/detail.css">
+    <link rel="stylesheet" href="/css/detail.css?v=20260927-2">
     <link rel="stylesheet" href="/css/comment.css">
     <link rel="stylesheet" href="/css/content-comment.css">
     <!--
@@ -62,7 +62,12 @@
                th:text="${regionPath}"
                class="region-path-link"></a>
             <span th:if="${regionPath != null}"> . </span>
-            <span th:text="${categoryName}">카테고리</span>
+            <!-- 대표 카테고리: 이 카테고리가 선택된 목록(같은 국내/해외의 전체 지역). 모습은 그대로 두고 링크만 건다. -->
+            <a th:if="${categoryId != null}"
+               th:href="@{/destinations(type=${type},category=${categoryId})}"
+               th:text="${categoryName}"
+               class="category-path-link">카테고리</a>
+            <span th:if="${categoryId == null}" th:text="${categoryName}">카테고리</span>
         </p>
         <h1 class="destination-title" th:text="${destination.name}">여행지 이름</h1> <!-- destination.name으로 수정 -->
         <div class="meta-icons">
@@ -104,8 +109,10 @@
                      th:classappend="${idx.index == 0} ? 'active'"
                      th:attr="data-source-name=${img.sourceName},
                               data-license-label=${img.licenseDisplay},
+                              data-license-url=${img.safeLicenseUrl},
                               data-photographer=${img.photographer},
-                              data-source-url=${img.safeSourceUrl}">
+                              data-credit=${img.customAttribution},
+                              data-source-url=${img.attributionUrl}">
                     <!--
                       첫 장은 열자마자 보이므로 그대로 받는다.
                       둘째 장부터는 넘겨야 보이는 자리라 그때 받는다. (th:attr 은 null 이면 속성을 뺀다)
@@ -132,8 +139,13 @@
                                or firstImage.licenseDisplay == null}"
                   data-destination-image-separator>·</span>
             <span th:text="${firstImage.licenseDisplay}"
-                  th:hidden="${firstImage.licenseDisplay == null}"
+                  th:hidden="${firstImage.licenseDisplay == null or firstImage.safeLicenseUrl != null}"
                   data-destination-image-license></span>
+            <a th:href="${firstImage.safeLicenseUrl}"
+               th:text="${firstImage.licenseDisplay}"
+               th:hidden="${firstImage.licenseDisplay == null or firstImage.safeLicenseUrl == null}"
+               target="_blank" rel="noopener noreferrer license"
+               data-destination-image-license-link></a>
             <span aria-hidden="true"
                   th:hidden="${firstImage.photographer == null or #strings.isEmpty(firstImage.photographer)
                                or (firstImage.sourceName == null or #strings.isEmpty(firstImage.sourceName))
@@ -145,8 +157,17 @@
             <span th:text="${firstImage.photographer}"
                   th:hidden="${firstImage.photographer == null or #strings.isEmpty(firstImage.photographer)}"
                   data-destination-image-photographer></span>
-            <a th:href="${firstImage.safeSourceUrl}"
-               th:hidden="${firstImage.safeSourceUrl == null}"
+            <span aria-hidden="true"
+                  th:hidden="${firstImage.customAttribution == null or #strings.isEmpty(firstImage.customAttribution)}"
+                  data-destination-image-credit-separator>·</span>
+            <span th:hidden="${firstImage.customAttribution == null or #strings.isEmpty(firstImage.customAttribution)}"
+                  th:text="#{destination.detail.gallery.credit}"
+                  data-destination-image-credit-prefix>크레딧</span>
+            <span th:text="${firstImage.customAttribution}"
+                  th:hidden="${firstImage.customAttribution == null or #strings.isEmpty(firstImage.customAttribution)}"
+                  data-destination-image-credit></span>
+            <a th:href="${firstImage.attributionUrl}"
+               th:hidden="${firstImage.attributionUrl == null}"
                th:aria-label="#{destination.detail.gallery.sourceLink}"
                target="_blank" rel="noopener noreferrer"
                data-destination-image-source-link>↗</a>
@@ -178,6 +199,42 @@
                 <p th:each="paragraph : ${descriptionParagraphs}">
                     <span th:text="${paragraph}">설명</span>
                 </p>
+            </div>
+            <!-- 지금 보이는 언어의 설명에 연결된 Wikipedia 출처만 표시한다. 문구는 선택 언어를 따른다. -->
+            <!-- 캡션 한 줄: 본문 출처 · Wikipedia 기여자 · 라이선스 · (수정 여부) · 원문 보기. 판본 ID 등은 펼쳐서 본다. -->
+            <div th:if="${wikipediaSource != null}" class="destination-description-source">
+                <span class="destination-description-source-label"
+                      th:text="#{destination.detail.description.source.label}">본문 출처</span>
+                <span aria-hidden="true">·</span>
+                <span th:text="#{destination.detail.description.source.contributors}">Wikipedia 기여자</span>
+                <span aria-hidden="true">·</span>
+                <a th:href="${wikipediaSource.licenseUrl}" target="_blank" rel="noopener noreferrer license"
+                   th:text="${wikipediaSource.licenseName}">CC BY-SA 4.0</a>
+                <th:block th:if="${wikipediaSource.contentModified}">
+                    <span aria-hidden="true">·</span>
+                    <span th:text="#{destination.detail.description.modified}">TripBora에서 일부 수정</span>
+                </th:block>
+                <span aria-hidden="true">·</span>
+                <a th:href="${wikipediaSource.sourceUrl}" target="_blank" rel="noopener noreferrer"
+                   th:text="#{destination.detail.description.source.original}">원문 보기</a>
+                <details class="destination-description-source-details">
+                    <summary th:text="#{destination.detail.description.source.details}">출처 정보</summary>
+                    <dl>
+                        <div>
+                            <dt th:text="#{destination.detail.description.source.article}">문서</dt>
+                            <dd><a th:href="${wikipediaSource.sourceUrl}" target="_blank" rel="noopener noreferrer"
+                                   th:text="${wikipediaSource.sourceTitle}">Wikipedia 문서</a></dd>
+                        </div>
+                        <div>
+                            <dt th:text="#{destination.detail.description.source.revision}">판본 ID</dt>
+                            <dd th:text="${wikipediaSource.sourceRevisionId}">123456</dd>
+                        </div>
+                        <div>
+                            <dt th:text="#{destination.detail.description.source.attribution}">저작자 표시</dt>
+                            <dd th:text="${wikipediaSource.attributionText}">Wikipedia contributors</dd>
+                        </div>
+                    </dl>
+                </details>
             </div>
 
             <!-- 추가 정보 -->

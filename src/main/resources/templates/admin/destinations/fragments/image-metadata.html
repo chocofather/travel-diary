@@ -31,9 +31,21 @@
         이용조건이 확인되지 않은 이미지는 공개 서비스 사용 전에 권리관계를 확인하세요.
       </p>
       <label class="is-wide">
-        <span>출처 URL</span>
+        <span>기존 출처 URL (의미 미확인)</span>
         <input type="url" maxlength="1000" inputmode="url"
                placeholder="https://..." data-image-metadata-field="sourceUrl">
+      </label>
+      <label class="is-wide">
+        <span>공통 제공기관 페이지 URL</span>
+        <input type="url" maxlength="2000" inputmode="url"
+               placeholder="https://..." data-image-metadata-field="commonSourceUrl"
+               data-image-source-url="common">
+      </label>
+      <label class="is-wide">
+        <span>사진별 원본 페이지 URL</span>
+        <input type="url" maxlength="2000" inputmode="url"
+               placeholder="https://..." data-image-metadata-field="workPageUrl"
+               data-image-source-url="work">
       </label>
     </div>
   </template>

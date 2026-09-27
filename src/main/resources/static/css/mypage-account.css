@@ -454,6 +454,19 @@
     background: #f8fafc;
 }
 
+/* 비밀번호 변경하기는 링크지만 연결하기 버튼과 같은 모습으로 둔다. */
+a.mypage-social-connect-button {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    text-decoration: none;
+}
+
+.mypage-social-connect-button:focus-visible {
+    outline: 3px solid rgba(118, 87, 200, 0.25);
+    outline-offset: 2px;
+}
+
 .mypage-social-disconnect-button {
     min-height: 32px;
     padding: 6px 11px;
@@ -560,6 +573,7 @@
     }
 
     .mypage-social-withdrawal .mypage-account-actions,
+    .mypage-social-withdrawal .mypage-account-actions a,
     .mypage-social-withdrawal .mypage-account-actions button {
         width: auto;
     }

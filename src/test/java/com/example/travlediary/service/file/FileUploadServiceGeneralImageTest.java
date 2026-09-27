@@ -116,7 +116,7 @@ class FileUploadServiceGeneralImageTest {
         assertThat(Files.notExists(editor) || isEmpty(editor)).isTrue();
     }
 
-    /** multipart 한도(10MB)를 넘는 파일은 펼쳐 보기 전에 끊는다. */
+    /** 일반 이미지 한도(10MB)를 넘는 파일은 펼쳐 보기 전에 끊는다. multipart 한도가 더 커도 이 한도는 그대로다. */
     @Test
     void anOversizedFileIsRejectedBeforeItIsRead() {
         byte[] huge = new byte[10 * 1024 * 1024 + 1];

@@ -16,7 +16,9 @@ function setUpLicenseFields(fields) {
 
     const detailLicenseTypes = ["CREATIVE_COMMONS", "PERMISSION", "OTHER"];
     const updateVisibility = () => {
-        detail.hidden = !detailLicenseTypes.includes(licenseType.value);
+        const detailInput = detail.querySelector("input");
+        detail.hidden = !detailLicenseTypes.includes(licenseType.value)
+            && !detailInput?.value.trim();
         unknownWarning.hidden = licenseType.value !== "UNKNOWN";
     };
 
@@ -54,7 +56,9 @@ function setUpPreview(preview) {
             photographer: "imagePhotographers",
             licenseType: "imageLicenseTypes",
             licenseDetail: "imageLicenseDetails",
-            sourceUrl: "imageSourceUrls"
+            sourceUrl: "imageSourceUrls",
+            commonSourceUrl: "imageCommonSourceUrls",
+            workPageUrl: "imageWorkPageUrls"
         };
         fields.querySelectorAll("[data-image-metadata-field]").forEach(control => {
             control.name = parameterNames[control.dataset.imageMetadataField];
@@ -92,6 +96,16 @@ function setUpPreview(preview) {
         name.title = file.name;
 
         card.append(image, name);
+        const selection = document.createElement("label");
+        selection.className = "admin-image-bulk-photo-choice";
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = true;
+        checkbox.dataset.imageBulkSelect = "";
+        const selectionText = document.createElement("span");
+        selectionText.textContent = "공통 출처 적용";
+        selection.append(checkbox, selectionText);
+        card.append(selection);
         appendMetadataFields(card);
         return card;
     }
@@ -103,10 +117,13 @@ function setUpPreview(preview) {
         if (files.length === 0) return;
 
         const fragment = document.createDocumentFragment();
-        files.forEach(file => {
+        files.forEach((file, index) => {
             // 한 장이 실패해도 나머지 미리보기는 계속 만든다.
             try {
-                fragment.append(previewCard(file));
+                const card = previewCard(file);
+                // 카드가 몇 번째 파일인지. 나눠 올리기가 사진별 상태를 이 카드에 표시한다.
+                card.dataset.fileIndex = String(index);
+                fragment.append(card);
             } catch (error) {
                 console.warn("미리보기를 만들지 못했습니다.", error);
             }
@@ -115,6 +132,7 @@ function setUpPreview(preview) {
         grid.append(fragment);
         count.textContent = `선택한 이미지 ${files.length}장`;
         preview.hidden = false;
+        preview.dispatchEvent(new CustomEvent("destination-images-changed", {bubbles: true}));
     });
 
     window.addEventListener("pagehide", releaseObjectUrls);

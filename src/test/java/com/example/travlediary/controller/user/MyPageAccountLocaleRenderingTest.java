@@ -69,7 +69,8 @@ class MyPageAccountLocaleRenderingTest {
 
     @Test
     void englishVerifyScreenLocalizesItsLabels() throws Exception {
-        mockMvc.perform(get("/mypage/account").with(user(principal(7L, UserRole.USER)))
+        mockMvc.perform(get("/mypage/account/verify").param("next", "password")
+                        .with(user(principal(7L, UserRole.USER)))
                         .cookie(english()))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
@@ -80,13 +81,11 @@ class MyPageAccountLocaleRenderingTest {
     }
 
     @Test
-    void englishEditScreenLocalizesLabelsAndKeepsTheAccountValues() throws Exception {
-        MockHttpSession session = new MockHttpSession();
-        reauthenticationService.markVerified(session, 7L);
+    void englishAccountScreenLocalizesLabelsAndKeepsTheAccountValues() throws Exception {
         when(accountService.getAccountDetails(7L))
                 .thenReturn(details("member@example.com"));
 
-        mockMvc.perform(get("/mypage/account/edit").session(session)
+        mockMvc.perform(get("/mypage/account")
                         .with(user(principal(7L, UserRole.USER)))
                         .cookie(english()))
                 .andExpect(status().isOk())
@@ -94,6 +93,7 @@ class MyPageAccountLocaleRenderingTest {
                         "Manage your account and sign-in methods securely.")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "Change password")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(">Change</a>")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "Delete account")))
                 // 로그인 이메일은 번역 대상이 아니다

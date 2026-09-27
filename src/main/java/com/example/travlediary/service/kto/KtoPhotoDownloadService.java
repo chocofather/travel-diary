@@ -38,8 +38,13 @@ public class KtoPhotoDownloadService {
             "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\\.(?:jpg|png)$",
             Pattern.CASE_INSENSITIVE);
 
+    private static final String COMMONS_USER_AGENT =
+            "TripBoraCommonsImport/1.0 (https://github.com/chocofather/travel-diary)";
+
     private final KtoPhotoUrlValidator urlValidator;
     private final KtoPhotoHttpTransport httpTransport;
+    private final KtoPhotoUrlValidator commonsUrlValidator;
+    private final KtoPhotoHttpTransport commonsHttpTransport;
     private final Path uploadRoot;
     private final long maxFileSize;
 
@@ -51,6 +56,8 @@ public class KtoPhotoDownloadService {
         this(
                 new KtoPhotoUrlValidator(),
                 new JdkKtoPhotoHttpTransport(CONNECT_TIMEOUT, READ_TIMEOUT),
+                KtoPhotoUrlValidator.wikimediaCommons(),
+                new JdkKtoPhotoHttpTransport(CONNECT_TIMEOUT, READ_TIMEOUT, COMMONS_USER_AGENT),
                 Paths.get(uploadPath),
                 maxFileSize.toBytes());
     }
@@ -61,22 +68,48 @@ public class KtoPhotoDownloadService {
             Path uploadRoot,
             long maxFileSize
     ) {
+        this(urlValidator, httpTransport, KtoPhotoUrlValidator.wikimediaCommons(), httpTransport,
+                uploadRoot, maxFileSize);
+    }
+
+    KtoPhotoDownloadService(
+            KtoPhotoUrlValidator urlValidator,
+            KtoPhotoHttpTransport httpTransport,
+            KtoPhotoUrlValidator commonsUrlValidator,
+            KtoPhotoHttpTransport commonsHttpTransport,
+            Path uploadRoot,
+            long maxFileSize
+    ) {
         if (maxFileSize <= 0) {
             throw new IllegalArgumentException("maxFileSize must be positive");
         }
         this.urlValidator = urlValidator;
         this.httpTransport = httpTransport;
+        this.commonsUrlValidator = commonsUrlValidator;
+        this.commonsHttpTransport = commonsHttpTransport;
         this.uploadRoot = uploadRoot.toAbsolutePath().normalize();
         this.maxFileSize = maxFileSize;
     }
 
     public KtoDownloadedPhoto download(String sourceImageUrl) {
-        URI sourceUri = urlValidator.validate(sourceImageUrl);
+        return download(urlValidator.validate(sourceImageUrl), httpTransport);
+    }
+
+    /**
+     * Wikimedia Commons 사진을 여행지 이미지 저장소에 내려받는다.
+     * 관광사진과 같은 크기·형식·경로 검증을 쓰고, 주소는 upload.wikimedia.org HTTPS만 허용한다.
+     * 리다이렉트는 따라가지 않고 실패로 처리한다.
+     */
+    public KtoDownloadedPhoto downloadCommonsImage(String imageUrl) {
+        return download(commonsUrlValidator.validate(imageUrl), commonsHttpTransport);
+    }
+
+    private KtoDownloadedPhoto download(URI sourceUri, KtoPhotoHttpTransport transport) {
         Path temporary = null;
         Path completedFile = null;
         boolean completed = false;
 
-        try (KtoPhotoHttpResponse response = httpTransport.get(sourceUri)) {
+        try (KtoPhotoHttpResponse response = transport.get(sourceUri)) {
             String declaredContentType = validateResponse(response);
             Path destinationDirectory = destinationDirectory();
             temporary = Files.createTempFile(destinationDirectory, ".kto-photo-", ".download");
@@ -141,6 +174,10 @@ public class KtoPhotoDownloadService {
     }
 
     private String validateResponse(KtoPhotoHttpResponse response) {
+        // 요청 제한은 다른 실패와 구분해 둔다. KTO 흐름에서는 기존과 같은 다운로드 실패로 처리된다.
+        if (response != null && (response.statusCode() == 429 || response.statusCode() == 503)) {
+            throw new PhotoDownloadRateLimitedException(response.retryAfter());
+        }
         if (response == null
                 || response.statusCode() < 200 || response.statusCode() >= 300
                 || response.body() == null

@@ -49,7 +49,8 @@ class DestinationDescriptionParagraphsTest {
     void setUp() {
         LocaleContextHolder.setLocale(SupportedLanguage.KOREAN.getLocale());
         controller = new DestinationController(destinationService, destinationImageService,
-                countryCategoryService, destinationCommentService, referenceNameLocalizationService);
+                countryCategoryService, destinationCommentService, referenceNameLocalizationService,
+                new com.example.travlediary.service.file.DestinationCardThumbnailService("build/tmp/no-uploads"));
 
         CountryCategory region = new CountryCategory();
         region.setId(10L);

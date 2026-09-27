@@ -83,16 +83,35 @@ function renderTags() {
 }
 renderTags();
 
+/*
+  카드 이미지가 화면에서 차지하는 폭(home.css 의 카드 격자와 같은 값).
+  브라우저는 이 폭 × 화면 배율로 srcset 의 480w / 960w 중 알맞은 썸네일을 고른다.
+*/
+const CARD_IMAGE_SIZES = '(max-width: 420px) calc(100vw - 28px), (max-width: 680px) calc(50vw - 22px), '
+    + '(max-width: 960px) calc(33vw - 24px), (max-width: 1160px) calc(20vw - 26px), 207px';
+
 function createDestinationCard(dest) {
     const card = document.createElement('div');
     card.className = 'trip-card';
+    // 여행지 업로드 사진은 서버가 카드 크기로 줄인 썸네일을 쓴다. 그 밖의 주소는 원래대로 둔다.
+    const thumbnailAttributes = dest.cardImageSrcset
+        ? `srcset="${dest.cardImageSrcset}" sizes="${CARD_IMAGE_SIZES}"`
+        : '';
     card.innerHTML = `
-        <img src="${dest.imageUrl}" alt="${dest.name}" />
+        <img src="${dest.cardImageUrl || dest.imageUrl}" ${thumbnailAttributes} alt="${dest.name}" />
         <div class="trip-info">
           <h4>${dest.name}</h4>
           <p>${dest.regionName}</p>
         </div>
     `;
+    const image = card.querySelector('img');
+    if (dest.cardImageUrl) {
+        // 썸네일을 받지 못하면 원본으로 한 번만 되돌린다.
+        image.addEventListener('error', () => {
+            image.removeAttribute('srcset');
+            image.src = dest.imageUrl;
+        }, {once: true});
+    }
     card.onclick = () => location.href = `/destinations/${dest.id}`;
     return card;
 }

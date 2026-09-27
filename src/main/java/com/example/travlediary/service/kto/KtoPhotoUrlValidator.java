@@ -5,31 +5,56 @@ import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
+import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 public class KtoPhotoUrlValidator {
 
     private static final String ALLOWED_HOST = "tong.visitkorea.or.kr";
     private static final String WEBSITE_PATH_PREFIX = "/cms2/website/";
     private static final String FESTIVAL_RESOURCE_PATH_PREFIX = "/cms/resource/";
+    /** Commons 원본은 upload, API가 주는 렌디션(thumburl)은 thumb 호스트에서 내려온다. */
+    private static final Set<String> COMMONS_HOSTS = Set.of("upload.wikimedia.org", "thumb.wikimedia.org");
+    private static final String COMMONS_PATH_PREFIX = "/wikipedia/commons/";
 
     private final HostResolver hostResolver;
+    private final Set<String> allowedHosts;
+    private final List<String> allowedPathPrefixes;
+    private final boolean httpAllowed;
 
     public KtoPhotoUrlValidator() {
         this(InetAddress::getAllByName);
     }
 
     KtoPhotoUrlValidator(HostResolver hostResolver) {
+        this(Set.of(ALLOWED_HOST), List.of(WEBSITE_PATH_PREFIX, FESTIVAL_RESOURCE_PATH_PREFIX), true, hostResolver);
+    }
+
+    private KtoPhotoUrlValidator(Set<String> allowedHosts, List<String> allowedPathPrefixes,
+                                 boolean httpAllowed, HostResolver hostResolver) {
+        this.allowedHosts = Set.copyOf(allowedHosts);
+        this.allowedPathPrefixes = List.copyOf(allowedPathPrefixes);
+        this.httpAllowed = httpAllowed;
         this.hostResolver = hostResolver;
+    }
+
+    /** 서버가 Commons API에서 다시 확인한 Wikimedia 파일 호스트의 HTTPS URL만 허용한다. */
+    public static KtoPhotoUrlValidator wikimediaCommons() {
+        return wikimediaCommons(InetAddress::getAllByName);
+    }
+
+    static KtoPhotoUrlValidator wikimediaCommons(HostResolver hostResolver) {
+        return new KtoPhotoUrlValidator(COMMONS_HOSTS, List.of(COMMONS_PATH_PREFIX), false, hostResolver);
     }
 
     public URI validate(String imageUrl) {
         URI uri = parse(imageUrl);
         String scheme = normalizedScheme(uri);
 
-        if (!("http".equals(scheme) || "https".equals(scheme))
+        if (!((httpAllowed && "http".equals(scheme)) || "https".equals(scheme))
                 || uri.getHost() == null
-                || !ALLOWED_HOST.equalsIgnoreCase(uri.getHost())
+                || !allowedHosts.contains(uri.getHost().toLowerCase(Locale.ROOT))
                 || uri.getUserInfo() != null
                 || uri.getFragment() != null
                 || hasNonStandardPort(uri, scheme)
@@ -77,8 +102,7 @@ public class KtoPhotoUrlValidator {
     }
 
     private boolean hasAllowedPathPrefix(String path) {
-        return path != null && (path.startsWith(WEBSITE_PATH_PREFIX)
-                || path.startsWith(FESTIVAL_RESOURCE_PATH_PREFIX));
+        return path != null && allowedPathPrefixes.stream().anyMatch(path::startsWith);
     }
 
     private void verifyPublicAddresses(String host) {

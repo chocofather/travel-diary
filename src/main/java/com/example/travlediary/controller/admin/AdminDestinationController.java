@@ -1,17 +1,20 @@
 package com.example.travlediary.controller.admin;
 
 import com.example.travlediary.dto.DestinationForm;
-import com.example.travlediary.model.DestinationImageLicenseType;
 import com.example.travlediary.dto.kto.KtoSelectedPhotoRequest;
 import com.example.travlediary.model.CountryCategory;
+import com.example.travlediary.model.DestinationImageLicenseType;
 import com.example.travlediary.model.DestinationType;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.amenity.AmenityService;
 import com.example.travlediary.service.category.CategoryService;
 import com.example.travlediary.service.category.CountryCategoryService;
+import com.example.travlediary.service.destination.DestinationImageService;
 import com.example.travlediary.service.destination.DestinationNotFoundException;
 import com.example.travlediary.service.destination.DestinationService;
 import com.example.travlediary.service.destination.DestinationSaveOrchestrationService;
+import com.example.travlediary.service.destination.DuplicateWikidataDestinationException;
+import com.example.travlediary.service.destination.InvalidMainCategoryException;
 import com.example.travlediary.service.file.UnsupportedImageFormatException;
 import com.example.travlediary.service.info.AccommodationInfoService;
 import com.example.travlediary.service.info.ActivityInfoService;
@@ -21,9 +24,15 @@ import com.example.travlediary.service.info.ShopInfoService;
 import com.example.travlediary.service.kto.InvalidKtoSelectedPhotosException;
 import com.example.travlediary.service.kto.KtoSelectedPhotoRequestParser;
 import com.example.travlediary.service.kto.KtoTourImportContentType;
+import com.example.travlediary.service.wikidata.CommonsApiException;
+import com.example.travlediary.service.wikidata.CommonsPhotoDownloadException;
+import com.example.travlediary.service.wikidata.WikidataApiException;
+import com.example.travlediary.service.wikidata.WikipediaApiException;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.dao.DataAccessException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
@@ -85,6 +94,29 @@ public class AdminDestinationController {
         return "admin/destinations/kto-import";
     }
 
+    /** 해외(Wikidata) 일괄 등록 화면. 검색·검토·등록은 /admin/api/wikidata/bulk 가 맡는다. */
+    @GetMapping("/wikidata-import")
+    public String showWikidataImportPage(Model model) {
+        model.addAttribute("destinationTypes", DESTINATION_TYPE_LABELS);
+        model.addAttribute("seasons", SEASON_LABELS);
+        // 해외 지역 선택에서 국내 루트를 빼는 기준. 숫자 ID 를 화면에 하드코딩하지 않는다.
+        model.addAttribute("domesticRootId", countryCategoryService.getKoreaRootId());
+        return "admin/destinations/wikidata-import";
+    }
+
+    /** 등록폼의 유형·시즌 선택지와 같은 순서·이름. */
+    private static final Map<String, String> DESTINATION_TYPE_LABELS = orderedLabels(
+            "ATTRACTION", "관광지", "ACCOMMODATION", "숙소", "RESTAURANTS", "음식점",
+            "CAFE", "카페", "SHOP", "쇼핑", "ACTIVITY", "체험/액티비티");
+    private static final Map<String, String> SEASON_LABELS = orderedLabels(
+            "SPRING", "봄", "SUMMER", "여름", "FALL", "가을", "WINTER", "겨울", "ALL_SEASONS", "사계절");
+
+    private static Map<String, String> orderedLabels(String... pairs) {
+        Map<String, String> labels = new java.util.LinkedHashMap<>();
+        for (int index = 0; index < pairs.length; index += 2) labels.put(pairs[index], pairs[index + 1]);
+        return java.util.Collections.unmodifiableMap(labels);
+    }
+
     // 여행지 등록
     @GetMapping("/create")
     public String showCreateForm(Model model,
@@ -111,6 +143,8 @@ public class AdminDestinationController {
 
     private void prepareCreateFormModel(Model model, DestinationForm form, String lang) {
         model.addAttribute("destinationForm", form);
+        model.addAttribute("wikipediaSourcesPending", form.getWikipediaRevisionIds() != null
+                && form.getWikipediaRevisionIds().stream().anyMatch(Objects::nonNull));
         model.addAttribute("imageLicenseOptions", DestinationImageLicenseType.values());
         model.addAttribute("imageLicenseCodes", Arrays.stream(DestinationImageLicenseType.values())
                 .map(DestinationImageLicenseType::getCode)
@@ -174,7 +208,10 @@ public class AdminDestinationController {
             Model model,
             HttpServletResponse response,
             @RequestParam(defaultValue = "ko") String lang) {
+        rejectInvalidMainCategory(form, bindingResult);
         if (bindingResult.hasErrors()) {
+            // 폼이 맨 위부터 다시 그려지므로, 칸 옆 오류와 별도로 위쪽 안내에도 원인을 모아 보여준다.
+            model.addAttribute("registrationError", bindingErrorSummary(bindingResult));
             prepareCreateFormModel(model, form, lang);
             return "admin/destinations/create";
         }
@@ -184,16 +221,84 @@ public class AdminDestinationController {
         try {
             destinationSaveOrchestrationService.registerDestination(
                     form, userDetails.getId(), selectedKtoPhotos);
+        } catch (DuplicateWikidataDestinationException exception) {
+            return duplicateWikidataForm(form, model, response, lang);
+        } catch (DuplicateKeyException exception) {
+            if (form.getWikidataQid() != null
+                    && destinationService.findWikidataDestinationId(form.getWikidataQid()) != null) {
+                return duplicateWikidataForm(form, model, response, lang);
+            }
+            throw exception;
         } catch (InvalidKtoSelectedPhotosException exception) {
             throw invalidKtoSelection();
-        } catch (UnsupportedImageFormatException exception) {
+        } catch (UnsupportedImageFormatException | DestinationImageService.InvalidSourceUrlException exception) {
             // 잘못된 이미지는 입력 오류이므로 400 을 유지하되 등록 폼 안에서 이유를 보여준다
             response.setStatus(HttpStatus.BAD_REQUEST.value());
             model.addAttribute("imageError", exception.getMessage());
             prepareCreateFormModel(model, form, lang);
             return "admin/destinations/create";
+        } catch (IllegalArgumentException | WikidataApiException | WikipediaApiException | NoSuchElementException exception) {
+            response.setStatus(HttpStatus.BAD_REQUEST.value());
+            model.addAttribute("registrationError", exception.getMessage());
+            prepareCreateFormModel(model, form, lang);
+            return "admin/destinations/create";
+        } catch (CommonsApiException | CommonsPhotoDownloadException exception) {
+            // Commons 조회·내려받기 실패는 외부 제공처 문제라 502로 두고, 사진을 제외해 다시 등록할 수 있게 폼을 유지한다.
+            response.setStatus(HttpStatus.BAD_GATEWAY.value());
+            model.addAttribute("registrationError", exception.getMessage());
+            prepareCreateFormModel(model, form, lang);
+            return "admin/destinations/create";
+        } catch (DataAccessException | IllegalStateException exception) {
+            if (form.getWikidataQid() == null || form.getWikidataQid().isBlank()) throw exception;
+            response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
+            model.addAttribute("registrationError",
+                    "Wikidata 여행지·Wikipedia 출처·Commons 사진 저장에 실패했습니다. 입력값은 저장되지 않았습니다. 다시 시도해 주세요.");
+            prepareCreateFormModel(model, form, lang);
+            return "admin/destinations/create";
         }
-        return "redirect:/admin";
+        // Wikidata·KTO·수동 등록 모두 성공하면 방금 등록한 여행지를 확인할 수 있는 관리자 목록으로 보낸다.
+        return "redirect:/admin/destinations";
+    }
+
+    /** 형식 변환 오류는 스프링 기본 문구 대신 관리자용 짧은 안내로 바꾼다. */
+    private String bindingErrorSummary(BindingResult bindingResult) {
+        String summary = bindingResult.getFieldErrors().stream()
+                .map(error -> error.isBindingFailure()
+                        ? BINDING_FIELD_LABELS.getOrDefault(error.getField(), "입력값") + " 형식을 확인해 주세요."
+                        : error.getDefaultMessage())
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.joining(" "));
+        return summary.isBlank() ? "입력값을 확인해 주세요." : summary;
+    }
+
+    private static final Map<String, String> BINDING_FIELD_LABELS = Map.of(
+            "latitude", "위도",
+            "longitude", "경도",
+            "regionId", "지역",
+            "mainCategoryId", "대표 카테고리"
+    );
+
+    /** 선택하지 않은 카테고리를 대표로 보냈으면 저장하지 않고 카테고리 칸에 알린다. 규칙은 저장 서비스와 같다. */
+    private void rejectInvalidMainCategory(DestinationForm form, BindingResult bindingResult) {
+        if (bindingResult.hasFieldErrors("mainCategoryId")) {
+            return;
+        }
+        try {
+            DestinationService.resolveMainCategoryId(form.getCategoryIds(), form.getMainCategoryId());
+        } catch (InvalidMainCategoryException exception) {
+            bindingResult.rejectValue("mainCategoryId", "invalid", exception.getMessage());
+        }
+    }
+
+    private String duplicateWikidataForm(DestinationForm form, Model model,
+                                         HttpServletResponse response, String lang) {
+        response.setStatus(HttpStatus.CONFLICT.value());
+        model.addAttribute("registrationError", "이미 등록된 Wikidata 여행지입니다.");
+        model.addAttribute("existingWikidataDestinationId",
+                destinationService.findWikidataDestinationId(form.getWikidataQid()));
+        prepareCreateFormModel(model, form, lang);
+        return "admin/destinations/create";
     }
 
 
@@ -338,6 +443,7 @@ public class AdminDestinationController {
         var detailDto = destinationService.getDestinationDetailWithInfo(id);
         var translations = destinationService.getTranslationsByDestinationId(id);
         var form = DestinationForm.fromDetailDto(detailDto, translations);
+        model.addAttribute("wikipediaSources", destinationService.getWikipediaSourcesByDestinationId(id));
         // 유형별 상세정보의 언어별 값은 저장된 줄이 있으면 각 슬롯으로 되돌린다.
         if (detailDto != null && detailDto.getRestaurantInfo() != null) {
             form.setRestaurantInfoTranslations(restaurantInfoService.getTranslationForms(id));
@@ -361,6 +467,10 @@ public class AdminDestinationController {
 
     private void prepareEditFormModel(Model model, DestinationForm form, String lang) {
         model.addAttribute("destinationForm", form);
+        if (form.getDestinationId() != null) {
+            model.addAttribute("wikipediaSources",
+                    destinationService.getWikipediaSourcesByDestinationId(form.getDestinationId()));
+        }
         model.addAttribute("domesticRootId", countryCategoryService.getKoreaRootId());
         model.addAttribute("regionPathIds", joinRegionPathIds(form.getRegionId()));
         addCategoryModel(model);
@@ -385,6 +495,8 @@ public class AdminDestinationController {
                                     Model model,
                                     RedirectAttributes redirectAttributes,
                                     @RequestParam(defaultValue = "ko") String lang) {
+        form.setDestinationId(id);
+        rejectInvalidMainCategory(form, bindingResult);
         if (bindingResult.hasErrors()) {
             prepareEditFormModel(model, form, lang);
             return "admin/destinations/edit";

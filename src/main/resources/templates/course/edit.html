@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko"
       xmlns:th="http://www.thymeleaf.org"
-      th:replace="layout/main :: layout(~{::body}, ~{::headFragment})">
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
 
 <th:block th:fragment="headFragment">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css">

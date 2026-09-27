@@ -27,8 +27,11 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -72,7 +75,12 @@ class AdminDestinationTranslationTabsRenderingTest {
         assertThat(preview.select("[data-wikidata-search]")).hasSize(1);
         assertThat(preview.select("[data-wikidata-detail][hidden]")).hasSize(1);
         assertThat(preview.select("[name]")).isEmpty();
+        assertThat(document.select("script[src^='/js/admin-wikidata-form-apply.js']")).hasSize(1);
         assertThat(document.select("script[src^='/js/admin-wikidata-preview.js']")).hasSize(1);
+        Element form = document.selectFirst("form[data-translation-collapsible]");
+        assertThat(form).isNotNull();
+        assertThat(form.select("[name=wikidataQid][type=hidden]")).hasSize(1);
+        assertThat(form.select("[data-wikipedia-revision][type=hidden]")).hasSize(5);
     }
 
     @Test
@@ -281,5 +289,88 @@ class AdminDestinationTranslationTabsRenderingTest {
         }
         // 언어 전용 훅은 더 이상 없다
         assertThat(document.select("[data-kto-tour-english-field]")).isEmpty();
+    }
+
+    @Test
+    void overseasBulkImportPageOffersTypeAndSeasonWithoutPreselectingThem() throws Exception {
+        when(countryCategoryService.getKoreaRootId()).thenReturn(7L);
+        var document = Jsoup.parse(mockMvc.perform(get("/admin/destinations/wikidata-import")
+                        .with(user("admin").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString());
+
+        assertThat(document.selectFirst("[data-wikidata-bulk]").attr("data-domestic-root-id")).isEqualTo("7");
+        // 유형·시즌은 임의로 정하지 않는다: 첫 선택지는 빈 값이고 선택된 값이 없다.
+        for (String selector : List.of("[data-bulk-common-type]", "[data-bulk-common-season]")) {
+            Element select = document.selectFirst(selector);
+            assertThat(select.select("option").first().val()).isEmpty();
+            assertThat(select.select("option[selected]")).isEmpty();
+        }
+        assertThat(document.select("[data-bulk-common-type] option")).extracting(Element::val)
+                .contains("ATTRACTION", "ACCOMMODATION", "RESTAURANTS", "CAFE", "SHOP", "ACTIVITY");
+        assertThat(document.select("[data-bulk-common-season] option")).extracting(Element::val)
+                .contains("SPRING", "SUMMER", "FALL", "WINTER", "ALL_SEASONS");
+        assertThat(document.select("script[src^='/js/admin-wikidata-bulk-import.js']")).hasSize(1);
+        assertThat(document.select("script[src^='/js/admin-commons-photo-picker.js']")).hasSize(1);
+        // 국내 일괄 등록과 같은 현재 페이지 선택 도구
+        assertThat(document.selectFirst("[data-bulk-page-select]").text()).isEqualTo("현재 페이지 전체선택");
+        assertThat(document.selectFirst("[data-bulk-page-clear]").text()).isEqualTo("현재 페이지 선택해제");
+        assertThat(document.selectFirst("[data-bulk-clear]").text()).isEqualTo("전체 선택해제");
+        assertThat(document.select("th.is-check input[type=checkbox][data-bulk-page-toggle]")).hasSize(1);
+        assertThat(document.select("script[src^='/js/admin-bulk-page-selection.js']")).hasSize(1);
+    }
+
+    @Test
+    void aMainCategoryThatWasNotSelectedIsNotSavedAndIsReportedInTheCategorySection() throws Exception {
+        var document = Jsoup.parse(mockMvc.perform(multipart("/admin/destinations")
+                        .param("regionId", "101")
+                        .param("translations[0].languageCode", "ko")
+                        .param("translations[0].name", "경복궁")
+                        .param("season", "SPRING").param("type", "ATTRACTION")
+                        .param("categoryIds", "3", "5")
+                        .param("mainCategoryId", "8")
+                        .param("ktoSelectedPhotosJson", "[]")
+                        .with(user("admin").roles("ADMIN")).with(csrf()))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString());
+
+        org.mockito.Mockito.verify(destinationSaveOrchestrationService, org.mockito.Mockito.never())
+                .registerDestination(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
+                        org.mockito.ArgumentMatchers.any());
+        Element categorySection = document.selectFirst("[data-category-select]");
+        assertThat(categorySection.select(".admin-field-error").text())
+                .isEqualTo("대표 카테고리는 선택한 카테고리 중에서 지정해 주세요.");
+        assertThat(document.selectFirst("[data-registration-error]").text())
+                .contains("대표 카테고리는 선택한 카테고리 중에서 지정해 주세요.");
+        // 대표 칸은 폼 안에 있어 다시 고른 값이 함께 저장된다.
+        assertThat(categorySection.selectFirst("input[type=hidden][name=mainCategoryId][data-category-main]"))
+                .isNotNull();
+    }
+
+    @Test
+    void rejectedRegistrationShowsItsReasonAtTheTopAndKeepsInputsAndSelectedPhotos() throws Exception {
+        String selection = "{\"qid\":\"Q12501\",\"photos\":[{\"fileName\":\"A.jpg\",\"main\":true},"
+                + "{\"fileName\":\"B.jpg\",\"main\":false}]}";
+        var document = Jsoup.parse(mockMvc.perform(multipart("/admin/destinations")
+                        .param("wikidataQid", "Q12501")
+                        .param("commonsSelectedPhotosJson", selection)
+                        .param("translations[0].languageCode", "ko")
+                        .param("translations[0].name", "만리장성")
+                        .param("season", "SPRING").param("type", "ATTRACTION")
+                        .param("ktoSelectedPhotosJson", "[]")
+                        .with(user("admin").roles("ADMIN")).with(csrf()))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString());
+
+        // 다시 그려진 폼은 맨 위부터 보이므로, 원인은 폼 앞쪽 안내에 둔다(버튼 옆에만 두지 않는다).
+        Element alert = document.selectFirst("[data-registration-error]");
+        assertThat(alert).isNotNull();
+        assertThat(alert.closest("form")).isNull();
+        assertThat(alert.text()).contains("여행지를 등록하지 못했습니다", "지역을 선택해 주세요.");
+        assertThat(document.select(".admin-form-actions [role=alert]")).isEmpty();
+        // 관리자 입력과 선택한 Commons 사진은 그대로 남는다.
+        assertThat(document.selectFirst("[name=commonsSelectedPhotosJson]").val()).isEqualTo(selection);
+        assertThat(document.selectFirst("[name=wikidataQid]").val()).isEqualTo("Q12501");
+        assertThat(document.selectFirst("[name='translations[0].name']").val()).isEqualTo("만리장성");
     }
 }

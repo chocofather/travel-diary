@@ -4,6 +4,7 @@ import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.config.i18n.TravelDiaryLocaleResolver;
 import com.example.travlediary.dto.RecommendDestinationDto;
 import com.example.travlediary.dto.SeasonDestinationDto;
+import com.example.travlediary.service.file.DestinationCardThumbnailService;
 import com.example.travlediary.service.recommend.DestinationRecommendService;
 import com.example.travlediary.service.recommend.PopularRecommendService;
 import jakarta.servlet.http.Cookie;
@@ -28,15 +29,18 @@ class HomeDestinationApiLocaleTest {
 
     @Mock private PopularRecommendService popularRecommendService;
     @Mock private DestinationRecommendService destinationRecommendService;
+    /** 이 테스트의 카드에는 이미지가 없어 썸네일을 채우지 않는다. (업로드 폴더도 비어 있다) */
+    private final DestinationCardThumbnailService cardThumbnailService =
+            new DestinationCardThumbnailService("build/tmp/no-uploads");
 
     @ParameterizedTest
     @EnumSource(SupportedLanguage.class)
     void homeDestinationApisUseTheLocaleCookieForTheirLocalizedJson(
             SupportedLanguage language) throws Exception {
         PopularRecommendController popularController =
-                new PopularRecommendController(popularRecommendService);
+                new PopularRecommendController(popularRecommendService, cardThumbnailService);
         DestinationRecommendController seasonController =
-                new DestinationRecommendController(destinationRecommendService);
+                new DestinationRecommendController(destinationRecommendService, cardThumbnailService);
         MockMvc mockMvc = MockMvcBuilders
                 .standaloneSetup(popularController, seasonController)
                 .setLocaleResolver(new TravelDiaryLocaleResolver())

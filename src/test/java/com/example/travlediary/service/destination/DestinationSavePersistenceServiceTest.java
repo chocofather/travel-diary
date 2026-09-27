@@ -1,15 +1,25 @@
 package com.example.travlediary.service.destination;
 
 import com.example.travlediary.dto.DestinationForm;
+import com.example.travlediary.model.DestinationImage;
+import com.example.travlediary.model.DestinationImageCommonsSource;
+import com.example.travlediary.model.DestinationTranslation;
+import com.example.travlediary.model.DestinationTranslationSource;
+import com.example.travlediary.repository.destination.DestinationMapper;
+import com.example.travlediary.repository.destination.DestinationTranslationSourceMapper;
 import com.example.travlediary.service.kto.KtoPhotoImportPersistenceService;
 import com.example.travlediary.service.kto.PreparedKtoPhoto;
+import com.example.travlediary.service.wikidata.CommonsPhotoSelectionException;
+import com.example.travlediary.service.wikidata.PreparedCommonsPhoto;
 import org.junit.jupiter.api.BeforeEach;
+import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.lang.reflect.Method;
 import java.sql.Timestamp;
@@ -19,6 +29,9 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
@@ -30,6 +43,9 @@ class DestinationSavePersistenceServiceTest {
 
     @Mock private DestinationService destinationService;
     @Mock private KtoPhotoImportPersistenceService ktoPersistenceService;
+    @Mock private DestinationMapper destinationMapper;
+    @Mock private DestinationTranslationSourceMapper sourceMapper;
+    @Mock private DestinationImageService imageService;
 
     private DestinationSavePersistenceService service;
 
@@ -37,6 +53,203 @@ class DestinationSavePersistenceServiceTest {
     void setUp() {
         service = new DestinationSavePersistenceService(
                 destinationService, ktoPersistenceService);
+        ReflectionTestUtils.setField(service, "destinationMapper", destinationMapper);
+        ReflectionTestUtils.setField(service, "translationSourceMapper", sourceMapper);
+        ReflectionTestUtils.setField(service, "destinationImageService", imageService);
+    }
+
+    @Test
+    void wikidataDuplicateIsCheckedBeforeAnyInsert() {
+        DestinationForm form = new DestinationForm();
+        form.setWikidataQid("Q243");
+        when(destinationMapper.countByExternalContentId("WIKIDATA", "Q243")).thenReturn(1);
+
+        assertThatThrownBy(() -> service.registerWikidataDestination(form, 7L, java.util.Map.of()))
+                .isInstanceOf(DuplicateWikidataDestinationException.class);
+        verify(destinationService, never()).registerDestination(any(), any(), any(), any());
+    }
+
+    @Test
+    void preCheckRejectsRegisteredQidButLeavesTheFinalCheckInsideTheTransaction() {
+        when(destinationMapper.countByExternalContentId("WIKIDATA", "Q243")).thenReturn(1);
+
+        assertThatThrownBy(() -> service.rejectRegisteredWikidata(" q243 "))
+                .isInstanceOf(DuplicateWikidataDestinationException.class);
+        service.rejectRegisteredWikidata("not-a-qid");
+        verify(destinationMapper, never()).countByExternalContentId("WIKIDATA", "NOT-A-QID");
+
+        // 사전 확인을 통과한 뒤 다른 요청이 먼저 저장했어도 트랜잭션 안에서 다시 막는다.
+        DestinationForm form = new DestinationForm();
+        form.setWikidataQid("Q243");
+        assertThatThrownBy(() -> service.registerWikidataDestination(form, 7L, java.util.Map.of(), List.of()))
+                .isInstanceOf(DuplicateWikidataDestinationException.class);
+        verify(destinationService, never()).registerDestination(any(), any(), any(), any());
+    }
+
+    @Test
+    void wikipediaSourceInsertFailurePropagatesAcrossTransactionalBoundary() throws Exception {
+        DestinationForm form = new DestinationForm();
+        form.setWikidataQid("Q243");
+        DestinationTranslation translation = new DestinationTranslation();
+        translation.setId(10L);
+        when(destinationService.registerDestination(form, 7L, "WIKIDATA", "Q243")).thenReturn(9L);
+        when(destinationMapper.findTranslationByDestinationAndLanguage(9L, "ko"))
+                .thenReturn(translation);
+        DestinationTranslationSource source = new DestinationTranslationSource();
+        doThrow(new IllegalStateException("source insert failed")).when(sourceMapper).insert(source);
+
+        assertThatThrownBy(() -> service.registerWikidataDestination(form, 7L,
+                java.util.Map.of("ko", source))).isInstanceOf(IllegalStateException.class);
+        assertThat(source.getDestinationTranslationId()).isEqualTo(10L);
+        assertThat(DestinationSavePersistenceService.class.getMethod("registerWikidataDestination",
+                DestinationForm.class, Long.class, java.util.Map.class)
+                .getAnnotation(Transactional.class)).isNotNull();
+    }
+
+    @Test
+    void allFiveWikipediaSourcesAttachToTheirOwnTranslationRows() {
+        DestinationForm form = new DestinationForm();
+        form.setWikidataQid("Q243");
+        when(destinationService.registerDestination(form, 7L, "WIKIDATA", "Q243")).thenReturn(9L);
+        java.util.Map<String, DestinationTranslationSource> sources = new java.util.LinkedHashMap<>();
+        List<String> languages = List.of("ko", "en", "ja", "zh-CN", "zh-TW");
+        for (int i = 0; i < languages.size(); i++) {
+            DestinationTranslation translation = new DestinationTranslation();
+            translation.setId(100L + i);
+            when(destinationMapper.findTranslationByDestinationAndLanguage(9L, languages.get(i)))
+                    .thenReturn(translation);
+            sources.put(languages.get(i), new DestinationTranslationSource());
+        }
+
+        assertThat(service.registerWikidataDestination(form, 7L, sources)).isEqualTo(9L);
+
+        for (int i = 0; i < languages.size(); i++) {
+            DestinationTranslationSource source = sources.get(languages.get(i));
+            assertThat(source.getDestinationTranslationId()).isEqualTo(100L + i);
+            verify(sourceMapper).insert(source);
+        }
+    }
+
+    @Test
+    void commonsPhotosSaveImageRowsWithoutLegacySourceColumnsThenFullSourceRows() {
+        DestinationForm form = new DestinationForm();
+        form.setWikidataQid("Q243");
+        when(destinationService.registerDestination(form, 7L, "WIKIDATA", "Q243")).thenReturn(9L);
+        PreparedCommonsPhoto main = commonsPhoto("/uploads/destinations/a.jpg", "File:A.jpg", true);
+        PreparedCommonsPhoto extra = commonsPhoto("/uploads/destinations/b.jpg", "File:B.jpg", false);
+        doAnswer(invocation -> {
+            List<DestinationImage> images = invocation.getArgument(1);
+            images.get(0).setId(501L);
+            images.get(1).setId(502L);
+            return null;
+        }).when(imageService).saveImages(eq(9L), anyList());
+
+        service.registerWikidataDestination(form, 7L, java.util.Map.of(), List.of(main, extra));
+
+        ArgumentCaptor<List<DestinationImage>> images = ArgumentCaptor.forClass(List.class);
+        verify(imageService).saveImages(eq(9L), images.capture());
+        assertThat(images.getValue()).extracting(DestinationImage::getSourceType)
+                .containsOnly("WIKIMEDIA_COMMONS");
+        assertThat(images.getValue()).extracting(DestinationImage::getIsMain).containsExactly(true, false);
+        assertThat(images.getValue()).allSatisfy(image -> {
+            assertThat(image.getPhotographer()).isNull();
+            assertThat(image.getSourceName()).isNull();
+            assertThat(image.getLicenseType()).isNull();
+            assertThat(image.getSourceImageUrl()).isNull();
+        });
+        InOrder order = inOrder(imageService, destinationMapper);
+        order.verify(imageService).saveImages(eq(9L), anyList());
+        order.verify(destinationMapper).insertCommonsImageSource(main.source());
+        order.verify(destinationMapper).insertCommonsImageSource(extra.source());
+        assertThat(main.source().getDestinationImageId()).isEqualTo(501L);
+        assertThat(extra.source().getDestinationImageId()).isEqualTo(502L);
+    }
+
+    @Test
+    void duplicateCommonsFileForTheSameDestinationIsRefusedBeforeImageInsert() {
+        DestinationForm form = new DestinationForm();
+        form.setWikidataQid("Q243");
+        when(destinationService.registerDestination(form, 7L, "WIKIDATA", "Q243")).thenReturn(9L);
+
+        assertThatThrownBy(() -> service.registerWikidataDestination(form, 7L, java.util.Map.of(), List.of(
+                commonsPhoto("/uploads/destinations/a.jpg", "File:A.jpg", true),
+                commonsPhoto("/uploads/destinations/b.jpg", "File:A.jpg", false))))
+                .isInstanceOf(CommonsPhotoSelectionException.class);
+
+        when(destinationMapper.countCommonsImageSource(9L, "File:C.jpg")).thenReturn(1);
+        assertThatThrownBy(() -> service.registerWikidataDestination(form, 7L, java.util.Map.of(), List.of(
+                commonsPhoto("/uploads/destinations/c.jpg", "File:C.jpg", true))))
+                .isInstanceOf(CommonsPhotoSelectionException.class);
+        verify(imageService, never()).saveImages(any(), anyList());
+        verify(destinationMapper, never()).insertCommonsImageSource(any());
+    }
+
+    @Test
+    void commonsSourceInsertFailurePropagatesSoTheWholeRegistrationRollsBack() throws Exception {
+        DestinationForm form = new DestinationForm();
+        form.setWikidataQid("Q243");
+        when(destinationService.registerDestination(form, 7L, "WIKIDATA", "Q243")).thenReturn(9L);
+        PreparedCommonsPhoto photo = commonsPhoto("/uploads/destinations/a.jpg", "File:A.jpg", true);
+        doAnswer(invocation -> {
+            List<DestinationImage> images = invocation.getArgument(1);
+            images.get(0).setId(501L);
+            return null;
+        }).when(imageService).saveImages(eq(9L), anyList());
+        doThrow(new org.springframework.dao.DataIntegrityViolationException("source failed"))
+                .when(destinationMapper).insertCommonsImageSource(photo.source());
+
+        assertThatThrownBy(() -> service.registerWikidataDestination(
+                form, 7L, java.util.Map.of(), List.of(photo)))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+        assertThat(DestinationSavePersistenceService.class.getMethod("registerWikidataDestination",
+                DestinationForm.class, Long.class, java.util.Map.class, List.class)
+                .getAnnotation(Transactional.class)).isNotNull();
+    }
+
+    @Test
+    void addingToAnExistingDestinationLocksItThenChecksDuplicatesAndSavesInOneTransaction() throws Exception {
+        PreparedCommonsPhoto photo = commonsPhoto("/uploads/destinations/b.jpg", "File:B.jpg", false);
+        when(destinationMapper.lockDestinationForImageUpdate(9L)).thenReturn(9L);
+        doAnswer(invocation -> {
+            invocation.<List<DestinationImage>>getArgument(1).get(0).setId(601L);
+            return null;
+        }).when(imageService).saveImages(eq(9L), anyList());
+
+        service.addCommonsPhotosToExistingDestination(9L, List.of(photo));
+
+        InOrder order = inOrder(destinationMapper, imageService);
+        order.verify(destinationMapper).lockDestinationForImageUpdate(9L);
+        order.verify(destinationMapper).countCommonsImageSource(9L, "File:B.jpg");
+        order.verify(imageService).saveImages(eq(9L), anyList());
+        order.verify(destinationMapper).insertCommonsImageSource(photo.source());
+        assertThat(photo.source().getDestinationImageId()).isEqualTo(601L);
+        assertThat(DestinationSavePersistenceService.class.getMethod("addCommonsPhotosToExistingDestination",
+                Long.class, List.class).getAnnotation(Transactional.class)).isNotNull();
+    }
+
+    @Test
+    void concurrentAddOfTheSameFileIsRefusedAfterTheLockAndMissingDestinationSavesNothing() {
+        PreparedCommonsPhoto photo = commonsPhoto("/uploads/destinations/b.jpg", "File:B.jpg", false);
+        when(destinationMapper.lockDestinationForImageUpdate(9L)).thenReturn(9L);
+        // 먼저 잠금을 얻은 요청이 같은 파일을 저장한 뒤라면 여기서 막힌다.
+        when(destinationMapper.countCommonsImageSource(9L, "File:B.jpg")).thenReturn(1);
+
+        assertThatThrownBy(() -> service.addCommonsPhotosToExistingDestination(9L, List.of(photo)))
+                .isInstanceOf(CommonsPhotoSelectionException.class);
+        when(destinationMapper.lockDestinationForImageUpdate(404L)).thenReturn(null);
+        assertThatThrownBy(() -> service.addCommonsPhotosToExistingDestination(404L, List.of(photo)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .isNotInstanceOf(CommonsPhotoSelectionException.class);
+        verify(imageService, never()).saveImages(any(), anyList());
+        verify(destinationMapper, never()).insertCommonsImageSource(any());
+    }
+
+    private PreparedCommonsPhoto commonsPhoto(String localUrl, String title, boolean main) {
+        DestinationImageCommonsSource source = new DestinationImageCommonsSource();
+        source.setCommonsFileTitle(title);
+        source.setSourceTitle(title.substring(5));
+        source.setAuthorText("Artist");
+        return new PreparedCommonsPhoto(localUrl, main, source);
     }
 
     @Test

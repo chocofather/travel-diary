@@ -15,6 +15,10 @@
 }
 .admin-wikidata-status { margin: 0; color: #56647d; font-size: 0.88rem; }
 .admin-wikidata-status.is-error { color: #ae3030; }
+.admin-wikidata-progress { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.admin-wikidata-progress p { margin: 0; padding: 9px 11px; border-radius: 8px; background: #edf4fc; color: #2e4d79; font-size: 0.84rem; }
+.admin-wikidata-progress p.is-warning { background: #fff3de; color: #805b1c; }
+.admin-wikidata-progress p.is-error { background: #fff0f0; color: #ae3030; }
 .admin-wikidata-results { display: grid; gap: 10px; }
 .admin-wikidata-candidate {
     display: flex;
@@ -52,9 +56,87 @@
 .admin-wikidata-image-info a { font-size: 0.85rem; }
 .admin-wikidata-match { margin: 0; padding: 10px 12px; border-radius: 8px; background: #edf4fc; color: #2e4d79; }
 .admin-wikidata-match.is-review { background: #fff3de; color: #805b1c; }
+.admin-wikidata-review { display: grid; gap: 10px; }
+.admin-wikidata-review:empty { display: none; }
+.admin-wikidata-review h4 { margin: 0; color: #27375f; }
+.admin-wikidata-change-list { margin: 0; padding: 12px 12px 12px 32px; border: 1px solid #dbe5f3; border-radius: 8px; }
+.admin-wikidata-change-list li { margin: 4px 0; overflow-wrap: anywhere; }
+.admin-wikidata-review-note { margin: 0; color: #5d6b82; font-size: 0.87rem; }
+.admin-wikidata-review-note.is-warning { color: #805b1c; }
+.admin-wikidata-review-note a { margin-left: 8px; }
+/* 자동입력한 칸. 관리자가 값을 바꾸면 표시가 사라진다. */
+.admin-destination-form [data-autofill] { background-color: #f5f9ff; border-color: #b8c9e6; }
+/* 중국어 표기 자동 변환 문장. 원문 자동입력과 구분한다. */
+.admin-destination-form [data-autofill="chinese-conversion"] { background-color: #fffaf0; border-color: #e3cc9c; }
+.admin-wikidata-conversion-note { display: block; margin-top: 4px; color: #805b1c; font-size: 0.82rem; font-weight: 400; }
+.admin-wikidata-review-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.admin-wikidata-wikipedia { display: grid; gap: 10px; margin-top: 8px; padding-top: 16px; border-top: 1px solid #e3e8f1; }
+.admin-wikidata-wikipedia[hidden], .admin-wikidata-commons[hidden] { display: none; }
+.admin-wikidata-wikipedia h4, .admin-wikidata-wikipedia p { margin: 0; }
+.admin-wikidata-source-summary { color: #344763; font-size: 0.9rem; }
+.admin-wikidata-source-details { border: 1px solid #e3e8f1; border-radius: 8px; }
+.admin-wikidata-source-details > summary { cursor: pointer; padding: 10px 12px; color: #2e4d79; font-size: 0.88rem; font-weight: 600; }
+.admin-wikidata-source-details > .admin-wikidata-languages { padding: 0 12px 12px; }
+.admin-wikidata-toggle-open, .admin-wikidata-source-details[open] .admin-wikidata-toggle-closed { display: none; }
+.admin-wikidata-source-details[open] .admin-wikidata-toggle-open { display: inline; }
+.admin-wikidata-commons { display: grid; gap: 10px; }
+.admin-wikidata-commons h4 { margin: 0; color: #27375f; }
+.admin-wikidata-extract { white-space: pre-wrap; line-height: 1.6; overflow-wrap: anywhere; font-size: 0.88rem; }
+.admin-wikidata-source-links { display: flex; gap: 12px; flex-wrap: wrap; font-size: 0.85rem; }
+/* Commons 사진 후보: 사진이 중심인 그리드. 긴 출처·라이선스는 카드 안 '출처 상세 보기'에 접어 둔다. */
+.admin-commons-picker-summary { margin: 0; padding: 9px 12px; border-radius: 8px; background: #f4f7fb; color: #27375f; font-size: 0.88rem; font-weight: 600; overflow-wrap: anywhere; }
+.admin-commons-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+.admin-commons-card { display: flex; flex-direction: column; min-width: 0; border: 1px solid #e3e8f1; border-radius: 10px; background: #fff; overflow: hidden; }
+.admin-commons-card.is-selected { border-color: #4a74c9; box-shadow: 0 0 0 1px #4a74c9; }
+.admin-commons-card.is-registered, .admin-commons-card.is-blocked { background: #f8f9fb; }
+.admin-commons-card-media { position: relative; display: block; aspect-ratio: 4 / 3; background: #eef1f5; cursor: pointer; }
+.admin-commons-card.is-registered .admin-commons-card-media,
+.admin-commons-card.is-blocked .admin-commons-card-media { cursor: default; }
+.admin-commons-card-thumb { display: block; width: 100%; height: 100%; object-fit: cover; }
+.admin-commons-card.is-registered .admin-commons-card-thumb,
+.admin-commons-card.is-blocked .admin-commons-card-thumb { opacity: 0.55; }
+.admin-commons-card-noimage { display: grid; place-items: center; height: 100%; color: #8a94a6; font-size: 0.82rem; }
+.admin-commons-card-badges { position: absolute; top: 8px; left: 8px; right: 38px; display: flex; flex-wrap: wrap; gap: 4px; }
+.admin-commons-badge { padding: 2px 7px; border-radius: 999px; background: rgba(255, 255, 255, 0.92); color: #27375f; font-size: 0.72rem; font-weight: 600; }
+.admin-commons-badge.is-main { background: #27375f; color: #fff; }
+.admin-commons-badge[hidden] { display: none; }
+.admin-commons-card-check { position: absolute; top: 8px; right: 8px; width: 20px; height: 20px; margin: 0; accent-color: #4a74c9; cursor: pointer; }
+.admin-commons-card-check:disabled { cursor: not-allowed; }
+.admin-commons-card-body { display: grid; align-content: start; gap: 4px; padding: 10px; min-width: 0; }
+.admin-commons-card-title { overflow: hidden; color: #27375f; font-size: 0.85rem; text-overflow: ellipsis; white-space: nowrap; }
+.admin-commons-card-meta { margin: 0; overflow: hidden; color: #66738a; font-size: 0.8rem; text-overflow: ellipsis; white-space: nowrap; }
+.admin-commons-card-state { display: -webkit-box; margin: 0; overflow: hidden; color: #2e6b3f; font-size: 0.78rem; font-weight: 600; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.admin-commons-card.is-registered .admin-commons-card-state { color: #66738a; }
+.admin-commons-card.is-blocked .admin-commons-card-state { color: #805b1c; font-weight: 500; }
+.admin-commons-card-body > .admin-btn { justify-self: start; }
+.admin-commons-card-body > .admin-btn[hidden] { display: none; }
+.admin-commons-card-details { font-size: 0.8rem; }
+.admin-commons-card-details > summary { cursor: pointer; color: #2e4d79; }
+.admin-commons-card-details .admin-wikidata-detail-grid { margin-top: 8px; gap: 6px; }
+.admin-commons-card-details .admin-wikidata-field { grid-template-columns: 1fr; gap: 0; }
+.admin-commons-card-details .admin-wikidata-field dt { font-size: 0.76rem; }
+.admin-commons-card-details .admin-wikidata-field dd { font-size: 0.8rem; }
+.admin-commons-card-details .admin-wikidata-source-links { flex-direction: column; gap: 4px; margin-top: 8px; font-size: 0.8rem; overflow-wrap: anywhere; }
+.admin-commons-picker-more { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.admin-commons-picker-count { color: #66738a; font-size: 0.85rem; }
+.admin-commons-picker-more .admin-btn[hidden] { display: none; }
+.admin-commons-picker-more .admin-wikidata-review-note { flex-basis: 100%; }
+.admin-commons-add { display: grid; gap: 12px; }
+.admin-commons-add > .admin-btn { justify-self: start; }
+.admin-commons-add-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.admin-commons-add-form .admin-wikidata-review-note { flex-basis: 100%; }
+.admin-form-actions [data-wikipedia-save-warning] { flex-basis: 100%; }
+/* 수정폼의 언어별 Wikipedia 출처 한 줄 */
+.admin-wikipedia-source-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.admin-wikipedia-source { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; padding: 10px 12px; border: 1px solid #e3e8f1; border-radius: 8px; color: #5d6b82; font-size: 0.87rem; overflow-wrap: anywhere; }
+.admin-wikipedia-source strong { color: #27375f; }
+.admin-wikipedia-source label { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; font-weight: 500; }
 
 @media (max-width: 680px) {
+    .admin-wikidata-progress { grid-template-columns: 1fr; }
     .admin-wikidata-candidate { flex-wrap: wrap; }
     .admin-wikidata-candidate .admin-btn { margin-left: auto; }
     .admin-wikidata-languages { grid-template-columns: 1fr; }
+    .admin-commons-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .admin-commons-card-body { padding: 8px; }
 }

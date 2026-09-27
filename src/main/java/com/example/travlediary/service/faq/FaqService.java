@@ -1,6 +1,7 @@
 package com.example.travlediary.service.faq;
 
 import com.example.travlediary.config.i18n.SupportedLanguage;
+import com.example.travlediary.dto.FaqCategoryFilterDto;
 import com.example.travlediary.dto.FaqForm;
 import com.example.travlediary.dto.FaqListItemDto;
 import com.example.travlediary.dto.FaqTranslationForm;
@@ -19,6 +20,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -52,6 +54,44 @@ public class FaqService {
     @Transactional(readOnly = true)
     public List<FaqCategory> getCategories() {
         return faqMapper.findCategories();
+    }
+
+    /**
+     * 공개 FAQ 카테고리 필터.
+     *
+     * <p>DB 의 카테고리 전체를 쓴다. 공개 질문이 있는 카테고리는 목록에 처음 나오는 순서(관리자 노출 순서)로
+     * 앞에 두고, 아직 공개 질문이 없는 카테고리는 기존 카테고리 조회 순서대로 뒤에 붙인다.
+     * 이름은 목록과 같은 규칙으로 요청 언어로 바꾼다. (번역 조회는 한 번)
+     *
+     * @param publicFaqs 노출 순서대로 읽은 공개 목록 (언어 대체 전후 무관, 카테고리 번호만 본다)
+     */
+    @Transactional(readOnly = true)
+    public List<FaqCategoryFilterDto> getPublicCategoryFilters(List<FaqListItemDto> publicFaqs,
+                                                               SupportedLanguage requestedLanguage) {
+        List<FaqCategory> categories = faqMapper.findCategories();
+        if (categories == null || categories.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, String> baseNames = new LinkedHashMap<>();
+        for (FaqListItemDto item : publicFaqs == null ? List.<FaqListItemDto>of() : publicFaqs) {
+            if (item != null && item.getCategoryId() != null) {
+                baseNames.putIfAbsent(item.getCategoryId(), null);
+            }
+        }
+        for (FaqCategory category : categories) {
+            if (category != null && category.getId() != null) {
+                baseNames.put(category.getId(), category.getCategoryName());
+            }
+        }
+        // 목록에는 있지만 카테고리 조회에 없는 번호(동시에 지워진 경우 등)는 필터로 만들지 않는다.
+        baseNames.values().removeIf(Objects::isNull);
+
+        Map<Long, String> names = faqCategoryLocalizationService
+                .resolveLocalizedNamesByCategoryIds(baseNames, requestedLanguage);
+        List<FaqCategoryFilterDto> filters = new ArrayList<>();
+        baseNames.forEach((id, baseName) -> filters.add(
+                new FaqCategoryFilterDto(id, names.getOrDefault(id, baseName))));
+        return filters;
     }
 
     /**

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<th:block th:fragment="fields">
+  <div class="admin-image-bulk-fields">
+    <label><span>제공기관</span><input type="text" maxlength="100" data-bulk-field="sourceName" placeholder="예: 한국관광공사"></label>
+    <label><span>공통 저작자 (해당하는 경우)</span><input type="text" maxlength="100" data-bulk-field="photographer"></label>
+    <label><span>라이선스 유형</span>
+      <select data-bulk-field="licenseType">
+        <option value="">선택 안 함</option>
+        <option th:each="option : ${imageLicenseOptions}" th:value="${option.code}" th:text="${option.displayName}"></option>
+      </select>
+    </label>
+    <label><span>라이선스 상세 내용</span><input type="text" maxlength="255" data-bulk-field="licenseDetail"></label>
+    <label class="is-wide"><span>공통 제공기관 페이지 URL</span><input type="url" maxlength="2000" data-bulk-field="commonSourceUrl" data-image-source-url="common" placeholder="https://..."></label>
+  </div>
+  <p class="admin-field-help">공통 출처 페이지는 사진별 원본 페이지와 다릅니다. 사진별 원본 페이지와 기존 출처 URL은 일괄 변경하지 않습니다.</p>
+  <label class="admin-image-bulk-confirm"><input type="checkbox" data-bulk-license-confirm> 선택한 모든 사진에 입력한 라이선스가 동일하게 적용됨을 확인했습니다.</label>
+  <fieldset class="admin-image-bulk-overwrite">
+    <legend>기존 값을 덮어쓸 항목 (기본: 빈 칸만 채우기)</legend>
+    <label><input type="checkbox" value="sourceName" data-bulk-overwrite> 제공기관</label>
+    <label><input type="checkbox" value="photographer" data-bulk-overwrite> 저작자</label>
+    <label><input type="checkbox" value="licenseType" data-bulk-overwrite> 라이선스 유형</label>
+    <label><input type="checkbox" value="licenseDetail" data-bulk-overwrite> 라이선스 상세</label>
+    <label><input type="checkbox" value="commonSourceUrl" data-bulk-overwrite> 공통 페이지 URL</label>
+  </fieldset>
+  <p class="admin-image-bulk-selection" data-bulk-count aria-live="polite">선택한 사진 0장</p>
+  <button type="button" class="admin-btn is-small" data-bulk-select-all>전체 선택</button>
+  <button type="button" class="admin-btn is-small" data-bulk-clear-all>전체 해제</button>
+  <button type="button" class="admin-btn is-small" data-bulk-preview-button>변경 미리보기</button>
+  <div class="admin-image-bulk-preview" data-bulk-preview hidden aria-live="polite"></div>
+  <button type="button" class="admin-btn is-primary" data-bulk-apply disabled>공통 출처 적용</button>
+  <p class="admin-image-bulk-result" data-bulk-result role="status" hidden></p>
+</th:block>
+</html>

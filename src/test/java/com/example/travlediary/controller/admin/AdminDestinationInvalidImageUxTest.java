@@ -6,6 +6,9 @@ import com.example.travlediary.service.amenity.AmenityService;
 import com.example.travlediary.service.category.CategoryService;
 import com.example.travlediary.service.category.CountryCategoryService;
 import com.example.travlediary.service.destination.DestinationSaveOrchestrationService;
+import com.example.travlediary.service.destination.DuplicateWikidataDestinationException;
+import com.example.travlediary.service.wikidata.CommonsPhotoDownloadException;
+import com.example.travlediary.service.wikidata.CommonsPhotoSelectionException;
 import com.example.travlediary.service.info.AccommodationInfoService;
 import com.example.travlediary.service.info.ShopInfoService;
 import com.example.travlediary.service.info.ActivityInfoService;
@@ -24,6 +27,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.core.MethodParameter;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.test.web.servlet.MockMvc;
@@ -142,7 +146,81 @@ class AdminDestinationInvalidImageUxTest {
                         .param("type", "ATTRACTION")
                         .param("ktoSelectedPhotosJson", "[]"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/admin"));
+                .andExpect(redirectedUrl("/admin/destinations"));
+    }
+
+    @Test
+    void duplicateWikidataShowsEditLinkTarget() throws Exception {
+        doThrow(new DuplicateWikidataDestinationException("Q243"))
+                .when(destinationSaveOrchestrationService).registerDestination(any(), any(), any());
+        when(destinationService.findWikidataDestinationId("Q243")).thenReturn(42L);
+
+        var result = mockMvc.perform(multipart("/admin/destinations")
+                        .param("wikidataQid", "Q243")
+                        .param("regionId", "31").param("season", "SPRING")
+                        .param("type", "ATTRACTION").param("ktoSelectedPhotosJson", "[]"))
+                .andExpect(status().isConflict()).andReturn();
+
+        assertThat(result.getModelAndView().getModel().get("existingWikidataDestinationId"))
+                .isEqualTo(42L);
+        assertThat(result.getModelAndView().getModel().get("registrationError"))
+                .isEqualTo("이미 등록된 Wikidata 여행지입니다.");
+    }
+
+    @Test
+    void wikidataSourceFailureShowsRollbackMessage() throws Exception {
+        doThrow(new IllegalStateException("source insert failed"))
+                .when(destinationSaveOrchestrationService).registerDestination(any(), any(), any());
+
+        var result = mockMvc.perform(multipart("/admin/destinations")
+                        .param("wikidataQid", "Q243")
+                        .param("regionId", "31").param("season", "SPRING")
+                        .param("type", "ATTRACTION").param("ktoSelectedPhotosJson", "[]"))
+                .andExpect(status().isInternalServerError()).andReturn();
+
+        assertThat(result.getModelAndView().getModel().get("registrationError").toString())
+                .contains("저장에 실패했습니다");
+    }
+
+    @Test
+    void blockedCommonsLicenseKeepsTheFormWithTheReasonAndCommonsDownloadFailureIs502() throws Exception {
+        doThrow(new CommonsPhotoSelectionException("다음 Commons 사진은 자동 저장할 수 없습니다. Old.jpg: 퍼블릭 도메인"))
+                .doThrow(new CommonsPhotoDownloadException("Commons 사진을 내려받지 못했습니다: A.jpg", null))
+                .when(destinationSaveOrchestrationService).registerDestination(any(), any(), any());
+
+        var blocked = mockMvc.perform(multipart("/admin/destinations")
+                        .param("wikidataQid", "Q243")
+                        .param("commonsSelectedPhotosJson", "{\"qid\":\"Q243\",\"photos\":[{\"fileName\":\"Old.jpg\"}]}")
+                        .param("regionId", "31").param("season", "SPRING")
+                        .param("type", "ATTRACTION").param("ktoSelectedPhotosJson", "[]"))
+                .andExpect(status().isBadRequest()).andReturn();
+        assertThat(blocked.getModelAndView().getViewName()).isEqualTo("admin/destinations/create");
+        assertThat(blocked.getModelAndView().getModel().get("registrationError").toString())
+                .contains("Old.jpg: 퍼블릭 도메인");
+
+        var failed = mockMvc.perform(multipart("/admin/destinations")
+                        .param("wikidataQid", "Q243")
+                        .param("regionId", "31").param("season", "SPRING")
+                        .param("type", "ATTRACTION").param("ktoSelectedPhotosJson", "[]"))
+                .andExpect(status().isBadGateway()).andReturn();
+        assertThat(failed.getModelAndView().getModel().get("registrationError").toString())
+                .contains("내려받지 못했습니다");
+    }
+
+    @Test
+    void concurrentUniqueCollisionAlsoShowsExistingDestination() throws Exception {
+        doThrow(new DuplicateKeyException("uq_destinations_source_content"))
+                .when(destinationSaveOrchestrationService).registerDestination(any(), any(), any());
+        when(destinationService.findWikidataDestinationId("Q243")).thenReturn(42L);
+
+        var result = mockMvc.perform(multipart("/admin/destinations")
+                        .param("wikidataQid", "Q243")
+                        .param("regionId", "31").param("season", "SPRING")
+                        .param("type", "ATTRACTION").param("ktoSelectedPhotosJson", "[]"))
+                .andExpect(status().isConflict()).andReturn();
+
+        assertThat(result.getModelAndView().getModel().get("existingWikidataDestinationId"))
+                .isEqualTo(42L);
     }
 
     @Test

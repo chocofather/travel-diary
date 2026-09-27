@@ -60,48 +60,104 @@ class AdminDestinationImageManagementUiContractTest {
                 .contains("CREATIVE_COMMONS", "PERMISSION", "OTHER");
     }
 
+    /**
+     * 등록된 사진 카드는 출처 입력을 접어 두고(details), 대표·슬라이드·삭제와 공통 출처 대상 선택은
+     * 접힌 상태에서도 바로 쓸 수 있게 바깥에 둔다. 상태·요약·순서는 카드에서 늘 보인다.
+     */
+    @Test
+    void registeredImageCardsFoldTheSourceFormButKeepActionsOutside() throws IOException {
+        Document page = Jsoup.parse(resource("/templates/admin/destinations/image-upload.html"));
+        var card = page.selectFirst(".admin-destination-image-grid .admin-destination-image-card");
+
+        assertThat(card.select("details[data-image-source-details] form.admin-destination-image-metadata-form"))
+                .hasSize(1);
+        assertThat(card.select("details[data-image-source-details] button[type=submit]").text())
+                .isEqualTo("출처 정보 저장");
+        assertThat(card.select("details [action*=/main], details [action*=/slide], details [action*=/delete], "
+                + "details [data-image-bulk-select]")).isEmpty();
+        assertThat(card.select(".admin-destination-image-actions form")).hasSize(3);
+        assertThat(card.select("[data-image-bulk-select]")).hasSize(1);
+        assertThat(card.select(".admin-image-source-status, .admin-image-source-summary, .admin-image-order-badge"))
+                .hasSize(3);
+        assertThat(card.select("details summary").text()).contains("출처 정보 접기");
+        assertThat(resource("/static/js/admin-destination-image-cards.js"))
+                .contains("document.addEventListener(\"invalid\"", "details.open = true");
+    }
+
+    /**
+     * 순서 편집 모드는 사진과 번호, 위치 이동 조작만 둔다(출처 입력 없음).
+     * 번호를 사진마다 직접 입력하지 않고 목록에서 고르거나 한 칸씩 옮기며, 저장은 순서 API 로 한 번에 보낸다.
+     */
+    @Test
+    void imageOrderEditorShowsOnlyPhotosNumbersAndMoveControls() throws IOException {
+        Document page = Jsoup.parse(resource("/templates/admin/destinations/image-upload.html"));
+        var editor = page.selectFirst("[data-image-order-editor][hidden]");
+
+        // '순서 편집'은 사진 격자 바로 위 머리말(등록된 이미지 · 총 N장)에 있다.
+        // 위의 공통 출처 일괄 수정 영역 아래, 편집 영역·격자보다 앞이다.
+        String source = resource("/templates/admin/destinations/image-upload.html");
+        assertThat(page.select("[data-image-order-bar] [data-image-order-open]")).hasSize(1);
+        assertThat(page.select("[data-image-order-bar] h2").text()).contains("등록된 이미지");
+        assertThat(source.indexOf("data-image-bulk=\"existing\""))
+                .isLessThan(source.indexOf("data-image-order-bar"));
+        assertThat(source.indexOf("data-image-order-bar"))
+                .isLessThan(source.indexOf("data-image-order-editor"))
+                .isLessThan(source.indexOf("class=\"admin-destination-image-grid\""));
+        assertThat(editor.attr("th:attr")).contains("/images/order");
+        var item = editor.selectFirst("[data-image-order-list] > li[th:each]");
+        assertThat(item.select("img, [data-image-order-number], [data-image-order-handle], select[data-image-order-move], "
+                + "[data-image-order-step=-1], [data-image-order-step=1]")).hasSize(6);
+        assertThat(editor.select("input, textarea, form")).isEmpty();
+        assertThat(editor.select("[data-image-order-save][disabled], [data-image-order-cancel]")).hasSize(2);
+        assertThat(resource("/static/js/admin-destination-image-order.js"))
+                .contains("JSON.stringify({imageIds: ids})", "if (saving ||");
+    }
+
     @Test
     void imageManagementPostsSelectedKtoPhotosForTheCurrentDestination() throws IOException {
         String source = resource("/templates/admin/destinations/image-upload.html");
         Document page = Jsoup.parse(source);
+        Document search = Jsoup.parse(resource("/templates/admin/destinations/fragments/kto-photo-search.html"));
 
         assertThat(source)
                 .contains("/images/kto(id=${destinationId})")
-                .contains("admin/destinations/fragments/kto-photo-search");
-        assertThat(page.select("button[type=submit][data-kto-photo-submit]")).hasSize(1);
+                .contains("admin/destinations/fragments/kto-photo-search :: search(true)");
+        assertThat(page.select(".admin-image-add-kto button[type=submit][data-kto-photo-submit]")).isEmpty();
+        assertThat(search.select(".admin-kto-photo-results-area button[type=submit][data-kto-photo-submit][disabled]"))
+                .hasSize(1);
+        assertThat(resource("/static/js/admin-kto-photo-search.js"))
+                .contains("submitButton.disabled = selections.length === 0");
     }
 
     @Test
-    void addingImagesUsesOneSectionWithUploadAndKtoSearchSideBySide() throws IOException {
+    void addingImagesSeparatesUploadAndKtoActions() throws IOException {
         String source = resource("/templates/admin/destinations/image-upload.html");
         Document page = Jsoup.parse(source);
 
-        // 직접 업로드와 KTO 검색이 하나의 '이미지 추가' 영역 안에 함께 있다
-        assertThat(page.select(".admin-image-add-grid")).hasSize(1);
-        assertThat(page.select(".admin-image-add-grid form[enctype=multipart/form-data]"
-                + " input[type=file][name=files][multiple]")).hasSize(1);
-        assertThat(page.select(".admin-image-add-grid .admin-kto-photo-management-form")).hasSize(1);
-        // 잘못된 이미지 안내는 직접 업로드 영역 안에서 보여준다
+        assertThat(page.select(".admin-image-add-stack")).hasSize(1);
+        assertThat(page.select(".admin-image-add-upload input[type=file][name=files][multiple]"))
+                .hasSize(1);
+        assertThat(page.select(".admin-image-add-upload [data-destination-upload-preview]"))
+                .hasSize(1);
+        assertThat(page.select(".admin-image-add-upload [data-image-bulk=upload]"))
+                .hasSize(1);
+        assertThat(page.select(".admin-image-add-upload button[type=submit]"))
+                .hasSize(1);
+        assertThat(page.select(".admin-image-add-kto .admin-kto-photo-management-form"))
+                .hasSize(1);
         assertThat(page.select(".admin-image-add-upload .admin-alert")).hasSize(1);
         assertThat(source).contains("${imageError}");
-        // 업로드 버튼과 KTO 검색 버튼은 그대로 유지된다
-        assertThat(page.select(".admin-image-add-grid button[type=submit]")).isNotEmpty();
     }
 
     @Test
-    void ktoSearchResultsAndRegisteredImagesKeepTheirFullWidthLayout() throws IOException {
+    void imageAddChannelsKeepTheirOwnSpacing() throws IOException {
         String css = resource("/static/css/admin-destination-images.css");
 
         assertThat(css)
-                // PC 2열 (직접 업로드 35% / KTO 검색 65%)
-                .contains(".admin-image-add-grid")
-                .contains("35fr 65fr")
-                // 검색 결과·선택 목록·추가 버튼은 전체 폭
-                .contains("grid-column: 1 / -1")
-                .contains(".admin-kto-photo-grid")
-                // 결과가 없으면 빈 영역이 자리를 차지하지 않는다
-                .contains(".admin-kto-photo-grid:empty")
-                // 좁은 화면에서는 1열로 쌓인다
+                .contains(".admin-image-add-stack")
+                .contains(".admin-image-add-upload")
+                .contains(".admin-image-add-kto")
+                .contains(".admin-kto-photo-results-area")
                 .contains("@media");
     }
 
@@ -110,10 +166,8 @@ class AdminDestinationImageManagementUiContractTest {
         String source = resource("/templates/admin/destinations/image-upload.html");
         Document page = Jsoup.parse(source);
 
-        // 미리보기는 상단 입력 열 안이 아니라 전체 폭 영역에 있다 (상단 row 높이를 늘리지 않는다)
         assertThat(page.select("[data-destination-upload-preview]")).hasSize(1);
-        assertThat(page.select(".admin-image-add-upload [data-destination-upload-preview]")).isEmpty();
-        assertThat(page.select(".admin-image-add-grid > [data-destination-upload-preview]")).hasSize(1);
+        assertThat(page.select(".admin-image-add-upload [data-destination-upload-preview]")).hasSize(1);
         assertThat(page.select("[data-destination-upload-preview-count]")).hasSize(1);
         assertThat(page.select("[data-destination-upload-preview-grid]")).hasSize(1);
         // 선택 전에는 숨긴 상태
@@ -128,30 +182,26 @@ class AdminDestinationImageManagementUiContractTest {
     }
 
     @Test
-    void topInputRowStaysCompactWhilePreviewAndKtoResultsUseTheFullWidth() throws IOException {
+    void uploadPreviewAndBulkFieldsBelongToTheUploadForm() throws IOException {
         String source = resource("/templates/admin/destinations/image-upload.html");
         Document page = Jsoup.parse(source);
 
-        // 상단 2열에는 입력 컨트롤만 남는다
         assertThat(page.select(".admin-image-add-upload input[type=file]")).hasSize(1);
         assertThat(page.select(".admin-image-add-upload button[type=submit]")).hasSize(1);
         assertThat(page.select(".admin-image-add-upload [data-destination-upload-preview-grid]"))
-                .isEmpty();
+                .hasSize(1);
 
-        // DOM 순서: 상단 입력 → 직접 업로드 미리보기 → KTO 검색 결과(프래그먼트)
+        // DOM 순서: 파일 선택 → 사진별 입력·공통 출처 → 해당 폼의 업로드 버튼
         assertThat(source.indexOf("data-destination-upload-preview"))
                 .isGreaterThan(source.indexOf("name=\"files\""));
-        assertThat(source.indexOf("kto-photo-search :: search"))
+        assertThat(source.indexOf("data-image-bulk=\"upload\""))
                 .isGreaterThan(source.indexOf("data-destination-upload-preview"));
+        assertThat(source.indexOf("이미지 업로드</button>"))
+                .isGreaterThan(source.indexOf("data-image-bulk=\"upload\""));
         assertThat(Jsoup.parse(resource(
                 "/templates/admin/destinations/fragments/kto-photo-search.html"))
                 .select("[data-kto-photo-results]")).hasSize(1);
 
-        String css = resource("/static/css/admin-destination-images.css");
-        assertThat(css)
-                // 미리보기와 KTO 결과 모두 상단 그리드에서 전체 폭을 쓴다
-                .contains(".admin-upload-preview")
-                .contains("grid-column: 1 / -1");
         // 썸네일 그리드 모양은 등록 폼과 공용 CSS 에 있다
         assertThat(resource("/static/css/destination-create.css"))
                 .contains(".admin-upload-preview-grid")
@@ -183,6 +233,53 @@ class AdminDestinationImageManagementUiContractTest {
                 .contains("선택한 이미지")
                 // 개별 파일 실패는 해당 카드만 fallback
                 .contains("미리보기를 불러올 수 없습니다.");
+    }
+
+    @Test
+    void bulkSourceControlsKeepCommonAndWorkPagesSeparateOnBothScreens() throws IOException {
+        String create = resource("/templates/admin/destinations/create.html");
+        String management = resource("/templates/admin/destinations/image-upload.html");
+        String metadata = resource("/templates/admin/destinations/fragments/image-metadata.html");
+        String bulk = resource("/templates/admin/destinations/fragments/image-bulk-source.html");
+
+        assertThat(create).contains("data-image-bulk=\"upload\"");
+        assertThat(management).contains("data-image-bulk=\"upload\"", "data-image-bulk=\"existing\"")
+                .contains("images/sources/bulk")
+                .contains("data-image-bulk-select")
+                .contains("name=\"workPageUrl\"")
+                .contains("name=\"commonSourceUrl\"");
+        assertThat(metadata).contains("data-image-metadata-field=\"commonSourceUrl\"")
+                .contains("data-image-metadata-field=\"workPageUrl\"");
+        assertThat(bulk).contains("data-bulk-preview-button", "data-bulk-license-confirm")
+                .doesNotContain("data-bulk-field=\"workPageUrl\"")
+                .doesNotContain("data-bulk-field=\"sourceUrl\"");
+        String script = resource("/static/js/admin-destination-image-bulk-source.js");
+        assertThat(script).contains(".admin-upload-preview-card, .admin-destination-image-card")
+                .contains("document.addEventListener(\"input\", invalidateForCardEdit)")
+                .contains("result.hidden = true");
+    }
+
+    @Test
+    void commonAndWorkPageUrlsShareNormalizationWithoutTouchingLegacyUrls() throws IOException {
+        String create = resource("/templates/admin/destinations/create.html");
+        String management = resource("/templates/admin/destinations/image-upload.html");
+        Document metadata = Jsoup.parse(resource(
+                "/templates/admin/destinations/fragments/image-metadata.html"));
+        Document bulk = Jsoup.parse(resource(
+                "/templates/admin/destinations/fragments/image-bulk-source.html"));
+        Document page = Jsoup.parse(management);
+
+        assertThat(create).contains("admin-destination-image-bulk-source.js?v=20260927-1");
+        assertThat(management).contains("admin-destination-image-bulk-source.js?v=20260927-1");
+        assertThat(metadata.select("[data-image-metadata-field=commonSourceUrl][data-image-source-url=common], "
+                + "[data-image-metadata-field=workPageUrl][data-image-source-url=work]")).hasSize(2);
+        assertThat(bulk.select("[data-bulk-field=commonSourceUrl][data-image-source-url=common]"))
+                .hasSize(1);
+        assertThat(page.select("input[name=commonSourceUrl][data-image-source-url=common], "
+                + "input[name=workPageUrl][data-image-source-url=work]")).hasSize(2);
+        assertThat(metadata.select("[data-image-metadata-field=sourceUrl][data-image-source-url]"))
+                .isEmpty();
+        assertThat(page.select("input[name=sourceUrl][data-image-source-url]")).isEmpty();
     }
 
     private String resource(String path) throws IOException {

@@ -5,7 +5,12 @@ import com.example.travlediary.dto.kto.KtoSelectedPhotoRequest;
 import com.example.travlediary.service.kto.InvalidKtoSelectedPhotosException;
 import com.example.travlediary.service.kto.KtoPhotoImportService;
 import com.example.travlediary.service.kto.PreparedKtoPhoto;
+import com.example.travlediary.model.DestinationImageCommonsSource;
+import com.example.travlediary.service.wikidata.CommonsPhotoImportService;
+import com.example.travlediary.service.wikidata.PreparedCommonsPhoto;
+import com.example.travlediary.service.wikidata.WikidataRegistrationService;
 import org.junit.jupiter.api.BeforeEach;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
@@ -16,8 +21,10 @@ import org.springframework.mock.web.MockMultipartFile;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
@@ -48,6 +55,71 @@ class DestinationSaveOrchestrationServiceTest {
                 .isInstanceOf(InvalidKtoSelectedPhotosException.class);
 
         verifyNoInteractions(ktoPhotoImportService, persistenceService);
+    }
+
+    @Test
+    void wikidataCommonsPhotosArePreparedBeforeTransactionAndCleanedWhenDbSaveFails() {
+        CommonsPhotoImportService commons = org.mockito.Mockito.mock(CommonsPhotoImportService.class);
+        WikidataRegistrationService wikidata = org.mockito.Mockito.mock(WikidataRegistrationService.class);
+        ReflectionTestUtils.setField(service, "commonsPhotoImportService", commons);
+        ReflectionTestUtils.setField(service, "wikidataRegistrationService", wikidata);
+        DestinationForm form = new DestinationForm();
+        form.setWikidataQid("Q243");
+        form.setCommonsSelectedPhotosJson("{\"qid\":\"Q243\",\"photos\":[{\"fileName\":\"A.jpg\",\"main\":true}]}");
+        List<CommonsPhotoImportService.Selection> selections =
+                List.of(new CommonsPhotoImportService.Selection("A.jpg", true));
+        List<PreparedCommonsPhoto> prepared = List.of(new PreparedCommonsPhoto(
+                "/uploads/destinations/a.jpg", true, new DestinationImageCommonsSource()));
+        when(commons.parseSelections(form.getCommonsSelectedPhotosJson(), "Q243")).thenReturn(selections);
+        when(wikidata.prepareRegistration(form, selections, false))
+                .thenReturn(new WikidataRegistrationService.PreparedRegistration(Map.of(), prepared));
+        doThrow(new IllegalStateException("db failed"))
+                .when(persistenceService).registerWikidataDestination(form, 7L, Map.of(), prepared);
+
+        assertThatThrownBy(() -> service.registerDestination(form, 7L, List.of()))
+                .isInstanceOf(IllegalStateException.class);
+
+        InOrder order = inOrder(persistenceService, wikidata, commons);
+        order.verify(persistenceService).rejectRegisteredWikidata("Q243");
+        order.verify(wikidata).prepareRegistration(form, selections, false);
+        order.verify(persistenceService).registerWikidataDestination(form, 7L, Map.of(), prepared);
+        order.verify(commons).cleanup(prepared);
+    }
+
+    @Test
+    void alreadyRegisteredQidIsRejectedBeforeAnyRevalidationOrDownload() {
+        CommonsPhotoImportService commons = org.mockito.Mockito.mock(CommonsPhotoImportService.class);
+        WikidataRegistrationService wikidata = org.mockito.Mockito.mock(WikidataRegistrationService.class);
+        ReflectionTestUtils.setField(service, "commonsPhotoImportService", commons);
+        ReflectionTestUtils.setField(service, "wikidataRegistrationService", wikidata);
+        DestinationForm form = new DestinationForm();
+        form.setWikidataQid("Q243");
+        form.setCommonsSelectedPhotosJson("{\"qid\":\"Q243\",\"photos\":[{\"fileName\":\"A.jpg\",\"main\":true}]}");
+        doThrow(new DuplicateWikidataDestinationException("Q243"))
+                .when(persistenceService).rejectRegisteredWikidata("Q243");
+
+        assertThatThrownBy(() -> service.registerDestination(form, 7L, List.of()))
+                .isInstanceOf(DuplicateWikidataDestinationException.class);
+
+        verifyNoInteractions(wikidata, commons);
+        verify(persistenceService, never()).registerWikidataDestination(any(), any(), any(), any());
+    }
+
+    @Test
+    void wikidataRegistrationWithoutPhotosDoesNotCallCommons() {
+        CommonsPhotoImportService commons = org.mockito.Mockito.mock(CommonsPhotoImportService.class);
+        WikidataRegistrationService wikidata = org.mockito.Mockito.mock(WikidataRegistrationService.class);
+        ReflectionTestUtils.setField(service, "commonsPhotoImportService", commons);
+        ReflectionTestUtils.setField(service, "wikidataRegistrationService", wikidata);
+        DestinationForm form = new DestinationForm();
+        form.setWikidataQid("Q243");
+        when(wikidata.prepareRegistration(form, List.of(), false))
+                .thenReturn(new WikidataRegistrationService.PreparedRegistration(Map.of(), List.of()));
+
+        service.registerDestination(form, 7L, List.of());
+
+        verify(persistenceService).registerWikidataDestination(form, 7L, Map.of(), List.of());
+        verifyNoInteractions(commons);
     }
 
     @Test

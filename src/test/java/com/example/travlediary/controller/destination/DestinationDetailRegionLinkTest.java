@@ -61,7 +61,8 @@ class DestinationDetailRegionLinkTest {
     void setUp() {
         LocaleContextHolder.setLocale(SupportedLanguage.KOREAN.getLocale());
         controller = new DestinationController(destinationService, destinationImageService,
-                countryCategoryService, destinationCommentService, referenceNameLocalizationService);
+                countryCategoryService, destinationCommentService, referenceNameLocalizationService,
+                new com.example.travlediary.service.file.DestinationCardThumbnailService("build/tmp/no-uploads"));
         when(countryCategoryService.getDomesticRootIds()).thenReturn(List.of(KOREA_ROOT_ID));
     }
 
@@ -125,6 +126,23 @@ class DestinationDetailRegionLinkTest {
     }
 
     @Test
+    void detailShowsOnlyTheMainCategoryAmongTheRegisteredOnes() {
+        givenRegionTree(region(101L, "종로구", 4, KOREA_ROOT_ID), region(KOREA_ROOT_ID, "대한민국", 1, null));
+        when(referenceNameLocalizationService.localizeCategories(any(), eq(SupportedLanguage.KOREAN)))
+                .thenReturn(Map.of(3L, "랜드마크", 5L, "고궁", 8L, "사진명소"));
+
+        // 경복궁: 등록 카테고리 랜드마크·고궁·사진명소, 대표 고궁 → 배지는 고궁 목록으로 간다.
+        Model palace = renderDetail(101L, List.of(3L, 5L, 8L), 5L);
+        assertThat(palace.getAttribute("categoryName")).isEqualTo("고궁");
+        assertThat(palace.getAttribute("categoryId")).isEqualTo(5L);
+        assertThat(palace.getAttribute("type")).isEqualTo("domestic");
+        // 대표가 없는 기존 데이터는 가장 작은 ID(MIN(category_id))를 보여 주고 그 목록으로 간다.
+        Model legacy = renderDetail(101L, List.of(8L, 3L, 5L), null);
+        assertThat(legacy.getAttribute("categoryName")).isEqualTo("랜드마크");
+        assertThat(legacy.getAttribute("categoryId")).isEqualTo(3L);
+    }
+
+    @Test
     void heroRegionLinksUseTheSameParameterSyntaxAsTheRecommendationLink() throws java.io.IOException {
         String hero = heroBlock();
 
@@ -135,8 +153,11 @@ class DestinationDetailRegionLinkTest {
                 // 문자열 연결은 &reg; 엔티티로 깨지므로 남아 있으면 안 된다
                 .doesNotContain("'&region='")
                 .doesNotContain("href=\"#\"");
-        // 카테고리(랜드마크)는 링크로 만들지 않는다
-        assertThat(hero).contains("<span th:text=\"${categoryName}\">");
+        // 대표 카테고리는 그 카테고리가 선택된 목록으로 간다. 하위 지역(region)으로 좁히지 않고 국내/해외 전체다.
+        assertThat(hero)
+                .contains("@{/destinations(type=${type},category=${categoryId})}")
+                .doesNotContain("category=${categoryId},region")
+                .doesNotContain("region=${regionId},category");
     }
 
     @Test
@@ -207,6 +228,10 @@ class DestinationDetailRegionLinkTest {
     }
 
     private Model renderDetail(Long regionId) {
+        return renderDetail(regionId, List.of(5L), null);
+    }
+
+    private Model renderDetail(Long regionId, List<Long> categoryIds, Long mainCategoryId) {
         Destination destination = new Destination();
         destination.setId(7L);
         destination.setName("여행지");
@@ -218,7 +243,8 @@ class DestinationDetailRegionLinkTest {
 
         DestinationDetailDto dto = new DestinationDetailDto();
         dto.setDestination(destination);
-        dto.setCategoryIds(List.of(5L));
+        dto.setCategoryIds(categoryIds);
+        dto.setMainCategoryId(mainCategoryId);
 
         when(destinationService.getDestinationDetailWithInfo(eq(7L), any(SupportedLanguage.class)))
                 .thenReturn(dto);

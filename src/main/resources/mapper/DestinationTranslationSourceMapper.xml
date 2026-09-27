@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.travlediary.repository.destination.DestinationTranslationSourceMapper">
+    <insert id="insert" parameterType="com.example.travlediary.model.DestinationTranslationSource">
+        INSERT INTO destination_translation_sources
+        (destination_translation_id, wikidata_qid, source_title, source_url,
+         source_revision_id, source_language, source_variant, license_name,
+         license_url, attribution_text, original_content_sha256, content_modified, source_checked_at)
+        VALUES (#{destinationTranslationId}, #{wikidataQid}, #{sourceTitle}, #{sourceUrl},
+                #{sourceRevisionId}, #{sourceLanguage}, #{sourceVariant}, #{licenseName},
+                #{licenseUrl}, #{attributionText}, #{originalContentSha256},
+                #{contentModified}, #{sourceCheckedAt})
+    </insert>
+    <select id="findByTranslationId" resultType="com.example.travlediary.model.DestinationTranslationSource">
+        SELECT destination_translation_id AS destinationTranslationId,
+               wikidata_qid AS wikidataQid, source_title AS sourceTitle,
+               source_url AS sourceUrl, source_revision_id AS sourceRevisionId,
+               source_language AS sourceLanguage, source_variant AS sourceVariant,
+               license_name AS licenseName, license_url AS licenseUrl,
+               attribution_text AS attributionText,
+               original_content_sha256 AS originalContentSha256,
+               content_modified AS contentModified, source_checked_at AS sourceCheckedAt
+        FROM destination_translation_sources WHERE destination_translation_id = #{translationId}
+    </select>
+    <update id="updateModified">
+        UPDATE destination_translation_sources SET content_modified = #{contentModified}
+        WHERE destination_translation_id = #{translationId}
+    </update>
+    <delete id="deleteByTranslationId">
+        DELETE FROM destination_translation_sources WHERE destination_translation_id = #{translationId}
+    </delete>
+</mapper>

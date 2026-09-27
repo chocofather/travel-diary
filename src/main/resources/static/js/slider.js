@@ -9,8 +9,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     let isPaused = false;
 
     // 1. Fetch Slide Data from API
-    const res = await fetch('/api/events/slide');
-    const list = await res.json();
+    // 서버는 노출 중(is_slide, 기간 안)인 이벤트만 준다. 응답이 비었거나 읽지 못하면 슬라이드 0개로 본다.
+    let list = [];
+    try {
+        const res = await fetch('/api/events/slide');
+        const data = res.ok ? await res.json() : [];
+        if (Array.isArray(data)) list = data;
+    } catch (error) {
+        list = [];
+    }
+    // 상세로 이동할 번호가 있는 이벤트만 슬라이드로 그린다. 슬라이드 수는 이 목록 기준이다.
+    list = list.filter(ev => ev && ev.id != null && ev.id !== '');
+    const slideCount = list.length;
+    const hasMultipleSlides = slideCount > 1;
+    const eventSlider = document.getElementById('event-slider');
+
+    // 표시할 슬라이드가 없으면 슬라이더 내용·컨트롤을 숨기고 타이머도 시작하지 않는다.
+    if (slideCount === 0) {
+        eventSlider.classList.add('is-empty');
+        return;
+    }
+    // 한 장이어도 컨트롤은 그대로 둔다. 넘기는 대신 같은 슬라이드에서 진행바만 다시 채운다.
 
     const pastelColors = [
         '#F3EFFF', // 라벤더
@@ -77,7 +96,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
-    totalSpan.textContent = String(list.length).padStart(2, '0');
+    totalSpan.textContent = String(slideCount).padStart(2, '0');
 
     // ✅ 슬라이드에 맞춰 배경색 변경
     function updateBackgroundColor(swiperInstance) {
@@ -97,9 +116,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         swiper = new Swiper('.swiper', {
             slidesPerView: 1,
             centeredSlides: false,
-            loop: true,
+            // 한 장이면 반복·자동재생·끌어 넘기기를 끈다.
+            loop: hasMultipleSlides,
+            allowTouchMove: hasMultipleSlides,
             speed: 600,
-            autoplay: { delay: 10000, disableOnInteraction: false },
+            autoplay: hasMultipleSlides ? { delay: 10000, disableOnInteraction: false } : false,
             on: {
                 slideChangeTransitionStart() {
                     resetProgress();
@@ -119,6 +140,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 4. 진행률 바 시작
     function startProgress() {
+        // 진행 루프는 하나만 돈다. 전환 이벤트와 직접 호출이 겹쳐도 이전 루프를 이어서 쌓지 않는다.
+        cancelAnimationFrame(animationFrameId);
         function updateProgress(timestamp) {
             if (isPaused) return;
 
@@ -132,7 +155,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 animationFrameId = requestAnimationFrame(updateProgress);
             } else {
                 resetProgress();
-                swiper.slideNext();
+                // 한 장이면 넘기지 않고 진행바만 0%부터 다시 채운다.
+                if (hasMultipleSlides) swiper.slideNext();
                 startProgress();
             }
         }
@@ -151,7 +175,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 6. 현재 슬라이드 인덱스 업데이트
     function updateCounter() {
         if (!swiper) return;
-        indexSpan.textContent = String(swiper.realIndex + 1).padStart(2, '0');
+        // 번호는 언제나 1 ~ 슬라이드 수 안에 둔다.
+        const index = ((Number(swiper.realIndex) || 0) % slideCount + slideCount) % slideCount;
+        indexSpan.textContent = String(index + 1).padStart(2, '0');
     }
 
     // 7. Swiper 시작
@@ -160,20 +186,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     startProgress();
 
     // 8. 일시정지/재생 버튼
+    // 한 장이면 Swiper 자동재생은 꺼져 있으므로 진행바만 멈추고 잇는다.
     const pauseBtn = document.querySelector('.pause');
     pauseBtn.onclick = () => {
         isPaused = !isPaused;
         if (isPaused) {
-            swiper.autoplay.stop();
+            if (hasMultipleSlides) swiper.autoplay.stop();
             cancelAnimationFrame(animationFrameId);
             if (startTime !== null) {
-                elapsedTime += performance.now() - startTime;
+                // startTime 은 이미 앞서 흐른 시간을 빼 둔 값이라, 지금까지의 경과는 이 차이 그대로다.
+                elapsedTime = performance.now() - startTime;
                 startTime = null;
             }
             pauseBtn.textContent = '▶';
             pauseBtn.setAttribute('aria-label', homeI18n.eventPlay);
         } else {
-            swiper.autoplay.start();
+            if (hasMultipleSlides) swiper.autoplay.start();
             startTime = performance.now() - elapsedTime;
             startProgress();
             pauseBtn.textContent = '❚❚';
@@ -182,11 +210,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     // 9. 이전/다음 버튼
+    // 한 장이면 슬라이드를 움직이지 않고 같은 슬라이드에서 진행바만 처음부터 다시 시작한다.
+    const restartSingleSlide = () => {
+        resetProgress();
+        startProgress();
+    };
     document.querySelector('.prev').onclick = () => {
+        if (!hasMultipleSlides) return restartSingleSlide();
         resetProgress();
         swiper.slidePrev();
     };
     document.querySelector('.next').onclick = () => {
+        if (!hasMultipleSlides) return restartSingleSlide();
         resetProgress();
         swiper.slideNext();
     };

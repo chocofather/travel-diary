@@ -108,6 +108,8 @@ public class SecurityConfig {
                           개인 사진은 여기에 없고 /diaries/** 의 통제된 endpoint 로만 나간다.
                         */
                         .requestMatchers(publicUploadPatterns()).permitAll()
+                        // 메인 여행지 카드 썸네일. 공개 여행지 사진(destinations)을 줄인 것뿐이다.
+                        .requestMatchers(HttpMethod.GET, "/thumbnails/destinations/**").permitAll()
 
                         /* === 비회원도 접근 가능한 공개 영역 === */
                         .requestMatchers(

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/admin :: layout(~{::body}, ~{::headFragment}, 'destinations')}">
+<th:block th:fragment="headFragment">
+  <link rel="stylesheet" href="/css/admin-kto-tour-import.css?v=20260926-1">
+  <link rel="stylesheet" href="/css/admin-wikidata-preview.css?v=20260926-5">
+  <link rel="stylesheet" href="/css/admin-wikidata-bulk-import.css?v=20260926-3">
+  <script src="/js/admin-commons-photo-picker.js?v=20260926-5" defer></script>
+  <script src="/js/admin-bulk-page-selection.js?v=20260926-1" defer></script>
+  <script src="/js/admin-wikidata-bulk-import.js?v=20260926-4" defer></script>
+</th:block>
+<th:block th:fragment="body">
+  <section class="admin-page-section" data-wikidata-bulk
+           th:attr="data-domestic-root-id=${domesticRootId}">
+    <header class="admin-page-header">
+      <div class="admin-page-heading">
+        <h1 class="admin-page-title">해외 일괄 등록</h1>
+        <p class="admin-page-description">
+          지역별로 모아 보거나 이름으로 검색해 해외 여행지 여러 곳을 고른 뒤, 유형·시즌·지역과 대표 사진을 검토하고 한 번에 등록합니다.
+        </p>
+      </div>
+      <div class="admin-page-actions">
+        <a th:href="@{/admin/destinations}" class="admin-btn">여행지 목록</a>
+      </div>
+    </header>
+
+    <!-- 1. 찾기와 선택. 두 방식에서 고른 여행지는 한 선택 목록으로 모이고, 지역·검색어를 바꿔도 남는다. -->
+    <div class="admin-wikidata-bulk-modes" role="group" aria-label="여행지 찾는 방식">
+      <button type="button" class="admin-filter-tab active" aria-pressed="true" data-bulk-mode="region">지역별 탐색</button>
+      <button type="button" class="admin-filter-tab" aria-pressed="false" data-bulk-mode="keyword">여행지 검색</button>
+    </div>
+
+    <div class="admin-filter-card is-toolbar admin-wikidata-bulk-region-panel" data-bulk-panel="region">
+      <div class="admin-filter-form admin-kto-import-filters">
+        <label class="admin-kto-import-field">
+          <span>대륙</span>
+          <select class="admin-select" data-bulk-continent><option value="">대륙 선택</option></select>
+        </label>
+        <label class="admin-kto-import-field">
+          <span>국가</span>
+          <select class="admin-select" data-bulk-country disabled><option value="">국가 선택</option></select>
+        </label>
+        <label class="admin-kto-import-field">
+          <span>지역</span>
+          <select class="admin-select" data-bulk-area disabled><option value="">지역 선택</option></select>
+        </label>
+        <label class="admin-kto-import-field">
+          <span>시 <small>(선택)</small></span>
+          <select class="admin-select" data-bulk-city disabled><option value="">지역 전체</option></select>
+        </label>
+        <div class="admin-filter-actions">
+          <button type="button" class="admin-btn is-primary" data-bulk-region-search disabled>여행지 찾기</button>
+        </div>
+      </div>
+      <p class="admin-kto-import-status" aria-live="polite" data-bulk-region-info>
+        국가와 지역을 고르면 Wikidata 행정구역과 연결한 뒤 그 지역의 여행지 후보를 보여줍니다.
+      </p>
+      <p class="admin-field-help admin-wikidata-bulk-scope">
+        조회 범위: 선택한 행정구역(하위 구역 포함)에 속하고 좌표가 있는 Wikidata 장소 중 인지도(위키백과 문서 수) 순 1,000곳을 살펴,
+        명소·박물관·유적·공원·신사·사찰·성·정원·전망대·쇼핑센터 등 여행 관련 분류이거나 문화재로 지정된 곳을 최대 300곳까지 보여줍니다.
+        넓은 지역은 잘 알려진 곳 위주로 나오므로, 시를 고르면 그 시의 장소를 더 많이 볼 수 있습니다.
+        Wikidata에 소재 행정구역이나 분류가 입력되지 않은 곳은 나오지 않으니, 필요하면 여행지 검색으로 찾아 추가해 주세요.
+      </p>
+    </div>
+
+    <div class="admin-filter-card is-toolbar" data-bulk-panel="keyword" hidden>
+      <form class="admin-filter-form admin-kto-import-filters" data-bulk-search-form>
+        <label class="admin-kto-import-field admin-wikidata-bulk-keyword">
+          <span>해외 여행지명</span>
+          <input type="search" class="admin-input" placeholder="예: 에펠탑 또는 Eiffel Tower"
+                 autocomplete="off" data-bulk-keyword>
+        </label>
+        <div class="admin-filter-actions">
+          <button type="submit" class="admin-btn is-primary" data-bulk-search>검색</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="admin-card is-table-card">
+      <div class="admin-kto-import-toolbar">
+        <strong class="admin-kto-import-count" data-bulk-result-count>검색 결과</strong>
+        <div class="admin-kto-import-actions">
+          <!-- 현재 페이지는 화면에 보이는 후보 전체(더 보기로 붙은 후보 포함)다. 다른 검색·지역에서 고른 여행지는 그대로 남는다. -->
+          <span class="admin-kto-import-page-count" data-bulk-page-count>현재 페이지 선택 가능 0건 중 0건 선택</span>
+          <button type="button" class="admin-btn is-small" data-bulk-page-select disabled>현재 페이지 전체선택</button>
+          <button type="button" class="admin-btn is-small" data-bulk-page-clear disabled>현재 페이지 선택해제</button>
+          <span class="admin-kto-import-count" data-bulk-selected-count aria-live="polite">전체 선택 0건</span>
+          <button type="button" class="admin-btn is-small" data-bulk-clear disabled>전체 선택해제</button>
+          <button type="button" class="admin-btn is-primary is-small" data-bulk-open-review disabled>
+            선택한 여행지 검토
+          </button>
+        </div>
+      </div>
+      <p class="admin-kto-import-status" aria-live="polite" data-bulk-status>
+        지역을 고르거나 여행지명으로 검색해 등록할 해외 여행지를 고르세요. 장소가 아닌 결과는 제외됩니다.
+      </p>
+      <div class="admin-wikidata-bulk-chips" data-bulk-chips hidden></div>
+      <div class="admin-table-wrapper">
+        <table class="admin-table admin-kto-import-table">
+          <thead>
+          <tr>
+            <th scope="col" class="is-check">
+              <input type="checkbox" aria-label="현재 페이지 전체선택" data-bulk-page-toggle disabled>
+            </th>
+            <th scope="col" class="is-thumb">이미지</th>
+            <th scope="col">여행지명</th>
+            <th scope="col">국가·지역</th>
+            <th scope="col" class="admin-wikidata-bulk-description">간단 설명</th>
+            <th scope="col">등록 여부</th>
+          </tr>
+          </thead>
+          <tbody data-bulk-rows></tbody>
+        </table>
+      </div>
+      <div class="admin-kto-import-paging">
+        <button type="button" class="admin-btn is-small" data-bulk-more hidden>더 보기</button>
+      </div>
+    </div>
+
+    <!-- 2. 등록 전 검토와 등록 결과. 여행지마다 따로 등록하므로 한 곳의 실패가 나머지를 취소하지 않는다. -->
+    <section class="admin-card is-table-card admin-wikidata-bulk-review" data-bulk-review hidden>
+      <div class="admin-kto-import-toolbar">
+        <h2 class="admin-kto-import-result-title">등록 전 검토</h2>
+        <div class="admin-kto-import-actions admin-wikidata-bulk-common">
+          <span class="admin-kto-import-count">공통 설정</span>
+          <select class="admin-select" aria-label="모든 여행지의 유형" data-bulk-common-type>
+            <option value="">유형 선택</option>
+            <option th:each="entry : ${destinationTypes}" th:value="${entry.key}" th:text="${entry.value}">관광지</option>
+          </select>
+          <select class="admin-select" aria-label="모든 여행지의 시즌" data-bulk-common-season>
+            <option value="">시즌 선택</option>
+            <option th:each="entry : ${seasons}" th:value="${entry.key}" th:text="${entry.value}">사계절</option>
+          </select>
+          <button type="button" class="admin-btn is-small" data-bulk-apply-common>모든 여행지에 적용</button>
+        </div>
+      </div>
+      <p class="admin-kto-import-status" data-bulk-review-help>
+        유형과 시즌은 자동으로 정하지 않습니다. 지역을 자동으로 찾지 못했거나 한국어 이름이 없는 여행지는 '확인 필요'로 표시되니,
+        보완하거나 제외한 뒤 등록해 주세요. 대표 사진은 여행지당 1장만 함께 저장하며, 추가 사진은 등록 후 이미지 관리 화면에서 더할 수 있습니다.
+      </p>
+      <p class="admin-kto-import-result-summary admin-wikidata-bulk-summary" aria-live="polite" data-bulk-summary></p>
+      <div class="admin-table-wrapper">
+        <table class="admin-table admin-kto-import-table admin-wikidata-bulk-table">
+          <thead>
+          <tr>
+            <th scope="col">여행지</th>
+            <th scope="col">한국어 이름</th>
+            <th scope="col">지역</th>
+            <th scope="col">유형</th>
+            <th scope="col">시즌</th>
+            <th scope="col">대표 사진</th>
+            <th scope="col">상태</th>
+            <th scope="col"><span class="admin-visually-hidden">제외</span></th>
+          </tr>
+          </thead>
+          <tbody data-bulk-review-rows></tbody>
+        </table>
+      </div>
+      <div class="admin-wikidata-bulk-actions">
+        <p class="admin-kto-import-status" role="status" aria-live="polite" data-bulk-register-status></p>
+        <button type="button" class="admin-btn" data-bulk-retry hidden>실패한 여행지 재시도</button>
+        <button type="button" class="admin-btn is-primary" data-bulk-register disabled>등록</button>
+      </div>
+      <!-- 행 아래에 펼쳐지는 대표 사진 선택 영역에 쓴다. -->
+      <template data-bulk-photo-template>
+        <tr class="admin-wikidata-bulk-photo-row">
+          <td colspan="8"><div class="admin-wikidata-commons" data-bulk-photo-picker></div></td>
+        </tr>
+      </template>
+    </section>
+  </section>
+</th:block>
+</html>

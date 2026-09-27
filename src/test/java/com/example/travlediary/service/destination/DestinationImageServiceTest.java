@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
@@ -37,6 +38,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mockingDetails;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -57,6 +59,12 @@ class DestinationImageServiceTest {
     void setUp() {
         service = new DestinationImageService(destinationMapper, fileUploadService);
         ReflectionTestUtils.setField(service, "uploadDir", uploadDir.toString());
+        AtomicLong nextImageId = new AtomicLong(100L);
+        doAnswer(invocation -> {
+            DestinationImage image = invocation.getArgument(0);
+            image.setId(nextImageId.getAndIncrement());
+            return null;
+        }).when(destinationMapper).insertImage(any());
     }
 
     @Test
@@ -161,6 +169,15 @@ class DestinationImageServiceTest {
                         org.assertj.core.groups.Tuple.tuple(
                                 "서울특별시", "박하늘", "CREATIVE_COMMONS", "CC BY 4.0",
                                 "https://example.com/b"));
+        assertThat(invocationsNamed("insertImageSource")).hasSize(2);
+        assertThat(invocationsNamed("insertImageSource"))
+                .extracting(invocation -> ((DestinationImage) invocation.getArgument(0)).getId())
+                .containsExactly(100L, 101L);
+        assertThat(mockingDetails(destinationMapper).getInvocations().stream()
+                .map(invocation -> invocation.getMethod().getName())
+                .filter(name -> name.equals("insertImage") || name.equals("insertImageSource"))
+                .toList())
+                .containsExactly("insertImage", "insertImageSource", "insertImage", "insertImageSource");
     }
 
     @Test
@@ -178,6 +195,141 @@ class DestinationImageServiceTest {
                     assertThat(image.getLicenseType()).isNull();
                     assertThat(image.getSourceUrl()).isNull();
                 });
+        assertThat(invocationsNamed("insertImageSource")).isEmpty();
+    }
+
+    @Test
+    void directUploadStoresCommonPageAndWorkPageIndependentlyInItsOwnSourceRow() {
+        when(fileUploadService.saveDestinationImage(any()))
+                .thenReturn("/uploads/destinations/new.jpg");
+
+        service.saveImages(10L, files("new.jpg"), null, new Integer[0],
+                new String[]{"공공기관"}, null, null, null, null,
+                new String[]{"https://example.com/collection"},
+                new String[]{"https://example.com/work/1"});
+
+        assertThat(insertedImages()).singleElement().satisfies(image -> {
+            assertThat(image.getCommonSourceUrl()).isEqualTo("https://example.com/collection");
+            assertThat(image.getWorkPageUrl()).isEqualTo("https://example.com/work/1");
+            assertThat(image.getSourceUrl()).isNull();
+        });
+        assertThat(invocationsNamed("insertImageSource")).hasSize(1);
+    }
+
+    @Test
+    void ktoImageAlsoWritesItsOwnSourceAfterTheImage() {
+        DestinationImage ktoImage = image(null, 10L, 0, true);
+        ktoImage.setSourceType("KTO_TOURAPI");
+        ktoImage.setSourceName("한국관광공사");
+        ktoImage.setExternalContentId("12345");
+        ktoImage.setLicenseType("KOGL_TYPE_3");
+
+        service.saveImages(10L, List.of(ktoImage));
+
+        assertThat(invocationsNamed("insertImageSource"))
+                .singleElement()
+                .satisfies(invocation -> {
+                    DestinationImage saved = invocation.getArgument(0);
+                    assertThat(saved.getId()).isEqualTo(100L);
+                    assertThat(saved.getSourceType()).isEqualTo("KTO_TOURAPI");
+                    assertThat(saved.getExternalContentId()).isEqualTo("12345");
+                    assertThat(saved.getLicenseType()).isEqualTo("KOGL_TYPE_3");
+                });
+    }
+
+    /**
+     * 관리 화면의 나눠 올리기: 사진 한 장이 한 번의 저장이다. 기존 사진 다음 순서로 붙고, 출처는 그 사진에 연결되며,
+     * 대표·슬라이드는 건드리지 않는다. 실패하면 그 사진 파일만 지우고 앞서 저장된 사진은 남는다.
+     */
+    @Test
+    void oneUploadedPhotoIsSavedAfterExistingImagesWithItsOwnSourceAndCleansUpOnlyItselfOnFailure() {
+        when(destinationMapper.findImagesByDestinationId(10L)).thenReturn(List.of(image(1L, 10L, 7, true)));
+        when(fileUploadService.saveDestinationImage(any()))
+                .thenReturn("/uploads/destinations/one.jpg")
+                .thenReturn("/uploads/destinations/broken-source.jpg");
+
+        Long imageId = service.saveUploadedImage(10L, files("one.jpg")[0],
+                " 한국관광공사 ", "김지호", "KOGL_TYPE_1", null, null,
+                "https://kto.visitkorea.or.kr", " ");
+
+        assertThat(imageId).isEqualTo(100L);
+        assertThat(insertedImages()).singleElement().satisfies(saved -> {
+            assertThat(saved.getImageUrl()).isEqualTo("/uploads/destinations/one.jpg");
+            assertThat(saved.getOrderIndex()).isEqualTo(8);
+            assertThat(saved.getIsMain()).isFalse();
+            assertThat(saved.getIsSlide()).isFalse();
+            assertThat(saved.getSourceName()).isEqualTo("한국관광공사");
+            assertThat(saved.getWorkPageUrl()).isNull();
+        });
+        verify(destinationMapper, never()).clearMainImagesByDestinationId(any());
+        assertThat(invocationsNamed("insertImageSource")).hasSize(1);
+
+        // 잘못된 출처 URL: 이 사진만 실패하고 저장한 파일은 되돌린다.
+        withTransactionSynchronization(() -> {
+            assertThatThrownBy(() -> service.saveUploadedImage(10L, files("broken.jpg")[0],
+                    null, null, null, null, null, "javascript:alert(1)", null))
+                    .isInstanceOf(DestinationImageService.InvalidSourceUrlException.class);
+            completeSynchronizations(TransactionSynchronization.STATUS_ROLLED_BACK);
+        });
+        verify(fileUploadService).deleteDestinationFile("/uploads/destinations/broken-source.jpg");
+        verify(fileUploadService, never()).deleteDestinationFile("/uploads/destinations/one.jpg");
+    }
+
+    /**
+     * 순서 편집 저장: 요청한 순서대로 0부터 다시 매기고, 자리가 바뀐 사진만 고친다.
+     * 대표·슬라이드 지정은 순서와 상관없어 건드리지 않는다.
+     */
+    @Test
+    void savedImageOrderRenumbersOnlyMovedPhotosAndKeepsMainAndSlide() {
+        when(destinationMapper.findImagesByDestinationId(10L)).thenReturn(List.of(
+                image(1L, 10L, 0, true), image(2L, 10L, 1, false), image(3L, 10L, 2, false), image(4L, 10L, 3, false)));
+
+        // 4번째 사진을 2번째 자리로 (1, 4, 2, 3)
+        service.saveImageOrder(10L, List.of(1L, 4L, 2L, 3L));
+
+        assertThat(orderUpdates()).containsExactly(List.of(4L, 1), List.of(2L, 2), List.of(3L, 3));
+        verify(destinationMapper, never()).clearMainImagesByDestinationId(any());
+        verify(destinationMapper, never()).setMainImage(any());
+        assertThat(invocationsNamed("updateImageSlide")).isEmpty();
+    }
+
+    /** 다른 여행지 사진, 중복, 빠진 사진이 있으면 아무것도 바꾸지 않는다. */
+    @Test
+    void imageOrderMustListExactlyThisDestinationsPhotos() {
+        when(destinationMapper.findImagesByDestinationId(10L)).thenReturn(List.of(
+                image(1L, 10L, 0, true), image(2L, 10L, 1, false), image(3L, 10L, 2, false)));
+
+        for (List<Long> invalid : List.of(
+                List.of(1L, 2L, 99L),          // 다른 여행지 사진
+                List.of(1L, 2L, 2L),           // 중복
+                List.of(1L, 2L),               // 빠진 사진
+                List.of(1L, 2L, 3L, 4L),       // 그 사이 지워진 사진
+                List.<Long>of())) {
+            assertThatThrownBy(() -> service.saveImageOrder(10L, invalid))
+                    .as(invalid.toString())
+                    .isInstanceOf(DestinationImageService.InvalidImageOrderException.class);
+        }
+        assertThat(invocationsNamed("updateImageOrder")).isEmpty();
+    }
+
+    @Test
+    void sourceInsertFailureKeepsDirectUploadRollbackCleanup() {
+        when(fileUploadService.saveDestinationImage(any()))
+                .thenReturn("/uploads/destinations/new-with-source.jpg");
+        doThrow(new IllegalStateException("source insert failed"))
+                .when(destinationMapper).insertImageSource(any());
+
+        withTransactionSynchronization(() -> {
+            assertThatThrownBy(() -> service.saveImages(
+                    10L, files("with-source.jpg"), null, new Integer[0],
+                    new String[]{"제공기관"}, null, null, null, null))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("source insert failed");
+            completeSynchronizations(TransactionSynchronization.STATUS_ROLLED_BACK);
+        });
+
+        verify(fileUploadService).deleteDestinationFile(
+                "/uploads/destinations/new-with-source.jpg");
     }
 
     @Test
@@ -394,6 +546,7 @@ class DestinationImageServiceTest {
     void metadataUpdateDoesNotTouchImageStateOrFile() {
         DestinationImage selected = image(2L, 10L, 3, true);
         selected.setIsSlide(true);
+        selected.setSourceRecordPresent(true);
         when(destinationMapper.findImageById(2L)).thenReturn(selected);
 
         service.updateImageMetadata(
@@ -403,11 +556,137 @@ class DestinationImageServiceTest {
         verify(destinationMapper).updateImageMetadata(
                 2L, "한국관광공사", "한국관광공사 김지호",
                 "KOGL_TYPE_4", "CC BY 4.0", "https://example.com/source");
+        verify(destinationMapper).upsertImageSourceMetadata(
+                2L, "한국관광공사", "한국관광공사 김지호",
+                "KOGL_TYPE_4", "CC BY 4.0", "https://example.com/source");
         verify(destinationMapper, never()).clearMainImagesByDestinationId(anyLong());
         verify(destinationMapper, never()).setMainImage(anyLong());
         verify(destinationMapper, never()).updateImageSlide(anyLong(), org.mockito.ArgumentMatchers.anyBoolean());
         verify(destinationMapper, never()).deleteImageById(anyLong());
         verifyNoInteractions(fileUploadService);
+    }
+
+    @Test
+    void clearingExistingSourceKeepsNullsInTheNewRow() {
+        DestinationImage selected = image(2L, 10L, 3, false);
+        selected.setSourceRecordPresent(true);
+        when(destinationMapper.findImageById(2L)).thenReturn(selected);
+
+        service.updateImageMetadata(10L, 2L, null, null, null, null, null);
+
+        verify(destinationMapper).upsertImageSourceMetadata(2L, null, null, null, null, null);
+    }
+
+    @Test
+    void editingLegacyOnlyImageCopiesUneditedKtoFieldsIntoItsFirstSourceRow() {
+        DestinationImage selected = image(2L, 10L, 3, false);
+        selected.setExternalContentId("gallery-42");
+        selected.setSourceTitle("기존 원본 제목");
+        selected.setSourceImageUrl("https://example.com/original.jpg");
+        when(destinationMapper.findImageById(2L)).thenReturn(selected);
+
+        service.updateImageMetadata(10L, 2L, "새 제공기관", null, "KOGL_TYPE_1",
+                null, null);
+
+        ArgumentCaptor<DestinationImage> source = ArgumentCaptor.forClass(DestinationImage.class);
+        verify(destinationMapper).insertImageSource(source.capture());
+        assertThat(source.getValue())
+                .extracting(DestinationImage::getId, DestinationImage::getSourceName,
+                        DestinationImage::getExternalContentId, DestinationImage::getSourceTitle,
+                        DestinationImage::getSourceImageUrl)
+                .containsExactly(2L, "새 제공기관", "gallery-42", "기존 원본 제목",
+                        "https://example.com/original.jpg");
+        assertThat(invocationsNamed("upsertImageSourceMetadata")).isEmpty();
+    }
+
+    @Test
+    void bulkSourceFillsBlanksAndPreservesExistingPerPhotoValues() {
+        DestinationImage first = image(2L, 10L, 0, false);
+        first.setSourceRecordPresent(true);
+        first.setPhotographer("개별 촬영자");
+        DestinationImage second = image(3L, 10L, 1, false);
+        second.setSourceRecordPresent(true);
+        when(destinationMapper.findImageById(2L)).thenReturn(first);
+        when(destinationMapper.findImageById(3L)).thenReturn(second);
+
+        var result = service.applyBulkSource(10L, List.of(2L, 3L),
+                "공공기관", "공통 촬영자", "KOGL_TYPE_1", null,
+                "https://example.com/collection", java.util.Set.of(), true, false);
+
+        assertThat(result.appliedImageCount()).isEqualTo(2);
+        assertThat(result.skippedFieldCount()).isEqualTo(1);
+        assertThat(result.manualReviewImageIds()).containsExactly(2L);
+        assertThat(first.getPhotographer()).isEqualTo("개별 촬영자");
+        assertThat(first.getCommonSourceUrl()).isEqualTo("https://example.com/collection");
+        verify(destinationMapper).updateBulkImageSource(eq(first), any());
+        verify(destinationMapper).updateBulkImageSource(eq(second), any());
+    }
+
+    @Test
+    void bulkSourceRequiresLicenseAndOverwriteConfirmationAndRejectsForeignPhoto() {
+        assertThatThrownBy(() -> service.applyBulkSource(10L, List.of(2L),
+                null, null, "KOGL_TYPE_1", null, null,
+                java.util.Set.of(), false, false)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.applyBulkSource(10L, List.of(2L),
+                "기관", null, null, null, null,
+                java.util.Set.of("sourceName"), true, false)).isInstanceOf(IllegalArgumentException.class);
+        when(destinationMapper.findImageById(2L)).thenReturn(image(2L, 99L, 0, false));
+        assertThatThrownBy(() -> service.applyBulkSource(10L, List.of(2L),
+                "기관", null, null, null, null,
+                java.util.Set.of(), true, false)).isInstanceOf(IllegalArgumentException.class);
+        verify(destinationMapper, never()).updateBulkImageSource(any(), any());
+    }
+
+    @Test
+    void commonsPhotoSourceCannotBeOverwrittenByManualOrBulkSourceEditing() {
+        DestinationImage commons = image(2L, 10L, 0, false);
+        commons.setSourceType("WIKIMEDIA_COMMONS");
+        commons.setSourceRecordPresent(true);
+        when(destinationMapper.findImageById(2L)).thenReturn(commons);
+
+        assertThatThrownBy(() -> service.updateImageMetadataAndPages(10L, 2L, "기관", "촬영자",
+                "KOGL_TYPE_1", null, null, null, null))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("Commons");
+        assertThatThrownBy(() -> service.applyBulkSource(10L, List.of(2L),
+                "기관", null, null, null, null, java.util.Set.of(), false, false))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("Commons");
+        verify(destinationMapper, never()).updateImageMetadata(any(), any(), any(), any(), any(), any());
+        verify(destinationMapper, never()).upsertImageSourceMetadata(any(), any(), any(), any(), any(), any());
+        verify(destinationMapper, never()).updateBulkImageSource(any(), any());
+        verify(destinationMapper, never()).updateBulkImageLegacy(any(), any());
+    }
+
+    @Test
+    void bulkSourceOnLegacyOnlyPhotoCopiesUnchangedKtoIdentifiersAndKeepsLegacyUrl() {
+        DestinationImage image = image(2L, 10L, 0, false);
+        image.setExternalContentId("kto-42");
+        image.setSourceUrl("https://example.com/legacy");
+        when(destinationMapper.findImageById(2L)).thenReturn(image);
+
+        var result = service.applyBulkSource(10L, List.of(2L),
+                "공공기관", null, null, null, "https://example.com/collection",
+                java.util.Set.of(), false, false);
+
+        assertThat(result.appliedImageCount()).isEqualTo(1);
+        assertThat(image.getExternalContentId()).isEqualTo("kto-42");
+        assertThat(image.getSourceUrl()).isEqualTo("https://example.com/legacy");
+        verify(destinationMapper).insertImageSource(image);
+    }
+
+    @Test
+    void editingPhotoPagesKeepsMissingPageParametersAndOtherSourceFields() {
+        DestinationImage image = image(2L, 10L, 0, false);
+        image.setSourceRecordPresent(true);
+        image.setCommonSourceUrl("https://example.com/collection");
+        image.setWorkPageUrl("https://example.com/work/2");
+        when(destinationMapper.findImageById(2L)).thenReturn(image);
+
+        service.updateImageMetadataAndPages(10L, 2L,
+                "공공기관", "개별 촬영자", "KOGL_TYPE_1", null, null,
+                null, "https://example.com/work/3");
+
+        verify(destinationMapper).upsertImageSourcePages(
+                2L, "https://example.com/collection", "https://example.com/work/3");
     }
 
     @Test

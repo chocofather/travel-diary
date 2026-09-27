@@ -57,7 +57,8 @@ class OverseasMapEmbedTest {
     @BeforeEach
     void setUp() {
         controller = new DestinationController(destinationService, destinationImageService,
-                countryCategoryService, destinationCommentService, referenceNameLocalizationService);
+                countryCategoryService, destinationCommentService, referenceNameLocalizationService,
+                new com.example.travlediary.service.file.DestinationCardThumbnailService("build/tmp/no-uploads"));
         when(countryCategoryService.getDomesticRootIds()).thenReturn(List.of(1L));
     }
 

@@ -1,6 +1,5 @@
 package com.example.travlediary.controller.user;
 
-import com.example.travlediary.dto.AccountDetailsDto;
 import com.example.travlediary.dto.AccountVerifyForm;
 import com.example.travlediary.dto.AccountWithdrawalForm;
 import com.example.travlediary.dto.PasswordChangeForm;
@@ -37,6 +36,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.Duration;
@@ -59,25 +59,77 @@ public class MyPageAccountController {
     private final SocialWithdrawalService socialWithdrawalService;
     private final MessageSource messageSource;
 
+    /**
+     * 비밀번호를 다시 확인한 뒤 돌아갈 곳. 주소의 next 값은 이 목록 안에서만 고른다(임의 주소로 보내지 않는다).
+     */
+    enum VerificationTarget {
+        /** 비밀번호 변경 화면 */
+        PASSWORD("/mypage/account/edit"),
+        /** 회원 탈퇴 화면 */
+        WITHDRAW("/mypage/account/withdraw"),
+        /** 계정 관리 화면(소셜 계정 연결·해제를 이어서 한다) */
+        ACCOUNT("/mypage/account");
+
+        private final String path;
+
+        VerificationTarget(String path) {
+            this.path = path;
+        }
+
+        String path() {
+            return path;
+        }
+
+        String param() {
+            return name().toLowerCase();
+        }
+
+        static VerificationTarget from(String value) {
+            for (VerificationTarget target : values()) {
+                if (target.param().equals(value)) {
+                    return target;
+                }
+            }
+            return ACCOUNT;
+        }
+    }
+
+    /**
+     * 모든 회원이 같은 주소로 들어오는 계정 관리 화면.
+     * 계정 정보, 로그인 및 보안(비밀번호가 있는 회원만 비밀번호 변경 + 소셜 계정 연결), 회원 탈퇴를 한 화면에 둔다.
+     * 비밀번호 확인은 비밀번호 변경·탈퇴·소셜 연결 변경처럼 실제로 바꾸는 동작에서만 요구한다.
+     */
     @GetMapping
-    public String verifyForm(@AuthenticationPrincipal CustomUserDetails userDetails,
-                             HttpSession session,
-                             Model model) {
+    public String accountHome(@AuthenticationPrincipal CustomUserDetails userDetails,
+                              HttpSession session,
+                              Model model) {
         // 확인 화면을 떠나 계정 관리로 돌아온 경우 탈퇴 intent를 재사용하지 않는다.
         session.removeAttribute(PendingSocialWithdrawal.SESSION_ATTRIBUTE);
+        Long userId = userDetails.getId();
+        model.addAttribute("account", accountService.getAccountDetails(userId));
+        model.addAttribute("localPasswordAccount", accountService.hasLocalPassword(userId));
+        prepareSocialConnections(model, session, userId);
+        model.addAttribute("pageTitle", message("mypage.account.social.pageTitle"));
+        return "mypage/account";
+    }
+
+    /** 비밀번호 확인 화면. 비밀번호가 없는 소셜 회원에게는 묻지 않는다. */
+    @GetMapping("/verify")
+    public String verifyForm(@RequestParam(value = "next", required = false) String next,
+                             @AuthenticationPrincipal CustomUserDetails userDetails,
+                             HttpSession session,
+                             Model model) {
         if (!accountService.hasLocalPassword(userDetails.getId())) {
-            prepareSocialConnections(model, session, userDetails.getId());
-            model.addAttribute("pageTitle", message("mypage.account.social.pageTitle"));
-            return "mypage/account-social";
+            return "redirect:/mypage/account";
         }
+        VerificationTarget target = VerificationTarget.from(next);
         if (reauthenticationService.isVerified(session, userDetails.getId())) {
-            return "redirect:/mypage/account/edit";
+            return "redirect:" + target.path();
         }
-        // 본인 확인 화면에서도 로그인 직후 처리된 소셜 연결 결과를 흘리지 않고 보여준다.
-        consumeSocialConnectionNotice(model, session);
         if (!model.containsAttribute("verifyForm")) {
             model.addAttribute("verifyForm", new AccountVerifyForm());
         }
+        model.addAttribute("verificationTarget", target.param());
         model.addAttribute("pageTitle", message("mypage.account.verify.pageTitle"));
         return "mypage/account-verify";
     }
@@ -96,11 +148,11 @@ public class MyPageAccountController {
                     new SocialConnectionNotice(SocialConnectionNotice.Type.ERROR, null));
             return "redirect:/mypage/account";
         }
+        // 비밀번호가 있는 회원은 연결 전에 비밀번호를 한 번 더 확인한다(소셜 전용 회원은 묻지 않는다).
         if (accountService.hasLocalPassword(userDetails.getId())
                 && !reauthenticationService.isVerified(session, userDetails.getId())) {
-            redirectAttributes.addFlashAttribute(
-                    "verificationMessage", message("mypage.account.verify.required"));
-            return "redirect:/mypage/account";
+            return verificationRedirect(VerificationTarget.ACCOUNT,
+                    "mypage.account.verify.socialRequired", redirectAttributes);
         }
 
         session.removeAttribute(PendingSocialConnection.SESSION_ATTRIBUTE);
@@ -146,9 +198,8 @@ public class MyPageAccountController {
         }
         if (accountService.hasLocalPassword(userDetails.getId())
                 && !reauthenticationService.isVerified(session, userDetails.getId())) {
-            redirectAttributes.addFlashAttribute(
-                    "verificationMessage", message("mypage.account.verify.required"));
-            return "redirect:/mypage/account";
+            return verificationRedirect(VerificationTarget.ACCOUNT,
+                    "mypage.account.verify.socialRequired", redirectAttributes);
         }
 
         SocialDisconnectionResult result;
@@ -232,12 +283,15 @@ public class MyPageAccountController {
     public String verifyPassword(
             @ModelAttribute("verifyForm") AccountVerifyForm form,
             BindingResult bindingResult,
+            @RequestParam(value = "next", required = false) String next,
             @AuthenticationPrincipal CustomUserDetails userDetails,
             HttpSession session,
-            Model model) {
+            Model model,
+            RedirectAttributes redirectAttributes) {
         if (!accountService.hasLocalPassword(userDetails.getId())) {
             return "redirect:/mypage/account";
         }
+        VerificationTarget target = VerificationTarget.from(next);
         if (form.getCurrentPassword() == null || form.getCurrentPassword().isEmpty()) {
             bindingResult.rejectValue("currentPassword",
                     "mypage.account.error.currentPassword.required",
@@ -251,14 +305,21 @@ public class MyPageAccountController {
 
         if (bindingResult.hasErrors()) {
             form.setCurrentPassword(null);
+            model.addAttribute("verificationTarget", target.param());
             model.addAttribute("pageTitle", message("mypage.account.verify.pageTitle"));
             return "mypage/account-verify";
         }
 
         reauthenticationService.markVerified(session, userDetails.getId());
-        return "redirect:/mypage/account/edit";
+        if (target == VerificationTarget.ACCOUNT) {
+            // 소셜 계정 연결·해제를 하려다 확인하러 온 경우: 계정 관리로 돌아가 이어서 누르게 한다.
+            redirectAttributes.addFlashAttribute(
+                    "verifiedMessage", message("mypage.account.verify.socialDone"));
+        }
+        return "redirect:" + target.path();
     }
 
+    /** 비밀번호 변경 전용 화면. 최근에 비밀번호를 확인한 회원만 들어온다. */
     @GetMapping("/edit")
     public String editForm(@AuthenticationPrincipal CustomUserDetails userDetails,
                            HttpSession session,
@@ -267,11 +328,11 @@ public class MyPageAccountController {
         if (!accountService.hasLocalPassword(userDetails.getId())) {
             return "redirect:/mypage/account";
         }
-        if (!requireVerification(session, userDetails.getId(), redirectAttributes)) {
-            return "redirect:/mypage/account";
+        if (!reauthenticationService.isVerified(session, userDetails.getId())) {
+            return verificationRedirect(VerificationTarget.PASSWORD,
+                    "mypage.account.verify.required", redirectAttributes);
         }
-        AccountDetailsDto details = accountService.getAccountDetails(userDetails.getId());
-        prepareEditModel(model, details, userDetails.getId(), session);
+        preparePasswordModel(model);
         return "mypage/account-edit";
     }
 
@@ -283,10 +344,31 @@ public class MyPageAccountController {
         if (!accountService.hasLocalPassword(userDetails.getId())) {
             return "redirect:/mypage/account";
         }
-        if (!requireVerification(session, userDetails.getId(), redirectAttributes)) {
-            return "redirect:/mypage/account";
+        if (!reauthenticationService.isVerified(session, userDetails.getId())) {
+            return verificationRedirect(VerificationTarget.PASSWORD,
+                    "mypage.account.verify.required", redirectAttributes);
         }
         return "redirect:/mypage/account/edit";
+    }
+
+    /**
+     * 비밀번호가 있는 회원의 회원 탈퇴 화면. 최근에 비밀번호를 확인한 회원만 들어오고, 확인 문구를 한 번 더 받는다.
+     * 비밀번호가 없는 소셜 회원은 계정 관리 화면의 소셜 인증 탈퇴 절차를 그대로 쓴다.
+     */
+    @GetMapping("/withdraw")
+    public String withdrawForm(@AuthenticationPrincipal CustomUserDetails userDetails,
+                               HttpSession session,
+                               Model model,
+                               RedirectAttributes redirectAttributes) {
+        if (!accountService.hasLocalPassword(userDetails.getId())) {
+            return "redirect:/mypage/account";
+        }
+        if (!reauthenticationService.isVerified(session, userDetails.getId())) {
+            return verificationRedirect(VerificationTarget.WITHDRAW,
+                    "mypage.account.verify.required", redirectAttributes);
+        }
+        prepareWithdrawalModel(model);
+        return "mypage/account-withdraw";
     }
 
     @PostMapping("/password")
@@ -303,8 +385,9 @@ public class MyPageAccountController {
         if (!accountService.hasLocalPassword(userDetails.getId())) {
             return "redirect:/mypage/account";
         }
-        if (!requireVerification(session, userDetails.getId(), redirectAttributes)) {
-            return "redirect:/mypage/account";
+        if (!reauthenticationService.isVerified(session, userDetails.getId())) {
+            return verificationRedirect(VerificationTarget.PASSWORD,
+                    "mypage.account.verify.required", redirectAttributes);
         }
         try {
             accountService.changePassword(userDetails.getId(), form);
@@ -315,8 +398,7 @@ public class MyPageAccountController {
         if (bindingResult.hasErrors()) {
             form.setNewPassword(null);
             form.setNewPasswordConfirm(null);
-            prepareEditModel(model, accountService.getAccountDetails(userDetails.getId()),
-                    userDetails.getId(), session);
+            preparePasswordModel(model);
             return "mypage/account-edit";
         }
 
@@ -339,8 +421,9 @@ public class MyPageAccountController {
         if (!accountService.hasLocalPassword(userDetails.getId())) {
             return "redirect:/mypage/account";
         }
-        if (!requireVerification(session, userDetails.getId(), redirectAttributes)) {
-            return "redirect:/mypage/account";
+        if (!reauthenticationService.isVerified(session, userDetails.getId())) {
+            return verificationRedirect(VerificationTarget.WITHDRAW,
+                    "mypage.account.verify.required", redirectAttributes);
         }
         try {
             accountService.withdraw(userDetails.getId(), form.getConfirmationPhrase());
@@ -350,9 +433,8 @@ public class MyPageAccountController {
 
         if (bindingResult.hasErrors()) {
             form.setConfirmationPhrase(null);
-            prepareEditModel(model, accountService.getAccountDetails(userDetails.getId()),
-                    userDetails.getId(), session);
-            return "mypage/account-edit";
+            prepareWithdrawalModel(model);
+            return "mypage/account-withdraw";
         }
 
         reauthenticationService.clear(session);
@@ -360,30 +442,26 @@ public class MyPageAccountController {
         return "redirect:/?withdrawn=true";
     }
 
-    private boolean requireVerification(HttpSession session,
-                                        Long userId,
+    /** 비밀번호를 다시 확인하러 보낸다. 확인이 끝나면 target 으로 돌아온다. */
+    private String verificationRedirect(VerificationTarget target,
+                                        String messageCode,
                                         RedirectAttributes redirectAttributes) {
-        boolean verified = reauthenticationService.isVerified(session, userId);
-        if (!verified) {
-            redirectAttributes.addFlashAttribute(
-                    "verificationMessage", message("mypage.account.verify.required"));
-        }
-        return verified;
+        redirectAttributes.addFlashAttribute("verificationMessage", message(messageCode));
+        return "redirect:/mypage/account/verify?next=" + target.param();
     }
 
-    private void prepareEditModel(Model model,
-                                  AccountDetailsDto details,
-                                  Long userId,
-                                  HttpSession session) {
-        model.addAttribute("account", details);
+    private void preparePasswordModel(Model model) {
         if (!model.containsAttribute("passwordForm")) {
             model.addAttribute("passwordForm", new PasswordChangeForm());
         }
+        model.addAttribute("pageTitle", message("mypage.account.password.pageTitle"));
+    }
+
+    private void prepareWithdrawalModel(Model model) {
         if (!model.containsAttribute("withdrawalForm")) {
             model.addAttribute("withdrawalForm", new AccountWithdrawalForm());
         }
-        prepareSocialConnections(model, session, userId);
-        model.addAttribute("pageTitle", message("mypage.account.edit.pageTitle"));
+        model.addAttribute("pageTitle", message("mypage.account.withdrawal.pageTitle"));
     }
 
     private void prepareSocialConnections(Model model,

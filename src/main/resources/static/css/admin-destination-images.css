@@ -7,14 +7,8 @@
 }
 
 .admin-destination-image-upload-form {
-    display: flex;
-    align-items: end;
-    justify-content: space-between;
-    gap: 18px;
-}
-
-.admin-destination-image-upload-form .admin-form-field {
-    flex: 1;
+    display: grid;
+    gap: 12px;
 }
 
 .admin-destination-image-upload-form input[type="file"] {
@@ -27,50 +21,630 @@
     border-radius: 9px;
 }
 
-.admin-destination-image-upload-form .admin-form-actions,
-.admin-kto-photo-save-actions {
-    display: flex;
-    justify-content: flex-end;
-}
-
 .admin-kto-photo-management-form {
     display: block;
 }
 
-.admin-kto-photo-management-form .admin-destination-section {
-    border-radius: 16px 16px 0 0;
+.admin-image-add-stack {
+    display: grid;
+    gap: 16px;
+    margin-top: 14px;
 }
 
-.admin-kto-photo-save-actions {
-    padding: 16px 24px;
-    background: #f8faff;
+.admin-image-add-upload,
+.admin-image-add-kto .admin-kto-photo-section {
+    min-width: 0;
+    padding: 18px;
     border: 1px solid #e1e7f0;
-    border-top: 0;
-    border-radius: 0 0 16px 16px;
+    border-radius: 10px;
+    background: #fff;
+}
+
+.admin-image-add-title {
+    margin: 0;
+    color: #35415a;
+    font-size: 15px;
+}
+
+.admin-image-add-upload .admin-field-help {
+    margin: 0;
+}
+
+.admin-image-add-upload .admin-upload-preview {
+    margin-top: 4px;
+}
+
+.admin-image-add-upload .admin-upload-preview-grid {
+    max-height: none;
+    overflow: visible;
+}
+
+.admin-image-add-actions,
+.admin-kto-photo-save-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 12px;
+    border-top: 1px solid #edf0f5;
+}
+
+.admin-kto-photo-results-area {
+    display: grid;
+    gap: 14px;
+}
+
+.admin-upload-preview-card.is-bulk-applied {
+    border-color: #8da4e2;
+}
+
+/* 직접 업로드를 한 장씩 올릴 때의 진행·결과 표시 */
+.admin-image-upload-selection:empty {
+    display: none;
+}
+
+.admin-image-upload-progress {
+    display: grid;
+    gap: 8px;
+    padding: 12px 14px;
+    background: #f8fafc;
+    border: 1px solid #e3e8f0;
+    border-radius: 10px;
+}
+
+.admin-image-upload-summary {
+    margin: 0;
+    color: #2f3a4f;
+    font-size: 0.86rem;
+    font-weight: 700;
+}
+
+.admin-image-upload-bar {
+    height: 6px;
+    overflow: hidden;
+    background: #e3e8f0;
+    border-radius: 999px;
+}
+
+.admin-image-upload-bar span {
+    display: block;
+    width: 0;
+    height: 100%;
+    background: var(--tripbora-primary, #7657c8);
+    transition: width 0.2s ease;
+}
+
+.admin-image-upload-failures {
+    margin: 0;
+    padding-left: 18px;
+    color: #b04444;
+    font-size: 0.8rem;
+    line-height: 1.5;
+}
+
+.admin-image-upload-result-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.admin-image-upload-result-actions:not(:has(> :not([hidden]))) {
+    display: none;
+}
+
+.admin-image-upload-state {
+    margin: 6px 0 0;
+    color: #5b6780;
+    font-size: 0.76rem;
+    font-weight: 700;
+}
+
+.admin-image-upload-state.is-success {
+    color: #1f7a4d;
+}
+
+.admin-image-upload-state.is-failed {
+    color: #b04444;
+    font-weight: 600;
+}
+
+.admin-upload-preview-card.is-upload-failed {
+    border-color: #e3a9a9;
+}
+
+.admin-upload-preview-card.is-upload-done {
+    opacity: 0.72;
+}
+
+.admin-kto-photo-save-actions .admin-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
 }
 
 .admin-destination-images-card {
     padding: 22px 24px;
 }
 
+/* 사진이 30장을 넘어도 훑어볼 수 있게 카드 폭을 좁혀 여러 열로 채운다. */
 .admin-destination-image-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(195px, 1fr));
+    align-items: start;
+    gap: 12px;
     margin-top: 18px;
 }
 
 .admin-destination-image-card {
+    display: flex;
     min-width: 0;
+    flex-direction: column;
     overflow: hidden;
     background: #fff;
     border: 1px solid #dfe5ef;
     border-radius: 12px;
+    scroll-margin-top: 90px;
+}
+
+.admin-destination-image-card.is-source-error {
+    border-color: #e3a9a9;
+}
+
+.admin-destination-image-body {
+    display: grid;
+    gap: 7px;
+    padding: 9px 10px 10px;
+}
+
+.admin-image-source-status {
+    display: inline-flex;
+    align-items: center;
+    justify-self: start;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 750;
+}
+
+.admin-image-source-status.is-complete {
+    color: #1f6e46;
+    background: #e8f6ee;
+}
+
+.admin-image-source-status.is-license_needed {
+    color: #875a0c;
+    background: #fff3d9;
+}
+
+.admin-image-source-status.is-missing {
+    color: #a33b3b;
+    background: #fdecec;
+}
+
+.admin-image-source-status.is-commons {
+    color: #3f559e;
+    background: #edf2ff;
+}
+
+.admin-image-source-summary,
+.admin-image-source-title {
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.admin-image-source-summary {
+    color: #3e4b68;
+    font-size: 0.78rem;
+    font-weight: 650;
+}
+
+.admin-image-source-title {
+    color: #7b8599;
+    font-size: 0.72rem;
+}
+
+.admin-image-source-saved {
+    margin: 0;
+    color: #1f6e46;
+    font-size: 0.74rem;
+    font-weight: 700;
+}
+
+.admin-image-order-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    min-width: 24px;
+    padding: 3px 7px;
+    color: #fff;
+    background: rgba(28, 36, 52, 0.72);
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 750;
+    text-align: center;
+}
+
+/* 등록된 이미지 머리말: 설명과 '순서 편집' 버튼 */
+/*
+  사진 격자 바로 위 머리말(등록된 이미지 · 총 N장 + 순서 편집).
+  위의 공통 출처 일괄 수정과 선으로 나누고, 격자를 스크롤해도 관리자 상단바 아래에 붙어 있게 한다.
+*/
+.admin-registered-images-bar {
+    position: sticky;
+    top: 72px;
+    z-index: 4;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px 16px;
+    margin: 22px -26px 0;
+    padding: 14px 26px;
+    background: #fff;
+    border-top: 1px solid #e6ebf3;
+    border-bottom: 1px solid #edf0f5;
+}
+
+.admin-destination-images-card > .admin-registered-images-bar:first-child {
+    margin-top: -26px;
+    border-top: 0;
+    border-radius: 16px 16px 0 0;
+}
+
+.admin-registered-images-bar > div {
+    flex: 1 1 320px;
+    min-width: 0;
+}
+
+.admin-registered-images-bar .admin-card-heading {
+    margin: 0;
+}
+
+.admin-registered-images-bar .admin-card-description {
+    margin: 4px 0 0;
+}
+
+.admin-registered-images-count {
+    color: #6b768d;
+    font-weight: 700;
+}
+
+.admin-registered-images-bar [data-image-order-open] {
+    flex: 0 0 auto;
+}
+
+.admin-registered-images-bar[hidden] {
+    display: none;
+}
+
+.admin-image-order-result {
+    margin: 14px 0 0;
+    color: #1f6e46;
+    background: #effaf4;
+    border-color: #cfeedd;
+}
+
+/* 순서 편집 중에는 일반 카드와 공통 출처 일괄 수정을 숨긴다(클래스의 display 가 hidden 을 덮지 않게). */
+.admin-destination-image-grid[hidden],
+.admin-image-bulk-panel[hidden],
+.admin-image-order-editor[hidden],
+[data-image-order-open][hidden] {
+    display: none;
+}
+
+/* 순서 편집 모드: 출처 입력 없이 사진과 번호만 촘촘한 격자로 */
+.admin-image-order-editor {
+    margin-top: 16px;
+}
+
+.admin-image-order-toolbar {
+    position: sticky;
+    top: 72px;
+    z-index: 3;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 14px;
+    background: #fff;
+    border: 1px solid #e3e8f0;
+    border-radius: 10px;
+}
+
+.admin-image-order-toolbar h3 {
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+.admin-image-order-help {
+    margin: 8px 2px 0;
+}
+
+.admin-image-order-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.admin-image-order-heading {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+
+.admin-image-order-heading h3 span {
+    color: #6b768d;
+    font-weight: 700;
+}
+
+.admin-image-order-status {
+    min-height: 1.2em;
+    margin: 0;
+    color: #5b6780;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+/* 관리자 상단바가 따라오지 않는 좁은 화면에서는 화면 맨 위에 붙인다. */
+@media (max-width: 960px) {
+    .admin-registered-images-bar,
+    .admin-image-order-toolbar {
+        top: 0;
+    }
+}
+
+.admin-image-order-status.is-error {
+    color: #b04444;
+}
+
+.admin-image-order-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.admin-image-order-item {
+    min-width: 0;
+    overflow: hidden;
+    background: #fff;
+    border: 1px solid #dfe5ef;
+    border-radius: 10px;
+    cursor: grab;
+    user-select: none;
+}
+
+/* 끄는 동안 원래 칸은 흐리게 남겨 두고(자리 표시), 사진은 떠 있는 미리보기로 따라간다. */
+.admin-image-order-item.is-dragging {
+    opacity: 0.35;
+    outline: 2px dashed #7657c8;
+    outline-offset: -2px;
+}
+
+.admin-image-order-grid.is-sorting .admin-image-order-item {
+    cursor: grabbing;
+}
+
+/* 놓일 자리 표시선. 한 개를 transform 으로만 옮겨 끄는 동안 레이아웃을 다시 계산하지 않는다. */
+.admin-image-order-indicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 35;
+    width: 4px;
+    background: #7657c8;
+    border-radius: 4px;
+    box-shadow: 0 0 0 3px rgba(118, 87, 200, 0.22);
+    pointer-events: none;
+    will-change: transform;
+}
+
+.admin-image-order-indicator.is-same {
+    background: #b4a6dc;
+    box-shadow: none;
+}
+
+.admin-image-order-indicator[hidden] {
+    display: none;
+}
+
+.admin-image-order-ghost {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 40;
+    overflow: hidden;
+    background: #fff;
+    border: 2px solid #7657c8;
+    border-radius: 10px;
+    box-shadow: 0 10px 24px rgba(28, 36, 52, 0.28);
+    opacity: 0.94;
+    pointer-events: none;
+    will-change: transform;
+}
+
+.admin-image-order-ghost img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+}
+
+.admin-image-order-ghost span {
+    position: absolute;
+    right: 6px;
+    bottom: 6px;
+    padding: 3px 8px;
+    color: #fff;
+    background: #7657c8;
+    border-radius: 999px;
+    font-size: 0.74rem;
+    font-weight: 800;
+}
+
+.admin-image-order-thumb {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    background: #eef2f8;
+}
+
+.admin-image-order-thumb img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+}
+
+.admin-image-order-number {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    min-width: 24px;
+    padding: 2px 7px;
+    color: #fff;
+    background: rgba(28, 36, 52, 0.78);
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-align: center;
+}
+
+/* 터치로 끌 때 잡는 곳. 여기서만 화면 스크롤을 막아 사진 목록은 평소처럼 스크롤된다. */
+.admin-image-order-handle {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    display: grid;
+    width: 28px;
+    height: 28px;
+    place-items: center;
+    color: #2f3a4f;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    touch-action: none;
+}
+
+.admin-image-order-thumb .admin-image-state-badges {
+    bottom: 6px;
+    left: 6px;
+}
+
+.admin-image-order-thumb .admin-image-state-badge {
+    padding: 2px 6px;
+    font-size: 0.64rem;
+}
+
+.admin-image-order-controls {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 3px;
+    padding: 5px;
+}
+
+.admin-image-order-controls .admin-btn {
+    min-height: 26px;
+    padding: 2px 6px;
+    font-size: 0.7rem;
+}
+
+.admin-image-order-controls .admin-select {
+    min-width: 0;
+    height: 26px;
+    padding: 0 4px;
+    font-size: 0.72rem;
+}
+
+/* 출처 정보 접기/펼치기 */
+.admin-image-source-details {
+    border-top: 1px solid #edf0f5;
+    padding-top: 8px;
+}
+
+.admin-image-source-details > summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #4860bd;
+    font-size: 0.76rem;
+    font-weight: 700;
+    cursor: pointer;
+    list-style: none;
+}
+
+.admin-image-source-details > summary::-webkit-details-marker {
+    display: none;
+}
+
+.admin-image-source-details > summary::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: rotate(-45deg);
+    transition: transform 0.15s ease;
+}
+
+.admin-image-source-details[open] > summary::before {
+    transform: rotate(45deg);
+}
+
+.admin-image-source-details > summary:focus-visible {
+    outline: 2px solid rgba(72, 96, 189, 0.35);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+.admin-image-source-toggle.is-open,
+.admin-image-source-details[open] .admin-image-source-toggle.is-closed,
+.admin-image-source-dirty {
+    display: none;
+}
+
+.admin-image-source-details[open] .admin-image-source-toggle.is-open,
+.admin-image-source-details[data-dirty="true"] .admin-image-source-dirty {
+    display: inline;
+}
+
+.admin-image-source-dirty {
+    padding: 1px 6px;
+    color: #875a0c;
+    background: #fff3d9;
+    border-radius: 999px;
+    font-size: 0.68rem;
+}
+
+.admin-image-source-details .admin-destination-image-meta {
+    padding: 8px 0 0;
+}
+
+.admin-image-source-details .admin-destination-image-metadata-form {
+    margin: 8px 0 0;
+    padding-top: 0;
+    border-top: 0;
+}
+
+/* 카드 폭이 좁으므로 펼친 출처 입력은 한 줄에 한 칸씩 둔다. 펼친 카드만 길어지고 옆 카드는 늘어나지 않는다. */
+.admin-image-source-details .admin-image-metadata-fields {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+/* 공용 label 의 display:grid 가 hidden 을 덮어 '세부 이용조건'·경고가 늘 보이던 것을 카드 안에서 바로잡는다. */
+.admin-image-source-details .admin-image-metadata-fields [hidden] {
+    display: none;
+}
+
+.admin-image-source-error {
+    margin: 0;
 }
 
 .admin-destination-image-preview {
     position: relative;
-    aspect-ratio: 4 / 3;
+    aspect-ratio: 3 / 2;
     overflow: hidden;
     background: #eef2f8;
 }
@@ -93,19 +667,37 @@
     font-weight: 750;
 }
 
-.admin-image-state-badge {
+/* 사진 위 표시: 왼쪽 위 일괄 적용 선택, 오른쪽 위 순서, 왼쪽 아래 대표·슬라이드 */
+.admin-image-state-badges {
     position: absolute;
-    top: 9px;
-    left: 9px;
+    bottom: 8px;
+    left: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.admin-image-state-badge {
     color: #fff;
     background: #4f6ed9;
 }
 
 .admin-image-state-badge.is-slide {
-    top: auto;
-    bottom: 9px;
     color: #68440c;
     background: #ffe9bd;
+}
+
+.admin-image-card-select {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    padding: 3px 8px 3px 6px;
+    color: #2f3a4f;
+    background: rgba(255, 255, 255, 0.92);
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    cursor: pointer;
 }
 
 .admin-image-source-badge {
@@ -129,6 +721,18 @@
     white-space: nowrap;
 }
 
+.admin-destination-image-meta span {
+    overflow-wrap: anywhere;
+}
+
+.admin-destination-image-meta a + a {
+    margin-left: 10px;
+}
+
+.admin-destination-image-meta .admin-field-help {
+    margin: 0;
+}
+
 .admin-destination-image-metadata-form {
     display: grid;
     gap: 8px;
@@ -149,8 +753,20 @@
 .admin-destination-image-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 7px;
-    padding: 13px 14px 14px;
+    gap: 4px;
+}
+
+/* 좁은 카드에서도 대표·슬라이드·삭제가 한 줄에 들어가도록 작게 둔다. */
+.admin-destination-image-actions .admin-btn,
+.admin-destination-image-actions .admin-image-current-state {
+    min-height: 26px;
+    padding: 3px 5px;
+    font-size: 0.7rem;
+    white-space: nowrap;
+}
+
+.admin-destination-image-actions form:last-child {
+    margin-left: auto;
 }
 
 .admin-destination-image-actions form {
@@ -160,7 +776,7 @@
 .admin-image-current-state {
     display: inline-flex;
     align-items: center;
-    min-height: 32px;
+    min-height: 30px;
     padding: 5px 9px;
     color: #4860bd;
     background: #f1f4ff;
@@ -179,141 +795,23 @@
     text-align: center;
 }
 
-/* 이미지 추가: 왼쪽 직접 업로드 / 오른쪽 KTO 검색, 검색 결과는 전체 폭 */
-.admin-image-add-grid {
-    display: grid;
-    grid-template-columns: 35fr 65fr;
-    column-gap: 24px;
-    row-gap: 12px;
-    align-items: start;
-    margin-top: 14px;
-}
-
-/* KTO form/section 은 상자만 없애고 자식 요소를 그리드에 직접 배치한다 (JS selector 는 그대로) */
-.admin-image-add-grid .admin-kto-photo-management-form,
-.admin-image-add-grid .admin-kto-photo-section {
-    display: contents;
-}
-
-.admin-image-add-grid input[type="hidden"] {
-    display: none;
-}
-
-.admin-image-add-upload {
-    display: block;
-    grid-column: 1;
-    grid-row: 1 / 4;
-    padding-right: 24px;
-    border-right: 1px solid #e6ebf4;
-}
-
-.admin-image-add-title {
-    margin: 0 0 8px;
-    color: #35415a;
-    font-size: 15px;
-}
-
 .admin-image-add-upload-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+    display: block;
 }
 
 .admin-image-add-upload-row input[type="file"] {
-    flex: 1;
     min-width: 0;
 }
 
-.admin-image-add-upload .admin-field-help {
-    margin-top: 8px;
-}
-
-.admin-image-add-upload .admin-alert {
-    margin-bottom: 10px;
-}
-
-/* 직접 업로드 미리보기: 이미지 관리 화면에서는 상단 2열 아래 전체 폭에 놓는다.
-   (공통 모양은 destination-create.css 에 있고 두 화면이 함께 쓴다) */
-.admin-image-add-grid .admin-upload-preview {
-    grid-column: 1 / -1;
-    grid-row: 4;
-    padding-top: 14px;
-    border-top: 1px solid #e6ebf4;
-}
-
-.admin-image-add-grid .admin-kto-photo-section > .admin-destination-section-header {
-    grid-column: 2;
-    grid-row: 1;
-    margin: 0;
-}
-
-.admin-image-add-grid .admin-kto-photo-search-controls {
-    grid-column: 2;
-    grid-row: 2;
-}
-
-.admin-image-add-grid .admin-kto-photo-status {
-    grid-column: 2;
-    grid-row: 3;
-    margin: 0;
-}
-
-.admin-image-add-grid .admin-kto-photo-selected-area,
-.admin-image-add-grid .admin-kto-photo-grid,
-.admin-image-add-grid .admin-kto-photo-more-actions,
-.admin-image-add-grid .admin-kto-photo-save-actions {
-    grid-column: 1 / -1;
-}
-
-/* 검색 전에는 결과 영역이 자리를 차지하지 않는다 */
-.admin-image-add-grid .admin-kto-photo-grid:empty {
-    display: none;
-}
-
-.admin-image-add-grid .admin-kto-photo-save-actions {
-    border: 1px solid #e1e7f0;
-    border-radius: 12px;
-}
-
 @media (max-width: 1000px) {
-    .admin-image-add-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .admin-image-add-upload,
-    .admin-image-add-grid .admin-kto-photo-section > .admin-destination-section-header,
-    .admin-image-add-grid .admin-kto-photo-search-controls,
-    .admin-image-add-grid .admin-kto-photo-status {
-        grid-column: 1;
-        grid-row: auto;
-    }
-
-    /* 1열로 쌓일 때는 DOM 순서를 그대로 따른다 */
-    .admin-upload-preview {
-        grid-row: auto;
-    }
-
-    .admin-image-add-upload {
-        padding-right: 0;
-        padding-bottom: 14px;
-        border-right: 0;
-        border-bottom: 1px solid #e6ebf4;
-    }
-}
-
-@media (max-width: 900px) {
-    .admin-destination-image-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+    .admin-image-add-upload .admin-upload-preview-grid {
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     }
 }
 
 @media (max-width: 620px) {
-    .admin-destination-image-upload-form {
-        align-items: stretch;
-        flex-direction: column;
-    }
-
-    .admin-destination-image-grid {
-        grid-template-columns: 1fr;
+    .admin-image-add-upload,
+    .admin-image-add-kto .admin-kto-photo-section {
+        padding: 14px;
     }
 }

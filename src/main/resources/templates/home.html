@@ -1,7 +1,7 @@
 <!-- templates/home.html -->
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="layout/main :: layout(~{::body}, ~{::headFragment})">
+      th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
 
 <th:block th:fragment="headFragment">
   <!--
@@ -11,7 +11,7 @@
   -->
   <link rel="stylesheet" href="https://unpkg.com/swiper@9/swiper-bundle.min.css" />
   <script src="https://unpkg.com/swiper@9/swiper-bundle.min.js" defer></script>
-  <link rel="stylesheet" href="/css/slider.css" />
+  <link rel="stylesheet" href="/css/slider.css?v=20260926-2" />
   <link rel="stylesheet" href="/css/home.css" />
 </th:block>
 
@@ -161,8 +161,8 @@
     </section>
   </div>
 
-  <script src="/js/home.js" defer></script>
-  <script src="/js/slider.js" defer></script>
+  <script src="/js/home.js?v=20260926-2" defer></script>
+  <script src="/js/slider.js?v=20260926-2" defer></script>
   <script src="/js/home-withdrawal-toast.js" defer></script>
 </th:block>
 </html>

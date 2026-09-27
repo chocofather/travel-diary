@@ -75,8 +75,13 @@ class AdminDestinationKtoImportPageRenderingTest {
         assertThat(document.select("[data-kto-import-count]").eachAttr("data-kto-import-count"))
                 .containsExactly("ALL", "NEW", "REGISTERED");
 
-        assertThat(document.select("[data-kto-import-select-all]")).isNotEmpty();
-        assertThat(document.select("[data-kto-import-clear]")).isNotEmpty();
+        // 현재 페이지 선택과 전체 선택해제를 따로 둔다 (해외 일괄 등록과 같은 문구)
+        assertThat(document.selectFirst("[data-kto-import-select-all]").text()).isEqualTo("현재 페이지 전체선택");
+        assertThat(document.selectFirst("[data-kto-import-page-clear]").text()).isEqualTo("현재 페이지 선택해제");
+        assertThat(document.selectFirst("[data-kto-import-clear]").text()).isEqualTo("전체 선택해제");
+        assertThat(document.select("th.is-check input[type=checkbox][data-kto-import-page-toggle]")).hasSize(1);
+        assertThat(document.select("[data-kto-import-page-count]")).isNotEmpty();
+        assertThat(document.select("script[src^='/js/admin-bulk-page-selection.js']")).hasSize(1);
         assertThat(document.select("[data-kto-import-selected-count]")).isNotEmpty();
         // 선택 전에는 등록 버튼을 누를 수 없다.
         assertThat(document.selectFirst("[data-kto-import-submit]").hasAttr("disabled")).isTrue();
@@ -114,7 +119,7 @@ class AdminDestinationKtoImportPageRenderingTest {
             String listPage = new String(template.readAllBytes(), StandardCharsets.UTF_8);
             assertThat(listPage)
                     .contains("@{/admin/destinations/kto-import}")
-                    .contains("TourAPI 일괄 가져오기");
+                    .contains("국내 일괄 등록");
         }
 
         Element backLink = Jsoup.parse(render()).selectFirst(".admin-page-actions a");

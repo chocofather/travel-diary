@@ -29,4 +29,7 @@ public class DestinationDetailDto {
 
     private List<Long> categoryIds;
 
+    /** 대표 카테고리(등록 카테고리 중 하나). 대표가 없는 기존 데이터는 null. */
+    private Long mainCategoryId;
+
 }

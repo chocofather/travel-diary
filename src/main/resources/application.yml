@@ -51,8 +51,11 @@ spring:
   servlet:
     multipart:
       enabled: true
-      max-file-size: 10MB
-      max-request-size: 10MB
+      # 관리자 여행지 사진은 한 장에 20MB까지 받는다(이미지 관리 화면은 사진을 한 장씩 보낸다).
+      # 요청 전체는 사진 한 장 + 출처 입력값이 들어가도록 25MB. 다른 업로드(일반 이미지·다이어리·프로필·스티커 등)는
+      # 서버 검증에서 각자 더 작은 한도(10MB 등)를 따로 확인하므로 이 값이 커져도 그 한도는 그대로다.
+      max-file-size: 20MB
+      max-request-size: 25MB
   web:
     resources:
       static-locations: classpath:/static/
@@ -81,6 +84,10 @@ custom:
   # 업로드 저장소. 특정 개발자의 절대경로를 고정하지 않는다.
   # 운영은 UPLOAD_PATH 환경변수로 실제 저장 경로를 지정한다.
   upload-path: ${UPLOAD_PATH:${user.home}/travlediary-uploads/}
+  thumbnails:
+    # 서버가 뜬 뒤 기존 여행지 사진의 관리용 썸네일(작은 크기)을 뒤에서 한 장씩 미리 만든다.
+    # 이미 만든 썸네일은 파일 확인만 하므로 두 번째 기동부터는 거의 비용이 없다.
+    prewarm-on-startup: ${THUMBNAIL_PREWARM_ON_STARTUP:true}
   # /uploads/** 정적 매핑 바깥의 표지 라이브러리 공유 사진 전용 저장소.
   cover-library-private-path: ${COVER_LIBRARY_PRIVATE_PATH:${custom.upload-path}../traveldiary-cover-library-private}
   # /uploads/** 정적 매핑 바깥의 회원 개인 다이어리 사진 전용 저장소.
@@ -100,6 +107,11 @@ server:
   # IntelliJ / bootRun 개발 서버. 운영은 application-prod.yml 에서 8080으로 덮어쓴다.
   address: 127.0.0.1
   port: 8081
+  tomcat:
+    # 실제 등록폼 494 parts(카테고리·편의시설 체크박스 표시 필드 포함) + 사진별 출처 입력 7 parts.
+    # 기본 50개 제한은 이미지 없이도 413을 낸다. 600개면 현재 폼에 사진 약 15장 여유가 있다.
+    # 업로드 크기는 spring.servlet.multipart 의 한도(파일 20MB, 요청 25MB)를 따른다.
+    max-part-count: 600
   error:
     include-stacktrace: never
     include-message: never

@@ -895,11 +895,21 @@ public class FileUploadService {
             try {
                 DestinationImageFormat format = DestinationImageFormat.of(reader.getFormatName());
                 reader.setInput(imageInput);
-                if (reader.getWidth(0) <= 0 || reader.getHeight(0) <= 0) {
+                int width = reader.getWidth(0);
+                int height = reader.getHeight(0);
+                if (width <= 0 || height <= 0) {
                     throw unsupportedDestinationImage();
                 }
-                // 실제로 decode 되는 이미지인지까지 확인한다
-                reader.read(0);
+                /*
+                  실제로 decode 되는 이미지인지까지 확인한다. 여행지 사진은 한 장에 20MB(수천만 화소)까지 받으므로
+                  일반 이미지 검증처럼 건너뛰며 펼쳐 메모리를 제한한다. 끝까지 읽는 것은 같아 깨진 파일은 똑같이 걸러진다.
+                  저장되는 원본 바이트는 건드리지 않는다.
+                */
+                ImageReadParam param = reader.getDefaultReadParam();
+                int step = Math.max(1, (int) Math.ceil(
+                        (double) Math.max(width, height) / VALIDATION_DECODE_EDGE));
+                param.setSourceSubsampling(step, step, 0, 0);
+                reader.read(0, param);
                 return format;
             } finally {
                 reader.dispose();

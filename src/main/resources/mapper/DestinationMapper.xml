@@ -23,23 +23,60 @@
     <!-- 이미지 컬렉션용 -->
     <resultMap id="imageMap" type="com.example.travlediary.model.DestinationImage">
         <id     property="id"         column="img_id"/>
-        <result property="imageUrl"   column="image_url"/>
-        <result property="sourceType" column="source_type"/>
-        <result property="sourceName" column="source_name"/>
-        <result property="externalContentId" column="external_content_id"/>
-        <result property="sourceTitle" column="source_title"/>
-        <result property="photographer" column="photographer"/>
-        <result property="licenseType" column="license_type"/>
-        <result property="licenseDetail" column="license_detail"/>
-        <result property="sourceUrl" column="source_url"/>
-        <result property="sourceImageUrl" column="source_image_url"/>
-        <result property="licenseCheckedAt" column="license_checked_at"/>
-        <result property="isMain"     column="is_main"/>
-        <result property="isSlide"    column="is_slide"/>
-        <result property="orderIndex" column="order_index"/>
-        <result property="destinationId" column="destination_id"/>
-        <result property="createdAt"  column="created_at"/>
+        <result property="imageUrl"   column="img_image_url"/>
+        <result property="sourceType" column="img_source_type"/>
+        <result property="sourceName" column="img_source_name"/>
+        <result property="externalContentId" column="img_external_content_id"/>
+        <result property="sourceTitle" column="img_source_title"/>
+        <result property="photographer" column="img_photographer"/>
+        <result property="licenseType" column="img_license_type"/>
+        <result property="licenseDetail" column="img_license_detail"/>
+        <result property="sourceUrl" column="img_source_url"/>
+        <result property="commonSourceUrl" column="img_common_source_url"/>
+        <result property="workPageUrl" column="img_work_page_url"/>
+        <result property="licenseName" column="img_license_name"/>
+        <result property="licenseUrl" column="img_license_url"/>
+        <result property="customAttribution" column="img_custom_attribution"/>
+        <result property="commonsFileTitle" column="img_commons_file_title"/>
+        <result property="wikidataQid" column="img_wikidata_qid"/>
+        <result property="sourceImageUrl" column="img_source_image_url"/>
+        <result property="licenseCheckedAt" column="img_license_checked_at"/>
+        <result property="sourceRecordPresent" column="img_source_record_present"/>
+        <result property="isMain"     column="img_is_main"/>
+        <result property="isSlide"    column="img_is_slide"/>
+        <result property="orderIndex" column="img_order_index"/>
+        <result property="destinationId" column="img_destination_id"/>
+        <result property="createdAt"  column="img_created_at"/>
     </resultMap>
+
+    <!-- 출처 행이 있으면 NULL도 그 행의 값으로 취급한다. 구 컬럼은 행이 없을 때만 사용. -->
+    <sql id="imageSelectColumns">
+        di.id AS img_id,
+        di.image_url AS img_image_url,
+        di.source_type AS img_source_type,
+        CASE WHEN s.destination_image_id IS NOT NULL THEN s.source_name ELSE di.source_name END AS img_source_name,
+        CASE WHEN s.destination_image_id IS NOT NULL THEN s.external_content_id ELSE di.external_content_id END AS img_external_content_id,
+        CASE WHEN s.destination_image_id IS NOT NULL THEN s.source_title ELSE di.source_title END AS img_source_title,
+        CASE WHEN s.destination_image_id IS NOT NULL THEN s.author_text ELSE di.photographer END AS img_photographer,
+        CASE WHEN s.destination_image_id IS NOT NULL THEN s.license_type ELSE di.license_type END AS img_license_type,
+        CASE WHEN s.destination_image_id IS NOT NULL THEN s.license_detail ELSE di.license_detail END AS img_license_detail,
+        CASE WHEN s.destination_image_id IS NOT NULL THEN s.legacy_source_url ELSE di.source_url END AS img_source_url,
+        s.common_source_url AS img_common_source_url,
+        s.work_page_url AS img_work_page_url,
+        s.license_name AS img_license_name,
+        s.license_url AS img_license_url,
+        s.custom_attribution AS img_custom_attribution,
+        s.commons_file_title AS img_commons_file_title,
+        s.wikidata_qid AS img_wikidata_qid,
+        CASE WHEN s.destination_image_id IS NOT NULL THEN s.original_image_url ELSE di.source_image_url END AS img_source_image_url,
+        CASE WHEN s.destination_image_id IS NOT NULL THEN s.license_checked_at ELSE di.license_checked_at END AS img_license_checked_at,
+        CASE WHEN s.destination_image_id IS NULL THEN 0 ELSE 1 END AS img_source_record_present,
+        di.is_main AS img_is_main,
+        di.is_slide AS img_is_slide,
+        di.order_index AS img_order_index,
+        di.destination_id AS img_destination_id,
+        di.created_at AS img_created_at
+    </sql>
 
     <!-- 상세페이지용 (필요하면 컬럼 더 추가) -->
     <resultMap id="DestinationDetailMap" type="com.example.travlediary.model.Destination">
@@ -70,26 +107,11 @@
         SELECT
             d.*,                            -- type 컬럼 포함!
             c.region_name,
-            di.id           AS img_id,
-            di.image_url,
-            di.source_type,
-            di.source_name,
-            di.external_content_id,
-            di.source_title,
-            di.photographer,
-            di.license_type,
-            di.license_detail,
-            di.source_url,
-            di.source_image_url,
-            di.license_checked_at,
-            di.is_main,
-            di.is_slide,
-            di.order_index,
-            di.destination_id,
-            di.created_at
+            <include refid="imageSelectColumns"/>
         FROM destinations d
                  JOIN country_categories      c ON d.region_id = c.id
                  LEFT JOIN destination_images di ON di.destination_id = d.id
+                 LEFT JOIN destination_image_sources s ON s.destination_image_id = di.id
         WHERE d.id = #{id}
         ORDER BY di.order_index
     </select>
@@ -108,6 +130,17 @@
         FROM destinations
         WHERE source_type = #{sourceType}
           AND external_content_id = #{externalContentId}
+    </select>
+    <select id="findIdByExternalContentId" resultType="long">
+        SELECT id FROM destinations
+        WHERE source_type = #{sourceType} AND external_content_id = #{externalContentId}
+        LIMIT 1
+    </select>
+    <select id="findTranslationByDestinationAndLanguage" resultType="com.example.travlediary.model.DestinationTranslation">
+        SELECT id, destination_id AS destinationId, language_code AS languageCode,
+               name, description, short_description AS shortDescription
+        FROM destination_translations
+        WHERE destination_id = #{destinationId} AND language_code = #{languageCode}
     </select>
 
     <select id="findExternalContentIds" resultType="string">
@@ -130,7 +163,7 @@
         VALUES (#{categoryId}, #{destinationId})
     </insert>
 
-    <insert id="insertImage">
+    <insert id="insertImage" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO destination_images (
             image_url,
             source_type,
@@ -169,6 +202,60 @@
         )
     </insert>
 
+    <insert id="insertImageSource">
+        INSERT INTO destination_image_sources (
+            destination_image_id, source_name, external_content_id, source_title,
+            author_text, common_source_url, work_page_url, legacy_source_url,
+            original_image_url, license_type, license_detail, license_checked_at
+        ) VALUES (
+            #{id}, #{sourceName}, #{externalContentId}, #{sourceTitle},
+            #{photographer}, #{commonSourceUrl}, #{workPageUrl}, #{sourceUrl},
+            #{sourceImageUrl}, #{licenseType}, #{licenseDetail}, #{licenseCheckedAt}
+        )
+    </insert>
+
+    <!-- Commons 사진은 새 출처 테이블에만 원문 전체를 저장한다. 구 destination_images 출처 컬럼은 비워 둔다. -->
+    <insert id="insertCommonsImageSource" parameterType="com.example.travlediary.model.DestinationImageCommonsSource">
+        INSERT INTO destination_image_sources (
+            destination_image_id, source_name, external_content_id, source_title,
+            author_text, work_page_url, original_image_url,
+            license_type, license_name, license_version, license_url,
+            attribution_text, source_credit, custom_attribution, credit_links,
+            license_evidence_url, license_evidence_detail, license_evidence_revision_id,
+            license_conditions, license_restrictions,
+            attribution_required, changes_required, share_alike_required, content_modified,
+            license_checked_at, wikidata_qid, commons_file_title
+        ) VALUES (
+            #{destinationImageId}, #{sourceName}, #{externalContentId}, #{sourceTitle},
+            #{authorText}, #{workPageUrl}, #{originalImageUrl},
+            #{licenseType}, #{licenseName}, #{licenseVersion}, #{licenseUrl},
+            #{attributionText}, #{sourceCredit}, #{customAttribution}, #{creditLinksJson},
+            #{licenseEvidenceUrl}, #{licenseEvidenceDetail}, #{licenseEvidenceRevisionId},
+            #{licenseConditions}, #{licenseRestrictions},
+            #{attributionRequired}, #{changesRequired}, #{shareAlikeRequired}, #{contentModified},
+            #{licenseCheckedAt}, #{wikidataQid}, #{commonsFileTitle}
+        )
+    </insert>
+
+    <select id="countCommonsImageSource" resultType="int">
+        SELECT COUNT(*)
+        FROM destination_image_sources s
+                 JOIN destination_images di ON di.id = s.destination_image_id
+        WHERE di.destination_id = #{destinationId}
+          AND s.commons_file_title = #{commonsFileTitle}
+    </select>
+
+    <select id="findExternalContentIdBySourceType" resultType="string">
+        SELECT external_content_id
+        FROM destinations
+        WHERE id = #{destinationId}
+          AND source_type = #{sourceType}
+    </select>
+
+    <select id="lockDestinationForImageUpdate" resultType="long">
+        SELECT id FROM destinations WHERE id = #{destinationId} FOR UPDATE
+    </select>
+
     <!-- ========== SELECT ========== -->
 
     <select id="findById" resultMap="destinationWithThumbnail">
@@ -204,26 +291,11 @@
 
     <select id="findImagesByDestinationId" resultMap="imageMap">
         SELECT
-            id           AS img_id,
-            image_url,
-            source_type,
-            source_name,
-            external_content_id,
-            source_title,
-            photographer,
-            license_type,
-            license_detail,
-            source_url,
-            source_image_url,
-            license_checked_at,
-            is_main,
-            is_slide,
-            order_index,
-            destination_id,
-            created_at
-        FROM destination_images
-        WHERE destination_id = #{destinationId}
-        ORDER BY order_index, id
+            <include refid="imageSelectColumns"/>
+        FROM destination_images di
+        LEFT JOIN destination_image_sources s ON s.destination_image_id = di.id
+        WHERE di.destination_id = #{destinationId}
+        ORDER BY di.order_index, di.id
     </select>
 
     <select id="findAllWithRegion" resultType="com.example.travlediary.model.Destination">
@@ -245,8 +317,11 @@
             AND i.is_main = true
     </select>
 
-    <select id="findImageById" resultType="com.example.travlediary.model.DestinationImage">
-        SELECT * FROM destination_images WHERE id = #{imageId}
+    <select id="findImageById" resultMap="imageMap">
+        SELECT <include refid="imageSelectColumns"/>
+        FROM destination_images di
+        LEFT JOIN destination_image_sources s ON s.destination_image_id = di.id
+        WHERE di.id = #{imageId}
     </select>
 
     <delete id="deleteImageById" parameterType="long">
@@ -287,6 +362,52 @@
             source_url = #{sourceUrl}
         WHERE id = #{imageId}
     </update>
+
+    <insert id="upsertImageSourceMetadata">
+        INSERT INTO destination_image_sources (
+            destination_image_id, source_name, author_text, license_type,
+            license_detail, legacy_source_url
+        ) VALUES (
+            #{imageId}, #{sourceName}, #{photographer}, #{licenseType},
+            #{licenseDetail}, #{sourceUrl}
+        ) ON DUPLICATE KEY UPDATE
+            source_name = #{sourceName},
+            author_text = #{photographer},
+            license_type = #{licenseType},
+            license_detail = #{licenseDetail},
+            legacy_source_url = #{sourceUrl}
+    </insert>
+
+    <update id="updateBulkImageSource">
+        UPDATE destination_image_sources
+        <set>
+            <if test="fields.contains('sourceName')">source_name = #{image.sourceName},</if>
+            <if test="fields.contains('photographer')">author_text = #{image.photographer},</if>
+            <if test="fields.contains('licenseType')">license_type = #{image.licenseType},</if>
+            <if test="fields.contains('licenseDetail')">license_detail = #{image.licenseDetail},</if>
+            <if test="fields.contains('commonSourceUrl')">common_source_url = #{image.commonSourceUrl},</if>
+        </set>
+        WHERE destination_image_id = #{image.id}
+    </update>
+
+    <update id="updateBulkImageLegacy">
+        UPDATE destination_images
+        <set>
+            <if test="fields.contains('sourceName')">source_name = #{image.sourceName},</if>
+            <if test="fields.contains('photographer')">photographer = #{image.photographer},</if>
+            <if test="fields.contains('licenseType')">license_type = #{image.licenseType},</if>
+            <if test="fields.contains('licenseDetail')">license_detail = #{image.licenseDetail},</if>
+        </set>
+        WHERE id = #{image.id}
+    </update>
+
+    <insert id="upsertImageSourcePages">
+        INSERT INTO destination_image_sources (destination_image_id, common_source_url, work_page_url)
+        VALUES (#{imageId}, #{commonSourceUrl}, #{workPageUrl})
+        ON DUPLICATE KEY UPDATE
+            common_source_url = #{commonSourceUrl},
+            work_page_url = #{workPageUrl}
+    </insert>
 
     <!--<select id="findByCountryCategoryId" resultType="com.example.travlediary.model.Destination">
         SELECT
@@ -448,6 +569,20 @@
         DELETE FROM destination_categories WHERE destination_id = #{destinationId} AND category_id = #{categoryId}
     </delete>
 
+    <!-- 대표 카테고리: 연결 행의 is_main 만 읽고 바꾼다. 연결 행은 지우거나 다시 넣지 않는다. -->
+    <select id="findMainCategoryId" resultType="long" parameterType="long">
+        SELECT category_id FROM destination_categories WHERE destination_id = #{destinationId} AND is_main = 1
+    </select>
+
+    <update id="clearMainCategory" parameterType="long">
+        UPDATE destination_categories SET is_main = 0 WHERE destination_id = #{destinationId} AND is_main = 1
+    </update>
+
+    <update id="markMainCategory">
+        UPDATE destination_categories SET is_main = 1
+        WHERE destination_id = #{destinationId} AND category_id = #{categoryId}
+    </update>
+
     <update id="updateTranslation" parameterType="com.example.travlediary.model.DestinationTranslation">
         UPDATE destination_translations
         SET name = #{name},
@@ -509,12 +644,14 @@
         <foreach item="id" collection="regionIds" open="(" separator="," close=")">
             #{id}
         </foreach>
+        <include refid="listCategoryFilter"/>
+        <!-- 같은 값이면 id 순으로 고정한다. 그래야 쪽을 넘길 때 같은 여행지가 두 쪽에 나오거나 빠지지 않는다. -->
         <choose>
             <when test="sort == 'views'">
-                ORDER BY d.views DESC
+                ORDER BY d.views DESC, d.id ASC
             </when>
             <when test="sort == 'bookmarks'">
-                ORDER BY bookmarkCount DESC
+                ORDER BY bookmarkCount DESC, d.id ASC
             </when>
             <otherwise>
                 ORDER BY d.id ASC
@@ -523,13 +660,55 @@
         LIMIT #{size} OFFSET #{offset}
     </select>
 
+    <!--
+      목록 카테고리 필터: 고른 카테고리 중 하나라도 등록된 여행지(OR).
+      대표(is_main)가 아니라 destination_categories 의 모든 연결을 본다.
+      EXISTS 라 카테고리가 여럿 맞아도 여행지가 한 번만 나온다.
+    -->
+    <sql id="listCategoryFilter">
+        <if test="categoryIds != null and categoryIds.size() > 0">
+            AND EXISTS (
+                SELECT 1 FROM destination_categories dc
+                WHERE dc.destination_id = d.id
+                AND dc.category_id IN
+                <foreach item="categoryId" collection="categoryIds" open="(" separator="," close=")">
+                    #{categoryId}
+                </foreach>
+            )
+        </if>
+    </sql>
 
     <select id="countByRegionIds" resultType="int">
-        SELECT COUNT(*) FROM destinations
-        WHERE region_id IN
+        SELECT COUNT(*) FROM destinations d
+        WHERE d.region_id IN
         <foreach item="id" collection="regionIds" open="(" separator="," close=")">
             #{id}
         </foreach>
+        <include refid="listCategoryFilter"/>
+    </select>
+
+    <!--
+      목록 카테고리 필터의 선택지와 여행지 수(모든 연결 기준).
+      이 지역 범위의 여행지에 등록된 카테고리 + 고른 카테고리 중 실제로 있는 것(여행지 0곳이어도).
+      없는 카테고리 번호는 결과에 나오지 않는다.
+    -->
+    <select id="findCategoryFilterCounts" resultType="com.example.travlediary.dto.CategoryDestinationCount">
+        SELECT c.id AS categoryId, COUNT(DISTINCT d.id) AS destinationCount
+        FROM categories c
+        LEFT JOIN destination_categories dc ON dc.category_id = c.id
+        LEFT JOIN destinations d ON d.id = dc.destination_id
+            AND d.region_id IN
+            <foreach item="id" collection="regionIds" open="(" separator="," close=")">
+                #{id}
+            </foreach>
+        GROUP BY c.id
+        HAVING COUNT(DISTINCT d.id) > 0
+        <if test="selectedCategoryIds != null and selectedCategoryIds.size() > 0">
+            OR c.id IN
+            <foreach item="categoryId" collection="selectedCategoryIds" open="(" separator="," close=")">
+                #{categoryId}
+            </foreach>
+        </if>
     </select>
 
     <select id="findDomesticPaged" resultType="com.example.travlediary.model.Destination">

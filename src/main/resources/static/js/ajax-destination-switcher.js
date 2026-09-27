@@ -12,6 +12,7 @@ function rebindList() {
     bindFragmentPagination();
     bindSubregionScrollArrows();
     bindSortButtons();
+    bindCategoryFilter();
     if (window.initBookmarkButton) window.initBookmarkButton();
 }
 
@@ -32,12 +33,40 @@ function getCurrentRegionId() {
     return sel ? sel.dataset.regionId : '';
 }
 
-// region-bar + 리스트 전체 교체
-function fetchRegionFragment(type, regionId, sort) {
-    const url = `/destinations/fragment?type=${type}`
-        + (regionId ? `&region=${regionId}` : '')
-        + `&sort=${sort}`;
-    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+// 지금 목록의 고른 카테고리(하나, 없으면 '')와 쪽 크기. 서버가 #destination-list 에 적어 둔 값이다.
+function getCurrentCategory() {
+    const value = document.getElementById('destination-list')?.dataset.category || '';
+    return /^\d+$/.test(value) ? value : '';
+}
+function getCurrentPageSize() {
+    return document.getElementById('destination-list')?.dataset.pageSize || '12';
+}
+
+/*
+  주소창을 지금 보이는 목록과 같게 맞춘다. 새로고침·공유·상세에서 뒤로 와도 같은 목록이 열린다.
+  history: 'replace'(지역·정렬·쪽) | 'push'(카테고리 바꾸기 — 뒤로 가기로 이전 카테고리로 돌아간다) | 'none'(뒤로 가기 복원)
+*/
+function syncAddressBar(requestUrl, history = 'replace') {
+    if (history === 'none') return;
+    const source = new URL(requestUrl, window.location.origin).searchParams;
+    const params = new URLSearchParams();
+    const skipDefault = {sort: 'default', page: '1', size: '12'};
+    ['type', 'region', 'sort', 'page', 'size', 'category'].forEach(name => {
+        const value = source.get(name);
+        if (value && value !== skipDefault[name]) params.set(name, value);
+    });
+    const query = params.toString();
+    const url = '/destinations' + (query ? `?${query}` : '');
+    if (history === 'push') {
+        window.history.pushState({destinationList: true}, '', url);
+    } else {
+        window.history.replaceState(window.history.state, '', url);
+    }
+}
+
+// region-bar + 리스트 전체를 주어진 주소의 조각으로 바꾼다.
+function replaceRegionFragment(url, history = 'replace') {
+    return fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
         .then(r => r.text())
         .then(html => {
             const tmp = document.createElement('div');
@@ -47,15 +76,27 @@ function fetchRegionFragment(type, regionId, sort) {
                 document.getElementById('region-fragment-container').replaceWith(nr);
                 rebindRegionBar();
                 rebindList();
+                syncAddressBar(url, history);
             } else {
                 console.error('region-fragment-container가 응답에 없음');
             }
         });
 }
 
-// 리스트만 교체 (type, region, sort, page, size 모두 URL에서 읽어옴)
-function fetchListFragmentByUrl(url) {
-    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+// region-bar + 리스트 전체 교체 (고른 카테고리는 유지)
+function fetchRegionFragment(type, regionId, sort) {
+    const params = new URLSearchParams({type});
+    if (regionId) params.set('region', regionId);
+    params.set('sort', sort);
+    params.set('size', getCurrentPageSize());
+    const category = getCurrentCategory();
+    if (category) params.set('category', category);
+    return replaceRegionFragment(`/destinations/fragment?${params}`);
+}
+
+// 리스트만 교체 (type, region, sort, page, size, category 모두 URL에서 읽어옴)
+function fetchListFragmentByUrl(url, history = 'replace') {
+    return fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
         .then(r => r.text())
         .then(html => {
             const tmp = document.createElement('div');
@@ -64,34 +105,87 @@ function fetchListFragmentByUrl(url) {
             if (dl) {
                 document.getElementById('destination-list').replaceWith(dl);
                 rebindList();
+                syncAddressBar(url, history);
             } else {
                 console.error('#destination-list가 응답에 없음');
             }
         });
 }
 
-// 정렬 버튼 바인딩 (1페이지로 돌아감)
+// 지금 지역·정렬·쪽 크기·카테고리에 바꿀 값만 덮은 목록 주소 (page 는 1 로)
+function listFragmentUrl(overrides) {
+    const params = new URLSearchParams();
+    params.set('type', getCurrentType());
+    const region = overrides.region ?? getCurrentRegionId();
+    if (region) params.set('region', region);
+    params.set('sort', overrides.sort ?? getCurrentSort());
+    params.set('page', '1');
+    params.set('size', getCurrentPageSize());
+    const category = 'category' in overrides ? overrides.category : getCurrentCategory();
+    if (category) params.set('category', category);
+    return `/destinations/list-fragment?${params}`;
+}
+
+// 정렬 버튼 바인딩 (1페이지로 돌아감, 쪽 크기·카테고리는 그대로)
 function bindSortButtons() {
     document.querySelectorAll('.sort-btn').forEach(btn => {
         btn.onclick = e => {
             e.preventDefault();
             document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            const type = getCurrentType();
-            const region = getCurrentRegionId();
-            const sort = btn.dataset.sort || 'default';
-            // 항상 page=1, size 그대로
-            const url = new URL('/destinations/list-fragment', window.location.origin);
-            url.searchParams.set('type', type);
-            if (region) url.searchParams.set('region', region);
-            url.searchParams.set('sort', sort);
-            url.searchParams.set('page', '1');
-            // size는 기존 페이지에 있던 size 가져오기
-            const currentSize = new URLSearchParams(window.location.search).get('size');
-            url.searchParams.set('size', currentSize || '5');
-            fetchListFragmentByUrl(url.toString());
+            fetchListFragmentByUrl(listFragmentUrl({sort: btn.dataset.sort || 'default'}));
         };
     });
+}
+
+// ─── 카테고리 필터(하나만 고른다) ───
+// 메뉴에서 카테고리를 누르면 바로 그 카테고리 목록(1쪽)으로 바뀌고 메뉴가 닫힌다. '전체'는 필터를 푼다.
+// 카테고리를 바꿀 때마다 방문 기록을 남겨 뒤로 가기로 이전 카테고리로 돌아간다.
+function categoryFilterParts() {
+    const filter = document.querySelector('[data-category-filter]');
+    if (!filter) return null;
+    return {
+        toggle: filter.querySelector('[data-category-filter-toggle]'),
+        panel: filter.querySelector('[data-category-filter-panel]'),
+        options: [...filter.querySelectorAll('[data-category-filter-option]')]
+    };
+}
+
+function openCategoryPanel() {
+    const parts = categoryFilterParts();
+    if (!parts) return;
+    parts.panel.hidden = false;
+    parts.toggle.setAttribute('aria-expanded', 'true');
+    (parts.options.find(option => option.getAttribute('aria-pressed') === 'true') || parts.options[0])?.focus();
+}
+
+function closeCategoryPanel(focusToggle) {
+    const parts = categoryFilterParts();
+    if (!parts || parts.panel.hidden) return;
+    parts.panel.hidden = true;
+    parts.toggle.setAttribute('aria-expanded', 'false');
+    if (focusToggle) parts.toggle.focus();
+}
+
+function selectCategory(category) {
+    closeCategoryPanel(true);
+    if (category === getCurrentCategory()) return;
+    fetchListFragmentByUrl(listFragmentUrl({category}), 'push')
+        .then(() => document.querySelector('[data-category-filter-toggle]')?.focus());
+}
+
+function bindCategoryFilter() {
+    const parts = categoryFilterParts();
+    if (!parts) return;
+    parts.toggle.onclick = () => (parts.panel.hidden ? openCategoryPanel() : closeCategoryPanel(false));
+    parts.options.forEach(option => {
+        option.onclick = () => selectCategory(option.value);
+    });
+}
+
+// 뒤로·앞으로 가기: 그 주소의 지역·정렬·카테고리 목록을 다시 그린다(주소는 이미 맞으므로 기록은 건드리지 않는다).
+function restoreListFromAddress() {
+    replaceRegionFragment(`/destinations/fragment${window.location.search}`, 'none');
 }
 
 // 페이징 바인딩 (href 그대로 사용, sort/type만 덮어쓰기)
@@ -150,17 +244,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!document.querySelector('.region-btn.selected') || btnDepth !== currentRegionBarDepth) {
                 fetchRegionFragment(type, regionId, sort);
             } else {
-                // 같은 depth 이동: 리스트만
+                // 같은 depth 이동: 리스트만 (정렬·쪽 크기·카테고리 유지, 다른 지역이므로 1쪽부터)
                 document.querySelectorAll('.region-btn.selected')
                     .forEach(b => b.classList.remove('selected'));
                 rb.classList.add('selected');
-                // page/size 유지
-                const params = new URLSearchParams(window.location.search);
-                params.set('type', type);
-                params.set('region', regionId);
-                params.set('sort', sort);
-                const url = `/destinations/list-fragment?${params.toString()}`;
-                fetchListFragmentByUrl(url);
+                fetchListFragmentByUrl(listFragmentUrl({region: regionId, sort}));
             }
             return;
         }
@@ -172,17 +260,18 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.subregion-btn.selected')
                 .forEach(b => b.classList.remove('selected'));
             sb.classList.add('selected');
-            const regionId = sb.dataset.cityId;
-            const type = getCurrentType();
-            const sort = getCurrentSort();
-            const params = new URLSearchParams(window.location.search);
-            params.set('type', type);
-            params.set('region', regionId);
-            params.set('sort', sort);
-            // 서브는 page=1로
-            params.set('page', '1');
-            const url = `/destinations/list-fragment?${params.toString()}`;
-            fetchListFragmentByUrl(url);
+            // 서브는 page=1로, 카테고리는 유지
+            fetchListFragmentByUrl(listFragmentUrl({region: sb.dataset.cityId}));
+            return;
         }
+
+        // 3) 카테고리 메뉴 바깥을 누르면 닫는다.
+        if (!e.target.closest('[data-category-filter]')) closeCategoryPanel(false);
     });
+
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') closeCategoryPanel(true);
+    });
+
+    window.addEventListener('popstate', restoreListFromAddress);
 });

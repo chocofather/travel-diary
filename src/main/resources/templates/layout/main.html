@@ -56,7 +56,7 @@
   </script>
 
   <!-- 공통 헤더 -->
-  <div th:replace="fragments/header :: siteHeader"></div>
+  <div th:replace="~{fragments/header :: siteHeader}"></div>
 
   <!-- 본문 슬롯 -->
   <main>
@@ -64,7 +64,7 @@
   </main>
 
   <!-- 공통 푸터 -->
-  <div th:replace="fragments/footer :: siteFooter"></div>
+  <div th:replace="~{fragments/footer :: siteFooter}"></div>
 
   <!--
     jQuery / Swiper 는 공통으로 두지 않는다.

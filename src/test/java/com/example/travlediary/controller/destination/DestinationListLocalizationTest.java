@@ -54,7 +54,8 @@ class DestinationListLocalizationTest {
         LocaleContextHolder.setLocale(SupportedLanguage.ENGLISH.getLocale());
         controller = new DestinationController(destinationService, destinationImageService,
                 countryCategoryService, destinationCommentService,
-                referenceNameLocalizationService);
+                referenceNameLocalizationService,
+                new com.example.travlediary.service.file.DestinationCardThumbnailService("build/tmp/no-uploads"));
         seoul = region(38L, "서울", 3, 7L);
         jongno = region(235L, "종로구", 4, 38L);
         destination = new Destination();
@@ -72,9 +73,9 @@ class DestinationListLocalizationTest {
         when(countryCategoryService.getDomesticRootIds()).thenReturn(List.of(7L));
         when(countryCategoryService.getAllRegionIdsUnder(7L)).thenReturn(List.of(7L, 38L, 235L));
         when(destinationService.getDestinationsByRegionIdsPaged(
-                List.of(7L, 38L, 235L), 0, 12, "default"))
+                List.of(7L, 38L, 235L), List.of(), 0, 12, "default"))
                 .thenReturn(List.of(destination));
-        when(destinationService.countDestinationsByRegionIds(List.of(7L, 38L, 235L)))
+        when(destinationService.countDestinationsByRegionIds(List.of(7L, 38L, 235L), List.of()))
                 .thenReturn(1);
         when(referenceNameLocalizationService.localizeCountryCategoryNames(
                 anyMap(), eq(SupportedLanguage.ENGLISH)))
@@ -95,7 +96,7 @@ class DestinationListLocalizationTest {
 
         Model model = new ExtendedModelMap();
         String view = controller.destinationList(
-                "domestic", null, 1, 12, "default", null, request, model);
+                "domestic", null, 1, 12, "default", null, null, request, model);
 
         assertThat(view).isEqualTo("destination/list");
         assertThat(model.getAttribute("regionDisplayNames"))
@@ -111,9 +112,9 @@ class DestinationListLocalizationTest {
         when(countryCategoryService.getSubregions(38L, 4)).thenReturn(List.of(jongno));
         when(countryCategoryService.getAllRegionIdsUnder(38L)).thenReturn(List.of(38L, 235L));
         when(destinationService.getDestinationsByRegionIdsPaged(
-                List.of(38L, 235L), 0, 12, "default"))
+                List.of(38L, 235L), List.of(), 0, 12, "default"))
                 .thenReturn(List.of(destination));
-        when(destinationService.countDestinationsByRegionIds(List.of(38L, 235L))).thenReturn(1);
+        when(destinationService.countDestinationsByRegionIds(List.of(38L, 235L), List.of())).thenReturn(1);
 
         Map<Long, String> names = new LinkedHashMap<>();
         names.put(38L, "Seoul");
@@ -123,7 +124,7 @@ class DestinationListLocalizationTest {
 
         Model model = new ExtendedModelMap();
         String view = controller.destinationListFragment(
-                "domestic", 38L, 1, 12, "default", null, model);
+                "domestic", 38L, 1, 12, "default", null, null, model);
 
         assertThat(view).isEqualTo("destination/fragment :: destinationList");
         assertThat(model.getAttribute("selectedCityName")).isEqualTo("Seoul");

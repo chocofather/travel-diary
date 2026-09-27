@@ -1,9 +1,12 @@
 package com.example.travlediary.service.faq;
 
+import com.example.travlediary.config.i18n.SupportedLanguage;
+import com.example.travlediary.dto.FaqCategoryFilterDto;
 import com.example.travlediary.dto.FaqForm;
 import com.example.travlediary.dto.FaqListItemDto;
 import com.example.travlediary.model.Faq;
 import com.example.travlediary.model.FaqCategory;
+import com.example.travlediary.model.FaqCategoryTranslation;
 import com.example.travlediary.repository.faq.FaqMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,6 +39,47 @@ class FaqServiceTest {
     void setUp() {
         faqService = new FaqService(faqMapper, new FaqLocalizationService(faqMapper),
                 new FaqCategoryLocalizationService(faqMapper));
+    }
+
+    /**
+     * 필터는 DB 카테고리 전체로 만든다. 공개 질문이 있는 카테고리는 관리자 노출 순서대로 앞에,
+     * 공개 질문이 없는 카테고리는 뒤에 두고, 이름은 요청 언어로 바꾼다.
+     */
+    @Test
+    void publicCategoryFiltersFollowTheFaqOrderThenAppendCategoriesWithoutPublicQuestions() {
+        // 카테고리 조회는 이름순이다.
+        when(faqMapper.findCategories()).thenReturn(List.of(
+                category(6L, "고객센터"), category(9L, "새 카테고리"),
+                category(2L, "여행정보"), category(1L, "회원/계정")));
+        FaqCategoryTranslation english = new FaqCategoryTranslation();
+        english.setFaqCategoryId(1L);
+        english.setLanguageCode("en");
+        english.setCategoryName("Account");
+        when(faqMapper.findCategoryTranslationsByCategoryIds(any())).thenReturn(List.of(english));
+        // 99 는 목록에만 남은 번호(카테고리 조회에 없음)라 필터로 만들지 않는다.
+        List<FaqListItemDto> publicFaqs = List.of(listItem(1L), listItem(6L), listItem(2L), listItem(1L), listItem(99L));
+
+        List<FaqCategoryFilterDto> filters = faqService.getPublicCategoryFilters(
+                publicFaqs, SupportedLanguage.ENGLISH);
+
+        assertThat(filters).containsExactly(
+                new FaqCategoryFilterDto(1L, "Account"),
+                new FaqCategoryFilterDto(6L, "고객센터"),
+                new FaqCategoryFilterDto(2L, "여행정보"),
+                new FaqCategoryFilterDto(9L, "새 카테고리"));
+    }
+
+    private static FaqCategory category(Long id, String name) {
+        FaqCategory category = new FaqCategory();
+        category.setId(id);
+        category.setCategoryName(name);
+        return category;
+    }
+
+    private static FaqListItemDto listItem(Long categoryId) {
+        FaqListItemDto item = new FaqListItemDto();
+        item.setCategoryId(categoryId);
+        return item;
     }
 
     @Test

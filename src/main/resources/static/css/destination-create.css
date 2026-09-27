@@ -311,6 +311,41 @@
     text-overflow: ellipsis;
 }
 
+.admin-image-bulk-panel {
+    margin-top: 16px;
+    padding: 16px;
+    border: 1px solid #dfe5ef;
+    border-radius: 10px;
+    background: #f8faff;
+}
+
+.admin-image-bulk-panel h3 { margin: 0 0 12px; color: #35415a; font-size: 15px; }
+.admin-image-bulk-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.admin-image-bulk-fields label { display: grid; gap: 4px; color: #56627a; font-size: 12px; }
+.admin-image-bulk-fields .is-wide { grid-column: 1 / -1; }
+.admin-image-bulk-fields input, .admin-image-bulk-fields select {
+    min-width: 0; width: 100%; min-height: 34px; padding: 6px 8px;
+    border: 1px solid #dfe5ef; border-radius: 6px; background: #fff;
+}
+.admin-image-bulk-confirm, .admin-image-bulk-overwrite label, .admin-image-bulk-photo-choice {
+    display: inline-flex; align-items: center; gap: 6px; color: #56627a; font-size: 12px;
+}
+.admin-image-bulk-confirm { margin: 12px 0; }
+.admin-image-bulk-overwrite { display: flex; flex-wrap: wrap; gap: 8px 14px; margin: 0 0 10px; padding: 10px; border: 1px solid #dfe5ef; }
+.admin-image-bulk-overwrite legend { color: #56627a; font-size: 12px; font-weight: 650; }
+.admin-image-bulk-selection { margin: 8px 0; font-weight: 650; }
+.admin-image-bulk-preview { max-height: 240px; overflow-y: auto; margin: 10px 0; padding: 10px; border: 1px solid #dfe5ef; background: #fff; font-size: 12px; }
+.admin-image-bulk-preview p { margin: 4px 0; overflow-wrap: anywhere; }
+.admin-image-bulk-result { margin: 8px 0 0; color: #315a3e; font-size: 12px; }
+.admin-image-bulk-fields [aria-invalid="true"] { border-color: #b54747; }
+.admin-image-bulk-field-error { color: #a72f2f; font-size: 12px; }
+.admin-image-bulk-photo-choice { padding: 7px 8px; }
+
+@media (max-width: 520px) {
+    .admin-image-bulk-fields { grid-template-columns: 1fr; }
+    .admin-image-bulk-fields .is-wide { grid-column: auto; }
+}
+
 /* 이미지 자체보다 한 단계 낮은 밀도의 선택 메타데이터 입력 */
 .admin-image-metadata-fields {
     display: grid;
@@ -365,6 +400,17 @@
     flex-wrap: wrap;
     gap: 6px;
     margin-bottom: 10px;
+}
+
+/*
+  유형 필터 버튼은 글자 폭 그대로 두고 줄을 넘긴다.
+  관리자 공통 모바일 규칙(admin-layout.css 680px 이하 .admin-filter-tab { flex: 1 })을 받으면
+  여섯 개가 한 줄에 끼워져 글자가 세로로 한 자씩 꺾인다.
+*/
+.admin-category-filters .admin-filter-tab,
+.admin-amenity-filters .admin-filter-tab {
+    flex: 0 0 auto;
+    white-space: nowrap;
 }
 
 .admin-amenity-option[hidden] {
@@ -1200,6 +1246,47 @@
     color: #fff;
     background: #5871d6;
     outline: none;
+}
+
+/* 대표 카테고리: 대표 칩은 테두리를 진하게 하고 '대표' 표시를 붙인다. 나머지 칩에는 작은 '대표로' 버튼. */
+.admin-category-chip.is-main {
+    border-color: #5871d6;
+}
+
+.admin-category-main-badge {
+    padding: 1px 6px;
+    color: #fff;
+    background: #5871d6;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+.admin-category-main-button {
+    padding: 1px 7px;
+    color: #56627a;
+    background: #fff;
+    border: 1px solid #d5e0fb;
+    border-radius: 999px;
+    font: inherit;
+    font-size: 0.7rem;
+    font-weight: 600;
+    line-height: 1.5;
+    cursor: pointer;
+}
+
+.admin-category-main-button:hover,
+.admin-category-main-button:focus-visible {
+    color: #3853ba;
+    border-color: #5871d6;
+    outline: none;
+}
+
+.admin-category-main-note {
+    margin: 0;
+    color: #56627a;
+    font-size: 0.8rem;
 }
 
 .admin-category-empty {

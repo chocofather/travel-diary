@@ -64,7 +64,8 @@ class DestinationDetailNotFoundTest {
                 destinationImageService,
                 countryCategoryService,
                 destinationCommentService,
-                referenceNameLocalizationService);
+                referenceNameLocalizationService,
+                new com.example.travlediary.service.file.DestinationCardThumbnailService("build/tmp/no-uploads"));
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setCustomArgumentResolvers(anonymousPrincipalResolver())
                 .build();
