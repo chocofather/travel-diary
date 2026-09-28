@@ -9,7 +9,7 @@
     <header class="admin-page-header">
       <div class="admin-page-heading">
         <h1 class="admin-page-title">여행정보 관리</h1>
-        <p class="admin-page-description">국내·해외 일반 여행정보를 조회하고 관리합니다.</p>
+        <p class="admin-page-description">국내·해외 일반 여행정보와 여행가이드를 조회하고 관리합니다.</p>
       </div>
       <div class="admin-page-actions">
         <a th:href="@{/admin/travel-info/create}" class="admin-btn is-primary">+ 여행정보 등록</a>
@@ -18,6 +18,15 @@
 
     <div class="admin-filter-card">
       <form th:action="@{/admin/travel-info}" method="get" class="admin-filter-form">
+        <label class="admin-filter-field">
+          <span>유형</span>
+          <select name="contentType" class="admin-select">
+            <option value="GENERAL">일반 여행정보</option>
+            <option value="GUIDE" th:selected="${contentType != null and contentType.name() == 'GUIDE'}">여행가이드</option>
+          </select>
+        </label>
+
+        <!-- 여행가이드는 지역 범위가 없다. 범위를 골라도 서버가 쓰지 않는다 -->
         <label class="admin-filter-field">
           <span>범위</span>
           <select name="scope" class="admin-select">
@@ -68,7 +77,8 @@
             </td>
             <td>
               <span class="admin-travel-info-badge"
-                    th:text="${info.scope.name() == 'DOMESTIC'} ? '국내' : '해외'">국내</span>
+                    th:text="${info.contentType.name() == 'GUIDE'} ? '여행가이드'
+                             : (${info.scope.name() == 'DOMESTIC'} ? '국내' : '해외')">국내</span>
             </td>
             <td th:text="${info.categoryName}">계절여행</td>
             <td th:text="${info.views}">0</td>

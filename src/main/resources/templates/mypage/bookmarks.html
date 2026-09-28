@@ -183,12 +183,13 @@
           <div class="mypage-bookmark-card-body">
             <!-- 카테고리 이름은 서비스가 지역화한 값을 그대로 쓴다 -->
             <p class="mypage-bookmark-card-tags">
-              <span th:text="${bookmark.scope == 'DOMESTIC'}
+              <span th:if="${bookmark.contentType != 'GUIDE'}"
+                    th:text="${bookmark.scope == 'DOMESTIC'}
                              ? #{travelInfo.scope.domestic} : #{travelInfo.scope.international}">국내</span>
               <span th:text="${bookmark.categoryName}">카테고리</span>
-              <span th:text="${bookmark.contentType == 'FESTIVAL'}
-                             ? #{travelInfo.contentType.festival}
-                             : #{travelInfo.contentType.general}">일반</span>
+              <span th:text="${bookmark.contentType == 'FESTIVAL'} ? #{travelInfo.contentType.festival}
+                             : (${bookmark.contentType == 'GUIDE'} ? #{travelInfo.contentType.guide}
+                             : #{travelInfo.contentType.general})">일반</span>
             </p>
             <h2><a th:href="@{/travel-info/{id}(id=${bookmark.targetId})}"
                    th:text="${bookmark.title}">여행정보 제목</a></h2>

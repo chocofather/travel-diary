@@ -33,7 +33,9 @@ class AdminTravelInfoUiContractTest {
                 .contains("name=\"categoryId\"")
                 .contains("th:action=\"@{/admin/travel-info/{id}/delete(id=${info.id})}\"")
                 .contains("method=\"post\"")
-                .doesNotContain("name=\"contentType\"", "value=\"FESTIVAL\"")
+                // 일반 여행정보와 여행가이드만 고른다. 축제·행사는 별도 관리 화면이다.
+                .contains("name=\"contentType\"", "value=\"GUIDE\"")
+                .doesNotContain("value=\"FESTIVAL\"")
                 .doesNotContain("info_images", "image-upload", "대표 이미지");
     }
 
@@ -65,6 +67,7 @@ class AdminTravelInfoUiContractTest {
                 .contains("data-content-type=${category.contentType}")
                 .contains("th:hidden=\"${category.contentType != travelInfoForm.contentType}\"")
                 .contains("th:disabled=\"${category.contentType != travelInfoForm.contentType}\"")
+                .contains("<option value=\"GUIDE\">여행가이드</option>")
                 .contains("quill@2.0.3/dist/quill.snow.css")
                 .contains("quill@2.0.3/dist/quill.js")
                 .contains("quill-resize-module@2.1.3/dist/resize.css")

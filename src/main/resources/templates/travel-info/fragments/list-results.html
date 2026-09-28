@@ -80,7 +80,10 @@
                      : @{/travel-info/{id}(id=${info.id},returnUrl=${listUrl})}"
              th:text="${info.title}">여행정보 제목</a>
         </h2>
-        <p class="travel-info-type-meta">
+        <p class="travel-info-type-meta" th:if="${info.contentType.name() == 'GUIDE'}">
+          <span th:text="#{travelInfo.contentType.guide}">여행가이드</span>
+        </p>
+        <p class="travel-info-type-meta" th:unless="${info.contentType.name() == 'GUIDE'}">
           <span th:text="${info.scope.name() == 'DOMESTIC'}
                          ? #{travelInfo.scope.domestic}
                          : #{travelInfo.scope.international}">국내</span>

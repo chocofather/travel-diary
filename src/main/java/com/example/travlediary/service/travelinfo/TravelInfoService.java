@@ -665,11 +665,14 @@ public class TravelInfoService {
         if (title.length() > 255) {
             throw new TravelInfoValidationException("title", "제목은 255자 이하로 입력해 주세요.");
         }
-        if (form.getScope() == null) {
-            throw new TravelInfoValidationException("scope", "국내/해외 범위를 선택해 주세요.");
-        }
         if (form.getContentType() == null) {
             throw new TravelInfoValidationException("contentType", "여행정보 유형을 선택해 주세요.");
+        }
+        if (form.getContentType() == TravelInfoContentType.GUIDE) {
+            // 여행가이드는 지역에 매이지 않는다. 화면에서 값이 넘어와도 저장하지 않는다.
+            form.setScope(null);
+        } else if (form.getScope() == null) {
+            throw new TravelInfoValidationException("scope", "국내/해외 범위를 선택해 주세요.");
         }
 
         String content = postContentSanitizer.sanitize(form.getContent());
@@ -722,7 +725,7 @@ public class TravelInfoService {
     }
 
     private List<ValidatedPeriod> validatePeriods(TravelInfoForm form) {
-        if (form.getContentType() == TravelInfoContentType.GENERAL) {
+        if (form.getContentType() != TravelInfoContentType.FESTIVAL) {
             return List.of();
         }
 

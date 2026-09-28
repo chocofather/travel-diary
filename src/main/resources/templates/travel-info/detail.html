@@ -42,7 +42,10 @@
         </button>
       </div>
 
-      <div class="travel-info-detail-type">
+      <div class="travel-info-detail-type" th:if="${travelInfo.contentType.name() == 'GUIDE'}">
+        <span th:text="#{travelInfo.contentType.guide}">여행가이드</span>
+      </div>
+      <div class="travel-info-detail-type" th:unless="${travelInfo.contentType.name() == 'GUIDE'}">
         <span th:text="${travelInfo.scope.name() == 'DOMESTIC'}
                        ? #{travelInfo.scope.domestic}
                        : #{travelInfo.scope.international}">국내</span>

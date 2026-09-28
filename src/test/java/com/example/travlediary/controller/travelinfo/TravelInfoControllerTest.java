@@ -298,6 +298,56 @@ class TravelInfoControllerTest {
     }
 
     @Test
+    void guideListIgnoresScopeUsesGuideCategoriesAndShowsGuideMeta() throws Exception {
+        TravelInfoListItemDto guide = item(21L, "환전 가이드",
+                null, TravelInfoContentType.GUIDE, null);
+        when(travelInfoService.getPublicList(
+                null, TravelInfoContentType.GUIDE,
+                List.of(3L), null, null, "latest", 0L, 12)).thenReturn(List.of(guide));
+        when(travelInfoService.countPublicList(
+                null, TravelInfoContentType.GUIDE, List.of(3L), null, null)).thenReturn(1L);
+        when(infoCategoryService.getVisibleByContentType(TravelInfoContentType.GUIDE))
+                .thenReturn(List.of(category(3L, "환전·결제", 1, TravelInfoContentType.GUIDE)));
+
+        mockMvc.perform(get("/travel-info")
+                        .param("contentType", "GUIDE")
+                        .param("scope", "DOMESTIC")
+                        .param("categoryId", "3"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("scope", (Object) null))
+                .andExpect(model().attribute("contentType", TravelInfoContentType.GUIDE))
+                .andExpect(model().attribute("listUrl",
+                        "/travel-info?contentType=GUIDE&categoryId=3"))
+                .andExpect(result -> {
+                    var document = Jsoup.parse(result.getResponse().getContentAsString());
+                    assertThat(document.select("a.travel-info-filter-pill[data-filter-name=primary]")
+                            .eachText())
+                            .containsExactly("국내", "해외", "여행가이드");
+                    assertThat(document.select("a.travel-info-filter-pill.is-active"
+                            + "[data-filter-content-type=GUIDE]")).singleElement();
+                    assertThat(document.select(".travel-info-type-meta"))
+                            .singleElement()
+                            .extracting(org.jsoup.nodes.Element::text)
+                            .isEqualTo("여행가이드");
+                    assertThat(document.select("a.travel-info-card-link").attr("href"))
+                            .startsWith("/travel-info/21?returnUrl=");
+                    assertThat(document.select("#travel-info-category-filter "
+                            + "[data-filter-name=categoryId]").eachText())
+                            .containsExactly("전체", "환전·결제");
+                    // 유형이 바뀌는 링크에는 GUIDE 주제를 싣지 않는다
+                    assertThat(document.selectFirst("a[data-filter-value=DOMESTIC]").attr("href"))
+                            .contains("contentType=GENERAL")
+                            .doesNotContain("categoryId=3");
+                    assertThat(document.selectFirst("a[data-filter-content-type=GUIDE]").attr("href"))
+                            .contains("contentType=GUIDE")
+                            .contains("categoryId=3");
+                });
+
+        verify(infoCategoryService).getVisibleByContentType(TravelInfoContentType.GUIDE);
+        verify(infoCategoryService, never()).getVisibleByContentType(TravelInfoContentType.GENERAL);
+    }
+
+    @Test
     void festivalViewsSortKeepsTheStatusFilterAndCarriesBothInTheListUrl() throws Exception {
         when(travelInfoService.getPublicList(
                 null, TravelInfoContentType.FESTIVAL,

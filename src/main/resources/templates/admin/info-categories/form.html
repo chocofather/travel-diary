@@ -40,6 +40,7 @@
                   th:attr="aria-invalid=${#fields.hasErrors('contentType')}">
             <option value="GENERAL">일반</option>
             <option value="FESTIVAL">축제</option>
+            <option value="GUIDE">여행가이드</option>
           </select>
           <p class="admin-field-error" th:if="${#fields.hasErrors('contentType')}"
              th:errors="*{contentType}">여행정보 유형 오류</p>

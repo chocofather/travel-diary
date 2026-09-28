@@ -74,6 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const contentType = document.getElementById('travel-info-content-type');
+    const scopeSelect = document.getElementById('travel-info-scope');
     const categorySelect = document.getElementById('travel-info-category');
     const periodSection = document.getElementById('travel-info-period-section');
     const periodList = document.getElementById('travel-info-period-list');
@@ -154,6 +155,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    /* 여행가이드는 지역 범위가 없다. 막아 둔 select 는 전송되지 않는다. */
+    function syncScopeAvailability() {
+        if (!scopeSelect) return;
+        scopeSelect.disabled = contentType.value === 'GUIDE';
+    }
+
     function updatePeriodVisibility() {
         const festival = contentType.value === 'FESTIVAL';
         periodSection.hidden = !festival;
@@ -174,10 +181,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     contentType.addEventListener('change', () => {
         syncCategoryOptions();
+        syncScopeAvailability();
         updatePeriodVisibility();
     });
 
     reindexPeriods();
     syncCategoryOptions();
+    syncScopeAvailability();
     updatePeriodVisibility();
 });

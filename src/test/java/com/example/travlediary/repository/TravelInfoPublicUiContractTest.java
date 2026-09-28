@@ -245,7 +245,10 @@ class TravelInfoPublicUiContractTest {
                 .contains("syncPrimaryFilterUi")
                 // 지역 범위를 바꿔도 화면 종류(여행정보/축제·행사)는 그대로 유지한다
                 .contains("url.searchParams.set(CONTENT_TYPE_PARAMETER_NAME, nextContentType)")
-                .contains("control.dataset.filterContentType === FESTIVAL_CONTENT_TYPE")
+                .contains("normalizeContentType(control.dataset.filterContentType)")
+                // 유형마다 주제 카테고리가 다르므로 유형이 바뀌면 고른 주제를 지운다
+                .contains("if (currentContentType !== nextContentType) {")
+                .doesNotContain("categoryContentType")
                 .contains("const sortOption = event.target.closest(SORT_SELECTOR)")
                 .contains("loadResults(sortUrl(sortOption), 'push')")
                 .contains("control.dataset.sortValue")

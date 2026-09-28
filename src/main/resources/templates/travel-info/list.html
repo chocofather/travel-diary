@@ -60,26 +60,36 @@
         </noscript>
       </form>
 
-      <!-- 일반 여행정보: 국내/해외 전환만 둔다 ('전체'와 축제·행사는 여기 없다) -->
+      <!-- 일반 여행정보: 국내/해외/여행가이드 전환만 둔다 ('전체'와 축제·행사는 여기 없다) -->
       <div class="travel-info-filter-group"
            th:if="${contentType == null or contentType.name() != 'FESTIVAL'}">
         <span class="travel-info-filter-label"
               th:text="#{travelInfo.list.filter.scope.general}">여행정보 구분</span>
-        <div class="travel-info-pills">
-          <a th:href="@{/travel-info(keyword=${keyword},scope='DOMESTIC',contentType='GENERAL',categoryId=${categoryIds},sort=${sortParam},size=${pageSize})}"
+        <!-- 국내/해외와 여행가이드는 주제 카테고리가 다르다. 유형이 바뀌는 링크에는 고른 주제를 싣지 않는다 -->
+        <div class="travel-info-pills"
+             th:with="isGuide=${contentType != null and contentType.name() == 'GUIDE'}">
+          <a th:href="@{/travel-info(keyword=${keyword},scope='DOMESTIC',contentType='GENERAL',categoryId=${isGuide ? null : categoryIds},sort=${sortParam},size=${pageSize})}"
              class="travel-info-filter-pill"
              data-filter-name="primary" data-filter-value="DOMESTIC"
              data-filter-content-type="GENERAL"
              th:classappend="${scope != null and scope.name() == 'DOMESTIC'} ? ' is-active'"
              th:attr="aria-current=${scope != null and scope.name() == 'DOMESTIC'} ? 'true' : null"
              th:text="#{travelInfo.scope.domestic}">국내</a>
-          <a th:href="@{/travel-info(keyword=${keyword},scope='INTERNATIONAL',contentType='GENERAL',categoryId=${categoryIds},sort=${sortParam},size=${pageSize})}"
+          <a th:href="@{/travel-info(keyword=${keyword},scope='INTERNATIONAL',contentType='GENERAL',categoryId=${isGuide ? null : categoryIds},sort=${sortParam},size=${pageSize})}"
              class="travel-info-filter-pill"
              data-filter-name="primary" data-filter-value="INTERNATIONAL"
              data-filter-content-type="GENERAL"
              th:classappend="${scope != null and scope.name() == 'INTERNATIONAL'} ? ' is-active'"
              th:attr="aria-current=${scope != null and scope.name() == 'INTERNATIONAL'} ? 'true' : null"
              th:text="#{travelInfo.scope.international}">해외</a>
+          <!-- 여행가이드는 지역 범위가 없고, content_type = GUIDE 인 전용 주제 카테고리를 쓴다 -->
+          <a th:href="@{/travel-info(keyword=${keyword},contentType='GUIDE',categoryId=${isGuide ? categoryIds : null},sort=${sortParam},size=${pageSize})}"
+             class="travel-info-filter-pill"
+             data-filter-name="primary" data-filter-value=""
+             data-filter-content-type="GUIDE"
+             th:classappend="${contentType != null and contentType.name() == 'GUIDE'} ? ' is-active'"
+             th:attr="aria-current=${contentType != null and contentType.name() == 'GUIDE'} ? 'true' : null"
+             th:text="#{travelInfo.contentType.guide}">여행가이드</a>
         </div>
       </div>
 

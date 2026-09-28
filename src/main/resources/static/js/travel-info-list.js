@@ -15,6 +15,8 @@
     const CONTENT_TYPE_PARAMETER_NAME = 'contentType';
     const FESTIVAL_CONTENT_TYPE = 'FESTIVAL';
     const GENERAL_CONTENT_TYPE = 'GENERAL';
+    const GUIDE_CONTENT_TYPE = 'GUIDE';
+    const DEFAULT_GENERAL_SCOPE = 'DOMESTIC';
     const KEYWORD_PARAMETER_NAME = 'keyword';
     const SORT_PARAMETER_NAME = 'sort';
     const SORT_VIEWS = 'views';
@@ -89,20 +91,22 @@
         return cleanUrl(url);
     }
 
+    function normalizeContentType(value) {
+        return value === FESTIVAL_CONTENT_TYPE || value === GUIDE_CONTENT_TYPE
+            ? value
+            : GENERAL_CONTENT_TYPE;
+    }
+
     /**
-     * 지역 범위(국내/해외/전체) 전환. 여행정보와 축제·행사는 각각 독립된 화면이라
+     * 지역 범위(국내/해외/전체)·여행가이드 전환. 여행정보와 축제·행사는 각각 독립된 화면이라
      * 화면 종류는 버튼이 들고 있는 값을 그대로 쓰고, 여기서 바꾸지 않는다.
      */
     function primaryFilterUrl(control, baseUrl = selectedUrl) {
         const url = new URL(baseUrl.href);
         const primaryValue = control.dataset.filterValue;
-        const currentContentType = url.searchParams.get(CONTENT_TYPE_PARAMETER_NAME)
-            === FESTIVAL_CONTENT_TYPE
-            ? FESTIVAL_CONTENT_TYPE
-            : GENERAL_CONTENT_TYPE;
-        const nextContentType = control.dataset.filterContentType === FESTIVAL_CONTENT_TYPE
-            ? FESTIVAL_CONTENT_TYPE
-            : GENERAL_CONTENT_TYPE;
+        const currentContentType = normalizeContentType(
+            url.searchParams.get(CONTENT_TYPE_PARAMETER_NAME));
+        const nextContentType = normalizeContentType(control.dataset.filterContentType);
 
         url.searchParams.set(CONTENT_TYPE_PARAMETER_NAME, nextContentType);
         if (primaryValue) {
@@ -110,6 +114,7 @@
         } else {
             url.searchParams.delete('scope');
         }
+        // 유형마다 주제 카테고리가 다르다. 국내 ↔ 해외만 고른 주제를 그대로 둔다.
         if (currentContentType !== nextContentType) {
             url.searchParams.delete(CATEGORY_FILTER_NAME);
         }
@@ -182,11 +187,21 @@
 
     function syncPrimaryFilterUi(pills, url) {
         const primaryPills = pills.filter((pill) => pill.dataset.filterName === PRIMARY_FILTER_NAME);
-        // 한 화면에는 그 화면의 지역 범위 버튼만 있으므로 scope 로만 활성 상태를 정한다.
-        const activeValue = url.searchParams.get('scope') || '';
+        // 여행정보 화면에는 국내/해외/여행가이드가 함께 있으므로 유형과 scope 를 같이 본다.
+        // 일반 여행정보는 scope 가 없으면 국내를, 여행가이드는 scope 없이 본다. (서버와 같은 규칙)
+        const activeContentType = normalizeContentType(
+            url.searchParams.get(CONTENT_TYPE_PARAMETER_NAME));
+        const scope = url.searchParams.get('scope') || '';
+        let activeValue = scope;
+        if (activeContentType === GUIDE_CONTENT_TYPE) {
+            activeValue = '';
+        } else if (activeContentType === GENERAL_CONTENT_TYPE && !scope) {
+            activeValue = DEFAULT_GENERAL_SCOPE;
+        }
 
         primaryPills.forEach((pill) => {
-            const isActive = pill.dataset.filterValue === activeValue;
+            const isActive = normalizeContentType(pill.dataset.filterContentType) === activeContentType
+                && pill.dataset.filterValue === activeValue;
             pill.classList.toggle('is-active', isActive);
             if (isActive) {
                 pill.setAttribute('aria-current', 'true');
@@ -274,8 +289,21 @@
         });
     }
 
+    /* 국내/해외 ↔ 여행가이드는 한 화면 안에서 바뀌므로 초기화도 지금 보는 유형을 따라간다. */
+    function syncResetUi(url) {
+        const reset = document.querySelector(RESET_SELECTOR);
+        if (!reset) {
+            return;
+        }
+        const nextUrl = new URL(url.pathname, url.origin);
+        nextUrl.searchParams.set(CONTENT_TYPE_PARAMETER_NAME,
+            normalizeContentType(url.searchParams.get(CONTENT_TYPE_PARAMETER_NAME)));
+        reset.href = nextUrl.pathname + nextUrl.search;
+    }
+
     function syncUi(url) {
         syncFilterUi(url);
+        syncResetUi(url);
         syncSearchUi(url);
         syncSortUi(url);
     }

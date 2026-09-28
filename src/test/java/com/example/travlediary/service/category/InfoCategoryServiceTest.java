@@ -81,6 +81,18 @@ class InfoCategoryServiceTest {
     }
 
     @Test
+    void createSavesGuideCategoryAsItsOwnContentType() {
+        InfoCategoryForm form = form("환전·결제", 5, true, TravelInfoContentType.GUIDE);
+        when(infoCategoryMapper.countByNameExcludingId("환전·결제", null)).thenReturn(0);
+
+        infoCategoryService.create(form);
+
+        ArgumentCaptor<InfoCategory> captor = ArgumentCaptor.forClass(InfoCategory.class);
+        verify(infoCategoryMapper).insert(captor.capture());
+        assertThat(captor.getValue().getContentType()).isEqualTo(TravelInfoContentType.GUIDE);
+    }
+
+    @Test
     void createRejectsDuplicateNameBeforeInsert() {
         InfoCategoryForm form = form("여행준비", 1, true);
         when(infoCategoryMapper.countByNameExcludingId("여행준비", null)).thenReturn(1);

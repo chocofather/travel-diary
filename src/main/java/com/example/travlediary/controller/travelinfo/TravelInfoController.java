@@ -77,11 +77,13 @@ public class TravelInfoController {
                        Model model) {
         String safeKeyword = TravelInfoSearchKeyword.normalize(keyword);
         // 여행정보와 축제·행사는 각각 독립된 화면이다. 유형을 비워 두면 일반 여행정보로 본다.
+        TravelInfoContentType parsedContentType = parseEnum(contentType, TravelInfoContentType.class);
         TravelInfoContentType safeContentType =
-                TravelInfoContentType.FESTIVAL == parseEnum(contentType, TravelInfoContentType.class)
-                        ? TravelInfoContentType.FESTIVAL
-                        : TravelInfoContentType.GENERAL;
-        TravelInfoScope safeScope = parseEnum(scope, TravelInfoScope.class);
+                parsedContentType == null ? TravelInfoContentType.GENERAL : parsedContentType;
+        // 여행가이드는 지역에 매이지 않으므로 scope 가 와도 쓰지 않는다.
+        TravelInfoScope safeScope = TravelInfoContentType.GUIDE == safeContentType
+                ? null
+                : parseEnum(scope, TravelInfoScope.class);
         if (safeScope == null && TravelInfoContentType.GENERAL == safeContentType) {
             // 일반 여행정보에는 '전체'가 없으므로 국내부터 보여 준다.
             safeScope = TravelInfoScope.DOMESTIC;
@@ -149,7 +151,7 @@ public class TravelInfoController {
                 null, LocaleContextHolder.getLocale()));
         Map<String, Object> canonicalParameters = SeoModel.parameters();
         canonicalParameters.put("contentType",
-                TravelInfoContentType.FESTIVAL == safeContentType ? "FESTIVAL" : null);
+                TravelInfoContentType.GENERAL == safeContentType ? null : safeContentType.name());
         canonicalParameters.put("scope",
                 TravelInfoScope.DOMESTIC == safeScope
                         && TravelInfoContentType.GENERAL == safeContentType ? null : safeScope);

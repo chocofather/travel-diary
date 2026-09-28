@@ -38,12 +38,19 @@ public class AdminTravelInfoController {
 
     @GetMapping
     public String list(@RequestParam(required = false) TravelInfoScope scope,
+                       @RequestParam(required = false) TravelInfoContentType contentType,
                        @RequestParam(required = false) Long categoryId,
                        Model model) {
+        // 축제·행사는 별도 관리 화면이 있다. 여기서는 일반 여행정보와 여행가이드만 본다.
+        TravelInfoContentType safeContentType = contentType == TravelInfoContentType.GUIDE
+                ? TravelInfoContentType.GUIDE
+                : TravelInfoContentType.GENERAL;
+        TravelInfoScope safeScope = safeContentType == TravelInfoContentType.GUIDE ? null : scope;
         model.addAttribute("travelInfoList", travelInfoService.getAdminList(
-                scope, TravelInfoContentType.GENERAL, categoryId));
-        model.addAttribute("categories", categoriesByContentType(TravelInfoContentType.GENERAL));
-        model.addAttribute("scope", scope);
+                safeScope, safeContentType, categoryId));
+        model.addAttribute("categories", categoriesByContentType(safeContentType));
+        model.addAttribute("scope", safeScope);
+        model.addAttribute("contentType", safeContentType);
         model.addAttribute("categoryId", categoryId);
         return LIST_VIEW;
     }
@@ -78,7 +85,7 @@ public class AdminTravelInfoController {
             prepareFormModel(model, form, null);
             return FORM_VIEW;
         }
-        return REDIRECT_LIST;
+        return redirectList(form.getContentType());
     }
 
     @GetMapping("/edit/{id}")
@@ -105,7 +112,14 @@ public class AdminTravelInfoController {
             prepareFormModel(model, form, id);
             return FORM_VIEW;
         }
-        return REDIRECT_LIST;
+        return redirectList(form.getContentType());
+    }
+
+    /** 여행가이드를 저장했으면 여행가이드 목록으로 돌아간다. */
+    private String redirectList(TravelInfoContentType contentType) {
+        return contentType == TravelInfoContentType.GUIDE
+                ? REDIRECT_LIST + "?contentType=GUIDE"
+                : REDIRECT_LIST;
     }
 
     @PostMapping("/{id}/delete")

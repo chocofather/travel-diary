@@ -24,6 +24,7 @@
           <thead>
           <tr>
             <th>카테고리명</th>
+            <th>유형</th>
             <th>표시 순서</th>
             <th>노출 상태</th>
             <th>관리</th>
@@ -32,6 +33,9 @@
           <tbody>
           <tr th:each="category : ${categories}">
             <td class="admin-info-category-name" th:text="${category.name}">계절여행</td>
+            <td th:text="${category.contentType == null} ? '-'
+                         : (${category.contentType.name() == 'GENERAL'} ? '일반'
+                         : (${category.contentType.name() == 'GUIDE'} ? '여행가이드' : '축제'))">일반</td>
             <td th:text="${category.displayOrder}">1</td>
             <td>
               <span class="admin-status-badge"
@@ -50,7 +54,7 @@
             </td>
           </tr>
           <tr th:if="${#lists.isEmpty(categories)}">
-            <td colspan="4" class="admin-table-empty">등록된 정보 카테고리가 없습니다.</td>
+            <td colspan="5" class="admin-table-empty">등록된 정보 카테고리가 없습니다.</td>
           </tr>
           </tbody>
         </table>

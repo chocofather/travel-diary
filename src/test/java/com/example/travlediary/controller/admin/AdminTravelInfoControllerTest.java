@@ -101,6 +101,32 @@ class AdminTravelInfoControllerTest {
     }
 
     @Test
+    void adminGuideListIgnoresScopeAndShowsGuideBadge() throws Exception {
+        AdminTravelInfoListItemDto item = new AdminTravelInfoListItemDto();
+        item.setId(21L);
+        item.setTitle("환전 가이드");
+        item.setContentType(TravelInfoContentType.GUIDE);
+        item.setCategoryName("여행준비");
+        item.setViews(3);
+        item.setCreatedAt(Timestamp.valueOf("2026-04-01 10:00:00"));
+        when(travelInfoService.getAdminList(null, TravelInfoContentType.GUIDE, null))
+                .thenReturn(List.of(item));
+        when(infoCategoryService.getAll()).thenReturn(List.of());
+
+        mockMvc.perform(get("/admin/travel-info")
+                        .param("contentType", "GUIDE")
+                        .param("scope", "DOMESTIC")
+                        .with(user("admin").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("scope", (Object) null))
+                .andExpect(model().attribute("contentType", TravelInfoContentType.GUIDE))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("환전 가이드")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("여행가이드")));
+
+        verify(travelInfoService).getAdminList(null, TravelInfoContentType.GUIDE, null);
+    }
+
+    @Test
     void adminCanOpenFestivalDetailWithMultiplePeriodsAndHtmlContent() throws Exception {
         AdminTravelInfoDetailDto detail = detail(TravelInfoContentType.FESTIVAL, List.of(
                 infoPeriod("2026-04-01", "2026-04-03"),

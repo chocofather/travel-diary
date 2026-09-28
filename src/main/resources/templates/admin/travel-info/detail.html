@@ -29,9 +29,11 @@
       <header class="admin-travel-info-detail-header">
         <div class="admin-travel-info-detail-badges">
           <span class="admin-travel-info-badge"
+                th:if="${travelInfo.scope != null}"
                 th:text="${travelInfo.scope.name() == 'DOMESTIC'} ? '국내' : '해외'">국내</span>
           <span class="admin-travel-info-badge is-type"
-                th:text="${travelInfo.contentType.name() == 'GENERAL'} ? '일반' : '축제'">일반</span>
+                th:text="${travelInfo.contentType.name() == 'GENERAL'} ? '일반'
+                         : (${travelInfo.contentType.name() == 'GUIDE'} ? '여행가이드' : '축제')">일반</span>
         </div>
         <h2 th:text="${travelInfo.title}">여행정보 제목</h2>
       </header>
@@ -39,11 +41,13 @@
       <dl class="admin-travel-info-detail-meta">
         <div>
           <dt>범위</dt>
-          <dd th:text="${travelInfo.scope.name() == 'DOMESTIC'} ? '국내' : '해외'">국내</dd>
+          <dd th:text="${travelInfo.scope == null} ? '-'
+                       : (${travelInfo.scope.name() == 'DOMESTIC'} ? '국내' : '해외')">국내</dd>
         </div>
         <div>
           <dt>유형</dt>
-          <dd th:text="${travelInfo.contentType.name() == 'GENERAL'} ? '일반' : '축제'">일반</dd>
+          <dd th:text="${travelInfo.contentType.name() == 'GENERAL'} ? '일반'
+                       : (${travelInfo.contentType.name() == 'GUIDE'} ? '여행가이드' : '축제')">일반</dd>
         </div>
         <div>
           <dt>정보 카테고리</dt>

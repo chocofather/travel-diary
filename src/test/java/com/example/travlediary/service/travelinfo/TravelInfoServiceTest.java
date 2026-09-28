@@ -391,6 +391,36 @@ class TravelInfoServiceTest {
     }
 
     @Test
+    void createsGuideWithGuideCategoryAndWithoutScopeOrPeriods() {
+        TravelInfoForm form = form(TravelInfoContentType.GUIDE);
+        form.setPeriods(List.of(period("2026-04-01", "2026-04-03")));
+        allowCategory(TravelInfoContentType.GUIDE);
+        stubTravelInfoInsert(101L);
+
+        Long id = travelInfoService.create(form, 7L);
+
+        assertThat(id).isEqualTo(101L);
+        ArgumentCaptor<TravelInfo> captor = ArgumentCaptor.forClass(TravelInfo.class);
+        verify(travelInfoMapper).insertTravelInfo(captor.capture());
+        assertThat(captor.getValue().getContentType()).isEqualTo(TravelInfoContentType.GUIDE);
+        assertThat(captor.getValue().getScope()).isNull();
+        verify(travelInfoMapper, never()).insertPeriod(any());
+    }
+
+    @Test
+    void guideAndGeneralDoNotShareCategories() {
+        allowCategory(TravelInfoContentType.GENERAL);
+        assertValidation("선택한 정보 카테고리의 유형이 여행정보 유형과 일치하지 않습니다.",
+                () -> travelInfoService.create(form(TravelInfoContentType.GUIDE), 7L));
+
+        allowCategory(TravelInfoContentType.GUIDE);
+        assertValidation("선택한 정보 카테고리의 유형이 여행정보 유형과 일치하지 않습니다.",
+                () -> travelInfoService.create(form(TravelInfoContentType.GENERAL), 7L));
+
+        verify(travelInfoMapper, never()).insertTravelInfo(any());
+    }
+
+    @Test
     void createsInfoWithOneMainThumbnail() {
         TravelInfoForm form = form(TravelInfoContentType.GENERAL);
         form.setThumbnailFile(thumbnailFile());
