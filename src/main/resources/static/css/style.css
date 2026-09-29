@@ -590,6 +590,70 @@ body {
     background:#f1f5f9;
 }
 
+/*
+  서비스 소개(/about) 아이콘 링크. 배경·테두리 없이 원형 info 선 아이콘만 두고
+  hover/focus 때 아이콘 색만 브랜드 보라로 바뀐다. 클릭 영역은 40px 로 넓혀 둔다.
+  ☰ 가 보이는 1199px 이하에서는 감추고 메뉴 판의 글자 링크(.site-menu-about)로 대신한다.
+*/
+.header-about-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    color: #333;
+    text-decoration: none;
+    transition: color .15s ease;
+}
+
+.header-about-link:hover,
+.header-about-link:focus-visible {
+    color: var(--tripbora-primary);
+}
+
+.header-about-link:focus-visible {
+    outline: 3px solid var(--tripbora-focus);
+    outline-offset: 2px;
+}
+
+.header-about-icon {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+}
+
+.header-about-icon-dot {
+    fill: currentColor;
+    stroke: none;
+}
+
+/* 메뉴 판의 소개 보조 링크. 1차 메뉴보다 한 단계 가볍게 둔다 */
+.site-menu-about {
+    display: block;
+    padding: 12px 0;
+    border-top: 1px solid #f0f0f0;
+    font-size: 15px;
+    font-weight: 500;
+    color: #555;
+    text-decoration: none;
+}
+
+.site-menu-about:hover,
+.site-menu-about:focus-visible {
+    color: var(--tripbora-primary);
+}
+
+@media (max-width: 1199px) {
+    .header-about-link {
+        display: none;
+    }
+}
+
 #auth-area{
     margin-left:16px;
     display:flex;

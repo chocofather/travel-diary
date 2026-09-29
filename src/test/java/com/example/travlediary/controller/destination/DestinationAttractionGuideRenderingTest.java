@@ -113,7 +113,7 @@ class DestinationAttractionGuideRenderingTest {
                 eq(15L), any(SupportedLanguage.class))).thenReturn(dto);
 
         Model model = new ExtendedModelMap();
-        controller.destinationDetail(15L, null, model);
+        controller.destinationDetail(15L, null, new org.springframework.mock.web.MockHttpSession(), model);
         return model;
     }
 }

@@ -51,6 +51,19 @@
         <span class="site-menu-toggle-bars" aria-hidden="true"></span>
       </button>
 
+      <!--
+        서비스 소개(/about) 진입점. 펼친 메뉴가 보이는 넓은 화면에서만 아이콘으로 두고,
+        ☰ 로 접히는 화면에서는 메뉴 판 안의 글자 메뉴로 대신한다.
+      -->
+      <a href="/about" class="header-about-link"
+         th:aria-label="#{header.about}" th:title="#{header.about}">
+        <svg class="header-about-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="9"></circle>
+          <path d="M12 11v5.5"></path>
+          <circle class="header-about-icon-dot" cx="12" cy="7.8" r="0.9"></circle>
+        </svg>
+      </a>
+
       <!-- 언어 선택은 헤더 없는 인증 화면과 공용 fragment 를 쓴다. -->
       <div th:replace="~{fragments/language-menu :: languageMenu}"></div>
 
@@ -159,6 +172,8 @@
             <ul th:replace="~{fragments/header :: eventLinks}"></ul>
           </li>
         </ul>
+        <!-- 넓은 화면의 소개 아이콘을 대신하는 보조 링크. 1차 메뉴와 섞지 않고 목록 아래에 둔다. -->
+        <a href="/about" class="site-menu-about" th:text="#{header.about}">TripBora 소개</a>
       </nav>
     </div>
   </nav>

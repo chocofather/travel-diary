@@ -183,7 +183,6 @@
     outline-offset: 4px;
 }
 
-.recommend-badge,
 .home-section-badge {
     display: inline-flex;
     min-height: 28px;
@@ -446,56 +445,6 @@
     color: #7a828d;
 }
 
-/* 인기 여행지 태그 */
-.recommend-tag-list {
-    display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 9px;
-}
-
-.recommend-tag-list .tag {
-    padding: 8px 17px;
-    border: 1px solid #cbd1d8;
-    border-radius: 999px;
-    background: #fff;
-    color: #343b44;
-    font: inherit;
-    font-size: 13px;
-    cursor: pointer;
-    transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
-}
-
-.recommend-tag-list .tag:hover {
-    border-color: var(--tripbora-border);
-    background: var(--tripbora-soft);
-    color: var(--tripbora-primary-hover);
-}
-
-.recommend-tag-list .tag.active {
-    border-color: var(--tripbora-primary);
-    background: var(--tripbora-primary);
-    color: #fff;
-    font-weight: 700;
-}
-
-.recommend-tag-list .tag.active:hover {
-    border-color: var(--tripbora-primary-hover);
-    background: var(--tripbora-primary-hover);
-    color: #fff;
-}
-
-.recommend-tag-list .tag:active {
-    border-color: var(--tripbora-primary-active);
-    background: var(--tripbora-primary-active);
-    color: #fff;
-}
-
-.recommend-tag-list .tag:focus-visible {
-    outline: 3px solid var(--tripbora-focus);
-    outline-offset: 2px;
-}
-
 .trip-card {
     min-width: 0;
     overflow: hidden;
@@ -552,26 +501,175 @@
     text-overflow: ellipsis;
 }
 
-/* 인기 여행지 */
+/*
+  인기 여행지
+  필터 없는 편집형 큐레이션. 첫 곳이 큰 대표(featured), 나머지 넷이 보조로 1 Large + 4 Small 을 이룬다.
+  머리글과 격자가 .popular-recommend-inner 한 상자 안에 있어 좌우 끝이 맞는다.
+  카드는 상자·그림자 없이 사진이 주인공이고, 브랜드 보라는 전체보기 링크에만 쓴다.
+*/
 .popular-recommend {
-    background: #f7f8fa;
+    background: #fff;
+    text-align: left;
 }
 
-.recommend-sub {
-    margin-bottom: 28px;
-}
-
-.recommend-tag-list {
-    margin-bottom: 34px;
-}
-
-.recommend-card-list {
+.popular-recommend-inner {
     width: min(var(--home-content-width), 100%);
-    min-height: 226px;
     margin: 0 auto;
+}
+
+.recommend-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 22px;
+}
+
+.recommend-heading {
+    min-width: 0;
+}
+
+.popular-recommend .recommend-title {
+    margin: 0 0 6px;
+}
+
+.recommend-view-all {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    padding: 4px 0;
+    color: var(--tripbora-primary);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.recommend-view-all:hover {
+    color: var(--tripbora-primary-hover);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.recommend-view-all:focus-visible {
+    border-radius: 4px;
+    outline: 3px solid var(--tripbora-focus);
+    outline-offset: 2px;
+}
+
+/*
+  데스크톱: 대표 칸이 왼쪽 절반(2fr)을 두 줄에 걸쳐 차지하고, 오른쪽 1fr 두 칸에 보조가 2×2 로 앉는다.
+  대표 사진은 보조 두 줄 높이에 맞춰 늘어나 아래 끝이 맞는다. (보조가 모자라면 5:4 비율을 지킨다)
+  열 폭은 home.html 의 img sizes 와 같은 값이다.
+*/
+.recommend-editorial {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: var(--home-card-gap);
+    grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr));
+    gap: 24px 20px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.recommend-featured,
+.recommend-item {
+    display: flex;
+    min-width: 0;
+}
+
+.recommend-featured {
+    grid-row: span 2;
+}
+
+/* 여행지가 한 곳뿐이면 대표 칸이 본문 폭 전체를 쓴다. */
+.recommend-editorial.is-count-1 {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.recommend-editorial.is-count-1 .recommend-featured {
+    grid-row: auto;
+}
+
+/* 카드 자체에는 상자·그림자가 없다. 사진 아래 이름과 지역만 둔다. */
+.recommend-card {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    border-radius: 8px;
+    color: inherit;
+    text-decoration: none;
+}
+
+.recommend-card-media {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    margin-bottom: 11px;
+    border-radius: 8px;
+    background: #eef0f2;
+}
+
+.recommend-featured .recommend-card-media {
+    flex: 1 1 auto;
+    aspect-ratio: 5 / 4;
+    margin-bottom: 14px;
+}
+
+.recommend-editorial.is-count-1 .recommend-card-media {
+    aspect-ratio: 21 / 9;
+}
+
+.recommend-card-media img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+    transition: transform 0.2s ease;
+}
+
+.recommend-card:hover .recommend-card-media img {
+    transform: scale(1.02);
+}
+
+.recommend-card:focus-visible {
+    outline: 3px solid var(--tripbora-focus);
+    outline-offset: 3px;
+}
+
+.recommend-card-name {
+    margin: 0 0 3px;
+    overflow: hidden;
+    color: #20262e;
+    font-size: 16px;
+    font-weight: 650;
+    line-height: 1.4;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.recommend-card-region {
+    margin: 0;
+    overflow: hidden;
+    color: #77818d;
+    font-size: 13px;
+    line-height: 1.4;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.recommend-featured .recommend-card-name {
+    margin-bottom: 4px;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+}
+
+.recommend-featured .recommend-card-region {
+    font-size: 14px;
 }
 
 .home-empty-state {
@@ -582,10 +680,6 @@
     border-radius: 8px;
     color: #78828e;
     background: #fff;
-}
-
-.recommend-card-list > .home-empty-state {
-    grid-column: 1 / -1;
 }
 
 /* 여행자 인기 코스 */
@@ -846,8 +940,20 @@
         --home-card-gap: 16px;
     }
 
-    .recommend-card-list {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+    /* 태블릿: 대표가 본문 폭 전체로 위에 서고, 보조 넷이 그 아래 한 줄로 선다. */
+    .recommend-editorial {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 22px 16px;
+    }
+
+    .recommend-featured {
+        grid-column: 1 / -1;
+        grid-row: auto;
+    }
+
+    .recommend-featured .recommend-card-media {
+        flex: none;
+        aspect-ratio: 16 / 9;
     }
 
     /* 계절 추천 카드는 한 줄 가로 스크롤로 둔다. 다음 카드가 조금 보여 넘길 수 있음을 알린다. */
@@ -926,8 +1032,28 @@
         flex-basis: calc((100% - 12px) / 1.6);
     }
 
-    .recommend-card-list {
+    /* 모바일: 대표 하나를 크게 두고 보조는 2열로 이어 둔다. (가로 스크롤 없이 세로로 읽힌다) */
+    .recommend-editorial {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 20px 16px;
+    }
+
+    .recommend-featured .recommend-card-media,
+    .recommend-editorial.is-count-1 .recommend-card-media {
+        aspect-ratio: 4 / 3;
+        margin-bottom: 12px;
+    }
+
+    .recommend-header {
+        margin-bottom: 18px;
+    }
+
+    .recommend-card-name {
+        font-size: 15px;
+    }
+
+    .recommend-featured .recommend-card-name {
+        font-size: 19px;
     }
 
     .trip-card img {
@@ -980,10 +1106,6 @@
 }
 
 @media (max-width: 420px) {
-    .recommend-card-list {
-        grid-template-columns: 1fr;
-    }
-
     .trip-card-list .trip-card {
         flex-basis: calc((100% - 12px) / 1.3);
     }
@@ -1003,7 +1125,8 @@
     .popular-course-photo,
     .popular-course-arrow,
     .season-tag-list .tag,
-    .trip-card-list .trip-card img {
+    .trip-card-list .trip-card img,
+    .recommend-card-media img {
         transition: none;
     }
 }

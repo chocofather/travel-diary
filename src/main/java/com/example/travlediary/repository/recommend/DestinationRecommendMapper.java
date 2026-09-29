@@ -4,6 +4,7 @@ import com.example.travlediary.dto.SeasonDestinationDto;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Mapper
@@ -30,6 +31,15 @@ public interface DestinationRecommendMapper {
      */
     List<SeasonDestinationDto> findByCategoryName(@Param("categoryName") String categoryName,
                                                   @Param("limit") int limit);
+
+    /**
+     * 메인 '지금 뜨는 여행지': destination_view_daily 의 기간 합계 상위 N곳 (국내 + 해외 전체).
+     * 합계 내림차순, 같으면 여행지 id 오름차순이다. (요청마다 바뀌지 않는다)
+     * fromDate/toDate 는 애플리케이션이 Asia/Seoul 기준으로 정해 넘긴다. 양 끝 날짜를 포함한다.
+     */
+    List<SeasonDestinationDto> findTrendingByViewDate(@Param("fromDate") LocalDate fromDate,
+                                                      @Param("toDate") LocalDate toDate,
+                                                      @Param("limit") int limit);
 
     /**
      * 카테고리 PK로 카테고리명 조회 (뱃지 이름 등)

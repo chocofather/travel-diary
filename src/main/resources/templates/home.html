@@ -37,9 +37,6 @@
          th:data-winter-title="#{home.season.winter.title}"
          th:data-winter-description="#{home.season.winter.description}"
          th:data-winter-tags="#{home.season.winter.tags}"
-         th:data-popular-tags="#{home.popular.tags}"
-         th:data-destination-empty="#{home.destination.empty}"
-         th:data-destination-error="#{home.destination.error}"
          th:data-event-badge="#{home.event.badge}"
          th:data-event-details="#{home.event.details}"
          th:data-event-pause="#{home.event.pause}"
@@ -140,29 +137,58 @@
       </div>
     </section>
 
-    <section class="home-service-teaser" aria-labelledby="home-service-teaser-title">
-      <div class="home-service-teaser-inner">
-        <div class="home-service-teaser-copy">
-          <span class="home-service-teaser-label" th:text="#{home.about.eyebrow}">TRIPBORA</span>
-          <h2 id="home-service-teaser-title" th:text="#{home.about.bannerTitle}">여행을 보라, 추억을 남겨라</h2>
-          <p th:text="#{home.about.bannerDescription}">여행지를 발견하고, 함께 계획하고, 나만의 여행일기로 남겨보세요.</p>
-        </div>
-        <div class="home-service-teaser-action">
-          <p class="home-service-teaser-flow" aria-label="Discover, plan, record">DISCOVER <span>→</span> PLAN <span>→</span> RECORD</p>
-          <a class="home-service-teaser-link" href="/about" th:text="#{home.about.cta}">TripBora(트립보라) 알아보기 →</a>
-        </div>
-      </div>
-    </section>
-
     <!-- 인기 여행지 -->
-    <section class="popular-recommend">
-      <div class="recommend-header">
-        <span class="recommend-badge" th:text="#{home.popular.badge}">이런 여행지 어때요?</span>
-        <h2 class="recommend-title" th:text="#{home.popular.title}">국내·해외 인기 많은 여행지</h2>
-        <p class="recommend-sub" th:text="#{home.popular.description}">다양한 테마로 인기 많은 여행지를 만나보세요.</p>
+    <!--
+      필터 없이 지금 많이 찾는 여행지를 보여 주는 편집형 영역. 세부 탐색은 전체보기(/destinations)가 맡는다.
+      HomeController 가 넘기는 여행지(최대 5곳)의 첫 곳이 큰 대표, 나머지가 보조다.
+      popularTrending 이면 최근 7일 조회 상위 5곳('지금 뜨는 여행지'), 아니면 기존 국내 인기 여행지다.
+      한 곳도 없으면 섹션을 그리지 않고, 모자라면 있는 만큼만 그린다. (is-count-N 으로 배치를 고른다)
+      머리글과 격자가 한 본문 폭 상자 안에 있어 좌우 끝이 맞는다.
+    -->
+    <section class="popular-recommend" aria-labelledby="popular-recommend-title"
+             th:if="${!#lists.isEmpty(popularDestinations)}">
+      <div class="popular-recommend-inner">
+        <div class="recommend-header">
+          <div class="recommend-heading">
+            <h2 id="popular-recommend-title" class="recommend-title"
+                th:text="${popularTrending} ? #{home.trending.title} : #{home.popular.title}">인기 여행지</h2>
+            <p class="recommend-sub"
+               th:text="${popularTrending} ? #{home.trending.description} : #{home.popular.description}">지금 사람들이 많이 찾는 여행지를 둘러보세요.</p>
+          </div>
+          <a id="popular-view-all" class="recommend-view-all" href="/destinations?type=domestic&amp;sort=views">
+            <span th:text="#{home.popular.viewAll}">전체보기</span>
+            <span aria-hidden="true">→</span>
+          </a>
+        </div>
+        <ul class="recommend-editorial"
+            th:classappend="'is-count-' + ${#lists.size(popularDestinations)}">
+          <li th:each="destination, stat : ${popularDestinations}"
+              th:class="${stat.first} ? 'recommend-featured' : 'recommend-item'">
+            <a class="recommend-card" th:href="@{/destinations/{id}(id=${destination.id})}">
+              <div class="recommend-card-media">
+                <!--
+                  여행지 업로드 사진은 서버가 카드 크기로 줄인 썸네일을 쓴다. 그 밖의 주소는 원래대로 둔다.
+                  sizes 는 home.css 의 .recommend-editorial 격자 폭과 같은 값이다.
+                  썸네일을 받지 못하면 원본으로 한 번만 되돌린다. (랜드마크 카드와 같은 방식)
+                -->
+                <img th:src="${destination.cardImageUrl != null} ? ${destination.cardImageUrl} : @{${destination.imageUrl}}"
+                     th:alt="${destination.name}"
+                     th:attr="srcset=${destination.cardImageSrcset},
+                              sizes=${destination.cardImageSrcset == null} ? null : (${stat.first}
+                                  ? '(max-width: 680px) calc(100vw - 28px), (max-width: 960px) calc(100vw - 40px), (max-width: 1160px) calc(50vw - 40px), 540px'
+                                  : '(max-width: 680px) calc(50vw - 22px), (max-width: 960px) calc(25vw - 22px), (max-width: 1160px) calc(25vw - 20px), 270px'),
+                              data-original-src=${destination.cardImageUrl != null} ? @{${destination.imageUrl}} : null"
+                     onerror="if (this.dataset.originalSrc) { this.removeAttribute('srcset'); this.src = this.dataset.originalSrc; delete this.dataset.originalSrc; }"
+                     loading="lazy" decoding="async">
+              </div>
+              <h3 class="recommend-card-name" th:text="${destination.name}" th:title="${destination.name}">경복궁</h3>
+              <!-- 상위 지역이 있으면 '서울 종로구' 처럼 앞에 붙인다. (랜드마크 카드와 같은 규칙) -->
+              <p class="recommend-card-region" th:with="parent=${#strings.trim(destination.parentRegionName)}"
+                 th:text="${#strings.trim((#strings.isEmpty(parent) ? '' : parent + ' ') + (destination.regionName ?: ''))}">서울 종로구</p>
+            </a>
+          </li>
+        </ul>
       </div>
-      <div class="recommend-tag-list" id="popular-tag-list"></div>
-      <div class="recommend-card-list" id="recommend-card-list"></div>
     </section>
 
     <!-- 여행자 인기 코스 -->

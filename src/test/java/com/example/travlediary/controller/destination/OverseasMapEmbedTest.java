@@ -224,7 +224,7 @@ class OverseasMapEmbedTest {
         when(destinationService.convertToDtoWithBookmark(List.of(), null)).thenReturn(List.of());
 
         Model model = new ExtendedModelMap();
-        controller.destinationDetail(7L, null, model);
+        controller.destinationDetail(7L, null, new org.springframework.mock.web.MockHttpSession(), model);
         return model;
     }
 

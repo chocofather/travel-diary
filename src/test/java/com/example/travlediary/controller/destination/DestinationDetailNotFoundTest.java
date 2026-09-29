@@ -25,10 +25,16 @@ import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
 
+import org.mockito.ArgumentCaptor;
+import org.springframework.mock.web.MockHttpSession;
+
+import java.time.LocalDate;
 import java.util.List;
+import java.util.function.Predicate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.any;
@@ -106,18 +112,32 @@ class DestinationDetailNotFoundTest {
         mockMvc.perform(get("/destinations/404"))
                 .andExpect(status().isNotFound());
 
+        verify(destinationService, never()).recordDetailView(any(), any());
         verify(destinationService, never()).incrementViewCount(404L);
     }
 
     @Test
+    void theSameSessionIsCountedOncePerKstDayWhileEveryViewIsRecorded() throws Exception {
+        stubExistingDestination();
+        MockHttpSession session = new MockHttpSession();
+        LocalDate today = LocalDate.of(2026, 9, 30);
+
+        mockMvc.perform(get("/destinations/7").session(session)).andExpect(status().isOk());
+        mockMvc.perform(get("/destinations/7").session(session)).andExpect(status().isOk());
+
+        // 두 번 모두 기록(누적 조회수)을 부르고, 일별 집계 여부는 세션 판정이 정한다.
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Predicate<LocalDate>> firstViewOn = ArgumentCaptor.forClass(Predicate.class);
+        verify(destinationService, times(2)).recordDetailView(eq(7L), firstViewOn.capture());
+        assertThat(firstViewOn.getAllValues().get(0).test(today)).isTrue();
+        assertThat(firstViewOn.getAllValues().get(1).test(today)).isFalse();
+        // 날짜가 바뀌면 같은 세션도 다시 집계된다.
+        assertThat(firstViewOn.getAllValues().get(1).test(today.plusDays(1))).isTrue();
+    }
+
+    @Test
     void existingDestinationStillRendersTheDetailPageAndCountsTheView() throws Exception {
-        when(destinationService.getDestinationDetailWithInfo(eq(7L), any(SupportedLanguage.class)))
-                .thenReturn(detailDto());
-        when(countryCategoryService.getById(101L)).thenReturn(region(101L, "종로구", 10L));
-        when(countryCategoryService.getById(10L)).thenReturn(region(10L, "서울", null));
-        when(countryCategoryService.getDomesticRootIds()).thenReturn(List.of(10L));
-        when(destinationService.getSimilarDestinations(7L, 4)).thenReturn(List.of());
-        when(destinationService.convertToDtoWithBookmark(List.of(), null)).thenReturn(List.of());
+        stubExistingDestination();
 
         var result = mockMvc.perform(get("/destinations/7"))
                 .andExpect(status().isOk())
@@ -126,7 +146,17 @@ class DestinationDetailNotFoundTest {
 
         assertThat(result.getModelAndView()).isNotNull();
         assertThat(result.getModelAndView().getModel().get("regionName")).isEqualTo("종로구");
-        verify(destinationService).incrementViewCount(7L);
+        verify(destinationService).recordDetailView(eq(7L), any());
+    }
+
+    private void stubExistingDestination() {
+        when(destinationService.getDestinationDetailWithInfo(eq(7L), any(SupportedLanguage.class)))
+                .thenReturn(detailDto());
+        when(countryCategoryService.getById(101L)).thenReturn(region(101L, "종로구", 10L));
+        when(countryCategoryService.getById(10L)).thenReturn(region(10L, "서울", null));
+        when(countryCategoryService.getDomesticRootIds()).thenReturn(List.of(10L));
+        when(destinationService.getSimilarDestinations(7L, 4)).thenReturn(List.of());
+        when(destinationService.convertToDtoWithBookmark(List.of(), null)).thenReturn(List.of());
     }
 
     private DestinationDetailDto detailDto() {

@@ -48,11 +48,13 @@ class HomePageContractTest {
                 .contains("SPRING", "SUMMER", "FALL", "WINTER")
                 .contains("/api/season-destinations?season=")
                 .contains("renderSeasonDestinations(currentSeason, tag.id)")
-                .contains("/api/popular-destinations/domestic")
-                .contains("/api/popular-destinations/overseas")
-                .contains("/api/popular-destinations/history")
-                .contains("/api/popular-destinations/photo")
-                .contains("renderPopularRecommend(popularTags[0].api)");
+                // 인기 여행지는 필터 없는 편집형 영역이라 서버가 그린다. 메인 스크립트는 필터 API 를 부르지 않는다.
+                .doesNotContain("/api/popular-destinations/")
+                .doesNotContain("renderPopularRecommend", "popularTags");
+        assertThat(template)
+                .contains("th:each=\"destination, stat : ${popularDestinations}\"")
+                .contains("th:href=\"@{/destinations/{id}(id=${destination.id})}\"")
+                .contains("th:alt=\"${destination.name}\"");
     }
 
     @Test
@@ -110,7 +112,7 @@ class HomePageContractTest {
                 .contains("th:text=\"${course.title}\"")
                 .contains("th:text=\"${destinationName}\"");
         assertThat(homeScript)
-                .contains("home-i18n", ".dataset", "homeI18n.springTitle", "homeI18n.popularTags")
+                .contains("home-i18n", ".dataset", "homeI18n.springTitle")
                 .contains("${dest.name}", "${regionText(dest)}")
                 // 지역은 API 가 준 상위 지역 + 지역 이름을 이어 붙인다. (화면에 지역명을 박아 두지 않는다)
                 .contains("[dest.parentRegionName, dest.regionName]")

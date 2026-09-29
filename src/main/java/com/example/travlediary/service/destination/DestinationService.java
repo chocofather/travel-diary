@@ -14,6 +14,7 @@ import com.example.travlediary.model.DestinationTranslationSource;
 import com.example.travlediary.repository.bookmark.BookmarkMapper;
 import com.example.travlediary.repository.destination.DestinationMapper;
 import com.example.travlediary.repository.destination.DestinationTranslationSourceMapper;
+import com.example.travlediary.repository.destination.DestinationViewDailyMapper;
 import com.example.travlediary.service.amenity.AmenityService;
 import com.example.travlediary.service.comment.DestinationCommentService;
 import com.example.travlediary.service.course.CourseService;
@@ -25,8 +26,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.*;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 @Service
@@ -52,6 +55,9 @@ public class DestinationService {
     /** 여행지 번역 일괄 조회와 언어 대체 규칙은 코스 STOP 과 함께 쓰도록 떼어 두었다. */
     private final DestinationLocalizationService destinationLocalizationService;
     @Autowired private DestinationTranslationSourceMapper translationSourceMapper;
+    /** 상세 조회의 일별 집계(지금 뜨는 여행지). 날짜는 Asia/Seoul 기준이다. */
+    @Autowired private DestinationViewDailyMapper viewDailyMapper;
+    @Autowired private DestinationViewClock viewClock;
 
     @Value("${custom.upload-path}")
     private String uploadPath;
@@ -439,6 +445,21 @@ public class DestinationService {
     // 조회수 증가
     public void incrementViewCount(Long id) {
         destinationMapper.incrementViewCount(id);
+    }
+
+    /**
+     * 여행지 상세 조회 한 번을 기록한다.
+     * 누적 조회수(destinations.views)는 매번 +1 하고, 일별 집계(destination_view_daily)는
+     * firstViewOn 이 '오늘(KST) 처음 본 여행지'라고 답할 때만 +1 한다. 두 쓰기는 한 트랜잭션이다.
+     * 세션 중복 판정은 웹 계층이 firstViewOn 으로 넘긴다. (이 서비스와 Mapper 는 세션을 모른다)
+     */
+    @Transactional
+    public void recordDetailView(Long destinationId, Predicate<LocalDate> firstViewOn) {
+        incrementViewCount(destinationId);
+        LocalDate today = viewClock.today();
+        if (firstViewOn.test(today)) {
+            viewDailyMapper.incrementDailyView(destinationId, today);
+        }
     }
 
     // 여행지 삭제

@@ -9,6 +9,7 @@ import com.example.travlediary.service.destination.DestinationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +26,8 @@ public class DestinationRecommendService {
     static final String LANDMARK_CATEGORY_NAME = "랜드마크";
     // 첫 화면에 여섯 장이 보이고, 나머지는 레일을 넘겨 본다.
     static final int HOME_LANDMARK_LIMIT = 18;
+    // 지금 뜨는 여행지 기간: 오늘 포함 7일
+    static final int TRENDING_DAYS = 7;
 
     private final DestinationRecommendMapper recommendMapper;
     private final DestinationService destinationService;
@@ -46,6 +49,18 @@ public class DestinationRecommendService {
     // 메인 랜드마크 카드 (최대 6곳). 이름·지역 번역은 계절 추천과 같이 한 번에 읽는다.
     public List<SeasonDestinationDto> findHomeLandmarks(SupportedLanguage requestedLanguage) {
         return localize(recommendMapper.findByCategoryName(LANDMARK_CATEGORY_NAME, HOME_LANDMARK_LIMIT),
+                requestedLanguage);
+    }
+
+    /**
+     * 메인 '지금 뜨는 여행지': 오늘(KST) 포함 최근 7일 일별 조회 합계 상위 limit 곳.
+     * today 는 호출한 쪽이 Asia/Seoul 기준으로 넘긴다. 기간은 today-6일 ~ today (양 끝 포함)이다.
+     * 이름·지역(상위 지역 포함) 번역은 계절 추천·랜드마크와 같이 한 번에 읽는다.
+     */
+    public List<SeasonDestinationDto> findTrendingDestinations(
+            LocalDate today, int limit, SupportedLanguage requestedLanguage) {
+        LocalDate fromDate = today.minusDays(TRENDING_DAYS - 1);
+        return localize(recommendMapper.findTrendingByViewDate(fromDate, today, limit),
                 requestedLanguage);
     }
 

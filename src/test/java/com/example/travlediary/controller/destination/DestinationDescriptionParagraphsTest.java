@@ -121,7 +121,7 @@ class DestinationDescriptionParagraphsTest {
         when(destinationService.getDestinationDetailWithInfo(7L, language)).thenReturn(dto);
 
         Model model = new ExtendedModelMap();
-        controller.destinationDetail(7L, null, model);
+        controller.destinationDetail(7L, null, new org.springframework.mock.web.MockHttpSession(), model);
         return (List<String>) model.getAttribute("descriptionParagraphs");
     }
 }

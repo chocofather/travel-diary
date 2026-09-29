@@ -11,6 +11,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -162,6 +165,60 @@ class DestinationRecommendServiceLocalizationTest {
                 List.of(31L, 15L), SupportedLanguage.ENGLISH);
         verify(referenceNameLocalizationService).localizeCountryCategoryNames(
                 baseRegionNames, SupportedLanguage.ENGLISH);
+    }
+
+    @Test
+    void trendingAsksForTheLastSevenKstDaysIncludingTodayAndLocalizesParentRegions() {
+        SeasonDestinationDto palace = new SeasonDestinationDto();
+        palace.setId(15L);
+        palace.setName("경복궁");
+        palace.setRegionId(235L);
+        palace.setRegionName("종로구");
+        palace.setParentRegionId(10L);
+        palace.setParentRegionName("서울");
+        // 오늘 포함 7일 = 6일 전(9/24) ~ 오늘(9/30). 7일 전(9/23)은 BETWEEN 아래 경계 밖이라 빠진다.
+        when(recommendMapper.findTrendingByViewDate(
+                LocalDate.of(2026, 9, 24), LocalDate.of(2026, 9, 30), 5))
+                .thenReturn(List.of(palace));
+        when(destinationService.resolveLocalizedContentByDestinationIds(
+                List.of(15L), SupportedLanguage.ENGLISH))
+                .thenReturn(Map.of(15L, translation(15L, "Gyeongbokgung Palace")));
+        Map<Long, String> baseRegionNames = new java.util.LinkedHashMap<>();
+        baseRegionNames.put(235L, "종로구");
+        baseRegionNames.put(10L, "서울");
+        when(referenceNameLocalizationService.localizeCountryCategoryNames(
+                baseRegionNames, SupportedLanguage.ENGLISH))
+                .thenReturn(Map.of(235L, "Jongno-gu", 10L, "Seoul"));
+        when(referenceNameLocalizationService.localizeCategories(
+                List.of(), SupportedLanguage.ENGLISH)).thenReturn(Map.of());
+
+        DestinationRecommendService service = new DestinationRecommendService(
+                recommendMapper, destinationService, referenceNameLocalizationService);
+
+        List<SeasonDestinationDto> result = service.findTrendingDestinations(
+                LocalDate.of(2026, 9, 30), 5, SupportedLanguage.ENGLISH);
+
+        assertThat(result).extracting(SeasonDestinationDto::getName).containsExactly("Gyeongbokgung Palace");
+        assertThat(result.get(0).getParentRegionName()).isEqualTo("Seoul");
+        assertThat(result.get(0).getRegionName()).isEqualTo("Jongno-gu");
+    }
+
+    @Test
+    void trendingQueryUsesTheGivenDateRangeWithAStableOrderAndNoDatabaseClock() throws IOException {
+        String xml;
+        try (var in = getClass().getResourceAsStream("/mapper/DestinationRecommendMapper.xml")) {
+            xml = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+        }
+        String query = xml.substring(xml.indexOf("<select id=\"findTrendingByViewDate\""));
+        query = query.substring(0, query.indexOf("</select>"));
+
+        assertThat(query)
+                .contains("FROM destination_view_daily dvd")
+                .contains("WHERE dvd.view_date BETWEEN #{fromDate} AND #{toDate}")
+                .contains("ORDER BY recent_views DESC, dvd.destination_id ASC")
+                .contains("ORDER BY recent.recent_views DESC, recent.destination_id ASC")
+                .contains("LEFT JOIN country_categories pcc ON cc.parent_id = pcc.id")
+                .doesNotContain("RAND()", "CURDATE()", "NOW()", "region_id IN");
     }
 
     private DestinationTranslation translation(Long destinationId, String name) {

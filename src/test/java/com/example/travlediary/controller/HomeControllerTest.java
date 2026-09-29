@@ -7,14 +7,17 @@ import com.example.travlediary.config.i18n.I18nConfig;
 import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.config.i18n.TravelDiaryLocaleResolver;
 import com.example.travlediary.dto.HomePopularCourseDto;
+import com.example.travlediary.dto.RecommendDestinationDto;
 import com.example.travlediary.dto.SeasonDestinationDto;
 import com.example.travlediary.model.User;
 import com.example.travlediary.model.UserRole;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.course.CourseService;
+import com.example.travlediary.service.destination.DestinationViewClock;
 import com.example.travlediary.service.file.DestinationCardThumbnailService;
 import com.example.travlediary.service.recommend.DestinationRecommendService;
+import com.example.travlediary.service.recommend.PopularRecommendService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -29,10 +32,12 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import jakarta.servlet.http.Cookie;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.never;
@@ -58,6 +63,10 @@ class HomeControllerTest {
     @MockitoBean
     private DestinationRecommendService recommendService;
     @MockitoBean
+    private PopularRecommendService popularRecommendService;
+    @MockitoBean
+    private DestinationViewClock viewClock;
+    @MockitoBean
     private DestinationCardThumbnailService cardThumbnailService;
     @MockitoBean
     private UserMapper userMapper;
@@ -81,6 +90,18 @@ class HomeControllerTest {
                 "/images/changdeokgung.jpg"));
         when(courseService.getPopularCoursesForHome(SupportedLanguage.KOREAN))
                 .thenReturn(List.of(course));
+        RecommendDestinationDto featured = popular(15L, "경복궁", "/uploads/destinations/palace.jpg", "종로구");
+        // 썸네일 서비스가 채워 두는 값 (여기서는 서비스가 mock 이라 미리 넣어 둔다)
+        featured.setCardImageUrl("/destination-thumbnails/v1/480/palace.jpg");
+        featured.setCardImageSrcset("/destination-thumbnails/v1/480/palace.jpg 480w, "
+                + "/destination-thumbnails/v1/960/palace.jpg 960w");
+        List<RecommendDestinationDto> popularDestinations = List.of(featured,
+                popular(21L, "해운대해수욕장", "/uploads/destinations/haeundae.jpg", "해운대구"),
+                popular(22L, "성산일출봉", "/uploads/destinations/seongsan.jpg", "서귀포시"),
+                popular(23L, "전주한옥마을", "/uploads/destinations/jeonju.jpg", "전주시"),
+                popular(24L, "경주 불국사", "/uploads/destinations/bulguksa.jpg", "경주시"));
+        when(popularRecommendService.findDomesticPopular(5, SupportedLanguage.KOREAN))
+                .thenReturn(popularDestinations);
 
         mockMvc.perform(get("/"))
                 .andExpect(status().isOk())
@@ -93,20 +114,57 @@ class HomeControllerTest {
                     assertThat(document.select(".footer-operations .footer-contact-email").text())
                             .isEqualTo("contact@tripbora.test");
                     assertThat(document.select("#event-slider #slide-area")).hasSize(1);
-                    assertThat(document.select(".home-service-teaser")).hasSize(1);
-                    assertThat(document.select(".home-service-teaser a[href='/about']")).hasSize(1);
+                    // 서비스 소개는 메인 본문 블록이 아니라 헤더 아이콘과 ☰ 메뉴 판의 글자 메뉴로 들어간다.
+                    assertThat(document.select(".home-service-teaser")).isEmpty();
+                    assertThat(document.selectFirst(".search-box a.header-about-link").attr("href"))
+                            .isEqualTo("/about");
+                    assertThat(document.selectFirst(".header-about-link").attr("aria-label"))
+                            .isEqualTo("TripBora 소개");
+                    assertThat(document.select("#site-menu a.site-menu-about[href='/about']").text())
+                            .isEqualTo("TripBora 소개");
                     // jsoup 의 Element 는 Iterable<Element> 라 assertThat(요소) 가 컬렉션 단언으로
                     // 잡힌다. 확인하려는 것은 "바로 다음 형제의 class" 하나이므로 그 값을 직접 본다.
                     assertThat(document.selectFirst("#event-slider").nextElementSibling()
                             .hasClass("seasonal-recommend")).isTrue();
-                    // 랜드마크가 없으면 섹션을 그리지 않아 계절 추천 다음이 바로 서비스 소개다.
+                    // 랜드마크가 없으면 섹션을 그리지 않아 계절 추천 다음이 바로 인기 여행지다.
                     assertThat(document.select(".home-converge")).isEmpty();
                     assertThat(document.selectFirst(".seasonal-recommend").nextElementSibling()
-                            .hasClass("home-service-teaser")).isTrue();
-                    assertThat(document.selectFirst(".home-service-teaser").nextElementSibling()
                             .hasClass("popular-recommend")).isTrue();
                     assertThat(document.select(".seasonal-recommend")).hasSize(1);
                     assertThat(document.select(".popular-recommend")).hasSize(1);
+                    // 인기 여행지: 배지·필터 없이 제목·설명·전체보기, 그 아래 1 Large + 4 Small 편집 격자.
+                    // 머리글과 격자가 한 본문 폭 상자 안에 있다.
+                    assertThat(document.select(".popular-recommend .recommend-badge")).isEmpty();
+                    assertThat(document.select("#popular-tag-list, .recommend-filter, "
+                            + ".recommend-scope-tab, .recommend-theme-tab")).isEmpty();
+                    assertThat(document.select("#popular-recommend-title").text()).isEqualTo("인기 여행지");
+                    assertThat(document.selectFirst("#popular-view-all").attr("href"))
+                            .isEqualTo("/destinations?type=domestic&sort=views");
+                    assertThat(document.select(".popular-recommend-inner > .recommend-header, "
+                            + ".popular-recommend-inner > ul.recommend-editorial")).hasSize(2);
+                    assertThat(document.select(".recommend-editorial.is-count-5")).hasSize(1);
+                    assertThat(document.select(".recommend-editorial > li.recommend-featured")).hasSize(1);
+                    assertThat(document.select(".recommend-editorial > li.recommend-item")).hasSize(4);
+                    assertThat(document.selectFirst(".recommend-editorial > li").hasClass("recommend-featured"))
+                            .isTrue();
+                    // 카드 전체가 상세 링크이고, 사진 alt 는 (다국어 처리된) 여행지명이다.
+                    assertThat(document.select(".recommend-editorial a.recommend-card").eachAttr("href"))
+                            .containsExactly("/destinations/15", "/destinations/21", "/destinations/22",
+                                    "/destinations/23", "/destinations/24");
+                    assertThat(document.select(".recommend-featured .recommend-card-name").text())
+                            .isEqualTo("경복궁");
+                    assertThat(document.select(".recommend-featured .recommend-card-region").text())
+                            .isEqualTo("종로구");
+                    var popularImages = document.select(".recommend-card-media img");
+                    assertThat(popularImages.eachAttr("alt")).containsExactly(
+                            "경복궁", "해운대해수욕장", "성산일출봉", "전주한옥마을", "경주 불국사");
+                    assertThat(popularImages.get(0).attr("src"))
+                            .isEqualTo("/destination-thumbnails/v1/480/palace.jpg");
+                    assertThat(popularImages.get(0).attr("sizes")).endsWith("540px");
+                    assertThat(popularImages.get(0).attr("data-original-src"))
+                            .isEqualTo("/uploads/destinations/palace.jpg");
+                    assertThat(popularImages.get(1).attr("src")).isEqualTo("/uploads/destinations/haeundae.jpg");
+                    assertThat(popularImages.get(1).hasAttr("srcset")).isFalse();
                     assertThat(document.select("a.popular-course-card[href='/course/12']")).hasSize(1);
                     assertThat(document.select(".popular-course-visual.is-count-3 img")
                             .eachAttr("src")).containsExactly(
@@ -124,6 +182,109 @@ class HomeControllerTest {
                 });
 
         verify(courseService).getPopularCoursesForHome(SupportedLanguage.KOREAN);
+        verify(cardThumbnailService).applyCardImages(eq(popularDestinations), any(), any());
+    }
+
+    @Test
+    void popularDestinationsDrawOnlyWhatExistsAndHideWhenEmpty() throws Exception {
+        // 한 곳도 없으면 섹션 자체를 그리지 않는다. (빈 카드·안내 문구 없음)
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(result -> {
+                    var document = Jsoup.parse(result.getResponse().getContentAsString());
+                    assertThat(document.select(".popular-recommend")).isEmpty();
+                    assertThat(document.selectFirst(".seasonal-recommend").nextElementSibling()
+                            .hasClass("popular-course-section")).isTrue();
+                });
+
+        // 한 곳이면 대표 칸만 그리고 보조 칸은 만들지 않는다. 대표 사진이 없어도 화면이 깨지지 않는다.
+        when(popularRecommendService.findDomesticPopular(5, SupportedLanguage.KOREAN))
+                .thenReturn(List.of(popular(15L, "경복궁", null, "종로구")));
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(result -> {
+                    var document = Jsoup.parse(result.getResponse().getContentAsString());
+                    assertThat(document.select(".recommend-editorial.is-count-1")).hasSize(1);
+                    assertThat(document.select(".recommend-editorial > li")).hasSize(1);
+                    assertThat(document.select(".recommend-featured a.recommend-card").attr("href"))
+                            .isEqualTo("/destinations/15");
+                    assertThat(document.select(".recommend-item")).isEmpty();
+                });
+    }
+
+    @Test
+    void fiveRecentlyViewedDestinationsTurnTheSectionIntoTrendingWithoutAskingForPopular() throws Exception {
+        LocalDate today = LocalDate.of(2026, 9, 30);
+        when(viewClock.today()).thenReturn(today);
+        List<SeasonDestinationDto> trending = List.of(
+                landmark(15L, "경복궁", "/uploads/destinations/palace.jpg", "서울", "종로구"),
+                landmark(21L, "공산성", "/uploads/destinations/gongsan.jpg", "충남", "공주시"),
+                landmark(31L, "센소지", "/uploads/destinations/sensoji.jpg", "일본", "도쿄"),
+                landmark(32L, "빅벤", "/uploads/destinations/bigben.jpg", "영국", "런던"),
+                landmark(40L, "성산일출봉", "/uploads/destinations/seongsan.jpg", null, "제주"));
+        when(recommendService.findTrendingDestinations(today, 5, SupportedLanguage.KOREAN))
+                .thenReturn(trending);
+
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("popularTrending", true))
+                .andExpect(result -> {
+                    var document = Jsoup.parse(result.getResponse().getContentAsString());
+                    assertThat(document.select("#popular-recommend-title").text()).isEqualTo("지금 뜨는 여행지");
+                    assertThat(document.select(".popular-recommend .recommend-sub").text())
+                            .isEqualTo("최근 여행자들이 많이 찾아본 여행지를 만나보세요.");
+                    // 같은 1 Large + 4 Small 격자에 최근 7일 순서 그대로 그린다. (순위·배지 없음)
+                    assertThat(document.select(".recommend-editorial.is-count-5")).hasSize(1);
+                    assertThat(document.select(".recommend-editorial a.recommend-card").eachAttr("href"))
+                            .containsExactly("/destinations/15", "/destinations/21", "/destinations/31",
+                                    "/destinations/32", "/destinations/40");
+                    assertThat(document.select(".recommend-card-region").eachText())
+                            .containsExactly("서울 종로구", "충남 공주시", "일본 도쿄", "영국 런던", "제주");
+                });
+
+        verify(popularRecommendService, never()).findDomesticPopular(anyInt(), any());
+        verify(cardThumbnailService).applyCardImages(eq(trending), any(), any());
+    }
+
+    @Test
+    void fewerThanFiveRecentDestinationsFallBackToPopularWithoutMixing() throws Exception {
+        LocalDate today = LocalDate.of(2026, 9, 30);
+        when(viewClock.today()).thenReturn(today);
+        when(recommendService.findTrendingDestinations(today, 5, SupportedLanguage.KOREAN))
+                .thenReturn(List.of(
+                        landmark(91L, "최근1", "/uploads/r1.jpg", "서울", "중구"),
+                        landmark(92L, "최근2", "/uploads/r2.jpg", "서울", "중구"),
+                        landmark(93L, "최근3", "/uploads/r3.jpg", "서울", "중구"),
+                        landmark(94L, "최근4", "/uploads/r4.jpg", "서울", "중구")));
+        when(popularRecommendService.findDomesticPopular(5, SupportedLanguage.KOREAN))
+                .thenReturn(List.of(
+                        popular(15L, "경복궁", "/uploads/destinations/palace.jpg", "종로구"),
+                        popular(21L, "해운대해수욕장", "/uploads/destinations/haeundae.jpg", "해운대구")));
+
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("popularTrending", false))
+                .andExpect(result -> {
+                    var document = Jsoup.parse(result.getResponse().getContentAsString());
+                    assertThat(document.select("#popular-recommend-title").text()).isEqualTo("인기 여행지");
+                    assertThat(document.select(".popular-recommend .recommend-sub").text())
+                            .isEqualTo("지금 사람들이 많이 찾는 여행지를 둘러보세요.");
+                    // 기존 인기 여행지만 그린다. 최근 조회 여행지로 빈 칸을 채우지 않는다.
+                    assertThat(document.select(".recommend-editorial a.recommend-card").eachAttr("href"))
+                            .containsExactly("/destinations/15", "/destinations/21");
+                    assertThat(document.select(".recommend-editorial").text()).doesNotContain("최근1", "최근4");
+                    assertThat(document.select(".recommend-card-region").eachText())
+                            .containsExactly("종로구", "해운대구");
+                });
+    }
+
+    private RecommendDestinationDto popular(Long id, String name, String imageUrl, String regionName) {
+        RecommendDestinationDto destination = new RecommendDestinationDto();
+        destination.setId(id);
+        destination.setName(name);
+        destination.setImageUrl(imageUrl);
+        destination.setRegionName(regionName);
+        return destination;
     }
 
     @Test
@@ -148,8 +309,9 @@ class HomeControllerTest {
                     var document = Jsoup.parse(result.getResponse().getContentAsString());
                     assertThat(document.selectFirst(".seasonal-recommend").nextElementSibling()
                             .hasClass("home-converge")).isTrue();
+                    // 인기 여행지가 없는 상태라 랜드마크 다음이 바로 여행 코스다.
                     assertThat(document.selectFirst(".home-converge").nextElementSibling()
-                            .hasClass("home-service-teaser")).isTrue();
+                            .hasClass("popular-course-section")).isTrue();
                     assertThat(document.select("#home-converge-title").text()).isEqualTo("세계의 랜드마크");
                     assertThat(document.select(".home-converge-eyebrow").text()).isEqualTo("Landmarks");
 
@@ -304,8 +466,6 @@ class HomeControllerTest {
                             .isEqualTo("https://tripbora.com/images/branding/tripbora-og.png");
                     assertThat(document.select("link[rel=alternate][hreflang]")).isEmpty();
                     assertThat(document.select(".home-page > h1")).hasSize(1);
-                    assertThat(document.select(".home-service-teaser h2").text())
-                            .isEqualTo("여행을 보라, 추억을 남겨라");
                     assertThat(document.select(".footer-description").text())
                             .isEqualTo("여행을 보라, 추억을 남겨라");
                     var website = new ObjectMapper().readTree(document
@@ -374,6 +534,9 @@ class HomeControllerTest {
         // 쿠키로 고른 언어가 코스 STOP 이름 조회까지 그대로 전달된다.
         when(courseService.getPopularCoursesForHome(SupportedLanguage.ENGLISH))
                 .thenReturn(List.of(course));
+        when(popularRecommendService.findDomesticPopular(5, SupportedLanguage.ENGLISH))
+                .thenReturn(List.of(popular(15L, "Gyeongbokgung Palace", "/uploads/destinations/palace.jpg",
+                        "Jongno-gu")));
 
         mockMvc.perform(get("/")
                         .cookie(new Cookie(TravelDiaryLocaleResolver.COOKIE_NAME, "en")))
@@ -381,7 +544,7 @@ class HomeControllerTest {
                 .andExpect(result -> {
                     var document = Jsoup.parse(result.getResponse().getContentAsString());
                     assertThat(document.select(".recommend-header").text())
-                            .contains("Popular Picks", "Top Destinations at Home and Abroad");
+                            .contains("Popular Destinations", "View all");
                     assertThat(document.select(".home-section-header").text())
                             .contains("Traveler Stories", "Popular Travel Routes");
                     assertThat(document.select(".popular-course-card").text())

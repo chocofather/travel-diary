@@ -30,6 +30,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.HtmlUtils;
 import jakarta.servlet.http.HttpServletRequest; // Spring Boot 3.x
+import jakarta.servlet.http.HttpSession;
 
 import java.math.BigDecimal;
 import java.net.URLEncoder;
@@ -227,6 +228,7 @@ public class DestinationController {
     @GetMapping("/destinations/{id}")
     public String destinationDetail(@PathVariable Long id,
                                     @AuthenticationPrincipal CustomUserDetails userDetails,
+                                    HttpSession session,
                                     Model model) {
         Long userId = (userDetails != null) ? userDetails.getId() : null;
 
@@ -241,8 +243,9 @@ public class DestinationController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "여행지를 찾을 수 없습니다.");
         }
 
-        // ✅ 조회수 증가
-        destinationService.incrementViewCount(id);
+        // ✅ 조회수 증가: 누적 조회수는 매번, 일별 집계(지금 뜨는 여행지)는 이 세션에서 KST 하루 1회만 센다.
+        destinationService.recordDetailView(id,
+                today -> DestinationDailyViewSession.markFirstView(session, id, today));
 
         model.addAttribute("destination", dto.getDestination());
         model.addAttribute("images", dto.getImages());

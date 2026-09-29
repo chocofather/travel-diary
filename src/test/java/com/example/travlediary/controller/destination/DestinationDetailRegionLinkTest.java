@@ -253,7 +253,7 @@ class DestinationDetailRegionLinkTest {
 
         Model model = new ExtendedModelMap();
         model.addAttribute("seoSiteBaseUrl", "https://travel.example");
-        controller.destinationDetail(7L, null, model);
+        controller.destinationDetail(7L, null, new org.springframework.mock.web.MockHttpSession(), model);
         return model;
     }
 

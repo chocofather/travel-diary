@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.travlediary.repository.destination.DestinationViewDailyMapper">
+
+    <!--
+      여행지 일별 조회 +1. 한 문장 upsert 라 동시 요청에서도 행이 둘 생기거나 증가가 빠지지 않는다.
+      view_date 는 애플리케이션이 넘긴 Asia/Seoul 날짜다. (CURDATE() 를 쓰지 않는다)
+    -->
+    <insert id="incrementDailyView">
+        INSERT INTO destination_view_daily
+            (destination_id, view_date, view_count)
+        VALUES
+            (#{destinationId}, #{viewDate}, 1)
+        ON DUPLICATE KEY UPDATE
+            view_count = view_count + 1
+    </insert>
+
+</mapper>

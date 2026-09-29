@@ -121,6 +121,46 @@
         LIMIT #{limit}
     </select>
 
+    <!--
+      메인 '지금 뜨는 여행지': 기간(양 끝 포함) 일별 조회 합계 상위 N곳. 국내 + 해외 전체라 지역 조건이 없다.
+      합계를 먼저 N곳으로 줄인 뒤 이름·사진·지역을 붙인다. 순서는 합계 내림차순, 같으면 id 오름차순이다. (RAND 없음)
+      날짜는 애플리케이션이 Asia/Seoul 기준으로 넘긴다. (CURDATE() 를 쓰지 않는다)
+      사진·지역 표시는 메인 랜드마크 카드와 같다. (대표 사진 중 순서가 가장 앞선 한 장, 직계 상위 지역)
+    -->
+    <select id="findTrendingByViewDate" resultMap="SeasonDestinationDtoMap">
+        SELECT
+            d.id AS destination_id,
+            d.region_id AS region_id,
+            dt.name,
+            (
+                SELECT di.image_url
+                FROM destination_images di
+                WHERE di.destination_id = d.id AND di.is_main = 1 AND TRIM(di.image_url) &lt;&gt; ''
+                ORDER BY di.order_index ASC, di.id ASC
+                LIMIT 1
+            ) AS image_url,
+            cc.region_name AS region_name,
+            pcc.id AS parent_region_id,
+            pcc.region_name AS parent_region_name,
+            d.season,
+            NULL AS category_id,
+            NULL AS category_name
+        FROM (
+                 SELECT dvd.destination_id,
+                        SUM(dvd.view_count) AS recent_views
+                 FROM destination_view_daily dvd
+                 WHERE dvd.view_date BETWEEN #{fromDate} AND #{toDate}
+                 GROUP BY dvd.destination_id
+                 ORDER BY recent_views DESC, dvd.destination_id ASC
+                 LIMIT #{limit}
+             ) recent
+                 JOIN destinations d ON d.id = recent.destination_id
+                 LEFT JOIN destination_translations dt ON d.id = dt.destination_id AND dt.language_code = 'ko'
+                 LEFT JOIN country_categories cc ON d.region_id = cc.id
+                 LEFT JOIN country_categories pcc ON cc.parent_id = pcc.id
+        ORDER BY recent.recent_views DESC, recent.destination_id ASC
+    </select>
+
     <!-- 카테고리 ID → 카테고리명 -->
     <select id="findCategoryNameById" resultType="string">
         SELECT name FROM categories WHERE id = #{categoryId}

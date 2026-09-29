@@ -88,24 +88,20 @@ function renderTags() {
 renderTags();
 
 /*
-  카드 이미지가 화면에서 차지하는 폭(home.css 의 카드 격자와 같은 값).
+  계절 추천 카드 폭 (home.css 의 .trip-card-list: 데스크톱 최대 네 장 폭, 좁은 화면 가로 스크롤).
   브라우저는 이 폭 × 화면 배율로 srcset 의 480w / 960w 중 알맞은 썸네일을 고른다.
 */
-const CARD_IMAGE_SIZES = '(max-width: 420px) calc(100vw - 28px), (max-width: 680px) calc(50vw - 22px), '
-    + '(max-width: 960px) calc(33vw - 24px), (max-width: 1160px) calc(20vw - 26px), 207px';
-
-// 계절 추천 카드 폭 (home.css 의 .trip-card-list: 데스크톱 최대 네 장 폭, 좁은 화면 가로 스크롤)
 const SEASON_CARD_IMAGE_SIZES = '(max-width: 420px) calc((100vw - 44px) / 1.3), '
     + '(max-width: 680px) calc((100vw - 44px) / 1.6), (max-width: 960px) calc((100vw - 72px) / 2.6), 265px';
 
-// 상위 지역이 오면 '충남 공주시' 처럼 앞에 붙인다. 상위 지역이 없는 응답(인기 여행지 등)은 지역명만 쓴다.
+// 상위 지역이 오면 '충남 공주시' 처럼 앞에 붙인다. 상위 지역이 없는 응답은 지역명만 쓴다.
 function regionText(dest) {
     return [dest.parentRegionName, dest.regionName]
         .filter(value => value && value.trim())
         .join(' ');
 }
 
-function createDestinationCard(dest, imageSizes = CARD_IMAGE_SIZES) {
+function createDestinationCard(dest, imageSizes = SEASON_CARD_IMAGE_SIZES) {
     const card = document.createElement('div');
     card.className = 'trip-card';
     // 여행지 업로드 사진은 서버가 카드 크기로 줄인 썸네일을 쓴다. 그 밖의 주소는 원래대로 둔다.
@@ -151,60 +147,4 @@ if (meta.tags.length > 0) {
     renderSeasonDestinations(currentSeason, meta.tags[0].id);
 }
 
-// =========== 7. 인기 많은 여행지 추천 (하단 인기 태그/카드) ===========
-const popularTags = localizedTags(homeI18n.popularTags, [
-    "/api/popular-destinations/domestic",
-    "/api/popular-destinations/overseas",
-    "/api/popular-destinations/history",
-    "/api/popular-destinations/photo",
-    "/api/popular-destinations/artmuseum",
-    "/api/popular-destinations/zoo"
-]).map(tag => ({label: tag.label, api: tag.id}));
-
-const popularTagList = document.getElementById('popular-tag-list');
-const recommendCardList = document.getElementById('recommend-card-list');
-
-function renderPopularTags() {
-    if (!popularTagList) return;
-    popularTagList.innerHTML = '';
-    popularTags.forEach((tag, idx) => {
-        const btn = document.createElement('button');
-        btn.className = 'tag';
-        btn.textContent = tag.label;
-        btn.onclick = () => {
-            popularTagList.querySelectorAll('.tag').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            renderPopularRecommend(tag.api);
-        };
-        if (idx === 0) btn.classList.add('active');
-        popularTagList.appendChild(btn);
-    });
-}
-
-async function renderPopularRecommend(api, limit = 5) {
-    if (!recommendCardList) return;
-    recommendCardList.innerHTML = '';
-    try {
-        const res = await fetch(`${api}?limit=${limit}`);
-        const data = await res.json();
-        if (!Array.isArray(data) || data.length === 0) {
-            const emptyState = document.createElement('div');
-            emptyState.className = 'home-empty-state';
-            emptyState.textContent = homeI18n.destinationEmpty;
-            recommendCardList.appendChild(emptyState);
-            return;
-        }
-        data.forEach(dest => {
-            recommendCardList.appendChild(createDestinationCard(dest));
-        });
-    } catch (e) {
-        const errorState = document.createElement('div');
-        errorState.className = 'home-empty-state';
-        errorState.textContent = homeI18n.destinationError;
-        recommendCardList.appendChild(errorState);
-    }
-}
-
-// =========== 8. 인기 태그/카드 최초 랜더링 ===========
-renderPopularTags();
-renderPopularRecommend(popularTags[0].api);
+// 인기 여행지는 home.html 이 서버에서 그린다. (필터 없는 편집형 영역이라 이 파일에서 다루지 않는다)
