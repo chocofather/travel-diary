@@ -9,6 +9,9 @@ public class SeasonDestinationDto {
     private String imageUrl;
     private Long regionId;
     private String regionName;
+    // 직계 상위 지역 (country_categories.parent_id). 최상위 지역이면 null 이다.
+    private Long parentRegionId;
+    private String parentRegionName;
     private String season;
 
     // 태그/카테고리 정보

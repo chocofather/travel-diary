@@ -49,6 +49,10 @@ for (const [key, value] of Object.entries(seasonMeta)) {
         break;
     }
 }
+// 개발환경(localhost)에서만 ?season= 으로 계절을 미리 본다. 그 밖에는 null 이라 위 월별 판별을 그대로 쓴다.
+const previewSeason = window.TravelDiarySeasonPreview
+    ?.previewSeasonKey(location.hostname, location.search);
+if (previewSeason) currentSeason = previewSeason;
 const meta = seasonMeta[currentSeason];
 
 // 3. DOM 메타데이터 적용
@@ -90,18 +94,29 @@ renderTags();
 const CARD_IMAGE_SIZES = '(max-width: 420px) calc(100vw - 28px), (max-width: 680px) calc(50vw - 22px), '
     + '(max-width: 960px) calc(33vw - 24px), (max-width: 1160px) calc(20vw - 26px), 207px';
 
-function createDestinationCard(dest) {
+// 계절 추천 카드 폭 (home.css 의 .trip-card-list: 데스크톱 최대 네 장 폭, 좁은 화면 가로 스크롤)
+const SEASON_CARD_IMAGE_SIZES = '(max-width: 420px) calc((100vw - 44px) / 1.3), '
+    + '(max-width: 680px) calc((100vw - 44px) / 1.6), (max-width: 960px) calc((100vw - 72px) / 2.6), 265px';
+
+// 상위 지역이 오면 '충남 공주시' 처럼 앞에 붙인다. 상위 지역이 없는 응답(인기 여행지 등)은 지역명만 쓴다.
+function regionText(dest) {
+    return [dest.parentRegionName, dest.regionName]
+        .filter(value => value && value.trim())
+        .join(' ');
+}
+
+function createDestinationCard(dest, imageSizes = CARD_IMAGE_SIZES) {
     const card = document.createElement('div');
     card.className = 'trip-card';
     // 여행지 업로드 사진은 서버가 카드 크기로 줄인 썸네일을 쓴다. 그 밖의 주소는 원래대로 둔다.
     const thumbnailAttributes = dest.cardImageSrcset
-        ? `srcset="${dest.cardImageSrcset}" sizes="${CARD_IMAGE_SIZES}"`
+        ? `srcset="${dest.cardImageSrcset}" sizes="${imageSizes}"`
         : '';
     card.innerHTML = `
         <img src="${dest.cardImageUrl || dest.imageUrl}" ${thumbnailAttributes} alt="${dest.name}" />
         <div class="trip-info">
           <h4>${dest.name}</h4>
-          <p>${dest.regionName}</p>
+          <p>${regionText(dest)}</p>
         </div>
     `;
     const image = card.querySelector('img');
@@ -127,7 +142,7 @@ async function renderSeasonDestinations(season, categoryId = null) {
     if (!listDiv) return;
     listDiv.innerHTML = '';
     data.forEach(dest => {
-        listDiv.appendChild(createDestinationCard(dest));
+        listDiv.appendChild(createDestinationCard(dest, SEASON_CARD_IMAGE_SIZES));
     });
 }
 

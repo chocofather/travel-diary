@@ -11,6 +11,8 @@
         <result property="imageUrl"     column="image_url"/>
         <result property="regionId"     column="region_id"/>
         <result property="regionName"   column="region_name"/>
+        <result property="parentRegionId"   column="parent_region_id"/>
+        <result property="parentRegionName" column="parent_region_name"/>
         <result property="season"       column="season"/>
         <result property="categoryId"   column="category_id"/>
         <result property="categoryName" column="category_name"/>
@@ -24,6 +26,8 @@
         dt.name,
         di.image_url,
         cc.region_name AS region_name,
+        pcc.id AS parent_region_id,
+        pcc.region_name AS parent_region_name,
         d.season,
         c.id AS category_id,
         c.name AS category_name
@@ -31,6 +35,8 @@
         LEFT JOIN destination_translations dt ON d.id = dt.destination_id AND dt.language_code = 'ko'
         LEFT JOIN destination_images di ON d.id = di.destination_id AND di.is_main = 1
         LEFT JOIN country_categories cc ON d.region_id = cc.id
+        <!-- 카드 지역 표시용 직계 상위 지역 (예: 공주시 → 충남). 한 줄에 최대 한 건이라 행 수는 그대로다. -->
+        LEFT JOIN country_categories pcc ON cc.parent_id = pcc.id
         LEFT JOIN destination_categories dc ON d.id = dc.destination_id
         LEFT JOIN categories c ON dc.category_id = c.id
         WHERE d.season = #{season}
@@ -50,6 +56,8 @@
             dt.name,
             di.image_url,
             cc.region_name AS region_name,
+            pcc.id AS parent_region_id,
+            pcc.region_name AS parent_region_name,
             d.season,
             NULL AS category_id,
             NULL AS category_name
@@ -57,6 +65,7 @@
                  LEFT JOIN destination_translations dt ON d.id = dt.destination_id AND dt.language_code = 'ko'
                  LEFT JOIN destination_images di ON d.id = di.destination_id AND di.is_main = 1
                  LEFT JOIN country_categories cc ON d.region_id = cc.id
+                 LEFT JOIN country_categories pcc ON cc.parent_id = pcc.id
         WHERE d.season = #{season}
         ORDER BY RAND()
             LIMIT #{limit}

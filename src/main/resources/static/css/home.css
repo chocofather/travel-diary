@@ -49,7 +49,6 @@
     }
 }
 
-.seasonal-recommend,
 .popular-recommend,
 .popular-course-section {
     padding: var(--home-section-padding) 20px;
@@ -184,7 +183,6 @@
     outline-offset: 4px;
 }
 
-.season-badge,
 .recommend-badge,
 .home-section-badge {
     display: inline-flex;
@@ -199,7 +197,6 @@
     line-height: 1.2;
 }
 
-.season-title,
 .recommend-title,
 .home-section-header h2 {
     margin: 14px 0 8px;
@@ -209,7 +206,6 @@
     letter-spacing: -0.6px;
 }
 
-.season-sub,
 .recommend-sub,
 .home-section-header p {
     margin: 0;
@@ -218,53 +214,239 @@
     line-height: 1.65;
 }
 
-/* 계절 여행 */
+/*
+  계절 여행
+  사진이 주인공인 editorial 영역이다. 제목·설명은 왼쪽 정렬로 두고,
+  주제 탭과 추천 카드가 hero 바로 아래 같은 폭으로 이어져 한 덩어리로 읽히게 한다.
+  .tag / .trip-card 는 인기 여행지 영역과 같이 쓰는 클래스라 여기서는 늘 부모로 범위를 좁힌다.
+*/
 .seasonal-recommend {
-    position: relative;
-    padding: 44px 0 var(--home-section-padding);
-    overflow: hidden;
+    width: min(var(--home-content-width), calc(100% - 40px));
+    margin: 0 auto;
+    padding: 56px 0 var(--home-section-padding);
+    text-align: left;
 }
 
 .seasonal-bg-wrapper {
-    min-height: 390px;
-    padding: 78px 20px 112px;
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    min-height: 400px;
+    padding: 48px;
+    align-items: flex-end;
+    overflow: hidden;
+    border-radius: 6px;
+    background-color: #2b3036;
     background-repeat: no-repeat;
     background-position: center;
     background-size: cover;
 }
 
+/* 사진 위에 두 겹. 아래 겹은 같은 사진의 채도만 낮춰 일러스트 느낌을 덜어 낸다. */
+.seasonal-bg-wrapper::before,
+.seasonal-bg-wrapper::after {
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    content: "";
+}
+
+.seasonal-bg-wrapper::before {
+    background: inherit;
+    filter: saturate(0.82);
+}
+
+/* 위 겹은 글자가 놓이는 왼쪽 아래만 어둡게 한다. 오른쪽 풍경은 그대로 보인다. */
+.seasonal-bg-wrapper::after {
+    background:
+        linear-gradient(90deg, rgba(14, 17, 22, 0.6) 0%, rgba(14, 17, 22, 0.34) 40%, rgba(14, 17, 22, 0) 70%),
+        linear-gradient(0deg, rgba(14, 17, 22, 0.4) 0%, rgba(14, 17, 22, 0) 55%);
+}
+
 /*
-  배경 넉 장은 알파를 쓰지 않는 사진인데 PNG 로 들어 있어 한 장에 3MB 씩 나갔다.
-  같은 1536x1024 그대로 WebP(q85) 로만 바꿨다. 크기·비율·crop 이 그대로라
-  background-size: cover 와 background-position: center 결과도 그대로다.
+  계절 배경은 static/images/home/season/ 의 고정 파일명 네 장이다.
+  이미지를 바꿀 때는 같은 이름으로 덮어쓰기만 하면 된다. (가로형 사진, background-size: cover 로 가운데 기준으로 잘린다)
+  클래스 이름은 home.js 가 붙이는 값이라 가을은 .fall 이고 파일은 autumn.webp 다.
 */
 .seasonal-bg-wrapper.spring {
-    background-image: url('/images/spring4.webp');
+    background-image: url('/images/home/season/spring.webp');
 }
 
 .seasonal-bg-wrapper.summer {
-    background-image: url('/images/summer2.webp');
+    background-image: url('/images/home/season/summer.webp');
+    /* 가운데 기준이면 구름만 남아 바다가 잘린다. 세로 기준만 아래로 내린다. */
+    background-position: center 70%;
 }
 
 .seasonal-bg-wrapper.fall {
-    background-image: url('/images/fall2.webp');
+    background-image: url('/images/home/season/autumn.webp');
+    background-position: center 35%;
+
 }
 
 .seasonal-bg-wrapper.winter {
-    background-image: url('/images/winter.webp');
+    background-image: url('/images/home/season/winter.webp');
+    background-position: center 40%;
+
 }
 
-.season-title,
-.season-sub {
+.season-header {
+    max-width: 560px;
     color: #fff;
-    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.55);
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.16);
+}
+
+.season-eyebrow {
+    display: block;
+    margin-bottom: 12px;
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    line-height: 1.4;
+    text-transform: uppercase;
+}
+
+.seasonal-bg-wrapper.spring .season-eyebrow::after { content: " · Spring"; }
+.seasonal-bg-wrapper.summer .season-eyebrow::after { content: " · Summer"; }
+.seasonal-bg-wrapper.fall .season-eyebrow::after { content: " · Autumn"; }
+.seasonal-bg-wrapper.winter .season-eyebrow::after { content: " · Winter"; }
+
+.season-title {
+    margin: 0 0 10px;
+    color: #fff;
+    font-size: clamp(26px, 3vw, 34px);
+    font-weight: 700;
+    line-height: 1.3;
+    letter-spacing: -0.035em;
+    word-break: keep-all;
 }
 
 .season-sub {
-    margin-bottom: 30px;
+    max-width: 460px;
+    margin: 0;
+    color: rgba(255, 255, 255, 0.86);
+    font-size: 15px;
+    line-height: 1.65;
+    word-break: keep-all;
 }
 
-.season-tag-list,
+/* 주제 탭: hero 바로 아래 붙는 얇은 텍스트 탭. 활성 밑줄만 브랜드색이다. */
+.season-tag-list {
+    display: flex;
+    gap: 28px;
+    overflow-x: auto;
+    box-shadow: inset 0 -1px 0 #e4e7eb;
+    scrollbar-width: none;
+}
+
+.season-tag-list::-webkit-scrollbar {
+    display: none;
+}
+
+.season-tag-list .tag {
+    position: relative;
+    flex: 0 0 auto;
+    padding: 18px 0 14px;
+    border: 0;
+    background: none;
+    color: #6a7280;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color 0.15s ease;
+}
+
+.season-tag-list .tag::after {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 2px;
+    background: transparent;
+    content: "";
+}
+
+.season-tag-list .tag:hover,
+.season-tag-list .tag.active {
+    color: #1f242b;
+}
+
+.season-tag-list .tag.active {
+    font-weight: 600;
+}
+
+.season-tag-list .tag.active::after {
+    background: var(--tripbora-primary);
+}
+
+.season-tag-list .tag:focus-visible {
+    border-radius: 2px;
+    outline: 2px solid var(--tripbora-focus);
+    outline-offset: -2px;
+}
+
+/*
+  추천 카드: 테두리·그림자 없이 사진과 글만 둔다.
+  한 줄에 놓고, 카드 폭은 네 장이 한 줄을 채우는 폭을 넘지 않는다.
+  다섯 장이면 같은 폭으로 나눠 한 줄에 들어가고, 한두 장만 와도 커지거나 길어지지 않는다.
+*/
+.trip-card-list {
+    display: flex;
+    gap: 20px;
+    min-height: 200px;
+    margin-top: 24px;
+}
+
+.trip-card-list .trip-card {
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: calc((100% - 60px) / 4);
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.trip-card-list .trip-card:hover {
+    box-shadow: none;
+}
+
+.trip-card-list .trip-card img {
+    height: auto;
+    aspect-ratio: 4 / 3;
+    border-radius: 6px;
+    background: #eef0f2;
+    transition: filter 0.2s ease;
+}
+
+.trip-card-list .trip-card:hover img {
+    filter: brightness(0.93);
+    transform: none;
+}
+
+.trip-card-list .trip-info {
+    padding: 12px 2px 0;
+}
+
+.trip-card-list .trip-info h4 {
+    margin-bottom: 4px;
+    color: #1f242b;
+    font-size: 15px;
+}
+
+.trip-card-list .trip-card:hover .trip-info h4 {
+    color: var(--tripbora-primary-hover);
+}
+
+.trip-card-list .trip-info p {
+    color: #7a828d;
+}
+
+/* 인기 여행지 태그 */
 .recommend-tag-list {
     display: flex;
     justify-content: center;
@@ -272,7 +454,6 @@
     gap: 9px;
 }
 
-.season-tag-list .tag,
 .recommend-tag-list .tag {
     padding: 8px 17px;
     border: 1px solid #cbd1d8;
@@ -285,14 +466,12 @@
     transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
 }
 
-.season-tag-list .tag:hover,
 .recommend-tag-list .tag:hover {
     border-color: var(--tripbora-border);
     background: var(--tripbora-soft);
     color: var(--tripbora-primary-hover);
 }
 
-.season-tag-list .tag.active,
 .recommend-tag-list .tag.active {
     border-color: var(--tripbora-primary);
     background: var(--tripbora-primary);
@@ -300,35 +479,21 @@
     font-weight: 700;
 }
 
-.season-tag-list .tag.active:hover,
 .recommend-tag-list .tag.active:hover {
     border-color: var(--tripbora-primary-hover);
     background: var(--tripbora-primary-hover);
     color: #fff;
 }
 
-.season-tag-list .tag:active,
 .recommend-tag-list .tag:active {
     border-color: var(--tripbora-primary-active);
     background: var(--tripbora-primary-active);
     color: #fff;
 }
 
-.season-tag-list .tag:focus-visible,
 .recommend-tag-list .tag:focus-visible {
     outline: 3px solid var(--tripbora-focus);
     outline-offset: 2px;
-}
-
-.trip-card-list {
-    position: relative;
-    z-index: 2;
-    width: min(var(--home-content-width), calc(100% - 40px));
-    min-height: 236px;
-    margin: -76px auto 0;
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: var(--home-card-gap);
 }
 
 .trip-card {
@@ -681,9 +846,27 @@
         --home-card-gap: 16px;
     }
 
-    .trip-card-list,
     .recommend-card-list {
         grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    /* 계절 추천 카드는 한 줄 가로 스크롤로 둔다. 다음 카드가 조금 보여 넘길 수 있음을 알린다. */
+    .trip-card-list {
+        gap: 16px;
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
+        scroll-snap-type: x mandatory;
+        scrollbar-width: none;
+    }
+
+    .trip-card-list::-webkit-scrollbar {
+        display: none;
+    }
+
+    .trip-card-list .trip-card {
+        flex: 0 0 calc((100% - 32px) / 2.6);
+        max-width: none;
+        scroll-snap-align: start;
     }
 
     .popular-course-list {
@@ -697,26 +880,54 @@
         --home-section-padding: 52px;
     }
 
-    .season-title,
     .recommend-title,
     .home-section-header h2 {
         font-size: 24px;
     }
 
-    .seasonal-bg-wrapper {
-        min-height: 350px;
-        padding: 62px 18px 102px;
-        background-position: center center;
+    .seasonal-recommend {
+        width: calc(100% - 32px);
+        padding-top: 36px;
     }
 
-    .trip-card-list,
-    .recommend-card-list {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+    .seasonal-bg-wrapper {
+        min-height: 340px;
+        padding: 28px 22px 26px;
+    }
+
+    /* 좁은 화면에서는 글이 폭 전체를 쓰므로 아래쪽을 기준으로 어둡게 한다. */
+    .seasonal-bg-wrapper::after {
+        background: linear-gradient(0deg, rgba(14, 17, 22, 0.68) 0%, rgba(14, 17, 22, 0.32) 52%, rgba(14, 17, 22, 0.04) 100%);
+    }
+
+    .season-title {
+        font-size: 24px;
+    }
+
+    .season-sub {
+        font-size: 14px;
+    }
+
+    .season-tag-list {
+        gap: 22px;
+    }
+
+    .season-tag-list .tag {
+        padding: 15px 0 12px;
+        font-size: 14px;
     }
 
     .trip-card-list {
-        width: calc(100% - 28px);
-        margin-top: -64px;
+        gap: 12px;
+        margin-top: 18px;
+    }
+
+    .trip-card-list .trip-card {
+        flex-basis: calc((100% - 12px) / 1.6);
+    }
+
+    .recommend-card-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .trip-card img {
@@ -769,9 +980,12 @@
 }
 
 @media (max-width: 420px) {
-    .trip-card-list,
     .recommend-card-list {
         grid-template-columns: 1fr;
+    }
+
+    .trip-card-list .trip-card {
+        flex-basis: calc((100% - 12px) / 1.3);
     }
 
     .trip-card img {
@@ -787,7 +1001,9 @@
 @media (prefers-reduced-motion: reduce) {
     .popular-course-card,
     .popular-course-photo,
-    .popular-course-arrow {
+    .popular-course-arrow,
+    .season-tag-list .tag,
+    .trip-card-list .trip-card img {
         transition: none;
     }
 }

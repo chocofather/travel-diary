@@ -65,6 +65,11 @@ public class DestinationRecommendService {
                 baseRegionNames.putIfAbsent(
                         destination.getRegionId(), destination.getRegionName());
             }
+            // 상위 지역도 같은 country_categories 이름이라 한 번에 번역을 읽는다.
+            if (destination != null && destination.getParentRegionId() != null) {
+                baseRegionNames.putIfAbsent(
+                        destination.getParentRegionId(), destination.getParentRegionName());
+            }
         }
         Map<Long, String> localizedRegionNames =
                 referenceNameLocalizationService.localizeCountryCategoryNames(
@@ -84,6 +89,10 @@ public class DestinationRecommendService {
             if (destination.getRegionId() != null) {
                 destination.setRegionName(localizedRegionNames.getOrDefault(
                         destination.getRegionId(), destination.getRegionName()));
+            }
+            if (destination.getParentRegionId() != null) {
+                destination.setParentRegionName(localizedRegionNames.getOrDefault(
+                        destination.getParentRegionId(), destination.getParentRegionName()));
             }
             if (destination.getCategoryId() != null) {
                 destination.setCategoryName(localizedCategoryNames.getOrDefault(

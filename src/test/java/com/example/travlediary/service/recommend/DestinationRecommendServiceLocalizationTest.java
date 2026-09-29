@@ -67,6 +67,50 @@ class DestinationRecommendServiceLocalizationTest {
                 List.of(7L), SupportedLanguage.JAPANESE);
     }
 
+    @Test
+    void localizesParentRegionInTheSameBatchAsTheRegion() {
+        SeasonDestinationDto gongju = new SeasonDestinationDto();
+        gongju.setId(21L);
+        gongju.setName("공산성");
+        gongju.setRegionId(371L);
+        gongju.setRegionName("공주시");
+        gongju.setParentRegionId(49L);
+        gongju.setParentRegionName("충남");
+        SeasonDestinationDto tokyo = new SeasonDestinationDto();
+        tokyo.setId(22L);
+        tokyo.setName("아사쿠사");
+        tokyo.setRegionId(92L);
+        tokyo.setRegionName("도쿄");
+        tokyo.setParentRegionId(8L);
+        tokyo.setParentRegionName("일본");
+        when(recommendMapper.findBySeason("FALL", 5)).thenReturn(List.of(gongju, tokyo));
+        when(destinationService.resolveLocalizedContentByDestinationIds(
+                List.of(21L, 22L), SupportedLanguage.ENGLISH)).thenReturn(Map.of());
+        Map<Long, String> baseRegionNames = new java.util.LinkedHashMap<>();
+        baseRegionNames.put(371L, "공주시");
+        baseRegionNames.put(49L, "충남");
+        baseRegionNames.put(92L, "도쿄");
+        baseRegionNames.put(8L, "일본");
+        when(referenceNameLocalizationService.localizeCountryCategoryNames(
+                baseRegionNames, SupportedLanguage.ENGLISH))
+                .thenReturn(Map.of(371L, "Gongju-si", 49L, "Chungnam", 92L, "Tokyo", 8L, "Japan"));
+        when(referenceNameLocalizationService.localizeCategories(
+                List.of(), SupportedLanguage.ENGLISH)).thenReturn(Map.of());
+
+        DestinationRecommendService service = new DestinationRecommendService(
+                recommendMapper, destinationService, referenceNameLocalizationService);
+
+        List<SeasonDestinationDto> result = service.findBySeason("FALL", 5, SupportedLanguage.ENGLISH);
+
+        assertThat(result.get(0).getParentRegionName()).isEqualTo("Chungnam");
+        assertThat(result.get(0).getRegionName()).isEqualTo("Gongju-si");
+        assertThat(result.get(1).getParentRegionName()).isEqualTo("Japan");
+        assertThat(result.get(1).getRegionName()).isEqualTo("Tokyo");
+        // 상위 지역을 따로 조회하지 않고 지역과 같은 한 번의 호출로 번역한다.
+        verify(referenceNameLocalizationService).localizeCountryCategoryNames(
+                baseRegionNames, SupportedLanguage.ENGLISH);
+    }
+
     private DestinationTranslation translation(Long destinationId, String name) {
         DestinationTranslation translation = new DestinationTranslation();
         translation.setDestinationId(destinationId);

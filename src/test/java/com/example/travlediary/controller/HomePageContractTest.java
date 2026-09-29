@@ -111,7 +111,9 @@ class HomePageContractTest {
                 .contains("th:text=\"${destinationName}\"");
         assertThat(homeScript)
                 .contains("home-i18n", ".dataset", "homeI18n.springTitle", "homeI18n.popularTags")
-                .contains("${dest.name}", "${dest.regionName}")
+                .contains("${dest.name}", "${regionText(dest)}")
+                // 지역은 API 가 준 상위 지역 + 지역 이름을 이어 붙인다. (화면에 지역명을 박아 두지 않는다)
+                .contains("[dest.parentRegionName, dest.regionName]")
                 .doesNotContain("데이터가 없습니다.", "불러오기에 실패했습니다.");
         assertThat(sliderScript)
                 .contains("home-i18n", ".dataset", "homeI18n.eventDetails", "homeI18n.eventBadge")

@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="https://unpkg.com/swiper@9/swiper-bundle.min.css" />
   <script src="https://unpkg.com/swiper@9/swiper-bundle.min.js" defer></script>
   <link rel="stylesheet" href="/css/slider.css?v=20260926-2" />
-  <link rel="stylesheet" href="/css/home.css" />
+  <link rel="stylesheet" href="/css/home.css?v=20260929-3" />
 </th:block>
 
 <th:block th:fragment="body">
@@ -64,16 +64,20 @@
       <div class="event-slider-bottom"></div>
     </section>
 
-    <!-- 시즌 추천 -->
-    <section class="seasonal-recommend">
+    <!--
+      시즌 추천. 계절 판별·제목·주제 탭·추천 여행지는 home.js 가 클래스 이름으로 찾아 채운다.
+      사진 hero → 주제 탭 → 추천 카드가 같은 폭으로 이어지는 한 덩어리다.
+      eyebrow 의 계절 이름은 home.js 가 wrapper 에 붙이는 계절 클래스(spring/summer/fall/winter)로 CSS 가 붙인다.
+    -->
+    <section class="seasonal-recommend" aria-labelledby="season-title">
       <div class="seasonal-bg-wrapper">
         <div class="season-header">
-          <span class="season-badge"></span>
-          <h2 class="season-title"></h2>
+          <span class="season-eyebrow" aria-hidden="true">Seasonal Picks</span>
+          <h2 class="season-title" id="season-title"></h2>
           <p class="season-sub"></p>
         </div>
-        <div class="season-tag-list"></div>
       </div>
+      <div class="season-tag-list"></div>
       <div class="trip-card-list"></div>
     </section>
 
@@ -161,7 +165,8 @@
     </section>
   </div>
 
-  <script src="/js/home.js?v=20260926-2" defer></script>
+  <script src="/js/home-season-preview.js?v=20260929-1" defer></script>
+  <script src="/js/home.js?v=20260929-2" defer></script>
   <script src="/js/slider.js?v=20260926-2" defer></script>
   <script src="/js/home-withdrawal-toast.js" defer></script>
 </th:block>
