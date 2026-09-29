@@ -18,6 +18,13 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class DestinationRecommendService {
 
+    /*
+      메인 랜드마크 카드가 고르는 카테고리. categories.name 은 UNIQUE 이고 기본(한국어) 이름이라
+      번호 대신 이 이름으로 찾는다. 관리자 화면에서 이름을 바꾸면 여기도 같이 바꿔야 한다.
+    */
+    static final String LANDMARK_CATEGORY_NAME = "랜드마크";
+    static final int HOME_LANDMARK_LIMIT = 6;
+
     private final DestinationRecommendMapper recommendMapper;
     private final DestinationService destinationService;
     private final ReferenceNameLocalizationService referenceNameLocalizationService;
@@ -33,6 +40,12 @@ public class DestinationRecommendService {
     public List<SeasonDestinationDto> findBySeason(
             String season, int limit, SupportedLanguage requestedLanguage) {
         return localize(recommendMapper.findBySeason(season, limit), requestedLanguage);
+    }
+
+    // 메인 랜드마크 카드 (최대 6곳). 이름·지역 번역은 계절 추천과 같이 한 번에 읽는다.
+    public List<SeasonDestinationDto> findHomeLandmarks(SupportedLanguage requestedLanguage) {
+        return localize(recommendMapper.findByCategoryName(LANDMARK_CATEGORY_NAME, HOME_LANDMARK_LIMIT),
+                requestedLanguage);
     }
 
     // 카테고리 이름 조회

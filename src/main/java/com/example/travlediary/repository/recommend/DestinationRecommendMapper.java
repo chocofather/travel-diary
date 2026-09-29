@@ -25,6 +25,13 @@ public interface DestinationRecommendMapper {
                                             @Param("limit") int limit);
 
     /**
+     * 카테고리 이름(categories.name, UNIQUE)이 등록된 여행지 중 대표 사진이 있는 곳 N개.
+     * 인기 점수(조회수 + 북마크 수) 내림차순, 같으면 id 오름차순이다.
+     */
+    List<SeasonDestinationDto> findByCategoryName(@Param("categoryName") String categoryName,
+                                                  @Param("limit") int limit);
+
+    /**
      * 카테고리 PK로 카테고리명 조회 (뱃지 이름 등)
      */
     String findCategoryNameById(@Param("categoryId") Long categoryId);

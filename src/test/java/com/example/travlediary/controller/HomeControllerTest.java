@@ -7,11 +7,14 @@ import com.example.travlediary.config.i18n.I18nConfig;
 import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.config.i18n.TravelDiaryLocaleResolver;
 import com.example.travlediary.dto.HomePopularCourseDto;
+import com.example.travlediary.dto.SeasonDestinationDto;
 import com.example.travlediary.model.User;
 import com.example.travlediary.model.UserRole;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.service.course.CourseService;
+import com.example.travlediary.service.file.DestinationCardThumbnailService;
+import com.example.travlediary.service.recommend.DestinationRecommendService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -30,6 +33,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -51,6 +55,10 @@ class HomeControllerTest {
 
     @MockitoBean
     private CourseService courseService;
+    @MockitoBean
+    private DestinationRecommendService recommendService;
+    @MockitoBean
+    private DestinationCardThumbnailService cardThumbnailService;
     @MockitoBean
     private UserMapper userMapper;
     @MockitoBean
@@ -91,6 +99,8 @@ class HomeControllerTest {
                     // 잡힌다. 확인하려는 것은 "바로 다음 형제의 class" 하나이므로 그 값을 직접 본다.
                     assertThat(document.selectFirst("#event-slider").nextElementSibling()
                             .hasClass("seasonal-recommend")).isTrue();
+                    // 랜드마크가 없으면 섹션을 그리지 않아 계절 추천 다음이 바로 서비스 소개다.
+                    assertThat(document.select(".home-converge")).isEmpty();
                     assertThat(document.selectFirst(".seasonal-recommend").nextElementSibling()
                             .hasClass("home-service-teaser")).isTrue();
                     assertThat(document.selectFirst(".home-service-teaser").nextElementSibling()
@@ -114,6 +124,66 @@ class HomeControllerTest {
                 });
 
         verify(courseService).getPopularCoursesForHome(SupportedLanguage.KOREAN);
+    }
+
+    @Test
+    void landmarkCardsLinkToDestinationsWithParentAndRegionNames() throws Exception {
+        SeasonDestinationDto bigBen = landmark(31L, "빅벤",
+                "https://upload.wikimedia.org/big-ben.jpg", "영국", "런던");
+        SeasonDestinationDto palace = landmark(15L, "경복궁",
+                "/uploads/destinations/palace.jpg", "서울", "종로구");
+        // 썸네일 서비스가 채워 두는 값 (여기서는 서비스가 mock 이라 미리 넣어 둔다)
+        palace.setCardImageUrl("/destination-thumbnails/v1/480/palace.jpg");
+        palace.setCardImageSrcset("/destination-thumbnails/v1/480/palace.jpg 480w, "
+                + "/destination-thumbnails/v1/960/palace.jpg 960w");
+        palace.setCardImageCoverScale(1.78);
+        SeasonDestinationDto jeju = landmark(40L, "성산일출봉",
+                "/uploads/destinations/seongsan.jpg", null, "제주");
+        List<SeasonDestinationDto> landmarks = List.of(bigBen, palace, jeju);
+        when(recommendService.findHomeLandmarks(SupportedLanguage.KOREAN)).thenReturn(landmarks);
+
+        mockMvc.perform(get("/").header("Accept-Language", "ko"))
+                .andExpect(status().isOk())
+                .andExpect(result -> {
+                    var document = Jsoup.parse(result.getResponse().getContentAsString());
+                    assertThat(document.selectFirst(".seasonal-recommend").nextElementSibling()
+                            .hasClass("home-converge")).isTrue();
+                    assertThat(document.selectFirst(".home-converge").nextElementSibling()
+                            .hasClass("home-service-teaser")).isTrue();
+                    assertThat(document.select("#home-converge-title").text()).isEqualTo("세계의 랜드마크");
+                    assertThat(document.select(".home-converge-eyebrow").text()).isEqualTo("Landmarks");
+
+                    // 있는 만큼만 그린다. 스크롤 효과가 옮기는 li 안에 링크가 있다.
+                    assertThat(document.select("[data-home-converge] > li.home-converge-card")).hasSize(3);
+                    assertThat(document.select(".home-converge-card > a.home-converge-link").eachAttr("href"))
+                            .containsExactly("/destinations/31", "/destinations/15", "/destinations/40");
+                    assertThat(document.select(".home-converge-card h3").eachText())
+                            .containsExactly("빅벤", "경복궁", "성산일출봉");
+                    assertThat(document.select(".home-converge-card p").eachText())
+                            .containsExactly("영국 런던", "서울 종로구", "제주");
+
+                    var images = document.select(".home-converge-photo img");
+                    assertThat(images.get(0).attr("src")).isEqualTo("https://upload.wikimedia.org/big-ben.jpg");
+                    assertThat(images.get(0).hasAttr("srcset")).isFalse();
+                    assertThat(images.get(1).attr("src")).isEqualTo("/destination-thumbnails/v1/480/palace.jpg");
+                    assertThat(images.get(1).attr("srcset")).contains("960w");
+                    assertThat(images.get(1).attr("sizes")).contains("calc(170px * 1.78)");
+                    assertThat(images.get(1).attr("data-original-src")).isEqualTo("/uploads/destinations/palace.jpg");
+                    assertThat(images.get(2).attr("src")).isEqualTo("/uploads/destinations/seongsan.jpg");
+                });
+
+        verify(cardThumbnailService).applyCardImages(eq(landmarks), any(), any());
+    }
+
+    private SeasonDestinationDto landmark(Long id, String name, String imageUrl,
+                                          String parentRegionName, String regionName) {
+        SeasonDestinationDto destination = new SeasonDestinationDto();
+        destination.setId(id);
+        destination.setName(name);
+        destination.setImageUrl(imageUrl);
+        destination.setParentRegionName(parentRegionName);
+        destination.setRegionName(regionName);
+        return destination;
     }
 
     @Test

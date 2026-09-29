@@ -111,6 +111,58 @@ class DestinationRecommendServiceLocalizationTest {
                 baseRegionNames, SupportedLanguage.ENGLISH);
     }
 
+    @Test
+    void homeLandmarksAskForTheLandmarkCategoryByNameAndLocalizeInOneBatch() {
+        SeasonDestinationDto bigBen = new SeasonDestinationDto();
+        bigBen.setId(31L);
+        bigBen.setName("빅벤");
+        bigBen.setRegionId(120L);
+        bigBen.setRegionName("런던");
+        bigBen.setParentRegionId(12L);
+        bigBen.setParentRegionName("영국");
+        SeasonDestinationDto palace = new SeasonDestinationDto();
+        palace.setId(15L);
+        palace.setName("경복궁");
+        palace.setRegionId(235L);
+        palace.setRegionName("종로구");
+        palace.setParentRegionId(10L);
+        palace.setParentRegionName("서울");
+        // 카테고리 번호를 코드에 두지 않고 categories.name(UNIQUE) 으로 고른다. 최대 6곳이다.
+        when(recommendMapper.findByCategoryName("랜드마크", 6)).thenReturn(List.of(bigBen, palace));
+        when(destinationService.resolveLocalizedContentByDestinationIds(
+                List.of(31L, 15L), SupportedLanguage.ENGLISH))
+                .thenReturn(Map.of(31L, translation(31L, "Big Ben"),
+                        15L, translation(15L, "Gyeongbokgung Palace")));
+        Map<Long, String> baseRegionNames = new java.util.LinkedHashMap<>();
+        baseRegionNames.put(120L, "런던");
+        baseRegionNames.put(12L, "영국");
+        baseRegionNames.put(235L, "종로구");
+        baseRegionNames.put(10L, "서울");
+        when(referenceNameLocalizationService.localizeCountryCategoryNames(
+                baseRegionNames, SupportedLanguage.ENGLISH))
+                .thenReturn(Map.of(120L, "London", 12L, "United Kingdom",
+                        235L, "Jongno-gu", 10L, "Seoul"));
+        when(referenceNameLocalizationService.localizeCategories(
+                List.of(), SupportedLanguage.ENGLISH)).thenReturn(Map.of());
+
+        DestinationRecommendService service = new DestinationRecommendService(
+                recommendMapper, destinationService, referenceNameLocalizationService);
+
+        List<SeasonDestinationDto> result = service.findHomeLandmarks(SupportedLanguage.ENGLISH);
+
+        assertThat(result).extracting(SeasonDestinationDto::getName)
+                .containsExactly("Big Ben", "Gyeongbokgung Palace");
+        assertThat(result).extracting(SeasonDestinationDto::getParentRegionName)
+                .containsExactly("United Kingdom", "Seoul");
+        assertThat(result).extracting(SeasonDestinationDto::getRegionName)
+                .containsExactly("London", "Jongno-gu");
+        // 카드마다 따로 읽지 않고 여행지 이름·지역 이름을 각각 한 번에 번역한다.
+        verify(destinationService).resolveLocalizedContentByDestinationIds(
+                List.of(31L, 15L), SupportedLanguage.ENGLISH);
+        verify(referenceNameLocalizationService).localizeCountryCategoryNames(
+                baseRegionNames, SupportedLanguage.ENGLISH);
+    }
+
     private DestinationTranslation translation(Long destinationId, String name) {
         DestinationTranslation translation = new DestinationTranslation();
         translation.setDestinationId(destinationId);
