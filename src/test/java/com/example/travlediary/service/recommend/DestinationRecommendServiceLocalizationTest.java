@@ -127,8 +127,9 @@ class DestinationRecommendServiceLocalizationTest {
         palace.setRegionName("종로구");
         palace.setParentRegionId(10L);
         palace.setParentRegionName("서울");
-        // 카테고리 번호를 코드에 두지 않고 categories.name(UNIQUE) 으로 고른다. 최대 6곳이다.
-        when(recommendMapper.findByCategoryName("랜드마크", 6)).thenReturn(List.of(bigBen, palace));
+        // 카테고리 번호를 코드에 두지 않고 categories.name(UNIQUE) 으로 고른다.
+        // 첫 화면 여섯 장 + 레일로 넘겨 볼 카드까지 최대 18곳이다.
+        when(recommendMapper.findByCategoryName("랜드마크", 18)).thenReturn(List.of(bigBen, palace));
         when(destinationService.resolveLocalizedContentByDestinationIds(
                 List.of(31L, 15L), SupportedLanguage.ENGLISH))
                 .thenReturn(Map.of(31L, translation(31L, "Big Ben"),

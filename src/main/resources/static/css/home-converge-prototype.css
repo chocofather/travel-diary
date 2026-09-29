@@ -6,6 +6,9 @@
   JS 가 격자에 진행률(--converge-progress, 0→1)을, 카드마다 곡선 위 이동량(--converge-x/y)을 넘기고
   is-converging 을 붙인다. 투명도·크기·겹침 순서만 여기서 정한다.
   is-converging 이 없으면(JS 없음·수렴 끝·모바일·reduced-motion) transform 없이 최종 배열이다.
+
+  카드 목록은 기본이 손으로 넘기는 가로 레일(scroll-snap)이다. 수렴하는 동안만 레일을 멈추고(overflow visible)
+  첫 화면 밖 카드를 숨긴다. 카드 폭과 자리는 두 상태가 같아서 수렴이 끝나 레일로 바뀔 때 움직임이 없다.
 */
 .home-converge {
     /* 바깥 카드가 벌어져 있을 때 가로 스크롤이 생기지 않게 화면 폭에서 자른다. */
@@ -14,16 +17,29 @@
     padding: 8px 20px var(--home-section-padding);
 }
 
-.home-converge-header,
-.home-converge-grid {
+/*
+  머리글과 카드 레일을 함께 담는 본문 폭 상자. 머리글이 이 안에 있어 폭이 레일과 정확히 같다.
+  (JS 는 이 상자에서 이전/다음 버튼을 찾고 is-scrollable 을 붙인다)
+*/
+.home-converge-rail {
+    position: relative;
     width: min(var(--home-content-width), 100%);
     margin-right: auto;
     margin-left: auto;
 }
 
+/* 제목·설명은 왼쪽, 이전/다음 버튼 묶음은 오른쪽. 버튼은 설명 줄 아래 끝에 맞춘다. */
 .home-converge-header {
-    margin-bottom: 32px;
-    text-align: center;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 28px;
+    text-align: left;
+}
+
+.home-converge-heading {
+    min-width: 0;
 }
 
 .home-converge-eyebrow {
@@ -53,24 +69,88 @@
 }
 
 .home-converge-grid {
+    /*
+      레일 안쪽 여백. 카드 초점 테두리가 레일 가장자리에서 잘리지 않을 만큼만 두고,
+      같은 만큼 바깥 여백을 당겨 카드가 놓이는 자리는 본문 폭 그대로다.
+    */
+    --rail-inset: 6px;
+    --rail-gap: 20px;
+    --rail-visible: 6;
     /* JS 가 카드 offsetLeft 를 격자 기준으로 읽는다. */
     position: relative;
     /*
-      데스크톱은 한 줄이다. 카드 폭은 여섯 장이 한 줄을 채우는 폭으로 고정해,
-      여섯 장이면 예전 6열 격자와 같고 그보다 적으면 같은 폭의 카드가 가운데에 모인다.
-      태블릿·모바일은 아래에서 격자로 바꾼다.
+      한 줄 레일. 카드 폭은 --rail-visible 장이 본문 폭을 채우는 폭으로 고정한다.
+      데스크톱은 여섯 장이 예전 6열과 같은 자리에 놓이고, 나머지는 오른쪽으로 이어진다.
+      카드가 그보다 적으면 양 끝 카드의 auto 여백으로 가운데에 모인다. (넘칠 때는 0 이 되어 왼쪽부터 시작한다)
     */
     display: flex;
-    justify-content: center;
-    gap: 20px;
-    padding: 0;
+    gap: var(--rail-gap);
+    width: calc(100% + 2 * var(--rail-inset));
+    margin: calc(-1 * var(--rail-inset));
+    padding: var(--rail-inset);
     list-style: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: var(--rail-inset);
+    scrollbar-width: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.home-converge-grid::-webkit-scrollbar {
+    display: none;
+}
+
+/*
+  드래그하는 동안과 버튼·키보드로 옮겨 가는 동안(is-free)은 스냅을 끈다. JS 가 카드 자리에 정확히 세운 뒤
+  멈추면 다시 켠다. 그래야 순환 경계에서 같은 모습의 자리로 옮겨 붙일 때 브라우저 스냅이 끼어들어 튀지 않는다.
+*/
+.home-converge-grid.is-dragging,
+.home-converge-grid.is-free {
+    scroll-snap-type: none;
+}
+
+/* 순환용 복제본은 수렴이 끝나 레일이 돌기 시작한 뒤에만 보인다. */
+.home-converge-grid:not(.is-looping) .home-converge-card.is-clone {
+    display: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .home-converge-rail.is-scrollable .home-converge-grid {
+        cursor: grab;
+    }
+
+    .home-converge-grid.is-dragging,
+    .home-converge-grid.is-dragging * {
+        cursor: grabbing;
+    }
 }
 
 .home-converge-card {
-    flex: 0 0 calc((100% - 5 * 20px) / 6);
+    flex: 0 0 calc((100% - (var(--rail-visible) - 1) * var(--rail-gap)) / var(--rail-visible));
     min-width: 0;
     text-align: center;
+    scroll-snap-align: start;
+}
+
+/* 원본 첫·마지막 카드(서버가 표시). 복제본이 앞뒤에 붙어도 :first-child 에 기대지 않는다. */
+.home-converge-card.is-first {
+    margin-left: auto;
+}
+
+.home-converge-card.is-last {
+    margin-right: auto;
+}
+
+/* 수렴하는 동안: 레일을 멈춰 카드가 레일 밖(화면 양 끝)에서 날아올 수 있게 하고, 첫 화면 밖 카드는 숨긴다. */
+.home-converge-grid.is-converging {
+    overflow: visible;
+}
+
+.home-converge-grid.is-converging .home-converge-card.is-offstage {
+    visibility: hidden;
 }
 
 .home-converge-grid.is-converging .home-converge-card {
@@ -141,32 +221,122 @@
     word-break: keep-all;
 }
 
-/* 태블릿: 세 장씩 두 줄. 가운데 열은 제자리, 양옆 열만 짧게 모인다. (거리는 JS) */
+/*
+  이전/다음 버튼 묶음: 머리글 오른쪽의 한 세트. 레일을 넘길 수 있을 때만 JS 가 두 버튼을 보여 준다(hidden 해제).
+  바깥 테두리와 모서리는 두 버튼이 나눠 그리고, 가운데 세로선은 이전 버튼의 오른쪽 테두리다.
+  버튼이 숨으면 묶음도 아무것도 그리지 않는다.
+  설명 줄 아래 끝에 맞추면 제목에서 떠 보여, 10px 내려 카드 쪽으로 붙인다. (머리글 높이는 그대로다)
+*/
+.home-converge-nav-group {
+    position: relative;
+    top: 10px;
+    display: inline-flex;
+    flex: none;
+}
+
+.home-converge-nav {
+    position: relative;
+    display: inline-flex;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #d3d8de;
+    background: #fff;
+    color: #1f252d;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.home-converge-nav[hidden] {
+    display: none;
+}
+
+.home-converge-nav.is-prev {
+    border-right-color: #e0e4e8;
+    border-radius: 9px 0 0 9px;
+}
+
+.home-converge-nav.is-next {
+    border-left: 0;
+    border-radius: 0 9px 9px 0;
+}
+
+.home-converge-nav svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2;
+}
+
+.home-converge-nav:hover:not(:disabled),
+.home-converge-nav:focus-visible {
+    border-color: #bcc3cb;
+    background: #f3f4f6;
+}
+
+.home-converge-nav.is-prev:hover:not(:disabled),
+.home-converge-nav.is-prev:focus-visible {
+    border-right-color: #d3d8de;
+}
+
+/* 눌렀을 때 아이콘만 1px 내려앉는다. 버튼 상자는 움직이지 않아 테두리가 어긋나지 않는다. */
+.home-converge-nav:active:not(:disabled) svg {
+    transform: translateY(1px);
+}
+
+.home-converge-nav:focus-visible {
+    z-index: 1;
+    outline: 2px solid var(--tripbora-focus);
+    outline-offset: 2px;
+}
+
+.home-converge-nav:disabled {
+    background: #fcfcfd;
+    color: #a3aab3;
+    cursor: default;
+    opacity: 0.7;
+}
+
+/* 태블릿: 한 줄에 네 장. 양옆 카드만 짧게 모인다. (거리는 JS) */
 @media (max-width: 960px) {
     .home-converge-grid {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 28px 16px;
+        --rail-gap: 16px;
+        --rail-visible: 4;
     }
 }
 
-/* 모바일: 두 장씩 세 줄. 수렴 없이 최종 배열만 보인다. (JS 도 이 폭에서는 멈춘다) */
+/*
+  모바일: 수렴 없이 바로 레일이다. (JS 도 이 폭에서는 수렴을 멈춘다)
+  화면 끝까지 넘겨 보도록 레일을 좌우 여백 밖으로 넓히고, 다음 카드가 조금 보여 넘길 수 있음을 알린다.
+  버튼 묶음은 숨기고 스와이프만 쓴다. 머리글은 왼쪽 정렬 그대로 한 단으로 쌓인다.
+*/
 @media (max-width: 680px) {
+    .home-converge-grid {
+        --rail-inset: 16px;
+        --rail-gap: 12px;
+        --rail-visible: 2.3;
+    }
+
+    .home-converge-nav-group {
+        display: none;
+    }
+
     .home-converge {
         padding: 0 16px var(--home-section-padding);
     }
 
     .home-converge-header {
-        margin-bottom: 24px;
+        display: block;
+        margin-bottom: 20px;
     }
 
     .home-converge-header h2 {
         font-size: 24px;
-    }
-
-    .home-converge-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 24px 12px;
     }
 
     .home-converge-grid.is-converging .home-converge-card {
@@ -181,7 +351,12 @@
         transform: none;
     }
 
-    .home-converge-photo img {
+    .home-converge-photo img,
+    .home-converge-nav {
         transition: none;
+    }
+
+    .home-converge-nav:active:not(:disabled) svg {
+        transform: none;
     }
 }

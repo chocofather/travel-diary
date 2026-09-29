@@ -23,7 +23,8 @@ public class DestinationRecommendService {
       번호 대신 이 이름으로 찾는다. 관리자 화면에서 이름을 바꾸면 여기도 같이 바꿔야 한다.
     */
     static final String LANDMARK_CATEGORY_NAME = "랜드마크";
-    static final int HOME_LANDMARK_LIMIT = 6;
+    // 첫 화면에 여섯 장이 보이고, 나머지는 레일을 넘겨 본다.
+    static final int HOME_LANDMARK_LIMIT = 18;
 
     private final DestinationRecommendMapper recommendMapper;
     private final DestinationService destinationService;

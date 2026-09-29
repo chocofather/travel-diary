@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="/css/slider.css?v=20260926-2" />
   <link rel="stylesheet" href="/css/home.css?v=20260929-3" />
   <!-- 랜드마크 아치 카드 (스크롤 수렴) -->
-  <link rel="stylesheet" href="/css/home-converge-prototype.css?v=20260929-3" />
+  <link rel="stylesheet" href="/css/home-converge-prototype.css?v=20260930-4" />
 </th:block>
 
 <th:block th:fragment="body">
@@ -84,30 +84,49 @@
     </section>
 
     <!--
-      랜드마크: '랜드마크' 카테고리가 등록된 여행지 최대 6곳 (HomeController → homeLandmarks).
+      랜드마크: '랜드마크' 카테고리가 등록된 여행지 최대 18곳 (HomeController → homeLandmarks).
       한 곳도 없으면 섹션을 그리지 않는다. 좌우에서 모이는 스크롤 효과는 home-converge-prototype.js 가
       .home-converge-card(li) 를 옮기므로, 링크는 그 안에 두고 li 는 그대로 둔다.
+      첫 화면 카드가 모두 모인 뒤에는 목록(ul)이 손으로 넘기는 가로 레일이 된다. 자동으로 넘기지 않는다.
+      카드가 한 화면을 넘으면 JS 가 원본 앞뒤에 보이기만 하는 복제본(aria-hidden, 링크 tabindex=-1)을 붙여 끝없이 돈다.
+      is-first / is-last 는 원본 첫·마지막 카드 표시다(카드가 적을 때 가운데 정렬용, 복제본에는 없다).
+      이전/다음 버튼은 머리글 오른쪽의 한 묶음이고, 넘길 카드가 있을 때만 JS 가 보여 준다.
+      머리글과 레일을 같은 상자(.home-converge-rail)에 두어 폭이 정확히 같고, JS 도 이 상자에서 버튼을 찾는다.
       지역은 계절 추천 카드와 같이 "상위 지역 + 지역"이고, 둘 다 서버가 요청 언어로 바꿔 둔 이름이다.
     -->
     <section class="home-converge" aria-labelledby="home-converge-title"
              th:if="${!#lists.isEmpty(homeLandmarks)}">
+      <div class="home-converge-rail">
       <div class="home-converge-header">
-        <span class="home-converge-eyebrow" aria-hidden="true">Landmarks</span>
-        <h2 id="home-converge-title" th:text="#{home.landmark.title}">세계의 랜드마크</h2>
-        <p th:text="#{home.landmark.description}">한 번쯤 직접 만나보고 싶은 세계의 상징적인 명소를 둘러보세요.</p>
+        <div class="home-converge-heading">
+          <span class="home-converge-eyebrow" aria-hidden="true">Landmarks</span>
+          <h2 id="home-converge-title" th:text="#{home.landmark.title}">세계의 랜드마크</h2>
+          <p th:text="#{home.landmark.description}">한 번쯤 직접 만나보고 싶은 세계의 상징적인 명소를 둘러보세요.</p>
+        </div>
+        <div class="home-converge-nav-group">
+          <button type="button" class="home-converge-nav is-prev" data-home-converge-prev hidden
+                  aria-controls="home-converge-list" th:aria-label="#{home.landmark.previous}">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>
+          </button>
+          <button type="button" class="home-converge-nav is-next" data-home-converge-next hidden
+                  aria-controls="home-converge-list" th:aria-label="#{home.landmark.next}">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
+        </div>
       </div>
-      <ul class="home-converge-grid" data-home-converge>
-        <li class="home-converge-card" th:each="landmark : ${homeLandmarks}">
+      <ul class="home-converge-grid" id="home-converge-list" data-home-converge>
+        <li class="home-converge-card" th:each="landmark : ${homeLandmarks}"
+            th:classappend="|${landmarkStat.first ? 'is-first' : ''} ${landmarkStat.last ? 'is-last' : ''}|">
           <a class="home-converge-link" th:href="@{/destinations/{id}(id=${landmark.id})}">
             <div class="home-converge-photo">
               <!--
                 여행지 업로드 사진은 카드 크기 썸네일을 쓰고, 받지 못하면 원본으로 한 번 되돌린다.
-                sizes 는 아치 칸 폭(6열 → 3열 → 2열)에 3:4 칸을 cover 로 채울 때의 사진 폭 배율을 곱한 값이다.
+                sizes 는 레일 카드 폭(한 화면 6장 → 4장 → 2.3장)에 3:4 칸을 cover 로 채울 때의 사진 폭 배율을 곱한 값이다.
               -->
               <img th:src="${landmark.cardImageUrl != null} ? ${landmark.cardImageUrl} : @{${landmark.imageUrl}}"
                    th:with="k=${landmark.cardImageCoverScale}"
                    th:attr="srcset=${landmark.cardImageSrcset},
-                            sizes=${landmark.cardImageSrcset != null} ? ('(max-width: 680px) calc((50vw - 22px) * ' + ${k} + '), (max-width: 960px) calc((33vw - 24px) * ' + ${k} + '), (max-width: 1160px) calc((16.7vw - 23px) * ' + ${k} + '), calc(170px * ' + ${k} + ')') : null,
+                            sizes=${landmark.cardImageSrcset != null} ? ('(max-width: 680px) calc((43.5vw - 21px) * ' + ${k} + '), (max-width: 960px) calc((25vw - 22px) * ' + ${k} + '), (max-width: 1160px) calc((16.7vw - 23px) * ' + ${k} + '), calc(170px * ' + ${k} + ')') : null,
                             data-original-src=${landmark.cardImageUrl != null} ? @{${landmark.imageUrl}} : null"
                    onerror="if (this.dataset.originalSrc) { this.removeAttribute('srcset'); this.src = this.dataset.originalSrc; delete this.dataset.originalSrc; }"
                    alt="" loading="lazy" decoding="async">
@@ -118,6 +137,7 @@
           </a>
         </li>
       </ul>
+      </div>
     </section>
 
     <section class="home-service-teaser" aria-labelledby="home-service-teaser-title">
@@ -209,6 +229,6 @@
   <script src="/js/slider.js?v=20260926-2" defer></script>
   <script src="/js/home-withdrawal-toast.js" defer></script>
   <!-- 랜드마크 아치 카드 (스크롤 수렴) -->
-  <script src="/js/home-converge-prototype.js?v=20260929-4" defer></script>
+  <script src="/js/home-converge-prototype.js?v=20260930-2" defer></script>
 </th:block>
 </html>

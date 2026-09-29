@@ -155,6 +155,10 @@ class HomeControllerTest {
 
                     // 있는 만큼만 그린다. 스크롤 효과가 옮기는 li 안에 링크가 있다.
                     assertThat(document.select("[data-home-converge] > li.home-converge-card")).hasSize(3);
+                    // 순환 복제본이 앞뒤에 붙어도 원본 첫·마지막 카드를 알 수 있게 서버가 표시한다.
+                    assertThat(document.select(".home-converge-card.is-first h3").text()).isEqualTo("빅벤");
+                    assertThat(document.select(".home-converge-card.is-last h3").text()).isEqualTo("성산일출봉");
+                    assertThat(document.select(".home-converge-card.is-clone")).isEmpty();
                     assertThat(document.select(".home-converge-card > a.home-converge-link").eachAttr("href"))
                             .containsExactly("/destinations/31", "/destinations/15", "/destinations/40");
                     assertThat(document.select(".home-converge-card h3").eachText())
@@ -170,6 +174,17 @@ class HomeControllerTest {
                     assertThat(images.get(1).attr("sizes")).contains("calc(170px * 1.78)");
                     assertThat(images.get(1).attr("data-original-src")).isEqualTo("/uploads/destinations/palace.jpg");
                     assertThat(images.get(2).attr("src")).isEqualTo("/uploads/destinations/seongsan.jpg");
+
+                    // 수동 레일의 이전/다음 버튼: button + aria-label, 넘길 카드가 있을 때만 JS 가 보여 준다.
+                    var rail = document.selectFirst(".home-converge-rail");
+                    assertThat(rail.selectFirst("#home-converge-list[data-home-converge]")).isNotNull();
+                    var navButtons = rail.select("button.home-converge-nav");
+                    assertThat(navButtons.eachAttr("aria-label"))
+                            .containsExactly("이전 랜드마크", "다음 랜드마크");
+                    assertThat(navButtons.eachAttr("aria-controls"))
+                            .containsExactly("home-converge-list", "home-converge-list");
+                    assertThat(navButtons).allMatch(button -> button.hasAttr("hidden")
+                            && "button".equals(button.attr("type")));
                 });
 
         verify(cardThumbnailService).applyCardImages(eq(landmarks), any(), any());
