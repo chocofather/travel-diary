@@ -306,7 +306,7 @@ class HomeControllerTest {
                             .contains("1,284 views")
                             .contains("5 places");
                     assertThat(document.selectFirst("#home-i18n").attr("data-spring-title"))
-                            .isEqualTo("Spring Destinations Worth Remembering");
+                            .isEqualTo("Spring: Great Places to Go Now");
                     assertThat(document.selectFirst("#home-i18n").attr("data-event-details"))
                             .isEqualTo("View details");
                 });
