@@ -142,9 +142,8 @@
     <div id="site-menu" class="site-menu" hidden>
       <nav class="site-menu-nav" th:aria-label="#{header.menu.label}">
         <!--
-          위에서 아래로 한 방향으로만 읽히게 둔다.
-          1차 메뉴가 가로로 한 줄 나오고 그 아래 같은 이름이 다시 나오면 두 번 읽게 된다.
-          그래서 1차 메뉴 자체가 제목 자리를 맡고 하위 링크가 그 아래에 붙는다.
+          직접 링크는 그대로 두고 하위 링크가 있는 그룹만 접는다.
+          같은 name의 native details는 한 그룹씩 열리고 기존 메뉴 닫기 로직이 초기화한다.
         -->
         <ul class="site-menu-list">
           <li class="site-menu-entry">
@@ -154,30 +153,43 @@
             <a th:replace="~{fragments/header :: linkOverseas}"></a>
           </li>
           <li class="site-menu-entry">
-            <a th:replace="~{fragments/header :: linkCommunity}"></a>
-            <ul th:replace="~{fragments/header :: communityLinks}"></ul>
+            <details class="site-menu-group" name="site-menu-group">
+              <summary th:text="#{nav.community}">여행 커뮤니티</summary>
+              <ul th:replace="~{fragments/header :: communityLinks}"></ul>
+            </details>
           </li>
           <li class="site-menu-entry">
-            <a th:replace="~{fragments/header :: linkTravelInfo}"></a>
-            <ul th:replace="~{fragments/header :: infoLinks}"></ul>
+            <details class="site-menu-group" name="site-menu-group">
+              <summary th:text="#{nav.travelInfo}">여행정보</summary>
+              <ul th:replace="~{fragments/header :: infoLinks}"></ul>
+            </details>
           </li>
           <li class="site-menu-entry">
-            <a th:replace="~{fragments/header :: linkDiaries}"></a>
-            <ul th:replace="~{fragments/header :: recordLinks}"></ul>
+            <details class="site-menu-group" name="site-menu-group">
+              <summary th:text="#{nav.travelRecords}">여행기록</summary>
+              <ul th:replace="~{fragments/header :: recordLinks}"></ul>
+            </details>
           </li>
           <li class="site-menu-entry">
-            <a th:replace="~{fragments/header :: linkSupport}"></a>
-            <ul th:replace="~{fragments/header :: supportLinks}"></ul>
+            <details class="site-menu-group" name="site-menu-group">
+              <summary th:text="#{nav.support}">고객센터</summary>
+              <ul th:replace="~{fragments/header :: supportLinks}"></ul>
+            </details>
           </li>
           <li class="site-menu-entry">
-            <a th:replace="~{fragments/header :: linkEvents}"></a>
-            <ul th:replace="~{fragments/header :: eventLinks}"></ul>
+            <details class="site-menu-group" name="site-menu-group">
+              <summary th:text="#{nav.events}">이벤트</summary>
+              <ul th:replace="~{fragments/header :: eventLinks}"></ul>
+            </details>
           </li>
         </ul>
         <!-- 넓은 화면의 소개 아이콘을 대신하는 보조 링크. 1차 메뉴와 섞지 않고 목록 아래에 둔다. -->
-        <a href="/about" class="site-menu-about" th:text="#{header.about}">TripBora 소개</a>
         <div class="site-menu-utilities">
-          <div th:replace="~{fragments/language-menu :: languageMenu}"></div>
+          <a href="/about" class="site-menu-about">
+            <span th:text="#{header.about}">TripBora 소개</span>
+            <span class="site-menu-utility-chevron" aria-hidden="true"></span>
+          </a>
+          <div th:replace="~{fragments/language-menu :: mobileLanguageMenu}"></div>
         </div>
       </nav>
     </div>

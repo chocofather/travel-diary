@@ -367,9 +367,70 @@ body {
 
 }
 
-/*
-  모바일도 같은 세로 메뉴를 쓴다. 구조는 그대로 두고 여백과 글자만 조금 줄인다.
-*/
+/* 접힌 메뉴 전용. 펼쳐진 데스크톱 navigation에는 적용하지 않는다. */
+@media (max-width: 1199px) {
+    .site-menu {
+        max-height: calc(100dvh - 100px);
+        padding: 8px 16px 12px;
+        overscroll-behavior-y: contain;
+        scrollbar-width: thin;
+        box-shadow: none;
+    }
+
+    .site-menu-entry + .site-menu-entry { border-top: 0; }
+
+    .site-menu-entry > a:only-child,
+    .site-menu-group > summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 42px;
+        padding: 0;
+        color: #333;
+        font-size: 15px;
+        font-weight: 600;
+        line-height: 1.4;
+        list-style: none;
+        cursor: pointer;
+    }
+
+    .site-menu-group > summary::-webkit-details-marker { display: none; }
+    .site-menu-group > summary::after {
+        content: "";
+        flex: none;
+        width: 7px;
+        height: 7px;
+        margin: 0 4px 4px 12px;
+        border-right: 1.5px solid #777;
+        border-bottom: 1.5px solid #777;
+        transform: rotate(45deg);
+    }
+    .site-menu-group[open] > summary::after {
+        transform: translateY(4px) rotate(-135deg);
+    }
+    .site-menu-group > summary:focus-visible {
+        outline: 2px solid var(--tripbora-focus);
+        outline-offset: -2px;
+    }
+    .site-menu-entry ul { padding: 0 0 4px 12px; }
+    .site-menu-entry ul li a {
+        display: flex;
+        align-items: center;
+        min-height: 34px;
+        padding: 0;
+        font-size: 13px;
+        line-height: 1.4;
+    }
+    .site-menu .site-menu-about {
+        margin-top: 8px;
+        padding: 8px 0;
+        color: #666;
+        font-size: 13px;
+        font-weight: 400;
+    }
+}
+
+/* 모바일 로고 크기와 메뉴의 좌우 여백 */
 @media (max-width: 767px) {
     /* 오른쪽 검색·메뉴·언어·로그인 묶음(약 236px)과 겹치지 않도록 좁은 화면에서 함께 줄인다. */
     .logo {
@@ -382,18 +443,6 @@ body {
         padding: 8px 16px 16px;
     }
 
-    .site-menu-entry > a {
-        padding: 11px 0 5px;
-        font-size: 15px;
-    }
-
-    .site-menu-entry ul {
-        padding-bottom: 8px;
-    }
-
-    .site-menu-entry ul li a {
-        font-size: 13px;
-    }
 }
 
 /* ---------- 검색창 (헤더 오른쪽) ---------- */
@@ -1035,6 +1084,72 @@ body {
     .site-menu-utilities .language-menu-option {
         min-height: 44px;
         border-radius: 0;
+    }
+}
+
+/* 모바일 메뉴의 utility와 언어 subview. 데스크톱 언어 popover는 그대로 둔다. */
+@media (max-width: 1199px) {
+    .site-menu-utilities .site-menu-about,
+    .site-menu-utilities .language-menu-toggle {
+        display: flex;
+        align-items: center;
+        min-height: 38px;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        color: #666;
+        font-size: 13px;
+        font-weight: 400;
+        gap: 10px;
+    }
+    .site-menu-utilities .site-menu-about { justify-content: space-between; }
+    .site-menu-utilities .language-menu-current { margin-left: auto; }
+    .site-menu-utility-chevron {
+        width: 6px;
+        height: 6px;
+        margin-right: 4px;
+        border-top: 1.5px solid #888;
+        border-right: 1.5px solid #888;
+        transform: rotate(45deg);
+    }
+    .site-menu-nav:has(.site-menu-language[open]) > .site-menu-list,
+    .site-menu-utilities:has(.site-menu-language[open]) > .site-menu-about,
+    .site-menu-language[open] > summary { display: none; }
+    .site-menu-utilities:has(.site-menu-language[open]) {
+        margin: 0;
+        padding: 0;
+        border: 0;
+    }
+    .site-menu-language-back {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 42px;
+        width: 100%;
+        padding: 0;
+        border: 0;
+        background: none;
+        color: #333;
+        font: inherit;
+        font-size: 14px;
+        font-weight: 600;
+        text-align: left;
+        cursor: pointer;
+    }
+    .site-menu-language .language-menu-option {
+        justify-content: flex-start;
+        gap: 10px;
+        min-height: 40px;
+        padding: 0 0 0 24px;
+        font-size: 14px;
+        font-weight: 400;
+        background: none;
+    }
+    .site-menu-language .language-menu-option.is-active { color: var(--tripbora-primary); }
+    .site-menu-language .language-menu-check { order: -1; margin-left: -20px; }
+    .site-menu-language-back:focus-visible {
+        outline: 2px solid var(--tripbora-focus);
+        outline-offset: -2px;
     }
 }
 

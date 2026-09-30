@@ -158,6 +158,11 @@ class HeaderProfileMenuTest {
                 .eachAttr("value")).containsExactly("ko", "en", "ja", "zh-CN", "zh-TW");
         assertThat(document.select(".site-menu-utilities .locale-option-form input[name=_csrf]"))
                 .hasSize(5);
+        assertThat(document.select(".site-menu-language .site-menu-language-back")).hasSize(1);
+        assertThat(document.select(".site-menu-language .language-menu-option[aria-current=true]").text())
+                .contains("繁體中文");
+        assertThat(document.select(".site-menu-utilities > a.site-menu-about[href='/about']"))
+                .hasSize(1);
         assertThat(document.select(".global-submenu a").eachText())
                 .containsExactly(
                         "旅遊問答", "旅遊攻略", "我的旅遊路線",
@@ -231,14 +236,18 @@ class HeaderProfileMenuTest {
     void theNarrowMenuLeadsToExactlyTheSamePlacesAsTheWideOne() throws Exception {
         org.jsoup.nodes.Document page = page();
 
-        // 두 메뉴는 같은 fragment 를 쓰므로 주소가 갈라질 수 없다
+        // 국내/해외는 직접 링크, 나머지는 같은 다국어 제목의 접힌 그룹이다.
         assertThat(page.select("#site-menu .site-menu-entry > a").eachAttr("href"))
-                .containsExactlyElementsOf(
-                        page.select(".main-menu > .menu-item > a").eachAttr("href"));
-        assertThat(page.select("#site-menu .site-menu-entry > a").eachText())
+                .containsExactlyElementsOf(page.select(".main-menu > .menu-item > a")
+                        .stream().limit(2).map(link -> link.attr("href")).toList());
+        assertThat(page.select("#site-menu .site-menu-entry > a, #site-menu .site-menu-group > summary").eachText())
                 .containsExactlyElementsOf(List.of(
                         "국내", "해외", "여행 커뮤니티", "여행정보",
                         "여행기록", "고객센터", "이벤트"));
+        assertThat(page.select("#site-menu .site-menu-group")).hasSize(5);
+        assertThat(page.select("#site-menu .site-menu-group[open]")).isEmpty();
+        assertThat(page.select("#site-menu .site-menu-group").eachAttr("name"))
+                .containsOnly("site-menu-group");
 
         // 넓은 화면에서 hover 로만 닿던 하위 링크도 빠지지 않는다
         List<String> submenuLinks = page.select(".global-submenu a").eachAttr("href");
@@ -252,12 +261,12 @@ class HeaderProfileMenuTest {
         org.jsoup.nodes.Document page = page();
 
         // 1차 메뉴가 제목 자리를 겸한다. 같은 이름이 두 번 나오지 않는다
-        List<String> everyLabel = page.select("#site-menu a").eachText();
+        List<String> everyLabel = page.select("#site-menu a, #site-menu summary").eachText();
         assertThat(everyLabel).doesNotHaveDuplicates();
 
         // 하위 링크는 자기 1차 메뉴 안에 들어 있다
         org.jsoup.nodes.Element community = page.select("#site-menu .site-menu-entry").stream()
-                .filter(entry -> "여행 커뮤니티".equals(entry.selectFirst("a").text()))
+                .filter(entry -> entry.select("summary").text().equals("여행 커뮤니티"))
                 .findFirst().orElseThrow();
         assertThat(community.select("ul a").eachText())
                 .containsExactly("여행 질문", "여행 팁", "나의 여행코스");
@@ -265,7 +274,7 @@ class HeaderProfileMenuTest {
         // 하위 링크가 없는 항목은 목록만 있고 빈 껍데기가 붙지 않는다
         org.jsoup.nodes.Element domestic = page.selectFirst("#site-menu .site-menu-entry");
         assertThat(domestic.selectFirst("a").text()).isEqualTo("국내");
-        assertThat(domestic.select("ul")).isEmpty();
+        assertThat(domestic.select("ul, details")).isEmpty();
     }
 
     @Test
@@ -287,14 +296,10 @@ class HeaderProfileMenuTest {
                 .contains("font-size: 14px")
                 .contains("font-weight: 400");
 
-        // 가로로 늘어놓던 예전 구조는 남아 있지 않다
-        assertThat(css).doesNotContain(".site-menu-group");
-
-        // 모바일도 같은 구조를 쓰고 여백·글자만 다르다
-        String mobile = between(css, "@media (max-width: 767px) {", "/* ---------- 검색창");
-        assertThat(mobile)
-                .contains(".site-menu-entry > a")
-                .doesNotContain("display: flex");
+        // 접힌 메뉴에서만 accordion 제목과 하위 링크의 밀도를 조정한다.
+        String narrow = between(css, "/* 접힌 메뉴 전용.", "/* 모바일 로고 크기");
+        assertThat(narrow).contains("@media (max-width: 1199px)",
+                ".site-menu-group > summary", "min-height: 42px", "min-height: 34px");
     }
 
     @Test

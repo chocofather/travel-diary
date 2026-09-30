@@ -19,7 +19,26 @@
     <span class="language-menu-chevron" aria-hidden="true"></span>
   </summary>
 
-  <div class="language-menu-popover" role="menu">
+  <div th:replace="~{fragments/language-menu :: languageOptions}"></div>
+</details>
+
+<!-- 모바일 메뉴는 같은 POST/CSRF 폼을 독립된 subview 안에서 사용한다. -->
+<details class="language-menu site-menu-language" th:fragment="mobileLanguageMenu">
+  <summary class="language-menu-toggle" th:aria-label="#{header.language.selector}">
+    <span th:text="#{header.language.label}">언어</span>
+    <span class="language-menu-current" th:text="${currentLanguage.displayName}">한국어</span>
+    <span class="site-menu-utility-chevron" aria-hidden="true"></span>
+  </summary>
+  <div class="site-menu-language-view">
+    <button type="button" class="site-menu-language-back" th:aria-label="#{header.language.back}">
+      <span aria-hidden="true">←</span>
+      <span th:text="#{header.language.selector}">언어 선택</span>
+    </button>
+    <div th:replace="~{fragments/language-menu :: languageOptions}"></div>
+  </div>
+</details>
+
+  <div class="language-menu-popover" role="menu" th:fragment="languageOptions">
     <form class="locale-option-form" method="post" th:action="@{/locale}"
           th:each="language : ${supportedLanguages}">
       <input type="hidden" name="languageTag" th:value="${language.languageTag}" />
@@ -34,6 +53,5 @@
       </button>
     </form>
   </div>
-</details>
 </body>
 </html>

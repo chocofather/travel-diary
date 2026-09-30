@@ -107,6 +107,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const siteMenu = document.getElementById('site-menu');
 
     if (siteMenuToggle && siteMenu) {
+        const languageView = siteMenu.querySelector('.site-menu-language');
+        const languageBack = siteMenu.querySelector('.site-menu-language-back');
+        languageView?.addEventListener('toggle', () => {
+            if (languageView.open) {
+                siteMenu.scrollTop = 0;
+                languageBack?.focus();
+            }
+        });
+        languageBack?.addEventListener('click', () => {
+            languageView.open = false;
+            languageView.querySelector('summary')?.focus();
+        });
         setSiteMenuOpen = (isOpen, restoreFocus = false) => {
             if (isOpen && isMobileHeader()) setSearchOpen(false);
             siteMenu.hidden = !isOpen;

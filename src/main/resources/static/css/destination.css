@@ -909,9 +909,9 @@ body:has(> main #region-fragment-container) #destination-list {
     }
 
     #region-fragment-container .category-filter-toggle {
-        min-height: 40px;
-        padding: 0 10px;
-        border-radius: 6px;
+        min-height: 34px;
+        padding: 0 8px;
+        border-radius: 4px;
         font-size: 13px;
     }
 
@@ -920,12 +920,25 @@ body:has(> main #region-fragment-container) #destination-list {
         right: 0;
         width: auto;
         max-width: none;
-        border-radius: 8px;
+        padding: 6px;
+        border-radius: 6px;
+        box-shadow: none;
+    }
+
+    #region-fragment-container .category-filter-options {
+        max-height: 252px;
+        gap: 2px 4px;
+        scrollbar-width: thin;
+        scrollbar-color: #d4d4dc transparent;
+        overscroll-behavior-y: contain;
     }
 
     #region-fragment-container .category-filter-option {
-        min-height: 40px;
+        min-height: 34px;
+        padding: 4px 8px;
         border-radius: 4px;
+        font-size: 13px;
+        line-height: 1.4;
     }
 
     #region-fragment-container .list-sort-buttons {
@@ -938,8 +951,8 @@ body:has(> main #region-fragment-container) #destination-list {
     }
 
     #region-fragment-container .sort-btn {
-        min-height: 40px;
-        padding: 0 10px;
+        min-height: 34px;
+        padding: 0 8px;
         font-size: 13px;
         border-radius: 4px;
     }
@@ -1012,11 +1025,26 @@ body:has(> main #region-fragment-container) #destination-list {
         border-radius: 6px;
         box-shadow: none;
         transform: none;
+        background: transparent;
+        isolation: isolate;
+        backdrop-filter: none;
+        transition: none;
+    }
+
+    /* 배경만 작게 그린다. 바깥의 투명 영역도 기존 버튼에 포함된다. */
+    #region-fragment-container .bookmark-icon::before {
+        content: "";
+        position: absolute;
+        inset: 4.5px;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.92);
+        pointer-events: none;
+        z-index: -1;
     }
 
     #region-fragment-container .bookmark-icon img {
-        width: 18px;
-        height: 18px;
+        width: 17px;
+        height: 17px;
     }
 
     /* 기본 60px !important보다 목록 범위를 좁혀 모바일 간격을 적용한다. */

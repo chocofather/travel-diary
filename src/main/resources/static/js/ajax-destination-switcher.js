@@ -1,4 +1,22 @@
 let currentRegionBarDepth = null;
+const smartphoneDestinationList = window.matchMedia('(max-width: 600px)');
+let destinationRequestVersion = 0;
+
+// 서버의 기존 size 계약을 재사용한다. 카드 숨김 없이 응답과 URL 모두 8개 기준으로 맞춘다.
+function destinationRequestUrl(url) {
+    const request = new URL(url, window.location.origin);
+    if (smartphoneDestinationList.matches) request.searchParams.set('size', '8');
+    return request.toString();
+}
+
+function syncViewportPageSize(resetPage = false) {
+    const size = smartphoneDestinationList.matches ? '8' : '12';
+    if (getCurrentPageSize() === size) return;
+    const params = new URLSearchParams(window.location.search);
+    params.set('size', size);
+    if (resetPage) params.set('page', '1');
+    return replaceRegionFragment(`/destinations/fragment?${params}`);
+}
 
 // region-bar(상단) 전용 rebind 및 depth 저장
 function rebindRegionBar() {
@@ -66,9 +84,12 @@ function syncAddressBar(requestUrl, history = 'replace') {
 
 // region-bar + 리스트 전체를 주어진 주소의 조각으로 바꾼다.
 function replaceRegionFragment(url, history = 'replace') {
+    url = destinationRequestUrl(url);
+    const version = ++destinationRequestVersion;
     return fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
         .then(r => r.text())
         .then(html => {
+            if (version !== destinationRequestVersion) return;
             const tmp = document.createElement('div');
             tmp.innerHTML = html;
             const nr = tmp.querySelector('#region-fragment-container');
@@ -96,9 +117,12 @@ function fetchRegionFragment(type, regionId, sort) {
 
 // 리스트만 교체 (type, region, sort, page, size, category 모두 URL에서 읽어옴)
 function fetchListFragmentByUrl(url, history = 'replace') {
+    url = destinationRequestUrl(url);
+    const version = ++destinationRequestVersion;
     return fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
         .then(r => r.text())
         .then(html => {
+            if (version !== destinationRequestVersion) return;
             const tmp = document.createElement('div');
             tmp.innerHTML = html;
             const dl = tmp.querySelector('#destination-list');
@@ -185,7 +209,10 @@ function bindCategoryFilter() {
 
 // 뒤로·앞으로 가기: 그 주소의 지역·정렬·카테고리 목록을 다시 그린다(주소는 이미 맞으므로 기록은 건드리지 않는다).
 function restoreListFromAddress() {
-    replaceRegionFragment(`/destinations/fragment${window.location.search}`, 'none');
+    const source = `/destinations/fragment${window.location.search}`;
+    // 다른 폭에서 만들어진 과거 URL도 스마트폰에서는 실제 8개 목록으로 복원한다.
+    const size = new URLSearchParams(window.location.search).get('size');
+    replaceRegionFragment(source, smartphoneDestinationList.matches && size !== '8' ? 'replace' : 'none');
 }
 
 // 페이징 바인딩 (href 그대로 사용, sort/type만 덮어쓰기)
@@ -229,6 +256,12 @@ function bindSubregionScrollArrows() {
 document.addEventListener('DOMContentLoaded', () => {
     rebindRegionBar();
     rebindList();
+    if (smartphoneDestinationList.matches) syncViewportPageSize();
+    smartphoneDestinationList.addEventListener('change', () => {
+        // 이전 폭에서 시작한 느린 응답이 새 폭의 목록을 덮지 않게 한다.
+        destinationRequestVersion++;
+        syncViewportPageSize(true);
+    });
 
     document.addEventListener('click', e => {
         // 1) 상단 아이콘(region-btn) 클릭

@@ -102,6 +102,27 @@ class DestinationListCategoryFilterTest {
     }
 
     @Test
+    void eightItemPagesUseTheSameLimitOffsetAndPaginationForAllListEndpoints() {
+        when(destinationService.countDestinationsByRegionIds(SEOUL_REGION_IDS, List.of()))
+                .thenReturn(25);
+        for (int endpoint = 0; endpoint < 3; endpoint++) {
+            Model model = new ExtendedModelMap();
+            if (endpoint == 0) {
+                controller.destinationList("domestic", 38L, 2, 8, "views", null, null, request, model);
+            } else if (endpoint == 1) {
+                controller.regionFragment("domestic", 38L, 2, 8, "views", null, null, model);
+            } else {
+                controller.destinationListFragment("domestic", 38L, 2, 8, "views", null, null, model);
+            }
+            assertThat(model.getAttribute("pageSize")).isEqualTo(8);
+            assertThat(model.getAttribute("currentPage")).isEqualTo(2);
+            assertThat(model.getAttribute("totalPages")).isEqualTo(4);
+        }
+        verify(destinationService, org.mockito.Mockito.times(3))
+                .getDestinationsByRegionIdsPaged(SEOUL_REGION_IDS, List.of(), 8, 8, "views");
+    }
+
+    @Test
     void oneCategoryIsSelectedEvenWhenAnOldMultiValueAddressIsUsed() {
         // 예전 다중 선택 주소(category=abc&category=12&category=5)는 스프링이 "abc,12,5" 로 이어 준다.
         // 잘못된 값은 버리고 첫 번째 올바른 값 하나만 쓴다. 야경(12)은 서울에 0곳이어도 있는 카테고리라 고른다.
