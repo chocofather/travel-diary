@@ -502,12 +502,14 @@
 }
 
 /*
-  인기 여행지
+  인기 여행지 / 지금 뜨는 여행지
   필터 없는 편집형 큐레이션. 첫 곳이 큰 대표(featured), 나머지 넷이 보조로 1 Large + 4 Small 을 이룬다.
   머리글과 격자가 .popular-recommend-inner 한 상자 안에 있어 좌우 끝이 맞는다.
-  카드는 상자·그림자 없이 사진이 주인공이고, 브랜드 보라는 전체보기 링크에만 쓴다.
+  상자·그림자·배지 없이 사진과 글이 주인공이고, 브랜드 보라는 hover/focus 에만 쓴다.
+  아래 여행 코스 영역과 이어지도록 아래 여백은 다른 섹션보다 짧다.
 */
 .popular-recommend {
+    padding-bottom: 32px;
     background: #fff;
     text-align: left;
 }
@@ -539,17 +541,17 @@
     gap: 4px;
     flex-shrink: 0;
     padding: 4px 0;
-    color: var(--tripbora-primary);
+    color: #4b5563;
     font-size: 14px;
     font-weight: 600;
     text-decoration: none;
     white-space: nowrap;
+    transition: color 0.15s ease;
 }
 
-.recommend-view-all:hover {
-    color: var(--tripbora-primary-hover);
-    text-decoration: underline;
-    text-underline-offset: 3px;
+.recommend-view-all:hover,
+.recommend-view-all:focus-visible {
+    color: var(--tripbora-primary);
 }
 
 .recommend-view-all:focus-visible {
@@ -632,7 +634,11 @@
 }
 
 .recommend-card:hover .recommend-card-media img {
-    transform: scale(1.02);
+    transform: scale(1.01);
+}
+
+.recommend-card:hover .recommend-card-name {
+    color: var(--tripbora-primary);
 }
 
 .recommend-card:focus-visible {
@@ -649,6 +655,7 @@
     line-height: 1.4;
     white-space: nowrap;
     text-overflow: ellipsis;
+    transition: color 0.15s ease;
 }
 
 .recommend-card-region {
@@ -1033,6 +1040,10 @@
     }
 
     /* 모바일: 대표 하나를 크게 두고 보조는 2열로 이어 둔다. (가로 스크롤 없이 세로로 읽힌다) */
+    .popular-recommend {
+        padding-bottom: 24px;
+    }
+
     .recommend-editorial {
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 20px 16px;
