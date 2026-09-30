@@ -41,7 +41,8 @@ class DestinationListCardImageRenderingTest {
         Element thumbnail = render(uploaded);
         assertThat(thumbnail.attr("src")).isEqualTo("/thumbnails/destinations/v2/480/c51f.jpg");
         assertThat(thumbnail.attr("srcset")).isEqualTo(uploaded.getCardImageSrcset());
-        assertThat(thumbnail.attr("sizes")).isEqualTo("(max-width: 600px) calc(100vw * 2.18), "
+        assertThat(thumbnail.attr("sizes")).isEqualTo("(max-width: 600px) calc((50vw - 22px) * 2.18), "
+                + "(max-width: 820px) calc((33.333333vw - 18.666667px) * 2.18), "
                 + "(max-width: 1024px) calc((50vw - 20px) * 2.18), (max-width: 1300px) calc((25vw - 28px) * 2.18), "
                 + "calc(301px * 2.18)");
         assertThat(thumbnail.attr("data-original-src")).isEqualTo("/uploads/destinations/c51f.jpg");

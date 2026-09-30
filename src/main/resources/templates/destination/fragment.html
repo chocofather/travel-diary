@@ -172,14 +172,14 @@
                             <!--
                               여행지 업로드 사진은 카드 크기 썸네일(메인 추천 카드와 같은 규칙)을 쓰고,
                               외부 주소·기본 이미지는 원래 주소 그대로 둔다. 썸네일을 받지 못하면 원본으로 한 번 되돌린다.
-                              sizes 는 destination.css 의 카드 격자(4열 → 2열 → 1열) 폭에, 4:3 칸을 cover 로 채울 때의
+                              sizes 는 destination.css 의 카드 격자(4열 → 2열 → 태블릿 3열 → 모바일 2열) 폭에, 4:3 칸을 cover 로 채울 때의
                               사진 폭 배율(가로로 긴 사진일수록 큼)을 곱한 값이다. srcset 의 폭은 실제 픽셀 그대로다.
                             -->
                             <img th:if="${d.thumbnailPath != null}"
                                  th:src="${d.cardImageUrl != null} ? ${d.cardImageUrl} : @{${d.thumbnailPath}}"
                                  th:with="k=${d.cardImageCoverScale}"
                                  th:attr="srcset=${d.cardImageSrcset},
-                                          sizes=${d.cardImageSrcset != null} ? ('(max-width: 600px) calc(100vw * ' + ${k} + '), (max-width: 1024px) calc((50vw - 20px) * ' + ${k} + '), (max-width: 1300px) calc((25vw - 28px) * ' + ${k} + '), calc(301px * ' + ${k} + ')') : null,
+                                          sizes=${d.cardImageSrcset != null} ? ('(max-width: 600px) calc((50vw - 22px) * ' + ${k} + '), (max-width: 820px) calc((33.333333vw - 18.666667px) * ' + ${k} + '), (max-width: 1024px) calc((50vw - 20px) * ' + ${k} + '), (max-width: 1300px) calc((25vw - 28px) * ' + ${k} + '), calc(301px * ' + ${k} + ')') : null,
                                           data-original-src=${d.cardImageUrl != null} ? @{${d.thumbnailPath}} : null"
                                  onerror="if (this.dataset.originalSrc) { this.removeAttribute('srcset'); this.src = this.dataset.originalSrc; delete this.dataset.originalSrc; }"
                                  th:alt="#{destination.list.card.imageAlt(${d.name})}" loading="lazy"/>
