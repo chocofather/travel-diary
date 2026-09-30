@@ -1,0 +1,195 @@
+/* 상세에만 적용한다. 데스크톱에서는 래퍼가 기존 레이아웃에 박스를 추가하지 않는다. */
+.destination-detail-page { display: contents; }
+
+.destination-detail-page .destination-description-toggle { display: none; }
+
+@media (max-width: 600px) {
+    .destination-detail-page .destination-description { line-height: 1.75; }
+    .destination-detail-page .destination-description.is-collapsible { margin-bottom: 8px; }
+    .destination-detail-page .destination-description.is-collapsible:not(.is-expanded) { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 6; overflow: hidden; }
+    .destination-detail-page .destination-description-toggle:not([hidden]) { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; padding: 0; margin-bottom: 24px; border: 0; border-radius: 0; background: none; color: #667085; font: inherit; font-size: 13px; cursor: pointer; }
+    .destination-detail-page .destination-description-toggle::after { content: '↓'; }
+    .destination-detail-page .destination-description-toggle[aria-expanded=true]::after { content: '↑'; }
+    .destination-detail-page .destination-description-toggle:focus-visible { outline: 2px solid #7654b5; outline-offset: 3px; }
+    .destination-detail-page #destination-image-modal .image-modal-nav { display: none; }
+    .destination-detail-page #destination-image-modal .image-modal-img { touch-action: pan-y; user-select: none; -webkit-user-select: none; -webkit-user-drag: none; }
+}
+
+@media (max-width: 800px) {
+    .destination-detail-page .destination-hero,
+    .destination-detail-page .carousel-wrapper,
+    .destination-detail-page .detail-container,
+    .destination-detail-page .photo-review-section,
+    .destination-detail-page .comment-section,
+    .destination-detail-page .similar-destinations .container {
+        box-sizing: border-box;
+        width: 100%;
+        padding-right: 16px;
+        padding-left: 16px;
+    }
+    .destination-detail-page .destination-hero { margin: 24px auto 14px; }
+    .destination-detail-page .breadcrumb { margin: 0 0 6px; font-size: 12px; line-height: 1.5; }
+    .destination-detail-page .breadcrumb a { display: inline-block; padding: 4px 0; color: #667085; }
+    .destination-detail-page .destination-title {
+        margin: 0 0 8px; font-size: 28px; line-height: 1.3; letter-spacing: -.025em;
+        overflow-wrap: anywhere;
+    }
+    .destination-detail-page .meta-icons { align-items: center; flex-wrap: wrap; gap: 2px 14px; font-size: 12px; }
+    .destination-detail-page .meta-icons > span { display: inline-flex; align-items: center; min-height: 36px; }
+    .destination-detail-page .meta-icons img { width: 14px; height: 14px; margin-right: 4px; object-fit: contain; }
+    .destination-detail-page #bookmark-container { margin-left: auto; gap: 4px; }
+    .destination-detail-page #bookmark-icon { width: 16px; height: 16px; }
+
+    .destination-detail-page .carousel-wrapper { margin: 0 auto 28px; }
+    .destination-detail-page .carousel { border-radius: 8px; background: #f3f4f6; }
+    .destination-detail-page .carousel .slide { aspect-ratio: 4 / 3; }
+    .destination-detail-page .carousel img { width: 100%; height: 100%; max-height: none; object-fit: cover; }
+    .destination-detail-page .carousel.no-image { width: calc(100% - 32px); aspect-ratio: 4 / 3; margin: 0 auto 28px; }
+    .destination-detail-page .carousel .nav {
+        width: 40px; height: 40px; padding: 0; border-radius: 6px; font-size: 14px; line-height: 40px;
+        background: rgba(0, 0, 0, .3);
+    }
+    .destination-detail-page .carousel .prev { left: 6px; }
+    .destination-detail-page .carousel .next { right: 6px; }
+    .destination-detail-page .carousel:has(.slide:only-child) .nav { display: none; }
+    .destination-detail-page .carousel .slide::after,
+    .destination-detail-page .carousel.no-image::after { width: 26px; height: 26px; border-radius: 6px; opacity: .8; }
+    .destination-detail-page .destination-image-attribution { justify-content: flex-start; font-size: 11px; gap: 2px 4px; }
+
+    .destination-detail-page .detail-container { margin: 0 auto 32px; }
+    .destination-detail-page .info h2,
+    .destination-detail-page .photo-review-header h2,
+    .destination-detail-page .content-comment-heading {
+        margin: 0 0 12px; padding: 0; border: 0; color: #242931; font-size: 19px; line-height: 1.4;
+        letter-spacing: -.015em;
+    }
+    .destination-detail-page .info h2::after { content: none; }
+    .destination-detail-page .destination-description { margin-bottom: 28px; font-size: 14px; color: #414955; overflow-wrap: anywhere; }
+    .destination-detail-page .destination-description p { line-height: 1.75; }
+    .destination-detail-page .destination-description p + p { margin-top: 12px; }
+    .destination-detail-page .destination-description:has(+ .destination-description-source) { margin-bottom: 10px; }
+    .destination-detail-page .destination-description-source { margin-bottom: 28px; font-size: 11px; }
+
+    .destination-detail-page .type-info-block .info-card { padding: 0; margin-bottom: 24px; border: 0; border-radius: 0; box-shadow: none; }
+    .destination-detail-page .type-info-block .info-grid { grid-template-columns: minmax(0, 1fr); gap: 0; }
+    .destination-detail-page .type-info-block .info-item { gap: 8px; padding: 8px 0; }
+    .destination-detail-page .type-info-block .info-item-icon { width: 16px; height: 16px; }
+    .destination-detail-page .type-info-block .info-item-text { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 8px; flex: 1; }
+    .destination-detail-page .type-info-block .info-item-label { padding-top: 2px; font-size: 12px; line-height: 1.5; }
+    .destination-detail-page .type-info-block .info-item-value { margin: 0; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+    .destination-detail-page .type-info-block .info-item-link { min-height: 32px; margin-top: -5px; margin-bottom: -5px; font-size: 13px; }
+    .destination-detail-page .type-info-block .info-note { margin-top: 12px; padding: 12px 0 0; border-top: 1px solid #eceef0; border-radius: 0; background: none; }
+    .destination-detail-page .type-info-block .info-note-label { margin-bottom: 5px; font-size: 12px; }
+    .destination-detail-page .type-info-block .info-note-text { font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; white-space: pre-line; }
+
+    .destination-detail-page .amenity-row { margin: 24px 0 28px; }
+    .destination-detail-page .amenities-title { display: block; margin: 0 0 12px; font-size: 16px; font-weight: 600; }
+    .destination-detail-page .amenities-list { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px 6px; }
+    .destination-detail-page .amenities-list li {
+        width: auto; height: auto; min-width: 0; gap: 6px; justify-content: flex-start;
+        border: 0; border-radius: 0; background: none; box-shadow: none; transition: none;
+    }
+    .destination-detail-page .amenity-icon { width: 24px; height: 24px; object-fit: contain; }
+    /* 이미 존재하는 다국어 이름을 상시 표시해 hover 없이 시설을 알아볼 수 있게 한다. */
+    .destination-detail-page .amenities-list li::after { content: attr(data-tooltip); color: #667085; font-size: 11px; line-height: 1.4; text-align: center; overflow-wrap: anywhere; }
+    .destination-detail-page #amenity-tooltip { display: none !important; }
+
+    .destination-detail-page .map { margin-top: 28px; padding-top: 22px; border-top: 1px solid #eceef0; }
+    /* 국내 지도는 기존 inline 높이보다 모바일 값을 우선한다. 지도 SDK/좌표는 그대로 둔다. */
+    .destination-detail-page #map,
+    .destination-detail-page .map-embed { height: 220px !important; margin-top: 12px !important; border-radius: 8px; overflow: hidden; }
+    .destination-detail-page .map-external-link { min-height: 36px; margin-top: 4px; font-size: 12px; }
+    .destination-detail-page .map-unavailable { margin-top: 12px; padding: 20px 12px; border-radius: 6px; font-size: 13px; }
+
+    .destination-detail-page .photo-review-section { margin: 32px auto 24px; }
+    .destination-detail-page .photo-review-section:has(.photo-review-list:empty) { display: none; }
+    .destination-detail-page .photo-review-header { margin-bottom: 12px; }
+    .destination-detail-page .photo-review-header h2 { margin: 0; }
+    .destination-detail-page .photo-review-header .view-all { display: inline-flex; align-items: center; min-height: 36px; font-size: 12px; color: #667085; }
+    .destination-detail-page .photo-review-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+    .destination-detail-page .photo-thumbnail { width: 100%; height: auto; aspect-ratio: 1; border-radius: 6px; }
+    .destination-detail-page .photo-thumbnail:hover { transform: none; }
+
+    .destination-detail-page .comment-section { margin: 24px auto 32px; }
+    .destination-detail-page .content-comments .content-comment-toolbar { flex-direction: row; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .destination-detail-page .content-comments .content-comment-heading { margin: 0; white-space: nowrap; }
+    .destination-detail-page .content-comments .content-comment-sort { flex-wrap: nowrap; gap: 2px; }
+    .destination-detail-page .content-comments .content-comment-sort button { min-height: 36px; padding: 4px 7px; border: 0; border-radius: 5px; color: #667085; background: none; font-size: 12px; font-weight: 500; }
+    .destination-detail-page .content-comments .content-comment-sort button.is-active { color: #7657c8; background: #f4f0fa; }
+    .destination-detail-page #comment-form { margin-bottom: 16px; padding: 10px; gap: 8px; border-color: #e0e3e8; border-radius: 6px; box-shadow: none; }
+    .destination-detail-page #comment-form textarea,
+    .destination-detail-page #guest-comment-box,
+    .destination-detail-page .reply-form textarea,
+    .destination-detail-page .edit-text { box-sizing: border-box; width: 100%; min-height: 80px; padding: 10px; font-size: 16px; line-height: 1.5; border-radius: 5px; }
+    .destination-detail-page #comment-form textarea { border: 0; padding: 2px; }
+    .destination-detail-page .comment-controls { margin-top: 0; gap: 8px; flex-wrap: wrap; }
+    .destination-detail-page .reply-form .comment-controls,
+    .destination-detail-page .edit-comment-form .comment-controls { margin-top: 8px; gap: 8px; }
+    .destination-detail-page .reply-form .image-upload-label,
+    .destination-detail-page .reply-form .submit-btn,
+    .destination-detail-page .edit-comment-form .submit-btn,
+    .destination-detail-page .content-comments .cancel-edit-btn { min-height: 36px; box-sizing: border-box; padding: 4px 10px; border-radius: 5px; font-size: 13px; font-weight: 500; }
+    .destination-detail-page .content-comments .cancel-edit-btn { background: #f3f4f6; color: #667085; }
+    .destination-detail-page #comment-form .comment-length { margin-right: auto; font-size: 12px; }
+    .destination-detail-page #comment-form .image-upload-label { min-height: 36px; box-sizing: border-box; padding: 4px 8px; font-size: 12px; border-color: #e0e3e8; }
+    .destination-detail-page #comment-form .submit-btn { min-height: 36px; padding: 4px 12px !important; font-size: 13px; }
+    .destination-detail-page .comment-image-preview { margin-top: 0; }
+    .destination-detail-page .content-comments .content-comment-list { margin-top: 16px; }
+    .destination-detail-page .content-comments .content-comment-item { padding: 14px 0; border-color: #eceef0; }
+    .destination-detail-page .content-comments .content-comment-card { grid-template-columns: 28px minmax(0, 1fr); gap: 8px; }
+    .destination-detail-page .content-comments .content-comment-avatar,
+    .destination-detail-page .content-comments .content-comment-profile-link { width: 28px; height: 28px; }
+    .destination-detail-page .content-comments .content-comment-header { flex-wrap: wrap; gap: 2px 6px; margin-bottom: 6px; }
+    .destination-detail-page .content-comments .content-comment-nickname { font-size: 13px; }
+    .destination-detail-page .content-comments .content-comment-meta { margin-left: 0; font-size: 11px; flex-wrap: wrap; white-space: normal; }
+    .destination-detail-page .content-comments .content-comment-text { font-size: 14px; line-height: 1.65; }
+    .destination-detail-page .content-comments .content-comment-actions { margin-top: 4px; gap: 2px 8px; font-size: 12px; }
+    .destination-detail-page .content-comments .content-comment-action { min-height: 36px; padding: 2px 3px; }
+    .destination-detail-page .content-comments .content-comment-like-icon { width: 16px; height: 16px; }
+    .destination-detail-page .content-comments .content-comment-replies { margin: 10px 0 0 8px; padding-left: 10px; border-color: #eceef0; }
+    .destination-detail-page .content-comments .content-comment-replies .content-comment-replies { margin-left: 0; padding-left: 0; border: 0; }
+    .destination-detail-page .content-comments .comment-images { display: flex; flex-wrap: nowrap; gap: 6px; }
+    .destination-detail-page .content-comments .comment-images .comment-image { width: calc((100% - 12px) / 3); height: auto; aspect-ratio: 1; max-width: 110px; margin-top: 8px; border-radius: 6px; }
+    .destination-detail-page .content-comments .content-comment-more { min-width: 128px; min-height: 40px; padding: 6px 14px; border-radius: 6px; font-size: 13px; }
+
+    .destination-detail-page .similar-destinations { margin: 32px 0 24px; padding: 24px 0; background: #fff; }
+    .destination-detail-page .similar-destinations-header { flex-direction: column; gap: 4px; margin-bottom: 12px; }
+    .destination-detail-page .similar-destinations-title { font-size: 18px; }
+    .destination-detail-page .similar-destinations-more { min-height: 32px; font-size: 12px; }
+    .destination-detail-page .similar-destination-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 12px; }
+    .destination-detail-page .similar-destination-card { border: 0; border-radius: 0; background: none; box-shadow: none; transform: none; }
+    .destination-detail-page .similar-destination-media { border-radius: 6px; }
+    .destination-detail-page .similar-destination-body { padding: 8px 0 0; }
+    .destination-detail-page .similar-destination-name { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; white-space: normal; font-size: 14px; line-height: 1.4; }
+    .destination-detail-page .similar-destination-region { margin-top: 4px; font-size: 12px; }
+    .destination-detail-page .similar-destination-card .similar-destination-bookmark { width: 38px; height: 38px; top: 2px; right: 2px; border: 5px solid transparent; border-radius: 11px; background-clip: padding-box; box-shadow: none; box-sizing: border-box; }
+    .destination-detail-page .similar-destination-card .similar-destination-bookmark img { width: 16px; height: 16px; }
+    .destination-detail-page .similar-destination-thumbnail { transform: none; }
+    .destination-detail-page .photo-modal-container { box-sizing: border-box; width: calc(100% - 24px); max-width: calc(100vw - 24px); height: calc(100dvh - 88px); flex-direction: column; gap: 12px; }
+    .destination-detail-page .photo-main { min-height: 0; }
+    .destination-detail-page .photo-main img { box-shadow: none; }
+    .destination-detail-page .photo-sidebar-thumbnails { box-sizing: border-box; width: 100%; flex: 0 0 auto; flex-direction: row; gap: 8px; padding: 4px; overflow-x: auto; overflow-y: hidden; border: 0; background: transparent; }
+    .destination-detail-page .photo-sidebar-thumbnails img { flex: 0 0 56px; width: 56px; height: 56px; box-sizing: border-box; transform: none; }
+    .destination-detail-page .photo-close { top: 8px; right: 8px; width: 40px; height: 40px; font-size: 26px; }
+    .destination-detail-page .photo-prev,
+    .destination-detail-page .photo-next { width: 40px; height: 40px; border-radius: 6px; font-size: 14px; }
+}
+
+/* 태블릿은 읽기 폭과 2열 정보를 활용하고 사진을 스마트폰처럼 길게 늘리지 않는다. */
+@media (min-width: 601px) and (max-width: 800px) {
+    .destination-detail-page .destination-hero,
+    .destination-detail-page .carousel-wrapper,
+    .destination-detail-page .detail-container,
+    .destination-detail-page .photo-review-section,
+    .destination-detail-page .comment-section,
+    .destination-detail-page .similar-destinations .container { padding-right: 24px; padding-left: 24px; }
+    .destination-detail-page .destination-title { font-size: 32px; }
+    .destination-detail-page .carousel .slide { aspect-ratio: 16 / 9; }
+    .destination-detail-page .carousel.no-image { width: calc(100% - 48px); aspect-ratio: 16 / 9; }
+    .destination-detail-page .type-info-block .info-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 24px; }
+    .destination-detail-page .amenities-list { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+    .destination-detail-page #map,
+    .destination-detail-page .map-embed { height: 280px !important; }
+    .destination-detail-page .photo-review-list { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+    .destination-detail-page .similar-destination-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

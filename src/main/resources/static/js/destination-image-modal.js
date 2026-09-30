@@ -13,6 +13,11 @@
     // 현재 모달이 보여주는 이미지 목록과 위치
     let images = [];
     let currentIndex = 0;
+    const mobile = window.matchMedia('(max-width: 600px)');
+    let returnFocus = null;
+    let previousOverflow = '';
+    let gesture = null;
+    let ignoreImageClick = false;
 
     function getModal() {
         return document.getElementById(MODAL_ID);
@@ -34,6 +39,8 @@
         modalImage.src = source.currentSrc || source.src;
         const messages = document.getElementById('destination-detail-i18n')?.dataset;
         modalImage.alt = source.alt || messages?.galleryFallbackAlt || '';
+        if (mobile.matches) modalImage.setAttribute('draggable', 'false');
+        else modalImage.removeAttribute('draggable');
         // 이미지가 한 장뿐이면 좌/우 버튼을 숨긴다.
         modal.classList.toggle('is-single', images.length <= 1);
         document.dispatchEvent(new CustomEvent('destination-gallery-change', {
@@ -61,7 +68,13 @@
 
         images = collectImages();
         currentIndex = Math.max(images.indexOf(image), 0);
+        returnFocus = image;
+        previousOverflow = document.body.style.overflow;
+        gesture = null;
+        ignoreImageClick = false;
         render(modal);
+        // showModal()이 닫기 버튼에 포커스를 주기 전에 숨김 접근성 상태를 해제한다.
+        modal.removeAttribute('aria-hidden');
 
         // showModal() 은 open 상태에서 호출하면 예외가 나고,
         // open 속성만 붙은 dialog 는 top layer 밖(비모달)으로 렌더링돼 화면에 보이지 않는다.
@@ -91,9 +104,24 @@
         } else {
             modal.removeAttribute('open');
         }
+        finishClose(modal);
+    }
+
+    function finishClose(modal) {
         modal.classList.remove('is-open', 'is-fallback');
+        document.body.style.overflow = previousOverflow;
+        gesture = null;
+        ignoreImageClick = false;
+        // -1은 탭 순서를 추가하지 않고 프로그램 포커스 복귀만 허용한다.
+        // 모달 이동은 기존 캐러셀의 활성 사진도 바꾸므로 현재 보이는 사진으로 복귀한다.
+        const focusTarget = returnFocus && (images[currentIndex] || returnFocus);
+        if (focusTarget?.isConnected) {
+            const tabindex = focusTarget.getAttribute('tabindex');
+            if (tabindex === null) focusTarget.setAttribute('tabindex', '-1');
+            focusTarget.focus({preventScroll: true});
+        }
+        returnFocus = null;
         modal.setAttribute('aria-hidden', 'true');
-        document.body.style.overflow = '';
 
         const modalImage = modal.querySelector('.image-modal-img');
         if (modalImage) {
@@ -121,10 +149,22 @@
             return;
         }
 
-        // 확대된 이미지를 다시 누르면 닫힌다.
+        // 스마트폰에서는 이미지 안의 탭을 배경 닫기로 전파하지 않는다.
         if (target.closest('.image-modal-img')) {
             event.preventDefault();
-            closeModal();
+            event.stopPropagation();
+            if (!mobile.matches) {
+                closeModal();
+                return;
+            }
+            if (ignoreImageClick) {
+                ignoreImageClick = false;
+                return;
+            }
+            const rect = target.closest('.image-modal-img').getBoundingClientRect();
+            const position = (event.clientX - rect.left) / rect.width;
+            if (position < .38) move(-1);
+            else if (position > .62) move(1);
             return;
         }
 
@@ -139,6 +179,32 @@
         if (!image) return;
         event.preventDefault();
         openModal(image);
+    }, true);
+
+    // pan-y는 세로 제스처를 브라우저에 맡기고 가로 이동만 이 모달이 처리한다.
+    document.addEventListener('pointerdown', (event) => {
+        const image = event.target?.closest?.('.image-modal-img');
+        if (!mobile.matches || !isOpen(getModal()) || !image || event.isPrimary === false || event.button !== 0) return;
+        ignoreImageClick = false;
+        gesture = {id: event.pointerId, x: event.clientX, y: event.clientY};
+        image.setPointerCapture?.(event.pointerId);
+    }, true);
+
+    document.addEventListener('pointerup', (event) => {
+        if (!gesture || gesture.id !== event.pointerId) return;
+        const dx = event.clientX - gesture.x;
+        const dy = event.clientY - gesture.y;
+        gesture = null;
+        ignoreImageClick = Math.max(Math.abs(dx), Math.abs(dy)) > 12;
+        if (mobile.matches && Math.abs(dx) >= 40 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+            event.preventDefault();
+            move(dx < 0 ? 1 : -1);
+        }
+    }, true);
+
+    document.addEventListener('pointercancel', () => {
+        gesture = null;
+        ignoreImageClick = true;
     }, true);
 
     // 모달이 열려 있을 때만 키보드에 반응한다.
@@ -164,8 +230,7 @@
     // ESC 등으로 dialog 가 스스로 닫힐 때 상태를 맞춘다.
     document.addEventListener('close', (event) => {
         if (event.target && event.target.id === MODAL_ID) {
-            event.target.classList.remove('is-open');
-            document.body.style.overflow = '';
+            if (!event.target.open) finishClose(event.target);
         }
     }, true);
 })();

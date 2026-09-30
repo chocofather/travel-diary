@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="/css/detail.css?v=20260927-2">
     <link rel="stylesheet" href="/css/comment.css">
     <link rel="stylesheet" href="/css/content-comment.css">
+    <link rel="stylesheet" href="/css/destination-detail-mobile.css?v=20261001-2">
     <!--
       detail-carousel.js 가 $ 를 쓴다. 공통 layout 에서 내려온 jQuery 에 기대지 않고 여기서 부른다.
       defer 라 문서 순서대로 실행된다 — head 의 이 파일이 body 의 detail-carousel.js 보다 먼저다.
@@ -16,6 +17,7 @@
 </th:block>
 
 <th:block th:fragment="body">
+    <div class="destination-detail-page">
 
     <div id="destination-detail-i18n" hidden
          th:data-gallery-fallback-alt="#{destination.detail.gallery.imageFallbackAlt}"
@@ -195,11 +197,16 @@
     <div class="detail-container">
         <section class="info">
             <h2 th:text="#{destination.detail.section.introduction}">소개</h2>
-            <div class="destination-description">
+            <div id="destination-description" class="destination-description">
                 <p th:each="paragraph : ${descriptionParagraphs}">
                     <span th:text="${paragraph}">설명</span>
                 </p>
             </div>
+            <button id="destination-description-toggle" class="destination-description-toggle" type="button"
+                    hidden aria-expanded="false" aria-controls="destination-description"
+                    th:data-expand-label="#{destination.detail.description.expand}"
+                    th:data-collapse-label="#{destination.detail.description.collapse}"
+                    th:text="#{destination.detail.description.expand}">더보기</button>
             <!-- 지금 보이는 언어의 설명에 연결된 Wikipedia 출처만 표시한다. 문구는 선택 언어를 따른다. -->
             <!-- 캡션 한 줄: 본문 출처 · Wikipedia 기여자 · 라이선스 · (수정 여부) · 원문 보기. 판본 ID 등은 펼쳐서 본다. -->
             <div th:if="${wikipediaSource != null}" class="destination-description-source">
@@ -1354,7 +1361,8 @@
 
     <!-- 자체 JS -->
     <script src="/js/detail-carousel.js" defer></script>
-    <script src="/js/destination-image-modal.js" defer></script>
+    <script src="/js/destination-image-modal.js?v=20261001-2" defer></script>
+    <script src="/js/destination-description-mobile.js?v=20261001-1" defer></script>
     <script src="/js/map-init.js" defer></script>
     <script src="/js/bookmark.js" defer></script>
     <script src="/js/detail.js" defer></script>
@@ -1397,6 +1405,6 @@
         });
     </script>
     <div id="amenity-tooltip" class="amenity-tooltip"></div>
-
+    </div>
 </th:block>
 </html>
