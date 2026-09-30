@@ -1,0 +1,176 @@
+/* 메인 전용 밀도 조정. 데스크톱과 공통 헤더에는 적용하지 않는다. */
+@media (max-width: 960px) {
+    .home-page { --home-section-padding: 40px; }
+
+    .home-page #event-slider { padding: 32px 0 16px; }
+    .home-page #event-slider .slide-inner {
+        padding: 0 24px;
+        flex-direction: row;
+        gap: 24px;
+        text-align: left;
+    }
+    .home-page #event-slider .slide-text {
+        flex: 1 1 0;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    .home-page #event-slider .slide-text .badge {
+        align-self: flex-start;
+        margin: 0;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 12px;
+    }
+    .home-page #event-slider .slide-text .title { font-size: 26px; }
+    .home-page #event-slider .slide-text .description {
+        font-size: 14px;
+        line-height: 1.5;
+        -webkit-line-clamp: 3;
+    }
+    .home-page #event-slider .slide-text a.more {
+        min-height: 40px;
+        margin-top: 2px;
+        padding: 8px 12px;
+    }
+    .home-page #event-slider .slide-img {
+        flex: 1 1 0;
+        min-width: 0;
+        height: 220px;
+        border-radius: 6px;
+    }
+    .home-page #event-slider .slider-ui {
+        width: calc(100% - 48px);
+        max-width: 400px;
+        margin: 8px 24px 0;
+        padding: 0;
+        gap: 4px;
+        font-size: 13px;
+    }
+    .home-page #event-slider button.nav { min-width: 44px; min-height: 44px; }
+    .home-page #event-slider .event-slider-bottom { height: 60px; }
+
+    .home-page .seasonal-recommend {
+        width: calc(100% - 48px);
+        padding: 36px 0 40px;
+    }
+    .home-page .seasonal-bg-wrapper { min-height: 300px; padding: 28px; }
+    .home-page .season-title { font-size: 24px; }
+    .home-page .season-sub { font-size: 14px; line-height: 1.5; }
+    .home-page .season-tag-list { gap: 20px; }
+    .home-page .season-tag-list .tag { min-height: 44px; padding: 12px 0; font-size: 14px; }
+    .home-page .trip-card-list { min-height: 0; margin-top: 16px; }
+    .home-page .trip-card-list .trip-card { flex: 0 0 calc((100% - 32px) / 3); }
+    .home-page .trip-card-list .trip-card img { height: auto; aspect-ratio: 16 / 10; }
+    .home-page .trip-card-list .trip-info { padding: 8px 0 0; }
+    .home-page .trip-card-list .trip-info p { font-size: 12px; }
+
+    .home-page .home-converge { padding: 0 24px 40px; }
+    .home-page .home-converge-header,
+    .home-page .recommend-header,
+    .home-page .home-section-header { margin-bottom: 16px; gap: 12px; }
+    .home-page .home-converge-header h2,
+    .home-page .recommend-title,
+    .home-page .home-section-header h2 { margin: 0 0 6px; font-size: 24px; }
+    .home-page .home-converge-header p,
+    .home-page .recommend-sub,
+    .home-page .home-section-header p { font-size: 14px; line-height: 1.5; }
+    .home-page .home-converge-card h3 { margin: 8px 0 3px; }
+    .home-page .home-converge-card p { font-size: 12px; }
+
+    .home-page .popular-recommend,
+    .home-page .popular-course-section { padding: 0 24px 40px; }
+    .home-page .recommend-editorial {
+        grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr));
+        gap: 16px 12px;
+    }
+    .home-page .recommend-featured { grid-column: auto; grid-row: span 2; }
+    .home-page .recommend-featured .recommend-card-media { flex: 1 1 auto; }
+    .home-page .recommend-card-media { margin-bottom: 6px; aspect-ratio: 16 / 10; }
+    .home-page .recommend-card-name { font-size: 15px; margin-bottom: 2px; }
+    .home-page .recommend-featured .recommend-card-name { font-size: 18px; }
+    .home-page .recommend-card-region { font-size: 12px; }
+    .home-page .recommend-view-all { min-height: 44px; font-size: 13px; }
+    .home-page .recommend-editorial.is-count-1 { grid-template-columns: minmax(0, 1fr); }
+    .home-page .recommend-editorial.is-count-1 .recommend-card-media { flex: none; aspect-ratio: 21 / 9; }
+
+    .home-page .popular-course-section { text-align: left; }
+    .home-page .home-section-badge {
+        min-height: 0;
+        margin-bottom: 8px;
+        padding: 0;
+        border-radius: 0;
+        color: #66717f;
+        background: none;
+        font-size: 12px;
+    }
+    .home-page .popular-course-list { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .home-page .popular-course-card { border-radius: 8px; box-shadow: none; }
+    .home-page .popular-course-card:hover { box-shadow: none; transform: none; }
+    .home-page .popular-course-visual { height: auto; flex: none; aspect-ratio: 16 / 9; }
+    /* 기존 첫 사진을 대표로 사용한다. 데스크톱의 여러 사진 구성과 데이터는 그대로다. */
+    .home-page .popular-course-visual .popular-course-photo.is-photo-1 {
+        inset: 0;
+        width: 100%;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+        transform: none;
+    }
+    .home-page .popular-course-photo:not(.is-photo-1),
+    .home-page .popular-course-image-more { display: none; }
+    .home-page .popular-course-content { padding: 10px 12px; }
+    .home-page .popular-course-card h3 { min-height: 0; font-size: 16px; line-height: 1.4; }
+    .home-page .popular-course-meta { gap: 4px; margin-bottom: 8px; font-size: 12px; }
+    .home-page .popular-course-meta > span:first-child { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .home-page .popular-course-meta > span:last-child { flex-shrink: 0; }
+    .home-page .popular-course-route { padding: 0; background: none; border-radius: 0; }
+    .home-page .popular-course-route-label { display: none; }
+    .home-page .popular-course-route-track {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        font-size: 12px;
+        font-weight: 400;
+    }
+    .home-page .popular-course-route-stop,
+    .home-page .popular-course-route-name { display: inline; white-space: normal; overflow-wrap: anywhere; }
+    .home-page .popular-course-route-dot { display: none; }
+    .home-page .popular-course-footer { margin-top: 8px; padding-top: 8px; font-size: 12px; }
+}
+
+@media (max-width: 680px) {
+    .home-page #event-slider { padding: 20px 0 12px; }
+    .home-page #event-slider .slide-inner { flex-direction: column; padding: 0 16px; gap: 16px; }
+    .home-page #event-slider .slide-text { flex: none; width: 100%; }
+    .home-page #event-slider .slide-text .title { font-size: 24px; }
+    .home-page #event-slider .slide-text .description { -webkit-line-clamp: 2; }
+    .home-page #event-slider .slide-img { flex: none; width: 100%; height: 180px; }
+    .home-page #event-slider .slider-ui { width: calc(100% - 32px); margin: 8px 16px 0; }
+    .home-page .seasonal-recommend { width: calc(100% - 32px); }
+    .home-page .seasonal-bg-wrapper { min-height: 260px; padding: 20px; }
+    .home-page .season-eyebrow { margin-bottom: 8px; }
+    .home-page .trip-card-list .trip-card { flex-basis: calc((100% - 12px) / 2); }
+    .home-page .home-converge,
+    .home-page .popular-recommend,
+    .home-page .popular-course-section { padding-right: 16px; padding-left: 16px; }
+    .home-page .home-converge-grid { --rail-visible: 2.75; }
+    .home-page .home-converge-header h2,
+    .home-page .recommend-title,
+    .home-page .home-section-header h2 { font-size: 22px; }
+    .home-page .recommend-editorial { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .home-page .recommend-featured { grid-column: 1 / -1; grid-row: auto; }
+    .home-page .recommend-featured .recommend-card-media,
+    .home-page .recommend-editorial.is-count-1 .recommend-card-media { flex: none; aspect-ratio: 2 / 1; }
+    /* 다음 코스가 보이는 수동 rail. 링크의 Tab 탐색도 브라우저가 화면 안으로 스크롤한다. */
+    .home-page .popular-course-list {
+        display: flex;
+        width: calc(100% + 32px);
+        margin: 0 -16px;
+        padding: 4px 16px;
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
+        scroll-snap-type: x proximity;
+        scroll-padding-inline: 16px;
+    }
+    .home-page .popular-course-card { flex: 0 0 74%; scroll-snap-align: start; }
+}

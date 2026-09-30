@@ -4,6 +4,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const toggleBtn = document.getElementById('search-toggle');
     const form = document.getElementById('search-form');
     const searchBox = toggleBtn?.closest('.search-box');
+    const isMobileHeader = () => window.innerWidth <= 1199;
+    let setSearchOpen = () => {};
+    let setSiteMenuOpen = () => {};
 
     if (toggleBtn && form && searchBox) {
         const searchInput = form.querySelector('input[name="q"]');
@@ -17,10 +20,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
 
-        const setSearchOpen = (isOpen, restoreFocus = false) => {
+        setSearchOpen = (isOpen, restoreFocus = false) => {
+            if (isOpen && isMobileHeader()) setSiteMenuOpen(false);
             form.classList.toggle('open', isOpen);
             searchBox.classList.toggle('search-open', isOpen);
             toggleBtn.setAttribute('aria-expanded', String(isOpen));
+            toggleBtn.setAttribute('aria-label', isOpen && isMobileHeader()
+                    ? toggleBtn.dataset.closeLabel : toggleBtn.dataset.openLabel);
             syncClearButton();
             if (isOpen) {
                 form.querySelector('input')?.focus();
@@ -54,7 +60,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         toggleBtn.addEventListener('click', e => {
             e.preventDefault();
-            setSearchOpen(true);
+            if (isMobileHeader()) {
+                setSearchOpen(!form.classList.contains('open'));
+            } else {
+                setSearchOpen(true);
+            }
         });
 
         /*
@@ -79,6 +89,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && isMobileHeader() && form.classList.contains('open')) {
+                setSearchOpen(false, true);
+            }
+        });
+
         document.addEventListener('click', e => {
             if (form.classList.contains('open') && !searchBox.contains(e.target)) {
                 setSearchOpen(false);
@@ -91,8 +107,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const siteMenu = document.getElementById('site-menu');
 
     if (siteMenuToggle && siteMenu) {
-        const setSiteMenuOpen = (isOpen, restoreFocus = false) => {
+        setSiteMenuOpen = (isOpen, restoreFocus = false) => {
+            if (isOpen && isMobileHeader()) setSearchOpen(false);
             siteMenu.hidden = !isOpen;
+            if (!isOpen) {
+                siteMenu.querySelectorAll('details[open]').forEach(details => details.removeAttribute('open'));
+            }
             siteMenuToggle.setAttribute('aria-expanded', String(isOpen));
             siteMenuToggle.setAttribute(
                     'aria-label', isOpen
@@ -120,13 +140,19 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        /* 넓은 화면으로 돌아가면 메뉴가 헤더에 다시 펼쳐지므로 판은 닫아 둔다 */
-        window.addEventListener('resize', () => {
-            if (!siteMenu.hidden && window.innerWidth > 1199) {
-                setSiteMenuOpen(false);
-            }
-        });
     }
+
+    /* 키보드/주소창에 따른 resize 는 유지하고, 모바일·데스크톱 경계를 넘을 때만 초기화한다. */
+    let wasMobileHeader = isMobileHeader();
+    window.addEventListener('resize', () => {
+        const mobileHeader = isMobileHeader();
+        if (mobileHeader !== wasMobileHeader) {
+            setSearchOpen(false);
+            setSiteMenuOpen(false);
+            searchBox?.querySelectorAll('details[open]').forEach(details => details.removeAttribute('open'));
+        }
+        wasMobileHeader = mobileHeader;
+    });
 
     /* 프로필 메뉴 */
     const profileToggle = document.getElementById('profile-menu-toggle');

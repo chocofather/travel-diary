@@ -899,6 +899,145 @@ body {
     font-family: inherit;
 }
 
+/* 모바일 헤더: 상단 컨트롤과 검색 행을 분리한다. 데스크톱 규칙은 유지한다. */
+.search-toggle-close { display: none; }
+
+@media (max-width: 1199px) {
+    .main-nav {
+        display: flex;
+        align-items: center;
+        padding: 0 16px;
+        box-sizing: border-box;
+    }
+
+    .main-nav .logo {
+        position: static;
+        width: 124px;
+        flex-shrink: 0;
+    }
+
+    .main-nav .search-box {
+        position: static;
+        margin-left: auto;
+        padding: 0;
+        gap: 4px;
+    }
+
+    .search-box > .language-menu { display: none; }
+
+    .search-box #search-toggle,
+    .search-box.search-open button#search-toggle,
+    .search-box .site-menu-toggle {
+        width: 44px;
+        height: 44px;
+        padding: 10px;
+        box-sizing: border-box;
+        justify-content: center;
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+        transition: none;
+    }
+
+    .search-box.search-open #search-toggle img { display: none; }
+    .search-box.search-open .search-toggle-close {
+        display: block;
+        position: relative;
+        width: 22px;
+        height: 22px;
+    }
+    .search-toggle-close::before,
+    .search-toggle-close::after {
+        content: '';
+        position: absolute;
+        left: 2px;
+        top: 10px;
+        width: 18px;
+        height: 2px;
+        background: currentColor;
+        transform: rotate(45deg);
+    }
+    .search-toggle-close::after { transform: rotate(-45deg); }
+
+    .search-box #auth-area { margin-left: 4px; }
+    .search-box #login-btn {
+        min-height: 44px;
+        padding: 0 12px;
+        white-space: nowrap;
+    }
+    .search-box .profile-menu-toggle { width: 44px; height: 44px; }
+
+    #search-form,
+    #search-form.open {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        width: auto;
+        max-width: none;
+        padding: 0 16px 16px;
+        box-sizing: border-box;
+        background: #fff;
+        overflow: visible;
+        transition: none;
+    }
+    #search-form { display: none; }
+    #search-form.open { display: flex; }
+    #search-form input {
+        height: 48px;
+        box-sizing: border-box;
+        padding: 0 92px 0 12px;
+        font-size: 16px;
+    }
+    #search-form .search-submit {
+        top: 2px;
+        right: 18px;
+        bottom: auto;
+        width: 44px;
+        height: 44px;
+    }
+    #search-form .search-clear {
+        top: 2px;
+        right: 62px;
+        width: 44px;
+        height: 44px;
+        transform: none;
+    }
+
+    .site-menu { max-height: calc(100dvh - 100px); }
+    .site-menu-utilities {
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid #e5e7eb;
+    }
+    .site-menu-utilities .language-menu-toggle {
+        width: 100%;
+        min-height: 44px;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        background: none;
+        box-sizing: border-box;
+        justify-content: flex-start;
+    }
+    .site-menu-utilities .language-menu-current,
+    .site-menu-utilities .language-menu-chevron { display: block; }
+    .site-menu-utilities .language-menu-chevron { margin-left: auto; }
+    .site-menu-utilities .language-menu-popover {
+        position: static;
+        width: auto;
+        max-width: none;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+    .site-menu-utilities .language-menu-option {
+        min-height: 44px;
+        border-radius: 0;
+    }
+}
+
 /* 푸터 */
 .site-footer {
     padding: 52px 24px 24px;
@@ -1014,12 +1153,76 @@ body {
 
 @media (max-width: 820px) {
     .site-footer {
-        padding: 40px 20px 22px;
+        padding: 24px 20px 18px;
     }
 
     .footer-main {
-        grid-template-columns: minmax(0, 1fr);
-        gap: 32px;
+        grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(0, 1fr));
+        gap: 24px;
+    }
+
+    .footer-logo {
+        margin-bottom: 4px;
+        font-size: 22px;
+    }
+
+    .footer-description {
+        line-height: 1.5;
+    }
+
+    .footer-column-title {
+        margin-bottom: 6px;
+    }
+
+    .footer-links {
+        gap: 0;
+    }
+
+    .footer-links li a {
+        display: flex;
+        align-items: center;
+        min-height: 32px;
+        line-height: 1.5;
+        overflow-wrap: anywhere;
+    }
+
+    .footer-info {
+        margin-top: 12px;
+        padding-top: 10px;
+        border-color: #e7e5ea;
+        font-size: 13px;
+    }
+
+    .footer-info p {
+        line-height: 1.5;
+    }
+
+    .footer-operations {
+        gap: 0 10px;
+        margin-bottom: 2px !important;
+    }
+}
+
+@media (max-width: 600px) {
+    .site-footer {
+        padding: 20px 16px 16px;
+    }
+
+    .footer-main {
+        grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+        gap: 14px 20px;
+    }
+
+    .footer-brand {
+        grid-column: 1 / -1;
+    }
+
+    .footer-operations {
+        flex-direction: column;
+    }
+
+    .footer-operation--separated::before {
+        content: none;
     }
 }
 

@@ -148,12 +148,16 @@ class HeaderProfileMenuTest {
                 .containsExactly("國內", "海外", "旅遊社群", "旅遊資訊",
                         "旅遊記錄", "客服中心", "活動");
         assertThat(document.select(
-                ".locale-option-form input[name=languageTag]").eachAttr("value"))
+                ".search-box .locale-option-form input[name=languageTag]").eachAttr("value"))
                 .containsExactly("ko", "en", "ja", "zh-CN", "zh-TW");
         assertThat(document.select(".language-menu-option[aria-current=true]").text())
                 .contains("繁體中文");
         assertThat(document.select(
-                ".locale-option-form input[name=_csrf]")).hasSize(5);
+                ".search-box .locale-option-form input[name=_csrf]")).hasSize(5);
+        assertThat(document.select(".site-menu-utilities .locale-option-form input[name=languageTag]")
+                .eachAttr("value")).containsExactly("ko", "en", "ja", "zh-CN", "zh-TW");
+        assertThat(document.select(".site-menu-utilities .locale-option-form input[name=_csrf]"))
+                .hasSize(5);
         assertThat(document.select(".global-submenu a").eachText())
                 .containsExactly(
                         "旅遊問答", "旅遊攻略", "我的旅遊路線",
@@ -346,7 +350,7 @@ class HeaderProfileMenuTest {
                 .contains("e.key === 'Escape' && !siteMenu.hidden")
                 .contains("siteMenuToggle.focus()")
                 // 넓은 화면으로 돌아가면 판을 닫는다
-                .contains("window.innerWidth > 1199");
+                .contains("window.innerWidth <= 1199", "mobileHeader !== wasMobileHeader");
         // 새 UI 프레임워크를 들이지 않는다
         assertThat(script).doesNotContain("bootstrap").doesNotContain("import ");
     }

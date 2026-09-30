@@ -16,8 +16,10 @@
     <div class="search-box">
       <!-- 검색 버튼 -->
       <button type="button" id="search-toggle" th:aria-label="#{header.search.open}"
+              th:data-open-label="#{header.search.open}" th:data-close-label="#{header.search.close}"
               aria-controls="search-form" aria-expanded="false">
         <img src="/images/magnify.svg" alt="" aria-hidden="true" />
+        <span class="search-toggle-close" aria-hidden="true"></span>
       </button>
 
       <!-- 숨겨진 검색창 -->
@@ -174,6 +176,9 @@
         </ul>
         <!-- 넓은 화면의 소개 아이콘을 대신하는 보조 링크. 1차 메뉴와 섞지 않고 목록 아래에 둔다. -->
         <a href="/about" class="site-menu-about" th:text="#{header.about}">TripBora 소개</a>
+        <div class="site-menu-utilities">
+          <div th:replace="~{fragments/language-menu :: languageMenu}"></div>
+        </div>
       </nav>
     </div>
   </nav>
