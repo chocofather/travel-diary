@@ -40,7 +40,8 @@ class FestivalDetailServiceTest {
     @BeforeEach
     void setUp() {
         service = new FestivalDetailService(travelInfoService, travelInfoMapper, festivalInfoMapper,
-                new FestivalInfoLocalizationService(festivalInfoMapper));
+                new FestivalInfoLocalizationService(festivalInfoMapper),
+                org.mockito.Mockito.mock(HomeFestivalRegionService.class));
     }
 
     @Test

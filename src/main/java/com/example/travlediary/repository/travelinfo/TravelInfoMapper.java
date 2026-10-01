@@ -1,6 +1,7 @@
 package com.example.travlediary.repository.travelinfo;
 
 import com.example.travlediary.dto.AdminTravelInfoListItemDto;
+import com.example.travlediary.dto.HomeFestivalDto;
 import com.example.travlediary.dto.TravelInfoDetailDto;
 import com.example.travlediary.dto.TravelInfoListItemDto;
 import com.example.travlediary.model.InfoPeriod;
@@ -12,10 +13,14 @@ import com.example.travlediary.model.TravelInfoTranslation;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Mapper
 public interface TravelInfoMapper {
+
+    List<HomeFestivalDto> findHomeFestivals(@Param("today") LocalDate today,
+                                          @Param("limit") int limit);
 
     List<AdminTravelInfoListItemDto> findAdminList(
             @Param("scope") TravelInfoScope scope,

@@ -2,7 +2,9 @@ package com.example.travlediary.service.travelinfo;
 
 import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.dto.FestivalDetailDto;
+import com.example.travlediary.dto.HomeFestivalDto;
 import com.example.travlediary.dto.TravelInfoDetailDto;
+import com.example.travlediary.dto.TravelInfoListItemDto;
 import com.example.travlediary.model.FestivalInfo;
 import com.example.travlediary.model.FestivalInfoTranslation;
 import com.example.travlediary.model.InfoImage;
@@ -15,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
 
@@ -26,6 +29,23 @@ public class FestivalDetailService {
     private final TravelInfoMapper travelInfoMapper;
     private final FestivalInfoMapper festivalInfoMapper;
     private final FestivalInfoLocalizationService festivalInfoLocalizationService;
+    private final HomeFestivalRegionService homeFestivalRegionService;
+
+    @Transactional(readOnly = true)
+    public List<HomeFestivalDto> getHomeFestivals(LocalDate today, SupportedLanguage language) {
+        List<HomeFestivalDto> festivals = travelInfoMapper.findHomeFestivals(today, 8);
+        if (festivals == null || festivals.isEmpty()) {
+            return List.of();
+        }
+        travelInfoService.localizePublicList(
+                festivals.stream().map(festival -> (TravelInfoListItemDto) festival).toList(), language);
+        var locations = homeFestivalRegionService.resolveLocations(festivals, language);
+        for (HomeFestivalDto festival : festivals) {
+            festival.setEventStatus(festival.getStartDate().isAfter(today) ? "upcoming" : "ongoing");
+            festival.setLocation(locations.get(festival.getId()));
+        }
+        return festivals;
+    }
 
     @Transactional(readOnly = true)
     public boolean isPublicFestival(Long id) {

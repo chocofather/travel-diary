@@ -16,6 +16,7 @@
   <!-- 랜드마크 아치 카드 (스크롤 수렴) -->
   <link rel="stylesheet" href="/css/home-converge-prototype.css?v=20260930-4" />
   <link rel="stylesheet" href="/css/home-mobile.css?v=20261001-1" />
+  <link rel="stylesheet" href="/css/home-festival.css?v=20261002-2" />
 </th:block>
 
 <th:block th:fragment="body">
@@ -192,67 +193,54 @@
       </div>
     </section>
 
-    <!-- 여행자 인기 코스 -->
-    <section class="popular-course-section" aria-labelledby="popular-course-title">
-      <div class="home-section-header">
-        <span class="home-section-badge" th:text="#{home.course.badge}">여행자의 기록</span>
-        <h2 id="popular-course-title" th:text="#{home.course.title}">여행자들이 많이 본 코스</h2>
-        <p th:text="#{home.course.description}">다른 여행자들이 직접 만든 동선을 참고해 다음 여행을 계획해 보세요.</p>
-      </div>
-
-      <div class="popular-course-list" th:if="${!#lists.isEmpty(popularCourses)}">
-        <a class="popular-course-card" th:each="course : ${popularCourses}"
-           th:href="${course.detailUrl}">
-          <div class="popular-course-visual"
-               th:classappend="|is-count-${#lists.size(course.previewImageUrls)}|"
-               aria-hidden="true">
-            <span class="popular-course-photo"
-                  th:each="imageUrl, imageStatus : ${course.previewImageUrls}"
-                  th:classappend="|is-photo-${imageStatus.count}|">
-              <img th:src="${imageUrl}" alt="" loading="lazy" decoding="async"
-                   onerror="this.onerror=null;this.src='/images/default.png';">
-            </span>
-            <strong class="popular-course-image-more"
-                    th:if="${course.remainingDestinationCount > 0}"
-                    th:text="|+${course.remainingDestinationCount}|">+2</strong>
+    <section class="home-festival-section" aria-labelledby="home-festival-title"
+             th:if="${!#lists.isEmpty(homeFestivals)}">
+      <div class="home-festival-inner">
+        <header class="home-festival-header">
+          <div>
+            <span class="home-festival-eyebrow">FESTIVAL &amp; EVENTS</span>
+            <h2 id="home-festival-title" th:text="#{home.festival.title}">지금 가볼 만한 축제·행사</h2>
           </div>
-          <div class="popular-course-content">
-            <h3 th:text="${course.title}" th:title="${course.title}">서울 하루 고궁 산책</h3>
-            <p class="popular-course-meta">
-              <span th:text="${course.writerWithdrawn} ? #{member.withdrawn} : ${course.nickname}">minjun</span>
-              <span aria-hidden="true">·</span>
-              <span th:text="#{home.course.views(${#numbers.formatInteger(course.views, 1, 'COMMA')})}">조회 1,284</span>
-            </p>
-            <div class="popular-course-route">
-              <span class="popular-course-route-label" th:text="#{home.course.route}">경로</span>
-              <div class="popular-course-route-track">
-                <th:block th:each="destinationName, stopStatus : ${course.previewDestinationNames}">
-                  <span class="popular-course-route-stop">
-                    <span class="popular-course-route-dot" aria-hidden="true"></span>
-                    <span class="popular-course-route-name" th:text="${destinationName}">경복궁</span>
-                  </span>
-                  <span class="popular-course-route-connector"
-                        th:unless="${stopStatus.last}"
-                        aria-hidden="true">→</span>
-                </th:block>
-              </div>
-            </div>
-            <div class="popular-course-footer">
-              <span th:text="#{home.course.stopCount(${course.totalDestinationCount})}">장소 5곳</span>
-              <span class="popular-course-arrow" aria-hidden="true">→</span>
+          <div class="home-festival-actions">
+            <a class="home-festival-all" th:href="@{/travel-info(contentType='FESTIVAL')}"
+               th:text="|#{home.popular.viewAll} →|">전체보기 →</a>
+            <div class="home-festival-navigation" th:if="${#lists.size(homeFestivals) > 1}">
+              <button type="button" data-festival-direction="-1" aria-controls="home-festival-list"
+                      th:aria-label="#{search.pagination.previous}" disabled>←</button>
+              <button type="button" data-festival-direction="1" aria-controls="home-festival-list"
+                      th:aria-label="#{search.pagination.next}">→</button>
             </div>
           </div>
-        </a>
+          <p th:text="#{home.festival.description}">이번 주말과 가까운 날짜에 즐길 수 있는 축제와 행사를 만나보세요.</p>
+        </header>
+        <div class="home-festival-list" id="home-festival-list">
+          <a class="home-festival-card" th:each="festival : ${homeFestivals}"
+             th:href="@{/festivals/{id}(id=${festival.id})}">
+            <div class="home-festival-media"
+                 th:classappend="${#strings.isEmpty(festival.thumbnailUrl)} ? 'is-empty'">
+              <img class="home-festival-image" th:if="${!#strings.isEmpty(festival.thumbnailUrl)}"
+                   th:src="${festival.thumbnailUrl}" alt="" loading="lazy" decoding="async"
+                   onerror="this.onerror=null;this.parentElement.classList.add('is-empty');">
+              <span class="home-festival-placeholder" aria-hidden="true">▧</span>
+            </div>
+            <div class="home-festival-content">
+              <span class="home-festival-status" th:classappend="${festival.eventStatus}"
+                    th:text="${festival.eventStatus == 'ongoing'} ? #{home.festival.ongoing} : #{home.festival.upcoming}">진행중</span>
+              <h3 th:text="${festival.title}">축제명</h3>
+              <p class="home-festival-location" th:if="${!#strings.isEmpty(festival.location)}"
+                 th:text="${festival.location}">지역</p>
+              <p class="home-festival-period"
+                 th:text="|${#temporals.format(festival.startDate, 'yyyy.MM.dd')} - ${#temporals.format(festival.endDate, festival.startDate.year == festival.endDate.year ? 'MM.dd' : 'yyyy.MM.dd')}|">2026.10.03 - 10.12</p>
+            </div>
+          </a>
+        </div>
       </div>
-      <p class="home-empty-state" th:if="${#lists.isEmpty(popularCourses)}"
-         th:text="#{home.course.empty}">
-        아직 소개할 여행 코스가 없습니다.
-      </p>
     </section>
   </div>
 
   <script src="/js/home-season-preview.js?v=20260929-1" defer></script>
   <script src="/js/home.js?v=20260929-2" defer></script>
+  <script src="/js/home-festival.js?v=20261002-1" defer></script>
   <script src="/js/slider.js?v=20260926-2" defer></script>
   <script src="/js/home-withdrawal-toast.js" defer></script>
   <!-- 랜드마크 아치 카드 (스크롤 수렴) -->

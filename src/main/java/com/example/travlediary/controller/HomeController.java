@@ -5,7 +5,7 @@ import com.example.travlediary.dto.RecommendDestinationDto;
 import com.example.travlediary.dto.SeasonDestinationDto;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.seo.SeoStructuredData;
-import com.example.travlediary.service.course.CourseService;
+import com.example.travlediary.service.travelinfo.FestivalDetailService;
 import com.example.travlediary.service.destination.DestinationViewClock;
 import com.example.travlediary.service.file.DestinationCardThumbnailService;
 import com.example.travlediary.service.recommend.DestinationRecommendService;
@@ -25,18 +25,18 @@ public class HomeController {
     // 메인 인기 여행지: 대표 1곳 + 보조 4곳
     private static final int HOME_POPULAR_LIMIT = 5;
 
-    private final CourseService courseService;
+    private final FestivalDetailService festivalDetailService;
     private final DestinationRecommendService recommendService;
     private final PopularRecommendService popularRecommendService;
     private final DestinationCardThumbnailService cardThumbnailService;
     private final DestinationViewClock viewClock;
 
-    public HomeController(CourseService courseService,
+    public HomeController(FestivalDetailService festivalDetailService,
                           DestinationRecommendService recommendService,
                           PopularRecommendService popularRecommendService,
                           DestinationCardThumbnailService cardThumbnailService,
                           DestinationViewClock viewClock) {
-     this.courseService = courseService;
+     this.festivalDetailService = festivalDetailService;
      this.recommendService = recommendService;
      this.popularRecommendService = popularRecommendService;
      this.cardThumbnailService = cardThumbnailService;
@@ -52,7 +52,7 @@ public class HomeController {
         SupportedLanguage language = SupportedLanguage.fromLocale(LocaleContextHolder.getLocale())
                 .orElse(SupportedLanguage.KOREAN);
         model.addAttribute("isLoggedIn", authenticatedUser(auth) != null);
-        model.addAttribute("popularCourses", courseService.getPopularCoursesForHome(language));
+        model.addAttribute("homeFestivals", festivalDetailService.getHomeFestivals(viewClock.today(), language));
         model.addAttribute("homeLandmarks", homeLandmarks(language));
         /*
           인기 여행지 편집 영역의 데이터는 둘 중 하나만 쓴다. (섞어서 5곳을 채우지 않는다)

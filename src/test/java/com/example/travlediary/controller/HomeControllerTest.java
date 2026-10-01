@@ -6,14 +6,14 @@ import com.example.travlediary.config.SecurityConfig;
 import com.example.travlediary.config.i18n.I18nConfig;
 import com.example.travlediary.config.i18n.SupportedLanguage;
 import com.example.travlediary.config.i18n.TravelDiaryLocaleResolver;
-import com.example.travlediary.dto.HomePopularCourseDto;
+import com.example.travlediary.dto.HomeFestivalDto;
 import com.example.travlediary.dto.RecommendDestinationDto;
 import com.example.travlediary.dto.SeasonDestinationDto;
 import com.example.travlediary.model.User;
 import com.example.travlediary.model.UserRole;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
-import com.example.travlediary.service.course.CourseService;
+import com.example.travlediary.service.travelinfo.FestivalDetailService;
 import com.example.travlediary.service.destination.DestinationViewClock;
 import com.example.travlediary.service.file.DestinationCardThumbnailService;
 import com.example.travlediary.service.recommend.DestinationRecommendService;
@@ -59,7 +59,7 @@ class HomeControllerTest {
     private MockMvc mockMvc;
 
     @MockitoBean
-    private CourseService courseService;
+    private FestivalDetailService festivalDetailService;
     @MockitoBean
     private DestinationRecommendService recommendService;
     @MockitoBean
@@ -76,20 +76,12 @@ class HomeControllerTest {
     private CustomLogoutSuccessHandler customLogoutSuccessHandler;
 
     @Test
-    void guestHomeRendersPopularCourseRouteAndExistingMainSections() throws Exception {
-        HomePopularCourseDto course = new HomePopularCourseDto();
-        course.setCourseId(12L);
-        course.setTitle("서울 하루 고궁 산책");
-        course.setNickname("minjun");
-        course.setViews(1284);
-        course.setTotalDestinationCount(5);
-        course.setPreviewDestinationNames(List.of("경복궁", "북촌한옥마을", "창덕궁"));
-        course.setPreviewImageUrls(List.of(
-                "/images/gyeongbokgung.jpg",
-                "/images/bukchon.jpg",
-                "/images/changdeokgung.jpg"));
-        when(courseService.getPopularCoursesForHome(SupportedLanguage.KOREAN))
-                .thenReturn(List.of(course));
+    void guestHomeRendersFestivalsAndExistingMainSections() throws Exception {
+        LocalDate today = LocalDate.of(2026, 10, 2);
+        when(viewClock.today()).thenReturn(today);
+        HomeFestivalDto festival = festival(12L, "서울 가을 문화 축제", "ongoing");
+        when(festivalDetailService.getHomeFestivals(today, SupportedLanguage.KOREAN))
+                .thenReturn(List.of(festival));
         RecommendDestinationDto featured = popular(15L, "경복궁", "/uploads/destinations/palace.jpg", "종로구");
         // 썸네일 서비스가 채워 두는 값 (여기서는 서비스가 mock 이라 미리 넣어 둔다)
         featured.setCardImageUrl("/destination-thumbnails/v1/480/palace.jpg");
@@ -107,7 +99,8 @@ class HomeControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("home"))
                 .andExpect(model().attribute("isLoggedIn", false))
-                .andExpect(model().attribute("popularCourses", List.of(course)))
+                .andExpect(model().attribute("homeFestivals", List.of(festival)))
+                .andExpect(model().attributeDoesNotExist("popularCourses"))
                 .andExpect(result -> {
                     var document = Jsoup.parse(result.getResponse().getContentAsString());
                     assertThat(document.select(".footer-operations .footer-operator-name")).isEmpty();
@@ -165,23 +158,16 @@ class HomeControllerTest {
                             .isEqualTo("/uploads/destinations/palace.jpg");
                     assertThat(popularImages.get(1).attr("src")).isEqualTo("/uploads/destinations/haeundae.jpg");
                     assertThat(popularImages.get(1).hasAttr("srcset")).isFalse();
-                    assertThat(document.select("a.popular-course-card[href='/course/12']")).hasSize(1);
-                    assertThat(document.select(".popular-course-visual.is-count-3 img")
-                            .eachAttr("src")).containsExactly(
-                                    "/images/gyeongbokgung.jpg",
-                                    "/images/bukchon.jpg",
-                                    "/images/changdeokgung.jpg");
-                    assertThat(document.select(".popular-course-image-more").text()).isEqualTo("+2");
-                    assertThat(document.select(".popular-course-route-track").text())
-                            .isEqualTo("경복궁 → 북촌한옥마을 → 창덕궁");
-                    assertThat(document.select(".popular-course-card").text())
-                            .contains("서울 하루 고궁 산책")
-                            .contains("minjun · 조회 1,284")
-                            .contains("장소 5곳");
+                    assertThat(document.select("a.home-festival-card[href='/festivals/12']")).hasSize(1);
+                    assertThat(document.select(".home-festival-card").text())
+                            .contains("서울 가을 문화 축제", "진행중", "서울 종로구", "2026.10.01 - 10.12");
+                    assertThat(document.select(".home-festival-all").attr("href"))
+                            .isEqualTo("/travel-info?contentType=FESTIVAL");
+                    assertThat(document.select(".popular-course-section")).isEmpty();
                     assertThat(document.select(".instant-trip, #roulette-canvas")).isEmpty();
                 });
 
-        verify(courseService).getPopularCoursesForHome(SupportedLanguage.KOREAN);
+        verify(festivalDetailService).getHomeFestivals(today, SupportedLanguage.KOREAN);
         verify(cardThumbnailService).applyCardImages(eq(popularDestinations), any(), any());
     }
 
@@ -193,8 +179,7 @@ class HomeControllerTest {
                 .andExpect(result -> {
                     var document = Jsoup.parse(result.getResponse().getContentAsString());
                     assertThat(document.select(".popular-recommend")).isEmpty();
-                    assertThat(document.selectFirst(".seasonal-recommend").nextElementSibling()
-                            .hasClass("popular-course-section")).isTrue();
+                    assertThat(document.selectFirst(".seasonal-recommend").nextElementSibling()).isNull();
                 });
 
         // 한 곳이면 대표 칸만 그리고 보조 칸은 만들지 않는다. 대표 사진이 없어도 화면이 깨지지 않는다.
@@ -309,9 +294,8 @@ class HomeControllerTest {
                     var document = Jsoup.parse(result.getResponse().getContentAsString());
                     assertThat(document.selectFirst(".seasonal-recommend").nextElementSibling()
                             .hasClass("home-converge")).isTrue();
-                    // 인기 여행지가 없는 상태라 랜드마크 다음이 바로 여행 코스다.
-                    assertThat(document.selectFirst(".home-converge").nextElementSibling()
-                            .hasClass("popular-course-section")).isTrue();
+                    // 인기 여행지와 축제가 없으면 랜드마크가 마지막 섹션이다.
+                    assertThat(document.selectFirst(".home-converge").nextElementSibling()).isNull();
                     assertThat(document.select("#home-converge-title").text()).isEqualTo("세계의 랜드마크");
                     assertThat(document.select(".home-converge-eyebrow").text()).isEqualTo("Landmarks");
 
@@ -366,8 +350,6 @@ class HomeControllerTest {
     @Test
     void withdrawalQueryRendersAnAccessibleToastWithoutAddingAHomeLayoutBanner()
             throws Exception {
-        when(courseService.getPopularCoursesForHome(SupportedLanguage.KOREAN))
-                .thenReturn(List.of());
 
         mockMvc.perform(get("/").queryParam("withdrawn", "true"))
                 .andExpect(status().isOk())
@@ -395,7 +377,6 @@ class HomeControllerTest {
     })
     void withdrawalToastFollowsTheCurrentLanguage(String languageTag, String expected)
             throws Exception {
-        when(courseService.getPopularCoursesForHome(any())).thenReturn(List.of());
 
         mockMvc.perform(get("/")
                         .queryParam("withdrawn", "true")
@@ -413,7 +394,6 @@ class HomeControllerTest {
     @ParameterizedTest
     @CsvSource({"false", "TRUE", "1", "yes"})
     void onlyTheExactWithdrawnTrueValueRendersTheToast(String value) throws Exception {
-        when(courseService.getPopularCoursesForHome(any())).thenReturn(List.of());
 
         mockMvc.perform(get("/").queryParam("withdrawn", value))
                 .andExpect(status().isOk())
@@ -424,8 +404,6 @@ class HomeControllerTest {
 
     @Test
     void regularHomeDoesNotRenderTheWithdrawalToast() throws Exception {
-        when(courseService.getPopularCoursesForHome(SupportedLanguage.KOREAN))
-                .thenReturn(List.of());
 
         mockMvc.perform(get("/"))
                 .andExpect(status().isOk())
@@ -436,8 +414,6 @@ class HomeControllerTest {
 
     @Test
     void homeRendersCanonicalSeoHeadAndOnePageHeading() throws Exception {
-        when(courseService.getPopularCoursesForHome(SupportedLanguage.KOREAN))
-                .thenReturn(List.of());
 
         mockMvc.perform(get("/").queryParam("withdrawn", "true"))
                 .andExpect(status().isOk())
@@ -509,8 +485,6 @@ class HomeControllerTest {
     @Test
     void authenticatedHomeDoesNotLoadTheWholeMemberRow() throws Exception {
         User user = user(7L);
-        when(courseService.getPopularCoursesForHome(SupportedLanguage.KOREAN))
-                .thenReturn(List.of());
 
         mockMvc.perform(get("/").with(authentication(authenticationFor(user))))
                 .andExpect(status().isOk())
@@ -524,16 +498,9 @@ class HomeControllerTest {
 
     @Test
     void englishHomeTranslatesFixedUiWhileKeepingDatabaseContentUnchanged() throws Exception {
-        HomePopularCourseDto course = new HomePopularCourseDto();
-        course.setCourseId(12L);
-        course.setTitle("서울 하루 고궁 산책");
-        course.setNickname("여행자민준");
-        course.setViews(1284);
-        course.setTotalDestinationCount(5);
-        course.setPreviewDestinationNames(List.of("경복궁", "북촌한옥마을"));
-        // 쿠키로 고른 언어가 코스 STOP 이름 조회까지 그대로 전달된다.
-        when(courseService.getPopularCoursesForHome(SupportedLanguage.ENGLISH))
-                .thenReturn(List.of(course));
+        HomeFestivalDto festival = festival(12L, "Seoul Autumn Festival", "upcoming");
+        when(festivalDetailService.getHomeFestivals(any(), eq(SupportedLanguage.ENGLISH)))
+                .thenReturn(List.of(festival));
         when(popularRecommendService.findDomesticPopular(5, SupportedLanguage.ENGLISH))
                 .thenReturn(List.of(popular(15L, "Gyeongbokgung Palace", "/uploads/destinations/palace.jpg",
                         "Jongno-gu")));
@@ -545,19 +512,90 @@ class HomeControllerTest {
                     var document = Jsoup.parse(result.getResponse().getContentAsString());
                     assertThat(document.select(".recommend-header").text())
                             .contains("Popular Destinations", "View all");
-                    assertThat(document.select(".home-section-header").text())
-                            .contains("Traveler Stories", "Popular Travel Routes");
-                    assertThat(document.select(".popular-course-card").text())
-                            .contains("서울 하루 고궁 산책")
-                            .contains("여행자민준")
-                            .contains("경복궁")
-                            .contains("1,284 views")
-                            .contains("5 places");
+                    assertThat(document.select(".home-festival-header").text())
+                            .contains("Festivals & Events to Visit Now", "View all");
+                    assertThat(document.select(".home-festival-card").text())
+                            .contains("Seoul Autumn Festival", "Upcoming");
                     assertThat(document.selectFirst("#home-i18n").attr("data-spring-title"))
                             .isEqualTo("Spring: Great Places to Go Now");
                     assertThat(document.selectFirst("#home-i18n").attr("data-event-details"))
                             .isEqualTo("View details");
                 });
+    }
+
+    private HomeFestivalDto festival(Long id, String title, String eventStatus) {
+        HomeFestivalDto festival = new HomeFestivalDto();
+        festival.setId(id);
+        festival.setTitle(title);
+        festival.setEventStatus(eventStatus);
+        festival.setThumbnailUrl(id == 14L ? null : id == 12L ? "/images/travel8.jpg" : "/images/travel9.jpg");
+        festival.setLocation("서울 종로구");
+        festival.setStartDate(LocalDate.of(2026, 10, 1));
+        festival.setEndDate(LocalDate.of(2026, 10, 12));
+        return festival;
+    }
+
+    @Test
+    void noFestivalsHidesTheEntireSection() throws Exception {
+        mockMvc.perform(get("/")).andExpect(status().isOk()).andExpect(result -> {
+            var document = Jsoup.parse(result.getResponse().getContentAsString());
+            assertThat(document.select(".home-festival-section, .popular-course-section")).isEmpty();
+            exportHomeFixture("empty", result.getResponse().getContentAsString());
+        });
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+            "ko | 지금 가볼 만한 축제·행사 | 진행중 | 예정",
+            "en | Festivals & Events to Visit Now | Ongoing | Upcoming",
+            "ja | 今行きたい祭り・イベント | 開催中 | 開催予定",
+            "zh-CN | 近期值得去的节庆与活动 | 进行中 | 即将开始",
+            "zh-TW | 近期值得去的節慶與活動 | 進行中 | 即將開始"
+    })
+    void festivalSectionSupportsEveryLanguage(String languageTag, String title,
+                                             String ongoing, String upcoming) throws Exception {
+        var language = SupportedLanguage.fromLanguageTag(languageTag).orElseThrow();
+        var festivals = List.of(festival(12L, "서울 가을 문화 축제", "ongoing"),
+                festival(13L, "A Long Festival & Events Title Across Multiple Cities", "upcoming"),
+                festival(14L, "지역 문화 행사", "upcoming"),
+                festival(15L, "가을 축제", "upcoming"),
+                festival(16L, "문화 축제", "upcoming"),
+                festival(17L, "음식 축제", "upcoming"),
+                festival(18L, "야간 행사", "upcoming"),
+                festival(19L, "지역 축제", "upcoming"));
+        when(festivalDetailService.getHomeFestivals(any(), eq(language))).thenReturn(festivals);
+        when(popularRecommendService.findDomesticPopular(5, language)).thenReturn(List.of(
+                popular(15L, "경복궁", "/images/default.png", "종로구"),
+                popular(21L, "해운대", "/images/default.png", "해운대구"),
+                popular(22L, "성산일출봉", "/images/default.png", "서귀포시"),
+                popular(23L, "전주한옥마을", "/images/default.png", "전주시"),
+                popular(24L, "불국사", "/images/default.png", "경주시")));
+        when(recommendService.findHomeLandmarks(language)).thenReturn(List.of(
+                landmark(1L, "경복궁", "/images/travel8.jpg", "서울", "종로구"),
+                landmark(2L, "랜드마크", "/images/travel9.jpg", "도시", "지역"),
+                landmark(3L, "세계의 명소", "/images/default.png", "도시", "지역")));
+        mockMvc.perform(get("/").cookie(new Cookie(TravelDiaryLocaleResolver.COOKIE_NAME, languageTag)))
+                .andExpect(status().isOk()).andExpect(result -> {
+                    String html = result.getResponse().getContentAsString();
+                    var document = Jsoup.parse(html);
+                    assertThat(document.select("#home-festival-title").text()).isEqualTo(title);
+                    assertThat(document.select(".home-festival-status").eachText())
+                            .containsExactly(ongoing, upcoming, upcoming, upcoming, upcoming, upcoming, upcoming, upcoming);
+                    assertThat(document.select(".home-festival-card").eachAttr("href"))
+                            .containsExactly("/festivals/12", "/festivals/13", "/festivals/14", "/festivals/15",
+                                    "/festivals/16", "/festivals/17", "/festivals/18", "/festivals/19");
+                    assertThat(html).doesNotContain("??home.festival");
+                    exportHomeFixture(languageTag, html);
+                });
+    }
+
+    private void exportHomeFixture(String name, String html) throws java.io.IOException {
+        String directory = System.getenv("HOME_BROWSER_FIXTURES");
+        if (directory != null && !directory.isBlank()) {
+            var path = java.nio.file.Path.of(directory);
+            java.nio.file.Files.createDirectories(path);
+            java.nio.file.Files.writeString(path.resolve(name + ".html"), html);
+        }
     }
 
     private UsernamePasswordAuthenticationToken authenticationFor(User user) {

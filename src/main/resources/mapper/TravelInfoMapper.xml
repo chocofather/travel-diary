@@ -375,6 +375,42 @@
         ) AS thumbnail_url
     </sql>
 
+    <resultMap id="HomeFestivalResultMap" type="com.example.travlediary.dto.HomeFestivalDto"
+               extends="PublicListResultMap">
+        <association property="festivalInfo" javaType="com.example.travlediary.model.FestivalInfo">
+            <id property="infoId" column="festival_info_id"/>
+            <result property="address" column="address"/>
+            <result property="eventPlace" column="event_place"/>
+        </association>
+    </resultMap>
+
+    <!-- Home 전용: DB 시계 대신 애플리케이션 날짜. 복수 기간도 행사당 한 건만 남긴다. -->
+    <select id="findHomeFestivals" resultMap="HomeFestivalResultMap">
+        <bind name="contentType" value="@com.example.travlediary.model.TravelInfoContentType@FESTIVAL"/>
+        SELECT page.*, <include refid="PublicListThumbnail"/>,
+               fi.info_id AS festival_info_id, fi.address, fi.event_place
+        FROM (
+            SELECT ti.id, ti.title, ti.scope, ti.content_type, ti.category_id,
+                   ic.name AS category_name, ti.views, ti.created_at,
+                   period.start_date, period.end_date
+            FROM travel_info ti
+            JOIN info_categories ic ON ic.id = ti.category_id AND ic.is_visible = 1
+            JOIN festival_info festival ON festival.info_id = ti.id
+            JOIN info_periods period ON period.id = (
+                SELECT candidate.id FROM info_periods candidate
+                WHERE candidate.info_id = ti.id AND candidate.end_date >= #{today}
+                ORDER BY CASE WHEN candidate.start_date &lt;= #{today} THEN 0 ELSE 1 END,
+                         candidate.start_date ASC, candidate.id ASC LIMIT 1
+            )
+            WHERE ti.content_type = 'FESTIVAL'
+            ORDER BY CASE WHEN period.start_date &lt;= #{today} THEN 0 ELSE 1 END,
+                     period.start_date ASC, ti.id ASC LIMIT #{limit}
+        ) page
+        JOIN festival_info fi ON fi.info_id = page.id
+        ORDER BY CASE WHEN page.start_date &lt;= #{today} THEN 0 ELSE 1 END,
+                 page.start_date ASC, page.id ASC
+    </select>
+
     <select id="findPublicList" resultMap="PublicListResultMap">
         SELECT page.id,
                page.title,

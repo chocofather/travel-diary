@@ -72,30 +72,22 @@ class HomePageContractTest {
     }
 
     @Test
-    void popularCourseCardsKeepDetailUrlAndUseCenteredRoutePreview() throws IOException {
+    void festivalsReplaceHomeCoursesWithManualRailAndExistingFestivalLinks() throws IOException {
         String template = resource("/templates/home.html");
-        String homeCss = resource("/static/css/home.css");
+        String homeCss = resource("/static/css/home-festival.css");
 
         assertThat(template)
-                .contains("여행자들이 많이 본 코스")
-                .contains("th:each=\"course : ${popularCourses}\"")
-                .contains("th:href=\"${course.detailUrl}\"")
-                .contains("th:each=\"imageUrl, imageStatus : ${course.previewImageUrls}\"")
-                .contains("onerror=\"this.onerror=null;this.src='/images/default.png';\"")
-                .contains("popular-course-image-more")
-                .contains("th:each=\"destinationName, stopStatus : ${course.previewDestinationNames}\"")
-                .contains("popular-course-route-dot")
-                .contains("popular-course-route-connector")
-                .contains("course.remainingDestinationCount > 0")
-                .contains("course.totalDestinationCount");
+                .contains("지금 가볼 만한 축제·행사")
+                .contains("th:if=\"${!#lists.isEmpty(homeFestivals)}\"")
+                .contains("th:each=\"festival : ${homeFestivals}\"")
+                .contains("@{/festivals/{id}(id=${festival.id})}")
+                .contains("@{/travel-info(contentType='FESTIVAL')}")
+                .contains("home-festival-placeholder")
+                .doesNotContain("popularCourses", "popular-course-section");
         assertThat(homeCss)
-                .contains(".popular-course-list")
-                .contains("grid-template-columns: repeat(3, minmax(0, 1fr))")
-                .contains(".popular-course-visual.is-count-1 .is-photo-1")
-                .contains(".popular-course-visual.is-count-2 .is-photo-1")
-                .contains(".popular-course-visual.is-count-3 .is-photo-1")
-                .contains("white-space: nowrap")
-                .contains("text-overflow: ellipsis");
+                .contains("calc((100% - 54px) / 4)", "calc((100% - 32px) / 3)")
+                .contains("overflow-x: auto", "flex-basis: 55%", "aspect-ratio: 3 / 4")
+                .doesNotContain("animation:");
     }
 
     @Test
@@ -109,8 +101,8 @@ class HomePageContractTest {
                 .contains("id=\"home-i18n\"")
                 .contains("#{home.season.spring.title}")
                 .contains("#{home.event.details}")
-                .contains("th:text=\"${course.title}\"")
-                .contains("th:text=\"${destinationName}\"");
+                .contains("th:text=\"${festival.title}\"")
+                .contains("th:text=\"${festival.location}\"");
         assertThat(homeScript)
                 .contains("home-i18n", ".dataset", "homeI18n.springTitle")
                 .contains("${dest.name}", "${regionText(dest)}")
