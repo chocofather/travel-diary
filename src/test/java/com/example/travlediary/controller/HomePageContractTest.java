@@ -27,22 +27,20 @@ class HomePageContractTest {
         assertThat(document.select("#progress-bar")).hasSize(1);
         assertThat(sliderScript)
                 .contains("fetch('/api/events/slide')")
-                .contains("navBar.style.backgroundColor = bgColor")
-                .contains("#F3EFFF", "#EEF4FA", "#FBF5EE", "#F8F0F4")
+                .doesNotContain("navBar.style.backgroundColor", "pastelColors")
                 .doesNotContain("#e0ffe0", "#fff5cc", "#ffe0f0", "#e0f7fa")
                 // 자동재생은 슬라이드가 두 장 이상일 때만 켠다. 0장이면 타이머 없이 영역을 숨긴다.
-                .contains("autoplay: hasMultipleSlides ? { delay: 10000")
+                .contains("autoplay: hasMultipleSlides && !reducedMotion ? { delay: 10000")
+                .contains("sliderUi.hidden = !hasMultipleSlides", "effect: 'fade'")
                 .contains("if (slideCount === 0)", "classList.add('is-empty')")
                 .contains("swiper.slidePrev()", "swiper.slideNext()");
         assertThat(sliderCss)
-                .contains("padding-top: 150px")
-                .contains("height: 400px")
-                .contains("height: 160px")
-                .contains("max-width: 500px")
-                .contains("margin-left: 250px")
+                .contains("grid-template-columns: minmax(0, 38fr) minmax(0, 62fr)")
+                .contains(".slider-ui[hidden]", "prefers-reduced-motion: reduce")
+                .contains("aspect-ratio: 16 / 9")
                 .contains("#event-slider #progress-bar")
                 .contains("#event-slider .slide-text a.more")
-                .contains("padding: 6px 12px")
+                .contains("font-size: 26px")
                 .contains("font-size: 13px");
         assertThat(homeScript)
                 .contains("SPRING", "SUMMER", "FALL", "WINTER")
@@ -110,7 +108,7 @@ class HomePageContractTest {
                 .contains("[dest.parentRegionName, dest.regionName]")
                 .doesNotContain("데이터가 없습니다.", "불러오기에 실패했습니다.");
         assertThat(sliderScript)
-                .contains("home-i18n", ".dataset", "homeI18n.eventDetails", "homeI18n.eventBadge")
+                .contains("home-i18n", ".dataset", "homeI18n.eventDetails", ">EVENT</span>")
                 // 이벤트 값은 여전히 서버가 준 그대로 그린다. (escape 만 거친다)
                 .contains("escapeHtml(ev.title)", "escapeHtml(ev.description)")
                 .doesNotContain(">자세히 보기<");

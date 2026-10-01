@@ -162,9 +162,9 @@ class EventUiContractTest {
                 .contains("escapeHtml(ev.title)")
                 .contains("escapeHtml(ev.description)")
                 .contains("escapeHtml(ev.eventImg)")
-                // 고정 문구는 messages 로 내려온다. 배지도 제목을 되풀이하지 않고 공통 라벨을 쓴다.
+                // CTA는 messages를 유지하고, editorial eyebrow는 공통 EVENT 표기를 쓴다.
                 .contains("homeI18n.eventDetails")
-                .contains("homeI18n.eventBadge");
+                .contains(">EVENT</span>");
         // 설명이 없거나 'null' 이면 그 영역을 아예 만들지 않는다.
         assertThat(script)
                 .contains("hasText(ev.description)")

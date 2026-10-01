@@ -11,12 +11,12 @@
   -->
   <link rel="stylesheet" href="https://unpkg.com/swiper@9/swiper-bundle.min.css" />
   <script src="https://unpkg.com/swiper@9/swiper-bundle.min.js" defer></script>
-  <link rel="stylesheet" href="/css/slider.css?v=20260926-2" />
   <link rel="stylesheet" href="/css/home.css?v=20260929-3" />
   <!-- 랜드마크 아치 카드 (스크롤 수렴) -->
   <link rel="stylesheet" href="/css/home-converge-prototype.css?v=20260930-4" />
   <link rel="stylesheet" href="/css/home-mobile.css?v=20261001-1" />
   <link rel="stylesheet" href="/css/home-festival.css?v=20261002-2" />
+  <link rel="stylesheet" href="/css/slider.css?v=20261002-editorial" />
 </th:block>
 
 <th:block th:fragment="body">
@@ -53,7 +53,7 @@
     <section id="event-slider" th:aria-label="#{home.event.sectionLabel}">
       <div class="swiper">
         <div class="swiper-wrapper" id="slide-area"></div>
-        <div class="slider-ui">
+        <div class="slider-ui" hidden>
           <span id="slide-index">01</span> /
           <span id="slide-total">--</span>
           <button type="button" class="nav prev" th:aria-label="#{home.event.previous}">❮</button>
@@ -241,7 +241,7 @@
   <script src="/js/home-season-preview.js?v=20260929-1" defer></script>
   <script src="/js/home.js?v=20260929-2" defer></script>
   <script src="/js/home-festival.js?v=20261002-1" defer></script>
-  <script src="/js/slider.js?v=20260926-2" defer></script>
+  <script src="/js/slider.js?v=20261002-editorial" defer></script>
   <script src="/js/home-withdrawal-toast.js" defer></script>
   <!-- 랜드마크 아치 카드 (스크롤 수렴) -->
   <script src="/js/home-converge-prototype.js?v=20260930-2" defer></script>

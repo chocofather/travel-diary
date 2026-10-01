@@ -23,20 +23,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     const slideCount = list.length;
     const hasMultipleSlides = slideCount > 1;
     const eventSlider = document.getElementById('event-slider');
+    const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const sliderUi = eventSlider.querySelector('.slider-ui');
+    sliderUi.hidden = !hasMultipleSlides;
+    eventSlider.querySelector('.pause').hidden = reducedMotion;
+    eventSlider.querySelector('.progress').hidden = reducedMotion;
 
     // 표시할 슬라이드가 없으면 슬라이더 내용·컨트롤을 숨기고 타이머도 시작하지 않는다.
     if (slideCount === 0) {
         eventSlider.classList.add('is-empty');
         return;
     }
-    // 한 장이어도 컨트롤은 그대로 둔다. 넘기는 대신 같은 슬라이드에서 진행바만 다시 채운다.
-
-    const pastelColors = [
-        '#F3EFFF', // 라벤더
-        '#EEF4FA', // 미스트 블루
-        '#FBF5EE', // 웜 아이보리
-        '#F8F0F4'  // 소프트 로즈
-    ];
 
     const slideArea = document.getElementById('slide-area');
     const totalSpan = document.getElementById('slide-total');
@@ -58,9 +55,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     // 2. DOM에 슬라이드 추가
-    list.forEach((ev, index) => {
+    list.forEach(ev => {
         const div = document.createElement('div');
-        ev.bgcolor = pastelColors[index % pastelColors.length];
         div.className = 'swiper-slide';
         // 슬라이더가 받는 이미지는 유형과 무관하게 언제나 대표 이미지(event_img)다.
         // 대표 이미지는 가로형으로 등록하는 값이라 유형별로 담는 방식을 나누지 않는다.
@@ -73,10 +69,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         div.innerHTML = `
       <div class="slide-inner">
         <div class="slide-text">
-          <span class="badge">${escapeHtml(homeI18n.eventBadge)}</span>
+          <span class="badge">EVENT</span>
           <h2 class="title">${title}</h2>
           ${description}
-          <a href="/events/${encodeURIComponent(ev.id)}" class="more">${escapeHtml(homeI18n.eventDetails)}</a>
+          <a href="/events/${encodeURIComponent(ev.id)}" class="more">${escapeHtml(homeI18n.eventDetails)} <span aria-hidden="true">→</span></a>
         </div>
         <div class="slide-img">
           <img src="${escapeHtml(ev.eventImg)}" alt="${title}" data-id="${escapeHtml(ev.id)}">
@@ -98,41 +94,28 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     totalSpan.textContent = String(slideCount).padStart(2, '0');
 
-    // ✅ 슬라이드에 맞춰 배경색 변경
-    function updateBackgroundColor(swiperInstance) {
-        const currentData = list[swiperInstance.realIndex];
-        const bgColor = currentData?.bgcolor || '#ffffff';
-
-        const eventSlider = document.getElementById('event-slider');
-        const navBar = document.querySelector('.main-nav');
-
-        eventSlider.style.backgroundColor = bgColor;
-        navBar.style.backgroundColor = bgColor;
-    }
-
-
     // 3. Swiper 초기화
     function initializeSwiper() {
-        swiper = new Swiper('.swiper', {
+        swiper = new Swiper('#event-slider .swiper', {
             slidesPerView: 1,
             centeredSlides: false,
             // 한 장이면 반복·자동재생·끌어 넘기기를 끈다.
             loop: hasMultipleSlides,
             allowTouchMove: hasMultipleSlides,
-            speed: 600,
-            autoplay: hasMultipleSlides ? { delay: 10000, disableOnInteraction: false } : false,
+            effect: 'fade',
+            fadeEffect: { crossFade: true },
+            speed: reducedMotion ? 0 : 600,
+            autoplay: hasMultipleSlides && !reducedMotion ? { delay: 10000, disableOnInteraction: false } : false,
             on: {
                 slideChangeTransitionStart() {
                     resetProgress();
                     startProgress();
                     updateCounter();
-                    updateBackgroundColor(this); // ✅ 슬라이드 전환 시 배경 변경
                 },
                 init() {
                     resetProgress();
                     startProgress();
                     updateCounter();
-                    updateBackgroundColor(this); // ✅ 초기 진입 시 배경 설정
                 }
             }
         });
@@ -140,6 +123,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 4. 진행률 바 시작
     function startProgress() {
+        if (!hasMultipleSlides || reducedMotion) return;
         // 진행 루프는 하나만 돈다. 전환 이벤트와 직접 호출이 겹쳐도 이전 루프를 이어서 쌓지 않는다.
         cancelAnimationFrame(animationFrameId);
         function updateProgress(timestamp) {
@@ -155,8 +139,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 animationFrameId = requestAnimationFrame(updateProgress);
             } else {
                 resetProgress();
-                // 한 장이면 넘기지 않고 진행바만 0%부터 다시 채운다.
-                if (hasMultipleSlides) swiper.slideNext();
+                swiper.slideNext();
                 startProgress();
             }
         }
@@ -186,10 +169,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     startProgress();
 
     // 8. 일시정지/재생 버튼
-    // 한 장이면 Swiper 자동재생은 꺼져 있으므로 진행바만 멈추고 잇는다.
-    const pauseBtn = document.querySelector('.pause');
+    // 자동재생이 있는 여러 장일 때만 컨트롤이 표시된다.
+    const pauseBtn = eventSlider.querySelector('.pause');
     pauseBtn.onclick = () => {
         isPaused = !isPaused;
+        pauseBtn.setAttribute('aria-pressed', String(isPaused));
         if (isPaused) {
             if (hasMultipleSlides) swiper.autoplay.stop();
             cancelAnimationFrame(animationFrameId);
@@ -210,17 +194,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     // 9. 이전/다음 버튼
-    // 한 장이면 슬라이드를 움직이지 않고 같은 슬라이드에서 진행바만 처음부터 다시 시작한다.
+    // 한 장의 컨트롤은 숨기지만 호출되더라도 같은 슬라이드를 유지한다.
     const restartSingleSlide = () => {
         resetProgress();
         startProgress();
     };
-    document.querySelector('.prev').onclick = () => {
+    eventSlider.querySelector('.prev').onclick = () => {
         if (!hasMultipleSlides) return restartSingleSlide();
         resetProgress();
         swiper.slidePrev();
     };
-    document.querySelector('.next').onclick = () => {
+    eventSlider.querySelector('.next').onclick = () => {
         if (!hasMultipleSlides) return restartSingleSlide();
         resetProgress();
         swiper.slideNext();

@@ -47,6 +47,11 @@ src/main/resources/application-local.yml
 ### Markdown 문서 Git 제외 ###
 *.md
 !docs/licenses/diary-pdf-third-party.md
+
+### Claude Code local config ###
+.claude/
+CLAUDE.md
+
 ### DB dumps / local backups ###
 *.dump
 *.bak
