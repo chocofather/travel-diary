@@ -2,7 +2,8 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <th:block th:fragment="boardListFragment (boardList, totalPages, currentPage, sort)">
-  <div class="board-list">
+  <div class="board-list" th:attr="data-page-size=${pageSize}"
+       th:classappend="${courseBoard} ? ' board-list--course-only'">
     <div th:each="item : ${boardList}"
          class="board-list-row"
          th:classappend="${item.boardType == 'course'} ? ' board-list-row--course' : ' board-list-row--post'">
@@ -38,6 +39,8 @@
         </span>
         <span class="board-meta-item board-date">
           <span class="board-meta-value"
+                th:attr="data-mobile-date=${item.createdAt != null and #strings.length(item.createdAt) >= 16
+                    ? #strings.replace(#strings.substring(item.createdAt, 5, 16), '-', '.') : item.createdAt}"
                 th:text="${item.createdAt != null and #strings.length(item.createdAt) >= 16
                     ? #strings.replace(#strings.substring(item.createdAt, 2, 16), '-', '.')
                     : item.createdAt}"></span>

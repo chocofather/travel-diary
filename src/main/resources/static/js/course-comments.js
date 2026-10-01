@@ -397,6 +397,7 @@ document.addEventListener('DOMContentLoaded', () => {
             image.alt = detailMessage('commentImageAlt', index + 1);
             group.append(image);
         });
+        window.CommunityCommentMobile?.prepareImages(group);
         return group;
     }
 
@@ -889,7 +890,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (image && list.contains(image)) open(image);
         });
 
+        const mobileNavigation = window.CommunityCommentMobile?.bindImageNavigation({
+            modal, image: modalImage, show: offset => show(index + offset), close
+        });
         modal.addEventListener('click', event => {
+            if (mobileNavigation?.handleClick(event)) return;
             const nav = event.target.closest('.comment-image-nav');
             if (nav) {
                 // 확대 이미지/배경 클릭(닫기)으로 이어지지 않도록 여기서 끊는다.

@@ -16,9 +16,11 @@
   <link rel="stylesheet" href="/css/content-translation.css" />
   <link rel="stylesheet" href="/css/content-bookmark.css" />
   <link rel="stylesheet" href="/css/content-comment.css" />
+  <link rel="stylesheet" href="/css/community-detail-mobile.css" />
   <script src="/js/comment-deep-link.js" defer></script>
   <script src="/js/confirm-submit.js" defer></script>
   <script src="/js/course-comments.js" defer></script>
+  <script src="/js/community-comment-mobile.js" defer></script>
   <script src="/js/user-post-translation.js" defer></script>
   <script src="/js/content-bookmarks.js" defer></script>
   <script src="/js/course-hide-modal.js" defer></script>
@@ -127,8 +129,8 @@
                                        th:if="${course.writerWithdrawn}"
                                        class="content-writer-withdrawn"
                                        th:text="#{member.withdrawn}">탈퇴한 회원</span></dd></div>
-          <div><dt th:text="#{course.detail.meta.createdAt}">작성일</dt><dd th:text="${#dates.format(course.createdAt, 'yyyy-MM-dd HH:mm')}">작성일</dd></div>
-          <div><dt th:text="#{course.detail.meta.updatedAt}">수정일</dt><dd th:text="${#dates.format(course.updatedAt, 'yyyy-MM-dd HH:mm')}">수정일</dd></div>
+          <div><dt th:text="#{course.detail.meta.createdAt}">작성일</dt><dd th:attr="data-mobile-date=${#dates.format(course.createdAt, 'yyyy.MM.dd')}" th:text="${#dates.format(course.createdAt, 'yyyy-MM-dd HH:mm')}">작성일</dd></div>
+          <div><dt th:text="#{course.detail.meta.updatedAt}">수정일</dt><dd th:attr="data-mobile-date=${#dates.format(course.updatedAt, 'yyyy.MM.dd')}" th:text="${#dates.format(course.updatedAt, 'yyyy-MM-dd HH:mm')}">수정일</dd></div>
           <div><dt th:text="#{course.detail.meta.views}">조회수</dt><dd th:text="${course.views}">0</dd></div>
         </dl>
         <div class="content-translation-control" th:if="${course.translationAvailable}">

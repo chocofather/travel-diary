@@ -59,6 +59,8 @@ class BoardControllerSecurityTest {
                 .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("board-list-actions"))))
                 .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("board-mobile-write-action"))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
                         org.hamcrest.Matchers.containsString("href=\"/post/write\""))));
     }
 
@@ -78,6 +80,14 @@ class BoardControllerSecurityTest {
                     String body = result.getResponse().getContentAsString();
                     assertThat(body.indexOf("board-list-actions"))
                             .isGreaterThan(body.indexOf("board-fragment-container"));
+                    assertThat(body.indexOf("board-mobile-write-action"))
+                            .isLessThan(body.indexOf("board-fragment-container"));
+                    assertThat(org.jsoup.Jsoup.parse(body).select("[data-board-write-open]")).hasSize(2);
+                    String exportPath = System.getenv("BOARD_BROWSER_FIXTURES");
+                    if (exportPath != null) {
+                        java.nio.file.Files.createDirectories(java.nio.file.Path.of(exportPath));
+                        java.nio.file.Files.writeString(java.nio.file.Path.of(exportPath, "member-course.html"), body);
+                    }
                 });
     }
 
@@ -195,5 +205,59 @@ class BoardControllerSecurityTest {
         country.setRegionName(name);
         country.setParentId(parentId);
         return country;
+    }
+
+    @Test
+    void smartphoneSizeUsesEightRowsAndMatchingPageCountForEveryBoardAndSort() throws Exception {
+        when(countryCategoryService.getCourseCountries()).thenReturn(List.of(country(8L, "일본", 1L)));
+        String[][] boards = {{"", "", "all"}, {"post", "question", "all"}, {"post", "tip", "all"},
+                {"course", "", "all"}, {"course", "", "domestic"}, {"course", "", "overseas"}};
+        String exportPath = System.getenv("BOARD_BROWSER_FIXTURES");
+        for (int board = 0; board < boards.length; board++) {
+            String type = boards[board][0].isEmpty() ? null : boards[board][0];
+            String postType = boards[board][1].isEmpty() ? null : boards[board][1];
+            String scope = boards[board][2];
+            for (String sort : List.of("latest", "oldest", "views", "comments", "bookmarks")) {
+                for (int page = 1; page <= 3; page++) {
+                    List<BoardListDto> rows = new java.util.ArrayList<>();
+                    int count = page == 1 ? 8 : page == 2 ? 1 : 0;
+                    for (int row = 0; row < count; row++) {
+                        BoardListDto item = new BoardListDto();
+                        item.setId((long) row + 1);
+                        item.setBoardType(type == null ? (row % 2 == 0 ? "course" : "post") : type);
+                        item.setPostType("tip".equals(postType) ? "TIP" : "QUESTION");
+                        item.setTitle(row % 3 == 0 ? "서울 궁궐과 한강을 따라 즐기는 아주 긴 하루 여행 코스와 맛집 추천"
+                                : row % 3 == 1 ? "A very long travel title with SupercalifragilisticexpialidociousWithoutAnySpaces1234567890"
+                                : "東京の街をゆっくり歩く長い旅行コースとおすすめの場所について");
+                        item.setNickname("귀여운곰돌이와아주긴작성자이름");
+                        item.setUserId(1L);
+                        item.setCreatedAt("2026-09-17 00:36:00");
+                        item.setViews(28);
+                        item.setCommentCount(4);
+                        item.setBookmarkCount(0);
+                        rows.add(item);
+                    }
+                    when(boardService.getBoardList(type, postType, scope, null, sort, page, 8)).thenReturn(rows);
+                    when(boardService.getBoardCount(type, postType, scope, null)).thenReturn(page == 3 ? 0 : 9);
+                    for (String endpoint : List.of("list", "fragment")) {
+                        var request = get("/board/" + endpoint).param("scope", scope).param("sort", sort)
+                                .param("page", String.valueOf(page)).param("size", "8");
+                        if (type != null) request.param("boardType", type);
+                        if (postType != null) request.param("postType", postType);
+                        var response = mockMvc.perform(request).andExpect(status().isOk())
+                                .andExpect(model().attribute("pageSize", 8))
+                                .andExpect(model().attribute("totalPages", page == 3 ? 0 : 2))
+                                .andReturn().getResponse().getContentAsString();
+                        assertThat(org.jsoup.Jsoup.parse(response).select(".board-list-row")).hasSize(count);
+                        assertThat(response).contains("data-page-size=\"8\"");
+                        if (exportPath != null) {
+                            java.nio.file.Path directory = java.nio.file.Path.of(exportPath);
+                            java.nio.file.Files.createDirectories(directory);
+                            java.nio.file.Files.writeString(directory.resolve(board + "-" + sort + "-" + page + "-" + endpoint + ".html"), response);
+                        }
+                    }
+                }
+            }
+        }
     }
 }

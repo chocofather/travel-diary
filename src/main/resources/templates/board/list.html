@@ -34,6 +34,9 @@
           <h1>여행 커뮤니티</h1>
           <p>여행의 궁금증과 유용한 팁, 직접 만든 코스를 함께 나눠보세요.</p>
         </div>
+        <div class="board-mobile-write-action" sec:authorize="isAuthenticated()">
+          <button type="button" class="board-write-btn" data-board-write-open>글쓰기</button>
+        </div>
       </div>
 
       <section th:if="${courseBoard}" class="board-country-filter" aria-label="여행코스 국가 필터">

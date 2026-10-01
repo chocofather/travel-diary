@@ -189,6 +189,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderSelectedDestinations() {
         selectedList.replaceChildren();
         hiddenInputs.replaceChildren();
+        const selectedCount = document.getElementById('selected-course-count');
+        if (selectedCount) selectedCount.textContent = `현재 ${selectedDestinations.length}곳`;
 
         if (selectedDestinations.length === 0) {
             const empty = document.createElement('li');
@@ -242,6 +244,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const button = document.createElement('button');
         button.type = 'button';
         button.textContent = label;
+        button.setAttribute('aria-label', label);
+        button.title = label;
+        button.dataset.mobileSymbol = {'위로': '↑', '아래로': '↓', '제거': '×'}[label];
         button.disabled = disabled;
         button.className = `order-control ${extraClass}`.trim();
         button.addEventListener('click', action);

@@ -1,0 +1,193 @@
+/* Shared by community write/edit forms; desktop keeps its existing layout. */
+.write-mobile-section-title,
+.write-mobile-field-label,
+.write-mobile-selection-count { display: none; }
+
+@media (max-width: 820px) {
+    .write-container,
+    .course-write-wrapper {
+        width: 100%;
+        max-width: 720px;
+        box-sizing: border-box;
+        margin: 24px auto 48px;
+        padding: 0 24px;
+        border: 0;
+        border-radius: 0;
+        background: #fff;
+        box-shadow: none;
+        overflow: visible;
+    }
+    .write-container .write-title,
+    .course-write-wrapper > h1 {
+        margin: 0 0 10px;
+        font-size: 24px;
+        line-height: 1.35;
+        overflow-wrap: anywhere;
+    }
+    .course-write-wrapper > h1 { margin-bottom: 24px; }
+    .write-guide { margin-bottom: 14px; font-size: 12px; color: #737782; }
+    .write-type-row { margin-bottom: 22px; gap: 12px; }
+    .write-type-badge {
+        padding: 3px 7px;
+        border: 0;
+        border-radius: 3px;
+        background: #f5f1fc;
+        color: var(--tripbora-primary);
+        font-size: 12px;
+        font-weight: 600;
+    }
+    .write-type-change { min-height: 38px; font-size: 12px; }
+    :is(.write-container, .course-write-wrapper) .form-group { margin-bottom: 22px; }
+    .write-field-label,
+    .write-mobile-field-label,
+    .write-container .select-label { font-size: 13px; font-weight: 600; color: #4b505a; }
+    .write-field-count { font-size: 11px; }
+    .write-mobile-field-label { display: block; margin-bottom: 8px; }
+    .write-mobile-section-title { display: block; margin: 0 0 18px; font-size: 16px; font-weight: 600; }
+    :is(.write-container, .course-write-wrapper) .write-form .input-text,
+    .write-container .write-form .input-select,
+    .course-write-wrapper .destination-search-controls input,
+    .course-write-wrapper .overseas-country-field input {
+        height: 44px;
+        padding: 0 12px;
+        border-color: #dedfe5;
+        border-radius: 5px;
+        font-size: 16px;
+        line-height: normal;
+        box-sizing: border-box;
+    }
+    .write-container .write-form .input-select { width: auto; min-width: 150px; }
+    :is(.write-container, .course-write-wrapper) .input-text:focus {
+        border-color: var(--tripbora-primary);
+        box-shadow: 0 0 0 2px var(--tripbora-focus);
+    }
+    :is(.write-container, .course-write-wrapper) .quill-editor-shell {
+        --quill-editor-min-height: 300px;
+        --quill-toolbar-background: #fafafa;
+        --quill-border-color: #dedfe5;
+    }
+    :is(.write-container, .course-write-wrapper) .ql-toolbar.ql-snow {
+        display: grid;
+        grid-template-columns: 60px minmax(0, 1fr) 60px 30px;
+        gap: 6px 0;
+        padding: 8px;
+        border-radius: 5px 5px 0 0;
+    }
+    :is(.write-container, .course-write-wrapper) .ql-toolbar .is-text-format { display: contents; }
+    :is(.write-container, .course-write-wrapper) .ql-toolbar.ql-snow::after { display: none; }
+    :is(.write-container, .course-write-wrapper) .ql-toolbar.ql-snow .ql-formats {
+        flex-wrap: nowrap;
+        gap: 0;
+        grid-row: 1;
+    }
+    /* Pickers remain outside a scroll container so their menus stay usable. */
+    :is(.write-container, .course-write-wrapper) .is-text-format .ql-formats:nth-child(3) {
+        grid-row: 2;
+        grid-column: 1 / -1;
+        width: 120px;
+    }
+    :is(.write-container, .course-write-wrapper) .ql-toolbar.ql-snow .is-block-format {
+        display: flex;
+        grid-row: 2;
+        grid-column: 1 / -1;
+        margin-left: 128px;
+        min-width: 0;
+        gap: 6px;
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+    :is(.write-container, .course-write-wrapper) .is-block-format::-webkit-scrollbar { display: none; }
+    :is(.write-container, .course-write-wrapper) .ql-toolbar.ql-snow button,
+    :is(.write-container, .course-write-wrapper) .ql-toolbar.ql-snow .ql-picker { height: 32px; }
+    :is(.write-container, .course-write-wrapper) .ql-toolbar.ql-snow button { width: 30px; padding: 6px; }
+    :is(.write-container, .course-write-wrapper) .ql-picker { font-size: 11px; }
+    :is(.write-container, .course-write-wrapper) .ql-picker.ql-header { width: 60px; }
+    :is(.write-container, .course-write-wrapper) .ql-picker.ql-font { width: 96px; }
+    :is(.write-container, .course-write-wrapper) .ql-picker.ql-size { width: 48px; }
+    :is(.write-container, .course-write-wrapper) .ql-picker-label { padding-left: 4px; }
+    :is(.write-container, .course-write-wrapper) .ql-picker-label::before { max-width: calc(100% - 18px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    :is(.write-container, .course-write-wrapper) :is(.ql-color, .ql-background, .ql-align) .ql-picker-options { left: auto; right: 0; }
+    :is(.write-container, .course-write-wrapper) .ql-container.ql-snow { border-radius: 0 0 5px 5px; }
+    :is(.write-container, .course-write-wrapper) .ql-editor { padding: 14px 12px; font-size: 15px; line-height: 1.7; overflow-wrap: anywhere; }
+    :is(.write-container, .course-write-wrapper) .button-group {
+        flex-direction: row;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 10px;
+        margin-top: 24px;
+    }
+    :is(.write-container, .course-write-wrapper) .button-group .btn {
+        width: auto;
+        min-width: 72px;
+        height: 42px;
+        padding: 0 16px;
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        border-radius: 5px;
+        box-sizing: border-box;
+        font-size: 13px;
+    }
+    :is(.write-container, .course-write-wrapper) .btn-primary { background: var(--tripbora-primary); border-color: var(--tripbora-primary); }
+    :is(.write-container, .course-write-wrapper) .btn-secondary { color: #656975; border-color: #dedfe5; }
+    .course-write-wrapper .button-group .btn-secondary { order: -1; }
+    .course-write-wrapper :is(.course-country-picker, .course-destination-picker, .selected-course-section) {
+        margin-top: 26px;
+        padding-top: 24px;
+        border-color: #eeedf1;
+    }
+    .course-write-wrapper .picker-heading h2 { font-size: 16px; font-weight: 600; color: #323642; }
+    .course-write-wrapper .picker-heading p { font-size: 12px; line-height: 1.5; color: #7c8089; }
+    .course-write-wrapper .course-country-control { margin-top: 14px; }
+    .course-write-wrapper .course-scope-button { min-width: 72px; height: 38px; padding: 0 16px; border-radius: 4px; font-size: 13px; font-weight: 500; border-color: #dedfe5; }
+    .course-write-wrapper .course-scope-button.is-active { background: #f5f1fc; color: var(--tripbora-primary); border-color: #d8c9f1; }
+    .course-write-wrapper .course-country-helper { font-size: 11px; }
+    .course-write-wrapper .destination-search-controls { grid-template-columns: minmax(0, 1fr) auto; gap: 0; margin-top: 14px; }
+    .course-write-wrapper .destination-search-controls input { border-radius: 5px 0 0 5px; border-right: 0; font-size: 14px; }
+    .course-write-wrapper .destination-search-controls .btn { height: 44px; padding: 0 14px; border-color: #dedfe5; border-left: 0; border-radius: 0 5px 5px 0; font-size: 12px; }
+    .course-write-wrapper .course-write-message { min-height: 18px; margin: 12px 0 4px; font-size: 11px; }
+    .course-write-wrapper .destination-search-results { grid-template-columns: minmax(0, 1fr); gap: 0; }
+    .course-write-wrapper .destination-result-card {
+        grid-template-columns: 64px minmax(0, 1fr) 52px;
+        gap: 10px;
+        padding: 12px 0;
+        border: 0;
+        border-bottom: 1px solid #efedf2;
+        border-radius: 0;
+        background: #fff;
+    }
+    .course-write-wrapper .destination-card-image { width: 64px; height: 64px; border-radius: 5px; }
+    .course-write-wrapper .destination-card-info h3,
+    .course-write-wrapper .selected-card-info strong { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; font-size: 13px; font-weight: 600; line-height: 1.45; }
+    .course-write-wrapper .destination-card-region { margin-top: 5px; font-size: 11px; white-space: nowrap; text-overflow: ellipsis; }
+    .course-write-wrapper .destination-card-description { display: none; }
+    .course-write-wrapper .destination-add-button { grid-column: auto; width: 52px; height: 38px; padding: 0; border: 0; border-radius: 4px; background: linear-gradient(#f5f1fc, #f5f1fc) center / 100% 32px no-repeat; color: var(--tripbora-primary); font-size: 12px; }
+    .course-write-wrapper .destination-add-button:disabled { background: none; color: #92959e; opacity: 1; }
+    .course-write-wrapper .selected-course-section .picker-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; }
+    .write-mobile-selection-count { display: inline; color: #7c8089; font-size: 11px; }
+    .course-write-wrapper .selected-course-section .picker-heading p { width: 100%; margin: 0; }
+    .course-write-wrapper .selected-destinations { margin-top: 12px; gap: 0; }
+    .course-write-wrapper .selected-destination-card {
+        grid-template-columns: 24px 52px minmax(0, 1fr) 108px;
+        gap: 8px;
+        padding: 12px 0;
+        border: 0;
+        border-bottom: 1px solid #efedf2;
+        border-radius: 0;
+        background: #fff;
+    }
+    .course-write-wrapper .selected-order { width: 24px; height: 24px; font-size: 11px; font-weight: 600; background: #f5f1fc; color: var(--tripbora-primary); }
+    .course-write-wrapper .selected-card-image { width: 52px; height: 52px; border-radius: 5px; }
+    .course-write-wrapper .selected-card-info { gap: 4px; }
+    .course-write-wrapper .selected-card-info span { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .course-write-wrapper .selected-card-controls { grid-column: auto; display: flex; flex-wrap: nowrap; gap: 0; }
+    .course-write-wrapper .order-control { flex: 0 0 36px; width: 36px; height: 38px; padding: 0; border: 0; border-radius: 0; background: none; color: #747884; font-size: 0; }
+    .course-write-wrapper .order-control::before { content: attr(data-mobile-symbol); font-size: 18px; }
+    .course-write-wrapper .order-control.remove { color: #747884; }
+    .course-write-wrapper .picker-empty { padding: 16px 0; border: 0; border-radius: 0; font-size: 12px; text-align: left; }
+}
+
+@media (max-width: 600px) {
+    .write-container,
+    .course-write-wrapper { padding: 0 16px; }
+}

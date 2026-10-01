@@ -77,6 +77,8 @@
     box-shadow: 0 14px 40px rgba(15, 23, 42, 0.06);
 }
 
+.board-mobile-write-action { display: none; }
+
 .board-list-header {
     display: flex;
     align-items: flex-start;
@@ -869,4 +871,221 @@
     .board-page-status {
         min-width: 58px;
     }
+}
+
+/* Smartphone feed; tablet and desktop retain the existing board layout. */
+@media (max-width: 600px) {
+    .board-layout {
+        min-height: 0;
+        gap: 20px;
+        margin: 12px auto 36px;
+        padding: 0 16px;
+        background: #fff;
+    }
+
+    .board-sidebar {
+        flex: 0 0 auto;
+        min-height: 0;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+        background: transparent;
+    }
+
+    .board-sidebar ul {
+        flex-wrap: nowrap;
+        gap: 18px;
+        overflow-x: auto;
+        scrollbar-width: none;
+        border-bottom: 1px solid #edf1f5;
+    }
+
+    .board-sidebar ul::-webkit-scrollbar,
+    .board-sort-bar::-webkit-scrollbar { display: none; }
+
+    .board-sidebar li { flex: 0 0 auto; }
+
+    .board-sidebar a,
+    .board-sidebar a:hover,
+    .board-sidebar a.active {
+        min-height: 42px;
+        padding: 0;
+        border-radius: 0;
+        border-bottom: 2px solid transparent;
+        background: transparent;
+        font-size: 12px;
+        white-space: nowrap;
+    }
+
+    .board-sidebar a.active { border-bottom-color: var(--board-accent); }
+
+    .board-main {
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .board-list-header { margin-bottom: 16px; position: relative; }
+    .board-main:has(.board-mobile-write-action) .board-heading { padding-right: 88px; }
+    .board-mobile-write-action { display: block; position: absolute; top: 0; right: 0; }
+    .board-mobile-write-action .board-write-btn {
+        min-height: 40px;
+        padding: 0 10px;
+        border: 0;
+        border-radius: 4px;
+        background: linear-gradient(#f5f1fc, #f5f1fc) center / 100% 32px no-repeat;
+        box-shadow: none;
+        color: var(--tripbora-primary) !important;
+        font-size: 12px;
+        gap: 4px;
+    }
+    .board-mobile-write-action .board-write-btn::before { font-size: 15px; }
+    .board-list-actions { display: none; }
+    .board-heading-kicker { display: none; }
+    .board-heading h1 { font-size: 24px; }
+    .board-heading p { display: none; }
+
+    .board-sort-bar {
+        display: flex;
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+        gap: 20px;
+        padding: 0;
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+    .board-sort-button,
+    .board-sort-button:hover,
+    .board-sort-button.active,
+    .board-sort-button[aria-pressed="true"] {
+        flex: 0 0 auto;
+        min-height: 36px;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        font-size: 11px;
+    }
+
+    .board-sort-button.active::after,
+    .board-sort-button[aria-pressed="true"]::after { right: 0; left: 0; bottom: 0; height: 1px; }
+
+    .board-country-filter {
+        gap: 8px;
+        margin-bottom: 8px;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+    }
+
+    .board-scope-options { width: auto; gap: 22px; }
+    .board-scope-link,
+    .board-scope-link:hover,
+    .board-scope-link.active,
+    .board-scope-link[aria-current="page"] {
+        flex: 0 0 auto;
+        min-width: 0;
+        min-height: 34px;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        font-size: 11px;
+    }
+
+    .board-country-select-wrap { width: 100%; }
+    .board-country-combobox { width: 100%; min-width: 0; }
+
+    .board-list-row,
+    .board-list-row--course,
+    .board-list-row:hover {
+        position: relative;
+        display: block;
+        padding: 15px 0;
+        background: transparent;
+        transition: none;
+    }
+
+    .board-row-main {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 3px;
+    }
+    .board-type {
+        min-width: 0;
+        min-height: 0;
+        padding: 0;
+        border-radius: 0;
+        background: transparent;
+        color: var(--board-muted);
+        font-size: 11px;
+        font-weight: 400;
+        line-height: 20px;
+    }
+
+    .board-list--course-only .board-type { display: none; }
+    .board-title,
+    .board-list-row--course .board-title {
+        width: 100%;
+        padding: 0;
+        font-size: 15px;
+        font-weight: 600;
+        line-height: 1.5;
+    }
+    .board-title a {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+    .board-title a::after { position: absolute; inset: 0; content: ""; }
+    .board-profile-link { position: relative; z-index: 1; }
+
+    .board-meta {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        gap: 0 8px;
+        margin-top: 8px;
+        padding: 0;
+    }
+    /* An empty flex line keeps reaction counts together beneath writer/date. */
+    .board-meta::before { content: ""; order: 1; flex-basis: 100%; height: 0; }
+    .board-meta-item { grid-column: auto; gap: 3px; font-size: 11px; line-height: 1.5; }
+    .board-meta-item::before { display: none; }
+    .board-nickname { max-width: min(170px, calc(100% - 112px)); }
+    .board-nickname .board-meta-label { display: none; }
+    .board-date { overflow: visible; }
+    .board-date .board-meta-value { font-size: 0; }
+    .board-date .board-meta-value::after { content: attr(data-mobile-date); font-size: 11px; }
+    .board-date::before { display: inline !important; content: "·"; }
+    .board-meta-label { font-size: 11px; color: var(--board-muted); }
+    .board-meta-value,
+    .board-comments .board-meta-value,
+    .board-bookmarks .board-meta-value { color: var(--board-muted); font-weight: 400; }
+
+    .board-views,
+    .board-comments,
+    .board-bookmarks {
+        order: 2;
+        margin-top: 4px;
+        font-size: 10px;
+    }
+    .board-views .board-meta-label,
+    .board-comments .board-meta-label,
+    .board-bookmarks .board-meta-label { font-size: 10px; }
+    .board-comments::before,
+    .board-bookmarks::before { display: inline; font-weight: 400; }
+
+    .board-list-empty { padding: 32px 0; font-size: 13px; }
+    .board-pagination { gap: 10px; padding-top: 22px; }
+    .board-page-button { min-width: 62px; min-height: 37px; border-radius: 6px; font-size: 12px; }
+    .board-page-button:disabled { border-color: #f1f5f9; background: transparent; }
+    .board-page-status { min-width: 58px; font-size: 12px; }
+    .board-page-status strong { font-size: 13px; }
 }
