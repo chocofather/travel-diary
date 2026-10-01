@@ -244,7 +244,7 @@
 
 /* Editorial hero 실험. 이 블록은 이벤트 영역 안에서만 기존 모바일 스타일을 대체한다. */
 .home-page #event-slider {
-    padding: 32px 0 24px;
+    padding: 20px 0 12px;
     background: #fff;
     transition: none;
 }
@@ -253,9 +253,9 @@
     max-width: none;
     padding: 0;
     display: grid;
-    grid-template-columns: minmax(0, 38fr) minmax(0, 62fr);
+    grid-template-columns: minmax(0, 35fr) minmax(0, 65fr);
     align-items: center;
-    gap: 32px;
+    gap: 24px;
     text-align: left;
 }
 .home-page #event-slider .slide-text {
@@ -264,18 +264,22 @@
     gap: 14px;
 }
 .home-page #event-slider .slide-text .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
     align-self: flex-start;
     margin: 0 0 2px;
     padding: 0;
     border: 0;
     border-radius: 0;
     background: none;
-    color: #817086;
+    color: var(--tripbora-primary);
     font-size: 11px;
     font-weight: 600;
     letter-spacing: .14em;
     line-height: 1.4;
 }
+.home-page #event-slider .slide-text .badge::after { content: ''; width: 28px; height: 1px; background: var(--tripbora-primary); }
 .home-page #event-slider .slide-text .title {
     font-size: 40px;
     font-weight: 700;
@@ -302,7 +306,8 @@
     font-size: 13px;
     font-weight: 600;
 }
-.home-page #event-slider .slide-text a.more:hover { color: var(--tripbora-primary); background: none; }
+.home-page #event-slider .slide-text a.more:hover,
+.home-page #event-slider .slide-text a.more:focus-visible { color: var(--tripbora-primary); background: none; }
 .home-page #event-slider .slide-img {
     flex: none;
     width: 100%;
@@ -316,30 +321,33 @@
     max-width: none;
     margin: 12px auto 0;
     padding: 0;
-    gap: 6px;
+    align-items: center;
+    gap: 4px;
     font-size: 11px;
     color: #8b858d;
 }
-.home-page #event-slider .slider-ui .progress { flex: 0 0 72px; order: 1; margin: 0 8px; height: 2px; background: #ebe8ec; }
-.home-page #event-slider #progress-bar { background: #a59aaa; }
-.home-page #event-slider button.nav { order: 2; width: 32px; min-width: 32px; height: 32px; min-height: 32px; padding: 0; font-size: 13px; }
-.home-page #event-slider button.pause { order: 3; color: #a39ba6; font-size: 11px; }
+.home-page #event-slider .slider-counter { display: inline-flex; align-items: center; gap: 4px; line-height: 1; font-variant-numeric: tabular-nums; }
+.home-page #event-slider .slider-ui .progress { flex: 0 0 72px; order: 1; margin: 0 6px; height: 2px; background: #ebe8ec; }
+.home-page #event-slider #progress-bar { background: color-mix(in srgb, var(--tripbora-primary) 60%, white); }
+.home-page #event-slider button.nav { order: 2; width: 32px; min-width: 32px; height: 32px; min-height: 32px; padding: 0; font-size: 13px; display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
+.home-page #event-slider button.nav:hover { background: none; color: #514357; }
+.home-page #event-slider button.pause { order: 3; font-size: 11px; }
 .home-page #event-slider .slider-ui[hidden],
 .home-page #event-slider .slider-ui [hidden],
 .home-page #event-slider .event-slider-bottom { display: none; }
 .home-page #event-slider .swiper-slide .slide-text { opacity: 0; transform: translateY(6px); transition: opacity .6s ease, transform .6s ease; }
 .home-page #event-slider .swiper-slide-active .slide-text { opacity: 1; transform: none; }
 @media (max-width: 960px) {
-    .home-page #event-slider { padding: 24px 0 20px; }
-    .home-page #event-slider .slide-inner { width: calc(100% - 48px); gap: 24px; }
+    .home-page #event-slider { padding: 18px 0 12px; }
+    .home-page #event-slider .slide-inner { width: calc(100% - 48px); gap: 20px; }
     .home-page #event-slider .slide-text { gap: 10px; }
     .home-page #event-slider .slide-text .title { font-size: 30px; }
     .home-page #event-slider .slide-text .description { font-size: 13px; }
     .home-page #event-slider .slider-ui { width: calc(100% - 48px); }
 }
 @media (max-width: 680px) {
-    .home-page #event-slider { padding: 20px 0 12px; }
-    .home-page #event-slider .slide-inner { width: calc(100% - 32px); grid-template-columns: minmax(0, 1fr); gap: 14px; }
+    .home-page #event-slider { padding: 16px 0 12px; }
+    .home-page #event-slider .slide-inner { width: calc(100% - 32px); grid-template-columns: minmax(0, 1fr); gap: 12px; }
     .home-page #event-slider .slide-text { width: 100%; gap: 8px; }
     .home-page #event-slider .slide-text .title { font-size: 26px; line-height: 1.25; }
     .home-page #event-slider .slide-text .description { max-width: 100%; font-size: 12px; line-height: 1.6; -webkit-line-clamp: 2; }

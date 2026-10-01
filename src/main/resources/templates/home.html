@@ -16,7 +16,7 @@
   <link rel="stylesheet" href="/css/home-converge-prototype.css?v=20260930-4" />
   <link rel="stylesheet" href="/css/home-mobile.css?v=20261001-1" />
   <link rel="stylesheet" href="/css/home-festival.css?v=20261002-2" />
-  <link rel="stylesheet" href="/css/slider.css?v=20261002-editorial" />
+  <link rel="stylesheet" href="/css/slider.css?v=20261002-editorial-density" />
 </th:block>
 
 <th:block th:fragment="body">
@@ -54,8 +54,7 @@
       <div class="swiper">
         <div class="swiper-wrapper" id="slide-area"></div>
         <div class="slider-ui" hidden>
-          <span id="slide-index">01</span> /
-          <span id="slide-total">--</span>
+          <span class="slider-counter"><span id="slide-index">01</span> / <span id="slide-total">--</span></span>
           <button type="button" class="nav prev" th:aria-label="#{home.event.previous}">❮</button>
           <button type="button" class="nav pause" th:aria-label="#{home.event.pause}">❚❚</button>
           <button type="button" class="nav next" th:aria-label="#{home.event.next}">❯</button>

@@ -35,7 +35,7 @@ class HomePageContractTest {
                 .contains("if (slideCount === 0)", "classList.add('is-empty')")
                 .contains("swiper.slidePrev()", "swiper.slideNext()");
         assertThat(sliderCss)
-                .contains("grid-template-columns: minmax(0, 38fr) minmax(0, 62fr)")
+                .contains("grid-template-columns: minmax(0, 35fr) minmax(0, 65fr)")
                 .contains(".slider-ui[hidden]", "prefers-reduced-motion: reduce")
                 .contains("aspect-ratio: 16 / 9")
                 .contains("#event-slider #progress-bar")
