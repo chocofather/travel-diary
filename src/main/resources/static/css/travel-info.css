@@ -452,19 +452,27 @@
 }
 
 .travel-info-card.is-festival .travel-info-thumbnail {
+    position: relative;
     display: grid;
-    aspect-ratio: 4 / 5;
+    aspect-ratio: 3 / 4;
     place-items: center;
-    background: #f8fafc;
+    background: #f4f3f5;
 }
 
 .travel-info-card.is-festival .travel-info-thumbnail img {
+    position: absolute;
+    inset: 0;
     object-fit: contain;
+    object-position: center;
+}
+
+.travel-info-card.is-festival .travel-info-thumbnail img.is-landscape {
+    object-fit: cover;
 }
 
 .travel-info-card.is-festival .travel-info-thumbnail-placeholder {
     gap: 6px;
-    background: #f8fafc;
+    background: #f4f3f5;
     font-size: 12px;
 }
 
@@ -762,9 +770,6 @@
         grid-template-columns: minmax(0, 1fr);
     }
 
-    .travel-info-card.is-festival .travel-info-thumbnail {
-        aspect-ratio: 4 / 3;
-    }
 }
 
 @media (max-width: 430px) {

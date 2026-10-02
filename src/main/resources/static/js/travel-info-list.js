@@ -14,6 +14,8 @@
     const EVENT_STATUS_FILTER_NAME = 'eventStatus';
     const CONTENT_TYPE_PARAMETER_NAME = 'contentType';
     const FESTIVAL_CONTENT_TYPE = 'FESTIVAL';
+    const FESTIVAL_IMAGE_SELECTOR = '.travel-info-card.is-festival .travel-info-thumbnail img';
+    const POSTER_MIN_HEIGHT_RATIO = 1.2;
     const GENERAL_CONTENT_TYPE = 'GENERAL';
     const GUIDE_CONTENT_TYPE = 'GUIDE';
     const DEFAULT_GENERAL_SCOPE = 'DOMESTIC';
@@ -25,6 +27,29 @@
     let activeController = null;
     let searchTimer = null;
     let selectedUrl = new URL(window.location.href);
+
+    function classifyFestivalImage(image) {
+        if (!image.naturalWidth || !image.naturalHeight) {
+            return;
+        }
+        image.classList.toggle('is-landscape',
+            image.naturalHeight / image.naturalWidth < POSTER_MIN_HEIGHT_RATIO);
+    }
+
+    function syncFestivalImages() {
+        document.querySelectorAll(FESTIVAL_IMAGE_SELECTOR).forEach((image) => {
+            if (image.complete) {
+                classifyFestivalImage(image);
+            }
+        });
+    }
+
+    // load는 bubble하지 않는다. lazy 이미지와 AJAX로 교체된 이미지 모두 capture로 처리한다.
+    document.addEventListener('load', (event) => {
+        if (event.target instanceof HTMLImageElement && event.target.matches(FESTIVAL_IMAGE_SELECTOR)) {
+            classifyFestivalImage(event.target);
+        }
+    }, true);
 
     function canIntercept(event, control) {
         return event.button === 0
@@ -370,6 +395,7 @@
         }
         currentCategoryFilter.replaceWith(nextCategoryFilter);
         currentResults.replaceWith(nextResults);
+        syncFestivalImages();
     }
 
     async function loadResults(requestedUrl, historyMode) {
@@ -495,4 +521,5 @@
     });
 
     syncUi(selectedUrl);
+    syncFestivalImages();
 })();

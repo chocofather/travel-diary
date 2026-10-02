@@ -136,7 +136,7 @@ class TravelInfoPublicUiContractTest {
     }
 
     @Test
-    void festivalCardsUseASeparateContainedPosterLayoutWithoutChangingGeneralCards()
+    void festivalCardsUseASeparatePosterFrameWithoutChangingGeneralCards()
             throws IOException {
         String fragment = resource("/templates/travel-info/fragments/list-results.html");
         String css = resource("/static/css/travel-info.css");
@@ -150,9 +150,10 @@ class TravelInfoPublicUiContractTest {
                 .doesNotContain("travel-info-period-label");
         assertThat(css)
                 .contains(".travel-info-card.is-festival .travel-info-thumbnail")
-                .contains("aspect-ratio: 4 / 5")
+                .contains("aspect-ratio: 3 / 4")
                 .contains(".travel-info-card.is-festival .travel-info-thumbnail img")
                 .contains("object-fit: contain")
+                .contains(".travel-info-card.is-festival .travel-info-thumbnail img.is-landscape")
                 .contains(".travel-info-card.is-festival .travel-info-thumbnail-placeholder")
                 .contains(".travel-info-card.is-festival .travel-info-type-meta")
                 .contains(".travel-info-card.is-festival .travel-info-card-bookmark")

@@ -2,7 +2,7 @@
 <html lang="ko" xmlns:th="http://www.thymeleaf.org"
       th:replace="~{layout/main :: layout(~{::body}, ~{::headFragment})}">
 <th:block th:fragment="headFragment">
-  <link rel="stylesheet" href="/css/travel-info.css">
+  <link rel="stylesheet" href="/css/travel-info.css?v=20261002-festival-poster">
 </th:block>
 <th:block th:fragment="body">
   <section class="travel-info-page" aria-labelledby="travel-info-title">
@@ -172,7 +172,7 @@
        th:attr="data-load-failed-message=#{travelInfo.list.loadFailed}"></p>
     <div th:replace="~{travel-info/fragments/list-results :: results}"></div>
   </section>
-  <script src="/js/travel-info-list.js" defer></script>
+  <script src="/js/travel-info-list.js?v=20261002-festival-poster" defer></script>
   <script src="/js/travel-info-bookmark.js" defer></script>
 </th:block>
 </html>
