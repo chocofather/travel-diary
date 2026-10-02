@@ -54,6 +54,15 @@
     text-underline-offset: 3px;
 }
 
+/* 메인 추천 중인 글: 제목 아래 작은 회색 글자로만 알린다 */
+.admin-travel-info-home-featured-note {
+    display: block;
+    margin-top: 3px;
+    color: #6b7891;
+    font-size: 0.74rem;
+    font-weight: 600;
+}
+
 .admin-travel-info-badge {
     display: inline-flex;
     min-width: 44px;
@@ -167,6 +176,25 @@
 /* URL 처럼 한 줄을 다 쓰는 값 */
 .admin-travel-info-basic-grid .admin-form-field.is-full {
     grid-column: 1 / -1;
+}
+
+/* 축제·행사일 때만 보이는 행사 범위. 칸의 display:grid 가 브라우저 기본 [hidden] 을 이기므로 다시 숨긴다 */
+.admin-travel-info-basic-grid .admin-form-field[hidden] {
+    display: none;
+}
+
+/* 메인 추천: 체크와 순서를 위아래로 둔다. 축제·행사면 통째로 숨긴다 */
+.admin-travel-info-home-featured {
+    display: grid;
+    gap: 16px;
+}
+
+.admin-travel-info-home-featured[hidden] {
+    display: none;
+}
+
+.admin-travel-info-home-featured input[type="number"] {
+    max-width: 120px;
 }
 
 /* 한 줄 입력과 나란히 서는 textarea 는 행 높이를 과하게 키우지 않는다 */
@@ -825,6 +853,10 @@
 }
 
 @media (max-width: 560px) {
+    .admin-travel-info-basic-grid.is-pairs {
+        grid-template-columns: 1fr;
+    }
+
     .admin-travel-info-section-header.is-action-header,
     .admin-travel-info-submit-actions {
         align-items: stretch;

@@ -22,26 +22,46 @@ class HomePageContractTest {
         String sliderCss = resource("/static/css/slider.css");
         var document = Jsoup.parse(template);
 
-        assertThat(document.select("#event-slider .swiper #slide-area")).hasSize(1);
-        assertThat(document.select(".slider-ui .prev, .slider-ui .pause, .slider-ui .next")).hasSize(3);
-        assertThat(document.select("#progress-bar")).hasSize(1);
+        // Hero 와 이벤트 프로모션 배너는 서버가 그린다. 각자 영역 안에 Swiper 와 컨트롤을 가진다.
+        assertThat(document.select("#home-hero .swiper .swiper-wrapper .swiper-slide")).hasSize(1);
+        assertThat(document.select("#home-hero .slider-ui .prev, #home-hero .slider-ui .pause, "
+                + "#home-hero .slider-ui .next")).hasSize(3);
+        assertThat(document.select("#home-hero .progress-bar")).hasSize(1);
+        assertThat(document.select("#home-promotion .swiper .swiper-slide .home-promotion-banner")).hasSize(1);
+        assertThat(document.select("#event-slider, #slide-area, #progress-bar")).isEmpty();
+        assertThat(template)
+                .contains("th:if=\"${!#lists.isEmpty(homeHeroItems)}\"")
+                .contains("th:if=\"${#lists.size(homeHeroItems) > 1}\"")
+                .contains("th:if=\"${!#lists.isEmpty(homePromotionEvents)}\"")
+                .contains("th:if=\"${#lists.size(homePromotionEvents) > 1}\"")
+                .doesNotContain("home.event.");
         assertThat(sliderScript)
-                .contains("fetch('/api/events/slide')")
+                .doesNotContain("fetch(", "/api/events/slide", "innerHTML", "/events/", "EVENT")
                 .doesNotContain("navBar.style.backgroundColor", "pastelColors")
                 .doesNotContain("#e0ffe0", "#fff5cc", "#ffe0f0", "#e0f7fa")
-                // 자동재생은 슬라이드가 두 장 이상일 때만 켠다. 0장이면 타이머 없이 영역을 숨긴다.
-                .contains("autoplay: hasMultipleSlides && !reducedMotion ? { delay: 10000")
-                .contains("sliderUi.hidden = !hasMultipleSlides", "effect: 'fade'")
-                .contains("if (slideCount === 0)", "classList.add('is-empty')")
-                .contains("swiper.slidePrev()", "swiper.slideNext()");
+                .doesNotContain("getElementById")
+                // 영역마다 따로 시작하고, 요소는 그 영역 안에서만 찾는다.
+                .contains("document.querySelectorAll('#home-hero, #home-promotion')")
+                .contains("root.querySelector('.swiper')", "root.querySelector('.progress-bar')")
+                // 자동재생은 슬라이드가 두 장 이상이고 움직임 줄이기가 아닐 때만 켠다.
+                .contains("const autoplayEnabled = hasMultipleSlides && !reducedMotion")
+                .contains("autoplay: autoplayEnabled ? { delay: AUTOPLAY_DELAY")
+                .contains("effect: 'fade'", "if (slideCount === 0")
+                .contains("swiper.slidePrev()", "swiper.slideNext()")
+                .contains("root.dataset.labelPlay", "root.dataset.labelPause");
+        // Hero 는 본문 폭의 큰 이미지 한 장 위에 글을 얹는다. 글/이미지 두 칸 구조는 쓰지 않는다.
         assertThat(sliderCss)
-                .contains("grid-template-columns: minmax(0, 35fr) minmax(0, 65fr)")
-                .contains(".slider-ui[hidden]", "prefers-reduced-motion: reduce")
-                .contains("aspect-ratio: 16 / 9")
-                .contains("#event-slider #progress-bar")
-                .contains("#event-slider .slide-text a.more")
-                .contains("font-size: 26px")
-                .contains("font-size: 13px");
+                .contains("aspect-ratio: 2.2 / 1", "aspect-ratio: 2 / 1", "aspect-ratio: 6 / 5")
+                .contains(".slide-img::after", "rgba(14, 17, 22,")
+                .contains("#home-hero .slide-text {\n    position: absolute;")
+                .contains("-webkit-line-clamp: 2")
+                .contains(".slider-ui [hidden]", "prefers-reduced-motion: reduce")
+                .contains("#home-hero .progress-bar")
+                .contains("#home-hero .slide-text a.more")
+                .doesNotContain("grid-template-columns", "35fr", "65fr")
+                .doesNotContain("event-slider", ".description", "is-empty");
+        // 폭별 Hero 모양은 slider.css 한 곳에서만 정한다.
+        assertThat(resource("/static/css/home-mobile.css")).doesNotContain("#home-hero");
         assertThat(homeScript)
                 .contains("SPRING", "SUMMER", "FALL", "WINTER")
                 .contains("/api/season-destinations?season=")
@@ -98,7 +118,11 @@ class HomePageContractTest {
         assertThat(template)
                 .contains("id=\"home-i18n\"")
                 .contains("#{home.season.spring.title}")
-                .contains("#{home.event.details}")
+                // Hero·프로모션 배너의 고정 문구는 메시지로, 콘텐츠 값은 서버가 바꿔 둔 그대로 그린다.
+                .contains("#{home.hero.details}", "#{home.promotion.details}", "#{home.promotion.eyebrow}")
+                .contains("th:text=\"${item.categoryName}\"", "th:text=\"${item.title}\"")
+                .contains("th:text=\"${event.title}\"")
+                .doesNotContain("th:text=\"${event.description}\"")
                 .contains("th:text=\"${festival.title}\"")
                 .contains("th:text=\"${festival.location}\"");
         assertThat(homeScript)
@@ -108,10 +132,9 @@ class HomePageContractTest {
                 .contains("[dest.parentRegionName, dest.regionName]")
                 .doesNotContain("데이터가 없습니다.", "불러오기에 실패했습니다.");
         assertThat(sliderScript)
-                .contains("home-i18n", ".dataset", "homeI18n.eventDetails", ">EVENT</span>")
-                // 이벤트 값은 여전히 서버가 준 그대로 그린다. (escape 만 거친다)
-                .contains("escapeHtml(ev.title)", "escapeHtml(ev.description)")
-                .doesNotContain(">자세히 보기<");
+                // 슬라이더는 글자를 만들지 않는다. 일시정지/재생 이름만 자기 영역의 data 속성에서 읽는다.
+                .contains("root.dataset.labelPause", "root.dataset.labelPlay")
+                .doesNotContain("home-i18n", "escapeHtml", ">자세히 보기<", "자세히 보기");
     }
 
     private String resource(String path) throws IOException {

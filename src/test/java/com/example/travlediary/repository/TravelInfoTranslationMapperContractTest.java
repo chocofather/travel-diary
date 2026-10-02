@@ -152,7 +152,8 @@ class TravelInfoTranslationMapperContractTest {
                 .doesNotContain("travel_info_translations");
         assertThat(normalize(findById.getSql())).isEqualTo(
                 "SELECT id, title, content, scope, content_type, created_at, updated_at, "
-                        + "category_id, views, user_id FROM travel_info WHERE id = ?");
+                        + "category_id, views, is_home_featured, home_featured_order, user_id "
+                        + "FROM travel_info WHERE id = ?");
     }
 
     @Test

@@ -9,11 +9,17 @@ import com.example.travlediary.config.i18n.TravelDiaryLocaleResolver;
 import com.example.travlediary.dto.HomeFestivalDto;
 import com.example.travlediary.dto.RecommendDestinationDto;
 import com.example.travlediary.dto.SeasonDestinationDto;
+import com.example.travlediary.dto.TravelInfoListItemDto;
+import com.example.travlediary.model.Event;
+import com.example.travlediary.model.TravelInfoContentType;
 import com.example.travlediary.model.User;
 import com.example.travlediary.model.UserRole;
 import com.example.travlediary.repository.user.UserMapper;
 import com.example.travlediary.security.CustomUserDetails;
+import com.example.travlediary.service.event.EventLocalizationService;
+import com.example.travlediary.service.event.EventService;
 import com.example.travlediary.service.travelinfo.FestivalDetailService;
+import com.example.travlediary.service.travelinfo.TravelInfoService;
 import com.example.travlediary.service.destination.DestinationViewClock;
 import com.example.travlediary.service.file.DestinationCardThumbnailService;
 import com.example.travlediary.service.recommend.DestinationRecommendService;
@@ -69,6 +75,12 @@ class HomeControllerTest {
     @MockitoBean
     private DestinationCardThumbnailService cardThumbnailService;
     @MockitoBean
+    private TravelInfoService travelInfoService;
+    @MockitoBean
+    private EventService eventService;
+    @MockitoBean
+    private EventLocalizationService eventLocalizationService;
+    @MockitoBean
     private UserMapper userMapper;
     @MockitoBean
     private CustomLoginSuccessHandler customLoginSuccessHandler;
@@ -106,7 +118,8 @@ class HomeControllerTest {
                     assertThat(document.select(".footer-operations .footer-operator-name")).isEmpty();
                     assertThat(document.select(".footer-operations .footer-contact-email").text())
                             .isEqualTo("contact@tripbora.test");
-                    assertThat(document.select("#event-slider #slide-area")).hasSize(1);
+                    // 메인 추천·메인 노출 이벤트가 없으면 Hero 와 프로모션 배너를 그리지 않는다. (임의 fallback 없음)
+                    assertThat(document.select("#home-hero, #home-promotion, #event-slider")).isEmpty();
                     // 서비스 소개는 메인 본문 블록이 아니라 헤더 아이콘과 ☰ 메뉴 판의 글자 메뉴로 들어간다.
                     assertThat(document.select(".home-service-teaser")).isEmpty();
                     assertThat(document.selectFirst(".search-box a.header-about-link").attr("href"))
@@ -115,14 +128,11 @@ class HomeControllerTest {
                             .isEqualTo("TripBora 소개");
                     assertThat(document.select("#site-menu a.site-menu-about[href='/about']").text())
                             .isEqualTo("TripBora 소개");
-                    // jsoup 의 Element 는 Iterable<Element> 라 assertThat(요소) 가 컬렉션 단언으로
-                    // 잡힌다. 확인하려는 것은 "바로 다음 형제의 class" 하나이므로 그 값을 직접 본다.
-                    assertThat(document.selectFirst("#event-slider").nextElementSibling()
-                            .hasClass("seasonal-recommend")).isTrue();
-                    // 랜드마크가 없으면 섹션을 그리지 않아 계절 추천 다음이 바로 인기 여행지다.
+                    // 메인 순서: Hero → 지금 뜨는 여행지 → 이벤트 → 계절 추천 → 랜드마크 → 축제.
+                    // 비어 있는 영역(Hero·이벤트·랜드마크)은 그리지 않고, 남은 영역은 같은 차례를 지킨다.
                     assertThat(document.select(".home-converge")).isEmpty();
-                    assertThat(document.selectFirst(".seasonal-recommend").nextElementSibling()
-                            .hasClass("popular-recommend")).isTrue();
+                    assertThat(document.select(".home-page > section").eachAttr("class"))
+                            .containsExactly("popular-recommend", "seasonal-recommend", "home-festival-section");
                     assertThat(document.select(".seasonal-recommend")).hasSize(1);
                     assertThat(document.select(".popular-recommend")).hasSize(1);
                     // 인기 여행지: 배지·필터 없이 제목·설명·전체보기, 그 아래 1 Large + 4 Small 편집 격자.
@@ -163,6 +173,8 @@ class HomeControllerTest {
                             .contains("서울 가을 문화 축제", "진행중", "서울 종로구", "2026.10.01 - 10.12");
                     assertThat(document.select(".home-festival-all").attr("href"))
                             .isEqualTo("/travel-info?contentType=FESTIVAL");
+                    // 위의 TripBora 이벤트 배너와 겹쳐 보이지 않게 지역 축제 영역임을 eyebrow 로 구분한다.
+                    assertThat(document.select(".home-festival-eyebrow").text()).isEqualTo("LOCAL FESTIVALS");
                     assertThat(document.select(".popular-course-section")).isEmpty();
                     assertThat(document.select(".instant-trip, #roulette-canvas")).isEmpty();
                 });
@@ -504,6 +516,8 @@ class HomeControllerTest {
         when(popularRecommendService.findDomesticPopular(5, SupportedLanguage.ENGLISH))
                 .thenReturn(List.of(popular(15L, "Gyeongbokgung Palace", "/uploads/destinations/palace.jpg",
                         "Jongno-gu")));
+        when(travelInfoService.getHomeHeroItems(5, SupportedLanguage.ENGLISH))
+                .thenReturn(List.of(heroItem(10L, "Seoul Palace Walk", "Seasonal travel")));
 
         mockMvc.perform(get("/")
                         .cookie(new Cookie(TravelDiaryLocaleResolver.COOKIE_NAME, "en")))
@@ -518,9 +532,185 @@ class HomeControllerTest {
                             .contains("Seoul Autumn Festival", "Upcoming");
                     assertThat(document.selectFirst("#home-i18n").attr("data-spring-title"))
                             .isEqualTo("Spring: Great Places to Go Now");
-                    assertThat(document.selectFirst("#home-i18n").attr("data-event-details"))
-                            .isEqualTo("View details");
+                    // Hero 의 고정 문구도 요청 언어를 따르고, 제목·카테고리는 서비스가 바꿔 둔 값 그대로다.
+                    var hero = document.selectFirst("#home-hero");
+                    assertThat(hero.attr("aria-label")).isEqualTo("Featured travel guides");
+                    assertThat(hero.attr("data-label-play")).isEqualTo("Start autoplay");
+                    assertThat(hero.select(".slide-text").text())
+                            .isEqualTo("Seasonal travel Seoul Palace Walk View details →");
                 });
+    }
+
+    @Test
+    void heroRendersFeaturedTravelInfoOnTheServerInTheGivenOrder() throws Exception {
+        when(travelInfoService.getHomeHeroItems(5, SupportedLanguage.KOREAN)).thenReturn(List.of(
+                heroItem(10L, "서울 고궁 체험", "여행추천"),
+                heroItem(11L, "일본 온천 여행 가이드", "준비물")));
+
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(result -> {
+                    var document = Jsoup.parse(result.getResponse().getContentAsString());
+                    var hero = document.selectFirst("#home-hero");
+                    assertThat(hero).isNotNull();
+                    // Hero 는 본문의 첫 영역이다. 이 경우 지금 뜨는 여행지·이벤트가 비어 있어 다음이 계절 추천이다.
+                    assertThat(document.selectFirst(".home-page > section")).isSameAs(hero);
+                    assertThat(hero.nextElementSibling().hasClass("seasonal-recommend")).isTrue();
+                    assertThat(hero.attr("aria-label")).isEqualTo("추천 여행정보");
+
+                    var slides = hero.select(".swiper-wrapper > .swiper-slide");
+                    assertThat(slides).hasSize(2);
+                    assertThat(slides.select(".badge").eachText()).containsExactly("여행추천", "준비물");
+                    assertThat(slides.select("h2.title").eachText())
+                            .containsExactly("서울 고궁 체험", "일본 온천 여행 가이드");
+                    assertThat(slides.select("a.more").eachAttr("href"))
+                            .containsExactly("/travel-info/10", "/travel-info/11");
+                    assertThat(slides.select("a.more").eachText()).containsOnly("자세히 보기 →");
+                    // 이미지 링크는 글 링크와 같은 곳으로 가지만 읽기·탭 순서에서는 빠진다.
+                    assertThat(slides.select("a.slide-img").eachAttr("href"))
+                            .containsExactly("/travel-info/10", "/travel-info/11");
+                    assertThat(slides.select("a.slide-img").eachAttr("tabindex")).containsOnly("-1");
+                    assertThat(slides.select("a.slide-img").eachAttr("aria-hidden")).containsOnly("true");
+                    // 첫 이미지는 바로 받고 나머지는 미룬다.
+                    var images = slides.select(".slide-img img");
+                    assertThat(images.eachAttr("src"))
+                            .containsExactly("/uploads/travel-info/thumbnails/10.jpg",
+                                    "/uploads/travel-info/thumbnails/11.jpg");
+                    assertThat(images.get(0).attr("fetchpriority")).isEqualTo("high");
+                    assertThat(images.get(0).attr("loading")).isEqualTo("eager");
+                    assertThat(images.get(1).hasAttr("fetchpriority")).isFalse();
+                    assertThat(images.get(1).attr("loading")).isEqualTo("lazy");
+                    // 이벤트 시절의 고정 문구·링크가 남지 않는다.
+                    assertThat(hero.text()).doesNotContain("EVENT", "이벤트");
+                    assertThat(hero.select("a[href^=/events/]")).isEmpty();
+
+                    // 두 장 이상이라 컨트롤을 그린다. 버튼마다 이름이 있고 카운터 전체 수는 서버가 채운다.
+                    assertThat(hero.select(".slider-ui .slider-counter").text()).isEqualTo("01 / 02");
+                    assertThat(hero.select(".slider-ui .prev").attr("aria-label")).isEqualTo("이전 추천 여행정보");
+                    assertThat(hero.select(".slider-ui .next").attr("aria-label")).isEqualTo("다음 추천 여행정보");
+                    assertThat(hero.select(".slider-ui .pause").attr("aria-label")).isEqualTo("자동 재생 일시정지");
+                    assertThat(hero.select(".slider-ui .pause").attr("aria-pressed")).isEqualTo("false");
+                    assertThat(hero.select(".slider-ui .progress .progress-bar")).hasSize(1);
+                    // 진행선·카운터는 영역 안 class 로 찾는다. 문서 전체 id 로 두 슬라이더가 섞이지 않는다.
+                    assertThat(document.select("#slide-area, #slide-index, #slide-total, #progress-bar")).isEmpty();
+                });
+
+        verify(travelInfoService).getHomeHeroItems(5, SupportedLanguage.KOREAN);
+    }
+
+    @Test
+    void singleHeroItemRendersWithoutCarouselControls() throws Exception {
+        when(travelInfoService.getHomeHeroItems(5, SupportedLanguage.KOREAN))
+                .thenReturn(List.of(heroItem(10L, "단양 8경", null)));
+
+        mockMvc.perform(get("/")).andExpect(status().isOk()).andExpect(result -> {
+            var hero = Jsoup.parse(result.getResponse().getContentAsString()).selectFirst("#home-hero");
+            assertThat(hero.select(".swiper-slide")).hasSize(1);
+            assertThat(hero.select(".slider-ui, .nav, .progress")).isEmpty();
+            // 카테고리 이름이 비면 eyebrow 를 그리지 않는다.
+            assertThat(hero.select(".badge")).isEmpty();
+            assertThat(hero.select("h2.title").text()).isEqualTo("단양 8경");
+        });
+    }
+
+    @Test
+    void promotionBannerShowsLocalizedOngoingAndUpcomingEventsBetweenTrendingAndSeasonal()
+            throws Exception {
+        LocalDate today = LocalDate.of(2026, 10, 3);
+        when(viewClock.today()).thenReturn(today);
+        when(popularRecommendService.findDomesticPopular(5, SupportedLanguage.KOREAN))
+                .thenReturn(List.of(popular(15L, "경복궁", "/uploads/destinations/palace.jpg", "종로구")));
+        when(festivalDetailService.getHomeFestivals(today, SupportedLanguage.KOREAN))
+                .thenReturn(List.of(festival(12L, "서울 가을 문화 축제", "ongoing")));
+        List<Event> stored = List.of(
+                event(3L, "가을 여행 후기 이벤트", "<p>원문</p>", "/uploads/events/a.jpg"),
+                event(4L, "겨울 사진 공모전", null, "/uploads/events/b.jpg"));
+        when(eventService.getHomePromotionEvents(today, 5)).thenReturn(stored);
+        // 언어 대체는 이벤트 공개 화면과 같은 서비스가 맡는다. 설명은 HTML 로 저장될 수 있다.
+        when(eventLocalizationService.localizeAll(stored, SupportedLanguage.KOREAN)).thenReturn(List.of(
+                event(3L, "가을 여행 후기 이벤트", "<p>후기를 남기면 <strong>여행 굿즈</strong>를 드려요.</p>",
+                        "/uploads/events/a.jpg"),
+                event(4L, "겨울 사진 공모전", null, "/uploads/events/b.jpg")));
+
+        mockMvc.perform(get("/")).andExpect(status().isOk()).andExpect(result -> {
+            var document = Jsoup.parse(result.getResponse().getContentAsString());
+            var promotion = document.selectFirst("#home-promotion");
+            assertThat(promotion).isNotNull();
+            // 지금 뜨는(인기) 여행지 다음, 계절 추천 앞이다.
+            assertThat(promotion.previousElementSibling().hasClass("popular-recommend")).isTrue();
+            assertThat(promotion.nextElementSibling().hasClass("seasonal-recommend")).isTrue();
+            assertThat(document.select(".home-page > section").eachAttr("class"))
+                    .containsExactly("popular-recommend", "home-promotion home-slider is-carousel",
+                            "seasonal-recommend", "home-festival-section");
+            assertThat(promotion.attr("aria-label")).isEqualTo("TripBora 이벤트");
+
+            var banners = promotion.select(".swiper-slide .home-promotion-banner");
+            assertThat(banners).hasSize(2);
+            // eyebrow 는 배너 위에 영역당 하나다. 슬라이드마다 반복하지 않는다.
+            assertThat(promotion.select(".home-promotion-eyebrow").eachText()).containsExactly("TRIPBORA EVENT");
+            assertThat(banners.select(".home-promotion-eyebrow")).isEmpty();
+            assertThat(banners.select(".home-promotion-title").eachText())
+                    .containsExactly("가을 여행 후기 이벤트", "겨울 사진 공모전");
+            // 메인 배너는 이미지 중심이라 설명을 그리지 않는다.
+            assertThat(promotion.select(".home-promotion-description")).isEmpty();
+            assertThat(promotion.text()).doesNotContain("여행 굿즈");
+            assertThat(banners.select("a.home-promotion-more").eachAttr("href"))
+                    .containsExactly("/events/3", "/events/4");
+            assertThat(banners.select(".home-promotion-media img").eachAttr("src"))
+                    .containsExactly("/uploads/events/a.jpg", "/uploads/events/b.jpg");
+            assertThat(banners.select(".home-promotion-media").eachAttr("tabindex")).containsOnly("-1");
+
+            // 여러 장이라 같은 자리에서 넘기는 작은 컨트롤이 있다. Hero 컨트롤과는 다른 영역이다.
+            assertThat(promotion.select(".slider-ui .slider-counter").text()).isEqualTo("01 / 02");
+            assertThat(promotion.select(".slider-ui .prev").attr("aria-label")).isEqualTo("이전 이벤트");
+            assertThat(promotion.select(".slider-ui .next").attr("aria-label")).isEqualTo("다음 이벤트");
+            assertThat(promotion.select(".slider-ui .pause")).hasSize(1);
+        });
+
+        // 오늘은 DB 시계가 아니라 애플리케이션 날짜(KST)다.
+        verify(eventService).getHomePromotionEvents(today, 5);
+    }
+
+    @Test
+    void singlePromotionEventIsOneBannerWithoutControlsAndNoneHidesTheSection() throws Exception {
+        LocalDate today = LocalDate.of(2026, 10, 3);
+        when(viewClock.today()).thenReturn(today);
+        List<Event> one = List.of(event(3L, "가을 여행 후기 이벤트", null, "/uploads/events/a.jpg"));
+        when(eventService.getHomePromotionEvents(today, 5)).thenReturn(one);
+        when(eventLocalizationService.localizeAll(one, SupportedLanguage.KOREAN)).thenReturn(one);
+
+        mockMvc.perform(get("/")).andExpect(status().isOk()).andExpect(result -> {
+            var promotion = Jsoup.parse(result.getResponse().getContentAsString())
+                    .selectFirst("#home-promotion");
+            assertThat(promotion.select(".home-promotion-banner")).hasSize(1);
+            assertThat(promotion.select(".slider-ui, .nav")).isEmpty();
+        });
+
+        when(eventService.getHomePromotionEvents(today, 5)).thenReturn(List.of());
+        when(eventLocalizationService.localizeAll(List.of(), SupportedLanguage.KOREAN)).thenReturn(List.of());
+        mockMvc.perform(get("/")).andExpect(status().isOk()).andExpect(result ->
+                assertThat(Jsoup.parse(result.getResponse().getContentAsString())
+                        .select("#home-promotion")).isEmpty());
+    }
+
+    private TravelInfoListItemDto heroItem(Long id, String title, String categoryName) {
+        TravelInfoListItemDto item = new TravelInfoListItemDto();
+        item.setId(id);
+        item.setTitle(title);
+        item.setContentType(TravelInfoContentType.GENERAL);
+        item.setCategoryId(3L);
+        item.setCategoryName(categoryName);
+        item.setThumbnailUrl("/uploads/travel-info/thumbnails/" + id + ".jpg");
+        return item;
+    }
+
+    private Event event(Long id, String title, String description, String eventImg) {
+        Event event = new Event();
+        event.setId(id);
+        event.setTitle(title);
+        event.setDescription(description);
+        event.setEventImg(eventImg);
+        return event;
     }
 
     private HomeFestivalDto festival(Long id, String title, String eventStatus) {

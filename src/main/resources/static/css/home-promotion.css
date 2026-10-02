@@ -1,0 +1,281 @@
+/*
+  TripBora 이벤트 프로모션 (#home-promotion). 지금 뜨는 여행지와 축제·행사 사이에서 짧게 시선을 돌리는 배너다.
+  흰 메인 바탕 위에 작은 eyebrow, 넓고 낮은 이벤트 이미지, 그 아래 한 줄(제목 · 자세히 보기 · 컨트롤)만 둔다.
+  큰 배경 상자·테두리·그림자·그라데이션 없이 이미지가 포인트가 된다. 보라색은 eyebrow 선과 링크 반응에만 쓴다.
+  여러 장이면 Hero 와 같은 slider.js 가 이 영역 안에서만 따로 넘기고, 컨트롤은 정보 줄 오른쪽 끝에 둔다.
+*/
+.home-promotion {
+    /* 여러 장일 때만 정보 줄 오른쪽에 컨트롤 자리를 비운다 */
+    --promotion-control-space: 0px;
+    /* 위 지금 뜨는 여행지와는 가깝게, 아래 계절 추천(큰 사진)과는 조금 넉넉하게 띄운다 */
+    padding: 32px 20px;
+    background: #fff;
+}
+
+/* 컨트롤 묶음 폭(구분선 · 번호 · 버튼 세 개 ≈ 150px)에 정보 줄 간격(24px)을 더한 자리 */
+.home-promotion.is-carousel {
+    --promotion-control-space: 176px;
+}
+
+.home-promotion-inner {
+    position: relative;
+    max-width: var(--home-content-width, 1120px);
+    margin: 0 auto;
+}
+
+/* 아래 LOCAL FESTIVALS eyebrow 와 같은 크기·자간에, 짧은 보라색 선만 더한다 */
+.home-promotion-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    color: #77717e;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .12em;
+    line-height: 1.4;
+}
+
+.home-promotion-eyebrow::after {
+    content: '';
+    width: 24px;
+    height: 1px;
+    background: var(--tripbora-primary);
+}
+
+/* 페이드로 겹친 슬라이드 높이를 가장 긴 배너에 맞춘다 */
+.home-promotion .swiper-slide {
+    display: flex;
+    height: auto;
+}
+
+.home-promotion-banner {
+    flex: 1;
+    min-width: 0;
+}
+
+/*
+  넓고 낮은 이벤트 이미지(desktop 5:1). 이벤트마다 이미지 비율이 달라도 칸 모양은 배너가 정하고,
+  사진은 가운데보다 조금 위를 기준으로 채운다.
+*/
+.home-promotion-media {
+    display: block;
+    aspect-ratio: 5 / 1;
+    overflow: hidden;
+    border-radius: 8px;
+    background: #f1eff3;
+}
+
+.home-promotion-media img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 45%;
+}
+
+/* 이미지 아래 한 줄: 왼쪽 제목, 오른쪽 자세히 보기. 여러 장이면 그 오른쪽에 컨트롤이 붙는다 */
+.home-promotion-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    min-height: 48px;
+    padding-right: var(--promotion-control-space);
+}
+
+.home-promotion-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    color: #20262e;
+    font-size: 16px;
+    font-weight: 650;
+    line-height: 1.4;
+    letter-spacing: -.02em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 버튼이 아니라 글 링크. 반응은 밑줄과 화살표가 조금 움직이는 정도로만 둔다 */
+.home-promotion-more {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 4px 0;
+    color: #514357;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.home-promotion-more > span[aria-hidden] {
+    transition: transform .2s ease;
+}
+
+.home-promotion-more:hover,
+.home-promotion-more:focus-visible {
+    color: var(--tripbora-primary);
+}
+
+.home-promotion-more:hover > span:first-child,
+.home-promotion-more:focus-visible > span:first-child {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 4px;
+}
+
+.home-promotion-more:hover > span[aria-hidden],
+.home-promotion-more:focus-visible > span[aria-hidden] {
+    transform: translateX(3px);
+}
+
+.home-promotion-more:focus-visible,
+.home-promotion button.nav:focus-visible {
+    outline: 3px solid var(--tripbora-focus);
+    outline-offset: 3px;
+}
+
+/*
+  여러 장일 때만 그리는 작은 컨트롤. 정보 줄과 같은 높이로 오른쪽 끝에 둔다.
+  진행선 없이 번호와 화살표만 두어 위쪽 Hero 컨트롤과 섞여 보이지 않게 한다.
+*/
+.home-promotion-ui {
+    position: absolute;
+    z-index: 2;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    height: 48px;
+    color: #8b858d;
+    font-size: 11px;
+}
+
+/* 자세히 보기와 컨트롤 사이의 짧은 구분선 */
+.home-promotion-ui::before {
+    content: '';
+    width: 1px;
+    height: 14px;
+    margin-right: 14px;
+    background: #e3dfe6;
+}
+
+.home-promotion .slider-counter {
+    margin-right: 6px;
+    color: #625c68;
+    letter-spacing: .04em;
+    font-variant-numeric: tabular-nums;
+}
+
+.home-promotion button.nav {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    background: none;
+    color: inherit;
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.home-promotion button.nav:hover {
+    color: #3d3443;
+}
+
+.home-promotion button.pause {
+    font-size: 10px;
+}
+
+.home-promotion .slider-ui [hidden] {
+    display: none;
+}
+
+@media (max-width: 960px) {
+    .home-promotion {
+        padding: 16px 24px;
+    }
+
+    .home-promotion-media {
+        aspect-ratio: 4 / 1;
+    }
+
+    .home-promotion-title {
+        font-size: 15px;
+    }
+}
+
+/*
+  휴대폰: 이미지(2:1) 아래에 제목을 한 줄 전체로 두고(최대 2줄),
+  다음 줄 왼쪽에 자세히 보기, 같은 줄 오른쪽에 컨트롤을 둔다.
+*/
+@media (max-width: 680px) {
+    .home-promotion {
+        padding: 8px 16px 16px;
+    }
+
+    .home-promotion.is-carousel {
+        --promotion-control-space: 0px;
+    }
+
+    .home-promotion-eyebrow {
+        margin-bottom: 10px;
+    }
+
+    .home-promotion-media {
+        aspect-ratio: 2 / 1;
+        border-radius: 6px;
+    }
+
+    .home-promotion-info {
+        flex-wrap: wrap;
+        row-gap: 0;
+        min-height: 0;
+        padding-top: 10px;
+    }
+
+    .home-promotion-title {
+        flex-basis: 100%;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        font-size: 15px;
+        line-height: 1.45;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    .home-promotion-more {
+        min-height: 40px;
+    }
+
+    .home-promotion-ui {
+        height: 40px;
+    }
+
+    .home-promotion-ui::before {
+        display: none;
+    }
+
+    .home-promotion button.nav {
+        width: 36px;
+        height: 36px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .home-promotion .swiper-wrapper,
+    .home-promotion .swiper-slide,
+    .home-promotion-more > span[aria-hidden] {
+        transition: none !important;
+    }
+}

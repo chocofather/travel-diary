@@ -206,6 +206,39 @@ class TravelInfoPublicLocalizationTest {
         assertThat(detail.getContentType()).isEqualTo(TravelInfoContentType.FESTIVAL);
     }
 
+    // ─── 메인 Hero (메인 추천 여행정보) ───
+
+    @Test
+    void homeHeroKeepsTheQueryOrderAndUsesTheRequestedLanguageTitleAndCategory() {
+        TravelInfoListItemDto palace = listItem(10L, "서울 고궁 체험", TravelInfoContentType.GENERAL);
+        TravelInfoListItemDto guide = listItem(11L, "일본 온천 여행 가이드", TravelInfoContentType.GUIDE);
+        when(travelInfoMapper.findHomeHeroItems(5)).thenReturn(new ArrayList<>(List.of(palace, guide)));
+        when(travelInfoMapper.findTranslationsByInfoIds(List.of(10L, 11L))).thenReturn(List.of(
+                translation(1L, 10L, "ko", "서울 고궁 체험", null),
+                translation(2L, 10L, "en", "Seoul Palace Walk", null)));
+        when(infoCategoryMapper.findTranslationsByCategoryIds(List.of(3L))).thenReturn(List.of(
+                categoryTranslation(1L, 3L, "ko", "계절여행"),
+                categoryTranslation(2L, 3L, "en", "Seasonal travel")));
+
+        List<TravelInfoListItemDto> hero = travelInfoService.getHomeHeroItems(5, SupportedLanguage.ENGLISH);
+
+        // 순서는 조회(노출 순서 → id) 그대로다. 번역이 없는 글은 한국어 원문 제목으로 남는다.
+        assertThat(hero).extracting(TravelInfoListItemDto::getId).containsExactly(10L, 11L);
+        assertThat(hero).extracting(TravelInfoListItemDto::getTitle)
+                .containsExactly("Seoul Palace Walk", "일본 온천 여행 가이드");
+        assertThat(hero).extracting(TravelInfoListItemDto::getCategoryName)
+                .containsExactly("Seasonal travel", "Seasonal travel");
+    }
+
+    @Test
+    void homeHeroWithoutFeaturedItemsIsEmptyAndReadsNoTranslations() {
+        when(travelInfoMapper.findHomeHeroItems(5)).thenReturn(List.of());
+
+        assertThat(travelInfoService.getHomeHeroItems(5, SupportedLanguage.KOREAN)).isEmpty();
+        verify(travelInfoMapper, never()).findTranslationsByInfoIds(anyList());
+        verify(infoCategoryMapper, never()).findTranslationsByCategoryIds(anyList());
+    }
+
     // ─── 카테고리 이름 (GENERAL / FESTIVAL 공용) ───
 
     @Test

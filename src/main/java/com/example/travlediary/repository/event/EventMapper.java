@@ -5,11 +5,19 @@ import com.example.travlediary.model.EventTranslation;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Mapper
 public interface EventMapper {
     List<Event> selectSlideEvents();
+
+    /**
+     * 메인 이벤트 프로모션 배너. 메인 노출로 고른 진행 중·예정 이벤트를 최대 limit 개.
+     * today 는 애플리케이션 날짜(KST)다. 종료일 당일까지 진행 중으로 본다.
+     */
+    List<Event> selectHomePromotionEvents(@Param("today") LocalDate today,
+                                          @Param("limit") int limit);
 
     /** 새 이벤트 저장 */
     int insert(Event event);     // 성공 시 1 반환

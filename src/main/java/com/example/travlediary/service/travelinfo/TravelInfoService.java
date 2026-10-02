@@ -76,6 +76,20 @@ public class TravelInfoService {
         return travelInfoMapper.findAdminList(scope, contentType, categoryId);
     }
 
+    /**
+     * Home Hero. 관리자가 메인 추천으로 고른 일반 여행정보·여행가이드를 노출 순서대로 최대 limit 개.
+     * 제목과 카테고리 이름은 공개 목록과 같은 규칙으로 요청 언어에 맞춘다. 고른 글이 없으면 빈 목록이다.
+     */
+    @Transactional(readOnly = true)
+    public List<TravelInfoListItemDto> getHomeHeroItems(int limit, SupportedLanguage requestedLanguage) {
+        List<TravelInfoListItemDto> items = travelInfoMapper.findHomeHeroItems(limit);
+        if (items == null || items.isEmpty()) {
+            return List.of();
+        }
+        localizePublicList(items, requestedLanguage);
+        return items;
+    }
+
     @Transactional(readOnly = true)
     public List<TravelInfoListItemDto> getPublicList(TravelInfoScope scope,
                                                       TravelInfoContentType contentType,
@@ -368,6 +382,7 @@ public class TravelInfoService {
         }
 
         ValidatedTravelInfo validated = validate(form);
+        requireHomeFeaturedThumbnail(form, null);
         String newThumbnailUrl = saveNewThumbnail(form.getThumbnailFile());
         boolean lifecycleRegistered = false;
         try {
@@ -392,6 +407,11 @@ public class TravelInfoService {
             if (newThumbnailUrl != null) {
                 insertThumbnail(travelInfo.getId(), newThumbnailUrl);
             }
+            if (form.getContentType() != TravelInfoContentType.FESTIVAL) {
+                // 공용 insert 는 DB 기본값(미노출, 순서 1)으로 넣는다. 일반 정보·가이드만 입력값으로 맞춘다.
+                travelInfoMapper.updateHomeFeatured(
+                        travelInfo.getId(), form.isHomeFeatured(), form.getHomeFeaturedOrder());
+            }
             return travelInfo.getId();
         } catch (RuntimeException exception) {
             if (!lifecycleRegistered) {
@@ -407,6 +427,7 @@ public class TravelInfoService {
         ValidatedTravelInfo validated = validate(form);
         // 이 폼으로도 축제 기간을 고칠 수 있다. 축제 전용 화면과 같은 규칙을 여기서도 지킨다.
         requireSameFestivalEventYear(id, validated.periods());
+        requireHomeFeaturedThumbnail(form, id);
 
         boolean replaceThumbnail = hasNewThumbnail(form.getThumbnailFile());
         boolean deleteThumbnail = !replaceThumbnail && form.isRemoveThumbnail();
@@ -428,6 +449,12 @@ public class TravelInfoService {
             if (travelInfoMapper.updateTravelInfo(travelInfo) != 1) {
                 throw notFound();
             }
+            // 위에서 잠그고 갱신한 같은 줄이라 결과 건수를 다시 확인하지 않는다.
+            // 축제는 validate 에서 이미 노출이 꺼져 있고, 순서 입력이 없으므로 저장된 순서를 그대로 쓴다.
+            travelInfoMapper.updateHomeFeatured(id, form.isHomeFeatured(),
+                    form.getContentType() == TravelInfoContentType.FESTIVAL
+                            ? travelInfo.getHomeFeaturedOrder()
+                            : form.getHomeFeaturedOrder());
             travelInfoMapper.deletePeriodsByInfoId(id);
             insertPeriods(id, validated.periods());
             // base 수정과 같은 트랜잭션에서 번역까지 끝낸다. ko 는 base 값으로 맞춰진다.
@@ -693,8 +720,46 @@ public class TravelInfoService {
                     "선택한 정보 카테고리의 유형이 여행정보 유형과 일치하지 않습니다.");
         }
 
+        validateHomeFeatured(form);
         List<ValidatedPeriod> periods = validatePeriods(form);
         return new ValidatedTravelInfo(title, content, periods);
+    }
+
+    /**
+     * 메인 추천은 일반 여행정보와 여행가이드만 받는다.
+     * 축제는 메인에 따로 섹션이 있으므로 화면에서 값이 넘어와도 저장하지 않는다.
+     * 순서는 노출 여부와 상관없이 입력한 값을 저장하므로 언제나 확인한다.
+     */
+    private void validateHomeFeatured(TravelInfoForm form) {
+        if (form.getContentType() == TravelInfoContentType.FESTIVAL) {
+            form.setHomeFeatured(false);
+            return;
+        }
+        Integer order = form.getHomeFeaturedOrder();
+        if (order == null || order < 1) {
+            throw new TravelInfoValidationException("homeFeaturedOrder",
+                    "메인 노출 순서는 1 이상의 숫자로 입력해 주세요.");
+        }
+    }
+
+    /**
+     * 메인 추천은 대표 이미지를 그대로 쓰므로, 저장을 마쳤을 때 대표 이미지가 남아 있어야 한다.
+     * 새 파일을 저장하기 전에 확인해서 거절된 요청이 업로드 파일을 남기지 않게 한다.
+     *
+     * @param existingId 수정이면 그 여행정보 번호, 신규 등록이면 null
+     */
+    private void requireHomeFeaturedThumbnail(TravelInfoForm form, Long existingId) {
+        if (!form.isHomeFeatured() || hasNewThumbnail(form.getThumbnailFile())) {
+            return;
+        }
+        // 새 파일이 없으면 저장된 대표 이미지를 지우지 않고 그대로 두는 경우만 통과한다.
+        boolean keepsStoredThumbnail = existingId != null
+                && !form.isRemoveThumbnail()
+                && travelInfoMapper.findMainImageByInfoId(existingId) != null;
+        if (!keepsStoredThumbnail) {
+            throw new TravelInfoValidationException("homeFeatured",
+                    "메인 추천 노출 시 대표 이미지가 필요합니다.");
+        }
     }
 
     /**

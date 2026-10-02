@@ -22,6 +22,9 @@ public interface TravelInfoMapper {
     List<HomeFestivalDto> findHomeFestivals(@Param("today") LocalDate today,
                                           @Param("limit") int limit);
 
+    /** Home Hero. 메인 추천으로 고른 일반 여행정보·여행가이드를 노출 순서대로 최대 limit 개. */
+    List<TravelInfoListItemDto> findHomeHeroItems(@Param("limit") int limit);
+
     List<AdminTravelInfoListItemDto> findAdminList(
             @Param("scope") TravelInfoScope scope,
             @Param("contentType") TravelInfoContentType contentType,
@@ -59,6 +62,11 @@ public interface TravelInfoMapper {
     int insertTravelInfo(TravelInfo travelInfo);
 
     int updateTravelInfo(TravelInfo travelInfo);
+
+    /** 메인 추천 노출 여부와 순서만 바꾼다. 축제 화면도 쓰는 updateTravelInfo 에 섞지 않는다. */
+    int updateHomeFeatured(@Param("id") Long id,
+                           @Param("homeFeatured") boolean homeFeatured,
+                           @Param("homeFeaturedOrder") Integer homeFeaturedOrder);
 
     int deleteTravelInfo(Long id);
 

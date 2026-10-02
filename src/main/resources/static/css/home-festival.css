@@ -1,4 +1,5 @@
-.home-festival-section { padding: var(--home-section-padding, 64px) 20px; background: #fff; }
+/* 바로 위 랜드마크 아래 여백과 합쳐 '약간 넉넉'하게 되도록 위 여백만 줄인다. 아래(Footer 쪽)는 그대로 둔다 */
+.home-festival-section { padding: 32px 20px var(--home-section-padding, 64px); background: #fff; }
 .home-festival-inner { max-width: var(--home-content-width, 1120px); margin: 0 auto; }
 .home-festival-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 20px; margin-bottom: 24px; }
 .home-festival-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .12em; color: #77717e; }

@@ -5,18 +5,19 @@
 
 <th:block th:fragment="headFragment">
   <!--
-    Swiper 는 이 화면의 이벤트 슬라이더만 쓴다. 공통 layout 이 아니라 여기서 부른다.
+    Swiper 는 이 화면의 Hero 와 이벤트 프로모션 배너만 쓴다. 공통 layout 이 아니라 여기서 부른다.
     defer 라 문서 순서대로 실행된다 — head 의 이 파일이 body 의 slider.js 보다 먼저 끝나고,
     slider.js 는 DOMContentLoaded 안에서 new Swiper 를 부르므로 순서가 보장된다.
   -->
   <link rel="stylesheet" href="https://unpkg.com/swiper@9/swiper-bundle.min.css" />
   <script src="https://unpkg.com/swiper@9/swiper-bundle.min.js" defer></script>
-  <link rel="stylesheet" href="/css/home.css?v=20260929-3" />
+  <link rel="stylesheet" href="/css/home.css?v=20261003-rhythm" />
   <!-- 랜드마크 아치 카드 (스크롤 수렴) -->
   <link rel="stylesheet" href="/css/home-converge-prototype.css?v=20260930-4" />
-  <link rel="stylesheet" href="/css/home-mobile.css?v=20261001-1" />
-  <link rel="stylesheet" href="/css/home-festival.css?v=20261002-2" />
-  <link rel="stylesheet" href="/css/slider.css?v=20261002-editorial-density" />
+  <link rel="stylesheet" href="/css/home-mobile.css?v=20261003-rhythm" />
+  <link rel="stylesheet" href="/css/home-festival.css?v=20261003-rhythm" />
+  <link rel="stylesheet" href="/css/slider.css?v=20261003-rhythm" />
+  <link rel="stylesheet" href="/css/home-promotion.css?v=20261003-rhythm" />
 </th:block>
 
 <th:block th:fragment="body">
@@ -38,30 +39,151 @@
          th:data-winter-badge="#{home.season.winter.badge}"
          th:data-winter-title="#{home.season.winter.title}"
          th:data-winter-description="#{home.season.winter.description}"
-         th:data-winter-tags="#{home.season.winter.tags}"
-         th:data-event-badge="#{home.event.badge}"
-         th:data-event-details="#{home.event.details}"
-         th:data-event-pause="#{home.event.pause}"
-         th:data-event-play="#{home.event.play}"></div>
+         th:data-winter-tags="#{home.season.winter.tags}"></div>
     <p class="home-withdrawal-toast" data-withdrawal-toast
        th:if="${param.withdrawn != null and param.withdrawn[0] == 'true'}"
        role="status" aria-live="polite" aria-atomic="true">
       <span th:text="#{home.withdrawal.completed}">회원 탈퇴가 완료되었습니다.</span>
     </p>
 
-    <!-- 이벤트 슬라이더 -->
-    <section id="event-slider" th:aria-label="#{home.event.sectionLabel}">
+    <!--
+      메인 Hero: 관리자가 메인 추천으로 고른 여행정보·여행가이드 (HomeController → homeHeroItems, 최대 5개).
+      슬라이드는 서버가 그리고, slider.js 는 Swiper 와 컨트롤만 맡는다. 한 곳도 없으면 영역을 그리지 않는다.
+      본문 폭의 큰 대표 이미지가 중심이고, 글(eyebrow · 제목 · 자세히 보기)은 이미지 왼쪽 아래에 얹는다(slider.css).
+      eyebrow 는 요청 언어로 바꾼 정보 카테고리 이름, 제목도 요청 언어 제목이다. 본문을 잘라 설명으로 쓰지 않는다.
+      한 장이면 컨트롤을 그리지 않는다. 첫 이미지는 화면의 가장 큰 그림이라 바로 받고, 나머지는 미룬다.
+    -->
+    <section id="home-hero" class="home-slider" th:if="${!#lists.isEmpty(homeHeroItems)}"
+             th:aria-label="#{home.hero.sectionLabel}"
+             th:attr="data-label-pause=#{home.slider.pause},data-label-play=#{home.slider.play}">
       <div class="swiper">
-        <div class="swiper-wrapper" id="slide-area"></div>
-        <div class="slider-ui" hidden>
-          <span class="slider-counter"><span id="slide-index">01</span> / <span id="slide-total">--</span></span>
-          <button type="button" class="nav prev" th:aria-label="#{home.event.previous}">❮</button>
-          <button type="button" class="nav pause" th:aria-label="#{home.event.pause}">❚❚</button>
-          <button type="button" class="nav next" th:aria-label="#{home.event.next}">❯</button>
-          <div class="progress" aria-hidden="true"><span id="progress-bar"></span></div>
+        <div class="swiper-wrapper">
+          <div class="swiper-slide" th:each="item, stat : ${homeHeroItems}">
+            <div class="slide-inner">
+              <div class="slide-text">
+                <span class="badge" th:if="${!#strings.isEmpty(item.categoryName)}"
+                      th:text="${item.categoryName}">여행추천</span>
+                <h2 class="title" th:text="${item.title}">서울 고궁 체험</h2>
+                <a class="more" th:href="@{/travel-info/{id}(id=${item.id})}">
+                  <span th:text="#{home.hero.details}">자세히 보기</span> <span aria-hidden="true">→</span>
+                </a>
+              </div>
+              <!-- 이미지도 같은 상세로 가지만 글 링크와 겹치므로 읽기·탭 순서에서는 뺀다 -->
+              <a class="slide-img" th:href="@{/travel-info/{id}(id=${item.id})}" tabindex="-1" aria-hidden="true">
+                <img th:src="${item.thumbnailUrl}" alt="" decoding="async"
+                     th:attr="fetchpriority=${stat.first} ? 'high' : null,
+                              loading=${stat.first} ? 'eager' : 'lazy'">
+              </a>
+            </div>
+          </div>
+        </div>
+        <div class="slider-ui" th:if="${#lists.size(homeHeroItems) > 1}">
+          <span class="slider-counter"><span class="slider-index">01</span> / <span
+                th:text="${#numbers.formatInteger(#lists.size(homeHeroItems), 2)}">05</span></span>
+          <button type="button" class="nav prev" th:aria-label="#{home.hero.previous}">❮</button>
+          <button type="button" class="nav pause" aria-pressed="false" th:aria-label="#{home.slider.pause}">❚❚</button>
+          <button type="button" class="nav next" th:aria-label="#{home.hero.next}">❯</button>
+          <div class="progress" aria-hidden="true"><span class="progress-bar"></span></div>
         </div>
       </div>
-      <div class="event-slider-bottom"></div>
+    </section>
+
+    <!-- 인기 여행지 -->
+    <!--
+      필터 없이 지금 많이 찾는 여행지를 보여 주는 편집형 영역. 세부 탐색은 전체보기(/destinations)가 맡는다.
+      HomeController 가 넘기는 여행지(최대 5곳)의 첫 곳이 큰 대표, 나머지가 보조다.
+      popularTrending 이면 최근 7일 조회 상위 5곳('지금 뜨는 여행지'), 아니면 기존 국내 인기 여행지다.
+      한 곳도 없으면 섹션을 그리지 않고, 모자라면 있는 만큼만 그린다. (is-count-N 으로 배치를 고른다)
+      머리글과 격자가 한 본문 폭 상자 안에 있어 좌우 끝이 맞는다.
+    -->
+    <section class="popular-recommend" aria-labelledby="popular-recommend-title"
+             th:if="${!#lists.isEmpty(popularDestinations)}">
+      <div class="popular-recommend-inner">
+        <div class="recommend-header">
+          <div class="recommend-heading">
+            <h2 id="popular-recommend-title" class="recommend-title"
+                th:text="${popularTrending} ? #{home.trending.title} : #{home.popular.title}">인기 여행지</h2>
+            <p class="recommend-sub"
+               th:text="${popularTrending} ? #{home.trending.description} : #{home.popular.description}">지금 사람들이 많이 찾는 여행지를 둘러보세요.</p>
+          </div>
+          <a id="popular-view-all" class="recommend-view-all" href="/destinations?type=domestic&amp;sort=views">
+            <span th:text="#{home.popular.viewAll}">전체보기</span>
+            <span aria-hidden="true">→</span>
+          </a>
+        </div>
+        <ul class="recommend-editorial"
+            th:classappend="'is-count-' + ${#lists.size(popularDestinations)}">
+          <li th:each="destination, stat : ${popularDestinations}"
+              th:class="${stat.first} ? 'recommend-featured' : 'recommend-item'">
+            <a class="recommend-card" th:href="@{/destinations/{id}(id=${destination.id})}">
+              <div class="recommend-card-media">
+                <!--
+                  여행지 업로드 사진은 서버가 카드 크기로 줄인 썸네일을 쓴다. 그 밖의 주소는 원래대로 둔다.
+                  sizes 는 home.css 의 .recommend-editorial 격자 폭과 같은 값이다.
+                  썸네일을 받지 못하면 원본으로 한 번만 되돌린다. (랜드마크 카드와 같은 방식)
+                -->
+                <img th:src="${destination.cardImageUrl != null} ? ${destination.cardImageUrl} : @{${destination.imageUrl}}"
+                     th:alt="${destination.name}"
+                     th:attr="srcset=${destination.cardImageSrcset},
+                              sizes=${destination.cardImageSrcset == null} ? null : (${stat.first}
+                                  ? '(max-width: 680px) calc(100vw - 28px), (max-width: 960px) calc(100vw - 40px), (max-width: 1160px) calc(50vw - 40px), 540px'
+                                  : '(max-width: 680px) calc(50vw - 22px), (max-width: 960px) calc(25vw - 22px), (max-width: 1160px) calc(25vw - 20px), 270px'),
+                              data-original-src=${destination.cardImageUrl != null} ? @{${destination.imageUrl}} : null"
+                     onerror="if (this.dataset.originalSrc) { this.removeAttribute('srcset'); this.src = this.dataset.originalSrc; delete this.dataset.originalSrc; }"
+                     loading="lazy" decoding="async">
+              </div>
+              <h3 class="recommend-card-name" th:text="${destination.name}" th:title="${destination.name}">경복궁</h3>
+              <!-- 상위 지역이 있으면 '서울 종로구' 처럼 앞에 붙인다. (랜드마크 카드와 같은 규칙) -->
+              <p class="recommend-card-region" th:with="parent=${#strings.trim(destination.parentRegionName)}"
+                 th:text="${#strings.trim((#strings.isEmpty(parent) ? '' : parent + ' ') + (destination.regionName ?: ''))}">서울 종로구</p>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!--
+      TripBora 이벤트 프로모션 배너 (HomeController → homePromotionEvents, 최대 5개).
+      관리자가 메인 노출로 고른 진행 중·예정 이벤트다. 아래 축제·행사(지역 행사 정보)와는 다른 영역이다.
+      0개면 그리지 않고, 1개면 컨트롤 없이 한 장, 여러 개면 같은 자리에서 넘긴다(Hero 와 상태를 나누지 않는다).
+      메인에서는 짧게 시선을 돌리는 배너라 넓고 낮은 이미지가 중심이고, 아래 한 줄에 제목과 자세히 보기만 둔다.
+      설명은 그리지 않는다. 글자는 이미지에 굽지 않고 HTML 로 그린다.
+      is-carousel 은 여러 장일 때 정보 줄 오른쪽 끝에 놓이는 컨트롤 자리를 비워 두기 위한 표시다.
+    -->
+    <section id="home-promotion" class="home-promotion home-slider"
+             th:if="${!#lists.isEmpty(homePromotionEvents)}"
+             th:classappend="${#lists.size(homePromotionEvents) > 1} ? 'is-carousel'"
+             th:aria-label="#{home.promotion.sectionLabel}"
+             th:attr="data-label-pause=#{home.slider.pause},data-label-play=#{home.slider.play}">
+      <div class="home-promotion-inner">
+        <span class="home-promotion-eyebrow" th:text="#{home.promotion.eyebrow}">TRIPBORA EVENT</span>
+        <div class="swiper">
+          <div class="swiper-wrapper">
+            <div class="swiper-slide" th:each="event : ${homePromotionEvents}">
+              <article class="home-promotion-banner">
+                <!-- 이미지도 같은 상세로 가지만 아래 글 링크와 겹치므로 읽기·탭 순서에서는 뺀다 -->
+                <a class="home-promotion-media" th:href="@{/events/{id}(id=${event.id})}"
+                   tabindex="-1" aria-hidden="true">
+                  <img th:src="${event.eventImg}" alt="" loading="lazy" decoding="async">
+                </a>
+                <div class="home-promotion-info">
+                  <h2 class="home-promotion-title" th:text="${event.title}">이벤트 제목</h2>
+                  <a class="home-promotion-more" th:href="@{/events/{id}(id=${event.id})}">
+                    <span th:text="#{home.promotion.details}">자세히 보기</span> <span aria-hidden="true">→</span>
+                  </a>
+                </div>
+              </article>
+            </div>
+          </div>
+        </div>
+        <div class="slider-ui home-promotion-ui" th:if="${#lists.size(homePromotionEvents) > 1}">
+          <span class="slider-counter"><span class="slider-index">01</span> / <span
+                th:text="${#numbers.formatInteger(#lists.size(homePromotionEvents), 2)}">02</span></span>
+          <button type="button" class="nav prev" th:aria-label="#{home.promotion.previous}">❮</button>
+          <button type="button" class="nav next" th:aria-label="#{home.promotion.next}">❯</button>
+          <button type="button" class="nav pause" aria-pressed="false" th:aria-label="#{home.slider.pause}">❚❚</button>
+        </div>
+      </div>
     </section>
 
     <!--
@@ -138,66 +260,13 @@
       </div>
     </section>
 
-    <!-- 인기 여행지 -->
-    <!--
-      필터 없이 지금 많이 찾는 여행지를 보여 주는 편집형 영역. 세부 탐색은 전체보기(/destinations)가 맡는다.
-      HomeController 가 넘기는 여행지(최대 5곳)의 첫 곳이 큰 대표, 나머지가 보조다.
-      popularTrending 이면 최근 7일 조회 상위 5곳('지금 뜨는 여행지'), 아니면 기존 국내 인기 여행지다.
-      한 곳도 없으면 섹션을 그리지 않고, 모자라면 있는 만큼만 그린다. (is-count-N 으로 배치를 고른다)
-      머리글과 격자가 한 본문 폭 상자 안에 있어 좌우 끝이 맞는다.
-    -->
-    <section class="popular-recommend" aria-labelledby="popular-recommend-title"
-             th:if="${!#lists.isEmpty(popularDestinations)}">
-      <div class="popular-recommend-inner">
-        <div class="recommend-header">
-          <div class="recommend-heading">
-            <h2 id="popular-recommend-title" class="recommend-title"
-                th:text="${popularTrending} ? #{home.trending.title} : #{home.popular.title}">인기 여행지</h2>
-            <p class="recommend-sub"
-               th:text="${popularTrending} ? #{home.trending.description} : #{home.popular.description}">지금 사람들이 많이 찾는 여행지를 둘러보세요.</p>
-          </div>
-          <a id="popular-view-all" class="recommend-view-all" href="/destinations?type=domestic&amp;sort=views">
-            <span th:text="#{home.popular.viewAll}">전체보기</span>
-            <span aria-hidden="true">→</span>
-          </a>
-        </div>
-        <ul class="recommend-editorial"
-            th:classappend="'is-count-' + ${#lists.size(popularDestinations)}">
-          <li th:each="destination, stat : ${popularDestinations}"
-              th:class="${stat.first} ? 'recommend-featured' : 'recommend-item'">
-            <a class="recommend-card" th:href="@{/destinations/{id}(id=${destination.id})}">
-              <div class="recommend-card-media">
-                <!--
-                  여행지 업로드 사진은 서버가 카드 크기로 줄인 썸네일을 쓴다. 그 밖의 주소는 원래대로 둔다.
-                  sizes 는 home.css 의 .recommend-editorial 격자 폭과 같은 값이다.
-                  썸네일을 받지 못하면 원본으로 한 번만 되돌린다. (랜드마크 카드와 같은 방식)
-                -->
-                <img th:src="${destination.cardImageUrl != null} ? ${destination.cardImageUrl} : @{${destination.imageUrl}}"
-                     th:alt="${destination.name}"
-                     th:attr="srcset=${destination.cardImageSrcset},
-                              sizes=${destination.cardImageSrcset == null} ? null : (${stat.first}
-                                  ? '(max-width: 680px) calc(100vw - 28px), (max-width: 960px) calc(100vw - 40px), (max-width: 1160px) calc(50vw - 40px), 540px'
-                                  : '(max-width: 680px) calc(50vw - 22px), (max-width: 960px) calc(25vw - 22px), (max-width: 1160px) calc(25vw - 20px), 270px'),
-                              data-original-src=${destination.cardImageUrl != null} ? @{${destination.imageUrl}} : null"
-                     onerror="if (this.dataset.originalSrc) { this.removeAttribute('srcset'); this.src = this.dataset.originalSrc; delete this.dataset.originalSrc; }"
-                     loading="lazy" decoding="async">
-              </div>
-              <h3 class="recommend-card-name" th:text="${destination.name}" th:title="${destination.name}">경복궁</h3>
-              <!-- 상위 지역이 있으면 '서울 종로구' 처럼 앞에 붙인다. (랜드마크 카드와 같은 규칙) -->
-              <p class="recommend-card-region" th:with="parent=${#strings.trim(destination.parentRegionName)}"
-                 th:text="${#strings.trim((#strings.isEmpty(parent) ? '' : parent + ' ') + (destination.regionName ?: ''))}">서울 종로구</p>
-            </a>
-          </li>
-        </ul>
-      </div>
-    </section>
-
     <section class="home-festival-section" aria-labelledby="home-festival-title"
              th:if="${!#lists.isEmpty(homeFestivals)}">
       <div class="home-festival-inner">
         <header class="home-festival-header">
           <div>
-            <span class="home-festival-eyebrow">FESTIVAL &amp; EVENTS</span>
+            <!-- 바로 위 TripBora 이벤트 배너와 겹쳐 보이지 않게, 지역 축제·행사 영역임을 eyebrow 로 구분한다 -->
+            <span class="home-festival-eyebrow">LOCAL FESTIVALS</span>
             <h2 id="home-festival-title" th:text="#{home.festival.title}">지금 가볼 만한 축제·행사</h2>
           </div>
           <div class="home-festival-actions">
@@ -240,7 +309,7 @@
   <script src="/js/home-season-preview.js?v=20260929-1" defer></script>
   <script src="/js/home.js?v=20260929-2" defer></script>
   <script src="/js/home-festival.js?v=20261002-1" defer></script>
-  <script src="/js/slider.js?v=20261002-editorial" defer></script>
+  <script src="/js/slider.js?v=20261003-home-hero" defer></script>
   <script src="/js/home-withdrawal-toast.js" defer></script>
   <!-- 랜드마크 아치 카드 (스크롤 수렴) -->
   <script src="/js/home-converge-prototype.js?v=20260930-2" defer></script>

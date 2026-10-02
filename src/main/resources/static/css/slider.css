@@ -1,363 +1,344 @@
-#event-slider {
-    position: relative;
-    z-index: 1;
-    width: 100%;
-    overflow: hidden;
-    padding-top: 150px;
-    padding-bottom: 60px;
-    transition: background-color 0.35s ease;
-}
-
-#event-slider .swiper {
-    position: relative;
-    z-index: 1;
-}
-
-#event-slider .swiper-slide {
-    display: flex;
-    justify-content: center;
-}
-
 /*
-  오른쪽에 남던 배경 여백까지 이미지가 쓰도록 폭만 넓힌다. 높이는 그대로다.
-  글과 이미지 사이를 띄우려고 gap 을 늘리는 대신 왼쪽 padding 은 그대로 둔다.
-  글 블록의 시작 위치가 밀리지 않고 이미지만 오른쪽으로 간다.
+  메인 최상단 Hero(#home-hero). 관리자가 메인 추천으로 고른 여행정보·여행가이드를 보여 준다.
+  본문 폭의 큰 대표 이미지 한 장이 중심이고, 그 왼쪽 아래에 eyebrow(정보 카테고리) · 제목 · 자세히 보기를 얹는다.
+  글이 읽히도록 이미지의 아래·왼쪽만 은은하게 어둡게 한다(계절 추천 사진 카드와 같은 색).
+  여러 장이면 컨트롤(번호 · 진행선 · 이전/다음 · 일시정지)을 이미지 오른쪽 아래에 얹고,
+  휴대폰에서는 글과 겹치지 않게 이미지 아래 한 줄로 내린다.
+  폭별 모양은 모두 이 파일이 맡는다. 이벤트 프로모션 배너는 home-promotion.css 가 따로 맡는다.
 */
-#event-slider .slide-inner {
-    width: 100%;
-    max-width: 1240px;
-    padding: 0 8px 0 20px;
-    display: flex;
-    align-items: center;
-    gap: 50px;
+.home-page #home-hero {
+    padding: 20px 0;
+    background: #fff;
 }
 
-/* 글 영역은 지금 폭(약 450px)을 그대로 지킨다. 늘어나지 않고 좁을 때만 줄어든다 */
-#event-slider .slide-text {
-    flex: 0 1 450px;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: flex-start;
-    gap: 10px;
+/* Swiper 를 본문 폭으로 묶어, 컨트롤을 이미지 오른쪽 아래 기준으로 얹을 수 있게 한다 */
+.home-page #home-hero .swiper {
+    position: relative;
+    width: min(var(--home-content-width, 1120px), calc(100% - 40px));
+    margin: 0 auto;
 }
 
-/*
-  대표 이미지는 16:9 로 등록하는 값이라 담는 자리도 16:9 로 맞춘다.
-  높이 400px 는 그대로 두고 가로만 넓혀(약 572px → 711px) 좌우가 잘리지 않게 한다.
-*/
-#event-slider .slide-img {
-    flex: 0 1 auto;
-    height: 400px;
-    aspect-ratio: 16 / 9;
-    max-width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+/* 슬라이드 한 장 = 이미지 한 장. 데스크톱 2.2:1 — 메인다운 크기를 갖되 아래 영역을 밀어내지 않는다 */
+.home-page #home-hero .slide-inner {
+    position: relative;
+    aspect-ratio: 2.2 / 1;
     overflow: hidden;
+    border-radius: 8px;
+    background: #ebe8ec;
 }
 
-#event-slider .slide-img img {
+/* 이미지 칸 전체가 상세 링크다(읽기·탭 순서에서는 아래 글 링크만 남긴다) */
+.home-page #home-hero .slide-img {
+    position: absolute;
+    inset: 0;
+    display: block;
+}
+
+.home-page #home-hero .slide-img img {
+    display: block;
     width: 100%;
     height: 100%;
-    display: block;
     object-fit: cover;
-    cursor: pointer;
 }
 
-#event-slider .slide-text .badge {
-    display: inline-block;
-    align-self: flex-start;
-    margin-bottom: 16px;
-    padding: 5px 12px;
-    border-radius: 999px;
-    background: var(--tripbora-primary);
+.home-page #home-hero .slide-img::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        linear-gradient(0deg, rgba(14, 17, 22, 0.62) 0%, rgba(14, 17, 22, 0.26) 36%, rgba(14, 17, 22, 0) 64%),
+        linear-gradient(90deg, rgba(14, 17, 22, 0.22) 0%, rgba(14, 17, 22, 0) 55%);
+}
+
+.home-page #home-hero .slide-text {
+    position: absolute;
+    z-index: 2;
+    left: 48px;
+    bottom: 44px;
+    max-width: min(640px, 58%);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    color: #fff;
+}
+
+.home-page #home-hero .slide-text .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .14em;
+    line-height: 1.4;
+}
+
+.home-page #home-hero .slide-text .badge::after {
+    content: '';
+    width: 28px;
+    height: 1px;
+    background: color-mix(in srgb, var(--tripbora-primary) 40%, white);
+}
+
+.home-page #home-hero .slide-text .title {
+    display: -webkit-box;
+    margin: 0;
+    overflow: hidden;
+    color: #fff;
+    font-size: 44px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -.035em;
+    overflow-wrap: anywhere;
+    text-shadow: 0 1px 12px rgba(0, 0, 0, 0.18);
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+/* 버튼이 아니라 글 링크. 반응은 밑줄과 화살표가 조금 움직이는 정도로만 둔다 */
+.home-page #home-hero .slide-text a.more {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 40px;
+    margin-top: 2px;
+    padding: 4px 0;
     color: #fff;
     font-size: 14px;
     font-weight: 600;
-}
-
-#event-slider .slide-text .title {
-    margin: 0;
-    color: #222;
-    font-size: 36px;
-    font-weight: 700;
-    line-height: 1.35;
-}
-
-#event-slider .slide-text .description {
-    display: -webkit-box;
-    overflow: hidden;
-    margin: 0;
-    color: #555;
-    font-size: 16px;
-    line-height: 1.6;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
-}
-
-#event-slider .slide-text a.more {
-    display: inline-flex;
-    min-height: 32px;
-    margin-top: 7px;
-    padding: 6px 12px;
-    align-items: center;
-    border: 1px solid var(--tripbora-primary);
-    border-radius: 5px;
-    background: var(--tripbora-primary);
-    color: #fff;
-    font-size: 13px;
-    font-weight: 700;
-    line-height: 1.2;
     text-decoration: none;
-    transition: background-color 0.18s ease, border-color 0.18s ease;
 }
 
-#event-slider .slide-text a.more:hover {
-    border-color: var(--tripbora-primary-hover);
-    background: var(--tripbora-primary-hover);
+.home-page #home-hero .slide-text a.more > span[aria-hidden] {
+    transition: transform .2s ease;
 }
 
-#event-slider .slide-text a.more:active {
-    border-color: var(--tripbora-primary-active);
-    background: var(--tripbora-primary-active);
+.home-page #home-hero .slide-text a.more:hover > span:first-child,
+.home-page #home-hero .slide-text a.more:focus-visible > span:first-child {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 5px;
 }
 
-#event-slider .slide-text a.more:focus-visible,
-#event-slider button.nav:focus-visible {
-    outline: 3px solid var(--tripbora-focus);
+.home-page #home-hero .slide-text a.more:hover > span[aria-hidden],
+.home-page #home-hero .slide-text a.more:focus-visible > span[aria-hidden] {
+    transform: translateX(3px);
+}
+
+/* 어두운 사진 위라 보라색 대신 흰 초점선을 쓴다 */
+.home-page #home-hero .slide-text a.more:focus-visible,
+.home-page #home-hero button.nav:focus-visible {
+    outline: 2px solid #fff;
     outline-offset: 3px;
 }
 
-#event-slider .slider-ui {
-    position: relative;
-    z-index: 2;
-    max-width: 500px;
-    margin-top: 0;
-    margin-left: 250px;
-    padding: 10px 30px;
+/* 글은 지금 슬라이드에서만 떠오른다. Swiper 가 뜨기 전에는 첫 슬라이드 글을 그대로 보여 준다 */
+.home-page #home-hero .swiper-slide .slide-text {
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity .6s ease, transform .6s ease;
+}
+
+.home-page #home-hero .swiper-slide-active .slide-text,
+.home-page #home-hero .swiper:not(.swiper-initialized) .swiper-slide:first-child .slide-text {
+    opacity: 1;
+    transform: none;
+}
+
+/* 여러 장일 때만 그리는 컨트롤. 이미지 오른쪽 아래에 가볍게 얹는다 */
+.home-page #home-hero .slider-ui {
+    position: absolute;
+    z-index: 3;
+    right: 40px;
+    bottom: 40px;
     display: flex;
     align-items: center;
-    justify-content: flex-start;
-    gap: 12px;
-    box-sizing: border-box;
-    color: #313841;
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 16px;
+    gap: 2px;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 12px;
 }
 
-#event-slider .slider-ui .progress {
-    flex: 1;
-    height: 2px;
+.home-page #home-hero .slider-counter {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    line-height: 1;
+    letter-spacing: .04em;
+    font-variant-numeric: tabular-nums;
+}
+
+.home-page #home-hero .slider-ui .progress {
     position: relative;
-    background: #ddd;
+    flex: 0 0 64px;
+    order: 1;
+    height: 2px;
+    margin: 0 10px;
+    background: rgba(255, 255, 255, 0.32);
 }
 
-#event-slider #progress-bar {
+.home-page #home-hero .progress-bar {
     position: absolute;
     top: 0;
     bottom: 0;
     left: 0;
     width: 0;
-    background: var(--tripbora-primary);
-}
-
-#event-slider button.nav {
-    padding: 4px 8px;
-    border: 0;
-    background: transparent;
-    color: inherit;
-    font-size: 18px;
-    cursor: pointer;
-}
-
-#event-slider button.nav:hover {
-    background: rgba(255, 255, 255, 0.42);
-}
-
-#event-slider .event-slider-bottom {
-    position: absolute;
-    z-index: 0;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    height: 160px;
     background: #fff;
 }
 
-@media (max-width: 768px) {
-    #event-slider {
-        padding-top: 80px;
-        padding-bottom: 48px;
+.home-page #home-hero button.nav {
+    order: 2;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: inherit;
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.home-page #home-hero button.nav:hover {
+    background: rgba(255, 255, 255, 0.14);
+    color: #fff;
+}
+
+.home-page #home-hero button.pause {
+    order: 3;
+    font-size: 11px;
+}
+
+.home-page #home-hero .slider-ui [hidden] {
+    display: none;
+}
+
+/* 태블릿: 2:1 로 조금 높이고, 글·컨트롤 여백과 글자를 줄인다 */
+@media (max-width: 960px) {
+    .home-page #home-hero {
+        padding: 18px 0 20px;
     }
 
-    #event-slider .slide-inner {
-        padding: 0 14px;
-        flex-direction: column;
-        gap: 22px;
-        text-align: center;
+    .home-page #home-hero .swiper {
+        width: calc(100% - 48px);
     }
 
-    /* 세로로 쌓이는 화면에서는 데스크톱 폭 지정(flex-basis)이 높이로 해석되므로 되돌린다 */
-    #event-slider .slide-text {
-        flex: none;
-        align-items: center;
+    .home-page #home-hero .slide-inner {
+        aspect-ratio: 2 / 1;
     }
 
-    #event-slider .slide-text .badge {
-        align-self: center;
-        margin-bottom: 6px;
+    .home-page #home-hero .slide-text {
+        left: 32px;
+        bottom: 30px;
+        max-width: min(520px, 56%);
+        gap: 10px;
     }
 
-    #event-slider .slide-text .title {
-        font-size: 27px;
+    .home-page #home-hero .slide-text .title {
+        font-size: 32px;
     }
 
-    #event-slider .slide-img {
-        flex: none;
-        aspect-ratio: auto;
-        width: 100%;
-        height: 280px;
+    .home-page #home-hero .slider-ui {
+        right: 24px;
+        bottom: 28px;
     }
 
-    #event-slider .slider-ui {
-        width: calc(100% - 28px);
-        max-width: 500px;
-        margin: 10px auto 0;
-        padding-right: 0;
-        padding-left: 0;
-    }
-
-    #event-slider .event-slider-bottom {
-        height: 116px;
+    .home-page #home-hero .slider-ui .progress {
+        flex-basis: 40px;
+        margin: 0 6px;
     }
 }
 
 /*
-  표시할 이벤트가 없으면 슬라이더 영역 전체를 숨긴다.
-  헤더 높이만큼의 여백은 레이아웃의 main 이 따로 잡고 있으므로 아래 콘텐츠가 헤더에 가려지지 않는다.
+  휴대폰: 세로로 길게 늘이지 않고 6:5 로 둔다. 글은 이미지 안 아래쪽 전체 폭을 쓰고,
+  그림자를 조금 더 깊게 깐다. 컨트롤은 글과 겹치지 않게 이미지 아래 한 줄로 내린다.
 */
-#event-slider.is-empty {
-    display: none;
+@media (max-width: 680px) {
+    .home-page #home-hero {
+        padding: 16px 0 20px;
+    }
+
+    .home-page #home-hero .swiper {
+        width: calc(100% - 32px);
+    }
+
+    .home-page #home-hero .slide-inner {
+        aspect-ratio: 6 / 5;
+        border-radius: 6px;
+    }
+
+    .home-page #home-hero .slide-img::after {
+        background: linear-gradient(0deg, rgba(14, 17, 22, 0.7) 0%, rgba(14, 17, 22, 0.34) 42%, rgba(14, 17, 22, 0) 72%);
+    }
+
+    .home-page #home-hero .slide-text {
+        left: 20px;
+        right: 20px;
+        bottom: 16px;
+        max-width: none;
+        gap: 6px;
+    }
+
+    .home-page #home-hero .slide-text .badge {
+        font-size: 11px;
+    }
+
+    .home-page #home-hero .slide-text .title {
+        font-size: 26px;
+        line-height: 1.25;
+    }
+
+    .home-page #home-hero .slide-text a.more {
+        min-height: 36px;
+        margin-top: 0;
+        font-size: 13px;
+    }
+
+    .home-page #home-hero .slider-ui {
+        position: static;
+        margin-top: 6px;
+        color: #8b858d;
+        font-size: 11px;
+    }
+
+    .home-page #home-hero .slider-ui .progress {
+        flex-basis: 56px;
+        background: #ebe8ec;
+    }
+
+    .home-page #home-hero .progress-bar {
+        background: color-mix(in srgb, var(--tripbora-primary) 60%, white);
+    }
+
+    .home-page #home-hero button.nav {
+        width: 36px;
+        height: 36px;
+    }
+
+    .home-page #home-hero button.nav:hover {
+        background: none;
+        color: #514357;
+    }
+
+    .home-page #home-hero button.nav:focus-visible {
+        outline-color: var(--tripbora-primary);
+    }
 }
 
-/* Editorial hero 실험. 이 블록은 이벤트 영역 안에서만 기존 모바일 스타일을 대체한다. */
-.home-page #event-slider {
-    padding: 20px 0 12px;
-    background: #fff;
-    transition: none;
-}
-.home-page #event-slider .slide-inner {
-    width: min(var(--home-content-width, 1120px), calc(100% - 40px));
-    max-width: none;
-    padding: 0;
-    display: grid;
-    grid-template-columns: minmax(0, 35fr) minmax(0, 65fr);
-    align-items: center;
-    gap: 24px;
-    text-align: left;
-}
-.home-page #event-slider .slide-text {
-    flex: none;
-    align-items: flex-start;
-    gap: 14px;
-}
-.home-page #event-slider .slide-text .badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    align-self: flex-start;
-    margin: 0 0 2px;
-    padding: 0;
-    border: 0;
-    border-radius: 0;
-    background: none;
-    color: var(--tripbora-primary);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: .14em;
-    line-height: 1.4;
-}
-.home-page #event-slider .slide-text .badge::after { content: ''; width: 28px; height: 1px; background: var(--tripbora-primary); }
-.home-page #event-slider .slide-text .title {
-    font-size: 40px;
-    font-weight: 700;
-    line-height: 1.22;
-    letter-spacing: -.035em;
-    overflow-wrap: anywhere;
-}
-.home-page #event-slider .slide-text .description {
-    max-width: 360px;
-    color: #79757a;
-    font-size: 14px;
-    line-height: 1.75;
-    -webkit-line-clamp: 3;
-}
-.home-page #event-slider .slide-text a.more {
-    min-height: 40px;
-    margin-top: 2px;
-    padding: 4px 0;
-    gap: 12px;
-    border: 0;
-    border-radius: 0;
-    background: none;
-    color: #514357;
-    font-size: 13px;
-    font-weight: 600;
-}
-.home-page #event-slider .slide-text a.more:hover,
-.home-page #event-slider .slide-text a.more:focus-visible { color: var(--tripbora-primary); background: none; }
-.home-page #event-slider .slide-img {
-    flex: none;
-    width: 100%;
-    min-width: 0;
-    height: auto;
-    aspect-ratio: 16 / 9;
-    border-radius: 8px;
-}
-.home-page #event-slider .slider-ui {
-    width: min(var(--home-content-width, 1120px), calc(100% - 40px));
-    max-width: none;
-    margin: 12px auto 0;
-    padding: 0;
-    align-items: center;
-    gap: 4px;
-    font-size: 11px;
-    color: #8b858d;
-}
-.home-page #event-slider .slider-counter { display: inline-flex; align-items: center; gap: 4px; line-height: 1; font-variant-numeric: tabular-nums; }
-.home-page #event-slider .slider-ui .progress { flex: 0 0 72px; order: 1; margin: 0 6px; height: 2px; background: #ebe8ec; }
-.home-page #event-slider #progress-bar { background: color-mix(in srgb, var(--tripbora-primary) 60%, white); }
-.home-page #event-slider button.nav { order: 2; width: 32px; min-width: 32px; height: 32px; min-height: 32px; padding: 0; font-size: 13px; display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
-.home-page #event-slider button.nav:hover { background: none; color: #514357; }
-.home-page #event-slider button.pause { order: 3; font-size: 11px; }
-.home-page #event-slider .slider-ui[hidden],
-.home-page #event-slider .slider-ui [hidden],
-.home-page #event-slider .event-slider-bottom { display: none; }
-.home-page #event-slider .swiper-slide .slide-text { opacity: 0; transform: translateY(6px); transition: opacity .6s ease, transform .6s ease; }
-.home-page #event-slider .swiper-slide-active .slide-text { opacity: 1; transform: none; }
-@media (max-width: 960px) {
-    .home-page #event-slider { padding: 18px 0 12px; }
-    .home-page #event-slider .slide-inner { width: calc(100% - 48px); gap: 20px; }
-    .home-page #event-slider .slide-text { gap: 10px; }
-    .home-page #event-slider .slide-text .title { font-size: 30px; }
-    .home-page #event-slider .slide-text .description { font-size: 13px; }
-    .home-page #event-slider .slider-ui { width: calc(100% - 48px); }
-}
-@media (max-width: 680px) {
-    .home-page #event-slider { padding: 16px 0 12px; }
-    .home-page #event-slider .slide-inner { width: calc(100% - 32px); grid-template-columns: minmax(0, 1fr); gap: 12px; }
-    .home-page #event-slider .slide-text { width: 100%; gap: 8px; }
-    .home-page #event-slider .slide-text .title { font-size: 26px; line-height: 1.25; }
-    .home-page #event-slider .slide-text .description { max-width: 100%; font-size: 12px; line-height: 1.6; -webkit-line-clamp: 2; }
-    .home-page #event-slider .slide-text a.more { min-height: 36px; margin: 0; font-size: 12px; }
-    .home-page #event-slider .slider-ui { width: calc(100% - 32px); margin-top: 6px; }
-    .home-page #event-slider button.nav { min-width: 36px; min-height: 36px; }
-}
 @media (prefers-reduced-motion: reduce) {
-    .home-page #event-slider .swiper-wrapper,
-    .home-page #event-slider .swiper-slide,
-    .home-page #event-slider .swiper-slide .slide-text { transition: none !important; }
-    .home-page #event-slider .swiper-slide .slide-text { transform: none; }
+    .home-page #home-hero .swiper-wrapper,
+    .home-page #home-hero .swiper-slide,
+    .home-page #home-hero .swiper-slide .slide-text,
+    .home-page #home-hero .slide-text a.more > span[aria-hidden] {
+        transition: none !important;
+    }
+
+    .home-page #home-hero .swiper-slide .slide-text {
+        transform: none;
+    }
 }

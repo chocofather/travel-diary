@@ -13,12 +13,15 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.method.annotation.ExtendedServletRequestDataBinder;
 
 import java.util.List;
 import java.util.Objects;
@@ -35,6 +38,18 @@ public class AdminTravelInfoController {
 
     private final TravelInfoService travelInfoService;
     private final InfoCategoryService infoCategoryService;
+
+    /**
+     * 폼은 유형을 '콘텐츠 구분'(contentSection)으로만 보내고 contentType 파라미터는 보내지 않는다.
+     * Spring 은 요청 헤더도 폼 객체에 묶는데, 그러면 Content-Type 헤더 값(multipart/form-data)이
+     * contentType 칸에 들어가 변환 오류가 난다. 이 폼에서는 그 헤더만 묶지 않는다.
+     */
+    @InitBinder("travelInfoForm")
+    void ignoreContentTypeHeader(WebDataBinder binder) {
+        if (binder instanceof ExtendedServletRequestDataBinder requestBinder) {
+            requestBinder.addHeaderPredicate(header -> !"Content-Type".equalsIgnoreCase(header));
+        }
+    }
 
     @GetMapping
     public String list(@RequestParam(required = false) TravelInfoScope scope,

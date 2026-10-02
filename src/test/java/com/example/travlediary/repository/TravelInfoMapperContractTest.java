@@ -203,6 +203,41 @@ class TravelInfoMapperContractTest {
     }
 
     @Test
+    void homeHeroReadsOnlyFeaturedGeneralOrGuideWithVisibleCategoryAndMainImageInOrder()
+            throws IOException {
+        String hero = between(mapper(), "<select id=\"findHomeHeroItems\"", "</select>");
+
+        assertThat(hero)
+                // 공개 목록과 같은 결과 모양·대표 이미지 규칙을 쓴다. (축제가 아닌 유형은 is_main)
+                .contains("resultMap=\"PublicListResultMap\"")
+                .contains("<include refid=\"PublicListThumbnail\"/>")
+                .contains("TravelInfoContentType@GENERAL")
+                .contains("JOIN info_categories ic ON ic.id = ti.category_id AND ic.is_visible = 1")
+                .contains("WHERE ti.is_home_featured = 1")
+                .contains("AND ti.content_type IN ('GENERAL', 'GUIDE')")
+                // 대표 이미지가 없는 글은 LIMIT 전에 빼야 5개가 채워진다.
+                .contains("main_image.info_id = ti.id AND main_image.is_main = 1")
+                .contains("ORDER BY ti.home_featured_order ASC, ti.id ASC\n            LIMIT #{limit}")
+                .contains("ORDER BY page.home_featured_order ASC, page.id ASC")
+                .doesNotContain("FESTIVAL'", "festival_info");
+        assertThat(hero.indexOf("main_image.is_main = 1")).isLessThan(hero.indexOf("LIMIT #{limit}"));
+    }
+
+    @Test
+    void homeFeaturedIsSavedSeparatelyFromTheSharedUpdate() throws IOException {
+        String mapper = mapper();
+        String update = between(mapper, "<update id=\"updateTravelInfo\"", "</update>");
+        String homeFeatured = between(mapper, "<update id=\"updateHomeFeatured\"", "</update>");
+
+        // 축제 화면도 쓰는 공용 update 는 메인 추천 칸을 건드리지 않는다.
+        assertThat(update).doesNotContain("is_home_featured", "home_featured_order");
+        assertThat(homeFeatured)
+                .contains("SET is_home_featured = #{homeFeatured},")
+                .contains("home_featured_order = #{homeFeaturedOrder}")
+                .contains("WHERE id = #{id}");
+    }
+
+    @Test
     void imageQueriesMapThumbnailRoleAndKeepMainAndGalleryOrdering() throws IOException {
         String mapper = mapper();
         String findOne = between(mapper, "<select id=\"findMainImageByInfoId\"", "</select>");

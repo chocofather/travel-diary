@@ -17,6 +17,8 @@ public class AdminTravelInfoListItemDto {
     private Long categoryId;
     private String categoryName;
     private Integer views;
+    private Boolean homeFeatured;
+    private Integer homeFeaturedOrder;
     private Timestamp createdAt;
     private LocalDate startDate;
     private LocalDate endDate;

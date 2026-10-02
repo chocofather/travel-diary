@@ -15,6 +15,8 @@
         <result property="updatedAt" column="updated_at"/>
         <result property="categoryId" column="category_id"/>
         <result property="views" column="views"/>
+        <result property="homeFeatured" column="is_home_featured" javaType="boolean"/>
+        <result property="homeFeaturedOrder" column="home_featured_order"/>
         <result property="userId" column="user_id"/>
     </resultMap>
 
@@ -26,6 +28,8 @@
         <result property="categoryId" column="category_id"/>
         <result property="categoryName" column="category_name"/>
         <result property="views" column="views"/>
+        <result property="homeFeatured" column="is_home_featured" javaType="boolean"/>
+        <result property="homeFeaturedOrder" column="home_featured_order"/>
         <result property="createdAt" column="created_at"/>
         <result property="startDate" column="start_date"/>
         <result property="endDate" column="end_date"/>
@@ -99,6 +103,8 @@
                ti.category_id,
                ic.name AS category_name,
                ti.views,
+               ti.is_home_featured,
+               ti.home_featured_order,
                ti.created_at,
                festival_period.start_date,
                festival_period.end_date
@@ -411,6 +417,40 @@
                  page.start_date ASC, page.id ASC
     </select>
 
+    <!--
+      Home Hero 전용: 관리자가 메인 추천으로 고른 일반 여행정보·여행가이드.
+      공개 상세처럼 숨긴 카테고리의 글은 빼고, Hero 가 그릴 대표 이미지(is_main)가 없는 글도 뺀다.
+      대표 이미지 고르기는 목록 카드 조각을 그대로 쓴다. 축제가 아닌 유형은 모두 is_main 규칙이라
+      GENERAL 로 묶어 둔다(GUIDE 도 같은 규칙). 순서가 같으면 id 차례다.
+    -->
+    <select id="findHomeHeroItems" resultMap="PublicListResultMap">
+        <bind name="contentType" value="@com.example.travlediary.model.TravelInfoContentType@GENERAL"/>
+        SELECT page.id,
+               page.title,
+               page.scope,
+               page.content_type,
+               page.category_id,
+               page.category_name,
+               <include refid="PublicListThumbnail"/>,
+               page.views,
+               page.created_at
+        FROM (
+            SELECT ti.id, ti.title, ti.scope, ti.content_type, ti.category_id,
+                   ic.name AS category_name, ti.views, ti.created_at, ti.home_featured_order
+            FROM travel_info ti
+            JOIN info_categories ic ON ic.id = ti.category_id AND ic.is_visible = 1
+            WHERE ti.is_home_featured = 1
+              AND ti.content_type IN ('GENERAL', 'GUIDE')
+              AND EXISTS (
+                  SELECT 1 FROM info_images main_image
+                  WHERE main_image.info_id = ti.id AND main_image.is_main = 1
+              )
+            ORDER BY ti.home_featured_order ASC, ti.id ASC
+            LIMIT #{limit}
+        ) page
+        ORDER BY page.home_featured_order ASC, page.id ASC
+    </select>
+
     <select id="findPublicList" resultMap="PublicListResultMap">
         SELECT page.id,
                page.title,
@@ -484,14 +524,14 @@
 
     <select id="findById" parameterType="long" resultMap="TravelInfoResultMap">
         SELECT id, title, content, scope, content_type, created_at, updated_at,
-               category_id, views, user_id
+               category_id, views, is_home_featured, home_featured_order, user_id
         FROM travel_info
         WHERE id = #{id}
     </select>
 
     <select id="findByIdForUpdate" parameterType="long" resultMap="TravelInfoResultMap">
         SELECT id, title, content, scope, content_type, created_at, updated_at,
-               category_id, views, user_id
+               category_id, views, is_home_featured, home_featured_order, user_id
         FROM travel_info
         WHERE id = #{id}
         FOR UPDATE
@@ -514,6 +554,17 @@
             content_type = #{contentType},
             category_id = #{categoryId},
             updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <!--
+      메인 추천 설정만 바꾼다. 축제 화면도 쓰는 updateTravelInfo 와 섞지 않는다.
+      노출 여부와 순서는 따로 저장된다. 노출을 꺼도 순서는 남아 다시 켤 때 그대로 쓴다.
+    -->
+    <update id="updateHomeFeatured">
+        UPDATE travel_info
+        SET is_home_featured = #{homeFeatured},
+            home_featured_order = #{homeFeaturedOrder}
         WHERE id = #{id}
     </update>
 

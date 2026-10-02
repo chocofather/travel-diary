@@ -54,6 +54,15 @@ public class EventService {
         return eventMapper.selectSlideEvents();
     }
 
+    /**
+     * 메인 이벤트 프로모션 배너. 메인 노출로 고른 진행 중 → 진행 예정 이벤트를 최대 limit 개.
+     * today 는 호출하는 쪽이 넘기는 애플리케이션 날짜(KST)다. DB 시계에 기대지 않는다.
+     */
+    public List<Event> getHomePromotionEvents(LocalDate today, int limit) {
+        List<Event> events = eventMapper.selectHomePromotionEvents(today, limit);
+        return events == null ? List.of() : events;
+    }
+
     @Transactional
     public void create(EventForm form, Long userId) {
         ValidatedEvent validated = validate(form, null);

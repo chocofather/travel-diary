@@ -44,6 +44,31 @@
     </select>
 
 
+    <!--
+      메인 이벤트 프로모션 배너: 메인 노출(is_slide)로 고른 진행 중·진행 예정 이벤트.
+      start_date / end_date 는 DATE 라 DB 시계(NOW())와 견주면 종료일 당일 0시 이후에 빠진다.
+      그래서 애플리케이션이 넘긴 오늘(KST)과 DATE 끼리 비교한다. 종료일 당일까지 진행 중이다.
+        진행 중 : start_date <= today AND end_date >= today  (종료일이 가까운 순)
+        진행 예정: start_date > today                        (시작일이 가까운 순)
+        종료    : end_date < today                          (빼낸다)
+      배너는 대표 이미지(event_img)를 그리므로 이미지가 없는 예전 줄은 뺀다.
+    -->
+    <select id="selectHomePromotionEvents" resultMap="EventMap">
+        SELECT
+            id, title, description, event_img, poster_img, event_type, is_slide,
+            user_id, start_date, end_date, created_at
+        FROM events
+        WHERE is_slide = 1
+          AND end_date &gt;= #{today}
+          AND event_img IS NOT NULL
+          AND event_img &lt;&gt; ''
+        ORDER BY CASE WHEN start_date &lt;= #{today} THEN 0 ELSE 1 END ASC,
+                 CASE WHEN start_date &lt;= #{today} THEN end_date END ASC,
+                 CASE WHEN start_date &gt; #{today} THEN start_date END ASC,
+                 id ASC
+        LIMIT #{limit}
+    </select>
+
     <!-- 새 이벤트 번호는 같은 트랜잭션의 번역 저장에서 쓰므로 돌려받는다. -->
     <insert id="insert"
             parameterType="com.example.travlediary.model.Event"

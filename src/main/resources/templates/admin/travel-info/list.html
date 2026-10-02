@@ -74,6 +74,9 @@
               <a class="admin-travel-info-title-link"
                  th:href="@{/travel-info/{id}(id=${info.id})}"
                  th:text="${info.title}">여행정보 제목</a>
+              <span class="admin-travel-info-home-featured-note"
+                    th:if="${info.homeFeatured}"
+                    th:text="|메인 노출 · ${info.homeFeaturedOrder}|">메인 노출 · 1</span>
             </td>
             <td>
               <span class="admin-travel-info-badge"

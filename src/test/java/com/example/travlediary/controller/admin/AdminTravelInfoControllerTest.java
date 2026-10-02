@@ -278,6 +278,43 @@ class AdminTravelInfoControllerTest {
     }
 
     @Test
+    void contentSectionFromTheFormBindsToExistingContentTypeAndScope() throws Exception {
+        // 화면은 콘텐츠 구분 하나만 보낸다. 범위 select 는 축제·행사가 아니면 막혀 있어 오지 않는다.
+        mockMvc.perform(multipart("/admin/travel-info")
+                        .with(user(adminDetails()))
+                        .with(csrf())
+                        .param("title", "해외 여행")
+                        .param("content", "<p>본문</p>")
+                        .param("contentSection", "GENERAL_INTERNATIONAL")
+                        .param("categoryId", "3")
+                        .param("homeFeaturedOrder", "3"))
+                .andExpect(status().is3xxRedirection());
+
+        // 축제·행사는 따로 고른 국내/해외를 그대로 쓴다.
+        mockMvc.perform(multipart("/admin/travel-info")
+                        .with(user(adminDetails()))
+                        .with(csrf())
+                        .param("title", "축제")
+                        .param("content", "<p>본문</p>")
+                        .param("contentSection", "FESTIVAL")
+                        .param("scope", "INTERNATIONAL")
+                        .param("categoryId", "3"))
+                .andExpect(status().is3xxRedirection());
+
+        ArgumentCaptor<TravelInfoForm> captor = ArgumentCaptor.forClass(TravelInfoForm.class);
+        verify(travelInfoService, org.mockito.Mockito.times(2))
+                .create(captor.capture(), org.mockito.ArgumentMatchers.eq(7L));
+        TravelInfoForm general = captor.getAllValues().get(0);
+        assertThat(general.getContentType()).isEqualTo(TravelInfoContentType.GENERAL);
+        assertThat(general.getScope()).isEqualTo(TravelInfoScope.INTERNATIONAL);
+        assertThat(general.isHomeFeatured()).isFalse();
+        assertThat(general.getHomeFeaturedOrder()).isEqualTo(3);
+        TravelInfoForm festival = captor.getAllValues().get(1);
+        assertThat(festival.getContentType()).isEqualTo(TravelInfoContentType.FESTIVAL);
+        assertThat(festival.getScope()).isEqualTo(TravelInfoScope.INTERNATIONAL);
+    }
+
+    @Test
     void multipartCreateBindsThumbnailToExistingTravelInfoForm() throws Exception {
         MockMultipartFile thumbnail = new MockMultipartFile(
                 "thumbnailFile", "thumbnail.jpg", "image/jpeg",
@@ -491,6 +528,54 @@ class AdminTravelInfoControllerTest {
 
         assertThat(document.select("#period-start-0").attr("value")).isEqualTo("2026-09-02");
         assertThat(document.select("#period-end-0").attr("value")).isEqualTo("2026-10-24");
+    }
+
+    @Test
+    void editScreenRestoresContentSectionAndKeepsOrderEditableWhenNotFeatured() throws Exception {
+        when(infoCategoryService.getAll()).thenReturn(List.of(category(3L, "현지정보", true)));
+        TravelInfoForm general = new TravelInfoForm();
+        general.setTitle("해외 여행");
+        general.setContent("<p>본문</p>");
+        general.setContentType(TravelInfoContentType.GENERAL);
+        general.setScope(TravelInfoScope.INTERNATIONAL);
+        general.setCategoryId(3L);
+        general.setHomeFeaturedOrder(3);
+        when(travelInfoService.getForm(10L)).thenReturn(general);
+
+        org.jsoup.nodes.Document document = org.jsoup.Jsoup.parse(mockMvc.perform(
+                        get("/admin/travel-info/edit/10").with(user(adminDetails())))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString());
+
+        assertThat(document.select("#travel-info-content-type option[selected]").attr("value"))
+                .isEqualTo("GENERAL_INTERNATIONAL");
+        // 국내/해외 여행정보의 범위는 콘텐츠 구분이 정하므로 행사 범위는 숨기고 보내지 않는다.
+        assertThat(document.select("#travel-info-scope-field").hasAttr("hidden")).isTrue();
+        assertThat(document.select("#travel-info-scope").hasAttr("disabled")).isTrue();
+        assertThat(document.select("#travel-info-home-featured").hasAttr("hidden")).isFalse();
+        assertThat(document.select("#travel-info-home-featured-check").hasAttr("checked")).isFalse();
+        assertThat(document.select("#travel-info-home-featured-order").hasAttr("disabled")).isFalse();
+        assertThat(document.select("#travel-info-home-featured-order").attr("value")).isEqualTo("3");
+
+        TravelInfoForm festival = new TravelInfoForm();
+        festival.setTitle("벚꽃 축제");
+        festival.setContent("<p>본문</p>");
+        festival.setContentType(TravelInfoContentType.FESTIVAL);
+        festival.setScope(TravelInfoScope.INTERNATIONAL);
+        festival.setCategoryId(3L);
+        when(travelInfoService.getForm(11L)).thenReturn(festival);
+
+        document = org.jsoup.Jsoup.parse(mockMvc.perform(
+                        get("/admin/travel-info/edit/11").with(user(adminDetails())))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString());
+
+        assertThat(document.select("#travel-info-content-type option[selected]").attr("value"))
+                .isEqualTo("FESTIVAL");
+        assertThat(document.select("#travel-info-scope-field").hasAttr("hidden")).isFalse();
+        assertThat(document.select("#travel-info-scope option[selected]").attr("value"))
+                .isEqualTo("INTERNATIONAL");
+        assertThat(document.select("#travel-info-home-featured").hasAttr("hidden")).isTrue();
     }
 
     private InfoPeriod infoPeriod(String startDate, String endDate) {

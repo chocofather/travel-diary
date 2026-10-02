@@ -18,5 +18,7 @@ public class TravelInfo {
     private Timestamp updatedAt; // 수정일
     private Long categoryId; // 카테고리번호
     private Integer views; // 조회수
+    private Boolean homeFeatured; // 메인 추천 노출 여부 (GENERAL / GUIDE 만)
+    private Integer homeFeaturedOrder; // 메인 추천 노출 순서
     private Long userId; // 회원번호
 }

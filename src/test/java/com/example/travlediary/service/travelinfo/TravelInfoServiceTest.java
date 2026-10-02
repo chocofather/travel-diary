@@ -43,6 +43,8 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -725,6 +727,191 @@ class TravelInfoServiceTest {
     }
 
     @Test
+    void createsGeneralAsHomeFeaturedWithItsOrder() {
+        assertHomeFeaturedCreate(TravelInfoContentType.GENERAL, 2);
+    }
+
+    @Test
+    void createsGuideAsHomeFeaturedWithItsOrder() {
+        assertHomeFeaturedCreate(TravelInfoContentType.GUIDE, 3);
+    }
+
+    private void assertHomeFeaturedCreate(TravelInfoContentType contentType, int order) {
+        TravelInfoForm form = homeFeaturedForm(contentType, order);
+        form.setThumbnailFile(thumbnailFile());
+        allowCategory(contentType);
+        stubTravelInfoInsert(100L);
+        when(fileUploadService.saveTravelInfoThumbnail(form.getThumbnailFile()))
+                .thenReturn("/uploads/travel-info/thumbnails/new.jpg");
+        when(travelInfoMapper.insertInfoImage(any())).thenReturn(1);
+
+        travelInfoService.create(form, 7L);
+
+        verify(travelInfoMapper).updateHomeFeatured(100L, true, order);
+    }
+
+    @Test
+    void createSavesTheEnteredOrderEvenWhenNotFeatured() {
+        allowCategory();
+        stubTravelInfoInsert(100L);
+        TravelInfoForm form = form(TravelInfoContentType.GENERAL);
+        form.setHomeFeaturedOrder(3);
+
+        travelInfoService.create(form, 7L);
+
+        // 체크는 노출 여부만 정한다. 이미지가 없어도 미노출이면 막지 않는다.
+        verify(travelInfoMapper).updateHomeFeatured(100L, false, 3);
+        verify(travelInfoMapper, never()).findMainImageByInfoId(any());
+    }
+
+    @Test
+    void homeFeaturedCreateWithoutThumbnailIsRejectedBeforeAnyWrite() {
+        allowCategory();
+
+        assertValidation("메인 추천 노출 시 대표 이미지가 필요합니다.",
+                () -> travelInfoService.create(homeFeaturedForm(TravelInfoContentType.GENERAL, 1), 7L));
+
+        verify(travelInfoMapper, never()).insertTravelInfo(any());
+        verify(fileUploadService, never()).saveTravelInfoThumbnail(any());
+    }
+
+    @Test
+    void homeFeaturedRequiresOrderOfAtLeastOne() {
+        allowCategory();
+        assertValidation("메인 노출 순서는 1 이상의 숫자로 입력해 주세요.",
+                () -> travelInfoService.create(homeFeaturedForm(TravelInfoContentType.GENERAL, 0), 7L));
+        assertValidation("메인 노출 순서는 1 이상의 숫자로 입력해 주세요.",
+                () -> travelInfoService.create(homeFeaturedForm(TravelInfoContentType.GENERAL, null), 7L));
+
+        // 순서는 체크하지 않아도 저장되므로 같은 규칙을 지킨다.
+        TravelInfoForm notFeatured = form(TravelInfoContentType.GUIDE);
+        notFeatured.setHomeFeaturedOrder(null);
+        allowCategory(TravelInfoContentType.GUIDE);
+        assertValidation("메인 노출 순서는 1 이상의 숫자로 입력해 주세요.",
+                () -> travelInfoService.create(notFeatured, 7L));
+
+        verify(travelInfoMapper, never()).insertTravelInfo(any());
+    }
+
+    @Test
+    void homeFeaturedUpdateKeepsStoredThumbnailAndSavesOrder() {
+        TravelInfo existing = existingInfo(10L, TravelInfoContentType.GUIDE);
+        when(travelInfoMapper.findByIdForUpdate(10L)).thenReturn(existing);
+        when(travelInfoMapper.findMainImageByInfoId(10L)).thenReturn(new InfoImage());
+        when(travelInfoMapper.updateTravelInfo(existing)).thenReturn(1);
+        allowCategory(TravelInfoContentType.GUIDE);
+
+        travelInfoService.update(10L, homeFeaturedForm(TravelInfoContentType.GUIDE, 4));
+
+        verify(travelInfoMapper).updateHomeFeatured(10L, true, 4);
+        verify(travelInfoMapper, never()).deleteMainImagesByInfoId(any());
+    }
+
+    @Test
+    void homeFeaturedUpdateCannotRemoveTheOnlyThumbnail() {
+        when(travelInfoMapper.findByIdForUpdate(10L))
+                .thenReturn(existingInfo(10L, TravelInfoContentType.GENERAL));
+        allowCategory();
+
+        TravelInfoForm form = homeFeaturedForm(TravelInfoContentType.GENERAL, 1);
+        form.setRemoveThumbnail(true);
+
+        assertValidation("메인 추천 노출 시 대표 이미지가 필요합니다.",
+                () -> travelInfoService.update(10L, form));
+        verify(travelInfoMapper, never()).updateTravelInfo(any());
+        verify(travelInfoMapper, never()).deleteMainImagesByInfoId(any());
+        verify(travelInfoMapper, never()).updateHomeFeatured(any(), anyBoolean(), any());
+    }
+
+    @Test
+    void homeFeaturedUpdateWithoutStoredThumbnailIsRejected() {
+        when(travelInfoMapper.findByIdForUpdate(10L))
+                .thenReturn(existingInfo(10L, TravelInfoContentType.GENERAL));
+        allowCategory();
+
+        assertValidation("메인 추천 노출 시 대표 이미지가 필요합니다.",
+                () -> travelInfoService.update(10L, homeFeaturedForm(TravelInfoContentType.GENERAL, 1)));
+        verify(travelInfoMapper, never()).updateTravelInfo(any());
+    }
+
+    @Test
+    void homeFeaturedUpdateAcceptsReplacingThumbnailWithoutStoredLookup() {
+        TravelInfo existing = existingInfo(10L, TravelInfoContentType.GENERAL);
+        TravelInfoForm form = homeFeaturedForm(TravelInfoContentType.GENERAL, 1);
+        form.setThumbnailFile(thumbnailFile());
+        form.setRemoveThumbnail(true);
+        when(travelInfoMapper.findByIdForUpdate(10L)).thenReturn(existing);
+        when(fileUploadService.saveTravelInfoThumbnail(form.getThumbnailFile()))
+                .thenReturn("/uploads/travel-info/thumbnails/new.jpg");
+        when(travelInfoMapper.updateTravelInfo(existing)).thenReturn(1);
+        when(travelInfoMapper.insertInfoImage(any())).thenReturn(1);
+        allowCategory();
+
+        travelInfoService.update(10L, form);
+
+        verify(travelInfoMapper, never()).findMainImageByInfoId(any());
+        verify(travelInfoMapper).updateHomeFeatured(10L, true, 1);
+    }
+
+    @Test
+    void uncheckedHomeFeaturedStillSavesTheEditedOrderAndSkipsThumbnailCheck() {
+        TravelInfo existing = existingInfo(10L, TravelInfoContentType.GENERAL);
+        existing.setHomeFeatured(true);
+        existing.setHomeFeaturedOrder(2);
+        when(travelInfoMapper.findByIdForUpdate(10L)).thenReturn(existing);
+        when(travelInfoMapper.updateTravelInfo(existing)).thenReturn(1);
+        allowCategory();
+
+        TravelInfoForm form = form(TravelInfoContentType.GENERAL);
+        form.setHomeFeaturedOrder(3);
+        travelInfoService.update(10L, form);
+
+        verify(travelInfoMapper).updateHomeFeatured(10L, false, 3);
+        verify(travelInfoMapper, never()).findMainImageByInfoId(any());
+    }
+
+    @Test
+    void festivalIsNeverSavedAsHomeFeatured() {
+        TravelInfo existing = existingInfo(10L, TravelInfoContentType.GENERAL);
+        existing.setHomeFeatured(true);
+        existing.setHomeFeaturedOrder(4);
+        when(travelInfoMapper.findByIdForUpdate(10L)).thenReturn(existing);
+        when(travelInfoMapper.updateTravelInfo(existing)).thenReturn(1);
+        when(travelInfoMapper.insertPeriod(any())).thenReturn(1);
+        allowCategory(TravelInfoContentType.FESTIVAL);
+
+        // 대표 이미지가 없어도 축제는 추천 대상이 아니므로 막지 않고 꺼서 저장한다.
+        TravelInfoForm form = homeFeaturedForm(TravelInfoContentType.FESTIVAL, 2);
+        form.setPeriods(List.of(period("2026-04-01", "2026-04-03")));
+        travelInfoService.update(10L, form);
+
+        assertThat(form.isHomeFeatured()).isFalse();
+        // 축제 화면에는 순서 입력이 없으므로 폼 값(2)이 아니라 저장된 순서(4)를 그대로 둔다.
+        verify(travelInfoMapper).updateHomeFeatured(10L, false, 4);
+        verify(travelInfoMapper, never()).findMainImageByInfoId(any());
+
+        TravelInfoForm created = homeFeaturedForm(TravelInfoContentType.FESTIVAL, 2);
+        created.setPeriods(List.of(period("2026-04-01", "2026-04-03")));
+        stubTravelInfoInsert(100L);
+        travelInfoService.create(created, 7L);
+        verify(travelInfoMapper, never()).updateHomeFeatured(eq(100L), anyBoolean(), any());
+    }
+
+    @Test
+    void editFormRestoresHomeFeaturedAndOrder() {
+        TravelInfo existing = existingInfo(10L, TravelInfoContentType.GENERAL);
+        existing.setHomeFeatured(false);
+        existing.setHomeFeaturedOrder(3);
+        when(travelInfoMapper.findById(10L)).thenReturn(existing);
+
+        TravelInfoForm form = travelInfoService.getForm(10L);
+
+        assertThat(form.isHomeFeatured()).isFalse();
+        // 노출을 꺼 둔 글도 저장된 순서를 보여 주어 다시 켤 때 그대로 쓴다.
+        assertThat(form.getHomeFeaturedOrder()).isEqualTo(3);
+    }
+
+    @Test
     void rejectsCreateWhenCategoryContentTypeDiffersFromTravelInfo() {
         allowCategory(TravelInfoContentType.FESTIVAL);
 
@@ -846,6 +1033,13 @@ class TravelInfoServiceTest {
         form.setScope(TravelInfoScope.DOMESTIC);
         form.setContentType(contentType);
         form.setCategoryId(3L);
+        return form;
+    }
+
+    private TravelInfoForm homeFeaturedForm(TravelInfoContentType contentType, Integer order) {
+        TravelInfoForm form = form(contentType);
+        form.setHomeFeatured(true);
+        form.setHomeFeaturedOrder(order);
         return form;
     }
 

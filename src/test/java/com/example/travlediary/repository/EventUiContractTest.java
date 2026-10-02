@@ -153,33 +153,32 @@ class EventUiContractTest {
     }
 
     @Test
-    void sliderScriptOnlyRendersWhatTheServerSendsAndDecidesNoLanguageItself() throws IOException {
+    void homePromotionBannerRendersServerValuesAndOnlyTheRepresentativeImage() throws IOException {
+        String template = resource("/templates/home.html");
+        String banner = template.substring(template.indexOf("<section id=\"home-promotion\""),
+                template.indexOf("<section class=\"home-festival-section\""));
         String script = resource("/static/js/slider.js");
 
-        // 서버가 이미 번역된 값을 내려주므로 슬라이더는 받은 값을 그리기만 한다.
-        assertThat(script)
-                .contains("fetch('/api/events/slide')")
-                .contains("escapeHtml(ev.title)")
-                .contains("escapeHtml(ev.description)")
-                .contains("escapeHtml(ev.eventImg)")
-                // CTA는 messages를 유지하고, editorial eyebrow는 공통 EVENT 표기를 쓴다.
-                .contains("homeI18n.eventDetails")
-                .contains(">EVENT</span>");
-        // 설명이 없거나 'null' 이면 그 영역을 아예 만들지 않는다.
-        assertThat(script)
-                .contains("hasText(ev.description)")
-                .contains("text !== 'null'");
-        // 슬라이더는 언제나 대표 이미지만 그린다. 유형으로 담는 방식을 나누지 않는다.
-        assertThat(script)
-                .doesNotContain("ev.eventType")
-                .doesNotContain("is-infographic");
+        // 메인 이벤트는 서버가 이미 언어를 바꿔 둔 값을 그대로 그린다. CTA·eyebrow 는 메시지를 쓴다.
+        assertThat(banner)
+                .contains("th:text=\"${event.title}\"")
+                .contains("#{home.promotion.eyebrow}", "#{home.promotion.details}")
+                .contains("@{/events/{id}(id=${event.id})}");
+        // 메인 배너는 이미지 중심이라 설명을 그리지 않는다. (설명은 이벤트 상세에서 본다)
+        assertThat(banner).doesNotContain("event.description");
+        // 메인은 언제나 대표 이미지만 그린다. 유형으로 담는 방식을 나누지 않고 포스터를 쓰지 않는다.
+        assertThat(banner)
+                .contains("th:src=\"${event.eventImg}\"")
+                .doesNotContain("eventType", "is-infographic", "posterImg");
+        // 슬라이더 스크립트는 글자도 언어도 정하지 않는다.
         assertThat(script)
                 .doesNotContain("TRAVEL_DIARY_LOCALE")
                 .doesNotContain("navigator.language")
                 .doesNotContain("SupportedLanguage")
                 .doesNotContain("'zh-CN'")
-                .doesNotContain("ev.posterImg")
-                .doesNotContain("translation");
+                .doesNotContain("posterImg")
+                .doesNotContain("translation")
+                .doesNotContain("innerHTML");
     }
 
     private String resource(String path) throws IOException {

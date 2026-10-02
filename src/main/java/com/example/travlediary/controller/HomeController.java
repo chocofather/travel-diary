@@ -1,15 +1,21 @@
 package com.example.travlediary.controller;
 
 import com.example.travlediary.config.i18n.SupportedLanguage;
+import com.example.travlediary.dto.EventSlideDto;
 import com.example.travlediary.dto.RecommendDestinationDto;
 import com.example.travlediary.dto.SeasonDestinationDto;
+import com.example.travlediary.model.Event;
 import com.example.travlediary.security.CustomUserDetails;
 import com.example.travlediary.seo.SeoStructuredData;
+import com.example.travlediary.seo.SeoTextUtils;
+import com.example.travlediary.service.event.EventLocalizationService;
+import com.example.travlediary.service.event.EventService;
 import com.example.travlediary.service.travelinfo.FestivalDetailService;
 import com.example.travlediary.service.destination.DestinationViewClock;
 import com.example.travlediary.service.file.DestinationCardThumbnailService;
 import com.example.travlediary.service.recommend.DestinationRecommendService;
 import com.example.travlediary.service.recommend.PopularRecommendService;
+import com.example.travlediary.service.travelinfo.TravelInfoService;
 
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.security.core.Authentication;
@@ -24,23 +30,36 @@ public class HomeController {
 
     // 메인 인기 여행지: 대표 1곳 + 보조 4곳
     private static final int HOME_POPULAR_LIMIT = 5;
+    // 메인 Hero: 관리자가 메인 추천으로 고른 여행정보 최대 5개
+    private static final int HOME_HERO_LIMIT = 5;
+    // 메인 이벤트 프로모션 배너: 메인 노출로 고른 진행 중·예정 이벤트 최대 5개
+    private static final int HOME_PROMOTION_LIMIT = 5;
 
     private final FestivalDetailService festivalDetailService;
     private final DestinationRecommendService recommendService;
     private final PopularRecommendService popularRecommendService;
     private final DestinationCardThumbnailService cardThumbnailService;
     private final DestinationViewClock viewClock;
+    private final TravelInfoService travelInfoService;
+    private final EventService eventService;
+    private final EventLocalizationService eventLocalizationService;
 
     public HomeController(FestivalDetailService festivalDetailService,
                           DestinationRecommendService recommendService,
                           PopularRecommendService popularRecommendService,
                           DestinationCardThumbnailService cardThumbnailService,
-                          DestinationViewClock viewClock) {
+                          DestinationViewClock viewClock,
+                          TravelInfoService travelInfoService,
+                          EventService eventService,
+                          EventLocalizationService eventLocalizationService) {
      this.festivalDetailService = festivalDetailService;
      this.recommendService = recommendService;
      this.popularRecommendService = popularRecommendService;
      this.cardThumbnailService = cardThumbnailService;
      this.viewClock = viewClock;
+     this.travelInfoService = travelInfoService;
+     this.eventService = eventService;
+     this.eventLocalizationService = eventLocalizationService;
     }
 
     @GetMapping("/")
@@ -52,6 +71,8 @@ public class HomeController {
         SupportedLanguage language = SupportedLanguage.fromLocale(LocaleContextHolder.getLocale())
                 .orElse(SupportedLanguage.KOREAN);
         model.addAttribute("isLoggedIn", authenticatedUser(auth) != null);
+        model.addAttribute("homeHeroItems", travelInfoService.getHomeHeroItems(HOME_HERO_LIMIT, language));
+        model.addAttribute("homePromotionEvents", homePromotionEvents(language));
         model.addAttribute("homeFestivals", festivalDetailService.getHomeFestivals(viewClock.today(), language));
         model.addAttribute("homeLandmarks", homeLandmarks(language));
         /*
@@ -72,6 +93,19 @@ public class HomeController {
     @GetMapping("/about")
     public String about() {
         return "about";
+    }
+
+    /*
+      메인 중간 이벤트 프로모션 배너. 메인 노출로 고른 진행 중·예정 이벤트를 오늘(KST) 기준으로 고른다.
+      제목·설명은 이벤트 공개 화면과 같은 언어 대체를 거친다. 설명은 HTML 일 수 있으므로
+      글자만 짧게 뽑는다(배너는 CSS 로 두 줄까지만 보여 준다).
+    */
+    private List<EventSlideDto> homePromotionEvents(SupportedLanguage language) {
+        List<Event> events = eventService.getHomePromotionEvents(viewClock.today(), HOME_PROMOTION_LIMIT);
+        return eventLocalizationService.localizeAll(events, language).stream()
+                .map(event -> new EventSlideDto(event.getId(), event.getTitle(),
+                        SeoTextUtils.summary(event.getDescription()), event.getEventImg()))
+                .toList();
     }
 
     /*

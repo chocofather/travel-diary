@@ -2,52 +2,7 @@
 @media (max-width: 960px) {
     .home-page { --home-section-padding: 40px; }
 
-    .home-page #event-slider { padding: 32px 0 16px; }
-    .home-page #event-slider .slide-inner {
-        padding: 0 24px;
-        flex-direction: row;
-        gap: 24px;
-        text-align: left;
-    }
-    .home-page #event-slider .slide-text {
-        flex: 1 1 0;
-        align-items: flex-start;
-        gap: 8px;
-    }
-    .home-page #event-slider .slide-text .badge {
-        align-self: flex-start;
-        margin: 0;
-        padding: 4px 8px;
-        border-radius: 6px;
-        font-size: 12px;
-    }
-    .home-page #event-slider .slide-text .title { font-size: 26px; }
-    .home-page #event-slider .slide-text .description {
-        font-size: 14px;
-        line-height: 1.5;
-        -webkit-line-clamp: 3;
-    }
-    .home-page #event-slider .slide-text a.more {
-        min-height: 40px;
-        margin-top: 2px;
-        padding: 8px 12px;
-    }
-    .home-page #event-slider .slide-img {
-        flex: 1 1 0;
-        min-width: 0;
-        height: 220px;
-        border-radius: 6px;
-    }
-    .home-page #event-slider .slider-ui {
-        width: calc(100% - 48px);
-        max-width: 400px;
-        margin: 8px 24px 0;
-        padding: 0;
-        gap: 4px;
-        font-size: 13px;
-    }
-    .home-page #event-slider button.nav { min-width: 44px; min-height: 44px; }
-    .home-page #event-slider .event-slider-bottom { height: 60px; }
+    /* 최상단 Hero 의 폭별 모양은 slider.css 가 모두 맡는다. */
 
     .home-page .seasonal-recommend {
         width: calc(100% - 48px);
@@ -78,7 +33,7 @@
     .home-page .home-converge-card p { font-size: 12px; }
 
     .home-page .popular-recommend,
-    .home-page .popular-course-section { padding: 0 24px 40px; }
+    .home-page .popular-course-section { padding: 16px 24px 40px; }
     .home-page .recommend-editorial {
         grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr));
         gap: 16px 12px;
@@ -139,13 +94,6 @@
 }
 
 @media (max-width: 680px) {
-    .home-page #event-slider { padding: 20px 0 12px; }
-    .home-page #event-slider .slide-inner { flex-direction: column; padding: 0 16px; gap: 16px; }
-    .home-page #event-slider .slide-text { flex: none; width: 100%; }
-    .home-page #event-slider .slide-text .title { font-size: 24px; }
-    .home-page #event-slider .slide-text .description { -webkit-line-clamp: 2; }
-    .home-page #event-slider .slide-img { flex: none; width: 100%; height: 180px; }
-    .home-page #event-slider .slider-ui { width: calc(100% - 32px); margin: 8px 16px 0; }
     .home-page .seasonal-recommend { width: calc(100% - 32px); }
     .home-page .seasonal-bg-wrapper { min-height: 260px; padding: 20px; }
     .home-page .season-eyebrow { margin-bottom: 8px; }

@@ -46,7 +46,9 @@
           <p>여행정보의 제목과 분류를 선택합니다.</p>
         </div>
 
-        <div class="admin-form-fields">
+        <div class="admin-form-fields"
+             th:with="festival=${travelInfoForm.contentType != null
+                                 and travelInfoForm.contentType.name() == 'FESTIVAL'}">
           <div class="admin-form-field">
             <label for="travel-info-title">제목</label>
             <input id="travel-info-title" type="text" th:field="*{title}"
@@ -56,32 +58,25 @@
                th:errors="*{title}">제목 오류</p>
           </div>
 
-          <div class="admin-travel-info-basic-grid">
+          <div class="admin-travel-info-basic-grid is-pairs">
+            <!--
+              콘텐츠 구분 하나로 고르고, 저장은 기존 contentType + scope 로 한다. (TravelInfoForm.contentSection)
+              축제·행사 값은 그대로 'FESTIVAL' 이라 TourAPI 불러오기 스크립트도 이 select 를 본다.
+            -->
             <div class="admin-form-field">
-              <label for="travel-info-scope">범위</label>
-              <!-- 여행가이드는 지역 범위가 없다. 선택을 막고 서버도 저장하지 않는다 -->
-              <select id="travel-info-scope" th:field="*{scope}"
-                      th:disabled="${travelInfoForm.contentType != null
-                                     and travelInfoForm.contentType.name() == 'GUIDE'}"
-                      th:classappend="${#fields.hasErrors('scope')} ? ' is-invalid' : ''">
-                <option value="">-- 국내/해외 선택 --</option>
-                <option value="DOMESTIC">국내</option>
-                <option value="INTERNATIONAL">해외</option>
-              </select>
-              <p class="admin-field-error" th:if="${#fields.hasErrors('scope')}"
-                 th:errors="*{scope}">범위 오류</p>
-            </div>
-
-            <div class="admin-form-field">
-              <label for="travel-info-content-type">유형</label>
-              <select id="travel-info-content-type" th:field="*{contentType}"
-                      th:classappend="${#fields.hasErrors('contentType')} ? ' is-invalid' : ''">
-                <option value="GENERAL">일반</option>
-                <option value="FESTIVAL">축제</option>
+              <label for="travel-info-content-type">콘텐츠 구분</label>
+              <select id="travel-info-content-type" th:field="*{contentSection}"
+                      th:classappend="${#fields.hasErrors('contentType')
+                                       or (!festival and #fields.hasErrors('scope'))} ? ' is-invalid' : ''">
+                <option value="GENERAL_DOMESTIC">국내 여행정보</option>
+                <option value="GENERAL_INTERNATIONAL">해외 여행정보</option>
                 <option value="GUIDE">여행가이드</option>
+                <option value="FESTIVAL">축제·행사</option>
               </select>
               <p class="admin-field-error" th:if="${#fields.hasErrors('contentType')}"
-                 th:errors="*{contentType}">유형 오류</p>
+                 th:errors="*{contentType}">콘텐츠 구분 오류</p>
+              <p class="admin-field-error" th:if="${!festival and #fields.hasErrors('scope')}"
+                 th:errors="*{scope}">범위 오류</p>
             </div>
 
             <div class="admin-form-field">
@@ -98,6 +93,50 @@
               </select>
               <p class="admin-field-error" th:if="${#fields.hasErrors('categoryId')}"
                  th:errors="*{categoryId}">카테고리 오류</p>
+            </div>
+
+            <!--
+              축제·행사도 국내/해외 범위를 가진다(축제 관리 화면과 같은 규칙). 축제·행사일 때만 보이고,
+              다른 구분에서는 막아 두어 전송되지 않는다. 국내/해외 여행정보의 범위는 콘텐츠 구분이 정한다.
+            -->
+            <div id="travel-info-scope-field" class="admin-form-field" th:hidden="${!festival}">
+              <label for="travel-info-scope">행사 범위</label>
+              <select id="travel-info-scope" th:field="*{scope}" th:disabled="${!festival}"
+                      th:classappend="${festival and #fields.hasErrors('scope')} ? ' is-invalid' : ''">
+                <option value="">-- 국내/해외 선택 --</option>
+                <option value="DOMESTIC">국내</option>
+                <option value="INTERNATIONAL">해외</option>
+              </select>
+              <p class="admin-field-error" th:if="${festival and #fields.hasErrors('scope')}"
+                 th:errors="*{scope}">범위 오류</p>
+            </div>
+          </div>
+
+          <!--
+            메인 추천: 일반 여행정보와 여행가이드만 쓴다. 축제·행사를 고르면 숨기고 서버도 저장하지 않는다.
+            체크는 노출 여부만 정한다. 순서는 체크와 상관없이 고치고 저장할 수 있다.
+          -->
+          <div id="travel-info-home-featured" class="admin-travel-info-home-featured"
+               th:hidden="${festival}">
+            <div class="admin-form-field admin-checkbox-field">
+              <label>
+                <input id="travel-info-home-featured-check" type="checkbox"
+                       th:field="*{homeFeatured}" th:disabled="${festival}">
+                메인 추천 노출
+              </label>
+              <span class="admin-help-text">메인 추천 노출 시 대표 이미지가 필요하며 가로형 이미지를 권장합니다.</span>
+              <p class="admin-field-error" th:if="${#fields.hasErrors('homeFeatured')}"
+                 th:errors="*{homeFeatured}">메인 추천 오류</p>
+            </div>
+
+            <div class="admin-form-field">
+              <label for="travel-info-home-featured-order">노출 순서</label>
+              <input id="travel-info-home-featured-order" type="number" min="1" step="1"
+                     th:field="*{homeFeaturedOrder}" th:disabled="${festival}"
+                     th:classappend="${#fields.hasErrors('homeFeaturedOrder')} ? ' is-invalid' : ''">
+              <span class="admin-help-text">번호가 작은 순서대로 메인에 표시됩니다. 최대 5개까지 노출됩니다.</span>
+              <p class="admin-field-error" th:if="${#fields.hasErrors('homeFeaturedOrder')}"
+                 th:errors="*{homeFeaturedOrder}">노출 순서 오류</p>
             </div>
           </div>
         </div>
