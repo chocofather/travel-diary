@@ -58,15 +58,56 @@
 
 .region-selector {
     position: relative;
-    max-width: 1200px;
-    margin: 20px auto;
-    padding: 0 40px;
+    max-width: 1300px;
+    box-sizing: border-box;
+    margin: 12px auto;
+    padding: 0 calc(44px + var(--region-rail-inset, 0px));
+}
+.region-selector.has-region-back { padding-left: calc(44px + var(--region-rail-inset, 0px) + var(--region-slot-width, 72px) + 20px); }
+.region-back {
+    position: absolute;
+    left: calc(44px + var(--region-rail-inset, 0px));
+    top: 8px;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    width: var(--region-slot-width, 72px);
+    color: #424957;
+    font-size: 14px;
+    line-height: 1.4;
+    font-weight: 500;
+    text-decoration: none;
+    white-space: nowrap;
+}
+.region-back-visual {
+    display: grid;
+    place-items: center;
+    width: 68px;
+    height: 68px;
+    box-sizing: border-box;
+    border: 1px solid #e4e7eb;
+    border-radius: 50%;
+    background: #fafafa;
+}
+.region-back-visual svg { width: 24px; height: 24px; }
+.region-back-label { padding-bottom: 5px; }
+.region-back:hover { color: var(--tripbora-primary); }
+.region-back:hover .region-back-visual { border-color: var(--tripbora-primary); }
+.region-back:focus-visible {
+    outline: 2px solid var(--tripbora-primary);
+    outline-offset: 2px;
+}
+.region-selector.has-region-back > .arrow.prev { left: 0; }
+
+/* 여행지 목록 헤더도 white로 통일하고 얇은 neutral 경계만 둔다. */
+body:has(> main #region-fragment-container) .main-nav {
+    background-color: #fff !important;
+    box-shadow: inset 0 -1px 0 #e4e7eb;
 }
 
-/* 여행지 목록에서만 헤더부터 지역 선택 영역까지 한 톤으로 이어 준다. */
-body:has(> main #region-fragment-container) .main-nav,
 body:has(> main #region-fragment-container) > main {
-    background-color: var(--tripbora-soft) !important;
+    background-color: #fff !important;
 }
 
 /* 실제 1차 메뉴가 열렸을 때만 헤더 shell과 2차 메뉴를 흰색으로 잇는다. */
@@ -91,17 +132,17 @@ body:has(> main #region-fragment-container) #destination-list {
 
 /* 새로운 배경 래퍼 */
 .region-bar-wrapper {
-    background-color: var(--tripbora-soft);
-    padding: 5px 0;
+    background-color: #fff;
+    padding: 0;
 }
 
 /* ─── 스크롤 리스트 ─── */
 .region-buttons {
     display: flex;
     overflow-x: auto;
-    gap: 16px;
-    padding: 10px 0;
-    background: var(--tripbora-soft);
+    gap: 20px;
+    padding: 8px 0;
+    background: transparent;
     scroll-behavior: smooth;
 }
 .region-buttons::-webkit-scrollbar { display: none; }
@@ -124,6 +165,24 @@ body:has(> main #region-fragment-container) #destination-list {
 .arrow.prev { left: 8px; }
 .arrow.next { right: 8px; }
 
+/* 상단 rail 화살표만 간소화한다. 하위 지역 버튼에는 적용하지 않는다. */
+.region-selector .arrow {
+    width: 40px;
+    height: 44px;
+    left: 0;
+    background: none;
+    border: 0;
+    border-radius: 0;
+    color: #687080;
+    font-size: 26px;
+}
+.region-selector .arrow.next { left: auto; right: 0; }
+.region-selector .arrow:hover { color: var(--tripbora-primary); }
+.region-selector .arrow:focus-visible {
+    outline: 2px solid var(--tripbora-primary);
+    outline-offset: -2px;
+}
+
 /* ─── 원형 버튼 ─── */
 .circle-btn {
     flex: 0 0 auto;
@@ -132,6 +191,8 @@ body:has(> main #region-fragment-container) #destination-list {
     flex-direction: column;
     align-items: center;
     text-decoration: none;
+    min-width: 72px;
+    cursor: pointer;
 }
 
 /* ✅ 버튼 기본 리셋 및 정렬 */
@@ -144,8 +205,8 @@ body:has(> main #region-fragment-container) #destination-list {
 
 /* 아이콘 이미지 */
 .circle-icon {
-    width: 80px;
-    height: 80px;
+    width: 68px;
+    height: 68px;
     border-radius: 50%;
     object-fit: cover;
     /*
@@ -154,8 +215,8 @@ body:has(> main #region-fragment-container) #destination-list {
     /*
     padding: 2px; !* 내부 콘텐츠 간 여백 확보 *!
     */
-    margin: 0 auto 6px;
-    border: 2px solid #ddd;
+    margin: 0 auto;
+    border: 0;
 }
 
 /*!* 도시 이름 텍스트 *!
@@ -173,19 +234,42 @@ body:has(> main #region-fragment-container) #destination-list {
 }*/
 
 .circle-btn span {
-    font-size: 12px;
-    color: #333;
-    margin-top: 6px;
+    font-size: 14px;
+    line-height: 1.4;
+    color: #424957;
+    margin-top: 4px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid transparent;
     display: block;
     text-align: center;
-    font-weight: bold; /* ✅ 볼드 처리 */
+    font-weight: 500;
 }
 
 /* 선택된 버튼 스타일 */
-.circle-btn.selected .circle-icon {
-    border: 3px solid var(--tripbora-primary);
-    box-shadow: 0 0 6px var(--tripbora-focus);
+.region-visual {
+    position: relative;
+    border-radius: 50%;
 }
+.region-visual .circle-icon { display: block; }
+.circle-btn.selected .region-visual::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 2px solid var(--tripbora-primary);
+    border-radius: 50%;
+    box-sizing: border-box;
+    pointer-events: none;
+}
+.circle-btn.selected .circle-icon {
+    border: 0;
+    box-shadow: none;
+}
+.circle-btn.selected span {
+    color: var(--tripbora-primary);
+    font-weight: 600;
+    border-bottom-color: currentColor;
+}
+.circle-btn:hover span { color: var(--tripbora-primary); }
 
 /* ─── 여행지 카드 리스트 ─── */
 .pagination-wrapper {
@@ -353,10 +437,8 @@ body:has(> main #region-fragment-container) #destination-list {
 /* 하위 여행지 */
 .subregion-selector {
     position: relative;
-    padding: 5px 60px;
-    margin: 20px auto;
-    border-radius: 10px;
-    max-width: 960px;
+    padding: 0 44px;
+    margin: 0 0 10px;
 }
 
 .subregion-scroll-container::-webkit-scrollbar {
@@ -372,35 +454,45 @@ body:has(> main #region-fragment-container) #destination-list {
 
 .subregion-list {
     display: flex;
-    gap: 10px;
-    padding: 10px 0;
+    gap: 13px;
+    padding: 0;
     flex-wrap: nowrap;
 }
 
 
-/* 모던한 행정구 버튼 스타일 */
+/* 작은 outlined chip. 바깥 5px 클릭 여유로 44px 터치 영역을 유지한다. */
 .subregion-btn {
-    background: #ffffff;         /* ✅ 추천 배경색 */
-    color: var(--tripbora-text);
-    border: 1px solid var(--tripbora-border);
-    border-radius: 999px;
-    padding: 8px 16px;
-    font-size: 14px;
+    position: relative;
+    flex: 0 0 auto;
+    min-width: 44px;
+    min-height: 34px;
+    margin: 5px 0;
+    box-sizing: border-box;
+    background: #fff;
+    color: #424957;
+    border: 1px solid #e4e7eb;
+    border-radius: 6px;
+    padding: 0 12px;
+    font-size: 13px;
+    font-weight: 500;
     cursor: pointer;
     white-space: nowrap;
-    transition: all 0.2s ease;
+    transition: color 0.15s ease;
+}
+.subregion-btn::before {
+    content: '';
+    position: absolute;
+    inset: -5px 0;
 }
 
 .subregion-btn:hover {
-    background: var(--tripbora-soft);
-    color: var(--tripbora-primary-hover);
+    color: #28272d;
 }
 
 .subregion-btn.active {
-    background: var(--tripbora-primary);
-    color: #ffffff;
-    border-color: var(--tripbora-primary);
-    font-weight: bold;
+    color: var(--tripbora-primary);
+    border-color: var(--tripbora-border);
+    font-weight: 600;
 }
 
 /* 좌우 화살표 */
@@ -408,17 +500,24 @@ body:has(> main #region-fragment-container) #destination-list {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    background: rgba(255,255,255,0.9);
-    border: 1px solid #ccc;
-    width: 32px; height: 32px;
-    border-radius: 50%;
-    font-size: 20px;
+    background: none;
+    border: 0;
+    width: 40px; height: 44px;
+    border-radius: 0;
+    color: #687080;
+    font-size: 26px;
     line-height: 1;
     cursor: pointer;
     z-index: 10;
 }
-.subregion-arrow.prev { left: 10px; }
-.subregion-arrow.next { right: 10px; }
+.subregion-arrow.prev { left: 0; }
+.subregion-arrow.next { right: 0; }
+.subregion-arrow:hover { color: #28272d; }
+.subregion-btn:focus-visible,
+.subregion-arrow:focus-visible {
+    outline: 2px solid var(--tripbora-primary);
+    outline-offset: -2px;
+}
 
 /* 북마크 */
 
@@ -475,23 +574,18 @@ body:has(> main #region-fragment-container) #destination-list {
 }
 
 .subregion-btn.selected {
-    background: var(--tripbora-primary);
-    color: #fff;
-    border: 1.5px solid var(--tripbora-primary);
+    color: var(--tripbora-primary);
+    border-color: var(--tripbora-border);
     font-weight: 600;
 }
 
 .subregion-btn.active:hover,
 .subregion-btn.selected:hover {
-    background: var(--tripbora-primary-hover);
-    color: #fff;
-    border-color: var(--tripbora-primary-hover);
+    color: var(--tripbora-primary-hover);
 }
 
 .subregion-btn:active {
-    background: var(--tripbora-primary-active);
-    color: #fff;
-    border-color: var(--tripbora-primary-active);
+    color: #28272d;
 }
 
 /* 페이징 */
@@ -570,15 +664,15 @@ body:has(> main #region-fragment-container) #destination-list {
     }
 }
 
-/* 정렬 (세그먼트 컨트롤) */
+/* 정렬 text tabs */
 .list-sort-buttons {
     display: inline-flex;
-    gap: 2px;
+    gap: 18px;
     margin: 0 0 22px auto !important;
-    padding: 3px;
-    background: #fafafc;
-    border: 1px solid var(--tripbora-border);
-    border-radius: 10px;
+    padding: 0;
+    background: none;
+    border: 0;
+    border-radius: 0;
     width: fit-content;
 }
 
@@ -589,44 +683,44 @@ body:has(> main #region-fragment-container) #destination-list {
 
 .sort-btn {
     display: inline-flex;
-    min-height: 34px;
+    min-height: 40px;
     align-items: center;
     justify-content: center;
-    padding: 0 14px;
+    padding: 0 4px;
     color: #6b7686;
     background: transparent;
-    border: none;
-    border-radius: 8px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
     font-size: 0.88rem;
-    font-weight: 650;
+    font-weight: 500;
+    white-space: nowrap;
     letter-spacing: -0.01em;
     cursor: pointer;
-    transition: color .15s ease, background-color .15s ease;
-    outline: none;
+    transition: color .15s ease;
 }
 
-.sort-btn:hover,
+.sort-btn:hover {
+    color: #424957;
+}
 .sort-btn:focus-visible {
-    color: var(--tripbora-primary-hover);
-    background: var(--tripbora-soft);
+    outline: 2px solid var(--tripbora-primary);
+    outline-offset: -2px;
 }
 
 .sort-btn.active {
-    color: #fff;
-    background: var(--tripbora-primary);
-    font-weight: 750;
-    box-shadow: 0 1px 3px rgba(30, 41, 59, 0.1);
+    color: var(--tripbora-primary);
+    border-bottom-color: currentColor;
+    font-weight: 600;
 }
 
 .sort-btn.active:hover,
 .sort-btn.active:focus-visible {
-    color: #fff;
-    background: var(--tripbora-primary-hover);
+    color: var(--tripbora-primary-hover);
 }
 
 .sort-btn:active {
-    color: #fff;
-    background: var(--tripbora-primary-active);
+    color: #424957;
 }
 
 /* ─── 목록 도구줄: 카테고리 필터 · 정렬 ─── */
@@ -637,7 +731,7 @@ body:has(> main #region-fragment-container) #destination-list {
     align-items: center;
     justify-content: flex-end;
     gap: 8px;
-    margin: 0 0 22px;
+    margin: 0 0 18px;
 }
 
 .destination-list-wrapper .list-toolbar .list-sort-buttons {
@@ -820,7 +914,14 @@ body:has(> main #region-fragment-container) #destination-list {
 
     #region-fragment-container .region-selector {
         margin: 0 auto;
-        padding: 0 16px;
+        padding: 0 calc(16px + var(--region-rail-inset, 0px));
+    }
+    #region-fragment-container .region-selector.has-region-back { padding-left: calc(16px + var(--region-rail-inset, 0px) + var(--region-slot-width, 76px) + 16px); }
+    #region-fragment-container .region-back {
+        left: calc(16px + var(--region-rail-inset, 0px));
+        top: 10px;
+        width: var(--region-slot-width, 76px);
+        font-size: 13px;
     }
 
     #region-fragment-container .region-selector .arrow,
@@ -829,24 +930,24 @@ body:has(> main #region-fragment-container) #destination-list {
     }
 
     #region-fragment-container .region-buttons {
-        gap: 10px;
-        padding: 12px 0;
+        gap: 16px;
+        padding: 10px 0;
         overflow-x: auto;
         scroll-snap-type: x proximity;
     }
 
     #region-fragment-container .circle-btn {
-        flex: 0 0 80px;
+        flex: 0 0 76px;
         min-width: 0;
         scroll-snap-align: start;
     }
 
     #region-fragment-container .circle-icon {
-        width: 74px;
-        height: 74px;
+        width: 68px;
+        height: 68px;
         margin: 0 auto;
         box-sizing: border-box;
-        border: 1px solid #ddd;
+        border: 0;
         box-shadow: none;
     }
 
@@ -859,13 +960,13 @@ body:has(> main #region-fragment-container) #destination-list {
     }
 
     #region-fragment-container .circle-btn.selected .circle-icon {
-        border: 2px solid var(--tripbora-primary);
+        border: 0;
         box-shadow: none;
     }
 
     #region-fragment-container .circle-btn.selected span {
         color: var(--tripbora-primary-active);
-        font-weight: 700;
+        font-weight: 600;
     }
 
     #region-fragment-container .destination-list-wrapper {
@@ -881,17 +982,17 @@ body:has(> main #region-fragment-container) #destination-list {
     }
 
     #region-fragment-container .subregion-selector {
-        margin: 0 0 12px;
+        margin: 0 0 8px;
         padding: 0;
     }
 
     #region-fragment-container .subregion-list {
-        gap: 6px;
-        padding: 0 0 4px;
+        gap: 13px;
+        padding: 0;
     }
 
     #region-fragment-container .subregion-btn {
-        min-height: 40px;
+        min-height: 34px;
         padding: 0 12px;
         border-radius: 6px;
         font-size: 13px;
@@ -899,7 +1000,7 @@ body:has(> main #region-fragment-container) #destination-list {
 
     #region-fragment-container .list-toolbar {
         justify-content: space-between;
-        margin-bottom: 16px;
+        margin-bottom: 14px;
     }
 
     #region-fragment-container .category-filter {
@@ -942,7 +1043,8 @@ body:has(> main #region-fragment-container) #destination-list {
     }
 
     #region-fragment-container .list-sort-buttons {
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
+        gap: 10px;
         max-width: 100%;
         padding: 0;
         border: 0;
@@ -951,16 +1053,15 @@ body:has(> main #region-fragment-container) #destination-list {
     }
 
     #region-fragment-container .sort-btn {
-        min-height: 34px;
-        padding: 0 8px;
+        min-height: 40px;
+        padding: 0 4px;
         font-size: 13px;
-        border-radius: 4px;
+        border-radius: 0;
     }
 
     #region-fragment-container .sort-btn.active {
         color: var(--tripbora-primary-active);
-        background: var(--tripbora-soft);
-        box-shadow: none;
+        background: none;
     }
 
     #region-fragment-container .destination-card-list {
@@ -1068,7 +1169,39 @@ body:has(> main #region-fragment-container) #destination-list {
     }
 }
 
+/* 순환 위치 보정은 즉시 적용한다. native swipe/wheel은 그대로 사용한다. */
+#region-fragment-container .region-loop {
+    scroll-behavior: auto;
+    scroll-snap-type: none;
+}
+
+/* 태블릿/desktop 상위 rail만 동일 slot + 정수 개수 viewport를 사용한다. */
+@media (min-width: 601px) {
+    #region-fragment-container .region-buttons.region-complete-items .region-btn {
+        flex: 0 0 var(--region-slot-width);
+        min-width: 0;
+    }
+}
+
 @media (max-width: 600px) {
+    #region-fragment-container .region-buttons {
+        gap: 12px;
+        padding: 8px 0;
+    }
+
+    #region-fragment-container .region-selector.has-region-back { padding-left: 96px; }
+    #region-fragment-container .region-back { top: 8px; width: 68px; }
+    #region-fragment-container .region-back-visual { width: 60px; height: 60px; }
+
+    #region-fragment-container .circle-btn {
+        flex-basis: 68px;
+    }
+
+    #region-fragment-container .circle-icon {
+        width: 60px;
+        height: 60px;
+    }
+
     #region-fragment-container .destination-list-wrapper {
         margin-top: 20px;
     }

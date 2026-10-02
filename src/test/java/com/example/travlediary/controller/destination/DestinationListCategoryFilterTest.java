@@ -240,12 +240,51 @@ class DestinationListCategoryFilterTest {
                 .isEqualTo("カテゴリー · すべて");
     }
 
+    @Test
+    void overseasRegionBackStaysOutsideTheLoopAndKeepsFiltersWithoutRegionOrPage() {
+        Map<String, Object> variables = new HashMap<>();
+        CountryCategory country = region(8L, "일본", 2, 1L);
+        country.setIconPath("/images/japan.png");
+        variables.put("cities", List.of(country));
+        variables.put("destinations", List.of());
+        variables.put("regionDisplayNames", Map.of(8L, "일본"));
+        variables.put("selectedCityId", 1L);
+        variables.put("selectedSubregionId", null);
+        variables.put("subregions", List.of());
+        variables.put("totalPages", 0);
+        variables.put("currentPage", 3);
+        variables.put("pageSize", 8);
+        variables.put("sort", "views");
+        variables.put("type", "overseas");
+        variables.put("selectedCategoryId", 5L);
+        Document continent = renderFragment(variables, Locale.KOREAN, "regionFragment");
+        var back = continent.selectFirst("[data-region-back]");
+        assertThat(back).isNotNull();
+        assertThat(back.text()).isEqualTo("대륙");
+        assertThat(back.select(".region-back-visual[aria-hidden=true] svg path")).hasSize(1);
+        assertThat(back.hasClass("region-btn")).isFalse();
+        assertThat(back.attr("href")).isEqualTo("/destinations?type=overseas&sort=views&size=8&category=5");
+        assertThat(continent.select(".region-buttons [data-region-back]")).isEmpty();
+        variables.put("selectedCityId", 8L);
+        assertThat(renderFragment(variables, Locale.ENGLISH, "regionFragment")
+                .selectFirst("[data-region-back]").text()).isEqualTo("Continents");
+        variables.put("selectedCityId", null);
+        assertThat(renderFragment(variables, Locale.KOREAN, "regionFragment").select("[data-region-back]")).isEmpty();
+        variables.put("type", "domestic");
+        variables.put("selectedCityId", 38L);
+        assertThat(renderFragment(variables, Locale.KOREAN, "regionFragment").select("[data-region-back]")).isEmpty();
+    }
+
     @SuppressWarnings("unchecked")
     private static List<DestinationCategoryFilterDto> options(Model model) {
         return (List<DestinationCategoryFilterDto>) model.getAttribute("categoryFilterOptions");
     }
 
     private static Document renderList(Map<String, Object> variables, Locale locale) {
+        return renderFragment(variables, locale, "destinationList");
+    }
+
+    private static Document renderFragment(Map<String, Object> variables, Locale locale, String fragment) {
         ClassLoaderTemplateResolver resolver = new ClassLoaderTemplateResolver();
         resolver.setPrefix("templates/");
         resolver.setSuffix(".html");
@@ -262,7 +301,7 @@ class DestinationListCategoryFilterTest {
         WebContext context = new WebContext(JakartaServletWebApplication.buildApplication(servletContext)
                 .buildExchange(new MockHttpServletRequest(servletContext), new MockHttpServletResponse()), locale);
         context.setVariables(variables);
-        return Jsoup.parse(engine.process("destination/fragment", Set.of("destinationList"), context));
+        return Jsoup.parse(engine.process("destination/fragment", Set.of(fragment), context));
     }
 
     private Configuration mapperConfiguration() throws IOException {

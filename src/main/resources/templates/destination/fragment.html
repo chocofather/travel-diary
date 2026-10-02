@@ -18,18 +18,32 @@
     <div id="region-fragment-container">
         <!-- ─── 상단 region-bar ─── -->
         <div class="region-bar-wrapper" th:attr="data-type=${type}">
-            <section class="region-selector">
+            <section class="region-selector"
+                     th:classappend="${type == 'overseas' and selectedCityId != null} ? 'has-region-back' : ''">
                 <button class="arrow prev" th:if="${cities.size()} >= 12"
                         th:aria-label="#{destination.list.region.previous}">‹</button>
+                <a th:if="${type == 'overseas' and selectedCityId != null}"
+                   class="region-back" data-region-back
+                   th:href="@{/destinations(type=${type},sort=${sort},size=${pageSize},category=${selectedCategoryId})}">
+                    <span class="region-back-visual" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
+                             stroke-linecap="round" stroke-linejoin="round">
+                            <path d="m9 4-5 5 5 5M4 9h9a7 7 0 0 1 7 7v3"/>
+                        </svg>
+                    </span>
+                    <span class="region-back-label" th:text="#{destination.list.region.continents}">대륙</span>
+                </a>
                 <div th:class="'region-buttons ' +
                        (${cities.size()} <= 3 ? 'few' :
                         (${cities.size()} >= 7 ? 'scrollable' : 'normal'))">
                     <div th:each="c : ${cities}"
                          th:class="'circle-btn region-btn' + (${selectedCityId} == ${c.id} ? ' selected' : '')"
                          th:attr="data-region-id=${c.id},data-depth=${c.depth}">
-                        <img th:src="@{${c.iconPath}}"
-                             th:alt="#{destination.list.region.iconAlt(${regionDisplayNames[c.id]})}"
-                             class="circle-icon"/>
+                        <div class="region-visual">
+                            <img th:src="@{${c.iconPath}}"
+                                 th:alt="#{destination.list.region.iconAlt(${regionDisplayNames[c.id]})}"
+                                 class="circle-icon"/>
+                        </div>
                         <span th:text="${regionDisplayNames[c.id]}">도시명</span>
                     </div>
                 </div>
