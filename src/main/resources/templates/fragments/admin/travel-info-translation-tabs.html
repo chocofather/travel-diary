@@ -58,7 +58,7 @@
           <div class="admin-form-field">
             <label>본문</label>
             <div class="admin-travel-info-editor-shell quill-editor-shell">
-              <div class="admin-travel-info-editor quill-editor"
+              <div class="admin-travel-info-editor quill-editor rich-text-image-layout"
                    th:attr="data-translation-editor=${translation.languageCode}"></div>
             </div>
             <input type="hidden" th:field="*{translations[__${slot.index}__].content}"

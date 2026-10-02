@@ -428,7 +428,126 @@
     font-size: 2.5em;
 }
 
+/*
+  여행정보 본문(travel_info.content) 이미지 정렬·크기. 편집기와 공개/관리자 상세가 같은 규칙을 쓴다.
+  이미지를 문단 안의 글자처럼 두어 Quill 문단 정렬(ql-align-*)을 그대로 따르게 하고,
+  크기 프리셋(ql-image-size-*)은 본문 폭 기준 % 로 그린다. 어떤 크기든 본문 폭을 넘지 않는다.
+*/
+.rich-text-image-layout img {
+    display: inline-block;
+    max-width: 100%;
+    height: auto;
+    vertical-align: bottom;
+}
+
+.rich-text-image-layout img.ql-image-size-25 {
+    width: 25%;
+    min-width: min(120px, 100%);
+}
+
+.rich-text-image-layout img.ql-image-size-50 {
+    width: 50%;
+}
+
+.rich-text-image-layout img.ql-image-size-75 {
+    width: 75%;
+}
+
+.rich-text-image-layout img.ql-image-size-100 {
+    width: 100%;
+}
+
+/* 편집기 이미지 크기·정렬 패널. 선택 테두리와 함께 편집 영역 밖(ql-container)에 붙는다. */
+.quill-image-layout {
+    position: absolute;
+    z-index: 3;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    max-width: calc(100% - 16px);
+    padding: 4px;
+    border: 1px solid var(--quill-border-color, #d8dfeb);
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+    box-sizing: border-box;
+}
+
+.quill-image-layout[hidden],
+.quill-image-layout-frame[hidden] {
+    display: none;
+}
+
+.quill-image-layout-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.quill-image-layout-group + .quill-image-layout-group {
+    padding-left: 6px;
+    border-left: 1px solid #e3e8f0;
+}
+
+.quill-image-layout button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 28px;
+    padding: 0 6px;
+    border: 0;
+    border-radius: 5px;
+    background: none;
+    color: #35415a;
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.quill-image-layout button svg {
+    width: 18px;
+    height: 18px;
+}
+
+.quill-image-layout button:hover {
+    background: #f1f4f9;
+}
+
+.quill-image-layout button[aria-pressed="true"] {
+    background: #e8eefc;
+    color: #2f4fb5;
+    font-weight: 600;
+}
+
+.quill-image-layout button[aria-pressed="true"] .ql-stroke {
+    stroke: #2f4fb5;
+}
+
+.quill-image-layout button:focus-visible {
+    outline: 2px solid #3558c6;
+    outline-offset: 1px;
+}
+
+.quill-image-layout-frame {
+    position: absolute;
+    z-index: 2;
+    outline: 2px solid #3558c6;
+    outline-offset: 1px;
+    pointer-events: none;
+}
+
 @media (max-width: 560px) {
+    /* 좁은 화면에서는 중간·크게를 한 단계 넓혀 사진이 지나치게 작아지지 않게 한다. 작게는 최소 120px 을 지킨다. */
+    .rich-text-image-layout img.ql-image-size-50 {
+        width: 75%;
+    }
+
+    .rich-text-image-layout img.ql-image-size-75 {
+        width: 100%;
+    }
+
     .quill-editor-shell .ql-toolbar.ql-snow {
         gap: 7px;
         padding: 9px;

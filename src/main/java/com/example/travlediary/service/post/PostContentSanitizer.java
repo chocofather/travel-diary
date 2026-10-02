@@ -38,6 +38,10 @@ public class PostContentSanitizer {
             "ql-indent-1", "ql-indent-2", "ql-indent-3", "ql-indent-4",
             "ql-indent-5", "ql-indent-6", "ql-indent-7", "ql-indent-8"
     );
+    /** 본문 폭 기준 이미지 크기 프리셋. 값이 정해진 class 만 남기고 style 은 받지 않는다. */
+    private static final Set<String> IMAGE_QUILL_CLASSES = Set.of(
+            "ql-image-size-25", "ql-image-size-50", "ql-image-size-75", "ql-image-size-100"
+    );
     private static final Set<String> CHECKLIST_STATES = Set.of("checked", "unchecked");
     private static final Set<String> ALLOWED_COLOR_PROPERTIES = Set.of("color", "background-color");
     private static final Pattern HEX_COLOR = Pattern.compile("^#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?$");
@@ -115,7 +119,8 @@ public class PostContentSanitizer {
             String tagName = element.tagName();
             Set<String> allowedNames = INLINE_FORMAT_TAGS.contains(tagName)
                     ? inlineClasses(additionalInlineClasses)
-                    : BLOCK_FORMAT_TAGS.contains(tagName) ? BLOCK_QUILL_CLASSES : Set.of();
+                    : BLOCK_FORMAT_TAGS.contains(tagName) ? BLOCK_QUILL_CLASSES
+                    : "img".equals(tagName) ? IMAGE_QUILL_CLASSES : Set.of();
 
             StringJoiner safeClasses = new StringJoiner(" ");
             for (String className : element.className().trim().split("\\s+")) {

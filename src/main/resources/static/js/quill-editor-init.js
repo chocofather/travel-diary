@@ -49,6 +49,43 @@ window.initQuillEditor = function (editorSelector, contentInputId, formId, initi
         'gangwon-saeeum'
     ];
     Quill.register(Font, true);
+
+    // 본문 이미지 크기 프리셋(본문 폭 기준 %)은 img 의 ql-image-size-* class 로 저장한다.
+    // 기본 Image blot 은 alt/width/height 만 읽고 쓰므로 class 도 formats 로 다루게 덮어 등록한다.
+    // 크기 패널이 없는 편집기도 같은 본문을 다시 저장할 때 크기를 잃지 않도록 등록은 늘 한다.
+    const imageSizePresets = ['25', '50', '75', '100'];
+    const BaseImage = Quill.import('formats/image');
+    if (!BaseImage.keepsImageSizePreset) {
+        class PresetSizedImage extends BaseImage {
+            static formats(domNode) {
+                const formats = super.formats(domNode);
+                const size = imageSizePresets.find(preset =>
+                    domNode.classList.contains(`ql-image-size-${preset}`));
+                if (size) formats.imageSize = size;
+                return formats;
+            }
+
+            format(name, value) {
+                if (name !== 'imageSize') {
+                    super.format(name, value);
+                    return;
+                }
+                imageSizePresets.forEach(preset =>
+                    this.domNode.classList.remove(`ql-image-size-${preset}`));
+                if (imageSizePresets.includes(value)) {
+                    this.domNode.classList.add(`ql-image-size-${value}`);
+                }
+                if (this.domNode.classList.length === 0) {
+                    this.domNode.removeAttribute('class');
+                }
+            }
+        }
+        PresetSizedImage.keepsImageSizePreset = true;
+        Quill.register(PresetSizedImage, true);
+    }
+    // 이미지 크기·정렬 패널은 본문 영역이 이 class 를 가진 편집기(여행정보)에서만 켠다.
+    const imageLayoutEnabled = editorElement.classList.contains('rich-text-image-layout');
+
     const Delta = Quill.import('delta');
     const fontFormatsByClass = new Map([
         ['ql-font-serif', 'serif'],
@@ -203,6 +240,162 @@ window.initQuillEditor = function (editorSelector, contentInputId, formId, initi
         localizePicker(toolbar, '.ql-align', '정렬', {
             '': '왼쪽 정렬', 'center': '가운데 정렬',
             'right': '오른쪽 정렬', 'justify': '양쪽 정렬'
+        });
+    }
+
+    /**
+     * 본문 이미지를 클릭하면 그 위에 작은 크기·정렬 패널을 띄운다.
+     *
+     * <p>크기는 위 PresetSizedImage 의 imageSize(class), 정렬은 이미지가 든 문단의 Quill 기본
+     * align(ql-align-*) 으로 바꾼다. 자유 위치 배치는 하지 않는다. 패널과 선택 테두리는 편집 영역
+     * 밖(ql-container)에 붙여 저장 HTML 에 섞이지 않게 한다.
+     */
+    function bindImageLayout(quillEditor) {
+        const sizeOptions = [
+            ['25', '25%', '작게 (본문 폭 25%)'],
+            ['50', '50%', '중간 (본문 폭 50%)'],
+            ['75', '75%', '크게 (본문 폭 75%)'],
+            ['100', '100%', '본문 폭에 맞춤'],
+            ['', '원본', '원본 크기 (본문 폭을 넘지 않음)']
+        ];
+        const alignOptions = [
+            ['', '왼쪽 정렬'],
+            ['center', '가운데 정렬'],
+            ['right', '오른쪽 정렬']
+        ];
+        const alignIcons = Quill.import('ui/icons').align;
+        const frame = quillEditor.addContainer('quill-image-layout-frame');
+        const panel = quillEditor.addContainer('quill-image-layout');
+        frame.hidden = true;
+        panel.hidden = true;
+        panel.setAttribute('role', 'toolbar');
+        panel.setAttribute('aria-label', '이미지 크기와 정렬');
+        let selectedImage = null;
+
+        function createGroup(label) {
+            const group = document.createElement('div');
+            group.className = 'quill-image-layout-group';
+            group.setAttribute('role', 'group');
+            group.setAttribute('aria-label', label);
+            panel.appendChild(group);
+            return group;
+        }
+
+        function createButton(group, value, label, onClick) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.dataset.value = value;
+            setAccessibleLabel(button, label);
+            // 누르는 동안 편집기 선택이 풀리지 않게 한다.
+            button.addEventListener('mousedown', event => event.preventDefault());
+            button.addEventListener('click', () => onClick(value));
+            group.appendChild(button);
+            return button;
+        }
+
+        const sizeGroup = createGroup('이미지 크기');
+        const sizeButtons = sizeOptions.map(([value, text, label]) => {
+            const button = createButton(sizeGroup, value, label, applySize);
+            button.textContent = text;
+            return button;
+        });
+        const alignGroup = createGroup('이미지 정렬');
+        const alignButtons = alignOptions.map(([value, label]) => {
+            const button = createButton(alignGroup, value, label, applyAlign);
+            button.innerHTML = alignIcons[value];
+            return button;
+        });
+
+        function selectedIndex() {
+            if (!selectedImage || !quillEditor.root.contains(selectedImage)) return null;
+            const blot = Quill.find(selectedImage);
+            return blot ? quillEditor.getIndex(blot) : null;
+        }
+
+        function hide() {
+            selectedImage = null;
+            frame.hidden = true;
+            panel.hidden = true;
+        }
+
+        function refresh() {
+            const index = selectedIndex();
+            if (index === null) {
+                hide();
+                return;
+            }
+            const size = Quill.find(selectedImage).formats().imageSize
+                ?? (selectedImage.hasAttribute('width') ? null : '');
+            const align = quillEditor.getFormat(index, 1).align ?? '';
+            sizeButtons.forEach(button =>
+                button.setAttribute('aria-pressed', String(button.dataset.value === size)));
+            alignButtons.forEach(button =>
+                button.setAttribute('aria-pressed', String(button.dataset.value === align)));
+
+            const containerRect = quillEditor.container.getBoundingClientRect();
+            const imageRect = selectedImage.getBoundingClientRect();
+            const top = imageRect.top - containerRect.top;
+            const left = imageRect.left - containerRect.left;
+            frame.style.top = `${top}px`;
+            frame.style.left = `${left}px`;
+            frame.style.width = `${imageRect.width}px`;
+            frame.style.height = `${imageRect.height}px`;
+            frame.hidden = false;
+            panel.hidden = false;
+
+            // 이미지 위쪽 가운데에 두고, 위에 자리가 없으면 이미지 안쪽 위에 겹친다.
+            const gap = 8;
+            const maxLeft = Math.max(gap, quillEditor.container.clientWidth - panel.offsetWidth - gap);
+            const panelLeft = left + (imageRect.width - panel.offsetWidth) / 2;
+            const panelTop = top - panel.offsetHeight - gap;
+            panel.style.left = `${Math.min(Math.max(panelLeft, gap), maxLeft)}px`;
+            panel.style.top = `${panelTop >= 0 ? panelTop : top + gap}px`;
+        }
+
+        function applySize(value) {
+            const index = selectedIndex();
+            if (index === null) return;
+            // 프리셋을 고르면 예전 px 드래그 크기(width)는 지운다.
+            const formats = {imageSize: value || false};
+            if (selectedImage.hasAttribute('width')) formats.width = false;
+            quillEditor.formatText(index, 1, formats, 'user');
+            refresh();
+        }
+
+        function applyAlign(value) {
+            const index = selectedIndex();
+            if (index === null) return;
+            quillEditor.formatLine(index, 1, 'align', value || false, 'user');
+            refresh();
+        }
+
+        quillEditor.root.addEventListener('click', event => {
+            if (event.target instanceof HTMLImageElement) {
+                selectedImage = event.target;
+                refresh();
+            }
+        });
+        // 편집 영역의 이미지가 늦게 읽혀도 테두리·패널 위치를 맞춘다.
+        quillEditor.root.addEventListener('load', () => {
+            if (selectedImage) refresh();
+        }, true);
+        quillEditor.root.addEventListener('keydown', () => {
+            if (selectedImage) hide();
+        });
+        panel.addEventListener('keydown', event => {
+            if (event.key !== 'Escape') return;
+            hide();
+            quillEditor.focus();
+        });
+        document.addEventListener('pointerdown', event => {
+            if (!selectedImage || event.target === selectedImage || panel.contains(event.target)) return;
+            hide();
+        });
+        quillEditor.on('text-change', () => {
+            if (selectedImage) requestAnimationFrame(refresh);
+        });
+        window.addEventListener('resize', () => {
+            if (selectedImage) refresh();
         });
     }
 
@@ -361,11 +554,15 @@ window.initQuillEditor = function (editorSelector, contentInputId, formId, initi
                 }
             },
             history: true,
-            ...(resizeModuleAvailable ? {resize: resizeOptions} : {})
+            // 크기 패널을 쓰는 편집기는 px 드래그 대신 프리셋만 쓴다. (두 방식이 섞이지 않게)
+            ...(resizeModuleAvailable && !imageLayoutEnabled ? {resize: resizeOptions} : {})
         }
     });
     editorElement.quillEditorInstance = quill;
     localizeToolbar(quill);
+    if (imageLayoutEnabled) {
+        bindImageLayout(quill);
+    }
 
     // Quill's default Clipboard conversion does not reliably restore custom
     // class-attributor font values. Reapply only the explicitly registered

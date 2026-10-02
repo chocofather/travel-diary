@@ -809,7 +809,7 @@ class TravelInfoControllerTest {
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("한국관광공사")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("공공누리 제3유형")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "class=\"festival-detail-content rich-text-content\"")))
+                        "class=\"festival-detail-content rich-text-content rich-text-image-layout\"")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "<span class=\"ql-font-noto-serif-kr\">축제 본문</span>")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("행사 정보")));

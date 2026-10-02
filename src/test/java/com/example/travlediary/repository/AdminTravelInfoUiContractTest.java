@@ -58,7 +58,7 @@ class AdminTravelInfoUiContractTest {
                 .contains("th:field=\"*{removeThumbnail}\"")
                 .contains("class=\"admin-travel-info-editor-shell quill-editor-shell\"")
                 .contains("id=\"travel-info-editor\"")
-                .contains("class=\"admin-travel-info-editor quill-editor\"")
+                .contains("class=\"admin-travel-info-editor quill-editor rich-text-image-layout\"")
                 .contains("th:field=\"*{content}\"")
                 .contains("id=\"travel-info-initial-content\"")
                 .contains("hidden th:text=\"*{content}\"")
@@ -198,12 +198,38 @@ class AdminTravelInfoUiContractTest {
     }
 
     @Test
+    void travelInfoImagesUseQuillAlignAndPresetSizeClassesInEditorAndDetail() throws IOException {
+        String quillInitializer = resource("/static/js/quill-editor-init.js");
+        String quillCss = resource("/static/css/quill-content.css");
+        String translationTabs = resource("/templates/fragments/admin/travel-info-translation-tabs.html");
+        String festivalDetail = resource("/templates/festivals/detail.html");
+
+        // 크기는 img class, 정렬은 문단의 Quill 기본 align 으로 저장한다. px 드래그와 섞지 않는다.
+        assertThat(quillInitializer)
+                .contains("class PresetSizedImage extends BaseImage")
+                .contains("`ql-image-size-${value}`")
+                .contains("editorElement.classList.contains('rich-text-image-layout')")
+                .contains("resizeModuleAvailable && !imageLayoutEnabled")
+                .contains("quillEditor.formatLine(index, 1, 'align', value || false, 'user')")
+                .contains("quillEditor.addContainer('quill-image-layout')");
+        assertThat(translationTabs)
+                .contains("class=\"admin-travel-info-editor quill-editor rich-text-image-layout\"");
+        assertThat(festivalDetail)
+                .contains("festival-detail-content rich-text-content rich-text-image-layout");
+        // 상세에서도 이미지가 문단 정렬을 따르고, 어떤 크기든 본문 폭을 넘지 않는다.
+        assertThat(quillCss)
+                .contains(".rich-text-image-layout img {\n    display: inline-block;\n    max-width: 100%;")
+                .contains(".rich-text-image-layout img.ql-image-size-25")
+                .contains(".rich-text-image-layout img.ql-image-size-100");
+    }
+
+    @Test
     void detailRendersSanitizedHtmlWithoutToastUiDependency() throws IOException {
         String detail = resource("/templates/admin/travel-info/detail.html");
         String quillCss = resource("/static/css/quill-content.css");
 
         assertThat(detail)
-                .contains("class=\"admin-travel-info-content rich-text-content\"")
+                .contains("class=\"admin-travel-info-content rich-text-content rich-text-image-layout\"")
                 .contains("th:utext=\"${travelInfo.content}\"")
                 .contains("pretendard@v1.3.9")
                 .contains("@fontsource/noto-sans-kr@5.3.0/400.css")

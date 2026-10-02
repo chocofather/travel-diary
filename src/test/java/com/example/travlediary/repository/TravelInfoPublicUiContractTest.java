@@ -177,7 +177,7 @@ class TravelInfoPublicUiContractTest {
                 .contains("!#lists.isEmpty(travelInfo.periods)")
                 .contains("th:each=\"period : ${travelInfo.periods}\"")
                 .contains("period.startDate", "period.endDate")
-                .contains("class=\"travel-info-detail-content rich-text-content\"")
+                .contains("class=\"travel-info-detail-content rich-text-content rich-text-image-layout\"")
                 .contains("th:utext=\"${travelInfo.content}\"")
                 .contains("th:href=\"${listUrl}\"", "#{travelInfo.detail.backToList}")
                 .contains("/js/travel-info-bookmark.js")

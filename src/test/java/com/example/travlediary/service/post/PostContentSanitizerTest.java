@@ -218,6 +218,21 @@ class PostContentSanitizerTest {
     }
 
     @Test
+    void keepsAlignedParagraphAndOnlyPresetImageSizeClasses() {
+        String html = "<p class=\"ql-align-center\"><img src=\"/uploads/editor/a.png\" class=\"ql-image-size-25\"></p>"
+                + "<p class=\"ql-align-right\"><img src=\"/uploads/editor/b.png\" class=\"ql-image-size-100 x\"></p>"
+                + "<p><img src=\"/uploads/editor/c.png\" class=\"ql-image-size-30 ql-align-center\""
+                + " style=\"width: 30%\"></p>";
+
+        String cleaned = sanitizer.sanitize(html);
+
+        assertThat(cleaned).isEqualTo(
+                "<p class=\"ql-align-center\"><img src=\"/uploads/editor/a.png\" class=\"ql-image-size-25\"></p>"
+                        + "<p class=\"ql-align-right\"><img src=\"/uploads/editor/b.png\" class=\"ql-image-size-100\"></p>"
+                        + "<p><img src=\"/uploads/editor/c.png\"></p>");
+    }
+
+    @Test
     void removesExecutableMarkupAndUnsafeImageSources() {
         String html = "<script>alert(1)</script>"
                 + "<iframe src=\"https://example.com\"></iframe>"

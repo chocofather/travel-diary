@@ -146,7 +146,7 @@ class AdminTravelInfoControllerTest {
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("2026-05-10")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("2026-05-12")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
-                        "class=\"admin-travel-info-content rich-text-content\"")))
+                        "class=\"admin-travel-info-content rich-text-content rich-text-image-layout\"")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString(
                         "<p><span class=\"ql-font-noto-serif-kr\">축제 본문</span></p>"
                                 + "<img src=\"/uploads/editor/festival.png\" width=\"600\" alt=\"축제\">")))
