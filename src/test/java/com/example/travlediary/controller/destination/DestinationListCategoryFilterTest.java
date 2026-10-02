@@ -203,6 +203,11 @@ class DestinationListCategoryFilterTest {
         Document page = renderList(variables, Locale.KOREAN);
 
         assertThat(page.selectFirst("#destination-list").attr("data-category")).isEqualTo("5");
+        Map<String, Object> headingVariables = new HashMap<>(variables);
+        headingVariables.put("selectedCityName", "종로구");
+        Document heading = renderList(headingVariables, Locale.KOREAN);
+        assertThat(heading.select(".destination-title-context")).isEmpty();
+        assertThat(heading.selectFirst("#page-title").text()).isEqualTo("종로구 여행지");
         assertThat(page.selectFirst("[data-category-filter-toggle]").text()).isEqualTo("카테고리 · 고궁");
         // 메뉴: 버튼 바로 아래 팝오버(처음에는 닫힘). 맨 앞 '전체' + 이름만 있는 항목, 고른 것 하나만 눌린 상태
         var panel = page.selectFirst("[data-category-filter] > [data-category-filter-panel]");

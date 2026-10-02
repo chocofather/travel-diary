@@ -36,7 +36,7 @@ class DestinationListI18nContractTest {
                 .contains("th:text=\"${d.name}\"")
                 .contains("th:text=\"${d.shortDescription}\"")
                 .contains("th:text=\"${d.regionName}\"")
-                .contains("#{destination.list.card.region}");
+                .doesNotContain("#{destination.list.card.region}");
     }
 
     @Test

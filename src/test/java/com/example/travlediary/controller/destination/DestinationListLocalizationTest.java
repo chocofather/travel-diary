@@ -132,6 +132,28 @@ class DestinationListLocalizationTest {
         assertThat(model.getAttribute("destinations")).isEqualTo(List.of(localizedCard));
     }
 
+    @Test
+    void titleUsesLocalizedSelectedRegionAcrossFullAndListAjaxResponses() {
+        when(countryCategoryService.getById(38L)).thenReturn(seoul);
+        when(countryCategoryService.getById(235L)).thenReturn(jongno);
+        when(countryCategoryService.getSubregions(7L, 3)).thenReturn(List.of(seoul));
+        when(countryCategoryService.getSubregions(38L, 4)).thenReturn(List.of(jongno));
+        when(countryCategoryService.getAllRegionIdsUnder(235L)).thenReturn(List.of(235L));
+        when(destinationService.getDestinationsByRegionIdsPaged(
+                List.of(235L), List.of(), 0, 12, "default")).thenReturn(List.of(destination));
+        when(destinationService.countDestinationsByRegionIds(List.of(235L), List.of())).thenReturn(1);
+        Model full = new ExtendedModelMap();
+        Model ajax = new ExtendedModelMap();
+        Model region = new ExtendedModelMap();
+        controller.destinationList("domestic", 235L, 1, 12, "default", null, null, request, full);
+        controller.destinationListFragment("domestic", 235L, 1, 12, "default", null, null, ajax);
+        controller.regionFragment("domestic", 235L, 1, 12, "default", null, null, region);
+        for (Model model : List.of(full, ajax, region)) {
+            assertThat(model.getAttribute("destinationTitleTrail")).isNull();
+            assertThat(model.getAttribute("selectedCityName")).isEqualTo("Jongno-gu");
+        }
+    }
+
     private CountryCategory region(Long id, String name, int depth, Long parentId) {
         CountryCategory region = new CountryCategory();
         region.setId(id);

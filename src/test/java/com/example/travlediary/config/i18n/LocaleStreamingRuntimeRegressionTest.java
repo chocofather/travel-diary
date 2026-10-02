@@ -103,7 +103,8 @@ class LocaleStreamingRuntimeRegressionTest {
                     .contains(">" + expectation.region() + "</span>")
                     .contains(">" + expectation.title() + "</span>")
                     .contains(">" + expectation.defaultSort() + "</button>")
-                    .contains(">" + expectation.regionLabel() + "</span>")
+                    .contains("<p class=\"region\">" + expectation.region() + "</p>")
+                    .doesNotContain(">" + expectation.regionLabel() + "</span>")
                     .contains(">Localized destination</h3>")
                     .contains(">Localized summary</p>")
                     .doesNotContain("??destination.list.");
