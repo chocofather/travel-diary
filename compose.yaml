@@ -1,6 +1,6 @@
 services:
   mysql:
-    image: mysql:8.4.9
+    image: mysql:9.2.0
     container_name: tripbora-mysql
     restart: unless-stopped
 
@@ -14,7 +14,7 @@ services:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
 
     volumes:
-      - tripbora_mysql_data:/var/lib/mysql
+      - tripbora_mysql92_data:/var/lib/mysql
 
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD"]
@@ -68,4 +68,4 @@ services:
 
 
 volumes:
-  tripbora_mysql_data:
+  tripbora_mysql92_data:
