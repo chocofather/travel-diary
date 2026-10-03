@@ -1,0 +1,71 @@
+services:
+  mysql:
+    image: mysql:8.4.9
+    container_name: tripbora-mysql
+    restart: unless-stopped
+
+    ports:
+      - "3307:3306"
+
+    environment:
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+
+    volumes:
+      - tripbora_mysql_data:/var/lib/mysql
+
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: tripbora-app
+    restart: unless-stopped
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+    ports:
+      - "8081:8081"
+
+    env_file:
+      - .env.docker.local
+
+    environment:
+      DB_URL: "jdbc:mysql://mysql:3306/${DB_NAME}?connectionTimeZone=LOCAL&characterEncoding=UTF-8"
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+
+      SERVER_ADDRESS: 0.0.0.0
+
+      UPLOAD_PATH: /data/uploads/
+      DIARY_PRIVATE_PATH: /data/diary-private
+      COVER_LIBRARY_PRIVATE_PATH: /data/cover-library-private
+
+    volumes:
+      - type: bind
+        source: ${HOST_UPLOAD_PATH}
+        target: /data/uploads
+
+      - type: bind
+        source: ${HOST_DIARY_PRIVATE_PATH}
+        target: /data/diary-private
+
+      - type: bind
+        source: ${HOST_COVER_LIBRARY_PRIVATE_PATH}
+        target: /data/cover-library-private
+
+
+volumes:
+  tripbora_mysql_data:
