@@ -9,6 +9,8 @@
         <id property="id" column="id"/>
         <result property="title" column="title"/>
         <result property="content" column="content"/>
+        <result property="contentFormat" column="content_format"/>
+        <result property="structuredContent" column="structured_content"/>
         <result property="scope" column="scope"/>
         <result property="contentType" column="content_type"/>
         <result property="createdAt" column="created_at"/>
@@ -57,6 +59,8 @@
         <result property="categoryId" column="category_id"/>
         <result property="categoryName" column="category_name"/>
         <result property="content" column="content"/>
+        <result property="contentFormat" column="content_format"/>
+        <result property="structuredContentJson" column="structured_content"/>
         <result property="views" column="views"/>
         <result property="createdAt" column="created_at"/>
         <result property="updatedAt" column="updated_at"/>
@@ -76,6 +80,7 @@
         <result property="languageCode" column="language_code"/>
         <result property="title" column="title"/>
         <result property="content" column="content"/>
+        <result property="structuredText" column="structured_text"/>
     </resultMap>
 
     <resultMap id="InfoImageResultMap" type="com.example.travlediary.model.InfoImage">
@@ -504,6 +509,8 @@
                ti.category_id,
                ic.name AS category_name,
                ti.content,
+               ti.content_format,
+               ti.structured_content,
                ti.views,
                ti.created_at,
                ti.updated_at
@@ -523,14 +530,16 @@
     </select>
 
     <select id="findById" parameterType="long" resultMap="TravelInfoResultMap">
-        SELECT id, title, content, scope, content_type, created_at, updated_at,
+        SELECT id, title, content, content_format, structured_content, scope, content_type,
+               created_at, updated_at,
                category_id, views, is_home_featured, home_featured_order, user_id
         FROM travel_info
         WHERE id = #{id}
     </select>
 
     <select id="findByIdForUpdate" parameterType="long" resultMap="TravelInfoResultMap">
-        SELECT id, title, content, scope, content_type, created_at, updated_at,
+        SELECT id, title, content, content_format, structured_content, scope, content_type,
+               created_at, updated_at,
                category_id, views, is_home_featured, home_featured_order, user_id
         FROM travel_info
         WHERE id = #{id}
@@ -540,9 +549,11 @@
     <insert id="insertTravelInfo" parameterType="com.example.travlediary.model.TravelInfo"
             useGeneratedKeys="true" keyProperty="id">
         INSERT INTO travel_info (
-            title, content, scope, content_type, category_id, views, user_id, created_at, updated_at
+            title, content, content_format, structured_content,
+            scope, content_type, category_id, views, user_id, created_at, updated_at
         ) VALUES (
-            #{title}, #{content}, #{scope}, #{contentType}, #{categoryId}, 0, #{userId}, NOW(), NOW()
+            #{title}, #{content}, #{contentFormat}, #{structuredContent},
+            #{scope}, #{contentType}, #{categoryId}, 0, #{userId}, NOW(), NOW()
         )
     </insert>
 
@@ -556,6 +567,31 @@
             updated_at = NOW()
         WHERE id = #{id}
     </update>
+
+    <!--
+      STRUCTURED 글의 원문 블록 JSON 만 바꾼다. 제목·파생 content 등은 같은 트랜잭션의 updateTravelInfo 가 맡는다.
+      축제 화면도 쓰는 updateTravelInfo 에 섞지 않고, 작성 방식이 STRUCTURED 인 줄에만 쓴다.
+    -->
+    <update id="updateStructuredContent">
+        UPDATE travel_info
+        SET structured_content = #{structuredContent}
+        WHERE id = #{id}
+          AND content_format = 'STRUCTURED'
+    </update>
+
+    <!--
+      구조화 본문 이미지 파일을 지우기 전에, 아직 그 url 을 쓰는 STRUCTURED 글이 있는지 센다.
+      지우는 쪽 트랜잭션 안에서 부르므로 방금 바꾸거나 지운 자기 줄은 바뀐 상태로 보인다.
+      JSON 경로 함수로 찾지 않고 JSON 글자 안에 url 이 그대로 들어 있는지만 본다. url 은 서버가 만든
+      소문자 UUID 이름이라 다른 값과 우연히 겹치지 않고(LIKE 특수 문자도 없다),
+      넓게 잡혀도 파일을 남기는 쪽으로만 틀린다. (지우면 안 될 파일을 지우지 않는다)
+    -->
+    <select id="countStructuredContentReferences" resultType="int">
+        SELECT COUNT(*)
+        FROM travel_info
+        WHERE content_format = 'STRUCTURED'
+          AND CAST(structured_content AS CHAR) LIKE CONCAT('%', #{imageUrl}, '%')
+    </select>
 
     <!--
       메인 추천 설정만 바꾼다. 축제 화면도 쓰는 updateTravelInfo 와 섞지 않는다.
@@ -659,14 +695,14 @@
     -->
     <select id="findTranslationsByInfoId" parameterType="long"
             resultMap="TravelInfoTranslationResultMap">
-        SELECT id, travel_info_id, language_code, title, content
+        SELECT id, travel_info_id, language_code, title, content, structured_text
         FROM travel_info_translations
         WHERE travel_info_id = #{infoId}
         ORDER BY language_code ASC, id ASC
     </select>
 
     <select id="findTranslationsByInfoIds" resultMap="TravelInfoTranslationResultMap">
-        SELECT id, travel_info_id, language_code, title, content
+        SELECT id, travel_info_id, language_code, title, content, structured_text
         FROM travel_info_translations
         <choose>
             <when test="infoIds != null and !infoIds.isEmpty()">
@@ -686,15 +722,19 @@
     <insert id="insertTranslation"
             parameterType="com.example.travlediary.model.TravelInfoTranslation"
             useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO travel_info_translations (travel_info_id, language_code, title, content)
-        VALUES (#{travelInfoId}, #{languageCode}, #{title}, #{content})
+        INSERT INTO travel_info_translations (
+            travel_info_id, language_code, title, content, structured_text
+        ) VALUES (
+            #{travelInfoId}, #{languageCode}, #{title}, #{content}, #{structuredText}
+        )
     </insert>
 
     <update id="updateTranslation"
             parameterType="com.example.travlediary.model.TravelInfoTranslation">
         UPDATE travel_info_translations
         SET title = #{title},
-            content = #{content}
+            content = #{content},
+            structured_text = #{structuredText}
         WHERE travel_info_id = #{travelInfoId}
           AND language_code = #{languageCode}
     </update>

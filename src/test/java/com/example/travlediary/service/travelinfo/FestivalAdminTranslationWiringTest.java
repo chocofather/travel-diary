@@ -25,6 +25,7 @@ import com.example.travlediary.repository.category.CountryCategoryMapper;
 import com.example.travlediary.service.category.LocalizedReferenceNameResolver;
 import com.example.travlediary.service.category.ReferenceNameLocalizationService;
 import com.example.travlediary.service.post.PostContentSanitizer;
+import com.example.travlediary.service.travelinfo.structured.StructuredContentTestSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -83,7 +84,8 @@ class FestivalAdminTranslationWiringTest {
                 new ReferenceNameLocalizationService(
                         org.mockito.Mockito.mock(CountryCategoryMapper.class),
                         org.mockito.Mockito.mock(CategoryMapper.class),
-                        infoCategoryMapper, new LocalizedReferenceNameResolver()));
+                        infoCategoryMapper, new LocalizedReferenceNameResolver()),
+                StructuredContentTestSupport.structuredContentService());
         FestivalInfoService festivalInfoService = new FestivalInfoService(festivalInfoMapper);
         registrationService = new FestivalRegistrationService(
                 travelInfoMapper, festivalInfoMapper, infoCategoryMapper, sanitizer,

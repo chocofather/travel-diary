@@ -1,0 +1,477 @@
+/*
+  여행정보 구조화 콘텐츠(STRUCTURED) 본문. 공개 상세와 관리자 상세 미리보기가 같은 규칙을 쓴다.
+
+  흰 바탕 위에 블록들이 매거진 본문처럼 이어진다. 상자·그림자·둥근 모서리로 감싸지 않는다.
+  섹션 제목·본문(기본형)·사진·슬라이더는 콘텐츠 폭의 같은 왼쪽 기준선에서 시작한다.
+  본문 집중형(is-focused)과 강조 문구만 좁은 단을 가운데 둔다.
+  블록 사이 여백은 블록 성격에 따라 이 파일이 정한다. 관리자가 여백·크기 값을 넣는 자리는 없다.
+  그 여백은 아래 "블록 사이 여백" 규칙(다음 블록의 margin-top)만 정한다.
+  각 블록 규칙은 자기 바깥 위아래 margin 을 건드리지 않는다. (건드리면 블록 사이 여백을 덮어쓴다)
+*/
+.structured-content {
+    --structured-text-width: 680px;
+    --structured-body-width: 880px;
+    --structured-focused-width: 700px;
+    --structured-ink: #1d2430;
+    --structured-body: #3a4352;
+    --structured-muted: #6b7180;
+    --structured-caption-title: #5c616b;
+    --structured-caption: #80858f;
+    --structured-line: #e6e4ea;
+    --structured-media-bg: #f2f1f4;
+    --structured-callout-bg: #f7f5fb;
+    --structured-accent: var(--tripbora-primary, #7657c8);
+    /* 블록 사이 여백: 글↔글 / 글↔사진 / 사진↔사진 / 제목 다음 / 새 챕터 앞 */
+    --structured-space-text: 30px;
+    --structured-space-media: 40px;
+    --structured-space-media-pair: 46px;
+    --structured-space-title-text: 24px;
+    --structured-space-title-media: 28px;
+    --structured-space-chapter: 80px;
+    color: var(--structured-body);
+    font-size: 17px;
+    line-height: 1.85;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+}
+
+/*
+  ---- 블록 사이 여백 ----
+  블록 자신은 위아래 margin 0 이고, "앞 블록 + 다음 블록" 관계로 다음 블록의 margin-top 하나만 준다.
+  그래서 여백이 겹치거나(앞 블록 아래 + 다음 블록 위) 사라지지 않는다.
+  기본은 글↔사진 간격이고, 글끼리는 가깝게, 사진 블록끼리는 한 덩어리로 보이지 않게 조금 더 띄운다.
+*/
+.structured-content > * {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.structured-content > * + * {
+    margin-top: var(--structured-space-media);
+}
+
+.structured-content > :is(.structured-text, .structured-callout) + :is(.structured-text, .structured-callout) {
+    margin-top: var(--structured-space-text);
+}
+
+.structured-content > :is(.structured-figure, .structured-image-text, .structured-slider, .structured-grid)
+    + :is(.structured-figure, .structured-image-text, .structured-slider, .structured-grid) {
+    margin-top: var(--structured-space-media-pair);
+}
+
+/* 새 챕터는 크게 띄우고, 제목 바로 다음 블록은 제목에 붙인다 (글은 줄 간격만큼 덜 띄운다) */
+.structured-content > * + .structured-section-title {
+    margin-top: var(--structured-space-chapter);
+}
+
+.structured-content > .structured-section-title + * {
+    margin-top: var(--structured-space-title-media);
+}
+
+.structured-content > .structured-section-title + :is(.structured-text, .structured-callout) {
+    margin-top: var(--structured-space-title-text);
+}
+
+/* ---- 가운데 글 단 (강조 문구) ---- */
+.structured-callout {
+    max-width: var(--structured-text-width);
+    margin-inline: auto;
+}
+
+/* ---- SECTION_TITLE : 왼쪽 세로 accent 선 + 제목. 카드·배경 없이 ---- */
+.structured-section-title {
+    padding-left: 16px;
+    border-left: 3px solid var(--structured-accent);
+}
+
+.structured-section-title h2 {
+    margin: 0;
+    color: var(--structured-ink);
+    font-size: 30px;
+    font-weight: 750;
+    line-height: 1.38;
+    letter-spacing: -0.02em;
+}
+
+/* ---- RICH_TEXT : 기본은 왼쪽 기준선, 집중형은 좁은 단을 가운데. 글은 둘 다 왼쪽 정렬 ---- */
+.structured-text {
+    max-width: var(--structured-body-width);
+    text-align: left;
+}
+
+.structured-text.is-focused {
+    max-width: var(--structured-focused-width);
+    margin-inline: auto;
+}
+
+.structured-text p {
+    margin: 0;
+    white-space: pre-line;
+}
+
+.structured-text p + p {
+    margin-top: 1.1em;
+}
+
+/* ---- FULL_IMAGE ---- */
+.structured-figure {
+    margin-inline: 0;
+}
+
+.structured-figure img {
+    display: block;
+    width: 100%;
+    height: auto;
+    background: var(--structured-media-bg);
+}
+
+/* 세로 사진은 본문 폭 전체로 키우면 화면보다 길어진다. 폭을 줄여 가운데 둔다. */
+.structured-figure.is-portrait img {
+    width: min(100%, 560px);
+    margin-inline: auto;
+}
+
+.structured-figure.is-portrait figcaption {
+    width: min(100%, 560px);
+    margin-inline: auto;
+}
+
+/* ---- IMAGE_TEXT : 사진 45 / 글 55 ---- */
+.structured-image-text {
+    display: grid;
+    grid-template-columns: minmax(0, 45fr) minmax(0, 55fr);
+    align-items: center;
+    gap: 48px;
+}
+
+.structured-image-text.is-image-right {
+    grid-template-columns: minmax(0, 55fr) minmax(0, 45fr);
+}
+
+.structured-image-text.is-image-right .structured-image-text-media {
+    order: 2;
+}
+
+.structured-image-text-media img {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 560px;
+    object-fit: cover;
+    background: var(--structured-media-bg);
+}
+
+.structured-image-text-body h3 {
+    margin: 0 0 14px;
+    color: var(--structured-ink);
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.45;
+    letter-spacing: -0.015em;
+}
+
+.structured-image-text-body p {
+    margin: 0;
+    white-space: pre-line;
+}
+
+.structured-image-text-body p + p {
+    margin-top: 1em;
+}
+
+/* ---- IMAGE_SLIDER ---- */
+.structured-slider-title {
+    margin: 0 0 18px;
+    color: var(--structured-ink);
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.45;
+    letter-spacing: -0.015em;
+}
+
+/* 한 장이 트랙 폭 전체를 쓰고, 넘길 때마다 한 장씩 멈춘다. JS 가 없어도 가로로 넘겨 볼 수 있다. */
+.structured-slider-track {
+    position: relative;
+    display: flex;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+}
+
+/* JS 가 붙어 버튼·키보드로 넘길 수 있게 되면 스크롤 막대를 감춘다 */
+.structured-slider.is-enhanced .structured-slider-track {
+    scrollbar-width: none;
+}
+
+.structured-slider.is-enhanced .structured-slider-track::-webkit-scrollbar {
+    display: none;
+}
+
+.structured-slide {
+    flex: 0 0 100%;
+    min-width: 0;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+}
+
+.structured-slide figure {
+    margin: 0;
+}
+
+.structured-slide-media {
+    aspect-ratio: 3 / 2;
+    overflow: hidden;
+    background: var(--structured-media-bg);
+}
+
+.structured-slide-media img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.structured-slider-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--structured-line);
+}
+
+.structured-slider-controls[hidden] {
+    display: none;
+}
+
+.structured-slider-counter {
+    display: flex;
+    gap: 6px;
+    margin: 0;
+    color: var(--structured-muted);
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    font-variant-numeric: tabular-nums;
+}
+
+.structured-slider-counter [data-slider-current] {
+    color: var(--structured-ink);
+    font-weight: 700;
+}
+
+.structured-slider-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.structured-slider-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 1px solid var(--structured-line);
+    border-radius: 4px;
+    background: #fff;
+    color: var(--structured-ink);
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.structured-slider-button:hover:not(:disabled) {
+    border-color: var(--structured-accent);
+    color: var(--structured-accent);
+}
+
+.structured-slider-button:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.structured-slider-button:focus-visible,
+.structured-slider-track:focus-visible {
+    outline: 2px solid var(--structured-accent);
+    outline-offset: 3px;
+}
+
+/* ---- IMAGE_GRID : 사진 2장(4:3) / 3장(1:1)을 한 줄에. 같은 비율 틀에 잘라 넣어 줄을 맞춘다 ---- */
+.structured-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px 20px;
+    padding: 0;
+    list-style: none;
+}
+
+.structured-grid.is-three {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 24px 16px;
+}
+
+.structured-grid-item {
+    min-width: 0;
+}
+
+.structured-grid-item figure {
+    margin: 0;
+}
+
+.structured-grid-media {
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    background: var(--structured-media-bg);
+}
+
+.structured-grid.is-three .structured-grid-media {
+    aspect-ratio: 1 / 1;
+}
+
+.structured-grid-media img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/*
+  ---- 사진 아래 제목·설명 (FULL_IMAGE / IMAGE_GRID 칸 / IMAGE_SLIDER 사진) ----
+  본문 제목이 아니라 사진의 보조 정보다. 사진 가운데 기준으로, 본문보다 작고 연하게 둔다.
+  제목은 중간 굵기의 회색, 설명은 그보다 한 단계 더 연하게. 글은 그 사진(칸) 폭 안에서만 줄바꿈한다.
+*/
+.structured-media-caption {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    max-width: var(--structured-text-width);
+    margin-inline: auto;
+    padding-top: 12px;
+    color: var(--structured-caption);
+    font-size: 13.5px;
+    font-weight: 400;
+    line-height: 1.65;
+    text-align: center;
+    text-wrap: pretty;
+}
+
+.structured-media-title {
+    color: var(--structured-caption-title);
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.5;
+}
+
+/* ---- CALLOUT : 본문 사이의 짧은 쉼표. 경고창처럼 보이지 않게 옅게 ---- */
+.structured-callout {
+    padding: 18px 22px;
+    border-left: 2px solid var(--structured-accent);
+    background: var(--structured-callout-bg);
+    color: var(--structured-ink);
+}
+
+.structured-callout p {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.75;
+    white-space: pre-line;
+}
+
+/* ---- 태블릿 ---- */
+@media (max-width: 960px) {
+    .structured-image-text {
+        gap: 32px;
+    }
+
+    .structured-content {
+        --structured-space-chapter: 72px;
+    }
+}
+
+/* ---- 휴대폰 ---- */
+@media (max-width: 720px) {
+    /* 여백은 데스크톱보다 약 20% 줄인다 */
+    .structured-content {
+        --structured-space-text: 24px;
+        --structured-space-media: 32px;
+        --structured-space-media-pair: 36px;
+        --structured-space-title-text: 18px;
+        --structured-space-title-media: 22px;
+        --structured-space-chapter: 64px;
+        font-size: 16px;
+        line-height: 1.8;
+    }
+
+    .structured-section-title {
+        padding-left: 12px;
+    }
+
+    .structured-section-title h2 {
+        font-size: 24px;
+    }
+
+    /* 좁은 화면은 사진을 먼저, 글을 아래에 둔다. (이미지 위치와 상관없이) */
+    .structured-image-text,
+    .structured-image-text.is-image-right {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 18px;
+    }
+
+    .structured-image-text.is-image-right .structured-image-text-media {
+        order: 0;
+    }
+
+    .structured-image-text-media img {
+        max-height: 420px;
+    }
+
+    .structured-image-text-body h3,
+    .structured-slider-title {
+        font-size: 20px;
+    }
+
+    .structured-slide-media {
+        aspect-ratio: 4 / 3;
+    }
+
+    /* 2장·3장 배치 모두 한 줄에 한 장. 3장도 2열 + 1장보다 같은 크기로 쌓는 편이 자연스럽다. */
+    .structured-grid,
+    .structured-grid.is-three {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 20px;
+    }
+
+    .structured-grid.is-three .structured-grid-media {
+        aspect-ratio: 4 / 3;
+    }
+
+    .structured-media-caption {
+        padding-top: 10px;
+        font-size: 13px;
+    }
+
+    .structured-media-title {
+        font-size: 14px;
+    }
+
+    .structured-slider-button {
+        width: 44px;
+        height: 44px;
+    }
+
+    .structured-callout {
+        padding: 16px 18px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .structured-slider-track {
+        scroll-behavior: auto;
+    }
+}

@@ -1,7 +1,6 @@
 package com.example.travlediary.dto;
 
 import com.example.travlediary.config.i18n.SupportedLanguage;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -15,15 +14,23 @@ import java.util.List;
  * 언어 코드는 화면이 고르지 않고 슬롯에 고정한다. (canonical: en / ja / zh-CN / zh-TW)
  */
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
 public class TravelInfoTranslationForm {
     private String languageCode;
     private String title;
+    /** QUILL 글의 번역 본문(Quill HTML). STRUCTURED 글이면 쓰지 않는다. */
     private String content;
+    /** STRUCTURED 글의 번역 글 JSON(structured_text). QUILL 글이면 쓰지 않는다. */
+    private String structuredText;
 
     public TravelInfoTranslationForm(String languageCode) {
         this.languageCode = languageCode;
+    }
+
+    public TravelInfoTranslationForm(String languageCode, String title, String content) {
+        this.languageCode = languageCode;
+        this.title = title;
+        this.content = content;
     }
 
     /**

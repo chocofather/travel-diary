@@ -55,7 +55,14 @@
                    th:attr="data-translation-title=${translation.languageCode}">
           </div>
 
-          <div class="admin-form-field">
+          <!--
+            구조화 콘텐츠(STRUCTURED) 글의 번역 글 JSON. 아직 편집 화면이 없어 값만 그대로 오가게 둔다.
+            (수정 저장이 기존 번역 글을 지우지 않게) 일반 에디터 글과 축제·행사 폼에서는 비어 있다.
+          -->
+          <input type="hidden" th:field="*{translations[__${slot.index}__].structuredText}"
+                 th:attr="data-translation-structured-text=${translation.languageCode}">
+
+          <div class="admin-form-field" data-translation-body>
             <label>본문</label>
             <div class="admin-travel-info-editor-shell quill-editor-shell">
               <div class="admin-travel-info-editor quill-editor rich-text-image-layout"

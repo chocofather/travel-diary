@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--
+  여행정보 구조화 콘텐츠(STRUCTURED) 본문. 공개 상세와 관리자 상세 미리보기가 함께 쓴다.
+
+  content 는 Service 가 읽고 검사한(공개 상세라면 요청 언어로 바꾼) typed model 이다.
+  여기서는 JSON 을 다시 읽거나 언어를 고르지 않는다. 글은 모두 th:text 로 escape 해서 그린다.
+  img 의 alt 는 model 이 정한 대체 규칙(effectiveAlt / itemAlt)을 쓴다. 설명이 없으면 alt="" (장식 이미지) 로
+  남겨야 하는데 th:alt / th:attr 는 빈 값이면 속성을 지운다. 그래서 alt="" 를 두고 값이 있을 때만 덧붙인다.
+  모양(여백·폭·비율)은 /css/travel-info-structured.css 가, 슬라이더 동작은 /js/structured-slider.js 가 맡는다.
+-->
+<div class="structured-content" th:fragment="blocks(content)">
+  <th:block th:each="block, blockStat : ${content.blocks()}">
+    <th:block th:switch="${block.type().name()}">
+
+      <header class="structured-section-title" th:case="'SECTION_TITLE'"
+              th:id="${'structured-' + block.id()}">
+        <h2 th:text="${block.title()}">경복궁</h2>
+      </header>
+
+      <!-- 본문 폭 프리셋: DEFAULT 는 콘텐츠 폭 왼쪽 기준선, FOCUSED 는 좁은 단을 가운데 둔다. -->
+      <div class="structured-text" th:case="'RICH_TEXT'" th:id="${'structured-' + block.id()}"
+           th:classappend="${block.layout().name() == 'FOCUSED'} ? 'is-focused'">
+        <p th:each="paragraph : ${block.paragraphs()}" th:text="${paragraph}">본문</p>
+      </div>
+
+      <figure class="structured-figure" th:case="'FULL_IMAGE'" th:id="${'structured-' + block.id()}"
+              th:classappend="${block.image().height() > block.image().width()} ? 'is-portrait'">
+        <img th:src="${block.image().url()}" alt="" th:attrappend="alt=${block.effectiveAlt()}"
+             th:width="${block.image().width()}" th:height="${block.image().height()}"
+             th:attr="loading=${blockStat.index < 2 ? 'eager' : 'lazy'}" decoding="async">
+        <figcaption class="structured-media-caption" th:if="${block.caption() != null}"
+                    th:text="${block.caption()}">사진 설명</figcaption>
+      </figure>
+
+      <section class="structured-image-text" th:case="'IMAGE_TEXT'" th:id="${'structured-' + block.id()}"
+               th:classappend="${block.imagePosition().name() == 'RIGHT'} ? 'is-image-right'">
+        <div class="structured-image-text-media">
+          <img th:src="${block.image().url()}" alt="" th:attrappend="alt=${block.effectiveAlt()}"
+               th:width="${block.image().width()}" th:height="${block.image().height()}"
+               th:attr="loading=${blockStat.index < 2 ? 'eager' : 'lazy'}" decoding="async">
+        </div>
+        <div class="structured-image-text-body">
+          <h3 th:if="${block.title() != null}" th:text="${block.title()}">근정전</h3>
+          <p th:each="paragraph : ${block.paragraphs()}" th:text="${paragraph}">본문</p>
+        </div>
+      </section>
+
+      <!--
+        슬라이더. JS 가 없어도 트랙을 가로로 넘겨 모든 사진을 볼 수 있다.
+        JS 가 붙으면(is-enhanced) 스크롤 막대를 감추고 번호·이전/다음 버튼을 보여 준다.
+        슬라이더마다 따로 초기화되므로 한 페이지에 여러 개 있어도 서로 상태를 나누지 않는다.
+      -->
+      <section class="structured-slider" th:case="'IMAGE_SLIDER'" th:id="${'structured-' + block.id()}"
+               data-structured-slider aria-roledescription="carousel"
+               th:attr="aria-labelledby=${block.title() != null ? 'structured-' + block.id() + '-title' : null},
+                        aria-label=${block.title() == null ? #messages.msg('travelInfo.structured.slider.label') : null}">
+        <h3 class="structured-slider-title" th:if="${block.title() != null}"
+            th:id="${'structured-' + block.id() + '-title'}" th:text="${block.title()}">경복궁 주요 전각</h3>
+        <ul class="structured-slider-track" data-slider-track tabindex="0"
+            th:attr="aria-label=${block.title() != null ? block.title() : #messages.msg('travelInfo.structured.slider.label')}">
+          <li class="structured-slide" th:each="item, itemStat : ${block.items()}" data-slider-slide
+              role="group" aria-roledescription="slide"
+              th:attr="aria-label=${itemStat.count + ' / ' + itemStat.size}">
+            <figure>
+              <div class="structured-slide-media">
+                <img th:src="${item.image().url()}" alt="" th:attrappend="alt=${block.itemAlt(item)}"
+                     th:width="${item.image().width()}" th:height="${item.image().height()}"
+                     th:attr="loading=${blockStat.index < 2 and itemStat.first ? 'eager' : 'lazy'}"
+                     decoding="async">
+              </div>
+              <figcaption class="structured-media-caption"
+                          th:if="${item.title() != null or item.caption() != null}">
+                <strong class="structured-media-title" th:if="${item.title() != null}" th:text="${item.title()}">광화문</strong>
+                <span th:if="${item.caption() != null}" th:text="${item.caption()}">경복궁의 정문</span>
+              </figcaption>
+            </figure>
+          </li>
+        </ul>
+        <div class="structured-slider-controls" th:if="${block.items().size() > 1}"
+             data-slider-controls hidden>
+          <p class="structured-slider-counter" aria-live="polite">
+            <span data-slider-current>01</span>
+            <span>/</span>
+            <span th:text="${#numbers.formatInteger(block.items().size(), 2)}">06</span>
+          </p>
+          <div class="structured-slider-buttons">
+            <button type="button" class="structured-slider-button" data-slider-prev
+                    th:attr="aria-label=#{travelInfo.structured.slider.previous}">
+              <span aria-hidden="true">&#8249;</span>
+            </button>
+            <button type="button" class="structured-slider-button" data-slider-next
+                    th:attr="aria-label=#{travelInfo.structured.slider.next}">
+              <span aria-hidden="true">&#8250;</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!--
+        이미지 2장 / 3장 배치. 사진은 같은 비율 틀에 맞춰 잘라(object-fit) 줄을 맞추고, 글은 사진 아래에 둔다.
+        휴대폰에서는 한 줄에 한 장씩 쌓인다.
+      -->
+      <ul class="structured-grid" th:case="'IMAGE_GRID'" th:id="${'structured-' + block.id()}"
+          th:classappend="${block.columns() == 3} ? 'is-three' : 'is-two'">
+        <li class="structured-grid-item" th:each="item : ${block.items()}">
+          <figure>
+            <div class="structured-grid-media">
+              <img th:src="${item.image().url()}" alt="" th:attrappend="alt=${block.itemAlt(item)}"
+                   th:width="${item.image().width()}" th:height="${item.image().height()}"
+                   th:attr="loading=${blockStat.index < 2 ? 'eager' : 'lazy'}" decoding="async">
+            </div>
+            <figcaption class="structured-media-caption" th:if="${item.title() != null or item.caption() != null}">
+              <strong class="structured-media-title" th:if="${item.title() != null}" th:text="${item.title()}">근정전</strong>
+              <span th:if="${item.caption() != null}" th:text="${item.caption()}">경복궁의 정전</span>
+            </figcaption>
+          </figure>
+        </li>
+      </ul>
+
+      <div class="structured-callout" th:case="'CALLOUT'" th:id="${'structured-' + block.id()}" role="note">
+        <p th:text="${block.text()}">화요일은 휴궁입니다.</p>
+      </div>
+
+    </th:block>
+  </th:block>
+</div>
+</body>
+</html>

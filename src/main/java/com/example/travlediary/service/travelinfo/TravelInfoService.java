@@ -15,6 +15,7 @@ import com.example.travlediary.model.InfoCategory;
 import com.example.travlediary.model.InfoImage;
 import com.example.travlediary.model.InfoPeriod;
 import com.example.travlediary.model.TravelInfo;
+import com.example.travlediary.model.TravelInfoContentFormat;
 import com.example.travlediary.model.TravelInfoContentType;
 import com.example.travlediary.model.TravelInfoScope;
 import com.example.travlediary.model.TravelInfoTranslation;
@@ -25,6 +26,8 @@ import com.example.travlediary.repository.travelinfo.TravelInfoMapper;
 import com.example.travlediary.service.category.ReferenceNameLocalizationService;
 import com.example.travlediary.service.file.FileUploadService;
 import com.example.travlediary.service.post.PostContentSanitizer;
+import com.example.travlediary.service.travelinfo.structured.StructuredContent;
+import com.example.travlediary.service.travelinfo.structured.StructuredContentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -40,10 +43,12 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -68,6 +73,8 @@ public class TravelInfoService {
     private final FileUploadService fileUploadService;
     private final TravelInfoLocalizationService travelInfoLocalizationService;
     private final ReferenceNameLocalizationService referenceNameLocalizationService;
+    /** STRUCTURED 본문 읽기·검사·정규화·파생 content. QUILL 경로는 쓰지 않는다. */
+    private final StructuredContentService structuredContentService;
 
     @Transactional(readOnly = true)
     public List<AdminTravelInfoListItemDto> getAdminList(TravelInfoScope scope,
@@ -219,8 +226,19 @@ public class TravelInfoService {
             return;
         }
 
-        TravelInfoTranslation display = travelInfoLocalizationService.resolveLocalizedContent(
-                detail.getId(), detail.getTitle(), detail.getContent(), requestedLanguage);
+        TravelInfoTranslation display;
+        if (detail.getContentFormat() == TravelInfoContentFormat.STRUCTURED) {
+            // 블록 글도 같은 번역 줄에서 고르므로 번역은 한 번만 읽어 둘 다에 쓴다.
+            List<TravelInfoTranslation> translations =
+                    travelInfoMapper.findTranslationsByInfoId(detail.getId());
+            List<TravelInfoTranslation> safeTranslations = translations == null ? List.of() : translations;
+            display = travelInfoLocalizationService.resolveLocalizedContent(detail.getId(),
+                    detail.getTitle(), detail.getContent(), safeTranslations, requestedLanguage);
+            localizeStructuredContent(detail, safeTranslations, requestedLanguage);
+        } else {
+            display = travelInfoLocalizationService.resolveLocalizedContent(
+                    detail.getId(), detail.getTitle(), detail.getContent(), requestedLanguage);
+        }
         if (display.getTitle() != null) {
             detail.setTitle(display.getTitle());
         }
@@ -229,6 +247,27 @@ public class TravelInfoService {
         }
         detail.setCategoryName(referenceNameLocalizationService.localizeInfoCategoryName(
                 detail.getCategoryId(), detail.getCategoryName(), requestedLanguage));
+    }
+
+    /**
+     * 블록 글을 요청 언어로 바꾼다. 요청 언어 번역 글이 없는 칸은 원문(한국어) 글을 쓰고,
+     * 이미지·블록 종류·순서는 언제나 원문 것이다. 한국어 요청이면 원문 그대로다.
+     */
+    private void localizeStructuredContent(TravelInfoDetailDto detail,
+                                           List<TravelInfoTranslation> translations,
+                                           SupportedLanguage requestedLanguage) {
+        if (detail.getStructuredContent() == null || requestedLanguage == null
+                || requestedLanguage == SupportedLanguage.KOREAN) {
+            return;
+        }
+        TravelInfoTranslation requested = travelInfoLocalizationService.translationFor(
+                travelInfoLocalizationService.orderedTranslations(translations),
+                requestedLanguage.getLanguageTag());
+        if (requested == null || requested.getStructuredText() == null) {
+            return;
+        }
+        detail.setStructuredContent(structuredContentService.localize(
+                detail.getStructuredContent(), requested.getStructuredText()));
     }
 
     @Transactional(readOnly = true)
@@ -282,6 +321,10 @@ public class TravelInfoService {
             throw notFound();
         }
         detail.setContent(postContentSanitizer.sanitize(detail.getContent()));
+        if (detail.getContentFormat() == TravelInfoContentFormat.STRUCTURED) {
+            // 화면에는 JSON 문자열이 아니라 다시 검사한 블록을 넘긴다. 읽지 못하면 null 이고 파생 content 가 남는다.
+            detail.setStructuredContent(structuredContentService.readStored(detail.getStructuredContentJson()));
+        }
 
         if (detail.getContentType() == TravelInfoContentType.FESTIVAL) {
             List<InfoPeriod> periods = travelInfoMapper.findPeriodsByInfoId(id);
@@ -318,6 +361,10 @@ public class TravelInfoService {
         detail.setId(travelInfo.getId());
         detail.setTitle(travelInfo.getTitle());
         detail.setContent(postContentSanitizer.sanitize(travelInfo.getContent()));
+        detail.setContentFormat(travelInfo.getContentFormat());
+        if (travelInfo.getContentFormat() == TravelInfoContentFormat.STRUCTURED) {
+            detail.setStructuredContent(structuredContentService.readStored(travelInfo.getStructuredContent()));
+        }
         detail.setScope(travelInfo.getScope());
         detail.setContentType(travelInfo.getContentType());
         detail.setCategoryId(travelInfo.getCategoryId());
@@ -335,6 +382,11 @@ public class TravelInfoService {
         travelInfo.setContent(postContentSanitizer.sanitize(travelInfo.getContent()));
         List<InfoPeriod> periods = travelInfoMapper.findPeriodsByInfoId(id);
         TravelInfoForm form = TravelInfoForm.from(travelInfo, periods);
+        if (travelInfo.getContentFormat() == TravelInfoContentFormat.STRUCTURED) {
+            // DB 가 다시 적은 JSON 모양이 아니라 서버 정규 JSON 으로 돌려준다.
+            form.setStructuredContent(
+                    structuredContentService.restoreContentJson(travelInfo.getStructuredContent()));
+        }
         form.setTranslations(getTranslationForms(id));
         return form;
     }
@@ -370,6 +422,10 @@ public class TravelInfoService {
                 }
                 slot.setTitle(translation.getTitle() == null ? "" : translation.getTitle());
                 slot.setContent(translation.getContent() == null ? "" : translation.getContent());
+                if (translation.getStructuredText() != null) {
+                    slot.setStructuredText(
+                            structuredContentService.restoreTextJson(translation.getStructuredText()));
+                }
             }
         }
         return slots;
@@ -391,6 +447,8 @@ public class TravelInfoService {
             TravelInfo travelInfo = new TravelInfo();
             travelInfo.setTitle(validated.title());
             travelInfo.setContent(validated.content());
+            travelInfo.setContentFormat(validated.contentFormat());
+            travelInfo.setStructuredContent(validated.structuredJson());
             travelInfo.setScope(form.getScope());
             travelInfo.setContentType(form.getContentType());
             travelInfo.setCategoryId(form.getCategoryId());
@@ -402,8 +460,7 @@ public class TravelInfoService {
             }
             insertPeriods(travelInfo.getId(), validated.periods());
             // base 저장과 같은 트랜잭션에서 번역까지 끝낸다. ko 는 base 값으로 맞춰진다.
-            saveTranslations(travelInfo.getId(), validated.title(), validated.content(),
-                    form.getTranslations());
+            saveValidatedTranslations(travelInfo.getId(), validated, form.getTranslations());
             if (newThumbnailUrl != null) {
                 insertThumbnail(travelInfo.getId(), newThumbnailUrl);
             }
@@ -424,6 +481,9 @@ public class TravelInfoService {
     @Transactional
     public void update(Long id, TravelInfoForm form) {
         TravelInfo travelInfo = requireTravelInfo(travelInfoMapper.findByIdForUpdate(id));
+        requireSameContentFormat(travelInfo, form);
+        // 잠근 줄의 수정 전 본문 이미지. 수정 뒤 빠진 것만 정리 후보가 된다.
+        Set<String> previousContentImages = contentImageUrls(travelInfo);
         ValidatedTravelInfo validated = validate(form);
         // 이 폼으로도 축제 기간을 고칠 수 있다. 축제 전용 화면과 같은 규칙을 여기서도 지킨다.
         requireSameFestivalEventYear(id, validated.periods());
@@ -449,6 +509,11 @@ public class TravelInfoService {
             if (travelInfoMapper.updateTravelInfo(travelInfo) != 1) {
                 throw notFound();
             }
+            // 공용 updateTravelInfo 가 파생 content 까지 바꾸고, 원문 블록 JSON 은 STRUCTURED 전용 update 가 바꾼다.
+            if (validated.structured() != null
+                    && travelInfoMapper.updateStructuredContent(id, validated.structuredJson()) != 1) {
+                throw new IllegalStateException("구조화 콘텐츠 저장에 실패했습니다.");
+            }
             // 위에서 잠그고 갱신한 같은 줄이라 결과 건수를 다시 확인하지 않는다.
             // 축제는 validate 에서 이미 노출이 꺼져 있고, 순서 입력이 없으므로 저장된 순서를 그대로 쓴다.
             travelInfoMapper.updateHomeFeatured(id, form.isHomeFeatured(),
@@ -458,13 +523,21 @@ public class TravelInfoService {
             travelInfoMapper.deletePeriodsByInfoId(id);
             insertPeriods(id, validated.periods());
             // base 수정과 같은 트랜잭션에서 번역까지 끝낸다. ko 는 base 값으로 맞춰진다.
-            saveTranslations(id, validated.title(), validated.content(), form.getTranslations());
+            saveValidatedTranslations(id, validated, form.getTranslations());
 
             if (replaceThumbnail || deleteThumbnail) {
                 travelInfoMapper.deleteMainImagesByInfoId(id);
                 if (newThumbnailUrl != null) {
                     insertThumbnail(id, newThumbnailUrl);
                 }
+            }
+
+            // DB 쓰기를 모두 마친 뒤 고른다. 새 본문에서 빠졌고 다른 글도 쓰지 않는 이미지만 commit 뒤에 지운다.
+            if (validated.structured() != null) {
+                Set<String> removedContentImages = new LinkedHashSet<>(previousContentImages);
+                removedContentImages.removeAll(
+                        structuredContentService.collectImageUrls(validated.structured().content()));
+                scheduleContentImageCleanup(unreferencedContentImages(removedContentImages));
             }
 
             if (!lifecycleRegistered) {
@@ -480,15 +553,74 @@ public class TravelInfoService {
 
     @Transactional
     public void delete(Long id) {
-        requireTravelInfo(travelInfoMapper.findByIdForUpdate(id));
+        TravelInfo travelInfo = requireTravelInfo(travelInfoMapper.findByIdForUpdate(id));
+        Set<String> contentImages = contentImageUrls(travelInfo);
         List<String> previousThumbnailUrls = mainThumbnailUrls(id);
         boolean lifecycleRegistered = registerFileLifecycle(null, previousThumbnailUrls);
         bookmarkMapper.deleteByTarget(BookmarkTargetType.TRAVEL_INFO.name(), id);
         if (travelInfoMapper.deleteTravelInfo(id) != 1) {
             throw notFound();
         }
+        // 줄을 지운 뒤에 센다. 다른 글이 아직 쓰는 이미지는 남기고, 나머지는 commit 뒤에 지운다.
+        scheduleContentImageCleanup(unreferencedContentImages(contentImages));
         if (!lifecycleRegistered) {
             deleteFilesSafely(previousThumbnailUrls);
+        }
+    }
+
+    /**
+     * STRUCTURED 글이 쓰는 본문 이미지 url. QUILL 글이거나 저장된 JSON 을 읽지 못하면 빈 집합이다.
+     * (읽지 못한 글의 파일은 지우지 않고 남긴다)
+     */
+    private Set<String> contentImageUrls(TravelInfo travelInfo) {
+        if (travelInfo.getContentFormat() != TravelInfoContentFormat.STRUCTURED) {
+            return Set.of();
+        }
+        return structuredContentService.collectImageUrls(
+                structuredContentService.readStored(travelInfo.getStructuredContent()));
+    }
+
+    /**
+     * 아직 어떤 STRUCTURED 글도 쓰지 않는 이미지만 고른다. 같은 트랜잭션에서 줄을 바꾸거나 지운 뒤에 불러야
+     * 자기 줄의 새 상태가 반영된다. 참조 확인은 넓게 잡는 쪽이라 틀려도 파일이 남을 뿐 지워지지 않는다.
+     */
+    private List<String> unreferencedContentImages(Set<String> candidates) {
+        if (candidates.isEmpty()) {
+            return List.of();
+        }
+        return candidates.stream()
+                .filter(url -> travelInfoMapper.countStructuredContentReferences(url) == 0)
+                .toList();
+    }
+
+    /**
+     * 본문 이미지는 DB 변경이 commit 된 뒤에만 지운다. rollback 이면 아무것도 지우지 않는다.
+     * (업로드 API 와 저장 트랜잭션은 따로라, 실패한 저장이 이미 올린 새 이미지를 지우지도 않는다)
+     * 트랜잭션 밖에서 불리면 썸네일과 같이 바로 지운다.
+     */
+    private void scheduleContentImageCleanup(List<String> imageUrls) {
+        if (imageUrls.isEmpty()) {
+            return;
+        }
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            deleteContentImagesSafely(imageUrls);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                deleteContentImagesSafely(imageUrls);
+            }
+        });
+    }
+
+    private void deleteContentImagesSafely(List<String> imageUrls) {
+        for (String imageUrl : imageUrls) {
+            try {
+                fileUploadService.deleteTravelInfoContentImage(imageUrl);
+            } catch (RuntimeException exception) {
+                log.warn("여행정보 본문 이미지 파일을 정리하지 못했습니다: {}", imageUrl, exception);
+            }
         }
     }
 
@@ -509,6 +641,51 @@ public class TravelInfoService {
                                  String baseTitle,
                                  String baseContent,
                                  List<TravelInfoTranslationForm> translationForms) {
+        saveTranslationRows(travelInfoId, koreanTranslation(travelInfoId, baseTitle, baseContent),
+                translationForms, form -> translationOf(travelInfoId, form));
+    }
+
+    /** 검증을 마친 작성 방식에 맞는 번역 저장으로 보낸다. */
+    private void saveValidatedTranslations(Long travelInfoId,
+                                           ValidatedTravelInfo validated,
+                                           List<TravelInfoTranslationForm> translationForms) {
+        if (validated.structured() == null) {
+            saveTranslations(travelInfoId, validated.title(), validated.content(), translationForms);
+            return;
+        }
+        saveStructuredTranslations(travelInfoId, validated.title(), validated.structured(),
+                translationForms);
+    }
+
+    /**
+     * STRUCTURED 글의 번역. 언어마다 structured_text(번역 글 정규 JSON)와 그 언어 기준 파생 content 를 함께 저장한다.
+     *
+     * <p>ko 줄은 base 제목과 base 파생 content 를 그대로 쓴다. (base JSON 이 이미 한국어 글이라 structured_text 는 비운다)
+     * 파생 content 는 escape 를 마친 값이라 sanitizer 를 다시 거치지 않는다.
+     * 번역 글은 원문 구조에 맞춰 정리한 뒤 블록 종류별 규칙으로 검사하므로, 잘못된 언어가 있으면 저장 전체가 되돌려진다.
+     */
+    private void saveStructuredTranslations(Long travelInfoId,
+                                            String baseTitle,
+                                            StructuredContentService.PreparedContent structured,
+                                            List<TravelInfoTranslationForm> translationForms) {
+        TravelInfoTranslation korean = new TravelInfoTranslation();
+        korean.setTravelInfoId(travelInfoId);
+        korean.setLanguageCode(KOREAN_CODE);
+        korean.setTitle(nonBlankTitle(baseTitle));
+        korean.setContent(structured.derivedContent());
+        saveTranslationRows(travelInfoId, korean, translationForms,
+                form -> structuredTranslationOf(travelInfoId, form, structured.content()));
+    }
+
+    /**
+     * 언어 한 줄씩 저장하는 공통 흐름. ko 줄을 먼저 맞추고, 화면 슬롯 언어만 한 번씩 저장한다.
+     *
+     * @param translator 번역 입력 한 칸을 저장할 줄로 바꾼다. (작성 방식마다 다르다)
+     */
+    private void saveTranslationRows(Long travelInfoId,
+                                     TravelInfoTranslation korean,
+                                     List<TravelInfoTranslationForm> translationForms,
+                                     Function<TravelInfoTranslationForm, TravelInfoTranslation> translator) {
         if (travelInfoId == null) {
             return;
         }
@@ -524,8 +701,7 @@ public class TravelInfoService {
             }
         }
 
-        saveTranslation(koreanTranslation(travelInfoId, baseTitle, baseContent),
-                existing.containsKey(KOREAN_CODE));
+        saveTranslation(korean, existing.containsKey(KOREAN_CODE));
 
         if (translationForms == null) {
             return;
@@ -544,7 +720,7 @@ public class TravelInfoService {
                 // 같은 언어가 두 번 들어오면 앞의 값만 쓴다. (UNIQUE 충돌을 만들지 않는다)
                 continue;
             }
-            saveTranslation(translationOf(travelInfoId, form), existing.containsKey(languageCode));
+            saveTranslation(translator.apply(form), existing.containsKey(languageCode));
         }
     }
 
@@ -585,8 +761,33 @@ public class TravelInfoService {
         return translation;
     }
 
+    /**
+     * STRUCTURED 번역 한 칸. Quill 본문 칸(content)은 쓰지 않는다.
+     * 덮어쓸 글이 없으면 structured_text 와 content 를 모두 비워 원문(ko) 글로 대체되게 한다.
+     */
+    private TravelInfoTranslation structuredTranslationOf(Long travelInfoId,
+                                                          TravelInfoTranslationForm form,
+                                                          StructuredContent base) {
+        StructuredContentService.PreparedText text = structuredContentService.prepareTranslation(
+                base, form.getStructuredText(), languageLabel(form.getLanguageCode()));
+        TravelInfoTranslation translation = new TravelInfoTranslation();
+        translation.setTravelInfoId(travelInfoId);
+        translation.setLanguageCode(form.getLanguageCode());
+        translation.setTitle(nonBlankTitle(form.getTitle()));
+        translation.setStructuredText(text.json());
+        translation.setContent(text.derivedContent());
+        return translation;
+    }
+
+    private String languageLabel(String languageCode) {
+        return SupportedLanguage.fromLanguageTag(languageCode)
+                .map(SupportedLanguage::getDisplayName)
+                .orElse(languageCode);
+    }
+
     private boolean isEmpty(TravelInfoTranslation translation) {
-        return translation.getTitle() == null && translation.getContent() == null;
+        return translation.getTitle() == null && translation.getContent() == null
+                && translation.getStructuredText() == null;
     }
 
     private String nonBlankTitle(String title) {
@@ -702,10 +903,30 @@ public class TravelInfoService {
             throw new TravelInfoValidationException("scope", "국내/해외 범위를 선택해 주세요.");
         }
 
-        String content = postContentSanitizer.sanitize(form.getContent());
-        form.setContent(content);
-        if (!TravelInfoContent.hasContent(content)) {
-            throw new TravelInfoValidationException("content", "본문을 입력해 주세요.");
+        String content;
+        StructuredContentService.PreparedContent structured = null;
+        if (form.getContentFormat() == null) {
+            throw new TravelInfoValidationException("contentFormat", "작성 방식을 선택해 주세요.");
+        }
+        if (form.getContentFormat() == TravelInfoContentFormat.STRUCTURED) {
+            // 1차 정책: 구조화 작성은 일반 여행정보·여행가이드만. 축제는 조용히 QUILL 로 바꾸지 않고 거부한다.
+            if (form.getContentType() == TravelInfoContentType.FESTIVAL) {
+                throw new TravelInfoValidationException("contentFormat",
+                        "축제·행사는 구조화 에디터로 작성할 수 없습니다.");
+            }
+            // 검사를 마친 model 을 다시 쓴 정규 JSON 과, escape 를 마친 파생 content 를 쓴다.
+            // 파생 content 는 Quill 용 sanitizer 를 다시 거치지 않는다. (4바이트 문자 숫자 참조가 풀리면 저장 실패)
+            // 본문이 있는지는 블록 검사(블록 1개 이상, 블록별 필수 값)가 이미 정했다. 파생 content 는 검색/SEO 용이라
+            // 글자가 없는 사진만의 글(alt·캡션을 비운 경우)이면 빈 값일 수 있고, 그것으로 저장을 막지 않는다.
+            structured = structuredContentService.prepareContent(form.getStructuredContent());
+            content = structured.derivedContent();
+            form.setStructuredContent(structured.json());
+        } else {
+            content = postContentSanitizer.sanitize(form.getContent());
+            form.setContent(content);
+            if (!TravelInfoContent.hasContent(content)) {
+                throw new TravelInfoValidationException("content", "본문을 입력해 주세요.");
+            }
         }
 
         if (form.getCategoryId() == null) {
@@ -722,7 +943,18 @@ public class TravelInfoService {
 
         validateHomeFeatured(form);
         List<ValidatedPeriod> periods = validatePeriods(form);
-        return new ValidatedTravelInfo(title, content, periods);
+        return new ValidatedTravelInfo(title, content, periods, form.getContentFormat(), structured);
+    }
+
+    /**
+     * 작성 방식은 등록할 때 정해지고 수정으로 바꾸지 않는다. (QUILL ↔ STRUCTURED 모두 막는다)
+     * 다른 방식으로 저장하면 원본이 사라지거나 파생 content 가 원본을 덮어쓰므로 조용히 맞추지 않고 거부한다.
+     */
+    private void requireSameContentFormat(TravelInfo stored, TravelInfoForm form) {
+        if (form == null || stored.getContentFormat() != form.getContentFormat()) {
+            throw new TravelInfoValidationException("contentFormat",
+                    "작성 방식은 등록한 뒤 바꿀 수 없습니다.");
+        }
     }
 
     /**
@@ -855,7 +1087,17 @@ public class TravelInfoService {
         return new ResponseStatusException(HttpStatus.NOT_FOUND, "여행정보를 찾을 수 없습니다.");
     }
 
-    private record ValidatedTravelInfo(String title, String content, List<ValidatedPeriod> periods) {
+    /**
+     * @param content    QUILL 은 sanitize 한 HTML, STRUCTURED 는 파생 HTML
+     * @param structured STRUCTURED 일 때만 있다. (정규 JSON · 번역 기준 model · 파생 content)
+     */
+    private record ValidatedTravelInfo(String title, String content, List<ValidatedPeriod> periods,
+                                       TravelInfoContentFormat contentFormat,
+                                       StructuredContentService.PreparedContent structured) {
+
+        String structuredJson() {
+            return structured == null ? null : structured.json();
+        }
     }
 
     private record ValidatedPeriod(LocalDate startDate, LocalDate endDate) {

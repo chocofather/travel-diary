@@ -1,0 +1,435 @@
+/*
+  관리자 여행정보 폼의 작성 방식 선택과 구조화 블록 에디터.
+  기존 관리자 폼(admin-form-field, admin-btn)을 그대로 쓰고, 블록은 얇은 선으로만 나눈다.
+  공개 화면 모양은 /css/travel-info-structured.css 가 정하므로 여기서 다시 흉내 내지 않는다.
+*/
+.admin-content-format {
+    margin: 0 0 18px;
+    padding: 0;
+    border: 0;
+}
+
+.admin-content-format legend,
+.admin-structured-choices legend {
+    margin-bottom: 8px;
+    padding: 0;
+    color: #334373;
+    font-size: 0.92rem;
+    font-weight: 700;
+}
+
+.admin-content-format-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    margin-bottom: 6px;
+}
+
+.admin-content-format-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 32px;
+    cursor: pointer;
+}
+
+.admin-content-format-option[hidden] {
+    display: none;
+}
+
+.admin-content-format.is-fixed p {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 12px;
+    margin: 0;
+}
+
+.admin-structured-translation-notice {
+    margin: 0 0 14px;
+    padding: 10px 12px;
+    border-left: 2px solid #9aa9d6;
+    background: #f6f8fd;
+    color: #4a5675;
+    font-size: 0.87rem;
+    line-height: 1.55;
+}
+
+.admin-structured-translation-notice[hidden],
+.admin-structured-editor[hidden],
+[data-translation-body][hidden] {
+    display: none;
+}
+
+/* ---- 에디터 ---- */
+.admin-structured-editor {
+    min-width: 0;
+}
+
+.admin-structured-editor-header h3 {
+    margin: 0 0 4px;
+    color: #334373;
+    font-size: 1rem;
+}
+
+.admin-structured-editor-header p {
+    margin: 0 0 14px;
+}
+
+.admin-structured-error-summary {
+    margin-bottom: 14px;
+}
+
+.admin-structured-error-summary p,
+.admin-structured-error-summary ul {
+    margin: 0;
+}
+
+.admin-structured-error-summary ul {
+    padding-left: 1.2em;
+}
+
+.admin-structured-load-error {
+    margin: 0 0 14px;
+    color: #b54747;
+    font-size: 0.87rem;
+}
+
+.admin-structured-empty {
+    margin: 0 0 14px;
+    padding: 16px;
+    border: 1px dashed #d4dbec;
+    border-radius: 6px;
+    color: #6b7590;
+    font-size: 0.9rem;
+}
+
+.admin-structured-blocks,
+.admin-structured-items {
+    display: grid;
+    gap: 12px;
+    margin: 0 0 14px;
+    padding: 0;
+    list-style: none;
+}
+
+.admin-structured-block {
+    min-width: 0;
+    border: 1px solid #dfe5f1;
+    border-radius: 6px;
+    background: #fff;
+}
+
+.admin-structured-block.is-invalid {
+    border-color: #e3a5a5;
+}
+
+.admin-structured-block-header,
+.admin-structured-item-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    padding: 8px 10px 8px 14px;
+    border-bottom: 1px solid #edf0f7;
+    background: #fafbfe;
+    border-radius: 6px 6px 0 0;
+}
+
+.admin-structured-block-type {
+    flex: none;
+    color: #334373;
+    font-size: 0.86rem;
+    font-weight: 700;
+}
+
+.admin-structured-block-summary {
+    flex: 1 1 120px;
+    min-width: 0;
+    overflow: hidden;
+    color: #6b7590;
+    font-size: 0.85rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.admin-structured-block-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-left: auto;
+}
+
+.admin-structured-action.admin-btn.is-small {
+    min-width: 34px;
+    min-height: 32px;
+    padding: 5px 9px;
+    border-radius: 6px;
+}
+
+.admin-structured-action:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.admin-structured-block-errors {
+    margin: 0;
+    padding: 10px 14px 0 2.2em;
+    color: #b54747;
+    font-size: 0.86rem;
+}
+
+.admin-structured-block-body {
+    display: grid;
+    gap: 14px;
+    padding: 14px;
+}
+
+.admin-structured-block-body[hidden] {
+    display: none;
+}
+
+.admin-structured-required {
+    color: #c74747;
+}
+
+.admin-structured-optional {
+    color: #8a93ab;
+    font-weight: 400;
+    font-size: 0.82rem;
+}
+
+.admin-structured-choices {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 18px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.admin-structured-choices legend {
+    float: left;
+    margin: 0 8px 0 0;
+}
+
+/* IMAGE_TEXT: 이미지 칸 / 글 칸 */
+.admin-structured-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+    gap: 18px;
+}
+
+.admin-structured-split > div {
+    display: grid;
+    gap: 14px;
+    align-content: start;
+    min-width: 0;
+}
+
+/* ---- 이미지 자리 ---- */
+.admin-structured-image {
+    display: flex;
+    gap: 14px;
+    min-width: 0;
+}
+
+.admin-structured-image-preview {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 132px;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    border: 1px solid #e3e8f2;
+    border-radius: 4px;
+    background: #f4f6fa;
+    color: #8a93ab;
+    font-size: 0.8rem;
+}
+
+.admin-structured-image.is-invalid .admin-structured-image-preview {
+    border-color: #e3a5a5;
+}
+
+.admin-structured-image-preview img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.admin-structured-image-side {
+    display: grid;
+    align-content: start;
+    gap: 6px;
+    min-width: 0;
+}
+
+.admin-structured-image-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 10px;
+}
+
+.admin-structured-image-actions label.admin-btn {
+    cursor: pointer;
+}
+
+.admin-structured-image-actions label.admin-btn:focus-within {
+    outline: 2px solid #3853ba;
+    outline-offset: 2px;
+}
+
+.admin-structured-image-actions label.admin-btn.is-disabled {
+    opacity: 0.55;
+    cursor: progress;
+}
+
+.admin-structured-image-status {
+    margin: 0;
+    color: #6b7590;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.admin-structured-image-status.is-error,
+.admin-structured-editor .admin-help-text.is-error {
+    color: #b54747;
+}
+
+/* 관리자 폼 공통 input[type=file] 규칙(width: 100%)보다 우선해야 숨긴 파일 칸이 페이지 폭만큼 커지지 않는다 */
+.admin-structured-editor .admin-visually-hidden,
+.admin-structured-editor input[type="file"].admin-visually-hidden {
+    position: absolute;
+    width: 1px;
+    min-height: 0;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* ---- 슬라이더 이미지 목록 ---- */
+.admin-structured-item {
+    min-width: 0;
+    border: 1px solid #e6eaf3;
+    border-radius: 6px;
+}
+
+.admin-structured-item-body {
+    display: grid;
+    gap: 12px;
+    padding: 12px;
+}
+
+.admin-structured-item-fields {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+/* 이미지 배치: 칸을 공개 화면처럼 나란히 두고, 칸 안의 이미지·입력은 세로로 쌓는다 */
+.admin-structured-grid.is-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-structured-grid.is-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.admin-structured-grid .admin-structured-item-fields {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.admin-structured-grid .admin-structured-image {
+    flex-direction: column;
+}
+
+/* ---- 블록 추가 ---- */
+.admin-structured-add {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 8px 12px;
+}
+
+.admin-structured-add-menu {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    flex-basis: 100%;
+    padding: 10px;
+    border: 1px solid #dfe5f1;
+    border-radius: 6px;
+    background: #fafbfe;
+}
+
+.admin-structured-add-menu[hidden] {
+    display: none;
+}
+
+.admin-structured-add-option {
+    min-height: 36px;
+    padding: 7px 12px;
+    border: 1px solid #dce4f7;
+    border-radius: 6px;
+    background: #fff;
+    color: #334373;
+    font: inherit;
+    font-size: 0.86rem;
+    cursor: pointer;
+}
+
+.admin-structured-add-option:hover,
+.admin-structured-add-option:focus-visible {
+    border-color: #3853ba;
+    color: #3853ba;
+}
+
+.admin-structured-add-option:focus-visible {
+    outline: 2px solid #3853ba;
+    outline-offset: 2px;
+}
+
+@media (max-width: 860px) {
+    .admin-structured-item-fields {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .admin-structured-grid.is-2,
+    .admin-structured-grid.is-3 {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .admin-structured-split {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .admin-structured-image {
+        flex-direction: column;
+    }
+
+    .admin-structured-image-preview {
+        width: 100%;
+        max-width: 320px;
+    }
+
+    .admin-structured-block-actions {
+        width: 100%;
+        margin-left: 0;
+    }
+
+    .admin-structured-block-summary {
+        flex-basis: 100%;
+        order: 3;
+    }
+}

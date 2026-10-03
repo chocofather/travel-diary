@@ -2,6 +2,7 @@ package com.example.travlediary.dto;
 
 import com.example.travlediary.model.InfoPeriod;
 import com.example.travlediary.model.TravelInfo;
+import com.example.travlediary.model.TravelInfoContentFormat;
 import com.example.travlediary.model.TravelInfoContentType;
 import com.example.travlediary.model.TravelInfoScope;
 import lombok.Data;
@@ -27,6 +28,10 @@ public class TravelInfoForm {
 
     private String title;
     private String content;
+    /** 본문 작성 방식. 저장 흐름은 아직 QUILL 만 쓴다. (STRUCTURED 연결은 다음 단계) */
+    private TravelInfoContentFormat contentFormat = TravelInfoContentFormat.QUILL;
+    /** STRUCTURED 블록 원본 JSON. QUILL 이면 쓰지 않는다. */
+    private String structuredContent;
     private TravelInfoScope scope;
     private TravelInfoContentType contentType = TravelInfoContentType.GENERAL;
     private Long categoryId;
@@ -87,6 +92,10 @@ public class TravelInfoForm {
         TravelInfoForm form = new TravelInfoForm();
         form.setTitle(travelInfo.getTitle());
         form.setContent(travelInfo.getContent());
+        if (travelInfo.getContentFormat() != null) {
+            form.setContentFormat(travelInfo.getContentFormat());
+        }
+        form.setStructuredContent(travelInfo.getStructuredContent());
         form.setScope(travelInfo.getScope());
         form.setContentType(travelInfo.getContentType());
         form.setCategoryId(travelInfo.getCategoryId());

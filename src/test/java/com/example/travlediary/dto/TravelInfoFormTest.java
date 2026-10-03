@@ -1,6 +1,7 @@
 package com.example.travlediary.dto;
 
 import com.example.travlediary.model.TravelInfo;
+import com.example.travlediary.model.TravelInfoContentFormat;
 import com.example.travlediary.model.TravelInfoContentType;
 import com.example.travlediary.model.TravelInfoScope;
 import org.junit.jupiter.api.Test;
@@ -10,6 +11,25 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class TravelInfoFormTest {
+
+    @Test
+    void contentFormatDefaultsToQuillAndEditFormKeepsStoredFormat() {
+        assertThat(new TravelInfo().getContentFormat()).isEqualTo(TravelInfoContentFormat.QUILL);
+        assertThat(new TravelInfoForm().getContentFormat()).isEqualTo(TravelInfoContentFormat.QUILL);
+
+        TravelInfo quill = new TravelInfo();
+        quill.setContent("<p>본문</p>");
+        TravelInfoForm quillForm = TravelInfoForm.from(quill, List.of());
+        assertThat(quillForm.getContentFormat()).isEqualTo(TravelInfoContentFormat.QUILL);
+        assertThat(quillForm.getStructuredContent()).isNull();
+
+        TravelInfo structured = new TravelInfo();
+        structured.setContentFormat(TravelInfoContentFormat.STRUCTURED);
+        structured.setStructuredContent("{\"version\":1,\"blocks\":[]}");
+        TravelInfoForm structuredForm = TravelInfoForm.from(structured, List.of());
+        assertThat(structuredForm.getContentFormat()).isEqualTo(TravelInfoContentFormat.STRUCTURED);
+        assertThat(structuredForm.getStructuredContent()).isEqualTo("{\"version\":1,\"blocks\":[]}");
+    }
 
     @Test
     void contentSectionIsSavedAsTheExistingContentTypeAndScope() {

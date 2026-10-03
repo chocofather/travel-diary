@@ -2,11 +2,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('travel-info-form');
     if (!form) return;
 
-    window.initQuillEditor(
+    /*
+      저장하는 순간 폼의 작성 방식. 등록은 고른 radio, 수정은 고정 hidden 값이다.
+      Quill 본문 검사(빈 본문이면 저장 막기)는 일반 에디터(QUILL)일 때만 한다.
+      구조화 에디터면 Quill 본문은 쓰지 않고, 본문 검사는 블록 에디터와 서버가 맡는다.
+    */
+    function submittedContentFormat() {
+        const checked = form.querySelector('input[type="radio"][name="contentFormat"]:checked');
+        const fixed = form.querySelector('input[type="hidden"][name="contentFormat"]');
+        return checked?.value || fixed?.value || 'QUILL';
+    }
+
+    const quill = window.initQuillEditor(
         '#travel-info-editor',
         'travel-info-content',
         'travel-info-form',
-        'travel-info-initial-content'
+        'travel-info-initial-content',
+        {isActive: () => submittedContentFormat() === 'QUILL'}
     );
 
     // 언어별 본문 편집기는 공통 스크립트(/js/admin-translation-editors.js)가 맡는다.
@@ -213,6 +225,77 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /*
+      작성 방식(QUILL / STRUCTURED). 등록 화면에서만 고르고(radio), 수정 화면은 hidden 값으로 고정이다.
+      두 편집기는 화면에 함께 살아 있고 고른 쪽만 보이고 저장된다. 고르지 않은 쪽 초안은 이 화면에 남는다.
+      (Quill 본문 검사를 쉬게 하는 기준은 위 submittedContentFormat 이다. 화면을 숨기는 것과는 따로다)
+    */
+    const formatRadios = Array.from(form.querySelectorAll('input[type="radio"][name="contentFormat"]'));
+    const fixedFormat = document.getElementById('travel-info-content-format-fixed');
+    const structuredOption = form.querySelector('[data-structured-format-option]');
+    const festivalFormatNote = form.querySelector('[data-format-festival-note]');
+    const quillBody = document.getElementById('travel-info-quill-body');
+    const structuredRoot = document.querySelector('[data-structured-editor]');
+    const structuredEditor = structuredRoot?.structuredEditor;
+    const structuredTranslationNotice = document.getElementById('travel-info-structured-translation-notice');
+    let activeFormat = currentFormat();
+
+    function currentFormat() {
+        if (fixedFormat) return fixedFormat.value;
+        return formatRadios.find(radio => radio.checked)?.value || 'QUILL';
+    }
+
+    function quillHasContent() {
+        if (!quill) return false;
+        return quill.getText().trim() !== '' || quill.root.querySelector('img[src]') !== null;
+    }
+
+    function applyFormat(format) {
+        const structured = format === 'STRUCTURED';
+        activeFormat = format;
+        if (quillBody) quillBody.hidden = structured;
+        structuredEditor?.setActive(structured);
+        // 구조화 글의 본문 번역 편집은 아직 없다. 언어별 제목만 받고 본문 편집기는 감춘다.
+        form.querySelectorAll('[data-translation-body]').forEach(body => { body.hidden = structured; });
+        if (structuredTranslationNotice) structuredTranslationNotice.hidden = !structured;
+    }
+
+    function checkFormat(format) {
+        formatRadios.forEach(radio => { radio.checked = radio.value === format; });
+    }
+
+    formatRadios.forEach(radio => radio.addEventListener('change', () => {
+        const next = currentFormat();
+        if (next === activeFormat) return;
+        const hasContent = activeFormat === 'STRUCTURED' ? structuredEditor?.hasContent() : quillHasContent();
+        if (hasContent && !window.confirm('작성 방식을 바꾸면 지금 작성한 내용은 저장되지 않습니다.\n'
+                + '이 화면에는 남아 있어 다시 바꾸면 이어서 쓸 수 있습니다. 바꿀까요?')) {
+            checkFormat(activeFormat);
+            return;
+        }
+        applyFormat(next);
+    }));
+
+    /* 축제·행사는 일반 에디터만 쓴다. 구조화를 고른 상태였다면 일반 에디터로 돌린다. (블록 초안은 남는다) */
+    function syncFormatAvailability(selectedType) {
+        const festival = selectedType === 'FESTIVAL';
+        if (formatRadios.length) {
+            const structuredRadio = formatRadios.find(radio => radio.value === 'STRUCTURED');
+            if (structuredRadio) structuredRadio.disabled = festival;
+            if (structuredOption) structuredOption.hidden = festival;
+            if (festivalFormatNote) festivalFormatNote.hidden = !festival;
+            if (festival && activeFormat === 'STRUCTURED') {
+                checkFormat('QUILL');
+                applyFormat('QUILL');
+            }
+        }
+        // 수정 중인 구조화 글은 축제·행사로 옮길 수 없다. (서버도 거부한다)
+        if (fixedFormat?.value === 'STRUCTURED') {
+            const festivalOption = contentType.querySelector('option[value="FESTIVAL"]');
+            if (festivalOption) festivalOption.disabled = true;
+        }
+    }
+
+    /*
       콘텐츠 구분 하나가 기준이다. 저장 유형을 먼저 정하고, 그 유형에 딸린 화면을 차례로 맞춘다.
       (TourAPI 불러오기 영역은 admin-travel-info-festival-autofill.js 가 같은 select 의 값으로 맞춘다)
     */
@@ -222,6 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
         syncScopeAvailability(selectedType);
         updatePeriodVisibility(selectedType);
         syncHomeFeatured(selectedType);
+        syncFormatAvailability(selectedType);
     }
 
     addPeriodButton.addEventListener('click', addPeriod);
@@ -234,5 +318,6 @@ document.addEventListener('DOMContentLoaded', () => {
     contentType.addEventListener('change', syncContentSection);
 
     reindexPeriods();
+    applyFormat(activeFormat);
     syncContentSection();
 });

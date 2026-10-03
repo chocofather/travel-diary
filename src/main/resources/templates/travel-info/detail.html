@@ -10,6 +10,8 @@
         href="https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-kr@5.3.0/400.css">
   <link rel="stylesheet" href="/css/quill-content.css?v=20261003-image-layout">
   <link rel="stylesheet" href="/css/travel-info-detail.css">
+  <link rel="stylesheet" href="/css/travel-info-structured.css?v=20261006-media-caption"
+        th:if="${travelInfo.contentFormat.name() == 'STRUCTURED'}">
 </th:block>
 <th:block th:fragment="body">
   <article class="travel-info-detail" aria-labelledby="travel-info-detail-title">
@@ -85,7 +87,17 @@
       </ul>
     </section>
 
+    <!--
+      STRUCTURED 글은 검사를 마친 블록으로 그린다. content 에 든 파생 HTML 은 검색/SEO 용이라 본문 디자인으로 쓰지 않는다.
+      저장된 블록을 읽지 못했으면(structuredContent == null) 아래 기존 본문 자리로 파생 HTML 이 대신 나온다.
+    -->
+    <section class="travel-info-detail-content travel-info-structured"
+             th:if="${travelInfo.contentFormat.name() == 'STRUCTURED' and travelInfo.structuredContent != null}"
+             th:attr="aria-label=#{travelInfo.detail.content}">
+      <div th:replace="~{fragments/travel-info/structured-content :: blocks(${travelInfo.structuredContent})}"></div>
+    </section>
     <section class="travel-info-detail-content rich-text-content rich-text-image-layout"
+             th:unless="${travelInfo.contentFormat.name() == 'STRUCTURED' and travelInfo.structuredContent != null}"
              th:attr="aria-label=#{travelInfo.detail.content}"
              th:utext="${travelInfo.content}"></section>
 
@@ -95,5 +107,7 @@
     </footer>
   </article>
   <script src="/js/travel-info-bookmark.js" defer></script>
+  <script src="/js/structured-slider.js?v=20261004-structured" defer
+          th:if="${travelInfo.contentFormat.name() == 'STRUCTURED' and travelInfo.structuredContent != null}"></script>
 </th:block>
 </html>

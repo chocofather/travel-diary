@@ -1,5 +1,7 @@
 package com.example.travlediary.repository;
 
+import com.example.travlediary.model.TravelInfoContentFormat;
+import org.apache.ibatis.type.EnumTypeHandler;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -7,8 +9,13 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.ResultSet;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class TravelInfoMapperContractTest {
 
@@ -180,8 +187,76 @@ class TravelInfoMapperContractTest {
                 .contains("useGeneratedKeys=\"true\"")
                 .contains("keyProperty=\"id\"")
                 .contains("INSERT INTO travel_info")
-                .contains("title, content, scope, content_type, category_id, views, user_id")
+                .contains("title, content, content_format, structured_content,")
+                .contains("scope, content_type, category_id, views, user_id")
+                .contains("#{title}, #{content}, #{contentFormat}, #{structuredContent},")
                 .contains("#{categoryId}, 0, #{userId}");
+    }
+
+    @Test
+    void singleRowReadsCarryContentFormatButUpdateLeavesItUntouched() throws IOException {
+        String mapper = mapper();
+        String resultMap = between(mapper,
+                "<resultMap id=\"TravelInfoResultMap\"", "</resultMap>");
+        String update = between(mapper, "<update id=\"updateTravelInfo\"", "</update>");
+
+        assertThat(resultMap)
+                .contains("<result property=\"contentFormat\" column=\"content_format\"/>")
+                .contains("<result property=\"structuredContent\" column=\"structured_content\"/>");
+        for (String select : List.of("findById", "findByIdForUpdate")) {
+            assertThat(between(mapper, "<select id=\"" + select + "\"", "</select>"))
+                    .contains("content, content_format, structured_content, scope");
+        }
+        // 작성 방식은 등록 때 정해진다. 기존 수정 SQL 은 두 컬럼을 건드리지 않는다.
+        assertThat(update).doesNotContain("content_format", "structured_content");
+
+        String publicDetailMap = between(mapper,
+                "<resultMap id=\"PublicDetailResultMap\"", "</resultMap>");
+        assertThat(publicDetailMap)
+                .contains("<result property=\"contentFormat\" column=\"content_format\"/>")
+                .contains("<result property=\"structuredContentJson\" column=\"structured_content\"/>");
+        assertThat(between(mapper, "<select id=\"findPublicDetailById\"", "</select>"))
+                .contains("ti.content,", "ti.content_format,", "ti.structured_content,")
+                .doesNotContain("SELECT *", "ti.*");
+    }
+
+    @Test
+    void structuredContentHasItsOwnGuardedUpdate() throws IOException {
+        String update = between(mapper(), "<update id=\"updateStructuredContent\"", "</update>");
+
+        // 원문 JSON 만 바꾸고, 작성 방식이 STRUCTURED 인 줄에만 쓴다. (QUILL 글에 JSON 이 생기지 않게)
+        assertThat(update)
+                .contains("SET structured_content = #{structuredContent}")
+                .contains("WHERE id = #{id}")
+                .contains("AND content_format = 'STRUCTURED'")
+                .doesNotContain("SET content_format", ", content_format", "title =", "category_id =");
+    }
+
+    @Test
+    void contentImageReferenceCountLooksOnlyAtStructuredArticles() throws IOException {
+        String select = between(mapper(), "<select id=\"countStructuredContentReferences\"", "</select>");
+
+        // 파일을 지우기 전 확인. JSON 경로 함수 없이 STRUCTURED 줄의 JSON 글자 안에 url 이 있는지만 본다.
+        assertThat(select)
+                .contains("SELECT COUNT(*)")
+                .contains("FROM travel_info")
+                .contains("WHERE content_format = 'STRUCTURED'")
+                .contains("CAST(structured_content AS CHAR) LIKE CONCAT('%', #{imageUrl}, '%')")
+                .doesNotContain("${");
+    }
+
+    @Test
+    void unknownStoredContentFormatFailsInsteadOfFallingBackToQuill() throws Exception {
+        // MyBatisConfig 의 기본 enum 변환(EnumTypeHandler)은 이름 그대로 valueOf 한다.
+        EnumTypeHandler<TravelInfoContentFormat> handler =
+                new EnumTypeHandler<>(TravelInfoContentFormat.class);
+        ResultSet resultSet = mock(ResultSet.class);
+        when(resultSet.getString("content_format")).thenReturn("STRUCTURED", "HTML");
+
+        assertThat(handler.getResult(resultSet, "content_format"))
+                .isEqualTo(TravelInfoContentFormat.STRUCTURED);
+        assertThatThrownBy(() -> handler.getResult(resultSet, "content_format"))
+                .hasRootCauseInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

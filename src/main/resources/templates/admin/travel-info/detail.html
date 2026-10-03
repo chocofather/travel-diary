@@ -10,6 +10,10 @@
         href="https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-kr@5.3.0/400.css">
   <link rel="stylesheet" href="/css/quill-content.css?v=20261003-image-layout">
   <link rel="stylesheet" href="/css/admin-travel-info.css">
+  <th:block th:if="${travelInfo.contentFormat.name() == 'STRUCTURED' and travelInfo.structuredContent != null}">
+    <link rel="stylesheet" href="/css/travel-info-structured.css?v=20261006-media-caption">
+    <script src="/js/structured-slider.js?v=20261004-structured" defer></script>
+  </th:block>
 </th:block>
 <th:block th:fragment="body">
   <section class="admin-page-section admin-travel-info-detail-page">
@@ -81,7 +85,13 @@
 
       <section class="admin-travel-info-detail-content-section">
         <h3>본문 미리보기</h3>
+        <!-- STRUCTURED 는 공개 상세와 같은 블록 fragment 로 그린다. (디자인을 따로 두지 않는다) -->
+        <div class="admin-travel-info-content travel-info-structured"
+             th:if="${travelInfo.contentFormat.name() == 'STRUCTURED' and travelInfo.structuredContent != null}">
+          <div th:replace="~{fragments/travel-info/structured-content :: blocks(${travelInfo.structuredContent})}"></div>
+        </div>
         <div class="admin-travel-info-content rich-text-content rich-text-image-layout"
+             th:unless="${travelInfo.contentFormat.name() == 'STRUCTURED' and travelInfo.structuredContent != null}"
              th:utext="${travelInfo.content}"></div>
       </section>
     </article>

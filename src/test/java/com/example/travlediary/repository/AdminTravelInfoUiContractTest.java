@@ -254,6 +254,66 @@ class AdminTravelInfoUiContractTest {
                 .contains("height: auto");
     }
 
+    @Test
+    void structuredEditorIsWiredNextToTheQuillEditorWithoutReplacingIt() throws IOException {
+        String form = resource("/templates/admin/travel-info/form.html");
+        String translations = resource("/templates/fragments/admin/travel-info-translation-tabs.html");
+        String editor = resource("/static/js/admin-structured-editor.js");
+        String formScript = resource("/static/js/admin-travel-info-form.js");
+        String quillInitializer = resource("/static/js/quill-editor-init.js");
+
+        // 작성 방식: 등록은 radio, 수정은 hidden 으로 고정. 두 편집기는 함께 있고 한쪽만 보인다.
+        assertThat(form)
+                .contains("<fieldset id=\"travel-info-content-format\" class=\"admin-content-format\" th:if=\"${!editMode}\">")
+                .contains("th:field=\"*{contentFormat}\" value=\"QUILL\"")
+                .contains("th:field=\"*{contentFormat}\" value=\"STRUCTURED\"")
+                .contains("<input type=\"hidden\" id=\"travel-info-content-format-fixed\" th:field=\"*{contentFormat}\">")
+                .contains("id=\"travel-info-quill-body\"")
+                // 바꾼 JS 는 버전을 올려 캐시에 남은 예전 판과 섞이지 않게 한다.
+                .contains("/js/quill-editor-init.js?v=20261004-format-check")
+                .contains("/js/admin-travel-info-form.js?v=20261004-format-check")
+                .doesNotContain("data-quill-inactive")
+                .contains("id=\"travel-info-editor\"")
+                .contains("data-structured-editor")
+                .contains("<input type=\"hidden\" id=\"travel-info-structured-content\" th:field=\"*{structuredContent}\">")
+                .contains("/css/admin-structured-editor.css")
+                .contains("id=\"travel-info-structured-translation-notice\"");
+        // 에디터가 먼저 만들어져야 폼 스크립트가 작성 방식 전환에 쓸 수 있다.
+        assertThat(form.indexOf("/js/admin-structured-editor.js"))
+                .isPositive()
+                .isLessThan(form.indexOf("/js/admin-travel-info-form.js"));
+        // 구조화 글의 번역 글 JSON 은 화면이 없어도 수정 저장에서 지워지지 않게 그대로 오간다.
+        assertThat(translations)
+                .contains("th:field=\"*{translations[__${slot.index}__].structuredText}\"")
+                .contains("data-translation-body");
+
+        assertThat(editor)
+                .contains("const UPLOAD_URL = '/admin/api/travel-info/content-images';")
+                .contains("body.append('image', file);")
+                .contains("meta[name=\"_csrf\"]")
+                .contains("credentials: 'same-origin'")
+                .contains("JSON.stringify({version: 1, blocks: state.blocks.map(writeBlock)})")
+                .contains("input.value = serialize();")
+                .contains("window.confirm(")
+                .doesNotContain(".innerHTML", "draggable");
+        // Quill 본문 검사는 저장하는 순간의 작성 방식이 QUILL 일 때만 한다. (화면 속성에 기대지 않는다)
+        assertThat(formScript)
+                .contains("input[type=\"radio\"][name=\"contentFormat\"]")
+                .contains("{isActive: () => submittedContentFormat() === 'QUILL'}")
+                .contains("input[type=\"radio\"][name=\"contentFormat\"]:checked")
+                .contains("input[type=\"hidden\"][name=\"contentFormat\"]")
+                .contains("structuredRadio.disabled = festival")
+                .contains("syncFormatAvailability(selectedType);")
+                .doesNotContain("data-quill-inactive");
+        assertThat(quillInitializer)
+                .contains("const isActive = typeof options.isActive === 'function' ? options.isActive : () => true;")
+                .contains("if (!isActive()) return;")
+                .contains("alert('본문을 입력해 주세요.');")
+                .doesNotContain("data-quill-inactive");
+        // 이미지 설명(alt)은 선택 입력이다. 화면 검사가 alt 를 이유로 저장을 막지 않는다.
+        assertThat(editor).doesNotContain("이미지 설명(alt)을 입력해 주세요.");
+    }
+
     private String resource(String path) throws IOException {
         try (InputStream input = getClass().getResourceAsStream(path)) {
             assertThat(input).as("resource %s", path).isNotNull();

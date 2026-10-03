@@ -4,10 +4,13 @@
  * <p>editor/content/initial 자리에는 선택자·id 문자열 대신 element 를 그대로 넘겨도 된다.
  * 한 폼에 편집기가 여러 개 있을 수 있어(예: 언어별 본문) submit 연결은 편집기마다 따로 건다.
  * options.required 가 false 면 빈 본문이어도 저장을 막지 않는다. (선택 입력 편집기)
+ * options.isActive 를 넘기면 저장할 때마다 물어보고, false 면 이 편집기의 검사·값 채우기를 하지 않는다.
+ * (예: 여행정보 폼에서 작성 방식이 구조화 에디터면 Quill 본문은 쓰지 않는다) 넘기지 않으면 언제나 쓴다.
  */
 window.initQuillEditor = function (editorSelector, contentInputId, formId, initialContentId,
                                    options = {}) {
     const required = options.required !== false;
+    const isActive = typeof options.isActive === 'function' ? options.isActive : () => true;
     const editorElement = typeof editorSelector === 'string'
         ? document.querySelector(editorSelector)
         : editorSelector;
@@ -603,6 +606,9 @@ window.initQuillEditor = function (editorSelector, contentInputId, formId, initi
     // 편집기마다 한 번씩만 건다. 같은 폼에 편집기가 여러 개여도 각자 자기 hidden input 을 채운다.
     if (editorElement.dataset.quillEditorSubmitBound !== 'true') {
         form.addEventListener('submit', event => {
+            // 이 편집기를 쓰지 않는 저장이면(예: 구조화 에디터로 작성) 빈 본문 검사도, 값 채우기도 하지 않는다.
+            // 판단은 화면 모양이 아니라 쓰는 쪽이 넘긴 기준(작성 방식)으로 저장하는 그 순간에 한다.
+            if (!isActive()) return;
             if (pendingImageUploads > 0) {
                 event.preventDefault();
                 alert('이미지 업로드가 끝난 뒤 다시 저장해 주세요.');

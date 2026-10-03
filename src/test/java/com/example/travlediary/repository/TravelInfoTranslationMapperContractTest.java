@@ -48,7 +48,7 @@ class TravelInfoTranslationMapperContractTest {
                 .getBoundSql(7L);
 
         assertThat(normalize(boundSql.getSql())).isEqualTo(
-                "SELECT id, travel_info_id, language_code, title, content "
+                "SELECT id, travel_info_id, language_code, title, content, structured_text "
                         + "FROM travel_info_translations WHERE travel_info_id = ? "
                         + "ORDER BY language_code ASC, id ASC");
         assertThat(boundSql.getParameterMappings())
@@ -64,7 +64,7 @@ class TravelInfoTranslationMapperContractTest {
 
         // 여행정보 수만큼 조회가 늘지 않도록 IN 한 번으로 묶는다.
         assertThat(normalize(boundSql.getSql())).isEqualTo(
-                "SELECT id, travel_info_id, language_code, title, content "
+                "SELECT id, travel_info_id, language_code, title, content, structured_text "
                         + "FROM travel_info_translations WHERE travel_info_id IN (? , ? , ?) "
                         + "ORDER BY travel_info_id ASC, language_code ASC, id ASC");
         assertThat(boundSql.getParameterMappings()).hasSize(3);
@@ -77,7 +77,7 @@ class TravelInfoTranslationMapperContractTest {
                 .getBoundSql(Map.of("infoIds", List.of()));
 
         assertThat(normalize(boundSql.getSql())).isEqualTo(
-                "SELECT id, travel_info_id, language_code, title, content "
+                "SELECT id, travel_info_id, language_code, title, content, structured_text "
                         + "FROM travel_info_translations WHERE 1 = 0 "
                         + "ORDER BY travel_info_id ASC, language_code ASC, id ASC");
         assertThat(boundSql.getParameterMappings()).isEmpty();
@@ -97,11 +97,11 @@ class TravelInfoTranslationMapperContractTest {
 
         assertThat(normalize(boundSql.getSql())).isEqualTo(
                 "INSERT INTO travel_info_translations "
-                        + "(travel_info_id, language_code, title, content) "
-                        + "VALUES (?, ?, ?, ?)");
+                        + "(travel_info_id, language_code, title, content, structured_text) "
+                        + "VALUES (?, ?, ?, ?, ?)");
         assertThat(boundSql.getParameterMappings())
                 .extracting(ParameterMapping::getProperty)
-                .containsExactly("travelInfoId", "languageCode", "title", "content");
+                .containsExactly("travelInfoId", "languageCode", "title", "content", "structuredText");
     }
 
     @Test
@@ -118,11 +118,11 @@ class TravelInfoTranslationMapperContractTest {
 
         // 언어 코드는 조건일 뿐 갱신 대상이 아니다. 바꾸면 다른 언어 줄을 덮어쓰게 된다.
         assertThat(normalize(boundSql.getSql())).isEqualTo(
-                "UPDATE travel_info_translations SET title = ?, content = ? "
+                "UPDATE travel_info_translations SET title = ?, content = ?, structured_text = ? "
                         + "WHERE travel_info_id = ? AND language_code = ?");
         assertThat(boundSql.getParameterMappings())
                 .extracting(ParameterMapping::getProperty)
-                .containsExactly("title", "content", "travelInfoId", "languageCode");
+                .containsExactly("title", "content", "structuredText", "travelInfoId", "languageCode");
     }
 
     @Test
@@ -151,7 +151,8 @@ class TravelInfoTranslationMapperContractTest {
                 .contains("FROM travel_info ti JOIN info_categories ic ON ic.id = ti.category_id")
                 .doesNotContain("travel_info_translations");
         assertThat(normalize(findById.getSql())).isEqualTo(
-                "SELECT id, title, content, scope, content_type, created_at, updated_at, "
+                "SELECT id, title, content, content_format, structured_content, scope, content_type, "
+                        + "created_at, updated_at, "
                         + "category_id, views, is_home_featured, home_featured_order, user_id "
                         + "FROM travel_info WHERE id = ?");
     }

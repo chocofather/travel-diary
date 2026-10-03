@@ -63,6 +63,16 @@ public interface TravelInfoMapper {
 
     int updateTravelInfo(TravelInfo travelInfo);
 
+    /**
+     * STRUCTURED 글의 원문 블록 JSON 만 바꾼다. 작성 방식이 STRUCTURED 인 줄만 바뀌며 바뀐 줄 수를 돌려준다.
+     * 제목·파생 content 는 같은 트랜잭션의 updateTravelInfo 가 맡는다.
+     */
+    int updateStructuredContent(@Param("id") Long id,
+                                @Param("structuredContent") String structuredContent);
+
+    /** 그 본문 이미지 url 을 아직 쓰는 STRUCTURED 글 수. 0 일 때만 파일을 지운다. */
+    int countStructuredContentReferences(@Param("imageUrl") String imageUrl);
+
     /** 메인 추천 노출 여부와 순서만 바꾼다. 축제 화면도 쓰는 updateTravelInfo 에 섞지 않는다. */
     int updateHomeFeatured(@Param("id") Long id,
                            @Param("homeFeatured") boolean homeFeatured,

@@ -25,6 +25,7 @@ import org.springframework.web.servlet.mvc.method.annotation.ExtendedServletRequ
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 @Controller
 @RequestMapping("/admin/travel-info")
@@ -143,8 +144,12 @@ public class AdminTravelInfoController {
         return REDIRECT_LIST;
     }
 
+    /** 화면에 칸별 오류 자리가 없는 필드. 전체 오류로 위에 보여 준다. (작성 방식·구조화 본문·번역 글) */
+    private static final Set<String> GLOBAL_ERROR_FIELDS =
+            Set.of("periods", "contentFormat", "structuredContent", "translations");
+
     private void rejectValidation(BindingResult bindingResult, TravelInfoValidationException exception) {
-        if (exception.getField() == null || "periods".equals(exception.getField())) {
+        if (exception.getField() == null || GLOBAL_ERROR_FIELDS.contains(exception.getField())) {
             bindingResult.reject("travelInfo.invalid", exception.getMessage());
             return;
         }

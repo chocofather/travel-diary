@@ -359,6 +359,77 @@ class AdminTravelInfoControllerTest {
     }
 
     @Test
+    void createFormOffersBothWritingModesWithQuillByDefault() throws Exception {
+        String html = mockMvc.perform(get("/admin/travel-info/create").with(user("admin").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        org.jsoup.nodes.Document document = org.jsoup.Jsoup.parse(html);
+
+        assertThat(document.select("input[type=radio][name=contentFormat]").eachAttr("value"))
+                .containsExactly("QUILL", "STRUCTURED");
+        assertThat(document.selectFirst("input[name=contentFormat][value=QUILL]").hasAttr("checked")).isTrue();
+        assertThat(document.selectFirst("#travel-info-quill-body").hasAttr("hidden")).isFalse();
+        assertThat(document.selectFirst("[data-structured-editor]").hasAttr("hidden")).isTrue();
+        assertThat(document.selectFirst("#travel-info-structured-content").attr("name")).isEqualTo("structuredContent");
+        assertThat(document.selectFirst("#travel-info-structured-translation-notice").hasAttr("hidden")).isTrue();
+        assertThat(document.select("input[name=translations[1].structuredText]")).hasSize(1);
+    }
+
+    @Test
+    void structuredEditFormFixesTheWritingModeAndCarriesTheBlocks() throws Exception {
+        TravelInfoForm form = new TravelInfoForm();
+        form.setTitle("서울 궁 투어");
+        form.setContentSection("GENERAL_DOMESTIC");
+        form.setCategoryId(3L);
+        form.setContentFormat(com.example.travlediary.model.TravelInfoContentFormat.STRUCTURED);
+        form.setStructuredContent("{\"version\":1,\"blocks\":[{\"type\":\"CALLOUT\",\"id\":\"b-1\",\"text\":\"<b>휴궁</b>\"}]}");
+        when(travelInfoService.getForm(10L)).thenReturn(form);
+
+        String html = mockMvc.perform(get("/admin/travel-info/edit/10").with(user("admin").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        org.jsoup.nodes.Document document = org.jsoup.Jsoup.parse(html);
+
+        assertThat(document.select("input[type=radio][name=contentFormat]")).isEmpty();
+        assertThat(document.selectFirst("#travel-info-content-format-fixed").val()).isEqualTo("STRUCTURED");
+        assertThat(document.selectFirst(".admin-content-format.is-fixed").text())
+                .contains("구조화 에디터", "등록한 뒤에는 작성 방식을 바꿀 수 없습니다.");
+        assertThat(document.selectFirst("#travel-info-quill-body").hasAttr("hidden")).isTrue();
+        assertThat(document.selectFirst("[data-structured-editor]").hasAttr("hidden")).isFalse();
+        // JSON 은 속성 값으로 escape 되어 실리고, 에디터가 그대로 다시 읽는다.
+        assertThat(document.selectFirst("#travel-info-structured-content").val()).isEqualTo(form.getStructuredContent());
+        assertThat(html).doesNotContain("value=\"{\"version\"");
+        assertThat(document.selectFirst("#travel-info-structured-translation-notice").hasAttr("hidden")).isFalse();
+    }
+
+    @Test
+    void rejectedStructuredCreateComesBackWithTheSubmittedBlocks() throws Exception {
+        String submitted = "{\"version\":1,\"blocks\":[{\"type\":\"RICH_TEXT\",\"id\":\"b-1\",\"text\":\"긴 글\"}]}";
+        doThrow(new com.example.travlediary.service.travelinfo.structured.StructuredContentValidationException(
+                "1번째 블록(본문): 본문은 5000자 이하로 입력해 주세요."))
+                .when(travelInfoService).create(any(), org.mockito.ArgumentMatchers.eq(7L));
+
+        String html = mockMvc.perform(post("/admin/travel-info")
+                        .with(user(adminDetails()))
+                        .with(csrf())
+                        .param("title", "서울 궁 투어")
+                        .param("contentSection", "GENERAL_DOMESTIC")
+                        .param("categoryId", "3")
+                        .param("contentFormat", "STRUCTURED")
+                        .param("structuredContent", submitted))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/travel-info/form"))
+                .andReturn().getResponse().getContentAsString();
+        org.jsoup.nodes.Document document = org.jsoup.Jsoup.parse(html);
+
+        // 칸별 자리가 없는 오류라 위쪽 전체 오류로 보이고, 작성한 블록과 작성 방식이 그대로 돌아온다.
+        assertThat(document.selectFirst(".admin-alert").text()).contains("본문은 5000자 이하로 입력해 주세요.");
+        assertThat(document.selectFirst("input[name=contentFormat][value=STRUCTURED]").hasAttr("checked")).isTrue();
+        assertThat(document.selectFirst("#travel-info-structured-content").val()).isEqualTo(submitted);
+        assertThat(document.selectFirst("[data-structured-editor]").hasAttr("hidden")).isFalse();
+    }
+
+    @Test
     void serviceValidationReturnsFieldErrorOnSameForm() throws Exception {
         doThrow(new TravelInfoValidationException("content", "본문을 입력해 주세요."))
                 .when(travelInfoService).create(any(), org.mockito.ArgumentMatchers.eq(7L));
@@ -479,6 +550,46 @@ class AdminTravelInfoControllerTest {
         form.setContentType(TravelInfoContentType.GENERAL);
         form.setCategoryId(3L);
         return form;
+    }
+
+    @Test
+    void structuredAdminDetailReusesThePublicBlockFragment() throws Exception {
+        AdminTravelInfoDetailDto detail = detail(TravelInfoContentType.GENERAL, List.of());
+        detail.setContent("<p>DERIVED-SEARCH-HTML</p>");
+        detail.setContentFormat(com.example.travlediary.model.TravelInfoContentFormat.STRUCTURED);
+        detail.setStructuredContent(
+                com.example.travlediary.service.travelinfo.structured.StructuredContentSamples.palaceTour());
+        when(travelInfoService.getAdminDetail(10L)).thenReturn(detail);
+
+        String html = mockMvc.perform(get("/admin/travel-info/10").with(user("admin").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        org.jsoup.nodes.Document document = org.jsoup.Jsoup.parse(html);
+
+        assertThat(document.select(".admin-travel-info-content.travel-info-structured .structured-content"))
+                .hasSize(1);
+        assertThat(document.select("[data-structured-slider]")).hasSize(3);
+        // 이미지 2장 / 3장 배치도 공개 상세와 같은 fragment 로 그린다.
+        assertThat(document.select(".structured-grid").eachAttr("class"))
+                .containsExactly("structured-grid is-two", "structured-grid is-three");
+        assertThat(document.select(".structured-grid.is-three .structured-grid-media img")).hasSize(3);
+        assertThat(document.select(".structured-section-title h2").eachText()).containsExactly("경복궁", "창덕궁");
+        assertThat(document.select("link[href^=/css/travel-info-structured.css]")).hasSize(1);
+        assertThat(document.select("script[src^=/js/structured-slider.js]")).hasSize(1);
+        assertThat(document.select(".rich-text-content")).isEmpty();
+        assertThat(document.text()).doesNotContain("DERIVED-SEARCH-HTML");
+    }
+
+    @Test
+    void quillAdminDetailDoesNotLoadStructuredAssets() throws Exception {
+        when(travelInfoService.getAdminDetail(10L)).thenReturn(detail(TravelInfoContentType.GENERAL, List.of()));
+
+        String html = mockMvc.perform(get("/admin/travel-info/10").with(user("admin").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(html).contains("class=\"admin-travel-info-content rich-text-content rich-text-image-layout\"")
+                .doesNotContain("travel-info-structured", "structured-slider.js");
     }
 
     private AdminTravelInfoDetailDto detail(TravelInfoContentType contentType, List<InfoPeriod> periods) {

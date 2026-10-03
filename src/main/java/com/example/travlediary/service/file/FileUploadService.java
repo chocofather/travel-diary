@@ -71,6 +71,25 @@ public class FileUploadService {
     private static final String TRAVEL_INFO_THUMBNAIL_DIRECTORY = "travel-info/thumbnails";
     private static final String TRAVEL_INFO_THUMBNAIL_URL_PREFIX =
             "/uploads/" + TRAVEL_INFO_THUMBNAIL_DIRECTORY + "/";
+    /**
+     * 구조화 콘텐츠(STRUCTURED) 본문 이미지의 긴 변 상한. 큰 이미지·슬라이더로 본문 폭 전체에 그려지므로
+     * 썸네일보다 크게 남긴다. 이보다 크면 비율을 지켜 줄이고, 작으면 키우지 않는다.
+     */
+    static final int TRAVEL_INFO_CONTENT_IMAGE_MAX_EDGE = 2000;
+    /** 펼치는 단계의 긴 변 상한. 썸네일과 같이 목표의 두 배라 한 걸음에 목표 크기가 된다. */
+    static final int TRAVEL_INFO_CONTENT_IMAGE_DECODE_EDGE = 4000;
+    private static final String TRAVEL_INFO_CONTENT_IMAGE_DIRECTORY = "travel-info/content";
+    /** 구조화 콘텐츠 model(StructuredImage.URL_PREFIX)이 받는 경로와 같아야 한다. */
+    static final String TRAVEL_INFO_CONTENT_IMAGE_URL_PREFIX =
+            "/uploads/" + TRAVEL_INFO_CONTENT_IMAGE_DIRECTORY + "/";
+    /** 서버가 만든 이름(소문자 UUID + 판별한 확장자)만 관리 대상으로 본다. */
+    private static final Pattern MANAGED_CONTENT_IMAGE_NAME = Pattern.compile(
+            "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.(?:jpg|png|webp)$");
+    public static final String EMPTY_IMAGE_MESSAGE = "이미지를 선택해 주세요.";
+    public static final String OVERSIZED_WEBP_CONTENT_IMAGE_MESSAGE =
+            "WebP 이미지는 긴 변 2000px 이하만 올릴 수 있습니다. JPG·PNG 는 자동으로 줄여 저장합니다.";
+    public static final String UNRESIZABLE_CONTENT_IMAGE_MESSAGE =
+            "이미지를 줄이지 못했습니다. 긴 변 2000px 이하 이미지로 다시 올려 주세요.";
     private static final Pattern MANAGED_THUMBNAIL_NAME = Pattern.compile(
             "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\\.(?:jpg|png|webp)$",
             Pattern.CASE_INSENSITIVE);
@@ -547,6 +566,159 @@ public class FileUploadService {
         }
     }
 
+    /**
+     * 구조화 콘텐츠(STRUCTURED) 본문 이미지 한 장을 저장하고, 저장한 그림의 실제 크기를 돌려준다.
+     *
+     * <p>검증은 일반 이미지 업로드와 같다. (앞머리 판별 + JPEG/PNG 실제 decode + WEBP 구조 검사, 10MB)
+     * 이름·확장자·MIME 은 믿지 않고 저장 확장자도 판별한 형식으로 정한다. 형식을 바꿔 굽지 않는다.
+     * <ul>
+     *   <li>JPEG/PNG — 긴 변이 {@value #TRAVEL_INFO_CONTENT_IMAGE_MAX_EDGE}px 를 넘으면 비율을 지켜 줄인다.
+     *       (EXIF 회전은 썸네일과 같이 픽셀에 반영된다) 그 안쪽이면 원본 바이트 그대로 둔다.</li>
+     *   <li>WEBP — 이 런타임의 ImageIO 가 읽지도 쓰지도 못해 줄일 수 없다. 머리말에서 크기를 읽고,
+     *       상한을 넘으면 저장하지 않고 거부한다.</li>
+     * </ul>
+     * 줄이기·저장 중에 실패하면 파일을 남기지 않는다. 그림은 메모리에서 끝낸 뒤 한 번에 쓴다.
+     * 아직 어떤 여행정보와도 이어지지 않으므로 DB 에는 아무것도 쓰지 않는다.
+     */
+    public StoredContentImage saveTravelInfoContentImage(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new UnsupportedImageFormatException(EMPTY_IMAGE_MESSAGE);
+        }
+        ImageFormat format = validateGeneralImage(file);
+        byte[] content = readContentImageBytes(file);
+
+        int[] size;
+        if (format == ImageFormat.WEBP) {
+            size = webpDimensions(content);
+            if (size == null) {
+                throw unsupportedImage();
+            }
+            if (Math.max(size[0], size[1]) > TRAVEL_INFO_CONTENT_IMAGE_MAX_EDGE) {
+                throw new UnsupportedImageFormatException(OVERSIZED_WEBP_CONTENT_IMAGE_MESSAGE);
+            }
+        } else {
+            content = RasterImageResizer.optimize(content, format.readerFormatName,
+                    format == ImageFormat.PNG,
+                    TRAVEL_INFO_CONTENT_IMAGE_MAX_EDGE, TRAVEL_INFO_CONTENT_IMAGE_DECODE_EDGE);
+            size = uprightDimensions(content, format.readerFormatName);
+            if (size == null) {
+                throw unsupportedImage();
+            }
+            // 줄이기는 실패해도 원본을 돌려준다. 상한을 넘는 원본은 본문 이미지로 받지 않는다.
+            if (Math.max(size[0], size[1]) > TRAVEL_INFO_CONTENT_IMAGE_MAX_EDGE) {
+                throw new UnsupportedImageFormatException(UNRESIZABLE_CONTENT_IMAGE_MESSAGE);
+            }
+        }
+
+        Path directory = resolveContainedDirectory(TRAVEL_INFO_CONTENT_IMAGE_DIRECTORY, true,
+                "본문 이미지 저장 경로를 준비할 수 없습니다.");
+        String savedName = UUID.randomUUID() + "." + format.extension;
+        Path destination = directory.resolve(savedName).normalize();
+        ensureContained(directory, destination);
+        try {
+            Files.write(destination, content, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+        } catch (IOException exception) {
+            try {
+                Files.deleteIfExists(destination);
+            } catch (IOException ignored) {
+                // 원래 저장 실패를 우선 전달한다.
+            }
+            throw new RuntimeException("본문 이미지 저장에 실패했습니다.", exception);
+        }
+        return new StoredContentImage(TRAVEL_INFO_CONTENT_IMAGE_URL_PREFIX + savedName, size[0], size[1]);
+    }
+
+    /**
+     * 구조화 콘텐츠 본문 이미지 한 장을 지운다. 이미 없으면 false.
+     *
+     * <p>넘어온 문자열을 그대로 경로로 잇지 않는다. 전용 경로 아래 서버가 만든 이름(소문자 UUID + 확장자)인지
+     * 다시 보고, 실제 경로가 전용 폴더 안인지 확인한 뒤에만 지운다. 그 밖의 값은 예외다.
+     */
+    public boolean deleteTravelInfoContentImage(String imageUrl) {
+        String fileName = managedContentImageFileName(imageUrl);
+        Path directory = resolveContainedDirectory(TRAVEL_INFO_CONTENT_IMAGE_DIRECTORY, false,
+                "본문 이미지 저장 경로를 확인할 수 없습니다.");
+        if (directory == null) {
+            return false;
+        }
+        Path target = directory.resolve(fileName).normalize();
+        ensureContained(directory, target);
+        try {
+            return Files.deleteIfExists(target);
+        } catch (IOException exception) {
+            throw new RuntimeException("본문 이미지 삭제에 실패했습니다.", exception);
+        }
+    }
+
+    /** 저장한 본문 이미지. width / height 는 화면에 보이는(EXIF 회전을 반영한) 실제 크기다. */
+    public record StoredContentImage(String url, int width, int height) {
+    }
+
+    private String managedContentImageFileName(String imageUrl) {
+        if (imageUrl == null || !imageUrl.startsWith(TRAVEL_INFO_CONTENT_IMAGE_URL_PREFIX)) {
+            throw new IllegalArgumentException("관리 대상이 아닌 본문 이미지 경로입니다.");
+        }
+        String fileName = imageUrl.substring(TRAVEL_INFO_CONTENT_IMAGE_URL_PREFIX.length());
+        if (!MANAGED_CONTENT_IMAGE_NAME.matcher(fileName).matches()) {
+            throw new IllegalArgumentException("올바르지 않은 본문 이미지 경로입니다.");
+        }
+        return fileName;
+    }
+
+    /** 크기 상한(10MB)을 이미 확인한 뒤라 통째로 읽어도 된다. */
+    private byte[] readContentImageBytes(MultipartFile file) {
+        try (InputStream input = file.getInputStream()) {
+            return input.readAllBytes();
+        } catch (IOException exception) {
+            throw new RuntimeException("본문 이미지를 읽지 못했습니다.", exception);
+        }
+    }
+
+    /** JPEG/PNG 의 화면 기준 크기. EXIF 가 90도 회전을 말하면(줄이지 않아 표시가 남은 경우) 가로·세로를 바꾼다. */
+    private int[] uprightDimensions(byte[] content, String imageIoFormat) {
+        try {
+            int[] dimensions = RasterImageResizer.readDimensions(content, imageIoFormat);
+            if (dimensions == null) {
+                return null;
+            }
+            return JpegOrientation.swapsEdges(JpegOrientation.read(content))
+                    ? new int[]{dimensions[1], dimensions[0]}
+                    : dimensions;
+        } catch (IOException exception) {
+            return null;
+        }
+    }
+
+    /**
+     * 구조를 이미 검사한 WEBP 의 캔버스 크기. VP8X 가 있으면 그 캔버스, 없으면 첫 VP8 / VP8L 프레임 크기다.
+     *
+     * @return {@code {가로, 세로}}. 찾지 못하면 null
+     */
+    private int[] webpDimensions(byte[] data) {
+        int offset = 12;
+        while (offset + 8 <= data.length) {
+            int chunkSize = (int) readLittleEndian(data, offset + 4, 4);
+            int payload = offset + 8;
+            if (payload + chunkSize > data.length) {
+                return null;
+            }
+            if (matchesFourCc(data, offset, 'V', 'P', '8', 'X') && chunkSize >= 10) {
+                return new int[]{(int) readLittleEndian(data, payload + 4, 3) + 1,
+                        (int) readLittleEndian(data, payload + 7, 3) + 1};
+            }
+            if (matchesFourCc(data, offset, 'V', 'P', '8', ' ') && chunkSize >= 10) {
+                return new int[]{(int) readLittleEndian(data, payload + 6, 2) & 0x3fff,
+                        (int) readLittleEndian(data, payload + 8, 2) & 0x3fff};
+            }
+            if (matchesFourCc(data, offset, 'V', 'P', '8', 'L') && chunkSize >= 5) {
+                int bits = (int) readLittleEndian(data, payload + 1, 4);
+                return new int[]{(bits & 0x3fff) + 1, ((bits >> 14) & 0x3fff) + 1};
+            }
+            offset = payload + chunkSize + (chunkSize & 1);
+        }
+        return null;
+    }
+
     /** 관리자 스티커는 정적 리소스가 아닌 공용 업로드 저장소에 유형별로 보관한다. */
     public String saveDiaryStickerImage(MultipartFile file, DiaryStickerType type) {
         if (type == null) {
@@ -826,6 +998,16 @@ public class FileUploadService {
     }
 
     private Path resolveThumbnailDirectory(boolean create) {
+        return resolveContainedDirectory(TRAVEL_INFO_THUMBNAIL_DIRECTORY, create,
+                "썸네일 저장 경로를 준비할 수 없습니다.");
+    }
+
+    /**
+     * 업로드 루트 아래 정해진 하위 폴더의 실제 경로. 링크 등으로 루트 밖을 가리키면 거부한다.
+     *
+     * @param create false 면 폴더가 없을 때 만들지 않고 null 을 돌려준다
+     */
+    private Path resolveContainedDirectory(String directoryName, boolean create, String failureMessage) {
         Path uploadRoot = Paths.get(uploadDir).toAbsolutePath().normalize();
         try {
             if (create) {
@@ -835,19 +1017,19 @@ public class FileUploadService {
             }
 
             Path realUploadRoot = uploadRoot.toRealPath();
-            Path thumbnailDirectory = realUploadRoot.resolve(TRAVEL_INFO_THUMBNAIL_DIRECTORY).normalize();
-            ensureContained(realUploadRoot, thumbnailDirectory);
+            Path directory = realUploadRoot.resolve(directoryName).normalize();
+            ensureContained(realUploadRoot, directory);
             if (create) {
-                Files.createDirectories(thumbnailDirectory);
-            } else if (Files.notExists(thumbnailDirectory)) {
+                Files.createDirectories(directory);
+            } else if (Files.notExists(directory)) {
                 return null;
             }
 
-            Path realThumbnailDirectory = thumbnailDirectory.toRealPath();
-            ensureContained(realUploadRoot, realThumbnailDirectory);
-            return realThumbnailDirectory;
+            Path realDirectory = directory.toRealPath();
+            ensureContained(realUploadRoot, realDirectory);
+            return realDirectory;
         } catch (IOException exception) {
-            throw new RuntimeException("썸네일 저장 경로를 준비할 수 없습니다.", exception);
+            throw new RuntimeException(failureMessage, exception);
         }
     }
 
