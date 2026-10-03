@@ -1,0 +1,75 @@
+name: tripbora-prod
+
+services:
+  mysql:
+    image: mysql:9.2.0
+    container_name: tripbora-prod-mysql
+    restart: unless-stopped
+
+    ports:
+      - "127.0.0.1:3307:3306"
+
+    environment:
+      MYSQL_DATABASE: tripbora_prod
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+
+    volumes:
+      - tripbora_prod_mysql92_data:/var/lib/mysql
+
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    image: tripbora-prod-app:local
+    container_name: tripbora-prod-app
+    restart: unless-stopped
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+    ports:
+      - "127.0.0.1:8080:8080"
+
+    env_file:
+      - /Users/minjun/tripbora-config/docker-prod.env
+
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+
+      DB_URL: "jdbc:mysql://mysql:3306/tripbora_prod?connectionTimeZone=LOCAL&characterEncoding=UTF-8"
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+
+      SERVER_ADDRESS: 0.0.0.0
+
+      UPLOAD_PATH: /data/uploads
+      DIARY_PRIVATE_PATH: /data/diary-private
+      COVER_LIBRARY_PRIVATE_PATH: /data/cover-library-private
+
+    volumes:
+      - type: bind
+        source: ${UPLOAD_PATH}
+        target: /data/uploads
+
+      - type: bind
+        source: ${DIARY_PRIVATE_PATH}
+        target: /data/diary-private
+
+      - type: bind
+        source: ${COVER_LIBRARY_PRIVATE_PATH}
+        target: /data/cover-library-private
+
+volumes:
+  tripbora_prod_mysql92_data:
+    name: tripbora_prod_mysql92_data
